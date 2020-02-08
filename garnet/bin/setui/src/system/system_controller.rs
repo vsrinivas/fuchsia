@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::registry::base::{Command, Notifier, State},
-    crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
+    crate::registry::base::{Command, Context, Notifier, SettingHandler, State},
+    crate::registry::device_storage::{DeviceStorageCompatible, DeviceStorageFactory},
     crate::switchboard::base::*,
     anyhow::Error,
     fuchsia_async as fasync,
-    futures::lock::Mutex,
     futures::StreamExt,
     parking_lot::RwLock,
     std::sync::Arc,
@@ -22,14 +21,17 @@ impl DeviceStorageCompatible for SystemInfo {
     }
 }
 
-pub fn spawn_system_controller(
-    storage: Arc<Mutex<DeviceStorage<SystemInfo>>>,
-) -> futures::channel::mpsc::UnboundedSender<Command> {
+pub fn spawn_system_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
+    context: &Context<T>,
+) -> SettingHandler {
+    let storage_handle = context.storage_factory_handle.clone();
     let (system_handler_tx, mut system_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
 
     let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));
 
     fasync::spawn(async move {
+        let storage = storage_handle.lock().await.get_store::<SystemInfo>();
+
         let mut stored_value: SystemInfo;
         {
             let mut storage_lock = storage.lock().await;

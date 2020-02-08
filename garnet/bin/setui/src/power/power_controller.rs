@@ -3,8 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::registry::base::Command, crate::service_context::ServiceContextHandle,
-    crate::switchboard::base::*, anyhow::Error, fuchsia_async as fasync, futures::StreamExt,
+    crate::registry::base::{Command, Context, SettingHandler},
+    crate::registry::device_storage::DeviceStorageFactory,
+    crate::service_context::ServiceContextHandle,
+    crate::switchboard::base::*,
+    anyhow::Error,
+    fuchsia_async as fasync,
+    futures::StreamExt,
 };
 
 async fn reboot(service_context_handle: ServiceContextHandle) {
@@ -17,9 +22,10 @@ async fn reboot(service_context_handle: ServiceContextHandle) {
     device_admin.suspend(fidl_fuchsia_device_manager::SUSPEND_FLAG_REBOOT).await.ok();
 }
 
-pub fn spawn_power_controller(
-    service_context_handle: ServiceContextHandle,
-) -> futures::channel::mpsc::UnboundedSender<Command> {
+pub fn spawn_power_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
+    context: &Context<T>,
+) -> SettingHandler {
+    let service_context_handle = context.service_context_handle.clone();
     let (system_handler_tx, mut system_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
 
     fasync::spawn(async move {

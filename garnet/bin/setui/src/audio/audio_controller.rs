@@ -4,8 +4,8 @@
 use {
     crate::audio::{default_audio_info, play_sound, StreamVolumeControl},
     crate::input::monitor_mic_mute,
-    crate::registry::base::{Command, Notifier, State},
-    crate::registry::device_storage::DeviceStorage,
+    crate::registry::base::{Command, Context, Notifier, SettingHandler, State},
+    crate::registry::device_storage::{DeviceStorage, DeviceStorageFactory},
     crate::service_context::ServiceContextHandle,
     crate::switchboard::base::*,
     anyhow::{Context as _, Error},
@@ -48,10 +48,11 @@ const VOLUME_CHANGED_FILE_PATH: &str = "volume-changed.wav";
 
 /// Controller that handles commands for SettingType::Audio.
 /// TODO(go/fxb/35988): Hook up the presentation service to listen for the mic mute state.
-pub fn spawn_audio_controller(
-    service_context_handle: ServiceContextHandle,
-    storage: Arc<Mutex<DeviceStorage<AudioInfo>>>,
-) -> futures::channel::mpsc::UnboundedSender<Command> {
+pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
+    context: &Context<T>,
+) -> SettingHandler {
+    let service_context_handle = context.service_context_handle.clone();
+    let storage_factory_handle = context.storage_factory_handle.clone();
     let (audio_handler_tx, mut audio_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
 
     let default_audio_settings = default_audio_info();
@@ -124,6 +125,7 @@ pub fn spawn_audio_controller(
         .await
         .ok();
 
+        let storage = storage_factory_handle.lock().await.get_store::<AudioInfo>();
         // Load data from persistent storage.
         let mut stored_value: AudioInfo;
         {

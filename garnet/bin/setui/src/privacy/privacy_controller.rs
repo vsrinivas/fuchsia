@@ -11,8 +11,10 @@ use futures::stream::StreamExt;
 use futures::TryFutureExt;
 use parking_lot::RwLock;
 
-use crate::registry::base::{Command, Notifier, State};
-use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use crate::registry::base::{Command, Context, Notifier, SettingHandler, State};
+use crate::registry::device_storage::{
+    DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
+};
 use crate::switchboard::base::{
     PrivacyInfo, SettingRequest, SettingRequestResponder, SettingResponse, SettingType,
     SwitchboardError,
@@ -37,13 +39,15 @@ pub struct PrivacyController {
 
 /// Controller for processing switchboard messages for the Privacy protocol.
 impl PrivacyController {
-    pub fn spawn(
-        storage: PrivacyStorage,
-    ) -> Result<futures::channel::mpsc::UnboundedSender<Command>, anyhow::Error> {
+    pub fn spawn<T: DeviceStorageFactory + Send + Sync + 'static>(
+        context: &Context<T>,
+    ) -> SettingHandler {
+        let storage_handle = context.storage_factory_handle.clone();
         let (ctrl_tx, mut ctrl_rx) = futures::channel::mpsc::unbounded::<Command>();
 
         fasync::spawn(
             async move {
+                let storage = storage_handle.lock().await.get_store::<PrivacyInfo>();
                 // Local copy of persisted privacy value.
                 let stored_value: PrivacyInfo;
                 {
@@ -67,7 +71,7 @@ impl PrivacyController {
             }),
         );
 
-        return Ok(ctrl_tx);
+        return ctrl_tx;
     }
 
     fn process_command(&mut self, command: Command) -> Result<(), anyhow::Error> {

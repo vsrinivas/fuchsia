@@ -46,7 +46,7 @@ async fn test_system() {
 
     let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
         .service(ServiceRegistry::serve(service_registry.clone()))
-        .settings(&[SettingType::System])
+        .settings(&[SettingType::System, SettingType::Account, SettingType::Power])
         .spawn_and_get_nested_environment()
         .await
         .unwrap();

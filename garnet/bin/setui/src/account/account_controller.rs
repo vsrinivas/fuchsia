@@ -3,8 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::registry::base::Command, crate::service_context::ServiceContextHandle,
-    crate::switchboard::base::*, anyhow::Error, fuchsia_async as fasync, futures::StreamExt,
+    crate::registry::base::{Command, Context, SettingHandler},
+    crate::registry::device_storage::DeviceStorageFactory,
+    crate::service_context::ServiceContextHandle,
+    crate::switchboard::base::*,
+    anyhow::Error,
+    fuchsia_async as fasync,
+    futures::StreamExt,
 };
 
 const FACTORY_RESET_FLAG: &str = "FactoryReset";
@@ -30,9 +35,11 @@ async fn schedule_clear_accounts(
     return Ok(());
 }
 
-pub fn spawn_account_controller(
-    service_context_handle: ServiceContextHandle,
-) -> futures::channel::mpsc::UnboundedSender<Command> {
+pub fn spawn_account_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
+    context: &Context<T>,
+) -> SettingHandler {
+    let service_context_handle = context.service_context_handle.clone();
+
     let (account_handler_tx, mut account_handler_rx) =
         futures::channel::mpsc::unbounded::<Command>();
 

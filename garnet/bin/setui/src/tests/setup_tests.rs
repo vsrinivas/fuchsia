@@ -24,7 +24,7 @@ const ENV_NAME: &str = "settings_service_setup_test_environment";
 async fn test_setup_default() {
     let env =
         EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), InMemoryStorageFactory::create_handle())
-            .settings(&[SettingType::Setup])
+            .settings(&[SettingType::Setup, SettingType::Power])
             .spawn_and_get_nested_environment()
             .await
             .unwrap();
@@ -66,7 +66,7 @@ async fn test_setup() {
     // Handle reboot
     let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
         .service(ServiceRegistry::serve(service_registry.clone()))
-        .settings(&[SettingType::Setup])
+        .settings(&[SettingType::Setup, SettingType::Power])
         .spawn_and_get_nested_environment()
         .await
         .unwrap();

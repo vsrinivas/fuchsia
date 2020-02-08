@@ -1,7 +1,9 @@
 use crate::switchboard::base::SettingRequestResponder;
 use {
-    crate::registry::base::{Command, Notifier, State},
-    crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
+    crate::registry::base::{Command, Context, Notifier, SettingHandler, State},
+    crate::registry::device_storage::{
+        DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
+    },
     crate::switchboard::base::{
         DoNotDisturbInfo, SettingRequest, SettingResponse, SettingType, SwitchboardError,
     },
@@ -25,15 +27,17 @@ impl DeviceStorageCompatible for DoNotDisturbInfo {
 }
 
 // Controller that handles commands for SettingType::DoNotDisturb
-pub fn spawn_do_not_disturb_controller(
-    storage: Arc<Mutex<DeviceStorage<DoNotDisturbInfo>>>,
-) -> futures::channel::mpsc::UnboundedSender<Command> {
+pub fn spawn_do_not_disturb_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
+    context: &Context<T>,
+) -> SettingHandler {
+    let storage_handle = context.storage_factory_handle.clone();
     let (do_not_disturb_handler_tx, mut do_not_disturb_handler_rx) =
         futures::channel::mpsc::unbounded::<Command>();
 
     let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));
 
     fasync::spawn(async move {
+        let storage = storage_handle.lock().await.get_store::<DoNotDisturbInfo>();
         // Load stored value
         let mut stored_value: DoNotDisturbInfo;
         {

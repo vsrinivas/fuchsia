@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::registry::base::{Command, Notifier, State},
-    crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
+    crate::registry::base::{Command, Context, Notifier, SettingHandler, State},
+    crate::registry::device_storage::{
+        DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
+    },
     crate::switchboard::accessibility_types::AccessibilityInfo,
     crate::switchboard::base::{
         Merge, SettingRequest, SettingRequestResponder, SettingResponse, SettingType,
@@ -36,9 +38,10 @@ impl DeviceStorageCompatible for AccessibilityInfo {
 }
 
 /// Controller that handles commands for SettingType::Accessibility.
-pub fn spawn_accessibility_controller(
-    storage: Arc<Mutex<DeviceStorage<AccessibilityInfo>>>,
-) -> futures::channel::mpsc::UnboundedSender<Command> {
+pub fn spawn_accessibility_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
+    context: &Context<T>,
+) -> SettingHandler {
+    let storage_factory_handle = context.storage_factory_handle.clone();
     let (accessibility_handler_tx, mut accessibility_handler_rx) =
         futures::channel::mpsc::unbounded::<Command>();
 
@@ -46,6 +49,8 @@ pub fn spawn_accessibility_controller(
 
     fasync::spawn(
         async move {
+            let storage = storage_factory_handle.lock().await.get_store::<AccessibilityInfo>();
+
             // Local copy of persisted audio description value.
             let mut stored_value: AccessibilityInfo;
             {

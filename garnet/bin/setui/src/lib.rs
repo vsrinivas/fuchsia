@@ -25,9 +25,10 @@ use {
     crate::power::spawn_power_controller,
     crate::privacy::privacy_controller::PrivacyController,
     crate::privacy::spawn_privacy_fidl_handler,
-    crate::registry::base::Registry,
+    crate::registry::base::GenerateHandler,
     crate::registry::device_storage::DeviceStorageFactory,
     crate::registry::registry_impl::RegistryImpl,
+    crate::registry::setting_handler_factory_impl::SettingHandlerFactoryImpl,
     crate::service_context::GenerateService,
     crate::service_context::ServiceContext,
     crate::service_context::ServiceContextHandle,
@@ -46,9 +47,9 @@ use {
     fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceFsDir, ServiceObj},
     fuchsia_syslog::fx_log_err,
     futures::channel::oneshot::Receiver,
-    futures::executor::block_on,
     futures::lock::Mutex,
     futures::StreamExt,
+    std::collections::HashMap,
     std::collections::HashSet,
     std::sync::Arc,
 };
@@ -110,16 +111,23 @@ impl Environment {
 
 /// The EnvironmentBuilder aggregates the parameters surrounding an environment
 /// and ultimately spawns an environment based on them.
-pub struct EnvironmentBuilder<T: DeviceStorageFactory> {
+pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     runtime: Runtime,
     configuration: Option<Configuration>,
     settings: Vec<SettingType>,
     agents: Vec<AgentHandle>,
     storage_factory: Arc<Mutex<T>>,
     generate_service: Option<GenerateService>,
+    handlers: HashMap<SettingType, GenerateHandler<T>>,
 }
 
-impl<T: DeviceStorageFactory> EnvironmentBuilder<T> {
+macro_rules! register_handler {
+    ($handler_factory:ident, $setting_type:expr, $spawn_method:expr) => {
+        $handler_factory.register($setting_type, Box::new($spawn_method));
+    };
+}
+
+impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     pub fn new(runtime: Runtime, storage_factory: Arc<Mutex<T>>) -> EnvironmentBuilder<T> {
         EnvironmentBuilder {
             runtime: runtime,
@@ -128,7 +136,17 @@ impl<T: DeviceStorageFactory> EnvironmentBuilder<T> {
             agents: vec![],
             storage_factory: storage_factory,
             generate_service: None,
+            handlers: HashMap::new(),
         }
+    }
+
+    pub fn handler(
+        mut self,
+        setting_type: SettingType,
+        generate_handler: GenerateHandler<T>,
+    ) -> EnvironmentBuilder<T> {
+        self.handlers.insert(setting_type, generate_handler);
+        self
     }
 
     /// A service generator to be used as an overlay on the ServiceContext.
@@ -173,12 +191,24 @@ impl<T: DeviceStorageFactory> EnvironmentBuilder<T> {
         for setting in self.settings {
             settings.insert(setting);
         }
+
+        let mut handler_factory = SettingHandlerFactoryImpl::new(
+            settings.clone(),
+            service_context.clone(),
+            self.storage_factory.clone(),
+        );
+
+        for (setting_type, handler) in self.handlers {
+            handler_factory.register(setting_type, handler);
+        }
+
+        EnvironmentBuilder::get_configuration_handlers(&mut handler_factory);
         let rx = create_environment(
             service_dir,
             settings,
             self.agents,
             service_context,
-            self.storage_factory,
+            Arc::new(Mutex::new(handler_factory)),
         );
 
         match self.runtime {
@@ -210,6 +240,43 @@ impl<T: DeviceStorageFactory> EnvironmentBuilder<T> {
 
         return Err(format_err!("nested environment not created"));
     }
+
+    fn get_configuration_handlers(factory_handle: &mut SettingHandlerFactoryImpl<T>) {
+        // Power
+        register_handler!(factory_handle, SettingType::Power, spawn_power_controller);
+        // Accessibility
+        register_handler!(
+            factory_handle,
+            SettingType::Accessibility,
+            spawn_accessibility_controller
+        );
+        // Account
+        register_handler!(factory_handle, SettingType::Account, spawn_account_controller);
+        // Audio
+        register_handler!(factory_handle, SettingType::Audio, spawn_audio_controller);
+        // Device
+        register_handler!(factory_handle, SettingType::Device, spawn_device_controller);
+        // Display
+        register_handler!(factory_handle, SettingType::Display, spawn_display_controller);
+        // Light sensor
+        register_handler!(factory_handle, SettingType::LightSensor, spawn_light_sensor_controller);
+        // Intl
+        register_handler!(factory_handle, SettingType::Intl, IntlController::spawn);
+        // Do not disturb
+        register_handler!(
+            factory_handle,
+            SettingType::DoNotDisturb,
+            spawn_do_not_disturb_controller
+        );
+        // Night mode
+        register_handler!(factory_handle, SettingType::NightMode, NightModeController::spawn);
+        // Privacy
+        register_handler!(factory_handle, SettingType::Privacy, PrivacyController::spawn);
+        // System
+        register_handler!(factory_handle, SettingType::System, spawn_system_controller);
+        // Setup
+        register_handler!(factory_handle, SettingType::Setup, SetupController::spawn);
+    }
 }
 
 /// Brings up the settings service environment.
@@ -217,15 +284,13 @@ impl<T: DeviceStorageFactory> EnvironmentBuilder<T> {
 /// This method generates the necessary infrastructure to support the settings
 /// service (switchboard, registry, etc.) and brings up the components necessary
 /// to support the components specified in the components HashSet.
-pub fn create_environment<'a, T: DeviceStorageFactory>(
+fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     components: HashSet<switchboard::base::SettingType>,
     agents: Vec<AgentHandle>,
     service_context_handle: ServiceContextHandle,
-    storage_factory: Arc<Mutex<T>>,
+    handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
 ) -> Receiver<Result<(), Error>> {
-    let storage_factory_lock = block_on(storage_factory.lock());
-
     let conduit_handle = ConduitImpl::create();
 
     // Creates switchboard, handed to interface implementations to send messages
@@ -235,36 +300,9 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
     let mut agent_authority = AuthorityImpl::new();
 
     // Creates registry, used to register handlers for setting types.
-    let registry_handle = RegistryImpl::create(conduit_handle.clone());
-
-    registry_handle
-        .write()
-        .register(
-            switchboard::base::SettingType::Power,
-            spawn_power_controller(service_context_handle.clone()),
-        )
-        .unwrap();
-
-    registry_handle
-        .write()
-        .register(
-            switchboard::base::SettingType::Account,
-            spawn_account_controller(service_context_handle.clone()),
-        )
-        .unwrap();
+    let _registry_handle = RegistryImpl::create(handler_factory.clone(), conduit_handle.clone());
 
     if components.contains(&SettingType::Accessibility) {
-        registry_handle
-            .write()
-            .register(
-                switchboard::base::SettingType::Accessibility,
-                spawn_accessibility_controller(
-                    storage_factory_lock
-                        .get_store::<switchboard::accessibility_types::AccessibilityInfo>(),
-                ),
-            )
-            .unwrap();
-
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: AccessibilityRequestStream| {
             spawn_accessibility_fidl_handler(switchboard_handle_clone.clone(), stream);
@@ -272,17 +310,6 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
     }
 
     if components.contains(&SettingType::Audio) {
-        registry_handle
-            .write()
-            .register(
-                switchboard::base::SettingType::Audio,
-                spawn_audio_controller(
-                    service_context_handle.clone(),
-                    storage_factory_lock.get_store::<switchboard::base::AudioInfo>(),
-                ),
-            )
-            .unwrap();
-
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: AudioRequestStream| {
             spawn_audio_fidl_handler(switchboard_handle_clone.clone(), stream);
@@ -290,11 +317,6 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
     }
 
     if components.contains(&SettingType::Device) {
-        registry_handle
-            .write()
-            .register(switchboard::base::SettingType::Device, spawn_device_controller())
-            .unwrap();
-
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: DeviceRequestStream| {
             spawn_device_fidl_handler(switchboard_handle_clone.clone(), stream);
@@ -303,27 +325,6 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
 
     if components.contains(&SettingType::Display) || components.contains(&SettingType::LightSensor)
     {
-        if components.contains(&SettingType::Display) {
-            registry_handle
-                .write()
-                .register(
-                    switchboard::base::SettingType::Display,
-                    spawn_display_controller(
-                        service_context_handle.clone(),
-                        storage_factory_lock.get_store::<switchboard::base::DisplayInfo>(),
-                    ),
-                )
-                .unwrap();
-        }
-        if components.contains(&SettingType::LightSensor) {
-            registry_handle
-                .write()
-                .register(
-                    switchboard::base::SettingType::LightSensor,
-                    spawn_light_sensor_controller(service_context_handle.clone()),
-                )
-                .unwrap();
-        }
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: DisplayRequestStream| {
             spawn_display_fidl_handler(switchboard_handle_clone.clone(), stream);
@@ -331,17 +332,6 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
     }
 
     if components.contains(&SettingType::DoNotDisturb) {
-        let register_result = registry_handle.write().register(
-            switchboard::base::SettingType::DoNotDisturb,
-            spawn_do_not_disturb_controller(
-                storage_factory_lock.get_store::<switchboard::base::DoNotDisturbInfo>(),
-            ),
-        );
-        match register_result {
-            Ok(_) => {}
-            Err(e) => fx_log_err!("failed to register do_not_disturb in registry, {:#?}", e),
-        };
-
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: DoNotDisturbRequestStream| {
             spawn_do_not_disturb_fidl_handler(switchboard_handle_clone.clone(), stream);
@@ -349,18 +339,6 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
     }
 
     if components.contains(&SettingType::Intl) {
-        registry_handle
-            .write()
-            .register(
-                switchboard::base::SettingType::Intl,
-                IntlController::spawn(
-                    service_context_handle.clone(),
-                    storage_factory_lock.get_store::<switchboard::intl_types::IntlInfo>(),
-                )
-                .unwrap(),
-            )
-            .unwrap();
-
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: IntlRequestStream| {
             spawn_intl_fidl_handler(switchboard_handle_clone.clone(), stream);
@@ -368,17 +346,6 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
     }
 
     if components.contains(&SettingType::NightMode) {
-        registry_handle
-            .write()
-            .register(
-                switchboard::base::SettingType::NightMode,
-                NightModeController::spawn(
-                    storage_factory_lock.get_store::<switchboard::base::NightModeInfo>(),
-                )
-                .unwrap(),
-            )
-            .unwrap();
-
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: NightModeRequestStream| {
             spawn_night_mode_fidl_handler(switchboard_handle_clone.clone(), stream);
@@ -386,17 +353,6 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
     }
 
     if components.contains(&SettingType::Privacy) {
-        registry_handle
-            .write()
-            .register(
-                switchboard::base::SettingType::Privacy,
-                PrivacyController::spawn(
-                    storage_factory_lock.get_store::<switchboard::base::PrivacyInfo>(),
-                )
-                .unwrap(),
-            )
-            .unwrap();
-
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: PrivacyRequestStream| {
             spawn_privacy_fidl_handler(switchboard_handle_clone.clone(), stream);
@@ -404,15 +360,6 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
     }
 
     if components.contains(&SettingType::System) {
-        registry_handle
-            .write()
-            .register(
-                switchboard::base::SettingType::System,
-                spawn_system_controller(
-                    storage_factory_lock.get_store::<switchboard::base::SystemInfo>(),
-                ),
-            )
-            .unwrap();
         {
             let switchboard_handle_clone = switchboard_handle.clone();
             service_dir.add_fidl_service(move |stream: SystemRequestStream| {
@@ -428,16 +375,6 @@ pub fn create_environment<'a, T: DeviceStorageFactory>(
     }
 
     if components.contains(&SettingType::Setup) {
-        registry_handle
-            .write()
-            .register(
-                switchboard::base::SettingType::Setup,
-                SetupController::spawn(
-                    storage_factory_lock.get_store::<switchboard::base::SetupInfo>(),
-                )
-                .unwrap(),
-            )
-            .unwrap();
         let switchboard_handle_clone = switchboard_handle.clone();
         service_dir.add_fidl_service(move |stream: SetupRequestStream| {
             spawn_setup_fidl_handler(switchboard_handle_clone.clone(), stream);

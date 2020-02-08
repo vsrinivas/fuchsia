@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::registry::base::{Command, Notifier, State};
-use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use crate::registry::base::{Command, Context, Notifier, SettingHandler, State};
+use crate::registry::device_storage::{
+    DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
+};
 use crate::switchboard::base::{
     ConfigurationInterfaceFlags, SettingRequest, SettingRequestResponder, SettingResponse,
     SettingType, SetupInfo, SwitchboardError,
@@ -30,12 +32,15 @@ pub struct SetupController {
 }
 
 impl SetupController {
-    pub fn spawn(
-        storage: Arc<Mutex<DeviceStorage<SetupInfo>>>,
-    ) -> Result<futures::channel::mpsc::UnboundedSender<Command>, Error> {
+    pub fn spawn<T: DeviceStorageFactory + Send + Sync + 'static>(
+        context: &Context<T>,
+    ) -> SettingHandler {
+        let storage_handle = context.storage_factory_handle.clone();
+
         let (ctrl_tx, mut ctrl_rx) = futures::channel::mpsc::unbounded::<Command>();
 
         fasync::spawn(async move {
+            let storage = storage_handle.lock().await.get_store::<SetupInfo>();
             let stored_value: SetupInfo;
             {
                 let mut storage_lock = storage.lock().await;
@@ -53,7 +58,7 @@ impl SetupController {
             }
         });
 
-        return Ok(ctrl_tx);
+        return ctrl_tx;
     }
 
     fn process_command(&mut self, command: Command) {

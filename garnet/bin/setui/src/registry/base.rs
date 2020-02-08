@@ -2,11 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::registry::device_storage::DeviceStorageFactory;
+use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{SettingRequest, SettingRequestResponder, SettingType};
-use anyhow::Error;
-
 use futures::channel::mpsc::UnboundedSender;
+use futures::lock::Mutex;
+use std::collections::HashSet;
+use std::sync::Arc;
+
 pub type Notifier = UnboundedSender<SettingType>;
+pub type SettingHandler = UnboundedSender<Command>;
+
+pub type GenerateHandler<T> = Box<dyn Fn(&Context<T>) -> SettingHandler + Send + Sync + 'static>;
 
 /// An command represents messaging from the registry to take a
 /// particular action.
@@ -21,12 +28,30 @@ pub enum State {
     EndListen,
 }
 
-/// The conductor of lifecycle and activity over a number of registered
-/// entities.
-pub trait Registry {
-    fn register(
-        &mut self,
-        setting_type: SettingType,
-        command_sender: UnboundedSender<Command>,
-    ) -> Result<(), Error>;
+/// A factory capable of creating a handler for a given setting on-demand. If no
+/// viable handler can be created, None will be returned.
+pub trait SettingHandlerFactory {
+    fn generate(&mut self, setting_type: SettingType) -> Option<SettingHandler>;
+}
+
+/// Context captures all details necessary for a handler to execute in a given
+/// settings service environment.
+pub struct Context<T: DeviceStorageFactory> {
+    pub settings: HashSet<SettingType>,
+    pub service_context_handle: ServiceContextHandle,
+    pub storage_factory_handle: Arc<Mutex<T>>,
+}
+
+impl<T: DeviceStorageFactory> Context<T> {
+    pub fn new(
+        settings: HashSet<SettingType>,
+        service_context_handle: ServiceContextHandle,
+        storage_factory_handle: Arc<Mutex<T>>,
+    ) -> Context<T> {
+        return Context {
+            settings: settings,
+            service_context_handle: service_context_handle,
+            storage_factory_handle: storage_factory_handle,
+        };
+    }
 }

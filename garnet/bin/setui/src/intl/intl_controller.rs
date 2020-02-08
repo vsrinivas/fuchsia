@@ -14,7 +14,8 @@ use parking_lot::RwLock;
 
 use rust_icu_uenum as uenum;
 
-use crate::registry::base::{Command, Notifier, State};
+use crate::registry::base::{Command, Context, Notifier, SettingHandler, State};
+use crate::registry::device_storage::DeviceStorageFactory;
 use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{
@@ -47,13 +48,16 @@ pub struct IntlController {
 /// Controller for processing switchboard messages surrounding the Intl
 /// protocol, backed by a number of services, including TimeZone.
 impl IntlController {
-    pub fn spawn(
-        service_context_handle: ServiceContextHandle,
-        storage: Arc<Mutex<DeviceStorage<IntlInfo>>>,
-    ) -> Result<futures::channel::mpsc::UnboundedSender<Command>, Error> {
+    pub fn spawn<T: DeviceStorageFactory + Send + Sync + 'static>(
+        context: &Context<T>,
+    ) -> SettingHandler {
+        let service_context_handle = context.service_context_handle.clone();
+        let storage_handle = context.storage_factory_handle.clone();
+
         let (ctrl_tx, mut ctrl_rx) = futures::channel::mpsc::unbounded::<Command>();
 
         fasync::spawn(async move {
+            let storage = storage_handle.lock().await.get_store::<IntlInfo>();
             // Local copy of persisted i18n values.
             let stored_value: IntlInfo;
             {
@@ -76,7 +80,7 @@ impl IntlController {
             }
         });
 
-        return Ok(ctrl_tx);
+        return ctrl_tx;
     }
 
     /// Loads the set of valid time zones from resources.

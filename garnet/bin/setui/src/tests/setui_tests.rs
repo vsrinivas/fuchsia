@@ -4,53 +4,57 @@
 
 #[cfg(test)]
 use {
-  crate::registry::device_storage::testing::*, crate::switchboard::base::SettingType,
-  crate::EnvironmentBuilder, crate::Runtime, fidl_fuchsia_setui::*,
+    crate::registry::device_storage::testing::*, crate::switchboard::base::SettingType,
+    crate::EnvironmentBuilder, crate::Runtime, fidl_fuchsia_setui::*,
 };
 
 const ENV_NAME: &str = "setui_service_system_test_environment";
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn tests_setui() {
-  const STARTING_LOGIN_MODE: fidl_fuchsia_setui::LoginOverride =
-    fidl_fuchsia_setui::LoginOverride::None;
-  const CHANGED_LOGIN_MODE: fidl_fuchsia_setui::LoginOverride =
-    fidl_fuchsia_setui::LoginOverride::AuthProvider;
+    const STARTING_LOGIN_MODE: fidl_fuchsia_setui::LoginOverride =
+        fidl_fuchsia_setui::LoginOverride::None;
+    const CHANGED_LOGIN_MODE: fidl_fuchsia_setui::LoginOverride =
+        fidl_fuchsia_setui::LoginOverride::AuthProvider;
 
-  let env =
-    EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), InMemoryStorageFactory::create_handle())
-      .settings(&[SettingType::System])
-      .spawn_and_get_nested_environment()
-      .await
-      .unwrap();
+    let env =
+        EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), InMemoryStorageFactory::create_handle())
+            .settings(&[SettingType::System])
+            .spawn_and_get_nested_environment()
+            .await
+            .unwrap();
 
-  let system_proxy = env.connect_to_service::<SetUiServiceMarker>().unwrap();
+    let system_proxy = env.connect_to_service::<SetUiServiceMarker>().unwrap();
 
-  let settings_obj =
-    system_proxy.watch(fidl_fuchsia_setui::SettingType::Account).await.expect("watch completed");
+    let settings_obj = system_proxy
+        .watch(fidl_fuchsia_setui::SettingType::Account)
+        .await
+        .expect("watch completed");
 
-  if let SettingData::Account(data) = settings_obj.data {
-    assert_eq!(data.mode, Some(STARTING_LOGIN_MODE));
-  } else {
-    panic!("Should have had account data");
-  }
+    if let SettingData::Account(data) = settings_obj.data {
+        assert_eq!(data.mode, Some(STARTING_LOGIN_MODE));
+    } else {
+        panic!("Should have had account data");
+    }
 
-  let mut mutation = Mutation::AccountMutationValue(AccountMutation {
-    operation: Some(AccountOperation::SetLoginOverride),
-    login_override: Some(CHANGED_LOGIN_MODE),
-  });
+    let mut mutation = Mutation::AccountMutationValue(AccountMutation {
+        operation: Some(AccountOperation::SetLoginOverride),
+        login_override: Some(CHANGED_LOGIN_MODE),
+    });
 
-  system_proxy
-    .mutate(fidl_fuchsia_setui::SettingType::Account, &mut mutation)
-    .await
-    .expect("mutate completed");
+    system_proxy
+        .mutate(fidl_fuchsia_setui::SettingType::Account, &mut mutation)
+        .await
+        .expect("mutate completed");
 
-  let updated_settings_obj =
-    system_proxy.watch(fidl_fuchsia_setui::SettingType::Account).await.expect("watch completed");
+    let updated_settings_obj = system_proxy
+        .watch(fidl_fuchsia_setui::SettingType::Account)
+        .await
+        .expect("watch completed");
 
-  if let SettingData::Account(data) = updated_settings_obj.data {
-    assert_eq!(data.mode, Some(CHANGED_LOGIN_MODE));
-  } else {
-    panic!("Should have had account data");
-  }
+    if let SettingData::Account(data) = updated_settings_obj.data {
+        assert_eq!(data.mode, Some(CHANGED_LOGIN_MODE));
+    } else {
+        panic!("Should have had account data");
+    }
 }

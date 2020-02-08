@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::registry::base::{Command, Notifier, State},
-    crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
-    crate::service_context::ServiceContextHandle,
+    crate::registry::base::{Command, Context, Notifier, SettingHandler, State},
+    crate::registry::device_storage::{
+        DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
+    },
     crate::switchboard::base::{
         DisplayInfo, SettingRequest, SettingResponse, SettingType, SwitchboardError,
     },
@@ -25,12 +26,11 @@ impl DeviceStorageCompatible for DisplayInfo {
     }
 }
 
-/// Controller that handles commands for SettingType::Display.
-/// TODO(ejia): refactor out common code
-pub fn spawn_display_controller(
-    service_context_handle: ServiceContextHandle,
-    storage: Arc<Mutex<DeviceStorage<DisplayInfo>>>,
-) -> futures::channel::mpsc::UnboundedSender<Command> {
+pub fn spawn_display_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
+    context: &Context<T>,
+) -> SettingHandler {
+    let storage_handle = context.storage_factory_handle.clone();
+    let service_context_handle = context.service_context_handle.clone();
     let (display_handler_tx, mut display_handler_rx) =
         futures::channel::mpsc::unbounded::<Command>();
 
@@ -42,6 +42,8 @@ pub fn spawn_display_controller(
             .await
             .connect::<fidl_fuchsia_ui_brightness::ControlMarker>()
             .expect("connected to brightness");
+
+        let storage = storage_handle.lock().await.get_store::<DisplayInfo>();
 
         // Load and set value
         // TODO(fxb/25388): handle at explicit initialization time instead of on spawn

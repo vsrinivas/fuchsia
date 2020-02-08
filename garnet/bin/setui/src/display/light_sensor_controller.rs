@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 use {
     crate::display::light_sensor::{open_sensor, read_sensor},
-    crate::registry::base::{Command, Notifier, State},
-    crate::service_context::ServiceContextHandle,
+    crate::registry::base::{Command, Context, Notifier, SettingHandler, State},
+    crate::registry::device_storage::DeviceStorageFactory,
     crate::switchboard::base::{
         LightData, SettingRequest, SettingResponse, SettingType, SwitchboardError,
     },
@@ -13,7 +13,7 @@ use {
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon::Duration,
-    futures::channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
+    futures::channel::mpsc::{unbounded, UnboundedReceiver},
     futures::future::{AbortHandle, Abortable},
     futures::prelude::*,
     parking_lot::RwLock,
@@ -25,9 +25,10 @@ const SCAN_DURATION_MS: i64 = 1000;
 
 /// Launches a new controller for the light sensor which periodically scans the light sensor
 /// for values, and sends out values on change.
-pub fn spawn_light_sensor_controller(
-    service_context_handle: ServiceContextHandle,
-) -> UnboundedSender<Command> {
+pub fn spawn_light_sensor_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
+    context: &Context<T>,
+) -> SettingHandler {
+    let service_context_handle = context.service_context_handle.clone();
     let (light_sensor_handler_tx, light_sensor_handler_rx) = unbounded::<Command>();
 
     let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));

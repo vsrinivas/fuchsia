@@ -13,8 +13,10 @@ use parking_lot::RwLock;
 
 use anyhow::Error;
 
-use crate::registry::base::{Command, Notifier, State};
-use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use crate::registry::base::{Command, Context, Notifier, SettingHandler, State};
+use crate::registry::device_storage::{
+    DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
+};
 use crate::switchboard::base::{
     NightModeInfo, SettingRequest, SettingRequestResponder, SettingResponse, SettingType,
     SwitchboardError,
@@ -38,13 +40,15 @@ pub struct NightModeController {
 
 /// Controller for processing switchboard messages for the NightMode protocol.
 impl NightModeController {
-    pub fn spawn(
-        storage: NightModeStorage,
-    ) -> Result<futures::channel::mpsc::UnboundedSender<Command>, anyhow::Error> {
+    pub fn spawn<T: DeviceStorageFactory + Send + Sync + 'static>(
+        context: &Context<T>,
+    ) -> SettingHandler {
+        let storage_handle = context.storage_factory_handle.clone();
         let (ctrl_tx, mut ctrl_rx) = futures::channel::mpsc::unbounded::<Command>();
 
         fasync::spawn(
             async move {
+                let storage = storage_handle.lock().await.get_store::<NightModeInfo>();
                 // Local copy of persisted night mode value.
                 let stored_value: NightModeInfo;
                 {
@@ -68,7 +72,7 @@ impl NightModeController {
             }),
         );
 
-        return Ok(ctrl_tx);
+        return ctrl_tx;
     }
 
     fn process_command(&mut self, command: Command) -> Result<(), anyhow::Error> {
