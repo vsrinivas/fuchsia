@@ -44,6 +44,8 @@ TEST(TrackingPtr, UnownedSingleValueLifecycle) {
   EXPECT_FALSE(ds2.destructor_called);
 }
 
+#if TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR
+
 TEST(TrackingPtr, OwnedSingleValueLifecycle) {
   DestructionState ds1, ds2;
   {
@@ -57,6 +59,8 @@ TEST(TrackingPtr, OwnedSingleValueLifecycle) {
   }
   EXPECT_TRUE(ds1.destructor_called);
 }
+
+#endif
 
 TEST(TrackingPtr, UnownedArrayLifecycle) {
   DestructionState ds1[2] = {};
@@ -73,6 +77,8 @@ TEST(TrackingPtr, UnownedArrayLifecycle) {
   EXPECT_FALSE(ds2[0].destructor_called);
   EXPECT_FALSE(ds2[1].destructor_called);
 }
+
+#if TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR
 
 TEST(TrackingPtr, OwnedArrayLifecycle) {
   DestructionState ds1[2] = {};
@@ -100,6 +106,8 @@ TEST(TrackingPtr, OwnedArrayLifecycle) {
   EXPECT_TRUE(ds1[0].destructor_called);
   EXPECT_TRUE(ds1[1].destructor_called);
 }
+
+#endif
 
 TEST(TrackingPtr, SingleValueOperatorBool) {
   fidl::tracking_ptr<int32_t> default_ptr;

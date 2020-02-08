@@ -12,6 +12,8 @@
 
 #include "unowned_ptr.h"
 
+#define TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR false
+
 namespace fidl {
 
 // tracking_ptr is a pointer that tracks ownership - it can either own or not own the pointed
@@ -72,7 +74,9 @@ class tracking_ptr final {
     set_marked(reinterpret_cast<marked_ptr>(
         static_cast<T*>(reinterpret_cast<U*>(other.release_marked_ptr()))));
   }
-  template <typename U = T, typename = std::enable_if_t<!std::is_void<U>::value>>
+  template <typename U = T,
+            typename = std::enable_if_t<TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR &&
+                                        !std::is_void<U>::value>>
   tracking_ptr(std::unique_ptr<U>&& other) {
     set_owned(other.release());
   }
@@ -80,13 +84,15 @@ class tracking_ptr final {
   tracking_ptr(unowned_ptr<ArraylessT> other) {
     set_unowned(other.get());
   }
+  tracking_ptr(const tracking_ptr&) = delete;
 
   ~tracking_ptr() { reset_marked(NULL_MARKED_PTR); }
 
-  tracking_ptr<T>& operator=(tracking_ptr<T>&& other) noexcept {
+  tracking_ptr& operator=(tracking_ptr&& other) noexcept {
     reset_marked(other.release_marked_ptr());
     return *this;
   }
+  tracking_ptr& operator=(const tracking_ptr&) = delete;
 
   template <typename U = T, typename ArraylessU = ArraylessT,
             typename = std::enable_if_t<!std::is_array<U>::value && !std::is_void<U>::value>>
