@@ -168,9 +168,7 @@ group("bluetooth") {
 
 group("tcp") {
   testonly = true
-  public_deps = [
-    "//garnet/examples/tcp/tcp_file_sender",
-  ]
+  public_deps = [ "//garnet/examples/tcp/tcp_file_sender" ]
 }
 
 group("rust") {

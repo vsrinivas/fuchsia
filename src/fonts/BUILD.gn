@@ -10,6 +10,20 @@ import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//src/fonts/build/fonts.gni")
 
+group("fonts") {
+  testonly = true
+  public_deps = [
+    ":pkg",
+    # XXX: external dependencies on //src/fonts are intending just to get the
+    # package, but that layout does not follow the convention of directory
+    # targets including all their tests and buildable artifacts. For now these
+    # need to be disabled, and all external consumers only intending to import
+    # fonts support should be moved to using //src/fonts:pkg instead.
+    # ":open-fonts",
+    # ":tests",
+  ]
+}
+
 group("tests") {
   testonly = true
   public_deps = [
@@ -81,7 +95,9 @@ rustc_binary("font_provider") {
   non_rust_deps = [ "//third_party/freetype2" ]
 }
 
-package("fonts") {
+package("pkg") {
+  package_name = "fonts"
+
   deps = [ ":font_provider" ]
 
   binary = "font_provider"
