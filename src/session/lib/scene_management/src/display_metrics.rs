@@ -154,6 +154,10 @@ impl DisplayMetrics {
     const GOOGLE_PIXELBOOK_DIMENSIONS: (u32, u32) = (2400, 1600);
 
     /// The dimensions used to determine whether or not the device dimensions correspond to
+    /// a Google Pixelbook Go with a 2K display. Used to set a default display pixel density.
+    const GOOGLE_PIXELBOOK_GO_2K_DIMENSIONS: (u32, u32) = (1920, 1080);
+
+    /// The dimensions used to determine whether or not the device dimensions correspond to
     /// a 24 inch 4k monitor. Used to set a default display pixel density.
     const MONITOR_24_IN_4K_DIMENSIONS: (u32, u32) = (3840, 2160);
 
@@ -166,6 +170,9 @@ impl DisplayMetrics {
 
     /// The display pixel density used for a Google Pixelbook.
     const GOOGLE_PIXELBOOK_DENSITY: f32 = 9.252;
+
+    /// The display pixel density used for a Google Pixelbook Go with a 2K display.
+    const GOOGLE_PIXELBOOK_GO_2K_DENSITY: f32 = 6.5;
 
     /// The display pixel density used for a 24 inch 4K monitor.
     const MONITOR_24_IN_4K_DENSITY: f32 = 7.323761;
@@ -192,6 +199,9 @@ impl DisplayMetrics {
                 DisplayMetrics::ACER_SWITCH_12_ALPHA_DENSITY
             }
             DisplayMetrics::GOOGLE_PIXELBOOK_DIMENSIONS => DisplayMetrics::GOOGLE_PIXELBOOK_DENSITY,
+            DisplayMetrics::GOOGLE_PIXELBOOK_GO_2K_DIMENSIONS => {
+                DisplayMetrics::GOOGLE_PIXELBOOK_GO_2K_DENSITY
+            }
             DisplayMetrics::MONITOR_24_IN_4K_DIMENSIONS => DisplayMetrics::MONITOR_24_IN_4K_DENSITY,
             DisplayMetrics::MONITOR_24_IN_DIMENSIONS => DisplayMetrics::MONITOR_24_IN_DENSITY,
             _ => DisplayMetrics::DEFAULT_DENSITY,
