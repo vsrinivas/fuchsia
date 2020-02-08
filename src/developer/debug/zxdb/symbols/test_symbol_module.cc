@@ -29,9 +29,6 @@ const char TestSymbolModule::kClassStaticName[] = "my_ns::MyClass::kClassStatic"
 const char TestSymbolModule::kPltFunctionName[] = "__stack_chk_fail";
 const uint64_t TestSymbolModule::kPltFunctionOffset = 0x1570;
 
-TestSymbolModule::TestSymbolModule() = default;
-TestSymbolModule::~TestSymbolModule() = default;
-
 namespace {
 
 inline std::string GetTestFilePath(const std::string& rel_path) {
@@ -92,6 +89,28 @@ Identifier TestSymbolModule::SplitName(std::string_view input) {
     result.AppendComponent(IdentifierComponent(std::move(cur_name)));
   }
   return result;
+}
+
+TestSymbolModule::TestSymbolModule(Kind kind) {
+  // This leaves the binary name empty since these files have both symbols and code together.
+  switch (kind) {
+    case kCheckedIn:
+      sym_name_ = GetCheckedInTestFileName();
+      break;
+    case kBuilt:
+      sym_name_ = GetTestFileName();
+      break;
+  }
+}
+
+TestSymbolModule::TestSymbolModule(const std::string& sym_name, const std::string& binary_name)
+    : sym_name_(sym_name), binary_name_(binary_name) {}
+
+TestSymbolModule::~TestSymbolModule() = default;
+
+Err TestSymbolModule::Init(bool should_index) {
+  symbols_ = fxl::MakeRefCounted<ModuleSymbolsImpl>(sym_name_, binary_name_, std::string());
+  return symbols_->Load(should_index);
 }
 
 }  // namespace zxdb

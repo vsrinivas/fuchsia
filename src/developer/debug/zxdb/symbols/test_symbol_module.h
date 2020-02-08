@@ -34,6 +34,12 @@ namespace zxdb {
 // writing symbol testing.
 class TestSymbolModule {
  public:
+  // Which of the symbol files to load int he constructor.
+  enum Kind {
+    kCheckedIn,  // The stable checked-in binary. See GetCheckedInTestFileName().
+    kBuilt       // The one built in the current build. See GetTestFileName().
+  };
+
   // These constants identify locations in the symbol test files.
   static const char kMyNamespaceName[];
   static const char kMyFunctionName[];
@@ -51,9 +57,6 @@ class TestSymbolModule {
   static const char kClassStaticName[];
   static const char kPltFunctionName[];
   static const uint64_t kPltFunctionOffset;
-
-  TestSymbolModule();
-  ~TestSymbolModule();
 
   // Returns the relative directory where the test program can find the checked-in test files. It
   // will have a trailing slash.
@@ -77,7 +80,22 @@ class TestSymbolModule {
   // just splits on "::" which handles most cases but not elaborate templates.
   static Identifier SplitName(std::string_view input);
 
+  // You must call Init() after the constructor to actually load the file.
+  TestSymbolModule(Kind);
+  TestSymbolModule(const std::string& sym_name, const std::string& binary_name);
+
+  ~TestSymbolModule();
+
+  Err Init(bool should_index = true);
+
+  ModuleSymbolsImpl* symbols() const { return symbols_.get(); }
+
  private:
+  std::string sym_name_;
+  std::string binary_name_;
+
+  fxl::RefPtr<ModuleSymbolsImpl> symbols_;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(TestSymbolModule);
 };
 
