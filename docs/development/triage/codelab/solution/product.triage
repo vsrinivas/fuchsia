@@ -1,0 +1,7 @@
+{
+    "metrics": {
+        "max_widgets": {"Eval": "4"}
+    },
+    "actions": {},
+    "tests": {}
+}

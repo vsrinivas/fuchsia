@@ -1,0 +1,305 @@
+[
+    {
+        "path": "/hub/c/netstack.cmx/11482/out/objects/sockets",
+        "contents": {
+            "Socket Info": {
+                "2286843951": {
+                    "BindAddress": "",
+                    "BindNICID": "0",
+                    "LocalAddress": "fe80::1234:1234:fe06:2461:46379",
+                    "NetworkProtocol": "IPv6",
+                    "RegisterNICID": "0",
+                    "RemoteAddress": "fe80::1234:1234:fe05:4e08:8083",
+                    "State": "ESTABLISHED",
+                    "TransportProtocol": "TCP",
+                    "Stats": {
+                        "FailedConnectionAttempts": 0,
+                        "SegmentsReceived": 2603,
+                        "SegmentsSent": 2604,
+                        "ReadErrors": {
+                            "InvalidEndpointState": 1,
+                            "ReadClosed": 0
+                        },
+                        "ReceiveErrors": {
+                            "ChecksumErrors": 0,
+                            "ClosedReceiver": 0,
+                            "ListenOverflowAckDrop": 0,
+                            "ListenOverflowSynDrop": 0,
+                            "MalformedPacketsReceived": 0,
+                            "ReceiveBufferOverflow": 0,
+                            "SegmentQueueDropped": 0,
+                            "ZeroRcvWindowState": 0
+                        },
+                        "SendErrors": {
+                            "FastRetransmit": 0,
+                            "NoLinkAddr": 0,
+                            "NoRoute": 0,
+                            "Retransmits": 0,
+                            "SegmentSendToNetworkFailed": 0,
+                            "SendToNetworkFailed": 0,
+                            "SynSendToNetworkFailed": 0,
+                            "Timeouts": 0
+                        },
+                        "WriteErrors": {
+                            "InvalidArgs": 0,
+                            "InvalidEndpointState": 0,
+                            "WriteClosed": 0
+                        }
+                    }
+                },
+                "2288912651": {
+                    "BindAddress": "",
+                    "BindNICID": "0",
+                    "LocalAddress": "fe80::1234:1234:fe06:2461:46668",
+                    "NetworkProtocol": "IPv6",
+                    "RegisterNICID": "0",
+                    "RemoteAddress": "fe80::1234:1234:fe05:4e08:8083",
+                    "State": "ESTABLISHED",
+                    "TransportProtocol": "TCP",
+                    "Stats": {
+                        "FailedConnectionAttempts": 0,
+                        "SegmentsReceived": 3,
+                        "SegmentsSent": 4,
+                        "ReadErrors": {
+                            "InvalidEndpointState": 1,
+                            "ReadClosed": 0
+                        },
+                        "ReceiveErrors": {
+                            "ChecksumErrors": 0,
+                            "ClosedReceiver": 0,
+                            "ListenOverflowAckDrop": 0,
+                            "ListenOverflowSynDrop": 0,
+                            "MalformedPacketsReceived": 0,
+                            "ReceiveBufferOverflow": 0,
+                            "SegmentQueueDropped": 0,
+                            "ZeroRcvWindowState": 0
+                        },
+                        "SendErrors": {
+                            "FastRetransmit": 0,
+                            "NoLinkAddr": 0,
+                            "NoRoute": 0,
+                            "Retransmits": 0,
+                            "SegmentSendToNetworkFailed": 0,
+                            "SendToNetworkFailed": 0,
+                            "SynSendToNetworkFailed": 0,
+                            "Timeouts": 0
+                        },
+                        "WriteErrors": {
+                            "InvalidArgs": 0,
+                            "InvalidEndpointState": 0,
+                            "WriteClosed": 0
+                        }
+                    }
+                },
+                "2293122243": {
+                    "BindAddress": "",
+                    "BindNICID": "0",
+                    "LocalAddress": ":1234",
+                    "NetworkProtocol": "IPv4",
+                    "RegisterNICID": "0",
+                    "RemoteAddress": ":0",
+                    "State": "BOUND",
+                    "TransportProtocol": "UDP",
+                    "Stats": {
+                        "PacketsReceived": 0,
+                        "PacketsSent": 10,
+                        "ReadErrors": {
+                            "InvalidEndpointState": 0,
+                            "ReadClosed": 0
+                        },
+                        "ReceiveErrors": {
+                            "ClosedReceiver": 0,
+                            "MalformedPacketsReceived": 0,
+                            "ReceiveBufferOverflow": 0
+                        },
+                        "SendErrors": {
+                            "NoLinkAddr": 0,
+                            "NoRoute": 0,
+                            "SendToNetworkFailed": 0
+                        },
+                        "WriteErrors": {
+                            "InvalidArgs": 0,
+                            "InvalidEndpointState": 0,
+                            "WriteClosed": 0
+                        }
+                    }
+                },
+                "2293122619": {
+                    "BindAddress": "",
+                    "BindNICID": "0",
+                    "LocalAddress": ":22",
+                    "NetworkProtocol": "IPv6",
+                    "RegisterNICID": "0",
+                    "RemoteAddress": ":0",
+                    "State": "LISTEN",
+                    "TransportProtocol": "TCP",
+                    "Stats": {
+                        "FailedConnectionAttempts": 0,
+                        "SegmentsReceived": 2,
+                        "SegmentsSent": 0,
+                        "ReadErrors": {
+                            "InvalidEndpointState": 2,
+                            "ReadClosed": 0
+                        },
+                        "ReceiveErrors": {
+                            "ChecksumErrors": 0,
+                            "ClosedReceiver": 0,
+                            "ListenOverflowAckDrop": 0,
+                            "ListenOverflowSynDrop": 0,
+                            "MalformedPacketsReceived": 0,
+                            "ReceiveBufferOverflow": 0,
+                            "SegmentQueueDropped": 0,
+                            "ZeroRcvWindowState": 0
+                        },
+                        "SendErrors": {
+                            "FastRetransmit": 0,
+                            "NoLinkAddr": 0,
+                            "NoRoute": 0,
+                            "Retransmits": 0,
+                            "SegmentSendToNetworkFailed": 0,
+                            "SendToNetworkFailed": 0,
+                            "SynSendToNetworkFailed": 0,
+                            "Timeouts": 0
+                        },
+                        "WriteErrors": {
+                            "InvalidArgs": 0,
+                            "InvalidEndpointState": 0,
+                            "WriteClosed": 0
+                        }
+                    }
+                },
+                "2293130415": {
+                    "BindAddress": "127.0.0.1",
+                    "BindNICID": "0",
+                    "LocalAddress": "127.0.0.1:1234",
+                    "NetworkProtocol": "IPv4",
+                    "RegisterNICID": "0",
+                    "RemoteAddress": ":0",
+                    "State": "LISTEN",
+                    "TransportProtocol": "TCP",
+                    "Stats": {
+                        "FailedConnectionAttempts": 0,
+                        "SegmentsReceived": 0,
+                        "SegmentsSent": 0,
+                        "ReadErrors": {
+                            "InvalidEndpointState": 1,
+                            "ReadClosed": 0
+                        },
+                        "ReceiveErrors": {
+                            "ChecksumErrors": 0,
+                            "ClosedReceiver": 0,
+                            "ListenOverflowAckDrop": 0,
+                            "ListenOverflowSynDrop": 0,
+                            "MalformedPacketsReceived": 0,
+                            "ReceiveBufferOverflow": 0,
+                            "SegmentQueueDropped": 0,
+                            "ZeroRcvWindowState": 0
+                        },
+                        "SendErrors": {
+                            "FastRetransmit": 0,
+                            "NoLinkAddr": 0,
+                            "NoRoute": 0,
+                            "Retransmits": 0,
+                            "SegmentSendToNetworkFailed": 0,
+                            "SendToNetworkFailed": 0,
+                            "SynSendToNetworkFailed": 0,
+                            "Timeouts": 0
+                        },
+                        "WriteErrors": {
+                            "InvalidArgs": 0,
+                            "InvalidEndpointState": 0,
+                            "WriteClosed": 0
+                        }
+                    }
+                },
+                "2294173991": {
+                    "BindAddress": "",
+                    "BindNICID": "0",
+                    "LocalAddress": "fe80::1234:1234:fe06:2461:22",
+                    "NetworkProtocol": "IPv6",
+                    "RegisterNICID": "0",
+                    "RemoteAddress": "fe80::1234:1234:fe05:4e08:37874",
+                    "State": "ESTABLISHED",
+                    "TransportProtocol": "TCP",
+                    "Stats": {
+                        "FailedConnectionAttempts": 0,
+                        "SegmentsReceived": 184628,
+                        "SegmentsSent": 194667,
+                        "ReadErrors": {
+                            "InvalidEndpointState": 0,
+                            "ReadClosed": 0
+                        },
+                        "ReceiveErrors": {
+                            "ChecksumErrors": 0,
+                            "ClosedReceiver": 0,
+                            "ListenOverflowAckDrop": 0,
+                            "ListenOverflowSynDrop": 0,
+                            "MalformedPacketsReceived": 0,
+                            "ReceiveBufferOverflow": 0,
+                            "SegmentQueueDropped": 0,
+                            "ZeroRcvWindowState": 0
+                        },
+                        "SendErrors": {
+                            "FastRetransmit": 0,
+                            "NoLinkAddr": 0,
+                            "NoRoute": 0,
+                            "Retransmits": 0,
+                            "SegmentSendToNetworkFailed": 0,
+                            "SendToNetworkFailed": 0,
+                            "SynSendToNetworkFailed": 0,
+                            "Timeouts": 0
+                        },
+                        "WriteErrors": {
+                            "InvalidArgs": 0,
+                            "InvalidEndpointState": 0,
+                            "WriteClosed": 0
+                        }
+                    }
+                }
+            }
+        }
+    },
+    {
+        "path": "/hub/c/widget_maker.cmx/653521/out/inspect/root.inspect",
+        "contents": {
+            "root": {
+                "total_widgets": 6
+            }
+        }
+    },
+    {
+        "path": "/hub/c/archivist.cmx/14613/out/global_data/storage_stats.inspect",
+        "contents": {
+            "root": {
+                "global_tmp": {
+                    "size": 73325,
+                    "r": {
+                        "size": 73325,
+                        "sys": {
+                            "size": 73325,
+                            "fuchsia.com:amber:0#meta:amber.cmx": {
+                                "size": 73325,
+                                "store": {
+                                    "size": 73325,
+                                    "repo689278895": {
+                                        "size": 73325,
+                                        "config.json": {
+                                            "size": 619
+                                        },
+                                        "tuf.json": {
+                                            "size": 72706
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "stats": {
+                    "total_bytes": 8481443840,
+                    "used_bytes": 8479544812
+                }
+            }
+        }
+    }
+]

@@ -28,6 +28,9 @@ toc:
 - title: "Inspect components"
   section:
   - include: /docs/development/inspect/_toc.yaml
+- title: "Analyze problems with Triage"
+  section:
+  - include: /docs/development/triage/_toc.yaml
 - title: "Manage memory"
   section:
   - include: /docs/development/memory/_toc.yaml

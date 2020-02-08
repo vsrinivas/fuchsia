@@ -1,0 +1,14 @@
+{
+    "metrics": {
+        "always_true": {
+            "Eval": "0 == 0"
+        }
+    },
+    "actions": {
+        "always_triggered": {
+            "trigger": "always_true",
+            "print": "Triage is running"
+        }
+    },
+    "tests": {}
+}
