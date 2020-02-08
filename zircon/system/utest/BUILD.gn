@@ -43,7 +43,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/bootfs:bootfs-parser-fuzzer",
       "$zx/system/ulib/bootfs:bootfs-test",
       "$zx/system/ulib/c/test",
-      "$zx/system/ulib/ddk:ddk-unittest",
+      "$zx/system/ulib/ddk/test",
       "$zx/system/ulib/elf-search/test",
       "$zx/system/ulib/elfload/test",
       "$zx/system/ulib/fdio/test",
