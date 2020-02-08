@@ -9,6 +9,10 @@
   "id": "8890373976687374912",
   "parts": [
     {
+      "meta": "docs/test_docs.json",
+      "type": "documentation"
+    },
+    {
       "meta": "pkg/svc/meta.json",
       "type": "cc_prebuilt_library"
     },

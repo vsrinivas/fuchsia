@@ -1,0 +1,8 @@
+{
+  "docs": [
+    "root_level_doc.md",
+    "docs/first_level_doc.md"
+  ],
+  "name": "test_docs",
+  "type": "documentation"
+}

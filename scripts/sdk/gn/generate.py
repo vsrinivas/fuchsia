@@ -93,6 +93,9 @@ class GNBuilder(Frontend):
 
     # Handlers for SDK atoms
 
+    def install_documentation_atom(self, atom):
+        self.copy_files(atom['docs'])
+
     def install_cc_prebuilt_library_atom(self, atom):
         name = atom['name']
         base = self.dest('pkg', name)
