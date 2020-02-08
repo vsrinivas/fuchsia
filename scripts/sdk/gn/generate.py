@@ -172,6 +172,13 @@ class GNBuilder(Frontend):
         self.write_file(os.path.join(base, 'BUILD.gn'), 'fidl', data)
         self.fidl_targets.append(name)
 
+    def install_host_tool_atom(self, atom):
+        if 'files' in atom:
+            self.copy_files(atom['files'], atom['root'], 'tools')
+        if 'target_files' in atom:
+            for files in atom['target_files'].values():
+                self.copy_files(files, atom['root'], 'tools')
+
 
 class TestData(object):
     """Class representing test data to be added to the run_py mako template"""

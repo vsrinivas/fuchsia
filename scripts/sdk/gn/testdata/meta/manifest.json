@@ -23,6 +23,14 @@
     {
       "meta": "fidl/fuchsia.process/meta.json",
       "type": "fidl_library"
+    },
+    {
+      "meta": "tools/fidlc-meta.json",
+      "type": "host_tool"
+    },
+    {
+      "meta": "tools/gen_snapshot-meta.json",
+      "type": "host_tool"
     }
   ],
   "schema_version": "1"

@@ -1,0 +1,15 @@
+{
+  "name": "gen_snapshot",
+  "root": "tools",
+  "target_files": {
+    "arm64": [
+      "tools/gen_snapshot.arm64",
+      "tools/gen_snapshot_product.arm64"
+    ],
+    "x64": [
+      "tools/gen_snapshot.x64",
+      "tools/gen_snapshot_product.x64"
+    ]
+  },
+  "type": "host_tool"
+}
