@@ -126,6 +126,7 @@ def main():
             print('Nope, there are still references in the ZN build:')
             for ref in sorted(same_type_refs | other_type_refs):
                 print('  ' + ref)
+            return 2
         else:
             print('Yes you can!')
 
