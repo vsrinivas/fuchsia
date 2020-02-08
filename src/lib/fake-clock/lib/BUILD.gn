@@ -5,7 +5,8 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-static_library("lib") {
+shared_library("lib") {
+  output_name = "fake_clock"
   testonly = true
   sources = [ "fake_clock.cc" ]
 

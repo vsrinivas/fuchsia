@@ -1,0 +1,41 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/go/toolchain.gni")
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+go_library("fake_clock") {
+  testonly = true
+  name = "fake_clock"
+}
+
+go_test("fake_clock_test") {
+  gopackages = [ "fake_clock" ]
+  deps = [
+    ":fake_clock",
+    "//src/lib/component/go/src/app",
+    "//src/lib/fake-clock/fidl($go_toolchain)",
+  ]
+  non_go_deps = [ "//src/lib/fake-clock/lib" ]
+}
+
+test_package("fake_clock_gotests") {
+  deps = [ ":fake_clock_test" ]
+
+  tests = [
+    {
+      name = "fake_clock_test"
+      environments = [ qemu_env ]
+    },
+  ]
+}
+
+group("examples") {
+  testonly = true
+  deps = [ ":fake_clock_gotests" ]
+}
