@@ -676,8 +676,12 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
 
   active_thread_ = next_thread;
 
-  // Update the expected runtime of the current thread and the per-CPU totals.
-  if (!thread_is_idle(current_thread) && (timeslice_expired || current_thread != next_thread)) {
+  // Update the expected runtime of the current thread and the per-CPU total.
+  // Only update the thread and aggregate values if the current thread is still
+  // associated with this CPU.
+  const bool current_is_active = current_state->active() && current_thread->curr_cpu == current_cpu;
+  if (!thread_is_idle(current_thread) && current_is_active &&
+      (timeslice_expired || current_thread != next_thread)) {
     LocalTraceDuration<KTRACE_DETAILED> update_ema_trace{
         "update_expected_runtime: rt, drt"_stringref};
 
@@ -693,11 +697,8 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
         std::max<SchedDuration>(scaled_ns, -current_state->expected_runtime_ns_);
     current_state->expected_runtime_ns_ += clamped_ns;
 
-    // Update the CPU totals if the current thread is still associated with this
-    // CPU.
-    if (current_state->active() && current_thread->curr_cpu == current_cpu) {
-      total_expected_runtime_ns_ += clamped_ns;
-    }
+    // Adjust the aggregate value by the same amount.
+    total_expected_runtime_ns_ += clamped_ns;
 
     update_ema_trace.End(Round<uint64_t>(total_expected_runtime_ns_),
                          Round<uint64_t>(total_deadline_utilization_));
@@ -1027,7 +1028,7 @@ void Scheduler::Insert(SchedTime now, thread_t* thread) {
     thread->curr_cpu = this_cpu();
 
     total_expected_runtime_ns_ += state->expected_runtime_ns_;
-    DEBUG_ASSERT(total_expected_runtime_ns_ > SchedDuration{0});
+    DEBUG_ASSERT(total_expected_runtime_ns_ >= SchedDuration{0});
 
     if (IsFairThread(thread)) {
       runnable_fair_task_count_++;
@@ -1062,8 +1063,8 @@ void Scheduler::Remove(thread_t* thread) {
   if (state->OnRemove()) {
     thread->curr_cpu = INVALID_CPU;
 
-    DEBUG_ASSERT(total_expected_runtime_ns_ > SchedDuration{0});
     total_expected_runtime_ns_ -= state->expected_runtime_ns_;
+    DEBUG_ASSERT(total_expected_runtime_ns_ >= SchedDuration{0});
 
     if (IsFairThread(thread)) {
       DEBUG_ASSERT(runnable_fair_task_count_ > 0);
