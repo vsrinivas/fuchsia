@@ -84,11 +84,21 @@ async fn scoped_breakpoints_test() -> Result<(), Error> {
     assert_eq!(stop_trigger_echo.message, "Stop trigger");
     stop_trigger_echo.resume();
 
-    // Verify that the `echo_reporter` sees `BeforeStartInstance` but not `RouteCapability`
-    // events because the target of the `RouteCapability` event is outside its realm.
+    // Verify that the `echo_reporter` sees `BeforeStartInstance` and
+    // a `RouteCapability` event to itself (routing the ELF runner
+    // capability at startup), but not other `RouteCapability` events
+    // because the target of other `RouteCapability` events are outside
+    // its realm.
     let events_echo = echo_rx.next().await.unwrap();
-    assert_eq!(events_echo.message, "Events: [DrainedEvent { event_type: BeforeStartInstance, target_moniker: \"./echo_server:0\" }]");
-
+    assert_eq!(
+        events_echo.message,
+        concat!(
+            "Events: [",
+            "DrainedEvent { event_type: RouteCapability, target_moniker: \"./echo_server:0\" }, ",
+            "DrainedEvent { event_type: BeforeStartInstance, target_moniker: \"./echo_server:0\" }",
+            "]"
+        )
+    );
     events_echo.resume();
 
     Ok(())

@@ -4,6 +4,9 @@
     "program": {
         "binary": "bin/echo_server",
     },
+    "use": [
+        { "runner": "elf" }
+    ],
     "expose": [
         {
             "protocol": "/svc/fidl.examples.routing.echo.Echo",

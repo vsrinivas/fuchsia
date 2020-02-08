@@ -5,6 +5,7 @@
         "binary": "bin/echo_test_client",
     },
     "use": [
+        { "runner": "elf" },
         {
             "protocol": "/svc/fidl.examples.routing.echo.Echo",
         },

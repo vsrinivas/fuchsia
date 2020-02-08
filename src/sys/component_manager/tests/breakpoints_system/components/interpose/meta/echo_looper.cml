@@ -5,6 +5,7 @@
         "binary": "bin/interpose_echo_looper",
     },
     "use": [
+        { "runner": "elf" },
         {
             "protocol": "/svc/fidl.examples.routing.echo.Echo",
         },

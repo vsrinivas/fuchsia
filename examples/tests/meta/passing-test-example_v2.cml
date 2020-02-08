@@ -2,6 +2,9 @@
     "program": {
         "binary": "bin/passing-test-example",
     },
+    "use": [
+        { "runner": "elf" }
+    ],
     "expose": [
         {
             "protocol": "/svc/fuchsia.test.Suite",

@@ -3,6 +3,7 @@
         "binary": "bin/scoped_echo_client",
     },
     "use": [
+        { "runner": "elf" },
         {
             "protocol": "/svc/fidl.examples.routing.echo.Echo",
         },

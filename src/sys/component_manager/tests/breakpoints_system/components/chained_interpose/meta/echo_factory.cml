@@ -2,6 +2,9 @@
     "program": {
         "binary": "bin/chained_interpose_echo_factory",
     },
+    "use": [
+        { "runner": "elf" }
+    ],
     "expose": [
         {
             "protocol": "/svc/fuchsia.test.echofactory.EchoFactory",

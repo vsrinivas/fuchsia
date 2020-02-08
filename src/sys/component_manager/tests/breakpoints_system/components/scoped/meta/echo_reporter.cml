@@ -3,6 +3,7 @@
         "binary": "bin/scoped_echo_reporter",
     },
     "use": [
+      { "runner": "elf" },
       {
         "protocol": [ "/svc/fuchsia.test.breakpoints.BreakpointSystem" ],
         "from": "framework"
@@ -11,6 +12,16 @@
           "protocol": "/svc/fidl.examples.routing.echo.Echo",
           "from": "framework",
       },
+    ],
+    "offer": [
+        // Offer the ELF runner to children.
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#echo_server",
+            ]
+        },
     ],
     "expose": [
         {

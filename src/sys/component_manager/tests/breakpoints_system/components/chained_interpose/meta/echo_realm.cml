@@ -2,6 +2,14 @@
     // Route EchoFactory service from server to client.
     "offer": [
         {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+              "#echo_factory",
+              "#echo_client"
+            ]
+        },
+        {
             "protocol": "/svc/fuchsia.test.echofactory.EchoFactory",
             "from": "#echo_factory",
             "to": [ "#echo_client" ]

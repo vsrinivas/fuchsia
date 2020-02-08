@@ -3,4 +3,7 @@
         "binary": "bin/echo_args",
         "args": [ "Hippos", "rule!" ],
     },
+    "use": [
+        { "runner": "elf" }
+    ],
 }

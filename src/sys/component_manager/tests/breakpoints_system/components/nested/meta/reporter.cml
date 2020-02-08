@@ -4,6 +4,7 @@
         "binary": "bin/nested_reporter"
     },
     "use": [
+      { "runner": "elf" },
       {
           "protocol": [
               "/svc/fuchsia.test.breakpoints.BreakpointSystem",
@@ -29,4 +30,16 @@
             "startup": "eager",
         },
     ],
+    "offer": [
+        // Offer the ELF runner to children.
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#child_a",
+                "#child_b",
+                "#child_c",
+            ]
+        },
+    ]
 }
