@@ -17,7 +17,7 @@ use {
 };
 
 /// The buffer size for the stream that InputEvents are sent over.
-pub const INPUT_EVENT_BUFFER_SIZE: usize = 15;
+pub const INPUT_EVENT_BUFFER_SIZE: usize = 100;
 
 /// The path to the input-report directory.
 static INPUT_REPORT_PATH: &str = "/dev/class/input-report";
@@ -201,6 +201,30 @@ pub async fn all_devices(
     Ok(devices)
 }
 
+/// Returns a new [`InputDeviceBinding`] of the given device type.
+///
+/// # Parameters
+/// - `device_type`: The type of the input device.
+/// - `device_proxy`: The device proxy which is used to get input reports.
+/// - `input_event_sender`: The channel to send generated InputEvents to.
+pub async fn get_device_binding(
+    device_type: InputDeviceType,
+    device_proxy: fidl_fuchsia_input_report::InputDeviceProxy,
+    input_event_sender: Sender<InputEvent>,
+) -> Result<Box<dyn InputDeviceBinding>, Error> {
+    match device_type {
+        InputDeviceType::Mouse => {
+            Ok(Box::new(mouse::MouseBinding::new2(device_proxy, input_event_sender).await?))
+        }
+        InputDeviceType::Touch => {
+            Ok(Box::new(touch::TouchBinding::new2(device_proxy, input_event_sender).await?))
+        }
+        InputDeviceType::Keyboard => {
+            Ok(Box::new(keyboard::KeyboardBinding::new2(device_proxy, input_event_sender).await?))
+        }
+    }
+}
+
 /// Returns a proxy to the InputDevice in `entry` if it exists.
 ///
 /// # Parameters
@@ -208,7 +232,7 @@ pub async fn all_devices(
 ///
 /// # Errors
 /// If there is an error connecting to the InputDevice in `entry`.
-fn get_device_from_dir_entry_path(
+pub fn get_device_from_dir_entry_path(
     entry_path: &PathBuf,
 ) -> Result<fidl_fuchsia_input_report::InputDeviceProxy, Error> {
     let input_device_path = entry_path.to_str();
@@ -225,7 +249,7 @@ fn get_device_from_dir_entry_path(
 mod tests {
     use {
         super::*, fidl::endpoints::create_proxy_and_stream, fuchsia_async as fasync,
-        futures::prelude::*,
+        futures::TryStreamExt,
     };
 
     /// Spawns a local `fidl_fuchsia_input_report::InputDevice` server, and returns a proxy to the

@@ -26,6 +26,15 @@ impl FakeInputDeviceBinding {
             futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
         FakeInputDeviceBinding { event_sender, event_receiver }
     }
+
+    pub fn new2(input_event_sender: Sender<input_device::InputEvent>) -> Self {
+        let (_dummy_event_sender, dummy_event_receiver) =
+            futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
+        FakeInputDeviceBinding {
+            event_sender: input_event_sender,
+            event_receiver: dummy_event_receiver,
+        }
+    }
 }
 
 #[async_trait]

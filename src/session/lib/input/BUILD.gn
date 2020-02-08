@@ -19,6 +19,7 @@ rustc_library("input") {
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//src/lib/storage/fuchsia-vfs-watcher",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/ui/fuchsia-scenic",
     "//src/lib/ui/input-synthesis",
