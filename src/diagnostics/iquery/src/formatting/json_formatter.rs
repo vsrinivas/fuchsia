@@ -48,7 +48,9 @@ impl Formatter for JsonFormatter {
                     hierarchy: result.hierarchy.unwrap(),
                     file_path: match self.path_format {
                         PathFormat::Absolute => result.location.absolute_path_to_string()?,
-                        PathFormat::Undefined | PathFormat::Full => result.location.to_string(),
+                        PathFormat::Undefined | PathFormat::Full | PathFormat::Display => {
+                            result.location.to_string()
+                        }
                     },
                     fields: result.location.parts,
                 })

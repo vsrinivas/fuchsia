@@ -6,7 +6,7 @@
 
 use {
     anyhow::{bail, format_err, Error},
-    difference::assert_diff,
+    difference::Changeset,
     fdio::{SpawnAction, SpawnOptions},
     fidl_fuchsia_sys::ComponentControllerEvent,
     fuchsia_async as fasync,
@@ -99,14 +99,19 @@ impl GoldenTest {
         let re = Regex::new("/\\d+/").unwrap();
         let reader_lines = reader.lines().map(|r| r.unwrap()).collect::<Vec<String>>();
         let max = cmp::max(self.golden.lines.len(), reader_lines.len());
-        let mut output_iter = reader_lines.into_iter();
-        let mut golden_iter = self.golden.lines.into_iter();
+        let mut output_iter = reader_lines.iter().map(|x| x.as_ref());
+        let mut golden_iter = self.golden.lines.iter().map(|x| x.as_ref());
         for _ in 0..max {
-            let golden_line = golden_iter.next().unwrap_or("".to_string());
-            let output_line = output_iter.next().unwrap_or("".to_string());
+            let golden_line = golden_iter.next().unwrap_or("");
+            let output_line = output_iter.next().unwrap_or("");
             // Replace paths containing ids with /*/ to remove process or realm ids.
             let output = re.replace_all(&output_line, "/*/");
-            assert_diff!(&golden_line, &output, "", 0);
+            let cs = Changeset::new(&golden_line, &output, "");
+            if cs.distance != 0 {
+                println!("Lines are different:\n  Golden: {}\n  Actual: {}", golden_line, output);
+                println!("Full output:\nBEGIN -------\n{}\n-------- END", reader_lines.join("\n"));
+                assert_eq!(cs.distance, 0);
+            }
         }
         Ok(())
     }
@@ -169,7 +174,7 @@ macro_rules! tests {
         $(
             #[fasync::run_singlethreaded(test)]
             async fn $test_name() -> Result<(), Error> {
-                let test = GoldenTest::new(stringify!($test_name))?;
+                let test = GoldenTest::new(stringify!($test_name)).expect("creating golden test");
                 test.execute().await
             }
         )*
@@ -178,8 +183,10 @@ macro_rules! tests {
 
 tests![
     cat_recursive_absolute,
+    cat_recursive_display,
     cat_recursive_full,
     cat_recursive_json_absolute,
+    cat_recursive_json_display,
     cat_recursive_json_full,
     cat_recursive_json,
     cat_recursive,
@@ -198,8 +205,10 @@ tests![
     report_json,
     report,
     vmo_cat_recursive_absolute,
+    vmo_cat_recursive_display,
     vmo_cat_recursive_full,
     vmo_cat_recursive_json_absolute,
+    vmo_cat_recursive_json_display,
     vmo_cat_recursive_json_full,
     vmo_cat_recursive_json,
     vmo_cat_recursive,
@@ -211,8 +220,10 @@ tests![
     vmo_ls_json,
     vmo_ls,
     tree_cat_recursive_absolute,
+    tree_cat_recursive_display,
     tree_cat_recursive_full,
     tree_cat_recursive_json_absolute,
+    tree_cat_recursive_json_display,
     tree_cat_recursive_json_full,
     tree_cat_recursive_json,
     tree_cat_recursive,

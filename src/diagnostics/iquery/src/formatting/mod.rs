@@ -29,10 +29,12 @@ pub fn format_parts(
 ) -> String {
     let path = match path_format {
         PathFormat::Absolute => location.absolute_path_to_string().unwrap(),
-        PathFormat::Undefined | PathFormat::Full => location.to_string(),
+        PathFormat::Undefined | PathFormat::Full | PathFormat::Display => location.to_string(),
     };
     if parts.is_empty() || (parts[0] == "root" && parts.len() == 1) {
         path
+    } else if *path_format == PathFormat::Display && parts.len() > 1 {
+        parts[parts.len() - 1].clone()
     } else if parts[0] == "root" {
         format!("{}#{}", path, parts[1..].join("/"))
     } else {
@@ -104,4 +106,81 @@ fn get_children_locations(
         result.extend(get_children_locations(child, location, path_format, &path))
     }
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::location::InspectType;
+    use std::path::PathBuf;
+
+    /// Test for full or display output only.
+    ///
+    /// Absolute is not tested since it requires FS working directories to exist.
+    /// Unknown is not tested since format_parts is not used for that purpose.
+    struct TestCase {
+        path: PathBuf,
+        parts: &'static [&'static str],
+
+        expected_full: &'static str,
+        expected_display: &'static str,
+    }
+
+    fn do_test(case: TestCase) {
+        let location =
+            InspectLocation { inspect_type: InspectType::Vmo, path: case.path, parts: vec![] };
+
+        let parts: Vec<String> = case.parts.into_iter().map(|x| x.to_string()).collect();
+        let actual = (
+            format_parts(&location, &PathFormat::Full, parts.as_slice()),
+            format_parts(&location, &PathFormat::Display, parts.as_slice()),
+        );
+
+        assert_eq!((case.expected_full.to_string(), case.expected_display.to_string(),), actual);
+    }
+
+    #[test]
+    fn test_path_formatting() {
+        do_test(TestCase {
+            path: PathBuf::from("123/root.inspect"),
+            parts: &["root"],
+            expected_full: "123/root.inspect",
+            expected_display: "123/root.inspect",
+        });
+
+        do_test(TestCase {
+            path: PathBuf::from("root.inspect"),
+            parts: &["root", "test"],
+            expected_full: "root.inspect#test",
+            expected_display: "test",
+        });
+
+        do_test(TestCase {
+            path: PathBuf::from("out/fuchsia.inspect.deprecated.Inspect"),
+            parts: &["Name"],
+            expected_full: "out#Name",
+            expected_display: "out#Name",
+        });
+
+        do_test(TestCase {
+            path: PathBuf::from("out/fuchsia.inspect.deprecated.Inspect"),
+            parts: &["Name", "val"],
+            expected_full: "out#Name/val",
+            expected_display: "val",
+        });
+
+        do_test(TestCase {
+            path: PathBuf::from("out/fuchsia.inspect.Tree"),
+            parts: &["root"],
+            expected_full: "out",
+            expected_display: "out",
+        });
+
+        do_test(TestCase {
+            path: PathBuf::from("out/fuchsia.inspect.Tree"),
+            parts: &["root", "val"],
+            expected_full: "out#val",
+            expected_display: "val",
+        });
+    }
 }

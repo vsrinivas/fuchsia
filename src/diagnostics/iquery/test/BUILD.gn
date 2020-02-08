@@ -61,12 +61,20 @@ test_package("iquery_golden_tests") {
       dest = "iquery_goldens/cat-recursive-absolute.txt"
     },
     {
+      path = rebase_path("goldens/cat-recursive-display.txt")
+      dest = "iquery_goldens/cat-recursive-display.txt"
+    },
+    {
       path = rebase_path("goldens/cat-recursive-full.txt")
       dest = "iquery_goldens/cat-recursive-full.txt"
     },
     {
       path = rebase_path("goldens/cat-recursive-json-absolute.txt")
       dest = "iquery_goldens/cat-recursive-json-absolute.txt"
+    },
+    {
+      path = rebase_path("goldens/cat-recursive-json-display.txt")
+      dest = "iquery_goldens/cat-recursive-json-display.txt"
     },
     {
       path = rebase_path("goldens/cat-recursive-json-full.txt")
@@ -157,6 +165,10 @@ test_package("iquery_golden_tests") {
       dest = "iquery_goldens/vmo-cat-recursive.txt"
     },
     {
+      path = rebase_path("goldens/vmo-cat-recursive-display.txt")
+      dest = "iquery_goldens/vmo-cat-recursive-display.txt"
+    },
+    {
       path = rebase_path("goldens/vmo-cat-recursive-full.txt")
       dest = "iquery_goldens/vmo-cat-recursive-full.txt"
     },
@@ -175,6 +187,10 @@ test_package("iquery_golden_tests") {
     {
       path = rebase_path("goldens/vmo-cat-recursive-json-absolute.txt")
       dest = "iquery_goldens/vmo-cat-recursive-json-absolute.txt"
+    },
+    {
+      path = rebase_path("goldens/vmo-cat-recursive-json-display.txt")
+      dest = "iquery_goldens/vmo-cat-recursive-json-display.txt"
     },
     {
       path = rebase_path("goldens/vmo-ls-json.txt")
@@ -209,6 +225,10 @@ test_package("iquery_golden_tests") {
       dest = "iquery_goldens/tree-cat-recursive.txt"
     },
     {
+      path = rebase_path("goldens/tree-cat-recursive-display.txt")
+      dest = "iquery_goldens/tree-cat-recursive-display.txt"
+    },
+    {
       path = rebase_path("goldens/tree-cat-recursive-full.txt")
       dest = "iquery_goldens/tree-cat-recursive-full.txt"
     },
@@ -227,6 +247,10 @@ test_package("iquery_golden_tests") {
     {
       path = rebase_path("goldens/tree-cat-recursive-json-absolute.txt")
       dest = "iquery_goldens/tree-cat-recursive-json-absolute.txt"
+    },
+    {
+      path = rebase_path("goldens/tree-cat-recursive-json-display.txt")
+      dest = "iquery_goldens/tree-cat-recursive-json-display.txt"
     },
     {
       path = rebase_path("goldens/tree-ls-json.txt")

@@ -49,6 +49,7 @@ pub enum PathFormat {
     Undefined,
     Absolute,
     Full,
+    Display,
 }
 
 impl FromStr for Format {
@@ -67,7 +68,9 @@ pub fn usage() -> String {
     let arg0 = env::args().next().unwrap_or("iquery".to_string());
     format!(
         "Usage: {:?} (--cat|--find|--ls) [--recursive] [--sort]
-      [--format=<FORMAT>] [(--full_paths|--absolute_paths)] [--dir=<PATH>]
+      [--format=<FORMAT>]
+      [(--full_paths|--absolute_paths|--display_paths)]
+      [--dir=<PATH>]
       PATH [...PATH]
 
   Utility for querying exposed object directories.
@@ -98,6 +101,8 @@ pub fn usage() -> String {
   --full_paths:     Include the full path in object names.
   --absolute_paths: Include full absolute path in object names.
                     Overrides --full_paths.
+  --display_paths:  Include full paths in only the top-level object.
+                    This mode is suitable for interactive display.
 
   PATH: paths where to look for targets. The interpretation of those depends
         on the mode.",
@@ -188,6 +193,7 @@ impl Options {
                     "--sort" => self.formatting.sort = true,
                     "--full_paths" => self.formatting.path_format = PathFormat::Full,
                     "--absolute_paths" => self.formatting.path_format = PathFormat::Absolute,
+                    "--display_paths" => self.formatting.path_format = PathFormat::Display,
                     "--cat" => self.mode = ModeCommand::Cat,
                     "--find" => self.mode = ModeCommand::Find,
                     "--ls" => self.mode = ModeCommand::Ls,
