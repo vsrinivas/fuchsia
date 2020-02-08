@@ -239,30 +239,8 @@ following information:
 
 ## Component URLs {#component-urls}
 
-A component URL specifies the location from which a component's declaration,
-program, and assets are retrieved.
-
-Components can be retrieved from many different sources as indicated by
-the URL scheme. These are some common URL schemes you may encounter:
-
-- `fuchsia-boot`: The component is resolved from the system boot image. This
-  scheme is used for retrieving components that are essential to the system's
-  operation during early boot before the package system is available.
-  - Example: "fuchsia-boot:///#meta/devcoordinator.cm"
-- [`fuchsia-pkg`][doc-package-url]: The component is resolved by the
-  Fuchsia package resolver. This scheme is used for components that are
-  distributed in the form of packages which can be downloaded on demand and
-  kept up-to-date.
-  - Example: "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cm"
-- `http` and `https`: The component is resolved as a web application by a web
-  resolver. This scheme is used to integrate web-based content with the
-  component framework.
-  - Example: "https://fuchsia.dev/"
-
-Note: The set of URL schemes available in each [realm](#realms) is configured
-with [capability routing](#capability-routing) in accordance with the realm's
-need to access components from various sources. The examples presented above
-are not universal.
+A [component URL][doc-component-urls] specifies the location from which a
+component's declaration, program, and assets are retrieved.
 
 Note: Use [monikers](#monikers) to identify specific instances of components
 instead of their source.
@@ -486,6 +464,7 @@ set size by stopping less essential components at a moment's notice.
 
 [doc-capabilities]: capabilities
 [doc-collections]: realms.md#collections
+[doc-component-urls]: component_urls.md
 [doc-hooks]: instrumentation_hooks.md
 [doc-hub]: hub.md
 [doc-lifecycle]: lifecycle.md

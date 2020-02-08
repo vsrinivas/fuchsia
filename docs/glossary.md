@@ -225,6 +225,16 @@ Additional metadata that is carried in a
 [component manifest](#component-manifest). This is an extension point to the
 [component framework](#component-framework).
 
+#### **Component URL**
+
+A [URL][component-url] that identifies a component, most often used when
+instantiating a component, for example
+`fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cm`.
+
+See also: [fuchsia-pkg URL](#fuchsia-pkg-url)
+
+[component-url]: /docs/concepts/components/component_urls.md
+
 #### **Components v1** {#components-v1}
 
 A shorthand for the [Component](#component) Architecture as first implemented on

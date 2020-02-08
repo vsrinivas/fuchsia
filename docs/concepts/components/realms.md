@@ -100,12 +100,10 @@ A static child is defined, foremost, by two pieces of information:
 - The child instance's *name*. The name is local to the parent component
   instance, and is used to form monikers. It is valid to declare multiple
   children with the same URL and different names.
-- The child instance's component URL.
+- The child instance's [component URL][component-urls].
 
 For information on providing additional configuration information to child
 declarations, see [children][children].
-
-TODO: link to component URL
 
 TODO: link to monikers
 
@@ -187,6 +185,7 @@ documentation.
 [collections]: ./component_manifests.md#collections
 [component-manifests]: ./component_manifests.md
 [component-manifest-examples]: ./component_manifests.md#examples
+[component-urls]: ./component_urls.md
 [expose]: ./component_manifests.md#expose
 [framework-services]: ./component_manifests.md#framework-services
 [glossary-storage]: /docs/glossary.md#storage-capability

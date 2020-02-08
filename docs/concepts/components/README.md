@@ -13,6 +13,7 @@ between executions.
 - [Introduction](introduction.md): the purpose of the component framework, and
   fundamental design principles.
 - [Realms](realms.md): sub-trees of the component instance topology.
+- [Component URLs](component_urls.md): URLs that identify components.
 - [Monikers](monikers.md): identifiers for component instances.
 
 **Developing components**

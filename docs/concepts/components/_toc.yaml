@@ -8,6 +8,8 @@ toc:
   path: /docs/concepts/components/introduction.md
 - title: "Concepts"
   section:
+  - title: "Component URLs"
+    path: /docs/concepts/components/component_urls.md
   - title: "Lifecycle"
     path: /docs/concepts/components/lifecycle.md
   - title: "Hub"
