@@ -76,10 +76,6 @@ class FakeAudioOutput : public AudioOutput {
   }
 
   void FinishMixJob(const MixStage::FrameSpan& span, float* buffer) override {}
-  fit::result<std::shared_ptr<Stream>, zx_status_t> InitializeDestLink(
-      const AudioObject& dest) override {
-    return fit::ok(nullptr);
-  }
 };
 
 static const RoutingConfig kConfigNoPolicy = RoutingConfig();

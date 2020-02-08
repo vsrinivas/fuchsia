@@ -9,7 +9,6 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/audio_admin.h"
-#include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/audio_input.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
@@ -126,8 +125,6 @@ TEST_F(AudioCapturerImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuff
       AudioInput::Create(zx::channel(), &threading_model(), &device_registry_, &link_matrix_);
   auto fake_driver =
       testing::FakeAudioDriver(std::move(c1), threading_model().FidlDomain().dispatcher());
-
-  auto vmo = fake_driver.CreateRingBuffer(PAGE_SIZE);
 
   input->driver()->Init(std::move(c2));
   fake_driver.Start();

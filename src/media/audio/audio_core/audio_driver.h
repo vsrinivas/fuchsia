@@ -60,6 +60,14 @@ class AudioDriver {
     Shutdown,
   };
 
+  struct RingBufferSnapshot {
+    std::shared_ptr<RingBuffer> ring_buffer;
+    TimelineFunction clock_mono_to_ring_pos_bytes;
+    uint32_t position_to_end_fence_frames;
+    uint32_t end_fence_to_start_fence_frames;
+    uint32_t gen_id;
+  };
+
   AudioDriver(AudioDevice* owner);
 
   using DriverTimeoutHandler = fit::function<void(zx::duration)>;
@@ -69,6 +77,7 @@ class AudioDriver {
 
   zx_status_t Init(zx::channel stream_channel);
   void Cleanup();
+  void SnapshotRingBuffer(RingBufferSnapshot* snapshot) const;
   std::optional<Format> GetFormat() const;
 
   bool plugged() const {
@@ -98,6 +107,11 @@ class AudioDriver {
   const audio_stream_unique_id_t& persistent_unique_id() const { return persistent_unique_id_; }
   const std::string& manufacturer_name() const { return manufacturer_name_; }
   const std::string& product_name() const { return product_name_; }
+
+  void SetEndFenceToStartFenceFrames(uint32_t dist) {
+    std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
+    end_fence_to_start_fence_frames_ = dist;
+  }
 
   zx_status_t GetDriverInfo();
   zx_status_t Configure(const Format& format, zx::duration min_ring_buffer_duration);
@@ -243,6 +257,7 @@ class AudioDriver {
   // allowing AudioCapturer clients to snapshot ring-buffer state during mix/resample operations.
   mutable std::mutex ring_buffer_state_lock_;
   std::shared_ptr<RingBuffer> ring_buffer_ FXL_GUARDED_BY(ring_buffer_state_lock_);
+  uint32_t end_fence_to_start_fence_frames_ FXL_GUARDED_BY(ring_buffer_state_lock_) = 0;
   fbl::RefPtr<VersionedTimelineFunction> clock_mono_to_fractional_frame_;
 
   // Plug detection state.

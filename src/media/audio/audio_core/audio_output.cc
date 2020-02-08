@@ -109,14 +109,6 @@ void AudioOutput::CleanupSourceLink(const AudioObject& source, std::shared_ptr<S
   }
 }
 
-fit::result<std::shared_ptr<Stream>, zx_status_t> AudioOutput::InitializeDestLink(
-    const AudioObject& dest) {
-  if (!pipeline_) {
-    return fit::error(ZX_ERR_BAD_STATE);
-  }
-  return fit::ok(pipeline_->loopback());
-}
-
 void AudioOutput::SetupMixTask(const Format& format, size_t max_block_size_frames,
                                TimelineFunction device_reference_clock_to_fractional_frame) {
   FX_CHECK(format.sample_format() == fuchsia::media::AudioSampleFormat::FLOAT);
