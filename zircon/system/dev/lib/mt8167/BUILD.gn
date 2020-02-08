@@ -31,23 +31,3 @@ zx_library("mt8167") {
     "$zx/system/ulib/zx",
   ]
 }
-
-zx_test("mt8167-audio-lib-test") {
-  output_name = "mt8167-audio-lib-test"
-  sources = [
-    "mt8167-audio-in-test.cc",
-    "mt8167-audio-in.cc",
-  ]
-  deps = [
-    "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/dev/lib/mmio",
-    "$zx/system/dev/lib/mock-mmio-reg",
-    "$zx/system/dev/lib/mt8167",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/hwreg",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
-  ]
-}
