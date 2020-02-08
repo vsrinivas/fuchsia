@@ -497,6 +497,19 @@ CodecAdapterAacEncoder::CreateEncoder(const fuchsia::media::PcmFormat& pcm_forma
     return fit::error(status);
   }
 
+  if (transmux == TT_MP4_LATM_MCP1) {
+    uint32_t header_period = 1;
+    if ((status = aacEncoder_SetParam(encoder, AACENC_HEADER_PERIOD, header_period)) != AACENC_OK) {
+      return fit::error(status);
+    }
+
+    uint32_t audio_mux_version = 2;
+    if ((status = aacEncoder_SetParam(encoder, AACENC_AUDIOMUXVER, audio_mux_version)) !=
+        AACENC_OK) {
+      return fit::error(status);
+    }
+  }
+
   if ((status = aacEncoder_SetParam(encoder, AACENC_SIGNALING_MODE, SIG_EXPLICIT_BW_COMPATIBLE)) !=
       AACENC_OK) {
     return fit::error(status);

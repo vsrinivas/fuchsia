@@ -167,7 +167,7 @@ fn aac_latm_test_suite() -> Result<()> {
                 output_file: None,
                 expected_digest: ExpectedDigest::new(
                     "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Latm/MuxConfig",
-                    "3af2677520134b8d4f48f95575e26389136d3698cb83ed5c293dda865b2b18e3",
+                    "30045910e5781f6550354e8c04b439eafa03912c1e48978b24e493aff62ceeb6",
                 ),
             }],
         };
