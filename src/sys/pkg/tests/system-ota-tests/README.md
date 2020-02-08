@@ -34,7 +34,7 @@ Now, you should be able to run the tests with:
 % ~/fuchsia/out/default/host_x64/system_ota_tests_upgrade \
   -ssh-private-key ~/fuchsia/.ssh/pkey \
   -downgrade-builder-name fuchsia/ci/fuchsia-x64-release \
-  -upgrade-amber-files $FUCHSIA_BUILD_DIR/amber-files
+  -upgrade-fuchsia-build-dir $FUCHSIA_BUILD_DIR
 ```
 
 This will run through the whole test. There are more options to the test, to see

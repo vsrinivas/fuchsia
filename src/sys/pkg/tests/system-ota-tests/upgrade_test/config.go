@@ -34,12 +34,10 @@ type Config struct {
 	PackagesPath             string
 	downgradeBuilderName     string
 	downgradeBuildID         string
-	downgradeAmberFilesDir   string
-	downgradePaveZedbootPath string
-	downgradePavePath        string
+	downgradeFuchsiaBuildDir string
 	upgradeBuilderName       string
 	upgradeBuildID           string
-	upgradeAmberFilesDir     string
+	upgradeFuchsiaBuildDir   string
 	LongevityTest            bool
 	archive                  *artifacts.Archive
 	sshPrivateKey            ssh.Signer
@@ -62,12 +60,10 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	fs.StringVar(&c.ArtifactsPath, "artifacts", filepath.Join(testDataPath, "artifacts"), "path to the artifacts binary, default is $FUCHSIA_DIR/prebuilt/tools/artifacts/artifacts")
 	fs.StringVar(&c.downgradeBuilderName, "downgrade-builder-name", "", "downgrade to the latest version of this builder")
 	fs.StringVar(&c.downgradeBuildID, "downgrade-build-id", "", "downgrade to this specific build id")
-	fs.StringVar(&c.downgradeAmberFilesDir, "downgrade-amber-files", "", "Path to the downgrade amber-files repository")
-	fs.StringVar(&c.downgradePaveZedbootPath, "downgrade-pave-zedboot-script", "", "Path to the downgrade pave-zedboot.sh script")
-	fs.StringVar(&c.downgradePavePath, "downgrade-pave-script", "", "Path to the downgrade pave.sh script")
+	fs.StringVar(&c.downgradeFuchsiaBuildDir, "downgrade-fuchsia-build-dir", "", "Path to the downgrade fuchsia build dir")
 	fs.StringVar(&c.upgradeBuilderName, "upgrade-builder-name", "", "upgrade to the latest version of this builder")
 	fs.StringVar(&c.upgradeBuildID, "upgrade-build-id", os.Getenv("BUILDBUCKET_ID"), "upgrade to this build id (default is $BUILDBUCKET_ID)")
-	fs.StringVar(&c.upgradeAmberFilesDir, "upgrade-amber-files", "", "Path to the upgrade amber-files repository")
+	fs.StringVar(&c.upgradeFuchsiaBuildDir, "upgrade-fuchsia-build-dir", "", "Path to the upgrade fuchsia build dir")
 	fs.BoolVar(&c.LongevityTest, "longevity-test", false, "Continuously update to the latest repository")
 	fs.DurationVar(&c.paveTimeout, "pave-timeout", 1<<63-1, "Err if a pave it takes longer than this time (default is no timeout)")
 	fs.DurationVar(&c.cycleTimeout, "cycle-timeout", 1<<63-1, "Err if a test cycle it takes longer than this time (default is no timeout)")
@@ -77,33 +73,27 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 
 func (c *Config) Validate() error {
 	defined := 0
-	for _, s := range []string{c.downgradeBuilderName, c.downgradeBuildID, c.downgradeAmberFilesDir} {
+	for _, s := range []string{
+		c.downgradeBuilderName,
+		c.downgradeBuildID,
+		c.downgradeFuchsiaBuildDir,
+	} {
 		if s != "" {
 			defined += 1
 		}
 	}
 	if defined > 1 {
-		return fmt.Errorf("-downgrade-builder-name, -downgrade-build-id, and -downgrade-amber-files are mutually exclusive")
+		return fmt.Errorf("-downgrade-builder-name, -downgrade-build-id, and -downgrade-fuchsia-build-dir are mutually exclusive")
 	}
 
 	defined = 0
-	for _, s := range []string{c.downgradePaveZedbootPath, c.downgradePavePath} {
-		if s != "" {
-			defined += 1
-		}
-	}
-	if defined == 1 {
-		return fmt.Errorf("-downgrade-pave-zedboot and -downgrade-pave must be specified together")
-	}
-
-	defined = 0
-	for _, s := range []string{c.upgradeBuilderName, c.upgradeBuildID, c.upgradeAmberFilesDir} {
+	for _, s := range []string{c.upgradeBuilderName, c.upgradeBuildID, c.upgradeFuchsiaBuildDir} {
 		if s != "" {
 			defined += 1
 		}
 	}
 	if defined != 1 {
-		return fmt.Errorf("exactly one of -upgrade-builder-name, -upgrade-build-id, or -upgrade-amber-files must be specified")
+		return fmt.Errorf("exactly one of -upgrade-builder-name, -upgrade-build-id, or -upgrade-fuchsia-build-dir must be specified")
 	}
 
 	if c.LongevityTest && c.upgradeBuilderName == "" {
@@ -175,7 +165,7 @@ func (c *Config) BuildArchive() *artifacts.Archive {
 }
 
 func (c *Config) ShouldRepaveDevice() bool {
-	return c.downgradeBuildID != "" || c.downgradeBuilderName != "" || c.downgradePaveZedbootPath != "" || c.downgradePavePath != ""
+	return c.downgradeBuildID != "" || c.downgradeBuilderName != "" || c.downgradeFuchsiaBuildDir != ""
 }
 
 func (c *Config) GetDowngradeBuilder() (*artifacts.Builder, error) {
@@ -241,8 +231,8 @@ func (c *Config) GetDowngradeRepository(dir string) (*packages.Repository, error
 		return build.GetPackageRepository()
 	}
 
-	if c.downgradeAmberFilesDir != "" {
-		return packages.NewRepository(c.downgradeAmberFilesDir)
+	if c.downgradeFuchsiaBuildDir != "" {
+		return packages.NewRepository(filepath.Join(c.downgradeFuchsiaBuildDir, "amber-files"))
 	}
 
 	return nil, fmt.Errorf("downgrade repository not specified")
@@ -263,8 +253,8 @@ func (c *Config) GetUpgradeRepository(dir string) (*packages.Repository, error) 
 		return build.GetPackageRepository()
 	}
 
-	if c.upgradeAmberFilesDir != "" {
-		return packages.NewRepository(c.upgradeAmberFilesDir)
+	if c.upgradeFuchsiaBuildDir != "" {
+		return packages.NewRepository(filepath.Join(c.upgradeFuchsiaBuildDir, "amber-files"))
 	}
 
 	return nil, fmt.Errorf("upgrade repository not specified")
@@ -291,8 +281,12 @@ func (c *Config) GetDowngradePaver(dir string) (*paver.Paver, error) {
 		return build.GetPaver(sshPublicKey)
 	}
 
-	if c.downgradePaveZedbootPath != "" && c.downgradePavePath != "" {
-		return paver.NewPaver(c.downgradePaveZedbootPath, c.downgradePavePath, sshPublicKey), nil
+	if c.downgradeFuchsiaBuildDir != "" {
+		return paver.NewPaver(
+				filepath.Join(c.downgradeFuchsiaBuildDir, "pave-zedboot.sh"),
+				filepath.Join(c.downgradeFuchsiaBuildDir, "pave.sh"),
+				sshPublicKey),
+			nil
 	}
 
 	return nil, fmt.Errorf("downgrade paver not specified")
