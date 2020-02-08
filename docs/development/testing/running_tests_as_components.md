@@ -292,6 +292,11 @@ Now, with `fx test`, that simply becomes:
 <code class="devsite-terminal">fx test <var>NESTED_COMPONENT_NAME</var></code>
 </pre>
 
+#### Internal working
+
+`fx test` when running your test component internally calls `run-test-component`
+on target device with test url to run the test.
+
 
 ## Running tests (Legacy)
 
@@ -317,15 +322,19 @@ In light of the above facts, the recommended way to run tests from a Fuchsia
 shell is:
 
 <pre class="prettyprint">
-<code class="devsite-terminal">run-test-component `locate <var>TEST_PACKAGE_NAME</var>`</code>
+<code class="devsite-terminal">fx shell run-test-component `locate <var>TEST_PACKAGE_NAME</var>`</code>
 </pre>
 
 The `locate` tool will search for and return fuchsia-pkg URLs based on a given
 search query. If there are multiple matches for the query the above command will
 fail, so `locate` should be invoked directly to discover the URL that should be
-provided to `run-test-component`
+provided to `run-test-component`.
+
+`run-test-component` will create a transient isolated storage for the test. See
+[isolated-storage][isolated-storage] for more info.
 
 [component_manifest]: /docs/concepts/storage/component_manifest.md
 [rust_testing]: ../languages/rust/testing.md
 [test_package]: test_component.md
+[isolated-storage]: test_component.md#isolated_storage
 [fuchsia_package_url]: /docs/concepts/storage/package_url.md

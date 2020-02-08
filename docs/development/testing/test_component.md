@@ -56,6 +56,25 @@ To run a Fuchsia test out of your build, execute:
 For more information on running Fuchsia tests, see
 [Running tests as components][executing-tests].
 
+## Isolated Storage
+
+- By default, the test component is launched in a new hermetic environment.
+- Generated environment name is of form test\_env\_XXXXX, where XXXXX is a
+  randomly generated number.
+- Each test component receives a new isolated storage directory.
+- The directory is deleted after the text exits, regardless of the test's
+  outcome.
+
+### Keep storage for debugging
+
+If you need to keep test storage for debugging after the test ends, use
+[run-test-component][run-test-component] in the Fuchsia shell and with the
+`--realm-label` flag.
+
+The `--realm-label` flag defines the label for environment that your test runs
+in. When the test ends, the storage won't be deleted automatically. When you're
+done exploring the contents of the directory, you may want to delete it to free
+up space or prevent interfering with the results of future tests.
 
 ## Ambient Services
 
@@ -146,4 +165,5 @@ However, services that are not listed here are not supported.
 
 This option would be replaced once we fix CP-144 (in component manager v2).
 
-[executing-tests]: /docs/development/testing/running_tests_as_components.md
+[executing-tests]: running_tests_as_components.md
+[run-test-component]: running_tests_as_components.md#running_tests_legacy
