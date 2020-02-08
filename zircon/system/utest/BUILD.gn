@@ -80,7 +80,6 @@ if (current_cpu != "") {
       "fidl-llcpp-interop",
       "fidl-simple",
       "fidl-utils",
-      "fs-test-utils",
       "kcounter",
       "kernel-cmdline:test",
       "log",

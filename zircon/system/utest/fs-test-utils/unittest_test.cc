@@ -52,7 +52,8 @@ bool VerifyRamdiskAndFvmExist(Fixture* fixture) {
   END_TEST;
 }
 
-bool VerifyRamdiskAndFvmExist2(Fixture* fixture) { return VerifyRamdiskAndFvmExist(fixture); }
+// TODO(38168): flaky tests
+// bool VerifyRamdiskAndFvmExist2(Fixture* fixture) { return VerifyRamdiskAndFvmExist(fixture); }
 
 BEGIN_FS_TEST_CASE(UnittestFixtureTest, OptionsUseRamdiskAndFvm)
 RUN_FS_TEST_F(VerifyRamdiskAndFvmExist)
