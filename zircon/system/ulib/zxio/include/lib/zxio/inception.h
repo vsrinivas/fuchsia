@@ -47,7 +47,8 @@ zx_status_t zxio_file_init(zxio_storage_t* remote, zx_handle_t control, zx_handl
 //
 // The |control| handle is a channel that implements the |fuchsia.io2/Node|. The
 // |observer| handle is an optional object used with some |fuchsia.io2/Node|
-// servers.
+// servers. The |stream| handle is an optional stream object associated with the
+// file. See fuchsia.io2/FileInfo for additional documentation.
 //
 // Will eventually be an implementation detail of zxio once fdio completes its
 // transition to the zxio backend.
@@ -55,6 +56,7 @@ typedef struct zxio_remote_v2 {
   zxio_t io;
   zx_handle_t control;
   zx_handle_t observer;
+  zx_handle_t stream;
 } zxio_remote_v2_t;
 
 static_assert(sizeof(zxio_remote_v2_t) <= sizeof(zxio_storage_t),
@@ -62,7 +64,8 @@ static_assert(sizeof(zxio_remote_v2_t) <= sizeof(zxio_storage_t),
 
 zx_status_t zxio_remote_v2_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t observer);
 zx_status_t zxio_dir_v2_init(zxio_storage_t* remote, zx_handle_t control);
-zx_status_t zxio_file_v2_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t observer);
+zx_status_t zxio_file_v2_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t observer,
+                              zx_handle_t stream);
 
 // posix mode conversions ------------------------------------------------------
 

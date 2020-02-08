@@ -31,24 +31,27 @@ class stream final : public object<stream> {
   static zx_status_t create(uint32_t options, const vmo& vmo_handle, zx_off_t seek,
                             stream* out_stream);
 
-  zx_status_t writev(uint32_t options, zx_iovec_t* vector, size_t vector_count,
+  zx_status_t writev(uint32_t options, const zx_iovec_t* vector, size_t vector_count,
                      size_t* actual) const {
     return zx_stream_writev(get(), options, vector, vector_count, actual);
   }
 
-  zx_status_t writev_at(uint32_t options, zx_off_t offset, zx_iovec_t* vector, size_t vector_count,
-                        size_t* actual) const {
+  zx_status_t writev_at(uint32_t options, zx_off_t offset, const zx_iovec_t* vector,
+                        size_t vector_count, size_t* actual) const {
     return zx_stream_writev_at(get(), options, offset, vector, vector_count, actual);
   }
 
-  zx_status_t readv(uint32_t options, zx_iovec_t* vector, size_t vector_count,
+  zx_status_t readv(uint32_t options, const zx_iovec_t* vector, size_t vector_count,
                     size_t* actual) const {
-    return zx_stream_readv(get(), options, vector, vector_count, actual);
+    // TODO: zx_stream_readv should accept a |const zx_iovec_t*|.
+    return zx_stream_readv(get(), options, const_cast<zx_iovec_t*>(vector), vector_count, actual);
   }
 
-  zx_status_t readv_at(uint32_t options, zx_off_t offset, zx_iovec_t* vector, size_t vector_count,
-                       size_t* actual) const {
-    return zx_stream_readv_at(get(), options, offset, vector, vector_count, actual);
+  zx_status_t readv_at(uint32_t options, zx_off_t offset, const zx_iovec_t* vector,
+                       size_t vector_count, size_t* actual) const {
+    // TODO: zx_stream_readv should accept a |const zx_iovec_t*|.
+    return zx_stream_readv_at(get(), options, offset, const_cast<zx_iovec_t*>(vector), vector_count,
+                              actual);
   }
 
   zx_status_t seek(zx_stream_seek_origin_t whence, int64_t offset, zx_off_t* out_seek) const {

@@ -242,6 +242,10 @@ zx::handle RemoteV2::Release() {
     zx_handle_close(rio_->observer);
     rio_->observer = ZX_HANDLE_INVALID;
   }
+  if (rio_->stream != ZX_HANDLE_INVALID) {
+    zx_handle_close(rio_->stream);
+    rio_->stream = ZX_HANDLE_INVALID;
+  }
   return control;
 }
 
@@ -319,13 +323,9 @@ void zxio_file_v2_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* 
 }
 
 template <typename F>
-static zx_status_t zxio_remote_do_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
-                                         zxio_flags_t flags, size_t* out_actual, F fn) {
-  if (flags) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  RemoteV2 rio(io);
-
+static zx_status_t zxio_remote_do_vector(const RemoteV2& rio, const zx_iovec_t* vector,
+                                         size_t vector_count, zxio_flags_t flags,
+                                         size_t* out_actual, F fn) {
   return zxio_do_vector(vector, vector_count, out_actual,
                         [&](void* data, size_t capacity, size_t* out_actual) {
                           auto buffer = static_cast<uint8_t*>(data);
@@ -351,8 +351,17 @@ static zx_status_t zxio_remote_do_vector(zxio_t* io, const zx_iovec_t* vector, s
 
 zx_status_t zxio_remote_v2_read_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
                                        zxio_flags_t flags, size_t* out_actual) {
+  if (flags) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  RemoteV2 rio(io);
+  if (rio.stream()->is_valid()) {
+    return rio.stream()->readv(0, vector, vector_count, out_actual);
+  }
+
   return zxio_remote_do_vector(
-      io, vector, vector_count, flags, out_actual,
+      rio, vector, vector_count, flags, out_actual,
       [](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::Buffer<fio2::File::ReadRequest> request_buffer;
@@ -380,8 +389,17 @@ zx_status_t zxio_remote_v2_read_vector(zxio_t* io, const zx_iovec_t* vector, siz
 zx_status_t zxio_remote_v2_read_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
                                           size_t vector_count, zxio_flags_t flags,
                                           size_t* out_actual) {
+  if (flags) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  RemoteV2 rio(io);
+  if (rio.stream()->is_valid()) {
+    return rio.stream()->readv_at(0, offset, vector, vector_count, out_actual);
+  }
+
   return zxio_remote_do_vector(
-      io, vector, vector_count, flags, out_actual,
+      rio, vector, vector_count, flags, out_actual,
       [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         fidl::Buffer<fio2::File::ReadAtRequest> request_buffer;
         fidl::Buffer<fio2::File::ReadAtResponse> response_buffer;
@@ -408,8 +426,17 @@ zx_status_t zxio_remote_v2_read_vector_at(zxio_t* io, zx_off_t offset, const zx_
 
 zx_status_t zxio_remote_v2_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
                                         zxio_flags_t flags, size_t* out_actual) {
+  if (flags) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  RemoteV2 rio(io);
+  if (rio.stream()->is_valid()) {
+    return rio.stream()->writev(0, vector, vector_count, out_actual);
+  }
+
   return zxio_remote_do_vector(
-      io, vector, vector_count, flags, out_actual,
+      rio, vector, vector_count, flags, out_actual,
       [](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::Buffer<fio2::File::WriteRequest> request_buffer;
@@ -436,8 +463,17 @@ zx_status_t zxio_remote_v2_write_vector(zxio_t* io, const zx_iovec_t* vector, si
 zx_status_t zxio_remote_v2_write_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* vector,
                                            size_t vector_count, zxio_flags_t flags,
                                            size_t* out_actual) {
+  if (flags) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  RemoteV2 rio(io);
+  if (rio.stream()->is_valid()) {
+    return rio.stream()->writev_at(0, offset, vector, vector_count, out_actual);
+  }
+
   return zxio_remote_do_vector(
-      io, vector, vector_count, flags, out_actual,
+      rio, vector, vector_count, flags, out_actual,
       [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::Buffer<fio2::File::WriteAtRequest> request_buffer;
@@ -462,9 +498,24 @@ zx_status_t zxio_remote_v2_write_vector_at(zxio_t* io, zx_off_t offset, const zx
       });
 }
 
+constexpr zx_stream_seek_origin_t ToZXStreamSeekOrigin(zxio_seek_origin_t start) {
+  return static_cast<zx_stream_seek_origin_t>(start) - 1;
+}
+
+static_assert(ToZXStreamSeekOrigin(ZXIO_SEEK_ORIGIN_START) == ZX_STREAM_SEEK_ORIGIN_START,
+              "ToZXStreamSeekOrigin should work for START");
+static_assert(ToZXStreamSeekOrigin(ZXIO_SEEK_ORIGIN_CURRENT) == ZX_STREAM_SEEK_ORIGIN_CURRENT,
+              "ToZXStreamSeekOrigin should work for CURRENT");
+static_assert(ToZXStreamSeekOrigin(ZXIO_SEEK_ORIGIN_END) == ZX_STREAM_SEEK_ORIGIN_END,
+              "ToZXStreamSeekOrigin should work for END");
+
 zx_status_t zxio_remote_v2_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset,
                                 size_t* out_offset) {
   RemoteV2 rio(io);
+  if (rio.stream()->is_valid()) {
+    return rio.stream()->seek(ToZXStreamSeekOrigin(start), offset, out_offset);
+  }
+
   auto result = fio2::File::Call::Seek(rio.control(), static_cast<fio2::SeekOrigin>(start), offset);
   if (result.status() != ZX_OK) {
     return result.status();
@@ -496,10 +547,12 @@ static constexpr zxio_ops_t zxio_file_v2_ops = []() {
   return ops;
 }();
 
-zx_status_t zxio_file_v2_init(zxio_storage_t* storage, zx_handle_t control, zx_handle_t observer) {
+zx_status_t zxio_file_v2_init(zxio_storage_t* storage, zx_handle_t control, zx_handle_t observer,
+                              zx_handle_t stream) {
   auto remote = reinterpret_cast<zxio_remote_v2_t*>(storage);
   zxio_init(&remote->io, &zxio_file_v2_ops);
   remote->control = control;
   remote->observer = observer;
+  remote->stream = stream;
   return ZX_OK;
 }

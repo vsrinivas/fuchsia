@@ -36,6 +36,15 @@ class TestServerBase : public fio2::File::Interface {
   }
 
   void Describe(fio2::ConnectionInfoQuery query, DescribeCompleter::Sync completer) override {
+    if (query == fio2::ConnectionInfoQuery::REPRESENTATION) {
+      auto file_info_builder = fio2::FileInfo::Build();
+      fio2::FileInfo file_info = file_info_builder.view();
+      auto representation = fio2::Representation::WithFile(&file_info);
+      auto info_builder = fio2::ConnectionInfo::Build();
+      info_builder.set_representation(&representation);
+      completer.Reply(info_builder.view());
+      return;
+    }
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -92,28 +101,52 @@ class TestServerBase : public fio2::File::Interface {
 
 class FileV2 : public zxtest::Test {
  public:
-  void SetUp() final {
-    ASSERT_OK(zx::channel::create(0, &control_client_end_, &control_server_end_));
-    ASSERT_OK(zx::event::create(0, &event_on_server_));
-    ASSERT_OK(event_on_server_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_to_client_));
-    ASSERT_OK(zxio_file_v2_init(&file_, control_client_end_.release(), event_to_client_.release()));
-  }
-
   template <typename ServerImpl>
   ServerImpl* StartServer() {
+    zx_status_t status = ZX_OK;
+
     server_ = std::make_unique<ServerImpl>();
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
-    zx_status_t status = ZX_OK;
     EXPECT_OK(status = loop_->StartThread("fake-filesystem"));
     if (status != ZX_OK) {
       return nullptr;
     }
-    EXPECT_OK(status =
-                  fidl::Bind(loop_->dispatcher(), std::move(control_server_end_), server_.get()));
-    if (status != ZX_OK) {
-      return nullptr;
-    }
     return static_cast<ServerImpl*>(server_.get());
+  }
+
+  zx_status_t OpenFile() {
+    zx::channel client_end, server_end;
+    zx_status_t status = zx::channel::create(0, &client_end, &server_end);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    status = fidl::Bind(loop_->dispatcher(), std::move(server_end), server_.get());
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    auto result =
+        fio2::File::Call::Describe(client_end.borrow(), fio2::ConnectionInfoQuery::REPRESENTATION);
+
+    if (result.status() != ZX_OK) {
+      return status;
+    }
+
+    zx::event observer;
+    zx::stream stream;
+    if (result->info.has_representation()) {
+      EXPECT_TRUE(result->info.representation().is_file());
+      fio2::FileInfo& file = result->info.representation().mutable_file();
+      if (file.has_observer()) {
+        observer = std::move(file.observer());
+      }
+      if (file.has_stream()) {
+        stream = std::move(file.stream());
+      }
+    }
+
+    return zxio_file_v2_init(&file_, client_end.release(), observer.release(), stream.release());
   }
 
   void TearDown() final {
@@ -124,16 +157,44 @@ class FileV2 : public zxtest::Test {
 
  protected:
   zxio_storage_t file_;
-  zx::channel control_client_end_;
-  zx::channel control_server_end_;
-  zx::event event_on_server_;
-  zx::event event_to_client_;
   std::unique_ptr<TestServerBase> server_;
   std::unique_ptr<async::Loop> loop_;
 };
 
+class TestServerEvent final : public TestServerBase {
+ public:
+  TestServerEvent() { ASSERT_OK(zx::event::create(0, &observer_)); }
+
+  const zx::event& observer() const { return observer_; }
+
+  void Describe(fio2::ConnectionInfoQuery query, DescribeCompleter::Sync completer) override {
+    if (query == fio2::ConnectionInfoQuery::REPRESENTATION) {
+      auto file_info_builder = fio2::FileInfo::Build();
+      zx::event client_observer;
+      zx_status_t status = observer_.duplicate(ZX_RIGHTS_BASIC, &client_observer);
+      if (status != ZX_OK) {
+        completer.Close(ZX_ERR_INTERNAL);
+        return;
+      }
+      file_info_builder.set_observer(&client_observer);
+      fio2::FileInfo file_info = file_info_builder.view();
+      auto representation = fio2::Representation::WithFile(&file_info);
+      auto info_builder = fio2::ConnectionInfo::Build();
+      info_builder.set_representation(&representation);
+      completer.Reply(info_builder.view());
+      return;
+    }
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+ private:
+  zx::event observer_;
+};
+
 TEST_F(FileV2, WaitTimeOut) {
-  ASSERT_NO_FAILURES(StartServer<TestServerBase>());
+  TestServerEvent* server = nullptr;
+  ASSERT_NO_FAILURES(server = StartServer<TestServerEvent>());
+  ASSERT_OK(OpenFile());
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   ASSERT_STATUS(ZX_ERR_TIMED_OUT,
                 zxio_wait_one(&file_.io, ZXIO_SIGNAL_ALL, ZX_TIME_INFINITE_PAST, &observed));
@@ -141,21 +202,25 @@ TEST_F(FileV2, WaitTimeOut) {
 }
 
 TEST_F(FileV2, WaitForReadable) {
-  ASSERT_NO_FAILURES(StartServer<TestServerBase>());
+  TestServerEvent* server = nullptr;
+  ASSERT_NO_FAILURES(server = StartServer<TestServerEvent>());
+  ASSERT_OK(OpenFile());
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   // Signal readability on the server end.
-  ASSERT_OK(event_on_server_.signal(ZX_SIGNAL_NONE,
-                                    static_cast<zx_signals_t>(fio2::FileSignal::READABLE)));
+  ASSERT_OK(server->observer().signal(ZX_SIGNAL_NONE,
+                                      static_cast<zx_signals_t>(fio2::FileSignal::READABLE)));
   ASSERT_OK(zxio_wait_one(&file_.io, ZXIO_SIGNAL_READABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_READABLE, observed);
 }
 
 TEST_F(FileV2, WaitForWritable) {
-  ASSERT_NO_FAILURES(StartServer<TestServerBase>());
+  TestServerEvent* server = nullptr;
+  ASSERT_NO_FAILURES(server = StartServer<TestServerEvent>());
+  ASSERT_OK(OpenFile());
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   // Signal writability on the server end.
-  ASSERT_OK(event_on_server_.signal(ZX_SIGNAL_NONE,
-                                    static_cast<zx_signals_t>(fio2::FileSignal::WRITABLE)));
+  ASSERT_OK(server->observer().signal(ZX_SIGNAL_NONE,
+                                      static_cast<zx_signals_t>(fio2::FileSignal::WRITABLE)));
   ASSERT_OK(zxio_wait_one(&file_.io, ZXIO_SIGNAL_WRITABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_WRITABLE, observed);
 }
@@ -164,15 +229,11 @@ constexpr zx_stream_seek_origin_t ToZXStreamSeekOrigin(fio2::SeekOrigin whence) 
   return static_cast<zx_stream_seek_origin_t>(whence) - 1;
 }
 
-class TestServerStream final : public TestServerBase {
+class TestServerChannel final : public TestServerBase {
  public:
-  // The storage_size must be a multiple of PAGE_SIZE.
-  zx_status_t Initialize(size_t storage_size) {
-    zx_status_t status = zx::vmo::create(storage_size, 0, &store_);
-    if (status != ZX_OK) {
-      return status;
-    }
-    return zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_);
+  TestServerChannel() {
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &store_));
+    ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
   }
 
   void Read(uint64_t count, ReadCompleter::Sync completer) override {
@@ -271,35 +332,77 @@ class TestServerStream final : public TestServerBase {
   zx::stream stream_;
 };
 
-TEST_F(FileV2, ReadWrite) {
-  TestServerStream* server = nullptr;
-  ASSERT_NO_FAILURES(server = StartServer<TestServerStream>());
-  server->Initialize(ZX_PAGE_SIZE);
-
+void TestReadWrite(zxio_t* io) {
   size_t actual = 0u;
-  ASSERT_OK(zxio_write(&file_.io, "abcd", 4, 0, &actual));
+  ASSERT_OK(zxio_write(io, "abcd", 4, 0, &actual));
   EXPECT_EQ(actual, 4u);
 
   size_t seek = 0;
-  ASSERT_OK(zxio_seek(&file_.io, ZXIO_SEEK_ORIGIN_CURRENT, -2, &seek));
+  ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, -2, &seek));
   EXPECT_EQ(2u, seek);
 
   char buffer[1024] = {};
   actual = 0u;
-  ASSERT_OK(zxio_read(&file_.io, buffer, 1024, 0, &actual));
+  ASSERT_OK(zxio_read(io, buffer, 1024, 0, &actual));
   EXPECT_EQ(actual, 2u);
   EXPECT_STR_EQ("cd", buffer);
   memset(buffer, 0, sizeof(buffer));
 
   actual = 2;
-  ASSERT_OK(zxio_write_at(&file_.io, 1, "xy", 2, 0, &actual));
+  ASSERT_OK(zxio_write_at(io, 1, "xy", 2, 0, &actual));
   EXPECT_EQ(actual, 2u);
 
   actual = 0u;
-  ASSERT_OK(zxio_read_at(&file_.io, 1, buffer, 1024, 0, &actual));
+  ASSERT_OK(zxio_read_at(io, 1, buffer, 1024, 0, &actual));
   EXPECT_EQ(actual, 3u);
   EXPECT_STR_EQ("xyd", buffer);
   memset(buffer, 0, sizeof(buffer));
+}
+
+TEST_F(FileV2, ReadWriteChannel) {
+  TestServerChannel* server = nullptr;
+  ASSERT_NO_FAILURES(server = StartServer<TestServerChannel>());
+  ASSERT_OK(OpenFile());
+  ASSERT_NO_FAILURES(TestReadWrite(&file_.io));
+}
+
+class TestServerStream final : public TestServerBase {
+ public:
+  TestServerStream() {
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &store_));
+    ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
+  }
+
+  void Describe(fio2::ConnectionInfoQuery query, DescribeCompleter::Sync completer) override {
+    if (query == fio2::ConnectionInfoQuery::REPRESENTATION) {
+      auto file_info_builder = fio2::FileInfo::Build();
+      zx::stream client_stream;
+      zx_status_t status = stream_.duplicate(ZX_RIGHT_SAME_RIGHTS, &client_stream);
+      if (status != ZX_OK) {
+        completer.Close(ZX_ERR_INTERNAL);
+        return;
+      }
+      file_info_builder.set_stream(&client_stream);
+      fio2::FileInfo file_info = file_info_builder.view();
+      auto representation = fio2::Representation::WithFile(&file_info);
+      auto info_builder = fio2::ConnectionInfo::Build();
+      info_builder.set_representation(&representation);
+      completer.Reply(info_builder.view());
+      return;
+    }
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+ private:
+  zx::vmo store_;
+  zx::stream stream_;
+};
+
+TEST_F(FileV2, ReadWriteStream) {
+  TestServerStream* server = nullptr;
+  ASSERT_NO_FAILURES(server = StartServer<TestServerStream>());
+  ASSERT_OK(OpenFile());
+  ASSERT_NO_FAILURES(TestReadWrite(&file_.io));
 }
 
 }  // namespace
