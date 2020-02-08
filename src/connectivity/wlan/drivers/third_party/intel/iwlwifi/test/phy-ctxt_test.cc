@@ -9,6 +9,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/single-ap-test.h"
+
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }
@@ -17,10 +19,13 @@ namespace wlan {
 namespace testing {
 namespace {
 
-class PhyContextTest : public ::zxtest::Test {
+class PhyContextTest : public SingleApTest {
  public:
-  PhyContextTest() {}
+  PhyContextTest() { mvm_ = iwl_trans_get_mvm(sim_trans_.iwl_trans()); }
   ~PhyContextTest() {}
+
+ protected:
+  struct iwl_mvm* mvm_;
 };
 
 TEST_F(PhyContextTest, GetControlPosition) {
@@ -137,6 +142,51 @@ TEST_F(PhyContextTest, GetControlPosition) {
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
   chandef.primary = 153;
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
+}
+
+TEST_F(PhyContextTest, Ref) {
+  struct iwl_mvm_phy_ctxt ctxt = {
+      .chandef =
+          {
+              // whatever arbitrary values
+              .primary = 5,
+              .cbw = WLAN_CHANNEL_BANDWIDTH__40,
+          },
+  };
+
+  iwl_mvm_phy_ctxt_ref(mvm_, &ctxt);
+  ASSERT_EQ(1, ctxt.ref);
+  iwl_mvm_phy_ctxt_ref(mvm_, &ctxt);
+  ASSERT_EQ(2, ctxt.ref);
+
+  ASSERT_EQ(ZX_OK, iwl_mvm_phy_ctxt_unref(mvm_, &ctxt));
+  ASSERT_EQ(1, ctxt.ref);
+  ASSERT_EQ(5, ctxt.chandef.primary);
+
+  // Once the ref count goes to 0, it will be reset back to default value.
+  ASSERT_EQ(ZX_OK, iwl_mvm_phy_ctxt_unref(mvm_, &ctxt));
+  ASSERT_EQ(0, ctxt.ref);
+  ASSERT_EQ(1, ctxt.chandef.primary);
+  ASSERT_EQ(WLAN_CHANNEL_BANDWIDTH__20, ctxt.chandef.cbw);
+}
+
+TEST_F(PhyContextTest, Changed) {
+  struct iwl_mvm_phy_ctxt old_ctxt = {
+      .chandef =
+          {
+              .primary = 5,
+              .cbw = WLAN_CHANNEL_BANDWIDTH__40,
+          },
+  };
+
+  wlan_channel_t new_def = {
+      .primary = 14,
+      .cbw = WLAN_CHANNEL_BANDWIDTH__80,
+  };
+
+  ASSERT_EQ(ZX_OK, iwl_mvm_phy_ctxt_changed(mvm_, &old_ctxt, &new_def, 1, 1));
+  EXPECT_EQ(14, old_ctxt.chandef.primary);
+  EXPECT_EQ(WLAN_CHANNEL_BANDWIDTH__80, old_ctxt.chandef.cbw);
 }
 
 }  // namespace

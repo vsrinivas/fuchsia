@@ -85,5 +85,52 @@ TEST_F(Mac80211Test, MultipleAddsRemoves) {
   }
 }
 
+TEST_F(Mac80211Test, ChanCtxSingle) {
+  wlan_channel_t chandef = {
+      // any arbitrary values
+      .primary = 6,
+  };
+  uint16_t phy_ctxt_id;
+  ASSERT_EQ(ZX_OK, iwl_mvm_add_chanctx(mvm_, &chandef, &phy_ctxt_id));
+  ASSERT_EQ(0, phy_ctxt_id);
+  struct iwl_mvm_phy_ctxt* phy_ctxt = &mvm_->phy_ctxts[phy_ctxt_id];
+  ASSERT_NE(0, phy_ctxt->ref);
+  EXPECT_EQ(6, phy_ctxt->chandef.primary);
+
+  wlan_channel_t new_def = {
+      .primary = 3,
+  };
+  iwl_mvm_change_chanctx(mvm_, phy_ctxt_id, &new_def);
+  EXPECT_EQ(3, phy_ctxt->chandef.primary);
+
+  iwl_mvm_remove_chanctx(mvm_, phy_ctxt_id);
+  EXPECT_EQ(0, phy_ctxt->ref);
+}
+
+TEST_F(Mac80211Test, ChanCtxMultiple) {
+  wlan_channel_t chandef = {
+      // any arbitrary values
+      .primary = 44,
+  };
+  uint16_t phy_ctxt_id_0;
+  uint16_t phy_ctxt_id_1;
+  uint16_t phy_ctxt_id_2;
+
+  ASSERT_EQ(ZX_OK, iwl_mvm_add_chanctx(mvm_, &chandef, &phy_ctxt_id_0));
+  ASSERT_EQ(0, phy_ctxt_id_0);
+
+  ASSERT_EQ(ZX_OK, iwl_mvm_add_chanctx(mvm_, &chandef, &phy_ctxt_id_1));
+  ASSERT_EQ(1, phy_ctxt_id_1);
+
+  iwl_mvm_remove_chanctx(mvm_, phy_ctxt_id_0);
+
+  ASSERT_EQ(ZX_OK, iwl_mvm_add_chanctx(mvm_, &chandef, &phy_ctxt_id_2));
+  ASSERT_EQ(0, phy_ctxt_id_2);
+
+  ASSERT_EQ(ZX_OK, iwl_mvm_remove_chanctx(mvm_, phy_ctxt_id_2));
+  ASSERT_EQ(ZX_OK, iwl_mvm_remove_chanctx(mvm_, phy_ctxt_id_1));
+  ASSERT_EQ(ZX_ERR_BAD_STATE, iwl_mvm_remove_chanctx(mvm_, phy_ctxt_id_0));  // removed above
+}
+
 }  // namespace
 }  // namespace wlan::testing

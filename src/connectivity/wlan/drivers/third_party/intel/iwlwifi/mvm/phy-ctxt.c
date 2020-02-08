@@ -33,13 +33,33 @@
  *
  *****************************************************************************/
 
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <ddk/protocol/wlan/info.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 
+// A channel setting used as default value. In some cases, we need an arbitrary value for channel.
+// For example, during initializing a PHY context in firmware, we need a (whatever) value to add
+// an entry in firmware. This value usually will be changed later.
+const wlan_channel_t default_channel = {
+    .primary = 1,
+    .cbw = WLAN_CHANNEL_BANDWIDTH__20,
+};
+
+// Converts channel number to band type.
+//
+// Args:
+//   chan_num: starts from 1.
+//
+// Returns:
+//   the band ID.
+static wlan_info_band_t iwl_mvm_get_channel_band(uint8_t chan_num) {
+  return chan_num < 14 ? WLAN_INFO_BAND_2GHZ : WLAN_INFO_BAND_5GHZ;
+}
+
 /* Maps the driver specific channel width definition to the fw values */
-uint8_t iwl_mvm_get_channel_width(wlan_channel_t* chandef) {
+uint8_t iwl_mvm_get_channel_width(const wlan_channel_t* chandef) {
   switch (chandef->cbw) {
     case WLAN_CHANNEL_BANDWIDTH__20:
       return PHY_VHT_CHANNEL_MODE20;
@@ -62,7 +82,7 @@ uint8_t iwl_mvm_get_channel_width(wlan_channel_t* chandef) {
  *
  * Here is the channel list: https://en.wikipedia.org/wiki/List_of_WLAN_channels
  */
-uint8_t iwl_mvm_get_ctrl_pos(wlan_channel_t* chandef) {
+uint8_t iwl_mvm_get_ctrl_pos(const wlan_channel_t* chandef) {
   uint8_t primary = chandef->primary;
   wlan_channel_bandwidth_t cbw = chandef->cbw;
   uint8_t base;
@@ -79,12 +99,14 @@ uint8_t iwl_mvm_get_ctrl_pos(wlan_channel_t* chandef) {
   } else if (100 <= primary && primary <= 128) {
     base = 100;
   } else if (132 <= primary && primary <= 144) {
-    if (cbw == WLAN_CHANNEL_BANDWIDTH__160) {  // This group doesn't support 160MHz primary channels. Use default value.
+    if (cbw == WLAN_CHANNEL_BANDWIDTH__160) {  // This group doesn't support 160MHz primary
+                                               // channels. Use default value.
       return PHY_VHT_CTRL_POS_1_BELOW;
     }
     base = 132;
   } else if (149 <= primary && primary <= 161) {
-    if (cbw == WLAN_CHANNEL_BANDWIDTH__160) {  // This group doesn't support 160MHz primary channels. Use default value.
+    if (cbw == WLAN_CHANNEL_BANDWIDTH__160) {  // This group doesn't support 160MHz primary
+                                               // channels. Use default value.
       return PHY_VHT_CTRL_POS_1_BELOW;
     }
     base = 149;
@@ -98,15 +120,15 @@ uint8_t iwl_mvm_get_ctrl_pos(wlan_channel_t* chandef) {
                                          // # of 1's means the bandwidth.
   bool has_bit2 = offset_to_base & 0x4;  // for HT40+/- checking
   switch (chandef->cbw) {
-    case WLAN_CHANNEL_BANDWIDTH__40ABOVE:   // The secondary channel is above the primary.
-      mask = 0x7;      // Keep 3 bits.
-      if (has_bit2) {  // Channel 40, 48, 56 ... doesn't allow HT40+.
+    case WLAN_CHANNEL_BANDWIDTH__40ABOVE:  // The secondary channel is above the primary.
+      mask = 0x7;                          // Keep 3 bits.
+      if (has_bit2) {                      // Channel 40, 48, 56 ... doesn't allow HT40+.
         return PHY_VHT_CTRL_POS_1_BELOW;
       }
       break;
-    case WLAN_CHANNEL_BANDWIDTH__40BELOW:    // The secondary channel is below the primary.
-      mask = 0x7;       // Keep 3 bits.
-      if (!has_bit2) {  // Channel 36, 44, 52 ... doesn't allow HT40-.
+    case WLAN_CHANNEL_BANDWIDTH__40BELOW:  // The secondary channel is below the primary.
+      mask = 0x7;                          // Keep 3 bits.
+      if (!has_bit2) {                     // Channel 36, 44, 52 ... doesn't allow HT40-.
         return PHY_VHT_CTRL_POS_1_BELOW;
       }
       break;
@@ -198,12 +220,13 @@ static void iwl_mvm_phy_ctxt_cmd_hdr(struct iwl_mvm_phy_ctxt* ctxt, struct iwl_p
  * Add the phy configuration to the PHY context command
  */
 static void iwl_mvm_phy_ctxt_cmd_data(struct iwl_mvm* mvm, struct iwl_phy_context_cmd* cmd,
-                                      wlan_channel_t* chandef, uint8_t chains_static,
+                                      const wlan_channel_t* chandef, uint8_t chains_static,
                                       uint8_t chains_dynamic) {
   uint8_t active_cnt, idle_cnt;
 
   /* Set the channel info data */
-  cmd->ci.band = (chandef->primary < 14 ? PHY_BAND_24 : PHY_BAND_5);
+  cmd->ci.band =
+      iwl_mvm_get_channel_band(chandef->primary) == WLAN_INFO_BAND_2GHZ ? PHY_BAND_24 : PHY_BAND_5;
 
   cmd->ci.channel = chandef->primary;
   cmd->ci.width = iwl_mvm_get_channel_width(chandef);
@@ -245,11 +268,12 @@ static void iwl_mvm_phy_ctxt_cmd_data(struct iwl_mvm* mvm, struct iwl_phy_contex
  * first time that the phy configuration is applied or in case that the phy
  * configuration changed from the previous apply.
  */
-static int iwl_mvm_phy_ctxt_apply(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
-                                  wlan_channel_t* chandef, uint8_t chains_static,
-                                  uint8_t chains_dynamic, uint32_t action, uint32_t apply_time) {
+static zx_status_t iwl_mvm_phy_ctxt_apply(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
+                                          const wlan_channel_t* chandef, uint8_t chains_static,
+                                          uint8_t chains_dynamic, uint32_t action,
+                                          uint32_t apply_time) {
   struct iwl_phy_context_cmd cmd;
-  int ret;
+  zx_status_t ret;
 
   /* Set the command header fields */
   iwl_mvm_phy_ctxt_cmd_hdr(ctxt, &cmd, action, apply_time);
@@ -258,7 +282,7 @@ static int iwl_mvm_phy_ctxt_apply(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* 
   iwl_mvm_phy_ctxt_cmd_data(mvm, &cmd, chandef, chains_static, chains_dynamic);
 
   ret = iwl_mvm_send_cmd_pdu(mvm, PHY_CONTEXT_CMD, 0, sizeof(struct iwl_phy_context_cmd), &cmd);
-  if (ret) {
+  if (ret != ZX_OK) {
     IWL_ERR(mvm, "PHY ctxt cmd error. ret=%d\n", ret);
   }
   return ret;
@@ -267,8 +291,9 @@ static int iwl_mvm_phy_ctxt_apply(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* 
 /*
  * Send a command to add a PHY context based on the current HW configuration.
  */
-int iwl_mvm_phy_ctxt_add(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
-                         wlan_channel_t* chandef, uint8_t chains_static, uint8_t chains_dynamic) {
+zx_status_t iwl_mvm_phy_ctxt_add(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
+                                 wlan_channel_t* chandef, uint8_t chains_static,
+                                 uint8_t chains_dynamic) {
   WARN_ON(!test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status) && ctxt->ref);
   lockdep_assert_held(&mvm->mutex);
 
@@ -280,7 +305,6 @@ int iwl_mvm_phy_ctxt_add(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
                                 FW_CTXT_ACTION_ADD, 0);
 }
 
-#if 0   // NEEDS_PORTING
 /*
  * Update the number of references to the given PHY context. This is valid only
  * in case the PHY context was already created, i.e., its reference count > 0.
@@ -295,21 +319,22 @@ void iwl_mvm_phy_ctxt_ref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt) {
  * configuration. Note that the function does not check that the configuration
  * changed.
  */
-int iwl_mvm_phy_ctxt_changed(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
-                             struct cfg80211_chan_def* chandef, uint8_t chains_static,
-                             uint8_t chains_dynamic) {
+zx_status_t iwl_mvm_phy_ctxt_changed(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
+                                     const wlan_channel_t* chandef, uint8_t chains_static,
+                                     uint8_t chains_dynamic) {
   enum iwl_ctxt_action action = FW_CTXT_ACTION_MODIFY;
 
   lockdep_assert_held(&mvm->mutex);
 
   if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_BINDING_CDB_SUPPORT) &&
-      ctxt->channel->band != chandef->chan->band) {
-    int ret;
+      iwl_mvm_get_channel_band(chandef->primary) !=
+          iwl_mvm_get_channel_band(ctxt->chandef.primary)) {
+    zx_status_t ret;
 
     /* ... remove it here ...*/
     ret = iwl_mvm_phy_ctxt_apply(mvm, ctxt, chandef, chains_static, chains_dynamic,
                                  FW_CTXT_ACTION_REMOVE, 0);
-    if (ret) {
+    if (ret != ZX_OK) {
       return ret;
     }
 
@@ -317,16 +342,19 @@ int iwl_mvm_phy_ctxt_changed(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
     action = FW_CTXT_ACTION_ADD;
   }
 
-  ctxt->channel = chandef->chan;
-  ctxt->width = chandef->width;
+  ctxt->chandef = *chandef;
   return iwl_mvm_phy_ctxt_apply(mvm, ctxt, chandef, chains_static, chains_dynamic, action, 0);
 }
 
-void iwl_mvm_phy_ctxt_unref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt) {
+zx_status_t iwl_mvm_phy_ctxt_unref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt) {
   lockdep_assert_held(&mvm->mutex);
 
-  if (WARN_ON_ONCE(!ctxt)) {
-    return;
+  if (!ctxt) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (ctxt->ref == 0) {
+    return ZX_ERR_BAD_STATE;
   }
 
   ctxt->ref--;
@@ -337,15 +365,14 @@ void iwl_mvm_phy_ctxt_unref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt) 
    * otherwise we might not be able to reuse this phy.
    */
   if (ctxt->ref == 0) {
-    struct ieee80211_channel* chan;
-    struct cfg80211_chan_def chandef;
-
-    chan = &mvm->hw->wiphy->bands[NL80211_BAND_2GHZ]->channels[0];
-    cfg80211_chandef_create(&chandef, chan, NL80211_CHAN_NO_HT);
-    iwl_mvm_phy_ctxt_changed(mvm, ctxt, &chandef, 1, 1);
+    // TODO(45353): support MIMO Rx.
+    iwl_mvm_phy_ctxt_changed(mvm, ctxt, &default_channel, 1, 1);
   }
+
+  return ZX_OK;
 }
 
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_binding_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
   unsigned long* data = _data;
   struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);

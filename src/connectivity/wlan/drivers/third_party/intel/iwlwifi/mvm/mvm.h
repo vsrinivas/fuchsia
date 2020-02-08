@@ -139,7 +139,7 @@ struct iwl_mvm_phy_ctxt {
   uint16_t color;
   uint32_t ref;
 
-  wlan_channel_bandwidth_t width;
+  wlan_channel_t chandef;
 
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
   /* Frequency Manager tx power limit*/
@@ -1685,16 +1685,17 @@ void iwl_mvm_rx_mfuart_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb)
 void iwl_mvm_rx_shared_mem_cfg_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb);
 
 /* MVM PHY */
-int iwl_mvm_phy_ctxt_add(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
-                         wlan_channel_t* chandef, uint8_t chains_static, uint8_t chains_dynamic);
-int iwl_mvm_phy_ctxt_changed(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
-                             struct cfg80211_chan_def* chandef, uint8_t chains_static,
-                             uint8_t chains_dynamic);
+zx_status_t iwl_mvm_phy_ctxt_add(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
+                                 wlan_channel_t* chandef, uint8_t chains_static,
+                                 uint8_t chains_dynamic);
+zx_status_t iwl_mvm_phy_ctxt_changed(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
+                                     const wlan_channel_t* chandef, uint8_t chains_static,
+                                     uint8_t chains_dynamic);
 void iwl_mvm_phy_ctxt_ref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt);
-void iwl_mvm_phy_ctxt_unref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt);
+zx_status_t iwl_mvm_phy_ctxt_unref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt);
 int iwl_mvm_phy_ctx_count(struct iwl_mvm* mvm);
-uint8_t iwl_mvm_get_channel_width(wlan_channel_t* chandef);
-uint8_t iwl_mvm_get_ctrl_pos(wlan_channel_t* chandef);
+uint8_t iwl_mvm_get_channel_width(const wlan_channel_t* chandef);
+uint8_t iwl_mvm_get_ctrl_pos(const wlan_channel_t* chandef);
 
 /* MAC (virtual interface) programming */
 zx_status_t iwl_mvm_mac_ctxt_init(struct iwl_mvm_vif* mvmvif);
@@ -2118,10 +2119,25 @@ void iwl_mvm_ax_softap_testmode_sta_add_debugfs(struct ieee80211_hw* hw, struct 
 // The entry point for ops.c.
 zx_status_t iwl_mvm_init(void);
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// For phy-ctxt.c
+//
+extern const wlan_channel_t default_channel;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//
 // Interfaces for mac80211.c
+//
 zx_status_t iwl_mvm_mac_add_interface(struct iwl_mvm_vif* mvmvif);
 zx_status_t iwl_mvm_mac_remove_interface(struct iwl_mvm_vif* mvmvif);
 zx_status_t iwl_mvm_mac_hw_scan(struct iwl_mvm_vif* mvmvif,
                                 const wlan_hw_scan_config_t* scan_config);
+
+zx_status_t iwl_mvm_add_chanctx(struct iwl_mvm* mvm, const wlan_channel_t* chandef,
+                                uint16_t* phy_ctxt_id);
+zx_status_t iwl_mvm_remove_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id);
+zx_status_t iwl_mvm_change_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id,
+                                   const wlan_channel_t* chandef);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_

@@ -198,6 +198,15 @@ static zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc,
     return ret;
   }
 
+  // Add PHY context with default value.
+  uint16_t phy_ctxt_id;
+  ret = iwl_mvm_add_chanctx(mvmvif->mvm, &default_channel, &phy_ctxt_id);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvmvif, "Cannot add channel context: %s\n", zx_status_get_string(ret));
+    return ret;
+  }
+  mvmvif->phy_ctxt = &mvmvif->mvm->phy_ctxts[phy_ctxt_id];
+
   return ret;
 }
 
@@ -216,8 +225,10 @@ static zx_status_t mac_queue_tx(void* ctx, uint32_t options, wlan_tx_packet_t* p
 }
 
 static zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* chan) {
-  IWL_ERR(ctx, "%s() needs porting ... see fxb/36742\n", __func__);
-  return ZX_ERR_NOT_SUPPORTED;
+  struct iwl_mvm_vif* mvmvif = ctx;
+  mvmvif->phy_ctxt->chandef = *chan;
+
+  return iwl_mvm_change_chanctx(mvmvif->mvm, mvmvif->phy_ctxt->id, chan);
 }
 
 static zx_status_t mac_configure_bss(void* ctx, uint32_t options, const wlan_bss_config_t* config) {

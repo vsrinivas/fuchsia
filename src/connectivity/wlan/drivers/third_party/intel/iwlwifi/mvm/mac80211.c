@@ -1144,19 +1144,22 @@ void iwl_mvm_mac_stop(struct iwl_mvm* mvm) {
 #endif  // NEEDS_PORTING
 }
 
-#if 0  // NEEDS_PORTING
 static struct iwl_mvm_phy_ctxt* iwl_mvm_get_free_phy_ctxt(struct iwl_mvm* mvm) {
-    uint16_t i;
+  uint16_t i;
 
-    lockdep_assert_held(&mvm->mutex);
+  lockdep_assert_held(&mvm->mutex);
 
-    for (i = 0; i < NUM_PHY_CTX; i++)
-        if (!mvm->phy_ctxts[i].ref) { return &mvm->phy_ctxts[i]; }
+  for (i = 0; i < NUM_PHY_CTX; i++) {
+    if (!mvm->phy_ctxts[i].ref) {
+      return &mvm->phy_ctxts[i];
+    }
+  }
 
-    IWL_ERR(mvm, "No available PHY context\n");
-    return NULL;
+  IWL_ERR(mvm, "No available PHY context\n");
+  return NULL;
 }
 
+#if 0  // NEEDS_PORTING
 static int iwl_mvm_set_tx_power(struct iwl_mvm* mvm, struct ieee80211_vif* vif, int16_t tx_power) {
     int len;
     union {
@@ -3311,89 +3314,83 @@ static int iwl_mvm_cancel_roc(struct ieee80211_hw* hw) {
     IWL_DEBUG_MAC80211(mvm, "leave\n");
     return 0;
 }
+#endif  // NEEDS_PORTING
 
-static int __iwl_mvm_add_chanctx(struct iwl_mvm* mvm, struct ieee80211_chanctx_conf* ctx) {
-    uint16_t* phy_ctxt_id = (uint16_t*)ctx->drv_priv;
-    struct iwl_mvm_phy_ctxt* phy_ctxt;
-    struct cfg80211_chan_def* def = &ctx->min_def;
-    int ret;
+static zx_status_t __iwl_mvm_add_chanctx(struct iwl_mvm* mvm, const wlan_channel_t* chandef,
+                                         uint16_t* phy_ctxt_id) {
+  struct iwl_mvm_phy_ctxt* phy_ctxt;
+  zx_status_t ret;
 
-    lockdep_assert_held(&mvm->mutex);
+  lockdep_assert_held(&mvm->mutex);
 
-    IWL_DEBUG_MAC80211(mvm, "Add channel context\n");
+  IWL_DEBUG_MAC80211(mvm, "Add channel context\n");
 
-    phy_ctxt = iwl_mvm_get_free_phy_ctxt(mvm);
-    if (!phy_ctxt) {
-        ret = -ENOSPC;
-        goto out;
-    }
+  phy_ctxt = iwl_mvm_get_free_phy_ctxt(mvm);
+  if (!phy_ctxt) {
+    ret = ZX_ERR_NO_RESOURCES;
+    goto out;
+  }
 
-    ret =
-        iwl_mvm_phy_ctxt_changed(mvm, phy_ctxt, def, ctx->rx_chains_static, ctx->rx_chains_dynamic);
-    if (ret) {
-        IWL_ERR(mvm, "Failed to add PHY context\n");
-        goto out;
-    }
+  // TODO(45353): support MIMO Rx.
+  ret = iwl_mvm_phy_ctxt_changed(mvm, phy_ctxt, chandef, 1, 1);
+  if (ret != ZX_OK) {
+    IWL_ERR(mvm, "Failed to add PHY context\n");
+    goto out;
+  }
 
-    iwl_mvm_phy_ctxt_ref(mvm, phy_ctxt);
-    *phy_ctxt_id = phy_ctxt->id;
+  iwl_mvm_phy_ctxt_ref(mvm, phy_ctxt);
+  *phy_ctxt_id = phy_ctxt->id;
 
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
-    iwl_mvm_fm_notify_channel_change(ctx, IWL_FM_ADD_CHANCTX);
+  iwl_mvm_fm_notify_channel_change(ctx, IWL_FM_ADD_CHANCTX);
 #endif
 
 out:
-    return ret;
+  return ret;
 }
 
-static int iwl_mvm_add_chanctx(struct ieee80211_hw* hw, struct ieee80211_chanctx_conf* ctx) {
-    struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
-    int ret;
+zx_status_t iwl_mvm_add_chanctx(struct iwl_mvm* mvm, const wlan_channel_t* chandef,
+                                uint16_t* phy_ctxt_id) {
+  zx_status_t ret;
 
-    mutex_lock(&mvm->mutex);
-    ret = __iwl_mvm_add_chanctx(mvm, ctx);
-    mutex_unlock(&mvm->mutex);
+  mtx_lock(&mvm->mutex);
+  ret = __iwl_mvm_add_chanctx(mvm, chandef, phy_ctxt_id);
+  mtx_unlock(&mvm->mutex);
 
-    return ret;
+  return ret;
 }
 
-static void __iwl_mvm_remove_chanctx(struct iwl_mvm* mvm, struct ieee80211_chanctx_conf* ctx) {
-    uint16_t* phy_ctxt_id = (uint16_t*)ctx->drv_priv;
-    struct iwl_mvm_phy_ctxt* phy_ctxt = &mvm->phy_ctxts[*phy_ctxt_id];
+static zx_status_t __iwl_mvm_remove_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id) {
+  struct iwl_mvm_phy_ctxt* phy_ctxt = &mvm->phy_ctxts[phy_ctxt_id];
 
-    lockdep_assert_held(&mvm->mutex);
+  lockdep_assert_held(&mvm->mutex);
 
-    iwl_mvm_phy_ctxt_unref(mvm, phy_ctxt);
+  return iwl_mvm_phy_ctxt_unref(mvm, phy_ctxt);
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
-    iwl_mvm_fm_notify_channel_change(ctx, IWL_FM_REMOVE_CHANCTX);
+  iwl_mvm_fm_notify_channel_change(ctx, IWL_FM_REMOVE_CHANCTX);
 #endif
 }
 
-static void iwl_mvm_remove_chanctx(struct ieee80211_hw* hw, struct ieee80211_chanctx_conf* ctx) {
-    struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
-
-    mutex_lock(&mvm->mutex);
-    __iwl_mvm_remove_chanctx(mvm, ctx);
-    mutex_unlock(&mvm->mutex);
+zx_status_t iwl_mvm_remove_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id) {
+  zx_status_t ret;
+  mtx_lock(&mvm->mutex);
+  ret = __iwl_mvm_remove_chanctx(mvm, phy_ctxt_id);
+  mtx_unlock(&mvm->mutex);
+  return ret;
 }
 
-static void iwl_mvm_change_chanctx(struct ieee80211_hw* hw, struct ieee80211_chanctx_conf* ctx,
-                                   uint32_t changed) {
-    struct iwl_mvm* mvm = IWL_MAC80211_GET_MVM(hw);
-    uint16_t* phy_ctxt_id = (uint16_t*)ctx->drv_priv;
-    struct iwl_mvm_phy_ctxt* phy_ctxt = &mvm->phy_ctxts[*phy_ctxt_id];
-    struct cfg80211_chan_def* def = &ctx->min_def;
+zx_status_t iwl_mvm_change_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id,
+                                   const wlan_channel_t* chandef) {
+  struct iwl_mvm_phy_ctxt* phy_ctxt = &mvm->phy_ctxts[phy_ctxt_id];
 
-    if (WARN_ONCE(
-            (phy_ctxt->ref > 1) &&
-                (changed & ~(IEEE80211_CHANCTX_CHANGE_WIDTH | IEEE80211_CHANCTX_CHANGE_RX_CHAINS |
-                             IEEE80211_CHANCTX_CHANGE_RADAR | IEEE80211_CHANCTX_CHANGE_MIN_WIDTH)),
-            "Cannot change PHY. Ref=%d, changed=0x%X\n", phy_ctxt->ref, changed)) {
-        return;
-    }
+  if (phy_ctxt->ref > 1) {
+    IWL_WARN(mvm, "Cannot change PHY. Ref=%d\n", phy_ctxt->ref);
+    return ZX_ERR_BAD_STATE;
+  }
 
-    mutex_lock(&mvm->mutex);
+  mtx_lock(&mvm->mutex);
 
+#if 0   // NEEDS_PORTING
     /* we are only changing the min_width, may be a noop */
     if (changed == IEEE80211_CHANCTX_CHANGE_MIN_WIDTH) {
         if (phy_ctxt->width == def->width) { goto out_unlock; }
@@ -3405,15 +3402,20 @@ static void iwl_mvm_change_chanctx(struct ieee80211_hw* hw, struct ieee80211_cha
     }
 
     iwl_mvm_bt_coex_vif_change(mvm);
-    iwl_mvm_phy_ctxt_changed(mvm, phy_ctxt, def, ctx->rx_chains_static, ctx->rx_chains_dynamic);
+#endif  // NEEDS_PORTING
+
+  // TODO(45353): support MIMO Rx.
+  zx_status_t ret = iwl_mvm_phy_ctxt_changed(mvm, phy_ctxt, chandef, 1, 1);
 #ifdef CPTCFG_IWLWIFI_FRQ_MGR
-    iwl_mvm_fm_notify_channel_change(ctx, IWL_FM_CHANGE_CHANCTX);
+  iwl_mvm_fm_notify_channel_change(ctx, IWL_FM_CHANGE_CHANCTX);
 #endif
 
-out_unlock:
-    mutex_unlock(&mvm->mutex);
+  mtx_unlock(&mvm->mutex);
+
+  return ret;
 }
 
+#if 0  // NEEDS_PORTING
 static int __iwl_mvm_assign_vif_chanctx(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
                                         struct ieee80211_chanctx_conf* ctx,
                                         bool switching_chanctx) {
