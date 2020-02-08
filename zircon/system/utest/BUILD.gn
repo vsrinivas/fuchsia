@@ -81,7 +81,6 @@ if (current_cpu != "") {
       "log",
       "logger",
       "mexec",
-      "noop-fuzzer",
       "platform-bus",
       "policy",
       "stdio",

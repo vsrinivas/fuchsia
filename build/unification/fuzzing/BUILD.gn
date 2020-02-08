@@ -17,7 +17,6 @@ fuzzer_names = [
   "kernel-cmdline",
   "lz4",
   "lz4-decompress",
-  "noop",
   "tftp",
   "vmo_file",
   "zbi-bootfs",
