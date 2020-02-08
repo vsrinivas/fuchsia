@@ -12,8 +12,6 @@ toc:
     path: /docs/concepts/components/lifecycle.md
   - title: "Hub"
     path: /docs/concepts/components/hub.md
-  - title: "Instrumentation hooks"
-    path: /docs/concepts/components/instrumentation_hooks.md
   - title: "Manifests"
     path: /docs/concepts/components/component_manifests.md
   - title: "Monikers"
@@ -37,10 +35,16 @@ toc:
   section:
   - title: "ELF runner"
     path: /docs/concepts/components/elf_runner.md
-- title: "Inspect"
+- title: "Testing"
+  section:
+  - title: "Black box testing"
+    path: /docs/concepts/components/black_box_testing.md
+- title: "Diagnostics"
   section:
   - include: /docs/concepts/components/inspect/_toc.yaml
-- title: "Life of a service open"
-  path: /docs/concepts/components/life_of_a_service_open.md
-- title: "Black box testing with component manager"
-  path: /docs/concepts/components/black_box_testing.md
+  - title: "Instrumentation hooks"
+    path: /docs/concepts/components/instrumentation_hooks.md
+- title: "Implementation details"
+  section:
+  - title: "Life of a service open"
+    path: /docs/concepts/components/life_of_a_service_open.md
