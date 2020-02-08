@@ -125,7 +125,6 @@ group("test") {
     ":debugdata",
     ":noop-tests.instrumented",
     ":posix-clocks",
-    "sanitizer",
   ]
   foreach(case, default_stack_size_cases) {
     deps += [ ":default-stack-size-${case.name}" ]
