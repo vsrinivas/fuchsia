@@ -187,7 +187,6 @@ group("test") {
     "journal/test",
     "test",
     "test_support/test",
-    "transaction/test",
   ]
 }
 
