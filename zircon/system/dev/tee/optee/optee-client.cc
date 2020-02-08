@@ -205,15 +205,15 @@ static zx_status_t RecursivelyWalkPath(zx::unowned_channel& root_channel,
   static_assert((kOpenFlags & fuchsia_io::OPEN_FLAG_NOT_DIRECTORY) == 0,
                 "kOpenFlags must not include fuchsia_io::OPEN_FLAG_NOT_DIRECTORY");
   ZX_DEBUG_ASSERT(root_channel->is_valid());
-  ZX_DEBUG_ASSERT(!path.empty());
   ZX_DEBUG_ASSERT(out_node_channel != nullptr);
 
   zx_status_t status;
   zx::channel result_channel;
 
-  if (path == std::filesystem::path(".")) {
+  if (path.empty() || path == std::filesystem::path(".")) {
     // If the path is lexicographically equivalent to the (relative) root directory, clone the
-    // root channel instead of opening the path
+    // root channel instead of opening the path.
+    // An empty path is considered equivalent to the relative root directory.
     zx::channel server_channel;
     status = zx::channel::create(0, &result_channel, &server_channel);
     if (status != ZX_OK) {
