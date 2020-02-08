@@ -414,6 +414,12 @@ template("library") {
   if (sdk != false && ((toolchain.environment == "user" &&
                         current_toolchain == toolchain.shlib) ||
                        toolchain.environment == "host")) {
+    name_suffix = ""
+    if (toolchain.environment == "host") {
+      # Host libraries are always exported as sources.
+      sdk = "source"
+      name_suffix = "-host"
+    }
     sdk_deps = []
     if (defined(invoker.public_deps)) {
       foreach(label, invoker.public_deps) {
@@ -430,11 +436,6 @@ template("library") {
     }
     if (sdk != "shared" && defined(invoker.deps)) {
       sdk_deps += invoker.deps
-    }
-
-    name_suffix = ""
-    if (toolchain.environment == "host") {
-      name_suffix = "-host"
     }
 
     install_files = []
@@ -618,6 +619,28 @@ template("library") {
 
         # TODO(BLD-353): temporary hacks
         metadata = legacy_metadata
+      }
+    } else {
+      # Set up a group target with enough metadata that no-op dependencies are
+      # correctly reflected in the GN build.
+      targets = true
+      not_needed(invoker, "*")
+      group(_library_name) {
+        public_deps = [ ":${_library_name}.headers" ]
+        metadata = {
+          legacy_barrier = []
+          legacy_dirs = [ "lib/$_library_name-host" ]
+          legacy_targets = [
+            {
+              _label = get_label_info(":$_library_name", "label_with_toolchain")
+              _zircon_public = "lib"
+              import = "//build/zircon/zircon_header_library.gni"
+              target_type = "zircon_header_library"
+              target_name = "$_library_name-host"
+              include_dirs = [ "//zircon/" + rebase_path("include", "$zx/") ]
+            }
+          ]
+        }
       }
     }
   } else if (static || shared) {
