@@ -31,7 +31,8 @@ bool StubCrashServer::MakeRequest(const std::map<std::string, std::string>& anno
   }
 
   FXL_CHECK(ExpectRequest()) << fxl::StringPrintf(
-      "no more calls to MakeRequest() expected (%lu/%lu calls made)", request_return_values_.size(),
+      "no more calls to MakeRequest() expected (%lu/%lu calls made)",
+      std::distance(request_return_values_.cbegin(), next_return_value_),
       request_return_values_.size());
   if (*next_return_value_) {
     *server_report_id = kStubServerReportId;
