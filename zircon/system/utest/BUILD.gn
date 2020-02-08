@@ -35,7 +35,6 @@ if (current_cpu != "") {
       "$zx/system/dev/lib/device-protocol-pdev/test",
       "$zx/system/dev/lib/fake-mmio-reg:fake-mmio-reg-test",
       "$zx/system/dev/lib/mock-mmio-reg:mock-mmio-reg-test",
-      "$zx/system/dev/lib/mt8167/test:mt8167-audio-lib-test",
       "$zx/system/dev/lib/scsi/test",
       "$zx/system/dev/sysmem/sysmem:sysmem-unittest",
       "$zx/system/dev/test",
