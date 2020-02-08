@@ -1,0 +1,12 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Top level BUILD file for gn samples
+
+import("//third_party/fuchsia-sdk/build/test_targets.gni")
+fuchsia_sdk_test_targets("fidl") {
+}
+group("default") {
+  deps = [ ":fidl" ]
+}
