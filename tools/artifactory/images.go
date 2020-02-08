@@ -10,7 +10,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/build/lib"
 )
 
-// ImageUploads parses the image manifest located in buildDir and returns a
+// ImageUploads parses the image manifest located in the build and returns a
 // list of Uploads for the images used for testing.
 func ImageUploads(mods *build.Modules, namespace string) []Upload {
 	return imageUploads(mods, namespace)

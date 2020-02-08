@@ -15,6 +15,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"go.fuchsia.dev/fuchsia/tools/artifactory/lib"
@@ -37,6 +38,11 @@ const (
 	keyDirName      = "keys"
 	blobDirName     = "blobs"
 	imageDirName    = "images"
+	debugDirName    = "debug"
+
+	// A record of all of the fuchsia debug symbols processed.
+	// This is eventually consumed by crash reporting infrastructure.
+	buildIDsTxt = "build-ids.txt"
 )
 
 type upCommand struct {
@@ -135,15 +141,44 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		},
 	}
 
-	files := artifactory.ImageUploads(m, path.Join(cmd.uuid, imageDirName))
+	var files []artifactory.Upload
+
+	images := artifactory.ImageUploads(m, path.Join(cmd.uuid, imageDirName))
+	files = append(files, images...)
+
+	debugBinaries, buildIDs, err := artifactory.DebugBinaryUploads(m, debugDirName)
+	if err != nil {
+		return err
+	}
+	files = append(files, debugBinaries...)
+	buildIDManifest, err := createBuildIDManifest(buildIDs)
+	if err != nil {
+		return err
+	}
+	defer os.Remove(buildIDManifest)
+	files = append(files, artifactory.Upload{
+		Source:      buildIDManifest,
+		Destination: path.Join(cmd.uuid, buildIDsTxt),
+	})
+
 	for _, dir := range dirs {
-		fs, err := dirToFiles(ctx, dir)
+		contents, err := dirToFiles(ctx, dir)
 		if err != nil {
 			return err
 		}
-		files = append(files, fs...)
+		files = append(files, contents...)
 	}
 	return uploadFiles(ctx, files, sink, cmd.j)
+}
+
+func createBuildIDManifest(buildIDs []string) (string, error) {
+	manifest, err := ioutil.TempFile("", buildIDsTxt)
+	if err != nil {
+		return "", err
+	}
+	defer manifest.Close()
+	_, err = io.WriteString(manifest, strings.Join(buildIDs, "\n"))
+	return manifest.Name(), err
 }
 
 // DataSink is an abstract data sink, providing a mockable interface to
