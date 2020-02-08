@@ -206,11 +206,13 @@ template("clang_toolchain") {
       #   https://github.com/ninja-build/ninja/pull/1534
       #if (outfile != unstripped_outfile) {
       #  outputs += [ unstripped_outfile ]
+      #  if (output_breakpad_syms && current_os == "fuchsia") {
+      #    outputs += [ "$outfile.sym" ]
+      #  }
       #}
-      #if (output_breakpad_syms && current_os == "fuchsia") {
-      #  outputs += [ "$outfile.sym" ]
-      #  command += " && $dump_syms -r -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
-      #}
+      if (output_breakpad_syms && current_os == "fuchsia") {
+        command += " && $dump_syms -r -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
+      }
       if (use_strip) {
         if (invoker.toolchain_os == "mac") {
           command += " && $strip \"$unstripped_outfile\" -o \"$outfile\""
@@ -297,11 +299,13 @@ template("clang_toolchain") {
       #   https://github.com/ninja-build/ninja/pull/1534
       #if (outfile != unstripped_outfile) {
       #  outputs += [ unstripped_outfile ]
+      #  if (output_breakpad_syms && current_os == "fuchsia") {
+      #    outputs += [ "$outfile.sym" ]
+      #  }
       #}
-      #if (output_breakpad_syms && current_os == "fuchsia") {
-      #  outputs += [ "$outfile.sym" ]
-      #  command += " && $dump_syms -r -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
-      #}
+      if (output_breakpad_syms && current_os == "fuchsia") {
+        command += " && $dump_syms -r -o Fuchsia \"$unstripped_outfile\" > \"$outfile.sym\""
+      }
       if (use_strip) {
         if (invoker.toolchain_os == "mac") {
           command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
