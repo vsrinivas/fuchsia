@@ -60,6 +60,12 @@ enum Command {
     },
     #[structopt(name = "apply")]
     Apply {
+        #[structopt(
+            short,
+            name = "component",
+            help = "Apply selectors from the provided selector_file for only this component"
+        )]
+        component_name: Option<String>,
         #[structopt(help = "The selector file to apply to the bugreport")]
         selector_file: String,
     },
@@ -266,7 +272,11 @@ fn filter_json_schema_by_selectors(
 ///
 /// Returns a vector of Line printed diffs between the unfiltered and filtered hierarchies,
 /// or an Error.
-fn filter_data_to_lines(selector_file: &str, data: &serde_json::Value) -> Result<Vec<Line>, Error> {
+fn filter_data_to_lines(
+    selector_file: &str,
+    data: &serde_json::Value,
+    requested_name_opt: &Option<String>,
+) -> Result<Vec<Line>, Error> {
     let selector_vec: Vec<Arc<Selector>> =
         selectors::parse_selector_file(&PathBuf::from(selector_file))?
             .into_iter()
@@ -274,21 +284,43 @@ fn filter_data_to_lines(selector_file: &str, data: &serde_json::Value) -> Result
             .collect();
 
     let arr: Vec<serde_json::Value> = match data {
-        serde_json::Value::Array(arr) => arr.clone(),
+        serde_json::Value::Array(arr) => arr.to_vec(),
         _ => return Err(format_err!("Input Inspect JSON must be an array.")),
     };
 
-    let filtered_node_hierarchies: Vec<serde_json::Value> = arr
+    // Filter the source data that we diff against to only contain the component
+    // of interest.
+    let diffable_source = match requested_name_opt {
+        Some(requested_name) => arr
+            .into_iter()
+            .filter(|value| match value[JSON_MONIKER_KEY].as_str() {
+                Some(moniker_str) => {
+                    let moniker = parse_path_to_moniker(moniker_str);
+                    let component_name = moniker
+                        .last()
+                        .expect("Monikers in provided data dumps are required to be non-empty.");
+
+                    requested_name == component_name
+                }
+                None => false,
+            })
+            .collect(),
+        None => arr,
+    };
+
+    let filtered_node_hierarchies: Vec<serde_json::Value> = diffable_source
+        .clone()
         .into_iter()
         .filter_map(|value| filter_json_schema_by_selectors(value, &selector_vec))
         .collect();
 
+    let unfiltered_collection_array = serde_json::Value::Array(diffable_source);
+
     // TODO(43937): Move inspect formatting utilities to the hierarchy library.
     let filtered_collection_array = serde_json::Value::Array(filtered_node_hierarchies);
 
-    let orig_str = serde_json::to_string_pretty(&data).unwrap();
+    let orig_str = serde_json::to_string_pretty(&unfiltered_collection_array).unwrap();
     let new_str = serde_json::to_string_pretty(&filtered_collection_array).unwrap();
-
     let cs = difference::Changeset::new(&orig_str, &new_str, "\n");
 
     Ok(cs
@@ -371,11 +403,15 @@ fn generate_selectors<'a>(
     Ok(output.join("\n"))
 }
 
-fn interactive_apply(data: &serde_json::Value, selector_file: &str) -> Result<(), Error> {
+fn interactive_apply(
+    data: &serde_json::Value,
+    selector_file: &str,
+    component_name: Option<String>,
+) -> Result<(), Error> {
     let stdin = stdin();
     let mut stdout = stdout().into_raw_mode().unwrap();
 
-    let mut output = Output::new(filter_data_to_lines(&selector_file, &data)?);
+    let mut output = Output::new(filter_data_to_lines(&selector_file, &data, &component_name)?);
 
     write!(stdout, "{}{}{}", cursor::Restore, cursor::Hide, termion::clear::All).unwrap();
 
@@ -394,7 +430,7 @@ fn interactive_apply(data: &serde_json::Value, selector_file: &str) -> Result<()
                 output.refresh(&mut stdout);
                 stdout.flush().unwrap();
 
-                output.set_lines(filter_data_to_lines(&selector_file, &data)?)
+                output.set_lines(filter_data_to_lines(&selector_file, &data, &component_name)?)
             }
             Event::Key(Key::Up) => {
                 output.scroll(-1, 0);
@@ -441,8 +477,8 @@ fn main() -> Result<(), Error> {
                     .expect(&format!("failed to generate selectors")),
             )?;
         }
-        Command::Apply { selector_file } => {
-            interactive_apply(&data, &selector_file)?;
+        Command::Apply { selector_file, component_name } => {
+            interactive_apply(&data, &selector_file, component_name)?;
         }
     }
 
@@ -501,6 +537,7 @@ account_manager.cmx:root/listeners:total_opened";
         selector_string: &str,
         source_hierarchy: serde_json::Value,
         golden_json: serde_json::Value,
+        requested_component: Option<String>,
     ) {
         let mut selector_path =
             tempfile::NamedTempFile::new().expect("Creating tmp selector file should succeed.");
@@ -509,15 +546,18 @@ account_manager.cmx:root/listeners:total_opened";
             .write_all(selector_string.as_bytes())
             .expect("writing selectors to file should be fine...");
 
-        let filtered_data_string =
-            filter_data_to_lines(&selector_path.path().to_string_lossy(), &source_hierarchy)
-                .expect("filtering hierarchy should have succeeded.")
-                .into_iter()
-                .filter(|line| !line.removed)
-                .fold(String::new(), |mut acc, line| {
-                    acc.push_str(&line.value);
-                    acc
-                });
+        let filtered_data_string = filter_data_to_lines(
+            &selector_path.path().to_string_lossy(),
+            &source_hierarchy,
+            &requested_component,
+        )
+        .expect("filtering hierarchy should have succeeded.")
+        .into_iter()
+        .filter(|line| !line.removed)
+        .fold(String::new(), |mut acc, line| {
+            acc.push_str(&line.value);
+            acc
+        });
         let filtered_json_value: serde_json::Value = serde_json::from_str(&filtered_data_string)
             .expect(&format!(
                 "Resultant json dump should be parsable json: {}",
@@ -536,7 +576,19 @@ account_manager.cmx:root/listeners:active
 account_manager.cmx:root/listeners:events
 account_manager.cmx:root/listeners:total_opened";
 
-        setup_and_run_selector_filtering(full_tree_selector, get_json_dump(), get_json_dump());
+        setup_and_run_selector_filtering(
+            full_tree_selector,
+            get_json_dump(),
+            get_json_dump(),
+            None,
+        );
+
+        setup_and_run_selector_filtering(
+            full_tree_selector,
+            get_json_dump(),
+            get_json_dump(),
+            Some("account_manager.cmx".to_string()),
+        );
 
         let single_value_selector = "account_manager.cmx:root/accounts:active";
 
@@ -544,6 +596,21 @@ account_manager.cmx:root/listeners:total_opened";
             single_value_selector,
             get_json_dump(),
             get_single_value_json(),
+            None,
+        );
+
+        setup_and_run_selector_filtering(
+            single_value_selector,
+            get_json_dump(),
+            get_single_value_json(),
+            Some("account_manager.cmx".to_string()),
+        );
+
+        setup_and_run_selector_filtering(
+            single_value_selector,
+            get_json_dump(),
+            get_empty_value_json(),
+            Some("bloop.cmx".to_string()),
         );
     }
 
@@ -588,5 +655,9 @@ account_manager.cmx:root/listeners:total_opened";
                 }
             ]
         )
+    }
+
+    fn get_empty_value_json() -> serde_json::Value {
+        serde_json::json!([])
     }
 }
