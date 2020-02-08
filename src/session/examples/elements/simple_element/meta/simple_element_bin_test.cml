@@ -4,6 +4,7 @@
         args: ["/pkg/test/simple_element_bin_test",]
     },
     use: [
+        { runner: "elf" },
         {
             protocol: "/svc/fuchsia.session.examples.ElementPing",
         },

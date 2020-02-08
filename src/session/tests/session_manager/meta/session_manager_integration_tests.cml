@@ -1,21 +1,34 @@
 {
-    "program": {
-        "binary": "bin/rust_test_adapter",
-        "args": [
+    program: {
+        binary: "bin/rust_test_adapter",
+        args: [
             "/pkg/test/session_manager_integration_tests",
         ],
     },
     use: [
         {
-            "protocol": "/svc/fuchsia.sys2.Realm",
-            "from": "framework",
+            runner: "elf"
+        },
+        {
+            protocol: "/svc/fuchsia.sys2.Realm",
+            from: "framework",
         },
         // The last "use" statements are needed for the RustTestAdapter trampoline
         {
-            "protocol": "/svc/fuchsia.process.Launcher"
+            protocol: "/svc/fuchsia.process.Launcher"
         },
         {
-            "protocol": "/svc/fuchsia.logger.LogSink"
+            protocol: "/svc/fuchsia.logger.LogSink"
+        },
+    ],
+    offer: [
+        // Offer the ELF runner to children.
+        {
+            runner: "elf",
+            from: "realm",
+            to: [
+                "#session",
+            ]
         },
     ],
     expose: [

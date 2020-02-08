@@ -3,6 +3,7 @@
         binary: "bin/simple_element",
     },
     use: [
+        { runner: "elf" },
         {
             protocol: "/svc/fuchsia.session.examples.ElementPing",
         },

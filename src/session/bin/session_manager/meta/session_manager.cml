@@ -9,6 +9,7 @@
         },
     ],
     use: [
+        { runner: "elf" },
         {
             // The Realm service allows session_manager to start components.
             protocol: "/svc/fuchsia.sys2.Realm",
@@ -36,6 +37,14 @@
         },
     ],
     offer: [
+        // Offer the ELF runner to children.
+        {
+            "runner": "elf",
+            "from": "realm",
+            "to": [
+                "#session",
+            ]
+        },
         {
             protocol: [
                 "/svc/fuchsia.deprecatedtimezone.Timezone",

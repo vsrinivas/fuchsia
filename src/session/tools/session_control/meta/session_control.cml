@@ -3,6 +3,7 @@
         binary: "bin/session_control",
     },
     use: [
+        { runner: "elf" },
         {
             protocol: "/svc/fuchsia.session.Launcher",
             from: "realm",

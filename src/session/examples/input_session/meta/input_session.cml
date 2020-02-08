@@ -3,6 +3,7 @@
         binary: "bin/input_session",
     },
     use: [
+        { runner: "elf" },
         {
             directory: "/dev/class/input-report",
             from: "realm",

@@ -4,6 +4,7 @@
         args: ["/pkg/test/input_session_bin_test",],
     },
     use: [
+        { runner: "elf" },
         {
             directory: "/dev/class/input-report",
             from: "realm",

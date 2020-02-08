@@ -3,6 +3,7 @@
         binary: "bin/element_proposer",
     },
     use: [
+        { runner: "elf" },
         {
             protocol: "/svc/fuchsia.session.ElementManager",
         },
