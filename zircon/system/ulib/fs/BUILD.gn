@@ -184,7 +184,6 @@ if (is_fuchsia) {
 group("test") {
   testonly = true
   deps = [
-    "journal/test",
     "test",
     "test_support/test",
   ]
