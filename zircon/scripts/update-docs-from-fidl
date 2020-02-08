@@ -34,8 +34,8 @@ STANDARD_BLOCK_HEADER = ['', STANDARD_COMMENT, '']
 REFERENCES_COMMENT = \
         '<!-- References updated by update-docs-from-fidl, do not edit. -->'
 
-SYSCALLS_FIDL_DIR = os.path.normpath(
-    os.path.join(SCRIPT_DIR, os.pardir, 'vdso'))
+SYSCALLS_FIDL_DIR = os.path.normpath(os.path.join(SCRIPT_DIR, os.pardir,
+                                                  'vdso'))
 
 
 def parse_args():
@@ -139,6 +139,15 @@ def match_sentence_form(sentence, arg_names):
         [
             'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'be', 'of',
             'type', 'TYPE', 'and', 'have', 'RIGHT', '.'
+        ],
+        [
+            'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'be', 'of',
+            'type', 'TYPE', 'and', 'have', 'RIGHT1', 'and', 'RIGHT2', '.'
+        ],
+        [
+            'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'be', 'of',
+            'type', 'TYPE', 'and', 'have', 'RIGHT1', 'and', 'RIGHT2', 'and',
+            'RIGHT3', '.'
         ],
         [
             'If', 'ARG1', '&', 'VALUE', ',', 'ARG2', 'must', 'be', 'of', 'type',
