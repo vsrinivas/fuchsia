@@ -7,6 +7,7 @@
 
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/fit/result.h>
 
 #include <array>
 
@@ -105,6 +106,25 @@ class Imx227Device : public DeviceType,
   zx_status_t CameraSensorGetSupportedModes(camera_sensor_mode_t* out_modes_list,
                                             size_t modes_count, size_t* out_modes_actual);
 
+  // OTP
+
+  //  Read the sensor's entire OTP memory.
+  //
+  //  Returns:
+  //    A result with a vmo containing the OTP blob if the read succeeded. Otherwise returns a
+  //    result with an error code.
+  fit::result<zx::vmo, zx_status_t> OtpRead();
+
+  //  Validates the integrity of the data written to the OTP. A checksum is calculated from the
+  //  written data and checked against a hard-coded value.
+  //
+  //  Args:
+  //    |vmo|   VMO pointer of data to be validated
+  //
+  //  Returns:
+  //    Whether the OTP data was validated successfully.
+  static bool OtpValidate(const zx::vmo* vmo);
+
  private:
   // I2C Helpers
   uint16_t Read16(uint16_t addr);
@@ -116,8 +136,6 @@ class Imx227Device : public DeviceType,
   zx_status_t InitSensor(uint8_t idx);
   void ShutDown();
   bool ValidateSensorID();
-
-  friend class Imx227DeviceTester;
 
   // Sensor Context
   SensorCtx ctx_;

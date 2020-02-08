@@ -7,12 +7,16 @@
 #include <lib/driver-unit-test/logger.h>
 #include <lib/driver-unit-test/utils.h>
 
+#include <iostream>
+
 #include <zxtest/zxtest.h>
+
+#include "src/camera/drivers/sensors/imx227/imx227_otp_config.h"
 
 namespace camera {
 namespace {
 
-constexpr uint32_t kValidSensorMode = 0;
+const uint32_t kValidSensorMode = 0;
 
 class Imx227DeviceTest : public zxtest::Test {
  protected:
@@ -47,6 +51,16 @@ TEST_F(Imx227DeviceTest, DeInitStateThrowsErrors) {
   EXPECT_NE(ZX_OK, imx227_device_->CameraSensorSetMode(kValidSensorMode));
   EXPECT_NE(ZX_OK, imx227_device_->CameraSensorStartStreaming());
   EXPECT_NE(ZX_OK, imx227_device_->CameraSensorStopStreaming());
+}
+
+TEST_F(Imx227DeviceTest, OtpReadAndValidate) {
+  // Try reading the entire OTP from the start
+  fit::result result = imx227_device_->OtpRead();
+  ASSERT_TRUE(result.is_ok());
+  zx::vmo vmo = std::move(result.value());
+
+  // Validate vmo contents
+  EXPECT_TRUE(imx227_device_->OtpValidate(&vmo));
 }
 
 }  // namespace
