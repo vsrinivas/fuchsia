@@ -109,6 +109,7 @@ zbi_test("core-tests") {
     "userboot=test/core/standalone-test",
     "kernel.enable-debugging-syscalls=true",
   ]
+
   deps = [
     ":standalone",
     "$zx/kernel",
@@ -116,6 +117,13 @@ zbi_test("core-tests") {
   assert_no_deps = [
     "$zx/system/core/*",
     "$zx/system/dev/*",
+  ]
+
+  device_types = [
+    "Astro",
+    "QEMU",
+    "Intel NUC Kit NUC7i5DNHE",
+    "Sherlock",
   ]
 }
 
@@ -138,5 +146,6 @@ if (current_cpu == "x64") {
       "$zx/system/core/*",
       "$zx/system/dev/*",
     ]
+    device_types = [ "Intel NUC Kit NUC7i5DNHE" ]
   }
 }
