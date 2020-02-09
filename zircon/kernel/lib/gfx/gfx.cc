@@ -455,7 +455,7 @@ void gfx_putchar(gfx_surface* surface, const struct gfx_font* font, uint ch, uin
  */
 void gfx_flush(gfx_surface* surface) {
   if (surface->flags & GFX_FLAG_FLUSH_CPU_CACHE)
-    arch_clean_cache_range((addr_t)surface->ptr, surface->len);
+    arch_clean_cache_range((vaddr_t)surface->ptr, surface->len);
 
   if (surface->flush)
     surface->flush(0, surface->height - 1);
@@ -478,7 +478,7 @@ void gfx_flush_rows(struct gfx_surface* surface, uint start, uint end) {
 
   if (surface->flags & GFX_FLAG_FLUSH_CPU_CACHE) {
     uint32_t runlen = surface->stride * surface->pixelsize;
-    arch_clean_cache_range((addr_t)surface->ptr + start * runlen, (end - start + 1) * runlen);
+    arch_clean_cache_range((vaddr_t)surface->ptr + start * runlen, (end - start + 1) * runlen);
   }
 
   if (surface->flush)

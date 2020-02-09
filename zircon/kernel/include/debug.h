@@ -59,11 +59,11 @@ static inline void hexdump8_ex(const void *ptr, size_t len, uint64_t disp_addr_s
 }
 
 static inline void hexdump(const void *ptr, size_t len) {
-  hexdump_ex(ptr, len, (uint64_t)((addr_t)ptr));
+  hexdump_ex(ptr, len, (uint64_t)((vaddr_t)ptr));
 }
 
 static inline void hexdump8(const void *ptr, size_t len) {
-  hexdump8_ex(ptr, len, (uint64_t)((addr_t)ptr));
+  hexdump8_ex(ptr, len, (uint64_t)((vaddr_t)ptr));
 }
 
 #define dprintf(level, x...)        \

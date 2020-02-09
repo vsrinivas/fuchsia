@@ -44,10 +44,10 @@ uint8_t arch_get_hw_watchpoint_count();
 void arch_disable_cache(uint flags);
 void arch_enable_cache(uint flags);
 
-void arch_clean_cache_range(addr_t start, size_t len);
-void arch_clean_invalidate_cache_range(addr_t start, size_t len);
-void arch_invalidate_cache_range(addr_t start, size_t len);
-void arch_sync_cache_range(addr_t start, size_t len);
+void arch_clean_cache_range(vaddr_t start, size_t len);
+void arch_clean_invalidate_cache_range(vaddr_t start, size_t len);
+void arch_invalidate_cache_range(vaddr_t start, size_t len);
+void arch_sync_cache_range(vaddr_t start, size_t len);
 
 /* Used to suspend work on a CPU until it is further shutdown.
  * This will only be invoked with interrupts disabled.  This function

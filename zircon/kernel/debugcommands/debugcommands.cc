@@ -239,8 +239,8 @@ static int cmd_copy_mem(int argc, const cmd_args *argv, uint32_t flags) {
     return -1;
   }
 
-  addr_t source = argv[1].u;
-  addr_t target = argv[2].u;
+  uintptr_t source = argv[1].u;
+  uintptr_t target = argv[2].u;
   size_t len = argv[3].u;
 
   memcpy((void *)target, (const void *)source, len);

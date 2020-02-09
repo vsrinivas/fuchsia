@@ -68,7 +68,7 @@ __NO_SAFESTACK uintptr_t choose_stack_guard(void) {
 #if !DISABLE_DEBUG_OUTPUT
 
 void hexdump_very_ex(const void* ptr, size_t len, uint64_t disp_addr, hexdump_print_fn_t* pfn) {
-  addr_t address = (addr_t)ptr;
+  uintptr_t address = (uintptr_t)ptr;
   size_t count;
 
   int zero_line_count = 0;
@@ -122,7 +122,7 @@ void hexdump_very_ex(const void* ptr, size_t len, uint64_t disp_addr, hexdump_pr
 }
 
 void hexdump8_very_ex(const void* ptr, size_t len, uint64_t disp_addr, hexdump_print_fn_t* pfn) {
-  addr_t address = (addr_t)ptr;
+  uintptr_t address = (uintptr_t)ptr;
   size_t count;
   size_t i;
 

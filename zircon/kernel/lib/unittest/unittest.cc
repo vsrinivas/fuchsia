@@ -58,9 +58,9 @@ bool unittest_expect_bytes(const uint8_t* expected, const char* expected_name,
                     expect_eq ? "should" : "should not");
 
     unittest_printf("expected (%s)\n", expected_name);
-    hexdump8_very_ex(expected, len, (uint64_t)((addr_t)expected), unittest_printf);
+    hexdump8_very_ex(expected, len, (uint64_t)((uintptr_t)expected), unittest_printf);
     unittest_printf("actual (%s)\n", actual_name);
-    hexdump8_very_ex(actual, len, (uint64_t)((addr_t)actual), unittest_printf);
+    hexdump8_very_ex(actual, len, (uint64_t)((uintptr_t)actual), unittest_printf);
 
     return false;
   }

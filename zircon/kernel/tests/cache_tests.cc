@@ -38,7 +38,7 @@ static void bench_cache(size_t bufsize, uint8_t* buf) {
     return;
 
   t = current_time();
-  arch_clean_cache_range((addr_t)buf, bufsize);
+  arch_clean_cache_range((vaddr_t)buf, bufsize);
   zx_duration_t duration = current_time() - t;
 
   printf("took %" PRIi64 " nsecs to clean %zu bytes (cold)\n", duration, bufsize);
@@ -46,7 +46,7 @@ static void bench_cache(size_t bufsize, uint8_t* buf) {
   memset(buf, 0x99, bufsize);
 
   t = current_time();
-  arch_clean_cache_range((addr_t)buf, bufsize);
+  arch_clean_cache_range((vaddr_t)buf, bufsize);
   duration = current_time() - t;
 
   if (do_free)

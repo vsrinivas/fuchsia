@@ -302,7 +302,7 @@ struct RootEntrySubentry {
     dst->raw = raw;
 
     // Hardware access to root entries may not be coherent, so flush just in case.
-    arch_clean_cache_range(reinterpret_cast<addr_t>(dst), sizeof(*dst));
+    arch_clean_cache_range(reinterpret_cast<vaddr_t>(dst), sizeof(*dst));
   }
 };
 
@@ -342,7 +342,7 @@ struct ContextEntry {
     dst->raw[0] = raw[0];
 
     // Hardware access to context entries may not be coherent, so flush just in case.
-    arch_clean_cache_range(reinterpret_cast<addr_t>(dst), sizeof(*dst));
+    arch_clean_cache_range(reinterpret_cast<vaddr_t>(dst), sizeof(*dst));
   }
 
   // clang-format off
@@ -417,7 +417,7 @@ struct ExtendedContextEntry {
     dst->raw[0] = raw[0];
 
     // Hardware access to extended-context entries may not be coherent, so flush just in case.
-    arch_clean_cache_range(reinterpret_cast<addr_t>(dst), sizeof(*dst));
+    arch_clean_cache_range(reinterpret_cast<vaddr_t>(dst), sizeof(*dst));
   }
 
   // clang-format off

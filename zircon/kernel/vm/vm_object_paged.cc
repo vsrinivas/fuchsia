@@ -1777,7 +1777,7 @@ zx_status_t VmObjectPaged::GetPageLocked(uint64_t offset, uint pf_flags, list_no
     // clean/invalidate to flush our zeroes. After doing this we will not touch the page via the
     // physmap and so we can pretend there isn't an aliased mapping.
     if (cache_policy_ != ARCH_MMU_FLAG_CACHED) {
-      arch_clean_invalidate_cache_range((addr_t)paddr_to_physmap(res_page->paddr()), PAGE_SIZE);
+      arch_clean_invalidate_cache_range((vaddr_t)paddr_to_physmap(res_page->paddr()), PAGE_SIZE);
     }
   } else {
     // We need a writable page; let ::CloneCowPageLocked handle inserting one.
@@ -3070,7 +3070,7 @@ zx_status_t VmObjectPaged::SetMappingCachePolicy(const uint32_t cache_policy) {
     page_list_.ForEveryPage([](const auto& p, uint64_t off) {
       if (p.IsPage()) {
         vm_page_t* page = p.Page();
-        arch_clean_invalidate_cache_range((addr_t)paddr_to_physmap(page->paddr()), PAGE_SIZE);
+        arch_clean_invalidate_cache_range((vaddr_t)paddr_to_physmap(page->paddr()), PAGE_SIZE);
       }
       return ZX_ERR_NEXT;
     });

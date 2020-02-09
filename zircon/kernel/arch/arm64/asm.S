@@ -36,9 +36,9 @@
 #define ICC_SRE_EL2             S3_4_C12_C9_5
 
 #if __has_feature(shadow_call_stack)
-// void arm64_context_switch(addr_t* old_sp, addr_t new_sp, uintptr_t** old_scsp, uintptr_t* new_scsp);
+// void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp, uintptr_t** old_scsp, uintptr_t* new_scsp);
 #else
-// void arm64_context_switch(addr_t* old_sp, addr_t new_sp);
+// void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp);
 #endif
 FUNCTION(arm64_context_switch)
     /* The exclusive monitor is logically part of a thread's context.  Clear it to ensure the new

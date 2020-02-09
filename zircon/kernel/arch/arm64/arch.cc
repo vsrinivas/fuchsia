@@ -223,7 +223,7 @@ void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
   atomic_store(&secondaries_released, 1);
 
   // Flush the signaling variable since the secondary cpus may have not yet enabled their caches.
-  arch_clean_cache_range((addr_t)&secondaries_released, sizeof(secondaries_released));
+  arch_clean_cache_range((vaddr_t)&secondaries_released, sizeof(secondaries_released));
 }
 
 __NO_RETURN int arch_idle_thread_routine(void*) {

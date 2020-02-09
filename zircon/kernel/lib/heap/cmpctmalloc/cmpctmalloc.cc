@@ -1025,7 +1025,7 @@ void cmpct_test(void) {
     ptr[index] = cmpct_memalign((unsigned int)rand() % 32768, align);
     // printf("ptr[0x%x] = %p, align 0x%x\n", index, ptr[index], align);
 
-    DEBUG_ASSERT(((addr_t)ptr[index] % align) == 0);
+    DEBUG_ASSERT(((vaddr_t)ptr[index] % align) == 0);
     // cmpct_dump(false);
   }
 

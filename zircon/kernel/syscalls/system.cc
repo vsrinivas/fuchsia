@@ -240,7 +240,7 @@ static zx_status_t vmo_coalesce_pages(zx_handle_t vmo_hdl, const size_t extra_by
     panic("Failed to read to contiguous vmo");
   }
 
-  arch_clean_invalidate_cache_range((addr_t)dst_addr, vmo_size);
+  arch_clean_invalidate_cache_range((vaddr_t)dst_addr, vmo_size);
 
   *size = num_pages * PAGE_SIZE;
   *addr = base_addr;
@@ -402,7 +402,7 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
   DEBUG_ASSERT(mexec_asm_length <= PAGE_SIZE);
 
   memcpy(id_page_addr, (const void*)mexec_asm, mexec_asm_length);
-  arch_sync_cache_range((addr_t)id_page_addr, mexec_asm_length);
+  arch_sync_cache_range((vaddr_t)id_page_addr, mexec_asm_length);
 
   // We must pass in an arg that represents a list of memory regions to
   // shuffle around. We put this args list immediately after the mexec
@@ -438,12 +438,12 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
                            reinterpret_cast<uintptr_t>(final_bootimage_addr), bootimage_len));
 
   // Sync because there is code in here that we intend to run.
-  arch_sync_cache_range((addr_t)id_page_addr, PAGE_SIZE);
+  arch_sync_cache_range((vaddr_t)id_page_addr, PAGE_SIZE);
 
   // Clean because we're going to turn the MMU/caches off and we want to make
   // sure that things are still available afterwards.
-  arch_clean_cache_range((addr_t)id_page_addr, PAGE_SIZE);
-  arch_clean_cache_range((addr_t)ops_ptr, PAGE_SIZE);
+  arch_clean_cache_range((vaddr_t)id_page_addr, PAGE_SIZE);
+  arch_clean_cache_range((vaddr_t)ops_ptr, PAGE_SIZE);
 
   shutdown_interrupts();
 

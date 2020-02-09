@@ -406,7 +406,7 @@ zx_status_t VmObject::CacheOp(const uint64_t start_offset, const uint64_t len,
       }
       // Convert the page address to a Kernel virtual address.
       const void* ptr = paddr_to_physmap(pa);
-      const addr_t cache_op_addr = reinterpret_cast<addr_t>(ptr) + page_offset;
+      const vaddr_t cache_op_addr = reinterpret_cast<vaddr_t>(ptr) + page_offset;
 
       LTRACEF("ptr %p op %d\n", ptr, (int)type);
 

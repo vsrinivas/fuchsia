@@ -16,7 +16,7 @@ static void apply_startup_code_patches(uint level) {
   for (const CodePatchInfo* patch = __start_code_patch_table; patch < __stop_code_patch_table;
        ++patch) {
     patch->apply_func(patch);
-    arch_sync_cache_range((addr_t)patch->dest_addr, patch->dest_size);
+    arch_sync_cache_range((vaddr_t)patch->dest_addr, patch->dest_size);
   }
 }
 

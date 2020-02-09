@@ -199,11 +199,11 @@ static void x86_unhandled_exception(x86_iframe_t* frame) {
 static void x86_dump_pfe(x86_iframe_t* frame, ulong cr2) {
   uint64_t error_code = frame->err_code;
 
-  addr_t v_addr = cr2;
-  addr_t ssp = frame->user_ss & X86_8BYTE_MASK;
-  addr_t sp = frame->user_sp;
-  addr_t cs = frame->cs & X86_8BYTE_MASK;
-  addr_t ip = frame->ip;
+  vaddr_t v_addr = cr2;
+  vaddr_t ssp = frame->user_ss & X86_8BYTE_MASK;
+  vaddr_t sp = frame->user_sp;
+  vaddr_t cs = frame->cs & X86_8BYTE_MASK;
+  vaddr_t ip = frame->ip;
 
   dprintf(CRITICAL, "<PAGE FAULT> Instruction Pointer   = 0x%lx:0x%lx\n", (ulong)cs, (ulong)ip);
   dprintf(CRITICAL, "<PAGE FAULT> Stack Pointer         = 0x%lx:0x%lx\n", (ulong)ssp, (ulong)sp);
