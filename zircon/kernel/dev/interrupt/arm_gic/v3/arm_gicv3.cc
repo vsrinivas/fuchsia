@@ -197,7 +197,7 @@ static zx_status_t gic_init() {
   return ZX_OK;
 }
 
-static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask) {
+static zx_status_t arm_gic_sgi(unsigned int irq, unsigned int flags, unsigned int cpu_mask) {
   if (flags != ARM_GIC_SGI_FLAG_NS) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -212,7 +212,7 @@ static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask) {
   uint cluster = 0;
   uint64_t val = 0;
   while (cpu_mask && cpu < arch_max_num_cpus()) {
-    u_int mask = 0;
+    unsigned int mask = 0;
     while (arch_cpu_num_to_cluster_id(cpu) == cluster) {
       if (cpu_mask & (1u << cpu)) {
         mask |= 1u << arch_cpu_num_to_cpu_id(cpu);

@@ -93,7 +93,7 @@ void vm_init_preheap() {
 
 #if !DISABLE_KASLR  // Disable random memory padding for KASLR
   // Reserve up to 15 pages as a random padding in the kernel physical mapping
-  uchar entropy;
+  unsigned char entropy;
   crypto::GlobalPRNG::GetInstance()->Draw(&entropy, sizeof(entropy));
   struct list_node list;
   list_initialize(&list);

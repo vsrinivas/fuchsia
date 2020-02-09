@@ -176,9 +176,10 @@ static zx_status_t arm_gic_init() {
   return ZX_OK;
 }
 
-static zx_status_t arm_gic_sgi(u_int irq, u_int flags, u_int cpu_mask) {
-  u_int val = ((flags & ARM_GIC_SGI_FLAG_TARGET_FILTER_MASK) << 24) | ((cpu_mask & 0xff) << 16) |
-              ((flags & ARM_GIC_SGI_FLAG_NS) ? (1U << 15) : 0) | (irq & 0xf);
+static zx_status_t arm_gic_sgi(unsigned int irq, unsigned int flags, unsigned int cpu_mask) {
+  unsigned int val = ((flags & ARM_GIC_SGI_FLAG_TARGET_FILTER_MASK) << 24) |
+                     ((cpu_mask & 0xff) << 16) | ((flags & ARM_GIC_SGI_FLAG_NS) ? (1U << 15) : 0) |
+                     (irq & 0xf);
 
   if (irq >= 16) {
     return ZX_ERR_INVALID_ARGS;
