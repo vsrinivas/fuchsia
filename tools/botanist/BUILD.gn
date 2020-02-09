@@ -26,9 +26,11 @@ go_library("target") {
   source_dir = "target"
   deps = [
     ":botanist_lib",
+    "//third_party/golibs:github.com/creack/pty",
     "//tools/bootserver:bootserver_lib",
     "//tools/lib/iomisc",
     "//tools/lib/osmisc",
+    "//tools/lib/ring",
     "//tools/net/netutil",
     "//tools/net/sshutil",
     "//tools/qemu",

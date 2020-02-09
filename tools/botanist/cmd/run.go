@@ -373,7 +373,7 @@ func deriveTarget(ctx context.Context, obj []byte, opts target.Options) (Target,
 		if err := json.Unmarshal(obj, &cfg); err != nil {
 			return nil, fmt.Errorf("invalid QEMU config found: %v", err)
 		}
-		return target.NewQEMUTarget(cfg, opts), nil
+		return target.NewQEMUTarget(cfg, opts)
 	case "device":
 		var cfg target.DeviceConfig
 		if err := json.Unmarshal(obj, &cfg); err != nil {

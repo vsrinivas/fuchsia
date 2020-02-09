@@ -60,6 +60,8 @@ go_library("cloud.google.com/go/storage") {
 }
 
 ### github.com/*
+golib("github.com/creack/pty") {
+}
 golib("github.com/dustin/go-humanize") {
 }
 golib("github.com/flynn/go-docopt") {
