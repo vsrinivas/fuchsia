@@ -49,14 +49,14 @@ package("magma-arm-mali") {
   }
 
   if (magma_enable_developer_build) {
-    deps = [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm_test" ]
+    deps = [ "//src/graphics/drivers/msd-arm-mali:msd_arm_test" ]
     drivers = [
       {
         name = "libmsd_arm_test.so"
       },
     ]
   } else {
-    deps = [ "//garnet/drivers/gpu/msd-arm-mali:msd_arm" ]
+    deps = [ "//src/graphics/drivers/msd-arm-mali:msd_arm" ]
     drivers = [
       {
         name = "libmsd_arm.so"
@@ -105,7 +105,7 @@ if (have_libvulkan_mali) {
 }
 
 test_package("msd_arm_mali_nonhardware_tests") {
-  deps = [ "//garnet/drivers/gpu/msd-arm-mali:tests" ]
+  deps = [ "//src/graphics/drivers/msd-arm-mali:tests" ]
 
   tests = [
     {
@@ -118,7 +118,7 @@ test_package("msd_arm_mali_nonhardware_tests") {
 test_package("msd-arm-mali-integration-tests") {
   tests = []
 
-  deps = [ "//garnet/drivers/gpu/msd-arm-mali/tests/integration" ]
+  deps = [ "//src/graphics/drivers/msd-arm-mali/tests/integration" ]
 
   tests = [
     {

@@ -187,7 +187,7 @@ source_set("msd_abi_conformance_tests") {
     "$magma_build_root/src/magma_util/platform:semaphore",
     "$magma_build_root/src/sys_driver",
     "$magma_build_root/tests/helper:platform_device_helper",
-    "//garnet/drivers/gpu/msd-intel-gen/include",
+    "//src/graphics/drivers/msd-intel-gen/include",
     "//third_party/googletest:gtest",
   ]
 }

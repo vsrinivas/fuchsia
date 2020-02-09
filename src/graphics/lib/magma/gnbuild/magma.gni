@@ -12,7 +12,7 @@ import(
 declare_args() {
   magma_build_root = "//src/graphics/lib/magma"
   expat_build_root = "//third_party/expat"
-  msd_build_root = "//garnet/drivers/gpu"
+  msd_build_root = "//src/graphics/drivers"
   msd_intel_gen_build_root = "$msd_build_root/msd-intel-gen"
   glm_build_root = "//third_party/glm"
   zircon_build_root = "//zircon"

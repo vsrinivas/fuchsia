@@ -18,27 +18,26 @@ group("tests") {
 
   # Add driver dependencies:
   public_deps += [
-    "//garnet/drivers/gpu/msd-img-rgx/tests/integration:msd_img_rgx_integration_tests",
-    "//garnet/drivers/gpu/msd-img-rgx/tests/unit_tests:msd_img_rgx_nonhardware_tests",
-    "//garnet/lib/magma/gnbuild/magma-arm-mali:msd-arm-mali-integration-tests",
-    "//garnet/lib/magma/gnbuild/magma-arm-mali:msd_arm_mali_nonhardware_tests",
-    "//garnet/lib/magma/gnbuild/magma-img-rgx:magma-vulkan-no-hardware",
-    "//garnet/lib/magma/gnbuild/magma-vsl-gc:msd_vsl_gc_nonhardware_tests",
-    "//garnet/lib/magma/tests",
     "//garnet/packages/prod:vulkan",
+    "//src/graphics/drivers/msd-img-rgx/tests/integration:msd_img_rgx_integration_tests",
+    "//src/graphics/drivers/msd-img-rgx/tests/unit_tests:msd_img_rgx_nonhardware_tests",
+    "//src/graphics/lib/magma/gnbuild/magma-arm-mali:msd-arm-mali-integration-tests",
+    "//src/graphics/lib/magma/gnbuild/magma-arm-mali:msd_arm_mali_nonhardware_tests",
+    "//src/graphics/lib/magma/gnbuild/magma-img-rgx:magma-vulkan-no-hardware",
+    "//src/graphics/lib/magma/gnbuild/magma-vsl-gc:msd_vsl_gc_nonhardware_tests",
   ]
   if (target_cpu == "x64") {
     public_deps += [
-      "//garnet/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_integration_tests",
-      "//garnet/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_nonhardware_tests",
+      "//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_integration_tests",
+      "//src/graphics/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_nonhardware_tests",
     ]
   }
 
   # Ensure the test MSDs are built even when not deployed
   public_deps += [
-    "//garnet/drivers/gpu/msd-arm-mali:msd_arm_test",
-    "//garnet/drivers/gpu/msd-intel-gen:msd_intel_test",
-    "//garnet/drivers/gpu/msd-vsl-gc:msd_vsl_test",
+    "//src/graphics/drivers/msd-arm-mali:msd_arm_test",
+    "//src/graphics/drivers/msd-intel-gen:msd_intel_test",
+    "//src/graphics/drivers/msd-vsl-gc:msd_vsl_test",
   ]
 }
 
@@ -60,8 +59,6 @@ group("l1") {
     "//garnet/packages/examples:vkcube-on-fb",
     "//garnet/packages/examples:vkcube-on-scenic",
     "//garnet/packages/prod:scenic",
-    "//garnet/packages/tests:image_pipe_swapchain",
-    "//garnet/packages/tests:magma",
     "//src/graphics/lib/magma/src/tools",
     "//src/lib/vulkan/tests:image-pipe-swapchain-tests",
   ]

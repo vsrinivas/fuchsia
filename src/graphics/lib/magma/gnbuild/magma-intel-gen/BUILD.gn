@@ -90,7 +90,7 @@ if (target_cpu == "x64") {
   }
 
   test_package("magma_intel_gen_integration_tests") {
-    deps = [ "//garnet/drivers/gpu/msd-intel-gen/tests/integration" ]
+    deps = [ "//src/graphics/drivers/msd-intel-gen/tests/integration" ]
 
     tests = [
       {

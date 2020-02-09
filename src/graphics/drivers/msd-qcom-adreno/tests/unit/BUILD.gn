@@ -1,0 +1,30 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/magma/gnbuild/magma.gni")
+
+group("msd_qcom_adreno_unittests_linux_arm64") {
+  testonly = true
+  deps = [ ":msd_qcom_adreno_unittests(//build/toolchain:linux_arm64)" ]
+}
+
+executable("msd_qcom_adreno_unittests") {
+  testonly = true
+
+  sources = [
+    "test_address_space.cc",
+    "test_device.cc",
+    "test_instructions.cc",
+    "test_register_io.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util:registers",
+    "$magma_build_root/src/magma_util/platform:iommu",
+    "$magma_build_root/tests/helper:platform_device_helper",
+    "$magma_build_root/tests_linux:drm_test_runner",
+    "//src/graphics/drivers/msd-qcom-adreno/src",
+    "//third_party/googletest:gtest",
+  ]
+}

@@ -39,7 +39,7 @@ For details on the process of building these two components, see the [porting](p
 ## The Magma interface
 
 The Magma interface is a service interface provided by the Magma system driver. The interface is designed to be useful for implementing an accelerated graphics api.  It consists of [magma.h](/src/graphics/lib/magma/include/magma_abi/magma.h)
-plus gpu specific headers (example: [intel](/garnet/drivers/gpu/msd-intel-gen/include/msd_intel_gen_query.h)).
+plus gpu specific headers (example: [intel](/src/graphics/drivers/msd-intel-gen/include/msd_intel_gen_query.h)).
 
 ### Physical devices
 During the Fuchsia boot sequence, a Magma system driver is instantiated for each physical device capable of accelerated graphics.  The instantiation creates a device binding in the class gpu; for example, in a single gpu system the device is bound to /dev/class/gpu/000.

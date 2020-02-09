@@ -6,7 +6,7 @@ import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 visibility_list = [
   "//src/graphics/lib/magma/*",
-  "//garnet/drivers/gpu/*",
+  "//src/graphics/drivers/*",
   "//third_party/imgtec-pvr-rgx-km/*",
 ]
 

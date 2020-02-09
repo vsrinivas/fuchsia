@@ -27,14 +27,14 @@ package("magma-vsl-gc") {
   deps = []
 
   if (magma_enable_developer_build) {
-    deps += [ "//garnet/drivers/gpu/msd-vsl-gc:msd_vsl_test" ]
+    deps += [ "//src/graphics/drivers/msd-vsl-gc:msd_vsl_test" ]
     drivers = [
       {
         name = "libmsd_vsl_test.so"
       },
     ]
   } else {
-    deps += [ "//garnet/drivers/gpu/msd-vsl-gc:msd_vsl" ]
+    deps += [ "//src/graphics/drivers/msd-vsl-gc:msd_vsl" ]
     drivers = [
       {
         name = "libmsd_vsl.so"
@@ -76,7 +76,7 @@ if (build_libvulkan_vsl_gc != []) {
 }
 
 test_package("msd_vsl_gc_nonhardware_tests") {
-  deps = [ "//garnet/drivers/gpu/msd-vsl-gc:tests" ]
+  deps = [ "//src/graphics/drivers/msd-vsl-gc:tests" ]
 
   tests = [
     {

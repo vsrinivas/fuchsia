@@ -35,14 +35,14 @@ package("magma-qcom-adreno") {
   }
 
   if (magma_enable_developer_build) {
-    deps += [ "//garnet/drivers/gpu/msd-qcom-adreno:msd_qcom_test" ]
+    deps += [ "//src/graphics/drivers/msd-qcom-adreno:msd_qcom_test" ]
     drivers = [
       {
         name = "libmsd_qcom_test.so"
       },
     ]
   } else {
-    deps += [ "//garnet/drivers/gpu/msd-qcom-adreno:msd_qcom" ]
+    deps += [ "//src/graphics/drivers/msd-qcom-adreno:msd_qcom" ]
     drivers = [
       {
         name = "libmsd_qcom.so"
