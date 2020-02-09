@@ -70,6 +70,8 @@ def main():
     for _, _, files in os.walk(source_dir):
         for file in files:
             shutil.move(os.path.join(source_dir, file), sdk_dir)
+            dest_file = os.path.join(sdk_dir, file)
+            run_command([FX, 'format-code', '--files=' + dest_file])
         break
 
     # Edit the build file in its new location.
