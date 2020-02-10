@@ -13,6 +13,7 @@ executable("controller-test") {
     "//garnet/public/lib/gtest",
     "//sdk/banjo/ddk.protocol.gdc",
     "//sdk/banjo/ddk.protocol.isp",
+    "//sdk/fidl/fuchsia.buttons",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/lib/sys/cpp",
@@ -39,7 +40,6 @@ executable("controller-test") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
-    "//zircon/system/fidl/fuchsia-buttons",
     "//zircon/system/fidl/fuchsia-hardware-camera",
     "//zircon/system/fidl/fuchsia-sysmem",
   ]
@@ -52,6 +52,7 @@ executable("controller-protocol-test") {
     "//garnet/public/lib/gtest",
     "//sdk/banjo/ddk.protocol.gdc",
     "//sdk/banjo/ddk.protocol.isp",
+    "//sdk/fidl/fuchsia.buttons",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/lib/sys/cpp",
@@ -79,7 +80,6 @@ executable("controller-protocol-test") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
-    "//zircon/system/fidl/fuchsia-buttons",
     "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
   ]
@@ -95,6 +95,7 @@ executable("controller-allocator-test") {
     "//garnet/public/lib/gtest",
     "//sdk/banjo/ddk.protocol.gdc",
     "//sdk/banjo/ddk.protocol.isp",
+    "//sdk/fidl/fuchsia.buttons",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/lib/sys/cpp",
@@ -126,7 +127,6 @@ executable("controller-allocator-test") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
-    "//zircon/system/fidl/fuchsia-buttons",
     "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
   ]
