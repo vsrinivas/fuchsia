@@ -67,7 +67,6 @@ group("banjo") {
     "ddk.protocol.display.controller",
 #------------------
 #------------------
-    "ddk.protocol.dotmatrixdisplay",
 #------------------
 #------------------
     "ddk.protocol.dsiimpl",
