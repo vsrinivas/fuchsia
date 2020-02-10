@@ -29,6 +29,7 @@ driver_module("nand-broker") {
   }
   sources = [ "broker.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.nand",
     "//sdk/fidl/fuchsia.nand:fuchsia.nand_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -36,7 +37,6 @@ driver_module("nand-broker") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.nand",
     "//zircon/system/fidl/fuchsia-hardware-nand:c",
   ]
 }
