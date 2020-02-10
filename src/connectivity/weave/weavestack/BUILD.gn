@@ -6,15 +6,26 @@ import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 
+source_set("lib") {
+  sources = [
+    "app.cc",
+    "app.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+  ]
+}
+
 executable("bin") {
   output_name = "weavestack"
 
   sources = [ "main.cc" ]
 
   deps = [
-    "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
+    ":lib",
   ]
 }
 
@@ -49,13 +60,13 @@ executable("unittests") {
 
   testonly = true
 
-  sources = []
+  sources = [
+    "app_test.cc",
+  ]
 
-  deps = [
-    "//sdk/lib/sys/cpp",
+  public_deps = [
+    ":lib",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
   ]
 }
 

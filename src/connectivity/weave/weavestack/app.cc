@@ -4,7 +4,8 @@
 
 #include "src/connectivity/weave/weavestack/app.h"
 
-int main(void) {
-  weavestack::App app;
-  return app.loop()->Run() != ZX_OK;
-}
+namespace weavestack {
+
+App::App() = default;
+
+}  // namespace weavestack

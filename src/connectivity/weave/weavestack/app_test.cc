@@ -4,7 +4,10 @@
 
 #include "src/connectivity/weave/weavestack/app.h"
 
-int main(void) {
-  weavestack::App app;
-  return app.loop()->Run() != ZX_OK;
-}
+#include <gtest/gtest.h>
+
+namespace weavestack {
+
+TEST(App, CanInstantiateApp) { EXPECT_EQ(ZX_OK, App().loop()->RunUntilIdle()); }
+
+}  // namespace weavestack
