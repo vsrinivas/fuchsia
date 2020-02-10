@@ -3,5 +3,15 @@
 # found in the LICENSE file.
 
 group("bus") {
-  deps = [ "pci" ]
+  deps = [
+    "pci",
+    "virtio:virtio_block",
+    "virtio:virtio_console",
+    "virtio:virtio_ethernet",
+    "virtio:virtio_gpu",
+    "virtio:virtio_input",
+    "virtio:virtio_rng",
+    "virtio:virtio_scsi",
+    "virtio:virtio_socket",
+  ]
 }
