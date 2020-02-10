@@ -165,7 +165,6 @@ group("fidl") {
 #------------------
 #------------------
 #------------------
-    "fuchsia-hardware-usb-tester",
 #------------------
 #------------------
     "fuchsia-hardware-usb-virtual-bus",
