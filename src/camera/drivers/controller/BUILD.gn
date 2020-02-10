@@ -56,6 +56,7 @@ source_set("controller-source") {
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
+    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_c",
     "//src/camera/drivers/controller/configs/sherlock/:controller-configs",
     "//src/camera/lib/format_conversion:format_conversion",
     "//src/devices/lib/driver",
@@ -87,7 +88,6 @@ source_set("controller-source") {
     "//zircon/system/banjo/ddk.protocol.gdc",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-buttons",
-    "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]

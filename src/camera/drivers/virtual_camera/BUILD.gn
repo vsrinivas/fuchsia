@@ -29,6 +29,7 @@ source_set("virtual_camera_source") {
     "//sdk/fidl/fuchsia.camera",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
+    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_c",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/media/cpp",
     "//src/camera/lib/image_writer:hsv_color_source",
@@ -47,7 +48,6 @@ source_set("virtual_camera_source") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.test",
     "//zircon/system/banjo/ddk.protocol.usb",
-    "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
   ]
 }
 

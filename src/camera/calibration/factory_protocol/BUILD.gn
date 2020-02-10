@@ -23,9 +23,9 @@ source_set("factory_protocol") {
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/fidl/fuchsia.factory.camera",
+    "//sdk/fidl/fuchsia.hardware.camera",
     "//src/camera/test/isp_tester:fuchsia.camera.test",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/system/fidl/fuchsia-hardware-camera",
   ]
 }
