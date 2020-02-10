@@ -18,9 +18,9 @@ sdk_source_set("cpp") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.inspect",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/inspect",
-    "//zircon/system/fidl/fuchsia-inspect",
   ]
 
   public_configs = [ "//sdk/config" ]

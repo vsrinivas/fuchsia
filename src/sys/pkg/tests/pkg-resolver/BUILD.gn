@@ -14,6 +14,7 @@ rustc_library("lib") {
 
   deps = [
     "//garnet/public/rust/fuchsia-hyper",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -43,7 +44,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:void",
-    "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
@@ -60,6 +60,7 @@ rustc_test("dynamic_repositories_disabled") {
   deps = [
     ":lib",
     "//garnet/public/rust/fuchsia-hyper",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -88,7 +89,6 @@ rustc_test("dynamic_repositories_disabled") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:void",
-    "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
@@ -105,6 +105,7 @@ rustc_test("dynamic_rewrite_disabled") {
   deps = [
     ":lib",
     "//garnet/public/rust/fuchsia-hyper",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -133,7 +134,6 @@ rustc_test("dynamic_rewrite_disabled") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:void",
-    "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
@@ -150,6 +150,7 @@ rustc_test("pkg_resolve_inspect") {
   deps = [
     ":lib",
     "//garnet/public/rust/fuchsia-hyper",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -178,7 +179,6 @@ rustc_test("pkg_resolve_inspect") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:void",
-    "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
@@ -195,6 +195,7 @@ rustc_test("resolve_propagates_pkgfs_failure") {
   deps = [
     ":lib",
     "//garnet/public/rust/fuchsia-hyper",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -224,7 +225,6 @@ rustc_test("resolve_propagates_pkgfs_failure") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:void",
-    "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
@@ -241,6 +241,7 @@ rustc_test("resolve_recovers_from_http_errors") {
   deps = [
     ":lib",
     "//garnet/public/rust/fuchsia-hyper",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -269,7 +270,6 @@ rustc_test("resolve_recovers_from_http_errors") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:void",
-    "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
@@ -286,6 +286,7 @@ rustc_test("resolve_succeeds_with_broken_minfs") {
   deps = [
     ":lib",
     "//garnet/public/rust/fuchsia-hyper",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -314,7 +315,6 @@ rustc_test("resolve_succeeds_with_broken_minfs") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:void",
-    "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
@@ -331,6 +331,7 @@ rustc_test("resolve_succeeds") {
   deps = [
     ":lib",
     "//garnet/public/rust/fuchsia-hyper",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
@@ -359,7 +360,6 @@ rustc_test("resolve_succeeds") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:void",
-    "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",

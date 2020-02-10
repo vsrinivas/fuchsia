@@ -15,12 +15,12 @@ test("inspect_service_cpp_unittests") {
   ]
   deps = [
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.inspect",
     "//sdk/lib/inspect/service/cpp",
     "//sdk/lib/inspect/testing/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/inspect",
-    "//zircon/system/fidl/fuchsia-inspect",
   ]
 }
 

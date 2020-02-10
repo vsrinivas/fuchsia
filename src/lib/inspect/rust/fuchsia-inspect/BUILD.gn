@@ -12,6 +12,7 @@ rustc_library("fuchsia-inspect") {
 
   deps = [
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -38,7 +39,6 @@ rustc_library("fuchsia-inspect") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:paste",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]

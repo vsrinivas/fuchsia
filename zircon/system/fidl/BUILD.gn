@@ -169,7 +169,6 @@ group("fidl") {
     "fuchsia-hardware-vsock",
 #------------------
 #------------------
-    "fuchsia-inspect",
 #------------------
 #------------------
     "fuchsia-inspect-deprecated",
