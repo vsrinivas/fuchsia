@@ -96,7 +96,6 @@ group("banjo") {
     "ddk.protocol.hidbus",
 #------------------
 #------------------
-    "ddk.protocol.hiddevice",
 #------------------
 #------------------
     "ddk.protocol.i2c",

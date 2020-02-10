@@ -10,6 +10,7 @@ import("//build/test/test_package.gni")
 driver_module("hid-input-report") {
   sources = [ "input-report.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.hiddevice",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//src/devices/lib/driver",
     "//src/ui/lib/hid-input-report",
@@ -20,7 +21,6 @@ driver_module("hid-input-report") {
     "//zircon/public/lib/hid",
     "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.hiddevice",
     "//zircon/system/fidl/fuchsia-hardware-input:c",
   ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -33,6 +33,7 @@ test("hid-input-report-test-bin") {
     "test.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.hiddevice",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//src/devices/lib/driver",
     "//src/ui/lib/hid-input-report",
@@ -46,7 +47,6 @@ test("hid-input-report-test-bin") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.hiddevice",
     "//zircon/system/fidl/fuchsia-hardware-input:c",
   ]
 }
