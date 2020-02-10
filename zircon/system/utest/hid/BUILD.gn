@@ -22,6 +22,7 @@ test("hid") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "hid-driver.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.hidctl:fuchsia.hardware.hidctl_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/devmgr-launcher",
@@ -31,7 +32,6 @@ test("hid") {
     "//zircon/public/lib/hid",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-hardware-hidctl:c",
     "//zircon/system/fidl/fuchsia-hardware-input:llcpp",
   ]
 }

@@ -23,6 +23,7 @@ driver_module("hidctl") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "hidctl.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.hidctl:fuchsia.hardware.hidctl_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -30,7 +31,6 @@ driver_module("hidctl") {
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.hidbus",
-    "//zircon/system/fidl/fuchsia-hardware-hidctl:c",
   ]
 }
 
