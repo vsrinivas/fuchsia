@@ -1558,7 +1558,7 @@ Enable all 8 cores, which is faster but emits more heat.
 
 **Current value (from the default):** `true`
 
-From //garnet/drivers/gpu/msd-arm-mali/src/BUILD.gn:9
+From //src/graphics/drivers/msd-arm-mali/src/BUILD.gn:9
 
 ### msd_arm_enable_cache_coherency
 With this flag set the system tries to use cache coherent memory if the
@@ -1566,7 +1566,7 @@ GPU supports it.
 
 **Current value (from the default):** `true`
 
-From //garnet/drivers/gpu/msd-arm-mali/src/BUILD.gn:13
+From //src/graphics/drivers/msd-arm-mali/src/BUILD.gn:13
 
 ### msd_arm_enable_protected_debug_swap_mode
 In protected mode, faults don't return as much information so they're much harder to debug. To
@@ -1580,17 +1580,17 @@ precommitted (which is not done by default).
 
 **Current value (from the default):** `false`
 
-From //garnet/drivers/gpu/msd-arm-mali/src/BUILD.gn:23
+From //src/graphics/drivers/msd-arm-mali/src/BUILD.gn:23
 
 ### msd_build_root
 
-**Current value (from the default):** `"//garnet/drivers/gpu"`
+**Current value (from the default):** `"//src/graphics/drivers"`
 
 From //src/graphics/lib/magma/gnbuild/magma.gni:15
 
 ### msd_intel_gen_build_root
 
-**Current value (from the default):** `"//garnet/drivers/gpu/msd-intel-gen"`
+**Current value (from the default):** `"//src/graphics/drivers/msd-intel-gen"`
 
 From //src/graphics/lib/magma/gnbuild/magma.gni:16
 
