@@ -24,6 +24,7 @@ driver_module("lp50xx-light") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "lp50xx-light.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -37,7 +38,6 @@ driver_module("lp50xx-light") {
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.gpioimpl",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/fidl/fuchsia-hardware-light:llcpp",
   ]
 }
 
@@ -52,6 +52,7 @@ test("lp50xx-light-test") {
     "lp50xx-light.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_llcpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
@@ -67,7 +68,6 @@ test("lp50xx-light-test") {
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.gpioimpl",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/fidl/fuchsia-hardware-light:llcpp",
   ]
 }
 
