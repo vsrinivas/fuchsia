@@ -21,6 +21,10 @@
 ##                          information. This is information includes current
 ##                          register and stack traces for all threads.
 ##                          False by default.
+##    -d|--display          Whether to trigger display mode.
+##                          When display mode is set for text output, node 
+##                          names only include the full path for the root
+##                          of the hierarchy.
 ##
 ##    REGEX   Basic Regular Expression (as understood by GNU grep) to filter
 ##            out components. Only matching components will be included in the
@@ -31,6 +35,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/va
 # Defaults.
 system_objects=false
 formatter=""
+display=0
 
 # Flag parsing.
 while [[ "$1" =~ ^- ]]; do
@@ -45,6 +50,9 @@ while [[ "$1" =~ ^- ]]; do
       ;;
     -s|--system-objects)
       system_objects=true
+      ;;
+    -d|--display)
+      display=1
       ;;
     --)
       break
@@ -72,7 +80,7 @@ if [[ "${system_objects}" = "false" ]]; then
   find="$(echo "${find}" | grep -v "system_objects$")"
 fi
 
-# Join al given regexp into a format grep can consume.
+# Join all given regexp into a format grep can consume.
 if [[ ! -z ${regexps} ]]; then
   filters=""
   for regex in ${regexps}; do
@@ -81,7 +89,12 @@ if [[ ! -z ${regexps} ]]; then
   find="$(echo "${find}" | grep ${filters})"
 fi
 
+paths="--absolute_paths"
+if [[ ${display} -ne 0 ]]; then
+  paths="--display_paths"
+fi
+
 # Flatten to the format iquery expects.
 flatten="$(echo "${find}" | tr '\n' ' ')"
 
-fx-command-exec "ssh" "${host}" "iquery --absolute_paths --cat ${format} --recursive ${flatten}"
+fx-command-exec "ssh" "${host}" "iquery ${paths} --cat ${format} --recursive ${flatten}"
