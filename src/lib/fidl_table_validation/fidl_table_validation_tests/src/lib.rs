@@ -295,3 +295,38 @@ fn works_with_nested_typenames() {
         Err(e) => panic!("Did not expect to fail to build ValidHello: got {:?}", e),
     };
 }
+
+#[test]
+fn works_with_option_wrapped_nested_fields() {
+    #[derive(Default, Debug, PartialEq)]
+    struct NestedFidl {
+        required: Option<usize>,
+    }
+    dummy_impl_decodable!(NestedFidl);
+
+    #[derive(ValidFidlTable, Debug, PartialEq)]
+    #[fidl_table_src(NestedFidl)]
+    struct ValidNestedFidl {
+        required: usize,
+    }
+
+    #[derive(Default, Debug, PartialEq)]
+    struct Fidl {
+        optional: Option<NestedFidl>,
+    }
+    dummy_impl_decodable!(Fidl);
+
+    #[derive(Default, ValidFidlTable, Debug, PartialEq)]
+    #[fidl_table_src(Fidl)]
+    struct ValidFidl {
+        #[fidl_field_type(optional)]
+        optional: Option<ValidNestedFidl>,
+    }
+
+    match ValidFidl::try_from(Fidl { optional: Some(NestedFidl { required: Some(5) }) }) {
+        Ok(valid) => {
+            assert_eq!(ValidFidl { optional: Some(ValidNestedFidl { required: 5 }) }, valid)
+        }
+        Err(e) => panic!("Did not expect to fail to build ValidFidl: got {:?}", e),
+    };
+}

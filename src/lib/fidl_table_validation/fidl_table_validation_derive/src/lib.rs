@@ -236,9 +236,15 @@ fn impl_valid_fidl_table(
                 )
             }
             FidlFieldKind::Optional => quote!(
-                #ident: std::convert::TryFrom::try_from(
-                    src.#ident
-                ).map_err(|e| Box::new(e) as Box<std::error::Error + Send + Sync>)?,
+                #ident: if let Some(field) = src.#ident {
+                    Some(
+                        std::convert::TryFrom::try_from(
+                            field
+                        ).map_err(|e| Box::new(e) as Box<std::error::Error + Send + Sync>)?
+                    )
+                } else {
+                    None
+                },
             ),
             FidlFieldKind::HasDefault(value) => quote!(
                 #ident: src.#ident.unwrap_or(#value),
@@ -256,7 +262,11 @@ fn impl_valid_fidl_table(
                 ),
             ),
             FidlFieldKind::Optional => quote!(
-                #ident: src.#ident.into(),
+                #ident: if let Some(field) = src.#ident {
+                    Some(field.into())
+                } else {
+                    None
+                },
             ),
         }
     }));
