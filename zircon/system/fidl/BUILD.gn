@@ -137,7 +137,6 @@ group("fidl") {
     "fuchsia-hardware-rtc",
 #------------------
 #------------------
-    "fuchsia-hardware-securemem",
 #------------------
 #------------------
     "fuchsia-hardware-skipblock",
