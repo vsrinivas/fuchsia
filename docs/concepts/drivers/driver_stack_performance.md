@@ -120,5 +120,5 @@ device driver implementations, part of the fast path is often in interrupt threa
  possible, preferably in batches.
 
 
-[netdevice-fidl]: /zircon/system/fidl/fuchsia-hardware-network/device.fidl
+[netdevice-fidl]: /sdk/fidl/fuchsia.hardware.network/device.fidl
 [netdevice-banjo]: /zircon/system/banjo/ddk.protocol.network.device/network-device.banjo

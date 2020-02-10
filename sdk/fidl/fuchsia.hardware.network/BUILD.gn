@@ -2,10 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/fidl.gni")
+import("//build/fidl/fidl.gni")
 
-fidl_library("fuchsia-hardware-network") {
-  sdk = true
+fidl("fuchsia.hardware.network") {
+  sdk_category = "partner"
+  api = "fuchsia.hardware.network.api"
   sources = [
     "device.fidl",
     "frames.fidl",
@@ -14,5 +15,5 @@ fidl_library("fuchsia-hardware-network") {
     "session.fidl",
   ]
 
-  public_deps = [ "$zx/system/fidl/fuchsia-net" ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-net" ]
 }
