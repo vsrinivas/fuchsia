@@ -193,28 +193,156 @@ async fn send_get_media_attributes(target_proxy: TargetHandlerProxy) {
     );
 }
 
-async fn handle_session_control_requests(mut stream: SessionControlRequestStream) {
+async fn handle_accept_control_requests(mut stream: SessionControlRequestStream) {
     while let Some(req) = stream.try_next().await.expect("Failed to serve session control") {
         match req {
-            SessionControlRequest::Pause { .. } | SessionControlRequest::SetShuffleMode { .. } => {}
+            SessionControlRequest::Pause { .. }
+            | SessionControlRequest::Play { .. }
+            | SessionControlRequest::SetShuffleMode { .. } => {}
             _ => panic!("Received unexpected SessionControl request."),
         }
     }
 }
 
-async fn handle_discovery_requests(mut stream: DiscoveryRequestStream) {
+async fn handle_reject_control_requests(mut stream: SessionControlRequestStream) {
+    while let Some(_) = stream.try_next().await.expect("Failed to serve session control") {
+        panic!("Received unexpected SessionControl request.");
+    }
+}
+
+/// If `id` is provided, then only DiscoveryRequests with matching `session_id` will accept
+/// SessionControl requests. This is basically a filter to ensure the correct SessionControlProxy
+/// is being used.
+/// If no `id` is provided, then all SessionControl requests will be served with response accepts.
+async fn handle_custom_discovery_requests(
+    id: Option<MediaSessionId>,
+    mut stream: DiscoveryRequestStream,
+) {
     while let Some(req) = stream.try_next().await.expect("Failed to serve session control") {
         match req {
             DiscoveryRequest::WatchSessions { .. } => {}
-            DiscoveryRequest::ConnectToSession { session_control_request, .. } => {
+            DiscoveryRequest::ConnectToSession { session_id, session_control_request, .. } => {
                 // For new sessions, spawn a mock listener that acknowledges proxied commands.
                 let request_stream = session_control_request
                     .into_stream()
                     .expect("Failed to take session control request stream");
-                fasync::spawn(handle_session_control_requests(request_stream));
+                if id == Some(MediaSessionId(session_id)) || id.is_none() {
+                    fasync::spawn(handle_accept_control_requests(request_stream));
+                } else {
+                    fasync::spawn(handle_reject_control_requests(request_stream));
+                }
             }
         }
     }
+}
+
+/// The main setup logic for tests in this file.
+/// Assigns two session ids, creates a MediaSessions object to store state, and spawns handlers to
+/// accept discovery requests, TargetHandler requests, and MediaSession updates.
+/// The `filter` flag determines if `handle_custom_discovery_requests` should filter incoming requests.
+async fn setup(
+    filter: bool,
+) -> (MediaSessionId, MediaSessionId, SessionsWatcherProxy, TargetHandlerProxy, Arc<MediaSessions>)
+{
+    // AVRCP
+    let (target_proxy, target_request_stream) = setup_target_handler();
+
+    // Media
+    let (discovery, discovery_request_stream) =
+        create_proxy_and_stream::<DiscoveryMarker>().expect("Couldn't create discovery service");
+    let (watcher_client, watcher_request_stream) = setup_sessions_watcher();
+
+    // Mock two sessions.
+    let session1_id = MediaSessionId(1234);
+    let session2_id = MediaSessionId(9876);
+
+    // Spawn the mocked MediaSessions server (sends canned responses).
+    let filter_id = if filter { Some(session1_id) } else { None };
+    fasync::spawn(handle_custom_discovery_requests(filter_id, discovery_request_stream));
+
+    // Create local state for testing.
+    let media_sessions: Arc<MediaSessions> = Arc::new(MediaSessions::create());
+    let media_sessions_copy = media_sessions.clone();
+    let media_sessions_copy2 = media_sessions.clone();
+    assert_eq!(None, media_sessions.get_active_session_id());
+
+    // Spawn the AVRCP request task.
+    fasync::spawn(async move {
+        let _ = handle_target_requests(target_request_stream, media_sessions_copy).await;
+    });
+
+    // Spawn the Media listener task.
+    fasync::spawn(async move {
+        let _ = media_sessions_copy2
+            .watch_media_sessions(discovery.clone(), watcher_request_stream)
+            .await;
+    });
+
+    (session1_id, session2_id, watcher_client, target_proxy, media_sessions)
+}
+
+#[test]
+/// Tests listening to all MediaSessions.
+/// Tests that passthrough commands are routed to the right MediaSession.
+fn test_listen_to_media_sessions() -> Result<(), Error> {
+    let mut exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+    exec.set_fake_time(fasync::Time::from_nanos(555555555));
+
+    let test_fut = async {
+        let (session1_id, session2_id, watcher_client, target_proxy, media_sessions) =
+            setup(true).await;
+
+        // Send a MediaSessionUpdate for session1 -> New active session because no
+        // active sessions exist.
+        let delta1 = SessionInfoDelta { ..SessionInfoDelta::new_empty() };
+        let _ = watcher_client.session_updated(session1_id.0, delta1).await;
+        assert_eq!(Some(session1_id), media_sessions.get_active_session_id());
+
+        // Send a play command to the active media session. It should be accepted since
+        // session1 is the active session.
+        let res = target_proxy
+            .send_command(AvcPanelCommand::Play, false)
+            .await
+            .expect("FIDL call should work");
+        assert_eq!(Ok(()), res);
+
+        // Send a pause command to the active media session. It should be accepted since
+        // session1 is the active session.
+        let res = target_proxy
+            .send_command(AvcPanelCommand::Pause, false)
+            .await
+            .expect("FIDL call should work");
+        assert_eq!(Ok(()), res);
+
+        // Send a play command to the active media session. It should be accepted since
+        // session1 is the active session.
+        let res = target_proxy
+            .send_command(AvcPanelCommand::Play, false)
+            .await
+            .expect("FIDL call should work");
+        assert_eq!(Ok(()), res);
+
+        // Send a MediaSessionUpdate for session2, but not locally active. Session1 should still be active.
+        let delta2 = SessionInfoDelta {
+            metadata: Some(create_metadata()),
+            player_status: Some(create_player_status()),
+            ..SessionInfoDelta::new_empty()
+        };
+        let _ = watcher_client.session_updated(session2_id.0, delta2).await;
+        assert_eq!(Some(session1_id), media_sessions.get_active_session_id());
+
+        // Send a pause command to the active media session. It should be accepted since
+        // session1 is the active session (even though we received a session2 update).
+        let res = target_proxy
+            .send_command(AvcPanelCommand::Play, false)
+            .await
+            .expect("FIDL call should work");
+        assert_eq!(Ok(()), res);
+    };
+
+    pin_mut!(test_fut);
+    let _ = exec.run_until_stalled(&mut test_fut);
+    Ok(())
 }
 
 #[test]
@@ -232,34 +360,8 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
     exec.set_fake_time(fasync::Time::from_nanos(555555555));
 
     let test_fut = async {
-        // AVRCP
-        let (target_proxy, target_request_stream) = setup_target_handler();
-
-        // Media
-        let (discovery, discovery_request_stream) = create_proxy_and_stream::<DiscoveryMarker>()
-            .expect("Couldn't create discovery service");
-        let (watcher_client, watcher_request_stream) = setup_sessions_watcher();
-
-        // Spawn the mocked MediaSessions server (sends canned responses).
-        fasync::spawn(handle_discovery_requests(discovery_request_stream));
-
-        // Create local state for testing.
-        let media_sessions: Arc<MediaSessions> = Arc::new(MediaSessions::create());
-        let media_sessions_copy = media_sessions.clone();
-        let media_sessions_copy2 = media_sessions.clone();
-        assert_eq!(None, media_sessions.get_active_session_id());
-
-        // Spawn the AVRCP request task.
-        fasync::spawn(async move {
-            let _ = handle_target_requests(target_request_stream, media_sessions_copy).await;
-        });
-
-        // Spawn the Media listener task.
-        fasync::spawn(async move {
-            let _ = media_sessions_copy2
-                .watch_media_sessions(discovery.clone(), watcher_request_stream)
-                .await;
-        });
+        let (session1_id, session2_id, watcher_client, target_proxy, media_sessions) =
+            setup(false).await;
 
         // Integration tests begin.
         // Get TG supported events (static response, not contingent on active media player).
@@ -274,16 +376,13 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
             res
         );
 
-        // Mock two sessions.
-        let session1_id = MediaSessionId(1234);
-        let session2_id = MediaSessionId(9876);
-
         // Get the play status of the active session.
         // There is no active session, so this should be rejected.
         let res = target_proxy.get_play_status().await.expect("FIDL call should work");
         assert_eq!(Err(TargetAvcError::RejectedNoAvailablePlayers), res);
 
-        // Send a MediaSessionUpdate for session1 -> New active session.
+        // Send a MediaSessionUpdate for session1 -> New active session because no
+        // active sessions exist.
         let delta1 = SessionInfoDelta { ..SessionInfoDelta::new_empty() };
         let _ = watcher_client.session_updated(session1_id.0, delta1).await;
         assert_eq!(Some(session1_id), media_sessions.get_active_session_id());
@@ -307,6 +406,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
         let delta2 = SessionInfoDelta {
             metadata: Some(create_metadata()),
             player_status: Some(create_player_status()),
+            is_locally_active: Some(true),
             ..SessionInfoDelta::new_empty()
         };
         let _ = watcher_client.session_updated(session2_id.0, delta2).await;
@@ -318,14 +418,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
         // Test getting the play status of the active session.
         send_get_play_status(target_proxy.clone()).await;
 
-        // Send a MediaSessionUpdate for session2 -> Paused, so now it's not active.
-        // As per MediaSession, when a player is paused, it becomes inactive, and a
-        // SessionRemoved should be triggered.
         // Then, make session1 the new active session.
-        let res = watcher_client.session_removed(session2_id.0).await;
-        assert_eq!(Ok(()), res.map_err(|e| format!("{}", e)));
-        assert_eq!(None, media_sessions.get_active_session_id());
-
         let delta1 = SessionInfoDelta {
             player_status: Some(PlayerStatus {
                 duration: Some(9876543210),
@@ -333,6 +426,7 @@ fn test_media_and_avrcp_listener() -> Result<(), Error> {
                 repeat_mode: Some(RepeatMode::Group),
                 ..PlayerStatus::new_empty()
             }),
+            is_locally_active: Some(true),
             ..SessionInfoDelta::new_empty()
         };
         let _ = watcher_client.session_updated(session1_id.0, delta1).await;

@@ -51,11 +51,12 @@ impl MediaSessions {
         let (watcher_client, watcher_requests) =
             create_request_stream().expect("Error creating watcher request stream");
 
-        // Only subscribe to updates from players that are active.
-        let watch_active_options =
-            WatchOptions { only_active: Some(true), ..WatchOptions::new_empty() };
+        // Subscribe to all players. The active player is the player that has sent this
+        // component the most recent SessionUpdate with an active status.
+        let watch_options = WatchOptions::new_empty();
+
         if let Err(e) = discovery
-            .watch_sessions(watch_active_options, watcher_client)
+            .watch_sessions(watch_options, watcher_client)
             .context("Should be able to watch media sessions")
         {
             fx_log_warn!("FIDL error watching sessions: {:?}", e);
@@ -65,7 +66,6 @@ impl MediaSessions {
         self.watch_media_sessions(discovery, watcher_requests)
     }
 
-    #[cfg(test)]
     pub fn get_active_session_id(&self) -> Option<MediaSessionId> {
         self.inner.read().active_session_id
     }
@@ -122,11 +122,21 @@ impl MediaSessions {
                     responder.send()?;
                     fx_vlog!(tag: "avrcp-tg", 1, "MediaSession update: id[{}], delta[{:?}]", id, delta);
 
-                    // Since we are only listening to active sessions, update the currently
-                    // active media session id every time a watcher event is triggered.
+                    // Since we are listening to all sessions, update the currently
+                    // active media session id every time a watcher event is triggered and
+                    // the session is locally active.
+                    // If there is currently no active session, default the current session
+                    // to be the active session.
                     // This means AVRCP commands will be queried/set to the player that has most
-                    // recently changed in status.
-                    sessions_inner.write().update_active_session_id(Some(MediaSessionId(id)));
+                    // recently changed to active status.
+                    match (self.get_active_session_id(), delta.is_locally_active) {
+                        (None, _) | (_, Some(true)) => {
+                            sessions_inner
+                                .write()
+                                .update_target_session_id(Some(MediaSessionId(id)));
+                        }
+                        _ => {}
+                    };
 
                     // If this is our first time receiving updates from this MediaPlayer, create
                     // a session control proxy and connect to the session.
@@ -189,7 +199,7 @@ impl MediaSessionsInner {
     /// Returns the removed MediaState.
     pub fn clear_session(&mut self, id: &MediaSessionId) -> Option<MediaState> {
         if Some(id) == self.active_session_id.as_ref() {
-            self.update_active_session_id(None);
+            self.update_target_session_id(None);
         }
         self.map.remove(id)
     }
@@ -208,10 +218,10 @@ impl MediaSessionsInner {
         fx_vlog!(tag: "avrcp-tg", 1, "After evicting cleared responders: {:?}", self.notifications);
     }
 
-    /// Updates the active session with the new session specified by `id`.
-    /// Clear all outstanding notifications, if the active session has changed.
-    /// If the updated active session_id has changed, return old active id.
-    pub fn update_active_session_id(
+    /// Updates the target session with the new session specified by `id`.
+    /// Clear all outstanding notifications, if the session has changed.
+    /// If the updated session_id has changed, return old target id.
+    pub fn update_target_session_id(
         &mut self,
         id: Option<MediaSessionId>,
     ) -> Option<MediaSessionId> {
@@ -620,7 +630,7 @@ pub(crate) mod tests {
     /// playing active media session, as well as clears any outstanding notifications.
     /// 1. Test updating active_session_id with the same id does nothing.
     /// 2. Test updating active_session_id with a new id updates active id.
-    async fn test_update_active_session_id() -> Result<(), Error> {
+    async fn update_target_session_id() -> Result<(), Error> {
         let (mut proxy, mut stream) = create_proxy_and_stream::<TargetHandlerMarker>()
             .expect("Couldn't create proxy and stream");
 
@@ -631,7 +641,7 @@ pub(crate) mod tests {
         let mut sessions = create_session(discovery.clone(), id, true);
 
         // 1. Update with the same id.
-        let no_update = sessions.update_active_session_id(Some(id));
+        let no_update = sessions.update_target_session_id(Some(id));
         assert_eq!(None, no_update);
 
         let (result_fut, responder) =
@@ -656,7 +666,7 @@ pub(crate) mod tests {
             // 2. Update with a new id.
             let new_id = MediaSessionId(9876);
             let expected_old_id = Some(id);
-            let evicted_id = sessions.update_active_session_id(Some(new_id));
+            let evicted_id = sessions.update_target_session_id(Some(new_id));
             assert_eq!(expected_old_id, evicted_id);
             assert_eq!(false, sessions.notifications.contains_key(&supported_id));
         }
