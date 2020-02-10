@@ -32,5 +32,4 @@ prebuilt_package("cast_runner_pkg") {
   package_name = "cast_runner"
   archive =
       "//prebuilt/third_party/cast_runner/arch/$target_cpu/cast_runner.far"
-  debug_archive = "//prebuilt/third_party/build_ids/$target_cpu/chromium/cast_runner.symbols.tar.bz2"
 }
