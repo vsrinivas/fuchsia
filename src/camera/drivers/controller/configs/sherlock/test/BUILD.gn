@@ -15,7 +15,6 @@ executable("configs_test") {
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
-    "//sdk/fidl/fuchsia.hardware.camera",
     "//sdk/lib/sys/cpp",
     "//src/camera/drivers/controller/configs/sherlock/:controller-configs",
     "//src/camera/drivers/test_utils",
@@ -40,6 +39,7 @@ executable("configs_test") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/fidl/fuchsia-hardware-camera",
     "//zircon/system/fidl/fuchsia-sysmem",
   ]
 

@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fidl/fidl.gni")
+import("$zx_build/public/gn/fidl.gni")
 
-fidl("fuchsia.hardware.camera") {
-  sdk_category = "partner"
-  api = "fuchsia.hardware.camera.api"
+fidl_library("fuchsia-hardware-camera") {
+  sdk = true
   sources = [ "camera.fidl" ]
 }

@@ -15,7 +15,6 @@ executable("controller-test") {
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
-    "//sdk/fidl/fuchsia.hardware.camera",
     "//sdk/lib/sys/cpp",
     "//src/camera/drivers/controller:controller-source",
     "//src/camera/drivers/test_utils",
@@ -41,6 +40,7 @@ executable("controller-test") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-buttons",
+    "//zircon/system/fidl/fuchsia-hardware-camera",
     "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }
@@ -54,7 +54,6 @@ executable("controller-protocol-test") {
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
-    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_c",
     "//sdk/lib/sys/cpp",
     "//src/camera/drivers/controller/:controller-source",
     "//src/camera/drivers/controller/configs/sherlock:controller-configs",
@@ -81,6 +80,7 @@ executable("controller-protocol-test") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-buttons",
+    "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
   ]
   if (internal_access) {
@@ -97,7 +97,6 @@ executable("controller-allocator-test") {
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
-    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_c",
     "//sdk/lib/sys/cpp",
     "//src/camera/drivers/controller:controller-source",
     "//src/camera/drivers/controller/configs/sherlock:controller-configs",
@@ -128,6 +127,7 @@ executable("controller-allocator-test") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-buttons",
+    "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
   ]
 }

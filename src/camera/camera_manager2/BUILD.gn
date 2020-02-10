@@ -15,9 +15,9 @@ source_set("lib") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.camera",
-    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_c",
     "//zircon/public/lib/fzl",
+    "//zircon/system/fidl/fuchsia-hardware-camera",
+    "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
   ]
 
   public_deps = [
