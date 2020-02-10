@@ -23,6 +23,7 @@ driver_module("ums-function") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ums-function.c" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral.block:fuchsia.hardware.usb.peripheral.block_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
@@ -31,7 +32,6 @@ driver_module("ums-function") {
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.function",
     "//zircon/system/banjo/ddk.protocol.usb.request",
-    "//zircon/system/fidl/fuchsia-hardware-usb-peripheral-block:c",
   ]
 }
 

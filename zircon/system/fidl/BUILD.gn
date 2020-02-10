@@ -166,7 +166,6 @@ group("fidl") {
     "fuchsia-hardware-usb-peripheral",
 #------------------
 #------------------
-    "fuchsia-hardware-usb-peripheral-block",
 #------------------
 #------------------
     "fuchsia-hardware-usb-tester",
