@@ -78,7 +78,6 @@ group("banjo") {
     "ddk.protocol.ethernet.board",
 #------------------
 #------------------
-    "ddk.protocol.ethernet.mac",
 #------------------
 #------------------
     "ddk.protocol.gdc",
