@@ -731,10 +731,6 @@ void platform_halt_secondary_cpus(void) {
 }
 
 void platform_early_init(void) {
-  /* call before bootloader data is populated, since we want to
-   * let the bootloader data override this */
-  pc_init_debug_default_early();
-
   /* extract bootloader data while still accessible */
   /* this includes debug uart config, etc. */
   platform_save_bootloader_data();

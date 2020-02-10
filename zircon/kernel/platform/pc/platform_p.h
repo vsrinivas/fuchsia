@@ -27,7 +27,6 @@ extern size_t pcie_mem_lo_size;
 extern uint16_t pcie_pio_base;
 extern uint16_t pcie_pio_size;
 
-void pc_init_debug_default_early(void);
 void pc_init_debug_early(void);
 void pc_init_debug(void);
 void pc_init_timer_percpu(void);

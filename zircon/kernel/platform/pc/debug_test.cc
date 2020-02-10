@@ -17,24 +17,24 @@ namespace {
 bool test_parse_kernel_serial_arg() {
   BEGIN_TEST;
 
-  zbi_uart_t result;
+  DebugPort result;
 
   EXPECT_EQ(ZX_OK, parse_serial_cmdline("none", &result));
-  EXPECT_EQ(result.type, static_cast<uint32_t>(ZBI_UART_NONE));
+  EXPECT_EQ(result.type, DebugPort::Type::Disabled);
 
   EXPECT_EQ(ZX_OK, parse_serial_cmdline("legacy", &result));
-  EXPECT_EQ(result.type, static_cast<uint32_t>(ZBI_UART_PC_PORT));
-  EXPECT_EQ(result.base, 0x3f8u);
+  EXPECT_EQ(result.type, DebugPort::Type::IoPort);
+  EXPECT_EQ(result.io_port, 0x3f8u);
   EXPECT_EQ(result.irq, 4u);
 
   EXPECT_EQ(ZX_OK, parse_serial_cmdline("mmio,0x12345678,1", &result));
-  EXPECT_EQ(result.type, static_cast<uint32_t>(ZBI_UART_PC_MMIO));
-  EXPECT_EQ(result.base, 0x12345678u);
+  EXPECT_EQ(result.type, DebugPort::Type::Mmio);
+  EXPECT_EQ(result.phys_addr, 0x12345678u);
   EXPECT_EQ(result.irq, 1u);
 
   EXPECT_EQ(ZX_OK, parse_serial_cmdline("ioport,0x123,2", &result));
-  EXPECT_EQ(result.type, static_cast<uint32_t>(ZBI_UART_PC_PORT));
-  EXPECT_EQ(result.base, 0x123u);
+  EXPECT_EQ(result.type, DebugPort::Type::IoPort);
+  EXPECT_EQ(result.io_port, 0x123u);
   EXPECT_EQ(result.irq, 2u);
 
   // IRQs above 16 not supported.

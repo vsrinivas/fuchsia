@@ -8,6 +8,7 @@
 #include "debug.h"
 
 #include <bits.h>
+#include <lib/acpi_tables.h>
 #include <lib/cbuf.h>
 #include <lib/cmdline.h>
 #include <lib/debuglog.h>
@@ -33,61 +34,86 @@
 #include <platform/pc.h>
 #include <platform/pc/bootloader.h>
 #include <vm/physmap.h>
+#include <vm/vm_aspace.h>
 
+#include "memory.h"
 #include "platform_p.h"
 
-static const int uart_baud_rate = 115200;
-static int uart_io_port = 0x3f8;
-static uint64_t uart_mem_addr = 0;
-static uint32_t uart_irq = ISA_IRQ_SERIAL1;
+// Low level debug serial.
+//
+// This code provides basic serial support for a 16550-compatible UART, used
+// for kernel debugging. We support configuring serial from several sources of information:
+//
+//   1. The kernel command line ("kernel.serial=...")
+//   2. Information passed in via the ZBI (ZBI_TYPE_DEBUG_UART)
+//   3. From ACPI (the "DBG2" ACPI table)
+//
+// On system boot, we try each of these sources in decreasing order of priority.
+//
+// The init code is called several times during the boot sequence:
+//
+//   pc_init_debug_early():
+//       Before the MMU is set up.
+//
+//   pc_init_debug_post_acpi():
+//       After the MMU is set up and ACPI tables are available, but before other
+//       CPU cores are enabled.
+//
+//   pc_init_debug():
+//       After virtual memory, kernel, threading and arch-specific code has been enabled.
 
-DebugUartInfo debug_uart_info() {
-  DebugUartInfo::Type type;
-  switch (bootloader.uart.type) {
-    case ZBI_UART_PC_PORT:
-      type = DebugUartInfo::Type::Port;
-      break;
-    case ZBI_UART_PC_MMIO:
-      type = DebugUartInfo::Type::Mmio;
-      break;
-    default:
-      type = DebugUartInfo::Type::None;
-      break;
-  }
-  return DebugUartInfo{
-      .mem_addr = uart_mem_addr,
-      .io_port = static_cast<uint32_t>(uart_io_port),
-      .irq = uart_irq,
-      .type = type,
-  };
-}
+// Debug port baud rate.
+constexpr int kBaudRate = 115200;
 
-cbuf_t console_input_buf;
+// Hardware details of the system debug port.
+static DebugPort debug_port = {DebugPort::Type::Unknown, 0, 0, 0, 0};
+
+// UART state.
 static bool output_enabled = false;
+cbuf_t console_input_buf;
 static uint32_t uart_fifo_depth;
-
-// tx driven irq
-static bool uart_tx_irq_enabled = false;
+static bool uart_tx_irq_enabled = false;  // tx driven irq
 static event_t uart_dputc_event =
     EVENT_INITIAL_VALUE(uart_dputc_event, true, EVENT_FLAG_AUTOUNSIGNAL);
 static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
+// Read a single byte from the given UART register.
 static uint8_t uart_read(uint8_t reg) {
-  if (uart_mem_addr) {
-    return (uint8_t)readl(uart_mem_addr + 4 * reg);
-  } else {
-    return (uint8_t)inp((uint16_t)(uart_io_port + reg));
+  ZX_DEBUG_ASSERT(debug_port.type == DebugPort::Type::IoPort
+      || debug_port.type == DebugPort::Type::Mmio);
+
+  switch (debug_port.type) {
+    case DebugPort::Type::IoPort:
+      return (uint8_t)inp((uint16_t)(debug_port.io_port + reg));
+    case DebugPort::Type::Mmio: {
+      uintptr_t addr = reinterpret_cast<uintptr_t>(debug_port.mem_addr);
+      return (uint8_t)readl(addr + 4 * reg);
+    }
+    default:
+      return 0;
   }
 }
 
+// Write a single byte to the given UART register.
 static void uart_write(uint8_t reg, uint8_t val) {
-  if (uart_mem_addr) {
-    writel(val, uart_mem_addr + 4 * reg);
-  } else {
-    outp((uint16_t)(uart_io_port + reg), val);
+  ZX_DEBUG_ASSERT(debug_port.type == DebugPort::Type::IoPort
+      || debug_port.type == DebugPort::Type::Mmio);
+
+  switch (debug_port.type) {
+    case DebugPort::Type::IoPort:
+      outp((uint16_t)(debug_port.io_port + reg), val);
+      break;
+    case DebugPort::Type::Mmio: {
+      uintptr_t addr = reinterpret_cast<uintptr_t>(debug_port.mem_addr);
+      writel(val, addr + 4 * reg);
+      break;
+    }
+    default:
+      break;
   }
 }
 
+// Handle an interrupt from the UART.
 static interrupt_eoi uart_irq_handler(void* arg) {
   spin_lock(&uart_spinlock);
 
@@ -126,6 +152,7 @@ static interrupt_eoi uart_irq_handler(void* arg) {
   return IRQ_EOI_DEACTIVATE;
 }
 
+// Read all pending inputs from the UART.
 static void platform_drain_debug_uart_rx() {
   while (uart_read(5) & (1 << 0)) {
     unsigned char c = uart_read(0);
@@ -135,13 +162,16 @@ static void platform_drain_debug_uart_rx() {
 
 static constexpr TimerSlack kSlack{ZX_MSEC(1), TIMER_SLACK_CENTER};
 
-// for devices where the uart rx interrupt doesn't seem to work
+// Poll for inputs on the UART.
+//
+// Used for devices where the UART rx interrupt isn't available.
 static void uart_rx_poll(timer_t* t, zx_time_t now, void* arg) {
   const Deadline deadline(zx_time_add_duration(now, ZX_MSEC(10)), kSlack);
   timer_set(t, deadline, uart_rx_poll, NULL);
   platform_drain_debug_uart_rx();
 }
 
+// Create a polling thread for the UART.
 static void platform_debug_start_uart_timer() {
   static timer_t uart_rx_poll_timer;
   static bool started = false;
@@ -154,9 +184,10 @@ static void platform_debug_start_uart_timer() {
   }
 }
 
+// Setup the UART hardware.
 static void init_uart() {
   // configure the uart
-  int divisor = 115200 / uart_baud_rate;
+  int divisor = 115200 / kBaudRate;
 
   // get basic config done so that tx functions
   uart_write(1, 0);                                   // mask all irqs
@@ -185,26 +216,45 @@ static void init_uart() {
   }
 }
 
-bool platform_serial_enabled() { return bootloader.uart.type != ZBI_UART_NONE; }
+// Configure the serial device "port".
+static void setup_uart(const DebugPort& port) {
+  DEBUG_ASSERT(port.type != DebugPort::Type::Unknown);
 
-// This just initializes the default serial console to be disabled.
-// It's in a function rather than just a compile-time assignment to the
-// bootloader structure because our C++ compiler doesn't support non-trivial
-// designated initializers.
-void pc_init_debug_default_early() { bootloader.uart.type = ZBI_UART_NONE; }
+  // Update the port information.
+  debug_port = port;
 
-zx_status_t parse_serial_cmdline(const char* serial_mode, zbi_uart_t* uart) {
+  // Enable the UART.
+  if (port.type == DebugPort::Type::Disabled) {
+    dprintf(INFO, "UART disabled.\n");
+    return;
+  }
+  init_uart();
+  output_enabled = true;
+  dprintf(INFO, "UART: enabled with FIFO depth %u\n", uart_fifo_depth);
+}
+
+bool platform_serial_enabled() {
+  switch (debug_port.type) {
+    case DebugPort::Type::Unknown:
+    case DebugPort::Type::Disabled:
+      return false;
+    default:
+      return true;
+  }
+}
+
+zx_status_t parse_serial_cmdline(const char* serial_mode, DebugPort* port) {
   // Check if the user has explicitly disabled the UART.
   if (!strcmp(serial_mode, "none")) {
-    uart->type = ZBI_UART_NONE;
+    port->type = DebugPort::Type::Disabled;
     return ZX_OK;
   }
 
-  // Legacy mode UART (x86 IO ports).
+  // Legacy mode port (x86 IO ports).
   if (!strcmp(serial_mode, "legacy")) {
-    uart->type = ZBI_UART_PC_PORT;
-    uart->base = 0x3f8;
-    uart->irq = ISA_IRQ_SERIAL1;
+    port->type = DebugPort::Type::IoPort;
+    port->io_port = 0x3f8;
+    port->irq = ISA_IRQ_SERIAL1;
     return ZX_OK;
   }
 
@@ -241,9 +291,9 @@ zx_status_t parse_serial_cmdline(const char* serial_mode, zbi_uart_t* uart) {
   memcpy(type_buf, serial_mode, type_len);
   type_buf[type_len] = 0;
   if (!strcmp(type_buf, "ioport")) {
-    uart->type = ZBI_UART_PC_PORT;
+    port->type = DebugPort::Type::IoPort;
   } else if (!strcmp(type_buf, "mmio")) {
-    uart->type = ZBI_UART_PC_MMIO;
+    port->type = DebugPort::Type::Mmio;
   } else {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -255,9 +305,14 @@ zx_status_t parse_serial_cmdline(const char* serial_mode, zbi_uart_t* uart) {
   }
   memcpy(addr_buf, addr_start, addr_len);
   addr_buf[addr_len] = 0;
-  uart->base = strtoul(addr_buf, &endptr, 0);
+  uint64_t base = strtoul(addr_buf, &endptr, 0);
   if (endptr != addr_buf + addr_len) {
     return ZX_ERR_INVALID_ARGS;
+  }
+  if (port->type == DebugPort::Type::IoPort) {
+    port->io_port = static_cast<uint32_t>(base);
+  } else {
+    port->phys_addr = base;
   }
 
   // Parse out the IRQ part
@@ -271,55 +326,124 @@ zx_status_t parse_serial_cmdline(const char* serial_mode, zbi_uart_t* uart) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  uart->irq = static_cast<uint32_t>(irq_val);
+  port->irq = static_cast<uint32_t>(irq_val);
   return ZX_OK;
 }
 
-static void handle_serial_cmdline() {
+// Update the ZBI_TYPE_DEBUG_UART entry in the "bootloader" global to contain details in "port".
+static void update_zbi_uart(const DebugPort& port) {
+  switch (port.type) {
+    case DebugPort::Type::IoPort:
+      bootloader.uart.type = ZBI_UART_PC_PORT;
+      bootloader.uart.base = port.io_port;
+      bootloader.uart.irq = port.irq;
+      break;
+
+    case DebugPort::Type::Mmio:
+      bootloader.uart.type = ZBI_UART_PC_MMIO;
+      bootloader.uart.base = port.phys_addr;
+      bootloader.uart.irq = port.irq;
+      break;
+
+    case DebugPort::Type::Unknown:
+    case DebugPort::Type::Disabled:
+      bootloader.uart.type = ZBI_UART_NONE;
+      break;
+  }
+}
+
+// Parse the kernel command line.
+//
+// Return "true" if a debug port was found.
+static bool handle_serial_cmdline(DebugPort* port) {
   // Fetch the command line.
   const char* serial_mode = gCmdline.GetString("kernel.serial");
   if (serial_mode == nullptr) {
-    // Nothing provided: leave "bootloader.uart" unmodified.
-    return;
+    // Nothing provided.
+    return false;
   }
 
   // Otherwise, parse command line and update "bootloader.uart".
-  zx_status_t result = parse_serial_cmdline(serial_mode, &bootloader.uart);
+  zx_status_t result = parse_serial_cmdline(serial_mode, port);
   if (result != ZX_OK) {
-    dprintf(INFO, "Failed to parse \"kernel.serial\" parameter.\n");
-    bootloader.uart.type = ZBI_UART_NONE;
+    dprintf(INFO, "Failed to parse \"kernel.serial\" parameter. Disabling serial.\n");
+    // Explictly disable the serial.
+    port->type = DebugPort::Type::Disabled;
+    return true;
+  }
+
+  // Finish setup.
+  if (port->type == DebugPort::Type::Mmio) {
+    // Convert the physical address specified in the command line into a virtual
+    // address and mark it as reserved.
+    port->mem_addr = reinterpret_cast<vaddr_t>(paddr_to_physmap(port->phys_addr));
+    mark_mmio_region_to_reserve(port->phys_addr, PAGE_SIZE);
+  } else if (port->type == DebugPort::Type::IoPort) {
+    // Reserve the IO port range.
+    mark_pio_region_to_reserve(port->io_port, 8);
+  }
+
+  return true;
+}
+
+// Attempt to read information about a debug UART out of the ZBI.
+//
+// Return "true" if a debug port was found.
+static bool handle_serial_zbi(DebugPort* port) {
+  switch (bootloader.uart.type) {
+    case ZBI_UART_PC_PORT:
+      port->type = DebugPort::Type::IoPort;
+      port->io_port = static_cast<uint32_t>(bootloader.uart.base);
+      mark_pio_region_to_reserve(port->io_port, 8);
+      port->irq = bootloader.uart.irq;
+      return true;
+
+    case ZBI_UART_PC_MMIO:
+      port->type = DebugPort::Type::Mmio;
+      port->phys_addr = bootloader.uart.base;
+      port->mem_addr = reinterpret_cast<vaddr_t>(paddr_to_physmap(bootloader.uart.base));
+      mark_mmio_region_to_reserve(port->phys_addr, PAGE_SIZE);
+      port->irq = bootloader.uart.irq;
+      return true;
+
+    case ZBI_UART_NONE:
+    default:
+      return false;
   }
 }
 
 void pc_init_debug_early() {
-  handle_serial_cmdline();
-
-  switch (bootloader.uart.type) {
-    case ZBI_UART_PC_PORT:
-      uart_io_port = static_cast<uint32_t>(bootloader.uart.base);
-      uart_irq = bootloader.uart.irq;
-      break;
-    case ZBI_UART_PC_MMIO:
-      uart_mem_addr = (uint64_t)paddr_to_physmap(bootloader.uart.base);
-      uart_irq = bootloader.uart.irq;
-      break;
-    case ZBI_UART_NONE:  // fallthrough
-    default:
-      bootloader.uart.type = ZBI_UART_NONE;
-      return;
+  // Fetch serial information from the command line.
+  DebugPort port;
+  if (handle_serial_cmdline(&port)) {
+    setup_uart(port);
+    return;
   }
 
-  init_uart();
-
-  output_enabled = true;
-
-  dprintf(INFO, "UART: FIFO depth %u\n", uart_fifo_depth);
+  // Failing that, fetch serial information from the ZBI.
+  if (handle_serial_zbi(&port)) {
+    setup_uart(port);
+    return;
+  }
 }
 
 void pc_init_debug() {
-  bool tx_irq_driven = false;
-  // finish uart init to get rx going
+  // At this stage, we have threads, interrupts, the heap, and virtual memory
+  // available to us, which wasn't available at stages.
+  //
+  // Finish setting up the UART, including:
+  //   - Update the global "bootloader" structure, so that preconfigured serial
+  //     works across mexec().
+  //   - Setting up interrupts for TX and RX, or polling timers if we can't
+  //     use interrupts;
+  //   - RX buffers.
+
   cbuf_initialize(&console_input_buf, 1024);
+
+  // Update the ZBI with current serial port settings.
+  //
+  // The updated information is used by mexec() to pass onto the next kernel.
+  update_zbi_uart(debug_port);
 
   if (!platform_serial_enabled()) {
     // Need to bail after initializing the input_buf to prevent uninitialized
@@ -327,23 +451,26 @@ void pc_init_debug() {
     return;
   }
 
-  if ((uart_irq == 0) || gCmdline.GetBool("kernel.debug_uart_poll", false)) {
+  // If we don't support interrupts, set up a polling timer.
+  if ((debug_port.irq == 0) || gCmdline.GetBool("kernel.debug_uart_poll", false)) {
     printf("debug-uart: polling enabled\n");
     platform_debug_start_uart_timer();
-  } else {
-    uart_irq = apic_io_isa_to_global(static_cast<uint8_t>(uart_irq));
-    zx_status_t status = register_int_handler(uart_irq, uart_irq_handler, NULL);
-    DEBUG_ASSERT(status == ZX_OK);
-    unmask_interrupt(uart_irq);
-
-    uart_write(1, (1 << 0));  // enable receive data available interrupt
-
-    // modem control register: Auxiliary Output 2 is another IRQ enable bit
-    const uint8_t mcr = uart_read(4);
-    uart_write(4, mcr | 0x8);
-    printf("UART: started IRQ driven RX\n");
-    tx_irq_driven = !dlog_bypass();
+    return;
   }
+
+  // Otherwise, set up interrupts.
+  uint32_t irq = apic_io_isa_to_global(static_cast<uint8_t>(debug_port.irq));
+  zx_status_t status = register_int_handler(irq, uart_irq_handler, NULL);
+  DEBUG_ASSERT(status == ZX_OK);
+  unmask_interrupt(irq);
+
+  uart_write(1, (1 << 0));  // enable receive data available interrupt
+
+  // modem control register: Auxiliary Output 2 is another IRQ enable bit
+  const uint8_t mcr = uart_read(4);
+  uart_write(4, mcr | 0x8);
+  printf("UART: started IRQ driven RX\n");
+  bool tx_irq_driven = !dlog_bypass();
   if (tx_irq_driven) {
     // start up tx driven output
     printf("UART: started IRQ driven TX\n");

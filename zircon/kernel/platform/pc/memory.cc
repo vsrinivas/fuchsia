@@ -26,7 +26,6 @@
 #include <platform/pc/bootloader.h>
 #include <vm/vm.h>
 
-#include "debug.h"
 #include "platform_p.h"
 
 #define LOCAL_TRACE 0
@@ -63,13 +62,15 @@ typedef struct reserved_pio_space {
 reserved_pio_space_t reserved_pio_entries[kMaxReservedPioEntries];
 static uint8_t reserved_pio_count = 0;
 
-static void mark_mmio_region_to_reserve(uint64_t base, size_t len) {
+void mark_mmio_region_to_reserve(uint64_t base, size_t len) {
+  ZX_DEBUG_ASSERT(reserved_pio_count < kMaxReservedMmioEntries);
   reserved_mmio_entries[reserved_mmio_count].base = base;
   reserved_mmio_entries[reserved_mmio_count].len = len;
   reserved_mmio_count++;
 }
 
-static void mark_pio_region_to_reserve(uint64_t base, size_t len) {
+void mark_pio_region_to_reserve(uint64_t base, size_t len) {
+  ZX_DEBUG_ASSERT(reserved_pio_count < kMaxReservedPioEntries);
   reserved_pio_entries[reserved_pio_count].base = base;
   reserved_pio_entries[reserved_pio_count].len = len;
   reserved_pio_count++;
@@ -448,18 +449,6 @@ static void x86_resource_init_hook(unsigned int rl) {
   ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_IOPORT, 0, UINT16_MAX);
   ResourceDispatcher::InitializeAllocator(ZX_RSRC_KIND_IRQ, interrupt_get_base_vector(),
                                           interrupt_get_max_vector());
-
-  DebugUartInfo debug_uart = debug_uart_info();
-  switch (debug_uart.type) {
-    case DebugUartInfo::Type::None:
-      break;
-    case DebugUartInfo::Type::Port:
-      mark_pio_region_to_reserve(debug_uart.io_port, 8);
-      break;
-    case DebugUartInfo::Type::Mmio:
-      mark_mmio_region_to_reserve(debug_uart.mem_addr, PAGE_SIZE);
-      break;
-  }
 
   // Exclusively reserve the regions marked as memory earlier so that physical
   // vmos cannot be created against them.
