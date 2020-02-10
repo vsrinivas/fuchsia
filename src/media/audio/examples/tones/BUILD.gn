@@ -34,6 +34,7 @@ executable("tones_bin") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.hardware.midi:fuchsia.hardware.midi_c",
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/media/cpp",
     "//sdk/lib/sys/cpp",
@@ -46,6 +47,5 @@ executable("tones_bin") {
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fzl",
-    "//zircon/system/fidl/fuchsia-hardware-midi:fuchsia-hardware-midi_c",
   ]
 }
