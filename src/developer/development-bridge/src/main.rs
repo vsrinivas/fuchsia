@@ -5,7 +5,6 @@
 #![allow(unused)]
 use {
     crate::args::{Ffx, Subcommand},
-    crate::config::Config,
     crate::constants::{CONFIG_JSON_FILE, DAEMON, MAX_RETRY_COUNT},
     anyhow::{Context, Error},
     ffx_daemon::start as start_daemon,
@@ -132,8 +131,6 @@ async fn exec_list() -> Result<(), Error> {
 
 async fn async_main() -> Result<(), Error> {
     let app: Ffx = argh::from_env();
-    let mut config: Config = Config::new();
-    let _ = config.load_from_config_data(CONFIG_JSON_FILE);
     match app.subcommand {
         Subcommand::Start(_) => exec_start().await,
         Subcommand::Echo(c) => {
