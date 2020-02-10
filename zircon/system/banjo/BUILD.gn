@@ -43,7 +43,6 @@ group("banjo") {
     "ddk.protocol.buttons",
 #------------------
 #------------------
-    "ddk.protocol.camerahwaccel",
 #------------------
 #------------------
     "ddk.protocol.camerasensor",
