@@ -126,6 +126,11 @@ impl<K: Copy + Eq + Hash + 'static, St: Stream + FusedStream + Unpin + 'static> 
         self.store.lock().await.insert(key, stream)
     }
 
+    /// Returns true if the map contains an entry with the given key.
+    pub async fn contains_key(&self, key: K) -> bool {
+        self.store.lock().await.contains_key(&key)
+    }
+
     /// Ceases polling and moves to caller the stream added under this key, if there was one.
     pub async fn remove(&self, key: K) -> Option<St> {
         self.store.lock().await.remove(&key)

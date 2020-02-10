@@ -236,3 +236,16 @@ async fn for_each_stream_mut() {
         hashset! {(0, TestStream(Some(1))), (1, TestStream(Some(2))), (2, TestStream(Some(3)))}
     );
 }
+
+#[fasync::run_singlethreaded(test)]
+async fn contains_key() {
+    let mut stream_map = StreamMap::new();
+
+    stream_map.insert(0usize, TestStream(Some(0))).await;
+
+    assert!(stream_map.contains_key(0).await);
+    assert!(!stream_map.contains_key(1).await);
+
+    stream_map.remove(0usize).await;
+    assert!(!stream_map.contains_key(0).await);
+}
