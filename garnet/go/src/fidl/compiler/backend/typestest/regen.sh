@@ -12,9 +12,9 @@ if [ ! -x "${FIDLC}" ]; then
     exit 1
 fi
 
-FIDLGEN="${FUCHSIA_BUILD_DIR}/host_x64/fidlgen"
-if [ ! -x "${FIDLGEN}" ]; then
-    echo "error: fidlgen missing; maybe fx clean-build?" 1>&2
+FIDLGEN_HLCPP="${FUCHSIA_BUILD_DIR}/host_x64/fidlgen_hlcpp"
+if [ ! -x "${FIDLGEN_HLCPP}" ]; then
+    echo "error: fidlgen_hlcpp missing; maybe fx clean-build?" 1>&2
     exit 1
 fi
 
@@ -33,6 +33,12 @@ fi
 FIDLGEN_RUST="${FUCHSIA_BUILD_DIR}/host_x64/fidlgen_rust"
 if [ ! -x "${FIDLGEN_RUST}" ]; then
     echo "error: fidlgen_rust missing; maybe fx clean-build?" 1>&2
+    exit 1
+fi
+
+FIDLGEN_LIBFUZZER="${FUCHSIA_BUILD_DIR}/host_x64/fidlgen_libfuzzer"
+if [ ! -x "${FIDLGEN_LIBFUZZER}" ]; then
+    echo "error: fidlgen_syzkaller missing; maybe fx clean-build?" 1>&2
     exit 1
 fi
 
@@ -86,8 +92,7 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     mv "${GOLDENS_DIR}/${coding_tables_name}" "${GOLDENS_DIR}/${coding_tables_name}.golden"
 
     echo "  cpp: ${json_name} > ${cpp_header_name}, ${cpp_source_name}, and ${cpp_test_header_name}"
-    ${FIDLGEN} \
-        -generators cpp \
+    ${FIDLGEN_HLCPP} \
         -json "${GOLDENS_DIR}/${json_name}" \
         -output-base "${GOLDENS_DIR}/${json_name}" \
         -include-base "${GOLDENS_DIR}"
@@ -113,8 +118,7 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
             "${libfuzzer_source_name}.golden",
         )
         echo "  libfuzzer: ${json_name} > ${libfuzzer_header_name}, and ${libfuzzer_source_name}"
-        ${FIDLGEN} \
-            -generators libfuzzer \
+        ${FIDLGEN_LIBFUZZER} \
             -json "${GOLDENS_DIR}/${json_name}" \
             -output-base "${GOLDENS_DIR}/${json_name}" \
             -include-base "${GOLDENS_DIR}"
