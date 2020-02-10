@@ -4,6 +4,12 @@
 
 import("//build/test/test_package.gni")
 
+static_library("shell_interpreter") {
+  public = [ "src/interpreter.h" ]
+
+  sources = [ "src/interpreter.cc" ]
+}
+
 executable("bin") {
   output_name = "shell_server"
 
@@ -13,6 +19,7 @@ executable("bin") {
   ]
 
   deps = [
+    ":shell_interpreter",
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
     "//src/developer/shell/fidl/fuchsia.shell:shell",

@@ -5,37 +5,38 @@
 #ifndef SRC_DEVELOPER_SHELL_INTERPRETER_SRC_SERVER_H_
 #define SRC_DEVELOPER_SHELL_INTERPRETER_SRC_SERVER_H_
 
-#include <map>
 #include <memory>
 #include <vector>
 
 #include "fuchsia/shell/cpp/fidl.h"
 #include "fuchsia/shell/llcpp/fidl.h"
 #include "lib/async-loop/cpp/loop.h"
+#include "src/developer/shell/interpreter/src/interpreter.h"
 #include "zircon/status.h"
 
 namespace shell {
 namespace interpreter {
 namespace server {
 
-// Defines an execution context. Each execution context is a standalone entity which executes its
-// instructions in parallel with other execution contexts (eventually in separated threads).
-// For a batch execution, we have only one execution context for the program.
-// For an interactive shell, we usually have one execution context per line.
-class ExecutionContext {
- public:
-  explicit ExecutionContext(uint64_t id) : id_(id) {}
+class Service;
 
-  uint64_t id() const { return id_; }
+// Defines an interpreter managed by a server.
+class ServerInterpreter : public Interpreter {
+ public:
+  explicit ServerInterpreter(Service* service) : service_(service) {}
+
+  void EmitError(ExecutionContext* context, std::string error_message) override;
+  void ContextDoneWithAnalysisError(ExecutionContext* context) override;
 
  private:
-  uint64_t id_;
+  Service* service_;
 };
 
 // Defines a connection from a client to the interpreter.
 class Service final : public llcpp::fuchsia::shell::Shell::Interface {
  public:
-  explicit Service(zx_handle_t handle) : handle_(handle) {}
+  explicit Service(zx_handle_t handle)
+      : handle_(handle), interpreter_(std::make_unique<ServerInterpreter>(this)) {}
 
   void CreateExecutionContext(uint64_t context_id,
                               CreateExecutionContextCompleter::Sync completer) override;
@@ -65,7 +66,7 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
 
  private:
   zx_handle_t handle_;
-  std::map<uint64_t, std::unique_ptr<ExecutionContext>> contexts_;
+  std::unique_ptr<ServerInterpreter> interpreter_;
 };
 
 // Class which accept connections from clients. Each time a new connection is accepted, a Service

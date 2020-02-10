@@ -15,6 +15,15 @@ namespace shell {
 namespace interpreter {
 namespace server {
 
+void ServerInterpreter::EmitError(ExecutionContext* context, std::string error_message) {
+  service_->OnError((context == nullptr) ? 0 : context->id(), std::move(error_message));
+}
+
+void ServerInterpreter::ContextDoneWithAnalysisError(ExecutionContext* context) {
+  FXL_DCHECK(context != nullptr);
+  service_->OnExecutionDone(context->id(), fuchsia::shell::ExecuteResult::ANALYSIS_ERROR);
+}
+
 void connect(void* untyped_context, const char* service_name, zx_handle_t service_request) {
   auto server = static_cast<Server*>(untyped_context);
   server->IncommingConnection(service_request);
@@ -22,26 +31,12 @@ void connect(void* untyped_context, const char* service_name, zx_handle_t servic
 
 void Service::CreateExecutionContext(uint64_t context_id,
                                      CreateExecutionContextCompleter::Sync completer) {
-  auto context = contexts_.find(context_id);
-  if (context != contexts_.end()) {
-    OnError(0, "Execution context " + std::to_string(context_id) + " is already in use.");
-  } else {
-    contexts_.emplace(context_id, std::make_unique<ExecutionContext>(context_id));
-  }
+  interpreter_->AddContext(context_id);
 }
 
 void Service::ExecuteExecutionContext(uint64_t context_id,
                                       ExecuteExecutionContextCompleter::Sync completer) {
-  auto context = contexts_.find(context_id);
-  if (context == contexts_.end()) {
-    OnError(0, "Execution context " + std::to_string(context_id) + " not defined.");
-  } else {
-    // Currently, there is no way to define an instruction. That means that the server always
-    // returns the same error (and does nothing).
-    OnError(context_id, "No pending instruction to execute.");
-    OnExecutionDone(context_id, fuchsia::shell::ExecuteResult::ANALYSIS_ERROR);
-    contexts_.erase(context);
-  }
+  interpreter_->ExecuteContext(context_id);
 }
 
 Server::Server() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
