@@ -2,17 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(unused)]
-
 use crate::Result;
 use fidl::endpoints::create_request_stream;
 use fidl_fuchsia_media::*;
-use fidl_fuchsia_media_audio::*;
 use fuchsia_syslog::fx_log_warn;
-use futures::stream::{SelectAll, Stream, StreamExt, TryStreamExt};
+use futures::stream::{FusedStream, Stream};
 use std::{
     pin::Pin,
-    task::{Context, Poll, Waker},
+    task::{Context, Poll},
 };
 use streammap::StreamMap;
 
@@ -71,7 +68,7 @@ impl Stream for Interrupter {
         ) {
             Ok(state_change) => state_change,
             Err(e) => {
-                fx_log_warn!(tag: LOG_TAG, "Audio policy service died");
+                fx_log_warn!(tag: LOG_TAG, "Audio policy service died: {:?}", e);
                 return Poll::Pending;
             }
         };
@@ -103,11 +100,20 @@ impl Stream for Interrupter {
     }
 }
 
+impl FusedStream for Interrupter {
+    fn is_terminated(&self) -> bool {
+        false
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
     use fuchsia_async as fasync;
-    use futures::future;
+    use futures::{
+        future,
+        stream::{StreamExt, TryStreamExt},
+    };
     use matches::matches;
     use test_util::assert_matches;
 
@@ -125,9 +131,9 @@ mod test {
     #[fasync::run_singlethreaded]
     #[test]
     async fn pends_when_empty() {
-        let (mut interrupter, mut usage_reporter_requests) = test_interrupter();
+        let (mut interrupter, _usage_reporter_requests) = test_interrupter();
 
-        let mut next = interrupter.next();
+        let next = interrupter.next();
         assert!(matches!(futures::poll!(next), Poll::Pending));
     }
 

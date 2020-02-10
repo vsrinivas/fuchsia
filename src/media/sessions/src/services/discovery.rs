@@ -12,6 +12,7 @@ use self::{
     watcher::*,
 };
 use crate::{
+    interrupter::*,
     proxies::{
         observer::*,
         player::{ForwardControlRequest, Player},
@@ -22,8 +23,9 @@ use fidl::{
     encoding::Decodable,
     endpoints::{ClientEnd, ServerEnd},
 };
+use fidl_fuchsia_media::UsageReporterProxy;
 use fidl_fuchsia_media_sessions2::*;
-use fuchsia_syslog::fx_log_warn;
+use fuchsia_syslog::{fx_log_info, fx_log_warn};
 use futures::{
     self,
     channel::mpsc,
@@ -33,7 +35,12 @@ use futures::{
     StreamExt,
 };
 use mpmc;
-use std::{collections::HashMap, convert::TryFrom, marker::Unpin, ops::RangeFrom};
+use std::{
+    collections::{HashMap, HashSet},
+    convert::TryFrom,
+    marker::Unpin,
+    ops::RangeFrom,
+};
 use streammap::StreamMap;
 
 const LOG_TAG: &str = "discovery";
@@ -50,18 +57,27 @@ pub struct Discovery {
     watchers: StreamMap<usize, Task>,
     /// Connections to player serving sessions.
     players: StreamMap<u64, Player>,
+    /// A set of ids of players paused by an interruption on their audio usage.
+    interrupt_paused_players: HashSet<u64>,
+    /// A stream of interruptions of audio usages, observed from the audio service.
+    interrupter: Interrupter,
     /// The sender through which we distribute player events to all watchers.
     player_update_sender: mpmc::Sender<FilterApplicant<(u64, PlayerEvent)>>,
 }
 
 impl Discovery {
-    pub fn new(player_stream: mpsc::Receiver<Player>) -> Self {
+    pub fn new(
+        player_stream: mpsc::Receiver<Player>,
+        usage_reporter_proxy: UsageReporterProxy,
+    ) -> Self {
         Self {
             player_stream,
             catch_up_events: HashMap::new(),
             watcher_ids: 0..,
             watchers: StreamMap::new(),
             players: StreamMap::new(),
+            interrupt_paused_players: HashSet::new(),
+            interrupter: Interrupter::new(usage_reporter_proxy),
             player_update_sender: mpmc::Sender::default(),
         }
     }
@@ -167,10 +183,79 @@ impl Discovery {
         let (id, event) = &player_update.applicant;
         if let PlayerEvent::Removed = event {
             self.catch_up_events.remove(id);
+            self.interrupt_paused_players.remove(id);
         } else {
+            let mut usage = None;
+            self.players
+                .with_elem(*id, |player| usage = player.usage_to_pause_on_interruption())
+                .await;
+
+            if let Some(usage) = usage {
+                if let Err(e) = self.interrupter.watch_usage(usage).await {
+                    fx_log_warn!(
+                        tag: LOG_TAG,
+                        concat!(
+                            "Audio policy service UsageReporter is unavailable; ",
+                            "interruptions will not work. Error: {:?}"
+                        ),
+                        e
+                    )
+                }
+            }
+
             self.catch_up_events.insert(*id, player_update.clone());
         }
         self.player_update_sender.send(player_update).await;
+    }
+
+    async fn handle_interruption(&mut self, Interruption { usage, stage }: Interruption) {
+        let mut interrupted = HashSet::new();
+        std::mem::swap(&mut interrupted, &mut self.interrupt_paused_players);
+
+        if let InterruptionStage::Begin = stage {
+            fx_log_info!(
+                tag: LOG_TAG,
+                concat!(
+                    "Usage {:?} was interrputed; will pause the players ",
+                    "that requested to be paused on interruption.",
+                ),
+                usage
+            );
+        }
+
+        // We can ignore errors sending our commands to the player, because they will
+        // drop from the StreamMap when disconnected on their own.
+        match stage {
+            InterruptionStage::Begin => {
+                self.players
+                    .for_each_stream(|id, player| {
+                        if player.usage_to_pause_on_interruption() != Some(usage)
+                            || !player.is_active()
+                        {
+                            return;
+                        }
+
+                        let _ = player.pause();
+                        interrupted.insert(id);
+                    })
+                    .await
+            }
+            InterruptionStage::End => {
+                self.players
+                    .for_each_stream(|id, player| {
+                        if !interrupted.remove(&id)
+                            || player.usage_to_pause_on_interruption() != Some(usage)
+                        {
+                            return;
+                        }
+
+                        let _ = player.play();
+                    })
+                    .await
+            }
+        }
+
+        std::mem::swap(&mut interrupted, &mut self.interrupt_paused_players);
     }
 
     pub async fn serve(
@@ -195,6 +280,10 @@ impl Discovery {
                         }
                     }
                 }
+                // Watch the audio service for interruption notifications.
+                interruption = self.interrupter.select_next_some() => {
+                    self.handle_interruption(interruption).await;
+                }
                 // Drive dispatch of events to watcher clients.
                  _ = self.watchers.select_next_some() => {}
                 // A new player has been published to `fuchsia.media.sessions2.Publisher`.
@@ -214,7 +303,11 @@ impl Discovery {
 mod test {
     use super::*;
     use crate::{id::Id, spawn_log_error};
-    use fidl::{encoding::Decodable, endpoints::create_endpoints};
+    use fidl::{
+        encoding::Decodable,
+        endpoints::{create_endpoints, create_proxy},
+    };
+    use fidl_fuchsia_media::UsageReporterMarker;
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
     use test_util::assert_matches;
@@ -227,7 +320,8 @@ mod test {
         let dummy_control_handle =
             create_endpoints::<DiscoveryMarker>()?.1.into_stream_and_control_handle()?.1;
 
-        let under_test = Discovery::new(player_stream);
+        let (usage_reporter_proxy, _server_end) = create_proxy::<UsageReporterMarker>()?;
+        let under_test = Discovery::new(player_stream, usage_reporter_proxy);
         spawn_log_error(under_test.serve(request_stream));
 
         // Create one watcher ahead of any players, for synchronization.

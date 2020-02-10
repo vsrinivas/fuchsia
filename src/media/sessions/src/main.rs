@@ -12,8 +12,9 @@ mod services;
 mod test;
 
 use anyhow::Error;
+use fidl_fuchsia_media::UsageReporterMarker;
 use fuchsia_async as fasync;
-use fuchsia_component::server::ServiceFs;
+use fuchsia_component::{client, server::ServiceFs};
 use fuchsia_inspect::component;
 use futures::{channel::mpsc, prelude::*};
 
@@ -42,7 +43,10 @@ async fn main() {
 
     let (player_sink, player_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
     let (request_sink, request_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
-    let discovery = self::services::discovery::Discovery::new(player_stream);
+
+    let usage_reporter_proxy =
+        client::connect_to_service::<UsageReporterMarker>().expect("Connecting to UsageReporter");
+    let discovery = self::services::discovery::Discovery::new(player_stream, usage_reporter_proxy);
     spawn_log_error(discovery.serve(request_stream));
 
     server

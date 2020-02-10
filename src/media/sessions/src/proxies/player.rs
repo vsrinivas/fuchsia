@@ -27,10 +27,14 @@ use std::{
     task::{Context, Poll, Waker},
 };
 
+const DEFAULT_PLAYER_USAGE: AudioRenderUsage = AudioRenderUsage::Media;
+
 #[derive(Debug, Clone, ValidFidlTable, PartialEq)]
 #[fidl_table_src(PlayerRegistration)]
 pub struct ValidPlayerRegistration {
     pub domain: String,
+    #[fidl_field_with_default(DEFAULT_PLAYER_USAGE)]
+    pub usage: AudioRenderUsage,
 }
 
 #[derive(Debug, Clone, ValidFidlTable, PartialEq)]
@@ -93,6 +97,8 @@ pub struct ValidPlayerInfoDelta {
     pub media_images: Option<Vec<ValidMediaImage>>,
     #[fidl_field_type(optional)]
     pub player_capabilities: Option<ValidPlayerCapabilities>,
+    #[fidl_field_type(optional)]
+    pub interruption_behavior: Option<InterruptionBehavior>,
 }
 
 impl ValidPlayerInfoDelta {
@@ -104,6 +110,7 @@ impl ValidPlayerInfoDelta {
             metadata: delta.metadata.or(self.metadata),
             media_images: delta.media_images.or(self.media_images),
             player_capabilities: delta.player_capabilities.or(self.player_capabilities),
+            interruption_behavior: delta.interruption_behavior.or(self.interruption_behavior),
         }
     }
 
@@ -201,6 +208,32 @@ impl Player {
 
     pub fn id(&self) -> u64 {
         self.id.get()
+    }
+
+    /// Returns whether the player is in an active state.
+    pub fn is_active(&self) -> bool {
+        self.state.is_active().unwrap_or(false)
+    }
+
+    /// Returns the usage which, when interrupted, should cause the player
+    /// to pause until the interruption is over.
+    pub fn usage_to_pause_on_interruption(&self) -> Option<AudioRenderUsage> {
+        self.state
+            .interruption_behavior
+            .as_ref()
+            .copied()
+            .filter(|behavior| *behavior == InterruptionBehavior::Pause)
+            .map(|_| self.registration.usage)
+    }
+
+    /// Sends a pause command to the backing player.
+    pub fn pause(&self) -> Result<()> {
+        Ok(self.inner.pause()?)
+    }
+
+    /// Sends a play command to the backing player.
+    pub fn play(&self) -> Result<()> {
+        Ok(self.inner.play()?)
     }
 
     /// Updates state with the latest delta published by the player.
@@ -421,7 +454,10 @@ mod test {
             event,
             PlayerEvent::Updated {
                 delta: ValidPlayerInfoDelta::default(),
-                registration: Some(ValidPlayerRegistration { domain: TEST_DOMAIN.to_string() }),
+                registration: Some(ValidPlayerRegistration {
+                    domain: TEST_DOMAIN.to_string(),
+                    usage: AudioRenderUsage::Media
+                }),
                 active: None,
             }
         );
@@ -517,6 +553,7 @@ mod test {
             flags: Play | Pause,
         },
     ),
+    interruption_behavior: None,
 }";
 
         assert_inspect_tree!(inspector, root: {

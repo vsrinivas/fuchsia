@@ -53,9 +53,11 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/test_util",
     "//third_party/rust_crates:futures-test",
     "//third_party/rust_crates:matches",
+    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
   ]
 }
 

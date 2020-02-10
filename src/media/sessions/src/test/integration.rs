@@ -6,11 +6,22 @@ use crate::Result;
 use anyhow::Context as _;
 use fidl::encoding::Decodable;
 use fidl::endpoints::{create_endpoints, create_proxy, create_request_stream};
+use fidl_fuchsia_logger::LogSinkMarker;
+use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sessions2::*;
 use fuchsia_async as fasync;
 use fuchsia_component as comp;
-use futures::stream::{StreamExt, TryStreamExt};
+use fuchsia_component::server::*;
+use futures::{
+    self,
+    channel::mpsc,
+    future,
+    sink::SinkExt,
+    stream::{StreamExt, TryStreamExt},
+};
 use lazy_static::lazy_static;
+use matches::matches;
+use std::collections::HashMap;
 use test_util::assert_matches;
 
 const MEDIASESSION_URL: &str = "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cmx";
@@ -25,15 +36,51 @@ struct TestService {
     // This needs to stay alive to keep the service running.
     #[allow(unused)]
     app: comp::client::App,
+    // This needs to stay alive to keep the service running.
+    #[allow(unused)]
+    env: NestedEnvironment,
     publisher: PublisherProxy,
     discovery: DiscoveryProxy,
+    new_usage_watchers: mpsc::Receiver<(AudioRenderUsage, UsageWatcherProxy)>,
+    usage_watchers: HashMap<AudioRenderUsage, UsageWatcherProxy>,
 }
 
 impl TestService {
     fn new() -> Result<Self> {
-        let launcher = comp::client::launcher().context("Connecting to launcher")?;
-        let mediasession = comp::client::launch(&launcher, String::from(MEDIASESSION_URL), None)
-            .context("Launching mediasession")?;
+        let mut fs = ServiceFs::new();
+        fs.add_proxy_service::<LogSinkMarker, ()>();
+
+        let (new_usage_watchers_sink, new_usage_watchers) = mpsc::channel(10);
+        fs.add_fidl_service::<_, UsageReporterRequestStream>(move |mut request_stream| {
+            let mut new_usage_watchers_sink = new_usage_watchers_sink.clone();
+            fasync::spawn(async move {
+                while let Some(Ok(UsageReporterRequest::Watch { usage, usage_watcher, .. })) =
+                    request_stream.next().await
+                {
+                    match (usage, usage_watcher.into_proxy()) {
+                        (Usage::RenderUsage(usage), Ok(usage_watcher)) => {
+                            new_usage_watchers_sink
+                                .send((usage, usage_watcher))
+                                .await
+                                .expect("Forwarding new UsageWatcher from service under test");
+                        }
+                        (_, Ok(_)) => println!("Service under test tried to watch a capture usage"),
+                        (_, Err(e)) => println!("Service under test sent bad request: {:?}", e),
+                    }
+                }
+            })
+        });
+
+        let env = fs.create_salted_nested_environment("environment")?;
+
+        fasync::spawn(fs.for_each(|_| future::ready(())));
+
+        let mediasession = comp::client::launch(
+            env.launcher(),
+            String::from(MEDIASESSION_URL),
+            /*arguments=*/ None,
+        )
+        .context("Launching mediasession")?;
 
         let publisher = mediasession
             .connect_to_service::<PublisherMarker>()
@@ -42,7 +89,14 @@ impl TestService {
             .connect_to_service::<DiscoveryMarker>()
             .context("Connecting to Discovery")?;
 
-        Ok(Self { app: mediasession, publisher, discovery })
+        Ok(Self {
+            app: mediasession,
+            env,
+            publisher,
+            discovery,
+            new_usage_watchers,
+            usage_watchers: HashMap::new(),
+        })
     }
 
     fn new_watcher(&self, watch_options: WatchOptions) -> Result<TestWatcher> {
@@ -52,6 +106,42 @@ impl TestService {
         Ok(TestWatcher {
             watcher: watcher_server.into_stream().context("Turning watcher into stream")?,
         })
+    }
+
+    async fn dequeue_watcher(&mut self) {
+        if let Some((usage, watcher)) = self.new_usage_watchers.next().await {
+            self.usage_watchers.insert(usage, watcher);
+        } else {
+            panic!("Watcher channel closed.")
+        }
+    }
+
+    async fn start_interruption(&mut self, usage: AudioRenderUsage) {
+        if let Some(watcher) = self.usage_watchers.get(&usage) {
+            watcher
+                .on_state_changed(
+                    &mut Usage::RenderUsage(usage),
+                    &mut UsageState::Muted(UsageStateMuted::empty()),
+                )
+                .await
+                .expect("Sending interruption start to service under test");
+        } else {
+            panic!("Can't start interruption; no watcher is registered for usage {:?}", usage)
+        }
+    }
+
+    async fn stop_interruption(&mut self, usage: AudioRenderUsage) {
+        if let Some(watcher) = self.usage_watchers.get(&usage) {
+            watcher
+                .on_state_changed(
+                    &mut Usage::RenderUsage(usage),
+                    &mut UsageState::Unadjusted(UsageStateUnadjusted::empty()),
+                )
+                .await
+                .expect("Sending interruption stop to service under test");
+        } else {
+            panic!("Can't stop interruption; no watcher is registered for usage {:?}", usage)
+        }
     }
 }
 
@@ -143,6 +233,15 @@ fn delta_with_state(state: PlayerState) -> PlayerInfoDelta {
         }),
         ..Decodable::new_empty()
     }
+}
+
+fn delta_with_interruption(
+    state: PlayerState,
+    interruption_behavior: InterruptionBehavior,
+) -> PlayerInfoDelta {
+    let mut delta = delta_with_state(state);
+    delta.interruption_behavior = Some(interruption_behavior);
+    delta
 }
 
 macro_rules! test {
@@ -378,6 +477,100 @@ test!(users_can_watch_session_status, || async {
         status1.player_status,
         Some(PlayerStatus { player_state: Some(PlayerState::Paused), .. })
     );
+
+    Ok(())
+});
+
+test!(player_is_interrupted, || async {
+    let mut service = TestService::new()?;
+    let mut player = TestPlayer::new(&service).await?;
+
+    player
+        .emit_delta(delta_with_interruption(PlayerState::Playing, InterruptionBehavior::Pause))
+        .await?;
+    service.dequeue_watcher().await;
+
+    // We take the watch request from the player's queue and don't answer it, so that
+    // the stream of requests coming in that we match on down below doesn't contain it.
+    let _watch_request = player.requests.try_next().await?;
+
+    service.start_interruption(AudioRenderUsage::Media).await;
+    player
+        .wait_for_request(|request| matches!(request, PlayerRequest::Pause {..}))
+        .await
+        .expect("Waiting for player to receive pause");
+
+    service.stop_interruption(AudioRenderUsage::Media).await;
+    player
+        .wait_for_request(|request| matches!(request, PlayerRequest::Play {..}))
+        .await
+        .expect("Waiting for player to receive `Play` command");
+
+    Ok(())
+});
+
+test!(unenrolled_player_is_not_paused_when_interrupted, || async {
+    let mut service = TestService::new()?;
+    let mut player1 = TestPlayer::new(&service).await?;
+    let mut player2 = TestPlayer::new(&service).await?;
+
+    player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    player2
+        .emit_delta(delta_with_interruption(PlayerState::Playing, InterruptionBehavior::Pause))
+        .await?;
+    service.dequeue_watcher().await;
+
+    // We take the watch request from the player's queue and don't answer it, so that
+    // the stream of requests coming in that we match on down below doesn't contain it.
+    let _watch_request1 = player1.requests.try_next().await?;
+    let _watch_request2 = player2.requests.try_next().await?;
+
+    service.start_interruption(AudioRenderUsage::Media).await;
+    player2
+        .wait_for_request(|request| matches!(request, PlayerRequest::Pause {..}))
+        .await
+        .expect("Waiting for player to receive pause");
+
+    drop(service);
+    let next = player1.requests.try_next().await?;
+    assert!(next.is_none());
+
+    Ok(())
+});
+
+test!(player_paused_before_interruption_is_not_resumed_by_its_end, || async {
+    let mut service = TestService::new()?;
+    let mut player1 = TestPlayer::new(&service).await?;
+    let mut player2 = TestPlayer::new(&service).await?;
+
+    player1
+        .emit_delta(delta_with_interruption(PlayerState::Playing, InterruptionBehavior::Pause))
+        .await?;
+    player2
+        .emit_delta(delta_with_interruption(PlayerState::Paused, InterruptionBehavior::Pause))
+        .await?;
+    service.dequeue_watcher().await;
+
+    // We take the watch request from the player's queue and don't answer it, so that
+    // the stream of requests coming in that we match on down below doesn't contain it.
+    let _watch_request1 = player1.requests.try_next().await?;
+    let _watch_request2 = player2.requests.try_next().await?;
+
+    service.start_interruption(AudioRenderUsage::Media).await;
+    player1
+        .wait_for_request(|request| matches!(request, PlayerRequest::Pause {..}))
+        .await
+        .expect("Waiting for player to receive pause");
+
+    service.stop_interruption(AudioRenderUsage::Media).await;
+    player1
+        .wait_for_request(|request| matches!(request, PlayerRequest::Play {..}))
+        .await
+        .expect("Waiting for player to receive play");
+
+    drop(service);
+    let next = player2.requests.try_next().await?;
+    assert!(next.is_none());
 
     Ok(())
 });
