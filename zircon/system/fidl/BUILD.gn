@@ -135,7 +135,6 @@ group("fidl") {
     "fuchsia-hardware-tee",
 #------------------
 #------------------
-    "fuchsia-hardware-telephony-transport",
 #------------------
 #------------------
     "fuchsia-hardware-thermal",

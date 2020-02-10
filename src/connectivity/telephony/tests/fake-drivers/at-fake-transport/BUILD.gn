@@ -29,6 +29,7 @@ driver_module("fake_at_driver") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.hardware.telephony.transport:fuchsia.hardware.telephony.transport_llcpp",
     "//src/connectivity/telephony/tests/fake-drivers/fake-transport-base",
     "//src/devices/lib/driver",
     "//zircon/public/lib/async-cpp",
@@ -39,7 +40,6 @@ driver_module("fake_at_driver") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.test",
-    "//zircon/system/fidl/fuchsia-hardware-telephony-transport:fuchsia-hardware-telephony-transport_llcpp",
     "//zircon/system/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop_llcpp",
   ]
 

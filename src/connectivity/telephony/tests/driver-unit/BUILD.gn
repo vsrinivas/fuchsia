@@ -10,6 +10,7 @@ executable("tel-driver-unit-test") {
   sources = [ "driver-unit-test.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.hardware.telephony.transport:fuchsia.hardware.telephony.transport_llcpp",
     "//sdk/lib/sys/cpp",
     "//src/connectivity/telephony/drivers/qmi-usb-transport:qmi_driver_src",
     "//src/lib/fxl/test:gtest_main",
@@ -22,7 +23,6 @@ executable("tel-driver-unit-test") {
     "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.ethernet",
-    "//zircon/system/fidl/fuchsia-hardware-telephony-transport:fuchsia-hardware-telephony-transport_llcpp",
     "//zircon/system/fidl/fuchsia-hardware-usb-peripheral:fuchsia-hardware-usb-peripheral_llcpp",
     "//zircon/system/fidl/fuchsia-hardware-usb-virtual-bus:fuchsia-hardware-usb-virtual-bus_llcpp",
   ]
