@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/fidl.gni")
+import("//build/fidl/fidl.gni")
 
 # In the fullness of time we'll probably want to add this to the SDK, and
 # expose this at //sdk/fidl.  But for now, since our only callers live in zircon,
 # we can keep it here in //zircon/system/fidl.
-fidl_library("fuchsia-security-resource") {
+fidl("fuchsia.security.resource") {
   sources = [ "vmex.fidl" ]
 }

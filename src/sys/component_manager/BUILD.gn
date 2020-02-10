@@ -27,6 +27,7 @@ rustc_library("lib") {
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/by_addr:by_addr",
@@ -63,7 +64,6 @@ rustc_library("lib") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-io2:fuchsia-io2-rustc",
     "//zircon/system/fidl/fuchsia-process:fuchsia-process-rustc",
-    "//zircon/system/fidl/fuchsia-security-resource:fuchsia-security-resource-rustc",
 
     # This is a 'logical' test-only dep, in that it's only used in the
     # model::testing helpers, but that module is currently included in the main

@@ -233,7 +233,6 @@ group("fidl") {
     "fuchsia-scheduler",
 #------------------
 #------------------
-    "fuchsia-security-resource",
 #------------------
 #------------------
     "fuchsia-storage-metrics",
