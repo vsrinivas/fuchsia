@@ -9,6 +9,7 @@ source_set("camera-task") {
   visibility = [ "*" ]
   sources = [ "task.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.gdc",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/ddk",
@@ -18,7 +19,6 @@ source_set("camera-task") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.gdc",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
   ]
 }

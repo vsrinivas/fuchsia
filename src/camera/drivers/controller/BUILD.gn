@@ -52,6 +52,7 @@ source_set("controller-source") {
     "stream_protocol.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.gdc",
     "//sdk/banjo/ddk.protocol.ge2d",
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/fidl/fuchsia.camera2",
@@ -85,7 +86,6 @@ source_set("controller-source") {
     "//zircon/system/banjo/ddk.protocol.buttons",
     "//zircon/system/banjo/ddk.protocol.camerahwaccel",
     "//zircon/system/banjo/ddk.protocol.composite",
-    "//zircon/system/banjo/ddk.protocol.gdc",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-buttons",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",

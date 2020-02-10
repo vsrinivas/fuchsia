@@ -11,6 +11,7 @@ executable("controller-test") {
   sources = [ "device_test.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
+    "//sdk/banjo/ddk.protocol.gdc",
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
@@ -36,7 +37,6 @@ executable("controller-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.gdc",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
@@ -50,6 +50,7 @@ executable("controller-protocol-test") {
   sources = [ "protocol_test.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
+    "//sdk/banjo/ddk.protocol.gdc",
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
@@ -76,7 +77,6 @@ executable("controller-protocol-test") {
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.gdc",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
@@ -93,6 +93,7 @@ executable("controller-allocator-test") {
   sources = [ "allocator_test.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
+    "//sdk/banjo/ddk.protocol.gdc",
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
@@ -123,7 +124,6 @@ executable("controller-allocator-test") {
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.gdc",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",

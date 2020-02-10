@@ -13,6 +13,7 @@ executable("gdc-test") {
     "task-test.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.gdc",
     "//src/camera/drivers/hw_accel/task:camera-task",
     "//src/camera/drivers/test_utils",
     "//src/devices/lib/driver",
@@ -35,7 +36,6 @@ executable("gdc-test") {
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.gdc",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",

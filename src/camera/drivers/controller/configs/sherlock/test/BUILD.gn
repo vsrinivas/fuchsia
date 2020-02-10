@@ -11,6 +11,7 @@ executable("configs_test") {
   sources = [ "configs_test.cc" ]
   deps = [
     "//garnet/public/lib/gtest",
+    "//sdk/banjo/ddk.protocol.gdc",
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
@@ -36,7 +37,6 @@ executable("configs_test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/syslog",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.gdc",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
