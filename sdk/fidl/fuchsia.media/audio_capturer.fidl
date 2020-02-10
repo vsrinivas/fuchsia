@@ -6,6 +6,22 @@ library fuchsia.media;
 
 using fuchsia.media.audio;
 
+/// Configuration for a capturer which will receive a loopback stream
+/// a system output.
+table LoopbackAudioCapturerConfiguration {
+};
+
+/// Configuration for a capturer which will receive a stream from an
+/// input device.
+table InputAudioCapturerConfiguration {
+};
+
+/// Configuration for an audio Capturer.
+union AudioCapturerConfiguration {
+    1: LoopbackAudioCapturerConfiguration loopback;
+    2: InputAudioCapturerConfiguration input;
+};
+
 // TODO(mpuryear): Routing policy needs to become more capable than this.
 // Clients will need to be able to request sets of inputs/outputs/renderers,
 // make changes to theses sets, have their requests vetted by policy (do they

@@ -83,6 +83,26 @@ protocol AudioCore {
     /// Create an AudioRenderer which outputs audio to the default device.
     CreateAudioRenderer(request<AudioRenderer> audio_out_request);
 
+    /// Create a new Audio Capturer according to the given requirements.
+    ///
+    /// `pcm_stream_type` sets the stream type of the stream to be delivered.
+    /// It causes the source material to be reformatted/resampled if needed
+    /// in order to produce the requested stream type.
+    ///
+    /// `usage` is used by Fuchsia to make decisions about user experience.
+    /// See `AudioCaptureUsage` for more details.
+    ///
+    /// `configuration` must be initialized to a variant, or no capturer
+    /// can be created.
+    ///
+    /// TODO(45240): Implement
+    [Transitional]
+    CreateAudioCapturerWithConfiguration(
+        AudioStreamType stream_type,
+        AudioCaptureUsage usage,
+        AudioCapturerConfiguration configuration,
+        request<AudioCapturer> audio_capturer_request);
+
     /// Create an AudioCapturer which either captures from the current default
     /// audio input device, or loops-back from the current default audio output
     /// device based on value passed for the loopback flag.
