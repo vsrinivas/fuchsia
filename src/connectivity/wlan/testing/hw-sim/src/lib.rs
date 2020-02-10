@@ -41,19 +41,11 @@ pub const ETH_DST_MAC: [u8; 6] = [0x65, 0x74, 0x68, 0x64, 0x73, 0x74];
 pub const CHANNEL: WlanChan = WlanChan { primary: 1, secondary80: 0, cbw: Cbw::Cbw20 };
 
 pub fn default_wlantap_config_client() -> WlantapPhyConfig {
-    wlantap_config_client(format!("wlantap-client"), CLIENT_MAC_ADDR)
-}
-
-pub fn wlantap_config_client(name: String, mac_addr: [u8; 6]) -> WlantapPhyConfig {
-    config::create_wlantap_config(name, mac_addr, MacRole::Client)
+    config::create_wlantap_config(format!("wlantap-client"), CLIENT_MAC_ADDR, MacRole::Client)
 }
 
 pub fn default_wlantap_config_ap() -> WlantapPhyConfig {
-    wlantap_config_ap(format!("wlantap-ap"), AP_MAC_ADDR.0)
-}
-
-pub fn wlantap_config_ap(name: String, mac_addr: [u8; 6]) -> WlantapPhyConfig {
-    config::create_wlantap_config(name, mac_addr, MacRole::Ap)
+    config::create_wlantap_config(format!("wlantap-ap"), AP_MAC_ADDR.0, MacRole::Ap)
 }
 
 pub fn create_rx_info(channel: &WlanChan, rssi_dbm: i8) -> WlanRxInfo {
