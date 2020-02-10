@@ -56,6 +56,22 @@ source_set("cobalt") {
   visibility = [ "//src/developer/feedback/*" ]
 }
 
+source_set("files") {
+  public = [
+    "file_size.h",
+    "rotating_file_set.h",
+    "write_only_file.h",
+  ]
+
+  sources = [
+    "file_size.h",
+    "rotating_file_set.cc",
+    "rotating_file_set.h",
+    "write_only_file.cc",
+    "write_only_file.h",
+  ]
+}
+
 source_set("inspect_node_manager") {
   sources = [
     "inspect_node_manager.cc",

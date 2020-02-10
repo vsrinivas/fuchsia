@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/rotating_file_set_unittest"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ]
+    }
+}

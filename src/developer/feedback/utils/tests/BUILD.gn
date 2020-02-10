@@ -19,6 +19,12 @@ test_package("feedback_utils_tests") {
       name = "cobalt_unittest"
     },
     {
+      name = "rotating_file_set_unittest"
+    },
+    {
+      name = "write_only_file_unittest"
+    },
+    {
       name = "inspect_node_manager_unittest"
     },
     {
@@ -45,8 +51,10 @@ test_package("feedback_utils_tests") {
     ":cobalt_unittest",
     ":inspect_node_manager_unittest",
     ":promise_unittest",
+    ":rotating_file_set_unittest",
     ":time_unittest",
     ":utc_time_provider_unittest",
+    ":write_only_file_unittest",
   ]
 }
 
@@ -84,6 +92,34 @@ executable("cobalt_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
+  ]
+}
+
+executable("rotating_file_set_unittest") {
+  testonly = true
+
+  sources = [ "rotating_file_set_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/utils:files",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("write_only_file_unittest") {
+  testonly = true
+
+  sources = [ "write_only_file_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/utils:files",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }
 
