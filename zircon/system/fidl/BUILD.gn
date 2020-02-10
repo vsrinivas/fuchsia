@@ -82,7 +82,6 @@ group("fidl") {
     "fuchsia-hardware-ethernet",
 #------------------
 #------------------
-    "fuchsia-hardware-ethertap",
 #------------------
 #------------------
 #------------------

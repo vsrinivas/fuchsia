@@ -22,6 +22,7 @@ test("ethernet") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "ethernet.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.ethertap:fuchsia.hardware.ethertap_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
@@ -31,7 +32,6 @@ test("ethernet") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.ethernet",
     "//zircon/system/fidl/fuchsia-hardware-ethernet:c",
-    "//zircon/system/fidl/fuchsia-hardware-ethertap:c",
   ]
 }
 
