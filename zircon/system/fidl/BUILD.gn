@@ -32,7 +32,6 @@ group("fidl") {
     "fuchsia-device-test",
 #------------------
 #------------------
-    "fuchsia-device-vsock",
 #------------------
 #------------------
     "fuchsia-driver-test",
