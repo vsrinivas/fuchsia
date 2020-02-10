@@ -138,6 +138,34 @@ impl FidlField {
         let name = self.ident.to_string().to_camel_case();
         Ident::new(&name, Span::call_site())
     }
+
+    fn generate_try_from(&self, missing_field_error_type: &Ident) -> TokenStream {
+        let ident = &self.ident;
+        match &self.kind {
+            FidlFieldKind::Required => {
+                let camel_case = self.camel_case();
+                quote!(
+                    #ident: std::convert::TryFrom::try_from(
+                        src.#ident.ok_or(#missing_field_error_type::#camel_case)?
+                    ).map_err(|e| Box::new(e) as Box<std::error::Error + Send + Sync>)?,
+                )
+            }
+            FidlFieldKind::Optional => quote!(
+                #ident: if let Some(field) = src.#ident {
+                    Some(
+                        std::convert::TryFrom::try_from(
+                            field
+                        ).map_err(|e| Box::new(e) as Box<std::error::Error + Send + Sync>)?
+                    )
+                } else {
+                    None
+                },
+            ),
+            FidlFieldKind::HasDefault(value) => quote!(
+                #ident: src.#ident.unwrap_or(#value),
+            ),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -224,33 +252,7 @@ fn impl_valid_fidl_table(
         .collect::<Result<Vec<FidlField>>>()?;
 
     let mut field_validations = TokenStream::new();
-    field_validations.extend(fields.iter().map(|field| {
-        let ident = &field.ident;
-        match &field.kind {
-            FidlFieldKind::Required => {
-                let camel_case = field.camel_case();
-                quote!(
-                    #ident: std::convert::TryFrom::try_from(
-                        src.#ident.ok_or(#missing_field_error_type::#camel_case)?
-                    ).map_err(|e| Box::new(e) as Box<std::error::Error + Send + Sync>)?,
-                )
-            }
-            FidlFieldKind::Optional => quote!(
-                #ident: if let Some(field) = src.#ident {
-                    Some(
-                        std::convert::TryFrom::try_from(
-                            field
-                        ).map_err(|e| Box::new(e) as Box<std::error::Error + Send + Sync>)?
-                    )
-                } else {
-                    None
-                },
-            ),
-            FidlFieldKind::HasDefault(value) => quote!(
-                #ident: src.#ident.unwrap_or(#value),
-            ),
-        }
-    }));
+    field_validations.extend(fields.iter().map(|f| f.generate_try_from(&missing_field_error_type)));
 
     let mut field_intos = TokenStream::new();
     field_intos.extend(fields.iter().map(|field| {
