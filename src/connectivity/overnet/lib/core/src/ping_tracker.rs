@@ -198,7 +198,6 @@ async fn ping_pong(state: Rc<RefCell<State>>) -> Result<(), Error> {
             && (published_mean <= 0 || (published_mean - mean).abs() > published_mean / 10);
         if new_round_trip_time {
             published_mean = mean;
-            eprintln!("PUBLISH MEAN: {} variance={}", mean, variance);
             state.round_trip_time.push(Some(Duration::from_micros(mean as u64)));
         }
 
@@ -304,18 +303,16 @@ mod test {
 
     #[test]
     fn published_mean_updates() {
-        run(|| {
-            async move {
-                let pt = PingTracker::new();
-                let mut rtt_obs = pt.new_round_trip_time_observer();
-                assert_eq!(pt.take_send_ping(&mut Context::from_waker(&noop_waker())), Some(1));
-                assert_eq!(rtt_obs.next().await, Some(None));
-                wait_until(Instant::now() + Duration::from_secs(1)).await;
-                pt.got_pong(Pong { id: 1, queue_time: 100 });
-                let next = rtt_obs.next().await;
-                assert_ne!(next, None);
-                assert_ne!(next, Some(None));
-            }
+        run(|| async move {
+            let pt = PingTracker::new();
+            let mut rtt_obs = pt.new_round_trip_time_observer();
+            assert_eq!(pt.take_send_ping(&mut Context::from_waker(&noop_waker())), Some(1));
+            assert_eq!(rtt_obs.next().await, Some(None));
+            wait_until(Instant::now() + Duration::from_secs(1)).await;
+            pt.got_pong(Pong { id: 1, queue_time: 100 });
+            let next = rtt_obs.next().await;
+            assert_ne!(next, None);
+            assert_ne!(next, Some(None));
         })
     }
 }
