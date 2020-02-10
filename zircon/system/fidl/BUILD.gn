@@ -71,7 +71,6 @@ group("fidl") {
     "fuchsia-hardware-camera",
 #------------------
 #------------------
-    "fuchsia-hardware-clock",
 #------------------
 #------------------
     "fuchsia-hardware-cpu-ctrl",
