@@ -35,11 +35,11 @@ source_set("sdio") {
     "//zircon/system/public",
   ]
   public_deps = [
+    "//sdk/banjo/ddk.protocol.sdio",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:linuxisms",
     "//zircon/public/lib/ddk",
     "//zircon/system/banjo/ddk.protocol.gpio",
-    "//zircon/system/banjo/ddk.protocol.sdio",
   ]
   public_configs = [ ":config_sdio" ]
   friend = [ "test/*" ]

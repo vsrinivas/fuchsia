@@ -26,6 +26,8 @@ driver_module("bt-hci-mediatek") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "bt-hci-mediatek.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.bt.hci",
+    "//sdk/banjo/ddk.protocol.sdio",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -35,8 +37,6 @@ driver_module("bt-hci-mediatek") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//sdk/banjo/ddk.protocol.bt.hci",
-    "//zircon/system/banjo/ddk.protocol.sdio",
   ]
   data_deps = [ ":firmware" ]
 }
@@ -56,6 +56,8 @@ test("bt-hci-mediatek-test") {
     "bt-hci-mediatek.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.bt.hci",
+    "//sdk/banjo/ddk.protocol.sdio",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-pdev",
@@ -69,8 +71,6 @@ test("bt-hci-mediatek-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//sdk/banjo/ddk.protocol.bt.hci",
-    "//zircon/system/banjo/ddk.protocol.sdio",
   ]
 }
 

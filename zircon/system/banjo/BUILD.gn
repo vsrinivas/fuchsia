@@ -146,7 +146,6 @@ group("banjo") {
     "ddk.protocol.sdhci",
 #------------------
 #------------------
-    "ddk.protocol.sdio",
 #------------------
 #------------------
     "ddk.protocol.sdmmc",

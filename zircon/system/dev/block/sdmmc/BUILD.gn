@@ -32,12 +32,13 @@ driver_module("sdmmc") {
     "sdmmc-root-device.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.sdio",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/dev-operation",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/dev-operation",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace-driver",
@@ -46,7 +47,6 @@ driver_module("sdmmc") {
     "//zircon/system/banjo/ddk.protocol.block",
     "//zircon/system/banjo/ddk.protocol.block.partition",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/banjo/ddk.protocol.sdio",
     "//zircon/system/banjo/ddk.protocol.sdmmc",
   ]
 }
@@ -68,12 +68,13 @@ test("sdmmc-test") {
     "sdmmc-device.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.sdio",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/dev-operation",
     "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/dev-operation",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace-driver",
@@ -83,7 +84,6 @@ test("sdmmc-test") {
     "//zircon/system/banjo/ddk.protocol.block",
     "//zircon/system/banjo/ddk.protocol.block.partition",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/banjo/ddk.protocol.sdio",
     "//zircon/system/banjo/ddk.protocol.sdmmc",
   ]
 }
