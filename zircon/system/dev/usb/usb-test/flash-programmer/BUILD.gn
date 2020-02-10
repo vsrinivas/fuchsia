@@ -29,11 +29,13 @@ driver_module("flash-programmer") {
       configs -= fdio_config
     }
   }
+
   # Dependent manifests unfortunately cannot be marked as `testonly`.
   # TODO(44278): Remove when converting this file to proper GN build idioms.
   testonly = false
   sources = [ "flash-programmer.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.usb.fwloader:fuchsia.hardware.usb.fwloader_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -43,7 +45,6 @@ driver_module("flash-programmer") {
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/banjo/ddk.protocol.usb.request",
-    "//zircon/system/fidl/fuchsia-hardware-usb-fwloader:c",
     "//zircon/system/fidl/fuchsia-mem:c",
   ]
   data_deps = [ ":fx3-firmware" ]
