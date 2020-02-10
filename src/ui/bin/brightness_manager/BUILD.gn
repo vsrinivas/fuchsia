@@ -14,6 +14,7 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight-rustc",
     "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//src/lib/fdio/rust:fdio",
@@ -33,7 +34,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:splines",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-hardware-backlight:fuchsia-hardware-backlight-rustc",
     "//zircon/system/fidl/fuchsia-hardware-input:fuchsia-hardware-input-rustc",
   ]
 }

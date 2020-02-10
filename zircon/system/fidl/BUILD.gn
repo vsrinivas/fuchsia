@@ -50,7 +50,6 @@ group("fidl") {
     "fuchsia-hardware-audio",
 #------------------
 #------------------
-    "fuchsia-hardware-backlight",
 #------------------
 #------------------
     "fuchsia-hardware-block",

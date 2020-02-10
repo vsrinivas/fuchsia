@@ -13,6 +13,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight-rustc",
     "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -25,7 +26,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:clap",
     "//third_party/rust_crates:futures",
-    "//zircon/system/fidl/fuchsia-hardware-backlight:fuchsia-hardware-backlight-rustc",
   ]
 }
 

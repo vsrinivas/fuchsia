@@ -34,6 +34,7 @@ driver_module("intel-i915") {
     "power.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -50,7 +51,6 @@ driver_module("intel-i915") {
     "//zircon/system/banjo/ddk.protocol.intelgpucore",
     "//zircon/system/banjo/ddk.protocol.pci",
     "//zircon/system/banjo/ddk.protocol.sysmem",
-    "//zircon/system/fidl/fuchsia-hardware-backlight:llcpp",
     "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
 }
@@ -73,6 +73,7 @@ test("intel-i915-test") {
     "power.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",
@@ -95,7 +96,6 @@ test("intel-i915-test") {
     "//zircon/system/banjo/ddk.protocol.intelgpucore",
     "//zircon/system/banjo/ddk.protocol.pci",
     "//zircon/system/banjo/ddk.protocol.sysmem",
-    "//zircon/system/fidl/fuchsia-hardware-backlight:llcpp",
     "//zircon/system/fidl/fuchsia-sysmem:c",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
   ]
