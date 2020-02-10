@@ -18,13 +18,13 @@ executable("insntrace_integration_tests") {
   sources = [ "integration_tests.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.hardware.cpu.insntrace",
     "//src/developer/tracing/lib/test_utils",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-hardware-cpu-insntrace",
   ]
 }
 

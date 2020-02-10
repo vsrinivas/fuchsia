@@ -73,7 +73,6 @@ group("fidl") {
 #------------------
 #------------------
 #------------------
-    "fuchsia-hardware-cpu-insntrace",
 #------------------
 #------------------
     "fuchsia-hardware-display",

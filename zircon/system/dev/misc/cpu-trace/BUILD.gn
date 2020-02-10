@@ -57,6 +57,7 @@ driver_module("cpu-trace") {
 
   deps = [
     ":perf-mon",
+    "//sdk/fidl/fuchsia.hardware.cpu.insntrace:fuchsia.hardware.cpu.insntrace_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -65,7 +66,6 @@ driver_module("cpu-trace") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/fidl/fuchsia-hardware-cpu-insntrace:llcpp",
   ]
 }
 
