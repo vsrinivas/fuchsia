@@ -241,7 +241,6 @@ group("fidl") {
     "fuchsia-tracing-provider",
 #------------------
 #------------------
-    "fuchsia-usb-debug",
 #------------------
 #------------------
     "fuchsia-virtualconsole",
