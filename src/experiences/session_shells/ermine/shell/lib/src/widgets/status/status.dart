@@ -86,7 +86,6 @@ class Status extends StatelessWidget {
                 model.battery,
                 model.memory,
                 model.bluetooth,
-                model.weather,
               ])
                 StatusEntry(
                   uiStream: uiStream,

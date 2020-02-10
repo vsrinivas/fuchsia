@@ -19,7 +19,6 @@ class StatusModel implements Inspectable {
   UiStream brightness;
   UiStream memory;
   UiStream battery;
-  UiStream weather;
   UiStream volume;
   UiStream bluetooth;
   UiStream datetime;
@@ -37,7 +36,6 @@ class StatusModel implements Inspectable {
     battery = UiStream(Battery.fromStartupContext(startupContext));
     volume = UiStream(Volume.fromStartupContext(startupContext));
     bluetooth = UiStream(Bluetooth.fromStartupContext(startupContext));
-    weather = UiStream(Weather());
   }
 
   factory StatusModel.fromStartupContext(
@@ -57,7 +55,6 @@ class StatusModel implements Inspectable {
     brightness.dispose();
     memory.dispose();
     battery.dispose();
-    weather.dispose();
     volume.dispose();
     battery.dispose();
     datetime.dispose();
