@@ -203,7 +203,6 @@ group("banjo") {
     "ddk.protocol.usb.modeswitch",
 #------------------
 #------------------
-    "ddk.protocol.usb.phy",
 #------------------
 #------------------
     "ddk.protocol.usb.request",
