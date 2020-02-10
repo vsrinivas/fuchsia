@@ -13,21 +13,3 @@ zx_library("abs_clock") {
   ]
   public_deps = [ "$zx/system/ulib/zx:headers" ]
 }
-
-group("test") {
-  testonly = true
-  deps = [ ":abs_clock_test" ]
-}
-
-zx_test("abs_clock_test") {
-  testonly = true
-  sources = [ "clock_test.cc" ]
-  deps = [
-    ":abs_clock",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/sync",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
-  ]
-}
