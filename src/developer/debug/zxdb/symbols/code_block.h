@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "src/developer/debug/zxdb/common/address_ranges.h"
+#include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 
 namespace zxdb {
@@ -72,14 +73,14 @@ class CodeBlock : public Symbol {
                                         uint64_t absolute_address,
                                         bool recurse_into_inlines = false) const;
 
-  // Recursively searches the containing blocks until it finds a function. If this code block is a
-  // function, returns |this| as a Function. Returns null on error, but this should not happen for
-  // well-formed symbols (all code should be inside functions).
+  // Recursively searches the containing blocks until it finds a function (physical or inline). If
+  // this code block is a function, returns |this| as a Function. Returns null on error, but this
+  // should not happen for well-formed symbols (all code should be inside functions).
   fxl::RefPtr<Function> GetContainingFunction() const;
 
   // Returns the chain of inline functions to the current code block.
   //
-  // The returned vector will go back in time. The 0 item will be the most specific function
+  // The returned vector will go back in time. The [0] item will be the most specific function
   // containing this code block (always GetContainingFunction(), will be = |this| if this is a
   // function).
   //
@@ -89,6 +90,22 @@ class CodeBlock : public Symbol {
   //
   // If the current block is not in an inline function, the returned vector will have one element.
   std::vector<fxl::RefPtr<Function>> GetInlineChain() const;
+
+  // Like GetInlineChain() but returns only those functions with ambiguous inline locations at the
+  // given address. If the address is at the first address of an inline routine, it's ambiguous
+  // whether the virtual location is at the first instruction of the inlined function, or at the
+  // optimized-out "call" to the inlined function.
+  //
+  // The returned vector will go back in time. The [0] item will be the most specific function
+  // containing this code block (always GetContainingFunction(), will be = |this| if this is a
+  // function).
+  //
+  // When the [0] item is ambiguous (the address is at the beginning of it), the [1] item will
+  // be the containing function (inlined or not). If that's also ambiguous, there will be a [2]
+  // item, etc. The back() item will be either a non-inlined function or a non-ambiguous inlined
+  // function.
+  std::vector<fxl::RefPtr<Function>> GetAmbiguousInlineChain(const SymbolContext& symbol_context,
+                                                             TargetPointer absolute_address) const;
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(CodeBlock);

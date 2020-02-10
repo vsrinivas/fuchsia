@@ -108,4 +108,23 @@ std::vector<fxl::RefPtr<Function>> CodeBlock::GetInlineChain() const {
   return result;
 }
 
+std::vector<fxl::RefPtr<Function>> CodeBlock::GetAmbiguousInlineChain(
+    const SymbolContext& symbol_context, TargetPointer absolute_address) const {
+  std::vector<fxl::RefPtr<Function>> result;
+
+  // For simplicity this gets the inline chain and then filters for ambiguous locations. This may
+  // throw away some work which GetInlineChain() did.
+  std::vector<fxl::RefPtr<Function>> inline_chain = GetInlineChain();
+  for (size_t i = 0; i < inline_chain.size(); i++) {
+    result.push_back(inline_chain[i]);
+    if (!inline_chain[i]->is_inline() ||
+        inline_chain[i]->GetFullRange(symbol_context).begin() != absolute_address) {
+      // Non-ambiguous location, we're done.
+      break;
+    }
+  }
+
+  return result;
+}
+
 }  // namespace zxdb

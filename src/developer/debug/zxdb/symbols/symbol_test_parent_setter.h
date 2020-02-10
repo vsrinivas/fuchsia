@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_SYMBOL_TEST_PARENT_SETTER_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_SYMBOL_TEST_PARENT_SETTER_H_
 
+#include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 
 namespace zxdb {
@@ -39,6 +40,20 @@ class SymbolTestParentSetter {
 
  private:
   fxl::RefPtr<Symbol> symbol_;
+};
+
+// Like the above but for Function::set_containing_block().
+class SymbolTestContainingBlockSetter {
+ public:
+  SymbolTestContainingBlockSetter(fxl::RefPtr<Function> function, fxl::RefPtr<Symbol> parent)
+      : function_(std::move(function)) {
+    function_->set_containing_block(UncachedLazySymbol::MakeUnsafe(std::move(parent)));
+  }
+
+  ~SymbolTestContainingBlockSetter() { function_->set_containing_block(UncachedLazySymbol()); }
+
+ private:
+  fxl::RefPtr<Function> function_;
 };
 
 }  // namespace zxdb

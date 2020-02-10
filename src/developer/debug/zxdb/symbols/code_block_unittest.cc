@@ -5,7 +5,9 @@
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 
 #include "gtest/gtest.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
+#include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
 
 namespace zxdb {
 
@@ -93,6 +95,42 @@ TEST(CodeBlock, GetMostSpecificChild) {
   // Querying for something in the inlined routine is controlled by the optional flag.
   EXPECT_EQ(child_child_inline.get(), outer->GetMostSpecificChild(context, 0x1020, true));
   EXPECT_EQ(child_child.get(), outer->GetMostSpecificChild(context, 0x1020, false));
+}
+
+TEST(CodeBlock, GetAmbiguousInlineChain) {
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+  constexpr TargetPointer kAddress = 0x1000;
+
+  // Outer physical (non-inline) function.
+  auto outer = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  outer->set_code_ranges(AddressRanges(AddressRange(kAddress, kAddress + 0x1000)));
+
+  // Middle inline function starting at the same address.
+  auto middle = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
+  middle->set_code_ranges(AddressRanges(AddressRange(kAddress, kAddress + 0x100)));
+  SymbolTestContainingBlockSetter middle_parent(middle, outer);
+
+  // Inner inline function is the most specific (smallest) one.
+  auto inner = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
+  inner->set_code_ranges(AddressRanges(AddressRange(kAddress, kAddress + 0x10)));
+  SymbolTestContainingBlockSetter inner_parent(inner, middle);
+
+  // Given a non-inline address, the ambiguous inline chain should only return the function itself.
+  auto result = inner->GetAmbiguousInlineChain(symbol_context, kAddress + 1);
+  ASSERT_EQ(1u, result.size());
+  EXPECT_EQ(inner.get(), result[0].get());
+
+  // Test the same condition using the outer frame.
+  result = outer->GetAmbiguousInlineChain(symbol_context, kAddress + 1);
+  ASSERT_EQ(1u, result.size());
+  EXPECT_EQ(outer.get(), result[0].get());
+
+  // Test the ambiguous address, it should give all 3.
+  result = inner->GetAmbiguousInlineChain(symbol_context, kAddress);
+  ASSERT_EQ(3u, result.size());
+  EXPECT_EQ(inner.get(), result[0].get());
+  EXPECT_EQ(middle.get(), result[1].get());
+  EXPECT_EQ(outer.get(), result[2].get());
 }
 
 }  // namespace zxdb
