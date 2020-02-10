@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/fidl.gni")
+import("//build/fidl/fidl.gni")
 
-fidl_library("fuchsia-nand") {
+fidl("fuchsia.nand") {
   sources = [ "broker.fidl" ]
-  public_deps = [ "$zx/system/fidl/fuchsia-hardware-nand" ]
+  public_deps = [ "//zircon/system/fidl/fuchsia-hardware-nand" ]
 }

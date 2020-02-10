@@ -23,6 +23,7 @@ source_set("common") {
     "parent.cc",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.nand:fuchsia.nand_c",
     "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/devmgr-launcher",
     "//zircon/public/lib/fbl",
@@ -35,7 +36,6 @@ source_set("common") {
     "//zircon/system/banjo/ddk.protocol.nand",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-hardware-nand:c",
-    "//zircon/system/fidl/fuchsia-nand:c",
   ]
 }
 

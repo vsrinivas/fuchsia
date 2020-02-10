@@ -8,13 +8,13 @@ using zx;
 
 // Defines a Read/Write/Erase request to be sent to the nand driver.
 struct BrokerRequest {
-    handle<vmo>? vmo;           // Only used for read and write.
-    uint32 length;              // In pages (read / write) or blocks (erase).
-    uint32 offset_nand;         // In pages (read / write) or blocks (erase).
-    uint64 offset_data_vmo;     // In pages.
-    uint64 offset_oob_vmo;      // In pages.
-    bool data_vmo;              // True to read or write data.
-    bool oob_vmo;               // True to read or write OOB data.
+    handle<vmo>? vmo; // Only used for read and write.
+    uint32 length; // In pages (read / write) or blocks (erase).
+    uint32 offset_nand; // In pages (read / write) or blocks (erase).
+    uint64 offset_data_vmo; // In pages.
+    uint64 offset_oob_vmo; // In pages.
+    bool data_vmo; // True to read or write data.
+    bool oob_vmo; // True to read or write OOB data.
 };
 
 [Layout = "Simple"]
