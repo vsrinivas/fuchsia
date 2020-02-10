@@ -86,11 +86,6 @@ if (current_cpu != "") {
 #------------------
 #------------------
       "$zx/system/ulib/fdio/test",
-#------------------
-#------------------
-      "$zx/system/ulib/ffl/test",
-#------------------
-#------------------
       "$zx/system/ulib/fs:test",
 #------------------
 #------------------
@@ -264,7 +259,6 @@ if (current_cpu != "") {
     testonly = true
     deps = [
       "$zx/system/ulib/blobfs/test:blobfs-host",
-      "$zx/system/ulib/ffl/test",
       "$zx/system/ulib/fvm/test",
       "$zx/system/ulib/minfs/test:minfs-host",
       "$zx/system/ulib/trace-reader:tests",

@@ -207,6 +207,7 @@ group("ulib-host") {
     "cmdline",
     "fbl",
     "fdio",
+    "ffl",
     "fit",
     "libzbi",
     "log",
