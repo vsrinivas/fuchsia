@@ -8,7 +8,7 @@
 #include <fuchsia/accessibility/tts/cpp/fidl.h>
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 
-#include "src/ui/a11y/lib/semantics/semantics_manager.h"
+#include "src/ui/a11y/lib/view/view_manager.h"
 
 namespace a11y {
 
@@ -31,7 +31,7 @@ class ScreenReaderAction {
   // Struct to hold pointers to various services, which will be required to
   // complete an action.
   struct ActionContext {
-    a11y::SemanticsManager* semantics_manager;
+    a11y::ViewManager* view_manager;
     fuchsia::accessibility::tts::EnginePtr tts_engine_ptr;
   };
 

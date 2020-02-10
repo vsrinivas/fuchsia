@@ -13,7 +13,7 @@ MockSemanticListener::MockSemanticListener(sys::testing::ComponentContextProvide
     : context_provider_(context_provider), view_ref_(std::move(view_ref)) {
   context_provider_->ConnectToPublicService(manager_.NewRequest());
   manager_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Cannot connect to SemanticsManager with status:" << status;
+    FX_LOGS(ERROR) << "Cannot connect to ViewManager with status:" << status;
   });
   fidl::InterfaceHandle<SemanticListener> listener_handle;
   bindings_.AddBinding(this, listener_handle.NewRequest());

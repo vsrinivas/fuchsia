@@ -31,7 +31,7 @@ class ScreenReader {
   // Pointers to Semantics Manager, TTS Manager and Gesture Manager must outlive
   // screen reader. A11y App is responsible for creating these pointers along
   // with Screen Reader object.
-  ScreenReader(a11y::SemanticsManager* semantics_manager_impl, a11y::TtsManager* tts_manager);
+  ScreenReader(a11y::ViewManager* semantics_manager_impl, a11y::TtsManager* tts_manager);
   ~ScreenReader() = default;
 
   void BindGestures(a11y::GestureHandler* gesture_handler);

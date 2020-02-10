@@ -20,8 +20,8 @@
 #include "src/ui/a11y/lib/gesture_manager/gesture_manager.h"
 #include "src/ui/a11y/lib/magnifier/magnifier.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader.h"
-#include "src/ui/a11y/lib/semantics/semantics_manager.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
+#include "src/ui/a11y/lib/view/view_manager.h"
 
 namespace a11y_manager {
 
@@ -112,7 +112,7 @@ class App {
   std::unique_ptr<sys::ComponentContext> startup_context_;
 
   std::unique_ptr<a11y::ScreenReader> screen_reader_;
-  a11y::SemanticsManager semantics_manager_;
+  a11y::ViewManager view_manager_;
   a11y::TtsManager tts_manager_;
   a11y::ColorTransformManager color_transform_manager_;
   // The gesture manager is instantiated whenever a11y manager starts listening

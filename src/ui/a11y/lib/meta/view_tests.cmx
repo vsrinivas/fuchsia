@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/semantics_manager_tests"
+        "binary": "test/view_tests"
     },
     "sandbox": {
         "services": [

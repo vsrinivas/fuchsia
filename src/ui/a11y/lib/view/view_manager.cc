@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/semantics/semantics_manager.h"
+#include "src/ui/a11y/lib/view/view_manager.h"
 
 #include <lib/syslog/cpp/logger.h>
 #include <zircon/status.h>
@@ -22,13 +22,13 @@ std::unique_ptr<SemanticTreeService> SemanticTreeServiceFactory::NewService(
   return semantic_tree;
 }
 
-SemanticsManager::SemanticsManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
-                                   vfs::PseudoDir* debug_dir)
+ViewManager::ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
+                         vfs::PseudoDir* debug_dir)
     : factory_(std::move(factory)), debug_dir_(debug_dir) {}
 
-SemanticsManager::~SemanticsManager() = default;
+ViewManager::~ViewManager() = default;
 
-void SemanticsManager::RegisterViewForSemantics(
+void ViewManager::RegisterViewForSemantics(
     fuchsia::ui::views::ViewRef view_ref,
     fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticListener> handle,
     fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree> semantic_tree_request) {
@@ -55,8 +55,7 @@ void SemanticsManager::RegisterViewForSemantics(
   semantic_tree_bindings_.AddBinding(std::move(service), std::move(semantic_tree_request));
 }
 
-const fxl::WeakPtr<::a11y::SemanticTree> SemanticsManager::GetTreeByKoid(
-    const zx_koid_t koid) const {
+const fxl::WeakPtr<::a11y::SemanticTree> ViewManager::GetTreeByKoid(const zx_koid_t koid) const {
   for (auto& binding : semantic_tree_bindings_.bindings()) {
     if (binding->impl()->view_ref_koid() == koid) {
       return binding->impl()->Get();
@@ -65,12 +64,12 @@ const fxl::WeakPtr<::a11y::SemanticTree> SemanticsManager::GetTreeByKoid(
   return nullptr;
 }
 
-void SemanticsManager::SetSemanticsManagerEnabled(bool enabled) {
+void ViewManager::SetSemanticsEnabled(bool enabled) {
   semantics_enabled_ = enabled;
   EnableSemanticsUpdates(semantics_enabled_);
 }
 
-void SemanticsManager::CloseChannel(zx_koid_t view_ref_koid) {
+void ViewManager::CloseChannel(zx_koid_t view_ref_koid) {
   for (auto& binding : semantic_tree_bindings_.bindings()) {
     if (binding->impl()->view_ref_koid() == view_ref_koid) {
       semantic_tree_bindings_.RemoveBinding(binding->impl());
@@ -78,7 +77,7 @@ void SemanticsManager::CloseChannel(zx_koid_t view_ref_koid) {
   }
 }
 
-void SemanticsManager::EnableSemanticsUpdates(bool enabled) {
+void ViewManager::EnableSemanticsUpdates(bool enabled) {
   // Notify all the Views about change in Semantics Enabled.
   for (auto& binding : semantic_tree_bindings_.bindings()) {
     binding->impl()->EnableSemanticsUpdates(enabled);

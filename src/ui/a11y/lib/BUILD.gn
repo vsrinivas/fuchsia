@@ -12,6 +12,7 @@ group("lib") {
     "screen_reader",
     "semantics",
     "tts",
+    "view",
   ]
 }
 
@@ -31,9 +32,10 @@ test_package("a11y_lib_tests") {
     "screen_reader/tests",
     "semantics/tests",
     "tts/tests",
+    "view/tests",
   ]
   resources = [
-    # needed for semantics_manager_test
+    # needed for semantics_test
     {
       path = "semantics/tests/testdata/semantic_tree_single_node.json"
       dest = "semantic_tree_single_node.json"
@@ -86,11 +88,15 @@ test_package("a11y_lib_tests") {
       environments = basic_envs
     },
     {
-      name = "semantics_manager_tests"
+      name = "semantics_tests"
       environments = basic_envs
     },
     {
       name = "tts_manager_tests"
+      environments = basic_envs
+    },
+    {
+      name = "view_tests"
       environments = basic_envs
     },
   ]

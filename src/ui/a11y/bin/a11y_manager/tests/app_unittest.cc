@@ -114,8 +114,8 @@ Node CreateTestNode(uint32_t node_id, std::string label) {
   return node;
 }
 
-// Test to make sure SemanticsManager Service is exposed by A11y.
-// Test sends a node update to SemanticsManager and then compare the expected
+// Test to make sure ViewManager Service is exposed by A11y.
+// Test sends a node update to ViewManager and then compare the expected
 // result using log file created by semantics manager.
 TEST_F(AppUnitTest, UpdateNodeToSemanticsManager) {
   a11y_manager::App app = a11y_manager::App(context_provider_.TakeContext());

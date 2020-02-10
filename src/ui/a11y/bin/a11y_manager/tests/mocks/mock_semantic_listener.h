@@ -27,7 +27,7 @@ class MockSemanticListener : public SemanticListener {
   // OnAccessibillityActionRequested() requests.
   //
   // On initialization, MockSemanticListener tries to connect to
-  // |fuchsia::accessibility::SemanticsManager| service in |context_| and
+  // |fuchsia::accessibility::ViewManager| service in |context_| and
   // registers with it's view_ref, binding and interface request.
   explicit MockSemanticListener(sys::testing::ComponentContextProvider* context_provider,
                                 fuchsia::ui::views::ViewRef view_ref);

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/semantics/semantics_manager.h"
+#include "src/ui/a11y/lib/view/view_manager.h"
 
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -20,7 +20,7 @@
 
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
-#include "src/ui/a11y/lib/semantics/tests/semantic_tree_parser.h"
+//#include "src/ui/a11y/lib/semantics/tests/semantic_tree_parser.h"
 #include "src/ui/a11y/lib/util/util.h"
 
 namespace accessibility_test {
@@ -51,12 +51,12 @@ class MockSemanticTreeServiceFactory : public a11y::SemanticTreeServiceFactory {
   a11y::SemanticTreeService* service_ = nullptr;
 };
 
-class SemanticsManagerTest : public gtest::TestLoopFixture {
+class ViewManagerTest : public gtest::TestLoopFixture {
  public:
-  SemanticsManagerTest()
+  ViewManagerTest()
       : factory_(std::make_unique<MockSemanticTreeServiceFactory>()),
         factory_ptr_(factory_.get()),
-        semantics_manager_(std::move(factory_), debug_dir()) {
+        view_manager_(std::move(factory_), debug_dir()) {
     syslog::InitLogger();
   }
 
@@ -65,13 +65,13 @@ class SemanticsManagerTest : public gtest::TestLoopFixture {
   sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<MockSemanticTreeServiceFactory> factory_;
   MockSemanticTreeServiceFactory* factory_ptr_;
-  a11y::SemanticsManager semantics_manager_;
+  a11y::ViewManager view_manager_;
 };
 
-TEST_F(SemanticsManagerTest, ProviderGetsNotifiedOfSemanticsEnabled) {
+TEST_F(ViewManagerTest, ProviderGetsNotifiedOfSemanticsEnabled) {
   // Enable Semantics Manager.
-  semantics_manager_.SetSemanticsManagerEnabled(true);
-  MockSemanticProvider semantic_provider(&semantics_manager_);
+  view_manager_.SetSemanticsEnabled(true);
+  MockSemanticProvider semantic_provider(&view_manager_);
   // Upon initialization, MockSemanticProvider calls RegisterViewForSemantics().
   // Ensure that it called the factory to instantiate a new service.
   EXPECT_TRUE(factory_ptr_->service());
@@ -80,46 +80,46 @@ TEST_F(SemanticsManagerTest, ProviderGetsNotifiedOfSemanticsEnabled) {
   EXPECT_TRUE(semantic_provider.GetSemanticsEnabled());
 
   // Disable Semantics Manager.
-  semantics_manager_.SetSemanticsManagerEnabled(false);
+  view_manager_.SetSemanticsEnabled(false);
   RunLoopUntilIdle();
   // Semantics Listener should get notified about Semantics manager disable.
   EXPECT_FALSE(semantic_provider.GetSemanticsEnabled());
 }
 
-TEST_F(SemanticsManagerTest, GetsTreeByKoid) {
-  semantics_manager_.SetSemanticsManagerEnabled(true);
-  MockSemanticProvider semantic_provider(&semantics_manager_);
+TEST_F(ViewManagerTest, GetsTreeByKoid) {
+  view_manager_.SetSemanticsEnabled(true);
+  MockSemanticProvider semantic_provider(&view_manager_);
   RunLoopUntilIdle();
   const auto tree_weak_ptr =
-      semantics_manager_.GetTreeByKoid(a11y::GetKoid(semantic_provider.view_ref()));
+      view_manager_.GetTreeByKoid(a11y::GetKoid(semantic_provider.view_ref()));
   EXPECT_TRUE(tree_weak_ptr);
   EXPECT_EQ(tree_weak_ptr->Size(), 0u);
 }
 
-TEST_F(SemanticsManagerTest, ClosesChannel) {
-  semantics_manager_.SetSemanticsManagerEnabled(true);
-  MockSemanticProvider semantic_provider(&semantics_manager_);
+TEST_F(ViewManagerTest, ClosesChannel) {
+  view_manager_.SetSemanticsEnabled(true);
+  MockSemanticProvider semantic_provider(&view_manager_);
   RunLoopUntilIdle();
   const auto tree_weak_ptr =
-      semantics_manager_.GetTreeByKoid(a11y::GetKoid(semantic_provider.view_ref()));
+      view_manager_.GetTreeByKoid(a11y::GetKoid(semantic_provider.view_ref()));
   EXPECT_TRUE(tree_weak_ptr);
   EXPECT_EQ(tree_weak_ptr->Size(), 0u);
   // Forces the client to disconnect.
   semantic_provider.SendEventPairSignal();
   RunLoopUntilIdle();
   const auto invalid_tree_weak_ptr =
-      semantics_manager_.GetTreeByKoid(a11y::GetKoid(semantic_provider.view_ref()));
+      view_manager_.GetTreeByKoid(a11y::GetKoid(semantic_provider.view_ref()));
   EXPECT_FALSE(invalid_tree_weak_ptr);
 }
 
 // Tests that log file is removed when semantic tree service entry is removed from semantics
 // manager.
-TEST_F(SemanticsManagerTest, LogFileRemoved) {
-  semantics_manager_.SetSemanticsManagerEnabled(true);
-  MockSemanticProvider semantic_provider(&semantics_manager_);
+TEST_F(ViewManagerTest, LogFileRemoved) {
+  view_manager_.SetSemanticsEnabled(true);
+  MockSemanticProvider semantic_provider(&view_manager_);
   RunLoopUntilIdle();
   const auto tree_weak_ptr =
-      semantics_manager_.GetTreeByKoid(a11y::GetKoid(semantic_provider.view_ref()));
+      view_manager_.GetTreeByKoid(a11y::GetKoid(semantic_provider.view_ref()));
   std::string debug_file = std::to_string(a11y::GetKoid(semantic_provider.view_ref()));
   {
     vfs::internal::Node* node;

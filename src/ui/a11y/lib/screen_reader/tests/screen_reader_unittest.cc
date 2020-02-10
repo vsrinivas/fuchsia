@@ -12,11 +12,11 @@
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_drag_recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/one_finger_n_tap_recognizer.h"
 #include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_tts_engine.h"
-#include "src/ui/a11y/lib/semantics/semantics_manager.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 #include "src/ui/a11y/lib/testing/input.h"
 #include "src/ui/a11y/lib/tts/tts_manager.h"
 #include "src/ui/a11y/lib/util/util.h"
+#include "src/ui/a11y/lib/view/view_manager.h"
 
 namespace accessibility_test {
 namespace {
@@ -29,7 +29,6 @@ using fuchsia::accessibility::semantics::Attributes;
 using fuchsia::accessibility::semantics::Hit;
 using fuchsia::accessibility::semantics::Node;
 using fuchsia::accessibility::semantics::Role;
-using fuchsia::accessibility::semantics::SemanticsManager;
 
 const std::string kSemanticTreeSingle = "Node_id: 0, Label:Label A";
 constexpr int kMaxLogBufferSize = 1024;
@@ -38,10 +37,10 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
  public:
   ScreenReaderTest()
       : tts_manager_(context_provider_.context()),
-        semantics_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
-                           context_provider_.context()->outgoing()->debug_dir()),
-        screen_reader_(&semantics_manager_, &tts_manager_),
-        semantic_provider_(&semantics_manager_) {
+        view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
+                      context_provider_.context()->outgoing()->debug_dir()),
+        screen_reader_(&view_manager_, &tts_manager_),
+        semantic_provider_(&view_manager_) {
     screen_reader_.BindGestures(gesture_manager_.gesture_handler());
   }
 
@@ -59,7 +58,7 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
 
   sys::testing::ComponentContextProvider context_provider_;
   a11y::TtsManager tts_manager_;
-  a11y::SemanticsManager semantics_manager_;
+  a11y::ViewManager view_manager_;
   a11y::GestureManager gesture_manager_;
   a11y::ScreenReader screen_reader_;
   accessibility_test::MockSemanticProvider semantic_provider_;

@@ -14,12 +14,12 @@ const float kDefaultMagnificationZoomFactor = 1.0;
 
 App::App(std::unique_ptr<sys::ComponentContext> context)
     : startup_context_(std::move(context)),
-      semantics_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
-                         startup_context_->outgoing()->debug_dir()),
+      view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
+                    startup_context_->outgoing()->debug_dir()),
       tts_manager_(startup_context_.get()),
       color_transform_manager_(startup_context_.get()) {
   startup_context_->outgoing()->AddPublicService(
-      semantics_manager_bindings_.GetHandler(&semantics_manager_));
+      semantics_manager_bindings_.GetHandler(&view_manager_));
   startup_context_->outgoing()->AddPublicService(magnifier_bindings_.GetHandler(&magnifier_));
 
   // Connect to Root presenter service.
@@ -54,11 +54,11 @@ void App::SetState(A11yManagerState state) {
 
 void App::UpdateScreenReaderState() {
   // If this is used elsewhere, it should be moved into its own function.
-  semantics_manager_.SetSemanticsManagerEnabled(state_.screen_reader_enabled());
+  view_manager_.SetSemanticsEnabled(state_.screen_reader_enabled());
 
   if (state_.screen_reader_enabled()) {
     if (!screen_reader_) {
-      screen_reader_ = std::make_unique<a11y::ScreenReader>(&semantics_manager_, &tts_manager_);
+      screen_reader_ = std::make_unique<a11y::ScreenReader>(&view_manager_, &tts_manager_);
     }
   } else {
     screen_reader_.reset();

@@ -24,17 +24,17 @@ constexpr int kMaxLogBufferSize = 1024;
 class DefaultActionTest : public gtest::TestLoopFixture {
  public:
   DefaultActionTest()
-      : semantics_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
-                           context_provider_.context()->outgoing()->debug_dir()),
-        semantic_provider_(&semantics_manager_) {
-    action_context_.semantics_manager = &semantics_manager_;
-    semantics_manager_.SetSemanticsManagerEnabled(true);
+      : view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
+                      context_provider_.context()->outgoing()->debug_dir()),
+        semantic_provider_(&view_manager_) {
+    action_context_.view_manager = &view_manager_;
+    view_manager_.SetSemanticsEnabled(true);
   }
 
   vfs::PseudoDir* debug_dir() { return context_provider_.context()->outgoing()->debug_dir(); }
 
   sys::testing::ComponentContextProvider context_provider_;
-  a11y::SemanticsManager semantics_manager_;
+  a11y::ViewManager view_manager_;
   a11y::ScreenReaderAction::ActionContext action_context_;
   accessibility_test::MockSemanticProvider semantic_provider_;
 };

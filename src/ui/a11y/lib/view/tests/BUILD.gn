@@ -4,21 +4,15 @@
 
 group("tests") {
   testonly = true
-  public_deps = [ ":semantics_tests" ]
+  public_deps = [ ":view_tests" ]
 }
 
-executable("semantics_tests") {
-  output_name = "semantics_tests"
+executable("view_tests") {
+  output_name = "view_tests"
 
   testonly = true
 
-  sources = [
-    "semantic_tree_parser.cc",
-    "semantic_tree_parser.h",
-    "semantic_tree_parser_test.cc",
-    "semantic_tree_service_unittest.cc",
-    "tree_unittest.cc",
-  ]
+  sources = [ "view_manager_test.cc" ]
   public_deps = [ "//sdk/fidl/fuchsia.accessibility.semantics" ]
   deps = [
     "//garnet/public/lib/gtest",
@@ -33,7 +27,9 @@ executable("semantics_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/syslog/cpp",
     "//src/ui/a11y/lib/semantics",
+    "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/semantics/tests/mocks",
+    "//src/ui/a11y/lib/view",
     "//third_party/googletest:gmock",
     "//third_party/rapidjson",
   ]

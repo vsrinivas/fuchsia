@@ -31,12 +31,12 @@ constexpr int kMaxLogBufferSize = 1024;
 class ExploreActionTest : public gtest::TestLoopFixture {
  public:
   ExploreActionTest()
-      : semantics_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
-                           context_provider_.context()->outgoing()->debug_dir()),
+      : view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
+                      context_provider_.context()->outgoing()->debug_dir()),
         tts_manager_(context_provider_.context()),
-        semantic_provider_(&semantics_manager_) {
-    action_context_.semantics_manager = &semantics_manager_;
-    semantics_manager_.SetSemanticsManagerEnabled(true);
+        semantic_provider_(&view_manager_) {
+    action_context_.view_manager = &view_manager_;
+    view_manager_.SetSemanticsEnabled(true);
 
     tts_manager_.OpenEngine(action_context_.tts_engine_ptr.NewRequest(),
                             [](fuchsia::accessibility::tts::TtsManager_OpenEngine_Result result) {
@@ -47,7 +47,7 @@ class ExploreActionTest : public gtest::TestLoopFixture {
   vfs::PseudoDir* debug_dir() { return context_provider_.context()->outgoing()->debug_dir(); }
 
   sys::testing::ComponentContextProvider context_provider_;
-  a11y::SemanticsManager semantics_manager_;
+  a11y::ViewManager view_manager_;
   a11y::ScreenReaderAction::ActionContext action_context_;
   a11y::TtsManager tts_manager_;
   accessibility_test::MockSemanticProvider semantic_provider_;

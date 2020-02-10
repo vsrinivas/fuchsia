@@ -12,7 +12,7 @@ ScreenReaderAction::~ScreenReaderAction() = default;
 fxl::WeakPtr<::a11y::SemanticTree> ScreenReaderAction::GetTreePointer(ActionContext* context,
                                                                       ActionData data) {
   FXL_DCHECK(context);
-  return context->semantics_manager->GetTreeByKoid(data.koid);
+  return context->view_manager->GetTreeByKoid(data.koid);
 }
 
 void ScreenReaderAction::ExecuteHitTesting(

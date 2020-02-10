@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_A11Y_LIB_SEMANTICS_SEMANTICS_MANAGER_H_
-#define SRC_UI_A11Y_LIB_SEMANTICS_SEMANTICS_MANAGER_H_
+#ifndef SRC_UI_A11Y_LIB_VIEW_VIEW_MANAGER_H_
+#define SRC_UI_A11Y_LIB_VIEW_VIEW_MANAGER_H_
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
@@ -33,16 +33,16 @@ class SemanticTreeServiceFactory {
 // Semantic Providers connect to this service to start supplying semantic
 // information for a particular View while Semantic Consumers query available
 // semantic information managed by this service.
-class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsManager {
+class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager {
  public:
-  explicit SemanticsManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
-                            vfs::PseudoDir* debug_dir);
-  ~SemanticsManager() override;
+  explicit ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
+                       vfs::PseudoDir* debug_dir);
+  ~ViewManager() override;
 
   // Function to Enable/Disable Semantics Manager.
   // When Semantics Manager is disabled, all the semantic tree bindings are
   // closed, which deletes all the semantic tree data.
-  void SetSemanticsManagerEnabled(bool enabled);
+  void SetSemanticsEnabled(bool enabled);
 
   // Returns a weak pointer to the Semantic Tree owned by the service with
   // |koid| if it exists, nullptr otherwise. Caller must always check if the
@@ -53,7 +53,7 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
   const fxl::WeakPtr<::a11y::SemanticTree> GetTreeByKoid(const zx_koid_t koid) const;
 
  private:
-  // |fuchsia::accessibility::semantics::SemanticsManager|:
+  // |fuchsia::accessibility::semantics::ViewManager|:
   void RegisterViewForSemantics(
       fuchsia::ui::views::ViewRef view_ref,
       fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticListener> handle,
@@ -78,4 +78,4 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
 };
 }  // namespace a11y
 
-#endif  // SRC_UI_A11Y_LIB_SEMANTICS_SEMANTICS_MANAGER_H_
+#endif  // SRC_UI_A11Y_LIB_VIEW_VIEW_MANAGER_H_

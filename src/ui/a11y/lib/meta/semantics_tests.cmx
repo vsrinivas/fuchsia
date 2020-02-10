@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "test/semantics_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}
