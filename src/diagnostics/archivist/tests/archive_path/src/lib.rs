@@ -25,7 +25,6 @@ lazy_static! {
     static ref ARCHIVIST_CONFIG: &'static [u8] = include_bytes!("../configs/archivist_config.json");
     static ref CONFIG_PATH: PathBuf = Path::new("/tmp/config/data").to_path_buf();
     static ref ARCHIVIST_CONFIGURATION_PATH: PathBuf = CONFIG_PATH.join("archivist_config.json");
-    static ref TEST_DATA_PATH: &'static str = "/tmp/test_data";
     static ref SAMPLE_FILE_NAME: &'static str = "sample_file";
 }
 
@@ -44,8 +43,8 @@ fn verify_out(hub_out_path: &Path) -> Result<(), Error> {
 
     let dir_entries = fs::read_dir(&hub_out_path)?.filter_map(Result::ok).collect::<Vec<_>>();
     let expected = hashset! {
-    "archive".to_string(), "svc".to_string(), "diagnostics".to_string(),
-    "test_data".to_string()};
+        "archive".to_string(), "svc".to_string(), "diagnostics".to_string(),
+    };
     assert_eq!(
         expected,
         dir_entries
@@ -56,22 +55,10 @@ fn verify_out(hub_out_path: &Path) -> Result<(), Error> {
 
     let diagnostics_entries =
         fs::read_dir(hub_out_path.join("diagnostics"))?.filter_map(Result::ok).collect::<Vec<_>>();
-    let expected = hashset! {"root.inspect".to_string()};
+    let expected = hashset! {"fuchsia.inspect.Tree".to_string()};
     assert_eq!(
         expected,
         diagnostics_entries
-            .into_iter()
-            .map(|entry| entry.file_name().to_string_lossy().to_string())
-            .collect::<HashSet<_>>()
-    );
-
-    let test_data_entries = fs::read_dir(hub_out_path.join(*TEST_DATA_PATH))?
-        .filter_map(Result::ok)
-        .collect::<Vec<_>>();
-    let expected = hashset! {SAMPLE_FILE_NAME.to_string()};
-    assert_eq!(
-        expected,
-        test_data_entries
             .into_iter()
             .map(|entry| entry.file_name().to_string_lossy().to_string())
             .collect::<HashSet<_>>()
@@ -88,13 +75,8 @@ fn verify_out(hub_out_path: &Path) -> Result<(), Error> {
 async fn out_can_be_read() -> Result<(), Error> {
     fs::create_dir_all(&*CONFIG_PATH).context("create archivist config dir")?;
     fs::create_dir_all(*ARCHIVE_PATH).context("create archive dir")?;
-    fs::create_dir_all(*TEST_DATA_PATH).context("create test_data dir")?;
     fs::write(&*ARCHIVIST_CONFIGURATION_PATH, *ARCHIVIST_CONFIG)
         .context("write archivist config")?;
-
-    let full_path = Path::new(*TEST_DATA_PATH).join(*SAMPLE_FILE_NAME);
-    fs::create_dir_all(full_path.parent().unwrap()).context("create test_data dir")?;
-    fs::write(full_path, SAMPLE_FILE_NAME.as_bytes()).context("write sample file")?;
 
     let archivist = AppBuilder::new(*ARCHIVIST_URL)
         .add_dir_to_namespace("/config/data".into(), fs::File::open(&*CONFIG_PATH)?)

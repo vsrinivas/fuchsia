@@ -12,6 +12,7 @@ use {
     argh::FromArgs,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_inspect::component,
     futures::{future, FutureExt, StreamExt},
     io_util,
     parking_lot::RwLock,
@@ -69,7 +70,7 @@ fn main() -> Result<(), Error> {
     let all_inspect_repository = Arc::new(RwLock::new(inspect::InspectDataRepository::new(None)));
 
     if let Some(to_summarize) = &archivist_configuration.summarized_dirs {
-        data_stats::add_stats_nodes(&mut fs, to_summarize)?;
+        data_stats::add_stats_nodes(component::inspector().root(), to_summarize.clone())?;
     }
 
     let num_threads = archivist_configuration.num_threads;

@@ -1,3 +1,7 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 use {
     crate::archive::EventFileGroupStatsMap,
     anyhow::Error,
@@ -52,7 +56,7 @@ pub fn root() -> &'static Node {
 }
 
 pub fn serve(service_fs: &mut ServiceFs<impl ServiceObjTrait>) -> Result<(), Error> {
-    component::inspector().serve(service_fs)
+    component::inspector().serve_tree(service_fs)
 }
 
 pub(crate) fn set_group_stats(stats: &EventFileGroupStatsMap) {

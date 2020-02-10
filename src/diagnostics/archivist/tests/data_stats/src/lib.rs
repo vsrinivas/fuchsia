@@ -1,6 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints::create_proxy,
@@ -46,37 +47,34 @@ async fn data_stats() -> Result<(), Error> {
     }
 
     let expected = json!({
-        "path": "observer_with_data_stats.cmx",
-        "contents": {
-            "root": {
-                "stats": {
-                    // NOTE(adamperry): this is due to a lack of ADMIN rights on the test_data dir
-                    "error": "Query failed",
-                },
-                "test_data": {
-                    "size": 34,
-                    "first": {
-                        "size": 5,
-                    },
-                    "second": {
-                        "size": 6,
-                    },
-                    "third": {
-                        "size": 23,
-                        "fifth": {
-                            "size": 11,
-                        },
-                        "fourth": {
-                            "size": 12,
-                        },
-                    },
-                },
+        "test_data": {
+            "stats": {
+                // NOTE(adamperry): this is due to a lack of ADMIN rights on the test_data dir
+                "error": "Query failed"
             },
-        },
+            "test_data": {
+                "size": 34,
+                "first": {
+                    "size": 5
+                },
+                "second": {
+                    "size": 6
+                },
+                "third": {
+                    "size": 23,
+                    "fifth": {
+                        "size": 11
+                    },
+                    "fourth": {
+                        "size": 12
+                    }
+                }
+            }
+        }
     });
 
     let launcher = launcher()?;
-    let mut archivist = AppBuilder::new(ARCHIVIST_URL)
+    let archivist = AppBuilder::new(ARCHIVIST_URL)
         .add_dir_to_namespace("/config/data".into(), File::open(config_path)?)?
         .add_dir_to_namespace("/data/archive".into(), File::open(archive_path)?)?
         .add_dir_to_namespace("/test_data".into(), File::open(test_data_path)?)?
@@ -108,70 +106,48 @@ async fn data_stats() -> Result<(), Error> {
                     .expect("fidl should be fine")
                     .expect("expect batches to be retrieved without error");
 
-                if first_result.len() < 2 {
+                if first_result.len() < 1 {
                     continue;
                 }
 
-                let first_batch_results = first_result
-                    .iter()
-                    .map(|entry| {
-                        let mem_buf = match entry {
-                            fidl_fuchsia_diagnostics::FormattedContent::FormattedJsonHierarchy(
-                                buffer,
-                            ) => buffer,
-                            _ => panic!("should be json formatted text"),
-                        };
+                assert_eq!(first_result.len(), 1);
 
-                        let mut byte_buf = vec![0u8; mem_buf.size as usize];
+                let entry = &first_result[0];
+                let mem_buf = match entry {
+                    fidl_fuchsia_diagnostics::FormattedContent::FormattedJsonHierarchy(buffer) => {
+                        buffer
+                    }
+                    _ => panic!("should be json formatted text"),
+                };
 
-                        mem_buf
-                            .vmo
-                            .read(&mut byte_buf, 0)
-                            .map_err(|_| format_err!("Reading from vmo failed."))
-                            .and_then(|_| {
-                                std::str::from_utf8(&byte_buf).map_err(|_| {
-                                    format_err!("Parsing byte vector to utf8 string failed...")
-                                })
-                            })
-                            .map(|s| s.to_string())
-                            .unwrap_or(r#"{}"#.to_string())
+                let mut byte_buf = vec![0u8; mem_buf.size as usize];
+
+                let first_batch_result = mem_buf
+                    .vmo
+                    .read(&mut byte_buf, 0)
+                    .map_err(|_| format_err!("Reading from vmo failed."))
+                    .and_then(|_| {
+                        std::str::from_utf8(&byte_buf).map_err(|_| {
+                            format_err!("Parsing byte vector to utf8 string failed...")
+                        })
                     })
-                    .collect::<Vec<String>>()
-                    .join(",");
+                    .map(|s| s.to_string())
+                    .unwrap_or(r#"{}"#.to_string());
 
-                let results = format!("[{}]", first_batch_results);
-
-                archivist.kill().expect("archivist should be killable here.");
-                let _ = archivist
-                    .wait()
-                    .await
-                    .expect("waiting on archivist should finish implying it died.");
-
-                let output: serde_json::Value = serde_json::from_str(&results)
+                let output: serde_json::Value = serde_json::from_str(&first_batch_result)
                     .expect("should have valid json from the first payload.");
 
-                let hierarchy_array =
-                    output.as_array().expect("the formatting should produce an array of values.");
-
-                assert_eq!(
-                    hierarchy_array.len(),
-                    2,
-                    "only test data and health node should be present"
-                );
-
-                // the hierarchy array contains a health hierarchy which has a timestamp
-                // that we can't pattern match. so just search for the test data.
-                let mut test_data_present = false;
-                for hierarchy in hierarchy_array {
-                    if *hierarchy == expected {
-                        test_data_present = true;
-                        break;
-                    }
+                // TODO(fxb/43112): when the archivist outputs the new JSON format for which we
+                // have a deserializer, perform an `assert_inspect_tree` that checks the other
+                // values in the response as well, not only data stats.
+                if let Some(data_stats) = output
+                    .get("contents")
+                    .and_then(|contents| contents.get("root"))
+                    .and_then(|root| root.get("data_stats"))
+                {
+                    assert_eq!(*data_stats, expected);
+                    return;
                 }
-
-                assert!(test_data_present, "expected the test_data hierarchy to be present.");
-                // Need explicit return to break the loop and async fn.
-                return;
             }
         }
     };
