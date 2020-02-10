@@ -121,7 +121,7 @@ test.
 ### Tag the test as flaky
 
 You can do this by adding "flaky" to the `tags` field in the
-[test environment](/docs/development/testing/environments.md). This operates
+[test environment](/docs/concepts/testing/environments.md). This operates
 on the entire test target (which corresponds to an executable). It will prevent this target
 from running on the builders in the commit queue, and enable the target on special flaky
 builders that continue to run the test in CI. Be sure to note the bug in a

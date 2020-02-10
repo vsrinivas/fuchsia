@@ -335,6 +335,6 @@ provided to `run-test-component`.
 
 [component_manifest]: /docs/concepts/storage/component_manifest.md
 [rust_testing]: ../languages/rust/testing.md
-[test_package]: test_component.md
-[isolated-storage]: test_component.md#isolated_storage
+[test_package]: /docs/concepts/testing/test_component.md
+[isolated-storage]: /docs/concepts/testing/test_component.md#isolated_storage
 [fuchsia_package_url]: /docs/concepts/storage/package_url.md

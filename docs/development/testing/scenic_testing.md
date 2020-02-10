@@ -5,7 +5,7 @@
 Information about testability:
 
 * All changes within Fuchsia need to adhere to the [Testability rubric](/docs/concepts/testing/testability_rubric.md).
-* See also: [general Fuchsia testing documentation](/docs/development/testing/environments.md)
+* See also: [Test environments](/docs/concepts/testing/environments.md)
 
 ## Scenic test packages
 
@@ -53,8 +53,8 @@ To add a test package to CQ, you need to:
 #### Create test components {#create-test-components}
 
 To add a new test package to CQ, you need to create a test component including source files,
-metadata and BUILD.gn file. See the
-[testing documentation](/docs/development/testing/test_component.md).
+metadata and BUILD.gn file. See
+[Test component](/docs/concepts/testing/test_component.md).
 You can include multiple test executables in one single test package, and all of them will be
 executed if you run `fx test <test_package>` on host.
 
@@ -77,13 +77,13 @@ your test package. For more information, see
 #### Specify test environments {#specify-test-environments}
 
 To ensure that the test is run on CQ, you also need to specify a
-[test environment](/docs/development/testing/environments.md)
+[test environment](/docs/concepts/testing/environments.md)
 for each test executable in the package inside the test's `BUILD.gn` file.
 
 Generally the environment is set to `environments = basic_envs`.
 This specifies the test should be run on both QEMU (for x64 + arm64) and NUC (for x64), and using
-both debug and release builds. For running on other environments, please refer to
-the [Test Envinronment doc](/docs/development/testing/environments.md).
+both debug and release builds. For running on other environments, refer to
+[Test environments](/docs/concepts/testing/environments.md).
 
 Reference the test package transitively. For example, the packages above are
 referenced by `//garnet/packages/tests:all`.

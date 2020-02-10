@@ -2,24 +2,20 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Block device testing"
-  path: /docs/development/testing/block_device_testing.md
-- title: "Fuchsia flaky test policy"
-  path: /docs/development/testing/test_flake_policy.md
+- title: "Running tests as components"
+  path: /docs/development/testing/running_tests_as_components.md
+- title: "Testing Scenic and Escher"
+  path: /docs/development/testing/scenic_testing.md
+- title: "Questions and answers"
+  path: /docs/development/testing/faq.md
+- title: "Zircon testing"
+  section:
+  - title: "Zircon testing overview"
+    path: /docs/development/testing/testing.md
+  - title: "Block device testing"
+    path: /docs/development/testing/block_device_testing.md
+  - title: "NAND testing"
+    path: /docs/development/testing/nand_testing.md
 - title: "Fuzzing"
   section:
   - include: /docs/development/testing/fuzzing/_toc.yaml
-- title: "NAND testing"
-  path: /docs/development/testing/nand_testing.md
-- title: "Running tests as components"
-  path: /docs/development/testing/running_tests_as_components.md
-- title: "Test component"
-  path: /docs/development/testing/test_component.md
-- title: "Test environments"
-  path: /docs/development/testing/environments.md
-- title: "Testing Scenic and Escher"
-  path: /docs/development/testing/scenic_testing.md
-- title: "Testing: Questions and answers"
-  path: /docs/development/testing/faq.md
-- title: "Zircon testing overview"
-  path: /docs/development/testing/testing.md

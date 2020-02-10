@@ -18,7 +18,7 @@ The examples in this doc will be focused around a testing mod under
 The name is derived from how it is an example mod relating to the use of
 [Flutter Driver](https://docs.flutter.io/flutter/flutter_driver/flutter_driver-library.html).
 In addition, you'll see how to set up a hermetic test with Fuchsia
-[component testing](/docs/development/testing/test_component.md).
+[component testing](/docs/concepts/testing/test_component.md).
 
 The ultimate goal of this document is to make it possible for you to add
 integration tests into
@@ -179,7 +179,7 @@ If you’d like to see an example test that pushes a few buttons, you can check
 A
 [component manifest](/docs/concepts/storage/component_manifest.md)
 allows the test to run as a hermetic
-[test component](/docs/development/testing/test_component.md)
+[test component](/docs/concepts/testing/test_component.md)
 under its own dedicated environment that will sandbox its services and tear
 everything down on completion or failure. This is particularly important for
 Flutter Driver tests and other graphical tests as only one Scenic instance may
@@ -236,7 +236,7 @@ The component manifest for our tests is
 ```
 
 The
-[injected-services](/docs/development/testing/test_component.md#run-external-services)
+[injected-services](/docs/concepts/testing/test_component.md#run-external-services)
 entry starts the hermetic services our mod will need, mostly related to
 graphics. In addition, the `fuchsia.posix.socket.Provider` system service and
 `deprecated-shell` feature are needed to allow Flutter Driver to interact with
@@ -280,7 +280,7 @@ dart_fuchsia_test("driver_example_mod_tests") {
 defines a Dart test that runs on a Fuchsia device. It uses each file in the
 `test` subfolder that ends in `_test.dart` as an entrypoint for tests. In
 addition, it links the component manifest for the tests and specifies the
-[environments](/docs/development/testing/environments.md)
+[environments](/docs/concepts/testing/environments.md)
 in which to run the test in automated testing (CI/CQ). (See also the predefined
 environments in
 [//build/testing/environments.gni](/build/testing/environments.gni).)

@@ -165,5 +165,5 @@ However, services that are not listed here are not supported.
 
 This option would be replaced once we fix CP-144 (in component manager v2).
 
-[executing-tests]: running_tests_as_components.md
-[run-test-component]: running_tests_as_components.md#running_tests_legacy
+[executing-tests]: /docs/development/testing/running_tests_as_components.md
+[run-test-component]: /docs/development/testing/running_tests_as_components.md#running_tests_legacy

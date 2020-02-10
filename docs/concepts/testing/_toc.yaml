@@ -6,6 +6,12 @@ toc:
   path: /docs/concepts/testing/testability_rubric.md
 - title: "Introduction to the Fuchsia Testing Framework"
   path: /docs/concepts/testing/fuchsia_testing_framework.md
+- title: "Test component"
+  path: /docs/concepts/testing/test_component.md
+- title: "Test environments"
+  path: /docs/concepts/testing/environments.md
+- title: "Fuchsia flaky test policy"
+  path: /docs/concepts/testing/test_flake_policy.md
 - title: "Entropy quality tests"
   path:  /docs/concepts/testing/entropy_quality_tests.md
 - title: "Testing isolated cache storage"
