@@ -90,7 +90,6 @@ group("fidl") {
     "fuchsia-hardware-ethertap",
 #------------------
 #------------------
-    "fuchsia-hardware-ftdi",
 #------------------
 #------------------
     "fuchsia-hardware-gpu-clock",

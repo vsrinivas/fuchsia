@@ -14,10 +14,10 @@ executable("bin") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_c",
+    "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_llcpp",
     "//zircon/public/lib/fdio",
     "//zircon/system/fidl/fuchsia-hardware-dotmatrixdisplay:fuchsia-hardware-dotmatrixdisplay_c",
-    "//zircon/system/fidl/fuchsia-hardware-ftdi:fuchsia-hardware-ftdi_c",
-    "//zircon/system/fidl/fuchsia-hardware-ftdi:fuchsia-hardware-ftdi_llcpp",
   ]
 }
 
@@ -27,10 +27,10 @@ executable("bin2") {
   sources = [ "create_ssd1306.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_c",
+    "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_llcpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-hardware-ftdi:fuchsia-hardware-ftdi_c",
-    "//zircon/system/fidl/fuchsia-hardware-ftdi:fuchsia-hardware-ftdi_llcpp",
   ]
 }
 
