@@ -145,7 +145,6 @@ group("all") {
     "//garnet/packages/prod:setui_client",
     "//garnet/packages/prod:setui_service",
     "//garnet/packages/prod:ssh",
-    "//garnet/packages/prod:stash",
     "//garnet/packages/prod:sysmem_connector",
     "//garnet/packages/prod:tee_manager",
     "//garnet/packages/prod:telephony",
@@ -513,14 +512,6 @@ if (target_cpu == "arm64") {
       "//garnet/drivers/video/amlogic-decoder:amlogic_video_decoder_test_build",
     ]
   }
-}
-
-group("stash") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/stash:stash",
-    "//garnet/bin/stash_ctl:stash_ctl",
-  ]
 }
 
 group("wlanphy") {
