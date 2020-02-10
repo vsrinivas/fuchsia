@@ -70,10 +70,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/blobfs/test",
 #------------------
 #------------------
-      "$zx/system/ulib/bootfs:bootfs-parser-fuzzer",
-#------------------
-#------------------
-      "$zx/system/ulib/bootfs:bootfs-test",
+      "$zx/system/ulib/bootfs/test",
 #------------------
 #------------------
       "$zx/system/ulib/c/test",

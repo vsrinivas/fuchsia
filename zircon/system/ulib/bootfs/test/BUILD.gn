@@ -1,0 +1,35 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/fuzzer.gni")
+
+group("test") {
+  testonly = true
+  deps = [
+    ":bootfs-test",
+    ":bootfs-parser-fuzzer",
+  ]
+}
+
+zx_test("bootfs-test") {
+  sources = [ "parser-test.cc" ]
+  deps = [
+    "$zx/system/ulib/bootfs",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+fuzzer("bootfs-parser-fuzzer") {
+  sources = [ "parser-fuzzer.cc" ]
+  deps = [
+    "$zx/system/ulib/bootfs",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zx",
+  ]
+}

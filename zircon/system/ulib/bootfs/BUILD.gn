@@ -2,36 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fuzzer.gni")
-
 zx_library("bootfs") {
   sdk = "source"
   sdk_headers = [ "lib/bootfs/parser.h" ]
 
   sources = [ "parser.cc" ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-  ]
-}
-
-zx_test("bootfs-test") {
-  sources = [ "parser-test.cc" ]
-  deps = [
-    "$zx/system/ulib/bootfs",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
-  ]
-}
-
-fuzzer("bootfs-parser-fuzzer") {
-  sources = [ "parser-fuzzer.cc" ]
-  deps = [
-    "$zx/system/ulib/bootfs",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
