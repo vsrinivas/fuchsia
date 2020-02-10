@@ -382,6 +382,7 @@ fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
     }
 
     let (response_tx, response_rx) = futures::channel::oneshot::channel::<Result<(), Error>>();
+    let switchboard_handle_clone = switchboard_handle.clone();
     fasync::spawn(async move {
         // Register agents
         for agent in agents {
@@ -395,6 +396,7 @@ fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
             .execute_lifespan(
                 Lifespan::Initialization,
                 components.clone(),
+                switchboard_handle_clone.clone(),
                 service_context_handle.clone(),
                 true,
             )
@@ -410,6 +412,7 @@ fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
             .execute_lifespan(
                 Lifespan::Service,
                 components.clone(),
+                switchboard_handle_clone.clone(),
                 service_context_handle.clone(),
                 false,
             )

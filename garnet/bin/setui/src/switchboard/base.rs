@@ -122,6 +122,9 @@ pub enum SettingRequest {
     // Power requests.
     Reboot,
 
+    // Restores settings to outside dependencies.
+    Restore,
+
     // Privacy requests.
     SetUserDataSharingConsent(Option<bool>),
 

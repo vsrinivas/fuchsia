@@ -95,7 +95,14 @@ impl NightModeController {
                     SettingRequest::Get => {
                         self.get(responder);
                     }
-                    _ => panic!("Unexpected command to night_mode: {:?}", request),
+                    _ => {
+                        responder
+                            .send(Err(Error::new(SwitchboardError::UnimplementedRequest {
+                                setting_type: SettingType::NightMode,
+                                request: request,
+                            })))
+                            .ok();
+                    }
                 }
             }
         };

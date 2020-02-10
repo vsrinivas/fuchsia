@@ -8,3 +8,6 @@ pub mod base;
 
 /// This mod provides a concrete implementation of the agent authority.
 pub mod authority_impl;
+
+/// Agent for rehydrating actions for restore
+pub mod restore_agent;

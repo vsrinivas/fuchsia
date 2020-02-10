@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::SettingType;
+use crate::switchboard::base::{SettingType, SwitchboardHandle};
 use anyhow::{format_err, Error};
 use core::fmt::Debug;
 use futures::channel::mpsc::UnboundedSender;
@@ -55,6 +55,7 @@ pub struct InvocationContext {
     pub lifespan: Lifespan,
     pub available_components: HashSet<SettingType>,
     pub service_context: ServiceContextHandle,
+    pub switchboard: SwitchboardHandle,
 }
 
 pub trait Agent: Debug {

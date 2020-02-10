@@ -8,6 +8,7 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::{self as syslog, fx_log_info},
     futures::lock::Mutex,
+    settings::agent::restore_agent::RestoreAgent,
     settings::registry::device_storage::StashDeviceStorageFactory,
     settings::Configuration,
     settings::EnvironmentBuilder,
@@ -34,6 +35,7 @@ fn main() -> Result<(), Error> {
     let _ =
         EnvironmentBuilder::new(Runtime::Service(executor), Arc::new(Mutex::new(storage_factory)))
             .configuration(Configuration::All)
+            .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
             .spawn();
 
     Ok(())

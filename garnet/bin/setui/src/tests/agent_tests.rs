@@ -4,9 +4,11 @@
 #[cfg(test)]
 use crate::agent::authority_impl::AuthorityImpl;
 use crate::agent::base::*;
+use crate::conduit::conduit_impl::ConduitImpl;
 use crate::registry::device_storage::testing::*;
 use crate::service_context::ServiceContext;
 use crate::switchboard::base::SettingType;
+use crate::switchboard::switchboard_impl::SwitchboardImpl;
 use crate::EnvironmentBuilder;
 use crate::Runtime;
 use anyhow::{format_err, Error};
@@ -153,6 +155,8 @@ async fn test_environment_startup() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_sequential() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
+    let conduit = ConduitImpl::create();
+    let switchboard = SwitchboardImpl::create(conduit);
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
 
@@ -160,8 +164,13 @@ async fn test_sequential() {
     let agent_ids = create_agents(12, Lifespan::Initialization, &mut authority, tx.clone());
 
     // Execute the lifespan sequentially.
-    let completion_ack =
-        authority.execute_lifespan(Lifespan::Initialization, HashSet::new(), service_context, true);
+    let completion_ack = authority.execute_lifespan(
+        Lifespan::Initialization,
+        HashSet::new(),
+        switchboard.clone(),
+        service_context,
+        true,
+    );
 
     // Process the agent callbacks, making sure they are received in the right
     // order and acknowledging the acks. Note that this is a chain reaction.
@@ -195,6 +204,8 @@ async fn test_sequential() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_simultaneous() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
+    let conduit = ConduitImpl::create();
+    let switchboard = SwitchboardImpl::create(conduit);
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
     let agent_ids = create_agents(12, Lifespan::Initialization, &mut authority, tx.clone());
@@ -203,6 +214,7 @@ async fn test_simultaneous() {
     let completion_ack = authority.execute_lifespan(
         Lifespan::Initialization,
         HashSet::new(),
+        switchboard.clone(),
         service_context,
         false,
     );
@@ -237,6 +249,9 @@ async fn test_simultaneous() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_err_handling() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
+
+    let conduit = ConduitImpl::create();
+    let switchboard = SwitchboardImpl::create(conduit);
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();
@@ -252,8 +267,13 @@ async fn test_err_handling() {
         TestAgent::create(rng.gen(), Lifespan::Initialization, &mut authority, tx.clone()).unwrap();
 
     // Execute lifespan sequentially
-    let completion_ack =
-        authority.execute_lifespan(Lifespan::Initialization, HashSet::new(), service_context, true);
+    let completion_ack = authority.execute_lifespan(
+        Lifespan::Initialization,
+        HashSet::new(),
+        switchboard.clone(),
+        service_context,
+        true,
+    );
 
     // Ensure the first agent received an invocation, acknowledge with an error.
     if let Some((id, invocation)) = rx.next().await {
@@ -283,6 +303,9 @@ async fn test_err_handling() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_available_components() {
     let (tx, mut rx) = futures::channel::mpsc::unbounded::<(u32, Invocation)>();
+
+    let conduit = ConduitImpl::create();
+    let switchboard = SwitchboardImpl::create(conduit);
     let mut authority = AuthorityImpl::new();
     let service_context = ServiceContext::create(None);
     let mut rng = rand::thread_rng();
@@ -303,6 +326,7 @@ async fn test_available_components() {
     let _ = authority.execute_lifespan(
         Lifespan::Initialization,
         available_components.clone(),
+        switchboard.clone(),
         service_context,
         true,
     );

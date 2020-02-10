@@ -5,7 +5,7 @@
 use crate::agent::base::*;
 
 use crate::service_context::ServiceContextHandle;
-use crate::switchboard::base::SettingType;
+use crate::switchboard::base::{SettingType, SwitchboardHandle};
 use anyhow::{format_err, Error};
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
@@ -49,6 +49,7 @@ impl AuthorityImpl {
         &self,
         lifespan: Lifespan,
         available_components: HashSet<SettingType>,
+        switchboard: SwitchboardHandle,
         service_context: ServiceContextHandle,
         sequential: bool,
     ) -> futures::channel::oneshot::Receiver<Result<(), Error>> {
@@ -65,6 +66,7 @@ impl AuthorityImpl {
                     lifespan: lifespan,
                     available_components: available_components.clone(),
                     service_context: service_context.clone(),
+                    switchboard: switchboard.clone(),
                 };
 
                 // Create ack channel.
