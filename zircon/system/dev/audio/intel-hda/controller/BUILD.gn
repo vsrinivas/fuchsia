@@ -75,6 +75,7 @@ source_set("src") {
     "//zircon/system/banjo/ddk.protocol.intelhda.codec",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.intel.hda:fuchsia.hardware.intel.hda_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
@@ -85,7 +86,6 @@ source_set("src") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.pci",
-    "//zircon/system/fidl/fuchsia-hardware-intel-hda:c",
   ]
 }
 

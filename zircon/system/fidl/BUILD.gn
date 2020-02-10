@@ -106,7 +106,6 @@ group("fidl") {
     "fuchsia-hardware-input",
 #------------------
 #------------------
-    "fuchsia-hardware-intel-hda",
 #------------------
 #------------------
     "fuchsia-hardware-light",
