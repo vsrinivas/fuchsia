@@ -99,23 +99,23 @@ func (r *SSHRunner) run(ctx context.Context, command []string, stdout, stderr io
 // is of type sshutil.ConnectionError. Also, this can be used
 // to recover the runner after having called Close(). If there is an underlying
 // connection error, the returned value will unwrap as sshutil.ConnectionError.
-func (r *SSHRunner) Reconnect(ctx context.Context) error {
+func (r *SSHRunner) Reconnect(ctx context.Context) (*ssh.Client, error) {
 	raddr := r.client.Conn.RemoteAddr()
 	client, err := sshutil.Connect(ctx, raddr, r.config)
 	if err != nil {
-		return fmt.Errorf("failed to create a new client: %w", err)
+		return nil, fmt.Errorf("failed to create a new client: %w", err)
 	}
 	r.Lock()
 	r.client.Close()
 	r.client = client
 	r.Unlock()
-	return nil
+	return r.client, nil
 }
 
 // ReconnectIfNecessary checks that the connection is alive and attempts to
 // reconnect if unresponsive. If there is an underlying connection error, the
 // returned value will unwrap as sshutil.ConnectionError.
-func (r *SSHRunner) ReconnectIfNecessary(ctx context.Context) error {
+func (r *SSHRunner) ReconnectIfNecessary(ctx context.Context) (*ssh.Client, error) {
 	r.Lock()
 	err := sshutil.CheckConnection(r.client)
 	r.Unlock()
@@ -123,7 +123,7 @@ func (r *SSHRunner) ReconnectIfNecessary(ctx context.Context) error {
 		logger.Errorf(ctx, "SSH connection unresponsive; trying to reconnect: %v", err)
 		return r.Reconnect(ctx)
 	}
-	return nil
+	return r.client, nil
 }
 
 // Close closes the underlying client.

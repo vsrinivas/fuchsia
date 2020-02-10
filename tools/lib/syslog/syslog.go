@@ -36,7 +36,7 @@ type Syslogger struct {
 
 type sshRunner interface {
 	Run(context.Context, []string, io.Writer, io.Writer) error
-	Reconnect(context.Context) error
+	Reconnect(context.Context) (*ssh.Client, error)
 	Close() error
 }
 
@@ -63,7 +63,7 @@ func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 		}
 		logger.Errorf(ctx, "syslog: SSH client unresponsive; will attempt to reconnect and continue streaming: %v", err)
 		err = retry.Retry(ctx, retry.NewConstantBackoff(s.reconnectInterval), func() error {
-			err := s.r.Reconnect(ctx)
+			_, err := s.r.Reconnect(ctx)
 			if err != nil {
 				logger.Debugf(ctx, "syslog: failed to refresh SSH client, will try again after %s: %v", s.reconnectInterval, err)
 			} else {
