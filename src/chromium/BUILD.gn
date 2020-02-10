@@ -57,7 +57,8 @@ prebuilt_package("web_runner_pkg") {
 
   package_name = "web_runner"
   archive = "//prebuilt/third_party/chromium/arch/$target_cpu/web_runner.far"
-  debug_archive = "//prebuilt/third_party/build_ids/$target_cpu/chromium/web_runner.symbols.tar.bz2"
+  debug_archive =
+      "//prebuilt/build_ids/$target_cpu/chromium/web_runner.symbols.tar.bz2"
 }
 
 # Prebuilt FAR tests
