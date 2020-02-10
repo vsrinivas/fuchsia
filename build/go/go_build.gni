@@ -252,13 +252,6 @@ template("go_build") {
           "//zircon/public/lib/fdio",
         ]
 
-        if (!carchive) {
-          args += [
-            "--dump-syms",
-            rebase_path("//prebuilt/third_party/breakpad/${host_platform}/dump_syms/dump_syms", root_build_dir)
-          ]
-        }
-
         args += [
           # GN provides no way to propagate include paths like this, so, this
           # is brittle.
@@ -379,10 +372,10 @@ template("go_build") {
             # TODO(fxbug.dev/27215): Update when we add linux go binaries
             # to .build-id.
             if (is_fuchsia) {
-              elf_build_id = "$dist.build-id.stamp"
+              elf_build_id = "$debug.build-id.stamp"
             }
             if (output_breakpad_syms && is_fuchsia) {
-              breakpad = "$dist.sym"
+              breakpad = "$debug.sym"
             }
           },
         ]
