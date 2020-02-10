@@ -110,6 +110,5 @@ if (current_toolchain == default_toolchain) {
       "$zx/kernel/vm",
       "$zx/system/ulib/bitmap",
     ]
-    public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
   }
 }
