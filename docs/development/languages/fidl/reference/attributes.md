@@ -204,7 +204,7 @@ specifying `[Transport="Foo"]` disables `Channel` and uses only
 `Foo`).
 
 <!-- xrefs -->
-[channel]: /docs/concepts/objects/channel.md
+[channel]: /docs/reference/kernel_objects/channel.md
 [FTP-013]: ftp/ftp-013.md
 [FTP-020]: ftp/ftp-020.md
 [FTP-021]: ftp/ftp-021.md

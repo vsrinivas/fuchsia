@@ -1,0 +1,54 @@
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Overview"
+  path: /docs/reference/kernel_objects/objects.md
+- title: "Bus transaction initiator"
+  path: /docs/reference/kernel_objects/bus_transaction_initiator.md
+- title: "Channel"
+  path: /docs/reference/kernel_objects/channel.md
+- title: "Clock"
+  path: /docs/reference/kernel_objects/clock.md
+- title: "Log"
+  path: /docs/reference/kernel_objects/debuglog.md
+- title: "Event"
+  path: /docs/reference/kernel_objects/event.md
+- title: "Event pair"
+  path: /docs/reference/kernel_objects/eventpair.md
+- title: "FIFO"
+  path: /docs/reference/kernel_objects/fifo.md
+- title: "Futex"
+  path: /docs/reference/kernel_objects/futex.md
+- title: "Interrupts"
+  path: /docs/reference/kernel_objects/interrupts.md
+- title: "Job"
+  path: /docs/reference/kernel_objects/job.md
+- title: "Pager"
+  path: /docs/reference/kernel_objects/pager.md
+- title: "Pinned memory token"
+  path: /docs/reference/kernel_objects/pinned_memory_token.md
+- title: "Port"
+  path: /docs/reference/kernel_objects/port.md
+- title: "Process"
+  path: /docs/reference/kernel_objects/process.md
+- title: "Profile"
+  path: /docs/reference/kernel_objects/profile.md
+- title: "Resource"
+  path: /docs/reference/kernel_objects/resource.md
+- title: "Socket"
+  path: /docs/reference/kernel_objects/socket.md
+- title: "Stream"
+  path: /docs/reference/kernel_objects/stream.md
+- title: "Task"
+  path: /docs/reference/kernel_objects/task.md
+- title: "Thread"
+  path: /docs/reference/kernel_objects/thread.md
+- title: "Time units"
+  path: /docs/reference/kernel_objects/time.md
+- title: "Timer"
+  path: /docs/reference/kernel_objects/timer.md
+- title: "Virtual memory address region"
+  path: /docs/reference/kernel_objects/vm_address_region.md
+- title: "Virtual memory object"
+  path: /docs/reference/kernel_objects/vm_object.md

@@ -72,7 +72,7 @@ starts it running at the `userboot` entry point.
 In normal [program loading](program_loading.md),
 a [*bootstrap message*](program_loading.md#the-processargs-protocol) is
 sent to each new process.  The process's first thread receives
-a [channel](/docs/concepts/objects/channel.md) handle in a register.  It can then read
+a [channel](/docs/reference/kernel_objects/channel.md) handle in a register.  It can then read
 data and handles sent by its creator.
 
 The kernel uses the exact same protocol to start `userboot`.  The kernel
@@ -111,7 +111,7 @@ location it will appear in memory after the `userboot` image itself.
 The first thing `userboot` does is to read the bootstrap message sent by
 the kernel.  Among the handles it gets from the kernel is one with
 *handle info entry* `PA_HND(PA_VMO_BOOTDATA, 0)`.  This is
-a [VMO](/docs/concepts/objects/vm_object.md) containing the ZBI from the
+a [VMO](/docs/reference/kernel_objects/vm_object.md) containing the ZBI from the
 boot loader.  `userboot` reads the ZBI headers from this VMO
 looking for the first item with type `ZBI_TYPE_STORAGE_BOOTFS`.  That
 contains the [BOOTFS](#BOOTFS) image.  The item's ZBI header

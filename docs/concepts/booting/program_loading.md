@@ -3,8 +3,8 @@
 In Zircon, the kernel is not directly involved in normal program loading.
 Instead, the kernel provides the building blocks from
 which userspace program loading is built, such as
-[Virtual Memory Objects](/docs/concepts/objects/vm_object.md), [processes](/docs/concepts/objects/process.md),
-[Virtual Memory Address Regions](/docs/concepts/objects/vm_address_region.md), and [threads](/docs/concepts/objects/thread.md).
+[Virtual Memory Objects](/docs/reference/kernel_objects/vm_object.md), [processes](/docs/reference/kernel_objects/process.md),
+[Virtual Memory Address Regions](/docs/reference/kernel_objects/vm_address_region.md), and [threads](/docs/reference/kernel_objects/thread.md).
 
 Note: The only time that the kernel is involved in program loading is when you bootstrap the
 userspace environment at system startup. See [`userboot`](userboot.md) for more information.
@@ -88,8 +88,8 @@ The [lowest userspace layers of the system](userboot.md) implement the same
 protocols.
 
 Filesystems are not part of the lower layers of Zircon API. Instead,
-program loading is based on [VMOs](/docs/concepts/objects/vm_object.md) and on IPC
-protocols used through [channels](/docs/concepts/objects/channel.md).
+program loading is based on [VMOs](/docs/reference/kernel_objects/vm_object.md) and on IPC
+protocols used through [channels](/docs/reference/kernel_objects/channel.md).
 
 A program loading request starts with:
 
@@ -127,7 +127,7 @@ Three types of file are handled:
 
   * The system chooses a random base address for the first `PT_LOAD` segment
     and then maps in each `PT_LOAD` segment relative to that base address.
-    This is done by creating a [VMAR](/docs/concepts/objects/vm_address_region.md) covering
+    This is done by creating a [VMAR](/docs/reference/kernel_objects/vm_address_region.md) covering
     the whole range from the first page of the first segment to the last
     page of the last segment.
   * A VMO is created and mapped at another random address to hold the stack
@@ -137,19 +137,19 @@ Three types of file are handled:
   * The [vDSO](/docs/concepts/kernel/vdso.md) is mapped into the process
     (another VMO containing an ELF image), also at a random base address.
   * A new thread is created in the process with [`zx_thread_create()`].
-  * A new [channel](/docs/concepts/objects/channel.md) is created, called the *bootstrap
+  * A new [channel](/docs/reference/kernel_objects/channel.md) is created, called the *bootstrap
     channel*. The program loader writes into this channel a message
     in [the `processargs` protocol](#the-processargs-protocol) format. This
     *bootstrap message* includes the argument and environment strings and
     the initial handles from the original request. That list is augmented
     with handles for:
 
-     * the new [process](/docs/concepts/objects/process.md) itself
-     * its root [VMAR](/docs/concepts/objects/vm_address_region.md)
-     * its initial [thread](/docs/concepts/objects/thread.md)
+     * the new [process](/docs/reference/kernel_objects/process.md) itself
+     * its root [VMAR](/docs/reference/kernel_objects/vm_address_region.md)
+     * its initial [thread](/docs/reference/kernel_objects/thread.md)
      * the VMAR covering where the executable was loaded
      * the VMO just created for the stack
-     * optionally, a default [job](/docs/concepts/objects/job.md) so the new
+     * optionally, a default [job](/docs/reference/kernel_objects/job.md) so the new
        process itself can create more processes
      * optionally, the vDSO VMO so the new process can let the processes
        it creates make system calls themselves
@@ -261,14 +261,14 @@ A bootstrap message conveys:
 The handles serve many purposes, indicated by the *handle info entry* type:
 
  * essential handles for the process to make [system calls](/docs/reference/syscalls/README.md):
-   [process](/docs/concepts/objects/process.md), [VMAR](/docs/concepts/objects/vm_address_region.md),
-   [thread](/docs/concepts/objects/thread.md), [job](/docs/concepts/objects/job.md)
- * [channel](/docs/concepts/objects/channel.md) to the [loader service](#the-loader-service)
- * [vDSO](/docs/concepts/kernel/vdso.md) [VMO](/docs/concepts/objects/vm_object.md)
+   [process](/docs/reference/kernel_objects/process.md), [VMAR](/docs/reference/kernel_objects/vm_address_region.md),
+   [thread](/docs/reference/kernel_objects/thread.md), [job](/docs/reference/kernel_objects/job.md)
+ * [channel](/docs/reference/kernel_objects/channel.md) to the [loader service](#the-loader-service)
+ * [vDSO](/docs/concepts/kernel/vdso.md) [VMO](/docs/reference/kernel_objects/vm_object.md)
  * filesystem-related handles: current directory, file descriptors, name
    space bindings (these encode an index into the list of name strings)
  * special handles for system processes:
-   [resource](/docs/concepts/objects/resource.md), [VMO](/docs/concepts/objects/vm_object.md)
+   [resource](/docs/reference/kernel_objects/resource.md), [VMO](/docs/reference/kernel_objects/vm_object.md)
  * other types used for higher-layer or private protocol purposes
 
 Most of these are just passed through by the program loader,
@@ -289,8 +289,8 @@ program loading cannot be defined in terms of higher-layer abstractions
 such as a filesystem paradigm,
 as
 [traditional systems have done](#background_traditional-elf-program-loading).
-Instead, program loading is based only on [VMOs](/docs/concepts/objects/vm_object.md) and
-a simple [channel](/docs/concepts/objects/channel.md)-based protocol.
+Instead, program loading is based only on [VMOs](/docs/reference/kernel_objects/vm_object.md) and
+a simple [channel](/docs/reference/kernel_objects/channel.md)-based protocol.
 
 This *loader service* protocol is how a dynamic linker acquires VMOs
 representing the additional files it needs to load as shared libraries.

@@ -1,6 +1,6 @@
 # Timer Slack
 
-[Timer objects](/docs/concepts/objects/timer.md) have a concept of slack. Slack
+[Timer objects](/docs/reference/kernel_objects/timer.md) have a concept of slack. Slack
 defines how the system may alter the timer's deadline. Slack allows
 the system to internally coalesce timers and timer-like events to
 improve performance or efficiency.

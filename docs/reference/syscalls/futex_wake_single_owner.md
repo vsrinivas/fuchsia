@@ -36,7 +36,7 @@ None.
 
 ## SEE ALSO
 
- - [futex objects](/docs/concepts/objects/futex.md)
+ - [futex objects](/docs/reference/kernel_objects/futex.md)
  - [`zx_futex_requeue()`]
  - [`zx_futex_wait()`]
  - [`zx_futex_wake()`]

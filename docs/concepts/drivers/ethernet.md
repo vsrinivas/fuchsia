@@ -207,7 +207,7 @@ use in the binding function):
 
 Function            | Description
 --------------------|------------------------------------------------------------------------------
-`get_bti`           | Used to get the Bus Transaction Initiator (**[BTI](/docs/concepts/objects/bus_transaction_initiator.md)**) for the device
+`get_bti`           | Used to get the Bus Transaction Initiator (**[BTI](/docs/reference/kernel_objects/bus_transaction_initiator.md)**) for the device
 `query_irq_mode`    | Returns the number of the specific type of IRQ available (MSI or legacy)
 `set_irq_mode`      | Requests the specified IRQ mode to be used for the device
 `map_interrupt`     | Creates an IRQ handle associated with the device's interrupt
@@ -230,10 +230,10 @@ The first PCI function we call is
     }
 ```
 
-A [BTI](/docs/concepts/objects/bus_transaction_initiator.md)
+A [BTI](/docs/reference/kernel_objects/bus_transaction_initiator.md)
 is used to represent the bus mastering / DMA capability of a device.
 It can be used for granting memory access to a device.
-The [BTI](/docs/concepts/objects/bus_transaction_initiator.md)
+The [BTI](/docs/reference/kernel_objects/bus_transaction_initiator.md)
 handle is stored in `edev->btih` and is used later to initialize transfer buffers.
 The [Hardware Interfacing](hardware.md) chapter talks more about this, in the DMA section.
 
@@ -322,7 +322,7 @@ is in the `ie.c` file.
 ### DMA buffer setup and hardware configuration
 
 With the device configured, we can now set up the DMA buffers.
-Here we see the [BTI](/docs/concepts/objects/bus_transaction_initiator.md)
+Here we see the [BTI](/docs/reference/kernel_objects/bus_transaction_initiator.md)
 handle, `edev->btih`, that we set up above, as the 2nd argument to
 **io_buffer_init()**:
 
@@ -339,8 +339,8 @@ handle, `edev->btih`, that we set up above, as the 2nd argument to
 ```
 
 The **io_buffer_init()**
-function zeroes the buffer, and creates a [VMO](/docs/concepts/objects/vm_object.md)
-handle to the [BTI](/docs/concepts/objects/bus_transaction_initiator.md).
+function zeroes the buffer, and creates a [VMO](/docs/reference/kernel_objects/vm_object.md)
+handle to the [BTI](/docs/reference/kernel_objects/bus_transaction_initiator.md).
 The **eth_setup_buffers()** and **eth_init_hw()** functions are defined in the `ie.c` module.
 
 ### Final driver binding
@@ -672,7 +672,7 @@ it points to a valid interface block.
 
 The Intel ethernet driver doesn't support the optional **get_bti()** callout.
 
-This callout is used to return a handle to the [BTI](/docs/concepts/objects/bus_transaction_initiator.md).
+This callout is used to return a handle to the [BTI](/docs/reference/kernel_objects/bus_transaction_initiator.md).
 In case the device doesn't support it, it can either leave it out of the `ethernet_impl_protocol_ops_t`
 structure (like the Intel ethernet driver does), or it can return `ZX_HANDLE_INVALID`.
 

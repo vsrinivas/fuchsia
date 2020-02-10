@@ -23,7 +23,7 @@ Fetch the koid of the current owner of the futex identified by *value_ptr*, or
 a futex typically serves no purpose when building synchronization primitives
 from futexes.  This syscall is used primarily for testing.
 
-See *Ownership and Priority Inheritance* in [futex](/docs/concepts/objects/futex.md) for
+See *Ownership and Priority Inheritance* in [futex](/docs/reference/kernel_objects/futex.md) for
 details.
 
 ## RIGHTS
@@ -48,5 +48,4 @@ owner.
 
 ## SEE ALSO
 
-
-[futex objects](/docs/concepts/objects/futex.md)
+[futex objects](/docs/reference/kernel_objects/futex.md)

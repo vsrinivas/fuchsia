@@ -17,39 +17,39 @@ Zircon actively manages the following resources:
 ## Kernel objects for applications
 
 ### IPC
-+ [Channel](/docs/concepts/objects/channel.md)
-+ [Socket](/docs/concepts/objects/socket.md)
-+ [FIFO](/docs/concepts/objects/fifo.md)
++ [Channel](/docs/reference/kernel_objects/channel.md)
++ [Socket](/docs/reference/kernel_objects/socket.md)
++ [FIFO](/docs/reference/kernel_objects/fifo.md)
 
 ### Tasks
-+ [Process](/docs/concepts/objects/process.md)
-+ [Thread](/docs/concepts/objects/thread.md)
-+ [Job](/docs/concepts/objects/job.md)
-+ [Task](/docs/concepts/objects/task.md)
++ [Process](/docs/reference/kernel_objects/process.md)
++ [Thread](/docs/reference/kernel_objects/thread.md)
++ [Job](/docs/reference/kernel_objects/job.md)
++ [Task](/docs/reference/kernel_objects/task.md)
 
 ### Scheduling
-+ [Profile](/docs/concepts/objects/profile.md)
++ [Profile](/docs/reference/kernel_objects/profile.md)
 
 ### Signaling
-+ [Event](/docs/concepts/objects/event.md)
-+ [Event Pair](/docs/concepts/objects/eventpair.md)
-+ [Futex](/docs/concepts/objects/futex.md)
++ [Event](/docs/reference/kernel_objects/event.md)
++ [Event Pair](/docs/reference/kernel_objects/eventpair.md)
++ [Futex](/docs/reference/kernel_objects/futex.md)
 
 ### Memory and address space
-+ [Virtual Memory Object](/docs/concepts/objects/vm_object.md)
-+ [Virtual Memory Address Region](/docs/concepts/objects/vm_address_region.md)
-+ [bus_transaction_initiator](/docs/concepts/objects/bus_transaction_initiator.md)
-+ [Pager](/docs/concepts/objects/pager.md)
++ [Virtual Memory Object](/docs/reference/kernel_objects/vm_object.md)
++ [Virtual Memory Address Region](/docs/reference/kernel_objects/vm_address_region.md)
++ [bus_transaction_initiator](/docs/reference/kernel_objects/bus_transaction_initiator.md)
++ [Pager](/docs/reference/kernel_objects/pager.md)
 
 ### Waiting
-+ [Port](/docs/concepts/objects/port.md)
-+ [Timer](/docs/concepts/objects/timer.md)
++ [Port](/docs/reference/kernel_objects/port.md)
++ [Timer](/docs/reference/kernel_objects/timer.md)
 
 ## Kernel objects for drivers
 
-+ [Interrupts](/docs/concepts/objects/interrupts.md)
-+ [Resource](/docs/concepts/objects/resource.md)
-+ [Debuglog](/docs/concepts/objects/debuglog.md)
++ [Interrupts](/docs/reference/kernel_objects/interrupts.md)
++ [Resource](/docs/reference/kernel_objects/resource.md)
++ [Debuglog](/docs/reference/kernel_objects/debuglog.md)
 
 ## Kernel Object and LK
 Some kernel objects wrap one or more LK-level constructs. For example the
@@ -84,4 +84,4 @@ single process can have two different handles to the same object with
 different rights.
 
 ## See Also
-[Handles](handles.md)
+[Handles](/docs/concepts/objects/handles.md)

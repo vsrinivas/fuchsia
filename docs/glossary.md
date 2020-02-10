@@ -146,7 +146,7 @@ datagram-like transport that can transfer small messages including
 [Handles](#handle). [FIDL](#fidl) protocols typically use channels as their
 underlying transport.
 
--   [Channel Overview](/docs/concepts/objects/channel.md)
+-   [Channel Overview](/docs/reference/kernel_objects/channel.md)
 -   [Update Channel Usage Policy](/docs/community/contribute/best-practices/update_channel_usage_policy.md)
 
 #### **Component** {#component}
@@ -478,7 +478,7 @@ A Job is a [kernel object](#kernel-object) that groups a set of related
 Every process in the system belongs to a job and all jobs form a single
 rooted tree.
 
--   [Job Overview](/docs/concepts/objects/job.md)
+-   [Job Overview](/docs/reference/kernel_objects/job.md)
 
 #### **Kernel Object** {#kernel-object}
 
@@ -486,7 +486,7 @@ A kernel object is a kernel data structure which is used to regulate access to
 system resources such as memory, i/o, processor time and access to other
 processes. Userspace can only reference kernel objects via [Handles](#handle).
 
--   [Reference](/docs/concepts/objects/objects.md)
+-   [Reference](/docs/reference/kernel_objects/objects.md)
 
 #### **KOID** {#koid}
 
@@ -581,7 +581,7 @@ of a program as a set of instructions which are executed by one or more
 [threads](#thread) together with a collection of [capabilities](#capability).
 Every process is contained in a [job](#job).
 
--   [Process Overview](/docs/concepts/objects/process.md)
+-   [Process Overview](/docs/reference/kernel_objects/process.md)
 
 #### **Protocol** {#protocol}
 
@@ -734,7 +734,7 @@ presenter component, plus structure and state information read from each story.
 A Thread is a [kernel object](#kernel-object) that represents a time-shared
 CPU execution context. Each thread is contained in a [process](#process).
 
--   [Thread Overview](/docs/concepts/objects/thread.md)
+-   [Thread Overview](/docs/reference/kernel_objects/thread.md)
 
 #### **userboot** {#userboot}
 
@@ -761,7 +761,7 @@ A Virtual Memory Address Range (VMAR) is a Zircon
 [Virtual Memory Objects](#virtual-memory-object) may be mapped into the address
 space of a process.
 
--   [VMAR Overview](/docs/concepts/objects/vm_address_region.md)
+-   [VMAR Overview](/docs/reference/kernel_objects/vm_address_region.md)
 
 #### **Virtual Memory Object** {#virtual-memory-object}
 
@@ -770,7 +770,7 @@ represents a collection of pages (or the potential for pages) which may be read,
 written, mapped into the address space of a process, or shared with another
 process by passing a [Handle](#handle) over a [Channel](#channel).
 
--   [VMO Overview](/docs/concepts/objects/vm_object.md)
+-   [VMO Overview](/docs/reference/kernel_objects/vm_object.md)
 
 #### **Zircon Boot Image** {#zircon-boot-image}
 

@@ -44,7 +44,7 @@ majority of handle types by default. These are **ZX_RIGHT_DUPLICATE**,
 These four rights are referred to as **ZX_RIGHTS_BASIC** when used together.
 
 ## See also
-[Objects](/docs/concepts/objects/objects.md),
+[Objects](/docs/reference/kernel_objects/objects.md),
 [Handles](/docs/concepts/objects/handles.md)
 
 [`zx_channel_write()`]: /docs/reference/syscalls/channel_write.md

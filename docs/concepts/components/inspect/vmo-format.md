@@ -474,6 +474,6 @@ visible before the generation count update is visible.
 
 <!-- xrefs -->
 [buddy]: https://en.wikipedia.org/wiki/Buddy_memory_allocation
-[VMO]: /docs/concepts/objects/vm_object.md
+[VMO]: /docs/reference/kernel_objects/vm_object.md
 [block.h]: /zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/block.h
 

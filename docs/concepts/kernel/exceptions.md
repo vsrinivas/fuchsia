@@ -17,7 +17,7 @@ intercept crashes, [signals](signals.md) may be a better choice.
 Exceptions are handled from userspace by creating an exception channel on a
 task (thread, process, or job) with the [`zx_task_create_exception_channel()`]
 system call. The created handle is a standard Zircon
-[channel](/docs/concepts/objects/channel.md), but is created read-only so can only be used
+[channel](/docs/reference/kernel_objects/channel.md), but is created read-only so can only be used
 for receiving exception messages.
 
 When an exception occurs, the thread is paused and a message containing a

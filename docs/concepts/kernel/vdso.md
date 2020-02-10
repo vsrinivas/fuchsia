@@ -83,7 +83,7 @@ names and thus make system calls.
 ### **PA_VMO_VDSO** handle
 
 The vDSO image is embedded in the kernel at compile time. The kernel
-exposes it to userspace as a read-only [VMO](/docs/concepts/objects/vm_object.md).
+exposes it to userspace as a read-only [VMO](/docs/reference/kernel_objects/vm_object.md).
 
 When a program loader sets up a new process, the only way to make it
 possible for that process to make system calls is for the program loader to

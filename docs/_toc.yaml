@@ -16,6 +16,9 @@ toc:
 - name: "Development"
   contents:
   - include: /docs/development/_toc.yaml
+- name: "Reference"
+  contents:
+  - include: /docs/reference/_toc.yaml
 - name: "Community"
   contents:
   - include: /docs/community/_toc.yaml

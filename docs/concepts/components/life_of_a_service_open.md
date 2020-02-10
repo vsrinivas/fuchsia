@@ -265,7 +265,7 @@ children with `use` declarations; it must use `BindChild()`.
 [binding]: #binding-to-a-component-and-sending-a-service-channel
 
 [handle]: /docs/concepts/objects/handles.md
-[channel]: /docs/concepts/objects/channel.md
+[channel]: /docs/reference/kernel_objects/channel.md
 [namespaces]: /docs/concepts/framework/namespaces.md
 [component-manifests]: component_manifests.md
 [fuchsia.io]: /zircon/system/fidl/fuchsia-io/io.fidl

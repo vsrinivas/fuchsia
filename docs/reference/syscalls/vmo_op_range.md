@@ -34,7 +34,7 @@ zx_status_t zx_vmo_op_range(zx_handle_t handle,
 *buffer* and *buffer_size* are currently unused.
 
 **ZX_VMO_OP_COMMIT** - Commit *size* bytes worth of pages starting at byte *offset* for the VMO.
-More information can be found in the [vm object documentation](/docs/concepts/objects/vm_object.md).
+More information can be found in the [vm object documentation](/docs/reference/kernel_objects/vm_object.md).
 Requires the **ZX_RIGHT_WRITE** right.
 
 **ZX_VMO_OP_DECOMMIT** - Release a range of pages previously committed to the VMO from *offset*

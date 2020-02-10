@@ -38,9 +38,3 @@ toc:
   path: /docs/concepts/kernel/zx_and_lk.md
 - title: "Random number generator"
   path: /docs/concepts/kernel/cprng.md
-- title: "Kernel reference"
-  section:
-  - include: /docs/reference/kernel/_toc.yaml
-- title: "System calls reference"
-  section:
-  - include: /docs/reference/syscalls/_toc.yaml

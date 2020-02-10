@@ -119,7 +119,7 @@ On success, returns **ZX_OK**.
 
 ## SEE ALSO
 
- - [clocks](/docs/concepts/objects/clock.md)
+ - [clocks](/docs/reference/kernel_objects/clock.md)
  - [`zx_clock_create()`]
  - [`zx_clock_get_details()`]
  - [`zx_clock_read()`]

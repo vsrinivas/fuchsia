@@ -63,7 +63,7 @@ audio is not a service provided by the audio stream interface.
 ### Basic Operation
 
 Communication with an audio stream device is performed using messages sent over
-a [channel](/docs/concepts/objects/channel.md). Applications open the device node for a
+a [channel](/docs/reference/kernel_objects/channel.md). Applications open the device node for a
 stream and obtain a channel by issuing a FIDL request. After obtaining the
 channel, the device node may be closed. All subsequent communication with the
 stream occurs using channels.
@@ -85,7 +85,7 @@ In order to actually send or receive audio information on the stream, the
 specific format to be used must first be set. The response to a successful
 `SetFormat` operation will contain a new "ring-buffer" channel. The ring-buffer
 channel may be used to request a shared buffer from the stream (delivered in the
-form of a [VMO](/docs/concepts/objects/vm_object.md)) which may be mapped into the address
+form of a [VMO](/docs/reference/kernel_objects/vm_object.md)) which may be mapped into the address
 space of the application and used to send or receive audio data as appropriate.
 Generally, the operations conducted over the ring buffer channel include:
 
@@ -171,8 +171,8 @@ may be sent to the driver using the
 [zx_channel_write(...)](/docs/reference/syscalls/channel_write.md) syscall. If a response is
 expected, it may be read using the
 [zx_channel_read(...)](/docs/reference/syscalls/channel_read.md) syscall. Best practice,
-however, is to queue packets for your [channel(s)](/docs/concepts/objects/channel.md)
-[port](/docs/concepts/objects/port.md) using the
+however, is to queue packets for your [channel(s)](/docs/reference/kernel_objects/channel.md)
+[port](/docs/reference/kernel_objects/port.md) using the
 [zx_port_queue(...)](/docs/reference/syscalls/port_queue.md) syscall, and use the
 [zx_port_wait(...)](/docs/reference/syscalls/port_wait.md) syscall to determine when your set
 of channels have messages (either expected responses or asynchronous
@@ -632,7 +632,7 @@ message.
 ### Overview
 
 Once an application has successfully set the format of a stream, it receives in
-the response a new [channel](/docs/concepts/objects/channel.md) representing its connection
+the response a new [channel](/docs/reference/kernel_objects/channel.md) representing its connection
 to the stream's ring-buffer. Clients use the ring-buffer channel to establish a
 shared memory buffer and start/stop playback/capture of audio stream data.
 
@@ -715,7 +715,7 @@ consider the existing buffer is has to be invalid. Success or failure, the old
 buffer is now gone.
 
 If the request succeeds, the driver **must** return a handle to a
-[VMO](/docs/concepts/objects/vm_object.md) with permissions which allow applications to map
+[VMO](/docs/reference/kernel_objects/vm_object.md) with permissions which allow applications to map
 the VMO into their address space using [zx_vmar_map](/docs/reference/syscalls/vmar_map.md),
 and to read/write data in the buffer in the case of playback, or simply to read
 the data in the buffer in the case of capture. Additionally, the driver **must**

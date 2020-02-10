@@ -27,7 +27,7 @@ sending messages to other processes), and then go back to sleep in their event
 loop.
 
 The fundamental building block for event loops in Fuchsia is the
-[port](/docs/concepts/objects/port.md)
+[port](/docs/reference/kernel_objects/port.md)
 object. A thread can sleep in a port using
 [`zx_port_wait`](/docs/reference/syscalls/port_wait.md).
 When the kernel wakes up the thread, the kernel provides a *packet*, which is a
@@ -63,7 +63,7 @@ using
 The Zircon kernel itself largely provides memory management, scheduling, and
 interprocess communication. Rather than being provided directly by the kernel,
 the bulk of the system interface is actually provided through interprocess
-communication, typically using [channels](/docs/concepts/objects/channel.md).
+communication, typically using [channels](/docs/reference/kernel_objects/channel.md).
 The protocols used for interprocess communication are defined in
 [Fuchsia Interface Definition Language (FIDL)](../fidl/README.md).
 

@@ -2,59 +2,9 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Bus transaction initiator"
-  path: /docs/concepts/objects/bus_transaction_initiator.md
-- title: "Channel"
-  path: /docs/concepts/objects/channel.md
-- title: "Clock overview"
-  path: /docs/concepts/objects/clock.md
-- title: "Clock Transformations"
-  path: /docs/concepts/objects/clock_transformations.md
 - title: "Handles"
   path: /docs/concepts/objects/handles.md
-- title: "Kernel objects"
-  path: /docs/concepts/objects/objects.md
-- title: "Log"
-  path: /docs/concepts/objects/debuglog.md
-- title: "Event"
-  path: /docs/concepts/objects/event.md
-- title: "Event pair"
-  path: /docs/concepts/objects/eventpair.md
-- title: "FIFO"
-  path: /docs/concepts/objects/fifo.md
-- title: "Futex"
-  path: /docs/concepts/objects/futex.md
-- title: "Interrupts"
-  path: /docs/concepts/objects/interrupts.md
-- title: "Job"
-  path: /docs/concepts/objects/job.md
-- title: "Pager"
-  path: /docs/concepts/objects/pager.md
-- title: "Pinned memory token"
-  path: /docs/concepts/objects/pinned_memory_token.md
-- title: "Port"
-  path: /docs/concepts/objects/port.md
-- title: "Process"
-  path: /docs/concepts/objects/process.md
-- title: "Profile"
-  path: /docs/concepts/objects/profile.md
-- title: "Resource"
-  path: /docs/concepts/objects/resource.md
-- title: "Socket"
-  path: /docs/concepts/objects/socket.md
-- title: "Stream"
-  path: /docs/concepts/objects/stream.md
-- title: "Task"
-  path: /docs/concepts/objects/task.md
-- title: "Thread"
-  path: /docs/concepts/objects/thread.md
-- title: "Time units"
-  path: /docs/concepts/objects/time.md
-- title: "Timer"
-  path: /docs/concepts/objects/timer.md
+- title: "Clock Transformations"
+  path: /docs/concepts/objects/clock_transformations.md
 - title: "Timer Slack"
   path: /docs/concepts/objects/timer_slack.md
-- title: "Virtual memory address region"
-  path: /docs/concepts/objects/vm_address_region.md
-- title: "Virtual memory object"
-  path: /docs/concepts/objects/vm_object.md

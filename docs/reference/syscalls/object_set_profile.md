@@ -28,7 +28,7 @@ The parameter *profile* is a handle to a [profile] object created with
 
 *options* is currently ignored, and should be set to `0` by callers.
 
-[profile]: /docs/concepts/objects/profile.md
+[profile]: /docs/reference/kernel_objects/profile.md
 
 ## RIGHTS
 

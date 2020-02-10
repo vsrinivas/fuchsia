@@ -57,7 +57,7 @@ Magma supports multiple contexts per connection; this is to allow for more than 
 When a client connection is closed, to avoid gpu fault the address space must remain alive while gpu is executing work using that address space; therefore, context takes a shared reference on the address space.
 
 ### Buffers and Mappings
-Currently Magma requires a unified memory architecture, as is the case with most mobile hardware, where cpu and gpu access the same physical memory.   Magma buffers are just zircon virtual memory objects ([VMOs](/docs/concepts/objects/vm_object.md)). Client drivers allocate buffers and register those buffers with the system driver.
+Currently Magma requires a unified memory architecture, as is the case with most mobile hardware, where cpu and gpu access the same physical memory.   Magma buffers are just zircon virtual memory objects ([VMOs](/docs/reference/kernel_objects/vm_object.md)). Client drivers allocate buffers and register those buffers with the system driver.
 
 Gpu address space management may be performed by the client or by the system driver. The client driver design may dictate the model.
 
@@ -76,7 +76,7 @@ Pre-emption of inflight command buffers, if supported by hardware, can be used t
 
 ### Semaphores
 
-Magma provides semaphores as a general signalling mechanism that can be used to implement Vulkan fences and semaphores.  Magma semaphores are built on zircon [events](/docs/concepts/objects/event.md).
+Magma provides semaphores as a general signalling mechanism that can be used to implement Vulkan fences and semaphores.  Magma semaphores are built on zircon [events](/docs/reference/kernel_objects/event.md).
 
 ### Summary of object ownership
 * Client: owns connections; shared ownership of buffers, mappings, contexts

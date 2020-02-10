@@ -66,7 +66,7 @@ is used for detached threads.
 
 ## SEE ALSO
 
- - [futex objects](/docs/concepts/objects/futex.md)
+ - [futex objects](/docs/reference/kernel_objects/futex.md)
  - [`zx_futex_wake()`]
  - [`zx_handle_close()`]
  - [`zx_thread_exit()`]
