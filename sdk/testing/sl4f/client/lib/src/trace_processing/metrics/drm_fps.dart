@@ -59,6 +59,21 @@ class _AdjacentPairIterator<T, U> extends Iterator<U> {
   U get current => _current;
 }
 
+/// Compute a list of DRM FPS values for [events] that eventually link to
+/// display driver VSYNC events.
+List<double> _computeDrmFpsValues(Iterable<DurationEvent> events) {
+  final vsyncs = events
+      .map(findFollowingVsync)
+      .where((e) => e != null)
+      .toSet()
+      .toList()
+        ..sort((a, b) => a.start.compareTo(b.start));
+  return _AdjacentPairIterable(vsyncs, (a, b) => (b.start - a.start))
+      .where((x) => x < TimeDelta.fromSeconds(1))
+      .map((x) => 1.0 / x.toSecondsF())
+      .toList();
+}
+
 List<TestCaseResults> drmFpsMetricsProcessor(
     Model model, MetricsSpec metricsSpec) {
   if (metricsSpec.name != 'drm_fps') {
@@ -93,19 +108,18 @@ List<TestCaseResults> drmFpsMetricsProcessor(
     }
 
     final uiThread = uiThreads.first;
+    final vsyncCallbackEvents = filterEventsTyped<DurationEvent>(
+        uiThread.events,
+        category: 'flutter',
+        name: 'vsync callback');
+    if (vsyncCallbackEvents.length < 2) {
+      throw ArgumentError(
+          'Error, only found ${vsyncCallbackEvents.length} "vsync callback" '
+          'events in trace, and expected to find at least 2');
+    }
 
-    final vsyncs = filterEventsTyped<DurationEvent>(uiThread.events,
-            category: 'flutter', name: 'vsync callback')
-        .map(findFollowingVsync)
-        .where((e) => e != null)
-        .toSet()
-        .toList()
-          ..sort((a, b) => a.start.compareTo(b.start));
-    final drmFpsValues =
-        _AdjacentPairIterable(vsyncs, (a, b) => (b.start - a.start))
-            .where((x) => x < TimeDelta.fromSeconds(1))
-            .map((x) => 1.0 / x.toSecondsF())
-            .toList();
+    final drmFpsValues = _computeDrmFpsValues(vsyncCallbackEvents);
+    assert(drmFpsValues.isNotEmpty);
 
     // In a better world, we would not need to separately export percentiles
     // of the list of DRM FPS values.  Unfortunately though, our performance
@@ -144,4 +158,59 @@ List<TestCaseResults> drmFpsMetricsProcessor(
   throw ArgumentError(
       'Failed to find any matching flutter process in $model for flutter app '
       'name $flutterAppName');
+}
+
+// System DRM FPS is similar to the DRM FPS metric above, however instead of
+// measuring FPS for a single application in isolation, measures FPS across the
+// whole system, by examining only the system compositor.  This has the notable
+// downside of producing overly optimistic FPS values when separate applications
+// are rendering at below refresh rate, but happen to submit their frames to
+// different vsync intervals.
+//
+// As an extreme example, suppose 2 applications rendered like:
+//
+//        App-A: [  Frame, Nothing,   Frame, Nothing, ...]
+//        App-B: [Nothing,   Frame, Nothing,   Frame, ...]
+//   Compositor: [  Frame,   Frame,   Frame,   Frame, ...]
+//
+// In this case, the system DRM FPS would be (suppose a 60hz refresh rate) 60,
+// however each application would be rendering at 30 FPS.
+//
+// As is the case with DRM FPS itself, this metric is primarily implemented for
+// purpose of comparison with other platforms that implement an analogous (and
+// most importantly, comparable) metric.
+
+List<TestCaseResults> systemDrmFpsMetricsProcessor(
+    Model model, MetricsSpec metricsSpec) {
+  if (metricsSpec.name != 'system_drm_fps') {
+    throw ArgumentError(
+        'Error, unexpected metrics name "${metricsSpec.name}" in '
+        'systemDrmFpsMetricsProcessor');
+  }
+
+  final renderFrameEvents = filterEventsTyped<DurationEvent>(
+      getAllEvents(model),
+      category: 'gfx',
+      name: 'RenderFrame');
+  if (renderFrameEvents.length < 2) {
+    throw ArgumentError(
+        'Error, only found ${renderFrameEvents.length} "RenderFrame" events in '
+        'trace, and expected to find at least 2');
+  }
+
+  final drmFpsValues = _computeDrmFpsValues(renderFrameEvents);
+  assert(drmFpsValues.isNotEmpty);
+
+  // Export percentiles as separate metrics.  See the comment above in
+  // [drmFpsMetricsProcessor] for an explanation of why this is done.
+  final p10 = computePercentile(drmFpsValues, 10);
+  final p50 = computePercentile(drmFpsValues, 50);
+  final p90 = computePercentile(drmFpsValues, 90);
+
+  return [
+    TestCaseResults('system_drm_fps', Unit.framesPerSecond, drmFpsValues),
+    TestCaseResults('system_drm_fps_p10', Unit.framesPerSecond, [p10]),
+    TestCaseResults('system_drm_fps_p50', Unit.framesPerSecond, [p50]),
+    TestCaseResults('system_drm_fps_p90', Unit.framesPerSecond, [p90]),
+  ];
 }

@@ -423,6 +423,17 @@ void main(List<String> args) {
     expect(results[3].values[0], _closeTo(60.025630989830326));
   });
 
+  test('System DRM FPS metric', () async {
+    final model = createModelFromJsonString(flutterAppTraceJsonString);
+    final metricsSpec = MetricsSpec(name: 'system_drm_fps');
+    final results = systemDrmFpsMetricsProcessor(model, metricsSpec);
+
+    expect(computeMean(results[0].values), _closeTo(58.80063339525843));
+    expect(results[1].values[0], _closeTo(59.97681878050269));
+    expect(results[2].values[0], _closeTo(60.000150000375));
+    expect(results[3].values[0], _closeTo(60.0252706908439));
+  });
+
   test('CPU metric', () async {
     final model = createModelFromJsonString(testCpuMetricJsonString);
     final metricsSpec = MetricsSpec(name: 'cpu');
