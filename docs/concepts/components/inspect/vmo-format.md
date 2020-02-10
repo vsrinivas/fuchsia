@@ -96,7 +96,20 @@ We use 28 bits for indexes, so Inspect Files may be at most 4GiB.
 
 A `block_header` consists of 16 bytes as follows:
 
-![Figure: Block header organization](blockheader.png)
+```
+.---------------------------------------------------------------.
+|       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
+|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
+|---+---+-------+-----------------------------------------------|
+| O | R | Type  |                                               |
+|---------------------------------------------------------------|
+|                                                               |
+'---------------------------------------------------------------'
+
+O = Order
+R = Reserved, must be 0
+The rest (left blank) depends on the payload
+```
 
 Each block has an `order`, specifying its size.
 
@@ -170,7 +183,21 @@ Each type interprets the payload differently, as follows:
 
 ## FREE {#free}
 
-![Figure: Free block](freeblock.png)
+```
+.---------------------------------------------------------------.
+|       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
+|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
+|---+---+-------+-----------------------+-----------------------|
+| O | R | Type  | Next free block       |                       |
+|---------------------------------------------------------------|
+|                                                               |
+'---------------------------------------------------------------'
+
+O = Order
+R = Reserved, must be 0
+Type = 0
+Next free block = index (optional)
+```
 
 A `FREE` block is available for allocation. Importantly, the zero-valued
 block (16 bytes of `\0`) is interpreted as a `FREE` block of order 0,
@@ -189,7 +216,20 @@ points to a location that is either not `FREE` or not of the same order
 
 ## RESERVED {#reserved}
 
-![Figure: Reserved block](reservedblock.png)
+```
+.---------------------------------------------------------------.
+|       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
+|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
+|---+---+-------+-----------------------------------------------|
+| O | R | Type  |                                               |
+|---------------------------------------------------------------|
+|                                                               |
+'---------------------------------------------------------------'
+
+O = Order
+R = Reserved, must be 0
+Type = 1
+```
 
 `RESERVED` blocks are simply available to be changed to a different
 type.  It is an optional transitional state between the allocation of a
@@ -199,29 +239,47 @@ not treated as free).
 
 ## HEADER {#header}
 
-![Figure: Header block](headerblock.png)
+```
+.---------------------------------------------------------------.
+|       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
+|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
+|---+---+-------+---------------+-------------------------------|
+| O | R | Type  | Version       | Magic number                  |
+|---------------------------------------------------------------|
+| Generation count                                              |
+'---------------------------------------------------------------'
+
+O = Order
+R = Reserved, must be 0
+Type = 2
+Version = 1
+Magic number = "INSP"
+```
 
 There must be one `HEADER` block at the beginning of the file. It consists
-of a **Magic Number** ("INSP"), a **Version** (currently 0), and the
+of a **Magic Number** ("INSP"), a **Version** (currently 1), and the
 **Generation Count** for concurrency control. The first byte of the header
 must not be a valid ASCII character.
 
 See the [next section](#concurrency) for how concurrency control must be
 implemented using the generation count.
 
-## \*\_VALUE {#value}
-
-![Figure: general value block](generalvalue.png)
-
-Values all start with the same prefix, consisting of the index of the
-parent for the value and the index of the name associated with the value.
-
-The payload is interpreted differently depending on the type of value, as
-below.
-
 ## NODE\_VALUE and TOMBSTONE {#node}
 
-![Figure: Node and Tombstone blocks](objtombblock.png)
+```
+.---------------------------------------------------------------.
+|       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
+|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
+|---+---+-------+-----------------------+-----------------------|
+| O | R | Type  | Parent index          | Name index            |
+|---------------------------------------------------------------|
+| Reference count (optional)                                    |
+'---------------------------------------------------------------'
+
+O = Order
+R = Reserved, must be 0
+Type = {3,10}
+```
 
 Nodes are anchor points for further nesting, and the `ParentID` field
 of values must only refer to blocks of type `NODE_VALUE`.
@@ -255,14 +313,43 @@ Index | Value
 
 ## \{INT,UINT,DOUBLE,BOOL\}\_VALUE {#numeric}
 
-![Figure: Numeric type block](numericblock.png)
+```
+.---------------------------------------------------------------.
+|       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
+|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
+|---+---+-------+-----------------------+-----------------------|
+| O | R | Type  | Parent index          | Name index            |
+|---------------------------------------------------------------|
+| Inlined numeric value                                         |
+'---------------------------------------------------------------'
+
+O = Order
+R = Reserved, must be 0
+Type = {4,5,6,13}
+```
 
 Numeric `VALUE` blocks all contain the 64-bit numeric type inlined into
 the second 8 bytes of the block.
 
 ## PROPERTY\_VALUE {#property}
 
-![Figure: Property value block](stringblock.png)
+```
+.---------------------------------------------------------------.
+|       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
+|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
+|---+---+-------+-----------------------+-----------------------|
+| O | R | Type  | Parent index          | Name index            |
+|---------------------------------------------------------------|
+| Total length                  | Extent index              | F |
+'---------------------------------------------------------------'
+
+O = Order
+R = Reserved, must be 0
+Type = 7
+Total length = size of the string
+Extent index = index of the extent containing bytes for the string
+F = Display format {0,1}
+```
 
 General `PROPERTY_VALUE` blocks reference arbitrary byte data across
 one or more linked `EXTENT` blocks.
@@ -281,7 +368,24 @@ kBinary | 1     | The byte data is arbitrary binary data and may not be printabl
 
 ## EXTENT {#extent}
 
-![Figure: Extent block](extentblock.png)
+```
+.---------------------------------------------------------------.
+|       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
+|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
+|---+---+-------+-----------------------+-----------------------|
+| O | R | Type  | Next extent index     | R                     |
+|---------------------------------------------------------------|
+| Payload                                                       |
+'---------------------------------------------------------------'
+
+O = Order
+R = Reserved, must be 0
+Type = 8
+Next extent index = index of next extent in the chain
+Extent index = index of the extent containing bytes for the string
+Payload = string payload up to at most the end of the block. Size
+          depends on the order
+```
 
 `EXTENT` blocks contain an arbitrary byte data payload and the index of
 the next `EXTENT` in the chain. The byte data for a property is retrieved
@@ -289,14 +393,47 @@ by reading each `EXTENT` in order until **Total Length** bytes are read.
 
 ## NAME {#name}
 
-![Figure: Name block](nameblock.png)
+```
+.---------------------------------------------------------------.
+|       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
+|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
+|---+---+-------+-----------------------------------------------|
+| O | R | Type  | Length    | Reserved                          |
+|---------------------------------------------------------------|
+| Payload                                                       |
+'---------------------------------------------------------------'
+
+O = Order
+R = Reserved, must be 0
+Type = 9
+Payload = contents of the name. Size depends on the order
+```
 
 `NAME` blocks give objects and values a human-readable identifier. They
 consist of a UTF-8 payload that fits entirely within the given block.
 
 ## ARRAY\_VALUE {#array}
 
-![Figure: Array block](arrayblock.png)
+```
+.---------------------------------------------------------------.
+|       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
+|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
+|---+---+-------+-----------------------+-----------------------|
+| O | R | Type  | Parent index          | Name index            |
+|---------------------------------------------------------------|
+| T | F | Count | Reserved                                      |
+|---------------------------------------------------------------|
+| Payload                                                       |
+'---------------------------------------------------------------'
+
+O = Order
+R = Reserved, must be 0
+Type = 11
+T = Type of the stored values {4,5,6}
+F = Display format {0,1,2}
+Count = Count of stored values
+Payload = array of size |count|
+```
 
 `ARRAY_VALUE` blocks contain an array of specifically 64-bit numeric
 values.  The **Stored Value Type** field is interpreted exactly like
@@ -356,7 +493,22 @@ N+4:   [floor + initial_step * step_multiplier^N, +inf)
 
 ## LINK\_VALUE {#link}
 
-![Figure: Link block](linkblock.png)
+```
+.---------------------------------------------------------------.
+|       |1|1|1|1|1|2|2|2|2|2|3|3|3|3|3|4|4|4|4|4|5|5|5|5|5|6|6|6|
+|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|6|8|0|2|4|
+|---+---+-------+-----------------------------------------------|
+| O | R | Type  | Length    | Reserved                          |
+|---------------------------------------------------------------|
+| Content index     |                                       | F |
+'---------------------------------------------------------------'
+
+O = Order
+R = Reserved, must be 0
+Type = 12
+Content index = Index of the content of this link (as a NAME node)
+F = Disposition flags {0,1}
+```
 
 `LINK_VALUE` blocks allow nodes to support children that are present
 in a separate Inspect File.
