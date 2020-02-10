@@ -15,6 +15,7 @@ driver_module("goldfish_driver") {
   ]
 
   deps = [
+    "//sdk/banjo/ddk.protocol.goldfish.pipe",
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/async-loop-cpp",
@@ -31,7 +32,6 @@ driver_module("goldfish_driver") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.acpi",
-    "//zircon/system/banjo/ddk.protocol.goldfish.pipe",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
