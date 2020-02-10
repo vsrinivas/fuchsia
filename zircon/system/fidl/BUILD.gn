@@ -99,7 +99,6 @@ group("fidl") {
     "fuchsia-hardware-hidctl",
 #------------------
 #------------------
-    "fuchsia-hardware-i2c",
 #------------------
 #------------------
     "fuchsia-hardware-input",
