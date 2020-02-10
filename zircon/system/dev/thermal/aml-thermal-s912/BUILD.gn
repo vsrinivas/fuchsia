@@ -24,6 +24,7 @@ driver_module("aml-thermal-s912") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "aml-thermal.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.thermal",
     "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/async-loop",
@@ -38,7 +39,6 @@ driver_module("aml-thermal-s912") {
     "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.scpi",
-    "//zircon/system/banjo/ddk.protocol.thermal",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
   ]
 }
@@ -54,6 +54,7 @@ test("aml-thermal-s912-test") {
     "aml-thermal.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.thermal",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
@@ -71,7 +72,6 @@ test("aml-thermal-s912-test") {
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/banjo/ddk.protocol.scpi:ddk.protocol.scpi_mock",
-    "//zircon/system/banjo/ddk.protocol.thermal",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
   ]
 }

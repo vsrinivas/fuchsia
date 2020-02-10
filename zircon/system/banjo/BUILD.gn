@@ -176,7 +176,6 @@ group("banjo") {
     "ddk.protocol.test",
 #------------------
 #------------------
-    "ddk.protocol.thermal",
 #------------------
 #------------------
     "ddk.protocol.usb",
