@@ -231,7 +231,6 @@ group("fidl") {
     "fuchsia-telephony-snoop",
 #------------------
 #------------------
-    "fuchsia-tracing-kernel",
 #------------------
 #------------------
     "fuchsia-tracing-provider",

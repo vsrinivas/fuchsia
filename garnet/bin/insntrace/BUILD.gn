@@ -31,11 +31,11 @@ executable("bin") {
     #"//src/lib/files",
     #"//src/lib/fsl",
     "//sdk/fidl/fuchsia.hardware.cpu.insntrace",
+    "//sdk/fidl/fuchsia.tracing.kernel:fuchsia.tracing.kernel",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/system/fidl/fuchsia-tracing-kernel:fuchsia-tracing-kernel",
   ]
 
   libs = [ "zircon" ]
