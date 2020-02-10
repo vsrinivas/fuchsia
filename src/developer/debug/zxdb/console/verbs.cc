@@ -7,6 +7,7 @@
 #include "src/developer/debug/zxdb/console/commands/verb_aspace.h"
 #include "src/developer/debug/zxdb/console/commands/verb_attach.h"
 #include "src/developer/debug/zxdb/console/commands/verb_attach_job.h"
+#include "src/developer/debug/zxdb/console/commands/verb_auth.h"
 #include "src/developer/debug/zxdb/console/commands/verb_break.h"
 #include "src/developer/debug/zxdb/console/commands/verb_clear.h"
 #include "src/developer/debug/zxdb/console/commands/verb_cls.h"
@@ -19,6 +20,7 @@
 #include "src/developer/debug/zxdb/console/commands/verb_help.h"
 #include "src/developer/debug/zxdb/console/commands/verb_kill.h"
 #include "src/developer/debug/zxdb/console/commands/verb_libs.h"
+#include "src/developer/debug/zxdb/console/commands/verb_list.h"
 #include "src/developer/debug/zxdb/console/commands/verb_mem_analyze.h"
 #include "src/developer/debug/zxdb/console/commands/verb_mem_read.h"
 #include "src/developer/debug/zxdb/console/commands/verb_opendump.h"
@@ -30,6 +32,10 @@
 #include "src/developer/debug/zxdb/console/commands/verb_status.h"
 #include "src/developer/debug/zxdb/console/commands/verb_stderr.h"
 #include "src/developer/debug/zxdb/console/commands/verb_stdout.h"
+#include "src/developer/debug/zxdb/console/commands/verb_sym_info.h"
+#include "src/developer/debug/zxdb/console/commands/verb_sym_near.h"
+#include "src/developer/debug/zxdb/console/commands/verb_sym_search.h"
+#include "src/developer/debug/zxdb/console/commands/verb_sym_stat.h"
 #include "src/developer/debug/zxdb/console/commands/verb_sys_info.h"
 #include "src/developer/debug/zxdb/console/commands/verb_watch.h"
 #include "src/lib/fxl/logging.h"
@@ -86,12 +92,12 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
   if (all_verbs.empty()) {
     AppendSettingsVerbs(&all_verbs);
     AppendSharedVerbs(&all_verbs);
-    AppendSymbolVerbs(&all_verbs);
     AppendThreadVerbs(&all_verbs);
 
     all_verbs[Verb::kAspace] = GetAspaceVerbRecord();
     all_verbs[Verb::kAttach] = GetAttachVerbRecord();
     all_verbs[Verb::kAttachJob] = GetAttachJobVerbRecord();
+    all_verbs[Verb::kAuth] = GetAuthVerbRecord();
     all_verbs[Verb::kBreak] = GetBreakVerbRecord();
     all_verbs[Verb::kClear] = GetClearVerbRecord();
     all_verbs[Verb::kCls] = GetClsVerbRecord();
@@ -104,6 +110,7 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     all_verbs[Verb::kHelp] = GetHelpVerbRecord();
     all_verbs[Verb::kKill] = GetKillVerbRecord();
     all_verbs[Verb::kLibs] = GetLibsVerbRecord();
+    all_verbs[Verb::kList] = GetListVerbRecord();
     all_verbs[Verb::kListProcesses] = GetPsVerbRecord();
     all_verbs[Verb::kMemAnalyze] = GetMemAnalyzeVerbRecord();
     all_verbs[Verb::kMemRead] = GetMemReadVerbRecord();
@@ -114,6 +121,10 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     all_verbs[Verb::kStatus] = GetStatusVerbRecord();
     all_verbs[Verb::kStdout] = GetStdoutVerbRecord();
     all_verbs[Verb::kStderr] = GetStderrVerbRecord();
+    all_verbs[Verb::kSymInfo] = GetSymInfoVerbRecord();
+    all_verbs[Verb::kSymNear] = GetSymNearVerbRecord();
+    all_verbs[Verb::kSymSearch] = GetSymSearchVerbRecord();
+    all_verbs[Verb::kSymStat] = GetSymStatVerbRecord();
     all_verbs[Verb::kSysInfo] = GetSysInfoVerbRecord();
     all_verbs[Verb::kStack] = GetStackVerbRecord();
     all_verbs[Verb::kWatch] = GetWatchVerbRecord();

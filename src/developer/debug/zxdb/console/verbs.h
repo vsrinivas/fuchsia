@@ -177,7 +177,6 @@ const std::map<std::string, Verb>& GetStringVerbMap();
 // These functions add records for the verbs they support to the given map.
 void AppendSettingsVerbs(std::map<Verb, VerbRecord>* verbs);
 void AppendSharedVerbs(std::map<Verb, VerbRecord>* verbs);
-void AppendSymbolVerbs(std::map<Verb, VerbRecord>* verbs);
 void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs);
 
 }  // namespace zxdb
