@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/banjo.gni")
+import("//build/banjo/banjo.gni")
 
-banjo_library("ddk.protocol.mipicsi") {
+banjo("ddk.protocol.mipicsi") {
   sources = [ "mipicsi.banjo" ]
-  public_deps = [ "$zx/system/banjo/ddk.protocol.camerasensor" ]
+  deps = [ "//zircon/system/banjo/ddk.protocol.camerasensor" ]
 }
