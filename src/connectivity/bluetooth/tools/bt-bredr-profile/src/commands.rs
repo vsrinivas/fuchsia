@@ -73,6 +73,7 @@ macro_rules! gen_commands {
 
 gen_commands! {
     Cmd {
+        Channels = ("channels", [], "List connected channels and their Ids assigned by the REPL"),
         ConnectL2cap = ("connect-l2cap", ["peer-id", "psm", "channel-mode", "max-rx-sdu-size"],
                         "\n\t\tCreate an l2cap channel to the remote device 'peer-id'. \n\
                          \t\t'channel-mode' must be {basic|ertm}. 'psm' and 'max-rx-sdu-size' must be\n\
