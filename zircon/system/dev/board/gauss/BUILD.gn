@@ -35,7 +35,7 @@ driver_module("gauss") {
     "gauss.c",
   ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/designware",
@@ -61,7 +61,7 @@ driver_module("gauss-i2c-test") {
   }
   sources = [ "gauss-i2c-test.c" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/device-protocol-i2c",
     "//zircon/public/lib/sync",

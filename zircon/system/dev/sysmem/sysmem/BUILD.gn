@@ -76,7 +76,7 @@ driver_module("sysmem") {
   sources = [ "binding.cc" ]
   deps = [
     ":sysmem_common_srcs",
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
   ]
 }
 

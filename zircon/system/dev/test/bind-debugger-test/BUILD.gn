@@ -26,7 +26,7 @@ driver_module("bind-debugger-test") {
   }
   sources = [ "bind-debugger-test.cc" ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
   ]
 }

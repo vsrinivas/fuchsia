@@ -42,7 +42,7 @@ driver_module("vim2") {
     "vim.cc",
   ]
   deps = [
-    "//src/devices:driver",
+    "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/broadcom",
     "//zircon/public/lib/ddk",
