@@ -225,7 +225,6 @@ group("banjo") {
     "zircon.device.block",
 #------------------
 #------------------
-    "zircon.device.camera",
 #------------------
 #------------------
     "zircon.device.nand",
