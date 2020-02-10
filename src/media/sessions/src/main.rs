@@ -5,6 +5,7 @@
 #![recursion_limit = "512"]
 
 mod id;
+mod interrupter;
 mod proxies;
 mod services;
 #[cfg(test)]
