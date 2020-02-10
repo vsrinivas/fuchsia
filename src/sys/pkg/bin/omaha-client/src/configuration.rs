@@ -96,6 +96,9 @@ pub async fn get_app_set(
 }
 
 pub fn get_config(version: &str) -> Config {
+    // This file does not exist in production, it is only used in integration/e2e testing.
+    let service_url = fs::read_to_string("/config/data/omaha_url")
+        .unwrap_or("https://clients2.google.com/service/update2/fuchsia/json".to_string());
     Config {
         updater: Updater { name: "Fuchsia".to_string(), version: Version::from([0, 0, 1, 0]) },
 
@@ -106,7 +109,7 @@ pub fn get_config(version: &str) -> Config {
             arch: std::env::consts::ARCH.to_string(),
         },
 
-        service_url: "https://clients2.google.com/service/update2/fuchsia/json".to_string(),
+        service_url,
     }
 }
 

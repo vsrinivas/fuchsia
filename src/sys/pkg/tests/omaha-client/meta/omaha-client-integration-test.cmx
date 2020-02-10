@@ -1,10 +1,21 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.posix.socket.Provider"
+            ]
+        }
+    },
     "program": {
         "binary": "test/omaha-client-integration-test"
     },
     "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
+            "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader"
