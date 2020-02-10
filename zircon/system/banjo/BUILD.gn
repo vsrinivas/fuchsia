@@ -138,7 +138,6 @@ group("banjo") {
     "ddk.protocol.pwm",
 #------------------
 #------------------
-    "ddk.protocol.rawnand",
 #------------------
 #------------------
     "ddk.protocol.scpi",

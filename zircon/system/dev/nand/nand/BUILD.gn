@@ -23,18 +23,18 @@ driver_module("nand") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "nand.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.rawnand",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/dev-operation",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
-    "//zircon/public/lib/dev-operation",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.nand",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/banjo/ddk.protocol.rawnand",
     "//zircon/system/fidl/fuchsia-hardware-nand:c",
   ]
 }
