@@ -14,6 +14,7 @@ if (target_cpu == "x64") {
     sources = [ "thermd.cc" ]
 
     deps = [
+      "//sdk/fidl/fuchsia.hardware.gpu.clock:fuchsia.hardware.gpu.clock_c_client",
       "//zircon/public/lib/async",
       "//zircon/public/lib/async-default",
       "//zircon/public/lib/async-loop-cpp",
@@ -27,7 +28,6 @@ if (target_cpu == "x64") {
       "//zircon/public/lib/zx",
       "//zircon/system/banjo/ddk.protocol.scpi",
       "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
-      "//zircon/system/fidl/fuchsia-hardware-gpu-clock:fuchsia-hardware-gpu-clock_c_client",
       "//zircon/system/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal_c",
     ]
   }
@@ -40,6 +40,7 @@ if (target_cpu == "arm64") {
     with_unit_tests = true
 
     deps = [
+      "//sdk/fidl/fuchsia.hardware.gpu.clock:fuchsia.hardware.gpu.clock-rustc",
       "//src/lib/fdio/rust:fdio",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",
@@ -48,7 +49,6 @@ if (target_cpu == "arm64") {
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:thiserror",
-      "//zircon/system/fidl/fuchsia-hardware-gpu-clock:fuchsia-hardware-gpu-clock-rustc",
       "//zircon/system/fidl/fuchsia-hardware-thermal:fuchsia-hardware-thermal-rustc",
     ]
   }

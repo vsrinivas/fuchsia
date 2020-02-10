@@ -28,6 +28,7 @@ driver_module("aml-gpu") {
     "aml-s905d2g.c",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.gpu.clock:fuchsia.hardware.gpu.clock_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
@@ -38,7 +39,6 @@ driver_module("aml-gpu") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.scpi",
-    "//zircon/system/fidl/fuchsia-hardware-gpu-clock:c",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
   ]
 }
