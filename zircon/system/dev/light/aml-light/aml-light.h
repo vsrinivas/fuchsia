@@ -70,6 +70,36 @@ class AmlLight : public AmlLightType,
   void GetRgbValue(uint32_t index, GetRgbValueCompleter::Sync completer);
   void SetRgbValue(uint32_t index, Rgb value, SetRgbValueCompleter::Sync completer);
 
+  void GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync completer) {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
+  }
+  void GetGroupCurrentSimpleValue(uint32_t group_id,
+                                  GetGroupCurrentSimpleValueCompleter::Sync completer) {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED, ::fidl::VectorView<bool>(nullptr, 0));
+  }
+  void SetGroupSimpleValue(uint32_t group_id, ::fidl::VectorView<bool> values,
+                           SetGroupSimpleValueCompleter::Sync completer) {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
+  void GetGroupCurrentBrightnessValue(uint32_t group_id,
+                                      GetGroupCurrentBrightnessValueCompleter::Sync completer) {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED, ::fidl::VectorView<uint8_t>(nullptr, 0));
+  }
+  void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<uint8_t> values,
+                               SetGroupBrightnessValueCompleter::Sync completer) {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
+  void GetGroupCurrentRgbValue(uint32_t group_id,
+                               GetGroupCurrentRgbValueCompleter::Sync completer) {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED,
+                    ::fidl::VectorView<::llcpp::fuchsia::hardware::light::Rgb>(nullptr, 0));
+  }
+  void SetGroupRgbValue(uint32_t group_id,
+                        ::fidl::VectorView<::llcpp::fuchsia::hardware::light::Rgb> values,
+                        SetGroupRgbValueCompleter::Sync completer) {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
+
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(AmlLight);
   friend class FakeAmlLight;

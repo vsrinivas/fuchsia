@@ -23,7 +23,7 @@ driver_module("gpio-light") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "gpio-light.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_c",
+    "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",

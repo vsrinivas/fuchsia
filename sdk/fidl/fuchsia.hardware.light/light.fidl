@@ -3,16 +3,19 @@
 // found in the LICENSE file.
 
 library fuchsia.hardware.light;
+
 using zx;
 
 const uint8 LIGHT_NAME_LEN = 32;
 
 enum Capability {
-    // This capability indicates that the light supports setting brightness to a uint8_t value.
-    // If this capability is not supported, the light only supports off and on state.
+    /// This capability indicates that the light supports setting brightness to a uint8_t value.
+    /// If this capability is not supported, the light only supports off and on state.
     BRIGHTNESS = 0;
-    // This capability indicates that the light supports setting an RGB value.
+    /// This capability indicates that the light supports setting an RGB value.
     RGB = 1;
+    /// No capabilities
+    SIMPLE = 2;
 };
 
 struct Rgb {
@@ -21,36 +24,80 @@ struct Rgb {
     uint8 blue;
 };
 
-[Layout = "Simple"]
+struct GroupInfo {
+    string:LIGHT_NAME_LEN name;
+    uint32 count;
+    Capability capability;
+};
+
 protocol Light {
-    // Returns a board specific name for the light.
-    // For example, "mute" for a microphone mute indicator light, "bluetooth" for
-    // Bluetooth pairing light, etc.
+    /// Returns a board specific name for the light.
+    /// For example, "mute" for a microphone mute indicator light, "bluetooth" for
+    /// Bluetooth pairing light, etc.
     GetName(uint32 index) -> (zx.status status, string:LIGHT_NAME_LEN? name);
 
-    // Returns the number of physical lights.
-    // This will typically be 1 for a simple LED, but may be greater than one for an array of LEDs
-    // or a more complicated lighting device.
-    // The multiple lights are addressed using "index" parameter in the calls below.
+    /// Returns the total number of physical lights.
+    /// This will typically be 1 for a simple LED, but may be greater than one for an array of LEDs
+    /// or a more complicated lighting device.
+    /// The multiple lights are addressed using "index" parameter in the calls below.
     GetCount() -> (uint32 count);
 
-    // Returns true if the light with given index
+    /// Returns true if the light with given index
     HasCapability(uint32 index, Capability capability) -> (zx.status status, bool has);
 
-    // Returns the current value (zero or non-zero for simple lights, or 0 - 255 for lights
-    // that support brightness). Returns error for RGB lights.
+    /// Returns the current value (zero or non-zero for simple lights, or 0 - 255 for lights
+    /// that support brightness). Returns error for RGB lights.
     GetSimpleValue(uint32 index) -> (zx.status status, uint8 value);
 
-    // Sets the current value (zero or non-zero for simple lights, or 0 - 255 for lights
-    // that support brightness). Returns error for RGB lights.
+    /// Sets the current value (zero or non-zero for simple lights, or 0 - 255 for lights
+    /// that support brightness). Returns error for RGB lights.
     SetSimpleValue(uint32 index, uint8 value) -> (zx.status status);
 
-    // Returns the current RGB value for the light. Returns error for non-RGB lights.
+    /// Returns the current RGB value for the light. Returns error for non-RGB lights.
     GetRgbValue(uint32 index) -> (zx.status status, Rgb value);
 
-    // Sets the current RGB value for the light. Returns error for non-RGB lights.
+    /// Sets the current RGB value for the light. Returns error for non-RGB lights.
     SetRgbValue(uint32 index, Rgb value) -> (zx.status status);
 
-    // TODO: Ideas for future expansion
-    // - Hardware blinking configuration, for lights that have hardware or MCU support for blinking.
+    /// Returns group info for the light group.
+    GetGroupInfo(uint32 group_id) -> (zx.status status, GroupInfo? info);
+
+    /// Returns an array of the current values (bool for on/off).
+    /// If group_id is invalid, ZX_ERR_INVALID_ARGS will be returned.
+    /// If the capability 'SIMPLE' is not supported by this group, returns ZX_ERR_NOT_SUPPORTED.
+    /// Use GetGroupInfo to check if group supports this operation.
+    GetGroupCurrentSimpleValue(uint32 group_id) -> (zx.status status, vector<bool>:MAX? values);
+
+    /// Sets the current values (bool for on/off) through the values array.
+    /// If group_id is invalid, ZX_ERR_INVALID_ARGS will be returned.
+    /// If the capability 'SIMPLE' is not supported by this group, returns ZX_ERR_NOT_SUPPORTED.
+    /// Use GetGroupInfo to check if group supports this operation.
+    SetGroupSimpleValue(uint32 group_id, vector<bool>:MAX values) -> (zx.status status);
+
+    /// Returns an array of the current values (0 - 255).
+    /// If group_id is invalid, ZX_ERR_INVALID_ARGS will be returned.
+    /// If the capability 'BRIGHTNESS' is not supported by this group, returns ZX_ERR_NOT_SUPPORTED.
+    /// Use GetGroupInfo to check if group supports this operation.
+    GetGroupCurrentBrightnessValue(uint32 group_id) -> (zx.status status, vector<uint8>:MAX? values);
+
+    /// Sets the current values (0 - 255) through the values array.
+    /// If group_id is invalid, ZX_ERR_INVALID_ARGS will be returned.
+    /// If the capability 'BRIGHTNESS' is not supported by this group, returns ZX_ERR_NOT_SUPPORTED.
+    /// Use GetGroupInfo to check if group supports this operation.
+    SetGroupBrightnessValue(uint32 group_id, vector<uint8>:MAX values) -> (zx.status status);
+
+    /// Returns an array of the current RGB values for the light group.
+    /// If group_id is invalid, ZX_ERR_INVALID_ARGS will be returned.
+    /// If the capability 'RGB' is not supported by this group, returns ZX_ERR_NOT_SUPPORTED.
+    /// Use GetGroupInfo to check if group supports this operation.
+    GetGroupCurrentRgbValue(uint32 group_id) -> (zx.status status, vector<Rgb>:MAX? values);
+
+    /// Sets the current RGB value for the light group.
+    /// If group_id is invalid, ZX_ERR_INVALID_ARGS will be returned.
+    /// If the capability 'RGB' is not supported by this group, returns ZX_ERR_NOT_SUPPORTED.
+    /// Use GetGroupInfo to check if group supports this operation.
+    SetGroupRgbValue(uint32 group_id, vector<Rgb>:MAX values) -> (zx.status status);
+
+    /// TODO: Ideas for future expansion
+    /// - Hardware blinking configuration, for lights that have hardware or MCU support for blinking.
 };

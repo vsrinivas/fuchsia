@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIGHT_LP50XX_LIGHT_LP50XX_LIGHT_H_
+#define ZIRCON_SYSTEM_DEV_LIGHT_LP50XX_LIGHT_LP50XX_LIGHT_H_
 
 #include <fuchsia/hardware/light/llcpp/fidl.h>
 #include <lib/device-protocol/i2c.h>
@@ -50,6 +51,36 @@ class Lp50xxLight : public Lp50xxLightType,
   void SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::Rgb value,
                    SetRgbValueCompleter::Sync completer) override;
 
+  void GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
+  }
+  void GetGroupCurrentSimpleValue(uint32_t group_id,
+                                  GetGroupCurrentSimpleValueCompleter::Sync completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED, ::fidl::VectorView<bool>(nullptr, 0));
+  }
+  void SetGroupSimpleValue(uint32_t group_id, ::fidl::VectorView<bool> values,
+                           SetGroupSimpleValueCompleter::Sync completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
+  void GetGroupCurrentBrightnessValue(
+      uint32_t group_id, GetGroupCurrentBrightnessValueCompleter::Sync completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED, ::fidl::VectorView<uint8_t>(nullptr, 0));
+  }
+  void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<uint8_t> values,
+                               SetGroupBrightnessValueCompleter::Sync completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
+  void GetGroupCurrentRgbValue(uint32_t group_id,
+                               GetGroupCurrentRgbValueCompleter::Sync completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED,
+                    ::fidl::VectorView<::llcpp::fuchsia::hardware::light::Rgb>(nullptr, 0));
+  }
+  void SetGroupRgbValue(uint32_t group_id,
+                        ::fidl::VectorView<llcpp::fuchsia::hardware::light::Rgb> values,
+                        SetGroupRgbValueCompleter::Sync completer) override {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  }
+
   bool BlinkTest();
   zx_status_t Init();
 
@@ -78,3 +109,5 @@ class Lp50xxLight : public Lp50xxLightType,
 };
 
 }  // namespace lp50xx_light
+
+#endif  // ZIRCON_SYSTEM_DEV_LIGHT_LP50XX_LIGHT_LP50XX_LIGHT_H_

@@ -11,6 +11,9 @@
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/assert.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
 
 #include <memory>
 
@@ -18,105 +21,76 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/fidl.h>
 #include <ddktl/protocol/composite.h>
 #include <fbl/alloc_checker.h>
 
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <zircon/assert.h>
-
 namespace gpio_light {
 
-zx_status_t GpioLight::MsgGetName(fidl_txn_t* txn, uint32_t index) {
+void GpioLight::GetName(uint32_t index, GetNameCompleter::Sync completer) {
   if (index >= gpio_count_) {
-    return fuchsia_hardware_light_LightGetName_reply(txn, ZX_ERR_OUT_OF_RANGE, nullptr, 0);
+    completer.Reply(ZX_ERR_OUT_OF_RANGE, ::fidl::StringView(nullptr, 0));
+    return;
   }
 
   if (names_.size() > 0) {
     auto* name = names_.data() + index * kNameLength;
-    return fuchsia_hardware_light_LightGetName_reply(txn, ZX_OK, name, strlen(name) + 1);
+    completer.Reply(ZX_OK, ::fidl::StringView(name, strlen(name) + 1));
   } else {
     // Return "gpio-X" if no metadata was provided.
     char name[20];
     snprintf(name, sizeof(name), "gpio-%u\n", index);
-    return fuchsia_hardware_light_LightGetName_reply(txn, ZX_OK, name, strlen(name) + 1);
+    completer.Reply(ZX_OK, ::fidl::StringView(name, strlen(name) + 1));
   }
 }
 
-zx_status_t GpioLight::MsgGetCount(fidl_txn_t* txn) {
-  return fuchsia_hardware_light_LightGetCount_reply(txn, gpio_count_);
-}
+void GpioLight::GetCount(GetCountCompleter::Sync completer) { completer.Reply(gpio_count_); }
 
-zx_status_t GpioLight::MsgHasCapability(uint32_t index,
-                                        fuchsia_hardware_light_Capability capability,
-                                        fidl_txn_t* txn) {
+void GpioLight::HasCapability(uint32_t index,
+                              llcpp::fuchsia::hardware::light::Capability capability,
+                              HasCapabilityCompleter::Sync completer) {
   if (index >= gpio_count_) {
-    return fuchsia_hardware_light_LightHasCapability_reply(txn, ZX_ERR_OUT_OF_RANGE, false);
+    completer.Reply(ZX_ERR_OUT_OF_RANGE, false);
+    return;
   }
-  return fuchsia_hardware_light_LightHasCapability_reply(txn, ZX_OK, false);
+  completer.Reply(ZX_OK, false);
 }
 
-zx_status_t GpioLight::MsgGetSimpleValue(uint32_t index, fidl_txn_t* txn) {
+void GpioLight::GetSimpleValue(uint32_t index, GetSimpleValueCompleter::Sync completer) {
   if (index >= gpio_count_) {
-    return fuchsia_hardware_light_LightGetSimpleValue_reply(txn, ZX_ERR_OUT_OF_RANGE, 0);
+    completer.Reply(ZX_ERR_OUT_OF_RANGE, 0);
+    return;
   }
 
   uint8_t value;
   auto status = gpios_[index].Read(&value);
-  return fuchsia_hardware_light_LightGetSimpleValue_reply(txn, status, value);
+  completer.Reply(status, value);
 }
 
-zx_status_t GpioLight::MsgSetSimpleValue(uint32_t index, uint8_t value, fidl_txn_t* txn) {
+void GpioLight::SetSimpleValue(uint32_t index, uint8_t value,
+                               SetSimpleValueCompleter::Sync completer) {
   if (index >= gpio_count_) {
-    return fuchsia_hardware_light_LightSetSimpleValue_reply(txn, ZX_ERR_OUT_OF_RANGE);
+    completer.Reply(ZX_ERR_OUT_OF_RANGE);
+    return;
   }
 
   auto status = gpios_[index].Write(value);
-  return fuchsia_hardware_light_LightSetSimpleValue_reply(txn, status);
+  completer.Reply(status);
 }
 
-zx_status_t GpioLight::MsgGetRgbValue(uint32_t index, fidl_txn_t* txn) {
-  fuchsia_hardware_light_Rgb rgb = {};
-  return fuchsia_hardware_light_LightGetRgbValue_reply(txn, ZX_ERR_NOT_SUPPORTED, &rgb);
+void GpioLight::GetRgbValue(uint32_t index, GetRgbValueCompleter::Sync completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
 }
 
-zx_status_t GpioLight::MsgSetRgbValue(uint32_t index, const fuchsia_hardware_light_Rgb* value,
-                                      fidl_txn_t* txn) {
-  return fuchsia_hardware_light_LightSetRgbValue_reply(txn, ZX_ERR_NOT_SUPPORTED);
+void GpioLight::SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::Rgb value,
+                            SetRgbValueCompleter::Sync completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
-
-static fuchsia_hardware_light_Light_ops_t fidl_ops = {
-    .GetName =
-        [](void* ctx, uint32_t index, fidl_txn_t* txn) {
-          return reinterpret_cast<GpioLight*>(ctx)->MsgGetName(txn, index);
-        },
-    .GetCount = [](void* ctx,
-                   fidl_txn_t* txn) { return reinterpret_cast<GpioLight*>(ctx)->MsgGetCount(txn); },
-    .HasCapability =
-        [](void* ctx, uint32_t index, fuchsia_hardware_light_Capability capability,
-           fidl_txn_t* txn) {
-          return reinterpret_cast<GpioLight*>(ctx)->MsgHasCapability(index, capability, txn);
-        },
-    .GetSimpleValue =
-        [](void* ctx, uint32_t index, fidl_txn_t* txn) {
-          return reinterpret_cast<GpioLight*>(ctx)->MsgGetSimpleValue(index, txn);
-        },
-    .SetSimpleValue =
-        [](void* ctx, uint32_t index, uint8_t value, fidl_txn_t* txn) {
-          return reinterpret_cast<GpioLight*>(ctx)->MsgSetSimpleValue(index, value, txn);
-        },
-    .GetRgbValue =
-        [](void* ctx, uint32_t index, fidl_txn_t* txn) {
-          return reinterpret_cast<GpioLight*>(ctx)->MsgGetRgbValue(index, txn);
-        },
-    .SetRgbValue =
-        [](void* ctx, uint32_t index, const fuchsia_hardware_light_Rgb* value, fidl_txn_t* txn) {
-          return reinterpret_cast<GpioLight*>(ctx)->MsgSetRgbValue(index, value, txn);
-        },
-};
 
 zx_status_t GpioLight::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-  return fuchsia_hardware_light_Light_dispatch(this, txn, msg, &fidl_ops);
+  DdkTransaction transaction(txn);
+  llcpp::fuchsia::hardware::light::Light::Dispatch(this, msg, &transaction);
+  return transaction.Status();
 }
 
 void GpioLight::DdkRelease() { delete this; }
@@ -168,8 +142,8 @@ zx_status_t GpioLight::Init() {
       return ZX_ERR_NO_MEMORY;
     }
 
-    status =
-        device_get_metadata(parent(), DEVICE_METADATA_NAME, names_.data(), metadata_size, &expected);
+    status = device_get_metadata(parent(), DEVICE_METADATA_NAME, names_.data(), metadata_size,
+                                 &expected);
     if (status != ZX_OK) {
       return status;
     }
