@@ -27,12 +27,12 @@ driver_module("qmi_function") {
     "usb-qmi-function.h",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.usb.function",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.usb.function",
   ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

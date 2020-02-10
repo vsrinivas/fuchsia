@@ -45,6 +45,7 @@ driver_module("usb-hid-fake-usb") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-hid-function.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.usb.function",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -56,7 +57,6 @@ driver_module("usb-hid-fake-usb") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/banjo/ddk.protocol.usb",
-    "//zircon/system/banjo/ddk.protocol.usb.function",
     "//zircon/system/banjo/ddk.protocol.usb.request",
   ]
 }
