@@ -144,10 +144,10 @@ if (target_cpu == "arm64") {
     deps = [
       ":test_support",
       "third_party/libvpx",
+      "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_c",
       "//sdk/fidl/fuchsia.mediacodec",
       "//sdk/lib/fidl/cpp",
       "//src/media/lib/codec_impl",
-      "//zircon/system/fidl/fuchsia-hardware-mediacodec:fuchsia-hardware-mediacodec_c",
     ]
     public_configs = [ ":sources_include_config" ]
     cflags = []
