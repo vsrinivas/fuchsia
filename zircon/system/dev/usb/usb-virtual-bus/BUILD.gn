@@ -27,6 +27,7 @@ driver_module("usb-virtual-bus") {
     "usb-virtual-host.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.usb.dci",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -37,7 +38,6 @@ driver_module("usb-virtual-bus") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.bus",
-    "//zircon/system/banjo/ddk.protocol.usb.dci",
     "//zircon/system/banjo/ddk.protocol.usb.function",
     "//zircon/system/banjo/ddk.protocol.usb.hci",
     "//zircon/system/banjo/ddk.protocol.usb.hub",
