@@ -115,7 +115,6 @@ group("banjo") {
     "ddk.protocol.iommu",
 #------------------
 #------------------
-    "ddk.protocol.mailbox",
 #------------------
 #------------------
     "ddk.protocol.mipicsi",
