@@ -30,6 +30,7 @@ if (current_cpu != "") {
       "$zx/system/dev/board/mt8167s_ref:mt8167s_ref-test",
       "$zx/system/dev/bus/pci:pci-driver",
       "$zx/system/dev/bus/pci:pci-unit",
+      "$zx/system/dev/lib/fake-mmio-reg/test",
       "$zx/system/dev/lib/mock-mmio-reg/test",
       "$zx/system/ulib/abs_clock:test",
       "$zx/system/ulib/blobfs/test",
