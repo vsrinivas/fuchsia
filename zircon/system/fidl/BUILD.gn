@@ -26,7 +26,6 @@ group("fidl") {
     "fuchsia-device-manager",
 #------------------
 #------------------
-    "fuchsia-device-manager-test",
 #------------------
 #------------------
     "fuchsia-device-test",
