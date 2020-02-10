@@ -49,7 +49,7 @@ pub struct Discovery {
     /// through a `SessionControl` channel.
     watchers: StreamMap<usize, Task>,
     /// Connections to player serving sessions.
-    player_updates: StreamMap<u64, Player>,
+    players: StreamMap<u64, Player>,
     /// The sender through which we distribute player events to all watchers.
     player_update_sender: mpmc::Sender<FilterApplicant<(u64, PlayerEvent)>>,
 }
@@ -61,7 +61,7 @@ impl Discovery {
             catch_up_events: HashMap::new(),
             watcher_ids: 0..,
             watchers: StreamMap::new(),
-            player_updates: StreamMap::new(),
+            players: StreamMap::new(),
             player_update_sender: mpmc::Sender::default(),
         }
     }
@@ -129,7 +129,7 @@ impl Discovery {
         let observer = Observer::new(session_info_stream, status_request_stream);
         let task = future::join(partitioner, observer).map(drop).boxed();
 
-        self.player_updates
+        self.players
             .with_elem(session_id, move |player: &mut Player| {
                 player.serve_controls(control_request_stream);
                 player.add_proxy_task(task);
@@ -199,10 +199,10 @@ impl Discovery {
                  _ = self.watchers.select_next_some() => {}
                 // A new player has been published to `fuchsia.media.sessions2.Publisher`.
                 new_player = self.player_stream.select_next_some() => {
-                    self.player_updates.insert(new_player.id(), new_player).await;
+                    self.players.insert(new_player.id(), new_player).await;
                 }
                 // A player answered a hanging get for its status.
-                player_update = self.player_updates.select_next_some() => {
+                player_update = self.players.select_next_some() => {
                     self.handle_player_update(player_update).await;
                 }
             }
