@@ -20,14 +20,23 @@ namespace {
 const char kExpressionsName[] = "expressions";
 const char kExpressionsHelp[] = R"(Expressions
 
-  Expressions appear in some commands, most notably "print":
+  Expressions appear in many commands. Some commands expect just an expression,
+  most notably "print":
 
     [zxdb] print &object->array_data[i + 4]
     (*)71cc72b5310
 
-  Most C++ and Rust operators are implemented in a compatible way. Function
-  calls are not currently supported (with exceptions, see "Pretty printers"
-  below). Language-overloaded operators are ignored.
+  Other commands such as "break" or "disassemble" accept a location. This is
+  typically a function name or a line number, but can also be an expression that
+  evaluates to a memory address. To use expressions for these commands, prefix
+  it with a "*":
+
+    [zxdb] break *foo->some_address
+    Created Breakpoint 1 @ 0x30ad01a2b80
+
+  Most C++ and Rust operators are implemented in a language-compatible way.
+  Function calls are not currently supported (with exceptions, see "Pretty
+  printers" below). User-overloaded operators are ignored.
 
 Variable and type names
 
@@ -148,46 +157,63 @@ Common errors
 constexpr char kJitdName[] = "jitd";
 constexpr char kJitdHelp[] = R"(Just In Time Debugging
 
-  Just In Time Debugging is a way for the system to suspend processes that have crashed without
-  any exception handlers. The system will keep those processes in a place called the "Process
-  Limbo". Later, zxdb is able to connect to the Process Limbo and attach to any process waiting to
-  be debugged.
+  Just In Time Debugging is a way for the system to suspend processes that have
+  crashed without any exception handlers. The system will keep those processes
+  in a place called "Process Limbo". Later, zxdb is able to connect to Process
+  Limbo and attach to process waiting to be debugged.
+
+Enabling process limbo in the system
+
+  To enable catching exceptions in newly crashed processes, type in a Fuchsia
+  shell:
+
+    run limbo.cmx enable
+
+  For full documentation on enabling and configuring Limbo, including enabling
+  on system startup, see the full documentation at:
+
+  https://fuchsia.dev/fuchsia-src/development/debugger/just_in_time_debugging.md
 
 Listing Processes
 
-  When zxdb starts up, any process waiting to be debugged within the Process Limbo will be listed
-  like this:
+  When zxdb starts up, any process waiting to be debugged within Process Limbo
+  will be listed like this:
 
-  👉 To get started, try "status" or "help".
-  Processes waiting on exception:
-  2780309: process-that-crashed
-  2783544: some-other-process-that-crashed
-  Type "attach <pid>" to reconnect.
-  [zxdb]
+    👉 To get started, try "status" or "help".
+    Processes waiting on exception:
+    2780309: process-that-crashed
+    2783544: some-other-process-that-crashed
+    Type "attach <pid>" to reconnect.
+    [zxdb]
 
   You call also run the "status" command and get the same information:
 
-  [zxdb] status
-  ...
-  Processes waiting on exception
-  2 process(es) waiting on exception.
-  Run "attach <KOID>" to load them into zxdb or "detach <KOID>" to free them back into the system.
-      Koid Name
-   2780309 process-that-crashed
-   2783544 some-other-process-that-crashed
+    [zxdb] status
+    ...
+    Processes waiting on exception
+    2 process(es) waiting on exception.
+      Run "attach <KOID>" to load them into zxdb or "detach <KOID>" to
+      terminate them. See "help jitd" for more information on Just-In-Time
+      Debugging.
+
+     2780309 process-that-crashed
+     2783544 some-other-process-that-crashed
 
 Attaching/Removing Processes
 
-  From the point of view of zxdb, the processes within the limbo behave very similar to what a
-  normal running process does. In order to start debugging one, simply do "attach <KOID>" and zxdb
-  will retrieve the process from limbo and start debugging it. Once attached, you can manipulate the
-  process as normal, and even detach or kill it. Note that if you detach from a crashing process,
-  the exception will be re-triggered and it will caught by the Process Limbo. Killing it will
+  From the point of view of zxdb, the processes within the limbo behave very
+  similar to what a normal running process does. In order to start debugging
+  one, simply do "attach <KOID>" and zxdb will retrieve the process from limbo
+  and start debugging it. Once attached, you can manipulate the process as
+  normal, and even detach or kill it.
+
+  Note that if you detach from a crashing process, the exception will be
+  re-triggered and it will caught by the Process Limbo. Killing it will
   terminate the process as usual.
 
-  The only difference comes when attempting to release a process from the Process Limbo, without
-  attaching from it. In that case, you need to instruct the debugger to "detach" from it by issuing
-  a "detach <KOID>" commnad.
+  The only difference comes when attempting to release a process from the
+  Process Limbo, without attaching from it. In that case, you need to instruct
+  the debugger to "detach" from it by issuing a "detach <KOID>" command.
 )";
 
 const char kHelpShortHelp[] = R"(help / h: Help.)";
@@ -220,11 +246,11 @@ const char kHelpIntro[] =
           thread or process.
 )";
 
-const char kOtherTopics[] =
-    R"(
-  expressions: Information on expressions used in "print", etc.
-
-)";
+// Sorted list of strings for other help topics.
+const char* kOtherTopics[] = {
+    "expressions: Information on expressions used in \"print\", etc.",
+    "jitd: Use \"just-in-time debugging\" to attach after a process crashes.",
+};
 
 // Format and syntax-highlights a line of the form "<name>: <description>". If there's no colon the
 // line will be not syntax highlighted.
@@ -272,11 +298,11 @@ OutputBuffer GetReference() {
   help.Append("\n\n  Type \"help <command>\" for command-specific help.\n\n");
 
   help.Append(Syntax::kHeading, "Other help topics");
-  help.Append(" (see \"help <topic>\")\n");
-  help.Append(kOtherTopics);
+  help.Append(" (see \"help <topic>\")\n\n");
+  for (const auto& line : kOtherTopics)
+    help.Append(FormatIndexLine(line));
 
-  help.Append(Syntax::kHeading, "Command syntax\n");
-
+  help.Append(Syntax::kHeading, "\nCommand syntax\n");
   help.Append(kHelpIntro);
 
   // Group all verbs by their CommandGroup. Add nouns to this since people will expect, for example,

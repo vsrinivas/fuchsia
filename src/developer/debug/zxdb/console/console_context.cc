@@ -447,8 +447,8 @@ void ConsoleContext::HandleProcessesInLimbo(
     const std::vector<debug_ipc::ProcessRecord>& processes) {
   OutputBuffer out(OutputBuffer{Syntax::kHeading, "Processes waiting on exception:\n"});
   for (auto& process : processes) {
-    out.Append(
-        fxl::StringPrintf("%" PRIu64 ": %s\n", process.process_koid, process.process_name.c_str()));
+    out.Append(fxl::StringPrintf("  %" PRIu64 ": %s\n", process.process_koid,
+                                 process.process_name.c_str()));
   }
   out.Append(OutputBuffer{Syntax::kComment, "Type \"attach <pid>\" to reconnect.\n"});
 

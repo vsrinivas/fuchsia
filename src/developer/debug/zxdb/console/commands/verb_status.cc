@@ -79,22 +79,19 @@ OutputBuffer FormatProcessRecords(std::vector<debug_ipc::ProcessRecord> records,
               return lhs.process_name < rhs.process_name;
             });
 
-  std::string indent_str(indent, ' ');
   std::vector<std::vector<std::string>> rows;
 
   for (const debug_ipc::ProcessRecord& record : records) {
     auto& row = rows.emplace_back();
     row.reserve(4);
 
-    row.push_back(indent_str);
     row.push_back(std::to_string(record.process_koid));
     row.push_back(record.process_name);
   }
 
   OutputBuffer out;
-  FormatTable(
-      {ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "Koid"), ColSpec(Align::kLeft, 0, "Name")},
-      rows, &out);
+  FormatTable({ColSpec(Align::kRight, 0, "Koid", indent), ColSpec(Align::kLeft, 0, "Name")}, rows,
+              &out);
 
   return out;
 }
@@ -188,12 +185,13 @@ OutputBuffer GetLimboStatus(const std::vector<debug_ipc::ProcessRecord>& limbo) 
   if (limbo.empty()) {
     result.Append("  No processes waiting on exception.");
   } else {
-    result.Append(fxl::StringPrintf("  %zu process(es) waiting on exception.\n", limbo.size()));
+    result.Append(fxl::StringPrintf("  %zu process(es) waiting on exception. ", limbo.size()));
     result.Append(
-        "  Run \"attach <KOID>\" to load them into zxdb or \"detach <KOID>\" terminate them.\n");
-    result.Append("  Run \"help jitd\" for more information on Just In Time Debugging.\n");
+        "Run \"attach <KOID>\" to load one into\n"
+        "  zxdb or \"detach <KOID>\" to terminate them. See \"help jitd\" for more\n"
+        "  information on Just-In-Time Debugging.\n");
 
-    result.Append(FormatProcessRecords(limbo, 2));
+    result.Append(FormatProcessRecords(limbo, 4));
   }
 
   return result;
