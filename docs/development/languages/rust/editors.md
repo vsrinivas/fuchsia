@@ -30,18 +30,21 @@ Some plugins require a `.cargo/config` file to allow cargo to operate correctly 
 
 1. [Install rustup](https://rustup.rs/)
 2. Configure `rustup` to use the Fuchsia Rust toolchain by running:
-```sh
-rustup toolchain link fuchsia $($FUCHSIA_DIR/scripts/youcompleteme/paths.py VSCODE_RUST_TOOLCHAIN)
-rustup default fuchsia
-```
+
+    ```sh
+    rustup toolchain link fuchsia $($FUCHSIA_DIR/scripts/youcompleteme/paths.py VSCODE_RUST_TOOLCHAIN)
+    rustup default fuchsia
+    ```
+
 3. Clone and install the `fargo` tool within your `$FUCHSIA_DIR` by following the
 [getting started instructions](https://fuchsia.googlesource.com/fargo/) for fargo.
 4. Create your config:
-```sh
-cd $FUCHSIA_DIR && fargo write-config
-# Note the caveats about changing architecture in the fargo readme
-# https://fuchsia.googlesource.com/fargo/#creating-a-cargo_config
-```
+
+    ```sh
+    cd $FUCHSIA_DIR && fargo write-config
+    # Note the caveats about changing architecture in the fargo readme
+    # https://fuchsia.googlesource.com/fargo/#creating-a-cargo_config
+    ```
 
 ## Intellij
 
