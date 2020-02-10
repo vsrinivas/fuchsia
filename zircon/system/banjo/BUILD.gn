@@ -165,7 +165,6 @@ group("banjo") {
     "ddk.protocol.serialimpl",
 #------------------
 #------------------
-    "ddk.protocol.serialimpl.async",
 #------------------
 #------------------
     "ddk.protocol.shareddma",

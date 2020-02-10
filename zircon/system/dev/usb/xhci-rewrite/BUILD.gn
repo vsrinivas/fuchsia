@@ -84,6 +84,7 @@ test("xhci-unittest") {
     "xhci-enumeration.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.serialimpl.async",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-pci",
@@ -104,7 +105,6 @@ test("xhci-unittest") {
     "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/banjo/ddk.protocol.serialimpl.async",
     "//zircon/system/banjo/ddk.protocol.usb.hci",
     "//zircon/system/banjo/ddk.protocol.usb.phy",
     "//zircon/system/fidl/fuchsia-hardware-serial:c",
