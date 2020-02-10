@@ -171,6 +171,7 @@ const (
 	FidlAlignmentV1Tag
 	FidlHashedOrdTag
 	FidlExplicitOrdTag
+	FidlHandleSubtypeTag
 	FidlHandleRightsTag
 	EndTag   // This value must be last in the list to allow iteration over all tags.
 	StartTag = FidlTag
@@ -190,6 +191,8 @@ func (t Tag) String() string {
 		return "fidl_hashed_ord"
 	case FidlExplicitOrdTag:
 		return "fidl_explicit_ord"
+	case FidlHandleSubtypeTag:
+		return "fidl_handle_subtype"
 	case FidlHandleRightsTag:
 		return "fidl_handle_rights"
 	}
@@ -563,6 +566,18 @@ func (c *compiler) computeHandleRights(t types.Type) *types.HandleRights {
 	return nil
 }
 
+// Handle subtype annotations are added to fields that contain handles
+// or arrays and vectors of handles (recursively).
+func (c *compiler) computeHandleSubtype(t types.Type) *types.HandleSubtype {
+	switch t.Kind {
+	case types.HandleType:
+		return &t.HandleSubtype
+	case types.ArrayType, types.VectorType:
+		return c.computeHandleSubtype(*t.ElementType)
+	}
+	return nil
+}
+
 func (_ *compiler) compileIdentifier(id types.Identifier, export bool, ext string) string {
 	str := string(id)
 	if export {
@@ -785,6 +800,9 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	if handleRights := c.computeHandleRights(val.Type); handleRights != nil {
 		tags[FidlHandleRightsTag] = int(*handleRights)
 	}
+	if handleSubtype := c.computeHandleSubtype(val.Type); handleSubtype != nil {
+		tags[FidlHandleSubtypeTag] = *handleSubtype
+	}
 
 	return StructMember{
 		Attributes:  val.Attributes,
@@ -831,6 +849,9 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 		if handleRights := c.computeHandleRights(member.Type); handleRights != nil {
 			tags[FidlHandleRightsTag] = *handleRights
 		}
+		if handleSubtype := c.computeHandleSubtype(member.Type); handleSubtype != nil {
+			tags[FidlHandleSubtypeTag] = *handleSubtype
+		}
 		members = append(members, XUnionMember{
 			Attributes:  member.Attributes,
 			Ordinal:     uint64(member.Ordinal),
@@ -873,6 +894,9 @@ func (c *compiler) compileTable(val types.Table) Table {
 		}
 		if handleRights := c.computeHandleRights(member.Type); handleRights != nil {
 			tags[FidlHandleRightsTag] = *handleRights
+		}
+		if handleSubtype := c.computeHandleSubtype(member.Type); handleSubtype != nil {
+			tags[FidlHandleSubtypeTag] = *handleSubtype
 		}
 		members = append(members, TableMember{
 			Attributes:        member.Attributes,

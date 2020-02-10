@@ -73,11 +73,13 @@ go_binary("fidlgen_syzkaller") {
 
 install_host_tools("fidl") {
   deps = [
+    ":fidlgen_go",
     ":fidlgen_hlcpp",
     ":fidlgen_llcpp",
     ":fidlgen_syzkaller",
   ]
   outputs = [
+    "fidlgen_go",
     "fidlgen_hlcpp",
     "fidlgen_llcpp",
     "fidlgen_syzkaller",
