@@ -8,14 +8,12 @@
 
 #include <blobfs/format.h>
 #include <blobfs/mkfs.h>
-#include <blobfs/mount.h>
 #include <block-client/cpp/fake-device.h>
 #include <fs-test-utils/blobfs/blobfs.h>
 #include <storage/buffer/vmo_buffer.h>
 #include <zxtest/zxtest.h>
 
 #include "directory.h"
-#include "utils.h"
 
 namespace blobfs {
 namespace {
