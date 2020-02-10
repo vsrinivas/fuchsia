@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 zx_library("posix_tests") {
+  sdk = "source"
+  sdk_headers = [ "fs/test/posix/tests.h" ]
   testonly = true
   sources = [ "truncate.cc" ]
   deps = [
