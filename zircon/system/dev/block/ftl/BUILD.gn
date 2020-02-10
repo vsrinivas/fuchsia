@@ -44,6 +44,7 @@ source_set("common") {
     "oob_doubler.cc",
   ]
   public_deps = [
+    "//sdk/banjo/ddk.protocol.badblock",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -54,7 +55,6 @@ source_set("common") {
     "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.badblock",
     "//zircon/system/banjo/ddk.protocol.block",
     "//zircon/system/banjo/ddk.protocol.block.partition",
     "//zircon/system/banjo/ddk.protocol.nand",
