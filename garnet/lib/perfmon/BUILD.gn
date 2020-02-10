@@ -61,8 +61,8 @@ static_library("perfmon") {
     ]
 
     public_deps += [
+      "//sdk/fidl/fuchsia.perfmon.cpu",
       "//zircon/public/lib/zx",
-      "//zircon/system/fidl/fuchsia-perfmon-cpu",
     ]
   } else {
     sources += [

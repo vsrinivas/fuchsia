@@ -210,7 +210,6 @@ group("fidl") {
     "fuchsia-paver",
 #------------------
 #------------------
-    "fuchsia-perfmon-cpu",
 #------------------
 #------------------
     "fuchsia-posix-socket",
