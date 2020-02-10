@@ -154,7 +154,6 @@ group("fidl") {
     "fuchsia-hardware-thermal",
 #------------------
 #------------------
-    "fuchsia-hardware-usb-device",
 #------------------
 #------------------
     "fuchsia-hardware-usb-fwloader",

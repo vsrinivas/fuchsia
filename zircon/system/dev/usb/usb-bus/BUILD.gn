@@ -42,6 +42,7 @@ source_set("common") {
     "//zircon/system/banjo/ddk.protocol.usb.hub",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.usb.device:fuchsia.hardware.usb.device_llcpp",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/usb",
@@ -49,7 +50,6 @@ source_set("common") {
     "//zircon/system/banjo/ddk.protocol.usb.bus",
     "//zircon/system/banjo/ddk.protocol.usb.hci",
     "//zircon/system/banjo/ddk.protocol.usb.request",
-    "//zircon/system/fidl/fuchsia-hardware-usb-device:llcpp",
   ]
 }
 
