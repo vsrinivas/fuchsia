@@ -7,7 +7,6 @@
 /// different types of packages and when blobfs and pkgfs are in
 /// various intermediate states.
 use {
-    fidl_fuchsia_pkg::ExperimentToggle as Experiment,
     fidl_fuchsia_pkg_ext::MirrorConfigBuilder,
     fuchsia_async as fasync,
     fuchsia_inspect::assert_inspect_tree,
@@ -772,7 +771,6 @@ async fn rust_tuf_experiment_identity() {
     env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
 
     // Verify we can resolve a package using rust tuf
-    env.set_experiment_state(Experiment::RustTuf, true).await;
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
     let package = env.resolve_package(&pkg_url).await.expect("package to resolve without error");
     pkg.verify_contents(&package).await.unwrap();

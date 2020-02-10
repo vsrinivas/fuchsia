@@ -4,7 +4,6 @@
 
 use {
     anyhow::format_err,
-    fidl_fuchsia_pkg::ExperimentToggle as Experiment,
     fidl_fuchsia_pkg_ext::RepositoryConfigBuilder,
     fuchsia_async as fasync,
     fuchsia_inspect::{
@@ -43,9 +42,7 @@ async fn test_initial_inspect_state() {
                 channel_name: OptionDebugStringProperty::<String>::None,
               }
             },
-            experiments: {
-                "RustTuf": 1i64,
-            },
+            experiments: {},
             repository_manager: {
                 dynamic_configs_path: format!("{:?}", Some(std::path::Path::new("/data/repositories.json"))),
                 dynamic_configs: {},
@@ -87,9 +84,7 @@ async fn test_adding_repo_updates_inspect_state() {
                 channel_name: OptionDebugStringProperty::<String>::None,
               }
             },
-            experiments: {
-                "RustTuf": 1i64,
-            },
+            experiments: {},
             repository_manager: {
                 dynamic_configs_path: format!("{:?}", Some(std::path::Path::new("/data/repositories.json"))),
                 dynamic_configs: {
@@ -113,7 +108,6 @@ async fn test_adding_repo_updates_inspect_state() {
 #[fasync::run_singlethreaded(test)]
 async fn test_resolving_package_updates_inspect_state() {
     let env = TestEnvBuilder::new().build();
-    env.set_experiment_state(Experiment::RustTuf, true).await;
 
     let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
     let repo = Arc::new(
@@ -147,9 +141,7 @@ async fn test_resolving_package_updates_inspect_state() {
                 channel_name: format!("{:?}", Option::<String>::None),
               }
             },
-            experiments: {
-              "RustTuf": 1i64
-            },
+            experiments: {},
             repository_manager: {
                 dynamic_configs_path: format!("{:?}", Some(std::path::Path::new("/data/repositories.json"))),
                 dynamic_configs: {

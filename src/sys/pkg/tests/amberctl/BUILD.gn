@@ -12,7 +12,6 @@ rustc_test("driver") {
   edition = "2018"
 
   deps = [
-    "//sdk/fidl/fuchsia.amber:fuchsia.amber-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",

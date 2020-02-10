@@ -26,7 +26,6 @@ import (
 
 	"amber/urlscope"
 	"app/context"
-	"fidl/fuchsia/amber"
 	fuchsiaio "fidl/fuchsia/io"
 	"fidl/fuchsia/pkg"
 	"fidl/fuchsia/pkg/rewrite"
@@ -94,21 +93,11 @@ func (e ErrGetFile) Error() string {
 }
 
 type Services struct {
-	amber         *amber.ControlInterface
 	resolver      *pkg.PackageResolverInterface
 	repoMgr       *pkg.RepositoryManagerInterface
 	rewriteEngine *rewrite.EngineInterface
 	space         *space.ManagerInterface
 	updateManager *update.ManagerInterface
-}
-
-func connectToAmber(ctx *context.Context) *amber.ControlInterface {
-	req, pxy, err := amber.NewControlInterfaceRequest()
-	if err != nil {
-		panic(err)
-	}
-	ctx.ConnectToEnvService(req)
-	return pxy
 }
 
 func connectToPackageResolver(ctx *context.Context) *pkg.PackageResolverInterface {
@@ -156,7 +145,27 @@ func connectToUpdateManager(ctx *context.Context) *update.ManagerInterface {
 	return pxy
 }
 
-// upgradeSourceConfig attempts to upgrade an amber.SourceConfig into a pkg.RepositoryConfig
+type SourceConfig struct {
+	Id           string
+	RepoUrl      string
+	BlobRepoUrl  string
+	RootKeys     []KeyConfig
+	StatusConfig *StatusConfig
+	Auto         bool
+	BlobKey      *BlobEncryptionKey
+}
+type KeyConfig struct {
+	Type  string
+	Value string
+}
+type StatusConfig struct {
+	Enabled bool
+}
+type BlobEncryptionKey struct {
+	Data [32]uint8
+}
+
+// upgradeSourceConfig attempts to upgrade a SourceConfig into a pkg.RepositoryConfig
 //
 // The two config formats are incompatible in various ways:
 //
@@ -168,7 +177,7 @@ func connectToUpdateManager(ctx *context.Context) *update.ManagerInterface {
 //
 // * repo config mirrors do not accept different URLs for the TUF repo and the blobs. Any custom
 // blob URL is discarded.
-func upgradeSourceConfig(cfg amber.SourceConfig) pkg.RepositoryConfig {
+func upgradeSourceConfig(cfg SourceConfig) pkg.RepositoryConfig {
 	repoCfg := pkg.RepositoryConfig{
 		RepoUrl:        repoUrlForId(cfg.Id),
 		RepoUrlPresent: true,
@@ -355,7 +364,7 @@ func addSource(services Services, repoOnly bool) error {
 		source = f
 	}
 
-	var cfg amber.SourceConfig
+	var cfg SourceConfig
 	if err := json.NewDecoder(source).Decode(&cfg); err != nil {
 		return fmt.Errorf("failed to parse source config: %v", err)
 	}
@@ -485,7 +494,7 @@ func listSources(r *pkg.RepositoryManagerInterface) error {
 	return nil
 }
 
-func isSourceConfigEnabled(cfg *amber.SourceConfig) bool {
+func isSourceConfigEnabled(cfg *SourceConfig) bool {
 	if cfg.StatusConfig == nil {
 		return true
 	}
@@ -643,9 +652,6 @@ func Main() {
 	ctx := context.CreateFromStartupInfo()
 
 	var services Services
-
-	services.amber = connectToAmber(ctx)
-	defer services.amber.Close()
 
 	services.resolver = connectToPackageResolver(ctx)
 	defer services.resolver.Close()

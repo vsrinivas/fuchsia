@@ -113,8 +113,7 @@ fn main_inner() -> Result<(), Error> {
     let main_inspect_node = inspector.root().create_child("main");
     let channel_inspect_state = ChannelInspectState::new(main_inspect_node.create_child("channel"));
 
-    let mut experiment_state = experiment::State::new(inspector.root().create_child("experiments"));
-    experiment_state.set_state(experiment::Experiment::RustTuf, true);
+    let experiment_state = experiment::State::new(inspector.root().create_child("experiments"));
     let experiment_state = Arc::new(RwLock::new(experiment_state));
     let experiments = Arc::clone(&experiment_state).into();
 

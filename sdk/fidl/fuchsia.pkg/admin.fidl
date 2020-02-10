@@ -25,6 +25,5 @@ enum ExperimentToggle : uint64 {
     /// Does nothing, but visible in inspect.
     LIGHTBULB = 0;
 
-    /// Resolve package merkle roots using rust-tuf instead of amber.
-    RUST_TUF = 2;
+    // Next unused experiment id: 3
 };

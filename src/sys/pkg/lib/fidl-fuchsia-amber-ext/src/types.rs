@@ -3,13 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
-    fidl_fuchsia_amber as fidl,
     serde_derive::{Deserialize, Serialize},
-    std::{
-        convert::{TryFrom, TryInto},
-        fmt,
-    },
+    std::fmt,
 };
 
 #[cfg(test)]
@@ -120,49 +115,6 @@ impl SourceConfig {
     }
 }
 
-impl From<SourceConfig> for fidl::SourceConfig {
-    fn from(config: SourceConfig) -> Self {
-        Self {
-            id: config.id,
-            repo_url: config.repo_url,
-            blob_repo_url: config.blob_repo_url,
-            rate_limit: config.rate_limit,
-            rate_period: config.rate_period,
-            root_keys: config.root_keys.into_iter().map(|key| key.into()).collect(),
-            transport_config: config.transport_config.map(|cfg| Box::new(cfg.into())),
-            oauth2_config: None,
-            status_config: config.status_config.map(|cfg| Box::new(cfg.into())),
-            auto: config.auto,
-            blob_key: config.blob_key.map(|key| Box::new(key.into())),
-        }
-    }
-}
-
-impl TryFrom<fidl::SourceConfig> for SourceConfig {
-    type Error = Error;
-    fn try_from(x: fidl::SourceConfig) -> Result<Self, Self::Error> {
-        if x.oauth2_config.is_some() {
-            return Err(format_err!("oauth2_config is not supported"));
-        }
-        Ok(SourceConfig {
-            id: x.id,
-            repo_url: x.repo_url,
-            blob_repo_url: x.blob_repo_url,
-            rate_limit: x.rate_limit,
-            rate_period: x.rate_period,
-            root_keys: x
-                .root_keys
-                .into_iter()
-                .map(|key| key.try_into())
-                .collect::<Result<Vec<_>, _>>()?,
-            transport_config: x.transport_config.map(|cfg| cfg.try_into()).transpose()?,
-            status_config: x.status_config.map(|cfg| cfg.try_into()).transpose()?,
-            auto: x.auto,
-            blob_key: x.blob_key.map(|key| key.try_into()).transpose()?,
-        })
-    }
-}
-
 impl Ord for SourceConfig {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.id.cmp(&other.id)
@@ -191,67 +143,11 @@ pub struct TransportConfig {
     tls_handshake_timeout: i32,
 }
 
-impl From<TransportConfig> for fidl::TransportConfig {
-    fn from(config: TransportConfig) -> Self {
-        Self {
-            disable_keep_alives: config.disable_keep_alives,
-            keep_alive: config.keep_alive,
-            max_idle_conns: config.max_idle_conns,
-            max_idle_conns_per_host: config.max_idle_conns_per_host,
-            connect_timeout: config.connect_timeout,
-            request_timeout: config.request_timeout,
-            idle_conn_timeout: config.idle_conn_timeout,
-            response_header_timeout: config.response_header_timeout,
-            expect_continue_timeout: config.expect_continue_timeout,
-            tls_handshake_timeout: config.tls_handshake_timeout,
-            tls_client_config: None,
-        }
-    }
-}
-
-impl TryFrom<Box<fidl::TransportConfig>> for TransportConfig {
-    type Error = Error;
-    fn try_from(x: Box<fidl::TransportConfig>) -> Result<Self, Self::Error> {
-        if x.tls_client_config.is_some() {
-            return Err(format_err!("tls_client_config not supported"));
-        }
-        Ok(TransportConfig {
-            disable_keep_alives: x.disable_keep_alives,
-            keep_alive: x.keep_alive,
-            max_idle_conns: x.max_idle_conns,
-            max_idle_conns_per_host: x.max_idle_conns_per_host,
-            connect_timeout: x.connect_timeout,
-            request_timeout: x.request_timeout,
-            idle_conn_timeout: x.idle_conn_timeout,
-            response_header_timeout: x.response_header_timeout,
-            expect_continue_timeout: x.expect_continue_timeout,
-            tls_handshake_timeout: x.tls_handshake_timeout,
-        })
-    }
-}
-
 #[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(test, derive(Arbitrary))]
 #[serde(rename_all = "lowercase", tag = "type", content = "value", deny_unknown_fields)]
 pub enum KeyConfig {
     Ed25519(#[serde(with = "hex_serde")] Vec<u8>),
-}
-
-impl From<KeyConfig> for fidl::KeyConfig {
-    fn from(config: KeyConfig) -> Self {
-        let KeyConfig::Ed25519(value) = config;
-        Self { type_: "ed25519".to_owned(), value: hex::encode(value) }
-    }
-}
-
-impl TryFrom<fidl::KeyConfig> for KeyConfig {
-    type Error = Error;
-    fn try_from(x: fidl::KeyConfig) -> Result<Self, Self::Error> {
-        if x.type_ != "ed25519" {
-            return Err(format_err!("unknown key type: {}", x.type_));
-        }
-        Ok(KeyConfig::Ed25519(hex::decode(x.value.as_bytes())?))
-    }
 }
 
 impl fmt::Debug for KeyConfig {
@@ -267,36 +163,10 @@ pub struct StatusConfig {
     enabled: bool,
 }
 
-impl From<StatusConfig> for fidl::StatusConfig {
-    fn from(config: StatusConfig) -> Self {
-        Self { enabled: config.enabled }
-    }
-}
-
-impl TryFrom<Box<fidl::StatusConfig>> for StatusConfig {
-    type Error = Error;
-    fn try_from(x: Box<fidl::StatusConfig>) -> Result<Self, Self::Error> {
-        Ok(StatusConfig { enabled: x.enabled })
-    }
-}
-
 #[derive(Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(test, derive(Arbitrary))]
 pub struct BlobEncryptionKey {
     data: [u8; 32],
-}
-
-impl From<BlobEncryptionKey> for fidl::BlobEncryptionKey {
-    fn from(key: BlobEncryptionKey) -> Self {
-        Self { data: key.data }
-    }
-}
-
-impl TryFrom<Box<fidl::BlobEncryptionKey>> for BlobEncryptionKey {
-    type Error = Error;
-    fn try_from(x: Box<fidl::BlobEncryptionKey>) -> Result<Self, Self::Error> {
-        Ok(BlobEncryptionKey { data: x.data })
-    }
 }
 
 impl fmt::Debug for BlobEncryptionKey {
@@ -387,13 +257,6 @@ mod tests {
         #[test]
         fn test_builder_builds(builder in arb_source_builder()) {
             builder.build()
-        }
-
-        #[test]
-        fn test_fidl_roundtrips(config: SourceConfig) {
-            let there: fidl::SourceConfig = config.clone().into();
-            let back_again: SourceConfig = there.try_into().unwrap();
-            assert_eq!(back_again, dbg!(config));
         }
 
         #[test]
