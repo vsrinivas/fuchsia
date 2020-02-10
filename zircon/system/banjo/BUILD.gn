@@ -219,7 +219,6 @@ group("banjo") {
     "ddk.protocol.wlan.mac",
 #------------------
 #------------------
-    "ddk.protocol.wlanif",
 #------------------
 #------------------
     "zircon.device.audio",
