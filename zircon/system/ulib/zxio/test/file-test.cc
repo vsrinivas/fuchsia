@@ -14,9 +14,13 @@
 
 #include <zxtest/zxtest.h>
 
+#include "file_test_suite.h"
+
 namespace {
 
-class TestServerBase : public llcpp::fuchsia::io::File::Interface {
+namespace fio = llcpp::fuchsia::io;
+
+class TestServerBase : public fio::File::Interface {
  public:
   TestServerBase() = default;
   virtual ~TestServerBase() = default;
@@ -32,16 +36,13 @@ class TestServerBase : public llcpp::fuchsia::io::File::Interface {
   }
 
   void Describe(DescribeCompleter::Sync completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
+    fio::FileObject file_object;
+    completer.Reply(fio::NodeInfo::WithFile(&file_object));
   }
 
-  void Sync(SyncCompleter::Sync completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
+  void Sync(SyncCompleter::Sync completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
-  void GetAttr(GetAttrCompleter::Sync completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
+  void GetAttr(GetAttrCompleter::Sync completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
   void SetAttr(uint32_t flags, llcpp::fuchsia::io::NodeAttributes attribute,
                SetAttrCompleter::Sync completer) override {
@@ -94,13 +95,6 @@ class TestServerBase : public llcpp::fuchsia::io::File::Interface {
 
 class File : public zxtest::Test {
  public:
-  void SetUp() final {
-    ASSERT_OK(zx::channel::create(0, &control_client_end_, &control_server_end_));
-    ASSERT_OK(zx::event::create(0, &event_on_server_));
-    ASSERT_OK(event_on_server_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_to_client_));
-    ASSERT_OK(zxio_file_init(&file_, control_client_end_.release(), event_to_client_.release()));
-  }
-
   template <typename ServerImpl>
   ServerImpl* StartServer() {
     server_ = std::make_unique<ServerImpl>();
@@ -110,12 +104,30 @@ class File : public zxtest::Test {
     if (status != ZX_OK) {
       return nullptr;
     }
-    EXPECT_OK(status =
-                  fidl::Bind(loop_->dispatcher(), std::move(control_server_end_), server_.get()));
-    if (status != ZX_OK) {
-      return nullptr;
-    }
     return static_cast<ServerImpl*>(server_.get());
+  }
+
+  zx_status_t OpenFile() {
+    zx::channel client_end, server_end;
+    zx_status_t status = zx::channel::create(0, &client_end, &server_end);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    status = fidl::Bind(loop_->dispatcher(), std::move(server_end), server_.get());
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    auto result = fio::File::Call::Describe(client_end.borrow());
+
+    if (result.status() != ZX_OK) {
+      return status;
+    }
+
+    EXPECT_TRUE(result->info.is_file());
+    return zxio_file_init(&file_, client_end.release(), result->info.mutable_file().event.release(),
+                          result->info.mutable_file().stream.release());
   }
 
   void TearDown() final {
@@ -126,18 +138,34 @@ class File : public zxtest::Test {
 
  protected:
   zxio_storage_t file_;
-  zx::channel control_client_end_;
-  zx::channel control_server_end_;
-  zx::event event_on_server_;
-  zx::event event_to_client_;
   std::unique_ptr<TestServerBase> server_;
   std::unique_ptr<async::Loop> loop_;
 };
 
+class TestServerEvent final : public TestServerBase {
+ public:
+  TestServerEvent() { ASSERT_OK(zx::event::create(0, &event_)); }
+
+  const zx::event& event() const { return event_; }
+
+  void Describe(DescribeCompleter::Sync completer) override {
+    fio::FileObject file_object;
+    zx_status_t status = event_.duplicate(ZX_RIGHTS_BASIC, &file_object.event);
+    if (status != ZX_OK) {
+      completer.Close(ZX_ERR_INTERNAL);
+      return;
+    }
+    completer.Reply(fio::NodeInfo::WithFile(&file_object));
+  }
+
+ private:
+  zx::event event_;
+};
+
 TEST_F(File, WaitTimeOut) {
-  class TestServer : public TestServerBase {};
-  TestServer* server;
-  ASSERT_NO_FAILURES(server = StartServer<TestServer>());
+  TestServerEvent* server;
+  ASSERT_NO_FAILURES(server = StartServer<TestServerEvent>());
+  ASSERT_NO_FAILURES(OpenFile());
 
   zxio_signals_t observed = ZX_SIGNAL_NONE;
   ASSERT_EQ(ZX_ERR_TIMED_OUT,
@@ -146,23 +174,23 @@ TEST_F(File, WaitTimeOut) {
 }
 
 TEST_F(File, WaitForReadable) {
-  class TestServer : public TestServerBase {};
-  TestServer* server;
-  ASSERT_NO_FAILURES(server = StartServer<TestServer>());
+  TestServerEvent* server;
+  ASSERT_NO_FAILURES(server = StartServer<TestServerEvent>());
+  ASSERT_NO_FAILURES(OpenFile());
 
   zxio_signals_t observed = ZX_SIGNAL_NONE;
-  ASSERT_OK(event_on_server_.signal(ZX_SIGNAL_NONE, llcpp::fuchsia::io::FILE_SIGNAL_READABLE));
+  ASSERT_OK(server->event().signal(ZX_SIGNAL_NONE, llcpp::fuchsia::io::FILE_SIGNAL_READABLE));
   ASSERT_OK(zxio_wait_one(&file_.io, ZXIO_SIGNAL_READABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_READABLE, observed);
 }
 
 TEST_F(File, WaitForWritable) {
-  class TestServer : public TestServerBase {};
-  TestServer* server;
-  ASSERT_NO_FAILURES(server = StartServer<TestServer>());
+  TestServerEvent* server;
+  ASSERT_NO_FAILURES(server = StartServer<TestServerEvent>());
+  ASSERT_NO_FAILURES(OpenFile());
 
   zxio_signals_t observed = ZX_SIGNAL_NONE;
-  ASSERT_OK(event_on_server_.signal(ZX_SIGNAL_NONE, llcpp::fuchsia::io::FILE_SIGNAL_WRITABLE));
+  ASSERT_OK(server->event().signal(ZX_SIGNAL_NONE, llcpp::fuchsia::io::FILE_SIGNAL_WRITABLE));
   ASSERT_OK(zxio_wait_one(&file_.io, ZXIO_SIGNAL_WRITABLE, ZX_TIME_INFINITE_PAST, &observed));
   EXPECT_EQ(ZXIO_SIGNAL_WRITABLE, observed);
 }
@@ -184,6 +212,7 @@ TEST_F(File, GetVmoPropagatesError) {
   };
   TestServer* server;
   ASSERT_NO_FAILURES(server = StartServer<TestServer>());
+  ASSERT_NO_FAILURES(OpenFile());
 
   zx::vmo vmo;
   ASSERT_STATUS(kGetBufferError,
@@ -191,6 +220,136 @@ TEST_F(File, GetVmoPropagatesError) {
   ASSERT_STATUS(kGetBufferError,
                 zxio_vmo_get_exact(&file_.io, vmo.reset_and_get_address(), nullptr));
   ASSERT_STATUS(kGetAttrError, zxio_vmo_get_copy(&file_.io, vmo.reset_and_get_address(), nullptr));
+}
+
+class TestServerChannel final : public TestServerBase {
+ public:
+  TestServerChannel() {
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &store_));
+    ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
+  }
+
+  void Read(uint64_t count, ReadCompleter::Sync completer) override {
+    if (count > fio::MAX_BUF) {
+      completer.Close(ZX_ERR_OUT_OF_RANGE);
+      return;
+    }
+    uint8_t buffer[fio::MAX_BUF];
+    zx_iovec_t vec = {
+        .buffer = buffer,
+        .capacity = count,
+    };
+    size_t actual = 0u;
+    zx_status_t status = stream_.readv(0, &vec, 1, &actual);
+    if (status != ZX_OK) {
+      completer.Reply(status, fidl::VectorView<uint8_t>());
+      return;
+    }
+    completer.Reply(ZX_OK, fidl::VectorView(buffer, actual));
+  }
+
+  void ReadAt(uint64_t count, uint64_t offset, ReadAtCompleter::Sync completer) override {
+    if (count > fio::MAX_BUF) {
+      completer.Close(ZX_ERR_OUT_OF_RANGE);
+      return;
+    }
+    uint8_t buffer[fio::MAX_BUF];
+    zx_iovec_t vec = {
+        .buffer = buffer,
+        .capacity = count,
+    };
+    size_t actual = 0u;
+    zx_status_t status = stream_.readv_at(0, offset, &vec, 1, &actual);
+    if (status != ZX_OK) {
+      completer.Reply(status, fidl::VectorView<uint8_t>());
+      return;
+    }
+    completer.Reply(ZX_OK, fidl::VectorView(buffer, actual));
+  }
+
+  void Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync completer) override {
+    if (data.count() > fio::MAX_BUF) {
+      completer.Close(ZX_ERR_OUT_OF_RANGE);
+      return;
+    }
+    zx_iovec_t vec = {
+        .buffer = data.mutable_data(),
+        .capacity = data.count(),
+    };
+    size_t actual = 0u;
+    zx_status_t status = stream_.writev(0, &vec, 1, &actual);
+    completer.Reply(status, actual);
+  }
+
+  void WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
+               WriteAtCompleter::Sync completer) override {
+    if (data.count() > fio::MAX_BUF) {
+      completer.Close(ZX_ERR_OUT_OF_RANGE);
+      return;
+    }
+    zx_iovec_t vec = {
+        .buffer = data.mutable_data(),
+        .capacity = data.count(),
+    };
+    size_t actual = 0u;
+    zx_status_t status = stream_.writev_at(0, offset, &vec, 1, &actual);
+    completer.Reply(status, actual);
+  }
+
+  void Seek(int64_t offset, fio::SeekOrigin origin, SeekCompleter::Sync completer) override {
+    zx_off_t seek = 0u;
+    static_assert(
+        static_cast<zx_stream_seek_origin_t>(fio::SeekOrigin::START) == ZX_STREAM_SEEK_ORIGIN_START,
+        "fio::SeekOrigin and zx_stream_seek_origin_t should match");
+    static_assert(static_cast<zx_stream_seek_origin_t>(fio::SeekOrigin::CURRENT) ==
+                      ZX_STREAM_SEEK_ORIGIN_CURRENT,
+                  "fio::SeekOrigin and zx_stream_seek_origin_t should match");
+    static_assert(
+        static_cast<zx_stream_seek_origin_t>(fio::SeekOrigin::END) == ZX_STREAM_SEEK_ORIGIN_END,
+        "fio::SeekOrigin and zx_stream_seek_origin_t should match");
+    zx_status_t status = stream_.seek(static_cast<zx_stream_seek_origin_t>(origin), offset, &seek);
+    completer.Reply(status, seek);
+  }
+
+ private:
+  zx::vmo store_;
+  zx::stream stream_;
+};
+
+TEST_F(File, ReadWriteChannel) {
+  TestServerChannel* server = nullptr;
+  ASSERT_NO_FAILURES(server = StartServer<TestServerChannel>());
+  ASSERT_OK(OpenFile());
+  ASSERT_NO_FAILURES(FileTestSuite::ReadWrite(&file_.io));
+}
+
+class TestServerStream final : public TestServerBase {
+ public:
+  TestServerStream() {
+    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &store_));
+    ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
+  }
+
+  void Describe(DescribeCompleter::Sync completer) override {
+    fio::FileObject file_object;
+    zx_status_t status = stream_.duplicate(ZX_RIGHT_SAME_RIGHTS, &file_object.stream);
+    if (status != ZX_OK) {
+      completer.Close(ZX_ERR_INTERNAL);
+      return;
+    }
+    completer.Reply(fio::NodeInfo::WithFile(&file_object));
+  }
+
+ private:
+  zx::vmo store_;
+  zx::stream stream_;
+};
+
+TEST_F(File, ReadWriteStream) {
+  TestServerStream* server = nullptr;
+  ASSERT_NO_FAILURES(server = StartServer<TestServerStream>());
+  ASSERT_OK(OpenFile());
+  ASSERT_NO_FAILURES(FileTestSuite::ReadWrite(&file_.io));
 }
 
 }  // namespace

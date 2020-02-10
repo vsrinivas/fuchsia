@@ -16,6 +16,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "file_test_suite.h"
+
 namespace {
 
 namespace fio2 = ::llcpp::fuchsia::io2;
@@ -332,38 +334,11 @@ class TestServerChannel final : public TestServerBase {
   zx::stream stream_;
 };
 
-void TestReadWrite(zxio_t* io) {
-  size_t actual = 0u;
-  ASSERT_OK(zxio_write(io, "abcd", 4, 0, &actual));
-  EXPECT_EQ(actual, 4u);
-
-  size_t seek = 0;
-  ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, -2, &seek));
-  EXPECT_EQ(2u, seek);
-
-  char buffer[1024] = {};
-  actual = 0u;
-  ASSERT_OK(zxio_read(io, buffer, 1024, 0, &actual));
-  EXPECT_EQ(actual, 2u);
-  EXPECT_STR_EQ("cd", buffer);
-  memset(buffer, 0, sizeof(buffer));
-
-  actual = 2;
-  ASSERT_OK(zxio_write_at(io, 1, "xy", 2, 0, &actual));
-  EXPECT_EQ(actual, 2u);
-
-  actual = 0u;
-  ASSERT_OK(zxio_read_at(io, 1, buffer, 1024, 0, &actual));
-  EXPECT_EQ(actual, 3u);
-  EXPECT_STR_EQ("xyd", buffer);
-  memset(buffer, 0, sizeof(buffer));
-}
-
 TEST_F(FileV2, ReadWriteChannel) {
   TestServerChannel* server = nullptr;
   ASSERT_NO_FAILURES(server = StartServer<TestServerChannel>());
   ASSERT_OK(OpenFile());
-  ASSERT_NO_FAILURES(TestReadWrite(&file_.io));
+  ASSERT_NO_FAILURES(FileTestSuite::ReadWrite(&file_.io));
 }
 
 class TestServerStream final : public TestServerBase {
@@ -402,7 +377,7 @@ TEST_F(FileV2, ReadWriteStream) {
   TestServerStream* server = nullptr;
   ASSERT_NO_FAILURES(server = StartServer<TestServerStream>());
   ASSERT_OK(OpenFile());
-  ASSERT_NO_FAILURES(TestReadWrite(&file_.io));
+  ASSERT_NO_FAILURES(FileTestSuite::ReadWrite(&file_.io));
 }
 
 }  // namespace

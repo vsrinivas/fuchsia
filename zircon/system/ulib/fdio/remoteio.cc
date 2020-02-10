@@ -257,7 +257,8 @@ zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, fdio_t**
       io = fdio_remote_create(handle.release(), 0);
       break;
     case fio::NodeInfo::Tag::kFile:
-      io = fdio_file_create(handle.release(), info.mutable_file().event.release());
+      io = fdio_file_create(handle.release(), info.mutable_file().event.release(),
+                            info.mutable_file().stream.release());
       break;
     case fio::NodeInfo::Tag::kDevice:
       io = fdio_remote_create(handle.release(), info.mutable_device().event.release());

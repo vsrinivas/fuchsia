@@ -370,13 +370,15 @@ fdio_t* fdio_dir_create(zx_handle_t control) {
   return io;
 }
 
-fdio_t* fdio_file_create(zx_handle_t control, zx_handle_t event) {
+fdio_t* fdio_file_create(zx_handle_t control, zx_handle_t event, zx_handle_t stream) {
   fdio_t* io = fdio_alloc(&fdio_zxio_remote_ops);
   if (io == NULL) {
     zx_handle_close(control);
+    zx_handle_close(event);
+    zx_handle_close(stream);
     return NULL;
   }
-  zx_status_t status = zxio_file_init(fdio_get_zxio_storage(io), control, event);
+  zx_status_t status = zxio_file_init(fdio_get_zxio_storage(io), control, event, stream);
   if (status != ZX_OK) {
     return NULL;
   }

@@ -200,8 +200,8 @@ fdio_t* fdio_dir_create(zx_handle_t control);
 
 // Creates an |fdio_t| from a remote file connection.
 //
-// Takes ownership of |control| and |event|.
-fdio_t* fdio_file_create(zx_handle_t control, zx_handle_t event);
+// Takes ownership of |control|, |event|, and |stream|.
+fdio_t* fdio_file_create(zx_handle_t control, zx_handle_t event, zx_handle_t stream);
 
 // Creates a pipe backed by a socket.
 //

@@ -30,6 +30,8 @@ test("zxio") {
     "debuglog-test.cc",
     "dir_v2-test.cc",
     "dirent-test.cc",
+    "file_test_suite.cc",
+    "file_test_suite.h",
     "file-test.cc",
     "file_v2-test.cc",
     "null-test.cc",
