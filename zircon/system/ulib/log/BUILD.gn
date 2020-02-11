@@ -16,5 +16,4 @@ zx_library("log") {
     "$zx/system/ulib/fdio",
   ]
   configs += [ "$zx_build/public/gn/config:static-libc++" ]
-  public_configs = [ "$zx/public/gn/config:Wno-unused-function" ]
 }
