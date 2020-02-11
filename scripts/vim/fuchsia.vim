@@ -101,6 +101,9 @@ if jiri_manifest != ""
     " .cml files are JSON5
     autocmd BufRead,BufNewFile *.cml set syntax=json5
 
+    " zsh completion functions are zsh scripts
+    autocmd BufRead,BufNewFile */scripts/zsh-completion/_* set filetype=zsh
+
     " .tmpl.go files are Go template files
     autocmd BufRead,BufNewFile *.tmpl.go set syntax=gotmpl
 
