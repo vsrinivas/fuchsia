@@ -7,7 +7,7 @@
 #include <stdatomic.h>
 #include <zircon/syscalls.h>
 
-enum int32_t {
+enum {
   UNSIGNALED = 0,
   UNSIGNALED_WITH_WAITERS = 1,
   SIGNALED = 2,
