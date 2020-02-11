@@ -122,7 +122,6 @@ group("all") {
     "//garnet/packages/prod:guest_runner",
     "//garnet/packages/prod:insntrace",
     "//garnet/packages/prod:iquery",
-    "//garnet/packages/prod:log_listener",
     "//garnet/packages/prod:magma-arm-mali",
     "//garnet/packages/prod:magma-img-rgx-mt8167",
     "//garnet/packages/prod:magma-qcom-adreno",
@@ -278,14 +277,6 @@ group("cobalt_client") {
   public_deps = [
     "//src/cobalt/bin/app:cobalt",
     "//src/cobalt/bin/system-metrics:cobalt_system_metrics",
-  ]
-}
-
-group("log_listener") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/log_listener:log_listener",
-    "//garnet/bin/log_listener:log_listener_shell",
   ]
 }
 
