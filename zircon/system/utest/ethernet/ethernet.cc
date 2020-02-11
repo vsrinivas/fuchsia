@@ -738,7 +738,7 @@ static bool EthernetMulticastSetsAddresses() {
   END_TEST;
 }
 
-// This value is implementation dependent, set in zircon/system/dev/ethernet/ethernet/ethernet.c
+// This value is implementation dependent, set in src/connectivity/ethernet/drivers/ethernet/ethernet.c
 #define MULTICAST_LIST_LIMIT 32
 
 static bool EthernetMulticastPromiscOnOverflow() {

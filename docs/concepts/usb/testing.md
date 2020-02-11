@@ -11,7 +11,7 @@ Bus. The component version is located at
 [/src/lib/isolated_devmgr/usb-virtual-bus.h](/src/lib/isolated_devmgr/usb-virtual-bus.h).
 There is currently no documentation about the component version.
 
-The [USB Virtual Bus](/zircon/system/dev/usb/usb-virtual-bus/) framework is a
+The [USB Virtual Bus](/src/devices/usb/drivers/usb-virtual-bus/) framework is a
 helpful framework to connect a USB Function driver to a
 USB device driver for testing.
 
@@ -52,8 +52,8 @@ mode with no modifications to the device driver.
 
 Examples of usb-function drivers:
 
-* [usb-hid-function driver](/zircon/system/dev/input/usb-hid/usb-hid-function.cc)
-* [ftdi-function driver](/zircon/system/dev/serial/ftdi/ftdi-function.cc)
+* [usb-hid-function driver](/src/ui/input/drivers/usb-hid/usb-hid-function.cc)
+* [ftdi-function driver](/src/devices/serial/drivers/ftdi/ftdi-function.cc)
 
 The usb-function driver needs to implement the
 [UsbFunctionInterface](/sdk/banjo/ddk.protocol.usb.function/usb-function.banjo#49)

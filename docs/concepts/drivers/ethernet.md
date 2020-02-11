@@ -17,9 +17,9 @@ for specific examples.
 
 In order to handle ethernet devices, two distinct parts are involved.
 A "top half" driver handles the generic ethernet protocol, and is located in
-`//zircon/system/dev/ethernet/ethernet/ethernet.c` (yes, three "ethernets" in a row),
+`//src/connectivity/ethernet/drivers/ethernet/ethernet.c` (yes, three "ethernets" in a row),
 and one or more "bottom half" drivers handle the actual devices, located one
-directory higher in `//zircon/system/dev/ethernet/`**_devicename_**`/`.
+directory higher in `//src/connectivity/ethernet/drivers/`**_devicename_**`/`.
 
 Multiple Zircon IPC protocols are used for communication between modules.
 
@@ -52,7 +52,7 @@ The top half manages the ethernet interface to the system.
 
 # Intel PCI-based ethernet
 
-The Intel ethernet driver can be found in `//zircon/system/dev/ethernet/intel-ethernet`,
+The Intel ethernet driver can be found in `//src/connectivity/ethernet/drivers/intel-ethernet`,
 and consists of the following files:
 
 <dl>

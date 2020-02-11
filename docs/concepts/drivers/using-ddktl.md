@@ -191,7 +191,7 @@ zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out) {
 Let's take a look at how a driver uses the DDKTL.
 
 We're going to use the USB XHCI driver for this set of code samples; you can find it
-[here: `//zircon/system/dev/usb/xhci/usb-xhci.cpp`](/zircon/system/dev/usb/xhci/usb-xhci.cc).
+[here: `//src/devices/usb/drivers/xhci/usb-xhci.cpp`](/src/devices/usb/drivers/xhci/usb-xhci.cc).
 
 In the previous sections, we saw [simple, C-based drivers](simple.md).
 Recall that those drivers had binding instructions (usually at the bottom of the
@@ -316,4 +316,4 @@ This usage is typical.
 [dev/block/zxcrypt]: /zircon/system/dev/block/zxcrypt
 [include/ddktl/device.h]: /zircon/system/ulib/ddktl/include/ddktl/device.h
 [mixins]: https://en.wikipedia.org/wiki/Mixin
-[usb-xhci.cc]: /zircon/system/dev/usb/xhci/usb-xhci.cc
+[usb-xhci.cc]: /src/devices/usb/drivers/xhci/usb-xhci.cc

@@ -1,0 +1,71 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("display-core-unittests") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [
+    "display-test.cc",
+    "fence-test.cc",
+    "image-test.cc",
+    "integration-test.cc",
+  ]
+  include_dirs = [ ".." ]
+  deps = [
+    ":base",
+    "//zircon/public/lib/async-testing",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/banjo/ddk.protocol.composite",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/fidl/fuchsia-hardware-display:llcpp",
+    "//zircon/system/fidl/fuchsia-sysmem:llcpp",
+  ]
+}
+
+source_set("base") {
+  sources = [
+    "base.cc",
+    "fidl_client.cc",
+    "fidl_client.h",
+  ]
+  deps = [
+    "//zircon/system/banjo/ddk.protocol.composite",
+    "//zircon/system/banjo/ddk.protocol.platform.bus",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/banjo/ddk.protocol.sysmem",
+  ]
+  public_deps = [
+    "//zircon/public/lib/async-testing",
+    "//zircon/public/lib/fake-bti",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/zxtest",
+    "//src/graphics/display/drivers/display:shared",
+    "//src/graphics/display/drivers/fake:fake-lib",
+    "//zircon/system/dev/sysmem/sysmem:sysmem_common_srcs",
+    "//zircon/system/fidl/fuchsia-hardware-display:llcpp",
+    "//zircon/system/fidl/fuchsia-sysmem:llcpp",
+  ]
+}
+
+migrated_manifest("display-core-unittests-manifest") {
+  deps = [ ":display-core-unittests" ]
+}

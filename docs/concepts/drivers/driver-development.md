@@ -11,9 +11,10 @@ Zircon drivers are found under [system/dev](/zircon/system/dev).
 They are grouped based on the protocols they implement.
 The driver protocols are defined in
 [ddk/include/ddk/protodefs.h](/zircon/system/ulib/ddk/include/ddk/protodefs.h).
-For example, a USB ethernet driver goes in [system/dev/ethernet](/zircon/system/dev/ethernet)
-rather than [system/dev/usb](/zircon/system/dev/usb) because it implements an ethernet protocol.
-However, drivers that implement the USB stack are in [system/dev/usb](/zircon/system/dev/usb)
+For example, a USB ethernet driver goes in
+[system/dev/ethernet](/src/connectivity/ethernet/drivers/)
+rather than [system/dev/usb](/src/devices/usb/drivers) because it implements an ethernet protocol.
+However, drivers that implement the USB stack are in [system/dev/usb](/src/devices/usb/drivers)
 because they implement USB protocols.
 
 In the driver's `BUILD.gn`, there should be a `zx_driver` target (for drivers in

@@ -31,7 +31,7 @@ src/connectivity/bluetooth/
 sdk/fidl/fuchsia.bluetooth.*                    # public API
 topaz/bin/bluetooth_settings/                   # Bluetooth Settings UI
 topaz/examples/eddystone_agent/                 # [Eddystone](https://github.com/google/eddystone)-based trigger
-zircon/system/dev/bluetooth/                    # bt-transport drivers
+src/connectivity/bluetooth/drivers/                    # bt-transport drivers
 ```
 
 See the [HCI section of the Bluetooth System document](/docs/concepts/networking/bluetooth_architecture.md#hci) for an explanation of how the drivers, such as `bt-transport`, `bt-hci`, and `bt-host`, relate to each other.
