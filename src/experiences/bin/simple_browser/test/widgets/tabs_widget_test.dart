@@ -62,12 +62,6 @@ void main() {
     // Adds one more tab and sees if there are two tabs in the tabsBloc.
     await _addNTabsToTabsBloc(tester, tabsBloc, 1);
 
-    // Sees if there are two Expanded widgets for the tab widgets.
-    // A tabsBloc should be wrapped by an Expanded widget when the total widths of
-    // the currently displayed tabs is smaller than the browser width.
-    expect(find.byType(Expanded), findsNWidgets(2),
-        reason: 'Expected 2 Expanded widgets when 2 tabs added.');
-
     // See if the tab widgets have the default title.
     expect(_findNewTabWidgets(), findsNWidgets(2),
         reason: '''Expected 2 tab widgets with the title, $_emptyTitle,
@@ -183,6 +177,67 @@ void main() {
     expect(tabsBloc.currentTabIdx, 2,
         reason:
             'Expected the 3rd tab widget was focused after tapped the close.');
+  });
+
+  testWidgets(
+      'Should rearrange the tabs when a tab is dragged to another position',
+      (WidgetTester tester) async {
+    await _setUpTabsWidget(tester, tabsBloc);
+    await _addNTabsToTabsBloc(tester, tabsBloc, 5);
+    final tabs = _findNewTabWidgets();
+    expect(tabs, findsNWidgets(5),
+        reason: 'Expected to find 5 tab widgets when 5 tabs added.');
+    expect(tabsBloc.currentTabIdx, 4,
+        reason: 'Expected the 5th tab widget was focused by default.');
+
+    WebPageBloc originalTab0 = tabsBloc.tabs[0];
+    WebPageBloc originalTab1 = tabsBloc.tabs[1];
+    WebPageBloc originalTab2 = tabsBloc.tabs[2];
+    WebPageBloc originalTab3 = tabsBloc.tabs[3];
+    WebPageBloc originalTab4 = tabsBloc.tabs[4];
+
+    // Drags the last tab 161.0 to the left.
+    await tester.drag(tabs.at(4), Offset(-161.0, 0.0));
+    await tester.pumpAndSettle();
+
+    // Sees if the tab just moved is focused.
+    expect(tabsBloc.currentTabIdx, 3,
+        reason: '''Expected the index of the focused tab to be rearranged to 3,
+            but actually has been rearranged to ${tabsBloc.currentTabIdx}.''');
+
+    // Sees if all tabs have been rarranged correctly.
+    expect(tabsBloc.tabs[0], originalTab0,
+        reason: 'Expected that the 1st tab used to be the 1st.');
+    expect(tabsBloc.tabs[1], originalTab1,
+        reason: 'Expected that the 2nd tab used to be the 2nd.');
+    expect(tabsBloc.tabs[2], originalTab2,
+        reason: 'Expected that the 3rd tab used to be the 3rd.');
+    expect(tabsBloc.tabs[3], originalTab4,
+        reason: 'Expected that the 4th tab used to be the 5th.');
+
+    expect(tabsBloc.tabs[4], originalTab3,
+        reason: 'Expected that the 5th tab used to the 4th.');
+
+    // Drags the 2nd tab 170.0 to the right.
+    await tester.drag(tabs.at(1), Offset(161.0, 0.0));
+    await tester.pumpAndSettle();
+
+    // Sees if the tab just moved is focused.
+    expect(tabsBloc.currentTabIdx, 2,
+        reason: '''Expected the index of the focused tab to be rearranged to 2,
+            but actually has been rearranged to ${tabsBloc.currentTabIdx}.''');
+
+    // Sees if all tabs have been rarranged correctly.
+    expect(tabsBloc.tabs[0], originalTab0,
+        reason: 'Expected that the 1st tab used to be the 1st.');
+    expect(tabsBloc.tabs[1], originalTab2,
+        reason: 'Expected that the 2nd tab used to be the 3rd.');
+    expect(tabsBloc.tabs[2], originalTab1,
+        reason: 'Expected that the 3rd tab used to be the 2nd.');
+    expect(tabsBloc.tabs[3], originalTab4,
+        reason: 'Expected that the 4th tab used to be the 5th.');
+    expect(tabsBloc.tabs[4], originalTab3,
+        reason: 'Expected that the 5th tab used to the 4th.');
   });
 
   testWidgets(

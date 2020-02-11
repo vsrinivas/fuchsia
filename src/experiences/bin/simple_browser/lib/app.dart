@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
@@ -20,6 +22,7 @@ import 'src/widgets/tabs_widget.dart';
 const _kBackgroundColor = Color(0xFFE5E5E5);
 const _kForegroundColor = Color(0xFF191919);
 const _kSelectionColor = Color(0x26191919);
+const _kTextStyle = TextStyle(color: _kForegroundColor, fontSize: 14.0);
 
 class App extends StatelessWidget {
   final AppModel model;
@@ -48,6 +51,10 @@ class App extends StatelessWidget {
                     primaryColor: _kBackgroundColor,
                     canvasColor: _kBackgroundColor,
                     accentColor: _kForegroundColor,
+                    textTheme: TextTheme(
+                      bodyText2: _kTextStyle,
+                      subtitle1: _kTextStyle,
+                    ),
                   ),
                   locale: locale,
                   localizationsDelegates: [
