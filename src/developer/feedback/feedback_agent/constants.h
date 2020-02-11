@@ -5,6 +5,10 @@
 #ifndef SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CONSTANTS_H_
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_AGENT_CONSTANTS_H_
 
+#include <cstdint>
+#include <string>
+#include <vector>
+
 namespace feedback {
 
 constexpr char kAnnotationBuildBoard[] = "build.board";
@@ -36,6 +40,20 @@ constexpr char kAttachmentLogSystem[] = "log.system.txt";
 constexpr char kAttachmentBundle[] = "fuchsia_feedback_data.zip";
 
 constexpr char kFeedbackIdPath[] = "/data/feedback_id.txt";
+
+constexpr char kPreviousLogsFilePath[] = "/tmp/log.system.previous_boot.txt";
+
+// We use the 4 files below to store up to 256 kb of logs. So, assuming all components have logged
+// at least 256 kb of data, we can expect between 192 kb and 256 kb of logs to be persisted due to
+// the log rotation.
+constexpr uint64_t kPersistentLogsMaxSizeInKb = 256;
+const std::vector<const std::string> kCurrentLogsFilePaths({
+    "/cache/current_system_log_0.txt",
+    "/cache/current_system_log_1.txt",
+    "/cache/current_system_log_2.txt",
+    "/cache/current_system_log_3.txt",
+
+});
 
 }  // namespace feedback
 

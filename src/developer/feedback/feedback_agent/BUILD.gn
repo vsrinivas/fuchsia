@@ -13,6 +13,9 @@ package("feedback_agent") {
     {
       name = "data_provider"
     },
+    {
+      name = "system_log_recorder"
+    },
   ]
 
   meta = [
@@ -32,6 +35,7 @@ package("feedback_agent") {
   deps = [
     ":data_provider",
     ":main",
+    ":system_log_recorder",
   ]
 }
 
@@ -63,11 +67,13 @@ source_set("feedback_agent_src") {
   ]
 
   deps = [
+    ":constants",
     "//garnet/public/lib/syslog/cpp",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
+    "//src/developer/feedback/utils:files",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/zx",
@@ -149,6 +155,19 @@ source_set("feedback_id") {
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//src/lib/uuid",
+  ]
+}
+
+executable("system_log_recorder") {
+  sources = [ "system_log_recorder_main.cc" ]
+
+  deps = [
+    ":constants",
+    ":system_log_recorder_src",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 

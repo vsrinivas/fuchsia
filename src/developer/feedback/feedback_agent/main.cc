@@ -20,13 +20,15 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
 
+  if (!feedback::InitializeFeedbackId(feedback::kFeedbackIdPath)) {
+    FX_LOGS(ERROR) << "Error initializing feedback id";
+  }
+
   auto inspector = std::make_unique<sys::ComponentInspector>(context.get());
   inspect::Node& root_node = inspector->root();
   feedback::FeedbackAgent agent(&root_node);
 
-  if (!feedback::InitializeFeedbackId(feedback::kFeedbackIdPath)) {
-    FX_LOGS(ERROR) << "Error initializing feedback id";
-  }
+  agent.SpawnSystemLogRecorder();
 
   // We spawn a new process capable of handling fuchsia.feedback.DataProvider requests on every
   // incoming request. This has the advantage of tying each request to a different process that can

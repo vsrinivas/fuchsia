@@ -12,13 +12,51 @@
 
 #include <cinttypes>
 
+#include "src/developer/feedback/feedback_agent/constants.h"
+#include "src/developer/feedback/utils/rotating_file_set.h"
+#include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace feedback {
+namespace {
+
+void MovePreviousLogs() {
+  RotatingFileSetReader log_reader(kCurrentLogsFilePaths);
+
+  if (log_reader.Concatenate(kPreviousLogsFilePath)) {
+    FX_LOGS(INFO) << "Found logs from previous boot, available at " << kPreviousLogsFilePath;
+  } else {
+    FX_LOGS(ERROR) << "No logs found from previous boot";
+  }
+
+  // Clean up all of the previous log files now that they have been concatenated into a single
+  // in-memory file.
+  for (const auto& file : kCurrentLogsFilePaths) {
+    files::DeletePath(file, /*recursive=*/false);
+  }
+}
+
+}  // namespace
 
 FeedbackAgent::FeedbackAgent(inspect::Node* node)
     : total_num_connections_(node, "total_num_connections", 0),
-      current_num_connections_(node, "current_num_connections", 0) {}
+      current_num_connections_(node, "current_num_connections", 0) {
+  // We need to move the logs from the previous boot before spawning the system log recorder process
+  // so that the new process doesn't overwrite the old logs. Additionally, to guarantee the data
+  // providers see the complete previous logs, this needs to be done before spawning any data
+  // providers to avoid parallel attempts to read and write the previous logs file.
+  MovePreviousLogs();
+}
+
+void FeedbackAgent::SpawnSystemLogRecorder() {
+  zx_handle_t process;
+  const char* argv[] = {/*process_name=*/"system_log_recorder", nullptr};
+  if (const zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
+                                            "/pkg/bin/system_log_recorder", argv, &process);
+      status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to spawn system log recorder, logs will not be persisted";
+  }
+}
 
 void FeedbackAgent::SpawnNewDataProvider(
     fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {

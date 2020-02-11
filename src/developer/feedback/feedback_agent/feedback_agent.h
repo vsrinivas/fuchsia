@@ -19,6 +19,7 @@ class FeedbackAgent {
  public:
   FeedbackAgent(inspect::Node* root_node);
 
+  void SpawnSystemLogRecorder();
   void SpawnNewDataProvider(fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request);
 
  private:
