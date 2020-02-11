@@ -59,7 +59,7 @@ For more information on running Fuchsia tests, see
 ## Isolated Storage
 
 - By default, the test component is launched in a new hermetic environment.
-- Generated environment name is of form test\_env\_XXXXX, where XXXXX is a
+- The generated environment name is of form test\_env\_XXXXX, where XXXXX is a
   randomly generated number.
 - Each test component receives a new isolated storage directory.
 - The directory is deleted after the text exits, regardless of the test's
@@ -67,14 +67,14 @@ For more information on running Fuchsia tests, see
 
 ### Keep storage for debugging
 
-If you need to keep test storage for debugging after the test ends, use
-[run-test-component][run-test-component] in the Fuchsia shell and with the
+If you need to keep test storage for the debugging after the test ends, use
+[run-test-component][run-test-component] in the Fuchsia shell and pass
 `--realm-label` flag.
 
 The `--realm-label` flag defines the label for environment that your test runs
 in. When the test ends, the storage won't be deleted automatically. When you're
 done exploring the contents of the directory, you may want to delete it to free
-up space or prevent interfering with the results of future tests.
+up space or prevent it from interfering with the results of future tests.
 
 ## Ambient Services
 

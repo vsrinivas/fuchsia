@@ -292,10 +292,10 @@ Now, with `fx test`, that simply becomes:
 <code class="devsite-terminal">fx test <var>NESTED_COMPONENT_NAME</var></code>
 </pre>
 
-#### Internal working
+#### Implementation
 
-`fx test` when running your test component internally calls `run-test-component`
-on target device with test url to run the test.
+When `fx test` runs your test component, `fx test` calls `run-test-component`
+on the target device with the test url to run the test.
 
 
 ## Running tests (Legacy)
@@ -330,7 +330,7 @@ search query. If there are multiple matches for the query the above command will
 fail, so `locate` should be invoked directly to discover the URL that should be
 provided to `run-test-component`.
 
-`run-test-component` will create a transient isolated storage for the test. See
+`run-test-component` will create transient isolated storage for the test. See
 [isolated-storage][isolated-storage] for more info.
 
 [component_manifest]: /docs/concepts/storage/component_manifest.md
