@@ -1205,15 +1205,17 @@ TEST_F(ScenicPixelTest, ClipSpaceTransformPerspective) {
   EXPECT_GT(histogram[shapes[1].color], 0u);
 }
 
-// We cannot capture protected content, so we expect a black screenshot instead.
-// TODO(40926): Reenable after flakiness is resolved.
-TEST_F(ScenicPixelTest, DISABLED_ProtectedImage) {
+// We cannot capture protected content, so we expect a fuchsia screenshot instead.
+TEST_F(ScenicPixelTest, ProtectedImage) {
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
   const auto [display_width, display_height] = test_session->display_dimensions;
   test_session->SetUpCamera().SetProjection(0);
 
   fuchsia::images::ImagePipe2Ptr image_pipe;
+  image_pipe.set_error_handler([](zx_status_t status) {
+    GTEST_FAIL() << "ImagePipe terminated.";
+  });
   const uint32_t kImagePipeId = session->next_resource_id();
   session->Enqueue(scenic::NewCreateImagePipe2Cmd(kImagePipeId, image_pipe.NewRequest()));
 
@@ -1242,8 +1244,12 @@ TEST_F(ScenicPixelTest, DISABLED_ProtectedImage) {
   EXPECT_EQ(status, ZX_OK);
   status = local_token->Sync();
   EXPECT_EQ(status, ZX_OK);
+
+  ASSERT_TRUE(image_pipe.is_bound());
   const uint32_t kBufferId = 1;
   image_pipe->AddBufferCollection(kBufferId, std::move(dup_token));
+  // WaitForBuffersAllocated() hangs if AddBufferCollection() isn't finished successfully.
+  RunLoopUntilIdle();
 
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   status = sysmem_allocator->BindSharedCollection(std::move(local_token),
@@ -1253,7 +1259,15 @@ TEST_F(ScenicPixelTest, DISABLED_ProtectedImage) {
   constraints.has_buffer_memory_constraints = true;
   constraints.buffer_memory_constraints.secure_required = true;
   constraints.buffer_memory_constraints.inaccessible_domain_supported = true;
+  constraints.buffer_memory_constraints.cpu_domain_supported = false;
+  constraints.buffer_memory_constraints.ram_domain_supported = false;
   constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferSrc;
+  constraints.image_format_constraints_count = 1;
+  auto& image_constraints = constraints.image_format_constraints[0];
+  image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::BGRA32;
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0] =
+      fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
   status = buffer_collection->SetConstraints(true, constraints);
   EXPECT_EQ(status, ZX_OK);
   zx_status_t allocation_status = ZX_OK;
@@ -1261,7 +1275,7 @@ TEST_F(ScenicPixelTest, DISABLED_ProtectedImage) {
   status = buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
   if (allocation_status != ZX_OK) {
     // Protected memory might not be available in some devices which causes allocation failure.
-    GTEST_SKIP();
+    GTEST_SKIP() << "Protected memory cannot be allocated";
   }
   EXPECT_EQ(status, ZX_OK);
   EXPECT_TRUE(buffer_collection_info.settings.buffer_settings.is_secure);
