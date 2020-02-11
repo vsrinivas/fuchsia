@@ -5,9 +5,6 @@
 #ifndef TOOLS_FIDLCAT_LIB_INFERENCE_H_
 #define TOOLS_FIDLCAT_LIB_INFERENCE_H_
 
-#include <zircon/system/public/zircon/processargs.h>
-#include <zircon/system/public/zircon/types.h>
-
 #include <map>
 #include <memory>
 #include <string>
@@ -30,6 +27,23 @@ class Inference : public fidl_codec::semantic::HandleSemantic {
 
   // Function called when __libc_extensions_init (from libc) is intercepted.
   void LibcExtensionsInit(SyscallDecoder* decoder);
+
+  // Called after a zx_channel_create syscall has been displayed.
+  void ZxChannelCreate(SyscallDecoder* decoder);
+
+  // Called after a zx_port_create syscall has been displayed.
+  void ZxPortCreate(SyscallDecoder* decoder);
+
+  // Called after a zx_timer_create syscall has been displayed.
+  void ZxTimerCreate(SyscallDecoder* decoder);
+
+ private:
+  // Id for the next created channel.
+  uint32_t next_channel_ = 0;
+  // Id for the next created port.
+  uint32_t next_port_ = 0;
+  // Id for the next created timer.
+  uint32_t next_timer_ = 0;
 };
 
 }  // namespace fidlcat

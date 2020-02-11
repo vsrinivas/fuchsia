@@ -29,9 +29,24 @@ std::unique_ptr<SystemCallTest> ZxPortCreate(int64_t status, std::string_view st
   return value;
 }
 
-#define PORT_CREATE_DISPLAY_TEST_CONTENT(status, expected) \
-  zx_handle_t handle = kHandle;                            \
-  PerformDisplayTest("zx_port_create@plt", ZxPortCreate(status, #status, 0, &handle), expected);
+// Checks that we can decode a zx_port_create syscall.
+// Also checks that we create the right semantic for the ports.
+#define PORT_CREATE_DISPLAY_TEST_CONTENT(status, expected)                                         \
+  zx_handle_t handle = kHandle;                                                                    \
+  ProcessController controller(this, session(), loop());                                           \
+  PerformDisplayTest(&controller, "zx_port_create@plt", ZxPortCreate(status, #status, 0, &handle), \
+                     expected);                                                                    \
+  SyscallDecoderDispatcher* dispatcher = controller.workflow().syscall_decoder_dispatcher();       \
+  const fidl_codec::semantic::HandleDescription* description0 =                                    \
+      dispatcher->inference().GetHandleDescription(kFirstPid, handle);                             \
+  ASSERT_NE(description0, nullptr);                                                                \
+  ASSERT_EQ(description0->type(), "port");                                                         \
+  ASSERT_EQ(description0->fd(), 0);                                                                \
+  const fidl_codec::semantic::HandleDescription* description1 =                                    \
+      dispatcher->inference().GetHandleDescription(kSecondPid, handle);                            \
+  ASSERT_NE(description1, nullptr);                                                                \
+  ASSERT_EQ(description1->type(), "port");                                                         \
+  ASSERT_EQ(description1->fd(), 1);
 
 #define PORT_CREATE_DISPLAY_TEST(name, status, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \

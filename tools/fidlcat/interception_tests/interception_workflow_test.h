@@ -344,11 +344,16 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
 
   void PerformDisplayTest(const char* syscall_name, std::unique_ptr<SystemCallTest> syscall,
                           const char* expected, fidl_codec::LibraryLoader* loader = nullptr);
+  void PerformDisplayTest(ProcessController* controller, const char* syscall_name,
+                          std::unique_ptr<SystemCallTest> syscall, const char* expected,
+                          fidl_codec::LibraryLoader* loader = nullptr);
 
   void PerformOneThreadDisplayTest(const char* syscall_name,
                                    std::unique_ptr<SystemCallTest> syscall, const char* expected);
 
   void PerformInterleavedDisplayTest(const char* syscall_name,
+                                     std::unique_ptr<SystemCallTest> syscall, const char* expected);
+  void PerformInterleavedDisplayTest(ProcessController* controller, const char* syscall_name,
                                      std::unique_ptr<SystemCallTest> syscall, const char* expected);
 
   void PerformNoReturnDisplayTest(const char* syscall_name, std::unique_ptr<SystemCallTest> syscall,

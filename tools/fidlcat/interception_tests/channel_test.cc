@@ -19,11 +19,39 @@ std::unique_ptr<SystemCallTest> ZxChannelCreate(int64_t result, std::string_view
   return value;
 }
 
-#define CREATE_DISPLAY_TEST_CONTENT(errno, expected)                                           \
-  zx_handle_t out0 = 0x12345678;                                                               \
-  zx_handle_t out1 = 0x87654321;                                                               \
-  PerformDisplayTest("zx_channel_create@plt", ZxChannelCreate(errno, #errno, 0, &out0, &out1), \
-                     expected);
+// Checks that we can decode a zx_channel_create syscall.
+// Also checks that we create the right semantic for the channels.
+#define CREATE_DISPLAY_TEST_CONTENT(errno, expected)                                         \
+  zx_handle_t out0 = 0x12345678;                                                             \
+  zx_handle_t out1 = 0x87654321;                                                             \
+  ProcessController controller(this, session(), loop());                                     \
+  PerformDisplayTest(&controller, "zx_channel_create@plt",                                   \
+                     ZxChannelCreate(errno, #errno, 0, &out0, &out1), expected);             \
+  SyscallDecoderDispatcher* dispatcher = controller.workflow().syscall_decoder_dispatcher(); \
+  const fidl_codec::semantic::HandleDescription* description0 =                              \
+      dispatcher->inference().GetHandleDescription(kFirstPid, out0);                         \
+  ASSERT_NE(description0, nullptr);                                                          \
+  ASSERT_EQ(description0->type(), "channel");                                                \
+  ASSERT_EQ(description0->fd(), 0);                                                          \
+  const fidl_codec::semantic::HandleDescription* description1 =                              \
+      dispatcher->inference().GetHandleDescription(kFirstPid, out1);                         \
+  ASSERT_NE(description1, nullptr);                                                          \
+  ASSERT_EQ(description1->type(), "channel");                                                \
+  ASSERT_EQ(description1->fd(), 1);                                                          \
+  const fidl_codec::semantic::HandleDescription* description2 =                              \
+      dispatcher->inference().GetHandleDescription(kSecondPid, out0);                        \
+  ASSERT_NE(description2, nullptr);                                                          \
+  ASSERT_EQ(description2->type(), "channel");                                                \
+  ASSERT_EQ(description2->fd(), 2);                                                          \
+  const fidl_codec::semantic::HandleDescription* description3 =                              \
+      dispatcher->inference().GetHandleDescription(kSecondPid, out1);                        \
+  ASSERT_NE(description3, nullptr);                                                          \
+  ASSERT_EQ(description3->type(), "channel");                                                \
+  ASSERT_EQ(description3->fd(), 3);                                                          \
+  ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kFirstPid, out0), out1);                 \
+  ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kFirstPid, out1), out0);                 \
+  ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kSecondPid, out0), out1);                \
+  ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kSecondPid, out1), out0);
 
 #define CREATE_DISPLAY_TEST(name, errno, expected)                                            \
   TEST_F(InterceptionWorkflowTestX64, name) { CREATE_DISPLAY_TEST_CONTENT(errno, expected); } \
@@ -37,11 +65,39 @@ CREATE_DISPLAY_TEST(
     "  -> \x1B[32mZX_OK\x1B[0m (out0:\x1B[32mhandle\x1B[0m: \x1B[31m12345678\x1B[0m, "
     "out1:\x1B[32mhandle\x1B[0m: \x1B[31m87654321\x1B[0m)\n");
 
-#define CREATE_INTERLEAVED_DISPLAY_TEST_CONTENT(errno, expected) \
-  zx_handle_t out0 = 0x12345678;                                 \
-  zx_handle_t out1 = 0x87654321;                                 \
-  PerformInterleavedDisplayTest("zx_channel_create@plt",         \
-                                ZxChannelCreate(errno, #errno, 0, &out0, &out1), expected);
+// Checks that we can decode a zx_channel_create syscall with interleaved responses.
+// Also checks that we create the right semantic for the channels.
+#define CREATE_INTERLEAVED_DISPLAY_TEST_CONTENT(errno, expected)                             \
+  zx_handle_t out0 = 0x12345678;                                                             \
+  zx_handle_t out1 = 0x87654321;                                                             \
+  ProcessController controller(this, session(), loop());                                     \
+  PerformInterleavedDisplayTest(&controller, "zx_channel_create@plt",                        \
+                                ZxChannelCreate(errno, #errno, 0, &out0, &out1), expected);  \
+  SyscallDecoderDispatcher* dispatcher = controller.workflow().syscall_decoder_dispatcher(); \
+  const fidl_codec::semantic::HandleDescription* description0 =                              \
+      dispatcher->inference().GetHandleDescription(kFirstPid, out0);                         \
+  ASSERT_NE(description0, nullptr);                                                          \
+  ASSERT_EQ(description0->type(), "channel");                                                \
+  ASSERT_EQ(description0->fd(), 0);                                                          \
+  const fidl_codec::semantic::HandleDescription* description1 =                              \
+      dispatcher->inference().GetHandleDescription(kFirstPid, out1);                         \
+  ASSERT_NE(description1, nullptr);                                                          \
+  ASSERT_EQ(description1->type(), "channel");                                                \
+  ASSERT_EQ(description1->fd(), 1);                                                          \
+  const fidl_codec::semantic::HandleDescription* description2 =                              \
+      dispatcher->inference().GetHandleDescription(kSecondPid, out0);                        \
+  ASSERT_NE(description2, nullptr);                                                          \
+  ASSERT_EQ(description2->type(), "channel");                                                \
+  ASSERT_EQ(description2->fd(), 2);                                                          \
+  const fidl_codec::semantic::HandleDescription* description3 =                              \
+      dispatcher->inference().GetHandleDescription(kSecondPid, out1);                        \
+  ASSERT_NE(description3, nullptr);                                                          \
+  ASSERT_EQ(description3->type(), "channel");                                                \
+  ASSERT_EQ(description3->fd(), 3);                                                          \
+  ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kFirstPid, out0), out1);                 \
+  ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kFirstPid, out1), out0);                 \
+  ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kSecondPid, out0), out1);                \
+  ASSERT_EQ(dispatcher->inference().GetLinkedHandle(kSecondPid, out1), out0);
 
 #define CREATE_INTERLEAVED_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {                  \

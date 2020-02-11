@@ -19,10 +19,24 @@ std::unique_ptr<SystemCallTest> ZxTimerCreate(int64_t result, std::string_view r
   return value;
 }
 
-#define TIMER_CREATE_DISPLAY_TEST_CONTENT(result, expected) \
-  zx_handle_t out = kHandleOut;                             \
-  PerformDisplayTest("zx_timer_create@plt",                 \
-                     ZxTimerCreate(result, #result, 0, ZX_CLOCK_MONOTONIC, &out), expected);
+// Checks that we can decode a zx_timer_create syscall.
+// Also checks that we create the right semantic for the timers.
+#define TIMER_CREATE_DISPLAY_TEST_CONTENT(result, expected)                                  \
+  zx_handle_t out = kHandleOut;                                                              \
+  ProcessController controller(this, session(), loop());                                     \
+  PerformDisplayTest(&controller, "zx_timer_create@plt",                                     \
+                     ZxTimerCreate(result, #result, 0, ZX_CLOCK_MONOTONIC, &out), expected); \
+  SyscallDecoderDispatcher* dispatcher = controller.workflow().syscall_decoder_dispatcher(); \
+  const fidl_codec::semantic::HandleDescription* description0 =                              \
+      dispatcher->inference().GetHandleDescription(kFirstPid, out);                          \
+  ASSERT_NE(description0, nullptr);                                                          \
+  ASSERT_EQ(description0->type(), "timer");                                                  \
+  ASSERT_EQ(description0->fd(), 0);                                                          \
+  const fidl_codec::semantic::HandleDescription* description1 =                              \
+      dispatcher->inference().GetHandleDescription(kSecondPid, out);                         \
+  ASSERT_NE(description1, nullptr);                                                          \
+  ASSERT_EQ(description1->type(), "timer");                                                  \
+  ASSERT_EQ(description1->fd(), 1);
 
 #define TIMER_CREATE_DISPLAY_TEST(name, errno, expected) \
   TEST_F(InterceptionWorkflowTestX64, name) {            \

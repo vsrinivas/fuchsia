@@ -59,6 +59,8 @@ class HandleDescription {
 struct ProcessSemantic {
   // All the handles for which we have some information.
   std::map<zx_handle_t, std::unique_ptr<HandleDescription>> handles;
+  // All the links between handle pairs.
+  std::map<zx_handle_t, zx_handle_t> linked_handles;
 };
 
 // Object which hold the information we have about handles for all the processes.
@@ -107,6 +109,26 @@ class HandleSemantic {
   void AddHandleDescription(zx_koid_t pid, zx_handle_t handle, uint32_t type) {
     process_handles_[pid].handles[handle] =
         std::make_unique<HandleDescription>(HandleDescription::Convert(type));
+  }
+
+  // Returns the handle peer for a channel.
+  zx_handle_t GetLinkedHandle(zx_koid_t pid, zx_handle_t handle) const {
+    const auto& process_semantic = process_handles_.find(pid);
+    if (process_semantic == process_handles_.end()) {
+      return ZX_HANDLE_INVALID;
+    }
+    auto linked = process_semantic->second.linked_handles.find(handle);
+    if (linked == process_semantic->second.linked_handles.end()) {
+      return ZX_HANDLE_INVALID;
+    }
+    return linked->second;
+  }
+
+  // Associates two channels which have been created by the same zx_channel_create.
+  void AddLinkedHandles(zx_koid_t pid, zx_handle_t handle0, zx_handle_t handle1) {
+    ProcessSemantic& process_semantic = process_handles_[pid];
+    process_semantic.linked_handles.insert(std::make_pair(handle0, handle1));
+    process_semantic.linked_handles.insert(std::make_pair(handle1, handle0));
   }
 
  private:

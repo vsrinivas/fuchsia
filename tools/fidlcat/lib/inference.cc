@@ -9,6 +9,8 @@
 
 #include "src/lib/fidl_codec/printer.h"
 #include "tools/fidlcat/lib/syscall_decoder.h"
+#include "zircon/system/public/zircon/processargs.h"
+#include "zircon/system/public/zircon/types.h"
 
 namespace fidlcat {
 
@@ -91,6 +93,39 @@ void Inference::LibcExtensionsInit(SyscallDecoder* decoder) {
           break;
       }
     }
+  }
+}
+
+void Inference::ZxChannelCreate(SyscallDecoder* decoder) {
+  constexpr int kOut0 = 1;
+  constexpr int kOut1 = 2;
+  zx_handle_t* out0 = reinterpret_cast<zx_handle_t*>(decoder->ArgumentContent(Stage::kExit, kOut0));
+  zx_handle_t* out1 = reinterpret_cast<zx_handle_t*>(decoder->ArgumentContent(Stage::kExit, kOut1));
+  if ((out0 != nullptr) && (*out0 != ZX_HANDLE_INVALID) && (out1 != nullptr) &&
+      (*out1 != ZX_HANDLE_INVALID)) {
+    // Provides the minimal semantic for both handles (that is they are channels).
+    AddHandleDescription(decoder->process_id(), *out0, "channel", next_channel_++);
+    AddHandleDescription(decoder->process_id(), *out1, "channel", next_channel_++);
+    // Links the two channels.
+    AddLinkedHandles(decoder->process_id(), *out0, *out1);
+  }
+}
+
+void Inference::ZxPortCreate(SyscallDecoder* decoder) {
+  constexpr int kOut = 1;
+  zx_handle_t* out = reinterpret_cast<zx_handle_t*>(decoder->ArgumentContent(Stage::kExit, kOut));
+  if ((out != nullptr) && (*out != ZX_HANDLE_INVALID)) {
+    // Provides the minimal semantic for the handle (that is it's a port).
+    AddHandleDescription(decoder->process_id(), *out, "port", next_port_++);
+  }
+}
+
+void Inference::ZxTimerCreate(SyscallDecoder* decoder) {
+  constexpr int kOut = 2;
+  zx_handle_t* out = reinterpret_cast<zx_handle_t*>(decoder->ArgumentContent(Stage::kExit, kOut));
+  if ((out != nullptr) && (*out != ZX_HANDLE_INVALID)) {
+    // Provides the minimal semantic for the handle (that is it's a timer).
+    AddHandleDescription(decoder->process_id(), *out, "timer", next_timer_++);
   }
 }
 

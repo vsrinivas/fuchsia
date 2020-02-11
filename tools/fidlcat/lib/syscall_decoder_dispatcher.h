@@ -1229,6 +1229,14 @@ class Syscall {
     inputs_decoded_action_ = inputs_decoded_action;
   }
 
+  [[nodiscard]] void (SyscallDecoderDispatcher::*displayed_action() const)(SyscallDecoder*) {
+    return displayed_action_;
+  }
+  void set_displayed_action(
+      void (SyscallDecoderDispatcher::*displayed_action)(SyscallDecoder* decoder)) {
+    displayed_action_ = displayed_action;
+  }
+
   // Adds an argument definition to the syscall.
   template <typename Type>
   SyscallArgument<Type>* Argument(SyscallType syscall_type) {
@@ -1481,6 +1489,7 @@ class Syscall {
   std::vector<std::unique_ptr<fidl_codec::StructMember>> output_inline_members_;
   std::vector<std::unique_ptr<fidl_codec::StructMember>> output_outline_members_;
   bool (SyscallDecoderDispatcher::*inputs_decoded_action_)(SyscallDecoder* decoder) = nullptr;
+  void (SyscallDecoderDispatcher::*displayed_action_)(SyscallDecoder* decoder) = nullptr;
 };
 
 // Decoder for syscalls. This creates the breakpoints for all the syscalls we
@@ -1611,6 +1620,15 @@ class SyscallDecoderDispatcher {
     inference_.LibcExtensionsInit(decoder);
     return false;
   }
+
+  // Called when we intercept zx_channel_create.
+  void ZxChannelCreate(SyscallDecoder* decoder) { inference_.ZxChannelCreate(decoder); }
+
+  // Called when we intercept zx_port_create.
+  void ZxPortCreate(SyscallDecoder* decoder) { inference_.ZxPortCreate(decoder); }
+
+  // Called when we intercept zx_timer_create.
+  void ZxTimerCreate(SyscallDecoder* decoder) { inference_.ZxTimerCreate(decoder); }
 
   // Decoding options.
   const DecodeOptions& decode_options_;

@@ -3226,6 +3226,7 @@ void SyscallDecoderDispatcher::Populate() {
                                            std::make_unique<ArgumentAccess<zx_handle_t>>(out0));
     zx_channel_create->Output<zx_handle_t>(ZX_OK, "out1",
                                            std::make_unique<ArgumentAccess<zx_handle_t>>(out1));
+    zx_channel_create->set_displayed_action(&SyscallDecoderDispatcher::ZxChannelCreate);
   }
 
   {
@@ -4028,6 +4029,7 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_port_create->Output<zx_handle_t>(ZX_OK, "out",
                                         std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+    zx_port_create->set_displayed_action(&SyscallDecoderDispatcher::ZxPortCreate);
   }
 
   {
@@ -4088,6 +4090,7 @@ void SyscallDecoderDispatcher::Populate() {
     // Outputs
     zx_timer_create->Output<zx_handle_t>(ZX_OK, "out",
                                          std::make_unique<ArgumentAccess<zx_handle_t>>(out));
+    zx_timer_create->set_displayed_action(&SyscallDecoderDispatcher::ZxTimerCreate);
   }
 
   {

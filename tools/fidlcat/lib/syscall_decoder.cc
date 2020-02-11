@@ -363,6 +363,11 @@ void SyscallDecoder::DecodeAndDisplay() {
 
 void SyscallDecoder::Destroy() {
   if (pending_request_count_ == 0) {
+    if (syscall_->displayed_action() != nullptr) {
+      // Calls the action associated with the syscall. This is used to infer semantic about handles.
+      (dispatcher_->*(syscall_->displayed_action()))(this);
+    }
+
     dispatcher_->DeleteDecoder(this);
   }
 }

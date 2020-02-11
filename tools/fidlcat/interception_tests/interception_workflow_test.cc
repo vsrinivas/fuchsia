@@ -72,10 +72,17 @@ void InterceptionWorkflowTest::PerformDisplayTest(const char* syscall_name,
                                                   const char* expected,
                                                   fidl_codec::LibraryLoader* loader) {
   ProcessController controller(this, session(), loop());
+  PerformDisplayTest(&controller, syscall_name, std::move(syscall), expected, loader);
+}
 
-  PerformTest(syscall_name, std::move(syscall), nullptr, &controller,
+void InterceptionWorkflowTest::PerformDisplayTest(ProcessController* controller,
+                                                  const char* syscall_name,
+                                                  std::unique_ptr<SystemCallTest> syscall,
+                                                  const char* expected,
+                                                  fidl_codec::LibraryLoader* loader) {
+  PerformTest(syscall_name, std::move(syscall), nullptr, controller,
               std::make_unique<SyscallDisplayDispatcherTest>(
-                  loader, decode_options_, display_options_, result_, &controller, aborted_),
+                  loader, decode_options_, display_options_, result_, controller, aborted_),
               /*interleaved_test=*/false, /*multi_thread=*/true);
   std::string both_results = result_.str();
   // The second output starts with "test_2718"
@@ -131,10 +138,15 @@ void InterceptionWorkflowTest::PerformOneThreadDisplayTest(const char* syscall_n
 void InterceptionWorkflowTest::PerformInterleavedDisplayTest(
     const char* syscall_name, std::unique_ptr<SystemCallTest> syscall, const char* expected) {
   ProcessController controller(this, session(), loop());
+  PerformInterleavedDisplayTest(&controller, syscall_name, std::move(syscall), expected);
+}
 
-  PerformTest(syscall_name, std::move(syscall), nullptr, &controller,
+void InterceptionWorkflowTest::PerformInterleavedDisplayTest(
+    ProcessController* controller, const char* syscall_name,
+    std::unique_ptr<SystemCallTest> syscall, const char* expected) {
+  PerformTest(syscall_name, std::move(syscall), nullptr, controller,
               std::make_unique<SyscallDisplayDispatcherTest>(
-                  nullptr, decode_options_, display_options_, result_, &controller, aborted_),
+                  nullptr, decode_options_, display_options_, result_, controller, aborted_),
               /*interleaved_test=*/true, /*multi_thread=*/true);
   ASSERT_EQ(expected, result_.str());
 }
