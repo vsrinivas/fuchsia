@@ -22,6 +22,7 @@ void TestAxis(fuchsia_input_report::Axis a, fuchsia_input_report::Axis b) {
 }
 
 TEST(FidlTest, MouseInputDescriptor) {
+  // Build Mouse Input Descriptor.
   fuchsia_input_report::Axis axis;
   axis.unit = fuchsia_input_report::Unit::DISTANCE;
   axis.range.min = -126;
@@ -39,34 +40,31 @@ TEST(FidlTest, MouseInputDescriptor) {
   hid_input_report::ReportDescriptor desc;
   desc.descriptor = mouse_desc;
 
+  // Convert to FIDL and back.
   hid_input_report::FidlDescriptor fidl_desc = {};
   ASSERT_OK(SetFidlDescriptor(desc, &fidl_desc));
 
   fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.build();
   ASSERT_TRUE(fidl.has_mouse());
   ASSERT_TRUE(fidl.mouse().has_input());
-  auto& fidl_mouse = fidl.mouse().input();
 
-  ASSERT_TRUE(fidl_mouse.has_movement_x());
-  TestAxis(*mouse_desc.input->movement_x, fidl_mouse.movement_x());
+  hid_input_report::MouseDescriptor new_desc = hid_input_report::ToMouseDescriptor(fidl.mouse());
 
-  ASSERT_TRUE(fidl_mouse.has_movement_y());
-  TestAxis(*mouse_desc.input->movement_y, fidl_mouse.movement_y());
+  // Check the fields.
+  TestAxis(*mouse_desc.input->movement_x, *new_desc.input->movement_x);
+  TestAxis(*mouse_desc.input->movement_y, *new_desc.input->movement_y);
 
-  ASSERT_TRUE(fidl_mouse.has_buttons());
-  ::fidl::VectorView<uint8_t>& buttons = fidl_mouse.buttons();
-  ASSERT_EQ(mouse_desc.input->num_buttons, buttons.count());
+  ASSERT_EQ(mouse_desc.input->num_buttons, new_desc.input->num_buttons);
   for (size_t i = 0; i < mouse_desc.input->num_buttons; i++) {
-    ASSERT_EQ(mouse_desc.input->buttons[i], buttons[i]);
+    ASSERT_EQ(mouse_desc.input->buttons[i], mouse_desc.input->buttons[i]);
   }
 }
 
 TEST(FidlTest, MouseInputReport) {
+  // Build Mouse Input report.
   hid_input_report::MouseInputReport mouse = {};
   mouse.movement_x = 100;
-
   mouse.movement_y = 200;
-
   mouse.num_buttons_pressed = 3;
   mouse.buttons_pressed[0] = 1;
   mouse.buttons_pressed[1] = 10;
@@ -75,24 +73,21 @@ TEST(FidlTest, MouseInputReport) {
   hid_input_report::InputReport report;
   report.report = mouse;
 
+  // Convert to FIDL and back.
   hid_input_report::FidlInputReport fidl_report = {};
   ASSERT_OK(SetFidlInputReport(report, &fidl_report));
 
-  fuchsia_input_report::InputReport fidl = fidl_report.builder.build();
-  ASSERT_TRUE(fidl.has_mouse());
-  auto& fidl_mouse = fidl.mouse();
+  hid_input_report::InputReport new_input_report =
+      hid_input_report::ToInputReport(fidl_report.builder.build());
+  auto new_mouse = std::get<hid_input_report::MouseInputReport>(new_input_report.report);
 
-  ASSERT_TRUE(fidl_mouse.has_movement_x());
-  ASSERT_EQ(mouse.movement_x, fidl_mouse.movement_x());
+  // Check the fields.
+  ASSERT_EQ(mouse.movement_x, new_mouse.movement_x);
+  ASSERT_EQ(mouse.movement_y, new_mouse.movement_y);
 
-  ASSERT_TRUE(fidl_mouse.has_movement_y());
-  ASSERT_EQ(mouse.movement_y, fidl_mouse.movement_y());
-
-  ASSERT_TRUE(fidl_mouse.has_pressed_buttons());
-  ::fidl::VectorView<uint8_t>& buttons = fidl_mouse.pressed_buttons();
-  ASSERT_EQ(mouse.num_buttons_pressed, buttons.count());
+  ASSERT_EQ(mouse.num_buttons_pressed, new_mouse.num_buttons_pressed);
   for (size_t i = 0; i < mouse.num_buttons_pressed; i++) {
-    ASSERT_EQ(mouse.buttons_pressed[i], buttons[i]);
+    ASSERT_EQ(mouse.buttons_pressed[i], new_mouse.buttons_pressed[i]);
   }
 }
 
@@ -122,16 +117,15 @@ TEST(FidlTest, SensorInputDescriptor) {
   fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.build();
   ASSERT_TRUE(fidl.has_sensor());
   ASSERT_TRUE(fidl.sensor().has_input());
-  auto& fidl_sensor = fidl.sensor().input();
 
-  ASSERT_TRUE(fidl_sensor.has_values());
-  ASSERT_EQ(fidl_sensor.values().count(), 2);
+  hid_input_report::SensorDescriptor new_desc = hid_input_report::ToSensorDescriptor(fidl.sensor());
 
-  TestAxis(sensor_desc.input->values[0].axis, fidl_sensor.values()[0].axis);
-  ASSERT_EQ(fidl_sensor.values()[0].type, fuchsia_input_report::SensorType::ACCELEROMETER_X);
+  ASSERT_EQ(sensor_desc.input->num_values, new_desc.input->num_values);
 
-  TestAxis(sensor_desc.input->values[1].axis, fidl_sensor.values()[1].axis);
-  ASSERT_EQ(fidl_sensor.values()[1].type, fuchsia_input_report::SensorType::LIGHT_ILLUMINANCE);
+  for (size_t i = 0; i < sensor_desc.input->num_values; i++) {
+    TestAxis(sensor_desc.input->values[i].axis, new_desc.input->values[i].axis);
+    ASSERT_EQ(sensor_desc.input->values[i].type, new_desc.input->values[i].type);
+  }
 }
 
 TEST(FidlTest, SensorInputReport) {
@@ -147,16 +141,14 @@ TEST(FidlTest, SensorInputReport) {
   hid_input_report::FidlInputReport fidl_report = {};
   ASSERT_OK(SetFidlInputReport(report, &fidl_report));
 
-  fuchsia_input_report::InputReport fidl = fidl_report.builder.build();
-  ASSERT_TRUE(fidl.has_sensor());
-  auto& fidl_sensor = fidl.sensor();
+  hid_input_report::InputReport new_input_report =
+      hid_input_report::ToInputReport(fidl_report.builder.build());
+  auto new_sensor = std::get<hid_input_report::SensorInputReport>(new_input_report.report);
 
-  ASSERT_TRUE(fidl_sensor.has_values());
-  ASSERT_EQ(fidl_sensor.values().count(), 3);
-
-  ASSERT_EQ(fidl_sensor.values()[0], sensor_report.values[0]);
-  ASSERT_EQ(fidl_sensor.values()[1], sensor_report.values[1]);
-  ASSERT_EQ(fidl_sensor.values()[2], sensor_report.values[2]);
+  ASSERT_EQ(new_sensor.num_values, sensor_report.num_values);
+  for (size_t i = 0; i < sensor_report.num_values; i++) {
+    ASSERT_EQ(new_sensor.values[i], sensor_report.values[i]);
+  }
 }
 
 TEST(FidlTest, TouchInputDescriptor) {
@@ -190,18 +182,16 @@ TEST(FidlTest, TouchInputDescriptor) {
   fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.build();
   ASSERT_TRUE(fidl.has_touch());
   ASSERT_TRUE(fidl.touch().has_input());
-  fuchsia_input_report::TouchInputDescriptor& fidl_touch = fidl.touch().input();
 
-  ASSERT_TRUE(fidl_touch.has_max_contacts());
-  ASSERT_EQ(touch_desc.input->max_contacts, fidl_touch.max_contacts());
+  hid_input_report::TouchDescriptor new_desc = hid_input_report::ToTouchDescriptor(fidl.touch());
 
-  ASSERT_EQ(touch_desc.input->touch_type, fidl_touch.touch_type());
+  ASSERT_EQ(touch_desc.input->max_contacts, new_desc.input->max_contacts);
+  ASSERT_EQ(touch_desc.input->touch_type, new_desc.input->touch_type);
+  ASSERT_EQ(touch_desc.input->num_contacts, new_desc.input->num_contacts);
 
-  ASSERT_EQ(1, fidl_touch.contacts().count());
-
-  TestAxis(*touch_desc.input->contacts[0].position_x, fidl_touch.contacts()[0].position_x());
-  TestAxis(*touch_desc.input->contacts[0].position_y, fidl_touch.contacts()[0].position_y());
-  TestAxis(*touch_desc.input->contacts[0].pressure, fidl_touch.contacts()[0].pressure());
+  TestAxis(*touch_desc.input->contacts[0].position_x, *new_desc.input->contacts[0].position_x);
+  TestAxis(*touch_desc.input->contacts[0].position_y, *new_desc.input->contacts[0].position_y);
+  TestAxis(*touch_desc.input->contacts[0].pressure, *new_desc.input->contacts[0].pressure);
 }
 
 TEST(FidlTest, TouchInputReport) {
@@ -221,17 +211,17 @@ TEST(FidlTest, TouchInputReport) {
   hid_input_report::FidlInputReport fidl_report = {};
   ASSERT_OK(SetFidlInputReport(report, &fidl_report));
 
-  fuchsia_input_report::InputReport fidl = fidl_report.builder.build();
-  ASSERT_TRUE(fidl.has_touch());
-  auto& fidl_touch = fidl.touch();
+  hid_input_report::InputReport new_input_report =
+      hid_input_report::ToInputReport(fidl_report.builder.build());
+  auto new_touch = std::get<hid_input_report::TouchInputReport>(new_input_report.report);
 
-  ASSERT_EQ(1, fidl_touch.contacts().count());
+  ASSERT_EQ(touch_report.num_contacts, new_touch.num_contacts);
 
-  EXPECT_EQ(touch_report.contacts[0].position_x, fidl_touch.contacts()[0].position_x());
-  EXPECT_EQ(touch_report.contacts[0].position_y, fidl_touch.contacts()[0].position_y());
-  EXPECT_EQ(touch_report.contacts[0].pressure, fidl_touch.contacts()[0].pressure());
-  EXPECT_EQ(touch_report.contacts[0].contact_width, fidl_touch.contacts()[0].contact_width());
-  EXPECT_EQ(touch_report.contacts[0].contact_height, fidl_touch.contacts()[0].contact_height());
+  EXPECT_EQ(touch_report.contacts[0].position_x, new_touch.contacts[0].position_x);
+  EXPECT_EQ(touch_report.contacts[0].position_y, new_touch.contacts[0].position_y);
+  EXPECT_EQ(touch_report.contacts[0].pressure, new_touch.contacts[0].pressure);
+  EXPECT_EQ(touch_report.contacts[0].contact_width, new_touch.contacts[0].contact_width);
+  EXPECT_EQ(touch_report.contacts[0].contact_height, new_touch.contacts[0].contact_height);
 }
 
 TEST(FidlTest, KeyboardInputDescriptor) {
@@ -251,12 +241,14 @@ TEST(FidlTest, KeyboardInputDescriptor) {
   fuchsia_input_report::DeviceDescriptor fidl = fidl_desc.builder.build();
   ASSERT_TRUE(fidl.has_keyboard());
   ASSERT_TRUE(fidl.keyboard().has_input());
-  auto& fidl_keyboard = fidl.keyboard().input();
 
-  ASSERT_EQ(3, fidl_keyboard.keys().count());
-  EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::A, fidl_keyboard.keys()[0]);
-  EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::END, fidl_keyboard.keys()[1]);
-  EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT, fidl_keyboard.keys()[2]);
+  hid_input_report::KeyboardDescriptor new_desc =
+      hid_input_report::ToKeyboardDescriptor(fidl.keyboard());
+
+  ASSERT_EQ(keyboard_descriptor.input->num_keys, new_desc.input->num_keys);
+  for (size_t i = 0; i < keyboard_descriptor.input->num_keys; i++) {
+    ASSERT_EQ(keyboard_descriptor.input->keys[i], new_desc.input->keys[i]);
+  }
 }
 
 TEST(FidlTest, KeyboardOutputDescriptor) {
@@ -297,12 +289,12 @@ TEST(FidlTest, KeyboardInputReport) {
   hid_input_report::FidlInputReport fidl_report = {};
   ASSERT_OK(SetFidlInputReport(report, &fidl_report));
 
-  fuchsia_input_report::InputReport fidl = fidl_report.builder.build();
-  ASSERT_TRUE(fidl.has_keyboard());
-  auto& fidl_keyboard = fidl.keyboard();
+  hid_input_report::InputReport new_input_report =
+      hid_input_report::ToInputReport(fidl_report.builder.build());
+  auto new_keyboard = std::get<hid_input_report::KeyboardInputReport>(new_input_report.report);
 
-  ASSERT_EQ(3, fidl_keyboard.pressed_keys().count());
-  EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::A, fidl_keyboard.pressed_keys()[0]);
-  EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::END, fidl_keyboard.pressed_keys()[1]);
-  EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT, fidl_keyboard.pressed_keys()[2]);
+  ASSERT_EQ(keyboard_report.num_pressed_keys, new_keyboard.num_pressed_keys);
+  for (size_t i = 0; i < keyboard_report.num_pressed_keys; i++) {
+    ASSERT_EQ(keyboard_report.pressed_keys[i], new_keyboard.pressed_keys[i]);
+  }
 }

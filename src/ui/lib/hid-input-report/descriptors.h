@@ -34,14 +34,14 @@ struct MouseInputReport {
   std::optional<int64_t> movement_y;
   std::optional<int64_t> scroll_v;
   std::optional<int64_t> scroll_h;
-  uint8_t num_buttons_pressed;
+  uint8_t num_buttons_pressed = 0;
   std::array<uint8_t, fuchsia_input_report::MOUSE_MAX_NUM_BUTTONS> buttons_pressed;
 };
 
 // |SensorInputDescriptor| describes the capabilities of a sensor device.
 struct SensorInputDescriptor {
   std::array<fuchsia_input_report::SensorAxis, fuchsia_input_report::SENSOR_MAX_VALUES> values;
-  size_t num_values;
+  size_t num_values = 0;
 };
 
 // |SensorInputReport| describes the sensor event delivered from the event stream.
@@ -49,7 +49,7 @@ struct SensorInputDescriptor {
 // will always be in the same order.
 struct SensorInputReport {
   std::array<int64_t, fuchsia_input_report::SENSOR_MAX_VALUES> values;
-  size_t num_values;
+  size_t num_values = 0;
 };
 
 struct ContactInputDescriptor {
@@ -66,10 +66,10 @@ struct TouchInputDescriptor {
   /// The type of touch device being used.
   fuchsia_input_report::TouchType touch_type;
 
-  uint32_t max_contacts;
+  uint32_t max_contacts = 0;
   /// This describes each of the contact capabilities.
   std::array<ContactInputDescriptor, fuchsia_input_report::TOUCH_MAX_CONTACTS> contacts;
-  size_t num_contacts;
+  size_t num_contacts = 0;
 };
 
 struct TouchDescriptor {
@@ -93,7 +93,7 @@ struct ContactInputReport {
 struct TouchInputReport {
   /// The contacts currently being reported by the device.
   std::array<ContactInputReport, fuchsia_input_report::TOUCH_MAX_CONTACTS> contacts;
-  size_t num_contacts;
+  size_t num_contacts = 0;
 };
 
 struct KeyboardInputDescriptor {
@@ -103,7 +103,7 @@ struct KeyboardInputDescriptor {
 
 struct KeyboardOutputDescriptor {
   std::array<fuchsia_input_report::LedType, fuchsia_input_report::KEYBOARD_MAX_NUM_LEDS> leds;
-  size_t num_leds;
+  size_t num_leds = 0;
 };
 
 struct KeyboardDescriptor {
@@ -114,13 +114,13 @@ struct KeyboardDescriptor {
 struct KeyboardInputReport {
   std::array<::llcpp::fuchsia::ui::input2::Key, fuchsia_input_report::KEYBOARD_MAX_NUM_KEYS>
       pressed_keys;
-  size_t num_pressed_keys;
+  size_t num_pressed_keys = 0;
 };
 
 struct KeyboardOutputReport {
   std::array<fuchsia_input_report::LedType, fuchsia_input_report::KEYBOARD_MAX_NUM_LEDS>
       enabled_leds;
-  size_t num_enabled_leds;
+  size_t num_enabled_leds = 0;
 };
 
 struct MouseDescriptor {

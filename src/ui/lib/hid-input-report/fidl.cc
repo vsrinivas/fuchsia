@@ -252,4 +252,208 @@ zx_status_t SetFidlInputReport(const hid_input_report::InputReport& hid_report,
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+MouseDescriptor ToMouseDescriptor(const fuchsia_input_report::MouseDescriptor& fidl_descriptor) {
+  MouseDescriptor descriptor;
+  if (fidl_descriptor.has_input()) {
+    MouseInputDescriptor input;
+    if (fidl_descriptor.input().has_movement_x()) {
+      input.movement_x = fidl_descriptor.input().movement_x();
+    }
+    if (fidl_descriptor.input().has_movement_y()) {
+      input.movement_y = fidl_descriptor.input().movement_y();
+    }
+    if (fidl_descriptor.input().has_scroll_v()) {
+      input.scroll_v = fidl_descriptor.input().scroll_v();
+    }
+    if (fidl_descriptor.input().has_scroll_h()) {
+      input.scroll_h = fidl_descriptor.input().scroll_h();
+    }
+    if (fidl_descriptor.input().has_buttons()) {
+      input.num_buttons = fidl_descriptor.input().buttons().count();
+      for (size_t i = 0; i < fidl_descriptor.input().buttons().count(); i++) {
+        input.buttons[i] = fidl_descriptor.input().buttons()[i];
+      }
+    }
+    descriptor.input = input;
+  }
+  return descriptor;
+}
+
+KeyboardDescriptor ToKeyboardDescriptor(
+    const fuchsia_input_report::KeyboardDescriptor& fidl_descriptor) {
+  KeyboardDescriptor descriptor;
+  if (fidl_descriptor.has_input()) {
+    KeyboardInputDescriptor input;
+    if (fidl_descriptor.input().has_keys()) {
+      input.num_keys = fidl_descriptor.input().keys().count();
+      for (size_t i = 0; i < fidl_descriptor.input().keys().count(); i++) {
+        input.keys[i] = fidl_descriptor.input().keys()[i];
+      }
+    }
+    descriptor.input = input;
+  }
+  if (fidl_descriptor.has_output()) {
+    KeyboardOutputDescriptor output;
+    if (fidl_descriptor.output().has_leds()) {
+      output.num_leds = fidl_descriptor.output().leds().count();
+      for (size_t i = 0; i < fidl_descriptor.output().leds().count(); i++) {
+        output.leds[i] = fidl_descriptor.output().leds()[i];
+      }
+    }
+    descriptor.output = output;
+  }
+  return descriptor;
+}
+
+TouchDescriptor ToTouchDescriptor(const fuchsia_input_report::TouchDescriptor& fidl_descriptor) {
+  TouchDescriptor descriptor;
+  if (fidl_descriptor.has_input()) {
+    TouchInputDescriptor input;
+    if (fidl_descriptor.input().has_touch_type()) {
+      input.touch_type = fidl_descriptor.input().touch_type();
+    }
+    if (fidl_descriptor.input().has_max_contacts()) {
+      input.max_contacts = fidl_descriptor.input().max_contacts();
+    }
+
+    if (fidl_descriptor.input().has_contacts()) {
+      input.num_contacts = fidl_descriptor.input().contacts().count();
+      for (size_t i = 0; i < fidl_descriptor.input().contacts().count(); i++) {
+        ContactInputDescriptor contact;
+        const fuchsia_input_report::ContactInputDescriptor& fidl_contact =
+            fidl_descriptor.input().contacts()[i];
+
+        if (fidl_contact.has_position_x()) {
+          contact.position_x = fidl_contact.position_x();
+        }
+        if (fidl_contact.has_position_y()) {
+          contact.position_y = fidl_contact.position_y();
+        }
+        if (fidl_contact.has_pressure()) {
+          contact.pressure = fidl_contact.pressure();
+        }
+        if (fidl_contact.has_contact_width()) {
+          contact.contact_width = fidl_contact.contact_width();
+        }
+        if (fidl_contact.has_contact_height()) {
+          contact.contact_height = fidl_contact.contact_height();
+        }
+        input.contacts[i] = contact;
+      }
+    }
+
+    descriptor.input = input;
+  }
+  return descriptor;
+}
+
+SensorDescriptor ToSensorDescriptor(const fuchsia_input_report::SensorDescriptor& fidl_descriptor) {
+  SensorDescriptor descriptor;
+  if (fidl_descriptor.has_input()) {
+    SensorInputDescriptor input;
+    if (fidl_descriptor.input().has_values()) {
+      input.num_values = fidl_descriptor.input().values().count();
+      for (size_t i = 0; i < fidl_descriptor.input().values().count(); i++) {
+        input.values[i] = fidl_descriptor.input().values()[i];
+      }
+    }
+    descriptor.input = input;
+  }
+  return descriptor;
+}
+
+MouseInputReport ToMouseInputReport(const fuchsia_input_report::MouseInputReport& fidl_report) {
+  MouseInputReport report = {};
+  if (fidl_report.has_movement_x()) {
+    report.movement_x = fidl_report.movement_x();
+  }
+  if (fidl_report.has_movement_y()) {
+    report.movement_y = fidl_report.movement_y();
+  }
+  if (fidl_report.has_scroll_v()) {
+    report.scroll_v = fidl_report.scroll_v();
+  }
+  if (fidl_report.has_scroll_h()) {
+    report.scroll_h = fidl_report.scroll_h();
+  }
+  if (fidl_report.has_pressed_buttons()) {
+    report.num_buttons_pressed = fidl_report.pressed_buttons().count();
+    for (size_t i = 0; i < fidl_report.pressed_buttons().count(); i++) {
+      report.buttons_pressed[i] = fidl_report.pressed_buttons()[i];
+    }
+  }
+  return report;
+}
+
+KeyboardInputReport ToKeyboardInputReport(
+    const fuchsia_input_report::KeyboardInputReport& fidl_report) {
+  KeyboardInputReport report = {};
+  if (fidl_report.has_pressed_keys()) {
+    report.num_pressed_keys = fidl_report.pressed_keys().count();
+    for (size_t i = 0; i < fidl_report.pressed_keys().count(); i++) {
+      report.pressed_keys[i] = fidl_report.pressed_keys()[i];
+    }
+  }
+  return report;
+}
+
+TouchInputReport ToTouchInputReport(const fuchsia_input_report::TouchInputReport& fidl_report) {
+  TouchInputReport report = {};
+  if (fidl_report.has_contacts()) {
+    report.num_contacts = fidl_report.contacts().count();
+    for (size_t i = 0; i < fidl_report.contacts().count(); i++) {
+      ContactInputReport contact;
+      const fuchsia_input_report::ContactInputReport& fidl_contact = fidl_report.contacts()[i];
+
+      if (fidl_contact.has_position_x()) {
+        contact.position_x = fidl_contact.position_x();
+      }
+      if (fidl_contact.has_position_y()) {
+        contact.position_y = fidl_contact.position_y();
+      }
+      if (fidl_contact.has_pressure()) {
+        contact.pressure = fidl_contact.pressure();
+      }
+      if (fidl_contact.has_contact_width()) {
+        contact.contact_width = fidl_contact.contact_width();
+      }
+      if (fidl_contact.has_contact_height()) {
+        contact.contact_height = fidl_contact.contact_height();
+      }
+      report.contacts[i] = contact;
+    }
+  }
+  return report;
+}
+
+SensorInputReport ToSensorInputReport(const fuchsia_input_report::SensorInputReport& fidl_report) {
+  SensorInputReport report = {};
+  if (fidl_report.has_values()) {
+    report.num_values = fidl_report.values().count();
+    for (size_t i = 0; i < fidl_report.values().count(); i++) {
+      report.values[i] = fidl_report.values()[i];
+    }
+  }
+  return report;
+}
+
+InputReport ToInputReport(const fuchsia_input_report::InputReport& fidl_report) {
+  InputReport report = {};
+
+  if (fidl_report.has_event_time()) {
+    report.time = fidl_report.event_time();
+  }
+
+  if (fidl_report.has_mouse()) {
+    report.report = ToMouseInputReport(fidl_report.mouse());
+  } else if (fidl_report.has_keyboard()) {
+    report.report = ToKeyboardInputReport(fidl_report.keyboard());
+  } else if (fidl_report.has_touch()) {
+    report.report = ToTouchInputReport(fidl_report.touch());
+  } else if (fidl_report.has_sensor()) {
+    report.report = ToSensorInputReport(fidl_report.sensor());
+  }
+  return report;
+}
+
 }  // namespace hid_input_report

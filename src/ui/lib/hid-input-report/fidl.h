@@ -158,6 +158,16 @@ zx_status_t SetFidlDescriptor(const ReportDescriptor& hid_descriptor, FidlDescri
 // Builds the |FidlReport| object from the |Report|.
 zx_status_t SetFidlInputReport(const InputReport& hid_report, FidlInputReport* report);
 
+// Creates a statically sized descriptor from a Fidl Descriptor.
+MouseDescriptor ToMouseDescriptor(const fuchsia_input_report::MouseDescriptor& fidl_descriptor);
+KeyboardDescriptor ToKeyboardDescriptor(
+    const fuchsia_input_report::KeyboardDescriptor& fidl_descriptor);
+TouchDescriptor ToTouchDescriptor(const fuchsia_input_report::TouchDescriptor& fidl_descriptor);
+SensorDescriptor ToSensorDescriptor(const fuchsia_input_report::SensorDescriptor& fidl_descriptor);
+
+// Creates a statically sized report from a Fidl Report.
+InputReport ToInputReport(const fuchsia_input_report::InputReport& fidl_report);
+
 }  // namespace hid_input_report
 
 #endif  // SRC_UI_LIB_HID_INPUT_REPORT_FIDL_H_
