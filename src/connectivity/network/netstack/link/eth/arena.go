@@ -141,18 +141,17 @@ func (a *Arena) freeAll(c *Client) {
 	}
 }
 
-func (a *Arena) entry(b Buffer) C.struct_eth_fifo_entry {
+func (a *Arena) entry(b Buffer) FifoEntry {
 	i := a.index(b)
 
-	entry := C.struct_eth_fifo_entry{
+	return FifoEntry{
 		offset: C.uint32_t(i) * bufferSize,
 		length: C.uint16_t(len(b)),
 		cookie: (cookieMagic << 32) | C.uint64_t(i),
 	}
-	return entry
 }
 
-func (a *Arena) bufferFromEntry(e C.struct_eth_fifo_entry) Buffer {
+func (a *Arena) bufferFromEntry(e FifoEntry) Buffer {
 	i := int32(e.cookie)
 	if e.cookie>>32 != cookieMagic || i < 0 || i >= numBuffers {
 		panic(fmt.Sprintf("eth.Arena: buffer entry has bad cookie: %x", e.cookie))
@@ -166,4 +165,4 @@ func (a *Arena) bufferFromEntry(e C.struct_eth_fifo_entry) Buffer {
 	return a.buffer(int(i))[:e.length]
 }
 
-const cookieMagic = 0x42420102 // used to fill top 32-bits of C.struct_eth_fifo_entry.cookie
+const cookieMagic = 0x42420102 // used to fill top 32-bits of FifoEntry.cookie

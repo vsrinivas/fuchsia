@@ -7,8 +7,10 @@ package eth_test
 import (
 	"bytes"
 	"syscall/zx"
+	"syscall/zx/zxwait"
 	"testing"
 	"time"
+	"unsafe"
 
 	"netstack/link/eth"
 
@@ -53,7 +55,7 @@ func TestEndpoint(t *testing.T) {
 	const depth = 1
 
 	var outFifo, inFifo zx.Handle
-	if status := zx.Sys_fifo_create(depth, eth.FifoEntrySize, 0, &outFifo, &inFifo); status != zx.ErrOk {
+	if status := zx.Sys_fifo_create(depth, uint(unsafe.Sizeof(eth.FifoEntry{})), 0, &outFifo, &inFifo); status != zx.ErrOk {
 		t.Fatal(status)
 	}
 	defer func() {
@@ -85,19 +87,6 @@ func TestEndpoint(t *testing.T) {
 		},
 	}
 
-	outDevice := baseDevice
-	outDevice.GetFifosImpl = func() (int32, *ethernet.Fifos, error) {
-		return int32(zx.ErrOk), &ethernet.Fifos{Tx: outFifo, TxDepth: depth}, nil
-	}
-	outClient, err := eth.NewClient(t.Name(), "out", &outDevice, arena)
-	if err != nil {
-		t.Fatal(err)
-	}
-	outEndpoint := eth.NewLinkEndpoint(outClient)
-	outCh := make(dispatcherChan, depth)
-	defer close(outCh)
-	outEndpoint.Attach(&outCh)
-
 	inDevice := baseDevice
 	inDevice.GetFifosImpl = func() (int32, *ethernet.Fifos, error) {
 		return int32(zx.ErrOk), &ethernet.Fifos{Rx: inFifo, RxDepth: depth}, nil
@@ -112,6 +101,34 @@ func TestEndpoint(t *testing.T) {
 		inEndpoint := eth.NewLinkEndpoint(inClient)
 		inEndpoint.Attach(&inCh)
 	}
+	// Both sides are trying to "seed" the RX direction, which is not valid. Drain the buffers sent
+	// by the "in" client and discard them.
+	if _, err := zxwait.Wait(outFifo, zx.SignalFIFOReadable, zx.TimensecInfinite); err != nil {
+		t.Fatal(err)
+	}
+	{
+		b := make([]eth.FifoEntry, depth+1)
+		status, count := eth.FifoRead(outFifo, b)
+		if status != zx.ErrOk {
+			t.Fatal(status)
+		}
+		if count != depth {
+			t.Fatalf("got zx_fifo_read(...) = %d want = %d", count, depth)
+		}
+	}
+
+	outDevice := baseDevice
+	outDevice.GetFifosImpl = func() (int32, *ethernet.Fifos, error) {
+		return int32(zx.ErrOk), &ethernet.Fifos{Tx: outFifo, TxDepth: depth}, nil
+	}
+	outClient, err := eth.NewClient(t.Name(), "out", &outDevice, arena)
+	if err != nil {
+		t.Fatal(err)
+	}
+	outEndpoint := eth.NewLinkEndpoint(outClient)
+	outCh := make(dispatcherChan, depth)
+	defer close(outCh)
+	outEndpoint.Attach(&outCh)
 
 	const localLinkAddress = tcpip.LinkAddress("\x01\x02\x03\x04\x05\x06")
 	const remoteLinkAddress = tcpip.LinkAddress("\x11\x12\x13\x14\x15\x16")

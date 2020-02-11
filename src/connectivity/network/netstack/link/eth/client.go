@@ -30,7 +30,7 @@ import "C"
 const zxsioEthSignalStatus = zx.SignalUser0
 const tag = "eth"
 
-const FifoEntrySize = C.sizeof_struct_eth_fifo_entry
+type FifoEntry = C.struct_eth_fifo_entry
 
 var _ link.Controller = (*Client)(nil)
 
@@ -55,13 +55,13 @@ type Client struct {
 	stateFunc func(link.State)
 	arena     *Arena
 
-	rxQueue []C.struct_eth_fifo_entry
+	rxQueue []FifoEntry
 	tx      struct {
 		mu struct {
 			sync.Mutex
 			waiters int
 
-			storage []C.struct_eth_fifo_entry
+			storage []FifoEntry
 
 			// available is the index after the last available entry.
 			available int
@@ -112,7 +112,7 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 		arena:  arena,
 		// TODO: use 2x depth so that the driver always has rx buffers available. Be careful to
 		// preserve the invariant: len(rxQueue) >= cap(rxQueue) - RxDepth.
-		rxQueue: make([]C.struct_eth_fifo_entry, 0, fifos.RxDepth),
+		rxQueue: make([]FifoEntry, 0, fifos.RxDepth),
 	}
 	for i := 0; i < cap(c.rxQueue); i++ {
 		b := arena.alloc(c)
@@ -121,7 +121,7 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 		}
 		c.rxQueue = append(c.rxQueue, arena.entry(b))
 	}
-	c.tx.mu.storage = make([]C.struct_eth_fifo_entry, 0, 2*fifos.TxDepth)
+	c.tx.mu.storage = make([]FifoEntry, 0, 2*fifos.TxDepth)
 	for i := 0; i < cap(c.tx.mu.storage); i++ {
 		b := arena.alloc(c)
 		if b == nil {
@@ -257,20 +257,20 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	go func() {
 		defer c.wg.Done()
 		if err := func() error {
-			scratch := make([]C.struct_eth_fifo_entry, c.fifos.TxDepth)
+			scratch := make([]FifoEntry, c.fifos.TxDepth)
 			for {
 				if _, err := zxwait.Wait(c.fifos.Tx, zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed, zx.TimensecInfinite); err != nil {
 					return err
 				}
 
-				switch status, count := fifoRead(c.fifos.Tx, scratch); status {
+				switch status, count := FifoRead(c.fifos.Tx, scratch); status {
 				case zx.ErrOk:
 					c.tx.mu.Lock()
 					c.tx.mu.available += copy(c.tx.mu.storage[c.tx.mu.available:], scratch[:count])
 					c.tx.mu.Unlock()
 					c.tx.cond.Broadcast()
 				default:
-					return &zx.Error{Status: status, Text: "fifoRead(TX)"}
+					return &zx.Error{Status: status, Text: "FifoRead(TX)"}
 				}
 			}
 		}(); err != nil {
@@ -286,9 +286,9 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	go func() {
 		defer c.wg.Done()
 		if err := func() error {
-			scratch := make([]C.struct_eth_fifo_entry, c.fifos.TxDepth)
+			scratch := make([]FifoEntry, c.fifos.TxDepth)
 			for {
-				var batch []C.struct_eth_fifo_entry
+				var batch []FifoEntry
 				c.tx.mu.Lock()
 				for {
 					if batchSize := len(scratch) - (len(c.tx.mu.storage) - c.tx.mu.available); batchSize != 0 {
@@ -374,7 +374,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 					}
 					if obs&(zx.SignalFIFOReadable) != 0 {
 						dst := c.rxQueue[len(c.rxQueue):cap(c.rxQueue)]
-						switch status, received := fifoRead(c.fifos.Rx, dst); status {
+						switch status, received := FifoRead(c.fifos.Rx, dst); status {
 						case zx.ErrOk:
 							c.rxQueue = c.rxQueue[:uint32(len(c.rxQueue))+received]
 							for i, entry := range dst[:received] {
@@ -386,7 +386,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 								dst[i].length = bufferSize
 							}
 						default:
-							return &zx.Error{Status: status, Text: "fifoRead(RX)"}
+							return &zx.Error{Status: status, Text: "FifoRead(RX)"}
 						}
 					}
 					if obs&(zx.SignalFIFOWritable) != 0 {
@@ -521,17 +521,17 @@ func (c *Client) SetPromiscuousMode(enabled bool) error {
 	return nil
 }
 
-func fifoWrite(handle zx.Handle, b []C.struct_eth_fifo_entry) (zx.Status, uint32) {
+func fifoWrite(handle zx.Handle, b []FifoEntry) (zx.Status, uint32) {
 	var actual uint
 	data := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&b)).Data)
-	status := zx.Sys_fifo_write(handle, C.sizeof_struct_eth_fifo_entry, data, uint(len(b)), &actual)
+	status := zx.Sys_fifo_write(handle, uint(unsafe.Sizeof(FifoEntry{})), data, uint(len(b)), &actual)
 	return status, uint32(actual)
 }
 
-func fifoRead(handle zx.Handle, b []C.struct_eth_fifo_entry) (zx.Status, uint32) {
+func FifoRead(handle zx.Handle, b []FifoEntry) (zx.Status, uint32) {
 	var actual uint
 	data := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&b)).Data)
-	status := zx.Sys_fifo_read(handle, C.sizeof_struct_eth_fifo_entry, data, uint(len(b)), &actual)
+	status := zx.Sys_fifo_read(handle, uint(unsafe.Sizeof(FifoEntry{})), data, uint(len(b)), &actual)
 	return status, uint32(actual)
 }
 
