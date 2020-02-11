@@ -7,7 +7,6 @@ source_set("lockdep") {
   deps = [
     "$zx/kernel/lib/console",
     "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/version",
   ]
   public_deps = [
     # The kernel lockdep library is just a slight augmentation of the

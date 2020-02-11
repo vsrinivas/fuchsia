@@ -57,7 +57,7 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
   buf_printf(
       "VERSION\narch: %s\nbuild_id: %s\ndso: id=%s base=%#lx "
       "name=zircon.elf\n\n",
-      arch, version.buildid, version.elf_build_id, is_oom ? 0u : crashlog.base_address);
+      arch, version_string(), elf_build_id_string(), is_oom ? 0u : crashlog.base_address);
   if (remain <= 0) {
     return out_len;
   }
@@ -67,7 +67,7 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
     return out_len - remain;
   }
 
-  print_module(buf_printf, version.elf_build_id);
+  print_module(buf_printf, elf_build_id_string());
   if (remain <= 0) {
     return out_len;
   }

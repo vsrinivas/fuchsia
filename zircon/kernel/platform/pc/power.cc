@@ -7,7 +7,6 @@
 
 #include <lib/console.h>
 #include <lib/debuglog.h>
-#include <lib/version.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>

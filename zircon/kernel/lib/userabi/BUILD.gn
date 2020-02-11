@@ -198,7 +198,7 @@ if (is_kernel) {
       ":vdso.image",
       "$zx/kernel/lib/cmdline",
       "$zx/kernel/lib/syscalls",
-      "$zx/kernel/lib/version:config-buildid-header",
+      "$zx/kernel/lib/version",
       "$zx/kernel/vm:headers",
       "$zx/system/ulib/affine",
       "$zx/system/ulib/fbl",

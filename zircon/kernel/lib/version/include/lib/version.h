@@ -8,24 +8,11 @@
 #ifndef ZIRCON_KERNEL_LIB_VERSION_INCLUDE_LIB_VERSION_H_
 #define ZIRCON_KERNEL_LIB_VERSION_INCLUDE_LIB_VERSION_H_
 
-#include <zircon/compiler.h>
+// This is the string returned by zx_system_get_version_string.
+const char* version_string();
 
-#define VERSION_STRUCT_VERSION 0x3
-
-// Global structure that holds some build information about the kernel.
-typedef struct {
-  unsigned int struct_version;
-  const char* arch;
-  const char* buildid;
-
-  // This is a printable string of hex digits giving the ELF build ID
-  // bits.  The ELF build ID is a unique bit-string identifying the
-  // kernel binary, produced automatically by the linker.  It's the
-  // canonical way to find a binary and its debug information.
-  const char* elf_build_id;
-} lk_version_t;
-
-extern "C" const lk_version_t version;
+// This is a string of lowercase hexadecimal digits.
+const char* elf_build_id_string();
 
 void print_version(void);
 

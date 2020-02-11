@@ -7,7 +7,6 @@
 #include <debug.h>
 #include <inttypes.h>
 #include <lib/console.h>
-#include <lib/version.h>
 #include <string.h>
 
 #include <new>

@@ -13,10 +13,10 @@
 // layouts match exactly in both contexts.
 
 #define VDSO_CONSTANTS_ALIGN 8
-// The build id is based on a 40 character representation of a git
+// The version string is based on a 40 character representation of a git
 // hash. There is also a 4 byte 'git-' prefix, and possibly a 6 byte
 // '-dirty' suffix. Let's be generous and use 64 bytes.
-#define MAX_BUILDID_SIZE 64
+#define MAX_VERSION_STRING_SIZE 64
 
 // The manifest for the constants size is currently...
 // + 8 32-bit integers
@@ -31,7 +31,7 @@
 // |
 // + max build ID size (64 bytes)
 //
-#define VDSO_CONSTANTS_SIZE ((8 * 4) + (2 * 8) + MAX_BUILDID_SIZE)
+#define VDSO_CONSTANTS_SIZE ((8 * 4) + (2 * 8) + MAX_VERSION_STRING_SIZE)
 
 #ifndef __ASSEMBLER__
 
@@ -80,9 +80,8 @@ struct vdso_constants {
   // Total amount of physical memory in the system, in bytes.
   uint64_t physmem;
 
-  // A build id of the system. Currently a non-null terminated ascii
-  // representation of a git SHA.
-  char buildid[MAX_BUILDID_SIZE];
+  // A NUL-terminated UTF-8 string returned by zx_system_get_version.
+  char version_string[MAX_VERSION_STRING_SIZE];
 };
 
 static_assert(VDSO_CONSTANTS_SIZE == sizeof(vdso_constants), "Need to adjust VDSO_CONSTANTS_SIZE");

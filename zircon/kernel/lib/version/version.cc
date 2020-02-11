@@ -6,6 +6,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <debug.h>
+#include <lib/console.h>
 #include <lib/version.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -14,57 +15,15 @@
 #include <lk/init.h>
 #include <vm/vm.h>
 
-/* generated for us */
-#include <config-buildid.h>
+namespace {
 
-/* BUILDID is optional, and may be defined anywhere */
-#ifndef BUILDID
-#define BUILDID ""
-#endif
+// This defines `constexpr char kVersionString[]`.
+#include "version-string.inc"
 
 // If the build ID were SHA256, it would be 32 bytes.
 // (The algorithms used for build IDs today actually produce fewer than that.)
 // This string needs 2 bytes to print each byte in hex, plus a NUL terminator.
-static char elf_build_id_string[65];
-
-const lk_version_t version = {
-    .struct_version = VERSION_STRUCT_VERSION,
-    .arch = ARCH,
-    .buildid = BUILDID,
-    .elf_build_id = elf_build_id_string,
-};
-
-void print_version(void) {
-  printf("version:\n");
-  printf("\tarch:     %s\n", version.arch);
-  printf("\tbuildid:  %s\n", version.buildid);
-  printf("\tELF build ID: %s\n", version.elf_build_id);
-}
-
-// TODO(eieio): Consider whether it makes sense to locate the logic for printing
-// mappings somewhere else (perhaps in vm/vm.cpp?).
-static void print_mmap(uintptr_t bias, const void* begin, const void* end, const char* perm) {
-  const uintptr_t start = reinterpret_cast<uintptr_t>(begin);
-  const size_t size = reinterpret_cast<uintptr_t>(end) - start;
-  printf("{{{mmap:%#lx:%#lx:load:0:%s:%#lx}}}\n", start, size, perm, start + bias);
-}
-
-void print_backtrace_version_info() {
-  printf("BUILDID %s\n\n", version.buildid);
-
-  // Log the ELF build ID in the format the symbolizer scripts understand.
-  if (version.elf_build_id[0] != '\0') {
-    const uintptr_t bias = KERNEL_BASE - reinterpret_cast<uintptr_t>(__code_start);
-    print_module(_printf, version.elf_build_id);
-    // These four mappings match the mappings printed by vm_init().
-    print_mmap(_printf, bias, __code_start, __code_end, "rx");
-    print_mmap(_printf, bias, __rodata_start, __rodata_end, "r");
-    print_mmap(_printf, bias, __data_start, __data_end, "rw");
-    print_mmap(_printf, bias, __bss_start, _end, "rw");
-    printf("dso: id=%s base=%#lx name=zircon.elf\n", version.elf_build_id,
-           reinterpret_cast<uintptr_t>(__code_start));
-  }
-}
+char gElfBuildIdString[65];
 
 // Standard ELF note layout (Elf{32,64}_Nhdr in <elf.h>).
 // The name and type fields' values are what GNU and GNU-compatible
@@ -80,30 +39,65 @@ struct build_id_note {
   uint8_t id[];
 };
 
-extern const struct build_id_note __build_id_note_start;
-extern const uint8_t __build_id_note_end[];
+extern "C" const struct build_id_note __build_id_note_start;
+extern "C" const uint8_t __build_id_note_end[];
 
-static void init_build_id(uint level) {
-  const struct build_id_note* const note = &__build_id_note_start;
+void init_build_id(uint level) {
+  const build_id_note* const note = &__build_id_note_start;
   if (note->type != NT_GNU_BUILD_ID || note->namesz != sizeof(NOTE_NAME) ||
       memcmp(note->name, NOTE_NAME, sizeof(NOTE_NAME)) != 0 ||
       &note->id[note->descsz] != __build_id_note_end) {
     panic("ELF build ID note has bad format!\n");
   }
-  if (note->descsz * 2 >= sizeof(elf_build_id_string)) {
+  if (note->descsz * 2 >= sizeof(gElfBuildIdString)) {
     panic("ELF build ID is %u bytes, expected %u or fewer\n", note->descsz,
-          (uint32_t)(sizeof(elf_build_id_string) / 2));
+          (uint32_t)(sizeof(gElfBuildIdString) / 2));
   }
   for (uint32_t i = 0; i < note->descsz; ++i) {
-    snprintf(&elf_build_id_string[i * 2], 3, "%02x", note->id[i]);
+    snprintf(&gElfBuildIdString[i * 2], 3, "%02x", note->id[i]);
   }
 }
 
 // This must happen before print_version, below.
 LK_INIT_HOOK(elf_build_id, &init_build_id, LK_INIT_LEVEL_HEAP - 2)
 
-#include <debug.h>
-#include <lib/console.h>
+// TODO(eieio): Consider whether it makes sense to locate the logic for printing
+// mappings somewhere else (perhaps in vm/vm.cpp?).
+void print_mmap(uintptr_t bias, const void* begin, const void* end, const char* perm) {
+  const uintptr_t start = reinterpret_cast<uintptr_t>(begin);
+  const size_t size = reinterpret_cast<uintptr_t>(end) - start;
+  printf("{{{mmap:%#lx:%#lx:load:0:%s:%#lx}}}\n", start, size, perm, start + bias);
+}
+
+}  // namespace
+
+const char* version_string() { return kVersionString; }
+
+const char* elf_build_id_string() { return gElfBuildIdString; }
+
+void print_version(void) {
+  printf("version:\n");
+  printf("\tarch:     %s\n", ARCH);
+  printf("\tzx_system_get_version_string: %s\n", kVersionString);
+  printf("\tELF build ID: %s\n", gElfBuildIdString);
+}
+
+void print_backtrace_version_info() {
+  printf("zx_system_get_version_string %s\n\n", kVersionString);
+
+  // Log the ELF build ID in the format the symbolizer scripts understand.
+  if (gElfBuildIdString[0] != '\0') {
+    const uintptr_t bias = KERNEL_BASE - reinterpret_cast<uintptr_t>(__code_start);
+    print_module(_printf, gElfBuildIdString);
+    // These four mappings match the mappings printed by vm_init().
+    print_mmap(_printf, bias, __code_start, __code_end, "rx");
+    print_mmap(_printf, bias, __rodata_start, __rodata_end, "r");
+    print_mmap(_printf, bias, __data_start, __data_end, "rw");
+    print_mmap(_printf, bias, __bss_start, _end, "rw");
+    printf("dso: id=%s base=%#lx name=zircon.elf\n", gElfBuildIdString,
+           reinterpret_cast<uintptr_t>(__code_start));
+  }
+}
 
 static int cmd_version(int argc, const cmd_args* argv, uint32_t flags) {
   print_version();

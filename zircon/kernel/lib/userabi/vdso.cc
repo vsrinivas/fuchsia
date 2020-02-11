@@ -8,6 +8,7 @@
 #include <lib/cmdline.h>
 #include <lib/userabi/vdso-constants.h>
 #include <lib/userabi/vdso.h>
+#include <lib/version.h>
 #include <platform.h>
 #include <zircon/types.h>
 
@@ -18,7 +19,6 @@
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 
-#include "config-buildid.h"
 #include "vdso-code.h"
 
 // This is defined in assembly via RODSO_IMAGE (see rodso-asm.h);
@@ -226,7 +226,8 @@ const VDso* VDso::Create(KernelHandle<VmObjectDispatcher>* vmo_kernel_handles) {
   // Rather than assigning each member individually, do this with
   // struct assignment and a compound literal so that the compiler
   // can warn if the initializer list omits any member.
-  *constants_window.data() = (vdso_constants){
+  auto constants = constants_window.data();
+  *constants = vdso_constants{
       arch_max_num_cpus(),
       {
           arch_cpu_features(),
@@ -239,8 +240,9 @@ const VDso* VDso::Create(KernelHandle<VmObjectDispatcher>* vmo_kernel_handles) {
       ticks_to_mono_ratio.numerator(),
       ticks_to_mono_ratio.denominator(),
       pmm_count_total_bytes(),
-      BUILDID,
+      "",
   };
+  strncpy(constants->version_string, version_string(), sizeof(constants->version_string));
 
   // Conditionally patch some of the entry points related to time based on
   // platform details which get determined at runtime.
