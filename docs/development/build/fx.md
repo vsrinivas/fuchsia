@@ -390,19 +390,19 @@ to unix shell environments have been ported and are available, such as `ps`,
 
 ### Getting logs {#getting-logs}
 
-`fx syslog` captures all logs from low-level and high-level programs,
-including the kernel, drivers and other userspace programs. `fx syslog`
-depends upon a working high level network stack and SSH. As such, `fx syslog`
+`fx log` captures all logs from low-level and high-level programs,
+including the kernel, drivers and other userspace programs. `fx log`
+depends upon a working high level network stack and SSH. As such, `fx log`
 does not work with Zedboot or "bringup" product configurations. If a device
-is in a state where `fx syslog` ceases to function, it is often useful to
-switch to `fx log` to capture more information about probable causes.
+is in a state where `fx log` ceases to function, it is often useful to
+switch to `fx klog` to capture more information about probable causes.
 
-`fx log` captures only a low-level log stream called "klog". The klog stream
+`fx klog` captures only a low-level log stream called "klog". The klog stream
 includes logs from the Zircon kernel itself, as well as a subset of userspace
-software (most notably drivers and low-level core software). `fx log` depends
+software (most notably drivers and low-level core software). `fx klog` depends
 on a lightweight network stack called `netsvc` that has a tendency to remain
 available even after problems in higher-level software. The netsvc suite is
-also always available in "bringup" product configurations, as such, `fx log`
+also always available in "bringup" product configurations, as such, `fx klog`
 is most useful when working on low-level software, such as the Zircon kernel,
 or drivers.
 
