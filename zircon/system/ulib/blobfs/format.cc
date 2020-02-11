@@ -111,7 +111,7 @@ zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superbl
   uint64_t nodemap_blocks = NodeMapBlocks(superblock);
 
   // All in-memory structures have been created successfully. Dump everything to disk.
-  uint64_t superblock_blocks = 1;
+  uint64_t superblock_blocks = SuperblockBlocks(superblock);
   uint64_t journal_blocks = JournalBlocks(superblock);
   uint64_t total_blocks = superblock_blocks + blockmap_blocks + nodemap_blocks + journal_blocks;
 
