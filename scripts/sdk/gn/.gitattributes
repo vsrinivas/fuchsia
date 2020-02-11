@@ -1,0 +1,3 @@
+# Even for golden files, BUILD.gn are normally checked. The BUILD.gn files here
+# are generated, so ignore these explicitly.
+golden/**/BUILD.gn -tricium

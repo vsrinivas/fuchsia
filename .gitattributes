@@ -9,7 +9,10 @@
 *.gn   text
 *.md   text
 
-# Skip Tricium by default on files in third_party and golden files.
-golden/** -tricium
-goldens/** -tricium
-third_party/** -tricium
+# Skip Tricium by default on files in third_party and golden files but still
+# enforce tricium on BUILD.gn and OWNERS even in these directories.
+**/golden/** -tricium
+**/goldens/** -tricium
+**/third_party/** -tricium
+**/BUILD.gn tricium
+**/OWNERS tricium
