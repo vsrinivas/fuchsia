@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <zircon/process.h>
@@ -11,12 +10,10 @@
 #include "private.h"
 #include "unistd.h"
 
-namespace fuchsia = ::llcpp::fuchsia;
-
 __EXPORT
 zx_status_t fdio_get_vmo_copy(int fd, zx_handle_t* out_vmo) {
   fdio_t* io = fd_to_io(fd);
-  if (io == NULL) {
+  if (io == nullptr) {
     return ZX_ERR_BAD_HANDLE;
   }
   zx_status_t status = zxio_vmo_get_copy(fdio_get_zxio(io), out_vmo, nullptr);
