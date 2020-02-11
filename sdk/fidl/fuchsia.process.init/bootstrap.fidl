@@ -10,25 +10,35 @@ using fuchsia.process;
 
 /// The protocol used to initialize processes.
 protocol Bootstrap {
-    /// Initialize the process with handles.
+    /// Provide the interpreter (in the sense of PT_INTERP) with the capabilities and information it
+    /// needs to load code.
     ///
-    /// Always the first message sent into the channel when starting a new
-    /// process. Must be sent exactly once.
-    Init(InterpreterInfo info);
+    /// This method must be called at most once, and must come before all other method calls if it
+    /// is sent at all.
+    InitializeInterpreter(InterpreterInfo info);
+
+    /// Provide the program with the capabilities and information it needs for runtime support.
+    ///
+    /// This method must be called exactly once. It must proceed all other messages except the
+    /// optional call to `InitializeInterpreter`.
+    InitializeRuntime(RuntimeInfo info);
 
     /// Add the given handles to set of startup handles for the process.
     ///
-    /// Must be called after `Init` and before `Start`. Can be called multiple
-    /// times.
+    /// Must be called after `InitializeInterpreter` and `InitializeRuntime`, and before
+    /// `Start`. Can be called multiple times.
     AddHandles(vector<fuchsia.process.HandleInfo>:64 handles);
 
     /// Add the given names to the namespace of the new process.
     ///
-    /// Must be called after `Init` and before `Start`. Can be called multiple
-    /// times.
+    /// Must be called after `InitializeInterpreter` and `InitializeRuntime`, and before
+    /// `Start`. Can be called multiple times.
     AddNames(vector<fuchsia.process.NameInfo>:64 names);
 
     /// Start the process.
+    ///
+    /// This must be called last, and exactly once, after initialization and after all handles and
+    /// names have been added.
     ///
     ///  * argc: The number of arguments in `argv`.
     ///  * environc: The number of variables in the `environ`.
@@ -42,6 +52,17 @@ protocol Bootstrap {
     Start(uint32 argc, uint32 environc, fuchsia.mem.Data data);
 };
 
+struct RuntimeInfo {
+    /// The process being bootstrapped.
+    handle<process> process;
+
+    /// The initial thread of the process being bootstrapped.
+    handle<thread> initial_thread;
+
+    /// REVIEW: What VMAR(s) does the program runtime receive?
+    handle<vmar> vmars;
+};
+
 /// Flags to modulate the behavior of the interpreter for a process.
 bits InterpreterFlags : uint64 {
     DEBUG = 0x1;
@@ -49,25 +70,20 @@ bits InterpreterFlags : uint64 {
 };
 
 /// Information need by the interpreter to initialize a process.
-table InterpreterInfo {
+struct InterpreterInfo {
     /// Flags to modulate the behavior of the interpreter.
-    1: InterpreterFlags flags;
+    /// REVIEW: Can this be removed?
+    InterpreterFlags flags;
 
-    /// The process being started.
-    2: handle<process> process;
+    /// The VMAR into which the interpreter should load code.
+    handle<vmar> target_vmar;
 
-    /// The root the root virtual memory address range for the process being started.
-    3: handle<vmar> root_vmar;
+    /// The VMAR into which the interpreter was loaded.
+    handle<vmar> interpreter_vmar;
 
-    /// The initial thread for the process.
-    4: handle<thread> thread;
-
-    /// The executable to load into the process.
-    5: handle<vmo> executable;
-
-    /// The the root virtual memory address range into which the interpreter was loaded.
-    6: handle<vmar> loaded_vmar;
+    /// The executable to load.
+    handle<vmo> executable;
 
     /// The shared library loader to use for the process.
-    7: fuchsia.ldsvc.Loader loader;
+    fuchsia.ldsvc.Loader loader;
 };
