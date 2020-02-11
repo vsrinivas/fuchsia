@@ -9,6 +9,7 @@ rustc_binary("iquery_example_component") {
   source_root = "main.rs"
 
   deps = [
+    "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/inspect/rust/fuchsia-inspect",
@@ -17,6 +18,5 @@ rustc_binary("iquery_example_component") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-inspect-deprecated:fuchsia-inspect-deprecated-rustc",
   ]
 }

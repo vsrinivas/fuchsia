@@ -10,10 +10,10 @@ source_set("testing") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.inspect.deprecated",
     "//src/lib/inspect_deprecated",
     "//src/lib/inspect_deprecated:reader",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/fidl/fuchsia-inspect-deprecated",
   ]
 }
