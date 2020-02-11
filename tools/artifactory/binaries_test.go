@@ -5,6 +5,10 @@
 package artifactory
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -14,37 +18,62 @@ import (
 
 // Implements binModules
 type mockBinModules struct {
-	bins []build.Binary
+	buildDir string
+	bins     []build.Binary
+	pkgs     []build.PrebuiltPackage
 }
 
 func (m mockBinModules) BuildDir() string {
-	return "BUILD_DIR"
+	return m.buildDir
 }
 
 func (m mockBinModules) Binaries() []build.Binary {
 	return m.bins
 }
 
-func TestDebugBinaryUploads(t *testing.T) {
+func (m mockBinModules) PrebuiltPackages() []build.PrebuiltPackage {
+	return m.pkgs
+}
 
-	// For the ease of testing, we pretend that the first three of the binaries
-	// below lie in prebuilt build-id directories (so that ELFBuildID() returns
-	// straightforwardly).
-	prebuiltBuildIDDir := filepath.Join("..", "..", "prebuilt", ".build-id")
+func TestDebugBinaryUploads(t *testing.T) {
+	buildDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		t.Fatalf("failed to create a temporary directory: %v", err)
+	}
+	defer os.RemoveAll(buildDir)
+	println(buildDir)
+
+	prebuiltBinManifest, err := binaryManifest(buildDir, []build.Binary{
+		{
+			Debug:    filepath.Join(".build-id", "pr", "ebuiltA.debug"),
+			Breakpad: filepath.Join("gen", "prebuiltA.sym"),
+			OS:       "fuchsia",
+		},
+		{
+			Debug:    filepath.Join(".build-id", "pr", "ebuiltB.debug"),
+			Breakpad: filepath.Join("host", "gen", "prebuiltB.sym"),
+			OS:       "linux",
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to create binary manifest: %v", err)
+	}
+
 	m := &mockBinModules{
+		buildDir: buildDir,
 		bins: []build.Binary{
 			{
-				Debug:    filepath.Join(prebuiltBuildIDDir, "fi", "rst.debug"),
+				Debug:    filepath.Join(".build-id", "fi", "rst.debug"),
 				Breakpad: filepath.Join("gen", "first.sym"),
 				OS:       "fuchsia",
 			},
 			{
-				Debug:    filepath.Join(prebuiltBuildIDDir, "se", "cond.debug"),
+				Debug:    filepath.Join(".build-id", "se", "cond.debug"),
 				Breakpad: filepath.Join("host", "gen", "second.sym"),
 				OS:       "linux",
 			},
 			{
-				Debug: filepath.Join(prebuiltBuildIDDir, "th", "ird.debug"),
+				Debug: filepath.Join(".build-id", "th", "ird.debug"),
 				OS:    "fuchsia",
 			},
 			{
@@ -52,36 +81,62 @@ func TestDebugBinaryUploads(t *testing.T) {
 				OS:    "fuchsia",
 			},
 		},
+		pkgs: []build.PrebuiltPackage{
+			{
+				Name:           "prebuilt",
+				BinaryManifest: prebuiltBinManifest,
+			},
+		},
 	}
 
 	expectedUploads := []Upload{
 		{
-			Source:      filepath.Join("BUILD_DIR", prebuiltBuildIDDir, "fi", "rst.debug"),
+			Source:      filepath.Join(buildDir, ".build-id", "fi", "rst.debug"),
 			Destination: "NAMESPACE/first.debug",
 			Deduplicate: true,
 		},
 		{
-			Source:      filepath.Join("BUILD_DIR", "gen", "first.sym"),
+			Source:      filepath.Join(buildDir, "gen", "first.sym"),
 			Destination: "NAMESPACE/first.sym",
 			Deduplicate: true,
 		},
 		{
-			Source:      filepath.Join("BUILD_DIR", prebuiltBuildIDDir, "se", "cond.debug"),
+			Source:      filepath.Join(buildDir, ".build-id", "se", "cond.debug"),
 			Destination: "NAMESPACE/second.debug",
 			Deduplicate: true,
 		},
 		{
-			Source:      filepath.Join("BUILD_DIR", "host", "gen", "second.sym"),
+			Source:      filepath.Join(buildDir, "host", "gen", "second.sym"),
 			Destination: "NAMESPACE/second.sym",
 			Deduplicate: true,
 		},
 		{
-			Source:      filepath.Join("BUILD_DIR", prebuiltBuildIDDir, "th", "ird.debug"),
+			Source:      filepath.Join(buildDir, ".build-id", "th", "ird.debug"),
 			Destination: "NAMESPACE/third.debug",
 			Deduplicate: true,
 		},
+		{
+			Source:      filepath.Join(buildDir, ".build-id", "pr", "ebuiltA.debug"),
+			Destination: "NAMESPACE/prebuiltA.debug",
+			Deduplicate: true,
+		},
+		{
+			Source:      filepath.Join(buildDir, "gen", "prebuiltA.sym"),
+			Destination: "NAMESPACE/prebuiltA.sym",
+			Deduplicate: true,
+		},
+		{
+			Source:      filepath.Join(buildDir, ".build-id", "pr", "ebuiltB.debug"),
+			Destination: "NAMESPACE/prebuiltB.debug",
+			Deduplicate: true,
+		},
+		{
+			Source:      filepath.Join(buildDir, "host", "gen", "prebuiltB.sym"),
+			Destination: "NAMESPACE/prebuiltB.sym",
+			Deduplicate: true,
+		},
 	}
-	expectedIDs := []string{"first", "third"}
+	expectedIDs := []string{"first", "third", "prebuiltA"}
 
 	actualUploads, actualIDs, err := debugBinaryUploads(m, "NAMESPACE")
 	if err != nil {
@@ -93,4 +148,16 @@ func TestDebugBinaryUploads(t *testing.T) {
 	if !reflect.DeepEqual(actualIDs, expectedIDs) {
 		t.Fatalf("unexpected build IDs:\nexpected:\n%#v\nactual:\n%#v\n", expectedIDs, actualIDs)
 	}
+}
+
+func binaryManifest(buildDir string, bins []build.Binary) (string, error) {
+	manifest, err := ioutil.TempFile(buildDir, "artifactory_tests")
+	if err != nil {
+		return "", err
+	}
+	defer manifest.Close()
+	if err := json.NewEncoder(manifest).Encode(&bins); err != nil {
+		return "", fmt.Errorf("failed to encode binary manifest: %v", err)
+	}
+	return filepath.Base(manifest.Name()), nil
 }

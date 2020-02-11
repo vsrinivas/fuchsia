@@ -19,9 +19,21 @@ func DebugBinaryUploads(mods *build.Modules, namespace string) ([]Upload, []stri
 }
 
 func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, error) {
+	bins := mods.Binaries()
+	for _, pkg := range mods.PrebuiltPackages() {
+		if pkg.BinaryManifest == "" {
+			continue
+		}
+		prebuiltBins, err := pkg.Binaries(mods.BuildDir())
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to derive binaries from prebuilt package %q: %v", pkg.Name, err)
+		}
+		bins = append(bins, prebuiltBins...)
+	}
+
 	var uploads []Upload
 	var buildIDs []string
-	for _, bin := range mods.Binaries() {
+	for _, bin := range bins {
 		id, err := bin.ELFBuildID(mods.BuildDir())
 		// OK if there was no build ID found for an associated binary.
 		if err == build.ErrBuildIDNotFound {
@@ -59,4 +71,5 @@ func debugBinaryUploads(mods binModules, namespace string) ([]Upload, []string, 
 type binModules interface {
 	BuildDir() string
 	Binaries() []build.Binary
+	PrebuiltPackages() []build.PrebuiltPackage
 }

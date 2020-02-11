@@ -11,18 +11,12 @@ import (
 )
 
 const (
-	// BinaryModuleName is the name of the build API module of binaries.
-	binaryModuleName = "binaries.json"
-	// ImageModuleName is the name of the build API module of images.
-	imageModuleName = "images.json"
-	// PlatformModuleName is the the name of the build API module of valid
-	// platforms that tests can target.
-	platformModuleName = "platforms.json"
-	// TestDurationsName is the name of the file containing expected test
-	// durations and timeouts.
-	testDurationsName = "test_durations.json"
-	// TestModuleName is the name of the build API module of tests.
-	testModuleName = "tests.json"
+	binaryModuleName          = "binaries.json"
+	imageModuleName           = "images.json"
+	platformModuleName        = "platforms.json"
+	prebuiltPackageModuleName = "prebuilt_packages.json"
+	testDurationsName         = "test_durations.json"
+	testModuleName            = "tests.json"
 )
 
 // Modules is a convenience interface for accessing the various build API
@@ -32,6 +26,7 @@ type Modules struct {
 	binaries      []Binary
 	images        []Image
 	platforms     []DimensionSet
+	prebuiltPkgs  []PrebuiltPackage
 	testSpecs     []TestSpec
 	testDurations []TestDuration
 }
@@ -53,6 +48,11 @@ func NewModules(buildDir string) (*Modules, error) {
 	}
 
 	m.platforms, err = loadPlatforms(m.PlatformManifest())
+	if err != nil {
+		errMsgs = append(errMsgs, err.Error())
+	}
+
+	m.prebuiltPkgs, err = loadPrebuiltPackages(m.PrebuiltPackageManifest())
 	if err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
@@ -106,6 +106,16 @@ func (m Modules) Platforms() []DimensionSet {
 // PlatformManifest returns the path to the manifest of available test platforms.
 func (m Modules) PlatformManifest() string {
 	return filepath.Join(m.BuildDir(), platformModuleName)
+}
+
+// PrebuiltPackages returns the build API module of prebuilt packages registered in the build.
+func (m Modules) PrebuiltPackages() []PrebuiltPackage {
+	return m.prebuiltPkgs
+}
+
+// PrebuiltPackageManifest returns the path to the manifest of prebuilt packages.
+func (m Modules) PrebuiltPackageManifest() string {
+	return filepath.Join(m.BuildDir(), prebuiltPackageModuleName)
 }
 
 // TestDurations returns the build API module of test duration data.
