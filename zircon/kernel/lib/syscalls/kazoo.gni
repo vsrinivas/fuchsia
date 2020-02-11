@@ -6,7 +6,8 @@
 
 import("$zx/public/gn/host_tool_action.gni")
 
-_kazoo_label = "$zx/kernel/syscalls:generate_syscalls.kazoo($default_toolchain)"
+_kazoo_label =
+    "$zx/kernel/lib/syscalls:generate_syscalls.kazoo($default_toolchain)"
 _kazoo_dir = get_label_info(_kazoo_label, "root_gen_dir")
 syscall_ir_json = "$_kazoo_dir/syscalls.ir.json"
 
@@ -41,12 +42,8 @@ template("kazoo") {
 
     tool = "$zx/tools/kazoo"
 
-    deps = [
-      _kazoo_label,
-    ]
-    sources = [
-      syscall_ir_json,
-    ]
+    deps = [ _kazoo_label ]
+    sources = [ syscall_ir_json ]
 
     outputs = []
     args = []

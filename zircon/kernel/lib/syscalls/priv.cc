@@ -4,9 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/cmdline.h>
-
 #include "priv.h"
+
+#include <lib/cmdline.h>
 
 bool DebuggingSyscallsEnabled() {
   static bool enabled = gCmdline.GetBool("kernel.enable-debugging-syscalls", false);

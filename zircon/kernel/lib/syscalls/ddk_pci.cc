@@ -49,7 +49,7 @@ namespace {
 struct FreeDeleter {
   void operator()(void* ptr) const { ::free(ptr); }
 };
-}
+}  // namespace
 
 // Implementation of a PcieRoot with a look-up table based legacy IRQ swizzler
 // suitable for use with ACPI style swizzle definitions.

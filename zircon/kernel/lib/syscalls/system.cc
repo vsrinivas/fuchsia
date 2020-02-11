@@ -10,6 +10,7 @@
 #include <mexec.h>
 #include <platform.h>
 #include <string.h>
+#include <sys/types.h>
 #include <trace.h>
 #include <zircon/boot/image.h>
 #include <zircon/compiler.h>
@@ -32,7 +33,6 @@
 #include <object/user_handles.h>
 #include <object/vm_object_dispatcher.h>
 #include <platform/halt_helper.h>
-#include <sys/types.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
@@ -53,42 +53,38 @@ extern void mexec_asm_end(void);
 __END_CDECLS
 
 class IdentityPageAllocator {
-  public:
-    IdentityPageAllocator()
-        : aspace_(nullptr)
-        , mapping_id_(0) {
-        allocated_ = LIST_INITIAL_VALUE(allocated_);
-    }
-    ~IdentityPageAllocator() {
-        pmm_free(&allocated_);
-    }
+ public:
+  IdentityPageAllocator() : aspace_(nullptr), mapping_id_(0) {
+    allocated_ = LIST_INITIAL_VALUE(allocated_);
+  }
+  ~IdentityPageAllocator() { pmm_free(&allocated_); }
 
-    /* Allocates a page of memory that has the same physical and virtual
-    addresses. */
-    zx_status_t Allocate(void** result);
+  /* Allocates a page of memory that has the same physical and virtual
+  addresses. */
+  zx_status_t Allocate(void** result);
 
-    // Activate the 1:1 address space. P
-    void Activate();
+  // Activate the 1:1 address space. P
+  void Activate();
 
-  private:
-    zx_status_t InitializeAspace();
-    fbl::RefPtr<VmAspace> aspace_;
-    size_t mapping_id_;
-    list_node allocated_;
+ private:
+  zx_status_t InitializeAspace();
+  fbl::RefPtr<VmAspace> aspace_;
+  size_t mapping_id_;
+  list_node allocated_;
 };
 
 zx_status_t IdentityPageAllocator::InitializeAspace() {
-    // The Aspace has already been initialized, nothing to do.
-    if (aspace_) {
-        return ZX_OK;
-    }
-
-    aspace_ = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "identity");
-    if (!aspace_) {
-        return ZX_ERR_INTERNAL;
-    }
-
+  // The Aspace has already been initialized, nothing to do.
+  if (aspace_) {
     return ZX_OK;
+  }
+
+  aspace_ = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "identity");
+  if (!aspace_) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  return ZX_OK;
 }
 
 zx_status_t alloc_pages_greater_than(paddr_t lower_bound, size_t count, size_t limit,
@@ -133,64 +129,62 @@ zx_status_t alloc_pages_greater_than(paddr_t lower_bound, size_t count, size_t l
 }
 
 zx_status_t IdentityPageAllocator::Allocate(void** result) {
-    zx_status_t st;
+  zx_status_t st;
 
-    // Start by obtaining an unused physical page. This address will eventually
-    // be the physical/virtual address of our identity mapped page.
-    // TODO: when ZX-978 is completed, we should allocate low memory directly
-    //       from the pmm rather than using "alloc_pages_greater_than" which is
-    //       somewhat of a hack.
-    paddr_t pa;
-    st = alloc_pages_greater_than(0, 1, 4 * GB, &pa);
-    if (st != ZX_OK) {
-      LTRACEF("mexec: failed to allocate page in low memory\n");
-      return st;
-    }
-
-    // Add this page to the list of allocated pages such that it gets freed when
-    // the object is destroyed.
-    vm_page_t* page = paddr_to_vm_page(pa);
-    DEBUG_ASSERT(page);
-    list_add_tail(&allocated_, &page->queue_node);
-
-    // The kernel address space may be in high memory which cannot be identity
-    // mapped since all Kernel Virtual Addresses might be out of range of the
-    // physical address space. For this reason, we need to make a new address
-    // space.
-    st = InitializeAspace();
-    if (st != ZX_OK) {
-        return st;
-    }
-
-    // Create a new allocation in the new address space that identity maps the
-    // target page.
-    constexpr uint kPermissionFlagsRWX = (ARCH_MMU_FLAG_PERM_READ |
-                                          ARCH_MMU_FLAG_PERM_WRITE |
-                                          ARCH_MMU_FLAG_PERM_EXECUTE);
-
-    void* addr = reinterpret_cast<void*>(pa);
-
-    // 2 ** 64 = 18446744073709551616
-    // len("identity 18446744073709551616\n") == 30, round to sizeof(word) = 32
-    char mapping_name[32];
-    snprintf(mapping_name, sizeof(mapping_name), "identity %lu", mapping_id_++);
-
-    st = aspace_->AllocPhysical(mapping_name, PAGE_SIZE, &addr, 0, pa,
-                                VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
-                                kPermissionFlagsRWX);
-    if (st != ZX_OK) {
-        return st;
-    }
-
-    *result = addr;
+  // Start by obtaining an unused physical page. This address will eventually
+  // be the physical/virtual address of our identity mapped page.
+  // TODO: when ZX-978 is completed, we should allocate low memory directly
+  //       from the pmm rather than using "alloc_pages_greater_than" which is
+  //       somewhat of a hack.
+  paddr_t pa;
+  st = alloc_pages_greater_than(0, 1, 4 * GB, &pa);
+  if (st != ZX_OK) {
+    LTRACEF("mexec: failed to allocate page in low memory\n");
     return st;
+  }
+
+  // Add this page to the list of allocated pages such that it gets freed when
+  // the object is destroyed.
+  vm_page_t* page = paddr_to_vm_page(pa);
+  DEBUG_ASSERT(page);
+  list_add_tail(&allocated_, &page->queue_node);
+
+  // The kernel address space may be in high memory which cannot be identity
+  // mapped since all Kernel Virtual Addresses might be out of range of the
+  // physical address space. For this reason, we need to make a new address
+  // space.
+  st = InitializeAspace();
+  if (st != ZX_OK) {
+    return st;
+  }
+
+  // Create a new allocation in the new address space that identity maps the
+  // target page.
+  constexpr uint kPermissionFlagsRWX =
+      (ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE);
+
+  void* addr = reinterpret_cast<void*>(pa);
+
+  // 2 ** 64 = 18446744073709551616
+  // len("identity 18446744073709551616\n") == 30, round to sizeof(word) = 32
+  char mapping_name[32];
+  snprintf(mapping_name, sizeof(mapping_name), "identity %lu", mapping_id_++);
+
+  st = aspace_->AllocPhysical(mapping_name, PAGE_SIZE, &addr, 0, pa,
+                              VmAspace::VMM_FLAG_VALLOC_SPECIFIC, kPermissionFlagsRWX);
+  if (st != ZX_OK) {
+    return st;
+  }
+
+  *result = addr;
+  return st;
 }
 
 void IdentityPageAllocator::Activate() {
-    if (!aspace_) {
-        panic("Cannot Activate 1:1 Aspace with no 1:1 mappings!");
-    }
-    vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(aspace_.get()));
+  if (!aspace_) {
+    panic("Cannot Activate 1:1 Aspace with no 1:1 mappings!");
+  }
+  vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(aspace_.get()));
 }
 
 /* Takes all the pages in a VMO and creates a copy of them where all the pages

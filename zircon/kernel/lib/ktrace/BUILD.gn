@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/kernel/syscalls/kazoo.gni")
+import("$zx/kernel/lib/syscalls/kazoo.gni")
 
 config("config") {
   include_dirs = [ "include" ]

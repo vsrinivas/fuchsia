@@ -19,7 +19,7 @@
 #include <ktl/array.h>
 #include <ktl/unique_ptr.h>
 
-#include <../syscalls/system_priv.h>
+#include "../../lib/syscalls/system_priv.h"
 
 extern void x86_amd_set_lfence_serializing(const cpu_id::CpuId*, MsrAccess*);
 

@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_SYSCALLS_PRIV_H_
-#define ZIRCON_KERNEL_SYSCALLS_PRIV_H_
+#ifndef ZIRCON_KERNEL_LIB_SYSCALLS_PRIV_H_
+#define ZIRCON_KERNEL_LIB_SYSCALLS_PRIV_H_
 
 #include <lib/user_copy/user_ptr.h>
 #include <zircon/syscalls/types.h>
@@ -87,4 +87,4 @@ bool DebuggingSyscallsEnabled();
 // Returns |true| if serial port syscalls have been enabled (see kernel.enable-serial-syscalls).
 bool SerialSyscallsEnabled();
 
-#endif  // ZIRCON_KERNEL_SYSCALLS_PRIV_H_
+#endif  // ZIRCON_KERNEL_LIB_SYSCALLS_PRIV_H_

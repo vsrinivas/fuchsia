@@ -105,8 +105,8 @@ if (current_toolchain == default_toolchain) {
       "$zx/kernel/lib/crashlog",
       "$zx/kernel/lib/ktl",
       "$zx/kernel/lib/perfmon",
+      "$zx/kernel/lib/syscalls:syscall-abi",
       "$zx/kernel/object",
-      "$zx/kernel/syscalls:syscall-abi",
       "$zx/kernel/vm",
       "$zx/system/ulib/bitmap",
     ]

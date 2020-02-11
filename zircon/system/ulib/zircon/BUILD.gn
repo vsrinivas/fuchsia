@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/kernel/syscalls/kazoo.gni")
+import("$zx_build/kernel/lib/syscalls/kazoo.gni")
 import("$zx_build/public/gn/config/globals.gni")
 import("$zx_build/public/gn/config/standard.gni")
 import("$zx_build/public/gn/toolchain/environment.gni")
@@ -239,7 +239,7 @@ if (current_toolchain == default_toolchain) {
     configs += [ ":config" ]
     deps = [
       ":generate",
-      "$zx/kernel/syscalls:syscall-abi",
+      "$zx/kernel/lib/syscalls:syscall-abi",
     ]
     if (toolchain.base_environment == "user") {
       configs -= [ "$zx/public/gn/config:user" ]

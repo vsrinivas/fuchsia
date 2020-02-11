@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/kernel/syscalls/kazoo.gni")
+import("$zx/kernel/lib/syscalls/kazoo.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
 import("$zx/public/gn/zbi.gni")
@@ -197,8 +197,8 @@ if (is_kernel) {
       ":vdso-code.h",
       ":vdso.image",
       "$zx/kernel/lib/cmdline",
+      "$zx/kernel/lib/syscalls",
       "$zx/kernel/lib/version:config-buildid-header",
-      "$zx/kernel/syscalls",
       "$zx/kernel/vm:headers",
       "$zx/system/ulib/affine",
       "$zx/system/ulib/fbl",
