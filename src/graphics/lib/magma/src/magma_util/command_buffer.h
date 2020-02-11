@@ -45,7 +45,7 @@ class CommandBuffer : public MappedBatch<Context, typename GpuMapping::BufferTyp
     sequence_number_ = sequence_number;
   }
 
-  uint32_t sequence_number() const { return sequence_number_; }
+  uint32_t GetSequenceNumber() const override { return sequence_number_; }
 
   // A buffer and a region, used to initialize resources.
   struct ExecResource {

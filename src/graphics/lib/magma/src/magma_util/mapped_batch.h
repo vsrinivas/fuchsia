@@ -19,6 +19,7 @@ class MappedBatch {
   virtual uint64_t GetGpuAddress() const = 0;
   virtual uint64_t GetLength() const = 0;
   virtual void SetSequenceNumber(uint32_t sequence_number) = 0;
+  virtual uint32_t GetSequenceNumber() const = 0;
   virtual uint64_t GetBatchBufferId() const { return 0; }
   virtual const GpuMappingView<Buffer>* GetBatchMapping() const = 0;
   virtual bool IsCommandBuffer() const { return false; }

@@ -33,6 +33,7 @@ class MockMappedBatch : public magma::MappedBatch<MsdVslContext, GpuMapping::Buf
   uint64_t GetLength() const override { return length_; }
 
   void SetSequenceNumber(uint32_t sequence_number) override {}
+  uint32_t GetSequenceNumber() const override { return 0; }
   uint64_t GetBatchBufferId() const override { return 0; }
 
   const magma::GpuMappingView<AddressSpace::Buffer>* GetBatchMapping() const override {

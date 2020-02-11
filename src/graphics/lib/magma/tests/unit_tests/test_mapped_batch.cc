@@ -53,7 +53,7 @@ TEST(TestCommandBuffer, SequenceNumber) {
 
   constexpr uint32_t kSequenceNumber = 0xabcd1234;
   command_buffer.SetSequenceNumber(kSequenceNumber);
-  EXPECT_EQ(kSequenceNumber, command_buffer.sequence_number());
+  EXPECT_EQ(kSequenceNumber, command_buffer.GetSequenceNumber());
 }
 
 TEST(TestCommandBuffer, InitializeResources) {

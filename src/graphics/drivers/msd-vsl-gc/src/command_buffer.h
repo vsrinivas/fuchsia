@@ -23,6 +23,9 @@ class CommandBuffer : public magma::CommandBuffer<MsdVslContext, GpuMapping> {
       : magma::CommandBuffer<MsdVslContext, GpuMapping>(context, connection_id,
                                                         std::move(command_buffer)) {}
 
+  void SetSequenceNumber(uint32_t sequence_number) override { seq_num_ = sequence_number; }
+  uint32_t GetSequenceNumber() const override { return seq_num_; }
+
   // Returns a pointer to the batch buffer.
   magma::PlatformBuffer* GetBatchBuffer() {
     if (batch_buffer_index() < exec_resources_.size()) {
@@ -55,6 +58,9 @@ class CommandBuffer : public magma::CommandBuffer<MsdVslContext, GpuMapping> {
     }
     return true;
   }
+
+ private:
+  uint32_t seq_num_ = 0;
 };
 
 #endif  // COMMAND_BUFFER_H
