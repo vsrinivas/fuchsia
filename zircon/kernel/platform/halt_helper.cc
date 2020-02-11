@@ -5,16 +5,14 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/debuglog.h>
+#include <zircon/boot/crash-reason.h>
 
 #include <platform/halt_helper.h>
 
-void platform_graceful_halt_helper(platform_halt_action action) {
+void platform_graceful_halt_helper(platform_halt_action action, zircon_crash_reason_t reason) {
   thread_migrate_to_cpu(BOOT_CPU_ID);
   platform_halt_secondary_cpus();
 
-  // Delay shutdown of debuglog to ensure log messages emitted by above calls will be written.
-  dlog_shutdown();
-
-  platform_halt(action, HALT_REASON_SW_RESET);
+  platform_halt(action, reason);
   panic("ERROR: failed to halt the platform\n");
 }

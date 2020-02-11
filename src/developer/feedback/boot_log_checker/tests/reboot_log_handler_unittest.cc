@@ -67,8 +67,8 @@ class RebootLogHandlerTest : public UnitTestFixture,
     }
   }
 
-  void WriteRebootLogContents(
-      const std::string& contents = "ZIRCON KERNEL PANIC\n\nUPTIME (ms)\n74715002") {
+  void WriteRebootLogContents(const std::string& contents =
+                                  "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002") {
     ASSERT_TRUE(tmp_dir_.NewTempFileWithData(contents, &reboot_log_path_));
   }
 
@@ -111,38 +111,59 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, RebootLogHandlerTest,
                          ::testing::ValuesIn(std::vector<TestParam>({
                              {
                                  "KernelPanicCrashLog",
-                                 "ZIRCON KERNEL PANIC\n\nUPTIME (ms)\n74715002",
+                                 "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUPTIME (ms)\n74715002",
                                  "fuchsia-kernel-panic",
                                  zx::msec(74715002),
                                  RebootReason::kKernelPanic,
                              },
                              {
                                  "KernelPanicCrashLogNoUptime",
-                                 "ZIRCON KERNEL PANIC",
+                                 "ZIRCON REBOOT REASON (KERNEL PANIC)",
                                  "fuchsia-kernel-panic",
                                  std::nullopt,
                                  RebootReason::kKernelPanic,
                              },
                              {
                                  "KernelPanicCrashLogWrongUptime",
-                                 "ZIRCON KERNEL PANIC\n\nUNRECOGNIZED",
+                                 "ZIRCON REBOOT REASON (KERNEL PANIC)\n\nUNRECOGNIZED",
                                  "fuchsia-kernel-panic",
                                  std::nullopt,
                                  RebootReason::kKernelPanic,
                              },
                              {
                                  "OutOfMemoryLog",
-                                 "ZIRCON OOM\n\nUPTIME (ms)\n65487494",
+                                 "ZIRCON REBOOT REASON (OOM)\n\nUPTIME (ms)\n65487494",
                                  "fuchsia-oom",
                                  zx::msec(65487494),
                                  RebootReason::kOOM,
                              },
                              {
                                  "OutOfMemoryLogNoUptime",
-                                 "ZIRCON OOM",
+                                 "ZIRCON REBOOT REASON (OOM)",
                                  "fuchsia-oom",
                                  std::nullopt,
                                  RebootReason::kOOM,
+                             },
+                             {
+                                 "SoftwareWatchdogFired",
+                                 "ZIRCON REBOOT REASON (SW WATCHDOG)",
+                                 "fuchsia-sw-watchdog",
+                                 std::nullopt,
+                                 RebootReason::kSoftwareWatchdog,
+                             },
+                             {
+                                 "HardwareWatchdogFired",
+                                 "ZIRCON REBOOT REASON (HW WATCHDOG)",
+                                 "fuchsia-hw-watchdog",
+                                 std::nullopt,
+                                 RebootReason::kHardwareWatchdog,
+                             },
+                             {
+                                 "BrownoutPowerSupplyFailure",
+                                 "ZIRCON REBOOT REASON (BROWNOUT)",
+                                 "fuchsia-brownout",
+                                 std::nullopt,
+                                 RebootReason::kBrownout,
                              },
                              {
                                  "UnrecognizedCrashTypeInRebootLog",

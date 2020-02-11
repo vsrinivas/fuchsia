@@ -42,6 +42,7 @@
 #include <libzbi/zbi-cpp.h>
 #include <lk/init.h>
 #include <platform/console.h>
+#include <platform/crashlog.h>
 #include <platform/keyboard.h>
 #include <platform/pc.h>
 #include <platform/pc/bootloader.h>
@@ -143,7 +144,9 @@ zbi_result_t process_zbi_item(zbi_header_t* hdr, void* payload, void* cookie) {
     // fallthrough: this is a legacy/typo variant
     case ZBI_TYPE_NVRAM:
       if (hdr->length >= sizeof(zbi_nvram_t)) {
-        memcpy(&bootloader.nvram, payload, sizeof(zbi_nvram_t));
+        zbi_nvram_t info;
+        memcpy(&info, payload, sizeof(info));
+        platform_set_ram_crashlog_location(info.base, info.length);
       }
       break;
     case ZBI_TYPE_DEBUG_UART:
@@ -157,6 +160,12 @@ zbi_result_t process_zbi_item(zbi_header_t* hdr, void* payload, void* cookie) {
       break;
     case ZBI_TYPE_DISCARD:
       break;
+    case ZBI_TYPE_HW_REBOOT_REASON: {
+      zbi_hw_reboot_reason_t reason;
+      memcpy(&reason, payload, sizeof(reason));
+      platform_set_hw_reboot_reason(reason);
+      break;
+    }
   }
   return ZBI_RESULT_OK;
 }
@@ -188,15 +197,11 @@ static void process_zbi(zbi_header_t* hdr, uintptr_t phys) {
   bootloader.ramdisk_size = image.Length();
 }
 
-extern bool halt_on_panic;
-
 static void platform_save_bootloader_data(void) {
   if (_zbi_base != NULL) {
     zbi_header_t* bd = (zbi_header_t*)X86_PHYS_TO_VIRT(_zbi_base);
     process_zbi(bd, (uintptr_t)_zbi_base);
   }
-
-  halt_on_panic = gCmdline.GetBool("kernel.halt-on-panic", false);
 }
 
 static void* ramdisk_base;
@@ -301,84 +306,51 @@ static void platform_ensure_display_memtype(uint level) {
 LK_INIT_HOOK(display_memtype, &platform_ensure_display_memtype, LK_INIT_LEVEL_VM + 1)
 
 static efi_guid zircon_guid = ZIRCON_VENDOR_GUID;
-static char16_t crashlog_name[] = ZIRCON_CRASHLOG_EFIVAR
+static char16_t crashlog_name[] = ZIRCON_CRASHLOG_EFIVAR;
+static fbl::RefPtr<VmAspace> efi_aspace;
 
-    static fbl::RefPtr<VmAspace>
-        efi_aspace;
+// Something big enough for the panic log but not too enormous
+// to avoid excessive pressure on efi variable storage
+#define MAX_EFI_CRASHLOG_LEN 4096
 
-typedef struct {
-  uint64_t magic;
-  uint64_t length;
-  uint64_t nmagic;
-  uint64_t nlength;
-} log_hdr_t;
-
-#define NVRAM_MAGIC (0x6f8962d66b28504fULL)
-
-static size_t nvram_stow_crashlog(void* log, size_t len) {
-  size_t max = bootloader.nvram.length - sizeof(log_hdr_t);
-  void* nvram = paddr_to_physmap(bootloader.nvram.base);
-  if (nvram == NULL) {
-    return 0;
+static void efi_stow_crashlog(zircon_crash_reason_t, const void* log, size_t len) {
+  if (!efi_aspace || (log == NULL)) {
+    return;
   }
 
-  if (log == NULL) {
-    return max;
-  }
-  if (len > max) {
-    len = max;
+  if (len > MAX_EFI_CRASHLOG_LEN) {
+    len = MAX_EFI_CRASHLOG_LEN;
   }
 
-  log_hdr_t hdr = {
-      .magic = NVRAM_MAGIC,
-      .length = len,
-      .nmagic = ~NVRAM_MAGIC,
-      .nlength = ~len,
-  };
-  memcpy(nvram, &hdr, sizeof(hdr));
-  memcpy(static_cast<char*>(nvram) + sizeof(hdr), log, len);
-  arch_clean_cache_range((uintptr_t)nvram, sizeof(hdr) + len);
-  return len;
+  // We could be panicking whilst already holding the thread_lock. If so we must avoid calling
+  // functions that will grab it again.
+  if (spin_lock_held(&thread_lock)) {
+    vmm_set_active_aspace_locked(reinterpret_cast<vmm_aspace_t*>(efi_aspace.get()));
+  } else {
+    vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(efi_aspace.get()));
+  }
+
+  efi_system_table* sys = static_cast<efi_system_table*>(bootloader.efi_system_table);
+  efi_runtime_services* rs = sys->RuntimeServices;
+  rs->SetVariable(crashlog_name, &zircon_guid, ZIRCON_CRASHLOG_EFIATTR, len, log);
 }
 
-static size_t nvram_recover_crashlog(size_t len, void* cookie,
-                                     void (*func)(const void* data, size_t, size_t len,
-                                                  void* cookie)) {
-  size_t max = bootloader.nvram.length - sizeof(log_hdr_t);
-  void* nvram = paddr_to_physmap(bootloader.nvram.base);
-  if (nvram == NULL) {
+size_t efi_recover_crashlog(size_t len, void* cookie,
+                            void (*func)(const void* data, size_t, size_t len, void* cookie)) {
+  if (last_crashlog == nullptr) {
     return 0;
   }
-  log_hdr_t hdr;
-  memcpy(&hdr, nvram, sizeof(hdr));
-  if ((hdr.magic != NVRAM_MAGIC) || (hdr.length > max) || (hdr.nmagic != ~NVRAM_MAGIC) ||
-      (hdr.nlength != ~hdr.length)) {
-    printf("nvram-crashlog: bad header: %016lx %016lx %016lx %016lx\n", hdr.magic, hdr.length,
-           hdr.nmagic, hdr.nlength);
-    return 0;
-  }
-  if (len == 0) {
-    return hdr.length;
-  }
-  if (len > hdr.length) {
-    len = hdr.length;
-  }
-  func(static_cast<char*>(nvram) + sizeof(hdr), 0, len, cookie);
 
-  // invalidate header so we don't get a stale crashlog
-  // on future boots
-  hdr.magic = 0;
-  memcpy(nvram, &hdr, sizeof(hdr));
-  return hdr.length;
+  if (len != 0) {
+    func(last_crashlog, 0, last_crashlog_len, cookie);
+  }
+  return last_crashlog_len;
 }
 
 void platform_init_crashlog(void) {
-  if (bootloader.nvram.base && bootloader.nvram.length > sizeof(log_hdr_t)) {
+  if (platform_has_ram_crashlog()) {
     // Nothing to do for simple nvram logs
     return;
-  } else {
-    bootloader.nvram.base = 0;
-    bootloader.nvram.length = 0;
   }
 
   if (bootloader.efi_system_table != NULL) {
@@ -400,64 +372,12 @@ void platform_init_crashlog(void) {
     if (r != ZX_OK) {
       efi_aspace.reset();
     }
-  }
-}
 
-// Something big enough for the panic log but not too enormous
-// to avoid excessive pressure on efi variable storage
-#define MAX_EFI_CRASHLOG_LEN 4096
-
-static size_t efi_stow_crashlog(void* log, size_t len) {
-  if (!efi_aspace) {
-    return 0;
+    // Override the crashlog hooks with the EFI crashlog functions.
+    platform_stow_crashlog = efi_stow_crashlog;
+    platform_recover_crashlog = efi_recover_crashlog;
+    platform_enable_crashlog_uptime_updates = [](bool) {};
   }
-  if (log == NULL) {
-    return MAX_EFI_CRASHLOG_LEN;
-  }
-  if (len > MAX_EFI_CRASHLOG_LEN) {
-    len = MAX_EFI_CRASHLOG_LEN;
-  }
-
-  // We could be panicking whilst already holding the thread_lock. If so we must avoid calling
-  // functions that will grab it again.
-  if (spin_lock_held(&thread_lock)) {
-    vmm_set_active_aspace_locked(reinterpret_cast<vmm_aspace_t*>(efi_aspace.get()));
-  } else {
-    vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(efi_aspace.get()));
-  }
-
-  efi_system_table* sys = static_cast<efi_system_table*>(bootloader.efi_system_table);
-  efi_runtime_services* rs = sys->RuntimeServices;
-  if (rs->SetVariable(crashlog_name, &zircon_guid, ZIRCON_CRASHLOG_EFIATTR, len, log) == 0) {
-    return len;
-  } else {
-    return 0;
-  }
-}
-
-size_t platform_stow_crashlog(void* log, size_t len) {
-  printf("stowing crashlog:\n");
-  hexdump(log, MIN(64u, len));
-  printf("...\n");
-
-  if (bootloader.nvram.base) {
-    return nvram_stow_crashlog(log, len);
-  } else {
-    return efi_stow_crashlog(log, len);
-  }
-}
-
-size_t platform_recover_crashlog(size_t len, void* cookie,
-                                 void (*func)(const void* data, size_t, size_t len, void* cookie)) {
-  if (bootloader.nvram.base != 0) {
-    return nvram_recover_crashlog(len, cookie, func);
-  } else if (last_crashlog != nullptr) {
-    if (len != 0) {
-      func(last_crashlog, 0, last_crashlog_len, cookie);
-    }
-    return last_crashlog_len;
-  }
-  return 0;
 }
 
 typedef struct e820_walk_ctx {

@@ -8,7 +8,7 @@
 #include <zircon/types.h>
 
 #include <arch/arch_ops.h>
-#include <dev/watchdog.h>
+#include <dev/hw_watchdog.h>
 #include <pdev/watchdog.h>
 
 static const struct pdev_watchdog_ops default_ops = {
@@ -21,12 +21,12 @@ static const struct pdev_watchdog_ops default_ops = {
 
 static const struct pdev_watchdog_ops* watchdog_ops = &default_ops;
 
-bool watchdog_present() { return watchdog_ops != &default_ops; }
-void watchdog_pet() { watchdog_ops->pet(); }
-zx_status_t watchdog_set_enabled(bool enabled) { return watchdog_ops->set_enabled(enabled); }
-bool watchdog_is_enabled() { return watchdog_ops->is_enabled(); }
-zx_duration_t watchdog_get_timeout_nsec() { return watchdog_ops->get_timeout_nsec(); }
-zx_time_t watchdog_get_last_pet_time() { return watchdog_ops->get_last_pet_time(); }
+bool hw_watchdog_present() { return watchdog_ops != &default_ops; }
+void hw_watchdog_pet() { watchdog_ops->pet(); }
+zx_status_t hw_watchdog_set_enabled(bool enabled) { return watchdog_ops->set_enabled(enabled); }
+bool hw_watchdog_is_enabled() { return watchdog_ops->is_enabled(); }
+zx_duration_t hw_watchdog_get_timeout_nsec() { return watchdog_ops->get_timeout_nsec(); }
+zx_time_t hw_watchdog_get_last_pet_time() { return watchdog_ops->get_last_pet_time(); }
 
 void pdev_register_watchdog(const pdev_watchdog_ops_t* ops) {
   watchdog_ops = ops;

@@ -10,7 +10,7 @@
 #include <lib/debuglog.h>
 #include <platform.h>
 
-#include <dev/watchdog.h>
+#include <dev/hw_watchdog.h>
 
 static void usage(const char* cmd_name) {
   printf("Usage:\n");
@@ -57,27 +57,27 @@ static int cmd_watchdog(int argc, const cmd_args* argv, uint32_t flags) {
     return -1;
   }
 
-  if (!watchdog_present()) {
+  if (!hw_watchdog_present()) {
     printf("There is no hardware watchdog present in this system.\n");
     return 0;
   }
 
   switch (command) {
     case Cmd::Status: {
-      zx_time_t last_pet = watchdog_get_last_pet_time();
+      zx_time_t last_pet = hw_watchdog_get_last_pet_time();
       zx_time_t now = current_time();
-      printf("Enabled  : %s\n", watchdog_is_enabled() ? "yes" : "no");
-      printf("Timeout  : %ld nSec\n", watchdog_get_timeout_nsec());
+      printf("Enabled  : %s\n", hw_watchdog_is_enabled() ? "yes" : "no");
+      printf("Timeout  : %ld nSec\n", hw_watchdog_get_timeout_nsec());
       printf("Last Pet : %ld (%ld nSec ago)\n", last_pet, now - last_pet);
     } break;
 
     case Cmd::Pet: {
-      printf("Watchdog has been pet.  She's a good girl! (yes she is!!)\n");
+      printf("Watchdog has been pet.  They're a good dog! (yes they are!!)\n");
     } break;
 
     case Cmd::Enable: {
       zx_status_t res;
-      res = watchdog_set_enabled(true);
+      res = hw_watchdog_set_enabled(true);
       if (res == ZX_ERR_NOT_SUPPORTED) {
         printf("Watchdog does not support enabling.\n");
         return res;
@@ -91,7 +91,7 @@ static int cmd_watchdog(int argc, const cmd_args* argv, uint32_t flags) {
 
     case Cmd::Disable: {
       zx_status_t res;
-      res = watchdog_set_enabled(false);
+      res = hw_watchdog_set_enabled(false);
       if (res == ZX_ERR_NOT_SUPPORTED) {
         printf("Watchdog does not support disabling.\n");
         return res;
@@ -104,7 +104,7 @@ static int cmd_watchdog(int argc, const cmd_args* argv, uint32_t flags) {
     } break;
 
     case Cmd::Force: {
-      if (!watchdog_is_enabled()) {
+      if (!hw_watchdog_is_enabled()) {
         printf("Watchdog is not enabled.  Enable the watchdog first.\n");
         return ZX_ERR_BAD_STATE;
       }
@@ -126,7 +126,7 @@ static int cmd_watchdog(int argc, const cmd_args* argv, uint32_t flags) {
       // the system.
       dlog_force_panic();
 
-      zx_time_t deadline = watchdog_get_last_pet_time() + watchdog_get_timeout_nsec();
+      zx_time_t deadline = hw_watchdog_get_last_pet_time() + hw_watchdog_get_timeout_nsec();
       printf("System wedged!  Watchdog will fire in %ld nSec\n", deadline - current_time());
 
       // Spin forever.  The watchdog should reboot us.
@@ -139,7 +139,7 @@ static int cmd_watchdog(int argc, const cmd_args* argv, uint32_t flags) {
 }
 
 STATIC_COMMAND_START
-STATIC_COMMAND("watchdog", "watchdog commands", &cmd_watchdog)
+STATIC_COMMAND("wdt", "hardware watchdog commands", &cmd_watchdog)
 STATIC_COMMAND_END(gfx)
 
 #endif

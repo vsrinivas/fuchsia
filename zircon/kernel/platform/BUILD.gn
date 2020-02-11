@@ -4,13 +4,19 @@
 
 source_set("platform") {
   sources = [
+    "crashlog.cc",
     "debug.cc",
     "halt_helper.cc",
+    "hw_reboot_reason.cc",
     "init.cc",
     "power.cc",
   ]
   deps = [
+    "$zx/kernel/dev/pdev/hw_watchdog",
+    "$zx/kernel/lib/cmdline",
     "$zx/kernel/lib/console",
+    "$zx/kernel/lib/crashlog",
     "$zx/kernel/lib/debuglog",
+    "$zx/system/ulib/ram-crashlog",
   ]
 }

@@ -13,6 +13,7 @@
 #include <printf.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/boot/crash-reason.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 
@@ -29,9 +30,7 @@ void spin(uint32_t usecs) {
     ;
 }
 
-void abort(void) {
-  panic("abort!");
-}
+void abort(void) { panic("abort!"); }
 
 void _panic(void* caller, void* frame, const char* fmt, ...) {
   platform_panic_start();
@@ -43,7 +42,7 @@ void _panic(void* caller, void* frame, const char* fmt, ...) {
   vprintf(fmt, ap);
   va_end(ap);
 
-  platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
+  platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
 }
 
 static void puts_for_panic(const char* msg, size_t len) { __printf_output_func(msg, len, NULL); }
@@ -51,7 +50,7 @@ static void puts_for_panic(const char* msg, size_t len) { __printf_output_func(m
 void _panic_no_format(const char* msg, size_t len) {
   platform_panic_start();
   puts_for_panic(msg, len);
-  platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
+  platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
 }
 
 void __stack_chk_fail(void) { panic_no_format("stack canary corrupted!\n"); }

@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_LIB_CRASHLOG_INCLUDE_LIB_CRASHLOG_H_
 #define ZIRCON_KERNEL_LIB_CRASHLOG_INCLUDE_LIB_CRASHLOG_H_
 
+#include <zircon/boot/crash-reason.h>
+
 #if defined(__aarch64__)
 
 #include <arch/arm64.h>
@@ -24,11 +26,9 @@ typedef struct {
 
 extern crashlog_t crashlog;
 
-enum class CrashlogType { PANIC, OOM };
-
-// Serialize the crashlog to string in `out' up to `len' characters. If `type'
+// Serialize the crashlog to string in `out' up to `len' characters. If `reason'
 // is OOM, then a different preamble will be used, and the backtrace will not be
 // included.
-size_t crashlog_to_string(char* out, const size_t len, CrashlogType type);
+size_t crashlog_to_string(char* out, const size_t len, zircon_crash_reason_t reason);
 
 #endif  // ZIRCON_KERNEL_LIB_CRASHLOG_INCLUDE_LIB_CRASHLOG_H_

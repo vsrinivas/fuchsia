@@ -8,8 +8,9 @@
 #define ZIRCON_KERNEL_INCLUDE_PLATFORM_HALT_HELPER_H_
 
 #include <platform.h>
+#include <zircon/boot/crash-reason.h>
 
 // Gracefully halt and perform |action|.
-void platform_graceful_halt_helper(platform_halt_action action);
+void platform_graceful_halt_helper(platform_halt_action action, zircon_crash_reason_t);
 
 #endif  // ZIRCON_KERNEL_INCLUDE_PLATFORM_HALT_HELPER_H_

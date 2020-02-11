@@ -99,7 +99,7 @@ __NO_RETURN static void exception_die(arm64_iframe_t* iframe, uint32_t esr, cons
   dump_iframe(iframe);
   crashlog.iframe = iframe;
 
-  platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
+  platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
 }
 
 static void arm64_unknown_handler(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr) {
@@ -405,7 +405,7 @@ extern "C" void arm64_invalid_exception(arm64_iframe_t* iframe, unsigned int whi
   printf("invalid exception, which 0x%x\n", which);
   dump_iframe(iframe);
 
-  platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
+  platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
 }
 
 /* called from assembly */

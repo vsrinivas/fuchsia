@@ -70,11 +70,6 @@ void dlog_serial_write(const char* data, size_t len);
 // is captured or displayed to the user
 void dlog_bluescreen_init(void);
 
-// bluescreen_halt should be called from inside platform_halt to allow
-// the bluescreen service to finalize the display of the panic data
-// (for example, creating a qrcode)
-void dlog_bluescreen_halt(void);
-
 // Force the dlog into panic mode.  Can be used in special circumstances to
 // force log messages to the serial console in the event that interrupts are off
 // and will never be turned back on (for example, when about to force a watchdog

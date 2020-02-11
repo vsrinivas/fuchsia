@@ -9,6 +9,8 @@
 #define ZIRCON_KERNEL_INCLUDE_PLATFORM_H_
 
 #include <sys/types.h>
+#include <zircon/boot/crash-reason.h>
+#include <zircon/boot/image.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -23,12 +25,6 @@ typedef enum {
   HALT_ACTION_REBOOT_RECOVERY,    // Reboot into the recovery partition.
   HALT_ACTION_SHUTDOWN,           // Shutdown and power off.
 } platform_halt_action;
-
-typedef enum {
-  HALT_REASON_UNKNOWN = 0,
-  HALT_REASON_SW_RESET,  // Generic Software Initiated Reboot
-  HALT_REASON_SW_PANIC,  // Reboot triggered by a SW panic or ASSERT
-} platform_halt_reason;
 
 /* current time in nanoseconds */
 zx_time_t current_time(void);
@@ -52,10 +48,6 @@ void platform_init(void);
 /* called by the arch init code to get the platform to set up any mmu mappings it may need */
 void platform_init_mmu_mappings(void);
 
-/* if the platform has knowledge of what caused the latest reboot, it can report
- * it to applications with this function.  */
-platform_halt_reason platform_get_reboot_reason(void);
-
 /* platform_panic_start informs the system that a panic message is about
  * to be printed and that platform_halt will be called shortly.  The
  * platform should stop other CPUs if possible and do whatever is necessary
@@ -71,7 +63,17 @@ void platform_panic_start(void);
  *
  * There is no returning from this function.
  */
-void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason) __NO_RETURN;
+void platform_halt(platform_halt_action suggested_action, zircon_crash_reason_t reason) __NO_RETURN;
+
+/* The platform specific actions to be taken in a halt situation.  This is a
+ * weak symbol meant to be overloaded by platform specific implementations and
+ * called from the common |platform_halt| implementation.  Do not call this
+ * function directly, call |platform_halt| instead.
+ *
+ * There is no returning from this function.
+ */
+void platform_specific_halt(platform_halt_action suggested_action, zircon_crash_reason_t reason,
+                            bool halt_on_panic) __NO_RETURN;
 
 /* optionally stop the current cpu in a way the platform finds appropriate */
 void platform_halt_cpu(void);
@@ -93,31 +95,6 @@ void platform_quiesce(void);
  */
 void* platform_get_ramdisk(size_t* size);
 
-/* Stash the crashlog somewhere platform-specific that allows
- * for recovery after reboot.  This will only be called out
- * of the panic() handling path on the way to reboot, and is
- * not necessarily safe to be called from any other state.
- *
- * Calling with a NULL log returns the maximum supported size.
- * It is safe to query the size at any time after boot.  If the
- * return is 0, no crashlog recovery is supported.
- */
-size_t platform_stow_crashlog(void* log, size_t len);
-
-/* If len == 0, return the length of the last crashlog (or 0 if none).
- * Otherwise call func() to return the last crashlog to the caller,
- * returning the length the last crashlog.
- *
- * func() may be called as many times as necessary (adjusting off)
- * to return the crashlog in segments.  There will not be gaps,
- * but the individual segments may range from 1 byte to the full
- * length requested, depending on the limitations of the underlying
- * storage model.
- */
-size_t platform_recover_crashlog(size_t len, void* cookie,
-                                 void (*func)(const void* data, size_t off, size_t len,
-                                              void* cookie));
-
 // Called just before initiating a system suspend to give the platform layer a
 // chance to save state.  Must be called with interrupts disabled.
 void platform_suspend(void);
@@ -131,6 +108,11 @@ bool platform_serial_enabled(void);
 
 // Returns true if the early graphics console is enabled
 bool platform_early_console_enabled(void);
+
+// Accessors for the HW reboot reason which may or may not have been delivered
+// by the bootloader.
+void platform_set_hw_reboot_reason(zbi_hw_reboot_reason_t reason);
+zbi_hw_reboot_reason_t platform_hw_reboot_reason(void);
 
 __END_CDECLS
 

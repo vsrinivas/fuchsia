@@ -6,6 +6,7 @@
 
 #include <lib/cmdline.h>
 #include <lib/debuglog.h>
+#include <zircon/boot/crash-reason.h>
 
 #include <object/root_job_observer.h>
 #include <platform/halt_helper.h>
@@ -58,14 +59,14 @@ void RootJobObserver::Halt(dpc_t* dpc) {
   dlog_shutdown();
 
   if (!strcmp(behavior, "halt")) {
-    platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_RESET);
+    platform_halt(HALT_ACTION_HALT, ZirconCrashReason::NoCrash);
   } else if (!strcmp(behavior, "bootloader")) {
-    platform_halt(HALT_ACTION_REBOOT_BOOTLOADER, HALT_REASON_SW_RESET);
+    platform_halt(HALT_ACTION_REBOOT_BOOTLOADER, ZirconCrashReason::NoCrash);
   } else if (!strcmp(behavior, "recovery")) {
-    platform_halt(HALT_ACTION_REBOOT_RECOVERY, HALT_REASON_SW_RESET);
+    platform_halt(HALT_ACTION_REBOOT_RECOVERY, ZirconCrashReason::NoCrash);
   } else if (!strcmp(behavior, "shutdown")) {
-    platform_halt(HALT_ACTION_SHUTDOWN, HALT_REASON_SW_RESET);
+    platform_halt(HALT_ACTION_SHUTDOWN, ZirconCrashReason::NoCrash);
   } else {
-    platform_halt(HALT_ACTION_REBOOT, HALT_REASON_SW_RESET);
+    platform_halt(HALT_ACTION_REBOOT, ZirconCrashReason::NoCrash);
   }
 }

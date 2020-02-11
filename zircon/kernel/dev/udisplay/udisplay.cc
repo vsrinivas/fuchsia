@@ -13,17 +13,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/boot/crash-reason.h>
 
 #include <dev/udisplay.h>
 #include <ktl/move.h>
+#include <platform/crashlog.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 
 #define LOCAL_TRACE 0
 
 constexpr uint kFramebufferArchMmuFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
-
-static char crashlogbuf[4096u];
 
 struct udisplay_info {
   void* framebuffer_virt;
@@ -35,13 +35,6 @@ struct udisplay_info {
 static struct udisplay_info g_udisplay = {};
 
 zx_status_t udisplay_init(void) { return ZX_OK; }
-
-void dlog_bluescreen_halt(void) {
-  size_t len = crashlog_to_string(crashlogbuf, sizeof(crashlogbuf), CrashlogType::PANIC);
-  platform_stow_crashlog(crashlogbuf, len);
-  if (g_udisplay.framebuffer_virt == 0)
-    return;
-}
 
 void udisplay_clear_framebuffer_vmo() {
   if (g_udisplay.framebuffer_vmo_mapping) {

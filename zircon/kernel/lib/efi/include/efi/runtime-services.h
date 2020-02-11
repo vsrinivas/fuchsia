@@ -133,7 +133,7 @@ typedef struct {
                                     efi_guid* vendor_guid) EFIAPI;
 
   efi_status (*SetVariable)(char16_t* var_name, efi_guid* vendor_guid, uint32_t attributes,
-                            size_t data_size, void* data) EFIAPI;
+                            size_t data_size, const void* data) EFIAPI;
 
   efi_status (*GetNextHighMonotonicCount)(uint32_t* high_count) EFIAPI;
 

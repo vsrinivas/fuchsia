@@ -58,5 +58,5 @@ func TestOOM(t *testing.T) {
 
 	// Ensure that the reboot has stowed a correct crashlog.
 	i.WaitForLogMessage("stowing crashlog")
-	i.WaitForLogMessage("ZIRCON OOM")
+	i.WaitForLogMessage("ZIRCON REBOOT REASON (OOM)")
 }

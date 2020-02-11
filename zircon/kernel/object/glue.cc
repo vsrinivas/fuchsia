@@ -12,6 +12,7 @@
 #include <inttypes.h>
 #include <lib/cmdline.h>
 #include <lib/crashlog.h>
+#include <zircon/boot/crash-reason.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
@@ -21,6 +22,7 @@
 #include <object/executor.h>
 #include <object/job_dispatcher.h>
 #include <object/port_dispatcher.h>
+#include <platform/crashlog.h>
 #include <platform/halt_helper.h>
 
 static Executor gExecutor;
@@ -104,10 +106,7 @@ static void on_oom() {
         printf("OOM: sleep failed: %d\n", status);
       }
       printf("OOM: rebooting\n");
-      static char buf[1024];
-      size_t len = crashlog_to_string(buf, sizeof(buf), CrashlogType::OOM);
-      platform_stow_crashlog(buf, len);
-      platform_graceful_halt_helper(HALT_ACTION_REBOOT);
+      platform_graceful_halt_helper(HALT_ACTION_REBOOT, ZirconCrashReason::Oom);
   }
 }
 

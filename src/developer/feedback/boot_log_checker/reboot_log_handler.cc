@@ -48,8 +48,15 @@ void ExtractRebootReason(const std::string line, RebootReason* reboot_reason) {
   };
 
   constexpr std::array str_to_reason_map{
-      StrToReason{.str = "ZIRCON KERNEL PANIC", .reason = RebootReason::kKernelPanic},
-      StrToReason{.str = "ZIRCON OOM", .reason = RebootReason::kOOM},
+      StrToReason{.str = "ZIRCON REBOOT REASON (KERNEL PANIC)",
+                  .reason = RebootReason::kKernelPanic},
+      StrToReason{.str = "ZIRCON REBOOT REASON (OOM)", .reason = RebootReason::kOOM},
+      StrToReason{.str = "ZIRCON REBOOT REASON (SW WATCHDOG)",
+                  .reason = RebootReason::kSoftwareWatchdog},
+      StrToReason{.str = "ZIRCON REBOOT REASON (HW WATCHDOG)",
+                  .reason = RebootReason::kHardwareWatchdog},
+      StrToReason{.str = "ZIRCON REBOOT REASON (BROWNOUT)", .reason = RebootReason::kBrownout},
+      StrToReason{.str = "ZIRCON REBOOT REASON (UNKNOWN)", .reason = RebootReason::kUnknown},
   };
 
   for (const auto entry : str_to_reason_map) {
@@ -59,9 +66,8 @@ void ExtractRebootReason(const std::string line, RebootReason* reboot_reason) {
     }
   }
 
-  FX_LOGS(ERROR)
-      << "Failed to extract a reboot reason from first line of reboot log - defaulting to "
-         "kernel panic";
+  FX_LOGS(ERROR) << "Failed to extract a reboot reason from first line of reboot log - defaulting "
+                    "to kernel panic";
   *reboot_reason = RebootReason::kKernelPanic;
 }
 

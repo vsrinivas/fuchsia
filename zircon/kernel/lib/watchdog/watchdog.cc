@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include <lib/watchdog.h>
 #include <platform.h>
+#include <zircon/boot/crash-reason.h>
 #include <zircon/compiler.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
@@ -25,7 +26,7 @@ static SpinLock lock;
 __WEAK void watchdog_handler(watchdog_t* dog) {
   dprintf(INFO, "Watchdog \"%s\" (timeout %" PRId64 " mSec) just fired!!\n", dog->name,
           dog->timeout / (1000 * 1000));
-  platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_RESET);
+  platform_halt(HALT_ACTION_HALT, ZirconCrashReason::SoftwareWatchdog);
 }
 
 static void watchdog_timer_callback(timer_t* timer, zx_time_t now, void* arg) {

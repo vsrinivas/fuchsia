@@ -3,6 +3,6 @@
 # found in the LICENSE file.
 
 source_set("generic32") {
-  sources = [ "watchdog.cc" ]
+  sources = [ "hw_watchdog.cc" ]
   deps = [ "$zx/kernel/dev/pdev" ]
 }

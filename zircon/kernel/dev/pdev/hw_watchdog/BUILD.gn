@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_library("watchdog") {
+zx_library("hw_watchdog") {
   kernel = true
   sources = [
     "console.cc",
-    "watchdog.cc",
+    "hw_watchdog.cc",
   ]
   deps = [
     "$zx/kernel/dev/pdev",

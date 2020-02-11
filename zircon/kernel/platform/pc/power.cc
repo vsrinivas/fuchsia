@@ -96,11 +96,12 @@ void platform_panic_start(void) {
   halt_other_cpus();
 }
 
-bool halt_on_panic = false;
 extern const char* manufacturer;
 
-void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason) {
-  printf("platform_halt suggested_action %d reason %d\n", suggested_action, reason);
+void platform_specific_halt(platform_halt_action suggested_action, zircon_crash_reason_t reason,
+                            bool halt_on_panic) {
+  printf("platform_halt suggested_action %d reason %d\n", suggested_action,
+         static_cast<int>(reason));
 
   arch_disable_ints();
 
@@ -134,9 +135,8 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
       break;
   }
 
-  if (reason == HALT_REASON_SW_PANIC) {
+  if (reason == ZirconCrashReason::Panic) {
     thread_print_current_backtrace();
-    dlog_bluescreen_halt();
   }
 
   if (!halt_on_panic) {

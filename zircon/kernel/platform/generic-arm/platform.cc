@@ -38,6 +38,7 @@
 #include <kernel/spinlock.h>
 #include <lk/init.h>
 #include <object/resource_dispatcher.h>
+#include <platform/crashlog.h>
 #include <vm/bootreserve.h>
 #include <vm/kstack.h>
 #include <vm/physmap.h>
@@ -64,9 +65,6 @@ static size_t ramdisk_size;
 
 static zbi_header_t* zbi_root = nullptr;
 
-static zbi_nvram_t lastlog_nvram;
-
-static bool halt_on_panic = false;
 static bool uart_disabled = false;
 
 // all of the configured memory arenas from the zbi
@@ -320,12 +318,22 @@ static zbi_result_t process_zbi_item_early(zbi_header_t* item, void* payload, vo
     }
 
     case ZBI_TYPE_NVRAM: {
-      zbi_nvram_t* nvram = reinterpret_cast<zbi_nvram_t*>(payload);
-      memcpy(&lastlog_nvram, nvram, sizeof(lastlog_nvram));
+      zbi_nvram_t info;
+      memcpy(&info, payload, sizeof(info));
+
       dprintf(INFO, "boot reserve nvram range: phys base %#" PRIx64 " length %#" PRIx64 "\n",
-              nvram->base, nvram->length);
-      boot_reserve_add_range(nvram->base, nvram->length);
+              info.base, info.length);
+
+      platform_set_ram_crashlog_location(info.base, info.length);
+      boot_reserve_add_range(info.base, info.length);
       save_mexec_zbi(item);
+      break;
+    }
+
+    case ZBI_TYPE_HW_REBOOT_REASON: {
+      zbi_hw_reboot_reason_t reason;
+      memcpy(&reason, payload, sizeof(reason));
+      platform_set_hw_reboot_reason(reason);
       break;
     }
   }
@@ -495,9 +503,6 @@ void platform_early_init(void) {
 
   // Serial port should be active now
 
-  // Read cmdline after processing zbi, which may contain cmdline data.
-  halt_on_panic = gCmdline.GetBool("kernel.halt-on-panic", false);
-
   // Check if serial should be enabled
   const char* serial_mode = gCmdline.GetString("kernel.serial");
   uart_disabled = (serial_mode != NULL && !strcmp(serial_mode, "none"));
@@ -595,7 +600,8 @@ int platform_pgetc(char* c, bool wait) {
 /* no built in framebuffer */
 zx_status_t display_get_info(struct display_info* info) { return ZX_ERR_NOT_FOUND; }
 
-void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason) {
+void platform_specific_halt(platform_halt_action suggested_action, zircon_crash_reason_t reason,
+                            bool halt_on_panic) {
   if (suggested_action == HALT_ACTION_REBOOT) {
     power_reboot(REBOOT_NORMAL);
     printf("reboot failed\n");
@@ -609,21 +615,20 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
     power_shutdown();
   }
 
-  if (reason == HALT_REASON_SW_PANIC) {
+  if (reason == ZirconCrashReason::Panic) {
     thread_print_current_backtrace();
-    dlog_bluescreen_halt();
     if (!halt_on_panic) {
       power_reboot(REBOOT_NORMAL);
       printf("reboot failed\n");
     }
 #if ENABLE_PANIC_SHELL
-    dprintf(ALWAYS, "CRASH: starting debug shell... (reason = %d)\n", reason);
+    dprintf(ALWAYS, "CRASH: starting debug shell... (reason = %d)\n", static_cast<int>(reason));
     arch_disable_ints();
     panic_shell_start();
 #endif  // ENABLE_PANIC_SHELL
   }
 
-  dprintf(ALWAYS, "HALT: spinning forever... (reason = %d)\n", reason);
+  dprintf(ALWAYS, "HALT: spinning forever... (reason = %d)\n", static_cast<int>(reason));
 
   // catch all fallthrough cases
   arch_disable_ints();
@@ -633,85 +638,6 @@ void platform_halt(platform_halt_action suggested_action, platform_halt_reason r
 
   for (;;)
     ;
-}
-
-typedef struct {
-  // TODO: combine with x86 nvram crashlog handling
-  // TODO: ECC for more robust crashlogs
-  uint64_t magic;
-  uint64_t length;
-  uint64_t nmagic;
-  uint64_t nlength;
-} log_hdr_t;
-
-#define NVRAM_MAGIC (0x6f8962d66b28504fULL)
-
-size_t platform_stow_crashlog(void* log, size_t len) {
-  printf("stowing crashlog:\n");
-  hexdump(log, MIN(64u, len));
-  printf("...\n");
-
-  if (lastlog_nvram.length < sizeof(log_hdr_t)) {
-    return 0;
-  }
-
-  size_t max = lastlog_nvram.length - sizeof(log_hdr_t);
-  void* nvram = paddr_to_physmap(lastlog_nvram.base);
-  if (nvram == NULL) {
-    return 0;
-  }
-
-  if (log == NULL) {
-    return max;
-  }
-  if (len > max) {
-    len = max;
-  }
-
-  log_hdr_t hdr = {
-      .magic = NVRAM_MAGIC,
-      .length = len,
-      .nmagic = ~NVRAM_MAGIC,
-      .nlength = ~len,
-  };
-  memcpy(nvram, &hdr, sizeof(hdr));
-  memcpy(static_cast<char*>(nvram) + sizeof(hdr), log, len);
-  arch_clean_cache_range((uintptr_t)nvram, sizeof(hdr) + len);
-  return len;
-}
-
-size_t platform_recover_crashlog(size_t len, void* cookie,
-                                 void (*func)(const void* data, size_t, size_t len, void* cookie)) {
-  if (lastlog_nvram.length < sizeof(log_hdr_t)) {
-    return 0;
-  }
-
-  size_t max = lastlog_nvram.length - sizeof(log_hdr_t);
-  void* nvram = paddr_to_physmap(lastlog_nvram.base);
-  if (nvram == NULL) {
-    return 0;
-  }
-  log_hdr_t hdr;
-  memcpy(&hdr, nvram, sizeof(hdr));
-  if ((hdr.magic != NVRAM_MAGIC) || (hdr.length > max) || (hdr.nmagic != ~NVRAM_MAGIC) ||
-      (hdr.nlength != ~hdr.length)) {
-    printf("nvram-crashlog: bad header: %016lx %016lx %016lx %016lx\n", hdr.magic, hdr.length,
-           hdr.nmagic, hdr.nlength);
-    return 0;
-  }
-  if (len == 0) {
-    return hdr.length;
-  }
-  if (len > hdr.length) {
-    len = hdr.length;
-  }
-  func(static_cast<char*>(nvram) + sizeof(hdr), 0, len, cookie);
-
-  // invalidate header so we don't get a stale crashlog
-  // on future boots
-  hdr.magic = 0;
-  memcpy(nvram, &hdr, sizeof(hdr));
-  return hdr.length;
 }
 
 zx_status_t platform_mexec_patch_zbi(uint8_t* zbi, const size_t len) {

@@ -12,6 +12,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <trace.h>
+#include <zircon/boot/crash-reason.h>
 #include <zircon/boot/image.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls/resource.h>
@@ -480,16 +481,16 @@ zx_status_t sys_system_powerctl(zx_handle_t root_rsrc, uint32_t cmd,
     }
 #endif  //__x86_64
     case ZX_SYSTEM_POWERCTL_REBOOT:
-      platform_graceful_halt_helper(HALT_ACTION_REBOOT);
+      platform_graceful_halt_helper(HALT_ACTION_REBOOT, ZirconCrashReason::NoCrash);
       break;
     case ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER:
-      platform_graceful_halt_helper(HALT_ACTION_REBOOT_BOOTLOADER);
+      platform_graceful_halt_helper(HALT_ACTION_REBOOT_BOOTLOADER, ZirconCrashReason::NoCrash);
       break;
     case ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY:
-      platform_graceful_halt_helper(HALT_ACTION_REBOOT_RECOVERY);
+      platform_graceful_halt_helper(HALT_ACTION_REBOOT_RECOVERY, ZirconCrashReason::NoCrash);
       break;
     case ZX_SYSTEM_POWERCTL_SHUTDOWN:
-      platform_graceful_halt_helper(HALT_ACTION_SHUTDOWN);
+      platform_graceful_halt_helper(HALT_ACTION_SHUTDOWN, ZirconCrashReason::NoCrash);
       break;
     default:
       return ZX_ERR_INVALID_ARGS;

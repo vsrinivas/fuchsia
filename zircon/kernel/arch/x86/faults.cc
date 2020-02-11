@@ -13,6 +13,7 @@
 #include <lib/ktrace.h>
 #include <platform.h>
 #include <trace.h>
+#include <zircon/boot/crash-reason.h>
 #include <zircon/hw/debug/x86.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
@@ -94,7 +95,7 @@ __NO_RETURN static void exception_die(x86_iframe_t* frame, const char* msg) {
     }
   }
 
-  platform_halt(HALT_ACTION_HALT, HALT_REASON_SW_PANIC);
+  platform_halt(HALT_ACTION_HALT, ZirconCrashReason::Panic);
 }
 
 static bool try_dispatch_user_exception(x86_iframe_t* frame, uint exception_type) {

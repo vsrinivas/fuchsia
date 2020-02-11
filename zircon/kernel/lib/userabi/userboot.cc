@@ -34,6 +34,7 @@
 #include <object/thread_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
+#include <platform/crashlog.h>
 #include <vm/vm_object_paged.h>
 
 #if ENABLE_ENTROPY_COLLECTOR_TEST
@@ -160,13 +161,27 @@ zx_status_t crashlog_to_vmo(fbl::RefPtr<VmObject>* out) {
   size_t size = platform_recover_crashlog(0, NULL, NULL);
   fbl::RefPtr<VmObject> crashlog_vmo;
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, size, &crashlog_vmo);
+
   if (status != ZX_OK) {
     return status;
   }
-  platform_recover_crashlog(size, crashlog_vmo.get(), clog_to_vmo);
+
+  if (size) {
+    platform_recover_crashlog(size, crashlog_vmo.get(), clog_to_vmo);
+  }
+
   crashlog_vmo->set_name(kCrashlogVmoName, sizeof(kCrashlogVmoName) - 1);
   mexec_stash_crashlog(crashlog_vmo);
   *out = ktl::move(crashlog_vmo);
+
+  // Now that we have recovered the old crashlog, enable crashlog uptime
+  // updates.  This will cause systems with a RAM based crashlog to periodically
+  // create a payload-less crashlog indicating a SW reboot reason of "unknown"
+  // along with an uptime indicator.  If the system spontaneously reboots (due
+  // to something like a WDT, or brownout) we will be able to recover this log
+  // and know that we spontaneously rebooted, and have some idea of how long we
+  // were running before we did.
+  platform_enable_crashlog_uptime_updates(true);
   return ZX_OK;
 }
 

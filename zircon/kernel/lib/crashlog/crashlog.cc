@@ -4,7 +4,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <vm/vm.h>
 #include <ctype.h>
 #include <inttypes.h>
 #include <lib/crashlog.h>
@@ -12,24 +11,25 @@
 #include <platform.h>
 #include <printf.h>
 #include <string.h>
+#include <zircon/boot/crash-reason.h>
 
 #include <kernel/thread.h>
+#include <vm/vm.h>
 
 crashlog_t crashlog = {};
 
-size_t crashlog_to_string(char* out, const size_t out_len, CrashlogType type) {
+size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t reason) {
   char* buf = out;
   size_t remain = out_len;
-  const bool is_oom = type == CrashlogType::OOM;
+  const bool is_oom = (reason == ZirconCrashReason::Oom);
 
   buf[0] = '\0';
 
-  const uintptr_t bias =
-      KERNEL_BASE - reinterpret_cast<uintptr_t>(__code_start);
+  const uintptr_t bias = KERNEL_BASE - reinterpret_cast<uintptr_t>(__code_start);
 
   // Note that (2, 3) is used instead of (1, 2) because the lambda adds an
   // implicit argument for the captures.
-  auto buf_printf = [&buf, &remain](const char *fmt, ...) __PRINTFLIKE(2, 3) {
+  auto buf_printf = [&buf, &remain](const char* fmt, ...) __PRINTFLIKE(2, 3) {
     va_list args;
     va_start(args, fmt);
     size_t len = vsnprintf(buf, remain, fmt, args);
@@ -37,7 +37,7 @@ size_t crashlog_to_string(char* out, const size_t out_len, CrashlogType type) {
     buf += len;
   };
 
-  buf_printf("ZIRCON %s\n\n", is_oom ? "OOM" : "KERNEL PANIC");
+  buf_printf("ZIRCON REBOOT REASON (%s)\n\n", is_oom ? "OOM" : "KERNEL PANIC");
   if (remain <= 0) {
     return out_len;
   }
@@ -54,10 +54,10 @@ size_t crashlog_to_string(char* out, const size_t out_len, CrashlogType type) {
 #elif defined(__aarch64__)
   const char* arch = "aarch64";
 #endif
-  buf_printf("VERSION\narch: %s\nbuild_id: %s\ndso: id=%s base=%#lx "
-             "name=zircon.elf\n\n",
-             arch, version.buildid, version.elf_build_id,
-             is_oom ? 0u : crashlog.base_address);
+  buf_printf(
+      "VERSION\narch: %s\nbuild_id: %s\ndso: id=%s base=%#lx "
+      "name=zircon.elf\n\n",
+      arch, version.buildid, version.elf_build_id, is_oom ? 0u : crashlog.base_address);
   if (remain <= 0) {
     return out_len;
   }
@@ -94,6 +94,7 @@ size_t crashlog_to_string(char* out, const size_t out_len, CrashlogType type) {
 
   if (crashlog.iframe) {
 #if defined(__aarch64__)
+    // clang-format off
     buf_printf(
         "REGISTERS\n"
         "  x0: %#18" PRIx64 "\n"
@@ -143,10 +144,12 @@ size_t crashlog_to_string(char* out, const size_t out_len, CrashlogType type) {
         crashlog.iframe->r[27], crashlog.iframe->r[28], crashlog.iframe->r[29],
         crashlog.iframe->lr, crashlog.iframe->usp, crashlog.iframe->elr,
         crashlog.iframe->spsr);
+    // clang-format on
     if (remain <= 0) {
       return out_len;
     }
 #elif defined(__x86_64__)
+    // clang-format off
     buf_printf("REGISTERS\n"
                "  CS: %#18" PRIx64 "\n"
                " RIP: %#18" PRIx64 "\n"
@@ -178,6 +181,7 @@ size_t crashlog_to_string(char* out, const size_t out_len, CrashlogType type) {
                crashlog.iframe->r9, crashlog.iframe->r10, crashlog.iframe->r11,
                crashlog.iframe->r12, crashlog.iframe->r13, crashlog.iframe->r14,
                crashlog.iframe->r15, crashlog.iframe->err_code);
+    // clang-format on
     if (remain <= 0) {
       return out_len;
     }
