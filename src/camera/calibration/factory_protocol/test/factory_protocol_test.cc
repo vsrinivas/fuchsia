@@ -68,6 +68,8 @@ TEST_F(FactoryProtocolTest, DISABLED_StreamingWritesToFile) {
   ASSERT_TRUE(files::IsFile(path));
 }
 
+// TODO(nzo): ConnectToStream() should only be called once in the current implementation, should
+// make this clear in testing
 TEST_F(FactoryProtocolTest, DISABLED_ShutdownClosesChannelAndStream) {
   ASSERT_EQ(ZX_OK, factory_impl_->ConnectToStream());
   ASSERT_TRUE(factory_impl_->streaming());
@@ -98,6 +100,31 @@ TEST_F(FactoryProtocolTest, DISABLED_DetectCameraFIDL) {
 
   while (!test_done && !HasFailure())
     loop_.RunUntilIdle();
+}
+
+// This is the same test as `ShutdownClosesChannelAndStream` but for the FIDL call
+TEST_F(FactoryProtocolTest, DISABLED_StartStopFIDL) {
+  factory_protocol_->Start();
+  while (!factory_impl_->streaming() && !HasFailure()) {
+    loop_.RunUntilIdle();
+  }
+
+  // Nothing happens when Start() is called while already streaming
+  factory_protocol_->Start();
+  loop_.RunUntilIdle();
+  ASSERT_TRUE(factory_impl_->streaming());
+
+  factory_protocol_->Stop();
+  while (factory_impl_->streaming() && !HasFailure()) {
+    loop_.RunUntilIdle();
+  }
+  zx_status_t status =
+      factory_protocol_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
+  if (status != ZX_OK) {
+    EXPECT_EQ(status, ZX_ERR_BAD_HANDLE);
+  }
+
+  ASSERT_FALSE(factory_impl_->streaming());
 }
 
 }  // namespace

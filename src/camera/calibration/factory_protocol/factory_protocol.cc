@@ -158,9 +158,13 @@ void FactoryProtocol::DetectCamera(DetectCameraCallback callback) {
   callback(std::move(result));
 }
 
-void FactoryProtocol::Start() { FX_NOTIMPLEMENTED(); }
+void FactoryProtocol::Start() {
+  if (!streaming_) {
+    ConnectToStream();
+  }
+}
 
-void FactoryProtocol::Stop() { FX_NOTIMPLEMENTED(); }
+void FactoryProtocol::Stop() { Shutdown(ZX_OK); }
 
 void FactoryProtocol::SetConfig(uint32_t mode, int32_t integration_time, int32_t analog_gain,
                                 int32_t digital_gain, SetConfigCallback callback) {
