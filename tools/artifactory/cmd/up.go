@@ -236,11 +236,17 @@ func (h *hasher) Write(p []byte) (int, error) {
 	return n, err
 }
 
-func (s *cloudSink) write(ctx context.Context, name, path string) error {
-	obj := s.bucket.Object(name)
+func getCompressedObjectWriter(ctx context.Context, obj *storage.ObjectHandle) *storage.Writer {
 	w := obj.If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
 	w.ChunkSize = chunkSize
+	w.ContentType = "application/octet-stream"
 	w.ContentEncoding = "gzip"
+	return w
+}
+
+func (s *cloudSink) write(ctx context.Context, name, path string) error {
+	obj := s.bucket.Object(name)
+	w := getCompressedObjectWriter(ctx, obj)
 
 	fd, err := os.Open(path)
 	if err != nil {
