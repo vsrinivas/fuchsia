@@ -24,6 +24,8 @@ import (
 var c *Config
 
 func TestMain(m *testing.M) {
+	log.SetPrefix("upgrade-test: ")
+
 	var err error
 	c, err = NewConfig(flag.CommandLine)
 	if err != nil {

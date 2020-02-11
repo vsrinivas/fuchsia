@@ -48,7 +48,7 @@ type Config struct {
 func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	c := &Config{}
 
-	testDataPath := filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system_ota_tests")
+	testDataPath := filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests")
 
 	fs.StringVar(&c.outputDir, "output-dir", "", "save temporary files to this directory, defaults to a tempdir")
 	fs.StringVar(&c.FuchsiaDir, "fuchsia-dir", os.Getenv("FUCHSIA_DIR"), "fuchsia dir")

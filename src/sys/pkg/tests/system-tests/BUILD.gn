@@ -6,7 +6,7 @@ import("//build/config/fuchsia/zircon.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/testing/environments.gni")
-import("//src/sys/pkg/tests/system-ota-tests/system_ota_tests.gni")
+import("//src/sys/pkg/tests/system-tests/system-tests.gni")
 
 copy("copy") {
   testonly = true
@@ -15,13 +15,13 @@ copy("copy") {
     "//prebuilt/tools/artifacts/artifacts",
     "//prebuilt/tools/lkgb/lkgb",
   ]
-  outputs = [ "$root_out_dir/test_data/system_ota_tests/{{source_file_part}}" ]
+  outputs = [ "$root_out_dir/test_data/system-tests/{{source_file_part}}" ]
   deps = [ "//zircon/public/tool/netaddr($host_toolchain)" ]
 }
 
-go_library("system_ota_tests_lib") {
+go_library("system_tests_lib") {
   testonly = true
-  name = "fuchsia.googlesource.com/system_ota_tests"
+  name = "fuchsia.googlesource.com/system_tests"
   deps = [ "//src/testing/host-target-testing" ]
   non_go_deps = [ ":copy" ]
   metadata = {
@@ -29,18 +29,18 @@ go_library("system_ota_tests_lib") {
   }
 }
 
-go_test("system_ota_tests_upgrade") {
-  gopackages = [ "fuchsia.googlesource.com/system_ota_tests/upgrade_test" ]
+go_test("system_tests_upgrade") {
+  gopackages = [ "fuchsia.googlesource.com/system_tests/upgrade_test" ]
   disabled = true
-  deps = [ ":system_ota_tests_lib" ]
+  deps = [ ":system_tests_lib" ]
 }
 
-group("system_ota_tests") {
+group("system_tests") {
   testonly = true
-  deps = [ ":system_ota_tests_upgrade($host_toolchain)" ]
+  deps = [ ":system_tests_upgrade($host_toolchain)" ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [ ":system_ota_tests" ]
+  public_deps = [ ":system_tests" ]
 }

@@ -10,7 +10,7 @@ group("tests") {
     "pkg-cache:tests",
     "pkg-resolver:tests",
     "pkgctl:tests",
-    "system-ota-tests:tests",
+    "system-tests:tests",
     "system-update-checker:tests",
     "system-updater:tests",
   ]
