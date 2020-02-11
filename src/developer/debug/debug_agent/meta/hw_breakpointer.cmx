@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/hw_breakpointer"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

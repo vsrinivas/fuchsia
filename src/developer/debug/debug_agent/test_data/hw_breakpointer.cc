@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/eventpair.h>
+
+#include <string>
+#include <vector>
+
 #include "hw_breakpointer_helpers.h"
 
 // This is a self contained binary that is meant to be run *manually*. This is the smallest code
@@ -30,6 +35,8 @@ int __NO_INLINE FunctionToBreakpointOn2(int c) { return c + c; }
 int __NO_INLINE FunctionToBreakpointOn3(int c) { return c + c; }
 int __NO_INLINE FunctionToBreakpointOn4(int c) { return c + c; }
 int __NO_INLINE FunctionToBreakpointOn5(int c) { return c + c; }
+
+const char kBeacon[] = "Counter: Thread running.\n";
 
 // This is the code that the new thread will run.
 // It's meant to be an eternal loop.
@@ -277,7 +284,7 @@ int AlignedWatchpointThreadFunction(void* user) {
   return 0;
 }
 
-void WatchpointStepOver(const zx::thread& thread, const zx::port& port,
+void WatchpointStepOver(uint64_t wp_address, const zx::thread& thread, const zx::port& port,
                         const zx::channel& exception_channel, std::optional<Exception> exception) {
   RemoveWatchpoint(thread);
 
@@ -285,7 +292,7 @@ void WatchpointStepOver(const zx::thread& thread, const zx::port& port,
   FXL_DCHECK(exception);
 
   // Now that we have single stepped, we can reinstall the watchpoint.
-  InstallWatchpoint(thread, (uint64_t)&SomeInt2, 4, WatchpointType::kReadWrite);
+  InstallWatchpoint(thread, wp_address, 4, WatchpointType::kReadWrite);
 
   WaitAsyncOnExceptionChannel(port, exception_channel);
   ResumeException(thread, std::move(*exception));
@@ -295,10 +302,14 @@ void WatchpointStepOver(const zx::thread& thread, const zx::port& port,
 
 void AlignedWatchpointTestCase() {
   PRINT("Running aligned watchpoint test case.");
+  PRINT("SomeInt:  0x%p", &SomeInt);
+  PRINT("SomeInt2: 0x%p", &SomeInt2);
+  PRINT("SomeInt3: 0x%p", &SomeInt3);
+  PRINT("SomeInt4: 0x%p", &SomeInt4);
 
   // Create test setup.
   AlignedWatchpointUserData user_data = {};
-  user_data.times = 1000;
+  user_data.times = 1;
   auto thread_setup = CreateTestSetup(AlignedWatchpointThreadFunction, &user_data);
   const zx::thread& thread = thread_setup->thread;
 
@@ -306,7 +317,8 @@ void AlignedWatchpointTestCase() {
   WaitAsyncOnExceptionChannel(port, exception_channel);
 
   // We install a watchpoint.
-  InstallWatchpoint(thread, (uint64_t)&SomeInt2, 4, WatchpointType::kReadWrite);
+  uint64_t wp_address = reinterpret_cast<uint64_t>(&SomeInt);
+  InstallWatchpoint(thread, wp_address, 4, WatchpointType::kReadWrite);
 
   // Tell the test to run.
   CHECK_OK(thread_setup->event.signal(kThreadToHarness, kHarnessToThread));
@@ -320,32 +332,36 @@ void AlignedWatchpointTestCase() {
     FXL_DCHECK(exception->pc > pc);
     FXL_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
     pc = exception->pc;
-    PRINT("Hit first printf read!");
-    WatchpointStepOver(thread, port, exception_channel, std::move(exception));
+    PRINT("Exception on 0x%p: Hit first printf read!", (void*)exception->pc);
+
+    WatchpointStepOver(wp_address, thread, port, exception_channel, std::move(exception));
 
     exception = WaitForException(port, exception_channel, GET_DEADLINE(kExceptionWaitTimeout));
     FXL_DCHECK(exception.has_value());
     FXL_DCHECK(exception->pc > pc);
     FXL_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
     pc = exception->pc;
-    PRINT("Hit ++ read!");
-    WatchpointStepOver(thread, port, exception_channel, std::move(exception));
+    PRINT("Exception on 0x%p: Hit ++ read!", (void*)exception->pc);
+
+    WatchpointStepOver(wp_address, thread, port, exception_channel, std::move(exception));
 
     exception = WaitForException(port, exception_channel, GET_DEADLINE(kExceptionWaitTimeout));
     FXL_DCHECK(exception.has_value());
     FXL_DCHECK(exception->pc > pc);
     FXL_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
     pc = exception->pc;
-    PRINT("Hit ++ write!");
-    WatchpointStepOver(thread, port, exception_channel, std::move(exception));
+    PRINT("Exception on 0x%p: Hit ++ write!", (void*)exception->pc);
+
+    WatchpointStepOver(wp_address, thread, port, exception_channel, std::move(exception));
 
     exception = WaitForException(port, exception_channel, GET_DEADLINE(kExceptionWaitTimeout));
     FXL_DCHECK(exception.has_value());
     FXL_DCHECK(exception->pc > pc);
     FXL_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
     pc = exception->pc;
-    PRINT("Hit second printf read!");
-    WatchpointStepOver(thread, port, exception_channel, std::move(exception));
+    PRINT("Exception on 0x%p: Hit second printf read!", (void*)exception->pc);
+
+    WatchpointStepOver(wp_address, thread, port, exception_channel, std::move(exception));
   }
 
   // Wait until the thread is done.
@@ -412,6 +428,233 @@ void ChannelMessagingTestCase() {
   thread_setup->test_running = false;
 }
 
+// Watchpoint Server/Client ------------------------------------------------------------------------
+//
+// The test spawns a new process with this binary, but passing the |watchpoint_client| option.
+// It coordinates through a channel and an event. The idea is that the server listen on the debugger
+// exception port of the client and setup a read-write watchpoint on a thread of the client.
+// The client runs the same thread as AlignedWatchpointTestCase (AlignedWatchpointThreadFunction),
+// which the server will set a brekapoint to. Basically it's a multi-process |aligned_watchpoint|
+// test.
+//
+// The setup is as follows:
+// 1. Client sends the addresses of the ints (SomeInt, SomeInt2, etc.). It also passes the memory
+//    associated with AlignedWatchpointThreadFunction, so that the server can verify which address
+//    actually triggered the exception.
+// 2. The server listens on the exception port of the client and sets up a R/W Breakpoint.
+// 3. The client starts another thread with AlignedWatchpointThreadFunction.
+// 4. The server verifies that all the expected watchpoint exceptions are hit.
+
+#define DEADLINE(d) zx::deadline_after(zx::sec((d)))
+
+constexpr uint32_t kIterations = 1000;
+
+constexpr uint32_t kInstructionBufferSize = 4096;
+
+// These are the instructions that the server expects the client to have in the PC when it triggers
+// each of the exceptions. Thhe client will send |kInstructionBufferSize| instructions starting
+// with the first of |AlignedWatchpointThreadFunction| and the base address of it. That way the
+// server can see the offset and see which instruction triggered the exception.
+constexpr uint32_t kPrintLoad1 = 0xb9400101;  // ldr w1, [x8]
+constexpr uint32_t kPlusRead = 0xb940010c;    // ldr w12, [x8]
+constexpr uint32_t kPlusWrite = 0xb900010c;   // str w12, [x8]
+constexpr uint32_t kPrintLoad2 = 0xb9400101;  // ldr w1, [x8]
+
+// Verifies the exception that was triggered by the client.
+// |instructions| is an array with the instructions of |AlignedWatchpointThreadFunction.
+// |base_address| is the address where |AlignedWatchpointThreadFunction| starts.
+// |expected_instruction| is what we expect the pc points to.
+uint64_t CheckWatchpointException(const std::optional<Exception>& exception,
+                                  const zx::thread& thread, const zx::port& port,
+                                  const zx::channel& exception_channel, uint32_t* instructions,
+                                  uint32_t expected_instruction, uint64_t base_address, uint64_t pc,
+                                  const char* msg) {
+  // Wait until the exception is hit.
+  FXL_DCHECK(exception.has_value());
+  FXL_DCHECK(exception->pc > pc);
+  FXL_DCHECK(DecodeHWException(thread, exception.value()) == HWExceptionType::kWatchpoint);
+  pc = exception->pc;
+  FXL_DCHECK(pc < base_address + kInstructionBufferSize * sizeof(uint64_t));
+  uint32_t instruction = instructions[(pc - base_address) >> 2];
+  FXL_DCHECK(instruction == expected_instruction);
+  PRINT("SERVER: Exception on %p (0x%x): %s.", reinterpret_cast<void*>(pc), instruction, msg);
+
+  return pc;
+}
+
+void WatchpointServer() {
+  PRINT("Running Watchpoint Server");
+
+  zx::job default_job(zx_job_default());
+  zx::job child_job;
+  CHECK_OK(zx::job::create(default_job, 0, &child_job));
+
+  // Spawn a process the FDIO way.
+  Process process;
+  std::vector<std::string> args = {"/pkg/bin/hw_breakpointer", "watchpoint_client"};
+  CHECK_OK(LaunchProcess(child_job, "test-process", args, &process));
+
+  zx::eventpair event, theirs;
+  CHECK_OK(zx::eventpair::create(0, &event, &theirs));
+
+  // Send an event down the channel.
+  zx_handle_t theirs_handle = theirs.release();
+  CHECK_OK(process.comm_channel.write(0, &kIterations, sizeof(kIterations), &theirs_handle, 1));
+
+  // Wait on the event.
+  CHECK_OK(WaitForClient(event, DEADLINE(1)));
+  PRINT("SERVER: Client got the event.");
+
+  // We set up the exception channel.
+  zx::port port;
+  CHECK_OK(zx::port::create(0, &port));
+  zx::channel exception_channel;
+  CHECK_OK(process.handle.create_exception_channel(0, &exception_channel));
+  WaitAsyncOnExceptionChannel(port, exception_channel);
+
+  // Wait until the client sends us where the addresses are.
+  CHECK_OK(WaitOnChannelReadable(process.comm_channel, DEADLINE(1)));
+  uint64_t kAddresses[4];
+  CHECK_OK(
+      process.comm_channel.read(0, kAddresses, nullptr, sizeof(kAddresses), 0, nullptr, nullptr));
+
+  PRINT("SERVER: SomeInt:  0x%p", reinterpret_cast<void*>(kAddresses[0]));
+  PRINT("SERVER: SomeInt2: 0x%p", reinterpret_cast<void*>(kAddresses[1]));
+  PRINT("SERVER: SomeInt3: 0x%p", reinterpret_cast<void*>(kAddresses[2]));
+  PRINT("SERVER: SomeInt4: 0x%p", reinterpret_cast<void*>(kAddresses[3]));
+
+  // Read the instructions.
+  CHECK_OK(WaitOnChannelReadable(process.comm_channel, DEADLINE(1)));
+  uint32_t kInstructions[kInstructionBufferSize] = {};
+  CHECK_OK(process.comm_channel.read(0, kInstructions, nullptr, sizeof(kInstructions), 0, nullptr,
+                                     nullptr));
+
+  // Read the base address.
+  CHECK_OK(WaitOnChannelReadable(process.comm_channel, DEADLINE(1)));
+  uint64_t kBaseAddress = 0;
+  CHECK_OK(process.comm_channel.read(0, &kBaseAddress, nullptr, sizeof(kBaseAddress), 0, nullptr,
+                                     nullptr));
+  FXL_DCHECK(kBaseAddress > 0);
+  PRINT("SERVER: Got Base address %p.", reinterpret_cast<void*>(kBaseAddress));
+
+  // Ping the client we got it and wait for it to spawn up a thread and send the handle over.
+  CHECK_OK(SignalClient(event));
+  CHECK_OK(WaitForClient(event, DEADLINE(1)));
+  CHECK_OK(WaitOnChannelReadable(process.comm_channel, DEADLINE(1)));
+
+  zx::thread thread;
+  CHECK_OK(process.comm_channel.read(0, nullptr, thread.reset_and_get_address(), 0, 1, nullptr,
+                                     nullptr));
+  PRINT("SERVER: Received the thread handle.");
+
+  // Setup a watchpoint.
+  uint64_t wp_address = kAddresses[0];
+  InstallWatchpoint(thread, wp_address, 4, WatchpointType::kReadWrite);
+
+  CHECK_OK(SignalClient(event));
+  for (uint32_t i = 0; i < kIterations; i++) {
+    uint64_t pc = 0;
+    PRINT("SERVER: ITERATION %d ---------------------------------------------------------", i);
+
+    // printf 1.
+    auto exception = WaitForException(port, exception_channel, DEADLINE(1));
+    pc = CheckWatchpointException(exception, thread, port, exception_channel, kInstructions,
+                                  kPrintLoad1, kBaseAddress, pc, "First printf read");
+    WatchpointStepOver(wp_address, thread, port, exception_channel, std::move(exception));
+
+    // ++ Read.
+    exception = WaitForException(port, exception_channel, DEADLINE(1));
+    pc = CheckWatchpointException(exception, thread, port, exception_channel, kInstructions,
+                                  kPlusRead, kBaseAddress, pc, "++ read");
+    WatchpointStepOver(wp_address, thread, port, exception_channel, std::move(exception));
+
+    // ++ Write.
+    exception = WaitForException(port, exception_channel, DEADLINE(1));
+    pc = CheckWatchpointException(exception, thread, port, exception_channel, kInstructions,
+                                  kPlusWrite, kBaseAddress, pc, "++ write");
+    WatchpointStepOver(wp_address, thread, port, exception_channel, std::move(exception));
+
+    // printf 2.
+    exception = WaitForException(port, exception_channel, DEADLINE(1));
+    pc = CheckWatchpointException(exception, thread, port, exception_channel, kInstructions,
+                                  kPrintLoad2, kBaseAddress, pc, "Second printf read");
+    WatchpointStepOver(wp_address, thread, port, exception_channel, std::move(exception));
+  }
+
+  // Wait for the client to be done.
+  CHECK_OK(WaitForClient(event, DEADLINE(1)));
+}
+
+void WatchpointClient() {
+  zx::channel channel;
+  CHECK_OK(InitSubProcess(&channel));
+
+  CHECK_OK(WaitOnChannelReadable(channel, DEADLINE(1)));
+
+  uint32_t kTimes = 0;
+  zx::eventpair event;
+  CHECK_OK(
+      channel.read(0, &kTimes, event.reset_and_get_address(), sizeof(kTimes), 1, nullptr, nullptr));
+  FXL_DCHECK(kTimes > 0);
+
+  PRINT("CLIENT: Read event. Times: %u.", kTimes);
+  CHECK_OK(SignalServer(event));
+
+  // Send over the addresses of the watchpoints.
+  uint64_t kAddresses[4] = {(uint64_t)&SomeInt, (uint64_t)&SomeInt2, (uint64_t)&SomeInt3,
+                            (uint64_t)&SomeInt3};
+  CHECK_OK(channel.write(0, kAddresses, sizeof(kAddresses), nullptr, 0));
+
+  PRINT("CLIENT: SomeInt:  0x%p", reinterpret_cast<void*>(kAddresses[0]));
+  PRINT("CLIENT: SomeInt2: 0x%p", reinterpret_cast<void*>(kAddresses[1]));
+  PRINT("CLIENT: SomeInt3: 0x%p", reinterpret_cast<void*>(kAddresses[2]));
+  PRINT("CLIENT: SomeInt4: 0x%p", reinterpret_cast<void*>(kAddresses[3]));
+  PRINT("CLIENT: Wrote addresses.");
+
+  // Send over the instructions of the function.
+  uint32_t kInstructions[kInstructionBufferSize] = {};
+  memcpy(kInstructions, reinterpret_cast<void*>(AlignedWatchpointThreadFunction),
+         sizeof(kInstructions));
+  CHECK_OK(channel.write(0, kInstructions, sizeof(kInstructions), nullptr, 0));
+
+  // Send over the base address.
+  uint64_t kBaseAddress = (uint64_t)AlignedWatchpointThreadFunction;
+  CHECK_OK(channel.write(0, &kBaseAddress, sizeof(kBaseAddress), nullptr, 0));
+  PRINT("CLIENT: Sent base address %p.", reinterpret_cast<void*>(kBaseAddress));
+
+  // Wait for ack from the server.
+  CHECK_OK(WaitForServer(event, DEADLINE(1)));
+
+  // Start the thread.
+  AlignedWatchpointUserData user_data = {};
+  user_data.times = kTimes;
+  auto thread_setup = CreateTestSetup(AlignedWatchpointThreadFunction, &user_data);
+
+  // Write the thread handle over.
+  zx::thread thread_to_send;
+  CHECK_OK(thread_setup->thread.duplicate(ZX_RIGHT_SAME_RIGHTS, &thread_to_send));
+
+  CHECK_OK(SignalServer(event));
+
+  zx_handle_t handle = thread_to_send.release();
+  CHECK_OK(channel.write(0, nullptr, 0, &handle, 1));
+
+  PRINT("CLIENT: Created and sent the thread handle over.");
+
+  // Tell the client we wrote.
+  CHECK_OK(WaitForServer(event, DEADLINE(1)));
+  PRINT("CLIENT: Starting test thread.");
+
+  // Tell the test to run.
+  CHECK_OK(thread_setup->event.signal(kThreadToHarness, kHarnessToThread));
+
+  // Wait until the thread is done.
+  CHECK_OK(thread_setup->event.wait_one(kThreadToHarness, zx::time::infinite(), nullptr));
+
+  // Signal the server we're done.
+  CHECK_OK(SignalServer(event));
+}
+
 }  // namespace
 
 // Main --------------------------------------------------------------------------------------------
@@ -437,6 +680,11 @@ TestCase kTestCases[] = {
     {"channel_calls",
      "Send multiple messages over a channel call and read from it after it is closed.",
      ChannelMessagingTestCase},
+
+    {"watchpoint_server", "Will start a client process and sets up a R/W watchpoint on it.",
+     WatchpointServer},
+    {"watchpoint_client", "Started by |watchpoint_server|. Not meant to be run manually.",
+     WatchpointClient},
 };
 
 void PrintUsage() {

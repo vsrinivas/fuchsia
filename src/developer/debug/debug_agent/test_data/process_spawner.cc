@@ -72,7 +72,6 @@ int main() {
   struct Process {
     std::string name;
     zx_handle_t proc_handle;
-    zx_handle_t vmar_handle;
   };
   std::vector<Process> processes;
 

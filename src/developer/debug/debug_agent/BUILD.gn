@@ -316,6 +316,10 @@ test_package("debug_agent_tests") {
       path = "meta/limbo_caller.cmx"
       dest = "limbo_caller.cmx"
     },
+    {
+      path = "meta/hw_breakpointer.cmx"
+      dest = "hw_breakpointer.cmx"
+    },
   ]
 
   if (include_test_app) {

@@ -9,10 +9,16 @@
 #include <zircon/hw/debug/arm64.h>
 #endif
 
+#include <lib/fdio/spawn.h>
+#include <lib/zx/eventpair.h>
+#include <unistd.h>
 #include <zircon/exception.h>
+#include <zircon/processargs.h>
 #include <zircon/status.h>
 
 #include <vector>
+
+constexpr uint64_t kPortKey = 0x11232141234;
 
 ThreadSetup::~ThreadSetup() {
   int res = -1;
@@ -37,12 +43,13 @@ std::unique_ptr<ThreadSetup> CreateTestSetup(ThreadSetup::Function func, void* u
   return setup;
 }
 
-std::pair<zx::port, zx::channel> CreateExceptionChannel(const zx::thread& thread) {
+std::pair<zx::port, zx::channel> CreateExceptionChannel(const zx::thread& thread, bool debugger) {
   zx::port port;
   CHECK_OK(zx::port::create(0, &port));
 
   zx::channel exception_channel;
-  CHECK_OK(thread.create_exception_channel(0, &exception_channel));
+  uint32_t flags = debugger ? ZX_EXCEPTION_CHANNEL_DEBUGGER : 0;
+  CHECK_OK(thread.create_exception_channel(flags, &exception_channel));
 
   return std::make_pair<zx::port, zx::channel>(std::move(port), std::move(exception_channel));
 }
@@ -237,12 +244,10 @@ void SetHWBreakpoint(const zx::thread& thread, uint64_t address) {
 }  // namespace
 
 void InstallHWBreakpoint(const zx::thread& thread, uint64_t address) {
-  PRINT("Installed hw breakpoint on address 0x%zx", address);
   SetHWBreakpoint(thread, address);
 }
 
 void RemoveHWBreakpoint(const zx::thread& thread) {
-  PRINT("Removed hw breakpoint.");
   SetHWBreakpoint(thread, 0);
 }
 
@@ -542,6 +547,7 @@ std::optional<Exception> SingleStep(const zx::thread& thread, const zx::port& po
 
   exception = WaitForException(port, exception_channel,
                                zx::deadline_after(zx::msec(kExceptionWaitTimeout)));
+
   FXL_DCHECK(exception.has_value()) << "No exception!";
   FXL_DCHECK(exception->info.type == ZX_EXCP_HW_BREAKPOINT)
       << "Got: " << zx_exception_get_string(exception->info.type);
@@ -554,4 +560,80 @@ std::optional<Exception> SingleStep(const zx::thread& thread, const zx::port& po
   }
 
   return exception;
+}
+
+// Process Spawning --------------------------------------------------------------------------------
+
+zx_status_t LaunchProcess(const zx::job& job, const std::string& name,
+                          const std::vector<std::string>& argv, Process* out) {
+  // fdio_spawn_etc expects argv to be a nullptr-terminated array.
+  std::vector<const char*> normalized_argv;
+  normalized_argv.reserve(argv.size() + 1);
+  for (const std::string& arg : argv) {
+    normalized_argv.push_back(arg.c_str());
+  }
+  normalized_argv.push_back(nullptr);
+
+  zx::channel mine, theirs;
+  CHECK_OK(zx::channel::create(0, &mine, &theirs));
+
+  // clang-format off
+  fdio_spawn_action_t actions[] = {
+    // Set the process name.
+    {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = name.c_str()}},
+    // Pass in a special channel handle that they can obtain via |zx_take_startup_handle|.
+    // See |InitSubProcess|.
+    {.action = FDIO_SPAWN_ACTION_ADD_HANDLE, .h = {.id = PA_HND(PA_USER0, 0), .handle = theirs.release()}},
+    // Clone stdout/err/in.
+    {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = STDOUT_FILENO, .target_fd = STDOUT_FILENO}},
+    {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd =  STDIN_FILENO, .target_fd =  STDIN_FILENO}},
+    {.action = FDIO_SPAWN_ACTION_CLONE_FD, .fd = {.local_fd = STDERR_FILENO, .target_fd = STDERR_FILENO}},
+  };
+  // clang-format on
+
+  zx::process process;
+  char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
+  zx_status_t status = fdio_spawn_etc(job.get(), FDIO_SPAWN_CLONE_ALL, normalized_argv.front(),
+                                      normalized_argv.data(), nullptr, std::size(actions), actions,
+                                      process.reset_and_get_address(), err_msg);
+
+  if (status != ZX_OK)
+    return status;
+
+  *out = {};
+  out->name = name;
+  out->handle = std::move(process);
+  out->comm_channel = std::move(mine);
+
+  return ZX_OK;
+}
+
+zx_status_t InitSubProcess(zx::channel* out) {
+  zx::channel channel{zx_take_startup_handle(PA_HND(PA_USER0, 0))};
+  if (!channel.is_valid())
+    return ZX_ERR_BAD_STATE;
+  *out = std::move(channel);
+  return ZX_OK;
+}
+
+zx_status_t WaitOnChannelReadable(const zx::channel& channel, zx::time deadline) {
+  return channel.wait_one(ZX_FIFO_READABLE, zx::deadline_after(zx::sec(1)), nullptr);
+}
+
+zx_status_t SignalClient(const zx::eventpair& event) {
+  CHECK_OK(event.signal(kClientToServer, 0));
+  return event.signal_peer(0, kServerToClient);
+}
+
+zx_status_t SignalServer(const zx::eventpair& event) {
+  CHECK_OK(event.signal(kServerToClient, 0));
+  return event.signal_peer(0, kClientToServer);
+}
+
+zx_status_t WaitForClient(const zx::eventpair& event, zx::time deadline) {
+  return event.wait_one(kClientToServer, deadline, 0);
+}
+
+zx_status_t WaitForServer(const zx::eventpair& event, zx::time deadline) {
+  return event.wait_one(kServerToClient, deadline, 0);
 }
