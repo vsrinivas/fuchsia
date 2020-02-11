@@ -184,7 +184,7 @@ class VDsoCodeWindow {
   void block_##category##_syscalls(VDsoDynSymWindow& dynsym_window, VDsoCodeWindow& code_window) {
 #define SYSCALL_IN_CATEGORY(syscall) BLOCK_SYSCALL(dynsym_window, code_window, zx_##syscall);
 #define SYSCALL_CATEGORY_END(category) }
-#include <zircon/syscall-category.inc>
+#include <lib/syscalls/category.inc>
 #undef SYSCALL_CATEGORY_BEGIN
 #undef SYSCALL_IN_CATEGORY_END
 #undef SYSCALL_CATEGORY_END

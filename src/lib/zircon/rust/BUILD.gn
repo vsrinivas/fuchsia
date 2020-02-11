@@ -26,7 +26,8 @@ if (is_fuchsia) {
 rustc_library("fuchsia-zircon-sys") {
   version = "0.3.3"
   edition = "2018"
-  source_root = "$zircon_root_build_dir/user.vdso-$target_cpu-clang.shlib/gen/zircon/syscalls/definitions.rs"
+  source_root =
+      "$zircon_root_build_dir/gen/include/zircon/syscalls/definitions.rs"
   deps = [ ":fuchsia-zircon-types" ]
 }
 

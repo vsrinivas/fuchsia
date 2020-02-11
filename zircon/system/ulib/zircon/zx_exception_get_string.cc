@@ -6,7 +6,7 @@
 
 #include "private.h"
 
-const char* _zx_exception_get_string(zx_excp_type_t exception) {
+__EXPORT const char* _zx_exception_get_string(zx_excp_type_t exception) {
   switch (exception) {
     case ZX_EXCP_GENERAL:
       return "ZX_EXCP_GENERAL";

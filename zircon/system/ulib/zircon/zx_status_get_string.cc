@@ -6,7 +6,7 @@
 
 #include "private.h"
 
-const char* _zx_status_get_string(zx_status_t status) {
+__EXPORT const char* _zx_status_get_string(zx_status_t status) {
   switch (status) {
     case ZX_OK:
       return "ZX_OK";

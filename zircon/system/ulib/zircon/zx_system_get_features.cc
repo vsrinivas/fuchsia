@@ -3,14 +3,13 @@
 // found in the LICENSE file.
 
 #include <stdint.h>
-
 #include <zircon/compiler.h>
 #include <zircon/features.h>
 #include <zircon/syscalls.h>
 
 #include "private.h"
 
-zx_status_t _zx_system_get_features(uint32_t kind, uint32_t* features) {
+__EXPORT zx_status_t _zx_system_get_features(uint32_t kind, uint32_t* features) {
   switch (kind) {
     case ZX_FEATURE_KIND_CPU: {
       uint32_t cpu_features = DATA_CONSTANTS.features.cpu;

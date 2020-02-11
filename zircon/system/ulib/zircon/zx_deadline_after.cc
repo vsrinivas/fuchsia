@@ -24,7 +24,7 @@
 //
 // See comments in zx_clock_monotonic.cc for additional details.
 //
-zx_time_t _zx_deadline_after(zx_duration_t nanoseconds) {
+__EXPORT zx_time_t _zx_deadline_after(zx_duration_t nanoseconds) {
   zx_time_t now = VDSO_zx_clock_get_monotonic();
   return zx_time_add_duration(now, nanoseconds);
 }

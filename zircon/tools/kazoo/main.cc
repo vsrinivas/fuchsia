@@ -14,7 +14,6 @@
 namespace {
 
 struct CommandLineOptions {
-  std::optional<std::string> arm64_asm;
   std::optional<std::string> category;
   std::optional<std::string> go_syscall_arm64_asm;
   std::optional<std::string> go_syscall_stubs;
@@ -23,16 +22,12 @@ struct CommandLineOptions {
   std::optional<std::string> go_vdso_keys;
   std::optional<std::string> go_vdso_x86_calls;
   std::optional<std::string> json;
-  std::optional<std::string> kernel_branches;
   std::optional<std::string> kernel_header;
   std::optional<std::string> kernel_wrappers;
-  std::optional<std::string> ktrace;
+  std::optional<std::string> private_header;
+  std::optional<std::string> public_header;
   std::optional<std::string> rust;
   std::optional<std::string> syscall_numbers;
-  std::optional<std::string> user_header;
-  std::optional<std::string> vdso_header;
-  std::optional<std::string> vdso_wrappers;
-  std::optional<std::string> x86_asm;
 };
 
 constexpr const char kHelpIntro[] = R"(kazoo [ <options> ] <fidlc-ir.json>
@@ -43,9 +38,6 @@ constexpr const char kHelpIntro[] = R"(kazoo [ <options> ] <fidlc-ir.json>
 Options:
 
 )";
-
-constexpr const char kArm64AsmHelp[] = R"(  --arm64-asm=FILENAME
-    The output name for the .S file ARM64 syscalls.)";
 
 constexpr const char kCategoryHelp[] = R"(  --category=FILENAME
     The output name for the .inc categories file.)";
@@ -71,35 +63,23 @@ constexpr const char kGoVdsoX86CallsHelp[] = R"(  --go-vdso-x86-calls=FILENAME
 constexpr const char kJsonHelp[] = R"(  --json=FILENAME
     The output name for the .json syscall definitions.)";
 
-constexpr const char kKernelBranchesHelp[] = R"(  --kernel-branches=FILENAME
-    The output name for the .S file used for kernel syscall dispatch.)";
-
 constexpr const char kKernelHeaderHelp[] = R"(  --kernel-header=FILENAME
-    The output name for the .h file used for kernel header.)";
+    The output name for the .inc file used for kernel declarations.)";
 
 constexpr const char kKernelWrappersHelp[] = R"(  --kernel-wrappers=FILENAME
     The output name for the .inc file used for kernel wrappers.)";
 
-constexpr const char kKtraceHelp[] = R"(  --ktrace=FILENAME
-    The output name for the .inc file used for kernel tracing.)";
+constexpr const char kPrivateHeaderHelp[] = R"(  --private-header=FILENAME
+    The output name for the .inc file used for the vDSO-private header.)";
+
+constexpr const char kPublicHeaderHelp[] = R"(  --private-header=FILENAME
+    The output name for the .inc file used for the public vDSO API header.)";
 
 constexpr const char kRustHelp[] = R"(  --rust=FILENAME
     The output name for the .rs file used for Rust syscall definitions.)";
 
 constexpr const char kSyscallNumbersHelp[] = R"(  --syscall-numbers=FILENAME
     The output name for the .h file used for syscall numbers.)";
-
-constexpr const char kUserHeaderHelp[] = R"(  --user-header=FILENAME
-    The output name for the .h file used for the user syscall header.)";
-
-constexpr const char kVdsoHeaderHelp[] = R"(  --vdso-header=FILENAME
-    The output name for the .h file used for VDSO prototypes.)";
-
-constexpr const char kVdsoWrappersHelp[] = R"(  --vdso-wrappers=FILENAME
-    The output name for the .inc file used for blocking VDSO call wrappers.)";
-
-constexpr const char kX86AsmHelp[] = R"(  --x86-asm=FILENAME
-    The output name for the .S file x86 syscalls.)";
 
 const char kHelpHelp[] = R"(  --help
   -h
@@ -112,7 +92,6 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
                                  std::vector<std::string>* params,
                                  std::set<std::string>* excludes) {
   cmdline::ArgsParser<CommandLineOptions> parser;
-  parser.AddSwitch("arm64-asm", 0, kArm64AsmHelp, &CommandLineOptions::arm64_asm);
   parser.AddSwitch("category", 0, kCategoryHelp, &CommandLineOptions::category);
   parser.AddSwitch("go-syscall-arm64-asm", 0, kGoSyscallArm64AsmHelp,
                    &CommandLineOptions::go_syscall_arm64_asm);
@@ -126,16 +105,12 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("go-vdso-x86-calls", 0, kGoVdsoX86CallsHelp,
                    &CommandLineOptions::go_vdso_x86_calls);
   parser.AddSwitch("json", 0, kJsonHelp, &CommandLineOptions::json);
-  parser.AddSwitch("kernel-branches", 0, kKernelBranchesHelp, &CommandLineOptions::kernel_branches);
   parser.AddSwitch("kernel-header", 0, kKernelHeaderHelp, &CommandLineOptions::kernel_header);
   parser.AddSwitch("kernel-wrappers", 0, kKernelWrappersHelp, &CommandLineOptions::kernel_wrappers);
-  parser.AddSwitch("ktrace", 0, kKtraceHelp, &CommandLineOptions::ktrace);
+  parser.AddSwitch("private-header", 0, kPrivateHeaderHelp, &CommandLineOptions::private_header);
+  parser.AddSwitch("public-header", 0, kPublicHeaderHelp, &CommandLineOptions::public_header);
   parser.AddSwitch("rust", 0, kRustHelp, &CommandLineOptions::rust);
   parser.AddSwitch("syscall-numbers", 0, kSyscallNumbersHelp, &CommandLineOptions::syscall_numbers);
-  parser.AddSwitch("user-header", 0, kUserHeaderHelp, &CommandLineOptions::user_header);
-  parser.AddSwitch("vdso-header", 0, kVdsoHeaderHelp, &CommandLineOptions::vdso_header);
-  parser.AddSwitch("vdso-wrappers", 0, kVdsoWrappersHelp, &CommandLineOptions::vdso_wrappers);
-  parser.AddSwitch("x86-asm", 0, kX86AsmHelp, &CommandLineOptions::x86_asm);
 
   bool requested_help = false;
   parser.AddGeneralSwitch("help", 'h', kHelpHelp, [&requested_help]() { requested_help = true; });
@@ -189,7 +164,6 @@ int main(int argc, const char* argv[]) {
     std::optional<std::string>* name;
     bool (*output)(const SyscallLibrary&, Writer*);
   } backends[] = {
-      {&options.arm64_asm, AsmOutput},
       {&options.category, CategoryOutput},
       {&options.go_syscall_arm64_asm, GoSyscallsAsm},
       {&options.go_syscall_stubs, GoSyscallsStubs},
@@ -198,16 +172,12 @@ int main(int argc, const char* argv[]) {
       {&options.go_vdso_keys, GoVdsoKeys},
       {&options.go_vdso_x86_calls, GoVdsoX86Calls},
       {&options.json, JsonOutput},
-      {&options.kernel_branches, KernelBranchesOutput},
-      {&options.kernel_header, KernelHeaderOutput},
+      {&options.kernel_header, KernelDeclarationsOutput},
       {&options.kernel_wrappers, KernelWrappersOutput},
-      {&options.ktrace, KtraceOutput},
+      {&options.private_header, PrivateDeclarationsOutput},
+      {&options.public_header, PublicDeclarationsOutput},
       {&options.rust, RustOutput},
       {&options.syscall_numbers, SyscallNumbersOutput},
-      {&options.user_header, UserHeaderOutput},
-      {&options.vdso_header, VdsoHeaderOutput},
-      {&options.vdso_wrappers, VdsoWrappersOutput},
-      {&options.x86_asm, AsmOutput},
   };
 
   for (const auto& backend : backends) {
