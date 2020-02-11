@@ -12,5 +12,5 @@ group("service") {
 fidl("socket_passing") {
   name = "fuchsia.overnet.socketpassingexample"
 
-  sources = [ "socket_passing.fidl" ]
+  sources = [ "socket_passing.test.fidl" ]
 }

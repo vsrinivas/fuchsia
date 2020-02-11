@@ -4,30 +4,75 @@
 
 use {
     anyhow::{Context as _, Error},
-    clap::{App, Arg, SubCommand},
+    argh::FromArgs,
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fuchsia_overnet::{
         ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
     },
     fidl_fuchsia_overnet_socketpassingexample as socketpassing,
-    futures::prelude::*,
+    futures::{future::try_join, prelude::*},
 };
 
-fn app<'a, 'b>() -> App<'a, 'b> {
-    App::new("overnet-socket-passing")
-        .version("0.1.0")
-        .about("Interface passing example for overnet")
-        .author("Fuchsia Team")
-        .subcommand(SubCommand::with_name("client").about("Run as client").arg(
-            Arg::with_name("text").help("Text string to echo back and forth").takes_value(true),
-        ))
-        .subcommand(SubCommand::with_name("server").about("Run as server"))
+#[derive(FromArgs)]
+/// Echo example for Overnet.
+struct TestArgs {
+    #[argh(subcommand)]
+    subcommand: Subcommand,
+}
+
+#[derive(FromArgs, Clone)]
+#[argh(subcommand, name = "server")]
+/// Run as a server
+struct ServerCommand {
+    #[argh(option)]
+    /// text string to send server->client
+    send: Option<String>,
+    #[argh(option)]
+    /// text string to expect client->server
+    expect: Option<String>,
+}
+
+#[derive(FromArgs)]
+#[argh(subcommand, name = "client")]
+/// Run as a server
+struct ClientCommand {
+    #[argh(option)]
+    /// text string to send client->server
+    send: Option<String>,
+    #[argh(option)]
+    /// text string to expect server->client
+    expect: Option<String>,
+}
+
+#[derive(Clone)]
+struct Command {
+    send: Option<String>,
+    expect: Option<String>,
+}
+
+impl From<ServerCommand> for Command {
+    fn from(c: ServerCommand) -> Command {
+        Command { send: c.send, expect: c.expect }
+    }
+}
+
+impl From<ClientCommand> for Command {
+    fn from(c: ClientCommand) -> Command {
+        Command { send: c.send, expect: c.expect }
+    }
+}
+
+#[derive(FromArgs)]
+#[argh(subcommand)]
+enum Subcommand {
+    Server(ServerCommand),
+    Client(ClientCommand),
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Client implementation
 
-async fn exec_client(text: &str) -> Result<(), Error> {
+async fn exec_client(args: Command) -> Result<(), Error> {
     let svc = hoist::connect_as_service_consumer()?;
     loop {
         let peers = svc.list_peers().await?;
@@ -59,21 +104,9 @@ async fn exec_client(text: &str) -> Result<(), Error> {
 
             let (ss, cs) = fidl::Socket::create(fidl::SocketOpts::STREAM)
                 .context("failed to create socket")?;
-            println!("Sending {:?} to {:?}", text, peer.id);
-            if let Err(e) = cli.pass(ss) {
-                println!("ERROR PASSING SOCKET: {:?}", e);
-                continue;
-            }
-            cs.write(text.as_bytes())?;
-            let mut cs = fidl::AsyncSocket::from_socket(cs)?;
-            let mut incoming = Vec::new();
-            while incoming.len() != text.as_bytes().len() {
-                let mut buf = [0u8; 128];
-                let n = cs.read(&mut buf).await?;
-                incoming.extend_from_slice(&buf[..n]);
-            }
-            assert_eq!(incoming, text.as_bytes());
-            return Ok(());
+            return try_join(run_command(cs, args), cli.pass(ss).map_err(|e| e.into()))
+                .await
+                .map(|_| ());
         }
     }
 }
@@ -81,24 +114,44 @@ async fn exec_client(text: &str) -> Result<(), Error> {
 ////////////////////////////////////////////////////////////////////////////////
 // Server implementation
 
-fn spawn_echo_server(socket: fidl::Socket, quiet: bool) {
-    hoist::spawn(
+async fn run_command(socket: fidl::Socket, args: Command) -> Result<(), Error> {
+    let (mut rx, mut tx) = fidl::AsyncSocket::from_socket(socket)?.split();
+
+    let send = args.send;
+    let expect = args.expect;
+    try_join(
         async move {
-            let mut buf = [0u8; 1024];
-            let mut socket = fidl::AsyncSocket::from_socket(socket)?;
-            loop {
-                let n = socket.read(&mut buf).await?;
-                if !quiet {
-                    println!("got bytes: {:?}", &buf[..n]);
+            if let Some(send) = send {
+                println!("SEND: {}", send);
+                let buf: Vec<u8> = send.bytes().collect();
+                let mut ofs = 0;
+                while ofs != buf.len() {
+                    ofs += tx.write(&buf[ofs..]).await?;
                 }
-                socket.write(&buf[..n]).await?;
             }
-        }
-        .unwrap_or_else(|e: Error| eprintln!("{:?}", e)),
-    );
+            Ok(()) as Result<(), Error>
+        },
+        async move {
+            if let Some(expect) = expect {
+                println!("EXPECT: {}", expect);
+                let mut buf = [0u8; 1024];
+                let mut ofs = 0;
+                while ofs < expect.len() {
+                    let n = rx.read(&mut buf[ofs..]).await?;
+                    println!("got bytes: {:?}", &buf[ofs..ofs + n]);
+                    ofs += n;
+                }
+                assert_eq!(ofs, expect.len());
+                assert_eq!(&buf[..ofs], expect.bytes().collect::<Vec<u8>>().as_slice());
+            }
+            Ok(())
+        },
+    )
+    .await?;
+    Ok(())
 }
 
-fn spawn_example_server(chan: fidl::AsyncChannel, quiet: bool) {
+fn spawn_example_server(chan: fidl::AsyncChannel, args: Command) {
     hoist::spawn(
         async move {
             let mut stream = socketpassing::ExampleRequestStream::from_channel(chan);
@@ -106,11 +159,11 @@ fn spawn_example_server(chan: fidl::AsyncChannel, quiet: bool) {
                 stream.try_next().await.context("error running echo server")?
             {
                 match request {
-                    socketpassing::ExampleRequest::Pass { socket, .. } => {
-                        if !quiet {
-                            println!("Received socket request");
-                        }
-                        spawn_echo_server(socket, quiet);
+                    socketpassing::ExampleRequest::Pass { socket, responder } => {
+                        println!("Received socket request");
+                        let args = args.clone();
+                        run_command(socket, args).await?;
+                        responder.send()?;
                     }
                 }
             }
@@ -127,7 +180,7 @@ async fn next_request(
     Ok(stream.try_next().await.context("error running service provider server")?)
 }
 
-async fn exec_server(quiet: bool) -> Result<(), Error> {
+async fn exec_server(args: Command) -> Result<(), Error> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
     let mut stream = ServiceProviderRequestStream::from_channel(chan);
@@ -138,12 +191,10 @@ async fn exec_server(quiet: bool) -> Result<(), Error> {
         control_handle: _control_handle,
     }) = next_request(&mut stream).await?
     {
-        if !quiet {
-            println!("Received service request for service");
-        }
+        println!("Received service request for service");
         let chan =
             fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
-        spawn_example_server(chan, quiet);
+        spawn_example_server(chan, args.clone());
     }
     Ok(())
 }
@@ -153,16 +204,10 @@ async fn exec_server(quiet: bool) -> Result<(), Error> {
 
 async fn async_main() -> Result<(), Error> {
     std::env::set_var("RUST_BACKTRACE", "full");
-    let args = app().get_matches();
 
-    match args.subcommand() {
-        ("server", Some(_)) => exec_server(args.is_present("quiet")).await,
-        ("client", Some(cmd)) => {
-            let r = exec_client(cmd.value_of("text").unwrap_or("")).await;
-            println!("finished client");
-            r
-        }
-        (_, _) => unimplemented!(),
+    match argh::from_env::<TestArgs>().subcommand {
+        Subcommand::Server(server_args) => exec_server(server_args.into()).await,
+        Subcommand::Client(client_args) => exec_client(client_args.into()).await,
     }
 }
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    async_quic::{AsyncQuicStreamReader, AsyncQuicStreamWriter},
+    async_quic::{AsyncQuicStreamReader, AsyncQuicStreamWriter, StreamProperties},
     coding::{decode_fidl, encode_fidl},
     framed_stream::{framed, FrameType, FramedStreamReader, FramedStreamWriter, MessageStats},
     future_help::log_errors,
@@ -105,7 +105,7 @@ async fn channel_to_stream(
         let (bytes, handles) = buf.split_mut();
         let mut send_handles = Vec::new();
         for handle in handles {
-            let stream_io = stream.underlying_quic_connection().alloc_bidi();
+            let stream_io = stream.conn().alloc_bidi();
             let stream_id = fidl_fuchsia_overnet_protocol::StreamId { id: stream_io.0.id() };
             match handle_type(&handle)? {
                 SendHandle::Channel => {
@@ -126,6 +126,7 @@ async fn channel_to_stream(
             bytes: std::mem::replace(bytes, Vec::new()),
             handles: send_handles,
         };
+        log::trace!("send message: {:?}", msg);
         stream.send(FrameType::Data, encode_fidl(&mut msg)?.as_mut_slice(), false, &*stats).await?;
     }
 }
@@ -138,6 +139,7 @@ async fn stream_to_channel(
     loop {
         let (frame_type, mut msg, fin) = stream.next().await?;
         match frame_type {
+            FrameType::Hello => bail!("Should not see Hello frames in regular flow"),
             FrameType::Data => {
                 let msg = decode_fidl::<ZirconChannelMessage>(&mut msg)?;
                 let mut handles = Vec::new();
@@ -147,7 +149,7 @@ async fn stream_to_channel(
                             let (overnet_channel, app_channel) = Channel::create()?;
                             spawn_channel_proxy(
                                 overnet_channel,
-                                stream.underlying_quic_connection().bind_id(stream_index.id),
+                                stream.conn().bind_id(stream_index.id),
                                 stats.clone(),
                             )?;
                             app_channel.into_handle()
@@ -163,7 +165,7 @@ async fn stream_to_channel(
                             spawn_socket_proxy(
                                 socket_type,
                                 overnet_socket,
-                                stream.underlying_quic_connection().bind_id(stream_index.id),
+                                stream.conn().bind_id(stream_index.id),
                                 stats.clone(),
                             )?;
                             app_socket.into_handle()

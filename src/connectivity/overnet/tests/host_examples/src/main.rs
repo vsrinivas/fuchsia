@@ -173,7 +173,7 @@ impl TestContext {
         let (tx, rx) = std::sync::mpsc::channel();
         let j = std::thread::spawn(move || tx.send(f()));
         let r = (|| -> Result<(), Error> {
-            rx.recv_timeout(Duration::from_secs(60))
+            rx.recv_timeout(Duration::from_secs(10))
                 .context("receiving completion notificiation")?
                 .context("running test code")?;
             j.join()
@@ -208,6 +208,11 @@ impl TestContext {
 
         r
     }
+}
+
+pub struct SocketPassingArgs {
+    pub client_sends: Option<String>,
+    pub server_sends: Option<String>,
 }
 
 struct Ascendd {
@@ -276,15 +281,30 @@ impl Ascendd {
         c
     }
 
-    fn socket_passing_client(&self) -> Command {
+    fn socket_passing_client(&self, args: &SocketPassingArgs) -> Command {
         let mut c = self.socket_passing_cmd("client");
-        c.arg("AUTOMATED_TEST");
+        if let Some(send) = &args.client_sends {
+            c.arg("--send");
+            c.arg(send);
+        }
+        if let Some(expect) = &args.server_sends {
+            c.arg("--expect");
+            c.arg(expect);
+        }
         c
     }
 
-    fn add_socket_passing_server(&mut self) -> Result<(), Error> {
-        self.ctx.new_daemon(self.socket_passing_cmd("server"))?;
-        Ok(())
+    fn add_socket_passing_server(&mut self, args: &SocketPassingArgs) -> Result<(), Error> {
+        let mut c = self.socket_passing_cmd("server");
+        if let Some(send) = &args.server_sends {
+            c.arg("--send");
+            c.arg(send);
+        }
+        if let Some(expect) = &args.client_sends {
+            c.arg("--expect");
+            c.arg(expect);
+        }
+        self.ctx.new_daemon(c)
     }
 
     fn add_onet_host_pipe(
@@ -381,16 +401,41 @@ mod tests {
     }
 
     #[test]
-    fn socket_passing() -> Result<(), Error> {
-        socket_passing_test(Default::default())
+    fn socket_passing_both_ways() -> Result<(), Error> {
+        socket_passing_test(
+            Default::default(),
+            SocketPassingArgs {
+                client_sends: Some("AAAAAAAAAAAAAAAAAAA".to_string()),
+                server_sends: Some("BBBBBBBBBBBBBBBB".to_string()),
+            },
+        )
     }
 
-    pub fn socket_passing_test(args: TestArgs) -> Result<(), Error> {
+    #[test]
+    fn socket_passing_client_to_server_send() -> Result<(), Error> {
+        socket_passing_test(
+            Default::default(),
+            SocketPassingArgs {
+                client_sends: Some("ABCDEFGHIJKLMNOPQRSTUVWXYZ".to_string()),
+                server_sends: None,
+            },
+        )
+    }
+
+    #[test]
+    fn socket_passing_server_to_client_send() -> Result<(), Error> {
+        socket_passing_test(
+            Default::default(),
+            SocketPassingArgs { client_sends: None, server_sends: Some("0123456789".to_string()) },
+        )
+    }
+
+    pub fn socket_passing_test(args: TestArgs, config: SocketPassingArgs) -> Result<(), Error> {
         let ctx = TestContext::new(args);
         let mut ascendd = Ascendd::new(&ctx).context("creating ascendd")?;
         ctx.clone().show_reports_if_failed(move || {
-            ascendd.add_socket_passing_server().context("starting server")?;
-            ctx.run_client(ascendd.socket_passing_client()).context("running client")?;
+            ascendd.add_socket_passing_server(&config).context("starting server")?;
+            ctx.run_client(ascendd.socket_passing_client(&config)).context("running client")?;
             ctx.run_client(ascendd.onet_client("full-map")).context("running onet full-map")?;
             Ok(())
         })
@@ -446,7 +491,42 @@ fn main() -> Result<(), Error> {
             ("echo".to_string(), box_test(tests::echo_test)),
             ("multiple_ascendd_echo".to_string(), box_test(tests::multiple_ascendd_echo_test)),
             ("interface_passing".to_string(), box_test(tests::interface_passing_test)),
-            ("socket_passing".to_string(), box_test(tests::socket_passing_test)),
+            (
+                "socket_passing_both_ways".to_string(),
+                box_test(|a| {
+                    tests::socket_passing_test(
+                        a,
+                        SocketPassingArgs {
+                            client_sends: Some("AAAAAAAAAAAAAAAAAAA".to_string()),
+                            server_sends: Some("BBBBBBBBBBBBBBBB".to_string()),
+                        },
+                    )
+                }),
+            ),
+            (
+                "socket_passing_client_to_server_send".to_string(),
+                box_test(|a| {
+                    tests::socket_passing_test(
+                        a,
+                        SocketPassingArgs {
+                            client_sends: Some("ABCDEFGHIJKLMNOPQRSTUVWXYZ".to_string()),
+                            server_sends: None,
+                        },
+                    )
+                }),
+            ),
+            (
+                "socket_passing_server_to_client_send".to_string(),
+                box_test(|a| {
+                    tests::socket_passing_test(
+                        a,
+                        SocketPassingArgs {
+                            client_sends: None,
+                            server_sends: Some("0123456789".to_string()),
+                        },
+                    )
+                }),
+            ),
         ]
         .into_iter()
         .collect();

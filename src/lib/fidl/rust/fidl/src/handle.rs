@@ -468,10 +468,11 @@ pub mod non_fuchsia_handles {
         pub fn create(sock_opts: SocketOpts) -> Result<(Socket, Socket), zx_status::Status> {
             match sock_opts {
                 SocketOpts::STREAM => {
-                    let cs = Arc::new(Mutex::new(StreamSocketState::Open(
-                        HalfStreamSocketState::new(),
-                        HalfStreamSocketState::new(),
-                    )));
+                    let cs = Arc::new(Mutex::new(StreamSocketState {
+                        open: true,
+                        left: HalfStreamSocketState::new(),
+                        right: HalfStreamSocketState::new(),
+                    }));
                     let mut h = HANDLES.lock();
                     let left =
                         h.insert(FidlHandle::LeftStreamSocket(cs.clone(), INVALID_HANDLE)) as u32;
@@ -484,10 +485,11 @@ pub mod non_fuchsia_handles {
                     Ok((Socket(left), Socket(right)))
                 }
                 SocketOpts::DATAGRAM => {
-                    let cs = Arc::new(Mutex::new(DatagramSocketState::Open(
-                        HalfDatagramSocketState::new(),
-                        HalfDatagramSocketState::new(),
-                    )));
+                    let cs = Arc::new(Mutex::new(DatagramSocketState {
+                        open: true,
+                        left: HalfDatagramSocketState::new(),
+                        right: HalfDatagramSocketState::new(),
+                    }));
                     let mut h = HANDLES.lock();
                     let left =
                         h.insert(FidlHandle::LeftDatagramSocket(cs.clone(), INVALID_HANDLE)) as u32;
@@ -507,26 +509,26 @@ pub mod non_fuchsia_handles {
         pub fn write(&self, bytes: &[u8]) -> Result<usize, zx_status::Status> {
             let (result, wakeup) = with_handle(self.0, |obj| match obj {
                 FidlHandle::LeftStreamSocket(cs, peer) => match *cs.lock() {
-                    StreamSocketState::Closed => Err(zx_status::Status::PEER_CLOSED),
-                    StreamSocketState::Open(_, ref mut st) => {
+                    StreamSocketState { open: false, .. } => Err(zx_status::Status::PEER_CLOSED),
+                    StreamSocketState { right: ref mut st, .. } => {
                         Self::enqueue_stream_write(st, *peer, bytes)
                     }
                 },
                 FidlHandle::RightStreamSocket(cs, peer) => match *cs.lock() {
-                    StreamSocketState::Closed => Err(zx_status::Status::PEER_CLOSED),
-                    StreamSocketState::Open(ref mut st, _) => {
+                    StreamSocketState { open: false, .. } => Err(zx_status::Status::PEER_CLOSED),
+                    StreamSocketState { left: ref mut st, .. } => {
                         Self::enqueue_stream_write(st, *peer, bytes)
                     }
                 },
                 FidlHandle::LeftDatagramSocket(cs, peer) => match *cs.lock() {
-                    DatagramSocketState::Closed => Err(zx_status::Status::PEER_CLOSED),
-                    DatagramSocketState::Open(_, ref mut st) => {
+                    DatagramSocketState { open: false, .. } => Err(zx_status::Status::PEER_CLOSED),
+                    DatagramSocketState { right: ref mut st, .. } => {
                         Self::enqueue_datagram_write(st, *peer, bytes)
                     }
                 },
                 FidlHandle::RightDatagramSocket(cs, peer) => match *cs.lock() {
-                    DatagramSocketState::Closed => Err(zx_status::Status::PEER_CLOSED),
-                    DatagramSocketState::Open(ref mut st, _) => {
+                    DatagramSocketState { open: false, .. } => Err(zx_status::Status::PEER_CLOSED),
+                    DatagramSocketState { left: ref mut st, .. } => {
                         Self::enqueue_datagram_write(st, *peer, bytes)
                     }
                 },
@@ -568,22 +570,28 @@ pub mod non_fuchsia_handles {
         pub fn outstanding_read_bytes(&self) -> Result<usize, zx_status::Status> {
             with_handle(self.0, |obj| match obj {
                 FidlHandle::LeftStreamSocket(cs, _) => match *cs.lock() {
-                    StreamSocketState::Closed => Err(zx_status::Status::PEER_CLOSED),
-                    StreamSocketState::Open(ref st, _) => Ok(st.bytes.len()),
+                    StreamSocketState { left: ref mut st, .. } if st.bytes.len() > 0 => {
+                        Ok(st.bytes.len())
+                    }
+                    StreamSocketState { open: false, .. } => Err(zx_status::Status::PEER_CLOSED),
+                    StreamSocketState { .. } => Ok(0),
                 },
                 FidlHandle::RightStreamSocket(cs, _) => match *cs.lock() {
-                    StreamSocketState::Closed => Err(zx_status::Status::PEER_CLOSED),
-                    StreamSocketState::Open(_, ref st) => Ok(st.bytes.len()),
+                    StreamSocketState { right: ref mut st, .. } if st.bytes.len() > 0 => {
+                        Ok(st.bytes.len())
+                    }
+                    StreamSocketState { open: false, .. } => Err(zx_status::Status::PEER_CLOSED),
+                    StreamSocketState { .. } => Ok(0),
                 },
                 FidlHandle::LeftDatagramSocket(cs, _) => match *cs.lock() {
-                    DatagramSocketState::Closed => Err(zx_status::Status::PEER_CLOSED),
-                    DatagramSocketState::Open(ref st, _) => {
+                    DatagramSocketState { open: false, .. } => Err(zx_status::Status::PEER_CLOSED),
+                    DatagramSocketState { left: ref mut st, .. } => {
                         Ok(st.bytes.front().map(|frame| frame.len()).unwrap_or(0))
                     }
                 },
                 FidlHandle::RightDatagramSocket(cs, _) => match *cs.lock() {
-                    DatagramSocketState::Closed => Err(zx_status::Status::PEER_CLOSED),
-                    DatagramSocketState::Open(_, ref st) => {
+                    DatagramSocketState { open: false, .. } => Err(zx_status::Status::PEER_CLOSED),
+                    DatagramSocketState { right: ref mut st, .. } => {
                         Ok(st.bytes.front().map(|frame| frame.len()).unwrap_or(0))
                     }
                 },
@@ -596,22 +604,24 @@ pub mod non_fuchsia_handles {
         pub fn read(&self, bytes: &mut [u8]) -> Result<usize, zx_status::Status> {
             with_handle(self.0, |obj| match obj {
                 FidlHandle::LeftStreamSocket(cs, _) => match *cs.lock() {
-                    StreamSocketState::Closed => Err(zx_status::Status::PEER_CLOSED),
-                    StreamSocketState::Open(ref mut st, _) => Self::dequeue_stream_read(st, bytes),
+                    StreamSocketState { open, left: ref mut st, .. } => {
+                        Self::dequeue_stream_read(open, st, bytes)
+                    }
                 },
                 FidlHandle::RightStreamSocket(cs, _) => match *cs.lock() {
-                    StreamSocketState::Closed => Err(zx_status::Status::PEER_CLOSED),
-                    StreamSocketState::Open(_, ref mut st) => Self::dequeue_stream_read(st, bytes),
+                    StreamSocketState { open, right: ref mut st, .. } => {
+                        Self::dequeue_stream_read(open, st, bytes)
+                    }
                 },
                 FidlHandle::LeftDatagramSocket(cs, _) => match *cs.lock() {
-                    DatagramSocketState::Closed => Err(zx_status::Status::PEER_CLOSED),
-                    DatagramSocketState::Open(ref mut st, _) => {
+                    DatagramSocketState { open: false, .. } => Err(zx_status::Status::PEER_CLOSED),
+                    DatagramSocketState { left: ref mut st, .. } => {
                         Self::dequeue_datagram_read(st, bytes)
                     }
                 },
                 FidlHandle::RightDatagramSocket(cs, _) => match *cs.lock() {
-                    DatagramSocketState::Closed => Err(zx_status::Status::PEER_CLOSED),
-                    DatagramSocketState::Open(_, ref mut st) => {
+                    DatagramSocketState { open: false, .. } => Err(zx_status::Status::PEER_CLOSED),
+                    DatagramSocketState { right: ref mut st, .. } => {
                         Self::dequeue_datagram_read(st, bytes)
                     }
                 },
@@ -620,10 +630,14 @@ pub mod non_fuchsia_handles {
         }
 
         fn dequeue_stream_read(
+            open: bool,
             st: &mut HalfStreamSocketState,
             bytes: &mut [u8],
         ) -> Result<usize, zx_status::Status> {
             if bytes.len() == 0 {
+                if !open {
+                    return Err(zx_status::Status::PEER_CLOSED);
+                }
                 return Ok(0);
             }
             let copy_bytes = std::cmp::min(bytes.len(), st.bytes.len());
@@ -878,14 +892,16 @@ pub mod non_fuchsia_handles {
         }
     }
 
-    enum StreamSocketState {
-        Closed,
-        Open(HalfStreamSocketState, HalfStreamSocketState),
+    struct StreamSocketState {
+        open: bool,
+        left: HalfStreamSocketState,
+        right: HalfStreamSocketState,
     }
 
-    enum DatagramSocketState {
-        Closed,
-        Open(HalfDatagramSocketState, HalfDatagramSocketState),
+    struct DatagramSocketState {
+        open: bool,
+        left: HalfDatagramSocketState,
+        right: HalfDatagramSocketState,
     }
 
     enum FidlHandle {
@@ -940,10 +956,10 @@ pub mod non_fuchsia_handles {
             FidlHandle::LeftStreamSocket(cs, peer) => {
                 let st = &mut *cs.lock();
                 let wakeup = match st {
-                    StreamSocketState::Closed => false,
-                    StreamSocketState::Open(_, st) => st.need_read,
+                    StreamSocketState { open: false, .. } => false,
+                    StreamSocketState { right: st, .. } => st.need_read,
                 };
-                *st = StreamSocketState::Closed;
+                st.open = false;
                 if wakeup {
                     peer
                 } else {
@@ -953,10 +969,10 @@ pub mod non_fuchsia_handles {
             FidlHandle::RightStreamSocket(cs, peer) => {
                 let st = &mut *cs.lock();
                 let wakeup = match st {
-                    StreamSocketState::Closed => false,
-                    StreamSocketState::Open(st, _) => st.need_read,
+                    StreamSocketState { open: false, .. } => false,
+                    StreamSocketState { left: st, .. } => st.need_read,
                 };
-                *st = StreamSocketState::Closed;
+                st.open = false;
                 if wakeup {
                     peer
                 } else {
@@ -966,10 +982,10 @@ pub mod non_fuchsia_handles {
             FidlHandle::LeftDatagramSocket(cs, peer) => {
                 let st = &mut *cs.lock();
                 let wakeup = match st {
-                    DatagramSocketState::Closed => false,
-                    DatagramSocketState::Open(_, st) => st.need_read,
+                    DatagramSocketState { open: false, .. } => false,
+                    DatagramSocketState { right: st, .. } => st.need_read,
                 };
-                *st = DatagramSocketState::Closed;
+                st.open = false;
                 if wakeup {
                     peer
                 } else {
@@ -979,10 +995,10 @@ pub mod non_fuchsia_handles {
             FidlHandle::RightDatagramSocket(cs, peer) => {
                 let st = &mut *cs.lock();
                 let wakeup = match st {
-                    DatagramSocketState::Closed => false,
-                    DatagramSocketState::Open(st, _) => st.need_read,
+                    DatagramSocketState { open: false, .. } => false,
+                    DatagramSocketState { left: st, .. } => st.need_read,
                 };
-                *st = DatagramSocketState::Closed;
+                st.open = false;
                 if wakeup {
                     peer
                 } else {
@@ -1021,8 +1037,8 @@ pub mod non_fuchsia_handles {
                 }
             },
             FidlHandle::LeftStreamSocket(cs, _) => match *cs.lock() {
-                StreamSocketState::Closed => true,
-                StreamSocketState::Open(ref mut st, _) => {
+                StreamSocketState { open: false, .. } => true,
+                StreamSocketState { left: ref mut st, .. } => {
                     if st.bytes.is_empty() {
                         st.need_read = true;
                         false
@@ -1032,8 +1048,8 @@ pub mod non_fuchsia_handles {
                 }
             },
             FidlHandle::RightStreamSocket(cs, _) => match *cs.lock() {
-                StreamSocketState::Closed => true,
-                StreamSocketState::Open(_, ref mut st) => {
+                StreamSocketState { open: false, .. } => true,
+                StreamSocketState { right: ref mut st, .. } => {
                     if st.bytes.is_empty() {
                         st.need_read = true;
                         false
@@ -1043,8 +1059,8 @@ pub mod non_fuchsia_handles {
                 }
             },
             FidlHandle::LeftDatagramSocket(cs, _) => match *cs.lock() {
-                DatagramSocketState::Closed => true,
-                DatagramSocketState::Open(ref mut st, _) => {
+                DatagramSocketState { open: false, .. } => true,
+                DatagramSocketState { left: ref mut st, .. } => {
                     if st.bytes.is_empty() {
                         st.need_read = true;
                         false
@@ -1054,8 +1070,8 @@ pub mod non_fuchsia_handles {
                 }
             },
             FidlHandle::RightDatagramSocket(cs, _) => match *cs.lock() {
-                DatagramSocketState::Closed => true,
-                DatagramSocketState::Open(_, ref mut st) => {
+                DatagramSocketState { open: false, .. } => true,
+                DatagramSocketState { right: ref mut st, .. } => {
                     if st.bytes.is_empty() {
                         st.need_read = true;
                         false

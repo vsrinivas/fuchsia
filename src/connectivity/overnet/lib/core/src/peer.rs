@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    async_quic::{AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter},
+    async_quic::{AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, StreamProperties},
     coding::{decode_fidl, encode_fidl},
     framed_stream::{FrameType, FramedStreamReader, FramedStreamWriter, MessageStats},
     future_help::{log_errors, Observer},
@@ -331,6 +331,7 @@ async fn client_conn_stream(
             }
             Action::Frame(frame_type, mut bytes, fin) => {
                 match frame_type {
+                    FrameType::Hello => bail!("Hello frames disallowed on peer connections"),
                     FrameType::Data => {
                         client_conn_handle_incoming_frame(
                             peer_node_id,
@@ -449,6 +450,7 @@ async fn server_conn_stream(
         let router = Weak::upgrade(&router)
             .ok_or_else(|| format_err!("Router gone during connection stream message handling"))?;
         match frame_type {
+            FrameType::Hello => bail!("Hello frames disallowed on peer connections"),
             FrameType::Data => {
                 let msg: PeerMessage = decode_fidl(&mut bytes)?;
                 log::trace!("Got peer request from {:?}: {:?}", node_id, msg);
@@ -473,7 +475,7 @@ async fn server_conn_stream(
                         // some pipelined operations)
                         spawn_channel_proxy(
                             overnet_channel,
-                            conn_stream_writer.underlying_quic_connection().bind_id(stream_index),
+                            conn_stream_writer.conn().bind_id(stream_index),
                             channel_proxy_stats.clone(),
                         )?;
                     }

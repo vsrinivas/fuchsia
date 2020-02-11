@@ -8,7 +8,9 @@
                         "apps": [
                             {
                                 "arguments": [
-                                    "server"
+                                    "server",
+                                    "--send",
+                                    "hello"
                                 ]
                             }
                         ],
@@ -87,7 +89,9 @@
                 "test": [
                     {
                         "arguments": [
-                            "client"
+                            "client",
+                            "--expect",
+                            "hello"
                         ]
                     }
                 ]

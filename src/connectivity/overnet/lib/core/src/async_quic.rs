@@ -196,6 +196,17 @@ async fn run_timers(inner: Weak<AsyncConnectionInner>) -> Result<(), Error> {
     }
 }
 
+pub trait StreamProperties {
+    fn conn(&self) -> &AsyncConnection;
+    fn id(&self) -> u64;
+
+    fn is_initiator(&self) -> bool {
+        // QUIC stream id's use the lower two bits as a stream type designator.
+        // Bit 0 of that type is the initiator of the stream: 0 for client, 1 for server.
+        self.id() & 1 == self.conn().0.endpoint.quic_id_bit()
+    }
+}
+
 pub struct AsyncQuicStreamWriter {
     conn: AsyncConnection,
     id: u64,
@@ -205,12 +216,14 @@ impl AsyncQuicStreamWriter {
     pub fn send<'b>(&mut self, bytes: &'b [u8], fin: bool) -> QuicSend<'b> {
         QuicSend { conn: self.conn.clone(), id: self.id, bytes, fin, n: 0 }
     }
+}
 
-    pub fn conn(&self) -> &AsyncConnection {
+impl StreamProperties for AsyncQuicStreamWriter {
+    fn conn(&self) -> &AsyncConnection {
         &self.conn
     }
 
-    pub fn id(&self) -> u64 {
+    fn id(&self) -> u64 {
         self.id
     }
 }
@@ -280,8 +293,14 @@ impl AsyncQuicStreamReader {
             bytes = &mut bytes[n..];
         }
     }
+}
 
-    pub fn conn(&self) -> &AsyncConnection {
+impl StreamProperties for AsyncQuicStreamReader {
+    fn id(&self) -> u64 {
+        self.id
+    }
+
+    fn conn(&self) -> &AsyncConnection {
         &self.conn
     }
 }
@@ -431,6 +450,7 @@ pub(crate) mod test_util {
 mod test {
 
     use super::test_util::new_client_server;
+    use super::StreamProperties;
     use crate::future_help::log_errors;
     use crate::router::test_util::run;
     use crate::runtime::spawn;

@@ -6,5 +6,5 @@ library fuchsia.overnet.socketpassingexample;
 
 [Discoverable]
 protocol Example {
-    Pass(handle<socket> socket);
+    Pass(handle<socket> socket) -> ();
 };

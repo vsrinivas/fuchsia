@@ -26,7 +26,7 @@ rustc_binary("bin") {
     "//src/connectivity/overnet/lib/hoist",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:clap",
+    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
   ]
   non_rust_deps = [ "//third_party/boringssl" ]

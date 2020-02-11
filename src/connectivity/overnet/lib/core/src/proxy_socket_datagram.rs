@@ -56,6 +56,7 @@ async fn stream_to_socket(
     loop {
         let (frame_type, msg, fin) = stream.next().await?;
         match frame_type {
+            FrameType::Hello => bail!("Should not see Hello frames in regular flow"),
             FrameType::Data => {
                 sock.write(&msg).await?;
                 if fin {
