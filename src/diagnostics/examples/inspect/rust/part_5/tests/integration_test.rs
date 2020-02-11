@@ -15,18 +15,11 @@ use {
 
 // [START include_test_stuff]
 use {
-    anyhow::{format_err, Context},
-    fidl_fuchsia_diagnostics::{
-        ArchiveMarker, BatchIteratorMarker, Format, FormattedContent, ReaderMarker,
+    anyhow::format_err,
+    fuchsia_inspect::{
+        reader::NodeHierarchy,
+        testing::{self, assert_inspect_tree},
     },
-    fidl_fuchsia_mem::Buffer,
-    fuchsia_component::client,
-    fuchsia_inspect::{assert_inspect_tree, reader::NodeHierarchy},
-    fuchsia_inspect_node_hierarchy::serialization::{
-        json::RawJsonNodeHierarchySerializer, HierarchyDeserializer,
-    },
-    fuchsia_zircon::DurationNum,
-    serde_json,
 };
 // [END include_test_stuff]
 
@@ -75,58 +68,16 @@ impl IntegrationTest {
 
     // [START get_inspect]
     async fn get_inspect_hierarchy(&self) -> Result<NodeHierarchy, Error> {
-        let archive =
-            client::connect_to_service::<ArchiveMarker>().context("connect to Archive")?;
-
-        let (reader, server_end) = fidl::endpoints::create_proxy::<ReaderMarker>()?;
-        let selectors = Vec::new();
-        archive
-            .read_inspect(server_end, &mut selectors.into_iter())
-            .await
-            .context("get Reader")?
-            .map_err(|e| format_err!("accessor error: {:?}", e))?;
-
-        loop {
-            let (iterator, server_end) = fidl::endpoints::create_proxy::<BatchIteratorMarker>()?;
-            reader
-                .get_snapshot(Format::Json, server_end)
-                .await
-                .context("get BatchIterator")?
-                .map_err(|e| format_err!("get snapshot: {:?}", e))?;
-
-            if let Ok(result) = iterator.get_next().await? {
-                for entry in result {
-                    match entry {
-                        FormattedContent::FormattedJsonHierarchy(json) => {
-                            let json_string =
-                                self.vmo_buffer_to_string(json).context("read vmo")?;
-                            if json_string.contains(&format!(
-                                "{}/inspect_rust_codelab_part_5.cmx",
-                                self.environment_label
-                            )) {
-                                let mut output: serde_json::Value =
-                                    serde_json::from_str(&json_string).expect("valid json");
-                                let tree_json =
-                                    output.get_mut("contents").expect("contents are there").take();
-                                return RawJsonNodeHierarchySerializer::deserialize(tree_json);
-                            }
-                        }
-                        _ => unreachable!("response should contain only json"),
-                    }
-                }
-            }
-
-            // Retry with delay to ensure data appears.
-            150000.micros().sleep();
-        }
-    }
-
-    pub fn vmo_buffer_to_string(&self, buffer: Buffer) -> Result<String, Error> {
-        let buffer_size = buffer.size;
-        let buffer_vmo = buffer.vmo;
-        let mut bytes = vec![0; buffer_size as usize];
-        buffer_vmo.read(&mut bytes, 0)?;
-        Ok(String::from_utf8_lossy(&bytes).to_string())
+        testing::InspectDataFetcher::new()
+            .add_selector(testing::ComponentSelector::new(vec![
+                self.environment_label.clone(),
+                "inspect_rust_codelab_part_5.cmx".to_string(),
+            ]))
+            .get()
+            .await?
+            .into_iter()
+            .next()
+            .ok_or(format_err!("expected one inspect hierarchy"))
     }
     // [END get_inspect]
 }
