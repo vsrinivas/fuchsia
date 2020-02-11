@@ -15,6 +15,7 @@ zx_library("vm") {
     "pinned_vm_object.cc",
     "pmm.cc",
     "pmm_arena.cc",
+    "pmm_checker.cc",
     "pmm_node.cc",
     "scanner.cc",
     "vm.cc",

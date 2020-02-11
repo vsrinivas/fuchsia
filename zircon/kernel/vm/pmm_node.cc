@@ -17,6 +17,7 @@
 #include <vm/bootalloc.h>
 #include <vm/page_request.h>
 #include <vm/physmap.h>
+#include <vm/pmm_checker.h>
 
 #include "fbl/algorithm.h"
 #include "vm_priv.h"
@@ -109,7 +110,43 @@ void PmmNode::AddFreePages(list_node* list) TA_NO_THREAD_SAFETY_ANALYSIS {
   LTRACEF("free count now %" PRIu64 "\n", free_count_);
 }
 
-void PmmNode::AllocPageHelper(vm_page_t* page) {
+void PmmNode::FillFreePages() {
+  Guard<fbl::Mutex> guard{&lock_};
+
+  if (!free_fill_enabled_) {
+    return;
+  }
+
+  vm_page* page;
+  list_for_every_entry (&free_list_, page, vm_page, queue_node) { checker_.FillPattern(page); }
+
+  // Now that every page has been filled, we can arm the checker.
+  checker_.Arm();
+}
+
+void PmmNode::CheckAllFreePages() {
+  Guard<fbl::Mutex> guard{&lock_};
+
+  if (!checker_.IsArmed()) {
+    return;
+  }
+
+  vm_page* page;
+  list_for_every_entry (&free_list_, page, vm_page, queue_node) { checker_.AssertPattern(page); }
+}
+
+void PmmNode::EnableChecker() {
+  Guard<fbl::Mutex> guard{&lock_};
+  free_fill_enabled_ = true;
+}
+
+void PmmNode::DisableChecker() {
+  Guard<fbl::Mutex> guard{&lock_};
+  checker_.Disarm();
+  free_fill_enabled_ = false;
+}
+
+void PmmNode::AllocPageHelperLocked(vm_page_t* page) {
   LTRACEF("allocating page %p, pa %#" PRIxPTR ", prev state %s\n", page, page->paddr(),
           page_state_to_string(page->state()));
 
@@ -117,9 +154,9 @@ void PmmNode::AllocPageHelper(vm_page_t* page) {
 
   page->set_state(VM_PAGE_STATE_ALLOC);
 
-#if PMM_ENABLE_FREE_FILL
-  PmmNode::CheckFreeFill(page);
-#endif
+  if (unlikely(free_fill_enabled_)) {
+    checker_.AssertPattern(page);
+  }
 }
 
 zx_status_t PmmNode::AllocPage(uint alloc_flags, vm_page_t** page_out, paddr_t* pa_out) {
@@ -137,7 +174,7 @@ zx_status_t PmmNode::AllocPage(uint alloc_flags, vm_page_t** page_out, paddr_t* 
     return ZX_ERR_NO_MEMORY;
   }
 
-  AllocPageHelper(page);
+  AllocPageHelperLocked(page);
 
   DecrementFreeCountLocked(1);
 
@@ -188,7 +225,7 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
   auto node = &free_list_;
   while (count-- > 0) {
     node = list_next(&free_list_, node);
-    AllocPageHelper(containerof(node, vm_page, queue_node));
+    AllocPageHelperLocked(containerof(node, vm_page, queue_node));
   }
 
   list_node tmp_list = LIST_INITIAL_VALUE(tmp_list);
@@ -232,7 +269,7 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
 
       list_delete(&page->queue_node);
 
-      page->set_state(VM_PAGE_STATE_ALLOC);
+      AllocPageHelperLocked(page);
 
       list_add_tail(list, &page->queue_node);
 
@@ -290,9 +327,7 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
 
       DecrementFreeCountLocked(1);
 
-#if PMM_ENABLE_FREE_FILL
-      CheckFreeFill(p);
-#endif
+      checker_.AssertPattern(p);
 
       list_add_tail(list, &p->queue_node);
     }
@@ -310,12 +345,12 @@ void PmmNode::FreePageHelperLocked(vm_page* page) {
   DEBUG_ASSERT(page->state() != VM_PAGE_STATE_OBJECT || page->object.pin_count == 0);
   DEBUG_ASSERT(!page->is_free());
 
-#if PMM_ENABLE_FREE_FILL
-  FreeFill(page);
-#endif
-
   // mark it free
   page->set_state(VM_PAGE_STATE_FREE);
+
+  if (unlikely(free_fill_enabled_)) {
+    checker_.FillPattern(page);
+  }
 }
 
 void PmmNode::FreePage(vm_page* page) {
@@ -623,28 +658,3 @@ void PmmNode::InitRequestThread() {
       thread_create("pmm-node-request-thread", pmm_node_request_loop, this, HIGH_PRIORITY);
   thread_resume(request_thread_);
 }
-
-#if PMM_ENABLE_FREE_FILL
-void PmmNode::EnforceFill() {
-  DEBUG_ASSERT(!enforce_fill_);
-
-  vm_page* page;
-  list_for_every_entry (&free_list_, page, vm_page, queue_node) { FreeFill(page); }
-
-  enforce_fill_ = true;
-}
-
-void PmmNode::FreeFill(vm_page_t* page) {
-  void* kvaddr = paddr_to_physmap(page->paddr());
-  DEBUG_ASSERT(is_kernel_address((vaddr_t)kvaddr));
-  memset(kvaddr, PMM_FREE_FILL_BYTE, PAGE_SIZE);
-}
-
-void PmmNode::CheckFreeFill(vm_page_t* page) {
-  uint8_t* kvaddr = static_cast<uint8_t*>(paddr_to_physmap(page->paddr()));
-  for (size_t j = 0; j < PAGE_SIZE; ++j) {
-    ASSERT_MSG(!enforce_fill_ || *(kvaddr + j) == PMM_FREE_FILL_BYTE,
-        "PMM CheckFreeFill failed at address: %p", kvaddr);
-  }
-}
-#endif  // PMM_ENABLE_FREE_FILL

@@ -129,4 +129,11 @@ typedef void (*mem_avail_state_updated_callback_t)(uint8_t cur_state);
 zx_status_t pmm_init_reclamation(const uint64_t* watermarks, uint8_t watermark_count,
                                  uint64_t debounce, mem_avail_state_updated_callback_t callback);
 
+// Should be called after the kernel command line has been parsed.
+void pmm_checker_init_from_cmdline();
+
+// Synchronously walk the PMM's free list and validate each page.  This is an incredibly expensive
+// operation and should only be used for debugging purposes.
+void pmm_checker_check_all_free_pages();
+
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PMM_H_

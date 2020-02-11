@@ -502,6 +502,9 @@ void platform_early_init(void) {
   const char* serial_mode = gCmdline.GetString("kernel.serial");
   uart_disabled = (serial_mode != NULL && !strcmp(serial_mode, "none"));
 
+  // Initialize the PmmChecker now that the cmdline has been parsed.
+  pmm_checker_init_from_cmdline();
+
   // add the ramdisk to the boot reserve memory list
   paddr_t ramdisk_start_phys = physmap_to_paddr(ramdisk_base);
   paddr_t ramdisk_end_phys = ramdisk_start_phys + ramdisk_size;

@@ -18,6 +18,7 @@
 #include <ktl/move.h>
 #include <vm/fault.h>
 #include <vm/physmap.h>
+#include <vm/pmm_checker.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
@@ -575,6 +576,52 @@ static bool pmm_node_delayed_alloc_clear_early_test() {
 
 static bool pmm_node_delayed_alloc_clear_late_test() {
   return pmm_node_delayed_alloc_clear_test_helper(false);
+}
+
+static bool pmm_checker_test() {
+  BEGIN_TEST;
+
+  PmmChecker checker;
+
+  // Starts off unarmed.
+  EXPECT_FALSE(checker.IsArmed());
+
+  // Borrow a real page from the PMM, ask the checker to validate it.  See that because the checker
+  // is not armed, |ValidatePattern| still returns true even though the page has no pattern.
+  vm_page_t* page;
+  EXPECT_EQ(pmm_alloc_page(0, &page), ZX_OK);
+  page->set_state(VM_PAGE_STATE_FREE);
+  auto p = static_cast<uint8_t*>(paddr_to_physmap(page->paddr()));
+  memset(p, 0, PAGE_SIZE);
+  EXPECT_TRUE(checker.ValidatePattern(page));
+  checker.AssertPattern(page);
+
+  // Arm the checker and see that |ValidatePattern| returns false.
+  checker.Arm();
+  EXPECT_TRUE(checker.IsArmed());
+  EXPECT_FALSE(checker.ValidatePattern(page));
+
+  // Fill with pattern and see that it validates.
+  checker.FillPattern(page);
+  for (int i = 0; i < PAGE_SIZE; ++i) {
+    EXPECT_NE(0, p[i]);
+  }
+  EXPECT_TRUE(checker.ValidatePattern(page));
+
+  // Corrupt the page and see that the corruption is detected.
+  p[PAGE_SIZE - 1] = 1;
+  EXPECT_FALSE(checker.ValidatePattern(page));
+
+  // Disarm the checker and see that it now passes.
+  checker.Disarm();
+  EXPECT_FALSE(checker.IsArmed());
+  EXPECT_TRUE(checker.ValidatePattern(page));
+  checker.AssertPattern(page);
+
+  page->set_state(VM_PAGE_STATE_ALLOC);
+  pmm_free_page(page);
+
+  END_TEST;
 }
 
 static uint32_t test_rand(uint32_t seed) { return (seed = seed * 1664525 + 1013904223); }
@@ -2357,6 +2404,7 @@ VM_UNITTEST(pmm_node_delayed_alloc_swap_early_test)
 VM_UNITTEST(pmm_node_delayed_alloc_swap_late_test)
 VM_UNITTEST(pmm_node_delayed_alloc_clear_early_test)
 VM_UNITTEST(pmm_node_delayed_alloc_clear_late_test)
+VM_UNITTEST(pmm_checker_test)
 UNITTEST_END_TESTCASE(pmm_tests, "pmm", "Physical memory manager tests")
 
 UNITTEST_START_TESTCASE(vm_page_list_tests)

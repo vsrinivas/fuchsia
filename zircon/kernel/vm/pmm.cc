@@ -5,9 +5,12 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "vm/pmm.h"
+
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/cmdline.h>
 #include <lib/console.h>
 #include <platform.h>
 #include <pow2.h>
@@ -27,7 +30,7 @@
 #include <lk/init.h>
 #include <vm/bootalloc.h>
 #include <vm/physmap.h>
-#include <vm/pmm.h>
+#include <vm/pmm_checker.h>
 #include <vm/scanner.h>
 #include <vm/vm.h>
 
@@ -40,10 +43,8 @@
 // The (currently) one and only pmm node
 static PmmNode pmm_node;
 
-#if PMM_ENABLE_FREE_FILL
-static void pmm_enforce_fill(uint level) { pmm_node.EnforceFill(); }
-LK_INIT_HOOK(pmm_fill, &pmm_enforce_fill, LK_INIT_LEVEL_VM)
-#endif
+static void pmm_fill_free_pages(uint level) { pmm_node.FillFreePages(); }
+LK_INIT_HOOK(pmm_fill, &pmm_fill_free_pages, LK_INIT_LEVEL_VM)
 
 vm_page_t* paddr_to_vm_page(paddr_t addr) { return pmm_node.PaddrToPage(addr); }
 
@@ -108,6 +109,33 @@ zx_status_t pmm_init_reclamation(const uint64_t* watermarks, uint8_t watermark_c
   return pmm_node.InitReclamation(watermarks, watermark_count, debounce, callback);
 }
 
+void pmm_checker_init_from_cmdline() {
+  bool enabled = gCmdline.GetBool("kernel.pmm-checker.enable", false);
+  if (enabled) {
+    pmm_node.EnableChecker();
+  }
+}
+
+void pmm_checker_check_all_free_pages() { pmm_node.CheckAllFreePages(); }
+
+static void pmm_checker_enable() {
+  // Enable filling of pages going forward.
+  pmm_node.EnableChecker();
+
+  // From this point on, pages will be filled when they are freed.  However, the free list may still
+  // have a lot of unfilled pages so make a pass over them and fill them all.  Node, |FillFreePages|
+  // will also |Arm| the checker.
+  pmm_node.FillFreePages();
+}
+
+static void pmm_checker_disable() { pmm_node.DisableChecker(); }
+
+static bool pmm_checker_is_enabled() { return pmm_node.Checker()->IsArmed(); }
+
+static void pmm_checker_print_status() {
+  printf("pmm checker %s\n", pmm_checker_is_enabled() ? "enabled" : "disabled");
+}
+
 static void pmm_dump_timer(struct timer* t, zx_time_t now, void*) {
   zx_time_t deadline = zx_time_add_duration(now, ZX_SEC(1));
   timer_set_oneshot(t, deadline, &pmm_dump_timer, nullptr);
@@ -138,6 +166,11 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
           "%s scan [reclaim]       : expensive scan that can optionally attempt to reclaim "
           "memory\n",
           argv[0].str);
+      printf("%s checker status       : prints the status of the pmm checker\n", argv[0].str);
+      printf("%s checker enable       : enables the pmm checker\n", argv[0].str);
+      printf("%s checker disable      : disables the pmm checker\n", argv[0].str);
+      printf("%s checker check        : forces a check of all free pages in the pmm\n",
+             argv[0].str);
     }
     return ZX_ERR_INTERNAL;
   }
@@ -210,6 +243,29 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
       reclaim = true;
     }
     scanner_trigger_scan(reclaim);
+  } else if (!strcmp(argv[1].str, "checker")) {
+    if (argc != 3) {
+      goto usage;
+    }
+    if (!strcmp(argv[2].str, "status")) {
+      pmm_checker_print_status();
+    } else if (!strcmp(argv[2].str, "enable")) {
+      pmm_checker_enable();
+      pmm_checker_print_status();
+    } else if (!strcmp(argv[2].str, "disable")) {
+      pmm_checker_disable();
+      pmm_checker_print_status();
+    } else if (!strcmp(argv[2].str, "check")) {
+      if (!pmm_checker_is_enabled()) {
+        printf("error: pmm checker is not enabled\n");
+        return ZX_ERR_INTERNAL;
+      }
+      printf("checking all free pages...\n");
+      pmm_checker_check_all_free_pages();
+      printf("done\n");
+    } else {
+      goto usage;
+    }
   } else {
     printf("unknown command\n");
     goto usage;

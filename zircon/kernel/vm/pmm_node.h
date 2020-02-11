@@ -12,11 +12,9 @@
 #include <kernel/event.h>
 #include <kernel/lockdep.h>
 #include <vm/pmm.h>
+#include <vm/pmm_checker.h>
 
 #include "pmm_arena.h"
-
-#define PMM_ENABLE_FREE_FILL 0
-#define PMM_FREE_FILL_BYTE 0x42
 
 // per numa node collection of pmm arenas and worker threads
 class PmmNode {
@@ -61,14 +59,30 @@ class PmmNode {
   void DumpMemAvailState() const;
   uint64_t DebugNumPagesTillOomState() const;
 
-#if PMM_ENABLE_FREE_FILL
-  void EnforceFill() TA_NO_THREAD_SAFETY_ANALYSIS;
-#endif
-
   zx_status_t AddArena(const pmm_arena_info_t* info);
 
   // add new pages to the free queue. used when boostrapping a PmmArena
   void AddFreePages(list_node* list);
+
+  // Fill all free pages with a pattern.  See all |PmmChecker|.
+  //
+  // Should be done only once early in boot.
+  void FillFreePages();
+
+  // Synchronously walk the PMM's free list and validate each page.  This is an incredibly expensive
+  // operation and should only be used for debugging purposes.
+  void CheckAllFreePages();
+
+  // Enable the free fill checker.
+  void EnableChecker();
+
+  // Disable the free fill checker.
+  void DisableChecker();
+
+  // Return a pointer to this object's free fill checker.
+  //
+  // For test and diagnostic purposes.
+  PmmChecker* Checker() { return &checker_; }
 
  private:
   void FreePageHelperLocked(vm_page* page) TA_REQ(lock_);
@@ -96,6 +110,8 @@ class PmmNode {
   }
 
   bool InOomStateLocked() TA_REQ(lock_);
+
+  void AllocPageHelperLocked(vm_page_t* page) TA_REQ(lock_);
 
   fbl::Canary<fbl::magic("PNOD")> canary_;
 
@@ -128,14 +144,8 @@ class PmmNode {
   thread_t* request_thread_ = nullptr;
   ktl::atomic<bool> request_thread_live_ = true;
 
-  void AllocPageHelper(vm_page_t* page);
-
-#if PMM_ENABLE_FREE_FILL
-  void FreeFill(vm_page_t* page);
-  void CheckFreeFill(vm_page_t* page);
-
-  bool enforce_fill_ = false;
-#endif
+  bool free_fill_enabled_ TA_GUARDED(lock_) = false;
+  PmmChecker checker_ TA_GUARDED(lock_);
 };
 
 // We don't need to hold the arena lock while executing this, since it is
