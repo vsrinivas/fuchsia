@@ -15,7 +15,6 @@ use {
         hci_emulator::Emulator,
         util::{clone_host_info, clone_remote_device},
     },
-    fuchsia_zircon::{Duration, DurationNum},
     futures::{
         future::{self, BoxFuture},
         FutureExt, TryFutureExt, TryStreamExt,
@@ -23,12 +22,7 @@ use {
     std::collections::HashMap,
 };
 
-use crate::harness::TestHarness;
-
-/// Timeout for updating Bluetooth through fuchsia.bluetooth.control.Control actions
-pub fn control_timeout() -> Duration {
-    10.seconds()
-}
+use crate::{harness::TestHarness, tests::timeout_duration};
 
 #[derive(Default)]
 pub struct ControlState {
@@ -209,7 +203,7 @@ pub async fn activate_fake_host(
                 },
                 Some("Fake Host Added"),
             ),
-            control_timeout(),
+            timeout_duration(),
         )
         .await?;
 
@@ -224,7 +218,7 @@ pub async fn activate_fake_host(
 
     let fut = control.aux().set_active_adapter(&host);
     fut.await?;
-    control.when_satisfied(expectation::active_host_is(host.clone()), control_timeout()).await?;
+    control.when_satisfied(expectation::active_host_is(host.clone()), timeout_duration()).await?;
     Ok((host, hci))
 }
 
@@ -248,7 +242,7 @@ impl ActivatedFakeHost {
 
         // Wait for BT-GAP to unregister the associated fake host
         self.control
-            .when_satisfied(expectation::host_not_present(self.host.clone()), control_timeout())
+            .when_satisfied(expectation::host_not_present(self.host.clone()), timeout_duration())
             .await?;
         Ok(())
     }

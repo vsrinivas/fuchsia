@@ -15,9 +15,11 @@ use {
     },
 };
 
-use crate::harness::control::{
-    activate_fake_host, control_timeout, expectation, ControlHarness, ControlState,
-    FAKE_HCI_ADDRESS,
+use crate::{
+    harness::control::{
+        activate_fake_host, expectation, ControlHarness, ControlState, FAKE_HCI_ADDRESS,
+    },
+    tests::timeout_duration,
 };
 
 async fn test_set_active_host(control: ControlHarness) -> Result<(), Error> {
@@ -38,7 +40,7 @@ async fn test_set_active_host(control: ControlHarness) -> Result<(), Error> {
                 },
                 Some("Both Fake Hosts Added"),
             ),
-            control_timeout(),
+            timeout_duration(),
         )
         .await?;
 
@@ -53,7 +55,7 @@ async fn test_set_active_host(control: ControlHarness) -> Result<(), Error> {
         let fut = control.aux().set_active_adapter(host);
         fut.await?;
         control
-            .when_satisfied(expectation::active_host_is(host.to_string()), control_timeout())
+            .when_satisfied(expectation::active_host_is(host.to_string()), timeout_duration())
             .await?;
     }
 
@@ -61,7 +63,7 @@ async fn test_set_active_host(control: ControlHarness) -> Result<(), Error> {
     fake_hci_1.destroy_and_wait().await?;
 
     for host in fake_hosts {
-        control.when_satisfied(expectation::host_not_present(host), control_timeout()).await?;
+        control.when_satisfied(expectation::host_not_present(host), timeout_duration()).await?;
     }
 
     Ok(())
@@ -92,7 +94,7 @@ async fn test_disconnect(control: ControlHarness) -> Result<(), Error> {
     let state = control
         .when_satisfied(
             expectation::peer_with_address(&peer_address.to_string()),
-            control_timeout(),
+            timeout_duration(),
         )
         .await?;
 
@@ -105,11 +107,11 @@ async fn test_disconnect(control: ControlHarness) -> Result<(), Error> {
     let fut = control.aux().connect(peer);
     fut.await?;
 
-    control.when_satisfied(expectation::peer_connected(peer, true), control_timeout()).await?;
+    control.when_satisfied(expectation::peer_connected(peer, true), timeout_duration()).await?;
     let fut = control.aux().disconnect(peer);
     fut.await?;
 
-    control.when_satisfied(expectation::peer_connected(peer, false), control_timeout()).await?;
+    control.when_satisfied(expectation::peer_connected(peer, false), timeout_duration()).await?;
 
     hci.destroy_and_wait().await?;
     Ok(())

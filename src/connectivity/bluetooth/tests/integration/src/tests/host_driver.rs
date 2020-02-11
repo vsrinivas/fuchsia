@@ -21,12 +21,13 @@ use {
     std::{convert::TryInto, path::PathBuf},
 };
 
-use crate::harness::{
-    emulator::{self, EmulatorHarness},
-    expect::expect_eq,
-    host_driver::{
-        expect_host_state, expect_no_peer, expect_peer, timeout_duration, HostDriverHarness,
+use crate::{
+    harness::{
+        emulator::{self, EmulatorHarness},
+        expect::expect_eq,
+        host_driver::{expect_host_state, expect_no_peer, expect_peer, HostDriverHarness},
     },
+    tests::timeout_duration,
 };
 
 // Tests that creating and destroying a fake HCI device binds and unbinds the bt-host driver.

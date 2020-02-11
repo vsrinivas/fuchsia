@@ -8,11 +8,10 @@ use {
     fuchsia_bluetooth::{
         error::Error as BTError, expectation::asynchronous::ExpectableStateExt, types::Address,
     },
-    fuchsia_zircon::{Duration, DurationNum},
     futures::TryFutureExt,
 };
 
-use crate::harness::low_energy_central::CentralHarness;
+use crate::{harness::low_energy_central::CentralHarness, tests::timeout_duration};
 
 mod central_expectation {
     use crate::harness::low_energy_central::{CentralState, ScanStateChange};
@@ -58,17 +57,13 @@ mod central_expectation {
     }
 }
 
-fn scan_timeout() -> Duration {
-    10.seconds()
-}
-
 async fn start_scan(central: &CentralHarness) -> Result<(), Error> {
     let fut = central
         .aux()
         .proxy()
         .start_scan(None)
         .map_err(|e| e.into())
-        .on_timeout(scan_timeout().after_now(), move || Err(format_err!("Timed out")));
+        .on_timeout(timeout_duration().after_now(), move || Err(format_err!("Timed out")));
     let status = fut.await?;
     if let Some(e) = status.error {
         return Err(BTError::from(*e).into());
@@ -84,7 +79,7 @@ async fn test_enable_scan(central: CentralHarness) -> Result<(), Error> {
     let _ = central
         .when_satisfied(
             central_expectation::scan_enabled().and(central_expectation::device_found("Fake")),
-            scan_timeout(),
+            timeout_duration(),
         )
         .await?;
     Ok(())
@@ -92,9 +87,10 @@ async fn test_enable_scan(central: CentralHarness) -> Result<(), Error> {
 
 async fn test_enable_and_disable_scan(central: CentralHarness) -> Result<(), Error> {
     start_scan(&central).await?;
-    let _ = central.when_satisfied(central_expectation::scan_enabled(), scan_timeout()).await?;
+    let _ = central.when_satisfied(central_expectation::scan_enabled(), timeout_duration()).await?;
     let _ = central.aux().proxy().stop_scan()?;
-    let _ = central.when_satisfied(central_expectation::scan_disabled(), scan_timeout()).await?;
+    let _ =
+        central.when_satisfied(central_expectation::scan_disabled(), timeout_duration()).await?;
     Ok(())
 }
 

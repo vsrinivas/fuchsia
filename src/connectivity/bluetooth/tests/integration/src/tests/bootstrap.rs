@@ -7,20 +7,16 @@ use {
     fidl_fuchsia_bluetooth_sys as sys,
     fuchsia_bluetooth::expectation::{asynchronous::ExpectableStateExt, Predicate as P},
     fuchsia_bluetooth::types::{Address, BondingData, Identity, LeData, OneOrBoth, PeerId},
-    fuchsia_zircon::{Duration, DurationNum},
     std::collections::HashSet,
 };
 
-use crate::harness::{
-    bootstrap::BootstrapHarness,
-    control::{ControlHarness, ControlState},
+use crate::{
+    harness::{
+        bootstrap::BootstrapHarness,
+        control::{ControlHarness, ControlState},
+    },
+    tests::timeout_duration,
 };
-
-const TIMEOUT_SECONDS: i64 = 60;
-
-fn bootstrap_timeout() -> Duration {
-    TIMEOUT_SECONDS.seconds()
-}
 
 /// An example identity for an Hci Emulator backed host
 fn example_emulator_identity() -> Identity {
@@ -86,7 +82,7 @@ async fn test_add_and_commit_identities(
         move |control| expected_devices == control.peers.keys().cloned().collect(),
         Some("known device identifiers == expected device identifiers"),
     );
-    control.when_satisfied(pred, bootstrap_timeout()).await?;
+    control.when_satisfied(pred, timeout_duration()).await?;
 
     Ok(())
 }

@@ -18,7 +18,6 @@ use {
         host,
         types::{HostInfo, Peer, PeerId},
     },
-    fuchsia_zircon::{Duration, DurationNum},
     futures::{
         future::{self, BoxFuture},
         FutureExt, TryFutureExt,
@@ -31,16 +30,15 @@ use {
     },
 };
 
-use crate::harness::{
-    emulator::{watch_controller_parameters, EmulatorHarness, EmulatorHarnessAux, EmulatorState},
-    TestHarness,
+use crate::{
+    harness::{
+        emulator::{
+            watch_controller_parameters, EmulatorHarness, EmulatorHarnessAux, EmulatorState,
+        },
+        TestHarness,
+    },
+    tests::timeout_duration,
 };
-
-const TIMEOUT_SECONDS: i64 = 10; // in seconds
-
-pub fn timeout_duration() -> Duration {
-    TIMEOUT_SECONDS.seconds()
-}
 
 // Returns a Future that resolves when the state of any RemoteDevice matches `target`.
 pub async fn expect_peer(
