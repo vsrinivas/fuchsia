@@ -29,6 +29,7 @@ test_package("a11y_lib_tests") {
     "gesture_manager/recognizers/tests",
     "gesture_manager/tests",
     "magnifier/tests",
+    "screen_reader/focus/tests",
     "screen_reader/tests",
     "semantics/tests",
     "tts/tests",
@@ -85,6 +86,10 @@ test_package("a11y_lib_tests") {
     },
     {
       name = "screen_reader_tests"
+      environments = basic_envs
+    },
+    {
+      name = "focus_manager_tests"
       environments = basic_envs
     },
     {

@@ -15,6 +15,12 @@ namespace a11y {
 // Utility function to extract Koid from a View Ref.
 zx_koid_t GetKoid(const fuchsia::ui::views::ViewRef& view_ref);
 
+// Utility function to extract koid from objects zx_handle_t.
+zx_koid_t GetHandleKoid(const zx_handle_t& handle);
+
+// Utility function to Clone a ViewRef.
+fuchsia::ui::views::ViewRef Clone(const fuchsia::ui::views::ViewRef& view_ref);
+
 // Multiply two 3x3 Matrix represented in Row Major form.
 std::array<float, 9> Multiply3x3MatrixRowMajor(std::array<float, 9> left,
                                                std::array<float, 9> right);

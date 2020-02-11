@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/focus_manager_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

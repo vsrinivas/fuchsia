@@ -1,0 +1,27 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":focus_manager_tests" ]
+}
+
+executable("focus_manager_tests") {
+  output_name = "focus_manager_tests"
+
+  testonly = true
+  sources = [ "a11y_focus_manager_tests.cc" ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/syslog/cpp",
+    "//src/ui/a11y/lib/screen_reader/focus",
+    "//src/ui/a11y/lib/screen_reader/focus/tests/mocks",
+  ]
+}

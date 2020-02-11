@@ -4,10 +4,20 @@
 
 #include "src/ui/a11y/lib/util/util.h"
 
+#include "src/lib/syslog/cpp/logger.h"
+
 namespace a11y {
 
 zx_koid_t GetKoid(const fuchsia::ui::views::ViewRef& view_ref) {
-  return fsl::GetKoid(view_ref.reference.get());
+  return GetHandleKoid(view_ref.reference.get());
+}
+
+zx_koid_t GetHandleKoid(const zx_handle_t& handle) { return fsl::GetKoid(handle); }
+
+fuchsia::ui::views::ViewRef Clone(const fuchsia::ui::views::ViewRef& view_ref) {
+  fuchsia::ui::views::ViewRef clone;
+  FX_CHECK(fidl::Clone(view_ref, &clone) == ZX_OK);
+  return clone;
 }
 
 std::array<float, 9> Multiply3x3MatrixRowMajor(std::array<float, 9> left,

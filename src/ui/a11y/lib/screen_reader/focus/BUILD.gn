@@ -1,0 +1,20 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("focus") {
+  sources = [
+    "a11y_focus_manager.cc",
+    "a11y_focus_manager.h",
+  ]
+
+  public_deps = [ "//src/ui/a11y/lib/util" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
+    "//src/lib/syslog/cpp",
+  ]
+}
