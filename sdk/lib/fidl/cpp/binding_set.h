@@ -137,6 +137,19 @@ class BindingSet final {
     bindings_.clear();
   }
 
+  // Removes all the bindings from the set using the provided epitaph.
+  //
+  // Closes all the channels associated with this |BindingSet| after sending
+  // an epitaph. As with CloseAll(void) above, bindings are destroyed after they
+  // are removed from the bindings set.
+  void CloseAll(zx_status_t epitaph_value) {
+    auto bindings_local = std::move(bindings_);
+    bindings_.clear();
+    for (const auto& binding : bindings_local) {
+      binding->Close(epitaph_value);
+    }
+  }
+
   // The number of bindings in this |BindingSet|.
   size_t size() const { return bindings_.size(); }
 

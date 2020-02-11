@@ -222,6 +222,32 @@ TEST(BindingSet, BindingDestroyedAfterCloseAll) {
   EXPECT_TRUE(binding_set.bindings().empty());
 }
 
+TEST(BindingSet, EpitaphSentWithCloseAll) {
+  fidl::test::AsyncLoopForTest loop;
+
+  BindingSet<fidl::test::frobinator::Frobinator, std::unique_ptr<test::FrobinatorImpl>> binding_set;
+
+  // Attach an error handler.
+  fidl::test::frobinator::FrobinatorPtr ptr;
+  bool client_error_handler_invoked = false;
+  zx_status_t client_error_handler_status = ZX_OK;
+  ptr.set_error_handler([&](zx_status_t status) {
+    client_error_handler_status = status;
+    client_error_handler_invoked = true;
+  });
+
+  // Add the binding.
+  binding_set.AddBinding(std::make_unique<test::FrobinatorImpl>(), ptr.NewRequest());
+  EXPECT_EQ(1u, binding_set.size());
+
+  constexpr auto kEpitaphValue = ZX_ERR_ADDRESS_UNREACHABLE;
+  binding_set.CloseAll(kEpitaphValue);
+  loop.RunUntilIdle();
+  EXPECT_TRUE(binding_set.bindings().empty());
+  ASSERT_TRUE(client_error_handler_invoked);
+  EXPECT_EQ(client_error_handler_status, kEpitaphValue);
+}
+
 TEST(BindingSet, RemoveBindingDeletesTheBinding) {
   fidl::test::AsyncLoopForTest loop;
 
