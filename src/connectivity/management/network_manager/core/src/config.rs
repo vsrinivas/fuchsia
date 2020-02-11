@@ -4,11 +4,13 @@
 
 use {
     crate::{address::LifIpAddr, error, lifmgr},
+    eui48::MacAddress,
     serde_derive::{Deserialize, Serialize},
     serde_json::Value,
     std::collections::HashSet,
     std::fs::File,
     std::io::Read,
+    std::net,
     std::path::{Path, PathBuf},
     valico::json_schema::{self, schema},
 };
@@ -168,6 +170,8 @@ pub struct Subinterface {
 #[serde(deny_unknown_fields)]
 pub struct IpAddressConfig {
     pub addresses: Vec<IpAddress>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dhcp_server: Option<DhcpServer>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
@@ -178,7 +182,7 @@ pub struct IpAddress {
     pub dhcp_client: Option<bool>,
     // If an IP address is provided, it must be paired with a prefix length.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ip: Option<std::net::IpAddr>,
+    pub ip: Option<net::IpAddr>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prefix_length: Option<u8>,
 }
@@ -235,37 +239,95 @@ pub struct Acls {}
 #[serde(deny_unknown_fields)]
 pub struct Services {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub dhcp_server: Option<DhcpServer>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub ip_forwarding: Option<IpForwarding>,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct DhcpServer {
     pub enabled: bool,
     pub dhcp_pool: DhcpPool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub static_ip_allocations: Option<Vec<StaticIpAllocations>>,
-    pub interfaces: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+impl DhcpServer {
+    fn validate(&self, config_path: &str) -> error::Result<()> {
+        self.dhcp_pool.validate(config_path)?;
+        match &self.static_ip_allocations {
+            None => Ok(()),
+            Some(allocations) => {
+                for allocation in allocations.iter() {
+                    allocation.validate(config_path)?
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn validate_addresses(&self, addr: &LifIpAddr) -> bool {
+        let valid_pool = addr.is_in_same_subnet(&net::IpAddr::V4(self.dhcp_pool.start))
+            && addr.is_in_same_subnet(&net::IpAddr::V4(self.dhcp_pool.end));
+        self.static_ip_allocations.as_ref().map_or(valid_pool, |x| {
+            x.iter()
+                .fold(valid_pool, |r, a| r & addr.is_in_same_subnet(&net::IpAddr::V4(a.ip_address)))
+        })
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct DhcpPool {
-    pub start: String,
-    pub end: String,
-    pub lease_time: String,
+    pub start: net::Ipv4Addr,
+    pub end: net::Ipv4Addr,
+    pub lease_time: String, // TODO(dpradilla): add support and validation for lease_time.
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+impl DhcpPool {
+    /// Validate a [`config::dhcp_pool`] configuration.
+    fn validate(&self, config_path: &str) -> error::Result<()> {
+        if !self.start.is_private() || !self.end.is_private() {
+            return Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+                path: config_path.to_string(),
+                error: "DhcpPool start and end must be private addresses.".to_string(),
+            }));
+        }
+        if u32::from(self.start) > u32::from(self.end) {
+            return Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+                path: config_path.to_string(),
+                error: "DhcpPool start and end is not a valid range.".to_string(),
+            }));
+        }
+        Ok(())
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct StaticIpAllocations {
     pub device_name: String,
-    pub mac_address: String,
-    pub ip_address: String,
+    pub mac_address: MacAddress,
+    pub ip_address: net::Ipv4Addr,
 }
 
+impl StaticIpAllocations {
+    /// Validate a [`config::StaticIpAllocations`] configuration.
+    fn validate(&self, config_path: &str) -> error::Result<()> {
+        if !self.ip_address.is_private() {
+            return Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+                path: config_path.to_string(),
+                error: "must be private addresses.".to_string(),
+            }));
+        }
+        if !self.mac_address.is_unicast() || self.mac_address.is_nil() {
+            return Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+                path: config_path.to_string(),
+                error: "not a valid MAC address".to_string(),
+            }));
+        }
+        Ok(())
+    }
+}
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct IpForwarding {
@@ -472,20 +534,18 @@ impl Config {
     fn validate_interface_config(&self, intf: &Interface) -> error::Result<()> {
         // TODO(cgibson): Try using serde's 'externally tagged' enum representation to remove
         // this validation step: https://serde.rs/enum-representations.html
-        if intf.subinterfaces.is_some()
-            && intf.switched_vlan.is_none()
-            && intf.routed_vlan.is_none()
+        match (intf.subinterfaces.as_ref(), intf.switched_vlan.as_ref(), intf.routed_vlan.as_ref())
         {
-            return Ok(());
+            (Some(_), None, None) | (None, Some(_), None) | (None, None, Some(_)) => Ok(()),
+            _ => Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+                path: String::from(self.startup_path().to_string_lossy()),
+                error: concat!(
+                    "Interface must be exactly one of either: ",
+                    "'subinterfaces', 'routed_vlan', or 'switched_vlan'",
+                )
+                .to_string(),
+            })),
         }
-        Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
-            path: String::from(self.startup_path().to_string_lossy()),
-            error: concat!(
-                "Interface must be exactly one of either: ",
-                "'subinterfaces', 'routed_vlan', or 'switched_vlan'"
-            )
-            .to_string(),
-        }))
     }
 
     /// Validates a [`config::InterfaceType`].
@@ -493,15 +553,34 @@ impl Config {
     /// If an Interface's type is [`InterfaceType::IfUplink`], then the Interface must have a
     /// [`Interface::Subinterfaces`] definition.
     fn validate_interface_types(&self, intf: &Interface) -> error::Result<()> {
-        match intf.config.interface_type {
+        match &intf.config.interface_type {
             InterfaceType::IfUplink => {
                 if intf.subinterfaces.is_none() {
                     return Err(error::NetworkManager::CONFIG(
                         error::Config::FailedToValidateConfig {
                             path: String::from(self.startup_path().to_string_lossy()),
-                            error:
-                                "Interface type is 'IF_UPLINK' but does not define a 'subinterface'"
-                                    .to_string(),
+                            error: concat!(
+                                "Interface type is 'IF_UPLINK' ",
+                                "but does not define a 'subinterface'"
+                            )
+                            .to_string(),
+                        },
+                    ));
+                }
+                if let Some(subifs) = intf.subinterfaces.as_ref() {
+                    self.validate_subinterfaces(subifs)?;
+                }
+            }
+            InterfaceType::IfEthernet => {
+                if intf.subinterfaces.is_none() && intf.switched_vlan.is_none() {
+                    return Err(error::NetworkManager::CONFIG(
+                        error::Config::FailedToValidateConfig {
+                            path: String::from(self.startup_path().to_string_lossy()),
+                            error: concat!(
+                                "Interface type is 'IF_ETHERNET' ",
+                                "but does not define a 'subinterface' nor a 'switched_vlan'"
+                            )
+                            .to_string(),
                         },
                     ));
                 }
@@ -522,9 +601,30 @@ impl Config {
                         },
                     ));
                 }
+                // TODO(dpradilla): Fix Router vlan validationi. It is incomplete. Is should so similar
+                // validation to validate_subinterfaces.
+            }
+            InterfaceType::IfLoopback => {
+                if intf.subinterfaces.is_none() {
+                    return Err(error::NetworkManager::CONFIG(
+                        error::Config::FailedToValidateConfig {
+                            path: String::from(self.startup_path().to_string_lossy()),
+                            error: concat!(
+                                "Interface type is 'IF_LOOPBACK' ",
+                                "but does not define a 'subinterface'"
+                            )
+                            .to_string(),
+                        },
+                    ));
+                }
             }
             // Add additional type validation here.
-            _ => return Ok(()),
+            t => {
+                return Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+                    path: String::from(self.startup_path().to_string_lossy()),
+                    error: format!("Interface type {:?} not supported", t),
+                }))
+            }
         }
         Ok(())
     }
@@ -548,8 +648,32 @@ impl Config {
     fn validate_subinterfaces(&self, subinterfaces: &[Subinterface]) -> error::Result<()> {
         for subif in subinterfaces.iter() {
             if let Some(v4addr) = &subif.ipv4 {
+                v4addr
+                    .dhcp_server
+                    .as_ref()
+                    .map_or(Ok(()), |x| x.validate(&self.startup_path().to_string_lossy()))?;
+                let mut pool_in_range = v4addr.dhcp_server.as_ref().map_or(true, |d| !d.enabled);
                 for a in v4addr.addresses.iter() {
                     self.validate_ip_address(&a)?;
+                    if let Some(dhcp_server) = &v4addr.dhcp_server {
+                        if a.dhcp_client.unwrap_or(false) {
+                            return Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+                            path: String::from(self.startup_path().to_string_lossy()),
+                            error: "configuring dhcp client and server on same interface is invalid".to_string(),
+                            }));
+                        }
+                        let addr =
+                            LifIpAddr { address: a.ip.unwrap(), prefix: a.prefix_length.unwrap() };
+                        pool_in_range |= dhcp_server.validate_addresses(&addr);
+                    }
+                }
+                if !pool_in_range {
+                    return Err(error::NetworkManager::CONFIG(
+                        error::Config::FailedToValidateConfig {
+                            path: String::from(self.startup_path().to_string_lossy()),
+                            error: "DhcpPool is not related to any IP address".to_string(),
+                        },
+                    ));
                 }
             }
             if let Some(v6addr) = &subif.ipv6 {
@@ -651,7 +775,7 @@ impl Config {
             .unwrap_or(false)
     }
 
-    /// Returns the name of the interface.
+    /// Returns name of the interface at topo_path.
     pub fn get_interface_name(&self, topo_path: &str) -> error::Result<String> {
         if let Some(intf) = self.get_interface_by_device_id(topo_path) {
             return Ok(intf.config.name.clone());
@@ -1073,6 +1197,7 @@ mod tests {
                         ip: None,
                         prefix_length: None,
                     }],
+                    dhcp_server: None,
                 }),
                 ipv6: None,
             }]),
@@ -1106,6 +1231,7 @@ mod tests {
                                         ip: Some("192.0.2.1".parse().unwrap()),
                                         prefix_length: Some(24),
                                     }],
+                                    dhcp_server: None,
                                 }),
                                 ipv6: None,
                             }]),
@@ -1131,6 +1257,7 @@ mod tests {
                                         ip: Some("192.0.2.1".parse().unwrap()),
                                         prefix_length: Some(24),
                                     }],
+                                    dhcp_server: None,
                                 }),
                                 ipv6: None,
                             }]),
@@ -1156,6 +1283,15 @@ mod tests {
                                         ip: Some("192.168.0.1".parse().unwrap()),
                                         prefix_length: Some(32),
                                     }],
+                                    dhcp_server: Some(DhcpServer {
+                                        enabled: true,
+                                        dhcp_pool: DhcpPool {
+                                            lease_time: "1d".to_string(),
+                                            start: "192.168.0.100".parse().unwrap(),
+                                            end: "192.168.0.254".parse().unwrap(),
+                                        },
+                                        static_ip_allocations: None,
+                                    }),
                                 }),
                                 ipv6: None,
                             }),
@@ -1200,6 +1336,7 @@ mod tests {
                                         ip: Some("192.0.2.1".parse().unwrap()),
                                         prefix_length: Some(24),
                                     }],
+                                    dhcp_server: None,
                                 }),
                                 ipv6: None,
                             }]),
@@ -1225,6 +1362,7 @@ mod tests {
                                         ip: None,
                                         prefix_length: None,
                                     }],
+                                    dhcp_server: None,
                                 }),
                                 ipv6: None,
                             }]),
@@ -1250,6 +1388,7 @@ mod tests {
                                         ip: Some("192.0.2.1".parse().unwrap()),
                                         prefix_length: Some(24),
                                     }],
+                                    dhcp_server: None,
                                 }),
                                 ipv6: None,
                             }]),
@@ -1275,6 +1414,7 @@ mod tests {
                                         ip: Some("192.0.2.1".parse().unwrap()),
                                         prefix_length: Some(24),
                                     }],
+                                    dhcp_server: None,
                                 }),
                                 ipv6: None,
                             }]),
@@ -1300,6 +1440,7 @@ mod tests {
                                         ip: Some("192.0.2.1".parse().unwrap()),
                                         prefix_length: Some(24),
                                     }],
+                                    dhcp_server: None,
                                 }),
                                 ipv6: None,
                             }]),
@@ -1320,11 +1461,42 @@ mod tests {
                             subinterfaces: None,
                         },
                     },
+                    Interfaces {
+                        interface: Interface {
+                            config: InterfaceConfig {
+                                name: "test_lan_has_dhcp_server".to_string(),
+                                interface_type: InterfaceType::IfEthernet,
+                            },
+                            oper_state: None,
+                            device_id: Some("test_lan_has_dhcp_server_id".to_string()),
+                            ethernet: None,
+                            tcp_offload: None,
+                            routed_vlan: None,
+                            switched_vlan: None,
+                            subinterfaces: Some(vec![Subinterface {
+                                admin_state: Some(AdminState::Up),
+                                ipv4: Some(IpAddressConfig {
+                                    addresses: vec![IpAddress {
+                                        dhcp_client: None,
+                                        ip: Some("192.0.2.1".parse().unwrap()),
+                                        prefix_length: Some(24),
+                                    }],
+                                    dhcp_server: Some(DhcpServer {
+                                        enabled: true,
+                                        dhcp_pool: DhcpPool {
+                                            start: "192.0.2.100".parse().unwrap(),
+                                            end: "192.0.2.254".parse().unwrap(),
+                                            lease_time: "1d".to_string(),
+                                        },
+                                        static_ip_allocations: None,
+                                    }),
+                                }),
+                                ipv6: None,
+                            }]),
+                        },
+                    },
                 ]),
-                services: Some(Services {
-                    dhcp_server: None,
-                    ip_forwarding: Some(IpForwarding { enabled: true }),
-                }),
+                services: Some(Services { ip_forwarding: Some(IpForwarding { enabled: true }) }),
             },
         }
     }
@@ -1422,9 +1594,24 @@ mod tests {
                             {
                               "dhcp_client": false,
                               "ip": "1.1.1.1",
-                              "prefix_length": 32
+                              "prefix_length": 24
                             }
-                          ]
+                          ],
+                          "dhcp_server": {
+                            "properties": {
+                              "enabled": true,
+                              "lease_time": "1d",
+                              "dhcp_pool": {
+                                "start": "1.1.1.100",
+                                "end": "1.1.1.254"
+                              },
+                              "static_ip_allocations": {
+                                "name": "device1",
+                                "ip_address": "1.1.1.200",
+                                "mac_address": "00:01:02:03:04:05"
+                              }
+                            }
+                          }
                         }
                       }
                   ],
@@ -1437,24 +1624,38 @@ mod tests {
         let expected_config: Value;
         match serde_json::from_str(&valid_config) {
             Ok(j) => expected_config = j,
-            Err(e) => panic!("Got unexpected error result: {}", e),
+            Err(e) => panic!("Want: {:?} Got unexpected error result: {}", valid_config, e),
         }
 
         // Make sure that the configuration actually validates.
         match test_config.validate_with_schema(&expected_config).await {
             Ok(_) => (),
-            Err(e) => panic!("Got unexpected error result: {}", e),
+            Err(e) => panic!("Want {:?}, got unexpected error result: {}", valid_config, e),
         }
     }
 
-    #[test]
-    fn verify_toulouse_factory_config() {
+    #[fasync::run_singlethreaded(test)]
+    async fn test_verify_toulouse_factory_config() {
         let config_path = "/pkg/data/toulouse_factory_config.json";
         let mut contents = String::new();
         let mut f = File::open(config_path).unwrap();
         f.read_to_string(&mut contents).unwrap();
-        let _deserialized_config: DeviceConfig = serde_json::from_str(&contents)
+        let deserialized_config = serde_json::from_str(&contents)
             .expect(format!("Failed to deserialized {}", config_path).as_ref());
+        let mut test_config =
+            create_test_config("/doesntmatter", config_path, "/pkg/data/device_schema.json");
+        // Make sure that the configuration actually validates.
+        match test_config.validate_with_schema(&deserialized_config).await {
+            Ok(()) => {
+                test_config.device_config =
+                    Some(serde_json::from_value(deserialized_config).unwrap())
+            }
+            Err(e) => panic!("Got unexpected error result: {}", e),
+        }
+        match test_config.final_validation().await {
+            Ok(()) => (),
+            Err(e) => panic!("Got unexpected error result: {}", e),
+        }
     }
 
     #[test]
@@ -1560,6 +1761,7 @@ mod tests {
                     ip: None,
                     prefix_length: None,
                 }],
+                dhcp_server: None,
             }),
             ipv6: None,
         }];
@@ -1568,6 +1770,31 @@ mod tests {
             Err(e) => panic!("Got unexpected error result: {}", e),
         }
 
+        // Should fail because `dhcp_client` is set to true and has dhcp server configured.
+        let test_subif = vec![Subinterface {
+            admin_state: Some(AdminState::Up),
+            ipv4: Some(IpAddressConfig {
+                addresses: vec![IpAddress {
+                    dhcp_client: Some(true),
+                    ip: None,
+                    prefix_length: None,
+                }],
+                dhcp_server: Some(DhcpServer {
+                    dhcp_pool: DhcpPool {
+                        start: "192.168.2.100".parse().unwrap(),
+                        end: "192.168.2.254".parse().unwrap(),
+                        lease_time: "1d".to_string(),
+                    },
+                    enabled: true,
+                    static_ip_allocations: None,
+                }),
+            }),
+            ipv6: None,
+        }];
+        match test_config.validate_subinterfaces(&test_subif) {
+            Ok(_) => panic!("should be invalid"),
+            Err(_) => (),
+        }
         // Should not fail with dhcp_client set to false, ip and prefix set to valid values.
         let test_subif = vec![Subinterface {
             admin_state: Some(AdminState::Up),
@@ -1577,6 +1804,7 @@ mod tests {
                     ip: Some("127.0.0.1".parse().unwrap()),
                     prefix_length: Some(32),
                 }],
+                dhcp_server: None,
             }),
             ipv6: None,
         }];
@@ -1594,6 +1822,7 @@ mod tests {
                     ip: None,
                     prefix_length: None,
                 }],
+                dhcp_server: None,
             }),
             ipv6: None,
         }];
@@ -1612,6 +1841,7 @@ mod tests {
                     ip: Some("127.0.0.1".parse().unwrap()),
                     prefix_length: Some(32),
                 }],
+                dhcp_server: None,
             }),
             ipv6: None,
         }];
@@ -1620,11 +1850,66 @@ mod tests {
             Err(e) => panic!("Got unexpected error result: {}", e),
         }
 
+        // Should not fail with dhcp client set to None, ip, and prefx set to valid values,
+        // and dhcp server.
+        let test_subif = vec![Subinterface {
+            admin_state: Some(AdminState::Up),
+            ipv4: Some(IpAddressConfig {
+                addresses: vec![IpAddress {
+                    dhcp_client: None,
+                    ip: Some("192.168.2.1".parse().unwrap()),
+                    prefix_length: Some(24),
+                }],
+                dhcp_server: Some(DhcpServer {
+                    dhcp_pool: DhcpPool {
+                        start: "192.168.2.100".parse().unwrap(),
+                        end: "192.168.2.254".parse().unwrap(),
+                        lease_time: "1d".to_string(),
+                    },
+                    enabled: true,
+                    static_ip_allocations: None,
+                }),
+            }),
+            ipv6: None,
+        }];
+        match test_config.validate_subinterfaces(&test_subif) {
+            Ok(_) => (),
+            Err(e) => panic!("Got unexpected error result: {}", e),
+        }
+
+        // Should fail with dhcp client set to None, ip, and prefx set to valid values,
+        // but dhcp server pool misconfiguredr.
+        let test_subif = vec![Subinterface {
+            admin_state: Some(AdminState::Up),
+            ipv4: Some(IpAddressConfig {
+                addresses: vec![IpAddress {
+                    dhcp_client: None,
+                    ip: Some("192.168.2.1".parse().unwrap()),
+                    prefix_length: Some(30),
+                }],
+                dhcp_server: Some(DhcpServer {
+                    dhcp_pool: DhcpPool {
+                        start: "192.168.2.100".parse().unwrap(),
+                        end: "192.168.2.254".parse().unwrap(),
+                        lease_time: "1d".to_string(),
+                    },
+                    enabled: true,
+                    static_ip_allocations: None,
+                }),
+            }),
+            ipv6: None,
+        }];
+        match test_config.validate_subinterfaces(&test_subif) {
+            Err(CONFIG(error::Config::FailedToValidateConfig { path: _, error: _ })) => (),
+            Err(e) => panic!("Got unexpected error result: {}", e),
+            Ok(_) => panic!("Got unexpected 'Ok' result!"),
+        }
         // Should fail because both dhcp_client and ip/prefix_len are None.
         let test_subif = vec![Subinterface {
             admin_state: Some(AdminState::Up),
             ipv4: Some(IpAddressConfig {
                 addresses: vec![IpAddress { dhcp_client: None, ip: None, prefix_length: None }],
+                dhcp_server: None,
             }),
             ipv6: None,
         }];
@@ -1636,11 +1921,104 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    async fn test_validate_dhcp_pool() {
+        for (test_case, pool, want_ok) in &[
+            (
+                "valid pool",
+                DhcpPool {
+                    start: "192.168.2.10".parse().unwrap(),
+                    end: "192.168.2.254".parse().unwrap(),
+                    lease_time: "1".to_string(),
+                },
+                true,
+            ),
+            (
+                "only one",
+                DhcpPool {
+                    start: "192.168.2.10".parse().unwrap(),
+                    end: "192.168.2.10".parse().unwrap(),
+                    lease_time: "1".to_string(),
+                },
+                true,
+            ),
+            (
+                "two",
+                DhcpPool {
+                    start: "192.168.2.10".parse().unwrap(),
+                    end: "192.168.2.11".parse().unwrap(),
+                    lease_time: "1".to_string(),
+                },
+                true,
+            ),
+            (
+                "invalid pool",
+                DhcpPool {
+                    start: "192.168.2.254".parse().unwrap(),
+                    end: "192.168.2.10".parse().unwrap(),
+                    lease_time: "1".to_string(),
+                },
+                false,
+            ),
+            (
+                "another invalid pool",
+                DhcpPool {
+                    start: "192.168.51.10".parse().unwrap(),
+                    end: "192.168.0.254".parse().unwrap(),
+                    lease_time: "1".to_string(),
+                },
+                false,
+            ),
+            (
+                "valid large pool",
+                DhcpPool {
+                    start: "192.168.2.10".parse().unwrap(),
+                    end: "192.168.4.254".parse().unwrap(),
+                    lease_time: "1".to_string(),
+                },
+                true,
+            ),
+            (
+                "invalid large pool",
+                DhcpPool {
+                    start: "192.168.4.254".parse().unwrap(),
+                    end: "192.168.2.10".parse().unwrap(),
+                    lease_time: "1".to_string(),
+                },
+                false,
+            ),
+            (
+                "non private range should invalid",
+                DhcpPool {
+                    start: "12.168.4.100".parse().unwrap(),
+                    end: "12.168.4.200".parse().unwrap(),
+                    lease_time: "1".to_string(),
+                },
+                false,
+            ),
+            (
+                "localhost range",
+                DhcpPool {
+                    start: "127.0.0.1".parse().unwrap(),
+                    end: "127.0.0.2".parse().unwrap(),
+                    lease_time: "1".to_string(),
+                },
+                false,
+            ),
+        ] {
+            let got = pool.validate("config_file.path");
+            assert_eq!(&got.is_ok(), want_ok, "test case {} failed", test_case);
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn test_final_validation() {
         let mut test_config =
             create_test_config("/user", "/factory", "/pkg/data/device_schema.json");
 
-        let valid_config = r#"{
+        for (test_name, config, want) in &[
+            (
+                "valid_config",
+                r#"{
           "device": {
             "interfaces": [
               {
@@ -1664,20 +2042,57 @@ mod tests {
                   ],
                   "device_id": "my_test_device"
                 }
+              },
+              {
+                "interface": {
+                  "config": {
+                    "name": "lan",
+                    "type": "IF_ETHERNET"
+                  },
+                  "subinterfaces": [
+                    {
+                      "ipv4": {
+                        "addresses": [
+                          {
+                            "dhcp_client": false,
+                            "ip": "192.168.1.1",
+                            "prefix_length": 24
+                          }
+                        ],
+                        "dhcp_server": {
+                           "enabled": true,
+                           "dhcp_pool": {
+                             "start": "192.168.1.100",
+                             "end": "192.168.1.254",
+                             "lease_time": "1d"
+                           },
+                           "static_ip_allocations": [
+                           {
+                             "device_name": "device1",
+                             "ip_address": "192.168.1.200",
+                             "mac_address": "00:01:02:03:04:05"
+                           },
+                           {
+                             "device_name": "device2",
+                             "ip_address": "192.168.1.201",
+                             "mac_address": "00:01:02:03:04:06"
+                           }
+                           ]
+                        }
+                      }
+                    }
+                  ],
+                  "device_id": "my_test_device"
+                }
               }
             ]
           }
-        }"#;
-        match serde_json::from_str(&valid_config) {
-            Ok(j) => test_config.device_config = j,
-            Err(e) => panic!("Got unexpected error result: {}", e),
-        }
-        match test_config.final_validation().await {
-            Ok(()) => (),
-            Err(e) => panic!("Got unexpected error result: {:?}", e),
-        }
-
-        let invalid_config = r#"{
+        }"#,
+                Ok(()),
+            ),
+            (
+                "invalid config",
+                r#"{
           "device": {
             "interfaces": [
               {
@@ -1729,15 +2144,170 @@ mod tests {
               }
             ]
           }
-        }"#;
-        match serde_json::from_str(&invalid_config) {
-            Ok(j) => test_config.device_config = j,
-            Err(e) => panic!("Got unexpected error result: {}", e),
-        }
-        match test_config.final_validation().await {
-            Ok(_) => panic!("Got unexpected 'ok' result"),
-            Err(CONFIG(error::Config::FailedToValidateConfig { path: _, error: _ })) => (),
-            Err(e) => panic!("Got unexpected error result: {}", e),
+        }"#,
+                Err(CONFIG(error::Config::FailedToValidateConfig {
+                    path: "".to_string(),
+                    error: "Interface must be exactly one of either: \'subinterfaces\', \'routed_vlan\', or \'switched_vlan\'".to_string(),
+                })),
+            ),
+            (
+                "bad dhcp pool",
+                r#"{
+          "device": {
+            "interfaces": [
+              {
+                "interface": {
+                  "config": {
+                    "name": "lan",
+                    "type": "IF_ETHERNET"
+                  },
+                  "subinterfaces": [
+                    {
+                      "ipv4": {
+                        "addresses": [
+                          {
+                            "dhcp_client": false,
+                            "ip": "192.168.1.1",
+                            "prefix_length": 24
+                          }
+                        ],
+                        "dhcp_server": {
+                           "enabled": true,
+                           "dhcp_pool": {
+                             "start": "192.168.1.100",
+                             "end": "192.168.2.254",
+                             "lease_time": "1d"
+                           },
+                           "static_ip_allocations": [{
+                             "device_name": "device1",
+                             "ip_address": "192.168.1.200",
+                             "mac_address": "00:01:02:03:04:05"
+                           }]
+                        }
+                      }
+                    }
+                  ],
+                  "device_id": "my_test_device"
+                }
+              }
+            ]
+          }
+        }"#,
+                Err(CONFIG(error::Config::FailedToValidateConfig {
+                    path: "".to_string(),
+                    error: "DhcpPool is not related to any IP address".to_string()
+                })),
+            ),
+            (
+                "bad dhcp allocation ip address",
+                r#"{
+          "device": {
+            "interfaces": [
+              {
+                "interface": {
+                  "config": {
+                    "name": "lan",
+                    "type": "IF_ETHERNET"
+                  },
+                  "subinterfaces": [
+                    {
+                      "ipv4": {
+                        "addresses": [
+                          {
+                            "dhcp_client": false,
+                            "ip": "192.168.1.1",
+                            "prefix_length": 24
+                          }
+                        ],
+                        "dhcp_server": {
+                           "enabled": true,
+                           "dhcp_pool": {
+                             "start": "192.168.1.100",
+                             "end": "192.168.1.254",
+                             "lease_time": "1d"
+                           },
+                           "static_ip_allocations": [
+                           {
+                             "device_name": "device1",
+                             "ip_address": "192.168.1.250",
+                             "mac_address": "00:01:02:03:04:05"
+                           },
+                           {
+                             "device_name": "device2",
+                             "ip_address": "192.168.2.251",
+                             "mac_address": "00:01:02:03:04:06"
+                           }
+                           ]
+                        }
+                      }
+                    }
+                  ],
+                  "device_id": "my_test_device"
+                }
+              }
+            ]
+          }
+        }"#,
+                Err(CONFIG(error::Config::FailedToValidateConfig {
+                    path: "".to_string(),
+                    error: "DhcpPool is not related to any IP address".to_string()
+                })),
+            ),
+            (
+                "bad dhcp allocation mac address",
+                r#"{
+          "device": {
+            "interfaces": [
+              {
+                "interface": {
+                  "config": {
+                    "name": "lan",
+                    "type": "IF_ETHERNET"
+                  },
+                  "subinterfaces": [
+                    {
+                      "ipv4": {
+                        "addresses": [
+                          {
+                            "dhcp_client": false,
+                            "ip": "192.168.1.1",
+                            "prefix_length": 24
+                          }
+                        ],
+                        "dhcp_server": {
+                           "enabled": true,
+                           "dhcp_pool": {
+                             "start": "192.168.1.100",
+                             "end": "192.168.1.254",
+                             "lease_time": "1d"
+                           },
+                           "static_ip_allocations": [{
+                             "device_name": "device1",
+                             "ip_address": "192.168.1.200",
+                             "mac_address": "01:01:02:03:04:05"
+                           }]
+                        }
+                      }
+                    }
+                  ],
+                  "device_id": "my_test_device"
+                }
+              }
+            ]
+          }
+        }"#,
+                Err(CONFIG(error::Config::FailedToValidateConfig {
+                    path: "".to_string(),
+                    error: "not a valid MAC address".to_string()
+                })),
+            ),
+        ] {
+            match serde_json::from_str(&config) {
+                Ok(j) => test_config.device_config = j,
+                Err(e) => panic!("{} Got unexpected error result: {}", test_name, e),
+            }
+            let got = test_config.final_validation().await;
+            assert_eq!(&got, want, "{}: got {:?} want: {:?}", test_name, got, want);
         }
     }
 
@@ -1793,12 +2363,12 @@ mod tests {
         }
 
         match test_config.device_id_is_an_uplink("does_not_exist") {
-            true => panic!("Got unexpected 'false' value"),
+            true => panic!("Got unexpected 'true' value"),
             false => (),
         }
 
         match test_config.device_id_is_an_uplink("/dev/sys/pci/test_lan_up_id/ethernet") {
-            true => panic!("Got unexpected 'false' value"),
+            true => panic!("Got unexpected 'true' value"),
             false => (),
         }
     }
@@ -1813,11 +2383,16 @@ mod tests {
         }
 
         match test_config.device_id_is_a_downlink("does_not_exist") {
-            true => panic!("Got unexpected 'false' value"),
+            true => panic!("Got unexpected 'true' value"),
             false => (),
         }
 
         match test_config.device_id_is_a_downlink("/dev/sys/pci/test_wan_up_id/ethernet") {
+            true => panic!("Got unexpected 'true' value"),
+            false => (),
+        }
+
+        match test_config.device_id_is_an_uplink("/dev/sys/pci/test_lan_up_id/ethernet") {
             true => panic!("Got unexpected 'true' value"),
             false => (),
         }
@@ -2188,6 +2763,7 @@ mod tests {
                     ip: Some("192.168.0.1".parse().unwrap()),
                     prefix_length: Some(32),
                 }],
+                dhcp_server: None,
             }),
             ipv6: None,
         };

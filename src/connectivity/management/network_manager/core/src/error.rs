@@ -10,7 +10,7 @@ use thiserror::Error;
 pub type Result<T> = std::result::Result<T, NetworkManager>;
 
 /// Top-level error type the network manager.
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum NetworkManager {
     /// Errors related to LIF and LIFManager
     #[error("{}", _0)]

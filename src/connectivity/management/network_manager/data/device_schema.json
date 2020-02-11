@@ -44,6 +44,76 @@
       "title": "Enables a DHCP client on the interface in order to request an address",
       "default": true
     },
+    "dhcp_server": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": false,
+          "description": "Is the DHCP server enabled?",
+          "type": "boolean"
+        },
+        "dhcp_pool": {
+          "additionalProperties": false,
+          "description": "Configure the DHCP server address pool",
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": "string",
+              "description": "The first IP address of the pool",
+              "examples": [
+                "192.168.0.10"
+              ]
+            },
+            "end": {
+              "type": "string",
+              "description": "The last IP address of the pool",
+              "examples": [
+                "192.168.0.254"
+              ]
+            },
+            "lease_time": {
+              "type": "string",
+              "description": "The time in seconds after which leases will be renewed. Can also be defined in minutes ('m'), hours ('h'), or days ('d').",
+              "examples": [
+                "1440",
+                "24m",
+                "12h",
+                "1d"
+              ]
+            }
+          }
+        },
+        "static_ip_allocations": {
+          "type": "array",
+          "additionalItems": false,
+          "required": [ "name", "mac-address", "ip" ],
+          "items": {
+            "device_name": {
+              "type": "string",
+              "description": "A human-readable device name.",
+              "examples": [
+                  "My Web Server"
+              ]
+            },
+            "mac_address": {
+              "type": "string",
+              "description": "The MAC address of this host.",
+              "examples": [
+                "00:1f:3c:e3:c9:73"
+              ]
+            },
+            "ip_address": {
+              "type": "string",
+              "description": "An IP to statically assign to this host.",
+              "examples": [
+                "192.168.1.2"
+              ]
+            }
+          }
+        }
+      }
+    },
     "ip": {
       "type": "string",
       "title": "An IP address.",
@@ -86,6 +156,9 @@
                   "$ref": "#/definitions/prefix_length"
                 }
               }
+            },
+            "dhcp_server": {
+              "$ref": "#/definitions/dhcp_server"
             }
           }
         }
@@ -282,83 +355,6 @@
                 "enabled": {
                   "type": "boolean",
                   "default": false
-                }
-              }
-            },
-            "dhcp_server": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "enabled": {
-                  "default": false,
-                  "description": "Is the DHCP server enabled?",
-                  "type": "boolean"
-                },
-                "dhcp_pool": {
-                  "additionalProperties": false,
-                  "description": "Configure the DHCP server address pool",
-                  "type": "object",
-                  "properties": {
-                    "start": {
-                      "type": "string",
-                      "description": "The first IP address of the pool",
-                      "examples": [
-                        "192.168.0.10"
-                      ]
-                    },
-                    "end": {
-                      "type": "string",
-                      "description": "The last IP address of the pool",
-                      "examples": [
-                        "192.168.0.254"
-                      ]
-                    },
-                    "lease_time": {
-                      "type": "string",
-                      "description": "The time in seconds after which leases will be renewed. Can also be defined in minutes ('m'), hours ('h'), or days ('d').",
-                      "examples": [
-                        "1440",
-                        "24m",
-                        "12h",
-                        "1d"
-                      ]
-                    }
-                  }
-                },
-                "interfaces": {
-                  "type": "string",
-                  "description": "A comma-separated list of interface names to bind the DHCP server to. Defaults to all interfaces if none are provided.",
-                  "examples": [
-                    "eth0,lan1,lan2"
-                  ]
-                },
-                "static_ip_allocations": {
-                  "type": "array",
-                  "additionalItems": false,
-                  "required": [ "name", "mac-address", "ip" ],
-                  "items": {
-                    "device_name": {
-                      "type": "string",
-                      "description": "A human-readable device name.",
-                      "examples": [
-                          "My Web Server"
-                      ]
-                    },
-                    "mac_address": {
-                      "type": "string",
-                      "description": "The MAC address of this host.",
-                      "examples": [
-                        "00:1f:3c:e3:c9:73"
-                      ]
-                    },
-                    "ip_address": {
-                      "type": "string",
-                      "description": "An IP to statically assign to this host.",
-                      "examples": [
-                        "192.168.1.2"
-                      ]
-                    }
-                  }
                 }
               }
             }

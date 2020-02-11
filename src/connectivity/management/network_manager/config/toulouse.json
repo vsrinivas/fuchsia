@@ -14,9 +14,17 @@
                             "addresses": [
                                 {
                                     "ip": "192.168.51.1",
-                                    "prefix_length": 32
+                                    "prefix_length": 24
                                 }
-                            ]
+                            ],
+                            "dhcp_server": {
+                                "enabled": true,
+                                "dhcp_pool": {
+                                    "start": "192.168.51.10",
+                                    "end": "192.168.0.254",
+                                    "lease_time": "1440"
+                                }
+                            }
                         }
                     }
                 }
@@ -151,15 +159,6 @@
         "services": {
             "ip_forwarding": {
                 "enabled": true
-            },
-            "dhcp_server": {
-                "enabled": true,
-                "dhcp_pool": {
-                    "start": "192.168.0.10",
-                    "end": "192.168.0.254",
-                    "lease_time": "1440"
-                },
-                "interfaces": "lan"
             }
         }
     }

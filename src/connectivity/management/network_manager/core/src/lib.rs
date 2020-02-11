@@ -66,9 +66,9 @@ pub enum DnsPolicy {
 impl From<DnsPolicy> for netconfig::DnsPolicy {
     fn from(p: DnsPolicy) -> Self {
         match p {
-            DnsPolicy::Static => fidl_fuchsia_router_config::DnsPolicy::Static,
-            DnsPolicy::Replaceable => fidl_fuchsia_router_config::DnsPolicy::Replaceable,
-            DnsPolicy::Merge => fidl_fuchsia_router_config::DnsPolicy::Merge,
+            DnsPolicy::Static => netconfig::DnsPolicy::Static,
+            DnsPolicy::Replaceable => netconfig::DnsPolicy::Replaceable,
+            DnsPolicy::Merge => netconfig::DnsPolicy::Merge,
         }
     }
 }
@@ -79,12 +79,12 @@ impl Default for DnsPolicy {
     }
 }
 
-impl From<fidl_fuchsia_router_config::DnsPolicy> for DnsPolicy {
-    fn from(p: fidl_fuchsia_router_config::DnsPolicy) -> Self {
+impl From<netconfig::DnsPolicy> for DnsPolicy {
+    fn from(p: netconfig::DnsPolicy) -> Self {
         match p {
-            fidl_fuchsia_router_config::DnsPolicy::Static => DnsPolicy::Static,
-            fidl_fuchsia_router_config::DnsPolicy::Replaceable => DnsPolicy::Replaceable,
-            fidl_fuchsia_router_config::DnsPolicy::Merge => DnsPolicy::Merge,
+            netconfig::DnsPolicy::Static => DnsPolicy::Static,
+            netconfig::DnsPolicy::Replaceable => DnsPolicy::Replaceable,
+            netconfig::DnsPolicy::Merge => DnsPolicy::Merge,
             _ => DnsPolicy::default(),
         }
     }
@@ -98,12 +98,12 @@ struct DnsConfig {
     policy: DnsPolicy,
 }
 
-impl From<&DnsConfig> for fidl_fuchsia_router_config::DnsResolverConfig {
+impl From<&DnsConfig> for netconfig::DnsResolverConfig {
     fn from(c: &DnsConfig) -> Self {
-        fidl_fuchsia_router_config::DnsResolverConfig {
+        netconfig::DnsResolverConfig {
             element: c.id.into(),
             policy: c.policy.into(),
-            search: fidl_fuchsia_router_config::DnsSearch {
+            search: netconfig::DnsSearch {
                 domain_name: c.domain.clone(),
                 servers: c.servers.clone(),
             },
@@ -204,7 +204,6 @@ impl DeviceState {
         let properties = self.config.create_wan_properties(topological_path)?;
         let lif = self.create_lif(LIFType::WAN, wan_name, None, &[pid]).await?;
         self.update_lif_properties(lif.id().uuid(), &properties.to_fidl_wan()).await?;
-        self.hal.set_interface_state(pid, true).await?;
         info!("WAN configured: pid: {:?}, lif: {:?}, properties: {:?} ", pid, lif, properties);
         Ok(())
     }
