@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     fuchsia_async as fasync,
     io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
-    test_utils_lib::{breakpoint_system_client::*, test_utils::*},
+    test_utils_lib::{events::*, test_utils::*},
 };
 
 /// Drains the required number of events, sorts them and compares them
@@ -25,18 +25,15 @@ async fn destruction() -> Result<(), Error> {
     )
     .await?;
 
-    let breakpoint_system = test
-        .connect_to_breakpoint_system()
-        .await
-        .expect("Breakpoint system should be available, but is not");
+    let event_source = test.connect_to_event_source().await?;
 
     let sink =
-        breakpoint_system.soak_events(vec![StopInstance::TYPE, PostDestroyInstance::TYPE]).await?;
-    let receiver = breakpoint_system.set_breakpoints(vec![PostDestroyInstance::TYPE]).await?;
-    breakpoint_system.start_component_tree().await?;
+        event_source.soak_events(vec![StopInstance::TYPE, PostDestroyInstance::TYPE]).await?;
+    let event_stream = event_source.subscribe(vec![PostDestroyInstance::TYPE]).await?;
+    event_source.start_component_tree().await?;
 
     // Wait for `coll:root` to be destroyed.
-    let invocation = receiver.wait_until_exact::<PostDestroyInstance>("./coll:root:1").await?;
+    let event = event_stream.wait_until_exact::<PostDestroyInstance>("./coll:root:1").await?;
 
     // Assert that root component has no children.
     let child_dir_path = test.get_hub_v2_path().join("children");
@@ -93,7 +90,7 @@ async fn destruction() -> Result<(), Error> {
     );
 
     assert!(events.is_empty());
-    invocation.resume().await?;
+    event.resume().await?;
 
     Ok(())
 }

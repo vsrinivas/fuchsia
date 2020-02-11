@@ -20,7 +20,7 @@ use {
         sync::Arc,
         time::Duration,
     },
-    test_utils_lib::breakpoint_system_client::Injector,
+    test_utils_lib::events::Injector,
 };
 
 #[derive(Debug)]

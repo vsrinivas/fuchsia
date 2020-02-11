@@ -12,7 +12,7 @@ use {
     hub_report_capability::*,
     io_util::*,
     std::{path::PathBuf, sync::Arc},
-    test_utils_lib::{breakpoint_system_client::*, test_utils::*},
+    test_utils_lib::{events::*, test_utils::*},
 };
 
 pub struct TestRunner {
@@ -20,7 +20,7 @@ pub struct TestRunner {
     external_hub_v2_path: PathBuf,
     hub_report_capability: Arc<HubReportCapability>,
     channel_close_rx: mpsc::Receiver<()>,
-    _breakpoint_system: BreakpointSystemClient,
+    _event_source: EventSource,
 }
 
 impl TestRunner {
@@ -28,7 +28,7 @@ impl TestRunner {
         root_component_url: &str,
         num_eager_static_components: i32,
         event_types: Vec<fbreak::EventType>,
-    ) -> Result<(TestRunner, InvocationReceiverClient), Error> {
+    ) -> Result<(TestRunner, EventStream), Error> {
         assert!(
             num_eager_static_components >= 1,
             "There must always be at least one eager static component (the root)"
@@ -38,39 +38,36 @@ impl TestRunner {
 
         let (hub_report_capability, channel_close_rx) = HubReportCapability::new();
 
-        let (breakpoint_system, receiver) = {
-            // Register temporary receivers for StartInstance and RouteFrameworkCapability.
-            // These receivers are registered separately because the events do not happen
+        let (event_source, event_stream) = {
+            // Register temporary event_streams for StartInstance and RouteFrameworkCapability.
+            // These event_streams are registered separately because the events do not happen
             // in predictable orders. There is a possibility for the RouteFrameworkCapability event
             // to be interleaved between the StartInstance events.
-            let breakpoint_system = test
-                .connect_to_breakpoint_system()
-                .await
-                .expect("breakpoint system failed to connect");
-            let start_receiver =
-                breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
+            let event_source = test.connect_to_event_source().await?;
+            let start_event_stream =
+                event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
 
             // Register for events which are required by this test runner.
             // TODO(xbhatnag): There may be problems here if event_types contains
             // StartInstance or RouteFrameworkCapability
-            let receiver = breakpoint_system.set_breakpoints(event_types).await?;
+            let event_stream = event_source.subscribe(event_types).await?;
 
             // Inject HubReportCapability wherever it's requested.
-            breakpoint_system.install_injector(hub_report_capability.clone()).await?;
+            event_source.install_injector(hub_report_capability.clone()).await?;
 
             // Unblock component manager
-            breakpoint_system.start_component_tree().await?;
+            event_source.start_component_tree().await?;
 
             // Wait for the root component to start up
-            start_receiver.expect_exact::<BeforeStartInstance>(".").await?.resume().await?;
+            start_event_stream.expect_exact::<BeforeStartInstance>(".").await?.resume().await?;
 
             // Wait for all child components to start up
             for _ in 1..=(num_eager_static_components - 1) {
-                start_receiver.expect_type::<BeforeStartInstance>().await?.resume().await?;
+                start_event_stream.expect_type::<BeforeStartInstance>().await?.resume().await?;
             }
 
-            // Return the receiver to be used later
-            (breakpoint_system, receiver)
+            // Return the event_stream to be used later
+            (event_source, event_stream)
         };
 
         let external_hub_v2_path = test.get_component_manager_path().join("out/hub");
@@ -80,10 +77,10 @@ impl TestRunner {
             external_hub_v2_path,
             hub_report_capability,
             channel_close_rx,
-            _breakpoint_system: breakpoint_system,
+            _event_source: event_source,
         };
 
-        Ok((runner, receiver))
+        Ok((runner, event_stream))
     }
 
     pub async fn connect_to_echo_service(&self, echo_service_path: String) -> Result<(), Error> {
@@ -344,7 +341,7 @@ async fn used_service_test() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn dynamic_child_test() -> Result<(), Error> {
-    let (test_runner, receiver) = TestRunner::start(
+    let (test_runner, event_stream) = TestRunner::start(
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/dynamic_child_reporter.cm",
         1,
         vec![PreDestroyInstance::TYPE, StopInstance::TYPE, PostDestroyInstance::TYPE],
@@ -392,8 +389,7 @@ async fn dynamic_child_test() -> Result<(), Error> {
         .send()?;
 
     // Wait for the dynamic child to begin deletion
-    let invocation =
-        receiver.expect_exact::<PreDestroyInstance>("./coll:simple_instance:1").await?;
+    let event = event_stream.expect_exact::<PreDestroyInstance>("./coll:simple_instance:1").await?;
 
     // When deletion begins, the dynamic child should be moved to the deleting directory
     test_runner.verify_directory_listing("children", vec![]).await;
@@ -406,10 +402,10 @@ async fn dynamic_child_test() -> Result<(), Error> {
         .await;
 
     // Unblock the ComponentManager
-    invocation.resume().await?;
+    event.resume().await?;
 
     // Wait for the dynamic child to stop
-    let invocation = receiver.expect_exact::<StopInstance>("./coll:simple_instance:1").await?;
+    let event = event_stream.expect_exact::<StopInstance>("./coll:simple_instance:1").await?;
 
     // After stopping, the dynamic child should not have an exec directory
     test_runner
@@ -420,11 +416,11 @@ async fn dynamic_child_test() -> Result<(), Error> {
         .await;
 
     // Unblock the Component Manager
-    invocation.resume().await?;
+    event.resume().await?;
 
     // Wait for the dynamic child's static child to begin deletion
-    let invocation =
-        receiver.expect_exact::<PreDestroyInstance>("./coll:simple_instance:1/child:0").await?;
+    let event =
+        event_stream.expect_exact::<PreDestroyInstance>("./coll:simple_instance:1/child:0").await?;
 
     // When deletion begins, the dynamic child's static child should be moved to the deleting directory
     test_runner.verify_directory_listing("deleting/coll:simple_instance:1/children", vec![]).await;
@@ -439,27 +435,28 @@ async fn dynamic_child_test() -> Result<(), Error> {
         .await;
 
     // Unblock the Component Manager
-    invocation.resume().await?;
+    event.resume().await?;
 
     // Wait for the dynamic child's static child to be destroyed
-    let invocation =
-        receiver.expect_exact::<PostDestroyInstance>("./coll:simple_instance:1/child:0").await?;
+    let event = event_stream
+        .expect_exact::<PostDestroyInstance>("./coll:simple_instance:1/child:0")
+        .await?;
 
     // The dynamic child's static child should not be visible in the hub anymore
     test_runner.verify_directory_listing("deleting/coll:simple_instance:1/deleting", vec![]).await;
 
     // Unblock the Component Manager
-    invocation.resume().await?;
+    event.resume().await?;
 
     // Wait for the dynamic child to be destroyed
-    let invocation =
-        receiver.expect_exact::<PostDestroyInstance>("./coll:simple_instance:1").await?;
+    let event =
+        event_stream.expect_exact::<PostDestroyInstance>("./coll:simple_instance:1").await?;
 
     // After deletion, verify that parent can no longer see the dynamic child in the Hub
     test_runner.verify_directory_listing("deleting", vec![]).await;
 
     // Unblock the Component Manager
-    invocation.resume().await?;
+    event.resume().await?;
 
     // Wait for the component to stop
     test_runner.wait_for_component_stop().await;

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::breakpoint_system_client::Injector,
+    crate::events::Injector,
     anyhow::Error,
     async_trait::async_trait,
     fidl_fidl_test_components as ftest, fuchsia_async as fasync,

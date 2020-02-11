@@ -7,7 +7,7 @@ use {
     fidl_fidl_examples_echo as fidl_echo, fuchsia_async as fasync,
     fuchsia_component::client::*,
     io_util,
-    test_utils_lib::{breakpoint_system_client::*, test_utils::*},
+    test_utils_lib::{events::*, test_utils::*},
 };
 
 #[fasync::run_singlethreaded(test)]
@@ -27,22 +27,21 @@ async fn base_resolver_test() -> Result<(), Error> {
     )
     .await?;
 
-    let breakpoint_system =
-        &test.connect_to_breakpoint_system().await.expect("Failed to connect to breakpoint system");
+    let event_source = &test.connect_to_event_source().await?;
 
-    // Register breakpoints and begin execution of component manager
-    let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
+    // Subscribe to events and begin execution of component manager
+    let event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
 
     // Begin component manager's execution
-    breakpoint_system.start_component_tree().await?;
+    event_source.start_component_tree().await?;
 
     // Expect the root component to be bound to
-    let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
-    invocation.resume().await?;
+    let event = event_stream.expect_exact::<BeforeStartInstance>(".").await?;
+    event.resume().await?;
 
     // Expect the echo_server component to be bound to
-    let invocation = receiver.expect_exact::<BeforeStartInstance>("./echo_server:0").await?;
-    invocation.resume().await?;
+    let event = event_stream.expect_exact::<BeforeStartInstance>("./echo_server:0").await?;
+    event.resume().await?;
 
     // Connect to the echo service
     let path_to_service_dir =

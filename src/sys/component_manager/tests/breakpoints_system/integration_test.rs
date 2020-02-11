@@ -8,7 +8,7 @@ use {
     echo_interposer::EchoInterposer,
     fuchsia_async as fasync,
     futures::StreamExt,
-    test_utils_lib::{breakpoint_system_client::*, echo_capability::EchoCapability, test_utils::*},
+    test_utils_lib::{echo_capability::EchoCapability, events::*, test_utils::*},
 };
 
 #[fasync::run_singlethreaded(test)]
@@ -18,14 +18,13 @@ async fn echo_interposer_test() -> Result<(), Error> {
     )
     .await?;
 
-    let breakpoint_system =
-        test.connect_to_breakpoint_system().await.expect("breakpoint system is unavailable");
+    let event_source = test.connect_to_event_source().await?;
 
     // Setup the interposer
     let (echo_interposer, mut rx) = EchoInterposer::new();
-    let interposer = breakpoint_system.install_interposer(echo_interposer).await?;
+    let interposer = event_source.install_interposer(echo_interposer).await?;
 
-    breakpoint_system.start_component_tree().await?;
+    event_source.start_component_tree().await?;
 
     // Ensure that the string "Interposed: Hippos rule!" is sent 10 times as a response
     // from server to client.
@@ -45,14 +44,13 @@ async fn scoped_breakpoints_test() -> Result<(), Error> {
     )
     .await?;
 
-    let breakpoint_system =
-        test.connect_to_breakpoint_system().await.expect("breakpoint system is unavailable");
+    let event_source = test.connect_to_event_source().await?;
 
     // Inject an echo capability for `echo_reporter` so that we can observe its messages here.
     let mut echo_rx = {
-        let receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
+        let receiver = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
 
-        breakpoint_system.start_component_tree().await?;
+        event_source.start_component_tree().await?;
 
         // Wait for `echo_reporter` to attempt to connect to the Echo service
         let invocation = receiver
@@ -111,13 +109,12 @@ async fn nested_breakpoint_test() -> Result<(), Error> {
     )
     .await?;
 
-    let breakpoint_system =
-        test.connect_to_breakpoint_system().await.expect("breakpoint system is unavailable");
+    let event_source = test.connect_to_event_source().await?;
 
     let (capability, mut echo_rx) = EchoCapability::new();
-    let injector = breakpoint_system.install_injector(capability).await?;
+    let injector = event_source.install_injector(capability).await?;
 
-    breakpoint_system.start_component_tree().await?;
+    event_source.start_component_tree().await?;
 
     let mut children = vec![];
     for _ in 1..=3 {
@@ -140,12 +137,12 @@ async fn chained_interpose_breakpoint_test() -> Result<(), Error> {
     )
     .await?;
 
-    let breakpoint_system = test.connect_to_breakpoint_system().await?;
+    let event_source = test.connect_to_event_source().await?;
 
     let (capability, mut echo_rx) = EchoFactoryInterposer::new();
-    let injector = breakpoint_system.install_interposer(capability).await?;
+    let injector = event_source.install_interposer(capability).await?;
 
-    breakpoint_system.start_component_tree().await?;
+    event_source.start_component_tree().await?;
 
     let mut messages = vec![];
     for _ in 1..=3 {

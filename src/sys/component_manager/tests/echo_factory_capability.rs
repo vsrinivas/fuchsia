@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{breakpoint_system_client::Injector, echo_capability::EchoCapability},
+    crate::{echo_capability::EchoCapability, events::Injector},
     async_trait::async_trait,
     fidl_fuchsia_test_echofactory as fechofactory, fuchsia_async as fasync,
     futures::StreamExt,

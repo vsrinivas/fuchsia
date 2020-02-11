@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_test_hub as fhub,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::{collections::HashMap, sync::Arc},
-    test_utils_lib::breakpoint_system_client::Injector,
+    test_utils_lib::events::Injector,
 };
 
 #[derive(Debug)]

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::breakpoint_system_client::BreakpointSystemClient,
+    crate::events::EventSource,
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys::{
@@ -141,9 +141,9 @@ impl BlackBoxTest {
     /// The breakpoints FIDL service connected to component manager.
     /// An integration test can use this service to halt tasks of component manager
     /// at various points during its execution.
-    pub async fn connect_to_breakpoint_system(&self) -> Result<BreakpointSystemClient, Error> {
+    pub async fn connect_to_event_source(&self) -> Result<EventSource, Error> {
         let path = self.get_component_manager_path();
-        connect_to_breakpoint_system(&path).await
+        connect_to_event_source(&path).await
     }
 }
 
@@ -177,8 +177,8 @@ pub async fn launch_component_and_expect_output_with_extra_dirs(
     )
     .await?;
 
-    let breakpoint_system_client = &test.connect_to_breakpoint_system().await?;
-    breakpoint_system_client.start_component_tree().await?;
+    let event_source = &test.connect_to_event_source().await?;
+    event_source.start_component_tree().await?;
     read_from_pipe(file, expected_output)
 }
 
@@ -280,14 +280,12 @@ async fn launch_component_manager(
 
 /// Use the path to component manager's hub to find the Breakpoint service
 /// and connect to it
-async fn connect_to_breakpoint_system(
-    component_manager_path: &PathBuf,
-) -> Result<BreakpointSystemClient, Error> {
+async fn connect_to_event_source(component_manager_path: &PathBuf) -> Result<EventSource, Error> {
     let path_to_svc = component_manager_path.join("out/svc");
     let path_to_svc = path_to_svc.to_str().expect("found invalid chars");
     let proxy = connect_to_service_at::<BreakpointSystemMarker>(path_to_svc)
         .context("could not connect to BreakpointSystem service")?;
-    Ok(BreakpointSystemClient::from_proxy(proxy))
+    Ok(EventSource::from_proxy(proxy))
 }
 
 /// Explore the hub to find the component manager running in the environment

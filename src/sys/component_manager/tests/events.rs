@@ -20,17 +20,17 @@ use {
 /// A wrapper over the BreakpointSystem FIDL proxy.
 /// Provides all of the FIDL methods with a cleaner, simpler interface.
 /// Refer to breakpoints.fidl for a detailed description of this protocol.
-pub struct BreakpointSystemClient {
+pub struct EventSource {
     proxy: fbreak::BreakpointSystemProxy,
 }
 
-impl BreakpointSystemClient {
+impl EventSource {
     /// Connects to the BreakpointSystem service at its default location
     /// The default location is presumably "/svc/fuchsia.test.breakpoints.BreakpointSystem"
     pub fn new() -> Result<Self, Error> {
         let proxy = connect_to_service::<fbreak::BreakpointSystemMarker>()
             .context("could not connect to BreakpointSystem service")?;
-        Ok(BreakpointSystemClient::from_proxy(proxy))
+        Ok(EventSource::from_proxy(proxy))
     }
 
     /// Wraps a provided BreakpointSystem proxy
@@ -38,23 +38,23 @@ impl BreakpointSystemClient {
         Self { proxy }
     }
 
-    pub async fn set_breakpoints(
+    pub async fn subscribe(
         &self,
         event_types: Vec<fbreak::EventType>,
-    ) -> Result<InvocationReceiverClient, Error> {
+    ) -> Result<EventStream, Error> {
         let (proxy, server_end) = create_proxy::<fbreak::InvocationReceiverMarker>()?;
         self.proxy
             .set_breakpoints(&mut event_types.into_iter(), server_end)
             .await
             .context("could not register breakpoints")?;
-        Ok(InvocationReceiverClient::new(proxy))
+        Ok(EventStream::new(proxy))
     }
 
     pub async fn soak_events(
         &self,
         event_types: Vec<fbreak::EventType>,
     ) -> Result<EventSink, Error> {
-        let receiver = self.set_breakpoints(event_types).await?;
+        let receiver = self.subscribe(event_types).await?;
         Ok(EventSink::soak_async(receiver))
     }
 
@@ -65,7 +65,7 @@ impl BreakpointSystemClient {
     where
         I: Injector,
     {
-        let receiver = self.set_breakpoints(vec![RouteCapability::TYPE]).await?;
+        let receiver = self.subscribe(vec![RouteCapability::TYPE]).await?;
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
         fasync::spawn(
             Abortable::new(
@@ -100,7 +100,7 @@ impl BreakpointSystemClient {
     where
         I: Interposer,
     {
-        let receiver = self.set_breakpoints(vec![RouteCapability::TYPE]).await?;
+        let receiver = self.subscribe(vec![RouteCapability::TYPE]).await?;
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
         fasync::spawn(
             Abortable::new(
@@ -136,11 +136,11 @@ impl BreakpointSystemClient {
 
 /// A wrapper over the InvocationReceiver FIDL proxy.
 /// Provides convenience methods that build on InvocationReceiver::Next
-pub struct InvocationReceiverClient {
+pub struct EventStream {
     proxy: fbreak::InvocationReceiverProxy,
 }
 
-impl InvocationReceiverClient {
+impl EventStream {
     fn new(proxy: fbreak::InvocationReceiverProxy) -> Self {
         Self { proxy }
     }
@@ -152,14 +152,14 @@ impl InvocationReceiverClient {
 
     /// Expects the next invocation to be of a particular type.
     /// Returns the casted type if successful and an error otherwise.
-    pub async fn expect_type<T: Invocation>(&self) -> Result<T, Error> {
+    pub async fn expect_type<T: Event>(&self) -> Result<T, Error> {
         let invocation = self.next().await?;
         T::from_fidl(invocation)
     }
 
     /// Expects the next invocation to be of a particular type and moniker.
     /// Returns the casted type if successful and an error otherwise.
-    pub async fn expect_exact<T: Invocation>(&self, expected_moniker: &str) -> Result<T, Error> {
+    pub async fn expect_exact<T: Event>(&self, expected_moniker: &str) -> Result<T, Error> {
         let invocation = self.expect_type::<T>().await?;
         if expected_moniker == invocation.target_moniker() {
             Ok(invocation)
@@ -171,7 +171,7 @@ impl InvocationReceiverClient {
     /// Waits for an invocation of a particular type.
     /// Implicitly resumes all other invocations.
     /// Returns the casted type if successful and an error otherwise.
-    pub async fn wait_until_type<T: Invocation>(&self) -> Result<T, Error> {
+    pub async fn wait_until_type<T: Event>(&self) -> Result<T, Error> {
         loop {
             let invocation = self.next().await?;
             if let Ok(invocation) = T::from_fidl(invocation) {
@@ -183,7 +183,7 @@ impl InvocationReceiverClient {
     /// Waits for an invocation of a particular type and target moniker.
     /// Implicitly resumes all other invocations.
     /// Returns the casted type if successful and an error otherwise.
-    pub async fn wait_until_exact<T: Invocation>(
+    pub async fn wait_until_exact<T: Event>(
         &self,
         expected_target_moniker: &str,
     ) -> Result<T, Error> {
@@ -250,13 +250,13 @@ impl InvocationReceiverClient {
 }
 
 /// Common features of any invocation - event type, target moniker, conversion function
-pub trait Invocation: Handler {
+pub trait Event: Handler {
     const TYPE: fbreak::EventType;
     fn target_moniker(&self) -> &str;
     fn from_fidl(inv: fbreak::Invocation) -> Result<Self, Error>;
 }
 
-/// Basic handler that resumes/unblocks from an Invocation
+/// Basic handler that resumes/unblocks from an Event
 #[must_use = "invoke resume() otherwise component manager will be halted indefinitely!"]
 pub trait Handler: Sized {
     fn handler_proxy(self) -> fbreak::HandlerProxy;
@@ -272,7 +272,7 @@ pub trait Handler: Sized {
 impl Handler for fbreak::Invocation {
     fn handler_proxy(self) -> fbreak::HandlerProxy {
         self.handler
-            .expect("Could not find handler in Invocation object")
+            .expect("Could not find handler in Event object")
             .into_proxy()
             .expect("Could not convert into proxy")
     }
@@ -423,14 +423,14 @@ pub struct DrainedEvent {
     pub target_moniker: String,
 }
 
-/// Soaks events from an InvocationReceiverClient, allowing them to be
+/// Soaks events from an EventStream, allowing them to be
 /// drained at a later point in time.
 pub struct EventSink {
     drained_events: Arc<Mutex<Vec<DrainedEvent>>>,
 }
 
 impl EventSink {
-    fn soak_async(receiver: InvocationReceiverClient) -> Self {
+    fn soak_async(receiver: EventStream) -> Self {
         let drained_events = Arc::new(Mutex::new(vec![]));
         {
             // Start an async task that soaks up events from the receiver
@@ -445,13 +445,12 @@ impl EventSink {
                         .await
                         .expect("Failed to get next event from InvocationReceiver");
 
-                    // Construct the DrainedEvent from the Invocation
-                    let event_type =
-                        inv.event_type.expect("Failed to get event type from Invocation");
+                    // Construct the DrainedEvent from the Event
+                    let event_type = inv.event_type.expect("Failed to get event type from Event");
                     let target_moniker = inv
                         .target_moniker
                         .as_ref()
-                        .expect("Failed to get target moniker from Invocation")
+                        .expect("Failed to get target moniker from Event")
                         .clone();
                     let event = DrainedEvent { event_type, target_moniker };
 
@@ -478,7 +477,7 @@ impl EventSink {
 
 /// The macro defined below will automatically create event classes corresponding
 /// to their breakpoints.fidl and hooks.rs counterparts. Every event class implements
-/// the Invocation and Handler traits. These minimum requirements allow every event to
+/// the Event and Handler traits. These minimum requirements allow every event to
 /// be handled by the breakpoints client library.
 
 /// Creates an event class based on event type and an optional payload
@@ -519,7 +518,7 @@ macro_rules! create_event {
             $(pub $data_name: $data_ty,)*
         }
 
-        impl Invocation for $event_type {
+        impl Event for $event_type {
             const TYPE: fbreak::EventType = fbreak::EventType::$event_type;
 
             fn target_moniker(&self) -> &str {
@@ -529,21 +528,21 @@ macro_rules! create_event {
             fn from_fidl(inv: fbreak::Invocation) -> Result<Self, Error> {
                 // Event type in invocation must match what is expected
                 let event_type = inv.event_type.ok_or(
-                    format_err!("Missing event_type from Invocation object")
+                    format_err!("Missing event_type from Event object")
                 )?;
                 if event_type != Self::TYPE {
                     return Err(format_err!("Incorrect event type"));
                 }
                 let target_moniker = inv.target_moniker.ok_or(
-                    format_err!("Missing target_moniker from Invocation object")
+                    format_err!("Missing target_moniker from Event object")
                 )?;
                 let handler = inv.handler.ok_or(
-                    format_err!("Missing handler from Invocation object")
+                    format_err!("Missing handler from Event object")
                 )?.into_proxy()?;
 
-                // Extract the payload from the Invocation object.
+                // Extract the payload from the Event object.
                 let event_payload = inv.event_payload.ok_or(
-                    format_err!("Missing event_payload from Invocation object")
+                    format_err!("Missing event_payload from Event object")
                 )?;
                 let $payload_name = event_payload.$payload_name.ok_or(
                     format_err!("Missing $payload_name from EventPayload object")
@@ -587,7 +586,7 @@ macro_rules! create_event {
             handler: fbreak::HandlerProxy,
         }
 
-        impl Invocation for $event_type {
+        impl Event for $event_type {
             const TYPE: fbreak::EventType = fbreak::EventType::$event_type;
 
             fn target_moniker(&self) -> &str {
@@ -597,16 +596,16 @@ macro_rules! create_event {
             fn from_fidl(inv: fbreak::Invocation) -> Result<Self, Error> {
                 // Event type in invocation must match what is expected
                 let event_type = inv.event_type.ok_or(
-                    format_err!("Missing event_type from Invocation object")
+                    format_err!("Missing event_type from Event object")
                 )?;
                 if event_type != Self::TYPE {
                     return Err(format_err!("Incorrect event type"));
                 }
                 let target_moniker = inv.target_moniker.ok_or(
-                    format_err!("Missing target_moniker from Invocation object")
+                    format_err!("Missing target_moniker from Event object")
                 )?;
                 let handler = inv.handler.ok_or(
-                    format_err!("Missing handler from Invocation object")
+                    format_err!("Missing handler from Event object")
                 )?.into_proxy()?;
 
                 // There should be no payload for this event

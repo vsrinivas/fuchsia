@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error, cs2::Component, std::path::PathBuf, test_utils_lib::breakpoint_system_client::*,
+    anyhow::Error, cs2::Component, std::path::PathBuf, test_utils_lib::events::*,
     test_utils_lib::test_utils::*,
 };
 
@@ -28,15 +28,14 @@ fn compare_output(actual: Vec<String>, expected: Vec<&str>) {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn empty_component() -> Result<(), Error> {
     let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/empty.cm").await?;
-    let breakpoint_system =
-        test.connect_to_breakpoint_system().await.expect("Failed to connect to breakpoint system");
-    let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
+    let event_source = test.connect_to_event_source().await?;
+    let event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
 
-    breakpoint_system.start_component_tree().await?;
+    event_source.start_component_tree().await?;
 
     // Root must be created first
-    let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
-    invocation.resume().await?;
+    let event = event_stream.expect_exact::<BeforeStartInstance>(".").await?;
+    event.resume().await?;
 
     let actual = launch_cs2(test.get_hub_v2_path());
     compare_output(
@@ -59,20 +58,19 @@ async fn empty_component() -> Result<(), Error> {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn tree() -> Result<(), Error> {
     let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/root.cm").await?;
-    let breakpoint_system =
-        test.connect_to_breakpoint_system().await.expect("Failed to connect to breakpoint system");
-    let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
+    let event_source = test.connect_to_event_source().await?;
+    let event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
 
-    breakpoint_system.start_component_tree().await?;
+    event_source.start_component_tree().await?;
 
     // Root must be created first
-    let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
-    invocation.resume().await?;
+    let event = event_stream.expect_exact::<BeforeStartInstance>(".").await?;
+    event.resume().await?;
 
     // 6 descendants are created eagerly. Order is irrelevant.
     for _ in 1..=6 {
-        let invocation = receiver.expect_type::<BeforeStartInstance>().await?;
-        invocation.resume().await?;
+        let event = event_stream.expect_type::<BeforeStartInstance>().await?;
+        event.resume().await?;
     }
 
     let actual = launch_cs2(test.get_hub_v2_path());
@@ -151,18 +149,17 @@ async fn tree() -> Result<(), Error> {
 async fn echo_realm() -> Result<(), Error> {
     let test =
         BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/echo_realm.cm").await?;
-    let breakpoint_system =
-        test.connect_to_breakpoint_system().await.expect("Failed to connect to breakpoint system");
+    let event_source = test.connect_to_event_source().await?;
 
-    let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
-    breakpoint_system.start_component_tree().await?;
+    let event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+    event_source.start_component_tree().await?;
 
     // 3 components are started. Order is irrelevant.
     // root and echo_client are started eagerly.
     // echo_server is started after echo_client connects to the Echo service.
     for _ in 1..=3 {
-        let invocation = receiver.expect_type::<BeforeStartInstance>().await?;
-        invocation.resume().await?;
+        let event = event_stream.expect_type::<BeforeStartInstance>().await?;
+        event.resume().await?;
     }
 
     let actual = launch_cs2(test.get_hub_v2_path());

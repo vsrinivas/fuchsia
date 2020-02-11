@@ -7,7 +7,7 @@ use {
     fidl_fidl_examples_routing_echo as fecho,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::sync::Arc,
-    test_utils_lib::breakpoint_system_client::Interposer,
+    test_utils_lib::events::Interposer,
 };
 
 /// Client <---> EchoInterposer <---> Echo service

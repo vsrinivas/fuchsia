@@ -9,9 +9,7 @@ use {
     fuchsia_component::server::ServiceFs,
     futures::StreamExt,
     test_utils_lib::{
-        breakpoint_system_client::{
-            BeforeStartInstance, BreakpointSystemClient, Invocation, RouteCapability,
-        },
+        events::{BeforeStartInstance, Event, EventSource, RouteCapability},
         trigger_capability::{TriggerCapability, TriggerReceiver},
     },
 };
@@ -31,39 +29,37 @@ async fn start_echo_reporter(mut trigger_receiver: TriggerReceiver) -> Result<()
     // TODO(fsamuel): It's a bit confusing to have two implementations of the echo capability:
     // one by `echo_server` and one by the integration test. We really want some kind of
     // event reporting system.
-    let echo = connect_to_service::<fecho::EchoMarker>().expect("error connecting to echo");
+    let echo = connect_to_service::<fecho::EchoMarker>()?;
 
     let start_logging_trigger = trigger_receiver.next().await.unwrap();
-    let _ = echo.echo_string(Some("Start trigger")).await.expect("echo_string failed");
+    let _ = echo.echo_string(Some("Start trigger")).await?;
 
-    // Register breakpoints for relevant events
-    let breakpoint_system = BreakpointSystemClient::new()?;
-    let sink = breakpoint_system
-        .soak_events(vec![BeforeStartInstance::TYPE, RouteCapability::TYPE])
-        .await?;
+    // Subscribe to relevant events.
+    let event_source = EventSource::new()?;
+    let sink =
+        event_source.soak_events(vec![BeforeStartInstance::TYPE, RouteCapability::TYPE]).await?;
 
-    breakpoint_system.start_component_tree().await?;
+    event_source.start_component_tree().await?;
 
     start_logging_trigger.resume();
 
     let stop_logging_trigger = trigger_receiver.next().await.unwrap();
-    let _ = echo.echo_string(Some("Stop trigger")).await.expect("echo_string failed");
+    let _ = echo.echo_string(Some("Stop trigger")).await?;
     let events = sink.drain().await;
-    let _ =
-        echo.echo_string(Some(&format!("Events: {:?}", events))).await.expect("echo_string failed");
+    let _ = echo.echo_string(Some(&format!("Events: {:?}", events))).await?;
     stop_logging_trigger.resume();
 
     Ok(())
 }
 
-fn main() {
-    let mut executor = fasync::Executor::new().expect("error creating executor");
+fn main() -> Result<(), Error> {
+    let mut executor = fasync::Executor::new()?;
     let mut fs = ServiceFs::new_local();
     let (capability, receiver) = TriggerCapability::new();
     fs.dir("svc").add_fidl_service(move |stream| {
         capability.clone().serve_async(stream);
     });
-    fs.take_and_serve_directory_handle().expect("failed to serve outgoing directory");
+    fs.take_and_serve_directory_handle()?;
     let fut = async move {
         fasync::spawn_local(async move {
             fs.collect::<()>().await;
@@ -71,4 +67,6 @@ fn main() {
         start_echo_reporter(receiver).await.expect("failed running echo_reporter");
     };
     executor.run_singlethreaded(fut);
+
+    Ok(())
 }

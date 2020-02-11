@@ -7,27 +7,26 @@ use {
     fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     hub_report::HubReport,
-    test_utils_lib::breakpoint_system_client::*,
+    test_utils_lib::events::*,
 };
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     // Accessing the hub triggers a RouteCapability event.
-    // Hence, code is placed in blocks so that breakpoint receivers are dropped.
+    // Hence, code is placed in blocks so that event_streams are dropped.
 
-    // Connect to the Breakpoint
-    let breakpoint_system = BreakpointSystemClient::new()?;
-    breakpoint_system.start_component_tree().await?;
+    let event_source = EventSource::new()?;
+    event_source.start_component_tree().await?;
 
     let hub_report = {
         // Register for RouteCapability events
-        let receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
+        let event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
 
         // Connect to the HubReport service
         let hub_report = HubReport::new()?;
 
         // Wait until the HubReport service has been routed successfully
-        receiver
+        event_stream
             .wait_until_framework_capability(".", "/svc/fuchsia.test.hub.HubReport", Some("."))
             .await?
             .resume()
@@ -41,14 +40,14 @@ async fn main() -> Result<(), Error> {
 
     {
         // Register for RouteCapability events
-        let receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
+        let event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
 
         // Connect to the Echo capability.
         connect_to_service::<fecho::EchoMarker>().context("error connecting to Echo service")?;
 
         // Since connecting to the Echo capability is an asynchronous operation, we should
         // wait until the capability is actually routed.
-        receiver
+        event_stream
             .wait_until_component_capability(".", "/svc/fidl.examples.routing.echo.Echo")
             .await?
             .resume()
@@ -60,14 +59,14 @@ async fn main() -> Result<(), Error> {
 
     {
         // Register for RouteCapability events
-        let receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
+        let event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
 
         // Connect to the Echo capability again
         connect_to_service::<fecho::EchoMarker>().context("error connecting to Echo service")?;
 
         // Since connecting to the Echo capability is an asynchronous operation, we should
         // wait until the capability is actually routed.
-        receiver
+        event_stream
             .wait_until_component_capability(".", "/svc/fidl.examples.routing.echo.Echo")
             .await?
             .resume()

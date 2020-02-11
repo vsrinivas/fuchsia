@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_test_echofactory as fechofactory, fuchsia_async as fasync,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::sync::Arc,
-    test_utils_lib::breakpoint_system_client::Interposer,
+    test_utils_lib::events::Interposer,
 };
 
 /// Client <---> EchoFactoryInterposer <---> EchoFactory service

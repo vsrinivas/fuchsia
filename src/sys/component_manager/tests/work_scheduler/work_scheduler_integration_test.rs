@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error,
-    test_utils_lib::{breakpoint_system_client::*, test_utils::*},
+    test_utils_lib::{events::*, test_utils::*},
     work_scheduler_dispatch_reporter::{DispatchedEvent, WorkSchedulerDispatchReporter},
 };
 
@@ -14,18 +14,17 @@ async fn basic_work_scheduler_test() -> Result<(), Error> {
         "fuchsia-pkg://fuchsia.com/work_scheduler_integration_test#meta/bound_worker.cm";
     let test = BlackBoxTest::default(root_component_url).await?;
 
-    let breakpoint_system =
-        test.connect_to_breakpoint_system().await.expect("breakpoint system is unavailable");
-    let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
+    let event_source = test.connect_to_event_source().await?;
+    let event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
-    breakpoint_system.install_injector(work_scheduler_dispatch_reporter.clone()).await?;
+    event_source.install_injector(work_scheduler_dispatch_reporter.clone()).await?;
 
-    breakpoint_system.start_component_tree().await?;
+    event_source.start_component_tree().await?;
 
     // Expect the root component to be bound to
-    let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
-    invocation.resume().await?;
+    let event = event_stream.expect_exact::<BeforeStartInstance>(".").await?;
+    event.resume().await?;
 
     let dispatched_event = work_scheduler_dispatch_reporter
         .wait_for_dispatched(std::time::Duration::from_secs(10))
@@ -41,25 +40,24 @@ async fn unbound_work_scheduler_test() -> Result<(), Error> {
         "fuchsia-pkg://fuchsia.com/work_scheduler_integration_test#meta/unbound_child_worker_parent.cm";
     let test = BlackBoxTest::default(root_component_url).await?;
 
-    let breakpoint_system =
-        test.connect_to_breakpoint_system().await.expect("breakpoint system is unavailable");
-    let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
+    let event_source = test.connect_to_event_source().await?;
+    let event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
-    breakpoint_system.install_injector(work_scheduler_dispatch_reporter.clone()).await?;
+    event_source.install_injector(work_scheduler_dispatch_reporter.clone()).await?;
 
-    breakpoint_system.start_component_tree().await?;
+    event_source.start_component_tree().await?;
 
     // Expect the root component to be bound to
-    let invocation = receiver.expect_exact::<BeforeStartInstance>(".").await?;
-    invocation.resume().await?;
+    let event = event_stream.expect_exact::<BeforeStartInstance>(".").await?;
+    event.resume().await?;
 
     // `/worker_sibling:0` has started.
-    let invocation = receiver.expect_exact::<BeforeStartInstance>("./worker_sibling:0").await?;
-    invocation.resume().await?;
+    let event = event_stream.expect_exact::<BeforeStartInstance>("./worker_sibling:0").await?;
+    event.resume().await?;
 
     // We no longer need to track `StartInstance` events.
-    drop(receiver);
+    drop(event_stream);
 
     let dispatched_event = work_scheduler_dispatch_reporter
         .wait_for_dispatched(std::time::Duration::from_secs(10))

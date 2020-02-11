@@ -10,14 +10,14 @@ use {
     fuchsia_component::client::connect_to_service,
     futures::prelude::*,
     hub_report::HubReport,
-    test_utils_lib::breakpoint_system_client::*,
+    test_utils_lib::events::*,
 };
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let breakpoint_system = BreakpointSystemClient::new()?;
+    let event_source = EventSource::new()?;
     // Creating children will not complete until `start_component_tree` is called.
-    breakpoint_system.start_component_tree().await?;
+    event_source.start_component_tree().await?;
 
     // Create a dynamic child component
     let realm = connect_to_service::<fsys::RealmMarker>().context("error connecting to realm")?;
@@ -73,12 +73,8 @@ async fn main() -> Result<(), Error> {
     hub_report.report_file_content("/hub/children/coll:simple_instance/children/child/id").await?;
 
     // Register breakpoints for relevant events
-    let receiver = breakpoint_system
-        .set_breakpoints(vec![
-            StopInstance::TYPE,
-            PreDestroyInstance::TYPE,
-            PostDestroyInstance::TYPE,
-        ])
+    let event_stream = event_source
+        .subscribe(vec![StopInstance::TYPE, PreDestroyInstance::TYPE, PostDestroyInstance::TYPE])
         .await?;
 
     // Delete the dynamic child
@@ -90,42 +86,42 @@ async fn main() -> Result<(), Error> {
     fasync::spawn(f);
 
     // Wait for the dynamic child to begin deletion
-    let invocation =
-        receiver.expect_exact::<PreDestroyInstance>("./coll:simple_instance:1").await?;
+    let event = event_stream.expect_exact::<PreDestroyInstance>("./coll:simple_instance:1").await?;
     hub_report.report_directory_contents("/hub/children").await?;
     hub_report.report_directory_contents("/hub/deleting").await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
-    invocation.resume().await?;
+    event.resume().await?;
 
     // Wait for the destroy call to return
     destroy_handle.await.context("delete_child failed")?.expect("failed to delete child");
 
     // Wait for the dynamic child to stop
-    let invocation = receiver.expect_exact::<StopInstance>("./coll:simple_instance:1").await?;
+    let event = event_stream.expect_exact::<StopInstance>("./coll:simple_instance:1").await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
-    invocation.resume().await?;
+    event.resume().await?;
 
     // Wait for the dynamic child's static child to begin deletion
-    let invocation =
-        receiver.expect_exact::<PreDestroyInstance>("./coll:simple_instance:1/child:0").await?;
+    let event =
+        event_stream.expect_exact::<PreDestroyInstance>("./coll:simple_instance:1/child:0").await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1/children").await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting").await?;
     hub_report
         .report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting/child:0")
         .await?;
-    invocation.resume().await?;
+    event.resume().await?;
 
     // Wait for the dynamic child's static child to be destroyed
-    let invocation =
-        receiver.expect_exact::<PostDestroyInstance>("./coll:simple_instance:1/child:0").await?;
+    let event = event_stream
+        .expect_exact::<PostDestroyInstance>("./coll:simple_instance:1/child:0")
+        .await?;
     hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting").await?;
-    invocation.resume().await?;
+    event.resume().await?;
 
     // Wait for the dynamic child to be destroyed
-    let invocation =
-        receiver.expect_exact::<PostDestroyInstance>("./coll:simple_instance:1").await?;
+    let event =
+        event_stream.expect_exact::<PostDestroyInstance>("./coll:simple_instance:1").await?;
     hub_report.report_directory_contents("/hub/deleting").await?;
-    invocation.resume().await?;
+    event.resume().await?;
 
     Ok(())
 }
