@@ -11,6 +11,7 @@ group("lib") {
   testonly = true
   deps = [
     "fake_legacy_stream",
+    "fake_stream",
     "format_conversion",
     "image_writer",
     "stream_utils",
