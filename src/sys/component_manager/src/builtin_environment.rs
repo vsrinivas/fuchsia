@@ -16,8 +16,8 @@ use {
         framework::RealmCapabilityHost,
         model::{
             binding::Binder,
-            breakpoints::core::BreakpointSystemFactory,
             error::ModelError,
+            events::core::EventSourceFactory,
             hub::Hub,
             model::{ComponentManagerConfig, Model},
         },
@@ -61,7 +61,7 @@ pub struct BuiltinEnvironment {
     pub realm_capability_host: RealmCapabilityHost,
     pub hub: Hub,
     pub builtin_runners: HashMap<CapabilityName, BuiltinRunner>,
-    pub breakpoint_system_factory: Option<BreakpointSystemFactory>,
+    pub event_source_factory: Option<EventSourceFactory>,
     pub stop_notifier: Mutex<Option<RootRealmStopNotifier>>,
 }
 
@@ -157,9 +157,9 @@ impl BuiltinEnvironment {
         let stop_notifier = RootRealmStopNotifier::new();
         model.root_realm.hooks.install(stop_notifier.hooks()).await;
 
-        let breakpoint_system_factory = {
+        let event_source_factory = {
             if args.debug {
-                Some(BreakpointSystemFactory::new())
+                Some(EventSourceFactory::new())
             } else {
                 None
             }
@@ -179,7 +179,7 @@ impl BuiltinEnvironment {
             realm_capability_host,
             hub,
             builtin_runners,
-            breakpoint_system_factory,
+            event_source_factory,
             stop_notifier: Mutex::new(Some(stop_notifier)),
         })
     }
@@ -200,12 +200,12 @@ impl BuiltinEnvironment {
         model.root_realm.hooks.install(self.hub.hooks()).await;
         service_fs.add_remote("hub", hub_proxy);
 
-        // If component manager is in debug mode, create a breakpoint system scoped at the
+        // If component manager is in debug mode, create an event source scoped at the
         // root and offer it via ServiceFs to the outside world.
-        if let Some(breakpoint_system_factory) = &self.breakpoint_system_factory {
-            model.root_realm.hooks.install(breakpoint_system_factory.hooks()).await;
+        if let Some(event_source_factory) = &self.event_source_factory {
+            model.root_realm.hooks.install(event_source_factory.hooks()).await;
 
-            let system = breakpoint_system_factory.create(None).await;
+            let system = event_source_factory.create(None).await;
 
             service_fs.dir("svc").add_fidl_service(move |stream| {
                 let system = system.clone();

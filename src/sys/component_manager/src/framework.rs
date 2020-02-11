@@ -368,7 +368,7 @@ impl Hook for RealmCapabilityHostInner {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::breakpoints::registry::BreakpointRegistry;
+    use crate::model::events::registry::EventRegistry;
     use {
         crate::{
             builtin_environment::BuiltinEnvironment,
@@ -624,17 +624,16 @@ mod tests {
 
         let hook = Arc::new(TestHook::new());
 
-        let breakpoint_events = vec![EventType::PreDestroyInstance, EventType::PostDestroyInstance];
-        let breakpoint_registry = Arc::new(BreakpointRegistry::new());
-        let mut breakpoint_receiver =
-            breakpoint_registry.set_breakpoints(None, breakpoint_events.clone()).await;
+        let events = vec![EventType::PreDestroyInstance, EventType::PostDestroyInstance];
+        let event_registry = Arc::new(EventRegistry::new());
+        let mut event_stream = event_registry.subscribe(None, events.clone()).await;
 
         let mut hooks = vec![];
         hooks.append(&mut hook.hooks());
         hooks.append(&mut vec![HooksRegistration::new(
-            "BreakpointRegistry",
-            breakpoint_events,
-            Arc::downgrade(&breakpoint_registry) as Weak<dyn Hook>,
+            "EventRegistry",
+            events,
+            Arc::downgrade(&event_registry) as Weak<dyn Hook>,
         )]);
         let test = RealmCapabilityTest::new(
             mock_resolver,
@@ -673,7 +672,7 @@ mod tests {
         let (f, destroy_handle) = test.realm_proxy.destroy_child(&mut child_ref).remote_handle();
         fasync::spawn(f);
 
-        let invocation = breakpoint_receiver
+        let event = event_stream
             .wait_until(EventType::PreDestroyInstance, vec!["system:0", "coll:a:1"].into())
             .await;
 
@@ -691,7 +690,7 @@ mod tests {
         assert!(has_child(&test.realm, "coll:a:1").await);
 
         // Move past the 'PreDestroy' event for "a", and wait for destroy_child to return.
-        invocation.resume();
+        event.resume();
         let res = destroy_handle.await;
         let _ = res.expect("failed to destroy child a").expect("failed to destroy child a");
 
@@ -705,7 +704,7 @@ mod tests {
         }
 
         // Wait until 'PostDestroy' event for "a"
-        breakpoint_receiver
+        event_stream
             .wait_until(EventType::PostDestroyInstance, vec!["system:0", "coll:a:1"].into())
             .await
             .resume();

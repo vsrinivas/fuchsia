@@ -4,7 +4,7 @@
 
 use {
     crate::model::{
-        actions::{Action, ActionSet, start},
+        actions::{start, Action, ActionSet},
         error::ModelError,
         model::Model,
         moniker::AbsoluteMoniker,
@@ -130,7 +130,7 @@ mod tests {
             builtin_environment::BuiltinEnvironment,
             model::{
                 actions::{Action, ActionSet},
-                breakpoints::registry::BreakpointRegistry,
+                events::registry::EventRegistry,
                 hooks::{EventType, Hook, HooksRegistration},
                 model::{ComponentManagerConfig, ModelParams},
                 moniker::PartialMoniker,
@@ -232,15 +232,14 @@ mod tests {
         );
         mock_resolver.add_component("system", component_decl_with_test_runner());
 
-        let breakpoint_events = vec![EventType::BeforeStartInstance];
-        let breakpoint_registry = Arc::new(BreakpointRegistry::new());
-        let mut breakpoint_receiver = breakpoint_registry
-            .set_breakpoints(Some(AbsoluteMoniker::root()), breakpoint_events.clone())
-            .await;
+        let events = vec![EventType::BeforeStartInstance];
+        let event_registry = Arc::new(EventRegistry::new());
+        let mut event_stream =
+            event_registry.subscribe(Some(AbsoluteMoniker::root()), events.clone()).await;
         let hooks = vec![HooksRegistration::new(
             "bind_concurrent",
-            breakpoint_events,
-            Arc::downgrade(&breakpoint_registry) as Weak<dyn Hook>,
+            events,
+            Arc::downgrade(&event_registry) as Weak<dyn Hook>,
         )];
         let (model, _builtin_environment) =
             new_model_with(mock_resolver, mock_runner.clone(), hooks).await;
@@ -253,12 +252,10 @@ mod tests {
         }
         .remote_handle();
         fasync::spawn(f);
-        let invocation =
-            breakpoint_receiver.wait_until(EventType::BeforeStartInstance, vec![].into()).await;
-        invocation.resume();
-        let invocation = breakpoint_receiver
-            .wait_until(EventType::BeforeStartInstance, vec!["system:0"].into())
-            .await;
+        let event = event_stream.wait_until(EventType::BeforeStartInstance, vec![].into()).await;
+        event.resume();
+        let event =
+            event_stream.wait_until(EventType::BeforeStartInstance, vec!["system:0"].into()).await;
         {
             let expected_urls: Vec<String> = vec!["test:///root_resolved".to_string()];
             assert_eq!(mock_runner.urls_run(), expected_urls);
@@ -269,7 +266,7 @@ mod tests {
         let m: AbsoluteMoniker = vec!["system:0"].into();
         let realm = model.look_up_realm(&m).await.expect("failed realm lookup");
         let nf = ActionSet::register(realm, model.clone(), Action::Start).await;
-        invocation.resume();
+        event.resume();
         bind_handle.await;
         nf.await.expect("failed to bind 2");
 

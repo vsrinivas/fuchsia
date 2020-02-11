@@ -6,9 +6,9 @@ use {
     crate::{
         capability::{CapabilityProvider, CapabilitySource, FrameworkCapability},
         model::{
-            breakpoints::core::BreakpointSystem,
-            breakpoints::registry::{Invocation, InvocationReceiver},
             error::ModelError,
+            events::core::EventSource,
+            events::registry::{Event, EventStream},
             hooks::{EventPayload, EventType},
             moniker::{AbsoluteMoniker, RelativeMoniker},
         },
@@ -21,8 +21,8 @@ use {
     std::{path::PathBuf, sync::Arc},
 };
 
-pub async fn serve_system(
-    mut system: BreakpointSystem,
+pub async fn serve_event_source(
+    mut system: EventSource,
     mut stream: fbreak::BreakpointSystemRequestStream,
 ) {
     while let Some(Ok(request)) = stream.next().await {
@@ -38,14 +38,18 @@ pub async fn serve_system(
                     .map(|event_type| convert_fidl_event_type_to_std(event_type))
                     .collect();
 
-                // Set the breakpoints
-                let receiver = system.set_breakpoints(event_types).await;
+                // Subscribe to events.
+                let event_stream = system.subscribe(event_types).await;
                 let scope = system.scope();
 
-                // Serve the receiver over FIDL asynchronously
+                // Serve the event_stream over FIDL asynchronously
                 fasync::spawn(async move {
-                    serve_receiver(receiver, scope.unwrap_or(AbsoluteMoniker::root()), server_end)
-                        .await;
+                    serve_event_stream(
+                        event_stream,
+                        scope.unwrap_or(AbsoluteMoniker::root()),
+                        server_end,
+                    )
+                    .await;
                 });
 
                 // Unblock the component
@@ -59,27 +63,27 @@ pub async fn serve_system(
     }
 }
 
-/// Serves InvocationReceiver FIDL requests received over the provided stream.
-async fn serve_receiver(
-    mut receiver: InvocationReceiver,
+/// Serves EventStream FIDL requests received over the provided stream.
+async fn serve_event_stream(
+    mut event_stream: EventStream,
     scope_moniker: AbsoluteMoniker,
     server_end: ServerEnd<fbreak::InvocationReceiverMarker>,
 ) {
-    // Serve the InvocationReceiver FIDL protocol asynchronously
+    // Serve the EventStream FIDL protocol asynchronously
     let mut stream = server_end.into_stream().unwrap();
 
     while let Some(Ok(fbreak::InvocationReceiverRequest::Next { responder })) = stream.next().await
     {
-        trace::duration!("component_manager", "breakpoints:fidl_get_next");
+        trace::duration!("component_manager", "events:fidl_get_next");
         // Wait for the next breakpoint to occur
-        let invocation = receiver.next().await;
+        let event = event_stream.next().await;
 
-        // Create the basic Invocation FIDL object.
+        // Create the basic Event FIDL object.
         // This will begin serving the Handler protocol asynchronously.
-        let invocation_fidl_object = create_invocation_fidl_object(&scope_moniker, invocation);
+        let event_fidl_object = create_event_fidl_object(&scope_moniker, event);
 
-        // Respond with the Invocation FIDL object
-        responder.send(invocation_fidl_object).unwrap();
+        // Respond with the Event FIDL object
+        responder.send(event_fidl_object).unwrap();
     }
 }
 
@@ -133,18 +137,15 @@ fn maybe_create_event_payload(
     }
 }
 
-/// Creates the basic FIDL Invocation object containing the event type, target_realm
+/// Creates the basic FIDL Event object containing the event type, target_realm
 /// and basic handler for resumption.
-fn create_invocation_fidl_object(
-    scope_moniker: &AbsoluteMoniker,
-    invocation: Invocation,
-) -> fbreak::Invocation {
-    let event_type = Some(convert_std_event_type_to_fidl(invocation.event.payload.type_()));
+fn create_event_fidl_object(scope_moniker: &AbsoluteMoniker, event: Event) -> fbreak::Invocation {
+    let event_type = Some(convert_std_event_type_to_fidl(event.event.payload.type_()));
     let target_relative_moniker =
-        RelativeMoniker::from_absolute(scope_moniker, &invocation.event.target_moniker);
+        RelativeMoniker::from_absolute(scope_moniker, &event.event.target_moniker);
     let target_moniker = Some(target_relative_moniker.to_string());
-    let event_payload = maybe_create_event_payload(scope_moniker, invocation.event.payload.clone());
-    let handler = Some(serve_handler_async(invocation));
+    let event_payload = maybe_create_event_payload(scope_moniker, event.event.payload.clone());
+    let handler = Some(serve_handler_async(event));
     fbreak::Invocation { event_type, target_moniker, handler, event_payload }
 }
 
@@ -243,13 +244,13 @@ async fn serve_routing_protocol(
 }
 
 /// Serves the server end of Handler FIDL protocol asynchronously
-fn serve_handler_async(invocation: Invocation) -> ClientEnd<fbreak::HandlerMarker> {
+fn serve_handler_async(event: Event) -> ClientEnd<fbreak::HandlerMarker> {
     let (client_end, mut stream) = create_request_stream::<fbreak::HandlerMarker>()
         .expect("could not create request stream for handler protocol");
     fasync::spawn(async move {
         // Expect exactly one call to Resume
         if let Some(Ok(fbreak::HandlerRequest::Resume { responder })) = stream.next().await {
-            invocation.resume();
+            event.resume();
             responder.send().unwrap();
         }
     });
