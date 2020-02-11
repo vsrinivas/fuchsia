@@ -16,11 +16,11 @@ use futures::{
     task::{Context, Poll},
     Stream, StreamExt,
 };
-use std::{collections::VecDeque, iter::once, pin::Pin};
+use std::{collections::VecDeque, pin::Pin};
 
 use fuchsia_syslog::fx_log_info;
 
-pub struct RtpPacketBuilderSbc {
+pub struct RtpPacketBuilder {
     /// The number of frames to be included in each packet
     frames_per_packet: u8,
     /// The next packet's sequence number
@@ -31,6 +31,8 @@ pub struct RtpPacketBuilderSbc {
     frames: VecDeque<Vec<u8>>,
     /// Time that those frames represent, in the same units as `timestamp`
     frame_time: u32,
+    /// Extra header to include in each packet before `frames` are added
+    frame_header: Vec<u8>,
 }
 
 bitfield! {
@@ -46,15 +48,17 @@ bitfield! {
     u32, ssrc, set_ssrc: 95, 64;
 }
 
-impl RtpPacketBuilderSbc {
-    /// Make a new builder that will vend a packet every `frames_per_packet` frames.
-    pub fn new(frames_per_packet: u8) -> Self {
+impl RtpPacketBuilder {
+    /// Make a new builder that will vend a packet every `frames_per_packet` frames. `frame_header`
+    /// are header bytes added to each packet before frames are added.
+    pub fn new(frames_per_packet: u8, frame_header: Vec<u8>) -> Self {
         Self {
             frames_per_packet,
             next_sequence_number: 1,
             timestamp: 0,
             frames: VecDeque::with_capacity(frames_per_packet.into()),
             frame_time: 0,
+            frame_header,
         }
     }
 
@@ -71,9 +75,9 @@ impl RtpPacketBuilderSbc {
             header.set_sequence_number(self.next_sequence_number);
             header.set_timestamp(self.timestamp);
             let header_iter = header.0.iter().cloned();
+            let frame_header_iter = self.frame_header.iter().cloned();
             let frame_bytes_iter = self.frames.drain(..).flatten();
-            let packet =
-                header_iter.chain(once(self.frames_per_packet)).chain(frame_bytes_iter).collect();
+            let packet = header_iter.chain(frame_header_iter).chain(frame_bytes_iter).collect();
             self.next_sequence_number = self.next_sequence_number.wrapping_add(1);
             self.timestamp = self.timestamp + self.frame_time;
             self.frame_time = 0;
@@ -195,7 +199,7 @@ mod tests {
 
     #[test]
     fn test_packet_builder_sbc() {
-        let mut builder = RtpPacketBuilderSbc::new(5);
+        let mut builder = RtpPacketBuilder::new(5, vec![5]);
 
         assert!(builder.push_frame(vec![0xf0], 1).unwrap().is_none());
         assert!(builder.push_frame(vec![0x9f], 2).unwrap().is_none());

@@ -32,7 +32,7 @@ mod pcm_audio;
 mod peer;
 mod sources;
 
-use crate::encoding::{EncodedStreamSbc, RtpPacketBuilderSbc};
+use crate::encoding::{EncodedStreamSbc, RtpPacketBuilder};
 use crate::pcm_audio::PcmAudio;
 use crate::peer::Peer;
 use sources::AudioSourceType;
@@ -252,7 +252,7 @@ async fn start_streaming(
 
     let mut encoded_stream = EncodedStreamSbc::build(pcm_format, &sbc_settings, source_stream)?;
 
-    let mut builder = RtpPacketBuilderSbc::new(FRAMES_PER_SBC_PACKET);
+    let mut builder = RtpPacketBuilder::new(FRAMES_PER_SBC_PACKET, vec![FRAMES_PER_SBC_PACKET]);
 
     while let Some(encoded) = encoded_stream.try_next().await? {
         if let Some(packet) =
