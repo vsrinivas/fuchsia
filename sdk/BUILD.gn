@@ -87,6 +87,7 @@ sdk_molecule("fidl") {
   deps = [
     "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.auth.oldtokens:fuchsia.auth.oldtokens_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.bluetooth.a2dp:fuchsia.bluetooth.a2dp_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le_sdk($fidl_toolchain)",

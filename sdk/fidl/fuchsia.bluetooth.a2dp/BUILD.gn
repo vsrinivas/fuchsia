@@ -4,8 +4,10 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("a2dp") {
+fidl("fuchsia.bluetooth.a2dp") {
   name = "fuchsia.bluetooth.a2dp"
+
+  sdk_category = "partner"
 
   sources = [ "audio_mode.fidl" ]
 }
