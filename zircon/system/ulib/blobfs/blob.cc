@@ -338,22 +338,13 @@ zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
   // Decompress the compressed data into the target buffer.
   size_t target_size = inode_.blob_size;
   const void* compressed_buffer = compressed_mapper.start();
-  switch (algorithm) {
-    case CompressionAlgorithm::LZ4:
-      status = LZ4Decompress(GetData(), &target_size, compressed_buffer, &compressed_size);
-      break;
-    case CompressionAlgorithm::ZSTD:
-      status = ZSTDDecompress(GetData(), &target_size, compressed_buffer, &compressed_size);
-      break;
-    case CompressionAlgorithm::ZSTD_SEEKABLE:
-      // TODO(markdittmer): This does not have the same signature as other decompression routines.
-      status = ZSTDSeekableDecompress(GetData(), &target_size, compressed_buffer, compressed_size);
-      break;
-    default:
-      FS_TRACE_ERROR("Unsupported decompression algorithm");
-      return ZX_ERR_NOT_SUPPORTED;
+  std::unique_ptr<Decompressor> decompressor;
+  status = Decompressor::Create(algorithm, &decompressor);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("Failed to create decompressor, status=%d", status);
+    return status;
   }
-
+  status = decompressor->Decompress(GetData(), &target_size, compressed_buffer, compressed_size);
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Failed to decompress data: %d\n", status);
     return status;

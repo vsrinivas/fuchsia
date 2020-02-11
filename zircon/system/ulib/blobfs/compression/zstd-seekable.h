@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include <blobfs/format.h>
 #include <zstd/zstd.h>
 #include <zstd/zstd_seekable.h>
 
@@ -27,20 +28,13 @@ constexpr size_t kZSTDSeekableHeaderSize = sizeof(ZSTDSeekableHeader);
 // random access in zstd archives.
 class ZSTDSeekableCompressor : public Compressor {
  public:
+  // TODO(markdittmer): This can include `kBlobFlagZSTDCompressed` if a unified envelope format is
+  // implemented across (minimally) all ZSTD compression strategies.
+  static uint32_t InodeHeaderCompressionFlags() { return kBlobFlagZSTDSeekableCompressed; }
+
   // Returns an upper bound on the size of the buffer required to store the compressed
   // representation of a blob of size `input_length`.
   static size_t BufferMax(size_t input_length);
-
-  // Writes up to `kZSTDSeekableHeaderSize` bytes from the beginning of `buf` from `header`.
-  // @param buf Pointer to buffer that is to contain <header><zstd seekable archive>.
-  // @param buf_size Size of `buf` in bytes.
-  // @param header Header values to write.
-  // It is the responsibility of any code writing the zstd seekable archive to `buf` to skip the
-  // first `kZSTDSeekableHeaderSize` bytes before writing the archive contents. This is generally an
-  // implementation detail invoked by other public methods, but is public to enable test
-  // environments to write syntactically correct headers via the same code code path used by
-  // `ZSTDSeekableCompressor`.
-  static zx_status_t WriteZSTDSeekableHeader(void* buf, size_t buf_size, ZSTDSeekableHeader header);
 
   static zx_status_t Create(size_t input_size, void* compression_buffer,
                             size_t compression_buffer_length,
@@ -54,6 +48,17 @@ class ZSTDSeekableCompressor : public Compressor {
   zx_status_t End() final;
 
  private:
+  // Writes up to `kZSTDSeekableHeaderSize` bytes from the beginning of `buf` from `header`.
+  // @param buf Pointer to buffer that is to contain <header><zstd seekable archive>.
+  // @param buf_size Size of `buf` in bytes.
+  // @param header Header values to write.
+  // It is the responsibility of any code writing the zstd seekable archive to `buf` to skip the
+  // first `kZSTDSeekableHeaderSize` bytes before writing the archive contents. This is generally an
+  // implementation detail invoked by other public methods, but is public to enable test
+  // environments to write syntactically correct headers via the same code code path used by
+  // `ZSTDSeekableCompressor`.
+  static zx_status_t WriteHeader(void* buf, size_t buf_size, ZSTDSeekableHeader header);
+
   ZSTDSeekableCompressor(ZSTD_seekable_CStream* stream, void* compression_buffer,
                          size_t compression_buffer_length);
 
@@ -63,32 +68,30 @@ class ZSTDSeekableCompressor : public Compressor {
   DISALLOW_COPY_ASSIGN_AND_MOVE(ZSTDSeekableCompressor);
 };
 
-// TODO(markdittmer): Encapsulate decompression functions in testable decompressor class.
+class ZSTDSeekableDecompressor : public Decompressor, public SeekableDecompressor {
+ public:
+  ZSTDSeekableDecompressor() = default;
+  DISALLOW_COPY_ASSIGN_AND_MOVE(ZSTDSeekableDecompressor);
 
-// Reads up to `kZSTDSeekableHeaderSize` bytes from the beginning of `buf` into `header`.
-// @param buf Pointer to buffer that is to contain <header><zstd seekable archive>.
-// @param buf_size Size of `buf` in bytes.
-// @param header Header struct in which to store values.
-zx_status_t ReadZSTDSeekableHeader(const void* buf, size_t buf_size, ZSTDSeekableHeader* header);
+  zx_status_t DecompressArchive(void* uncompressed_buf, size_t* uncompressed_size,
+                                const void* compressed_buf, size_t compressed_size, size_t offset);
 
-// Decompress the source buffer into the target buffer, starting at _uncompressed_ `offset`, until
-// either the source is drained or the target is filled (or both). The source buffer is interpreted
-// as a complete zstd seekable archive (with _no_ padding in the source buffer).
-zx_status_t ZSTDSeekableDecompressArchive(void* target_buf, size_t* target_size,
-                                          const void* src_buf, size_t src_size, size_t offset);
+  // Decompressor implementation.
+  zx_status_t Decompress(void* uncompressed_buf, size_t* uncompressed_size,
+                         const void* compressed_buf, const size_t max_compressed_size) final;
 
-// Decompress the source buffer into the target buffer, starting at _uncompressed_ `offset`, until
-// either the source is drained or the target is filled (or both). The source buffer is interpreted
-// as a `ZSTDSeekableCompressor`-defined blob that may contain additional metadata beyond a zstd
-// seekable archive.
-zx_status_t ZSTDSeekableDecompressBytes(void* target_buf, size_t* target_size, const void* src_buf,
-                                        size_t src_size, size_t offset);
+  // SeekableDecompressor implementation.
+  zx_status_t DecompressRange(void* uncompressed_buf, size_t* uncompressed_size,
+                              const void* compressed_buf, size_t max_compressed_size,
+                              size_t offset) final;
 
-// Decompress the source buffer into the target buffer, until either the source is drained or
-// the target is filled (or both). This is equivalent to:
-// `ZSTDSeekableDecompressBytes(target_buf, target_size, src_buf, src_size, 0)`.
-zx_status_t ZSTDSeekableDecompress(void* target_buf, size_t* target_size, const void* src_buf,
-                                   size_t src_size);
+ private:
+  // Reads up to `kZSTDSeekableHeaderSize` bytes from the beginning of `buf` into `header`.
+  // @param buf Pointer to buffer that is to contain <header><zstd seekable archive>.
+  // @param buf_size Size of `buf` in bytes.
+  // @param header Header struct in which to store values.
+  zx_status_t ReadHeader(const void* buf, size_t buf_size, ZSTDSeekableHeader* header);
+};
 
 }  // namespace blobfs
 

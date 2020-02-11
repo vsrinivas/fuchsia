@@ -46,8 +46,7 @@ namespace {
 // TODO(markdittmer): Abstract choice of host compressor, decompressor and metadata flag to support
 // choosing from multiple strategies.
 using HostCompressor = ZSTDCompressor;
-auto HostDecompressor = ZSTDDecompress;
-constexpr uint32_t kBlobFlagCompressed = kBlobFlagZSTDCompressed;
+using HostDecompressor = ZSTDDecompressor;
 
 zx_status_t ReadBlockOffset(int fd, uint64_t bno, off_t offset, void* data) {
   off_t off = offset + bno * kBlobfsBlockSize;
@@ -155,7 +154,8 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, FileSizeRecorder* siz
     return ZX_ERR_NOT_SUPPORTED;
   }
   inode->block_count = static_cast<uint32_t>(block_count);
-  inode->header.flags |= kBlobFlagAllocated | (info.compressed ? kBlobFlagCompressed : 0);
+  inode->header.flags |=
+      kBlobFlagAllocated | (info.compressed ? HostCompressor::InodeHeaderCompressionFlags() : 0);
 
   // TODO(smklein): Currently, host-side tools can only generate single-extent
   // blobs. This should be fixed.
@@ -745,7 +745,7 @@ zx_status_t Blobfs::VerifyBlob(uint32_t node_index) {
 
   // Create data buffer.
   std::unique_ptr<uint8_t[]> data(new uint8_t[target_size]);
-  if (inode.header.flags & kBlobFlagCompressed) {
+  if (inode.header.flags & HostCompressor::InodeHeaderCompressionFlags()) {
     // Read in uncompressed merkle blocks.
     for (unsigned i = 0; i < merkle_blocks; i++) {
       ReadBlock(data_start_block_ + inode.extents[0].Start() + i);
@@ -773,8 +773,9 @@ zx_status_t Blobfs::VerifyBlob(uint32_t node_index) {
     zx_status_t status;
     target_size = inode.blob_size;
     uint8_t* data_ptr = data.get() + (merkle_blocks * kBlobfsBlockSize);
-    if ((status = HostDecompressor(data_ptr, &target_size, compressed_data.get(),
-                                   &compressed_size)) != ZX_OK) {
+    HostDecompressor decompressor;
+    if ((status = decompressor.Decompress(data_ptr, &target_size, compressed_data.get(),
+                                          compressed_size)) != ZX_OK) {
       return status;
     }
     if (target_size != inode.blob_size) {

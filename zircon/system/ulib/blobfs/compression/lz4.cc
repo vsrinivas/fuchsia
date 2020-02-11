@@ -85,11 +85,13 @@ zx_status_t LZ4Compressor::End() {
 
 size_t LZ4Compressor::Size() const { return buf_used_; }
 
-zx_status_t LZ4Decompress(void* target_buf_, size_t* target_size, const void* src_buf_,
-                          size_t* src_size) {
-  TRACE_DURATION("blobfs", "LZ4Decompress", "target_size", *target_size, "src_size", *src_size);
-  uint8_t* target_buf = reinterpret_cast<uint8_t*>(target_buf_);
-  const uint8_t* src_buf = reinterpret_cast<const uint8_t*>(src_buf_);
+zx_status_t LZ4Decompressor::Decompress(void* uncompressed_buf_, size_t* uncompressed_size,
+                                        const void* compressed_buf_,
+                                        const size_t max_compressed_size) {
+  TRACE_DURATION("blobfs", "LZ4Decompressor::Decompress", "uncompressed_size", *uncompressed_size,
+                 "compressed_size", max_compressed_size);
+  uint8_t* uncompressed_buf = reinterpret_cast<uint8_t*>(uncompressed_buf_);
+  const uint8_t* compressed_buf = reinterpret_cast<const uint8_t*>(compressed_buf_);
 
   LZ4F_decompressionContext_t ctx;
   LZ4F_errorCode_t errc = LZ4F_createDecompressionContext(&ctx, LZ4F_VERSION);
@@ -107,8 +109,8 @@ zx_status_t LZ4Decompress(void* target_buf_, size_t* target_size, const void* sr
   size_t src_sz_next = 4;
 
   while (true) {
-    uint8_t* target = target_buf + target_drained;
-    const uint8_t* src = src_buf + src_drained;
+    uint8_t* target = uncompressed_buf + target_drained;
+    const uint8_t* src = compressed_buf + src_drained;
 
     size_t r = LZ4F_decompress(ctx, target, &dst_sz_next, src, &src_sz_next, nullptr);
     if (LZ4F_isError(r)) {
@@ -123,12 +125,11 @@ zx_status_t LZ4Decompress(void* target_buf_, size_t* target_size, const void* sr
       break;
     }
 
-    dst_sz_next = *target_size - target_drained;
+    dst_sz_next = *uncompressed_size - target_drained;
     src_sz_next = r;
   }
 
-  *target_size = target_drained;
-  *src_size = src_drained;
+  *uncompressed_size = target_drained;
   return ZX_OK;
 }
 

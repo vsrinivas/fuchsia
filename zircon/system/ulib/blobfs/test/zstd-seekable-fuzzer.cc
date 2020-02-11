@@ -38,8 +38,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   std::vector<uint8_t> uncompressed_buf(uncompressed_size);
 
   // Invoke decompression API.
-  blobfs::ZSTDSeekableDecompressArchive(uncompressed_buf.data(), &uncompressed_size,
-                                        compressed_buf.data(), compressed_size, offset);
+  blobfs::ZSTDSeekableDecompressor decompressor;
+  decompressor.DecompressArchive(uncompressed_buf.data(), &uncompressed_size, compressed_buf.data(),
+                                 compressed_size, offset);
 
   return 0;
 }

@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include <blobfs/format.h>
 #include <zstd/zstd.h>
 
 #include "compressor.h"
@@ -17,12 +18,14 @@ namespace blobfs {
 
 class ZSTDCompressor : public Compressor {
  public:
+  static uint32_t InodeHeaderCompressionFlags() { return kBlobFlagZSTDCompressed; }
+
   // Returns the maximum possible size a buffer would need to be
   // in order to compress data of size |input_length|.
   static size_t BufferMax(size_t input_length);
 
   static zx_status_t Create(size_t input_size, void* compression_buffer,
-                            size_t compression_buffer_length, std::unique_ptr<ZSTDCompressor>* out);
+                              size_t compression_buffer_length, std::unique_ptr<ZSTDCompressor>* out);
   ~ZSTDCompressor();
 
   ////////////////////////////////////////
@@ -38,18 +41,15 @@ class ZSTDCompressor : public Compressor {
   ZSTD_outBuffer output_ = {};
 };
 
-class AbstractZSTDDecompressor {
+class AbstractZSTDDecompressor : public Decompressor {
  public:
   AbstractZSTDDecompressor() = default;
-  AbstractZSTDDecompressor(const AbstractZSTDDecompressor&) = delete;
-  AbstractZSTDDecompressor& operator=(const AbstractZSTDDecompressor&) = delete;
   virtual ~AbstractZSTDDecompressor() {}
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AbstractZSTDDecompressor);
 
-  // Decompress the source buffer into the target buffer, until either the source is drained or
-  // the target is filled (or both). Internally invokes `DecompressStream` to perform streaming
-  // decompression.
-  zx_status_t Decompress(void* target_buf, size_t* target_size, const void* src_buf,
-                         size_t* src_size);
+  // Decompressor implementation.
+  virtual zx_status_t Decompress(void* uncompressed_buf, size_t* uncompressed_size,
+                                 const void* compressed_buf, const size_t max_compressed_size);
 
  private:
   virtual size_t DecompressStream(ZSTD_DStream* zds, ZSTD_outBuffer* output,
@@ -59,18 +59,12 @@ class AbstractZSTDDecompressor {
 class ZSTDDecompressor : public AbstractZSTDDecompressor {
  public:
   ZSTDDecompressor() = default;
+  DISALLOW_COPY_ASSIGN_AND_MOVE(ZSTDDecompressor);
 
   // AbstractZSTDDecompressor interface.
   size_t DecompressStream(ZSTD_DStream* zds, ZSTD_outBuffer* output,
                           ZSTD_inBuffer* input) const final;
-
- private:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(ZSTDDecompressor);
 };
-
-// Production implementation of `DoZSTDDecompress(ZSTDDecompressor{}, ...)`.
-zx_status_t ZSTDDecompress(void* target_buf, size_t* target_size, const void* src_buf,
-                           size_t* src_size);
 
 }  // namespace blobfs
 

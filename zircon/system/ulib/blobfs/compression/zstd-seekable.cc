@@ -72,8 +72,8 @@ size_t ZSTDSeekableCompressor::BufferMax(size_t blob_size) {
   return kZSTDSeekableHeaderSize + ZSTD_compressBound(blob_size);
 }
 
-zx_status_t ZSTDSeekableCompressor::WriteZSTDSeekableHeader(void* buf, size_t buf_size,
-                                                            ZSTDSeekableHeader header) {
+zx_status_t ZSTDSeekableCompressor::WriteHeader(void* buf, size_t buf_size,
+                                                ZSTDSeekableHeader header) {
   if (buf_size < kZSTDSeekableHeaderSize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -120,32 +120,20 @@ zx_status_t ZSTDSeekableCompressor::End() {
 
   // Store archive size header as first bytes of blob.
   uint64_t archive_size = output_.pos - kZSTDSeekableHeaderSize;
-  WriteZSTDSeekableHeader(output_.dst, output_.size, ZSTDSeekableHeader{archive_size});
+  WriteHeader(output_.dst, output_.size, ZSTDSeekableHeader{archive_size});
 
   return ZX_OK;
 }
 
 size_t ZSTDSeekableCompressor::Size() const { return output_.pos; }
 
-zx_status_t ReadZSTDSeekableHeader(const void* buf, size_t buf_size, ZSTDSeekableHeader* header) {
-  if (buf_size < kZSTDSeekableHeaderSize) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  const uint64_t* size_header = static_cast<const uint64_t*>(buf);
-  const uint64_t archive_size = size_header[0];
-  header->archive_size = archive_size;
-  if (buf_size < archive_size + kZSTDSeekableHeaderSize) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-
-  return ZX_OK;
-}
-
-zx_status_t ZSTDSeekableDecompressArchive(void* target_buf, size_t* target_size,
-                                          const void* src_buf, size_t src_size, size_t offset) {
+zx_status_t ZSTDSeekableDecompressor::DecompressArchive(void* uncompressed_buf,
+                                                        size_t* uncompressed_size,
+                                                        const void* compressed_buf,
+                                                        size_t compressed_size, size_t offset) {
   ZSTD_seekable* stream = ZSTD_seekable_create();
   auto cleanup = fbl::MakeAutoCall([&stream] { ZSTD_seekable_free(stream); });
-  size_t zstd_return = ZSTD_seekable_initBuff(stream, src_buf, src_size);
+  size_t zstd_return = ZSTD_seekable_initBuff(stream, compressed_buf, compressed_size);
   if (ZSTD_isError(zstd_return)) {
     FS_TRACE_ERROR("[blobfs][zstd-seekable] Failed to initialize seekable dstream: %s\n",
                    ZSTD_getErrorName(zstd_return));
@@ -155,7 +143,8 @@ zx_status_t ZSTDSeekableDecompressArchive(void* target_buf, size_t* target_size,
   size_t decompressed = 0;
   zstd_return = 0;
   do {
-    zstd_return = ZSTD_seekable_decompress(stream, target_buf, *target_size, offset + decompressed);
+    zstd_return = ZSTD_seekable_decompress(stream, uncompressed_buf, *uncompressed_size,
+                                           offset + decompressed);
     decompressed += zstd_return;
     if (ZSTD_isError(zstd_return)) {
       FS_TRACE_ERROR("[blobfs][zstd-seekable] Failed to decompress: %s\n",
@@ -167,31 +156,52 @@ zx_status_t ZSTDSeekableDecompressArchive(void* target_buf, size_t* target_size,
     //   ZSTD_isError().
     // Assume that a return value of 0 indicates, not only that 0 bytes were decompressed, but also
     // that there are no more bytes to decompress.
-  } while (zstd_return > 0 && decompressed < *target_size);
+  } while (zstd_return > 0 && decompressed < *uncompressed_size);
 
-  *target_size = decompressed;
+  *uncompressed_size = decompressed;
   return ZX_OK;
 }
 
-zx_status_t ZSTDSeekableDecompressBytes(void* target_buf, size_t* target_size, const void* src_buf,
-                                        size_t src_size, size_t offset) {
-  TRACE_DURATION("blobfs", "ZSTDSeekableDecompress", "target_size", *target_size, "src_size",
-                 src_size);
+zx_status_t ZSTDSeekableDecompressor::Decompress(void* uncompressed_buf, size_t* uncompressed_size,
+                                                 const void* compressed_buf,
+                                                 const size_t max_compressed_size) {
+  return DecompressRange(uncompressed_buf, uncompressed_size, compressed_buf, max_compressed_size,
+                         0);
+}
+
+// SeekableDecompressor implementation.
+zx_status_t ZSTDSeekableDecompressor::DecompressRange(void* uncompressed_buf,
+                                                      size_t* uncompressed_size,
+                                                      const void* compressed_buf,
+                                                      size_t max_compressed_size, size_t offset) {
+  TRACE_DURATION("blobfs", "ZSTDSeekableDecompressor::DecompressRange", "uncompressed_size",
+                 *uncompressed_size, "max_compressed_size", max_compressed_size);
 
   ZSTDSeekableHeader header;
-  zx_status_t status = ReadZSTDSeekableHeader(src_buf, src_size, &header);
+  zx_status_t status = ReadHeader(compressed_buf, max_compressed_size, &header);
   if (status != ZX_OK) {
     return status;
   }
 
-  const uint8_t* src_byte_buf = static_cast<const uint8_t*>(src_buf);
-  return ZSTDSeekableDecompressArchive(
-      target_buf, target_size, src_byte_buf + kZSTDSeekableHeaderSize, header.archive_size, offset);
+  const uint8_t* compressed_byte_buf = static_cast<const uint8_t*>(compressed_buf);
+  return DecompressArchive(uncompressed_buf, uncompressed_size,
+                           compressed_byte_buf + kZSTDSeekableHeaderSize, header.archive_size,
+                           offset);
 }
 
-zx_status_t ZSTDSeekableDecompress(void* target_buf, size_t* target_size, const void* src_buf,
-                                   size_t src_size) {
-  return ZSTDSeekableDecompressBytes(target_buf, target_size, src_buf, src_size, 0);
+zx_status_t ZSTDSeekableDecompressor::ReadHeader(const void* buf, size_t buf_size,
+                                                 ZSTDSeekableHeader* header) {
+  if (buf_size < kZSTDSeekableHeaderSize) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+  const uint64_t* size_header = static_cast<const uint64_t*>(buf);
+  const uint64_t archive_size = size_header[0];
+  header->archive_size = archive_size;
+  if (buf_size < archive_size + kZSTDSeekableHeaderSize) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
+
+  return ZX_OK;
 }
 
 }  // namespace blobfs

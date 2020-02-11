@@ -69,27 +69,16 @@ void CompressionHelper(CompressionAlgorithm algorithm, const char* input, size_t
   *out = std::move(compressor);
 }
 
-void DecompressionHelper(CompressionAlgorithm algorithm, const void* compressed,
+void DecompressionHelper(CompressionAlgorithm algorithm, const void* compressed_buf,
                          size_t compressed_size, const void* expected, size_t expected_size) {
-  std::unique_ptr<char[]> output(new char[expected_size]);
-  size_t target_size = expected_size;
-  size_t src_size = compressed_size;
-  switch (algorithm) {
-    case CompressionAlgorithm::LZ4:
-      ASSERT_OK(LZ4Decompress(output.get(), &target_size, compressed, &src_size));
-      break;
-    case CompressionAlgorithm::ZSTD:
-      ASSERT_OK(ZSTDDecompress(output.get(), &target_size, compressed, &src_size));
-      break;
-    case CompressionAlgorithm::ZSTD_SEEKABLE:
-      ASSERT_OK(ZSTDSeekableDecompress(output.get(), &target_size, compressed, src_size));
-      break;
-    default:
-      FAIL("Bad algorithm");
-  }
-  EXPECT_EQ(expected_size, target_size);
-  EXPECT_EQ(compressed_size, src_size);
-  EXPECT_BYTES_EQ(expected, output.get(), expected_size);
+  std::unique_ptr<char[]> uncompressed_buf(new char[expected_size]);
+  size_t uncompressed_size = expected_size;
+  std::unique_ptr<Decompressor> decompressor;
+  ASSERT_OK(Decompressor::Create(algorithm, &decompressor));
+  ASSERT_OK(decompressor->Decompress(uncompressed_buf.get(), &uncompressed_size, compressed_buf,
+                                     compressed_size));
+  EXPECT_EQ(expected_size, uncompressed_size);
+  EXPECT_BYTES_EQ(expected, uncompressed_buf.get(), expected_size);
 }
 
 // Tests a contained case of compression and decompression.
@@ -238,28 +227,18 @@ TEST(CompressorTests, UpdateNoDataZSTDSeekable) {
   RunUpdateNoDataTest(CompressionAlgorithm::ZSTD_SEEKABLE);
 }
 
-void DecompressionRoundHelper(CompressionAlgorithm algorithm, const void* compressed,
+void DecompressionRoundHelper(CompressionAlgorithm algorithm, const void* compressed_buf,
                               size_t rounded_compressed_size, const void* expected,
                               size_t expected_size) {
-  std::unique_ptr<char[]> output(new char[expected_size]);
-  size_t target_size = expected_size;
-  size_t src_size = rounded_compressed_size;
-  switch (algorithm) {
-    case CompressionAlgorithm::LZ4:
-      ASSERT_OK(LZ4Decompress(output.get(), &target_size, compressed, &src_size));
-      break;
-    case CompressionAlgorithm::ZSTD:
-      ASSERT_OK(ZSTDDecompress(output.get(), &target_size, compressed, &src_size));
-      break;
-    case CompressionAlgorithm::ZSTD_SEEKABLE:
-      ASSERT_OK(ZSTDSeekableDecompress(output.get(), &target_size, compressed, src_size));
-      break;
-    default:
-      FAIL("Bad algorithm");
-  }
-  EXPECT_EQ(expected_size, target_size);
-  EXPECT_GE(rounded_compressed_size, src_size);
-  EXPECT_BYTES_EQ(expected, output.get(), expected_size);
+  std::unique_ptr<char[]> uncompressed_buf(new char[expected_size]);
+  size_t uncompressed_size = expected_size;
+  size_t compressed_size = rounded_compressed_size;
+  std::unique_ptr<Decompressor> decompressor;
+  ASSERT_OK(Decompressor::Create(algorithm, &decompressor));
+  ASSERT_OK(decompressor->Decompress(uncompressed_buf.get(), &uncompressed_size, compressed_buf,
+                                     compressed_size));
+  EXPECT_EQ(expected_size, uncompressed_size);
+  EXPECT_BYTES_EQ(expected, uncompressed_buf.get(), expected_size);
 }
 
 // Tests decompression's ability to handle receiving a compressed size that is rounded
@@ -379,7 +358,7 @@ TEST(CompressorTests, DecompressZSTDNonZeroNonAdvancing) {
   size_t uncompressed_size = kUncompressedSize;
   NonZeroHintNonAdvancingZSTDDecompressor decompressor;
   ASSERT_OK(decompressor.Decompress(uncompressed_buf, &uncompressed_size, compressed_buf,
-                                    &compressed_size));
+                                    compressed_size));
 }
 
 }  // namespace

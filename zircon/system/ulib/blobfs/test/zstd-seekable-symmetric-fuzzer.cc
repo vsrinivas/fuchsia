@@ -45,9 +45,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   // Decompress from uncompressed space `offset` through `offset + uncompressed_size` into
   // `uncompressed_buf`.
   std::vector<uint8_t> uncompressed_buf(initial_uncompressed_size);
-  assert(blobfs::ZSTDSeekableDecompressBytes(uncompressed_buf.data(), &uncompressed_size,
-                                             compressed_buf.data(), compressor->Size(),
-                                             offset) == 0);
+  blobfs::ZSTDSeekableDecompressor decompressor;
+  assert(decompressor.DecompressRange(uncompressed_buf.data(), &uncompressed_size,
+                                      compressed_buf.data(), compressor->Size(), offset) == 0);
 
   // Verify correctness of read.
   assert(std::memcmp(data + offset, uncompressed_buf.data(), uncompressed_size) == 0);

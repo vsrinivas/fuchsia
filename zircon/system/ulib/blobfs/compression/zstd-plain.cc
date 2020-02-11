@@ -21,9 +21,11 @@ namespace blobfs {
 
 constexpr int kCompressionLevel = 3;
 
-zx_status_t AbstractZSTDDecompressor::Decompress(void* target_buf, size_t* target_size,
-                                                 const void* src_buf, size_t* src_size) {
-  TRACE_DURATION("blobfs", "ZSTDDecompress", "target_size", *target_size, "src_size", *src_size);
+zx_status_t AbstractZSTDDecompressor::Decompress(void* uncompressed_buf, size_t* uncompressed_size,
+                                                 const void* compressed_buf,
+                                                 const size_t max_compressed_size) {
+  TRACE_DURATION("blobfs", "AbstractZSTDDecompressor::Decompress", "uncompressed_size",
+                 *uncompressed_size, "max_compressed_size", max_compressed_size);
   ZSTD_DStream* stream = ZSTD_createDStream();
   auto cleanup = fbl::MakeAutoCall([&stream] { ZSTD_freeDStream(stream); });
 
@@ -34,13 +36,13 @@ zx_status_t AbstractZSTDDecompressor::Decompress(void* target_buf, size_t* targe
   }
 
   ZSTD_inBuffer input;
-  input.src = src_buf;
-  input.size = *src_size;
+  input.src = compressed_buf;
+  input.size = max_compressed_size;
   input.pos = 0;
 
   ZSTD_outBuffer output;
-  output.dst = target_buf;
-  output.size = *target_size;
+  output.dst = uncompressed_buf;
+  output.size = *uncompressed_size;
   output.pos = 0;
 
   size_t prev_output_pos = 0;
@@ -62,8 +64,7 @@ zx_status_t AbstractZSTDDecompressor::Decompress(void* target_buf, size_t* targe
     // None of these provides a difinitive signal that the entire archive has been decompressed.
   } while (output.pos < output.size && prev_output_pos != output.pos);
 
-  *src_size = input.pos;
-  *target_size = output.pos;
+  *uncompressed_size = output.pos;
   return ZX_OK;
 }
 
@@ -151,12 +152,6 @@ size_t ZSTDCompressor::Size() const { return output_.pos; }
 size_t ZSTDDecompressor::DecompressStream(ZSTD_DStream* zds, ZSTD_outBuffer* output,
                                           ZSTD_inBuffer* input) const {
   return ZSTD_decompressStream(zds, output, input);
-}
-
-zx_status_t ZSTDDecompress(void* target_buf, size_t* target_size, const void* src_buf,
-                           size_t* src_size) {
-  ZSTDDecompressor decompressor;
-  return decompressor.Decompress(target_buf, target_size, src_buf, src_size);
 }
 
 }  // namespace blobfs

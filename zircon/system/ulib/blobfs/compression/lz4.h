@@ -9,6 +9,7 @@
 
 #include <memory>
 
+#include <blobfs/format.h>
 #include <lz4/lz4frame.h>
 
 #include "compressor.h"
@@ -17,6 +18,8 @@ namespace blobfs {
 
 class LZ4Compressor : public Compressor {
  public:
+  static uint32_t InodeHeaderCompressionFlags() { return kBlobFlagLZ4Compressed; }
+
   // Returns the maximum possible size a buffer would need to be
   // in order to compress data of size |input_length|.
   static size_t BufferMax(size_t input_length);
@@ -42,6 +45,17 @@ class LZ4Compressor : public Compressor {
   void* buf_ = nullptr;
   size_t buf_max_ = 0;
   size_t buf_used_ = 0;
+};
+
+class LZ4Decompressor : public Decompressor {
+ public:
+  LZ4Decompressor() = default;
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(LZ4Decompressor);
+
+  // Decompressor implementation.
+  virtual zx_status_t Decompress(void* uncompressed_buf, size_t* uncompressed_size,
+                                 const void* compressed_buf,
+                                 const size_t max_compressed_size) final;
 };
 
 // Decompress the source buffer into the target buffer, until either the source is drained or
