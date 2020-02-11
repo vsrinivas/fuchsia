@@ -117,13 +117,13 @@ void ActiveScanTest::ReceiveNotification(void* payload) {
 // the driver.
 void ActiveScanTest::GetFirmwareMac() {
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet("cur_etheraddr", sim_fw_mac_.byte, ETH_ALEN);
+  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "cur_etheraddr", sim_fw_mac_.byte, ETH_ALEN);
 }
 
 void ActiveScanTest::GetFirwarePfnMac() {
   brcmf_simdev* sim = device_->GetSim();
   if (!sim_fw_pfn_mac_)
-    sim->sim_fw->IovarsGet("pfn_macaddr", sim_fw_pfn_mac_->byte, ETH_ALEN);
+    sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "pfn_macaddr", sim_fw_pfn_mac_->byte, ETH_ALEN);
 }
 
 void ActiveScanTest::Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) {

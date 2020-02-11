@@ -35,6 +35,7 @@
 
 #include "bus.h"
 #include "fweh.h"
+#include "fwil_types.h"
 #include "linuxisms.h"
 #include "netbuf.h"
 #include "workqueue.h"
@@ -109,23 +110,7 @@ struct brcmf_mp_device; /* module paramateres, device specific */
  */
 struct brcmf_rev_info {
   zx_status_t result;
-  uint32_t vendorid;
-  uint32_t deviceid;
-  uint32_t radiorev;
-  uint32_t chiprev;
-  uint32_t corerev;
-  uint32_t boardid;
-  uint32_t boardvendor;
-  uint32_t boardrev;
-  uint32_t driverrev;
-  uint32_t ucoderev;
-  uint32_t bus;
-  uint32_t chipnum;
-  uint32_t phytype;
-  uint32_t phyrev;
-  uint32_t anarev;
-  uint32_t chippkg;
-  uint32_t nvramrev;
+  struct brcmf_rev_info_le fwrevinfo;
 };
 
 /* Common structure for module and instance linkage */

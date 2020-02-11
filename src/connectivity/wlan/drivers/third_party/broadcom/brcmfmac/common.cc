@@ -26,6 +26,7 @@
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "bus.h"
+#include "cfg80211.h"
 #include "debug.h"
 #include "device.h"
 #include "fwil.h"
@@ -185,7 +186,7 @@ static zx_status_t brcmf_set_macaddr(struct brcmf_if* ifp) {
 }
 
 // Get Broadcom WiFi Metadata by calling the bus specific function
-static zx_status_t brcmf_get_meta_data(brcmf_if* ifp, wifi_config_t* config) {
+zx_status_t brcmf_get_meta_data(brcmf_if* ifp, wifi_config_t* config) {
   zx_status_t err;
   size_t actual;
   err = brcmf_bus_get_wifi_metadata(ifp->drvr->bus_if, config, sizeof(wifi_config_t), &actual);
@@ -324,23 +325,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     BRCMF_ERR("retrieving revision info failed: %s, fw err %s\n", zx_status_get_string(err),
               brcmf_fil_get_errstr(fw_err));
   } else {
-    ri->vendorid = revinfo.vendorid;
-    ri->deviceid = revinfo.deviceid;
-    ri->radiorev = revinfo.radiorev;
-    ri->chiprev = revinfo.chiprev;
-    ri->corerev = revinfo.corerev;
-    ri->boardid = revinfo.boardid;
-    ri->boardvendor = revinfo.boardvendor;
-    ri->boardrev = revinfo.boardrev;
-    ri->driverrev = revinfo.driverrev;
-    ri->ucoderev = revinfo.ucoderev;
-    ri->bus = revinfo.bus;
-    ri->chipnum = revinfo.chipnum;
-    ri->phytype = revinfo.phytype;
-    ri->phyrev = revinfo.phyrev;
-    ri->anarev = revinfo.anarev;
-    ri->chippkg = revinfo.chippkg;
-    ri->nvramrev = revinfo.nvramrev;
+    memcpy(&ri->fwrevinfo, &revinfo, sizeof(revinfo));
   }
   ri->result = err;
 
@@ -390,14 +375,6 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
   brcmf_set_country(ifp->drvr, &country);
   brcmf_set_init_cfg_params(ifp);
 
-  /* set mpc */
-  err = brcmf_fil_iovar_int_set(ifp, "mpc", 1, &fw_err);
-  if (err != ZX_OK) {
-    BRCMF_ERR("failed setting mpc: %s, fw err %s\n", zx_status_get_string(err),
-              brcmf_fil_get_errstr(fw_err));
-    // Does not work on all platforms. For now ignore the error and continue
-  }
-
   brcmf_c_set_joinpref_default(ifp);
 
   /* Setup event_msgs, enable E_IF */
@@ -434,6 +411,23 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     goto done;
   }
 
+  err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1, &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("BRCMF_C_DOWN error %s, fw err %s\n", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+  }
+  // Enable simultaneous STA/AP operation, aka Real Simultaneous Dual Band (RSDB)
+  err = brcmf_fil_iovar_int_set(ifp, "apsta", 1, &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Set apsta error %s, fw err %s\n", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+  }
+
+  err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("BRCMF_C_UP error: %s, fw err %s\n", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+  }
   /* Enable tx beamforming, errors can be ignored (not supported) */
   (void)brcmf_fil_iovar_int_set(ifp, "txbf", 1, nullptr);
 

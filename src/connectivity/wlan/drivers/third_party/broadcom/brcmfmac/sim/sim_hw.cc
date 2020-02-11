@@ -34,7 +34,6 @@ static bool ChannelsMatch(const wlan_channel_t& c1, const wlan_channel_t& c2) {
 void SimHardware::Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) {
   if (!rx_enabled_ || !ChannelsMatch(channel, channel_))
     return;
-
   // Simply transfer frame to firmware.
   event_handlers_.rx_handler(frame, channel);
 }

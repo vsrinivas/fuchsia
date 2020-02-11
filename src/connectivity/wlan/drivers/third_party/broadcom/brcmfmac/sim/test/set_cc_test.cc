@@ -57,7 +57,7 @@ zx_status_t CountryCodeTest::SetCountryCode(const wlanphy_country_t* country) {
 // state of the country code setting by bypassing the interfaces.
 void CountryCodeTest::GetCountryCode(brcmf_fil_country_le* ccode) {
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet("country", ccode, sizeof(brcmf_fil_country_le));
+  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "country", ccode, sizeof(brcmf_fil_country_le));
 }
 
 TEST_F(CountryCodeTest, SetDefault) {

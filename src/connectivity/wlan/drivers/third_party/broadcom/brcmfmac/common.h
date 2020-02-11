@@ -17,6 +17,8 @@
 
 #include <string>
 
+#include <wifi/wifi-config.h>
+
 #include "bus.h"
 #include "core.h"
 #include "fwil_types.h"
@@ -60,5 +62,7 @@ zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp, std::string_view clm_
 /* Sets dongle media info (drv_version, mac address). */
 zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp);
 zx_status_t brcmf_set_country(brcmf_pub* drvr, const wlanphy_country_t* country);
+// Get WiFi metadata
+zx_status_t brcmf_get_meta_data(brcmf_if* ifp, wifi_config_t* config);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_COMMON_H_

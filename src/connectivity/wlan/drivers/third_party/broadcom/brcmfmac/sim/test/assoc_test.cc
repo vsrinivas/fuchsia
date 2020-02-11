@@ -193,7 +193,7 @@ void AssocTest::Finish() {
 void AssocTest::DisassocFromAp() {
   uint8_t mac_buf[ETH_ALEN];
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet("cur_etheraddr", mac_buf, ETH_ALEN);
+  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
   common::MacAddr my_mac(mac_buf);
 
   // Disassoc the STA
@@ -277,7 +277,7 @@ void AssocTest::TxFakeDisassocReq() {
   // Figure out our own MAC
   uint8_t mac_buf[ETH_ALEN];
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet("cur_etheraddr", mac_buf, ETH_ALEN);
+  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
   common::MacAddr my_mac(mac_buf);
 
   // Send a Disassoc Req to our STA (which is not associated)
@@ -460,7 +460,8 @@ TEST_F(AssocTest, ApRejectedRequest) {
 
   uint32_t max_assoc_retries = 0;
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet("assoc_retry_max", &max_assoc_retries, sizeof(max_assoc_retries));
+  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "assoc_retry_max", &max_assoc_retries,
+                         sizeof(max_assoc_retries));
   ASSERT_NE(max_assoc_retries, 0U);
   // We should have gotten a rejection from the fake AP
   EXPECT_EQ(assoc_responses_.size(), max_assoc_retries + 1);
@@ -474,7 +475,7 @@ void AssocTest::SendBadResp() {
   // Figure out our own MAC
   uint8_t mac_buf[ETH_ALEN];
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet("cur_etheraddr", mac_buf, ETH_ALEN);
+  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
   common::MacAddr my_mac(mac_buf);
 
   // Send a response from the wrong bss
@@ -524,7 +525,7 @@ void AssocTest::SendMultipleResp() {
   // Figure out our own MAC
   uint8_t mac_buf[ETH_ALEN];
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsGet("cur_etheraddr", mac_buf, ETH_ALEN);
+  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
   common::MacAddr my_mac(mac_buf);
   simulation::SimAssocRespFrame multiple_resp_frame(this, context_.bssid, my_mac,
                                                     WLAN_ASSOC_RESULT_SUCCESS);
@@ -691,13 +692,15 @@ TEST_F(AssocTest, AssocMaxRetries) {
 
   uint32_t max_assoc_retries = 5;
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsSet("assoc_retry_max", &max_assoc_retries, sizeof(max_assoc_retries));
+  sim->sim_fw->IovarsSet(client_ifc_->iface_id_, "assoc_retry_max", &max_assoc_retries,
+                         sizeof(max_assoc_retries));
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
   env_->Run();
 
   uint32_t assoc_retries;
-  sim->sim_fw->IovarsGet("assoc_retry_max", &assoc_retries, sizeof(max_assoc_retries));
+  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "assoc_retry_max", &assoc_retries,
+                         sizeof(max_assoc_retries));
   ASSERT_EQ(max_assoc_retries, assoc_retries);
   // Should have received as many rejections as the configured # of retries.
   EXPECT_EQ(assoc_responses_.size(), max_assoc_retries + 1);
@@ -722,7 +725,8 @@ TEST_F(AssocTest, AssocMaxRetriesWhenTimedout) {
 
   uint32_t max_assoc_retries = 5;
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsSet("assoc_retry_max", &max_assoc_retries, sizeof(max_assoc_retries));
+  sim->sim_fw->IovarsSet(client_ifc_->iface_id_, "assoc_retry_max", &max_assoc_retries,
+                         sizeof(max_assoc_retries));
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
   env_->Run();
@@ -748,13 +752,15 @@ TEST_F(AssocTest, AssocNoRetries) {
 
   uint32_t max_assoc_retries = 0;
   brcmf_simdev* sim = device_->GetSim();
-  sim->sim_fw->IovarsSet("assoc_retry_max", &max_assoc_retries, sizeof(max_assoc_retries));
+  sim->sim_fw->IovarsSet(client_ifc_->iface_id_, "assoc_retry_max", &max_assoc_retries,
+                         sizeof(max_assoc_retries));
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
   env_->Run();
 
   uint32_t assoc_retries;
-  sim->sim_fw->IovarsGet("assoc_retry_max", &assoc_retries, sizeof(max_assoc_retries));
+  sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "assoc_retry_max", &assoc_retries,
+                         sizeof(max_assoc_retries));
   ASSERT_EQ(max_assoc_retries, assoc_retries);
   // We should have gotten a rejection from the fake AP
   EXPECT_EQ(assoc_responses_.size(), 1U);

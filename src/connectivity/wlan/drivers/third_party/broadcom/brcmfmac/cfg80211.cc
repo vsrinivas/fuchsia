@@ -52,54 +52,6 @@
 #include "proto.h"
 #include "workqueue.h"
 
-#define WPA_OUI "\x00\x50\xF2" /* WPA OUI */
-#define WPA_OUI_TYPE 1
-#define RSN_OUI "\x00\x0F\xAC" /* RSN OUI */
-#define WME_OUI_TYPE 2
-#define WPS_OUI_TYPE 4
-
-#define VS_IE_FIXED_HDR_LEN 6
-#define WPA_IE_VERSION_LEN 2
-#define WPA_IE_MIN_OUI_LEN 4
-#define WPA_IE_SUITE_COUNT_LEN 2
-
-// IEEE Std. 802.11-2016, 9.4.2.1, Table 9-77
-#define WLAN_IE_TYPE_SSID 0
-#define WLAN_IE_TYPE_SUPP_RATES 1
-#define WLAN_IE_TYPE_RSNE 48
-#define WLAN_IE_TYPE_EXT_SUPP_RATES 50
-#define WLAN_IE_TYPE_VENDOR_SPECIFIC 221
-
-/* IEEE Std. 802.11-2016, 9.4.2.25.2, Table 9-131 */
-#define WPA_CIPHER_NONE 0   /* None */
-#define WPA_CIPHER_WEP_40 1 /* WEP (40-bit) */
-#define WPA_CIPHER_TKIP 2   /* TKIP: default for WPA */
-/*      RESERVED             3  */
-#define WPA_CIPHER_CCMP_128 4 /* AES (CCM) */
-#define WPA_CIPHER_WEP_104 5  /* WEP (104-bit) */
-#define WPA_CIPHER_CMAC_128 6 /* BIP-CMAC-128 */
-
-#define RSN_AKM_NONE 0        /* None (IBSS) */
-#define RSN_AKM_UNSPECIFIED 1 /* Over 802.1x */
-#define RSN_AKM_PSK 2         /* Pre-shared Key */
-#define RSN_AKM_SHA256_1X 5   /* SHA256, 802.1X */
-#define RSN_AKM_SHA256_PSK 6  /* SHA256, Pre-shared Key */
-#define RSN_CAP_LEN 2         /* Length of RSN capabilities */
-#define RSN_CAP_PTK_REPLAY_CNTR_MASK (BIT(2) | BIT(3))
-#define RSN_CAP_MFPR_MASK BIT(6)
-#define RSN_CAP_MFPC_MASK BIT(7)
-#define RSN_PMKID_COUNT_LEN 2
-
-#define VNDR_IE_CMD_LEN 4 /* length of the set command string :"add", "del" (+ NUL) */
-#define VNDR_IE_COUNT_OFFSET 4
-#define VNDR_IE_PKTFLAG_OFFSET 8
-#define VNDR_IE_VSIE_OFFSET 12
-#define VNDR_IE_HDR_SIZE 12
-#define VNDR_IE_PARSE_LIMIT 5
-
-#define DOT11_MGMT_HDR_LEN 24      /* d11 management header len */
-#define DOT11_BCN_PRB_FIXED_LEN 12 /* beacon/probe fixed length */
-
 #define BRCMF_SCAN_JOIN_ACTIVE_DWELL_TIME_MS 320
 #define BRCMF_SCAN_JOIN_PASSIVE_DWELL_TIME_MS 400
 #define BRCMF_SCAN_JOIN_PROBE_INTERVAL_MS 20
@@ -316,15 +268,53 @@ static zx_status_t brcmf_cfg80211_request_ap_if(struct brcmf_if* ifp) {
   return err;
 }
 
+// Derive the mac address for the SoftAP interface from the system mac address
+// (which is used for the client interface).
+static zx_status_t brcmf_set_ap_macaddr(struct brcmf_if* ifp) {
+  uint8_t mac_addr[ETH_ALEN];
+  int32_t fw_err = 0;
+
+  // First retrieve the current mac address (by default it is the system mac
+  // address set during init)
+  zx_status_t err = brcmf_fil_iovar_data_get(ifp, "cur_etheraddr", mac_addr, ETH_ALEN, &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Retrieving mac address from firmware failed: %s, fw err %s\n",
+              zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
+    return err;
+  }
+
+  // Modify the mac address as follows:
+  // Mark the address as unicast and locally administered. In addition, modify
+  // byte 5 (increment) to ensure that it is different from the original address
+  mac_addr[0] &= 0xfe;  // bit 0: 0 = unicast
+  mac_addr[0] |= 0x02;  // bit 1: 1 = locally-administered
+  mac_addr[5]++;
+  BRCMF_INFO("mac address for AP IF: %02x:%02x:%02x:%02x:%02x:%02x\n", mac_addr[0], mac_addr[1],
+             mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+
+  // Update the mac address of the interface in firmware
+  err = brcmf_fil_iovar_data_set(ifp, "cur_etheraddr", mac_addr, ETH_ALEN, &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("Setting mac address failed: %s, fw err %s\n", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+    return err;
+  }
+
+  // Update the driver interface with the new mac address
+  memcpy(ifp->mac_addr, mac_addr, sizeof(ifp->mac_addr));
+  memcpy(ifp->drvr->mac, ifp->mac_addr, sizeof(ifp->drvr->mac));
+  return ZX_OK;
+}
+
 /**
  * brcmf_ap_add_vif() - create a new AP virtual interface for multiple BSS
  *
  * @cfg: config of new interface.
  * @name: name of the new interface.
- * @params: contains mac address for AP device.
+ * @dev_out: address of wireless dev pointer
  */
 static zx_status_t brcmf_ap_add_vif(struct brcmf_cfg80211_info* cfg, const char* name,
-                                    struct vif_params* params, struct wireless_dev** dev_out) {
+                                    struct wireless_dev** dev_out) {
   struct brcmf_if* ifp = cfg_to_if(cfg);
   struct brcmf_cfg80211_vif* vif;
   zx_status_t err;
@@ -375,6 +365,12 @@ static zx_status_t brcmf_ap_add_vif(struct brcmf_cfg80211_info* cfg, const char*
     goto fail;
   }
 
+  err = brcmf_set_ap_macaddr(ifp);
+  if (err != ZX_OK) {
+    BRCMF_ERR("unable to set mac address of ap if\n");
+    goto fail;
+  }
+
   if (dev_out) {
     *dev_out = &ifp->vif->wdev;
   }
@@ -416,7 +412,7 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
 
   switch (req->role) {
     case WLAN_INFO_MAC_ROLE_AP:
-      err = brcmf_ap_add_vif(drvr->config, name, params, wdev_out);
+      err = brcmf_ap_add_vif(drvr->config, name, wdev_out);
       if (err == ZX_OK) {
         brcmf_cfg80211_update_proto_addr_mode(*wdev_out);
         if (wdev_out) {
@@ -451,23 +447,28 @@ zx_status_t brcmf_cfg80211_add_iface(brcmf_pub* drvr, const char* name, struct v
 
 static void brcmf_scan_config_mpc(struct brcmf_if* ifp, int mpc) {
   if (brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_NEED_MPC)) {
-    brcmf_set_mpc(ifp, mpc);
+    brcmf_enable_mpc(ifp, mpc);
   }
 }
 
-void brcmf_set_mpc(struct brcmf_if* ifp, int mpc) {
+// This function set "mpc" to the requested value only if SoftAP
+// has not been started. Else it sets "mpc" to 0.
+void brcmf_enable_mpc(struct brcmf_if* ifp, int mpc) {
   zx_status_t err = ZX_OK;
   int32_t fw_err = 0;
+  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
 
-  if (check_vif_up(ifp->vif)) {
-    err = brcmf_fil_iovar_int_set(ifp, "mpc", mpc, &fw_err);
-    if (err != ZX_OK) {
-      BRCMF_ERR("fail to set mpc: %s, fw err %s\n", zx_status_get_string(err),
-                brcmf_fil_get_errstr(fw_err));
-      return;
-    }
-    BRCMF_DBG(INFO, "MPC : %d\n", mpc);
+  // If AP has been started, mpc is always 0
+  if (cfg->ap_started) {
+    mpc = 0;
   }
+  err = brcmf_fil_iovar_int_set(ifp, "mpc", mpc, &fw_err);
+  if (err != ZX_OK) {
+    BRCMF_ERR("fail to set mpc: %s, fw err %s\n", zx_status_get_string(err),
+              brcmf_fil_get_errstr(fw_err));
+    return;
+  }
+  BRCMF_DBG(INFO, "MPC : %d\n", mpc);
 }
 
 static void brcmf_signal_scan_end(struct net_device* ndev, uint64_t txn_id,
@@ -607,6 +608,7 @@ err_unarm:
 
 zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wireless_dev* wdev) {
   struct net_device* ndev = wdev->netdev;
+  struct brcmf_if* ifp = cfg_to_if(cfg);
 
   /* vif event pending in firmware */
   if (brcmf_cfg80211_vif_event_armed(cfg)) {
@@ -619,7 +621,7 @@ zx_status_t brcmf_cfg80211_del_iface(struct brcmf_cfg80211_info* cfg, struct wir
       brcmf_notify_escan_complete(cfg, ndev_to_if(ndev), true, true);
     }
 
-    brcmf_fil_iovar_int_set(ndev_to_if(ndev), "mpc", 1, nullptr);
+    brcmf_enable_mpc(ifp, 1);
   }
 
   switch (wdev->iftype) {
@@ -2474,7 +2476,7 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
   memcpy(ssid_le.SSID, req->ssid.data, req->ssid.len);
   ssid_le.SSID_len = req->ssid.len;
 
-  brcmf_set_mpc(ifp, 0);
+  brcmf_enable_mpc(ifp, 0);
   brcmf_configure_arp_nd_offload(ifp, false);
 
   // set to open authentication for external supplicant
@@ -2511,16 +2513,6 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
     goto fail;
   }
 
-  status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1, &fw_err);
-  if (status != ZX_OK) {
-    BRCMF_ERR("BRCMF_C_DOWN error %s, fw err %s\n", zx_status_get_string(status),
-              brcmf_fil_get_errstr(fw_err));
-    goto fail;
-  }
-
-  // Disable simultaneous STA/AP operation, aka Real Simultaneous Dual Band (RSDB)
-  brcmf_fil_iovar_int_set(ifp, "apsta", 0, nullptr);
-
   status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_INFRA, 1, &fw_err);
   if (status != ZX_OK) {
     BRCMF_ERR("SET INFRA error %s, fw err %s\n", zx_status_get_string(status),
@@ -2544,13 +2536,6 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
     goto fail;
   }
 
-  status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, &fw_err);
-  if (status != ZX_OK) {
-    BRCMF_ERR("BRCMF_C_UP error: %s, fw err %s\n", zx_status_get_string(status),
-              brcmf_fil_get_errstr(fw_err));
-    goto fail;
-  }
-
   struct brcmf_join_params join_params;
   memset(&join_params, 0, sizeof(join_params));
   // join parameters starts with ssid
@@ -2569,10 +2554,11 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
   brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
   brcmf_net_setcarrier(ifp, true);
 
+  cfg->ap_started = true;
   return WLAN_START_RESULT_SUCCESS;
 
 fail:
-  brcmf_set_mpc(ifp, 1);
+  brcmf_enable_mpc(ifp, 1);
   brcmf_configure_arp_nd_offload(ifp, true);
   return WLAN_START_RESULT_NOT_SUPPORTED;
 }
@@ -2584,6 +2570,7 @@ static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev, const wlanif_stop
   int32_t fw_err = 0;
   uint8_t result = WLAN_STOP_RESULT_SUCCESS;
   struct brcmf_join_params join_params;
+  struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
 
   if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state)) {
     BRCMF_ERR("attempt to stop already stopped AP\n");
@@ -2599,13 +2586,6 @@ static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev, const wlanif_stop
     result = WLAN_STOP_RESULT_INTERNAL_ERROR;
   }
 
-  status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1, &fw_err);
-  if (status != ZX_OK) {
-    BRCMF_ERR("BRCMF_C_DOWN error: %s, fw err %s\n", zx_status_get_string(status),
-              brcmf_fil_get_errstr(fw_err));
-    result = WLAN_STOP_RESULT_INTERNAL_ERROR;
-  }
-
   status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 0, &fw_err);
   if (status != ZX_OK) {
     BRCMF_ERR("setting AP mode failed: %s, fw err %s\n", zx_status_get_string(status),
@@ -2613,19 +2593,12 @@ static uint8_t brcmf_cfg80211_stop_ap(struct net_device* ndev, const wlanif_stop
     result = WLAN_STOP_RESULT_INTERNAL_ERROR;
   }
 
-  /* Bring device back up so it can be used again */
-  status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1, &fw_err);
-  if (status != ZX_OK) {
-    BRCMF_ERR("BRCMF_C_UP error: %s, fw err %s\n", zx_status_get_string(status),
-              brcmf_fil_get_errstr(fw_err));
-    result = WLAN_STOP_RESULT_INTERNAL_ERROR;
-  }
-
   brcmf_vif_clear_mgmt_ies(ifp->vif);
-  brcmf_set_mpc(ifp, 1);
   brcmf_configure_arp_nd_offload(ifp, true);
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
   brcmf_net_setcarrier(ifp, false);
+  cfg->ap_started = false;
+  brcmf_enable_mpc(ifp, 1);
 
   return result;
 }
@@ -2674,12 +2647,9 @@ static zx_status_t brcmf_notify_tdls_peer_event(struct brcmf_if* ifp,
 // when available.
 zx_status_t brcmf_if_start(net_device* ndev, const wlanif_impl_ifc_protocol_t* ifc,
                            zx_handle_t* out_sme_channel) {
-  struct brcmf_if* ifp;
-
   if (!ndev->sme_channel.is_valid()) {
     return ZX_ERR_ALREADY_BOUND;
   }
-  ifp = ndev_to_if(ndev);
 
   BRCMF_DBG(WLANIF, "Starting wlanif interface\n");
   ndev->if_proto = *ifc;
@@ -3506,6 +3476,8 @@ fail_pbuf:
 void brcmf_if_stats_query_req(net_device* ndev) {
   struct wireless_dev* wdev = ndev_to_wdev(ndev);
   wlanif_stats_query_response_t response = {};
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+  int32_t fw_err;
 
   BRCMF_DBG(TRACE, "Enter\n");
 
@@ -3514,10 +3486,8 @@ void brcmf_if_stats_query_req(net_device* ndev) {
     case WLAN_INFO_MAC_ROLE_CLIENT: {
       zx_status_t status;
       struct brcmf_pktcnt_le pktcnt;
-      struct brcmf_if* ifp = ndev_to_if(ndev);
-      int32_t fw_err = 0;
-
       wlanif_mlme_stats_t mlme_stats = {};
+
       response.stats.mlme_stats_list = &mlme_stats;
       response.stats.mlme_stats_count = 1;
 
@@ -3937,8 +3907,8 @@ static zx_status_t brcmf_notify_connect_status(struct brcmf_if* ifp,
   zx_status_t err = ZX_OK;
 
   BRCMF_DBG(TRACE, "Enter\n");
-  BRCMF_DBG(CONN, "Event code %d, status %d reason %d auth %d flags 0x%x\n", e->event_code,
-            e->status, e->reason, e->auth_type, e->flags);
+  BRCMF_DBG(CONN, "IF: %d Event code %d, status %d reason %d auth %d flags 0x%x\n", ifp->ifidx,
+            e->event_code, e->status, e->reason, e->auth_type, e->flags);
   if ((e->event_code == BRCMF_E_DEAUTH) || (e->event_code == BRCMF_E_DEAUTH_IND) ||
       (e->event_code == BRCMF_E_DISASSOC_IND) || ((e->event_code == BRCMF_E_LINK) && (!e->flags))) {
     brcmf_proto_delete_peer(ifp->drvr, ifp->ifidx, (uint8_t*)e->addr);

@@ -63,6 +63,53 @@
 #define TLV_BODY_OFF  2  /* body offset */
 #define TLV_OUI_LEN   3  /* oui id length */
 
+#define WPA_OUI "\x00\x50\xF2" /* WPA OUI */
+#define WPA_OUI_TYPE 1
+#define RSN_OUI "\x00\x0F\xAC" /* RSN OUI */
+#define WME_OUI_TYPE 2
+#define WPS_OUI_TYPE 4
+
+#define VS_IE_FIXED_HDR_LEN 6
+#define WPA_IE_VERSION_LEN 2
+#define WPA_IE_MIN_OUI_LEN 4
+#define WPA_IE_SUITE_COUNT_LEN 2
+
+// IEEE Std. 802.11-2016, 9.4.2.1, Table 9-77
+#define WLAN_IE_TYPE_SSID 0
+#define WLAN_IE_TYPE_SUPP_RATES 1
+#define WLAN_IE_TYPE_RSNE 48
+#define WLAN_IE_TYPE_EXT_SUPP_RATES 50
+#define WLAN_IE_TYPE_VENDOR_SPECIFIC 221
+
+/* IEEE Std. 802.11-2016, 9.4.2.25.2, Table 9-131 */
+#define WPA_CIPHER_NONE 0   /* None */
+#define WPA_CIPHER_WEP_40 1 /* WEP (40-bit) */
+#define WPA_CIPHER_TKIP 2   /* TKIP: default for WPA */
+/*      RESERVED             3  */
+#define WPA_CIPHER_CCMP_128 4 /* AES (CCM) */
+#define WPA_CIPHER_WEP_104 5  /* WEP (104-bit) */
+#define WPA_CIPHER_CMAC_128 6 /* BIP-CMAC-128 */
+
+#define RSN_AKM_NONE 0        /* None (IBSS) */
+#define RSN_AKM_UNSPECIFIED 1 /* Over 802.1x */
+#define RSN_AKM_PSK 2         /* Pre-shared Key */
+#define RSN_AKM_SHA256_1X 5   /* SHA256, 802.1X */
+#define RSN_AKM_SHA256_PSK 6  /* SHA256, Pre-shared Key */
+#define RSN_CAP_LEN 2         /* Length of RSN capabilities */
+#define RSN_CAP_PTK_REPLAY_CNTR_MASK (BIT(2) | BIT(3))
+#define RSN_CAP_MFPR_MASK BIT(6)
+#define RSN_CAP_MFPC_MASK BIT(7)
+#define RSN_PMKID_COUNT_LEN 2
+
+#define VNDR_IE_CMD_LEN 4 /* length of the set command string :"add", "del" (+ NUL) */
+#define VNDR_IE_COUNT_OFFSET 4
+#define VNDR_IE_PKTFLAG_OFFSET 8
+#define VNDR_IE_VSIE_OFFSET 12
+#define VNDR_IE_HDR_SIZE 12
+#define VNDR_IE_PARSE_LIMIT 5
+
+#define DOT11_MGMT_HDR_LEN 24      /* d11 management header len */
+#define DOT11_BCN_PRB_FIXED_LEN 12 /* beacon/probe fixed length */
 /* 802.11 Mgmt Packet flags */
 #define BRCMF_VNDR_IE_BEACON_FLAG     0x1
 #define BRCMF_VNDR_IE_PRBRSP_FLAG     0x2
@@ -347,6 +394,7 @@ struct brcmf_cfg80211_info {
   struct brcmf_assoclist_le assoclist;
   struct brcmf_cfg80211_wowl wowl;
   struct brcmf_pno_info* pno;
+  bool ap_started;
 };
 
 /**
@@ -419,7 +467,7 @@ bool brcmf_cfg80211_vif_event_armed(struct brcmf_cfg80211_info* cfg);
 zx_status_t brcmf_cfg80211_wait_vif_event(struct brcmf_cfg80211_info* cfg, zx_duration_t timeout);
 zx_status_t brcmf_notify_escan_complete(struct brcmf_cfg80211_info* cfg, struct brcmf_if* ifp,
                                         bool aborted, bool fw_abort);
-void brcmf_set_mpc(struct brcmf_if* ndev, int mpc);
+void brcmf_enable_mpc(struct brcmf_if* ndev, int mpc);
 void brcmf_abort_scanning(struct brcmf_cfg80211_info* cfg);
 void brcmf_free_net_device_vif(struct net_device* ndev);
 

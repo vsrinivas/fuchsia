@@ -642,8 +642,8 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
 
   /* assure we have chipid before feature attach */
   if (!bus_if->chip) {
-    bus_if->chip = drvr->revinfo.chipnum;
-    bus_if->chiprev = drvr->revinfo.chiprev;
+    bus_if->chip = drvr->revinfo.fwrevinfo.chipnum;
+    bus_if->chiprev = drvr->revinfo.fwrevinfo.chiprev;
     BRCMF_DBG(INFO, "firmware revinfo: chip %x (%d) rev %d\n", bus_if->chip, bus_if->chip,
               bus_if->chiprev);
   }
