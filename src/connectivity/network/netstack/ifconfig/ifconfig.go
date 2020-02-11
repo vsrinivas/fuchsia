@@ -21,7 +21,6 @@ import (
 	"fidl/fuchsia/netstack"
 	"fidl/fuchsia/wlan/service"
 
-	"github.com/pkg/errors"
 	"gvisor.dev/gvisor/pkg/tcpip"
 )
 
@@ -288,7 +287,7 @@ func (a *netstackClientApp) setDHCP(iface netstack.NetInterface2, startStop stri
 	case "start":
 		res, err := client.Start()
 		if err != nil {
-			return errors.Wrap(err, "failed to start client")
+			return fmt.Errorf("failed to start client: %w", err)
 		}
 		switch res.Which() {
 		case dhcp.ClientStartResultErr:
@@ -298,7 +297,7 @@ func (a *netstackClientApp) setDHCP(iface netstack.NetInterface2, startStop stri
 	case "stop":
 		res, err := client.Stop()
 		if err != nil {
-			return errors.Wrap(err, "failed to stop client")
+			return fmt.Errorf("failed to stop client: %w", err)
 		}
 		switch res.Which() {
 		case dhcp.ClientStopResultErr:

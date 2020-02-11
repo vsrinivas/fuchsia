@@ -6,6 +6,7 @@ package dhcp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -15,7 +16,6 @@ import (
 	"netstack/packetbuffer"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/pkg/errors"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -154,7 +154,7 @@ func TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP(t *testing.T) {
 
 	select {
 	case err := <-errs:
-		if errors.Cause(err) == context.DeadlineExceeded {
+		if errors.Is(err, context.DeadlineExceeded) {
 			t.Fatal("timed out waiting for a DHCP packet to be sent")
 		}
 		t.Fatalf("c.acquire(_, _): %s", err)
@@ -165,7 +165,7 @@ func TestIPv4UnspecifiedAddressNotPrimaryDuringDHCP(t *testing.T) {
 			// Defers run inside-out, so this one will run before the context is
 			// cancelled; multiple cancellations are harmless.
 			cancel()
-			if err := <-errs; errors.Cause(err) != context.Canceled {
+			if err := <-errs; !errors.Is(err, context.Canceled) {
 				t.Error(err)
 			}
 		}()
@@ -219,7 +219,7 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 	defer close(errs)
 	defer func() {
 		for range clientLinkEPs {
-			if err := <-errs; errors.Cause(err) != context.Canceled {
+			if err := <-errs; !errors.Is(err, context.Canceled) {
 				t.Error(err)
 			}
 		}
@@ -462,15 +462,17 @@ func TestDelayRetransmission(t *testing.T) {
 				LeaseLength: 24 * time.Hour,
 			}
 
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-			if _, err := newEPConnServer(ctx, serverStack, clientAddrs, serverCfg); err != nil {
-				t.Fatal(err)
+			{
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				if _, err := newEPConnServer(ctx, serverStack, clientAddrs, serverCfg); err != nil {
+					t.Fatal(err)
+				}
 			}
 
 			c0 := NewClient(clientStack, testNICID, linkAddr1, tc.acquisition, defaultBackoffTime, tc.retransmission, nil)
 			info := c0.Info()
-			ctx, cancel = context.WithTimeout(ctx, tc.acquisition)
+			ctx, cancel := context.WithTimeout(context.Background(), tc.acquisition)
 			defer cancel()
 			cfg, err := c0.acquire(ctx, &info)
 			if tc.success {
@@ -484,11 +486,8 @@ func TestDelayRetransmission(t *testing.T) {
 					t.Errorf("cfg.SubnetMask=%s, want=%s", got, want)
 				}
 			} else {
-				switch err := errors.Cause(err); err {
-				case context.DeadlineExceeded:
-					// Success case.
-				default:
-					t.Errorf("got err=%v, want=%s", err, context.DeadlineExceeded)
+				if !errors.Is(err, ctx.Err()) {
+					t.Errorf("got err=%v, want=%s", err, ctx.Err())
 				}
 			}
 		})

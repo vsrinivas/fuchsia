@@ -15,7 +15,6 @@ import (
 
 	"syslog"
 
-	"github.com/pkg/errors"
 	"gvisor.dev/gvisor/pkg/rand"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -394,7 +393,7 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 
 	var xid [4]byte
 	if _, err := rand.Read(xid[:]); err != nil {
-		return Config{}, fmt.Errorf("rand.Read(): %s", err)
+		return Config{}, fmt.Errorf("rand.Read(): %w", err)
 	}
 
 	commonOpts := options{
@@ -430,7 +429,7 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 				false, /* ciaddr */
 			); err != nil {
 				c.stats.SendDiscoverErrors.Increment()
-				return Config{}, fmt.Errorf("%s: %s", dhcpDISCOVER, err)
+				return Config{}, fmt.Errorf("%s: %w", dhcpDISCOVER, err)
 			}
 			c.stats.SendDiscovers.Increment()
 
@@ -443,7 +442,7 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 					} else {
 						c.stats.RecvOfferErrors.Increment()
 					}
-					return Config{}, errors.Wrapf(err, "recv %s", dhcpOFFER)
+					return Config{}, fmt.Errorf("recv %s: %w", dhcpOFFER, err)
 				}
 				if timedOut {
 					c.stats.RecvOfferTimeout.Increment()
@@ -461,7 +460,7 @@ func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 				var cfg Config
 				if err := cfg.decode(opts); err != nil {
 					c.stats.RecvOfferOptsDecodeErrors.Increment()
-					return Config{}, fmt.Errorf("%s decode: %s", typ, err)
+					return Config{}, fmt.Errorf("%s decode: %w", typ, err)
 				}
 
 				// We can overwrite the client's server notion, since there's no
@@ -512,7 +511,7 @@ retransmitRequest:
 			info.State != initSelecting, /* ciaddr */
 		); err != nil {
 			c.stats.SendRequestErrors.Increment()
-			return Config{}, fmt.Errorf("%s: %s", dhcpREQUEST, err)
+			return Config{}, fmt.Errorf("%s: %w", dhcpREQUEST, err)
 		}
 		c.stats.SendRequests.Increment()
 
@@ -525,7 +524,7 @@ retransmitRequest:
 				} else {
 					c.stats.RecvAckErrors.Increment()
 				}
-				return Config{}, errors.Wrapf(err, "recv %s", dhcpACK)
+				return Config{}, fmt.Errorf("recv %s: %w", dhcpACK, err)
 			}
 			if timedOut {
 				c.stats.RecvAckTimeout.Increment()
@@ -538,7 +537,7 @@ retransmitRequest:
 				var cfg Config
 				if err := cfg.decode(opts); err != nil {
 					c.stats.RecvAckOptsDecodeErrors.Increment()
-					return Config{}, fmt.Errorf("%s decode: %s", typ, err)
+					return Config{}, fmt.Errorf("%s decode: %w", typ, err)
 				}
 				prefixLen, _ := net.IPMask(cfg.SubnetMask).Size()
 				addr := tcpip.AddressWithPrefix{
@@ -604,14 +603,14 @@ func (c *Client) send(ctx context.Context, info *Info, ep tcpip.Endpoint, opts o
 			case <-resCh:
 				continue
 			case <-ctx.Done():
-				return fmt.Errorf("client address resolution: %s", ctx.Err())
+				return fmt.Errorf("client address resolution: %w", ctx.Err())
 			}
 		}
 		if err == tcpip.ErrWouldBlock {
 			panic(fmt.Sprintf("UDP writes are nonblocking; saw %d/%d", n, len(payload)))
 		}
 		if err != nil {
-			return fmt.Errorf("client write: %s", err)
+			return fmt.Errorf("client write: %w", err)
 		}
 		return nil
 	}
@@ -628,7 +627,7 @@ func (c *Client) recv(ctx context.Context, info *Info, ep tcpip.Endpoint, ch <-c
 			case <-time.After(info.Retransmission):
 				return tcpip.FullAddress{}, "", nil, 0, true, nil
 			case <-ctx.Done():
-				return tcpip.FullAddress{}, "", nil, 0, true, errors.Wrap(ctx.Err(), "read failed")
+				return tcpip.FullAddress{}, "", nil, 0, true, fmt.Errorf("read: %w", ctx.Err())
 			}
 		}
 		if err != nil {
@@ -653,12 +652,12 @@ func (c *Client) recv(ctx context.Context, info *Info, ep tcpip.Endpoint, ch <-c
 		{
 			opts, err := h.options()
 			if err != nil {
-				return tcpip.FullAddress{}, "", nil, 0, false, fmt.Errorf("invalid options: %s", err)
+				return tcpip.FullAddress{}, "", nil, 0, false, fmt.Errorf("invalid options: %w", err)
 			}
 
 			typ, err := opts.dhcpMsgType()
 			if err != nil {
-				return tcpip.FullAddress{}, "", nil, 0, false, fmt.Errorf("invalid type: %s", err)
+				return tcpip.FullAddress{}, "", nil, 0, false, fmt.Errorf("invalid type: %w", err)
 			}
 
 			return srcAddr, tcpip.Address(h.yiaddr()), opts, typ, false, nil
