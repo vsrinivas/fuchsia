@@ -34,13 +34,11 @@ using fuchsia::accessibility::semantics::SemanticsManager;
 class MockSemanticTreeServiceFactory : public a11y::SemanticTreeServiceFactory {
  public:
   std::unique_ptr<a11y::SemanticTreeService> NewService(
-      fuchsia::ui::views::ViewRef view_ref,
-      fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
+      zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
       vfs::PseudoDir* debug_dir,
       a11y::SemanticTreeService::CloseChannelCallback close_channel_callback) override {
     auto service = a11y::SemanticTreeServiceFactory::NewService(
-        std::move(view_ref), std::move(semantic_listener), debug_dir,
-        std::move(close_channel_callback));
+        koid, std::move(semantic_listener), debug_dir, std::move(close_channel_callback));
     service_ = service.get();
     return service;
   }

@@ -23,8 +23,7 @@ class SemanticTreeServiceFactory {
   virtual ~SemanticTreeServiceFactory() = default;
 
   virtual std::unique_ptr<SemanticTreeService> NewService(
-      fuchsia::ui::views::ViewRef view_ref,
-      fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
+      zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
       vfs::PseudoDir* debug_dir, SemanticTreeService::CloseChannelCallback close_channel_callback);
 };
 
@@ -63,12 +62,23 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager {
   // Closes the service channel of the View with |view_ref_koid| in |semantic_tree_bindings_|.
   void CloseChannel(zx_koid_t view_ref_koid);
 
+  // ViewSignalHandler is called when ViewRef peer is destroyed. It is
+  // responsible for closing the channel and cleaning up the associated SemanticTree.
+  void ViewSignalHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                         const zx_packet_signal* signal);
+
   // Helper function to enable semantic updates for all the Views.
   void EnableSemanticsUpdates(bool enabled);
 
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticTree,
                    std::unique_ptr<SemanticTreeService>>
       semantic_tree_bindings_;
+
+  std::unordered_map<zx_koid_t, fuchsia::ui::views::ViewRef> view_ref_map_;
+
+  std::unordered_map<
+      zx_koid_t, std::unique_ptr<async::WaitMethod<ViewManager, &ViewManager::ViewSignalHandler>>>
+      wait_map_;
 
   bool semantics_enabled_ = false;
 

@@ -50,7 +50,6 @@ void MockSemanticProvider::CommitUpdates() {
 void MockSemanticProvider::SetHitTestResult(uint32_t hit_test_result) {
   semantic_listener_.SetHitTestResult(hit_test_result);
 }
-
 bool MockSemanticProvider::GetSemanticsEnabled() {
   return semantic_listener_.GetSemanticsEnabled();
 }

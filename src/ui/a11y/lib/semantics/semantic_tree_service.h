@@ -29,8 +29,7 @@ class SemanticTreeService : public fuchsia::accessibility::semantics::SemanticTr
   // commit.
   using CloseChannelCallback = fit::function<void(zx_koid_t)>;
 
-  SemanticTreeService(std::unique_ptr<::a11y::SemanticTree> tree,
-                      fuchsia::ui::views::ViewRef view_ref,
+  SemanticTreeService(std::unique_ptr<::a11y::SemanticTree> tree, zx_koid_t koid,
                       fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
                       vfs::PseudoDir* debug_dir, CloseChannelCallback callback);
 
@@ -89,11 +88,6 @@ class SemanticTreeService : public fuchsia::accessibility::semantics::SemanticTr
   // Function to remove per view Log files under debug directory.
   void RemoveDebugEntry();
 
-  // SignalHandler is called when ViewRef peer is destroyed. It is
-  // responsible for closing the channel.
-  void SignalHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                     const zx_packet_signal* signal);
-
   // The Semantic Tree data structure owned by this service. Semantic providers
   // typically modify the state of this tree via calls to Update(), Delete() and
   // Commit(), while semantic consumers only query the tree state via Get().
@@ -109,11 +103,8 @@ class SemanticTreeService : public fuchsia::accessibility::semantics::SemanticTr
   // this service.
   CloseChannelCallback close_channel_callback_;
 
-  // Unique identifier of the view providing semantics .
-  fuchsia::ui::views::ViewRef view_ref_;
-
-  // handler of |view_ref_| received signals.
-  async::WaitMethod<SemanticTreeService, &SemanticTreeService::SignalHandler> wait_;
+  // Unique identifier of the view providing semantics.
+  zx_koid_t koid_;
 
   // Client-end channel of the fidl service to perform actions on the semantic provider.
   fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener_;

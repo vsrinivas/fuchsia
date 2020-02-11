@@ -30,13 +30,12 @@ constexpr std::string::size_type kIndentSize = 4;
 }  // namespace
 
 SemanticTreeService::SemanticTreeService(
-    std::unique_ptr<::a11y::SemanticTree> tree, fuchsia::ui::views::ViewRef view_ref,
+    std::unique_ptr<::a11y::SemanticTree> tree, zx_koid_t(koid),
     fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
     vfs::PseudoDir* debug_dir, CloseChannelCallback error_callback)
     : tree_(std::move(tree)),
       close_channel_callback_(std::move(error_callback)),
-      view_ref_(std::move(view_ref)),
-      wait_(this, view_ref_.reference.get(), ZX_EVENTPAIR_PEER_CLOSED),
+      koid_(koid),
       semantic_listener_(std::move(semantic_listener)),
       debug_dir_(debug_dir),
       semantic_tree_factory_(
@@ -52,8 +51,7 @@ SemanticTreeService::SemanticTreeService(
              fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {
         this->PerformHitTesting(local_point, std::move(callback));
       });
-  wait_.Begin(async_get_default_dispatcher());
-  debug_file_name_ = std::to_string(view_ref_koid());
+  debug_file_name_ = std::to_string(koid_);
   InitializeDebugEntry();
 }
 
@@ -69,17 +67,17 @@ void SemanticTreeService::PerformAccessibilityAction(
   semantic_listener_->OnAccessibilityActionRequested(node_id, action, std::move(callback));
 }
 
-zx_koid_t SemanticTreeService::view_ref_koid() const { return GetKoid(view_ref_); }
+zx_koid_t SemanticTreeService::view_ref_koid() const { return koid_; }
 
 void SemanticTreeService::CommitUpdates(CommitUpdatesCallback callback) {
   if (tree_->Update(std::move(updates_))) {
     callback();
     updates_.clear();
   } else {
-    FX_LOGS(ERROR) << "Closing Semantic Tree Channel for View(KOID):" << GetKoid(view_ref_)
+    FX_LOGS(ERROR) << "Closing Semantic Tree Channel for View(KOID):" << koid_
                    << " because client sent an invalid tree update";
     callback();
-    close_channel_callback_(GetKoid(view_ref_));
+    close_channel_callback_(koid_);
   }
 }
 
@@ -147,7 +145,7 @@ void SemanticTreeService::InitializeDebugEntry() {
               std::string buffer = LogSemanticTree();
               size_t len = buffer.length();
               if (len > max_file_size) {
-                FX_LOGS(WARNING) << "Semantic Tree log file (" << std::to_string(GetKoid(view_ref_))
+                FX_LOGS(WARNING) << "Semantic Tree log file (" << std::to_string(koid_)
                                  << ") size is:" << len
                                  << " which is more than max size:" << kMaxDebugFileSize;
                 len = kMaxDebugFileSize;
@@ -185,11 +183,6 @@ void SemanticTreeService::EnableSemanticsUpdates(bool enabled) {
   fuchsia::accessibility::semantics::SemanticListener::OnSemanticsModeChangedCallback callback =
       []() { FX_LOGS(INFO) << "NotifySemanticsEnabled complete."; };
   semantic_listener_->OnSemanticsModeChanged(enabled, std::move(callback));
-}
-
-void SemanticTreeService::SignalHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                        zx_status_t status, const zx_packet_signal* signal) {
-  close_channel_callback_(GetKoid(view_ref_));
 }
 
 const fxl::WeakPtr<::a11y::SemanticTree> SemanticTreeService::Get() const {

@@ -95,24 +95,14 @@ class SemanticTreeServiceTest : public gtest::TestLoopFixture {
     // Create View Ref.
     zx::eventpair a;
     zx::eventpair::create(0u, &a, &b_);
-    view_ref_ = fuchsia::ui::views::ViewRef({
-        .reference = std::move(a),
-    });
 
     a11y::SemanticTreeService::CloseChannelCallback close_channel_callback(
         [this](zx_koid_t /*unused*/) { this->close_channel_called_ = true; });
     auto tree = std::make_unique<MockSemanticTree>();
     tree_ptr_ = tree.get();
     semantic_tree_ = std::make_unique<a11y::SemanticTreeService>(
-        std::move(tree), Clone(view_ref_),
-        fuchsia::accessibility::semantics::SemanticListenerPtr() /*unused*/, debug_dir(),
-        std::move(close_channel_callback));
-  }
-
-  fuchsia::ui::views::ViewRef Clone(const fuchsia::ui::views::ViewRef& view_ref) {
-    fuchsia::ui::views::ViewRef clone;
-    FX_CHECK(fidl::Clone(view_ref, &clone) == ZX_OK);
-    return clone;
+        std::move(tree), koid_, fuchsia::accessibility::semantics::SemanticListenerPtr() /*unused*/,
+        debug_dir(), std::move(close_channel_callback));
   }
 
   static Node CreateTestNode(uint32_t node_id, std::string label,
@@ -171,7 +161,7 @@ class SemanticTreeServiceTest : public gtest::TestLoopFixture {
   std::unique_ptr<a11y::SemanticTreeService> semantic_tree_;
   MockSemanticTree* tree_ptr_ = nullptr;
   bool close_channel_called_ = false;
-  fuchsia::ui::views::ViewRef view_ref_;
+  zx_koid_t koid_ = 12345;
   SemanticTreeParser semantic_tree_parser_;
 
   // The event signaling pair member, used to invalidate the View Ref.
@@ -179,7 +169,7 @@ class SemanticTreeServiceTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(SemanticTreeServiceTest, IsSameViewReturnsTrueForTreeViewRef) {
-  EXPECT_EQ(semantic_tree_->view_ref_koid(), a11y::GetKoid(Clone(view_ref_)));
+  EXPECT_EQ(semantic_tree_->view_ref_koid(), koid_);
 }
 
 TEST_F(SemanticTreeServiceTest, UpdatesAreSentOnlyAfterCommit) {
@@ -257,15 +247,4 @@ TEST_F(SemanticTreeServiceTest, LogsSemanticTree) {
 
   EXPECT_EQ(expected_semantic_tree_odd, buffer);
 }
-
-TEST_F(SemanticTreeServiceTest, ClosesChannelWhenViewRefIsInvalidated) {
-  InitializeTreeNodesFromFile(kSemanticTreeSingleNodePath);
-  EXPECT_EQ(semantic_tree_->Get()->Size(), 1u);
-  // Invalidates the View Ref by signaling the event pair member.
-  b_.reset();
-  RunLoopUntilIdle();
-  // This should have invoked the callback to close the channel.
-  EXPECT_TRUE(close_channel_called_);
-}
-
 }  // namespace accessibility_test
