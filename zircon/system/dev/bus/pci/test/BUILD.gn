@@ -1,0 +1,71 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/kernel/params.gni")
+
+# The output of the test code below is made up of several binaries
+# pci-unit-test: A binary to run the unit tests defiend in test/
+# pci-driver-test: A binary to run the driver tests
+# pci_fake.so: A fake bus driver loaded by pci-driver-test to provide a bind
+#              point for pci_test.so
+# pci_fake.proxy.so: The corresponding proxy driver that binds to pci_fake.so
+#                    and loads pci_test.so
+# pci_test.so: A zxtest driver to test the PCI protocol
+zx_test("pci-unit") {
+  testonly = true
+  sources = [
+    "unit/allocation_tests.cc",
+    "unit/config_tests.cc",
+    "unit/device_tests.cc",
+  ]
+  deps = [
+    "$zx/system/dev/bus/pci:user_pci",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+zx_test("pci-driver") {
+  testonly = true
+  sources = [ "driver/driver_tests.cc" ]
+  deps = [
+    ":pci_fake",
+    ":pci_fake.proxy",
+    ":pci_protocol_test_driver",
+    "$zx/system/fidl/fuchsia-device-test:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/devmgr-integration-test",
+    "$zx/system/ulib/driver-integration-test",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fdio",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+# These drivers are not 'test' drivers because at the moment having other
+# drivers in test/ breaks ddkltl integration tests.
+zx_driver("pci_fake") {
+  sources = [ "driver/fake_bus_driver.cc" ]
+  public_deps = [
+    "$zx/system/dev/bus/pci:user_pci",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/pretty",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+zx_driver("pci_fake.proxy") {
+  deps = [ "$zx/system/dev/bus/pci:user_pci.proxy" ]
+}
+
+zx_driver("pci_protocol_test_driver") {
+  sources = [ "driver/protocol_test_driver.cc" ]
+  deps = [
+    "$zx/system/dev/bus/pci:user_pci",
+    "$zx/system/fidl/fuchsia-device-test:c",
+    "$zx/system/ulib/zxtest",
+  ]
+}

@@ -8,16 +8,17 @@ group("pci") {
   deps = [
     ":bus-pci",
     ":bus-pci.proxy",
-    ":pci_fake",
-    ":pci_fake.proxy",
-    ":pci_protocol_test_driver",
   ]
 }
 
 # The userspace PCI bus driver uses this set, as well as the
 # automated tests.
 source_set("user_pci") {
-  visibility = [ ":*" ]
+  visibility = [
+    ":*",
+    "test/:*",
+  ]
+
   sources = [
     "allocation.cc",
     "bridge.cc",
@@ -97,63 +98,4 @@ if (enable_user_pci) {
       "$zx/system/ulib/zircon",
     ]
   }
-}
-
-# The output of the test code below is made up of several binaries
-# pci-unit-test: A binary to run the unit tests defiend in test/
-# pci-driver-test: A binary to run the driver tests
-# pci_fake.so: A fake bus driver loaded by pci-driver-test to provide a bind
-#              point for pci_test.so
-# pci_fake.proxy.so: The corresponding proxy driver that binds to pci_fake.so
-#                    and loads pci_test.so
-# pci_test.so: A zxtest driver to test the PCI protocol
-zx_test("pci-unit") {
-  sources = [
-    "test/unit/allocation_tests.cc",
-    "test/unit/config_tests.cc",
-    "test/unit/device_tests.cc",
-  ]
-  deps = [
-    ":user_pci",
-    "$zx/system/dev/lib/fake_ddk",
-    "$zx/system/ulib/zxtest",
-  ]
-}
-
-zx_test("pci-driver") {
-  sources = [ "test/driver/driver_tests.cc" ]
-  deps = [
-    "$zx/system/fidl/fuchsia-device-test:c",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/devmgr-integration-test",
-    "$zx/system/ulib/driver-integration-test",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/zxtest",
-  ]
-}
-
-zx_driver("pci_fake") {
-  sources = [ "test/driver/fake_bus_driver.cc" ]
-  public_deps = [
-    ":user_pci",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/pretty",
-    "$zx/system/ulib/zxtest",
-  ]
-}
-
-zx_driver("pci_fake.proxy") {
-  deps = [ ":user_pci.proxy" ]
-}
-
-zx_driver("pci_protocol_test_driver") {
-  sources = [ "test/driver/protocol_test_driver.cc" ]
-  deps = [
-    ":user_pci",
-    "$zx/system/fidl/fuchsia-device-test:c",
-    "$zx/system/ulib/zxtest",
-  ]
 }
