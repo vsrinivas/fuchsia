@@ -5,6 +5,7 @@
 use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints;
 use fidl_fuchsia_wlan_common as fidl_common;
+use fidl_fuchsia_wlan_device::MacRole;
 use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
@@ -41,6 +42,33 @@ pub async fn get_iface_sme_proxy(
     } else {
         Err(format_err!("Invalid interface id {}", iface_id))
     }
+}
+
+pub async fn get_first_client_sme(
+    wlan_svc: &WlanService,
+) -> Result<fidl_sme::ClientSmeProxy, Error> {
+    let wlan_iface_ids =
+        get_iface_list(wlan_svc).await.context("Connect: failed to get wlan iface list")?;
+
+    if wlan_iface_ids.len() == 0 {
+        return Err(format_err!("No wlan interface found"));
+    }
+    fx_log_info!("Found {} wlan iface entries", wlan_iface_ids.len());
+    for iface_id in wlan_iface_ids {
+        let (status, resp) = wlan_svc.query_iface(iface_id).await.context("querying iface info")?;
+
+        if status != zx::sys::ZX_OK {
+            return Err(format_err!("query_iface {} failed: {}", iface_id, status));
+        }
+        if resp.is_none() {
+            return Err(format_err!("invalid response"));
+        }
+        let resp = resp.unwrap();
+        if resp.role == MacRole::Client {
+            return get_iface_sme_proxy(&wlan_svc, resp.id).await;
+        }
+    }
+    Err(format_err!("No client interface found"))
 }
 
 pub async fn connect_to_network(
@@ -155,6 +183,42 @@ pub async fn disconnect_from_network(
     Ok(())
 }
 
+pub async fn disconnect_all_clients(wlan_svc: &WlanService) -> Result<(), Error> {
+    let wlan_iface_ids =
+        get_iface_list(wlan_svc).await.context("Connect: failed to get wlan iface list")?;
+
+    let mut error_msg = format!("");
+    for iface_id in wlan_iface_ids {
+        let (status, resp) = wlan_svc.query_iface(iface_id).await.context("querying iface info")?;
+
+        if status != zx::sys::ZX_OK {
+            error_msg = format!("{}failed querying iface {}: {}\n", error_msg, iface_id, status);
+            fx_log_err!("disconnect_all_clients: query err on iface {}: {}", iface_id, status);
+            continue;
+        }
+        if resp.is_none() {
+            error_msg = format!("{}no query response on iface {}\n", error_msg, iface_id);
+            fx_log_err!("disconnect_all_clients: iface query empty on iface {}", iface_id);
+            continue;
+        }
+        let resp = resp.unwrap();
+        if resp.role == MacRole::Client {
+            let sme_proxy = get_iface_sme_proxy(&wlan_svc, iface_id)
+                .await
+                .context("Disconnect all: failed to get iface sme proxy")?;
+            if let Err(e) = disconnect_from_network(&sme_proxy).await {
+                error_msg = format!("{}Error disconnecting iface {}: {}\n", error_msg, iface_id, e);
+                fx_log_err!("disconnect_all_clients: disconnect err on iface {}: {}", iface_id, e);
+            }
+        }
+    }
+    if error_msg.is_empty() {
+        Ok(())
+    } else {
+        Err(format_err!("{}", error_msg))
+    }
+}
+
 pub async fn perform_scan(
     iface_sme_proxy: &fidl_sme::ClientSmeProxy,
 ) -> Result<Vec<fidl_sme::BssInfo>, Error> {
@@ -246,6 +310,259 @@ mod tests {
         wlan_common::assert_variant,
     };
 
+    fn respond_to_query_iface_list_request(
+        exec: &mut Executor,
+        req_stream: &mut DeviceServiceRequestStream,
+        iface_list_vec: Vec<IfaceListItem>,
+    ) {
+        let req = exec.run_until_stalled(&mut req_stream.next());
+        let responder = assert_variant !(
+            req,
+            Poll::Ready(Some(Ok(DeviceServiceRequest::ListIfaces{responder})))
+            => responder);
+        responder
+            .send(&mut ListIfacesResponse { ifaces: iface_list_vec })
+            .expect("fake query list response: send failed")
+    }
+
+    fn extract_sme_server_from_get_client_sme_req_and_respond(
+        exec: &mut Executor,
+        req_stream: &mut DeviceServiceRequestStream,
+        status: zx::Status,
+    ) -> fidl_sme::ClientSmeRequestStream {
+        let req = exec.run_until_stalled(&mut req_stream.next());
+
+        let (responder, fake_sme_server) = assert_variant !(
+            req,
+            Poll::Ready(Some(Ok(DeviceServiceRequest::GetClientSme{ iface_id:_, sme, responder})))
+            => (responder, sme));
+
+        // now send the response back
+        responder.send(status.into_raw()).expect("fake sme proxy response: send failed");
+
+        // and return the stream
+        // let sme_stream = fake_sme_server.into_stream().expect("sme server stream failed");
+        // sme_stream
+        fake_sme_server.into_stream().expect("sme server stream failed")
+    }
+
+    fn respond_to_get_client_sme_request(
+        exec: &mut Executor,
+        req_stream: &mut DeviceServiceRequestStream,
+        status: zx::Status,
+    ) {
+        let req = exec.run_until_stalled(&mut req_stream.next());
+
+        let responder = assert_variant !(
+            req,
+            Poll::Ready(Some(Ok(DeviceServiceRequest::GetClientSme{ responder, ..})))
+            => responder);
+
+        // now send the response back
+        responder.send(status.into_raw()).expect("fake sme proxy response: send failed")
+    }
+
+    fn respond_to_client_sme_disconnect_request(
+        exec: &mut Executor,
+        req_stream: &mut ClientSmeRequestStream,
+    ) {
+        let req = exec.run_until_stalled(&mut req_stream.next());
+        let responder = assert_variant !(
+            req,
+            Poll::Ready(Some(Ok(ClientSmeRequest::Disconnect{ responder})))
+            => responder);
+
+        // now send the response back
+        responder.send().expect("fake disconnect response: send failed")
+    }
+
+    // In response to the Client SME Status request, respond based on input
+    // status. Status response is made up of connected  (bss info) and
+    // connecting (to ssid). Here are the 3 supported scenarios:
+    // Empty Status: Both fields are empty (IF delete success)
+    // Connected: connected is set and connecting is null (IF deleted failed)
+    // Connecting: connected is null and connecting is set (IF delete failed)
+    fn respond_to_client_sme_status_request(
+        exec: &mut Executor,
+        req_stream: &mut ClientSmeRequestStream,
+        status: &StatusResponse,
+    ) {
+        let req = exec.run_until_stalled(&mut req_stream.next());
+        let responder = assert_variant !(
+            req,
+            Poll::Ready(Some(Ok(ClientSmeRequest::Status{ responder})))
+            => responder);
+
+        // Send appropriate status response
+        match status {
+            StatusResponse::Empty => {
+                let connected_to_bss_info = create_bssinfo_using_ssid(vec![]);
+                let mut response = fidl_sme::ClientStatusResponse {
+                    connected_to: connected_to_bss_info,
+                    connecting_to_ssid: vec![],
+                };
+                responder.send(&mut response).expect("Failed to send StatusResponse.");
+            }
+            StatusResponse::Connected => {
+                let connected_to_bss_info = create_bssinfo_using_ssid(vec![1, 2, 3, 4]);
+                let mut response = fidl_sme::ClientStatusResponse {
+                    connected_to: connected_to_bss_info,
+                    connecting_to_ssid: vec![],
+                };
+                responder.send(&mut response).expect("Failed to send StatusResponse.");
+            }
+            StatusResponse::Connecting => {
+                let connected_to_bss_info = create_bssinfo_using_ssid(vec![]);
+                let mut response = fidl_sme::ClientStatusResponse {
+                    connected_to: connected_to_bss_info,
+                    connecting_to_ssid: vec![1, 2, 3, 4],
+                };
+                responder.send(&mut response).expect("Failed to send StatusResponse.");
+            }
+        }
+    }
+
+    fn test_get_first_client_sme(
+        iface_list: &[MacRole],
+    ) -> Result<fidl_sme::ClientSmeProxy, Error> {
+        let (mut exec, proxy, mut req_stream) = crate::setup_fake_service::<DeviceServiceMarker>();
+        let fut = get_first_client_sme(&proxy);
+        pin_mut!(fut);
+
+        let ifaces =
+            (0..iface_list.len() as u16).map(|iface_id| IfaceListItem { iface_id }).collect();
+
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+        respond_to_query_iface_list_request(&mut exec, &mut req_stream, ifaces);
+
+        for mac_role in iface_list {
+            // iface query response
+            assert!(exec.run_until_stalled(&mut fut).is_pending());
+            respond_to_query_iface_request(
+                &mut exec,
+                &mut req_stream,
+                *mac_role,
+                Some([1, 2, 3, 4, 5, 6]),
+            );
+
+            if *mac_role == MacRole::Client {
+                // client sme proxy
+                assert!(exec.run_until_stalled(&mut fut).is_pending());
+                respond_to_get_client_sme_request(&mut exec, &mut req_stream, zx::Status::OK);
+                break;
+            }
+        }
+
+        exec.run_singlethreaded(&mut fut)
+    }
+
+    fn test_disconnect_all_clients(iface_list: &[(MacRole, StatusResponse)]) -> Result<(), Error> {
+        let (mut exec, proxy, mut req_stream) = crate::setup_fake_service::<DeviceServiceMarker>();
+        let fut = disconnect_all_clients(&proxy);
+        pin_mut!(fut);
+
+        let ifaces =
+            (0..iface_list.len() as u16).map(|iface_id| IfaceListItem { iface_id }).collect();
+
+        assert!(exec.run_until_stalled(&mut fut).is_pending());
+        respond_to_query_iface_list_request(&mut exec, &mut req_stream, ifaces);
+
+        for (mac_role, status) in iface_list {
+            // iface query response
+            assert!(exec.run_until_stalled(&mut fut).is_pending());
+            respond_to_query_iface_request(
+                &mut exec,
+                &mut req_stream,
+                *mac_role,
+                Some([1, 2, 3, 4, 5, 6]),
+            );
+
+            if *mac_role == MacRole::Client {
+                // Get the Client SME server (to send the responses for the following 2 SME requests)
+                assert!(exec.run_until_stalled(&mut fut).is_pending());
+                let mut fake_sme_server_stream =
+                    extract_sme_server_from_get_client_sme_req_and_respond(
+                        &mut exec,
+                        &mut req_stream,
+                        zx::Status::OK,
+                    );
+
+                // Disconnect
+                assert!(exec.run_until_stalled(&mut fut).is_pending());
+                respond_to_client_sme_disconnect_request(&mut exec, &mut fake_sme_server_stream);
+
+                assert!(exec.run_until_stalled(&mut fut).is_pending());
+
+                // Send appropriate status response
+                respond_to_client_sme_status_request(
+                    &mut exec,
+                    &mut fake_sme_server_stream,
+                    status,
+                );
+            }
+        }
+        exec.run_singlethreaded(&mut fut)
+    }
+
+    // iface list contains an AP and a client. Test should pass
+    #[test]
+    fn check_get_client_sme_success() {
+        let iface_list: Vec<MacRole> = vec![MacRole::Ap, MacRole::Client];
+        test_get_first_client_sme(&iface_list).expect("expect success but failed");
+    }
+
+    // iface list is empty. Test should fail
+    #[test]
+    fn check_get_client_sme_no_devices() {
+        let iface_list: Vec<MacRole> = Vec::new();
+        test_get_first_client_sme(&iface_list).expect_err("expect fail but succeeded");
+    }
+
+    // iface list does not contain a client. Test should fail
+    #[test]
+    fn check_get_client_sme_no_clients() {
+        let iface_list: Vec<MacRole> = vec![MacRole::Ap, MacRole::Ap];
+        test_get_first_client_sme(&iface_list).expect_err("expect fail but succeeded");
+    }
+
+    // test disconnect_all_clients with a Client and an AP. Test should pass
+    // as AP IF will be ignored and Client IF delete should succeed.
+    #[test]
+    fn check_disconnect_all_clients_client_and_ap_success() {
+        let iface_list: Vec<(MacRole, StatusResponse)> =
+            vec![(MacRole::Ap, StatusResponse::Empty), (MacRole::Client, StatusResponse::Empty)];
+        test_disconnect_all_clients(&iface_list).expect("Expect success but failed")
+    }
+
+    // test disconnect_all_clients with 2 Clients. Test should pass as both the
+    // IFs are clients and both deletes should succeed.
+    #[test]
+    fn check_disconnect_all_clients_all_clients_success() {
+        let iface_list: Vec<(MacRole, StatusResponse)> = vec![
+            (MacRole::Client, StatusResponse::Empty),
+            (MacRole::Client, StatusResponse::Empty),
+        ];
+        test_disconnect_all_clients(&iface_list).expect("Expect success but failed");
+    }
+
+    // test disconnect_all_clients with 2 Clients, one disconnect failure
+    #[test]
+    fn check_disconnect_all_clients_all_clients_fail() {
+        let iface_list: Vec<(MacRole, StatusResponse)> = vec![
+            (MacRole::Ap, StatusResponse::Connected),
+            (MacRole::Client, StatusResponse::Connected),
+        ];
+        test_disconnect_all_clients(&iface_list).expect_err("Expect fail but succeeded");
+    }
+
+    // test disconnect_all_clients with no Clients
+    #[test]
+    fn check_disconnect_all_clients_no_clients_success() {
+        let iface_list: Vec<(MacRole, StatusResponse)> =
+            vec![(MacRole::Ap, StatusResponse::Empty), (MacRole::Ap, StatusResponse::Empty)];
+        test_disconnect_all_clients(&iface_list).expect("Expect success but failed");
+    }
+
     #[test]
     fn list_ifaces_returns_iface_id_vector() {
         let mut exec = Executor::new().expect("failed to create an executor");
@@ -278,7 +595,7 @@ mod tests {
         };
 
         // now verify the response
-        assert_eq!(response, iface_id_list);
+        assert_eq!(response, iface_id_list)
     }
 
     #[test]
@@ -310,7 +627,7 @@ mod tests {
         };
 
         // now verify the response
-        assert_eq!(response, iface_id_list);
+        assert_eq!(response, iface_id_list)
     }
 
     fn poll_device_service_req(
@@ -355,7 +672,7 @@ mod tests {
         match exec.run_until_stalled(&mut fut) {
             Poll::Ready(Ok(_)) => (),
             _ => panic!("Expected a status response"),
-        };
+        }
     }
 
     fn send_sme_proxy_response(
@@ -852,9 +1169,10 @@ mod tests {
         }
     }
 
-    fn send_fake_query_iface_response(
+    fn respond_to_query_iface_request(
         exec: &mut Executor,
         req_stream: &mut DeviceServiceRequestStream,
+        role: fidl_fuchsia_wlan_device::MacRole,
         fake_mac_addr: Option<[u8; 6]>,
     ) {
         use fuchsia_zircon::sys::{ZX_ERR_NOT_FOUND, ZX_OK};
@@ -865,7 +1183,7 @@ mod tests {
             Poll::Ready(Some(Ok(DeviceServiceRequest::QueryIface{iface_id : _, responder})))
             => responder);
         if let Some(mac) = fake_mac_addr {
-            let mut response = fake_iface_query_response(mac);
+            let mut response = fake_iface_query_response(mac, role);
             responder
                 .send(ZX_OK, Some(&mut response))
                 .expect("sending fake response with mac address");
@@ -874,14 +1192,11 @@ mod tests {
         }
     }
 
-    fn fake_iface_query_response(mac_addr: [u8; 6]) -> QueryIfaceResponse {
-        QueryIfaceResponse {
-            role: fidl_fuchsia_wlan_device::MacRole::Client,
-            id: 0,
-            phy_id: 0,
-            phy_assigned_id: 0,
-            mac_addr,
-        }
+    fn fake_iface_query_response(
+        mac_addr: [u8; 6],
+        role: fidl_fuchsia_wlan_device::MacRole,
+    ) -> QueryIfaceResponse {
+        QueryIfaceResponse { role, id: 0, phy_id: 0, phy_assigned_id: 0, mac_addr }
     }
 
     #[test]
@@ -892,10 +1207,14 @@ mod tests {
 
         assert_variant!(exec.run_until_stalled(&mut mac_addr_fut), Poll::Pending);
 
-        send_fake_query_iface_response(&mut exec, &mut req_stream, Some([1, 2, 3, 4, 5, 6]));
+        respond_to_query_iface_request(
+            &mut exec,
+            &mut req_stream,
+            MacRole::Client,
+            Some([1, 2, 3, 4, 5, 6]),
+        );
 
-        let mac_addr = assert_variant!(exec.run_until_stalled(&mut mac_addr_fut),
-                                       Poll::Ready(Ok(addr)) => addr);
+        let mac_addr = exec.run_singlethreaded(&mut mac_addr_fut).expect("should get a mac addr");
         assert_eq!(mac_addr, [1, 2, 3, 4, 5, 6]);
     }
 
@@ -907,11 +1226,10 @@ mod tests {
 
         assert_variant!(exec.run_until_stalled(&mut mac_addr_fut), Poll::Pending);
 
-        send_fake_query_iface_response(&mut exec, &mut req_stream, None);
+        respond_to_query_iface_request(&mut exec, &mut req_stream, MacRole::Client, None);
 
-        let err_str = assert_variant!(exec.run_until_stalled(&mut mac_addr_fut),
-                                      Poll::Ready(Err(e)) => format !("{}", e));
-        assert_eq!("No valid iface response", err_str);
+        let err = exec.run_singlethreaded(&mut mac_addr_fut).expect_err("should be an error");
+        assert_eq!("No valid iface response", format!("{}", err));
     }
 
     #[test]
@@ -925,9 +1243,8 @@ mod tests {
         // Simulate service not being available by closing the channel
         std::mem::drop(req_stream);
 
-        let err_str = assert_variant!(exec.run_until_stalled(&mut mac_addr_fut),
-                                      Poll::Ready(Err(e)) => format !("{}", e));
-        assert!(err_str.contains("PEER_CLOSED"));
+        let err = exec.run_singlethreaded(&mut mac_addr_fut).expect_err("should be an error");
+        assert!(format!("{}", err).contains("PEER_CLOSED"));
     }
 
     fn send_destroy_iface_response(

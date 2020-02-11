@@ -6,11 +6,10 @@ use crate::wlan::types::{
     ClientStateSummary, ConnectionState, DisconnectStatus, NetworkIdentifier, NetworkState,
     SecurityType, WlanClientState,
 };
-use anyhow::{format_err, Context as _, Error};
+use anyhow::{Context as _, Error};
 use connectivity_testing::wlan_service_util;
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
 use fuchsia_component::client::connect_to_service;
-use fuchsia_syslog::fx_log_err;
 use parking_lot::RwLock;
 
 // WlanFacade: proxies commands from sl4f test to proper fidl APIs
@@ -48,19 +47,10 @@ impl WlanFacade {
     }
 
     pub async fn scan(&self) -> Result<Vec<String>, Error> {
-        // get iface info
-        let wlan_iface_ids = wlan_service_util::get_iface_list(&self.wlan_svc)
+        // get the first client interface
+        let sme_proxy = wlan_service_util::get_first_client_sme(&self.wlan_svc)
             .await
-            .context("Scan: failed to get wlan iface list")?;
-
-        if wlan_iface_ids.len() == 0 {
-            return Err(format_err!("no wlan interfaces found"));
-        }
-
-        // pick the first one
-        let sme_proxy = wlan_service_util::get_iface_sme_proxy(&self.wlan_svc, wlan_iface_ids[0])
-            .await
-            .context("Scan: failed to get iface sme proxy")?;
+            .context("Scan: failed to get client iface sme proxy")?;
 
         // start the scan
         let results = wlan_service_util::perform_scan(&sme_proxy).await.context("Scan failed")?;
@@ -71,24 +61,14 @@ impl WlanFacade {
             let ssid = String::from_utf8_lossy(&entry.ssid).into_owned();
             ssids.push(ssid);
         }
-
         Ok(ssids)
     }
 
     pub async fn connect(&self, target_ssid: Vec<u8>, target_pwd: Vec<u8>) -> Result<bool, Error> {
-        // get iface info
-        let wlan_iface_ids = wlan_service_util::get_iface_list(&self.wlan_svc)
+        // get the first client interface
+        let sme_proxy = wlan_service_util::get_first_client_sme(&self.wlan_svc)
             .await
-            .context("Connect: failed to get wlan iface list")?;
-
-        if wlan_iface_ids.len() == 0 {
-            return Err(format_err!("no wlan interfaces found"));
-        }
-
-        // pick the first one
-        let sme_proxy = wlan_service_util::get_iface_sme_proxy(&self.wlan_svc, wlan_iface_ids[0])
-            .await
-            .context("Connect: failed to get iface sme proxy")?;
+            .context("Connect: failed to get client iface sme proxy")?;
 
         wlan_service_util::connect_to_network(&sme_proxy, target_ssid, target_pwd).await
     }
@@ -100,55 +80,18 @@ impl WlanFacade {
     pub async fn destroy_iface(&self, iface_id: u16) -> Result<(), Error> {
         wlan_service_util::destroy_iface(&self.wlan_svc, iface_id)
             .await
-            .context("Destroy: Failed to destroy iface")?;
-
-        Ok(())
+            .context("Destroy: Failed to destroy iface")
     }
 
     pub async fn disconnect(&self) -> Result<(), Error> {
-        // get iface info
-        let wlan_iface_ids = wlan_service_util::get_iface_list(&self.wlan_svc)
+        wlan_service_util::disconnect_all_clients(&self.wlan_svc)
             .await
-            .context("Disconnect: failed to get wlan iface list")?;
-
-        if wlan_iface_ids.len() == 0 {
-            return Err(format_err!("no wlan interfaces found"));
-        }
-
-        let mut disconnect_error = false;
-
-        // disconnect all networks
-        for iface_id in wlan_iface_ids {
-            let sme_proxy = wlan_service_util::get_iface_sme_proxy(&self.wlan_svc, iface_id)
-                .await
-                .context("Disconnect: failed to get iface sme proxy")?;
-
-            match wlan_service_util::disconnect_from_network(&sme_proxy).await {
-                Err(e) => {
-                    fx_log_err!("Disconnect call failed on iface {}: {:?}", iface_id, e);
-                    disconnect_error = true;
-                }
-                _ => {}
-            }
-        }
-        if disconnect_error {
-            return Err(format_err!("saw a failure with at least one disconnect call"));
-        }
-        Ok(())
+            .context("Disconnect: Failed to disconnect ifaces")
     }
 
     pub async fn status(&self) -> Result<ClientStateSummary, Error> {
-        // get iface info
-        let wlan_iface_ids = wlan_service_util::get_iface_list(&self.wlan_svc)
-            .await
-            .context("Status: failed to get wlan iface list")?;
-
-        if wlan_iface_ids.len() == 0 {
-            return Err(format_err!("no wlan interfaces found"));
-        }
-
-        // pick the first one
-        let sme_proxy = wlan_service_util::get_iface_sme_proxy(&self.wlan_svc, wlan_iface_ids[0])
+        // get the first client interface
+        let sme_proxy = wlan_service_util::get_first_client_sme(&self.wlan_svc)
             .await
             .context("Status: failed to get iface sme proxy")?;
 
