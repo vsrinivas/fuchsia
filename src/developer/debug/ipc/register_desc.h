@@ -26,9 +26,9 @@ struct Register;
 
 enum class SpecialRegisterType {
   kNone,
-  kIP, // Instruction Pointer
-  kSP, // Stack Pointer
-  kTP  // Thread Pointer
+  kIP,  // Instruction Pointer
+  kSP,  // Stack Pointer
+  kTP   // Thread Pointer
 };
 
 struct RegisterInfo {
@@ -235,6 +235,7 @@ enum class RegisterID : uint32_t {
   kARMv8_id_aa64dfr0_el1 = 1300,  // Debug Feature Register 0.
   kARMv8_mdscr_el1 = 1301,        // Debug System Control Register.
 
+  // HW Registers.
   kARMv8_dbgbcr0_el1 = 1320,
   kARMv8_dbgbcr1_el1 = 1321,
   kARMv8_dbgbcr2_el1 = 1322,
@@ -252,24 +253,57 @@ enum class RegisterID : uint32_t {
   kARMv8_dbgbcr14_el1 = 1334,
   kARMv8_dbgbcr15_el1 = 1335,
 
-  kARMv8_dbgbvr0_el1 = 1350,
-  kARMv8_dbgbvr1_el1 = 1351,
-  kARMv8_dbgbvr2_el1 = 1352,
-  kARMv8_dbgbvr3_el1 = 1353,
-  kARMv8_dbgbvr4_el1 = 1354,
-  kARMv8_dbgbvr5_el1 = 1355,
-  kARMv8_dbgbvr6_el1 = 1356,
-  kARMv8_dbgbvr7_el1 = 1357,
-  kARMv8_dbgbvr8_el1 = 1358,
-  kARMv8_dbgbvr9_el1 = 1359,
-  kARMv8_dbgbvr10_el1 = 1360,
-  kARMv8_dbgbvr11_el1 = 1361,
-  kARMv8_dbgbvr12_el1 = 1362,
-  kARMv8_dbgbvr13_el1 = 1363,
-  kARMv8_dbgbvr14_el1 = 1364,
-  kARMv8_dbgbvr15_el1 = 1365,
+  kARMv8_dbgbvr0_el1 = 1340,
+  kARMv8_dbgbvr1_el1 = 1341,
+  kARMv8_dbgbvr2_el1 = 1342,
+  kARMv8_dbgbvr3_el1 = 1343,
+  kARMv8_dbgbvr4_el1 = 1344,
+  kARMv8_dbgbvr5_el1 = 1345,
+  kARMv8_dbgbvr6_el1 = 1346,
+  kARMv8_dbgbvr7_el1 = 1347,
+  kARMv8_dbgbvr8_el1 = 1348,
+  kARMv8_dbgbvr9_el1 = 1349,
+  kARMv8_dbgbvr10_el1 = 1350,
+  kARMv8_dbgbvr11_el1 = 1351,
+  kARMv8_dbgbvr12_el1 = 1352,
+  kARMv8_dbgbvr13_el1 = 1353,
+  kARMv8_dbgbvr14_el1 = 1354,
+  kARMv8_dbgbvr15_el1 = 1355,
 
-  // TODO(bug 40992) Add ARM64 hardware watchpoint registers here.
+  // HW Watchpoints.
+  kARMv8_dbgwcr0_el1 = 1360,
+  kARMv8_dbgwcr1_el1 = 1361,
+  kARMv8_dbgwcr2_el1 = 1362,
+  kARMv8_dbgwcr3_el1 = 1363,
+  kARMv8_dbgwcr4_el1 = 1364,
+  kARMv8_dbgwcr5_el1 = 1365,
+  kARMv8_dbgwcr6_el1 = 1366,
+  kARMv8_dbgwcr7_el1 = 1367,
+  kARMv8_dbgwcr8_el1 = 1368,
+  kARMv8_dbgwcr9_el1 = 1369,
+  kARMv8_dbgwcr10_el1 = 1370,
+  kARMv8_dbgwcr11_el1 = 1371,
+  kARMv8_dbgwcr12_el1 = 1372,
+  kARMv8_dbgwcr13_el1 = 1373,
+  kARMv8_dbgwcr14_el1 = 1374,
+  kARMv8_dbgwcr15_el1 = 1375,
+
+  kARMv8_dbgwvr0_el1 = 1380,
+  kARMv8_dbgwvr1_el1 = 1381,
+  kARMv8_dbgwvr2_el1 = 1382,
+  kARMv8_dbgwvr3_el1 = 1383,
+  kARMv8_dbgwvr4_el1 = 1384,
+  kARMv8_dbgwvr5_el1 = 1385,
+  kARMv8_dbgwvr6_el1 = 1386,
+  kARMv8_dbgwvr7_el1 = 1387,
+  kARMv8_dbgwvr8_el1 = 1388,
+  kARMv8_dbgwvr9_el1 = 1389,
+  kARMv8_dbgwvr10_el1 = 1390,
+  kARMv8_dbgwvr11_el1 = 1391,
+  kARMv8_dbgwvr12_el1 = 1392,
+  kARMv8_dbgwvr13_el1 = 1393,
+  kARMv8_dbgwvr14_el1 = 1394,
+  kARMv8_dbgwvr15_el1 = 1395,
 
   // x64 (Range: 2000-2999) ----------------------------------------------------
 

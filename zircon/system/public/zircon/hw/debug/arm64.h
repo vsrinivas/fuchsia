@@ -52,7 +52,7 @@
 // - BT  = 0
 
 // Enable/disable the breakpoint.
-#define ARM64_DBGBCR_E 1u  // Bit 0
+#define ARM64_DBGBCR_E 1lu  // Bit 0
 #define ARM64_DBGBCR_E_SHIFT 0u
 #define ARM64_DBGBCR_E_MASK (ARM64_DBGBCR_E << ARM64_DBGBCR_E_SHIFT)
 #define ARM64_DBGBCR_E_GET(dbgbcr) \
@@ -62,7 +62,7 @@
                                           ARM64_DBGBCR_E_SHIFT)
 
 // PMC, HMC, SSC define the environment where the breakpoint will trigger.
-#define ARM64_DBGBCR_PMC 0b11u  // Bits 1-2.
+#define ARM64_DBGBCR_PMC 0b11lu  // Bits 1-2.
 #define ARM64_DBGBCR_PMC_SHIFT 1u
 #define ARM64_DBGBCR_PMC_MASK (ARM64_DBGBCR_PMC << ARM64_DBGBCR_PMC_SHIFT)
 #define ARM64_DBGBCR_PMC_GET(dbgbcr) \
@@ -73,7 +73,7 @@
 
 // Byte Address Select. Defines which half-words triggers the breakpoint.
 // In AArch64 implementations (which zircon targets), is res1.
-#define ARM64_DBGBCR_BAS 0b1111u  // Bits 5-8.
+#define ARM64_DBGBCR_BAS 0b1111lu  // Bits 5-8.
 #define ARM64_DBGBCR_BAS_SHIFT 5u
 #define ARM64_DBGBCR_BAS_MASK (ARM64_DBGBCR_BAS << ARM64_DBGBCR_BAS_SHIFT)
 #define ARM64_DBGBCR_BAS_GET(dbgbcr) \
@@ -83,7 +83,7 @@
                                           ARM64_DBGBCR_BAS_SHIFT)
 
 // PMC, HMC, SSC define the environment where the breakpoint will trigger.
-#define ARM64_DBGBCR_HMC 0b1u  // Bit 13.
+#define ARM64_DBGBCR_HMC 0b1lu  // Bit 13.
 #define ARM64_DBGBCR_HMC_SHIFT 13u
 #define ARM64_DBGBCR_HMC_MASK (ARM64_DBGBCR_HMC << ARM64_DBGBCR_HMC_SHIFT)
 #define ARM64_DBGBCR_HMC_GET(dbgbcr) \
@@ -93,7 +93,7 @@
                                           ARM64_DBGBCR_HMC_SHIFT)
 
 // PMC, HMC, SSC define the environment where the breakpoint will trigger.
-#define ARM64_DBGBCR_SSC 0b111u  // Bits 14-15.
+#define ARM64_DBGBCR_SSC 0b11lu  // Bits 14-15.
 #define ARM64_DBGBCR_SSC_SHIFT 14u
 #define ARM64_DBGBCR_SSC_MASK (ARM64_DBGBCR_SSC << ARM64_DBGBCR_SSC_SHIFT)
 #define ARM64_DBGBCR_SSC_GET(dbgbcr) \
@@ -103,7 +103,7 @@
                                           ARM64_DBGBCR_SSC_SHIFT)
 
 // Linked Breakpoint Number. Zircon doesn't use this feature. Always zero.
-#define ARM64_DBGBCR_LBN 0b1111u  // Bits 16-19.
+#define ARM64_DBGBCR_LBN 0b1111lu  // Bits 16-19.
 #define ARM64_DBGBCR_LBN_SHIFT 16u
 #define ARM64_DBGBCR_LBN_MASK (ARM64_DBGBCR_LBN << ARM64_DBGBCR_LBN_SHIFT)
 #define ARM64_DBGBCR_LBN_GET(dbgbcr) \
@@ -113,7 +113,7 @@
                                           ARM64_DBGBCR_LBN_SHIFT)
 
 // Breakpoint Type. Zircon only uses unlinked address match (zero).
-#define ARM64_DBGBCR_BT 0b1111u  // Bits 20-23.
+#define ARM64_DBGBCR_BT 0b1111lu  // Bits 20-23.
 #define ARM64_DBGBCR_BT_SHIFT 20u
 #define ARM64_DBGBCR_BT_MASK (ARM64_DBGBCR_BT << ARM64_DBGBCR_BT_SHIFT)
 #define ARM64_DBGBCR_BT_GET(dbgbcr) \

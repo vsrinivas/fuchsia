@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/console/format_register.cc"
 
+#include <zircon/hw/debug/arm64.h>
+
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/shared/arch_arm64.h"
@@ -306,12 +308,28 @@ TEST(FormatRegisters, DebugRegisters_arm64) {
   registers.push_back(CreateRegisterWithValue(
       RegisterID::kARMv8_dbgbcr0_el1,
       ARM64_FLAG_MASK(DBGBCR, PMC) | ARM64_FLAG_MASK(DBGBCR, HMC) | ARM64_FLAG_MASK(DBGBCR, LBN)));
-  registers.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbvr0_el1, 0xdeadbeefaabbccdd));
   registers.push_back(CreateRegisterWithValue(
       RegisterID::kARMv8_dbgbcr15_el1, ARM64_FLAG_MASK(DBGBCR, E) | ARM64_FLAG_MASK(DBGBCR, BAS) |
                                            ARM64_FLAG_MASK(DBGBCR, SSC) |
                                            ARM64_FLAG_MASK(DBGBCR, BT)));
-  registers.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbvr0_el1, 0xaabbccdd11223344));
+  registers.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbvr0_el1, 0xdeadbeefaabbccdd));
+  registers.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgbvr15_el1, 0xaabbccdd11223344));
+
+  uint32_t value = 0;
+  ARM64_DBGWCR_PAC_SET(&value, 0b01);
+  ARM64_DBGWCR_BAS_SET(&value, 0xab);
+  ARM64_DBGWCR_SSC_SET(&value, 0b11);
+  ARM64_DBGWCR_WT_SET(&value, 0b1);
+  registers.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgwcr2_el1, value));
+
+  value = 0;
+  ARM64_DBGWCR_E_SET(&value, 1);
+  ARM64_DBGWCR_LSC_SET(&value, 0b11);
+  ARM64_DBGWCR_HMC_SET(&value, 1);
+  ARM64_DBGWCR_LBN_SET(&value, 0b1011);
+  ARM64_DBGWCR_MSK_SET(&value, 0b11011);
+  registers.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgwcr14_el1, value));
+
   registers.push_back(CreateRegisterWithValue(
       RegisterID::kARMv8_id_aa64dfr0_el1,
       ARM64_FLAG_MASK(ID_AA64DFR0_EL1, DV) | ARM64_FLAG_MASK(ID_AA64DFR0_EL1, PMUV) |
@@ -323,18 +341,25 @@ TEST(FormatRegisters, DebugRegisters_arm64) {
           ARM64_FLAG_MASK(MDSCR_EL1, MDE) | ARM64_FLAG_MASK(MDSCR_EL1, TXU) |
           ARM64_FLAG_MASK(MDSCR_EL1, RXfull)));
 
+  registers.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgwvr2_el1, 0x9988776655443322));
+  registers.push_back(CreateRegisterWithValue(RegisterID::kARMv8_dbgwvr14_el1, 0x1133557799aaccee));
+
   FormatRegisterOptions options;
   options.arch = debug_ipc::Arch::kArm64;
 
   // clang-format off
   EXPECT_EQ(
       "Debug Registers\n"
-      "  id_aa64dfr0_el1         0xf00f0ff0f DV=15, TV=0, PMUV=15, BRP=16, WRP=16, CTX_CMP=1, PMSV=15\n"
-      "        mdscr_el1          0x44009001 SS=1, TDCC=1, KDE=0, HDE=0, MDE=1, RAZ/WI=0, TDA=0, INTdis=0, TXU=1, RXO=0, TXfull=0, RXfull=1\n"
-      "      dbgbcr0_el1          0x000f2006 E=0, PMC=3, BAS=0, HMC=1, SSC=0, LBN=15, BT=0\n"
-      "     dbgbcr15_el1          0x00f0c1e1 E=1, PMC=0, BAS=15, HMC=0, SSC=3, LBN=0, BT=15\n"
-      "      dbgbvr0_el1  0xdeadbeefaabbccdd \n"
-      "      dbgbvr0_el1  0xaabbccdd11223344 \n"
+      "  id_aa64dfr0         0xf00f0ff0f DV=15, TV=0, PMUV=15, BRP=16, WRP=16, CTX_CMP=1, PMSV=15\n"
+      "        mdscr          0x44009001 SS=1, TDCC=1, KDE=0, HDE=0, MDE=1, RAZ/WI=0, TDA=0, INTdis=0, TXU=1, RXO=0, TXfull=0, RXfull=1\n"
+      "      dbgbcr0          0x000f2006 E=0, PMC=3, BAS=0, HMC=1, SSC=0, LBN=15, BT=0\n"
+      "     dbgbcr15          0x00f0c1e1 E=1, PMC=0, BAS=15, HMC=0, SSC=3, LBN=0, BT=15\n"
+      "      dbgbvr0  0xdeadbeefaabbccdd \n"
+      "     dbgbvr15  0xaabbccdd11223344 \n"
+      "      dbgwcr2          0x0010d562 E=0, PAC=1, LSC=0, BAS=0xab, HMC=0, SSC=3, LBN=0, WT=1, MASK=0x0\n"
+      "     dbgwcr14          0x1b0b2019 E=1, PAC=0, LSC=3, BAS=0x0, HMC=1, SSC=0, LBN=11, WT=0, MASK=0x1b\n"
+      "      dbgwvr2  0x9988776655443322 \n"
+      "     dbgwvr14  0x1133557799aaccee \n"
       "\n",
       FormatRegisters(options, registers).AsString());
   // clang-format on

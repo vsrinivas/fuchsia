@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/console/format_register_arm64.h"
 
 #include <inttypes.h>
+#include <zircon/hw/debug/arm64.h>
 
 #include "src/developer/debug/shared/arch_arm64.h"
 #include "src/developer/debug/zxdb/common/err.h"
@@ -101,12 +102,29 @@ std::vector<OutputBuffer> FormatDBGBCR(const Register& reg, TextForegroundColor 
   uint64_t value = reg.GetValue();
   row.emplace_back(to_hex_string(value, 8), color);
 
+  row.emplace_back(fxl::StringPrintf("E=%d, PMC=%d, BAS=%d, HMC=%d, SSC=%d, LBN=%d, BT=%d",
+                                     ARM64_DBGBCR_E_GET(value), ARM64_DBGBCR_PMC_GET(value),
+                                     ARM64_DBGBCR_BAS_GET(value), ARM64_DBGBCR_HMC_GET(value),
+                                     ARM64_DBGBCR_SSC_GET(value), ARM64_DBGBCR_LBN_GET(value),
+                                     ARM64_DBGBCR_BT_GET(value)),
+                   color);
+  return row;
+}
+
+std::vector<OutputBuffer> FormatDBGWCR(const Register& reg, TextForegroundColor color) {
+  std::vector<OutputBuffer> row;
+  row.reserve(3);
+  row.emplace_back(RegisterIDToString(reg.id), color);
+
+  uint32_t value = reg.GetValue();
+  row.emplace_back(to_hex_string(value, 8), color);
+
   row.emplace_back(
-      fxl::StringPrintf("E=%d, PMC=%d, BAS=%d, HMC=%d, SSC=%d, LBN=%d, BT=%d",
-                        ARM64_FLAG_VALUE(value, DBGBCR, E), ARM64_FLAG_VALUE(value, DBGBCR, PMC),
-                        ARM64_FLAG_VALUE(value, DBGBCR, BAS), ARM64_FLAG_VALUE(value, DBGBCR, HMC),
-                        ARM64_FLAG_VALUE(value, DBGBCR, SSC), ARM64_FLAG_VALUE(value, DBGBCR, LBN),
-                        ARM64_FLAG_VALUE(value, DBGBCR, BT)),
+      fxl::StringPrintf(
+          "E=%d, PAC=%d, LSC=%d, BAS=0x%x, HMC=%d, SSC=%d, LBN=%d, WT=%d, MASK=0x%x",
+          ARM64_DBGWCR_E_GET(value), ARM64_DBGWCR_PAC_GET(value), ARM64_DBGWCR_LSC_GET(value),
+          ARM64_DBGWCR_BAS_GET(value), ARM64_DBGWCR_HMC_GET(value), ARM64_DBGWCR_SSC_GET(value),
+          ARM64_DBGWCR_LBN_GET(value), ARM64_DBGWCR_WT_GET(value), ARM64_DBGWCR_MSK_GET(value)),
       color);
   return row;
 }
@@ -184,6 +202,24 @@ void FormatDebugRegisters(const FormatRegisterOptions& options,
       case RegisterID::kARMv8_dbgbcr14_el1:
       case RegisterID::kARMv8_dbgbcr15_el1:
         rows.push_back(FormatDBGBCR(reg, color));
+        break;
+      case RegisterID::kARMv8_dbgwcr0_el1:
+      case RegisterID::kARMv8_dbgwcr1_el1:
+      case RegisterID::kARMv8_dbgwcr2_el1:
+      case RegisterID::kARMv8_dbgwcr3_el1:
+      case RegisterID::kARMv8_dbgwcr4_el1:
+      case RegisterID::kARMv8_dbgwcr5_el1:
+      case RegisterID::kARMv8_dbgwcr6_el1:
+      case RegisterID::kARMv8_dbgwcr7_el1:
+      case RegisterID::kARMv8_dbgwcr8_el1:
+      case RegisterID::kARMv8_dbgwcr9_el1:
+      case RegisterID::kARMv8_dbgwcr10_el1:
+      case RegisterID::kARMv8_dbgwcr11_el1:
+      case RegisterID::kARMv8_dbgwcr12_el1:
+      case RegisterID::kARMv8_dbgwcr13_el1:
+      case RegisterID::kARMv8_dbgwcr14_el1:
+      case RegisterID::kARMv8_dbgwcr15_el1:
+        rows.push_back(FormatDBGWCR(reg, color));
         break;
       case RegisterID::kARMv8_id_aa64dfr0_el1:
         rows.push_back(FormatID_AA64FR0_EL1(reg, color));
