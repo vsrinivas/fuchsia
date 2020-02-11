@@ -8,8 +8,8 @@
 #include <map>
 
 #include "gtest/gtest_prod.h"
-#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/elf_symbol_record.h"
 #include "src/developer/debug/zxdb/symbols/index.h"
@@ -32,23 +32,18 @@ class Binary;
 
 namespace zxdb {
 
+class DwarfBinary;
 class DwarfSymbolFactory;
 class Variable;
 
-// Represents the symbols for a module (executable or shared library). See ModuleSymbols.
+// Represents the symbol interface for a module (executable or shared library). See ModuleSymbols.
+//
+// This provides a high-level interface on top of the DwarfBinary file (low-level stuff), the Index,
+// and the SymbolFactory.
 class ModuleSymbolsImpl : public ModuleSymbols {
  public:
-  // These are invalid until Load() has completed successfully.
-  llvm::DWARFContext* context() { return context_.get(); }
-  llvm::DWARFUnitVector& compile_units() { return compile_units_; }
+  DwarfBinary* binary() { return binary_.get(); }
   DwarfSymbolFactory* symbol_factory() { return symbol_factory_.get(); }
-  llvm::object::ObjectFile* object_file() {
-    return static_cast<llvm::object::ObjectFile*>(binary_.get());
-  }
-
-  // Normal callers will always want to create the index. The only time this is unnecessary is
-  // from certain tests that want to do it themselves.
-  Err Load(bool create_index = true);
 
   fxl::WeakPtr<ModuleSymbolsImpl> GetWeakPtr();
 
@@ -71,12 +66,12 @@ class ModuleSymbolsImpl : public ModuleSymbols {
   FRIEND_REF_COUNTED_THREAD_SAFE(ModuleSymbolsImpl);
   FRIEND_TEST(ModuleSymbols, ResolveMainFunction);
 
-  // You must call Load before using this class.
-  ModuleSymbolsImpl(const std::string& name, const std::string& binary_name,
-                    const std::string& build_id);
+  // The input binary must be successfully initialized already.
+  //
+  // Normal callers will always want to create the index. The only time this is unnecessary is
+  // from certain tests that want to do it themselves (say to inject some stuff).
+  explicit ModuleSymbolsImpl(std::unique_ptr<DwarfBinary> binary, bool create_index = true);
   ~ModuleSymbolsImpl() override;
-
-  llvm::DWARFUnit* CompileUnitForRelativeAddress(uint64_t relative_address) const;
 
   // Helpers for ResolveInputLocation() for the different types of inputs.
   std::vector<Location> ResolveLineInputLocation(const SymbolContext& symbol_context,
@@ -143,22 +138,10 @@ class ModuleSymbolsImpl : public ModuleSymbols {
                                  std::optional<uint64_t> relative_address,
                                  const ElfSymbolRecord& record) const;
 
-  // Given the records from PLT symbols and regular ELF symbols, fills the forward and backward
-  // indices for ELF symbols.
-  void FillElfSymbols(const std::map<std::string, llvm::ELF::Elf64_Sym>& elf_syms,
-                      const std::map<std::string, uint64_t>& plt_syms);
+  // Fills the forward and backward indices for ELF symbols.
+  void FillElfSymbols();
 
-  const std::string name_;
-  const std::string binary_name_;
-  const std::string build_id_;
-
-  std::time_t modification_time_ = 0;  // Set when the file is loaded.
-
-  std::unique_ptr<llvm::MemoryBuffer> binary_buffer_;  // Backing for binary_.
-  std::unique_ptr<llvm::object::Binary> binary_;
-  std::unique_ptr<llvm::DWARFContext> context_;  // binary_ must outlive this.
-
-  llvm::DWARFUnitVector compile_units_;
+  std::unique_ptr<DwarfBinary> binary_;
 
   Index index_;
 

@@ -53,6 +53,8 @@ class LineTable {
 
   // Returns the DIE associated with the subroutine for the given row. This may be an invalid DIE if
   // there is no subroutine for this code (could be compiler-generated).
+  //
+  // TODO(brettw) remove and have the callers that need this take a DwarfUnit.
   virtual llvm::DWARFDie GetSubroutineForRow(const Row& row) const = 0;
 
   // Query for sequences. This is used for iterating through the entire line table.

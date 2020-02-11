@@ -12,6 +12,7 @@
 
 #include "gtest/gtest.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_binary.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_symbol_factory.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols_impl.h"
 #include "src/developer/debug/zxdb/symbols/test_symbol_module.h"
@@ -23,17 +24,15 @@ namespace zxdb {
 // but the important thing is that when this happens to check that the new index makes sense and
 // then add it.
 TEST(Index, IndexDump) {
-  auto module = fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetCheckedInTestFileName(),
-                                                       "test", "build_id");
-  Err err = module->Load(false);
-  ASSERT_TRUE(err.ok()) << err.msg();
+  TestSymbolModule setup(TestSymbolModule::kCheckedIn);
+  ASSERT_TRUE(setup.Init(false).ok());
 
   Index index;
-  index.CreateIndex(module->object_file());
+  index.CreateIndex(setup.symbols()->binary()->GetLLVMObjectFile());
 
   // Symbol index.
   std::ostringstream out;
-  index.root().Dump(out, module->symbol_factory(), 0);
+  index.root().Dump(out, setup.symbols()->symbol_factory(), 0);
   const char kExpected[] = R"(  Namespaces:
     <<empty index string>>
       Functions:
@@ -131,20 +130,18 @@ zxdb_symbol_test2.cc -> ../../src/developer/debug/zxdb/symbols/test_data/zxdb_sy
 
   // Test that the slow indexing path produces the same result as the fast path.
   Index slow_index;
-  slow_index.CreateIndex(module->object_file(), true);
+  slow_index.CreateIndex(setup.symbols()->binary()->GetLLVMObjectFile(), true);
   out = std::ostringstream();
-  slow_index.root().Dump(out, module->symbol_factory(), 0);
+  slow_index.root().Dump(out, setup.symbols()->symbol_factory(), 0);
   EXPECT_EQ(kExpected, out.str());
 }
 
 TEST(Index, FindExactFunction) {
-  auto module = fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetCheckedInTestFileName(),
-                                                       "test", "build_id");
-  Err err = module->Load(false);
-  ASSERT_TRUE(err.ok()) << err.msg();
+  TestSymbolModule setup(TestSymbolModule::kCheckedIn);
+  ASSERT_TRUE(setup.Init(false).ok());
 
   Index index;
-  index.CreateIndex(module->object_file());
+  index.CreateIndex(setup.symbols()->binary()->GetLLVMObjectFile());
 
   // Standalone function search.
   auto result = index.FindExact(TestSymbolModule::SplitName(TestSymbolModule::kMyFunctionName));
@@ -185,13 +182,11 @@ TEST(Index, FindExactFunction) {
 }
 
 TEST(Index, FindFileMatches) {
-  auto module = fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetCheckedInTestFileName(),
-                                                       "test", "build_id");
-  Err err = module->Load(false);
-  ASSERT_TRUE(err.ok()) << err.msg();
+  TestSymbolModule setup(TestSymbolModule::kCheckedIn);
+  ASSERT_TRUE(setup.Init(false).ok());
 
   Index index;
-  index.CreateIndex(module->object_file());
+  index.CreateIndex(setup.symbols()->binary()->GetLLVMObjectFile());
 
   // Simple filename-only query that succeeds.
   std::vector<std::string> result = index.FindFileMatches("zxdb_symbol_test.cc");
@@ -223,13 +218,11 @@ TEST(Index, FindFileMatches) {
 }
 
 TEST(Index, FindFilePrefixes) {
-  auto module = fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetCheckedInTestFileName(),
-                                                       "test", "build_id");
-  Err err = module->Load(false);
-  ASSERT_TRUE(err.ok()) << err.msg();
+  TestSymbolModule setup(TestSymbolModule::kCheckedIn);
+  ASSERT_TRUE(setup.Init(false).ok());
 
   Index index;
-  index.CreateIndex(module->object_file());
+  index.CreateIndex(setup.symbols()->binary()->GetLLVMObjectFile());
 
   // Should find both files. Order not guaranteed.
   std::vector<std::string> result = index.FindFilePrefixes("z");
@@ -241,13 +234,11 @@ TEST(Index, FindFilePrefixes) {
 // Enable and substitute a path on your system to dump the index for a DWARF file.
 #if 0
 TEST(Index, DumpIndex) {
-  auto module= fxl::MakeRefCounted<ModuleSymbolsImpl>("chrome",
-  "test", "build_id");
-  Err err = module->Load(false);
-  ASSERT_TRUE(err.ok()) << err.msg();
+  TestSymbolModule setup("chrome", "test");
+  ASSERT_TRUE(setup.Init(false).ok());
 
   Index index;
-  index.CreateIndex(module->object_file());
+  index.CreateIndex(setup.symbols()->binary()->GetLLVMObjectFile());
 
   std::cout << index.main_functions().size() << " main function(s) found.\n\n";
 
@@ -278,14 +269,13 @@ TEST(Index, BenchmarkIndexing) {
   const char kFilename[] = "chrome";
   int64_t begin_us = GetTickMicroseconds();
 
-  auto module = fxl::MakeRefCounted<ModuleSymbolsImpl>(kFilename, "test", "build_id");
-  Err err = module->Load(false);
-  ASSERT_TRUE(err.ok()) << err.msg();
+  TestSymbolModule setup(kFileName, "");
+  ASSERT_TRUE(setup.Init(false).ok());
 
   int64_t load_complete_us = GetTickMicroseconds();
 
   Index index;
-  index.CreateIndex(module->object_file());
+  index.CreateIndex(setup.symbols()->binary()->GetLLVMObjectFile());
 
   int64_t index_complete_us = GetTickMicroseconds();
 

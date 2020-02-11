@@ -7,6 +7,7 @@
 #include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/developer/debug/zxdb/common/host_util.h"
 #include "src/developer/debug/zxdb/common/ref_ptr_to.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_binary_impl.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols_impl.h"
 #include "src/lib/elflib/elflib.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -52,10 +53,11 @@ Err SystemSymbols::GetModule(const std::string& build_id, fxl::RefPtr<ModuleSymb
   if (file_name.empty())
     return Err();  // No symbols synchronously available.
 
-  auto module_impl = fxl::MakeRefCounted<ModuleSymbolsImpl>(file_name, binary_file_name, build_id);
-  if (Err err = module_impl->Load(); err.has_error())
+  auto binary = std::make_unique<DwarfBinaryImpl>(file_name, binary_file_name, build_id);
+  if (Err err = binary->Load(); err.has_error())
     return err;  // Symbols corrupt.
-  *module = std::move(module_impl);
+
+  *module = fxl::MakeRefCounted<ModuleSymbolsImpl>(std::move(binary));
 
   SaveModule(build_id, module->get());  // Save in cache for future use.
   return Err();

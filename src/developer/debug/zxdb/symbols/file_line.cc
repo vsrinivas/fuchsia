@@ -10,8 +10,8 @@ namespace zxdb {
 
 FileLine::FileLine() = default;
 FileLine::FileLine(std::string file, int line) : file_(std::move(file)), line_(line) {}
-FileLine::FileLine(std::string file, const char* comp_dir, int line)
-    : file_(std::move(file)), comp_dir_(comp_dir ? comp_dir : ""), line_(line) {}
+FileLine::FileLine(std::string file, std::string comp_dir, int line)
+    : file_(std::move(file)), comp_dir_(std::move(comp_dir)), line_(line) {}
 FileLine::~FileLine() = default;
 
 bool operator<(const FileLine& a, const FileLine& b) {

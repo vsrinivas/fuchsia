@@ -573,6 +573,9 @@ void Index::CreateIndex(llvm::object::ObjectFile* object_file, bool force_slow_p
   std::unique_ptr<llvm::DWARFContext> context =
       llvm::DWARFContext::create(*object_file, nullptr, llvm::DWARFContext::defaultErrorHandler);
 
+  // Extracts the units to a place where we can destroy them after indexing is complete. This
+  // construction order matches that of LLVM's DWARFContext so the indexes into this vector will
+  // match the indices into DWARFContext's.
   llvm::DWARFUnitVector compile_units;
   context->getDWARFObj().forEachInfoSections([&](const llvm::DWARFSection& s) {
     compile_units.addUnitsForSection(*context, s, llvm::DW_SECT_INFO);

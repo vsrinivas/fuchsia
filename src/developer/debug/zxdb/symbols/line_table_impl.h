@@ -12,8 +12,12 @@ namespace zxdb {
 // Implementation of LineTable backed by LLVM's DWARFDebugLine.
 class LineTableImpl : public LineTable {
  public:
-  // The passed-in pointer must outlive this class.
-  explicit LineTableImpl(llvm::DWARFContext* context, llvm::DWARFUnit* unit);
+  // Constructor for an empty line table.
+  LineTableImpl() {}
+
+  // The passed-in pointers must outlive this class.
+  LineTableImpl(llvm::DWARFUnit* unit, const llvm::DWARFDebugLine::LineTable* line_table);
+
   ~LineTableImpl() override;
 
   // LineTable public implementation.
@@ -26,9 +30,12 @@ class LineTableImpl : public LineTable {
   const std::vector<llvm::DWARFDebugLine::Row>& GetRows() const override;
 
  private:
-  llvm::DWARFUnit* unit_;
+  // Possibly null.
+  // TODO(brettw) remove when GetSubroutineForRow() is removed (see TODO in line_table.h).
+  llvm::DWARFUnit* unit_ = nullptr;
 
-  const llvm::DWARFDebugLine::LineTable* line_table_;
+  // This will be null if the unit has no line table or if default constructred.
+  const llvm::DWARFDebugLine::LineTable* line_table_ = nullptr;
 };
 
 }  // namespace zxdb

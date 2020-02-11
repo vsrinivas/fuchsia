@@ -9,6 +9,7 @@
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "src/developer/debug/zxdb/common/host_util.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_binary_impl.h"
 
 namespace zxdb {
 
@@ -109,8 +110,11 @@ TestSymbolModule::TestSymbolModule(const std::string& sym_name, const std::strin
 TestSymbolModule::~TestSymbolModule() = default;
 
 Err TestSymbolModule::Init(bool should_index) {
-  symbols_ = fxl::MakeRefCounted<ModuleSymbolsImpl>(sym_name_, binary_name_, std::string());
-  return symbols_->Load(should_index);
+  auto binary = std::make_unique<DwarfBinaryImpl>(sym_name_, binary_name_, std::string());
+  if (Err err = binary->Load(); err.has_error())
+    return err;
+  symbols_ = fxl::MakeRefCounted<ModuleSymbolsImpl>(std::move(binary), should_index);
+  return Err();
 }
 
 }  // namespace zxdb

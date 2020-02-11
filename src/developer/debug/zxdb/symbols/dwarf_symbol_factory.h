@@ -41,6 +41,8 @@ class DwarfSymbolFactory : public SymbolFactory {
   explicit DwarfSymbolFactory(fxl::WeakPtr<ModuleSymbolsImpl> symbols);
   ~DwarfSymbolFactory() override;
 
+  llvm::DWARFContext* GetLLVMContext();
+
   // Internal version that creates a symbol from a Die.
   fxl::RefPtr<Symbol> DecodeSymbol(const llvm::DWARFDie& die);
 

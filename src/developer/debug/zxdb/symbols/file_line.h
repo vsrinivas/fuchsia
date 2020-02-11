@@ -16,9 +16,8 @@ class FileLine {
   // Constructor for a file/line with no compilation directory.
   FileLine(std::string file, int line);
 
-  // Constructor with a compilation directory. comp_dir may be nullptr, which is equivalent to
-  // passing the empty string.
-  FileLine(std::string file, const char* comp_dir, int line);
+  // Constructor with a compilation directory. comp_dir may be empty if not known.
+  FileLine(std::string file, std::string comp_dir, int line);
 
   ~FileLine();
 
