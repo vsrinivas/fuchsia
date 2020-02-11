@@ -16,10 +16,6 @@
 
 namespace media::audio {
 
-const VolumeCurve& VolumeCurve::Default() {
-  return ProcessConfig::instance().default_volume_curve();
-}
-
 VolumeCurve VolumeCurve::DefaultForMinGain(float min_gain_db) {
   FX_DCHECK(min_gain_db < Gain::kUnityGainDb);
   FX_DCHECK(min_gain_db >= fuchsia::media::audio::MUTED_GAIN_DB);
