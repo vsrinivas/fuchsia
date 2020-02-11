@@ -6,10 +6,10 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
-        make_app_assistant, AnimationMode, App, AppAssistant, FrameBufferPtr, Point, Rect, Size,
-        ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+        make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color, FrameBufferPtr,
+        Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
     },
-    euclid::{Angle, Transform2D, Vector2D},
+    euclid::{Angle, Point2D, Rect, Size2D, Transform2D, Vector2D},
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_hardware_input as hid, fidl_fuchsia_input_report as hid_input_report,
     fidl_fuchsia_sysmem::BufferCollectionTokenMarker,
@@ -18,12 +18,7 @@ use {
     std::{collections::BTreeMap, f32, fs},
 };
 
-mod spinel_utils;
-
-use crate::spinel_utils::{Context, MoldContext, Path, Raster, RenderExt, SpinelContext};
-
-const APP_NAME: &'static [u8; 7] = b"ink_rs\0";
-const BACKGROUND_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
+const BACKGROUND_COLOR: Color = Color { r: 255, g: 255, b: 255, a: 255 };
 
 // Stroke constants.
 const STROKE_START_RADIUS: f32 = 0.25;
@@ -35,13 +30,13 @@ const TOOL_RADIUS: f32 = 25.0;
 const TOOL_PADDING: f32 = 12.5;
 
 // Color palette constants.
-const COLORS: [[f32; 4]; 6] = [
-    [0.0, 0.0, 0.0, 1.0],
-    [1.0, 1.0, 1.0, 1.0],
-    [0.73, 0.29, 0.28, 0.8],
-    [0.88, 0.82, 0.36, 0.8],
-    [0.24, 0.52, 0.69, 0.8],
-    [0.14, 0.50, 0.42, 0.8],
+const COLORS: [Color; 6] = [
+    Color { r: 0, g: 0, b: 0, a: 255 },
+    Color { r: 255, g: 255, b: 255, a: 255 },
+    Color { r: 187, g: 74, b: 72, a: 205 },
+    Color { r: 225, g: 210, b: 92, a: 205 },
+    Color { r: 61, g: 133, b: 177, a: 205 },
+    Color { r: 36, g: 128, b: 108, a: 205 },
 ];
 
 // Pencil constants.
@@ -54,7 +49,7 @@ fn lerp(t: f32, p0: Point, p1: Point) -> Point {
     Point::new(p0.x * (1.0 - t) + p1.x * t, p0.y * (1.0 - t) + p1.y * t)
 }
 
-trait PathBuilder {
+trait InkPathBuilder {
     fn line_to(&mut self, p: Point);
     fn cubic_to(&mut self, p0: Point, p1: Point, p2: Point, p3: Point, offset: Vector2D<f32>) {
         let deviation_x = (p0.x + p2.x - 3.0 * (p1.x + p2.x)).abs();
@@ -93,19 +88,31 @@ struct PointPathBuilder<'a> {
     points: &'a mut Vec<Point>,
 }
 
-impl<'a> PathBuilder for PointPathBuilder<'a> {
+impl<'a> PointPathBuilder<'a> {
+    fn new(points: &'a mut Vec<Point>) -> Self {
+        Self { points }
+    }
+}
+
+impl<'a> InkPathBuilder for PointPathBuilder<'a> {
     fn line_to(&mut self, p: Point) {
         self.points.push(p);
     }
 }
 
-struct PathBuilderWrapper<'a> {
-    path_builder: &'a mut dyn spinel_utils::PathBuilder,
+struct PathBuilderWrapper<'a, B: Backend> {
+    path_builder: &'a mut B::PathBuilder,
 }
 
-impl<'a> PathBuilder for PathBuilderWrapper<'a> {
+impl<'a, B: Backend> PathBuilderWrapper<'a, B> {
+    fn new(path_builder: &'a mut B::PathBuilder) -> Self {
+        Self { path_builder }
+    }
+}
+
+impl<'a, B: Backend> InkPathBuilder for PathBuilderWrapper<'a, B> {
     fn line_to(&mut self, p: Point) {
-        self.path_builder.line_to(&p);
+        self.path_builder.line_to(p);
     }
 }
 
@@ -130,7 +137,7 @@ impl Circle {
 
         let mut points = Vec::new();
         points.push(t + offset);
-        let mut path_builder = PointPathBuilder { points: &mut points };
+        let mut path_builder = PointPathBuilder::new(&mut points);
         path_builder.cubic_to(t, t + cr, r + ct, r, offset);
         path_builder.cubic_to(r, r + cb, b + cr, b, offset);
         path_builder.cubic_to(b, b + cl, l + cb, l, offset);
@@ -172,7 +179,7 @@ impl Flower {
 
         let mut p0 = Point::new(t.cos() * r1, t.sin() * r1);
         points.push(p0 + offset);
-        let mut path_builder = PointPathBuilder { points: &mut points };
+        let mut path_builder = PointPathBuilder::new(&mut points);
         for _ in 0..petal_count {
             let x1 = t.cos() * r1;
             let y1 = t.sin() * r1;
@@ -234,23 +241,12 @@ impl AppAssistant for InkAppAssistant {
             .expect("duplicate");
         let config = &fb.borrow().get_config();
 
-        if args.use_mold {
-            Ok(Box::new(InkViewAssistant::new(MoldContext::new(token, config))))
-        } else {
-            const BLOCK_POOL_SIZE: u64 = 1 << 26; // 64 MB
-            const HANDLE_COUNT: u32 = 1 << 14; // 16K handles
-            const LAYERS_COUNT: u32 = (MAX_STROKES + (COLORS.len() + PENCILS.len()) * 2) as u32;
-            const CMDS_COUNT: u32 = LAYERS_COUNT * 8 + 32;
+        let size = Size2D::new(config.width, config.height);
 
-            Ok(Box::new(InkViewAssistant::new(SpinelContext::new(
-                token,
-                config,
-                APP_NAME.as_ptr(),
-                BLOCK_POOL_SIZE,
-                HANDLE_COUNT,
-                LAYERS_COUNT,
-                CMDS_COUNT,
-            ))))
+        if args.use_mold {
+            Ok(Box::new(InkViewAssistant::new(Mold::new_context(token, size))))
+        } else {
+            Ok(Box::new(InkViewAssistant::new(Spinel::new_context(token, size))))
         }
     }
 
@@ -259,34 +255,31 @@ impl AppAssistant for InkAppAssistant {
     }
 }
 
-struct Fill {
-    raster: Raster,
-    color: [f32; 4],
+struct InkFill<B: Backend> {
+    raster: B::Raster,
+    color: Color,
 }
 
-impl Fill {
-    fn new(context: &mut dyn Context, color: &[f32; 4], points: &Vec<Point>) -> Self {
+impl<B: Backend> InkFill<B> {
+    fn new(context: &mut impl Context<B>, color: &Color, points: &Vec<Point>) -> Self {
         let path = {
-            let path_builder = context.path_builder();
-            path_builder.begin();
+            let mut path_builder = context.path_builder().unwrap();
             let mut p0 = Point::zero();
-            for (i, p) in points.iter().enumerate() {
+            for (i, &p) in points.iter().enumerate() {
                 if i == 0 {
-                    path_builder.move_to(&p);
-                    p0 = *p;
+                    path_builder.move_to(p);
+                    p0 = p;
                 } else {
-                    path_builder.line_to(&p);
+                    path_builder.line_to(p);
                 }
             }
-            path_builder.line_to(&p0);
-            path_builder.end()
+            path_builder.line_to(p0);
+            path_builder.build()
         };
 
-        let raster_builder = context.raster_builder();
-        raster_builder.begin();
-        const CLIP: [f32; 4] = [std::f32::MIN, std::f32::MIN, std::f32::MAX, std::f32::MAX];
-        raster_builder.add(&path, &Transform2D::identity(), &CLIP);
-        let raster = raster_builder.end();
+        let mut raster_builder = context.raster_builder().unwrap();
+        raster_builder.add(&path, None);
+        let raster = raster_builder.build();
 
         Self { raster, color: *color }
     }
@@ -312,15 +305,15 @@ impl Box2D {
         }
     }
 
-    fn to_rect(&self) -> Rect {
+    fn to_rect(&self) -> Rect<f32> {
         Rect { origin: self.min, size: (self.max - self.min).to_size() }
     }
 }
 
-struct Segment {
-    path: Path,
+struct Segment<B: Backend> {
+    path: B::Path,
     bbox: Box2D,
-    raster: Option<Raster>,
+    raster: Option<B::Raster>,
 }
 
 struct StrokePoint {
@@ -330,26 +323,27 @@ struct StrokePoint {
     thickness: f32,
 }
 
-struct Stroke {
+struct InkStroke<B: Backend> {
     points: Vec<StrokePoint>,
-    segments: Vec<(usize, Segment)>,
-    color: [f32; 4],
+    segments: Vec<(usize, Segment<B>)>,
+    color: Color,
     thickness: f32,
     transform: Transform2D<f32>,
 }
 
-impl Stroke {
-    fn new(color: [f32; 4], thickness: f32, transform: Transform2D<f32>) -> Self {
+impl<B: Backend> InkStroke<B> {
+    fn new(color: Color, thickness: f32, transform: Transform2D<f32>) -> Self {
         Self { points: Vec::new(), segments: Vec::new(), color, thickness, transform }
     }
 
-    fn raster(context: &mut dyn Context, path: &Path, transform: &Transform2D<f32>) -> Raster {
-        let raster_builder = context.raster_builder();
-        raster_builder.begin();
-        const CLIP: [f32; 4] = [std::f32::MIN, std::f32::MIN, std::f32::MAX, std::f32::MAX];
-        raster_builder.add(path, transform, &CLIP);
-
-        raster_builder.end()
+    fn raster(
+        context: &mut impl Context<B>,
+        path: &B::Path,
+        transform: &Transform2D<f32>,
+    ) -> B::Raster {
+        let mut raster_builder = context.raster_builder().unwrap();
+        raster_builder.add(path, Some(transform));
+        raster_builder.build()
     }
 
     fn push_point(&mut self, p: &Point) {
@@ -412,11 +406,10 @@ impl Stroke {
         }
     }
 
-    fn push_segment(&mut self, context: &mut dyn Context, i0: usize, i1: usize) {
+    fn push_segment(&mut self, context: &mut impl Context<B>, i0: usize, i1: usize) {
         let (path, bbox) = {
             let mut bbox = Box2D::new();
-            let path_builder = context.path_builder();
-            path_builder.begin();
+            let mut path_builder = context.path_builder().unwrap();
 
             //
             // Convert stroke to fill and compute a bounding box.
@@ -427,10 +420,10 @@ impl Stroke {
             for (i, p) in self.points[i0..i1].iter().enumerate() {
                 let a = p.point + p.normal1 * p.thickness;
                 if i == 0 {
-                    path_builder.move_to(&a);
+                    path_builder.move_to(a);
                     a0 = a;
                 } else {
-                    path_builder.line_to(&a);
+                    path_builder.line_to(a);
                 }
                 bbox = bbox.union(&a);
             }
@@ -454,7 +447,7 @@ impl Stroke {
                     let c2 = p1 - $p.normal1 * control_dist;
                     let c3 = p2 - n * control_dist;
 
-                    let mut wrapper = PathBuilderWrapper { path_builder };
+                    let mut wrapper = PathBuilderWrapper::<'_, B>::new(&mut path_builder);
                     wrapper.cubic_to(p0, c0, c1, p1, offset);
                     wrapper.cubic_to(p1, c2, c3, p2, offset);
 
@@ -470,7 +463,7 @@ impl Stroke {
             // Walk from point i1 back to i0 and offset by radius at each point.
             for p in self.points[i0..i1].iter().rev() {
                 let a = p.point - p.normal1 * p.thickness;
-                path_builder.line_to(&a);
+                path_builder.line_to(a);
                 bbox = bbox.union(&a);
             }
 
@@ -479,15 +472,15 @@ impl Stroke {
                 cap!(p_first, -p_first.thickness);
             }
 
-            path_builder.line_to(&a0);
+            path_builder.line_to(a0);
 
-            (path_builder.end(), bbox)
+            (path_builder.build(), bbox)
         };
 
         self.segments.push((i0, Segment { path, bbox, raster: None }));
     }
 
-    fn update_thickness(&mut self, context: &mut dyn Context) {
+    fn update_thickness(&mut self, context: &mut impl Context<B>) {
         assert_eq!(self.points.is_empty(), false);
 
         // No update needed if last point has correct thickness. This assumes
@@ -530,7 +523,7 @@ impl Stroke {
         }
     }
 
-    fn update(&mut self, context: &mut dyn Context, size: &Size) {
+    fn update(&mut self, context: &mut impl Context<B>, size: &Size) {
         // Update thickness expects at least one point.
         if self.points.is_empty() {
             return;
@@ -559,37 +552,17 @@ impl Stroke {
     }
 }
 
-struct Scene {
-    tools: Vec<(Stroke, Fill, Point)>,
-    strokes: Vec<Stroke>,
+struct Scene<B: Backend> {
+    tools: Vec<(InkStroke<B>, InkFill<B>, Point)>,
+    strokes: Vec<InkStroke<B>>,
 }
 
-impl Scene {
+impl<B: Backend> Scene<B> {
     fn new() -> Self {
         Self { tools: Vec::new(), strokes: Vec::new() }
     }
 
-    fn update_styling(&mut self, context: &mut dyn Context) {
-        let tools_count = self.tools.len() as u32;
-        let stroke_count = self.strokes.len() as u32;
-        let layers = tools_count * 2 + stroke_count;
-        assert_ne!(layers, 0);
-        let styling = context.styling();
-        styling.unseal();
-        styling.reset();
-        let group_id = styling.alloc_group(0, layers - 1, &BACKGROUND_COLOR);
-        for (i, (stroke, fill, _)) in self.tools.iter().enumerate() {
-            styling.group_layer(&group_id, (i * 2) as u32, &stroke.color);
-            styling.group_layer(&group_id, (i * 2 + 1) as u32, &fill.color);
-        }
-        let stroke_base = tools_count * 2;
-        for (i, stroke) in self.strokes.iter_mut().rev().enumerate() {
-            styling.group_layer(&group_id, stroke_base + i as u32, &stroke.color);
-        }
-        styling.seal();
-    }
-
-    fn setup(&mut self, context: &mut dyn Context, size: &Size, tools: &Vec<(&[f32; 4], &f32)>) {
+    fn setup(&mut self, context: &mut impl Context<B>, size: &Size, tools: &Vec<(&Color, &f32)>) {
         const TOOL_SIZE: f32 = (TOOL_RADIUS + TOOL_PADDING) * 2.0;
 
         // Layout tools at top-center.
@@ -598,19 +571,18 @@ impl Scene {
         for (color, size) in tools {
             let center = Point::new(x, y);
             let circle = Circle::new(center, TOOL_RADIUS);
-            let mut stroke = Stroke::new([0.0, 0.0, 0.0, 1.0], 1.0, Transform2D::identity());
+            let mut stroke =
+                InkStroke::new(Color { r: 0, g: 0, b: 0, a: 255 }, 1.0, Transform2D::identity());
             while stroke.points.len() < circle.points.len() {
                 let p = &circle.points[stroke.points.len()];
                 stroke.push_point(p);
             }
             let circle = Circle::new(center, **size);
-            let fill = Fill::new(context, color, &circle.points);
+            let fill = InkFill::new(context, color, &circle.points);
             self.tools.push((stroke, fill, center));
 
             x += TOOL_SIZE;
         }
-
-        self.update_styling(context);
     }
 
     fn hit_test(&mut self, point: Point) -> Option<usize> {
@@ -629,12 +601,11 @@ impl Scene {
         }
     }
 
-    fn push_stroke(&mut self, context: &mut dyn Context, color: [f32; 4], radius: f32) {
-        self.strokes.push(Stroke::new(color, radius, Transform2D::identity()));
-        self.update_styling(context);
+    fn push_stroke(&mut self, color: Color, radius: f32) {
+        self.strokes.push(InkStroke::new(color, radius, Transform2D::identity()));
     }
 
-    fn last_stroke(&mut self) -> Option<&mut Stroke> {
+    fn last_stroke(&mut self) -> Option<&mut InkStroke<B>> {
         self.strokes.last_mut()
     }
 
@@ -642,7 +613,7 @@ impl Scene {
         self.strokes.clear();
     }
 
-    fn update(&mut self, context: &mut dyn Context, size: &Size) {
+    fn update(&mut self, context: &mut impl Context<B>, size: &Size) {
         for (stroke, _, _) in self.tools.iter_mut() {
             stroke.update(context, size);
         }
@@ -658,61 +629,90 @@ impl Scene {
     }
 }
 
-struct Contents {
-    image_id: u32,
-    composition_id: u32,
-    size: Size,
+struct Contents<B: Backend> {
+    image: B::Image,
 }
 
-impl Contents {
-    fn new(context: &mut dyn Context, index: u32) -> Self {
-        // Use index as image and composition IDs.
-        let image_id = index;
-        context.image_from_index(image_id, index);
-        let composition_id = index;
-
-        Self { image_id, composition_id, size: Size::zero() }
+impl<B: Backend> Contents<B> {
+    fn new(image: B::Image) -> Self {
+        Self { image }
     }
 
-    fn update(&mut self, context: &mut dyn Context, scene: &Scene, size: &Size) {
-        let clip: [u32; 4] = [0, 0, size.width.floor() as u32, size.height.floor() as u32];
-
-        let composition = context.composition(self.composition_id);
-        composition.unseal();
-        composition.reset();
-
-        if self.size != *size {
-            self.size = *size;
-            composition.set_clip(&clip);
-        }
-
-        for (i, (stroke, fill, _)) in scene.tools.iter().enumerate() {
-            for segment in stroke.segments.iter() {
-                if let Some(raster) = &segment.1.raster {
-                    composition.place(raster, (i * 2) as u32);
-                }
-            }
-            composition.place(&fill.raster, (i * 2 + 1) as u32);
-        }
-
-        let stroke_base = scene.tools.len() as u32 * 2;
-        for (i, stroke) in scene.strokes.iter().rev().enumerate() {
-            for segment in stroke.segments.iter() {
-                if let Some(raster) = &segment.1.raster {
-                    composition.place(raster, stroke_base + i as u32);
-                }
-            }
-        }
-
-        composition.seal();
-
-        context.render(
-            self.image_id,
-            self.composition_id,
-            &clip,
-            &[RenderExt::PreClear(BACKGROUND_COLOR)],
+    fn update(&mut self, context: &mut impl Context<B>, scene: &Scene<B>, size: &Size) {
+        let clip = Rect::new(
+            Point2D::new(0, 0),
+            Size2D::new(size.width.floor() as u32, size.height.floor() as u32),
         );
-        context.image(self.image_id, &[0, 0]).flush();
+
+        let ext = RenderExt {
+            pre_clear: Some(PreClear { color: BACKGROUND_COLOR }),
+            ..Default::default()
+        };
+
+        let layers = scene
+            .tools
+            .iter()
+            .map(|(stroke, _, _)| Layer {
+                raster: stroke
+                    .segments
+                    .iter()
+                    .fold(None, |raster_union: Option<B::Raster>, segment| {
+                        if let Some(raster) = &segment.1.raster {
+                            if let Some(raster_union) = raster_union {
+                                Some(raster_union + raster.clone())
+                            } else {
+                                Some(raster.clone())
+                            }
+                        } else {
+                            raster_union
+                        }
+                    })
+                    .unwrap(),
+                style: Style {
+                    fill_rule: FillRule::NonZero,
+                    fill: Fill::Solid(stroke.color),
+                    blend_mode: BlendMode::Over,
+                },
+            })
+            .chain(scene.tools.iter().map(|(_, fill, _)| Layer {
+                raster: fill.raster.clone(),
+                style: Style {
+                    fill_rule: FillRule::NonZero,
+                    fill: Fill::Solid(fill.color),
+                    blend_mode: BlendMode::Over,
+                },
+            }))
+            .chain(scene.strokes.iter().rev().filter_map(|stroke| {
+                if let Some(raster) =
+                    stroke.segments.iter().fold(None, |raster_union: Option<B::Raster>, segment| {
+                        if let Some(raster) = &segment.1.raster {
+                            if let Some(raster_union) = raster_union {
+                                Some(raster_union + raster.clone())
+                            } else {
+                                Some(raster.clone())
+                            }
+                        } else {
+                            raster_union
+                        }
+                    })
+                {
+                    Some(Layer {
+                        raster,
+                        style: Style {
+                            fill_rule: FillRule::NonZero,
+                            fill: Fill::Solid(stroke.color),
+                            blend_mode: BlendMode::Over,
+                        },
+                    })
+                } else {
+                    None
+                }
+            }));
+
+        let composition = Composition::new(layers, BACKGROUND_COLOR);
+
+        context.render(&composition, Some(clip), self.image, &ext);
+        context.flush_image(self.image);
     }
 }
 
@@ -841,10 +841,10 @@ impl TouchDevice {
     }
 }
 
-struct InkViewAssistant<T> {
-    context: T,
-    scene: Scene,
-    contents: BTreeMap<u64, Contents>,
+struct InkViewAssistant<B: Backend, C: Context<B>> {
+    context: C,
+    scene: Scene<B>,
+    contents: BTreeMap<u64, Contents<B>>,
     touch_device: Option<TouchDevice>,
     touch_points: Vec<Point>,
     stylus_device: Option<StylusDevice>,
@@ -861,8 +861,8 @@ struct InkViewAssistant<T> {
     clear_origin: Vector2D<f32>,
 }
 
-impl<T: Context> InkViewAssistant<T> {
-    pub fn new(context: T) -> Self {
+impl<B: Backend, C: Context<B>> InkViewAssistant<B, C> {
+    pub fn new(context: C) -> Self {
         let scene = Scene::new();
         let touch_device = TouchDevice::create().ok();
         let stylus_device = StylusDevice::create().ok();
@@ -894,12 +894,12 @@ impl<T: Context> InkViewAssistant<T> {
     }
 }
 
-impl<T: Context> ViewAssistant for InkViewAssistant<T> {
+impl<B: Backend, C: Context<B>> ViewAssistant for InkViewAssistant<B, C> {
     fn setup(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         let size = &context.size;
         let context = &mut self.context;
         let color_iter = COLORS.iter().map(|color| (color, &TOOL_RADIUS));
-        let pencil_iter = PENCILS.iter().map(|size| (&[0.0, 0.0, 0.0, 1.0], size));
+        let pencil_iter = PENCILS.iter().map(|size| (&Color { r: 0, g: 0, b: 0, a: 255 }, size));
         let tools = color_iter.chain(pencil_iter).collect::<Vec<_>>();
         self.scene.setup(context, size, &tools);
         self.scene.select_tools(&vec![self.color, COLORS.len() + self.pencil]);
@@ -907,10 +907,10 @@ impl<T: Context> ViewAssistant for InkViewAssistant<T> {
         Ok(())
     }
 
-    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+    fn update(&mut self, view_context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         let time_now = Time::get(ClockId::Monotonic);
-        let canvas = context.canvas.as_ref().unwrap().borrow();
-        let size = &context.size;
+        let canvas = view_context.canvas.as_ref().unwrap().borrow();
+        let size = &view_context.size;
         let context = &mut self.context;
 
         // Process touch device input.
@@ -1046,11 +1046,8 @@ impl<T: Context> ViewAssistant for InkViewAssistant<T> {
                             } else {
                                 // Start stroke if we haven't reached the limit.
                                 if self.scene.strokes.len() < MAX_STROKES {
-                                    self.scene.push_stroke(
-                                        context,
-                                        COLORS[self.color],
-                                        PENCILS[self.pencil],
-                                    );
+                                    self.scene
+                                        .push_stroke(COLORS[self.color], PENCILS[self.pencil]);
                                     self.scene.last_stroke().unwrap().push_point(&point);
                                     self.last_stylus_point = Some(point);
                                 }
@@ -1082,7 +1079,7 @@ impl<T: Context> ViewAssistant for InkViewAssistant<T> {
         // Generate flower when idle after clearing screen.
         if time_now.into_nanos() > self.flower_start.into_nanos() {
             if self.flower.is_none() {
-                self.scene.push_stroke(context, COLORS[self.color], PENCILS[self.pencil]);
+                self.scene.push_stroke(COLORS[self.color], PENCILS[self.pencil]);
             }
 
             let flower = self.flower.take().unwrap_or_else(|| Flower::new(size.width, size.height));
@@ -1121,16 +1118,17 @@ impl<T: Context> ViewAssistant for InkViewAssistant<T> {
         // image ID of zero.
         let mut temp_content;
         let content;
+        let image = self.context.get_current_image(view_context);
+
         if canvas.id == 0 {
-            temp_content = Contents::new(context, canvas.index);
+            temp_content = Contents::new(image);
             content = &mut temp_content;
         } else {
-            content = self
-                .contents
-                .entry(canvas.id)
-                .or_insert_with(|| Contents::new(context, canvas.index));
+            content = self.contents.entry(canvas.id).or_insert_with(|| Contents::new(image));
         }
-        content.update(context, &self.scene, size);
+
+        content.update(&mut self.context, &self.scene, size);
+
         Ok(())
     }
 
@@ -1139,7 +1137,7 @@ impl<T: Context> ViewAssistant for InkViewAssistant<T> {
     }
 
     fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat {
-        self.context.get_pixel_format()
+        self.context.pixel_format()
     }
 }
 
