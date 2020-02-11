@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -259,9 +260,6 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 }
 
 func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []string, socketPath string) error {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	subprocessEnv := map[string]string{
 		"FUCHSIA_NODENAME":      t.Nodename(),
 		"FUCHSIA_SERIAL_SOCKET": socketPath,
@@ -282,7 +280,11 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 		if err != nil {
 			return err
 		}
-		defer client.Close()
+		defer func() {
+			if err := client.Close(); err != nil {
+				logger.Errorf(ctx, "failed to close SSH client: %v", err)
+			}
+		}()
 		subprocessEnv["FUCHSIA_SSH_KEY"] = t.SSHKey()
 
 		ip, err := t.IPv4Addr()
@@ -304,15 +306,24 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 				return err
 			}
 			defer s.Close()
+
 			// Note: the sylogger takes ownership of the SSH client.
 			syslogger := syslog.NewSyslogger(client, config)
-			defer syslogger.Close()
-
+			var wg sync.WaitGroup
+			ctx, cancel := context.WithCancel(ctx)
+			defer func() {
+				// Signal syslogger.Stream to stop and wait for it to finish before return.
+				// This makes sure syslogger.Stream finishes necessary clean-up (e.g. closing any open SSH sessions).
+				// before SSH client is closed.
+				cancel()
+				wg.Wait()
+				// Skip syslogger.Close() to avoid double close; syslogger.Close() only closes the underlying client,
+				// which is closed in another defer above.
+			}()
 			go func() {
-				err := syslogger.Stream(ctx, s, false)
-				// TODO(fxbug.dev/43518): when 1.13 is available, spell this as
-				// `err != nil && errors.Is(err, context.Canceled) && errors.Is(err, context.DeadlineExceeded)`
-				if err != nil && ctx.Err() == nil {
+				wg.Add(1)
+				defer wg.Done()
+				if err := syslogger.Stream(ctx, s, false); err != nil && !errors.Is(err, ctx.Err()) {
 					logger.Errorf(ctx, "syslog streaming interrupted: %v", err)
 				}
 			}()
@@ -329,7 +340,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 		Env: environ,
 	}
 
-	ctx, cancel = context.WithTimeout(ctx, r.timeout)
+	ctx, cancel := context.WithTimeout(ctx, r.timeout)
 	defer cancel()
 
 	err := runner.Run(ctx, args, os.Stdout, os.Stderr)
