@@ -7,7 +7,7 @@
       { "runner": "elf" },
       {
           "protocol": [
-              "/svc/fuchsia.test.breakpoints.BreakpointSystem",
+              "/svc/fuchsia.test.events.EventSourceSync",
               "/svc/fidl.examples.routing.echo.Echo"
           ],
           "from": "framework"

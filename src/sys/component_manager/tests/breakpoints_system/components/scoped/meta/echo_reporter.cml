@@ -5,7 +5,7 @@
     "use": [
       { "runner": "elf" },
       {
-        "protocol": [ "/svc/fuchsia.test.breakpoints.BreakpointSystem" ],
+        "protocol": [ "/svc/fuchsia.test.events.EventSourceSync" ],
         "from": "framework"
       },
       {

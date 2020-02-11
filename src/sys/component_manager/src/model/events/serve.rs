@@ -15,7 +15,7 @@ use {
     },
     async_trait::async_trait,
     fidl::endpoints::{create_request_stream, ClientEnd, ServerEnd},
-    fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync, fuchsia_trace as trace,
+    fidl_fuchsia_test_events as fevents, fuchsia_async as fasync, fuchsia_trace as trace,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt},
     std::{path::PathBuf, sync::Arc},
@@ -23,15 +23,11 @@ use {
 
 pub async fn serve_event_source(
     mut system: EventSource,
-    mut stream: fbreak::BreakpointSystemRequestStream,
+    mut stream: fevents::EventSourceSyncRequestStream,
 ) {
     while let Some(Ok(request)) = stream.next().await {
         match request {
-            fbreak::BreakpointSystemRequest::SetBreakpoints {
-                event_types,
-                server_end,
-                responder,
-            } => {
+            fevents::EventSourceSyncRequest::Subscribe { event_types, server_end, responder } => {
                 // Convert the FIDL event types into standard event types
                 let event_types = event_types
                     .into_iter()
@@ -55,7 +51,7 @@ pub async fn serve_event_source(
                 // Unblock the component
                 responder.send().unwrap();
             }
-            fbreak::BreakpointSystemRequest::StartComponentTree { responder } => {
+            fevents::EventSourceSyncRequest::StartComponentTree { responder } => {
                 system.start_component_tree().await;
                 responder.send().unwrap();
             }
@@ -67,13 +63,12 @@ pub async fn serve_event_source(
 async fn serve_event_stream(
     mut event_stream: EventStream,
     scope_moniker: AbsoluteMoniker,
-    server_end: ServerEnd<fbreak::InvocationReceiverMarker>,
+    server_end: ServerEnd<fevents::EventStreamSyncMarker>,
 ) {
     // Serve the EventStream FIDL protocol asynchronously
     let mut stream = server_end.into_stream().unwrap();
 
-    while let Some(Ok(fbreak::InvocationReceiverRequest::Next { responder })) = stream.next().await
-    {
+    while let Some(Ok(fevents::EventStreamSyncRequest::Next { responder })) = stream.next().await {
         trace::duration!("component_manager", "events:fidl_get_next");
         // Wait for the next breakpoint to occur
         let event = event_stream.next().await;
@@ -90,7 +85,7 @@ async fn serve_event_stream(
 fn maybe_create_event_payload(
     scope: &AbsoluteMoniker,
     event_payload: EventPayload,
-) -> Option<fbreak::EventPayload> {
+) -> Option<fevents::EventPayload> {
     match event_payload {
         EventPayload::RouteCapability { source, capability_provider, .. } => {
             let routing_protocol = Some(serve_routing_protocol_async(capability_provider));
@@ -114,24 +109,24 @@ fn maybe_create_event_payload(
                 CapabilitySource::Framework { scope_moniker, .. } => {
                     let scope_moniker =
                         scope_moniker.map(|a| RelativeMoniker::from_absolute(scope, &a));
-                    fbreak::CapabilitySource::Framework(fbreak::FrameworkCapability {
+                    fevents::CapabilitySource::Framework(fevents::FrameworkCapability {
                         scope_moniker: scope_moniker.map(|m| m.to_string()),
-                        ..fbreak::FrameworkCapability::empty()
+                        ..fevents::FrameworkCapability::empty()
                     })
                 }
                 CapabilitySource::Component { source_moniker, .. } => {
                     let source_moniker = RelativeMoniker::from_absolute(scope, &source_moniker);
-                    fbreak::CapabilitySource::Component(fbreak::ComponentCapability {
+                    fevents::CapabilitySource::Component(fevents::ComponentCapability {
                         source_moniker: Some(source_moniker.to_string()),
-                        ..fbreak::ComponentCapability::empty()
+                        ..fevents::ComponentCapability::empty()
                     })
                 }
                 _ => return None,
             });
 
             let routing_payload =
-                Some(fbreak::RoutingPayload { routing_protocol, capability_id, source });
-            Some(fbreak::EventPayload { routing_payload, ..fbreak::EventPayload::empty() })
+                Some(fevents::RoutingPayload { routing_protocol, capability_id, source });
+            Some(fevents::EventPayload { routing_payload, ..fevents::EventPayload::empty() })
         }
         _ => None,
     }
@@ -139,21 +134,21 @@ fn maybe_create_event_payload(
 
 /// Creates the basic FIDL Event object containing the event type, target_realm
 /// and basic handler for resumption.
-fn create_event_fidl_object(scope_moniker: &AbsoluteMoniker, event: Event) -> fbreak::Invocation {
+fn create_event_fidl_object(scope_moniker: &AbsoluteMoniker, event: Event) -> fevents::Event {
     let event_type = Some(convert_std_event_type_to_fidl(event.event.payload.type_()));
     let target_relative_moniker =
         RelativeMoniker::from_absolute(scope_moniker, &event.event.target_moniker);
     let target_moniker = Some(target_relative_moniker.to_string());
     let event_payload = maybe_create_event_payload(scope_moniker, event.event.payload.clone());
     let handler = Some(serve_handler_async(event));
-    fbreak::Invocation { event_type, target_moniker, handler, event_payload }
+    fevents::Event { event_type, target_moniker, handler, event_payload }
 }
 
 /// Serves the server end of the RoutingProtocol FIDL protocol asynchronously.
 fn serve_routing_protocol_async(
     capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
-) -> ClientEnd<fbreak::RoutingProtocolMarker> {
-    let (client_end, stream) = create_request_stream::<fbreak::RoutingProtocolMarker>()
+) -> ClientEnd<fevents::RoutingProtocolMarker> {
+    let (client_end, stream) = create_request_stream::<fevents::RoutingProtocolMarker>()
         .expect("failed to create request stream for RoutingProtocol");
     fasync::spawn(async move {
         serve_routing_protocol(capability_provider, stream).await;
@@ -164,11 +159,11 @@ fn serve_routing_protocol_async(
 /// Connects the component manager capability provider to
 /// an external provider over FIDL
 struct ExternalCapabilityProvider {
-    proxy: fbreak::CapabilityProviderProxy,
+    proxy: fevents::CapabilityProviderProxy,
 }
 
 impl ExternalCapabilityProvider {
-    pub fn new(client_end: ClientEnd<fbreak::CapabilityProviderMarker>) -> Self {
+    pub fn new(client_end: ClientEnd<fevents::CapabilityProviderMarker>) -> Self {
         Self { proxy: client_end.into_proxy().expect("cannot create proxy from client_end") }
     }
 }
@@ -193,11 +188,11 @@ impl CapabilityProvider for ExternalCapabilityProvider {
 /// Serves RoutingProtocol FIDL requests received over the provided stream.
 async fn serve_routing_protocol(
     capability_provider: Arc<Mutex<Option<Box<dyn CapabilityProvider>>>>,
-    mut stream: fbreak::RoutingProtocolRequestStream,
+    mut stream: fevents::RoutingProtocolRequestStream,
 ) {
     while let Some(Ok(request)) = stream.next().await {
         match request {
-            fbreak::RoutingProtocolRequest::SetProvider { client_end, responder } => {
+            fevents::RoutingProtocolRequest::SetProvider { client_end, responder } => {
                 // Lock on the provider
                 let mut capability_provider = capability_provider.lock().await;
 
@@ -207,7 +202,7 @@ async fn serve_routing_protocol(
 
                 responder.send().unwrap();
             }
-            fbreak::RoutingProtocolRequest::ReplaceAndOpen {
+            fevents::RoutingProtocolRequest::ReplaceAndOpen {
                 client_end,
                 server_end,
                 responder,
@@ -244,12 +239,12 @@ async fn serve_routing_protocol(
 }
 
 /// Serves the server end of Handler FIDL protocol asynchronously
-fn serve_handler_async(event: Event) -> ClientEnd<fbreak::HandlerMarker> {
-    let (client_end, mut stream) = create_request_stream::<fbreak::HandlerMarker>()
+fn serve_handler_async(event: Event) -> ClientEnd<fevents::HandlerMarker> {
+    let (client_end, mut stream) = create_request_stream::<fevents::HandlerMarker>()
         .expect("could not create request stream for handler protocol");
     fasync::spawn(async move {
         // Expect exactly one call to Resume
-        if let Some(Ok(fbreak::HandlerRequest::Resume { responder })) = stream.next().await {
+        if let Some(Ok(fevents::HandlerRequest::Resume { responder })) = stream.next().await {
             event.resume();
             responder.send().unwrap();
         }
@@ -257,26 +252,26 @@ fn serve_handler_async(event: Event) -> ClientEnd<fbreak::HandlerMarker> {
     client_end
 }
 
-fn convert_fidl_event_type_to_std(event_type: fbreak::EventType) -> EventType {
+fn convert_fidl_event_type_to_std(event_type: fevents::EventType) -> EventType {
     match event_type {
-        fbreak::EventType::AddDynamicChild => EventType::AddDynamicChild,
-        fbreak::EventType::BeforeStartInstance => EventType::BeforeStartInstance,
-        fbreak::EventType::PostDestroyInstance => EventType::PostDestroyInstance,
-        fbreak::EventType::PreDestroyInstance => EventType::PreDestroyInstance,
-        fbreak::EventType::ResolveInstance => EventType::ResolveInstance,
-        fbreak::EventType::RouteCapability => EventType::RouteCapability,
-        fbreak::EventType::StopInstance => EventType::StopInstance,
+        fevents::EventType::AddDynamicChild => EventType::AddDynamicChild,
+        fevents::EventType::BeforeStartInstance => EventType::BeforeStartInstance,
+        fevents::EventType::PostDestroyInstance => EventType::PostDestroyInstance,
+        fevents::EventType::PreDestroyInstance => EventType::PreDestroyInstance,
+        fevents::EventType::ResolveInstance => EventType::ResolveInstance,
+        fevents::EventType::RouteCapability => EventType::RouteCapability,
+        fevents::EventType::StopInstance => EventType::StopInstance,
     }
 }
 
-fn convert_std_event_type_to_fidl(event_type: EventType) -> fbreak::EventType {
+fn convert_std_event_type_to_fidl(event_type: EventType) -> fevents::EventType {
     match event_type {
-        EventType::AddDynamicChild => fbreak::EventType::AddDynamicChild,
-        EventType::BeforeStartInstance => fbreak::EventType::BeforeStartInstance,
-        EventType::PostDestroyInstance => fbreak::EventType::PostDestroyInstance,
-        EventType::PreDestroyInstance => fbreak::EventType::PreDestroyInstance,
-        EventType::ResolveInstance => fbreak::EventType::ResolveInstance,
-        EventType::RouteCapability => fbreak::EventType::RouteCapability,
-        EventType::StopInstance => fbreak::EventType::StopInstance,
+        EventType::AddDynamicChild => fevents::EventType::AddDynamicChild,
+        EventType::BeforeStartInstance => fevents::EventType::BeforeStartInstance,
+        EventType::PostDestroyInstance => fevents::EventType::PostDestroyInstance,
+        EventType::PreDestroyInstance => fevents::EventType::PreDestroyInstance,
+        EventType::ResolveInstance => fevents::EventType::ResolveInstance,
+        EventType::RouteCapability => fevents::EventType::RouteCapability,
+        EventType::StopInstance => fevents::EventType::StopInstance,
     }
 }

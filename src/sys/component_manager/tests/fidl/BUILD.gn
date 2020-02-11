@@ -19,10 +19,10 @@ fidl("hub") {
   public_deps = [ "//zircon/system/fidl/fuchsia-io" ]
 }
 
-fidl("breakpoints") {
-  name = "fuchsia.test.breakpoints"
+fidl("events") {
+  name = "fuchsia.test.events"
 
-  sources = [ "breakpoints.fidl" ]
+  sources = [ "events.fidl" ]
 }
 
 fidl("echofactory") {

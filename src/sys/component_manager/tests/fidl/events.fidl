@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.test.breakpoints;
+library fuchsia.test.events;
 
 /// The maximum number of event types that a receiver can listen to.
 /// This capacity should match the actual number of event types.
@@ -90,15 +90,15 @@ table RoutingPayload {
     3: CapabilitySource source;
 };
 
-/// Contains all information about a single invocation of a breakpoint
-table Invocation {
-    /// Event type corresponding to the invocation
+/// Contains all information about a single event of a breakpoint
+table Event {
+    /// Event type corresponding to the event
     1: EventType event_type;
 
-    /// Moniker of instance corresponding to the invocation
+    /// Moniker of instance corresponding to the event
     2: string:MAX_MONIKER_LENGTH target_moniker;
 
-    /// Handler for resuming from invocation
+    /// Handler for resuming from event
     3: Handler handler;
 
     /// Optional payload for some event types
@@ -107,29 +107,29 @@ table Invocation {
 
 /// Registers breakpoints in component manager.
 [Discoverable]
-protocol BreakpointSystem {
-    /// Sets breakpoints on the given EventTypes.
-    /// Returns a BreakpointInvocationReceiver which can be used
+protocol EventSourceSync {
+    /// Subscribes to the events of the provided EventTypes.
+    /// Returns a EventStreamSync which can be used
     /// to expect the registered types.
-    SetBreakpoints(vector<EventType>:MAX_NUM_EVENT_TYPES_RECEIVED event_types, request<InvocationReceiver> server_end) -> ();
+    Subscribe(vector<EventType>:MAX_NUM_EVENT_TYPES_RECEIVED event_types, request<EventStreamSync> server_end) -> ();
 
     /// Resume the execution of components within the realm using a scoped
-    /// BreakpointSystem.  This method is idempotent.
+    /// EventSourceSync.  This method is idempotent.
     StartComponentTree() -> ();
 };
 
-/// Receives invocations for registered events in component manager.
-protocol InvocationReceiver {
-    /// Blocks until the next invocation of a breakpoint occurs.
+/// Receives events for registered events in component manager.
+protocol EventStreamSync {
+    /// Blocks until the next event is dispatched.
     ///
     /// Note: The component manager is blocked after this call and will not be
     /// allowed to proceed until resumed explicitly via the Handler.
-    Next() -> (Invocation invocation);
+    Next() -> (Event event);
 };
 
-/// Every Invocation supports this basic handler to allow resumption.
+/// Every Event supports this basic handler to allow resumption.
 protocol Handler {
-    /// Resumes/unblocks from an invocation.
+    /// Resumes/unblocks from an event.
     Resume() -> ();
 };
 

@@ -7,7 +7,7 @@ use {
     async_trait::async_trait,
     fidl::endpoints::{create_proxy, create_request_stream, ClientEnd, ServerEnd, ServiceMarker},
     fidl::Channel,
-    fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync,
+    fidl_fuchsia_test_events as fevents, fuchsia_async as fasync,
     fuchsia_component::client::*,
     futures::{
         future::{AbortHandle, Abortable, BoxFuture, TryFutureExt},
@@ -17,42 +17,39 @@ use {
     std::sync::Arc,
 };
 
-/// A wrapper over the BreakpointSystem FIDL proxy.
+/// A wrapper over the EventSourceSync FIDL proxy.
 /// Provides all of the FIDL methods with a cleaner, simpler interface.
 /// Refer to breakpoints.fidl for a detailed description of this protocol.
 pub struct EventSource {
-    proxy: fbreak::BreakpointSystemProxy,
+    proxy: fevents::EventSourceSyncProxy,
 }
 
 impl EventSource {
-    /// Connects to the BreakpointSystem service at its default location
-    /// The default location is presumably "/svc/fuchsia.test.breakpoints.BreakpointSystem"
+    /// Connects to the EventSourceSync service at its default location
+    /// The default location is presumably "/svc/fuchsia.test.events.EventSourceSync"
     pub fn new() -> Result<Self, Error> {
-        let proxy = connect_to_service::<fbreak::BreakpointSystemMarker>()
-            .context("could not connect to BreakpointSystem service")?;
+        let proxy = connect_to_service::<fevents::EventSourceSyncMarker>()
+            .context("could not connect to EventSourceSync service")?;
         Ok(EventSource::from_proxy(proxy))
     }
 
-    /// Wraps a provided BreakpointSystem proxy
-    pub fn from_proxy(proxy: fbreak::BreakpointSystemProxy) -> Self {
+    /// Wraps a provided EventSourceSync proxy
+    pub fn from_proxy(proxy: fevents::EventSourceSyncProxy) -> Self {
         Self { proxy }
     }
 
     pub async fn subscribe(
         &self,
-        event_types: Vec<fbreak::EventType>,
+        event_types: Vec<fevents::EventType>,
     ) -> Result<EventStream, Error> {
-        let (proxy, server_end) = create_proxy::<fbreak::InvocationReceiverMarker>()?;
-        self.proxy
-            .set_breakpoints(&mut event_types.into_iter(), server_end)
-            .await
-            .context("could not register breakpoints")?;
+        let (proxy, server_end) = create_proxy::<fevents::EventStreamSyncMarker>()?;
+        self.proxy.subscribe(&mut event_types.into_iter(), server_end).await?;
         Ok(EventStream::new(proxy))
     }
 
     pub async fn soak_events(
         &self,
-        event_types: Vec<fbreak::EventType>,
+        event_types: Vec<fevents::EventType>,
     ) -> Result<EventSink, Error> {
         let receiver = self.subscribe(event_types).await?;
         Ok(EventSink::soak_async(receiver))
@@ -134,18 +131,18 @@ impl EventSource {
     }
 }
 
-/// A wrapper over the InvocationReceiver FIDL proxy.
-/// Provides convenience methods that build on InvocationReceiver::Next
+/// A wrapper over the EventStreamSync FIDL proxy.
+/// Provides convenience methods that build on EventStreamSync::Next
 pub struct EventStream {
-    proxy: fbreak::InvocationReceiverProxy,
+    proxy: fevents::EventStreamSyncProxy,
 }
 
 impl EventStream {
-    fn new(proxy: fbreak::InvocationReceiverProxy) -> Self {
+    fn new(proxy: fevents::EventStreamSyncProxy) -> Self {
         Self { proxy }
     }
 
-    pub async fn next(&self) -> Result<fbreak::Invocation, Error> {
+    pub async fn next(&self) -> Result<fevents::Event, Error> {
         let invocation = self.proxy.next().await.context("could not get next breakpoint")?;
         Ok(invocation)
     }
@@ -209,7 +206,7 @@ impl EventStream {
                 self.wait_until_exact::<RouteCapability>(expected_target_moniker).await?;
             if expected_capability_id == invocation.capability_id {
                 match invocation.source {
-                    fbreak::CapabilitySource::Component(_) => return Ok(invocation),
+                    fevents::CapabilitySource::Component(_) => return Ok(invocation),
                     _ => {}
                 }
             }
@@ -234,7 +231,7 @@ impl EventStream {
             // with a matching optional scope moniker, then return the invocation.
             if expected_capability_id == invocation.capability_id {
                 match &invocation.source {
-                    fbreak::CapabilitySource::Framework(fbreak::FrameworkCapability {
+                    fevents::CapabilitySource::Framework(fevents::FrameworkCapability {
                         scope_moniker,
                         ..
                     }) if scope_moniker.as_ref().map(|s| s.as_str()) == expected_scope_moniker => {
@@ -251,15 +248,15 @@ impl EventStream {
 
 /// Common features of any invocation - event type, target moniker, conversion function
 pub trait Event: Handler {
-    const TYPE: fbreak::EventType;
+    const TYPE: fevents::EventType;
     fn target_moniker(&self) -> &str;
-    fn from_fidl(inv: fbreak::Invocation) -> Result<Self, Error>;
+    fn from_fidl(inv: fevents::Event) -> Result<Self, Error>;
 }
 
 /// Basic handler that resumes/unblocks from an Event
 #[must_use = "invoke resume() otherwise component manager will be halted indefinitely!"]
 pub trait Handler: Sized {
-    fn handler_proxy(self) -> fbreak::HandlerProxy;
+    fn handler_proxy(self) -> fevents::HandlerProxy;
 
     #[must_use = "futures do nothing unless you await on them!"]
     fn resume<'a>(self) -> BoxFuture<'a, Result<(), fidl::Error>> {
@@ -268,9 +265,9 @@ pub trait Handler: Sized {
     }
 }
 
-/// Implemented on fbreak::Invocation for resuming a generic invocation
-impl Handler for fbreak::Invocation {
-    fn handler_proxy(self) -> fbreak::HandlerProxy {
+/// Implemented on fevents::Event for resuming a generic invocation
+impl Handler for fevents::Event {
+    fn handler_proxy(self) -> fevents::HandlerProxy {
         self.handler
             .expect("Could not find handler in Event object")
             .into_proxy()
@@ -324,12 +321,12 @@ pub trait Interposer: Send + Sync {
 /// A protocol that allows routing capabilities over FIDL.
 #[async_trait]
 pub trait RoutingProtocol {
-    fn protocol_proxy(&self) -> fbreak::RoutingProtocolProxy;
+    fn protocol_proxy(&self) -> fevents::RoutingProtocolProxy;
 
     #[must_use = "futures do nothing unless you await on them!"]
     async fn set_provider(
         &self,
-        client_end: ClientEnd<fbreak::CapabilityProviderMarker>,
+        client_end: ClientEnd<fevents::CapabilityProviderMarker>,
     ) -> Result<(), fidl::Error> {
         let proxy = self.protocol_proxy();
         proxy.set_provider(client_end).await
@@ -343,12 +340,12 @@ pub trait RoutingProtocol {
     {
         // Create the CapabilityProvider channel
         let (provider_client_end, mut provider_capability_stream) =
-            create_request_stream::<fbreak::CapabilityProviderMarker>()
+            create_request_stream::<fevents::CapabilityProviderMarker>()
                 .expect("Could not create request stream for CapabilityProvider");
 
         // Wait for an Open request on the CapabilityProvider channel
         fasync::spawn(async move {
-            if let Some(Ok(fbreak::CapabilityProviderRequest::Open { server_end, responder })) =
+            if let Some(Ok(fevents::CapabilityProviderRequest::Open { server_end, responder })) =
                 provider_capability_stream.next().await
             {
                 // Unblock component manager from the open request
@@ -382,12 +379,12 @@ pub trait RoutingProtocol {
 
         // Create the CapabilityProvider channel
         let (provider_client_end, mut provider_capability_stream) =
-            create_request_stream::<fbreak::CapabilityProviderMarker>()
+            create_request_stream::<fevents::CapabilityProviderMarker>()
                 .expect("Could not create request stream for CapabilityProvider");
 
         // Wait for an Open request on the CapabilityProvider channel
         fasync::spawn(async move {
-            if let Some(Ok(fbreak::CapabilityProviderRequest::Open { server_end, responder })) =
+            if let Some(Ok(fevents::CapabilityProviderRequest::Open { server_end, responder })) =
                 provider_capability_stream.next().await
             {
                 // Unblock component manager from the open request
@@ -419,7 +416,7 @@ pub trait RoutingProtocol {
 /// Describes an event drained out by the EventSink
 #[derive(Eq, PartialEq, PartialOrd, Ord, Debug)]
 pub struct DrainedEvent {
-    pub event_type: fbreak::EventType,
+    pub event_type: fevents::EventType,
     pub target_moniker: String,
 }
 
@@ -443,7 +440,7 @@ impl EventSink {
                     let inv = receiver
                         .next()
                         .await
-                        .expect("Failed to get next event from InvocationReceiver");
+                        .expect("Failed to get next event from EventStreamSync");
 
                     // Construct the DrainedEvent from the Event
                     let event_type = inv.event_type.expect("Failed to get event type from Event");
@@ -513,19 +510,19 @@ macro_rules! create_event {
     ) => {
         pub struct $event_type {
             target_moniker: String,
-            handler: fbreak::HandlerProxy,
+            handler: fevents::HandlerProxy,
             $($protocol_name: $protocol_ty,)*
             $(pub $data_name: $data_ty,)*
         }
 
         impl Event for $event_type {
-            const TYPE: fbreak::EventType = fbreak::EventType::$event_type;
+            const TYPE: fevents::EventType = fevents::EventType::$event_type;
 
             fn target_moniker(&self) -> &str {
                 &self.target_moniker
             }
 
-            fn from_fidl(inv: fbreak::Invocation) -> Result<Self, Error> {
+            fn from_fidl(inv: fevents::Event) -> Result<Self, Error> {
                 // Event type in invocation must match what is expected
                 let event_type = inv.event_type.ok_or(
                     format_err!("Missing event_type from Event object")
@@ -567,7 +564,7 @@ macro_rules! create_event {
         }
 
         impl Handler for $event_type {
-            fn handler_proxy(self) -> fbreak::HandlerProxy {
+            fn handler_proxy(self) -> fevents::HandlerProxy {
                 self.handler
             }
         }
@@ -583,17 +580,17 @@ macro_rules! create_event {
     ($event_type:ident) => {
         pub struct $event_type {
             target_moniker: String,
-            handler: fbreak::HandlerProxy,
+            handler: fevents::HandlerProxy,
         }
 
         impl Event for $event_type {
-            const TYPE: fbreak::EventType = fbreak::EventType::$event_type;
+            const TYPE: fevents::EventType = fevents::EventType::$event_type;
 
             fn target_moniker(&self) -> &str {
                 &self.target_moniker
             }
 
-            fn from_fidl(inv: fbreak::Invocation) -> Result<Self, Error> {
+            fn from_fidl(inv: fevents::Event) -> Result<Self, Error> {
                 // Event type in invocation must match what is expected
                 let event_type = inv.event_type.ok_or(
                     format_err!("Missing event_type from Event object")
@@ -618,7 +615,7 @@ macro_rules! create_event {
         }
 
         impl Handler for $event_type {
-            fn handler_proxy(self) -> fbreak::HandlerProxy {
+            fn handler_proxy(self) -> fevents::HandlerProxy {
                 self.handler
             }
         }
@@ -639,7 +636,7 @@ create_event!(
         data: {
             {
                 name: source,
-                ty: fbreak::CapabilitySource,
+                ty: fevents::CapabilitySource,
             }
             {
                 name: capability_id,
@@ -649,7 +646,7 @@ create_event!(
         protocols: {
             {
                 name: routing_protocol,
-                ty: fbreak::RoutingProtocolProxy,
+                ty: fevents::RoutingProtocolProxy,
                 trait_name: RoutingProtocol,
             }
         },

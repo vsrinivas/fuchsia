@@ -18,7 +18,7 @@ use {
     anyhow::format_err,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_test_events as fevents, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::Mutex},
     lazy_static::lazy_static,
     std::{
@@ -30,8 +30,8 @@ use {
 };
 
 lazy_static! {
-    pub static ref EVENT_SOURCE_SERVICE: cm_rust::CapabilityPath =
-        "/svc/fuchsia.test.breakpoints.BreakpointSystem".try_into().unwrap();
+    pub static ref EVENT_SOURCE_SYNC_SERVICE: cm_rust::CapabilityPath =
+        "/svc/fuchsia.test.events.EventSourceSync".try_into().unwrap();
 }
 
 pub struct EventSourceFactory {
@@ -103,7 +103,7 @@ impl EventSourceFactoryInner {
     ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
         match (capability, capability_decl) {
             (None, FrameworkCapability::Protocol(source_path))
-                if *source_path == *EVENT_SOURCE_SERVICE =>
+                if *source_path == *EVENT_SOURCE_SYNC_SERVICE =>
             {
                 let key = Some(scope_moniker.clone());
                 let event_source_registry = self.event_source_registry.lock().await;
@@ -140,7 +140,7 @@ impl Hook for EventSourceFactoryInner {
                         .await?;
                 }
                 EventPayload::ResolveInstance { decl } => {
-                    if decl.uses_protocol_from_framework(&EVENT_SOURCE_SERVICE) {
+                    if decl.uses_protocol_from_framework(&EVENT_SOURCE_SYNC_SERVICE) {
                         let key = Some(event.target_moniker.clone());
                         let mut event_source_registry = self.event_source_registry.lock().await;
                         // It is currently assumed that a component instance's declaration
@@ -190,7 +190,7 @@ impl EventSource {
     }
 
     /// Serves a `EventSource` FIDL protocol.
-    pub fn serve_async(self, stream: fbreak::BreakpointSystemRequestStream) {
+    pub fn serve_async(self, stream: fevents::EventSourceSyncRequestStream) {
         fasync::spawn(async move {
             serve_event_source(self, stream).await;
         });
@@ -211,7 +211,7 @@ impl CapabilityProvider for EventSource {
         _relative_path: PathBuf,
         server_end: zx::Channel,
     ) -> Result<(), ModelError> {
-        let stream = ServerEnd::<fbreak::BreakpointSystemMarker>::new(server_end)
+        let stream = ServerEnd::<fevents::EventSourceSyncMarker>::new(server_end)
             .into_stream()
             .expect("could not convert channel into stream");
         self.serve_async(stream);

@@ -6,8 +6,7 @@ use {
     anyhow::Error,
     fidl_fidl_examples_routing_echo as fecho,
     fidl_fuchsia_io::{OPEN_FLAG_DIRECTORY, OPEN_FLAG_POSIX},
-    fidl_fuchsia_test_breakpoints as fbreak, fidl_fuchsia_test_hub as fhub,
-    fuchsia_async as fasync,
+    fidl_fuchsia_test_events as fevents, fidl_fuchsia_test_hub as fhub, fuchsia_async as fasync,
     futures::{channel::mpsc, StreamExt},
     hub_report_capability::*,
     io_util::*,
@@ -27,7 +26,7 @@ impl TestRunner {
     async fn start(
         root_component_url: &str,
         num_eager_static_components: i32,
-        event_types: Vec<fbreak::EventType>,
+        event_types: Vec<fevents::EventType>,
     ) -> Result<(TestRunner, EventStream), Error> {
         assert!(
             num_eager_static_components >= 1,
@@ -300,7 +299,7 @@ async fn advanced_routing() -> Result<(), Error> {
 async fn used_service_test() -> Result<(), Error> {
     let echo_service_name = "fidl.examples.routing.echo.Echo";
     let hub_report_service_name = "fuchsia.test.hub.HubReport";
-    let breakpoints_service_name = "fuchsia.test.breakpoints.BreakpointSystem";
+    let breakpoints_service_name = "fuchsia.test.events.EventSourceSync";
 
     let (test_runner, _) = TestRunner::start(
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/used_service_echo_realm.cm",
