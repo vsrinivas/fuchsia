@@ -17,7 +17,7 @@ template("fuchsia_sdk_test_targets") {
   not_needed(["invoker"])
   group(target_name) {
     deps = [
-      "${fuchsia_sdk}/sdk/fidl/fuchsia.process",
+      "${fuchsia_sdk}/fidl/fuchsia.process",
     ]
   }
 }

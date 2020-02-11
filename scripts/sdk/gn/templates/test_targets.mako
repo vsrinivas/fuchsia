@@ -12,7 +12,7 @@ template("fuchsia_sdk_test_targets") {
   group(target_name) {
     deps = [
     % for dep in sorted(data.fidl_targets):
-      "<%text>${fuchsia_sdk}</%text>/sdk/fidl/${dep}",
+      "<%text>${fuchsia_sdk}</%text>/fidl/${dep}",
     % endfor
     ]
   }
