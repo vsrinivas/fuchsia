@@ -39,3 +39,21 @@ async fn test_input() {
         assert_eq!(second_event, event);
     }
 }
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_device_listener_failure() {
+    let service_registry = ServiceRegistry::create();
+    let input_device_registry_service = Arc::new(Mutex::new(InputDeviceRegistryService::new()));
+    input_device_registry_service.lock().await.set_fail(true);
+
+    let initial_event = MediaButtonsEvent { volume: Some(1), mic_mute: Some(true) };
+    input_device_registry_service.lock().await.send_media_button_event(initial_event.clone());
+
+    service_registry.lock().await.register_service(input_device_registry_service.clone());
+
+    let service_context =
+        ServiceContext::create(Some(ServiceRegistry::serve(service_registry.clone())));
+
+    let (input_tx, _input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
+    assert!(!monitor_mic_mute(service_context.clone(), input_tx).await.is_ok());
+}

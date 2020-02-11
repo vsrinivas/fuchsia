@@ -17,6 +17,7 @@ use std::sync::Arc;
 pub struct InputDeviceRegistryService {
     listeners: Arc<RwLock<Vec<MediaButtonsListenerProxy>>>,
     last_sent_event: Arc<RwLock<Option<MediaButtonsEvent>>>,
+    fail: bool,
 }
 
 impl InputDeviceRegistryService {
@@ -24,7 +25,12 @@ impl InputDeviceRegistryService {
         Self {
             listeners: Arc::new(RwLock::new(Vec::new())),
             last_sent_event: Arc::new(RwLock::new(None)),
+            fail: false,
         }
+    }
+
+    pub fn set_fail(&mut self, fail: bool) {
+        self.fail = fail;
     }
 
     pub fn send_media_button_event(&self, event: MediaButtonsEvent) {
@@ -51,6 +57,11 @@ impl Service for InputDeviceRegistryService {
 
         let listeners_handle = self.listeners.clone();
         let last_event = self.last_sent_event.clone();
+
+        if self.fail {
+            return Err(format_err!("exiting early"));
+        }
+
         fasync::spawn(async move {
             while let Some(req) = manager_stream.try_next().await.unwrap() {
                 #[allow(unreachable_patterns)]

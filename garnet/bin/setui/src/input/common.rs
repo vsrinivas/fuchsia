@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 use {
     crate::service_context::ServiceContextHandle,
-    anyhow::Error,
+    anyhow::{format_err, Error},
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_ui_input::MediaButtonsEvent,
     fidl_fuchsia_ui_policy::{
         DeviceListenerRegistryMarker, MediaButtonsListenerMarker, MediaButtonsListenerRequest,
     },
     fuchsia_async as fasync,
+    fuchsia_syslog::fx_log_err,
     futures::StreamExt,
 };
 
@@ -31,9 +32,10 @@ pub async fn monitor_mic_mute(
 
     let (client_end, mut stream) = create_request_stream::<MediaButtonsListenerMarker>().unwrap();
 
-    presenter_service
-        .register_media_buttons_listener(client_end)
-        .expect("Could not register as listener for media buttons");
+    if presenter_service.register_media_buttons_listener(client_end).is_err() {
+        fx_log_err!("Registering media button listener with presenter service failed.");
+        return Err(format_err!("presenter service not ready"));
+    }
 
     fasync::spawn(async move {
         while let Some(Ok(media_request)) = stream.next().await {
