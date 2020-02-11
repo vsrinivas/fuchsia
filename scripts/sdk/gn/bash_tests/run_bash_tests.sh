@@ -8,6 +8,7 @@ declare -r SCRIPT_SRC_DIR
 
 # Return failure if any test fails.
 "${SCRIPT_SRC_DIR}/script_runner.sh" fuchsia-common-tests.sh
+"${SCRIPT_SRC_DIR}/script_runner.sh" fpave-test.sh
 "${SCRIPT_SRC_DIR}/script_runner.sh" fpublish-test.sh
 "${SCRIPT_SRC_DIR}/script_runner.sh" fserve-test.sh
 "${SCRIPT_SRC_DIR}/script_runner.sh" fssh-test.sh
