@@ -28,6 +28,8 @@ toc:
     path: /docs/concepts/components/services.md
   - title: "Shutdown"
     path: /docs/concepts/components/shutdown.md
+  - title: "Topology"
+    path: /docs/concepts/components/topology.md
   - title: "Work Scheduler"
     path: /docs/concepts/components/work_scheduler.md
 - title: "Capabilities"
