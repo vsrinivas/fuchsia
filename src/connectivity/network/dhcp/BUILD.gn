@@ -64,7 +64,9 @@ rustc_binary("bin") {
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:getopts",
+    "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:net2",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:void",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
@@ -92,6 +94,10 @@ package("dhcpd") {
     {
       path = rebase_path("data/test_config.json")
       dest = "test_config.json"
+    },
+    {
+      path = rebase_path("data/bound_device_test_config.json")
+      dest = "bound_device_test_config.json"
     },
   ]
   binaries = [

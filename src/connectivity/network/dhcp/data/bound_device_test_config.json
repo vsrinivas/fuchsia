@@ -16,5 +16,5 @@
     "permitted_macs": [],
     "static_assignments": {},
     "arp_probe": false,
-    "bound_device_names": []
+    "bound_device_names": ["eth2"]
 }

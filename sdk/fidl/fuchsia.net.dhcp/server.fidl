@@ -68,6 +68,14 @@ xunion Parameter {
     /// it in a lease. If the server receives a response, the server will mark the
     /// address as in-use and try again with a different address.
     6: bool arp_probe;
+    /// The names of the interface to which the server will listen. If this
+    /// vector is empty, the server will listen on all interfaces and will
+    /// process incoming DHCP messages regardless of the interface on which
+    /// they arrive. If this vector is not empty, then the server will only
+    /// listen for incoming DHCP messages on the named interfaces contained by
+    /// this vector. The string and vectors bounds have been arbitrarily
+    /// selected as generous upper limits.
+    7: vector<string:256>:256 bound_device_names;
 };
 
 /// The name of the Parameter to be retrieved by Server.GetParameter().
@@ -78,6 +86,7 @@ enum ParameterName {
     PERMITTED_MACS = 3;
     STATICALLY_ASSIGNED_ADDRS = 4;
     ARP_PROBE = 5;
+    BOUND_DEVICE_NAMES = 6;
 };
 
 /// Provides methods for DHCP Server configuration.

@@ -296,6 +296,7 @@ mod tests {
             permitted_macs: crate::configuration::PermittedMacs(Vec::new()),
             static_assignments: crate::configuration::StaticAssignments(HashMap::new()),
             arp_probe: false,
+            bound_device_names: vec![],
         };
         let () = stash.store_parameters(&params)?;
         let value = accessor_client.get_value(&PARAMETERS_KEY.to_string()).await?;
@@ -391,6 +392,7 @@ mod tests {
             permitted_macs: crate::configuration::PermittedMacs(Vec::new()),
             static_assignments: crate::configuration::StaticAssignments(HashMap::new()),
             arp_probe: false,
+            bound_device_names: vec![],
         };
         let serialized_params = serde_json::to_string(&params)?;
         let () = accessor.set_value(

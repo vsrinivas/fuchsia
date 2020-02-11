@@ -225,6 +225,9 @@ async fn test_list_parameter() {
     ArpProbe(
         false,
     ),
+    BoundDeviceNames(
+        [],
+    ),
 ]
 "#,
         expected_stderr: "",

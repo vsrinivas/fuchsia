@@ -677,8 +677,16 @@ async fn disable_interface_loopback() -> Result {
 // TODO(tamird): could this be done with a single stack and bridged interfaces?
 #[fuchsia_async::run_singlethreaded(test)]
 async fn acquire_dhcp() -> Result {
-    let name = "acquire_dhcp";
+    test_dhcp("acquire_dhcp", "/pkg/data/test_config.json").await
+}
 
+#[fuchsia_async::run_singlethreaded(test)]
+async fn acquire_dhcp_with_dhcpd_bound_device() -> Result {
+    test_dhcp("acquire_dhcp_with_dhcpd_bound_device", "/pkg/data/bound_device_test_config.json")
+        .await
+}
+
+async fn test_dhcp(name: &str, dhcpd_config: &str) -> Result {
     let sandbox = fuchsia_component::client::connect_to_service::<
         fidl_fuchsia_netemul_sandbox::SandboxMarker,
     >()
@@ -727,10 +735,11 @@ async fn acquire_dhcp() -> Result {
         let () = server_environment.get_launcher(server).context("failed to get launcher")?;
         client
     };
+    // TODO(45593): Remove config file test fixture
     let _dhcpd = fuchsia_component::client::launch(
         &launcher,
         fuchsia_component::fuchsia_single_component_package_url!("dhcpd").to_string(),
-        Some(vec![String::from("--config"), String::from("/pkg/data/test_config.json")]),
+        Some(vec![String::from("--config"), String::from(dhcpd_config)]),
     )
     .context("failed to start dhcpd")?;
     let client_environment =

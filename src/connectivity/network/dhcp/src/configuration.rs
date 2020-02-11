@@ -39,6 +39,11 @@ pub struct ServerParameters {
     /// Enables server behavior where the server ARPs an IP address prior to issuing
     /// it in a lease.
     pub arp_probe: bool,
+    /// The interface names to which the server's UDP sockets are bound. If
+    /// this vector is empty, the server will not bind to a specific interface
+    /// and will process incoming DHCP messages regardless of the interface on
+    /// which they arrive.
+    pub bound_device_names: Vec<String>,
 }
 
 /// Parameters controlling lease duration allocation. Per,

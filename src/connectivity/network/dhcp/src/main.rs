@@ -16,10 +16,12 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as fx_syslog, fx_log_err, fx_log_info},
     fuchsia_zircon::DurationNum,
-    futures::{Future, StreamExt, TryFutureExt, TryStreamExt},
+    futures::{Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
+    net2::unix::UnixUdpBuilderExt,
     std::{
         cell::RefCell,
-        net::{IpAddr, Ipv4Addr, SocketAddr},
+        net::{IpAddr, Ipv4Addr},
+        os::unix::io::AsRawFd,
     },
     void::Void,
 };
@@ -66,6 +68,21 @@ async fn main() -> Result<(), Error> {
         configuration::load_server_params_from_file(&config)
             .context("failed to load server parameters from configuration file")
     })?;
+    let socks = if params.bound_device_names.len() > 0 {
+        params.bound_device_names.iter().map(String::as_str).try_fold::<_, _, Result<_, Error>>(
+            Vec::new(),
+            |mut acc, name| {
+                let sock = create_socket(Some(name))?;
+                let () = acc.push(sock);
+                Ok(acc)
+            },
+        )?
+    } else {
+        vec![create_socket(None)?]
+    };
+    if socks.len() == 0 {
+        return Err(anyhow::format_err!("no valid sockets to receive messages from"));
+    }
     let options = stash.load_options().await.unwrap_or_else(|e| {
         fx_syslog::fx_log_warn!("failed to load options from stash: {}", e);
         std::collections::HashMap::new()
@@ -93,17 +110,49 @@ async fn main() -> Result<(), Error> {
         fx_log_info!("starting server in configuration only mode");
         let () = admin_fut.await?;
     } else {
-        let udp_socket =
-            UdpSocket::bind(&SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), SERVER_PORT))
-                .context("unable to bind socket")?;
-        let () = udp_socket.set_broadcast(true).context("unable to set broadcast")?;
-        let msg_handling_loop = define_msg_handling_loop_future(udp_socket, &server);
+        let msg_loops = socks
+            .into_iter()
+            .map(|sock| define_msg_handling_loop_future(sock, &server).boxed_local());
         let lease_expiration_handler = define_lease_expiration_handler_future(&server);
         fx_log_info!("starting server");
-        let (_void, (), ()) =
-            futures::try_join!(msg_handling_loop, admin_fut, lease_expiration_handler)?;
+        let (_void, (), ()) = futures::try_join!(
+            futures::future::select_ok(msg_loops),
+            admin_fut,
+            lease_expiration_handler
+        )?;
     }
     Ok(())
+}
+
+fn create_socket(name: Option<&str>) -> Result<UdpSocket, Error> {
+    let sock = net2::UdpBuilder::new_v4()?;
+    // Since dhcpd may listen to multiple interfaces, we must enable
+    // SO_REUSEPORT so that binding the same (address, port) pair to each
+    // interface can still succeed.
+    let sock = sock.reuse_port(true)?;
+    if let Some(name) = name {
+        // There are currently no safe Rust interfaces to set SO_BINDTODEVICE,
+        // so we must set it through libc.
+        if unsafe {
+            libc::setsockopt(
+                sock.as_raw_fd(),
+                libc::SOL_SOCKET,
+                libc::SO_BINDTODEVICE,
+                name.as_ptr() as *const libc::c_void,
+                name.len() as libc::socklen_t,
+            )
+        } == -1
+        {
+            return Err(anyhow::format_err!(
+                "setsockopt(SO_BINDTODEVICE) failed for {}: {}",
+                name,
+                std::io::Error::last_os_error()
+            ));
+        }
+    }
+    let sock = sock.bind((Ipv4Addr::UNSPECIFIED, SERVER_PORT))?;
+    let () = sock.set_broadcast(true)?;
+    Ok(UdpSocket::from_socket(sock)?)
 }
 
 async fn define_msg_handling_loop_future(
@@ -133,7 +182,6 @@ async fn define_msg_handling_loop_future(
                 }
 
                 let response_buffer = message.serialize();
-
                 sock.send_to(&response_buffer, sender).await.context("unable to send response")?;
                 fx_log_info!("response sent to: {}", sender);
             }

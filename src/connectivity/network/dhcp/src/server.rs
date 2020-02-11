@@ -158,6 +158,7 @@ impl Server {
             permitted_macs: crate::configuration::PermittedMacs(Vec::new()),
             static_assignments: crate::configuration::StaticAssignments(HashMap::new()),
             arp_probe: false,
+            bound_device_names: vec![],
         };
         let stash = Stash::new(&rand_string, DEFAULT_STASH_PREFIX)?;
         Ok(Self {
@@ -708,6 +709,11 @@ impl ServerDispatcher for Server {
             fidl_fuchsia_net_dhcp::ParameterName::ArpProbe => {
                 Ok(fidl_fuchsia_net_dhcp::Parameter::ArpProbe(self.params.arp_probe))
             }
+            fidl_fuchsia_net_dhcp::ParameterName::BoundDeviceNames => {
+                Ok(fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(
+                    self.params.bound_device_names.clone(),
+                ))
+            }
         }
     }
 
@@ -780,6 +786,9 @@ impl ServerDispatcher for Server {
             fidl_fuchsia_net_dhcp::Parameter::ArpProbe(arp_probe) => {
                 self.params.arp_probe = arp_probe
             }
+            fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(bound_device_names) => {
+                self.params.bound_device_names = bound_device_names
+            }
             fidl_fuchsia_net_dhcp::Parameter::__UnknownVariant { .. } => {
                 return Err(Status::INVALID_ARGS)
             }
@@ -821,6 +830,7 @@ impl ServerDispatcher for Server {
             permitted_macs,
             static_assignments,
             arp_probe,
+            bound_device_names,
         } = &self.params;
         Ok(vec![
             fidl_fuchsia_net_dhcp::Parameter::IpAddrs(server_ips.clone().into_fidl()),
@@ -831,6 +841,7 @@ impl ServerDispatcher for Server {
                 static_assignments.clone().into_fidl(),
             ),
             fidl_fuchsia_net_dhcp::Parameter::ArpProbe(*arp_probe),
+            fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(bound_device_names.clone()),
         ])
     }
 }
@@ -3024,7 +3035,7 @@ pub mod tests {
         server.params.server_ips = vec![addr];
         let expected = fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![addr.into_fidl()]);
         let result = server.dispatch_list_parameters()?;
-        let params_fields_ct = 6;
+        let params_fields_ct = 7;
         assert_eq!(result.len(), params_fields_ct);
         assert!(result.contains(&expected));
         Ok(())
