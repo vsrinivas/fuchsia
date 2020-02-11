@@ -20,7 +20,6 @@ base_package_labels += [
   "//garnet/packages/prod:iquery",
   "//garnet/packages/prod:memory_monitor",
   "//garnet/packages/prod:network-speed-test",
-  "//garnet/packages/prod:overnetstack",
   "//garnet/packages/prod:run",
   "//garnet/packages/prod:sbase",
   "//third_party/openssh-portable:openssh-tools",

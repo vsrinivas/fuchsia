@@ -130,7 +130,6 @@ group("all") {
     "//garnet/packages/prod:network-speed-test",
     "//garnet/packages/prod:odu",
     "//garnet/packages/prod:openthread",
-    "//garnet/packages/prod:overnetstack",
     "//garnet/packages/prod:ralink",
     "//garnet/packages/prod:realtek",
     "//garnet/packages/prod:run",
@@ -195,15 +194,6 @@ group("memory_monitor") {
   public_deps = [
     "//garnet/packages/config:services",
     "//src/developer/memory/monitor",
-  ]
-}
-
-group("overnetstack") {
-  testonly = true
-  public_deps = [
-    "//src/connectivity/overnet/overnetstack",
-    "//src/connectivity/overnet/tools/ascendd:bin($host_toolchain)",
-    "//src/connectivity/overnet/tools/onet",
   ]
 }
 
