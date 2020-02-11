@@ -19,6 +19,7 @@
 #include <arch/ops.h>
 #include <arch/thread.h>
 #include <fbl/intrusive_double_list.h>
+#include <fbl/macros.h>
 #include <kernel/cpu.h>
 #include <kernel/scheduler_state.h>
 #include <kernel/spinlock.h>
@@ -231,7 +232,7 @@ struct thread_t {
 #define DEFAULT_STACK_SIZE ARCH_DEFAULT_STACK_SIZE
 #endif
 
-// TODO(johngro): Remove this when we have addressed ZX-3683.  Right now, this
+// TODO(johngro): Remove this when we have addressed fxb/33473.  Right now, this
 // is used in only one place (x86_bringup_aps in arch/x86/smp.cpp) outside of
 // thread.cpp.
 //
@@ -552,8 +553,6 @@ static inline void thread_preempt_set_pending(void) {
   current_thread->preempt_pending = true;
 }
 
-#include <fbl/macros.h>
-
 // AutoReschedDisable is an RAII helper for disabling rescheduling
 // using thread_resched_disable()/thread_resched_reenable().
 //
@@ -596,5 +595,112 @@ class AutoReschedDisable {
  private:
   bool started_ = false;
 };
+
+// - As of now, this recreates the C API with no changes to argument types or spelling,
+//   other than thread_snake_case to SnakeCase.
+// - The only opinions so far are:
+//   - Whether to put a function as a free function in some namespace, vs. a static member function
+//     on the thread. As of now, like Create-type functions are static in Thread, while things that
+//     implicitly operate on the current thread are in the CurrentThread namespace.
+//   - What order and how to group functions in the class or namespace.
+// - Functions with definitions inline correspond to static inline functions above. Similarly, const
+//   is preserved in the translation.
+class Thread {
+  static Thread* CreateIdleThread(uint cpu_num);
+  static Thread* Create(const char* name, thread_start_routine entry, void* arg, int priority);
+  static Thread* CreateEtc(Thread* t, const char* name, thread_start_routine entry, void* arg,
+                           int priority, thread_trampoline_routine alt_trampoline);
+
+  void SetCurrent();
+  void SetUsermodeThread(ThreadDispatcher* user_thread);
+  zx_status_t SetRealTime();
+
+  void Resume();
+  zx_status_t Suspend();
+  void Forget();
+  zx_status_t Detach();
+  zx_status_t DetachAndResume();
+  zx_status_t Join(int* retcode, zx_time_t deadline);
+  void Kill();
+
+  void SetPriority(int priority);
+  void SetDeadline(const zx_sched_deadline_params_t& params);
+
+  void SetCpuAffinity(cpu_mask_t affinity) TA_EXCL(thread_lock);
+  cpu_mask_t GetCpuAffinity() const TA_EXCL(thread_lock);
+  void SetSoftCpuAffinity(cpu_mask_t affinity) TA_EXCL(thread_lock);
+  cpu_mask_t GetSoftCpuAffinity() const TA_EXCL(thread_lock);
+
+  static Thread* IdToThreadSlow(uint64_t tid);
+
+  void OwnerName(char out_name[THREAD_NAME_LENGTH]);
+  zx_duration_t Runtime() const;
+  cpu_num_t LastCpu() const TA_EXCL(thread_lock);
+  bool IsSignaled() { return thread_is_signaled(&thread_); }
+  bool IsRealtime() const { return thread_is_realtime(&thread_); }
+  bool IsIdle() const { return thread_is_idle(&thread_); }
+  bool IsRealTimeOrIdle() const { return thread_is_real_time_or_idle(&thread_); }
+  bool CannotBoost() const { return thread_cannot_boost(&thread_); }
+
+  zx_status_t PrintBacktrace();
+
+  void DumpDuringPanic(bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
+    dump_thread_during_panic(&thread_, full);
+  }
+
+ private:
+  thread_t thread_;
+};
+
+namespace CurrentThread {
+Thread* GetCurrent();
+
+void Yield();
+void Preempt();
+void Reschedule();
+void Exit(int retcode) __NO_RETURN;
+void BecomeIdle() __NO_RETURN;
+
+zx_status_t SleepEtc(const Deadline& deadline, bool interruptable, zx_time_t now);
+zx_status_t Sleep(zx_time_t deadline);
+zx_status_t SleepRelative(zx_duration_t delay);
+zx_status_t SleepInterrutable(zx_time_t deadline);
+
+void SignalPolicyException();
+
+void ProcessPendingSignals();
+
+void MigrateToCpu(cpu_num_t target_cpuid);
+
+void SetName(const char* name);
+
+static inline bool LockHeld() { return thread_lock_held(); }
+void CheckPreemptPending();
+uint32_t PreemptDisableCount();
+uint32_t ReschedDisableCount();
+static inline void PreemptDisable() { thread_preempt_disable(); }
+static inline void PreemptReenable() { thread_preempt_reenable(); }
+static inline void PreemptReenableNoResched() { thread_preempt_reenable_no_resched(); }
+static inline void ReschedDisable() { thread_resched_disable(); }
+static inline void ReschedReenable() { thread_resched_reenable(); }
+static inline void PreemptSetPending() { thread_preempt_set_pending(); }
+
+void PrintCurrentBacktrace();
+size_t AppendCurrentBacktrace(char* out, size_t len);
+void PrintCurrentBacktraceAtFrame(void* caller_frame);
+
+void DumpLocked(bool full) TA_REQ(thread_lock);
+void Dump(bool full) TA_EXCL(thread_lock);
+void DumpAllThreadsLocked(bool full) TA_REQ(thread_lock);
+void DumpAllThreads(bool full) TA_EXCL(thread_lock);
+void DumpUserTid(uint64_t tid, bool full) TA_EXCL(thread_lock);
+void DumpUserTidLocked(uint64_t tid, bool full) TA_REQ(thread_lock);
+static inline void DumpAllDuringPanic(bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
+  dump_all_threads_during_panic(full);
+}
+static inline void DumpUserTidDuringPanic(uint64_t tid, bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
+  dump_thread_user_tid_during_panic(tid, full);
+}
+}  // namespace CurrentThread
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_H_
