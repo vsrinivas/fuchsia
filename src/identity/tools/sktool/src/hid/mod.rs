@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod command;
 mod connection;
 mod device;
 mod message;
+mod packet;
+mod util;
 
 use rand::rngs::OsRng;
 

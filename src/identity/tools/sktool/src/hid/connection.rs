@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::hid::message::Packet;
+use crate::hid::packet::Packet;
 use anyhow::Error;
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -46,7 +46,7 @@ pub trait Connection: Sized + Debug {
 /// An implementation of a `Connection` over the FIDL `fuchsia.hardware.input.Device` protocol.
 pub mod fidl {
     use crate::hid::connection::Connection;
-    use crate::hid::message::Packet;
+    use crate::hid::packet::Packet;
     use anyhow::{format_err, Error};
     use async_trait::async_trait;
     use bytes::Bytes;
@@ -406,7 +406,7 @@ pub mod fidl {
 #[cfg(test)]
 pub mod fake {
     use crate::hid::connection::Connection;
-    use crate::hid::message::Packet;
+    use crate::hid::packet::Packet;
     use anyhow::{format_err, Error};
     use async_trait::async_trait;
     use bytes::Bytes;
@@ -596,7 +596,8 @@ pub mod fake {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use crate::hid::message::{Command, Packet};
+        use crate::hid::command::Command;
+        use crate::hid::packet::Packet;
         use fuchsia_async as fasync;
         use lazy_static::lazy_static;
 

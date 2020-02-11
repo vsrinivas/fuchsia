@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::hid::command::Command;
 use crate::hid::connection::{Connection, FidlConnection};
-use crate::hid::message::{Command, Packet};
+use crate::hid::packet::Packet;
 use crate::CtapDevice;
 use anyhow::{format_err, Context as _, Error};
 use async_trait::async_trait;
