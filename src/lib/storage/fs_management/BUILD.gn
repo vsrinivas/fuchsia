@@ -5,7 +5,7 @@
 import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 
-rustc_library("fs-management") {
+rustc_library("fs_management") {
   with_unit_tests = true
   edition = "2018"
   deps = [
@@ -21,7 +21,7 @@ rustc_library("fs-management") {
   ]
 }
 
-generate_manifest("fs-management.manifest") {
+generate_manifest("fs_management.manifest") {
   visibility = [ ":*" ]
   args = [
     "--binary=bin/blobfs",
@@ -29,14 +29,14 @@ generate_manifest("fs-management.manifest") {
   ]
 }
 
-manifest_outputs = get_target_outputs(":fs-management.manifest")
+manifest_outputs = get_target_outputs(":fs_management.manifest")
 fs_management_manifests = [ manifest_outputs[0] ]
 
-test_package("fs-management-test") {
+test_package("fs_management_tests") {
   extra = fs_management_manifests
   deps = [
-    ":fs-management.manifest",
-    ":fs-management_test",
+    ":fs_management.manifest",
+    ":fs_management_test",
   ]
   tests = [
     {
@@ -48,5 +48,5 @@ test_package("fs-management-test") {
 
 group("tests") {
   testonly = true
-  deps = [ ":fs-management-test" ]
+  deps = [ ":fs_management_tests" ]
 }

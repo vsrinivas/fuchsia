@@ -18,7 +18,7 @@ rustc_library("blackout-target") {
 rustc_test("blackout-target-lib-test") {
   edition = "2018"
   deps = [
-    "//src/storage/fs-management",
+    "//src/lib/storage/fs_management",
     "//src/lib/storage/ramdevice_client",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:rand",

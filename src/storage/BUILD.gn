@@ -3,10 +3,7 @@
 # found in the LICENSE file.
 
 group("storage") {
-  deps = [
-    "ext4",
-    "fs-management",
-  ]
+  deps = [ "ext4" ]
 }
 
 group("tests") {
@@ -15,6 +12,5 @@ group("tests") {
     "conformance:tests",
     "conformance_harness",
     "ext4:tests",
-    "fs-management:tests",
   ]
 }
