@@ -133,17 +133,24 @@ int main(int argc, char** argv) {
     }
 
     printf("netsvc: start\n");
-    for (;;) {
-      if (g_netbootloader && should_advertise) {
-        netboot_advertise(g_nodename);
-      }
 
-      if (netifc_poll(std::min(debuglog_next_timeout(), tftp_next_timeout()))) {
+    zx_time_t advertise_next_timeout = ZX_TIME_INFINITE;
+    if (g_netbootloader && should_advertise) {
+      advertise_next_timeout = zx::clock::get_monotonic().get();
+    }
+
+    for (;;) {
+      if (netifc_poll(
+              std::min({advertise_next_timeout, debuglog_next_timeout(), tftp_next_timeout()}))) {
         printf("netsvc: netifc_poll() failed - terminating\n");
         break;
       }
 
       zx_time_t now = zx::clock::get_monotonic().get();
+      if (now > advertise_next_timeout) {
+        netboot_advertise(g_nodename);
+        advertise_next_timeout = zx_deadline_after(ZX_SEC(1));
+      }
       if (now > debuglog_next_timeout()) {
         debuglog_timeout_expired();
       }

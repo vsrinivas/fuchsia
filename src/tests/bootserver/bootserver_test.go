@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"context"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -147,7 +149,7 @@ func setupQemu(t *testing.T, appendCmdline string, modeString string) (*qemu.Ins
 	}
 }
 
-func attemptPaveNoBind(t *testing.T, i *qemu.Instance, shouldWork bool) {
+func attemptPaveNoBind(t *testing.T, shouldWork bool) {
 	// Get the node ipv6 address
 	out := cmdWithOutput(t, toolPath(t, "netls"))
 	// Extract the ipv6 from the netls output
@@ -160,16 +162,20 @@ func attemptPaveNoBind(t *testing.T, i *qemu.Instance, shouldWork bool) {
 
 	var logPattern []logMatch
 	if shouldWork {
-		paveWorksPattern := []logMatch{{"Sending request to ", true},
+		paveWorksPattern := []logMatch{
+			{"Sending request to ", true},
 			{"Received request from ", true},
 			{"Proceeding with nodename ", true},
-			{"Transfer starts", true}}
+			{"Transfer starts", true},
+		}
 		logPattern = paveWorksPattern
 	} else {
-		paveFailsPattern := []logMatch{{"Sending request to ", true},
+		paveFailsPattern := []logMatch{
+			{"Sending request to ", true},
 			{"Received request from ", false},
 			{"Proceeding with nodename ", false},
-			{"Transfer starts", false}}
+			{"Transfer starts", false},
+		}
 		logPattern = paveFailsPattern
 	}
 
@@ -180,33 +186,99 @@ func attemptPaveNoBind(t *testing.T, i *qemu.Instance, shouldWork bool) {
 
 }
 
+func TestAdvertFrequency(t *testing.T) {
+	_, cleanup := setupQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
+	defer cleanup()
+
+	// Get the node ipv6 address
+	out := cmdWithOutput(t, toolPath(t, "netls"))
+	// Extract the ipv6 from the netls output
+	regexString := defaultNodename + ` \((.*)/(.*)\)`
+	match := regexp.MustCompile(regexString).FindSubmatch(out)
+	if len(match) != 3 {
+		t.Fatalf("node %s not found in netls output - %s", defaultNodename, out)
+	}
+	index, err := strconv.Atoi(string(match[2]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ifi, err := net.InterfaceByIndex(index)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	conn, err := net.ListenMulticastUDP("udp6", ifi, &net.UDPAddr{
+		IP:   net.IPv6linklocalallnodes,
+		Port: 33331,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ip := net.ParseIP(string(match[1]))
+	if ip == nil {
+		t.Fatalf("can't parse %s as IP", match[1])
+	}
+	for i := 0; i < 50; i++ {
+		if _, err := conn.WriteToUDP(nil, &net.UDPAddr{
+			IP:   ip,
+			Port: 1337,
+			Zone: strconv.Itoa(index),
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := conn.SetDeadline(time.Now().Add(800 * time.Millisecond)); err != nil {
+		t.Fatal(err)
+	}
+	var dst [100]byte
+	for i := 0; i < 10; i++ {
+		n, addr, err := conn.ReadFromUDP(dst[:])
+		if i == 0 {
+			if err != nil {
+				t.Fatal(err)
+			}
+			continue
+		}
+		if err == nil {
+			t.Errorf("expected one advertisement packet, got %d bytes from %s on iteration %d", n, addr, i)
+			continue
+		}
+		if tErr, ok := err.(net.Error); !ok || !tErr.Timeout() {
+			t.Errorf("expected timeout error on iteration %d, got %s", i, err)
+			continue
+		}
+		break
+	}
+}
+
 func TestPaveNoBind(t *testing.T) {
-	i, cleanup := setupQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
+	_, cleanup := setupQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
 	defer cleanup()
 
 	// Test that advertise request is serviced and paving starts as netsvc.netboot=true
-	attemptPaveNoBind(t, i, true)
-
+	attemptPaveNoBind(t, true)
 }
 
 func TestPaveNoBindFailure(t *testing.T) {
-	i, cleanup := setupQemu(t, "netsvc.all-features=true, netsvc.netboot=false", "full")
+	_, cleanup := setupQemu(t, "netsvc.all-features=true, netsvc.netboot=false", "full")
 	defer cleanup()
 
 	// Test that advertise request is NOT serviced and paving does NOT start
 	// as netsvc.netboot=false
-	attemptPaveNoBind(t, i, false)
+	attemptPaveNoBind(t, false)
 }
 
 func TestInitPartitionTables(t *testing.T) {
 	_, cleanup := setupQemu(t, "netsvc.all-features=true, netsvc.netboot=true", "full")
 	defer cleanup()
 
-	logPattern := []logMatch{{"Received request from ", true},
-			{"Proceeding with nodename ", true},
-			{"Transfer starts", true},
-			{"Transfer ends successfully", true},
-			{"Issued reboot command to", false}}
+	logPattern := []logMatch{
+		{"Received request from ", true},
+		{"Proceeding with nodename ", true},
+		{"Transfer starts", true},
+		{"Transfer ends successfully", true},
+		{"Issued reboot command to", false},
+	}
 
 	cmdSearchLog(
 		t, logPattern,
