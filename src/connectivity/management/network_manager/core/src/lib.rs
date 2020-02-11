@@ -180,9 +180,12 @@ impl DeviceState {
         event: netstack::NetstackEvent,
     ) -> error::Result<()> {
         match event {
-            netstack::NetstackEvent::OnInterfacesChanged { interfaces } => interfaces
-                .into_iter()
-                .try_for_each(|iface| self.notify_lif_added_or_updated(iface.into())),
+            netstack::NetstackEvent::OnInterfacesChanged { interfaces } => {
+                interfaces.into_iter().try_for_each(|iface| {
+                    let i = &iface;
+                    self.notify_lif_added_or_updated(i.into())
+                })
+            }
         }
     }
 

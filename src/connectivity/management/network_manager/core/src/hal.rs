@@ -11,7 +11,7 @@ use {
     crate::oir,
     crate::DnsPolicy,
     anyhow::{Context as _, Error},
-    fidl_fuchsia_net as net,
+    fidl_fuchsia_net as fnet,
     fidl_fuchsia_net_stack::{
         self as stack, ForwardingDestination, ForwardingEntry, InterfaceInfo, StackMarker,
         StackProxy,
@@ -120,6 +120,20 @@ impl From<&ForwardingEntry> for Route {
     }
 }
 
+impl From<&netstack::RouteTableEntry2> for Route {
+    fn from(r: &netstack::RouteTableEntry2) -> Self {
+        Route {
+            target: LifIpAddr {
+                address: to_ip_addr(r.destination),
+                prefix: subnet_mask_to_prefix_length(r.netmask),
+            },
+            gateway: r.gateway.as_ref().map(|g| to_ip_addr(**g)),
+            port_id: Some(StackPortId::from(r.nicid as u64).into()),
+            metric: Some(r.metric),
+        }
+    }
+}
+
 pub struct NetCfg {
     stack: StackProxy,
     netstack: NetstackProxy,
@@ -185,27 +199,27 @@ impl From<&InterfaceInfo> for Interface {
                 .properties
                 .addresses
                 .iter()
-                .find(|&addr| match addr {
+                .filter_map(|a| match a.ip_address {
                     // Only return interfaces with an IPv4 address
                     // TODO(dpradilla) support interfaces with multiple IPs? (is there
                     // a use case given this context?)
-                    stack::InterfaceAddress {
-                        ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr }),
-                        ..
-                    } => address_is_valid_unicast(&IpAddr::from(*addr)),
-                    _ => false,
+                    fnet::IpAddress::Ipv4(_) => {
+                        if address_is_valid_unicast(&LifIpAddr::from(&a.ip_address).address) {
+                            Some(InterfaceAddress::Unknown(LifIpAddr::from(a)))
+                        } else {
+                            None
+                        }
+                    }
+                    _ => None,
                 })
-                .map(|addr| InterfaceAddress::Unknown(addr.into())),
+                .next(),
             ipv6_addr: iface
                 .properties
                 .addresses
                 .iter()
-                .filter_map(|addr| match addr {
+                .filter_map(|a| match a.ip_address {
                     // Only return Ipv6 addresses
-                    stack::InterfaceAddress {
-                        ip_address: net::IpAddress::Ipv6(net::Ipv6Address { addr }),
-                        ..
-                    } => Some(LifIpAddr { address: addr.clone().into(), prefix: 128 }),
+                    fnet::IpAddress::Ipv6(_) => Some(LifIpAddr::from(a)),
                     _ => None,
                 })
                 .collect(),
@@ -231,8 +245,8 @@ fn valid_unicast_address_or_none(addr: LifIpAddr) -> Option<LifIpAddr> {
     }
 }
 
-impl From<netstack::NetInterface> for Interface {
-    fn from(iface: netstack::NetInterface) -> Self {
+impl From<&netstack::NetInterface> for Interface {
+    fn from(iface: &netstack::NetInterface) -> Self {
         let dhcp = iface.flags & netstack::NET_INTERFACE_FLAG_DHCP != 0;
         let addr = valid_unicast_address_or_none(LifIpAddr {
             address: to_ip_addr(iface.addr),
@@ -240,7 +254,7 @@ impl From<netstack::NetInterface> for Interface {
         });
         Interface {
             id: PortId(iface.id.into()),
-            name: iface.name,
+            name: iface.name.clone(),
             ipv4_addr: addr.map(|a| {
                 if dhcp {
                     InterfaceAddress::Dhcp(a)
@@ -248,7 +262,7 @@ impl From<netstack::NetInterface> for Interface {
                     InterfaceAddress::Static(a)
                 }
             }),
-            ipv6_addr: Vec::new(),
+            ipv6_addr: iface.ipv6addrs.iter().map(|a| LifIpAddr::from(a)).collect(),
             enabled: (iface.flags & netstack::NET_INTERFACE_FLAG_UP) != 0,
             state: InterfaceState::Unknown,
             dhcp_client_enabled: dhcp,
@@ -278,7 +292,7 @@ impl NetCfg {
         Ok(NetCfg { stack, netstack, resolver_admin })
     }
 
-    /// Returns event streams for fuchsia.net.stack and fuchsia.netstack.
+    /// Returns event streams for fuchsia.fnet.stack and fuchsia.netstack.
     pub fn take_event_streams(
         &mut self,
     ) -> (stack::StackEventStream, netstack::NetstackEventStream) {
@@ -320,7 +334,7 @@ impl NetCfg {
 
     /// Creates a new interface, bridging the given ports.
     pub async fn create_bridge(&mut self, ports: Vec<PortId>) -> error::Result<Interface> {
-        let br = self
+        let (error, bridge_id) = self
             .netstack
             .bridge_interfaces(&mut ports.into_iter().map(|id| StackPortId::from(id).to_u32()))
             .await
@@ -328,12 +342,12 @@ impl NetCfg {
                 error!("Failed creating bridge {:?}", e);
                 error::NetworkManager::HAL(error::Hal::OperationFailed)
             })?;
-        if br.0.status != fidl_fuchsia_netstack::Status::Ok {
-            error!("Failed creating bridge {:?}", br.0);
+        if error.status != netstack::Status::Ok {
+            error!("Failed creating bridge {:?}", error);
             return Err(error::NetworkManager::HAL(error::Hal::OperationFailed));
         }
-        info!("bridge created {:?}", br.1);
-        if let Some(i) = self.get_interface(br.1.into()).await {
+        info!("bridge created {:?}", bridge_id);
+        if let Some(i) = self.get_interface(bridge_id.into()).await {
             Ok(i)
         } else {
             Err(error::NetworkManager::HAL(error::Hal::BridgeNotFound))
@@ -499,7 +513,7 @@ impl NetCfg {
 
     /// Returns the running routing table (as seen by the network stack).
     pub async fn routes(&mut self) -> Option<Vec<Route>> {
-        let table = self.stack.get_forwarding_table().await;
+        let table = self.netstack.get_route_table2().await;
         match table {
             Ok(entries) => Some(
                 entries
@@ -542,11 +556,11 @@ impl NetCfg {
             .netstack
             .add_ethernet_device(
                 &port.topological_path,
-                &mut fidl_fuchsia_netstack::InterfaceConfig {
+                &mut netstack::InterfaceConfig {
                     name: port.name,
                     metric: port.metric,
                     filepath: port.file_path,
-                    ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(false),
+                    ip_address_config: netstack::IpAddressConfig::Dhcp(false),
                 },
                 fidl::endpoints::ClientEnd::<fidl_fuchsia_hardware_ethernet::DeviceMarker>::new(
                     channel,
@@ -597,34 +611,34 @@ mod tests {
         vec![
             // Unspecified addresses are skipped.
             stack::InterfaceAddress {
-                ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [0, 0, 0, 0] }),
+                ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [0, 0, 0, 0] }),
                 prefix_len: 24,
             },
             // Multicast addresses are skipped.
             stack::InterfaceAddress {
-                ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [224, 0, 0, 5] }),
+                ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [224, 0, 0, 5] }),
                 prefix_len: 24,
             },
             // Loopback addresses are skipped.
             stack::InterfaceAddress {
-                ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [127, 0, 0, 1] }),
+                ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [127, 0, 0, 1] }),
                 prefix_len: 24,
             },
             // IPv6 addresses are skipped.
             stack::InterfaceAddress {
-                ip_address: net::IpAddress::Ipv6(net::Ipv6Address {
+                ip_address: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
                     addr: [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
                 }),
                 prefix_len: 8,
             },
             // First valid address, should be picked.
             stack::InterfaceAddress {
-                ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [4, 3, 2, 1] }),
+                ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [4, 3, 2, 1] }),
                 prefix_len: 24,
             },
             // A valid address is already available, so this address should be skipped.
             stack::InterfaceAddress {
-                ip_address: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
+                ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
                 prefix_len: 24,
             },
         ]
@@ -706,36 +720,275 @@ mod tests {
     }
 
     #[test]
-    fn test_netstack_net_interface_into_hal_interface() {
-        let net_interface = netstack::NetInterface {
-            id: 5,
-            flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
-            features: 0,
-            configuration: 0,
-            name: "test_if".to_string(),
-            addr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 4] }),
-            netmask: net::IpAddress::Ipv4(net::Ipv4Address { addr: [255, 255, 255, 0] }),
-            broadaddr: net::IpAddress::Ipv4(net::Ipv4Address { addr: [1, 2, 3, 255] }),
-            ipv6addrs: vec![],
-            hwaddr: vec![1, 2, 3, 4, 5, 6],
-        };
-        assert_eq!(
-            Interface::from(net_interface),
-            Interface {
-                id: PortId(5),
-                name: "test_if".to_string(),
-                ipv4_addr: Some(InterfaceAddress::Dhcp(LifIpAddr {
-                    address: IpAddr::from([1, 2, 3, 4]),
-                    prefix: 24
-                }),),
-                ipv6_addr: Vec::new(),
-                enabled: true,
-                state: InterfaceState::Unknown,
-                dhcp_client_enabled: true,
-            }
-        )
+    fn test_hal_interface_from_netstack_net_interface() {
+        for (test, net_interface, want) in [
+            (
+                "ipv4 /24",
+                netstack::NetInterface {
+                    id: 5,
+                    flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
+                    features: 0,
+                    configuration: 0,
+                    name: "test_if".to_string(),
+                    addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
+                    netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [255, 255, 255, 0] }),
+                    broadaddr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 255] }),
+                    ipv6addrs: vec![],
+                    hwaddr: vec![1, 2, 3, 4, 5, 6],
+                },
+                Interface {
+                    id: PortId(5),
+                    name: "test_if".to_string(),
+                    ipv4_addr: Some(InterfaceAddress::Dhcp(LifIpAddr {
+                        address: IpAddr::from([1, 2, 3, 4]),
+                        prefix: 24,
+                    })),
+                    ipv6_addr: Vec::new(),
+                    enabled: true,
+                    state: InterfaceState::Unknown,
+                    dhcp_client_enabled: true,
+                },
+            ),
+            (
+                "ipv4 /25",
+                netstack::NetInterface {
+                    id: 5,
+                    flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
+                    features: 0,
+                    configuration: 0,
+                    name: "test_if".to_string(),
+                    addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
+                    netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
+                        addr: [255, 255, 255, 128],
+                    }),
+                    broadaddr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 127] }),
+                    ipv6addrs: vec![],
+                    hwaddr: vec![1, 2, 3, 4, 5, 6],
+                },
+                Interface {
+                    id: PortId(5),
+                    name: "test_if".to_string(),
+                    ipv4_addr: Some(InterfaceAddress::Dhcp(LifIpAddr {
+                        address: IpAddr::from([1, 2, 3, 4]),
+                        prefix: 25,
+                    })),
+                    ipv6_addr: Vec::new(),
+                    enabled: true,
+                    state: InterfaceState::Unknown,
+                    dhcp_client_enabled: true,
+                },
+            ),
+            (
+                "ipv6 /64",
+                netstack::NetInterface {
+                    id: 5,
+                    flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
+                    features: 0,
+                    configuration: 0,
+                    name: "test_if".to_string(),
+                    addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
+                    netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [255, 255, 255, 0] }),
+                    broadaddr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 255] }),
+                    ipv6addrs: vec![fnet::Subnet {
+                        addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                            addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                        }),
+                        prefix_len: 64,
+                    }],
+                    hwaddr: vec![1, 2, 3, 4, 5, 6],
+                },
+                Interface {
+                    id: PortId(5),
+                    name: "test_if".to_string(),
+                    ipv4_addr: Some(InterfaceAddress::Dhcp(LifIpAddr {
+                        address: IpAddr::from([1, 2, 3, 4]),
+                        prefix: 24,
+                    })),
+                    ipv6_addr: vec![LifIpAddr {
+                        address: IpAddr::from([
+                            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                        ]),
+                        prefix: 64,
+                    }],
+                    enabled: true,
+                    state: InterfaceState::Unknown,
+                    dhcp_client_enabled: true,
+                },
+            ),
+            (
+                "ipv6 /72",
+                netstack::NetInterface {
+                    id: 5,
+                    flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
+                    features: 0,
+                    configuration: 0,
+                    name: "test_if".to_string(),
+                    addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
+                    netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [255, 255, 255, 0] }),
+                    broadaddr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 255] }),
+                    ipv6addrs: vec![fnet::Subnet {
+                        addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                            addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                        }),
+                        prefix_len: 72,
+                    }],
+                    hwaddr: vec![1, 2, 3, 4, 5, 6],
+                },
+                Interface {
+                    id: PortId(5),
+                    name: "test_if".to_string(),
+                    ipv4_addr: Some(InterfaceAddress::Dhcp(LifIpAddr {
+                        address: IpAddr::from([1, 2, 3, 4]),
+                        prefix: 24,
+                    })),
+                    ipv6_addr: vec![LifIpAddr {
+                        address: IpAddr::from([
+                            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                        ]),
+                        prefix: 72,
+                    }],
+                    enabled: true,
+                    state: InterfaceState::Unknown,
+                    dhcp_client_enabled: true,
+                },
+            ),
+            (
+                "2 ipv6 /64",
+                netstack::NetInterface {
+                    id: 5,
+                    flags: netstack::NET_INTERFACE_FLAG_UP | netstack::NET_INTERFACE_FLAG_DHCP,
+                    features: 0,
+                    configuration: 0,
+                    name: "test_if".to_string(),
+                    addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] }),
+                    netmask: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [255, 255, 255, 0] }),
+                    broadaddr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 255] }),
+                    ipv6addrs: vec![
+                        fnet::Subnet {
+                            addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                                addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                            }),
+                            prefix_len: 64,
+                        },
+                        fnet::Subnet {
+                            addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                                addr: [2, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                            }),
+                            prefix_len: 48,
+                        },
+                    ],
+                    hwaddr: vec![1, 2, 3, 4, 5, 6],
+                },
+                Interface {
+                    id: PortId(5),
+                    name: "test_if".to_string(),
+                    ipv4_addr: Some(InterfaceAddress::Dhcp(LifIpAddr {
+                        address: IpAddr::from([1, 2, 3, 4]),
+                        prefix: 24,
+                    })),
+                    ipv6_addr: vec![
+                        LifIpAddr {
+                            address: IpAddr::from([
+                                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                            ]),
+                            prefix: 64,
+                        },
+                        LifIpAddr {
+                            address: IpAddr::from([
+                                2, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                            ]),
+                            prefix: 48,
+                        },
+                    ],
+                    enabled: true,
+                    state: InterfaceState::Unknown,
+                    dhcp_client_enabled: true,
+                },
+            ),
+        ]
+        .iter()
+        {
+            let got = Interface::from(net_interface);
+            assert_eq!(got, *want, "{} Got {:?}, want {:?}", test, got, want)
+        }
     }
 
+    #[test]
+    fn test_hal_interface_from_interfaceinfo() {
+        for (test, net_interface, want) in [(
+            "multiple v4 and v6 addresses",
+            InterfaceInfo {
+                id: 5,
+                properties: stack::InterfaceProperties {
+                    topopath: "test/interface/info".to_string(),
+                    addresses: vec![
+                        stack::InterfaceAddress {
+                            ip_address: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                                addr: [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
+                            }),
+                            prefix_len: 8,
+                        },
+                        stack::InterfaceAddress {
+                            ip_address: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                                addr: [1, 1, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1],
+                            }),
+                            prefix_len: 64,
+                        },
+                        stack::InterfaceAddress {
+                            ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
+                                addr: [4, 3, 2, 1],
+                            }),
+                            prefix_len: 23,
+                        },
+                        // A valid address is already available, so this address should be skipped.
+                        stack::InterfaceAddress {
+                            ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
+                                addr: [1, 2, 3, 4],
+                            }),
+                            prefix_len: 27,
+                        },
+                    ],
+                    administrative_status: stack::AdministrativeStatus::Enabled,
+                    name: "test_if".to_string(),
+                    filepath: "/some/file".to_string(),
+                    mac: None,
+                    mtu: 1234,
+                    features: 0,
+                    physical_status: stack::PhysicalStatus::Up,
+                },
+            },
+            Interface {
+                id: PortId(5),
+                name: "test/interface/info".to_string(),
+                ipv4_addr: Some(InterfaceAddress::Unknown(LifIpAddr {
+                    address: IpAddr::from([4, 3, 2, 1]),
+                    prefix: 23,
+                })),
+                ipv6_addr: vec![
+                    LifIpAddr {
+                        address: IpAddr::from([
+                            16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
+                        ]),
+                        prefix: 8,
+                    },
+                    LifIpAddr {
+                        address: IpAddr::from([
+                            1, 1, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
+                        ]),
+                        prefix: 64,
+                    },
+                ],
+                enabled: true,
+                state: InterfaceState::Up,
+                dhcp_client_enabled: false,
+            },
+        )]
+        .iter()
+        {
+            let got = Interface::from(net_interface);
+            assert_eq!(got, *want, "{} Got {:?}, want {:?}", test, got, want)
+        }
+    }
     #[test]
     fn test_route_from_forwarding_entry() {
         assert_eq!(
@@ -820,6 +1073,102 @@ mod tests {
                 target: LifIpAddr { address: "2620:0:1000:5000::".parse().unwrap(), prefix: 58 },
                 gateway: None,
                 metric: None,
+                port_id: Some(PortId(3))
+            },
+            "valid IPv6 entry, no gateway"
+        );
+    }
+
+    #[test]
+    fn test_route_from_routetableentry2() {
+        assert_eq!(
+            Route::from(&netstack::RouteTableEntry2 {
+                destination: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                    addr: [1, 2, 3, 0],
+                }),
+                netmask: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                    addr: [255, 255, 254, 0],
+                }),
+                gateway: Some(Box::new(fidl_fuchsia_net::IpAddress::Ipv4(
+                    fidl_fuchsia_net::Ipv4Address { addr: [1, 2, 3, 1] }
+                ))),
+                nicid: 1,
+                metric: 100,
+            }),
+            Route {
+                target: LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 23 },
+                gateway: Some("1.2.3.1".parse().unwrap()),
+                metric: Some(100),
+                port_id: Some(PortId(1)),
+            },
+            "valid IPv4 entry, with gateway"
+        );
+
+        assert_eq!(
+            Route::from(&netstack::RouteTableEntry2 {
+                destination: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                    addr: [1, 2, 3, 0],
+                }),
+                netmask: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                    addr: [255, 255, 254, 0],
+                }),
+                gateway: None,
+                nicid: 3,
+                metric: 50,
+            }),
+            Route {
+                target: LifIpAddr { address: "1.2.3.0".parse().unwrap(), prefix: 23 },
+                gateway: None,
+                metric: Some(50),
+                port_id: Some(PortId(3))
+            },
+            "valid IPv4 entry, no gateway"
+        );
+
+        assert_eq!(
+            Route::from(&netstack::RouteTableEntry2 {
+                destination: fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                    addr: [0x26, 0x20, 0, 0, 0x10, 0, 0x50, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                }),
+                netmask: fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                    addr: [255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0],
+                }),
+                gateway: Some(Box::new(fidl_fuchsia_net::IpAddress::Ipv6(
+                    fidl_fuchsia_net::Ipv6Address {
+                        addr: [
+                            0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0x02, 0x0, 0x5e, 0xff, 0xfe, 0x0, 0x02,
+                            0x65
+                        ],
+                    }
+                ))),
+                nicid: 9,
+                metric: 500,
+            }),
+            Route {
+                target: LifIpAddr { address: "2620:0:1000:5000::".parse().unwrap(), prefix: 64 },
+                gateway: Some("fe80::200:5eff:fe00:265".parse().unwrap()),
+                metric: Some(500),
+                port_id: Some(PortId(9)),
+            },
+            "valid IPv6 entry, with gateway"
+        );
+
+        assert_eq!(
+            Route::from(&netstack::RouteTableEntry2 {
+                destination: fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                    addr: [0x26, 0x20, 0, 0, 0x10, 0, 0x50, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+                }),
+                netmask: fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                    addr: [255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                }),
+                gateway: None,
+                nicid: 3,
+                metric: 50,
+            }),
+            Route {
+                target: LifIpAddr { address: "2620:0:1000:5000::".parse().unwrap(), prefix: 56 },
+                gateway: None,
+                metric: Some(50),
                 port_id: Some(PortId(3))
             },
             "valid IPv6 entry, no gateway"
