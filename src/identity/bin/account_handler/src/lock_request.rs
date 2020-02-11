@@ -4,8 +4,6 @@
 
 //! Utilities for handling lock requests.
 
-#![allow(dead_code)]
-
 use futures::channel::oneshot;
 use futures::lock::Mutex;
 

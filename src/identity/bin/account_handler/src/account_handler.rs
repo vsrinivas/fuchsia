@@ -5,6 +5,7 @@
 use crate::account::{Account, AccountContext};
 use crate::common::AccountLifetime;
 use crate::inspect;
+use crate::lock_request;
 use crate::pre_auth;
 use account_common::{AccountManagerError, LocalAccountId};
 use anyhow::format_err;
@@ -16,7 +17,9 @@ use fidl_fuchsia_identity_internal::{
     AccountHandlerContextProxy, AccountHandlerControlRequest, AccountHandlerControlRequestStream,
     HASH_SALT_SIZE, HASH_SIZE,
 };
+use fuchsia_async as fasync;
 use fuchsia_inspect::{Inspector, Property};
+use futures::channel::oneshot;
 use futures::lock::Mutex;
 use futures::prelude::*;
 use identity_common::TaskGroupError;
@@ -82,7 +85,7 @@ pub struct AccountHandler {
     /// The current state of the AccountHandler state machine, optionally containing
     /// a reference to the `Account` and its pre-authentication data, depending on the
     /// state. The methods of the AccountHandler drives changes to the state.
-    state: Mutex<Lifecycle>,
+    state: Arc<Mutex<Lifecycle>>,
 
     /// Lifetime for this account (ephemeral or persistent with a path).
     lifetime: AccountLifetime,
@@ -94,7 +97,7 @@ pub struct AccountHandler {
     pre_auth_manager: Arc<dyn pre_auth::Manager>,
 
     /// Helper for outputting account handler information via fuchsia_inspect.
-    inspect: inspect::AccountHandler,
+    inspect: Arc<inspect::AccountHandler>,
     // TODO(jsankey): Add TokenManager and AccountHandlerContext.
 }
 
@@ -107,10 +110,11 @@ impl AccountHandler {
         pre_auth_manager: Arc<dyn pre_auth::Manager>,
         inspector: &Inspector,
     ) -> AccountHandler {
-        let inspect = inspect::AccountHandler::new(inspector.root(), &account_id, "uninitialized");
+        let inspect =
+            Arc::new(inspect::AccountHandler::new(inspector.root(), &account_id, "uninitialized"));
         Self {
             context,
-            state: Mutex::new(Lifecycle::Uninitialized),
+            state: Arc::new(Mutex::new(Lifecycle::Uninitialized)),
             lifetime,
             pre_auth_manager,
             inspect,
@@ -256,9 +260,14 @@ impl AccountHandler {
                     warn!("Could not write pre-auth data: {:?}", err);
                     err.api_error
                 })?;
+                let sender = self.create_lock_request_sender().await.map_err(|err| {
+                    warn!("Error constructing lock request sender: {:?}", err);
+                    err.api_error
+                })?;
                 let account = Account::create(
                     self.lifetime.clone(),
                     self.context.clone(),
+                    sender,
                     self.inspect.get_node(),
                 )
                 .await
@@ -324,9 +333,14 @@ impl AccountHandler {
                         return Err(ApiError::FailedAuthentication);
                     }
                 }
+                let sender = self.create_lock_request_sender().await.map_err(|err| {
+                    warn!("Error constructing lock request sender: {:?}", err);
+                    err.api_error
+                })?;
                 let account = Account::load(
                     self.lifetime.clone(),
                     self.context.clone(),
+                    sender,
                     self.inspect.get_node(),
                 )
                 .await
@@ -348,24 +362,10 @@ impl AccountHandler {
     /// Locks the account, terminating all open Account and Persona channels.  Moves
     /// the handler to the `Locked` state.
     async fn lock_account(&self) -> Result<(), ApiError> {
-        let mut state_lock = self.state.lock().await;
-        match &*state_lock {
-            Lifecycle::Locked { .. } => {
-                info!("LockAccount was called in the Locked state, quietly succeeding.");
-                return Ok(());
-            }
-            Lifecycle::Initialized { account } => {
-                let _ = account.task_group().cancel().await; // Ignore AlreadyCancelled error
-                let new_state = Lifecycle::Locked;
-                *state_lock = new_state;
-                self.inspect.lifecycle.set("locked");
-                Ok(())
-            }
-            ref invalid_state @ _ => {
-                warn!("LockAccount was called in the {:?} state", invalid_state);
-                Err(ApiError::FailedPrecondition)
-            }
-        }
+        Self::lock_now(Arc::clone(&self.state), Arc::clone(&self.inspect)).await.map_err(|err| {
+            warn!("LockAccount call failed: {:?}", err);
+            err.api_error
+        })
     }
 
     /// Prepares the handler for an account transfer.  Moves the handler from the
@@ -567,6 +567,70 @@ impl AccountHandler {
             Ok((None, None))
         }
     }
+
+    /// Returns a sender which, when dispatched, causes the account handler
+    /// to transition to the locked state. This method spawns
+    /// a task monitoring the lock request (which terminates quitely if the
+    /// sender is dropped). If lock requests are not supported for the account,
+    /// depending on the pre-auth state, an unsupported lock request sender is
+    /// returned.
+    async fn create_lock_request_sender(
+        &self,
+    ) -> Result<lock_request::Sender, AccountManagerError> {
+        // Lock requests are only supported for accounts with an enrolled
+        // storage unlock mechanism
+        if self.pre_auth_manager.get().await?.as_ref() == &pre_auth::State::NoEnrollments {
+            return Ok(lock_request::Sender::NotSupported);
+        }
+        // Use weak pointers in order to not interfere with destruction of AccountHandler
+        let state_weak = Arc::downgrade(&self.state);
+        let inspect_weak = Arc::downgrade(&self.inspect);
+        let (sender, receiver) = lock_request::channel();
+        fasync::spawn(async move {
+            match receiver.await {
+                Ok(()) => {
+                    if let (Some(state), Some(inspect)) =
+                        (state_weak.upgrade(), inspect_weak.upgrade())
+                    {
+                        if let Err(err) = Self::lock_now(state, inspect).await {
+                            warn!("Lock request failure: {:?}", err);
+                        }
+                    }
+                }
+                Err(oneshot::Canceled) => {
+                    // The sender was dropped, which is on the expected path.
+                }
+            }
+        });
+        Ok(sender)
+    }
+
+    /// Moves the provided lifecycle to the lock state, and notifies the inspect
+    /// node of the change. Succeeds quitely if already locked.
+    async fn lock_now(
+        state: Arc<Mutex<Lifecycle>>,
+        inspect: Arc<inspect::AccountHandler>,
+    ) -> Result<(), AccountManagerError> {
+        let mut state_lock = state.lock().await;
+        match &*state_lock {
+            Lifecycle::Locked { .. } => {
+                info!("A lock operation was attempted in the locked state, quietly succeeding.");
+                Ok(())
+            }
+            Lifecycle::Initialized { account } => {
+                let _ = account.task_group().cancel().await; // Ignore AlreadyCancelled error
+                let new_state = Lifecycle::Locked;
+                *state_lock = new_state;
+                inspect.lifecycle.set("locked");
+                Ok(())
+            }
+            ref invalid_state @ _ => Err(AccountManagerError::new(ApiError::FailedPrecondition)
+                .with_cause(format_err!(
+                    "A lock operation was attempted in the {:?} state",
+                    invalid_state
+                ))),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -582,8 +646,10 @@ mod tests {
     };
     use fidl_fuchsia_identity_internal::{AccountHandlerControlMarker, AccountHandlerControlProxy};
     use fuchsia_async as fasync;
+    use fuchsia_async::DurationExt;
     use fuchsia_inspect::testing::AnyProperty;
     use fuchsia_inspect::{assert_inspect_tree, Inspector};
+    use fuchsia_zircon as zx;
     use futures::future::join;
     use lazy_static::lazy_static;
     use std::sync::Arc;
@@ -618,6 +684,9 @@ mod tests {
 
         /// Pre-key material that fails authentication.
         static ref TEST_INVALID_PREKEY_MATERIAL: Vec<u8>  = vec![80; 32];
+
+        /// Assumed time between a lock request and when the account handler is locked
+        static ref LOCK_REQUEST_DURATION: zx::Duration = zx::Duration::from_millis(20);
     }
 
     /// An enum expressing unexpected errors that may occur during a test.
@@ -1536,6 +1605,119 @@ mod tests {
                 assert_eq!(
                     proxy.create_account(Some(TEST_AUTH_MECHANISM_ID)).await?,
                     Err(ApiError::InvalidRequest)
+                );
+                Ok(())
+            },
+        );
+    }
+
+    #[test]
+    fn test_lock_request_ephemeral_account_failure() {
+        let inspector = Arc::new(Inspector::new());
+        request_stream_test(
+            AccountLifetime::Ephemeral,
+            create_clean_pre_auth_manager(),
+            None,
+            Arc::clone(&inspector),
+            |account_handler_proxy| async move {
+                account_handler_proxy.create_account(None).await??;
+
+                // Get a proxy to the Account interface
+                let (account_client_end, account_server_end) = create_endpoints().unwrap();
+                let (acp_client_end, _) = create_endpoints().unwrap();
+                account_handler_proxy.get_account(acp_client_end, account_server_end).await??;
+                let account_proxy = account_client_end.into_proxy().unwrap();
+
+                // Send the lock request
+                assert_eq!(account_proxy.lock().await?, Err(ApiError::FailedPrecondition));
+
+                // Wait for a potentitially faulty lock request to propagate
+                fasync::Timer::new(LOCK_REQUEST_DURATION.clone().after_now()).await;
+
+                // The channel is still usable
+                assert!(account_proxy.get_persona_ids().await.is_ok());
+
+                // The state remains initialized
+                assert_inspect_tree!(inspector, root: {
+                    account_handler: contains {
+                        lifecycle: "initialized",
+                    }
+                });
+                Ok(())
+            },
+        );
+    }
+
+    #[test]
+    fn test_lock_request_persistent_account_without_auth_mechanism() {
+        let location = TempLocation::new();
+        let inspector = Arc::new(Inspector::new());
+        request_stream_test(
+            location.to_persistent_lifetime(),
+            create_clean_pre_auth_manager(),
+            None,
+            Arc::clone(&inspector),
+            |account_handler_proxy| async move {
+                account_handler_proxy.create_account(None).await??;
+
+                // Get a proxy to the Account interface
+                let (account_client_end, account_server_end) = create_endpoints().unwrap();
+                let (acp_client_end, _) = create_endpoints().unwrap();
+                account_handler_proxy.get_account(acp_client_end, account_server_end).await??;
+                let account_proxy = account_client_end.into_proxy().unwrap();
+
+                // Send the lock request
+                assert_eq!(account_proxy.lock().await?, Err(ApiError::FailedPrecondition));
+                Ok(())
+            },
+        );
+    }
+
+    #[test]
+    fn test_lock_request_persistent_account_with_auth_mechanism() {
+        let authenticator = FakeAuthenticator::new();
+        authenticator.enqueue(Expected::Enroll {
+            resp: Ok((TEST_ENROLLMENT_DATA.clone(), VALID_PREKEY_MATERIAL.clone())),
+        });
+        let location = TempLocation::new();
+        let inspector = Arc::new(Inspector::new());
+        request_stream_test(
+            location.to_persistent_lifetime(),
+            create_clean_pre_auth_manager(),
+            Some(authenticator),
+            Arc::clone(&inspector),
+            |account_handler_proxy| async move {
+                account_handler_proxy
+                    .create_account(Some(TEST_AUTH_MECHANISM_ID.clone()))
+                    .await??;
+
+                // Get a proxy to the Account interface
+                let (account_client_end, account_server_end) = create_endpoints().unwrap();
+                let (acp_client_end, _) = create_endpoints().unwrap();
+                account_handler_proxy.get_account(acp_client_end, account_server_end).await??;
+                let account_proxy = account_client_end.into_proxy().unwrap();
+
+                // Send the lock request
+                assert_eq!(account_proxy.lock().await?, Ok(()));
+
+                // Wait for it to propagate
+                fasync::Timer::new(LOCK_REQUEST_DURATION.clone().after_now()).await;
+
+                // Channel is unusable
+                assert!(account_proxy.get_persona_ids().await.is_err());
+
+                assert_inspect_tree!(inspector, root: {
+                    account_handler: contains {
+                        lifecycle: "locked",
+                    }
+                });
+
+                // Extra check to ensure the account cannot be retrieved
+                let (_, account_server_end) = create_endpoints().unwrap();
+                let (acp_client_end, _) = create_endpoints().unwrap();
+                assert_eq!(
+                    account_handler_proxy.get_account(acp_client_end, account_server_end).await?,
+                    Err(ApiError::FailedPrecondition)
                 );
                 Ok(())
             },

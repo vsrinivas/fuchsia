@@ -5,6 +5,7 @@
 use crate::auth_provider_supplier::AuthProviderSupplier;
 use crate::common::AccountLifetime;
 use crate::inspect;
+use crate::lock_request;
 use crate::persona::{Persona, PersonaContext};
 use crate::stored_account::StoredAccount;
 use crate::TokenManager;
@@ -60,6 +61,9 @@ pub struct Account {
     /// Collection of tasks that are using this instance.
     task_group: TaskGroup,
 
+    /// A Sender of a lock request.
+    lock_request_sender: lock_request::Sender,
+
     /// Helper for outputting account information via fuchsia_inspect.
     inspect: inspect::Account,
     // TODO(jsankey): Once the system and API surface can support more than a single persona, add
@@ -79,6 +83,7 @@ impl Account {
         global_account_id: GlobalAccountId,
         lifetime: AccountLifetime,
         context_proxy: AccountHandlerContextProxy,
+        lock_request_sender: lock_request::Sender,
         inspect_parent: &Node,
     ) -> Result<Account, AccountManagerError> {
         let task_group = TaskGroup::new();
@@ -120,6 +125,7 @@ impl Account {
                 inspect_parent,
             )),
             task_group,
+            lock_request_sender,
             inspect: account_inspect,
         })
     }
@@ -128,6 +134,7 @@ impl Account {
     pub async fn create(
         lifetime: AccountLifetime,
         context_proxy: AccountHandlerContextProxy,
+        lock_request_sender: lock_request::Sender,
         inspect_parent: &Node,
     ) -> Result<Account, AccountManagerError> {
         let global_account_id = Self::generate_global_account_id()?;
@@ -141,14 +148,22 @@ impl Account {
                 StoredAccount::new(local_persona_id.clone(), global_account_id.clone());
             stored_account.save(account_dir)?;
         }
-        Self::new(local_persona_id, global_account_id, lifetime, context_proxy, inspect_parent)
-            .await
+        Self::new(
+            local_persona_id,
+            global_account_id,
+            lifetime,
+            context_proxy,
+            lock_request_sender,
+            inspect_parent,
+        )
+        .await
     }
 
     /// Loads an existing Fuchsia account from disk.
     pub async fn load(
         lifetime: AccountLifetime,
         context_proxy: AccountHandlerContextProxy,
+        lock_request_sender: lock_request::Sender,
         inspect_parent: &Node,
     ) -> Result<Account, AccountManagerError> {
         let account_dir = match lifetime {
@@ -164,8 +179,15 @@ impl Account {
         let stored_account = StoredAccount::load(account_dir)?;
         let local_persona_id = stored_account.get_default_persona_id().clone();
         let global_account_id = stored_account.get_global_account_id().clone();
-        Self::new(local_persona_id, global_account_id, lifetime, context_proxy, inspect_parent)
-            .await
+        Self::new(
+            local_persona_id,
+            global_account_id,
+            lifetime,
+            context_proxy,
+            lock_request_sender,
+            inspect_parent,
+        )
+        .await
     }
 
     /// Removes the account from disk or returns the account and the error.
@@ -285,7 +307,8 @@ impl Account {
                 responder.send(&mut Err(ApiError::UnsupportedOperation))?;
             }
             AccountRequest::Lock { responder } => {
-                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
+                let mut response = self.lock().await;
+                responder.send(&mut response)?;
             }
         }
         Ok(())
@@ -379,6 +402,24 @@ impl Account {
         warn!("SetRecoveryAccount not yet implemented");
         Err(ApiError::Internal)
     }
+
+    async fn lock(&self) -> Result<(), ApiError> {
+        match self.lock_request_sender.send().await {
+            Err(lock_request::SendError::NotSupported) => {
+                info!("Account lock failure: unsupported account type");
+                Err(ApiError::FailedPrecondition)
+            }
+            Err(lock_request::SendError::UnattendedReceiver) => {
+                warn!("Account lock failure: unattended listener");
+                Err(ApiError::Internal)
+            }
+            Err(lock_request::SendError::AlreadySent) => {
+                info!("Received account lock request while existing request in progress");
+                Ok(())
+            }
+            Ok(()) => Ok(()),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -391,6 +432,7 @@ mod tests {
     use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
     use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
+    use futures::channel::oneshot;
 
     const TEST_SCENARIO: Scenario =
         Scenario { include_test: false, threat_scenario: ThreatScenario::BasicAttacker };
@@ -418,6 +460,7 @@ mod tests {
             Account::create(
                 AccountLifetime::Persistent { account_dir },
                 account_handler_context_client_end.into_proxy().unwrap(),
+                lock_request::Sender::NotSupported,
                 &inspector.root(),
             )
             .await
@@ -430,6 +473,7 @@ mod tests {
             Account::create(
                 AccountLifetime::Ephemeral,
                 account_handler_context_client_end.into_proxy().unwrap(),
+                lock_request::Sender::NotSupported,
                 &inspector.root(),
             )
             .await
@@ -442,9 +486,28 @@ mod tests {
             Account::load(
                 AccountLifetime::Persistent { account_dir: self.location.path.clone() },
                 account_handler_context_client_end.into_proxy().unwrap(),
+                lock_request::Sender::NotSupported,
                 &inspector.root(),
             )
             .await
+        }
+
+        async fn create_persistent_account_with_lock_request(
+            &self,
+        ) -> Result<(Account, oneshot::Receiver<()>), AccountManagerError> {
+            let inspector = Inspector::new();
+            let (account_handler_context_client_end, _) =
+                create_endpoints::<AccountHandlerContextMarker>().unwrap();
+            let account_dir = self.location.path.clone();
+            let (sender, receiver) = lock_request::channel();
+            let account = Account::create(
+                AccountLifetime::Persistent { account_dir },
+                account_handler_context_client_end.into_proxy().unwrap(),
+                sender,
+                &inspector.root(),
+            )
+            .await?;
+            Ok((account, receiver))
         }
 
         async fn run<TestFn, Fut>(&mut self, test_object: Account, test_fn: TestFn)
@@ -548,6 +611,7 @@ mod tests {
         assert!(Account::load(
             AccountLifetime::Ephemeral,
             account_handler_context_client_end.into_proxy().unwrap(),
+            lock_request::Sender::NotSupported,
             &inspector.root(),
         )
         .await
@@ -760,8 +824,48 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn test_lock() {
         let mut test = Test::new();
-        test.run(test.create_persistent_account().await.unwrap(), |proxy| async move {
-            assert_eq!(proxy.lock().await?, Err(ApiError::UnsupportedOperation));
+        let (account, mut receiver) =
+            test.create_persistent_account_with_lock_request().await.unwrap();
+        test.run(account, |proxy| async move {
+            assert_eq!(receiver.try_recv(), Ok(None));
+            assert_eq!(proxy.lock().await?, Ok(()));
+            assert_eq!(receiver.await, Ok(()));
+            Ok(())
+        })
+        .await;
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_lock_not_supported() {
+        let mut test = Test::new();
+        let account = test.create_persistent_account().await.unwrap();
+        test.run(account, |proxy| async move {
+            assert_eq!(proxy.lock().await?, Err(ApiError::FailedPrecondition));
+            Ok(())
+        })
+        .await;
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_lock_unattended_receiver() {
+        let mut test = Test::new();
+        let (account, receiver) = test.create_persistent_account_with_lock_request().await.unwrap();
+        std::mem::drop(receiver);
+        test.run(account, |proxy| async move {
+            assert_eq!(proxy.lock().await?, Err(ApiError::Internal));
+            Ok(())
+        })
+        .await;
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_lock_twice() {
+        let mut test = Test::new();
+        let (account, _receiver) =
+            test.create_persistent_account_with_lock_request().await.unwrap();
+        test.run(account, |proxy| async move {
+            assert_eq!(proxy.lock().await?, Ok(()));
+            assert_eq!(proxy.lock().await?, Ok(()));
             Ok(())
         })
         .await;
