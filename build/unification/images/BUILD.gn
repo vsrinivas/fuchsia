@@ -1372,7 +1372,7 @@ aggregate_manifest("migrated-image") {
   deps = [
     "//src/developer/cmd:bin-manifest",
     "//src/devices/serial/drivers/serial-async:serial-async-manifest",
-    "//zircon/system/dev/test/ddk-test:ddk-test-manifest",
+    "//src/devices/tests/ddk-test:ddk-test-manifest",
     "//zircon/system/uapp/audio:bin-manifest",
     "//zircon/system/uapp/audio:test-manifest",
     "//zircon/system/uapp/backlight:backlight-manifest",
@@ -1391,7 +1391,7 @@ aggregate_manifest("migrated-image") {
 #------------------
     "//zircon/system/uapp/cpuctl:cpuctl-manifest",
     "//zircon/system/uapp/crasher:crasher-manifest",
-    "//zircon/system/dev/test/ddk-schedule-work:ddk-schedule-work-perf-manifest",
+    "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-perf-manifest",
 #------------------
     #":bin.device-name-provider",
 #------------------
@@ -1549,18 +1549,18 @@ aggregate_manifest("migrated-image") {
     #":driver.component.proxy",
 #------------------
     "//src/devices/misc/drivers/cpu-trace:cpu-trace-manifest",
-    "//zircon/system/dev/test/crash-device:crash-device-manifest",
+    "//src/devices/tests/crash-device:crash-device-manifest",
     "//src/ui/input/drivers/cypress:cypress-manifest",
-    "//zircon/system/dev/test/ddk-lifecycle:ddk-lifecycle-test-manifest",
-    "//zircon/system/dev/test/ddk-power:ddk-power-test-manifest",
-    "//zircon/system/dev/test/ddk-power:ddk-power-test-child-manifest",
-    "//zircon/system/dev/test/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-manifest",
-    "//zircon/system/dev/test/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-child-manifest",
-    "//zircon/system/dev/test/ddk-schedule-work:ddk-schedule-work-test-manifest",
+    "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-test-manifest",
+    "//src/devices/tests/ddk-power:ddk-power-test-manifest",
+    "//src/devices/tests/ddk-power:ddk-power-test-child-manifest",
+    "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-manifest",
+    "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-child-manifest",
+    "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-test-manifest",
     "//examples/drivers//fifo:demo-fifo-manifest",
-    "//zircon/system/dev/test/devhost-test:devhost-test-manifest",
-    "//zircon/system/dev/test/devhost-test:devhost-test-child-manifest",
-    "//zircon/system/dev/test/devhost-test:devhost-test-manual-manifest",
+    "//src/devices/tests/devhost-test:devhost-test-manifest",
+    "//src/devices/tests/devhost-test:devhost-test-child-manifest",
+    "//src/devices/tests/devhost-test:devhost-test-manual-manifest",
     "//src/graphics/display/drivers/display:display-manifest",
     "//src/graphics/display/drivers/dsi-dw:dsi-dw-manifest",
     "//src/graphics/display/drivers/dsi-mt:dsi-mt-manifest",
@@ -1577,8 +1577,8 @@ aggregate_manifest("migrated-image") {
     "//src/devices/serial/drivers/usb-cdc-acm:fake-usb-cdc-acm-manifest",
     "//src/devices/rtc/drivers/fallback:fallback-manifest",
     "//src/devices/usb/drivers/usb-test/flash-programmer:flash-programmer-manifest",
-    "//zircon/system/dev/test/fidl-async-llcpp-driver:fidl-async-llcpp-driver-manifest",
-    "//zircon/system/dev/test/fidl-llcpp-driver:fidl-llcpp-driver-manifest",
+    "//src/devices/tests/fidl-async-llcpp-driver:fidl-async-llcpp-driver-manifest",
+    "//src/devices/tests/fidl-llcpp-driver:fidl-llcpp-driver-manifest",
     "//src/ui/input/drivers/focaltech:focaltech-manifest",
     "//src/devices/serial/drivers/ftdi:ftdi-manifest",
     "//src/devices/serial/drivers/ftdi:ftdi-fake-usb-manifest",
@@ -1607,7 +1607,7 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/dev/board/integration-test:integration-test-manifest",
     "//src/media/audio/drivers/intel-hda/controller:intel-hda-manifest",
     "//src/devices/i2c/drivers/intel-i2c:intel-i2c-manifest",
-    "//zircon/system/dev/test/isolateddevmgr:isolateddevmgr-test-manifest",
+    "//src/devices/tests/isolateddevmgr:isolateddevmgr-test-manifest",
     "//src/devices/misc/drivers/ktrace:ktrace-manifest",
     "//src/devices/light-sensor/drivers/lite-on:lite-on-manifest",
     "//src/ui/light/drivers/lp50xx-light:lp50xx-light-manifest",
@@ -1727,15 +1727,15 @@ aggregate_manifest("migrated-image") {
 #------------------
     #":driver.test-spi",
 #------------------
-    "//zircon/system/dev/test/bind-fail-test:bind-fail-test-manifest",
+    "//src/devices/tests/bind-fail-test:bind-fail-test-manifest",
 #------------------
     #":driver.test.ddktl-test",
 #------------------
-    "//zircon/system/dev/test/sysdev:sysdev-manifest",
-    "//zircon/system/dev/test/unit-test-test:unit-test-fail-manifest",
-    "//zircon/system/dev/test/unit-test-test:unit-test-pass-manifest",
-    "//zircon/system/dev/test/mock-device:mock-device-manifest",
-    "//zircon/system/dev/test/bind-debugger-test:bind-debugger-test-manifest",
+    "//src/devices/tests/sysdev:sysdev-manifest",
+    "//src/devices/tests/unit-test-test:unit-test-fail-manifest",
+    "//src/devices/tests/unit-test-test:unit-test-pass-manifest",
+    "//src/devices/tests/mock-device:mock-device-manifest",
+    "//src/devices/tests/bind-debugger-test:bind-debugger-test-driver-manifest",
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-manifest",
     "//src/storage/block/drivers/ums-function:ums-function-manifest",
     "//src/media/audio/drivers/usb-audio:usb-audio-manifest",
@@ -1794,7 +1794,7 @@ aggregate_manifest("migrated-image") {
 aggregate_manifest("migrated-aux") {
   deps = [
     "//src/devices/serial/drivers/serial-async/test:serial-async-unittest-manifest",
-    "//zircon/system/dev/test/ddk-test:ddk-test-manifest",
+    "//src/devices/tests/ddk-test:ddk-test-manifest",
     "//zircon/system/uapp/audio:test-manifest",
 
     # Please uncomment and update to //zircon/whatever below, but keep these
@@ -1922,10 +1922,10 @@ aggregate_manifest("migrated-aux") {
     #":bin.zstd-seekable-symmetric-fuzzer.ubsan",
 #------------------
     "//src/media/audio/drivers/alc5663:alc5663-manifest",
-    "//zircon/system/dev/test/crash-device:crash-device-manifest",
-    "//zircon/system/dev/test/devhost-test:devhost-test-manifest",
-    "//zircon/system/dev/test/sysdev:sysdev-manifest",
-    "//zircon/system/dev/test/mock-device:mock-device-manifest",
+    "//src/devices/tests/crash-device:crash-device-manifest",
+    "//src/devices/tests/devhost-test:devhost-test-manifest",
+    "//src/devices/tests/sysdev:sysdev-manifest",
+    "//src/devices/tests/mock-device:mock-device-manifest",
 #------------------
     #":lib.async-default",
 #------------------
@@ -2929,11 +2929,11 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/utest/ctor:ctor-manifest",
     "//src/ui/input/drivers/cypress:cypress-touch-test-manifest",
-    "//zircon/system/dev/test/ddk-fidl-test:ddk-fidl-test-manifest",
-    "//zircon/system/dev/test/ddk-lifecycle:ddk-lifecycle-manifest",
-    "//zircon/system/dev/test/ddk-power:ddk-power-manifest",
-    "//zircon/system/dev/test/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-manifest",
-    "//zircon/system/dev/test/ddk-schedule-work:ddk-schedule-work-manifest",
+    "//src/devices/tests/ddk-fidl-test:ddk-fidl-test-manifest",
+    "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-manifest",
+    "//src/devices/tests/ddk-power:ddk-power-manifest",
+    "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-manifest",
+    "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-manifest",
 #------------------
     #":test.sys.ddk-unittest-test",
 #------------------
@@ -3055,7 +3055,7 @@ aggregate_manifest("migrated-aux") {
     "//src/media/audio/drivers/intel-hda/test:intel-hda-test-manifest",
     "//zircon/system/ulib/intel-hda/test:intel-hda-utils-test-manifest",
     "//zircon/system/ulib/io-scheduler/test:io-scheduler-test-manifest",
-    "//zircon/system/dev/test/isolateddevmgr:isolateddevmgr-manifest",
+    "//src/devices/tests/isolateddevmgr:isolateddevmgr-manifest",
 #------------------
     #":test.sys.kcounter-test",
 #------------------
@@ -3153,7 +3153,7 @@ aggregate_manifest("migrated-aux") {
 #------------------
     #":test.sys.noop-test.ubsan-sancov-full",
 #------------------
-    "//zircon/system/dev/test/operation:operation-manifest",
+    "//src/devices/tests/operation:operation-manifest",
     "//src/devices/tee/drivers/optee:optee-message-test-manifest",
 #------------------
     #":test.sys.paver-test",
@@ -3313,7 +3313,7 @@ aggregate_manifest("migrated-aux") {
 aggregate_manifest("migrated-tests") {
   deps = [
     "//src/devices/serial/drivers/serial-async/test:serial-async-unittest-manifest",
-    "//zircon/system/dev/test/ddk-test:ddk-test-manifest",
+    "//src/devices/tests/ddk-test:ddk-test-manifest",
     "//zircon/system/uapp/audio:test-manifest",
 
     # Please uncomment and update to //zircon/whatever below, but keep these
@@ -3399,10 +3399,10 @@ aggregate_manifest("migrated-tests") {
     #":bin.zstd-fuzzer.ubsan",
 #------------------
     "//src/media/audio/drivers/alc5663:alc5663-manifest",
-    "//zircon/system/dev/test/crash-device:crash-device-manifest",
-    "//zircon/system/dev/test/devhost-test:devhost-test-manifest",
-    "//zircon/system/dev/test/sysdev:sysdev-manifest",
-    "//zircon/system/dev/test/mock-device:mock-device-manifest",
+    "//src/devices/tests/crash-device:crash-device-manifest",
+    "//src/devices/tests/devhost-test:devhost-test-manifest",
+    "//src/devices/tests/sysdev:sysdev-manifest",
+    "//src/devices/tests/mock-device:mock-device-manifest",
 #------------------
     #":test.c.debugdata-test",
 #------------------
@@ -3631,11 +3631,11 @@ aggregate_manifest("migrated-tests") {
 #------------------
     "//zircon/system/utest/ctor:ctor-manifest",
     "//src/ui/input/drivers/cypress:cypress-touch-test-manifest",
-    "//zircon/system/dev/test/ddk-fidl-test:ddk-fidl-test-manifest",
-    "//zircon/system/dev/test/ddk-lifecycle:ddk-lifecycle-manifest",
-    "//zircon/system/dev/test/ddk-power:ddk-power-manifest",
-    "//zircon/system/dev/test/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-manifest",
-    "//zircon/system/dev/test/ddk-schedule-work:ddk-schedule-work-manifest",
+    "//src/devices/tests/ddk-fidl-test:ddk-fidl-test-manifest",
+    "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-manifest",
+    "//src/devices/tests/ddk-power:ddk-power-manifest",
+    "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-manifest",
+    "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-manifest",
 #------------------
     #":test.sys.ddk-unittest-test",
 #------------------
@@ -3757,7 +3757,7 @@ aggregate_manifest("migrated-tests") {
     "//src/media/audio/drivers/intel-hda/test:intel-hda-test-manifest",
     "//zircon/system/ulib/intel-hda/test:intel-hda-utils-test-manifest",
     "//zircon/system/ulib/io-scheduler/test:io-scheduler-test-manifest",
-    "//zircon/system/dev/test/isolateddevmgr:isolateddevmgr-manifest",
+    "//src/devices/tests/isolateddevmgr:isolateddevmgr-manifest",
 #------------------
     #":test.sys.kcounter-test",
 #------------------
@@ -3855,7 +3855,7 @@ aggregate_manifest("migrated-tests") {
 #------------------
     #":test.sys.noop-test.ubsan-sancov-full",
 #------------------
-    "//zircon/system/dev/test/operation:operation-manifest",
+    "//src/devices/tests/operation:operation-manifest",
     "//src/devices/tee/drivers/optee:optee-message-test-manifest",
 #------------------
     #":test.sys.paver-test",

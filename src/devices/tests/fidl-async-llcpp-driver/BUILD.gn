@@ -15,7 +15,7 @@ assert(!defined(zx) || zx != "/",
 import("//build/config/fuchsia/rules.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
-driver_module("fidl-llcpp-driver") {
+driver_module("fidl-async-llcpp-driver") {
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -31,10 +31,10 @@ driver_module("fidl-llcpp-driver") {
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/dev/test/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
+    "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
   ]
 }
 
-migrated_manifest("fidl-llcpp-driver-manifest") {
-  deps = [ ":fidl-llcpp-driver" ]
+migrated_manifest("fidl-async-llcpp-driver-manifest") {
+  deps = [ ":fidl-async-llcpp-driver" ]
 }
