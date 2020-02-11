@@ -172,7 +172,7 @@ class GNBuilder(Frontend):
         for dep in atom['deps']:
             data.deps.append(dep)
 
-        self.write_file(os.path.join(base, 'BUILD.gn'), 'fidl', data)
+        self.write_file(os.path.join(base, 'BUILD.gn'), 'fidl_library', data)
         self.fidl_targets.append(name)
 
     def install_host_tool_atom(self, atom):
