@@ -112,24 +112,44 @@ fn fidl_table_validator(span: Span, attrs: &[Attribute]) -> Result<Option<Ident>
         .transpose()
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct FidlField {
     ident: Ident,
+    #[allow(unused)]
+    in_vec: bool,
     kind: FidlFieldKind,
 }
 
 impl TryFrom<Field> for FidlField {
     type Error = Error;
     fn try_from(src: Field) -> Result<Self> {
-        let span = src.span().clone();
+        let ident = match src.ident {
+            Some(ident) => Ok(ident),
+            None => Err(Error::new(
+                src.span(),
+                "ValidFidlTable can only be derived for non-tuple structs.",
+            )),
+        }?;
+
         let attrs = src.attrs;
         let kind = FidlFieldKind::try_from(attrs.as_slice())?;
-        match src.ident {
-            Some(ident) => Ok(FidlField { ident, kind }),
-            None => {
-                Err(Error::new(span, "ValidFidlTable can only be derived for non-tuple structs."))
+
+        let in_vec = match src.ty {
+            syn::Type::Path(path) if path.qself.is_none() => {
+                let mut segments = path.path.segments.iter();
+                let mut get_segment = || segments.next().map(|s| format!("{}", s.ident));
+                let first_segment = get_segment();
+                let second_segment = get_segment();
+                match (kind.clone(), first_segment, second_segment) {
+                    (FidlFieldKind::Required, Some(segment), _) if segment == "Vec" => true,
+                    (FidlFieldKind::Optional, _, Some(segment)) if segment == "Vec" => true,
+                    _ => false,
+                }
             }
-        }
+            _ => false,
+        };
+
+        Ok(FidlField { ident, in_vec, kind })
     }
 }
 
@@ -144,11 +164,23 @@ impl FidlField {
         match &self.kind {
             FidlFieldKind::Required => {
                 let camel_case = self.camel_case();
-                quote!(
-                    #ident: std::convert::TryFrom::try_from(
-                        src.#ident.ok_or(#missing_field_error_type::#camel_case)?
-                    ).map_err(anyhow::Error::from)?,
-                )
+                match self.in_vec {
+                    true => quote!(
+                        #ident: {
+                            let src_vec = src.#ident.ok_or(#missing_field_error_type::#camel_case)?;
+                            src_vec
+                                .into_iter()
+                                .map(std::convert::TryFrom::try_from)
+                                .map(|r| r.map_err(anyhow::Error::from))
+                                .collect::<std::result::Result<_, anyhow::Error>>()?
+                        },
+                    ),
+                    false => quote!(
+                        #ident: std::convert::TryFrom::try_from(
+                            src.#ident.ok_or(#missing_field_error_type::#camel_case)?
+                        ).map_err(anyhow::Error::from)?,
+                    ),
+                }
             }
             FidlFieldKind::Optional => quote!(
                 #ident: if let Some(field) = src.#ident {
@@ -168,7 +200,7 @@ impl FidlField {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum FidlFieldKind {
     Required,
     Optional,
@@ -258,11 +290,18 @@ fn impl_valid_fidl_table(
     field_intos.extend(fields.iter().map(|field| {
         let ident = &field.ident;
         match &field.kind {
-            FidlFieldKind::Required | FidlFieldKind::HasDefault(_) => quote!(
-                #ident: Some(
-                    src.#ident.into()
+            FidlFieldKind::Required | FidlFieldKind::HasDefault(_) => match field.in_vec {
+                true => quote!(
+                    #ident: Some(
+                        src.#ident.into_iter().map(Into::into).collect()
+                    ),
                 ),
-            ),
+                false => quote!(
+                    #ident: Some(
+                        src.#ident.into()
+                    ),
+                ),
+            },
             FidlFieldKind::Optional => quote!(
                 #ident: if let Some(field) = src.#ident {
                     Some(field.into())

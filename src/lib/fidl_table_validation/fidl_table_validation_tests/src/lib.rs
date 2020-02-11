@@ -330,3 +330,42 @@ fn works_with_option_wrapped_nested_fields() {
         Err(e) => panic!("Did not expect to fail to build ValidFidl: got {:?}", e),
     };
 }
+
+#[test]
+fn works_with_vec_wrapped_nested_fields() {
+    #[derive(Default, Debug, PartialEq)]
+    struct NestedFidl {
+        required: Option<usize>,
+    }
+    dummy_impl_decodable!(NestedFidl);
+
+    #[derive(ValidFidlTable, Debug, PartialEq)]
+    #[fidl_table_src(NestedFidl)]
+    struct ValidNestedFidl {
+        required: usize,
+    }
+
+    #[derive(Default, Debug, PartialEq)]
+    struct Fidl {
+        vec: Option<Vec<NestedFidl>>,
+    }
+    dummy_impl_decodable!(Fidl);
+
+    #[derive(Default, ValidFidlTable, Debug, PartialEq)]
+    #[fidl_table_src(Fidl)]
+    struct ValidFidl {
+        vec: Vec<ValidNestedFidl>,
+    }
+
+    match ValidFidl::try_from(Fidl {
+        vec: Some(vec![NestedFidl { required: Some(5) }, NestedFidl { required: Some(6) }]),
+    }) {
+        Ok(valid) => assert_eq!(
+            ValidFidl {
+                vec: vec![ValidNestedFidl { required: 5 }, ValidNestedFidl { required: 6 }]
+            },
+            valid
+        ),
+        Err(e) => panic!("Did not expect to fail to build ValidFidl: got {:?}", e),
+    };
+}
