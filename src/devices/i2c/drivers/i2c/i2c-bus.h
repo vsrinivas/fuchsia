@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_I2C_I2C_I2C_BUS_H_
+#define ZIRCON_SYSTEM_DEV_I2C_I2C_I2C_BUS_H_
 
+#include <lib/sync/completion.h>
 #include <threads.h>
 
 #include <ddk/driver.h>
@@ -11,16 +13,16 @@
 #include <ddktl/protocol/i2cimpl.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
-#include <lib/sync/completion.h>
 
 namespace i2c {
 
 class I2cBus : public fbl::RefCounted<I2cBus> {
  public:
   explicit I2cBus(ddk::I2cImplProtocolClient i2c, uint32_t bus_id);
+  virtual ~I2cBus() = default;
   zx_status_t Start();
-  void Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count,
-                i2c_transact_callback callback, void* cookie);
+  virtual void Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count,
+                        i2c_transact_callback callback, void* cookie);
 
   size_t max_transfer() const { return max_transfer_; }
 
@@ -50,3 +52,5 @@ class I2cBus : public fbl::RefCounted<I2cBus> {
 };
 
 }  // namespace i2c
+
+#endif  // ZIRCON_SYSTEM_DEV_I2C_I2C_I2C_BUS_H_

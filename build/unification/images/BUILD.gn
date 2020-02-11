@@ -2958,6 +2958,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/utest/dlopen-indirect-deps:dlopen-indirect-deps-manifest",
     "//zircon/system/dev/lib/dma-buffer/test:dma-buffer-test-manifest",
     "//src/graphics/display/drivers/mt8167s-display:dsi-host-manifest",
+    "//src/devices/i2c/drivers/i2c:i2c-test-manifest",
     "//src/devices/i2c/drivers/dw-i2c:dw-i2c-test-manifest",
 #------------------
     #":test.sys.elf-search-test",
@@ -3660,6 +3661,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/utest/dlopen-indirect-deps:dlopen-indirect-deps-manifest",
     "//zircon/system/dev/lib/dma-buffer/test:dma-buffer-test-manifest",
     "//src/graphics/display/drivers/mt8167s-display:dsi-host-manifest",
+    "//src/devices/i2c/drivers/i2c:i2c-test-manifest",
     "//src/devices/i2c/drivers/dw-i2c:dw-i2c-test-manifest",
 #------------------
     #":test.sys.elf-search-test",

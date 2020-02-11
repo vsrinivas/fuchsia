@@ -13,6 +13,7 @@ assert(!defined(zx) || zx != "/",
        "This file can only be used in the Fuchsia GN build.")
 
 import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("i2c") {
@@ -36,9 +37,39 @@ driver_module("i2c") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.i2cimpl",
+    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
+  ]
+}
+
+test("i2c-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  output_name = "i2c-test"
+  sources = [
+    "i2c-bus.cc",
+    "i2c-child-test.cc",
+    "i2c-child.cc",
+  ]
+  deps = [
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/device-protocol-i2c",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.i2c",
+    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
   ]
 }
 
 migrated_manifest("i2c-manifest") {
   deps = [ ":i2c" ]
+}
+
+migrated_manifest("i2c-test-manifest") {
+  deps = [ ":i2c-test" ]
 }

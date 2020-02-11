@@ -2,10 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_I2C_I2C_I2C_CHILD_H_
+#define ZIRCON_SYSTEM_DEV_I2C_I2C_I2C_CHILD_H_
 
+#include <fuchsia/hardware/i2c/llcpp/fidl.h>
+
+#include <ddk/metadata/i2c.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
+#include <ddktl/fidl.h>
 #include <ddktl/protocol/i2c.h>
 #include <ddktl/protocol/i2cimpl.h>
 #include <fbl/ref_ptr.h>
@@ -16,18 +21,33 @@
 namespace i2c {
 
 class I2cChild;
-using I2cChildType = ddk::Device<I2cChild, ddk::UnbindableNew>;
 
-class I2cChild : public I2cChildType, public ddk::I2cProtocol<I2cChild, ddk::base_protocol> {
+using I2cChildType = ddk::Device<I2cChild, ddk::UnbindableNew, ddk::Messageable>;
+
+namespace fidl_i2c = llcpp::fuchsia::hardware::i2c;
+
+class I2cChild : public I2cChildType,
+                 public ddk::I2cProtocol<I2cChild, ddk::base_protocol>,
+                 public fidl_i2c::Device2::Interface {
  public:
-  I2cChild(zx_device_t* parent, ddk::I2cImplProtocolClient i2c, fbl::RefPtr<I2cBus> bus,
-           const i2c_channel_t* channel)
-      : I2cChildType(parent), bus_(bus), address_(channel->address) {}
+  I2cChild(zx_device_t* parent, fbl::RefPtr<I2cBus> bus, uint16_t address)
+      : I2cChildType(parent), bus_(bus), address_(address) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
+  zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    DdkTransaction transaction(txn);
+    llcpp::fuchsia::hardware::i2c::Device2::Dispatch(this, msg, &transaction);
+    return transaction.Status();
+  }
+
+  // FIDL methods.
+  void Transfer(fidl::VectorView<bool> input_segments,
+                fidl::VectorView<fidl::VectorView<uint8_t>> input_segments_data,
+                fidl::VectorView<uint8_t> output_segments_length,
+                TransferCompleter::Sync completer) override;
 
   void I2cTransact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
                    void* cookie);
@@ -40,3 +60,5 @@ class I2cChild : public I2cChildType, public ddk::I2cProtocol<I2cChild, ddk::bas
 };
 
 }  // namespace i2c
+
+#endif  // ZIRCON_SYSTEM_DEV_I2C_I2C_I2C_CHILD_H_
