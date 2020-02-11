@@ -74,8 +74,10 @@ void SetConstraints(fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     image_constraints.color_spaces_count = 1;
     switch (pixel_format) {
       case fuchsia::sysmem::PixelFormatType::BGRA32:
+      case fuchsia::sysmem::PixelFormatType::R8G8B8A8:
         image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::SRGB;
         break;
+      case fuchsia::sysmem::PixelFormatType::I420:
       case fuchsia::sysmem::PixelFormatType::NV12:
         image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC709;
         break;
@@ -685,10 +687,11 @@ TEST_F(ImagePipe2Test, DetectsProtectedMemory) {
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
 
-// Checks if NV12 and BGRAimage can be added.
-TEST_F(ImagePipe2Test, AddMultipleFormatsImage) {
-  std::vector<fuchsia::sysmem::PixelFormatType> formats{fuchsia::sysmem::PixelFormatType::BGRA32,
-                                                        fuchsia::sysmem::PixelFormatType::NV12};
+// Checks all supported pixel formats can be added.
+TEST_F(ImagePipe2Test, SupportsMultiplePixelFormats) {
+  std::vector<fuchsia::sysmem::PixelFormatType> formats{
+      fuchsia::sysmem::PixelFormatType::BGRA32, fuchsia::sysmem::PixelFormatType::I420,
+      fuchsia::sysmem::PixelFormatType::NV12, fuchsia::sysmem::PixelFormatType::R8G8B8A8};
   for (auto format : formats) {
     auto tokens = CreateSysmemTokens(image_pipe_->sysmem_allocator(), true);
     const uint32_t kBufferId = 1;
@@ -711,8 +714,6 @@ TEST_F(ImagePipe2Test, AddMultipleFormatsImage) {
 
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
-
-// Detects not supported pixel format.
 
 // TODO(23406): More tests.
 // - Test that you can't add the same image twice.

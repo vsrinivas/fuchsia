@@ -33,6 +33,7 @@ int main(int argc, const char** argv) {
   } table[] = {
       {"NV12", fuchsia::sysmem::PixelFormatType::NV12},
       {"BGRA32", fuchsia::sysmem::PixelFormatType::BGRA32},
+      {"R8G8B8A8", fuchsia::sysmem::PixelFormatType::R8G8B8A8},
       {"I420", fuchsia::sysmem::PixelFormatType::I420},
   };
 

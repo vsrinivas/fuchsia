@@ -31,6 +31,7 @@ fuchsia::sysmem::ColorSpaceType DefaultColorSpaceForPixelFormat(
     case fuchsia::sysmem::PixelFormatType::I420:
       return fuchsia::sysmem::ColorSpaceType::REC709;
     case fuchsia::sysmem::PixelFormatType::BGRA32:
+    case fuchsia::sysmem::PixelFormatType::R8G8B8A8:
       return fuchsia::sysmem::ColorSpaceType::SRGB;
     default:
       FXL_NOTREACHED() << "Pixel format not supported.";
@@ -44,6 +45,7 @@ uint32_t StrideBytesPerWidthPixel(fuchsia::sysmem::PixelFormatType pixel_format)
     case fuchsia::sysmem::PixelFormatType::I420:
       return 1u;
     case fuchsia::sysmem::PixelFormatType::BGRA32:
+    case fuchsia::sysmem::PixelFormatType::R8G8B8A8:
       return 4u;
     default:
       FXL_NOTREACHED() << "Pixel format not supported.";
@@ -189,14 +191,17 @@ void YuvBaseView::PresentImage(uint32_t image_id) {
 
 void YuvBaseView::SetVmoPixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
   switch (pixel_format_) {
-    case fuchsia::sysmem::PixelFormatType::NV12:
-      SetNv12Pixels(vmo_base, pixel_multiplier);
-      break;
     case fuchsia::sysmem::PixelFormatType::BGRA32:
       SetBgra32Pixels(vmo_base, pixel_multiplier);
       break;
     case fuchsia::sysmem::PixelFormatType::I420:
       SetI420Pixels(vmo_base, pixel_multiplier);
+      break;
+    case fuchsia::sysmem::PixelFormatType::R8G8B8A8:
+      SetRgba32Pixels(vmo_base, pixel_multiplier);
+      break;
+    case fuchsia::sysmem::PixelFormatType::NV12:
+      SetNv12Pixels(vmo_base, pixel_multiplier);
       break;
     default:
       FXL_NOTREACHED() << "Pixel format not supported.";
@@ -213,6 +218,25 @@ void YuvBaseView::SetBgra32Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
       uint8_t v_value = GetVValue(x, y) * pixel_multiplier;
       yuv::YuvToBgra(y_value, u_value, v_value,
                      &vmo_base[y_iter * stride_ + x_iter * sizeof(uint32_t)]);
+    }
+  }
+}
+
+void YuvBaseView::SetRgba32Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier) {
+  for (uint32_t y_iter = 0; y_iter < kShapeHeight; y_iter++) {
+    double y = static_cast<double>(y_iter) / kShapeHeight;
+    for (uint32_t x_iter = 0; x_iter < kShapeWidth; x_iter++) {
+      double x = static_cast<double>(x_iter) / kShapeWidth;
+      uint8_t y_value = GetYValue(x, y) * pixel_multiplier;
+      uint8_t u_value = GetUValue(x, y) * pixel_multiplier;
+      uint8_t v_value = GetVValue(x, y) * pixel_multiplier;
+      uint8_t bgra_val[4];
+      yuv::YuvToBgra(y_value, u_value, v_value, bgra_val);
+      uint8_t* target = &vmo_base[y_iter * stride_ + x_iter * sizeof(uint32_t)];
+      target[0] = bgra_val[2];
+      target[1] = bgra_val[1];
+      target[2] = bgra_val[0];
+      target[3] = bgra_val[3];
     }
   }
 }

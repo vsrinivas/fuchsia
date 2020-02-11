@@ -25,6 +25,8 @@ vk::Format SysmemPixelFormatTypeToVkFormat(fuchsia::sysmem::PixelFormatType pixe
   switch (pixel_format) {
     case fuchsia::sysmem::PixelFormatType::BGRA32:
       return vk::Format::eB8G8R8A8Unorm;
+    case fuchsia::sysmem::PixelFormatType::R8G8B8A8:
+      return vk::Format::eR8G8B8A8Unorm;
     case fuchsia::sysmem::PixelFormatType::NV12:
       return vk::Format::eG8B8R82Plane420Unorm;
     case fuchsia::sysmem::PixelFormatType::I420:

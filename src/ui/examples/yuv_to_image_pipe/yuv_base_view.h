@@ -39,6 +39,7 @@ class YuvBaseView : public scenic::BaseView {
 
   void SetVmoPixels(uint8_t* vmo_base, uint8_t pixel_multiplier);
   void SetBgra32Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier);
+  void SetRgba32Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier);
   void SetNv12Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier);
   void SetI420Pixels(uint8_t* vmo_base, uint8_t pixel_multiplier);
 
