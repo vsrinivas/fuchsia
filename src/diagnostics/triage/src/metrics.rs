@@ -6,8 +6,8 @@ mod fetch;
 
 use {
     super::config,
+    super::config::InspectData,
     serde_derive::Deserialize,
-    serde_json as json,
     std::{clone::Clone, collections::HashMap},
 };
 
@@ -20,7 +20,7 @@ pub type MetricsSchema = HashMap<String, Metric>;
 /// component) that can be accessed by Selector-type Metrics.
 pub struct MetricState<'a> {
     pub metrics: &'a Metrics,
-    pub inspect_entries: &'a Vec<json::Value>,
+    pub inspect_data: &'a InspectData,
 }
 
 /// The contents of a single Metric. Metrics produce a value for use in Actions or other Metrics.
@@ -78,8 +78,8 @@ pub enum Expression {
 
 impl<'a> MetricState<'a> {
     /// Create an initialized MetricState.
-    pub fn new(metrics: &'a Metrics, inspect_entries: &'a Vec<json::Value>) -> MetricState<'a> {
-        MetricState { metrics, inspect_entries }
+    pub fn new(metrics: &'a Metrics, inspect_data: &'a InspectData) -> MetricState<'a> {
+        MetricState { metrics, inspect_data }
     }
 
     /// Calculate the value of a Metric specified by name and namespace.
@@ -118,7 +118,9 @@ impl<'a> MetricState<'a> {
                     ))
                 }
                 Some(metric) => match metric {
-                    Metric::Selector(selector) => fetch::fetch(&self.inspect_entries, &selector),
+                    Metric::Selector(selector) => {
+                        fetch::fetch(&self.inspect_data.as_json(), &selector)
+                    }
                     Metric::Eval(expression) => match config::parse::parse_expression(expression) {
                         Ok(expr) => self.evaluate(namespace, &expr),
                         Err(e) => MetricValue::Missing(format!("Expression parse error\n{}", e)),
@@ -131,7 +133,7 @@ impl<'a> MetricState<'a> {
     /// Evaluate an Expression which contains only base values, not referring to other Metrics.
     #[cfg(test)]
     pub fn evaluate_math(e: &Expression) -> MetricValue {
-        MetricState::new(&HashMap::new(), &vec![]).evaluate(&"".to_string(), e)
+        MetricState::new(&HashMap::new(), &InspectData::new(vec![])).evaluate(&"".to_string(), e)
     }
 
     fn evaluate(&self, namespace: &String, e: &Expression) -> MetricValue {

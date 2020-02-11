@@ -61,7 +61,7 @@ pub fn fetch(inspect_data: &Vec<serde_json::Value>, selector: &String) -> Metric
 
 #[cfg(test)]
 mod test {
-    use {super::*, crate::config::parse_inspect, anyhow::Error};
+    use {super::*, crate::config::InspectData, anyhow::Error};
 
     #[test]
     fn test_fetch() -> Result<(), Error> {
@@ -70,7 +70,8 @@ mod test {
                         {"path":"zxcv/bar/hjkl",
                         "contents":{"base":{"dataInt":42, "array":[2,3,4], "yes": true}}}
                         ]"#;
-        let inspect = parse_inspect(json.to_string())?;
+        let inspect_data = InspectData::from(json.to_string())?;
+        let inspect = inspect_data.as_json();
         macro_rules! assert_wrong {
             ($selector:expr, $error:expr) => {
                 assert_eq!(

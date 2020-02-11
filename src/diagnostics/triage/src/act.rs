@@ -4,7 +4,7 @@
 
 use {
     super::{
-        config::InspectData,
+        config::InspectContext,
         metrics::{MetricState, MetricValue, Metrics},
     },
     anyhow::Error,
@@ -19,35 +19,60 @@ pub fn report_failure(e: Error) {
     println!("Triage failed: {}", e);
 }
 
-/// Outputs a [message] to stdout and logs at "warning" level.
-pub fn output_warning(message: &String) {
-    println!("{}", message);
-    warn!("{}", message);
-}
-
-/// Provides the [metric_state] context to evaluate [Action]s and store the
-/// [warnings] from the [actions] that trigger.
+/// Provides the [metric_state] context to evaluate [Action]s and results of the [actions].
 pub struct ActionContext<'a> {
     actions: &'a Actions,
     metric_state: MetricState<'a>,
-    pub warnings: Warnings,
+    action_results: ActionResults,
 }
 
 impl<'a> ActionContext<'a> {
     pub fn new(
         metrics: &'a Metrics,
         actions: &'a Actions,
-        inspect_data: &'a InspectData,
+        inspect_context: &'a InspectContext,
     ) -> ActionContext<'a> {
         ActionContext {
             actions,
-            metric_state: MetricState::new(metrics, inspect_data),
-            warnings: Vec::new(),
+            metric_state: MetricState::new(metrics, &inspect_context.data),
+            action_results: ActionResults::new(&inspect_context.source),
         }
     }
 }
 
-type Warnings = Vec<String>;
+/// Stores the results of each [Action] specified in [source] and the [warnings] that are
+/// generated.
+pub struct ActionResults {
+    pub source: String,
+    results: HashMap<String, bool>,
+    warnings: Vec<String>,
+}
+
+impl ActionResults {
+    pub fn new(source: &str) -> ActionResults {
+        ActionResults { source: source.to_string(), results: HashMap::new(), warnings: Vec::new() }
+    }
+
+    pub fn set_result(&mut self, action: &str, value: bool) {
+        self.results.insert(action.to_string(), value);
+    }
+
+    pub fn get_result(&self, action: &str) -> Option<&bool> {
+        self.results.get(action)
+    }
+
+    pub fn get_actions(&self) -> Vec<String> {
+        self.results.keys().map(|k| k.clone()).collect()
+    }
+
+    pub fn add_warning(&mut self, warning: String) {
+        self.warnings.push(warning);
+    }
+
+    pub fn get_warnings(&self) -> &Vec<String> {
+        &self.warnings
+    }
+}
 
 /// [Actions] are stored as a map of maps, both with string keys. The outer key
 /// is the namespace for the inner key, which is the name of the [Action].
@@ -70,27 +95,35 @@ pub struct Action {
 
 impl ActionContext<'_> {
     /// Processes all actions, acting on the ones that trigger.
-    pub fn process(&mut self) {
+    pub fn process(&mut self) -> &ActionResults {
         for (namespace, actions) in self.actions.iter() {
             for (name, action) in actions.iter() {
                 self.consider(action, namespace, name);
             }
         }
+        &self.action_results
     }
 
     fn consider(&mut self, action: &Action, namespace: &String, name: &String) {
-        match self.metric_state.metric_value(namespace, &action.trigger) {
-            MetricValue::Bool(true) => self.act(namespace, name, &action),
-            MetricValue::Bool(false) => {}
-            other => self.warn(format!(
-                "ERROR: In '{}', action '{}' used bad metric '{}' with value '{:?}'",
-                namespace, name, action.trigger, other
-            )),
-        }
+        let was_triggered = match self.metric_state.metric_value(namespace, &action.trigger) {
+            MetricValue::Bool(true) => {
+                self.act(namespace, name, &action);
+                true
+            }
+            MetricValue::Bool(false) => false,
+            other => {
+                self.warn(format!(
+                    "ERROR: In '{}', action '{}' used bad metric '{}' with value '{:?}'",
+                    namespace, name, action.trigger, other
+                ));
+                false
+            }
+        };
+        self.action_results.set_result(&format!("{}::{}", namespace, name), was_triggered);
     }
 
     fn warn(&mut self, warning: String) {
-        self.warnings.push(warning);
+        self.action_results.add_warning(warning);
     }
 
     fn act(&mut self, namespace: &String, name: &String, action: &Action) {
@@ -99,32 +132,25 @@ impl ActionContext<'_> {
             name, namespace, action.print, action.trigger
         ));
     }
-
-    /// Outputs stored warnings.
-    pub fn print_warnings(&self) {
-        for warning in self.warnings.iter() {
-            output_warning(warning);
-        }
-    }
-
-    /// Tells whether any of the stored warnings includes a substring.
-    #[cfg(test)]
-    pub fn warnings_include(&self, substring: &str) -> bool {
-        for warning in self.warnings.iter() {
-            if warning.contains(substring) {
-                return true;
-            }
-        }
-        return false;
-    }
 }
 
 #[cfg(test)]
 mod test {
     use {
         super::*,
+        crate::config::InspectData,
         crate::metrics::{Metric, MetricsSchema},
     };
+
+    /// Tells whether any of the stored warnings include a substring.
+    fn warnings_include(warnings: &Vec<String>, substring: &str) -> bool {
+        for warning in warnings {
+            if warning.contains(substring) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     #[test]
     fn actions_fire_correctly() {
@@ -133,7 +159,6 @@ mod test {
         metric_file.insert("true".to_string(), Metric::Eval("0==0".to_string()));
         metric_file.insert("false".to_string(), Metric::Eval("0==1".to_string()));
         metrics.insert("file".to_string(), metric_file);
-        let inspect_entries = Vec::new();
         let mut actions = Actions::new();
         let mut action_file = ActionsSchema::new();
         action_file.insert(
@@ -145,11 +170,14 @@ mod test {
             Action { trigger: "false".to_string(), print: "False was fired".to_string() },
         );
         actions.insert("file".to_string(), action_file);
-        let mut context = ActionContext::new(&metrics, &actions, &inspect_entries);
-        context.process();
-        assert!(context.warnings_include(
+        let inspect_context =
+            InspectContext { source: String::from("source"), data: InspectData::new(vec![]) };
+        let mut context = ActionContext::new(&metrics, &actions, &inspect_context);
+        let results = context.process();
+        assert!(warnings_include(
+            results.get_warnings(),
             "Warning: 'do_true' in 'file' detected 'True was fired': 'true' was true"
         ));
-        assert!(!context.warnings_include("False was fired"));
+        assert!(!warnings_include(results.get_warnings(), "False was fired"));
     }
 }

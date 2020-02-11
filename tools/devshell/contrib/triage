@@ -15,6 +15,7 @@
 ##
 ##    --config <config-file-or-dir>      Path to config file or dir
 ##    --inspect <path-to-inspect.json>   Path to inspect.json
+##    --output_format <format>           How the results should be formatted.
 ##    --test                             Run self-tests (only)
 ##
 ## 0 or more --config paths may be given. Path is relative to CWD, or absolute.
@@ -24,6 +25,9 @@
 ##
 ## 0 or 1 --inspect paths may be given. Path is relative to CWD, or absolute.
 ##   If no path is given, `fx bugreport` will be run using a temp directory.
+##
+## 1 --output_format type can be given. Currently only text and csv are supported.
+##   Text is the default option.
 
 set -e
 trap 'echo Failed: ${BASH_COMMAND}' ERR
@@ -50,6 +54,10 @@ while [[ "$1" =~ ^- ]]; do
     --inspect)
       shift
       inspect="$1"
+      ;;
+    --output_format)
+      shift
+      output_format="$1"
       ;;
     --test)
       testit="yes"
@@ -98,4 +106,8 @@ if [ -z "${inspect}" ]; then
   inspect="${temp_dir}/inspect.json"
 fi
 
-$triage_exe --inspect "${inspect}" "${config_file_args[@]}"
+if [ -z "${output_format}" ]; then
+   output_format="text"
+fi
+
+$triage_exe --output_format "${output_format}" --inspect "${inspect}" "${config_file_args[@]}"

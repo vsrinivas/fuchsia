@@ -12,7 +12,7 @@ use {
     anyhow::{format_err, Error},
     serde_derive::Deserialize,
     serde_json as json,
-    std::{collections::HashMap, fs, path::Path},
+    std::{collections::HashMap, fs, path::Path, str::FromStr},
 };
 
 pub mod parse;
@@ -42,25 +42,91 @@ impl ConfigFileSchema {
     }
 }
 
+#[derive(Debug)]
+pub enum OutputFormat {
+    Text,
+    CSV,
+}
+
+impl FromStr for OutputFormat {
+    type Err = anyhow::Error;
+    fn from_str(output_format: &str) -> Result<Self, Self::Err> {
+        match output_format {
+            "csv" => Ok(OutputFormat::CSV),
+            "text" => Ok(OutputFormat::Text),
+            incorrect => {
+                Err(format_err!("Invalid output type '{}' - must be 'csv' or 'text'", incorrect))
+            }
+        }
+    }
+}
+
 /// Permanent storage of program execution context. This lives as long as the program, so we can
 /// store references to it in various other structs.
 pub struct StateHolder {
     pub metrics: Metrics,
     pub actions: Actions,
-    pub inspect_data: InspectData,
+    pub inspect_contexts: Vec<InspectContext>,
+    pub output_format: OutputFormat,
 }
 
 /// Top-level schema of the inspect.json file found in bugreport.zip.
-pub type InspectData = Vec<json::Value>;
+pub struct InspectData {
+    entries: Vec<json::Value>,
+}
+
+impl InspectData {
+    pub fn new(entries: Vec<json::Value>) -> InspectData {
+        InspectData { entries }
+    }
+
+    /// Parses a JSON string formatted as an array of [json::Value]'s.
+    pub fn from(data: String) -> Result<InspectData, Error> {
+        let raw_json = match data.parse::<json::Value>() {
+            Ok(data) => data,
+            Err(_) => return Err(format_err!("Couldn't parse Inspect file '{}' as JSON", data)),
+        };
+        match raw_json {
+            json::Value::Array(entries) => Ok(InspectData { entries }),
+            _ => return Err(format_err!("Array expected in inspect.json format")),
+        }
+    }
+
+    pub fn as_json(&self) -> &Vec<json::Value> {
+        &self.entries
+    }
+}
+
+/// The path of the inspect file and the data contained within it.
+pub struct InspectContext {
+    pub source: String,
+    pub data: InspectData,
+}
+
+impl InspectContext {
+    pub fn initialize_from_file(filename: String) -> Result<InspectContext, Error> {
+        let text = match fs::read_to_string(&filename) {
+            Ok(data) => data,
+            Err(_) => {
+                return Err(format_err!("Couldn't read Inspect file '{}' to string", filename))
+            }
+        };
+
+        let inspect_data = match InspectData::from(text) {
+            Ok(data) => data,
+            Err(e) => return Err(e),
+        };
+
+        Ok(InspectContext { source: filename, data: inspect_data })
+    }
+}
 
 /// Parses the inspect.json file and all the config files.
 pub fn initialize(options: Options) -> Result<StateHolder, Error> {
-    let Options { inspect, config_files, .. } = options;
-    let inspect_text = match fs::read_to_string(inspect.clone()) {
-        Ok(data) => data,
-        Err(_) => return Err(format_err!("Couldn't read Inspect file '{}' to string", inspect)),
-    };
-    let inspect_data = parse_inspect(inspect_text)?;
+    let Options { output_format, inspect, config_files, .. } = options;
+
+    let mut inspect_contexts = Vec::new();
+    inspect_contexts.push(InspectContext::initialize_from_file(inspect)?);
 
     if config_files.len() == 0 {
         return Err(format_err!("Need at least one config file; use --config"));
@@ -87,19 +153,8 @@ pub fn initialize(options: Options) -> Result<StateHolder, Error> {
         tests.insert(namespace, file_tests);
     }
     validate(&metrics, &actions, &tests)?;
-    Ok(StateHolder { metrics, actions, inspect_data })
-}
 
-/// Parses a JSON string formatted as an array of [json::Value]'s.
-pub(crate) fn parse_inspect(data: String) -> Result<Vec<json::Value>, Error> {
-    let raw_json = match data.parse::<json::Value>() {
-        Ok(data) => data,
-        Err(_) => return Err(format_err!("Couldn't parse Inspect file '{}' as JSON", data)),
-    };
-    match raw_json {
-        json::Value::Array(entries) => Ok(entries),
-        _ => return Err(format_err!("Array expected in inspect.json format")),
-    }
+    Ok(StateHolder { metrics, actions, inspect_contexts, output_format })
 }
 
 fn base_name(path: &String) -> Result<String, Error> {
@@ -126,10 +181,10 @@ mod test {
     }
 
     #[test]
-    fn parse_inspect_works() -> Result<(), Error> {
-        assert!(parse_inspect("foo".to_string()).is_err(), "'foo' isn't valid JSON");
-        assert!(parse_inspect(r#"{"a":5}"#.to_string()).is_err(), "Needed an array");
-        assert!(parse_inspect("[]".to_string()).is_ok(), "A JSON array should have worked");
+    fn inspect_data_from_works() -> Result<(), Error> {
+        assert!(InspectData::from("foo".to_string()).is_err(), "'foo' isn't valid JSON");
+        assert!(InspectData::from(r#"{"a":5}"#.to_string()).is_err(), "Needed an array");
+        assert!(InspectData::from("[]".to_string()).is_ok(), "A JSON array should have worked");
         Ok(())
     }
 }

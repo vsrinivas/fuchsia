@@ -5,6 +5,7 @@
 use {
     super::{
         act::Actions,
+        config::InspectData,
         metrics::{MetricState, MetricValue, Metrics},
     },
     anyhow::{format_err, Error},
@@ -26,11 +27,10 @@ pub type TestsSchema = HashMap<String, Trial>;
 
 pub fn validate(metrics: &Metrics, actions: &Actions, trials: &Trials) -> Result<(), Error> {
     let mut failed = false;
-    let empty_vec = vec![];
-    let mut state = MetricState { metrics, inspect_entries: &empty_vec };
     for (namespace, trial_map) in trials {
         for (trial_name, trial) in trial_map {
-            state.inspect_entries = &trial.inspect;
+            let temp_data = InspectData::new(trial.inspect.clone());
+            let state = MetricState { metrics, inspect_data: &temp_data };
             for action_name in trial.yes.clone().into_iter() {
                 failed = check_failure(namespace, trial_name, &action_name, actions, &state, true)
                     || failed;
@@ -93,8 +93,8 @@ mod test {
         $(
             let (key, value) = $tuple;
             map.insert(key.to_string(), value);
-        )*
-        map
+         )*
+            map
     })}
 
     #[test]
