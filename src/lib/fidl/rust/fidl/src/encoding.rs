@@ -10,6 +10,7 @@ use {
     bitflags::bitflags,
     byteorder::{ByteOrder, LittleEndian},
     fuchsia_zircon_status as zx_status,
+    static_assertions::{assert_not_impl_any, assert_obj_safe},
     std::{cell::RefCell, cmp, mem, ptr, str, u32, u64},
 };
 
@@ -156,7 +157,7 @@ pub struct Encoder<'a> {
     handles: &'a mut Vec<Handle>,
 
     /// Encoding context.
-    context: Context,
+    context: &'a Context,
 }
 
 /// Decoding state
@@ -184,12 +185,12 @@ pub struct Decoder<'a> {
     handles: &'a mut [Handle],
 
     /// Decoding context.
-    context: Context,
+    context: &'a Context,
 }
 
 /// The default context for encoding.
+/// During migrations, this controls the default write path.
 fn default_encode_context() -> Context {
-    // During migrations, this controls the default write path.
     Context {}
 }
 
@@ -217,7 +218,7 @@ impl<'a> Encoder<'a> {
         x: &mut T,
     ) -> Result<()> {
         fn prepare_for_encoding<'a>(
-            context: &Context,
+            context: &'a Context,
             buf: &'a mut Vec<u8>,
             handles: &'a mut Vec<Handle>,
             ty_inline_size: usize,
@@ -226,7 +227,7 @@ impl<'a> Encoder<'a> {
             buf.truncate(0);
             buf.resize(inline_size, 0);
             handles.truncate(0);
-            Encoder { offset: 0, remaining_depth: MAX_RECURSION, buf, handles, context: *context }
+            Encoder { offset: 0, remaining_depth: MAX_RECURSION, buf, handles, context }
         }
 
         let mut encoder = prepare_for_encoding(context, buf, handles, x.inline_size(context));
@@ -327,8 +328,10 @@ impl<'a> Encoder<'a> {
     }
 
     /// Returns the encoder's context.
+    ///
+    /// This is needed for accessing the context in macros during migrations.
     pub fn context(&self) -> &Context {
-        &self.context
+        self.context
     }
 }
 
@@ -372,7 +375,7 @@ impl<'a> Decoder<'a> {
             out_of_line_buf,
             initial_out_of_line_buf_len: out_of_line_buf.len(),
             handles,
-            context: *context,
+            context,
         };
         value.decode(&mut decoder)?;
         if decoder.out_of_line_buf.len() != 0 {
@@ -559,8 +562,10 @@ impl<'a> Decoder<'a> {
     }
 
     /// Returns the decoder's context.
+    ///
+    /// This is needed for accessing the context in macros during migrations.
     pub fn context(&self) -> &Context {
-        &self.context
+        self.context
     }
 }
 
@@ -595,6 +600,8 @@ pub trait LayoutObject: Layout {
     fn inline_size(&self, context: &Context) -> usize;
 }
 
+assert_obj_safe!(LayoutObject);
+
 impl<T: Layout> LayoutObject for T {
     fn inline_align(&self, context: &Context) -> usize {
         <T as Layout>::inline_align(context)
@@ -623,6 +630,8 @@ pub trait Encodable: LayoutObject {
     /// Successful calls to this function should increase `encoder.offset` by `Layout::inline_size`.
     fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()>;
 }
+
+assert_obj_safe!(Encodable);
 
 /// A type which can be FIDL2-decoded from a buffer.
 ///
@@ -1560,7 +1569,7 @@ impl<T: Autonull> Layout for Option<&mut T> {
 
 impl<T: Autonull> Encodable for Option<&mut T> {
     fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
-        if T::naturally_nullable(&encoder.context) {
+        if T::naturally_nullable(encoder.context) {
             match self {
                 Some(x) => x.encode(encoder),
                 None => {
@@ -1610,7 +1619,7 @@ impl<T: Autonull> Decodable for Option<Box<T>> {
         None
     }
     fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
-        if T::naturally_nullable(&decoder.context) {
+        if T::naturally_nullable(decoder.context) {
             let inline_size = decoder.inline_size_of::<T>();
             let present = check_for_presence(decoder, inline_size)?;
             if present {
@@ -1781,7 +1790,7 @@ pub fn encode_in_envelope(
             ALLOC_PRESENT_U64.encode(encoder)?;
             let bytes_before = encoder.buf.len();
             let handles_before = encoder.handles.len();
-            encoder.write_out_of_line(x.inline_size(&encoder.context), |e| x.encode(e))?;
+            encoder.write_out_of_line(x.inline_size(encoder.context), |e| x.encode(e))?;
             let mut bytes_written = (encoder.buf.len() - bytes_before) as u32;
             let mut handles_written = (encoder.handles.len() - handles_before) as u32;
             // Back up and overwrite the `0s` for num_bytes and num_handles
@@ -2366,7 +2375,9 @@ impl TransactionHeader {
         HeaderFlags::from_bits_truncate(LittleEndian::read_u24(&self.flags))
     }
 
-    /// Returns the context to use for decoding the message body associated with this header.
+    /// Returns the context to use for decoding the message body associated with
+    /// this header. During migrations, this is dependent on `self.flags()` and
+    /// controls dynamic behavior in the read path.
     pub fn decoding_context(&self) -> Context {
         Context {}
     }
@@ -2397,23 +2408,22 @@ impl<T: Encodable> Encodable for TransactionMessage<'_, T> {
     }
 }
 
-impl<T: Decodable> Decodable for TransactionMessage<'_, T> {
-    fn new_empty() -> Self {
-        panic!("cannot create an empty transaction message")
-    }
-    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
-        self.header.decode(decoder)?;
-        decoder.context = self.header.decoding_context();
-        (*self.body).decode(decoder)?;
-        Ok(())
-    }
-}
+// To decode TransactionMessage<MyObject>, use this pattern:
+//
+//     let (header, body_bytes) = decode_transaction_header(bytes)?;
+//     let mut my_object = MyObject::new_empty();
+//     Decoder::decode_into(&header, body_bytes, handles, &mut my_object)?;
+//
+// We _could_ implement Decodable for TransactionMessage<T>, but it would only
+// work when you know the type T upfront, which is often not the case (for
+// example, it might depend on the ordinal). To avoid having two code paths that
+// could get out of sync, we simply do not implement Decodable.
+assert_not_impl_any!(TransactionMessage<()>: Decodable);
 
 /// Decodes the transaction header from a message.
 /// Returns the header and a reference to the tail of the message.
 pub fn decode_transaction_header(bytes: &[u8]) -> Result<(TransactionHeader, &[u8])> {
     let mut header = TransactionHeader::new_empty();
-    // The header doesn't contain unions, so the context flag doesn't matter.
     let context = Context {};
     let header_len = <TransactionHeader as Layout>::inline_size(&context);
     if bytes.len() < header_len {
