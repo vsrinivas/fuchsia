@@ -62,7 +62,7 @@ test_package("camera_tests") {
     "//src/camera/drivers/test_utils/test:test_utils_test",
     "//src/camera/drivers/virtual_camera/test:virtual_camera_test",
     "//src/camera/examples/camera_display/stream_provider/test",
-    "//src/camera/lib/fake_stream/test",
+    "//src/camera/lib/fake_legacy_stream/test",
     "//src/camera/lib/image_writer/test:hsv_generator_test",
     "//src/camera/lib/image_writer/test:image_format_test",
     "//src/camera/lib/image_writer/test:image_writer_test",
@@ -196,8 +196,8 @@ test_package("camera_tests") {
       environments = basic_envs
     },
     {
-      name = "fake_stream_test"
-      manifest = "lib/fake_stream/test/test.cmx"
+      name = "fake_legacy_stream_test"
+      manifest = "lib/fake_legacy_stream/test/test.cmx"
       environments = basic_envs
     },
     {

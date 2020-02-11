@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/fake_stream_test"
+        "binary": "test/fake_legacy_stream_test"
     },
     "sandbox": {
         "services": [

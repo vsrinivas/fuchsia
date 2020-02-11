@@ -2,22 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("fake_stream") {
+group("fake_legacy_stream") {
   testonly = true
 
-  public_deps = [ ":fake_stream_lib" ]
+  public_deps = [ ":fake_legacy_stream_lib" ]
 }
 
-source_set("fake_stream_lib") {
+source_set("fake_legacy_stream_lib") {
   testonly = true
 
   visibility = [ ":*" ]
 
-  public = [ "fake_stream.h" ]
+  public = [ "fake_legacy_stream.h" ]
 
   sources = [
-    "fake_stream.cc",
-    "fake_stream.h",
+    "fake_legacy_stream.cc",
+    "fake_legacy_stream.h",
   ]
 
   deps = [

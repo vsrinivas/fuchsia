@@ -5,7 +5,7 @@
 executable("test") {
   testonly = true
 
-  output_name = "fake_stream_test"
+  output_name = "fake_legacy_stream_test"
 
   sources = [ "test.cc" ]
 

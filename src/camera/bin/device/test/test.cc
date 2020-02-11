@@ -11,7 +11,7 @@
 #include "src/camera/bin/device/stream_impl.h"
 #include "src/camera/bin/device/test/fake_controller.h"
 #include "src/camera/bin/device/util.h"
-#include "src/camera/lib/fake_stream/fake_stream.h"
+#include "src/camera/lib/fake_legacy_stream/fake_legacy_stream.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace camera {
@@ -63,7 +63,7 @@ TEST_F(DeviceTest, CreateStreamNullConnection) { StreamImpl stream(nullptr, null
 
 TEST_F(DeviceTest, CreateStreamFakeLegacyStream) {
   fidl::InterfaceHandle<fuchsia::camera2::Stream> handle;
-  auto result = FakeStream::Create(handle.NewRequest());
+  auto result = FakeLegacyStream::Create(handle.NewRequest());
   ASSERT_TRUE(result.is_ok());
   { StreamImpl stream(std::move(handle), nullptr, 0, nop); }
 }
@@ -114,7 +114,7 @@ TEST_F(DeviceTest, ConvertConfig) {
 
 TEST_F(DeviceTest, GetFrames) {
   fidl::InterfaceHandle<fuchsia::camera2::Stream> handle;
-  auto result = FakeStream::Create(handle.NewRequest());
+  auto result = FakeLegacyStream::Create(handle.NewRequest());
   ASSERT_TRUE(result.is_ok());
   auto legacy_stream_fake = result.take_value();
   fuchsia::camera3::StreamPtr stream;
@@ -157,7 +157,7 @@ TEST_F(DeviceTest, GetFrames) {
 
 TEST_F(DeviceTest, GetFramesInvalidCall) {
   fidl::InterfaceHandle<fuchsia::camera2::Stream> handle;
-  auto result = FakeStream::Create(handle.NewRequest());
+  auto result = FakeLegacyStream::Create(handle.NewRequest());
   ASSERT_TRUE(result.is_ok());
   auto legacy_stream_fake = result.take_value();
   bool stream_errored = false;

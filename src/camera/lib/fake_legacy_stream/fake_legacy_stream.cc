@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fake_stream.h"
+#include "fake_legacy_stream.h"
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -50,11 +50,11 @@ static constexpr std::array<fuchsia::sysmem::ImageFormat_2, 2> kFakeImageFormats
     },
 }};
 
-class FakeStreamImpl : public FakeStream, public fuchsia::camera2::Stream {
+class FakeLegacyStreamImpl : public FakeLegacyStream, public fuchsia::camera2::Stream {
  public:
-  FakeStreamImpl() : binding_(this) {}
+  FakeLegacyStreamImpl() : binding_(this) {}
 
-  // |camera::FakeStream|
+  // |camera::FakeLegacyStream|
   fit::result<void, std::string> StreamClientStatus() override {
     if (client_error_count_ == 0) {
       return fit::ok();
@@ -159,12 +159,12 @@ class FakeStreamImpl : public FakeStream, public fuchsia::camera2::Stream {
   uint32_t client_error_count_ = 0;
   std::stringstream client_error_explanation_;
 
-  friend class FakeStream;
+  friend class FakeLegacyStream;
 };
 
-fit::result<std::unique_ptr<FakeStream>, zx_status_t> FakeStream::Create(
+fit::result<std::unique_ptr<FakeLegacyStream>, zx_status_t> FakeLegacyStream::Create(
     fidl::InterfaceRequest<fuchsia::camera2::Stream> request, async_dispatcher_t* dispatcher) {
-  auto impl = std::make_unique<FakeStreamImpl>();
+  auto impl = std::make_unique<FakeLegacyStreamImpl>();
   zx_status_t status = impl->binding_.Bind(std::move(request), dispatcher);
   if (status) {
     return fit::error(status);

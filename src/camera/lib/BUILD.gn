@@ -10,7 +10,7 @@ import("//build/testing/environments.gni")
 group("lib") {
   testonly = true
   deps = [
-    "fake_stream",
+    "fake_legacy_stream",
     "format_conversion",
     "image_writer",
     "stream_utils",
