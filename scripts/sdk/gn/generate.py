@@ -182,6 +182,21 @@ class GNBuilder(Frontend):
             for files in atom['target_files'].values():
                 self.copy_files(files, atom['root'], 'tools')
 
+    def install_sysroot_atom(self, atom):
+        for arch in self.target_arches:
+            base = self.dest('arch', arch, 'sysroot')
+            arch_data = atom['versions'][arch]
+            arch_root = arch_data['root']
+            self.copy_files(arch_data['headers'], arch_root, base)
+            self.copy_files(arch_data['link_libs'], arch_root, base)
+            # We maintain debug files in their original location.
+            self.copy_files(arch_data['debug_libs'])
+            # Files in dist_libs are required for toolchain config. They are the
+            # same for all architectures and shouldn't change names, so we
+            # hardcode those names in build/config/BUILD.gn. This may need to
+            # change if/when we support sanitized builds.
+            self.copy_files(arch_data['dist_libs'], arch_root, base)
+
 
 class TestData(object):
     """Class representing test data to be added to the run_py mako template"""
