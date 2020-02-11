@@ -214,13 +214,17 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
     // exception, so there is no more need to keep the thread in an excepted state. The suspend
     // handle will take care of keeping the thread stopped.
     //
-    // NOTE: It's important to resume the exception *before* telling the breakpoint we are done
-    //       going over it, as it may call ResumeForRunMode, which could then again attempt to step
-    //       over it.
+    // NOTE: It's important to resume the exception *after* telling the breakpoint we are done going
+    //       over it. This is because in the case that there are no other threads queued (the normal
+    //       case), it produces a window between resuming the exception and suspending the thread
+    //       to reinstall the breakpointer, which could make the thread miss the exception. By
+    //       keeping the exception until *after* the breakpoint has been told to step over, we
+    //       ensure that any installs have already occured and thus the thread won't miss any
+    //       breakpoints.
     SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
-    ResumeException();
     current_breakpoint_->EndStepOver(this);
     current_breakpoint_ = nullptr;
+    ResumeException();
     return;
   }
 
