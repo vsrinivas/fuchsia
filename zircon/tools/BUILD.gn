@@ -39,7 +39,6 @@ foreach(host, standard_build_hosts) {
       "fidl:tools",
       "fvm",
       "kazoo",
-      "kernel-buildsig",
       "ktrace-dump",
       "loglistener",
       "lz4",
