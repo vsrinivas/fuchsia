@@ -54,46 +54,63 @@ class HandleDescription {
   const std::string path_;
 };
 
-// Object which hold the information we have about handles.
+// Holds the handle semantic for one process. That is all the meaningful information we have been
+// able to infer for the handles owned by one process.
+struct ProcessSemantic {
+  // All the handles for which we have some information.
+  std::map<zx_handle_t, std::unique_ptr<HandleDescription>> handles;
+};
+
+// Object which hold the information we have about handles for all the processes.
 class HandleSemantic {
  public:
   HandleSemantic() = default;
 
-  const std::map<zx_handle_t, std::unique_ptr<HandleDescription>>& handles() const {
-    return handles_;
+  size_t handle_size(zx_koid_t pid) const {
+    const auto& process_semantic = process_handles_.find(pid);
+    if (process_semantic == process_handles_.end()) {
+      return 0;
+    }
+    return process_semantic->second.handles.size();
   }
 
-  const HandleDescription* GetHandleDescription(zx_handle_t handle) const {
-    const auto& result = handles_.find(handle);
-    if (result == handles_.end()) {
+  const HandleDescription* GetHandleDescription(zx_koid_t pid, zx_handle_t handle) const {
+    const auto& process_semantic = process_handles_.find(pid);
+    if (process_semantic == process_handles_.end()) {
+      return nullptr;
+    }
+    const auto& result = process_semantic->second.handles.find(handle);
+    if (result == process_semantic->second.handles.end()) {
       return nullptr;
     }
     return result->second.get();
   }
 
-  void AddHandleDescription(zx_handle_t handle, const HandleDescription& handle_description) {
-    handles_[handle] = std::make_unique<HandleDescription>(handle_description);
+  void AddHandleDescription(zx_koid_t pid, zx_handle_t handle,
+                            const HandleDescription& handle_description) {
+    process_handles_[pid].handles[handle] = std::make_unique<HandleDescription>(handle_description);
   }
 
-  void AddHandleDescription(zx_handle_t handle, std::string_view type) {
-    handles_[handle] = std::make_unique<HandleDescription>(type);
+  void AddHandleDescription(zx_koid_t pid, zx_handle_t handle, std::string_view type) {
+    process_handles_[pid].handles[handle] = std::make_unique<HandleDescription>(type);
   }
 
-  void AddHandleDescription(zx_handle_t handle, std::string_view type, int64_t fd) {
-    handles_[handle] = std::make_unique<HandleDescription>(type, fd);
+  void AddHandleDescription(zx_koid_t pid, zx_handle_t handle, std::string_view type, int64_t fd) {
+    process_handles_[pid].handles[handle] = std::make_unique<HandleDescription>(type, fd);
   }
 
-  void AddHandleDescription(zx_handle_t handle, std::string_view type, std::string_view path) {
-    handles_[handle] = std::make_unique<HandleDescription>(type, path);
+  void AddHandleDescription(zx_koid_t pid, zx_handle_t handle, std::string_view type,
+                            std::string_view path) {
+    process_handles_[pid].handles[handle] = std::make_unique<HandleDescription>(type, path);
   }
 
-  void AddHandleDescription(zx_handle_t handle, uint32_t type) {
-    handles_[handle] = std::make_unique<HandleDescription>(HandleDescription::Convert(type));
+  void AddHandleDescription(zx_koid_t pid, zx_handle_t handle, uint32_t type) {
+    process_handles_[pid].handles[handle] =
+        std::make_unique<HandleDescription>(HandleDescription::Convert(type));
   }
 
  private:
-  // All the handles for which we have some information.
-  std::map<zx_handle_t, std::unique_ptr<HandleDescription>> handles_;
+  std::map<zx_koid_t, ProcessSemantic> process_handles_;
 };
 
 }  // namespace semantic

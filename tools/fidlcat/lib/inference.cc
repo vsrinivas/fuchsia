@@ -32,13 +32,14 @@ void Inference::ExtractHandles(SyscallDecoder* decoder) {
       uint32_t type = PA_HND_TYPE(handle_info[handle]);
       switch (type) {
         case PA_FD:
-          AddHandleDescription(handles[handle], "fd", PA_HND_ARG(handle_info[handle]));
+          AddHandleDescription(decoder->process_id(), handles[handle], "fd",
+                               PA_HND_ARG(handle_info[handle]));
           break;
         case PA_DIRECTORY_REQUEST:
-          AddHandleDescription(handles[handle], "directory-request", "/");
+          AddHandleDescription(decoder->process_id(), handles[handle], "directory-request", "/");
           break;
         default:
-          AddHandleDescription(handles[handle], type);
+          AddHandleDescription(decoder->process_id(), handles[handle], type);
           break;
       }
     }
@@ -71,7 +72,7 @@ void Inference::LibcExtensionsInit(SyscallDecoder* decoder) {
       switch (type) {
         case PA_NS_DIR: {
           uint32_t index = PA_HND_ARG(handle_info[handle]);
-          AddHandleDescription(handles[handle], "dir",
+          AddHandleDescription(decoder->process_id(), handles[handle], "dir",
                                (index < name_count)
                                    ? reinterpret_cast<const char*>(
                                          decoder->BufferContent(Stage::kEntry, names[index]))
@@ -79,13 +80,14 @@ void Inference::LibcExtensionsInit(SyscallDecoder* decoder) {
           break;
         }
         case PA_FD:
-          AddHandleDescription(handles[handle], "fd", PA_HND_ARG(handle_info[handle]));
+          AddHandleDescription(decoder->process_id(), handles[handle], "fd",
+                               PA_HND_ARG(handle_info[handle]));
           break;
         case PA_DIRECTORY_REQUEST:
-          AddHandleDescription(handles[handle], "directory-request", "/");
+          AddHandleDescription(decoder->process_id(), handles[handle], "directory-request", "/");
           break;
         default:
-          AddHandleDescription(handles[handle], type);
+          AddHandleDescription(decoder->process_id(), handles[handle], type);
           break;
       }
     }

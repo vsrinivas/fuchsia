@@ -376,7 +376,7 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
                             debug_ipc::ExceptionType type);
   void TriggerException(uint64_t process_koid, uint64_t thread_koid, debug_ipc::ExceptionType type);
   void PerformFunctionTest(ProcessController* controller, const char* syscall_name,
-                           std::unique_ptr<SystemCallTest> syscall);
+                           std::unique_ptr<SystemCallTest> syscall, uint64_t pid, uint64_t tid);
 
  protected:
   DataForSyscallTest data_;
@@ -435,6 +435,7 @@ class ProcessController {
   InterceptionWorkflow& workflow() { return workflow_; }
   const std::vector<uint64_t>& process_koids() { return process_koids_; }
   uint64_t thread_koid(uint64_t process_koid) { return thread_koids_[process_koid]; }
+  bool initialized() const { return initialized_; }
 
   void InjectProcesses(zxdb::Session& session);
 
@@ -451,6 +452,7 @@ class ProcessController {
   std::vector<zxdb::Process*> processes_;
   std::vector<zxdb::Target*> targets_;
   size_t detached_processes_ = 0;
+  bool initialized_ = false;
 };
 
 class AlwaysQuit {

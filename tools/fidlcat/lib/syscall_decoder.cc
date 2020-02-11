@@ -72,6 +72,18 @@ void SyscallUse::SyscallDecodingError(const DecoderError& error, SyscallDecoder*
   decoder->Destroy();
 }
 
+void SyscallDecoder::DisplayHandle(const zx_handle_info_t& handle_info,
+                                   const fidl_codec::Colors& colors, std::ostream& os) {
+  fidl_codec::DisplayHandle(colors, handle_info, os);
+  const fidl_codec::semantic::HandleDescription* known_handle =
+      dispatcher_->inference().GetHandleDescription(process_id_, handle_info.handle);
+  if (known_handle != nullptr) {
+    os << '(';
+    known_handle->Display(colors, os);
+    os << ')';
+  }
+}
+
 void SyscallDecoder::LoadMemory(uint64_t address, size_t size, std::vector<uint8_t>* destination) {
   if (address == 0) {
     // Null pointer => don't load anything.
@@ -413,8 +425,8 @@ void SyscallDisplay::SyscallInputsDecoded(SyscallDecoder* decoder) {
                               std::to_string(result->thread()->process()->koid()) + colors.reset +
                               ':' + colors.red + std::to_string(result->thread()->koid()) +
                               colors.reset + ' ';
-    FidlcatPrinter printer(dispatcher_, os_, dispatcher_->colors(), line_header,
-                           dispatcher_->columns(), dispatcher_->with_process_info());
+    FidlcatPrinter printer(decoder, os_, dispatcher_->colors(), line_header, dispatcher_->columns(),
+                           dispatcher_->with_process_info());
     result->PrettyPrint(printer);
 
     if (!dispatcher_->with_process_info()) {

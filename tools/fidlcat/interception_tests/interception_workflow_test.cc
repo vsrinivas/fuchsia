@@ -361,29 +361,31 @@ void InterceptionWorkflowTest::TriggerException(uint64_t process_koid, uint64_t 
 // recognized.
 void InterceptionWorkflowTest::PerformFunctionTest(ProcessController* controller,
                                                    const char* syscall_name,
-                                                   std::unique_ptr<SystemCallTest> syscall) {
-  controller->Initialize(
-      session(),
-      std::make_unique<SyscallDisplayDispatcherTest>(nullptr, decode_options_, display_options_,
-                                                     result_, controller, aborted_),
-      syscall_name);
+                                                   std::unique_ptr<SystemCallTest> syscall,
+                                                   uint64_t pid, uint64_t tid) {
+  if (!controller->initialized()) {
+    controller->Initialize(
+        session(),
+        std::make_unique<SyscallDisplayDispatcherTest>(nullptr, decode_options_, display_options_,
+                                                       result_, controller, aborted_),
+        syscall_name);
+  }
   data_.set_syscall(std::move(syscall));
   data_.load_syscall_data();
 
   debug_ipc::NotifyException notification;
   // Fill the breakpoint.
-  std::vector<std::unique_ptr<zxdb::Frame>> frames =
-      FillBreakpoint(&notification, kFirstPid, kFirstThreadKoid);
-  threads_[kFirstThreadKoid]->GetStack().SetFramesForTest(std::move(frames),
-                                                          /*has_all_frames=*/true);
+  std::vector<std::unique_ptr<zxdb::Frame>> frames = FillBreakpoint(&notification, pid, tid);
+  threads_[tid]->GetStack().SetFramesForTest(std::move(frames),
+                                             /*has_all_frames=*/true);
 
   // Instead of using PopulateBreakpointIds and InjectException, we need to directly
   // call our function interception code.
   SyscallDecoderDispatcher* dispatcher = controller->workflow().syscall_decoder_dispatcher();
   for (const auto& syscall : dispatcher->syscalls()) {
     if (syscall->name() == syscall_name) {
-      dispatcher->DecodeSyscall(&controller->workflow().thread_observer(),
-                                threads_[kFirstThreadKoid], syscall.get());
+      dispatcher->DecodeSyscall(&controller->workflow().thread_observer(), threads_[tid],
+                                syscall.get());
     }
   }
 
@@ -412,6 +414,7 @@ void ProcessController::InjectProcesses(zxdb::Session& session) {
 void ProcessController::Initialize(zxdb::Session& session,
                                    std::unique_ptr<SyscallDecoderDispatcher> dispatcher,
                                    const char* syscall_name) {
+  initialized_ = true;
   global_dispatcher = dispatcher.get();
   std::vector<std::string> blank;
   workflow_.Initialize(blank, blank, "", blank, std::move(dispatcher));

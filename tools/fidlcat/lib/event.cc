@@ -9,7 +9,7 @@
 namespace fidlcat {
 
 void FidlcatPrinter::DisplayHandle(const zx_handle_info_t& handle) {
-  dispatcher_->DisplayHandle(handle, colors(), os());
+  decoder_->DisplayHandle(handle, colors(), os());
 }
 
 void InvokedEvent::PrettyPrint(fidl_codec::PrettyPrinter& printer) {

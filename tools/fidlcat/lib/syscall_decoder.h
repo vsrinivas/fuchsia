@@ -154,6 +154,10 @@ class SyscallDecoder {
     return error_.Set(type);
   }
 
+  // Display a handle. Also display the data we have inferered for this handle (if any).
+  void DisplayHandle(const zx_handle_info_t& handle_info, const fidl_codec::Colors& colors,
+                     std::ostream& os);
+
   // Load the value for a buffer or a struct (field or argument).
   void LoadMemory(uint64_t address, size_t size, std::vector<uint8_t>* destination);
 
@@ -167,12 +171,18 @@ class SyscallDecoder {
 
   // Returns the value of an argument for basic types.
   uint64_t ArgumentValue(int argument_index) const {
+    if (static_cast<size_t>(argument_index) >= decoded_arguments_.size()) {
+      return 0;
+    }
     return decoded_arguments_[argument_index].value();
   }
 
   // Returns a pointer on the argument content for buffers, structs or
   // output arguments.
   uint8_t* ArgumentContent(Stage stage, int argument_index) {
+    if (static_cast<size_t>(argument_index) >= decoded_arguments_.size()) {
+      return nullptr;
+    }
     SyscallDecoderArgument& argument = decoded_arguments_[argument_index];
     if (argument.value() == 0) {
       return nullptr;
