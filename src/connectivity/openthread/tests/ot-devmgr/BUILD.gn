@@ -1,0 +1,38 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//src/lib/isolated_devmgr/devmgr_manifest.gni")
+
+devmgr_manifest("devmgr_manifest") {
+}
+
+group("ot-devmgr") {
+  testonly = true
+  deps = [ ":ot_devmgr_component_integration" ]
+}
+
+package("ot_devmgr_component_integration") {
+  testonly = true
+
+  deps = [
+    ":devmgr_manifest",
+    "//src/lib/isolated_devmgr",
+  ]
+
+  extra = [ "$target_gen_dir/devmgr.manifest" ]
+
+  binaries = [
+    {
+      name = "isolated_devmgr"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/ot_devmgr_component_integration.cmx")
+      dest = "ot_devmgr_component_integration.cmx"
+    },
+  ]
+}

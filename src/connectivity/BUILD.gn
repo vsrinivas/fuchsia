@@ -27,6 +27,7 @@ group("tests") {
     "lowpan:tests",
     "management:tests",
     "network:tests",
+    "openthread:tests",
     "overnet:tests",
     "ppp:tests",
     "weave:tests",

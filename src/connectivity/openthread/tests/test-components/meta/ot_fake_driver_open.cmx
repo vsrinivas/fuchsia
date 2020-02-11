@@ -1,0 +1,32 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.openthread.devmgr.IsolatedDevmgr": [
+                    "fuchsia-pkg://fuchsia.com/ot_devmgr_component_integration#meta/ot_devmgr_component_integration.cmx"
+                ]
+            }
+        }
+    },
+    "program": {
+        "binary": "test/ot_fake_driver_open"
+    },
+    "sandbox": {
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
+        ],
+        "dev": [
+            "class/ot-radio",
+            "test/test"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.openthread.devmgr.IsolatedDevmgr"
+        ],
+        "system": [
+            "driver/fake-ot-radio.so"
+        ]
+    }
+}

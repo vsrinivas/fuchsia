@@ -2,40 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
-
-test_package("tests") {
-  package_name = "ot-radio-tests"
+group("tests") {
+  testonly = true
   public_deps = [
-    ":ot-radio-soft-reset-test",
-    ":ot-radio-tx-rx-test",
-  ]
-  tests = [
-    {
-      name = "ot_radio_tx_rx_test"
-      environments = basic_envs
-    },
-    {
-      name = "ot_radio_soft_reset_test"
-      environments = basic_envs
-    },
+    "fake-drivers",
+    "ot-devmgr",
+    "test-components:ot-radio-component-tests",
   ]
 }
 
-rustc_test("ot-radio-tx-rx-test") {
-  name = "ot_radio_tx_rx_test"
-  source_root = "src/ot_radio_tx_rx_test.rs"
-  edition = "2018"
-  deps = [ "//src/connectivity/openthread/tests/lib" ]
-  non_rust_deps = [ "//zircon/public/lib/syslog" ]
-}
-
-rustc_test("ot-radio-soft-reset-test") {
-  name = "ot_radio_soft_reset_test"
-  source_root = "src/ot_radio_soft_reset_test.rs"
-  edition = "2018"
-  deps = [ "//src/connectivity/openthread/tests/lib" ]
-  non_rust_deps = [ "//zircon/public/lib/syslog" ]
+group("all-tests") {
+  testonly = true
+  public_deps = [
+    ":tests",
+    "test-components:ot-radio-tests",
+  ]
 }

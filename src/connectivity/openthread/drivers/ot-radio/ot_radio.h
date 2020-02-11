@@ -36,7 +36,7 @@ enum {
 typedef enum {
   OT_SPINEL_DEVICE_ON,
   OT_SPINEL_DEVICE_OFF,
-} ot_radio_power_status_t;
+} ot_radio_power_status_e;
 
 namespace ot {
 constexpr uint32_t kOutboundAllowanceInit = 4;
@@ -115,7 +115,7 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::UnbindableNew, ddk:
   uint64_t outbound_cnt_ = 0;
   zx::unowned_channel fidl_channel_ = zx::unowned_channel(ZX_HANDLE_INVALID);
   std::unique_ptr<LowpanSpinelDeviceFidlImpl> fidl_impl_obj_ = 0;
-  ot_radio_power_status_t power_status_ = OT_SPINEL_DEVICE_OFF;
+  ot_radio_power_status_e power_status_ = OT_SPINEL_DEVICE_OFF;
 };
 
 }  // namespace ot

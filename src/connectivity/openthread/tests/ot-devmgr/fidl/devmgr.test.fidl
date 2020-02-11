@@ -1,0 +1,17 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.openthread.devmgr;
+
+using fuchsia.io;
+
+/// Provides an isolated devfs.
+///
+/// IsolatedDevmgr is a wrapper around a fuchsia.io.Directory node that is provided by
+/// an isolated devmgr component instance (//src/lib/isolated_devmgr). If injected into a test
+/// components, it represents the devfs (/dev) in IsolatedDevmgr component.
+[Discoverable]
+protocol IsolatedDevmgr {
+    compose fuchsia.io.Directory;
+};
