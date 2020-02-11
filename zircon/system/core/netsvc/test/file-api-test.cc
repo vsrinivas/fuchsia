@@ -4,14 +4,14 @@
 
 #include "file-api.h"
 
-#include <memory>
-
 #include <fcntl.h>
-
 #include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
+
+#include <memory>
+
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -172,8 +172,8 @@ TEST_F(FileApiTest, WriteBoardName) {
   fake_sysinfo_.set_board_name(kFakeData);
   ASSERT_EQ(file_api_.OpenWrite(NB_BOARD_NAME_FILENAME, 10), TFTP_NO_ERROR);
 #if __x86_64__
-  // We hardcode x64 to return "pc" no matter what sysinfo returns.
-  constexpr char kBoardName[] = "pc";
+  // We hardcode x64 to return "x64" no matter what sysinfo returns.
+  constexpr char kBoardName[] = "x64";
   size_t len = sizeof(kBoardName);
   ASSERT_EQ(file_api_.Write(kBoardName, &len, 0), TFTP_NO_ERROR);
   ASSERT_EQ(len, sizeof(kBoardName));
@@ -201,8 +201,8 @@ TEST_F(FileApiTest, ReadBoardInfo) {
   ASSERT_EQ(file_api_.Read(&board_info, &len, 0), TFTP_NO_ERROR);
   ASSERT_EQ(len, sizeof(board_info));
 #if __x86_64__
-  // We hardcode x64 to return "pc" no matter what sysinfo returns.
-  constexpr char kBoardName[] = "pc";
+  // We hardcode x64 to return "x64" no matter what sysinfo returns.
+  constexpr char kBoardName[] = "x64";
   ASSERT_BYTES_EQ(board_info.board_name, kBoardName, sizeof(kBoardName));
 #else
   ASSERT_BYTES_EQ(board_info.board_name, kFakeData, sizeof(kFakeData));

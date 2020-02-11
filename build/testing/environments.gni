@@ -64,7 +64,7 @@ if (host_os == "linux") {
 
 # The basic, freely usable test environments supported by the infrastructure.
 basic_envs = []
-if (board_name == "pc") {
+if (board_name == "x64") {
   basic_envs += [
     qemu_env,
     nuc_env,

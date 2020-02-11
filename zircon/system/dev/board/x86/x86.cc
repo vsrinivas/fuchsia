@@ -136,7 +136,7 @@ zx_status_t X86::Bind() {
       zxlogf(ERROR, "acpi: smbios board name could not be read: %s\n",
              zx_status_get_string(status));
     }
-    strcpy(board_name, "pc");
+    strcpy(board_name, "x64");
     board_name_actual = strlen(board_name) + 1;
   }
 

@@ -20,8 +20,8 @@
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/bootfs/parser.h>
-#include <lib/fdio/directory.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/directory.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 #include <zircon/boot/netboot.h>
@@ -142,15 +142,16 @@ zx_status_t GetBoardName(const zx::channel& sysinfo, char* real_board_name) {
   size_t strlen = std::min<size_t>(ZX_MAX_NAME_LEN, response.name.size());
   strncpy(real_board_name, response.name.data(), strlen);
   if (strlen == ZX_MAX_NAME_LEN) {
-    real_board_name[strlen-1] = '\0';
+    real_board_name[strlen - 1] = '\0';
   }
 
-  // Special case x64 to check if chromebook.
+  // Special case x64. All x64 boards should get one of "chromebook-x64" or "x64" instead of the
+  // more specific name from the BIOS (e.g. "NUC7i5DNHE".)
 #if __x86_64__
   if (IsChromebook()) {
     strcpy(real_board_name, "chromebook-x64");
   } else {
-    strcpy(real_board_name, "pc");
+    strcpy(real_board_name, "x64");
   }
 #endif
 

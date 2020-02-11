@@ -4,7 +4,7 @@
 
 target_cpu = "x64"
 
-board_name = "pc"
+board_name = "x64"
 
 board_package_labels = [
   "//garnet/bin/thermd",

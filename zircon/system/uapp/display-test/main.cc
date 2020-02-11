@@ -7,8 +7,8 @@
 #include <fcntl.h>
 #include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
-#include <lib/fidl/cpp/message.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fidl/cpp/message.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -601,7 +601,7 @@ Platforms GetPlatform() {
   printf("Found board %.*s\n", static_cast<int>(board_name.size()), result.value().name.data());
 
   auto board_name_cmp = std::string_view(board_name.data(), board_name.size());
-  if (board_name_cmp == "pc" || board_name_cmp == "chromebook-x64" || board_name_cmp == "Eve" ||
+  if (board_name_cmp == "x64" || board_name_cmp == "chromebook-x64" || board_name_cmp == "Eve" ||
       board_name_cmp.find("Nocturne") != std::string_view::npos ||
       board_name_cmp.find("NUC") != std::string_view::npos) {
     return INTEL_PLATFORM;

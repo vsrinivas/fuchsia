@@ -186,9 +186,7 @@ template("test_spec") {
     runtime_deps_target_name = "${target_name}_deps"
 
     generated_file(runtime_deps_target_name) {
-      outputs = [
-        runtime_deps_file,
-      ]
+      outputs = [ runtime_deps_file ]
       data_keys = [ "test_runtime_deps" ]
       deps = invoker.deps
       rebase = root_build_dir
@@ -203,7 +201,7 @@ template("test_spec") {
   # a function of this.
   # TODO(joshuaseaton): Use board_name instead of cpu in the reasoning above.
   allowed_device_types = []
-  if (board_name == "pc") {  # x64.gni
+  if (board_name == "x64") {
     allowed_device_types = [
       "QEMU",
       "Intel NUC Kit NUC7i5DNHE",
