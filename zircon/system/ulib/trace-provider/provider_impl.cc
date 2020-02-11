@@ -4,13 +4,12 @@
 
 #include "provider_impl.h"
 
-#include <stdio.h>
-
 #include <fuchsia/tracing/provider/c/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/coding.h>
 #include <lib/zx/process.h>
+#include <stdio.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
@@ -81,8 +80,8 @@ void TraceProviderImpl::Connection::Handle(async_dispatcher_t* dispatcher, async
       if (status == ZX_OK) {
         return;
       }
-      fprintf(stderr, "TraceProvider: Error re-registering channel wait: status=%d(%s)\n",
-              status, zx_status_get_string(status));
+      fprintf(stderr, "TraceProvider: Error re-registering channel wait: status=%d(%s)\n", status,
+              zx_status_get_string(status));
     } else {
       fprintf(stderr, "TraceProvider: received invalid FIDL message or failed to send reply\n");
     }
@@ -119,7 +118,6 @@ bool TraceProviderImpl::Connection::ReadMessage() {
 bool TraceProviderImpl::Connection::DecodeAndDispatch(uint8_t* buffer, uint32_t num_bytes,
                                                       zx_handle_t* handles, uint32_t num_handles) {
   if (num_bytes < sizeof(fidl_message_header_t)) {
-    zx_handle_close_many(handles, num_handles);
     return false;
   }
 
@@ -253,7 +251,7 @@ EXPORT trace_provider_t* trace_provider_create_with_name(zx_handle_t to_service_
   if (status != ZX_OK) {
     if (trace::internal::kVerboseTraceErrors) {
       fprintf(stderr, "TraceProvider: registry failed: status=%d(%s)\n", status,
-            zx_status_get_string(status));
+              zx_status_get_string(status));
     }
     return nullptr;
   }

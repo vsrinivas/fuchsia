@@ -4,14 +4,13 @@
 
 #include "fake_trace_manager.h"
 
-#include <stdio.h>
-
-#include <utility>
-
 #include <fuchsia/tracing/provider/c/fidl.h>
 #include <lib/fidl/coding.h>
+#include <stdio.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
+
+#include <utility>
 
 namespace trace {
 namespace test {
@@ -28,15 +27,13 @@ void FakeTraceManager::Create(async_dispatcher_t* dispatcher,
 }
 
 FakeTraceManager::FakeTraceManager(async_dispatcher_t* dispatcher, zx::channel channel)
-  : channel_(std::move(channel)),
-    wait_(this, channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED) {
+    : channel_(std::move(channel)),
+      wait_(this, channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED) {
   zx_status_t status = wait_.Begin(dispatcher);
   ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
-void FakeTraceManager::Close() {
-  channel_.reset();
-}
+void FakeTraceManager::Close() { channel_.reset(); }
 
 void FakeTraceManager::Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                               zx_status_t status, const zx_packet_signal_t* signal) {
@@ -55,8 +52,8 @@ void FakeTraceManager::Handle(async_dispatcher_t* dispatcher, async::WaitBase* w
       if (status == ZX_OK) {
         return;
       }
-      fprintf(stderr, "FakeTraceManager: Error re-registering channel wait: %d(%s)\n",
-              status, zx_status_get_string(status));
+      fprintf(stderr, "FakeTraceManager: Error re-registering channel wait: %d(%s)\n", status,
+              zx_status_get_string(status));
     } else {
       fprintf(stderr, "FakeTraceManager: received invalid FIDL message or failed to send reply\n");
     }
@@ -95,7 +92,6 @@ bool FakeTraceManager::DecodeAndDispatch(uint8_t* buffer, uint32_t num_bytes, zx
   printf("FakeTraceManager: Got request\n");
 
   if (num_bytes < sizeof(fidl_message_header_t)) {
-    zx_handle_close_many(handles, num_handles);
     return false;
   }
 
