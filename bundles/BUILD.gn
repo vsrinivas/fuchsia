@@ -25,6 +25,7 @@ group("tools") {
     "//src/developer/feedback/bugreport",
     "//src/developer/kcounter_inspect",
     "//src/developer/memory/mem",
+    "//src/developer/remote-control:pkg",
     "//src/developer/system_monitor/bin/dockyard_host:host_tools",
     "//src/developer/system_monitor/bin/harvester:system_monitor_harvester",
     "//src/devices/bind/debugger",
