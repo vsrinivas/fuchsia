@@ -1,4 +1,4 @@
-iquery --recursive --absolute_paths --sort diagnostics
+iquery --recursive --absolute_paths --sort diagnostics/fuchsia.inspect.Tree
 /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics:
   array:0x15 = [1, 10, -3]
   array:0x16 = [1, 10, 2]

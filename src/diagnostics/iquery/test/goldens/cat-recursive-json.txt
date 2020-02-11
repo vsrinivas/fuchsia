@@ -1,4 +1,4 @@
-iquery --recursive --format=json objects
+iquery --recursive --format=json diagnostics
 [
     {
         "contents": {
@@ -94,6 +94,6 @@ iquery --recursive --format=json objects
                 }
             }
         },
-        "path": "objects"
+        "path": "diagnostics"
     }
 ]

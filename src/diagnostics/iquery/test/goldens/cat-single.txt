@@ -1,5 +1,5 @@
 # Output the object properties for one object in text format.
-iquery objects#table:0x0
+iquery diagnostics#table:0x0
 table:0x0:
   binary_data = Binary:
 00000000	20 00 11 12 05                                  	 ....

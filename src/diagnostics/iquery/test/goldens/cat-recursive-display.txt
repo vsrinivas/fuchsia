@@ -1,5 +1,5 @@
-iquery --recursive --sort --display_paths objects
-objects:
+iquery --recursive --sort --display_paths diagnostics
+diagnostics:
   table:0x0:
     binary_data = Binary:
 00000000	20 00 11 12 05                                  	 ....

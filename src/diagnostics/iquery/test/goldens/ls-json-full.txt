@@ -1,8 +1,8 @@
-iquery --ls --format=json --sort --full_paths objects#table:0x0
+iquery --ls --format=json --sort --full_paths diagnostics#table:0x0
 [
-    "objects#table:0x0/row:0x1",
-    "objects#table:0x0/row:0x11",
-    "objects#table:0x0/row:0x5",
-    "objects#table:0x0/row:0x9",
-    "objects#table:0x0/row:0xd"
+    "diagnostics#table:0x0/row:0x1",
+    "diagnostics#table:0x0/row:0x11",
+    "diagnostics#table:0x0/row:0x5",
+    "diagnostics#table:0x0/row:0x9",
+    "diagnostics#table:0x0/row:0xd"
 ]

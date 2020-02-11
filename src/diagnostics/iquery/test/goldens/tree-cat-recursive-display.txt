@@ -1,4 +1,4 @@
-iquery --recursive --sort --display_paths diagnostics
+iquery --recursive --sort --display_paths diagnostics/fuchsia.inspect.Tree
 diagnostics:
   array:0x15 = [1, 10, -3]
   array:0x16 = [1, 10, 2]

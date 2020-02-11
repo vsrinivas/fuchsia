@@ -1,4 +1,4 @@
-iquery --recursive --format=json --display_paths --sort objects/root.inspect
+iquery --recursive --format=json --display_paths --sort diagnostics/root.inspect
 [
     {
         "contents": {
@@ -283,6 +283,6 @@ iquery --recursive --format=json --display_paths --sort objects/root.inspect
                 }
             }
         },
-        "path": "objects/root.inspect"
+        "path": "diagnostics/root.inspect"
     }
 ]

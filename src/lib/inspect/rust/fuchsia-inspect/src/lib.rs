@@ -55,7 +55,7 @@ pub mod reader;
 pub mod trie;
 #[macro_use]
 pub mod testing;
-mod service;
+pub mod service;
 mod state;
 mod utils;
 

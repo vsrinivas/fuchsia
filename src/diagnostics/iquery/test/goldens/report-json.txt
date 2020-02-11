@@ -283,7 +283,7 @@ iquery --report --format=json
                 }
             }
         },
-        "path": "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect"
+        "path": "/hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics/root.inspect"
     },
     {
         "contents": {
@@ -379,7 +379,7 @@ iquery --report --format=json
                 }
             }
         },
-        "path": "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects"
+        "path": "/hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics"
     },
     {
         "contents": {

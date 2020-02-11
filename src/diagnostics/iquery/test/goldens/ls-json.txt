@@ -1,4 +1,4 @@
-iquery --ls --sort --format=json objects#table:0x0
+iquery --ls --sort --format=json diagnostics#table:0x0
 [
     "row:0x1",
     "row:0x11",

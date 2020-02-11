@@ -1,71 +1,71 @@
-iquery --recursive --sort --full_paths objects
-objects:
-  objects#table:0x0:
+iquery --recursive --sort --full_paths diagnostics
+diagnostics:
+  diagnostics#table:0x0:
     binary_data = Binary:
 00000000	20 00 11 12 05                                  	 ....
     object_name = Example Table
-    objects#table:0x0/row:0x1:
-      objects#table:0x0/row:0x1/cell:0x2:
+    diagnostics#table:0x0/row:0x1:
+      diagnostics#table:0x0/row:0x1/cell:0x2:
         double_value = 6.666667
         name = (0,0)
         value = 0
-      objects#table:0x0/row:0x1/cell:0x3:
+      diagnostics#table:0x0/row:0x1/cell:0x3:
         double_value = 13.333333
         name = (0,1)
         value = 0
-      objects#table:0x0/row:0x1/cell:0x4:
+      diagnostics#table:0x0/row:0x1/cell:0x4:
         double_value = 20.000000
         name = (0,2)
         value = 0
-    objects#table:0x0/row:0x11:
-      objects#table:0x0/row:0x11/cell:0x12:
+    diagnostics#table:0x0/row:0x11:
+      diagnostics#table:0x0/row:0x11/cell:0x12:
         double_value = 86.666667
         name = (4,0)
         value = 0
-      objects#table:0x0/row:0x11/cell:0x13:
+      diagnostics#table:0x0/row:0x11/cell:0x13:
         double_value = 93.333333
         name = (4,1)
         value = 4
-      objects#table:0x0/row:0x11/cell:0x14:
+      diagnostics#table:0x0/row:0x11/cell:0x14:
         double_value = 100.000000
         name = (4,2)
         value = 8
-    objects#table:0x0/row:0x5:
-      objects#table:0x0/row:0x5/cell:0x6:
+    diagnostics#table:0x0/row:0x5:
+      diagnostics#table:0x0/row:0x5/cell:0x6:
         double_value = 26.666667
         name = (1,0)
         value = 0
-      objects#table:0x0/row:0x5/cell:0x7:
+      diagnostics#table:0x0/row:0x5/cell:0x7:
         double_value = 33.333333
         name = (1,1)
         value = 1
-      objects#table:0x0/row:0x5/cell:0x8:
+      diagnostics#table:0x0/row:0x5/cell:0x8:
         double_value = 40.000000
         name = (1,2)
         value = 2
-    objects#table:0x0/row:0x9:
-      objects#table:0x0/row:0x9/cell:0xa:
+    diagnostics#table:0x0/row:0x9:
+      diagnostics#table:0x0/row:0x9/cell:0xa:
         double_value = 46.666667
         name = (2,0)
         value = 0
-      objects#table:0x0/row:0x9/cell:0xb:
+      diagnostics#table:0x0/row:0x9/cell:0xb:
         double_value = 53.333333
         name = (2,1)
         value = 2
-      objects#table:0x0/row:0x9/cell:0xc:
+      diagnostics#table:0x0/row:0x9/cell:0xc:
         double_value = 60.000000
         name = (2,2)
         value = 4
-    objects#table:0x0/row:0xd:
-      objects#table:0x0/row:0xd/cell:0x10:
+    diagnostics#table:0x0/row:0xd:
+      diagnostics#table:0x0/row:0xd/cell:0x10:
         double_value = 80.000000
         name = (3,2)
         value = 6
-      objects#table:0x0/row:0xd/cell:0xe:
+      diagnostics#table:0x0/row:0xd/cell:0xe:
         double_value = 66.666667
         name = (3,0)
         value = 0
-      objects#table:0x0/row:0xd/cell:0xf:
+      diagnostics#table:0x0/row:0xd/cell:0xf:
         double_value = 73.333333
         name = (3,1)
         value = 3

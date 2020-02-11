@@ -1,5 +1,5 @@
-iquery --recursive --sort --display_paths objects/root.inspect
-objects/root.inspect:
+iquery --recursive --sort --display_paths diagnostics/root.inspect
+diagnostics/root.inspect:
   array:0x15 = [1, 10, -3]
   array:0x16 = [1, 10, 2]
   array:0x17 = [0.25, 1.25, -0.75]

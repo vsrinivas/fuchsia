@@ -1,5 +1,5 @@
-# Find from the base objects directory retrieves only the top level.
+# Find from the base diagnostics directory retrieves only the top level.
 iquery --find .
-./objects/root.inspect
-./objects
+./diagnostics/root.inspect
+./diagnostics
 ./diagnostics

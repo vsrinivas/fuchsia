@@ -1,5 +1,5 @@
 # Output the object properties for one object in text format.
-iquery --sort objects/root.inspect#table:0x0
+iquery --sort diagnostics/root.inspect#table:0x0
 table:0x0:
   binary_data = Binary:
 00000000	20 00 11 12 05                                  	 ....

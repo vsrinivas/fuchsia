@@ -1,4 +1,4 @@
-iquery --recursive --sort objects
+iquery --recursive --sort diagnostics
 root:
   table:0x0:
     binary_data = Binary:

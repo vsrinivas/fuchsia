@@ -1,8 +1,8 @@
-iquery --ls --format=json --absolute_paths --sort objects/root.inspect#table:0x0
+iquery --ls --format=json --absolute_paths --sort diagnostics/root.inspect#table:0x0
 [
-    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x1",
-    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x11",
-    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x5",
-    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0x9",
-    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects/root.inspect#table:0x0/row:0xd"
+    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics/root.inspect#table:0x0/row:0x1",
+    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics/root.inspect#table:0x0/row:0x11",
+    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics/root.inspect#table:0x0/row:0x5",
+    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics/root.inspect#table:0x0/row:0x9",
+    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics/root.inspect#table:0x0/row:0xd"
 ]

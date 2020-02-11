@@ -1,4 +1,4 @@
-iquery --recursive --format=json --absolute_paths --sort diagnostics
+iquery --recursive --format=json --absolute_paths --sort diagnostics/fuchsia.inspect.Tree
 [
     {
         "contents": {

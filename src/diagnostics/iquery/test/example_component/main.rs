@@ -157,13 +157,24 @@ async fn main() -> Result<(), Error> {
     });
 
     let mut fs = ServiceFs::new();
+
     // NOTE: this FIDL service is deprecated and the following *should not* be done.
     // Rust doesn't have a way of writing to the deprecated FIDL service, therefore
     // we read what we wrote to the VMO and provide it through the service for testing
     // purposes.
-    fs.dir("objects").add_fidl_service(move |stream| {
-        spawn_inspect_server(stream, example_table.get_node_object());
-    });
+    let inspector_clone = inspector.clone();
+    fs.dir("diagnostics")
+        .add_fidl_service(move |stream| {
+            spawn_inspect_server(stream, example_table.get_node_object());
+        })
+        .add_fidl_service(move |stream| {
+            // Purely for test purposes. Internally inspect creates a pseudo dir diagnostics and
+            // adds it as remote in ServiceFs. However, if we try to add the VMO file and the other
+            // service in the ServiceFs, an exception occurs. This is purely a workaround for
+            // ServiceFS and for the test purpose. A regular component wouldn't do this. It would
+            // just do `inspector.serve(&mut fs);`.
+            inspect::service::spawn_tree_server(inspector_clone.clone(), stream);
+        });
 
     // TODO(fxb/41952): remove when all clients writing VMO files today have been migrated to write
     // to Tree.
@@ -172,14 +183,18 @@ async fn main() -> Result<(), Error> {
         .ok_or(format_err!("Failed to duplicate VMO"))
         .and_then(|vmo| {
             let size = vmo.get_size()?;
-            fs.dir("objects").add_vmo_file_at("root.inspect", vmo, 0 /* vmo offset */, size);
+            fs.dir("diagnostics").add_vmo_file_at(
+                "root.inspect",
+                vmo,
+                0, /* vmo offset */
+                size,
+            );
             Ok(())
         })
         .unwrap_or_else(|e| {
             eprintln!("Failed to expose vmo. Error: {:?}", e);
         });
 
-    inspector.serve_tree(&mut fs)?;
     fs.take_and_serve_directory_handle()?;
 
     Ok(fs.collect().await)

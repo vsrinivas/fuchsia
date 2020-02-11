@@ -1,4 +1,4 @@
-iquery --recursive --format=json --absolute_paths objects
+iquery --recursive --format=json --absolute_paths diagnostics
 [
     {
         "contents": {
@@ -94,6 +94,6 @@ iquery --recursive --format=json --absolute_paths objects
                 }
             }
         },
-        "path": "/hub/r/test/*/c/iquery_example_component.cmx/*/out/objects"
+        "path": "/hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics"
     }
 ]
