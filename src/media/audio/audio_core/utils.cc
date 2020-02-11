@@ -252,12 +252,10 @@ zx_status_t AcquireHighPriorityProfile(zx::profile* profile) {
 
     zx_status_t fidl_status;
     zx::profile res_profile;
-    res = provider.GetDeadlineProfile(
-        ThreadingModel::kMixProfileCapacity.get(),
-        ThreadingModel::kMixProfileDeadline.get(),
-        ThreadingModel::kMixProfilePeriod.get(),
-        "src/media/audio/audio_core", &fidl_status,
-        &res_profile);
+    res = provider.GetDeadlineProfile(ThreadingModel::kMixProfileCapacity.get(),
+                                      ThreadingModel::kMixProfileDeadline.get(),
+                                      ThreadingModel::kMixProfilePeriod.get(),
+                                      "src/media/audio/audio_core", &fidl_status, &res_profile);
     if (res != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to create profile, res=" << res;
       return res;

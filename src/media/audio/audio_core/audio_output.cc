@@ -31,7 +31,7 @@ void AudioOutput::Process() {
   FX_CHECK(pipeline_);
   auto now = async::Now(mix_domain().dispatcher());
 
-  int64_t trace_wake_delta = next_sched_time_known_ ?  (now - next_sched_time_).get() : 0;
+  int64_t trace_wake_delta = next_sched_time_known_ ? (now - next_sched_time_).get() : 0;
   TRACE_DURATION("audio", "AudioOutput::Process", "wake delta", TA_INT64(trace_wake_delta));
 
   // At this point, we should always know when our implementation would like to be called to do some
