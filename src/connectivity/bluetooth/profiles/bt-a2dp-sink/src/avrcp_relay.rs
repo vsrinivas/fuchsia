@@ -218,7 +218,7 @@ impl AvrcpRelay {
             }
 
             if staged_info.is_some() && hanging_watcher.is_some() {
-                fx_log_info!("Sending watcher info: {:?}", staged_info.as_ref().unwrap());
+                fx_vlog!(1, "Sending watcher info: {:?}", staged_info.as_ref().unwrap());
                 hanging_watcher.take().unwrap().send(staged_info.take().unwrap())?;
             }
         }

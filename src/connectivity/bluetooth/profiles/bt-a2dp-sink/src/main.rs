@@ -21,7 +21,7 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
     fuchsia_inspect_contrib::nodes::ManagedNode,
-    fuchsia_syslog::{self, fx_log_info, fx_log_warn},
+    fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{self as mpsc, Receiver, Sender},
@@ -360,7 +360,7 @@ async fn decode_media_stream(
                         };
                     },
                     player::PlayerEvent::Status(s) => {
-                        fx_log_info!("PlayerEvent Status happened: {:?}", s);
+                        fx_vlog!(1, "PlayerEvent Status happened: {:?}", s);
                     },
                 }
             },
