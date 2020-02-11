@@ -96,6 +96,7 @@ template("fidl_library") {
 
       foreach(dep, merged_deps) {
         gen_dir = get_label_info(dep, "target_gen_dir")
+        dep_toolchain = get_label_info(dep, "toolchain")
         name = get_label_info(dep, "name")
         dep_libraries += [ "$gen_dir/$name.fidl_libraries" ]
         dep_dir =
@@ -131,7 +132,7 @@ template("fidl_library") {
 
     rebased_response_file = rebase_path(_response_file, root_build_dir)
     args = [
-      rebase_path("${fuchsia_sdk}/sdk/tools/fidlc", root_build_dir),
+      rebase_path("${fuchsia_sdk}/tools/fidlc", root_build_dir),
       "@$rebased_response_file",
     ]
   }
@@ -155,7 +156,7 @@ template("fidl_library") {
 
     script = "${fuchsia_sdk}/build/gn_run_binary.py"
     args = [
-      rebase_path("${fuchsia_sdk}/sdk/tools/fidlgen", root_build_dir),
+      rebase_path("${fuchsia_sdk}/tools/fidlgen", root_build_dir),
       "-generators",
       "cpp",
       "-json",
@@ -196,8 +197,8 @@ template("fidl_library") {
     if (!defined(public_deps)) {
       public_deps = []
     }
-    public_deps += [ "${fuchsia_sdk}/sdk/pkg/fidl" ]
-    public_deps += [ "${fuchsia_sdk}/sdk/pkg/fidl_cpp" ]
+    public_deps += [ "${fuchsia_sdk}/pkg/fidl" ]
+    public_deps += [ "${fuchsia_sdk}/pkg/fidl_cpp" ]
 
     public_configs = [ ":${invoker.target_name}_config" ]
   }

@@ -96,6 +96,7 @@ template("fidl_library") {
 
       foreach(dep, merged_deps) {
         gen_dir = get_label_info(dep, "target_gen_dir")
+        dep_toolchain = get_label_info(dep, "toolchain")
         name = get_label_info(dep, "name")
         dep_libraries += [ "$gen_dir/$name.fidl_libraries" ]
         dep_dir =

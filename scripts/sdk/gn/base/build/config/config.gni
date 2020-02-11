@@ -17,7 +17,7 @@ declare_args() {
   # The SDK manifest file. This is useful to include as a dependency
   # for some targets in order to cause a rebuild when the version of the
   # SDK is changed.
-  fuchsia_sdk_manifest_file = "$fuchsia_sdk/sdk/meta/manifest.json"
+  fuchsia_sdk_manifest_file = "$fuchsia_sdk/meta/manifest.json"
 }
 
 if (fuchsia_sdk_id == "") {
