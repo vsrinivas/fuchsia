@@ -53,12 +53,6 @@ USBVirtualBusBase::USBVirtualBusBase() {
   auto enable_result = virtual_bus_->Enable();
   ASSERT_NO_FATAL_FAILURES(ValidateResult(enable_result));
 
-  char peripheral_str[] = "usb-peripheral";
-  fd.reset(openat(devmgr_.devfs_root().get(), "class", O_RDONLY));
-  while (fdio_watch_directory(fd.get(), usb_virtual_bus::WaitForFile, ZX_TIME_INFINITE,
-                              &peripheral_str) != ZX_ERR_STOP)
-    continue;
-
   fd.reset(openat(devmgr_.devfs_root().get(), "class/usb-peripheral", O_RDONLY));
   fbl::String devpath;
   while (fdio_watch_directory(fd.get(), usb_virtual_bus::WaitForAnyFile, ZX_TIME_INFINITE,
