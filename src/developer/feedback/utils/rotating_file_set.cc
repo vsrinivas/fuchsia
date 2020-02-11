@@ -5,6 +5,7 @@
 #include "src/developer/feedback/utils/rotating_file_set.h"
 
 #include <assert.h>
+#include <sys/stat.h>
 
 #include <fstream>
 #include <sstream>
@@ -60,10 +61,30 @@ void RotatingFileSetWriter::RotateFilePaths() {
 RotatingFileSetReader::RotatingFileSetReader(const std::vector<const std::string>& file_paths)
     : file_paths_(file_paths) {}
 
-void RotatingFileSetReader::Concatenate(const std::string& file_path) const {
+namespace {
+
+size_t GetFileSize(const std::string& file_path) {
+  struct stat file_status;
+  file_status.st_size = 0;
+  stat(file_path.c_str(), &file_status);
+  return file_status.st_size;
+}
+
+}  // namespace
+
+bool RotatingFileSetReader::Concatenate(const std::string& file_path) const {
+  size_t total_bytes = 0;
+  for (auto path = file_paths_.crbegin(); path != file_paths_.crend(); ++path) {
+    total_bytes += GetFileSize(*path);
+  }
+
+  if (total_bytes == 0) {
+    return false;
+  }
+
   std::ofstream out(file_path, std::iostream::out | std::iostream::trunc);
   if (!out.is_open()) {
-    return;
+    return false;
   }
 
   std::ifstream in;
@@ -77,6 +98,8 @@ void RotatingFileSetReader::Concatenate(const std::string& file_path) const {
 
   out.flush();
   out.close();
+
+  return true;
 }
 
 }  // namespace feedback

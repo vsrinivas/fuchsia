@@ -60,7 +60,9 @@ class RotatingFileSetReader {
  public:
   RotatingFileSetReader(const std::vector<const std::string>& file_paths);
 
-  void Concatenate(const std::string& file_path) const;
+  // Returns true if data is written to |file_path|. If no data is written to |file_path|, the file
+  // will not be created.
+  bool Concatenate(const std::string& file_path) const;
 
  private:
   const std::vector<const std::string> file_paths_;

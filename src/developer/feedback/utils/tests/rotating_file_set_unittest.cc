@@ -32,10 +32,10 @@ TEST_F(RotatingFileSetTest, Writer_SingleFileInSet) {
       files::JoinPath(RootDirectory(), "file0.txt"),
   };
 
-  RotatingFileSetWriter buffer(file_paths, FileSize::Megabytes(1));
+  RotatingFileSetWriter writer(file_paths, FileSize::Megabytes(1));
 
-  buffer.Write("line1\n");
-  buffer.Write("line2\n");
+  writer.Write("line1\n");
+  writer.Write("line2\n");
 
   std::string file_contents;
   ReadFileContents(file_paths[0], &file_contents);
@@ -49,14 +49,14 @@ TEST_F(RotatingFileSetTest, Writer_SingleFileInSet_WritesClearFile) {
 
   std::string file_contents;
 
-  RotatingFileSetWriter buffer(file_paths, FileSize::Bytes(6));
+  RotatingFileSetWriter writer(file_paths, FileSize::Bytes(6));
 
-  buffer.Write("line1\n");
+  writer.Write("line1\n");
 
   ReadFileContents(file_paths[0], &file_contents);
   EXPECT_EQ(file_contents, "line1\n");
 
-  buffer.Write("line2\n");
+  writer.Write("line2\n");
 
   ReadFileContents(file_paths[0], &file_contents);
   EXPECT_EQ(file_contents, "line2\n");
@@ -71,21 +71,21 @@ TEST_F(RotatingFileSetTest, Writer_MultipleFilesInSet_WriteRotateFiles) {
 
   std::string file_contents;
 
-  RotatingFileSetWriter buffer(file_paths, FileSize::Bytes(6) * file_paths.size());
+  RotatingFileSetWriter writer(file_paths, FileSize::Bytes(6) * file_paths.size());
 
-  buffer.Write("line1\n");
+  writer.Write("line1\n");
 
   ReadFileContents(file_paths[0], &file_contents);
   EXPECT_EQ(file_contents, "line1\n");
 
-  buffer.Write("line2\n");
+  writer.Write("line2\n");
 
   ReadFileContents(file_paths[0], &file_contents);
   EXPECT_EQ(file_contents, "line2\n");
   ReadFileContents(file_paths[1], &file_contents);
   EXPECT_EQ(file_contents, "line1\n");
 
-  buffer.Write("line3\n");
+  writer.Write("line3\n");
 
   ReadFileContents(file_paths[0], &file_contents);
   EXPECT_EQ(file_contents, "line3\n");
@@ -102,13 +102,13 @@ TEST_F(RotatingFileSetTest, Writer_MultipleFilesInSet_ManyRotations) {
       files::JoinPath(RootDirectory(), "file2.txt"),
   };
 
-  RotatingFileSetWriter buffer(file_paths, FileSize::Bytes(6) * file_paths.size());
+  RotatingFileSetWriter writer(file_paths, FileSize::Bytes(6) * file_paths.size());
 
-  buffer.Write("line1\n");
-  buffer.Write("line2\n");
-  buffer.Write("line3\n");
-  buffer.Write("line4\n");
-  buffer.Write("line5\n");
+  writer.Write("line1\n");
+  writer.Write("line2\n");
+  writer.Write("line3\n");
+  writer.Write("line4\n");
+  writer.Write("line5\n");
 
   std::string file_contents;
   ReadFileContents(file_paths[0], &file_contents);
@@ -126,17 +126,17 @@ TEST_F(RotatingFileSetTest, Reader_ConcatenatesCorrectly) {
       files::JoinPath(RootDirectory(), "file2.txt"),
   };
 
-  RotatingFileSetWriter buffer(file_paths, FileSize::Bytes(6) * file_paths.size());
+  RotatingFileSetWriter writer(file_paths, FileSize::Bytes(6) * file_paths.size());
 
-  buffer.Write("line1\n");
-  buffer.Write("line2\n");
-  buffer.Write("line3\n");
-  buffer.Write("line4\n");
-  buffer.Write("line5\n");
+  writer.Write("line1\n");
+  writer.Write("line2\n");
+  writer.Write("line3\n");
+  writer.Write("line4\n");
+  writer.Write("line5\n");
 
   const std::string output_file = files::JoinPath(RootDirectory(), "output.txt");
   RotatingFileSetReader reader(file_paths);
-  reader.Concatenate(output_file);
+  EXPECT_TRUE(reader.Concatenate(output_file));
 
   std::string contents;
   files::ReadFileToString(output_file, &contents);
@@ -150,21 +150,51 @@ TEST_F(RotatingFileSetTest, Reader_ConcatenatesCorrectlyWhenSetContainsEmptyFile
       files::JoinPath(RootDirectory(), "file2.txt"),
   };
 
-  RotatingFileSetWriter buffer(file_paths, FileSize::Megabytes(6));
+  RotatingFileSetWriter writer(file_paths, FileSize::Megabytes(6));
 
-  buffer.Write("line1\n");
-  buffer.Write("line2\n");
-  buffer.Write("line3\n");
-  buffer.Write("line4\n");
-  buffer.Write("line5\n");
+  writer.Write("line1\n");
+  writer.Write("line2\n");
+  writer.Write("line3\n");
+  writer.Write("line4\n");
+  writer.Write("line5\n");
 
   const std::string output_file = files::JoinPath(RootDirectory(), "output.txt");
   RotatingFileSetReader reader(file_paths);
-  reader.Concatenate(output_file);
+  EXPECT_TRUE(reader.Concatenate(output_file));
 
   std::string contents;
   files::ReadFileToString(output_file, &contents);
   EXPECT_EQ(contents, "line1\nline2\nline3\nline4\nline5\n");
+}
+
+TEST_F(RotatingFileSetTest, Reader_ReturnsFalseWhenNoFilesInSet) {
+  const std::vector<const std::string> file_paths = {
+      files::JoinPath(RootDirectory(), "file0.txt"),
+      files::JoinPath(RootDirectory(), "file1.txt"),
+      files::JoinPath(RootDirectory(), "file2.txt"),
+  };
+
+  const std::string output_file = files::JoinPath(RootDirectory(), "output.txt");
+  RotatingFileSetReader reader(file_paths);
+  EXPECT_FALSE(reader.Concatenate(output_file));
+  EXPECT_FALSE(files::IsFile(output_file));
+}
+
+TEST_F(RotatingFileSetTest, Reader_ReturnsFalseWhenAllEmptyFilesInSet) {
+  const std::vector<const std::string> file_paths = {
+      files::JoinPath(RootDirectory(), "file0.txt"),
+      files::JoinPath(RootDirectory(), "file1.txt"),
+      files::JoinPath(RootDirectory(), "file2.txt"),
+  };
+
+  for (const auto& file_path : file_paths) {
+    files::WriteFile(file_path, "", 0);
+  }
+
+  const std::string output_file = files::JoinPath(RootDirectory(), "output.txt");
+  RotatingFileSetReader reader(file_paths);
+  EXPECT_FALSE(reader.Concatenate(output_file));
+  EXPECT_FALSE(files::IsFile(output_file));
 }
 
 }  // namespace
