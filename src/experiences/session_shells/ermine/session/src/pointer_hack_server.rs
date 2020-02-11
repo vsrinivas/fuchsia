@@ -31,21 +31,24 @@ impl PointerHackServer {
             move |mut stream: PresentationRequestStream| {
                 let pointer_listeners = pointer_listeners.clone();
                 fasync::spawn(async move {
-                    loop {
-                        match stream.next().await {
-                            Some(Ok(PresentationRequest::CapturePointerEventsHack {
+                    while let Some(Ok(request)) = stream.next().await {
+                        match request {
+                            PresentationRequest::CapturePointerEventsHack {
                                 listener,
                                 control_handle: _control_handle,
-                            })) => {
+                            } => {
                                 let mut pointer_listeners = pointer_listeners.lock().await;
-                                pointer_listeners.push(
-                                    listener
-                                        .into_proxy()
-                                        .expect("Could not convert channel to proxy."),
+                                if let Ok(proxy) = listener.into_proxy() {
+                                    pointer_listeners.push(proxy);
+                                }
+                            }
+                            invalid_request => {
+                                println!(
+                                    "Received invalid PresentationRequest {:?}",
+                                    invalid_request
                                 );
                             }
-                            _ => {}
-                        };
+                        }
                     }
                 });
             },
