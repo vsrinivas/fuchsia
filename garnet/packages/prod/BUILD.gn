@@ -136,7 +136,6 @@ group("all") {
     "//garnet/packages/prod:odu",
     "//garnet/packages/prod:openthread",
     "//garnet/packages/prod:overnetstack",
-    "//garnet/packages/prod:pm",
     "//garnet/packages/prod:ralink",
     "//garnet/packages/prod:realtek",
     "//garnet/packages/prod:run",
@@ -194,14 +193,6 @@ group("realtek") {
     "//src/connectivity/wlan/drivers/realtek/rtl88xx",
     "//src/connectivity/wlan/drivers/wlan",
     "//src/connectivity/wlan/drivers/wlanphy",
-  ]
-}
-
-group("pm") {
-  testonly = true
-  public_deps = [
-    "//src/sys/pkg/bin/pm",
-    "//src/sys/pkg/bin/pm:host",
   ]
 }
 

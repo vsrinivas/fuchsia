@@ -21,7 +21,6 @@ base_package_labels += [
   "//garnet/packages/prod:memory_monitor",
   "//garnet/packages/prod:network-speed-test",
   "//garnet/packages/prod:overnetstack",
-  "//garnet/packages/prod:pm",
   "//garnet/packages/prod:run",
   "//garnet/packages/prod:sbase",
   "//garnet/packages/prod:ssh",
