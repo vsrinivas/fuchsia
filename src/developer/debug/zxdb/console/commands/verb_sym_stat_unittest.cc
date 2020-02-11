@@ -24,11 +24,7 @@ class VerbSymStat : public ConsoleTest {};
 TEST_F(VerbSymStat, SymStat) {
   console().ProcessInputLine("attach 1234");
 
-  // TODO(bug 43528) The messages should not be duplicated.
   auto event = console().GetOutputEvent();
-  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("Process 2 state=Running koid=1234 name=<mock>", event.output.AsString());
-  event = console().GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ("Attached Process 2 state=Running koid=1234 name=<mock>", event.output.AsString());
 

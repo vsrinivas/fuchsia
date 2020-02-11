@@ -101,7 +101,9 @@ Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback c
       return err_or_target.err();
     err_or_target.value()->Attach(koid, [callback = std::move(callback)](
                                             fxl::WeakPtr<Target> target, const Err& err) mutable {
-      ProcessCommandCallback(target, true, err, std::move(callback));
+      // Don't display a message on success because the ConsoleContext will print the new process
+      // information when it's detected.
+      ProcessCommandCallback(target, false, err, std::move(callback));
     });
     return Err();
   }
