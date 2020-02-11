@@ -21,6 +21,7 @@ rustc_library("files_async") {
     "//garnet/lib/rust/io_util",
     "//src/lib/fuchsia-async",
     "//src/lib/storage/pseudo-fs",
+    "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:tempfile",
   ]

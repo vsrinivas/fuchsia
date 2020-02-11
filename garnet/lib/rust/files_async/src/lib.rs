@@ -290,9 +290,9 @@ mod tests {
             directory::entry::DirectoryEntry, file::simple::read_only_str, pseudo_directory,
         },
         fuchsia_zircon::DurationNum,
-        io_util,
+        io_util, pin_utils,
         proptest::prelude::*,
-        std::path::Path,
+        std::{path::Path, task::Poll},
         tempfile::TempDir,
     };
 
@@ -425,13 +425,33 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_readdir_recursive_timeout() {
-        let tempdir = TempDir::new().expect("failed to create tmp dir");
-        let dir = create_nested_dir(&tempdir).await;
-        let result = readdir_recursive(&dir, Some(0.nanos())).await;
+    #[test]
+    fn test_readdir_recursive_timeout() {
+        let mut executor = fasync::Executor::new_with_fake_time().unwrap();
+        executor.set_fake_time(fasync::Time::from_nanos(0));
+
+        let fut = async move {
+            let tempdir = TempDir::new().expect("failed to create tmp dir");
+            let dir = create_nested_dir(&tempdir).await;
+            readdir_recursive(&dir, Some(0.nanos())).await
+        };
+
+        pin_utils::pin_mut!(fut);
+        let mut i = 1;
+        let result = loop {
+            executor.wake_main_future();
+            match executor.run_one_step(&mut fut) {
+                Some(Poll::Ready(x)) => break x,
+                None => panic!("Executor stalled"),
+                Some(Poll::Pending) => {
+                    executor.set_fake_time(fasync::Time::from_nanos(10 * i));
+                    i += 1;
+                }
+            }
+        };
+
         match result.as_ref().unwrap_err().downcast_ref::<Error>() {
-            Some(Error::Timeout(dir)) => assert_eq!(dir, "emptydir"),
+            Some(Error::Timeout(_)) => {}
             _ => panic!(format!("unexpected result: {:?}", result)),
         }
     }
