@@ -163,6 +163,7 @@ mod tests {
             collections: None,
             storage: None,
             runners: None,
+            environments: None,
         };
         assert_eq!(component_decl, component.decl.unwrap());
         assert_eq!(

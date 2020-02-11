@@ -4,6 +4,7 @@
 
 library fuchsia.sys2;
 
+using fuchsia.component;
 using fuchsia.data;
 
 /// A component declaration.
@@ -71,4 +72,9 @@ table ComponentDecl {
     /// List of runner capabilities created by this component.
     /// Runner capabilities can be exposed to the parent's realm or offered to children.
     9: vector<RunnerDecl> runners;
+
+    /// List of environments declared by this component.
+    /// Environments are assigned to children and control aspects of a child component's
+    /// runtime.
+    10: vector<EnvironmentDecl>:fuchsia.component.MAX_NUM_ENVIRONMENTS environments;
 };

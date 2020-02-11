@@ -104,6 +104,7 @@ fn main() {
             name: Some("logger".to_string()),
             url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
             startup: Some(StartupMode::Lazy),
+            environment: None,
         }];
         let collections = vec![CollectionDecl {
             name: Some("modular".to_string()),
@@ -129,6 +130,7 @@ fn main() {
             runners: Some(runners),
             // TODO: test storage
             storage: None,
+            environments: None,
         }
     };
     assert_eq!(cm_decl, expected_decl);

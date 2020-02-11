@@ -33,6 +33,7 @@ async fn main() {
                 name
             )),
             startup: Some(fsys::StartupMode::Lazy),
+            environment: None,
         };
         realm
             .create_child(&mut collection_ref, child_decl)
@@ -92,6 +93,7 @@ async fn main() {
                     .to_string(),
             ),
             startup: Some(fsys::StartupMode::Lazy),
+            environment: None,
         };
         realm
             .create_child(&mut collection_ref, child_decl)

@@ -315,6 +315,7 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
             storage: self.storage.native_into_fidl(),
             facets: self.facets.native_into_fidl(),
             runners: self.runners.native_into_fidl(),
+            environments: None,
         }
     }
 }
@@ -504,6 +505,7 @@ fidl_into_struct!(ChildDecl, ChildDecl, fsys::ChildDecl, fsys::ChildDecl,
                       name: String,
                       url: String,
                       startup: fsys::StartupMode,
+                      environment: Option<String>,
                   });
 
 fidl_into_struct!(CollectionDecl, CollectionDecl, fsys::CollectionDecl, fsys::CollectionDecl,
@@ -530,6 +532,7 @@ fidl_translations_opt_type!(fdata::Dictionary);
 fidl_translations_opt_type!(fio2::Operations);
 fidl_translations_identical!(Option<fio2::Operations>);
 fidl_translations_identical!(Option<fdata::Dictionary>);
+fidl_translations_identical!(Option<String>);
 
 /// A path to a capability.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1357,6 +1360,7 @@ mod tests {
                 facets: None,
                 storage: None,
                 runners: None,
+                environments: None,
             },
             result = ComponentDecl {
                 program: None,
@@ -1528,12 +1532,14 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cm"
                                   .to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
                     },
                     fsys::ChildDecl {
                         name: Some("echo".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/echo#meta/echo.cm"
                                   .to_string()),
                         startup: Some(fsys::StartupMode::Eager),
+                        environment: None,
                     },
                ]),
                collections: Some(vec![
@@ -1566,6 +1572,7 @@ mod tests {
                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                    }
                ]),
+               environments: None,
             },
             result = {
                 ComponentDecl {
@@ -1682,11 +1689,13 @@ mod tests {
                             name: "netstack".to_string(),
                             url: "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cm".to_string(),
                             startup: fsys::StartupMode::Lazy,
+                            environment: None,
                         },
                         ChildDecl {
                             name: "echo".to_string(),
                             url: "fuchsia-pkg://fuchsia.com/echo#meta/echo.cm".to_string(),
                             startup: fsys::StartupMode::Eager,
+                            environment: None,
                         },
                     ],
                     collections: vec![

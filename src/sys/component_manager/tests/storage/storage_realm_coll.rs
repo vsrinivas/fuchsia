@@ -20,6 +20,7 @@ async fn main() -> Result<(), Error> {
             "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_user.cm",
         )),
         startup: Some(fsys::StartupMode::Lazy),
+        environment: None,
     };
 
     realm

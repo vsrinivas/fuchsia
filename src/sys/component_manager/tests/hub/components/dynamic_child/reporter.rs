@@ -26,6 +26,7 @@ async fn main() -> Result<(), Error> {
         name: Some(String::from("simple_instance")),
         url: Some(String::from("fuchsia-pkg://fuchsia.com/hub_integration_test#meta/simple.cm")),
         startup: Some(fsys::StartupMode::Lazy),
+        environment: None,
     };
     realm
         .create_child(&mut collection_ref, child_decl)

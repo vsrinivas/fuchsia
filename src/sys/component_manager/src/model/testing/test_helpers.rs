@@ -194,6 +194,7 @@ impl ComponentDeclBuilder {
             name: name.to_string(),
             url: url.to_string(),
             startup: startup,
+            environment: None,
         });
         self
     }
@@ -497,6 +498,7 @@ impl ActionsTest {
             name: name.to_string(),
             url: format!("test:///{}", name),
             startup: fsys::StartupMode::Lazy,
+            environment: None,
         }
         .native_into_fidl();
         let res = self

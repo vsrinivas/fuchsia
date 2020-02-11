@@ -140,6 +140,7 @@ mod tests {
                     collections: None,
                     storage: None,
                     runners: None,
+                    environments: None,
                 }),
                 package: None,
             }))

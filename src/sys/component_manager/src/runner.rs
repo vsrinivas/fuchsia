@@ -272,6 +272,7 @@ mod tests {
                         name: "b".to_string(),
                         url: "test:///b".to_string(),
                         startup: fsys::StartupMode::Lazy,
+                        environment: None,
                     }],
                     offers: vec![OfferDecl::Runner(OfferRunnerDecl {
                         source: OfferRunnerSource::Realm,

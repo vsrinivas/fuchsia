@@ -534,6 +534,7 @@ mod tests {
                 name: Some("a".to_string()),
                 url: None,
                 startup: Some(fsys::StartupMode::Lazy),
+                environment: None,
             };
             let err = test
                 .realm_proxy
@@ -588,6 +589,7 @@ mod tests {
                 name: Some("b".to_string()),
                 url: Some("test:///b".to_string()),
                 startup: Some(fsys::StartupMode::Eager),
+                environment: None,
             };
             let err = test
                 .realm_proxy
@@ -717,6 +719,7 @@ mod tests {
             name: Some("a".to_string()),
             url: Some("test:///a_alt".to_string()),
             startup: Some(fsys::StartupMode::Lazy),
+            environment: None,
         };
         let res = test.realm_proxy.create_child(&mut collection_ref, child_decl).await;
         let _ = res.expect("failed to recreate child a").expect("failed to recreate child a");
@@ -981,6 +984,7 @@ mod tests {
             name: name.to_string(),
             url: format!("test:///{}", name),
             startup: fsys::StartupMode::Lazy,
+            environment: None,
         }
         .native_into_fidl()
     }

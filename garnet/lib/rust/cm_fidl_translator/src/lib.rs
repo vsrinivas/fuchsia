@@ -55,6 +55,7 @@ impl CmInto<fsys::ComponentDecl> for cm::Document {
             facets: self.facets.cm_into()?,
             storage: self.storage.cm_into()?,
             runners: self.runners.cm_into()?,
+            environments: None,
         })
     }
 }
@@ -274,6 +275,7 @@ impl CmInto<fsys::ChildDecl> for cm::Child {
             name: Some(self.name.into()),
             url: Some(self.url.into()),
             startup: Some(self.startup.cm_into()?),
+            environment: None,
         })
     }
 }
@@ -450,6 +452,7 @@ mod tests {
             collections: None,
             storage: None,
             runners: None,
+            environments: None,
         }
     }
 
@@ -852,6 +855,7 @@ mod tests {
                         name: Some("logger".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
                     },
                 ];
                 let mut decl = new_component_decl();
@@ -1200,11 +1204,13 @@ mod tests {
                         name: Some("logger".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
                     },
                     fsys::ChildDecl{
                         name: Some("netstack".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(fsys::StartupMode::Eager),
+                        environment: None,
                     },
                 ];
                 let collections = vec![
@@ -1249,11 +1255,13 @@ mod tests {
                         name: Some("logger".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
                     },
                     fsys::ChildDecl{
                         name: Some("echo_server".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm".to_string()),
                         startup: Some(fsys::StartupMode::Eager),
+                        environment: None,
                     },
                 ];
                 let mut decl = new_component_decl();
@@ -1509,11 +1517,13 @@ mod tests {
                         name: Some("logger".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
                     },
                     fsys::ChildDecl {
                         name: Some("netstack".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(fsys::StartupMode::Eager),
+                        environment: None,
                     },
                 ];
                 let collections = vec![
@@ -1556,6 +1566,7 @@ mod tests {
                     facets: Some(facets),
                     storage: Some(storages),
                     runners: Some(runners),
+                    environments: None,
                 }
             },
         },

@@ -23,6 +23,14 @@ table ChildDecl {
     /// The startup mode for the component instance.
     3: StartupMode startup;
 
+    /// The environment assigned to the child. This environment will be used
+    /// when resolving the child's `url`.
+    ///
+    /// Must be non-empty, reference an environment defined in the containing
+    /// `ComponentDecl`, and contain only the following characters:
+    /// [a-z0-9-_.].
+    4: fuchsia.component.environment_name environment;
+
     // TODO(CP-154): Provide a way to supply parameters to the child, possibly
     // as command-line arguments, by URL, or maybe in some other way which is
     // orthogonal to other inputs to mitigate confused deputy issues.  Perhaps

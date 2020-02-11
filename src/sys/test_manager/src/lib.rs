@@ -81,6 +81,7 @@ async fn run_test<W: std::marker::Unpin + AsyncWrite>(
         name: Some(name.clone()),
         url: Some(suite_url.clone()),
         startup: Some(fsys::StartupMode::Lazy),
+        environment: None,
     };
     realm
         .create_child(&mut collection_ref, child_decl)

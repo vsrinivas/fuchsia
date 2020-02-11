@@ -1445,6 +1445,7 @@ async fn use_in_collection() {
             name: "c".to_string(),
             url: "test:///c".to_string(),
             startup: fsys::StartupMode::Lazy,
+            environment: None,
         },
     )
     .await;
@@ -1455,6 +1456,7 @@ async fn use_in_collection() {
             name: "d".to_string(),
             url: "test:///d".to_string(),
             startup: fsys::StartupMode::Lazy,
+            environment: None,
         },
     )
     .await;
@@ -1538,6 +1540,7 @@ async fn use_in_collection_not_offered() {
             name: "c".to_string(),
             url: "test:///c".to_string(),
             startup: fsys::StartupMode::Lazy,
+            environment: None,
         },
     )
     .await;
@@ -2096,6 +2099,7 @@ async fn use_with_destroyed_parent() {
             name: "b".to_string(),
             url: "test:///b".to_string(),
             startup: fsys::StartupMode::Lazy,
+            environment: None,
         },
     )
     .await;

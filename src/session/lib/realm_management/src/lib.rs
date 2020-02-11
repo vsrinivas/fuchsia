@@ -28,6 +28,7 @@ pub async fn create_child_component(
         name: Some(child_name.to_string()),
         url: Some(child_url.to_string()),
         startup: Some(fsys::StartupMode::Lazy), // Dynamic children can only be started lazily.
+        environment: None,
     };
 
     realm

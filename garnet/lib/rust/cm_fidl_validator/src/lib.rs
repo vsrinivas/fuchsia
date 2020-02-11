@@ -1261,6 +1261,7 @@ mod tests {
             children: None,
             collections: None,
             runners: None,
+            environments: None,
         }
     }
 
@@ -2459,6 +2460,7 @@ mod tests {
                     name: Some("logger".to_string()),
                     url: Some("fuchsia-pkg://fuchsia.com/logger#meta/logger.cm".to_string()),
                     startup: Some(StartupMode::Lazy),
+                    environment: None,
                 }]);
                 decl
             },
@@ -2490,6 +2492,7 @@ mod tests {
                         name: Some("logger".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
                         startup: Some(StartupMode::Lazy),
+                        environment: None,
                     },
                 ]),
                 storage: Some(vec![
@@ -2569,6 +2572,7 @@ mod tests {
                         name: Some("netstack".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(StartupMode::Lazy),
+                        environment: None,
                     },
                 ]);
                 decl.collections = Some(vec![
@@ -2662,6 +2666,7 @@ mod tests {
                         name: Some("netstack".to_string()),
                         url: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                         startup: Some(StartupMode::Eager),
+                        environment: None,
                     },
                 ]);
                 decl.collections = Some(vec![
@@ -2804,6 +2809,7 @@ mod tests {
                     name: None,
                     url: None,
                     startup: None,
+                    environment: None,
                 }]);
                 decl
             },
@@ -2820,6 +2826,7 @@ mod tests {
                     name: Some("^bad".to_string()),
                     url: Some("bad-scheme&://blah".to_string()),
                     startup: Some(StartupMode::Lazy),
+                    environment: None,
                 }]);
                 decl
             },
@@ -2835,6 +2842,7 @@ mod tests {
                     name: Some("a".repeat(1025)),
                     url: Some(format!("fuchsia-pkg://{}", "a".repeat(4083))),
                     startup: Some(StartupMode::Lazy),
+                    environment: None,
                 }]);
                 decl
             },

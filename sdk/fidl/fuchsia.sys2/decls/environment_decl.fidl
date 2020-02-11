@@ -1,0 +1,25 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+using fuchsia.component;
+
+/// Specifies how a declared environment's initial set of properties are assigned.
+enum EnvironmentExtends {
+    /// The environment has no initial set of properties.
+    NONE = 0;
+    /// The environment's initial set of properties are inherited from its realm.
+    /// Inherited properties include any fields defined in `EnvironmentDecl`.
+    REALM = 1;
+};
+
+/// Declares an environment which specifies intrinsic properties of a component.
+table EnvironmentDecl {
+    /// The name of this environment.
+    1: fuchsia.component.environment_name name;
+
+    /// Specifies how the initial state of this environment is constructed.
+    2: EnvironmentExtends extends;
+};

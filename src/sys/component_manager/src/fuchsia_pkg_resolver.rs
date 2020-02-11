@@ -172,6 +172,7 @@ mod tests {
             collections: None,
             storage: None,
             runners: None,
+            environments: None,
         };
         assert_eq!(decl.unwrap(), expected_decl);
 
