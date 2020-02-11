@@ -5,11 +5,13 @@
 package main
 
 import (
+	"bytes"
 	"compress/gzip"
 	"context"
 	"crypto/md5"
 	"flag"
 	"fmt"
+	"hash"
 	"io"
 	"io/ioutil"
 	"os"
@@ -17,14 +19,13 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-
-	"go.fuchsia.dev/fuchsia/tools/artifactory/lib"
-	"go.fuchsia.dev/fuchsia/tools/build/lib"
-	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
-	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"time"
 
 	"cloud.google.com/go/storage"
 	"github.com/google/subcommands"
+	artifactory "go.fuchsia.dev/fuchsia/tools/artifactory/lib"
+	build "go.fuchsia.dev/fuchsia/tools/build/lib"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 const (
@@ -186,14 +187,12 @@ func createBuildIDManifest(buildIDs []string) (string, error) {
 type dataSink interface {
 
 	// ObjectExistsAt returns whether an object of that name exists within the sink.
-	objectExistsAt(context.Context, string) (bool, error)
+	objectExistsAt(ctx context.Context, name string) (bool, error)
 
 	// Write writes the content of a file to a sink object at the given name.
 	// If an object at that name does not exists, it will be created; else it
-	// will be overwritten. If the written object has a checksum differing from
-	// the provided checksum, then an error will be returned, as this might
-	// derive from an opaque server-side error).
-	write(context.Context, string, string, []byte) error
+	// will be overwritten.
+	write(ctx context.Context, name, path string) error
 }
 
 // CloudSink is a GCS-backed data sink.
@@ -213,53 +212,113 @@ func newCloudSink(ctx context.Context, bucket string) (*cloudSink, error) {
 	}, nil
 }
 
-func (s cloudSink) objectExistsAt(ctx context.Context, name string) (bool, error) {
-	_, err := s.bucket.Object(name).Attrs(ctx)
+func (s *cloudSink) objectExistsAt(ctx context.Context, name string) (bool, error) {
+	a, err := s.bucket.Object(name).Attrs(ctx)
 	if err == storage.ErrObjectNotExist {
 		return false, nil
 	} else if err != nil {
 		return false, fmt.Errorf("object %q: possibly exists remotely, but is in an unknown state: %v", name, err)
 	}
-	return true, nil
+	// Check if MD5 is not set, mark this as a miss, then write() function will
+	// handle the race.
+	return len(a.MD5) != 0, nil
 }
 
-func (s cloudSink) write(ctx context.Context, name string, path string, expectedChecksum []byte) error {
+// hasher is a io.Writer that calculates the MD5.
+type hasher struct {
+	h hash.Hash
+	w io.Writer
+}
+
+func (h *hasher) Write(p []byte) (int, error) {
+	n, err := h.w.Write(p)
+	_, _ = h.h.Write(p[:n])
+	return n, err
+}
+
+func (s *cloudSink) write(ctx context.Context, name, path string) error {
 	obj := s.bucket.Object(name)
 	w := obj.If(storage.Conditions{DoesNotExist: true}).NewWriter(ctx)
 	w.ChunkSize = chunkSize
-	w.MD5 = expectedChecksum
-	w.ContentType = "application/octet-stream"
 	w.ContentEncoding = "gzip"
 
 	fd, err := os.Open(path)
 	if err != nil {
 		return err
 	}
-	defer fd.Close()
 
-	gzw := gzip.NewWriter(w)
-	// The following writer is effectively |gzw|, but for which |w| is also
-	// closed on Close(). Both need to be closed to finalize the write of the
-	// compressed file to GCS.
-	zw := struct {
-		io.Writer
-		io.Closer
-	}{gzw, iomisc.MultiCloser(gzw, w)}
-	defer zw.Close()
-	return artifactory.Copy(ctx, name, fd, zw, chunkSize)
+	// We compress on the fly, and calculate the MD5 on the compressed data.
+	h := hasher{md5.New(), w}
+	gzw := gzip.NewWriter(&h)
+
+	_, err = io.Copy(gzw, fd)
+	// Writes happen asynchronously, and so a nil may be returned while the write
+	// goes on to fail. It is recommended in
+	// https://godoc.org/cloud.google.com/go/storage#Writer.Write
+	// to return the value of Close() to detect the success of the write.
+	// Both the gzip compressor and the socket must be closed, one after then
+	// other.
+	// Keep the first error we got.
+	if err2 := gzw.Close(); err == nil {
+		err = err2
+	}
+	if err2 := w.Close(); err == nil {
+		err = err2
+	}
+	// Time to close the file.
+	fd.Close()
+	if err = checkGCSErr(ctx, err, name); err != nil {
+		return err
+	}
+
+	// Now confirm that the MD5 matches upstream, just in case. If the file was
+	// uploaded by another client (a race condition), loop until the MD5 is set.
+	// This guarantees that the file is properly uploaded before this function
+	// quits.
+	d := h.h.Sum(nil)
+	t := time.Second
+	const max = 30 * time.Second
+	for {
+		attrs, err := obj.Attrs(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to confirm MD5 for %s due to: %w", path, err)
+		}
+		if len(attrs.MD5) == 0 {
+			time.Sleep(t)
+			if t += t / 2; t > max {
+				t = max
+			}
+			logger.Debugf(ctx, "waiting for MD5 for %s", path)
+			continue
+		}
+		if !bytes.Equal(attrs.MD5, d) {
+			return fmt.Errorf("MD5 mismatch for %s", path)
+		}
+		logger.Infof(ctx, "Uploaded: %s", path)
+		break
+	}
+	return nil
 }
 
-type checksumError struct {
-	name     string
-	expected []byte
-	actual   []byte
-}
-
-func (err checksumError) Error() string {
-	return fmt.Sprintf(
-		"object %q: checksum mismatch: expected %v; actual %v",
-		err.name, err.expected, err.actual,
-	)
+// checkGCSErr validates the error for a GCS upload.
+//
+// If the precondition of the object not existing is not met on write (i.e.,
+// at the time of the write the object is there), then the server will
+// respond with a 412. (See
+// https://cloud.google.com/storage/docs/json_api/v1/status-codes and
+// https://tools.ietf.org/html/rfc7232#section-4.2.)
+// We do not report this as an error, however, as the associated object might
+// have been created after having checked its non-existence - and we wish to
+// be resilient in the event of such a race.
+func checkGCSErr(ctx context.Context, err error, name string) error {
+	if err == nil || err == io.EOF {
+		return nil
+	}
+	if strings.Contains(err.Error(), "Error 412") {
+		logger.Infof(ctx, "object %q: created after its non-existence check", name)
+		return nil
+	}
+	return err
 }
 
 // dirToFiles returns a list of the top-level files in the dir.
@@ -299,7 +358,7 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 			if _, err := os.Stat(f.Source); err != nil {
 				// The associated artifacts might not actually have been created, which is valid.
 				if os.IsNotExist(err) {
-					logger.Debugf(ctx, "%s does not exist; skipping upload", f.Source)
+					logger.Infof(ctx, "%s does not exist; skipping upload", f.Source)
 					continue
 				}
 				errs <- err
@@ -328,13 +387,8 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 				continue
 			}
 
-			checksum, err := md5Checksum(upload.Source)
-			if err != nil {
-				errs <- err
-				return
-			}
-
-			if err := dest.write(ctx, upload.Destination, upload.Source, checksum); err != nil {
+			logger.Debugf(ctx, "object %q: attempting creation", upload.Destination)
+			if err := dest.write(ctx, upload.Destination, upload.Source); err != nil {
 				errs <- fmt.Errorf("%s: %v", upload.Destination, err)
 				return
 			}
@@ -349,26 +403,4 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 	wg.Wait()
 	close(errs)
 	return <-errs
-}
-
-// Determines the checksum of the associated gzipped file without reading all
-// of the contents into memory.
-func md5Checksum(file string) ([]byte, error) {
-	fd, err := os.Open(file)
-	if err != nil {
-		return nil, err
-	}
-	defer fd.Close()
-
-	h := md5.New()
-	gzw := gzip.NewWriter(h)
-	if _, err := io.Copy(gzw, fd); err != nil {
-		gzw.Close()
-		return nil, err
-	}
-	if err := gzw.Close(); err != nil {
-		return nil, err
-	}
-	checksum := h.Sum(nil)
-	return checksum[:], nil
 }

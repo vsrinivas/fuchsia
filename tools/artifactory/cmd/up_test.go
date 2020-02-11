@@ -5,11 +5,7 @@
 package main
 
 import (
-	"bytes"
-	"compress/gzip"
 	"context"
-	"crypto/md5"
-	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -19,7 +15,7 @@ import (
 	"sync"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/tools/artifactory/lib"
+	artifactory "go.fuchsia.dev/fuchsia/tools/artifactory/lib"
 )
 
 const (
@@ -47,38 +43,15 @@ func (s *memSink) objectExistsAt(ctx context.Context, name string) (bool, error)
 	return true, nil
 }
 
-func (s *memSink) write(ctx context.Context, name string, path string, expectedChecksum []byte) error {
+func (s *memSink) write(ctx context.Context, name, path string) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	actualChecksum := md5Sum(content)
-	if bytes.Compare(expectedChecksum, actualChecksum[:]) != 0 {
-		return checksumError{
-			name:     name,
-			expected: expectedChecksum,
-			actual:   actualChecksum[:],
-		}
-	}
 	s.contents[name] = content
 	return nil
-}
-
-func md5Sum(b []byte) []byte {
-	h := md5.New()
-	gzw := gzip.NewWriter(h)
-	r := bytes.NewReader(b)
-	if _, err := io.Copy(gzw, r); err != nil {
-		gzw.Close()
-		panic("failed to calcular md5 hash: " + err.Error())
-	}
-	if err := gzw.Close(); err != nil {
-		panic("failed to close gzip writer: " + err.Error())
-	}
-	checksum := h.Sum(nil)
-	return checksum[:]
 }
 
 func sinkHasContents(t *testing.T, s *memSink, contents map[string][]byte) {
