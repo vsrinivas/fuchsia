@@ -47,9 +47,7 @@ test_package("camera_tests") {
     "//src/camera/camera_manager2/test:camera_plug_detector_test",
     "//src/camera/camera_manager2/test:video_device_client_test",
     "//src/camera/drivers/controller/configs/sherlock/test:configs_test",
-    "//src/camera/drivers/controller/test:controller-allocator-test",
-    "//src/camera/drivers/controller/test:controller-protocol-test",
-    "//src/camera/drivers/controller/test:controller-test",
+    "//src/camera/drivers/controller/test",
     "//src/camera/drivers/hw_accel/gdc/test:gdc-test",
     "//src/camera/drivers/hw_accel/ge2d/test:ge2d-test",
     "//src/camera/drivers/isp/mali-009/test:mali_009_test",
@@ -93,16 +91,6 @@ test_package("camera_tests") {
       name = "configs_test"
       manifest =
           "drivers/controller/configs/sherlock/test/meta/configs_test.cmx"
-      environments = basic_envs
-    },
-    {
-      name = "controller-allocator-test"
-      manifest = "drivers/controller/test/meta/controller-allocator-test.cmx"
-      environments = basic_envs
-    },
-    {
-      name = "controller-protocol-test"
-      manifest = "drivers/controller/test/meta/controller-protocol-test.cmx"
       environments = basic_envs
     },
     {

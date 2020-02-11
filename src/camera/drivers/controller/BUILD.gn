@@ -27,16 +27,16 @@ if (internal_access) {
   ]
 }
 
-driver_module("controller-driver") {
+driver_module("driver") {
   output_name = "controller"
-  deps = [ "//src/camera/drivers/controller/:controller-source" ]
+  deps = [ ":source" ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
-source_set("controller-source") {
+source_set("source") {
   visibility = [ "../*" ]
   sources = [
     "controller-device.cc",
@@ -51,7 +51,7 @@ source_set("controller-source") {
     "processing_node.cc",
     "stream_protocol.cc",
   ]
-  deps = [
+  public_deps = [
     "//sdk/banjo/ddk.protocol.camerahwaccel",
     "//sdk/banjo/ddk.protocol.gdc",
     "//sdk/banjo/ddk.protocol.ge2d",
@@ -59,8 +59,8 @@ source_set("controller-source") {
     "//sdk/fidl/fuchsia.buttons",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
-    "//src/camera/drivers/controller/configs/sherlock/:controller-configs",
-    "//src/camera/lib/format_conversion:format_conversion",
+    "//src/camera/drivers/controller/configs/sherlock:controller-configs",
+    "//src/camera/lib/format_conversion",
     "//src/devices/lib/driver",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
@@ -87,6 +87,7 @@ source_set("controller-source") {
     "//zircon/system/banjo/ddk.protocol.buttons",
     "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/fidl/fuchsia-hardware-camera",
     "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
     "//zircon/system/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
   ]
@@ -96,7 +97,7 @@ source_set("controller-source") {
 package("controller") {
   deprecated_system_image = true
 
-  deps = [ ":controller-driver" ]
+  deps = [ ":driver" ]
 
   drivers = [
     {
