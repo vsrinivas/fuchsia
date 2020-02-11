@@ -36,6 +36,8 @@ std::optional<std::string> LineTableImpl::GetFileNameByIndex(uint64_t file_id) c
     FXL_NOTREACHED();
     return std::nullopt;
   }
+  if (file_id == 0)
+    return std::nullopt;  // File IDs are 1-based.
 
   std::string result;
   if (line_table_->getFileNameByIndex(

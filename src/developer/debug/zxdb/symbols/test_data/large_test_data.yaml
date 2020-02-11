@@ -2,6 +2,8 @@ package: fuchsia_internal/test_data/debug/large_test_data
 description: Large test binaries for optional zxdb symbol tests.
 install_mode: copy
 data:
+  - file: debug_agent
+  - file: debug_agent.README
   - file: flutter_runner_tests
   - file: flutter_runner_tests.LICENSE
   - file: flutter_runner_tests.README

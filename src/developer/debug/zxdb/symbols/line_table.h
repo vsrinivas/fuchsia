@@ -32,6 +32,9 @@ class LineTable {
 
     bool empty() const { return sequence.empty(); }
 
+    // Returns the row. Call only when !empty().
+    const LineTable::Row& get() const { return sequence[index]; }
+
     // The sequence of rows associated with the address. These will be contiguous addresses. This
     // will be empty if nothing was matched. If nonempty, the last row will always be marked with an
     // EndSequence bit.
@@ -48,8 +51,14 @@ class LineTable {
   virtual size_t GetNumFileNames() const = 0;
 
   // Returns the absolute file name for the given file index. This is the value from
-  // DWARFDebugLine::Row::File (1-based). It will return an empty optional on failure.
+  // DWARFDebugLine::Row::File (1-based). It will return an empty optional on failure, which
+  // includes lookup errors or if the file is not set for this row (0 index).
   virtual std::optional<std::string> GetFileNameByIndex(uint64_t file_id) const = 0;
+
+  // Helper wrapper to extract the file from a row.
+  std::optional<std::string> GetFileNameForRow(const Row& row) const {
+    return GetFileNameByIndex(row.File);
+  }
 
   // Returns the DIE associated with the subroutine for the given row. This may be an invalid DIE if
   // there is no subroutine for this code (could be compiler-generated).

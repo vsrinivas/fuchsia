@@ -29,18 +29,19 @@ std::string GetFlutterRunnerPath() {
 // inlined and the abstract origin crosses compilation unit boundaries. This is less common and
 // forces the indexer into a slower mode. Validate that we can find the symbol.
 TEST(Index, CrossUnitInline) {
-  auto module = fxl::MakeRefCounted<ModuleSymbolsImpl>(GetFlutterRunnerPath(), "test", "build_id");
-  Err err = module->Load();
+  TestSymbolModule setup(GetFlutterRunnerPath(), "test");
+  Err err = setup.Init();
   ASSERT_TRUE(err.ok()) << err.msg();
 
   Identifier session_connection_ident =
       TestSymbolModule::SplitName("flutter_runner::SessionConnection::SessionConnection");
 
-  std::vector<IndexNode::DieRef> refs = module->GetIndex().FindExact(session_connection_ident);
+  std::vector<IndexNode::DieRef> refs =
+      setup.symbols()->GetIndex().FindExact(session_connection_ident);
   EXPECT_EQ(1u, refs.size());
 
   // The resolved symbol should be a function.
-  LazySymbol lazy = module->symbol_factory()->MakeLazy(refs[0].offset());
+  LazySymbol lazy = setup.symbols()->symbol_factory()->MakeLazy(refs[0].offset());
   const Symbol* symbol = lazy.Get();
   const Function* function = symbol->AsFunction();
   ASSERT_TRUE(function);

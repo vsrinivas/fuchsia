@@ -378,37 +378,63 @@ std::optional<Location> ModuleSymbolsImpl::DwarfLocationForAddress(
   if (!unit)  // No DWARF symbol.
     return std::nullopt;
 
+  FileLine file_line;
+  int column = 0;
+
   // Get the innermost subroutine or inlined function for the address. This may be empty, but still
   // lookup the line info below in case its present. This computes both a LazySymbol which we
   // pass to the result, and a possibly-null containing Function* (not an inlined subroutine) to do
   // later computations on.
-  fxl::RefPtr<Function> containing_function;  // Keep in scope from GetContainingFunction().
+  fxl::RefPtr<Function> function;  // For prologue computations.
   LazySymbol lazy_function;
   if (optional_func) {
-    containing_function = RefPtrTo(optional_func);
+    // The function was passed in and we want to return that exact one. This will happen if the
+    // caller has asked for the location of a named function.
+    function = RefPtrTo(optional_func);
     lazy_function = LazySymbol(optional_func);
   } else {
-    llvm::DWARFDie subroutine = unit->FunctionForRelativeAddress(relative_address);
-    if (subroutine) {
+    // Resolve the function for this address.
+    if (llvm::DWARFDie subroutine = unit->FunctionForRelativeAddress(relative_address)) {
+      // getSubroutineForAddress() will return the most specific inlined function for the address.
       lazy_function = symbol_factory_->MakeLazy(subroutine);
-      // FunctionForRelativeAddress will return inline functions and we want the physical function
-      // for prologue computations. Use GetContainingFunction() to get that.
-      if (const CodeBlock* code_block = lazy_function.Get()->AsCodeBlock())
-        containing_function = code_block->GetContainingFunction();
+      function = RefPtrTo(lazy_function.Get()->AsFunction());
+
+      // The is_inline() check is strictly unnecessary since ambiguous inline computations will
+      // work either way. This check allows us to skip the ambiguous inline computations in the
+      // common case that we're not in an inline.
+      if (function && function->is_inline() &&
+          options.ambiguous_inline == ResolveOptions::AmbiguousInline::kOuter) {
+        // Adjust the function to be the outermost frame (should be the non-inlined function)
+        // for ambiguous locations (at the beginning of one or more inlined functions).
+        std::vector<fxl::RefPtr<Function>> inline_chain =
+            function->GetAmbiguousInlineChain(symbol_context, absolute_address);
+        if (inline_chain.size() > 1) {
+          lazy_function = inline_chain.back();
+
+          // Since we picked a non-topmost inline subroutine, we know the file/line because
+          // it's the call location of the inline subroutine we skipped. DWARF doesn't encode
+          // column information for this type of call.
+          const auto& calling_func = inline_chain[inline_chain.size() - 2];
+          file_line = calling_func->call_line();
+        }
+      }
     }
   }
 
-  // Get the file/line location (may fail).
-  const llvm::DWARFDebugLine::LineTable* line_table = unit->GetLLVMLineTable();
-  if (line_table) {
-    if (containing_function && options.skip_function_prologue) {
-      // Use the line table to move the address to after the function prologue.
-      size_t prologue_size =
-          GetFunctionPrologueSize(unit->GetLineTable(), containing_function.get());
-      if (prologue_size > 0) {
+  // Get the file/line location (may fail). Don't overwrite one computed above if already set above
+  // using the ambigous inline call site.
+  //
+  if (!file_line.is_valid()) {
+    const LineTable& line_table = unit->GetLineTable();
+
+    // Use the line table to move the address to after the function prologue. Assume if the function
+    // is inline there's no prologue. Inlines themselves will have no prologues, and we assume
+    // inlines won't appear in the prologue of other functions.
+    if (function && !function->is_inline() && options.skip_function_prologue) {
+      if (size_t prologue_size = GetFunctionPrologueSize(line_table, function.get())) {
         // The function has a prologue. When it does, we know it has code ranges so don't need to
         // validate it's nonempty before using.
-        uint64_t function_begin = containing_function->code_ranges().front().begin();
+        uint64_t function_begin = function->code_ranges().front().begin();
         if (relative_address >= function_begin &&
             relative_address < function_begin + prologue_size) {
           // Adjust address to the first real instruction.
@@ -421,27 +447,25 @@ std::optional<Location> ModuleSymbolsImpl::DwarfLocationForAddress(
     // Look up the line info for this address.
     //
     // This re-computes some of what GetFunctionPrologueSize() may have done above. This could be
-    // enhanced in the future by having our own version of getFileLineInfoForAddress that includes
-    // the prologue adjustment as part of one computation.
-    llvm::DILineInfo line_info;
-    if (line_table->getFileLineInfoForAddress(
-            relative_address, "", llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-            line_info)) {
+    // enhanced in the future by having LineTable::GetRowForAddress that include the prologue
+    // adjustment as part of one computation.
+    LineTable::FoundRow found_row = line_table.GetRowForAddress(symbol_context, absolute_address);
+    if (!found_row.empty()) {
       // Line info present. Only set the file name if there's a nonzero line number. "Line 0"
       // entries which are compiled-generated code not associated with a line entry. Typically there
       // will be a file if we ask, but that's leftover from the previous row in the table by the
       // state machine and is not relevant.
-      std::string file_name;
-      if (line_info.Line)
-        file_name = std::move(line_info.FileName);
-      return Location(absolute_address,
-                      FileLine(std::move(file_name), unit->GetCompilationDir(), line_info.Line),
-                      line_info.Column, symbol_context, std::move(lazy_function));
+      const LineTable::Row& row = found_row.get();
+      std::optional<std::string> file_name;
+      if (row.Line)
+        file_name = line_table.GetFileNameForRow(row);  // Could still return nullopt.
+      if (file_name)
+        file_line = FileLine(std::move(*file_name), unit->GetCompilationDir(), row.Line);
+      column = row.Column;
     }
   }
 
-  // No line information.
-  return Location(absolute_address, FileLine(), 0, symbol_context, std::move(lazy_function));
+  return Location(absolute_address, file_line, column, symbol_context, std::move(lazy_function));
 }
 
 std::optional<Location> ModuleSymbolsImpl::ElfLocationForAddress(

@@ -59,7 +59,10 @@ if (is_host) {
   if (include_zxdb_large_tests) {
     # See symbols/test_data/README.md for how to download the data required for this test.
     test("zxdb_large_tests") {
-      sources = [ "symbols/index_largetest.cc" ]
+      sources = [
+        "symbols/index_largetest.cc",
+        "symbols/module_symbols_impl_largetest.cc",
+      ]
 
       deps = [
         ":copy_large_test_data",
@@ -71,8 +74,10 @@ if (is_host) {
 
     copy("copy_large_test_data") {
       # Each file must be individually listed here.
-      sources =
-          [ "//prebuilt/test_data/debug/large_test_data/flutter_runner_tests" ]
+      sources = [
+        "//prebuilt/test_data/debug/large_test_data/debug_agent",
+        "//prebuilt/test_data/debug/large_test_data/flutter_runner_tests",
+      ]
 
       outputs = [
         "$root_out_dir/test_data/zxdb/large_test_data/{{source_file_part}}",

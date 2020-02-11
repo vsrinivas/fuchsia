@@ -76,14 +76,15 @@ class Location {
   int column() const { return column_; }
 
   // The symbol associated with this address, if any. In the case of code this will most commonly be
-  // a Function. It will not be the code block inside the function (code wanting lexical blocks can
-  // look inside the function's children as needed). It could also be a variable symbol
+  // a Function. It will not be a non-function code block inside the function (code wanting lexical
+  // blocks can look inside the function's children as needed). It could also be a variable symbol
   // corresponding to a global or static variable or an ELF symbol.
   //
-  // When looking up code locations from the symbol system, this will be the most specific FUNCTION
-  // covering the code in question (the innermost inlined function if there is one). But Locations
-  // may be generated (e.g. by the stack unwinder) for any of the other inlined functions that may
-  // cover the same address.
+  // When looking up code locations from the symbol system and the address is non-ambiguous,
+  // this will be the most specific (possibly inline) function covering the address in
+  // question. For ambiguous inline locations this will either be the most specific inline function
+  // or the non-inline function (least-specific) according to ResolveOptions.ambiguous_inline (see
+  // that variable for more on ambiguous inline locations).
   //
   // A function can have different scopes inside of it. To get the current lexical scope inside the
   // function, use GetMostSpecificChild() on it.

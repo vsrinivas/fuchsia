@@ -31,6 +31,28 @@ struct ResolveOptions {
   // THIS OPTION REQUIRES THAT symbolize == true. Query functions will assert otherwise since
   // reading the prologue requires symbolization.
   bool skip_function_prologue = false;
+
+  // If the address is at the first address of an inline routine, it's ambiguous whether the
+  // virtual location is at the first instruction of the inlined function, or at the optimized-out
+  // "call" to the inlined function. This will not apply when looking up a function by name, in
+  // that case the returned function will be the requested one.
+  //
+  // See stack.h for a longer discussion about ambiguous inline locations.
+  //
+  //  * Generally if you're referring to the location from "outside" (say as the destination of a
+  //    call instruction), then you'll want to use kOuter mode. If the function begins with an
+  //    inline, the user will want to see the containing function and not some trivial helper
+  //    function that ended up being the first thing it executed. In this case, the returned
+  //    file/line will the call location for the first inline function.
+  //
+  //  * Alternatively, if you could think of being "at" that instruction (say as as the address of
+  //    an exception), you will generally want to use "kInner" since this will be the symbol that
+  //    actually generated the excepting instruction.
+  enum AmbiguousInline {
+    kOuter,
+    kInner,
+  };
+  AmbiguousInline ambiguous_inline = AmbiguousInline::kInner;
 };
 
 }  // namespace zxdb

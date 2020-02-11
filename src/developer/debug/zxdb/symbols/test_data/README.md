@@ -20,7 +20,7 @@ platform variations.
 # Large tests
 
 There are some additional binaries that are too large to include with every checkout. These are
-used by the `zxdb_large_tests` target and appear in `//prebuilts/test_data/debug/large_test_data`.
+used by the `zxdb_large_tests` target and appear in `//prebuilt/test_data/debug/large_test_data`.
 
 To make these work you need to download them and enable the target that requires them.
 
@@ -68,11 +68,12 @@ Copy `large_test_data.yaml` from this directory to `//prebuilt/test_data/debug/l
 since CIPD wants everything to be in the same directory while it's working. Be sure to check in the
 final version to this directory so it's always current.
 
-The atomic way to make a package and upload with a version tag is:
+The atomic way to make a package and upload with a version tag is (don't forget to replace the git
+hash!)
 
 ```
 cipd pkg-build -pkg-def large_test_data.yaml -out large_test_data.cipd
-cipd pkg-register -tag git_revision:fa316074ae0f53a2562c76cb4637b6f2892b02f7 large_test_data.cipd
+cipd pkg-register -tag git_revision:GIT_HASH_GOES_HERE large_test_data.cipd
 ```
 
 The other way to do this is make and upload a package and set the version tag later. To build and
