@@ -128,7 +128,6 @@ group("all") {
     "//garnet/packages/prod:magma-qcom-adreno",
     "//garnet/packages/prod:memory_monitor",
     "//garnet/packages/prod:network-speed-test",
-    "//garnet/packages/prod:odu",
     "//garnet/packages/prod:openthread",
     "//garnet/packages/prod:ralink",
     "//garnet/packages/prod:realtek",
@@ -272,11 +271,6 @@ group("vboot_reference") {
     "//garnet/tools/vboot_reference:cgpt_host",
     "//garnet/tools/vboot_reference:futility_host",
   ]
-}
-
-group("odu") {
-  testonly = true
-  public_deps = [ "//garnet/bin/odu" ]
 }
 
 group("cobalt_client") {
