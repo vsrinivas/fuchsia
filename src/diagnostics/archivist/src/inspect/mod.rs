@@ -486,11 +486,18 @@ impl ReaderServer {
             Some(static_matcher) => snapshots
                 .into_iter()
                 .filter_map(|snapshot| match convert_snapshot_to_node_hierarchy(snapshot) {
-                    Ok(node_hierarchy) => fuchsia_inspect_node_hierarchy::filter_inspect_snapshot(
-                        node_hierarchy,
-                        &static_matcher,
-                    )
-                    .unwrap_or(None),
+                    Ok(node_hierarchy) => {
+                        match fuchsia_inspect_node_hierarchy::filter_inspect_snapshot(
+                            node_hierarchy,
+                            &static_matcher,
+                        ) {
+                            Ok(filtered_hierarchy_opt) => filtered_hierarchy_opt,
+                            Err(e) => {
+                                eprintln!("Archivist failed to filter a node hierarchy: {:?}", e);
+                                None
+                            }
+                        }
+                    }
                     Err(e) => {
                         eprintln!("Archivist failed to convert snapshot to hierarchy: {:?}", e);
                         None
@@ -683,11 +690,15 @@ impl ReaderServer {
                     }
                 };
 
-                let content_string = formatted_string_result.unwrap_or(
-                    // TODO(4601): Convert failed formattings into the
-                    // canonical json schema, with a failure message in "data"
-                    "".to_string(),
-                );
+                let content_string = match formatted_string_result {
+                    Ok(formatted_string) => formatted_string,
+                    Err(e) => {
+                        // TODO(4601): Convert failed formattings into the
+                        // canonical json schema, with a failure message in "data"
+                        eprintln!("parsing results from the inspect source failed: {:?}", e);
+                        "".to_string()
+                    }
+                };
 
                 let vmo_size: u64 = content_string.len() as u64;
 
@@ -768,9 +779,9 @@ impl ReaderServer {
                         let filtered_results: Vec<fidl_fuchsia_diagnostics::FormattedContent> =
                             formatted_content.into_iter().filter_map(Result::ok).collect();
 
-                        responder.send(&mut Ok(filtered_results)).unwrap();
+                        responder.send(&mut Ok(filtered_results))?;
                     } else {
-                        responder.send(&mut Ok(Vec::new())).unwrap();
+                        responder.send(&mut Ok(Vec::new()))?;
                     }
                 }
             }
