@@ -40,7 +40,7 @@ impl MoldComposition {
         for (i, layer) in self.layers.iter().enumerate() {
             map.print(
                 i as u32 + 1,
-                mold::Layer::new(layer.raster.raster.clone(), style_to_ops(&layer.style)),
+                mold::Layer::new(mold::Raster::union(layer.raster.raster.iter()), style_to_ops(&layer.style)),
             );
         }
 

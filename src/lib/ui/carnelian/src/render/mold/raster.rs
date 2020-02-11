@@ -2,16 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::ops::Add;
+
 use euclid::Transform2D;
 
 use crate::render::{
     mold::{Mold, MoldPath},
+    ops::Op,
     RasterBuilder,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MoldRaster {
-    pub(crate) raster: mold::Raster,
+    pub(crate) raster: Op<mold::Raster>,
+}
+
+impl Add for MoldRaster {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self::Output {
+        Self { raster: self.raster.add(other.raster) }
+    }
 }
 
 #[derive(Debug)]
@@ -44,9 +55,9 @@ impl RasterBuilder<Mold> for MoldRasterBuilder {
 
     fn build(self) -> MoldRaster {
         MoldRaster {
-            raster: mold::Raster::from_paths_and_transforms(
+            raster: Op::Raster(mold::Raster::from_paths_and_transforms(
                 self.paths_transforms.iter().map(|(path, transform)| (&*path.path, transform)),
-            ),
+            )),
         }
     }
 }

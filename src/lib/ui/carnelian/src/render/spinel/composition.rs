@@ -110,14 +110,16 @@ impl SpinelComposition {
         );
 
         for (i, Layer { raster, .. }) in layers.enumerate() {
-            unsafe {
-                spn!(spn_composition_place(
-                    composition,
-                    &*raster.raster,
-                    &(i as u32),
-                    ptr::null(),
-                    1,
-                ));
+            for raster in raster.raster().iter() {
+                unsafe {
+                    spn!(spn_composition_place(
+                        composition,
+                        &**raster,
+                        &(i as u32),
+                        ptr::null(),
+                        1,
+                    ));
+                }
             }
         }
     }

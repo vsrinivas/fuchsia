@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{fmt::Debug, hash::Hash, u32};
+use std::{fmt::Debug, hash::Hash, ops::Add, u32};
 
 use euclid::{Point2D, Rect, Size2D, Transform2D, Vector2D};
 use fidl::endpoints::ClientEnd;
@@ -12,6 +12,7 @@ use fuchsia_framebuffer::PixelFormat;
 use crate::{Color, Point, ViewAssistantContext};
 
 pub mod mold;
+mod ops;
 pub mod spinel;
 
 pub use self::mold::Mold;
@@ -28,7 +29,7 @@ pub trait Backend: Copy + Debug + Default + Eq + Hash + Ord + Sized {
     /// Stateful path builder.
     type PathBuilder: PathBuilder<Self>;
     /// Compact rasterized form of any number of paths.
-    type Raster: Clone + Eq;
+    type Raster: Add<Output = Self::Raster> + Clone + Eq;
     /// Stateful raster builder.
     type RasterBuilder: RasterBuilder<Self>;
     /// Composition of stylized rasters.
@@ -242,7 +243,7 @@ pub(crate) mod tests {
             context.render(
                 &Composition::new(
                     vec![Layer {
-                        raster,
+                        raster: raster.clone() + raster,
                         style: Style {
                             fill_rule: FillRule::NonZero,
                             fill: Fill::Solid(Color::white()),
