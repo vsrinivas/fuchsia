@@ -28,10 +28,13 @@ while (($#)); do
   shift
 done
 
+keys_args=()
 if [ "${include_keys}" == 1 ]; then
   fx-zbi -o "${FUCHSIA_BUILD_DIR}/fuchsia-extra-keys.zbi" \
     "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" --replace \
     --entry "data/ssh/authorized_keys=${FUCHSIA_DIR}/.ssh/authorized_keys"
+
+  keys_args+=(-zbi "${FUCHSIA_BUILD_DIR}/fuchsia-extra-keys.zbi")
 fi
 
-"${FUCHSIA_BUILD_DIR}/host-tools/make-fuchsia-vol" -zbi "${FUCHSIA_BUILD_DIR}/fuchsia-extra-keys.zbi" "${fwd_args[@]}"
+"${FUCHSIA_BUILD_DIR}/host-tools/make-fuchsia-vol" "${keys_args[@]}" "${fwd_args[@]}"
