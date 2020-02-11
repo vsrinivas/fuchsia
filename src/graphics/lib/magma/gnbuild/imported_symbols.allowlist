@@ -451,6 +451,11 @@ zx_resource_create
 zx_socket_create
 zx_socket_write
 zx_status_get_string
+zx_stream_readv
+zx_stream_readv_at
+zx_stream_seek
+zx_stream_writev
+zx_stream_writev_at
 zx_system_get_physmem
 zx_thread_create
 zx_thread_self
