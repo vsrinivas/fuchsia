@@ -91,3 +91,15 @@ fuchsia_internal/firmware/optee/sherlock/41fe9859-71e4-4bf4-bbaa-d71435b127ae/de
 # cast_auth TA Firmware for Sherlock
 @Subdir firmware/optee/sherlock
 fuchsia_internal/firmware/optee/sherlock/93a424e2-5608-4413-84a8-58b16a064dce/dev UvXCbjvPF8L3mCdW9cuCC0WD81tdqVgqxU_EiFAFd7wC
+
+# Widevine TA Firmware
+@Subdir firmware/optee/sherlock
+fuchsia_internal/firmware/optee/sherlock/e043cde0-61d0-11e5-9c26-0002a5d5c51b/dev H8OVgHJ7oaxLJPatlOcSj1atr07UQ_mi-r1FB5pHbWEC
+
+# PlayReady TA firmware
+@Subdir firmware/optee/sherlock
+fuchsia_internal/firmware/optee/sherlock/9a04f079-9840-4286-ab92-e65be0885f95/dev Qcectd3dKzvE_qIMei-ugnHx93wEH0sB78eKqbEpMH8C
+
+# Provisioning TA Firmware
+@Subdir firmware/optee/sherlock
+fuchsia_internal/firmware/optee/sherlock/d83c3c4a-9e8d-4e4e-ad30-9d40e137f689/dev P1MlGGNuvHeimH6MYJuhnZCF5V86prp5Q-QXd6NumwgC
