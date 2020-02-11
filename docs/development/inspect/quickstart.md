@@ -321,7 +321,7 @@ See below for the quick start guide in your language of choice.
   });
   ```
 
-  Learn more about [testing](/src/lib/inspect/rust/fuchsia-inspect/src/testing.rs) inspect.
+  Learn more about [testing](/src/lib/inspect/rust/fuchsia-inspect/src/testing/mod.rs) inspect.
 
   See [the docs](https://fuchsia-docs.firebaseapp.com/rust/fuchsia_inspect/index.html)
   to learn about other methods offered by the Rust API.

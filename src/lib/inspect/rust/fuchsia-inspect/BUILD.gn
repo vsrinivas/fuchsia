@@ -38,6 +38,7 @@ rustc_library("fuchsia-inspect") {
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:paste",
+    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
