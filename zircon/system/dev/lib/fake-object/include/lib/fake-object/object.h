@@ -186,4 +186,12 @@ HandleTable& FakeHandleTable();
 zx_status_t fake_object_create(zx_handle_t* out);
 zx_koid_t fake_object_get_koid(zx_handle_t handle);
 
+void* FindRealSyscall(const char* name);
+#define REAL_SYSCALL(name)                                             \
+  ([]() {                                                              \
+    static const auto real_syscall =                                   \
+        reinterpret_cast<decltype(name)*>(FindRealSyscall("_" #name)); \
+    return real_syscall;                                               \
+  }())
+
 #endif  // ZIRCON_SYSTEM_DEV_LIB_FAKE_OBJECT_INCLUDE_LIB_FAKE_OBJECT_OBJECT_H_

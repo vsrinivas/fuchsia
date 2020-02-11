@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/dma-buffer/buffer.h>
+#include <lib/fake-object/object.h>
+
 #include <map>
 
 #include <zxtest/zxtest.h>
-
-#include "lib/dma-buffer/buffer.h"
 
 namespace dma_buffer {
 
@@ -45,7 +46,7 @@ zx_status_t zx_vmo_create_contiguous(zx_handle_t bti_handle, size_t size, uint32
 }
 
 zx_status_t zx_vmo_create(uint64_t size, uint32_t options, zx_handle_t* out) {
-  zx_status_t status = _zx_vmo_create(size, options, out);
+  zx_status_t status = REAL_SYSCALL(zx_vmo_create)(size, options, out);
   if (status != ZX_OK) {
     return status;
   }
@@ -60,7 +61,7 @@ zx_status_t zx_vmar_map(zx_handle_t handle, zx_vm_option_t options, uint64_t vma
                         zx_vaddr_t* mapped_addr) {
   auto record = syscall_state.vmos.find(vmo);
   zx_status_t status =
-      _zx_vmar_map(handle, options, vmar_offset, vmo, vmo_offset, len, mapped_addr);
+      REAL_SYSCALL(zx_vmar_map)(handle, options, vmar_offset, vmo, vmo_offset, len, mapped_addr);
   if (record != syscall_state.vmos.end()) {
     record->second.virt = reinterpret_cast<void*>(*mapped_addr);
   }
@@ -87,7 +88,7 @@ zx_status_t zx_bti_pin(zx_handle_t bti_handle, uint32_t options, zx_handle_t vmo
 zx_status_t zx_handle_close(zx_handle_t handle) {
   auto record = syscall_state.vmos.find(handle);
   if (record == syscall_state.vmos.end()) {
-    return _zx_handle_close(handle);
+    return REAL_SYSCALL(zx_handle_close)(handle);
   }
   syscall_state.vmos.erase(record);
   return ZX_OK;

@@ -136,7 +136,8 @@ TEST_F(FakeObject, DuplicateInvalidHandle) {
 
   // However, a real handle will just return an error:
   obj = kPotentialHandle;
-  ASSERT_NO_DEATH(([obj, &obj_dup]() { EXPECT_NOT_OK(_zx_handle_duplicate(obj, 0, &obj_dup)); }));
+  ASSERT_NO_DEATH(
+      ([obj, &obj_dup]() { EXPECT_NOT_OK(REAL_SYSCALL(zx_handle_duplicate)(obj, 0, &obj_dup)); }));
 }
 
 struct fake_object_data_t {
