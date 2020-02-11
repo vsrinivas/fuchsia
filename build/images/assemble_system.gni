@@ -27,6 +27,15 @@ import("//build/images/shell_commands.gni")
 #   base_packages (required)
 #     [list of labels] The packages to include in the base package set.
 #
+#   cache_packages (optional)
+#     [list of labels] The packages to cache in the images.
+#
+#   universe_packages (optional)
+#     [list of labels] The packages to build in addition to the base and cache
+#     sets. These packages do not contribute to the produced images directly,
+#     however they may contribute to the config-data and shell-commands meta
+#     packages.
+#
 #   netboot (default: false)
 #     [boolean] Whether the generated ZBI should contain the entire system.
 #
@@ -42,6 +51,14 @@ import("//build/images/shell_commands.gni")
 #       [list of files] Input files treated as kernel command line text.
 template("assemble_system") {
   base_packages = invoker.base_packages
+  cache_packages = []
+  universe_packages = []
+  if (defined(invoker.cache_packages)) {
+    cache_packages = invoker.cache_packages
+  }
+  if (defined(invoker.universe_packages)) {
+    universe_packages = invoker.universe_packages
+  }
 
   # Must be unique among assembled systems.
   image_name = target_name
@@ -59,13 +76,13 @@ template("assemble_system") {
   shell_commands("shell-commands") {
     testonly = true
     visibility = [ ":*" ]
-    deps = base_packages
+    deps = base_packages + cache_packages + universe_packages
   }
 
   config_package("config-data") {
     testonly = true
     visibility = [ ":*" ]
-    deps = base_packages
+    deps = base_packages + cache_packages + universe_packages
   }
 
   group("base_packages") {
