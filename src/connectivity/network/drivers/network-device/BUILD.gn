@@ -10,5 +10,8 @@ group("network-device") {
 group("tests") {
   testonly = true
 
-  deps = [ "device:tests" ]
+  deps = [
+    "device:tests",
+    "mac:tests",
+  ]
 }

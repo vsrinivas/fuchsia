@@ -1,0 +1,41 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Generates two `source_set` definitions, for use with and without the ddk.
+#
+# This template allows us to have a different source_set definition for targets that will become a
+# driver and targets that will not. Notably, network-device libraries' tests and the network-tun
+# component use the source_set without the DDK symbols.
+#
+# The DDK target will have DDK libraries added to its public deps and `NETDEV_DDK` to its defines.
+# The non-DDK target will have the syslog library added to its public deps. Both targets have the
+# `_ALL_SOURCE` define added.
+#
+# Parameters
+# - sources and public_deps work as expected.
+template("ddk_source_split") {
+  source_set(target_name + "_ddk") {
+    defines = [ "_ALL_SOURCE" ]
+    forward_variables_from(invoker,
+                           [
+                             "sources",
+                             "public_deps",
+                           ])
+    defines += [ "NETDEV_DDK" ]
+    public_deps += [
+      "//zircon/public/lib/ddk",
+      "//zircon/public/lib/ddktl",
+    ]
+  }
+
+  source_set(target_name) {
+    defines = [ "_ALL_SOURCE" ]
+    forward_variables_from(invoker,
+                           [
+                             "sources",
+                             "public_deps",
+                           ])
+    public_deps += [ "//zircon/public/lib/syslog" ]
+  }
+}
