@@ -9,6 +9,15 @@ import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/test_spec.gni")
 
+group("remote-control") {
+  testonly = true
+
+  public_deps = [
+    ":pkg",
+    ":tests",
+  ]
+}
+
 group("tests") {
   testonly = true
 
@@ -69,7 +78,8 @@ test_package("remote-control-lib-tests") {
   ]
 }
 
-package("remote-control") {
+package("pkg") {
+  package_name = "remote-control"
   deps = [ ":bin" ]
 
   binaries = [
@@ -81,7 +91,7 @@ package("remote-control") {
   meta = [
     {
       path = rebase_path("meta/remote-control.cmx")
-      dest = "remote_control.cmx"
+      dest = "remote-control.cmx"
     },
   ]
 }
