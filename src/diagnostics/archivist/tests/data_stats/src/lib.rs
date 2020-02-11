@@ -17,7 +17,7 @@ use {
 };
 
 const ARCHIVIST_URL: &str =
-    "fuchsia-pkg://fuchsia.com/archivist_data_stats_tests#meta/observer_with_data_stats.cmx";
+    "fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/observer_with_data_stats.cmx";
 const ALL_SELECTORS: &[u8] = include_bytes!("../config/all_selectors.txt");
 const ARCHIVIST_CONFIG: &[u8] = include_bytes!("../config/observer_config.json");
 

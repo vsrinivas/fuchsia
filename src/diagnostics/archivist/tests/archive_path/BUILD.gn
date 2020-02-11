@@ -22,36 +22,3 @@ rustc_test("archive_path_test") {
     "//third_party/rust_crates:regex",
   ]
 }
-
-test_package("archive_path_tests") {
-  deps = [
-    ":archive_path_test",
-    "//src/diagnostics/archivist:bin",
-    "//src/diagnostics/iquery:bin",
-    "//src/diagnostics/iquery/test/example_component:iquery_example_component",
-  ]
-
-  binaries = [
-    {
-      name = "archivist"
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/archive_path_test_archivist.cmx"
-      dest = "archive_path_test_archivist.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "archive_path_test"
-    },
-  ]
-}
-
-group("tests") {
-  testonly = true
-  public_deps = [ ":archive_path_tests" ]
-}

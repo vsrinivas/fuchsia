@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/archivist_data_stats_test"
+        "binary": "test/data_stats_test"
     },
     "sandbox": {
         "features": [
