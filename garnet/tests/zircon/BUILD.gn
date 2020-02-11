@@ -60,7 +60,7 @@ group("zircon_test_metadata") {
 _migrated_fuzzers = [
   "//src/storage/block/drivers/ftl/test:ftl-read-write-fuzzer",
   "//src/connectivity/ethernet/drivers/usb-cdc-ecm:usb-cdc-ecm-descriptor-fuzzer",
-  "//zircon/system/dev/audio/intel-hda/controller:nhlt-fuzzer",
+  "//src/media/audio/drivers/intel-hda/controller:nhlt-fuzzer",
   "//zircon/system/ulib/affine/test:affine-fuzzer",
   "//zircon/system/ulib/bitmap/test:raw-bitmap-fuzzer",
   "//zircon/system/ulib/bootfs/test:bootfs-parser-fuzzer",
