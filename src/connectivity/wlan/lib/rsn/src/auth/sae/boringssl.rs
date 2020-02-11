@@ -292,6 +292,7 @@ impl fmt::Debug for Bignum {
 }
 
 /// Supported elliptic curve groups.
+#[derive(Clone)]
 pub enum EcGroupId {
     P256,
 }

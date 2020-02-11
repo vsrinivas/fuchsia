@@ -16,6 +16,7 @@ use {
 
 /// An elliptic curve group to be used as the finite cyclic group for SAE.
 pub struct Group {
+    id: EcGroupId,
     group: EcGroup,
     bn_ctx: BignumCtx,
 }
@@ -24,7 +25,7 @@ impl Group {
     /// Construct a new FCG using the curve parameters specified by the given ID
     /// for underlying operations.
     pub fn new(ec_group: EcGroupId) -> Result<Self, Error> {
-        Ok(Self { group: EcGroup::new(ec_group)?, bn_ctx: BignumCtx::new()? })
+        Ok(Self { id: ec_group.clone(), group: EcGroup::new(ec_group)?, bn_ctx: BignumCtx::new()? })
     }
 }
 
@@ -110,6 +111,12 @@ fn is_quadratic_residue_blind(
 impl FiniteCyclicGroup for Group {
     type Element = boringssl::EcPoint;
 
+    fn group_id(&self) -> u16 {
+        match self.id {
+            EcGroupId::P256 => 19,
+        }
+    }
+
     // IEEE 802.11-2016 12.4.4.2.2
     fn generate_pwe(&self, params: &SaeParameters) -> Result<Self::Element, Error> {
         let group_params = self.group.get_params(&self.bn_ctx)?;
@@ -131,7 +138,8 @@ impl FiniteCyclicGroup for Group {
             if pwd_value < group_params.p {
                 let y_squared = compute_y_squared(&pwd_value, &group_params, &self.bn_ctx)?;
                 if is_quadratic_residue_blind(&y_squared, &group_params.p, &qr, &qnr, &self.bn_ctx)?
-                { // We have a valid x coord for our PWE! Save it if it's the first we've found.
+                {
+                    // We have a valid x coord for our PWE! Save it if it's the first we've found.
                     if x.is_none() {
                         x = Some(pwd_value);
                         save = Some(pwd_seed);
@@ -238,13 +246,19 @@ mod tests {
     ];
 
     fn make_group() -> Group {
-        let group = boringssl::EcGroup::new(boringssl::EcGroupId::P256).unwrap();
+        let group = boringssl::EcGroup::new(EcGroupId::P256).unwrap();
         let bn_ctx = boringssl::BignumCtx::new().unwrap();
-        Group { group, bn_ctx }
+        Group { id: EcGroupId::P256, group, bn_ctx }
     }
 
     fn bn(value: u64) -> Bignum {
         Bignum::new_from_u64(value).unwrap()
+    }
+
+    #[test]
+    fn get_group_id() {
+        let group = make_group();
+        assert_eq!(group.group_id(), 19);
     }
 
     #[test]

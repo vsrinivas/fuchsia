@@ -5,6 +5,7 @@
 use {
     super::{
         boringssl::{Bignum, BignumCtx},
+        frame::{write_commit, write_confirm},
         internal::FiniteCyclicGroup,
         internal::SaeParameters,
         CommitMsg, ConfirmMsg, Key, RejectReason, SaeHandshake, SaeUpdate, SaeUpdateSink, Timeout,
@@ -196,7 +197,8 @@ impl<E> SaeNew<E> {
     ) -> Result<(Bignum, Commit<E>), RejectReason> {
         let (rand, commit) = self.commit()?;
         let (scalar, element) = commit.serialize(&self.config)?;
-        sink.push(SaeUpdate::Commit(CommitMsg { scalar, element }));
+        let group_id = self.config.fcg.group_id();
+        sink.push(SaeUpdate::SendFrame(write_commit(group_id, &scalar[..], &element[..], &[])));
         sink.push(SaeUpdate::ResetTimeout(Timeout::Retransmission));
         Ok((rand, commit))
     }
@@ -221,8 +223,9 @@ impl<E> SaeNew<E> {
         let confirm = compute_confirm(&self.config, &kck, 1, &commit, &peer_commit)?;
         // We do not send our own commit message unless we process the peer's successfully.
         let (scalar, element) = commit.serialize(&self.config)?;
-        sink.push(SaeUpdate::Commit(CommitMsg { scalar, element }));
-        sink.push(SaeUpdate::Confirm(ConfirmMsg { confirm, send_confirm: 1 }));
+        let group_id = self.config.fcg.group_id();
+        sink.push(SaeUpdate::SendFrame(write_commit(group_id, &scalar[..], &element[..], &[])));
+        sink.push(SaeUpdate::SendFrame(write_confirm(1, &confirm[..])));
         sink.push(SaeUpdate::ResetTimeout(Timeout::Retransmission));
         Ok((rand, commit, peer_commit, kck, key))
     }
@@ -255,7 +258,7 @@ impl<E> SaeCommitted<E> {
             FrameResult::Drop => return Ok(FrameResult::Drop),
         };
         let confirm = compute_confirm(&self.config, &kck, 1, &self.commit, &peer_commit)?;
-        sink.push(SaeUpdate::Confirm(ConfirmMsg { confirm, send_confirm: 1 }));
+        sink.push(SaeUpdate::SendFrame(write_confirm(1, &confirm[..])));
         sink.push(SaeUpdate::ResetTimeout(Timeout::Retransmission));
         Ok(FrameResult::Proceed((peer_commit, kck, key)))
     }
@@ -269,7 +272,8 @@ impl<E> SaeCommitted<E> {
         self.sync += 1;
         // We resend our last commit.
         let (scalar, element) = self.commit.serialize(&self.config)?;
-        sink.push(SaeUpdate::Commit(CommitMsg { scalar, element }));
+        let group_id = self.config.fcg.group_id();
+        sink.push(SaeUpdate::SendFrame(write_commit(group_id, &scalar[..], &element[..], &[])));
         sink.push(SaeUpdate::ResetTimeout(Timeout::Retransmission));
         Ok(())
     }
@@ -291,8 +295,9 @@ impl<E> SaeConfirmed<E> {
         let confirm =
             compute_confirm(&self.config, &self.kck, self.sc, &self.commit, &self.peer_commit)?;
         let (scalar, element) = self.commit.serialize(&self.config)?;
-        sink.push(SaeUpdate::Commit(CommitMsg { scalar, element }));
-        sink.push(SaeUpdate::Confirm(ConfirmMsg { confirm, send_confirm: self.sc }));
+        let group_id = self.config.fcg.group_id();
+        sink.push(SaeUpdate::SendFrame(write_commit(group_id, &scalar[..], &element[..], &[])));
+        sink.push(SaeUpdate::SendFrame(write_confirm(self.sc, &confirm[..])));
         sink.push(SaeUpdate::ResetTimeout(Timeout::Retransmission));
         Ok(())
     }
@@ -355,7 +360,7 @@ impl<E> SaeAccepted<E> {
                     &self.0.commit,
                     &self.0.peer_commit,
                 )?;
-                sink.push(SaeUpdate::Confirm(ConfirmMsg { confirm, send_confirm: self.0.sc }));
+                sink.push(SaeUpdate::SendFrame(write_confirm(self.0.sc, &confirm[..])));
             }
         }
         Ok(())
