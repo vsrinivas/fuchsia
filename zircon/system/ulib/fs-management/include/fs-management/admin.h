@@ -10,8 +10,6 @@
 #include <fs-management/format.h>
 #include <fs-management/launch.h>
 
-__BEGIN_CDECLS
-
 #define PATH_DATA "/data"
 #define PATH_INSTALL "/install"
 #define PATH_SYSTEM "/system"
@@ -91,7 +89,5 @@ zx_status_t fs_register(zx_handle_t export_root);
 //
 // |export_root| is never consumed.
 zx_status_t fs_root_handle(zx_handle_t export_root, zx_handle_t* out_root);
-
-__END_CDECLS
 
 #endif  // FS_MANAGEMENT_ADMIN_H_

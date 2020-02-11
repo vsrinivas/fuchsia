@@ -10,8 +10,6 @@
 #include <fs-management/admin.h>
 #include <fs-management/launch.h>
 
-__BEGIN_CDECLS
-
 typedef struct mount_options {
   bool readonly;
   bool verbose_mount;
@@ -60,7 +58,5 @@ zx_status_t fmount(int device_fd, int mount_fd, disk_format_t df, const mount_op
 zx_status_t umount(const char* mount_path);
 // 'mount_fd' is used in lieu of the mount_path. It is not consumed.
 zx_status_t fumount(int mount_fd);
-
-__END_CDECLS
 
 #endif  // FS_MANAGEMENT_MOUNT_H_
