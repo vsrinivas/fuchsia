@@ -26,31 +26,32 @@ __BEGIN_CDECLS
 #define PDEV_DID_LED2472G           11  // RPi Sense Hat LED2472G
 #define PDEV_DID_GPU_VSL_GC         12  // Verisilicon GC series GPU
 // 13 unused
-#define PDEV_DID_OPTEE              14  // OP-TEE OS Driver
-#define PDEV_DID_RTC_FALLBACK       15  // Synthetic RTC device
-#define PDEV_DID_ETH_MAC            16  // Ethernet MAC
-#define PDEV_DID_ETH_PHY            17  // Ethernet PHY
-#define PDEV_DID_CAMERA_SENSOR      18  // Camera Sensor
-#define PDEV_DID_HID_BUTTONS        19  // HID Buttons
-#define PDEV_DID_MUSB_PERIPHERAL    20  // MUSB in peripheral role
-#define PDEV_DID_MUSB_HOST          21  // MUSB in host role
-#define PDEV_DID_FAKE_DISPLAY       22  // Dummy display
-#define PDEV_DID_FOCALTOUCH         23  // FocalTech touch device
-#define PDEV_DID_LITE_ON_ALS        24  // Lite-On ambient light sensor
-#define PDEV_DID_BOSCH_BMA253       25  // Bosch BMA253 acceleration sensor
-#define PDEV_DID_SG_MICRO_SGM37603A 26  // SG Micro SGM37603A backlight driver
-#define PDEV_DID_SYSMEM             27  // Sysmem driver
-#define PDEV_DID_GPIO_LIGHT         28  // Driver for controlling lights via GPIOs
-#define PDEV_DID_CPU_TRACE          29  // CPU tracing driver
-#define PDEV_DID_DW_DSI             30  // Designware DSI
-#define PDEV_DID_USB_XHCI_COMPOSITE 31  // XHCI USB Controller, as a composite device
-#define PDEV_DID_SSD1306            32  // Oled Display
-#define PDEV_DID_CAMERA_CONTROLLER  33  // Camera Controller
-#define PDEV_DID_CADENCE_HPNFC      34  // Cadence NAND Flash controller
-#define PDEV_DID_OT_RADIO           35  // OpenThread radio
-#define PDEV_DID_CRASH_TEST         36  // Crash-device
-#define PDEV_DID_GOODIX_GTX8X       37  // Goodix GTx8X touch controllers
-#define PDEV_DID_RADAR_SENSOR       38  // Radar Sensor
+#define PDEV_DID_OPTEE                  14  // OP-TEE OS Driver
+#define PDEV_DID_RTC_FALLBACK           15  // Synthetic RTC device
+#define PDEV_DID_ETH_MAC                16  // Ethernet MAC
+#define PDEV_DID_ETH_PHY                17  // Ethernet PHY
+#define PDEV_DID_CAMERA_SENSOR          18  // Camera Sensor
+#define PDEV_DID_HID_BUTTONS            19  // HID Buttons
+#define PDEV_DID_MUSB_PERIPHERAL        20  // MUSB in peripheral role
+#define PDEV_DID_MUSB_HOST              21  // MUSB in host role
+#define PDEV_DID_FAKE_DISPLAY           22  // Dummy display
+#define PDEV_DID_FOCALTOUCH             23  // FocalTech touch device
+#define PDEV_DID_LITE_ON_ALS            24  // Lite-On ambient light sensor
+#define PDEV_DID_BOSCH_BMA253           25  // Bosch BMA253 acceleration sensor
+#define PDEV_DID_SG_MICRO_SGM37603A     26  // SG Micro SGM37603A backlight driver
+#define PDEV_DID_SYSMEM                 27  // Sysmem driver
+#define PDEV_DID_GPIO_LIGHT             28  // Driver for controlling lights via GPIOs
+#define PDEV_DID_CPU_TRACE              29  // CPU tracing driver
+#define PDEV_DID_DW_DSI                 30  // Designware DSI
+#define PDEV_DID_USB_XHCI_COMPOSITE     31  // XHCI USB Controller, as a composite device
+#define PDEV_DID_SSD1306                32  // Oled Display
+#define PDEV_DID_CAMERA_CONTROLLER      33  // Camera Controller
+#define PDEV_DID_CADENCE_HPNFC          34  // Cadence NAND Flash controller
+#define PDEV_DID_OT_RADIO               35  // OpenThread radio
+#define PDEV_DID_CRASH_TEST             36  // Crash-device
+#define PDEV_DID_GOODIX_GTX8X           37  // Goodix GTx8X touch controllers
+#define PDEV_DID_RADAR_SENSOR           38  // Radar Sensor
+#define PDEV_DID_POWER_DOMAIN_COMPOSITE 39  // Power domain, as a composite device
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1

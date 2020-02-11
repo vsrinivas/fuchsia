@@ -74,6 +74,7 @@ TEST(PbusTest, Enumeration) {
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1/child-1/child-2", &fd));
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
                                  "sys/platform/11:01:1/child-1/child-2/child-4", &fd));
+
   EXPECT_OK(
       RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:1/child-1/child-3-top", &fd));
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
@@ -83,13 +84,16 @@ TEST(PbusTest, Enumeration) {
                                  "sys/platform/11:01:5/test-gpio/gpio-3/component", &fd));
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
                                  "sys/platform/11:01:7/test-clock/clock-1/component", &fd));
+
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
                                  "sys/platform/11:01:8/test-i2c/i2c/i2c-1-5/component", &fd));
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:f/component", &fd));
+
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "composite-dev/composite", &fd));
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:10/component", &fd));
-  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
-                                 "sys/platform/11:01:12/test-spi/spi/spi-0-0", &fd));
+
+  EXPECT_OK(
+      RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:12/test-spi/spi/spi-0-0", &fd));
   EXPECT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), "composite-dev-2/composite", &fd), ZX_OK);
 
   const int dirfd = devmgr.devfs_root().get();

@@ -17,7 +17,7 @@ using PowerDeviceType = ddk::Device<PowerDevice, ddk::UnbindableNew>;
 class PowerDevice : public PowerDeviceType,
                     public ddk::PowerProtocol<PowerDevice, ddk::base_protocol> {
  public:
-  PowerDevice(zx_device_t* parent, power_impl_protocol_t* power, uint32_t index)
+  PowerDevice(zx_device_t* parent, ddk::PowerImplProtocolClient& power, uint32_t index)
       : PowerDeviceType(parent), power_(power), index_(index) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);

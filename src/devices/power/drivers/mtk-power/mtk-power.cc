@@ -543,7 +543,7 @@ zx_status_t MtkPower::Bind() {
     zxlogf(ERROR, "%s pbus_register_protocol failed: %d\n", __FUNCTION__, status);
     return status;
   }
-  status = DdkAdd("mtk-power");
+  status = DdkAdd("mtk-power", DEVICE_ADD_ALLOW_MULTI_COMPOSITE);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s DdkAdd failed: %d\n", __FUNCTION__, status);
   }

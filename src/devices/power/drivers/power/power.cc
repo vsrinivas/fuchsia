@@ -13,6 +13,9 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/power.h>
+#include <ddk/platform-defs.h>
+#include <ddktl/protocol/composite.h>
+#include <ddktl/protocol/powerimpl.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 
@@ -52,14 +55,10 @@ void PowerDevice::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 void PowerDevice::DdkRelease() { delete this; }
 
 zx_status_t PowerDevice::Create(void* ctx, zx_device_t* parent) {
-  power_impl_protocol_t power;
-  auto status = device_get_protocol(parent, ZX_PROTOCOL_POWER_IMPL, &power);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   size_t metadata_size;
-  status = device_get_metadata_size(parent, DEVICE_METADATA_POWER_DOMAINS, &metadata_size);
+
+  zx_status_t status =
+      device_get_metadata_size(parent, DEVICE_METADATA_POWER_DOMAINS, &metadata_size);
   if (status != ZX_OK) {
     return status;
   }
@@ -81,28 +80,51 @@ zx_status_t PowerDevice::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_INTERNAL;
   }
 
-  for (uint32_t i = 0; i < count; i++) {
-    auto index = power_domains[i].index;
-    fbl::AllocChecker ac;
-    std::unique_ptr<PowerDevice> dev(new (&ac) PowerDevice(parent, &power, index));
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
-
-    char name[20];
-    snprintf(name, sizeof(name), "power-%u", index);
-    zx_device_prop_t props[] = {
-        {BIND_POWER_DOMAIN, 0, index},
-    };
-
-    status = dev->DdkAdd(name, DEVICE_ADD_ALLOW_MULTI_COMPOSITE, props, countof(props));
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    // dev is now owned by devmgr.
-    __UNUSED auto ptr = dev.release();
+  if (count != 1) {
+    return ZX_ERR_INTERNAL;
   }
+
+  auto index = power_domains[0].index;
+  char name[20];
+  snprintf(name, sizeof(name), "power-%u", index);
+
+  ddk::CompositeProtocolClient composite(parent);
+  if (!composite.is_valid()) {
+    zxlogf(ERROR, "%s could not get composite protocoln", __func__);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  uint32_t parent_count = composite.GetComponentCount();
+  zx_device_t* components[parent_count];
+  composite.GetComponents(components, parent_count, &actual);
+  if (actual != parent_count) {
+    zxlogf(ERROR, "%s could not get composite components\n", __func__);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // POWER_IMPL_PROTOCOL is always the first component
+  ddk::PowerImplProtocolClient power(components[0]);
+  if (!power.is_valid()) {
+    zxlogf(ERROR, "%s: ZX_PROTOCOL_POWER_IMPL not available\n", __func__);
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  std::unique_ptr<PowerDevice> dev(new (&ac) PowerDevice(parent, power, index));
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  zx_device_prop_t props[] = {
+      {BIND_POWER_DOMAIN, 0, index},
+  };
+
+  status = dev->DdkAdd(name, DEVICE_ADD_ALLOW_MULTI_COMPOSITE, props, countof(props));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // dev is now owned by devmgr.
+  __UNUSED auto ptr = dev.release();
 
   return ZX_OK;
 }
@@ -117,7 +139,8 @@ static constexpr zx_driver_ops_t driver_ops = []() {
 }  // namespace power
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(power, power::driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL),
-ZIRCON_DRIVER_END(power)
+ZIRCON_DRIVER_BEGIN(generic-power, power::driver_ops, "zircon", "0.1", 2)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_COMPOSITE),
+    BI_MATCH_IF(EQ, BIND_POWER_DOMAIN_COMPOSITE, PDEV_DID_POWER_DOMAIN_COMPOSITE),
+ZIRCON_DRIVER_END(gerneric-power)
 //clang-format on

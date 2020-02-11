@@ -310,7 +310,7 @@ zx_status_t As370Power::Init() {
 }
 
 zx_status_t As370Power::Bind() {
-  zx_status_t status = DdkAdd("as370-power");
+  zx_status_t status = DdkAdd("as370-power", DEVICE_ADD_ALLOW_MULTI_COMPOSITE);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s DdkAdd failed: %d\n", __FUNCTION__, status);
   }

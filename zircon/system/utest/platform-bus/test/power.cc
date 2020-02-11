@@ -84,7 +84,7 @@ zx_status_t TestPowerDevice::Create(zx_device_t* parent) {
     return status;
   }
 
-  status = dev->DdkAdd("test-power");
+  status = dev->DdkAdd("test-power", DEVICE_ADD_ALLOW_MULTI_COMPOSITE);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DdkAdd failed: %d\n", __func__, status);
     return status;

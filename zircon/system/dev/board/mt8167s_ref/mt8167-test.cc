@@ -10,6 +10,12 @@
 #include "soc/mt8167/mt8167-hw.h"
 #include "zircon/types.h"
 
+// This stubs ensures the power device setup succeeds
+__EXPORT zx_status_t device_add_composite(zx_device_t* dev, const char* name,
+                                          const composite_device_desc_t* comp_desc) {
+  return ZX_OK;
+}
+
 namespace board_mt8167 {
 
 class Mt8167Test : public Mt8167, public ddk::PBusProtocol<Mt8167Test> {
@@ -63,7 +69,6 @@ class Mt8167Test : public Mt8167, public ddk::PBusProtocol<Mt8167Test> {
   zx_status_t TouchInit() override { return ZX_OK; }
   zx_status_t BacklightInit() override { return ZX_OK; }
   zx_status_t AudioInit() override { return ZX_OK; }
-
   bool vgp1_enable_called_ = false;
   bool thermal_enable_called_second_ = false;
 };

@@ -339,6 +339,7 @@ fn get_deprecated_symbols() -> SymbolTable {
 
     // POWER binding variables at 0x0A2X
     insert_deprecated("BIND_POWER_DOMAIN", 0x0A20);
+    insert_deprecated("BIND_POWER_DOMAIN_COMPOSITE", 0x0A21);
 
     // POWER binding variables at 0x0A3X
     insert_deprecated("BIND_CLOCK_ID", 0x0A30);

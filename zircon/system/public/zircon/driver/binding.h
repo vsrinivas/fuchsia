@@ -132,6 +132,7 @@ __BEGIN_CDECLS
 
 // POWER binding variables at 0x0A2X
 #define BIND_POWER_DOMAIN 0x0A20
+#define BIND_POWER_DOMAIN_COMPOSITE 0x0A21
 
 // POWER binding variables at 0x0A3X
 #define BIND_CLOCK_ID 0x0A30
