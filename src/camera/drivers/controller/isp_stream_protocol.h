@@ -43,6 +43,11 @@ class IspStreamProtocol {
     ZX_ASSERT(ZX_OK == protocol_.ops->release_frame(protocol_.ctx, buffer_id));
   }
 
+  zx_status_t Shutdown(const isp_stream_shutdown_callback_t* shutdown_callback) {
+    auto status = protocol_.ops->shutdown(protocol_.ctx, shutdown_callback);
+    return status;
+  }
+
  private:
   bool started_ = false;
   output_stream_protocol_t protocol_;

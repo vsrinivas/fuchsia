@@ -9,6 +9,7 @@
 
 #include <ddk/trace/event.h>
 
+#include "ddk/protocol/isp.h"
 #include "src/camera/drivers/controller/graph_utils.h"
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -123,12 +124,25 @@ void InputNode::OnStopStreaming() {
 void InputNode::OnShutdown(fit::function<void(void)> shutdown_callback) {
   shutdown_callback_ = std::move(shutdown_callback);
 
-  // TODO(braval): Request ISP to shutdown this stream.
-  node_callback_received_ = true;
-
   // After a shutdown request has been made,
   // no other calls should be made to the ISP driver.
   shutdown_requested_ = true;
+
+  isp_stream_shutdown_callback_t isp_stream_shutdown_cb = {
+      .shutdown_complete =
+          [](void* ctx, zx_status_t status) {
+            auto input_node = static_cast<decltype(this)>(ctx);
+            input_node->node_callback_received_ = true;
+            input_node->OnCallbackReceived();
+          },
+      .ctx = this,
+  };
+
+  zx_status_t status = isp_stream_protocol_->Shutdown(&isp_stream_shutdown_cb);
+  if (status != ZX_OK) {
+    FX_PLOGST(ERROR, kTag, status) << "Failure during stream shutdown";
+    return;
+  }
 
   auto child_shutdown_completion_callback = [this]() {
     child_node_callback_received_ = true;

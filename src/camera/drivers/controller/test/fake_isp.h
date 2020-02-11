@@ -29,12 +29,17 @@ class FakeIsp {
     out_s->ops->start = Start;
     out_s->ops->stop = Stop;
     out_s->ops->release_frame = ReleaseFrame;
+    out_s->ops->shutdown = Shutdown;
   }
 
   zx_status_t Start() { return ZX_OK; }
   zx_status_t Stop() { return ZX_OK; }
   zx_status_t ReleaseFrame(uint32_t /*buffer_index*/) {
     frame_released_ = true;
+    return ZX_OK;
+  }
+  zx_status_t Shutdown(const isp_stream_shutdown_callback_t* shutdown_callback) {
+    shutdown_callback->shutdown_complete(shutdown_callback->ctx, ZX_OK);
     return ZX_OK;
   }
 
@@ -49,6 +54,7 @@ class FakeIsp {
     out_s->ops->start = Start;
     out_s->ops->stop = Stop;
     out_s->ops->release_frame = ReleaseFrame;
+    out_s->ops->shutdown = Shutdown;
     return ZX_OK;
   }
 
@@ -69,6 +75,9 @@ class FakeIsp {
   static zx_status_t Stop(void* ctx) { return static_cast<FakeIsp*>(ctx)->Stop(); }
   static zx_status_t ReleaseFrame(void* ctx, uint32_t index) {
     return static_cast<FakeIsp*>(ctx)->ReleaseFrame(index);
+  }
+  static zx_status_t Shutdown(void* ctx, const isp_stream_shutdown_callback_t* shutdown_callback) {
+    return static_cast<FakeIsp*>(ctx)->Shutdown(shutdown_callback);
   }
 
   const hw_accel_frame_callback_t* frame_callback_;
