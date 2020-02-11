@@ -5,7 +5,8 @@
 #![recursion_limit = "256"]
 
 use {
-    anyhow::{anyhow, Context, Error},
+    anyhow::{anyhow, Error},
+    async_helpers::event::Event,
     fidl_fuchsia_bluetooth_a2dp::{AudioModeRequest, AudioModeRequestStream, Role},
     fidl_fuchsia_bluetooth_component::{LifecycleMarker, LifecycleState},
     fidl_fuchsia_sys::LauncherProxy,
@@ -52,7 +53,10 @@ struct Handler {
     launcher: LauncherProxy,
     active_role: Option<Role>,
     children: Vec<client::App>,
+    /// Collection of futures of child component termination or error events.
     child_events: FuturesUnordered<BoxFuture<'static, Result<client::ExitStatus, Error>>>,
+    /// Signal indicating that a new future has been added to `child_events`.
+    child_added: Event,
 }
 
 impl Handler {
@@ -63,6 +67,7 @@ impl Handler {
             active_role: None,
             children: vec![],
             child_events: FuturesUnordered::new(),
+            child_added: Event::new(),
         }
     }
 
@@ -94,7 +99,17 @@ impl Handler {
         }
 
         events
-            .map(|r: Result<client::ExitStatus, Error>| r.and_then(|e| e.ok().map_err(Into::into)))
+            .map(|r: Result<client::ExitStatus, Error>| {
+                r.and_then(|e| {
+                    if e.code() != zx::sys::ZX_TASK_RETCODE_SYSCALL_KILL {
+                        syslog::fx_log_warn!(
+                            "Unexpected return code on child component exit: {:?}",
+                            e
+                        );
+                    }
+                    Ok(())
+                })
+            })
             .try_collect::<()>()
             .on_timeout(Time::after(COMPONENT_TERMINATION_TIMEOUT), || {
                 Err(anyhow!("timeout waiting for component termination"))
@@ -121,6 +136,7 @@ impl Handler {
         let event_stream = child.controller().take_event_stream();
         self.child_events.push(client::ExitStatus::from_event_stream(event_stream).boxed());
         self.children.push(child);
+        self.child_added.signal();
         Ok(())
     }
 
@@ -129,9 +145,16 @@ impl Handler {
     /// that error.
     async fn supervise(&mut self) -> Error {
         loop {
-            let result = match self.child_events.select_next_some().await {
-                Ok(status) => anyhow!("Managed profile died unexpectedly: {}", status),
-                e @ Err(_) => e.context("Watching of managed profile failed").unwrap_err(),
+            let result = match self.child_events.next().await {
+                Some(Ok(status)) => anyhow!("Managed profile died unexpectedly: {}", status),
+                Some(Err(e)) => anyhow!("Watching of managed profile failed: {}", e),
+                None => {
+                    // There are no children under supervision. Wait until there are before
+                    // jumping back to the top of the supervision loop.
+                    self.child_added.wait().await;
+                    self.child_added = Event::new();
+                    continue;
+                }
             };
             return result;
         }
@@ -148,14 +171,19 @@ async fn handle_requests(mut requests: mpsc::Receiver<AudioModeRequest>, launche
         select! {
             request = requests.next().fuse() => {
                 if let Some(AudioModeRequest::SetRole { role, responder }) = request {
-                    let mut response = handler.handle(role).await.map_err(|e| {
-                        syslog::fx_log_err!("Failed to set role {:?}: {}", role, e);
-                        zx::Status::INTERNAL.into_raw()
-                    });
-                    if let Err(e) = responder.send(&mut response) {
-                        syslog::fx_vlog!(1, "Failed to respond to client: {}", e);
+                    match handler.handle(role).await {
+                        Ok(()) => {
+                            // Error can be ignored since there is nothing more to do in the case
+                            // of an error.
+                            let _ = responder.send();
+                        }
+                        Err(e) => {
+                            syslog::fx_log_err!("Failed to set role {:?}: {}", role, e);
+                            responder.control_handle().shutdown_with_epitaph(zx::Status::UNAVAILABLE);
+                        }
                     }
                 } else {
+                    // Requests channel closed
                     break;
                 }
             }
@@ -203,7 +231,9 @@ async fn main() {
 mod tests {
     use {
         super::{test_util::*, *},
+        fidl::endpoints::RequestStream as _,
         fidl_fuchsia_bluetooth_a2dp::AudioModeMarker,
+        fidl_fuchsia_sys::LauncherMarker,
         futures::{pin_mut, StreamExt},
         matches::assert_matches,
         std::task::Poll,
@@ -262,7 +292,7 @@ mod tests {
         assert_expected_components!(expected_urls, &source_components);
 
         // Drive the FIDL request/response to completion.
-        assert_matches!(ex.run_until_stalled(&mut response), Poll::Ready(Ok(Ok(()))));
+        assert_matches!(ex.run_until_stalled(&mut response), Poll::Ready(Ok(())));
     }
 
     #[test]
@@ -292,7 +322,7 @@ mod tests {
             assert_expected_components!(expected_urls, &source_components);
 
             // Drive the FIDL request/response to completion.
-            assert_matches!(ex.run_until_stalled(&mut response), Poll::Ready(Ok(Ok(()))));
+            assert_matches!(ex.run_until_stalled(&mut response), Poll::Ready(Ok(())));
             source_components
         };
 
@@ -315,7 +345,7 @@ mod tests {
             assert_expected_components!(expected_urls, sink_components);
 
             // Drive the FIDL request/response to completion.
-            assert_matches!(ex.run_until_stalled(&mut response), Poll::Ready(Ok(Ok(()))));
+            assert_matches!(ex.run_until_stalled(&mut response), Poll::Ready(Ok(())));
         }
     }
 
@@ -346,7 +376,7 @@ mod tests {
             assert_expected_components!(expected_urls, &source_components);
 
             // Drive the FIDL request/response to completion.
-            assert_matches!(ex.run_until_stalled(&mut response), Poll::Ready(Ok(Ok(()))));
+            assert_matches!(ex.run_until_stalled(&mut response), Poll::Ready(Ok(())));
             source_components
         };
 
@@ -394,7 +424,7 @@ mod tests {
         assert_expected_components!(expected_urls, &source_components);
 
         // Drive the FIDL request/response to completion.
-        assert_matches!(ex.run_until_stalled(&mut response), Poll::Ready(Ok(Ok(()))));
+        assert_matches!(ex.run_until_stalled(&mut response), Poll::Ready(Ok(())));
 
         // Handler is in a steady state.
         assert!(ex.run_until_stalled(&mut handler).is_pending());
@@ -402,5 +432,34 @@ mod tests {
         // Terminating a child component causes handler to complete
         source_components[0].terminate();
         assert!(ex.run_until_stalled(&mut handler).is_ready());
+    }
+
+    #[test]
+    fn handler_completes_on_disconnected_launcher_proxy() {
+        let mut ex = fasync::Executor::new().unwrap();
+        let (mut sender, receiver) = mpsc::channel::<AudioModeRequest>(0);
+        let (launcher_proxy, launcher_stream) =
+            fidl::endpoints::create_proxy_and_stream::<LauncherMarker>().unwrap();
+        launcher_stream.control_handle().shutdown();
+        drop(launcher_stream);
+
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<AudioModeMarker>().unwrap();
+        let handler = handle_requests(receiver, launcher_proxy);
+        pin_mut!(handler);
+
+        let role = Role::Source;
+        // Construct a request that can be sent into the `handle_requests` function.
+        let mut response = proxy.set_role(role);
+        let request = unwrap_ready!(ex.run_until_stalled(&mut stream.next())).unwrap().unwrap();
+        assert!(ex.run_until_stalled(&mut sender.send(request)).is_pending());
+
+        // Handler should process some work and return pending indicating that it can continue
+        // processing.
+        assert_matches!(ex.run_until_stalled(&mut handler), Poll::Pending);
+
+        // The response is an error because the launcher_proxy in use by the handler could not
+        // launch the component.
+        assert_matches!(ex.run_until_stalled(&mut response), Poll::Ready(Err(_)));
     }
 }
