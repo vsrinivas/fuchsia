@@ -74,6 +74,9 @@ class RingBufferImpl : public RingBuffer {
     int64_t first_absolute_frame = std::max(frame, first_valid_frame);
 
     int64_t first_frame_local = first_absolute_frame % frames();
+    if (first_frame_local < 0) {
+      first_frame_local += frames();
+    }
     int64_t last_frame_local = std::min(last_requested_frame, last_valid_frame) % frames();
     if (last_frame_local <= first_frame_local) {
       last_frame_local = frames();

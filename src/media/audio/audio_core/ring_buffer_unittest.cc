@@ -106,6 +106,18 @@ TEST_F(InputRingBufferTest, TruncateBufferAtEndOfTheRing) {
   EXPECT_EQ(buffer->length().Floor(), 48u);
 }
 
+TEST_F(InputRingBufferTest, ReadNegativeFrame) {
+  auto buffer = ring_buffer()->LockBuffer(zx::time(0), -10, 10);
+  ASSERT_TRUE(buffer);
+
+  auto rb_start_address = reinterpret_cast<uintptr_t>(ring_buffer()->virt());
+  auto buffer_address = reinterpret_cast<uintptr_t>(buffer->payload());
+  EXPECT_EQ(buffer_address,
+            rb_start_address + ((ring_buffer()->frames() - 10) * kDefaultFormat.bytes_per_frame()));
+  EXPECT_EQ(buffer->start().Floor(), -10);
+  EXPECT_EQ(buffer->length().Floor(), 10u);
+}
+
 TEST_F(OutputRingBufferTest, ReadEmptyRing) {
   auto buffer = ring_buffer()->LockBuffer(zx::time(0), 0, 1);
   ASSERT_TRUE(buffer);
