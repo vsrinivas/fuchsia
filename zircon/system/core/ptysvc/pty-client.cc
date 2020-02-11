@@ -127,7 +127,7 @@ zx_status_t PtyClient::Write(const void* data, size_t count, size_t* out_actual)
 
 zx_status_t PtyClient::WriteChunk(const void* buf, size_t count, size_t* actual) {
   size_t length;
-  bool is_full;
+  bool is_full = false;
   zx_status_t status = server_->Recv(buf, count, &length, &is_full);
   if (status == ZX_OK) {
     *actual = length;
