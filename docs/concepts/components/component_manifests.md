@@ -79,7 +79,7 @@ See also: [ELF Runner](elf_runner.md), [Component Runners](runners.md).
 
 Component manifests provide a syntax for routing capabilities between
 components. For a detailed walkthrough about what happens during capability
-routing, see [_Life of a service open_](life_of_a_service_open.md)
+routing, see [_Life of a protocol open_](life_of_a_protocol_open.md)
 
 #### Capability types {#capability-types}
 
@@ -125,12 +125,12 @@ component instance's namespace:
   capability that was `exposed` to it by its child. This restriction exists to
   prevent dependency cycles between parent and child.
 
-#### Framework services {#framework-services}
+#### Framework protocols {#framework-protocols}
 
-A *framework service* is a service protocol provided by the component framework. Because
-the component framework itself provides the service protocol, any component may
+A *framework protocol* is a protocol provided by the component framework.
+Because the component framework itself provides the protocol, any component may
 `use` it without an explicit `offer`. Fuchsia supports the following framework
-service protocols:
+protocols:
 
 - [`fuchsia.sys2.Realm`](/sdk/fidl/fuchsia.sys2/realm.fidl): Allows a component
   to manage and bind to its children. Scoped to the component's realm.
@@ -147,9 +147,9 @@ following framework directories:
 
 #### Capability paths {#capability-paths}
 
-Service and directory capabilities are identified by paths.  A path consists of
-a sequence of path components, starting with and separated by `/`, where each
-path component consists one or more non-`/` characters.
+Service, protocol, and directory capabilities are identified by paths.  A path
+consists of a sequence of path components, starting with and separated by `/`,
+where each path component consists one or more non-`/` characters.
 
 A path may either be a *source path* or *target path*, whose meaning depends on
 context:
@@ -247,14 +247,14 @@ instance tree:
 
 ![Capability routing example](capability_routing_example.png)
 
-In this example, the `echo` component instance provides an `/svc/echo` service
-protocol in its outgoing directory. This protocol is routed to the `echo_tool` component
+In this example, the `echo` component instance provides an `/svc/echo` protocol
+in its outgoing directory. This protocol is routed to the `echo_tool` component
 instance, which uses it. It is necessary for each component instance in the
 routing path to propagate `/svc/echo` to the next component instance.
 
 The routing sequence is:
 
-- `echo` hosts the `/svc/echo` service protocol in its outgoing directory. Also, it
+- `echo` hosts the `/svc/echo` protocol in its outgoing directory. Also, it
   exposes `/svc/echo` from `self` so the protocol is visible to its parent,
   `services`.
 - `services` exposes `/svc/echo` from its child `echo` to its parent, `shell`.
@@ -397,8 +397,8 @@ can use at runtime, as explained in [Routing terminology](#routing-terminology).
 `use` is an array of objects with the following properties:
 
 - A capability declaration, one of:
-    - `protocol`: The [source path](#capability-paths) of a service capability,
-      or an array of source paths of service capabilities.
+    - `protocol`: The [source path](#capability-paths) of a protocol capability,
+      or an array of source paths of protocol capabilities.
     - `directory`: The [source path](#capability-paths) of a directory
       capability.
     - `storage`: The [type](#storage-types) of a storage capability. A manifest
@@ -406,9 +406,9 @@ can use at runtime, as explained in [Routing terminology](#routing-terminology).
     - `runner`: The [name](#capability-names) of a runner capability. A manifest
       can declare at most one `runner`.
 - `as` _(optional)_: The explicit [target path](#capability-paths) for the
-  capability. If omitted, defaults to the source path for service and directory
-  capabilities, and one of `/data` or `/cache` for storage capabilities.
-  This property cannot be used:
+  capability. If omitted, defaults to the source path for protocol and directory
+  capabilities, and one of `/data` or `/cache` for storage capabilities.  This
+  property cannot be used:
   - For meta storage capabilities.
   - When `protocol` is an array of multiple items.
 
@@ -448,8 +448,8 @@ explained in [Routing terminology](#routing-terminology).
 `expose` is an array of objects with the following properties:
 
 - A capability declaration, one of:
-    - `protocol`: The [source path](#capability-paths) of a service capability,
-      or an array of source paths to service capabilities.
+    - `protocol`: The [source path](#capability-paths) of a protocol capability,
+      or an array of source paths to protocol capabilities.
     - `directory`: The [source path](#capability-paths) of a directory
       capability.
     - `runner`: The [source name](#capability-names) of a runner capability.
@@ -496,8 +496,8 @@ explained in [Routing terminology](#routing-terminology).
 `offer` is an array of objects with the following properties:
 
 - A capability declaration, one of:
-    - `protocol`: The [source path](#capability-paths) of a service
-      capability, or an array of source paths of service capabilities.
+    - `protocol`: The [source path](#capability-paths) of a protocol 
+      capability, or an array of source paths of protocol capabilities.
     - `directory`: The [source path](#capability-paths) of a directory
       capability.
     - `storage`: The [type](#storage-types) of a storage capability.
@@ -505,10 +505,10 @@ explained in [Routing terminology](#routing-terminology).
 - `from`: The source of the capability, one of:
     - `realm`: The component's containing realm (parent). This source can be
       used for all capability types.
-    - `self`: This component. This source can only be used when offering service,
-      directory, or runner capabilities.
+    - `self`: This component. This source can only be used when offering
+      protocol, directory, or runner capabilities.
     - `#<child-name>`: A [reference](#references) to a child component instance.
-      This source can only be used when offering service, directory,
+      This source can only be used when offering protocol, directory,
       or runner capabilities.
     - `#<storage-name>` A [reference](#references) to a storage declaration.
       This source can only be used when offering storage capabilities.

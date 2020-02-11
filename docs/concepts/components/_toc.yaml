@@ -46,5 +46,5 @@ toc:
   - include: /docs/concepts/components/inspect/_toc.yaml
 - title: "Implementation details"
   section:
-  - title: "Life of a service open"
-    path: /docs/concepts/components/life_of_a_service_open.md
+  - title: "Life of a protocol open"
+    path: /docs/concepts/components/life_of_a_protocol_open.md

@@ -1,6 +1,6 @@
 # Component Runners
 
-A runner is a service that provides a runtime environment for other components.
+A runner is a protocol that provides a runtime environment for other components.
 For example:
 
 -   The component manager comes with an built in [ELF runner][elf-runner] which
@@ -73,32 +73,32 @@ following:
 
 A runner can be implemented by:
 
-1.  Providing a [`fuchsia.sys2.ComponentRunner`][sdk-component-runner] service
+1.  Providing a [`fuchsia.sys2.ComponentRunner`][sdk-component-runner] protocol
     protocol from a component, and
-2.  Declaring a runner capability backed by this service protocol.
+2.  Declaring a runner capability backed by this protocol.
 
 When the component manager is asked to launch a component that uses a particular
-runner, it will send a `ComponentRunner.Start` request to the service. The
+runner, it will send a `ComponentRunner.Start` request to the protocol. The
 request will contain details about the resolved URL of the component, the
 program name and arguments, and a namespace derived from the new component's
 `use` declarations.
 
-Once the component has launched, the component providing the runner service is
+Once the component has launched, the component providing the runner protocol is
 responsible for:
 
--   Providing a [`fuchsia.io.Directory`][sdk-directory] service for outgoing
-    services provided by the launched component;
--   Providing a [`fuchsia.io.Directory`][sdk-directory] service containing
+-   Providing a [`fuchsia.io.Directory`][sdk-directory] protocol for outgoing
+    protocols provided by the launched component;
+-   Providing a [`fuchsia.io.Directory`][sdk-directory] protocol containing
     runtime information about the launched component, which will be visible in
     the [hub][hub];
 -   Providing a [`fuchsia.sys2.ComponentController`][sdk-component-controller]
-    service, allowing the component manager to request the runner stop or kill
+    protocol, allowing the component manager to request the runner stop or kill
     the component.
 
 Further details are in the
 [`fuchsia.sys2.ComponentRunner`][sdk-component-runner] documentation.
 
-For a service offered by a component to be used as a runner, it must also
+For a protocol offered by a component to be used as a runner, it must also
 declare a runner capability in its component manifest, as follows:
 
 ```
@@ -107,10 +107,10 @@ declare a runner capability in its component manifest, as follows:
         // Name for the runner.
         "name": "web",
 
-        // Indicate this component provides the service.
+        // Indicate this component provides the protocol.
         "from": "self",
 
-        // Path to the service in our outgoing directory.
+        // Path to the protocol in our outgoing directory.
         "path": "/svc/fuchsia.sys2.ComponentRunner",
     }],
 }

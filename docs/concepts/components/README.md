@@ -39,5 +39,5 @@ between executions.
 
 **Implementation details**
 
-- [Life of a service open](life_of_a_service_open.md): how components connect to
-  services in their namespaces.
+- [Life of a protocol open](life_of_a_protocol_open.md): how components connect
+  to protocols in their namespaces.

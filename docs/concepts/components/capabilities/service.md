@@ -70,7 +70,7 @@ Consider a component with the following manifest declaration:
 ```
 {
     "use": [{
-        "protocol": "/svc/fuchsia.example.ExampleService",
+        "service": "/svc/fuchsia.example.ExampleService",
     }],
 }
 ```
@@ -82,27 +82,10 @@ this service. Then, the framework connects the newly opened channel to this
 provider.
 
 For more information about the open request, see
-[life of a service open][life-of-a-service-open].
+[life of a protocol open][life-of-a-protocol-open].
 
 For a working example of routing a service capability from one component to
 another, see [`//examples/components/routing`][routing-example].
-
-## Consuming service capabilities provided by the framework
-
-Some service capabilities are provided by the component framework, and thus can
-be [used][use] by components without their parents [offering][offer] them.
-
-For a list of these services and what they can be used for, see
-[framework services][framework-services].
-
-```
-{
-    "use": [{
-        "service": "/svc/fuchsia.sys2.Realm",
-        "from": "framework",
-    }],
-}
-```
 
 ## Service paths {#service-paths}
 
@@ -190,7 +173,7 @@ match in this chain, `C` will see its open attempt fail.
 [glossary-outgoing]: /docs/glossary.md#outgoing-directory
 [glossary-protocol]: /docs/glossary.md#protocol-capability
 [glossary-service]: /docs/glossary.md#service-capability
-[life-of-a-service-open]: /docs/concepts/components/life_of_a_service_open.md
+[life-of-a-protocol-open]: /docs/concepts/components/life_of_a_protocol_open.md
 [offer]: /docs/concepts/components/component_manifests.md#offer
 [protocol-capability]: /docs/concepts/components/capabilities/protocol.md
 [routing-example]: /examples/components/routing

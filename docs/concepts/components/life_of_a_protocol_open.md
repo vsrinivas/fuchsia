@@ -1,7 +1,7 @@
-# Life of a service open
+# Life of a protocol open
 
 This document describes the steps that occur when a component attempts to
-connect to a service in its namespace.
+connect to a protocol in its namespace.
 
 These steps apply to the components v2 model as run under component manager.
 Portions of it also apply to the components v1 model as run under appmgr.
@@ -10,19 +10,19 @@ At a high level these steps are:
 
 - Component manager will [construct a component's namespace][ns-construction]
   based on the `use` declarations in its manifest.
-- Once running, a component will attempt to [open a service][service-open] in
+- Once running, a component will attempt to [open a protocol][protocol-open] in
   its namespace.
 - This `Open` request is received by component manager, which performs the
   [capability routing][cap-routing] necessary to find the component providing
-  the service.
-- Component manager [binds to the component providing the service][binding] and
+  the protocol.
+- Component manager [binds to the component providing the protocol][binding] and
   connects the `Open` request to it
 
 ## Constructing a component's namespace
 
 A [_namespace_][namespaces] is a set of directories that are offered to a
 component when it is started. Each directory is associated with a file system
-path through which the component may access files and services offered by other
+path through which the component may access files and protocols offered by other
 components.
 
 These directories take the form of [handles][handle] to [channels][channel],
@@ -34,26 +34,26 @@ from which they were created at `/pkg`. This means that a component can see what
 binaries are available in their package by reading the contents of `/pkg/bin`.
 
 The `use` declarations in [the component's manifest][component-manifests]
-determine how the namespace is populated. When a service capability is used...
+determine how the namespace is populated. When a protocol capability is used...
 
 ```cml
 "use": [
     {
-        "service": "/svc/fuchsia.example.Foo",
+        "protocol": "/svc/fuchsia.example.Foo",
     },
 ]
 ```
 
 ...component manager will add an entry to the component's namespace for the
-parent directory of the service. In this example, this means that component
+parent directory of the protocol. In this example, this means that component
 manager will add a handle for `/svc` to the namespace.
 
-This service directory is provided by component manager itself, and component
-manager will respond to requests for services to this directory for the lifetime
-of the component.
+The `/svc` directory is provided by component manager itself, and component
+manager will respond to requests for protocols to this directory for the
+lifetime of the component.
 
 The exact semantics of what appears in the namespace varies based on capability
-type. For example if a directory capability is used instead of the service
+type. For example if a directory capability is used instead of the protocol 
 capability...
 
 ```cml
@@ -67,28 +67,28 @@ capability...
 ...a handle for the directory itself appears in the namespace instead of a
 handle for the parent directory. In this example, this means that a handle for
 `/example/data` will appear in the namespace, whereas if this path was used for
-a service capability `/example` would appear in the namespace.
+a protocol capability `/example` would appear in the namespace.
 
-## A component opens a service
+## A component opens a protocol
 
-When a component wants to open a service it creates a new channel pair, and
+When a component wants to open a protocol it creates a new channel pair, and
 sends one end of this pair via an `Open` request over a channel in its
 namespace. For example, if the component wanted to open a connection to
 `/svc/fuchsia.example.Foo`, one end of the new channel pair would be sent over
 the `/svc` handle in its namespace. The component may then call the
 `fuchsia.example.Foo` protocol over the channel.
 
-Since service directories are provided by component manager, it is component
-manager that will receive the server end of the new channel via the `Open`
-request sent by the component. Component manager then must identify the
-component providing the service over this channel.
+Since the directory containing the protocol (`/svc`) is provided by component
+manager, it is component manager that will receive the server end of the new
+channel via the `Open` request sent by the component. Component manager then
+must identify the component providing the protocol over this channel.
 
 ## The `Open` triggers capability routing
 
-To determine the component that provides the service over the channel, component
-manager must walk the tree of components, following `offer` and `expose`
-declarations to find the capability's source. This process is referred to as
-_capability routing_.
+To determine the component that provides the protocol over the channel,
+component manager must walk the tree of components, following `offer` and
+`expose` declarations to find the capability's source. This process is referred
+to as _capability routing_.
 
 Starting at the parent of the component that triggered the capability routing,
 component manager will inspect each component's manifest, looking for an `offer`
@@ -129,7 +129,7 @@ A.cml:
     // ...
     "expose: [
         {
-            "service": "/svc/fuchsia.example.Foo",
+            "protocol": "/svc/fuchsia.example.Foo",
             "from": "self",
         },
     ],
@@ -140,7 +140,7 @@ B.cml:
     // ...
     "expose: [
         {
-            "service": "/svc/fuchsia.example.Foo",
+            "protocol": "/svc/fuchsia.example.Foo",
             "from": "#A",
         },
     ],
@@ -157,7 +157,7 @@ C.cml:
     // ...
     "offer": [
         {
-            "service": "/svc/fuchsia.example.Foo",
+            "protocol": "/svc/fuchsia.example.Foo",
             "from": "#B",
             "to": [
                 { "dest": "#D" },
@@ -181,7 +181,7 @@ D.cml:
     // ...
     "use": [
         {
-            "service": "/svc/fuchsia.example.Foo",
+            "protocol": "/svc/fuchsia.example.Foo",
         },
     ],
 }
@@ -189,7 +189,7 @@ D.cml:
 
 When `D` calls `Open` on `/svc/fuchsia.example.Foo` in its namespace, component
 manager will walk the tree to find the component that should provide this
-service. It will start at `D`'s parent, `C`, and from there:
+protocol. It will start at `D`'s parent, `C`, and from there:
 
 - Look for the `offer` declaration for `fuchsia.example.Foo` to `D`, and see that
   it comes from child `B`.
@@ -202,14 +202,14 @@ service. It will start at `D`'s parent, `C`, and from there:
 Now that the provider component has been found, component manager can attempt to
 hand off the channel it received via the `Open` request.
 
-## Binding to a component and sending a service channel
+## Binding to a component and sending a protocol channel
 
 With the provider found the client component is now bound to the provider. This
 will cause the component to start running if it is currently stopped.
 
 Every component upon being started receives a server handle to an [_outgoing
 directory_][abi-system] in its handle table. When a component is bound to,
-component manager forwards the server end of the service channel to the
+component manager forwards the server end of the protocol channel to the
 providing component's outgoing directory, under the source path in the providing
 component's `offer` or `expose` declaration
 
@@ -221,7 +221,7 @@ called `Open` to component manager.
 It is then up to component `A` to receive this request and start responding to
 messages over the channel it was given.
 
-Since component manager directly forwards the server end of the service channel
+Since component manager directly forwards the server end of the protocol channel
 to the provider component's outgoing directory, it is not involved in message
 proxying and is entirely out of the picture after capability routing is
 completed. Once a connection to another component is established, they talk
@@ -253,17 +253,16 @@ parent offering these capabilities. Currently these are:
 
 Parent components can access capabilities offered by their children at runtime
 by calling the [`fuchsia.sys2.Realm.BindChild`][realm.fidl] method to start the
-child and receive a directory containing the child's exposed services.
+child and receive a directory containing the child's exposed protocols.
 
-To prevent service dependency cycles from occurring in component namespaces, a
-parent component cannot declare a static dependency on the services of its
+To prevent dependency cycles from occurring in component namespaces, a
+parent component cannot declare a static dependency on the protocols of its
 children with `use` declarations; it must use `BindChild()`.
 
 [ns-construction]: #constructing-a-components-namespace
-[service-open]: #a-component-opens-a-service
+[protocol-open]: #a-component-opens-a-protocol
 [cap-routing]: #the-open-triggers-capability-routing
-[binding]: #binding-to-a-component-and-sending-a-service-channel
-
+[binding]: #binding-to-a-component-and-sending-a-protocol-channel
 [handle]: /docs/concepts/objects/handles.md
 [channel]: /docs/reference/kernel_objects/channel.md
 [namespaces]: /docs/concepts/framework/namespaces.md

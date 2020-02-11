@@ -29,7 +29,7 @@ capability. This is done through an [`expose`][expose] declaration.
 ```
 {
     "expose": [{
-        "protocol": "/svc/fuchsia.example.ExampleService",
+        "protocol": "/svc/fuchsia.example.ExampleProtocol",
         "from": "self",
     }],
 }
@@ -38,7 +38,7 @@ capability. This is done through an [`expose`][expose] declaration.
 The `"from": "self"` directive means that the protocol capability was created
 by this component.
 
-Note: The protocol path `"/svc/fuchsia.example.ExampleService"` follows a
+Note: The protocol path `"/svc/fuchsia.example.ExampleProtocol"` follows a
 convention and is explained in the [protocol paths section](#protocol-paths).
 
 ### Offering {#providing-protocol-capability-offer}
@@ -49,7 +49,7 @@ capability. This is done through an [`offer`][offer] declaration.
 ```
 {
     "offer": [{
-        "protocol": "/svc/fuchsia.example.ExampleService",
+        "protocol": "/svc/fuchsia.example.ExampleProtocol",
         "from": "self",
         "to": [{
             { "dest": "#child-a" },
@@ -70,19 +70,19 @@ Consider a component with the following manifest declaration:
 ```
 {
     "use": [{
-        "protocol": "/svc/fuchsia.example.ExampleService",
+        "protocol": "/svc/fuchsia.example.ExampleProtocol",
     }],
 }
 ```
 
 When the component attempts to open the path
-`/svc/fuchsia.example.ExampleService`, the component framework performs
+`/svc/fuchsia.example.ExampleProtocol`, the component framework performs
 [capability routing][capability-routing] to find the component that provides
 this protocol. Then, the framework connects the newly opened channel to this
 provider.
 
 For more information about the open request, see
-[life of a service open][life-of-a-service-open].
+[life of a protocol open][life-of-a-protocol-open].
 
 For a working example of routing a protocol capability from one component to
 another, see [`//examples/components/routing`][routing-example].
@@ -93,7 +93,7 @@ Some protocol capabilities are provided by the component framework, and thus
 can be [used][use] by components without their parents [offering][offer] them.
 
 For a list of these protocols and what they can be used for, see
-[framework services][framework-services].
+[framework protocols][framework-protocols].
 
 ```
 {
@@ -170,7 +170,7 @@ C.cml:
 {
     "use": [{
         "protocol": "/intermediary2",
-        "as": "/service/example",
+        "as": "/svc/example",
     }],
 }
 ```
@@ -181,14 +181,14 @@ match in this chain, `C` will see its open attempt fail.
 
 [capability-routing]: /docs/concepts/components/component_manifests.md#capability-routing
 [expose]: /docs/concepts/components/component_manifests.md#expose
-[framework-services]: /docs/concepts/components/component_manifests.md#framework-services
+[framework-protocols]: /docs/concepts/components/component_manifests.md#framework-protocols
 [glossary-fidl]: /docs/glossary.md#fidl
 [glossary-fidl-protocol]: /docs/glossary.md#protocol
 [glossary-fidl-service]: /docs/glossary.md#service
 [glossary-namespace]: /docs/glossary.md#namespace
 [glossary-outgoing]: /docs/glossary.md#outgoing-directory
 [glossary-protocol]: /docs/glossary.md#protocol-capability
-[life-of-a-service-open]: /docs/concepts/components/life_of_a_service_open.md
+[life-of-a-protocol-open]: /docs/concepts/components/life_of_a_protocol_open.md
 [offer]: /docs/concepts/components/component_manifests.md#offer
 [routing-example]: /examples/components/routing
 [service-capability]: /docs/concepts/components/capabilities/service.md
