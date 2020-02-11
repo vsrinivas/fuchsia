@@ -139,19 +139,21 @@ protocol File {
 };
 
 /// The reference point for updating the seek offset. See [`File.Seek`].
+///
+/// This enum matches the `zx_stream_seek_origin_t` enum.
 enum SeekOrigin : uint32 {
     /// Seek from the start of the file.
     /// The seek offset will be set to `offset` bytes.
     /// The seek offset cannot be negative in this case.
-    START = 1;
+    START = 0;
 
     /// Seek from the current position in the file.
     /// The seek offset will be the current seek offset plus `offset` bytes.
-    CURRENT = 2;
+    CURRENT = 1;
 
     /// Seek from the end of the file.
     /// The seek offset will be the file size plus `offset` bytes.
-    END = 3;
+    END = 2;
 };
 
 bits VmoFlags : uint64 {

@@ -99,6 +99,7 @@ void FileConnection::Seek(int64_t new_offset, fuchsia::io::SeekOrigin seek, Seek
   int64_t cur_len = vn_->GetLength();
   size_t capacity = vn_->GetCapacity();
   uint64_t calculated_offset = 0u;
+  // TODO: This code does not appear to handle overflow.
   switch (seek) {
     case fuchsia::io::SeekOrigin::START:
       calculated_offset = new_offset;

@@ -298,15 +298,6 @@ class TestServerChannel final : public TestServerBase {
 
   void Seek(int64_t offset, fio::SeekOrigin origin, SeekCompleter::Sync completer) override {
     zx_off_t seek = 0u;
-    static_assert(
-        static_cast<zx_stream_seek_origin_t>(fio::SeekOrigin::START) == ZX_STREAM_SEEK_ORIGIN_START,
-        "fio::SeekOrigin and zx_stream_seek_origin_t should match");
-    static_assert(static_cast<zx_stream_seek_origin_t>(fio::SeekOrigin::CURRENT) ==
-                      ZX_STREAM_SEEK_ORIGIN_CURRENT,
-                  "fio::SeekOrigin and zx_stream_seek_origin_t should match");
-    static_assert(
-        static_cast<zx_stream_seek_origin_t>(fio::SeekOrigin::END) == ZX_STREAM_SEEK_ORIGIN_END,
-        "fio::SeekOrigin and zx_stream_seek_origin_t should match");
     zx_status_t status = stream_.seek(static_cast<zx_stream_seek_origin_t>(origin), offset, &seek);
     completer.Reply(status, seek);
   }

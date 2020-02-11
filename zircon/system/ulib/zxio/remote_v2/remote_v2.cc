@@ -498,22 +498,11 @@ zx_status_t zxio_remote_v2_write_vector_at(zxio_t* io, zx_off_t offset, const zx
       });
 }
 
-constexpr zx_stream_seek_origin_t ToZXStreamSeekOrigin(zxio_seek_origin_t start) {
-  return static_cast<zx_stream_seek_origin_t>(start) - 1;
-}
-
-static_assert(ToZXStreamSeekOrigin(ZXIO_SEEK_ORIGIN_START) == ZX_STREAM_SEEK_ORIGIN_START,
-              "ToZXStreamSeekOrigin should work for START");
-static_assert(ToZXStreamSeekOrigin(ZXIO_SEEK_ORIGIN_CURRENT) == ZX_STREAM_SEEK_ORIGIN_CURRENT,
-              "ToZXStreamSeekOrigin should work for CURRENT");
-static_assert(ToZXStreamSeekOrigin(ZXIO_SEEK_ORIGIN_END) == ZX_STREAM_SEEK_ORIGIN_END,
-              "ToZXStreamSeekOrigin should work for END");
-
 zx_status_t zxio_remote_v2_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset,
                                 size_t* out_offset) {
   RemoteV2 rio(io);
   if (rio.stream()->is_valid()) {
-    return rio.stream()->seek(ToZXStreamSeekOrigin(start), offset, out_offset);
+    return rio.stream()->seek(start, offset, out_offset);
   }
 
   auto result = fio2::File::Call::Seek(rio.control(), static_cast<fio2::SeekOrigin>(start), offset);

@@ -654,33 +654,14 @@ zx_status_t zxio_remote_write_vector_at(zxio_t* io, zx_off_t offset, const zx_io
       });
 }
 
-constexpr zx_stream_seek_origin_t ToZXStreamSeekOrigin(zxio_seek_origin_t start) {
-  return static_cast<zx_stream_seek_origin_t>(start) - 1;
-}
-
-static_assert(ToZXStreamSeekOrigin(ZXIO_SEEK_ORIGIN_START) == ZX_STREAM_SEEK_ORIGIN_START,
-              "ToZXStreamSeekOrigin should work for START");
-static_assert(ToZXStreamSeekOrigin(ZXIO_SEEK_ORIGIN_CURRENT) == ZX_STREAM_SEEK_ORIGIN_CURRENT,
-              "ToZXStreamSeekOrigin should work for CURRENT");
-static_assert(ToZXStreamSeekOrigin(ZXIO_SEEK_ORIGIN_END) == ZX_STREAM_SEEK_ORIGIN_END,
-              "ToZXStreamSeekOrigin should work for END");
-
-static constexpr fio::SeekOrigin ToIo1SeekOrigin(zxio_seek_origin_t start) {
-  return static_cast<fio::SeekOrigin>(start - 1);
-}
-
-static_assert(ToIo1SeekOrigin(ZXIO_SEEK_ORIGIN_START) == fio::SeekOrigin::START, "");
-static_assert(ToIo1SeekOrigin(ZXIO_SEEK_ORIGIN_CURRENT) == fio::SeekOrigin::CURRENT, "");
-static_assert(ToIo1SeekOrigin(ZXIO_SEEK_ORIGIN_END) == fio::SeekOrigin::END, "");
-
 zx_status_t zxio_remote_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset,
                              size_t* out_offset) {
   Remote rio(io);
   if (rio.stream()->is_valid()) {
-    return rio.stream()->seek(ToZXStreamSeekOrigin(start), offset, out_offset);
+    return rio.stream()->seek(start, offset, out_offset);
   }
 
-  auto result = fio::File::Call::Seek(rio.control(), offset, ToIo1SeekOrigin(start));
+  auto result = fio::File::Call::Seek(rio.control(), offset, static_cast<fio::SeekOrigin>(start));
   if (result.status() != ZX_OK) {
     return result.status();
   }

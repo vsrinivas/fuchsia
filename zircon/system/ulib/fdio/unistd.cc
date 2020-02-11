@@ -1207,20 +1207,19 @@ int fcntl(int fd, int cmd, ...) {
 #undef GET_INT_ARG
 }
 
-static constexpr zxio_seek_origin_t ToZxioSeekOrigin(int whence) { return whence + 1; }
-
-static_assert(ToZxioSeekOrigin(SEEK_SET) == ZXIO_SEEK_ORIGIN_START, "");
-static_assert(ToZxioSeekOrigin(SEEK_CUR) == ZXIO_SEEK_ORIGIN_CURRENT, "");
-static_assert(ToZxioSeekOrigin(SEEK_END) == ZXIO_SEEK_ORIGIN_END, "");
-
 __EXPORT
 off_t lseek(int fd, off_t offset, int whence) {
   fdio_t* io = fd_to_io(fd);
   if (io == NULL) {
     return ERRNO(EBADF);
   }
+
+  static_assert(SEEK_SET == ZXIO_SEEK_ORIGIN_START, "");
+  static_assert(SEEK_CUR == ZXIO_SEEK_ORIGIN_CURRENT, "");
+  static_assert(SEEK_END == ZXIO_SEEK_ORIGIN_END, "");
+
   size_t result = 0u;
-  zx_status_t status = zxio_seek(fdio_get_zxio(io), ToZxioSeekOrigin(whence), offset, &result);
+  zx_status_t status = zxio_seek(fdio_get_zxio(io), whence, offset, &result);
   if (status == ZX_ERR_WRONG_TYPE) {
     // Although 'ESPIPE' is a bit of a misnomer, it is the valid errno
     // for any fd which does not implement seeking (i.e., for pipes,

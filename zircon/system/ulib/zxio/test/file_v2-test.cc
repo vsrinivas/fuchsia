@@ -227,10 +227,6 @@ TEST_F(FileV2, WaitForWritable) {
   EXPECT_EQ(ZXIO_SIGNAL_WRITABLE, observed);
 }
 
-constexpr zx_stream_seek_origin_t ToZXStreamSeekOrigin(fio2::SeekOrigin whence) {
-  return static_cast<zx_stream_seek_origin_t>(whence) - 1;
-}
-
 class TestServerChannel final : public TestServerBase {
  public:
   TestServerChannel() {
@@ -315,13 +311,7 @@ class TestServerChannel final : public TestServerBase {
 
   void Seek(fio2::SeekOrigin origin, int64_t offset, SeekCompleter::Sync completer) override {
     zx_off_t seek = 0u;
-    static_assert(ToZXStreamSeekOrigin(fio2::SeekOrigin::START) == ZX_STREAM_SEEK_ORIGIN_START,
-                  "ToZXStreamSeekOrigin should work for START");
-    static_assert(ToZXStreamSeekOrigin(fio2::SeekOrigin::CURRENT) == ZX_STREAM_SEEK_ORIGIN_CURRENT,
-                  "ToZXStreamSeekOrigin should work for CURRENT");
-    static_assert(ToZXStreamSeekOrigin(fio2::SeekOrigin::END) == ZX_STREAM_SEEK_ORIGIN_END,
-                  "ToZXStreamSeekOrigin should work for END");
-    zx_status_t status = stream_.seek(ToZXStreamSeekOrigin(origin), offset, &seek);
+    zx_status_t status = stream_.seek(static_cast<zx_stream_seek_origin_t>(origin), offset, &seek);
     if (status != ZX_OK) {
       completer.ReplyError(status);
       return;

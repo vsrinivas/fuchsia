@@ -219,11 +219,12 @@ typedef struct zxio_node_attr {
     _tmp_attr->has.field_name = true;               \
   } while (0)
 
+// The zxio_seek_origin_t enum matches zx_stream_seek_origin_t.
 typedef uint32_t zxio_seek_origin_t;
 
-#define ZXIO_SEEK_ORIGIN_START ((zxio_seek_origin_t)1u)
-#define ZXIO_SEEK_ORIGIN_CURRENT ((zxio_seek_origin_t)2u)
-#define ZXIO_SEEK_ORIGIN_END ((zxio_seek_origin_t)3u)
+#define ZXIO_SEEK_ORIGIN_START ((zxio_seek_origin_t)0u)
+#define ZXIO_SEEK_ORIGIN_CURRENT ((zxio_seek_origin_t)1u)
+#define ZXIO_SEEK_ORIGIN_END ((zxio_seek_origin_t)2u)
 
 // An entry in a directory.
 typedef struct zxio_dirent {

@@ -176,6 +176,10 @@ zx_status_t zxio_write_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* 
   return zio->ops->write_vector_at(io, offset, vector, vector_count, flags, out_actual);
 }
 
+static_assert(ZX_STREAM_SEEK_ORIGIN_START == ZXIO_SEEK_ORIGIN_START, "ZXIO should match ZX");
+static_assert(ZX_STREAM_SEEK_ORIGIN_CURRENT == ZXIO_SEEK_ORIGIN_CURRENT, "ZXIO should match ZX");
+static_assert(ZX_STREAM_SEEK_ORIGIN_END == ZXIO_SEEK_ORIGIN_END, "ZXIO should match ZX");
+
 zx_status_t zxio_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset, size_t* out_offset) {
   zxio_internal_t* zio = to_internal(io);
   return zio->ops->seek(io, start, offset, out_offset);
