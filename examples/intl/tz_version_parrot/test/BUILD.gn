@@ -7,7 +7,10 @@ import("//build/testing/environments.gni")
 
 group("test") {
   testonly = true
-  deps = [ ":tz_version_parrot_test" ]
+  deps = [
+    ":tz_version_parrot_test",
+    "//examples/intl/tz_version_parrot",
+  ]
 }
 
 executable("tz_version_parrot_test_bin") {
