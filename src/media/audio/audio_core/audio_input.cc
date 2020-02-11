@@ -41,6 +41,11 @@ zx_status_t AudioInput::Init() {
   return res;
 }
 
+fit::result<std::shared_ptr<Stream>, zx_status_t> AudioInput::InitializeDestLink(
+    const AudioObject& dest) {
+  return fit::ok(driver()->ring_buffer());
+}
+
 void AudioInput::OnWakeup() {
   TRACE_DURATION("audio", "AudioInput::OnWakeup");
   // We were poked.  Are we just starting up?
@@ -90,10 +95,6 @@ void AudioInput::OnDriverInfoFetched() {
 
   // Send config request; recompute distance between start|end sampling fences.
   driver()->Configure(selected_format, kMaxFenceDistance);
-
-  int64_t dist = TimelineRate(pref_fps, ZX_SEC(1)).Scale(kMinFenceDistance.to_nsecs());
-  FX_DCHECK(dist < std::numeric_limits<uint32_t>::max());
-  driver()->SetEndFenceToStartFenceFrames(static_cast<uint32_t>(dist));
 
   // Tell AudioDeviceManager it can add us to the set of active audio devices.
   ActivateSelf();

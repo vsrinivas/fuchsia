@@ -26,6 +26,13 @@ class AudioInput : public AudioDevice {
   ~AudioInput() override = default;
 
  protected:
+  // |media::audio::AudioObject|
+  fit::result<std::shared_ptr<Stream>, zx_status_t> InitializeDestLink(
+      const AudioObject& dest) override;
+
+  // |media::audio::AudioDevice|
+  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override;
+
   zx_status_t Init() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   void OnWakeup() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
@@ -40,9 +47,6 @@ class AudioInput : public AudioDevice {
 
   void OnDriverPlugStateChange(bool plugged, zx::time plug_time) override
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
-
-  // AudioDevice impl
-  void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override;
 
  private:
   enum class State {
