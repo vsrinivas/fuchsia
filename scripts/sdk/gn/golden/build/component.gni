@@ -32,6 +32,7 @@ template("fuchsia_component") {
                              "friend",
                              "manifest",
                              "resources",
+                             "testonly",
                              "visibility",
                            ])
 
