@@ -24,6 +24,11 @@ class BlobfsChecker {
   void TraverseBlockBitmap();
   zx_status_t CheckAllocatedCounts() const;
 
+  // Check validates the blobfs filesystem provided when the Checker was
+  // constructed. It walks each of the inode and block allocation bitmaps
+  // only once.
+  zx_status_t Check();
+
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(BlobfsChecker);
   std::unique_ptr<Blobfs> blobfs_;

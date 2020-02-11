@@ -170,6 +170,11 @@ class Blobfs : public TransactionManager, public UserPager {
 
   bool ShouldCompress() const { return !write_uncompressed_; }
 
+ protected:
+  // Reloads metadata from disk. Useful when metadata on disk
+  // may have changed due to journal playback.
+  zx_status_t ReloadSuperblock();
+
  private:
   friend class BlobfsChecker;
 
@@ -199,10 +204,6 @@ class Blobfs : public TransactionManager, public UserPager {
   // either the presence or absence of a blob on the system without
   // further scanning.
   zx_status_t InitializeVnodes();
-
-  // Reloads metadata from disk. Useful when metadata on disk
-  // may have changed due to journal playback.
-  zx_status_t ReloadSuperblock();
 
   // Frees blocks from the allocated map (if allocated) and updates disk if necessary.
   void FreeExtent(const Extent& extent, storage::UnbufferedOperationsBuilder* operations,

@@ -92,8 +92,8 @@ zx_status_t BlobfsChecker::CheckAllocatedCounts() const {
   }
 
   if (alloc_blocks_ < kStartBlockMinimum) {
-    FS_TRACE_ERROR("check: allocated blocks (%u) are less than minimum%" PRIu64 "\n", alloc_blocks_,
-                   kStartBlockMinimum);
+    FS_TRACE_ERROR("check: allocated blocks (%u) are less than minimum (%" PRIu64 ")\n",
+                   alloc_blocks_, kStartBlockMinimum);
     status = ZX_ERR_BAD_STATE;
   }
 
@@ -116,6 +116,12 @@ zx_status_t BlobfsChecker::CheckAllocatedCounts() const {
   }
 
   return status;
+}
+
+zx_status_t BlobfsChecker::Check() {
+  TraverseInodeBitmap();
+  TraverseBlockBitmap();
+  return CheckAllocatedCounts();
 }
 
 BlobfsChecker::BlobfsChecker(std::unique_ptr<Blobfs> blobfs)
