@@ -24,11 +24,6 @@ group("tests") {
   ]
 }
 
-# TODO(abdulla): Migrate all users to //src/devices/lib/driver
-group("driver") {
-  deps = [ "lib/driver" ]
-}
-
 generate_manifest("devices.bootfs") {
   deps = [
     "bin",
