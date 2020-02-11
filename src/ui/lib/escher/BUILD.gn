@@ -42,6 +42,7 @@ test_package("escher_tests") {
   resources = vulkan_validation_layers.resources
   resources += escher_shaders_resources
   resources += escher_shaders_spirv_resources
+  resources += escher_test_shaders_spirv_resources
   resources += escher_examples_assets
 }
 

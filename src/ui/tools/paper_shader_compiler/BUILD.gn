@@ -14,6 +14,10 @@ executable("paper_shader_compiler") {
     "//third_party/shaderc:libshaderc",
   ]
 
+  if (is_linux) {
+    deps += [ "//src/ui/lib/escher/shaders:linux_shader_data" ]
+  }
+
   include_dirs = [
     "//lib",
     "//src/ui/lib/escher",
