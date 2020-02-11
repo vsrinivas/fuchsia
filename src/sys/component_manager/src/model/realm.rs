@@ -244,16 +244,8 @@ impl Realm {
                     as Arc<dyn Runner + Send + Sync>);
             }
 
-            // Otherwise, fall back to some defaults.
-            //
-            // If we have a binary defined, use the ELF loader. Otherwise, just use the
-            // NullRunner.
-            //
-            // TODO(fxb/4761): We want all runners to be routed. This should eventually be removed.
-            match decl.program {
-                Some(_) => Ok(model.elf_runner.clone()),
-                None => Ok(Arc::new(NullRunner {}) as Arc<dyn Runner + Send + Sync>),
-            }
+            // Otherwise, use a null runner.
+            Ok(Arc::new(NullRunner {}) as Arc<dyn Runner + Send + Sync>)
         }
         .boxed()
     }
