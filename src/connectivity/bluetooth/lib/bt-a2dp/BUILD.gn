@@ -17,6 +17,7 @@ rustc_library("bt-a2dp") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:bitflags",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:thiserror",
   ]
 }

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::convert::TryFrom;
 use {bitfield::bitfield, bitflags::bitflags, thiserror::Error};
 
 /// The error types for packet parsing.
@@ -99,6 +100,8 @@ bitflags! {
     }
 }
 
+pub const SBC_CODEC_EXTRA_LEN: usize = 4;
+
 bitfield! {
     /// SBC Codec Specific Information Elements (A2DP Sec. 4.3.2).
     /// Packet structure:
@@ -155,6 +158,21 @@ impl SbcCodecInfo {
     }
     pub fn to_bytes(&self) -> Vec<u8> {
         self.0.to_be_bytes().to_vec()
+    }
+}
+
+impl TryFrom<&[u8]> for SbcCodecInfo {
+    type Error = Error;
+
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        if value.len() != SBC_CODEC_EXTRA_LEN {
+            return Err(Error::OutOfRange);
+        }
+
+        let mut codec_info_bytes = [0_u8; SBC_CODEC_EXTRA_LEN];
+        codec_info_bytes.copy_from_slice(&value);
+
+        Ok(Self(u32::from_be_bytes(codec_info_bytes)))
     }
 }
 
@@ -217,6 +235,8 @@ bitflags! {
     }
 }
 
+pub const AAC_CODEC_EXTRA_LEN: usize = 6;
+
 bitfield! {
     /// MPEG-2 AAC Codec Specific Information Elements (A2DP Sec 4.5.2)
     /// Structure:
@@ -270,9 +290,27 @@ impl AACMediaCodecInfo {
     }
 }
 
+impl TryFrom<&[u8]> for AACMediaCodecInfo {
+    type Error = Error;
+
+    /// Create `AACMediaCodecInfo` from slice of length `AAC_CODEC_EXTRA_LEN`
+    fn try_from(value: &[u8]) -> Result<Self, Self::Error> {
+        if value.len() != AAC_CODEC_EXTRA_LEN {
+            return Err(Error::OutOfRange);
+        }
+        let mut codec_info_bytes = [0_u8; 8];
+        let codec_info_slice = &mut codec_info_bytes[2..8];
+        // AACMediaCodecInfo is represented as 8 bytes, with lower 6 bytes containing
+        // the codec extra data.
+        codec_info_slice.copy_from_slice(&value);
+        Ok(Self(u64::from_be_bytes(codec_info_bytes)))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use matches::assert_matches;
 
     #[test]
     /// Unit test for the SBC media codec info generation.
@@ -289,7 +327,12 @@ mod tests {
         )
         .expect("Couldn't create sbc media codec info.");
         let res = sbc_media_codec_info.to_bytes();
-        assert_eq!(vec![0x3F, 0xFF, 2, 250], res);
+        let codec_extra: Vec<u8> = vec![0x3F, 0xFF, 2, 250];
+        assert_eq!(codec_extra, res);
+
+        // reverse parsing and check we match
+        let res = SbcCodecInfo::try_from(&codec_extra[..]).expect("created codec info");
+        assert_eq!(res.0, sbc_media_codec_info.0);
 
         // Mandatory A2DP source support case. Some fields are choose 1 fields.
         let sbc_media_codec_info: SbcCodecInfo = SbcCodecInfo::new(
@@ -368,6 +411,13 @@ mod tests {
             50,
         );
         assert!(sbc_codec_info.is_err());
+
+        let empty = vec![0, 0, 0, 0];
+        let res = SbcCodecInfo::try_from(&empty[..]).expect("created codec info");
+        assert_eq!(res.0, 0);
+
+        let too_big = vec![0, 0, 0, 0, 0];
+        assert_matches!(SbcCodecInfo::try_from(&too_big[..]), Err(Error::OutOfRange));
     }
 
     #[test]
@@ -418,7 +468,12 @@ mod tests {
         )
         .expect("Error creating aac media codec info.");
         let res = aac_media_codec_info.to_bytes();
-        assert_eq!(vec![0x80, 0x01, 0x8C, 0x80, 0xAA, 0xFF], res);
+        let codec_extra: Vec<u8> = vec![0x80, 0x01, 0x8C, 0x80, 0xAA, 0xFF];
+        assert_eq!(codec_extra, res);
+
+        // reverse parsing and check we match
+        let res = AACMediaCodecInfo::try_from(&codec_extra[..]).expect("created codec info");
+        assert_eq!(res.0, aac_media_codec_info.0);
 
         // A2DP Source mandatory fields supported.
         let aac_media_codec_info: AACMediaCodecInfo = AACMediaCodecInfo::new(
@@ -441,5 +496,12 @@ mod tests {
             0xFFFFFF, // Too large
         );
         assert!(aac_media_codec_info.is_err());
+
+        let empty = vec![0, 0, 0, 0, 0, 0];
+        let res = AACMediaCodecInfo::try_from(&empty[..]).expect("created codec info");
+        assert_eq!(res.0, 0);
+
+        let too_big = vec![0, 0, 0, 0, 0, 0, 0];
+        assert_matches!(AACMediaCodecInfo::try_from(&too_big[..]), Err(Error::OutOfRange));
     }
 }

@@ -4,9 +4,6 @@ use fidl_fuchsia_media::{AUDIO_ENCODING_AAC, AUDIO_ENCODING_SBC};
 use fuchsia_syslog::fx_log_warn;
 use std::convert::{TryFrom, TryInto};
 
-const SBC_CODEC_EXTRA_LEN: usize = 4;
-const AAC_CODEC_EXTRA_LEN: usize = 6;
-
 #[derive(Clone, Debug)]
 pub enum CodecExtra {
     Sbc([u8; SBC_CODEC_EXTRA_LEN]),
@@ -23,15 +20,7 @@ impl CodecExtra {
     /// Extract sampling freqency from SBC codec extra data field
     /// (A2DP Sec. 4.3.2)
     fn parse_sbc_sampling_frequency(codec_extra: &[u8]) -> Option<u32> {
-        if codec_extra.len() != SBC_CODEC_EXTRA_LEN {
-            fx_log_warn!("Invalid SBC codec extra length: {:?}", codec_extra.len());
-            return None;
-        }
-
-        let mut codec_info_bytes = [0_u8; SBC_CODEC_EXTRA_LEN];
-        codec_info_bytes.copy_from_slice(&codec_extra);
-
-        let codec_info = SbcCodecInfo(u32::from_be_bytes(codec_info_bytes));
+        let codec_info = SbcCodecInfo::try_from(codec_extra).ok()?;
         let sample_freq = SbcSamplingFrequency::from_bits_truncate(codec_info.sampling_frequency());
 
         match sample_freq {
@@ -47,19 +36,7 @@ impl CodecExtra {
     /// Extract sampling frequency from AAC codec extra data field
     /// (A2DP Sec. 4.5.2)
     fn parse_aac_sampling_frequency(codec_extra: &[u8]) -> Option<u32> {
-        if codec_extra.len() != AAC_CODEC_EXTRA_LEN {
-            fx_log_warn!("Invalid AAC codec extra length: {:?}", codec_extra.len());
-            return None;
-        }
-
-        // AACMediaCodecInfo is represented as 8 bytes, with lower 6 bytes containing
-        // the codec extra data.
-        let mut codec_info_bytes = [0_u8; 8];
-        let codec_info_slice = &mut codec_info_bytes[2..8];
-
-        codec_info_slice.copy_from_slice(&codec_extra);
-
-        let codec_info = AACMediaCodecInfo(u64::from_be_bytes(codec_info_bytes));
+        let codec_info = AACMediaCodecInfo::try_from(codec_extra).ok()?;
         let sample_freq = AACSamplingFrequency::from_bits_truncate(codec_info.sampling_frequency());
 
         match sample_freq {
