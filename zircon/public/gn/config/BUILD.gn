@@ -455,6 +455,11 @@ config("default_warnings") {
       # then come back and fix the instances this appears after rolling.
       "-Wno-range-loop-analysis",
     ]
+    cflags_cc += [
+      # TODO(45689): Temporarily disable this warning until we roll toolchain,
+      # then come back and fix the instances this appears after rolling.
+      "-Wno-non-c-typedef-for-linkage",
+    ]
   }
 }
 
