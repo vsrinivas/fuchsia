@@ -44,6 +44,7 @@ pub fn parse_cml(value: Value) -> Result<cml::Document, Error> {
         all_children: HashSet::new(),
         all_collections: HashSet::new(),
         all_storage_and_sources: HashMap::new(),
+        all_environment_names: HashSet::new(),
     };
     ctx.validate()?;
     Ok(document)
@@ -132,6 +133,7 @@ struct ValidationContext<'a> {
     all_children: HashSet<&'a cml::Name>,
     all_collections: HashSet<&'a cml::Name>,
     all_storage_and_sources: HashMap<&'a cml::Name, &'a cml::Ref>,
+    all_environment_names: HashSet<&'a cml::Name>,
 }
 
 /// A name/identity of a capability exposed/offered to another component.
@@ -248,6 +250,14 @@ impl<'a> ValidationContext<'a> {
         self.all_children = self.document.all_children_names().into_iter().collect();
         self.all_collections = self.document.all_collection_names().into_iter().collect();
         self.all_storage_and_sources = self.document.all_storage_and_sources();
+        self.all_environment_names = self.document.all_environment_names().into_iter().collect();
+
+        // Validate "children".
+        if let Some(children) = self.document.children.as_ref() {
+            for child in children {
+                self.validate_child(&child)?;
+            }
+        }
 
         // Validate "use".
         if let Some(uses) = self.document.r#use.as_ref() {
@@ -287,6 +297,27 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
+        Ok(())
+    }
+
+    fn validate_child(&self, child: &'a cml::Child) -> Result<(), Error> {
+        if let Some(environment_ref) = &child.environment {
+            match environment_ref {
+                cml::Ref::Named(environment_name) => {
+                    if !self.all_environment_names.contains(&environment_name) {
+                        return Err(Error::validate(format!(
+                            "\"{}\" does not appear in \"environments\"",
+                            &environment_name
+                        )));
+                    }
+                }
+                _ => {
+                    return Err(Error::validate(
+                        "\"environment\" must be a named reference, e.g: \"#name\"",
+                    ))
+                }
+            }
+        }
         Ok(())
     }
 
@@ -1509,6 +1540,47 @@ mod tests {
                 ],
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /children/0/startup")),
+        },
+        test_cml_children_bad_environment => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "environment": "realm",
+                    }
+                ]
+            }),
+            result = Err(Error::validate("\"environment\" must be a named reference, e.g: \"#name\"")),
+        },
+        test_cml_children_unknown_environment => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "environment": "#foo_env",
+                    }
+                ]
+            }),
+            result = Err(Error::validate("\"foo_env\" does not appear in \"environments\"")),
+        },
+        test_cml_children_environment => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                        "environment": "#foo_env",
+                    }
+                ],
+                "environments": [
+                    {
+                        "name": "foo_env",
+                    }
+                ]
+            }),
+            result = Ok(()),
         },
 
         // collections

@@ -114,6 +114,8 @@ pub struct Child {
     pub name: Name,
     pub url: Url,
     pub startup: StartupMode,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub environment: Option<Name>,
 }
 
 /// A component collection. See [`CollectionDecl`].

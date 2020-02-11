@@ -169,6 +169,7 @@ pub struct ComponentDecl {
     pub storage: Vec<StorageDecl>,
     pub facets: Option<fdata::Dictionary>,
     pub runners: Vec<RunnerDecl>,
+    pub environments: Vec<EnvironmentDecl>,
 }
 
 impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
@@ -248,6 +249,7 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
             storage: self.storage.fidl_into_native(),
             facets: self.facets.fidl_into_native(),
             runners: self.runners.fidl_into_native(),
+            environments: self.environments.fidl_into_native(),
         }
     }
 }
@@ -315,7 +317,7 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
             storage: self.storage.native_into_fidl(),
             facets: self.facets.native_into_fidl(),
             runners: self.runners.native_into_fidl(),
-            environments: None,
+            environments: self.environments.native_into_fidl(),
         }
     }
 }
@@ -332,6 +334,7 @@ impl Clone for ComponentDecl {
             storage: self.storage.clone(),
             facets: data::clone_option_dictionary(&self.facets),
             runners: self.runners.clone(),
+            environments: self.environments.clone(),
         }
     }
 }
@@ -519,17 +522,24 @@ fidl_into_struct!(RunnerDecl, RunnerDecl, fsys::RunnerDecl, fsys::RunnerDecl,
                       source: RunnerSource,
                       source_path: CapabilityPath,
                   });
+fidl_into_struct!(EnvironmentDecl, EnvironmentDecl, fsys::EnvironmentDecl, fsys::EnvironmentDecl,
+                  {
+                      name: String,
+                      extends: fsys::EnvironmentExtends,
+                  });
 
 fidl_into_vec!(UseDecl, fsys::UseDecl);
 fidl_into_vec!(ChildDecl, fsys::ChildDecl);
 fidl_into_vec!(CollectionDecl, fsys::CollectionDecl);
 fidl_into_vec!(StorageDecl, fsys::StorageDecl);
 fidl_into_vec!(RunnerDecl, fsys::RunnerDecl);
+fidl_into_vec!(EnvironmentDecl, fsys::EnvironmentDecl);
 fidl_translations_opt_type!(String);
 fidl_translations_opt_type!(fsys::StartupMode);
 fidl_translations_opt_type!(fsys::Durability);
 fidl_translations_opt_type!(fdata::Dictionary);
 fidl_translations_opt_type!(fio2::Operations);
+fidl_translations_opt_type!(fsys::EnvironmentExtends);
 fidl_translations_identical!(Option<fio2::Operations>);
 fidl_translations_identical!(Option<fdata::Dictionary>);
 fidl_translations_identical!(Option<String>);
@@ -1372,6 +1382,7 @@ mod tests {
                 storage: vec![],
                 facets: None,
                 runners: vec![],
+                environments: vec![],
             },
         },
         try_from_all => {
@@ -1539,7 +1550,7 @@ mod tests {
                         url: Some("fuchsia-pkg://fuchsia.com/echo#meta/echo.cm"
                                   .to_string()),
                         startup: Some(fsys::StartupMode::Eager),
-                        environment: None,
+                        environment: Some("test_env".to_string()),
                     },
                ]),
                collections: Some(vec![
@@ -1572,7 +1583,12 @@ mod tests {
                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                    }
                ]),
-               environments: None,
+               environments: Some(vec![
+                   fsys::EnvironmentDecl {
+                       name: Some("test_env".to_string()),
+                       extends: Some(fsys::EnvironmentExtends::Realm),
+                   }
+               ])
             },
             result = {
                 ComponentDecl {
@@ -1695,7 +1711,7 @@ mod tests {
                             name: "echo".to_string(),
                             url: "fuchsia-pkg://fuchsia.com/echo#meta/echo.cm".to_string(),
                             startup: fsys::StartupMode::Eager,
-                            environment: None,
+                            environment: Some("test_env".to_string()),
                         },
                     ],
                     collections: vec![
@@ -1728,6 +1744,12 @@ mod tests {
                             source_path: "/elf".try_into().unwrap(),
                         }
                     ],
+                    environments: vec![
+                        EnvironmentDecl {
+                            name: "test_env".to_string(),
+                            extends: fsys::EnvironmentExtends::Realm,
+                        }
+                    ]
                 }
             },
         },

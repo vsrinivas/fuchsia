@@ -55,7 +55,7 @@ impl CmInto<fsys::ComponentDecl> for cm::Document {
             facets: self.facets.cm_into()?,
             storage: self.storage.cm_into()?,
             runners: self.runners.cm_into()?,
-            environments: None,
+            environments: self.environments.cm_into()?,
         })
     }
 }
@@ -275,7 +275,7 @@ impl CmInto<fsys::ChildDecl> for cm::Child {
             name: Some(self.name.into()),
             url: Some(self.url.into()),
             startup: Some(self.startup.cm_into()?),
-            environment: None,
+            environment: self.environment.map(|e| e.into()),
         })
     }
 }
@@ -305,6 +305,24 @@ impl CmInto<fsys::RunnerDecl> for cm::Runner {
             name: Some(self.name.into()),
             source: Some(self.source.cm_into()?),
             source_path: Some(self.source_path.into()),
+        })
+    }
+}
+
+impl CmInto<fsys::EnvironmentDecl> for cm::Environment {
+    fn cm_into(self) -> Result<fsys::EnvironmentDecl, Error> {
+        Ok(fsys::EnvironmentDecl {
+            name: Some(self.name.into()),
+            extends: Some(self.extends.cm_into()?),
+        })
+    }
+}
+
+impl CmInto<fsys::EnvironmentExtends> for cm::EnvironmentExtends {
+    fn cm_into(self) -> Result<fsys::EnvironmentExtends, Error> {
+        Ok(match self {
+            cm::EnvironmentExtends::None => fsys::EnvironmentExtends::None,
+            cm::EnvironmentExtends::Realm => fsys::EnvironmentExtends::Realm,
         })
     }
 }
@@ -1234,6 +1252,52 @@ mod tests {
                 decl
             },
         },
+        test_translate_environments => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "echo_server",
+                        "url": "fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm",
+                        "startup": "lazy",
+                        "environment": "test_env",
+                    },
+                ],
+                "environments": [
+                    {
+                        "name": "test_env",
+                        "extends": "none",
+                    },
+                    {
+                        "name": "env",
+                        "extends": "realm",
+                    }
+                ]
+            }),
+            output = {
+                let children = vec![
+                    fsys::ChildDecl {
+                        name: Some("echo_server".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: Some("test_env".to_string()),
+                    },
+                ];
+                let environments = vec![
+                    fsys::EnvironmentDecl {
+                        name: Some("test_env".to_string()),
+                        extends: Some(fsys::EnvironmentExtends::None),
+                    },
+                    fsys::EnvironmentDecl {
+                        name: Some("env".to_string()),
+                        extends: Some(fsys::EnvironmentExtends::Realm),
+                    },
+                ];
+                let mut decl = new_component_decl();
+                decl.children = Some(children);
+                decl.environments = Some(environments);
+                decl
+            },
+        },
         test_translate_children => {
             input = json!({
                 "children": [
@@ -1247,7 +1311,7 @@ mod tests {
                         "url": "fuchsia-pkg://fuchsia.com/echo_server/stable#meta/echo_server.cm",
                         "startup": "eager"
                     }
-                ]
+                ],
             }),
             output = {
                 let children = vec![
@@ -1470,6 +1534,12 @@ mod tests {
                         },
                         "source_path": "/elf"
                     }
+                ],
+                "environments": [
+                    {
+                        "name": "test_env",
+                        "extends": "realm",
+                    }
                 ]
             }),
             output = {
@@ -1556,6 +1626,12 @@ mod tests {
                         source_path: Some("/elf".to_string()),
                     },
                 ];
+                let environments = vec![
+                    fsys::EnvironmentDecl {
+                        name: Some("test_env".to_string()),
+                        extends: Some(fsys::EnvironmentExtends::Realm),
+                    }
+                ];
                 fsys::ComponentDecl {
                     program: Some(program),
                     uses: Some(uses),
@@ -1566,7 +1642,7 @@ mod tests {
                     facets: Some(facets),
                     storage: Some(storages),
                     runners: Some(runners),
-                    environments: None,
+                    environments: Some(environments),
                 }
             },
         },

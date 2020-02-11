@@ -816,6 +816,18 @@
               "eager",
               "lazy"
             ]
+          },
+          "environment": {
+            "title": "Assigned environment",
+            "description": "The environment assigned to the child.",
+            "allOf": [
+              {
+                "$ref": "#/definitions/relative-ref-clause"
+              }
+            ],
+            "examples": [
+              "#test_env"
+            ]
           }
         }
       }

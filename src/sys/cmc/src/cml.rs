@@ -308,6 +308,7 @@ pub struct Child {
     pub name: Name,
     pub url: String,
     pub startup: Option<String>,
+    pub environment: Option<Ref>,
 }
 
 #[derive(Deserialize, Debug)]

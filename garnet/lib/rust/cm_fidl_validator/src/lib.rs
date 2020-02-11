@@ -27,6 +27,7 @@ pub enum Error {
     InvalidChild(String, String, String),
     InvalidCollection(String, String, String),
     InvalidStorage(String, String, String),
+    InvalidEnvironment(String, String, String),
     MultipleRunnersSpecified(String),
 }
 
@@ -95,6 +96,14 @@ impl Error {
         Error::InvalidStorage(decl_type.into(), keyword.into(), storage.into())
     }
 
+    pub fn invalid_environment(
+        decl_type: impl Into<String>,
+        keyword: impl Into<String>,
+        environment: impl Into<String>,
+    ) -> Self {
+        Error::InvalidEnvironment(decl_type.into(), keyword.into(), environment.into())
+    }
+
     pub fn multiple_runners_specified(decl_type: impl Into<String>) -> Self {
         Error::MultipleRunnersSpecified(decl_type.into())
     }
@@ -131,6 +140,11 @@ impl fmt::Display for Error {
                 f,
                 "\"{}\" is referenced in {}.{} but it does not appear in storage",
                 s, d, k
+            ),
+            Error::InvalidEnvironment(d, k, e) => write!(
+                f,
+                "\"{}\" is referenced in {}.{} but it does not appear in environments",
+                e, d, k,
             ),
             Error::MultipleRunnersSpecified(d) => write!(f, "{} specifies multiple runners", d),
         }
@@ -177,6 +191,7 @@ pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
         all_collections: HashSet::new(),
         all_storage_and_sources: HashMap::new(),
         all_runners_and_sources: HashMap::new(),
+        all_environment_names: HashSet::new(),
         target_paths: HashMap::new(),
         offered_runner_names: HashMap::new(),
         errors: vec![],
@@ -192,6 +207,9 @@ pub fn validate_child(child: &fsys::ChildDecl) -> Result<(), ErrorList> {
     if child.startup.is_none() {
         errors.push(Error::missing_field("ChildDecl", "startup"));
     }
+    if child.environment.is_some() {
+        check_name(child.environment.as_ref(), "ChildDecl", "environment", &mut errors);
+    }
     if errors.is_empty() {
         Ok(())
     } else {
@@ -205,6 +223,7 @@ struct ValidationContext<'a> {
     all_collections: HashSet<&'a str>,
     all_storage_and_sources: HashMap<&'a str, Option<&'a str>>,
     all_runners_and_sources: HashMap<&'a str, Option<&'a str>>,
+    all_environment_names: HashSet<&'a str>,
     target_paths: PathMap<'a>,
     offered_runner_names: NameMap<'a>,
     errors: Vec<Error>,
@@ -227,6 +246,14 @@ type NameMap<'a> = HashMap<TargetId<'a>, HashSet<&'a str>>;
 
 impl<'a> ValidationContext<'a> {
     fn validate(mut self) -> Result<(), Vec<Error>> {
+        // Validate "environments" and build the set of all environment names.
+        // This must run before "children", as ChildDecls can reference environment names.
+        if let Some(environment) = self.decl.environments.as_ref() {
+            for environment in environment {
+                self.validate_environment_decl(&environment);
+            }
+        }
+
         // Validate "children" and build the set of all children.
         if let Some(children) = self.decl.children.as_ref() {
             for child in children.iter() {
@@ -399,6 +426,15 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::duplicate_field("ChildDecl", "name", name));
             }
         }
+        if let Some(environment) = child.environment.as_ref() {
+            if !self.all_environment_names.contains(environment.as_str()) {
+                self.errors.push(Error::invalid_environment(
+                    "ChildDecl",
+                    "environment",
+                    environment,
+                ));
+            }
+        }
     }
 
     fn validate_collection_decl(&mut self, collection: &'a fsys::CollectionDecl) {
@@ -411,6 +447,19 @@ impl<'a> ValidationContext<'a> {
         }
         if collection.durability.is_none() {
             self.errors.push(Error::missing_field("CollectionDecl", "durability"));
+        }
+    }
+
+    fn validate_environment_decl(&mut self, environment: &'a fsys::EnvironmentDecl) {
+        let name = environment.name.as_ref();
+        if check_name(name, "EnvironmentDecl", "name", &mut self.errors) {
+            let name: &str = name.unwrap();
+            if !self.all_environment_names.insert(name) {
+                self.errors.push(Error::duplicate_field("EnvironmentDecl", "name", name));
+            }
+        }
+        if environment.extends.is_none() {
+            self.errors.push(Error::missing_field("EnvironmentDecl", "extends"));
         }
     }
 
@@ -1158,11 +1207,12 @@ mod tests {
         fidl_fuchsia_io2 as fio2,
         fidl_fuchsia_sys2::{
             ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability,
-            ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeRunnerDecl,
-            ExposeServiceDecl, FrameworkRef, OfferDecl, OfferDirectoryDecl, OfferProtocolDecl,
-            OfferRunnerDecl, OfferServiceDecl, OfferStorageDecl, RealmRef, Ref, RunnerDecl,
-            SelfRef, StartupMode, StorageDecl, StorageRef, StorageType, UseDecl, UseDirectoryDecl,
-            UseProtocolDecl, UseRunnerDecl, UseServiceDecl, UseStorageDecl,
+            EnvironmentDecl, EnvironmentExtends, ExposeDecl, ExposeDirectoryDecl,
+            ExposeProtocolDecl, ExposeRunnerDecl, ExposeServiceDecl, FrameworkRef, OfferDecl,
+            OfferDirectoryDecl, OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl,
+            OfferStorageDecl, RealmRef, Ref, RunnerDecl, SelfRef, StartupMode, StorageDecl,
+            StorageRef, StorageType, UseDecl, UseDirectoryDecl, UseProtocolDecl, UseRunnerDecl,
+            UseServiceDecl, UseStorageDecl,
         },
         lazy_static::lazy_static,
         proptest::prelude::*,
@@ -2801,6 +2851,35 @@ mod tests {
             ])),
         },
 
+        // environments
+        test_validate_environment_empty => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.environments = Some(vec![EnvironmentDecl {
+                    name: None,
+                    extends: None,
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("EnvironmentDecl", "name"),
+                Error::missing_field("EnvironmentDecl", "extends"),
+            ])),
+        },
+        test_validate_environment_long_identifiers => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.environments = Some(vec![EnvironmentDecl {
+                    name: Some("a".repeat(1025)),
+                    extends: Some(EnvironmentExtends::None),
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::field_too_long("EnvironmentDecl", "name"),
+            ])),
+        },
+
         // children
         test_validate_children_empty => {
             input = {
@@ -2842,13 +2921,30 @@ mod tests {
                     name: Some("a".repeat(1025)),
                     url: Some(format!("fuchsia-pkg://{}", "a".repeat(4083))),
                     startup: Some(StartupMode::Lazy),
-                    environment: None,
+                    environment: Some("a".repeat(1025)),
                 }]);
                 decl
             },
             result = Err(ErrorList::new(vec![
                 Error::field_too_long("ChildDecl", "name"),
                 Error::field_too_long("ChildDecl", "url"),
+                Error::field_too_long("ChildDecl", "environment"),
+                Error::invalid_environment("ChildDecl", "environment", "a".repeat(1025)),
+            ])),
+        },
+        test_validate_child_references_unknown_env => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.children = Some(vec![ChildDecl{
+                    name: Some("foo".to_string()),
+                    url: Some("fuchsia-pkg://foo".to_string()),
+                    startup: Some(StartupMode::Lazy),
+                    environment: Some("test_env".to_string()),
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_environment("ChildDecl", "environment", "test_env"),
             ])),
         },
 

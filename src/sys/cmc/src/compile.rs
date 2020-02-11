@@ -67,6 +67,7 @@ pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<
 fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
     let mut out = cm::Document::default();
     out.program = document.program.as_ref().cloned();
+    out.children = document.children.as_ref().map(translate_children).transpose()?;
     out.uses = document.r#use.as_ref().map(translate_use).transpose()?;
     out.exposes = document.expose.as_ref().map(translate_expose).transpose()?;
     if let Some(offer) = document.offer.as_ref() {
@@ -74,12 +75,11 @@ fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
         let all_collections = document.all_collection_names().into_iter().collect();
         out.offers = Some(translate_offer(offer, &all_children, &all_collections)?);
     }
-    out.children = document.children.as_ref().map(translate_children).transpose()?;
+    out.environments = document.environments.as_ref().map(translate_environments).transpose()?;
     out.collections = document.collections.as_ref().map(translate_collections).transpose()?;
     out.storage = document.storage.as_ref().map(translate_storage).transpose()?;
     out.facets = document.facets.as_ref().cloned();
     out.runners = document.runners.as_ref().map(translate_runners).transpose()?;
-    out.environments = document.environments.as_ref().map(translate_environments).transpose()?;
     Ok(out)
 }
 
@@ -313,10 +313,19 @@ fn translate_children(children_in: &Vec<cml::Child>) -> Result<Vec<cm::Child>, E
                 return Err(Error::internal(format!("invalid startup")));
             }
         };
+        let environment = child
+            .environment
+            .as_ref()
+            .map(|e| match e {
+                cml::Ref::Named(name) => Ok(cm::Name::new(name.to_string())?),
+                _ => Err(Error::internal(format!("environment must be a named reference"))),
+            })
+            .transpose()?;
         out_children.push(cm::Child {
             name: cm::Name::new(child.name.to_string())?,
             url: cm::Url::new(child.url.clone())?,
             startup,
+            environment: environment,
         });
     }
     Ok(out_children)
