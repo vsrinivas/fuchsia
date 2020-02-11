@@ -103,10 +103,16 @@ int run_fuzzer_test_instance(std::string input_file_path, UseVideoDecoderFunctio
 
   auto input_copier = std::make_unique<MutatingInputCopier>(instance, loc, random_value);
 
-  use_video_decoder(&fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem),
-                    in_stream_peeker.get(), input_copier.get(), /*min_output_buffer_size=*/0,
-                    /*min_output_buffer_count=*/0, /*is_secure_output=*/false,
-                    /*is_secure_input=*/false, /*lax_mode=*/true, nullptr, std::move(emit_frame));
+  UseVideoDecoderParams params{.fidl_loop = &fidl_loop,
+                               .fidl_thread = fidl_thread,
+                               .codec_factory = std::move(codec_factory),
+                               .sysmem = std::move(sysmem),
+                               .in_stream = in_stream_peeker.get(),
+                               .input_copier = input_copier.get(),
+                               .lax_mode = true,
+                               .emit_frame = std::move(emit_frame)};
+
+  use_video_decoder(std::move(params));
 
   fidl_loop.Quit();
   fidl_loop.JoinThreads();

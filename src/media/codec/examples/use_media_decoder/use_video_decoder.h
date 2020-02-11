@@ -23,6 +23,30 @@ typedef fit::function<void(uint8_t* i420_data, uint32_t width, uint32_t height, 
                            bool has_timestamp_ish, uint64_t timestamp_ish)>
     EmitFrame;
 
+struct UseVideoDecoderParams {
+  // the loop created and run/started by main().  The codec_factory is
+  //     and sysmem are bound to fidl_loop->dispatcher().
+  async::Loop* fidl_loop{};
+  // the thread on which fidl_loop activity runs.
+  thrd_t fidl_thread{};
+  // codec_factory to take ownership of, use, and close by the
+  //     time the function returns.
+  fuchsia::mediacodec::CodecFactoryPtr codec_factory;
+  fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem;
+  InStreamPeeker* in_stream = nullptr;
+  InputCopier* input_copier = nullptr;
+  uint64_t min_output_buffer_size = 0;
+  uint32_t min_output_buffer_count = 0;
+  bool is_secure_output = false;
+  bool is_secure_input = false;
+  bool lax_mode = false;
+  // if not nullptr, send each frame to this FrameSink, which will
+  //     call back when the frame has been released by the sink.
+  FrameSink* frame_sink;
+  // if set, is called to emit each frame in i420 format + timestamp
+  //     info.
+  EmitFrame emit_frame;
+};
 // use_h264_decoder()
 //
 // If anything goes wrong, exit(-1) is used directly (until we have any reason
@@ -34,42 +58,12 @@ typedef fit::function<void(uint8_t* i420_data, uint32_t width, uint32_t height, 
 // output format parameters. When the same input file is decoded we expect the
 // sha256 to be the same.
 //
-// fidl_loop - the loop created and run/started by main().  The codec_factory is
-//     and sysmem are bound to fidl_loop->dispatcher().
-// fidl_thread - the thread on which fidl_loop activity runs.
-// codec_factory - codec_factory to take ownership of, use, and close by the
-//     time the function returns.
-// fourcc_out - if not nullptr, sets the value to the fourcc of the decoded
-//     frames.
-// frame_sink - if not nullptr, send each frame to this FrameSink, which will
-//     call back when the frame has been released by the sink.
-// emit_frame - if set, is called to emit each frame in i420 format + timestamp
-//     info.
-void use_h264_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
-                      fuchsia::mediacodec::CodecFactoryPtr codec_factory,
-                      fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-                      InStreamPeeker* in_stream, InputCopier* input_copier,
-                      uint64_t min_output_buffer_size, uint32_t min_output_buffer_count,
-                      bool is_secure_output, bool is_secure_input, bool lax_mode,
-                      FrameSink* frame_sink, EmitFrame emit_frame);
+void use_h264_decoder(UseVideoDecoderParams params);
 
 // The same as use_h264_decoder, but for a VP9 file wrapped in an IVF container.
-void use_vp9_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
-                     fuchsia::mediacodec::CodecFactoryPtr codec_factory,
-                     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-                     InStreamPeeker* in_stream, InputCopier* input_copier,
-                     uint64_t min_output_buffer_size, uint32_t min_output_buffer_count,
-                     bool is_secure_output, bool is_secure_input, bool lax_mode,
-                     FrameSink* frame_sink, EmitFrame emit_frame);
+void use_vp9_decoder(UseVideoDecoderParams params);
 
 // Common function pointer type shared by use_h264_decoder, use_vp9_decoder.
-typedef void (*UseVideoDecoderFunction)(async::Loop* fidl_loop, thrd_t fidl_thread,
-                                        fuchsia::mediacodec::CodecFactoryPtr codec_factory,
-                                        fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
-                                        InStreamPeeker* in_stream, InputCopier* input_copier,
-                                        uint64_t min_output_buffer_size,
-                                        uint32_t min_output_buffer_count, bool is_secure_output,
-                                        bool is_secure_input, bool lax_mode, FrameSink* frame_sink,
-                                        EmitFrame emit_frame);
+typedef void (*UseVideoDecoderFunction)(UseVideoDecoderParams params);
 
 #endif  // SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_USE_VIDEO_DECODER_H_

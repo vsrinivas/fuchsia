@@ -175,10 +175,19 @@ bool decode_video_stream_test(async::Loop* fidl_loop, thrd_t fidl_thread,
   if (is_secure_input)
     input_copier = InputCopier::Create();
 
-  use_video_decoder(fidl_loop, fidl_thread, std::move(codec_factory), std::move(sysmem),
-                    in_stream_peeker, input_copier.get(), min_output_buffer_size,
-                    min_output_buffer_count, is_secure_output, is_secure_input, /*lax_mode=*/false,
-                    nullptr, std::move(emit_frame));
+  UseVideoDecoderParams params{.fidl_loop = fidl_loop,
+                               .fidl_thread = fidl_thread,
+                               .codec_factory = std::move(codec_factory),
+                               .sysmem = std::move(sysmem),
+                               .in_stream = in_stream_peeker,
+                               .input_copier = input_copier.get(),
+                               .min_output_buffer_size = min_output_buffer_size,
+                               .min_output_buffer_count = min_output_buffer_count,
+                               .is_secure_output = is_secure_output,
+                               .is_secure_input = is_secure_input,
+                               .lax_mode = false,
+                               .emit_frame = std::move(emit_frame)};
+  use_video_decoder(std::move(params));
 
   return true;
 }
