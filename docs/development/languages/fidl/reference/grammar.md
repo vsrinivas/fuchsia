@@ -53,7 +53,7 @@ the end of the line.
 TODO(US-238): Eventually comments will be read as part of a
 documentation generation system.
 
-## The grammar
+## Grammar
 
 `file` is the starting symbol.
 
