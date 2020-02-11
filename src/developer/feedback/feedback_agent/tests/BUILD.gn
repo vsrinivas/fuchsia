@@ -63,6 +63,9 @@ test_package("feedback_agent_tests") {
       name = "kernel_log_ptr_integration_test"
     },
     {
+      name = "system_log_recorder_unittest"
+    },
+    {
       name = "product_info_provider_unittest"
     },
     {
@@ -147,6 +150,7 @@ test_package("feedback_agent_tests") {
     ":screenshot_ptr_unittest",
     ":single_sync_annotation_provider_unittest",
     ":system_log_ptr_unittest",
+    ":system_log_recorder_unittest",
   ]
 }
 
@@ -335,6 +339,28 @@ executable("kernel_log_ptr_integration_test") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-boot:fuchsia-boot_c",
+  ]
+}
+
+executable("system_log_recorder_unittest") {
+  testonly = true
+
+  sources = [ "system_log_recorder_unittest.cc" ]
+
+  deps = [
+    ":stub_logger",
+    "//src/developer/feedback/feedback_agent:system_log_recorder_src",
+    "//src/developer/feedback/testing:gmatchers",
+    "//src/developer/feedback/testing:gpretty_printers",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
+    "//src/developer/feedback/utils:files",
+    "//src/lib/files",
+    "//src/lib/fxl",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/zx",
   ]
 }
 

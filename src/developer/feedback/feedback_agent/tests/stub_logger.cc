@@ -35,6 +35,15 @@ fuchsia::logger::LogMessage BuildLogMessage(const int32_t severity, const std::s
   return msg;
 }
 
+void StubLogger::Listen(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+                        std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
+  fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
+  FXL_CHECK(log_listener_ptr.is_bound());
+  for (const auto& message : messages_) {
+    log_listener_ptr->Log(message);
+  }
+}
+
 void StubLogger::DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
                           std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
@@ -101,6 +110,44 @@ void StubLoggerDelaysAfterOneMessage::DumpLogs(
                   log_listener_ptr->Done();
                 },
                 delay_) == ZX_OK);
+}
+
+void StubLoggerDelayedResponses::Listen(
+    fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+    std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
+  log_listener_ptr_ = log_listener.Bind();
+  size_t i = 0;
+  for (const auto& message : messages_) {
+    async::PostDelayedTask(
+        dispatcher_, [this, message]() { log_listener_ptr_->Log(message); },
+        delay_between_responses_ * i);
+    ++i;
+  }
+}
+
+void StubLoggerDelayedResponses::DumpLogs(
+    fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+    std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
+  log_listener_ptr_ = log_listener.Bind();
+
+  size_t i = 0;
+  for (const auto& dump : dumps_) {
+    async::PostDelayedTask(
+        dispatcher_, [this, dump]() { log_listener_ptr_->LogMany(dump); },
+        delay_between_responses_ * i);
+    ++i;
+  }
+
+  async::PostDelayedTask(
+      dispatcher_, [this]() { log_listener_ptr_->Done(); }, delay_between_responses_ * i);
+}
+
+zx::duration StubLoggerDelayedResponses::TotalDelayBetweenDumps() {
+  return delay_between_responses_ * (dumps_.size());
+}
+
+zx::duration StubLoggerDelayedResponses::TotalDelayBetweenMessages() {
+  return delay_between_responses_ * (messages_.size() - 1);
 }
 
 }  // namespace feedback

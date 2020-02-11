@@ -36,9 +36,8 @@ class StubLogger : public fuchsia::logger::Log {
 
   // |fuchsia::logger::Log|.
   void Listen(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
-              std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override {
-    FXL_NOTIMPLEMENTED();
-  }
+              std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
+
   void DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
                 std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
 
@@ -100,6 +99,35 @@ class StubLoggerDelaysAfterOneMessage : public StubLogger {
  private:
   async_dispatcher_t* dispatcher_;
   zx::duration delay_;
+};
+
+class StubLoggerDelayedResponses : public StubLogger {
+ public:
+  StubLoggerDelayedResponses(async_dispatcher_t* dispatcher,
+                             std::vector<std::vector<fuchsia::logger::LogMessage>> dumps,
+                             std::vector<fuchsia::logger::LogMessage> messages,
+                             zx::duration delay_between_responses)
+      : dispatcher_(dispatcher),
+        dumps_(dumps),
+        messages_(messages),
+        delay_between_responses_(delay_between_responses) {}
+
+  void Listen(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+              std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
+  void DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
+                std::unique_ptr<fuchsia::logger::LogFilterOptions> options) override;
+
+  zx::duration TotalDelayBetweenDumps();
+  zx::duration TotalDelayBetweenMessages();
+
+ private:
+  async_dispatcher_t* dispatcher_;
+
+  std::vector<std::vector<fuchsia::logger::LogMessage>> dumps_;
+  std::vector<fuchsia::logger::LogMessage> messages_;
+  zx::duration delay_between_responses_;
+
+  fuchsia::logger::LogListenerPtr log_listener_ptr_;
 };
 
 }  // namespace feedback

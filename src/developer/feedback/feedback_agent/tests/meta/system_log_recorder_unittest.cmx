@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/system_log_recorder_unittest"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
