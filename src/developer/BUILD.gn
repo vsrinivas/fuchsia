@@ -8,6 +8,7 @@ group("developer") {
     ":tests",
     "cmd",
     "debug",
+    "development-bridge",
     "feedback",
     "fuchsia-criterion",
     "kcounter_inspect",

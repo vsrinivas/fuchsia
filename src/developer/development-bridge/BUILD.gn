@@ -8,6 +8,15 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/testing/test_spec.gni")
 
+group("development-bridge") {
+  testonly = true
+
+  public_deps = [
+    ":ffx",
+    ":tests",
+  ]
+}
+
 if (host_toolchain == current_toolchain) {
   rustc_binary("bin") {
     name = "ffx"
