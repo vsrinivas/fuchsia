@@ -241,7 +241,7 @@ If true, excludes syscalls with the [testonly] attribute.
 
 **Current value (from the default):** `false`
 
-From //kernel/syscalls/kazoo.gni:15
+From //kernel/lib/syscalls/kazoo.gni:16
 
 ### fidl_write_v1_wireformat
 
