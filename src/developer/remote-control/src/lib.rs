@@ -39,10 +39,18 @@ impl RemoteControlService {
                 rcs::RemoteControlRequest::StartComponent {
                     component_url,
                     args,
+                    component_stdout: stdout,
+                    component_stderr: stderr,
                     controller,
                     responder,
                 } => {
-                    let mut response = self.spawn_component_async(&component_url, args, controller);
+                    let mut response = self.spawn_component_async(
+                        &component_url,
+                        args,
+                        stdout,
+                        stderr,
+                        controller,
+                    );
                     responder.send(&mut response).context("sending StartComponent response")?;
                 }
                 rcs::RemoteControlRequest::RebootDevice { reboot_type, responder } => {
@@ -63,13 +71,20 @@ impl RemoteControlService {
         &self,
         component_name: &str,
         argv: Vec<String>,
+        stdout: fidl::Socket,
+        stderr: fidl::Socket,
         server_end: fidl::endpoints::ServerEnd<
             fidl_fuchsia_developer_remotecontrol::ComponentControllerMarker,
         >,
     ) -> Result<(), rcs::ComponentControlError> {
         log::info!("Attempting to start component '{}' with argv {:?}...", component_name, argv);
         let launcher = launcher().expect("Failed to open launcher service");
-        let app = match AppBuilder::new(component_name).args(argv).spawn(&launcher) {
+        let app = match AppBuilder::new(component_name)
+            .stdout(stdout)
+            .stderr(stderr)
+            .args(argv)
+            .spawn(&launcher)
+        {
             Ok(app) => app,
             Err(e) => {
                 log::error!("{}", e);
@@ -200,6 +215,19 @@ mod tests {
         };
     }
 
+    fn verify_socket_content(s: fidl::Socket, expected: &str) {
+        let mut value = Vec::new();
+
+        let mut remaining = s.outstanding_read_bytes().or::<usize>(Ok(0usize)).unwrap();
+        while remaining > 0 {
+            let mut buf = [0u8; 128];
+            let n = s.read(&mut buf).or::<usize>(Ok(0usize)).unwrap();
+            value.extend_from_slice(&buf[..n]);
+            remaining = s.outstanding_read_bytes().or::<usize>(Ok(0)).unwrap();
+        }
+        assert_eq!(std::str::from_utf8(&value).unwrap(), expected);
+    }
+
     fn setup_rcs() -> rcs::RemoteControlProxy {
         let service = RemoteControlService::new().unwrap();
 
@@ -254,11 +282,17 @@ mod tests {
     async fn test_spawn_hello_world_async() -> Result<(), Error> {
         let rcs_proxy = setup_rcs();
         let (proxy, server_end) = create_proxy::<rcs::ComponentControllerMarker>()?;
+        let (sout, cout) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
+        let (serr, cerr) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
 
         let _ = rcs_proxy
             .start_component(
                 "fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx",
                 &mut std::iter::empty::<_>(),
+                sout,
+                serr,
                 server_end,
             )
             .await
@@ -266,6 +300,9 @@ mod tests {
             .unwrap();
 
         verify_exit_code(proxy, 0).await;
+        verify_socket_content(cout, "Hello, world!\n");
+        verify_socket_content(cerr, "");
+
         Ok(())
     }
 
@@ -273,17 +310,25 @@ mod tests {
     async fn test_spawn_and_kill() -> Result<(), Error> {
         let rcs_proxy = setup_rcs();
         let (proxy, server_end) = create_proxy::<rcs::ComponentControllerMarker>()?;
+        let (sout, cout) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
+        let (serr, cerr) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
 
         let _ = rcs_proxy
             .start_component(
                 "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cmx",
                 &mut std::iter::empty::<_>(),
+                sout,
+                serr,
                 server_end,
             )
             .and_then(|_| proxy.kill())
             .await?;
 
         verify_exit_code(proxy, EXIT_CODE_KILLED).await;
+        verify_socket_content(cout, "");
+        verify_socket_content(cerr, "");
         Ok(())
     }
 
@@ -291,11 +336,17 @@ mod tests {
     async fn test_start_non_existent_package() -> Result<(), Error> {
         let rcs_proxy = setup_rcs();
         let (proxy, server_end) = create_proxy::<rcs::ComponentControllerMarker>()?;
+        let (sout, cout) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
+        let (serr, cerr) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
 
         let _start_response = rcs_proxy
             .start_component(
                 "fuchsia-pkg://fuchsia.com/hello_world_rust#meta/this_package_doesnt_exist.cmx",
                 &mut std::iter::empty::<_>(),
+                sout,
+                serr,
                 server_end,
             )
             .await
@@ -303,6 +354,8 @@ mod tests {
             .unwrap();
 
         verify_exit_code(proxy, EXIT_CODE_START_FAILED).await;
+        verify_socket_content(cout, "");
+        verify_socket_content(cerr, "");
         Ok(())
     }
 
