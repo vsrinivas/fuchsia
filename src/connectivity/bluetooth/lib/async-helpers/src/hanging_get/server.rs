@@ -255,7 +255,7 @@ pub struct HangingGetBroker<S, O: Unpin + 'static, F: Fn(&S, O)> {
 
 impl<S, O, F> HangingGetBroker<S, O, F>
 where
-    S: Clone + PartialEq + Send,
+    S: Clone + Send,
     O: Send + Unpin + 'static,
     F: Fn(&S, O),
 {
