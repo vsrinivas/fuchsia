@@ -12,7 +12,18 @@ The GN SDK frontend produces a [GN](https://gn.googlesource.com/gn/+/refs/heads/
 
 ## Generating
 
-In order to generate the GN SDK, point the `generate.py` script to an
+### Getting the latest Core SDK:
+
+Generating the GN SDK requires the download of an existing Core SDK, e.g.:
+
+```sh
+$ BUILD_ID="$(gsutil cat gs://fuchsia/development/LATEST_LINUX)" &&
+    gsutil cp gs://fuchsia/development/$BUILD_ID/sdk/linux-amd64/core.tar.gz my_sdk_archive.tar.gz
+```
+
+### Generating a SN SDK
+
+Generate the GN SDK by pointing the `generate.py` script to an
 SDK archive, e.g.:
 
 ```sh
@@ -21,14 +32,18 @@ $ scripts/sdk/gn/generate.py \
     --output gn_sdk_dir/
 ```
 
-### Getting the latest Core SDK:
+### Testing
+
+#### Execute GN SDK scripts
+
+The internal GN SDK helper scripts can be executed after the GN SDK has been generated.
 
 ```sh
-$ BUILD_ID="$(gsutil cat gs://fuchsia/development/LATEST_LINUX)" &&
-    gsutil cp gs://fuchsia/development/$BUILD_ID/sdk/linux-amd64/core.tar.gz .
+$ gn_sdk_dir/bin/fserve.sh
+$ gn_sdk_dir/bin/fpave.sh
+$ gn_sdk_dir/bin/fssh.sh
+$ gn_sdk_dir/bin/femu.sh
 ```
-
-### Testing
 
 #### SDK generator tests
 
