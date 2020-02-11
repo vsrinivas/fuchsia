@@ -36,6 +36,7 @@ source_set("qmi_driver_src") {
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.telephony.transport:fuchsia.hardware.telephony.transport_llcpp",
+    "//sdk/fidl/fuchsia.telephony.snoop:fuchsia.telephony.snoop_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
@@ -43,6 +44,5 @@ source_set("qmi_driver_src") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.ethernet",
     "//zircon/system/banjo/ddk.protocol.usb",
-    "//zircon/system/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop_llcpp",
   ]
 }

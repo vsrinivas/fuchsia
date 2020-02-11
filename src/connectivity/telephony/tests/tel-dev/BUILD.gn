@@ -9,6 +9,7 @@ rustc_library("tel_dev") {
 
   deps = [
     "//garnet/lib/rust/files_async",
+    "//sdk/fidl/fuchsia.telephony.snoop:fuchsia.telephony.snoop-rustc",
     "//src/connectivity/telephony/lib/tel-devmgr/fidl:devmgr-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -20,6 +21,5 @@ rustc_library("tel_dev") {
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-    "//zircon/system/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop-rustc",
   ]
 }

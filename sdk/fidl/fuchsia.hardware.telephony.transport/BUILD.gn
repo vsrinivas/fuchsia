@@ -7,6 +7,5 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.hardware.telephony.transport") {
   sources = [ "qmi.fidl" ]
 
-  public_deps =
-      [ "//zircon/system/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop" ]
+  public_deps = [ "//sdk/fidl/fuchsia.telephony.snoop:fuchsia.telephony.snoop" ]
 }

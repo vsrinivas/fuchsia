@@ -10,6 +10,7 @@ rustc_test("multi-clients") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/files_async",
+    "//sdk/fidl/fuchsia.telephony.snoop:fuchsia.telephony.snoop-rustc",
     "//src/connectivity/telephony/lib/qmi",
     "//src/connectivity/telephony/tests/tel-dev:tel_dev",
     "//src/lib/fdio/rust:fdio",
@@ -22,7 +23,6 @@ rustc_test("multi-clients") {
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-    "//zircon/system/fidl/fuchsia-telephony-snoop:fuchsia-telephony-snoop-rustc",
   ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
 }
