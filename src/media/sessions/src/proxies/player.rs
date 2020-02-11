@@ -7,7 +7,6 @@ use crate::{
     services::discovery::{filter::*, player_event::PlayerEvent},
     Result,
 };
-use anyhow::Error as FError;
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl::{self, client::QueryResponseFut};
 use fidl_fuchsia_media::*;
@@ -81,39 +80,19 @@ impl Validate<ValidMediaImage> for MediaImageValidator {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Default, Debug, Clone, ValidFidlTable, PartialEq)]
+#[fidl_table_src(PlayerInfoDelta)]
 pub struct ValidPlayerInfoDelta {
+    #[fidl_field_type(optional)]
     pub local: Option<bool>,
+    #[fidl_field_type(optional)]
     pub player_status: Option<ValidPlayerStatus>,
+    #[fidl_field_type(optional)]
     pub metadata: Option<Metadata>,
+    #[fidl_field_type(optional)]
     pub media_images: Option<Vec<ValidMediaImage>>,
+    #[fidl_field_type(optional)]
     pub player_capabilities: Option<ValidPlayerCapabilities>,
-}
-
-// TODO(turnage): Fix TryFrom path for optional fields in ValidFidlTable, so this
-// manual impl can be removed.
-impl TryFrom<PlayerInfoDelta> for ValidPlayerInfoDelta {
-    type Error = FError;
-    fn try_from(src: PlayerInfoDelta) -> std::result::Result<Self, FError> {
-        Ok(Self {
-            local: src.local,
-            player_status: src.player_status.map(ValidPlayerStatus::try_from).transpose()?,
-            metadata: src.metadata,
-            media_images: src
-                .media_images
-                .map(|images| {
-                    images
-                        .into_iter()
-                        .map(ValidMediaImage::try_from)
-                        .collect::<std::result::Result<Vec<ValidMediaImage>, _>>()
-                })
-                .transpose()?,
-            player_capabilities: src
-                .player_capabilities
-                .map(ValidPlayerCapabilities::try_from)
-                .transpose()?,
-        })
-    }
 }
 
 impl ValidPlayerInfoDelta {
