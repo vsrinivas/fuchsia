@@ -58,7 +58,7 @@ class System {
   enum TypeId {
     kGfx = 0,
     kSketchy = 1,
-    kVectorial = 2,
+    kReserved = 2,
     kInput = 3,
     kA11yInput = 4,
     kDummySystem = 5,
@@ -89,8 +89,6 @@ inline System::TypeId SystemTypeForCmd(const fuchsia::ui::scenic::Command& comma
       return System::TypeId::kGfx;
     case fuchsia::ui::scenic::Command::Tag::kInput:
       return System::TypeId::kInput;
-    case fuchsia::ui::scenic::Command::Tag::kVectorial:
-      return System::TypeId::kVectorial;
     default:
       return System::TypeId::kInvalid;
   }

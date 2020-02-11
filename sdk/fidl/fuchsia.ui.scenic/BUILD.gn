@@ -28,7 +28,6 @@ fidl("fuchsia.ui.scenic") {
     "//sdk/fidl/fuchsia.scenic.scheduling",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.vectorial",
     "//sdk/fidl/fuchsia.ui.views",
     "//zircon/system/fidl/fuchsia-mem",
   ]

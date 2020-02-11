@@ -6,12 +6,11 @@ library fuchsia.ui.scenic;
 
 using fuchsia.ui.gfx;
 using fuchsia.ui.input;
-using fuchsia.ui.vectorial;
 using fuchsia.ui.views;
 
 union Command {
     1: fuchsia.ui.gfx.Command gfx;
-    2: fuchsia.ui.vectorial.Command vectorial;
+    2: reserved;
     3: fuchsia.ui.views.Command views;
     4: fuchsia.ui.input.Command input;
 };

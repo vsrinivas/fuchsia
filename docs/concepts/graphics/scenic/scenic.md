@@ -295,8 +295,6 @@ make up Scenic.
 * [App](/sdk/fidl/fuchsia.ui.app) (`fuchsia.ui.app`)
   * [view_provider.fidl](/sdk/fidl/fuchsia.ui.app/view_provider.fidl)
 
-* [experimental] [Vectorial](/sdk/fidl/fuchsia.ui.vectorial) (`fuchsia.ui.vectorial`)
-
 ## TODO {#todo}
 
 Talk about how to get started using Scenic, recommended implementation strategies, etc.

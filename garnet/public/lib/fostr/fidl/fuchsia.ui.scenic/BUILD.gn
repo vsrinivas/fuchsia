@@ -14,7 +14,6 @@ fostr_fidl("fuchsia.ui.scenic") {
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input.accessibility",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.vectorial",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.views",
   ]
 }
