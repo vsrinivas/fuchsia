@@ -135,11 +135,29 @@ impl TryFrom<Field> for FidlField {
         let kind = FidlFieldKind::try_from(attrs.as_slice())?;
 
         let in_vec = match src.ty {
-            syn::Type::Path(path) if path.qself.is_none() => {
-                let mut segments = path.path.segments.iter();
-                let mut get_segment = || segments.next().map(|s| format!("{}", s.ident));
-                let first_segment = get_segment();
-                let second_segment = get_segment();
+            syn::Type::Path(path) => {
+                let first_segment = path.path.segments.iter().next();
+                let second_segment = match first_segment {
+                    Some(PathSegment {
+                        arguments:
+                            syn::PathArguments::AngleBracketed(AngleBracketedGenericArguments {
+                                args,
+                                ..
+                            }),
+                        ..
+                    }) => match args.first() {
+                        Some(GenericArgument::Type(syn::Type::Path(path))) => {
+                            path.path.segments.iter().next()
+                        }
+                        _ => None,
+                    },
+                    _ => None,
+                };
+
+                let extract_name = |segment: &PathSegment| format!("{}", segment.ident);
+                let first_segment = first_segment.map(&extract_name);
+                let second_segment = second_segment.map(&extract_name);
+
                 match (kind.clone(), first_segment, second_segment) {
                     (FidlFieldKind::Required, Some(segment), _) if segment == "Vec" => true,
                     (FidlFieldKind::Optional, _, Some(segment)) if segment == "Vec" => true,
@@ -182,17 +200,32 @@ impl FidlField {
                     ),
                 }
             }
-            FidlFieldKind::Optional => quote!(
-                #ident: if let Some(field) = src.#ident {
-                    Some(
-                        std::convert::TryFrom::try_from(
-                            field
-                        ).map_err(anyhow::Error::from)?
-                    )
-                } else {
-                    None
-                },
-            ),
+            FidlFieldKind::Optional => match self.in_vec {
+                true => quote!(
+                    #ident: if let Some(src_vec) = src.#ident {
+                        Some(
+                            src_vec
+                                .into_iter()
+                                .map(std::convert::TryFrom::try_from)
+                                .map(|r| r.map_err(anyhow::Error::from))
+                                .collect::<std::result::Result<_, anyhow::Error>>()?
+                        )
+                    } else {
+                        None
+                    },
+                ),
+                false => quote!(
+                    #ident: if let Some(field) = src.#ident {
+                        Some(
+                            std::convert::TryFrom::try_from(
+                                field
+                            ).map_err(anyhow::Error::from)?
+                        )
+                    } else {
+                        None
+                    },
+                ),
+            },
             FidlFieldKind::HasDefault(value) => quote!(
                 #ident: src.#ident.unwrap_or(#value),
             ),
@@ -302,13 +335,22 @@ fn impl_valid_fidl_table(
                     ),
                 ),
             },
-            FidlFieldKind::Optional => quote!(
-                #ident: if let Some(field) = src.#ident {
-                    Some(field.into())
-                } else {
-                    None
-                },
-            ),
+            FidlFieldKind::Optional => match field.in_vec {
+                true => quote!(
+                    #ident: if let Some(field) = src.#ident {
+                        Some(field.into_iter().map(Into::into).collect())
+                    } else {
+                        None
+                    },
+                ),
+                false => quote!(
+                    #ident: if let Some(field) = src.#ident {
+                        Some(field.into())
+                    } else {
+                        None
+                    },
+                ),
+            },
         }
     }));
 
