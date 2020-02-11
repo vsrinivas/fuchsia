@@ -323,7 +323,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t Target, args []stri
 			go func() {
 				wg.Add(1)
 				defer wg.Done()
-				if err := syslogger.Stream(ctx, s, false); err != nil && !errors.Is(err, ctx.Err()) {
+				if err := syslogger.Stream(ctx, s); err != nil && !errors.Is(err, ctx.Err()) {
 					logger.Errorf(ctx, "syslog streaming interrupted: %v", err)
 				}
 			}()

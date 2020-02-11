@@ -38,16 +38,11 @@ func NewSyslogger(client *ssh.Client, config *ssh.ClientConfig) *Syslogger {
 }
 
 // Stream writes system logs to a given writer; it blocks until the stream is
-// is terminated or a Done is signaled. The default behavior of the syslogger
-// is to stream from the very beggining of the system's uptime; if
-// |sinceNow| is true, then the logs will truncated to begin at the time of execution.
-func (s *Syslogger) Stream(ctx context.Context, output io.Writer, sinceNow bool) error {
+// is terminated or a Done is signaled. The syslogger streams from the very
+// beggining of the system's uptime.
+func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 	for {
 		cmd := []string{logListener}
-		if sinceNow {
-			cmd = append(cmd, "--since_now", "yes")
-		}
-
 		// Note: Fuchsia's log_listener does not write to stderr.
 		err := s.r.Run(ctx, cmd, output, nil)
 		// We need not attempt to reconnect if the context was canceled or if we
@@ -61,9 +56,6 @@ func (s *Syslogger) Stream(ctx context.Context, output io.Writer, sinceNow bool)
 			return err
 		}
 		io.WriteString(output, "\n\n<< SYSLOG STREAM INTERRUPTED; RECONNECTING NOW >>\n\n")
-
-		// Start streaming from this point in time onward in the case of connection loss.
-		sinceNow = true
 	}
 }
 

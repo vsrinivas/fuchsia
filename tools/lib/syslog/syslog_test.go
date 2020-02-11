@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"reflect"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -59,16 +58,6 @@ func (r *fakeSSHRunner) Close() error {
 	return nil
 }
 
-func incrementalStream(cmd []string) bool {
-	if reflect.DeepEqual(cmd, []string{"/bin/log_listener"}) {
-		return false
-	} else if reflect.DeepEqual(cmd, []string{"/bin/log_listener", "--since_now", "yes"}) {
-		return true
-	} else {
-		panic(fmt.Sprintf("unrecognized command %v", cmd))
-	}
-}
-
 func TestStream(t *testing.T) {
 	// NoLogLevel may be changed for verbosity while debugging.
 	l := logger.NewLogger(logger.NoLogLevel, nil, nil, nil, "")
@@ -94,7 +83,7 @@ func TestStream(t *testing.T) {
 	streamErrs := make(chan error)
 	go func() {
 		for {
-			streamErrs <- syslogger.Stream(ctx, &buf, false)
+			streamErrs <- syslogger.Stream(ctx, &buf)
 		}
 	}()
 
@@ -111,8 +100,6 @@ func TestStream(t *testing.T) {
 			t.Errorf("unexpected bytes:\nexpected: ABCDE\nactual: %s\n", b)
 		} else if r.reconnected {
 			t.Errorf("runner unexpectedly reconnected")
-		} else if incrementalStream(r.lastCmd) {
-			t.Errorf("streaming should only be incremental after reconnection")
 		}
 	})
 
@@ -129,8 +116,6 @@ func TestStream(t *testing.T) {
 			t.Errorf("unexpected bytes streamed: %q", b)
 		} else if r.reconnected {
 			t.Errorf("runner unexpectedly reconnected")
-		} else if incrementalStream(r.lastCmd) {
-			t.Errorf("streaming should only be incremental after reconnection")
 		}
 	})
 
@@ -147,8 +132,6 @@ func TestStream(t *testing.T) {
 			t.Errorf("unexpected streaming error: %v", err)
 		} else if !r.reconnected {
 			t.Errorf("runner failed to reconnect")
-		} else if !incrementalStream(r.lastCmd) {
-			t.Errorf("streaming should be incremental after reconnection")
 		}
 	})
 }
