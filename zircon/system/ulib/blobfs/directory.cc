@@ -209,6 +209,11 @@ void Directory::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync completer
   }
 }
 
+void Directory::SetCorruptBlobHandler(zx::channel handler,
+                                      SetCorruptBlobHandlerCompleter::Sync completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+}
+
 #endif  // __Fuchsia__
 
 }  // namespace blobfs

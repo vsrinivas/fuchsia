@@ -16,11 +16,10 @@ struct BlockRegion {
 protocol Blobfs {
     // Retrieve information about allocated regions on the filesystem.
     GetAllocatedRegions() -> (zx.status status, handle<vmo>? regions, uint64 count);
-};
 
-[Layout = "Simple"]
-protocol BlobfsAdmin {
-    HandleCorruptBlobs(CorruptBlobHandler handler) -> (zx.status status);
+    // Assign the handler for blob corruption callbacks. Only one handler will receive callbacks at
+    // any given time.
+    SetCorruptBlobHandler(CorruptBlobHandler handler) -> (zx.status status);
 };
 
 // Action to be taken on blob corruption.
