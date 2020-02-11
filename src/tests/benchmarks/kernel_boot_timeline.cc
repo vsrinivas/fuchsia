@@ -4,13 +4,13 @@
 
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <zircon/status.h>
 
 #include <iterator>
 #include <utility>
 
 #include <perftest/results.h>
 
-#include "garnet/bin/zircon_benchmarks/assert.h"
 #include "src/lib/inspect_deprecated/reader.h"
 
 namespace {
