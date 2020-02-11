@@ -8,6 +8,7 @@
 
 #include "src/developer/shell/josh/lib/fdio.h"
 #include "src/developer/shell/josh/lib/fidl.h"
+#include "src/developer/shell/josh/lib/sys.h"
 #include "src/developer/shell/josh/lib/zx.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/quickjs/quickjs-libc.h"
@@ -123,6 +124,13 @@ bool Context::InitBuiltins(const std::string& fidl_path, const std::string& boot
   }
 
   js_std_eval_binary(ctx_, qjsc_zx, qjsc_zx_size, 0);
+
+  if (sys::SysModuleInit(ctx_, "sys") == nullptr) {
+    return false;
+  }
+  if (!Export("sys")) {
+    return false;
+  }
 
   if (!boot_js_path.empty()) {
     if (!Export("pp", boot_js_path)) {

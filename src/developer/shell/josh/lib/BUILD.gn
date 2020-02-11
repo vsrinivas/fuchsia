@@ -15,6 +15,8 @@ static_library("lib") {
     "qjs_util.h",
     "runtime.cc",
     "runtime.h",
+    "sys.cc",
+    "sys.h",
     "zx.cc",
     "zx.h",
   ]
@@ -22,6 +24,7 @@ static_library("lib") {
   public_deps = [
     ":fidl",
     ":zx",
+    "//src/developer/shell/mirror:client",
     "//src/lib/fidl_codec",
     "//src/lib/fxl",
     "//src/lib/line_input",
