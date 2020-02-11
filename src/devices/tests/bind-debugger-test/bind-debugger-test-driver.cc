@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+
+#include "src/devices/tests/bind-debugger-test/bind-debugger-test-bind.h"
 
 static zx_device_t* dev = NULL;
 
@@ -42,9 +43,4 @@ static constexpr zx_driver_ops_t driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(bind_debugger_test, driver_ops, "zircon", "0.1", 2)
-    BI_ABORT_IF_AUTOBIND,
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST),
-ZIRCON_DRIVER_END(bind_debugger_test)
-    // clang-format on
+ZIRCON_DRIVER(bind_debugger_test, driver_ops, "zircon", "0.1")

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
@@ -47,6 +48,13 @@ test_package("bind-debugger-test") {
   ]
 }
 
+bind_rules("bind") {
+  rules = "bind-debugger-test.bind"
+  output = "bind-debugger-test-bind.h"
+  disable_autobind = true
+  deps = [ "//src/devices/bind/deprecated.test" ]
+}
+
 # TODO: Move this out of bootfs and into test package.
 driver_module("bind-debugger-test-driver") {
   output_name = "bind-debugger-test"
@@ -60,6 +68,7 @@ driver_module("bind-debugger-test-driver") {
   }
   sources = [ "bind-debugger-test-driver.cc" ]
   deps = [
+    ":bind",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
   ]

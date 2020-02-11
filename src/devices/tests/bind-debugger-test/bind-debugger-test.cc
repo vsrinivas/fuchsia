@@ -105,8 +105,11 @@ TEST_F(BindDebuggerTest, ValidDriver) {
   ASSERT_TRUE(result.is_response());
   auto instructions = result.response().instructions;
 
-  zx_bind_inst_t expected_instructions[] = {BI_ABORT_IF_AUTOBIND,
-                                            BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEST)};
+  zx_bind_inst_t expected_instructions[] = {
+      BI_ABORT_IF_AUTOBIND,
+      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_TEST),
+      BI_MATCH(),
+  };
 
   ASSERT_EQ(instructions.size(), countof(expected_instructions));
   for (size_t i = 0; i < instructions.size(); i++) {
