@@ -14,8 +14,9 @@ use {
     },
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, FileMarker, FileProxy, NodeInfo, NodeMarker, SeekOrigin,
-        Service,
+        Service, OPEN_RIGHT_READABLE,
     },
+    files_async::readdir,
     fuchsia_async::{self as fasync, run_until_stalled},
     fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj},
     fuchsia_vfs_pseudo_fs::{
@@ -448,6 +449,39 @@ async fn open_remote_pseudo_directory_files() -> Result<(), Error> {
     assert_read(&file_proxy, data.len() as u64, data.as_bytes())
         .await
         .expect("could not read expected data");
+
+    Ok(())
+}
+
+#[run_until_stalled(test)]
+async fn open_remote_nested_servicefs_files() -> Result<(), Error> {
+    let mut fs = ServiceFs::new();
+
+    // Create a nested ServiceFs contains directories "temp/folder".
+    let mut nested_fs = ServiceFs::new();
+    let (nested_proxy, nested_server_end) = create_proxy::<DirectoryMarker>()?;
+    nested_fs.dir("temp").dir("folder");
+    nested_fs.serve_connection(nested_server_end.into_channel())?;
+    fuchsia_async::spawn(nested_fs.collect::<()>());
+
+    // Add the remote as "test"
+    // "temp/folder" should appear in this directory as "test/folder".
+    fs.add_remote(
+        "test",
+        io_util::open_directory(&nested_proxy, Path::new("temp"), OPEN_RIGHT_READABLE)?,
+    );
+    let (dir_proxy, dir_server_end) = create_proxy::<DirectoryMarker>()?;
+    fs.serve_connection(dir_server_end.into_channel())?;
+
+    fuchsia_async::spawn(fs.collect::<()>());
+
+    // Open and read "test"
+    let temp_proxy = io_util::open_directory(&dir_proxy, Path::new("test"), OPEN_RIGHT_READABLE)?;
+    let result = readdir(&temp_proxy).await;
+    assert!(!result.is_err(), "got Err instead of Ok: {:?}", result.unwrap_err());
+    let files = result.unwrap();
+    assert_eq!(1, files.len());
+    assert_eq!("folder", files[0].name);
 
     Ok(())
 }
