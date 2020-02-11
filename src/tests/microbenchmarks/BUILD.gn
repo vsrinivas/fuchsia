@@ -142,7 +142,7 @@ package("zircon_benchmarks_perftestmode") {
 
 # This contains all the dependencies necessary for running
 # zircon_benchmarks in unit test mode.
-group("zircon_benchmarks") {
+group("tests") {
   testonly = true
   deps = [
     ":zircon_benchmarks_perftestmode",

@@ -54,6 +54,5 @@ group("bin") {
     "vsock_service",
     "vulkan_loader",
     "wayland",
-    "zircon_benchmarks",
   ]
 }

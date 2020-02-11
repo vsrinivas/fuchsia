@@ -65,13 +65,13 @@ group("package_deps") {
   testonly = true
   public_deps = [
     "//garnet/bin/ui/tests/performance:scenic_benchmarks",
-    "//garnet/bin/zircon_benchmarks:zircon_benchmarks_perftestmode",
     "//garnet/examples/benchmark",
     "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
     "//src/ledger:bin",
     "//src/ledger/bin/tests/benchmark",
     "//src/lib/inspect/rust/fuchsia-inspect:benchmarks",
     "//src/tests/benchmarks:kernel-boot-benchmarks",
+    "//src/tests/microbenchmarks:zircon_benchmarks_perftestmode",
 
     # These are used by garnet_input_latency_benchmarks.
     "//src/ui/bin/activity",

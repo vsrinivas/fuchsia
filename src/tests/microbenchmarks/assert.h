@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_ZIRCON_BENCHMARKS_ASSERT_H_
-#define GARNET_BIN_ZIRCON_BENCHMARKS_ASSERT_H_
+#ifndef SRC_TESTS_MICROBENCHMARKS_ASSERT_H_
+#define SRC_TESTS_MICROBENCHMARKS_ASSERT_H_
 
 #include <zircon/assert.h>
 #include <zircon/status.h>
@@ -18,4 +18,4 @@ inline void AssertOk(const char* source_file, int source_line, const char* expr,
 
 #define ASSERT_OK(x) AssertOk(__FILE__, __LINE__, #x, (x))
 
-#endif  // GARNET_BIN_ZIRCON_BENCHMARKS_ASSERT_H_
+#endif  // SRC_TESTS_MICROBENCHMARKS_ASSERT_H_

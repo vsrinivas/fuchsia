@@ -10,7 +10,6 @@ group("all") {
   public_deps = [
     "//garnet/packages/benchmarks:buildbot",
     "//garnet/packages/benchmarks:garnet",
-    "//garnet/packages/benchmarks:zircon",
   ]
 }
 
@@ -29,9 +28,4 @@ group("garnet") {
     "//garnet/tests/benchmarks:garnet_benchmarks",
     "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
   ]
-}
-
-group("zircon") {
-  testonly = true
-  public_deps = [ "//garnet/bin/zircon_benchmarks" ]
 }

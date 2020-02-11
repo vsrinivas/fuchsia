@@ -18,6 +18,7 @@ group("tests") {
     "fidl_go_conformance:tests",
     "fidl_transformer:tests",
     "limited_netsvc:tests",
+    "microbenchmarks:tests",
     "oom:tests",
     "reboot:tests",
   ]
