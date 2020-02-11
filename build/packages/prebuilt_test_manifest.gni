@@ -15,9 +15,6 @@ import("//build/packages/prebuilt_test_package.gni")
 #   archive_dir (required)
 #     [string] Path to directory containing prebuilt archives and test_manifest.json
 #
-#   package_name_prefix (optional)
-#     [string] Vendor specific prefix to add to pacakge (for avoiding GN target collision)
-#
 #   environments (optional, default: [ { dimensions = { device_type = "QEMU" } } ])
 #     [list of scopes] Device environments in which the test should run.
 #
@@ -26,29 +23,23 @@ import("//build/packages/prebuilt_test_package.gni")
 template("prebuilt_test_manifest") {
   assert(defined(invoker.archive_dir), "archive_dir must be defined.")
 
-  package_name_prefix = target_name
-  if (defined(invoker.package_name_prefix)) {
-    package_name_prefix = invoker.package_name_prefix
-  }
-
   manifest_path = "${invoker.archive_dir}/test_manifest.json"
   manifest = read_file(manifest_path, "json")
   test_targets = []
   foreach(test, manifest) {
-    prefixed_test_package = "${package_name_prefix}_${test.package}"
     test_package = test.package
     component_name = test.component_name
     runner = "run"
     if (defined(test.runner)) {
       runner = test.runner
     }
-    prebuilt_test_package(prefixed_test_package) {
+    prebuilt_test_package(test_package) {
       archive = "${invoker.archive_dir}/${test_package}.far"
       component_name = component_name
       runner = runner
       forward_variables_from(invoker, [ "environments" ])
     }
-    test_targets += [ ":${prefixed_test_package}" ]
+    test_targets += [ ":${test_package}" ]
   }
 
   group(target_name) {
