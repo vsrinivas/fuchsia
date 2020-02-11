@@ -28,7 +28,7 @@ __BEGIN_CDECLS
 // Most operations on zxio_t objects can be called from any thread with
 // external synchronization. However, the caller needs to synchronize
 // operations that consume the zxio_t with other operations.
-typedef struct zxio zxio_t;
+typedef struct zxio_tag zxio_t;
 
 // Node
 

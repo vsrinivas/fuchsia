@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zxio/extensions.h>
 #include <lib/zxio/ops.h>
 #include <lib/zxio/zxio.h>
 #include <string.h>
@@ -15,7 +16,19 @@
 // implementation file and are not visible in the header.
 typedef struct zxio_internal {
   const zxio_ops_t* ops;
-  uint64_t reserved[3];
+
+  // See extensions.h
+  //
+  // Clients may specify |extensions| when creating a |zxio_t| from a channel.
+  // When a new |zxio_t| is created from an existing |zxio_t| through
+  // opening/cloning, it will inherit the same |extensions| options.
+  const zxio_extensions_t* extensions;
+
+  // If applicable, records which function in |extensions| was used to
+  // initialize this |zxio_t|.
+  uintptr_t extension_init_func;
+
+  uint64_t reserved[1];
 } zxio_internal_t;
 
 static_assert(sizeof(zxio_t) == sizeof(zxio_internal_t), "zxio_t should match zxio_internal_t");
@@ -25,12 +38,24 @@ namespace {
 
 zxio_internal_t* to_internal(zxio_t* io) { return reinterpret_cast<zxio_internal_t*>(io); }
 
+const zxio_internal_t* to_internal(const zxio_t* io) {
+  return reinterpret_cast<const zxio_internal_t*>(io);
+}
+
 }  // namespace
 
 void zxio_init(zxio_t* io, const zxio_ops_t* ops) {
   zxio_internal_t* zio = to_internal(io);
   memset(zio, 0, sizeof(*zio));
   zio->ops = ops;
+}
+
+uintptr_t zxio_extensions_get_init_function(const zxio_t* io) {
+  return to_internal(io)->extension_init_func;
+}
+
+void zxio_extensions_set(zxio_t* io, const zxio_extensions_t* extensions) {
+  to_internal(io)->extensions = extensions;
 }
 
 zx_status_t zxio_release(zxio_t* io, zx_handle_t* out_handle) {

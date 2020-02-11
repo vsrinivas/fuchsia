@@ -13,14 +13,18 @@
 __BEGIN_CDECLS
 
 // See zxio.h
-typedef struct zxio {
+typedef struct zxio_tag {
   uint64_t reserved[4];
 } zxio_t;
 
 // Storage for the |zxio_ops_t| implementation.
+// All |zxio_t| implementations must fit within this space.
 typedef struct zxio_private {
   uint64_t reserved[6];
 } zxio_private_t;
+
+// See extensions.h
+typedef struct zxio_extensions zxio_extensions_t;
 
 // The storage backing a |zxio_t|.
 typedef struct zxio_storage {

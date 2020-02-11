@@ -173,8 +173,8 @@ class Remote {
 
   [[nodiscard]] zx::unowned_stream stream() const { return zx::unowned_stream(rio_->stream); }
 
-  zx::handle Release() {
-    zx::handle control(rio_->control);
+  zx::channel Release() {
+    zx::channel control(rio_->control);
     rio_->control = ZX_HANDLE_INVALID;
     if (rio_->event != ZX_HANDLE_INVALID) {
       zx_handle_close(rio_->event);
@@ -362,9 +362,7 @@ fio::NodeAttributes ToNodeAttributes(zxio_node_attr_t attr, ToIo1ModePermissions
 
 zx_status_t zxio_remote_close(zxio_t* io) {
   Remote rio(io);
-  auto result = fio::Node::Call::Close(rio.control());
-  rio.Release().reset();
-  return result.ok() ? result.Unwrap()->s : result.status();
+  return zxio_raw_remote_close(rio.Release());
 }
 
 zx_status_t zxio_remote_release(zxio_t* io, zx_handle_t* out_handle) {
@@ -375,18 +373,7 @@ zx_status_t zxio_remote_release(zxio_t* io, zx_handle_t* out_handle) {
 
 zx_status_t zxio_remote_clone(zxio_t* io, zx_handle_t* out_handle) {
   Remote rio(io);
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    return status;
-  }
-  uint32_t flags = fio::CLONE_FLAG_SAME_RIGHTS;
-  auto result = fio::Node::Call::Clone(rio.control(), flags, std::move(remote));
-  if (result.status() != ZX_OK) {
-    return result.status();
-  }
-  *out_handle = local.release();
-  return ZX_OK;
+  return zxio_raw_remote_clone(rio.control(), out_handle);
 }
 
 void zxio_remote_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
@@ -446,9 +433,9 @@ zx_status_t zxio_remote_sync(zxio_t* io) {
 }
 
 template <typename ToZxioAbilities>
-zx_status_t zxio_common_attr_get(zxio_t* io, ToZxioAbilities to_zxio, zxio_node_attr_t* out_attr) {
-  Remote rio(io);
-  auto result = fio::Node::Call::GetAttr(rio.control());
+zx_status_t zxio_common_attr_get(zx::unowned_channel control, ToZxioAbilities to_zxio,
+                                 zxio_node_attr_t* out_attr) {
+  auto result = fio::Node::Call::GetAttr(std::move(control));
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -460,9 +447,8 @@ zx_status_t zxio_common_attr_get(zxio_t* io, ToZxioAbilities to_zxio, zxio_node_
 }
 
 template <typename ToIo1ModePermissions>
-zx_status_t zxio_common_attr_set(zxio_t* io, ToIo1ModePermissions to_io1,
+zx_status_t zxio_common_attr_set(zx::unowned_channel control, ToIo1ModePermissions to_io1,
                                  const zxio_node_attr_t* attr) {
-  Remote rio(io);
   uint32_t flags = 0;
   zxio_node_attr_t::zxio_node_attr_has_t remaining = attr->has;
   if (attr->has.creation_time) {
@@ -477,16 +463,19 @@ zx_status_t zxio_common_attr_set(zxio_t* io, ToIo1ModePermissions to_io1,
   if (remaining != all_absent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  auto result = fio::Node::Call::SetAttr(rio.control(), flags, ToNodeAttributes(*attr, to_io1));
+  auto result =
+      fio::Node::Call::SetAttr(std::move(control), flags, ToNodeAttributes(*attr, to_io1));
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 
 zx_status_t zxio_remote_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
-  return zxio_common_attr_get(io, ToZxioAbilitiesForFile(), out_attr);
+  Remote rio(io);
+  return zxio_common_attr_get(rio.control(), ToZxioAbilitiesForFile(), out_attr);
 }
 
 zx_status_t zxio_remote_attr_set(zxio_t* io, const zxio_node_attr_t* attr) {
-  return zxio_common_attr_set(io, ToIo1ModePermissionsForFile(), attr);
+  Remote rio(io);
+  return zxio_common_attr_set(rio.control(), ToIo1ModePermissionsForFile(), attr);
 }
 
 template <typename F>
@@ -886,11 +875,13 @@ zx_status_t zxio_dir_read_vector_at(zxio_t* io, zx_off_t offset, const zx_iovec_
 }
 
 zx_status_t zxio_dir_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
-  return zxio_common_attr_get(io, ToZxioAbilitiesForDirectory(), out_attr);
+  Remote rio(io);
+  return zxio_common_attr_get(rio.control(), ToZxioAbilitiesForDirectory(), out_attr);
 }
 
 zx_status_t zxio_dir_attr_set(zxio_t* io, const zxio_node_attr_t* attr) {
-  return zxio_common_attr_set(io, ToIo1ModePermissionsForDirectory(), attr);
+  Remote rio(io);
+  return zxio_common_attr_set(rio.control(), ToIo1ModePermissionsForDirectory(), attr);
 }
 
 }  // namespace
@@ -956,11 +947,13 @@ void zxio_file_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* out
 }
 
 zx_status_t zxio_file_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
-  return zxio_common_attr_get(io, ToZxioAbilitiesForFile(), out_attr);
+  Remote rio(io);
+  return zxio_common_attr_get(rio.control(), ToZxioAbilitiesForFile(), out_attr);
 }
 
 zx_status_t zxio_file_attr_set(zxio_t* io, const zxio_node_attr_t* attr) {
-  return zxio_common_attr_set(io, ToIo1ModePermissionsForFile(), attr);
+  Remote rio(io);
+  return zxio_common_attr_set(rio.control(), ToIo1ModePermissionsForFile(), attr);
 }
 
 }  // namespace
@@ -1007,4 +1000,32 @@ uint32_t zxio_abilities_to_posix_permissions_for_file(zxio_abilities_t abilities
 
 uint32_t zxio_abilities_to_posix_permissions_for_directory(zxio_abilities_t abilities) {
   return ToIo1ModePermissionsForDirectory()(abilities);
+}
+
+zx_status_t zxio_raw_remote_close(zx::channel control) {
+  auto result = fio::Node::Call::Close(zx::unowned_channel(control));
+  return result.ok() ? result.Unwrap()->s : result.status();
+}
+
+zx_status_t zxio_raw_remote_clone(zx::unowned_channel source, zx_handle_t* out_handle) {
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return status;
+  }
+  uint32_t flags = fio::CLONE_FLAG_SAME_RIGHTS;
+  auto result = fio::Node::Call::Clone(std::move(source), flags, std::move(remote));
+  if (result.status() != ZX_OK) {
+    return result.status();
+  }
+  *out_handle = local.release();
+  return ZX_OK;
+}
+
+zx_status_t zxio_raw_remote_attr_get(zx::unowned_channel control, zxio_node_attr_t* out_attr) {
+  return zxio_common_attr_get(std::move(control), ToZxioAbilitiesForFile(), out_attr);
+}
+
+zx_status_t zxio_raw_remote_attr_set(zx::unowned_channel control, const zxio_node_attr_t* attr) {
+  return zxio_common_attr_set(std::move(control), ToIo1ModePermissionsForFile(), attr);
 }

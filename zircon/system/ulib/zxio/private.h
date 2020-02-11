@@ -5,7 +5,9 @@
 #ifndef ZIRCON_SYSTEM_ULIB_ZXIO_PRIVATE_H_
 #define ZIRCON_SYSTEM_ULIB_ZXIO_PRIVATE_H_
 
+#include <lib/zxio/extensions.h>
 #include <lib/zxio/zxio.h>
+#include <lib/zx/channel.h>
 #include <zircon/types.h>
 
 #include <algorithm>
@@ -69,5 +71,20 @@ zx_status_t zxio_datagram_pipe_write_vector(zxio_t* io, const zx_iovec_t* vector
                                             size_t* out_actual);
 
 zx_status_t zxio_vmo_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset, size_t* out_offset);
+
+void zxio_node_init(zxio_node_t* node, zx_handle_t control, const zxio_extension_ops_t* ops);
+
+// Common functionalities shared by the fuchsia.io v1 |node| and |remote| transports.
+// These operate on the raw FIDL channel directly, as |node| and |remote|
+// have different object layouts.
+
+// Closes the remote object and consumes |control|.
+zx_status_t zxio_raw_remote_close(zx::channel control);
+
+zx_status_t zxio_raw_remote_clone(zx::unowned_channel source, zx_handle_t* out_handle);
+
+zx_status_t zxio_raw_remote_attr_get(zx::unowned_channel control, zxio_node_attr_t* out_attr);
+
+zx_status_t zxio_raw_remote_attr_set(zx::unowned_channel control, const zxio_node_attr_t* attr);
 
 #endif  // ZIRCON_SYSTEM_ULIB_ZXIO_PRIVATE_H_

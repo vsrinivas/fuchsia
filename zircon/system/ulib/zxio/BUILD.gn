@@ -5,6 +5,7 @@
 zx_library("zxio") {
   sdk = "static"
   sdk_headers = [
+    "lib/zxio/extensions.h",
     "lib/zxio/inception.h",
     "lib/zxio/null.h",
     "lib/zxio/ops.h",
@@ -13,6 +14,7 @@ zx_library("zxio") {
   ]
   sources = [
     "debuglog.cc",
+    "extensions.cc",
     "get_vmo.cc",
     "null.cc",
     "pipe.cc",
