@@ -53,7 +53,7 @@
       },
       "additionalProperties": false
     },
-    "device_routing_profile" : {
+    "output_device_profile" : {
       "type": "object",
       "properties" : {
         "device_id": {
@@ -89,9 +89,13 @@
       "properties" : {
         "device_profiles" : {
           "type": "array",
-          "items" : { "$ref" : "#/definitions/device_routing_profile" }
+          "items" : { "$ref" : "#/definitions/output_device_profile" }
         }
       }
+    },
+    "output_devices" : {
+      "type": "array",
+      "items" : { "$ref" : "#/definitions/output_device_profile" }
     }
   },
   "required": ["volume_curve"],

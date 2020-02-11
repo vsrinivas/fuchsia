@@ -34,6 +34,7 @@ static constexpr char kJsonKeyLoopback[] = "loopback";
 static constexpr char kJsonKeyRoutingPolicy[] = "routing_policy";
 static constexpr char kJsonKeyDeviceProfiles[] = "device_profiles";
 static constexpr char kJsonKeyDeviceId[] = "device_id";
+static constexpr char kJsonKeyOutputDevices[] = "output_devices";
 static constexpr char kJsonKeySupportedOutputStreamTypes[] = "supported_output_stream_types";
 static constexpr char kJsonKeyEligibleForLoopback[] = "eligible_for_loopback";
 static constexpr char kJsonKeyIndependentVolumeControl[] = "independent_volume_control";
@@ -234,13 +235,8 @@ ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
                          independent_volume_control, std::move(pipeline_config))};
 }
 
-void ParseRoutingPolicyFromJsonObject(const rapidjson::Value& value,
+void ParseRoutingPolicyFromJsonObject(const rapidjson::Value& device_profiles,
                                       ProcessConfigBuilder* config_builder) {
-  FX_CHECK(value.IsObject());
-
-  auto device_profiles_it = value.FindMember(kJsonKeyDeviceProfiles);
-  FX_CHECK(device_profiles_it != value.MemberEnd());
-  auto& device_profiles = device_profiles_it->value;
   FX_CHECK(device_profiles.IsArray());
 
   std::unordered_set<uint32_t> all_supported_usages;
@@ -303,9 +299,19 @@ fit::result<ProcessConfig, std::string> ProcessConfigLoader::ParseProcessConfig(
   auto config_builder = ProcessConfig::Builder();
   config_builder.SetDefaultVolumeCurve(curve_result.take_value());
 
-  auto routing_policy_it = doc.FindMember(kJsonKeyRoutingPolicy);
-  if (routing_policy_it != doc.MemberEnd()) {
-    ParseRoutingPolicyFromJsonObject(routing_policy_it->value, &config_builder);
+  auto output_devices_it = doc.FindMember(kJsonKeyOutputDevices);
+  if (output_devices_it != doc.MemberEnd()) {
+    ParseRoutingPolicyFromJsonObject(output_devices_it->value, &config_builder);
+  } else {
+    // Deprecated location for output device profiles; to be removed once all configs are updated.
+    auto routing_policy_it = doc.FindMember(kJsonKeyRoutingPolicy);
+    if (routing_policy_it != doc.MemberEnd()) {
+      FX_CHECK(routing_policy_it->value.IsObject());
+
+      auto device_profiles_it = routing_policy_it->value.FindMember(kJsonKeyDeviceProfiles);
+      FX_CHECK(device_profiles_it != routing_policy_it->value.MemberEnd());
+      ParseRoutingPolicyFromJsonObject(device_profiles_it->value, &config_builder);
+    }
   }
 
   return fit::ok(config_builder.Build());

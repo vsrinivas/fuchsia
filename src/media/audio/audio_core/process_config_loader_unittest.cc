@@ -36,7 +36,7 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithOnlyVolumeCurve) {
   EXPECT_FLOAT_EQ(config->default_volume_curve().VolumeToDb(1.0), 0.0);
 }
 
-TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyOld) {
   static const std::string kConfigWithRoutingPolicy =
       R"JSON({
     "volume_curve": [
@@ -100,6 +100,68 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
   EXPECT_TRUE(config.device_profile(unknown_id).independent_volume_control());
 }
 
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
+  static const std::string kConfigWithRoutingPolicy =
+      R"JSON({
+    "volume_curve": [
+      {
+          "level": 0.0,
+          "db": -160.0
+      },
+      {
+          "level": 1.0,
+          "db": 0.0
+      }
+    ],
+    "output_devices": [
+      {
+        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "supported_output_stream_types": [
+          "media",
+          "interruption",
+          "background",
+          "communications"
+        ],
+        "eligible_for_loopback": true
+      },
+      {
+        "device_id": "*",
+        "supported_output_stream_types": ["media", "system_agent"],
+        "eligible_for_loopback": false,
+        "independent_volume_control": true
+      }
+    ]
+  })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithRoutingPolicy.data(),
+                               kConfigWithRoutingPolicy.size()));
+
+  const audio_stream_unique_id_t expected_id = {.data = {0x34, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
+                                                         0x80, 0x62, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
+                                                         0x05, 0x3a}};
+  const audio_stream_unique_id_t unknown_id = {.data = {0x32, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
+                                                        0x81, 0x42, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
+                                                        0x22, 0x3a}};
+
+  const auto process_config = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
+  ASSERT_TRUE(process_config);
+
+  using fuchsia::media::AudioRenderUsage;
+  auto& config = process_config->routing_config();
+
+  EXPECT_TRUE(config.device_profile(expected_id).supports_usage(AudioRenderUsage::MEDIA));
+  EXPECT_TRUE(config.device_profile(expected_id).supports_usage(AudioRenderUsage::INTERRUPTION));
+  EXPECT_FALSE(config.device_profile(expected_id).supports_usage(AudioRenderUsage::SYSTEM_AGENT));
+
+  EXPECT_FALSE(config.device_profile(unknown_id).supports_usage(AudioRenderUsage::INTERRUPTION));
+  EXPECT_TRUE(config.device_profile(unknown_id).supports_usage(AudioRenderUsage::MEDIA));
+
+  EXPECT_TRUE(config.device_profile(expected_id).eligible_for_loopback());
+  EXPECT_FALSE(config.device_profile(unknown_id).eligible_for_loopback());
+
+  EXPECT_FALSE(config.device_profile(expected_id).independent_volume_control());
+  EXPECT_TRUE(config.device_profile(unknown_id).independent_volume_control());
+}
+
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {
   static const std::string kConfigWithRoutingPolicy =
       R"JSON({
@@ -113,21 +175,19 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {
           "db": 0.0
       }
     ],
-    "routing_policy": {
-      "device_profiles": [
-        {
-          "device_id" : "34384e7da9d52c8062a9765baeb6053a",
-          "supported_output_stream_types": [
-            "media",
-            "interruption",
-            "background",
-            "communications",
-            "system_agent"
-          ],
-          "eligible_for_loopback": true
-        }
-      ]
-    }
+    "output_devices": [
+      {
+        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "supported_output_stream_types": [
+          "media",
+          "interruption",
+          "background",
+          "communications",
+          "system_agent"
+        ],
+        "eligible_for_loopback": true
+      }
+    ]
   })JSON";
   ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithRoutingPolicy.data(),
                                kConfigWithRoutingPolicy.size()));
@@ -161,19 +221,17 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyInsufficientCove
           "db": 0.0
       }
     ],
-    "routing_policy": {
-      "device_profiles": [
-        {
-          "device_id" : "34384e7da9d52c8062a9765baeb6053a",
-          "supported_output_stream_types": [
-            "media",
-            "interruption",
-            "system_agent"
-          ],
-          "eligible_for_loopback": true
-        }
-      ]
-    }
+    "output_devices": [
+      {
+        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "supported_output_stream_types": [
+          "media",
+          "interruption",
+          "system_agent"
+        ],
+        "eligible_for_loopback": true
+      }
+    ]
   })JSON";
   ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithRoutingPolicy.data(),
                                kConfigWithRoutingPolicy.size()));
@@ -188,85 +246,83 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       { "level": 0.0, "db": -160.0 },
       { "level": 1.0, "db": 0.0 }
     ],
-    "routing_policy": {
-      "device_profiles": [
-        {
-          "device_id" : "34384e7da9d52c8062a9765baeb6053a",
-          "supported_output_stream_types": [
-            "media",
-            "interruption",
-            "background",
-            "communications",
-            "system_agent"
+    "output_devices": [
+      {
+        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "supported_output_stream_types": [
+          "media",
+          "interruption",
+          "background",
+          "communications",
+          "system_agent"
+        ],
+        "eligible_for_loopback": true,
+        "pipeline": {
+          "streams": ["background", "system_agent", "media", "interruption"],
+          "effects": [
+            {
+              "lib": "libbar2.so",
+              "effect": "linearize_effect",
+              "name": "instance_name",
+              "_comment": "just a comment",
+              "config": {
+                "a": 123,
+                "b": 456
+              }
+            }
           ],
-          "eligible_for_loopback": true,
-          "pipeline": {
-            "streams": ["background", "system_agent", "media", "interruption"],
-            "effects": [
-              {
-                "lib": "libbar2.so",
-                "effect": "linearize_effect",
-                "name": "instance_name",
-                "_comment": "just a comment",
-                "config": {
-                  "a": 123,
-                  "b": 456
+          "inputs": [
+            {
+              "streams": [],
+              "loopback": true,
+              "effects": [
+                {
+                  "lib": "libfoo2.so",
+                  "effect": "effect3"
                 }
-              }
-            ],
-            "inputs": [
-              {
-                "streams": [],
-                "loopback": true,
-                "effects": [
-                  {
-                    "lib": "libfoo2.so",
-                    "effect": "effect3"
-                  }
-                ],
-                "inputs": [
-                  {
-                    "streams": ["media"],
-                    "name": "media",
-                    "effects": [
-                      {
-                        "lib": "libfoo.so",
-                        "effect": "effect1",
-                        "config": {
-                          "some_config": 0
-                        }
-                      },
-                      {
-                        "lib": "libbar.so",
-                        "effect": "effect2",
-                        "config": {
-                          "arg1": 55,
-                          "arg2": 3.14
-                        }
+              ],
+              "inputs": [
+                {
+                  "streams": ["media"],
+                  "name": "media",
+                  "effects": [
+                    {
+                      "lib": "libfoo.so",
+                      "effect": "effect1",
+                      "config": {
+                        "some_config": 0
                       }
-                    ]
-                  },
-                  {
-                    "streams": ["communications"],
-                    "name": "communications",
-                    "effects": [
-                      {
-                        "lib": "libbaz.so",
-                        "effect": "baz",
-                        "_comment": "Ignore me",
-                        "config": {
-                          "string_param": "some string value"
-                        }
+                    },
+                    {
+                      "lib": "libbar.so",
+                      "effect": "effect2",
+                      "config": {
+                        "arg1": 55,
+                        "arg2": 3.14
                       }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
+                    }
+                  ]
+                },
+                {
+                  "streams": ["communications"],
+                  "name": "communications",
+                  "effects": [
+                    {
+                      "lib": "libbaz.so",
+                      "effect": "baz",
+                      "_comment": "Ignore me",
+                      "config": {
+                        "string_param": "some string value"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
-      ]
-    }
+      }
+    ]
   })JSON";
   ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithEffects.data(),
                                kConfigWithEffects.size()));
@@ -398,32 +454,30 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithMultipleLoopbackStages) {
           "db": 0.0
       }
     ],
-    "routing_policy": {
-      "device_profiles": [
-        {
-          "device_id" : "34384e7da9d52c8062a9765baeb6053a",
-          "supported_output_stream_types": [
-            "media",
-            "interruption",
-            "background",
-            "communications",
-            "system_agent"
-          ],
-          "eligible_for_loopback": true,
-          "pipeline": {
-            "inputs": [
-              {
-                "streams": [ "media", "interruption", "background", "system_agent" ],
-                "loopback": true
-              }, {
-                "streams": [ "communications" ],
-                "loopback": true
-              }
-            ]
-          }
+    "output_devices": [
+      {
+        "device_id" : "34384e7da9d52c8062a9765baeb6053a",
+        "supported_output_stream_types": [
+          "media",
+          "interruption",
+          "background",
+          "communications",
+          "system_agent"
+        ],
+        "eligible_for_loopback": true,
+        "pipeline": {
+          "inputs": [
+            {
+              "streams": [ "media", "interruption", "background", "system_agent" ],
+              "loopback": true
+            }, {
+              "streams": [ "communications" ],
+              "loopback": true
+            }
+          ]
         }
-      ]
-    }
+      }
+    ]
   })JSON";
   ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithVolumeCurve.data(),
                                kConfigWithVolumeCurve.size()));
