@@ -5,6 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.memorypressure") {
-  sdk_category = "internal"
+  sdk_category = "partner"
   sources = [ "memorypressure.fidl" ]
 }
