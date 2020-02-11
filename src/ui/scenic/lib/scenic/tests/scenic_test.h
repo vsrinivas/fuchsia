@@ -18,9 +18,9 @@ namespace test {
 
 // Base class that can be specialized to configure a Scenic with the systems
 // required for a set of tests.
-class ScenicTest : public ::gtest::TestLoopFixture, public EventReporter {
+class ScenicTest : public ::gtest::TestLoopFixture {
  public:
-  ScenicTest() : weak_factory_(this) {}
+  ScenicTest() = default;
   ~ScenicTest() override = default;
 
   Scenic* scenic() { return scenic_.get(); }
@@ -37,18 +37,8 @@ class ScenicTest : public ::gtest::TestLoopFixture, public EventReporter {
   // none are installed by default.
   virtual void InitializeScenic(Scenic* scenic);
 
-  // |EventReporter|
-  void EnqueueEvent(fuchsia::ui::gfx::Event event) override;
-  void EnqueueEvent(fuchsia::ui::input::InputEvent event) override;
-  void EnqueueEvent(fuchsia::ui::scenic::Command event) override;
-  EventReporterWeakPtr GetWeakPtr() override { return weak_factory_.GetWeakPtr(); }
-
   std::unique_ptr<sys::ComponentContext> context_;
   std::unique_ptr<Scenic> scenic_;
-  std::vector<fuchsia::ui::scenic::Event> events_;
-
- private:
-  fxl::WeakPtrFactory<ScenicTest> weak_factory_;
 };
 
 }  // namespace test

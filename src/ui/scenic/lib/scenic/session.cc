@@ -324,8 +324,12 @@ void Session::EventAndErrorReporter::PostFlushTask() {
   // If this is the first EnqueueEvent() since the last FlushEvent(), post a
   // task to ensure that FlushEvents() is called.
   if (buffered_events_.empty()) {
-    async::PostTask(async_get_default_dispatcher(),
-                    [shared_this = session_->reporter_] { shared_this->FlushEvents(); });
+    async::PostTask(async_get_default_dispatcher(), [weak = weak_factory_.GetWeakPtr()] {
+      if (!weak)
+        return;
+      weak->FilterRedundantGfxEvents();
+      weak->FlushEvents();
+    });
   }
 }
 
@@ -361,12 +365,64 @@ void Session::EventAndErrorReporter::EnqueueEvent(fuchsia::ui::input::InputEvent
 
   TRACE_DURATION("gfx", "scenic_impl::Session::EventAndErrorReporter::EnqueueEvent", "event_type",
                  "input::InputEvent");
-  // Force an immediate flush, preserving event order.
+  // Send input event immediately.
   fuchsia::ui::scenic::Event scenic_event;
   scenic_event.set_input(std::move(event));
-  buffered_events_.push_back(std::move(scenic_event));
 
+  FilterRedundantGfxEvents();
+  buffered_events_.push_back(std::move(scenic_event));
   FlushEvents();
+}
+
+void Session::EventAndErrorReporter::FilterRedundantGfxEvents() {
+  if (buffered_events_.empty())
+    return;
+
+  struct EventCounts {
+    uint32_t view_attached_to_scene = 0;
+    uint32_t view_detached_from_scene = 0;
+  };
+  std::map</*view_id=*/uint32_t, EventCounts> event_counts;
+  for (const auto& event : buffered_events_) {
+    if (event.is_gfx()) {
+      switch (event.gfx().Which()) {
+        case fuchsia::ui::gfx::Event::kViewAttachedToScene:
+          event_counts[event.gfx().view_attached_to_scene().view_id].view_attached_to_scene++;
+          break;
+        case fuchsia::ui::gfx::Event::kViewDetachedFromScene:
+          event_counts[event.gfx().view_detached_from_scene().view_id].view_detached_from_scene++;
+          break;
+        default:
+          break;
+      }
+    }
+  }
+  if (event_counts.empty())
+    return;
+
+  auto is_view_event = [](uint32_t view_id, const fuchsia::ui::scenic::Event& event) {
+    return event.is_gfx() && ((event.gfx().is_view_detached_from_scene() &&
+                               (view_id == event.gfx().view_detached_from_scene().view_id)) ||
+                              (event.gfx().is_view_attached_to_scene() &&
+                               (view_id == event.gfx().view_attached_to_scene().view_id)));
+  };
+  for (auto [view_id, event_count] : event_counts) {
+    auto matching_view_event = std::bind(is_view_event, view_id, std::placeholders::_1);
+    // We expect that multiple attach or detach events aren't fired in a row. Then, remove all
+    // attach/detach events if we have balanced counts. Otherwise, remove all except last.
+    if (event_count.view_attached_to_scene == event_count.view_detached_from_scene) {
+      buffered_events_.erase(
+          std::remove_if(buffered_events_.begin(), buffered_events_.end(), matching_view_event),
+          buffered_events_.end());
+    } else if (event_count.view_attached_to_scene && event_count.view_detached_from_scene) {
+      auto last_event =
+          std::find_if(buffered_events_.rbegin(), buffered_events_.rend(), matching_view_event);
+      buffered_events_.erase(
+          buffered_events_.rend().base(),
+          std::remove_if(std::next(last_event), buffered_events_.rend(), matching_view_event)
+              .base());
+    }
+  }
 }
 
 void Session::EventAndErrorReporter::FlushEvents() {

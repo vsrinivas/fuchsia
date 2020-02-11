@@ -58,6 +58,95 @@ class ScenicSessionTest : public ::gtest::TestLoopFixture {
   void TearDown() override { delegate_.reset(); }
 };
 
+class TestSessionListener : public fuchsia::ui::scenic::SessionListener {
+ public:
+  TestSessionListener() = default;
+
+  // |fuchsia::ui::scenic::SessionListener|
+  void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) override {
+    events_.reserve(events_.size() + events.size());
+    std::move(events.begin(), events.end(), std::inserter(events_, events_.end()));
+  }
+  void OnScenicError(std::string error) override {}
+
+  std::vector<fuchsia::ui::scenic::Event> events_;
+};
+
+TEST_F(ScenicSessionTest, EventReporterFiltersViewDetachedAndAttachedEvents) {
+  TestSessionListener test_session_listener;
+  fidl::Binding<fuchsia::ui::scenic::SessionListener> session_listener(&test_session_listener);
+  fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> session_listener_handle;
+  session_listener.Bind(session_listener_handle.NewRequest());
+
+  fuchsia::ui::scenic::SessionPtr session_ptr;
+  scenic_impl::Session session(/*id=*/1, session_ptr.NewRequest(),
+                               std::move(session_listener_handle),
+                               /*destroy_session_function*/ [] {});
+  InitializeSession(session);
+
+  // Check single Attach event.
+  const uint32_t kViewId1 = 12;
+  fuchsia::ui::gfx::Event attached_event_1;
+  attached_event_1.set_view_attached_to_scene({.view_id = kViewId1});
+  session.event_reporter()->EnqueueEvent(std::move(attached_event_1));
+  RunLoopUntilIdle();
+  EXPECT_EQ(test_session_listener.events_.size(), 1u);
+  EXPECT_EQ(fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene,
+            test_session_listener.events_[0].gfx().Which());
+
+  // Check single Attach event.
+  fuchsia::ui::gfx::Event attached_event_2;
+  attached_event_2.set_view_attached_to_scene({.view_id = kViewId1});
+  session.event_reporter()->EnqueueEvent(std::move(attached_event_2));
+  fuchsia::ui::gfx::Event detached_event_1;
+  detached_event_1.set_view_detached_from_scene({.view_id = kViewId1});
+  session.event_reporter()->EnqueueEvent(std::move(detached_event_1));
+  RunLoopUntilIdle();
+  EXPECT_EQ(test_session_listener.events_.size(), 1u);
+
+  // Check Detach-Attach pair.
+  fuchsia::ui::gfx::Event detached_event_2;
+  detached_event_2.set_view_detached_from_scene({.view_id = kViewId1});
+  session.event_reporter()->EnqueueEvent(std::move(detached_event_2));
+  fuchsia::ui::gfx::Event attached_event_3;
+  attached_event_3.set_view_attached_to_scene({.view_id = kViewId1});
+  session.event_reporter()->EnqueueEvent(std::move(attached_event_3));
+  fuchsia::ui::input::InputEvent input_event;
+  session.event_reporter()->EnqueueEvent(std::move(input_event));
+  RunLoopUntilIdle();
+  EXPECT_EQ(test_session_listener.events_.size(), 1u);
+
+  // Check Detach-Attach pair with different view ids.
+  fuchsia::ui::gfx::Event detached_event_3;
+  detached_event_3.set_view_detached_from_scene({.view_id = kViewId1});
+  session.event_reporter()->EnqueueEvent(std::move(detached_event_3));
+  const uint32_t kViewId2 = 23;
+  fuchsia::ui::gfx::Event attached_event_4;
+  attached_event_4.set_view_attached_to_scene({.view_id = kViewId2});
+  session.event_reporter()->EnqueueEvent(std::move(attached_event_4));
+  RunLoopUntilIdle();
+  EXPECT_EQ(test_session_listener.events_.size(), 3u);
+  EXPECT_EQ(fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene,
+            test_session_listener.events_[1].gfx().Which());
+  EXPECT_EQ(fuchsia::ui::gfx::Event::Tag::kViewAttachedToScene,
+            test_session_listener.events_[2].gfx().Which());
+
+  // Check Detach-Attach-Detach sequence.
+  fuchsia::ui::gfx::Event detached_event_4;
+  detached_event_4.set_view_detached_from_scene({.view_id = kViewId1});
+  session.event_reporter()->EnqueueEvent(std::move(detached_event_4));
+  fuchsia::ui::gfx::Event attached_event_5;
+  attached_event_5.set_view_attached_to_scene({.view_id = kViewId1});
+  session.event_reporter()->EnqueueEvent(std::move(attached_event_5));
+  fuchsia::ui::gfx::Event detached_event_5;
+  detached_event_5.set_view_detached_from_scene({.view_id = kViewId1});
+  session.event_reporter()->EnqueueEvent(std::move(detached_event_5));
+  RunLoopUntilIdle();
+  EXPECT_EQ(test_session_listener.events_.size(), 4u);
+  EXPECT_EQ(fuchsia::ui::gfx::Event::Tag::kViewDetachedFromScene,
+            test_session_listener.events_[1].gfx().Which());
+}
+
 // Tests creating a session, and calling Present with two acquire fences. The call should not be
 // propagated further until all fences have been signalled.
 TEST_F(ScenicSessionTest, AcquireFences_WithPresent1) {

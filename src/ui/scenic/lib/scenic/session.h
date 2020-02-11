@@ -117,12 +117,16 @@ class Session final : public fuchsia::ui::scenic::Session {
       error_callback_ = std::move(callback);
     }
 
-    void FlushEvents();
-
     // Post an asynchronous task to call FlushEvents.
     void PostFlushTask();
 
    private:
+    // Parses |buffered_gfx_events_| to check if there is anything queued that contradicts, i.e.
+    // ViewAttachedToSceneEvent and ViewDetachedFromSceneEvent pairs. If there is a contradiction,
+    // removes the contradicting events.
+    void FilterRedundantGfxEvents();
+    void FlushEvents();
+
     Session* session_ = nullptr;
 
     // Callbacks for testing.
@@ -167,11 +171,6 @@ class Session final : public fuchsia::ui::scenic::Session {
 
   // Schedules the next Present on the queue.
   void ScheduleNextPresent();
-
-  // Flush any/all events that were enqueued via EnqueueEvent(), sending them
-  // to |listener_|.  If |listener_| is null but |event_callback_| isn't, then
-  // invoke the callback for each event.
-  void FlushEvents() { reporter_->FlushEvents(); }
 
   // Gets the future presentation times from the frame scheduler (indirectly),
   // and invokes |callback|.

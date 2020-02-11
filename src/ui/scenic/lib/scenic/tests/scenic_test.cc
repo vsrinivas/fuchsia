@@ -17,10 +17,7 @@ void ScenicTest::SetUp() {
   InitializeScenic(scenic_.get());
 }
 
-void ScenicTest::TearDown() {
-  events_.clear();
-  scenic_.reset();
-}
+void ScenicTest::TearDown() { scenic_.reset(); }
 
 void ScenicTest::InitializeScenic(Scenic* scenic) {}
 
@@ -31,24 +28,6 @@ std::unique_ptr<::scenic::Session> ScenicTest::CreateSession() {
       listener_handle.NewRequest();
   scenic()->CreateSession(session_ptr.NewRequest(), std::move(listener_handle));
   return std::make_unique<::scenic::Session>(std::move(session_ptr), std::move(listener_request));
-}
-
-void ScenicTest::EnqueueEvent(fuchsia::ui::gfx::Event event) {
-  fuchsia::ui::scenic::Event scenic_event;
-  scenic_event.set_gfx(std::move(event));
-  events_.push_back(std::move(scenic_event));
-}
-
-void ScenicTest::EnqueueEvent(fuchsia::ui::input::InputEvent event) {
-  fuchsia::ui::scenic::Event scenic_event;
-  scenic_event.set_input(std::move(event));
-  events_.push_back(std::move(scenic_event));
-}
-
-void ScenicTest::EnqueueEvent(fuchsia::ui::scenic::Command event) {
-  fuchsia::ui::scenic::Event scenic_event;
-  scenic_event.set_unhandled(std::move(event));
-  events_.push_back(std::move(scenic_event));
 }
 
 }  // namespace test
