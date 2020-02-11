@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use euclid::{Point2D, Rect, Size2D};
 use {
     anyhow::Error,
     argh::FromArgs,
@@ -11,7 +10,7 @@ use {
         Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
     },
     chrono::{Local, Timelike},
-    euclid::{Angle, Transform2D, Vector2D},
+    euclid::{Angle, Point2D, Rect, Size2D, Transform2D, Vector2D},
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_sysmem::BufferCollectionTokenMarker,
     std::{collections::BTreeMap, f32},
@@ -343,27 +342,44 @@ impl<B: Backend> Contents<B> {
                     blend_mode: BlendMode::Over,
                 },
             })
-            .chain(hands.iter().map(|hand| Layer {
-                raster: hand.shadow_raster.clone().unwrap(),
+            .chain(std::iter::once(Layer {
+                raster: hands
+                    .iter()
+                    .fold(None, |raster_union: Option<B::Raster>, hand| {
+                        if let Some(raster_union) = raster_union {
+                            Some(raster_union + hand.shadow_raster.clone().unwrap())
+                        } else {
+                            hand.shadow_raster.clone()
+                        }
+                    })
+                    .unwrap(),
                 style: Style {
                     fill_rule: FillRule::NonZero,
                     fill: Fill::Solid(SHADOW_COLOR),
                     blend_mode: BlendMode::Over,
                 },
             }))
-            .chain(hands.iter().enumerate().filter_map(|(i, hand)| {
-                if i != 1 {
-                    Some(Layer {
-                        raster: hand.shadow_raster.clone().unwrap(),
-                        style: Style {
-                            fill_rule: FillRule::NonZero,
-                            fill: Fill::Solid(SHADOW_COLOR),
-                            blend_mode: BlendMode::Over,
-                        },
+            .chain(std::iter::once(Layer {
+                raster: hands
+                    .iter()
+                    .enumerate()
+                    .fold(None, |raster_union: Option<B::Raster>, (i, hand)| {
+                        if i != 1 {
+                            if let Some(raster_union) = raster_union {
+                                Some(raster_union + hand.shadow_raster.clone().unwrap())
+                            } else {
+                                hand.shadow_raster.clone()
+                            }
+                        } else {
+                            raster_union
+                        }
                     })
-                } else {
-                    None
-                }
+                    .unwrap(),
+                style: Style {
+                    fill_rule: FillRule::NonZero,
+                    fill: Fill::Solid(SHADOW_COLOR),
+                    blend_mode: BlendMode::Over,
+                },
             }));
 
         let composition = Composition::new(layers, BACKGROUND_COLOR);
