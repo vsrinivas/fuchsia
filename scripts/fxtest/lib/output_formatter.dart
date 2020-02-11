@@ -178,7 +178,9 @@ class VerboseOutputFormatter extends OutputFormatter {
     String testName = colorize(event.testName, [cyan]);
     String emoji = event.isDryRun
         ? colorize('(dry run)', [darkGray])
-        : event.isSuccess ? colorize('√', [green]) : colorize('F', [red]);
+        : event.isSuccess
+            ? '${addEmoji('✔️', '√')} '
+            : '${addEmoji('❌', 'F')} ';
 
     String runtime =
         slowTestThreshold != null && event.runtime > slowTestThreshold
