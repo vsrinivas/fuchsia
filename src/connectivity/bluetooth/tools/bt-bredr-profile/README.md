@@ -45,6 +45,17 @@ Channel:
   Max Tx Sdu Size: 672
 ```
 
+### disconnect-l2cap
+Drops the socket corresponding to `channel-id`, which will disconnect the l2cap
+channel.
+
+#### Usage
+`disconnect-l2cap <channel-id>`
+
+##### Arguments
+- `channel-id` is an integer assigned to this channel by the REPL.
+It must correspond to a connected channel listed by the `channels` command.
+
 ### channels
 Prints the assigned Ids of connected channels. These Ids are local to the REPL
 and are only used for indicating which channel to perform operations on in other commands.

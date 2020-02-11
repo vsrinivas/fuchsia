@@ -68,7 +68,9 @@ impl<T: Debug + PartialEq> ChannelState<T> {
         chan_id
     }
 
-    // TODO(40025): fn remove_channel
+    pub fn remove_channel(&mut self, channel_id: u32) -> Option<T> {
+        self.channels.remove(&channel_id)
+    }
 }
 
 fn channels(state: &mut ChannelState<L2capChannel>) {
@@ -134,6 +136,23 @@ async fn connect_l2cap(
     Ok(())
 }
 
+fn disconnect_l2cap(
+    state: &mut ChannelState<L2capChannel>,
+    args: &Vec<String>,
+) -> Result<(), Error> {
+    if args.len() != 1 {
+        return Err(anyhow!("Invalid number of arguments"));
+    }
+
+    let chan_id = args[0].parse::<u32>().map_err(|_| anyhow!("channel-id must be an integer"))?;
+
+    match state.remove_channel(chan_id) {
+        Some(_) => println!("Channel {} disconnected", chan_id),
+        None => println!("No channel with id {} exists", chan_id),
+    }
+    Ok(())
+}
+
 enum ParsedCmd {
     Valid(Cmd, Vec<String>),
     Empty,
@@ -166,6 +185,9 @@ async fn handle_cmd(
         }
         Cmd::ConnectL2cap => {
             connect_l2cap(profile_svc, state, &args).await?;
+        }
+        Cmd::DisconnectL2cap => {
+            disconnect_l2cap(state, &args)?;
         }
         Cmd::Help => {
             println!("{}", Cmd::help_msg());
@@ -285,5 +307,27 @@ mod tests {
         assert_eq!(2, state.channels().len());
         assert_eq!(Some(&0i32), state.channels().get(&0u32));
         assert_eq!(Some(&1i32), state.channels().get(&1u32));
+    }
+
+    #[test]
+    fn test_disconnect_l2cap() {
+        let mut state = ChannelState::new();
+        let (s, _) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
+        assert_eq!(
+            0,
+            state.add_channel(L2capChannel {
+                socket: s,
+                mode: ChannelMode::Basic,
+                max_tx_sdu_size: 672
+            })
+        );
+        assert_eq!(1, state.channels().len());
+        let args = vec!["0".to_string()];
+        assert!(disconnect_l2cap(&mut state, &args).is_ok());
+        assert!(state.channels().is_empty());
+
+        // Disconnecting an already disconnected channel should not fail.
+        // (It should only print a message)
+        assert!(disconnect_l2cap(&mut state, &args).is_ok());
     }
 }

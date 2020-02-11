@@ -79,6 +79,12 @@ gen_commands! {
                          \t\t'channel-mode' must be {basic|ertm}. 'psm' and 'max-rx-sdu-size' must be\n\
                          \t\tpositive integers in the range 0 - 65535.\n\n\
                          \t\tExample: connect-l2cap 028565803f1368b2 1 basic 672"),
+        DisconnectL2cap = ("disconnect-l2cap", ["channel-id"],
+                           "\n\t\tDrop socket corresponding to 'channel-id', which will disconnect\n\
+                            \t\tthe l2cap channel.\n\
+                            \t\t'channel-id' must correspond to a connected channel listed by the \n\
+                            \t\t'channels' command\n\n\
+                            \t\tExample: disconnect-l2cap 0"),
         Help = ("help", [], "Print command help"),
         Exit = ("exit", [], "Quit the program"),
         Quit = ("quit", [], "Quit the program"),
