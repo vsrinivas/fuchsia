@@ -9,10 +9,9 @@
 
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/escher_process_init.h"
-#include "src/ui/lib/escher/fs/hack_filesystem.h"
+#include "src/ui/lib/escher/test/test_with_vk_validation_layer_macros_internal.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
 #include "src/ui/lib/escher/test/test_with_vk_validation_layer.h"
-#include "src/ui/lib/escher/test/test_with_vk_validation_layer_macros_internal.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -49,15 +48,10 @@ class EscherEnvironment : public ::testing::Environment {
     FXL_DCHECK(!VK_TESTS_SUPPRESSED());
     return vulkan_instance_;
   }
-  HackFilesystemPtr GetFilesystem() {
-    FXL_DCHECK(!VK_TESTS_SUPPRESSED());
-    return hack_filesystem_;
-  }
 
  private:
   VulkanInstancePtr vulkan_instance_;
   VulkanDeviceQueuesPtr vulkan_device_;
-  HackFilesystemPtr hack_filesystem_;
   std::unique_ptr<Escher> escher_;
 
   // The global Escher testing environment. Managed by Googletest after initial

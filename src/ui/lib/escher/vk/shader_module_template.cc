@@ -241,23 +241,10 @@ void ShaderModuleTemplate::Variant::UpdateModule() {
 
 void ShaderModuleTemplate::Variant::UpdateModule() {
   std::vector<uint32_t> spirv;
-  const std::optional<std::string>& base_path = template_->filesystem_->base_path();
-  if (!base_path.has_value()) {
-    // Mimic ReadSpirvFromDisk
-    auto path = template_->path_ + std::to_string(args_.hash().val);
-    std::replace(path.begin(), path.end(), '.', '_');
-    std::replace(path.begin(), path.end(), '/', '_');
-    path = "/data/shaders/" + path + ".spirv";
-    auto contents = template_->filesystem_->ReadFile(path);
-    FXL_CHECK(!contents.empty()) << "module " << path << " is empty or non-existent.\n"
-                                 << "Update //src/ui/lib/escher/{BUILD.gn,test/gtest_escher.cc}";
-    const size_t num = (contents.size() + 3) / sizeof(uint32_t);
-    spirv.resize(num);
-    memcpy(spirv.data(), contents.data(), num * sizeof(uint32_t));
-  } else {
-    shader_util::ReadSpirvFromDisk(args_, *base_path + "/shaders/", template_->path_, &spirv);
+  auto base_path = *template_->filesystem_->base_path() + "/shaders/";
+  if (shader_util::ReadSpirvFromDisk(args_, base_path, template_->path_, &spirv)) {
+    RecreateModuleFromSpirvAndNotifyListeners(spirv);
   }
-  RecreateModuleFromSpirvAndNotifyListeners(spirv);
 }
 
 #endif  // ESCHER_USE_RUNTIME_GLSL

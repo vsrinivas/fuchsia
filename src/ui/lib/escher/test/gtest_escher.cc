@@ -10,35 +10,6 @@
 
 namespace escher {
 namespace test {
-namespace {
-
-#if !ESCHER_USE_RUNTIME_GLSL
-static void LoadShadersFromDisk(HackFilesystemPtr fs) {
-  // NOTE: this and ../shaders/shaders.gni must be kept in sync.
-  const std::vector<HackFilePath> paths = {
-      // Flatland renderer.
-      "shaders/shaders_flatland_flat_main_frag14695981039346656037.spirv",
-      "shaders/shaders_flatland_flat_main_vert14695981039346656037.spirv",
-
-      // Paper renderer.
-      "shaders/shaders_model_renderer_main_frag17553292397499926694.spirv",
-      "shaders/shaders_model_renderer_main_frag8280587512758179706.spirv",
-      "shaders/shaders_model_renderer_main_vert11112688489391456647.spirv",
-      "shaders/shaders_model_renderer_main_vert17553292397499926694.spirv",
-      "shaders/shaders_model_renderer_main_vert4295183060635058569.spirv",
-      "shaders/shaders_model_renderer_main_vert8280587512758179706.spirv",
-      "shaders/shaders_paper_frag_main_ambient_light_frag17553292397499926694.spirv",
-      "shaders/shaders_paper_frag_main_point_light_frag11112688489391456647.spirv",
-      "shaders/shaders_paper_frag_main_point_light_frag4295183060635058569.spirv",
-
-      // Pose buffer latching compute shader, from pose_buffer_latching_shader.cc.
-      "shaders/shaders_compute_pose_buffer_latching_comp14695981039346656037.spirv",
-  };
-  FXL_CHECK(fs->InitializeWithRealFiles(paths));
-}
-#endif
-
-}  // namespace
 
 Escher* GetEscher() {
   EXPECT_FALSE(VK_TESTS_SUPPRESSED());
@@ -80,11 +51,7 @@ void EscherEnvironment::SetUp() {
 #endif
     vulkan_instance_ = VulkanInstance::New(instance_params);
     vulkan_device_ = VulkanDeviceQueues::New(vulkan_instance_, device_params);
-    hack_filesystem_ = HackFilesystem::New();
-#if !ESCHER_USE_RUNTIME_GLSL
-    LoadShadersFromDisk(hack_filesystem_);
-#endif
-    escher_ = std::make_unique<Escher>(vulkan_device_, hack_filesystem_);
+    escher_ = std::make_unique<Escher>(vulkan_device_);
 
 #if ESCHER_USE_RUNTIME_GLSL
     escher::GlslangInitializeProcess();
