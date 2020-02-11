@@ -8,7 +8,6 @@ use {
     fidl_fuchsia_bluetooth_host::{HostControlHandle, HostMarker, HostRequest, HostRequestStream},
     fidl_fuchsia_bluetooth_sys::{HostInfo as FidlHostInfo, TechnologyType},
     fuchsia_bluetooth::{
-        bt_fidl_status,
         inspect::{placeholder_node, Inspectable},
         types::{Address, BondingData, HostInfo, Peer, PeerId},
     },
@@ -62,7 +61,7 @@ async fn host_device_set_local_name() -> Result<(), Error> {
     let expect_fidl = expect_call(server.clone(), |_, e| match e {
         HostRequest::SetLocalName { local_name, responder } => {
             info.write().local_name = Some(local_name);
-            responder.send(&mut bt_fidl_status!())?;
+            responder.send(&mut Ok(()))?;
             Ok(())
         }
         _ => Err(format_err!("Unexpected!")),

@@ -65,10 +65,10 @@ protocol Host {
     WatchPeers() -> (vector<sys.Peer> updated, vector<bt.PeerId> removed);
 
     /// Sets the local name for this host device.
-    SetLocalName(string local_name) -> (fuchsia.bluetooth.Status status);
+    SetLocalName(string local_name) -> () error sys.Error;
 
     /// Sets the device class for this host device.
-    SetDeviceClass(bt.DeviceClass device_class) -> (fuchsia.bluetooth.Status status);
+    SetDeviceClass(bt.DeviceClass device_class) -> () error sys.Error;
 
     /// Initiates a general discovery procedure for BR/EDR and LE devices. On success, discovered
     /// peers can be monitored using the [`fuchsia.bluetooth.host/Host.WatchPeers`] method.
@@ -78,30 +78,30 @@ protocol Host {
     /// Discovery will continue until it is terminated via StopDiscovery() or if the Host protocol
     /// channel gets closed. If the device does not support BR/EDR, only LE discovery will be
     /// performed.
-    StartDiscovery() -> (fuchsia.bluetooth.Status status);
+    StartDiscovery() -> () error sys.Error;
 
     /// Terminates discovery if one was started via StartDiscovery().
     ///
     /// NOTE: If another client is performing discovery (e.g. via its own le.Central interface handle),
     /// then the system will continue performing device discovery even if this method results in
     /// success.
-    StopDiscovery() -> (fuchsia.bluetooth.Status status);
+    StopDiscovery();
 
     /// Sets whether this host should be connectable.
-    SetConnectable(bool enabled) -> (fuchsia.bluetooth.Status status);
+    SetConnectable(bool enabled) -> () error sys.Error;
 
     /// Sets whether this host should be discoverable.
-    SetDiscoverable(bool enabled) -> (fuchsia.bluetooth.Status status);
+    SetDiscoverable(bool enabled) -> () error sys.Error;
 
-    /// Establish a BR/EDR and/or LE connection to the remote device with identifier `device_id`:
+    /// Establish a BR/EDR and/or LE connection to the peer with identifier `id`:
     ///
-    ///   - If the device is known to support the BR/EDR transport then a logical link over that
+    ///   - If the peer is known to support the BR/EDR transport then a logical link over that
     ///     transport will be established to the device. If the connection attempt is successful,
     ///     local services registered using "RequestProfile()" will be available to the peer.
     ///     Traditional services discovered on the peer will be notified to local services
     ///     asynchronously.
     ///
-    ///   - If the device is known to support the LE transport then a logical link over that
+    ///   - If the peer is known to support the LE transport then a logical link over that
     ///     transport will be established to the device. If the connection attempt is successful,
     ///     GATT services in the local database (populated via RequestGattServer()) will become
     ///     available to the peer. Similarly, remote GATT services that are discovered on the
@@ -111,15 +111,15 @@ protocol Host {
     /// The result of the procedure will be communicated via `status`. If the remote device
     /// supports both BR/EDR and LE transports and a link cannot be established over both, then an
     /// error Status will be returned and neither transport will be connected.
-    Connect(string device_id) -> (fuchsia.bluetooth.Status status);
+    Connect(bt.PeerId id) -> () error sys.Error;
 
-    /// Terminate all connections (BR/EDR or LE) to the remote peer with identifier `peer_id`.
+    /// Terminate all connections (BR/EDR or LE) to the remote peer with identifier `id`.
     ///
-    /// + request `peer_id` The identifier of the peer to disconnect.
+    /// + request `id` The identifier of the peer to disconnect.
     /// - response `status` Contains an error if either LE or BR/EDR transport fails to disconnect. Contains
     ///                     success when both transports are successfully disconnected or if the peer is already
     ///                     disconnected.
-    Disconnect(string peer_id) -> (fuchsia.bluetooth.Status status);
+    Disconnect(bt.PeerId id) -> () error sys.Error;
 
     /// Initiates pairing to the peer with the supplied `id` and `options`. Returns an error
     /// variant of fuchsia.bluetooth.Status if no connected peer with `id` is found or the pairing
@@ -129,7 +129,7 @@ protocol Host {
     /// NOTE: This is intended to satisfy test scenarios that require pairing procedures to be
     /// initiated without relying on service access. In normal operation, Bluetooth security is
     /// enforced during service access.
-    Pair(fuchsia.bluetooth.PeerId id, fuchsia.bluetooth.control.PairingOptions options) -> (fuchsia.bluetooth.Status status);
+    Pair(fuchsia.bluetooth.PeerId id, fuchsia.bluetooth.control.PairingOptions options) -> () error sys.Error;
 
     /// Deletes a peer from the Bluetooth host. If the peer is connected, it will be disconnected.
     /// `device_id` will no longer refer to any peer, even if a device with the same address is
@@ -138,7 +138,7 @@ protocol Host {
     /// Returns success after no peer exists that's identified by `device_id` (even if it didn't
     /// exist before Forget), failure if the peer specified by `device_id` could not be
     /// disconnected or deleted and still exists.
-    Forget(string device_id) -> (fuchsia.bluetooth.Status status);
+    Forget(bt.PeerId id) -> () error sys.Error;
 
     /// Enable or disable a passive LE background scan. When enabled, the bt-host
     /// device will continuously perform a passive LE scan in the background when

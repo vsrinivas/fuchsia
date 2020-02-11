@@ -12,6 +12,21 @@ enum Error {
 
     /// The peer designated for the operation was not found.
     PEER_NOT_FOUND = 2;
+
+    /// The time limit for the operation has expired.
+    TIMED_OUT = 3;
+
+    /// The operation was canceled.
+    CANCELED = 4;
+
+    /// Operation already in progress.
+    IN_PROGRESS = 5;
+
+    /// Operation not supported.
+    NOT_SUPPORTED = 6;
+
+    /// The operation was given an invalid set of arguments.
+    INVALID_ARGUMENTS = 7;
 };
 
 /// Represents an active procedure. The validity of a handle that supports this protocol is tied to
@@ -19,7 +34,8 @@ enum Error {
 ///
 ///   1. Closing a token handle ends the procedure that it is attached to.
 ///   2. The system closes a token handle to communicate that a procedure was internally terminated.
-protocol ProcedureToken {};
+protocol ProcedureToken {
+};
 
 /// Protocol that abstracts the operational modes and procedures defined in the Bluetooth Generic
 /// Access Profile (see Core Specification v5.1, Vol 3, Part C).

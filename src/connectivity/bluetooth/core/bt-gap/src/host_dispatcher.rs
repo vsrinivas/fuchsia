@@ -5,9 +5,7 @@
 use {
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints::{self, ServerEnd},
-    fidl_fuchsia_bluetooth::{
-        Appearance, DeviceClass, Error as FidlError, ErrorCode, PeerId as FidlPeerId,
-    },
+    fidl_fuchsia_bluetooth::{Appearance, DeviceClass, Error as FidlError, ErrorCode},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::{
         self as control, ControlControlHandle, HostData, InputCapabilityType, LocalKey,
@@ -70,13 +68,10 @@ impl Drop for DiscoveryRequestToken {
     fn drop(&mut self) {
         fx_vlog!(1, "DiscoveryRequestToken dropped");
         if let Some(host) = self.adap.upgrade() {
-            let await_response = host.write().stop_discovery();
-            fasync::spawn(async move {
-                if let Err(err) = await_response.await {
-                    // TODO(45325) - we should close the host channel if an error is returned
-                    fx_log_warn!("Unexpected error response when stopping discovery: {:?}", err);
-                }
-            });
+            if let Err(err) = host.write().stop_discovery() {
+                // TODO(45325) - we should close the host channel if an error is returned
+                fx_log_warn!("Unexpected error response when stopping discovery: {:?}", err);
+            }
         }
     }
 }
@@ -461,7 +456,7 @@ impl HostDispatcher {
         for adapter in adapters {
             let adapter_path = adapter.read().path.clone();
 
-            let fut = adapter.write().forget(peer_id.to_string());
+            let fut = adapter.write().forget(peer_id);
             match fut.await {
                 Ok(()) => adapters_removed += 1,
                 Err(types::Error::HostError(FidlError {
@@ -484,7 +479,7 @@ impl HostDispatcher {
         Ok(())
     }
 
-    pub async fn connect(&self, peer_id: String) -> types::Result<()> {
+    pub async fn connect(&self, peer_id: PeerId) -> types::Result<()> {
         let host = self.get_active_adapter().await;
         match host {
             Some(host) => {
@@ -495,7 +490,7 @@ impl HostDispatcher {
         }
     }
 
-    pub async fn pair(&self, id: FidlPeerId, pairing_options: PairingOptions) -> types::Result<()> {
+    pub async fn pair(&self, id: PeerId, pairing_options: PairingOptions) -> types::Result<()> {
         let host = self.get_active_adapter().await;
         match host {
             Some(host) => {
@@ -507,14 +502,10 @@ impl HostDispatcher {
     }
 
     // Attempt to disconnect peer with id `peer_id` from all transports
-    pub async fn disconnect(&self, peer_id: String) -> types::Result<()> {
+    pub async fn disconnect(&self, peer_id: PeerId) -> types::Result<()> {
         let host = self.get_active_adapter().await;
         match host {
             Some(host) => {
-                // Suppress the error from `rm_gatt`, as the peer not having a GATT entry
-                // (i.e. not using LE) is not a failure condition
-                let fut = host.write().rm_gatt(peer_id.clone());
-                let _ = fut.await;
                 let fut = host.write().disconnect(peer_id);
                 fut.await
             }

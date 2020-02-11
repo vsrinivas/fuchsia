@@ -12,7 +12,10 @@ use {
     std::sync::Arc,
 };
 
-use crate::{host_dispatcher::*, types::status_response};
+use crate::{
+    host_dispatcher::*,
+    types::{self, status_response},
+};
 
 struct ControlSession {
     discovery_token: Option<Arc<DiscoveryRequestToken>>,
@@ -42,6 +45,23 @@ pub async fn start_control_service(
     Ok(())
 }
 
+fn parse_peer_id(id: &str) -> Result<PeerId, types::Error> {
+    id.parse::<PeerId>()
+        .map_err(|_| types::Error::InternalError(format_err!("invalid peer ID: {}", id)))
+}
+
+async fn handle_connect(hd: HostDispatcher, device_id: &str) -> types::Result<()> {
+    hd.connect(parse_peer_id(device_id)?).await
+}
+
+async fn handle_forget(hd: HostDispatcher, device_id: &str) -> types::Result<()> {
+    hd.forget(parse_peer_id(device_id)?).await
+}
+
+async fn handle_disconnect(hd: HostDispatcher, device_id: &str) -> types::Result<()> {
+    hd.disconnect(parse_peer_id(device_id)?).await
+}
+
 async fn handler(
     hd: HostDispatcher,
     session: &mut ControlSession,
@@ -49,11 +69,11 @@ async fn handler(
 ) -> fidl::Result<()> {
     match event {
         ControlRequest::Connect { device_id, responder } => {
-            let result = hd.connect(device_id).await;
+            let result = handle_connect(hd, &device_id).await;
             responder.send(&mut status_response(result))
         }
         ControlRequest::Pair { id, options, responder } => {
-            let result = hd.pair(id, options).await;
+            let result = hd.pair(id.into(), options).await;
             responder.send(&mut status_response(result))
         }
         ControlRequest::SetDiscoverable { discoverable, responder } => {
@@ -76,17 +96,11 @@ async fn handler(
             Ok(())
         }
         ControlRequest::Forget { device_id, responder } => {
-            let peer_id = device_id
-                .parse::<PeerId>()
-                .map_err(|_| format_err!(format!("Invalid peer identifier: {}", device_id)));
-            let result = match peer_id {
-                Ok(peer_id) => hd.forget(peer_id).await,
-                Err(e) => Err(e.into()),
-            };
+            let result = handle_forget(hd, &device_id).await;
             responder.send(&mut status_response(result))
         }
         ControlRequest::Disconnect { device_id, responder } => {
-            let result = hd.disconnect(device_id).await;
+            let result = handle_disconnect(hd, &device_id).await;
             responder.send(&mut status_response(result))
         }
         ControlRequest::GetKnownRemoteDevices { responder } => {

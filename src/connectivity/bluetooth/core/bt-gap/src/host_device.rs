@@ -5,15 +5,12 @@
 use {
     anyhow::format_err,
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_bluetooth::DeviceClass,
-    fidl_fuchsia_bluetooth::PeerId as FidlPeerId,
+    fidl_fuchsia_bluetooth::{self as fbt, DeviceClass},
     fidl_fuchsia_bluetooth_control::{
         self as control, HostData, InputCapabilityType, OutputCapabilityType,
         PairingDelegateMarker, PairingOptions,
     },
-    fidl_fuchsia_bluetooth_gatt::ClientProxy,
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
-    fidl_fuchsia_bluetooth_le::CentralProxy,
     fuchsia_bluetooth::{
         inspect::Inspectable,
         types::{BondingData, HostInfo, Peer, PeerId},
@@ -22,16 +19,15 @@ use {
     futures::{Future, FutureExt, StreamExt},
     parking_lot::RwLock,
     pin_utils::pin_mut,
-    std::{collections::HashMap, convert::TryInto, path::PathBuf, sync::Arc},
+    std::{convert::TryInto, path::PathBuf, sync::Arc},
 };
 
-use crate::types::{self, from_fidl_status, Error};
+use crate::types::{self, from_fidl_result, from_fidl_status, Error};
 
 pub struct HostDevice {
     pub path: PathBuf,
     host: HostProxy,
     info: Inspectable<HostInfo>,
-    gatt: HashMap<String, (CentralProxy, ClientProxy)>,
 }
 
 // Many HostDevice methods return impl Future rather than being implemented as `async`. This has an
@@ -41,7 +37,7 @@ pub struct HostDevice {
 // the future was polled.
 impl HostDevice {
     pub fn new(path: PathBuf, host: HostProxy, info: Inspectable<HostInfo>) -> Self {
-        HostDevice { path, host, info, gatt: HashMap::new() }
+        HostDevice { path, host, info }
     }
 
     pub fn get_host(&self) -> &HostProxy {
@@ -61,50 +57,43 @@ impl HostDevice {
         &self.info
     }
 
-    pub fn rm_gatt(&mut self, id: String) -> impl Future<Output = types::Result<()>> {
-        let gatt_entry = self.gatt.remove(&id);
-        async move {
-            if let Some((central, _)) = gatt_entry {
-                from_fidl_status(central.disconnect_peripheral(id.as_str()).await)
-            } else {
-                Err(Error::not_found("Unknown Peripheral"))
-            }
-        }
-    }
-
     pub fn set_name(&self, mut name: String) -> impl Future<Output = types::Result<()>> {
-        self.host.set_local_name(&mut name).map(from_fidl_status)
+        self.host.set_local_name(&mut name).map(from_fidl_result)
     }
 
     pub fn set_device_class(
         &self,
         mut cod: DeviceClass,
     ) -> impl Future<Output = types::Result<()>> {
-        self.host.set_device_class(&mut cod).map(from_fidl_status)
+        self.host.set_device_class(&mut cod).map(from_fidl_result)
     }
 
     pub fn start_discovery(&mut self) -> impl Future<Output = types::Result<()>> {
-        self.host.start_discovery().map(from_fidl_status)
+        self.host.start_discovery().map(from_fidl_result)
     }
 
-    pub fn connect(&mut self, device_id: String) -> impl Future<Output = types::Result<()>> {
-        self.host.connect(&device_id).map(from_fidl_status)
+    pub fn connect(&mut self, id: PeerId) -> impl Future<Output = types::Result<()>> {
+        let mut id: fbt::PeerId = id.into();
+        self.host.connect(&mut id).map(from_fidl_result)
     }
 
-    pub fn disconnect(&mut self, device_id: String) -> impl Future<Output = types::Result<()>> {
-        self.host.disconnect(&device_id).map(from_fidl_status)
+    pub fn disconnect(&mut self, id: PeerId) -> impl Future<Output = types::Result<()>> {
+        let mut id: fbt::PeerId = id.into();
+        self.host.disconnect(&mut id).map(from_fidl_result)
     }
 
     pub fn pair(
         &mut self,
-        mut id: FidlPeerId,
+        id: PeerId,
         options: PairingOptions,
     ) -> impl Future<Output = types::Result<()>> {
-        self.host.pair(&mut id, options).map(from_fidl_status)
+        let mut id: fbt::PeerId = id.into();
+        self.host.pair(&mut id, options).map(from_fidl_result)
     }
 
-    pub fn forget(&mut self, peer_id: String) -> impl Future<Output = types::Result<()>> {
-        self.host.forget(&peer_id).map(from_fidl_status)
+    pub fn forget(&mut self, id: PeerId) -> impl Future<Output = types::Result<()>> {
+        let mut id: fbt::PeerId = id.into();
+        self.host.forget(&mut id).map(from_fidl_result)
     }
 
     pub fn close(&self) -> types::Result<()> {
@@ -120,20 +109,19 @@ impl HostDevice {
     }
 
     pub fn set_connectable(&self, value: bool) -> impl Future<Output = types::Result<()>> {
-        self.host.set_connectable(value).map(from_fidl_status)
+        self.host.set_connectable(value).map(from_fidl_result)
     }
 
-    pub fn stop_discovery(&self) -> impl Future<Output = types::Result<()>> {
-        self.host.stop_discovery().map(from_fidl_status)
+    pub fn stop_discovery(&self) -> types::Result<()> {
+        self.host.stop_discovery().map_err(|e| e.into())
     }
 
     pub fn set_discoverable(&self, discoverable: bool) -> impl Future<Output = types::Result<()>> {
-        self.host.set_discoverable(discoverable).map(from_fidl_status)
+        self.host.set_discoverable(discoverable).map(from_fidl_result)
     }
 
     pub fn set_local_data(&self, mut data: HostData) -> types::Result<()> {
-        self.host.set_local_data(&mut data)?;
-        Ok(())
+        self.host.set_local_data(&mut data).map_err(|e| e.into())
     }
 
     pub fn enable_privacy(&self, enable: bool) -> types::Result<()> {
