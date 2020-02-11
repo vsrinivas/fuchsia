@@ -35,7 +35,7 @@ def main():
     parser.add_argument(
         '--target', help='The compiler target to use', required=False)
     parser.add_argument(
-        '--depfile', help='The path to the depfile', required=True)
+        '--depfile', help='The path to the depfile', required=False)
     parser.add_argument(
         '--current-cpu',
         help='Target architecture.',
@@ -46,11 +46,9 @@ def main():
         help='Target operating system.',
         choices=['fuchsia', 'linux', 'mac', 'win'],
         required=True)
+    parser.add_argument('--buildidtool', help='The path to the buildidtool.')
     parser.add_argument(
-        '--buildidtool', help='The path to the buildidtool.')
-    parser.add_argument(
-        '--build-id-dir',
-        help='The path to the .build-id directory.')
+        '--build-id-dir', help='The path to the .build-id directory.')
     parser.add_argument(
         '--go-root', help='The go root to use for builds.', required=True)
     parser.add_argument(
@@ -237,10 +235,14 @@ def main():
         retcode = subprocess.call(
             [
                 args.buildidtool,
-                "-build-id-dir", args.build_id_dir,
-                "-stamp", dist + ".build-id.stamp",
-                "-entry", ".debug=" + args.output_path,
-                "-entry", "=" + dist,
+                "-build-id-dir",
+                args.build_id_dir,
+                "-stamp",
+                dist + ".build-id.stamp",
+                "-entry",
+                ".debug=" + args.output_path,
+                "-entry",
+                "=" + dist,
             ])
 
     if retcode == 0:
