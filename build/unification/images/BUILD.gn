@@ -231,13 +231,10 @@ aggregate_manifest("legacy-aux") {
     ":bin.accept-child",
 #------------------
 #------------------
-    ":bin.bootfs-parser-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.bootfs-parser-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.bootfs-parser-fuzzer.ubsan",
 #------------------
 #------------------
     ":bin.debugdata-test-helper",
@@ -519,7 +516,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.backtrace-test-test",
 #------------------
 #------------------
-    ":test.sys.bootfs-test-test",
 #------------------
 #------------------
     ":test.sys.bootsvc-unit-test",
@@ -874,13 +870,10 @@ aggregate_manifest("legacy-aux") {
 aggregate_manifest("legacy-tests") {
   deps = [
 #------------------
-    ":bin.bootfs-parser-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.bootfs-parser-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.bootfs-parser-fuzzer.ubsan",
 #------------------
 #------------------
     ":bin.debugdata-test-helper",
@@ -1144,7 +1137,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.backtrace-test-test",
 #------------------
 #------------------
-    ":test.sys.bootfs-test-test",
 #------------------
 #------------------
     ":test.sys.bootsvc-unit-test",
@@ -1812,13 +1804,10 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/uapp/blobfs:blobfs-manifest",
 #------------------
-    #":bin.bootfs-parser-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.bootfs-parser-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.bootfs-parser-fuzzer.ubsan",
 #------------------
 #------------------
     #":bin.debugdata-test-helper",
@@ -2914,7 +2903,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/dev/block/core:core-unittest-manifest",
     "//src/ui/input/drivers/bma253:bma253-test-manifest",
 #------------------
-    #":test.sys.bootfs-test-test",
+    "//zircon/system/ulib/bootfs/test:bootfs-test-manifest",
 #------------------
 #------------------
     #":test.sys.bootsvc-unit-test",
@@ -3332,13 +3321,10 @@ aggregate_manifest("migrated-tests") {
     # unsorted to avoid trivial rebase collisions.
     "//zircon/system/uapp/blobfs:blobfs-manifest",
 #------------------
-    #":bin.bootfs-parser-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.bootfs-parser-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.bootfs-parser-fuzzer.ubsan",
 #------------------
 #------------------
     #":bin.debugdata-test-helper",
@@ -3620,7 +3606,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/dev/block/core:core-unittest-manifest",
     "//src/ui/input/drivers/bma253:bma253-test-manifest",
 #------------------
-    #":test.sys.bootfs-test-test",
+    "//zircon/system/ulib/bootfs/test:bootfs-test-manifest",
 #------------------
 #------------------
     #":test.sys.bootsvc-unit-test",

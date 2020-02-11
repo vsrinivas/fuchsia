@@ -10,7 +10,6 @@ zircon_fuzzers =
 # When removing an element from this list, add the GN build equivalent to:
 # _migrated_fuzzers in //garnet/tests/zircon/BUILD.gn.
 fuzzer_names = [
-  "bootfs-parser",
   "elfload",
   "hermetic-decompressor",
   "hmac",
