@@ -25,11 +25,11 @@ class DevMem {
     if (size == 0) {
       return false;
     }
-    return ranges.emplace(Range{addr, size}).second;
+    return ranges_.emplace(Range{addr, size}).second;
   }
 
-  const RangeSet::const_iterator begin() const { return ranges.begin(); }
-  const RangeSet::const_iterator end() const { return ranges.end(); }
+  const RangeSet::const_iterator begin() const { return ranges_.begin(); }
+  const RangeSet::const_iterator end() const { return ranges_.end(); }
 
   // Generates, by calling the provided functor, all Range's that are in the
   // provided range, that do not overlap with any internal ranges. This means
@@ -38,7 +38,7 @@ class DevMem {
   template <typename F>
   void YieldInverseRange(zx_gpaddr_t base, size_t size, F yield) const {
     zx_gpaddr_t prev = base;
-    for (const auto& range : ranges) {
+    for (const auto& range : ranges_) {
       zx_gpaddr_t next_top = std::min(range.addr, base + size);
       if (next_top > prev) {
         yield(prev, next_top - prev);
@@ -52,7 +52,7 @@ class DevMem {
   }
 
  private:
-  RangeSet ranges;
+  RangeSet ranges_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_DEV_MEM_H_
