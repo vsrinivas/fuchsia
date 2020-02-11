@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/log_format_unittest"
+    }
+}

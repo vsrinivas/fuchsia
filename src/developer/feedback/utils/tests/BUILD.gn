@@ -28,6 +28,9 @@ test_package("feedback_utils_tests") {
       name = "inspect_node_manager_unittest"
     },
     {
+      name = "log_format_unittest"
+    },
+    {
       name = "promise_unittest"
     },
     {
@@ -50,6 +53,7 @@ test_package("feedback_utils_tests") {
     ":archive_unittest",
     ":cobalt_unittest",
     ":inspect_node_manager_unittest",
+    ":log_format_unittest",
     ":promise_unittest",
     ":rotating_file_set_unittest",
     ":time_unittest",
@@ -133,6 +137,19 @@ executable("inspect_node_manager_unittest") {
     "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/utils:inspect_node_manager",
     "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("log_format_unittest") {
+  testonly = true
+
+  sources = [ "log_format_unittest.cc" ]
+
+  deps = [
+    "//src/developer/feedback/utils:logs",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/syslog/cpp",
     "//third_party/googletest:gtest",
   ]
 }

@@ -34,6 +34,7 @@ source_set("attachment_providers") {
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.diagnostics",
     "//src/developer/feedback/feedback_agent:constants",
+    "//src/developer/feedback/utils:logs",
     "//src/developer/feedback/utils:promise",
     "//src/lib/fsl",
     "//src/lib/syslog/cpp",

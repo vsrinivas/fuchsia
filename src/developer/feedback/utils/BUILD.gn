@@ -86,6 +86,22 @@ source_set("inspect_node_manager") {
   visibility = [ "//src/developer/feedback/*" ]
 }
 
+source_set("logs") {
+  public = [ "log_format.h" ]
+
+  sources = [
+    "log_format.cc",
+    "log_format.h",
+  ]
+
+  public_deps = [ "//zircon/system/fidl/fuchsia-logger" ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+  ]
+}
+
 source_set("promise") {
   public = [ "promise.h" ]
 
