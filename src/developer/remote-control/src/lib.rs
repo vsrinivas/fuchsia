@@ -42,8 +42,8 @@ impl RemoteControlService {
                     controller,
                     responder,
                 } => {
-                    self.spawn_component_async(&component_url, args, controller)?;
-                    responder.send(true).context("sending StartComponent response")?;
+                    let mut response = self.spawn_component_async(&component_url, args, controller);
+                    responder.send(&mut response).context("sending StartComponent response")?;
                 }
                 rcs::RemoteControlRequest::RebootDevice { reboot_type, responder } => {
                     self.reboot_device(reboot_type, responder).await?;
@@ -66,12 +66,24 @@ impl RemoteControlService {
         server_end: fidl::endpoints::ServerEnd<
             fidl_fuchsia_developer_remotecontrol::ComponentControllerMarker,
         >,
-    ) -> Result<(), Error> {
+    ) -> Result<(), rcs::ComponentControlError> {
         log::info!("Attempting to start component '{}' with argv {:?}...", component_name, argv);
         let launcher = launcher().expect("Failed to open launcher service");
-        let app = AppBuilder::new(component_name).args(argv).spawn(&launcher)?;
+        let app = match AppBuilder::new(component_name).args(argv).spawn(&launcher) {
+            Ok(app) => app,
+            Err(e) => {
+                log::error!("{}", e);
+                return Err(rcs::ComponentControlError::ComponentControlFailure);
+            }
+        };
 
-        let (stream, control_handle) = server_end.into_stream_and_control_handle()?;
+        let (stream, control_handle) = match server_end.into_stream_and_control_handle() {
+            Ok((stream, control_handle)) => (stream, control_handle),
+            Err(e) => {
+                log::error!("{}", e);
+                return Err(rcs::ComponentControlError::ControllerSetupFailure);
+            }
+        };
         let controller = ComponentController::new(app, stream, control_handle);
 
         hoist::spawn(async move {
@@ -125,6 +137,8 @@ mod tests {
 
     // This is the exit code zircon will return when a component is killed.
     const EXIT_CODE_KILLED: i64 = -1024;
+    // This is the exit code zircon will return for an non-existent package.
+    const EXIT_CODE_START_FAILED: i64 = -1;
 
     fn setup_fake_admin_service() -> fdevmgr::AdministratorProxy {
         let (proxy, mut stream) =
@@ -241,16 +255,15 @@ mod tests {
         let rcs_proxy = setup_rcs();
         let (proxy, server_end) = create_proxy::<rcs::ComponentControllerMarker>()?;
 
-        let argv = vec![];
-        let start_response = rcs_proxy
+        let _ = rcs_proxy
             .start_component(
                 "fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx",
-                &mut argv.iter().copied(),
+                &mut std::iter::empty::<_>(),
                 server_end,
             )
             .await
+            .unwrap()
             .unwrap();
-        assert!(start_response);
 
         verify_exit_code(proxy, 0).await;
         Ok(())
@@ -261,21 +274,35 @@ mod tests {
         let rcs_proxy = setup_rcs();
         let (proxy, server_end) = create_proxy::<rcs::ComponentControllerMarker>()?;
 
-        let argv = vec![];
-        let start_response = rcs_proxy
+        let _ = rcs_proxy
             .start_component(
                 "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cmx",
-                &mut argv.iter().copied(),
+                &mut std::iter::empty::<_>(),
+                server_end,
+            )
+            .and_then(|_| proxy.kill())
+            .await?;
+
+        verify_exit_code(proxy, EXIT_CODE_KILLED).await;
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_start_non_existent_package() -> Result<(), Error> {
+        let rcs_proxy = setup_rcs();
+        let (proxy, server_end) = create_proxy::<rcs::ComponentControllerMarker>()?;
+
+        let _start_response = rcs_proxy
+            .start_component(
+                "fuchsia-pkg://fuchsia.com/hello_world_rust#meta/this_package_doesnt_exist.cmx",
+                &mut std::iter::empty::<_>(),
                 server_end,
             )
             .await
+            .unwrap()
             .unwrap();
-        assert!(start_response);
 
-        let kill_response = proxy.kill().await.unwrap();
-        assert!(kill_response);
-
-        verify_exit_code(proxy, EXIT_CODE_KILLED).await;
+        verify_exit_code(proxy, EXIT_CODE_START_FAILED).await;
         Ok(())
     }
 

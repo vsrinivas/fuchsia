@@ -59,10 +59,12 @@ impl ComponentController {
         while let Ok(Some(request)) = self.request_stream.try_next().await {
             match request {
                 rcs::ComponentControllerRequest::Kill { responder } => match self.app.kill() {
-                    Ok(()) => responder.send(true).context("sending Kill response")?,
+                    Ok(()) => responder.send(&mut Ok(())).context("sending Kill response")?,
                     Err(e) => {
                         log::warn!("error killing component: {}", e);
-                        responder.send(false).context("sending Kill response")?
+                        responder
+                            .send(&mut Err(rcs::ComponentControlError::ComponentControlFailure))
+                            .context("sending Kill response")?
                     }
                 },
             }

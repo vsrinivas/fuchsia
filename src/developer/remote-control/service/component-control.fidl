@@ -1,0 +1,23 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.developer.remotecontrol;
+
+enum ComponentControlError : uint32 {
+    // Failure interacting with the component's Controller.
+    // This indicates that a controller connection was lost prior to receiving
+    // a response for the control operation (including potentially before the operation is sent).
+    COMPONENT_CONTROL_FAILURE = 1;
+    // Failure setting up the controller channel.
+    CONTROLLER_SETUP_FAILURE = 2;
+};
+
+protocol ComponentController {
+    // OnTerminated is invoked when a previously started component terminates, providing its exit code.
+    // TODO(fxb/43734) allow waiting on arbitrary components
+    -> OnTerminated(int64 exit_code);
+
+    // Kills the component.
+    Kill() -> () error ComponentControlError;
+};
