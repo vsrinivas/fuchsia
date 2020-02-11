@@ -34,7 +34,7 @@ specific set of concepts as follows:
     introduces state signalling to enable blocking I/O.
 
 For reference, the source code for all of these drivers is in the
-`//zircon/system/dev/sample` directory.
+`//examples/drivers/` directory.
 
 ## Registration
 
@@ -550,7 +550,7 @@ The exact path depends on the build target (e.g., ...`/zircon/build-x64/`... for
 
 For this example, we'll use the following paths:
 
-* ...`/zircon/system/dev/sample/number/demo-number.c`
+* ...`/examples/drivers//number/demo-number.c`
 	* source file for `/dev/misc/demo-number` driver
 * ...`/zircon/system/fidl/zircon-sample/demo_number.fidl`
 	* source file for FIDL protocol definition

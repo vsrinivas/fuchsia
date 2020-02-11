@@ -33,7 +33,7 @@ successfully finds a matching driver for a device. A driver declares the
 devices it is compatible with through bind rules, which are should be placed in
 a `.bind` file alongside the driver. The bind compiler compiles those rules
 and creates a driver declaration macro containing those rules in a C header file.
-The following bind program declares the [AHCI driver](/zircon/system/dev/block/ahci/ahci.h):
+The following bind program declares the [AHCI driver](/src/storage/block/drivers/ahci/ahci.h):
 
 ```
 using deprecated.pci;
@@ -67,7 +67,7 @@ The driver can now include the generated header and declare itself with the
 following macro. `"zircon"` is the vendor id and `"0.1"` is the driver version.
 
 ```c
-#include "zircon/system/dev/block/ahci/ahci-bind.h"
+#include "src/storage/block/drivers/ahci/ahci-bind.h"
 ...
 ZIRCON_DRIVER(ahci, ahci_driver_ops, "zircon", "0.1");
 ```

@@ -20,7 +20,7 @@ This driver introduces:
 *   Virtual Memory Address Regions ([VMAR](/docs/reference/kernel_objects/vm_address_region.md)s)
     and Virtual Memory Objects ([VMO](/docs/reference/kernel_objects/vm_object.md)s)
 
-The source is in `//zircon/system/dev/sample/ramdisk/demo-ramdisk.c`.
+The source is in `//examples/drivers//ramdisk/demo-ramdisk.c`.
 
 As with all drivers, the first thing to look at is how the driver initializes itself:
 
@@ -409,7 +409,7 @@ do the data transfer to or from media instantly; no need to defer.
 ## How is the real one more complicated?
 
 The RAM-disk presented above is somewhat simplified from the "real" RAM-disk
-device (present at `//zircon/system/dev/block/ramdisk/ramdisk.c`).
+device (present at `//src/storage/block/drivers/ramdisk/ramdisk.c`).
 
 The real one adds the following functionality:
 

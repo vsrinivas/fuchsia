@@ -24,7 +24,7 @@ source_set("shared") {
   ]
   public_deps = [
     "//zircon/public/lib/fake_ddk",
-    "//zircon/system/dev/block/ftl:common",
+    "//src/storage/block/drivers/ftl:common",
   ]
 }
 
@@ -51,7 +51,7 @@ test("ftl") {
     "nand_operation_test.cc",
     "oob_doubler_test.cc",
   ]
-  include_dirs = [ "//zircon/system/dev/block/ftl" ]
+  include_dirs = [ "//src/storage/block/drivers/ftl" ]
   deps = [
     ":shared",
     "//zircon/public/lib/unittest",
@@ -80,7 +80,7 @@ test("ftl-integration") {
     "integration_main.cc",
     "launch.cc",
   ]
-  include_dirs = [ "//zircon/system/dev/block/ftl" ]
+  include_dirs = [ "//src/storage/block/drivers/ftl" ]
   deps = [
     "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/devmgr-launcher",
@@ -97,7 +97,7 @@ test("ftl-integration") {
 
 fuzzer("ftl-read-write-fuzzer") {
   sources = [ "ftl-fuzzer.cc" ]
-  include_dirs = [ "//zircon/system/dev/block/ftl" ]
+  include_dirs = [ "//src/storage/block/drivers/ftl" ]
   deps = [ ":shared" ]
 }
 

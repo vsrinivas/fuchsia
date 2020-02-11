@@ -10,9 +10,9 @@ The USB mass storage driver is used to communicate with mass storage devices
 such as flash drives, external hard drives, and other types of removable media
 connected through USB. The USB mass storage driver is split into two parts.
 
-* [Block device interface](/zircon/system/dev/block/usb-mass-storage/block.cc)
+* [Block device interface](/src/storage/block/drivers/usb-mass-storage/block.cc)
 Uses the [block](/zircon/system/banjo/ddk.protocol.block/block.banjo) protocol.
-* [Core](/zircon/system/dev/block/usb-mass-storage/usb-mass-storage.cc) device
+* [Core](/src/storage/block/drivers/usb-mass-storage/usb-mass-storage.cc) device
 Interfaces with the USB stack.
 
 ## Block device

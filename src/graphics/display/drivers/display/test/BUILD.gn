@@ -60,7 +60,7 @@ source_set("base") {
     "//zircon/public/lib/zxtest",
     "//src/graphics/display/drivers/display:shared",
     "//src/graphics/display/drivers/fake:fake-lib",
-    "//zircon/system/dev/sysmem/sysmem:sysmem_common_srcs",
+    "//src/devices/sysmem/drivers/sysmem:sysmem_common_srcs",
     "//zircon/system/fidl/fuchsia-hardware-display:llcpp",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
   ]

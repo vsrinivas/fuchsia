@@ -27,8 +27,8 @@
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
 
-#include "../../../sysmem/sysmem/device.h"
-#include "../../../sysmem/sysmem/driver.h"
+#include "src/devices/sysmem/drivers/sysmem/device.h"
+#include "src/devices/sysmem/drivers/sysmem/driver.h"
 
 namespace fake_display {
 // Forward declared because the Banjo and FIDL headers conflict for fuchsia.hardware.display
