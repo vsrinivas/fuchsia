@@ -8,13 +8,13 @@ import("//build/package.gni")
 driver_module("virtual_camera_driver") {
   output_name = "virtual_camera_driver"
 
-  deps = [ "//src/camera/drivers/virtual_camera:virtual_camera_source" ]
+  deps = [ ":source" ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
-source_set("virtual_camera_source") {
+source_set("source") {
   sources = [
     "virtual_camera.cc",
     "virtual_camera2_control.cc",

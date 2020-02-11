@@ -5,7 +5,8 @@
 import("//build/package.gni")
 import("//build/test.gni")
 
-executable("ge2d-test") {
+executable("test") {
+  output_name = "ge2d-test"
   testonly = true
   sources = [
     "../ge2d-task.cc",

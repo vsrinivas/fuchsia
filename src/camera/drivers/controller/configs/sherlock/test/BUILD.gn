@@ -6,7 +6,8 @@ import("//build/cipd.gni")
 import("//build/package.gni")
 import("//build/test.gni")
 
-executable("configs_test") {
+executable("test") {
+  output_name = "configs_test"
   testonly = true
   sources = [ "configs_test.cc" ]
   deps = [
@@ -16,7 +17,7 @@ executable("configs_test") {
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/lib/sys/cpp",
-    "//src/camera/drivers/controller/configs/sherlock/:controller-configs",
+    "//src/camera/drivers/controller/configs/sherlock:controller-configs",
     "//src/camera/drivers/test_utils",
     "//src/devices/lib/driver",
     "//src/lib/fxl/test:gtest_main_with_syslog",

@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("stream_utils_test") {
+executable("test") {
+  output_name = "stream_utils_test"
   testonly = true
   sources = [ "image_io_util_test.cc" ]
   deps = [
