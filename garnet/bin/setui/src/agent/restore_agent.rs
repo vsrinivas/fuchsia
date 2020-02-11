@@ -8,45 +8,57 @@ use crate::agent::base::{Agent, Invocation, Lifespan};
 use crate::switchboard::base::{SettingRequest, SettingResponse};
 use anyhow::Error;
 use fuchsia_async as fasync;
+use fuchsia_syslog::fx_log_err;
 
 #[derive(Debug)]
 pub struct RestoreAgent;
 
 impl RestoreAgent {
-  pub fn new() -> RestoreAgent {
-    RestoreAgent {}
-  }
+    pub fn new() -> RestoreAgent {
+        RestoreAgent {}
+    }
 }
 
 async fn reply(invocation: Invocation, result: Result<(), Error>) {
-  if let Some(sender) = invocation.ack_sender.lock().await.take() {
-    sender.send(result).ok();
-  }
+    if let Some(sender) = invocation.ack_sender.lock().await.take() {
+        sender.send(result).ok();
+    }
 }
 
 impl Agent for RestoreAgent {
-  fn invoke(&mut self, invocation: Invocation) -> Result<bool, Error> {
-    // Only process initialization lifespans.
-    if invocation.context.lifespan != Lifespan::Initialization {
-      return Ok(false);
-    }
-
-    fasync::spawn(async move {
-      for component in invocation.context.clone().available_components {
-        let (result_tx, _) =
-          futures::channel::oneshot::channel::<Result<Option<SettingResponse>, Error>>();
-        let switchboard = invocation.context.switchboard.clone();
-        if switchboard.lock().await.request(component, SettingRequest::Restore, result_tx).is_err()
-        {
-          reply(invocation, Err(anyhow::format_err!("could not request restore from component")))
-            .await;
-          return;
+    fn invoke(&mut self, invocation: Invocation) -> Result<bool, Error> {
+        // Only process initialization lifespans.
+        if invocation.context.lifespan != Lifespan::Initialization {
+            return Ok(false);
         }
-      }
 
-      reply(invocation, Ok(())).await;
-    });
+        fasync::spawn(async move {
+            for component in invocation.context.clone().available_components {
+                let (result_tx, result_rx) =
+                    futures::channel::oneshot::channel::<Result<Option<SettingResponse>, Error>>();
+                let switchboard = invocation.context.switchboard.clone();
+                if switchboard
+                    .lock()
+                    .await
+                    .request(component, SettingRequest::Restore, result_tx)
+                    .is_ok()
+                {
+                    if result_rx.await.is_err() {
+                        fx_log_err!("could not restore the following setting:{:?}", component);
+                    }
+                } else {
+                    reply(
+                        invocation,
+                        Err(anyhow::format_err!("could not request restore from component")),
+                    )
+                    .await;
+                    return;
+                }
+            }
 
-    return Ok(true);
-  }
+            reply(invocation, Ok(())).await;
+        });
+
+        return Ok(true);
+    }
 }

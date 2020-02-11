@@ -4,15 +4,21 @@
 
 #[cfg(test)]
 use {
+    crate::agent::restore_agent::RestoreAgent,
     crate::registry::device_storage::testing::*,
-    crate::switchboard::base::SettingType,
+    crate::registry::device_storage::DeviceStorageFactory,
+    crate::switchboard::base::{DisplayInfo, SettingType},
+    crate::tests::fakes::brightness_service::BrightnessService,
+    crate::tests::fakes::service_registry::ServiceRegistry,
     crate::EnvironmentBuilder,
     crate::Runtime,
     anyhow::format_err,
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_settings::*,
     fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::lock::Mutex,
     futures::prelude::*,
+    std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_display_test_environment";
@@ -98,6 +104,51 @@ async fn test_display() {
     let settings = display_proxy.watch().await.expect("watch completed").expect("watch successful");
 
     assert_eq!(settings.auto_brightness, Some(true));
+}
+
+/// Makes sure that a failing display stream doesn't cause a failure for a different interface.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_display_restore() {
+    // Ensure auto-brightness value is restored correctly
+    validate_restore(0.7, true).await;
+
+    // Ensure manual-brightness value is restored correctly
+    validate_restore(0.9, false).await;
+}
+
+async fn validate_restore(manual_brightness: f32, auto_brightness: bool) {
+    let service_registry = ServiceRegistry::create();
+    let brightness_service_handle = BrightnessService::create();
+    service_registry.lock().await.register_service(brightness_service_handle.clone());
+
+    let storage_factory = InMemoryStorageFactory::create_handle();
+    {
+        let store = storage_factory.lock().await.get_store::<DisplayInfo>();
+        let info = DisplayInfo {
+            manual_brightness_value: manual_brightness,
+            auto_brightness: auto_brightness,
+        };
+        assert!(store.lock().await.write(&info, false).await.is_ok());
+    }
+
+    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
+        .service(Box::new(ServiceRegistry::serve(service_registry)))
+        .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
+        .settings(&[SettingType::Display])
+        .spawn()
+        .unwrap();
+
+    assert!(env.completion_rx.await.unwrap().is_ok());
+
+    if auto_brightness {
+        let service_auto_brightness =
+            brightness_service_handle.lock().await.get_auto_brightness().lock().await.unwrap();
+        assert_eq!(service_auto_brightness, auto_brightness);
+    } else {
+        let service_manual_brightness =
+            brightness_service_handle.lock().await.get_manual_brightness().lock().await.unwrap();
+        assert_eq!(service_manual_brightness, manual_brightness);
+    }
 }
 
 /// Makes sure that a failing display stream doesn't cause a failure for a different interface.
