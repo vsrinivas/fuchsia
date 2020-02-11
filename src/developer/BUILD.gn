@@ -11,6 +11,7 @@ group("developer") {
     "feedback",
     "fuchsia-criterion",
     "kcounter_inspect",
+    "remote-control",
     "tracing",
   ]
 }
