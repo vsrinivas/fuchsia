@@ -17,6 +17,7 @@ group("tests") {
   testonly = true
   deps = [
     "bin:tests",
+    "bind/debugger:tests",
     "lib:tests",
     "tests",
     "tools:tests",

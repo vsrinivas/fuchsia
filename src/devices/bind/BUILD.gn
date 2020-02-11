@@ -3,5 +3,5 @@
 # found in the LICENSE file.
 
 group("bind") {
-  deps = [ "bind_debugger" ]
+  deps = [ "debugger" ]
 }

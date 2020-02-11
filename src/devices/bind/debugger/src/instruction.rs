@@ -5,19 +5,70 @@
 //! Bind program instructions
 
 use bitfield::bitfield;
+use fidl_fuchsia_device_manager;
+use num_derive::FromPrimitive;
+use std::fmt;
+
+pub struct DeviceProperty {
+    pub key: u32,
+    pub value: u32,
+}
+
+impl fmt::Display for DeviceProperty {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:#06x} = {:#010x}", self.key, self.value)
+    }
+}
+
+impl From<fidl_fuchsia_device_manager::DeviceProperty> for DeviceProperty {
+    fn from(property: fidl_fuchsia_device_manager::DeviceProperty) -> Self {
+        DeviceProperty { key: property.id as u32, value: property.value }
+    }
+}
 
 bitfield! {
     /// Each instruction is a pair of 32 bit unsigned integers divided as
     /// follows.
     /// lsb           msb
     /// COAABBBB VVVVVVVV  Condition Opcode paramA paramB Value
-    struct RawInstruction([u32]);
+    pub struct RawInstruction([u32]);
     u32;
-    condition, set_condition: 31, 28;
-    operation, set_operation: 27, 24;
-    parameter_a, set_parameter_a: 23, 16;
-    parameter_b, set_parameter_b: 15, 0;
-    value, set_value: 63, 32;
+    pub condition, set_condition: 31, 28;
+    pub operation, set_operation: 27, 24;
+    pub parameter_a, set_parameter_a: 23, 16;
+    pub parameter_b, set_parameter_b: 15, 0;
+    pub value, set_value: 63, 32;
+}
+
+impl fmt::Display for RawInstruction<[u32; 2]> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "c: {}, o: {}, a: {}, b: {:#06x}, v: {:#010x}",
+            self.condition(),
+            self.operation(),
+            self.parameter_a(),
+            self.parameter_b(),
+            self.value()
+        )
+    }
+}
+
+/// These should match the values in <zircon/driver/binding.h>, e.g. COND_AL = 0
+#[derive(FromPrimitive, PartialEq)]
+pub enum RawCondition {
+    Always = 0,
+    Equal,
+    NotEqual,
+}
+
+/// These should match the values in <zircon/driver/binding.h>, e.g. OP_ABORT = 0
+#[derive(FromPrimitive, PartialEq)]
+pub enum RawOp {
+    Abort = 0,
+    Match,
+    Goto,
+    Label = 5,
 }
 
 /// For all conditions (except Always), the operands to the condition
@@ -27,22 +78,14 @@ pub enum Condition {
     Always,
     Equal(u32, u32),
     NotEqual(u32, u32),
-    GreaterThan(u32, u32),
-    LessThan(u32, u32),
-    GreaterThanEqual(u32, u32),
-    LessThanEqual(u32, u32),
 }
 
 impl Condition {
     fn to_raw(self) -> (u32, u32, u32) {
         match self {
-            Condition::Always => (0, 0, 0),
-            Condition::Equal(b, v) => (1, b, v),
-            Condition::NotEqual(b, v) => (2, b, v),
-            Condition::GreaterThan(b, v) => (3, b, v),
-            Condition::LessThan(b, v) => (4, b, v),
-            Condition::GreaterThanEqual(b, v) => (5, b, v),
-            Condition::LessThanEqual(b, v) => (6, b, v),
+            Condition::Always => (RawCondition::Always as u32, 0, 0),
+            Condition::Equal(b, v) => (RawCondition::Equal as u32, b, v),
+            Condition::NotEqual(b, v) => (RawCondition::NotEqual as u32, b, v),
         }
     }
 }
@@ -60,21 +103,21 @@ impl Instruction {
         (word0, word1)
     }
 
-    fn to_raw(self) -> RawInstruction<[u32; 2]> {
+    pub fn to_raw(self) -> RawInstruction<[u32; 2]> {
         let (c, o, a, b, v) = match self {
             Instruction::Abort(condition) => {
                 let (c, b, v) = condition.to_raw();
-                (c, 0, 0, b, v)
+                (c, RawOp::Abort as u32, 0, b, v)
             }
             Instruction::Match(condition) => {
                 let (c, b, v) = condition.to_raw();
-                (c, 1, 0, b, v)
+                (c, RawOp::Match as u32, 0, b, v)
             }
             Instruction::Goto(condition, a) => {
                 let (c, b, v) = condition.to_raw();
-                (c, 2, a, b, v)
+                (c, RawOp::Goto as u32, a, b, v)
             }
-            Instruction::Label(a) => (0, 5, a, 0, 0),
+            Instruction::Label(a) => (RawCondition::Always as u32, RawOp::Label as u32, a, 0, 0),
         };
         let mut raw_instruction = RawInstruction([0, 0]);
         raw_instruction.set_condition(c);
@@ -185,11 +228,11 @@ mod tests {
 
     #[test]
     fn test_complicated_value() {
-        let instruction = Instruction::Goto(Condition::LessThan(23, 1234), 42);
+        let instruction = Instruction::Goto(Condition::Equal(23, 1234), 42);
         let raw_instruction = instruction.to_raw();
-        assert_eq!(raw_instruction.0[0], (4 << 28) | (2 << 24) | (42 << 16) | 23);
+        assert_eq!(raw_instruction.0[0], (1 << 28) | (2 << 24) | (42 << 16) | 23);
         assert_eq!(raw_instruction.0[1], 1234);
-        assert_eq!(raw_instruction.condition(), 4);
+        assert_eq!(raw_instruction.condition(), 1);
         assert_eq!(raw_instruction.operation(), 2);
         assert_eq!(raw_instruction.parameter_a(), 42);
         assert_eq!(raw_instruction.parameter_b(), 23);

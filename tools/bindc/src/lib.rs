@@ -10,5 +10,4 @@ pub mod debugger;
 mod dependency_graph;
 mod device_specification;
 mod errors;
-pub mod instruction;
 mod parser_common;

@@ -6,7 +6,7 @@
 
 #![allow(dead_code)]
 
-use crate::instruction::{Condition, Instruction};
+use bind_debugger::instruction::{Condition, Instruction};
 
 fn c_macro_invocation(macro_name: &str, arguments: &Vec<String>) -> String {
     let mut parts = vec![macro_name, "("];
@@ -21,10 +21,6 @@ fn to_macro_parts(condition: &Condition) -> Vec<String> {
         Condition::Always => vec!["AL".to_string()],
         Condition::Equal(b, v) => vec!["EQ".to_string(), b.to_string(), v.to_string()],
         Condition::NotEqual(b, v) => vec!["NE".to_string(), b.to_string(), v.to_string()],
-        Condition::GreaterThan(b, v) => vec!["GT".to_string(), b.to_string(), v.to_string()],
-        Condition::LessThan(b, v) => vec!["LT".to_string(), b.to_string(), v.to_string()],
-        Condition::GreaterThanEqual(b, v) => vec!["GE".to_string(), b.to_string(), v.to_string()],
-        Condition::LessThanEqual(b, v) => vec!["LE".to_string(), b.to_string(), v.to_string()],
     }
 }
 
@@ -71,9 +67,9 @@ mod tests {
 
     #[test]
     fn test_match_if_value() {
-        let instruction = Instruction::Match(Condition::GreaterThanEqual(18, 19));
+        let instruction = Instruction::Match(Condition::Equal(18, 19));
         let c_constant = to_c_constant(&instruction);
-        assert_eq!(c_constant, "BI_MATCH_IF(GE, 18, 19)")
+        assert_eq!(c_constant, "BI_MATCH_IF(EQ, 18, 19)")
     }
 
     #[test]
@@ -85,9 +81,9 @@ mod tests {
 
     #[test]
     fn test_goto_if_value() {
-        let instruction = Instruction::Goto(Condition::LessThan(5, 6), 55);
+        let instruction = Instruction::Goto(Condition::NotEqual(5, 6), 55);
         let c_constant = to_c_constant(&instruction);
-        assert_eq!(c_constant, "BI_GOTO_IF(LT, 5, 6, 55)")
+        assert_eq!(c_constant, "BI_GOTO_IF(NE, 5, 6, 55)")
     }
 
     #[test]

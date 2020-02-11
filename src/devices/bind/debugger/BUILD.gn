@@ -1,0 +1,71 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+group("debugger") {
+  deps = [ ":bind_debugger" ]
+}
+
+rustc_binary("bin") {
+  name = "bind_debugger"
+  edition = "2018"
+
+  with_unit_tests = true
+
+  deps = [
+    ":lib",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:structopt",
+  ]
+}
+
+rustc_library("lib") {
+  name = "bind_debugger"
+  edition = "2018"
+
+  with_unit_tests = true
+
+  deps = [
+    "//third_party/rust_crates:bitfield",
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
+    "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",
+  ]
+}
+
+test_package("bind_debugger_tests") {
+  deps = [ ":lib_test" ]
+
+  tests = [
+    {
+      name = "bind_debugger_lib_test"
+      dest = "bind_debugger_tests"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":bind_debugger_tests" ]
+}
+
+package("bind_debugger") {
+  deps = [ ":bin" ]
+
+  binary = "bind_debugger"
+
+  meta = [
+    {
+      path = rebase_path("meta/bind_debugger.cmx")
+      dest = "bind_debugger.cmx"
+    },
+  ]
+}

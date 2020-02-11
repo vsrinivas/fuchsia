@@ -4,13 +4,13 @@
 
 //! A Fuchsia Driver Bind Program compiler
 
+use bind_debugger::instruction::{Condition, Instruction};
+use bindc::{compiler, debugger};
 use std::fmt::Write;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::PathBuf;
 use structopt::StructOpt;
-
-use bindc::{compiler, debugger, instruction::Condition, instruction::Instruction};
 
 const AUTOBIND_PROPERTY: u32 = 0x0002;
 
@@ -136,7 +136,6 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bindc::instruction::Condition;
 
     #[test]
     fn zero_instructions() {
