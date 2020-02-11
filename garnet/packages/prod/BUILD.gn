@@ -136,7 +136,6 @@ group("all") {
     "//garnet/packages/prod:sbase",
     "//garnet/packages/prod:scenic",
     "//garnet/packages/prod:setui_client",
-    "//garnet/packages/prod:setui_service",
     "//garnet/packages/prod:sysmem_connector",
     "//garnet/packages/prod:tee_manager",
     "//garnet/packages/prod:telephony",
@@ -203,11 +202,6 @@ group("insntrace") {
     "//garnet/bin/insntrace",
     "//garnet/bin/insntrace:host_insntrace_print",
   ]
-}
-
-group("setui_service") {
-  testonly = true
-  public_deps = [ "//garnet/bin/setui:setui_service" ]
 }
 
 group("guest_runner") {
