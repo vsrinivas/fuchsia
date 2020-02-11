@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     async_trait::async_trait,
     fidl_fidl_examples_routing_echo as fecho,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
@@ -34,7 +35,7 @@ impl Interposer for EchoInterposer {
         self: Arc<Self>,
         mut from_client: fecho::EchoRequestStream,
         to_service: fecho::EchoProxy,
-    ) {
+    ) -> Result<(), Error> {
         // Start listening to requests from client
         while let Some(Ok(fecho::EchoRequest::EchoString { value: Some(input), responder })) =
             from_client.next().await
@@ -45,16 +46,17 @@ impl Interposer for EchoInterposer {
             // Forward the request to the service and get a response
             let out = to_service
                 .echo_string(Some(&modified_input))
-                .await
-                .expect("echo_string failed")
+                .await?
                 .expect("echo_string got empty result");
 
             // Copy the response from the service and send it to the test
             let mut tx = self.tx.lock().await;
-            tx.send(out.clone()).await.expect("local tx/rx channel was closed");
+            tx.send(out.clone()).await?;
 
             // Respond to the client with the response from the service
-            responder.send(Some(out.as_str())).expect("failed to send echo response");
+            responder.send(Some(out.as_str()))?;
         }
+
+        Ok(())
     }
 }

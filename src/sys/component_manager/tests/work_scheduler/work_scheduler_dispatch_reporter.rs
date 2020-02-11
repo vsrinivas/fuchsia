@@ -96,7 +96,7 @@ impl Injector for WorkSchedulerDispatchReporter {
     async fn serve(
         self: Arc<Self>,
         mut request_stream: fws::WorkSchedulerDispatchReporterRequestStream,
-    ) {
+    ) -> Result<(), anyhow::Error> {
         while let Some(Ok(request)) = request_stream.next().await {
             match request {
                 fws::WorkSchedulerDispatchReporterRequest::OnDoWorkCalled {
@@ -108,11 +108,11 @@ impl Injector for WorkSchedulerDispatchReporter {
                     // the integration test if asserting that the report has arrived is the last
                     // step before the integration test completes.
 
-                    // TODO(markdittmer): Do something with on_do_work_called errors.
-                    responder.send().unwrap();
-                    self.dispatched_tx.clone().send(DispatchedEvent::new(work_id)).await.unwrap();
+                    responder.send()?;
+                    self.dispatched_tx.clone().send(DispatchedEvent::new(work_id)).await?;
                 }
             }
         }
+        Ok(())
     }
 }

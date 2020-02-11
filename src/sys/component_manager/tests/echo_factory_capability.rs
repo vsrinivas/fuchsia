@@ -4,6 +4,7 @@
 
 use {
     crate::{echo_capability::EchoCapability, events::Injector},
+    anyhow::Error,
     async_trait::async_trait,
     fidl_fuchsia_test_echofactory as fechofactory, fuchsia_async as fasync,
     futures::StreamExt,
@@ -21,7 +22,7 @@ impl EchoFactoryCapability {
 
     pub fn serve_async(self: Arc<Self>, request_stream: fechofactory::EchoFactoryRequestStream) {
         fasync::spawn(async move {
-            self.serve(request_stream).await;
+            self.serve(request_stream).await.expect("EchoFactoryCapability injector failed");
         });
     }
 }
@@ -30,7 +31,10 @@ impl EchoFactoryCapability {
 impl Injector for EchoFactoryCapability {
     type Marker = fechofactory::EchoFactoryMarker;
 
-    async fn serve(self: Arc<Self>, mut request_stream: fechofactory::EchoFactoryRequestStream) {
+    async fn serve(
+        self: Arc<Self>,
+        mut request_stream: fechofactory::EchoFactoryRequestStream,
+    ) -> Result<(), Error> {
         while let Some(Ok(fechofactory::EchoFactoryRequest::RequestEchoProtocol {
             server_end,
             responder,
@@ -39,7 +43,7 @@ impl Injector for EchoFactoryCapability {
             let (capability, mut echo_rx) = EchoCapability::new();
             fasync::spawn(async move {
                 let stream = server_end.into_stream().expect("could not convert into stream");
-                capability.serve(stream).await;
+                capability.serve(stream).await.expect("EchoCapability injector failed");
             });
             fasync::spawn(async move {
                 while let Some(echo) = echo_rx.next().await {
@@ -47,7 +51,8 @@ impl Injector for EchoFactoryCapability {
                 }
             });
 
-            responder.send().expect("failed to send echo factory response");
+            responder.send()?;
         }
+        Ok(())
     }
 }

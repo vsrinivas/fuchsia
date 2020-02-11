@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     async_trait::async_trait,
     fidl_fuchsia_test_hub as fhub,
     futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
@@ -79,7 +80,10 @@ impl HubReportCapability {
 impl Injector for HubReportCapability {
     type Marker = fhub::HubReportMarker;
 
-    async fn serve(self: Arc<Self>, mut request_stream: fhub::HubReportRequestStream) {
+    async fn serve(
+        self: Arc<Self>,
+        mut request_stream: fhub::HubReportRequestStream,
+    ) -> Result<(), Error> {
         while let Some(Ok(request)) = request_stream.next().await {
             let (path, event) = match request {
                 fhub::HubReportRequest::ListDirectory { path, entries, responder } => {
@@ -96,7 +100,7 @@ impl Injector for HubReportCapability {
                 let channel = get_or_insert_channel(&mut observers, path.clone());
                 channel.sender.take().unwrap()
             };
-            sender.send(event).await.expect("Unable to send HubEvent.");
+            sender.send(event).await?;
             // Transfer ownership back to the observers HashMap after the listing has
             // been sent.
             let mut observers = self.observers.lock().await;
@@ -105,10 +109,8 @@ impl Injector for HubReportCapability {
         }
 
         // Notify HubTestHook that the channel has been closed
-        self.channel_close_tx
-            .clone()
-            .send(())
-            .await
-            .expect("component stop channel has been closed");
+        self.channel_close_tx.clone().send(()).await?;
+
+        Ok(())
     }
 }

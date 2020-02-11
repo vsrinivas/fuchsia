@@ -16,6 +16,7 @@ rustc_library("hub_report_capability") {
     "//src/sys/component_manager/tests:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//src/sys/component_manager/tests/fidl:hub-rustc",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
   ]

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::Error,
     async_trait::async_trait,
     echo_interposer::EchoInterposer,
     fidl_fuchsia_test_echofactory as fechofactory, fuchsia_async as fasync,
@@ -36,7 +37,7 @@ impl Interposer for EchoFactoryInterposer {
         self: Arc<Self>,
         mut from_client: fechofactory::EchoFactoryRequestStream,
         to_service: fechofactory::EchoFactoryProxy,
-    ) {
+    ) -> Result<(), Error> {
         // Start listening to requests from client
         while let Some(Ok(fechofactory::EchoFactoryRequest::RequestEchoProtocol {
             server_end,
@@ -47,18 +48,17 @@ impl Interposer for EchoFactoryInterposer {
 
             // Create the Interposer <---> Server channel
             let (proxy_to_service, service_server_end) =
-                fidl::endpoints::create_proxy::<<EchoInterposer as Interposer>::Marker>()
-                    .expect("unable to create endpoints");
+                fidl::endpoints::create_proxy::<<EchoInterposer as Interposer>::Marker>()?;
 
             // Forward the request to the service and get a response
-            to_service
-                .request_echo_protocol(service_server_end)
-                .await
-                .expect("request_echo_protocol failed");
+            to_service.request_echo_protocol(service_server_end).await?;
 
             fasync::spawn(async move {
                 let stream = server_end.into_stream().expect("could not convert into stream");
-                interposer.interpose(stream, proxy_to_service).await;
+                interposer
+                    .interpose(stream, proxy_to_service)
+                    .await
+                    .expect("failed to interpose echo protocol");
             });
 
             let mut tx = {
@@ -71,7 +71,8 @@ impl Interposer for EchoFactoryInterposer {
                 }
             });
 
-            responder.send().expect("failed to send echo factory response");
+            responder.send()?;
         }
+        Ok(())
     }
 }

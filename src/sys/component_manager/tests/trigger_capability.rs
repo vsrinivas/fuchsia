@@ -7,7 +7,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     fidl_fidl_test_components as ftest, fuchsia_async as fasync,
-    futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt, TryStreamExt},
+    futures::{channel::*, lock::Mutex, sink::SinkExt, StreamExt},
     std::sync::Arc,
 };
 
@@ -76,7 +76,7 @@ impl TriggerCapability {
 
     pub fn serve_async(self: Arc<Self>, request_stream: ftest::TriggerRequestStream) {
         fasync::spawn(async move {
-            self.serve(request_stream).await;
+            self.serve(request_stream).await.expect("TriggerCapability injector failed");
         });
     }
 }
@@ -85,14 +85,15 @@ impl TriggerCapability {
 impl Injector for TriggerCapability {
     type Marker = ftest::TriggerMarker;
 
-    async fn serve(self: Arc<Self>, mut request_stream: ftest::TriggerRequestStream) {
-        while let Some(event) =
-            request_stream.try_next().await.expect("failed to serve trigger service")
-        {
-            let ftest::TriggerRequest::Run { responder } = event;
-            let trigger = self.tx.send().await.expect("failed to send trigger to test");
-            trigger.await.expect("Failed to receive a response");
-            responder.send().expect("failed to send trigger response");
+    async fn serve(
+        self: Arc<Self>,
+        mut request_stream: ftest::TriggerRequestStream,
+    ) -> Result<(), Error> {
+        while let Some(Ok(ftest::TriggerRequest::Run { responder })) = request_stream.next().await {
+            let trigger = self.tx.send().await?;
+            trigger.await?;
+            responder.send()?;
         }
+        Ok(())
     }
 }

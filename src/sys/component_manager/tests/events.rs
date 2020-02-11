@@ -291,7 +291,7 @@ pub trait Injector: Send + Sync {
     async fn serve(
         self: Arc<Self>,
         mut request_stream: <<Self as Injector>::Marker as ServiceMarker>::RequestStream,
-    );
+    ) -> Result<(), Error>;
 
     fn capability_path(&self) -> String {
         format!("/svc/{}", Self::Marker::NAME)
@@ -314,7 +314,7 @@ pub trait Interposer: Send + Sync {
         self: Arc<Self>,
         mut request_stream: <<Self as Interposer>::Marker as ServiceMarker>::RequestStream,
         to_service: <<Self as Interposer>::Marker as ServiceMarker>::Proxy,
-    );
+    ) -> Result<(), Error>;
 
     fn capability_path(&self) -> String {
         format!("/svc/{}", Self::Marker::NAME)
@@ -359,7 +359,7 @@ pub trait RoutingProtocol {
                     .into_stream()
                     .expect("could not convert channel into stream");
 
-                injector.serve(stream).await;
+                injector.serve(stream).await.expect("Injection failed");
             } else {
                 panic!(
                     "Failed to inject capability! CapabilityProvider was not able to invoke Open"
@@ -404,7 +404,7 @@ pub trait RoutingProtocol {
                     .expect("could not convert channel into stream");
 
                 // Start interposing!
-                interposer.interpose(stream, proxy).await;
+                interposer.interpose(stream, proxy).await.expect("Interposition failed");
             } else {
                 panic!("Failed to interpose! CapabilityProvider was not able to invoke Open");
             }

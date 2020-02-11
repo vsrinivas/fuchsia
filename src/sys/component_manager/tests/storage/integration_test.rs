@@ -136,10 +136,14 @@ impl TriggerCapability {
 impl Injector for TriggerCapability {
     type Marker = ftest::TriggerMarker;
 
-    async fn serve(self: Arc<Self>, mut request_stream: ftest::TriggerRequestStream) {
+    async fn serve(
+        self: Arc<Self>,
+        mut request_stream: ftest::TriggerRequestStream,
+    ) -> Result<(), Error> {
         while let Some(Ok(ftest::TriggerRequest::Run { responder })) = request_stream.next().await {
-            responder.send().unwrap();
+            responder.send()?;
         }
+        Ok(())
     }
 }
 

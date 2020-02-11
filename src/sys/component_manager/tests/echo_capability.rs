@@ -80,15 +80,19 @@ impl EchoCapability {
 impl Injector for EchoCapability {
     type Marker = fecho::EchoMarker;
 
-    async fn serve(self: Arc<Self>, mut request_stream: fecho::EchoRequestStream) {
+    async fn serve(
+        self: Arc<Self>,
+        mut request_stream: fecho::EchoRequestStream,
+    ) -> Result<(), Error> {
         // Start listening to requests from the client.
         while let Some(Ok(fecho::EchoRequest::EchoString { value: Some(input), responder })) =
             request_stream.next().await
         {
-            let echo = self.tx.send(input.clone()).await.expect("failed to send echo to test");
-            echo.await.expect("Failed to receive a response");
+            let echo = self.tx.send(input.clone()).await?;
+            echo.await?;
             // Respond to the client with the echo string.
-            responder.send(Some(&input)).expect("failed to send echo response");
+            responder.send(Some(&input))?;
         }
+        Ok(())
     }
 }
