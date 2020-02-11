@@ -8,10 +8,10 @@ use fidl_fuchsia_ui_gfx::{
     CreateResourceCmd, DetachCmd, DetachLightCmd, DetachLightsCmd, Quaternion, QuaternionValue,
     ReleaseResourceCmd, RemoveAllLayersCmd, RemoveLayerCmd, ResourceArgs, SceneAddAmbientLightCmd,
     SceneAddDirectionalLightCmd, SceneAddPointLightCmd, SetAnchorCmd, SetCameraCmd, SetClipCmd,
-    SetColorCmd, SetEventMaskCmd, SetLayerStackCmd, SetLightColorCmd, SetLightDirectionCmd,
-    SetMaterialCmd, SetRendererCmd, SetRotationCmd, SetScaleCmd, SetShapeCmd, SetSizeCmd,
-    SetTextureCmd, SetTranslationCmd, SetViewPropertiesCmd, Vec2, Vec3, Vector2Value, Vector3Value,
-    ViewProperties,
+    SetColorCmd, SetDisplayRotationCmdHack, SetEventMaskCmd, SetLayerStackCmd, SetLightColorCmd,
+    SetLightDirectionCmd, SetMaterialCmd, SetRendererCmd, SetRotationCmd, SetScaleCmd, SetShapeCmd,
+    SetSizeCmd, SetTextureCmd, SetTranslationCmd, SetViewPropertiesCmd, Vec2, Vec3, Vector2Value,
+    Vector3Value, ViewProperties,
 };
 use fidl_fuchsia_ui_scenic::Command;
 
@@ -117,6 +117,12 @@ pub fn remove_layer(layer_stack_id: u32, layer_id: u32) -> Command {
 pub fn remove_all_layers(layer_stack_id: u32) -> Command {
     let cmd = RemoveAllLayersCmd { layer_stack_id };
     Command::Gfx(GfxCommand::RemoveAllLayers(cmd))
+}
+
+// Display rotation can only be one of 0, 90, 180, 270
+pub fn set_display_rotation(compositor_id: u32, rotation_degrees: u32) -> Command {
+    let cmd = SetDisplayRotationCmdHack { compositor_id, rotation_degrees };
+    Command::Gfx(GfxCommand::SetDisplayRotation(cmd))
 }
 
 pub fn set_layer_stack(compositor_id: u32, layer_stack_id: u32) -> Command {

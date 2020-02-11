@@ -534,6 +534,14 @@ pub struct DisplayCompositor {
     resource: Resource,
 }
 
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum DisplayRotation {
+    None = 0,
+    By90Degrees = 90,
+    By180Degrees = 180,
+    By270Degrees = 270,
+}
+
 impl DisplayCompositor {
     pub fn new(session: SessionPtr) -> DisplayCompositor {
         let args = DisplayCompositorArgs { dummy: 0 };
@@ -544,6 +552,10 @@ impl DisplayCompositor {
 
     pub fn id(&self) -> u32 {
         self.resource.id
+    }
+
+    pub fn set_display_rotation(&self, rotation: DisplayRotation) {
+        self.resource.enqueue(cmd::set_display_rotation(self.id(), rotation as u32))
     }
 
     pub fn set_layer_stack(&self, layer_stack: &LayerStack) {
@@ -574,9 +586,7 @@ impl View {
     }
 }
 
-pub struct ViewHolder {
-    resource: Resource,
-}
+pub struct ViewHolder(Node);
 
 impl ViewHolder {
     pub fn new(
@@ -585,15 +595,19 @@ impl ViewHolder {
         debug_name: Option<String>,
     ) -> ViewHolder {
         let args = ViewHolderArgs { token: token, debug_name: debug_name };
-        ViewHolder { resource: Resource::new(session, ResourceArgs::ViewHolder(args)) }
-    }
-
-    pub fn id(&self) -> u32 {
-        self.resource.id
+        ViewHolder(Node::new(Resource::new(session, ResourceArgs::ViewHolder(args))))
     }
 
     pub fn set_view_properties(&self, view_properties: ViewProperties) {
-        self.resource.enqueue(cmd::set_view_properties(self.id(), view_properties))
+        self.enqueue(cmd::set_view_properties(self.id(), view_properties))
+    }
+}
+
+impl Deref for ViewHolder {
+    type Target = Node;
+
+    fn deref(&self) -> &Node {
+        &self.0
     }
 }
 
@@ -888,6 +902,37 @@ mod tests {
         }
     }
 
+    /// Print a more detailed message about the failure, and return false.
+    ///
+    /// Example:
+    ///   fidl_fuchsia_ui_gfx::Command::$command_type(command_struct) => {
+    ///       command_struct.$member_name == $expected_value
+    ///           || fail!("{}.{} = '{}' (expected: '{}')",
+    ///                    stringify!($command_type), stringify!($member_name),
+    ///                    command_struct.$member_name, $expected_value)
+    ///   }
+    ///   unexpected_type => {
+    ///       fail!("{} type is '{:?}' (expected '{}')",
+    ///               stringify!($command), unexpected_type, stringify!($command_type))
+    ///   }
+    ///
+    /// Note:
+    ///   * Do not end the macro call with a semicolon. The result is a bool "false".
+    ///   * Note the "||" (or) expression in the first example returns true if the test passes,
+    ///     and othewise executes the fail!() macro and returns false.
+    macro_rules! fail {
+        (
+            $format_string:literal,
+            $($args:expr),*
+        ) => {
+            {
+                println!(concat!("FAILED({}:{}:{}): ", $format_string),
+                         file!(), line!(), column!() $(,$args)*);
+                false
+            }
+        };
+    }
+
     /// Tests that the appropriate resource type is created.
     macro_rules! test_resource_creation {
         (
@@ -926,19 +971,72 @@ mod tests {
         };
     }
 
-    /// Tests that the incoming command it the type we expect.
-    macro_rules! test_command_type {
+    /// Asserts that the incoming command is the type we expect.
+    macro_rules! assert_command_type {
         (
             command: $command:expr,
             command_type: $command_type:ident
         ) => {
-            match $command {
-                fidl_fuchsia_ui_scenic::Command::Gfx(gfx_command) => match gfx_command {
-                    fidl_fuchsia_ui_gfx::Command::$command_type(_) => true,
-                    _ => false,
-                },
-                _ => false,
-            }
+            assert!({
+                match $command {
+                    fidl_fuchsia_ui_scenic::Command::Gfx(gfx_command) => match gfx_command {
+                        fidl_fuchsia_ui_gfx::Command::$command_type(_) => true,
+                        unexpected_type => fail!(
+                            "{} type is '{:?}' (expected '{}')",
+                            stringify!($command),
+                            unexpected_type,
+                            stringify!($command_type)
+                        ),
+                    },
+                    unexpected_command => fail!(
+                        "{} = '{:?}' (expected fidl_fuchsia_ui_gfx::Command::Gfx)",
+                        stringify!($command),
+                        unexpected_command
+                    ),
+                }
+            })
+        };
+    }
+
+    /// Asserts that the incoming command is the type we expect.
+    ///
+    /// Example:
+    ///   assert_command_value!(command: &commands[0], command_type: SetDisplayRotation,
+    ///                               rotation_degrees, 270.0));
+    macro_rules! assert_command_value {
+        (
+            command: $command:expr,
+            command_type: $command_type:ident,
+            $member_name:ident,
+            $expected_value:expr
+        ) => {
+            assert!({
+                match $command {
+                    fidl_fuchsia_ui_scenic::Command::Gfx(gfx_command) => match gfx_command {
+                        fidl_fuchsia_ui_gfx::Command::$command_type(command_struct) => {
+                            command_struct.$member_name == $expected_value
+                                || fail!(
+                                    "{}.{} = '{:?}' (expected: '{:?}')",
+                                    stringify!($command_type),
+                                    stringify!($member_name),
+                                    command_struct.$member_name,
+                                    $expected_value
+                                )
+                        }
+                        unexpected_type => fail!(
+                            "{} type is '{:?}' (expected '{}')",
+                            stringify!($command),
+                            unexpected_type,
+                            stringify!($command_type)
+                        ),
+                    },
+                    unexpected_command => fail!(
+                        "{} = '{:?}' (expected fidl_fuchsia_ui_gfx::Command::Gfx)",
+                        stringify!($command),
+                        unexpected_command
+                    ),
+                }
+            })
         };
     }
 
@@ -1090,9 +1188,9 @@ mod tests {
             }
         }
 
-        assert!(test_command_type!(command: &commands[0], command_type: CreateResource));
-        assert!(test_command_type!(command: &commands[1], command_type: CreateResource));
-        assert!(test_command_type!(command: &commands[2], command_type: AddChild));
+        assert_command_type!(command: &commands[0], command_type: CreateResource);
+        assert_command_type!(command: &commands[1], command_type: CreateResource);
+        assert_command_type!(command: &commands[2], command_type: AddChild);
     }
 
     /// Verifies that removing a child from a node creates the correct command.
@@ -1124,9 +1222,114 @@ mod tests {
             }
         }
 
-        assert!(test_command_type!(command: &commands[0], command_type: CreateResource));
-        assert!(test_command_type!(command: &commands[1], command_type: CreateResource));
-        assert!(test_command_type!(command: &commands[2], command_type: AddChild));
-        assert!(test_command_type!(command: &commands[3], command_type: Detach));
+        assert_command_type!(command: &commands[0], command_type: CreateResource);
+        assert_command_type!(command: &commands[1], command_type: CreateResource);
+        assert_command_type!(command: &commands[2], command_type: AddChild);
+        assert_command_type!(command: &commands[3], command_type: Detach);
+    }
+
+    /// Verifies that setting display rotation by enum creates a command with the correct u32 value
+    #[fasync::run_singlethreaded(test)]
+    async fn test_set_display_rotation() {
+        let (session_proxy, mut session_server) =
+            create_proxy_and_stream::<fidl_fuchsia_ui_scenic::SessionMarker>()
+                .expect("Failed to create Session FIDL.");
+
+        let session = Session::new(session_proxy);
+        let _ = session.lock();
+        let compositor = DisplayCompositor::new(session.clone());
+        compositor.set_display_rotation(DisplayRotation::By270Degrees);
+        compositor.set_display_rotation(DisplayRotation::By180Degrees);
+        compositor.set_display_rotation(DisplayRotation::By90Degrees);
+        compositor.set_display_rotation(DisplayRotation::None);
+
+        fasync::spawn(async move {
+            let fut = session.lock().present(0);
+            let _ = fut.await;
+        });
+
+        let mut commands = vec![];
+
+        if let Some(session_request) = session_server.try_next().await.unwrap() {
+            if let fidl_fuchsia_ui_scenic::SessionRequest::Enqueue { mut cmds, .. } =
+                session_request
+            {
+                commands.append(&mut cmds);
+            }
+        }
+
+        assert_command_type!(command: &commands[0], command_type: CreateResource);
+        assert_command_value!(command: &commands[1], command_type: SetDisplayRotation,
+                              rotation_degrees, 270);
+        assert_command_value!(command: &commands[2], command_type: SetDisplayRotation,
+                              rotation_degrees, 180);
+        assert_command_value!(command: &commands[3], command_type: SetDisplayRotation,
+                              rotation_degrees, 90);
+        assert_command_value!(command: &commands[4], command_type: SetDisplayRotation,
+                              rotation_degrees, 0);
+    }
+
+    /// Verifies that adding a child to a node creates the correct command
+    #[fasync::run_singlethreaded(test)]
+    async fn test_view_holder() {
+        let (session_proxy, mut session_server) =
+            create_proxy_and_stream::<fidl_fuchsia_ui_scenic::SessionMarker>()
+                .expect("Failed to create Session FIDL.");
+
+        let session = Session::new(session_proxy);
+        let _ = session.lock();
+
+        let ViewTokenPair { view_token: _, view_holder_token } = ViewTokenPair::new().unwrap();
+        let view_holder = ViewHolder::new(session.clone(), view_holder_token, None);
+
+        let view_properties = fidl_fuchsia_ui_gfx::ViewProperties {
+            bounding_box: fidl_fuchsia_ui_gfx::BoundingBox {
+                min: fidl_fuchsia_ui_gfx::Vec3 { x: 100.0, y: 200.0, z: 300.0 },
+                max: fidl_fuchsia_ui_gfx::Vec3 { x: 400.0, y: 500.0, z: 600.0 },
+            },
+            downward_input: false,
+            focus_change: true,
+            inset_from_min: fidl_fuchsia_ui_gfx::Vec3 { x: 10.0, y: 20.0, z: 30.0 },
+            inset_from_max: fidl_fuchsia_ui_gfx::Vec3 { x: 40.0, y: 50.0, z: 60.0 },
+        };
+        view_holder.set_view_properties(view_properties);
+
+        fasync::spawn(async move {
+            let fut = session.lock().present(0);
+            let _ = fut.await;
+        });
+
+        let mut commands = vec![];
+
+        if let Some(session_request) = session_server.try_next().await.unwrap() {
+            if let fidl_fuchsia_ui_scenic::SessionRequest::Enqueue { mut cmds, .. } =
+                session_request
+            {
+                commands.append(&mut cmds);
+            }
+        }
+
+        assert_command_type!(command: &commands[0], command_type: CreateResource);
+        assert_command_value!(command: &commands[1], command_type: SetViewProperties,
+                              view_holder_id, view_holder.id());
+
+        if let fidl_fuchsia_ui_scenic::Command::Gfx(gfx_command) = &commands[1] {
+            if let fidl_fuchsia_ui_gfx::Command::SetViewProperties(command_struct) = gfx_command {
+                assert_eq!(command_struct.properties.bounding_box.min.x, 100.0);
+                assert_eq!(command_struct.properties.bounding_box.min.y, 200.0);
+                assert_eq!(command_struct.properties.bounding_box.min.z, 300.0);
+                assert_eq!(command_struct.properties.bounding_box.max.x, 400.0);
+                assert_eq!(command_struct.properties.bounding_box.max.y, 500.0);
+                assert_eq!(command_struct.properties.bounding_box.max.z, 600.0);
+                assert_eq!(command_struct.properties.downward_input, false);
+                assert_eq!(command_struct.properties.focus_change, true);
+                assert_eq!(command_struct.properties.inset_from_min.x, 10.0);
+                assert_eq!(command_struct.properties.inset_from_min.y, 20.0);
+                assert_eq!(command_struct.properties.inset_from_min.z, 30.0);
+                assert_eq!(command_struct.properties.inset_from_max.x, 40.0);
+                assert_eq!(command_struct.properties.inset_from_max.y, 50.0);
+                assert_eq!(command_struct.properties.inset_from_max.z, 60.0);
+            }
+        }
     }
 }
