@@ -70,7 +70,8 @@ void PRNG::AddEntropy(const void* data, size_t size) {
     memcpy(key_, key, sizeof(key_));
   }
   // Increment how much entropy has been added, and signal if we have enough.
-  if (is_thread_safe() && accumulated_.fetch_add(size) + size >= kMinEntropy) {
+  size_t total_entropy = accumulated_.fetch_add(size) + size;
+  if (is_thread_safe() && total_entropy >= kMinEntropy) {
     event_signal(&ready_, true /* reschedule */);
   }
 }
@@ -135,7 +136,7 @@ uint64_t PRNG::RandInt(uint64_t exclusive_upper_bound) {
 // |ready_| and |accumulated_| initialized.
 void PRNG::BecomeThreadSafe() {
   ASSERT(!event_initialized(&ready_));
-  event_init(&ready_, accumulated_.load() < kMinEntropy, 0);
+  event_init(&ready_, accumulated_.load() >= kMinEntropy, 0);
 }
 
 bool PRNG::is_thread_safe() const {

@@ -8,6 +8,9 @@
 #include <lib/unittest/unittest.h>
 #include <stdint.h>
 
+#include <kernel/thread.h>
+#include <kernel/thread_lock.h>
+
 namespace crypto {
 
 namespace {
@@ -143,6 +146,65 @@ bool prng_output() {
   END_TEST;
 }
 
+static int cprng_drawer_thread(void* prng) {
+  uint8_t buf[16] = {0};
+  static_cast<PRNG*>(prng)->Draw(buf, sizeof(buf));
+  return 0;
+}
+
+// If not enough entropy has been added to the CPRNG, it should block.
+bool prng_blocks() {
+  BEGIN_TEST;
+  uint8_t fake_entropy[PRNG::kMinEntropy] = {0};
+
+  PRNG prng(nullptr, 0, PRNG::NonThreadSafeTag());
+  prng.BecomeThreadSafe();
+
+  thread_t* drawer =
+      thread_create("cprng drawer thread", &cprng_drawer_thread, &prng, DEFAULT_PRIORITY);
+  thread_resume(drawer);
+
+  int64_t wait_duration = ZX_USEC(1);
+  while (true) {
+    {
+      // The drawer thread should be blocked waiting for the prng to have enough entropy.
+      Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+      if (drawer->state == THREAD_BLOCKED) {
+        break;
+      }
+    }
+    thread_sleep_relative(wait_duration);
+    wait_duration *= 2;
+  }
+
+  prng.AddEntropy(fake_entropy, sizeof(fake_entropy));
+  // After this the thread has to eventually finish.
+
+  int thread_retcode = 0;
+  zx_status_t res = thread_join(drawer, &thread_retcode, ZX_TIME_INFINITE);
+  EXPECT_EQ(ZX_OK, res);
+  END_TEST;
+}
+
+// Adding entropy before becoming thread safe should count towards the cprng
+// unblocking.
+bool prng_doesnt_block_if_entropy_is_added_early() {
+  BEGIN_TEST;
+  uint8_t fake_entropy[PRNG::kMinEntropy] = {0};
+
+  PRNG prng(nullptr, 0, PRNG::NonThreadSafeTag());
+  prng.AddEntropy(fake_entropy, sizeof(fake_entropy));
+  prng.BecomeThreadSafe();
+  thread_t* drawer =
+      thread_create("cprng drawer thread", &cprng_drawer_thread, &prng, DEFAULT_PRIORITY);
+
+  thread_resume(drawer);
+  int thread_retcode = 0;
+  zx_status_t res = thread_join(drawer, &thread_retcode, ZX_TIME_INFINITE);
+  EXPECT_EQ(ZX_OK, res);
+  END_TEST;
+}
+
 bool prng_randint() {
   BEGIN_TEST;
 
@@ -181,6 +243,8 @@ UNITTEST("NonThreadSafeMode", non_thread_safe_prng_same_behavior)
 UNITTEST("Reseed", reseed)
 UNITTEST("Test Output", prng_output)
 UNITTEST("Test RandInt", prng_randint)
+UNITTEST("Block if not enough entropy", prng_blocks)
+UNITTEST("Dont block if entropy added in early boot", prng_doesnt_block_if_entropy_is_added_early)
 UNITTEST_END_TESTCASE(prng_tests, "prng", "Test pseudo-random number generator implementation.")
 
 }  // namespace crypto
