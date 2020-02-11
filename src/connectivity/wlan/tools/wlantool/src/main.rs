@@ -462,8 +462,19 @@ async fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy) -> Re
     Ok(())
 }
 
+fn print_scan_line(
+    bssid: impl fmt::Display,
+    dbm: impl fmt::Display,
+    chan: impl fmt::Display,
+    protection: impl fmt::Display,
+    compat: impl fmt::Display,
+    ssid: impl fmt::Display,
+) {
+    println!("{:17} {:>4} {:>6} {:12} {:10} {}", bssid, dbm, chan, protection, compat, ssid)
+}
+
 fn print_scan_header() {
-    println!("BSSID              dBm     Chan Protected SSID");
+    print_scan_line("BSSID", "dBm", "Chan", "Protection", "Compatible", "SSID");
 }
 
 fn is_ascii(v: &Vec<u8>) -> bool {
@@ -497,13 +508,24 @@ fn print_scan_result(bss: &fidl_sme::BssInfo) {
         ssid_str = format!("\"{}\"", String::from_utf8_lossy(&bss.ssid));
     }
 
-    println!(
-        "{} {:4} {:8} {:9} {}",
+    print_scan_line(
         MacAddr(bss.bssid),
         bss.rx_dbm,
         bss.channel,
-        if bss.protection != fidl_sme::Protection::Open { "Y" } else { "N" },
-        ssid_str
+        match bss.protection {
+            fidl_sme::Protection::Unknown => "Unknown",
+            fidl_sme::Protection::Open => "Open",
+            fidl_sme::Protection::Wep => "WEP",
+            fidl_sme::Protection::Wpa1 => "WPA1",
+            fidl_sme::Protection::Wpa1Wpa2Personal => "WPA1/2 PSK",
+            fidl_sme::Protection::Wpa2Personal => "WPA2 PSK",
+            fidl_sme::Protection::Wpa2Wpa3Personal => "WPA2/3 PSK",
+            fidl_sme::Protection::Wpa3Personal => "WPA3 PSK",
+            fidl_sme::Protection::Wpa2Enterprise => "WPA2 802.1X",
+            fidl_sme::Protection::Wpa3Enterprise => "WPA3 802.1X",
+        },
+        if bss.compatible { "Y" } else { "N" },
+        ssid_str,
     );
 }
 
