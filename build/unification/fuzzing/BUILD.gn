@@ -16,7 +16,6 @@ fuzzer_names = [
   "kernel-cmdline",
   "lz4",
   "lz4-decompress",
-  "tftp",
   "zbi-bootfs",
   "zstd",
   "zstd-seekable",

@@ -2,7 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fuzzer.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+import("//build/fuzzing/fuzzer.gni")
 
 group("test") {
   testonly = true
@@ -12,17 +25,31 @@ group("test") {
   ]
 }
 
-zx_test("tftp-test") {
+test("tftp-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   output_name = "tftp-test"
   sources = [
     "tftp-file-test.cc",
     "tftp-test.cc",
   ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/tftp",
-    "$zx/system/ulib/unittest",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/tftp",
+    "//zircon/public/lib/unittest",
   ]
   include_dirs = [ ".." ]
 }
@@ -30,9 +57,13 @@ zx_test("tftp-test") {
 fuzzer("tftp-fuzzer") {
   sources = [ "tftp-fuzztest.cc" ]
   deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/tftp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/tftp",
   ]
   include_dirs = [ ".." ]
+}
+
+migrated_manifest("tftp-test-manifest") {
+  deps = [ ":tftp-test" ]
 }

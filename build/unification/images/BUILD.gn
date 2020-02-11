@@ -306,13 +306,10 @@ aggregate_manifest("legacy-aux") {
     ":bin.sh",
 #------------------
 #------------------
-    ":bin.tftp-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.tftp-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.tftp-fuzzer.ubsan",
 #------------------
 #------------------
     ":bin.zbi-bootfs-fuzzer.asan",
@@ -661,7 +658,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.stdio-test",
 #------------------
 #------------------
-    ":test.sys.tftp-test",
 #------------------
 #------------------
     ":test.sys.timers-test",
@@ -927,13 +923,10 @@ aggregate_manifest("legacy-tests") {
     ":bin.null-namespace-child",
 #------------------
 #------------------
-    ":bin.tftp-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.tftp-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.tftp-fuzzer.ubsan",
 #------------------
 #------------------
     ":bin.zbi-bootfs-fuzzer.asan",
@@ -1282,7 +1275,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.stdio-test",
 #------------------
 #------------------
-    ":test.sys.tftp-test",
 #------------------
 #------------------
     ":test.sys.timers-test",
@@ -3223,7 +3215,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/test-exceptions/test:test-exceptions-manifest",
     "//zircon/system/ulib/test-utils/test:test-utils-manifest",
 #------------------
-    #":test.sys.tftp-test",
+    "//zircon/system/ulib/tftp/test:tftp-test-manifest",
 #------------------
     "//zircon/system/uapp/thermal-cli:thermal-cli-test-manifest",
     "//zircon/system/utest/thread-initial-state:thread-initial-state-manifest",
@@ -3926,7 +3918,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/test-exceptions/test:test-exceptions-manifest",
     "//zircon/system/ulib/test-utils/test:test-utils-manifest",
 #------------------
-    #":test.sys.tftp-test",
+    "//zircon/system/ulib/tftp/test:tftp-test-manifest",
 #------------------
     "//zircon/system/uapp/thermal-cli:thermal-cli-test-manifest",
     "//zircon/system/utest/thread-initial-state:thread-initial-state-manifest",

@@ -71,6 +71,7 @@ _migrated_fuzzers = [
   "//zircon/system/ulib/gfx/test:gfx-fuzzer",
   "//zircon/system/ulib/hid-parser/test:hid-parser-fuzzer",
   "//zircon/system/ulib/ldmsg/test:ldmsg-fuzzer",
+  "//zircon/system/ulib/tftp/test:tftp-fuzzer",
   "//zircon/system/ulib/utf_conversion/test:utf_conversion-fuzzer",
   "//zircon/system/utest/noop-fuzzer",
 ]
