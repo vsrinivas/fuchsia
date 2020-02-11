@@ -150,12 +150,18 @@ public:
   {{- end }}
 
   {{ .Name }} build() {
+    {{ if eq (len .Members) 0 -}}
+    return {{ .Name }}(max_ordinal_, nullptr);
+    {{- else -}}
     return {{ .Name }}(max_ordinal_, ::fidl::unowned_ptr<{{ .Name }}::Frame>(&frame_));
+    {{- end }}
   }
 
 private:
   uint64_t max_ordinal_ = 0;
+  {{ if ne (len .Members) 0 -}}
   {{ .Name }}::Frame frame_;
+  {{- end }}
 };
 
 {{- end }}

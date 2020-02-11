@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/llcpp/aligned.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
 
 #include <set>
@@ -28,7 +29,8 @@ TEST(TrackingPtr, DefaultConstructor) {
 
 TEST(TrackingPtr, SetGet) {
   int32_t x;
-  fidl::tracking_ptr<int32_t> ptr(fidl::unowned(&x));
+  fidl::unowned_ptr<int32_t> uptr(&x);
+  fidl::tracking_ptr<int32_t> ptr(uptr);
   EXPECT_EQ(ptr.get(), &x);
 }
 
@@ -123,7 +125,8 @@ TEST(TrackingPtr, SingleValueOperatorBool) {
 
 TEST(TrackingPtr, ArrayOperatorBool) {
   int32_t arr[3] = {};
-  fidl::tracking_ptr<int32_t[]> ptr(fidl::unowned(arr));
+  fidl::unowned_ptr<int32_t> uptr(arr);
+  fidl::tracking_ptr<int32_t[]> ptr(uptr);
   EXPECT_TRUE(ptr);
   ptr = nullptr;
   EXPECT_FALSE(ptr);
@@ -175,7 +178,7 @@ TEST(TrackingPtr, SingleValueHashing) {
 
   // Ensure that hashing is correctly implemented so unordered_set can be used.
   std::unordered_set<fidl::tracking_ptr<int32_t>> set;
-  set.insert(fidl::unowned(&val));
+  set.insert(fidl::unowned_ptr<int32_t>(&val));
 }
 
 TEST(TrackingPtr, ArrayHashing) {
@@ -185,7 +188,7 @@ TEST(TrackingPtr, ArrayHashing) {
 
   // Ensure that hashing is correctly implemented so unordered_set can be used.
   std::unordered_set<fidl::tracking_ptr<int32_t[]>> set;
-  set.insert(fidl::unowned(arr));
+  set.insert(fidl::unowned_ptr<int32_t>(arr));
 }
 
 TEST(TrackingPtr, Comparison) {
@@ -219,12 +222,14 @@ TEST(TrackingPtr, Comparison) {
 
   // Ensure that comparison is correctly implemented so set can be used.
   std::set<fidl::tracking_ptr<int32_t>> set;
-  set.insert(fidl::unowned(lower_ptr));
+  set.insert(fidl::unowned_ptr<int32_t>(lower_ptr));
 }
 
 TEST(TrackingPtr, Casting) {
-  class Base {};
-  class Derived : public Base {};
+  struct Base {
+    uint64_t v;
+  };
+  struct Derived : public Base {};
   Derived d;
   fidl::tracking_ptr<Derived> d_ptr = fidl::unowned_ptr<Derived>(&d);
   EXPECT_EQ(static_cast<fidl::tracking_ptr<Base>>(std::move(d_ptr)).get(), &d);
@@ -235,4 +240,12 @@ TEST(TrackingPtr, Casting) {
 
   auto d_arr_ptr = static_cast<fidl::tracking_ptr<Derived[]>>(std::move(vptr));
   EXPECT_EQ(d_arr_ptr.get(), &d);
+}
+
+TEST(TrackingPtr, FidlAligned) {
+  fidl::aligned<uint8_t> byte = 1;
+  fidl::tracking_ptr<uint8_t> ptr = fidl::unowned_ptr<fidl::aligned<uint8_t>>(&byte);
+  EXPECT_EQ(ptr.get(), &byte.value);
+  fidl::tracking_ptr<uint8_t[]> arr_ptr = fidl::unowned_ptr<fidl::aligned<uint8_t>>(&byte);
+  EXPECT_EQ(ptr.get(), &byte.value);
 }

@@ -70,6 +70,7 @@ zx_library("fidl-llcpp") {
     "lib/fidl/llcpp/service_handler_interface.h",
     "lib/fidl/llcpp/decoded_message.h",
     "lib/fidl/llcpp/encoded_message.h",
+    "lib/fidl/llcpp/aligned.h",
     "lib/fidl/llcpp/response_storage.h",
     "lib/fidl/llcpp/sync_call.h",
     "lib/fidl/llcpp/traits.h",

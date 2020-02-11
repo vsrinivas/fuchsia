@@ -74,7 +74,7 @@ class OsInfo {
 
   std::optional<fuchsia_tee::Uuid> uuid_{};
   std::optional<OsRevision> revision_{};
-  std::optional<bool> is_global_platform_compliant_{};
+  std::optional<fidl::aligned<bool>> is_global_platform_compliant_{};
 };
 
 class Value {

@@ -121,6 +121,7 @@ executable("fidl_llcpp_builder_test_bin") {
   output_name = "fidl_llcpp_builder_test"
 
   sources = [
+    "aligned_test.cc",
     "tracking_ptr_test.cc",
     "unowned_ptr_test.cc",
   ]

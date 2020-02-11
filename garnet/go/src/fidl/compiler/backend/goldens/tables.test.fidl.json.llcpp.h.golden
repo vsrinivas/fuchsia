@@ -770,12 +770,12 @@ public:
   UnownedBuilder& operator=(UnownedBuilder&& other) noexcept = default;
 
   EmptyTable build() {
-    return EmptyTable(max_ordinal_, ::fidl::unowned_ptr<EmptyTable::Frame>(&frame_));
+    return EmptyTable(max_ordinal_, nullptr);
   }
 
 private:
   uint64_t max_ordinal_ = 0;
-  EmptyTable::Frame frame_;
+  
 };
 
 }  // namespace name

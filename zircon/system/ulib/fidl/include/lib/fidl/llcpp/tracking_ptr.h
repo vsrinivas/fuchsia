@@ -10,6 +10,7 @@
 #include <memory>
 #include <type_traits>
 
+#include "aligned.h"
 #include "unowned_ptr.h"
 
 #define TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR false
@@ -54,17 +55,19 @@ namespace fidl {
 // than copy if certain methods are marked with noexcept.
 template <typename T, typename ArraylessT = std::remove_extent_t<T>>
 class tracking_ptr final {
-  // A marked_ptr is a pointer with the LSB reserved for the ownership bit.
-  using marked_ptr = uintptr_t;
-  static constexpr marked_ptr OWNERSHIP_MASK = 0x1;
-  static constexpr marked_ptr NULL_MARKED_PTR = 0x0;
-
   template <typename, typename>
   friend class tracking_ptr;
 
+  // A marked_ptr is a pointer with the LSB reserved for the ownership bit.
+  using marked_ptr = uintptr_t;
+  static constexpr marked_ptr kOwnershipMask = 0x1;
+  static constexpr marked_ptr kNullMarkedPtr = 0x0;
+
+  static constexpr size_t kMinAlignment = 2;
+
  public:
-  constexpr tracking_ptr() noexcept { set_marked(NULL_MARKED_PTR); }
-  constexpr tracking_ptr(std::nullptr_t) noexcept { set_marked(NULL_MARKED_PTR); }
+  constexpr tracking_ptr() noexcept { set_marked(kNullMarkedPtr); }
+  constexpr tracking_ptr(std::nullptr_t) noexcept { set_marked(kNullMarkedPtr); }
   template <typename U,
             typename = std::enable_if_t<(std::is_array<T>::value == std::is_array<U>::value) ||
                                         std::is_void<T>::value || std::is_void<U>::value>>
@@ -80,13 +83,21 @@ class tracking_ptr final {
   tracking_ptr(std::unique_ptr<U>&& other) {
     set_owned(other.release());
   }
-  template <typename U = T, typename = std::enable_if_t<!std::is_void<U>::value>>
   tracking_ptr(unowned_ptr<ArraylessT> other) {
+    static_assert(std::alignment_of<T>::value >= kMinAlignment,
+                  "unowned_ptr must point to an aligned value. "
+                  "An insufficiently aligned value can be aligned with fidl::align");
     set_unowned(other.get());
+  }
+  // This constructor exists to strip off 'aligned' from the type (aligned<bool> -> bool).
+  tracking_ptr(unowned_ptr<aligned<ArraylessT>> other) {
+    static_assert(std::alignment_of<aligned<ArraylessT>>::value >= kMinAlignment,
+                  "sanity check: aligned should always be sufficiently aligned");
+    set_unowned(&other->value);
   }
   tracking_ptr(const tracking_ptr&) = delete;
 
-  ~tracking_ptr() { reset_marked(NULL_MARKED_PTR); }
+  ~tracking_ptr() { reset_marked(kNullMarkedPtr); }
 
   tracking_ptr& operator=(tracking_ptr&& other) noexcept {
     reset_marked(other.release_marked_ptr());
@@ -104,13 +115,12 @@ class tracking_ptr final {
   ArraylessU* operator->() const noexcept {
     return get();
   }
-  template <typename U = T, typename ArraylessU = ArraylessT,
-            typename = std::enable_if_t<std::is_array<U>::value>>
+  template <typename U = T, typename ArraylessU = ArraylessT>
   ArraylessU& operator[](size_t index) const {
     return get()[index];
   }
   ArraylessT* get() const noexcept {
-    return reinterpret_cast<ArraylessT*>(mptr_ & ~OWNERSHIP_MASK);
+    return reinterpret_cast<ArraylessT*>(mptr_ & ~kOwnershipMask);
   }
   explicit operator bool() const noexcept { return get() != nullptr; }
 
@@ -142,7 +152,7 @@ class tracking_ptr final {
     }
     set_marked(new_ptr);
   }
-  bool is_owned() const noexcept { return (mptr_ & OWNERSHIP_MASK) != 0; }
+  bool is_owned() const noexcept { return (mptr_ & kOwnershipMask) != 0; }
 
   void set_marked(marked_ptr new_ptr) noexcept { mptr_ = new_ptr; }
   void set_unowned(ArraylessT* new_ptr) {
@@ -151,18 +161,18 @@ class tracking_ptr final {
   }
   void set_owned(ArraylessT* new_ptr) {
     assert_lsb_not_set(new_ptr);
-    marked_ptr ptr_marked_owned = reinterpret_cast<marked_ptr>(new_ptr) | OWNERSHIP_MASK;
+    marked_ptr ptr_marked_owned = reinterpret_cast<marked_ptr>(new_ptr) | kOwnershipMask;
     set_marked(ptr_marked_owned);
   }
   static void assert_lsb_not_set(ArraylessT* p) {
-    if (reinterpret_cast<marked_ptr>(p) & OWNERSHIP_MASK) {
+    if (reinterpret_cast<marked_ptr>(p) & kOwnershipMask) {
       abort();
     }
   }
 
   marked_ptr release_marked_ptr() noexcept {
     marked_ptr temp = mptr_;
-    mptr_ = NULL_MARKED_PTR;
+    mptr_ = kNullMarkedPtr;
     return temp;
   }
 
