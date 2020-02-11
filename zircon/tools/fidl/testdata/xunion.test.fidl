@@ -21,3 +21,54 @@ strict xunion ExplicitStrictFoo {
     3: string s;
     2: int32 i;
 };
+
+xunion OlderSimpleUnion {
+    1: int64 i;
+    2: float32 f;
+};
+
+xunion NewerSimpleUnion {
+    // float f;  // removed
+
+    1: int64 i; // unchanged
+
+    2: string s; // added
+    3: vector<string> v; // added
+};
+
+// 1. This xunion is currently unused by code, and for tracking changes in the goldens only.
+// 2. There's no FlexibleSimpleXUnion, since that's covered by OlderSimpleUnion above.
+strict xunion StrictSimpleXUnion {
+    1: int32 i;
+    2: float32 f;
+    3: string s;
+};
+
+struct Empty {
+};
+
+xunion XUnionContainingEmptyStruct {
+    // This is a test to prevent regressions for FIDL-762. Note that we need FIDL-758 to be resolved
+    // to ensure this actually works, since goldens aren't currently compiled.
+    1: Empty empty;
+};
+
+strict xunion StrictBoundedXUnion {
+    1: vector<uint8>:10 v;
+};
+
+protocol TestProtocol {
+    StrictXUnionHenceResponseMayBeStackAllocated() -> (StrictBoundedXUnion xu);
+    FlexibleXUnionHenceResponseMustBeHeapAllocated() -> (OlderSimpleUnion xu);
+};
+
+struct StructWithNullableXUnion {
+    OlderSimpleUnion? x1;
+};
+
+xunion ExplicitXUnion {
+    3: reserved;
+    2: reserved;
+    1: int64 i;
+    4: float32 f;
+};

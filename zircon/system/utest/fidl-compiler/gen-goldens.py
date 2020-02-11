@@ -70,6 +70,9 @@ def get_goldens_cc(inputs):
     testname_to_golden = {}
     fidl_file_contents = {}
     for filename in inputs:
+        # ignore table goldens
+        if filename.endswith('.tables.c.golden'):
+            continue
         testname = get_testname(filename)
         if filename.endswith('order.txt'):
             testname_to_order[testname] = open(filename, 'r').read().split()
@@ -84,7 +87,10 @@ def get_goldens_cc(inputs):
             raise RuntimeError('Unknown path: ' + filename)
     # each test has exactly one golden, and at least one fidl file, so the
     # keys for these two dicts should contain the exact same test names
-    assert (testname_to_golden.keys() == testname_to_fidl_files.keys())
+    missing_goldens = set(testname_to_golden.keys()) - set(testname_to_fidl_files.keys())
+    assert len(missing_goldens) == 0, missing_goldens
+    missing_fidls = set(testname_to_fidl_files.keys()) - set(testname_to_golden.keys())
+    assert len(missing_fidls) == 0, missing_fidls
 
     # sort the list of FIDL files per test by dependency order
     for testname, order in testname_to_order.items():

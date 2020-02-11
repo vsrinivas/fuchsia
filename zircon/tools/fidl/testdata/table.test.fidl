@@ -1,7 +1,33 @@
 library fidl.test.json;
 
-table Simple {
-    1: uint8 f1;
-    2: bool f2;
+table EmptyTable {
+};
+
+table SimpleTable {
+    1: int64 x;
+    2: reserved;
     3: reserved;
+    4: reserved;
+    5: int64 y;
+};
+
+table OlderSimpleTable {
+    1: int64 x;
+    2: reserved;
+};
+
+table NewerSimpleTable {
+    1: int64 x;
+    2: reserved;
+    3: reserved;
+    4: reserved;
+    5: int64 y;
+    6: int64 z;
+    7: reserved;
+};
+
+table ReverseOrdinalTable {
+    3: int64 x;
+    2: int64 y;
+    1: int64 z;
 };

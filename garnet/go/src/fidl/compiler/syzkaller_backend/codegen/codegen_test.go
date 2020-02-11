@@ -25,6 +25,11 @@ var basePath = func() string {
 
 func TestCodegenImplDotSyzkaller(t *testing.T) {
 	for _, filename := range typestest.AllExamples(basePath) {
+		// TODO(fxb/45007): Syzkaller does not support enum member references in
+		// struct defaults.
+		if filename == "struct_default_value_enum_library_reference.test.json" {
+			continue
+		}
 		t.Run(filename, func(t *testing.T) {
 			fidl := typestest.GetExample(basePath, filename)
 			tree := ir.Compile(fidl)

@@ -1,0 +1,396 @@
+{
+  "version": "0.0.1",
+  "name": "test.name",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "test.name/Child",
+      "location": {
+        "filename": "protocol_request.test.fidl",
+        "line": 3,
+        "column": 10
+      },
+      "methods": []
+    },
+    {
+      "name": "test.name/Parent",
+      "location": {
+        "filename": "protocol_request.test.fidl",
+        "line": 6,
+        "column": 10
+      },
+      "methods": [
+        {
+          "ordinal": 3932412583805452288,
+          "generated_ordinal": 6332745893922832518,
+          "name": "GetChild",
+          "location": {
+            "filename": "protocol_request.test.fidl",
+            "line": 7,
+            "column": 5
+          },
+          "has_request": true,
+          "maybe_request": [],
+          "maybe_request_type_shape_v1": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "test.name/Child",
+                "nullable": false
+              },
+              "name": "c",
+              "location": {
+                "filename": "protocol_request.test.fidl",
+                "line": 7,
+                "column": 26
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 4
+              }
+            }
+          ],
+          "maybe_response_payload": "test.name/SomeLongAnonymousPrefix1",
+          "maybe_response_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "is_composed": false
+        },
+        {
+          "ordinal": 4587704011968217088,
+          "generated_ordinal": 26635226975931008,
+          "name": "GetChildRequest",
+          "location": {
+            "filename": "protocol_request.test.fidl",
+            "line": 8,
+            "column": 5
+          },
+          "has_request": true,
+          "maybe_request": [],
+          "maybe_request_type_shape_v1": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "has_response": true,
+          "maybe_response": [
+            {
+              "type": {
+                "kind": "request",
+                "subtype": "test.name/Child",
+                "nullable": false
+              },
+              "name": "r",
+              "location": {
+                "filename": "protocol_request.test.fidl",
+                "line": 8,
+                "column": 42
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 4
+              }
+            }
+          ],
+          "maybe_response_payload": "test.name/SomeLongAnonymousPrefix3",
+          "maybe_response_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "is_composed": false
+        },
+        {
+          "ordinal": 5478139633957076992,
+          "generated_ordinal": 7680932945371199613,
+          "name": "TakeChild",
+          "location": {
+            "filename": "protocol_request.test.fidl",
+            "line": 9,
+            "column": 5
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "identifier",
+                "identifier": "test.name/Child",
+                "nullable": false
+              },
+              "name": "c",
+              "location": {
+                "filename": "protocol_request.test.fidl",
+                "line": 9,
+                "column": 21
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 4
+              }
+            }
+          ],
+          "maybe_request_payload": "test.name/SomeLongAnonymousPrefix4",
+          "maybe_request_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "has_response": false,
+          "is_composed": false
+        },
+        {
+          "ordinal": 6828449318567936000,
+          "generated_ordinal": 7803173423056840247,
+          "name": "TakeChildRequest",
+          "location": {
+            "filename": "protocol_request.test.fidl",
+            "line": 10,
+            "column": 5
+          },
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "request",
+                "subtype": "test.name/Child",
+                "nullable": false
+              },
+              "name": "r",
+              "location": {
+                "filename": "protocol_request.test.fidl",
+                "line": 10,
+                "column": 37
+              },
+              "field_shape_v1": {
+                "offset": 16,
+                "padding": 4
+              }
+            }
+          ],
+          "maybe_request_payload": "test.name/SomeLongAnonymousPrefix5",
+          "maybe_request_type_shape_v1": {
+            "inline_size": 24,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 1,
+            "max_out_of_line": 0,
+            "has_padding": true,
+            "has_flexible_envelope": false,
+            "contains_union": false
+          },
+          "has_response": false,
+          "is_composed": false
+        }
+      ]
+    }
+  ],
+  "service_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "test.name/SomeLongAnonymousPrefix1",
+      "location": {
+        "filename": "protocol_request.test.fidl",
+        "line": 7,
+        "column": 19
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.name/Child",
+            "nullable": false
+          },
+          "name": "c",
+          "location": {
+            "filename": "protocol_request.test.fidl",
+            "line": 7,
+            "column": 26
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          }
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 1,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "test.name/SomeLongAnonymousPrefix3",
+      "location": {
+        "filename": "protocol_request.test.fidl",
+        "line": 8,
+        "column": 26
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "request",
+            "subtype": "test.name/Child",
+            "nullable": false
+          },
+          "name": "r",
+          "location": {
+            "filename": "protocol_request.test.fidl",
+            "line": 8,
+            "column": 42
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          }
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 1,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "test.name/SomeLongAnonymousPrefix4",
+      "location": {
+        "filename": "protocol_request.test.fidl",
+        "line": 9,
+        "column": 14
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "test.name/Child",
+            "nullable": false
+          },
+          "name": "c",
+          "location": {
+            "filename": "protocol_request.test.fidl",
+            "line": 9,
+            "column": 21
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          }
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 1,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    },
+    {
+      "name": "test.name/SomeLongAnonymousPrefix5",
+      "location": {
+        "filename": "protocol_request.test.fidl",
+        "line": 10,
+        "column": 21
+      },
+      "anonymous": true,
+      "members": [
+        {
+          "type": {
+            "kind": "request",
+            "subtype": "test.name/Child",
+            "nullable": false
+          },
+          "name": "r",
+          "location": {
+            "filename": "protocol_request.test.fidl",
+            "line": 10,
+            "column": 37
+          },
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 4
+          }
+        }
+      ],
+      "type_shape_v1": {
+        "inline_size": 8,
+        "alignment": 8,
+        "depth": 0,
+        "max_handles": 1,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": false
+      }
+    }
+  ],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "test.name/Parent",
+    "test.name/Child"
+  ],
+  "declarations": {
+    "test.name/Child": "interface",
+    "test.name/Parent": "interface",
+    "test.name/SomeLongAnonymousPrefix0": "struct",
+    "test.name/SomeLongAnonymousPrefix1": "struct",
+    "test.name/SomeLongAnonymousPrefix2": "struct",
+    "test.name/SomeLongAnonymousPrefix3": "struct",
+    "test.name/SomeLongAnonymousPrefix4": "struct",
+    "test.name/SomeLongAnonymousPrefix5": "struct"
+  }
+}

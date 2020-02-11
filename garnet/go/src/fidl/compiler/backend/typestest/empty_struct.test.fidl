@@ -1,4 +1,0 @@
-library test.name;
-
-struct Empty {
-};

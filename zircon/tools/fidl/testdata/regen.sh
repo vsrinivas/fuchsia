@@ -6,7 +6,7 @@ if [ ! -x "${FUCHSIA_BUILD_DIR}" ]; then
     exit 1
 fi
 
-FIDLC="${FUCHSIA_BUILD_DIR}/../default.zircon/host-x64-linux-asan/obj/tools/fidl/fidlc"
+FIDLC="${FUCHSIA_BUILD_DIR}/../default.zircon/tools/fidlc"
 if [ ! -x "${FIDLC}" ]; then
     echo "error: fidlc missing; did you fx clean-build?" 1>&2
     exit 1
@@ -23,11 +23,14 @@ cd "${EXAMPLE_DIR}"
 while read -r src_path; do
     src_name="$( basename "${src_path}" )"
     json_name=$( echo "${src_name}" | cut -f 1 -d '.').test.json.golden
+    coding_tables_name=$( echo "${src_name}" | cut -f 1 -d '.').test.tables.c.golden
 
     echo -e "\033[1mexample: ${src_name}\033[0m"
     echo "  json ir: ${src_name} > ${json_name}"
+    echo "  coding table: ${src_name} > ${coding_tables_name}"
     ${FIDLC} \
         --json "../goldens/${json_name}" \
+        --tables "../goldens/${coding_tables_name}" \
         --experimental enable_handle_rights \
         --files "${src_name}"
 done < <(find . -maxdepth 1 -name '*.fidl')
@@ -36,12 +39,15 @@ cd "${FUCHSIA_DIR}"
 while read -r lib_path; do
     lib_name="$( basename "${lib_path}" )"
     json_name=${lib_name}.test.json.golden
+    coding_tables_name=$( echo "${src_name}" | cut -f 1 -d '.').test.tables.c.golden
 
     echo -e "\033[1mexample: ${lib_name}\033[0m"
     echo "  json ir: ${lib_name} > ${json_name}"
+    echo "  coding table: ${src_name} > ${coding_tables_name}"
     cd "${FUCHSIA_DIR}/${lib_path}"
     ${FIDLC} \
         --json "../../goldens/${json_name}" \
+        --tables "../../goldens/${coding_tables_name}" \
         --experimental enable_handle_rights \
         $( awk '{print "--files " $0}' < order.txt | tr '\n' ' ' )
 done < <(find "${EXAMPLE_DIR}" -maxdepth 1 ! -path "${EXAMPLE_DIR}" -type d)

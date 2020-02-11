@@ -1,0 +1,407 @@
+{
+  "version": "0.0.1",
+  "name": "test.name",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [
+    {
+      "name": "test.name/ENABLED_FLAG",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 3,
+        "column": 12
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "bool"
+      },
+      "value": {
+        "kind": "literal",
+        "value": "true",
+        "expression": "true",
+        "literal": {
+          "kind": "true",
+          "value": "true",
+          "expression": "true"
+        }
+      }
+    },
+    {
+      "name": "test.name/OFFSET",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 4,
+        "column": 12
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "int8"
+      },
+      "value": {
+        "kind": "literal",
+        "value": "-33",
+        "expression": "-33",
+        "literal": {
+          "kind": "numeric",
+          "value": "-33",
+          "expression": "-33"
+        }
+      }
+    },
+    {
+      "name": "test.name/ANSWER",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 5,
+        "column": 14
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint16"
+      },
+      "value": {
+        "kind": "literal",
+        "value": "42",
+        "expression": "42",
+        "literal": {
+          "kind": "numeric",
+          "value": "42",
+          "expression": "42"
+        }
+      }
+    },
+    {
+      "name": "test.name/ANSWER_IN_BINARY",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 6,
+        "column": 14
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint16"
+      },
+      "value": {
+        "kind": "literal",
+        "value": "42",
+        "expression": "0b101010",
+        "literal": {
+          "kind": "numeric",
+          "value": "42",
+          "expression": "0b101010"
+        }
+      }
+    },
+    {
+      "name": "test.name/POPULATION_USA_2018",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 7,
+        "column": 14
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32"
+      },
+      "value": {
+        "kind": "literal",
+        "value": "330000000",
+        "expression": "330000000",
+        "literal": {
+          "kind": "numeric",
+          "value": "330000000",
+          "expression": "330000000"
+        }
+      }
+    },
+    {
+      "name": "test.name/DIAMOND",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 8,
+        "column": 14
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint64"
+      },
+      "value": {
+        "kind": "literal",
+        "value": "1746410393481133080",
+        "expression": "0x183c7effff7e3c18",
+        "literal": {
+          "kind": "numeric",
+          "value": "1746410393481133080",
+          "expression": "0x183c7effff7e3c18"
+        }
+      }
+    },
+    {
+      "name": "test.name/FUCHSIA",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 9,
+        "column": 14
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint64"
+      },
+      "value": {
+        "kind": "literal",
+        "value": "4054509061583223046",
+        "expression": "4054509061583223046",
+        "literal": {
+          "kind": "numeric",
+          "value": "4054509061583223046",
+          "expression": "4054509061583223046"
+        }
+      }
+    },
+    {
+      "name": "test.name/USERNAME",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 10,
+        "column": 14
+      },
+      "type": {
+        "kind": "string",
+        "nullable": false
+      },
+      "value": {
+        "kind": "literal",
+        "value": "\"squeenze\"",
+        "expression": "\"\\\"squeenze\\\"\"",
+        "literal": {
+          "kind": "string",
+          "value": "\"squeenze\"",
+          "expression": "\"\\\"squeenze\\\"\""
+        }
+      }
+    },
+    {
+      "name": "test.name/MIN_TEMP",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 11,
+        "column": 15
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "float32"
+      },
+      "value": {
+        "kind": "literal",
+        "value": "-273.15",
+        "expression": "-273.15",
+        "literal": {
+          "kind": "numeric",
+          "value": "-273.15",
+          "expression": "-273.15"
+        }
+      }
+    },
+    {
+      "name": "test.name/CONVERSION_FACTOR",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 12,
+        "column": 15
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "float64"
+      },
+      "value": {
+        "kind": "literal",
+        "value": "1.41421",
+        "expression": "1.41421358",
+        "literal": {
+          "kind": "numeric",
+          "value": "1.41421",
+          "expression": "1.41421358"
+        }
+      }
+    },
+    {
+      "name": "test.name/enumVal",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 17,
+        "column": 16
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "test.name/EnumType",
+        "nullable": false
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "1",
+        "expression": "EnumType.VALUE",
+        "identifier": "test.name/EnumType.VALUE"
+      }
+    },
+    {
+      "name": "test.name/enumPrimitiveVal",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 18,
+        "column": 13
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "int32"
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "1",
+        "expression": "EnumType.VALUE",
+        "identifier": "test.name/EnumType.VALUE"
+      }
+    },
+    {
+      "name": "test.name/bitsVal",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 24,
+        "column": 16
+      },
+      "type": {
+        "kind": "identifier",
+        "identifier": "test.name/BitsType",
+        "nullable": false
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "1",
+        "expression": "BitsType.VALUE",
+        "identifier": "test.name/BitsType.VALUE"
+      }
+    },
+    {
+      "name": "test.name/bitsPrimitiveVal",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 25,
+        "column": 13
+      },
+      "type": {
+        "kind": "primitive",
+        "subtype": "int32"
+      },
+      "value": {
+        "kind": "identifier",
+        "value": "1",
+        "expression": "BitsType.VALUE",
+        "identifier": "test.name/BitsType.VALUE"
+      }
+    }
+  ],
+  "enum_declarations": [
+    {
+      "name": "test.name/EnumType",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 14,
+        "column": 6
+      },
+      "type": "int32",
+      "members": [
+        {
+          "name": "VALUE",
+          "location": {
+            "filename": "consts.test.fidl",
+            "line": 15,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          }
+        }
+      ],
+      "strict": true
+    },
+    {
+      "name": "test.name/BitsType",
+      "location": {
+        "filename": "consts.test.fidl",
+        "line": 21,
+        "column": 6
+      },
+      "type": "int32",
+      "members": [
+        {
+          "name": "VALUE",
+          "location": {
+            "filename": "consts.test.fidl",
+            "line": 22,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "0x00000001",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "0x00000001"
+            }
+          }
+        }
+      ],
+      "strict": true
+    }
+  ],
+  "interface_declarations": [],
+  "service_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "test.name/USERNAME",
+    "test.name/POPULATION_USA_2018",
+    "test.name/OFFSET",
+    "test.name/MIN_TEMP",
+    "test.name/FUCHSIA",
+    "test.name/EnumType",
+    "test.name/enumVal",
+    "test.name/enumPrimitiveVal",
+    "test.name/ENABLED_FLAG",
+    "test.name/DIAMOND",
+    "test.name/CONVERSION_FACTOR",
+    "test.name/BitsType",
+    "test.name/bitsVal",
+    "test.name/bitsPrimitiveVal",
+    "test.name/ANSWER_IN_BINARY",
+    "test.name/ANSWER"
+  ],
+  "declarations": {
+    "test.name/ENABLED_FLAG": "const",
+    "test.name/OFFSET": "const",
+    "test.name/ANSWER": "const",
+    "test.name/ANSWER_IN_BINARY": "const",
+    "test.name/POPULATION_USA_2018": "const",
+    "test.name/DIAMOND": "const",
+    "test.name/FUCHSIA": "const",
+    "test.name/USERNAME": "const",
+    "test.name/MIN_TEMP": "const",
+    "test.name/CONVERSION_FACTOR": "const",
+    "test.name/enumVal": "const",
+    "test.name/enumPrimitiveVal": "const",
+    "test.name/bitsVal": "const",
+    "test.name/bitsPrimitiveVal": "const",
+    "test.name/EnumType": "enum",
+    "test.name/BitsType": "enum"
+  }
+}

@@ -29,3 +29,40 @@ strict union StrictPizzaOrPasta {
     1: Pizza pizza;
     2: Pasta pasta;
 };
+
+union Union {
+    1: int32 Primitive;
+    2: string StringNeedsConstructor;
+    3: vector<string> VectorStringAlsoNeedsConstructor;
+};
+
+flexible union FlexibleUnion {
+    1: int32 Primitive;
+    2: string StringNeedsConstructor;
+    3: vector<string> VectorStringAlsoNeedsConstructor;
+};
+
+strict union StrictUnion {
+    1: int32 Primitive;
+    2: string StringNeedsConstructor;
+    3: vector<string> VectorStringAlsoNeedsConstructor;
+};
+
+union FieldCollision {
+    1: int32 field_collision_tag;
+};
+
+union ExplicitUnion {
+    2: reserved;
+    1: int32 Primitive;
+    3: string StringNeedsConstructor;
+};
+
+union ReverseOrdinalUnion {
+    2: uint32 second;
+    1: uint32 first;
+};
+
+struct NullableUnionStruct {
+    Union? the_union;
+};

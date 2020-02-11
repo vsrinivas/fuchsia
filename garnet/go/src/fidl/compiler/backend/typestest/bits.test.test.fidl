@@ -1,5 +1,0 @@
-library test.name;
-bits MyBits:uint32 {
-    MY_FIRST_BIT = 1;
-    MY_OTHER_BIT = 2;
-};

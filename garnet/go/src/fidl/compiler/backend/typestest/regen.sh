@@ -6,16 +6,9 @@ if [ ! -x "${FUCHSIA_BUILD_DIR}" ]; then
     exit 1
 fi
 
-FIDLC="${FUCHSIA_BUILD_DIR}/host_x64/fidlc"
-if [ ! -x "${FIDLC}" ]; then
-    echo "error: fidlc missing; did you fx clean-build?" 1>&2
-    exit 1
-fi
-
 FIDLGEN_HLCPP="${FUCHSIA_BUILD_DIR}/host_x64/fidlgen_hlcpp"
 if [ ! -x "${FIDLGEN_HLCPP}" ]; then
     echo "error: fidlgen_hlcpp missing; maybe fx clean-build?" 1>&2
-    exit 1
 fi
 
 FIDLGEN_LLCPP="${FUCHSIA_BUILD_DIR}/host_x64/fidlgen_llcpp"
@@ -51,12 +44,25 @@ fi
 EXAMPLE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 EXAMPLE_DIR="$( echo $EXAMPLE_DIR | sed -e "s+${FUCHSIA_DIR}/++" )"
 GOLDENS_DIR="${EXAMPLE_DIR}/../goldens"
+FIDLC_IR_DIR="${FUCHSIA_DIR}/zircon/tools/fidl/goldens"
 GOLDENS=()
+
+# base all paths in FUCHSIA_DIR 
 cd "${FUCHSIA_DIR}"
-for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
-    src_name="$( basename "${src_path}" )"
-    json_name=${src_name}.json
-    coding_tables_name=${src_name}.tables.c
+
+# fresh regen
+find "${GOLDENS_DIR}" -type f -not -name 'BUILD.gn' -exec rm {} \;
+
+for src_path in `find "${FIDLC_IR_DIR}" -name '*.test.json.golden'`; do
+    src_name="$( basename "${src_path}" | sed -e 's/\.json\.golden$//g' )"
+
+    # TODO(fxb/45006): Skipping due to issue with representation of binary
+    # operators.
+    if [ "constants.test" = "${src_name}" ]; then
+        continue
+    fi
+
+    json_name="${src_name}.json"
     cpp_header_name=${json_name}.h
     cpp_test_header_name=${json_name}_test_base.h
     cpp_source_name=${json_name}.cc
@@ -69,8 +75,7 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
     syzkaller_name=${json_name}.syz.txt
 
     GOLDENS+=(
-      $json_name,
-      "${coding_tables_name}.golden",
+      "$json_name",
       "${cpp_header_name}.golden",
       "${cpp_test_header_name}.golden",
       "${cpp_source_name}.golden",
@@ -78,18 +83,12 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
       "${llcpp_source_name}.golden",
       "${go_impl_name}.golden",
       "${rust_name}.golden",
-      "${syzkaller_name}.golden",
     )
 
     echo -e "\033[1mexample: ${src_name}\033[0m"
 
     echo "  json ir: ${src_name} > ${json_name}"
-    echo "  coding tables: ${src_name} > ${coding_tables_name}"
-    ${FIDLC} \
-        --json "${GOLDENS_DIR}/${json_name}" \
-        --tables "${GOLDENS_DIR}/${coding_tables_name}" \
-        --files "${EXAMPLE_DIR}/${src_name}"
-    mv "${GOLDENS_DIR}/${coding_tables_name}" "${GOLDENS_DIR}/${coding_tables_name}.golden"
+    cp "${src_path}" "${GOLDENS_DIR}/${json_name}"
 
     echo "  cpp: ${json_name} > ${cpp_header_name}, ${cpp_source_name}, and ${cpp_test_header_name}"
     ${FIDLGEN_HLCPP} \
@@ -143,6 +142,14 @@ for src_path in `find "${EXAMPLE_DIR}" -name '*.fidl'`; do
         -json "${GOLDENS_DIR}/${json_name}" \
         -output-filename "${GOLDENS_DIR}/${rust_name}.golden"
 
+    # TODO(fxb/45007): Syzkaller does not support enum member references in struct
+    # defaults.
+    if [ "struct_default_value_enum_library_reference.test" = "${src_name}" ]; then
+        continue
+    fi
+    GOLDENS+=(
+      "${syzkaller_name}.golden",
+    )
     echo "  syzkaller: ${json_name} > ${syzkaller_name}"
     ${FIDLGEN_SYZ} \
         -json "${GOLDENS_DIR}/${json_name}" \

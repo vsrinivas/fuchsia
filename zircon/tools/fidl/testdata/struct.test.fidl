@@ -4,3 +4,8 @@ struct Simple {
     uint8 f1;
     bool f2;
 };
+
+struct BasicStruct {
+    uint32 x;
+    string y;
+};

@@ -1,0 +1,120 @@
+{
+  "version": "0.0.1",
+  "name": "test.name",
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [
+    {
+      "name": "test.name/MyEnum",
+      "location": {
+        "filename": "enum.test.fidl",
+        "line": 3,
+        "column": 15
+      },
+      "type": "uint32",
+      "members": [
+        {
+          "name": "FOO",
+          "location": {
+            "filename": "enum.test.fidl",
+            "line": 4,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          }
+        },
+        {
+          "name": "BAR",
+          "location": {
+            "filename": "enum.test.fidl",
+            "line": 5,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "value": "2",
+            "expression": "2",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "2"
+            }
+          }
+        }
+      ],
+      "strict": false
+    },
+    {
+      "name": "test.name/MyStrictEnum",
+      "location": {
+        "filename": "enum.test.fidl",
+        "line": 8,
+        "column": 6
+      },
+      "type": "uint32",
+      "members": [
+        {
+          "name": "FOO",
+          "location": {
+            "filename": "enum.test.fidl",
+            "line": 9,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          }
+        },
+        {
+          "name": "BAR",
+          "location": {
+            "filename": "enum.test.fidl",
+            "line": 10,
+            "column": 5
+          },
+          "value": {
+            "kind": "literal",
+            "value": "2",
+            "expression": "2",
+            "literal": {
+              "kind": "numeric",
+              "value": "2",
+              "expression": "2"
+            }
+          }
+        }
+      ],
+      "strict": true
+    }
+  ],
+  "interface_declarations": [],
+  "service_declarations": [],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "xunion_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "test.name/MyStrictEnum",
+    "test.name/MyEnum"
+  ],
+  "declarations": {
+    "test.name/MyEnum": "enum",
+    "test.name/MyStrictEnum": "enum"
+  }
+}

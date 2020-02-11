@@ -9,7 +9,33 @@ using aliased_rights_handle = handle<vmo, 1>;
 
 struct Handles {
     handle plain_handle;
-    handle<vmo> subtype_handle;
+
+    handle<bti> bti_handle;
+    handle<channel> channel_handle;
+    handle<debuglog> debuglog_handle;
+    handle<event> event_handle;
+    handle<eventpair> eventpair_handle;
+    handle<exception> exception_handle;
+    handle<fifo> fifo_handle;
+    handle<guest> guest_handle;
+    handle<interrupt> interrupt_handle;
+    handle<iommu> iommu_handle;
+    handle<job> job_handle;
+    handle<pager> pager_handle;
+    handle<pcidevice> pcidevice_handle;
+    handle<pmt> pmt_handle;
+    handle<port> port_handle;
+    handle<process> process_handle;
+    handle<profile> profile_handle;
+    handle<resource> resource_handle;
+    handle<socket> socket_handle;
+    handle<suspendtoken> suspendtoken_handle;
+    handle<thread> thread_handle;
+    handle<timer> timer_handle;
+    handle<vcpu> vcpu_handle;
+    handle<vmar> vmar_handle;
+    handle<vmo> vmo_handle;
+
     handle<vmo, 1> rights_handle;
 
     aliased_plain_handle aliased_plain_handle_field;
