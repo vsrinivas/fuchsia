@@ -41,7 +41,6 @@ group("tools") {
     "//src/sys/tools/cs",
     "//src/sys/tools/runmany",
     "//src/ui/tools/tiles_ctl",
-    "//third_party/crashpad:crashpad_database_util",
     "//third_party/curl",
     "//third_party/iperf",
     "//tools",
