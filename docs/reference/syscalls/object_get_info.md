@@ -116,6 +116,55 @@ typedef struct zx_info_process_handle_stats {
 } zx_info_process_handle_stats_t;
 ```
 
+### ZX_INFO_HANDLE_TABLE
+
+*handle* type: **Process**
+
+*buffer* type: `zx_info_handle_extended_t[n]`
+
+Returns an array of `zx_info_handle_extended_t` one for each handle in the Process at
+the moment of the call. The kernel ensures that the handles returned are consistent.
+
+```
+typedef struct zx_info_handle_extended {
+    // The object type: channel, event, socket, etc.
+    zx_obj_type_t type;
+
+    // The handle value which is only valid for the process which
+    // was passed to ZX_INFO_HANDLE_TABLE.
+    zx_handle_t handle_value;
+
+    // The immutable rights assigned to the handle. Two handles that
+    // have the same koid and the same rights are equivalent and
+    // interchangeable.
+    zx_rights_t rights;
+
+    // Set to ZX_OBJ_PROP_WAITABLE if the object referenced by the
+    // handle can be waited on; zero otherwise.
+    zx_obj_props_t props;
+
+    // The unique id assigned by kernel to the object referenced by the
+    // handle.
+    zx_koid_t koid;
+
+    // If the object referenced by the handle is related to another (such
+    // as the other end of a channel, or the parent of a job) then
+    // |related_koid| is the koid of that object, otherwise it is zero.
+    // This relationship is immutable: an object's |related_koid| does
+    // not change even if the related object no longer exists.
+    zx_koid_t related_koid;
+
+    // If the object referenced by the handle has a peer, like the
+    // other end of a channel, then this is the koid of the process
+    // which currently owns it.
+    zx_koid_t peer_owner_koid;
+} zx_info_handle_extended_t;
+```
+
+Note that a process might have live references to objects for which the process
+does not have a handle to. For example, running threads for which all handles have
+been closed.
+
 ### ZX_INFO_JOB
 
 *handle* type: **Job**

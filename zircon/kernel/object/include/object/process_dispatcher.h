@@ -92,6 +92,9 @@ class ProcessDispatcher final
   Handle* GetHandleLocked(zx_handle_t handle_value, bool skip_policy = false)
       TA_REQ_SHARED(handle_table_lock_);
 
+  // Returns the number of outstanding handles in this process handle table.
+  uint32_t HandleCount() const;
+
   // Adds |handle| to this process handle list. The handle->process_id() is
   // set to this process id().
   void AddHandle(HandleOwner handle);
@@ -238,6 +241,8 @@ class ProcessDispatcher final
   zx_status_t GetThreads(fbl::Array<zx_koid_t>* threads) const;
   zx_status_t SetCriticalToJob(fbl::RefPtr<JobDispatcher> critical_to_job, bool retcode_nonzero);
 
+  zx_status_t GetHandleInfo(fbl::Array<zx_info_handle_extended_t>* handles) const;
+
   Exceptionate* exceptionate(Exceptionate::Type type);
 
   // The following two methods can be slow and inaccurate and should only be
@@ -343,8 +348,8 @@ class ProcessDispatcher final
   // If |skip_policy| is true, ZX_POL_BAD_HANDLE will not be enforced.
   template <typename T>
   zx_status_t GetDispatcherWithRightsImpl(zx_handle_t handle_value, zx_rights_t desired_rights,
-                                      fbl::RefPtr<T>* out_dispatcher, zx_rights_t* out_rights,
-                                      bool skip_policy) {
+                                          fbl::RefPtr<T>* out_dispatcher, zx_rights_t* out_rights,
+                                          bool skip_policy) {
     bool has_desired_rights;
     zx_rights_t rights;
     fbl::RefPtr<Dispatcher> generic_dispatcher;
@@ -442,6 +447,7 @@ class ProcessDispatcher final
   mutable DECLARE_BRWLOCK_PI(ProcessDispatcher) handle_table_lock_;
   // This process's handle table.  When removing one or more handles from this list, be sure to
   // advance or invalidate any cursors that might point to the handles being removed.
+  uint32_t handle_count_ TA_GUARDED(handle_table_lock_) = 0;
   HandleList handles_ TA_GUARDED(handle_table_lock_);
   // A list of cursors that contain pointers to elements of handles_.
   fbl::DoublyLinkedList<HandleCursor*> handle_cursors_ TA_GUARDED(handle_table_lock_);

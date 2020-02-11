@@ -372,6 +372,118 @@ constexpr auto process_provider = []() -> const zx::process& {
   return *process;
 };
 
+TEST_F(ProcessGetInfoTest, InfoProcessHandleTable) {
+  zx_info_handle_extended_t handle_info[4] = {};
+  auto& process = GetProcess();
+  size_t actual = 0;
+  size_t avail = 0;
+  ASSERT_OK(
+      process.get_info(ZX_INFO_HANDLE_TABLE, &handle_info, sizeof(handle_info), &actual, &avail));
+  // Since the process is a mini-process we fully control the handles in SetUpTestCase() above.
+  // Although the order of handles is a detail that is not guaranteed by the ABI. The handles are
+  // instanciated in the order they are written (then ready) into the channel; if we ever change
+  // that we need to change this test.
+  EXPECT_EQ(actual, 2);
+  EXPECT_EQ(avail, 2);
+  EXPECT_EQ(handle_info[0].type, ZX_OBJ_TYPE_VMO);
+  EXPECT_EQ(handle_info[1].type, ZX_OBJ_TYPE_CHANNEL);
+  EXPECT_EQ(handle_info[0].props, ZX_OBJ_PROP_WAITABLE);
+  EXPECT_EQ(handle_info[1].props, ZX_OBJ_PROP_WAITABLE);
+  EXPECT_NE(handle_info[0].handle_value, ZX_HANDLE_INVALID);
+  EXPECT_NE(handle_info[1].handle_value, ZX_HANDLE_INVALID);
+  EXPECT_EQ(handle_info[0].related_koid, 0);
+  EXPECT_GT(handle_info[1].related_koid, 0);
+  EXPECT_EQ(handle_info[0].peer_owner_koid, 0);
+  EXPECT_EQ(handle_info[1].peer_owner_koid, 0);
+  EXPECT_GT(handle_info[0].koid, 0);
+  EXPECT_GT(handle_info[1].koid, 0);
+}
+
+TEST_F(ProcessGetInfoTest, InfoProcessHandleTableInsufficientRights) {
+  size_t avail = 0;
+  zx::process selfie;
+  // Create a process handle that is missing ZX_RIGHT_MANAGE_PROCESS.
+  ASSERT_OK(zx::process::self()->duplicate(ZX_RIGHT_INSPECT | ZX_RIGHT_MANAGE_THREAD, &selfie));
+  ASSERT_EQ(selfie.get_info(ZX_INFO_HANDLE_TABLE, nullptr, 0, nullptr, &avail),
+            ZX_ERR_ACCESS_DENIED);
+}
+
+TEST_F(ProcessGetInfoTest, InfoProcessHandleTableEmpty) {
+  // An empty process does not have any handles, but the syscall suceeds.
+  zx::vmar vmar;
+  zx::process process;
+  ASSERT_OK(zx::process::create(*zx::job::default_job(), "", 0u, 0u, &process, &vmar));
+
+  zx_info_handle_extended_t handle_info[4] = {};
+  size_t actual = 0;
+  size_t avail = 0;
+  ASSERT_OK(
+      process.get_info(ZX_INFO_HANDLE_TABLE, &handle_info, sizeof(handle_info), &actual, &avail));
+
+  EXPECT_EQ(actual, 0);
+  EXPECT_EQ(avail, 0);
+}
+
+TEST_F(ProcessGetInfoTest, InfoProcessHandleTableSelf) {
+  // The current process can have many handles, in some configs upward of 70. Check
+  // the pattern of calling twice works, with the first time just to know the size.
+  size_t avail = 0;
+  ASSERT_OK(zx::process::self()->get_info(ZX_INFO_HANDLE_TABLE, nullptr, 0, nullptr, &avail));
+  ASSERT_GT(avail, 10);
+  size_t actual = 0;
+  // In the second syscall there is a slack of 4 handles in case another thread has allocated
+  // and object. We could loop until the call succeeds but this can mask other problems.
+  avail += 4u;
+  auto size = avail * sizeof(zx_info_handle_extended_t);
+  std::unique_ptr<zx_info_handle_extended_t[]> handle_info(new zx_info_handle_extended_t[avail]);
+  ASSERT_OK(zx::process::self()->get_info(ZX_INFO_HANDLE_TABLE, handle_info.get(), size, &actual,
+                                          &avail));
+  ASSERT_GE(actual, 10);
+  ASSERT_EQ(actual, avail);
+  // We don't know exactly what handles we have but we can do some basic checking.
+  for (size_t ix = 0; ix != actual; ++ix) {
+    EXPECT_NE(handle_info[ix].handle_value, ZX_HANDLE_INVALID);
+    EXPECT_GT(handle_info[ix].koid, 0);
+    EXPECT_NE(handle_info[ix].type, ZX_OBJ_TYPE_NONE);
+    switch (handle_info[ix].type) {
+      case ZX_OBJ_TYPE_CHANNEL:
+      case ZX_OBJ_TYPE_SOCKET:
+      case ZX_OBJ_TYPE_EVENTPAIR:
+      case ZX_OBJ_TYPE_FIFO:
+      case ZX_OBJ_TYPE_THREAD:
+      case ZX_OBJ_TYPE_PROCESS:
+        EXPECT_GT(handle_info[ix].related_koid, 0);
+        break;
+      case ZX_OBJ_TYPE_JOB:
+        // Jobs can have |related_koid| zero or not, depending if it is the root job.
+        break;
+      default:
+        EXPECT_EQ(handle_info[ix].related_koid, 0);
+        break;
+    }
+  }
+}
+
+TEST_F(ProcessGetInfoTest, InfoProcessHandleTableInvalidHandleFails) {
+  ASSERT_NO_FATAL_FAILURES((CheckInvalidHandleFails<zx_info_handle_extended_t>(
+      ZX_INFO_HANDLE_TABLE, 1, GetHandleProvider())));
+}
+
+TEST_F(ProcessGetInfoTest, InfoProcessHandleTableNullAvailSuceeds) {
+  ASSERT_NO_FATAL_FAILURES((CheckNullAvailSuceeds<zx_info_handle_extended_t>(
+      ZX_INFO_HANDLE_TABLE, 1, GetHandleProvider())));
+}
+
+TEST_F(ProcessGetInfoTest, InfoProcessHandleTableNullActualAvailSuceeds) {
+  ASSERT_NO_FATAL_FAILURES((CheckNullActualAndAvailSuceeds<zx_info_handle_extended_t>(
+      ZX_INFO_HANDLE_TABLE, 1, GetHandleProvider())));
+}
+
+TEST_F(ProcessGetInfoTest, InfoProcessHandleTableInvalidBufferPointerFails) {
+  ASSERT_NO_FATAL_FAILURES((CheckNullActualSuceeds<zx_info_handle_extended_t>(
+      ZX_INFO_HANDLE_TABLE, 1, GetHandleProvider())));
+}
+
 TEST_F(ProcessGetInfoTest, InfoProcessMapsOnSelfFails) {
   ASSERT_NO_FATAL_FAILURES(
       (CheckSelfInfoSuceeds<zx_info_maps_t>(ZX_INFO_PROCESS_MAPS, 1, process_provider())));

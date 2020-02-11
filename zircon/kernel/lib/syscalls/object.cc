@@ -620,6 +620,46 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
 
+    case ZX_INFO_HANDLE_TABLE: {
+      fbl::RefPtr<ProcessDispatcher> process;
+      auto error = up->GetDispatcherWithRights(
+          handle, ZX_RIGHT_INSPECT | ZX_RIGHT_MANAGE_PROCESS | ZX_RIGHT_MANAGE_THREAD, &process);
+      if (error != ZX_OK)
+        return error;
+
+      if (!_buffer && !_avail && _actual) {
+        // Optimization for callers which call twice, the first time just to know the size.
+        return _actual.copy_to_user(static_cast<size_t>(up->HandleCount()));
+      }
+
+      fbl::Array<zx_info_handle_extended_t> handle_info;
+      zx_status_t status = process->GetHandleInfo(&handle_info);
+      if (status != ZX_OK)
+        return status;
+
+      size_t num_records = handle_info.size();
+      size_t num_space_for = buffer_size / sizeof(zx_info_handle_extended_t);
+      size_t num_to_copy = MIN(num_records, num_space_for);
+
+      // Don't try to copy if there are no bytes to copy, as the "is
+      // user space" check may not handle (_buffer == NULL and len == 0).
+      if (num_to_copy && _buffer.reinterpret<zx_info_handle_extended_t>().copy_array_to_user(
+                             handle_info.data(), num_to_copy) != ZX_OK) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      if (_actual) {
+        zx_status_t status = _actual.copy_to_user(num_to_copy);
+        if (status != ZX_OK)
+          return status;
+      }
+      if (_avail) {
+        zx_status_t status = _avail.copy_to_user(num_records);
+        if (status != ZX_OK)
+          return status;
+      }
+      return ZX_OK;
+    }
+
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }

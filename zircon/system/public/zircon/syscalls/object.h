@@ -39,6 +39,7 @@ typedef uint32_t zx_object_info_topic_t;
 #define ZX_INFO_JOB                     ((zx_object_info_topic_t) 24u) // zx_info_job_t[1]
 #define ZX_INFO_TIMER                   ((zx_object_info_topic_t) 25u) // zx_info_timer_t[1]
 #define ZX_INFO_STREAM                  ((zx_object_info_topic_t) 26u) // zx_info_stream_t[1]
+#define ZX_INFO_HANDLE_TABLE            ((zx_object_info_topic_t) 27u) // zx_info_handle_extended_t[n]
 
 typedef uint32_t zx_obj_props_t;
 #define ZX_OBJ_PROP_NONE                ((zx_obj_props_t) 0u)
@@ -82,6 +83,43 @@ typedef struct zx_info_handle_basic {
 
     uint8_t padding1[4];
 } zx_info_handle_basic_t;
+
+typedef struct zx_info_handle_extended {
+    // The object type: channel, event, socket, etc.
+    zx_obj_type_t type;
+
+    // The handle value which is only valid for the process which
+    // was passed to ZX_INFO_HANDLE_TABLE.
+    zx_handle_t handle_value;
+
+    // The immutable rights assigned to the handle. Two handles that
+    // have the same koid and the same rights are equivalent and
+    // interchangeable.
+    zx_rights_t rights;
+
+    // Set to ZX_OBJ_PROP_WAITABLE if the object referenced by the
+    // handle can be waited on; zero otherwise.
+    zx_obj_props_t props;
+
+    // The unique id assigned by kernel to the object referenced by the
+    // handle.
+    zx_koid_t koid;
+
+    // If the object referenced by the handle is related to another (such
+    // as the other end of a channel, or the parent of a job) then
+    // |related_koid| is the koid of that object, otherwise it is zero.
+    // This relationship is immutable: an object's |related_koid| does
+    // not change even if the related object no longer exists.
+    zx_koid_t related_koid;
+
+    // If the object referenced by the handle has a peer, like the
+    // other end of a channel, then this is the koid of the process
+    // which currently owns it. This value is not stable; the process
+    // can change the owner at any moment.
+    //
+    // This is currently unimplemented and contains 0.
+    zx_koid_t peer_owner_koid;
+} zx_info_handle_extended_t;
 
 typedef struct zx_info_handle_count {
     // The number of outstanding handles to a kernel object.

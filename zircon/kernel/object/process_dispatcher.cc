@@ -129,6 +129,7 @@ ProcessDispatcher::~ProcessDispatcher() {
   // Assert that the -> DEAD transition cleaned up what it should have.
   DEBUG_ASSERT(handles_.is_empty());
   DEBUG_ASSERT(!aspace_ || aspace_->is_destroyed());
+  DEBUG_ASSERT(handle_count_ == 0);
 
   kcounter_add(dispatcher_process_destroy_count, 1);
 
@@ -419,6 +420,7 @@ void ProcessDispatcher::FinishDeadTransition() {
     for (auto& handle : handles_) {
       handle.set_process_id(ZX_KOID_INVALID);
     }
+    handle_count_ = 0;
     to_clean.swap(handles_);
   }
 
@@ -455,7 +457,7 @@ void ProcessDispatcher::FinishDeadTransition() {
   // If we are critical to a job, take action.
   if (critical_to_job_ != nullptr) {
     // Check if we accept any return code, or require it be non-zero.
-    if (!retcode_nonzero_  || retcode_ != 0) {
+    if (!retcode_nonzero_ || retcode_ != 0) {
       critical_to_job_->Kill(ZX_TASK_RETCODE_CRITICAL_PROCESS_KILL);
     }
   }
@@ -486,6 +488,11 @@ Handle* ProcessDispatcher::GetHandleLocked(zx_handle_t handle_value, bool skip_p
   return nullptr;
 }
 
+uint32_t ProcessDispatcher::HandleCount() const {
+  Guard<BrwLockPi, BrwLockPi::Reader> guard{&handle_table_lock_};
+  return handle_count_;
+}
+
 void ProcessDispatcher::AddHandle(HandleOwner handle) {
   Guard<BrwLockPi, BrwLockPi::Writer> guard{&handle_table_lock_};
   AddHandleLocked(ktl::move(handle));
@@ -494,9 +501,11 @@ void ProcessDispatcher::AddHandle(HandleOwner handle) {
 void ProcessDispatcher::AddHandleLocked(HandleOwner handle) {
   handle->set_process_id(get_koid());
   handles_.push_front(handle.release());
+  handle_count_++;
 }
 
 HandleOwner ProcessDispatcher::RemoveHandleLocked(Handle* handle) {
+  DEBUG_ASSERT(handle_count_ > 0);
   handle->set_process_id(ZX_KOID_INVALID);
   // Make sure we don't leave any dangling cursors.
   for (auto& cursor : handle_cursors_) {
@@ -504,6 +513,7 @@ HandleOwner ProcessDispatcher::RemoveHandleLocked(Handle* handle) {
     cursor.AdvanceIf(handle);
   }
   handles_.erase(*handle);
+  handle_count_--;
   return HandleOwner(handle);
 }
 
@@ -681,6 +691,40 @@ zx_status_t ProcessDispatcher::SetCriticalToJob(fbl::RefPtr<JobDispatcher> criti
 
   retcode_nonzero_ = retcode_nonzero;
   return ZX_OK;
+}
+
+zx_status_t ProcessDispatcher::GetHandleInfo(fbl::Array<zx_info_handle_extended_t>* handles) const {
+  for (;;) {
+    size_t count = HandleCount();
+    // TODO: Bug 45685. This memory allocation should come from a different pool since it
+    // can be larger than one page.
+    fbl::AllocChecker ac;
+    handles->reset(new (&ac) zx_info_handle_extended_t[count], count);
+    if (!ac.check()) {
+      return ZX_ERR_NO_MEMORY;
+    }
+
+    {
+      Guard<BrwLockPi, BrwLockPi::Reader> guard{&handle_table_lock_};
+      if (count != handle_count_) {
+        continue;
+      }
+
+      size_t index = 0;
+      ForEachHandleLocked([&](zx_handle_t handle, zx_rights_t rights, const Dispatcher* disp) {
+        auto& entry = (*handles)[index++];
+        entry = {disp->get_type(),
+                 handle,
+                 rights,
+                 disp->is_waitable() ? ZX_OBJ_PROP_WAITABLE : ZX_OBJ_PROP_NONE,
+                 disp->get_koid(),
+                 disp->get_related_koid(),
+                 0u};
+        return ZX_OK;
+      });
+    }
+    return ZX_OK;
+  }
 }
 
 Exceptionate* ProcessDispatcher::exceptionate(Exceptionate::Type type) {
