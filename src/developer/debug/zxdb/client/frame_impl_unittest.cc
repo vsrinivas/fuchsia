@@ -25,10 +25,26 @@ class FrameImplTest : public RemoteAPITest {};
 // Mock remote API for the register test that provides the logic for testing register sets.
 class MockRemoteAPIForRegister : public MockRemoteAPI {
  public:
+  const std::vector<debug_ipc::ReadRegistersRequest>& reads() const { return reads_; }
+
+  void PushRegisterToReturn(RegisterID id, std::vector<uint8_t> data) {
+    registers_to_return_.push_back({id, std::move(data)});
+  }
+
   // It's expected that RBX is set to this value, and these two values are returned when a register
   // is set.
   constexpr static uint8_t kRbxValue[8] = {0x3, 0x2, 0x1, 0x0, 0x9, 0x8, 0x7, 0x6};
   constexpr static uint8_t kRcxValue[8] = {0x4, 0x3, 0x2, 0x1, 0x0, 0x9, 0x8, 0x7};
+
+  void ReadRegisters(const debug_ipc::ReadRegistersRequest& request,
+                     fit::callback<void(const Err&, debug_ipc::ReadRegistersReply)> cb) {
+    reads_.push_back(request);
+
+    debug_ipc::ReadRegistersReply reply = {};
+    reply.registers = registers_to_return_;
+
+    cb(Err(), std::move(reply));
+  }
 
   void WriteRegisters(const debug_ipc::WriteRegistersRequest& request,
                       fit::callback<void(const Err&, debug_ipc::WriteRegistersReply)> cb) {
@@ -48,13 +64,25 @@ class MockRemoteAPIForRegister : public MockRemoteAPI {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb), reply]() mutable { cb(Err(), reply); });
   }
+
+ private:
+  std::vector<debug_ipc::ReadRegistersRequest> reads_;
+  std::vector<debug_ipc::Register> registers_to_return_;
 };
 
 class FrameImplRegisterTest : public RemoteAPITest {
+ public:
+  MockRemoteAPIForRegister* register_remote_api() { return register_remote_api_; }
+
  protected:
   std::unique_ptr<RemoteAPI> GetRemoteAPIImpl() override {
-    return std::make_unique<MockRemoteAPIForRegister>();
+    auto remote_api = std::make_unique<MockRemoteAPIForRegister>();
+    register_remote_api_ = remote_api.get();
+    return remote_api;
   }
+
+ private:
+  MockRemoteAPIForRegister* register_remote_api_ = nullptr;
 };
 
 // Tests asynchronous evaluation and callbacks for evaluating the base pointer.
@@ -162,6 +190,65 @@ TEST_F(FrameImplRegisterTest, UpdateRegister) {
   EXPECT_EQ(rbx_value, (*out_regs)[0].data);
   EXPECT_EQ(debug_ipc::RegisterID::kX64_rcx, (*out_regs)[1].id);
   EXPECT_EQ(rcx_value, (*out_regs)[1].data);
+}
+
+TEST_F(FrameImplRegisterTest, AlwaysRequest) {
+  // Make a process for notifying about.
+  constexpr uint64_t kProcessKoid = 1234;
+  InjectProcess(kProcessKoid);
+  constexpr uint64_t kThreadKoid = 5678;
+  Thread* thread = InjectThread(kProcessKoid, kThreadKoid);
+
+  // Notify of thread stop.
+  debug_ipc::NotifyException break_notification;
+  break_notification.type = debug_ipc::ExceptionType::kSoftware;
+  break_notification.thread.process_koid = kProcessKoid;
+  break_notification.thread.thread_koid = kThreadKoid;
+  break_notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+  break_notification.thread.frames.emplace_back(0x1234, 0x1000);
+  InjectException(break_notification);
+
+  Stack& stack = thread->GetStack();
+  Frame* frame = stack[0];
+
+  // The new values should be cached.
+  {
+    bool called = false;
+    frame->GetRegisterCategoryAsync(
+        debug_ipc::RegisterCategory::kGeneral, false,
+        [&called](const Err& err, const std::vector<debug_ipc::Register>& registers) {
+          called = true;
+        });
+    loop().RunUntilNoTasks();
+
+    ASSERT_TRUE(called);
+    // Should not have called the backend.
+    ASSERT_EQ(register_remote_api()->reads().size(), 0u);
+  }
+
+  // Calling with always request should get the registers.
+  register_remote_api()->PushRegisterToReturn(RegisterID::kX64_fip, {0, 1, 2, 3});
+  register_remote_api()->PushRegisterToReturn(RegisterID::kX64_rax, {5, 6, 7, 8});
+
+  {
+    bool called = false;
+    std::vector<debug_ipc::Register> registers;
+    frame->GetRegisterCategoryAsync(
+        debug_ipc::RegisterCategory::kGeneral, true,
+        [&called, &registers](const Err& err, const std::vector<debug_ipc::Register>& regs) {
+          called = true;
+          registers = std::move(regs);
+        });
+    loop().RunUntilNoTasks();
+
+    ASSERT_TRUE(called);
+    ASSERT_EQ(register_remote_api()->reads().size(), 1u);
+    ASSERT_EQ(registers.size(), 2u);
+    EXPECT_EQ(registers[0].id, RegisterID::kX64_fip);
+    EXPECT_EQ(registers[0].data, std::vector<uint8_t>({0, 1, 2, 3}));
+    EXPECT_EQ(registers[1].id, RegisterID::kX64_rax);
+    EXPECT_EQ(registers[1].data, std::vector<uint8_t>({5, 6, 7, 8}));
+  }
 }
 
 }  // namespace zxdb

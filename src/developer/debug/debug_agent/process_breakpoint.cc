@@ -47,6 +47,9 @@ zx_status_t ProcessBreakpoint::RegisterBreakpoint(Breakpoint* breakpoint) {
 }
 
 bool ProcessBreakpoint::UnregisterBreakpoint(Breakpoint* breakpoint) {
+  DEBUG_LOG(Breakpoint) << "Unregistering breakpoint " << breakpoint->settings().id << " ("
+                        << breakpoint->settings().name << ").";
+
   auto found = std::find(breakpoints_.begin(), breakpoints_.end(), breakpoint);
   if (found == breakpoints_.end()) {
     FXL_NOTREACHED();  // Should always be found.

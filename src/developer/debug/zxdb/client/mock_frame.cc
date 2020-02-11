@@ -82,7 +82,7 @@ const std::vector<debug_ipc::Register>* MockFrame::GetRegisterCategorySync(
 }
 
 void MockFrame::GetRegisterCategoryAsync(
-    debug_ipc::RegisterCategory category,
+    debug_ipc::RegisterCategory category, bool always_request,
     fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) {
   Err err;
   std::vector<debug_ipc::Register> regs;

@@ -65,13 +65,14 @@ const std::vector<Register>* FrameImpl::GetRegisterCategorySync(RegisterCategory
 }
 
 void FrameImpl::GetRegisterCategoryAsync(
-    RegisterCategory category, fit::function<void(const Err&, const std::vector<Register>&)> cb) {
+    RegisterCategory category, bool always_request,
+    fit::function<void(const Err&, const std::vector<Register>&)> cb) {
   FXL_DCHECK(category < RegisterCategory::kLast && category != RegisterCategory::kNone);
 
   size_t category_index = static_cast<size_t>(category);
   FXL_DCHECK(category_index < static_cast<size_t>(debug_ipc::RegisterCategory::kLast));
 
-  if (registers_[category_index]) {
+  if (!always_request && registers_[category_index]) {
     // Registers known already, asynchronously return the result.
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [cb = std::move(cb), weak_frame = weak_factory_.GetWeakPtr(), category_index]() {

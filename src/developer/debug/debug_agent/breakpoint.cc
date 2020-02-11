@@ -106,8 +106,16 @@ Breakpoint::Breakpoint(ProcessDelegate* process_delegate) : process_delegate_(pr
 
 Breakpoint::~Breakpoint() {
   DEBUG_LOG(Breakpoint) << Preamble(this) << "Deleting.";
-  for (const auto& loc : locations_)
-    process_delegate_->UnregisterBreakpoint(this, loc.first, loc.second);
+  for (const auto& [process_koid, address] : locations_) {
+    DEBUG_LOG(Breakpoint) << "- Proc " << process_koid << " at address 0x " << std::hex << address;
+    process_delegate_->UnregisterBreakpoint(this, process_koid, address);
+  }
+
+  for (const auto& [process_koid, address_range] : watchpoint_locations_) {
+    DEBUG_LOG(Breakpoint) << "- Proc " << process_koid << " at address " << std::hex
+                          << address_range.ToString();
+    process_delegate_->UnregisterWatchpoint(this, process_koid, address_range);
+  }
 }
 
 zx_status_t Breakpoint::SetSettings(const debug_ipc::BreakpointSettings& settings) {

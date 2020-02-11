@@ -74,18 +74,34 @@ zx_status_t ReadDebugRegs(const zx::thread& thread, std::vector<debug_ipc::Regis
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // TODO(bug 40992) Add ARM64 hardware watchpoint registers here.
+  // HW breakpoints.
+  {
+    auto bcr_base = static_cast<uint32_t>(RegisterID::kARMv8_dbgbcr0_el1);
+    auto bvr_base = static_cast<uint32_t>(RegisterID::kARMv8_dbgbvr0_el1);
+    for (size_t i = 0; i < debug_regs.hw_bps_count; i++) {
+      auto bcr_id = static_cast<RegisterID>(bcr_base + i);
+      out->push_back(CreateRegister(bcr_id, sizeof(debug_regs.hw_bps[i].dbgbcr),
+                                    &debug_regs.hw_bps[i].dbgbcr));
 
-  auto bcr_base = static_cast<uint32_t>(RegisterID::kARMv8_dbgbcr0_el1);
-  auto bvr_base = static_cast<uint32_t>(RegisterID::kARMv8_dbgbvr0_el1);
-  for (size_t i = 0; i < debug_regs.hw_bps_count; i++) {
-    auto bcr_id = static_cast<RegisterID>(bcr_base + i);
-    out->push_back(
-        CreateRegister(bcr_id, sizeof(debug_regs.hw_bps[i].dbgbcr), &debug_regs.hw_bps[i].dbgbcr));
+      auto bvr_id = static_cast<RegisterID>(bvr_base + i);
+      out->push_back(CreateRegister(bvr_id, sizeof(debug_regs.hw_bps[i].dbgbvr),
+                                    &debug_regs.hw_bps[i].dbgbvr));
+    }
+  }
 
-    auto bvr_id = static_cast<RegisterID>(bvr_base + i);
-    out->push_back(
-        CreateRegister(bvr_id, sizeof(debug_regs.hw_bps[i].dbgbvr), &debug_regs.hw_bps[i].dbgbvr));
+  // Watchpoints.
+  {
+    auto bcr_base = static_cast<uint32_t>(RegisterID::kARMv8_dbgwcr0_el1);
+    auto bvr_base = static_cast<uint32_t>(RegisterID::kARMv8_dbgwvr0_el1);
+    for (size_t i = 0; i < debug_regs.hw_bps_count; i++) {
+      auto bcr_id = static_cast<RegisterID>(bcr_base + i);
+      out->push_back(CreateRegister(bcr_id, sizeof(debug_regs.hw_wps[i].dbgwcr),
+                                    &debug_regs.hw_wps[i].dbgwcr));
+
+      auto bvr_id = static_cast<RegisterID>(bvr_base + i);
+      out->push_back(CreateRegister(bvr_id, sizeof(debug_regs.hw_wps[i].dbgwvr),
+                                    &debug_regs.hw_wps[i].dbgwvr));
+    }
   }
 
   // TODO(donosoc): Currently this registers that are platform information are

@@ -1270,7 +1270,8 @@ Err DoRegs(ConsoleContext* context, const Command& cmd) {
 
     for (auto category : category_set) {
       cmd.frame()->GetRegisterCategoryAsync(
-          category, [collector](const Err& err, const std::vector<debug_ipc::Register>& new_regs) {
+          category, true,
+          [collector](const Err& err, const std::vector<debug_ipc::Register>& new_regs) {
             // Save the new registers.
             collector->registers.insert(collector->registers.end(), new_regs.begin(),
                                         new_regs.end());

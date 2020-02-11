@@ -71,7 +71,7 @@ void FrameSymbolDataProvider::GetRegisterAsync(RegisterID id, GetRegisterCallbac
   FXL_DCHECK(category != RegisterCategory::kNone);
 
   frame_->GetRegisterCategoryAsync(
-      category,
+      category, false,
       [id, cb = std::move(cb)](const Err& err, const std::vector<Register>& regs) mutable {
         if (err.has_error())
           return cb(err, {});

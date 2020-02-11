@@ -72,8 +72,12 @@ class Frame : public ClientObject {
   //
   // The callback will always be issued. If the frame is destroyed before the registers are
   // retrieved, the error will be set and it will be called with an empty vector.
+  //
+  // If |always_request| is set, the registers will always be requested even if there is an entry
+  // in the cache. This is normally used for console commands such as "registers" that will always
+  // want the most up to date data.
   virtual void GetRegisterCategoryAsync(
-      debug_ipc::RegisterCategory category,
+      debug_ipc::RegisterCategory category, bool always_request,
       fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) = 0;
 
   // Writes to the given register. The register must be a canonical hardware register.

@@ -59,7 +59,7 @@ class MockFrame : public Frame {
   const std::vector<debug_ipc::Register>* GetRegisterCategorySync(
       debug_ipc::RegisterCategory category) const override;
   void GetRegisterCategoryAsync(
-      debug_ipc::RegisterCategory category,
+      debug_ipc::RegisterCategory category, bool always_request,
       fit::function<void(const Err&, const std::vector<debug_ipc::Register>&)> cb) override;
   void WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> data,
                      fit::callback<void(const Err&)> cb) override;

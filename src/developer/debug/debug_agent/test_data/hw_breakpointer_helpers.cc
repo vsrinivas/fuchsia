@@ -247,9 +247,7 @@ void InstallHWBreakpoint(const zx::thread& thread, uint64_t address) {
   SetHWBreakpoint(thread, address);
 }
 
-void RemoveHWBreakpoint(const zx::thread& thread) {
-  SetHWBreakpoint(thread, 0);
-}
+void RemoveHWBreakpoint(const zx::thread& thread) { SetHWBreakpoint(thread, 0); }
 
 // Watchpoint --------------------------------------------------------------------------------------
 
