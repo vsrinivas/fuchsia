@@ -6,9 +6,8 @@ use std::sync::Arc;
 
 use anyhow::{format_err, Error};
 use fidl_fuchsia_ui_brightness::{
-    BrightnessPoint, BrightnessTable, ControlRequest as BrightnessControlRequest,
-    ControlWatchAutoBrightnessAdjustmentResponder, ControlWatchAutoBrightnessResponder,
-    ControlWatchCurrentBrightnessResponder,
+    ControlRequest as BrightnessControlRequest, ControlWatchAutoBrightnessAdjustmentResponder,
+    ControlWatchAutoBrightnessResponder, ControlWatchCurrentBrightnessResponder,
 };
 use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_syslog::{self, fx_log_err, fx_log_info};
@@ -18,7 +17,10 @@ use futures::future::{AbortHandle, Abortable};
 use futures::lock::Mutex;
 use futures::prelude::*;
 use lazy_static::lazy_static;
+use serde_derive::{Deserialize, Serialize};
+use serde_json;
 use splines::{Interpolation, Key, Spline};
+use std::{fs, io};
 use watch_handler::{Sender, WatchHandler};
 
 // Delay between sensor reads
@@ -32,6 +34,34 @@ const AUTO_MINIMUM_BRIGHTNESS: f32 = 0.004;
 const BRIGHTNESS_USER_MULTIPLIER_CENTER: f32 = 1.0;
 const BRIGHTNESS_USER_MULTIPLIER_MAX: f32 = 8.0;
 const BRIGHTNESS_USER_MULTIPLIER_MIN: f32 = 0.25;
+const BRIGHTNESS_TABLE_FILE_PATH: &str = "/data/brightness_table";
+
+#[derive(Serialize, Deserialize, Clone)]
+struct BrightnessPoint {
+    ambient_lux: f32,
+    display_nits: f32,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+struct BrightnessTable {
+    points: Vec<BrightnessPoint>,
+}
+
+impl From<fidl_fuchsia_ui_brightness::BrightnessPoint> for BrightnessPoint {
+    fn from(brightness_point: fidl_fuchsia_ui_brightness::BrightnessPoint) -> Self {
+        return BrightnessPoint {
+            ambient_lux: brightness_point.ambient_lux,
+            display_nits: brightness_point.display_nits,
+        };
+    }
+}
+
+impl From<fidl_fuchsia_ui_brightness::BrightnessTable> for BrightnessTable {
+    fn from(brightness_table: fidl_fuchsia_ui_brightness::BrightnessTable) -> Self {
+        let fidl_fuchsia_ui_brightness::BrightnessTable { points } = brightness_table;
+        return BrightnessTable { points: points.into_iter().map(|p| p.into()).collect() };
+    }
+}
 
 //This is the default table, and a default curve will be generated base on this table.
 //This will be replaced once SetBrightnessTable is called.
@@ -116,9 +146,13 @@ impl Control {
         fx_log_info!("New Control class");
 
         let set_brightness_abort_handle = None::<AbortHandle>;
+        let default_table_points = &*BRIGHTNESS_TABLE.lock().await.points;
+        let brightness_table = read_brightness_table_file(BRIGHTNESS_TABLE_FILE_PATH)
+            .unwrap_or_else(|e| {
+                fx_log_err!("Error occurred when trying to read existing settings: {}, using default table instead.", e);
+                BrightnessTable { points: default_table_points.to_vec() }
+            });
 
-        let BrightnessTable { points } = &*BRIGHTNESS_TABLE.lock().await;
-        let brightness_table = BrightnessTable { points: points.to_vec() };
         let spline_arg = generate_spline(&brightness_table);
 
         // Startup auto-brightness loop
@@ -130,7 +164,6 @@ impl Control {
             initial_auto_brightness_abort_handle.as_ref(),
             current_sender_channel.clone(),
         );
-
         Control {
             backlight,
             sensor,
@@ -177,7 +210,7 @@ impl Control {
                 }
             }
             BrightnessControlRequest::SetBrightnessTable { table, control_handle: _ } => {
-                let result = self.check_brightness_table_and_set_new_curve(&table).await;
+                let result = self.check_brightness_table_and_set_new_curve(&table.into()).await;
                 match result {
                     Ok(_v) => fx_log_info!("Brightness table is valid and set"),
                     Err(e) => {
@@ -299,6 +332,23 @@ impl Control {
                 self.current_sender_channel.clone(),
             );
         }
+
+        let result = self.store_brightness_table(table, BRIGHTNESS_TABLE_FILE_PATH);
+        match result {
+            Ok(_v) => fx_log_info!("Stored successfully"),
+            Err(e) => fx_log_info!("Didn't store successfully due to error {}", e),
+        }
+    }
+
+    fn store_brightness_table(
+        &mut self,
+        table: &BrightnessTable,
+        file_path: &str,
+    ) -> Result<(), Error> {
+        fx_log_info!("Storing brightness table set.");
+        let file = fs::File::create(file_path)?;
+        serde_json::to_writer(io::BufWriter::new(file), &table)
+            .map_err(|e| anyhow::format_err!("Failed to write to file, ran into error: {:?}", e))
     }
 
     async fn check_brightness_table_and_set_new_curve(
@@ -417,6 +467,14 @@ impl ControlTrait for Control {
 // TODO(kpt) Move all the folllowing functions into Control. This is delayed so that in the CL
 // for the creation of this code the reviewer can see more easily that the code is unchanged
 // after the extraction from main.rs.
+
+fn read_brightness_table_file(path: &str) -> Result<BrightnessTable, Error> {
+    let file = fs::File::open(path)?;
+    let result = serde_json::from_reader(io::BufReader::new(file));
+    let result = result
+        .map_err(|e| anyhow::format_err!("Failed to read from file, ran into error: {:?}", e));
+    result
+}
 
 fn generate_spline(table: &BrightnessTable) -> Spline<f32, f32> {
     let BrightnessTable { points } = table;
@@ -1007,5 +1065,50 @@ mod tests {
         set_brightness_impl(0.04, backlight_clone).await;
         let last_set_brightness = &*LAST_SET_BRIGHTNESS.lock().await;
         assert_eq!(cmp_float(*last_set_brightness, 0.04), true);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_store_brightness_table() -> Result<(), Error> {
+        let mut control = generate_control_struct().await;
+        let brightness_table = BrightnessTable {
+            points: vec![
+                BrightnessPoint { ambient_lux: 10., display_nits: 50. },
+                BrightnessPoint { ambient_lux: 30., display_nits: 50. },
+                BrightnessPoint { ambient_lux: 60., display_nits: 50. },
+            ],
+        };
+        control.store_brightness_table(&brightness_table, "/data/test_file")?;
+        let file = fs::File::open("/data/test_file")?;
+        let data = serde_json::from_reader(io::BufReader::new(file))?;
+        let BrightnessTable { points: read_points } = data;
+        let BrightnessTable { points: write_points } = brightness_table;
+        let iter = read_points.iter().zip(write_points.iter());
+        for point_tuple in iter {
+            let (read_point, write_point) = point_tuple;
+            assert_eq!(cmp_float(read_point.ambient_lux, write_point.ambient_lux), true);
+            assert_eq!(cmp_float(read_point.display_nits, write_point.display_nits), true);
+        }
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_brightness_table_file_empty_file() {
+        fs::File::create("/data/test_file").unwrap();
+        let result = read_brightness_table_file("/data/test_file");
+        assert_eq!(true, result.is_err());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_brightness_table_file_missing_file() {
+        let result = read_brightness_table_file("/data/test_file");
+        assert_eq!(true, result.is_err());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_read_brightness_table_file_invalid_data() {
+        let file = fs::File::create("/data/test_file").unwrap();
+        serde_json::to_writer(io::BufWriter::new(file), &1.0).unwrap();
+        let result = read_brightness_table_file("/data/test_file");
+        assert_eq!(true, result.is_err());
     }
 }

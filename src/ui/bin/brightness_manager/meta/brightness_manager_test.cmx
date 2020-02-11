@@ -3,6 +3,9 @@
         "binary": "test/brightness_manager_test"
     },
     "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
         "services": [
             "fuchsia.logger.LogSink"
         ]

@@ -7,6 +7,9 @@
             "class/backlight",
             "class/input"
         ],
+        "features": [
+            "isolated-persistent-storage"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.ui.brightness.Control"
