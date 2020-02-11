@@ -26,6 +26,7 @@
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+
 #include "ddk/driver.h"
 #include "zircon/errors.h"
 #include "zircon/status.h"
@@ -364,7 +365,7 @@ zx_status_t PartitionTable::Bind() {
 
   if (!has_partition) {
     auto dummy = std::make_unique<DummyDevice>(parent_);
-    status = dummy->DdkAdd("dummy", DEVICE_ADD_INVISIBLE | DEVICE_ADD_NON_BINDABLE);
+    status = dummy->DdkAdd("dummy", DEVICE_ADD_NON_BINDABLE);
     if (status != ZX_OK) {
       zxlogf(ERROR, "gpt: failed to add dummy %s\n", zx_status_get_string(status));
       return status;
@@ -373,7 +374,6 @@ zx_status_t PartitionTable::Bind() {
     __UNUSED auto p = dummy.release();
     return ZX_OK;
   }
-
 
   return ZX_OK;
 }
