@@ -124,10 +124,9 @@ if (current_cpu != "") {
       "$zx/system/ulib/storage:test",
 #------------------
 #------------------
-      "$zx/system/ulib/tftp:tftp-fuzzer",
 #------------------
 #------------------
-      "$zx/system/ulib/tftp:tftp-test",
+      "$zx/system/ulib/tftp/test",
 #------------------
 #------------------
       "$zx/system/ulib/trace-reader:tests",
