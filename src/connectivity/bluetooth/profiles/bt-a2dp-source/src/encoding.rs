@@ -87,7 +87,7 @@ impl RtpPacketBuilder {
     }
 }
 
-pub struct EncodedStreamSbc {
+pub struct EncodedStream {
     /// The input media stream
     source: BoxStream<'static, fuchsia_audio_device_output::Result<Vec<u8>>>,
     /// The underlying encoder object
@@ -100,13 +100,17 @@ pub struct EncodedStreamSbc {
     encoder_input_buffers: VecDeque<Vec<u8>>,
     /// Cursor on the first buffer waiting indicating the next byte to be written to the encoder
     encoder_input_cursor: usize,
+    /// Number of bytes to encode of the input before flushing to get an output packet
+    pcm_bytes_per_encoded_packet: usize,
 }
 
-impl EncodedStreamSbc {
+impl EncodedStream {
     pub fn build(
         input_format: PcmFormat,
         _sbc_settings: &avdtp::ServiceCapability,
         source: BoxStream<'static, fuchsia_audio_device_output::Result<Vec<u8>>>,
+        pcm_frames_per_encoded_frame: u32,
+        encoded_frames_per_packet: u8,
     ) -> Result<Self, Error> {
         // TODO: take these from the sbc_settings
         let sbc_encoder_settings = EncoderSettings::Sbc(SbcEncoderSettings {
@@ -116,6 +120,12 @@ impl EncodedStreamSbc {
             channel_mode: SbcChannelMode::JointStereo,
             bit_pool: 53,
         });
+
+        let bytes_per_pcm_frame =
+            (input_format.bits_per_sample / 8) as usize * input_format.channel_map.len();
+        let pcm_bytes_per_encoded_packet = pcm_frames_per_encoded_frame as usize
+            * bytes_per_pcm_frame
+            * encoded_frames_per_packet as usize;
 
         let pcm_input_format = DomainFormat::Audio(AudioFormat::Uncompressed(
             AudioUncompressedFormat::Pcm(input_format),
@@ -130,19 +140,12 @@ impl EncodedStreamSbc {
             unflushed_bytecount: 0,
             encoder_input_buffers: VecDeque::new(),
             encoder_input_cursor: 0,
+            pcm_bytes_per_encoded_packet,
         })
     }
 }
 
-// TODO(40986, 41449): Update this based on the input format and the codec settings.
-pub const PCM_FRAMES_PER_ENCODED: usize = 640;
-const ENCODED_PER_PACKET: usize = 5;
-const BYTES_PER_PCM_FRAME: usize = 4;
-
-const PCM_BYTES_PER_ENCODED_PACKET: usize =
-    PCM_FRAMES_PER_ENCODED * ENCODED_PER_PACKET * BYTES_PER_PCM_FRAME;
-
-impl Stream for EncodedStreamSbc {
+impl Stream for EncodedStream {
     type Item = Result<Vec<u8>, Error>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -167,7 +170,7 @@ impl Stream for EncodedStreamSbc {
                     self.encoder_input_cursor = cursor + written;
                     self.unflushed_bytecount = self.unflushed_bytecount + written;
                     // flush() if we have sent enough bytes to generate a frame
-                    if self.unflushed_bytecount > PCM_BYTES_PER_ENCODED_PACKET {
+                    if self.unflushed_bytecount > self.pcm_bytes_per_encoded_packet {
                         // Attempt to flush.
                         if self.encoder.flush().is_ok() {
                             self.unflushed_bytecount = 0;
@@ -306,9 +309,14 @@ mod tests {
         };
         // Mayve just replace this with future::repeat(0)
         let silence_source = SilenceStream::build(pcm_format.clone());
-        let mut encoder =
-            EncodedStreamSbc::build(pcm_format, &sbc_settings, silence_source.boxed())
-                .expect("building Stream works");
+        let mut encoder = EncodedStream::build(
+            pcm_format,
+            &sbc_settings,
+            silence_source.boxed(),
+            /*pcm_frames_per_packet=*/ 640,
+            /*encoded_frames_per_packet=*/ 5,
+        )
+        .expect("building Stream works");
         let mut next_frame_fut = encoder
             .next()
             .on_timeout(fasync::Time::after(TIMEOUT), || panic!("Encoder took too long"));

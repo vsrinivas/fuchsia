@@ -32,7 +32,7 @@ mod pcm_audio;
 mod peer;
 mod sources;
 
-use crate::encoding::{EncodedStreamSbc, RtpPacketBuilder};
+use crate::encoding::{EncodedStream, RtpPacketBuilder};
 use crate::pcm_audio::PcmAudio;
 use crate::peer::Peer;
 use sources::AudioSourceType;
@@ -203,7 +203,9 @@ impl Peers {
 /// 5 is chosen by default as it represents a low amount of latency and fits within the default
 /// L2CAP MTU.
 /// RTP Header (12 bytes) + 1 byte (SBC header) + 5 * SBC Frame (119 bytes) = 608 bytes < 672
-const FRAMES_PER_SBC_PACKET: u8 = 5;
+/// TODO(40986, 41449): Update this based on the input format and the codec settings.
+const ENCODED_FRAMES_PER_SBC_PACKET: u8 = 5;
+const PCM_FRAMES_PER_SBC_FRAME: u32 = 640;
 
 async fn start_streaming(
     peer: &DetachableWeak<PeerId, Peer>,
@@ -250,14 +252,19 @@ async fn start_streaming(
 
     let source_stream = sources::build_stream(&peer.key(), pcm_format.clone(), source_type)?;
 
-    let mut encoded_stream = EncodedStreamSbc::build(pcm_format, &sbc_settings, source_stream)?;
+    let mut encoded_stream = EncodedStream::build(
+        pcm_format,
+        &sbc_settings,
+        source_stream,
+        PCM_FRAMES_PER_SBC_FRAME,
+        ENCODED_FRAMES_PER_SBC_PACKET,
+    )?;
 
-    let mut builder = RtpPacketBuilder::new(FRAMES_PER_SBC_PACKET, vec![FRAMES_PER_SBC_PACKET]);
+    let mut builder =
+        RtpPacketBuilder::new(ENCODED_FRAMES_PER_SBC_PACKET, vec![ENCODED_FRAMES_PER_SBC_PACKET]);
 
     while let Some(encoded) = encoded_stream.try_next().await? {
-        if let Some(packet) =
-            builder.push_frame(encoded, encoding::PCM_FRAMES_PER_ENCODED as u32)?
-        {
+        if let Some(packet) = builder.push_frame(encoded, PCM_FRAMES_PER_SBC_FRAME)? {
             if let Err(e) = media_stream.write(&packet).await {
                 fx_log_info!("Failed sending packet to peer: {}", e);
                 return Ok(());
