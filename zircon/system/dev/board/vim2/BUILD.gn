@@ -42,6 +42,7 @@ driver_module("vim2") {
     "vim.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.sdmmc",
     "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/broadcom",
@@ -57,7 +58,6 @@ driver_module("vim2") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.scpi",
-    "//zircon/system/banjo/ddk.protocol.sdmmc",
     "//zircon/system/banjo/ddk.protocol.serial",
     "//zircon/system/fidl/fuchsia-hardware-serial:c",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",

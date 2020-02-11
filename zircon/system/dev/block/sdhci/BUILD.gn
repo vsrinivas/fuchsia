@@ -24,6 +24,7 @@ driver_module("sdhci") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "sdhci.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.sdmmc",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
@@ -34,7 +35,6 @@ driver_module("sdhci") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.block",
     "//zircon/system/banjo/ddk.protocol.sdhci",
-    "//zircon/system/banjo/ddk.protocol.sdmmc",
   ]
 }
 
@@ -49,6 +49,7 @@ test("sdhci-test") {
     "sdhci.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.sdmmc",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fake-bti",
     "//zircon/public/lib/fake_ddk",
@@ -63,7 +64,6 @@ test("sdhci-test") {
     "//zircon/system/banjo/ddk.protocol.block",
     "//zircon/system/banjo/ddk.protocol.sdhci",
     "//zircon/system/banjo/ddk.protocol.sdhci:ddk.protocol.sdhci_mock",
-    "//zircon/system/banjo/ddk.protocol.sdmmc",
   ]
 }
 

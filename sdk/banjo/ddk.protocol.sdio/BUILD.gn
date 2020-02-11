@@ -6,5 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("ddk.protocol.sdio") {
   sources = [ "sdio.banjo" ]
-  deps = [ "//zircon/system/banjo/ddk.protocol.sdmmc" ]
+  deps = [ "//sdk/banjo/ddk.protocol.sdmmc" ]
 }
