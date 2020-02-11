@@ -13,36 +13,8 @@ readonly PACKAGE_NAME=placeholder.far
 # Paths.
 SCRIPT_SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
-# Sets up the device-finder mock. These side effects allow device-finder to
-# minimally respond to command line flags to produce fake output that parses
-# correctly by the scripts under test.
-set_up_device_finder() {
-  cat >"${BT_TEMP_DIR}/scripts/sdk/gn/base/sdk/tools/device-finder.mock_side_effects" <<"SETVAR"
-while (("$#")); do
-  case $1 in
-  --local)
-    # Emit a different address than the default so the device and the host can
-    # have different IP addresses.
-    echo fe80::1234%coffee
-    exit
-    ;;
-  --full)
-    echo fe80::c0ff:eec0:ffee%coffee coffee-coffee-coffee-coffee
-    exit
-    ;;
-  esac
-  shift
-done
-
-echo fe80::c0ff:eec0:ffee%coffee
-SETVAR
-}
-
-
 # Verifies that the correct pm serve command is run by fpublish.
 TEST_fpublish() {
-  set_up_device_finder
-
   # Run command.
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpublish.sh" "${PACKAGE_NAME}"
 
@@ -78,7 +50,6 @@ BT_FILE_DEPS=(
   scripts/sdk/gn/base/bin/fuchsia-common.sh
 )
 BT_MOCKED_TOOLS=(
-  scripts/sdk/gn/base/sdk/tools/device-finder
   scripts/sdk/gn/base/sdk/tools/pm
 )
 
