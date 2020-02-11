@@ -125,7 +125,7 @@ void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url, fit::functi
     if (agent_it->second->state() == AgentContextImpl::State::TERMINATING) {
       run_agent_callbacks_[agent_url].push_back(std::move(done));
     } else {
-      // fuchsia::modular::Agent is already running, so we can issue the
+      // Agent is already running, so we can issue the
       // callback immediately.
       done();
     }
@@ -167,13 +167,14 @@ void AgentRunner::ConnectToAgent(
   if (*terminating_) {
     return;
   }
-  pending_agent_connections_[agent_url].push_back(
-      {requestor_url, std::move(incoming_services_request), std::move(agent_controller_request)});
-  EnsureAgentIsRunning(agent_url, [this, agent_url] {
-    // If the agent was terminating and has restarted, forwarding connections
-    // here is redundant, since it was already forwarded earlier.
-    ForwardConnectionsToAgent(agent_url);
-  });
+  EnsureAgentIsRunning(
+      agent_url, [this, agent_url, requestor_url,
+                  incoming_services_request = std::move(incoming_services_request),
+                  agent_controller_request = std::move(agent_controller_request)]() mutable {
+        auto* agent = running_agents_[agent_url].get();
+        agent->NewAgentConnection(requestor_url, std::move(incoming_services_request),
+                                  std::move(agent_controller_request));
+      });
 }
 
 void AgentRunner::HandleAgentServiceNotFound(::zx::channel channel, std::string service_name) {
@@ -243,17 +244,12 @@ void AgentRunner::ConnectToEntityProvider(
     return;
   }
 
-  pending_entity_provider_connections_[agent_url] = {std::move(entity_provider_request),
-                                                     std::move(agent_controller_request)};
-
-  EnsureAgentIsRunning(agent_url, [this, agent_url] {
-    auto it = pending_entity_provider_connections_.find(agent_url);
-    FXL_DCHECK(it != pending_entity_provider_connections_.end());
-    running_agents_[agent_url]->NewEntityProviderConnection(
-        std::move(it->second.entity_provider_request),
-        std::move(it->second.agent_controller_request));
-    pending_entity_provider_connections_.erase(it);
-  });
+  EnsureAgentIsRunning(
+      agent_url, [this, agent_url, entity_provider_request = std::move(entity_provider_request),
+                  agent_controller_request = std::move(agent_controller_request)]() mutable {
+        running_agents_[agent_url]->NewEntityProviderConnection(
+            std::move(entity_provider_request), std::move(agent_controller_request));
+      });
 }
 
 bool AgentRunner::AgentInServiceIndex(const std::string& agent_url) const {
@@ -272,20 +268,6 @@ void AgentRunner::RemoveAgent(const std::string agent_url) {
   // the previous one was in a terminating state), we can start it up again.
   if (run_agent_callbacks_.find(agent_url) != run_agent_callbacks_.end()) {
     RunAgent(agent_url);
-  }
-}
-
-void AgentRunner::ForwardConnectionsToAgent(const std::string& agent_url) {
-  // Did we hold onto new connections as the previous one was exiting?
-  auto found_it = pending_agent_connections_.find(agent_url);
-  if (found_it != pending_agent_connections_.end()) {
-    AgentContextImpl* agent = running_agents_[agent_url].get();
-    for (auto& pending_connection : found_it->second) {
-      agent->NewAgentConnection(pending_connection.requestor_url,
-                                std::move(pending_connection.incoming_services_request),
-                                std::move(pending_connection.agent_controller_request));
-    }
-    pending_agent_connections_.erase(found_it);
   }
 }
 

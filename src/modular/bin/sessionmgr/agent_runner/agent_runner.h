@@ -121,31 +121,8 @@ class AgentRunner {
   // Actually starts up an agent (used by |EnsureAgentIsRunning()| above).
   void RunAgent(const std::string& agent_url);
 
-  // Will also start and initialize the agent as a consequence.
-  void ForwardConnectionsToAgent(const std::string& agent_url);
-
   // A set of all agents that are either running or scheduled to be run.
   std::vector<std::string> GetAllAgents();
-
-  // agent URL -> pending agent connections
-  // This map holds connections to an agent that we hold onto while the
-  // existing agent is in a terminating state.
-  struct PendingAgentConnectionEntry {
-    const std::string requestor_url;
-    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request;
-    fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request;
-  };
-  std::map<std::string, std::vector<struct PendingAgentConnectionEntry>> pending_agent_connections_;
-
-  // agent URL -> pending entity provider connection
-  // This map holds connections to an agents' fuchsia::modular::EntityProvider
-  // that we hold onto while the existing agent is in a terminating state.
-  struct PendingEntityProviderConnectionEntry {
-    fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request;
-    fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request;
-  };
-  std::map<std::string, struct PendingEntityProviderConnectionEntry>
-      pending_entity_provider_connections_;
 
   // agent URL -> done callbacks to invoke once agent has started.
   // Holds requests to start an agent; in case an agent is already in a
