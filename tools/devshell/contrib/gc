@@ -1,0 +1,16 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Software Delivery
+### garbage collect packages on the target (reboots!)
+## This command is essentially an alias for:
+##   fx reboot && fx wait && fx shell pkgctl gc
+## It is a temporary helper until online space management is available.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+fx-config-read
+
+fx-command-run reboot && fx-command-run wait && fx-command-run shell pkgctl gc
+
