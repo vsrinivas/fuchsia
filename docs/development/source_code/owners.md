@@ -28,6 +28,14 @@ such as suggesting reviewers automatically in Gerrit.
 ## Format
 
 We use the [Gerrit find-owners plugin][find-owners] file format for our
-OWNERS files.
+OWNERS files, with the addition of a comment indicating the default Monorail
+component to use when filing issues related to the contents of this directory:
+
+```
+validuser1@google.com
+validuser2@google.com
+
+# COMPONENT: TopComponent>SubComponent
+```
 
 [find-owners]: https://gerrit.googlesource.com/plugins/find-owners/+/master/src/main/resources/Documentation/about.md
