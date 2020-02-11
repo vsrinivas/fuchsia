@@ -59,9 +59,11 @@ using PoseBufferTest = escher::test::TestWithVkValidationLayer;
 // TODO(36692): This test now causes Vulkan validation errors on AEMU.
 VK_TEST_F(PoseBufferTest, ComputeShaderLatching) {
   auto escher = escher::test::EscherEnvironment::GetGlobalTestEnvironment()->GetEscher();
-  escher->shader_program_factory()->filesystem()->InitializeWithRealFiles({});
+  escher->shader_program_factory()->filesystem()->InitializeWithRealFiles(
+      escher::hmd::kPoseBufferLatchingPaths);
 
-  escher::FramePtr frame = escher->NewFrame("PoseBufferLatchingTest", 0);
+  escher::FramePtr frame =
+      escher->NewFrame("PoseBufferLatchingTest", 0, false, escher::CommandBuffer::Type::kCompute);
 
   uint32_t num_entries = 8;
   uint64_t base_time = 42L;              // Choose an arbitrary, non-zero time.

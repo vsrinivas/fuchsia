@@ -90,7 +90,9 @@ CommandBuffer::CommandBuffer(EscherWeakPtr escher, Type type, impl::CommandBuffe
       type_(type),
       impl_(impl),
       vk_(impl_->vk()),
-      vk_device_(escher_->vk_device()) {}
+      vk_device_(escher_->vk_device()) {
+  BeginCompute();
+}
 
 bool CommandBuffer::Submit(CommandBufferFinishedCallback callback) {
   vk::Queue queue;
@@ -400,6 +402,57 @@ void CommandBuffer::Draw(uint32_t vertex_count, uint32_t instance_count, uint32_
   vk().draw(vertex_count, instance_count, first_vertex, first_instance);
 }
 
+void CommandBuffer::Dispatch(uint32_t groupXCount, uint32_t groupYCount, uint32_t groupZCount) {
+  TRACE_DURATION("gfx", "escher::CommandBuffer::Dispatch");
+  FXL_DCHECK(current_program_);
+  FXL_DCHECK(is_compute_);
+  FXL_DCHECK(!IsInRenderPass());
+
+  FlushComputeState();
+
+  TRACE_DURATION("gfx", "escher::CommandBuffer::Dispatch[vulkan]");
+  vk().dispatch(groupXCount, groupYCount, groupZCount);
+}
+
+void CommandBuffer::FlushComputeState() {
+  TRACE_DURATION("gfx", "escher::CommandBuffer::ComputeStateState");
+
+  FXL_DCHECK(current_pipeline_layout_);
+  FXL_DCHECK(current_program_);
+
+  // We've invalidated pipeline state, update the VkPipeline.
+  if (GetAndClearDirty(kDirtyStaticStateBit | kDirtyPipelineBit)) {
+    // Update |current_pipeline_|, keeping track of the old one so we can see if
+    // there was a change.
+    vk::Pipeline previous_pipeline = current_vk_pipeline_;
+    FlushComputePipeline();
+    if (previous_pipeline != current_vk_pipeline_) {
+      vk().bindPipeline(vk::PipelineBindPoint::eCompute, current_vk_pipeline_);
+
+      // According to the Vulkan spec (Section 9.9 "Dynamic State"), it would
+      // theoretically be possible to track which state is statically vs.
+      // dynamically set for a given pipeline, and only set kDirtyDynamicBits
+      // when the new pipeline leaves some of the previous state in an undefined
+      // state.  However, it is not worth the additional complexity.
+      SetDirty(kDirtyDynamicBits);
+    }
+  }
+
+  FlushDescriptorSets();
+
+  if (GetAndClearDirty(kDirtyPushConstantsBit)) {
+    TRACE_DURATION("gfx", "escher::CommandBuffer::FlushComputeState[push_constants]");
+    // The push constants were invalidated (perhaps by being explicitly set, or
+    // perhaps by a change in the descriptor set layout; it doesn't matter).
+    uint32_t num_ranges = current_pipeline_layout_->spec().num_push_constant_ranges();
+    for (unsigned i = 0; i < num_ranges; ++i) {
+      auto& range = current_pipeline_layout_->spec().push_constant_ranges()[i];
+      vk().pushConstants(current_vk_pipeline_layout_, vk::ShaderStageFlagBits::eCompute,
+                         range.offset, range.size, bindings_.push_constant_data + range.offset);
+    }
+  }
+}
+
 void CommandBuffer::FlushRenderState() {
   TRACE_DURATION("gfx", "escher::CommandBuffer::FlushRenderState");
 
@@ -463,6 +516,12 @@ void CommandBuffer::FlushRenderState() {
 
   // Bind all vertex buffers that are both active and dirty.
   pipeline_state_.FlushVertexBuffers(vk());
+}
+
+void CommandBuffer::FlushComputePipeline() {
+  TRACE_DURATION("gfx", "escher::CommandBuffer::FlushComputePipeline");
+  current_vk_pipeline_ =
+      pipeline_state_.FlushComputePipeline(current_pipeline_layout_, current_program_);
 }
 
 void CommandBuffer::FlushGraphicsPipeline() {

@@ -6,13 +6,15 @@
 #define SRC_UI_LIB_ESCHER_HMD_POSE_BUFFER_LATCHING_SHADER_H_
 
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
-#include "src/ui/lib/escher/impl/compute_shader.h"
+#include "src/ui/lib/escher/vk/shader_program.h"
+#include "src/ui/lib/escher/vk/shader_variant_args.h"
 
 namespace escher {
 namespace hmd {
 
-extern const char* kPoseLatchingShaderName;
-extern const char* g_kernel_src;
+extern const std::vector<std::string> kPoseBufferLatchingPaths;
+extern const std::vector<std::string> kPoseBufferLatchingSpirvPaths;
+extern const ShaderProgramData kPoseBufferLatchingProgramData;
 
 // Uses a simple compute shader to latch a pose out of the pose buffer.
 // public/fidl/fuchsia.ui.gfx/commands.fidl for details on pose buffer.
@@ -57,7 +59,7 @@ class PoseBufferLatchingShader {
 
  private:
   const EscherWeakPtr escher_;
-  std::unique_ptr<impl::ComputeShader> kernel_;
+  ShaderProgramPtr program_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PoseBufferLatchingShader);
 };
