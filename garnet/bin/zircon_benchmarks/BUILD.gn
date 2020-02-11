@@ -29,6 +29,7 @@ executable("bin") {
     "random_memcpy.cc",
     "round_trips.cc",
     "sockets.cc",
+    "streams.cc",
     "test_runner.cc",
     "threads.cc",
     "util.cc",
