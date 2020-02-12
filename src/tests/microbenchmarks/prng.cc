@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/syscalls.h>
-
 #include <stdlib.h>
+#include <zircon/syscalls.h>
 
 #include <random>
 #include <type_traits>

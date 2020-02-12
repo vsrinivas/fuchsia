@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <pthread.h>
-#include <thread>
-#include <vector>
+#include "round_trips.h"
 
 #include <fuchsia/zircon/benchmarks/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/spawn.h>
+#include <pthread.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
+#include <thread>
+#include <vector>
+
 #include "lib/fidl/cpp/binding.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
-
-#include "round_trips.h"
 #include "test_runner.h"
 
 // This file measures two things:

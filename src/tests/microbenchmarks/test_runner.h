@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_TESTS_MICROBENCHMARKS_TEST_RUNNER_H_
+#define SRC_TESTS_MICROBENCHMARKS_TEST_RUNNER_H_
 
 #include <perftest/perftest.h>
 
@@ -24,3 +25,5 @@ void RegisterTest(const char* test_name, Args... args) {
 }
 
 }  // namespace fbenchmark
+
+#endif  // SRC_TESTS_MICROBENCHMARKS_TEST_RUNNER_H_
