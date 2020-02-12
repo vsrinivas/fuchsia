@@ -240,8 +240,18 @@ impl ThermalPolicy {
             "power_manager",
             "ThermalPolicy::thermal_control_iteration_data",
             fuchsia_trace::Scope::Thread,
-            "timestamp" => timestamp.0,
-            "raw_temperature" => raw_temperature.0,
+            "timestamp" => timestamp.0
+        );
+        fuchsia_trace::counter!(
+            "power_manager",
+            "ThermalPolicy raw_temperature",
+            0,
+            "raw_temperature" => raw_temperature.0
+        );
+        fuchsia_trace::counter!(
+            "power_manager",
+            "ThermalPolicy filtered_temperature",
+            0,
             "filtered_temperature" => filtered_temperature.0
         );
 
@@ -343,11 +353,11 @@ impl ThermalPolicy {
             temperature,
             &self.config.policy_params.thermal_limiting_range,
         );
-        fuchsia_trace::instant!(
+        fuchsia_trace::counter!(
             "power_manager",
-            "ThermalPolicy::calculated_thermal_load",
-            fuchsia_trace::Scope::Thread,
-            "load" => thermal_load.0
+            "ThermalPolicy thermal_load",
+            0,
+            "thermal_load" => thermal_load.0
         );
         if thermal_load != self.state.thermal_load.get() {
             fuchsia_trace::instant!(
@@ -403,12 +413,13 @@ impl ThermalPolicy {
         );
         let available_power = self.calculate_available_power(filtered_temperature, time_delta);
         self.inspect.available_power.set(available_power.0);
-        fuchsia_trace::instant!(
+        fuchsia_trace::counter!(
             "power_manager",
-            "ThermalPolicy::iterate_controller_power_available",
-            fuchsia_trace::Scope::Thread,
+            "ThermalPolicy available_power",
+            0,
             "available_power" => available_power.0
         );
+
         self.distribute_power(available_power).await
     }
 
@@ -431,6 +442,11 @@ impl ThermalPolicy {
         );
         self.state.error_integral.set(error_integral);
         self.inspect.error_integral.set(error_integral);
+        fuchsia_trace::counter!(
+            "power_manager",
+            "ThermalPolicy error_integral", 0,
+            "error_integral" => error_integral
+        );
 
         let p_term = temperature_error * controller_params.proportional_gain;
         let i_term = error_integral * controller_params.integral_gain;

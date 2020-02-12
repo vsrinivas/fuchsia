@@ -330,7 +330,12 @@ impl CpuControlHandler {
             fuchsia_trace::Scope::Thread,
             "driver" => self.cpu_driver_path.as_str(),
             "current_p_state_index" => current_p_state_index as u32,
-            "last_op_rate" => last_operation_rate.0,
+            "last_op_rate" => last_operation_rate.0
+        );
+        fuchsia_trace::counter!(
+            "power_manager",
+            "CpuControlHandler last_load",
+            0,
             "last_load" => last_load
         );
 
@@ -375,6 +380,13 @@ impl CpuControlHandler {
             self.current_p_state_index.set(Some(p_state_index));
             self.inspect.p_state_index.set(p_state_index as u64);
         }
+
+        fuchsia_trace::counter!(
+            "power_manager",
+            "CpuControlHandler p_state",
+            0,
+            "P-state index" => p_state_index as u32
+        );
 
         Ok(MessageReturn::SetMaxPowerConsumption)
     }
