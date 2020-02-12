@@ -76,7 +76,6 @@ group("fidl") {
     "fuchsia-hardware-display",
 #------------------
 #------------------
-    "fuchsia-hardware-dotmatrixdisplay",
 #------------------
 #------------------
     "fuchsia-hardware-ethernet",

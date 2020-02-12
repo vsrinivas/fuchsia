@@ -14,10 +14,10 @@ executable("bin") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.hardware.dotmatrixdisplay:fuchsia.hardware.dotmatrixdisplay_c",
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_c",
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_llcpp",
     "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-hardware-dotmatrixdisplay:fuchsia-hardware-dotmatrixdisplay_c",
   ]
 }
 
