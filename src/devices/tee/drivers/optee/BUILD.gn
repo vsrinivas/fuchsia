@@ -17,6 +17,7 @@ driver_module("optee") {
   sources = [
     "optee-client.cc",
     "optee-controller.cc",
+    "optee-device-info.cc",
     "optee-message.cc",
     "shared-memory.cc",
     "util.cc",
@@ -63,6 +64,7 @@ test("optee-message-test") {
   sources = [
     "optee-client.cc",
     "optee-controller.cc",
+    "optee-device-info.cc",
     "optee-message.cc",
     "shared-memory.cc",
     "test/optee-message-test.cc",
