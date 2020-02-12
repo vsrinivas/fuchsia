@@ -17,7 +17,6 @@ rustc_library("lib") {
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.router.config:fuchsia.router.config-rustc",
     "//src/connectivity/management/network_manager/core:lib",
@@ -31,6 +30,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 
   test_deps = [ "//src/lib/fidl/rust/fidl" ]

@@ -2,14 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/fidl/fidl.gni")
+import("$zx_build/public/gn/fidl.gni")
 
-fidl("fuchsia.net.stack") {
-  sdk_category = "partner"
-  api = "fuchsia.net.stack.api"
+fidl_library("fuchsia-net-stack") {
+  sdk = true
   sources = [ "stack.fidl" ]
   public_deps = [
-    "//zircon/system/fidl/fuchsia-hardware-ethernet",
-    "//zircon/system/fidl/fuchsia-net",
+    "$zx/system/fidl/fuchsia-hardware-ethernet",
+    "$zx/system/fidl/fuchsia-net",
   ]
 }

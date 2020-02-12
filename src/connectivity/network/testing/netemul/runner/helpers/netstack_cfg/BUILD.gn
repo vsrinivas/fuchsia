@@ -13,7 +13,6 @@ rustc_binary("netstack_cfg") {
     "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//garnet/lib/rust/fidl_fuchsia_netstack_ext",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
@@ -27,5 +26,6 @@ rustc_binary("netstack_cfg") {
     "//third_party/rust_crates:structopt",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 }
