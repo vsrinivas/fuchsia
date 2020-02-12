@@ -284,9 +284,6 @@ enum ieee80211_supported_vht_mcs_nss {
 #define IEEE80211_CCMP_HDR_LEN 8
 #define IEEE80211_CCMP_128_MIC_LEN 8
 
-// IEEE Std 802.11-2016, 9.4.2.2
-#define IEEE80211_SSID_LEN_MAX 32
-
 // IEEE Std 802.11-2016, 9.4.2.25.2, Table 9-131
 enum ieee80211_cipher_suite {
     IEEE80211_CIPHER_SUITE_GROUP    = 0,

@@ -39,6 +39,8 @@
 
 #include <stdint.h>
 
+#include <ddk/hw/wlan/ieee80211.h>
+
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fuchsia_porting.h"
 
 /* Scan Commands, Responses, Notifications */
@@ -61,7 +63,7 @@
 struct iwl_ssid_ie {
   uint8_t id;
   uint8_t len;
-  uint8_t ssid[IEEE80211_MAX_SSID_LEN];
+  uint8_t ssid[IEEE80211_SSID_LEN_MAX];
 } __packed; /* SCAN_DIRECT_SSID_IE_API_S_VER_1 */
 
 /* scan offload */
