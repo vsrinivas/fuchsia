@@ -111,8 +111,10 @@ template("spinel_target") {
 
   _spn_comp_includes = [
     _spn_target_dir + "/spn_config.h",
-    "${graphics_compute_dir}/spinel/platforms/vk/vk_layouts.h",
     "${graphics_compute_dir}/hotsort/platforms/vk/targets/hs_glsl_macros.h",
+    "${graphics_compute_dir}/spinel/platforms/vk/vk_layouts.h",
+    "${graphics_compute_dir}/spinel/platforms/vk/shaders/core_glsl.h",
+    "${graphics_compute_dir}/spinel/platforms/vk/shaders/spn_macros_glsl.h",
   ]
 
   _spn_comp_include_dirs = [
@@ -158,9 +160,7 @@ template("spinel_target") {
     outputs = _spn_target_gen_includes
     args = rebase_path(outputs, root_build_dir) +
            rebase_path(sources, root_build_dir)
-    public_deps = [
-      ":gen_spv",
-    ]
+    public_deps = [ ":gen_spv" ]
   }
 
   #
@@ -176,12 +176,8 @@ template("spinel_target") {
       defines = [ "SPN_DUMP" ]
       sources = _spn_target_gen_sources
       include_dirs = _spn_target_include_dirs
-      deps = [
-        graphics_compute_vulkan_loader_target,
-      ]
-      public_deps = [
-        ":gen_modules",
-      ]
+      deps = [ graphics_compute_vulkan_loader_target ]
+      public_deps = [ ":gen_modules" ]
     }
 
     #
@@ -190,13 +186,9 @@ template("spinel_target") {
     compiled_action("gen_bin") {
       tool = ":$_spn_target_dump_name"
       sources = _spn_target_sources
-      outputs = [
-        "$target_gen_dir/spn_target.bin",
-      ]
+      outputs = [ "$target_gen_dir/spn_target.bin" ]
       args = rebase_path(outputs, root_build_dir)
-      public_deps = [
-        ":$_spn_target_dump_name",
-      ]
+      public_deps = [ ":$_spn_target_dump_name" ]
     }
 
     #
@@ -218,12 +210,8 @@ template("spinel_target") {
       public = _spn_target_includes_public
       sources = _spn_target_sources
       include_dirs = _spn_target_include_dirs
-      deps = [
-        graphics_compute_vulkan_loader_target,
-      ]
-      public_deps = [
-        ":gen_modules",
-      ]
+      deps = [ graphics_compute_vulkan_loader_target ]
+      public_deps = [ ":gen_modules" ]
       public_configs = [ ":${_config_name}" ]
       if (defined(invoker.public_deps)) {
         public_deps += invoker.public_deps
