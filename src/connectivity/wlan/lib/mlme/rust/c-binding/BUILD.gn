@@ -29,7 +29,7 @@ rustc_staticlib("wlan-mlme-c") {
   ]
   non_rust_deps = [
     "//garnet/lib/wlan/protocol",
-    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
   ]
 
   public = [ "bindings.h" ]

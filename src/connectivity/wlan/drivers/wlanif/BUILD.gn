@@ -19,6 +19,7 @@ all_src = [
 
 all_deps = [
   "//garnet/lib/wlan/protocol",
+  "//sdk/banjo/ddk.hw.wlan.wlaninfo",
   "//sdk/fidl/fuchsia.wlan.device",
   "//sdk/fidl/fuchsia.wlan.mlme",
   "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_c_client",
@@ -29,7 +30,6 @@ all_deps = [
   "//zircon/public/lib/async-loop-cpp",
   "//zircon/public/lib/async-loop-default",
   "//zircon/public/lib/ddk",
-  "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
 ]
 
 source_set("lib_source") {

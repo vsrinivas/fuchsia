@@ -159,9 +159,9 @@ source_set("core") {
   ]
   deps = [
     ":debug",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/public/lib/ddk",
-    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
   ]
   public_deps = [
     ":linuxisms",

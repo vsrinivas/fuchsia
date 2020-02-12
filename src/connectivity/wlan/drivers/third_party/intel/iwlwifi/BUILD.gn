@@ -59,10 +59,10 @@ source_set("core") {
 
   deps = [
     "//garnet/lib/wlan/protocol:protocol",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
-    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
   ]
 
   public_deps = [

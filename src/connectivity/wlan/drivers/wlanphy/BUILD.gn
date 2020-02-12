@@ -16,6 +16,7 @@ wlanphy_sources = [
 
 wlanphy_deps = [
   "//garnet/lib/wlan/protocol",
+  "//sdk/banjo/ddk.hw.wlan.wlaninfo",
   "//sdk/banjo/ddk.protocol.wlanphyimpl",
   "//sdk/fidl/fuchsia.wlan.device",
   "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device_llcpp",
@@ -26,7 +27,6 @@ wlanphy_deps = [
   "//zircon/public/lib/async-loop-default",
   "//zircon/public/lib/ddk",
   "//zircon/public/lib/fdio",
-  "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
 ]
 
 driver_module("wlanphy_driver") {

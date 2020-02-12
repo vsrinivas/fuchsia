@@ -14,7 +14,6 @@ group("banjo") {
     "ddk.hw.wlan.ieee80211",
 #------------------
 #------------------
-    "ddk.hw.wlan.wlaninfo",
 #------------------
 #------------------
     "ddk.physiter",

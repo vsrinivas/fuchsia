@@ -19,6 +19,7 @@ driver_module("ralink_driver") {
 
   deps = [
     "//garnet/lib/wlan/protocol",
+    "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//sdk/fidl/fuchsia.wlan.device",
     "//src/connectivity/wlan/lib/common/cpp:common",
@@ -33,7 +34,6 @@ driver_module("ralink_driver") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.hw.wlan.wlaninfo",
     "//zircon/system/banjo/ddk.protocol.usb",
   ]
 
