@@ -29,9 +29,6 @@
 const ip6_addr ip6_ll_all_nodes = {
     .x = {0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 };
-const ip6_addr ip6_ll_all_routers = {
-    .x = {0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
-};
 
 // Convert MAC Address to IPv6 Link Local Address
 // aa:bb:cc:dd:ee:ff => FF80::aabb:ccFF:FEdd:eeff

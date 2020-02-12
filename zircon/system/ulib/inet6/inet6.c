@@ -27,9 +27,6 @@
 const ip6_addr_t ip6_ll_all_nodes = {
     .u8 = {0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 };
-const ip6_addr_t ip6_ll_all_routers = {
-    .u8 = {0xFF, 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
-};
 
 // If non-zero, this setting causes us to generate our
 // MAC-derived link-local IPv6 address in a way that

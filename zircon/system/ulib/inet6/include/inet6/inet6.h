@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef INET6_INET6_H_
+#define INET6_INET6_H_
 
 #include <endian.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
-
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -46,7 +46,6 @@ union ip6_addr {
 } __attribute__((packed));
 
 extern const ip6_addr_t ip6_ll_all_nodes;
-extern const ip6_addr_t ip6_ll_all_routers;
 
 static inline bool ip6_addr_eq(const ip6_addr_t* a, const ip6_addr_t* b) {
   return ((a->u64[0] == b->u64[0]) && (a->u64[1] == b->u64[1]));
@@ -181,3 +180,5 @@ unsigned ip6_checksum(ip6_hdr_t* ip, unsigned type, size_t length);
 //
 
 __END_CDECLS
+
+#endif  // INET6_INET6_H_
