@@ -2,6 +2,7 @@
 *~
 .*.sw?
 .build_lock
+.cargo
 .clangd
 .checkstyle
 .classpath
