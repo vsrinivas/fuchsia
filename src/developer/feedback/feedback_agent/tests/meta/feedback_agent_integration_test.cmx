@@ -35,16 +35,18 @@
             "vulkan"
         ],
         "services": [
+            "fuchsia.boot.ReadOnlyLog",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.diagnostics.Archive",
-            "fuchsia.boot.ReadOnlyLog",
             "fuchsia.factory.MiscFactoryStoreProvider",
             "fuchsia.feedback.DataProvider",
             "fuchsia.hwinfo.Board",
             "fuchsia.hwinfo.Product",
             "fuchsia.logger.Log",
+            "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
+            "fuchsia.sysinfo.SysInfo",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.update.channel.Provider",
             "fuchsia.vulkan.loader.Loader"

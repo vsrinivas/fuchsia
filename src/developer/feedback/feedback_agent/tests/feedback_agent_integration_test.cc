@@ -185,12 +185,13 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
     launch_info.url = "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx";
     services->AddServiceWithLaunchInfo(std::move(launch_info), "fuchsia.feedback.DataProvider");
     // We inherit the other injected services from the parent environment.
+    services->AllowParentService("fuchsia.boot.ReadOnlyLog");
     services->AllowParentService("fuchsia.cobalt.LoggerFactory");
     services->AllowParentService("fuchsia.diagnostics.Archive");
     services->AllowParentService("fuchsia.hwinfo.Board");
     services->AllowParentService("fuchsia.hwinfo.Product");
-    services->AllowParentService("fuchsia.boot.ReadOnlyLog");
     services->AllowParentService("fuchsia.logger.Log");
+    services->AllowParentService("fuchsia.sysinfo.SysInfo");
     services->AllowParentService("fuchsia.update.channel.Provider");
 
     auto env = CreateNewEnclosingEnvironment(test_name_, std::move(services));
