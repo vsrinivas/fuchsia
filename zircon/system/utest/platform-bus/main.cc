@@ -9,6 +9,7 @@
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fdio/watcher.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
 #include <stdio.h>
@@ -80,17 +81,17 @@ TEST(PbusTest, Enumeration) {
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
                                  "sys/platform/11:01:1/child-1/child-3-top/child-3", &fd));
 
-  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
-                                 "sys/platform/11:01:5/test-gpio/gpio-3/component", &fd));
-  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
-                                 "sys/platform/11:01:7/test-clock/clock-1/component", &fd));
+  EXPECT_OK(
+      RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:5/test-gpio/gpio-3", &fd));
+  EXPECT_OK(
+      RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:7/test-clock/clock-1", &fd));
 
-  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(),
-                                 "sys/platform/11:01:8/test-i2c/i2c/i2c-1-5/component", &fd));
-  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:f/component", &fd));
+  EXPECT_OK(
+      RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:8/test-i2c/i2c/i2c-1-5", &fd));
+  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:f", &fd));
 
   EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "composite-dev/composite", &fd));
-  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:10/component", &fd));
+  EXPECT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:10", &fd));
 
   EXPECT_OK(
       RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform/11:01:12/test-spi/spi/spi-0-0", &fd));
@@ -105,10 +106,31 @@ TEST(PbusTest, Enumeration) {
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-3-top", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-2/child-4", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:1/child-1/child-3-top/child-3", &st, 0), 0);
-  EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:5/test-gpio/gpio-3/component", &st, 0), 0);
-  EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:7/test-clock/clock-1/component", &st, 0), 0);
-  EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:8/test-i2c/i2c/i2c-1-5/component", &st, 0), 0);
+  EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:5/test-gpio/gpio-3", &st, 0), 0);
+  EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:7/test-clock/clock-1", &st, 0), 0);
+  EXPECT_EQ(fstatat(dirfd, "sys/platform/11:01:8/test-i2c/i2c/i2c-1-5", &st, 0), 0);
   EXPECT_EQ(fstatat(dirfd, "composite-dev/composite", &st, 0), 0);
+
+  // Check that we see multiple entries that begin with "component-" for a device that is a
+  // component of multiple composites
+  fbl::unique_fd clock_dir(openat(dirfd, "sys/platform/11:01:7/test-clock/clock-1", O_RDONLY));
+  size_t devices_seen = 0;
+  ASSERT_EQ(
+      fdio_watch_directory(
+          clock_dir.get(),
+          [](int dirfd, int event, const char* fn, void* cookie) {
+            auto devices_seen = static_cast<size_t*>(cookie);
+            if (event == WATCH_EVENT_ADD_FILE && !strncmp(fn, "component-", strlen("component-"))) {
+              *devices_seen += 1;
+            }
+            if (event == WATCH_EVENT_WAITING) {
+              return ZX_ERR_STOP;
+            }
+            return ZX_OK;
+          },
+          ZX_TIME_INFINITE, &devices_seen),
+      ZX_ERR_STOP);
+  ASSERT_EQ(devices_seen, 2);
 }
 
 TEST(PbusTest, BoardInfo) {

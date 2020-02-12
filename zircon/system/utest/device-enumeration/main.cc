@@ -134,8 +134,8 @@ TEST_F(DeviceEnumerationTest, Vim2Test) {
       "wifi/brcmfmac-wlanphy",
       "aml-sdio/aml-sd-emmc/sdmmc",
       "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio",
-      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1/component",
-      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2/component",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
       "sys/platform/05:02:b/aml-mailbox",
       "class/thermal/000",
       "aml-video",
@@ -194,8 +194,8 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "sys/platform/05:00:f/aml-raw_nand/nand/migration/skip-block",
       "aml-sdio/aml-sd-emmc/sdmmc",
       "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio",
-      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1/component",
-      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2/component",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
       "wifi/brcmfmac-wlanphy",
       "tcs3400-light/tcs-3400/hid-device-000",
       "sys/platform/05:03:11/clocks",
@@ -207,7 +207,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "pwm-init",
 
       // CPU Device.
-      "sys/platform/05:03:1e/component",
+      "sys/platform/05:03:1e",
       "class/cpu-ctrl/000",
   };
 
@@ -276,8 +276,8 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "class/pwm/009",
       "aml-sdio/aml-sd-emmc/sdmmc",
       "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio",
-      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1/component",
-      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2/component",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
+      "aml-sdio/aml-sd-emmc/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));

@@ -6,6 +6,7 @@
 
 #include <string.h>
 
+#include <atomic>
 #include <memory>
 
 #include <ddk/debug.h>
@@ -15,12 +16,24 @@
 
 namespace component {
 
+namespace {
+
+void MakeUniqueName(char name[ZX_DEVICE_NAME_MAX + 1]) {
+  static std::atomic<size_t> unique_id = 0;
+  snprintf(name, ZX_DEVICE_NAME_MAX + 1, "component-%zu", unique_id.fetch_add(1));
+}
+
+}  // namespace
+
 zx_status_t Component::Bind(void* ctx, zx_device_t* parent) {
+  char name[ZX_DEVICE_NAME_MAX + 1];
+  MakeUniqueName(name);
+
   auto dev = std::make_unique<Component>(parent);
   // The thing before the comma will become the process name, if a new process
   // is created
   const char* proxy_args = "composite-device,";
-  auto status = dev->DdkAdd("component", DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_MUST_ISOLATE,
+  auto status = dev->DdkAdd(name, DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_MUST_ISOLATE,
                             nullptr /* props */, 0 /* prop count */, 0 /* proto id */, proxy_args);
   if (status == ZX_OK) {
     // devmgr owns the memory now
