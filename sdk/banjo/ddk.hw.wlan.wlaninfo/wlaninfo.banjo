@@ -80,6 +80,9 @@ enum WlanInfoHardwareCapability {
 
     /// Radio measurement.
     radio_msmt = 0x08;
+
+    // Supports simutaneous client-ap combination
+    client_ap_combination = 0x10;
 };
 
 /// This is a simplified expression of channel starting frequencies. Expand this

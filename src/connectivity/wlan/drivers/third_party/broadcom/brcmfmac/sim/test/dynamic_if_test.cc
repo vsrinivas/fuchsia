@@ -50,6 +50,9 @@ class DynamicIfTest : public SimTest {
 
   void VerifyAssoc();
 
+  // Query for wlanphy info
+  void Query(wlanphy_impl_info_t* out_info);
+
  protected:
   struct AssocContext {
     // Information about the BSS we are attempting to associate with. Used to generate the
@@ -154,6 +157,12 @@ void DynamicIfTest::DeleteInterface(wlan_info_mac_role_t role) {
   else
     iface_id = softap_ifc_->iface_id_;
   status = device_->WlanphyImplDestroyIface(iface_id);
+  ASSERT_EQ(status, ZX_OK);
+}
+
+void DynamicIfTest::Query(wlanphy_impl_info_t* out_info) {
+  zx_status_t status;
+  status = device_->WlanphyImplQuery(out_info);
   ASSERT_EQ(status, ZX_OK);
 }
 
@@ -306,6 +315,16 @@ TEST_F(DynamicIfTest, DualInterfaces) {
   DeleteInterface(WLAN_INFO_MAC_ROLE_CLIENT);
   DeleteInterface(WLAN_INFO_MAC_ROLE_AP);
   EXPECT_EQ(DeviceCount(), static_cast<size_t>(1));
+}
+
+TEST_F(DynamicIfTest, QueryInfo) {
+  Init();
+  CreateInterface(WLAN_INFO_MAC_ROLE_CLIENT);
+  wlanphy_impl_info_t info = {};
+  // Test brcmfmac supports simutaneous client ap operation
+  Query(&info);
+  EXPECT_NE(info.wlan_info.caps & WLAN_INFO_HARDWARE_CAPABILITY_CLIENT_AP_COMBINATION,
+            static_cast<size_t>(0));
 }
 
 // Start both client and SoftAP interfaces simultaneously and check if
