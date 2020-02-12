@@ -81,6 +81,7 @@ group("ulib") {
     "framebuffer",
     "fs",
     "fs-management",
+    "fs-pty",
     "fs-test-utils",
     "fs/journal",
     "fs/metrics",
