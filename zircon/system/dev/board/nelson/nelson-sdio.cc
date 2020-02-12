@@ -86,24 +86,27 @@ static aml_sd_emmc_config_t config = {
     .prefs = 0,
 };
 
-static const wifi_config_t wifi_config = {
+constexpr wifi_config_t wifi_config = {
     .oob_irq_mode = ZX_INTERRUPT_MODE_LEVEL_HIGH,
     .iovar_table =
         {
             {IOVAR_STR_TYPE, {"ampdu_ba_wsize"}, 32},
+            {IOVAR_STR_TYPE, {"stbc_tx"}, 1},
+            {IOVAR_STR_TYPE, {"stbc_rx"}, 1},
             {IOVAR_CMD_TYPE, {{BRCMF_C_SET_PM}}, 0},
             {IOVAR_CMD_TYPE, {{BRCMF_C_SET_FAKEFRAG}}, 1},
             {IOVAR_LIST_END_TYPE, {{0}}, 0},
         },
     .cc_table =
         {
-            {"WW", 0},   {"AU", 922}, {"CA", 900}, {"US", 842}, {"GB", 888}, {"BE", 888},
-            {"BG", 888}, {"CZ", 888}, {"DK", 888}, {"DE", 888}, {"EE", 888}, {"IE", 888},
-            {"GR", 888}, {"ES", 888}, {"FR", 888}, {"HR", 888}, {"IT", 888}, {"CY", 888},
-            {"LV", 888}, {"LT", 888}, {"LU", 888}, {"HU", 888}, {"MT", 888}, {"NL", 888},
-            {"AT", 888}, {"PL", 888}, {"PT", 888}, {"RO", 888}, {"SI", 888}, {"SK", 888},
-            {"FI", 888}, {"SE", 888}, {"JP", 1},   {"KR", 1},   {"TW", 1},   {"IN", 1},
-            {"SG", 1},   {"", 0},
+            {"WW", 1},   {"AU", 923}, {"CA", 901}, {"US", 843}, {"GB", 889}, {"BE", 889},
+            {"BG", 889}, {"CZ", 889}, {"DK", 889}, {"DE", 889}, {"EE", 889}, {"IE", 889},
+            {"GR", 889}, {"ES", 889}, {"FR", 889}, {"HR", 889}, {"IT", 889}, {"CY", 889},
+            {"LV", 889}, {"LT", 889}, {"LU", 889}, {"HU", 889}, {"MT", 889}, {"NL", 889},
+            {"AT", 889}, {"PL", 889}, {"PT", 889}, {"RO", 889}, {"SI", 889}, {"SK", 889},
+            {"FI", 889}, {"SE", 889}, {"EL", 889}, {"IS", 889}, {"LI", 889}, {"TR", 889},
+            {"CH", 889}, {"NO", 889}, {"JP", 2},   {"KR", 2},   {"TW", 2},   {"IN", 2},
+            {"SG", 2},   {"MX", 2},   {"NZ", 2},   {"", 0},
         },
 };
 
