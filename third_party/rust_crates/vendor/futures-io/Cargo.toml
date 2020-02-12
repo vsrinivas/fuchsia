@@ -13,16 +13,15 @@
 [package]
 edition = "2018"
 name = "futures-io"
-version = "0.3.1"
+version = "0.3.4"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
-description = "The `AsyncRead` and `AsyncWrite` traits for the futures-rs library.\n"
-homepage = "https://rust-lang-nursery.github.io/futures-rs"
+description = "The `AsyncRead`, `AsyncWrite`, `AsyncSeek`, and `AsyncBufRead` traits for the futures-rs library.\n"
+homepage = "https://rust-lang.github.io/futures-rs"
 documentation = "https://docs.rs/futures-io/0.3.0"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/rust-lang-nursery/futures-rs"
-
-[lib]
-name = "futures_io"
+repository = "https://github.com/rust-lang/futures-rs"
+[package.metadata.docs.rs]
+all-features = true
 
 [dependencies]
 

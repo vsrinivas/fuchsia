@@ -13,26 +13,25 @@
 [package]
 edition = "2018"
 name = "futures-executor"
-version = "0.3.1"
+version = "0.3.4"
 authors = ["Alex Crichton <alex@alexcrichton.com>"]
 description = "Executors for asynchronous tasks based on the futures-rs library.\n"
-homepage = "https://rust-lang-nursery.github.io/futures-rs"
+homepage = "https://rust-lang.github.io/futures-rs"
 documentation = "https://docs.rs/futures-executor/0.3.0"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/rust-lang-nursery/futures-rs"
-
-[lib]
-name = "futures_executor"
+repository = "https://github.com/rust-lang/futures-rs"
+[package.metadata.docs.rs]
+all-features = true
 [dependencies.futures-core]
-version = "0.3.1"
+version = "0.3.4"
 default-features = false
 
 [dependencies.futures-task]
-version = "0.3.1"
+version = "0.3.4"
 default-features = false
 
 [dependencies.futures-util]
-version = "0.3.1"
+version = "0.3.4"
 default-features = false
 
 [dependencies.num_cpus]

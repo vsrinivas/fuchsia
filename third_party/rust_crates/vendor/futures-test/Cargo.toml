@@ -13,34 +13,33 @@
 [package]
 edition = "2018"
 name = "futures-test"
-version = "0.3.1"
+version = "0.3.4"
 authors = ["Wim Looman <wim@nemo157.com>"]
 description = "Common utilities for testing components built off futures-rs.\n"
-homepage = "https://rust-lang-nursery.github.io/futures-rs"
+homepage = "https://rust-lang.github.io/futures-rs"
 documentation = "https://docs.rs/futures-test/0.3.0"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/rust-lang-nursery/futures-rs"
-
-[lib]
-name = "futures_test"
+repository = "https://github.com/rust-lang/futures-rs"
+[package.metadata.docs.rs]
+all-features = true
 [dependencies.futures-core]
-version = "0.3.1"
+version = "0.3.4"
 default-features = false
 
 [dependencies.futures-executor]
-version = "0.3.1"
+version = "0.3.4"
 default-features = false
 
 [dependencies.futures-io]
-version = "0.3.1"
+version = "0.3.4"
 default-features = false
 
 [dependencies.futures-task]
-version = "0.3.1"
+version = "0.3.4"
 default-features = false
 
 [dependencies.futures-util]
-version = "0.3.1"
+version = "0.3.4"
 default-features = false
 
 [dependencies.pin-utils]

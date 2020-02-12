@@ -13,16 +13,15 @@
 [package]
 edition = "2018"
 name = "futures-macro"
-version = "0.3.1"
+version = "0.3.4"
 authors = ["Taylor Cramer <cramertj@google.com>", "Taiki Endo <te316e89@gmail.com>"]
 description = "The futures-rs procedural macro implementations.\n"
-homepage = "https://rust-lang-nursery.github.io/futures-rs"
+homepage = "https://rust-lang.github.io/futures-rs"
 documentation = "https://docs.rs/futures-macro/0.3.0"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/rust-lang-nursery/futures-rs"
+repository = "https://github.com/rust-lang/futures-rs"
 
 [lib]
-name = "futures_macro"
 proc-macro = true
 [dependencies.proc-macro-hack]
 version = "0.5.9"
