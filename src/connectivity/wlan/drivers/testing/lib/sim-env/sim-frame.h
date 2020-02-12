@@ -10,6 +10,7 @@
 #include <list>
 
 #include "sim-sta-ifc.h"
+#include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/mac_frame.h"
 
 namespace wlan::simulation {
 
@@ -99,6 +100,7 @@ class SimBeaconFrame : public SimManagementFrame {
 
   wlan_ssid_t ssid_;
   common::MacAddr bssid_;
+  wlan::CapabilityInfo capability_info_;
 };
 
 class SimProbeReqFrame : public SimManagementFrame {
@@ -128,6 +130,7 @@ class SimProbeRespFrame : public SimManagementFrame {
   common::MacAddr src_addr_;
   common::MacAddr dst_addr_;
   wlan_ssid_t ssid_;
+  wlan::CapabilityInfo capability_info_;
 };
 
 class SimAssocReqFrame : public SimManagementFrame {
