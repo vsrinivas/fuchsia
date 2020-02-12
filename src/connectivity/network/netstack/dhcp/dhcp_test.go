@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -367,54 +368,39 @@ func TestDHCP(t *testing.T) {
 }
 
 func TestDelayRetransmission(t *testing.T) {
-	var delayTests = []struct {
-		name           string
-		offerDelay     time.Duration
-		ackDelay       time.Duration
-		acquisition    time.Duration
-		retransmission time.Duration
-		success        bool
+	for _, tc := range []struct {
+		name              string
+		cancelBeforeOffer bool
+		cancelBeforeAck   bool
+		success           bool
 	}{
 		{
-			name:           "DelayedOfferWithLongAcquisitionSucceeds",
-			offerDelay:     5 * time.Millisecond,
-			ackDelay:       0,
-			acquisition:    20 * time.Millisecond,
-			retransmission: 1 * time.Millisecond,
-			success:        true,
+			name:              "Success",
+			cancelBeforeOffer: false,
+			cancelBeforeAck:   false,
+			success:           true,
 		},
 		{
-			name:           "DelayedAckWithLongAcquisitionSucceeds",
-			offerDelay:     0,
-			ackDelay:       5 * time.Millisecond,
-			acquisition:    20 * time.Millisecond,
-			retransmission: 1 * time.Millisecond,
-			success:        true,
+			name:              "CancelBeforeOffer",
+			cancelBeforeOffer: true,
+			cancelBeforeAck:   false,
+			success:           false,
 		},
 		{
-			name:           "DelayedOfferWithShortAcquisitionFails",
-			offerDelay:     20 * time.Millisecond,
-			ackDelay:       0,
-			acquisition:    5 * time.Millisecond,
-			retransmission: 1 * time.Millisecond,
-			success:        false,
+			name:              "CancelBeforeAck",
+			cancelBeforeOffer: false,
+			cancelBeforeAck:   true,
+			success:           false,
 		},
-		{
-			name:           "DelayedAckWithShortAcquisitionFails",
-			offerDelay:     0,
-			ackDelay:       20 * time.Millisecond,
-			acquisition:    5 * time.Millisecond,
-			retransmission: 1 * time.Millisecond,
-			success:        false,
-		},
-	}
-	for _, tc := range delayTests {
+	} {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
 			var serverLinkEP, clientLinkEP endpoint
 			serverLinkEP.remote = append(serverLinkEP.remote, &clientLinkEP)
 			clientLinkEP.remote = append(clientLinkEP.remote, &serverLinkEP)
 
-			var offerRcvd, ackRcvd int
 			serverLinkEP.onWritePacket = func(packetBuffer tcpip.PacketBuffer) bool {
 				h := hdr(packetBuffer.Data.First())
 				if !h.isValid() {
@@ -428,18 +414,27 @@ func TestDelayRetransmission(t *testing.T) {
 				if err != nil {
 					t.Fatalf("invalid header: %s, %s", err, h)
 				}
-				switch msgType {
-				case dhcpOFFER:
-					if offerRcvd == 0 {
-						offerRcvd++
-						time.Sleep(tc.offerDelay)
+				func() {
+					switch msgType {
+					case dhcpOFFER:
+						if !tc.cancelBeforeOffer {
+							return
+						}
+					case dhcpACK:
+						if !tc.cancelBeforeAck {
+							return
+						}
+					default:
+						return
 					}
-				case dhcpACK:
-					if ackRcvd == 0 {
-						ackRcvd++
-						time.Sleep(tc.ackDelay)
-					}
-				}
+
+					// Allow the other goroutine to begin waiting for a response.
+					time.Sleep(10 * time.Millisecond)
+					cancel()
+					// Allow the other goroutine (presumably waiting for a response) to
+					// notice it has been timed out.
+					time.Sleep(10 * time.Millisecond)
+				}()
 
 				return true
 			}
@@ -470,10 +465,8 @@ func TestDelayRetransmission(t *testing.T) {
 				}
 			}
 
-			c0 := NewClient(clientStack, testNICID, linkAddr1, tc.acquisition, defaultBackoffTime, tc.retransmission, nil)
+			c0 := NewClient(clientStack, testNICID, linkAddr1, 0, 0, math.MaxInt64, nil)
 			info := c0.Info()
-			ctx, cancel := context.WithTimeout(context.Background(), tc.acquisition)
-			defer cancel()
 			cfg, err := c0.acquire(ctx, &info)
 			if tc.success {
 				if err != nil {
