@@ -1,0 +1,21 @@
+{
+    "file_format_version" : "1.0.0",
+    "layer" : {
+        "name": "VK_LAYER_FUCHSIA_imagepipe_swapchain",
+        "type": "GLOBAL",
+        "library_path": "libVkLayer_image_pipe_swapchain.so",
+        "api_version": "1.0.38",
+        "implementation_version": "2",
+        "description": "Image Pipe Swapchain",
+        "disable_environment": {
+            "DISABLE_IMAGEPIPE_SWAPCHAIN_LAYER": "1"
+        },
+        "instance_extensions": [
+            { "name": "VK_KHR_surface", "spec_version": "25" },
+            { "name": "VK_FUCHSIA_imagepipe_surface", "spec_version": "1" }
+        ],
+        "device_extensions": [
+            { "name": "VK_KHR_swapchain", "spec_version": "68" }
+        ]
+    }
+}

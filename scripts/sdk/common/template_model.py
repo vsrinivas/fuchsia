@@ -87,3 +87,17 @@ class TestWorkspace(object):
         self.sdk_path = sdk_path
         self.with_cc = with_cc
         self.with_dart = with_dart
+
+
+class VulkanLibrary(object):
+
+    def __init__(self):
+        self.layers = []
+
+
+class VulkanLayer(object):
+
+    def __init__(self, name, config, binary):
+        self.name = name
+        self.config = config
+        self.binary = binary

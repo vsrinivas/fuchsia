@@ -182,6 +182,56 @@ class GNBuilder(Frontend):
             for files in atom['target_files'].values():
                 self.copy_files(files, atom['root'], 'tools')
 
+    def install_loadable_module_atom(self, atom):
+        name = atom['name']
+        if name != 'vulkan_layers':
+            raise RuntimeError('Unsupported loadable_module: %s' % name)
+
+        # Copy resources and binaries
+        resources = atom['resources']
+        self.copy_files(resources)
+
+        binaries = atom['binaries']
+        for arch in self.target_arches:
+            self.copy_files(binaries[arch])
+
+        def _filename_no_ext(name):
+            return os.path.splitext(os.path.basename(name))[0]
+
+        data = model.VulkanLibrary()
+        # Pair each json resource with its corresponding binary. Each such pair
+        # is a "layer". We only need to check one arch because each arch has the
+        # same list of binaries.
+        arch = next(iter(binaries))
+        binary_names = binaries[arch]
+        # TODO(jdkoren): use atom[root] once fxr/360094 lands
+        local_pkg = os.path.join('pkg', name)
+
+        for res in resources:
+            layer_name = _filename_no_ext(res)
+            # Filter binaries for a matching name.
+            filtered = [
+                n for n in binary_names if _filename_no_ext(n) == layer_name
+            ]
+            if filtered:
+                # Replace harcoded arch in the found binary filename.
+                binary = filtered[0].replace(
+                    '/' + arch + '/', "/${target_cpu}/")
+            else:
+                # We didn't find a matching binary. Rather than throw an error
+                # here, we'll emit a build rule with 'MISSING' in the file path,
+                # which will cause a test failure.
+                binary = 'MISSING/{}.so'.format(layer_name)
+
+            layer = model.VulkanLayer(
+                name=layer_name,
+                config=os.path.relpath(res, start=local_pkg),
+                binary=os.path.relpath(binary, start=local_pkg))
+            data.layers.append(layer)
+
+        self.write_file(
+            self.dest('pkg', name, 'BUILD.gn'), 'vulkan_module', data)
+
     def install_sysroot_atom(self, atom):
         for arch in self.target_arches:
             base = self.dest('arch', arch, 'sysroot')
