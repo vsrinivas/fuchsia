@@ -2,13 +2,13 @@
 
 __fx_nodename() {
   # TODO: allow configuration of node names with zstyle
-  local -a nodenames=( $(${fuchsia_build_dir}.zircon/tools/netls | awk '/device/ { print $2; }') )
+  local -a nodenames=( $(${fuchsia_dir}/${fuchsia_build_dir}.zircon/tools/netls | awk '/device/ { print $2; }') )
   _describe 'nodename' nodenames
 }
 
 __fx_amber_package() {
   # packages are directories in the build dir under amber-files/repository/targets
-  _values $(cd ${fuchsia_build_dir}/amber-files/repository/targets >/dev/null 2>&1 && echo *(/))
+  _values $(cd ${fuchsia_dir}/${fuchsia_build_dir}/amber-files/repository/targets >/dev/null 2>&1 && echo *(/))
 }
 
 __fx_build_dir() {
