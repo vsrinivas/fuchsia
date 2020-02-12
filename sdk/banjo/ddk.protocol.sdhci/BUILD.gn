@@ -2,8 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/banjo.gni")
+import("//build/banjo/banjo.gni")
 
-banjo_library("ddk.protocol.sdhci") {
+banjo("ddk.protocol.sdhci") {
+  # Remove after build unification, see b/44278
+  testonly = false
   sources = [ "sdhci.banjo" ]
 }

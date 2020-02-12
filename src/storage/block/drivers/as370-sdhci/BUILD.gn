@@ -13,6 +13,7 @@ driver_module("as370-sdhci") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "as370-sdhci.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.sdhci",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -24,7 +25,6 @@ driver_module("as370-sdhci") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/banjo/ddk.protocol.sdhci",
   ]
 }
 
