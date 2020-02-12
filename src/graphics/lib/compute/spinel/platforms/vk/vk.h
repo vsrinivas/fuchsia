@@ -52,8 +52,8 @@ struct spn_vk_target;
 // If you want to see what's happening here with all of the descriptor
 // layout expansions, run vk.c through the preprocessor:
 //
-// clang -I $VULKAN_SDK/include  -I ../.. -I ../../.. -I ../../include/spinel -E  vk.c | clang-format > vk_clang.c
-// cl    -I %VULKAN_SDK%\include -I ..\.. -I ..\..\.. -I ..\..\include\spinel -EP vk.c | clang-format > vk_msvc.c
+// clang -I $VULKAN_SDK/include  -I ../.. -I ../../.. -I ../../include -E  vk.c | clang-format > vk_clang.c
+// cl    -I %VULKAN_SDK%\include -I ..\.. -I ..\..\.. -I ..\..\include -EP vk.c | clang-format > vk_msvc.c
 //
 
 //
@@ -229,11 +229,11 @@ SPN_VK_DS_EXPAND()
                                                             SPN_VK_DS_TYPE(ds_id_) const ds)
 
 #undef SPN_VK_DESC_TYPE_STORAGE_BUFFER
-#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(ds_id_, d_id_x_, d_ext_, d_id_)                            \
+#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(ds_id_, d_id_x_, d_id_)                                    \
   SPN_VK_DS_GET_PROTO_STORAGE_BUFFER(ds_id_, d_id_);
 
 #undef SPN_VK_DESC_TYPE_STORAGE_IMAGE
-#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(ds_id_, d_id_x_, d_ext_, d_id_)                             \
+#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(ds_id_, d_id_x_, d_id_)                                     \
   SPN_VK_DS_GET_PROTO_STORAGE_IMAGE(ds_id_, d_id_);
 
 #undef SPN_VK_DS_EXPAND_X

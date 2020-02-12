@@ -611,6 +611,12 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
       // imgbar.dstQueueFamilyIndex -- not set
       // imgbar.image               -- use default
       //
+      // FIXME(allanmac): beware that we might need to add a
+      // VK_PIPELINE_STAGE_HOST_BIT in certain situations.  For now, do
+      // nothing because most of this logic and no longer the
+      // responsibility of Spinel will be externalized once timeline
+      // semaphores are available.
+      //
       imgbar.srcAccessMask       = VK_ACCESS_TRANSFER_READ_BIT;
       imgbar.dstAccessMask       = 0;
       imgbar.oldLayout           = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;

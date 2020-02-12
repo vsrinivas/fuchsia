@@ -13,7 +13,7 @@
 
 #include "allocator_device.h"
 #include "allocator_host.h"
-#include "spinel_vk.h"
+#include "spinel/spinel_vk.h"
 
 //
 //
@@ -37,14 +37,14 @@ struct spn_device
     {
       struct
       {
-        struct spn_allocator_device_perm local;
-        struct spn_allocator_device_perm copyback;  // hrN     -- copy-back to host
-        struct spn_allocator_device_perm coherent;  // hw1:drN -- target-specific
+        struct spn_allocator_device_perm drw;    // device read-write
+        struct spn_allocator_device_perm hw_dr;  // host write / device read
+        struct spn_allocator_device_perm hr_dw;  // host read / device write
       } perm;
 
       struct
       {
-        struct spn_allocator_device_temp local;
+        struct spn_allocator_device_temp drw;  // device read-write
       } temp;
     } device;
 

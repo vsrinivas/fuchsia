@@ -122,88 +122,13 @@
 #define SPN_VK_DS_COUNT  10  // this is validated with a static assert
 
 //
-// DESCRIPTOR EXTENT TYPES
-//
-// Interactions between the host<>device occur through Spinel extents.
-//
-// An extent is a very lightweight abstraction that captures a
-// specific location, lifetime and access pattern of one or more
-// Vulkan resources.
-//
-// For now, the extent resources we're managing are limited to
-// VkDeviceMemory and VkBuffer instances as well as mapped pointers.
-//
-// Legend:
-//
-//   P  :  durable
-//   T  :  ephemeral
-//   X  :  durable/ephemeral is target-specific
-//   H  :  host
-//   D  :  device
-//   R  :  read
-//   W  :  write
-//   1  :  once -- e.g. w1 is 'write-once'
-//   N  :  many -- e.g. rN is 'read-many'
-//   G  :  ring
-//   S  :  ring snapshot
-//
-// Examples:
-//
-//   PDRW        : permanent device-side read-write extent
-//   PHW1G_TDRNS : permanent write-once ring with temporary device-side read-many snapshot
-//
-// NOTE: The extent acronym captures the *intent* but an
-// implementation may be target-specific.
-//
-// For example, a PHW1G_TDR1S ring buffer is implemented based on the
-// target's capabilities, resource limitations and observed
-// performance.  Here are 4 possible implementations:
-//
-//   - a write-through to a perm device buffer                  (AMD)          -- update bufferinfo
-//   - a copy from the perm host buffer to a perm device buffer (dGPU)         -- copy / update bufferinfo
-//   - a copy from the perm host buffer to a temp device buffer (dGPU)         -- suballocate temp buffer+id / copy / update bufferinfo
-//   - a device-readable perm host coherent buffer              (iGPU or dGPU) -- update bufferinfo
-//
-
-//
-// FIXME(allanmac): support declaring an instance name in the descriptor sets
-//
-
-//
-// Spinel allocation type
-//
-// FIXME -- MOVE EXTENT HINTS INTO THE TARGET CONFIG
-//
-
-#define SPN_VK_ALLOC_PERM_BIT  (1u<<31)
-#define SPN_VK_ALLOC_TEMP_BIT  (1u<<30)
-
-// (SPN_VK_TEMP | copy to DEVICE_LOCAL)         or
-// (SPN_VK_PERM | HOST_VISIBLE | HOST_COHERENT) or
-// (SPN_VK_PERM | DEVICE_LOCAL | HOST_VISIBLE | HOST_COHERENT)
-
-//
-// Current implementation is limited to the extents below.
-//
-
-#if 0
-#define SPN_VK_EXTENT_PDRW
-#define SPN_VK_EXTENT_TDRW
-#define SPN_VK_EXTENT_PHWN_PDRN
-#define SPN_VK_EXTENT_PHRN_PDW1
-#define SPN_VK_EXTENT_PHW1G_TDR1S
-#define SPN_VK_EXTENT_PHW1G_TDRNS
-#define SPN_VK_EXTENT_IMAGE
-#endif
-
-//
 // DESCRIPTOR SET: STATUS
 //
 
 #define SPN_VK_BINDING_STATUS_BP_ATOMICS  0
 
 #define SPN_VK_DS_STATUS()                                              \
-  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_STATUS, SPN_VK_BINDING_STATUS_BP_ATOMICS, SPN_VK_EXTENT_PHRN_PDW1, status)
+  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_STATUS, SPN_VK_BINDING_STATUS_BP_ATOMICS, status)
 
 #define SPN_VK_GLSL_DS_STATUS(idx,mq_status)                            \
   SPN_VK_GLSL_LAYOUT_BUFFER(SPN_VK_DS_ID_STATUS,idx,                    \
@@ -227,12 +152,12 @@
 //
 //
 
-#if !defined(NDEBUG) && defined(SPN_BP_DEBUG)
+#ifdef SPN_BP_DEBUG
 
 #define SPN_VK_DESC_DEBUG()                                     \
   SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_BLOCK_POOL,      \
                                   SPN_VK_BINDING_BP_DEBUG,      \
-                                  SPN_VK_EXTENT_PDRW,bp_debug)
+                                  bp_debug)
 
 #define SPN_VK_GLSL_DEBUG(idx)                                                  \
   SPN_VK_GLSL_LAYOUT_BUFFER(SPN_VK_DS_ID_BLOCK_POOL,idx,                        \
@@ -263,9 +188,9 @@
 #define SPN_VK_BINDING_BP_DEBUG       3
 
 #define SPN_VK_DS_BLOCK_POOL()                                                                                            \
-  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_BLOCK_POOL, SPN_VK_BINDING_BP_IDS,      SPN_VK_EXTENT_PDRW, bp_ids)        \
-  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_BLOCK_POOL, SPN_VK_BINDING_BP_BLOCKS,   SPN_VK_EXTENT_PDRW, bp_blocks)     \
-  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_BLOCK_POOL, SPN_VK_BINDING_BP_HOST_MAP, SPN_VK_EXTENT_PDRW, bp_host_map)   \
+  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_BLOCK_POOL, SPN_VK_BINDING_BP_IDS,      bp_ids)        \
+  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_BLOCK_POOL, SPN_VK_BINDING_BP_BLOCKS,   bp_blocks)     \
+  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_BLOCK_POOL, SPN_VK_BINDING_BP_HOST_MAP, bp_host_map)   \
   SPN_VK_DESC_DEBUG()
 
 
@@ -314,8 +239,8 @@
 #define SPN_VK_BINDING_PC_RING        1
 
 #define SPN_VK_DS_PATHS_COPY()                                                                                                  \
-  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_PATHS_COPY, SPN_VK_BINDING_PC_ALLOC, SPN_VK_EXTENT_PDRW,        pc_alloc)        \
-  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_PATHS_COPY, SPN_VK_BINDING_PC_RING,  SPN_VK_EXTENT_PHW1G_TDR1S, pc_ring)
+  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_PATHS_COPY, SPN_VK_BINDING_PC_ALLOC, pc_alloc)        \
+  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_PATHS_COPY, SPN_VK_BINDING_PC_RING,  pc_ring)
 
 #define SPN_VK_GLSL_DS_PATHS_COPY(idx,mq_alloc,mq_cmds,mq_blocks)       \
   SPN_VK_GLSL_LAYOUT_BUFFER(SPN_VK_DS_ID_PATHS_COPY,idx,                \
@@ -337,10 +262,10 @@
 #define SPN_VK_BINDING_RAST_CMDS      3
 
 #define SPN_VK_DS_RASTERIZE()                                                                                                   \
-  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_RASTERIZE, SPN_VK_BINDING_FILL_CMDS,    SPN_VK_EXTENT_PHW1G_TDRNS, fill_cmds)    \
-  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_RASTERIZE, SPN_VK_BINDING_FILL_QUADS,   SPN_VK_EXTENT_PHW1G_TDRNS, fill_quads)   \
-  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_RASTERIZE, SPN_VK_BINDING_FILL_SCAN,    SPN_VK_EXTENT_TDRW,        fill_scan)    \
-  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_RASTERIZE, SPN_VK_BINDING_RAST_CMDS,    SPN_VK_EXTENT_TDRW,        rast_cmds)
+  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_RASTERIZE, SPN_VK_BINDING_FILL_CMDS,  fill_cmds)    \
+  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_RASTERIZE, SPN_VK_BINDING_FILL_QUADS, fill_quads)   \
+  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_RASTERIZE, SPN_VK_BINDING_FILL_SCAN,  fill_scan)    \
+  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_RASTERIZE, SPN_VK_BINDING_RAST_CMDS,  rast_cmds)
 
 #define SPN_VK_GLSL_DS_RASTERIZE(idx,                                                                   \
                                  mq_fill_cmds,mq_fill_quads,                                            \
@@ -371,8 +296,8 @@
 //
 #define SPN_VK_BINDING_TTRKS          0
 
-#define SPN_VK_DS_TTRKS()                                                                                                   \
-  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_TTRKS, SPN_VK_BINDING_TTRKS, SPN_VK_EXTENT_TDRW, ttrks)
+#define SPN_VK_DS_TTRKS()                                                               \
+  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_TTRKS, SPN_VK_BINDING_TTRKS, ttrks)
 
 #define SPN_VK_GLSL_DS_TTRKS(idx,mq_ttrks_meta,mq_ttrks_count,mq_ttrks_keys)                    \
   SPN_VK_GLSL_LAYOUT_BUFFER(SPN_VK_DS_ID_TTRKS,idx,                                             \
@@ -391,7 +316,6 @@
 #define SPN_VK_DS_RASTER_IDS()                                  \
   SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_RASTER_IDS,      \
                                   SPN_VK_BINDING_RASTER_IDS,    \
-                                  SPN_VK_EXTENT_PHW1G_TDRNS,    \
                                   raster_ids)
 
 #define SPN_VK_GLSL_DS_RASTER_IDS(idx,mq_raster_ids)                    \
@@ -406,19 +330,18 @@
 
 #define SPN_VK_BINDING_TTCKS          0
 
-#define SPN_VK_DS_TTCKS()                                                                               \
-  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_TTCKS, SPN_VK_BINDING_TTCKS, SPN_VK_EXTENT_PDRW, ttcks)
+#define SPN_VK_DS_TTCKS()                                                               \
+  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_TTCKS, SPN_VK_BINDING_TTCKS, ttcks)
 
 #define SPN_VK_GLSL_DS_TTCKS(idx,mq_keys,mq_offsets)                            \
   SPN_VK_GLSL_LAYOUT_BUFFER(SPN_VK_DS_ID_TTCKS,idx,                             \
                             SPN_VK_BINDING_TTCKS,ttcks) {                       \
-    mq_keys    SPN_MEMBER_FARRAY_UINT(ttcks_count,  4);                         \
+    mq_keys    SPN_MEMBER_FARRAY_UINT(ttcks_count,4);                           \
     mq_offsets SPN_MEMBER_FARRAY_UINT(offsets_count,4);                         \
     SPN_VK_GLSL_ALIGN_GPU_SEGMENT()                                             \
     mq_offsets SPN_MEMBER_FARRAY_UINT(offsets,(1<<SPN_TTCK_HI_BITS_YX));        \
     mq_keys    SPN_MEMBER_VARRAY_UVEC2(ttcks_keys);                             \
   };
-
 
 //
 // DESCRIPTOR SET: PLACE COMMANDS
@@ -428,8 +351,8 @@
 
 #define SPN_VK_BINDING_PLACE          0
 
-#define SPN_VK_DS_PLACE()                                                                                       \
-  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_PLACE, SPN_VK_BINDING_PLACE, SPN_VK_EXTENT_PHW1G_TDRNS, place)
+#define SPN_VK_DS_PLACE()                                                               \
+  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_PLACE, SPN_VK_BINDING_PLACE, place)
 
 #define SPN_VK_GLSL_DS_PLACE(idx,mq_cmds)                       \
   SPN_VK_GLSL_LAYOUT_BUFFER(SPN_VK_DS_ID_PLACE,idx,             \
@@ -443,8 +366,8 @@
 
 #define SPN_VK_BINDING_STYLING        0
 
-#define SPN_VK_DS_STYLING()                                                                                             \
-  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_STYLING, SPN_VK_BINDING_STYLING, SPN_VK_EXTENT_PHWN_PDRN, styling)
+#define SPN_VK_DS_STYLING()                                                                     \
+  SPN_VK_DESC_TYPE_STORAGE_BUFFER(SPN_VK_DS_ID_STYLING, SPN_VK_BINDING_STYLING, styling)
 
 #define SPN_VK_GLSL_DS_STYLING(idx,mq_styling)                  \
   SPN_VK_GLSL_LAYOUT_BUFFER(SPN_VK_DS_ID_STYLING,idx,           \
@@ -458,8 +381,8 @@
 
 #define SPN_VK_BINDING_SURFACE        0 // STORAGE_IMAGE
 
-#define SPN_VK_DS_SURFACE()                                                                                     \
-  SPN_VK_DESC_TYPE_STORAGE_IMAGE(SPN_VK_DS_ID_SURFACE, SPN_VK_BINDING_SURFACE, SPN_VK_EXTENT_IMAGE, surface)
+#define SPN_VK_DS_SURFACE()                                                             \
+  SPN_VK_DESC_TYPE_STORAGE_IMAGE(SPN_VK_DS_ID_SURFACE, SPN_VK_BINDING_SURFACE, surface)
 
 #define SPN_VK_GLSL_DS_SURFACE(idx,mq_surface,surface_type)     \
   SPN_VK_GLSL_LAYOUT_IMAGE2D(SPN_VK_DS_ID_SURFACE,idx,          \
@@ -721,9 +644,6 @@
 // necessary for pipeline compatibility because HotSort uses the same pipeline
 // layout.
 //
-// FIXME(allanmac): the HotSort API is now stable enough that it can generate
-// its own pipeline layout and we can remove this dependency.
-//
 
 #define SPN_VK_GLSL_PUSH_KERNEL_SEGMENT_TTRK()  \
   SPN_VK_PUSH_UINT(kv_offset_in)                \
@@ -830,20 +750,24 @@
 // This kernel defines its own layout-compatible but arch-specific
 // descriptor in order to harmonize with the HotSort library.
 //
+// Note that the push constants aren't currently used by this shader but are
+// necessary for pipeline compatibility because HotSort uses the same pipeline
+// layout.
+//
 
 #define SPN_VK_GLSL_PUSH_KERNEL_SEGMENT_TTCK()   \
   SPN_VK_PUSH_UINT(kv_offset_in)                 \
   SPN_VK_PUSH_UINT(kv_offset_out)                \
   SPN_VK_PUSH_UINT(kv_count)
 
-#define SPN_VK_GLSL_DECL_KERNEL_SEGMENT_TTCK()                           \
-  SPN_VK_GLSL_DS_TTCKS(1,readwrite,readwrite);                           \
+#define SPN_VK_GLSL_DECL_KERNEL_SEGMENT_TTCK()                          \
+  SPN_VK_GLSL_DS_BLOCK_POOL(0,noaccess,noaccess,noaccess,noaccess);     \
+  SPN_VK_GLSL_DS_TTCKS(1,readonly,readwrite);                           \
   SPN_VK_GLSL_PUSH(SPN_VK_GLSL_PUSH_KERNEL_SEGMENT_TTCK());
 
 #define SPN_VK_HOST_DECL_KERNEL_SEGMENT_TTCK()                                             \
   SPN_VK_HOST_DS(SPN_VK_P_ID_SEGMENT_TTCK,0,SPN_VK_DS_ID_BLOCK_POOL)                       \
   SPN_VK_HOST_DS(SPN_VK_P_ID_SEGMENT_TTCK,1,SPN_VK_DS_ID_TTCKS)                            \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_SEGMENT_TTCK,2,SPN_VK_DS_ID_PLACE)                            \
   SPN_VK_HOST_PUSH(SPN_VK_P_ID_SEGMENT_TTCK,SPN_VK_GLSL_PUSH_KERNEL_SEGMENT_TTCK())
 
 //

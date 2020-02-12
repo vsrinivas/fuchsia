@@ -9,6 +9,8 @@
 //
 //
 
+#include <vulkan/vulkan_core.h>
+
 #include "common/macros.h"
 #include "vk_layouts.h"
 #include "vk_target_requirements.h"
@@ -45,18 +47,31 @@ struct spn_vk_target_config
   union spn_vk_target_feature_structures structures; // required device feature structures
 
   //
-  // host allocators
+  // allocators
   //
   struct {
     struct {
       struct {
-        uint32_t alignment;
+        uint32_t                 alignment;
       } perm;
     } host;
+
     struct {
       struct {
-        uint32_t subbufs;
-        uint32_t size;
+        VkMemoryPropertyFlagBits properties;
+        VkBufferUsageFlags       usage;
+      } drw;   // device read-write
+      struct {
+        VkMemoryPropertyFlagBits properties;
+        VkBufferUsageFlags       usage;
+      } hw_dr; // host write / device read
+      struct {
+        VkMemoryPropertyFlagBits properties;
+        VkBufferUsageFlags       usage;
+      } hr_dw; // host read / device write
+      struct {
+        uint32_t                 subbufs;
+        uint32_t                 size;
       } temp;
     } device;
   } allocator;
@@ -78,7 +93,7 @@ struct spn_vk_target_config
     uint32_t     ids_per_invocation;
   } block_pool;
 
-  struct {                    // FIXME -- put ring host_coherent allocation flags here
+  struct {
     struct {
     uint32_t     dispatches;  // number of in-flight dispatches
     uint32_t     ring;        // number of blocks & cmds in ring
@@ -87,13 +102,6 @@ struct spn_vk_target_config
   } path_builder;
 
   struct {
-    struct {
-      struct {                // FIXME -- put ring host_coherent agnd device_local allocation flags here
-        uint32_t h;           // index of host   vk allocator
-        uint32_t d;           // index of device vk allocator
-      } rings;
-    } vk;
-
     struct {
       uint32_t   dispatches;  // number of in-flight dispatches
       uint32_t   ring;        // number of commands in ring
@@ -110,20 +118,6 @@ struct spn_vk_target_config
   } raster_builder;
 
   struct {
-    struct {
-      uint32_t   h;           // index of host   vk allocator
-      uint32_t   d;           // index of device vk allocator
-    } vk;
-  } styling;
-
-  struct {
-    struct {
-      struct {                // FIXME -- put ring host_coherent and device_local allocation flags here
-        uint32_t h;           // index of host   vk allocator
-        uint32_t d;           // index of device vk allocator
-      } rings;
-    } vk;
-
     struct {
       uint32_t   dispatches;  // number of in-flight dispatches
       uint32_t   ring;        // number of commands in ring
@@ -151,10 +145,10 @@ struct spn_vk_target_config
   struct
   {
 #undef SPN_VK_DESC_TYPE_STORAGE_BUFFER
-#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(_ds_id, _d_idx, _d_ext, _d_id) uint32_t _d_id;
+#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(_ds_id, _d_idx, _d_id) uint32_t _d_id;
 
 #undef SPN_VK_DESC_TYPE_STORAGE_IMAGE
-#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(_ds_id, _d_idx, _d_ext, _d_id)                              \
+#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(_ds_id, _d_idx, _d_id)                                      \
   uint32_t _d_id;  // do nothing for now
 
 #undef SPN_VK_DS_EXPAND_X
@@ -167,25 +161,6 @@ struct spn_vk_target_config
     SPN_VK_DS_EXPAND()
 
   } ds;
-
-  //
-  // descriptor extents
-  //
-  struct
-  {
-#undef SPN_VK_DS_EXPAND_X
-#define SPN_VK_DS_EXPAND_X(_ds_idx, _ds_id, _ds)                                                   \
-  struct                                                                                           \
-  {                                                                                                \
-    struct                                                                                         \
-    {                                                                                              \
-      _ds                                                                                          \
-    } props;                                                                                       \
-  } _ds_id;
-
-    SPN_VK_DS_EXPAND()
-
-  } ds_extents;
 
   //
   // pipelines

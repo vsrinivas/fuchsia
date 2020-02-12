@@ -111,7 +111,7 @@ spn_si_seal(struct spn_styling_impl * const impl)
   // If we're on a discrete GPU then copy styling data from the host to
   // device.
   //
-  if (impl->config->styling.vk.d != 0)
+  if ((impl->config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
     {
       // move to SEALING state
       impl->state = SPN_SI_STATE_SEALING;
@@ -228,18 +228,18 @@ spn_si_release(struct spn_styling_impl * const impl)
   //
   // free device allocations
   //
-  if (impl->config->styling.vk.d != 0)
+  if ((impl->config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
     {
       //
       // Note that we don't have to unmap before freeing
       //
-      spn_allocator_device_perm_free(&device->allocator.device.perm.local,
+      spn_allocator_device_perm_free(&device->allocator.device.perm.drw,
                                      &device->environment,
                                      &impl->vk.d.dbi,
                                      impl->vk.d.dm);
     }
 
-  spn_allocator_device_perm_free(&device->allocator.device.perm.coherent,
+  spn_allocator_device_perm_free(&device->allocator.device.perm.hw_dr,
                                  &device->environment,
                                  &impl->vk.h.dbi,
                                  impl->vk.h.dm);
@@ -320,7 +320,7 @@ spn_styling_impl_create(struct spn_device * const   device,
   //
   size_t const styling_size = dwords_count * sizeof(uint32_t);
 
-  spn_allocator_device_perm_alloc(&device->allocator.device.perm.coherent,
+  spn_allocator_device_perm_alloc(&device->allocator.device.perm.hw_dr,
                                   &device->environment,
                                   dwords_count * sizeof(uint32_t),
                                   NULL,
@@ -329,9 +329,9 @@ spn_styling_impl_create(struct spn_device * const   device,
 
   vk(MapMemory(device->environment.d, impl->vk.h.dm, 0, VK_WHOLE_SIZE, 0, (void **)&s->extent));
 
-  if (config->styling.vk.d != 0)
+  if ((impl->config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
     {
-      spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
+      spn_allocator_device_perm_alloc(&device->allocator.device.perm.drw,
                                       &device->environment,
                                       styling_size,
                                       NULL,

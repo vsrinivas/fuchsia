@@ -389,7 +389,7 @@ spn_ci_flush(struct spn_composition_impl * const impl)
   //
   // If this is a discrete GPU, copy the place command ring.
   //
-  if (impl->config->composition.vk.rings.d != 0)
+  if ((impl->config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
     {
       VkDeviceSize const head_offset = dispatch->cp.head * sizeof(struct spn_cmd_place);
 
@@ -576,17 +576,6 @@ spn_ci_complete_sealing_2(void * pfn_payload)
 
   // move to sealed state
   impl->state = SPN_CI_STATE_SEALED;
-
-  //
-  // DEBUG
-  //
-#if !defined(NDEBUG) && 0
-  fprintf(stderr,
-          "offsets_count = { %u, %u, %u }\n",
-          impl->mapped.cb.extent->offsets_count[0],
-          impl->mapped.cb.extent->offsets_count[1],
-          impl->mapped.cb.extent->offsets_count[2]);
-#endif
 }
 
 //
@@ -613,6 +602,20 @@ spn_ci_complete_sealing_1(void * pfn_payload)
   *payload_copy = *payload;
 
   //
+  // invalidate if necessary
+  //
+  if ((impl->config->allocator.device.hr_dw.properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
+    {
+      VkMappedMemoryRange const mmr = { .sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+                                        .pNext  = NULL,
+                                        .memory = impl->vk.copyback.dm,
+                                        .offset = 0,
+                                        .size   = VK_WHOLE_SIZE };
+
+      vk(InvalidateMappedMemoryRanges(device->environment.d, 1, &mmr));
+    }
+
+  //
   // get a cb
   //
   VkCommandBuffer cb = spn_device_dispatch_get_cb(device, impl->id_sealing);
@@ -622,7 +625,7 @@ spn_ci_complete_sealing_1(void * pfn_payload)
   //
   // This DS only needs to be bound if we're debugging
   //
-#ifndef NDEBUG
+#ifdef SPN_BP_DEBUG
   //
   // BLOCK POOL
   //
@@ -641,22 +644,6 @@ spn_ci_complete_sealing_1(void * pfn_payload)
   //
   ////////////////////////////////////////////////////////////////
 
-#if 0
-  //
-  // FIXME(allanmac): evaluate cached coherent vs. invalidated
-  //
-  VkMappedMemoryRange const mmrs[] = {
-
-    { .sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-      .pNext  = NULL,
-      .memory = impl->vk.copyback.dm,
-      .offset = 0,
-      .size   = VK_WHOLE_SIZE }
-  };
-
-  vk(InvalidateMappedMemoryRanges(device->environment->d, 1, mmrs));
-#endif
-
   uint32_t const keys_count = impl->mapped.cb.extent->ttcks_count[0];
   uint32_t       slabs_in;
   uint32_t       padded_in;
@@ -664,22 +651,27 @@ spn_ci_complete_sealing_1(void * pfn_payload)
 
   hotsort_vk_pad(device->hs, keys_count, &slabs_in, &padded_in, &padded_out);
 
-#if !defined(NDEBUG) && 0
-  fprintf(stderr,
-          "keys_count = %u\n"
-          "slabs_in   = %u\n"
-          "padded_in  = %u\n"
-          "padded_out = %u\n",
-          keys_count,
-          slabs_in,
-          padded_in,
-          padded_out);
-#endif
-
   struct hotsort_vk_ds_offsets const keys_offsets = {
     .in  = SPN_VK_BUFFER_OFFSETOF(ttcks, ttcks, ttcks_keys),
     .out = SPN_VK_BUFFER_OFFSETOF(ttcks, ttcks, ttcks_keys)
   };
+
+#if !defined(NDEBUG) && 0
+  fprintf(stderr,
+          "Composition:\n"
+          "  keys_count       = %u\n"
+          "  slabs_in         = %u\n"
+          "  padded_in        = %u\n"
+          "  padded_out       = %u\n"
+          "  keys_offsets.in  = %zu\n"
+          "  keys_offsets.out = %zu\n",
+          keys_count,
+          slabs_in,
+          padded_in,
+          padded_out,
+          keys_offsets.in,
+          keys_offsets.out);
+#endif
 
   hotsort_vk_sort(cb, device->hs, &keys_offsets, keys_count, padded_in, padded_out, false);
 
@@ -697,25 +689,9 @@ spn_ci_complete_sealing_1(void * pfn_payload)
   // dispatch one workgroup per fill command
   vkCmdDispatch(cb, slabs_in, 1, 1);
 
-//
-// DEBUG -- COPYBACK TO INSPECT OFFSETS COUNT
-//
-#ifndef NDEBUG
-  vk_barrier_compute_w_to_transfer_r(cb);
-
-  VkDeviceSize const dbi_src_offset = impl->vk.ttcks.dbi.offset;
-  VkDeviceSize const dbi_dst_offset = impl->vk.copyback.dbi.offset;
-
-  VkBufferCopy const bc = {
-
-    .srcOffset = dbi_src_offset + SPN_VK_BUFFER_OFFSETOF(ttcks, ttcks, offsets_count),
-    .dstOffset = dbi_dst_offset + OFFSETOF_MACRO(struct spn_ci_copyback, offsets_count),
-    .size      = sizeof(impl->mapped.cb.extent->offsets_count)
-  };
-
-  // copyback the key count
-  vkCmdCopyBuffer(cb, impl->vk.ttcks.dbi.buffer, impl->vk.copyback.dbi.buffer, 1, &bc);
-#endif
+  //
+  // we dispatch *indirectly* off of the output SEGMENT_TTCK
+  //
 
   //
   // submit the dispatch
@@ -822,11 +798,12 @@ spn_ci_unsealed_to_sealing(struct spn_composition_impl * const impl)
   vkCmdCopyBuffer(cb, impl->vk.ttcks.dbi.buffer, impl->vk.copyback.dbi.buffer, 1, &bc);
 
   //
-  // FIXME(allanmac): verify whether this is necessary with host
-  // coherent memory.
-  //
   // make the copyback visible to the host
-  vk_barrier_transfer_w_to_host_r(cb);
+  //
+  if ((impl->config->allocator.device.hr_dw.properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
+    {
+      vk_barrier_transfer_w_to_host_r(cb);
+    }
 
   //
   // submit the dispatch
@@ -1350,29 +1327,29 @@ spn_ci_release(struct spn_composition_impl * const impl)
   //
   // free copyback
   //
-  spn_allocator_device_perm_free(&device->allocator.device.perm.copyback,
+  spn_allocator_device_perm_free(&device->allocator.device.perm.hr_dw,
                                  &device->environment,
                                  &impl->vk.copyback.dbi,
                                  impl->vk.copyback.dm);
   //
   // free ttcks
   //
-  spn_allocator_device_perm_free(&device->allocator.device.perm.local,
+  spn_allocator_device_perm_free(&device->allocator.device.perm.drw,
                                  &device->environment,
                                  &impl->vk.ttcks.dbi,
                                  impl->vk.ttcks.dm);
   //
   // free ring
   //
-  if (impl->config->composition.vk.rings.d != 0)
+  if ((impl->config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
     {
-      spn_allocator_device_perm_free(&device->allocator.device.perm.local,
+      spn_allocator_device_perm_free(&device->allocator.device.perm.drw,
                                      &device->environment,
                                      &impl->vk.rings.d.dbi,
                                      impl->vk.rings.d.dm);
     }
 
-  spn_allocator_device_perm_free(&device->allocator.device.perm.coherent,
+  spn_allocator_device_perm_free(&device->allocator.device.perm.hw_dr,
                                  &device->environment,
                                  &impl->vk.rings.h.dbi,
                                  impl->vk.rings.h.dm);
@@ -1455,7 +1432,7 @@ spn_composition_impl_create(struct spn_device * const       device,
 
   spn_ring_init(&impl->mapped.cp.ring, config->composition.size.ring);
 
-  spn_allocator_device_perm_alloc(&device->allocator.device.perm.coherent,
+  spn_allocator_device_perm_alloc(&device->allocator.device.perm.hw_dr,
                                   &device->environment,
                                   ring_size,
                                   NULL,
@@ -1469,9 +1446,9 @@ spn_composition_impl_create(struct spn_device * const       device,
                0,
                (void **)&impl->mapped.cp.extent));
 
-  if (config->composition.vk.rings.d != 0)
+  if ((impl->config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
     {
-      spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
+      spn_allocator_device_perm_alloc(&device->allocator.device.perm.drw,
                                       &device->environment,
                                       ring_size,
                                       NULL,
@@ -1485,12 +1462,16 @@ spn_composition_impl_create(struct spn_device * const       device,
     }
 
   //
-  // allocate ttck descriptor
+  // allocate ttck descriptor set
   //
   size_t const ttcks_size = SPN_VK_BUFFER_OFFSETOF(ttcks, ttcks, ttcks_keys) +
                             config->composition.size.ttcks * sizeof(SPN_TYPE_UVEC2);
 
-  spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
+#if 0
+  fprintf(stderr, "ttcks_size = %zu\n", ttcks_size);
+#endif
+
+  spn_allocator_device_perm_alloc(&device->allocator.device.perm.drw,
                                   &device->environment,
                                   ttcks_size,
                                   NULL,
@@ -1502,7 +1483,7 @@ spn_composition_impl_create(struct spn_device * const       device,
   //
   size_t const copyback_size = sizeof(*impl->mapped.cb.extent);
 
-  spn_allocator_device_perm_alloc(&device->allocator.device.perm.copyback,
+  spn_allocator_device_perm_alloc(&device->allocator.device.perm.hr_dw,
                                   &device->environment,
                                   copyback_size,
                                   NULL,
@@ -1631,8 +1612,8 @@ spn_composition_pre_render_dispatch_indirect(struct spn_composition * const comp
 {
   struct spn_composition_impl * const impl = composition->impl;
 
-  VkDeviceSize const dbi_offset =
-    impl->vk.ttcks.dbi.offset + SPN_VK_BUFFER_OFFSETOF(ttcks, ttcks, offsets_count);
+  VkDeviceSize const dbi_offset = impl->vk.ttcks.dbi.offset +  //
+                                  SPN_VK_BUFFER_OFFSETOF(ttcks, ttcks, offsets_count);
 
   vkCmdDispatchIndirect(cb, impl->vk.ttcks.dbi.buffer, dbi_offset);
 }

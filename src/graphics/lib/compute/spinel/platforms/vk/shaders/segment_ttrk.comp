@@ -88,14 +88,10 @@ SPN_VK_GLSL_DECL_KERNEL_SEGMENT_TTRK();
 //
 
 //
-// TTRK macros
+// MACROS
 //
 
-#if SPN_HS_ENABLE_COMPARE_64
-#define SPN_HS_IS_NOT_MAX(row_) (pack64(r##row_) != HS_KEY_VAL_MAX)
-#else
-#define SPN_HS_IS_NOT_MAX(row_) ((r##row_[0] & r##row_[1]) != HS_KEY_VAL_MAX[0])
-#endif
+#define SPN_HS_IS_NOT_MAX(row_) (r##row_ != HS_KEY_VAL_MAX)
 
 //
 //

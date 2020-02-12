@@ -31,18 +31,6 @@
 // clang-format off
 //
 
-#define SPN_VK_EXTENT_PDRW         (SPN_VK_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-#define SPN_VK_EXTENT_TDRW         (SPN_VK_ALLOC_TEMP_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-#define SPN_VK_EXTENT_PHW1G_TDR1S  (SPN_VK_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-#define SPN_VK_EXTENT_PHW1G_TDRNS  (SPN_VK_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-#define SPN_VK_EXTENT_PHWN_PDRN    (SPN_VK_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) // bad
-#define SPN_VK_EXTENT_PHRN_PDW1    (SPN_VK_ALLOC_PERM_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-#define SPN_VK_EXTENT_IMAGE        0
-
-//
-//
-//
-
 static struct spn_vk_target const target =
 {
   .config = {
@@ -62,9 +50,6 @@ static struct spn_vk_target const target =
     },
 
     .structures.named = {
-      .ScalarBlockLayoutFeaturesEXT = {
-        .scalarBlockLayout                = 1
-      },
       .ShaderFloat16Int8FeaturesKHR = {
         .shaderFloat16                    = 1,
       },
@@ -84,6 +69,28 @@ static struct spn_vk_target const target =
         }
       },
       .device = {
+        .drw = {
+          .properties       = (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
+          .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT   |
+                               VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT  |
+                               VK_BUFFER_USAGE_TRANSFER_SRC_BIT     |
+                               VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+        },
+        .hr_dw = {
+          .properties       = (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT  |
+                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
+                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
+                               VK_MEMORY_PROPERTY_HOST_CACHED_BIT),
+          .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT   |
+                               VK_BUFFER_USAGE_TRANSFER_DST_BIT)
+        },
+        .hw_dr = {
+          .properties       = (VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT  |
+                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT  |
+                               VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+          .usage            = (VK_BUFFER_USAGE_STORAGE_BUFFER_BIT   |
+                               VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
+        },
         .temp = {
           .subbufs          = 256,      // 256 subbufs
           .size             = 32 << 20, // 32 MBytes
@@ -111,12 +118,6 @@ static struct spn_vk_target const target =
     },
 
     .raster_builder = {
-      .vk = {
-        .rings = {
-          .h                = 0,   // FIXME -- replace with extent type
-          .d                = 0
-        }
-      },
       .size = {
         .dispatches         = 32,
         .ring               = 8192,
@@ -130,20 +131,7 @@ static struct spn_vk_target const target =
       }
     },
 
-    .styling = {
-      .vk = {
-        .h                  = 0,   // FIXME -- replace with extent type
-        .d                  = 0
-      }
-    },
-
     .composition = {
-      .vk = {
-        .rings = {
-          .h                = 0,   // FIXME -- replace with extent type
-          .d                = 0
-        }
-      },
       .size = {
         .dispatches         = 32,
         .ring               = 8192,
@@ -198,23 +186,6 @@ static struct spn_vk_target const target =
         .sets = SPN_DS_WAG_COUNT
       }
     },
-
-    //
-    // capture target-specific extent types
-    //
-#undef  SPN_VK_DESC_TYPE_STORAGE_BUFFER
-#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(_ds_id,_d_idx,_d_ext,_d_id) ._d_id = _d_ext,
-
-#undef  SPN_VK_DESC_TYPE_STORAGE_IMAGE
-#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(_ds_id,_d_idx,_d_ext,_d_id)  ._d_id = _d_ext,
-
-#undef  SPN_VK_DS_EXPAND_X
-#define SPN_VK_DS_EXPAND_X(_ds_idx,_ds_id,_ds)  \
-    .ds_extents._ds_id.props = {                \
-      _ds                                       \
-    },
-
-    SPN_VK_DS_EXPAND()
 
     //
     // Initialize pipeline-specific parameters

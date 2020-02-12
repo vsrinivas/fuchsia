@@ -20,7 +20,7 @@
 struct spn_device;
 
 //
-// REMOVEME(allanmac): DEBUG ONLY
+// FIXME(allanmac): these are DEBUG ONLY and should be removed after bringup is complete
 //
 
 void

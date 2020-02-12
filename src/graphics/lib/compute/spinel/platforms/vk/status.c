@@ -54,7 +54,7 @@ spn_device_status_create(struct spn_device * const device)
   // get descriptor set DBIs
   status->h.dbi = spn_vk_ds_get_status_status(instance, status->ds_status);
 
-  spn_allocator_device_perm_alloc(&device->allocator.device.perm.copyback,
+  spn_allocator_device_perm_alloc(&device->allocator.device.perm.hr_dw,
                                   &device->environment,
                                   sizeof(*status->h.mapped),
                                   NULL,
@@ -84,7 +84,7 @@ spn_device_status_dispose(struct spn_device * const device)
 
   spn_vk_ds_release_status(instance, status->ds_status);
 
-  spn_allocator_device_perm_free(&device->allocator.device.perm.copyback,
+  spn_allocator_device_perm_free(&device->allocator.device.perm.hr_dw,
                                  &device->environment,
                                  status->h.dbi,
                                  status->h.dm);
@@ -153,6 +153,17 @@ spn_device_get_status(struct spn_device * const device)
   //
   {
     struct spn_vk_target_config const * const config = spn_vk_get_config(instance);
+
+    if ((config->allocator.device.hr_dw.properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
+      {
+        VkMappedMemoryRange const mmr = { .sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+                                          .pNext  = NULL,
+                                          .memory = status->h.dm,
+                                          .offset = 0,
+                                          .size   = VK_WHOLE_SIZE };
+
+        vk(InvalidateMappedMemoryRanges(device->environment.d, 1, &mmr));
+      }
 
     size_t const block_bytes = sizeof(uint32_t) << config->block_pool.block_dwords_log2;
 

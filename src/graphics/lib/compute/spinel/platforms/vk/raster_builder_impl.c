@@ -496,7 +496,7 @@ spn_rbi_complete_2(void * pfn_payload)
   spn_vk_ds_release_raster_ids(instance, payload_2->ds.i);
 
   // release the rasterize post temp buffer -- will never wait()
-  spn_allocator_device_temp_free(&device->allocator.device.temp.local, payload_2->temp.ttrks);
+  spn_allocator_device_temp_free(&device->allocator.device.temp.drw, payload_2->temp.ttrks);
 
   //
   // get the dispatch record
@@ -561,8 +561,8 @@ spn_rbi_complete_1(void * pfn_payload)
   //
   // Release the two temp buffers used by phase 1
   //
-  spn_allocator_device_temp_free(&device->allocator.device.temp.local, payload_1->temp.fill_scan);
-  spn_allocator_device_temp_free(&device->allocator.device.temp.local, payload_1->temp.rast_cmds);
+  spn_allocator_device_temp_free(&device->allocator.device.temp.drw, payload_1->temp.fill_scan);
+  spn_allocator_device_temp_free(&device->allocator.device.temp.drw, payload_1->temp.rast_cmds);
 
   //
   // Release the rasterize ds
@@ -634,6 +634,17 @@ spn_rbi_complete_1(void * pfn_payload)
   //
   ////////////////////////////////////////////////////////////////
 
+  if ((impl->config->allocator.device.hr_dw.properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
+    {
+      VkMappedMemoryRange const mmr = { .sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+                                        .pNext  = NULL,
+                                        .memory = impl->vk.copyback.dm,
+                                        .offset = 0,
+                                        .size   = VK_WHOLE_SIZE };
+
+      vk(InvalidateMappedMemoryRanges(device->environment.d, 1, &mmr));
+    }
+
   uint32_t const keys_count = impl->mapped.cb.extent[payload_2->dispatch_idx];
 
   uint32_t slabs_in;
@@ -649,12 +660,13 @@ spn_rbi_complete_1(void * pfn_payload)
 
 #if !defined(NDEBUG) && 0
   fprintf(stderr,
-          "keys_count       = %u\n"
-          "slabs_in         = %u\n"
-          "padded_in        = %u\n"
-          "padded_out       = %u\n"
-          "keys_offsets.in  = %zu\n"
-          "keys_offsets.out = %zu\n",
+          "Raster Builder:\n"
+          "  keys_count       = %u\n"
+          "  slabs_in         = %u\n"
+          "  padded_in        = %u\n"
+          "  padded_out       = %u\n"
+          "  keys_offsets.in  = %zu\n"
+          "  keys_offsets.out = %zu\n",
           keys_count,
           slabs_in,
           padded_in,
@@ -923,7 +935,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   VkDescriptorBufferInfo * const dbi_fill_scan =
     spn_vk_ds_get_rasterize_fill_scan(instance, payload_1->ds.r);
 
-  spn_allocator_device_temp_alloc(&device->allocator.device.temp.local,
+  spn_allocator_device_temp_alloc(&device->allocator.device.temp.drw,
                                   device,
                                   spn_device_wait,
                                   SPN_VK_BUFFER_OFFSETOF(rasterize, fill_scan, fill_scan_prefix) +
@@ -935,7 +947,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   VkDescriptorBufferInfo * const dbi_rast_cmds =
     spn_vk_ds_get_rasterize_rast_cmds(instance, payload_1->ds.r);
 
-  spn_allocator_device_temp_alloc(&device->allocator.device.temp.local,
+  spn_allocator_device_temp_alloc(&device->allocator.device.temp.drw,
                                   device,
                                   spn_device_wait,
                                   SPN_VK_BUFFER_OFFSETOF(rasterize, rast_cmds, rast_cmds) +
@@ -961,7 +973,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
 
   // dbi: ttrks -- allocate a temporary buffer
   spn_allocator_device_temp_alloc(
-    &device->allocator.device.temp.local,
+    &device->allocator.device.temp.drw,
     device,
     spn_device_wait,
     SPN_VK_BUFFER_OFFSETOF(ttrks, ttrks, ttrks_keys) +
@@ -1002,7 +1014,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //
   ////////////////////////////////////////////////////////////////
 
-  if (impl->config->raster_builder.vk.rings.d != 0)
+  if ((impl->config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
     {
       //
       // On a discrete GPU we need to copy between 3-6 regions because
@@ -1210,11 +1222,12 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   vkCmdCopyBuffer(cb, dbi_ttrks->buffer, dbi_copyback->buffer, 1, &bc);
 
   //
-  // Make the copyback visible to the host
+  // make the copyback visible to the host
   //
-  // FIXME(allanmac): I'm unclear we're going to need this with coherent memory?
-  //
-  vk_barrier_transfer_w_to_host_r(cb);
+  if ((impl->config->allocator.device.hr_dw.properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
+    {
+      vk_barrier_transfer_w_to_host_r(cb);
+    }
 
   //
   // Declare that this dispatch can't start until the path handles are
@@ -1571,22 +1584,22 @@ spn_rbi_release(struct spn_raster_builder_impl * const impl)
   //
   // free copyback
   //
-  spn_allocator_device_perm_free(&device->allocator.device.perm.copyback,
+  spn_allocator_device_perm_free(&device->allocator.device.perm.hr_dw,
                                  &device->environment,
                                  &impl->vk.copyback.dbi,
                                  impl->vk.copyback.dm);
   //
   // free ring
   //
-  if (impl->config->raster_builder.vk.rings.d != 0)
+  if ((impl->config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
     {
-      spn_allocator_device_perm_free(&device->allocator.device.perm.local,
+      spn_allocator_device_perm_free(&device->allocator.device.perm.drw,
                                      &device->environment,
                                      &impl->vk.rings.d.dbi,
                                      impl->vk.rings.d.dm);
     }
 
-  spn_allocator_device_perm_free(&device->allocator.device.perm.coherent,
+  spn_allocator_device_perm_free(&device->allocator.device.perm.hw_dr,
                                  &device->environment,
                                  &impl->vk.rings.h.dbi,
                                  impl->vk.rings.h.dm);
@@ -1689,7 +1702,7 @@ spn_raster_builder_impl_create(struct spn_device * const    device,
   //
   // allocate and map rings
   //
-  spn_allocator_device_perm_alloc(&device->allocator.device.perm.coherent,
+  spn_allocator_device_perm_alloc(&device->allocator.device.perm.hw_dr,
                                   &device->environment,
                                   vk_extent_size,
                                   NULL,
@@ -1711,9 +1724,9 @@ spn_raster_builder_impl_create(struct spn_device * const    device,
          (ptrdiff_t)((void *)impl->mapped.tc.extent - (void *)impl->mapped.cf.extent));
 #endif
 
-  if (config->raster_builder.vk.rings.d != 0)  // FIXME -- this will be improved later
+  if ((impl->config->allocator.device.hw_dr.properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == 0)
     {
-      spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
+      spn_allocator_device_perm_alloc(&device->allocator.device.perm.drw,
                                       &device->environment,
                                       vk_extent_size,
                                       NULL,
@@ -1738,7 +1751,7 @@ spn_raster_builder_impl_create(struct spn_device * const    device,
   uint32_t const max_in_flight = config->raster_builder.size.dispatches;
   size_t const   copyback_size = max_in_flight * sizeof(*impl->mapped.cb.extent);
 
-  spn_allocator_device_perm_alloc(&device->allocator.device.perm.copyback,
+  spn_allocator_device_perm_alloc(&device->allocator.device.perm.hr_dw,
                                   &device->environment,
                                   copyback_size,
                                   NULL,

@@ -66,7 +66,6 @@
 //
 // specialization constants
 //
-// FIXME -- we don't know what subgroup size we're going to get with INTEL
 //
 
 layout(local_size_x = HS_SLAB_THREADS) in;
@@ -75,13 +74,7 @@ layout(local_size_x = HS_SLAB_THREADS) in;
 // NOTE: THIS DESCRIPTOR MUST BE COMPATIBLE WITH 'SPN_DESC_TTRKS'
 //
 
-SPN_VK_GLSL_DECL_KERNEL_SEGMENT_TTCK();
-
-//
-// BLOCK POOL DEBUG
-//
-
-SPN_VK_GLSL_DEBUG(0);
+SPN_VK_GLSL_DECL_KERNEL_SEGMENT_TTCK()
 
 //
 // clang-format off
@@ -110,17 +103,13 @@ SPN_VK_GLSL_DEBUG(0);
 // MACROS
 //
 
-#if SPN_HS_ENABLE_COMPARE_64
-#define SPN_HS_IS_NOT_MAX(kv_) (pack64(kv_) != HS_KEY_VAL_MAX)
-#else
-#define SPN_HS_IS_NOT_MAX(kv_) ((kv_[0] != HS_KEY_VAL_MAX[0]) || (kv_[1] != HS_KEY_VAL_MAX[1]))
-#endif
+#define SPN_HS_IS_NOT_MAX(row_) (r##row_ != HS_KEY_VAL_MAX)
 
 //
 //
 //
 
-#define SPN_HS_IS_VALID(row_, prev_) SPN_HS_IS_NOT_MAX(r##row_) ? (1u << prev_) : 0
+#define SPN_HS_IS_VALID(row_, prev_) SPN_HS_IS_NOT_MAX(row_) ? (1u << prev_) : 0
 
 //
 //
@@ -157,7 +146,7 @@ main()
 #undef HS_SLAB_ROW
 #define HS_SLAB_ROW(row, prev) const HS_KEY_TYPE r##row = HS_SLAB_GLOBAL_LOAD_OUT(prev);
 
-  HS_SLAB_ROWS();
+  HS_SLAB_ROWS()
 
   //
   // DEBUG
@@ -167,15 +156,21 @@ main()
     uint debug_base = 0;
 
     if (gl_SubgroupInvocationID == 0)
-      debug_base =
-        atomicAdd(bp_debug_count[0], HS_KEY_DWORDS * HS_SLAB_THREADS * (HS_SLAB_HEIGHT + 1));
+      debug_base = atomicAdd(bp_debug_count[0],  //
+                             HS_KEY_DWORDS * HS_SLAB_THREADS * (HS_SLAB_HEIGHT + 4));
 
     debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
 
-    bp_debug[debug_base]                   = 0xCAFEBABE;
-    bp_debug[debug_base + HS_SLAB_THREADS] = gl_WorkGroupID.x;
+    bp_debug[debug_base + 0 * HS_SLAB_THREADS] = 0xCAFEBABE;
+    bp_debug[debug_base + 1 * HS_SLAB_THREADS] = gl_WorkGroupID.x;
+    bp_debug[debug_base + 2 * HS_SLAB_THREADS] = gmem_base;
+    bp_debug[debug_base + 3 * HS_SLAB_THREADS] = gmem_out_idx;
+    bp_debug[debug_base + 4 * HS_SLAB_THREADS] = kv_offset_in;
+    bp_debug[debug_base + 5 * HS_SLAB_THREADS] = kv_offset_out;
+    bp_debug[debug_base + 6 * HS_SLAB_THREADS] = kv_count;
+    bp_debug[debug_base + 7 * HS_SLAB_THREADS] = 0xDEADBEEF;
 
-    debug_base += HS_KEY_DWORDS * HS_SLAB_THREADS;
+    debug_base += HS_KEY_DWORDS * HS_SLAB_THREADS * 4;
 
 #undef HS_SLAB_ROW
 #define HS_SLAB_ROW(row, prev)                                                                     \
@@ -186,7 +181,7 @@ main()
     bp_debug[base + HS_SLAB_THREADS] = r##row[1];                                                  \
   }
 
-    HS_SLAB_ROWS();
+    HS_SLAB_ROWS()
   }
 #endif
 
@@ -233,7 +228,7 @@ main()
 #undef HS_SLAB_ROW
 #define HS_SLAB_ROW(row, prev) valid |= SPN_HS_IS_VALID(row, prev);
 
-  HS_SLAB_ROWS();
+  HS_SLAB_ROWS()
 
   //
   // FIND ALL DIFFERENCES IN SLAB
@@ -243,7 +238,25 @@ main()
 #undef HS_SLAB_ROW
 #define HS_SLAB_ROW(row, prev) diffs |= SPN_HS_YX_NEQ(row, prev);
 
-  HS_SLAB_ROWS();
+  HS_SLAB_ROWS()
+
+  //
+  // DEBUG
+  //
+#if 0
+  {
+    uint debug_base = 0;
+
+    if (gl_SubgroupInvocationID == 0)
+      debug_base = atomicAdd(bp_debug_count[0], HS_SLAB_THREADS * 3);
+
+    debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
+
+    bp_debug[debug_base + 0 * HS_SLAB_THREADS] = 0xFEEDFACE;
+    bp_debug[debug_base + 1 * HS_SLAB_THREADS] = valid;
+    bp_debug[debug_base + 2 * HS_SLAB_THREADS] = diffs;
+  }
+#endif
 
   //
   // SUM UP THE DIFFERENCES
@@ -266,6 +279,27 @@ main()
 
   // distribute base across subgroup
   next = subgroupBroadcast(next, HS_SLAB_THREADS - 1) + exc;
+
+  //
+  // DEBUG
+  //
+#if 0
+  {
+    uint debug_base = 0;
+
+    if (gl_SubgroupInvocationID == 0)
+      debug_base = atomicAdd(bp_debug_count[0], HS_SLAB_THREADS * 6);
+
+    debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
+
+    bp_debug[debug_base + 0 * HS_SLAB_THREADS] = 0xFEEDFACE;
+    bp_debug[debug_base + 1 * HS_SLAB_THREADS] = count;
+    bp_debug[debug_base + 2 * HS_SLAB_THREADS] = inc;
+    bp_debug[debug_base + 3 * HS_SLAB_THREADS] = exc;
+    bp_debug[debug_base + 4 * HS_SLAB_THREADS] = linear_idx;
+    bp_debug[debug_base + 5 * HS_SLAB_THREADS] = next;
+  }
+#endif
 
 //
 // STORE THE INDICES

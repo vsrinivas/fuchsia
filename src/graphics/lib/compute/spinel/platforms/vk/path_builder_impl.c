@@ -1035,12 +1035,12 @@ spn_pbi_release(struct spn_path_builder_impl * const impl)
   //
   // free device allocations
   //
-  spn_allocator_device_perm_free(&device->allocator.device.perm.coherent,
+  spn_allocator_device_perm_free(&device->allocator.device.perm.hw_dr,
                                  &device->environment,
                                  &impl->vk.ring.dbi,
                                  impl->vk.ring.dm);
 
-  spn_allocator_device_perm_free(&device->allocator.device.perm.local,
+  spn_allocator_device_perm_free(&device->allocator.device.perm.drw,
                                  &device->environment,
                                  &impl->vk.alloc.dbi,
                                  impl->vk.alloc.dm);
@@ -1110,7 +1110,7 @@ spn_path_builder_impl_create(struct spn_device * const        device,
 
   SPN_VK_TRACE_PATH_BUILDER_CREATE(impl, max_in_flight);
 
-  spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
+  spn_allocator_device_perm_alloc(&device->allocator.device.perm.drw,
                                   &device->environment,
                                   sizeof(uint32_t) * max_in_flight,
                                   NULL,
@@ -1127,7 +1127,7 @@ spn_path_builder_impl_create(struct spn_device * const        device,
   uint32_t const extent_dwords = ring_size * (block_dwords + 1);
   size_t const   extent_size   = extent_dwords * sizeof(uint32_t);
 
-  spn_allocator_device_perm_alloc(&device->allocator.device.perm.coherent,
+  spn_allocator_device_perm_alloc(&device->allocator.device.perm.hw_dr,
                                   &device->environment,
                                   extent_size,
                                   NULL,

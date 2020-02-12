@@ -127,7 +127,7 @@ struct spn_vk_pl
 //
 
 #undef SPN_VK_DESC_TYPE_STORAGE_BUFFER
-#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(ds_id_, d_idx_, d_ext_, d_id_)                             \
+#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(ds_id_, d_idx_, d_id_)                                     \
   { .binding            = d_idx_,                                                                  \
     .descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,                                       \
     .descriptorCount    = 1,                                                                       \
@@ -135,7 +135,7 @@ struct spn_vk_pl
     .pImmutableSamplers = NULL },
 
 #undef SPN_VK_DESC_TYPE_STORAGE_IMAGE
-#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(ds_id_, d_idx_, d_ext_, d_id_)                              \
+#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(ds_id_, d_idx_, d_id_)                                      \
   { .binding            = d_idx_,                                                                  \
     .descriptorType     = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,                                        \
     .descriptorCount    = 1,                                                                       \
@@ -192,14 +192,14 @@ struct spn_vk_dsl
 //
 
 #undef SPN_VK_DESC_TYPE_STORAGE_BUFFER
-#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(ds_id_, d_idx_, d_ext_, d_id_)                             \
+#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(ds_id_, d_idx_, d_id_)                                     \
   struct                                                                                           \
   {                                                                                                \
     VkDescriptorBufferInfo entry;                                                                  \
   } d_id_;
 
 #undef SPN_VK_DESC_TYPE_STORAGE_IMAGE
-#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(ds_id_, d_idx_, d_ext_, d_id_)                              \
+#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(ds_id_, d_idx_, d_id_)                                      \
   struct                                                                                           \
   {                                                                                                \
     VkDescriptorImageInfo entry;                                                                   \
@@ -252,7 +252,7 @@ struct spn_vk_dutdp
 //
 
 #undef SPN_VK_DESC_TYPE_STORAGE_BUFFER
-#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(ds_id_, d_idx_, d_ext_, d_id_)                             \
+#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(ds_id_, d_idx_, d_id_)                                     \
   { .dstBinding      = d_idx_,                                                                     \
     .dstArrayElement = 0,                                                                          \
     .descriptorCount = 1,                                                                          \
@@ -261,7 +261,7 @@ struct spn_vk_dutdp
     .stride          = 0 },
 
 #undef SPN_VK_DESC_TYPE_STORAGE_IMAGE
-#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(ds_id_, d_idx_, d_ext_, d_id_)                              \
+#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(ds_id_, d_idx_, d_id_)                                      \
   { .dstBinding      = d_idx_,                                                                     \
     .dstArrayElement = 0,                                                                          \
     .descriptorCount = 1,                                                                          \
@@ -312,11 +312,11 @@ struct spn_vk_dp
 //
 
 #undef SPN_VK_DESC_TYPE_STORAGE_BUFFER
-#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(ds_id_, d_idx_, d_ext_, d_id_)                             \
+#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(ds_id_, d_idx_, d_id_)                                  \
   { .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = SPN_VK_DPS_COUNT(ds_id_) },
 
 #undef SPN_VK_DESC_TYPE_STORAGE_IMAGE
-#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(ds_id_, d_idx_, d_ext_, d_id_)                              \
+#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(ds_id_, d_idx_, d_id_)                                   \
   { .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = SPN_VK_DPS_COUNT(ds_id_) },
 
 #define SPN_VK_DPS_NAME(ds_id_) spn_vk_dps_##ds_id_
@@ -865,14 +865,14 @@ SPN_VK_DS_EXPAND()
 //
 
 #undef SPN_VK_DESC_TYPE_STORAGE_BUFFER
-#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(ds_id_, d_idx_, d_ext_, d_id_)                             \
+#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(ds_id_, d_idx_, d_id_)                                     \
   SPN_VK_DS_GET_PROTO_STORAGE_BUFFER(ds_id_, d_id_)                                                \
   {                                                                                                \
     return &instance->dutdp.ds_id_.dutds[ds.idx].d_id_.entry;                                      \
   }
 
 #undef SPN_VK_DESC_TYPE_STORAGE_IMAGE
-#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(ds_id_, d_idx_, d_ext_, d_id_)                              \
+#define SPN_VK_DESC_TYPE_STORAGE_IMAGE(ds_id_, d_idx_, d_id_)                                      \
   SPN_VK_DS_GET_PROTO_STORAGE_IMAGE(ds_id_, d_id_)                                                 \
   {                                                                                                \
     return &instance->dutdp.ds_id_.dutds[ds.idx].d_id_.entry;                                      \
@@ -964,94 +964,6 @@ spn_vk_pl_hotsort(struct spn_vk const * const instance)
   // pipelines have compatible pipeline layouts
   return instance->pl.named.SPN_VK_P_ID_SEGMENT_TTCK;
 }
-
-//
-// Most descriptor sets are only acquired immediately before a
-// pipeline launch.
-//
-// For a descriptor set with permanent/durable extents:
-//
-//   1. allocate permanent/durable host-side and device-side extents
-//
-// Before launching a compute shader:
-//
-//   2. acquire a ds from the pool and:
-//     a. flush permanent mapped device-side extents from host-side (no-op for local-coherent mem)
-//     b. allocate temporary/ephemeral host-side extents (rare!)
-//     c. allocate temporary/ephemeral device-side extents
-//     d. update the ds with buffers,images,etc.
-//
-//   3. bind the ds to a command buffer
-//
-//   4. upon pipeline completion or opportunistically:
-//     a. free temporary/ephemeral device-side extents
-//     b. free temporary/ephemeral host-side extents
-//     c. release the ds back to the pool
-//
-// Note the block pool descriptor set is the only exception and is
-// acquired and allocated once per context and used by most of the
-// compute shaders in the Spinel pipeline.
-//
-
-//
-// spn_extent_alloc_perm(instance,spn_extent * * extent)
-//
-// spn_extent_alloc_perm(instance,spn_extent * * extent)
-//
-// spn_extent_free_perm (instance,spn_extent   * extent)
-//
-
-//
-//
-//
-
-void
-spn_vk_extent_alloc(struct spn_vk * const          instance,
-                    VkDescriptorBufferInfo * const dbi,
-                    VkDeviceSize const             size,
-                    uint32_t const                 props)
-{
-  ;
-}
-
-void
-spn_vk_extent_free(struct spn_vk * const instance, VkDescriptorBufferInfo * const dbi)
-{
-  ;
-}
-
-//
-//
-//
-
-#if 0  // TODO: DISABLED UNTIL IN USE
-void
-spn_vk_ds_extents_alloc_block_pool(struct spn_vk * const                         instance,
-                                   struct SPN_VK_DUTD_NAME(block_pool) * * const block_pool)
-{
-  // allocate buffers
-#undef SPN_VK_DESC_TYPE_STORAGE_BUFFER
-#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(ds_id_, d_idx_, d_ext_, d_id_)                             \
-  spn_vk_extent_alloc(instance,                                                                    \
-                      &(*block_pool)->d_id_.entry,                                                 \
-                      instance->config.ds.block_pool.mem.sizes.d_id_,                              \
-                      instance->config.ds.block_pool.mem.props.d_id_);
-
-  SPN_VK_DS_BLOCK_POOL();
-}
-
-void
-spn_vk_ds_extents_free_block_pool(struct spn_vk * const                       instance,
-                                  struct SPN_VK_DUTD_NAME(block_pool) * const block_pool)
-{
-  // allocate buffers
-#undef SPN_VK_DESC_TYPE_STORAGE_BUFFER
-#define SPN_VK_DESC_TYPE_STORAGE_BUFFER(ds_id_, d_idx_, d_ext_, d_id_)                             \
-  spn_vk_extent_free(instance, &block_pool->d_id_.entry);
-
-  SPN_VK_DS_BLOCK_POOL();
-}
-#endif
 
 //
 //
