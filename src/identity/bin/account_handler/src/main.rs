@@ -16,6 +16,7 @@ mod inspect;
 mod lock_request;
 mod persona;
 mod pre_auth;
+mod storage_manager;
 mod stored_account;
 
 #[cfg(test)]
