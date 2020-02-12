@@ -32,6 +32,10 @@ test_package("fdio_test") {
     {
       name = "io_conformance_fdio"
       environments = basic_envs
+
+      # TODO(fxb/44968): Re-enable these tests once we fix race conditions involving starting
+      # and connecting components.
+      disabled = true
     },
   ]
 }
