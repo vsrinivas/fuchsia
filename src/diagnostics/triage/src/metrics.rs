@@ -48,29 +48,34 @@ pub enum MetricValue {
     Missing(String),
 }
 
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+pub enum Function {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Greater,
+    Less,
+    GreaterEq,
+    LessEq,
+    Equals,
+    NotEq,
+    Max,
+    Min,
+    And,
+    Or,
+    Not,
+}
+
 /// Expression represents the parsed body of an Eval Metric. It applies
-/// one of several operators to sub-expressions, or stores the name of a
-/// Metric or a basic Value.
+/// a function to sub-expressions, or stores a Missing error, the name of a
+/// Metric, or a basic Value.
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum Expression {
     // Some operators have arity 1 or 2, some have arity N.
     // For symmetry/readability, I use the same operand-spec Vec<Expression> for all.
     // TODO(cphoenix): Check on load that all operators have a legal number of operands.
-    Add(Vec<Expression>),
-    Sub(Vec<Expression>),
-    Mul(Vec<Expression>),
-    Div(Vec<Expression>),
-    Greater(Vec<Expression>),
-    Less(Vec<Expression>),
-    GreaterEq(Vec<Expression>),
-    LessEq(Vec<Expression>),
-    Equals(Vec<Expression>),
-    NotEq(Vec<Expression>),
-    Max(Vec<Expression>),
-    Min(Vec<Expression>),
-    And(Vec<Expression>),
-    Or(Vec<Expression>),
-    Not(Vec<Expression>),
+    Function(Function, Vec<Expression>),
     IsMissing(Vec<Expression>),
     Metric(String),
     Value(MetricValue),
@@ -136,27 +141,34 @@ impl<'a> MetricState<'a> {
         MetricState::new(&HashMap::new(), &InspectData::new(vec![])).evaluate(&"".to_string(), e)
     }
 
+    fn evaluate_function(
+        &self,
+        namespace: &String,
+        function: &Function,
+        operands: &Vec<Expression>,
+    ) -> MetricValue {
+        match function {
+            Function::Add => self.fold_math(namespace, &|a, b| a + b, operands),
+            Function::Sub => self.apply_math(namespace, &|a, b| a - b, operands),
+            Function::Mul => self.fold_math(namespace, &|a, b| a * b, operands),
+            Function::Div => self.apply_math(namespace, &|a, b| a / b, operands),
+            Function::Greater => self.apply_cmp(namespace, &|a, b| a > b, operands),
+            Function::Less => self.apply_cmp(namespace, &|a, b| a < b, operands),
+            Function::GreaterEq => self.apply_cmp(namespace, &|a, b| a >= b, operands),
+            Function::LessEq => self.apply_cmp(namespace, &|a, b| a <= b, operands),
+            Function::Equals => self.apply_cmp(namespace, &|a, b| a == b, operands),
+            Function::NotEq => self.apply_cmp(namespace, &|a, b| a != b, operands),
+            Function::Max => self.fold_math(namespace, &|a, b| if a > b { a } else { b }, operands),
+            Function::Min => self.fold_math(namespace, &|a, b| if a < b { a } else { b }, operands),
+            Function::And => self.fold_bool(namespace, &|a, b| a && b, operands),
+            Function::Or => self.fold_bool(namespace, &|a, b| a || b, operands),
+            Function::Not => self.not_bool(namespace, operands),
+        }
+    }
+
     fn evaluate(&self, namespace: &String, e: &Expression) -> MetricValue {
         match e {
-            Expression::Add(operands) => self.fold_math(namespace, &|a, b| a + b, operands),
-            Expression::Sub(operands) => self.apply_math(namespace, &|a, b| a - b, operands),
-            Expression::Mul(operands) => self.fold_math(namespace, &|a, b| a * b, operands),
-            Expression::Div(operands) => self.apply_math(namespace, &|a, b| a / b, operands),
-            Expression::Greater(operands) => self.apply_cmp(namespace, &|a, b| a > b, operands),
-            Expression::Less(operands) => self.apply_cmp(namespace, &|a, b| a < b, operands),
-            Expression::GreaterEq(operands) => self.apply_cmp(namespace, &|a, b| a >= b, operands),
-            Expression::LessEq(operands) => self.apply_cmp(namespace, &|a, b| a <= b, operands),
-            Expression::Equals(operands) => self.apply_cmp(namespace, &|a, b| a == b, operands),
-            Expression::NotEq(operands) => self.apply_cmp(namespace, &|a, b| a != b, operands),
-            Expression::Max(operands) => {
-                self.fold_math(namespace, &|a, b| if a > b { a } else { b }, operands)
-            }
-            Expression::Min(operands) => {
-                self.fold_math(namespace, &|a, b| if a < b { a } else { b }, operands)
-            }
-            Expression::And(operands) => self.fold_bool(namespace, &|a, b| a && b, operands),
-            Expression::Or(operands) => self.fold_bool(namespace, &|a, b| a || b, operands),
-            Expression::Not(operands) => self.not_bool(namespace, operands),
+            Expression::Function(f, operands) => self.evaluate_function(namespace, f, operands),
             Expression::IsMissing(operands) => self.is_missing(namespace, operands),
             Expression::Metric(name) => self.metric_value(namespace, name),
             Expression::Value(value) => value.clone(),
@@ -269,8 +281,8 @@ impl<'a> MetricState<'a> {
     fn not_bool(&self, namespace: &String, operands: &Vec<Expression>) -> MetricValue {
         if operands.len() != 1 {
             return MetricValue::Missing(format!(
-                "Bad arg list {:?} for binary bool operator",
-                operands
+                "Wrong number of args ({}) for unary bool operator",
+                operands.len()
             ));
         }
         match self.evaluate(namespace, &operands[0]) {

@@ -3,16 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    crate::metrics::{Expression, MetricValue},
+    crate::metrics::{Expression, Function, MetricValue},
     anyhow::{format_err, Error},
     nom::{
         branch::alt,
         bytes::complete::{tag, take_while, take_while_m_n},
         character::{complete::char, is_alphabetic, is_alphanumeric},
-        combinator::{all_consuming, map},
+        combinator::{all_consuming, map, recognize},
         error::{convert_error, VerboseError},
+        multi::separated_list,
         number::complete::double,
-        sequence::{delimited, preceded, separated_pair, terminated},
+        sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
         Err::{self, Incomplete},
         IResult,
     },
@@ -25,6 +26,7 @@ use {
 //
 // This parser parses infix math expressions with operators
 // + - * / > < >= <= == () following standard order of operations.
+// It also supports functions like FuncName(expr, expr, expr...)
 //
 // Combinators (parse-function builders) used in this parser:
 // alt: Allows backtracking and trying an alternative parse.
@@ -38,7 +40,9 @@ use {
 // delimited: Applies three parsers and returns the result of the middle one.
 // preceded: Applies two parsers and returns the result of the second one.
 // terminated: Applies two parsers and returns the result of the first one.
+// separated_list: Takes two parsers, a separator and element, and returns a Vec of elements.
 // separated_pair: Applies three parsers and returns a tuple of the first and third results.
+// tuple: Takes a tuple of parsers and returns a tuple of the corresponding results.
 //
 //  In addition, two boolean functions match characters:
 // is_alphabetic: ASCII a..zA..Z
@@ -55,30 +59,42 @@ fn whitespace<'a>(i: &'a str) -> IResult<&'a str, &'a str, VerboseError<&'a str>
     take_while(move |c| " \n\t".contains(c))(i)
 }
 
-// Joins two parsers, returning a single &str containing the concatenated
-// sequences matched by both.
-fn join<'a, F, G>(
-    first: F,
-    second: G,
-) -> impl Fn(&'a str) -> IResult<&'a str, &'a str, VerboseError<&'a str>>
+// spewing() is useful for debugging. If you touch this file, you will
+// likely want to uncomment and use it. Wrap any parser in
+// spewing("diagnostic string", parser) to get lots of printouts showing
+// how far the parser has gotten and what strings it's seeing.
+// Remember that every backtrack (alt) will produce lots of output.
+
+/*use std::cmp::min;
+fn spewing<'a, F, O>(
+    note: &'static str,
+    parser: F,
+) -> impl Fn(&'a str) -> IResult<&'a str, O, VerboseError<&'a str>>
 where
-    F: Fn(&'a str) -> IResult<&'a str, &'a str, VerboseError<&'a str>>,
-    G: Fn(&'a str) -> IResult<&'a str, &'a str, VerboseError<&'a str>>,
+    F: Fn(&'a str) -> IResult<&'a str, O, VerboseError<&'a str>>,
 {
-    move |i: &'a str| {
-        let (remnant1, result1) = first(i)?;
-        let (remnant2, result2) = second(remnant1)?;
-        Ok((remnant2, &i[..(result1.len() + result2.len())]))
-    }
+    let dumper = move |i: &'a str| {
+        println!("{}:'{}'", note, &i[..min(20, i.len())]);
+        Ok((i, ()))
+    };
+    preceded(dumper, parser)
+}*/
+
+// A bit of syntactic sugar - just adds optional whitespace in front of any parser.
+fn spaced<'a, F, O>(parser: F) -> impl Fn(&'a str) -> IResult<&'a str, O, VerboseError<&'a str>>
+where
+    F: Fn(&'a str) -> IResult<&'a str, O, VerboseError<&'a str>>,
+{
+    preceded(whitespace, parser)
 }
 
 // Parses a name with the first character alphabetic or '_' and 0..n additional
 // characters alphanumeric or '_'.
 fn simple_name<'a>(i: &'a str) -> IResult<&'a str, &'a str, VerboseError<&'a str>> {
-    join(
+    recognize(pair(
         take_while_m_n(1, 1, |c: char| c.is_ascii() && (is_alphabetic(c as u8) || c == '_')),
         take_while(|c: char| c.is_ascii() && (is_alphanumeric(c as u8) || c == '_')),
-    )(i)
+    ))(i)
 }
 
 // Parses two simple names joined by "::" to form a namespaced name. Returns a
@@ -120,15 +136,38 @@ fn number<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>>
     }
 }
 
+macro_rules! function {
+    ($tag:expr, $function:ident) => {
+        (map(spaced(tag($tag)), move |_| Function::$function))
+    };
+}
+
+fn function_name_parser<'a>(i: &'a str) -> IResult<&'a str, Function, VerboseError<&'a str>> {
+    alt((
+        function!("And", And),
+        function!("Or", Or),
+        function!("Not", Not),
+        function!("Max", Max),
+        function!("Min", Min),
+    ))(i)
+}
+
+fn function_expression<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
+    let open_paren = spaced(char('('));
+    let expressions = separated_list(spaced(char(',')), expression_top);
+    let close_paren = spaced(char(')'));
+    let function_sequence = tuple((function_name_parser, open_paren, expressions, close_paren));
+    map(function_sequence, move |(function, _, operands, _)| {
+        Expression::Function(function, operands)
+    })(i)
+}
+
 // I use "primitive" to mean an expression that is not an infix operator pair:
-// a primitive value, a metric name, or any expression contained by ( ).
+// a primitive value, a metric name, a function (simple name followed by
+// parenthesized expression list), or any expression contained by ( ).
 fn expression_primitive<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
     let paren_expr = delimited(char('('), terminated(expression_top, whitespace), char(')'));
-    let res = preceded(
-        whitespace,
-        // TODO(cphoenix) - add Func(arg, arg, arg...)
-        alt((paren_expr, name, number)),
-    )(i);
+    let res = spaced(alt((paren_expr, function_expression, name, number)))(i);
     res
 }
 
@@ -185,7 +224,7 @@ where
         //
         // The wrappers borrow the vec's mutably, so they're inside a block to
         // drop them when their work is done.
-        let mut item_parse = |i| match preceded(whitespace, &item_parser)(i) {
+        let mut item_parse = |i| match spaced(&item_parser)(i) {
             Err(err) => Err(err),
             Ok((r, exp)) => {
                 items.push(exp);
@@ -230,7 +269,7 @@ where
 
 // This takes the lists of items and operators produced by items_and_separators()
 // and builds an Expression.
-fn build_expression<'a>(mut items: Vec<Expression>, mut operators: Vec<&'a str>) -> Expression {
+fn build_expression<'a>(mut items: Vec<Expression>, mut operators: Vec<Function>) -> Expression {
     // We want to evaluate the leftmost operator first, which means it has to be
     // lowest in the tree. The leftmost was parsed first, so it's lowest in the
     // vec's. Popping is more efficient than deleting item 0 and shifting, so
@@ -247,70 +286,56 @@ fn build_expression<'a>(mut items: Vec<Expression>, mut operators: Vec<&'a str>)
                 "Bug in parser: too few items".to_string(),
             ))),
         ];
-        res = match operators.pop().unwrap_or("Bug in parser: ops < ops") {
-            "+" => Expression::Add(args),
-            "-" => Expression::Sub(args),
-            "*" => Expression::Mul(args),
-            "/" => Expression::Div(args),
-            oops => Expression::Value(MetricValue::Missing(format!(
-                "Bug in parser: bad operator '{}'",
-                oops
-            ))),
-        };
+        res = Expression::Function(operators.pop().unwrap(), args);
     }
     res
 }
 
 // Scans for primitive expressions separated by * and /.
 fn expression_muldiv<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
-    let (remainder, (items, operators)) =
-        items_and_separators(expression_primitive, alt((tag("*"), tag("/"))), i)?;
+    let (remainder, (items, operators)) = items_and_separators(
+        expression_primitive,
+        alt((function!("*", Mul), function!("/", Div))),
+        i,
+    )?;
     Ok((remainder, build_expression(items, operators)))
 }
 
 // Scans for muldiv expressions (which may be a single primitive expression)
 // separated by + and -. Remember unary + and - will be recognized by number().
 fn expression_addsub<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
-    let (remainder, (items, operators)) =
-        items_and_separators(expression_muldiv, alt((tag("+"), tag("-"))), i)?;
+    let (remainder, (items, operators)) = items_and_separators(
+        expression_muldiv,
+        alt((function!("+", Add), function!("-", Sub))),
+        i,
+    )?;
     Ok((remainder, build_expression(items, operators)))
-}
-
-// Matches two numerics separated by a comparison operator, and builds the
-// given Expression type.
-macro_rules! comparison {
-    ($operator:expr, $type:expr) => {
-        (map(
-            separated_pair(
-                expression_addsub,
-                preceded(whitespace, tag($operator)),
-                expression_addsub,
-            ),
-            move |(e1, e2)| $type(vec![e1, e2]),
-        ))
-    };
 }
 
 // Top-level expression. Should match the entire expression string, and also
 // can be used inside parentheses.
 fn expression_top<'a>(i: &'a str) -> IResult<&'a str, Expression, VerboseError<&'a str>> {
-    preceded(
-        whitespace,
-        alt((
-            comparison!(">", Expression::Greater),
-            comparison!("<", Expression::Less),
-            comparison!(">=", Expression::GreaterEq),
-            comparison!("<=", Expression::LessEq),
-            comparison!("==", Expression::Equals),
-            comparison!("!=", Expression::NotEq),
-            expression_addsub,
-        )),
-    )(i)
+    // Note: alt() is not BNF - it's sequential. It's important to put the longer strings first.
+    // If a shorter substring succeeds where it shouldn't, the alt() may not get another chance.
+    let comparison = alt((
+        function!(">=", GreaterEq),
+        function!("<=", LessEq),
+        function!("==", Equals),
+        function!("!=", NotEq),
+        function!(">", Greater),
+        function!("<", Less),
+    ));
+    alt((
+        map(tuple((expression_addsub, comparison, expression_addsub)), move |(left, op, right)| {
+            Expression::Function(op, vec![left, right])
+        }),
+        expression_addsub,
+    ))(i)
 }
 
-/// Parses a given string into either an Error or an Expression ready
-/// to be evaluated.
-pub fn parse_expression(i: &str) -> Result<Expression, Error> {
+// Parses a given string into either an Error or an Expression ready
+// to be evaluated.
+pub(crate) fn parse_expression(i: &str) -> Result<Expression, Error> {
     let match_whole = all_consuming(terminated(expression_top, whitespace));
     match match_whole(i) {
         Err(Err::Error(e)) | Err(Err::Failure(e)) => {
@@ -529,12 +554,16 @@ mod test {
 
     #[test]
     fn parser_accepts_whitespace() -> Result<(), Error> {
-        assert_eq!(eval!(" 2 + +3 * 4 - 5 / ( -2 ) "), MetricValue::Int(16));
+        assert_eq!(eval!(" 2 + +3 * 4 - 5 / ( -2 + Min ( -2 , 3 ) ) "), MetricValue::Int(15));
         Ok(())
     }
 
     #[test]
     fn parser_comparisons() -> Result<(), Error> {
+        assert_eq!(
+            format!("{:?}", parse_expression("2>1")),
+            "Ok(Function(Greater, [Value(Int(2)), Value(Int(1))]))"
+        );
         assert_eq!(eval!("2>2"), MetricValue::Bool(false));
         assert_eq!(eval!("2>=2"), MetricValue::Bool(true));
         assert_eq!(eval!("2<2"), MetricValue::Bool(false));
@@ -542,6 +571,74 @@ mod test {
         assert_eq!(eval!("2==2"), MetricValue::Bool(true));
         // There can be only one.
         assert!(parse_expression("2==2==2").is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn parser_boolean_functions_value() -> Result<(), Error> {
+        assert_eq!(
+            format!("{:?}", parse_expression("Not(2>1)")),
+            "Ok(Function(Not, [Function(Greater, [Value(Int(2)), Value(Int(1))])]))"
+        );
+        assert_eq!(eval!("And(2>1, 2>2)"), MetricValue::Bool(false));
+        assert_eq!(eval!("And(2>2, 2>1)"), MetricValue::Bool(false));
+        assert_eq!(eval!("And(2>2, 2>2)"), MetricValue::Bool(false));
+        assert_eq!(eval!("And(2>1, 2>1)"), MetricValue::Bool(true));
+        assert_eq!(eval!("Or(2>1, 2>2)"), MetricValue::Bool(true));
+        assert_eq!(eval!("Or(2>2, 2>1)"), MetricValue::Bool(true));
+        assert_eq!(eval!("Or(2>2, 2>2)"), MetricValue::Bool(false));
+        assert_eq!(eval!("Or(2>1, 2>1)"), MetricValue::Bool(true));
+        assert_eq!(eval!("Not(2>1)"), MetricValue::Bool(false));
+        assert_eq!(eval!("Not(2>2)"), MetricValue::Bool(true));
+        Ok(())
+    }
+
+    #[test]
+    fn parser_boolean_functions_args() -> Result<(), Error> {
+        assert_eq!(eval!("And(2>1)"), MetricValue::Bool(true));
+        assert_eq!(eval!("And(2>1, 2>1, 2>1)"), MetricValue::Bool(true));
+        assert_eq!(
+            eval!("And()"),
+            MetricValue::Missing("No operands in boolean expression".to_string())
+        );
+        assert_eq!(eval!("Or(2>1)"), MetricValue::Bool(true));
+        assert_eq!(eval!("Or(2>1, 2>1, 2>1)"), MetricValue::Bool(true));
+        assert_eq!(
+            eval!("Or()"),
+            MetricValue::Missing("No operands in boolean expression".to_string())
+        );
+        assert_eq!(
+            eval!("Not(2>1, 2>1)"),
+            MetricValue::Missing("Wrong number of args (2) for unary bool operator".to_string())
+        );
+        assert_eq!(
+            eval!("Not()"),
+            MetricValue::Missing("Wrong number of args (0) for unary bool operator".to_string())
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn parser_maxmin_functions() -> Result<(), Error> {
+        assert_eq!(eval!("Max(2, 5, 3, -1)"), MetricValue::Int(5));
+        assert_eq!(eval!("Min(2, 5, 3, -1)"), MetricValue::Int(-1));
+        assert_eq!(eval!("Min(2)"), MetricValue::Int(2));
+        assert_eq!(eval!("Max(2)"), MetricValue::Int(2));
+        assert_eq!(
+            eval!("Max()"),
+            MetricValue::Missing("No operands in math expression".to_string())
+        );
+        assert_eq!(
+            eval!("Min()"),
+            MetricValue::Missing("No operands in math expression".to_string())
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn parser_nested_function() -> Result<(), Error> {
+        assert_eq!(eval!("Max(2, Min(4-1, 5))"), MetricValue::Int(3));
+        assert_eq!(eval!("And(Max(1, 2+3)>1, Or(1>2, 2>1))"), MetricValue::Bool(true));
         Ok(())
     }
 }
