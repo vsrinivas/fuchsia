@@ -8,6 +8,6 @@ banjo("ddk.protocol.ge2d") {
   sources = [ "ge2d.banjo" ]
   deps = [
     "//sdk/banjo/ddk.protocol.camerahwaccel",
-    "//zircon/system/banjo/zircon.device.sysmem",
+    "//sdk/banjo/zircon.device.sysmem",
   ]
 }

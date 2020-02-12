@@ -221,7 +221,6 @@ group("banjo") {
     "zircon.device.scpi",
 #------------------
 #------------------
-    "zircon.device.sysmem",
 #------------------
 #------------------
     "zircon.hw.pci",
