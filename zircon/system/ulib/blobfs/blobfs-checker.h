@@ -19,10 +19,8 @@ class BlobfsChecker {
  public:
   BlobfsChecker(std::unique_ptr<Blobfs> blobfs);
 
+  // Initialize validates the underlying FVM partition and optionally replays the journal.
   zx_status_t Initialize(bool apply_journal);
-  void TraverseInodeBitmap();
-  void TraverseBlockBitmap();
-  zx_status_t CheckAllocatedCounts() const;
 
   // Check validates the blobfs filesystem provided when the Checker was
   // constructed. It walks each of the inode and block allocation bitmaps
@@ -36,6 +34,10 @@ class BlobfsChecker {
   uint32_t alloc_blocks_ = 0;
   uint32_t error_blobs_ = 0;
   uint32_t inode_blocks_ = 0;
+
+  void TraverseInodeBitmap();
+  void TraverseBlockBitmap();
+  zx_status_t CheckAllocatedCounts() const;
 };
 
 #ifdef __Fuchsia__

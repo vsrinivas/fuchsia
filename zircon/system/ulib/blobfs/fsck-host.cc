@@ -21,9 +21,7 @@ zx_status_t Fsck(std::unique_ptr<Blobfs> blob, bool apply_journal) {
     return status;
   }
 
-  checker.TraverseInodeBitmap();
-  checker.TraverseBlockBitmap();
-  return checker.CheckAllocatedCounts();
+  return checker.Check();
 }
 
 }  // namespace blobfs

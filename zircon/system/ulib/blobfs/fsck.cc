@@ -40,9 +40,7 @@ zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, MountOptions
     return status;
   }
 
-  checker.TraverseInodeBitmap();
-  checker.TraverseBlockBitmap();
-  return checker.CheckAllocatedCounts();
+  return checker.Check();
 }
 
 }  // namespace blobfs
