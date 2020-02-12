@@ -12,7 +12,10 @@ import unittest
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 GEN_FIDL_RESPONSE_FILEPATH = os.path.join(
-    SCRIPT_DIR, 'base', 'build', 'gen_fidl_response_file.py')
+    SCRIPT_DIR, '..', 'third_party', 'fuchsia-sdk', 'build',
+    'gen_fidl_response_file.py')
+if not os.path.exists(GEN_FIDL_RESPONSE_FILEPATH):
+    print("CWCW not found", GEN_FIDL_RESPONSE_FILEPATH)
 gen_fidl_response_file = imp.load_source(
     'gen_fidl_response_file', GEN_FIDL_RESPONSE_FILEPATH)
 

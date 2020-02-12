@@ -38,12 +38,6 @@ TEST_GEN_PATH = os.path.join(
     FUCHSIA_ROOT, 'scripts', 'sdk', 'gn', 'test_generate.py')
 test_generate = imp.load_source('test_generate', TEST_GEN_PATH)
 
-# Import gen_fidl_response_file_unittest
-GEN_FIDL_RESP_FILE_TEST_PATH = os.path.join(
-    FUCHSIA_ROOT, 'scripts', 'sdk', 'gn', 'gen_fidl_response_file_unittest.py')
-gen_fidl_response_file_unittest = imp.load_source(
-    'gen_fidl_response_file_unittest', GEN_FIDL_RESP_FILE_TEST_PATH)
-
 # bash_tests constants
 BASH_TESTS_PATH = os.path.join(
     FUCHSIA_ROOT, 'scripts', 'sdk', 'gn', 'bash_tests', 'run_bash_tests.sh')
@@ -68,6 +62,11 @@ class GnTester(object):
         self.clang = clang
         self.proj_dir = proj_dir
         self.out_dir = out_dir
+        # Import gen_fidl_response_file_unittest
+        GEN_FIDL_RESP_FILE_TEST_PATH = os.path.join(
+            proj_dir, 'tests', 'gen_fidl_response_file_unittest.py')
+        self.gen_fidl_response_file_unittest = imp.load_source(
+            'gen_fidl_response_file_unittest', GEN_FIDL_RESP_FILE_TEST_PATH)
 
     def _run_unit_test(self, test_module):
         loader = unittest.TestLoader()
@@ -83,7 +82,7 @@ class GnTester(object):
         self._run_unit_test(test_generate)
 
     def _gen_fild_resp_file_unittest(self):
-        self._run_unit_test(gen_fidl_response_file_unittest)
+        self._run_unit_test(self.gen_fidl_response_file_unittest)
 
     def _bash_tests(self):
         self._run_cmd([BASH_TESTS_PATH])
