@@ -648,7 +648,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.noop-test.ubsan-sancov-full",
 #------------------
 #------------------
-    ":test.sys.paver-test",
 #------------------
 #------------------
     ":test.sys.pci-driver-test",
@@ -1260,7 +1259,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.noop-test.ubsan-sancov-full",
 #------------------
 #------------------
-    ":test.sys.paver-test",
 #------------------
 #------------------
     ":test.sys.pci-driver-test",
@@ -3190,7 +3188,7 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/tests/operation:operation-manifest",
     "//src/devices/tee/drivers/optee:optee-message-test-manifest",
 #------------------
-    #":test.sys.paver-test",
+    "//zircon/system/ulib/paver/test:paver-test-manifest",
 #------------------
 #------------------
     #":test.sys.pci-driver-test",
@@ -3893,7 +3891,7 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/tests/operation:operation-manifest",
     "//src/devices/tee/drivers/optee:optee-message-test-manifest",
 #------------------
-    #":test.sys.paver-test",
+    "//zircon/system/ulib/paver/test:paver-test-manifest",
 #------------------
 #------------------
     #":test.sys.pci-driver-test",

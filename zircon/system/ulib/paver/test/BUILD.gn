@@ -2,12 +2,39 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 group("test") {
   testonly = true
   deps = [ ":paver-test" ]
 }
 
-zx_test("paver-test") {
+test("paver-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   output_name = "paver-test"
   sources = [
     "abr-test.cc",
@@ -18,36 +45,43 @@ zx_test("paver-test") {
     "stream-reader-test.cc",
     "test-utils.cc",
   ]
-  include_dirs = [ "$zx/system/ulib/paver" ]
-  deps = [
-    "$zx/system/dev/lib/amlogic:amlogic.headers",
-    "$zx/system/fidl/fuchsia-boot:llcpp",
-    "$zx/system/fidl/fuchsia-device:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-block:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-block-partition:llcpp",
-    "$zx/system/fidl/fuchsia-hardware-nand:c",
-    "$zx/system/fidl/fuchsia-hardware-skipblock:llcpp",
-    "$zx/system/fidl/fuchsia-paver:llcpp",
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/block-client",
-    "$zx/system/ulib/devmgr-integration-test",
-    "$zx/system/ulib/driver-integration-test",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio-caller",
-    "$zx/system/ulib/fidl-async:fidl-async-cpp",
-    "$zx/system/ulib/fidl-utils",
-    "$zx/system/ulib/fs",
-    "$zx/system/ulib/fs-management",
-    "$zx/system/ulib/fvm",
-    "$zx/system/ulib/fzl",
-    "$zx/system/ulib/gpt",
-    "$zx/system/ulib/paver",
-    "$zx/system/ulib/ramdevice-client:static",
-    "$zx/system/ulib/svc",
-    "$zx/system/ulib/sysconfig-client:sysconfig-sync-client",
-    "$zx/system/ulib/zxtest",
-    "$zx/third_party/ulib/cksum",
+  include_dirs = [
+    "//zircon/public/lib/paver",
+    "..",
   ]
+  deps = [
+    "//zircon/public/lib/amlogic",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/block-client",
+    "//zircon/public/lib/cksum",
+    "//zircon/public/lib/devmgr-integration-test",
+    "//zircon/public/lib/driver-integration-test",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio-caller",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/fs-management",
+    "//zircon/public/lib/fvm",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/gpt",
+    "//zircon/public/lib/paver",
+    "//zircon/public/lib/ramdevice-client-static",
+    "//zircon/public/lib/svc",
+    "//zircon/public/lib/sysconfig-sync-client",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-boot:llcpp",
+    "//zircon/system/fidl/fuchsia-device:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-block:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-block-partition:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-nand:c",
+    "//zircon/system/fidl/fuchsia-hardware-skipblock:llcpp",
+    "//zircon/system/fidl/fuchsia-paver:llcpp",
+  ]
+}
+
+migrated_manifest("paver-test-manifest") {
+  deps = [ ":paver-test" ]
 }
