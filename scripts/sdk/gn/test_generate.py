@@ -43,16 +43,16 @@ class GNGenerateTest(unittest.TestCase):
         self.verify_contents(TMP_DIR_NAME)
 
     def verify_contents(self, outdir):
+        # update_golden.py doesn't copy bin and build subdirectories because we
+        # don't want duplicates of things in base, so ignore them here too.
         dcmp = filecmp.dircmp(
             outdir, os.path.join(SCRIPT_DIR, 'golden'), ignore=['bin', 'build'])
         self.verify_contents_recursive(dcmp)
-        # check the test_targets template. This is in the build directory,
-        # but since it is generated vs. static we add another comparision.
-        # fxb/45207 is  tracking fixing the comparison to only look at
-        # all generated files.
-        generated_file = os.path.join(outdir,'build', 'test_targets.gni')
+
+        # Special case: outdir/build/test_targets.gni is a generated file.
+        generated_file = os.path.join(outdir, 'build', 'test_targets.gni')
         golden_file = os.path.join(
-            SCRIPT_DIR, 'golden','build','test_targets.gni')
+            SCRIPT_DIR, 'golden', 'build', 'test_targets.gni')
         if not filecmp.cmp(generated_file, golden_file, False):
             self.fail("Generated %s does not match : %s." %
              (generated_file, golden_file))
