@@ -12,6 +12,7 @@ per-file debug=donosoc@google.com
 per-file debug=sadmac@google.com
 per-file delta,save-package-stats=kevinwells@google.com,raggi@google.com
 per-file exec-host-tests=joshuaseaton@google.com
+per-file ffx=raggi@google.com,boetger@google.com,jwing@google.com,awdavies@google.com
 per-file fidlcat=jeremymanson@google.com
 per-file fidltags=scottmg@google.com
 per-file flutter-attach=zra@google.com
