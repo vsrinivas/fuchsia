@@ -2,6 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+declare_args() {
+  # Use this flag to exclude artifacts from Astro builds.
+  # This is a very hacky way of ensuring that the resulting fuchsia.zbi fits
+  # within the available space on device.
+  # This will soon enough be replaced with a proper way to select image
+  # artifacts based on board / product properties.
+  # Artifacts that are known to not be useful on Astro builds (e.g. drivers for
+  # other devices, tests) may be put in `if (!filter_out_of_astro)` blocks.
+  # TODO(45680): remove this hack.
+  filter_out_of_astro = false
+
+  # Use this flag to include previously excluded artifacts on products based on
+  # Astro.
+  # Yes, our image building system is so broken that this is currently the only
+  # way to accommodate the configurations we run on our infrastructure.
+  on_second_thought_keep_on_astro = false
+}
+
 # Zircon manifests
 #
 # This file contains references to binaries either built by the Zircon GN build
@@ -104,78 +122,6 @@ aggregate_manifest("legacy-image") {
 #------------------
     ":driver.e1000",
 #------------------
-#------------------
-    ":driver.qemu-arm64",
-#------------------
-#------------------
-    ":driver.test-audio-codec",
-#------------------
-#------------------
-    ":driver.test-board",
-#------------------
-#------------------
-    ":driver.test-child-1",
-#------------------
-#------------------
-    ":driver.test-child-2",
-#------------------
-#------------------
-    ":driver.test-child-2.proxy",
-#------------------
-#------------------
-    ":driver.test-child-3",
-#------------------
-#------------------
-    ":driver.test-clock",
-#------------------
-#------------------
-    ":driver.test-composite",
-#------------------
-#------------------
-    ":driver.test-gpio",
-#------------------
-#------------------
-    ":driver.test-i2c",
-#------------------
-#------------------
-    ":driver.test-parent",
-#------------------
-#------------------
-    ":driver.test-power",
-#------------------
-#------------------
-    ":driver.test-pwm",
-#------------------
-#------------------
-    ":driver.test-spi",
-#------------------
-#------------------
-    ":driver.test.ddktl-test",
-#------------------
-#------------------
-    ":driver.virtio_block",
-#------------------
-#------------------
-    ":driver.virtio_console",
-#------------------
-#------------------
-    ":driver.virtio_ethernet",
-#------------------
-#------------------
-    ":driver.virtio_gpu",
-#------------------
-#------------------
-    ":driver.virtio_input",
-#------------------
-#------------------
-    ":driver.virtio_rng",
-#------------------
-#------------------
-    ":driver.virtio_scsi",
-#------------------
-#------------------
-    ":driver.virtio_socket",
-#------------------
   ]
 
   # CPU-specific targets.
@@ -213,7 +159,86 @@ aggregate_manifest("legacy-image") {
     ]
   }
 
-  reference = "legacy-image-$target_cpu"
+  if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
+    deps += [
+  #------------------
+      ":driver.test-audio-codec",
+  #------------------
+  #------------------
+      ":driver.test-board",
+  #------------------
+  #------------------
+      ":driver.test-child-1",
+  #------------------
+  #------------------
+      ":driver.test-child-2",
+  #------------------
+  #------------------
+      ":driver.test-child-2.proxy",
+  #------------------
+  #------------------
+      ":driver.test-child-3",
+  #------------------
+  #------------------
+      ":driver.test-clock",
+  #------------------
+  #------------------
+      ":driver.test-composite",
+  #------------------
+  #------------------
+      ":driver.test-gpio",
+  #------------------
+  #------------------
+      ":driver.test-i2c",
+  #------------------
+  #------------------
+      ":driver.test-parent",
+  #------------------
+  #------------------
+      ":driver.test-power",
+  #------------------
+  #------------------
+      ":driver.test-pwm",
+  #------------------
+  #------------------
+      ":driver.test-spi",
+  #------------------
+  #------------------
+      ":driver.test.ddktl-test",
+  #------------------
+  #------------------
+      ":driver.virtio_block",
+  #------------------
+  #------------------
+      ":driver.virtio_console",
+  #------------------
+  #------------------
+      ":driver.virtio_ethernet",
+  #------------------
+  #------------------
+      ":driver.virtio_gpu",
+  #------------------
+  #------------------
+      ":driver.virtio_input",
+  #------------------
+  #------------------
+      ":driver.virtio_rng",
+  #------------------
+  #------------------
+      ":driver.virtio_scsi",
+  #------------------
+  #------------------
+      ":driver.virtio_socket",
+  #------------------
+  #------------------
+      ":driver.qemu-arm64",
+  #------------------
+    ]
+
+    # Only checking manifest consistency in the case where nothing gets filtered
+    # out.
+    reference = "legacy-image-$target_cpu"
+  }
 }
 
 aggregate_manifest("legacy-aux") {
@@ -1355,9 +1380,7 @@ aggregate_manifest("migrated-image") {
   deps = [
     "//src/developer/cmd:bin-manifest",
     "//src/devices/serial/drivers/serial-async:serial-async-manifest",
-    "//src/devices/tests/ddk-test:ddk-test-manifest",
     "//zircon/system/uapp/audio:bin-manifest",
-    "//zircon/system/uapp/audio:test-manifest",
     "//zircon/system/uapp/backlight:backlight-manifest",
     "//zircon/system/uapp/dd:dd-manifest",
     "//zircon/system/uapp/df:df-manifest",
@@ -1374,12 +1397,10 @@ aggregate_manifest("migrated-image") {
 #------------------
     "//zircon/system/uapp/cpuctl:cpuctl-manifest",
     "//zircon/system/uapp/crasher:crasher-manifest",
-    "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-perf-manifest",
 #------------------
     #":bin.device-name-provider",
 #------------------
     "//zircon/system/uapp/disk-inspect:disk-inspect-manifest",
-    "//zircon/system/uapp/display-test:display-test-manifest",
     "//zircon/system/uapp/dlog:dlog-manifest",
     "//zircon/system/uapp/driverctl:driverctl-manifest",
     "//zircon/system/ulib/driver-info/app:driverinfo-manifest",
@@ -1440,7 +1461,6 @@ aggregate_manifest("migrated-image") {
 #------------------
     "//zircon/system/uapp/run-vc:run-vc-manifest",
     "//zircon/system/uapp/runtests:runtests-manifest",
-    "//zircon/system/uapp/serial-test:serial-test-manifest",
 #------------------
     #":bin.sh",
 #------------------
@@ -1471,7 +1491,6 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/uapp/psutils:vmos-manifest",
     "//zircon/system/uapp/waitfor:waitfor-manifest",
     "//zircon/system/uapp/watch:watch-manifest",
-    "//zircon/system/uapp/xdc-test:xdc-test-manifest",
     "//src/storage/block/drivers/ahci:ahci-manifest",
     "//src/media/audio/drivers/alc5663:alc5663-manifest",
     "//src/media/audio/drivers/alc5514:alc5514-manifest",
@@ -1532,18 +1551,8 @@ aggregate_manifest("migrated-image") {
     #":driver.component.proxy",
 #------------------
     "//src/devices/misc/drivers/cpu-trace:cpu-trace-manifest",
-    "//src/devices/tests/crash-device:crash-device-manifest",
     "//src/ui/input/drivers/cypress:cypress-manifest",
-    "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-test-manifest",
-    "//src/devices/tests/ddk-power:ddk-power-test-manifest",
-    "//src/devices/tests/ddk-power:ddk-power-test-child-manifest",
-    "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-manifest",
-    "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-child-manifest",
-    "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-test-manifest",
     "//examples/drivers//fifo:demo-fifo-manifest",
-    "//src/devices/tests/devhost-test:devhost-test-manifest",
-    "//src/devices/tests/devhost-test:devhost-test-child-manifest",
-    "//src/devices/tests/devhost-test:devhost-test-manual-manifest",
     "//src/graphics/display/drivers/display:display-manifest",
     "//src/graphics/display/drivers/dsi-dw:dsi-dw-manifest",
     "//src/graphics/display/drivers/dsi-mt:dsi-mt-manifest",
@@ -1559,9 +1568,6 @@ aggregate_manifest("migrated-image") {
     "//src/graphics/display/drivers/fake:fake-manifest",
     "//src/devices/serial/drivers/usb-cdc-acm:fake-usb-cdc-acm-manifest",
     "//src/devices/rtc/drivers/fallback:fallback-manifest",
-    "//src/devices/usb/drivers/usb-test/flash-programmer:flash-programmer-manifest",
-    "//src/devices/tests/fidl-async-llcpp-driver:fidl-async-llcpp-driver-manifest",
-    "//src/devices/tests/fidl-llcpp-driver:fidl-llcpp-driver-manifest",
     "//src/ui/input/drivers/focaltech:focaltech-manifest",
     "//src/devices/serial/drivers/ftdi:ftdi-manifest",
     "//src/devices/serial/drivers/ftdi:ftdi-fake-usb-manifest",
@@ -1574,7 +1580,6 @@ aggregate_manifest("migrated-image") {
     "//src/devices/gpio/drivers/gpio:gpio-manifest",
     "//src/ui/input/drivers/goodix:goodix-manifest",
     "//src/ui/light/drivers/gpio-light:gpio-light-manifest",
-    "//src/devices/gpio/drivers/gpio-test:gpio-test-manifest",
     "//src/storage/block/drivers/gpt:gpt-manifest",
     "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec-manifest",
     "//src/devices/gpio/drivers/hi3660-gpio:hi3660-gpio-manifest",
@@ -1590,7 +1595,6 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/dev/board/integration-test:integration-test-manifest",
     "//src/media/audio/drivers/intel-hda/controller:intel-hda-manifest",
     "//src/devices/i2c/drivers/intel-i2c:intel-i2c-manifest",
-    "//src/devices/tests/isolateddevmgr:isolateddevmgr-test-manifest",
     "//src/devices/misc/drivers/ktrace:ktrace-manifest",
     "//src/devices/light-sensor/drivers/lite-on:lite-on-manifest",
     "//src/ui/light/drivers/lp50xx-light:lp50xx-light-manifest",
@@ -1623,13 +1627,10 @@ aggregate_manifest("migrated-image") {
     "//src/devices/tee/drivers/optee:optee-manifest",
     "//src/devices/usb/drivers/nelson-usb-phy:nelson-usb-phy-manifest",
 #------------------
-    #":driver.pci_fake",
 #------------------
 #------------------
-    #":driver.pci_fake.proxy",
 #------------------
 #------------------
-    #":driver.pci_protocol_test_driver",
 #------------------
     "//src/devices/rtc/drivers/pl031-rtc:pl031-rtc-manifest",
     "//zircon/system/dev/bus/platform:platform-bus-manifest",
@@ -1639,7 +1640,6 @@ aggregate_manifest("migrated-image") {
     "//src/devices/gpio/drivers/qcom-gpio:qcom-gpio-manifest",
     "//src/devices/fw/drivers/qcom-pil:qcom-pil-manifest",
 #------------------
-    #":driver.qemu-arm64",
 #------------------
     "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec-manifest",
     "//src/storage/nand/drivers/ram-nand:ram-nand-manifest",
@@ -1667,58 +1667,36 @@ aggregate_manifest("migrated-image") {
     "//src/devices/sysmem/drivers/sysmem:sysmem-manifest",
     "//src/media/audio/drivers/codecs/tas5782:tas5782-manifest",
     "//src/media/audio/drivers/codecs/tas5805:tas5805-manifest",
-    "//src/devices/misc/drivers/test:test-manifest",
-#------------------
-    #":driver.test-audio-codec",
 #------------------
 #------------------
-    #":driver.test-board",
 #------------------
 #------------------
-    #":driver.test-child-1",
 #------------------
 #------------------
-    #":driver.test-child-2",
 #------------------
 #------------------
-    #":driver.test-child-2.proxy",
 #------------------
 #------------------
-    #":driver.test-child-3",
 #------------------
 #------------------
-    #":driver.test-clock",
 #------------------
 #------------------
-    #":driver.test-composite",
 #------------------
 #------------------
-    #":driver.test-gpio",
 #------------------
 #------------------
-    #":driver.test-i2c",
 #------------------
 #------------------
-    #":driver.test-parent",
 #------------------
 #------------------
-    #":driver.test-power",
 #------------------
 #------------------
-    #":driver.test-pwm",
 #------------------
 #------------------
-    #":driver.test-spi",
 #------------------
-    "//src/devices/tests/bind-fail-test:bind-fail-test-manifest",
 #------------------
-    #":driver.test.ddktl-test",
 #------------------
-    "//src/devices/tests/sysdev:sysdev-manifest",
-    "//src/devices/tests/unit-test-test:unit-test-fail-manifest",
-    "//src/devices/tests/unit-test-test:unit-test-pass-manifest",
-    "//src/devices/tests/mock-device:mock-device-manifest",
-    "//src/devices/tests/bind-debugger-test:bind-debugger-test-driver-manifest",
+#------------------
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-manifest",
     "//src/storage/block/drivers/ums-function:ums-function-manifest",
     "//src/media/audio/drivers/usb-audio:usb-audio-manifest",
@@ -1743,10 +1721,8 @@ aggregate_manifest("migrated-image") {
     "//src/devices/usb/drivers/usb-virtual-bus:usb-virtual-bus-manifest",
     "//src/graphics/display/drivers/vim-display:vim-display-manifest",
 #------------------
-    #":driver.virtio",
 #------------------
     "//src/devices/usb/drivers/xhci:xhci-manifest",
-    "//src/devices/usb/drivers/usb-bus:usb-device-manifest",
     "//src/storage/block/drivers/zxcrypt:zxcrypt-manifest",
   ]
 
@@ -1770,6 +1746,91 @@ aggregate_manifest("migrated-image") {
       "//src/devices/rtc/drivers/intel-rtc:intel-rtc-manifest",
       "//src/devices/serial/drivers/intel-serialio:intel-serialio-manifest",
       "//src/devices/serial/drivers/uart16550:uart16550-manifest",
+    ]
+  }
+
+  if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
+    deps += [
+  #------------------
+      #":driver.test-audio-codec",
+  #------------------
+  #------------------
+      #":driver.test-board",
+  #------------------
+  #------------------
+      #":driver.test-child-1",
+  #------------------
+  #------------------
+      #":driver.test-child-2",
+  #------------------
+  #------------------
+      #":driver.test-child-2.proxy",
+  #------------------
+  #------------------
+      #":driver.test-child-3",
+  #------------------
+  #------------------
+      #":driver.test-clock",
+  #------------------
+  #------------------
+      #":driver.test-composite",
+  #------------------
+  #------------------
+      #":driver.test-gpio",
+  #------------------
+  #------------------
+      #":driver.test-i2c",
+  #------------------
+  #------------------
+      #":driver.test-parent",
+  #------------------
+  #------------------
+      #":driver.test-power",
+  #------------------
+  #------------------
+      #":driver.test-pwm",
+  #------------------
+  #------------------
+      #":driver.test-spi",
+  #------------------
+  #------------------
+      #":driver.test.ddktl-test",
+  #------------------
+  #------------------
+      #":driver.virtio",
+  #------------------
+  #------------------
+      #":driver.qemu-arm64",
+  #------------------
+      "//src/devices/tests/ddk-test:ddk-test-manifest",
+      "//zircon/system/uapp/audio:test-manifest",
+      "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-perf-manifest",
+      "//zircon/system/uapp/display-test:display-test-manifest",
+      "//zircon/system/uapp/serial-test:serial-test-manifest",
+      "//zircon/system/uapp/xdc-test:xdc-test-manifest",
+      "//src/devices/tests/crash-device:crash-device-manifest",
+      "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-test-manifest",
+      "//src/devices/tests/ddk-power:ddk-power-test-manifest",
+      "//src/devices/tests/ddk-power:ddk-power-test-child-manifest",
+      "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-manifest",
+      "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-child-manifest",
+      "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-test-manifest",
+      "//src/devices/tests/devhost-test:devhost-test-manifest",
+      "//src/devices/tests/devhost-test:devhost-test-child-manifest",
+      "//src/devices/tests/devhost-test:devhost-test-manual-manifest",
+      "//src/devices/usb/drivers/usb-test/flash-programmer:flash-programmer-manifest",
+      "//src/devices/tests/fidl-async-llcpp-driver:fidl-async-llcpp-driver-manifest",
+      "//src/devices/tests/fidl-llcpp-driver:fidl-llcpp-driver-manifest",
+      "//src/devices/gpio/drivers/gpio-test:gpio-test-manifest",
+      "//src/devices/tests/isolateddevmgr:isolateddevmgr-test-manifest",
+      "//src/devices/misc/drivers/test:test-manifest",
+      "//src/devices/tests/bind-fail-test:bind-fail-test-manifest",
+      "//src/devices/usb/drivers/usb-bus:usb-device-manifest",
+      "//src/devices/tests/unit-test-test:unit-test-fail-manifest",
+      "//src/devices/tests/unit-test-test:unit-test-pass-manifest",
+      "//src/devices/tests/sysdev:sysdev-manifest",
+      "//src/devices/tests/mock-device:mock-device-manifest",
+      "//src/devices/tests/bind-debugger-test:bind-debugger-test-driver-manifest",
     ]
   }
 }
