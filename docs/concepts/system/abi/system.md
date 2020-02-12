@@ -25,17 +25,16 @@ initialize processes in which components stored in these packages execute.
 ## Terminology
 
 The *Application Programming Interface* (API) for a system is the source-level
-interface to the system. Developers typically write software that uses this
-interface directly. Changes to the system API might require developers to update
-their source code to account for the changes to the API.
+interface to the system. You typically write software that uses this
+interface directly. Changes to the system API might require you to update
+your source code to account for the changes to the API.
 
-The *Application Binary Interface* (ABI) for a system is the binary-level
-interface to the system. Developers do not typically write software that uses
-this interface directly. Instead, they write software against the system API.
-Instead, when that software is compiled, the binary artifact created by the
-compiler interfaces with the system through the system ABI. Changes to the
-system ABI might require the developer to recompile their source code to account
-for the changes to the ABI.
+The *Application Binary Interface* (ABI) for a system is the binary-level interface
+to the system. Typically you don't write software that uses the system ABI
+directly. Instead, you write software against the system API. When the software
+is compiled, the binary artifact created by the compiler interfaces with the system
+through the ABI. Changes to the system ABI may require you to recompile
+your source code to account for the changes in the ABI.
 
 ## ABI Surfaces
 
