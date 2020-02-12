@@ -112,7 +112,7 @@ CodecImpl::CodecImpl(fidl::InterfaceHandle<fuchsia::sysmem::Allocator> sysmem,
   binding_.set_error_handler([this](zx_status_t status) {
     // This handler can't run until after binding_ is bound.
     ZX_DEBUG_ASSERT(was_logically_bound_);
-    this->Fail("CodecImpl binding_ channel failed");
+    Unbind();
   });
 
   initial_input_format_details_ = IsDecoder() ? &decoder_params().input_details()
