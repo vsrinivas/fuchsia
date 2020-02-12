@@ -76,19 +76,23 @@ func TestOTA(t *testing.T) {
 }
 
 func testOTAs(t *testing.T, ctx context.Context, device *device.Client, rpcClient **sl4f.Client) {
-	ctx, cancel := context.WithTimeout(ctx, c.cycleTimeout)
-	defer cancel()
+	for i := 0; i < c.cycleCount; i++ {
+		log.Printf("OTA Attempt %d", i+1)
 
-	ch := make(chan struct{})
-	go func() {
-		doTestOTAs(t, ctx, device, rpcClient)
-		ch <- struct{}{}
-	}()
+		ctx, cancel := context.WithTimeout(ctx, c.cycleTimeout)
+		defer cancel()
 
-	select {
-	case <-ch:
-	case <-ctx.Done():
-		t.Fatalf("OTA Cycle timed out: %s", ctx.Err())
+		ch := make(chan struct{})
+		go func() {
+			doTestOTAs(t, ctx, device, rpcClient)
+			ch <- struct{}{}
+		}()
+
+		select {
+		case <-ch:
+		case <-ctx.Done():
+			t.Fatalf("OTA Cycle timed out: %s", ctx.Err())
+		}
 	}
 }
 

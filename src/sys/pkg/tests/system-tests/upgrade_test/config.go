@@ -42,6 +42,7 @@ type Config struct {
 	archive                  *artifacts.Archive
 	sshPrivateKey            ssh.Signer
 	paveTimeout              time.Duration
+	cycleCount               int
 	cycleTimeout             time.Duration
 }
 
@@ -66,6 +67,7 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	fs.StringVar(&c.upgradeFuchsiaBuildDir, "upgrade-fuchsia-build-dir", "", "Path to the upgrade fuchsia build dir")
 	fs.BoolVar(&c.LongevityTest, "longevity-test", false, "Continuously update to the latest repository")
 	fs.DurationVar(&c.paveTimeout, "pave-timeout", 1<<63-1, "Err if a pave it takes longer than this time (default is no timeout)")
+	fs.IntVar(&c.cycleCount, "cycle-count", 1, "How many cycles to run the test before completing (default is 1)")
 	fs.DurationVar(&c.cycleTimeout, "cycle-timeout", 1<<63-1, "Err if a test cycle it takes longer than this time (default is no timeout)")
 
 	return c, nil
@@ -98,6 +100,10 @@ func (c *Config) Validate() error {
 
 	if c.LongevityTest && c.upgradeBuilderName == "" {
 		return fmt.Errorf("-longevity-test requires -upgrade-builder-name to be specified")
+	}
+
+	if c.cycleCount < 1 {
+		return fmt.Errorf("-cycle-count must be >= 1")
 	}
 
 	return nil

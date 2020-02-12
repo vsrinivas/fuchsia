@@ -108,7 +108,7 @@ template("system_test_suite") {
       assert(invoker.cycle_count != "",
              "'${_spec_target_name}' cannot have an empty cycle count")
       _command += [
-        "-test.count",
+        "-cycle-count",
         invoker.cycle_count,
       ]
     }
