@@ -73,7 +73,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/c/test",
 #------------------
 #------------------
-      "$zx/system/ulib/ddk/test",
 #------------------
 #------------------
       "$zx/system/ulib/elf-search/test",

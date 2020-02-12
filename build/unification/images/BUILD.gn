@@ -534,7 +534,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.crashsvc-test",
 #------------------
 #------------------
-    ":test.sys.ddk-unittest-test",
 #------------------
 #------------------
     ":test.sys.default-stack-size-default-test",
@@ -1143,7 +1142,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.crashsvc-test",
 #------------------
 #------------------
-    ":test.sys.ddk-unittest-test",
 #------------------
 #------------------
     ":test.sys.default-stack-size-default-test",
@@ -2962,7 +2960,7 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-manifest",
     "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-manifest",
 #------------------
-    #":test.sys.ddk-unittest-test",
+    "//zircon/system/ulib/ddk/test:ddk-unittest-manifest",
 #------------------
     "//zircon/system/ulib/debugdata/test:debugdata-manifest",
     "//zircon/system/utest/debugger:debugger-manifest",
@@ -3665,7 +3663,7 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-manifest",
     "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-manifest",
 #------------------
-    #":test.sys.ddk-unittest-test",
+    "//zircon/system/ulib/ddk/test:ddk-unittest-manifest",
 #------------------
     "//zircon/system/ulib/debugdata/test:debugdata-manifest",
     "//zircon/system/utest/debugger:debugger-manifest",
