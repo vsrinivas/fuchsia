@@ -8,7 +8,7 @@ zx_library("posix_tests") {
   testonly = true
   sources = [ "truncate.cc" ]
   deps = [
-    "$zx/system/ulib/fs/test_support",
+    "$zx/system/ulib/fs/test_support:fs_test_support",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]

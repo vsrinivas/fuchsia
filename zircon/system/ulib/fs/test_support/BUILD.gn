@@ -2,14 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_library("test_support") {
+# Named to avoid conflicts with storage/buffer/test_support:
+zx_library("fs_test_support") {
   static = true
+  sdk = "source"
   testonly = true
 
   sources = [
     "environment.cc",
     "fixtures.cc",
     "test_support.cc",
+  ]
+  sdk_headers = [
+    "fs/test_support/environment.h",
+    "fs/test_support/fixtures.h",
+    "fs/test_support/test_support.h",
   ]
 
   public_deps = [

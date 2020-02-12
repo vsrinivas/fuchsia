@@ -570,7 +570,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.fs-test-support-test",
 #------------------
 #------------------
     ":test.sys.ftl-lib-test",
@@ -1180,7 +1179,6 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.fs-test-support-test",
 #------------------
 #------------------
     ":test.sys.ftl-lib-test",
@@ -3037,7 +3035,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/fs/test:fs-connection-manifest",
     "//zircon/system/utest/fs-recovery:fs-recovery-manifest",
 #------------------
-    #":test.sys.fs-test-support-test",
+    "//zircon/system/ulib/fs/test_support/test:fs_test_support-manifest",
 #------------------
     "//zircon/system/ulib/fs/transaction/test:fs-transaction-manifest",
     "//zircon/system/ulib/fs/test:fs-vnode-manifest",
@@ -3740,7 +3738,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/fs/test:fs-connection-manifest",
     "//zircon/system/utest/fs-recovery:fs-recovery-manifest",
 #------------------
-    #":test.sys.fs-test-support-test",
+    "//zircon/system/ulib/fs/test_support/test:fs_test_support-manifest",
 #------------------
     "//zircon/system/ulib/fs/transaction/test:fs-transaction-manifest",
     "//zircon/system/ulib/fs/test:fs-vnode-manifest",

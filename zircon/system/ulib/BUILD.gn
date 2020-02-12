@@ -80,6 +80,7 @@ group("ulib") {
     "fit",
     "framebuffer",
     "fs",
+    "fs/test_support:fs_test_support",
     "fs-management",
     "fs-pty",
     "fs-test-utils",
