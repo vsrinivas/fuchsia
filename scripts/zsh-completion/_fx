@@ -95,6 +95,8 @@ _fx() {
   f=_fx_$words[1]
   if [[ -e ${fuchsia_dir}/scripts/zsh-completion/$f ]]; then
     autoload $f; $f
+  else
+    _normal
   fi
 }
 
