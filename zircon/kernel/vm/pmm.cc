@@ -162,10 +162,6 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
           argv[0].str);
       printf("%s mem_avail_state info : dump memstate info\n", argv[0].str);
       printf("%s drop_user_pt         : drop all user hardware page tables\n", argv[0].str);
-      printf(
-          "%s scan [reclaim]       : expensive scan that can optionally attempt to reclaim "
-          "memory\n",
-          argv[0].str);
       printf("%s checker status       : prints the status of the pmm checker\n", argv[0].str);
       printf("%s checker enable       : enables the pmm checker\n", argv[0].str);
       printf("%s checker disable      : disables the pmm checker\n", argv[0].str);
@@ -237,12 +233,6 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     }
   } else if (!strcmp(argv[1].str, "drop_user_pt")) {
     VmAspace::DropAllUserPageTables();
-  } else if (!strcmp(argv[1].str, "scan")) {
-    bool reclaim = false;
-    if (argc > 2 && !strcmp(argv[2].str, "reclaim")) {
-      reclaim = true;
-    }
-    scanner_trigger_scan(reclaim);
   } else if (!strcmp(argv[1].str, "checker")) {
     if (argc != 3) {
       goto usage;

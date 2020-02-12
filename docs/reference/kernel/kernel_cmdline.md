@@ -399,6 +399,12 @@ following values:
 The option allows a notice to be printed when the root job is either:
 terminated, or has no jobs and no processes.
 
+## kernel.page-scanner.start-at-boot=\<bool>
+
+This option (false by default) causes the kernels active memory scanner to be
+initially disabled on startup. You can re-enable it using the kernel console.
+If you disable the scanner, you can have additional system predictability since
+it removes time based and background memory eviction.
 ## kernel.x86.disable_spec_mitigations=\<bool>
 
 If set, disable all speculative execution information leak mitigations.

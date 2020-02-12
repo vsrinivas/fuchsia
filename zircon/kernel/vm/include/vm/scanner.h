@@ -7,11 +7,13 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_SCANNER_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_SCANNER_H_
 
-// Trigger the memory scanner to perform a single pass. This function returns immediately and the
-// scanning will actually happen on a different thread and be reported on the console. Multiple
-// triggers will get coalesced together until at least one scanner pass has completed.
-// The `reclaim` flag controls whether the scan will perform reclamation, or just report on what
-// could be reclaimed.
-void scanner_trigger_scan(bool reclaim);
+// Increase the disable count of the scanner. This may need to block until the scanner finishes any
+// current work and so should not be called with other locks held that may conflict with the
+// scanner. Generally this is expected to be used by unittests.
+void scanner_push_disable_count();
+
+// Decrease the disable count of the scanner, potentially re-enabling the scanner if it reaches
+// zero.
+void scanner_pop_disable_count();
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_SCANNER_H_
