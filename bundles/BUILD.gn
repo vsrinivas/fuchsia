@@ -21,6 +21,7 @@ group("tools") {
     "//src/connectivity/overnet/tools",
     "//src/connectivity/wlan:tools",
     "//src/developer/debug/zxdb:zxdb_host",
+    "//src/developer/development-bridge:ffx",
     "//src/developer/exception_broker/limbo_client",
     "//src/developer/feedback/bugreport",
     "//src/developer/kcounter_inspect",
