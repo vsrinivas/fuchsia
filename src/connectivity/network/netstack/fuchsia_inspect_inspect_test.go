@@ -354,8 +354,20 @@ func TestEthInfoInspectImpl(t *testing.T) {
 		value: client,
 	}
 	children := v.ListChildren()
-	if diff := cmp.Diff([]string(nil), children); diff != "" {
+	if diff := cmp.Diff([]string{
+		"RxReads",
+		"RxWrites",
+		"TxReads",
+		"TxWrites",
+	}, children); diff != "" {
 		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
+	}
+	for _, childName := range children {
+		if child := v.GetChild(childName); child == nil {
+			t.Errorf("got GetChild(%s) = %v, want non-nil", childName, child)
+		} else if _, ok := child.(*fifoStatsInspectImpl); !ok {
+			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &fifoStatsInspectImpl{})
+		}
 	}
 
 	childName := "not a real child"
@@ -369,6 +381,40 @@ func TestEthInfoInspectImpl(t *testing.T) {
 			{Key: "Topopath", Value: inspect.PropertyValueWithStr(topopath)},
 			{Key: "Filepath", Value: inspect.PropertyValueWithStr(filepath)},
 			{Key: "Features", Value: inspect.PropertyValueWithStr(featuresString(features))},
+		},
+	}, v.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{})); diff != "" {
+		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestFifoStatsInfoInspectImpl(t *testing.T) {
+	var zeroCounter, nonZeroCounter tcpip.StatCounter
+	nonZeroCounter.IncrementBy(5)
+
+	v := fifoStatsInspectImpl{
+		name: "doesn't matter",
+		value: func(depth uint32) *tcpip.StatCounter {
+			if depth%2 == 0 {
+				return &zeroCounter
+			}
+			return &nonZeroCounter
+		},
+		size: 2,
+	}
+	children := v.ListChildren()
+	if diff := cmp.Diff(children, []string(nil)); diff != "" {
+		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
+	}
+
+	childName := "not a real child"
+	if child := v.GetChild(childName); child != nil {
+		t.Errorf("got GetChild(%s) = %s, want = %v", childName, child, nil)
+	}
+
+	if diff := cmp.Diff(inspect.Object{
+		Name: v.name,
+		Metrics: []inspect.Metric{
+			{Key: "1", Value: inspect.MetricValueWithUintValue(5)},
 		},
 	}, v.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{})); diff != "" {
 		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)

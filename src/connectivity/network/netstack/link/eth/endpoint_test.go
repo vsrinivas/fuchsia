@@ -53,8 +53,24 @@ func prependableComparer(x, y buffer.Prependable) bool {
 	return bytes.Equal(x.View(), y.View())
 }
 
+func fifoReadsTransformer(in eth.FifoStats) []uint64 {
+	reads := make([]uint64, in.Size())
+	for i := in.Size(); i > 0; i-- {
+		reads[i-1] = in.Reads(i).Value()
+	}
+	return reads
+}
+
+func fifoWritesTransformer(in eth.FifoStats) []uint64 {
+	writes := make([]uint64, in.Size())
+	for i := in.Size(); i > 0; i-- {
+		writes[i-1] = in.Writes(i).Value()
+	}
+	return writes
+}
+
 func TestEndpoint(t *testing.T) {
-	maxDepth := eth.FifoMaxSize / uint(unsafe.Sizeof(eth.FifoEntry{}))
+	const maxDepth = eth.FifoMaxSize / uint(unsafe.Sizeof(eth.FifoEntry{}))
 
 	arena, err := eth.NewArena()
 	if err != nil {
@@ -165,6 +181,81 @@ func TestEndpoint(t *testing.T) {
 				outEndpoint.Attach(&outCh)
 			}
 
+			t.Run("Stats", func(t *testing.T) {
+				for excess := depth; ; excess >>= 1 {
+					t.Run(fmt.Sprintf("excess=%d", excess), func(t *testing.T) {
+						// Grab baseline stats to avoid assumptions about ops done to this point.
+						wantTxWrites := fifoWritesTransformer(outClient.Stats.Tx)
+						wantRxReads := fifoReadsTransformer(inClient.Stats.Rx)
+
+						// Compute expectations.
+						for _, want := range [][]uint64{wantTxWrites, wantRxReads} {
+							for _, write := range []uint32{depth, excess} {
+								if write == 0 {
+									continue
+								}
+								want[write-1]++
+							}
+						}
+
+						writeSize := depth + excess
+						pkts := make([]tcpip.PacketBuffer, writeSize)
+						for i := range pkts {
+							pkts[i] = tcpip.PacketBuffer{
+								Header: buffer.NewPrependable(int(outEndpoint.MaxHeaderLength())),
+							}
+						}
+
+						// Use WritePackets to get deterministic batch sizes.
+						count, err := outEndpoint.WritePackets(
+							&stack.Route{},
+							nil,
+							pkts,
+							1337,
+						)
+						if err != nil {
+							t.Fatal(err)
+						}
+						if got, want := count, int(writeSize); got != want {
+							t.Fatalf("got WritePackets(_) = %d, nil, want %d, nil", got, want)
+						}
+
+						for i := uint32(0); i < writeSize; i++ {
+							select {
+							case <-time.After(5 * time.Second):
+								t.Fatalf("timeout waiting for %d/%d packets", i, writeSize)
+							case <-inCh:
+							}
+						}
+
+						for i := 0; ; i++ {
+							select {
+							case <-time.After(10 * time.Millisecond):
+							case args := <-inCh:
+								t.Errorf("unexpected packet received: %+v", args)
+								continue
+							}
+							break
+						}
+						if t.Failed() {
+							t.FailNow()
+						}
+
+						// NB: only assert on the writes, since TX reads are unsynchronized wrt this test.
+						if diff := cmp.Diff(wantTxWrites, fifoWritesTransformer(outClient.Stats.Tx)); diff != "" {
+							t.Errorf("outClient.Stats.Tx.Writes mismatch (-want +got):\n%s", diff)
+						}
+						// NB: only assert on the reads, since RX writes are unsynchronized wrt this test.
+						if diff := cmp.Diff(wantRxReads, fifoReadsTransformer(inClient.Stats.Rx)); diff != "" {
+							t.Errorf("inClient.Stats.Rx.Reads mismatch (-want +got):\n%s", diff)
+						}
+					})
+					if excess == 0 {
+						break
+					}
+				}
+			})
+
 			const localLinkAddress = tcpip.LinkAddress("\x01\x02\x03\x04\x05\x06")
 			const remoteLinkAddress = tcpip.LinkAddress("\x11\x12\x13\x14\x15\x16")
 			const protocol = tcpip.NetworkProtocolNumber(45)
@@ -208,6 +299,7 @@ func TestEndpoint(t *testing.T) {
 					}
 				}
 			})
+
 			// ReceivePacket tests that receiving ethernet frames of size
 			// less than the minimum size does not panic or cause any issues for future
 			// (valid) frames.

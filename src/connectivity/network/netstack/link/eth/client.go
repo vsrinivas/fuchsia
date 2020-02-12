@@ -123,6 +123,33 @@ func (e *entries) getQueued(dst []FifoEntry) int {
 	}
 }
 
+type rwStats struct {
+	reads, writes tcpip.StatCounter
+}
+
+type FifoStats struct {
+	// batches is an associative array from read/write batch sizes
+	// (indexed at `batchSize-1`) to tcpip.StatCounters of the number of reads
+	// and writes of that batch size.
+	batches []rwStats
+}
+
+func makeFifoStats(depth uint32) FifoStats {
+	return FifoStats{batches: make([]rwStats, depth)}
+}
+
+func (s *FifoStats) Size() uint32 {
+	return uint32(len(s.batches))
+}
+
+func (s *FifoStats) Reads(batchSize uint32) *tcpip.StatCounter {
+	return &s.batches[batchSize-1].reads
+}
+
+func (s *FifoStats) Writes(batchSize uint32) *tcpip.StatCounter {
+	return &s.batches[batchSize-1].writes
+}
+
 var _ link.Controller = (*Client)(nil)
 
 var _ stack.LinkEndpoint = (*Client)(nil)
@@ -136,6 +163,10 @@ type Client struct {
 	wg         sync.WaitGroup
 
 	Info ethernet.Info
+
+	Stats struct {
+		Tx, Rx FifoStats
+	}
 
 	device ethernet.Device
 	fifos  ethernet.Fifos
@@ -198,6 +229,8 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 		filepath: filepath,
 		arena:    arena,
 	}
+	c.Stats.Tx = makeFifoStats(fifos.TxDepth)
+	c.Stats.Rx = makeFifoStats(fifos.RxDepth)
 	c.rx.init(fifos.RxDepth)
 	for i := range c.rx.storage {
 		b := arena.alloc(c)
@@ -357,6 +390,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 
 				switch status, count := FifoRead(c.fifos.Tx, scratch); status {
 				case zx.ErrOk:
+					c.Stats.Tx.Reads(count).Increment()
 					c.tx.mu.Lock()
 					n := c.tx.mu.entries.addReadied(scratch[:count])
 					c.tx.mu.entries.incrementReadied(uint16(n))
@@ -423,6 +457,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 					if n := uint32(n); count != n {
 						return fmt.Errorf("fifoWrite(TX): tx_depth invariant violation; observed=%d expected=%d", c.fifos.TxDepth-n+count, c.fifos.TxDepth)
 					}
+					c.Stats.Tx.Writes(count).Increment()
 				default:
 					return &zx.Error{Status: status, Text: "fifoWrite(TX)"}
 				}
@@ -454,6 +489,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 					status, count := fifoWrite(c.fifos.Rx, scratch[:n])
 					switch status {
 					case zx.ErrOk:
+						c.Stats.Rx.Writes(count).Increment()
 						if n := uint32(n); count != n {
 							return fmt.Errorf("fifoWrite(RX): tx_depth invariant violation; observed=%d expected=%d", c.fifos.RxDepth-n+count, c.fifos.RxDepth)
 						}
@@ -503,6 +539,7 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 					if obs&(zx.SignalFIFOReadable) != 0 {
 						switch status, count := FifoRead(c.fifos.Rx, scratch); status {
 						case zx.ErrOk:
+							c.Stats.Rx.Reads(count).Increment()
 							n := c.rx.addReadied(scratch[:count])
 							c.rx.incrementReadied(uint16(n))
 

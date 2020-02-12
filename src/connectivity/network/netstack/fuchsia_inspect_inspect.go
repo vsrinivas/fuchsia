@@ -40,6 +40,10 @@ const (
 	socketInfo = "Socket Info"
 	dhcpInfo   = "DHCP Info"
 	ethInfo    = "Ethernet Info"
+	rxReads    = "RxReads"
+	rxWrites   = "RxWrites"
+	txReads    = "TxReads"
+	txWrites   = "TxWrites"
 )
 
 // An adapter that implements fuchsia.inspect.Inspect using the above.
@@ -390,10 +394,75 @@ func (impl *ethInfoInspectImpl) ReadData() inspect.Object {
 }
 
 func (impl *ethInfoInspectImpl) ListChildren() []string {
-	return nil
+	return []string{
+		rxReads,
+		rxWrites,
+		txReads,
+		txWrites,
+	}
 }
 
 func (impl *ethInfoInspectImpl) GetChild(childName string) inspectInner {
+	switch childName {
+	case rxReads:
+		return &fifoStatsInspectImpl{
+			name:  childName,
+			value: impl.value.Stats.Rx.Reads,
+			size:  impl.value.Stats.Rx.Size(),
+		}
+	case rxWrites:
+		return &fifoStatsInspectImpl{
+			name:  childName,
+			value: impl.value.Stats.Rx.Writes,
+			size:  impl.value.Stats.Rx.Size(),
+		}
+	case txReads:
+		return &fifoStatsInspectImpl{
+			name:  childName,
+			value: impl.value.Stats.Tx.Reads,
+			size:  impl.value.Stats.Tx.Size(),
+		}
+	case txWrites:
+		return &fifoStatsInspectImpl{
+			name:  childName,
+			value: impl.value.Stats.Tx.Writes,
+			size:  impl.value.Stats.Tx.Size(),
+		}
+	default:
+		return nil
+	}
+}
+
+var _ inspectInner = (*fifoStatsInspectImpl)(nil)
+
+type fifoStatsInspectImpl struct {
+	name  string
+	value func(uint32) *tcpip.StatCounter
+	size  uint32
+}
+
+func (impl *fifoStatsInspectImpl) ReadData() inspect.Object {
+	var metrics []inspect.Metric
+	for i := uint32(0); i < impl.size; i++ {
+		batchSize := i + 1
+		if v := impl.value(batchSize).Value(); v != 0 {
+			metrics = append(metrics, inspect.Metric{
+				Key:   strconv.FormatInt(int64(batchSize), 10),
+				Value: inspect.MetricValueWithUintValue(v),
+			})
+		}
+	}
+	return inspect.Object{
+		Name:    impl.name,
+		Metrics: metrics,
+	}
+}
+
+func (impl *fifoStatsInspectImpl) ListChildren() []string {
+	return nil
+}
+
+func (impl *fifoStatsInspectImpl) GetChild(string) inspectInner {
 	return nil
 }
 
