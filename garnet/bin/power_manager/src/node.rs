@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::error::PowerManagerError;
 use crate::message::{Message, MessageReturn};
-use anyhow::Error;
 use async_trait::async_trait;
 use std::rc::Rc;
 
@@ -20,7 +20,7 @@ pub trait Node {
     ///
     /// All nodes must implement this message to support communication between nodes. This
     /// is the entry point for a Node to receive new messages.
-    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, Error>;
+    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError>;
 
     /// Send a message to another node
     ///
@@ -31,7 +31,7 @@ pub trait Node {
         &self,
         node: &Rc<dyn Node>,
         msg: &Message,
-    ) -> Result<MessageReturn, Error> {
+    ) -> Result<MessageReturn, PowerManagerError> {
         // TODO(fxb/44484): Ideally we'd use a duration event here. But due to a limitation in the
         // Rust tracing library, that would require creating any formatted strings (such as the
         // "message" value) unconditionally, even when the tracing category is disabled. To

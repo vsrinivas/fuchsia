@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::types::ThermalLoad;
-use anyhow::{format_err, Error};
+use anyhow::Error;
 use async_trait::async_trait;
 use fidl_fuchsia_thermal as fthermal;
 use fuchsia_async as fasync;
@@ -286,7 +287,7 @@ impl ThermalLimiter {
     fn handle_update_thermal_load(
         &self,
         thermal_load: ThermalLoad,
-    ) -> Result<MessageReturn, Error> {
+    ) -> Result<MessageReturn, PowerManagerError> {
         fuchsia_trace::duration!(
             "power_manager",
             "ThermalLimiter::handle_update_thermal_load",
@@ -294,11 +295,10 @@ impl ThermalLimiter {
             "new_thermal_load" => thermal_load.0
         );
         if thermal_load > MAX_THERMAL_LOAD {
-            return Err(format_err!(
+            return Err(PowerManagerError::InvalidArgument(format!(
                 "Expected thermal_load in range [0-{}]; got {}",
-                MAX_THERMAL_LOAD.0,
-                thermal_load.0
-            ));
+                MAX_THERMAL_LOAD.0, thermal_load.0
+            )));
         }
 
         // If the load hasn't changed, just bail here and return a success
@@ -352,12 +352,12 @@ impl Node for ThermalLimiter {
         "ThermalLimiter"
     }
 
-    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, Error> {
+    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
         match msg {
             Message::UpdateThermalLoad(thermal_load) => {
                 self.handle_update_thermal_load(*thermal_load)
             }
-            _ => Err(format_err!("Unsupported message: {:?}", msg)),
+            _ => Err(PowerManagerError::Unsupported),
         }
     }
 }
@@ -452,6 +452,29 @@ pub mod tests {
         match node.handle_message(&Message::UpdateThermalLoad(thermal_load)).await {
             Ok(MessageReturn::UpdateThermalLoad) => {}
             _ => panic!("Expected MessageReturn::UpdateThermalLoad"),
+        }
+    }
+
+    /// Tests that an unsupported message is handled gracefully and an Unsupported error is returned
+    #[fasync::run_singlethreaded(test)]
+    async fn test_unsupported_msg() {
+        let node = setup_test_node();
+        match node.handle_message(&Message::ReadTemperature).await {
+            Err(PowerManagerError::Unsupported) => {}
+            e => panic!("Unexpected return value: {:?}", e),
+        }
+    }
+
+    /// Tests that an invalid thermal load update is met with an InvalidArgument error
+    #[fasync::run_singlethreaded(test)]
+    async fn test_invalid_thermal_load() {
+        let node = setup_test_node();
+        match node
+            .handle_message(&Message::UpdateThermalLoad(ThermalLoad(MAX_THERMAL_LOAD.0 + 1)))
+            .await
+        {
+            Err(PowerManagerError::InvalidArgument(_)) => {}
+            e => panic!("Unexpected return value: {:?}", e),
         }
     }
 

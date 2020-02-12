@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::dev_control_handler;
+use crate::error::PowerManagerError;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::types::{Farads, Hertz, Volts, Watts};
@@ -279,7 +280,7 @@ impl CpuControlHandler {
     async fn handle_set_max_power_consumption(
         &self,
         max_power: &Watts,
-    ) -> Result<MessageReturn, Error> {
+    ) -> Result<MessageReturn, PowerManagerError> {
         fuchsia_trace::duration!(
             "power_manager",
             "CpuControlHandler::handle_set_max_power_consumption",
@@ -385,10 +386,10 @@ impl Node for CpuControlHandler {
         "CpuControlHandler"
     }
 
-    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, Error> {
+    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
         match msg {
             Message::SetMaxPowerConsumption(p) => self.handle_set_max_power_consumption(p).await,
-            _ => Err(format_err!("Unsupported message: {:?}", msg)),
+            _ => Err(PowerManagerError::Unsupported),
         }
     }
 }
@@ -497,10 +498,26 @@ pub mod tests {
         assert_eq!(get_cpu_power(Farads(100.0e-12), Volts(1.0), Hertz(1.0e9)), Watts(0.1));
     }
 
+    /// Tests that an unsupported message is handled gracefully and an Unsupported error is returned
+    #[fasync::run_singlethreaded(test)]
+    async fn test_unsupported_msg() {
+        let cpu_stats_node = cpu_stats_handler::tests::setup_simple_test_node();
+        let devhost_node = dev_control_handler::tests::setup_simple_test_node();
+        let cpu_ctrl_node = setup_test_node(
+            CpuControlParams { num_cores: 0, p_states: vec![], capacitance: Farads(0.0) },
+            cpu_stats_node,
+            devhost_node.clone(),
+        );
+        match cpu_ctrl_node.handle_message(&Message::ReadTemperature).await {
+            Err(PowerManagerError::Unsupported) => {}
+            e => panic!("Unexpected return value: {:?}", e),
+        }
+    }
+
     async fn get_perf_state(devhost_node: Rc<dyn Node>) -> u32 {
         match devhost_node.handle_message(&Message::GetPerformanceState).await.unwrap() {
             MessageReturn::GetPerformanceState(state) => state,
-            _ => panic!(),
+            e => panic!("Unexpected return value: {:?}", e),
         }
     }
 
@@ -531,7 +548,7 @@ pub mod tests {
             .unwrap()
         {
             MessageReturn::SetMaxPowerConsumption => {}
-            _ => panic!(),
+            e => panic!("Unexpected return value: {:?}", e),
         }
         assert_eq!(get_perf_state(devhost_node.clone()).await, 0);
 
@@ -543,7 +560,7 @@ pub mod tests {
             .unwrap()
         {
             MessageReturn::SetMaxPowerConsumption => {}
-            _ => panic!(),
+            e => panic!("Unexpected return value: {:?}", e),
         }
         assert_eq!(get_perf_state(devhost_node.clone()).await, 1);
 
@@ -556,7 +573,7 @@ pub mod tests {
             .unwrap()
         {
             MessageReturn::SetMaxPowerConsumption => {}
-            _ => panic!(),
+            e => panic!("Unexpected return value: {:?}", e),
         }
         assert_eq!(get_perf_state(devhost_node.clone()).await, 1);
     }
@@ -586,7 +603,7 @@ pub mod tests {
         // After this point, the CpuParams should be populated into the Inspect tree.
         match node.handle_message(&Message::SetMaxPowerConsumption(Watts(1.0))).await.unwrap() {
             MessageReturn::SetMaxPowerConsumption => {}
-            _ => panic!(),
+            e => panic!("Unexpected return value: {:?}", e),
         }
 
         assert_inspect_tree!(

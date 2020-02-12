@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
@@ -80,7 +81,10 @@ pub struct SystemPowerStateHandler {
 }
 
 impl SystemPowerStateHandler {
-    async fn handle_system_shutdown(&self, reason: String) -> Result<MessageReturn, Error> {
+    async fn handle_system_shutdown(
+        &self,
+        reason: String,
+    ) -> Result<MessageReturn, PowerManagerError> {
         fuchsia_trace::duration!(
             "power_manager",
             "SystemPowerStateHandler::handle_system_shutdown",
@@ -101,7 +105,7 @@ impl SystemPowerStateHandler {
             Err(e) => {
                 self.inspect.suspend_errors.add(1);
                 self.inspect.last_suspend_error.set(format!("{}", e).as_str());
-                Err(e)
+                Err(PowerManagerError::GenericError(e))
             }
         }
     }
@@ -134,12 +138,12 @@ impl Node for SystemPowerStateHandler {
         "SystemPowerStateHandler"
     }
 
-    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, Error> {
+    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
         match msg {
             Message::SystemShutdown(reason) => {
                 self.handle_system_shutdown(reason.to_string()).await
             }
-            _ => Err(format_err!("Unsupported message: {:?}", msg)),
+            _ => Err(PowerManagerError::Unsupported),
         }
     }
 }
@@ -214,6 +218,16 @@ pub mod tests {
             .with_proxy(setup_fake_service(shutdown_function))
             .build()
             .unwrap()
+    }
+
+    /// Tests that an unsupported message is handled gracefully and an Unsupported error is returned
+    #[fasync::run_singlethreaded(test)]
+    async fn test_unsupported_msg() {
+        let node = setup_test_node(|| {});
+        match node.handle_message(&Message::ReadTemperature).await {
+            Err(PowerManagerError::Unsupported) => {}
+            e => panic!("Unexpected return value: {:?}", e),
+        }
     }
 
     /// Tests that the node can handle the 'SystemShutdown' message as expected. The test node uses

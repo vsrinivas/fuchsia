@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 // core
+mod error;
 mod message;
 mod node;
 mod power_manager;

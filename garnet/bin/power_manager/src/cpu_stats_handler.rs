@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
@@ -120,13 +121,13 @@ impl CpuStatsHandler {
         Ok(result?)
     }
 
-    async fn handle_get_num_cpus(&self) -> Result<MessageReturn, Error> {
+    async fn handle_get_num_cpus(&self) -> Result<MessageReturn, PowerManagerError> {
         fuchsia_trace::duration!("power_manager", "CpuStatsHandler::handle_get_num_cpus");
         let stats = self.get_cpu_stats().await?;
         Ok(MessageReturn::GetNumCpus(stats.actual_num_cpus as u32))
     }
 
-    async fn handle_get_total_cpu_load(&self) -> Result<MessageReturn, Error> {
+    async fn handle_get_total_cpu_load(&self) -> Result<MessageReturn, PowerManagerError> {
         fuchsia_trace::duration!("power_manager", "CpuStatsHandler::handle_get_total_cpu_load");
         let new_stats = self.get_idle_stats().await?;
 
@@ -262,11 +263,11 @@ impl Node for CpuStatsHandler {
         "CpuStatsHandler"
     }
 
-    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, Error> {
+    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
         match msg {
             Message::GetNumCpus => self.handle_get_num_cpus().await,
             Message::GetTotalCpuLoad => self.handle_get_total_cpu_load().await,
-            _ => Err(format_err!("Unsupported message: {:?}", msg)),
+            _ => Err(PowerManagerError::Unsupported),
         }
     }
 }
@@ -415,12 +416,14 @@ pub mod tests {
         assert_eq!(calculated_load, 2.0)
     }
 
-    /// Tests that an unsupported message is handled gracefully and an error is returned
+    /// Tests that an unsupported message is handled gracefully and an Unsupported error is returned
     #[fasync::run_singlethreaded(test)]
     async fn test_unsupported_msg() {
         let node = setup_simple_test_node();
-        let result = node.handle_message(&Message::ReadTemperature).await;
-        assert!(result.is_err());
+        match node.handle_message(&Message::ReadTemperature).await {
+            Err(PowerManagerError::Unsupported) => {}
+            e => panic!("Unexpected return value: {:?}", e),
+        }
     }
 
     /// Tests for the presence and correctness of dynamically-added inspect data

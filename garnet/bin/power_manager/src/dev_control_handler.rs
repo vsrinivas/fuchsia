@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
@@ -85,7 +86,7 @@ pub struct DeviceControlHandler {
 }
 
 impl DeviceControlHandler {
-    async fn handle_get_performance_state(&self) -> Result<MessageReturn, Error> {
+    async fn handle_get_performance_state(&self) -> Result<MessageReturn, PowerManagerError> {
         fuchsia_trace::duration!(
             "power_manager",
             "DeviceControlHandler::handle_get_performance_state",
@@ -102,11 +103,13 @@ impl DeviceControlHandler {
             "result" => format!("{:?}", result).as_str()
         );
 
-        if result.is_err() {
-            self.inspect.get_performance_state_errors.add(1);
+        match result {
+            Ok(state) => Ok(MessageReturn::GetPerformanceState(state)),
+            Err(e) => {
+                self.inspect.get_performance_state_errors.add(1);
+                Err(PowerManagerError::GenericError(e))
+            }
         }
-
-        result.map(|state| MessageReturn::GetPerformanceState(state))
     }
 
     async fn get_performance_state(&self) -> Result<u32, Error> {
@@ -122,7 +125,10 @@ impl DeviceControlHandler {
         Ok(state)
     }
 
-    async fn handle_set_performance_state(&self, in_state: u32) -> Result<MessageReturn, Error> {
+    async fn handle_set_performance_state(
+        &self,
+        in_state: u32,
+    ) -> Result<MessageReturn, PowerManagerError> {
         fuchsia_trace::duration!(
             "power_manager",
             "DeviceControlHandler::handle_set_performance_state",
@@ -148,7 +154,7 @@ impl DeviceControlHandler {
             Err(e) => {
                 self.inspect.set_performance_state_errors.add(1);
                 self.inspect.last_set_performance_state_error.set(format!("{}", e).as_str());
-                Err(e)
+                Err(PowerManagerError::GenericError(e))
             }
         }
     }
@@ -185,11 +191,11 @@ impl Node for DeviceControlHandler {
         "DeviceControlHandler"
     }
 
-    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, Error> {
+    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
         match msg {
             Message::GetPerformanceState => self.handle_get_performance_state().await,
             Message::SetPerformanceState(state) => self.handle_set_performance_state(*state).await,
-            _ => Err(format_err!("Unsupported message: {:?}", msg)),
+            _ => Err(PowerManagerError::Unsupported),
         }
     }
 }
@@ -281,6 +287,16 @@ pub mod tests {
         setup_test_node(get_performance_state, set_performance_state)
     }
 
+    /// Tests that an unsupported message is handled gracefully and an Unsupported error is returned
+    #[fasync::run_singlethreaded(test)]
+    async fn test_unsupported_msg() {
+        let node = setup_simple_test_node();
+        match node.handle_message(&Message::ReadTemperature).await {
+            Err(PowerManagerError::Unsupported) => {}
+            e => panic!("Unexpected return value: {:?}", e),
+        }
+    }
+
     /// Tests that the Get/SetPerformanceState messages cause the node to call the appropriate
     /// device controller FIDL APIs.
     #[fasync::run_singlethreaded(test)]
@@ -295,14 +311,14 @@ pub mod tests {
             .unwrap()
         {
             MessageReturn::SetPerformanceState => {}
-            _ => panic!(),
+            e => panic!("Unexpected return value: {:?}", e),
         }
 
         // Verify GetPerformanceState reads back the same state
         let received_perf_state =
             match node.handle_message(&Message::GetPerformanceState).await.unwrap() {
                 MessageReturn::GetPerformanceState(state) => state,
-                _ => panic!(),
+                e => panic!("Unexpected return value: {:?}", e),
             };
         assert_eq!(commanded_perf_state, received_perf_state);
 
@@ -314,14 +330,14 @@ pub mod tests {
             .unwrap()
         {
             MessageReturn::SetPerformanceState => {}
-            _ => panic!(),
+            e => panic!("Unexpected return value: {:?}", e),
         }
 
         // Verify GetPerformanceState reads back the same state
         let received_perf_state =
             match node.handle_message(&Message::GetPerformanceState).await.unwrap() {
                 MessageReturn::GetPerformanceState(state) => state,
-                _ => panic!(),
+                e => panic!("Unexpected return value: {:?}", e),
             };
         assert_eq!(commanded_perf_state, received_perf_state);
     }

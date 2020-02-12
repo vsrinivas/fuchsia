@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
@@ -85,7 +86,7 @@ pub struct TemperatureHandler {
 }
 
 impl TemperatureHandler {
-    async fn handle_read_temperature(&self) -> Result<MessageReturn, Error> {
+    async fn handle_read_temperature(&self) -> Result<MessageReturn, PowerManagerError> {
         fuchsia_trace::duration!(
             "power_manager",
             "TemperatureHandler::handle_read_temperature",
@@ -152,10 +153,10 @@ impl Node for TemperatureHandler {
         "TemperatureHandler"
     }
 
-    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, Error> {
+    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
         match msg {
             Message::ReadTemperature => self.handle_read_temperature().await,
-            _ => Err(format_err!("Unsupported message: {:?}", msg)),
+            _ => Err(PowerManagerError::Unsupported),
         }
     }
 }
@@ -271,9 +272,10 @@ pub mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_unsupported_msg() {
         let node = setup_test_node(|| Celsius(0.0));
-        let message = Message::GetTotalCpuLoad;
-        let result = node.handle_message(&message).await;
-        assert!(result.is_err());
+        match node.handle_message(&Message::GetTotalCpuLoad).await {
+            Err(PowerManagerError::Unsupported) => {}
+            e => panic!("Unexpected return value: {:?}", e),
+        }
     }
 
     /// Tests for the presence and correctness of dynamically-added inspect data

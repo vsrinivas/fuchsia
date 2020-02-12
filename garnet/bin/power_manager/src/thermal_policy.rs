@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
@@ -476,9 +477,9 @@ impl Node for ThermalPolicy {
         "ThermalPolicy"
     }
 
-    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, Error> {
+    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
         match msg {
-            _ => Err(format_err!("Unsupported message: {:?}", msg)),
+            _ => Err(PowerManagerError::Unsupported),
         }
     }
 }
@@ -1111,9 +1112,12 @@ mod tests {
                 "FakeNode"
             }
 
-            async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, Error> {
+            async fn handle_message(
+                &self,
+                msg: &Message,
+            ) -> Result<MessageReturn, PowerManagerError> {
                 match msg {
-                    _ => Err(format_err!("Unsupported message: {:?}", msg)),
+                    _ => Err(PowerManagerError::Unsupported),
                 }
             }
         }
