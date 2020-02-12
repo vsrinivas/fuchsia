@@ -17,6 +17,7 @@ recovery_packages = [
   "//build/info:build-info",
   "//garnet/bin/network_time_service",
   "//garnet/bin/sysmgr",
+  "//garnet/packages/prod:sysmem_connector",
   "//src/connectivity/network:config",
   "//src/connectivity/network/netcfg:config",
   "//src/connectivity/network/netcfg:filter_config",
