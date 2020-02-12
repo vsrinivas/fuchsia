@@ -137,8 +137,7 @@ zx_status_t IsolatedDevmgr::SetupSvcLoop(zx::channel bootsvc_server,
   // Quit the loop when the channel is closed.
   svc_loop_state_->bootsvc_wait.set_object(bootsvc_server.get());
   svc_loop_state_->bootsvc_wait.set_trigger(ZX_CHANNEL_PEER_CLOSED);
-  svc_loop_state_->bootsvc_wait.set_handler(
-      [loop = &svc_loop_state_->loop](...) { loop->Shutdown(); });
+  svc_loop_state_->bootsvc_wait.set_handler([loop = &svc_loop_state_->loop](...) { loop->Quit(); });
   svc_loop_state_->bootsvc_wait.Begin(svc_loop_state_->loop.dispatcher());
 
   // Connect to /svc in the current namespace.
