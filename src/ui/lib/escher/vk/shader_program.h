@@ -61,7 +61,11 @@ class ShaderProgram : public Resource, private ShaderModuleListener {
   vk::Pipeline FindPipeline(Hash hash) const;
   void StashPipeline(Hash hash, vk::Pipeline pipeline);
 
+  size_t stashed_graphics_pipeline_count() const { return graphics_pipelines_.size(); }
+
  private:
+  friend class VulkanTester;
+
   // Called by NewGraphics() and NewCompute(), respectively.
   ShaderProgram(ResourceRecycler* resource_recycler, std::vector<ShaderModulePtr> shader_modules);
   ShaderProgram(ResourceRecycler* resource_recycler, ShaderModulePtr shader_module);

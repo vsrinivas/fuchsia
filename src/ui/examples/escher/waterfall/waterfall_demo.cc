@@ -30,7 +30,8 @@ static constexpr float kNear = 1.f;
 static constexpr float kFar = -200.f;
 static constexpr size_t kMaxNumPointLights = 2;
 
-WaterfallDemo::WaterfallDemo(escher::EscherWeakPtr escher_in, int argc, char** argv)
+WaterfallDemo::WaterfallDemo(escher::EscherWeakPtr escher_in, vk::Format swapchain_format, int argc,
+                             char** argv)
     : Demo(std::move(escher_in), "Waterfall Demo") {
   ProcessCommandLineArgs(argc, argv);
 
@@ -73,6 +74,7 @@ WaterfallDemo::WaterfallDemo(escher::EscherWeakPtr escher_in, int argc, char** a
       ESCHER_CHECKED_VK_RESULT(device_caps.GetMatchingDepthStencilFormat(
           {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint}));
 
+  WarmPipelineCache(swapchain_format);
   renderer_->SetConfig(renderer_config_);
 
   // Start with 1 light.  Number of lights can be cycled via CycleNumLights().  Light positions
@@ -82,6 +84,42 @@ WaterfallDemo::WaterfallDemo(escher::EscherWeakPtr escher_in, int argc, char** a
 }
 
 WaterfallDemo::~WaterfallDemo() {}
+
+void WaterfallDemo::WarmPipelineCache(vk::Format swapchain_format) const {
+  TRACE_DURATION("gfx", "WaterfallDemo::WarmPipelineCache");
+
+  // Make a copy of the config, we'll be modifying it.
+  PaperRendererConfig config = renderer_config_;
+
+  // Build pipelines for rendering to the display as well as offscreen.
+  std::vector<std::pair<vk::Format, vk::ImageLayout>> formats_and_layouts = {
+      {swapchain_format, vk::ImageLayout::eColorAttachmentOptimal},
+      {swapchain_format, vk::ImageLayout::ePresentSrcKHR},
+  };
+
+  std::vector<escher::SamplerPtr> immutable_samplers;
+  if (ycbcr_tex_) {
+    immutable_samplers.push_back(ycbcr_tex_->sampler());
+  }
+
+  for (size_t count : allowed_sample_counts_) {
+    config.msaa_sample_count = count;
+
+    for (auto shadow_type : EnumArray<PaperRendererShadowType>()) {
+      if (!renderer_->SupportsShadowType(shadow_type)) {
+        continue;
+      }
+      config.shadow_type = shadow_type;
+
+      for (auto& p : formats_and_layouts) {
+        auto& output_format = p.first;
+        auto& output_swapchain_layout = p.second;
+        PaperRenderer::WarmPipelineAndRenderPassCaches(escher(), config, output_format,
+                                                       output_swapchain_layout, immutable_samplers);
+      }
+    }
+  }
+}
 
 void WaterfallDemo::SetWindowSize(vk::Extent2D window_size) {
   FXL_CHECK(paper_scene_);
@@ -376,6 +414,9 @@ static void UpdateLighting(PaperScene* paper_scene, const escher::Stopwatch& sto
 void WaterfallDemo::DrawFrame(const FramePtr& frame, const ImagePtr& output_image,
                               const escher::SemaphorePtr& framebuffer_acquired) {
   TRACE_DURATION("gfx", "WaterfallDemo::DrawFrame");
+
+  // WarmPipelineCache() generated all of the necessary pipelines.
+  frame->DisableLazyPipelineCreation();
 
   SetWindowSize({output_image->width(), output_image->height()});
 

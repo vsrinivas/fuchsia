@@ -60,6 +60,12 @@ using CommandBufferPtr = fxl::RefPtr<CommandBuffer>;
 // ShaderProgram and other CommandBuffer state (e.g. depth/stencil state, the
 // strides/formats/offsets of currently-bound vertex buffers, etc.).
 //
+// NOTE: this functionality can be disabled on a per-CommandBuffer basis by calling
+// DisableLazyPipelineCreation().  Afterward, this will result in a failed CHECK in
+// any situation that would normally generate a new Pipeline or RenderPass.  The app
+// is responsible for ensuring that all necessary pipelines are generated before
+// calling this function.
+//
 // Another major convenience provided by CommandBuffer is life-cycle management
 // of resources that are no longer needed.  Vulkan forbids client applications
 // from destroying any resource that is referenced by a "pending command buffer"
@@ -251,29 +257,7 @@ class CommandBuffer : public Reffable {
             const ImagePtr& dst_image, vk::Offset2D dst_offset, vk::Extent2D dst_extent,
             vk::Filter filter);
 
-  // Convenient way to bring CommandBuffer to a known default state.  See the
-  // implementation of SetToDefaultState() for more details; it's basically a
-  // big switch statement.
-  enum class DefaultState {
-    kOpaque,
-    // The intuition is more clearly expressed in terms of "transparency"
-    // instead of "alpha", where the former is defined as 1-alpha.
-    // If the transparencies of the fragment and destination pixel are,
-    // respectively:
-    //   X' == 1-X
-    //   Y' == 1-Y
-    // ... then we want the blended output to have transparency (X' * Y').
-    // In terms of alpha, this is:
-    //   1 - ((1-X) * (1-Y))  ==
-    //   1 - (1 - X - Y + XY) ==
-    //   X + Y - XY           ==
-    //   X + Y * (1-X)
-    // We express this with the following blend-factors:
-    //   src_alpha_blend == ONE
-    //   dst_alpha_blend == ONE_MINUS_SRC_ALPHA
-    kTranslucent,
-    kWireframe
-  };
+  using DefaultState = CommandBufferPipelineState::DefaultState;
   void SetToDefaultState(DefaultState state);
 
   // Set the ShaderProgram that will be used to obtain the VkPipeline to be used

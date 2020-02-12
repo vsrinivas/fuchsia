@@ -6,6 +6,7 @@
 #define SRC_UI_LIB_ESCHER_TEST_VK_VULKAN_TESTER_H_
 
 #include "src/ui/lib/escher/vk/command_buffer.h"
+#include "src/ui/lib/escher/vk/shader_program.h"
 
 namespace escher {
 
@@ -47,8 +48,15 @@ class VulkanTester {
   static vk::Pipeline ObtainGraphicsPipeline(CommandBufferT cb) {
     FXL_DCHECK(cb->current_pipeline_layout_);
     FXL_DCHECK(cb->current_program_);
-    return cb->pipeline_state_.FlushGraphicsPipeline(cb->current_pipeline_layout_,
-                                                     cb->current_program_);
+    return cb->pipeline_state_.FlushGraphicsPipeline(
+        cb->current_pipeline_layout_, cb->current_program_, /*allow_build_pipeline=*/true);
+  }
+
+  const ShaderProgramPtr& ClearPipelineStash(const ShaderProgramPtr& program) {
+    if (program) {
+      program->ClearPipelineStash();
+    }
+    return program;
   }
 };
 

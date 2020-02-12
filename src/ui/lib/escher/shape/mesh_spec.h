@@ -6,12 +6,15 @@
 #define SRC_UI_LIB_ESCHER_SHAPE_MESH_SPEC_H_
 
 // TODO(ES-132): Add Flags type so that MeshAttribute doesn't need vk::Flags.
-#include <vulkan/vulkan.hpp>
-
 #include "src/ui/lib/escher/vk/vulkan_limits.h"
+
+#include <vulkan/vulkan.hpp>
 
 namespace escher {
 
+// These are the attributes which can be present in a MeshSpec.  Each of them has a semantic meaning
+// which is distinct from its representation.  For example, kPosition2 and kUV are both represented
+// as vec2, but the data meant for one shouldn't be confused with the other.
 enum class MeshAttribute {
   // vec2.  Position of the vertex, to be transformed by model-view-projection
   // (MVP) matrix.
@@ -35,6 +38,19 @@ enum class MeshAttribute {
   kStride = 1 << 6,
 };
 
+// This struct specifies the vertex shader binding location for each type of mesh attribute; it
+// should correspond to the value expected by the GLSL/SPIR-V shader code, i.e. the |attrib|
+// argument to CommandBuffer::SetVertexAttributes().  Also see RenderFuncs::VertexAttributeBinding.
+struct MeshAttributeBindingLocations {
+  uint32_t position_2d;
+  uint32_t position_3d;
+  uint32_t position_offset;
+  uint32_t uv;
+  uint32_t perimeter_pos;
+  uint32_t blend_weight1;
+};
+
+// Describes all of the attributes that are associated with a specific vertex binding.
 using MeshAttributes = vk::Flags<MeshAttribute, uint32_t>;
 
 inline MeshAttributes operator|(MeshAttribute bit0, MeshAttribute bit1) {

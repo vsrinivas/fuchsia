@@ -32,7 +32,8 @@ int main(int argc, char** argv) {
   auto harness = CreateHarnessForDemo("Escher Waterfall Demo", WaterfallDemo::kDemoWidth,
                                       WaterfallDemo::kDemoHeight, argc, argv);
   {
-    WaterfallDemo demo(harness->escher()->GetWeakPtr(), argc, argv);
+    vk::Format swapchain_format = harness->GetVulkanSwapchain().format;
+    WaterfallDemo demo(harness->escher()->GetWeakPtr(), swapchain_format, argc, argv);
     harness->Run(&demo);
   }
   harness->Shutdown();

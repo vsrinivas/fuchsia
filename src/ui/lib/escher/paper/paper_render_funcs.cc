@@ -13,17 +13,6 @@
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/texture.h"
 
-namespace {
-
-constexpr uint32_t kMeshAttributeBindingLocation_Position2D = 0;
-constexpr uint32_t kMeshAttributeBindingLocation_Position3D = 0;
-constexpr uint32_t kMeshAttributeBindingLocation_PositionOffset = 1;
-constexpr uint32_t kMeshAttributeBindingLocation_UV = 2;
-constexpr uint32_t kMeshAttributeBindingLocation_PerimeterPos = 3;
-constexpr uint32_t kMeshAttributeBindingLocation_BlendWeight = 4;
-
-}  // anonymous namespace
-
 namespace escher {
 
 void PaperRenderFuncs::MeshData::Bind(CommandBuffer* cb) const {
@@ -87,57 +76,6 @@ void PaperRenderFuncs::RenderMesh(CommandBuffer* cb, const RenderQueueContext* c
   }
 }
 
-// Helper for PaperRenderFuncs::NewMeshData().
-static PaperRenderFuncs::VertexAttributeBinding* FillVertexAttributeBindings(
-    PaperRenderFuncs::VertexAttributeBinding* binding, uint32_t binding_index,
-    MeshAttributes attributes) {
-  using VertexAttributeBinding = PaperRenderFuncs::VertexAttributeBinding;
-
-  if (attributes & MeshAttribute::kPosition2D) {
-    *binding++ = VertexAttributeBinding{
-        .binding_index = binding_index,
-        .attribute_index = kMeshAttributeBindingLocation_Position2D,
-        .format = vk::Format::eR32G32Sfloat,
-        .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kPosition2D)};
-  }
-  if (attributes & MeshAttribute::kPosition3D) {
-    *binding++ = VertexAttributeBinding{
-        .binding_index = binding_index,
-        .attribute_index = kMeshAttributeBindingLocation_Position3D,
-        .format = vk::Format::eR32G32B32Sfloat,
-        .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kPosition3D)};
-  }
-  if (attributes & MeshAttribute::kPositionOffset) {
-    *binding++ = VertexAttributeBinding{
-        .binding_index = binding_index,
-        .attribute_index = kMeshAttributeBindingLocation_PositionOffset,
-        .format = vk::Format::eR32G32Sfloat,
-        .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kPositionOffset)};
-  }
-  if (attributes & MeshAttribute::kUV) {
-    *binding++ =
-        VertexAttributeBinding{.binding_index = binding_index,
-                               .attribute_index = kMeshAttributeBindingLocation_UV,
-                               .format = vk::Format::eR32G32Sfloat,
-                               .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kUV)};
-  }
-  if (attributes & MeshAttribute::kPerimeterPos) {
-    *binding++ = VertexAttributeBinding{
-        .binding_index = binding_index,
-        .attribute_index = kMeshAttributeBindingLocation_PerimeterPos,
-        .format = vk::Format::eR32G32Sfloat,
-        .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kPerimeterPos)};
-  }
-  if (attributes & MeshAttribute::kBlendWeight1) {
-    *binding++ = VertexAttributeBinding{
-        .binding_index = binding_index,
-        .attribute_index = kMeshAttributeBindingLocation_BlendWeight,
-        .format = vk::Format::eR32Sfloat,
-        .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kBlendWeight1)};
-  }
-  return binding;
-}
-
 PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(const FramePtr& frame, Mesh* mesh,
                                                           const TexturePtr& texture,
                                                           uint32_t num_indices,
@@ -184,7 +122,8 @@ PaperRenderFuncs::MeshData* PaperRenderFuncs::NewMeshData(const FramePtr& frame,
   // Set up vertex attribute bindings.
   const uint32_t total_attribute_count = mesh_spec.total_attribute_count();
   obj->vertex_attribute_count = total_attribute_count;
-  obj->vertex_attributes = NewVertexAttributeBindings(allocator, mesh_spec, total_attribute_count);
+  obj->vertex_attributes = NewVertexAttributeBindings(kMeshAttributeBindingLocations, allocator,
+                                                      mesh_spec, total_attribute_count);
   obj->uniform_binding_count = 0;
   obj->texture = texture.get();
 
@@ -206,25 +145,6 @@ PaperRenderFuncs::MeshDrawData* PaperRenderFuncs::NewMeshDrawData(const FramePtr
   draw_data->flags = flags;
 
   return draw_data;
-}
-
-RenderFuncs::VertexAttributeBinding* PaperRenderFuncs::NewVertexAttributeBindings(
-    BlockAllocator* allocator, const MeshSpec& mesh_spec, uint32_t total_attribute_count) {
-  FXL_DCHECK(total_attribute_count == mesh_spec.total_attribute_count());
-
-  auto bindings = allocator->AllocateMany<VertexAttributeBinding>(total_attribute_count);
-  {
-    VertexAttributeBinding* current = bindings;
-    for (uint32_t i = 0; i < VulkanLimits::kNumVertexBuffers; ++i) {
-      if (mesh_spec.attribute_count(i) > 0) {
-        current = FillVertexAttributeBindings(current, i, mesh_spec.attributes[i]);
-      }
-    }
-
-    // Sanity check that we filled in the correct number of attributes.
-    FXL_DCHECK(current == (bindings + total_attribute_count));
-  }
-  return bindings;
 }
 
 }  // namespace escher

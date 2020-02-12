@@ -19,10 +19,14 @@
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/renderer/render_funcs.h"
 #include "src/ui/lib/escher/scene/object.h"
+// TODO(44894): try to avoid including an "impl" file.
+#include "src/ui/lib/escher/third_party/granite/vk/command_buffer_pipeline_state.h"
+#include "src/ui/lib/escher/third_party/granite/vk/render_pass.h"
 #include "src/ui/lib/escher/util/string_utils.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/command_buffer.h"
 #include "src/ui/lib/escher/vk/image.h"
+#include "src/ui/lib/escher/vk/impl/render_pass_cache.h"
 #include "src/ui/lib/escher/vk/render_pass_info.h"
 #include "src/ui/lib/escher/vk/shader_program.h"
 #include "src/ui/lib/escher/vk/texture.h"
@@ -37,7 +41,6 @@ PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher, const PaperRendererConfi
     : escher_(weak_escher),
       context_(weak_escher->vulkan_context()),
       config_(config),
-
       draw_call_factory_(weak_escher, config),
       shape_cache_(std::move(weak_escher), config),
       // TODO(ES-151): (probably) move programs into PaperDrawCallFactory.
@@ -555,18 +558,16 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
         .eye_index = cam_data.eye_index,
     });
 
-    context.set_shader_program(no_lighting_program_);
     context.set_draw_mode(PaperRendererDrawMode::kAmbient);
 
     // Render wireframe.
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kWireframe);
+    context.set_shader_program(no_lighting_program_);
     render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kWireframe);
 
     // Render opaque.
-    context.set_shader_program(ambient_light_program_);
-    cmd_buf->SetWireframe(false);
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
-
+    context.set_shader_program(ambient_light_program_);
     render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kOpaque);
   }
 
@@ -574,18 +575,26 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
   cmd_buf->SetDepthTestAndWrite(true, false);
   cmd_buf->SetStencilFrontReference(0xff, 0xff, 0U);
   cmd_buf->SetStencilBackReference(0xff, 0xff, 0U);
+  cmd_buf->SetBlendFactors(
+      /*src_color_blend=*/vk::BlendFactor::eOne, /*src_alpha_blend=*/vk::BlendFactor::eZero,
+      /*dst_color_blend=*/vk::BlendFactor::eOne, /*dst_alpha_blend=*/vk::BlendFactor::eOne);
+  cmd_buf->SetBlendOp(vk::BlendOp::eAdd);
 
   // For each point light, emit Vulkan commands first to draw the stencil shadow
   // geometry for that light, and then to add the lighting contribution for that
   // light.
   const uint32_t num_point_lights = frame_data_->scene->num_point_lights();
   for (uint32_t i = 0; i < num_point_lights; ++i) {
-    // Must clear the stencil buffer for every light except the first one.
+    // Some setup doesn't need to be done for the first light.
     if (i != 0) {
       // Must clear the stencil buffer for every light except the first one.
       cmd_buf->ClearDepthStencilAttachmentRect(cam_data.rect.offset, cam_data.rect.extent,
                                                render_pass_info.clear_depth_stencil,
                                                vk::ImageAspectFlagBits::eStencil);
+
+      // Ensure that each light starts with blending disabled.  Otherwise, the 2nd and subsequent
+      // lights would use a different pipeline for |shadow_volume_geometry_program_|.
+      cmd_buf->SetBlendEnable(false);
 
       if (config_.debug) {
         // Replace values set by the debug visualization.
@@ -634,9 +643,6 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
       }
 
       cmd_buf->SetBlendEnable(true);
-      cmd_buf->SetBlendFactors(vk::BlendFactor::eOne, vk::BlendFactor::eZero, vk::BlendFactor::eOne,
-                               vk::BlendFactor::eOne);
-      cmd_buf->SetBlendOp(vk::BlendOp::eAdd);
 
       cmd_buf->SetCullMode(vk::CullModeFlagBits::eBack);
       cmd_buf->SetDepthCompareOp(vk::CompareOp::eLessOrEqual);
@@ -650,14 +656,19 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
     }
 
     if (config_.debug) {
-      context.set_draw_mode(PaperRendererDrawMode::kShadowVolumeGeometry);
-      context.set_shader_program(shadow_volume_geometry_debug_program_);
+      if (!escher_->supports_wireframe()) {
+        FXL_LOG(WARNING) << "Wireframe not supported; cannot visualize shadow volume geometry.";
+      } else {
+        context.set_draw_mode(PaperRendererDrawMode::kShadowVolumeGeometry);
+        context.set_shader_program(shadow_volume_geometry_debug_program_);
 
-      cmd_buf->SetBlendEnable(false);
-      cmd_buf->SetStencilTest(false);
-      cmd_buf->SetWireframe(true);
-      cmd_buf->SetCullMode(vk::CullModeFlagBits::eNone);
-      render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kOpaque);
+        cmd_buf->SetBlendEnable(false);
+        cmd_buf->SetStencilTest(false);
+        cmd_buf->SetWireframe(true);
+        cmd_buf->SetCullMode(vk::CullModeFlagBits::eNone);
+
+        render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kOpaque);
+      }
     }
   }
 
@@ -721,6 +732,174 @@ void PaperRenderer::GenerateDebugCommands(CommandBuffer* cmd_buf) {
       vk::AccessFlagBits::eColorAttachmentWrite | vk::AccessFlagBits::eTransferWrite);
 
   frame->AddTimestamp("finished debug render pass");
+}
+
+// Helper for WarmPipelineAndRenderPassCaches().  Return the render-pass that should be used for
+// pipeline creation for the specified config.
+static impl::RenderPassPtr WarmRenderPassCache(impl::RenderPassCache* cache,
+                                               const PaperRendererConfig& config,
+                                               vk::Format output_format,
+                                               vk::ImageLayout output_swapchain_layout) {
+  RenderPassInfo info;
+
+  RenderPassInfo::AttachmentInfo color_attachment_info;
+  color_attachment_info.format = output_format;
+  color_attachment_info.swapchain_layout = output_swapchain_layout;
+  color_attachment_info.sample_count = 1;
+
+  RenderPassInfo::InitRenderPassInfo(&info, color_attachment_info, config.depth_stencil_format,
+                                     output_format, config.msaa_sample_count, false);
+
+  return cache->ObtainRenderPass(info, /*allow_render_pass_creation*/ true);
+}
+
+// Helper for WarmPipelineAndRenderPassCaches.
+static void BindMeshSpecHelper(CommandBufferPipelineState* cbps, const MeshSpec& mesh_spec) {
+  const uint32_t total_attribute_count = mesh_spec.total_attribute_count();
+  BlockAllocator allocator;
+  RenderFuncs::VertexAttributeBinding* attribute_bindings =
+      RenderFuncs::NewVertexAttributeBindings(PaperRenderFuncs::kMeshAttributeBindingLocations,
+                                              &allocator, mesh_spec, total_attribute_count);
+
+  for (uint32_t i = 0; i < total_attribute_count; ++i) {
+    attribute_bindings[i].Bind(cbps);
+  }
+
+  // NOTE: we don't actually have a buffer to bind, nor an offset into the bound buffer.  This would
+  // be a problem if we tried to generate a draw cmd, but is OK because we just need the stride and
+  // input-rate in order to pre-generate pipelines.
+  for (uint32_t i = 0; i < VulkanLimits::kNumVertexBuffers; ++i) {
+    cbps->BindVertices(i, vk::Buffer(), 0, mesh_spec.stride(i), vk::VertexInputRate::eVertex);
+  }
+}
+
+// Helper for WarmPipelineAndRenderPassCaches.
+static void WarmProgramHelper(const ShaderProgramPtr& program, CommandBufferPipelineState* cbps,
+                              const std::vector<SamplerPtr>& immutable_samplers) {
+  // Generate pipeline which doesn't require an immutable sampler.
+  PipelineLayout* layout = program->ObtainPipelineLayout(nullptr);
+  cbps->FlushGraphicsPipeline(layout, program.get(), true);
+
+  // Generate pipelines which require immutable samplers.
+  for (auto& sampler : immutable_samplers) {
+    PipelineLayout* layout = program->ObtainPipelineLayout(sampler);
+    cbps->FlushGraphicsPipeline(layout, program.get(), true);
+  }
+}
+
+// Populate caches with all render passes and pipelines required by |config|.
+void PaperRenderer::WarmPipelineAndRenderPassCaches(
+    Escher* escher, const PaperRendererConfig& config, vk::Format output_format,
+    vk::ImageLayout output_swapchain_layout, const std::vector<SamplerPtr>& immutable_samplers) {
+  CommandBufferPipelineState cbps;
+
+  // Obtain and set the render pass; this is the only render pass that is used, so we just need to
+  // set it once.
+  // TODO(44894): try to avoid using this "impl" type directly.
+  impl::RenderPassPtr render_pass = WarmRenderPassCache(escher->render_pass_cache(), config,
+                                                        output_format, output_swapchain_layout);
+
+  FXL_DCHECK(render_pass);
+  cbps.set_render_pass(render_pass.get());
+
+  // Set up vertex buffer bindings, as well as bindings to attributes within those buffers.  Of
+  // course we don't actually have buffers right now; that's OK... see comments in the helper func
+  // for details.
+  BindMeshSpecHelper(&cbps, PaperShapeCache::kShadowVolumeMeshSpec());
+  // NOTE: different mesh specs are used depending on whether stencil shadows
+  // are enabled.  But it doesn't matter, because CommandBuffer will only use whichever attributes
+  // are required for the specified shader.
+  // TODO(44898): once kShadowVolumeMeshSpec and kStandardMeshSpec are constexpr, we should be able
+  // to use static_assert() here.
+  FXL_DCHECK(PaperShapeCache::kShadowVolumeMeshSpec().attributes[0] ==
+             PaperShapeCache::kStandardMeshSpec().attributes[0]);
+  FXL_DCHECK(PaperShapeCache::kShadowVolumeMeshSpec().attributes[1] ==
+             PaperShapeCache::kStandardMeshSpec().attributes[1]);
+
+  switch (config.shadow_type) {
+    case PaperRendererShadowType::kNone: {
+      if (escher->supports_wireframe()) {
+        cbps.SetToDefaultState(CommandBuffer::DefaultState::kWireframe);
+        WarmProgramHelper(escher->GetProgram(kNoLightingProgramData), &cbps, immutable_samplers);
+      }
+
+      cbps.SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
+      WarmProgramHelper(escher->GetProgram(kAmbientLightProgramData), &cbps, immutable_samplers);
+
+      cbps.SetToDefaultState(CommandBuffer::DefaultState::kTranslucent);
+      WarmProgramHelper(escher->GetProgram(kNoLightingProgramData), &cbps, immutable_samplers);
+    } break;
+    case PaperRendererShadowType::kShadowVolume: {
+      // Wireframe shapes (not shadow volumes).
+      if (escher->supports_wireframe()) {
+        cbps.SetToDefaultState(CommandBuffer::DefaultState::kWireframe);
+        WarmProgramHelper(escher->GetProgram(kNoLightingProgramData), &cbps, immutable_samplers);
+      }
+
+      // Ambient opaque.
+      {
+        cbps.SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
+        WarmProgramHelper(escher->GetProgram(kAmbientLightProgramData), &cbps, immutable_samplers);
+      }
+
+      // Set state common to both stencil shadow "geometry" and "lighting" passes.
+      cbps.SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
+      cbps.SetStencilTest(true);
+      cbps.SetDepthTestAndWrite(true, false);
+      cbps.SetBlendFactors(
+          /*src_color_blend=*/vk::BlendFactor::eOne, /*src_alpha_blend=*/vk::BlendFactor::eZero,
+          /*dst_color_blend=*/vk::BlendFactor::eOne, /*dst_alpha_blend=*/vk::BlendFactor::eOne);
+      cbps.SetBlendOp(vk::BlendOp::eAdd);
+
+      // Stencil shadow geometry.
+      {
+        cbps.SetCullMode(vk::CullModeFlagBits::eNone);
+        cbps.SetDepthCompareOp(vk::CompareOp::eLess);
+        cbps.SetStencilFrontOps(vk::CompareOp::eAlways, vk::StencilOp::eIncrementAndWrap,
+                                vk::StencilOp::eKeep, vk::StencilOp::eKeep);
+        cbps.SetStencilBackOps(vk::CompareOp::eAlways, vk::StencilOp::eDecrementAndWrap,
+                               vk::StencilOp::eKeep, vk::StencilOp::eKeep);
+        WarmProgramHelper(escher->GetProgram(kShadowVolumeGeometryProgramData), &cbps,
+                          immutable_samplers);
+      }
+
+      // Stencil shadow lighting.
+      {
+        cbps.SetBlendEnable(true);
+        cbps.SetCullMode(vk::CullModeFlagBits::eBack);
+        cbps.SetDepthCompareOp(vk::CompareOp::eLessOrEqual);
+        cbps.SetStencilFrontOps(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eKeep,
+                                vk::StencilOp::eKeep);
+        cbps.SetStencilBackOps(vk::CompareOp::eAlways, vk::StencilOp::eKeep, vk::StencilOp::eKeep,
+                               vk::StencilOp::eKeep);
+
+        WarmProgramHelper(escher->GetProgram(kPointLightProgramData), &cbps, immutable_samplers);
+
+        WarmProgramHelper(escher->GetProgram(kPointLightFalloffProgramData), &cbps,
+                          immutable_samplers);
+      }
+
+      // Wireframe shadow volumes (for debug-mode).
+      if (escher->supports_wireframe()) {
+        cbps.SetBlendEnable(false);
+        cbps.SetStencilTest(false);
+        cbps.SetWireframe(true);
+        cbps.SetCullMode(vk::CullModeFlagBits::eNone);
+        WarmProgramHelper(escher->GetProgram(kShadowVolumeGeometryDebugProgramData), &cbps,
+                          immutable_samplers);
+      }
+
+      // Translucent.
+      {
+        cbps.SetToDefaultState(CommandBuffer::DefaultState::kTranslucent);
+        WarmProgramHelper(escher->GetProgram(kNoLightingProgramData), &cbps, immutable_samplers);
+      }
+
+    } break;
+    case PaperRendererShadowType::kEnumCount:
+    default:
+      FXL_CHECK(false) << "unhandled shadow type";
+  }
 }
 
 }  // namespace escher

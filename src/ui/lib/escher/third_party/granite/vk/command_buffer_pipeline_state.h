@@ -54,8 +54,15 @@ class CommandBufferPipelineState {
 
   void BeginGraphicsOrComputeContext();
 
-  vk::Pipeline FlushGraphicsPipeline(const PipelineLayout* layout, ShaderProgram* program);
-  vk::Pipeline FlushComputePipeline(const PipelineLayout* pipeline_layout, ShaderProgram* program);
+  // Use |layout| and |program| to compute a hash that is used to look up the corresponding
+  // vk::Pipeline.  If no pipeline is found, then if |allow_build_pipeline| == true, a new pipeline
+  // is lazily generated and cached for next time; otherwise a CHECK fails.
+  vk::Pipeline FlushGraphicsPipeline(const PipelineLayout* layout, ShaderProgram* program,
+                                     bool allow_build_pipeline);
+  vk::Pipeline FlushComputePipeline(const PipelineLayout* layout, ShaderProgram* program);
+
+  // Helper function used by |FlushGraphicsPipeline()|, and by tests.  Generates a new vk::Pipeline.
+  vk::Pipeline BuildGraphicsPipeline(const PipelineLayout* layout, ShaderProgram* program);
 
   struct StaticState;
   StaticState* static_state() { return &static_state_; }
@@ -77,6 +84,31 @@ class CommandBufferPipelineState {
   // Called by CommandBuffer::FlushRenderState().  Binds any vertex buffers that
   // are both dirty and active in the current pipeline layout.
   void FlushVertexBuffers(vk::CommandBuffer cb);
+
+  // Convenient way to bring CommandBuffer to a known default state.  See the
+  // implementation of SetToDefaultState() for more details; it's basically a
+  // big switch statement.
+  enum class DefaultState {
+    kOpaque,
+    // The intuition is more clearly expressed in terms of "transparency"
+    // instead of "alpha", where the former is defined as 1-alpha.
+    // If the transparencies of the fragment and destination pixel are,
+    // respectively:
+    //   X' == 1-X
+    //   Y' == 1-Y
+    // ... then we want the blended output to have transparency (X' * Y').
+    // In terms of alpha, this is:
+    //   1 - ((1-X) * (1-Y))  ==
+    //   1 - (1 - X - Y + XY) ==
+    //   X + Y - XY           ==
+    //   X + Y * (1-X)
+    // We express this with the following blend-factors:
+    //   src_alpha_blend == ONE
+    //   dst_alpha_blend == ONE_MINUS_SRC_ALPHA
+    kTranslucent,
+    kWireframe
+  };
+  void SetToDefaultState(DefaultState state);
 
   impl::RenderPass* render_pass() { return render_pass_; }
   void set_render_pass(impl::RenderPass* render_pass) {
@@ -258,8 +290,7 @@ class CommandBufferPipelineState {
     vk::VertexInputRate input_rates[VulkanLimits::kNumVertexBuffers];
   };
 
-  vk::Pipeline BuildGraphicsPipeline(const PipelineLayout* layout, ShaderProgram* program);
-  vk::Pipeline BuildComputePipeline(const PipelineLayout* pipeline_layout, ShaderProgram* program);
+  vk::Pipeline BuildComputePipeline(const PipelineLayout* layout, ShaderProgram* program);
 
   // Helper functions for BuildGraphicsPipeline().
   static void InitPipelineColorBlendStateCreateInfo(

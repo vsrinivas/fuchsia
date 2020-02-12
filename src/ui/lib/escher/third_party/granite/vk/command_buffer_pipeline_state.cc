@@ -87,12 +87,12 @@ vk::Pipeline CommandBufferPipelineState::FlushComputePipeline(const PipelineLayo
 }
 
 vk::Pipeline CommandBufferPipelineState::FlushGraphicsPipeline(
-    const PipelineLayout* pipeline_layout, ShaderProgram* program) {
+    const PipelineLayout* pipeline_layout, ShaderProgram* program, bool allow_build_pipeline) {
   Hasher h;
   h.u64(pipeline_layout->spec().hash().val);
 
   active_vertex_bindings_ = 0;
-  uint32_t attribute_mask = pipeline_layout->spec().attribute_mask();
+  const uint32_t attribute_mask = pipeline_layout->spec().attribute_mask();
   ForEachBitIndex(attribute_mask, [&](uint32_t bit) {
     h.u32(bit);
     active_vertex_bindings_ |= 1u << vertex_attributes_[bit].binding;
@@ -108,12 +108,27 @@ vk::Pipeline CommandBufferPipelineState::FlushGraphicsPipeline(
 
   h.u64(render_pass_->uid());
   h.u32(current_subpass_);
-  h.struc(static_state_);
 
-  if (static_state_.blend_enable) {
+  // When blending is disabled, these have no effect, so remember them in case we need to reset them
+  // later.  See below.
+  const vk::BlendOp alpha_op_orig = static_state_.get_alpha_blend_op();
+  const vk::BlendOp color_op_orig = static_state_.get_color_blend_op();
+  const vk::BlendFactor dst_alpha_blend_orig = static_state_.get_dst_alpha_blend();
+  const vk::BlendFactor src_alpha_blend_orig = static_state_.get_src_alpha_blend();
+  const vk::BlendFactor dst_color_blend_orig = static_state_.get_dst_color_blend();
+  const vk::BlendFactor src_color_blend_orig = static_state_.get_src_color_blend();
+
+  if (!static_state_.blend_enable) {
+    // See above: set blend ops/factors to some predefined values.  It doesn't matter which ones,
+    // since they'll be ignored; we just want to generate the same hash.
+    SetBlendFactors(vk::BlendFactor::eZero, vk::BlendFactor::eZero, vk::BlendFactor::eZero,
+                    vk::BlendFactor::eZero);
+    SetBlendOp(vk::BlendOp::eAdd, vk::BlendOp::eAdd);
+  } else {
     const auto needs_blend_constant = [](vk::BlendFactor factor) {
       return factor == vk::BlendFactor::eConstantColor || factor == vk::BlendFactor::eConstantAlpha;
     };
+
     bool b0 = needs_blend_constant(static_state_.get_src_color_blend());
     bool b1 = needs_blend_constant(static_state_.get_src_alpha_blend());
     bool b2 = needs_blend_constant(static_state_.get_dst_color_blend());
@@ -124,16 +139,56 @@ vk::Pipeline CommandBufferPipelineState::FlushGraphicsPipeline(
     }
   }
 
+  const Hash hash_before_static_state = h.value();
+  h.struc(static_state_);
+  const Hash hash_after_static_state = h.value();
+
+  // This is very handy code to enable when trying to figure out why your app hasn't pre-generated
+  // all of the pipelines needed by your renderer.
+#if 0
+  FXL_LOG(INFO) << "Generating hash for FlushGraphicsPipeline() pipeline lookup";
+  FXL_LOG(INFO) << "      layout spec hash " << pipeline_layout->spec().hash().val;
+  ForEachBitIndex(attribute_mask, [&](uint32_t bit) {
+    FXL_LOG(INFO) << "      attribute mask bit " << bit;
+    FXL_LOG(INFO) << "      attribute mask bit binding "
+                  << vertex_attributes_[bit].binding;
+    FXL_LOG(INFO) << "      attribute mask bit format "
+                  << vk::to_string(vertex_attributes_[bit].format);
+    FXL_LOG(INFO) << "      attribute mask bit offset " << vertex_attributes_[bit].offset;
+  });
+  FXL_LOG(INFO) << "      attribute active_vertex_bindings_ " << active_vertex_bindings_;
+  ForEachBitIndex(active_vertex_bindings_, [&](uint32_t bit) {
+    FXL_LOG(INFO) << "      vertex binding rate "
+                  << vk::to_string(vertex_bindings_.input_rates[bit]);
+    FXL_LOG(INFO) << "      vertex binding stride " << vertex_bindings_.strides[bit];
+  });
+  FXL_LOG(INFO) << "      render_pass uid " << render_pass_->uid();
+  FXL_LOG(INFO) << "      current subpass " << current_subpass_;
+  FXL_LOG(INFO) << "      hash before static state " << hash_before_static_state.val;
+  FXL_LOG(INFO) << "      hash after static state " << hash_after_static_state.val;
+  FXL_LOG(INFO) << "      hash after blend constants " << h.value().val;
+#endif
+
   // Try to find a previously-stashed pipeline that matches the current command
   // state.  If none is found, build a new pipeline and stash it.
   Hash hash = h.value();
-  if (auto pipeline = program->FindPipeline(hash)) {
-    return pipeline;
-  } else {
+  vk::Pipeline pipeline = program->FindPipeline(hash);
+  if (!pipeline) {
+    FXL_CHECK(allow_build_pipeline) << static_state_;
     pipeline = BuildGraphicsPipeline(pipeline_layout, program);
     program->StashPipeline(hash, pipeline);
-    return pipeline;
+    FXL_CHECK(pipeline);
   }
+
+  // If blending is disabled, reset the blend ops/factors to their original value before returning
+  // the pipeline.
+  if (!static_state_.blend_enable) {
+    SetBlendFactors(src_color_blend_orig, src_alpha_blend_orig, dst_color_blend_orig,
+                    dst_alpha_blend_orig);
+    SetBlendOp(color_op_orig, alpha_op_orig);
+  }
+
+  return pipeline;
 }
 
 // Helper function for BuildGraphicsPipeline().
@@ -155,8 +210,10 @@ void CommandBufferPipelineState::InitPipelineColorBlendStateCreateInfo(
       static_assert(
           VulkanLimits::kNumColorAttachments * 4 <= sizeof(static_state.color_write_mask) * 8,
           "not enough bits for color mask.");
+
       att.colorWriteMask =
           vk::ColorComponentFlags((static_state.color_write_mask >> (4 * i)) & 0xf);
+
       att.blendEnable = static_state.blend_enable;
       if (att.blendEnable) {
         att.alphaBlendOp = vk::BlendOp(static_state.alpha_blend_op);
@@ -410,6 +467,43 @@ void CommandBufferPipelineState::FlushVertexBuffers(vk::CommandBuffer cb) {
                          vertex_bindings_.offsets + binding);
   });
   dirty_vertex_bindings_ &= ~update_vbo_mask;
+}
+
+void CommandBufferPipelineState::SetToDefaultState(DefaultState default_state) {
+  memset(&static_state_, 0, sizeof(StaticState));
+
+  // The following state is common to all currently-supported defaults.
+  static_state_.front_face = VK_FRONT_FACE_CLOCKWISE;
+  static_state_.cull_mode = VK_CULL_MODE_BACK_BIT;
+  static_state_.depth_test = true;
+  static_state_.depth_compare = VK_COMPARE_OP_LESS_OR_EQUAL;
+  static_state_.depth_write = true;
+  static_state_.depth_bias_enable = false;
+  static_state_.primitive_restart = false;
+  static_state_.stencil_test = false;
+  static_state_.primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+  static_state_.color_write_mask = ~0u;
+
+  // These states differ between the various supported defaults.
+  switch (default_state) {
+    case DefaultState::kWireframe: {
+      static_state_.wireframe = true;
+      static_state_.blend_enable = false;
+    } break;
+    case DefaultState::kOpaque: {
+      static_state_.blend_enable = false;
+    } break;
+    case DefaultState::kTranslucent: {
+      // See definition in header for explanation of these blend factors.
+      static_state_.blend_enable = true;
+      static_state_.src_color_blend = VK_BLEND_FACTOR_SRC_ALPHA;
+      static_state_.dst_color_blend = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+      static_state_.src_alpha_blend = VK_BLEND_FACTOR_ONE;
+      static_state_.dst_alpha_blend = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+      static_state_.color_blend_op = VK_BLEND_OP_ADD;
+      static_state_.alpha_blend_op = VK_BLEND_OP_ADD;
+    } break;
+  }
 }
 
 }  // namespace escher

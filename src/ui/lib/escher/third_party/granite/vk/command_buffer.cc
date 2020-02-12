@@ -526,8 +526,8 @@ void CommandBuffer::FlushComputePipeline() {
 
 void CommandBuffer::FlushGraphicsPipeline() {
   TRACE_DURATION("gfx", "escher::CommandBuffer::FlushGraphicsPipeline");
-  current_vk_pipeline_ =
-      pipeline_state_.FlushGraphicsPipeline(current_pipeline_layout_, current_program_);
+  current_vk_pipeline_ = pipeline_state_.FlushGraphicsPipeline(
+      current_pipeline_layout_, current_program_, allow_renderpass_and_pipeline_creation_);
 }
 
 void CommandBuffer::FlushDescriptorSets() {
@@ -703,42 +703,8 @@ void CommandBuffer::WriteDescriptors(uint32_t set_index, vk::DescriptorSet vk_se
 }
 
 void CommandBuffer::SetToDefaultState(DefaultState default_state) {
-  PipelineStaticState* static_state = pipeline_state_.static_state();
-  memset(static_state, 0, sizeof(PipelineStaticState));
   SetDirty(kDirtyStaticStateBit);
-
-  // The following state is common to all currently-supported defaults.
-  static_state->front_face = VK_FRONT_FACE_CLOCKWISE;
-  static_state->cull_mode = VK_CULL_MODE_BACK_BIT;
-  static_state->depth_test = true;
-  static_state->depth_compare = VK_COMPARE_OP_LESS_OR_EQUAL;
-  static_state->depth_write = true;
-  static_state->depth_bias_enable = false;
-  static_state->primitive_restart = false;
-  static_state->stencil_test = false;
-  static_state->primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-  static_state->color_write_mask = ~0u;
-
-  // These states differ between the various supported defaults.
-  switch (default_state) {
-    case DefaultState::kWireframe: {
-      static_state->wireframe = true;
-      static_state->blend_enable = false;
-    } break;
-    case DefaultState::kOpaque: {
-      static_state->blend_enable = false;
-    } break;
-    case DefaultState::kTranslucent: {
-      // See definition in header for explanation of these blend factors.
-      static_state->blend_enable = true;
-      static_state->src_color_blend = VK_BLEND_FACTOR_SRC_ALPHA;
-      static_state->dst_color_blend = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-      static_state->src_alpha_blend = VK_BLEND_FACTOR_ONE;
-      static_state->dst_alpha_blend = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-      static_state->color_blend_op = VK_BLEND_OP_ADD;
-      static_state->alpha_blend_op = VK_BLEND_OP_ADD;
-    } break;
-  }
+  pipeline_state_.SetToDefaultState(default_state);
 }
 
 void CommandBuffer::SaveState(CommandBuffer::SavedStateFlags flags,

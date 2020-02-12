@@ -22,7 +22,6 @@ RenderPassCache::~RenderPassCache() = default;
 const impl::RenderPassPtr& RenderPassCache::ObtainRenderPass(const RenderPassInfo& rpi,
                                                              bool allow_render_pass_creation) {
   TRACE_DURATION("gfx", "escher::impl::RenderPassCache::ObtainRenderPass");
-
   Hasher h;
 
   // TODO(ES-73): take advantage of lazily-allocated memory for transient

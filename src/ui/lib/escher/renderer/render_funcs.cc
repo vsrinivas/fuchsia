@@ -11,9 +11,83 @@
 
 namespace escher {
 
-void RenderFuncs::ObtainDepthAndMsaaTextures(
-    Escher* escher, const FramePtr& frame, const ImageInfo& info, uint32_t msaa_sample_count,
-    vk::Format depth_stencil_format, TexturePtr& depth_texture, TexturePtr& msaa_texture) {
+// Helper for NewVertexAttributeBindings().
+static RenderFuncs::VertexAttributeBinding* FillVertexAttributeBindings(
+    const MeshAttributeBindingLocations& attribute_binding_locations,
+    RenderFuncs::VertexAttributeBinding* binding, uint32_t binding_index,
+    MeshAttributes attributes) {
+  using VertexAttributeBinding = RenderFuncs::VertexAttributeBinding;
+
+  if (attributes & MeshAttribute::kPosition2D) {
+    *binding++ = VertexAttributeBinding{
+        .binding_index = binding_index,
+        .attribute_index = attribute_binding_locations.position_2d,
+        .format = vk::Format::eR32G32Sfloat,
+        .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kPosition2D)};
+  }
+  if (attributes & MeshAttribute::kPosition3D) {
+    *binding++ = VertexAttributeBinding{
+        .binding_index = binding_index,
+        .attribute_index = attribute_binding_locations.position_3d,
+        .format = vk::Format::eR32G32B32Sfloat,
+        .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kPosition3D)};
+  }
+  if (attributes & MeshAttribute::kPositionOffset) {
+    *binding++ = VertexAttributeBinding{
+        .binding_index = binding_index,
+        .attribute_index = attribute_binding_locations.position_offset,
+        .format = vk::Format::eR32G32Sfloat,
+        .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kPositionOffset)};
+  }
+  if (attributes & MeshAttribute::kUV) {
+    *binding++ =
+        VertexAttributeBinding{.binding_index = binding_index,
+                               .attribute_index = attribute_binding_locations.uv,
+                               .format = vk::Format::eR32G32Sfloat,
+                               .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kUV)};
+  }
+  if (attributes & MeshAttribute::kPerimeterPos) {
+    *binding++ = VertexAttributeBinding{
+        .binding_index = binding_index,
+        .attribute_index = attribute_binding_locations.perimeter_pos,
+        .format = vk::Format::eR32G32Sfloat,
+        .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kPerimeterPos)};
+  }
+  if (attributes & MeshAttribute::kBlendWeight1) {
+    *binding++ = VertexAttributeBinding{
+        .binding_index = binding_index,
+        .attribute_index = attribute_binding_locations.blend_weight1,
+        .format = vk::Format::eR32Sfloat,
+        .offset = GetMeshAttributeOffset(attributes, MeshAttribute::kBlendWeight1)};
+  }
+  return binding;
+}
+
+RenderFuncs::VertexAttributeBinding* RenderFuncs::NewVertexAttributeBindings(
+    const MeshAttributeBindingLocations& attribute_binding_locations, BlockAllocator* allocator,
+    const MeshSpec& mesh_spec, uint32_t total_attribute_count) {
+  FXL_DCHECK(total_attribute_count == mesh_spec.total_attribute_count());
+
+  auto bindings = allocator->AllocateMany<VertexAttributeBinding>(total_attribute_count);
+  {
+    VertexAttributeBinding* current = bindings;
+    for (uint32_t i = 0; i < VulkanLimits::kNumVertexBuffers; ++i) {
+      if (mesh_spec.attribute_count(i) > 0) {
+        current = FillVertexAttributeBindings(attribute_binding_locations, current, i,
+                                              mesh_spec.attributes[i]);
+      }
+    }
+
+    // Sanity check that we filled in the correct number of attributes.
+    FXL_DCHECK(current == (bindings + total_attribute_count));
+  }
+  return bindings;
+}
+
+void RenderFuncs::ObtainDepthAndMsaaTextures(Escher* escher, const FramePtr& frame,
+                                             const ImageInfo& info, uint32_t msaa_sample_count,
+                                             vk::Format depth_stencil_format,
+                                             TexturePtr& depth_texture, TexturePtr& msaa_texture) {
   // Support for other sample_counts should fairly easy to add, if necessary.
   FXL_DCHECK(info.sample_count == 1);
 

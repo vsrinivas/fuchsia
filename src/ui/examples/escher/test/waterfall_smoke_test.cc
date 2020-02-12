@@ -9,13 +9,20 @@
 #include "src/ui/lib/escher/test/test_with_vk_validation_layer.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 
+namespace {
+
 static constexpr uint32_t kFramebufferWidth = 1024;
 static constexpr uint32_t kFramebufferHeight = 1024;
 
+// Use the same format as Scenic screen shots.
+static constexpr vk::Format kScenicScreenshotFormat = vk::Format::eB8G8R8A8Unorm;
+
 using WaterfallDemoTest = escher::test::TestWithVkValidationLayer;
 
+}  // namespace
+
 VK_TEST_F(WaterfallDemoTest, SmokeTest) {
-  WaterfallDemo demo(escher::test::GetEscher()->GetWeakPtr(), 0, nullptr);
+  WaterfallDemo demo(escher::test::GetEscher()->GetWeakPtr(), kScenicScreenshotFormat, 0, nullptr);
   auto escher = demo.escher();
 
   auto output_image = escher::image_utils::NewColorAttachmentImage(
@@ -40,14 +47,14 @@ VK_TEST_F(WaterfallDemoTest, SmokeTest) {
 }
 
 VK_TEST_F(WaterfallDemoTest, OffscreenBenchmark) {
-  WaterfallDemo demo(escher::test::GetEscher()->GetWeakPtr(), 0, nullptr);
+  WaterfallDemo demo(escher::test::GetEscher()->GetWeakPtr(), kScenicScreenshotFormat, 0, nullptr);
   constexpr size_t kNumFrames = 20;
-  Demo::RunOffscreenBenchmark(&demo, kFramebufferWidth, kFramebufferHeight,
-                              vk::Format::eB8G8R8A8Unorm, kNumFrames);
+  Demo::RunOffscreenBenchmark(&demo, kFramebufferWidth, kFramebufferHeight, kScenicScreenshotFormat,
+                              kNumFrames);
 }
 
 VK_TEST_F(WaterfallDemoTest, KeyPresses) {
-  WaterfallDemo demo(escher::test::GetEscher()->GetWeakPtr(), 0, nullptr);
+  WaterfallDemo demo(escher::test::GetEscher()->GetWeakPtr(), kScenicScreenshotFormat, 0, nullptr);
   escher::PaperRenderer* renderer = demo.renderer();
 
   // "D" means toggle debug visualization.

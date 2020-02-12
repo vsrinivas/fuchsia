@@ -187,6 +187,13 @@ class PaperRenderer final : public fxl::RefCountedThreadSafe<PaperRenderer> {
     int16_t actual_present;
   };
 
+  // Utility function to warm up the pipeline/render-pass caches before any frames are rendered,
+  // in order to avoid janking on the first frame that a particular config is used.
+  static void WarmPipelineAndRenderPassCaches(Escher* escher, const PaperRendererConfig& config,
+                                              vk::Format output_format,
+                                              vk::ImageLayout output_swapchain_layout,
+                                              const std::vector<SamplerPtr>& immutable_samplers);
+
  private:
   friend class escher::test::PaperRendererTest;
   explicit PaperRenderer(EscherWeakPtr escher, const PaperRendererConfig& config);

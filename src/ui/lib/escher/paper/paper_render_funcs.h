@@ -55,6 +55,16 @@ class PaperRenderFuncs : public RenderFuncs {
     void Bind(CommandBuffer* cb) const;
   };
 
+  // These are the vertex shader binding locations where each of these attributes are expected by
+  // the PaperRenderer shader code.  For example, see escher/shaders/paper/common/use.glsl.
+  constexpr static MeshAttributeBindingLocations kMeshAttributeBindingLocations = {
+      .position_2d = 0,
+      .position_3d = 0,
+      .position_offset = 1,
+      .uv = 2,
+      .perimeter_pos = 3,
+      .blend_weight1 = 4};
+
   // Helper function for allocating/populating a |MeshData|.  Both CPU and
   // uniform GPU memory is allocated using per-Frame allocators.
   static PaperRenderFuncs::MeshData* NewMeshData(const FramePtr& frame, Mesh* mesh,
@@ -66,16 +76,6 @@ class PaperRenderFuncs : public RenderFuncs {
   static PaperRenderFuncs::MeshDrawData* NewMeshDrawData(const FramePtr& frame,
                                                          const mat4& transform, const vec4& color,
                                                          PaperDrawableFlags flags);
-
-  // Helper function used by |NewMeshData()| (see above), and also by
-  // |PaperRenderer::WarmPipelineAndRenderPassCaches()|.
-  //
-  // |total_attribute_count| must == |mesh_spec.total_attribute_count()|.  This is passed as an arg
-  // because:
-  //   - it involves non-negligible bit-shifting to compute
-  //   - |MeshData()|, the highest-frequency caller, already has this info
-  static RenderFuncs::VertexAttributeBinding* NewVertexAttributeBindings(
-      BlockAllocator* allocator, const MeshSpec& mesh_spec, uint32_t total_attribute_count);
 };
 
 }  // namespace escher

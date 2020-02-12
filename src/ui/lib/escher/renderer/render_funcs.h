@@ -19,7 +19,7 @@ struct RenderQueueItem;
 
 class RenderFuncs {
  public:
-  // Struct to hold vertex index data.
+  // Struct to hold vertex index data.  Typically allocated as per-frame RenderQueue data.
   struct IndexBinding {
     vk::Buffer index_buffer;
     vk::IndexType index_type;
@@ -30,7 +30,7 @@ class RenderFuncs {
     }
   };
 
-  // Struct to hold vertex buffer data.
+  // Struct to hold vertex buffer data.  Typically allocated as per-frame RenderQueue data.
   struct VertexBinding {
     uint32_t binding_index;
     vk::Buffer buffer;
@@ -40,7 +40,7 @@ class RenderFuncs {
     void Bind(CommandBuffer* cb) const { cb->BindVertices(binding_index, buffer, offset, stride); }
   };
 
-  // Struct to hold vertex attribute data.
+  // Struct to hold vertex attribute data.  Typically allocated as per-frame RenderQueue data.
   struct VertexAttributeBinding {
     uint32_t binding_index;
     uint32_t attribute_index;
@@ -50,13 +50,28 @@ class RenderFuncs {
     void Bind(CommandBuffer* cb) const {
       cb->SetVertexAttributes(binding_index, attribute_index, format, offset);
     }
+
+    void Bind(CommandBufferPipelineState* cbps) const {
+      cbps->SetVertexAttributes(binding_index, attribute_index, format, offset);
+    }
   };
+
+  // Allocates and initializes a temporary array of VertexAttributeBindings, one for each attribute
+  // defined by |mesh_spec|.  This array is valid until the next time that |allocator| is reset.
+  //
+  // The caller must ensure that |mesh_spec.total_attribute_count()| == |total_attribute_count|.
+  // This is passed as an arg because:
+  //   - it involves non-negligible bit-shifting to compute
+  //   - high-frequency callers will already know the count, e.g. |PaperRenderFuncs::MeshData()|.
+  static RenderFuncs::VertexAttributeBinding* NewVertexAttributeBindings(
+      const MeshAttributeBindingLocations& attribute_binding_locations, BlockAllocator* allocator,
+      const MeshSpec& mesh_spec, uint32_t total_attribute_count);
 
   // Called in PaperRenderer::BeginFrame() to obtain suitable render targets.
   static void ObtainDepthAndMsaaTextures(Escher* escher, const FramePtr& frame,
                                          const ImageInfo& info, uint32_t msaa_sample_count,
-                                         vk::Format depth_stencil_format,
-                                         TexturePtr& depth_texture, TexturePtr& msaa_texture);
+                                         vk::Format depth_stencil_format, TexturePtr& depth_texture,
+                                         TexturePtr& msaa_texture);
 
   // Updates or replaces the passed in depth texture (depth_texture_in_out) based on the provided
   // ImageInfo and vk::Format. If the texture pointer is null, a new texture will be allocated.

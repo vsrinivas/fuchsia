@@ -4,22 +4,27 @@
 
 #ifdef IS_VERTEX_SHADER
 
+// 'location' corresponds to PaperRenderFuncs::kMeshAttributeBindingLocations::position_2d/3d.
 #ifdef USE_ATTRIBUTE_POSITION
 layout(location = 0) in vec3 inPosition;
 #endif
 
+// 'location' corresponds to PaperRenderFuncs::kMeshAttributeBindingLocations::position_offset.
 #ifdef USE_ATTRIBUTE_POSITION_OFFSET
 layout(location = 1) in vec3 inPositionOffset;
 #endif
 
+// 'location' corresponds to PaperRenderFuncs::kMeshAttributeBindingLocations::uv.
 #ifdef USE_ATTRIBUTE_UV
 layout(location = 2) in vec2 inUV;
 #endif
 
+// 'location' corresponds to PaperRenderFuncs::kMeshAttributeBindingLocations::perimeter_pos.
 #ifdef USE_ATTRIBUTE_PERIMETER
 layout(location = 3) in vec2 inPerimeter;
 #endif
 
+// 'location' corresponds to PaperRenderFuncs::kMeshAttributeBindingLocations::blend_weight1.
 #ifdef USE_ATTRIBUTE_BLEND_WEIGHT_1
 layout(location = 4) in vec2 inBlendWeight;
 #endif
@@ -39,7 +44,7 @@ layout(set = 0, binding = 0) uniform PaperShaderSceneData {
 layout(set = 0, binding = 1) uniform PaperShaderLatchedPoseBuffer {
   // Padding same size as escher::hmd::Pose.
   vec4 _padding_PaperShaderLatchedPoseBuffer[2];
-  // Latched view-projection matrices for the two eyes.  The left eye is at 
+  // Latched view-projection matrices for the two eyes.  The left eye is at
   // index 0 and the right at index 1.  See the |eye_index| field of
   // PaperShaderPushConstants.
   mat4 vp_matrix[2];

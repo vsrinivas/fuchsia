@@ -8,12 +8,16 @@
 #include "src/ui/lib/escher/flatland/flatland_static_config.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/mesh/tessellation.h"
+// TODO(ES-183): remove PaperRenderer shader dependency.
+#include "src/ui/lib/escher/paper/paper_render_funcs.h"
 #include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
+#include "src/ui/lib/escher/paper/paper_shape_cache.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/shaders/util/spirv_file_util.h"
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/test/vk/vulkan_tester.h"
+#include "src/ui/lib/escher/third_party/granite/vk/render_pass.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/util/string_utils.h"
 #include "src/ui/lib/escher/vk/command_buffer.h"
@@ -238,6 +242,145 @@ VK_TEST_F(ShaderProgramTest, CachedVariants) {
   EXPECT_EQ(program1, program2);
   EXPECT_EQ(program3, program4);
   EXPECT_NE(program1, program3);
+}
+
+// This tests the most direct form of pipeline generation, without all of the laziness and caching
+// done by CommandBuffer.  Fundamentally this requires 4 things:
+//   1) a set of vk::ShaderModules
+//   2) a vk::PipelineLayout
+//   3) a vk::RenderPass
+//   4) a description of the static Vulkan state that the pipeline will be used with
+//
+//   ShaderProgram provides both 1) and 2), the latter via introspecting each modules' SPIR-V code.
+//   The test constructs 3) and 4).  The latter is achieved
+// is provided directly by the ShaderProgram, and 2) is
+//
+// - a ShaderProgram, in particular:
+//   - the set of vk::ShaderModules that it encapsulates
+//   - the PipelineLayout* obtained by inspection of the shader modules' SPIR-V code
+// - a MeshSpec, which defines the pipeline's vertex attribute bindings
+// - a CommandBufferPipelineState, responsible for:
+//   - representing all static state required to build a pipeline, i.e. everything except
+//   - building the pipeline based on that state.
+VK_TEST_F(ShaderProgramTest, GeneratePipelineDirectly) {
+  auto escher = test::GetEscher();
+
+  // 1), 2): obtain the ShaderProgram and the correcsponding PipelineLayout.
+  // TODO(ES-183): remove PaperRenderer shader dependency.
+  auto program = ClearPipelineStash(escher->GetProgram(escher::kNoLightingProgramData));
+  EXPECT_TRUE(program);
+  PipelineLayout* pipeline_layout = program->ObtainPipelineLayout(nullptr);
+
+  // 3): create a RenderPass.
+  // NOTE: typically, RenderPasses are lazily generated/cached by
+  // CommandBufferPipelineState::FlushGraphicsPipeline().
+  impl::RenderPassPtr render_pass;
+  {
+    // Use the same output format as Scenic screenshots.
+    constexpr vk::Format kScenicScreenshotFormat = vk::Format::eB8G8R8A8Unorm;
+    const vk::Format kDepthStencilFormat =
+        ESCHER_CHECKED_VK_RESULT(escher->device()->caps().GetMatchingDepthStencilFormat(
+            {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint}));
+
+    RenderPassInfo::AttachmentInfo color_info;
+    color_info.format = kScenicScreenshotFormat;
+    color_info.swapchain_layout = vk::ImageLayout::eColorAttachmentOptimal;
+    color_info.sample_count = 1;
+
+    RenderPassInfo info;
+    RenderPassInfo::InitRenderPassInfo(&info, color_info,
+                                       /*depth_format=*/kDepthStencilFormat,
+                                       /*msaa_format=*/vk::Format::eUndefined, /*sample_count=*/1,
+                                       /*use_transient_depth_and_msaa*/ false);
+
+    render_pass = fxl::MakeRefCounted<impl::RenderPass>(escher->resource_recycler(), info);
+  }
+  EXPECT_TRUE(render_pass);
+
+  // 4) Specify the static Vulkan state.
+  CommandBufferPipelineState cbps;
+  {
+    MeshSpec mesh_spec = PaperShapeCache::kStandardMeshSpec();
+    const uint32_t total_attribute_count = mesh_spec.total_attribute_count();
+    BlockAllocator allocator;
+    RenderFuncs::VertexAttributeBinding* attribute_bindings =
+        RenderFuncs::NewVertexAttributeBindings(PaperRenderFuncs::kMeshAttributeBindingLocations,
+                                                &allocator, mesh_spec, total_attribute_count);
+
+    for (uint32_t i = 0; i < total_attribute_count; ++i) {
+      attribute_bindings[i].Bind(&cbps);
+    }
+  }
+  cbps.set_render_pass(render_pass.get());
+  cbps.SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
+
+  // 5) Build a pipeline (smoke-test).
+  EXPECT_EQ(0U, program->stashed_graphics_pipeline_count());
+  vk::Pipeline pipeline_orig = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  EXPECT_EQ(1U, program->stashed_graphics_pipeline_count());
+
+  // 6) Verify that, when blending is disabled, we get the same cached pipeline with different
+  // blend-ops and blend-factors.
+  const vk::BlendOp alpha_op = vk::BlendOp::eMin;
+  const vk::BlendOp alpha_op_orig = cbps.static_state()->get_alpha_blend_op();
+  EXPECT_NE(alpha_op, alpha_op_orig);  // otherwise the test is bogus
+  const vk::BlendOp color_op = vk::BlendOp::eMin;
+  const vk::BlendOp color_op_orig = cbps.static_state()->get_color_blend_op();
+  EXPECT_NE(color_op, color_op_orig);  // otherwise the test is bogus
+  const vk::BlendFactor dst_alpha_blend = vk::BlendFactor::eOne;
+  const vk::BlendFactor src_alpha_blend = vk::BlendFactor::eOne;
+  const vk::BlendFactor dst_color_blend = vk::BlendFactor::eOne;
+  const vk::BlendFactor src_color_blend = vk::BlendFactor::eOne;
+  const vk::BlendFactor dst_alpha_blend_orig = cbps.static_state()->get_dst_alpha_blend();
+  const vk::BlendFactor src_alpha_blend_orig = cbps.static_state()->get_src_alpha_blend();
+  const vk::BlendFactor dst_color_blend_orig = cbps.static_state()->get_dst_color_blend();
+  const vk::BlendFactor src_color_blend_orig = cbps.static_state()->get_src_color_blend();
+  EXPECT_NE(dst_alpha_blend, dst_alpha_blend_orig);  // otherwise the test is bogus
+  EXPECT_NE(src_alpha_blend, src_alpha_blend_orig);  // otherwise the test is bogus
+  EXPECT_NE(dst_color_blend, dst_color_blend_orig);  // otherwise the test is bogus
+  EXPECT_NE(src_color_blend, src_color_blend_orig);  // otherwise the test is bogus
+
+  cbps.SetBlendFactors(src_color_blend, src_alpha_blend, dst_color_blend, dst_alpha_blend);
+  cbps.SetBlendOp(color_op, alpha_op);
+  vk::Pipeline pipeline2 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  EXPECT_EQ(pipeline_orig, pipeline2);
+
+  // 7) Verify that, when blending is enabled, different blend-ops and blend-factors result in
+  // different pipelines.
+  cbps.SetBlendEnable(true);
+  vk::Pipeline pipeline3 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  cbps.SetBlendFactors(src_color_blend_orig, src_alpha_blend_orig, dst_color_blend_orig,
+                       dst_alpha_blend_orig);
+  vk::Pipeline pipeline4 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  cbps.SetBlendOp(color_op_orig, alpha_op_orig);
+  vk::Pipeline pipeline5 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  EXPECT_NE(pipeline_orig, pipeline3);
+  EXPECT_NE(pipeline_orig, pipeline4);
+  EXPECT_NE(pipeline_orig, pipeline5);
+  EXPECT_NE(pipeline3, pipeline4);
+  EXPECT_NE(pipeline3, pipeline5);
+  EXPECT_NE(pipeline4, pipeline5);
+
+  // 8) Verify that, when blending is enabled, changing blend constants only makes a difference when
+  // the blend-factor is eConstantColor.
+  cbps.potential_static_state()->blend_constants[0] = 0.77f;
+  cbps.potential_static_state()->blend_constants[3] = 0.66f;
+  vk::Pipeline pipeline6 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  EXPECT_EQ(pipeline5, pipeline6);
+  cbps.potential_static_state()->blend_constants[0] = 0.55f;
+  cbps.potential_static_state()->blend_constants[3] = 0.44f;
+  vk::Pipeline pipeline7 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  EXPECT_EQ(pipeline5, pipeline7);
+  cbps.SetBlendFactors(vk::BlendFactor::eConstantColor, vk::BlendFactor::eConstantColor,
+                       vk::BlendFactor::eConstantColor, vk::BlendFactor::eConstantColor);
+  vk::Pipeline pipeline8 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  EXPECT_NE(pipeline7, pipeline8);
+  cbps.potential_static_state()->blend_constants[0] = 0.77f;
+  cbps.potential_static_state()->blend_constants[3] = 0.66f;
+  vk::Pipeline pipeline9 = cbps.FlushGraphicsPipeline(pipeline_layout, program.get(), true);
+  EXPECT_NE(pipeline6, pipeline9);
+  // This is similar to comparing 5 vs. 6, except this time the blend-factor is eConstantCOlor.
+  EXPECT_NE(pipeline8, pipeline9);
 }
 
 // TODO(ES-83): we need to set up so many meshes, materials, framebuffers, etc.

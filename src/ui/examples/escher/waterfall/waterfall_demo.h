@@ -31,7 +31,7 @@ class WaterfallDemo : public Demo {
     kNumShadowModes,
   };
 
-  WaterfallDemo(escher::EscherWeakPtr escher, int argc, char** argv);
+  WaterfallDemo(escher::EscherWeakPtr escher, vk::Format swapchain_format, int argc, char** argv);
   virtual ~WaterfallDemo();
 
   bool HandleKeyPress(std::string key) override;
@@ -46,6 +46,8 @@ class WaterfallDemo : public Demo {
   const std::vector<uint8_t>& allowed_sample_counts() const { return allowed_sample_counts_; }
 
  private:
+  void WarmPipelineCache(vk::Format swapchain_format) const;
+
   void ProcessCommandLineArgs(int argc, char** argv);
 
   void SetWindowSize(vk::Extent2D window_size);
