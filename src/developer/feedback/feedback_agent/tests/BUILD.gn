@@ -17,10 +17,10 @@ group("tests") {
 
     # Packages for the components that we are injecting in the integration tests.
     "//garnet/bin/sysmem_connector",
-    "//garnet/bin/vulkan_loader",
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/developer/feedback/feedback_agent",
     "//src/diagnostics/archivist",
+    "//src/graphics/bin/vulkan_loader",
     "//src/hwinfo:tests",
     "//src/sys/pkg/bin/system-update-checker",
   ]

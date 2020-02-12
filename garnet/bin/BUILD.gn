@@ -50,7 +50,6 @@ group("bin") {
     "ui",
     "uname",
     "vsock_service",
-    "vulkan_loader",
     "wayland",
   ]
 }

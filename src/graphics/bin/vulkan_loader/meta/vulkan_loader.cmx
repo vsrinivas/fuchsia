@@ -3,6 +3,8 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "system": [ "lib" ]
+        "system": [
+            "lib"
+        ]
     }
 }

@@ -319,8 +319,8 @@ group("tiles") {
 group("vulkan") {
   testonly = true
   public_deps = [
-    "//garnet/bin/vulkan_loader",
     "//garnet/packages/prod:sysmem_connector",
+    "//src/graphics/bin/vulkan_loader",
   ]
 }
 

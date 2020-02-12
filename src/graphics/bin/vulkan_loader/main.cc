@@ -36,9 +36,9 @@ class LoaderImpl final : public fuchsia::vulkan::loader::Loader {
     // TODO(MA-470): Load this from a package's data directory, not /system/lib
     std::string load_path = "/system/lib/" + name;
     int fd;
-    zx_status_t status = fdio_open_fd(load_path.c_str(),
-                                      fuchsia::io::OPEN_RIGHT_READABLE |
-                                      fuchsia::io::OPEN_RIGHT_EXECUTABLE, &fd);
+    zx_status_t status =
+        fdio_open_fd(load_path.c_str(),
+                     fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_EXECUTABLE, &fd);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Could not open path " << load_path << ":" << status;
       callback({});
