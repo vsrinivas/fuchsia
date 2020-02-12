@@ -45,6 +45,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//src/lib/mundane",
     "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:matches",
   ]
 }
 

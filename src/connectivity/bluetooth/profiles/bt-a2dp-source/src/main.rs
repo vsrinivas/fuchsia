@@ -24,7 +24,11 @@ use {
     fuchsia_zircon as zx,
     futures::{self, AsyncWriteExt, StreamExt, TryStreamExt},
     parking_lot::Mutex,
-    std::{convert::TryInto, string::String, sync::Arc},
+    std::{
+        convert::{TryFrom, TryInto},
+        string::String,
+        sync::Arc,
+    },
 };
 
 mod encoding;
@@ -83,9 +87,17 @@ const ATTR_A2DP_SUPPORTED_FEATURES: u16 = 0x0311;
 // Arbitrarily chosen ID for the SBC stream endpoint.
 const SBC_SEID: u8 = 6;
 
+// Arbitrarily chosen ID for the AAC stream endpoint.
+const AAC_SEID: u8 = 7;
+
+// Highest AAC bitrate we want to transmit
+const MAX_BITRATE_AAC: u32 = 250000;
+
 /// Builds a set of endpoints from the available codecs.
 pub(crate) fn build_local_endpoints() -> avdtp::Result<Vec<avdtp::StreamEndpoint>> {
     // TODO(BT-533): detect codecs, add streams for each codec
+
+    let mut streams: Vec<avdtp::StreamEndpoint> = Vec::new();
 
     let sbc_codec_info = SbcCodecInfo::new(
         SbcSamplingFrequency::FREQ48000HZ,
@@ -112,7 +124,34 @@ pub(crate) fn build_local_endpoints() -> avdtp::Result<Vec<avdtp::StreamEndpoint
             },
         ],
     )?;
-    Ok(vec![sbc_stream])
+    streams.push(sbc_stream);
+
+    let aac_codec_info = AACMediaCodecInfo::new(
+        AACObjectType::MANDATORY_SRC,
+        AACSamplingFrequency::FREQ48000HZ,
+        AACChannels::TWO,
+        AACVariableBitRate::VBR_SUPPORTED,
+        MAX_BITRATE_AAC,
+    )
+    .or(Err(avdtp::Error::OutOfRange))?;
+    fx_log_info!("Supported codec parameters: {:?}.", aac_codec_info);
+
+    let aac_stream = avdtp::StreamEndpoint::new(
+        AAC_SEID,
+        avdtp::MediaType::Audio,
+        avdtp::EndpointType::Source,
+        vec![
+            avdtp::ServiceCapability::MediaTransport,
+            avdtp::ServiceCapability::MediaCodec {
+                media_type: avdtp::MediaType::Audio,
+                codec_type: avdtp::MediaCodecType::AUDIO_AAC,
+                codec_extra: aac_codec_info.to_bytes(),
+            },
+        ],
+    )?;
+    streams.push(aac_stream);
+
+    Ok(streams)
 }
 
 struct Peers {
@@ -207,11 +246,19 @@ impl Peers {
 const ENCODED_FRAMES_PER_SBC_PACKET: u8 = 5;
 const PCM_FRAMES_PER_SBC_FRAME: u32 = 640;
 
-// Represents a chosen remote stream endpoint and negotiated codec and encoder settings
+/// The number of frames in each AAC packet sent to the peer. Only one encoded AudioMuxElement is
+/// sent per RTP frame. 1024 is the most our current AAC encoder will put in a single AudioMuxElement.
+const ENCODED_FRAMES_PER_AAC_PACKET: u8 = 1;
+const PCM_FRAMES_PER_AAC_FRAME: u32 = 1024;
+
+/// Pick a reasonable quality bitrate to use by default. 64k average per channel.
+const PREFERRED_BITRATE_AAC: u32 = 128000;
+
+/// Represents a chosen remote stream endpoint and negotiated codec and encoder settings
+#[derive(Debug)]
 struct SelectedStream<'a> {
     remote_stream: &'a avdtp::StreamEndpoint,
     codec_settings: avdtp::ServiceCapability,
-    pcm_format: PcmFormat,
     seid: u8,
     encoded_frames_per_packet: u8,
     pcm_frames_per_encoded_frame: u32,
@@ -219,45 +266,104 @@ struct SelectedStream<'a> {
 }
 
 impl<'a> SelectedStream<'a> {
-    // From the list of available remote streams, pick our preferred one and return matching codec parameters.
+    /// From the list of available remote streams, pick our preferred one and return matching codec parameters.
     fn pick(
         remote_streams: &'a Vec<avdtp::StreamEndpoint>,
     ) -> Result<SelectedStream, anyhow::Error> {
-        // Find the SBC stream, which should exist (it is required)
-        let sbc_stream = remote_streams
-            .iter()
-            .filter(|stream| stream.information().endpoint_type() == &avdtp::EndpointType::Sink)
-            .find(|stream| stream.codec_type() == Some(&avdtp::MediaCodecType::AUDIO_SBC))
-            .ok_or(format_err!("Couldn't find a compatible stream"))?;
+        // prefer AAC
+        if let Some(remote_stream) =
+            Self::find_stream(remote_streams, &avdtp::MediaCodecType::AUDIO_AAC)
+        {
+            let codec_settings = Self::negotiate_codec_settings(remote_stream)?;
 
-        // TODO(39321): Choose codec options based on availability and quality.
-        let sbc_codec_info = SbcCodecInfo::new(
-            SbcSamplingFrequency::FREQ48000HZ,
-            SbcChannelMode::JOINT_STEREO,
-            SbcBlockCount::SIXTEEN,
-            SbcSubBands::EIGHT,
-            SbcAllocation::LOUDNESS,
-            /* min_bpv= */ 53,
-            /* max_bpv= */ 53,
-        )?;
+            return Ok(SelectedStream {
+                remote_stream,
+                codec_settings,
+                seid: AAC_SEID,
+                encoded_frames_per_packet: ENCODED_FRAMES_PER_AAC_PACKET,
+                pcm_frames_per_encoded_frame: PCM_FRAMES_PER_AAC_FRAME,
+                frame_header: vec![],
+            });
+        }
+
+        // Find the SBC stream, which should exist (it is required)
+        let remote_stream = Self::find_stream(remote_streams, &avdtp::MediaCodecType::AUDIO_SBC)
+            .ok_or(format_err!("Couldn't find a compatible stream"))?;
+        let codec_settings = Self::negotiate_codec_settings(remote_stream)?;
 
         Ok(SelectedStream {
-            remote_stream: sbc_stream,
-            codec_settings: avdtp::ServiceCapability::MediaCodec {
-                media_type: avdtp::MediaType::Audio,
-                codec_type: avdtp::MediaCodecType::AUDIO_SBC,
-                codec_extra: sbc_codec_info.to_bytes(),
-            },
-            pcm_format: PcmFormat {
-                pcm_mode: AudioPcmMode::Linear,
-                bits_per_sample: 16,
-                frames_per_second: 48000,
-                channel_map: vec![AudioChannelId::Lf, AudioChannelId::Rf],
-            },
+            remote_stream,
+            codec_settings,
             seid: SBC_SEID,
             encoded_frames_per_packet: ENCODED_FRAMES_PER_SBC_PACKET,
             pcm_frames_per_encoded_frame: PCM_FRAMES_PER_SBC_FRAME,
             frame_header: vec![ENCODED_FRAMES_PER_SBC_PACKET],
+        })
+    }
+
+    /// From `stream` remote options, select our preferred and supported encoding options
+    fn negotiate_codec_settings(
+        stream: &'a avdtp::StreamEndpoint,
+    ) -> Result<avdtp::ServiceCapability, Error> {
+        match stream.codec_type() {
+            Some(&avdtp::MediaCodecType::AUDIO_AAC) => {
+                let codec_extra =
+                    Self::lookup_codec_extra(stream).ok_or(format_err!("no codec extra found"))?;
+                let remote_codec_info = AACMediaCodecInfo::try_from(&codec_extra[..])?;
+                let negotiated_bitrate =
+                    std::cmp::min(remote_codec_info.bitrate(), PREFERRED_BITRATE_AAC);
+
+                // Remote peers have to support these options
+                let aac_codec_info = AACMediaCodecInfo::new(
+                    AACObjectType::MPEG2_AAC_LC,
+                    AACSamplingFrequency::FREQ48000HZ,
+                    AACChannels::TWO,
+                    AACVariableBitRate::VBR_SUPPORTED,
+                    negotiated_bitrate,
+                )?;
+                Ok(avdtp::ServiceCapability::MediaCodec {
+                    media_type: avdtp::MediaType::Audio,
+                    codec_type: avdtp::MediaCodecType::AUDIO_AAC,
+                    codec_extra: aac_codec_info.to_bytes(),
+                })
+            }
+            Some(&avdtp::MediaCodecType::AUDIO_SBC) => {
+                // TODO(39321): Choose codec options based on availability and quality.
+                let sbc_codec_info = SbcCodecInfo::new(
+                    SbcSamplingFrequency::FREQ48000HZ,
+                    SbcChannelMode::JOINT_STEREO,
+                    SbcBlockCount::SIXTEEN,
+                    SbcSubBands::EIGHT,
+                    SbcAllocation::LOUDNESS,
+                    /* min_bpv= */ 53,
+                    /* max_bpv= */ 53,
+                )?;
+
+                Ok(avdtp::ServiceCapability::MediaCodec {
+                    media_type: avdtp::MediaType::Audio,
+                    codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+                    codec_extra: sbc_codec_info.to_bytes(),
+                })
+            }
+            Some(t) => Err(format_err!("Unsupported codec {:?}", t)),
+            None => Err(format_err!("No codec type")),
+        }
+    }
+
+    fn find_stream(
+        remote_streams: &'a Vec<avdtp::StreamEndpoint>,
+        codec_type: &avdtp::MediaCodecType,
+    ) -> Option<&'a avdtp::StreamEndpoint> {
+        remote_streams
+            .iter()
+            .filter(|stream| stream.information().endpoint_type() == &avdtp::EndpointType::Sink)
+            .find(|stream| stream.codec_type() == Some(codec_type))
+    }
+
+    fn lookup_codec_extra(stream: &'a avdtp::StreamEndpoint) -> Option<&'a Vec<u8>> {
+        stream.capabilities().iter().find_map(|cap| match cap {
+            avdtp::ServiceCapability::MediaCodec { codec_extra, .. } => Some(codec_extra),
+            _ => None,
         })
     }
 }
@@ -284,11 +390,18 @@ async fn start_streaming(
 
     let mut media_stream = start_stream_fut.await?;
 
-    let source_stream =
-        sources::build_stream(&peer.key(), selected_stream.pcm_format.clone(), source_type)?;
+    // all sinks must support these options
+    let pcm_format = PcmFormat {
+        pcm_mode: AudioPcmMode::Linear,
+        bits_per_sample: 16,
+        frames_per_second: 48000,
+        channel_map: vec![AudioChannelId::Lf, AudioChannelId::Rf],
+    };
+
+    let source_stream = sources::build_stream(&peer.key(), pcm_format.clone(), source_type)?;
 
     let mut encoded_stream = EncodedStream::build(
-        selected_stream.pcm_format.clone(),
+        pcm_format,
         &selected_stream.codec_settings,
         source_stream,
         selected_stream.pcm_frames_per_encoded_frame,
@@ -400,4 +513,93 @@ async fn main() -> Result<(), Error> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use matches::assert_matches;
+
+    #[test]
+    fn test_stream_selection() {
+        // test that aac is preferred
+        let remote_streams = vec![
+            avdtp::StreamEndpoint::new(
+                AAC_SEID,
+                avdtp::MediaType::Audio,
+                avdtp::EndpointType::Sink,
+                vec![
+                    avdtp::ServiceCapability::MediaTransport,
+                    avdtp::ServiceCapability::MediaCodec {
+                        media_type: avdtp::MediaType::Audio,
+                        codec_type: avdtp::MediaCodecType::AUDIO_AAC,
+                        codec_extra: vec![0, 0, 0, 0, 0, 0],
+                    },
+                ],
+            )
+            .expect("stream endpoint"),
+            avdtp::StreamEndpoint::new(
+                SBC_SEID,
+                avdtp::MediaType::Audio,
+                avdtp::EndpointType::Sink,
+                vec![
+                    avdtp::ServiceCapability::MediaTransport,
+                    avdtp::ServiceCapability::MediaCodec {
+                        media_type: avdtp::MediaType::Audio,
+                        codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+                        codec_extra: vec![0, 0, 0, 0],
+                    },
+                ],
+            )
+            .expect("stream endpoint"),
+        ];
+
+        assert_matches!(
+            SelectedStream::pick(&remote_streams),
+            Ok(SelectedStream {
+                seid: AAC_SEID,
+                codec_settings:
+                    avdtp::ServiceCapability::MediaCodec {
+                        media_type: avdtp::MediaType::Audio,
+                        codec_type: avdtp::MediaCodecType::AUDIO_AAC,
+                        ..
+                    },
+                ..
+            })
+        );
+
+        // only sbc available, should return sbc
+        let remote_streams = vec![avdtp::StreamEndpoint::new(
+            SBC_SEID,
+            avdtp::MediaType::Audio,
+            avdtp::EndpointType::Sink,
+            vec![
+                avdtp::ServiceCapability::MediaTransport,
+                avdtp::ServiceCapability::MediaCodec {
+                    media_type: avdtp::MediaType::Audio,
+                    codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+                    codec_extra: vec![0, 0, 0, 0],
+                },
+            ],
+        )
+        .expect("stream endpoint")];
+
+        assert_matches!(
+            SelectedStream::pick(&remote_streams),
+            Ok(SelectedStream {
+                seid: SBC_SEID,
+                codec_settings:
+                    avdtp::ServiceCapability::MediaCodec {
+                        media_type: avdtp::MediaType::Audio,
+                        codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+                        ..
+                    },
+                ..
+            })
+        );
+
+        // none available, should error
+        let remote_streams = vec![];
+        assert_matches!(SelectedStream::pick(&remote_streams), Err(Error { .. }));
+    }
 }
