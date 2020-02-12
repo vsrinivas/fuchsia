@@ -278,9 +278,6 @@ void x86_extended_register_restore_state(void* register_state);
 #ifdef __cplusplus
 struct thread_t;
 void x86_extended_register_context_switch(thread_t* old_thread, thread_t* new_thread);
-/* Handles the context switch for debug HW functionality (drN registers).
- * Will only copy over state if it's enabled (non-zero) for |new_thread|. */
-void x86_debug_state_context_switch(thread_t* old_thread, thread_t* new_thread);
 #endif
 
 void x86_set_extended_register_pt_state(bool threads);

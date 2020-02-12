@@ -1766,25 +1766,16 @@ RUN_TEST(TestStartSuspendedAndResumedThread)
 RUN_TEST(TestSuspendSingleWaitAsyncSignalDelivery)
 RUN_TEST(TestSuspendRepeatingWaitAsyncSignalDelivery)
 RUN_TEST(TestReadingGeneralRegisterState)
-
-// Test disabled, see fxb/33942.
-// RUN_TEST(TestReadingFpRegisterState)
-// RUN_TEST(TestReadingVectorRegisterState)
-// RUN_TEST(TestWritingGeneralRegisterState)
-
+RUN_TEST(TestReadingFpRegisterState)
+RUN_TEST(TestReadingVectorRegisterState)
+RUN_TEST(TestWritingGeneralRegisterState)
 RUN_TEST(TestWritingSingleStepState)
-
-// Test disabled, see fxb/33942.
-// RUN_TEST(TestWritingFpRegisterState)
-// RUN_TEST(TestWritingVectorRegisterState)
-
+RUN_TEST(TestWritingFpRegisterState)
+RUN_TEST(TestWritingVectorRegisterState)
 RUN_TEST(TestThreadLocalRegisterState)
 RUN_TEST(TestNoncanonicalRipAddress)
 RUN_TEST(TestWritingArmFlagsRegister)
 RUN_TEST(TestWriteReadDebugRegisterState);
-
-// Test disabled, see fxb/33942.
-// RUN_TEST(TestDebugRegistersValidation);
-
+RUN_TEST(TestDebugRegistersValidation);
 RUN_TEST(TestX86AcFlagUserCopy)
 END_TEST_CASE(threads_tests)

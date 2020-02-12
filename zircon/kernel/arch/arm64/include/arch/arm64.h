@@ -69,8 +69,6 @@ struct arch_exception_context {
 
 // Register state layout used by arm64_context_switch().
 struct arm64_context_switch_frame {
-  uint64_t tpidr_el0;
-  uint64_t tpidrro_el0;
   uint64_t r19;
   uint64_t r20;
   uint64_t r21;
@@ -113,6 +111,8 @@ void arm64_local_clean_cache_all();
 /* fpu routines */
 void arm64_fpu_exception(arm64_iframe_t* iframe, uint exception_flags);
 void arm64_fpu_context_switch(thread_t* oldthread, thread_t* newthread);
+void arm64_fpu_save_state(thread_t* t);
+void arm64_fpu_restore_state(thread_t* t);
 
 uint64_t arm64_get_boot_el(void);
 

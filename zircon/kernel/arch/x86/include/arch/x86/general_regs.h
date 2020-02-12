@@ -7,14 +7,6 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_GENERAL_REGS_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_GENERAL_REGS_H_
 
-// Userspace general regs are stored in two different structs:
-// - syscalls = x86_syscall_general_regs_t
-// - interrupts/exceptions = x86_iframe_t
-// A tagged pointer is stored in struct arch_thread to specify which one.
-#define X86_GENERAL_REGS_NONE 0
-#define X86_GENERAL_REGS_SYSCALL 1
-#define X86_GENERAL_REGS_IFRAME 2
-
 #ifndef __ASSEMBLER__
 
 #include <assert.h>

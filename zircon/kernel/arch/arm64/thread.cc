@@ -52,12 +52,6 @@ void arch_thread_initialize(thread_t* t, vaddr_t entry_point) {
   // The shadow call stack grows up.
   t->arch.shadow_call_sp = reinterpret_cast<uintptr_t*>(t->stack.shadow_call_base);
 #endif
-
-  // Initialize the debug state to a valid initial state.
-  for (size_t i = 0; i < ARM64_MAX_HW_BREAKPOINTS; i++) {
-    t->arch.debug_state.hw_bps[i].dbgbcr = 0;
-    t->arch.debug_state.hw_bps[i].dbgbvr = 0;
-  }
 }
 
 __NO_SAFESTACK void arch_thread_construct_first(thread_t* t) {
@@ -81,6 +75,23 @@ __NO_SAFESTACK void arch_thread_construct_first(thread_t* t) {
   set_current_thread(t);
 }
 
+static void arm64_tpidr_save_state(thread_t* thread) {
+  thread->arch.tpidr_el0 = __arm_rsr64("tpidr_el0");
+  thread->arch.tpidrro_el0 = __arm_rsr64("tpidrro_el0");
+}
+
+static void arm64_tpidr_restore_state(thread_t* thread) {
+  __arm_wsr64("tpidr_el0", thread->arch.tpidr_el0);
+  __arm_wsr64("tpidrro_el0", thread->arch.tpidrro_el0);
+}
+
+static void arm64_debug_restore_state(thread_t* thread) {
+  // If the thread has debug state, then install it, replacing the current contents.
+  if (unlikely(thread->arch.track_debug_state)) {
+    arm64_write_hw_debug_regs(&thread->arch.debug_state);
+  }
+}
+
 __NO_SAFESTACK void arch_context_switch(thread_t* oldthread, thread_t* newthread) {
   LTRACEF("old %p (%s), new %p (%s)\n", oldthread, oldthread->name, newthread, newthread->name);
   __dsb(ARM_MB_SY); /* broadcast tlb operations in case the thread moves to another cpu */
@@ -90,8 +101,34 @@ __NO_SAFESTACK void arch_context_switch(thread_t* oldthread, thread_t* newthread
    */
   newthread->arch.current_percpu_ptr = arm64_read_percpu_ptr();
 
-  arm64_fpu_context_switch(oldthread, newthread);
-  arm64_debug_state_context_switch(oldthread, newthread);
+  if (likely(!oldthread->user_state_saved)) {
+    arm64_fpu_context_switch(oldthread, newthread);
+    arm64_tpidr_save_state(oldthread);
+    arm64_tpidr_restore_state(newthread);
+    // Not saving debug state because the arch_thread_t's debug state is authoritative.
+    arm64_debug_restore_state(newthread);
+  } else {
+    // Nothing left to save for |oldthread|, so just restore |newthread|.  Technically, we could
+    // skip restoring here since we know a higher layer will restore before leaving the kernel.  We
+    // restore anyway so we don't leave |oldthread|'s state lingering in the hardware registers.
+    // The thinking is that:
+    //
+    // 1. The performance cost is tolerable - This code path is only executed by threads that have
+    // taken a (zircon) exception or are being debugged so there should be no performance impact to
+    // "normal" threads.
+    //
+    // 2. We want to avoid confusion - When, for example, the kernel panics and prints user register
+    // state to a log, a future maintainer might be confused to find that some other thread's user
+    // register state is present on a CPU that was executing an unrelated thread.
+    //
+    // 3. We want an extra layer of security - If we make a mistake and don't properly restore the
+    // state before returning we might expose one thread's register state to another thread.  By
+    // restoring early, that's less likely to happen (think belt and suspenders).
+    arm64_fpu_restore_state(newthread);
+    arm64_tpidr_restore_state(newthread);
+    arm64_debug_restore_state(newthread);
+  }
+
 #if __has_feature(shadow_call_stack)
   arm64_context_switch(&oldthread->arch.sp, newthread->arch.sp, &oldthread->arch.shadow_call_sp,
                        newthread->arch.shadow_call_sp);
@@ -116,22 +153,31 @@ void* arch_thread_get_blocked_fp(thread_t* t) {
   return (void*)frame->r29;
 }
 
-void arm64_debug_state_context_switch(thread_t* old_thread, thread_t* new_thread) {
-  // If the new thread has debug state, then install it, replacing the current contents.
-  if (unlikely(new_thread->arch.track_debug_state)) {
-    arm64_write_hw_debug_regs(&new_thread->arch.debug_state);
-    arm64_set_debug_state_for_cpu(true);
-    return;
-  }
-
-  // If the old thread had debug state running and the new one doesn't use it, disable the
-  // debug capabilities. We don't need to clear the state because if a new thread being
-  // scheduled needs them, then it will overwrite the state.
-  if (unlikely(old_thread->arch.track_debug_state)) {
-    arm64_set_debug_state_for_cpu(false);
-  }
-}
-
 arm64_context_switch_frame* arm64_get_context_switch_frame(thread_t* thread) {
   return reinterpret_cast<struct arm64_context_switch_frame*>(thread->arch.sp);
+}
+
+__NO_SAFESTACK void arch_save_user_state(thread_t* thread) {
+  arm64_fpu_save_state(thread);
+  arm64_tpidr_save_state(thread);
+  // Not saving debug state because the arch_thread_t's debug state is authoritative.
+}
+
+__NO_SAFESTACK void arch_restore_user_state(thread_t* thread) {
+  arm64_debug_restore_state(thread);
+  arm64_fpu_restore_state(thread);
+  arm64_tpidr_restore_state(thread);
+}
+
+void arch_set_suspended_general_regs(struct thread_t* thread, GeneralRegsSource source,
+                                     void* iframe) {
+  DEBUG_ASSERT(thread->arch.suspended_general_regs == nullptr);
+  DEBUG_ASSERT(iframe != nullptr);
+  DEBUG_ASSERT_MSG(source == GeneralRegsSource::Iframe, "invalid source %u\n",
+                   static_cast<uint32_t>(source));
+  thread->arch.suspended_general_regs = static_cast<iframe_t*>(iframe);
+}
+
+void arch_reset_suspended_general_regs(struct thread_t* thread) {
+  thread->arch.suspended_general_regs = nullptr;
 }

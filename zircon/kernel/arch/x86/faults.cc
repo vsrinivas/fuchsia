@@ -485,20 +485,12 @@ void x86_exception_handler(x86_iframe_t* frame) {
 }
 
 void x86_syscall_process_pending_signals(x86_syscall_general_regs_t* gregs) {
-  thread_t* thread = get_current_thread();
-  x86_set_suspended_general_regs(&thread->arch, X86_GENERAL_REGS_SYSCALL, gregs);
-  thread_process_pending_signals();
-  x86_reset_suspended_general_regs(&thread->arch);
+  thread_process_pending_signals(GeneralRegsSource::Syscall, gregs);
 }
 
 void arch_iframe_process_pending_signals(iframe_t* iframe) {
   DEBUG_ASSERT(iframe != nullptr);
-  thread_t* thread = get_current_thread();
-  if (unlikely(thread_is_signaled(thread))) {
-    x86_set_suspended_general_regs(&thread->arch, X86_GENERAL_REGS_IFRAME, iframe);
-    thread_process_pending_signals();
-    x86_reset_suspended_general_regs(&thread->arch);
-  }
+  thread_process_pending_signals(GeneralRegsSource::Iframe, iframe);
 }
 
 void arch_dump_exception_context(const arch_exception_context_t* context) {
@@ -528,7 +520,7 @@ void arch_fill_in_exception_context(const arch_exception_context_t* arch_context
                                     zx_exception_report_t* report) {
   zx_exception_context_t* zx_context = &report->context;
 
-  // TODO(ZX-563): |frame| will be nullptr for synthetic exceptions that
+  // TODO(fxb/30521): |frame| will be nullptr for synthetic exceptions that
   // don't provide general register values yet.
   if (arch_context->frame) {
     zx_context->arch.u.x86_64.vector = arch_context->frame->vector;
@@ -542,12 +534,14 @@ zx_status_t arch_dispatch_user_policy_exception(void) {
   return dispatch_user_exception(ZX_EXCP_POLICY_ERROR, &context);
 }
 
-void arch_install_context_regs(thread_t* thread, const arch_exception_context_t* context) {
-  // TODO(ZX-563): |context->frame| will be nullptr for exceptions that
-  // don't (yet) provide the registers.
-  if (context->frame) {
-    x86_set_suspended_general_regs(&thread->arch, X86_GENERAL_REGS_IFRAME, context->frame);
+bool arch_install_exception_context(thread_t* thread, const arch_exception_context_t* context) {
+  if (!context->frame) {
+    // TODO(fxb/30521): Must be a synthetic exception as they don't (yet) provide the registers.
+    return false;
   }
+
+  arch_set_suspended_general_regs(thread, GeneralRegsSource::Iframe, context->frame);
+  return true;
 }
 
-void arch_remove_context_regs(thread_t* thread) { x86_reset_suspended_general_regs(&thread->arch); }
+void arch_remove_exception_context(thread_t* thread) { arch_reset_suspended_general_regs(thread); }

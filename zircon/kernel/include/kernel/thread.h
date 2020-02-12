@@ -16,6 +16,7 @@
 #include <zircon/types.h>
 
 #include <arch/defines.h>
+#include <arch/exception.h>
 #include <arch/ops.h>
 #include <arch/thread.h>
 #include <fbl/intrusive_double_list.h>
@@ -213,6 +214,17 @@ struct thread_t {
   size_t linebuffer_pos;
   char linebuffer[THREAD_LINEBUFFER_LENGTH];
 #endif
+
+  // Indicates whether user register state (debug, vector, fp regs, etc.) has been saved to the
+  // arch_thread_t as part of thread suspension / exception handling.
+  //
+  // When a user thread is suspended or generates an exception (synthetic or architectural) that
+  // might be observed by another process, we save user register state to the thread's arch_thread_t
+  // so that it may be accessed by a debugger.  Upon leaving a suspended or exception state, we
+  // restore user register state.
+  //
+  // See also |thread_is_user_state_saved_locked()| and |ScopedThreadExceptionContext|.
+  bool user_state_saved;
 };
 
 // thread priority
@@ -355,7 +367,8 @@ static inline bool thread_is_signaled(thread_t* t) { return t->signals != 0; }
 extern "C" void arch_iframe_process_pending_signals(iframe_t* iframe);
 
 // process pending signals, may never return because of kill signal
-void thread_process_pending_signals(void);
+void thread_process_pending_signals(GeneralRegsSource source, void* gregs);
+
 void dump_thread_locked(thread_t* t, bool full) TA_REQ(thread_lock);
 void dump_thread(thread_t* t, bool full) TA_EXCL(thread_lock);
 void arch_dump_thread(thread_t* t);
@@ -594,6 +607,50 @@ class AutoReschedDisable {
 
  private:
   bool started_ = false;
+};
+
+// Returns true if |thread|'s user state has been saved.
+//
+// Caller must hold the thread lock.
+bool thread_is_user_state_saved_locked(thread_t* thread);
+
+// RAII helper that installs/removes an exception context and saves/restores user register state.
+//
+// When a thread takes an exception, this class is used to make user register state available to
+// debuggers and exception handlers.
+//
+// Example Usage:
+//
+// {
+//   ScopedThreadExceptionContext context(...);
+//   HandleException();
+// }
+//
+// Note, ScopedThreadExceptionContext keeps track of whether the state has already been saved so
+// it's safe to nest them:
+//
+// void Foo() {
+//   ScopedThreadExceptionContext context(...);
+//   Bar();
+// }
+//
+// void Bar() {
+//   ScopedThreadExceptionContext context(...);
+//   Baz();
+// }
+//
+class ScopedThreadExceptionContext {
+ public:
+  // |thread| must be the calling thread.
+  ScopedThreadExceptionContext(thread_t* thread, const arch_exception_context_t* context);
+  ~ScopedThreadExceptionContext();
+  DISALLOW_COPY_ASSIGN_AND_MOVE(ScopedThreadExceptionContext);
+
+ private:
+  thread_t* thread_;
+  const arch_exception_context_t* context_;
+  bool need_to_remove_;
+  bool need_to_restore_;
 };
 
 // - As of now, this recreates the C API with no changes to argument types or spelling,

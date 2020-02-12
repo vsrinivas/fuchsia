@@ -708,11 +708,7 @@ TEST(ProcessTest, CreateAndKillJobRaceStress) {
   zx_handle_close(args.job->load());
 }
 
-// TODO(fxb/8477): deflake and reenable this test.
 TEST(ProcessTest, ProcessStartWriteThreadState) {
-  printf("Test is disabled, see fxb/8477.\n");
-  return;
-
   zx_handle_t proc;
   zx_handle_t vmar;
   ASSERT_OK(zx_process_create(zx_job_default(), "ttp", 3u, 0, &proc, &vmar));

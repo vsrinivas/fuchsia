@@ -103,11 +103,9 @@ typedef struct arm64_debug_state {
   uint32_t esr;
 } arm64_debug_state_t;
 
-/* Enable/disable the HW debug functionalities for the current thread. */
+/* Enable/disable the HW debug functionalities for the specified thread. */
 struct thread_t;
 void arm64_set_debug_state_for_thread(thread_t*, bool active);
-/* Enable/disable mdscr_el1 */
-void arm64_set_debug_state_for_cpu(bool active);
 
 /* Checks whether the given state is valid to install on a running thread.
  *
@@ -144,10 +142,6 @@ void arm64_write_hw_debug_regs(const arm64_debug_state_t* debug_state);
 
 // Will zero out the debug registers for the current CPOU.
 void arm64_clear_hw_debug_regs();
-
-/* Handles the context switch for debug HW functionality.
- * Will only copy over state if it's enabled (non-zero) for |new_thread|. */
-void arm64_debug_state_context_switch(thread_t* old_thread, thread_t* new_thread);
 
 #ifndef NDEBUG
 // Debug only.

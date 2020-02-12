@@ -18,6 +18,7 @@
 #include <arch/arch_ops.h>
 #include <arch/arm64.h>
 #include <arch/exception.h>
+#include <arch/thread.h>
 #include <arch/user_copy.h>
 #include <kernel/interrupt.h>
 #include <kernel/thread.h>
@@ -411,14 +412,7 @@ extern "C" void arm64_invalid_exception(arm64_iframe_t* iframe, unsigned int whi
 /* called from assembly */
 extern "C" void arch_iframe_process_pending_signals(iframe_t* iframe) {
   DEBUG_ASSERT(iframe != nullptr);
-  thread_t* thread = get_current_thread();
-  if (unlikely(thread_is_signaled(thread))) {
-    DEBUG_ASSERT(thread->arch.suspended_general_regs == nullptr);
-
-    thread->arch.suspended_general_regs = iframe;
-    thread_process_pending_signals();
-    thread->arch.suspended_general_regs = nullptr;
-  }
+  thread_process_pending_signals(GeneralRegsSource::Iframe, iframe);
 }
 
 void arch_dump_exception_context(const arch_exception_context_t* context) {
@@ -476,15 +470,16 @@ zx_status_t arch_dispatch_user_policy_exception(void) {
   return dispatch_user_exception(ZX_EXCP_POLICY_ERROR, &context);
 }
 
-void arch_install_context_regs(thread_t* thread, const arch_exception_context_t* context) {
-  // TODO(ZX-563): |context->frame| will be nullptr for exceptions that
-  // don't (yet) provide the registers.
-  if (context->frame) {
-    DEBUG_ASSERT(thread->arch.suspended_general_regs == nullptr);
-    thread->arch.suspended_general_regs = context->frame;
-    thread->arch.debug_state.esr = context->esr;
-    thread->arch.debug_state.far = context->far;
+bool arch_install_exception_context(thread_t* thread, const arch_exception_context_t* context) {
+  if (!context->frame) {
+    // TODO(fxb/30521): Must be a synthetic exception as they don't (yet) provide the registers.
+    return false;
   }
+
+  arch_set_suspended_general_regs(thread, GeneralRegsSource::Iframe, context->frame);
+  thread->arch.debug_state.esr = context->esr;
+  thread->arch.debug_state.far = context->far;
+  return true;
 }
 
-void arch_remove_context_regs(thread_t* thread) { thread->arch.suspended_general_regs = nullptr; }
+void arch_remove_exception_context(thread_t* thread) { arch_reset_suspended_general_regs(thread); }

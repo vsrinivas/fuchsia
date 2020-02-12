@@ -193,8 +193,9 @@ static zx_status_t exception_handler_worker(uint exception_type,
 //
 // TODO(dje): Support unwinding from this exception and introducing a different
 // exception?
-zx_status_t dispatch_user_exception(uint exception_type, const arch_exception_context_t* context) {
-  LTRACEF("type %u, context %p\n", exception_type, context);
+zx_status_t dispatch_user_exception(uint exception_type,
+                                    const arch_exception_context_t* arch_context) {
+  LTRACEF("type %u, context %p\n", exception_type, arch_context);
 
   thread_t* lk_thread = get_current_thread();
   ThreadDispatcher* thread = lk_thread->user_thread;
@@ -206,10 +207,15 @@ zx_status_t dispatch_user_exception(uint exception_type, const arch_exception_co
   // From now until the exception is resolved the thread is in an exception.
   ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::EXCEPTION);
 
-  arch_install_context_regs(lk_thread, context);
   bool processed = false;
-  zx_status_t status = exception_handler_worker(exception_type, context, thread, &processed);
-  arch_remove_context_regs(lk_thread);
+  zx_status_t status;
+  {
+    // We're about to handle the exception.  Use a |ScopedThreadExceptionContext| to make the
+    // thread's user register state available to debuggers and exception handlers while the thread
+    // is "in exception".
+    ScopedThreadExceptionContext context(lk_thread, arch_context);
+    status = exception_handler_worker(exception_type, arch_context, thread, &processed);
+  }
 
   if (status == ZX_OK) {
     return ZX_OK;
@@ -231,7 +237,7 @@ zx_status_t dispatch_user_exception(uint exception_type, const arch_exception_co
       printf("KERN: %s in user thread '%s' in process '%s'\n", excp_type_to_string(exception_type),
              tname, pname);
 
-      arch_dump_exception_context(context);
+      arch_dump_exception_context(arch_context);
     }
 #endif
 

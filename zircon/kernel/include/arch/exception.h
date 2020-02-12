@@ -35,14 +35,16 @@ void arch_dump_exception_context(const arch_exception_context_t* context);
 void arch_fill_in_exception_context(const arch_exception_context_t* context,
                                     zx_exception_report_t* report);
 
-// Record registers in |context| as being available to
-// |zx_thread_read_state(),zx_thread_write_state()|.
-// This is called prior to the thread stopping in an exception, and must be
-// matched with a corresponding call to |arch_remove_context_regs()| prior to
-// the thread resuming execution.
-void arch_install_context_regs(thread_t* thread, const arch_exception_context_t* context);
+// Record registers in |context| as being available to |zx_thread_read_state(),
+// zx_thread_write_state()|.
+//
+// This is called prior to the thread stopping in an exception, and must be matched with a
+// corresponding call to |arch_remove_exception_context()| prior to the thread resuming execution if
+// it returns true.
+__WARN_UNUSED_RESULT
+bool arch_install_exception_context(thread_t* thread, const arch_exception_context_t* context);
 
-// Undo a previous call to |arch_install_context_regs()|.
-void arch_remove_context_regs(thread_t* thread);
+// Undo a previous call to |arch_install_exception_context()|.
+void arch_remove_exception_context(thread_t* thread);
 
 #endif  // ZIRCON_KERNEL_INCLUDE_ARCH_EXCEPTION_H_

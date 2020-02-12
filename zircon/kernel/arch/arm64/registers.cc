@@ -21,19 +21,6 @@ void arm64_set_debug_state_for_thread(thread_t* thread, bool active) {
   }
 }
 
-void arm64_set_debug_state_for_cpu(bool active) {
-  uint32_t mdscr = __arm_rsr("mdscr_el1");
-  if (active) {
-    mdscr |= ARM64_MDSCR_EL1_MDE;  // MDE enables hardware exceptions.
-    mdscr |= ARM64_MDSCR_EL1_KDE;  // KDE enables local debugging in EL0.
-  } else {
-    mdscr &= ~ARM64_MDSCR_EL1_MDE;  // MDE enables hardware exceptions.
-    mdscr &= ~ARM64_MDSCR_EL1_KDE;  // KDE enables local debugging in EL0.
-  }
-  __arm_wsr("mdscr_el1", mdscr);
-  __isb(ARM_MB_SY);
-}
-
 static bool arm64_validate_hw_breakpoints(arm64_debug_state_t* state,
                                           uint32_t* active_breakpoints) {
   uint32_t breakpoint_count = 0;

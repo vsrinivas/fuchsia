@@ -9,6 +9,7 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_ARCH_THREAD_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_ARCH_THREAD_H_
 
+#include <arch.h>
 #include <assert.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -36,14 +37,13 @@ struct arch_thread {
   vaddr_t gs_base;
 
   // Which entry of |suspended_general_regs| to use.
-  // One of X86_GENERAL_REGS_*.
-  uint32_t general_regs_source;
+  GeneralRegsSource general_regs_source;
 
   // Debugger access to userspace general regs while suspended or stopped
   // in an exception. See the description of X86_GENERAL_REGS_* for usage.
   // The regs are saved on the stack and then a pointer is stored here.
   // Nullptr if not suspended or not stopped in an exception.
-  // TODO(ZX-563): Also nullptr for synthetic exceptions that don't provide
+  // TODO(fxb/30521): Also nullptr for synthetic exceptions that don't provide
   // them yet.
   union {
     void *gregs;
@@ -71,20 +71,6 @@ struct arch_thread {
   bool track_debug_state;
   x86_debug_state_t debug_state;
 };
-
-static inline void x86_set_suspended_general_regs(struct arch_thread *thread, uint32_t source,
-                                                  void *gregs) {
-  DEBUG_ASSERT(thread->suspended_general_regs.gregs == NULL);
-  DEBUG_ASSERT(gregs != NULL);
-  DEBUG_ASSERT(source != X86_GENERAL_REGS_NONE);
-  thread->general_regs_source = source;
-  thread->suspended_general_regs.gregs = gregs;
-}
-
-static inline void x86_reset_suspended_general_regs(struct arch_thread *thread) {
-  thread->general_regs_source = X86_GENERAL_REGS_NONE;
-  thread->suspended_general_regs.gregs = NULL;
-}
 
 __END_CDECLS
 

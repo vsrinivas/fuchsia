@@ -33,6 +33,7 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
+#include <arch/debugger.h>
 #include <arch/exception.h>
 #include <kernel/atomic.h>
 #include <kernel/dpc.h>
@@ -779,8 +780,59 @@ static void thread_do_suspend(void) {
   }
 }
 
+bool thread_is_user_state_saved_locked(thread_t* thread) {
+  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  return thread->user_state_saved;
+}
+
+[[nodiscard]] static bool thread_save_user_state_locked(thread_t* thread) {
+  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread == get_current_thread());
+  DEBUG_ASSERT(thread->user_thread != nullptr);
+
+  if (thread->user_state_saved) {
+    return false;
+  }
+  thread->user_state_saved = true;
+  arch_save_user_state(thread);
+  return true;
+}
+
+static void thread_restore_user_state_locked(thread_t* thread) {
+  DEBUG_ASSERT(spin_lock_held(&thread_lock));
+  DEBUG_ASSERT(thread == get_current_thread());
+  DEBUG_ASSERT(thread->user_thread != nullptr);
+
+  DEBUG_ASSERT(thread->user_state_saved);
+  thread->user_state_saved = false;
+  arch_restore_user_state(thread);
+}
+
+ScopedThreadExceptionContext::ScopedThreadExceptionContext(thread_t* thread,
+                                                           const arch_exception_context_t* context)
+    : thread_(thread), context_(context) {
+  DEBUG_ASSERT(thread == get_current_thread());
+  Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+  // It's possible that the context and state have been installed/saved earlier in the call chain.
+  // If so, then it's some other object's responsibilty to remove/restore.
+  need_to_remove_ = arch_install_exception_context(thread_, context_);
+  need_to_restore_ = thread_save_user_state_locked(thread_);
+}
+
+ScopedThreadExceptionContext::~ScopedThreadExceptionContext() {
+  Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+  // Did we save the state?  If so, then it's our job to restore it.
+  if (need_to_restore_) {
+    thread_restore_user_state_locked(thread_);
+  }
+  // Did we install the exception context? If so, then it's out job to remove it.
+  if (need_to_remove_) {
+    arch_remove_exception_context(thread_);
+  }
+}
+
 // check for any pending signals and handle them
-void thread_process_pending_signals(void) {
+void thread_process_pending_signals(GeneralRegsSource source, void* gregs) {
   thread_t* current_thread = get_current_thread();
   if (likely(current_thread->signals == 0)) {
     return;
@@ -788,13 +840,28 @@ void thread_process_pending_signals(void) {
 
   // grab the thread lock so we can safely look at the signal mask
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
+
+  // This thread is about to be killed, raise an exception, or become suspended.  If this is a user
+  // thread, these are all debugger-visible actions.  Save the general registers so that a debugger
+  // may access them.
+  const bool has_user_thread = current_thread->user_thread != nullptr;
+  if (has_user_thread) {
+    arch_set_suspended_general_regs(current_thread, source, gregs);
+  }
+  auto cleanup_suspended_general_regs = fbl::MakeAutoCall([current_thread, has_user_thread]() {
+    if (has_user_thread) {
+      arch_reset_suspended_general_regs(current_thread);
+    }
+  });
+
   if (check_kill_signal(current_thread)) {
     guard.Release();
+    cleanup_suspended_general_regs.cancel();
     thread_exit(0);
   }
 
-  // Report exceptions raised by syscalls
-  if (current_thread->signals & THREAD_SIGNAL_POLICY_EXCEPTION) {
+  // Report any policy exceptions raised by syscalls.
+  if (has_user_thread && (current_thread->signals & THREAD_SIGNAL_POLICY_EXCEPTION)) {
     current_thread->signals &= ~THREAD_SIGNAL_POLICY_EXCEPTION;
     guard.Release();
 
@@ -806,11 +873,26 @@ void thread_process_pending_signals(void) {
   }
 
   if (current_thread->signals & THREAD_SIGNAL_SUSPEND) {
-    // transition the thread to the suspended state
     DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
-    guard.Release();
-
-    thread_do_suspend();
+    // This thread has been asked to suspend.  If it has a user mode component we need to save the
+    // user register state prior to calling |thread_do_suspend| so that a debugger may access it
+    // while the thread is suspended.
+    if (has_user_thread) {
+      // The enclosing function, |thread_process_pending_signals|, is called at the boundary of
+      // kernel and user mode (e.g. just before returning from a syscall, timer interrupt, or
+      // architectural exception/fault).  We're about the perform a save.  If the save fails
+      // (returns false), then we likely have a mismatched save/restore pair, which is a bug.
+      const bool saved = thread_save_user_state_locked(current_thread);
+      DEBUG_ASSERT(saved);
+      guard.CallUnlocked([]() { thread_do_suspend(); });
+      if (saved) {
+        thread_restore_user_state_locked(current_thread);
+      }
+    } else {
+      // No user mode component so nothing to save.
+      guard.Release();
+      thread_do_suspend();
+    }
   }
 }
 

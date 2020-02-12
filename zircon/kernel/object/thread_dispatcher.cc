@@ -686,7 +686,7 @@ zx_status_t ThreadDispatcher::HandleException(Exceptionate* exceptionate,
 
 bool ThreadDispatcher::HandleSingleShotException(Exceptionate* exceptionate,
                                                  zx_excp_type_t exception_type,
-                                                 const arch_exception_context_t& context) {
+                                                 const arch_exception_context_t& arch_context) {
   canary_.Assert();
 
   LTRACE_ENTRY_OBJ;
@@ -699,18 +699,20 @@ bool ThreadDispatcher::HandleSingleShotException(Exceptionate* exceptionate,
     return false;
   }
 
-  arch_install_context_regs(core_thread_, &context);
-  auto auto_call = fbl::MakeAutoCall([this]() { arch_remove_context_regs(core_thread_); });
-
-  zx_exception_report_t report = ExceptionDispatcher::BuildArchReport(exception_type, context);
+  zx_exception_report_t report = ExceptionDispatcher::BuildArchReport(exception_type, arch_context);
 
   fbl::RefPtr<ExceptionDispatcher> exception =
-      ExceptionDispatcher::Create(fbl::RefPtr(this), exception_type, &report, &context);
+      ExceptionDispatcher::Create(fbl::RefPtr(this), exception_type, &report, &arch_context);
   if (!exception) {
     printf("KERN: failed to allocate memory for exception type %u in thread %lu.%lu\n",
            exception_type, process_->get_koid(), get_koid());
     return false;
   }
+
+  // We're about to handle the exception (|HandleException|).  Use a |ScopedThreadExceptionContext|
+  // to make the thread's user register state available to debuggers and exception handlers while
+  // the thread is "in exception".
+  ScopedThreadExceptionContext context(core_thread_, &arch_context);
 
   bool sent = false;
   HandleException(exceptionate, exception, &sent);

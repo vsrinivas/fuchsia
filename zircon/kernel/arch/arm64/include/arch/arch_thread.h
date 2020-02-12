@@ -57,7 +57,7 @@ struct arch_thread {
   // in an exception.
   // The regs are saved on the stack and then a pointer is stored here.
   // Nullptr if not suspended or not stopped in an exception.
-  // TODO(ZX-563): Also nullptr for synthetic exceptions that don't provide
+  // TODO(fxb/30521): Also nullptr for synthetic exceptions that don't provide
   // them yet.
   struct iframe_t* suspended_general_regs;
 
@@ -74,6 +74,14 @@ struct arch_thread {
   // invoked resume is called with iframe_t::r[1] = fault address and iframe_t::r[2] = page fault
   // flags.
   uint64_t data_fault_resume;
+
+  // User mode's TPIDR and TPIDRRO.
+  //
+  // TODO(maniscalco): User mode registers state is stored in two places, on the stack (|iframe_t|)
+  // and here.  Consider consolidating and moving it all here so that it's in one place.  Motivation
+  // is to reduce code complexity.
+  uint64_t tpidr_el0;
+  uint64_t tpidrro_el0;
 
   // Counts how many times the usermode thread generated the exception that
   // is used to restore |fpstate|. After some number of them it is more efficient to

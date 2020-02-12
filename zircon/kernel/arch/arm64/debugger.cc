@@ -29,8 +29,10 @@ static constexpr uint64_t kSSMaskSPSR = (1 << 21);
 zx_status_t arch_get_general_regs(thread_t* thread, zx_thread_state_general_regs_t* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
+  DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
+
   // Punt if registers aren't available. E.g.,
-  // ZX-563 (registers aren't available in synthetic exceptions)
+  // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
   if (thread->arch.suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -44,9 +46,7 @@ zx_status_t arch_get_general_regs(thread_t* thread, zx_thread_state_general_regs
   out->sp = in->usp;
   out->pc = in->elr;
   out->cpsr = in->spsr & kUserVisibleFlags;
-
-  struct arm64_context_switch_frame* frame = arm64_get_context_switch_frame(thread);
-  out->tpidr = frame->tpidr_el0;
+  out->tpidr = thread->arch.tpidr_el0;
 
   return ZX_OK;
 }
@@ -54,8 +54,10 @@ zx_status_t arch_get_general_regs(thread_t* thread, zx_thread_state_general_regs
 zx_status_t arch_set_general_regs(thread_t* thread, const zx_thread_state_general_regs_t* in) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
+  DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
+
   // Punt if registers aren't available. E.g.,
-  // ZX-563 (registers aren't available in synthetic exceptions)
+  // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
   if (thread->arch.suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -69,9 +71,7 @@ zx_status_t arch_set_general_regs(thread_t* thread, const zx_thread_state_genera
   out->usp = in->sp;
   out->elr = in->pc;
   out->spsr = (out->spsr & ~kUserVisibleFlags) | (in->cpsr & kUserVisibleFlags);
-
-  struct arm64_context_switch_frame* frame = arm64_get_context_switch_frame(thread);
-  frame->tpidr_el0 = in->tpidr;
+  thread->arch.tpidr_el0 = in->tpidr;
 
   return ZX_OK;
 }
@@ -79,8 +79,10 @@ zx_status_t arch_set_general_regs(thread_t* thread, const zx_thread_state_genera
 zx_status_t arch_get_single_step(thread_t* thread, zx_thread_state_single_step_t* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
+  DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
+
   // Punt if registers aren't available. E.g.,
-  // ZX-563 (registers aren't available in synthetic exceptions)
+  // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
   if (thread->arch.suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -100,8 +102,10 @@ zx_status_t arch_set_single_step(thread_t* thread, const zx_thread_state_single_
 
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
+  DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
+
   // Punt if registers aren't available. E.g.,
-  // ZX-563 (registers aren't available in synthetic exceptions)
+  // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
   if (thread->arch.suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -129,6 +133,8 @@ zx_status_t arch_set_fp_regs(thread_t* thread, const zx_thread_state_fp_regs* in
 zx_status_t arch_get_vector_regs(thread_t* thread, zx_thread_state_vector_regs* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
+  DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
+
   const fpstate* in = &thread->arch.fpstate;
   out->fpcr = in->fpcr;
   out->fpsr = in->fpsr;
@@ -142,6 +148,8 @@ zx_status_t arch_get_vector_regs(thread_t* thread, zx_thread_state_vector_regs* 
 
 zx_status_t arch_set_vector_regs(thread_t* thread, const zx_thread_state_vector_regs* in) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+
+  DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
   fpstate* out = &thread->arch.fpstate;
   out->fpcr = in->fpcr;
@@ -158,7 +166,10 @@ zx_status_t arch_get_debug_regs(thread_t* thread, zx_thread_state_debug_regs* ou
   *out = {};
   out->hw_bps_count = arm64_hw_breakpoint_count();
   out->hw_wps_count = arm64_hw_watchpoint_count();
+
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
+
+  DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
   // The kernel ensures that this state is being kept up to date, so we can safely copy the
   // information over.
@@ -205,10 +216,12 @@ zx_status_t arch_set_debug_regs(thread_t* thread, const zx_thread_state_debug_re
 
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
+  DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
+
   // If the suspended registers are not there, we cannot save the MDSCR values for this thread,
   // meaning that the debug HW state will be cleared almost immediatelly.
   // This should always be there.
-  // ZX-563 (registers aren't available in synthetic exceptions)
+  // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
   if (!thread->arch.suspended_general_regs) {
     return ZX_ERR_NOT_SUPPORTED;
   }

@@ -25,7 +25,7 @@ static inline bool is_fpu_enabled(uint64_t cpacr) {
   return !!(BITS(cpacr, 21, 20) != 0);
 }
 
-static void arm64_fpu_load_state(thread_t* t) {
+static void arm64_fpu_load_regs(thread_t* t) {
   struct fpstate* fpstate = &t->arch.fpstate;
 
   LTRACEF("cpu %u, thread %s, load fpstate %p\n", arch_curr_cpu_num(), t->name, fpstate);
@@ -53,7 +53,7 @@ static void arm64_fpu_load_state(thread_t* t) {
       "r"((uint64_t)fpstate->fpcr), "r"((uint64_t)fpstate->fpsr));
 }
 
-__NO_SAFESTACK static void arm64_fpu_save_state(thread_t* t) {
+__NO_SAFESTACK static void arm64_fpu_save_regs(thread_t* t) {
   struct fpstate* fpstate = &t->arch.fpstate;
 
   LTRACEF("cpu %u, thread %s, save fpstate %p\n", arch_curr_cpu_num(), t->name, fpstate);
@@ -93,11 +93,42 @@ __NO_SAFESTACK static bool use_lazy_fpu_restore(thread_t* t) {
   return (t->arch.fp_restore_count < 8u);
 }
 
+__NO_SAFESTACK void arm64_fpu_save_state(thread_t* t) {
+  // If the FPU is not enabled, then there's nothing to save.
+  const uint64_t cpacr = __arm_rsr64("cpacr_el1");
+  if (!is_fpu_enabled(cpacr)) {
+    return;
+  }
+  arm64_fpu_save_regs(t);
+}
+
+__NO_SAFESTACK void arm64_fpu_restore_state(thread_t* t) {
+  const uint64_t cpacr = __arm_rsr64("cpacr_el1");
+  const bool enabled = is_fpu_enabled(cpacr);
+  const bool lazy_restore = use_lazy_fpu_restore(t);
+
+  if (lazy_restore) {
+    if (enabled) {
+      // FPU is enabled, but the thread wants lazy restore so disable it.
+      __arm_wsr64("cpacr_el1", cpacr & ~FPU_ENABLE_MASK);
+      __isb(ARM_MB_SY);
+    }
+    return;
+  }
+
+  // Eager restore.
+  if (!enabled) {
+    __arm_wsr64("cpacr_el1", cpacr | FPU_ENABLE_MASK);
+    __isb(ARM_MB_SY);
+  }
+  arm64_fpu_load_regs(t);
+}
+
 __NO_SAFESTACK void arm64_fpu_context_switch(thread_t* oldthread, thread_t* newthread) {
   const uint64_t cpacr = __arm_rsr64("cpacr_el1");
   if (is_fpu_enabled(cpacr)) {
     LTRACEF("saving state on thread %s\n", oldthread->name);
-    arm64_fpu_save_state(oldthread);
+    arm64_fpu_save_regs(oldthread);
   }
 
   if (use_lazy_fpu_restore(newthread)) {
@@ -114,7 +145,7 @@ __NO_SAFESTACK void arm64_fpu_context_switch(thread_t* oldthread, thread_t* newt
       __arm_wsr64("cpacr_el1", cpacr | FPU_ENABLE_MASK);
       __isb(ARM_MB_SY);
     }
-    arm64_fpu_load_state(newthread);
+    arm64_fpu_load_regs(newthread);
   }
 }
 
@@ -139,6 +170,6 @@ void arm64_fpu_exception(arm64_iframe_t* iframe, uint exception_flags) {
   if (likely(t)) {
     DEBUG_ASSERT(use_lazy_fpu_restore(t));
     t->arch.fp_restore_count++;
-    arm64_fpu_load_state(t);
+    arm64_fpu_load_regs(t);
   }
 }

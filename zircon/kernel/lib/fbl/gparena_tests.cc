@@ -193,7 +193,10 @@ static int arena_alloc_helper(void* arg) {
     // chances at actually doing Alloc and Free concurrently.
     allocations++;
     if (allocations % 100 == 0) {
-      thread_process_pending_signals();
+      // The user registers we pass to |thread_process_pending_signals| do not matter because this
+      // thread is a pure kernel thread and has no user mode component.
+      iframe_t iframe = {};
+      thread_process_pending_signals(GeneralRegsSource::Iframe, &iframe);
     }
   }
 }

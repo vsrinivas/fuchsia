@@ -56,9 +56,6 @@ FUNCTION(arm64_context_switch)
     push_regs x23, x24
     push_regs x21, x22
     push_regs x19, x20
-    mrs  x19, tpidr_el0
-    mrs  x20, tpidrro_el0
-    push_regs x19, x20
 
     /* save old sp */
     mov  x9, sp
@@ -73,9 +70,6 @@ FUNCTION(arm64_context_switch)
 #endif
 
     /* restore new frame */
-    pop_regs x19, x20
-    msr  tpidr_el0, x19
-    msr  tpidrro_el0, x20
     pop_regs x19, x20
     pop_regs x21, x22
     pop_regs x23, x24
