@@ -60,7 +60,6 @@ if (current_cpu != "") {
       "$zx/system/dev/bus/virtio:virtio-test",
 #------------------
 #------------------
-      "$zx/system/dev/lib/fake-mmio-reg/test",
 #------------------
 #------------------
 #------------------
