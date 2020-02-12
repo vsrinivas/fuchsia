@@ -47,7 +47,9 @@ assemble_system("recovery") {
             board_zedboot_cmdline_args
   cmdline_inputs = zedboot_cmdline_files
 
-  bootfs_allowlist = bootfs_allowlist_recovery
+  #XXX(comfoltey) Disable bootfs_allowlist_recovery while build unification is
+  # in progress
+  bootfs_allowlist = []
   metadata = {
     test_runtime_deps = [ "$root_out_dir/${target_name}.zbi" ]
   }
