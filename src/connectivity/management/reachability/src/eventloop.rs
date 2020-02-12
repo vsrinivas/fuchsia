@@ -8,9 +8,11 @@
 //! monitor to infer the connectivity state.
 
 use {
-    crate::worker::{EventWorker, TimerWorker},
+    crate::worker::{EventWorker, FidlWorker, TimerWorker},
     anyhow::Error,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_async as fasync,
+    fuchsia_inspect::health::Reporter,
+    fuchsia_zircon as zx,
     futures::channel::mpsc,
     futures::prelude::*,
     reachability_core::{Monitor, Timer},
@@ -24,7 +26,7 @@ pub enum Event {
     /// An event coming from fuchsia.netstack.
     NetstackEvent(fidl_fuchsia_netstack::NetstackEvent),
     /// A timer firing.
-    TimerEvent(u64),
+    TimerEvent(Option<u64>),
 }
 
 /// The event loop.
@@ -38,10 +40,9 @@ struct EventTimer {
 }
 
 impl Timer for EventTimer {
-    fn periodic(&self, duration: zx::Duration, id: u64) -> i64 {
+    fn periodic(&self, duration: zx::Duration, id: Option<u64>) {
         let timer_worker = TimerWorker;
         timer_worker.spawn(fasync::Interval::new(duration), self.event_send.clone(), id);
-        0
     }
 }
 
@@ -53,23 +54,31 @@ impl EventLoop {
         let streams = monitor.take_event_streams();
         let event_worker = EventWorker;
         event_worker.spawn(streams, event_send.clone());
-        let timer = EventTimer { event_send: event_send.clone() };
+        let fidl_worker = FidlWorker;
+        // Just panic on error. Nothing to do.
+        let inspector = fidl_worker.spawn().unwrap();
+        fuchsia_inspect::component::health().set_starting_up();
+        let timer = EventTimer { event_send };
         monitor.set_timer(Box::new(timer));
+        monitor.set_inspector(inspector);
         EventLoop { event_recv, monitor }
     }
 
     /// `run` starts the event loop.
     pub async fn run(&mut self) -> Result<(), Error> {
         debug!("starting event loop");
+        fuchsia_inspect::component::health().set_ok();
         while let Some(e) = self.event_recv.next().await {
             match e {
                 Event::StackEvent(event) => self.handle_stack_event(event).await,
                 Event::NetstackEvent(event) => self.handle_netstack_event(event).await,
-                Event::TimerEvent(id) => {
-                    self.handle_timer_firing(id).await;
-                }
+                Event::TimerEvent(id) => match id {
+                    Some(id) => self.handle_timer_firing(id).await,
+                    None => self.monitor.report_state(),
+                },
             }
         }
+        fuchsia_inspect::component::health().set_unhealthy("no events, exiting.");
         Ok(())
     }
 

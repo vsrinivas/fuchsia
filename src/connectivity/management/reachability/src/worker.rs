@@ -6,6 +6,8 @@ use {
     crate::eventloop::Event,
     anyhow::Error,
     fidl_fuchsia_net_stack as stack, fidl_fuchsia_netstack as netstack, fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    fuchsia_inspect::{component, Inspector},
     futures::{channel::mpsc, StreamExt, TryFutureExt},
 };
 
@@ -40,6 +42,21 @@ impl EventWorker {
     }
 }
 
+pub struct FidlWorker;
+
+impl FidlWorker {
+    pub fn spawn(self) -> Result<&'static Inspector, Error> {
+        let mut fs = ServiceFs::new_local();
+        fs.take_and_serve_directory_handle()?;
+
+        let inspector = component::inspector();
+        inspector.serve(&mut fs)?;
+
+        fasync::spawn_local(fs.collect());
+        Ok(inspector)
+    }
+}
+
 /// `TimerWorker` waits for timer events and sends them on the indicated
 /// `event_chan`.
 pub struct TimerWorker;
@@ -49,7 +66,7 @@ impl TimerWorker {
         self,
         mut timer: fasync::Interval,
         event_chan: mpsc::UnboundedSender<Event>,
-        id: u64,
+        id: Option<u64>,
     ) {
         debug!("spawn periodic timer");
         fasync::spawn_local(async move {

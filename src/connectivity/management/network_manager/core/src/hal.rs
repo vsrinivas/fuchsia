@@ -163,6 +163,7 @@ pub enum InterfaceState {
 #[derive(Debug, Eq, PartialEq)]
 pub struct Interface {
     pub id: PortId,
+    pub topo_path: String,
     pub name: String,
     pub ipv4_addr: Option<InterfaceAddress>,
     pub ipv6_addr: Vec<LifIpAddr>,
@@ -194,7 +195,8 @@ impl From<&InterfaceInfo> for Interface {
     fn from(iface: &InterfaceInfo) -> Self {
         Interface {
             id: iface.id.into(),
-            name: iface.properties.topopath.clone(),
+            topo_path: iface.properties.topopath.clone(),
+            name: iface.properties.name.clone(),
             ipv4_addr: iface
                 .properties
                 .addresses
@@ -254,6 +256,7 @@ impl From<&netstack::NetInterface> for Interface {
         });
         Interface {
             id: PortId(iface.id.into()),
+            topo_path: iface.name.clone(),
             name: iface.name.clone(),
             ipv4_addr: addr.map(|a| {
                 if dhcp {
@@ -649,7 +652,8 @@ mod tests {
     fn interface_with_addr(addr: Option<LifIpAddr>) -> Interface {
         Interface {
             id: 42.into(),
-            name: "test/interface/info".to_string(),
+            topo_path: "test/interface/info".to_string(),
+            name: "ethtest".to_string(),
             ipv4_addr: addr.map(|a| InterfaceAddress::Unknown(a)),
             ipv6_addr: Vec::new(),
             enabled: true,
@@ -699,7 +703,7 @@ mod tests {
     fn test_net_interface_info_into_hal_interface() {
         let info = interface_info_with_addrs(sample_addresses());
         let iface: Interface = (&info).into();
-        assert_eq!(iface.name, "test/interface/info");
+        assert_eq!(iface.topo_path, "test/interface/info");
         assert_eq!(iface.enabled, true);
         assert_eq!(
             iface.get_address_v4(),
@@ -789,6 +793,7 @@ mod tests {
                 },
                 Interface {
                     id: PortId(5),
+                    topo_path: "test_if".to_string(),
                     name: "test_if".to_string(),
                     ipv4_addr: Some(InterfaceAddress::Dhcp(LifIpAddr {
                         address: IpAddr::from([1, 2, 3, 4]),
@@ -818,6 +823,7 @@ mod tests {
                 },
                 Interface {
                     id: PortId(5),
+                    topo_path: "test_if".to_string(),
                     name: "test_if".to_string(),
                     ipv4_addr: Some(InterfaceAddress::Dhcp(LifIpAddr {
                         address: IpAddr::from([1, 2, 3, 4]),
@@ -850,6 +856,7 @@ mod tests {
                 },
                 Interface {
                     id: PortId(5),
+                    topo_path: "test_if".to_string(),
                     name: "test_if".to_string(),
                     ipv4_addr: Some(InterfaceAddress::Dhcp(LifIpAddr {
                         address: IpAddr::from([1, 2, 3, 4]),
@@ -887,6 +894,7 @@ mod tests {
                 },
                 Interface {
                     id: PortId(5),
+                    topo_path: "test_if".to_string(),
                     name: "test_if".to_string(),
                     ipv4_addr: Some(InterfaceAddress::Dhcp(LifIpAddr {
                         address: IpAddr::from([1, 2, 3, 4]),
@@ -932,6 +940,7 @@ mod tests {
                 },
                 Interface {
                     id: PortId(5),
+                    topo_path: "test_if".to_string(),
                     name: "test_if".to_string(),
                     ipv4_addr: Some(InterfaceAddress::Dhcp(LifIpAddr {
                         address: IpAddr::from([1, 2, 3, 4]),
@@ -1010,7 +1019,8 @@ mod tests {
             },
             Interface {
                 id: PortId(5),
-                name: "test/interface/info".to_string(),
+                topo_path: "test/interface/info".to_string(),
+                name: "test_if".to_string(),
                 ipv4_addr: Some(InterfaceAddress::Unknown(LifIpAddr {
                     address: IpAddr::from([4, 3, 2, 1]),
                     prefix: 23,

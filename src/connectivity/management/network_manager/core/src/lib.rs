@@ -345,7 +345,7 @@ impl DeviceState {
         let l = lifmgr::LIF::new(
             self.version,
             LIFType::WAN,
-            &iface.name,
+            &iface.topo_path,
             iface.id,
             vec![iface.id],
             0, // vlan

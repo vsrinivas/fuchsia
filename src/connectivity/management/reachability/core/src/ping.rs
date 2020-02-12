@@ -22,8 +22,9 @@ impl Pinger for IcmpPinger {
     fn ping(&self, url: &str) -> bool {
         let ret;
         // unsafe needed as we are calling C code.
+        let c_str = CString::new(url).unwrap();
         unsafe {
-            ret = c_ping((CString::new(url).unwrap()).as_ptr());
+            ret = c_ping(c_str.as_ptr());
         }
         if ret == 0 {
             debug!("ping {:#?} succeeded!", url);
