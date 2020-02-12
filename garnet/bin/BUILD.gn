@@ -37,7 +37,6 @@ group("bin") {
     "stash_ctl",
     "sysmem_connector",
     "sysmgr",
-    "tee_manager",
     "terminal",
     "test_runner",
     "thermd",

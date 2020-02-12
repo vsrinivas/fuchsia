@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "common.h"
-
 #include <fuchsia/tee/cpp/fidl.h>
-#include <gtest/gtest.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
+
+#include <gtest/gtest.h>
 #include <tee-client-api/tee_client_api.h>
+
+#include "common.h"
 
 namespace optee {
 namespace test {
@@ -83,8 +84,8 @@ TEST_F(OpteeSmokeTest, VerifyTeeConnectivity) {
       TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_NONE, TEEC_NONE, TEEC_MEMREF_TEMP_OUTPUT);
 
   OperationResult op_result;
-  op_result.result = TEEC_InvokeCommand(
-      GetSession(), kKeysafeGetHardwareDerivedKeyCmdID, &op, &op_result.return_origin);
+  op_result.result = TEEC_InvokeCommand(GetSession(), kKeysafeGetHardwareDerivedKeyCmdID, &op,
+                                        &op_result.return_origin);
 
   ASSERT_TRUE(IsTeecSuccess(op_result));
   ASSERT_EQ(op.params[3].tmpref.size, kDerivedKeySize);
@@ -101,14 +102,13 @@ TEST_F(OpteeSmokeTest, SupportsNullMemoryReferences) {
       TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_NONE, TEEC_NONE, TEEC_MEMREF_TEMP_OUTPUT);
 
   OperationResult op_result;
-  op_result.result = TEEC_InvokeCommand(
-      GetSession(), kKeysafeGetHardwareDerivedKeyCmdID, &op, &op_result.return_origin);
+  op_result.result = TEEC_InvokeCommand(GetSession(), kKeysafeGetHardwareDerivedKeyCmdID, &op,
+                                        &op_result.return_origin);
 
   // The TA is not expected to succeed given this input. It is sufficient to verify that
   // the error origin is not the api or the comms.
-  ASSERT_TRUE(IsTeecSuccess(op_result)
-              || ((op_result.return_origin != TEEC_ORIGIN_API)
-                  && (op_result.return_origin != TEEC_ORIGIN_COMMS)));
+  ASSERT_TRUE(IsTeecSuccess(op_result) || ((op_result.return_origin != TEEC_ORIGIN_API) &&
+                                           (op_result.return_origin != TEEC_ORIGIN_COMMS)));
 }
 
 }  // namespace test

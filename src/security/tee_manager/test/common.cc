@@ -41,7 +41,9 @@ ContextGuard::ContextGuard(TEEC_Context* context) : context_(context) {}
 
 ContextGuard::~ContextGuard() { Close(); }
 
-ContextGuard::ContextGuard(ContextGuard&& other) : context_(other.context_) { other.context_ = nullptr; }
+ContextGuard::ContextGuard(ContextGuard&& other) : context_(other.context_) {
+  other.context_ = nullptr;
+}
 
 ContextGuard& ContextGuard::operator=(ContextGuard&& other) {
   if (&other == this) {
@@ -76,7 +78,9 @@ SessionGuard::SessionGuard(TEEC_Session* session) : session_(session) {}
 
 SessionGuard::~SessionGuard() { Close(); }
 
-SessionGuard::SessionGuard(SessionGuard&& other) : session_(other.session_) { other.session_ = nullptr; }
+SessionGuard::SessionGuard(SessionGuard&& other) : session_(other.session_) {
+  other.session_ = nullptr;
+}
 
 SessionGuard& SessionGuard::operator=(SessionGuard&& other) {
   if (&other == this) {

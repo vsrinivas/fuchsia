@@ -582,8 +582,8 @@ group("setui_client") {
 group("tee_manager") {
   testonly = true
   public_deps = [
-    "//garnet/bin/tee_manager",
-    "//garnet/bin/tee_manager:config",
+    "//src/security/tee_manager",
+    "//src/security/tee_manager:config",
   ]
 }
 
