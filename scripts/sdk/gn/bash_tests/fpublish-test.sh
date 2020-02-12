@@ -19,7 +19,7 @@ TEST_fpublish() {
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpublish.sh" "${PACKAGE_NAME}"
 
   # Verify that pm serve was run correctly.
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/sdk/tools/pm.mock_state"
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/pm.mock_state"
   local PM_ARGS=("${BT_MOCK_ARGS[@]:1}")
 
   # Expected commands to be run by fpublish.sh.
@@ -50,7 +50,7 @@ BT_FILE_DEPS=(
   scripts/sdk/gn/base/bin/fuchsia-common.sh
 )
 BT_MOCKED_TOOLS=(
-  scripts/sdk/gn/base/sdk/tools/pm
+  scripts/sdk/gn/base/tools/pm
 )
 
 BT_RUN_TESTS "$@"
