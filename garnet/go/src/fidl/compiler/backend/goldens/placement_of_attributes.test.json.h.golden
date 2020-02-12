@@ -18,6 +18,7 @@ class ExampleProtocol_EventSender;
 class ExampleProtocol_Sync;
 using ExampleProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<ExampleProtocol>;
 class ExampleProtocol_SyncProxy;
+using ExampleProtocolHandle = ::fidl::InterfaceHandle<ExampleProtocol>;
 namespace internal {
 constexpr uint64_t kExampleProtocol_Method_Ordinal = 0x42fd6a1b00000000lu;
 constexpr uint64_t kExampleProtocol_Method_GenOrdinal = 0x1b489f95492fd90elu;

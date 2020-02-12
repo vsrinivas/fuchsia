@@ -20,6 +20,7 @@ class EmptyProtocol_EventSender;
 class EmptyProtocol_Sync;
 using EmptyProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<EmptyProtocol>;
 class EmptyProtocol_SyncProxy;
+using EmptyProtocolHandle = ::fidl::InterfaceHandle<EmptyProtocol>;
 namespace internal {
 constexpr uint64_t kEmptyProtocol_Send_Ordinal = 0x1109a64200000000lu;
 constexpr uint64_t kEmptyProtocol_Send_GenOrdinal = 0x7a2963cbd88da03lu;

@@ -21,6 +21,7 @@ class Protocol_EventSender;
 class Protocol_Sync;
 using ProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<Protocol>;
 class Protocol_SyncProxy;
+using ProtocolHandle = ::fidl::InterfaceHandle<Protocol>;
 namespace internal {
 constexpr uint64_t kProtocol_RequestStrictResponseFlexible_Ordinal = 0x1143e3c200000000lu;
 constexpr uint64_t kProtocol_RequestStrictResponseFlexible_GenOrdinal = 0x72b1a46e5e2af282lu;

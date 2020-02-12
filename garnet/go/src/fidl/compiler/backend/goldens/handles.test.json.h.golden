@@ -20,6 +20,7 @@ class SomeProtocol_EventSender;
 class SomeProtocol_Sync;
 using SomeProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<SomeProtocol>;
 class SomeProtocol_SyncProxy;
+using SomeProtocolHandle = ::fidl::InterfaceHandle<SomeProtocol>;
 namespace internal {
 
 }  // namespace

@@ -18,6 +18,7 @@ class {{ .EventSenderName }};
 class {{ .SyncName }};
 using {{ .Name }}SyncPtr = ::fidl::SynchronousInterfacePtr<{{ .Name }}>;
 class {{ .SyncProxyName }};
+using {{ .Name }}Handle = ::fidl::InterfaceHandle<{{ .Name }}>;
 namespace internal {
 
 {{- range .Methods }}

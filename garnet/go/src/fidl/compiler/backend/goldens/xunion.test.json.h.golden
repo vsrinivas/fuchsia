@@ -24,6 +24,7 @@ class TestProtocol_EventSender;
 class TestProtocol_Sync;
 using TestProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<TestProtocol>;
 class TestProtocol_SyncProxy;
+using TestProtocolHandle = ::fidl::InterfaceHandle<TestProtocol>;
 namespace internal {
 constexpr uint64_t kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal = 0x68bfe80f00000000lu;
 constexpr uint64_t kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal = 0x728fedeed6ef99dalu;

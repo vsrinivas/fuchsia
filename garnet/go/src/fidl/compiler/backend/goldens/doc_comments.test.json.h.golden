@@ -24,6 +24,7 @@ class Interface_EventSender;
 class Interface_Sync;
 using InterfaceSyncPtr = ::fidl::SynchronousInterfacePtr<Interface>;
 class Interface_SyncProxy;
+using InterfaceHandle = ::fidl::InterfaceHandle<Interface>;
 namespace internal {
 constexpr uint64_t kInterface_Method_Ordinal = 0x3f43684c00000000lu;
 constexpr uint64_t kInterface_Method_GenOrdinal = 0x60e700e002995ef8lu;

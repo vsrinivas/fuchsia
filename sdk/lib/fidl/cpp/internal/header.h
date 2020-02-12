@@ -48,6 +48,7 @@
 #include "lib/fidl/cpp/internal/logging.h"
 
 #ifdef __Fuchsia__
+#include "lib/fidl/cpp/interface_handle.h"
 #include "lib/fidl/cpp/interface_ptr.h"
 #include "lib/fidl/cpp/internal/proxy_controller.h"
 #include "lib/fidl/cpp/internal/stub_controller.h"

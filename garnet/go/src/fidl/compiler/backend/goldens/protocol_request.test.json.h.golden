@@ -18,6 +18,7 @@ class Parent_EventSender;
 class Parent_Sync;
 using ParentSyncPtr = ::fidl::SynchronousInterfacePtr<Parent>;
 class Parent_SyncProxy;
+using ParentHandle = ::fidl::InterfaceHandle<Parent>;
 namespace internal {
 constexpr uint64_t kParent_GetChild_Ordinal = 0x3692bc6900000000lu;
 constexpr uint64_t kParent_GetChild_GenOrdinal = 0x57e26ed694158086lu;
@@ -40,6 +41,7 @@ class Child_EventSender;
 class Child_Sync;
 using ChildSyncPtr = ::fidl::SynchronousInterfacePtr<Child>;
 class Child_SyncProxy;
+using ChildHandle = ::fidl::InterfaceHandle<Child>;
 namespace internal {
 
 }  // namespace

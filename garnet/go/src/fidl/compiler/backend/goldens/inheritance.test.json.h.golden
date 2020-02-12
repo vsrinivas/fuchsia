@@ -19,6 +19,7 @@ class super_EventSender;
 class super_Sync;
 using superSyncPtr = ::fidl::SynchronousInterfacePtr<super>;
 class super_SyncProxy;
+using superHandle = ::fidl::InterfaceHandle<super>;
 namespace internal {
 constexpr uint64_t ksuper_foo_Ordinal = 0x2f16c1bc00000000lu;
 constexpr uint64_t ksuper_foo_GenOrdinal = 0x4f6c089228ba7c92lu;
@@ -35,6 +36,7 @@ class sub_EventSender;
 class sub_Sync;
 using subSyncPtr = ::fidl::SynchronousInterfacePtr<sub>;
 class sub_SyncProxy;
+using subHandle = ::fidl::InterfaceHandle<sub>;
 namespace internal {
 constexpr uint64_t ksub_foo_Ordinal = 0x2f16c1bc00000000lu;
 constexpr uint64_t ksub_foo_GenOrdinal = 0x4f6c089228ba7c92lu;

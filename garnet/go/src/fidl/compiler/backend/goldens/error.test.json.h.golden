@@ -21,6 +21,7 @@ class Example_EventSender;
 class Example_Sync;
 using ExampleSyncPtr = ::fidl::SynchronousInterfacePtr<Example>;
 class Example_SyncProxy;
+using ExampleHandle = ::fidl::InterfaceHandle<Example>;
 namespace internal {
 constexpr uint64_t kExample_foo_Ordinal = 0x51a3dcd800000000lu;
 constexpr uint64_t kExample_foo_GenOrdinal = 0xbaf4e613e45f29blu;

@@ -19,6 +19,7 @@ class Top_EventSender;
 class Top_Sync;
 using TopSyncPtr = ::fidl::SynchronousInterfacePtr<Top>;
 class Top_SyncProxy;
+using TopHandle = ::fidl::InterfaceHandle<Top>;
 namespace internal {
 constexpr uint64_t kTop_GetFoo_Ordinal = 0xb3385a000000000lu;
 constexpr uint64_t kTop_GetFoo_GenOrdinal = 0x6ae8d19bc98f3d92lu;

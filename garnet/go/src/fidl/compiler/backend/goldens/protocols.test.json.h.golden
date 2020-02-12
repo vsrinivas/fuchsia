@@ -23,6 +23,7 @@ class ChannelProtocol_EventSender;
 class ChannelProtocol_Sync;
 using ChannelProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<ChannelProtocol>;
 class ChannelProtocol_SyncProxy;
+using ChannelProtocolHandle = ::fidl::InterfaceHandle<ChannelProtocol>;
 namespace internal {
 constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 0x556693d200000000lu;
 constexpr uint64_t kChannelProtocol_MethodA_GenOrdinal = 0x1b1e059b3f02bffclu;
@@ -45,6 +46,7 @@ class WithAndWithoutRequestResponse_EventSender;
 class WithAndWithoutRequestResponse_Sync;
 using WithAndWithoutRequestResponseSyncPtr = ::fidl::SynchronousInterfacePtr<WithAndWithoutRequestResponse>;
 class WithAndWithoutRequestResponse_SyncProxy;
+using WithAndWithoutRequestResponseHandle = ::fidl::InterfaceHandle<WithAndWithoutRequestResponse>;
 namespace internal {
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal = 0x1e03f87500000000lu;
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_GenOrdinal = 0x3931f96bc77fba8lu;
@@ -90,6 +92,7 @@ class WithErrorSyntax_EventSender;
 class WithErrorSyntax_Sync;
 using WithErrorSyntaxSyncPtr = ::fidl::SynchronousInterfacePtr<WithErrorSyntax>;
 class WithErrorSyntax_SyncProxy;
+using WithErrorSyntaxHandle = ::fidl::InterfaceHandle<WithErrorSyntax>;
 namespace internal {
 constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_Ordinal = 0x4f3c32be00000000lu;
 constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_GenOrdinal = 0x592157d505db2bcflu;
