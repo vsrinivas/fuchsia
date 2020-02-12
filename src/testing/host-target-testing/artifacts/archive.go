@@ -41,9 +41,10 @@ func (a *Archive) GetBuilder(name string) *Builder {
 func (a *Archive) GetBuildByID(id string, dir string) (*Build, error) {
 	// Make sure the build exists.
 	args := []string{"ls", "-build", id}
-	_, stderr, err := util.RunCommand(a.artifactsPath, args...)
+	stdout, stderr, err := util.RunCommand(a.artifactsPath, args...)
 	if err != nil {
 		if len(stderr) != 0 {
+			fmt.Printf("artifacts output: \n%s", stdout)
 			return nil, fmt.Errorf("artifacts failed: %s: %s", err, string(stderr))
 		}
 		return nil, fmt.Errorf("artifacts failed: %s", err)
