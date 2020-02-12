@@ -200,6 +200,10 @@ fxt_spinel_vk_svg::SetUp()
       spn(composition_unseal(composition));
       spn(composition_reset(composition));
 
+      // unseal and reset styling
+      spn(styling_unseal(styling));
+      spn(styling_reset(styling));
+
       // release paths
       spn_svg_paths_release(svg, context, paths);
 
