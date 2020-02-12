@@ -72,7 +72,7 @@ impl Stream for AudioFrameStream {
                 Ok(time) => time,
             }
         };
-        if next_frame_time > now.into() {
+        if next_frame_time + self.min_packet_duration > now.into() {
             self.last_frame_time = Some(from);
             self.timer = fasync::Timer::new(from + self.min_packet_duration);
             let poll = fasync::Timer::poll(Pin::new(&mut self.timer), cx);
@@ -642,16 +642,24 @@ mod tests {
 
         recv_and_expect_response(&mut exec, &rb, request, expected);
 
-        // One second plus one nanosecond passes
+        // Advance time enough for data to exist, but not far enough to hit min_packet_duration
+        exec.set_fake_time(fasync::Time::after(zx::Duration::from_millis(50)));
+
+        // No data should be ready yet
+        let mut frame_fut = frame_stream.next();
+        let result = exec.run_until_stalled(&mut frame_fut);
+        assert!(!result.is_ready());
+
+        // Now advance to after min_packet_duration, to 1 second + 1 nanos
         exec.set_fake_time(fasync::Time::after(
-            zx::Duration::from_seconds(1) + zx::Duration::from_nanos(1),
+            zx::Duration::from_seconds(1) + zx::Duration::from_nanos(1)
+                - zx::Duration::from_millis(50),
         ));
 
-        // Read audio out, it should match
-        let mut frame_fut = frame_stream.next();
         let result = exec.run_until_stalled(&mut frame_fut);
         assert!(result.is_ready());
 
+        // Read audio out, it should match
         if let Poll::Ready(Some(Ok(audio_recv))) = result {
             assert_eq!(bytes_per_second as usize, audio_recv.len());
             assert_eq!(&sent_audio, &audio_recv);
