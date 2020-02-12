@@ -131,9 +131,10 @@ func TestEndpoint(t *testing.T) {
 				t.Fatal(err)
 			}
 			outEndpoint := eth.NewLinkEndpoint(outClient)
-			outCh := make(dispatcherChan, depth)
-			defer close(outCh)
-			outEndpoint.Attach(&outCh)
+			{
+				var outCh dispatcherChan
+				outEndpoint.Attach(&outCh)
+			}
 
 			const localLinkAddress = tcpip.LinkAddress("\x01\x02\x03\x04\x05\x06")
 			const remoteLinkAddress = tcpip.LinkAddress("\x11\x12\x13\x14\x15\x16")

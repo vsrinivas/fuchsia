@@ -7,6 +7,7 @@ package eth
 import (
 	"fmt"
 	"math"
+	"math/bits"
 	"reflect"
 	"sync"
 	"syscall/zx"
@@ -31,6 +32,94 @@ const zxsioEthSignalStatus = zx.SignalUser0
 const tag = "eth"
 
 type FifoEntry = C.struct_eth_fifo_entry
+
+type entries struct {
+	// len(storage) must be a power of two; we rely on this fact to enable
+	// masking instead of modulus operations.
+	storage []FifoEntry
+
+	// sent, queued, readied are indices modulo (len(storage) << 1). They
+	// implement a ring buffer with 3 regions:
+	//
+	// - sent:queued: entries describing populated buffers, ready to be
+	// sent to the driver
+	//
+	// - queued:readied: entries describing unpopulated buffers, ready to
+	// accept outbound data
+	//
+	// - readied:sent: entries describing buffers currently owned by the
+	// driver, not yet returned
+	sent, queued, readied uint16
+}
+
+func (e *entries) init(depth uint32) {
+	*e = entries{}
+
+	// Round up to the next power of two.
+	power := bits.Len32(depth-1) + 1
+	size := uint32(1 << power)
+	e.storage = make([]FifoEntry, size)
+}
+
+func (e *entries) mask(val uint16) uint16 {
+	return val & uint16(len(e.storage)-1)
+}
+
+func (e *entries) mask2(val uint16) uint16 {
+	return val & uint16((len(e.storage)<<1)-1)
+}
+
+func (e *entries) incrementSent(delta uint16) {
+	e.sent = e.mask2(e.sent + delta)
+}
+
+func (e *entries) incrementQueued(delta uint16) {
+	e.queued = e.mask2(e.queued + delta)
+}
+
+func (e *entries) incrementReadied(delta uint16) {
+	e.readied = e.mask2(e.readied + delta)
+}
+
+func (e *entries) haveQueued() bool {
+	return e.sent != e.queued
+}
+
+func (e *entries) getReadied() *FifoEntry {
+	return &e.storage[e.mask(e.queued)]
+}
+
+func (e *entries) haveReadied() bool {
+	return e.queued != e.readied
+}
+
+func (e *entries) inFlight() uint16 {
+	if readied, sent := e.mask(e.readied), e.mask(e.sent); readied > sent {
+		return uint16(len(e.storage)) - (readied - sent)
+	} else {
+		return sent - readied
+	}
+}
+
+func (e *entries) addReadied(src []FifoEntry) int {
+	if readied, sent := e.mask(e.readied), e.mask(e.sent); readied < sent {
+		return copy(e.storage[readied:sent], src)
+	} else {
+		n := copy(e.storage[readied:], src)
+		n += copy(e.storage[:sent], src[n:])
+		return n
+	}
+}
+
+func (e *entries) getQueued(dst []FifoEntry) int {
+	if sent, queued := e.mask(e.sent), e.mask(e.queued); sent < queued {
+		return copy(dst, e.storage[sent:queued])
+	} else {
+		n := copy(dst, e.storage[sent:])
+		n += copy(dst[n:], e.storage[:queued])
+		return n
+	}
+}
 
 var _ link.Controller = (*Client)(nil)
 
@@ -61,13 +150,7 @@ type Client struct {
 			sync.Mutex
 			waiters int
 
-			storage []FifoEntry
-
-			// available is the index after the last available entry.
-			available int
-
-			// queued is the index after the last queued entry.
-			queued int
+			entries entries
 
 			// detached signals to incoming writes that the receiver is unable to service them.
 			detached bool
@@ -121,14 +204,14 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 		}
 		c.rxQueue = append(c.rxQueue, arena.entry(b))
 	}
-	c.tx.mu.storage = make([]FifoEntry, 0, 2*fifos.TxDepth)
-	for i := 0; i < cap(c.tx.mu.storage); i++ {
+	c.tx.mu.entries.init(fifos.TxDepth)
+	for i := range c.tx.mu.entries.storage {
 		b := arena.alloc(c)
 		if b == nil {
-			return nil, fmt.Errorf("%s: failed to allocate initial TX buffer %d/%d", tag, i, cap(c.tx.mu.storage))
+			return nil, fmt.Errorf("%s: failed to allocate initial TX buffer %d/%d", tag, i, len(c.tx.mu.entries.storage))
 		}
-		c.tx.mu.storage = append(c.tx.mu.storage, arena.entry(b))
-		c.tx.mu.available++
+		c.tx.mu.entries.storage[i] = arena.entry(b)
+		c.tx.mu.entries.incrementReadied(1)
 	}
 	c.tx.cond.L = &c.tx.mu.Mutex
 
@@ -177,9 +260,7 @@ func (c *Client) write(pkts []tcpip.PacketBuffer) (int, *tcpip.Error) {
 				return i, tcpip.ErrClosedForSend
 			}
 
-			// queued can never exceed available because both are indices and available is never zero
-			// because it represents a storage array double the size of the tx fifo depth.
-			if c.tx.mu.queued != c.tx.mu.available {
+			if c.tx.mu.entries.haveReadied() {
 				break
 			}
 
@@ -188,12 +269,14 @@ func (c *Client) write(pkts []tcpip.PacketBuffer) (int, *tcpip.Error) {
 			c.tx.mu.waiters--
 		}
 
-		prevQueued := c.tx.mu.queued
 		// Queue as many remaining packets as possible; if we run out of space, we'll return to the
 		// waiting state in the outer loop.
-		for _, pkt := range pkts[i:] {
+		for {
+			pkt := pkts[i]
+			i++
+
 			// This is being reused, reset its length to get an appropriately sized buffer.
-			entry := &c.tx.mu.storage[c.tx.mu.queued]
+			entry := c.tx.mu.entries.getReadied()
 			entry.length = bufferSize
 			b := c.arena.bufferFromEntry(*entry)
 			used := copy(b, pkt.Header.View())
@@ -221,16 +304,14 @@ func (c *Client) write(pkts []tcpip.PacketBuffer) (int, *tcpip.Error) {
 				used += copy(b[used:], v)
 			}
 			*entry = c.arena.entry(b[:used])
-			c.tx.mu.queued++
-			if c.tx.mu.queued == c.tx.mu.available {
+			c.tx.mu.entries.incrementQueued(1)
+
+			if i == len(pkts) || !c.tx.mu.entries.haveReadied() {
 				break
 			}
 		}
-		postQueued := c.tx.mu.queued
 		c.tx.mu.Unlock()
 		c.tx.cond.Broadcast()
-
-		i += postQueued - prevQueued
 	}
 
 	return len(pkts), nil
@@ -259,6 +340,13 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 		if err := func() error {
 			scratch := make([]FifoEntry, c.fifos.TxDepth)
 			for {
+				c.tx.mu.Lock()
+				detached := c.tx.mu.detached
+				c.tx.mu.Unlock()
+				if detached {
+					return nil
+				}
+
 				if _, err := zxwait.Wait(c.fifos.Tx, zx.SignalFIFOReadable|zx.SignalFIFOPeerClosed, zx.TimensecInfinite); err != nil {
 					return err
 				}
@@ -266,9 +354,14 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 				switch status, count := FifoRead(c.fifos.Tx, scratch); status {
 				case zx.ErrOk:
 					c.tx.mu.Lock()
-					c.tx.mu.available += copy(c.tx.mu.storage[c.tx.mu.available:], scratch[:count])
+					n := c.tx.mu.entries.addReadied(scratch[:count])
+					c.tx.mu.entries.incrementReadied(uint16(n))
 					c.tx.mu.Unlock()
 					c.tx.cond.Broadcast()
+
+					if n := uint32(n); count != n {
+						return fmt.Errorf("fifoRead(TX): tx_depth invariant violation; observed=%d expected=%d", c.fifos.TxDepth-n+count, c.fifos.TxDepth)
+					}
 				default:
 					return &zx.Error{Status: status, Text: "FifoRead(TX)"}
 				}
@@ -295,10 +388,9 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 						c.tx.mu.Unlock()
 						return nil
 					}
-					if batchSize := len(scratch) - (len(c.tx.mu.storage) - c.tx.mu.available); batchSize != 0 {
-						if c.tx.mu.queued != 0 {
-							// We have queued packets.
-							if c.tx.mu.waiters == 0 || c.tx.mu.queued == c.tx.mu.available {
+					if batchSize := len(scratch) - int(c.tx.mu.entries.inFlight()); batchSize != 0 {
+						if c.tx.mu.entries.haveQueued() {
+							if c.tx.mu.waiters == 0 || !c.tx.mu.entries.haveReadied() {
 								// No application threads are waiting OR application threads are waiting on the
 								// reader.
 								//
@@ -313,9 +405,8 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 					}
 					c.tx.cond.Wait()
 				}
-				n := copy(batch, c.tx.mu.storage[:c.tx.mu.queued])
-				c.tx.mu.available = copy(c.tx.mu.storage, c.tx.mu.storage[n:c.tx.mu.available])
-				c.tx.mu.queued -= n
+				n := c.tx.mu.entries.getQueued(batch)
+				c.tx.mu.entries.incrementSent(uint16(n))
 				c.tx.mu.Unlock()
 
 				switch status, count := fifoWrite(c.fifos.Tx, batch[:n]); status {
