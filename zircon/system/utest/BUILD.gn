@@ -116,7 +116,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/paver/test",
 #------------------
 #------------------
-      "$zx/system/ulib/runtests-utils/test",
 #------------------
 #------------------
       "$zx/system/ulib/storage:test",

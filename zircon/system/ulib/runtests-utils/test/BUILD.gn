@@ -2,34 +2,60 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fidl.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
 
-if (is_fuchsia) {
-  group("test") {
-    testonly = true
-    deps = [ ":service-proxy-dir" ]
-  }
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
 
-  zx_test("service-proxy-dir") {
-    sources = [ "service-proxy-dir.cc" ]
-    deps = [
-      ":fidl.test.echo.c",
-      "$zx/system/fidl/fuchsia-io:llcpp",
-      "$zx/system/ulib/async-loop:async-loop-cpp",
-      "$zx/system/ulib/async-loop:async-loop-default.static",
-      "$zx/system/ulib/fidl",
-      "$zx/system/ulib/fidl-async:fidl-async-cpp",
-      "$zx/system/ulib/fidl-utils",
-      "$zx/system/ulib/fs",
-      "$zx/system/ulib/runtests-utils",
-      "$zx/system/ulib/zx",
-      "$zx/system/ulib/zxtest",
-    ]
-  }
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+group("test") {
+  testonly = true
+  deps = [ ":service-proxy-dir" ]
 }
 
-fidl_library("fidl.test.echo") {
-  testonly = true
+test("service-proxy-dir") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  sources = [ "service-proxy-dir.cc" ]
+  deps = [
+    ":fidl.test.echo_c",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/runtests-utils",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-io:llcpp",
+  ]
+}
+
+fidl("fidl.test.echo") {
   visibility = [ ":*" ]
   sources = [ "echo.test.fidl" ]
+}
+
+migrated_manifest("service-proxy-dir-manifest") {
+  deps = [ ":service-proxy-dir" ]
 }
