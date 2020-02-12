@@ -45,7 +45,7 @@ void UsbHidbus::UsbInterruptCallback(usb_request_t* req) {
   }
 
   bool requeue = true;
-  fbl::AutoLock lock(&usb_lock_);
+  fbl::AutoLock lock(&hidbus_ifc_lock_);
   switch (req->response.status) {
     case ZX_ERR_IO_NOT_PRESENT:
       requeue = false;
@@ -91,7 +91,7 @@ zx_status_t UsbHidbus::HidbusQuery(uint32_t options, hid_info_t* info) {
 }
 
 zx_status_t UsbHidbus::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
-  fbl::AutoLock lock(&usb_lock_);
+  fbl::AutoLock lock(&hidbus_ifc_lock_);
   if (ifc_.is_valid()) {
     return ZX_ERR_ALREADY_BOUND;
   }
@@ -113,7 +113,7 @@ zx_status_t UsbHidbus::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
 void UsbHidbus::HidbusStop() {
   // TODO(tkilbourn) set flag to stop requeueing the interrupt request when we start using
   // this callback
-  fbl::AutoLock lock(&usb_lock_);
+  fbl::AutoLock lock(&hidbus_ifc_lock_);
   ifc_.clear();
 }
 
@@ -121,7 +121,6 @@ zx_status_t UsbHidbus::UsbHidControlIn(uint8_t req_type, uint8_t request, uint16
                                        uint16_t index, void* data, size_t length,
                                        size_t* out_length) {
   zx_status_t status;
-  fbl::AutoLock lock(&usb_lock_);
   status =
       usb_.ControlIn(req_type, request, value, index, ZX_TIME_INFINITE, data, length, out_length);
   if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
@@ -134,7 +133,6 @@ zx_status_t UsbHidbus::UsbHidControlOut(uint8_t req_type, uint8_t request, uint1
                                         uint16_t index, const void* data, size_t length,
                                         size_t* out_length) {
   zx_status_t status;
-  fbl::AutoLock lock(&usb_lock_);
   status = usb_.ControlOut(req_type, request, value, index, ZX_TIME_INFINITE, data, length);
   if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
     status = usb_.ResetEndpoint(0);
@@ -182,7 +180,6 @@ zx_status_t UsbHidbus::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* d
 zx_status_t UsbHidbus::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
                                        size_t len) {
   if (has_endptout_) {
-    fbl::AutoLock lock(&usb_lock_);
     sync_completion_reset(&set_report_complete_);
     usb_request_complete_t complete = {
         .callback =
@@ -229,7 +226,6 @@ zx_status_t UsbHidbus::HidbusSetProtocol(uint8_t protocol) {
 
 void UsbHidbus::DdkUnbindNew(ddk::UnbindTxn txn) {
   unbind_thread_ = std::thread([this, txn = std::move(txn)]() mutable {
-    fbl::AutoLock lock(&usb_lock_);
     usb_.CancelAll(endptin_address_);
     usb_.CancelAll(endptout_address_);
     txn.Reply();
@@ -265,7 +261,6 @@ void UsbHidbus::FindDescriptors(usb::Interface interface, usb_hid_descriptor_t**
 
 zx_status_t UsbHidbus::Bind(ddk::UsbProtocolClient usbhid) {
   zx_status_t status;
-  fbl::AutoLock lock(&usb_lock_);
   usb_ = usbhid;
   parent_req_size_ = usb_.GetRequestSize();
   status = usb::InterfaceList::Create(usb_, true, &usb_interface_list_);

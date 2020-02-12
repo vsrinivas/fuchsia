@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_INPUT_USB_HID_USB_HID_H_
-#define ZIRCON_SYSTEM_DEV_INPUT_USB_HID_USB_HID_H_
+#ifndef SRC_UI_INPUT_DRIVERS_USB_HID_USB_HID_H_
+#define SRC_UI_INPUT_DRIVERS_USB_HID_USB_HID_H_
 
 #include <lib/sync/completion.h>
 #include <zircon/hw/usb/hid.h>
@@ -74,10 +74,10 @@ class UsbHidbus : public DeviceType, public ddk::HidbusProtocol<UsbHidbus, ddk::
   usb_request_t* request_out_ = nullptr;
   bool req_queued_ = false;
 
-  fbl::Mutex usb_lock_;
-  ddk::UsbProtocolClient usb_ __TA_GUARDED(usb_lock_) = {};
+  ddk::UsbProtocolClient usb_ = {};
 
-  ddk::HidbusIfcProtocolClient ifc_ __TA_GUARDED(usb_lock_) = {};
+  fbl::Mutex hidbus_ifc_lock_;
+  ddk::HidbusIfcProtocolClient ifc_ __TA_GUARDED(hidbus_ifc_lock_) = {};
 
   uint8_t interface_ = 0;
   usb_desc_iter_t desc_iter_ = {};
@@ -89,4 +89,4 @@ class UsbHidbus : public DeviceType, public ddk::HidbusProtocol<UsbHidbus, ddk::
 
 }  // namespace usb_hid
 
-#endif  // ZIRCON_SYSTEM_DEV_INPUT_USB_HID_USB_HID_H_
+#endif  // SRC_UI_INPUT_DRIVERS_USB_HID_USB_HID_H_
