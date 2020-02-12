@@ -68,6 +68,10 @@ group("chromium_tests_group") {
   testonly = true
   deps = [
     ":chromium_tests",
+
+    # The targets below have exactly the same contents, so will not be taking
+    # extra storage in configurations that use them both.
+    ":tzdata_for_base_unittests",
     ":tzdata_for_chromium_tests_base_unittests",
   ]
 }
@@ -79,6 +83,12 @@ prebuilt_test_manifest("chromium_tests") {
 
 icu_tzdata_config_data("tzdata_for_chromium_tests_base_unittests") {
   for_pkg = "chromium_tests_base_unittests"
+  data_version = "44"
+  testonly = true
+}
+
+icu_tzdata_config_data("tzdata_for_base_unittests") {
+  for_pkg = "base_unittests"
   data_version = "44"
   testonly = true
 }
