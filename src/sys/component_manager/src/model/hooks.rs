@@ -90,6 +90,7 @@ pub enum EventPayload {
         component_url: String,
     },
     BeforeStartInstance {
+        component_url: String,
         runtime: RuntimeInfo,
         component_decl: ComponentDecl,
         live_children: Vec<ComponentDescriptor>,

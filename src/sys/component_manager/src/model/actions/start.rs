@@ -69,6 +69,7 @@ pub(super) async fn do_start(model: Arc<Model>, realm: Arc<Realm>) -> Result<(),
         let event = Event::new(
             realm.abs_moniker.clone(),
             EventPayload::BeforeStartInstance {
+                component_url: realm.component_url.clone(),
                 runtime: RuntimeInfo::from_runtime(&pending_runtime),
                 component_decl: decl.clone(),
                 live_children: live_child_descriptors,

@@ -15,7 +15,6 @@ use {
                 ComponentDescriptor, Event, EventPayload, EventType, Hook, HooksRegistration,
                 RuntimeInfo,
             },
-            model::Model,
             moniker::AbsoluteMoniker,
             routing_facade::RoutingFacade,
         },
@@ -118,8 +117,8 @@ pub struct Hub {
 
 impl Hub {
     /// Create a new Hub given a `component_url` and a controller to the root directory.
-    pub fn new(model: Weak<Model>, component_url: String) -> Result<Self, ModelError> {
-        Ok(Hub { inner: Arc::new(HubInner::new(model, component_url)?) })
+    pub fn new(component_url: String) -> Result<Self, ModelError> {
+        Ok(Hub { inner: Arc::new(HubInner::new(component_url)?) })
     }
 
     pub async fn open_root(&self, flags: u32, server_end: zx::Channel) -> Result<(), ModelError> {
@@ -147,14 +146,13 @@ impl Hub {
 }
 
 struct HubInner {
-    model: Weak<Model>,
     instances: Mutex<HashMap<AbsoluteMoniker, Instance>>,
     scope: ExecutionScope,
 }
 
 impl HubInner {
     /// Create a new Hub given a |component_url| and a controller to the root directory.
-    pub fn new(model: Weak<Model>, component_url: String) -> Result<Self, ModelError> {
+    pub fn new(component_url: String) -> Result<Self, ModelError> {
         let mut instances_map = HashMap::new();
         let abs_moniker = AbsoluteMoniker::root();
 
@@ -162,7 +160,6 @@ impl HubInner {
             .expect("Did not create directory.");
 
         Ok(HubInner {
-            model,
             instances: Mutex::new(instances_map),
             scope: ExecutionScope::from_executor(Box::new(EHandle::local())),
         })
@@ -363,15 +360,13 @@ impl HubInner {
     async fn on_before_start_instance_async<'a>(
         &'a self,
         target_moniker: &AbsoluteMoniker,
+        component_url: String,
         runtime: &RuntimeInfo,
         component_decl: &'a ComponentDecl,
         live_children: &'a Vec<ComponentDescriptor>,
         routing_facade: RoutingFacade,
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_start_instance_async");
-        let model = self.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
-        let realm = model.look_up_realm(target_moniker).await?;
-        let component_url = realm.component_url.clone();
 
         let mut instances_map = self.instances.lock().await;
 
@@ -626,6 +621,7 @@ impl Hook for HubInner {
         Box::pin(async move {
             match &event.payload {
                 EventPayload::BeforeStartInstance {
+                    component_url,
                     runtime,
                     component_decl,
                     live_children,
@@ -633,6 +629,7 @@ impl Hook for HubInner {
                 } => {
                     self.on_before_start_instance_async(
                         &event.target_moniker,
+                        component_url.clone(),
                         &runtime,
                         &component_decl,
                         &live_children,
