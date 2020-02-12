@@ -12,11 +12,13 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.cobalt.LoggerFactory",
             "fuchsia.boot.ReadOnlyLog",
             "fuchsia.boot.WriteOnlyLog",
             "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
-            "fuchsia.process.Launcher"
+            "fuchsia.sys.Loader"
         ]
     }
 }
