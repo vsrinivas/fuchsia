@@ -46,6 +46,10 @@ class PseudoDirServer final {
   // served on a different thread than the caller's thread.
   fuchsia::io::DirectoryPtr Serve();
 
+  // Serves |pseudo_dir| on a new thread and binds |request| to the serving
+  // directory.
+  void Serve(zx::channel request);
+
  private:
   // This method is the handler for a new thread. It lets the owning thread
   // know that it has started and serves a directory requests. The thread is
