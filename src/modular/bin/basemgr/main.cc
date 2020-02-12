@@ -14,6 +14,7 @@
 
 #include <src/lib/fxl/command_line.h>
 #include <src/lib/fxl/macros.h>
+#include <src/lib/syslog/cpp/logger.h>
 #include <trace-provider/provider.h>
 
 #include "src/lib/fxl/command_line.h"
@@ -171,6 +172,8 @@ class LifecycleImpl : public fuchsia::modular::Lifecycle {
 };
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger({"basemgr"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   fuchsia::modular::session::ModularConfig modular_config;
 
