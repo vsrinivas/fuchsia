@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/banjo.gni")
+import("//build/banjo/banjo.gni")
 
-banjo_library("ddk.protocol.block.partition") {
+banjo("ddk.protocol.block.partition") {
   sources = [ "partition.banjo" ]
-  public_deps = [ "$zx/system/banjo/zircon.device.block" ]
+  deps = [ "//zircon/system/banjo/zircon.device.block" ]
 }

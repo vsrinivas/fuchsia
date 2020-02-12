@@ -31,7 +31,6 @@ group("banjo") {
     "ddk.protocol.block",
 #------------------
 #------------------
-    "ddk.protocol.block.partition",
 #------------------
 #------------------
     "ddk.protocol.block.volume",

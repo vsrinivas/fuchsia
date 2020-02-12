@@ -19,6 +19,7 @@ driver_module("mbr") {
     "mbr.h",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.block.partition",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -27,7 +28,6 @@ driver_module("mbr") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.block",
-    "//zircon/system/banjo/ddk.protocol.block.partition",
   ]
 }
 
@@ -44,6 +44,7 @@ test("mbr-test") {
     "mbr.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.block.partition",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fake_ddk",
@@ -54,7 +55,6 @@ test("mbr-test") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.block",
-    "//zircon/system/banjo/ddk.protocol.block.partition",
   ]
 }
 

@@ -28,6 +28,8 @@ source_set("shared") {
     "vpartition.cc",
   ]
   public_deps = [
+    "//sdk/banjo/ddk.protocol.block.partition",
+    "//zircon/public/lib/boringssl",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/digest",
@@ -38,11 +40,9 @@ source_set("shared") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/gpt",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/boringssl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.block",
-    "//zircon/system/banjo/ddk.protocol.block.partition",
     "//zircon/system/banjo/ddk.protocol.block.volume",
     "//zircon/system/fidl/fuchsia-hardware-block:c",
     "//zircon/system/fidl/fuchsia-hardware-block-partition:c",
