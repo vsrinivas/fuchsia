@@ -149,6 +149,14 @@ impl Packet {
         }
     }
 
+    /// Returns true iff this is an intitializaion packet with the specified command.
+    pub fn is_command(&self, command: Command) -> bool {
+        match self {
+            Packet::Initialization { command: actual, .. } => (actual == &command),
+            Packet::Continuation { .. } => false,
+        }
+    }
+
     /// Returns the payload of this packet.
     pub fn payload(&self) -> &Bytes {
         match self {
@@ -238,6 +246,8 @@ mod tests {
             Packet::initialization(TEST_CHANNEL, TEST_COMMAND, TEST_LENGTH, vec![0xff, 0xee])?;
         assert_eq!(packet.channel(), TEST_CHANNEL);
         assert_eq!(packet.command()?, TEST_COMMAND);
+        assert_eq!(packet.is_command(TEST_COMMAND), true);
+        assert_eq!(packet.is_command(Command::Cbor), false);
         assert_eq!(packet.payload(), &vec![0xff, 0xee]);
         Ok(())
     }
@@ -247,6 +257,7 @@ mod tests {
         let packet = Packet::continuation(TEST_CHANNEL, TEST_SEQUENCE_NUM, vec![0xff, 0xee])?;
         assert_eq!(packet.channel(), TEST_CHANNEL);
         assert!(packet.command().is_err());
+        assert_eq!(packet.is_command(TEST_COMMAND), false);
         assert_eq!(packet.payload(), &vec![0xff, 0xee]);
         Ok(())
     }

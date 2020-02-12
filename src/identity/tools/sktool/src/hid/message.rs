@@ -76,6 +76,11 @@ impl Message {
     pub fn payload(&self) -> Bytes {
         self.payload.slice_to(self.payload_length as usize)
     }
+
+    /// Returns the length of packets this message iterates over.
+    pub fn packet_length(&self) -> u16 {
+        self.packet_length
+    }
 }
 
 impl fmt::Debug for Message {
@@ -158,14 +163,13 @@ pub enum BuilderStatus {
     Incomplete,
 }
 
-/// A builder to assemble a CTAPHID `Message` from CTAPHID `Packet` objects received over a
-/// `Connection`.
-pub struct MessageBuilder {
+/// The internal state of a `MessageBuilder` that has received one or more packets
+struct MessageBuilderState {
     /// The unique channel identifier for the client.
     channel: u32,
     /// The meaning of the message.
     command: Command,
-    /// The length of the data within the message before any paddding.
+    /// The length of the data within the message before any padding.
     payload_length: u16,
     /// A `BytesMut` object sized to contain the entire message, populated with the data received
     /// to date.
@@ -176,10 +180,35 @@ pub struct MessageBuilder {
     packet_length: u16,
 }
 
+impl MessageBuilderState {
+    /// Returns a status indicating whether the `MessageBuilderState` is ready to be converted into
+    /// a `Message`.
+    pub fn status(&self) -> BuilderStatus {
+        if self.next_sequence >= cont_packet_count(self.payload_length, self.packet_length) {
+            BuilderStatus::Complete
+        } else {
+            BuilderStatus::Incomplete
+        }
+    }
+}
+
+/// A builder to assemble a CTAPHID `Message` from CTAPHID `Packet` objects received over a
+/// `Connection`.
+pub struct MessageBuilder {
+    /// The internal state of the message builder, populated on append of the first packet.
+    state: Option<MessageBuilderState>,
+}
+
 #[allow(dead_code)]
 impl MessageBuilder {
-    /// Creates a new `MessageBuilder` starting with the supplied initialization packet.
-    pub fn new(packet: Packet) -> Result<MessageBuilder, Error> {
+    /// Creates a new empty `MessageBuilder`.
+    pub fn new() -> MessageBuilder {
+        MessageBuilder { state: None }
+    }
+
+    /// Add a packet to this `MessageBuilder`. If successful, returns a status indicating whether
+    /// the `MessageBuilder` is ready to be converted to a `Message`.
+    pub fn append(&mut self, packet: Packet) -> Result<BuilderStatus, Error> {
         match packet {
             Packet::Initialization {
                 channel,
@@ -187,6 +216,9 @@ impl MessageBuilder {
                 message_length,
                 payload: packet_payload,
             } => {
+                if self.state.is_some() {
+                    return Err(format_err!("Subsequent packet was not a continuation packet"));
+                }
                 let packet_length = INIT_HEADER_LENGTH + packet_payload.len() as u16;
                 if cont_packet_count(message_length, packet_length) > MAX_CONT_PACKET_COUNT {
                     return Err(format_err!(
@@ -197,60 +229,55 @@ impl MessageBuilder {
                 let padded_length = padded_length(message_length, packet_length);
                 let mut message_payload = BytesMut::with_capacity(padded_length as usize);
                 message_payload.put(packet_payload);
-                Ok(Self {
+                self.state.replace(MessageBuilderState {
                     channel,
                     command,
                     payload_length: message_length,
                     payload: message_payload,
                     next_sequence: 0,
                     packet_length,
-                })
-            }
-            Packet::Continuation { .. } => {
-                Err(format_err!("First packet in builder was not an initialization packet"))
-            }
-        }
-    }
-
-    /// Add a continuation packet to this builder, returning a status indicating whether the
-    /// message is ready to be built on success.
-    pub fn append(&mut self, packet: Packet) -> Result<BuilderStatus, Error> {
-        if self.status() == BuilderStatus::Complete {
-            return Err(format_err!("Cannot append packets to a builder that is already complete"));
-        }
-        match packet {
-            Packet::Initialization { .. } => {
-                Err(format_err!("Appended packet was not a continuation packet"))
+                });
+                Ok(self.status())
             }
             Packet::Continuation { channel, sequence, payload: packet_payload } => {
-                if channel != self.channel {
-                    return Err(format_err!(
-                        "Appended packet channel ({:?}) does not match \
-                        initialization channel ({:?})",
-                        channel,
-                        self.channel
-                    ));
+                match self.state.as_mut() {
+                    None => Err(format_err!("First packet was not an initialization packet")),
+                    Some(state) => {
+                        if state.status() == BuilderStatus::Complete {
+                            return Err(format_err!(
+                                "Cannot append to a builder that is already complete"
+                            ));
+                        }
+                        if channel != state.channel {
+                            return Err(format_err!(
+                                "Appended packet channel ({:?}) does not match \
+                                initialization channel ({:?})",
+                                channel,
+                                state.channel
+                            ));
+                        }
+                        let packet_length = CONT_HEADER_LENGTH + packet_payload.len() as u16;
+                        if packet_length != state.packet_length {
+                            return Err(format_err!(
+                                "Appended packet length ({:?}) does not match \
+                                initialization length ({:?})",
+                                packet_length,
+                                state.packet_length
+                            ));
+                        }
+                        if sequence != state.next_sequence {
+                            return Err(format_err!(
+                                "Appended packet sequence ({:?}) does not match \
+                                expectation ({:?})",
+                                sequence,
+                                state.next_sequence
+                            ));
+                        }
+                        state.payload.put(packet_payload);
+                        state.next_sequence += 1;
+                        Ok(state.status())
+                    }
                 }
-                let packet_length = CONT_HEADER_LENGTH + packet_payload.len() as u16;
-                if packet_length != self.packet_length {
-                    return Err(format_err!(
-                        "Appended packet length ({:?}) does not match \
-                        initialization length ({:?})",
-                        packet_length,
-                        self.packet_length
-                    ));
-                }
-                if sequence != self.next_sequence {
-                    return Err(format_err!(
-                        "Appended packet sequence ({:?}) does not match \
-                        expectation ({:?})",
-                        sequence,
-                        self.next_sequence
-                    ));
-                }
-                self.payload.put(packet_payload);
-                self.next_sequence += 1;
-                Ok(self.status())
             }
         }
     }
@@ -258,10 +285,9 @@ impl MessageBuilder {
     /// Returns a status indicating whether the `MessageBuilder` is ready to be converted into a
     /// `Message`.
     pub fn status(&self) -> BuilderStatus {
-        if self.next_sequence >= cont_packet_count(self.payload_length, self.packet_length) {
-            BuilderStatus::Complete
-        } else {
-            BuilderStatus::Incomplete
+        match &self.state {
+            None => BuilderStatus::Incomplete,
+            Some(state) => state.status(),
         }
     }
 }
@@ -270,17 +296,20 @@ impl TryFrom<MessageBuilder> for Message {
     type Error = anyhow::Error;
 
     fn try_from(builder: MessageBuilder) -> Result<Message, Error> {
-        match builder.status() {
-            BuilderStatus::Complete => Ok(Message {
-                channel: builder.channel,
-                command: builder.command,
-                payload: Bytes::from(builder.payload),
-                payload_length: builder.payload_length,
-                packet_length: builder.packet_length,
-            }),
-            BuilderStatus::Incomplete => {
-                Err(format_err!("Cannot create a message from an incomplete builder"))
-            }
+        match builder.state {
+            None => Err(format_err!("Cannot create a message from an empty builder")),
+            Some(state) => match state.status() {
+                BuilderStatus::Complete => Ok(Message {
+                    channel: state.channel,
+                    command: state.command,
+                    payload: Bytes::from(state.payload),
+                    payload_length: state.payload_length,
+                    packet_length: state.packet_length,
+                }),
+                BuilderStatus::Incomplete => {
+                    Err(format_err!("Cannot create a message from an incomplete builder"))
+                }
+            },
         }
     }
 }
@@ -338,17 +367,13 @@ mod tests {
         // Debug format for a message is very valuable during debugging, so worth testing.
         assert_eq!(format!("{:?}", message), debug_string);
         let cloned_original = message.clone();
-        let mut packets: Vec<Packet> = message.into_iter().collect();
+        let packets: Vec<Packet> = message.into_iter().collect();
         assert_eq!(packets, expected_packets);
 
-        let mut builder = MessageBuilder::new(packets.remove(0))?;
-        let expected_status = match packets.is_empty() {
-            true => BuilderStatus::Complete,
-            false => BuilderStatus::Incomplete,
-        };
-        assert_eq!(builder.status(), expected_status);
+        let mut builder = MessageBuilder::new();
         for packet in packets {
-            builder.append(packet)?;
+            let received_status = builder.append(packet)?;
+            assert_eq!(received_status, builder.status());
         }
         assert_eq!(builder.status(), BuilderStatus::Complete);
         let double_converted = Message::try_from(builder)?;
@@ -435,15 +460,13 @@ mod tests {
     #[test]
     fn new_messagebuilder_with_invalid_packet() -> Result<(), Error> {
         // Message builder has to start with an init packet.
-        assert!(MessageBuilder::new(Packet::continuation(TEST_CHANNEL, 0, vec![0x00])?).is_err());
+        let mut builder = MessageBuilder::new();
+        assert!(builder.append(Packet::continuation(TEST_CHANNEL, 0, vec![0x00])?).is_err());
         // Init packet has to infer less than 128 continue packets.
-        assert!(MessageBuilder::new(Packet::initialization(
-            TEST_CHANNEL,
-            TEST_COMMAND,
-            10000,
-            vec![7; 10]
-        )?)
-        .is_err());
+        let mut builder = MessageBuilder::new();
+        assert!(builder
+            .append(Packet::initialization(TEST_CHANNEL, TEST_COMMAND, 10000, vec![7; 10])?)
+            .is_err());
         Ok(())
     }
 
@@ -456,26 +479,30 @@ mod tests {
             Packet::initialization(TEST_CHANNEL, TEST_COMMAND, 100, vec![7; init_payload_len])?;
 
         // First test a succesful append to help avoid a degenerate test.
-        let mut builder = MessageBuilder::new(init_packet.clone())?;
+        let mut builder = MessageBuilder::new();
+        builder.append(init_packet.clone())?;
         assert_eq!(
             builder.append(Packet::continuation(TEST_CHANNEL, 0, vec![8; cont_payload_len])?)?,
             BuilderStatus::Incomplete
         );
 
         // Channel of continuation packet has to match.
-        let mut builder = MessageBuilder::new(init_packet.clone())?;
+        let mut builder = MessageBuilder::new();
+        builder.append(init_packet.clone())?;
         assert!(builder
             .append(Packet::continuation(WRONG_CHANNEL, 0, vec![8; cont_payload_len])?)
             .is_err());
 
         // Length of continuation packet has to match.
-        let mut builder = MessageBuilder::new(init_packet.clone())?;
+        let mut builder = MessageBuilder::new();
+        builder.append(init_packet.clone())?;
         assert!(builder
             .append(Packet::continuation(TEST_CHANNEL, 0, vec![8; cont_payload_len - 1])?)
             .is_err());
 
         // Sequence number has to be sequential.
-        let mut builder = MessageBuilder::new(init_packet.clone())?;
+        let mut builder = MessageBuilder::new();
+        builder.append(init_packet.clone())?;
         assert!(builder
             .append(Packet::continuation(TEST_CHANNEL, 1, vec![8; cont_payload_len])?)
             .is_err());
@@ -483,25 +510,24 @@ mod tests {
     }
 
     #[test]
+    fn build_empty_messagebuilder() -> Result<(), Error> {
+        let builder = MessageBuilder::new();
+        assert!(Message::try_from(builder).is_err());
+        Ok(())
+    }
+
+    #[test]
     fn build_incomplete_messagebuilder() -> Result<(), Error> {
-        let builder = MessageBuilder::new(Packet::initialization(
-            TEST_CHANNEL,
-            TEST_COMMAND,
-            100,
-            vec![7; 10],
-        )?)?;
+        let mut builder = MessageBuilder::new();
+        builder.append(Packet::initialization(TEST_CHANNEL, TEST_COMMAND, 100, vec![7; 10])?)?;
         assert!(Message::try_from(builder).is_err());
         Ok(())
     }
 
     #[test]
     fn append_to_complete_messagebuilder() -> Result<(), Error> {
-        let mut builder = MessageBuilder::new(Packet::initialization(
-            TEST_CHANNEL,
-            TEST_COMMAND,
-            22,
-            vec![7; 10],
-        )?)?;
+        let mut builder = MessageBuilder::new();
+        builder.append(Packet::initialization(TEST_CHANNEL, TEST_COMMAND, 22, vec![7; 10])?)?;
         assert_eq!(
             builder.append(Packet::continuation(TEST_CHANNEL, 0, vec![8; 12])?)?,
             BuilderStatus::Complete
