@@ -13,7 +13,7 @@
 #include "dockyard_proxy.h"
 #include "sample_bundle.h"
 #include "src/developer/system_monitor/lib/proto/dockyard.grpc.pb.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace harvester {
 
@@ -61,8 +61,8 @@ DockyardProxyStatus DockyardProxyGrpc::Init() {
   grpc::ClientContext context;
   grpc::Status status = stub_->Init(&context, request, &reply);
   if (!status.ok()) {
-    FXL_LOG(ERROR) << status.error_code() << ": " << status.error_message();
-    FXL_LOG(ERROR) << "Unable to send to dockyard.";
+    FX_LOGS(ERROR) << status.error_code() << ": " << status.error_message();
+    FX_LOGS(ERROR) << "Unable to send to dockyard.";
     return DockyardProxyStatus::ERROR;
   }
   return DockyardProxyStatus::OK;

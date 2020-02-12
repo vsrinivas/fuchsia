@@ -8,7 +8,7 @@
 
 #include "harvester.h"
 #include "sample_bundle.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace harvester {
 
@@ -18,11 +18,11 @@ void AddGlobalMemorySamples(SampleBundle* samples, zx_handle_t root_resource) {
                                        &stats, sizeof(stats),
                                        /*actual=*/nullptr, /*avail=*/nullptr);
   if (err != ZX_OK) {
-    FXL_LOG(ERROR) << "ZX_INFO_KMEM_STATS error " << zx_status_get_string(err);
+    FX_LOGS(ERROR) << "ZX_INFO_KMEM_STATS error " << zx_status_get_string(err);
     return;
   }
 
-  FXL_VLOG(2) << "free memory total " << stats.free_bytes << ", heap "
+  FX_VLOGS(2) << "free memory total " << stats.free_bytes << ", heap "
               << stats.free_heap_bytes << ", vmo " << stats.vmo_bytes
               << ", mmu " << stats.mmu_overhead_bytes << ", ipc "
               << stats.ipc_bytes;
@@ -59,14 +59,14 @@ void GatherMemory::GatherDeviceProperties() {
                                        &stats, sizeof(stats),
                                        /*actual=*/nullptr, /*avail=*/nullptr);
   if (err != ZX_OK) {
-    FXL_LOG(ERROR) << ZxErrorString("ZX_INFO_KMEM_STATS", err);
+    FX_LOGS(ERROR) << ZxErrorString("ZX_INFO_KMEM_STATS", err);
     return;
   }
   SampleList list;
   list.emplace_back(DEVICE_TOTAL, stats.total_bytes);
   DockyardProxyStatus status = Dockyard().SendSampleList(list);
   if (status != DockyardProxyStatus::OK) {
-    FXL_LOG(ERROR) << DockyardErrorString("SendSampleList", status)
+    FX_LOGS(ERROR) << DockyardErrorString("SendSampleList", status)
                    << " The total memory value will be missing";
   }
 }

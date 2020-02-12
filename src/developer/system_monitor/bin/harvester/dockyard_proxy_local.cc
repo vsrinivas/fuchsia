@@ -4,43 +4,43 @@
 
 #include "dockyard_proxy_local.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace harvester {
 
 DockyardProxyStatus DockyardProxyLocal::Init() {
-  FXL_LOG(INFO) << "DockyardProxyLocal::Init";
+  FX_LOGS(INFO) << "DockyardProxyLocal::Init";
   return DockyardProxyStatus::OK;
 }
 
 DockyardProxyStatus DockyardProxyLocal::SendInspectJson(
     const std::string& /*stream_name*/, const std::string& /*json*/) {
-  FXL_LOG(INFO) << "DockyardProxyLocal::SendInspectJson";
+  FX_LOGS(INFO) << "DockyardProxyLocal::SendInspectJson";
   return DockyardProxyStatus::OK;
 }
 
 DockyardProxyStatus DockyardProxyLocal::SendSample(
     const std::string& /*stream_name*/, uint64_t /*value*/) {
-  FXL_LOG(INFO) << "DockyardProxyLocal::SendSample";
+  FX_LOGS(INFO) << "DockyardProxyLocal::SendSample";
   return DockyardProxyStatus::OK;
 }
 
 DockyardProxyStatus DockyardProxyLocal::SendSampleList(
     const SampleList& /*list*/) {
-  FXL_LOG(INFO) << "DockyardProxyLocal::SendSampleList";
+  FX_LOGS(INFO) << "DockyardProxyLocal::SendSampleList";
   return DockyardProxyStatus::OK;
 }
 
 DockyardProxyStatus DockyardProxyLocal::SendStringSampleList(
     const StringSampleList& /*list*/) {
-  FXL_LOG(INFO) << "DockyardProxyLocal::StringSampleList";
+  FX_LOGS(INFO) << "DockyardProxyLocal::StringSampleList";
   return DockyardProxyStatus::OK;
 }
 
 DockyardProxyStatus DockyardProxyLocal::SendSamples(
     const SampleList& /*int_samples*/,
     const StringSampleList& /*string_samples*/) {
-  FXL_LOG(INFO) << "DockyardProxyLocal::SendSamples";
+  FX_LOGS(INFO) << "DockyardProxyLocal::SendSamples";
   return DockyardProxyStatus::OK;
 }
 

@@ -19,8 +19,8 @@
 #include "gather_processes_and_memory.h"
 #include "gather_tasks.h"
 #include "gather_threads_and_cpu.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/inspect_deprecated/query/discover.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace harvester {
 
@@ -30,7 +30,7 @@ Harvester::Harvester(zx_handle_t root_resource,
       dockyard_proxy_(std::move(dockyard_proxy)) {}
 
 void Harvester::GatherDeviceProperties() {
-  FXL_VLOG(1) << "Harvester::GatherDeviceProperties";
+  FX_VLOGS(1) << "Harvester::GatherDeviceProperties";
   gather_cpu_.GatherDeviceProperties();
   // TODO(fxb/40872): re-enable once we need this data.
   // gather_inspectable_.GatherDeviceProperties();
@@ -43,13 +43,13 @@ void Harvester::GatherDeviceProperties() {
 }
 
 void Harvester::GatherFastData(async_dispatcher_t* dispatcher) {
-  FXL_VLOG(1) << "Harvester::GatherFastData";
+  FX_VLOGS(1) << "Harvester::GatherFastData";
   zx::time now = async::Now(dispatcher);
   gather_threads_and_cpu_.PostUpdate(dispatcher, now, zx::msec(100));
 }
 
 void Harvester::GatherSlowData(async_dispatcher_t* dispatcher) {
-  FXL_VLOG(1) << "Harvester::GatherSlowData";
+  FX_VLOGS(1) << "Harvester::GatherSlowData";
   zx::time now = async::Now(dispatcher);
 
   // TODO(fxb/40872): re-enable once we need this data.

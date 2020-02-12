@@ -5,6 +5,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fdio.h>
+#include <lib/syslog/global.h>
 #include <zircon/status.h>
 
 #include <string>
@@ -14,6 +15,8 @@
 #include "dockyard_proxy_local.h"
 #include "harvester.h"
 #include "root_resource.h"
+#include "src/lib/fsl/syslogger/init.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
 #include "src/lib/fxl/logging.h"
@@ -38,17 +41,17 @@ int main(int argc, char** argv) {
   bool use_grpc = true;
 
   // Parse command line.
-  FXL_LOG(INFO) << VERSION_OUTPUT;
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
-    exit(EXIT_CODE_GENERAL_ERROR);
-  }
+  fsl::InitLoggerFromCommandLine(command_line, {"harvester"});
+
+  FX_LOGS(INFO) << VERSION_OUTPUT;
+
   if (command_line.HasOption(COMMAND_VERSION)) {
     std::cout << VERSION_OUTPUT << std::endl;
     exit(EXIT_CODE_OK);
   }
   if (command_line.HasOption(COMMAND_LOCAL)) {
-    FXL_LOG(INFO) << "Option: local only, not using transport to Dockyard.";
+    FX_LOGS(INFO) << "Option: local only, not using transport to Dockyard.";
     use_grpc = false;
   }
 
@@ -70,12 +73,12 @@ int main(int argc, char** argv) {
             positional_args[0], grpc::InsecureChannelCredentials()));
 
     if (!dockyard_proxy) {
-      FXL_LOG(ERROR) << "unable to create dockyard_proxy";
+      FX_LOGS(ERROR) << "unable to create dockyard_proxy";
       exit(EXIT_CODE_GENERAL_ERROR);
     }
     harvester::DockyardProxyStatus status = dockyard_proxy->Init();
     if (status != harvester::DockyardProxyStatus::OK) {
-      FXL_LOG(ERROR) << harvester::DockyardErrorString("Init", status);
+      FX_LOGS(ERROR) << harvester::DockyardErrorString("Init", status);
       exit(EXIT_CODE_GENERAL_ERROR);
     }
   } else {
@@ -98,10 +101,10 @@ int main(int argc, char** argv) {
   // The loop that runs quick calls is in a separate thread.
   zx_status_t status = fast_calls_loop.StartThread("fast-calls-thread");
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "fast_calls_loop.StartThread failed " << status;
+    FX_LOGS(ERROR) << "fast_calls_loop.StartThread failed " << status;
     exit(EXIT_CODE_GENERAL_ERROR);
   }
-  FXL_LOG(INFO) << "main thread " << pthread_self();
+  FX_LOGS(INFO) << "main thread " << pthread_self();
   harvester::Harvester harvester(root_resource, std::move(dockyard_proxy));
   harvester.GatherDeviceProperties();
   harvester.GatherFastData(fast_calls_loop.dispatcher());
@@ -110,6 +113,6 @@ int main(int argc, char** argv) {
   slow_calls_loop.Run();
   fast_calls_loop.Quit();
 
-  FXL_LOG(INFO) << "System Monitor Harvester - exiting";
+  FX_LOGS(INFO) << "System Monitor Harvester - exiting";
   return 0;
 }

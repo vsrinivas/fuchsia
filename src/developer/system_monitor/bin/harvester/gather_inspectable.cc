@@ -7,8 +7,8 @@
 #include <zircon/status.h>
 
 #include "harvester.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/inspect_deprecated/query/discover.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace harvester {
 
@@ -25,7 +25,7 @@ void GatherInspectable::Gather() {
   DockyardProxyStatus status =
       Dockyard().SendStringSampleList(string_sample_list);
   if (status != DockyardProxyStatus::OK) {
-    FXL_LOG(ERROR) << DockyardErrorString("SendStringSampleList", status)
+    FX_LOGS(ERROR) << DockyardErrorString("SendStringSampleList", status)
                    << " The list of inspectable components will be missing";
   }
 }

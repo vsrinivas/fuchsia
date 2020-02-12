@@ -10,6 +10,7 @@
             "fuchsia.boot.RootJob",
             "fuchsia.boot.RootJobForInspect",
             "fuchsia.kernel.Stats",
+            "fuchsia.logger.LogSink",
             "fuchsia.boot.RootResource",
             "fuchsia.net.NameLookup",
             "fuchsia.posix.socket.Provider"

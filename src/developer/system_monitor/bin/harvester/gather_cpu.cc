@@ -8,7 +8,7 @@
 
 #include "harvester.h"
 #include "sample_bundle.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace harvester {
 
@@ -31,7 +31,7 @@ void AddGlobalCpuSamples(SampleBundle* samples, zx_handle_t root_resource) {
   zx_status_t err = zx_object_get_info(root_resource, ZX_INFO_CPU_STATS, &stats,
                                        sizeof(stats), &actual, &avail);
   if (err != ZX_OK) {
-    FXL_LOG(ERROR) << ZxErrorString("ZX_INFO_CPU_STATS", err);
+    FX_LOGS(ERROR) << ZxErrorString("ZX_INFO_CPU_STATS", err);
     return;
   }
   auto now = std::chrono::high_resolution_clock::now();
@@ -71,14 +71,14 @@ void GatherCpu::GatherDeviceProperties() {
   zx_status_t err = zx_object_get_info(RootResource(), ZX_INFO_CPU_STATS,
                                        &stats, sizeof(stats), &actual, &avail);
   if (err != ZX_OK) {
-    FXL_LOG(ERROR) << ZxErrorString("ZX_INFO_CPU_STATS", err);
+    FX_LOGS(ERROR) << ZxErrorString("ZX_INFO_CPU_STATS", err);
     return;
   }
   SampleList list;
   list.emplace_back(CPU_COUNT, avail);
   DockyardProxyStatus status = Dockyard().SendSampleList(list);
   if (status != DockyardProxyStatus::OK) {
-    FXL_LOG(ERROR) << DockyardErrorString("SendSampleList", status)
+    FX_LOGS(ERROR) << DockyardErrorString("SendSampleList", status)
                    << " The cpu_count value will be missing";
   }
 }

@@ -4,7 +4,7 @@
 
 #include "src/developer/system_monitor/bin/harvester/dockyard_proxy.h"
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace harvester {
 
@@ -22,7 +22,7 @@ std::ostream& operator<<(std::ostream& out, const DockyardProxyStatus& status) {
     case DockyardProxyStatus::ERROR:
       return out << "ERROR (-1)";
   }
-  FXL_NOTREACHED();
+  FX_NOTREACHED();
   return out;
 }
 

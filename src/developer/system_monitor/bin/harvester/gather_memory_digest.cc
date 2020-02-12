@@ -9,7 +9,7 @@
 #include "harvester.h"
 #include "src/developer/memory/metrics/capture.h"
 #include "src/developer/memory/metrics/digest.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 // What is the verbose output level for trivia in this file. For easy debugging,
 // change this value to 0 temporarily.
@@ -59,13 +59,13 @@ void GatherMemoryDigest::Gather() {
   memory::CaptureState capture_state;
   zx_status_t zx_status = memory::Capture::GetCaptureState(&capture_state);
   if (zx_status != ZX_OK) {
-    FXL_LOG(ERROR) << ZxErrorString("GetCaptureState", zx_status)
+    FX_LOGS(ERROR) << ZxErrorString("GetCaptureState", zx_status)
                    << " Memory Digest will not be collected";
     return;
   }
   zx_status = memory::Capture::GetCapture(&capture, capture_state, memory::VMO);
   if (zx_status != ZX_OK) {
-    FXL_LOG(ERROR) << ZxErrorString("GetCapture", zx_status)
+    FX_LOGS(ERROR) << ZxErrorString("GetCapture", zx_status)
                    << " Memory Digest will not be collected";
     return;
   }
@@ -79,7 +79,7 @@ void GatherMemoryDigest::Gather() {
   for (auto const& bucket : digest.buckets()) {
     const auto& iter = name_to_path.find(bucket.name());
     if (iter == name_to_path.end()) {
-      FXL_LOG(ERROR) << "Unknown bucket name: " << bucket.name();
+      FX_LOGS(ERROR) << "Unknown bucket name: " << bucket.name();
       continue;
     }
     list.emplace_back(iter->second, bucket.size());
@@ -96,24 +96,24 @@ void GatherMemoryDigest::Gather() {
     strings.emplace_back(KoidPath(process.koid(), "name"), process.name());
   }
 
-  if (FXL_VLOG_IS_ON(VERBOSE_FOR_FILE)) {
-    FXL_VLOG(VERBOSE_FOR_FILE) << "GatherMemoryDigest::Gather";
+  if (FX_VLOG_IS_ENABLED(VERBOSE_FOR_FILE)) {
+    FX_VLOGS(VERBOSE_FOR_FILE) << "GatherMemoryDigest::Gather";
     for (auto const& item : list) {
-      FXL_VLOG(VERBOSE_FOR_FILE) << item.first << ": " << item.second;
+      FX_VLOGS(VERBOSE_FOR_FILE) << item.first << ": " << item.second;
     }
     for (auto const& item : strings) {
-      FXL_VLOG(VERBOSE_FOR_FILE) << item.first << ": " << item.second;
+      FX_VLOGS(VERBOSE_FOR_FILE) << item.first << ": " << item.second;
     }
   }
 
   DockyardProxyStatus status = Dockyard().SendSampleList(list);
   if (status != DockyardProxyStatus::OK) {
-    FXL_LOG(ERROR) << DockyardErrorString("SendSampleList", status)
+    FX_LOGS(ERROR) << DockyardErrorString("SendSampleList", status)
                    << " Memory digest and summary samples will be missing";
   }
   status = Dockyard().SendStringSampleList(strings);
   if (status != DockyardProxyStatus::OK) {
-    FXL_LOG(ERROR) << DockyardErrorString("SendStringSampleList", status)
+    FX_LOGS(ERROR) << DockyardErrorString("SendStringSampleList", status)
                    << " Memory digest and summary names will be missing";
   }
 }

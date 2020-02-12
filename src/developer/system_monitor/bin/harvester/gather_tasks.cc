@@ -13,7 +13,7 @@
 
 #include "harvester.h"
 #include "sample_bundle.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "task_tree.h"
 
 namespace harvester {
@@ -68,7 +68,7 @@ void SampleBundleBuilder::AddJobStats(zx_handle_t job, zx_koid_t koid) {
       zx_object_get_info(job, ZX_INFO_JOB, &info, sizeof(info),
                          /*actual=*/nullptr, /*avail=*/nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << ZxErrorString("AddJobStats", status);
+    FX_LOGS(WARNING) << ZxErrorString("AddJobStats", status);
     return;
   }
   AddKoidValue(koid, "kill_on_oom", info.kill_on_oom);
@@ -93,11 +93,11 @@ void SampleBundleBuilder::AddKoidName(zx_handle_t task, zx_koid_t koid) {
   zx_status_t status =
       zx_object_get_property(task, ZX_PROP_NAME, &name, name.size());
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << ZxErrorString("AddKoidName", status);
+    FX_LOGS(WARNING) << ZxErrorString("AddKoidName", status);
     return;
   }
   AddKoidString(koid, "name", name.data());
-  FXL_VLOG(2) << "name " << name.data();
+  FX_VLOGS(2) << "name " << name.data();
 }
 
 // Gather stats for a specific process.
@@ -108,7 +108,8 @@ void SampleBundleBuilder::AddProcessStats(zx_handle_t process, zx_koid_t koid) {
       zx_object_get_info(process, ZX_INFO_TASK_STATS, &info, sizeof(info),
                          /*actual=*/nullptr, /*avail=*/nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << ZxErrorString("AddProcessStats", status);
+    FX_LOGS(WARNING) << ZxErrorString("AddProcessStats", status)
+                     << " for koid " << koid;
     return;
   }
   AddKoidValue(koid, "memory_mapped_bytes", info.mem_mapped_bytes);
@@ -128,7 +129,7 @@ void SampleBundleBuilder::AddThreadState(zx_handle_t thread, zx_koid_t koid) {
       zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info),
                          /*actual=*/nullptr, /*avail=*/nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << ZxErrorString("AddThreadState", status);
+    FX_LOGS(WARNING) << ZxErrorString("AddThreadState", status);
     return;
   }
   AddKoidValue(koid, "thread_state", info.state);
@@ -142,7 +143,7 @@ void SampleBundleBuilder::AddThreadCpu(zx_handle_t thread, zx_koid_t koid) {
       zx_object_get_info(thread, ZX_INFO_THREAD_STATS, &stats, sizeof(stats),
                          /*actual=*/nullptr, /*avail=*/nullptr);
   if (status != ZX_OK) {
-    FXL_LOG(WARNING) << ZxErrorString("AddThreadCpu", status);
+    FX_LOGS(WARNING) << ZxErrorString("AddThreadCpu", status);
     return;
   }
   AddKoidValue(koid, "cpu_total", stats.total_runtime);
