@@ -2,40 +2,74 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
 group("test") {
   testonly = true
   deps = [ ":elf-search" ]
 }
 
-zx_library("elf") {
-  sdk = "source"
-  sdk_headers = [ "elf/elf.h" ]
-  sources = [ "elf.c" ]
-  deps = [
-    "$zx/system/ulib/elfload",
-    "$zx/system/ulib/zircon",
-  ]
-  testonly = true
-  visibility = [ ":*" ]
-}
-
-zx_executable("elf-search-test-helper") {
+executable("elf-search-test-helper") {
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [ "helper.cc" ]
-  testonly = true
   visibility = [ ":*" ]
 }
 
-zx_test("elf-search") {
-  sources = [ "elf-search-test.cc" ]
+test("elf-search") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  sources = [
+    "elf.c",
+    "elf-search-test.cc",
+    ]
   deps = [
-    ":elf",
-    "$zx/system/ulib/elf-search",
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/test-utils",
-    "$zx/system/ulib/zircon",
-    "$zx/system/ulib/zx",
-    "$zx/system/ulib/zxtest",
+    "//zircon/public/lib/elf-search",
+    "//zircon/public/lib/elfload",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/test-utils",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
   ]
   data_deps = [ ":elf-search-test-helper" ]
+  include_dirs = [ "include" ]
+}
+
+migrated_manifest("elf-search-test-helper-manifest") {
+  deps = [ ":elf-search-test-helper" ]
+}
+
+migrated_manifest("elf-search-manifest") {
+  deps = [ ":elf-search" ]
 }

@@ -248,7 +248,6 @@ aggregate_manifest("legacy-aux") {
     ":bin.debugdata-test-helper",
 #------------------
 #------------------
-    ":bin.elf-search-test-helper",
 #------------------
 #------------------
     ":bin.elfload-fuzzer.asan",
@@ -545,7 +544,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.dlfcn-test",
 #------------------
 #------------------
-    ":test.sys.elf-search-test",
 #------------------
 #------------------
 #------------------
@@ -1153,7 +1151,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.dlfcn-test",
 #------------------
 #------------------
-    ":test.sys.elf-search-test",
 #------------------
 #------------------
 #------------------
@@ -1839,7 +1836,7 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/utest/dump1:dump1-manifest",
 #------------------
-    #":bin.elf-search-test-helper",
+    "//zircon/system/ulib/elf-search/test:elf-search-test-helper-manifest",
 #------------------
 #------------------
     #":bin.elfload-fuzzer.asan",
@@ -2986,7 +2983,7 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/i2c/drivers/i2c:i2c-test-manifest",
     "//src/devices/i2c/drivers/dw-i2c:dw-i2c-test-manifest",
 #------------------
-    #":test.sys.elf-search-test",
+    "//zircon/system/ulib/elf-search/test:elf-search-manifest",
 #------------------
     "//zircon/system/utest/entropy:entropy-manifest",
     "//zircon/system/utest/errno:errno-manifest",
@@ -3689,7 +3686,7 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/i2c/drivers/i2c:i2c-test-manifest",
     "//src/devices/i2c/drivers/dw-i2c:dw-i2c-test-manifest",
 #------------------
-    #":test.sys.elf-search-test",
+    "//zircon/system/ulib/elf-search/test:elf-search-manifest",
 #------------------
     "//zircon/system/utest/entropy:entropy-manifest",
     "//zircon/system/utest/errno:errno-manifest",

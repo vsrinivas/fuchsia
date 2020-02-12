@@ -75,7 +75,6 @@ if (current_cpu != "") {
 #------------------
 #------------------
 #------------------
-      "$zx/system/ulib/elf-search/test",
 #------------------
 #------------------
       "$zx/system/ulib/elfload/test",
