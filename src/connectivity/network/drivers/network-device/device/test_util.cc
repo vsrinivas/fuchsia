@@ -210,7 +210,7 @@ void FakeNetworkDeviceImpl::SetStatus(const status_t& status) {
 }
 
 zx_status_t FakeNetworkDeviceImpl::CreateChild(async_dispatcher_t* dispatcher,
-                                               std::unique_ptr<NetworkDevice>* out) {
+                                               std::unique_ptr<NetworkDeviceInterface>* out) {
   auto protocol = proto();
 
   std::unique_ptr<internal::DeviceInterface> device;

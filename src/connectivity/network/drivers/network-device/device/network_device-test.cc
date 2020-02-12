@@ -116,7 +116,7 @@ class NetworkDeviceTest : public zxtest::Test {
   FakeNetworkDeviceImpl impl_;
   std::unique_ptr<async::Loop> loop_;
   int8_t session_counter_ = 0;
-  std::unique_ptr<NetworkDevice> device_;
+  std::unique_ptr<NetworkDeviceInterface> device_;
 };
 
 void PrintVec(const std::string& name, const std::vector<uint8_t>& vec) {

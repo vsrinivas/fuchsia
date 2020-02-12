@@ -12,8 +12,8 @@
 
 namespace network {
 
-zx_status_t MacAddrDevice::Create(ddk::MacAddrImplProtocolClient parent,
-                                  std::unique_ptr<MacAddrDevice>* out) {
+zx_status_t MacAddrDeviceInterface::Create(ddk::MacAddrImplProtocolClient parent,
+                                           std::unique_ptr<MacAddrDeviceInterface>* out) {
   std::unique_ptr<internal::MacInterface> mac;
   zx_status_t status = internal::MacInterface::Create(parent, &mac);
   if (status == ZX_OK) {

@@ -18,7 +18,7 @@ class FakeMacDeviceImpl : public ddk::MacAddrImplProtocol<FakeMacDeviceImpl> {
  public:
   FakeMacDeviceImpl();
 
-  zx_status_t CreateChild(std::unique_ptr<MacAddrDevice>* out);
+  zx_status_t CreateChild(std::unique_ptr<MacAddrDeviceInterface>* out);
 
   void MacAddrImplGetAddress(uint8_t out_mac[MAC_SIZE]);
   void MacAddrImplGetFeatures(features_t* out_features);

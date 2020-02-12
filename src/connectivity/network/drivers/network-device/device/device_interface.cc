@@ -13,9 +13,10 @@
 
 namespace network {
 
-zx_status_t NetworkDevice::Create(async_dispatcher_t* dispatcher,
-                                  ddk::NetworkDeviceImplProtocolClient parent,
-                                  const char* parent_name, std::unique_ptr<NetworkDevice>* out) {
+zx_status_t NetworkDeviceInterface::Create(async_dispatcher_t* dispatcher,
+                                           ddk::NetworkDeviceImplProtocolClient parent,
+                                           const char* parent_name,
+                                           std::unique_ptr<NetworkDeviceInterface>* out) {
   std::unique_ptr<internal::DeviceInterface> interface;
   zx_status_t status =
       internal::DeviceInterface::Create(dispatcher, parent, parent_name, &interface);

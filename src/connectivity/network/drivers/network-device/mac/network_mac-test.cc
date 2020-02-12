@@ -69,7 +69,7 @@ class MacDeviceTest : public zxtest::Test {
   // The loop is created lazily in `OpenInstance` to avoid spawning threads on tests that do not
   // instantiate clients.
   std::unique_ptr<async::Loop> loop_;
-  std::unique_ptr<MacAddrDevice> device_;
+  std::unique_ptr<MacAddrDeviceInterface> device_;
 };
 
 TEST_F(MacDeviceTest, GetAddress) {

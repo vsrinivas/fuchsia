@@ -26,7 +26,7 @@ enum class PendingDeviceOperation { NONE, START, STOP };
 
 class DeviceInterface : public netdev::Device::Interface,
                         public ddk::NetworkDeviceIfcProtocol<DeviceInterface>,
-                        public ::network::NetworkDevice {
+                        public ::network::NetworkDeviceInterface {
  public:
   static zx_status_t Create(async_dispatcher_t* dispatcher,
                             ddk::NetworkDeviceImplProtocolClient parent, const char* parent_name,

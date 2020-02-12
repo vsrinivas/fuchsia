@@ -35,7 +35,7 @@ class MacClientInstance;
 
 // Implements the API translation between MacAddrImpl (banjo) and
 // fuchsia.hardware.network.MacAddressing (FIDL).
-class MacInterface : public ::network::MacAddrDevice {
+class MacInterface : public ::network::MacAddrDeviceInterface {
  public:
   static zx_status_t Create(ddk::MacAddrImplProtocolClient parent,
                             std::unique_ptr<MacInterface>* out);

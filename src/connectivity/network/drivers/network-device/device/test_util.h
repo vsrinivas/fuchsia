@@ -108,7 +108,8 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   FakeNetworkDeviceImpl();
   ~FakeNetworkDeviceImpl();
 
-  zx_status_t CreateChild(async_dispatcher_t* dispatcher, std::unique_ptr<NetworkDevice>* out);
+  zx_status_t CreateChild(async_dispatcher_t* dispatcher,
+                          std::unique_ptr<NetworkDeviceInterface>* out);
 
   zx_status_t NetworkDeviceImplInit(const network_device_ifc_protocol_t* iface);
   void NetworkDeviceImplStart(network_device_impl_start_callback callback, void* cookie);

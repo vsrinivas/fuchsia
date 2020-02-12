@@ -12,23 +12,23 @@
 
 namespace network {
 
-class MacAddrDevice {
+class MacAddrDeviceInterface {
  public:
-  virtual ~MacAddrDevice() = default;
-  // Creates a new MacAddrDevice that is bound to the provided parent.
+  virtual ~MacAddrDeviceInterface() = default;
+  // Creates a new MacAddrDeviceInterface that is bound to the provided parent.
   static zx_status_t Create(ddk::MacAddrImplProtocolClient parent,
-                            std::unique_ptr<MacAddrDevice>* out);
+                            std::unique_ptr<MacAddrDeviceInterface>* out);
 
-  // Binds the request channel req to this MacAddrDevice. Requests will be handled on the provided
-  // dispatcher.
+  // Binds the request channel req to this MacAddrDeviceInterface. Requests will be handled on the
+  // provided dispatcher.
   virtual zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel req) = 0;
 
   // Tears down this device, closing all bound FIDL clients.
-  // It is safe to destroy this `MacAddrDevice` instance only once the callback is invoked.
+  // It is safe to destroy this `MacAddrDeviceInterface` instance only once the callback is invoked.
   virtual void Teardown(fit::callback<void()> callback) = 0;
 
  protected:
-  MacAddrDevice() = default;
+  MacAddrDeviceInterface() = default;
 };
 
 }  // namespace network
