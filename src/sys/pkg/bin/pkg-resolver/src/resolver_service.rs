@@ -57,22 +57,28 @@ pub async fn run_resolver_service(
     stream
         .map_err(anyhow::Error::new)
         .try_for_each_concurrent(None, |event| async {
-            let PackageResolverRequest::Resolve {
-                package_url,
-                selectors,
-                update_policy: _,
-                dir,
-                responder,
-            } = event;
-
-            // FIXME: need to implement selectors.
-            if !selectors.is_empty() {
-                fx_log_warn!("resolve does not support selectors yet");
+            match event {
+                PackageResolverRequest::Resolve {
+                    package_url,
+                    selectors,
+                    update_policy: _,
+                    dir,
+                    responder,
+                } => {
+                    // FIXME: need to implement selectors.
+                    if !selectors.is_empty() {
+                        fx_log_warn!("resolve does not support selectors yet");
+                    }
+                    let status =
+                        resolve(&rewrites, &cache, &package_fetcher, package_url, dir).await;
+                    responder.send(Status::from(status).into_raw())?;
+                    Ok(())
+                }
+                PackageResolverRequest::GetHash { package_url: _, responder } => {
+                    responder.send(&mut Err(Status::NOT_SUPPORTED.into_raw()))?;
+                    Ok(())
+                }
             }
-            let status = resolve(&rewrites, &cache, &package_fetcher, package_url, dir).await;
-            responder.send(Status::from(status).into_raw())?;
-
-            Ok(())
         })
         .await
 }

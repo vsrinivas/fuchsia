@@ -4,11 +4,13 @@
 
 #![cfg(test)]
 use {
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_paver::{
         self as paver, BootManagerRequest, BootManagerRequestStream, PaverRequest,
         PaverRequestStream,
     },
-    fidl_fuchsia_pkg::PackageResolverRequestStream,
+    fidl_fuchsia_pkg::{PackageResolverRequestStream, PackageResolverResolveResponder},
     fidl_fuchsia_update::{
         CheckStartedResult, Initiator, ManagerMarker, ManagerProxy, ManagerState, MonitorEvent,
         MonitorEventStream, MonitorMarker, Options,
@@ -250,37 +252,50 @@ impl MockResolver {
     }
     async fn run_resolver_service(self: Arc<Self>, mut stream: PackageResolverRequestStream) {
         while let Some(event) = stream.try_next().await.unwrap() {
-            let fidl_fuchsia_pkg::PackageResolverRequest::Resolve {
-                package_url,
-                selectors: _,
-                update_policy: _,
-                dir,
-                responder,
-            } = event;
-            eprintln!("TEST: Got resolve request for {:?}", package_url);
-
-            let response = self
-                .expectations
-                .lock()
-                .get(&package_url)
-                .map(|entry| entry.clone())
-                .unwrap_or(Err(Status::OK));
-
-            let response_status = match response {
-                Ok(package_dir) => {
-                    // Open the package directory using the directory request given by the client
-                    // asking to resolve the package.
-                    fdio::service_connect(
-                        package_dir.to_str().expect("path to str"),
-                        dir.into_channel(),
-                    )
-                    .unwrap_or_else(|err| panic!("error connecting to tempdir {:?}", err));
-                    Status::OK
+            match event {
+                fidl_fuchsia_pkg::PackageResolverRequest::Resolve {
+                    package_url,
+                    selectors: _,
+                    update_policy: _,
+                    dir,
+                    responder,
+                } => self.handle_resolve(package_url, dir, responder).await,
+                fidl_fuchsia_pkg::PackageResolverRequest::GetHash { .. } => {
+                    panic!("GetHash not implemented")
                 }
-                Err(status) => status,
-            };
-            responder.send(response_status.into_raw()).unwrap();
+            }
         }
+    }
+
+    async fn handle_resolve(
+        &self,
+        package_url: String,
+        dir: ServerEnd<DirectoryMarker>,
+        responder: PackageResolverResolveResponder,
+    ) {
+        eprintln!("TEST: Got resolve request for {:?}", package_url);
+
+        let response = self
+            .expectations
+            .lock()
+            .get(&package_url)
+            .map(|entry| entry.clone())
+            .unwrap_or(Err(Status::OK));
+
+        let response_status = match response {
+            Ok(package_dir) => {
+                // Open the package directory using the directory request given by the client
+                // asking to resolve the package.
+                fdio::service_connect(
+                    package_dir.to_str().expect("path to str"),
+                    dir.into_channel(),
+                )
+                .unwrap_or_else(|err| panic!("error connecting to tempdir {:?}", err));
+                Status::OK
+            }
+            Err(status) => status,
+        };
+        responder.send(response_status.into_raw()).unwrap();
     }
 
     fn mock_package_result(&self, url: impl Into<String>, response: Result<PathBuf, Status>) {

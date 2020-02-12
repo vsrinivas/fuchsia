@@ -27,16 +27,33 @@ protocol PackageResolver {
     /// Return Values:
     /// * `ZX_OK` if the package was successfully opened.
     /// * `ZX_ERR_ACCESS_DENIED` if the resolver does not have permission to fetch a package blob.
+    /// * `ZX_ERR_INTERNAL` if the resolver encountered an otherwise unspecified error while
+    ///   handling the request
     /// * `ZX_ERR_IO` if there is some other unspecified error during I/O.
     /// * `ZX_ERR_NOT_FOUND` if the package or a package blob does not exist.
     /// * `ZX_ERR_NO_SPACE` if there is no space available to store the package.
     /// * `ZX_ERR_UNAVAILABLE` if the resolver is currently unable to fetch a package blob.
+    // TODO(fxb/45811) change `package_url` from string to PackageUrl
     Resolve(
         string package_url,
         vector<string> selectors,
         UpdatePolicy update_policy,
         request<fuchsia.io.Directory> dir
         ) -> (zx.status status);
+
+    /// Determines the hash of a package.
+    ///
+    /// Arguments:
+    /// * `package_url` The package URL for a package.
+    ///
+    /// Return Values:
+    /// * `ZX_OK` if the hash of the package was successfully obtained.
+    /// * `ZX_ERR_INTERNAL` if the resolver encountered an otherwise unspecified error while
+    ///   handling the request
+    /// * `ZX_ERR_NOT_FOUND` if the package does not exist.
+    GetHash(
+        PackageUrl package_url
+        ) -> (BlobId meta_far_blob_id) error zx.status;
 };
 
 /// The `UpdatePolicy` provides different policies to be used when the `PackageResolver` is

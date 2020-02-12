@@ -33,6 +33,10 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
     callback(ZX_OK);
   }
 
+  virtual void GetHash(fuchsia::pkg::PackageUrl package_url, GetHashCallback callback) override {
+    callback(fuchsia::pkg::PackageResolver_GetHash_Result::WithErr(ZX_ERR_UNAVAILABLE));
+  }
+
  private:
   std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<fuchsia::pkg::PackageResolver> bindings_;

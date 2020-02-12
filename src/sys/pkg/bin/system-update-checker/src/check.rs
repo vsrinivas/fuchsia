@@ -182,6 +182,7 @@ fn extract_system_image_merkle_from_update_packages(
 pub mod test_check_for_system_update_impl {
     use super::*;
     use crate::errors::Error as ErrorKind;
+    use fidl_fuchsia_pkg::{PackageResolverGetHashResult, PackageUrl};
     use fuchsia_async::{self as fasync, futures::future};
     use lazy_static::lazy_static;
     use maplit::hashmap;
@@ -291,6 +292,11 @@ pub mod test_check_for_system_update_impl {
             .unwrap();
             future::ok(zx::sys::ZX_OK)
         }
+
+        type GetHashResponseFut = future::Ready<Result<PackageResolverGetHashResult, fidl::Error>>;
+        fn get_hash(&self, _package_url: &mut PackageUrl) -> Self::GetHashResponseFut {
+            panic!("get_hash not implemented");
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -331,6 +337,11 @@ pub mod test_check_for_system_update_impl {
             ) -> Self::ResolveResponseFut {
                 future::err(fidl::Error::Invalid)
             }
+            type GetHashResponseFut =
+                future::Ready<Result<PackageResolverGetHashResult, fidl::Error>>;
+            fn get_hash(&self, _package_url: &mut PackageUrl) -> Self::GetHashResponseFut {
+                panic!("get_hash not implemented");
+            }
         }
 
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
@@ -355,6 +366,11 @@ pub mod test_check_for_system_update_impl {
             ) -> Self::ResolveResponseFut {
                 future::ok(zx::sys::ZX_ERR_INTERNAL)
             }
+            type GetHashResponseFut =
+                future::Ready<Result<PackageResolverGetHashResult, fidl::Error>>;
+            fn get_hash(&self, _package_url: &mut PackageUrl) -> Self::GetHashResponseFut {
+                panic!("get_hash not implemented");
+            }
         }
 
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
@@ -378,6 +394,11 @@ pub mod test_check_for_system_update_impl {
                 _dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
                 future::ok(zx::sys::ZX_OK)
+            }
+            type GetHashResponseFut =
+                future::Ready<Result<PackageResolverGetHashResult, fidl::Error>>;
+            fn get_hash(&self, _package_url: &mut PackageUrl) -> Self::GetHashResponseFut {
+                panic!("get_hash not implemented");
             }
         }
 

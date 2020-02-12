@@ -5,8 +5,11 @@
 #![cfg(test)]
 use {
     anyhow::Error,
-    cobalt_sw_delivery_registry as metrics, fidl_fuchsia_paver as paver,
-    fidl_fuchsia_pkg::PackageResolverRequestStream,
+    cobalt_sw_delivery_registry as metrics,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_paver as paver,
+    fidl_fuchsia_pkg::{PackageResolverRequestStream, PackageResolverResolveResponder},
     fidl_fuchsia_sys::{LauncherProxy, TerminationReason},
     fuchsia_async as fasync,
     fuchsia_component::{
@@ -242,41 +245,54 @@ impl MockResolverService {
         mut stream: PackageResolverRequestStream,
     ) -> Result<(), Error> {
         while let Some(event) = stream.try_next().await? {
-            let fidl_fuchsia_pkg::PackageResolverRequest::Resolve {
-                package_url,
-                selectors: _,
-                update_policy: _,
-                dir,
-                responder,
-            } = event;
-            eprintln!("TEST: Got resolve request for {:?}", package_url);
-
-            let response = self
-                .expectations
-                .lock()
-                .get(&package_url)
-                .map(|entry| entry.clone())
-                // Successfully resolve unexpected packages without serving a package dir. Log the
-                // transaction so tests can decide if it was expected.
-                .unwrap_or(Err(Status::OK));
-            self.resolved_urls.lock().push(package_url);
-
-            let response_status = match response {
-                Ok(package_dir) => {
-                    // Open the package directory using the directory request given by the client
-                    // asking to resolve the package.
-                    fdio::service_connect(
-                        package_dir.to_str().expect("path to str"),
-                        dir.into_channel(),
-                    )
-                    .unwrap_or_else(|err| panic!("error connecting to tempdir {:?}", err));
-                    Status::OK
-                }
-                Err(status) => status,
-            };
-            responder.send(response_status.into_raw())?;
+            match event {
+                fidl_fuchsia_pkg::PackageResolverRequest::Resolve {
+                    package_url,
+                    selectors: _,
+                    update_policy: _,
+                    dir,
+                    responder,
+                } => self.handle_resolve(package_url, dir, responder).await?,
+                fidl_fuchsia_pkg::PackageResolverRequest::GetHash {
+                    package_url: _,
+                    responder: _,
+                } => panic!("GetHash not implemented"),
+            }
         }
+        Ok(())
+    }
+    async fn handle_resolve(
+        &self,
+        package_url: String,
+        dir: ServerEnd<DirectoryMarker>,
+        responder: PackageResolverResolveResponder,
+    ) -> Result<(), Error> {
+        eprintln!("TEST: Got resolve request for {:?}", package_url);
 
+        let response = self
+            .expectations
+            .lock()
+            .get(&package_url)
+            .map(|entry| entry.clone())
+            // Successfully resolve unexpected packages without serving a package dir. Log the
+            // transaction so tests can decide if it was expected.
+            .unwrap_or(Err(Status::OK));
+        self.resolved_urls.lock().push(package_url);
+
+        let response_status = match response {
+            Ok(package_dir) => {
+                // Open the package directory using the directory request given by the client
+                // asking to resolve the package.
+                fdio::service_connect(
+                    package_dir.to_str().expect("path to str"),
+                    dir.into_channel(),
+                )
+                .unwrap_or_else(|err| panic!("error connecting to tempdir {:?}", err));
+                Status::OK
+            }
+            Err(status) => status,
+        };
+        responder.send(response_status.into_raw())?;
         Ok(())
     }
 
