@@ -295,8 +295,15 @@ zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, fdio_t**
       if (status != ZX_OK) {
         return status;
       }
+      zx_info_socket_t socket_info;
+      status = info.stream_socket().socket.get_info(ZX_INFO_SOCKET, &socket_info,
+                                                    sizeof(socket_info), nullptr, nullptr);
+      if (status != ZX_OK) {
+        return status;
+      }
       io = fdio_stream_socket_create(std::move(info.mutable_stream_socket().socket),
-                                     fsocket::StreamSocket::SyncClient(std::move(handle)));
+                                     fsocket::StreamSocket::SyncClient(std::move(handle)),
+                                     socket_info);
       break;
     }
     default:

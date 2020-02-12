@@ -228,7 +228,8 @@ fdio_t* fdio_datagram_socket_create(
     zx::eventpair event, llcpp::fuchsia::posix::socket::DatagramSocket::SyncClient client);
 
 fdio_t* fdio_stream_socket_create(zx::socket socket,
-                                  llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client);
+                                  llcpp::fuchsia::posix::socket::StreamSocket::SyncClient client,
+                                  zx_info_socket_t info);
 
 // Creates a message port and pair of simple io fdio_t's
 int fdio_pipe_pair(fdio_t** a, fdio_t** b, uint32_t options);

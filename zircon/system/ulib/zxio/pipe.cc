@@ -67,7 +67,7 @@ static void zxio_pipe_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_han
   if (zxio_signals & ZXIO_SIGNAL_WRITE_THRESHOLD) {
     zx_signals |= ZX_SOCKET_WRITE_THRESHOLD;
   }
-  if (zxio_signals & ZXIO_SIGNAL_READ_DISABLED) {
+  if (zxio_signals & ZXIO_SIGNAL_PEER_CLOSED) {
     zx_signals |= ZX_SOCKET_PEER_CLOSED;
   }
   *out_zx_signals = zx_signals;
@@ -95,7 +95,7 @@ static void zxio_pipe_wait_end(zxio_t* io, zx_signals_t zx_signals,
     zxio_signals |= ZXIO_SIGNAL_WRITE_THRESHOLD;
   }
   if (zx_signals & ZX_SOCKET_PEER_CLOSED) {
-    zxio_signals |= ZXIO_SIGNAL_READ_DISABLED;
+    zxio_signals |= ZXIO_SIGNAL_PEER_CLOSED;
   }
   *out_zxio_signals = zxio_signals;
 }
