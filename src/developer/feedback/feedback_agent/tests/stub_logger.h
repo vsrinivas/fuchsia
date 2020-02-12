@@ -7,7 +7,7 @@
 
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/zx/time.h>
 
@@ -31,7 +31,9 @@ class StubLogger : public fuchsia::logger::Log {
  public:
   // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::logger::Log> GetHandler() {
-    return bindings_.GetHandler(this);
+    return [this](fidl::InterfaceRequest<fuchsia::logger::Log> request) {
+      binding_ = std::make_unique<fidl::Binding<fuchsia::logger::Log>>(this, std::move(request));
+    };
   }
 
   // |fuchsia::logger::Log|.
@@ -46,10 +48,10 @@ class StubLogger : public fuchsia::logger::Log {
     messages_ = messages;
   }
 
-  void CloseAllConnections() { bindings_.CloseAll(); }
+  void CloseConnection();
 
  protected:
-  fidl::BindingSet<fuchsia::logger::Log> bindings_;
+  std::unique_ptr<fidl::Binding<fuchsia::logger::Log>> binding_;
   std::vector<fuchsia::logger::LogMessage> messages_;
 };
 

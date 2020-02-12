@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_TESTS_STUB_NETWORK_REACHABILITY_PROVIDER_H_
 
 #include <fuchsia/net/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 
 namespace feedback {
@@ -15,19 +15,24 @@ class StubConnectivity : public fuchsia::net::Connectivity {
  public:
   // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::net::Connectivity> GetHandler() {
-    return bindings_.GetHandler(this);
+    return [this](fidl::InterfaceRequest<fuchsia::net::Connectivity> request) {
+      binding_ =
+          std::make_unique<fidl::Binding<fuchsia::net::Connectivity>>(this, std::move(request));
+    };
   }
 
   void TriggerOnNetworkReachable(bool reachable) {
-    for (const auto& binding : bindings_.bindings()) {
-      binding->events().OnNetworkReachable(reachable);
+    binding_->events().OnNetworkReachable(reachable);
+  }
+
+  void CloseConnection() {
+    if (binding_) {
+      binding_->Close(ZX_ERR_PEER_CLOSED);
     }
   }
 
-  void CloseAllConnections() { bindings_.CloseAll(); }
-
  private:
-  fidl::BindingSet<fuchsia::net::Connectivity> bindings_;
+  std::unique_ptr<fidl::Binding<fuchsia::net::Connectivity>> binding_;
 };
 
 }  // namespace feedback

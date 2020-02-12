@@ -239,7 +239,7 @@ TEST_F(RebootLogHandlerTest, Fail_NetworkReachabilityProviderClosesConnection) {
   fit::result<void> result = HandleRebootLog();
   EXPECT_EQ(result.state(), kPending);
 
-  network_reachability_provider_->CloseAllConnections();
+  network_reachability_provider_->CloseConnection();
   RunLoopUntilIdle();
   EXPECT_EQ(result.state(), kError);
 

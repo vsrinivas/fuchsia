@@ -15,6 +15,12 @@
 
 namespace feedback {
 
+void StubCrashReporter::CloseConnection() {
+  if (binding_) {
+    binding_->Close(ZX_ERR_PEER_CLOSED);
+  }
+}
+
 void StubCrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
   FX_CHECK(report.has_specific_report());
   FX_CHECK(report.specific_report().is_generic());

@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_STUB_COBALT_LOGGER_FACTORY_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 
 #include <limits>
@@ -27,7 +27,10 @@ class StubCobaltLoggerFactoryBase : public fuchsia::cobalt::LoggerFactory {
 
   // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::cobalt::LoggerFactory> GetHandler() {
-    return factory_bindings_.GetHandler(this);
+    return [this](fidl::InterfaceRequest<fuchsia::cobalt::LoggerFactory> request) {
+      factory_binding_ =
+          std::make_unique<fidl::Binding<fuchsia::cobalt::LoggerFactory>>(this, std::move(request));
+    };
   }
 
   const CobaltEvent& LastEvent() const { return logger_->LastEvent(); }
@@ -45,12 +48,9 @@ class StubCobaltLoggerFactoryBase : public fuchsia::cobalt::LoggerFactory {
   bool WasLogCobaltEventCalled() const { return logger_->WasLogCobaltEventCalled(); }
   bool WasLogCobaltEventsCalled() const { return logger_->WasLogCobaltEventsCalled(); }
 
-  void CloseFactoryConnection() { factory_bindings_.CloseAll(); }
-  void CloseLoggerConnection() { logger_bindings_.CloseAll(); }
-  void CloseAllConnections() {
-    CloseFactoryConnection();
-    CloseLoggerConnection();
-  }
+  void CloseFactoryConnection();
+  void CloseLoggerConnection();
+  void CloseAllConnections();
 
  protected:
   void CreateLoggerFromProjectId(
@@ -65,8 +65,8 @@ class StubCobaltLoggerFactoryBase : public fuchsia::cobalt::LoggerFactory {
   }
 
   std::unique_ptr<StubCobaltLoggerBase> logger_;
-  fidl::BindingSet<fuchsia::cobalt::Logger> logger_bindings_;
-  fidl::BindingSet<fuchsia::cobalt::LoggerFactory> factory_bindings_;
+  std::unique_ptr<fidl::Binding<fuchsia::cobalt::Logger>> logger_binding_;
+  std::unique_ptr<fidl::Binding<fuchsia::cobalt::LoggerFactory>> factory_binding_;
 };
 
 // Always succeed in setting up the logger.

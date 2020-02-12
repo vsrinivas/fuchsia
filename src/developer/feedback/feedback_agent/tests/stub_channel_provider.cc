@@ -4,12 +4,20 @@
 
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
 
+#include <zircon/errors.h>
+
 namespace feedback {
+
+void StubChannelProvider::CloseConnection() {
+  if (binding_) {
+    binding_->Close(ZX_ERR_PEER_CLOSED);
+  }
+}
 
 void StubChannelProvider::GetCurrent(GetCurrentCallback callback) { callback(channel_); }
 
 void StubChannelProviderClosesConnection::GetCurrent(GetCurrentCallback callback) {
-  CloseAllConnections();
+  CloseConnection();
 }
 
 void StubChannelProviderNeverReturns::GetCurrent(GetCurrentCallback callback) {}

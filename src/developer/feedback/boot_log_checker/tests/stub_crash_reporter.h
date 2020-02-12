@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_TESTS_STUB_CRASH_REPORTER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/zx/time.h>
 
@@ -18,7 +18,10 @@ class StubCrashReporter : public fuchsia::feedback::CrashReporter {
  public:
   // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::feedback::CrashReporter> GetHandler() {
-    return bindings_.GetHandler(this);
+    return [this](fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request) {
+      binding_ = std::make_unique<fidl::Binding<fuchsia::feedback::CrashReporter>>(
+          this, std::move(request));
+    };
   }
 
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override;
@@ -28,10 +31,10 @@ class StubCrashReporter : public fuchsia::feedback::CrashReporter {
   const std::optional<zx::duration>& uptime() { return uptime_; };
 
  protected:
-  void CloseAllConnections() { bindings_.CloseAll(); }
+  void CloseConnection();
 
  private:
-  fidl::BindingSet<fuchsia::feedback::CrashReporter> bindings_;
+  std::unique_ptr<fidl::Binding<fuchsia::feedback::CrashReporter>> binding_;
   std::string crash_signature_;
   std::string reboot_log_;
   std::optional<zx::duration> uptime_;
@@ -40,7 +43,7 @@ class StubCrashReporter : public fuchsia::feedback::CrashReporter {
 class StubCrashReporterClosesConnection : public StubCrashReporter {
  public:
   void File(fuchsia::feedback::CrashReport report, FileCallback callback) override {
-    CloseAllConnections();
+    CloseConnection();
   }
 };
 

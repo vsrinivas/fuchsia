@@ -227,7 +227,7 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
 
   // Then, we check that if the logger closes the connection (and triggers the error handler on the
   // LogListener side), we don't crash (cf. DX-1602).
-  logger->CloseAllConnections();
+  logger->CloseConnection();
 }
 
 TEST_F(LogListenerTest, Fail_CallCollectLogsTwice) {

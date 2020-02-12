@@ -7,6 +7,7 @@
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/zx/time.h>
+#include <zircon/errors.h>
 
 #include <cstdint>
 
@@ -35,6 +36,12 @@ fuchsia::logger::LogMessage BuildLogMessage(const int32_t severity, const std::s
   return msg;
 }
 
+void StubLogger::CloseConnection() {
+  if (binding_) {
+    binding_->Close(ZX_ERR_PEER_CLOSED);
+  }
+}
+
 void StubLogger::Listen(fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
                         std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
   fuchsia::logger::LogListenerPtr log_listener_ptr = log_listener.Bind();
@@ -55,7 +62,7 @@ void StubLogger::DumpLogs(fidl::InterfaceHandle<fuchsia::logger::LogListener> lo
 void StubLoggerClosesConnection::DumpLogs(
     fidl::InterfaceHandle<fuchsia::logger::LogListener> log_listener,
     std::unique_ptr<fuchsia::logger::LogFilterOptions> options) {
-  CloseAllConnections();
+  CloseConnection();
 }
 
 void StubLoggerNeverBindsToLogListener::DumpLogs(
