@@ -24,6 +24,7 @@ driver_module("intel-i915") {
     "power.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.intelgpucore",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -38,7 +39,6 @@ driver_module("intel-i915") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.display.controller",
     "//zircon/system/banjo/ddk.protocol.i2cimpl",
-    "//zircon/system/banjo/ddk.protocol.intelgpucore",
     "//zircon/system/banjo/ddk.protocol.pci",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-sysmem:c",
@@ -63,6 +63,7 @@ test("intel-i915-test") {
     "power.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.intelgpucore",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -83,7 +84,6 @@ test("intel-i915-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.display.controller",
     "//zircon/system/banjo/ddk.protocol.i2cimpl",
-    "//zircon/system/banjo/ddk.protocol.intelgpucore",
     "//zircon/system/banjo/ddk.protocol.pci",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-sysmem:c",

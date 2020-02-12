@@ -100,7 +100,6 @@ group("banjo") {
     "ddk.protocol.i2cimpl",
 #------------------
 #------------------
-    "ddk.protocol.intelgpucore",
 #------------------
 #------------------
     "ddk.protocol.intelhda.codec",
