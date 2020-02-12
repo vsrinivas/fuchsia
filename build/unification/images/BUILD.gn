@@ -568,7 +568,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.fidl-test",
 #------------------
 #------------------
-    ":test.sys.fidl-utils-test",
 #------------------
 #------------------
     ":test.sys.fs-test-support-test",
@@ -1179,7 +1178,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.fidl-test",
 #------------------
 #------------------
-    ":test.sys.fidl-utils-test",
 #------------------
 #------------------
     ":test.sys.fs-test-support-test",
@@ -3030,7 +3028,7 @@ aggregate_manifest("migrated-aux") {
     #":test.sys.fidl-test",
 #------------------
 #------------------
-    #":test.sys.fidl-utils-test",
+    "//zircon/system/utest/fidl-utils:fidl-utils-manifest",
 #------------------
     "//zircon/system/utest/fit:fit-manifest",
     "//zircon/system/ulib/fit/test:fit-unittest-manifest",
@@ -3733,7 +3731,7 @@ aggregate_manifest("migrated-tests") {
     #":test.sys.fidl-test",
 #------------------
 #------------------
-    #":test.sys.fidl-utils-test",
+    "//zircon/system/utest/fidl-utils:fidl-utils-manifest",
 #------------------
     "//zircon/system/utest/fit:fit-manifest",
     "//zircon/system/ulib/fit/test:fit-unittest-manifest",
