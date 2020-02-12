@@ -6,13 +6,14 @@ use {
     anyhow::Error,
     fuchsia_async as fasync,
     io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
+    std::cmp::min,
     test_utils_lib::{events::*, test_utils::*},
 };
 
 /// Drains the required number of events, sorts them and compares them
 /// to the expected events
 fn expect_next(events: &mut Vec<DrainedEvent>, expected: Vec<DrainedEvent>) {
-    let num_events: usize = expected.len();
+    let num_events: usize = min(expected.len(), events.len());
     let mut next: Vec<DrainedEvent> = events.drain(0..num_events).collect();
     next.sort_unstable();
     assert_eq!(next, expected);
