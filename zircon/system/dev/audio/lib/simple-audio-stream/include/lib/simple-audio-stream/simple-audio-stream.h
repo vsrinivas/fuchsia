@@ -257,8 +257,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   // provided.  Implementations may use this as a signal to stop notification
   // production until the point in time at which GetBuffer is called again.
   //
-  zx_status_t NotifyPosition(const audio_proto::RingBufPositionNotify& notif)
-      __TA_REQUIRES(domain_token());
+  zx_status_t NotifyPosition(const audio_proto::RingBufPositionNotify& notif);
 
   // Incoming interfaces (callable from child classes into this class)
   //
@@ -433,7 +432,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   // Stream and ring buffer channel state.
   fbl::Mutex channel_lock_ __TA_ACQUIRED_AFTER(domain_token());
   fbl::RefPtr<StreamChannel> stream_channel_ __TA_GUARDED(channel_lock_);
-  fbl::RefPtr<Channel> rb_channel_ __TA_GUARDED(domain_token());
+  fbl::RefPtr<Channel> rb_channel_ __TA_GUARDED(channel_lock_);
 
   fbl::DoublyLinkedList<fbl::RefPtr<StreamChannel>, StreamChannel::StreamChannelTrait>
       stream_channels_ __TA_GUARDED(channel_lock_);

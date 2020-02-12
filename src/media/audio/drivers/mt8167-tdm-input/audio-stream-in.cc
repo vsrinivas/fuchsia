@@ -192,6 +192,7 @@ zx_status_t Mt8167AudioStreamIn::Start(uint64_t* out_start_time) {
 
 // Timer handler for sending out position notifications.
 void Mt8167AudioStreamIn::ProcessRingNotification() {
+  ScopedToken t(domain_token());
   ZX_ASSERT(us_per_notification_ != 0);
 
   notify_timer_.PostDelayed(dispatcher(), zx::usec(us_per_notification_));

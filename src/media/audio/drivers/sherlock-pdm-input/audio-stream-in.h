@@ -44,7 +44,7 @@ class SherlockAudioStreamIn : public SimpleAudioStream {
   zx_status_t AddFormats() __TA_REQUIRES(domain_token());
   zx_status_t InitBuffer(size_t size) TA_REQ(domain_token());
   zx_status_t InitPDev() TA_REQ(domain_token());
-  void ProcessRingNotification() TA_REQ(domain_token());
+  void ProcessRingNotification();
 
   uint32_t us_per_notification_ = 0;
   uint32_t frames_per_second_ = 0;

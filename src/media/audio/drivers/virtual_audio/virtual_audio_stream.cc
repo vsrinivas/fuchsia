@@ -460,6 +460,7 @@ zx_status_t VirtualAudioStream::Start(uint64_t* out_start_time) {
 // override the notification frequency, and to VAD clients that set it to the same value that
 // AudioCore has selected.
 void VirtualAudioStream::ProcessRingNotification() {
+  audio::ScopedToken t(domain_token());
   ZX_DEBUG_ASSERT(notification_period_.get() > 0);
 
   auto monotonic_time = target_notification_time_.get();

@@ -43,7 +43,7 @@ class Mt8167AudioStreamIn : public SimpleAudioStream {
   zx_status_t AddFormats() __TA_REQUIRES(domain_token());
   zx_status_t InitBuffer(size_t size) TA_REQ(domain_token());
   zx_status_t InitPdev() TA_REQ(domain_token());
-  void ProcessRingNotification() TA_REQ(domain_token());
+  void ProcessRingNotification();
 
   uint32_t us_per_notification_ = 0;
 

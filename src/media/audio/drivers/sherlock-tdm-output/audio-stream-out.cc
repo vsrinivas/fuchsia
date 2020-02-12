@@ -219,6 +219,7 @@ zx_status_t SherlockAudioStreamOut::Init() {
 
 // Timer handler for sending out position notifications.
 void SherlockAudioStreamOut::ProcessRingNotification() {
+  ScopedToken t(domain_token());
   ZX_ASSERT(us_per_notification_ != 0);
 
   // TODO(andresoportus): johngro noticed there is some drifting on notifications here,

@@ -138,6 +138,7 @@ zx_status_t SimpleAudioStream::NotifyPlugDetect() {
 }
 
 zx_status_t SimpleAudioStream::NotifyPosition(const audio_proto::RingBufPositionNotify& notif) {
+  fbl::AutoLock channel_lock(&channel_lock_);
   if (!expected_notifications_per_ring_.load() || (rb_channel_ == nullptr)) {
     return ZX_ERR_BAD_STATE;
   }

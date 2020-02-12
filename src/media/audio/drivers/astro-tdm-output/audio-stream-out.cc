@@ -158,6 +158,7 @@ zx_status_t AstroAudioStreamOut::Init() {
 
 // Timer handler for sending out position notifications
 void AstroAudioStreamOut::ProcessRingNotification() {
+  ScopedToken t(domain_token());
   if (us_per_notification_) {
     notify_timer_.PostDelayed(dispatcher(), zx::usec(us_per_notification_));
   } else {

@@ -110,7 +110,8 @@ class MockSimpleAudio : public SimpleAudioStream {
     return ZX_OK;
   }
 
-  void ProcessRingNotification() __TA_REQUIRES(domain_token()) {
+  void ProcessRingNotification() {
+    ScopedToken t(domain_token());
     audio_proto::RingBufPositionNotify resp = {};
     resp.hdr.cmd = AUDIO_RB_POSITION_NOTIFY;
     resp.monotonic_time = zx::clock::get_monotonic().get();

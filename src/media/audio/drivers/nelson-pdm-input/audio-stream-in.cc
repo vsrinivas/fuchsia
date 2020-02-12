@@ -198,6 +198,7 @@ zx_status_t NelsonAudioStreamIn::Start(uint64_t* out_start_time) {
 
 // Timer handler for sending out position notifications.
 void NelsonAudioStreamIn::ProcessRingNotification() {
+  ScopedToken t(domain_token());
   ZX_ASSERT(notification_rate_ != zx::duration());
 
   notify_timer_.PostDelayed(dispatcher(), notification_rate_);

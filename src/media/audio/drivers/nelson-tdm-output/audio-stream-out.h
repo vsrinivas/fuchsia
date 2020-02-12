@@ -54,7 +54,7 @@ class NelsonAudioStreamOut : public SimpleAudioStream {
   zx_status_t AddFormats() TA_REQ(domain_token());
   zx_status_t InitBuffer(size_t size) TA_REQ(domain_token());
   zx_status_t InitPdev() TA_REQ(domain_token());
-  void ProcessRingNotification() TA_REQ(domain_token());
+  void ProcessRingNotification();
 
   uint32_t us_per_notification_ = 0;
   async::TaskClosureMethod<NelsonAudioStreamOut, &NelsonAudioStreamOut::ProcessRingNotification>

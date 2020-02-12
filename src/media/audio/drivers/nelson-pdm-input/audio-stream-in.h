@@ -53,7 +53,7 @@ class NelsonAudioStreamIn : public SimpleAudioStream {
   zx_status_t AddFormats() TA_REQ(domain_token());
   zx_status_t InitBuffer(size_t size) TA_REQ(domain_token());
   zx_status_t InitPDev() TA_REQ(domain_token());
-  void ProcessRingNotification() TA_REQ(domain_token());
+  void ProcessRingNotification();
 
   zx::duration notification_rate_ = {};
   uint32_t frames_per_second_ = 0;

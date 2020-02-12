@@ -201,6 +201,7 @@ zx_status_t As370AudioStreamOut::Init() {
 
 // Timer handler for sending out position notifications.
 void As370AudioStreamOut::ProcessRingNotification() {
+  ScopedToken t(domain_token());
   ZX_ASSERT(us_per_notification_ != 0);
 
   notify_timer_.PostDelayed(dispatcher(), zx::usec(us_per_notification_));

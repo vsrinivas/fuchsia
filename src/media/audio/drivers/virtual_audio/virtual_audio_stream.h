@@ -61,7 +61,7 @@ class VirtualAudioStream : public audio::SimpleAudioStream {
   void ShutdownHook() __TA_REQUIRES(domain_token()) override;
   // RingBufferShutdown() is unneeded: no hardware shutdown tasks needed...
 
-  void ProcessRingNotification() __TA_REQUIRES(domain_token());
+  void ProcessRingNotification();
   void ProcessAltRingNotification() __TA_REQUIRES(domain_token());
 
   enum class PlugType { Plug, Unplug };
