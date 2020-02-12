@@ -1648,7 +1648,7 @@ void CodecImpl::SetBufferSettingsCommon(
                 // that by expressing in sysmem constraints, or more likely just
                 // accept that such a client will need to start with a new codec
                 // instance for the 2nd try.
-                FailLocked("CodecImpl's BufferCollection failed - status: %d", status);
+                UnbindLocked();
               });
           port_settings_[port]->buffer_collection()->SetConstraints(
               true, std::move(buffer_collection_constraints));
