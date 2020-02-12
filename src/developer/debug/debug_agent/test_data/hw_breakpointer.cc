@@ -177,7 +177,7 @@ bool TestWatchpointRun(const zx::port& port, const zx::channel& exception_channe
 
   Exception exception = std::move(*opt_excp);
 
-  FXL_DCHECK(exception.info.type = ZX_EXCP_HW_BREAKPOINT);
+  FXL_DCHECK(exception.info.type == ZX_EXCP_HW_BREAKPOINT);
   PRINT_CLEAN("Writing into 0x%zx. Hit!", (uint64_t)address_to_write);
 
   WaitAsyncOnExceptionChannel(port, exception_channel);
