@@ -193,7 +193,7 @@ impl EventLoop {
                 let properties = fidl_fuchsia_router_config::LifProperties::Wan(properties);
                 if self
                     .device
-                    .update_lif_properties(u128::from_ne_bytes(wan_id.uuid), &properties)
+                    .update_lif_properties_fidl(u128::from_ne_bytes(wan_id.uuid), &properties)
                     .await
                     .is_err()
                 {
@@ -208,7 +208,7 @@ impl EventLoop {
                 let properties = fidl_fuchsia_router_config::LifProperties::Lan(properties);
                 if self
                     .device
-                    .update_lif_properties(u128::from_ne_bytes(lan_id.uuid), &properties)
+                    .update_lif_properties_fidl(u128::from_ne_bytes(lan_id.uuid), &properties)
                     .await
                     .is_err()
                 {

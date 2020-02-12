@@ -4,14 +4,6 @@
 
 //! A networking stack.
 
-// In case we roll the toolchain and something we're using as a feature has been
-// stabilized.
-#![allow(stable_features)]
-// TODO(dpradilla): reenable and add comments #![deny(missing_docs)]
-#![deny(unreachable_patterns)]
-#![deny(unused)]
-#![deny(unused_imports)]
-
 #[macro_use]
 extern crate log;
 
@@ -27,7 +19,6 @@ pub mod portmgr;
 mod servicemgr;
 
 use {
-    crate::address::LifIpAddr,
     crate::lifmgr::{LIFProperties, LIFType},
     crate::portmgr::PortId,
     fidl_fuchsia_net_stack as stack, fidl_fuchsia_netstack as netstack,
@@ -203,7 +194,7 @@ impl DeviceState {
         let wan_name = self.config.get_interface_name(topological_path)?;
         let properties = self.config.create_wan_properties(topological_path)?;
         let lif = self.create_lif(LIFType::WAN, wan_name, None, &[pid]).await?;
-        self.update_lif_properties(lif.id().uuid(), &properties.to_fidl_wan()).await?;
+        self.update_lif_properties(lif.id().uuid(), &properties).await?;
         info!("WAN configured: pid: {:?}, lif: {:?}, properties: {:?} ", pid, lif, properties);
         Ok(())
     }
@@ -225,7 +216,7 @@ impl DeviceState {
         let vlan_id = routed_vlan.vlan_id;
         let properties = self.config.create_routed_vlan_properties(&routed_vlan)?;
         let lif = self.create_lif(LIFType::LAN, bridge_name, Some(vlan_id), pids).await?;
-        self.update_lif_properties(lif.id().uuid(), &properties.to_fidl_wan()).await?;
+        self.update_lif_properties(lif.id().uuid(), &properties).await?;
         info!("Created new LAN bridge with properties: {:?}", properties);
         Ok(())
     }
@@ -239,7 +230,7 @@ impl DeviceState {
         let properties = self.config.create_lan_properties(topological_path)?;
         let lif = self.create_lif(LIFType::LAN, name, None, pids).await?;
         info!("LAN configured: pids: {:?} lif: {:?} properties: {:?} ", pids, lif, properties);
-        self.update_lif_properties(lif.id().uuid(), &properties.to_fidl_lan()).await?;
+        self.update_lif_properties(lif.id().uuid(), &properties).await?;
         for pid in pids {
             self.hal.set_interface_state(*pid, true).await?
         }
@@ -314,7 +305,7 @@ impl DeviceState {
 
                 // Port manager does not know about this port, add it.
 
-                // No version change, this is just added a port insertion,
+                // No version change, this is just a port insertion,
                 // not a configuration update.
                 self.add_port(pid, &event.topological_path, self.version());
 
@@ -359,7 +350,12 @@ impl DeviceState {
             vec![iface.id],
             0, // vlan
             Some(lifmgr::LIFProperties {
-                dhcp: iface.dhcp_client_enabled,
+                dhcp: if iface.dhcp_client_enabled {
+                    lifmgr::Dhcp::Client
+                } else {
+                    lifmgr::Dhcp::None
+                },
+                dhcp_config: None,
                 address_v4: iface.get_address_v4(),
                 address_v6: iface.get_address_v6(),
                 enabled: true,
@@ -502,7 +498,7 @@ impl DeviceState {
     }
 
     /// Configures an interface with the given properties, and updates the LIF information.
-    pub async fn update_lif_properties(
+    pub async fn update_lif_properties_fidl(
         &mut self,
         lif_id: UUID,
         properties: &netconfig::LifProperties,
@@ -510,250 +506,58 @@ impl DeviceState {
         let lif = match self.lif_manager.lif_mut(&lif_id) {
             None => {
                 info!("update_lif_properties: lif not found {:?} ", lif_id);
-                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+                return Err(error::NetworkManager::LIF(error::Lif::NotFound));
             }
             Some(x) => x,
         };
 
-        info!("update_lif_properties: setting properties {:?}", properties);
-        match properties {
-            // Get existing configuration
-            // Merge with new one
-            // Validate updated config
-            // Apply differences
-            // If failure, revert back
-            // Report result.
-            netconfig::LifProperties::Wan(p) => {
-                let old = lif.properties();
-                let mut lp = old.clone();
+        let old = lif.properties();
+        let lp = old.get_updated(&properties)?;
 
-                match &p.connection_type {
-                    None => {}
-                    Some(netconfig::WanConnection::Direct) => {
-                        info!("connection_type DIRECT ");
-                    }
-                    Some(cfg) => {
-                        info!("connection_type {:?}", cfg);
-                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
-                    }
-                };
-                match &p.connection_parameters {
-                    None => {}
-                    Some(cfg) => {
-                        info!("connection parameters {:?}", cfg);
-                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
-                    }
-                };
-                match &p.hostname {
-                    None => {}
-                    Some(cfg) => {
-                        info!("hostname {:?}", cfg);
-                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
-                    }
-                };
-                match &p.clone_mac {
-                    None => {}
-                    Some(cfg) => {
-                        info!("clone mac {:?}", cfg);
-                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
-                    }
-                };
-                match &p.mtu {
-                    None => {}
-                    Some(cfg) => {
-                        info!("mtu  {:?}", cfg);
-                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
-                    }
-                };
-                match &p.metric {
-                    None => {}
-                    Some(cfg) => {
-                        info!("metric {:?}", cfg);
-                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
-                    }
-                };
-                match &p.address_method {
-                    Some(netconfig::WanAddressMethod::Automatic) => {
-                        lp.dhcp = true;
-                        lp.address_v4 = None;
-                    }
-                    Some(netconfig::WanAddressMethod::Manual) => {
-                        lp.dhcp = false;
-                    }
-                    None => {}
-                };
-                match &p.address_v4 {
-                    None => {}
-                    Some(netconfig::CidrAddress {
-                        address: Some(address),
-                        prefix_length: Some(prefix_length),
-                    }) => {
-                        if lp.dhcp {
-                            warn!(
-                                "Setting a static ip is not allowed when \
-                                 a dhcp client is configured"
-                            );
-                            return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
-                        }
-                        info!("Setting WAN IPv4 address to {:?}/{:?}", address, prefix_length);
-                        let v4addr = LifIpAddr::from(p.address_v4.as_ref().unwrap());
-                        if !v4addr.is_ipv4() {
-                            return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
-                        }
-                        self.service_manager.set_global_ip_nat(v4addr.clone(), lif.pid());
-                        lp.address_v4 = Some(v4addr);
-                    }
-                    _ => {
-                        warn!("invalid address {:?}", p.address_v4);
-                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
-                    }
-                };
-                match &p.gateway_v4 {
-                    None => {}
-                    Some(gw) => {
-                        info!("setting gateway {:?}", gw);
-                        //  TODO(dpradilla): implement. - verify gw is in local network
-                    }
-                }
-                match &p.connection_v6_mode {
-                    None => {}
-                    Some(netconfig::WanIpV6ConnectionMode::Passthrough) => {
-                        info!("v6 mode Passthrough");
-                    }
-                    Some(cfg) => {
-                        info!("v6 mode {:?}", cfg);
-                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
-                    }
-                };
-                match &p.address_v6 {
-                    None => {}
-                    Some(netconfig::CidrAddress {
-                        address: Some(address),
-                        prefix_length: Some(prefix_length),
-                    }) => {
-                        info!("Setting WAN IPv6 to {:?}/{:?}", address, prefix_length);
-                        let a = LifIpAddr::from(p.address_v6.as_ref().unwrap());
-                        if !a.is_ipv6() {
-                            return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
-                        }
-                        lp.address_v6 = vec![a];
-                    }
-                    _ => {
-                        warn!("invalid address {:?}", p.address_v6);
-                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
-                    }
-                };
-                match &p.gateway_v6 {
-                    None => {}
-                    Some(gw) => {
-                        info!("setting gateway {:?}", gw);
-                        //  TODO(dpradilla): implement. - verify gw is in local network
-                    }
-                };
-                if let Some(enable) = &p.enable {
-                    info!("enable {:?}", enable);
-                    lp.enabled = *enable
-                };
-                self.hal.apply_properties(lif.pid(), &old, &lp).await?;
-                lif.set_properties(self.version, lp)?;
-                self.version += 1;
-                Ok(())
+        self.update_lif_properties(lif_id, &lp).await
+    }
+
+    /// Configures an interface with the given properties, and updates the LIF information.
+    pub async fn update_lif_properties(
+        &mut self,
+        lif_id: UUID,
+        lp: &lifmgr::LIFProperties,
+    ) -> error::Result<()> {
+        let lif = match self.lif_manager.lif_mut(&lif_id) {
+            None => {
+                info!("update_lif_properties: lif not found {:?} ", lif_id);
+                return Err(error::NetworkManager::LIF(error::Lif::NotFound));
             }
-            netconfig::LifProperties::Lan(p) => {
-                let old = lif.properties();
-                let mut lp = old.clone();
+            Some(x) => x,
+        };
 
-                match p.enable_dhcp_server {
-                    None => {}
-                    Some(true) => {
-                        info!("enable DHCP server");
-                        self.service_manager.enable_server(&lif)?;
-                    }
-                    Some(false) => {
-                        info!("disable DHCP server");
-                        self.service_manager.disable_server(&lif);
-                    }
-                };
-                match &p.dhcp_config {
-                    None => {}
-                    Some(cfg) => {
-                        info!("DHCP server configuration {:?}", cfg);
-                    }
-                };
-                match &p.address_v4 {
-                    None => {}
-                    Some(netconfig::CidrAddress {
-                        address: Some(address),
-                        prefix_length: Some(prefix_length),
-                    }) => {
-                        // LAN IPv4 address is changing.
-                        info!("Setting LAN IPv4 address to {:?}/{:?}", address, prefix_length);
-                        let v4addr = LifIpAddr::from(p.address_v4.as_ref().unwrap());
-                        if !v4addr.is_ipv4() {
-                            return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
-                        }
-                        self.service_manager.set_local_subnet_nat(v4addr.clone());
-                        lp.address_v4 = Some(v4addr);
-                    }
-                    _ => {
-                        warn!("invalid address {:?}", p.address_v4);
-                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
-                    }
-                };
-                match &p.address_v6 {
-                    None => {}
-                    Some(netconfig::CidrAddress {
-                        address: Some(address),
-                        prefix_length: Some(prefix_length),
-                    }) => {
-                        // LAN IPv6 address is changing.
-                        info!("Setting LAN IPv6 address to {:?}/{:?}", address, prefix_length);
-                        let a = LifIpAddr::from(p.address_v6.as_ref().unwrap());
-                        if !a.is_ipv4() {
-                            return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
-                        }
-                        lp.address_v6 = vec![a];
-                    }
-                    _ => {
-                        warn!("invalid address {:?}", p.address_v6);
-                        return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
-                    }
-                };
-                match &p.enable {
-                    None => {}
-                    Some(enable) => {
-                        info!("enable {:?}", enable);
-                        lp.enabled = *enable
-                    }
-                };
-                if let Err(e) = self.hal.apply_properties(lif.pid(), &old, &lp).await {
-                    // TODO(cgibson): Need to roll back any partially applied configuration here.
-                    warn!("Failed to update HAL properties: {:?}; Version not incremented.", e);
-                    return Err(e);
-                }
-                if let Err(e) = lif.set_properties(self.version, lp) {
-                    // TODO(cgibson): Need to roll back any partially applied configuration here.
-                    warn!("Failed to update LIF properties: {:?}; Version not incremented.", e);
-                    return Err(e);
-                }
-                match self.update_nat_config().await {
-                    // If the result of this call was `UpdateNatPendingConfig` or `NatNotEnabled`,
-                    // then NAT is not yet ready to be enabled until we have more configuration
-                    // data.
-                    Ok(_)
-                    | Err(error::NetworkManager::SERVICE(error::Service::UpdateNatPendingConfig))
-                    | Err(error::NetworkManager::SERVICE(error::Service::NatNotEnabled)) => {}
-                    Err(e) => {
-                        // Otherwise, this was an actual error and we should not increment the
-                        // version number.
-                        error!("Failed to update NAT rules: {:?}; Version not incremented.", e);
-                        return Err(e);
-                    }
-                }
-                self.version += 1;
-                Ok(())
+        let old = lif.properties();
+        self.hal.apply_properties(lif.pid(), &old, &lp).await?;
+        if let Some(addr) = lp.address_v4 {
+            match lif.ltype() {
+                LIFType::WAN => self.service_manager.set_global_ip_nat(addr.clone(), lif.pid()),
+                LIFType::LAN => self.service_manager.set_local_subnet_nat(addr.clone()),
+                _ => (),
             }
         }
+
+        match self.packet_filter.update_nat_config(self.service_manager.get_nat_config()).await {
+            // If the result of this call was `UpdateNatPendingConfig` or `NatNotEnabled`,
+            // then NAT is not yet ready to be enabled until we have more configuration
+            // data.
+            Ok(_)
+            | Err(error::NetworkManager::SERVICE(error::Service::UpdateNatPendingConfig))
+            | Err(error::NetworkManager::SERVICE(error::Service::NatNotEnabled)) => {}
+            Err(e) => {
+                // Otherwise, this was an actual error and we should not increment the
+                // version number.
+                error!("Failed to update NAT rules: {:?}; Version not incremented.", e);
+                return Err(e);
+            }
+        }
+        lif.set_properties(self.version, lp.clone())?;
+        self.version += 1;
+        Ok(())
     }
 
     /// Returns the LIF with the given `UUID`.
@@ -906,6 +710,7 @@ impl DeviceState {
 /// (we are not currently caching operational state, just querying for it).
 fn log_property_change(lif: &mut lifmgr::LIF, iface: hal::Interface) {
     let properties = lif.properties();
+    info!("log_property_change {:?} {:?}", iface.id, iface.name);
     let new_properties: lifmgr::LIFProperties = iface.into();
     if properties != &new_properties {
         info!("Properties have changed {:?}: new properties {:?}", properties, new_properties);
@@ -964,6 +769,7 @@ impl From<ElementId> for netconfig::Id {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::address::LifIpAddr;
     use fidl_fuchsia_net as net;
     use fuchsia_async as fasync;
     use std::net::IpAddr;

@@ -273,7 +273,8 @@ impl From<&netstack::NetInterface> for Interface {
 impl Into<LIFProperties> for Interface {
     fn into(self) -> LIFProperties {
         LIFProperties {
-            dhcp: self.dhcp_client_enabled,
+            dhcp: if self.dhcp_client_enabled { lifmgr::Dhcp::Client } else { lifmgr::Dhcp::None },
+            dhcp_config: None,
             address_v4: self.get_address_v4(),
             address_v6: self.get_address_v6(),
             enabled: self.enabled,
@@ -371,6 +372,7 @@ impl NetCfg {
             .stack
             .add_interface_address(StackPortId::from(pid).to_u64(), &mut addr.into())
             .await;
+        info!("set_ip_address {:?}: {:?}: {:?}", pid, addr, r);
         r.squash_result().map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))
     }
 
@@ -391,6 +393,7 @@ impl NetCfg {
                 a.prefix_length.unwrap(),
             )
             .await;
+        info!("unset_ip_address {:?}: {:?}: {:?}", pid, addr, r);
         r.map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))?;
 
         Ok(())
@@ -433,6 +436,28 @@ impl NetCfg {
             return Err(error::NetworkManager::HAL(error::Hal::OperationFailed));
         }
         info!("DHCP client on nicid: {}, enabled: {}", pid.to_u32(), enable);
+        Ok(())
+    }
+
+    /// Sets the state of the DHCP server on the specified interface.
+    ///
+    /// `enable` controls whether the given `PortId` has a DHCP client started or stopped.
+    pub async fn set_dhcp_server_state(&mut self, pid: PortId, enable: bool) -> error::Result<()> {
+        // TODO(dpradilla): call API here when ready.
+        info!("set_dhcp_server_state pid: {:?} enable: {}", pid, enable);
+        Ok(())
+    }
+
+    /// Sets the configuration of the DHCP server on the specified interface.
+    ///
+    pub async fn set_dhcp_server_config(
+        &mut self,
+        pid: PortId,
+        _old: &Option<lifmgr::DhcpServerConfig>,
+        desired: &Option<lifmgr::DhcpServerConfig>,
+    ) -> error::Result<()> {
+        // TODO(dpradilla): call API here when ready.
+        info!("set_dhcp_server_config pid: {:?} config: {:?}", pid, desired);
         Ok(())
     }
 
@@ -484,26 +509,52 @@ impl NetCfg {
         old: &'a lifmgr::LIFProperties,
         properties: &'a lifmgr::LIFProperties,
     ) -> error::Result<()> {
-        match (old.dhcp, properties.dhcp) {
-            // dhcp configuration transitions from enabled to disabled.
-            (true, false) => {
-                // Disable dhcp and apply manual address configuration.
-                self.set_dhcp_client_state(pid, properties.dhcp).await?;
-                self.apply_manual_ip(pid, &old.address_v4, &properties.address_v4).await?;
-            }
-            // dhcp configuration transitions from disabled to enabled.
-            (false, true) => {
-                // Remove any manual IP address and enable dhcp client.
-                self.apply_manual_ip(pid, &old.address_v4, &None).await?;
-                self.set_dhcp_client_state(pid, properties.dhcp).await?;
-            }
+        match (&old.dhcp, &properties.dhcp) {
             // dhcp is still disabled, check for manual IP address changes.
-            (false, false) => {
+            (lifmgr::Dhcp::None, lifmgr::Dhcp::None) => {
                 self.apply_manual_ip(pid, &old.address_v4, &properties.address_v4).await?;
             }
             // No changes to dhcp configuration, it is still enabled, nothing to do.
-            (true, true) => {}
+            (lifmgr::Dhcp::Client, lifmgr::Dhcp::Client) => {}
+            (lifmgr::Dhcp::Server, lifmgr::Dhcp::Server) => {
+                self.apply_manual_ip(pid, &old.address_v4, &properties.address_v4).await?;
+                self.set_dhcp_server_config(pid, &old.dhcp_config, &properties.dhcp_config).await?;
+            }
+
+            (lifmgr::Dhcp::Server, lifmgr::Dhcp::None) => {
+                self.apply_manual_ip(pid, &old.address_v4, &properties.address_v4).await?;
+                self.set_dhcp_server_state(pid, false).await?;
+            }
+            (lifmgr::Dhcp::None, lifmgr::Dhcp::Server) => {
+                self.apply_manual_ip(pid, &old.address_v4, &properties.address_v4).await?;
+                self.set_dhcp_server_config(pid, &old.dhcp_config, &properties.dhcp_config).await?;
+                self.set_dhcp_server_state(pid, true).await?;
+            }
+
+            // dhcp configuration transitions from client enabled
+            (lifmgr::Dhcp::Client, lifmgr::Dhcp::None) => {
+                // Disable dhcp and apply manual address configuration.
+                self.set_dhcp_client_state(pid, false).await?;
+                self.apply_manual_ip(pid, &old.address_v4, &properties.address_v4).await?;
+            }
+            (lifmgr::Dhcp::Client, lifmgr::Dhcp::Server) => {
+                // Disable dhcp and apply manual address configuration.
+                self.set_dhcp_client_state(pid, false).await?;
+                self.apply_manual_ip(pid, &old.address_v4, &properties.address_v4).await?;
+                self.set_dhcp_server_config(pid, &old.dhcp_config, &properties.dhcp_config).await?;
+                self.set_dhcp_server_state(pid, true).await?;
+            }
+            // dhcp configuration transitions from disabled to enabled.
+            (_, lifmgr::Dhcp::Client) => {
+                // Remove any manual IP address and enable dhcp client.
+                self.apply_manual_ip(pid, &old.address_v4, &None).await?;
+                self.set_dhcp_client_state(pid, properties.dhcp == lifmgr::Dhcp::Client).await?;
+                self.set_dhcp_server_state(pid, false).await?;
+            }
         }
+
+        // TODO(dpradilla) apply ipv6 address
+
         if old.enabled != properties.enabled {
             info!("id {:?} updating state {:?}", pid, properties.enabled);
             self.set_interface_state(pid, properties.enabled).await?;

@@ -5,12 +5,14 @@
 //! A basic Logical Interface (LIF) Manager.
 
 // TODO(dpradilla): remove when done.
-#![allow(dead_code)]
+#![allow(unused)]
 
 use {
     crate::{address::LifIpAddr, error, portmgr::PortId, ElementId, Version, UUID},
+    eui48::MacAddress,
     fidl_fuchsia_router_config as netconfig,
     std::collections::{HashMap, HashSet},
+    std::net,
 };
 
 /// `LIFType` denotes the supported types of Logical Interfaces.
@@ -28,7 +30,7 @@ pub enum LIFType {
 #[derive(Eq, PartialEq, Debug, Clone)]
 pub struct LIF {
     id: ElementId,
-    l_type: LIFType,
+    pub l_type: LIFType,
     name: String,
     // `pid` is the id of the port associated with the LIF.
     // In case of a LIF associated to a bridge, it is the id of the bridge port.
@@ -146,6 +148,11 @@ impl LIF {
         self.pid
     }
 
+    /// Returns the Lif type.
+    pub fn ltype(&self) -> LIFType {
+        self.l_type
+    }
+
     /// Returns the properties associated with the LIF.
     pub fn properties(&self) -> &LIFProperties {
         &self.properties
@@ -182,7 +189,6 @@ impl From<&LIF> for netconfig::Lif {
         }
     }
 }
-
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct DnsSearch {
     /// List of DNS servers to consult.
@@ -199,13 +205,70 @@ impl From<netconfig::DnsSearch> for DnsSearch {
     }
 }
 
+/// Keeps track of DHCP server options.
 #[derive(Debug, Eq, PartialEq, Clone, Default)]
-pub struct DhcpServerOptions {
+pub(crate) struct DhcpServerOptions {
     pub(crate) id: ElementId,
     pub(crate) lease_time_sec: u32,
     pub(crate) default_gateway: Option<fidl_fuchsia_net::Ipv4Address>,
     pub(crate) dns_server: Option<DnsSearch>,
     pub(crate) enable: bool,
+}
+
+/// Defines the DHCP address pool.
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub(crate) struct DhcpAddressPool {
+    pub(crate) id: ElementId,
+    pub(crate) start: std::net::Ipv4Addr,
+    pub(crate) end: std::net::Ipv4Addr,
+}
+
+impl From<&netconfig::AddressPool> for DhcpAddressPool {
+    fn from(p: &netconfig::AddressPool) -> Self {
+        DhcpAddressPool {
+            id: ElementId::default(),
+            start: net::Ipv4Addr::from(p.from.addr),
+            end: net::Ipv4Addr::from(p.to.addr),
+        }
+    }
+}
+
+/// Defines the DHCP address reservation.
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub(crate) struct DhcpReservation {
+    pub(crate) id: ElementId,
+    pub(crate) name: Option<String>,
+    pub(crate) address: std::net::Ipv4Addr,
+    pub(crate) mac: eui48::MacAddress,
+}
+
+impl From<&netconfig::DhcpReservation> for DhcpReservation {
+    fn from(p: &netconfig::DhcpReservation) -> Self {
+        DhcpReservation {
+            id: ElementId::default(),
+            address: net::Ipv4Addr::from(p.address.addr),
+            mac: eui48::MacAddress::new(p.mac.octets),
+            name: Some(p.name.clone()),
+        }
+    }
+}
+
+/// Keeps track of DHCP server configuration.
+#[derive(Debug, Eq, PartialEq, Clone, Default)]
+pub struct DhcpServerConfig {
+    pub(crate) options: DhcpServerOptions,
+    pub(crate) pool: Option<DhcpAddressPool>,
+    pub(crate) reservations: Vec<DhcpReservation>,
+}
+
+impl From<&netconfig::DhcpServerConfig> for DhcpServerConfig {
+    fn from(p: &netconfig::DhcpServerConfig) -> Self {
+        DhcpServerConfig {
+            options: DhcpServerOptions::default(),
+            pool: Some(DhcpAddressPool::from(&p.pool)),
+            reservations: p.reservations.iter().map(|x| x.into()).collect(),
+        }
+    }
 }
 
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -224,21 +287,21 @@ impl Default for Dhcp {
 #[derive(Eq, PartialEq, Debug, Clone, Default)]
 /// Properties associated with the LIF.
 pub struct LIFProperties {
-    /// Whether this interface's current address was acquired via DHCP. Corresponds to
-    /// fuchsia.netstack.NetInterfaceFlagUp.
-    pub dhcp: bool,
+    /// DHCP configuration
+    pub(crate) dhcp: Dhcp,
+    pub(crate) dhcp_config: Option<DhcpServerConfig>,
     /// Current address of this interface, may be `None`.
-    pub address_v4: Option<LifIpAddr>,
-    pub address_v6: Vec<LifIpAddr>,
+    pub(crate) address_v4: Option<LifIpAddr>,
+    pub(crate) address_v6: Vec<LifIpAddr>,
     /// Corresponds to fuchsia.netstack.NetInterfaceFlagUp.
-    pub enabled: bool,
+    pub(crate) enabled: bool,
 }
 
 impl LIFProperties {
     /// Convert to fuchsia.router.config.LifProperties, WAN variant.
     pub fn to_fidl_wan(&self) -> netconfig::LifProperties {
         netconfig::LifProperties::Wan(netconfig::WanProperties {
-            address_method: Some(if self.dhcp {
+            address_method: Some(if self.dhcp == Dhcp::Client {
                 netconfig::WanAddressMethod::Automatic
             } else {
                 netconfig::WanAddressMethod::Manual
@@ -260,14 +323,238 @@ impl LIFProperties {
 
     /// Convert to fuchsia.router.config.LifProperties, LAN variant.
     pub fn to_fidl_lan(&self) -> netconfig::LifProperties {
+        let enable_dhcp_server = if Dhcp::Server == self.dhcp {
+            if self.address_v4.is_none() {
+                warn!("Ignoring DHCP server configuration as interface does not have static IP configured");
+            }
+            Some(self.dhcp == Dhcp::Server)
+        //TODO(dpradilla): p.dhcp_config = self.dhcp_config.map(|x| x.into());
+        } else {
+            Some(false)
+        };
         netconfig::LifProperties::Lan(netconfig::LanProperties {
             address_v4: self.address_v4.as_ref().map(|x| x.into()),
             address_v6: None,
             enable: Some(self.enabled),
             dhcp_config: None,
-            enable_dhcp_server: Some(false),
+            enable_dhcp_server,
             enable_dns_forwarder: Some(false),
         })
+    }
+
+    fn update_wan_properties(&mut self, p: &netconfig::WanProperties) -> error::Result<()> {
+        match &p.connection_type {
+            None => {}
+            Some(netconfig::WanConnection::Direct) => {
+                info!("connection_type DIRECT ");
+            }
+            Some(cfg) => {
+                info!("connection_type {:?}", cfg);
+                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+            }
+        };
+        match &p.connection_parameters {
+            None => {}
+            Some(cfg) => {
+                info!("connection parameters {:?}", cfg);
+                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+            }
+        };
+        match &p.hostname {
+            None => {}
+            Some(cfg) => {
+                info!("hostname {:?}", cfg);
+                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+            }
+        };
+        match &p.clone_mac {
+            None => {}
+            Some(cfg) => {
+                info!("clone mac {:?}", cfg);
+                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+            }
+        };
+        match &p.mtu {
+            None => {}
+            Some(cfg) => {
+                info!("mtu  {:?}", cfg);
+                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+            }
+        };
+        match &p.metric {
+            None => {}
+            Some(cfg) => {
+                info!("metric {:?}", cfg);
+                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+            }
+        };
+        match &p.address_method {
+            Some(netconfig::WanAddressMethod::Automatic) => {
+                self.dhcp = Dhcp::Client;
+                self.address_v4 = None;
+            }
+            Some(netconfig::WanAddressMethod::Manual) => {
+                self.dhcp = Dhcp::None;
+            }
+            None => {}
+        };
+        match &p.address_v4 {
+            None => {}
+            Some(netconfig::CidrAddress {
+                address: Some(address),
+                prefix_length: Some(prefix_length),
+            }) => {
+                if self.dhcp == Dhcp::Client {
+                    warn!(
+                        "Setting a static ip is not allowed when \
+                                 a dhcp client is configured"
+                    );
+                    return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                }
+                let v4addr = LifIpAddr::from(p.address_v4.as_ref().unwrap());
+                if !v4addr.is_ipv4() {
+                    return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                }
+                info!("Setting WAN IPv4 address to {:?}/{:?}", address, prefix_length);
+                self.address_v4 = Some(v4addr);
+            }
+            _ => {
+                warn!("invalid address {:?}", p.address_v4);
+                return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+            }
+        };
+        match &p.gateway_v4 {
+            None => {}
+            Some(gw) => {
+                if self.dhcp == Dhcp::Client {
+                    warn!(
+                        "Setting an ipv4 gateway is not allowed when \
+                                 a dhcp client is configured"
+                    );
+                    return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                }
+                warn!("setting gateway not supportted {:?}", gw);
+                // TODO(dpradilla): verify gateway is local
+                // and install route.
+            }
+        }
+        match &p.connection_v6_mode {
+            None => {}
+            Some(netconfig::WanIpV6ConnectionMode::Passthrough) => {
+                info!("v6 mode Passthrough");
+            }
+            Some(cfg) => {
+                info!("v6 mode {:?}", cfg);
+                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+            }
+        };
+        match &p.address_v6 {
+            None => {}
+            Some(netconfig::CidrAddress {
+                address: Some(address),
+                prefix_length: Some(prefix_length),
+            }) => {
+                info!("Setting WAN IPv6 to {:?}/{:?}", address, prefix_length);
+                let a = LifIpAddr::from(p.address_v6.as_ref().unwrap());
+                if !a.is_ipv6() {
+                    return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                }
+                self.address_v6 = vec![a];
+            }
+            _ => {
+                warn!("invalid address {:?}", p.address_v6);
+                return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+            }
+        };
+        match &p.gateway_v6 {
+            None => {}
+            Some(gw) => {
+                info!("setting gateway {:?}", gw);
+                //  TODO(dpradilla): implement. - verify gw is in local network
+                warn!("setting gateway not supportted {:?}", gw);
+                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+            }
+        };
+        if let Some(enable) = &p.enable {
+            info!("enable {:?}", enable);
+            self.enabled = *enable
+        };
+        Ok(())
+    }
+
+    fn update_lan_properties(&mut self, p: &netconfig::LanProperties) -> error::Result<()> {
+        match p.enable_dhcp_server {
+            None => {}
+            Some(true) => {
+                info!("enable DHCP server");
+                self.dhcp = Dhcp::Server;
+            }
+            Some(false) => {
+                info!("disable DHCP server");
+                self.dhcp = Dhcp::None;
+            }
+        };
+        match &p.dhcp_config {
+            None => {}
+            Some(cfg) => {
+                info!("DHCP server configuration {:?}", cfg);
+                self.dhcp_config = Some(DhcpServerConfig::from(cfg));
+            }
+        };
+        match &p.address_v4 {
+            None => self.dhcp = Dhcp::None,
+            Some(netconfig::CidrAddress {
+                address: Some(address),
+                prefix_length: Some(prefix_length),
+            }) => {
+                info!("Setting LAN IPv4 address to {:?}/{:?}", address, prefix_length);
+                let v4addr = LifIpAddr::from(p.address_v4.as_ref().unwrap());
+                if !v4addr.is_ipv4() {
+                    return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                }
+                self.address_v4 = Some(v4addr);
+            }
+            _ => {
+                warn!("invalid address {:?}", p.address_v4);
+                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+            }
+        };
+        match &p.address_v6 {
+            None => {}
+            Some(netconfig::CidrAddress {
+                address: Some(address),
+                prefix_length: Some(prefix_length),
+            }) => {
+                info!("Setting LAN IPv6 address to {:?}/{:?}", address, prefix_length);
+                let a = LifIpAddr::from(p.address_v6.as_ref().unwrap());
+                if !a.is_ipv6() {
+                    return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                }
+                self.address_v6 = vec![a];
+            }
+            _ => {
+                warn!("invalid address {:?}", p.address_v6);
+                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+            }
+        };
+
+        if let Some(enable) = p.enable {
+            info!("enable {:?}", enable);
+            self.enabled = enable
+        }
+        Ok(())
+    }
+
+    /// `get_updated` returns a `LIFProperties` updated to reflect the changes indicated in
+    /// `properties`.
+    pub fn get_updated(&self, properties: &netconfig::LifProperties) -> error::Result<Self> {
+        let mut lp = self.clone();
+        match properties {
+            netconfig::LifProperties::Wan(p) => lp.update_wan_properties(p)?,
+
+            netconfig::LifProperties::Lan(p) => lp.update_lan_properties(p)?,
+        }
+        Ok(lp)
     }
 }
 
@@ -685,6 +972,339 @@ mod tests {
         let got = lm.remove_lif(5 as UUID);
         assert_eq!(lm.lifs.len(), 3);
         assert_eq!(got, None);
+    }
+
+    #[test]
+    fn test_from_ipaddress_to_lifipaddr() {
+        assert_eq!(
+            LifIpAddr::from(&fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: [1, 2, 3, 4] })),
+            LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 32 }
+        );
+        assert_eq!(
+            LifIpAddr::from(&fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                addr: [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0xfc, 0xb6, 0x5b, 0x27, 0xfd, 0x2c, 0xf, 0x12]
+            })),
+            LifIpAddr { address: "fe80::fcb6:5b27:fd2c:f12".parse().unwrap(), prefix: 128 }
+        );
+    }
+
+    #[test]
+    fn test_get_updated() {
+        for (base, properties, result, name) in [
+            (
+                LIFProperties::default(),
+                netconfig::LifProperties::Lan(netconfig::LanProperties {
+                    address_v4: None,
+                    address_v6: None,
+                    dhcp_config: None,
+                    enable: None,
+                    enable_dhcp_server: None,
+                    enable_dns_forwarder: None,
+                }),
+                Ok(LIFProperties::default()),
+                "lan all default",
+            ),
+            (
+                LIFProperties::default(),
+                netconfig::LifProperties::Lan(netconfig::LanProperties {
+                    address_v4: None,
+                    address_v6: None,
+                    dhcp_config: None,
+                    enable: Some(true),
+                    enable_dhcp_server: Some(true),
+                    enable_dns_forwarder: Some(true),
+                }),
+                Ok(LIFProperties { enabled: true, ..Default::default() }),
+                "enable dhcp server, but no ip v4 address",
+            ),
+            (
+                LIFProperties::default(),
+                netconfig::LifProperties::Lan(netconfig::LanProperties {
+                    address_v4: Some(netconfig::CidrAddress {
+                        address: Some(fnet::IpAddress::Ipv4(fnet::Ipv4Address {
+                            addr: [1, 2, 3, 4],
+                        })),
+                        prefix_length: Some(24),
+                    }),
+                    address_v6: None,
+                    dhcp_config: None,
+                    enable: Some(true),
+                    enable_dhcp_server: Some(true),
+                    enable_dns_forwarder: Some(true),
+                }),
+                Ok(LIFProperties {
+                    address_v4: Some(LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 24 }),
+                    dhcp: Dhcp::Server,
+                    enabled: true,
+                    ..Default::default()
+                }),
+                "enable dhcp server, with ip v4 address",
+            ),
+            (
+                LIFProperties::default(),
+                netconfig::LifProperties::Lan(netconfig::LanProperties {
+                    address_v4: Some(netconfig::CidrAddress {
+                        address: Some(fnet::IpAddress::Ipv4(fnet::Ipv4Address {
+                            addr: [1, 2, 3, 4],
+                        })),
+                        prefix_length: Some(24),
+                    }),
+                    address_v6: Some(netconfig::CidrAddress {
+                        address: Some(fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                            addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                        })),
+                        prefix_length: Some(64),
+                    }),
+                    dhcp_config: None,
+                    enable: None,
+                    enable_dhcp_server: Some(true),
+                    enable_dns_forwarder: None,
+                }),
+                Ok(LIFProperties {
+                    address_v4: Some(LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 24 }),
+                    address_v6: vec![LifIpAddr {
+                        address: "102:304:506:708:90a:b0c:d0e:f10".parse().unwrap(),
+                        prefix: 64,
+                    }],
+                    dhcp: Dhcp::Server,
+                    ..Default::default()
+                }),
+                "dhcp server, ipv4 and ipv6",
+            ),
+            (
+                LIFProperties::default(),
+                netconfig::LifProperties::Lan(netconfig::LanProperties {
+                    address_v4: Some(netconfig::CidrAddress {
+                        address: Some(fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                            addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                        })),
+                        prefix_length: Some(64),
+                    }),
+                    address_v6: Some(netconfig::CidrAddress {
+                        address: Some(fnet::IpAddress::Ipv4(fnet::Ipv4Address {
+                            addr: [1, 2, 3, 4],
+                        })),
+                        prefix_length: Some(24),
+                    }),
+                    dhcp_config: None,
+                    enable: None,
+                    enable_dhcp_server: Some(true),
+                    enable_dns_forwarder: None,
+                }),
+                Err(error::NetworkManager::LIF(error::Lif::InvalidParameter)),
+                "dhcp server, ipv4 and ipv6 reversed, should not pass.",
+            ),
+            (
+                LIFProperties::default(),
+                netconfig::LifProperties::Wan(netconfig::WanProperties {
+                    address_v4: None,
+                    address_v6: None,
+                    address_method: None,
+                    clone_mac: None,
+                    connection_parameters: None,
+                    connection_type: None,
+                    connection_v6_mode: None,
+                    gateway_v4: None,
+                    gateway_v6: None,
+                    hostname: None,
+                    metric: None,
+                    mtu: None,
+                    enable: None,
+                }),
+                Ok(LIFProperties::default()),
+                "wan all default",
+            ),
+            (
+                LIFProperties::default(),
+                netconfig::LifProperties::Wan(netconfig::WanProperties {
+                    address_v4: Some(netconfig::CidrAddress {
+                        address: Some(fnet::IpAddress::Ipv4(fnet::Ipv4Address {
+                            addr: [1, 2, 3, 4],
+                        })),
+                        prefix_length: Some(24),
+                    }),
+                    address_v6: None,
+                    address_method: None,
+                    clone_mac: None,
+                    connection_parameters: None,
+                    connection_type: None,
+                    connection_v6_mode: None,
+                    gateway_v4: None,
+                    gateway_v6: None,
+                    hostname: None,
+                    metric: None,
+                    mtu: None,
+                    enable: None,
+                }),
+                Ok(LIFProperties {
+                    address_v4: Some(LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 24 }),
+                    ..Default::default()
+                }),
+                "wan ip v4",
+            ),
+            (
+                LIFProperties::default(),
+                netconfig::LifProperties::Wan(netconfig::WanProperties {
+                    address_v4: None,
+                    address_v6: Some(netconfig::CidrAddress {
+                        address: Some(fnet::IpAddress::Ipv4(fnet::Ipv4Address {
+                            addr: [1, 2, 3, 4],
+                        })),
+                        prefix_length: Some(24),
+                    }),
+                    address_method: None,
+                    clone_mac: None,
+                    connection_parameters: None,
+                    connection_type: None,
+                    connection_v6_mode: None,
+                    gateway_v4: None,
+                    gateway_v6: None,
+                    hostname: None,
+                    metric: None,
+                    mtu: None,
+                    enable: None,
+                }),
+                Err(error::NetworkManager::LIF(error::Lif::InvalidParameter)),
+                "wan ip v4 in wrong place",
+            ),
+            (
+                LIFProperties::default(),
+                netconfig::LifProperties::Wan(netconfig::WanProperties {
+                    address_v4: None,
+                    address_v6: Some(netconfig::CidrAddress {
+                        address: Some(fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                            addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                        })),
+                        prefix_length: Some(64),
+                    }),
+                    address_method: None,
+                    clone_mac: None,
+                    connection_parameters: None,
+                    connection_type: None,
+                    connection_v6_mode: None,
+                    gateway_v4: None,
+                    gateway_v6: None,
+                    hostname: None,
+                    metric: None,
+                    mtu: None,
+                    enable: None,
+                }),
+                Ok(LIFProperties {
+                    address_v6: vec![LifIpAddr {
+                        address: "102:304:506:708:90a:b0c:d0e:f10".parse().unwrap(),
+                        prefix: 64,
+                    }],
+                    ..Default::default()
+                }),
+                "wan ip v6",
+            ),
+            (
+                LIFProperties::default(),
+                netconfig::LifProperties::Wan(netconfig::WanProperties {
+                    address_v4: Some(netconfig::CidrAddress {
+                        address: Some(fnet::IpAddress::Ipv4(fnet::Ipv4Address {
+                            addr: [1, 2, 3, 4],
+                        })),
+                        prefix_length: Some(24),
+                    }),
+                    address_v6: Some(netconfig::CidrAddress {
+                        address: Some(fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                            addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                        })),
+                        prefix_length: Some(64),
+                    }),
+                    address_method: Some(netconfig::WanAddressMethod::Manual),
+                    clone_mac: None,
+                    connection_parameters: None,
+                    connection_type: None,
+                    connection_v6_mode: None,
+                    gateway_v4: None,
+                    gateway_v6: None,
+                    hostname: None,
+                    metric: None,
+                    mtu: None,
+                    enable: None,
+                }),
+                Ok(LIFProperties {
+                    address_v4: Some(LifIpAddr { address: "1.2.3.4".parse().unwrap(), prefix: 24 }),
+                    address_v6: vec![LifIpAddr {
+                        address: "102:304:506:708:90a:b0c:d0e:f10".parse().unwrap(),
+                        prefix: 64,
+                    }],
+                    ..Default::default()
+                }),
+                "wan ip v4 and ipv6",
+            ),
+            (
+                LIFProperties::default(),
+                netconfig::LifProperties::Wan(netconfig::WanProperties {
+                    address_v4: Some(netconfig::CidrAddress {
+                        address: Some(fnet::IpAddress::Ipv4(fnet::Ipv4Address {
+                            addr: [1, 2, 3, 4],
+                        })),
+                        prefix_length: Some(24),
+                    }),
+                    address_v6: Some(netconfig::CidrAddress {
+                        address: Some(fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                            addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                        })),
+                        prefix_length: Some(64),
+                    }),
+                    address_method: Some(netconfig::WanAddressMethod::Automatic),
+                    clone_mac: None,
+                    connection_parameters: None,
+                    connection_type: None,
+                    connection_v6_mode: None,
+                    gateway_v4: None,
+                    gateway_v6: None,
+                    hostname: None,
+                    metric: None,
+                    mtu: None,
+                    enable: None,
+                }),
+                Err(error::NetworkManager::LIF(error::Lif::InvalidParameter)),
+                "wan invalid address method",
+            ),
+            (
+                LIFProperties::default(),
+                netconfig::LifProperties::Wan(netconfig::WanProperties {
+                    address_v4: None,
+                    address_v6: Some(netconfig::CidrAddress {
+                        address: Some(fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                            addr: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+                        })),
+                        prefix_length: Some(64),
+                    }),
+                    address_method: Some(netconfig::WanAddressMethod::Automatic),
+                    clone_mac: None,
+                    connection_parameters: None,
+                    connection_type: None,
+                    connection_v6_mode: None,
+                    gateway_v4: None,
+                    gateway_v6: None,
+                    hostname: None,
+                    metric: None,
+                    mtu: None,
+                    enable: None,
+                }),
+                Ok(LIFProperties {
+                    dhcp: Dhcp::Client,
+                    address_v6: vec![LifIpAddr {
+                        address: "102:304:506:708:90a:b0c:d0e:f10".parse().unwrap(),
+                        prefix: 64,
+                    }],
+                    ..Default::default()
+                }),
+                "wan DHCPv4 address.",
+            ),
+            // TODO(dpradilla) Not testing unsupported features. Add test cases as features are
+            // implemented.
+        ]
+        .iter()
+        {
+            let got = LIFProperties::get_updated(&base, &properties);
+            assert_eq!(&got, result, "{}: Got {:?}, Want {:?}", name, got, result);
+        }
     }
 
     #[test]

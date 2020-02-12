@@ -92,7 +92,7 @@ pub enum Lif {
     InvalidName,
     #[error("Operation not supported for lif type")]
     TypeNotSupported,
-    #[error("Vlan not supported for lif type")]
+    #[error("Vlan is not valid ")]
     InvalidVlan,
     #[error("LIF with same id already exists")]
     DuplicateLIF,

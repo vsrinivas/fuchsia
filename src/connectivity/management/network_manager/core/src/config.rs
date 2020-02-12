@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::{address::LifIpAddr, error, lifmgr},
+    crate::{address::LifIpAddr, error, lifmgr, ElementId},
     eui48::MacAddress,
     serde_derive::{Deserialize, Serialize},
     serde_json::Value,
     std::collections::HashSet,
+    std::convert::{TryFrom, TryInto},
     std::fs::File,
     std::io::Read,
     std::net,
@@ -145,6 +146,19 @@ pub struct Interface {
     pub tcp_offload: Option<bool>,
 }
 
+impl Interface {
+    fn get_dhcp_server_config(&self) -> Option<&DhcpServer> {
+        self.subinterfaces.as_ref().and_then(|subifs| {
+            if subifs.len() != 1 {
+                warn!("LIFProperties does not support multiple addresses yet.")
+            }
+            subifs
+                .first()
+                .and_then(|subif| subif.ipv4.as_ref().and_then(|cfg| cfg.dhcp_server.as_ref()))
+        })
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct InterfaceConfig {
@@ -275,6 +289,24 @@ impl DhcpServer {
     }
 }
 
+impl TryFrom<DhcpServer> for lifmgr::DhcpServerConfig {
+    type Error = error::NetworkManager;
+    fn try_from(s: DhcpServer) -> Result<Self, Self::Error> {
+        let a = s.static_ip_allocations.unwrap_or_else(|| vec![]);
+        let reservations = a.iter().filter_map(|x| x.try_into().ok());
+
+        Ok(lifmgr::DhcpServerConfig {
+            options: lifmgr::DhcpServerOptions { enable: s.enabled, ..Default::default() },
+            pool: Some(lifmgr::DhcpAddressPool {
+                id: ElementId::default(),
+                start: s.dhcp_pool.start,
+                end: s.dhcp_pool.end,
+            }),
+            reservations: reservations.collect(),
+        })
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct DhcpPool {
@@ -308,6 +340,28 @@ pub struct StaticIpAllocations {
     pub device_name: String,
     pub mac_address: MacAddress,
     pub ip_address: net::Ipv4Addr,
+}
+
+impl TryFrom<&StaticIpAllocations> for lifmgr::DhcpReservation {
+    type Error = error::NetworkManager;
+    fn try_from(allocations: &StaticIpAllocations) -> Result<Self, Self::Error> {
+        let name = if allocations.device_name.is_empty() {
+            None
+        } else {
+            Some(allocations.device_name.to_string())
+        };
+        if !allocations.mac_address.is_unicast() || allocations.mac_address.is_nil() {
+            return Err(error::NetworkManager::CONFIG(error::Config::NotSupported {
+                msg: "Invalid mac address".to_string(),
+            }));
+        }
+        Ok(lifmgr::DhcpReservation {
+            id: ElementId::default(),
+            name,
+            address: allocations.ip_address,
+            mac: allocations.mac_address,
+        })
+    }
 }
 
 impl StaticIpAllocations {
@@ -413,19 +467,17 @@ impl Config {
     /// If this method returns successfully, there will be a newly loaded and properly validated
     /// deserialized configuration available.
     pub async fn load_config(&mut self) -> error::Result<()> {
-        let loaded_config;
-        let loaded_path;
-        match self.try_load_config(&self.user_config_path()).await {
-            Ok(c) => {
-                loaded_config = c;
-                loaded_path = self.paths.user_config_path.to_path_buf();
-            }
-            Err(e) => {
-                warn!("Failed to load user config: {}", e);
-                loaded_config = self.try_load_config(&self.factory_config_path()).await?;
-                loaded_path = self.paths.factory_config_path.to_path_buf();
-            }
-        }
+        let (loaded_config, loaded_path) =
+            match self.try_load_config(&self.user_config_path()).await {
+                Ok(c) => (c, self.paths.user_config_path.to_path_buf()),
+                Err(e) => {
+                    warn!("Failed to load user config: {}", e);
+                    (
+                        self.try_load_config(&self.factory_config_path()).await?,
+                        self.paths.factory_config_path.to_path_buf(),
+                    )
+                }
+            };
         match self.validate_with_schema(&loaded_config).await {
             Ok(_) => {
                 self.device_config = Some(serde_json::from_value(loaded_config).map_err(|e| {
@@ -601,8 +653,8 @@ impl Config {
                         },
                     ));
                 }
-                // TODO(dpradilla): Fix Router vlan validationi. It is incomplete. Is should so similar
-                // validation to validate_subinterfaces.
+                // TODO(dpradilla): Fix Router vlan validationi. It is incomplete.
+                // Validation should be similar to validate_subinterfaces.
             }
             InterfaceType::IfLoopback => {
                 if intf.subinterfaces.is_none() {
@@ -836,7 +888,9 @@ impl Config {
     ) {
         if let Some(c) = ipconfig {
             if let Some(dhcp_client) = c.dhcp_client {
-                properties.dhcp = dhcp_client;
+                // TODO(dpradilla): do not allow this if dhcps_erver configuration is present.
+                properties.dhcp =
+                    if dhcp_client { lifmgr::Dhcp::Client } else { lifmgr::Dhcp::None };
             }
             // TODO(42315): LIFProperties doesn't support IPv6 addresses yet.
             if let (Some(address), Some(prefix)) = (c.ip, c.prefix_length) {
@@ -847,9 +901,11 @@ impl Config {
         // TODO(42315): LIF manager throws an error if both a DHCP client and a static IP address
         // configuration are set. We don't want to be generating invalid LIFProperties, so favor
         // the static IP configuration and turn off DHCP.
-        if properties.dhcp && properties.address_v4.is_some() {
-            warn!("DHCP client and static IP cannot be configured at once: Disabling DHCP.");
-            properties.dhcp = false;
+        if properties.dhcp == lifmgr::Dhcp::Client && properties.address_v4.is_some() {
+            warn!(
+                "DHCP client and static IP cannot be configured at the same time: Disabling DHCP."
+            );
+            properties.dhcp = lifmgr::Dhcp::None;
         }
     }
 
@@ -861,7 +917,8 @@ impl Config {
 
     /// Returns a WAN-specific [`lifmgr::LIFProperties`] based on the running configuration.
     pub fn create_wan_properties(&self, topo_path: &str) -> error::Result<lifmgr::LIFProperties> {
-        let properties = crate::lifmgr::LIFProperties { dhcp: true, ..Default::default() };
+        let properties =
+            crate::lifmgr::LIFProperties { dhcp: lifmgr::Dhcp::Client, ..Default::default() };
         self.create_properties(topo_path, properties)
     }
 
@@ -874,6 +931,7 @@ impl Config {
         topo_path: &str,
         mut properties: lifmgr::LIFProperties,
     ) -> error::Result<lifmgr::LIFProperties> {
+        info!("create_properties: {:?}", topo_path);
         let intf = match self.get_interface_by_device_id(topo_path) {
             Some(x) => x,
             None => {
@@ -924,6 +982,14 @@ impl Config {
             warn!("Setting IPv6 addresses is not supported yet");
         }
         self.set_ip_address_config(&mut properties, v4addr);
+        if let Some(dhcp) = intf.get_dhcp_server_config() {
+            if properties.dhcp != lifmgr::Dhcp::Client {
+                properties.dhcp = lifmgr::Dhcp::Server;
+                properties.dhcp_config = dhcp.clone().try_into().ok();
+            } else {
+                warn!("Ignoring DHCP server configuration as DHCP client is configured.");
+            }
+        }
         Ok(properties)
     }
 
@@ -1085,12 +1151,6 @@ impl Config {
         let v4addr = bridge.ipv4.as_ref().and_then(|c| c.addresses.iter().next());
         self.set_ip_address_config(&mut properties, v4addr);
 
-        // TODO(42316): Until LIFProperties supports IPv6 addresses, we have the possibility of
-        // generating properties that do not have an IP configuration. Make sure that we have
-        // at least DHCP client enabled.
-        if !properties.dhcp && properties.address_v4.is_none() {
-            properties.dhcp = true;
-        }
         Ok(properties)
     }
 
@@ -2444,7 +2504,7 @@ mod tests {
         // or not, that should come from the AdminState in the config. So we shouldn't alter the
         // `enabled` field.
         assert_eq!(properties.enabled, false);
-        assert_eq!(properties.dhcp, false);
+        assert_eq!(properties.dhcp, lifmgr::Dhcp::None);
         assert_eq!(
             properties.address_v4,
             Some(LifIpAddr { address: "127.0.0.1".parse().unwrap(), prefix: 32 })
@@ -2456,7 +2516,7 @@ mod tests {
             lifmgr::LIFProperties { enabled: true, ..Default::default() };
         test_config.set_ip_address_config(&mut properties, Some(&ipconfig));
         assert_eq!(properties.enabled, true);
-        assert_eq!(properties.dhcp, true);
+        assert_eq!(properties.dhcp, lifmgr::Dhcp::Client);
         assert_eq!(properties.address_v4, None);
 
         // Both DHCP client and static IP cannot be set simultaneously, make sure that DHCP client
@@ -2470,7 +2530,7 @@ mod tests {
             lifmgr::LIFProperties { enabled: true, ..Default::default() };
         test_config.set_ip_address_config(&mut properties, Some(&ipconfig));
         assert_eq!(properties.enabled, true);
-        assert_eq!(properties.dhcp, false);
+        assert_eq!(properties.dhcp, lifmgr::Dhcp::None);
         assert_eq!(
             properties.address_v4,
             Some(LifIpAddr { address: "127.0.0.1".parse().unwrap(), prefix: 32 })
@@ -2501,22 +2561,22 @@ mod tests {
             (
                 "test_wan_no_admin_state_id",
                 false,
-                false,
+                lifmgr::Dhcp::None,
                 Some(LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
             ),
             (
                 "test_wan_down_id",
                 false,
-                false,
+                lifmgr::Dhcp::None,
                 Some(LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
             ),
             (
                 "test_wan_up_id",
                 true,
-                false,
+                lifmgr::Dhcp::None,
                 Some(LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
             ),
-            ("test_wan_dhcp_id", true, true, None),
+            ("test_wan_dhcp_id", true, lifmgr::Dhcp::Client, None),
         ] {
             match test_config.create_wan_properties(path) {
                 Ok(p) => {
@@ -2525,7 +2585,7 @@ mod tests {
                         "{} enabled: got {} want {}",
                         path, p.enabled, enabled
                     );
-                    assert_eq!(p.dhcp, *dhcp, "{} dhcp: got {} want {}", path, p.dhcp, dhcp);
+                    assert_eq!(p.dhcp, *dhcp, "{} dhcp: got {:?} want {:?}", path, p.dhcp, dhcp);
                     assert_eq!(
                         p.address_v4, *address,
                         "{} address: got {:?} want {:?}",
@@ -2545,19 +2605,19 @@ mod tests {
             (
                 "test_lan_no_admin_state_id",
                 false,
-                false,
+                lifmgr::Dhcp::None,
                 Some(LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
             ),
             (
                 "test_lan_down_id",
                 false,
-                false,
+                lifmgr::Dhcp::None,
                 Some(LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
             ),
             (
                 "test_lan_up_id",
                 true,
-                false,
+                lifmgr::Dhcp::None,
                 Some(LifIpAddr { address: "192.0.2.1".parse().unwrap(), prefix: 24 }),
             ),
         ] {
@@ -2568,7 +2628,7 @@ mod tests {
                         "{} enabled: got {} want {}",
                         path, p.enabled, enabled
                     );
-                    assert_eq!(&p.dhcp, dhcp, "{} dhcp: got {} want {}", path, p.dhcp, dhcp);
+                    assert_eq!(&p.dhcp, dhcp, "{} dhcp: got {:?} want {:?}", path, p.dhcp, dhcp);
                     assert_eq!(
                         &p.address_v4, address,
                         "{} address: got {:?} want {:?}",
@@ -2770,13 +2830,128 @@ mod tests {
         match test_config.create_routed_vlan_properties(&rvi) {
             Ok(p) => {
                 assert_eq!(p.enabled, true);
-                assert_eq!(p.dhcp, false);
+                assert_eq!(p.dhcp, lifmgr::Dhcp::None);
                 assert_eq!(
                     p.address_v4,
                     Some(LifIpAddr { address: "192.168.0.1".parse().unwrap(), prefix: 32 })
                 );
             }
             Err(e) => panic!("Got unexpected result: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn test_get_dhcp_server_config() {
+        for (name, interface, want) in &[(
+            "good",
+            Interface {
+                config: InterfaceConfig {
+                    name: "test_lan_has_dhcp_server".to_string(),
+                    interface_type: InterfaceType::IfEthernet,
+                },
+                oper_state: None,
+                device_id: Some("test_lan_has_dhcp_server_id".to_string()),
+                ethernet: None,
+                tcp_offload: None,
+                routed_vlan: None,
+                switched_vlan: None,
+                subinterfaces: Some(vec![Subinterface {
+                    admin_state: Some(AdminState::Up),
+                    ipv4: Some(IpAddressConfig {
+                        addresses: vec![IpAddress {
+                            dhcp_client: None,
+                            ip: Some("192.0.2.1".parse().unwrap()),
+                            prefix_length: Some(24),
+                        }],
+                        dhcp_server: Some(DhcpServer {
+                            enabled: true,
+                            dhcp_pool: DhcpPool {
+                                start: "192.0.2.100".parse().unwrap(),
+                                end: "192.0.2.254".parse().unwrap(),
+                                lease_time: "1d".to_string(),
+                            },
+                            static_ip_allocations: None,
+                        }),
+                    }),
+                    ipv6: None,
+                }]),
+            },
+            Some(DhcpServer {
+                enabled: true,
+                dhcp_pool: DhcpPool {
+                    start: "192.0.2.100".parse().unwrap(),
+                    end: "192.0.2.254".parse().unwrap(),
+                    lease_time: "1d".to_string(),
+                },
+                static_ip_allocations: None,
+            }),
+        )] {
+            let got = interface.get_dhcp_server_config();
+            assert_eq!(got, want.as_ref(), "{} got: {:?}, want {:?}", name, interface, want);
+        }
+    }
+
+    #[test]
+    fn test_from_static_allocation() {
+        for (testcase, allocation, want) in &[
+            (
+                "good",
+                StaticIpAllocations {
+                    device_name: "name1".to_string(),
+                    ip_address: "192.168.0.1".parse().unwrap(),
+                    mac_address: MacAddress::parse_str("00:01:02:03:04:05").unwrap(),
+                },
+                Ok(lifmgr::DhcpReservation {
+                    id: ElementId::default(),
+                    name: Some("name1".to_string()),
+                    address: "192.168.0.1".parse().unwrap(),
+                    mac: MacAddress::parse_str("00:01:02:03:04:05").unwrap(),
+                }),
+            ),
+            (
+                "good, no name",
+                StaticIpAllocations {
+                    device_name: "".to_string(),
+                    ip_address: "192.168.0.1".parse().unwrap(),
+                    mac_address: MacAddress::parse_str("00:01:02:03:04:05").unwrap(),
+                },
+                Ok(lifmgr::DhcpReservation {
+                    id: ElementId::default(),
+                    name: None,
+                    address: "192.168.0.1".parse().unwrap(),
+                    mac: MacAddress::parse_str("00:01:02:03:04:05").unwrap(),
+                }),
+            ),
+            (
+                "bad mac",
+                StaticIpAllocations {
+                    device_name: "name1".to_string(),
+                    ip_address: "192.168.0.1".parse().unwrap(),
+                    mac_address: MacAddress::parse_str("00:00:00:00:00:00").unwrap(),
+                },
+                Err(CONFIG(error::Config::NotSupported { msg: "Invalid mac address".to_string() })),
+            ),
+            (
+                "broadcast mac",
+                StaticIpAllocations {
+                    device_name: "name1".to_string(),
+                    ip_address: "192.168.0.1".parse().unwrap(),
+                    mac_address: MacAddress::parse_str("ff:ff:ff:ff:ff:ff").unwrap(),
+                },
+                Err(CONFIG(error::Config::NotSupported { msg: "Invalid mac address".to_string() })),
+            ),
+            (
+                "mcast mac",
+                StaticIpAllocations {
+                    device_name: "name1".to_string(),
+                    ip_address: "192.168.0.1".parse().unwrap(),
+                    mac_address: MacAddress::parse_str("01:01:02:03:04:05").unwrap(),
+                },
+                Err(CONFIG(error::Config::NotSupported { msg: "Invalid mac address".to_string() })),
+            ),
+        ] {
+            let got = allocation.try_into();
+            assert_eq!(&got, want, "{}: got {:?} want {:?}", testcase, got, want);
         }
     }
 }

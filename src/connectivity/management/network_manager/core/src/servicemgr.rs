@@ -3,13 +3,6 @@
 // found in the LICENSE file.
 
 //! Manages services
-
-// In case we roll the toolchain and something we're using as a feature has been
-// stabilized.
-#![allow(stable_features)]
-// TODO(dpradilla): reenable and add comments #![deny(missing_docs)]
-#![deny(unreachable_patterns)]
-#![deny(unused)]
 // TODO(dpradilla): remove allow
 #![allow(dead_code)]
 
@@ -59,6 +52,10 @@ impl Manager {
     /// If the interface has a DHCP client enabled, returns [`error::Service::NotEnabled`].
     pub fn enable_server(&mut self, lif: &LIF) -> error::Result<bool> {
         if self.dhcp_client.contains(&lif.id().uuid) {
+            warn!(
+                "DHCP server cant be enabled, as there is an active DHCP client on {}",
+                lif.id().uuid
+            );
             return Err(error::NetworkManager::SERVICE(error::Service::NotEnabled));
         }
         Ok(self.dhcp_server.insert(lif.id().uuid))
