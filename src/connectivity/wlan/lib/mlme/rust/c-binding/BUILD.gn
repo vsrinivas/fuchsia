@@ -13,6 +13,7 @@ rustc_staticlib("wlan-mlme-c") {
   edition = "2018"
 
   deps = [
+    "//sdk/banjo/ddk.protocol.wlan.info:ddk.protocol.wlan.info-rustc",
     "//sdk/banjo/ddk.protocol.wlan.mac:ddk.protocol.wlan.mac-rustc",
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
@@ -25,7 +26,6 @@ rustc_staticlib("wlan-mlme-c") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/banjo/ddk.protocol.wlan.info:ddk.protocol.wlan.info-rustc",
   ]
   non_rust_deps = [
     "//garnet/lib/wlan/protocol",
