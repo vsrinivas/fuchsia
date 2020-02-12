@@ -7,7 +7,7 @@ use {
     crate::args::{Ffx, Subcommand},
     crate::constants::{CONFIG_JSON_FILE, DAEMON, MAX_RETRY_COUNT},
     anyhow::{Context, Error},
-    ffx_daemon::start as start_daemon,
+    ffx_daemon::{is_daemon_running, start as start_daemon},
     fidl::endpoints::ServiceMarker,
     fidl_fidl_developer_bridge::{DaemonMarker, DaemonProxy},
     fidl_fuchsia_developer_remotecontrol::RunComponentResponse,
@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_overnet_protocol::NodeId,
     futures::TryStreamExt,
     std::env,
-    std::process::{Command, Stdio},
+    std::process::Command,
 };
 
 mod args;
@@ -47,6 +47,9 @@ impl Cli {
     }
 
     async fn find_daemon() -> Result<NodeId, Error> {
+        if !is_daemon_running() {
+            Cli::spawn_daemon().await?;
+        }
         let svc = hoist::connect_as_service_consumer()?;
         // Sometimes list_peers doesn't properly report the published services - retry a few times
         // but don't loop indefinitely.
@@ -103,12 +106,11 @@ impl Cli {
             Err(e) => panic!("ERROR: {:?}", e),
         }
     }
-}
 
-async fn exec_start() -> Result<(), Error> {
-    println!("Starting background daemon");
-    Command::new(env::current_exe().unwrap()).arg(DAEMON).spawn()?;
-    Ok(())
+    async fn spawn_daemon() -> Result<(), Error> {
+        Command::new(env::current_exe().unwrap()).arg(DAEMON).spawn()?;
+        Ok(())
+    }
 }
 
 async fn exec_list() -> Result<(), Error> {
@@ -132,9 +134,8 @@ async fn exec_list() -> Result<(), Error> {
 async fn async_main() -> Result<(), Error> {
     let app: Ffx = argh::from_env();
     match app.subcommand {
-        Subcommand::Start(_) => exec_start().await,
         Subcommand::Echo(c) => {
-            match Cli::new().await.unwrap().echo(c.text).await {
+            match Cli::new().await?.echo(c.text).await {
                 Ok(r) => {
                     println!("SUCCESS: received {:?}", r);
                 }
@@ -146,7 +147,7 @@ async fn async_main() -> Result<(), Error> {
         }
         Subcommand::List(_) => exec_list().await,
         Subcommand::RunComponent(c) => {
-            match Cli::new().await.unwrap().run_component(c.url, &c.args).await {
+            match Cli::new().await?.run_component(c.url, &c.args).await {
                 Ok(r) => {
                     println!("SUCCESS: received {:?}", r);
                 }
@@ -156,10 +157,7 @@ async fn async_main() -> Result<(), Error> {
             }
             Ok(())
         }
-        Subcommand::Daemon(_) => {
-            start_daemon().await;
-            Ok(())
-        }
+        Subcommand::Daemon(_) => start_daemon().await,
     }
 }
 

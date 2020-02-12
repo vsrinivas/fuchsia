@@ -12,10 +12,6 @@ pub struct Ffx {
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "start", description = "starting background daemon")]
-pub struct StartCommand {}
-
-#[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "daemon", description = "run as daemon")]
 pub struct DaemonCommand {}
 
@@ -49,7 +45,6 @@ pub enum Subcommand {
     Echo(EchoCommand),
     List(ListCommand),
     RunComponent(RunComponentCommand),
-    Start(StartCommand),
 }
 
 #[cfg(test)]
@@ -73,18 +68,6 @@ mod tests {
         let echo = "test-echo";
 
         check(&["echo", echo], echo);
-    }
-
-    #[test]
-    fn test_start() {
-        fn check(args: &[&str]) {
-            assert_eq!(
-                Ffx::from_args(CMD_NAME, args),
-                Ok(Ffx { subcommand: Subcommand::Start(StartCommand {}) })
-            )
-        }
-
-        check(&["start"]);
     }
 
     #[test]

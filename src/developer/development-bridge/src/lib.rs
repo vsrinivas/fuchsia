@@ -22,16 +22,12 @@ use {
 mod constants;
 
 async fn start_ascendd() {
-    if Path::new(SOCKET).exists() {
-        log::info!("Ascendd already started.");
-    } else {
-        log::info!("Starting ascendd");
-        spawn(async move {
-            run_ascendd(SOCKET.to_string()).await.unwrap();
-        });
-        log::info!("Connecting to target");
-        Command::new(SOCAT).arg(LOCAL_SOCAT).arg(TARGET_SOCAT).spawn().unwrap();
-    }
+    log::info!("Starting ascendd");
+    spawn(async move {
+        run_ascendd(SOCKET.to_string()).await.unwrap();
+    });
+    log::info!("Connecting to target");
+    Command::new(SOCAT).arg(LOCAL_SOCAT).arg(TARGET_SOCAT).spawn().unwrap();
 }
 
 // Daemon
@@ -178,7 +174,14 @@ async fn exec_server(quiet: bool) -> Result<(), Error> {
 ////////////////////////////////////////////////////////////////////////////////
 // start
 
+pub fn is_daemon_running() -> bool {
+    Path::new(SOCKET).exists()
+}
+
 pub async fn start() -> Result<(), Error> {
+    if is_daemon_running() {
+        return Ok(());
+    }
     log::info!("Starting ascendd");
     start_ascendd().await;
     log::info!("Starting daemon overnet server");
