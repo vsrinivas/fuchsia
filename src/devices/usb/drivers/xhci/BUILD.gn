@@ -26,6 +26,7 @@ driver_module("xhci") {
     "xhci.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.usb.hci",
     "//sdk/fidl/fuchsia.usb.debug:fuchsia.usb.debug_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -44,7 +45,6 @@ driver_module("xhci") {
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.bus",
-    "//zircon/system/banjo/ddk.protocol.usb.hci",
     "//zircon/system/banjo/ddk.protocol.usb.hub",
     "//zircon/system/banjo/ddk.protocol.usb.request",
   ]

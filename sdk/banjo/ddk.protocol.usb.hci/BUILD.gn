@@ -1,0 +1,17 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/banjo/banjo.gni")
+
+banjo("ddk.protocol.usb.hci") {
+  sources = [ "usb-hci.banjo" ]
+  deps = [
+    "//zircon/system/banjo/ddk.physiter",
+    "//zircon/system/banjo/ddk.protocol.usb.bus",
+    "//zircon/system/banjo/ddk.protocol.usb.hub",
+    "//zircon/system/banjo/ddk.protocol.usb.request",
+    "//zircon/system/banjo/zircon.hw.usb",
+    "//zircon/system/banjo/zircon.hw.usb.hub",
+  ]
+}

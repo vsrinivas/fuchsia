@@ -32,13 +32,13 @@ source_set("common") {
     "//zircon/system/banjo/ddk.protocol.usb.hub",
   ]
   public_deps = [
+    "//sdk/banjo/ddk.protocol.usb.hci",
     "//sdk/fidl/fuchsia.hardware.usb.device:fuchsia.hardware.usb.device_llcpp",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/usb",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.bus",
-    "//zircon/system/banjo/ddk.protocol.usb.hci",
     "//zircon/system/banjo/ddk.protocol.usb.request",
   ]
 }
