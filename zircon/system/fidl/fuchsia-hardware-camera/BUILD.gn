@@ -1,10 +1,9 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/fidl.gni")
+import("//build/unification/fidl_alias.gni")
 
-fidl_library("fuchsia-hardware-camera") {
-  sdk = true
-  sources = [ "camera.fidl" ]
+fidl_alias("fuchsia-hardware-camera") {
+  sdk_category = "partner"
 }

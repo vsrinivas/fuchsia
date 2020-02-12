@@ -20,6 +20,7 @@ source_set("stream_provider_lib") {
   deps = [
     "//sdk/fidl/fuchsia.camera",
     "//sdk/fidl/fuchsia.camera2.hal",
+    "//sdk/fidl/fuchsia.hardware.camera",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
@@ -28,7 +29,6 @@ source_set("stream_provider_lib") {
     "//src/lib/fsl",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
-    "//zircon/system/fidl/fuchsia-hardware-camera",
   ]
 
   configs += [ ":stream_provider_config" ]
