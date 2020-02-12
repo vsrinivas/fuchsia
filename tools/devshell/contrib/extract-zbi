@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import argparse
+import os
+import struct
+import sys
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Turns a signed zbi into the original zbi')
+    parser.add_argument('--input',
+                        help='the signed zbi to process',
+                        required=True)
+    parser.add_argument('--output',
+                        help='the resulting zbi',
+                        required=True)
+    args = parser.parse_args()
+
+    with open(args.input, 'rb') as f:
+        # The signature format adds 512 bytes at the beginning, and some other number at the end.
+        f.seek(512)
+        header = f.read(32)
+        length = struct.unpack('<I', header[4:8])[0]
+        rest = f.read(length)
+        with open(args.output, 'wb') as g:
+            g.write(header)
+            g.write(rest)
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
