@@ -20,8 +20,7 @@
 
 //! A crate used for calculating offsets of struct members and their spans.
 //!
-//! Some of the funcationality of the crate makes no sense when used along with structs that
-//! are not `#[repr(C, packed)]`, but it is up to the user to make sure that they are.
+//! This functionality currently can not be used in compile time code such as `const` or `const fn` definitions.
 //!
 //! ## Examples
 //! ```
@@ -37,7 +36,7 @@
 //! fn main() {
 //!     assert_eq!(offset_of!(HelpMeIAmTrappedInAStructFactory, a), 15);
 //!     assert_eq!(span_of!(HelpMeIAmTrappedInAStructFactory, a), 15..19);
-//!     assert_eq!(span_of!(HelpMeIAmTrappedInAStructFactory, help_me_before_they_[2] .. a), 2..15);
+//!     assert_eq!(span_of!(HelpMeIAmTrappedInAStructFactory, help_me_before_they_ .. a), 0..15);
 //! }
 //! ```
 //!
@@ -59,10 +58,21 @@
 
 #![no_std]
 
+#[macro_use]
+#[cfg(memoffset_doctests)]
+#[cfg(doctest)]
+extern crate doc_comment;
+#[cfg(memoffset_doctests)]
+#[cfg(doctest)]
+doctest!("../README.md");
+
 // This `use` statement enables the macros to use `$crate::mem`.
 // Doing this enables this crate to function under both std and no-std crates.
 #[doc(hidden)]
 pub use core::mem;
+
+#[doc(hidden)]
+pub use core::ptr;
 
 #[macro_use]
 mod offset_of;

@@ -46,6 +46,9 @@ impl<T> Queue<T> {
             head: CachePadded::new(Atomic::null()),
             tail: CachePadded::new(Atomic::null()),
         };
+        // TODO(taiki-e): when the minimum supported Rust version is bumped to 1.36+,
+        // replace this with `mem::MaybeUninit`.
+        #[allow(deprecated)]
         let sentinel = Owned::new(Node {
             data: unsafe { mem::uninitialized() },
             next: Atomic::null(),
@@ -116,7 +119,8 @@ impl<T> Queue<T> {
                     .map(|_| {
                         guard.defer_destroy(head);
                         Some(ManuallyDrop::into_inner(ptr::read(&n.data)))
-                    }).map_err(|_| ())
+                    })
+                    .map_err(|_| ())
             },
             None => Ok(None),
         }
@@ -140,7 +144,8 @@ impl<T> Queue<T> {
                     .map(|_| {
                         guard.defer_destroy(head);
                         Some(ManuallyDrop::into_inner(ptr::read(&n.data)))
-                    }).map_err(|_| ())
+                    })
+                    .map_err(|_| ())
             },
             None | Some(_) => Ok(None),
         }
@@ -323,7 +328,8 @@ mod test {
             for i in 0..CONC_COUNT {
                 q.push(i)
             }
-        }).unwrap();
+        })
+        .unwrap();
     }
 
     #[test]
@@ -355,7 +361,8 @@ mod test {
                     q.push(i);
                 }
             });
-        }).unwrap();
+        })
+        .unwrap();
     }
 
     #[test]
@@ -400,7 +407,8 @@ mod test {
                     assert_eq!(vr, vr2);
                 });
             }
-        }).unwrap();
+        })
+        .unwrap();
     }
 
     #[test]
@@ -419,7 +427,8 @@ mod test {
             for i in 0..CONC_COUNT {
                 q.push(i)
             }
-        }).unwrap();
+        })
+        .unwrap();
         assert!(q.is_empty());
     }
 

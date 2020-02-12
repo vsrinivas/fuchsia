@@ -35,18 +35,16 @@
 //! Ideally each instance of concurrent data structure may have its own queue that gets fully
 //! destroyed as soon as the data structure gets dropped.
 
-use alloc::boxed::Box;
 use core::cell::{Cell, UnsafeCell};
 use core::mem::{self, ManuallyDrop};
 use core::num::Wrapping;
-use core::ptr;
+use core::{ptr, fmt};
 use core::sync::atomic;
 use core::sync::atomic::Ordering;
 
-use arrayvec::ArrayVec;
 use crossbeam_utils::CachePadded;
 
-use atomic::Owned;
+use atomic::{Shared, Owned};
 use collector::{Collector, LocalHandle};
 use deferred::Deferred;
 use epoch::{AtomicEpoch, Epoch};
@@ -61,10 +59,10 @@ const MAX_OBJECTS: usize = 64;
 const MAX_OBJECTS: usize = 4;
 
 /// A bag of deferred functions.
-#[derive(Default, Debug)]
 pub struct Bag {
     /// Stashed objects.
-    deferreds: ArrayVec<[Deferred; MAX_OBJECTS]>,
+    deferreds: [Deferred; MAX_OBJECTS],
+    len: usize
 }
 
 /// `Bag::try_push()` requires that it is safe for another thread to execute the given functions.
@@ -78,7 +76,7 @@ impl Bag {
 
     /// Returns `true` if the bag is empty.
     pub fn is_empty(&self) -> bool {
-        self.deferreds.is_empty()
+        self.len == 0
     }
 
     /// Attempts to insert a deferred function into the bag.
@@ -90,7 +88,13 @@ impl Bag {
     ///
     /// It should be safe for another thread to execute the given function.
     pub unsafe fn try_push(&mut self, deferred: Deferred) -> Result<(), Deferred> {
-        self.deferreds.try_push(deferred).map_err(|e| e.element())
+        if self.len < MAX_OBJECTS {
+            self.deferreds[self.len] = deferred;
+            self.len += 1;
+            Ok(())
+        } else {
+            Err(deferred)
+        }
     }
 
     /// Seals the bag with the given epoch.
@@ -99,14 +103,52 @@ impl Bag {
     }
 }
 
+impl Default for Bag {
+    fn default() -> Self {
+        // TODO: [no_op; MAX_OBJECTS] syntax blocked by https://github.com/rust-lang/rust/issues/49147
+        #[cfg(not(feature = "sanitize"))]
+        return Bag { len: 0, deferreds:
+            [Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func),
+             Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func),
+             Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func),
+             Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func),
+             Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func),
+             Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func),
+             Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func),
+             Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func),
+             Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func),
+             Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func),
+             Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func),
+             Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func),
+             Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func),
+             Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func),
+             Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func),
+             Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func)]
+        };
+        #[cfg(feature = "sanitize")]
+        return Bag { len: 0, deferreds: [Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func), Deferred::new(no_op_func)] };
+    }
+}
+
 impl Drop for Bag {
     fn drop(&mut self) {
         // Call all deferred functions.
-        for deferred in self.deferreds.drain(..) {
-            deferred.call();
+        for deferred in &mut self.deferreds[..self.len] {
+            let no_op = Deferred::new(no_op_func);
+            let owned_deferred = mem::replace(deferred, no_op);
+            owned_deferred.call();
         }
     }
 }
+
+// can't #[derive(Debug)] because Debug is not implemented for arrays 64 items long
+impl fmt::Debug for Bag {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Bag").field("deferreds", &&self.deferreds[..self.len]).finish()
+    }
+}
+
+fn no_op_func() {}
 
 /// A pair of an epoch and a bag.
 #[derive(Default, Debug)]
@@ -287,7 +329,8 @@ impl Local {
                 guard_count: Cell::new(0),
                 handle_count: Cell::new(1),
                 pin_count: Cell::new(Wrapping(0)),
-            }).into_shared(&unprotected());
+            })
+            .into_shared(&unprotected());
             collector.global.locals.insert(local, &unprotected());
             LocalHandle {
                 local: local.as_raw(),
@@ -501,9 +544,8 @@ impl IsElement<Local> for Local {
         &*local_ptr
     }
 
-    unsafe fn finalize(entry: &Entry) {
-        let local = Self::element_of(entry);
-        drop(Box::from_raw(local as *const Local as *mut Local));
+    unsafe fn finalize(entry: &Entry, guard: &Guard) {
+        guard.defer_destroy(Shared::from(Self::element_of(entry) as *const _));
     }
 }
 
