@@ -570,7 +570,7 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   }
 
   if (found_handles != handle_count) {
-    zxlogf(ERROR,
+    zxlogf(SPEW,
            "OnDisplayVsync with %lu unmatched images (found_handles = %lu, handle_count = %lu)\n",
            handle_count - found_handles, found_handles, handle_count);
     return;
