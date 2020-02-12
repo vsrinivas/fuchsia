@@ -302,7 +302,8 @@ cpu_mask_t thread_get_cpu_affinity(const thread_t* t) TA_EXCL(thread_lock);
 void thread_set_soft_cpu_affinity(thread_t* t, cpu_mask_t affinity) TA_EXCL(thread_lock);
 cpu_mask_t thread_get_soft_cpu_affinity(const thread_t* t) TA_EXCL(thread_lock);
 
-// migrates the current thread to the CPU identified by target_cpu
+// migrates the current thread to the CPU identified by target_cpu, and hard
+// pins the thread to the target_cpu in the process.
 void thread_migrate_to_cpu(cpu_num_t target_cpuid);
 
 // Marks a thread as detached, in this state its memory will be released once

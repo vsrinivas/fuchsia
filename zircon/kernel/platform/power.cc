@@ -52,21 +52,8 @@ void platform_halt(platform_halt_action suggested_action, zircon_crash_reason_t 
     memset(crashlog_render_buffer, 0, sizeof(crashlog_render_buffer));
     rendered_crashlog_len =
         crashlog_to_string(crashlog_render_buffer, sizeof(crashlog_render_buffer), reason);
-
-    // Dump up to the first 64 characters of the rendered crashlog.  Note, there
-    // is really no good reason to be doing this.  This is only to make a host
-    // test happy, and should probably be removed (along with the test).
-    char tmp[65] = {0};
-    ssize_t tmp_len = snprintf(tmp, sizeof(tmp), "%s", crashlog_render_buffer);
-    printf("stowing crashlog:\nFirst %zd/%zu bytes follow\n%s\n...\n",
-           fbl::min<ssize_t>(sizeof(tmp) - 1, tmp_len), rendered_crashlog_len, tmp);
   }
-
   platform_stow_crashlog(reason, crashlog_render_buffer, rendered_crashlog_len);
-
-  // Shutdown the dlog to give the logs one last chance to make it out into the
-  // world before we drop into the platform specific halt handler.
-  dlog_shutdown();
 
   // Finally, fall into the platform specific halt handler.
   platform_specific_halt(suggested_action, reason, halt_on_panic);

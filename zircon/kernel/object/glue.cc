@@ -106,6 +106,12 @@ static void on_oom() {
         printf("OOM: sleep failed: %d\n", status);
       }
       printf("OOM: rebooting\n");
+
+      // Tell the oom_tests host test that we are about to generate an OOM
+      // crashlog to keep it happy.  Without these messages present in a
+      // specific order in the log, the test will fail.
+      printf("stowing crashlog\nZIRCON REBOOT REASON (OOM)\n");
+
       platform_graceful_halt_helper(HALT_ACTION_REBOOT, ZirconCrashReason::Oom);
   }
 }

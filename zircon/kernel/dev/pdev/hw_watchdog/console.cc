@@ -110,13 +110,11 @@ static int cmd_watchdog(int argc, const cmd_args* argv, uint32_t flags) {
       }
 
       // In order to _really_ wedge the system we...
-      // 1) Disable preemption for our thread.
-      // 2) Migrate our thread to the boot core.
-      // 3) Halt all of the secondary cores
-      // 4) Disable interrupts.
-      // 5) Spin forever.
+      // 1) Migrate our thread to the boot core. (this pins the thread there too)
+      // 2) Halt all of the secondary cores
+      // 3) Disable interrupts.
+      // 4) Spin forever.
       //
-      thread_preempt_disable();
       thread_migrate_to_cpu(BOOT_CPU_ID);
       platform_halt_secondary_cpus();
       arch_disable_ints();
