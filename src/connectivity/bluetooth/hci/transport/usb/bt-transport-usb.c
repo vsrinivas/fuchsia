@@ -137,70 +137,74 @@ static void hci_event_complete(void* ctx, usb_request_t* req) {
   hci_t* hci = (hci_t*)ctx;
   zxlogf(SPEW, "bt-transport-usb: Event received\n");
   mtx_lock(&hci->mutex);
-  zx_status_t status;
+
+  if (req->response.status != ZX_OK) {
+    zxlogf(ERROR, "bt-transport-usb: request completed with error status %d (%s). Removing device\n",
+           req->response.status, zx_status_get_string(req->response.status));
+    device_async_remove(hci->zxdev);
+    goto out2;
+  }
 
   // Handle the interrupt as long as either the command channel or the snoop
   // channel is open.
   if (hci->cmd_channel == ZX_HANDLE_INVALID && hci->snoop_channel == ZX_HANDLE_INVALID)
     goto out2;
 
-  if (req->response.status == ZX_OK) {
-    uint8_t* buffer;
-    zx_status_t status = usb_request_mmap(req, (void*)&buffer);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "bt-transport-usb: usb_req_mmap failed: %s\n", zx_status_get_string(status));
-      goto out2;
-    }
-    size_t length = req->response.actual;
-    size_t packet_size = buffer[1] + 2;
+  uint8_t* buffer;
+  zx_status_t status = usb_request_mmap(req, (void*)&buffer);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "bt-transport-usb: usb_req_mmap failed: %s\n", zx_status_get_string(status));
+    goto out2;
+  }
+  size_t length = req->response.actual;
+  size_t packet_size = buffer[1] + 2;
 
-    // simple case - packet fits in received data
-    if (hci->event_buffer_offset == 0 && length >= 2) {
-      if (packet_size == length) {
-        if (hci->cmd_channel != ZX_HANDLE_INVALID) {
-          zx_status_t status = zx_channel_write(hci->cmd_channel, 0, buffer, length, NULL, 0);
-          if (status < 0) {
-            zxlogf(ERROR, "bt-transport-usb: hci_event_complete failed to write: %s\n",
-                   zx_status_get_string(status));
-          }
+  // simple case - packet fits in received data
+  if (hci->event_buffer_offset == 0 && length >= 2) {
+    if (packet_size == length) {
+      if (hci->cmd_channel != ZX_HANDLE_INVALID) {
+        zx_status_t status = zx_channel_write(hci->cmd_channel, 0, buffer, length, NULL, 0);
+        if (status < 0) {
+          zxlogf(ERROR, "bt-transport-usb: hci_event_complete failed to write: %s\n",
+                 zx_status_get_string(status));
         }
-        snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_EVT, true), buffer,
-                                   length);
-        goto out;
       }
+      snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_EVT, true), buffer,
+                                 length);
+      goto out;
+    }
+  }
+
+  // complicated case - need to accumulate into hci->event_buffer
+
+  if (hci->event_buffer_offset + length > sizeof(hci->event_buffer)) {
+    zxlogf(ERROR, "bt-transport-usb: event_buffer would overflow!\n");
+    goto out2;
+  }
+
+  memcpy(&hci->event_buffer[hci->event_buffer_offset], buffer, length);
+  if (hci->event_buffer_offset == 0) {
+    hci->event_buffer_packet_length = packet_size;
+  } else {
+    packet_size = hci->event_buffer_packet_length;
+  }
+  hci->event_buffer_offset += length;
+
+  // check to see if we have a full packet
+  if (packet_size <= hci->event_buffer_offset) {
+    zx_status_t status =
+        zx_channel_write(hci->cmd_channel, 0, hci->event_buffer, packet_size, NULL, 0);
+    if (status < 0) {
+      zxlogf(ERROR, "bt-transport-usb: failed to write: %s\n", zx_status_get_string(status));
     }
 
-    // complicated case - need to accumulate into hci->event_buffer
+    snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_EVT, true),
+                               hci->event_buffer, packet_size);
 
-    if (hci->event_buffer_offset + length > sizeof(hci->event_buffer)) {
-      zxlogf(ERROR, "bt-transport-usb: event_buffer would overflow!\n");
-      goto out2;
-    }
-
-    memcpy(&hci->event_buffer[hci->event_buffer_offset], buffer, length);
-    if (hci->event_buffer_offset == 0) {
-      hci->event_buffer_packet_length = packet_size;
-    } else {
-      packet_size = hci->event_buffer_packet_length;
-    }
-    hci->event_buffer_offset += length;
-
-    // check to see if we have a full packet
-    if (packet_size <= hci->event_buffer_offset) {
-      zx_status_t status =
-          zx_channel_write(hci->cmd_channel, 0, hci->event_buffer, packet_size, NULL, 0);
-      if (status < 0) {
-        zxlogf(ERROR, "bt-transport-usb: failed to write: %s\n", zx_status_get_string(status));
-      }
-
-      snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_EVT, true),
-                                 hci->event_buffer, packet_size);
-
-      uint32_t remaining = hci->event_buffer_offset - packet_size;
-      memmove(hci->event_buffer, hci->event_buffer + packet_size, remaining);
-      hci->event_buffer_offset = 0;
-      hci->event_buffer_packet_length = 0;
-    }
+    uint32_t remaining = hci->event_buffer_offset - packet_size;
+    memmove(hci->event_buffer, hci->event_buffer + packet_size, remaining);
+    hci->event_buffer_offset = 0;
+    hci->event_buffer_packet_length = 0;
   }
 
 out:
@@ -216,31 +220,37 @@ static void hci_acl_read_complete(void* ctx, usb_request_t* req) {
   zxlogf(SPEW, "bt-transport-usb: ACL frame received\n");
   mtx_lock(&hci->mutex);
 
-  if (req->response.status == ZX_OK) {
-    void* buffer;
-    zx_status_t status = usb_request_mmap(req, &buffer);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "bt-transport-usb: usb_req_mmap failed: %s\n", zx_status_get_string(status));
-      mtx_unlock(&hci->mutex);
-      return;
-    }
-
-    if (hci->acl_channel == ZX_HANDLE_INVALID) {
-      zxlogf(ERROR, "bt-transport-usb: ACL data received while channel is closed");
-    } else {
-      status = zx_channel_write(hci->acl_channel, 0, buffer, req->response.actual, NULL, 0);
-      if (status < 0) {
-        zxlogf(ERROR, "bt-transport-usb: hci_acl_read_complete failed to write: %s\n",
-               zx_status_get_string(status));
-      }
-    }
-
-    // If the snoop channel is open then try to write the packet even if acl_channel was closed.
-    snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_ACL, true), buffer,
-                               req->response.actual);
+  if (req->response.status != ZX_OK) {
+    zxlogf(ERROR, "bt-transport-usb: request completed with error status %d (%s). Removing device\n",
+           req->response.status, zx_status_get_string(req->response.status));
+    device_async_remove(hci->zxdev);
+    mtx_unlock(&hci->mutex);
+    return;
   }
 
-  zx_status_t status = usb_req_list_add_head(&hci->free_acl_read_reqs, req, hci->parent_req_size);
+  void* buffer;
+  zx_status_t status = usb_request_mmap(req, &buffer);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "bt-transport-usb: usb_req_mmap failed: %s\n", zx_status_get_string(status));
+    mtx_unlock(&hci->mutex);
+    return;
+  }
+
+  if (hci->acl_channel == ZX_HANDLE_INVALID) {
+    zxlogf(ERROR, "bt-transport-usb: ACL data received while channel is closed");
+  } else {
+    status = zx_channel_write(hci->acl_channel, 0, buffer, req->response.actual, NULL, 0);
+    if (status < 0) {
+      zxlogf(ERROR, "bt-transport-usb: hci_acl_read_complete failed to write: %s\n",
+             zx_status_get_string(status));
+    }
+  }
+
+  // If the snoop channel is open then try to write the packet even if acl_channel was closed.
+  snoop_channel_write_locked(hci, bt_hci_snoop_flags(BT_HCI_SNOOP_TYPE_ACL, true), buffer,
+                             req->response.actual);
+
+  status = usb_req_list_add_head(&hci->free_acl_read_reqs, req, hci->parent_req_size);
   ZX_DEBUG_ASSERT(status == ZX_OK);
   queue_acl_read_requests_locked(hci);
 
@@ -250,8 +260,16 @@ static void hci_acl_read_complete(void* ctx, usb_request_t* req) {
 static void hci_acl_write_complete(void* ctx, usb_request_t* req) {
   hci_t* hci = (hci_t*)ctx;
 
-  // FIXME what to do with error here?
   mtx_lock(&hci->mutex);
+
+  if (req->response.status != ZX_OK) {
+    zxlogf(ERROR, "bt-transport-usb: request completed with error status %d (%s). Removing device\n",
+           req->response.status, zx_status_get_string(req->response.status));
+    device_async_remove(hci->zxdev);
+    mtx_unlock(&hci->mutex);
+    return;
+  }
+
   zx_status_t status = usb_req_list_add_tail(&hci->free_acl_write_reqs, req, hci->parent_req_size);
   ZX_DEBUG_ASSERT(status == ZX_OK);
 
