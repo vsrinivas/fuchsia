@@ -11,12 +11,12 @@ driver_module("driver") {
   sources = [ "passthrough.c" ]
 
   deps = [
+    "//sdk/banjo/ddk.protocol.bt.hci",
+    "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
-    "//sdk/banjo/ddk.protocol.bt.hci",
-    "//zircon/system/fidl/fuchsia-hardware-bluetooth:fuchsia-hardware-bluetooth_c",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

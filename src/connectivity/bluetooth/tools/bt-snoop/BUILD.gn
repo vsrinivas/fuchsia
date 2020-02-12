@@ -15,6 +15,7 @@ rustc_binary("bin") {
   deps = [
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.snoop:fuchsia.bluetooth.snoop-rustc",
+    "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
@@ -31,7 +32,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:thiserror",
-    "//zircon/system/fidl/fuchsia-hardware-bluetooth:fuchsia-hardware-bluetooth-rustc",
   ]
 }
 

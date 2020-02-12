@@ -62,7 +62,6 @@ group("fidl") {
     "fuchsia-hardware-block-volume",
 #------------------
 #------------------
-    "fuchsia-hardware-bluetooth",
 #------------------
 #------------------
     "fuchsia-hardware-camera",

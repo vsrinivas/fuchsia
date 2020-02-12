@@ -17,6 +17,7 @@ driver_module("driver") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c",
     "//src/connectivity/bluetooth/core/bt-host/gap",
     "//src/connectivity/bluetooth/core/bt-host/hci",
     "//src/devices/lib/driver",
@@ -27,7 +28,6 @@ driver_module("driver") {
     "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.usb",
-    "//zircon/system/fidl/fuchsia-hardware-bluetooth:fuchsia-hardware-bluetooth_c",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

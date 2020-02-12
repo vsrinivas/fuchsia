@@ -28,11 +28,11 @@ driver_module("bt-hci-broadcom") {
   deps = [
     "//sdk/banjo/ddk.protocol.bt.hci",
     "//sdk/banjo/ddk.protocol.serialimpl.async",
+    "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
-    "//zircon/system/fidl/fuchsia-hardware-bluetooth:c",
   ]
   data_deps = [ ":firmware" ]
 }
@@ -51,6 +51,7 @@ test("bt-hci-broadcom-test") {
   deps = [
     "//sdk/banjo/ddk.protocol.bt.hci",
     "//sdk/banjo/ddk.protocol.serialimpl.async",
+    "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-pdev",
@@ -64,7 +65,6 @@ test("bt-hci-broadcom-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/fidl/fuchsia-hardware-bluetooth:c",
   ]
 }
 
