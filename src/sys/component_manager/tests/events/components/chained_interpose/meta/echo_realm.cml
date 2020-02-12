@@ -18,12 +18,12 @@
     "children": [
         {
             "name": "echo_factory",
-            "url": "fuchsia-pkg://fuchsia.com/breakpoints_system_integration_test#meta/chained_interpose_echo_factory.cm",
+            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/chained_interpose_echo_factory.cm",
             "startup": "eager",
         },
         {
             "name": "echo_client",
-            "url": "fuchsia-pkg://fuchsia.com/breakpoints_system_integration_test#meta/chained_interpose_echo_client.cm",
+            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/chained_interpose_echo_client.cm",
             "startup": "eager",
         },
     ],

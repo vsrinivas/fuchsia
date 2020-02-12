@@ -40,8 +40,8 @@ rustc_library("echo_factory_interposer") {
   ]
 }
 
-rustc_test("breakpoints_system_integration_test_bin") {
-  name = "breakpoints_system_integration_test"
+rustc_test("events_integration_test_bin") {
+  name = "events_integration_test"
   edition = "2018"
   source_root = "integration_test.rs"
   deps = [
@@ -58,9 +58,9 @@ rustc_test("breakpoints_system_integration_test_bin") {
   ]
 }
 
-test_package("breakpoints_system_integration_test") {
+test_package("events_integration_test") {
   deps = [
-    ":breakpoints_system_integration_test_bin",
+    ":events_integration_test_bin",
     "components:chained_interpose_echo_client_bin",
     "components:chained_interpose_echo_factory_bin",
     "components:echo_client_for_breakpoints_bin",
@@ -150,7 +150,7 @@ test_package("breakpoints_system_integration_test") {
 
   tests = [
     {
-      name = "breakpoints_system_integration_test"
+      name = "events_integration_test"
     },
   ]
 }

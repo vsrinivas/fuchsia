@@ -19,7 +19,7 @@ use {
 
 /// A wrapper over the EventSourceSync FIDL proxy.
 /// Provides all of the FIDL methods with a cleaner, simpler interface.
-/// Refer to breakpoints.fidl for a detailed description of this protocol.
+/// Refer to events.fidl for a detailed description of this protocol.
 pub struct EventSource {
     proxy: fevents::EventSourceSyncProxy,
 }
@@ -51,33 +51,33 @@ impl EventSource {
         &self,
         event_types: Vec<fevents::EventType>,
     ) -> Result<EventSink, Error> {
-        let receiver = self.subscribe(event_types).await?;
-        Ok(EventSink::soak_async(receiver))
+        let event_stream = self.subscribe(event_types).await?;
+        Ok(EventSink::soak_async(event_stream))
     }
 
     // This is a convenience method that sets a breakpoint on the the `RouteCapability`,
     // spawns a new task, and injects the service provided by the injector if requested
-    // by the invocation.
+    // by the event.
     pub async fn install_injector<I: 'static>(&self, injector: Arc<I>) -> Result<AbortHandle, Error>
     where
         I: Injector,
     {
-        let receiver = self.subscribe(vec![RouteCapability::TYPE]).await?;
+        let event_stream = self.subscribe(vec![RouteCapability::TYPE]).await?;
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
         fasync::spawn(
             Abortable::new(
                 async move {
                     loop {
-                        let invocation = receiver
+                        let event = event_stream
                             .wait_until_type::<RouteCapability>()
                             .await
                             .expect("Type mismatch");
 
-                        if invocation.capability_id == injector.capability_path() {
-                            invocation.inject(injector.clone()).await.expect("injection failed");
+                        if event.capability_id == injector.capability_path() {
+                            event.inject(injector.clone()).await.expect("injection failed");
                         }
 
-                        invocation.resume().await.expect("resumption failed");
+                        event.resume().await.expect("resumption failed");
                     }
                 },
                 abort_registration,
@@ -89,7 +89,7 @@ impl EventSource {
 
     // This is a convenience method that sets a breakpoint on the the `RouteCapability`,
     // spawns a new task, and interposes the service provided by the interposer if requested
-    // by the invocation.
+    // by the event.
     pub async fn install_interposer<I: 'static>(
         &self,
         interposer: Arc<I>,
@@ -97,25 +97,22 @@ impl EventSource {
     where
         I: Interposer,
     {
-        let receiver = self.subscribe(vec![RouteCapability::TYPE]).await?;
+        let event_stream = self.subscribe(vec![RouteCapability::TYPE]).await?;
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
         fasync::spawn(
             Abortable::new(
                 async move {
                     loop {
-                        let invocation = receiver
+                        let event = event_stream
                             .wait_until_type::<RouteCapability>()
                             .await
                             .expect("Type mismatch");
 
-                        if invocation.capability_id == interposer.capability_path() {
-                            invocation
-                                .interpose(interposer.clone())
-                                .await
-                                .expect("injection failed");
+                        if event.capability_id == interposer.capability_path() {
+                            event.interpose(interposer.clone()).await.expect("injection failed");
                         }
 
-                        invocation.resume().await.expect("resumption failed");
+                        event.resume().await.expect("resumption failed");
                     }
                 },
                 abort_registration,
@@ -143,58 +140,58 @@ impl EventStream {
     }
 
     pub async fn next(&self) -> Result<fevents::Event, Error> {
-        let invocation = self.proxy.next().await.context("could not get next breakpoint")?;
-        Ok(invocation)
+        let event = self.proxy.next().await.context("could not get next breakpoint")?;
+        Ok(event)
     }
 
-    /// Expects the next invocation to be of a particular type.
+    /// Expects the next event to be of a particular type.
     /// Returns the casted type if successful and an error otherwise.
     pub async fn expect_type<T: Event>(&self) -> Result<T, Error> {
-        let invocation = self.next().await?;
-        T::from_fidl(invocation)
+        let event = self.next().await?;
+        T::from_fidl(event)
     }
 
-    /// Expects the next invocation to be of a particular type and moniker.
+    /// Expects the next event to be of a particular type and moniker.
     /// Returns the casted type if successful and an error otherwise.
     pub async fn expect_exact<T: Event>(&self, expected_moniker: &str) -> Result<T, Error> {
-        let invocation = self.expect_type::<T>().await?;
-        if expected_moniker == invocation.target_moniker() {
-            Ok(invocation)
+        let event = self.expect_type::<T>().await?;
+        if expected_moniker == event.target_moniker() {
+            Ok(event)
         } else {
             Err(format_err!("Incorrect moniker"))
         }
     }
 
-    /// Waits for an invocation of a particular type.
-    /// Implicitly resumes all other invocations.
+    /// Waits for an event of a particular type.
+    /// Implicitly resumes all other events.
     /// Returns the casted type if successful and an error otherwise.
     pub async fn wait_until_type<T: Event>(&self) -> Result<T, Error> {
         loop {
-            let invocation = self.next().await?;
-            if let Ok(invocation) = T::from_fidl(invocation) {
-                return Ok(invocation);
+            let event = self.next().await?;
+            if let Ok(event) = T::from_fidl(event) {
+                return Ok(event);
             }
         }
     }
 
-    /// Waits for an invocation of a particular type and target moniker.
-    /// Implicitly resumes all other invocations.
+    /// Waits for an event of a particular type and target moniker.
+    /// Implicitly resumes all other events.
     /// Returns the casted type if successful and an error otherwise.
     pub async fn wait_until_exact<T: Event>(
         &self,
         expected_target_moniker: &str,
     ) -> Result<T, Error> {
         loop {
-            let invocation = self.wait_until_type::<T>().await?;
-            if invocation.target_moniker() == expected_target_moniker {
-                return Ok(invocation);
+            let event = self.wait_until_type::<T>().await?;
+            if event.target_moniker() == expected_target_moniker {
+                return Ok(event);
             }
-            invocation.resume().await?;
+            event.resume().await?;
         }
     }
 
     /// Waits for a component capability to be routed matching a particular
-    /// target moniker and capability. Implicitly resumes all other invocations.
+    /// target moniker and capability. Implicitly resumes all other events.
     /// Returns the casted type if successful and an error otherwise.
     pub async fn wait_until_component_capability(
         &self,
@@ -202,20 +199,19 @@ impl EventStream {
         expected_capability_id: &str,
     ) -> Result<RouteCapability, Error> {
         loop {
-            let invocation =
-                self.wait_until_exact::<RouteCapability>(expected_target_moniker).await?;
-            if expected_capability_id == invocation.capability_id {
-                match invocation.source {
-                    fevents::CapabilitySource::Component(_) => return Ok(invocation),
+            let event = self.wait_until_exact::<RouteCapability>(expected_target_moniker).await?;
+            if expected_capability_id == event.capability_id {
+                match event.source {
+                    fevents::CapabilitySource::Component(_) => return Ok(event),
                     _ => {}
                 }
             }
-            invocation.resume().await?;
+            event.resume().await?;
         }
     }
 
     /// Waits for a framework capability to be routed matching a particular
-    /// target moniker, scope moniker and capability. Implicitly resumes all other invocations.
+    /// target moniker, scope moniker and capability. Implicitly resumes all other events.
     /// Returns the casted type if successful and an error otherwise.
     pub async fn wait_until_framework_capability(
         &self,
@@ -224,33 +220,32 @@ impl EventStream {
         expected_scope_moniker: Option<&str>,
     ) -> Result<RouteCapability, Error> {
         loop {
-            let invocation =
-                self.wait_until_exact::<RouteCapability>(expected_target_moniker).await?;
+            let event = self.wait_until_exact::<RouteCapability>(expected_target_moniker).await?;
 
             // If the capability ID matches and the capability source is framework
-            // with a matching optional scope moniker, then return the invocation.
-            if expected_capability_id == invocation.capability_id {
-                match &invocation.source {
+            // with a matching optional scope moniker, then return the event.
+            if expected_capability_id == event.capability_id {
+                match &event.source {
                     fevents::CapabilitySource::Framework(fevents::FrameworkCapability {
                         scope_moniker,
                         ..
                     }) if scope_moniker.as_ref().map(|s| s.as_str()) == expected_scope_moniker => {
-                        return Ok(invocation)
+                        return Ok(event)
                     }
                     _ => {}
                 }
             }
 
-            invocation.resume().await?;
+            event.resume().await?;
         }
     }
 }
 
-/// Common features of any invocation - event type, target moniker, conversion function
+/// Common features of any event - event type, target moniker, conversion function
 pub trait Event: Handler {
     const TYPE: fevents::EventType;
     fn target_moniker(&self) -> &str;
-    fn from_fidl(inv: fevents::Event) -> Result<Self, Error>;
+    fn from_fidl(event: fevents::Event) -> Result<Self, Error>;
 }
 
 /// Basic handler that resumes/unblocks from an Event
@@ -265,7 +260,7 @@ pub trait Handler: Sized {
     }
 }
 
-/// Implemented on fevents::Event for resuming a generic invocation
+/// Implemented on fevents::Event for resuming a generic event
 impl Handler for fevents::Event {
     fn handler_proxy(self) -> fevents::HandlerProxy {
         self.handler
@@ -427,38 +422,38 @@ pub struct EventSink {
 }
 
 impl EventSink {
-    fn soak_async(receiver: EventStream) -> Self {
+    fn soak_async(event_stream: EventStream) -> Self {
         let drained_events = Arc::new(Mutex::new(vec![]));
         {
-            // Start an async task that soaks up events from the receiver
+            // Start an async task that soaks up events from the event_stream
             let drained_events = drained_events.clone();
             fasync::spawn(async move {
                 // TODO(xbhatnag): Terminate this infinite loop when EventSink is dropped.
                 // Or pass in a Weak and terminate if it can't be upgraded.
                 loop {
-                    // Get the next invocation from the receiver
-                    let inv = receiver
+                    // Get the next event from the event_stream
+                    let event = event_stream
                         .next()
                         .await
                         .expect("Failed to get next event from EventStreamSync");
 
                     // Construct the DrainedEvent from the Event
-                    let event_type = inv.event_type.expect("Failed to get event type from Event");
-                    let target_moniker = inv
+                    let event_type = event.event_type.expect("Failed to get event type from Event");
+                    let target_moniker = event
                         .target_moniker
                         .as_ref()
                         .expect("Failed to get target moniker from Event")
                         .clone();
-                    let event = DrainedEvent { event_type, target_moniker };
+                    let drained_event = DrainedEvent { event_type, target_moniker };
 
                     // Insert the event into the list
                     {
                         let mut drained_events = drained_events.lock().await;
-                        drained_events.push(event);
+                        drained_events.push(drained_event);
                     }
 
-                    // Resume from the invocation
-                    inv.resume().await.expect("Could not resume from invocation");
+                    // Resume from the event
+                    event.resume().await.expect("Could not resume from event");
                 }
             });
         }
@@ -473,9 +468,9 @@ impl EventSink {
 }
 
 /// The macro defined below will automatically create event classes corresponding
-/// to their breakpoints.fidl and hooks.rs counterparts. Every event class implements
+/// to their events.fidl and hooks.rs counterparts. Every event class implements
 /// the Event and Handler traits. These minimum requirements allow every event to
-/// be handled by the breakpoints client library.
+/// be handled by the events client library.
 
 /// Creates an event class based on event type and an optional payload
 /// * event_type -> FIDL name for event type
@@ -522,23 +517,23 @@ macro_rules! create_event {
                 &self.target_moniker
             }
 
-            fn from_fidl(inv: fevents::Event) -> Result<Self, Error> {
-                // Event type in invocation must match what is expected
-                let event_type = inv.event_type.ok_or(
+            fn from_fidl(event: fevents::Event) -> Result<Self, Error> {
+                // Event type in event must match what is expected
+                let event_type = event.event_type.ok_or(
                     format_err!("Missing event_type from Event object")
                 )?;
                 if event_type != Self::TYPE {
                     return Err(format_err!("Incorrect event type"));
                 }
-                let target_moniker = inv.target_moniker.ok_or(
+                let target_moniker = event.target_moniker.ok_or(
                     format_err!("Missing target_moniker from Event object")
                 )?;
-                let handler = inv.handler.ok_or(
+                let handler = event.handler.ok_or(
                     format_err!("Missing handler from Event object")
                 )?.into_proxy()?;
 
                 // Extract the payload from the Event object.
-                let event_payload = inv.event_payload.ok_or(
+                let event_payload = event.event_payload.ok_or(
                     format_err!("Missing event_payload from Event object")
                 )?;
                 let $payload_name = event_payload.$payload_name.ok_or(
@@ -590,23 +585,23 @@ macro_rules! create_event {
                 &self.target_moniker
             }
 
-            fn from_fidl(inv: fevents::Event) -> Result<Self, Error> {
-                // Event type in invocation must match what is expected
-                let event_type = inv.event_type.ok_or(
+            fn from_fidl(event: fevents::Event) -> Result<Self, Error> {
+                // Event type in event must match what is expected
+                let event_type = event.event_type.ok_or(
                     format_err!("Missing event_type from Event object")
                 )?;
                 if event_type != Self::TYPE {
                     return Err(format_err!("Incorrect event type"));
                 }
-                let target_moniker = inv.target_moniker.ok_or(
+                let target_moniker = event.target_moniker.ok_or(
                     format_err!("Missing target_moniker from Event object")
                 )?;
-                let handler = inv.handler.ok_or(
+                let handler = event.handler.ok_or(
                     format_err!("Missing handler from Event object")
                 )?.into_proxy()?;
 
                 // There should be no payload for this event
-                if inv.event_payload.is_some() {
+                if event.event_payload.is_some() {
                     return Err(format_err!("Unexpected event payload"));
                 }
 

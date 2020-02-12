@@ -16,17 +16,17 @@
     "children": [
         {
             "name": "child_a",
-            "url": "fuchsia-pkg://fuchsia.com/breakpoints_system_integration_test#meta/child.cm",
+            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/child.cm",
             "startup": "eager",
         },
         {
             "name": "child_b",
-            "url": "fuchsia-pkg://fuchsia.com/breakpoints_system_integration_test#meta/child.cm",
+            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/child.cm",
             "startup": "eager",
         },
         {
             "name": "child_c",
-            "url": "fuchsia-pkg://fuchsia.com/breakpoints_system_integration_test#meta/child.cm",
+            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/child.cm",
             "startup": "eager",
         },
     ],

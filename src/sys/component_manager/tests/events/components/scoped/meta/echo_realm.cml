@@ -26,12 +26,12 @@
     "children": [
         {
             "name": "echo_reporter",
-            "url": "fuchsia-pkg://fuchsia.com/breakpoints_system_integration_test#meta/echo_reporter.cm",
+            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/echo_reporter.cm",
             "startup": "eager",
         },
         {
             "name": "echo_client",
-            "url": "fuchsia-pkg://fuchsia.com/breakpoints_system_integration_test#meta/echo_client.cm",
+            "url": "fuchsia-pkg://fuchsia.com/events_integration_test#meta/echo_client.cm",
             "startup": "eager",
         },
     ],
