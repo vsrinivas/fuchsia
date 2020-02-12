@@ -448,50 +448,7 @@ void brcmf_net_setcarrier(struct brcmf_if* ifp, bool on) {
   }
 }
 
-zx_status_t brcmf_net_p2p_open(struct net_device* ndev) {
-  BRCMF_DBG(TRACE, "Enter\n");
-
-  return brcmf_cfg80211_up(ndev);
-}
-
-zx_status_t brcmf_net_p2p_stop(struct net_device* ndev) {
-  BRCMF_DBG(TRACE, "Enter\n");
-
-  return brcmf_cfg80211_down(ndev);
-}
-
-void brcmf_net_p2p_start_xmit(struct brcmf_netbuf* netbuf, struct net_device* ndev) {
-  if (netbuf) {
-    brcmf_netbuf_free(netbuf);
-  }
-}
-
-static zx_status_t brcmf_net_p2p_attach(struct brcmf_if* ifp) {
-  struct net_device* ndev;
-
-  BRCMF_DBG(TRACE, "Enter, bsscfgidx=%d mac=%pM\n", ifp->bsscfgidx, ifp->mac_addr);
-  ndev = ifp->ndev;
-
-  ndev->initialized_for_ap = false;
-
-  /* set the mac address */
-  memcpy(ndev->dev_addr, ifp->mac_addr, ETH_ALEN);
-
-  BRCMF_ERR("* * Tried to register_netdev(ndev); do the ZX thing instead.");
-  // TODO(cphoenix): Add back the appropriate "fail:" code
-  // If register_netdev failed, goto fail;
-
-  BRCMF_DBG(INFO, "%s: Broadcom Dongle Host Driver\n", ndev->name);
-
-  return ZX_OK;
-
-  // fail:
-  //    ifp->drvr->iflist[ifp->bsscfgidx] = NULL;
-  //    ndev->netdev_ops = NULL;
-  //    return ZX_ERR_IO_NOT_PRESENT;
-}
-
-zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifidx, bool is_p2pdev,
+zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifidx,
                          const char* name, uint8_t* mac_addr, struct brcmf_if** if_out) {
   struct brcmf_if* ifp;
   struct net_device* ndev;
@@ -519,27 +476,19 @@ zx_status_t brcmf_add_if(struct brcmf_pub* drvr, int32_t bsscfgidx, int32_t ifid
     }
   }
 
-  if (!drvr->settings->p2p_enable && is_p2pdev) {
-    /* this is P2P_DEVICE interface */
-    BRCMF_DBG(INFO, "allocate non-netdev interface\n");
-    ifp = static_cast<decltype(ifp)>(calloc(1, sizeof(*ifp)));
-    if (!ifp) {
-      return ZX_ERR_NO_MEMORY;
-    }
-  } else {
-    /* Allocate netdev, including space for private structure */
-    ndev = brcmf_allocate_net_device(sizeof(*ifp), is_p2pdev ? "p2p" : name);
-    if (!ndev) {
-      return ZX_ERR_NO_MEMORY;
-    }
 
-    ndev->needs_free_net_device = true;
-    ifp = ndev_to_if(ndev);
-    ifp->ndev = ndev;
-    /* store mapping ifidx to bsscfgidx */
-    if (drvr->if2bss[ifidx] == BRCMF_BSSIDX_INVALID) {
-      drvr->if2bss[ifidx] = bsscfgidx;
-    }
+  /* Allocate netdev, including space for private structure */
+  ndev = brcmf_allocate_net_device(sizeof(*ifp), name);
+  if (!ndev) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  ndev->needs_free_net_device = true;
+  ifp = ndev_to_if(ndev);
+  ifp->ndev = ndev;
+  /* store mapping ifidx to bsscfgidx */
+  if (drvr->if2bss[ifidx] == BRCMF_BSSIDX_INVALID) {
+    drvr->if2bss[ifidx] = bsscfgidx;
   }
 
   ifp->drvr = drvr;
@@ -619,18 +568,16 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
   zx_status_t ret = ZX_ERR_IO;
   struct brcmf_bus* bus_if = drvr->bus_if;
   struct brcmf_if* ifp;
-  struct brcmf_if* p2p_ifp;
   zx_status_t err;
 
   BRCMF_DBG(TRACE, "Enter\n");
 
   /* add primary networking interface */
   // TODO(WLAN-740): Name uniqueness
-  err = brcmf_add_if(drvr, 0, 0, false, "wlan", NULL, &ifp);
+  err = brcmf_add_if(drvr, 0, 0, "wlan", NULL, &ifp);
   if (err != ZX_OK) {
     return err;
   }
-  p2p_ifp = NULL;
 
   /* signal bus ready */
   brcmf_bus_change_state(bus_if, BRCMF_BUS_UP);
@@ -664,13 +611,6 @@ zx_status_t brcmf_bus_started(brcmf_pub* drvr) {
 
   ret = brcmf_net_attach(ifp, false);
 
-  if ((ret == ZX_OK) && (drvr->settings->p2p_enable)) {
-    p2p_ifp = drvr->iflist[1];
-    if (p2p_ifp) {
-      ret = brcmf_net_p2p_attach(p2p_ifp);
-    }
-  }
-
   if (ret != ZX_OK) {
     goto fail;
   }
@@ -684,9 +624,7 @@ fail:
     drvr->config = NULL;
   }
   brcmf_net_detach(ifp->ndev, false);
-  if (p2p_ifp) {
-    brcmf_net_detach(p2p_ifp->ndev, false);
-  }
+
   drvr->iflist[0] = NULL;
   drvr->iflist[1] = NULL;
   if (drvr->settings->ignore_probe_fail) {

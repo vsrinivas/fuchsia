@@ -41,9 +41,6 @@
 
 #define BRCMF_FW_NAME_LEN 256
 
-// Enable legacy p2p management functionality
-static int brcmf_p2p_enable;
-
 // Disable features
 static int brcmf_feature_disable;
 
@@ -449,7 +446,6 @@ done:
 void brcmf_get_module_param(enum brcmf_bus_type bus_type, uint32_t chip, uint32_t chiprev,
                             brcmf_mp_device* settings) {
   /* start by using the module paramaters */
-  settings->p2p_enable = !!brcmf_p2p_enable;
   settings->feature_disable = brcmf_feature_disable;
   settings->fcmode = brcmf_fcmode;
   settings->roamoff = brcmf_roamoff;

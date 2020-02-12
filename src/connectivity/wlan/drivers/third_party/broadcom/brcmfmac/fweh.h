@@ -303,7 +303,6 @@ typedef zx_status_t (*brcmf_fweh_handler_t)(struct brcmf_if* ifp,
 /**
  * struct brcmf_fweh_info - firmware event handling information.
  *
- * @p2pdev_setup_ongoing: P2P device creation in progress.
  * @event_work: event worker.
  * //@evt_q_lock: lock for event queue protection.
  *  (replaced by irq_callback_lock)
@@ -311,7 +310,6 @@ typedef zx_status_t (*brcmf_fweh_handler_t)(struct brcmf_if* ifp,
  * @evt_handler: registered event handlers.
  */
 struct brcmf_fweh_info {
-  bool p2pdev_setup_ongoing;
   WorkItem event_work;
   // spinlock_t evt_q_lock;
   struct list_node event_q;
@@ -331,7 +329,6 @@ void brcmf_fweh_unregister(struct brcmf_pub* drvr, enum brcmf_fweh_event_code co
 zx_status_t brcmf_fweh_activate_events(struct brcmf_if* ifp);
 void brcmf_fweh_process_event(struct brcmf_pub* drvr, const struct brcmf_event* event_packet,
                               uint32_t packet_len);
-void brcmf_fweh_p2pdev_setup(struct brcmf_if* ifp, bool ongoing);
 void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_event_msg* emsg, void* data);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_FWEH_H_

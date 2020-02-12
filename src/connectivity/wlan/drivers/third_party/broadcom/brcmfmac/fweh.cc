@@ -129,21 +129,12 @@ static zx_status_t brcmf_fweh_call_event_handler(struct brcmf_if* ifp,
 void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_event_msg* emsg, void* data) {
   struct brcmf_if_event* ifevent = static_cast<decltype(ifevent)>(data);
   struct brcmf_if* ifp;
-  bool is_p2pdev;
   zx_status_t err = ZX_OK;
 
   BRCMF_DBG(EVENT, "action: %u ifidx: %u bsscfgidx: %u flags: %u role: %u\n", ifevent->action,
             ifevent->ifidx, ifevent->bsscfgidx, ifevent->flags, ifevent->role);
 
-  /* The P2P Device interface event must not be ignored contrary to what
-   * firmware tells us. Older firmware uses p2p noif, with sta role.
-   * This should be accepted when p2pdev_setup is ongoing. TDLS setup will
-   * use the same ifevent and should be ignored.
-   */
-  is_p2pdev = ((ifevent->flags & BRCMF_E_IF_FLAG_NOIF) &&
-               (ifevent->role == BRCMF_E_IF_ROLE_P2P_CLIENT ||
-                ((ifevent->role == BRCMF_E_IF_ROLE_STA) && (drvr->fweh.p2pdev_setup_ongoing))));
-  if (!is_p2pdev && (ifevent->flags & BRCMF_E_IF_FLAG_NOIF)) {
+  if (ifevent->flags & BRCMF_E_IF_FLAG_NOIF) {
     BRCMF_DBG(EVENT, "event can be ignored\n");
     return;
   }
@@ -156,14 +147,13 @@ void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_event_msg* 
 
   if (ifevent->action == BRCMF_E_IF_ADD) {
     BRCMF_DBG(EVENT, "adding %s (%pM)\n", emsg->ifname, emsg->addr);
-    err = brcmf_add_if(drvr, ifevent->bsscfgidx, ifevent->ifidx, is_p2pdev, emsg->ifname,
+    err = brcmf_add_if(drvr, ifevent->bsscfgidx, ifevent->ifidx, emsg->ifname,
                        emsg->addr, &ifp);
     if (err != ZX_OK) {
       return;
     }
-    if (!is_p2pdev) {
-      brcmf_proto_add_if(drvr, ifp);
-    }
+    brcmf_proto_add_if(drvr, ifp);
+
     if (!drvr->fweh.evt_handler[BRCMF_E_IF])
       if (brcmf_net_attach(ifp, false) != ZX_OK) {
         return;
@@ -280,16 +270,6 @@ static void brcmf_fweh_event_worker(WorkItem* work) {
   while ((event = brcmf_fweh_dequeue_event(drvr, fweh))) {
     brcmf_fweh_handle_event(drvr, event);
   }
-}
-
-/**
- * brcmf_fweh_p2pdev_setup() - P2P device setup ongoing (or not).
- *
- * @ifp: ifp on which setup is taking place or finished.
- * @ongoing: p2p device setup in progress (or not).
- */
-void brcmf_fweh_p2pdev_setup(struct brcmf_if* ifp, bool ongoing) {
-  ifp->drvr->fweh.p2pdev_setup_ongoing = ongoing;
 }
 
 /**

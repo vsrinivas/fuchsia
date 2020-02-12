@@ -30,7 +30,6 @@ constexpr uint32_t kMaxAssocRetries = 3;
 /**
  * struct brcmf_mp_device - Device module paramaters.
  *
- * @p2p_enable: Legacy P2P0 enable (old wpa_supplicant).
  * @feature_disable: Feature_disable bitmask.
  * @fcmode: FWS flow control.
  * @roamoff: Firmware roaming off?
@@ -39,7 +38,6 @@ constexpr uint32_t kMaxAssocRetries = 3;
  * @bus: Bus specific platform data. Only SDIO at the mmoment.
  */
 struct brcmf_mp_device {
-  bool p2p_enable;
   unsigned int feature_disable;
   int fcmode;
   bool roamoff;
