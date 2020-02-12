@@ -144,8 +144,8 @@ type Client struct {
 	stateFunc func(link.State)
 	arena     *Arena
 
-	rxQueue []FifoEntry
-	tx      struct {
+	rx entries
+	tx struct {
 		mu struct {
 			sync.Mutex
 			waiters int
@@ -193,16 +193,16 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 		fifos:  *fifos,
 		path:   topo,
 		arena:  arena,
-		// TODO: use 2x depth so that the driver always has rx buffers available. Be careful to
-		// preserve the invariant: len(rxQueue) >= cap(rxQueue) - RxDepth.
-		rxQueue: make([]FifoEntry, 0, fifos.RxDepth),
 	}
-	for i := 0; i < cap(c.rxQueue); i++ {
+	c.rx.init(fifos.RxDepth)
+	for i := range c.rx.storage {
 		b := arena.alloc(c)
 		if b == nil {
-			return nil, fmt.Errorf("%s: failed to allocate initial RX buffer %d/%d", tag, i, cap(c.rxQueue))
+			return nil, fmt.Errorf("%s: failed to allocate initial RX buffer %d/%d", tag, i, len(c.rx.storage))
 		}
-		c.rxQueue = append(c.rxQueue, arena.entry(b))
+		c.rx.storage[i] = arena.entry(b)
+		c.rx.incrementReadied(1)
+		c.rx.incrementQueued(1)
 	}
 	c.tx.mu.entries.init(fifos.TxDepth)
 	for i := range c.tx.mu.entries.storage {
@@ -431,20 +431,39 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 	go func() {
 		defer c.wg.Done()
 		if err := func() error {
+			scratch := make([]FifoEntry, c.fifos.RxDepth)
 			for {
-				if len(c.rxQueue) != 0 {
-					status, sent := fifoWrite(c.fifos.Rx, c.rxQueue)
+				if batchSize := len(scratch) - int(c.rx.inFlight()); batchSize != 0 && c.rx.haveQueued() {
+					n := c.rx.getQueued(scratch[:batchSize])
+					c.rx.incrementSent(uint16(n))
+
+					status, count := fifoWrite(c.fifos.Rx, scratch[:n])
 					switch status {
 					case zx.ErrOk:
+						if n := uint32(n); count != n {
+							return fmt.Errorf("fifoWrite(RX): tx_depth invariant violation; observed=%d expected=%d", c.fifos.RxDepth-n+count, c.fifos.RxDepth)
+						}
 					default:
 						return &zx.Error{Status: status, Text: "fifoWrite(RX)"}
 					}
-					c.rxQueue = append(c.rxQueue[:0], c.rxQueue[sent:]...)
+				}
+
+				for c.rx.haveReadied() {
+					entry := c.rx.getReadied()
+
+					var emptyLinkAddress tcpip.LinkAddress
+					dispatcher.DeliverNetworkPacket(c, emptyLinkAddress, emptyLinkAddress, 0, tcpip.PacketBuffer{
+						Data: append(buffer.View(nil), c.arena.bufferFromEntry(*entry)...).ToVectorisedView(),
+					})
+
+					// This entry is going back to the driver; it can be reused.
+					entry.length = bufferSize
+					c.rx.incrementQueued(1)
 				}
 
 				for {
 					signals := zx.Signals(zx.SignalFIFOReadable | zx.SignalFIFOPeerClosed | zxsioEthSignalStatus)
-					if len(c.rxQueue) != 0 {
+					if int(c.rx.inFlight()) != len(scratch) && c.rx.haveQueued() {
 						signals |= zx.SignalFIFOWritable
 					}
 					obs, err := zxwait.Wait(c.fifos.Rx, signals, zx.TimensecInfinite)
@@ -468,17 +487,13 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 						}
 					}
 					if obs&(zx.SignalFIFOReadable) != 0 {
-						dst := c.rxQueue[len(c.rxQueue):cap(c.rxQueue)]
-						switch status, received := FifoRead(c.fifos.Rx, dst); status {
+						switch status, count := FifoRead(c.fifos.Rx, scratch); status {
 						case zx.ErrOk:
-							c.rxQueue = c.rxQueue[:uint32(len(c.rxQueue))+received]
-							for i, entry := range dst[:received] {
-								var emptyLinkAddress tcpip.LinkAddress
-								dispatcher.DeliverNetworkPacket(c, emptyLinkAddress, emptyLinkAddress, 0, tcpip.PacketBuffer{
-									Data: append(buffer.View(nil), c.arena.bufferFromEntry(entry)...).ToVectorisedView(),
-								})
-								// This entry is going back to the driver; it can be reused.
-								dst[i].length = bufferSize
+							n := c.rx.addReadied(scratch[:count])
+							c.rx.incrementReadied(uint16(n))
+
+							if n := uint32(n); count != n {
+								return fmt.Errorf("fifoRead(RX): tx_depth invariant violation; observed=%d expected=%d", c.fifos.RxDepth-n+count, c.fifos.RxDepth)
 							}
 						default:
 							return &zx.Error{Status: status, Text: "FifoRead(RX)"}
