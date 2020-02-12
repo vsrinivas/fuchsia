@@ -7,6 +7,7 @@ import filecmp
 import imp
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -66,14 +67,29 @@ class GNGenerateTest(unittest.TestCase):
         Args:
             dcmp (filecmp.dircmp): A dircmp of the directories.
         """
-        if dcmp.left_only or dcmp.right_only or dcmp.diff_files:
+        if dcmp.left_only or dcmp.right_only:
             self.fail("Generated SDK does not match golden files. " \
                 "You can run ./update_golden.py to update them.\n" \
                 "Only in {}:\n{}\n\n" \
-                "Only in {}:\n{}\n\n" \
-                "Common different files:\n{}"
-                .format(dcmp.left, dcmp.left_only, dcmp.right, dcmp.right_only,
-                    dcmp.diff_files))
+                "Only in {}:\n{}\n\n"
+                .format(dcmp.left, dcmp.left_only, dcmp.right, dcmp.right_only))
+        elif dcmp.diff_files:
+            # Show a diff of the culprit files. Need to run diff for each pair.
+            diff_result = ''
+            for file in dcmp.diff_files:
+                cmd_args = ['diff', os.path.join(dcmp.left, file),
+                    os.path.join(dcmp.right, file)]
+                pipe = subprocess.Popen(cmd_args, stdout=subprocess.PIPE)
+                out, err = pipe.communicate()
+                diff_result += "diff of '{}':\n{}\n".format(file, out)
+            self.fail("Generated SDK does not match golden files. " \
+                "You can run ./update_golden.py to update them.\n" \
+                "Left : {}\n" \
+                "Right: {}\n" \
+                "Different files: {}\n" \
+                "{}"
+                .format(dcmp.left, dcmp.right, dcmp.diff_files, diff_result))
+
         for sub_dcmp in dcmp.subdirs.values():
             self.verify_contents_recursive(sub_dcmp)
 
