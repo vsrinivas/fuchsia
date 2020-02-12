@@ -57,11 +57,6 @@ zx_status_t Vfs::GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size,
   }
   size_t aligned_len = fbl::round_up(request_size, kPageSize);
   ZX_DEBUG_ASSERT(current_size % kPageSize == 0);
-  size_t num_new_pages = (aligned_len - current_size) / kPageSize;
-  if (num_new_pages + num_allocated_pages_ > pages_limit_) {
-    *actual_size = current_size;
-    return ZX_ERR_NO_SPACE;
-  }
   zx_status_t status;
   if (!vmo.is_valid()) {
     if ((status = zx::vmo::create(aligned_len, ZX_VMO_RESIZABLE, &vmo)) != ZX_OK) {
@@ -73,19 +68,11 @@ zx_status_t Vfs::GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size,
     }
   }
   // vmo operation succeeded
-  num_allocated_pages_ += num_new_pages;
   *actual_size = aligned_len;
   return ZX_OK;
 }
 
-void Vfs::WillFreeVMO(size_t vmo_size) {
-  ZX_DEBUG_ASSERT(vmo_size % kPageSize == 0);
-  size_t freed_pages = vmo_size / kPageSize;
-  ZX_DEBUG_ASSERT(freed_pages <= num_allocated_pages_);
-  num_allocated_pages_ -= freed_pages;
-}
-
-zx_status_t Vfs::Create(const char* name, size_t pages_limit, std::unique_ptr<memfs::Vfs>* out_vfs,
+zx_status_t Vfs::Create(const char* name, std::unique_ptr<memfs::Vfs>* out_vfs,
                         fbl::RefPtr<VnodeDir>* out_root) {
   uint64_t id;
   zx_status_t status = CreateID(&id);
@@ -93,7 +80,7 @@ zx_status_t Vfs::Create(const char* name, size_t pages_limit, std::unique_ptr<me
     return status;
   }
 
-  auto fs = std::unique_ptr<memfs::Vfs>(new memfs::Vfs(id, pages_limit, name));
+  auto fs = std::unique_ptr<memfs::Vfs>(new memfs::Vfs(id, name));
   fbl::RefPtr<VnodeDir> root = fbl::AdoptRef(new VnodeDir(fs.get()));
   std::unique_ptr<Dnode> dn = Dnode::Create(name, root);
   root->dnode_ = dn.get();
@@ -104,8 +91,7 @@ zx_status_t Vfs::Create(const char* name, size_t pages_limit, std::unique_ptr<me
   return ZX_OK;
 }
 
-Vfs::Vfs(uint64_t id, size_t pages_limit, const char* name)
-    : fs::ManagedVfs(), fs_id_(id), pages_limit_(pages_limit) {}
+Vfs::Vfs(uint64_t id, const char* name) : fs::ManagedVfs(), fs_id_(id) {}
 
 Vfs::~Vfs() = default;
 

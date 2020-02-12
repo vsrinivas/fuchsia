@@ -12,7 +12,7 @@
 namespace netemul {
 
 VirtualData::VirtualData() {
-  auto status = memfs::Vfs::Create("<virtual-fs>", UINT64_MAX, &vfs_, &dir_);
+  auto status = memfs::Vfs::Create("<virtual-fs>", &vfs_, &dir_);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Can't create virtual file system: " << zx_status_get_string(status);
   }

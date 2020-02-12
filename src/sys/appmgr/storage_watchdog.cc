@@ -105,13 +105,10 @@ size_t StorageWatchdog::GetStorageUsage() {
   }
 
   fuchsia_io_FilesystemInfo info;
-  zx_status_t status;
   fdio_cpp::FdioCaller caller(std::move(fd));
-  zx_status_t io_status =
-      fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info);
-  if (io_status != ZX_OK || status != ZX_OK) {
-    FXL_LOG(WARNING) << "storage_watchdog: cannot query filesystem: " << io_status << " OR "
-                     << status;
+  zx_status_t status = GetFilesystemInfo(caller.borrow_channel(), &info);
+  if (status != ZX_OK) {
+    FXL_LOG(WARNING) << "storage_watchdog: cannot query filesystem: " << status;
     return 0;
   }
   info.name[fuchsia_io_MAX_FS_NAME_BUFFER - 1] = '\0';
@@ -166,4 +163,11 @@ void StorageWatchdog::PurgeCache() {
   size_t use_percentage = this->GetStorageUsage();
   FXL_LOG(INFO) << "cache purge is complete, new storage usage is at " << use_percentage
                 << "%% capacity";
+}
+
+zx_status_t StorageWatchdog::GetFilesystemInfo(zx_handle_t directory,
+                                               fuchsia_io_FilesystemInfo* out_info) {
+  zx_status_t status = ZX_OK;
+  zx_status_t io_status = fuchsia_io_DirectoryAdminQueryFilesystem(directory, &status, out_info);
+  return io_status != ZX_OK ? io_status : status;
 }

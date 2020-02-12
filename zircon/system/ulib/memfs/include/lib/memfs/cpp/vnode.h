@@ -179,7 +179,7 @@ class VnodeVmo final : public VnodeMemfs {
 
 class Vfs : public fs::ManagedVfs {
  public:
-  static zx_status_t Create(const char* fs_name, size_t pages_limit, std::unique_ptr<Vfs>* out_vfs,
+  static zx_status_t Create(const char* fs_name, std::unique_ptr<Vfs>* out_vfs,
                             fbl::RefPtr<VnodeDir>* out_root);
 
   ~Vfs();
@@ -189,10 +189,6 @@ class Vfs : public fs::ManagedVfs {
   // number of allocated pages in this Vfs.
   zx_status_t CreateFromVmo(VnodeDir* parent, fbl::StringPiece name, zx_handle_t vmo, zx_off_t off,
                             zx_off_t len);
-
-  size_t PagesLimit() const { return pages_limit_; }
-
-  size_t NumAllocatedPages() const { return num_allocated_pages_; }
 
   uint64_t GetFsId() const { return fs_id_; }
 
@@ -204,22 +200,10 @@ class Vfs : public fs::ManagedVfs {
   // ran out of memory, an error is returned.
   zx_status_t GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size, size_t* actual_size);
 
-  // VnodeFile must call this function in the destructor to signal that its VMO will be freed.
-  // |vmo_size| is the size of the owned vmo in bytes. It should be a multiple of page size.
-  void WillFreeVMO(size_t vmo_size);
-
  private:
-  // Creates a Vfs with the maximum |pages_limit| number of pages.
-  explicit Vfs(uint64_t id, size_t pages_limit, const char* name);
+  explicit Vfs(uint64_t id, const char* name);
 
   uint64_t fs_id_ = 0;
-
-  // Maximum number of pages available; fixed at Vfs creation time.
-  // Puts a bound on maximum memory usage.
-  const size_t pages_limit_ = UINT64_MAX;
-
-  // Number of pages currently in use by VnodeFiles.
-  size_t num_allocated_pages_ = 0;
 
   // Since no directory contains the root, it is owned by the VFS object.
   std::unique_ptr<Dnode> root_;

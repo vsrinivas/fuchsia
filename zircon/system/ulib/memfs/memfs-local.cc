@@ -31,17 +31,6 @@ struct memfs_filesystem {
 
 zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher, memfs_filesystem_t** out_fs,
                                     zx_handle_t* out_root) {
-  uint64_t physmem_size = zx_system_get_physmem();
-  ZX_DEBUG_ASSERT(physmem_size % PAGE_SIZE == 0);
-  size_t page_limit = physmem_size / PAGE_SIZE;
-
-  return memfs_create_filesystem_with_page_limit(dispatcher, page_limit, out_fs, out_root);
-}
-
-zx_status_t memfs_create_filesystem_with_page_limit(async_dispatcher_t* dispatcher,
-                                                    size_t max_num_pages,
-                                                    memfs_filesystem_t** out_fs,
-                                                    zx_handle_t* out_root) {
   ZX_DEBUG_ASSERT(dispatcher != nullptr);
   ZX_DEBUG_ASSERT(out_fs != nullptr);
   ZX_DEBUG_ASSERT(out_root != nullptr);
@@ -54,7 +43,7 @@ zx_status_t memfs_create_filesystem_with_page_limit(async_dispatcher_t* dispatch
 
   std::unique_ptr<memfs::Vfs> vfs;
   fbl::RefPtr<memfs::VnodeDir> root;
-  if ((status = memfs::Vfs::Create("<tmp>", max_num_pages, &vfs, &root)) != ZX_OK) {
+  if ((status = memfs::Vfs::Create("<tmp>", &vfs, &root)) != ZX_OK) {
     return status;
   }
   vfs->SetDispatcher(dispatcher);
@@ -69,15 +58,6 @@ zx_status_t memfs_create_filesystem_with_page_limit(async_dispatcher_t* dispatch
 }
 
 zx_status_t memfs_install_at(async_dispatcher_t* dispatcher, const char* path) {
-  uint64_t physmem_size = zx_system_get_physmem();
-  ZX_DEBUG_ASSERT(physmem_size % PAGE_SIZE == 0);
-  size_t page_limit = physmem_size / PAGE_SIZE;
-
-  return memfs_install_at_with_page_limit(dispatcher, page_limit, path);
-}
-
-zx_status_t memfs_install_at_with_page_limit(async_dispatcher_t* dispatcher, size_t max_num_pages,
-                                             const char* path) {
   fdio_ns_t* ns;
   zx_status_t status = fdio_ns_get_installed(&ns);
   if (status != ZX_OK) {
@@ -86,7 +66,7 @@ zx_status_t memfs_install_at_with_page_limit(async_dispatcher_t* dispatcher, siz
 
   memfs_filesystem_t* fs;
   zx_handle_t root;
-  status = memfs_create_filesystem_with_page_limit(dispatcher, max_num_pages, &fs, &root);
+  status = memfs_create_filesystem(dispatcher, &fs, &root);
   if (status != ZX_OK) {
     return status;
   }

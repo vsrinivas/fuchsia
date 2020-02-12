@@ -55,13 +55,15 @@ zx_status_t VnodeDir::QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* info
   info->max_filename_size = kDnodeNameMax;
   info->fs_type = VFS_TYPE_MEMFS;
   info->fs_id = vfs()->GetFsId();
-  size_t total_bytes = 0;
-  if (mul_overflow(vfs()->PagesLimit(), kMemfsBlksize, &total_bytes)) {
-    info->total_bytes = UINT64_MAX;
-  } else {
-    info->total_bytes = total_bytes;
-  }
-  info->used_bytes = vfs()->NumAllocatedPages() * kMemfsBlksize;
+  // There's no sensible value to use for the total_bytes for memfs. Fuchsia overcommits memory,
+  // which means you can have a memfs that stores more total bytes than the device has physical
+  // memory. You can actually commit more total_bytes than the device has physical memory because
+  // of zero-page deduplication.
+  info->total_bytes = UINT64_MAX;
+  // It's also very difficult to come up with a sensible value for used_bytes because memfs vends
+  // writable duplicates of its underlying VMOs to its client. The client can manipulate the VMOs
+  // in arbitrarily difficult ways to account for their memory usage.
+  info->used_bytes = 0;
   info->total_nodes = UINT64_MAX;
   uint64_t deleted_ino_count = GetDeletedInoCounter();
   uint64_t ino_count = GetInoCounter();

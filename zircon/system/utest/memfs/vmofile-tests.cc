@@ -41,7 +41,7 @@ bool test_vmofile_basic() {
 
   std::unique_ptr<memfs::Vfs> vfs;
   fbl::RefPtr<memfs::VnodeDir> root;
-  ASSERT_EQ(memfs::Vfs::Create("<tmp>", 1000, &vfs, &root), ZX_OK);
+  ASSERT_EQ(memfs::Vfs::Create("<tmp>", &vfs, &root), ZX_OK);
   vfs->SetDispatcher(dispatcher);
 
   zx::vmo backing_vmo;

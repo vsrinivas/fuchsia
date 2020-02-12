@@ -1,5 +1,3 @@
 memfs_create_filesystem
-memfs_create_filesystem_with_page_limit
 memfs_free_filesystem
 memfs_install_at
-memfs_install_at_with_page_limit

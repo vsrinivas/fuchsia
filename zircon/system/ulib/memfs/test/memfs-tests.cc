@@ -13,13 +13,13 @@ namespace {
 TEST(MemfsTest, DirectoryLifetime) {
   std::unique_ptr<Vfs> vfs;
   fbl::RefPtr<VnodeDir> root;
-  ASSERT_OK(Vfs::Create("<tmp>", 10, &vfs, &root));
+  ASSERT_OK(Vfs::Create("<tmp>", &vfs, &root));
 }
 
 TEST(MemfsTest, CreateFile) {
   std::unique_ptr<Vfs> vfs;
   fbl::RefPtr<VnodeDir> root;
-  ASSERT_OK(Vfs::Create("<tmp>", 1024, &vfs, &root));
+  ASSERT_OK(Vfs::Create("<tmp>", &vfs, &root));
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_OK(root->Create(&file, "foobar", S_IFREG));
   auto directory = static_cast<fbl::RefPtr<fs::Vnode>>(root);
@@ -38,7 +38,7 @@ TEST(MemfsTest, CreateFile) {
 TEST(MemfsTest, UpdateTimeLargeFile) {
   std::unique_ptr<Vfs> vfs;
   fbl::RefPtr<VnodeDir> root;
-  ASSERT_OK(Vfs::Create("<tmp>", UINT64_MAX, &vfs, &root));
+  ASSERT_OK(Vfs::Create("<tmp>", &vfs, &root));
   fbl::RefPtr<fs::Vnode> file;
   ASSERT_OK(root->Create(&file, "foobar", S_IFREG));
 
@@ -66,7 +66,7 @@ TEST(MemfsTest, UpdateTimeLargeFile) {
 TEST(MemfsTest, SubdirectoryUpdateTime) {
   std::unique_ptr<Vfs> vfs;
   fbl::RefPtr<VnodeDir> root;
-  ASSERT_OK(Vfs::Create("<tmp>", UINT64_MAX, &vfs, &root));
+  ASSERT_OK(Vfs::Create("<tmp>", &vfs, &root));
   fbl::RefPtr<fs::Vnode> index;
   ASSERT_OK(root->Create(&index, "index", S_IFREG));
   fbl::RefPtr<fs::Vnode> subdirectory;

@@ -22,14 +22,16 @@
 #define TMPDATA "abcdefghijklmnopqrstuvwxyz1234567890"
 #define TMPDATA_SIZE 36
 
+namespace {
+
 class StorageWatchdogTest : public ::testing::Test {
  public:
   StorageWatchdogTest() : loop_(async::Loop(&kAsyncLoopConfigAttachToCurrentThread)) {}
 
   void SetUp() override {
     testing::Test::SetUp();
-    ASSERT_EQ(ZX_OK, memfs_create_filesystem_with_page_limit(loop_.dispatcher(), 5, &memfs_handle_,
-                                                             &memfs_root_handle_));
+    ASSERT_EQ(ZX_OK,
+              memfs_create_filesystem(loop_.dispatcher(), &memfs_handle_, &memfs_root_handle_));
     ASSERT_EQ(ZX_OK, fdio_ns_get_installed(&ns_));
     ASSERT_EQ(ZX_OK, fdio_ns_bind(ns_, "/hippo_storage", memfs_root_handle_));
 
@@ -52,23 +54,39 @@ class StorageWatchdogTest : public ::testing::Test {
   fdio_ns_t* ns_;
 };
 
+class TestStorageWatchdog : public StorageWatchdog {
+ public:
+  TestStorageWatchdog(std::string path_to_watch, std::string path_to_clean)
+      : StorageWatchdog(path_to_watch, path_to_clean) {}
+
+  zx_status_t GetFilesystemInfo(zx_handle_t directory, fuchsia_io_FilesystemInfo* out_info) {
+    if (directory == ZX_HANDLE_INVALID) {
+      return ZX_ERR_BAD_HANDLE;
+    }
+    *out_info = info;
+    return ZX_OK;
+  }
+
+  fuchsia_io_FilesystemInfo info = {};
+};
+
 TEST_F(StorageWatchdogTest, Basic) {
   // Create directories on memfs
   files::CreateDirectory(EXAMPLE_PATH);
   files::CreateDirectory(EXAMPLE_TEST_PATH);
 
-  StorageWatchdog watchdog = StorageWatchdog("/hippo_storage", "/hippo_storage/cache");
+  TestStorageWatchdog watchdog = TestStorageWatchdog("/hippo_storage", "/hippo_storage/cache");
+  watchdog.info.used_bytes = 0;
+  watchdog.info.total_bytes = 20 * 1024;
   EXPECT_TRUE(95 > watchdog.GetStorageUsage());
 
-  // Write to those directories until writes fail
-  int counter = 0;
-  while (true) {
-    auto filename = std::to_string(counter++);
-    if (!files::WriteFile(files::JoinPath(EXAMPLE_PATH, filename), TMPDATA, TMPDATA_SIZE))
-      break;
-    if (!files::WriteFile(files::JoinPath(EXAMPLE_TEST_PATH, filename), TMPDATA, TMPDATA_SIZE))
-      break;
+  for (size_t i = 0; i < 10; ++i) {
+    auto filename = std::to_string(i);
+    ASSERT_TRUE(files::WriteFile(files::JoinPath(EXAMPLE_PATH, filename), TMPDATA, TMPDATA_SIZE));
+    ASSERT_TRUE(files::WriteFile(files::JoinPath(EXAMPLE_TEST_PATH, filename), TMPDATA, TMPDATA_SIZE));
   }
+
+  watchdog.info.used_bytes = watchdog.info.total_bytes - 128;
 
   // Confirm that storage pressure is high, clear the cache, check that things
   // were actually deleted
@@ -85,3 +103,5 @@ TEST_F(StorageWatchdogTest, Basic) {
   EXPECT_EQ(1ul, example_test_files.size());
   EXPECT_TRUE(example_test_files.at(0).compare(".") == 0);
 }
+
+}  // namespace

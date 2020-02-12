@@ -5,7 +5,9 @@
 #ifndef SRC_SYS_APPMGR_STORAGE_WATCHDOG_H_
 #define SRC_SYS_APPMGR_STORAGE_WATCHDOG_H_
 
+#include <fuchsia/io/c/fidl.h>
 #include <lib/async/dispatcher.h>
+#include <lib/zx/channel.h>
 
 #include <string>
 
@@ -21,6 +23,9 @@ class StorageWatchdog {
   size_t GetStorageUsage();
   void CheckStorage(async_dispatcher_t* dispatcher);
   void PurgeCache();
+
+ protected:
+  virtual zx_status_t GetFilesystemInfo(zx_handle_t directory, fuchsia_io_FilesystemInfo* out_info);
 
  private:
   std::string path_to_watch_;

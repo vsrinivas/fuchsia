@@ -25,7 +25,7 @@ namespace bootsvc {
 zx_status_t BootfsService::Create(async_dispatcher_t* dispatcher, fbl::RefPtr<BootfsService>* out) {
   auto svc = fbl::AdoptRef(new BootfsService());
 
-  zx_status_t status = memfs::Vfs::Create("<root>", UINT64_MAX, &svc->vfs_, &svc->root_);
+  zx_status_t status = memfs::Vfs::Create("<root>", &svc->vfs_, &svc->root_);
   if (status != ZX_OK) {
     return status;
   }

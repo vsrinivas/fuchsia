@@ -158,11 +158,7 @@ zx_status_t FsManager::SetupOutgoingDirectory(zx::channel dir_request,
 }
 
 zx_status_t FsManager::Initialize() {
-  uint64_t physmem_size = zx_system_get_physmem();
-  ZX_DEBUG_ASSERT(physmem_size % PAGE_SIZE == 0);
-  size_t page_limit = physmem_size / PAGE_SIZE;
-
-  zx_status_t status = memfs::Vfs::Create("<root>", page_limit, &root_vfs_, &global_root_);
+  zx_status_t status = memfs::Vfs::Create("<root>", &root_vfs_, &global_root_);
   if (status != ZX_OK) {
     return status;
   }

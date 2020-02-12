@@ -8,10 +8,10 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/memfs/memfs.h>
 #include <limits.h>
 #include <sys/stat.h>
@@ -136,59 +136,10 @@ bool TestFidlQueryFilesystem() {
     fio::FilesystemInfo info;
     ASSERT_TRUE(QueryInfo("/fidltmp-basic", &info));
 
-    // Query number of blocks
-    uint64_t physmem_size = zx_system_get_physmem();
-    ASSERT_EQ(info.total_bytes, physmem_size);
+    // These values are nonsense, but they're the nonsense we expect memfs to generate.
+    ASSERT_EQ(info.total_bytes, UINT64_MAX);
     ASSERT_EQ(info.used_bytes, 0);
 
-    loop.Shutdown();
-  }
-
-  // Query disk pressure in a page-limited scenario
-  {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-    ASSERT_EQ(loop.StartThread(), ZX_OK);
-
-    size_t max_num_pages = 3;
-    ASSERT_EQ(
-        memfs_install_at_with_page_limit(loop.dispatcher(), max_num_pages, "/fidltmp-limited"),
-        ZX_OK);
-    fbl::unique_fd fd(open("/fidltmp-limited", O_DIRECTORY | O_RDONLY));
-    ASSERT_GE(fd.get(), 0);
-
-    fio::FilesystemInfo info;
-    ASSERT_TRUE(QueryInfo("/fidltmp-limited", &info));
-
-    // When space is limited, total_bytes must be a multiple of block_size
-    ASSERT_EQ(info.total_bytes % info.block_size, 0);
-
-    // Query number of blocks
-    ASSERT_EQ(info.total_bytes, 3 * info.block_size);
-    ASSERT_EQ(info.used_bytes, 0);
-
-    // Create a file with a size smaller than ZX_PAGE_SIZE
-    DIR* d = fdopendir(fd.release());
-    const char* filename = "file-a";
-    fd.reset(openat(dirfd(d), filename, O_CREAT | O_RDWR));
-    ASSERT_GE(fd.get(), 0);
-    const char* data = "hello";
-    ssize_t datalen = strlen(data);
-    ASSERT_EQ(write(fd.get(), data, datalen), datalen);
-
-    // Query should now indicate an entire page is used
-    ASSERT_TRUE(QueryInfo("/fidltmp-limited", &info));
-    ASSERT_EQ(info.used_bytes, 1 * info.block_size);
-
-    // Unlink and close the file
-    ASSERT_EQ(unlinkat(dirfd(d), filename, 0), 0);
-    ASSERT_EQ(close(fd.get()), 0);
-    fd.reset();
-
-    // Query should now indicate 0 bytes used
-    ASSERT_TRUE(QueryInfo("/fidltmp-limited", &info));
-    ASSERT_EQ(info.used_bytes, 0);
-
-    closedir(d);
     loop.Shutdown();
   }
 

@@ -27,7 +27,7 @@ constexpr size_t kMemfsMaxFileSize = 512 * 1024 * 1024;
 
 VnodeFile::VnodeFile(Vfs* vfs) : VnodeMemfs(vfs), vmo_size_(0), length_(0) {}
 
-VnodeFile::~VnodeFile() { vfs()->WillFreeVMO(vmo_size_); }
+VnodeFile::~VnodeFile() = default;
 
 fs::VnodeProtocolSet VnodeFile::GetProtocols() const { return fs::VnodeProtocol::kFile; }
 

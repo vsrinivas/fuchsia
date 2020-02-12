@@ -88,88 +88,6 @@ bool TestMemfsBasic() {
   END_TEST;
 }
 
-bool TestMemfsLimitPages() {
-  BEGIN_TEST;
-
-  constexpr ssize_t kPageSize = static_cast<ssize_t>(PAGE_SIZE);
-  fbl::Vector<ssize_t> page_limits = {1, 2, 5, 50};
-  for (const auto& page_limit : page_limits) {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-    ASSERT_EQ(loop.StartThread(), ZX_OK);
-
-    // Create a memfs filesystem, acquire a file descriptor
-    memfs_filesystem_t* vfs;
-    zx_handle_t root;
-    ASSERT_EQ(memfs_create_filesystem_with_page_limit(loop.dispatcher(),
-                                                      static_cast<size_t>(page_limit), &vfs, &root),
-              ZX_OK);
-    int raw_root_fd = -1;
-    ASSERT_EQ(fdio_fd_create(root, &raw_root_fd), ZX_OK);
-    fbl::unique_fd root_fd(raw_root_fd);
-
-    // Access files within the filesystem.
-    DIR* d = fdopendir(root_fd.get());
-
-    // Create a file
-    const char* filename = "file-a";
-    fbl::unique_fd fd = fbl::unique_fd(openat(dirfd(d), filename, O_CREAT | O_RDWR));
-    ASSERT_GE(fd.get(), 0);
-
-    auto data = std::unique_ptr<uint8_t[]>(new uint8_t[page_limit * kPageSize + 1]);
-    auto data_back = std::unique_ptr<uint8_t[]>(new uint8_t[page_limit * kPageSize + 1]);
-    for (ssize_t i = 0; i < page_limit * kPageSize + 1; i++) {
-      data[i] = static_cast<uint8_t>(i % 100);
-      data_back[i] = 0;
-    }
-
-    // 1. Write some data which is exactly kPageSize * page_limit bytes long
-    ASSERT_EQ(write(fd.get(), &data[0], kPageSize * page_limit), kPageSize * page_limit);
-    ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0);
-    ASSERT_EQ(read(fd.get(), &data_back[0], kPageSize * page_limit), kPageSize * page_limit);
-    ASSERT_EQ(memcmp(&data[0], &data_back[0], kPageSize * page_limit), 0);
-
-    // 2. Try to write to a second file. This should fail since the first file has already
-    // taken up all the available pages.
-    const char* filename_another = "file-b";
-    int fd_another = openat(dirfd(d), filename_another, O_CREAT | O_RDWR);
-    ASSERT_GE(fd_another, 0);
-    ASSERT_EQ(write(fd_another, &data[0], 1), -1);
-    ASSERT_EQ(errno, ENOSPC);
-    ASSERT_EQ(unlinkat(dirfd(d), filename_another, 0), 0);
-    ASSERT_EQ(close(fd_another), 0);
-
-    // 3. Overwriting the file should succeed because it does not result in extra allocations.
-    ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0);
-    ASSERT_EQ(write(fd.get(), &data[0], kPageSize * page_limit), kPageSize * page_limit);
-
-    // 4. Write some data which is exactly (kPageSize * page_limit + 1) bytes long.
-    // This should fail.
-    ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0);
-    errno = 0;
-    ASSERT_EQ(write(fd.get(), &data[0], kPageSize * page_limit + 1), -1);
-    ASSERT_EQ(errno, ENOSPC);
-
-    // 5. Write kPageSize * page_limit data then unlink&close&open the file, repeat a few times.
-    for (size_t i = 0; i < 3; i++) {
-      ASSERT_EQ(lseek(fd.get(), 0, SEEK_SET), 0);
-      errno = 0;
-      ASSERT_EQ(write(fd.get(), &data[0], kPageSize * page_limit), kPageSize * page_limit);
-      ASSERT_EQ(errno, 0);
-      ASSERT_EQ(unlinkat(dirfd(d), "file-a", 0), 0);
-      fd = fbl::unique_fd(openat(dirfd(d), filename, O_CREAT | O_RDWR));
-      ASSERT_GE(fd.get(), 0);
-    }
-
-    // Teardown
-    ASSERT_EQ(closedir(d), 0);
-    sync_completion_t unmounted;
-    memfs_free_filesystem(vfs, &unmounted);
-    ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
-  }
-
-  END_TEST;
-}
-
 bool TestMemfsInstall() {
   BEGIN_TEST;
 
@@ -360,7 +278,6 @@ bool TestMemfsDetachLinkedFilesystem() {
 BEGIN_TEST_CASE(memfs_tests)
 RUN_TEST(TestMemfsNull)
 RUN_TEST(TestMemfsBasic)
-RUN_TEST(TestMemfsLimitPages)
 RUN_TEST(TestMemfsInstall)
 RUN_TEST(TestMemfsCloseDuringAccess)
 RUN_TEST(TestMemfsOverflow)
