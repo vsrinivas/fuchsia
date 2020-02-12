@@ -8,11 +8,25 @@ using fuchsia.tee as tee;
 using fuchsia.tee.manager as manager;
 
 /// Protocol used by the TEE Manager to proxy requests for TEE access to the driver.
-[Layout = "Simple"]
 protocol DeviceConnector {
     /// Requests service from the TEE driver while the caller provides a client end to a
     /// Provider server that supports the driver on any RPCs.
     ///
     /// The sole caller of this should be the TEE Manager.
+    [Transitional]
     ConnectTee(manager.Provider? service_provider, request<tee.Device> tee_request);
+
+    /// Requests a `DeviceInfo` connection to the TEE driver to enumerate device info.
+    ///
+    /// The sole caller of this should be the TEE Manager.
+    [Transitional]
+    ConnectToDeviceInfo(request<tee.DeviceInfo> device_info_request);
+
+    /// Requests an `Application` connection from the TEE driver while the caller provides a client
+    /// channel end to a `Provider` server that supports the driver on any RPCs.
+    ///
+    /// The sole caller of this should be the TEE Manager.
+    [Transitional]
+    ConnectToApplication(tee.Uuid application_uuid, manager.Provider? service_provider,
+                         request<tee.Application> application_request);
 };

@@ -102,13 +102,44 @@ table OpResult {
     3: ParameterSet parameter_set;
 };
 
+// TODO(44664): Remove this protocol once transition is complete.
 [Discoverable]
 protocol Device {
-    /// Obtain information about the TEE OS
+    /// Obtains information about the TEE OS
     GetOsInfo() -> (OsInfo info);
 
     /// Initiates a communication session with the specified trusted application.
     OpenSession(Uuid trusted_app, ParameterSet parameter_set)
+        -> (uint32 session_id, OpResult op_result);
+
+    /// Requests the trusted application perform the provided command. The command is unique to the
+    /// trusted application.
+    InvokeCommand(uint32 session_id, uint32 command_id, ParameterSet parameter_set)
+        -> (OpResult op_result);
+
+    /// Closes an established session.
+    CloseSession(uint32 session_id) -> ();
+};
+
+/// Provides information about the TEE device.
+protocol DeviceInfo {
+    /// Obtains information about the TEE OS.
+    GetOsInfo() -> (OsInfo info);
+};
+
+/// Represents a connection to an application running in the TEE.
+protocol Application {
+    // TODO(44664): Remove this function once transition is complete. Used for source-compatibility.
+    [Transitional, Deprecated]
+    GetOsInfo() -> (OsInfo info);
+
+    // TODO(44664): Remove this function once transition is complete. Used for source-compatibility.
+    [Transitional, Deprecated]
+    OpenSession(Uuid trusted_app, ParameterSet parameter_set)
+        -> (uint32 session_id, OpResult op_result);
+
+    /// Initiates a communication session with the trusted application.
+    OpenSession2(ParameterSet parameter_set)
         -> (uint32 session_id, OpResult op_result);
 
     /// Requests the trusted application perform the provided command. The command is unique to the
