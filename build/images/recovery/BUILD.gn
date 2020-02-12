@@ -38,6 +38,9 @@ recovery_packages = [
 
 assemble_system("recovery") {
   base_packages = recovery_packages
+  # We avoid compressing blobs in the blobfs image so that they can be more
+  # effectively compressed by the ZBI compressor that is tuned to zstd max.
+  compress_blobs = false
   netboot = true
   devmgr_config = [ "virtcon.disable=true" ] + zedboot_devmgr_config
   cmdline = [ "netsvc.disable=false" ] + zedboot_cmdline_args +

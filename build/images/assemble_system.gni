@@ -45,10 +45,13 @@ import("//build/images/shell_commands.gni")
 #     pkgfs.
 #
 #   cmdline (optional)
-#       [list of strings] Kernel command line text.
+#     [list of strings] Kernel command line text.
 #
 #   cmdline_inputs (optional)
-#       [list of files] Input files treated as kernel command line text.
+#     [list of files] Input files treated as kernel command line text.
+#
+#   compress_blobs (default: true)
+#     [boolean] Whether the blobs added to the blobfs image should be compressed.
 template("assemble_system") {
   base_packages = invoker.base_packages
   cache_packages = []
@@ -66,6 +69,11 @@ template("assemble_system") {
   netboot = false
   if (defined(invoker.netboot)) {
     netboot = invoker.netboot
+  }
+
+  compress_blobs = true
+  if (defined(invoker.compress_blobs)) {
+    compress_blobs = invoker.compress_blobs
   }
 
   devmgr_config = []
@@ -222,7 +230,11 @@ template("assemble_system") {
       "--depfile",
       "--sizes",
       rebase_path(blob_size_list, root_build_dir),
-      "--compress",
+    ]
+    if (compress_blobs) {
+      args += [ "--compress" ]
+    }
+    args += [
       rebase_path(blob_image_path, root_build_dir),
       "create",
       "--manifest",
