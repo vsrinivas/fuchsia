@@ -358,7 +358,7 @@ zx_status_t GptDevice::FinalizeAndSync(bool persist) {
     mbr[0x1fe] = 0x55;
     mbr[0x1ff] = 0xaa;
 
-    mbr_partition_t part;
+    mbr_partition_t part = {};
     part.chs_first[1] = 0x1;
     part.type = 0xee;  // gpt protective mbr
     part.chs_last[0] = 0xfe;
