@@ -2093,6 +2093,7 @@ group("images") {
     ":record_filesystem_sizes",
     ":root_component_index_metadata",
     ":zedboot-script",
+    "//build/images/recovery",
     "//build/images/zedboot",
   ]
   if (enable_netboot) {

@@ -56,10 +56,26 @@ template("assemble_system") {
     devmgr_config = invoker.devmgr_config
   }
 
-  group("base_packages") {
+  shell_commands("shell-commands") {
     testonly = true
     visibility = [ ":*" ]
     deps = base_packages
+  }
+
+  config_package("config-data") {
+    testonly = true
+    visibility = [ ":*" ]
+    deps = base_packages
+  }
+
+  group("base_packages") {
+    testonly = true
+    visibility = [ ":*" ]
+    deps = base_packages + [
+      ":config-data",
+      ":shell-commands",
+      pkgfs_package_label,
+    ]
   }
 
   meta_far_merkle_index = "$target_out_dir/meta_far_merkle_index"
