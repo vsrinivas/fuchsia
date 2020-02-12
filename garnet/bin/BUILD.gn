@@ -5,7 +5,6 @@
 group("bin") {
   testonly = true
   deps = [
-    "battery_manager",
     "catapult_converter",
     "chrealm",
     "cpuperf",

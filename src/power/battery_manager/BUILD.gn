@@ -56,3 +56,11 @@ test_package("battery_manager_tests") {
     },
   ]
 }
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":battery_manager_tests",
+    "//src/power/battery_manager/tests:battery_manager_gotests",
+  ]
+}

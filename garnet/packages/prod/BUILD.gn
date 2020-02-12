@@ -100,7 +100,6 @@ group("all") {
   public_deps = [
     ":drivers",
     "//garnet/packages/prod:atheros",
-    "//garnet/packages/prod:battery_manager",
     "//garnet/packages/prod:bluetooth_a2dp",
     "//garnet/packages/prod:bluetooth_all",
     "//garnet/packages/prod:bluetooth_atheros",
@@ -155,6 +154,7 @@ group("all") {
     "//src/connectivity/wlan:tools",
     "//src/developer/memory/mem",
     "//src/fonts",
+    "//src/power:battery",
     "//src/ui/a11y:a11y",
   ]
 }
@@ -287,11 +287,6 @@ group("bluetooth_profiles") {
     "//garnet/packages/prod:bluetooth_avrcp",
     "//garnet/packages/prod:bluetooth_hid",
   ]
-}
-
-group("battery_manager") {
-  testonly = true
-  public_deps = [ "//garnet/bin/battery_manager:battery_manager" ]
 }
 
 group("network_time") {

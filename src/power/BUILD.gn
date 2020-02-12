@@ -1,0 +1,16 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("power") {
+  deps = [ ":battery" ]
+}
+
+group("battery") {
+  deps = [ "battery_manager" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "battery_manager:tests" ]
+}
