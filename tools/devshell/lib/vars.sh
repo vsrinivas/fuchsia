@@ -190,7 +190,7 @@ function get-fuchsia-device-addr {
           exit 1
         fi
         echo "${output}" ;;
-     *) "${finder}" resolve --netboot --ipv4=false --mdns=false "$@" "$device" ;;
+     *) "${finder}" resolve --device-limit 1 --netboot --ipv4=false --mdns=false "$@" "$device" ;;
   esac
 }
 
