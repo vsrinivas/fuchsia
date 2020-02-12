@@ -43,7 +43,7 @@ void RunSingleBufferTest() {
       fprintf(stderr, "Skipping because received ZX_ERR_NOT_SUPPORTED\n");
       return;
     }
-    EXPECT_OK(status);
+    ASSERT_OK(status);
     zx_handle_t buffer_handle = fb_get_single_buffer();
     EXPECT_NE(ZX_HANDLE_INVALID, buffer_handle);
 
