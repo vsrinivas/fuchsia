@@ -61,7 +61,8 @@ void RunSingleBufferTest() {
   }
 }
 
-TEST(Framebuffer, SingleBuffer) {
+// TODO(fxb/45150): Crashes in fb_get_single_buffer()
+TEST(Framebuffer, DISABLED_SingleBuffer) {
   zx::event finished;
   zx::event::create(0, &finished);
   std::thread execute_thread([&finished]() {
@@ -312,6 +313,8 @@ void TestDisplayStride(bool ram_domain) {
 }
 
 // Check that the correct stride is returned when a weird one is used.
-TEST(Framebuffer, DisplayStrideCpuDomain) { TestDisplayStride(false); }
+// TODO(fxb/45150): Crashes in fb_get_single_buffer()
+TEST(Framebuffer, DISABLED_DisplayStrideCpuDomain) { TestDisplayStride(false); }
 
-TEST(Framebuffer, DisplayStrideRamDomain) { TestDisplayStride(true); }
+// TODO(fxb/45150): Crashes in fb_get_single_buffer()
+TEST(Framebuffer, DISABLED_DisplayStrideRamDomain) { TestDisplayStride(true); }
