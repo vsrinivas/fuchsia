@@ -8,6 +8,8 @@ source_set("attachment_providers") {
     "inspect_ptr.h",
     "kernel_log_ptr.cc",
     "kernel_log_ptr.h",
+    "previous_system_log_ptr.cc",
+    "previous_system_log_ptr.h",
     "screenshot_ptr.cc",
     "screenshot_ptr.h",
     "system_log_ptr.cc",

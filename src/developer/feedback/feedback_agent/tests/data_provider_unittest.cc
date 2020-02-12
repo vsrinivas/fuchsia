@@ -89,10 +89,8 @@ const std::set<std::string> kDefaultAnnotations = {
 };
 
 const std::set<std::string> kDefaultAttachments = {
-    kAttachmentBuildSnapshot,
-    kAttachmentInspect,
-    kAttachmentLogKernel,
-    kAttachmentLogSystem,
+    kAttachmentBuildSnapshot,     kAttachmentInspect,   kAttachmentLogKernel,
+    kAttachmentLogSystemPrevious, kAttachmentLogSystem,
 };
 const std::map<std::string, std::string> kBoardInfoValues = {
     {kAnnotationHardwareBoardName, "board-name"},
@@ -255,6 +253,10 @@ class DataProviderTest : public UnitTestFixture {
             {},
         }))));
     InjectServiceProvider(inspect_archive_.get());
+  }
+
+  void SetUpPreviousSystemLog(const std::string& content) {
+    ASSERT_TRUE(files::WriteFile(kPreviousLogsFilePath, content.c_str(), content.size()));
   }
 
   void SetUpLogger(const std::vector<fuchsia::logger::LogMessage>& messages) {
@@ -623,6 +625,21 @@ TEST_F(DataProviderTest, GetData_SysLog) {
   UnpackAttachmentBundle(data, &unpacked_attachments);
   EXPECT_THAT(unpacked_attachments,
               testing::Contains(MatchesAttachment(kAttachmentLogSystem, expected_syslog)));
+}
+
+TEST_F(DataProviderTest, GetData_PreviousSysLog) {
+  std::string previous_log_contents("LAST SYSTEM LOG");
+  SetUpPreviousSystemLog(previous_log_contents);
+
+  fit::result<Data, zx_status_t> result = GetData();
+  ASSERT_TRUE(result.is_ok());
+
+  const Data& data = result.value();
+  // There should be a "log.system.previous_boot.txt" attachment present in the attachment bundle.
+  std::vector<Attachment> unpacked_attachments;
+  UnpackAttachmentBundle(data, &unpacked_attachments);
+  EXPECT_THAT(unpacked_attachments, testing::Contains(MatchesAttachment(
+                                        kAttachmentLogSystemPrevious, previous_log_contents)));
 }
 
 TEST_F(DataProviderTest, GetData_Channel) {

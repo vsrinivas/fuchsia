@@ -15,6 +15,7 @@
 
 #include "src/developer/feedback/feedback_agent/attachments/inspect_ptr.h"
 #include "src/developer/feedback/feedback_agent/attachments/kernel_log_ptr.h"
+#include "src/developer/feedback/feedback_agent/attachments/previous_system_log_ptr.h"
 #include "src/developer/feedback/feedback_agent/attachments/system_log_ptr.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/utils/archive.h"
@@ -50,6 +51,8 @@ fit::promise<fuchsia::mem::Buffer> BuildValue(const std::string& key,
     return VmoFromFilename("/config/build-info/snapshot");
   } else if (key == kAttachmentLogKernel) {
     return CollectKernelLog(dispatcher, services, timeout, cobalt);
+  } else if (key == kAttachmentLogSystemPrevious) {
+    return CollectPreviousSystemLog();
   } else if (key == kAttachmentLogSystem) {
     return CollectSystemLog(dispatcher, services, timeout, cobalt);
   } else if (key == kAttachmentInspect) {

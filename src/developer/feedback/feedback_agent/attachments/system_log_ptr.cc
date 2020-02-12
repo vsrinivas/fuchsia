@@ -27,8 +27,7 @@ namespace feedback {
 
 fit::promise<fuchsia::mem::Buffer> CollectSystemLog(async_dispatcher_t* dispatcher,
                                                     std::shared_ptr<sys::ServiceDirectory> services,
-                                                    zx::duration timeout,
-                                                    Cobalt* cobalt) {
+                                                    zx::duration timeout, Cobalt* cobalt) {
   std::unique_ptr<LogListener> log_listener =
       std::make_unique<LogListener>(dispatcher, services, cobalt);
 
@@ -56,8 +55,7 @@ fit::promise<fuchsia::mem::Buffer> CollectSystemLog(async_dispatcher_t* dispatch
 }
 
 LogListener::LogListener(async_dispatcher_t* dispatcher,
-                         std::shared_ptr<sys::ServiceDirectory> services,
-                         Cobalt* cobalt)
+                         std::shared_ptr<sys::ServiceDirectory> services, Cobalt* cobalt)
     : dispatcher_(dispatcher), services_(services), cobalt_(cobalt), binding_(this) {}
 
 fit::promise<void> LogListener::CollectLogs(zx::duration timeout) {

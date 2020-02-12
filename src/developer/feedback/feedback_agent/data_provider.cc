@@ -20,7 +20,6 @@
 #include "src/developer/feedback/feedback_agent/attachments/screenshot_ptr.h"
 #include "src/developer/feedback/feedback_agent/config.h"
 #include "src/developer/feedback/feedback_agent/image_conversion.h"
-#include "src/lib/files/file.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
