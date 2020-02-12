@@ -15,6 +15,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -108,8 +109,7 @@ zx_status_t Blob::InitMerkleTreeVerifier(std::unique_ptr<MerkleTreeVerifier>* ve
 
     fs::Ticker ticker(blobfs_->Metrics().Collecting());
     fs::ReadTxn txn(blobfs_);
-    AllocatedExtentIterator extent_iter(blobfs_->GetNodeFinder(), GetMapIndex());
-    BlockIterator block_iter(&extent_iter);
+    BlockIterator block_iter = blobfs_->BlockIteratorByNodeIndex(GetMapIndex());
     const uint64_t data_start = DataStartBlock(blobfs_->Info());
     status = StreamBlocks(&block_iter, merkle_blocks,
                           [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
@@ -299,8 +299,7 @@ zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
       fbl::MakeAutoCall([this, &compressed_vmoid]() { blobfs_->DetachVmo(compressed_vmoid); });
 
   const uint64_t kDataStart = DataStartBlock(blobfs_->Info());
-  AllocatedExtentIterator extent_iter(blobfs_->GetNodeFinder(), GetMapIndex());
-  BlockIterator block_iter(&extent_iter);
+  BlockIterator block_iter = blobfs_->BlockIteratorByNodeIndex(GetMapIndex());
 
   // Read the uncompressed merkle tree into the start of the blob's VMO.
   status = StreamBlocks(&block_iter, merkle_blocks,
@@ -364,8 +363,7 @@ zx_status_t Blob::InitUncompressed() {
                  inode_.block_count);
   fs::Ticker ticker(blobfs_->Metrics().Collecting());
   fs::ReadTxn txn(blobfs_);
-  AllocatedExtentIterator extent_iter(blobfs_->GetNodeFinder(), GetMapIndex());
-  BlockIterator block_iter(&extent_iter);
+  BlockIterator block_iter = blobfs_->BlockIteratorByNodeIndex(GetMapIndex());
   // Read both the uncompressed merkle tree and data.
   const uint64_t blob_data_blocks = BlobDataBlocks(inode_);
   const uint64_t merkle_blocks = MerkleTreeBlocks(inode_);
@@ -658,8 +656,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
 
     // Since the merkle tree and data are co-allocated, use a block iterator
     // to parse their data in order.
-    VectorExtentIterator extent_iter(write_info_->extents);
-    BlockIterator block_iter(&extent_iter);
+    BlockIterator block_iter(std::make_unique<VectorExtentIterator>(write_info_->extents));
 
     fs::Duration generation_time;
     std::vector<fit::promise<void, zx_status_t>> promises;

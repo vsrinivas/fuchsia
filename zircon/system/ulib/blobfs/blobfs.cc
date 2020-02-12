@@ -21,6 +21,7 @@
 #include <zircon/syscalls.h>
 
 #include <limits>
+#include <memory>
 #include <utility>
 
 #include <blobfs/fsck.h>
@@ -657,6 +658,10 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
   return ZX_OK;
 }
 
+BlockIterator Blobfs::BlockIteratorByNodeIndex(uint32_t node_index) {
+  return BlockIterator(std::make_unique<AllocatedExtentIterator>(GetAllocator(), node_index));
+}
+
 void Blobfs::Sync(SyncCallback closure) {
   if (journal_ == nullptr) {
     return closure(ZX_OK);
@@ -809,8 +814,7 @@ zx_status_t Blobfs::AttachTransferVmo(const zx::vmo& transfer_vmo) {
 zx_status_t Blobfs::PopulateTransferVmo(uint64_t offset, uint64_t length, UserPagerInfo* info) {
   fs::Ticker ticker(Metrics().Collecting());
   fs::ReadTxn txn(this);
-  AllocatedExtentIterator extent_iter(GetAllocator(), info->identifier);
-  BlockIterator block_iter(&extent_iter);
+  BlockIterator block_iter = BlockIteratorByNodeIndex(info->identifier);
 
   auto start_block = static_cast<uint32_t>((offset + info->data_start_bytes) / kBlobfsBlockSize);
   auto block_count =

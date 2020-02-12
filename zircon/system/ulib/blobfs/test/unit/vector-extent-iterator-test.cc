@@ -96,8 +96,7 @@ TEST(VectorExtentIteratorTest, BlockIterator) {
   ASSERT_OK(allocator->ReserveBlocks(kAllocatedExtents, &extents));
   ASSERT_EQ(kAllocatedExtents, extents.size());
 
-  VectorExtentIterator vector_iter(extents);
-  BlockIterator iter(&vector_iter);
+  BlockIterator iter(std::make_unique<VectorExtentIterator>(extents));
   ASSERT_EQ(0, iter.BlockIndex());
   ASSERT_FALSE(iter.Done());
 
@@ -131,22 +130,19 @@ TEST(VectorExtentIteratorTest, BlockIteratorRandomStart) {
   ASSERT_EQ(kAllocatedExtents, extents.size());
 
   for (int i = 0; i < 20; i++) {
-    VectorExtentIterator vector_iter(extents);
-    BlockIterator iter(&vector_iter);
+    BlockIterator iter(std::make_unique<VectorExtentIterator>(extents));
 
     uint32_t block_index = static_cast<uint32_t>(rand() % kAllocatedExtents);
     ASSERT_OK(IterateToBlock(&iter, block_index));
     ASSERT_EQ(block_index, iter.BlockIndex());
   }
 
-  VectorExtentIterator vector_iter(extents);
-  BlockIterator iter(&vector_iter);
+  BlockIterator iter(std::make_unique<VectorExtentIterator>(extents));
   ASSERT_EQ(IterateToBlock(&iter, kAllocatedExtents + 10), ZX_ERR_INVALID_ARGS);
 }
 
 void ValidateStreamBlocks(fbl::Vector<ReservedExtent> extents, uint32_t block_count) {
-  VectorExtentIterator vector_iter(extents);
-  BlockIterator block_iter(&vector_iter);
+  BlockIterator iter(std::make_unique<VectorExtentIterator>(extents));
 
   size_t stream_blocks = 0;
   size_t stream_index = 0;
@@ -160,8 +156,8 @@ void ValidateStreamBlocks(fbl::Vector<ReservedExtent> extents, uint32_t block_co
     return ZX_OK;
   };
 
-  ASSERT_OK(StreamBlocks(&block_iter, block_count, stream_callback));
-  ASSERT_TRUE(block_iter.Done());
+  ASSERT_OK(StreamBlocks(&iter, block_count, stream_callback));
+  ASSERT_TRUE(iter.Done());
 }
 
 // Test streaming blocks from a fragmented iterator.
@@ -215,8 +211,7 @@ TEST(VectorExtentIteratorTest, StreamBlocksInvalidLength) {
   ASSERT_OK(allocator->ReserveBlocks(kAllocatedBlocks, &extents));
   ASSERT_EQ(kAllocatedExtents, extents.size());
 
-  VectorExtentIterator vector_iter(extents);
-  BlockIterator block_iter(&vector_iter);
+  BlockIterator iter(std::make_unique<VectorExtentIterator>(extents));
 
   size_t stream_blocks = 0;
   size_t stream_index = 0;
@@ -233,9 +228,8 @@ TEST(VectorExtentIteratorTest, StreamBlocksInvalidLength) {
   // If we request more blocks than we allocated, streaming will fail.
   //
   // Up to the point of failure, however, we should still see only valid extents.
-  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY,
-            StreamBlocks(&block_iter, kAllocatedBlocks + 10, stream_callback));
-  ASSERT_TRUE(block_iter.Done());
+  ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, StreamBlocks(&iter, kAllocatedBlocks + 10, stream_callback));
+  ASSERT_TRUE(iter.Done());
 }
 
 }  // namespace

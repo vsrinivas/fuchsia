@@ -250,8 +250,7 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorFragmented) {
   ASSERT_TRUE(inode->header.IsAllocated());
   ASSERT_EQ(kAllocatedExtents, inode->extent_count);
 
-  AllocatedExtentIterator allocated_iter(allocator.get(), node_index);
-  BlockIterator iter(&allocated_iter);
+  BlockIterator iter(std::make_unique<AllocatedExtentIterator>(allocator.get(), node_index));
   ASSERT_EQ(0, iter.BlockIndex());
   ASSERT_FALSE(iter.Done());
 
@@ -300,8 +299,7 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
 
   // Try asking for all the blocks.
   {
-    AllocatedExtentIterator allocated_iter(allocator.get(), node_index);
-    BlockIterator iter(&allocated_iter);
+    BlockIterator iter(std::make_unique<AllocatedExtentIterator>(allocator.get(), node_index));
     ASSERT_EQ(0, iter.BlockIndex());
     ASSERT_FALSE(iter.Done());
     uint32_t actual_length;
@@ -314,8 +312,7 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
 
   // Try asking for some of the blocks (in a linearly increasing size).
   {
-    AllocatedExtentIterator allocated_iter(allocator.get(), node_index);
-    BlockIterator iter(&allocated_iter);
+    BlockIterator iter(std::make_unique<AllocatedExtentIterator>(allocator.get(), node_index));
     ASSERT_EQ(0, iter.BlockIndex());
     ASSERT_FALSE(iter.Done());
 

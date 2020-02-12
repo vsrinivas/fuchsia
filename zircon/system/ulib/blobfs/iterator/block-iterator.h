@@ -9,10 +9,13 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include <blobfs/format.h>
 #include <fbl/function.h>
 #include <fs/trace.h>
 
+#include "allocated-extent-iterator.h"
 #include "extent-iterator.h"
 
 namespace blobfs {
@@ -21,7 +24,7 @@ namespace blobfs {
 // than extent-order.
 class BlockIterator {
  public:
-  BlockIterator(ExtentIterator* iterator);
+  BlockIterator(std::unique_ptr<ExtentIterator> iterator);
   DISALLOW_COPY_ASSIGN_AND_MOVE(BlockIterator);
 
   // Returns true if there are no more blocks to be consumed.
@@ -38,7 +41,7 @@ class BlockIterator {
   zx_status_t Next(uint32_t length, uint32_t* out_length, uint64_t* out_start);
 
  private:
-  ExtentIterator* iterator_;
+  std::unique_ptr<ExtentIterator> iterator_;
   // The latest extent pulled off of the iterator.
   const Extent* extent_ = nullptr;
   // The number of blocks left within the current extent.

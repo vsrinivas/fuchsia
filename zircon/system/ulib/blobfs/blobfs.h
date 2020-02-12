@@ -47,6 +47,8 @@
 #include "blob-cache.h"
 #include "directory.h"
 #include "iterator/allocated-extent-iterator.h"
+#include "iterator/block-iterator-provider.h"
+#include "iterator/block-iterator.h"
 #include "iterator/extent-iterator.h"
 #include "metrics.h"
 #include "pager/user-pager.h"
@@ -61,7 +63,7 @@ using storage::UnbufferedOperationsBuilder;
 
 constexpr char kOutgoingDataRoot[] = "root";
 
-class Blobfs : public TransactionManager, public UserPager {
+class Blobfs : public TransactionManager, public UserPager, public BlockIteratorProvider {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
 
@@ -118,6 +120,13 @@ class Blobfs : public TransactionManager, public UserPager {
   size_t WritebackCapacity() const final;
   fs::Journal* journal() final;
   Writability writability() const { return writability_; }
+
+  ////////////////
+  // BlockIteratorProvider interface.
+  //
+  // Allows clients to acquire a block iterator for a given node index.
+
+  BlockIterator BlockIteratorByNodeIndex(uint32_t node_index) final;
 
   ////////////////
   // Other methods.

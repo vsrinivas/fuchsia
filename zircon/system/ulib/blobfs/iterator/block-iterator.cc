@@ -13,7 +13,8 @@
 
 namespace blobfs {
 
-BlockIterator::BlockIterator(ExtentIterator* iterator) : iterator_(iterator) {}
+BlockIterator::BlockIterator(std::unique_ptr<ExtentIterator> iterator)
+    : iterator_(std::move(iterator)) {}
 
 bool BlockIterator::Done() const { return blocks_left_ == 0 && iterator_->Done(); }
 
