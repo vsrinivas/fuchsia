@@ -1945,7 +1945,6 @@ pm_publish("publish") {
 group("updates") {
   testonly = true
   deps = [
-    ":ids.txt",
     ":package_lists",
     ":publish",
     ":root_component_index_metadata",
@@ -2065,7 +2064,6 @@ action("ids.txt") {
     ]
   }
 }
-default_image_deps += [ ":ids.txt" ]
 
 group("bootserver") {
   deps = [ "//zircon/public/tool/bootserver($host_toolchain)" ]
