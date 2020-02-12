@@ -25,7 +25,7 @@ set_up_ssh() {
 # Sets up a device-finder mock. The implemented mock aims to produce minimal
 # output that parses correctly but is otherwise uninteresting.
 set_up_device_finder() {
-  cat >"${BT_TEMP_DIR}/scripts/sdk/gn/base/sdk/tools/device-finder.mock_side_effects" <<"SETVAR"
+  cat >"${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/device-finder.mock_side_effects" <<"SETVAR"
 while (("$#")); do
   case "$1" in
   --local)
@@ -156,7 +156,7 @@ TEST_fserve_starts_package_server() {
   # Run command.
   BT_EXPECT run_bash_script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve.sh"
 
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/sdk/tools/pm.mock_state"
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/pm.mock_state"
 
   BT_EXPECT_EQ 6 ${#BT_MOCK_ARGS[@]}
   check_mock_has_args serve
@@ -164,7 +164,7 @@ TEST_fserve_starts_package_server() {
   check_mock_has_args -l :8083
 
   # Verify that pm was only run once.
-  BT_EXPECT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/scripts/sdk/gn/base/sdk/tools/pm.mock_state.1"
+  BT_EXPECT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/pm.mock_state.1"
 }
 
 # Verifies that the package server has been correctly registered with the
@@ -196,17 +196,17 @@ BT_FILE_DEPS=(
 )
 BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/bin/gsutil
-  scripts/sdk/gn/base/sdk/tools/device-finder
-  scripts/sdk/gn/base/sdk/tools/pm
+  scripts/sdk/gn/base/tools/device-finder
+  scripts/sdk/gn/base/tools/pm
   ssh
 )
 
 BT_INIT_TEMP_DIR() {
-  mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/base/sdk/meta"
+  mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/base/meta"
 
   # Create a stub SDK manifest.
   cp "${BT_DEPS_ROOT}/scripts/sdk/gn/testdata/meta/manifest.json" \
-    "${BT_TEMP_DIR}/scripts/sdk/gn/base/sdk/meta/manifest.json"
+    "${BT_TEMP_DIR}/scripts/sdk/gn/base/meta/manifest.json"
 }
 
 BT_RUN_TESTS "$@"
