@@ -72,7 +72,7 @@ where
 {
     switchboard_handle: SwitchboardHandle,
     _listen_session: Box<dyn ListenSession + Send + Sync>,
-    hanging_get: Option<ST>,
+    pending_responders: Vec<ST>,
     data_type: PhantomData<T>,
     setting_type: SettingType,
     controller: HangingGetController<T>,
@@ -125,7 +125,7 @@ where
                     }),
                 )
                 .expect("started listening successfully"),
-            hanging_get: None,
+            pending_responders: Vec::new(),
             data_type: PhantomData,
             setting_type: setting_type,
             controller: HangingGetController::new(),
@@ -174,14 +174,10 @@ where
     ) {
         self.controller.set_change_function(change_function);
 
-        if let None = self.hanging_get {
-            self.hanging_get = Some(responder);
-            if self.controller.on_watch() {
-                let response = self.get_response().await.expect("got current value");
-                self.send_if_needed(response).await;
-            }
-        } else {
-            panic!("Inconsistent state; watcher already registered");
+        self.pending_responders.push(responder);
+        if self.controller.on_watch() {
+            let response = self.get_response().await.expect("got current value");
+            self.send_if_needed(response).await;
         }
     }
 
@@ -195,12 +191,10 @@ where
 
     /// Called when receiving a notification that value has changed.
     async fn send_if_needed(&mut self, response: SettingResponse) {
-        let mut responder_swap = None;
-        std::mem::swap(&mut self.hanging_get, &mut responder_swap);
-
-        if let Some(responder) = responder_swap {
-            responder.send_response(T::from(response.clone()));
-            self.hanging_get = None;
+        if !self.pending_responders.is_empty() {
+            while let Some(responder) = self.pending_responders.pop() {
+                responder.send_response(T::from(response.clone()));
+            }
             self.controller.on_send(T::from(response));
         }
     }
