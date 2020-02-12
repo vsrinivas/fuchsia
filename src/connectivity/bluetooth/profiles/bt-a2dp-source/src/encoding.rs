@@ -7,8 +7,10 @@ use bitfield::bitfield;
 use bt_a2dp::media_types as a2dp;
 use bt_avdtp as avdtp;
 use fidl_fuchsia_media::{
-    AudioFormat, AudioUncompressedFormat, DomainFormat, EncoderSettings, PcmFormat, SbcAllocation,
-    SbcBlockCount, SbcChannelMode, SbcEncoderSettings, SbcSubBands,
+    AacAudioObjectType, AacBitRate, AacChannelMode, AacConstantBitRate, AacEncoderSettings,
+    AacTransport, AacTransportLatm, AacVariableBitRate, AudioFormat, AudioUncompressedFormat,
+    DomainFormat, EncoderSettings, PcmFormat, SbcAllocation, SbcBlockCount, SbcChannelMode,
+    SbcEncoderSettings, SbcSubBands,
 };
 use fuchsia_audio_codec::{StreamProcessor, StreamProcessorOutputStream};
 use futures::{
@@ -158,6 +160,37 @@ impl EncodedStream {
                     block_count,
                     channel_mode,
                     bit_pool: codec_info.maxbitpoolval() as u64,
+                })
+            }
+            avdtp::ServiceCapability::MediaCodec {
+                media_type: avdtp::MediaType::Audio,
+                codec_type: avdtp::MediaCodecType::AUDIO_AAC,
+                codec_extra,
+            } => {
+                let codec_info = a2dp::AACMediaCodecInfo::try_from(&codec_extra[..])?;
+                let bit_rate = match a2dp::AACVariableBitRate::from_bits_truncate(codec_info.vbr())
+                {
+                    a2dp::AACVariableBitRate::VBR_SUPPORTED => {
+                        // TODO(39321) Select VBR quality based on peak bitrate in codec info
+                        AacBitRate::Variable(AacVariableBitRate::V3)
+                    }
+                    _ => {
+                        AacBitRate::Constant(AacConstantBitRate { bit_rate: codec_info.bitrate() })
+                    }
+                };
+
+                let channel_mode =
+                    match a2dp::AACChannels::from_bits_truncate(codec_info.channels()) {
+                        a2dp::AACChannels::ONE => AacChannelMode::Mono,
+                        a2dp::AACChannels::TWO => AacChannelMode::Stereo,
+                        _ => return Err(format_err!("out of range")),
+                    };
+
+                EncoderSettings::Aac(AacEncoderSettings {
+                    transport: AacTransport::Latm(AacTransportLatm { mux_config_present: true }),
+                    channel_mode,
+                    bit_rate,
+                    aot: AacAudioObjectType::Mpeg2AacLc,
                 })
             }
             _ => return Err(format_err!("Unsupported codec {:?}", codec_settings)),
@@ -335,7 +368,7 @@ mod tests {
     const TIMEOUT: zx::Duration = zx::Duration::from_millis(5000);
 
     #[test]
-    fn test_encodes_correctly() {
+    fn test_sbc_encodes_correctly() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
 
         let pcm_format = PcmFormat {
@@ -349,7 +382,7 @@ mod tests {
             codec_type: avdtp::MediaCodecType::AUDIO_SBC,
             codec_extra: vec![0x11, 0x15, 2, 53],
         };
-        // Mayve just replace this with future::repeat(0)
+        // Maybe just replace this with future::repeat(0)
         let silence_source = SilenceStream::build(pcm_format.clone());
         let mut encoder = EncodedStream::build(
             pcm_format,
@@ -366,6 +399,45 @@ mod tests {
         match exec.run_singlethreaded(&mut next_frame_fut) {
             Some(Ok(enc_frame)) => {
                 // TODO(45775) validate encoder settings match what we specified in sbc_settings
+                assert!(!enc_frame.is_empty());
+            }
+            Some(Err(e)) => panic!("Uexpected error encoding: {}", e),
+            None => panic!("Encoder finished without a frame"),
+        }
+    }
+
+    #[test]
+    fn test_aac_encodes_correctly() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+
+        let pcm_format = PcmFormat {
+            pcm_mode: AudioPcmMode::Linear,
+            bits_per_sample: 16,
+            frames_per_second: 48000,
+            channel_map: vec![AudioChannelId::Lf, AudioChannelId::Rf],
+        };
+        let aac_settings = avdtp::ServiceCapability::MediaCodec {
+            media_type: avdtp::MediaType::Audio,
+            codec_type: avdtp::MediaCodecType::AUDIO_AAC,
+            codec_extra: vec![128, 1, 4, 4, 226, 0],
+        };
+        // Maybe just replace this with future::repeat(0)
+        let silence_source = SilenceStream::build(pcm_format.clone());
+        let mut encoder = EncodedStream::build(
+            pcm_format,
+            &aac_settings,
+            silence_source.boxed(),
+            /*pcm_frames_per_packet=*/ 1024,
+            /*encoded_frames_per_packet=*/ 1,
+        )
+        .expect("building Stream works");
+        let mut next_frame_fut = encoder
+            .next()
+            .on_timeout(fasync::Time::after(TIMEOUT), || panic!("Encoder took too long"));
+
+        match exec.run_singlethreaded(&mut next_frame_fut) {
+            Some(Ok(enc_frame)) => {
+                // TODO(45775) validate encoder settings match what we specified in aac_settings
                 assert!(!enc_frame.is_empty());
             }
             Some(Err(e)) => panic!("Uexpected error encoding: {}", e),

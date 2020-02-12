@@ -250,10 +250,10 @@ bitfield! {
     pub struct AACMediaCodecInfo(u64);
     impl Debug;
     u8;
-    u32, bitrate, set_bitrate: 22, 0;
-    vbr, set_vbr: 23, 23;
+    pub u32, bitrate, set_bitrate: 22, 0;
+    pub vbr, set_vbr: 23, 23;
     // Bits 24-25 RFA.
-    channels, set_channels: 27,26;
+    pub channels, set_channels: 27,26;
     pub u16, sampling_frequency, set_sampling_frequency: 39, 28;
     object_type, set_object_type: 47, 40;
     // Bits 48-63 Unused.
