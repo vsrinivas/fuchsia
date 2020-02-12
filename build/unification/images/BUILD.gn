@@ -623,7 +623,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.logger-test",
 #------------------
 #------------------
-    ":test.sys.mock-mmio-reg-test",
 #------------------
 #------------------
     ":test.sys.mt8167s_ref-test",
@@ -1240,7 +1239,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.logger-test",
 #------------------
 #------------------
-    ":test.sys.mock-mmio-reg-test",
 #------------------
 #------------------
     ":test.sys.mt8167s_ref-test",
@@ -3144,7 +3142,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/utest/miscsvc:miscsvc-manifest",
     "//zircon/system/ulib/mock-function/test:mock-function-test-manifest",
 #------------------
-    #":test.sys.mock-mmio-reg-test",
+    "//zircon/system/dev/lib/mock-mmio-reg/test:mock-mmio-reg-manifest",
 #------------------
     "//src/devices/clock/drivers/msm8x53-clk:msm8x53-clk-test-manifest",
     "//src/devices/power/drivers/msm8x53-power:msm8x53-power-test-manifest",
@@ -3847,7 +3845,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/utest/miscsvc:miscsvc-manifest",
     "//zircon/system/ulib/mock-function/test:mock-function-test-manifest",
 #------------------
-    #":test.sys.mock-mmio-reg-test",
+    "//zircon/system/dev/lib/mock-mmio-reg/test:mock-mmio-reg-manifest",
 #------------------
     "//src/devices/clock/drivers/msm8x53-clk:msm8x53-clk-test-manifest",
     "//src/devices/power/drivers/msm8x53-power:msm8x53-power-test-manifest",

@@ -63,7 +63,6 @@ if (current_cpu != "") {
       "$zx/system/dev/lib/fake-mmio-reg/test",
 #------------------
 #------------------
-      "$zx/system/dev/lib/mock-mmio-reg/test",
 #------------------
 #------------------
       "$zx/system/ulib/abs_clock/test",
