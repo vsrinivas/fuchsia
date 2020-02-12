@@ -33,6 +33,7 @@ struct Options {
   long payload_size_bytes = 0;
   long count = 3;
   long timeout_msec = 1000;
+  uint32_t scope_id = 0;
   const char* host = nullptr;
   long min_payload_size_bytes = 0;
 
@@ -46,6 +47,7 @@ struct Options {
     printf("Payload size: %ld bytes, ", payload_size_bytes);
     printf("Interval: %ld ms, ", interval_msec);
     printf("Timeout: %ld ms, ", timeout_msec);
+    printf("Scope ID: %u, ", scope_id);
     if (host != nullptr) {
       printf("Destination: %s\n", host);
     }
@@ -91,6 +93,7 @@ struct Options {
     fprintf(stderr, "\t-c count: Only send count packets (default = 3)\n");
     fprintf(stderr, "\t-i interval(ms): Time interval between pings (default = 1000)\n");
     fprintf(stderr, "\t-t timeout(ms): Timeout waiting for ping response (default = 1000)\n");
+    fprintf(stderr, "\t-I scope_id: IPv6 address scope ID (default = 0)\n");
     fprintf(stderr, "\t-s size(bytes): Number of payload bytes (default = %ld, max 1400)\n",
             payload_size_bytes);
     fprintf(stderr, "\t-h: View this help message\n\n");
@@ -99,7 +102,7 @@ struct Options {
 
   int ParseCommandLine(int argc, char** argv) {
     int opt;
-    while ((opt = getopt(argc, argv, "s:c:i:t:h")) != -1) {
+    while ((opt = getopt(argc, argv, "s:c:i:t:I:h")) != -1) {
       char* endptr = nullptr;
       switch (opt) {
         case 'h':
@@ -129,6 +132,13 @@ struct Options {
           timeout_msec = strtol(optarg, &endptr, 10);
           if (*endptr != '\0') {
             fprintf(stderr, "-t must be followed by a non-negative integer\n");
+            return Usage();
+          }
+          break;
+        case 'I':
+          scope_id = static_cast<uint32_t>(strtoul(optarg, &endptr, 10));
+          if (*endptr != '\0') {
+            fprintf(stderr, "-I must be followed by a non-negative integer\n");
             return Usage();
           }
           break;
@@ -266,6 +276,7 @@ int main(int argc, char** argv) {
       type = ICMP6_ECHO_REQUEST;
       char buf[INET6_ADDRSTRLEN];
       auto addr = reinterpret_cast<struct sockaddr_in6*>(info->ai_addr);
+      addr->sin6_scope_id = options.scope_id;
       printf("PING6 %s (%s)\n", options.host,
              inet_ntop(info->ai_family, &addr->sin6_addr, buf, sizeof(buf)));
       break;
