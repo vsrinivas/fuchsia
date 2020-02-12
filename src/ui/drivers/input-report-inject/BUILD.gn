@@ -1,0 +1,40 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+driver_module("driver") {
+  output_name = "input-report-inject"
+  sources = [
+    "fake-input-report.cc",
+    "input-report-inject-instance.cc",
+    "input-report-inject.cc",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.input.inject:fuchsia.input.inject_llcpp",
+    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
+    "//src/devices/lib/driver",
+    "//src/ui/lib/hid-input-report",
+    "//src/ui/lib/input-report-instance-driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+  ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+package("input-report-inject") {
+  deprecated_system_image = true
+
+  deps = [ ":driver" ]
+
+  drivers = [
+    {
+      name = "input-report-inject.so"
+    },
+  ]
+}

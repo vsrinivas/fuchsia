@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "test/input-report-inject-test"
+    },
+    "sandbox": {
+        "dev": [
+            "test/InputReportInject",
+            "input-report"
+        ],
+        "services": [
+            "fuchsia.example.InputInjectDevmgr",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

@@ -1,0 +1,17 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.input.inject;
+
+using fuchsia.input.report;
+using zx;
+
+protocol FakeInputReportDevice {
+    /// Create a device with the given device descriptor.
+    /// Must be called before calling `SendInputReports`.
+    MakeDevice(fuchsia.input.report.DeviceDescriptor descriptor) -> () error zx.status;
+
+    /// Sends input-reports to the device.
+    SendInputReports(vector<fuchsia.input.report.InputReport>:fuchsia.input.report.MAX_DEVICE_REPORT_COUNT reports) -> () error zx.status;
+};

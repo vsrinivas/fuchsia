@@ -1,0 +1,22 @@
+{
+    "program": {
+        "args": [
+            "--svc_name=fuchsia.input.InputInjectDevmgr",
+            "--add_namespace=/pkg",
+            "--load_driver=/pkg/data/input-report-inject.so",
+            "--wait_for=misc/InputReportInject"
+        ],
+        "binary": "bin/isolated_devmgr"
+    },
+    "sandbox": {
+        "boot": [
+            "bin",
+            "lib"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher",
+            "fuchsia.exception.Handler"
+        ]
+    }
+}
