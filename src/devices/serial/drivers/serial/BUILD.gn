@@ -21,6 +21,7 @@ source_set("common") {
   defines = [ "_ALL_SOURCE" ]
   sources = [ "serial.cc" ]
   public_deps = [
+    "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -28,7 +29,6 @@ source_set("common") {
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.serial",
     "//zircon/system/fidl/fuchsia-hardware-serial:c",
     "//zircon/system/fidl/fuchsia-hardware-serial:llcpp",
   ]

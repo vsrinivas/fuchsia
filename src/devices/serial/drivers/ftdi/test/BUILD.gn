@@ -40,6 +40,7 @@ source_set("common") {
     "../ftdi-mpsse.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl",
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_llcpp",
     "//zircon/public/lib/ddk",
@@ -48,7 +49,6 @@ source_set("common") {
     "//zircon/public/lib/usb",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.i2cimpl",
-    "//zircon/system/banjo/ddk.protocol.serial",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/banjo/ddk.protocol.usb.request",

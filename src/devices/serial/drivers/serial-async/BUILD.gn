@@ -23,6 +23,7 @@ source_set("common") {
     "serial.h",
   ]
   public_deps = [
+    "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl.async",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
@@ -35,7 +36,6 @@ source_set("common") {
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.serial",
     "//zircon/system/fidl/fuchsia-hardware-serial:llcpp",
   ]
 }

@@ -27,6 +27,7 @@ source_set("driver") {
   include_dirs = [ "//src/connectivity/ppp" ]
 
   public_deps = [
+    "//sdk/banjo/ddk.protocol.serial",
     "//sdk/fidl/fuchsia.net.ppp:fuchsia.net.ppp_llcpp",
     "//src/connectivity/ppp/lib/common",
     "//src/connectivity/ppp/lib/hdlc:frame",
@@ -43,7 +44,6 @@ source_set("driver") {
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fidl-llcpp",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.serial",
   ]
 }
 

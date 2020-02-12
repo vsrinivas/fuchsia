@@ -13,6 +13,7 @@ driver_module("usb-cdc-acm") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-cdc-acm.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -21,7 +22,6 @@ driver_module("usb-cdc-acm") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.serial",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/fidl/fuchsia-hardware-serial:c",

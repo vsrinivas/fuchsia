@@ -49,6 +49,7 @@ driver_module("astro") {
     "astro.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.serial",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
@@ -69,7 +70,6 @@ driver_module("astro") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.scpi",
-    "//zircon/system/banjo/ddk.protocol.serial",
     "//zircon/system/fidl/fuchsia-hardware-serial:c",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
     "//zircon/system/fidl/fuchsia-sysmem:c",

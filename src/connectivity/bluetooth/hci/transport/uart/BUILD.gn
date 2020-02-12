@@ -14,11 +14,11 @@ driver_module("bt-transport-uart") {
   sources = [ "bt-transport-uart.c" ]
   deps = [
     "//sdk/banjo/ddk.protocol.bt.hci",
+    "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl.async",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
-    "//zircon/system/banjo/ddk.protocol.serial",
     "//zircon/system/fidl/fuchsia-hardware-serial:c",
   ]
 }

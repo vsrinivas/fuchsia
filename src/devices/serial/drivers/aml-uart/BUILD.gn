@@ -14,6 +14,7 @@ driver_module("aml-uart") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "aml-uart.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl.async",
     "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
@@ -31,7 +32,6 @@ driver_module("aml-uart") {
     "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/banjo/ddk.protocol.serial",
   ]
 }
 
