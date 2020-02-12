@@ -39,6 +39,14 @@
     {
       "meta": "pkg/vulkan_layers/meta.json",
       "type": "loadable_module"
+    },
+    {
+      "meta": "dart/fuchsia/meta.json",
+      "type": "dart_library"
+    },
+    {
+      "meta": "device/generic-arm64.json",
+      "type": "device_profile"
     }
   ],
   "schema_version": "1"

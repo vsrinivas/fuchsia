@@ -1,0 +1,8 @@
+{
+    "docs": [
+        "README.md",
+        ".gitignore"
+    ],
+    "name": "readme",
+    "type": "documentation"
+}

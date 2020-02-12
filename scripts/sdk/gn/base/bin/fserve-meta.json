@@ -1,0 +1,10 @@
+{
+    "files": [
+        "bin/fserve.sh",
+        "bin/fuchsia-common.sh"
+    ],
+    "name": "fserve",
+    "root": "bin",
+    "target_files": {},
+    "type": "host_tool"
+}

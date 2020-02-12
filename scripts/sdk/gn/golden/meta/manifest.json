@@ -9,8 +9,40 @@
   "id": "8890373976687374912",
   "parts": [
     {
+      "meta": "bin/fpave-meta.json",
+      "type": "host_tool"
+    },
+    {
+      "meta": "bin/fpublish-meta.json",
+      "type": "host_tool"
+    },
+    {
+      "meta": "bin/fserve-meta.json",
+      "type": "host_tool"
+    },
+    {
+      "meta": "bin/fssh-meta.json",
+      "type": "host_tool"
+    },
+    {
+      "meta": "build/gn-build-files-meta.json",
+      "type": "documentation"
+    },
+    {
+      "meta": "build/gn-rules-meta.json",
+      "type": "documentation"
+    },
+    {
       "meta": "docs/test_docs.json",
       "type": "documentation"
+    },
+    {
+      "meta": "fidl/fuchsia.process/meta.json",
+      "type": "fidl_library"
+    },
+    {
+      "meta": "pkg/media_cpp/meta.json",
+      "type": "cc_source_library"
     },
     {
       "meta": "pkg/svc/meta.json",
@@ -21,12 +53,12 @@
       "type": "cc_prebuilt_library"
     },
     {
-      "meta": "pkg/media_cpp/meta.json",
-      "type": "cc_source_library"
+      "meta": "pkg/vulkan_layers/meta.json",
+      "type": "loadable_module"
     },
     {
-      "meta": "fidl/fuchsia.process/meta.json",
-      "type": "fidl_library"
+      "meta": "readme-meta.json",
+      "type": "documentation"
     },
     {
       "meta": "tools/fidlc-meta.json",
@@ -35,10 +67,6 @@
     {
       "meta": "tools/gen_snapshot-meta.json",
       "type": "host_tool"
-    },
-    {
-      "meta": "pkg/vulkan_layers/meta.json",
-      "type": "loadable_module"
     }
   ],
   "schema_version": "1"

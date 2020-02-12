@@ -1,0 +1,23 @@
+{
+  "binaries": {
+    "arm64": {
+      "link": "arch/arm64/lib/libsync.a"
+    },
+    "x64": {
+      "link": "arch/x64/lib/libsync.a"
+    }
+  },
+  "deps": [],
+  "format": "static",
+  "headers": [
+    "pkg/sync/include/lib/sync/internal/condition-template.h",
+    "pkg/sync/include/lib/sync/internal/mutex-internal.h",
+    "pkg/sync/include/lib/sync/completion.h",
+    "pkg/sync/include/lib/sync/condition.h",
+    "pkg/sync/include/lib/sync/mutex.h"
+  ],
+  "include_dir": "pkg/sync/include",
+  "name": "sync",
+  "root": "pkg/sync",
+  "type": "cc_prebuilt_library"
+}

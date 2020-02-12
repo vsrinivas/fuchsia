@@ -1,0 +1,7 @@
+{
+  "description": "A generic arm64 device",
+  "images_url": "gs://fuchsia/development/8888805161258733152/images/generic-arm64.tgz",
+  "name": "generic-arm64",
+  "packages_url": "gs://fuchsia/development/8888805161258733152/packages/generic-arm64.tar.gz",
+  "type": "device_profile"
+}

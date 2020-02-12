@@ -1,0 +1,14 @@
+{
+    "deps": [
+        "zircon"
+    ],
+    "fidl_deps": [],
+    "name": "fuchsia",
+    "root": "dart/fuchsia",
+    "sources": [
+        "dart/fuchsia/lib/fuchsia.dart",
+        "dart/fuchsia/lib/src/fakes/fuchsia_fakes.dart"
+    ],
+    "third_party_deps": [],
+    "type": "dart_library"
+}

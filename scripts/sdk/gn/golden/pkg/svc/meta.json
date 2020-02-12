@@ -1,0 +1,28 @@
+{
+  "binaries": {
+    "arm64": {
+      "debug": ".build-id/5b/b62c17364e60b0.debug",
+      "dist": "arch/arm64/dist/libsvc.so",
+      "dist_path": "lib/libsvc.so",
+      "link": "arch/arm64/lib/libsvc.so"
+    },
+    "x64": {
+      "debug": ".build-id/01/b12c9295978cbb.debug",
+      "dist": "arch/x64/dist/libsvc.so",
+      "dist_path": "lib/libsvc.so",
+      "link": "arch/x64/lib/libsvc.so"
+    }
+  },
+  "deps": [
+    "async",
+    "fdio"
+  ],
+  "format": "shared",
+  "headers": [
+    "pkg/svc/include/lib/svc/dir.h"
+  ],
+  "include_dir": "pkg/svc/include",
+  "name": "svc",
+  "root": "pkg/svc",
+  "type": "cc_prebuilt_library"
+}

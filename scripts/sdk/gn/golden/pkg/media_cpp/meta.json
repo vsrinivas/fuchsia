@@ -1,0 +1,19 @@
+{
+  "banjo_deps": [],
+  "deps": [
+    "media_cpp_no_converters"
+  ],
+  "fidl_deps": [
+    "fuchsia.media"
+  ],
+  "headers": [
+    "pkg/media_cpp/include/lib/media/cpp/type_converters.h"
+  ],
+  "include_dir": "pkg/media_cpp/include",
+  "name": "media_cpp",
+  "root": "pkg/media_cpp",
+  "sources": [
+    "pkg/media_cpp/type_converters.cc"
+  ],
+  "type": "cc_source_library"
+}

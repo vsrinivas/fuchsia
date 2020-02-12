@@ -10,6 +10,8 @@ construction of a specific SDK for use in projects using GN.
 """
 
 import argparse
+import glob
+import json
 import os
 import shutil
 import stat
@@ -60,6 +62,7 @@ class GNBuilder(Frontend):
             directory=directory)
         self.target_arches = []
         self.fidl_targets = []  # List of all FIDL library targets generated
+        self.build_files = []
 
     def prepare(self, arch, types):
         """Called before elements are processed.
@@ -90,6 +93,83 @@ class GNBuilder(Frontend):
         self.write_file(self.dest('.gitignore'), 'gitignore', self)
         self.write_file(
             self.dest("build", "test_targets.gni"), 'test_targets', self)
+        self.write_build_file_metadata(
+            'gn-build-files', 'build/gn-build-files-meta.json')
+        self.update_metadata(
+            [
+                'build/gn-rules-meta.json', 'build/gn-build-files-meta.json',
+                'readme-meta.json'
+            ] + [
+                os.path.relpath(file, self.output)
+                for file in glob.glob(self.dest('bin/*.json'))
+            ], 'meta/manifest.json')
+
+    def update_metadata(self, entries, metafile):
+        with open(self.dest(metafile), 'r') as input:
+            metadata = json.load(input)
+
+            # Documentation metadata descriptions are named inconsistently, so in order to copy
+            # them we need to read the manifest and copy them explicitly.
+            for atom in metadata['parts']:
+                if atom['type'] in ['documentation', 'host_tool']:
+                    self.copy_file(atom['meta'])
+
+            # There are dart components and device_profile in the Core SDK which
+            #  are not part of the GN SDK if these are encountered,
+            # remove them from the manifest.
+            metadata['parts'] = [
+                atom for atom in metadata['parts']
+                if not atom['type'] in ['dart_library', 'device_profile']
+            ]
+
+            for entry in entries:
+                with open(self.dest(entry), 'r') as entry_meta:
+                    new_meta = json.load(entry_meta)
+                    metadata['parts'].append(
+                        {
+                            'meta': entry,
+                            'type': new_meta['type']
+                        })
+            # sort parts list so it is in a stable order
+            def meta_type_key(part):
+                return '%s_%s' % (part['meta'], part['type'])
+
+            metadata['parts'].sort(key=meta_type_key)
+
+            with open(os.path.join(self.output, metafile), 'w') as output:
+                json.dump(
+                    metadata,
+                    output,
+                    indent=2,
+                    sort_keys=True,
+                    separators=(',', ': '))
+
+    def write_build_file_metadata(self, name, filename):
+        """Writes a metadata atom defining the build files.
+
+        Args:
+            name: the name of atom.
+            filename: the relative filename to write the metadata file.
+        """
+        self.build_files.sort()
+        data = {'name': name, 'type': 'documentation', 'docs': self.build_files}
+
+        with open(self.dest(filename), 'w') as output:
+            json.dump(
+                data, output, indent=2, sort_keys=True, separators=(',', ': '))
+
+    def write_atom_metadata(self, filename, atom):
+        full_name = self.dest(filename)
+        if not os.path.exists(os.path.dirname(full_name)):
+            os.makedirs(os.path.dirname(full_name))
+
+        with open(full_name, 'w') as atom_metadata:
+            json.dump(
+                atom,
+                atom_metadata,
+                indent=2,
+                sort_keys=True,
+                separators=(',', ': '))
 
     # Handlers for SDK atoms
 
@@ -139,6 +219,9 @@ class GNBuilder(Frontend):
             os.makedirs(base)
         self.write_file(
             os.path.join(base, 'BUILD.gn'), 'cc_prebuilt_library', library)
+        self.write_atom_metadata(os.path.join(base, 'meta.json'), atom)
+        self.build_files.append(
+            os.path.relpath(os.path.join(base, 'BUILD.gn'), self.output))
 
     def install_cc_source_library_atom(self, atom):
         name = atom['name']
@@ -159,6 +242,9 @@ class GNBuilder(Frontend):
         library.includes = os.path.relpath(atom['include_dir'], atom['root'])
 
         self.write_file(os.path.join(base, 'BUILD.gn'), 'cc_library', library)
+        self.write_atom_metadata(os.path.join(base, 'meta.json'), atom)
+        self.build_files.append(
+            os.path.relpath(os.path.join(base, 'BUILD.gn'), self.output))
 
     def install_fidl_library_atom(self, atom):
         name = atom['name']
@@ -174,6 +260,9 @@ class GNBuilder(Frontend):
 
         self.write_file(os.path.join(base, 'BUILD.gn'), 'fidl_library', data)
         self.fidl_targets.append(name)
+        self.write_atom_metadata(os.path.join(base, 'meta.json'), atom)
+        self.build_files.append(
+            os.path.relpath(os.path.join(base, 'BUILD.gn'), self.output))
 
     def install_host_tool_atom(self, atom):
         if 'files' in atom:
@@ -229,8 +318,11 @@ class GNBuilder(Frontend):
                 binary=os.path.relpath(binary, start=local_pkg))
             data.layers.append(layer)
 
-        self.write_file(
-            self.dest('pkg', name, 'BUILD.gn'), 'vulkan_module', data)
+        base = self.dest(local_pkg)
+        self.write_file(os.path.join(base, 'BUILD.gn'), 'vulkan_module', data)
+        self.build_files.append(
+            os.path.relpath(os.path.join(base, 'BUILD.gn'), self.output))
+        self.write_atom_metadata(os.path.join(base, 'meta.json'), atom)
 
     def install_sysroot_atom(self, atom):
         for arch in self.target_arches:
