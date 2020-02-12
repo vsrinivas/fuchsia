@@ -9,6 +9,7 @@
 #include <ddk/protocol/acpi.h>
 #include <ddk/protocol/auxdata.h>
 #include <ddk/protocol/pciroot.h>
+#include <fbl/mutex.h>
 
 #include "resources.h"
 
