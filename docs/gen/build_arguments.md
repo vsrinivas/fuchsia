@@ -272,7 +272,7 @@ otherwise be /system/... at runtime is /boot/... instead.
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
-From //products/core.gni:7
+From //products/core.gni:11
 
 **Overridden from the default:** `false`
 
@@ -280,7 +280,7 @@ From //build/images/boot_args.gni:11
 
 **Current value for `target_cpu = "x64"`:** `false`
 
-From //products/core.gni:7
+From //products/core.gni:11
 
 **Overridden from the default:** `false`
 
@@ -382,7 +382,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/core.gni:76
+From //products/core.gni:80
 
 **Overridden from the default:** `[]`
 
@@ -390,7 +390,7 @@ From //BUILD.gn:28
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/core.gni:76
+From //products/core.gni:80
 
 **Overridden from the default:** `[]`
 
@@ -907,6 +907,20 @@ writing v1 wire-format by default.
 
 From //build/fidl/wireformat.gni:9
 
+### filter_out_of_astro
+Use this flag to exclude artifacts from Astro builds.
+This is a very hacky way of ensuring that the resulting fuchsia.zbi fits
+within the available space on device.
+This will soon enough be replaced with a proper way to select image
+artifacts based on board / product properties.
+Artifacts that are known to not be useful on Astro builds (e.g. drivers for
+other devices, tests) may be put in `if (!filter_out_of_astro)` blocks.
+TODO(45680): remove this hack.
+
+**Current value (from the default):** `false`
+
+From //build/unification/images/BUILD.gn:14
+
 ### flutter_default_app
 
 **Current value (from the default):** `"flutter_jit_app"`
@@ -1179,7 +1193,7 @@ See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
 
 **Current value for `target_cpu = "arm64"`:** `["kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
-From //products/core.gni:10
+From //products/core.gni:14
 
 **Overridden from the default:** `[]`
 
@@ -1187,7 +1201,7 @@ From //build/images/BUILD.gn:464
 
 **Current value for `target_cpu = "x64"`:** `["kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true", "netsvc.all-features=true", "netsvc.disable=false", "kernel.oom.behavior=reboot"]`
 
-From //products/core.gni:10
+From //products/core.gni:14
 
 **Overridden from the default:** `[]`
 
@@ -1521,7 +1535,7 @@ A list of labels for meta packages to be included in the monolith.
 
 **Current value for `target_cpu = "arm64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
-From //products/core.gni:14
+From //products/core.gni:18
 
 **Overridden from the default:** `[]`
 
@@ -1529,7 +1543,7 @@ From //build/images/BUILD.gn:39
 
 **Current value for `target_cpu = "x64"`:** `["//build/images:config-data", "//build/images:shell-commands", "//src/sys/component_index:component_index"]`
 
-From //products/core.gni:14
+From //products/core.gni:18
 
 **Overridden from the default:** `[]`
 
@@ -1606,6 +1620,28 @@ Default app id will always return no update.
 **Current value (from the default):** `"fuchsia-test:no-update"`
 
 From //src/sys/pkg/bin/omaha-client/BUILD.gn:14
+
+### on_second_thought_keep_on_astro
+Use this flag to include previously excluded artifacts on products based on
+Astro.
+Yes, our image building system is so broken that this is currently the only
+way to accommodate the configurations we run on our infrastructure.
+
+**Current value for `target_cpu = "arm64"`:** `false`
+
+From //products/core.gni:9
+
+**Overridden from the default:** `false`
+
+From //build/unification/images/BUILD.gn:20
+
+**Current value for `target_cpu = "x64"`:** `false`
+
+From //products/core.gni:9
+
+**Overridden from the default:** `false`
+
+From //build/unification/images/BUILD.gn:20
 
 ### output_breakpad_syms
 Sets if we should output breakpad symbols for Fuchsia binaries.
@@ -2120,7 +2156,7 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:78
+From //products/core.gni:82
 
 **Overridden from the default:** `[]`
 
@@ -2128,7 +2164,7 @@ From //BUILD.gn:42
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:78
+From //products/core.gni:82
 
 **Overridden from the default:** `[]`
 
@@ -2421,7 +2457,7 @@ netsvc build.
 
 **Current value for `target_cpu = "arm64"`:** `false`
 
-From //products/core.gni:12
+From //products/core.gni:16
 
 **Overridden from the default:** `false`
 
@@ -2429,7 +2465,7 @@ From //BUILD.gn:63
 
 **Current value for `target_cpu = "x64"`:** `false`
 
-From //products/core.gni:12
+From //products/core.gni:16
 
 **Overridden from the default:** `false`
 
