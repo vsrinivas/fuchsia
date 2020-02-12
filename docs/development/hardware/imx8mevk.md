@@ -4,7 +4,7 @@ Periodically check this file as the setup workflow will change/improve.
 
 Please refer to the following documents for SoC and board related information:
 
-i.MX 8M EVK Board Hardawre User's Guide:
+i.MX 8M EVK Board Hardware User's Guide:
 https://www.nxp.com/docs/en/user-guide/IMX8MDQLQEVKHUG.pdf
 
 iMX8M Technical Reference Manual:
