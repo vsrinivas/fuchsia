@@ -522,7 +522,7 @@ main(int argc, char const * argv[])
   free(phy_devices);
 
   //
-  // Get rest of command line
+  // get rest of command line
   //
   uint32_t const slab_size = hs_target->config.slab.height << hs_target->config.slab.width_log2;
 
@@ -533,6 +533,15 @@ main(int argc, char const * argv[])
   uint32_t const warmup     = (argc <= 8) ? HS_BENCH_WARMUP : strtoul(argv[8], NULL, 0);
   bool const     linearize  = (argc <= 9) ? true : strtoul(argv[9], NULL, 0) != 0;
   bool const     verify     = (argc <= 10) ? true : strtoul(argv[10], NULL, 0) != 0;
+
+  //
+  //
+  //
+  if (count_lo == 0)
+    {
+      fprintf(stderr, "Key count must be >= 1\n");
+      exit(EXIT_FAILURE);
+    }
 
   //
   // get the physical device's memory props
@@ -1146,7 +1155,7 @@ main(int argc, char const * argv[])
 
           VkBufferCopy const copy_vout = { .srcOffset = 0, .dstOffset = 0, .size = size_padded_in };
 
-          vkCmdCopyBuffer(cb, vout, sorted, 1, &copy_vout);
+          vkCmdCopyBuffer(cb, (count == 1) ? vin : vout, sorted, 1, &copy_vout);
 
           vk(EndCommandBuffer(cb));
 
