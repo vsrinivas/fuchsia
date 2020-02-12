@@ -84,15 +84,6 @@
       "type": "array",
       "items": { "$ref": "#/definitions/volume_mapping" }
     },
-    "routing_policy": {
-      "type" : "object",
-      "properties" : {
-        "device_profiles" : {
-          "type": "array",
-          "items" : { "$ref" : "#/definitions/output_device_profile" }
-        }
-      }
-    },
     "output_devices" : {
       "type": "array",
       "items" : { "$ref" : "#/definitions/output_device_profile" }

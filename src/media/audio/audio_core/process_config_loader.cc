@@ -31,8 +31,6 @@ static constexpr char kJsonKeyStreams[] = "streams";
 static constexpr char kJsonKeyInputs[] = "inputs";
 static constexpr char kJsonKeyEffects[] = "effects";
 static constexpr char kJsonKeyLoopback[] = "loopback";
-static constexpr char kJsonKeyRoutingPolicy[] = "routing_policy";
-static constexpr char kJsonKeyDeviceProfiles[] = "device_profiles";
 static constexpr char kJsonKeyDeviceId[] = "device_id";
 static constexpr char kJsonKeyOutputDevices[] = "output_devices";
 static constexpr char kJsonKeySupportedOutputStreamTypes[] = "supported_output_stream_types";
@@ -235,8 +233,8 @@ ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
                          independent_volume_control, std::move(pipeline_config))};
 }
 
-void ParseRoutingPolicyFromJsonObject(const rapidjson::Value& device_profiles,
-                                      ProcessConfigBuilder* config_builder) {
+void ParseOutputDevicePoliciesFromJsonObject(const rapidjson::Value& device_profiles,
+                                             ProcessConfigBuilder* config_builder) {
   FX_CHECK(device_profiles.IsArray());
 
   std::unordered_set<uint32_t> all_supported_usages;
@@ -301,17 +299,7 @@ fit::result<ProcessConfig, std::string> ProcessConfigLoader::ParseProcessConfig(
 
   auto output_devices_it = doc.FindMember(kJsonKeyOutputDevices);
   if (output_devices_it != doc.MemberEnd()) {
-    ParseRoutingPolicyFromJsonObject(output_devices_it->value, &config_builder);
-  } else {
-    // Deprecated location for output device profiles; to be removed once all configs are updated.
-    auto routing_policy_it = doc.FindMember(kJsonKeyRoutingPolicy);
-    if (routing_policy_it != doc.MemberEnd()) {
-      FX_CHECK(routing_policy_it->value.IsObject());
-
-      auto device_profiles_it = routing_policy_it->value.FindMember(kJsonKeyDeviceProfiles);
-      FX_CHECK(device_profiles_it != routing_policy_it->value.MemberEnd());
-      ParseRoutingPolicyFromJsonObject(device_profiles_it->value, &config_builder);
-    }
+    ParseOutputDevicePoliciesFromJsonObject(output_devices_it->value, &config_builder);
   }
 
   return fit::ok(config_builder.Build());
