@@ -133,7 +133,7 @@ func (r *Ramdisk) StartBlobfs() error {
 		return &zx.Error{Status: zx.Status(status), Text: "ramdisk_blobfs_mount"}
 	}
 
-	r.dir = &fdio.Directory{fdio.Node{(*zxio.NodeInterface)(&fidl.ChannelProxy{pxy})}}
+	r.dir = &fdio.Directory{fdio.Node{(*zxio.NodeInterface)(&fidl.ChannelProxy{Channel: pxy})}}
 	return nil
 }
 

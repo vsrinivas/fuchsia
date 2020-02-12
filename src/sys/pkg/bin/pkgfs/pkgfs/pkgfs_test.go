@@ -93,7 +93,7 @@ func tmain(m *testing.M) int {
 	nc, sc, err := zx.NewChannel(0)
 	panicerr(err)
 
-	pkgfsDir = &fdio.Directory{fdio.Node{(*zxio.NodeInterface)(&fidl.ChannelProxy{nc})}}
+	pkgfsDir = &fdio.Directory{fdio.Node{(*zxio.NodeInterface)(&fidl.ChannelProxy{Channel: nc})}}
 
 	go func() {
 		panicerr(pkgfs.Serve(sc))
