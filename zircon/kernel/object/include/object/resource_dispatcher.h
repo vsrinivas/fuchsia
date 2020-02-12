@@ -14,6 +14,8 @@
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
 
+#include <array>
+
 #include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/name.h>
@@ -34,25 +36,27 @@ class ResourceDispatcher final
   using ResourceList = fbl::DoublyLinkedList<ResourceDispatcher*>;
   using RefPtr = fbl::RefPtr<ResourceDispatcher>;
 
+  struct ResourceStorage {
+    ResourceList resource_list;
+    std::array<RegionAllocator, ZX_RSRC_KIND_COUNT> rallocs;
+  };
+
   // Creates ResourceDispatcher object representing access rights to a
   // given region of address space from a particular address space allocator, or a root resource
   // granted full access permissions. Only one instance of the root resource is created at boot.
   static zx_status_t Create(KernelHandle<ResourceDispatcher>* handle, zx_rights_t* rights,
                             uint32_t kind, uint64_t base, size_t size, uint32_t flags,
-                            const char name[ZX_MAX_NAME_LEN],
-                            RegionAllocator rallocs[ZX_RSRC_KIND_COUNT] = static_rallocs_,
-                            ResourceList* resource_list = &static_resource_list_);
+                            const char name[ZX_MAX_NAME_LEN], ResourceStorage* = nullptr);
   // Initializes the static mmembers used for bookkeeping and storage.
-  static zx_status_t InitializeAllocator(
-      uint32_t kind, uint64_t base, size_t size,
-      RegionAllocator rallocs[ZX_RSRC_KIND_COUNT] = static_rallocs_);
+  static zx_status_t InitializeAllocator(uint32_t kind, uint64_t base, size_t size,
+                                         ResourceStorage* = nullptr);
   static void Dump();
 
   template <typename T>
-  static zx_status_t ForEachResource(T func, ResourceList* resource_list = &static_resource_list_)
+  static zx_status_t ForEachResource(T func, ResourceStorage* storage = nullptr)
       TA_EXCL(ResourcesLock::Get()) {
     Guard<Mutex> guard{ResourcesLock::Get()};
-    return ForEachResourceLocked(func, resource_list);
+    return ForEachResourceLocked(func, (storage != nullptr) ? storage : &static_storage_);
   }
 
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_RESOURCE; }
@@ -75,14 +79,12 @@ class ResourceDispatcher final
 
  private:
   ResourceDispatcher(uint32_t kind, uint64_t base, size_t size, uint32_t flags,
-                     RegionAllocator::Region::UPtr&& region,
-                     RegionAllocator rallocs[ZX_RSRC_KIND_COUNT], ResourceList* resource_list);
+                     RegionAllocator::Region::UPtr&& region, ResourceStorage* storage);
 
   template <typename T>
-  static zx_status_t ForEachResourceLocked(T callback,
-                                           ResourceList* resource_list = &static_resource_list_)
+  static zx_status_t ForEachResourceLocked(T callback, ResourceStorage* storage)
       TA_REQ(ResourcesLock::Get()) {
-    for (const auto& resource : *resource_list) {
+    for (const auto& resource : storage->resource_list) {
       zx_status_t status = callback(resource);
       if (status != ZX_OK) {
         return status;
@@ -107,12 +109,11 @@ class ResourceDispatcher final
   // ensure that the region has not already been allocated as a shared region
   // by checking the static resource list.
   DECLARE_SINGLETON_MUTEX(ResourcesLock);
-  static RegionAllocator static_rallocs_[ZX_RSRC_KIND_COUNT] TA_GUARDED(ResourcesLock::Get());
   static RegionAllocator::RegionPool::RefPtr region_pool_;
   // A single global list is used for all resources so that root and hypervisor resources can
   // still be tracked, and filtering can be done via client tools/commands when displaying
   // the list is concerned.
-  static ResourceList static_resource_list_ TA_GUARDED(ResourcesLock::Get());
+  static ResourceStorage static_storage_ TA_GUARDED(ResourcesLock::Get());
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_RESOURCE_DISPATCHER_H_

@@ -32,8 +32,7 @@ KCOUNTER(dispatcher_resource_create_count, "dispatcher.resource.create")
 KCOUNTER(dispatcher_resource_destroy_count, "dispatcher.resource.destroy")
 
 // Storage for static members of ResourceDispatcher
-RegionAllocator ResourceDispatcher::static_rallocs_[ZX_RSRC_KIND_COUNT];
-ResourceDispatcher::ResourceList ResourceDispatcher::static_resource_list_;
+ResourceDispatcher::ResourceStorage ResourceDispatcher::static_storage_;
 RegionAllocator::RegionPool::RefPtr ResourceDispatcher::region_pool_;
 const char* kLogTag = "Resources:";
 
@@ -44,9 +43,7 @@ const char* kLogTag = "Resources:";
 zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
                                        zx_rights_t* rights, uint32_t kind, uint64_t base,
                                        size_t size, uint32_t flags,
-                                       const char name[ZX_MAX_NAME_LEN],
-                                       RegionAllocator rallocs[ZX_RSRC_KIND_COUNT],
-                                       ResourceList* resource_list) {
+                                       const char name[ZX_MAX_NAME_LEN], ResourceStorage* storage) {
   Guard<Mutex> guard{ResourcesLock::Get()};
   if (kind >= ZX_RSRC_KIND_COUNT || (flags & ZX_RSRC_FLAGS_MASK) != flags) {
     return ZX_ERR_INVALID_ARGS;
@@ -64,6 +61,12 @@ zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
   // more finely grained. It will work properly here because the base/size of a
   // hypervisor resource is never checked, but it's a workaround until a
   // proper capability exists for it.
+
+  // Use the local static bookkeeping for system resources unless mocks are passed in.
+  if (storage == nullptr) {
+    storage = &static_storage_;
+  }
+
   zx_status_t status;
   RegionAllocator::Region::UPtr region_uptr = nullptr;
   switch (kind) {
@@ -76,7 +79,7 @@ zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
       }
       break;
     default:
-      status = rallocs[kind].GetRegion({.base = base, .size = size}, region_uptr);
+      status = storage->rallocs[kind].GetRegion({.base = base, .size = size}, region_uptr);
       if (status != ZX_OK) {
         LTRACEF("%s couldn't pull the resource out of the ralloc %d\n", kLogTag, status);
         return status;
@@ -105,7 +108,7 @@ zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
       return ZX_OK;
     };
     LTRACEF("%s scanning resource list for [%u, %#lx, %zu]\n", kLogTag, kind, base, size);
-    zx_status_t status = ResourceDispatcher::ForEachResourceLocked(callback, resource_list);
+    zx_status_t status = ResourceDispatcher::ForEachResourceLocked(callback, storage);
     if (status != ZX_OK) {
       return status;
     }
@@ -115,8 +118,8 @@ zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
   // itself. The constructor will handle adding itself to the shared list if
   // necessary.
   fbl::AllocChecker ac;
-  KernelHandle new_handle(fbl::AdoptRef(new (&ac) ResourceDispatcher(
-      kind, base, size, flags, ktl::move(region_uptr), rallocs, resource_list)));
+  KernelHandle new_handle(fbl::AdoptRef(
+      new (&ac) ResourceDispatcher(kind, base, size, flags, ktl::move(region_uptr), storage)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -134,9 +137,12 @@ zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
 
 ResourceDispatcher::ResourceDispatcher(uint32_t kind, uint64_t base, uint64_t size, uint32_t flags,
                                        RegionAllocator::Region::UPtr&& region,
-                                       RegionAllocator rallocs[ZX_RSRC_KIND_COUNT],
-                                       ResourceList* resource_list)
-    : kind_(kind), base_(base), size_(size), flags_(flags), resource_list_(resource_list) {
+                                       ResourceStorage* storage)
+    : kind_(kind),
+      base_(base),
+      size_(size),
+      flags_(flags),
+      resource_list_(&storage->resource_list) {
   kcounter_add(dispatcher_resource_create_count, 1);
 
   if (flags_ & ZX_RSRC_FLAG_EXCLUSIVE) {
@@ -181,9 +187,14 @@ ResourceDispatcher::~ResourceDispatcher() {
 }
 
 zx_status_t ResourceDispatcher::InitializeAllocator(uint32_t kind, uint64_t base, size_t size,
-                                                    RegionAllocator rallocs[ZX_RSRC_KIND_COUNT]) {
+                                                    ResourceStorage* storage) {
   DEBUG_ASSERT(kind < ZX_RSRC_KIND_COUNT);
   DEBUG_ASSERT(size > 0);
+
+  // Static methods need to check for mocks manually.
+  if (storage == nullptr) {
+    storage = &static_storage_;
+  }
 
   Guard<Mutex> guard{ResourcesLock::Get()};
   zx_status_t status;
@@ -201,7 +212,7 @@ zx_status_t ResourceDispatcher::InitializeAllocator(uint32_t kind, uint64_t base
   // Failure to allocate this early in boot is a critical error
   DEBUG_ASSERT(region_pool_);
 
-  status = rallocs[kind].SetRegionPool(region_pool_);
+  status = storage->rallocs[kind].SetRegionPool(region_pool_);
   if (status != ZX_OK) {
     return status;
   }
@@ -209,9 +220,9 @@ zx_status_t ResourceDispatcher::InitializeAllocator(uint32_t kind, uint64_t base
   // Add the initial address space specified by the platform to the region allocator.
   // This will be used for verifying both shared and exclusive allocations of address
   // space.
-  status = rallocs[kind].AddRegion({.base = base, .size = size});
+  status = storage->rallocs[kind].AddRegion({.base = base, .size = size});
   LTRACEF("%s added [%#lx, %zu] to kind %u in allocator %p: %d\n", kLogTag, base, size, kind,
-          rallocs, status);
+          &storage->rallocs[kind], status);
   return status;
 }
 
