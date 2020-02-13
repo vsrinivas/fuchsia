@@ -1,0 +1,25 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.views.accessibility;
+
+using fuchsia.ui.views;
+
+/// A protocol for registering a 'fuchsia.ui.views.Focuser' to be used by an
+/// accessibility service.
+///
+/// Accessibility services can drastically alter the way an user interacts with
+/// a system. For example, instead of changing the focus from one view to
+/// another using the touch screen, this user may use voice. For this reason,
+/// accessibility services need a way to be able to request focus to whatever
+/// view on the system, as this request can come in any form of input, not
+/// necessarily the one that normally drives focus in a particular device.
+///
+/// The request from the accessibility service assumes that whoever implements
+/// this protocol associates this request with a view that sits high in the view
+/// hierarchy.
+[Discoverable]
+protocol FocuserRegistry {
+    RegisterFocuser(request<fuchsia.ui.views.Focuser> view_focuser);
+};
