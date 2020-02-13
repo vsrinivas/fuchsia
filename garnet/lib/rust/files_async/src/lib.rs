@@ -32,6 +32,9 @@ pub enum Error {
 
     #[error("timeout while reading dir: {}", _0)]
     Timeout(String),
+
+    #[error("`rewind` failed with status {:?}", _0)]
+    Rewind(zx::Status),
 }
 
 /// An error encountered while decoding a single directory entry.
@@ -156,6 +159,9 @@ pub async fn readdir_recursive(
 /// Returns a sorted Vec of directory entries contained directly in the given directory proxy. The
 /// returned entries will not include "." or nodes from any subdirectories.
 pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
+    let status = dir.rewind().await.map_err(|e| Error::Fidl("rewind", e))?;
+    zx::Status::ok(status).map_err(Error::Rewind)?;
+
     let mut entries = vec![];
 
     loop {
@@ -396,33 +402,40 @@ mod tests {
             unreachable!();
         });
 
-        let entries = readdir(&dir).await.expect("readdir to succeed");
-        assert_eq!(
-            entries,
-            vec![
-                build_direntry("afile", DirentKind::File),
-                build_direntry("subdir", DirentKind::Directory),
-                build_direntry("zzz", DirentKind::File),
-            ]
-        );
+        // run twice to check that seek offset is properly reset before reading the directory
+        for _ in 0..2 {
+            let entries = readdir(&dir).await.expect("readdir to succeed");
+            assert_eq!(
+                entries,
+                vec![
+                    build_direntry("afile", DirentKind::File),
+                    build_direntry("subdir", DirentKind::Directory),
+                    build_direntry("zzz", DirentKind::File),
+                ]
+            );
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_readdir_recursive() {
         let tempdir = TempDir::new().expect("failed to create tmp dir");
         let dir = create_nested_dir(&tempdir).await;
-        let entries = readdir_recursive(&dir, None).await.expect("readdir_recursive to succeed");
-        assert_eq!(
-            entries,
-            vec![
-                build_direntry("a", DirentKind::File),
-                build_direntry("b", DirentKind::File),
-                build_direntry("emptydir", DirentKind::Directory),
-                build_direntry("subdir/a", DirentKind::File),
-                build_direntry("subdir/subsubdir/a", DirentKind::File),
-                build_direntry("subdir/subsubdir/emptydir", DirentKind::Directory),
-            ]
-        );
+        // run twice to check that seek offset is properly reset before reading the directory
+        for _ in 0..2 {
+            let entries =
+                readdir_recursive(&dir, None).await.expect("readdir_recursive to succeed");
+            assert_eq!(
+                entries,
+                vec![
+                    build_direntry("a", DirentKind::File),
+                    build_direntry("b", DirentKind::File),
+                    build_direntry("emptydir", DirentKind::Directory),
+                    build_direntry("subdir/a", DirentKind::File),
+                    build_direntry("subdir/subsubdir/a", DirentKind::File),
+                    build_direntry("subdir/subsubdir/emptydir", DirentKind::Directory),
+                ]
+            );
+        }
     }
 
     #[test]
@@ -549,7 +562,7 @@ mod tests {
             let res = remove_dir_recursive(&dir, "baddir").await;
             let res = res.expect_err("remove_dir did not fail");
             match res {
-                Error::Fidl("read_dirents", fidl_error) if fidl_error.is_closed() => {}
+                Error::Fidl("rewind", fidl_error) if fidl_error.is_closed() => {}
                 _ => panic!("unexpected error {:?}", res),
             }
         }
