@@ -12,6 +12,7 @@
 #include <ddktl/protocol/sdmmc.h>
 #include <fbl/span.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <zircon/driver/binding.h>
 
 namespace sdmmc {
 
@@ -30,6 +31,13 @@ class Bind : public fake_ddk::Bind {
       return ZX_ERR_OUT_OF_RANGE;
     }
     return children_get_proto_[index].op(children_get_proto_[index].ctx, proto_id, proto);
+  }
+
+  fbl::Span<const zx_device_prop_t> GetChildProps(size_t index) {
+    if (index >= children_props_.size()) {
+      return fbl::Span<zx_device_prop_t>();
+    }
+    return fbl::Span(children_props_[index].data(), children_props_[index].size());
   }
 
  private:
@@ -53,6 +61,7 @@ class Bind : public fake_ddk::Bind {
   void (*unbind_op_)(void* ctx) = nullptr;
 
   std::vector<GetProtocolOp> children_get_proto_;
+  std::vector<std::vector<zx_device_prop_t>> children_props_;
 };
 
 class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {

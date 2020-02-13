@@ -198,7 +198,7 @@ zx_status_t SdioControllerDevice::AddDevice() {
   }
 
   for (uint32_t i = 0; i < hw_info_.num_funcs - 1; i++) {
-    if ((st = devices[i]->AddDevice(funcs_[0].hw_info, i + 1)) != ZX_OK) {
+    if ((st = devices[i]->AddDevice(funcs_[i + 1].hw_info, i + 1)) != ZX_OK) {
       return st;
     }
     devices[i].release();
