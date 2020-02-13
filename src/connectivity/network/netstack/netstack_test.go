@@ -44,6 +44,7 @@ const (
 	testV6Address        tcpip.Address = tcpip.Address("\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10\xc0\xa8\x2a\x10")
 	testLinkLocalV6Addr1 tcpip.Address = "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
 	testLinkLocalV6Addr2 tcpip.Address = "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02"
+	dadResolutionTimeout               = dadRetransmitTimer*dadTransmits + time.Second
 )
 
 func TestBindingSetCounterStat_Value(t *testing.T) {
@@ -286,11 +287,85 @@ func TestNotStartedByDefault(t *testing.T) {
 	}
 }
 
+type ndpDADEvent struct {
+	nicID    tcpip.NICID
+	addr     tcpip.Address
+	resolved bool
+	err      *tcpip.Error
+}
+
+// testNDPDispatcher is a tcpip.NDPDispatcher that sends an NDP DAD event on
+// dadC when OnDuplicateAddressDetectionStatus gets called.
+type testNDPDispatcher struct {
+	dadC chan ndpDADEvent
+}
+
+// OnDuplicateAddressDetectionStatus implements
+// stack.NDPDispatcher.OnDuplicateAddressDetectionStatus.
+func (n *testNDPDispatcher) OnDuplicateAddressDetectionStatus(nicID tcpip.NICID, addr tcpip.Address, resolved bool, err *tcpip.Error) {
+	if c := n.dadC; c != nil {
+		c <- ndpDADEvent{
+			nicID:    nicID,
+			addr:     addr,
+			resolved: resolved,
+			err:      err,
+		}
+	}
+}
+
+// OnDefaultRouterDiscovered implements stack.NDPDispatcher.OnDefaultRouterDiscovered.
+//
+// Adds the event to the event queue and returns true so Stack remembers the
+// discovered default router.
+func (*testNDPDispatcher) OnDefaultRouterDiscovered(tcpip.NICID, tcpip.Address) bool {
+	return false
+}
+
+// OnDefaultRouterInvalidated implements stack.NDPDispatcher.OnDefaultRouterInvalidated.
+func (*testNDPDispatcher) OnDefaultRouterInvalidated(tcpip.NICID, tcpip.Address) {
+}
+
+// OnOnLinkPrefixDiscovered implements stack.NDPDispatcher.OnOnLinkPrefixDiscovered.
+func (*testNDPDispatcher) OnOnLinkPrefixDiscovered(tcpip.NICID, tcpip.Subnet) bool {
+	return false
+}
+
+// OnOnLinkPrefixInvalidated implements stack.NDPDispatcher.OnOnLinkPrefixInvalidated.
+func (*testNDPDispatcher) OnOnLinkPrefixInvalidated(tcpip.NICID, tcpip.Subnet) {
+}
+
+// OnAutoGenAddress implements stack.NDPDispatcher.OnAutoGenAddress.
+func (*testNDPDispatcher) OnAutoGenAddress(tcpip.NICID, tcpip.AddressWithPrefix) bool {
+	return false
+}
+
+// OnAutoGenAddressDeprecated implements
+// stack.NDPDispatcher.OnAutoGenAddressDeprecated.
+func (*testNDPDispatcher) OnAutoGenAddressDeprecated(tcpip.NICID, tcpip.AddressWithPrefix) {
+}
+
+// OnAutoGenAddressInvalidated implements stack.NDPDispatcher.OnAutoGenAddressInvalidated.
+func (*testNDPDispatcher) OnAutoGenAddressInvalidated(tcpip.NICID, tcpip.AddressWithPrefix) {
+}
+
+// OnRecursiveDNSServerOption implements stack.NDPDispatcher.OnRecursiveDNSServerOption.
+func (*testNDPDispatcher) OnRecursiveDNSServerOption(tcpip.NICID, []tcpip.Address, time.Duration) {
+}
+
+// OnDHCPv6Configuration implements stack.NDPDispatcher.OnDHCPv6Configuration.
+func (*testNDPDispatcher) OnDHCPv6Configuration(tcpip.NICID, tcpipstack.DHCPv6ConfigurationFromNDPRA) {
+}
+
 // Test that NICs get an IPv6 link-local address using the same algorithm that
 // netsvc uses. It does not matter whether the address is generated
 // automatically by the netstack or manually by the bindings (Netstack).
 func TestIpv6LinkLocalAddr(t *testing.T) {
-	ns := newNetstack(t)
+	t.Parallel()
+
+	ndpDisp := testNDPDispatcher{
+		dadC: make(chan ndpDADEvent, 1),
+	}
+	ns := newNetstackWithStackNDPDispatcher(t, &ndpDisp)
 
 	eth := deviceForAddEth(ethernet.Info{
 		Mac: ethernet.MacAddress{
@@ -301,11 +376,8 @@ func TestIpv6LinkLocalAddr(t *testing.T) {
 	if err != nil {
 		t.Fatalf("addEth(_, _, _): %s", err)
 	}
-
-	nicInfos := ns.stack.NICInfo()
-	nicInfo, ok := nicInfos[ifs.nicid]
-	if !ok {
-		t.Fatalf("stack.NICInfo()[%d]: %s", ifs.nicid, tcpip.ErrUnknownNICID)
+	if err := ifs.eth.Up(); err != nil {
+		t.Fatalf("eth.Up(): %s", err)
 	}
 
 	want := tcpip.ProtocolAddress{
@@ -314,6 +386,22 @@ func TestIpv6LinkLocalAddr(t *testing.T) {
 			Address: "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x03\x04\xff\xfe\x05\x06\x07",
 		},
 	}
+
+	select {
+	case d := <-ndpDisp.dadC:
+		if diff := cmp.Diff(ndpDADEvent{nicID: ifs.nicid, addr: want.AddressWithPrefix.Address, resolved: true, err: nil}, d, cmp.AllowUnexported(d)); diff != "" {
+			t.Fatalf("ndp DAD event mismatch (-want +got):\n%s", diff)
+		}
+	case <-time.After(dadResolutionTimeout):
+		t.Fatal("timed out waiting for DAD event")
+	}
+
+	nicInfos := ns.stack.NICInfo()
+	nicInfo, ok := nicInfos[ifs.nicid]
+	if !ok {
+		t.Fatalf("stack.NICInfo()[%d]: %s", ifs.nicid, tcpip.ErrUnknownNICID)
+	}
+
 	if _, found := findAddress(nicInfo.ProtocolAddresses, want); !found {
 		t.Fatalf("got NIC addrs = %+v, want = %+v", nicInfo.ProtocolAddresses, want)
 	}
@@ -716,6 +804,33 @@ func newNetstack(t *testing.T) *Netstack {
 func newNetstackWithNDPDispatcher(t *testing.T, ndpDisp *ndpDispatcher) *Netstack {
 	t.Helper()
 
+	// ndpDispatcher should never be called with a nil receiver.
+	//
+	// From https://golang.org/doc/faq#nil_error:
+	//
+	// Under the covers, interfaces are implemented as two elements, a type T and
+	// a value V.
+	//
+	// An interface value is nil only if the V and T are both unset, (T=nil, V is
+	// not set), In particular, a nil interface will always hold a nil type. If we
+	// store a nil pointer of type *int inside an interface value, the inner type
+	// will be *int regardless of the value of the pointer: (T=*int, V=nil). Such
+	// an interface value will therefore be non-nil even when the pointer value V
+	// inside is nil.
+	var ndpDispImpl tcpipstack.NDPDispatcher
+	if ndpDisp != nil {
+		ndpDispImpl = ndpDispImpl
+	}
+	ns := newNetstackWithStackNDPDispatcher(t, ndpDispImpl)
+	if ndpDisp != nil {
+		ndpDisp.ns = ns
+	}
+	return ns
+}
+
+func newNetstackWithStackNDPDispatcher(t *testing.T, ndpDisp tcpipstack.NDPDispatcher) *Netstack {
+	t.Helper()
+
 	arena, err := eth.NewArena()
 	if err != nil {
 		t.Fatal(err)
@@ -739,9 +854,6 @@ func newNetstackWithNDPDispatcher(t *testing.T, ndpDisp *ndpDispatcher) *Netstac
 		// sets the DNS servers on that interface, which requires that dnsClient
 		// exist.
 		dnsClient: dns.NewClient(stack),
-	}
-	if ndpDisp != nil {
-		ndpDisp.ns = ns
 	}
 	return ns
 }
@@ -818,14 +930,39 @@ func TestNetstackImpl_GetInterfaces2(t *testing.T) {
 // Test adding a list of both IPV4 and IPV6 addresses and then removing them
 // again one-by-one.
 func TestListInterfaceAddresses(t *testing.T) {
-	ns := newNetstack(t)
+	ndpDisp := testNDPDispatcher{
+		dadC: make(chan ndpDADEvent, 1),
+	}
+	ns := newNetstackWithStackNDPDispatcher(t, &ndpDisp)
 	ni := &stackImpl{ns: ns}
 
-	d := deviceForAddEth(ethernet.Info{}, t)
+	d := deviceForAddEth(ethernet.Info{
+		Mac: ethernet.MacAddress{
+			Octets: [6]byte{2, 3, 4, 5, 6, 7},
+		},
+	}, t)
 	ifState, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if err := ifState.eth.Up(); err != nil {
+		t.Fatalf("ifState.eth.Up(): %s", err)
+	}
+
+	waitForDAD := func(addr tcpip.Address) {
+		t.Helper()
+
+		select {
+		case d := <-ndpDisp.dadC:
+			if diff := cmp.Diff(ndpDADEvent{nicID: ifState.nicid, addr: addr, resolved: true, err: nil}, d, cmp.AllowUnexported(d)); diff != "" {
+				t.Fatalf("ndp DAD event mismatch (-want +got):\n%s", diff)
+			}
+		case <-time.After(dadResolutionTimeout):
+			t.Fatal("timed out waiting for DAD event")
+		}
+	}
+
+	waitForDAD("\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x03\x04\xff\xfe\x05\x06\x07")
 
 	// The call to ns.addEth() added addresses to the stack. Make sure we include
 	// those in our want list.
@@ -855,7 +992,9 @@ func TestListInterfaceAddresses(t *testing.T) {
 				if result != stack.StackAddInterfaceAddressResultWithResponse(stack.StackAddInterfaceAddressResponse{}) {
 					t.Fatalf("got ni.AddInterfaceAddress(%d, %#v) = %#v, want = Response()", ifState.nicid, ifAddr, result)
 				}
-
+				if addr := addr.Address; header.IsV6UnicastAddress(addr) {
+					waitForDAD(addr)
+				}
 				wantAddrs = append(wantAddrs, addr)
 				gotAddrs := getInterfaceAddresses(t, ni, ifState.nicid)
 

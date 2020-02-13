@@ -718,6 +718,10 @@ func (ifs *ifState) stateChange(s link.State) {
 
 	case link.StateStarted:
 		syslog.Infof("NIC %s: link.StateStarted", name)
+		if err := ifs.ns.stack.EnableNIC(ifs.nicid); err != nil {
+			syslog.Errorf("error enabling NIC %s in stack.Stack: %s", name, err)
+		}
+
 		// Re-enable static routes out this interface.
 		ifs.ns.UpdateRoutesByInterface(ifs.nicid, routes.ActionEnableStatic)
 		if ifs.mu.dhcp.enabled {
@@ -808,7 +812,7 @@ func (ns *Netstack) getDeviceName() string {
 func (ns *Netstack) addLoopback() error {
 	ifs, err := ns.addEndpoint(func(tcpip.NICID) string {
 		return "lo"
-	}, loopback.New(), link.NewLoopbackController(), false, defaultInterfaceMetric, ethernet.InfoFeatureLoopback, "[none]")
+	}, loopback.New(), link.NewLoopbackController(), false, defaultInterfaceMetric, ethernet.InfoFeatureLoopback, "[none]", true /* enabled */)
 	if err != nil {
 		return err
 	}
@@ -817,6 +821,11 @@ func (ns *Netstack) addLoopback() error {
 	ifs.mu.state = link.StateStarted
 	nicid := ifs.nicid
 	ifs.mu.Unlock()
+
+	// Loopback interfaces do not need NDP.
+	if err := ns.stack.SetNDPConfigurations(nicid, stack.NDPConfigurations{}); err != nil {
+		return fmt.Errorf("error setting NDP configurations to NIC ID %d: %w", nicid, err)
+	}
 
 	ipv4LoopbackPrefix := tcpip.AddressMask(net.IP(ipv4Loopback).DefaultMask()).Prefix()
 	ipv4LoopbackAddressWithPrefix := tcpip.AddressWithPrefix{
@@ -874,7 +883,7 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 	b := bridge.New(links)
 	return ns.addEndpoint(func(nicid tcpip.NICID) string {
 		return fmt.Sprintf("br%d", nicid)
-	}, b, b, false, defaultInterfaceMetric, 0, "[none]")
+	}, b, b, false, defaultInterfaceMetric, 0, "[none]", false /* enabled */)
 }
 
 func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceConfig, device ethernet.Device) (*ifState, error) {
@@ -888,9 +897,15 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 			return fmt.Sprintf("eth%d", nicid)
 		}
 		return config.Name
-	}, eth.NewLinkEndpoint(client), client, true, routes.Metric(config.Metric), client.Info.Features, config.Filepath)
+	}, eth.NewLinkEndpoint(client), client, true, routes.Metric(config.Metric), client.Info.Features, config.Filepath, false /* enabled */)
 }
 
+// addEndpoint creates a new NIC with stack.Stack.
+//
+// If enabled is false, the NIC will initially be disabled. This is desirable
+// when the underlying device or the newly created NIC needs to be further
+// configured (with IP addresses, routes, etc.) before it is brought up and
+// starts handling packets.
 func (ns *Netstack) addEndpoint(
 	nameFn func(nicid tcpip.NICID) string,
 	ep stack.LinkEndpoint,
@@ -899,6 +914,7 @@ func (ns *Netstack) addEndpoint(
 	metric routes.Metric,
 	features uint32,
 	filepath string,
+	enabled bool,
 ) (*ifState, error) {
 	ifs := &ifState{
 		ns:       ns,
@@ -934,7 +950,7 @@ func (ns *Netstack) addEndpoint(
 	ns.mu.Unlock()
 
 	name := nameFn(ifs.nicid)
-	if err := ns.stack.CreateNICWithOptions(ifs.nicid, ep, stack.NICOptions{Name: name, Context: ifs}); err != nil {
+	if err := ns.stack.CreateNICWithOptions(ifs.nicid, ep, stack.NICOptions{Name: name, Context: ifs, Disabled: !enabled}); err != nil {
 		return nil, fmt.Errorf("NIC %s: could not create NIC: %s", name, err)
 	}
 

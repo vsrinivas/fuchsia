@@ -18,6 +18,7 @@ import (
 	"sync/atomic"
 	"syscall/zx"
 	"syscall/zx/fidl"
+	"time"
 
 	appcontext "app/context"
 	"syslog"
@@ -57,6 +58,19 @@ const (
 	// opaqueIIDSecretKeyName is the name of the key used to access the secret key
 	// for opaque IIDs from the secure stash store.
 	opaqueIIDSecretKeyName = "opaque-iid-secret-key"
+
+	// dadTransmits is the number of consecutive NDP Neighbor Solicitation
+	// messages sent while performing Duplicate Address Detection on a IPv6
+	// tentative address.
+	//
+	// As per RFC 4862 section 5.1, 1 is the default number of messages to send.
+	dadTransmits = 1
+
+	// dadRetransmitTimer is the time between retransmissions of NDP Neighbor
+	// Solicitation messages to a neighbor.
+	//
+	// As per RFC 4861 section 10, 1s is the default time between retransmissions.
+	dadRetransmitTimer = time.Second
 )
 
 type bindingSetCounterStat struct {
@@ -125,6 +139,8 @@ func Main() {
 		},
 		HandleLocal: true,
 		NDPConfigs: tcpipstack.NDPConfigurations{
+			DupAddrDetectTransmits: dadTransmits,
+			RetransmitTimer:        dadRetransmitTimer,
 			HandleRAs:              true,
 			DiscoverDefaultRouters: true,
 			DiscoverOnLinkPrefixes: true,
