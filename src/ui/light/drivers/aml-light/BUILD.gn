@@ -55,6 +55,7 @@ test("aml-light-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.gpio",
+    "//zircon/system/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//zircon/system/banjo/ddk.protocol.pwm",
     "//zircon/system/banjo/ddk.protocol.pwm:ddk.protocol.pwm_mock",
   ]
