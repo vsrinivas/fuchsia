@@ -4,16 +4,17 @@
 
 library fuchsia.test;
 
-/// Developer-defined human-readable name for a test case.
+/// Human-readable name for a test case.
 using Name = string:512;
 
 /// Describes a single test case.
 table Case {
     /// Uniquely identifies a test case within a test suite.
+    /// This member is required.
     1: Name name;
 };
 
-/// Defines the outcome of running a test case.
+/// Represents success, failure, or other possible conditions following a test invocation.
 enum Status {
     /// The test passed.
     PASSED = 1;
@@ -37,7 +38,6 @@ enum Status {
     /// Examples:
     /// The test could not accurately determine whether the intended
     /// behavior was actually observed.
-    /// The test was marked as flaky by the developer.
     /// The test was canceled prior to completion.
     /// The test infrastructure needed to run the test was not available.
     /// An unknown error occurred while attempting to run the test.
@@ -47,6 +47,7 @@ enum Status {
 /// Specification of a test to run.
 table Invocation {
     /// Uniquely identifies a test case within a test suite.
+    /// This member is required.
     1: Name name;
 };
 
@@ -56,6 +57,7 @@ table RunOptions {
 
 /// Results of invoking a single test case.
 table Outcome {
+    /// This member is required.
     1: Status status;
 };
 
