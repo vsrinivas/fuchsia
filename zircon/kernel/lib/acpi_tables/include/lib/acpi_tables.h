@@ -32,6 +32,10 @@ struct AcpiNumaDomain {
   uint8_t memory_count = 0;
 };
 
+// ACPI constants.
+inline constexpr uint8_t kAcpiAddressSpaceMemory = 0;  // Memory/MMIO address.
+inline constexpr uint8_t kAcpiAddressSpaceIOPort = 1;  // I/O port address.
+
 // Describes a dedicated system debug port suitable for low-level
 // debugging and diagnostics.
 //

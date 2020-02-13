@@ -79,8 +79,8 @@ static spin_lock_t uart_spinlock = SPIN_LOCK_INITIAL_VALUE;
 
 // Read a single byte from the given UART register.
 static uint8_t uart_read(uint8_t reg) {
-  ZX_DEBUG_ASSERT(debug_port.type == DebugPort::Type::IoPort
-      || debug_port.type == DebugPort::Type::Mmio);
+  DEBUG_ASSERT(debug_port.type == DebugPort::Type::IoPort ||
+               debug_port.type == DebugPort::Type::Mmio);
 
   switch (debug_port.type) {
     case DebugPort::Type::IoPort:
@@ -96,8 +96,8 @@ static uint8_t uart_read(uint8_t reg) {
 
 // Write a single byte to the given UART register.
 static void uart_write(uint8_t reg, uint8_t val) {
-  ZX_DEBUG_ASSERT(debug_port.type == DebugPort::Type::IoPort
-      || debug_port.type == DebugPort::Type::Mmio);
+  DEBUG_ASSERT(debug_port.type == DebugPort::Type::IoPort ||
+               debug_port.type == DebugPort::Type::Mmio);
 
   switch (debug_port.type) {
     case DebugPort::Type::IoPort:
@@ -412,6 +412,42 @@ static bool handle_serial_zbi(DebugPort* port) {
   }
 }
 
+// Attempt to read information about a debug UART out of the ZBI.
+//
+// Return "true" if a debug port was found.
+static bool handle_serial_acpi(DebugPort* port) {
+  // Fetch ACPI debug port information, if present.
+  AcpiTableProvider provider;
+  AcpiDebugPortDescriptor desc;
+  zx_status_t status = AcpiTables(&provider).debug_port(&desc);
+  if (status != ZX_OK) {
+    return false;
+  }
+
+  // Allocate mapping to UART MMIO.
+  void* ptr;
+  status = VmAspace::kernel_aspace()->AllocPhysical(
+      "debug_uart", /*size=*/PAGE_SIZE,
+      /*ptr=*/&ptr,
+      /*align_pow2=*/PAGE_SIZE_SHIFT,
+      /*paddr=*/(paddr_t)desc.address,
+      /*vmm_flags=*/0,
+      /*arch_mmu_flags=*/ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |
+          ARCH_MMU_FLAG_PERM_WRITE);
+  if (status != ZX_OK) {
+    dprintf(INFO, "UART: failed to allocate phsyical memory for ACPI UART.\n");
+    return false;
+  }
+
+  // Initialise.
+  dprintf(INFO, "UART: found ACPI debug port at address %#08lx.\n", desc.address);
+  port->type = DebugPort::Type::Mmio;
+  port->phys_addr = desc.address;
+  port->mem_addr = reinterpret_cast<vaddr_t>(ptr);
+  port->irq = 0;
+  return true;
+}
+
 void pc_init_debug_early() {
   // Fetch serial information from the command line.
   DebugPort port;
@@ -424,6 +460,16 @@ void pc_init_debug_early() {
   if (handle_serial_zbi(&port)) {
     setup_uart(port);
     return;
+  }
+}
+
+void pc_init_debug_post_acpi() {
+  // Fetch serial information from ACPI if we still don't have anything.
+  if (debug_port.type == DebugPort::Type::Unknown) {
+    DebugPort port;
+    if (handle_serial_acpi(&port)) {
+      setup_uart(port);
+    }
   }
 }
 
@@ -625,3 +671,7 @@ int platform_pgetc(char* c, bool wait) {
 // When we do Tx buffering, drain the Tx buffer here in polling mode.
 // Turn off Tx interrupts, so force Tx be polling from this point
 void platform_debug_panic_start() { uart_tx_irq_enabled = false; }
+
+// Call "pc_init_debug_post_acpi" once ACPI is up.
+LK_INIT_HOOK(
+    debug_serial, [](uint level) { pc_init_debug_post_acpi(); }, LK_INIT_LEVEL_VM + 2)

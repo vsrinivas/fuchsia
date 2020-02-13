@@ -433,6 +433,12 @@ zx_status_t AcpiTables::debug_port(AcpiDebugPortDescriptor* desc) const {
     return status;
   }
 
+  // Ensure we are a MMIO address.
+  if (address.SpaceId != kAcpiAddressSpaceMemory) {
+    TRACEF("acpi: Address space unsupported (space_id=%x)\n", address.SpaceId);
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // Return information.
   desc->address = static_cast<paddr_t>(address.Address);
 
