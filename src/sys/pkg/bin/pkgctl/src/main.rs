@@ -5,17 +5,17 @@
 use {
     crate::args::{
         Args, Command, ExperimentCommand, ExperimentDisableCommand, ExperimentEnableCommand,
-        ExperimentSubCommand, GcCommand, OpenCommand, RepoAddCommand, RepoCommand,
+        ExperimentSubCommand, GcCommand, GetHashCommand, OpenCommand, RepoAddCommand, RepoCommand,
         RepoRemoveCommand, RepoSubCommand, ResolveCommand, RuleClearCommand, RuleCommand,
         RuleListCommand, RuleReplaceCommand, RuleReplaceFileCommand, RuleReplaceJsonCommand,
         RuleReplaceSubCommand, RuleSubCommand, UpdateCommand,
     },
     anyhow::{format_err, Context as _},
     fidl_fuchsia_pkg::{
-        PackageCacheMarker, PackageResolverAdminMarker, PackageResolverMarker,
+        PackageCacheMarker, PackageResolverAdminMarker, PackageResolverMarker, PackageUrl,
         RepositoryManagerMarker, RepositoryManagerProxy, UpdatePolicy,
     },
-    fidl_fuchsia_pkg_ext::RepositoryConfig,
+    fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig},
     fidl_fuchsia_pkg_rewrite::{EditTransactionProxy, EngineMarker, EngineProxy},
     fidl_fuchsia_pkg_rewrite_ext::{Rule as RewriteRule, RuleConfig},
     fidl_fuchsia_space::ManagerMarker as SpaceManagerMarker,
@@ -64,6 +64,19 @@ fn main() -> Result<(), anyhow::Error> {
                     println!("/{}", entry.name);
                 }
 
+                Ok(())
+            }
+            Command::GetHash(GetHashCommand { pkg_url }) => {
+                let resolver = connect_to_service::<fidl_fuchsia_pkg::PackageResolverMarker>()
+                    .context("Failed to connect to resolver service")?;
+                let blob_id =
+                    resolver.get_hash(&mut PackageUrl { url: pkg_url }).await?.map_err(|i| {
+                        format_err!(
+                            "Failed to get package hash with error: {}",
+                            zx::Status::from_raw(i)
+                        )
+                    })?;
+                print!("{}", BlobId::from(blob_id));
                 Ok(())
             }
             Command::Open(OpenCommand { meta_far_blob_id, selectors }) => {

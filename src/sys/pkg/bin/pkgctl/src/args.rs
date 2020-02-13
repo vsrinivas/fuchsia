@@ -25,6 +25,7 @@ pub enum Command {
     Experiment(ExperimentCommand),
     Update(UpdateCommand),
     Gc(GcCommand),
+    GetHash(GetHashCommand),
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -208,6 +209,14 @@ pub struct UpdateCommand {}
 /// Trigger a manual garbage collection of the package cache.
 pub struct GcCommand {}
 
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "get-hash")]
+/// Get the hash of a package.
+pub struct GetHashCommand {
+    #[argh(positional)]
+    pub pkg_url: String,
+}
+
 fn parse_experiment_id(experiment: &str) -> Result<Experiment, String> {
     match experiment {
         "lightbulb" => Ok(Experiment::Lightbulb),
@@ -228,7 +237,7 @@ mod tests {
     const CMD_NAME: &'static [&'static str] = &["pkgctl"];
 
     #[test]
-    fn test_resolve() {
+    fn resolve() {
         fn check(args: &[&str], expected_pkg_url: &str, expected_selectors: &[String]) {
             assert_eq!(
                 Args::from_args(CMD_NAME, args),
@@ -253,7 +262,7 @@ mod tests {
     }
 
     #[test]
-    fn test_open() {
+    fn open() {
         fn check(args: &[&str], expected_blob_id: &str, expected_selectors: &[String]) {
             assert_eq!(
                 Args::from_args(CMD_NAME, args),
@@ -277,7 +286,7 @@ mod tests {
     }
 
     #[test]
-    fn test_open_reject_malformed_blobs() {
+    fn open_reject_malformed_blobs() {
         match Args::from_args(CMD_NAME, &["open", "bad_id"]) {
             Err(argh::EarlyExit { output: _, status: _ }) => {}
             result => panic!("unexpected result {:?}", result),
@@ -285,7 +294,7 @@ mod tests {
     }
 
     #[test]
-    fn test_repo() {
+    fn repo() {
         fn check(args: &[&str], expected: RepoCommand) {
             assert_eq!(
                 Args::from_args(CMD_NAME, args),
@@ -322,7 +331,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rule() {
+    fn rule() {
         fn check(args: &[&str], expected: RuleCommand) {
             match Args::from_args(CMD_NAME, args).unwrap() {
                 Args { command: Command::Rule(cmd) } => {
@@ -363,7 +372,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rule_replace_json_rejects_malformed_json() {
+    fn rule_replace_json_rejects_malformed_json() {
         assert_matches!(
             Args::from_args(CMD_NAME, &["rule", "replace", "json", "{"]),
             Err(argh::EarlyExit { output: _, status: _ })
@@ -371,7 +380,7 @@ mod tests {
     }
 
     #[test]
-    fn test_experiment_ok() {
+    fn experiment_ok() {
         assert_eq!(
             Args::from_args(CMD_NAME, &["experiment", "enable", "lightbulb"]).unwrap(),
             Args {
@@ -396,7 +405,7 @@ mod tests {
     }
 
     #[test]
-    fn test_experiment_unknown() {
+    fn experiment_unknown() {
         assert_matches!(
             Args::from_args(CMD_NAME, &["experiment", "enable", "unknown"]),
             Err(argh::EarlyExit { output, status: Err(()) }) if output.contains("unknown")
@@ -409,7 +418,7 @@ mod tests {
     }
 
     #[test]
-    fn test_update() {
+    fn update() {
         match Args::from_args(CMD_NAME, &["update"]).unwrap() {
             Args { command: Command::Update(UpdateCommand {}) } => {}
             result => panic!("unexpected result {:?}", result),
@@ -417,9 +426,18 @@ mod tests {
     }
 
     #[test]
-    fn test_gc() {
+    fn gc() {
         match Args::from_args(CMD_NAME, &["gc"]).unwrap() {
             Args { command: Command::Gc(GcCommand {}) } => {}
+            result => panic!("unexpected result {:?}", result),
+        }
+    }
+
+    #[test]
+    fn get_hash() {
+        let url = "fuchsia-pkg://fuchsia.com/foo/bar";
+        match Args::from_args(CMD_NAME, &["get-hash", url]).unwrap() {
+            Args { command: Command::GetHash(GetHashCommand { pkg_url }) } if pkg_url == url => {}
             result => panic!("unexpected result {:?}", result),
         }
     }
