@@ -74,7 +74,7 @@ Paver* Paver::Get() {
     if (status != ZX_OK) {
       return nullptr;
     }
-    fbl::unique_fd devfs_root(open("/dev", O_RDWR));
+    fbl::unique_fd devfs_root(open("/dev", O_RDONLY));
     if (!devfs_root) {
       return nullptr;
     }

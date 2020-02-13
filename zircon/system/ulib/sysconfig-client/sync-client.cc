@@ -88,7 +88,6 @@ zx_status_t FindSysconfigPartition(const fbl::unique_fd& devfs_root,
     return ZX_ERR_STOP;
   };
 
-
   const zx::time deadline = zx::deadline_after(zx::sec(5));
   if (fdio_watch_directory(dirfd(dir), watch_dir_event_cb, deadline.get(), out) != ZX_ERR_STOP) {
     return ZX_ERR_NOT_FOUND;
@@ -124,7 +123,7 @@ zx_status_t CheckIfAstro(const fbl::unique_fd& devfs_root) {
 }  // namespace
 
 zx_status_t SyncClient::Create(std::optional<SyncClient>* out) {
-  fbl::unique_fd devfs_root(open("/dev", O_RDWR));
+  fbl::unique_fd devfs_root(open("/dev", O_RDONLY));
   if (!devfs_root) {
     return ZX_ERR_IO;
   }
@@ -210,7 +209,6 @@ zx_status_t SyncClient::ReadPartition(PartitionType partition, const zx::vmo& vm
 }
 
 size_t SyncClient::GetPartitionSize(PartitionType partition) {
-
   switch (partition) {
     case PartitionType::kSysconfig:
       return kSysconfigSize;

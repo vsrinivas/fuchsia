@@ -83,7 +83,7 @@ fbl::String GetTestFilter() {
 class DeviceEnumerationTest : public zxtest::Test {
  protected:
   void TestRunner(const char** device_paths, size_t paths_num) {
-    fbl::unique_fd devfs_root(open("/dev", O_RDWR));
+    fbl::unique_fd devfs_root(open("/dev", O_RDONLY));
     ASSERT_TRUE(devfs_root);
 
     fbl::unique_fd fd;
