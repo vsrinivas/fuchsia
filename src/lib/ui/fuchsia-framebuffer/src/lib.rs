@@ -119,6 +119,7 @@ impl Into<fidl_fuchsia_sysmem::PixelFormatType> for PixelFormat {
         match self {
             PixelFormat::Abgr8888 => fidl_fuchsia_sysmem::PixelFormatType::R8G8B8A8,
             PixelFormat::Argb8888 => fidl_fuchsia_sysmem::PixelFormatType::Bgra32,
+            PixelFormat::RgbX888 => fidl_fuchsia_sysmem::PixelFormatType::Bgra32,
             _ => fidl_fuchsia_sysmem::PixelFormatType::Invalid,
         }
     }
