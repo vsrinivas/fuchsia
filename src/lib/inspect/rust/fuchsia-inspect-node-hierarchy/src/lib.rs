@@ -565,7 +565,7 @@ pub fn filter_inspect_snapshot(
             }
         };
 
-        if property_regex_set.is_match(property.name()) {
+        if property_regex_set.is_match(&selectors::sanitize_string_for_selectors(property.name())) {
             // TODO(4601): We can keep track of the prefix string identifying
             // the "curr_node" and only insert from root if our iteration has
             // brought us to a new node higher up the hierarchy. Right now, we
@@ -900,7 +900,7 @@ mod tests {
                     vec![Property::Int("12".to_string(), -4)],
                     vec![NodeHierarchy::new(
                         "zed",
-                        vec![Property::Int("13".to_string(), -4)],
+                        vec![Property::Int("13/:".to_string(), -4)],
                         vec![],
                     )],
                 ),
@@ -910,7 +910,7 @@ mod tests {
 
     #[test]
     fn test_filter_hierarchy() {
-        let test_selectors = vec!["*:root/foo:11", "*:root:z"];
+        let test_selectors = vec!["*:root/foo:11", "*:root:z", r#"*:root/bar/zed:13\/\:"#];
 
         assert_eq!(
             parse_selectors_and_filter_hierarchy(get_test_hierarchy(), test_selectors),
@@ -918,7 +918,16 @@ mod tests {
                 "root",
                 vec![Property::Int("z".to_string(), -4),],
                 vec![
-                    NodeHierarchy::new("foo", vec![Property::Int("11".to_string(), -4),], vec![],),
+                    NodeHierarchy::new(
+                        "bar",
+                        vec![],
+                        vec![NodeHierarchy::new(
+                            "zed",
+                            vec![Property::Int("13/:".to_string(), -4)],
+                            vec![],
+                        )],
+                    ),
+                    NodeHierarchy::new("foo", vec![Property::Int("11".to_string(), -4),], vec![],)
                 ],
             )
         );

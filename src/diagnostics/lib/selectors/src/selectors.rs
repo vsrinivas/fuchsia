@@ -18,7 +18,7 @@ use {
 static SELECTOR_DELIMITER: char = ':';
 
 // Character used to delimit nodes within a component hierarchy path.
-static PATH_NODE_DELIMITER: char = '/';
+pub static PATH_NODE_DELIMITER: char = '/';
 
 // Character used to escape interperetation of this parser's "special
 // characers"; *, /, :, and \.
