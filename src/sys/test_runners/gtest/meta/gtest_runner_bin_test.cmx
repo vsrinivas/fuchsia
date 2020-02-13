@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "test/gtest_runner_bin_test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp",
+            "deprecated-ambient-replace-as-executable"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

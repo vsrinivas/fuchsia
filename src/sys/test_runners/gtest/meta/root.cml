@@ -20,18 +20,27 @@
             storage: "data",
             from: "#test_storage",
             to: ["#gtest_runner"]
+        },
+        {
+            runner: "gtest_runner",
+            from: "#gtest_runner",
+            to: ["#sample_test"]
         }
     ],
     expose: [
         {
             protocol: "/svc/fuchsia.test.Suite",
-            from: "#gtest_runner"
+            from: "#sample_test"
         }
     ],
     children: [
         {
             name: "gtest_runner",
-            url: "fuchsia-pkg://fuchsia.com/gtest_runner#meta/gtest_runner.cm",
+            url: "fuchsia-pkg://fuchsia.com/gtest_runner#meta/gtest_runner.cm"
+        },
+        {
+            name: "sample_test",
+            url: "fuchsia-pkg://fuchsia.com/gtest_runner#meta/gtest_runner_sample_tests.cm",
             startup: "eager"
         },
         {

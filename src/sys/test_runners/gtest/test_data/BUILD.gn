@@ -1,0 +1,31 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("gtest_runner_sample_tests") {
+  testonly = true
+  sources = [ "sample_tests.cc" ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+executable("gtest_runner_no_tests") {
+  testonly = true
+  sources = [ "empty_test_file.cc" ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+group("test_data") {
+  testonly = true
+  public_deps = [
+    ":gtest_runner_no_tests",
+    ":gtest_runner_sample_tests",
+  ]
+}
