@@ -1,0 +1,36 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test/test_package.gni")
+
+# We need to make rustc link using clang++, appropriately configured, in order
+# to find libc++.
+config("clangxx_linker") {
+  visibility = [ ":*" ]
+  rustflags = [
+    "-Clinker=" + rebase_path("$clang_prefix/clang++", "", root_build_dir),
+    "-Cdefault-linker-libraries",
+  ]
+}
+
+rustc_library("lib") {
+  name = "usb_bulk"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [ "//third_party/rust_crates:anyhow" ]
+  non_rust_deps = [ "//src/lib/usb_bulk/cpp:usb_bulk" ]
+  configs += [ ":clangxx_linker" ]
+
+  # The tests require a zedmon device attached to the host, and should not run
+  # in the infrastructure currently.
+  test_environments = []
+}
+
+group("tests") {
+  public_deps = [ ":lib_test($host_toolchain)" ]
+  testonly = true
+}

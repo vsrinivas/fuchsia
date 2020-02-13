@@ -35,6 +35,7 @@ group("lib") {
     "trace",
     "ui",
     "url",
+    "usb_bulk",
     "uuid",
     "zerocopy",
   ]
@@ -84,6 +85,7 @@ group("tests") {
     "trace:tests",
     "ui:rust-ui-crates-tests",
     "ui:tests",
+    "usb_bulk:tests",
     "waitgroup:tests",
     "watch_handler:tests",
     "zerocopy:tests",
