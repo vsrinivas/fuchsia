@@ -109,7 +109,7 @@ struct DoublyLinkedListable {
 
 template <typename T, typename NodeTraits_ = DefaultDoublyLinkedListTraits<T>,
           typename TagType_ = DefaultObjectTag, SizeOrder ListSizeOrder_ = SizeOrder::N>
-class __POINTER(T) DoublyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
+class DoublyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
  private:
   // Private fwd decls of the iterator implementation.
   template <typename IterTraits>

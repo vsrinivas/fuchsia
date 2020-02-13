@@ -9,8 +9,6 @@
 #include <iterator>
 #include <vector>
 
-#include "src/lib/containers/cpp/ownership.h"
-
 namespace containers {
 
 // This is like a std::string_view but for array data. It attempts to have the same API as
@@ -20,7 +18,7 @@ namespace containers {
 // which is normally more efficient to push on the stack directly than to push one pointer that
 // points to two other pointers.
 template <typename T>
-class __POINTER(T) array_view {
+class array_view {
  public:
   using value_type = T;
   using size_type = std::size_t;

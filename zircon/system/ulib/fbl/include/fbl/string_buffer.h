@@ -25,7 +25,7 @@ size_t StringBufferAppendPrintf(char* dest, size_t remaining, const char* format
 //
 // The buffer is sized to hold up to N characters plus a null-terminator.
 template <size_t N>
-class __OWNER(char) StringBuffer final {
+class StringBuffer final {
  public:
   // Creates an empty string buffer.
   StringBuffer() : length_(0U) { data_[0] = 0; }

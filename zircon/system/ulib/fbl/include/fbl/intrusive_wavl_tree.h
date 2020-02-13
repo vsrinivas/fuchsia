@@ -141,7 +141,7 @@ template <typename KeyType_, typename PtrType_,
           typename NodeTraits_ = DefaultWAVLTreeTraits<PtrType_>,
           typename TagType_ = DefaultObjectTag,
           typename Observer_ = tests::intrusive_containers::DefaultWAVLTreeObserver>
-class __POINTER(KeyType_) WAVLTree {
+class WAVLTree {
  private:
   // Private fwd decls of the iterator implementation.
   template <typename IterTraits>

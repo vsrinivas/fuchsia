@@ -13,7 +13,7 @@
 namespace fbl {
 
 template <typename T>
-class __POINTER(T) Span {
+class Span {
  public:
   using element_type = T;
   using value_type = std::remove_cv_t<T>;

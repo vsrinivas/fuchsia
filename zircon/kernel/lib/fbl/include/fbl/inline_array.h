@@ -25,7 +25,7 @@ namespace fbl {
 //
 // Note: Currently, |max_inline_count| must be at least 1.
 template <typename T, size_t max_inline_count>
-class __OWNER(T) InlineArray {
+class InlineArray {
  public:
   InlineArray(fbl::AllocChecker* ac, size_t count)
       : count_(count),

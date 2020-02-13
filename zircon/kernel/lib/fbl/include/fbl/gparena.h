@@ -19,7 +19,7 @@ namespace fbl {
 // of a single kind of object. Compared to other arena style allocators it additionally guarantees
 // that a portion of the objects memory will be preserved between calls to Free+Alloc.
 template <size_t PersistSize, size_t ObjectSize>
-class __OWNER(void) GPArena {
+class GPArena {
  public:
   GPArena() = default;
   ~GPArena() {
