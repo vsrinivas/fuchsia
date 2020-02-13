@@ -53,6 +53,10 @@
       "type": "cc_prebuilt_library"
     },
     {
+      "meta": "pkg/sysroot/meta.json",
+      "type": "sysroot"
+    },
+    {
       "meta": "pkg/vulkan_layers/meta.json",
       "type": "loadable_module"
     },

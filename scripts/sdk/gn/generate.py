@@ -339,6 +339,7 @@ class GNBuilder(Frontend):
             # hardcode those names in build/config/BUILD.gn. This may need to
             # change if/when we support sanitized builds.
             self.copy_files(arch_data['dist_libs'], arch_root, base)
+        self.write_atom_metadata(self.dest('pkg','sysroot', 'meta.json'), atom)
 
 
 class TestData(object):

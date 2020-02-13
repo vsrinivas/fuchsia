@@ -119,14 +119,14 @@ class GNGenerateTest(unittest.TestCase):
             with open(os.path.join(sdk_dir, atom['meta']), 'r') as input:
                 atom_meta = json.load(input)
                 fileset.update(self.get_atom_files(atom_meta))
-
+        self.assertTrue(len(fileset) != 0)
         # walk the sdk_dir matching the files in the set.
         for dir_name, _, file_list in os.walk(sdk_dir):
             for f in file_list:
                 found_file = os.path.relpath(os.path.join(dir_name, f), sdk_dir)
                 self.assertIn(found_file, fileset)
                 fileset.remove(found_file)
-        self.assertFalse(fileset)
+        self.assertTrue(len(fileset) == 0)
 
     def get_atom_files(self, atom):
         files = set()
@@ -154,6 +154,18 @@ class GNGenerateTest(unittest.TestCase):
                     files.add(arch_atom['link'])
                 if type(arch_atom) is list:
                     files.update(arch_atom)
+        if 'versions' in atom:
+            for a in atom['versions']:
+                arch_atom = atom['versions'][a]
+                if 'debug_libs' in arch_atom:
+                    files.update(arch_atom['debug_libs'])
+                if 'dist_libs' in arch_atom:
+                    files.update(arch_atom['dist_libs'])
+                if 'headers' in arch_atom:
+                    files.update(arch_atom['headers'])
+                if 'link_libs' in arch_atom:
+                    files.update(arch_atom['link_libs'])
+
         return files
 
 

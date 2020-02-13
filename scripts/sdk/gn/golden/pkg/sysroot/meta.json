@@ -1,0 +1,28 @@
+{
+  "name": "sysroot",
+  "type": "sysroot",
+  "versions": {
+    "arm64": {
+      "debug_libs": [],
+      "dist_dir": "arch/arm64/sysroot",
+      "dist_libs": [
+        "arch/arm64/sysroot/dist/lib/ld.so.1"
+      ],
+      "headers": [],
+      "include_dir": "arch/arm64/sysroot/include",
+      "link_libs": [],
+      "root": "arch/arm64/sysroot"
+    },
+    "x64": {
+      "debug_libs": [],
+      "dist_dir": "arch/x64/sysroot",
+      "dist_libs": [
+        "arch/x64/sysroot/dist/lib/ld.so.1"
+      ],
+      "headers": [],
+      "include_dir": "arch/x64/sysroot/include",
+      "link_libs": [],
+      "root": "arch/x64/sysroot"
+    }
+  }
+}

@@ -47,6 +47,10 @@
     {
       "meta": "device/generic-arm64.json",
       "type": "device_profile"
+    },
+    {
+      "meta": "pkg/sysroot/meta.json",
+      "type": "sysroot"
     }
   ],
   "schema_version": "1"
