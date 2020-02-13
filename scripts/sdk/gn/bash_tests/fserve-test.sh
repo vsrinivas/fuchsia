@@ -9,6 +9,8 @@
 
 set -e
 
+FSERVE_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve.sh"
+
 # Sets up an ssh mock binary on the $PATH of any subshells and creates a stub
 # authorized_keys.
 set_up_ssh() {
@@ -63,6 +65,29 @@ mkdir -p "$(dirname "${outpath}")"
 touch foo
 tar czf "${outpath}" foo
 SETVAR
+}
+
+set_up_gsutil_multibucket() {
+  cat > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/gsutil.mock_side_effects" <<"EOF"
+  if [[ "$1" == "ls" ]]; then
+    if [[ "${2}" == *unknown.tar.gz ]]; then
+      echo "ls: cannot access \'${2}\': No such file or directory"
+      exit 1
+    elif [[ "${2}" == gs://fuchsia/* ]]; then
+      echo "gs://fuchsia/development/sdk_id/images/image1.tgz"
+      echo "gs://fuchsia/development/sdk_id/images/image2.tgz"
+      echo "gs://fuchsia/development/sdk_id/images/image3.tgz"
+    elif [[ "${2}" == gs://other/* ]]; then
+      echo "gs://other/development/sdk_id/images/image4.tgz"
+      echo "gs://other/development/sdk_id/images/image5.tgz"
+      echo "gs://other/development/sdk_id/images/image6.tgz"
+    fi
+  elif [[ "$1" == "cp" ]]; then
+    outpath="$3"
+    mkdir -p "$(dirname "${outpath}")"
+    cp ../testdata/empty.tar.gz "${outpath}"
+  fi
+EOF
 }
 
 # Creates a stub Core SDK hashes file. The filename is based on the SDK version
@@ -154,8 +179,9 @@ TEST_fserve_starts_package_server() {
   set_up_sdk_stubs
 
   # Run command.
-  BT_EXPECT run_bash_script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve.sh"
+  BT_EXPECT run_bash_script "${FSERVE_CMD}"
 
+  # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/tools/pm.mock_state"
 
   BT_EXPECT_EQ 6 ${#BT_MOCK_ARGS[@]}
@@ -176,8 +202,9 @@ TEST_fserve_registers_package_server() {
   set_up_sdk_stubs
 
   # Run command.
-  BT_EXPECT run_bash_script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve.sh"
+  BT_EXPECT run_bash_script "${FSERVE_CMD}"
 
+  # shellcheck disable=SC1090
   source "${PATH_DIR_FOR_TEST}/ssh.mock_state"
 
   BT_EXPECT_EQ 8 "${#BT_MOCK_ARGS[@]}"
@@ -189,11 +216,24 @@ TEST_fserve_registers_package_server() {
   BT_EXPECT_FILE_DOES_NOT_EXIST "${PATH_DIR_FOR_TEST}/ssh.mock_state.1"
 }
 
+# Verify image names are listed if the image is not found.
+TEST_fpave_lists_images() {
+  set_up_gsutil_multibucket
+
+  BT_EXPECT_FAIL run_bash_script -x "${FSERVE_CMD}" --image unknown > list_images_output.txt  2>&1
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "list_images_output.txt" "image1 image2 image3"
+
+  BT_EXPECT_FAIL run_bash_script "${FSERVE_CMD}" --bucket other --image unknown > list_images_output.txt 2>&1
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "list_images_output.txt" "image4 image5 image6 image1 image2 image3"
+}
+
 # Test initialization.
+# shellcheck disable=SC2034
 BT_FILE_DEPS=(
   scripts/sdk/gn/base/bin/fserve.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
 )
+# shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/bin/gsutil
   scripts/sdk/gn/base/tools/device-finder

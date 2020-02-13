@@ -8,6 +8,8 @@
 
 set -e
 
+FPAVE_CMD="${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpave.sh"
+
 # Sets up an ssh mock binary on the $PATH of any subshells and creates a stub
 # authorized_keys.
 set_up_ssh() {
@@ -58,6 +60,29 @@ outpath="$3"
 mkdir -p "$(dirname "${outpath}")"
 cp ../testdata/empty.tar.gz "${outpath}"
 SETVAR
+}
+
+set_up_gsutil_multibucket() {
+  cat > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/gsutil.mock_side_effects" <<"EOF"
+  if [[ "$1" == "ls" ]]; then
+    if [[ "${2}" == *unknown.tgz ]]; then
+      echo "ls: cannot access \'${2}\': No such file or directory"
+      exit 1
+    elif [[ "${2}" == gs://fuchsia/* ]]; then
+      echo "gs://fuchsia/development/sdk_id/images/image1.tgz"
+      echo "gs://fuchsia/development/sdk_id/images/image2.tgz"
+      echo "gs://fuchsia/development/sdk_id/images/image3.tgz"
+    elif [[ "${2}" == gs://other/* ]]; then
+      echo "gs://other/development/sdk_id/images/image4.tgz"
+      echo "gs://other/development/sdk_id/images/image5.tgz"
+      echo "gs://other/development/sdk_id/images/image6.tgz"
+    fi
+  elif [[ "$1" == "cp" ]]; then
+    outpath="$3"
+    mkdir -p "$(dirname "${outpath}")"
+    cp ../testdata/empty.tar.gz "${outpath}"
+  fi
+EOF
 }
 
 # Creates a stub Core SDK hashes file. The filename is based on the SDK version
@@ -141,8 +166,7 @@ TEST_fpave_restarts_device() {
   set_up_sdk_stubs
 
   # Run command.
-  BT_EXPECT run_bash_script \
-    "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpave.sh" \
+  BT_EXPECT run_bash_script "${FPAVE_CMD}" \
     --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
 
   # Verify that the script attempted to reboot the device over SSH.
@@ -167,7 +191,7 @@ TEST_fpave_starts_paving() {
 
   # Run command.
   BT_EXPECT run_bash_script \
-    "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpave.sh" \
+    "${FPAVE_CMD}" \
     --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
 
   # Verify that the pave.sh script from the Fuchsia SDK was started correctly.
@@ -181,12 +205,28 @@ TEST_fpave_starts_paving() {
   BT_EXPECT_FILE_DOES_NOT_EXIST "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/image/pave.sh.mock_state.1"
 }
 
+# Verify image names are listed if the image is not found.
+TEST_fpave_lists_images() {
+  set_up_gsutil_multibucket
+
+  BT_EXPECT_FAIL run_bash_script "${FPAVE_CMD}" --image unknown \
+    --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" > list_images_output.txt  2>&1
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "list_images_output.txt" "image1 image2 image3"
+
+  BT_EXPECT_FAIL run_bash_script "${FPAVE_CMD}" \
+    --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" \
+    --bucket other --image unknown > list_images_output.txt 2>&1
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "list_images_output.txt" "image4 image5 image6 image1 image2 image3"
+}
+
+# shellcheck disable=SC2034
 # Test initialization.
 BT_FILE_DEPS=(
   scripts/sdk/gn/base/bin/fpave.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
   scripts/sdk/gn/testdata/empty.tar.gz
 )
+# shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/bin/gsutil
   scripts/sdk/gn/base/images/image/pave.sh

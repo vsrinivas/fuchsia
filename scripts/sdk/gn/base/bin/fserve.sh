@@ -8,6 +8,7 @@ set -u
 SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
 
 # Fuchsia command common functions.
+# shellcheck disable=SC1090
 source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
 FUCHSIA_SDK_PATH="$(realpath "${SCRIPT_SRC_DIR}/..")"
@@ -34,6 +35,7 @@ usage () {
   echo "    Kills any existing package manager server"
   echo "  [--prepare]"
   echo "    Downloads any dependencies but does not start the package server"
+  echo "  [-x] Enable debug."
 }
 
 PRIVATE_KEY_FILE=""
@@ -74,6 +76,9 @@ case $1 in
     --prepare)
     PREPARE_ONLY="yes"
     ;;
+    -x)
+    set -x
+    ;;
     *)
     # unknown option
     usage
@@ -97,7 +102,7 @@ SDK_ID=$(get-sdk-version "${FUCHSIA_SDK_PATH}")
 # Consider cleaning up old tarballs when getting a new one?
 #
 if [[ ! -v  IMAGE_NAME ]]; then
-  IMAGES=("$(get-available-images "${SDK_ID}")")
+  IMAGES=("$(get-available-images "${SDK_ID}" "${FUCHSIA_BUCKET}")")
   fx-error "IMAGE_NAME not set. Valid images for this SDK version are:" "${IMAGES[*]}."
   exit 1
 fi
@@ -109,7 +114,7 @@ IMAGE_FILENAME="${SDK_ID}_${IMAGE_NAME}.tar.gz"
 if [[ ! -f "${FUCHSIA_IMAGE_WORK_DIR}/${IMAGE_FILENAME}" ]] ; then
   if ! run-gsutil ls "${FUCHSIA_TARGET_PACKAGES}"; then
     echo "Packages for ${IMAGE_NAME} not found. Valid images for this SDK version are:"
-    IMAGES=("$(get-available-images "${SDK_ID}")")
+    IMAGES=("$(get-available-images "${SDK_ID}" "${FUCHSIA_BUCKET}")")
     echo "${IMAGES[*]}."
     exit 2
   fi
@@ -170,7 +175,7 @@ if [[ "${PREPARE_ONLY}" == "yes" ]]; then
   exit 0
 fi
 
-HOST_IP=$(get-host-ip "${FUCHSIA_SDK_PATH}")
+HOST_IP=$(get-host-ip "${FUCHSIA_SDK_PATH}" "$DEVICE_NAME_FILTER")
 DEVICE_IP=$(get-device-ip-by-name "$FUCHSIA_SDK_PATH" "$DEVICE_NAME_FILTER")
 if [[ ! "$?" || -z "$DEVICE_IP" ]]; then
   fx-error "Could not get device IP address"

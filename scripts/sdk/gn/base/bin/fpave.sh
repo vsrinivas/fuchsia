@@ -23,25 +23,29 @@ IMAGE_NAME="generic-x64"
 function usage {
   echo "Usage: $0"
   echo "  [--work-dir <working directory to store image assets>]"
-  echo "    Defaults to ${FUCHSIA_IMAGE_WORK_DIR}"
+  echo "    Defaults to ${FUCHSIA_IMAGE_WORK_DIR}."
   echo "  [--bucket <fuchsia gsutil bucket>]"
-  echo "    Defaults to ${FUCHSIA_BUCKET}"
+  echo "    Defaults to ${FUCHSIA_BUCKET}."
   echo "  [--image <image name>]"
-  echo "    Defaults to ${IMAGE_NAME}"
+  echo "    Defaults to ${IMAGE_NAME}."
   echo "  [--authorized-keys <file>]"
   echo "    The authorized public key file for securing the device.  Defaults to "
-  echo "    the output of 'ssh-add -L'"
+  echo "    the output of 'ssh-add -L'."
   echo "  [--private-key <identity file>]"
   echo "    Uses additional private key when using ssh to access the device."
   echo "  [--device-name <device hostname>]"
-  echo "    Only paves a device with the given device hostname"
+  echo "    Only paves a device with the given device hostname."
   echo "  [--prepare]"
-  echo "    Downloads any dependencies but does not pave to a device"
+  echo "    Downloads any dependencies but does not pave to a device."
+  echo "  [--zedboot]"
+  echo "    Updates the Zedboot bootloader and exits."
+  echo "  [-x] Enable debug."
 }
 
 PRIVATE_KEY_FILE=""
 PREPARE_ONLY=""
 AUTH_KEYS_FILE=""
+UPDATE_ZEDBOOT=""
 
 # Parse command line
 while (( "$#" )); do
@@ -73,6 +77,12 @@ case $1 in
     --prepare)
       PREPARE_ONLY="yes"
     ;;
+    --zedboot)
+      UPDATE_ZEDBOOT="yes"
+    ;;
+    -x)
+      set -x
+    ;;
     *)
     # unknown option
     fx-error "Unknown option $1."
@@ -96,7 +106,7 @@ fi
 SDK_ID=$(get-sdk-version "${FUCHSIA_SDK_PATH}")
 
 if [[ ! -v  IMAGE_NAME ]]; then
-  IMAGES=("$(get-available-images "${SDK_ID}")")
+  IMAGES=("$(get-available-images "${SDK_ID}" "${FUCHSIA_BUCKET}")")
   fx-error "IMAGE_NAME not set. Valid images for this SDK version are: ${IMAGES[*]}."
   exit 1
 fi
@@ -110,7 +120,7 @@ IMAGE_FILENAME="${SDK_ID}_${IMAGE_NAME}.tgz"
 if [[ ! -f "${FUCHSIA_IMAGE_WORK_DIR}/${IMAGE_FILENAME}" ]] ; then
   if ! run-gsutil ls "${FUCHSIA_TARGET_IMAGE}"; then
     echo "Image ${IMAGE_NAME} not found. Valid images for this SDK version are:"
-    IMAGES=("$(get-available-images "${SDK_ID}")")
+    IMAGES=("$(get-available-images "${SDK_ID}" "${FUCHSIA_BUCKET}")")
     echo "${IMAGES[@]}"
     exit 2
   fi
@@ -200,7 +210,13 @@ else
     fx-warn "Device not detected.  Make sure the device is connected and at the 'Zedboot' screen."
 fi
 
-PAVE_CMD=("${FUCHSIA_IMAGE_WORK_DIR}/image/pave.sh" "--authorized-keys" "${AUTH_KEYS_FILE}" "-1")
+if [[ "${UPDATE_ZEDBOOT}" == "yes" ]]; then
+  PAVE_CMD=("${FUCHSIA_IMAGE_WORK_DIR}/image/pave-zedboot.sh")
+else
+  PAVE_CMD=("${FUCHSIA_IMAGE_WORK_DIR}/image/pave.sh")
+fi
+
+PAVE_CMD+=("--authorized-keys" "${AUTH_KEYS_FILE}" "-1")
 if ! "${PAVE_CMD[@]}"; then
   # Currently there is a bug on the first attempt of paving, so retry.
   sleep .33
