@@ -153,7 +153,10 @@ async fn main() -> Result<(), anyhow::Error> {
             };
 
             // Start the keepalive machinery.
-            let () = keepalive_timeout.std().set_keepalive_ms(Some(0))?;
+            //
+            // set_keepalive sets TCP_KEEPIDLE, which requires a minimum of 1 second.
+            let () =
+                keepalive_timeout.std().set_keepalive(Some(std::time::Duration::from_secs(1)))?;
             // TODO(tamird): use upstream's setters when
             // https://github.com/rust-lang-nursery/net2-rs/issues/90 is fixed.
             //

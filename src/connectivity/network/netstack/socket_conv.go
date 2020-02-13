@@ -43,11 +43,19 @@ import "C"
    diff --color --ignore-all-space --unified - src/connectivity/network/netstack/socket_conv.go
 */
 
-// DefaultTTL is linux's default TTL. All network protocols in all stacks used
-// with this package must have this value set as their default TTL.
-const DefaultTTL = 64
+const (
+	// DefaultTTL is linux's default TTL. All network protocols in all stacks used
+	// with this package must have this value set as their default TTL.
+	DefaultTTL = 64
 
-const sizeOfInt32 int = 4
+	sizeOfInt32 int = 4
+
+	// Max values for sockopt TCP_KEEPIDLE and TCP_KEEPINTVL in Linux.
+	//
+	// https://github.com/torvalds/linux/blob/f2850dd5ee015bd7b77043f731632888887689c7/include/net/tcp.h#L156-L157
+	maxTCPKeepIdle  = 32767
+	maxTCPKeepIntvl = 32767
+)
 
 func GetSockOpt(ep tcpip.Endpoint, ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, level, name int16) (interface{}, *tcpip.Error) {
 	switch level {
@@ -561,6 +569,10 @@ func setSockOptTCP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		}
 
 		v := binary.LittleEndian.Uint32(optVal)
+		// https://github.com/torvalds/linux/blob/f2850dd5ee015bd7b77043f731632888887689c7/net/ipv4/tcp.c#L2991
+		if v < 1 || v > maxTCPKeepIdle {
+			return tcpip.ErrInvalidOptionValue
+		}
 		return ep.SetSockOpt(tcpip.KeepaliveIdleOption(time.Second * time.Duration(v)))
 
 	case C.TCP_KEEPINTVL:
@@ -569,6 +581,10 @@ func setSockOptTCP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		}
 
 		v := binary.LittleEndian.Uint32(optVal)
+		// https://github.com/torvalds/linux/blob/f2850dd5ee015bd7b77043f731632888887689c7/net/ipv4/tcp.c#L3008
+		if v < 1 || v > maxTCPKeepIntvl {
+			return tcpip.ErrInvalidOptionValue
+		}
 		return ep.SetSockOpt(tcpip.KeepaliveIntervalOption(time.Second * time.Duration(v)))
 
 	case C.TCP_KEEPCNT:
