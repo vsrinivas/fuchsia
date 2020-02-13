@@ -5,14 +5,14 @@
 use {
     crate::key_util::get_input_sequence_for_key_event,
     crate::pty::Pty,
-    crate::ui::{ScrollContext, TerminalScene},
+    crate::ui::{PointerEventResponse, ScrollContext, TerminalScene},
     anyhow::{Context as _, Error},
     carnelian::{
         make_message, AnimationMode, AppContext, Message, Size, ViewAssistant,
         ViewAssistantContext, ViewKey, ViewMessages,
     },
     fidl_fuchsia_hardware_pty::WindowSize,
-    fidl_fuchsia_ui_input::KeyboardEvent,
+    fidl_fuchsia_ui_input::{KeyboardEvent, PointerEvent},
     fuchsia_async as fasync, fuchsia_trace as ftrace,
     futures::{channel::mpsc, io::AsyncReadExt, select, FutureExt, StreamExt},
     std::{cell::RefCell, ffi::CStr, fs::File, io::prelude::*, rc::Rc},
@@ -20,7 +20,8 @@ use {
         ansi::Processor,
         clipboard::Clipboard,
         config::Config,
-        event::{self, EventListener},
+        event::{Event, EventListener},
+        grid::Scroll,
         term::SizeInfo,
         Term,
     },
@@ -107,10 +108,19 @@ impl Write for PtyContext {
     }
 }
 
-struct EmptyEventProxy;
-impl EventListener for EmptyEventProxy {
-    fn send_event(&self, _event: event::Event) {
-        // Intentionally blank
+struct EventProxy {
+    app_context: AppContextWrapper,
+    view_key: ViewKey,
+}
+
+impl EventListener for EventProxy {
+    fn send_event(&self, event: Event) {
+        match event {
+            Event::MouseCursorDirty => {
+                self.app_context.queue_message(self.view_key, make_message(ViewMessages::Update))
+            }
+            _ => (),
+        }
     }
 }
 
@@ -125,12 +135,35 @@ impl Default for UIConfig {
 
 type TerminalConfig = Config<UIConfig>;
 
+trait PointerEventResponseHandler {
+    /// Signals that the struct should queue a view update.
+    fn update_view(&mut self);
+
+    fn scroll_term(&mut self, scroll: Scroll);
+}
+
+struct PointerEventResponseHandlerImpl<'a, 'b> {
+    ctx: &'a mut ViewAssistantContext<'b>,
+    term: Rc<RefCell<Term<EventProxy>>>,
+}
+
+impl PointerEventResponseHandler for PointerEventResponseHandlerImpl<'_, '_> {
+    fn update_view(&mut self) {
+        self.ctx.queue_message(make_message(ViewMessages::Update));
+    }
+
+    fn scroll_term(&mut self, scroll: Scroll) {
+        let mut term = self.term.borrow_mut();
+        term.scroll_display(scroll);
+    }
+}
+
 pub struct TerminalViewAssistant {
     last_known_size: Size,
     last_known_size_info: SizeInfo,
     pty_context: Option<PtyContext>,
     terminal_scene: TerminalScene,
-    term: Rc<RefCell<Term<EmptyEventProxy>>>,
+    term: Rc<RefCell<Term<EventProxy>>>,
     app_context: AppContextWrapper,
     view_key: ViewKey,
 
@@ -154,14 +187,12 @@ impl TerminalViewAssistant {
             dpr: 1.0,
         };
 
-        let term = Term::new(
-            &TerminalConfig::default(),
-            &size_info,
-            Clipboard::new(),
-            // The term sends events via an event proxy, we do not support this
-            // yet so we just ignore the events.
-            EmptyEventProxy,
-        );
+        let app_context =
+            AppContextWrapper { app_context: Some(app_context.clone()), test_sender: None };
+
+        let event_proxy = EventProxy { app_context: app_context.clone(), view_key };
+
+        let term = Term::new(&TerminalConfig::default(), &size_info, Clipboard::new(), event_proxy);
 
         TerminalViewAssistant {
             last_known_size: Size::zero(),
@@ -169,10 +200,7 @@ impl TerminalViewAssistant {
             pty_context: None,
             term: Rc::new(RefCell::new(term)),
             terminal_scene: TerminalScene::default(),
-            app_context: AppContextWrapper {
-                app_context: Some(app_context.clone()),
-                test_sender: None,
-            },
+            app_context,
             view_key,
             spawn_command: None,
         }
@@ -232,8 +260,7 @@ impl TerminalViewAssistant {
 
             self.last_known_size = floored_size;
             self.last_known_size_info = term_size_info;
-            self.terminal_scene.update_size(floored_size);
-            self.terminal_scene.update_cell_size(Size::new(cell_width, cell_height));
+            self.terminal_scene.update_size(floored_size, Size::new(cell_width, cell_height));
         }
         Ok(())
     }
@@ -335,6 +362,20 @@ impl TerminalViewAssistant {
 
         Ok(())
     }
+
+    /// Handles the pointer event response.
+    fn handle_pointer_event_response<'a, T: PointerEventResponseHandler>(
+        &mut self,
+        response: PointerEventResponse,
+        handler: &'a mut T,
+    ) {
+        match response {
+            PointerEventResponse::ScrollLines(lines) => {
+                handler.scroll_term(Scroll::Lines(lines));
+            }
+            PointerEventResponse::ViewDirty => handler.update_view(),
+        }
+    }
 }
 
 impl ViewAssistant for TerminalViewAssistant {
@@ -368,10 +409,11 @@ impl ViewAssistant for TerminalViewAssistant {
             visible_lines: *grid.num_lines(),
             display_offset: grid.display_offset(),
         };
+        self.terminal_scene.update_scroll_context(scroll_context);
 
         drop(grid);
 
-        self.terminal_scene.render(canvas, iter, scroll_context);
+        self.terminal_scene.render(canvas, iter);
         Ok(())
     }
 
@@ -381,6 +423,18 @@ impl ViewAssistant for TerminalViewAssistant {
         event: &KeyboardEvent,
     ) -> Result<(), Error> {
         self.handle_keyboard_event(event)
+    }
+
+    fn handle_pointer_event(
+        &mut self,
+        ctx: &mut ViewAssistantContext<'_>,
+        event: &PointerEvent,
+    ) -> Result<(), Error> {
+        if let Some(response) = self.terminal_scene.handle_pointer_event(&event) {
+            let mut handler = PointerEventResponseHandlerImpl { ctx, term: self.term.clone() };
+            self.handle_pointer_event_response(response, &mut handler);
+        }
+        Ok(())
     }
 
     fn initial_animation_mode(&mut self) -> AnimationMode {
@@ -397,11 +451,43 @@ mod tests {
         fuchsia_async::{DurationExt, Timer},
         fuchsia_zircon::DurationNum,
         futures::future::Either,
+        term_model::grid::Scroll,
     };
 
     #[test]
     fn can_create_view() {
         let _ = TerminalViewAssistant::new_for_test();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn handle_pointer_event_response_updates_view_for_view_dirty() -> Result<(), Error> {
+        let mut view = TerminalViewAssistant::new_for_test();
+        let mut handler = TestPointerEventResponder::new();
+        view.handle_pointer_event_response(PointerEventResponse::ViewDirty, &mut handler);
+        assert_eq!(handler.update_count, 1);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn handle_pointer_event_response_does_not_update_view_for_scroll_lines(
+    ) -> Result<(), Error> {
+        let mut view = TerminalViewAssistant::new_for_test();
+
+        let mut handler = TestPointerEventResponder::new();
+        view.handle_pointer_event_response(PointerEventResponse::ScrollLines(1), &mut handler);
+        assert_eq!(handler.update_count, 0);
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn handle_pointer_event_response_scroll_lines_updates_grid() -> Result<(), Error> {
+        let mut view = TerminalViewAssistant::new_for_test();
+
+        let mut handler = TestPointerEventResponder::new();
+        view.handle_pointer_event_response(PointerEventResponse::ScrollLines(1), &mut handler);
+
+        assert_eq!(handler.scroll_offset, 1);
+        Ok(())
     }
 
     #[test]
@@ -461,6 +547,46 @@ mod tests {
 
         assert_eq!(view.last_known_size.width, 100.0);
         assert_eq!(view.last_known_size.height, 100.0);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn event_proxy_calls_view_update_on_dirty_mouse_cursor() -> Result<(), Error> {
+        let (sender, mut receiver) = mpsc::unbounded();
+        let app_context = AppContextWrapper { app_context: None, test_sender: Some(sender) };
+
+        let event_proxy = EventProxy { app_context, view_key: 0 };
+
+        event_proxy.send_event(Event::MouseCursorDirty);
+
+        wait_until_update_received_or_timeout(&mut receiver)
+            .await
+            .context(":event_proxy_calls_view_update_on_dirty_mouse_cursor failed to get update")?;
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn scroll_display_triggers_call_to_redraw() -> Result<(), Error> {
+        let (view, mut receiver) = make_test_view_with_spawned_pty_loop().await?;
+
+        let event_proxy =
+            EventProxy { app_context: view.app_context.clone(), view_key: view.view_key };
+
+        let mut term = Term::new(
+            &TerminalConfig::default(),
+            &view.last_known_size_info,
+            Clipboard::new(),
+            event_proxy,
+        );
+
+        term.scroll_display(Scroll::Lines(1));
+
+        // No redraw will trigger a timeout and failure
+        wait_until_update_received_or_timeout(&mut receiver)
+            .await
+            .context(":resize_message_triggers_call_to_redraw after queue event")?;
+
+        Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -638,6 +764,30 @@ mod tests {
             event_time: 0 as u64,
             hid_usage: 0 as u32,
             modifiers: 0 as u32,
+        }
+    }
+
+    struct TestPointerEventResponder {
+        update_count: usize,
+        scroll_offset: isize,
+    }
+
+    impl TestPointerEventResponder {
+        fn new() -> TestPointerEventResponder {
+            TestPointerEventResponder { update_count: 0, scroll_offset: 0 }
+        }
+    }
+
+    impl PointerEventResponseHandler for TestPointerEventResponder {
+        fn update_view(&mut self) {
+            self.update_count += 1;
+        }
+
+        fn scroll_term(&mut self, scroll: Scroll) {
+            match scroll {
+                Scroll::Lines(lines) => self.scroll_offset += lines,
+                _ => (),
+            }
         }
     }
 }
