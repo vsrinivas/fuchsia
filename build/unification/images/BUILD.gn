@@ -108,10 +108,8 @@ aggregate_manifest("legacy-image") {
     ":bin.sysinfo",
 #------------------
 #------------------
-    ":driver.bus-pci",
 #------------------
 #------------------
-    ":driver.bus-pci.proxy",
 #------------------
 #------------------
     ":driver.component",
@@ -645,10 +643,8 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.pci-driver-test",
 #------------------
 #------------------
-    ":test.sys.pci-unit-test",
 #------------------
 #------------------
     ":test.sys.platform-bus-test",
@@ -1252,10 +1248,8 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.pci-driver-test",
 #------------------
 #------------------
-    ":test.sys.pci-unit-test",
 #------------------
 #------------------
     ":test.sys.platform-bus-test",
@@ -1510,10 +1504,10 @@ aggregate_manifest("migrated-image") {
     "//src/connectivity/bluetooth/hci/transport/usb:bt-transport-usb-manifest",
     "//src/devices/misc/drivers/builtin:builtin-manifest",
 #------------------
-    #":driver.bus-pci",
+    "//zircon/system/dev/bus/pci:bus-pci-manifest",
 #------------------
 #------------------
-    #":driver.bus-pci.proxy",
+    "//zircon/system/dev/bus/pci:bus-pci.proxy-manifest",
 #------------------
     "//src/storage/nand/drivers/cadence-hpnfc:cadence-hpnfc-manifest",
     "//src/devices/clock/drivers/clock:clock-manifest",
@@ -3184,10 +3178,10 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/paver/test:paver-test-manifest",
 #------------------
 #------------------
-    #":test.sys.pci-driver-test",
+    "//zircon/system/dev/bus/pci/test:pci-driver-manifest",
 #------------------
 #------------------
-    #":test.sys.pci-unit-test",
+    "//zircon/system/dev/bus/pci/test:pci-unit-manifest",
 #------------------
     "//src/devices/misc/drivers/cpu-trace:perf-mon-tests-manifest",
     "//zircon/system/utest/perftest:perftest-manifest",
@@ -3887,10 +3881,10 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/paver/test:paver-test-manifest",
 #------------------
 #------------------
-    #":test.sys.pci-driver-test",
+    "//zircon/system/dev/bus/pci/test:pci-driver-manifest",
 #------------------
 #------------------
-    #":test.sys.pci-unit-test",
+    "//zircon/system/dev/bus/pci/test:pci-unit-manifest",
 #------------------
     "//src/devices/misc/drivers/cpu-trace:perf-mon-tests-manifest",
     "//zircon/system/utest/perftest:perftest-manifest",

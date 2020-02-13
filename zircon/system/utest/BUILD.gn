@@ -49,10 +49,8 @@ if (current_cpu != "") {
       "$zx/system/dev/board/mt8167s_ref:mt8167s_ref-test",
 #------------------
 #------------------
-      "$zx/system/dev/bus/pci/test:pci-driver",
 #------------------
 #------------------
-      "$zx/system/dev/bus/pci/test:pci-unit",
 #------------------
 #------------------
 #------------------
