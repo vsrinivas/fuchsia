@@ -105,7 +105,6 @@ TEST_F(UsbHidTest, SetAndGetReport) {
   ASSERT_EQ(0xde, result2->report[2]);
 }
 
-// TODO(fxb/43207): Re-enable this test, which is failing with ASAN.
 TEST_F(UsbHidTest, UnBind) {
   fbl::unique_fd fd_input(openat(bus_.GetRootFd(), devpath_.c_str(), O_RDWR));
   ASSERT_GE(fd_input.get(), 0);
