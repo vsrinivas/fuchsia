@@ -9,8 +9,10 @@
     "sandbox": {
         "features": [
             "config-data",
-            "hub",
             "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.sys.internal.ComponentEventProvider"
         ]
     }
 }

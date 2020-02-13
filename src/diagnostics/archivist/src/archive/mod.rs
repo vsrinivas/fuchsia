@@ -4,16 +4,16 @@
 
 use {
     crate::{
-        collection::HubCollector,
-        component_events::{ComponentEvent, ComponentEventData, Data, InspectReaderData},
+        component_events::{
+            ComponentEvent, ComponentEventData, ComponentEventStream, Data, InspectReaderData,
+        },
         configs, diagnostics, inspect,
     },
     anyhow::{format_err, Error},
     chrono::prelude::*,
-    fuchsia_async as fasync,
-    fuchsia_inspect::{component, health::Reporter, NumericProperty},
+    fuchsia_inspect::NumericProperty,
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
-    futures::{FutureExt, StreamExt},
+    futures::StreamExt,
     itertools::Itertools,
     lazy_static::lazy_static,
     parking_lot::{Mutex, RwLock},
@@ -611,16 +611,22 @@ fn populate_inspect_repo(
     // The InspectReaderData should always contain a directory_proxy. Its existence
     // as an Option is only to support mock objects for equality in tests.
     let inspect_directory_proxy = inspect_reader_data.data_directory_proxy.unwrap();
-
+    let mut relative_moniker = inspect_reader_data.realm_path;
+    relative_moniker.push(inspect_reader_data.component_name.clone());
     state.lock().inspect_repository.write().add(
         inspect_reader_data.component_name,
-        inspect_reader_data.absolute_moniker,
+        inspect_reader_data.component_id,
+        relative_moniker,
         inspect_directory_proxy,
     )
 }
 
-fn remove_from_inspect_repo(state: &Arc<Mutex<ArchivistState>>, component_name: &String) {
-    state.lock().inspect_repository.write().remove(component_name);
+fn remove_from_inspect_repo(
+    state: &Arc<Mutex<ArchivistState>>,
+    component_name: &str,
+    component_id: &str,
+) {
+    state.lock().inspect_repository.write().remove(component_name, component_id);
 }
 
 async fn process_event(
@@ -628,10 +634,9 @@ async fn process_event(
     event: ComponentEvent,
 ) -> Result<(), Error> {
     match event {
-        ComponentEvent::Existing(data) => archive_event(&state, "EXISTING", data).await,
         ComponentEvent::Start(data) => archive_event(&state, "START", data).await,
         ComponentEvent::Stop(data) => {
-            remove_from_inspect_repo(&state, &data.component_name);
+            remove_from_inspect_repo(&state, &data.component_name, &data.component_id);
             archive_event(&state, "STOP", data).await
         }
         ComponentEvent::OutDirectoryAppeared(data) => populate_inspect_repo(&state, data),
@@ -747,32 +752,19 @@ async fn archive_event(
 
 pub async fn run_archivist(
     archivist_state: ArchivistState,
+    mut events: ComponentEventStream,
     event_stats: fuchsia_inspect::Node,
 ) -> Result<(), Error> {
     let state = Arc::new(Mutex::new(archivist_state));
-    component::health().set_starting_up();
 
     let components_started = event_stats.create_uint("components_started", 0);
     let components_stopped = event_stats.create_uint("components_stopped", 0);
     let out_directories_seen = event_stats.create_uint("out_directories_seen", 0);
 
-    let mut collector = HubCollector::new("/hub")?;
-    let mut events = collector.component_events().unwrap();
-
-    let collector_state = state.clone();
-    fasync::spawn(collector.start().then(|e| async move {
-        let mut state = collector_state.lock();
-        component::health().set_unhealthy("Collection loop stopped");
-        inspect_log!(state.log_node, event: "Collection ended", result: format!("{:?}", e));
-        eprintln!("Collection ended with result {:?}", e);
-    }));
-
-    component::health().set_ok();
-
     while let Some(event) = events.next().await {
         let state = state.clone();
         match &event {
-            ComponentEvent::Existing(_) | ComponentEvent::Start(_) => {
+            ComponentEvent::Start(_) => {
                 components_started.add(1);
             }
             ComponentEvent::Stop(_) => {

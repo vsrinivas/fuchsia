@@ -1,3 +1,6 @@
 fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx
 fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx
+fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/archive_path_test_archivist.cmx
+fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/observer_with_data_stats.cmx
+fuchsia-pkg://fuchsia.com/archivist_integration_tests#meta/unified_reader_test_archivist.cmx
 fuchsia-pkg://fuchsia.com/component_events_integration_tests#meta/component_events_integration_test.cmx

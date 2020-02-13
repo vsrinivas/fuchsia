@@ -4,8 +4,7 @@
     },
     "sandbox": {
         "features": [
-            "isolated-temp",
-            "hub"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.diagnostics.Archive",

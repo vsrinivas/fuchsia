@@ -7,13 +7,18 @@
 #![warn(missing_docs)]
 
 use {
-    anyhow::Error,
-    archivist_lib::{archive, archive_accessor, configs, data_stats, diagnostics, inspect, logs},
+    anyhow::{Context, Error},
+    archivist_lib::{
+        archive, archive_accessor, component_events, configs, data_stats, diagnostics, inspect,
+        logs,
+    },
     argh::FromArgs,
+    fidl_fuchsia_sys_internal::ComponentEventProviderMarker,
     fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_service,
     fuchsia_component::server::ServiceFs,
-    fuchsia_inspect::component,
-    futures::{future, FutureExt, StreamExt},
+    fuchsia_inspect::{component, health::Reporter},
+    futures::{future, stream, FutureExt, StreamExt},
     io_util,
     parking_lot::RwLock,
     std::{path::PathBuf, sync::Arc},
@@ -33,6 +38,10 @@ pub struct Args {
 
 fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new()?;
+
+    let provider = connect_to_service::<ComponentEventProviderMarker>()
+        .context("failed to connect to entity resolver")?;
+    let events_stream_fut = component_events::listen(provider);
 
     diagnostics::init();
 
@@ -94,8 +103,26 @@ fn main() -> Result<(), Error> {
 
     fs.take_and_serve_directory_handle()?;
 
-    let running_archivist =
-        archive::run_archivist(archivist_state, diagnostics::root().create_child("event_stats"));
+    let running_archivist = events_stream_fut.then(|events_result| {
+        let events = match events_result {
+            Ok(events) => {
+                component::health().set_ok();
+                events
+            }
+            Err(e) => {
+                component::health().set_unhealthy(&format!(
+                    "Failed to listen for component lifecycle events: {:?}",
+                    e
+                ));
+                stream::empty().boxed()
+            }
+        };
+        archive::run_archivist(
+            archivist_state,
+            events,
+            diagnostics::root().create_child("event_stats"),
+        )
+    });
     let running_service_fs = fs.collect::<()>().map(Ok);
     let both = future::try_join(running_service_fs, running_archivist);
     executor.run(both, num_threads)?;

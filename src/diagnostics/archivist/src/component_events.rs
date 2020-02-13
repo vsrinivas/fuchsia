@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::collection::RealmPath,
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_inspect::TreeProxy,
     fidl_fuchsia_inspect_deprecated::InspectProxy,
@@ -22,6 +21,32 @@ static CHANNEL_CAPACITY: usize = 1024;
 
 type ComponentEventChannel = mpsc::Sender<ComponentEvent>;
 
+/// A realm path is a vector of realm names.
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct RealmPath(pub Vec<String>);
+
+impl Into<String> for RealmPath {
+    fn into(self) -> String {
+        self.0.join("/").to_string()
+    }
+}
+
+impl AsRef<Vec<String>> for RealmPath {
+    fn as_ref(&self) -> &Vec<String> {
+        &self.0
+    }
+}
+impl AsMut<Vec<String>> for RealmPath {
+    fn as_mut(&mut self) -> &mut Vec<String> {
+        &mut self.0
+    }
+}
+impl From<Vec<String>> for RealmPath {
+    fn from(v: Vec<String>) -> Self {
+        RealmPath(v)
+    }
+}
+
 #[derive(Debug)]
 pub struct InspectReaderData {
     /// Path through the component hierarchy to the component
@@ -31,11 +56,13 @@ pub struct InspectReaderData {
     /// The path from the root parent to
     /// the component generating the inspect reader
     /// data, with all non-monikers stripped, such as
-    /// `r` and `c` characters denoting realm or component
-    /// or realm id/component id.
+    /// `r` and `c` characters denoting realm or component,
+    /// component names or realm id/component id.
     /// eg: /r/my_realm/123/c/echo.cmx/123/ becomes:
-    ///     [my_realm, echo.cmx]
-    pub absolute_moniker: Vec<String>,
+    ///     [my_realm]
+    /// If the realm is at the same level as this archivist, then
+    /// this will be empty.
+    pub realm_path: Vec<String>,
 
     /// The name of the component.
     pub component_name: String,
@@ -66,9 +93,6 @@ pub struct ComponentEventData {
 /// An event that occurred to a component.
 #[derive(Debug)]
 pub enum ComponentEvent {
-    /// The component existed when the collection process started.
-    Existing(ComponentEventData),
-
     /// We observed the component starting.
     Start(ComponentEventData),
 
@@ -161,27 +185,33 @@ impl EventListenerServer {
     }
 
     async fn handle_on_start(&mut self, component: SourceIdentity) -> Result<(), Error> {
-        if !(component.component_name.is_some() && component.instance_id.is_some()) {
+        if !(component.component_name.is_some()
+            && component.instance_id.is_some()
+            && component.realm_path.is_some())
+        {
             return Ok(());
         }
         self.send_event(ComponentEvent::Start(ComponentEventData {
             component_name: component.component_name.unwrap(),
             component_id: component.instance_id.unwrap(),
             component_data_map: None,
-            realm_path: RealmPath(vec![]),
+            realm_path: RealmPath(component.realm_path.unwrap()),
         }))
         .await
     }
 
     async fn handle_on_stop(&mut self, component: SourceIdentity) -> Result<(), Error> {
-        if !(component.component_name.is_some() && component.instance_id.is_some()) {
+        if !(component.component_name.is_some()
+            && component.instance_id.is_some()
+            && component.realm_path.is_some())
+        {
             return Ok(());
         }
         self.send_event(ComponentEvent::Stop(ComponentEventData {
             component_name: component.component_name.unwrap(),
             component_id: component.instance_id.unwrap(),
             component_data_map: None,
-            realm_path: RealmPath(vec![]),
+            realm_path: RealmPath(component.realm_path.unwrap()),
         }))
         .await
     }
@@ -205,7 +235,7 @@ impl EventListenerServer {
         ));
         self.send_event(ComponentEvent::OutDirectoryAppeared(InspectReaderData {
             component_hierarchy_path,
-            absolute_moniker: component.realm_path.unwrap(),
+            realm_path: component.realm_path.unwrap(),
             component_name: component.component_name.unwrap(),
             component_id: component.instance_id.unwrap(),
             data_directory_proxy: directory.into_proxy().ok(),
@@ -254,7 +284,7 @@ mod tests {
                 component_name: self.component_name,
                 component_id: self.instance_id,
                 component_data_map: None,
-                realm_path: RealmPath(vec![]),
+                realm_path: RealmPath(self.realm_path),
             }
         }
     }
@@ -262,9 +292,6 @@ mod tests {
     impl PartialEq for ComponentEvent {
         fn eq(&self, other: &Self) -> bool {
             match (self, other) {
-                (ComponentEvent::Existing(a), ComponentEvent::Existing(b)) => {
-                    return a == b;
-                }
                 (ComponentEvent::Start(a), ComponentEvent::Start(b)) => {
                     return a == b;
                 }
@@ -288,9 +315,9 @@ mod tests {
         /// We implement this manually so that we can avoid requiring equality comparison on
         /// `component_data_map`.
         fn eq(&self, other: &Self) -> bool {
-            self.realm_path == other.realm_path
-                && self.component_name == other.component_name
+            self.component_name == other.component_name
                 && self.component_id == other.component_id
+                && self.realm_path == other.realm_path
         }
     }
 
@@ -298,22 +325,22 @@ mod tests {
         fn eq(&self, other: &Self) -> bool {
             let InspectReaderData {
                 component_hierarchy_path,
-                absolute_moniker,
+                realm_path,
                 component_name,
                 component_id,
                 data_directory_proxy: _,
             } = self;
             let InspectReaderData {
-                component_hierarchy_path: heirarchy_path,
-                component_name: name,
-                absolute_moniker: moniker,
-                component_id: id,
+                component_hierarchy_path: other_hierarchy_path,
+                component_name: other_name,
+                realm_path: other_realm_path,
+                component_id: other_id,
                 data_directory_proxy: _,
             } = other;
-            component_hierarchy_path == heirarchy_path
-                && component_name == name
-                && component_id == id
-                && absolute_moniker == moniker
+            component_hierarchy_path == other_hierarchy_path
+                && component_name == other_name
+                && component_id == other_id
+                && realm_path == other_realm_path
         }
     }
 
@@ -349,7 +376,7 @@ mod tests {
                     data.component_hierarchy_path.to_string_lossy().to_string(),
                     "root/a/test.cmx/12345"
                 );
-                assert_eq!(data.absolute_moniker, identity.realm_path);
+                assert_eq!(data.realm_path, identity.realm_path);
                 assert_eq!(data.component_name, identity.component_name);
                 assert_eq!(data.component_id, identity.instance_id);
                 assert!(data.data_directory_proxy.is_some());

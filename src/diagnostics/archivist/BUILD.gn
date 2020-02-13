@@ -65,6 +65,7 @@ rustc_binary("bin") {
   deps = [
     ":lib",
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
     "//src/diagnostics/lib/selectors",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

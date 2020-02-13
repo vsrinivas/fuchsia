@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        collection::{DataCollector, DataMap},
-        component_events::Data,
-    },
+    crate::component_events::Data,
     anyhow::{format_err, Error},
     fidl::endpoints::DiscoverableService,
     fidl::endpoints::{RequestStream, ServerEnd},
@@ -20,9 +17,9 @@ use {
         snapshot::{Snapshot, SnapshotTree},
         PartialNodeHierarchy,
     },
-    fuchsia_inspect::trie,
     fuchsia_inspect_node_hierarchy::{
         serialization::{DeprecatedHierarchyFormatter, DeprecatedJsonFormatter, HierarchyData},
+        trie::{self, TrieIterableNode},
         InspectHierarchyMatcher, NodeHierarchy,
     },
     fuchsia_zircon::{self as zx, DurationNum, HandleBased},
@@ -59,6 +56,24 @@ enum ReadSnapshot {
     Tree(SnapshotTree),
     Finished(NodeHierarchy),
 }
+
+type DataMap = HashMap<String, Data>;
+
+pub trait DataCollector {
+    // Processes all previously collected data from the configured sources,
+    // provides the returned DataMap with ownership of that data, returns the
+    // map, and clears the collector state.
+    //
+    // If no data has yet been collected, or if the data had previously been
+    // collected, then the return value will be None.
+    fn take_data(self: Box<Self>) -> Option<DataMap>;
+
+    // Triggers the process of collection, causing the collector to find and stage
+    // all data it is configured to collect for transfer of ownership by the next
+    // take_data call.
+    fn collect(self: Box<Self>, path: PathBuf) -> BoxFuture<'static, Result<(), Error>>;
+}
+
 /// InspectDataCollector holds the information needed to retrieve the Inspect
 /// VMOs associated with a particular component
 #[derive(Clone, Debug)]
@@ -283,7 +298,7 @@ impl PopulatedInspectDataContainer {
                         match data {
                             Data::Tree(tree, _) => match SnapshotTree::try_from(&tree).await {
                                 Ok(snapshot_tree) => acc.push(ReadSnapshot::Tree(snapshot_tree)),
-                                _ => {}
+                                Err(_) => {}
                             },
                             Data::DeprecatedFidl(inspect_proxy) => {
                                 match deprecated_inspect::load_hierarchy(inspect_proxy)
@@ -366,17 +381,20 @@ impl InspectDataRepository {
         }
     }
 
-    pub fn remove(&mut self, component_name: &String) {
+    pub fn remove(&mut self, component_name: &str, component_id: &str) {
         // TODO(4601): The data directory trie should be a prefix of
         //             absolute moniker segments, not component names,
         //             so that client provided selectors can scope
         //             more quickly.
-        self.data_directories.remove(component_name.chars().collect());
+        let mut key: Vec<char> = component_name.chars().collect();
+        key.extend(component_id.chars());
+        self.data_directories.remove(key);
     }
 
     pub fn add(
         &mut self,
         component_name: String,
+        component_id: String,
         relative_moniker: Vec<String>,
         directory_proxy: DirectoryProxy,
     ) -> Result<(), Error> {
@@ -388,11 +406,20 @@ impl InspectDataRepository {
             None => None,
         };
 
+        // The component events stream might contain duplicated events for out/diagnostics
+        // directories of components that already existed before the archivist started or the
+        // archivist itself, make sure we don't track duplicated component diagnostics directories.
+        let mut key: Vec<char> = component_name.chars().collect();
+        key.extend(component_id.chars());
+        if self.contains(&key, &relative_moniker) {
+            return Ok(());
+        }
+
         match matched_selectors {
             Some(selectors) => {
                 if !selectors.is_empty() {
                     self.data_directories.insert(
-                        component_name.chars().collect(),
+                        key,
                         UnpopulatedInspectDataContainer {
                             relative_moniker: relative_moniker,
                             component_out_proxy: directory_proxy,
@@ -404,7 +431,7 @@ impl InspectDataRepository {
             }
             None => {
                 self.data_directories.insert(
-                    component_name.chars().collect(),
+                    key,
                     UnpopulatedInspectDataContainer {
                         relative_moniker: relative_moniker,
                         component_out_proxy: directory_proxy,
@@ -436,6 +463,18 @@ impl InspectDataRepository {
                 })
             })
             .collect();
+    }
+
+    fn contains(&mut self, key: &Vec<char>, relative_moniker: &[String]) -> bool {
+        self.data_directories
+            .get(key.clone())
+            .map(|trie_node| {
+                trie_node
+                    .get_values()
+                    .iter()
+                    .any(|container| container.relative_moniker == relative_moniker)
+            })
+            .unwrap_or(false)
     }
 }
 
@@ -850,9 +889,9 @@ hierarchy: {:?}",
 mod tests {
     use super::*;
     use {
-        crate::collection::DataCollector,
         fdio,
         fidl::endpoints::create_proxy,
+        fidl_fuchsia_io::DirectoryMarker,
         fuchsia_async as fasync,
         fuchsia_component::server::ServiceFs,
         fuchsia_inspect::{assert_inspect_tree, reader, Inspector},
@@ -1088,6 +1127,29 @@ mod tests {
         ns.unbind(path.join("out").to_str().unwrap()).unwrap();
     }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn inspect_repo_disallows_duplicated_dirs() {
+        let mut inspect_repo = InspectDataRepository::new(None);
+        let relative_moniker = vec!["a".to_string(), "b".to_string()];
+        let component_id = "1234".to_string();
+
+        let (proxy, _) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
+        inspect_repo
+            .add("foo.cmx".to_string(), component_id.clone(), relative_moniker.clone(), proxy)
+            .expect("add to repo");
+
+        let (proxy, _) =
+            fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
+        inspect_repo
+            .add("foo.cmx".to_string(), component_id.clone(), relative_moniker, proxy)
+            .expect("add to repo");
+
+        let mut key: Vec<char> = "foo.cmx".chars().collect();
+        key.extend(component_id.chars());
+        assert_eq!(inspect_repo.data_directories.get(key).unwrap().get_values().len(), 1);
+    }
+
     fn inspector_for_reader_test() -> Inspector {
         let inspector = Inspector::new();
         let root = inspector.root();
@@ -1103,6 +1165,7 @@ mod tests {
         root.record(child_2);
         inspector
     }
+
     async fn verify_reader(filename: impl Into<String>, path: PathBuf) {
         let child_1_1_selector = selectors::parse_selector(r#"*:root/child_1/*:some-int"#).unwrap();
         let child_2_selector =
@@ -1118,7 +1181,11 @@ mod tests {
         // selector, so any path would match.
         let absolute_moniker = vec!["test_component.cmx".to_string()];
         let filename_string = filename.into();
-        inspect_repo.write().add(filename_string.clone(), absolute_moniker, out_dir_proxy).unwrap();
+        let component_id = "1234".to_string();
+        inspect_repo
+            .write()
+            .add(filename_string.clone(), component_id.clone(), absolute_moniker, out_dir_proxy)
+            .unwrap();
 
         let reader_server = ReaderServer::new(inspect_repo.clone(), Vec::new());
 
@@ -1141,7 +1208,7 @@ mod tests {
 }"#;
         assert_eq!(result_string, expected_result);
 
-        inspect_repo.write().remove(&filename_string);
+        inspect_repo.write().remove(&filename_string, &component_id);
         let result_string = read_snapshot(reader_server.clone()).await;
 
         assert_eq!(result_string, "".to_string());

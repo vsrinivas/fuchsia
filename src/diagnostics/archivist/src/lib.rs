@@ -4,7 +4,6 @@
 
 pub mod archive;
 pub mod archive_accessor;
-pub mod collection;
 pub mod component_events;
 pub mod configs;
 pub mod data_stats;

@@ -9,8 +9,10 @@
     },
     "sandbox": {
         "features": [
-            "config-data",
-            "hub"
+            "config-data"
+        ],
+        "services": [
+            "fuchsia.sys.internal.ComponentEventProvider"
         ]
     }
 }

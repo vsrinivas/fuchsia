@@ -8,5 +8,5 @@
   // Directories to summarize in the archivist's diagnostics.
   "summarized_dirs": {
     "test_data": "/test_data"
-  },
+  }
 }

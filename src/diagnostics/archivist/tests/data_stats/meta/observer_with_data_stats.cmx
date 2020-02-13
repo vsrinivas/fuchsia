@@ -8,11 +8,8 @@
         "binary": "bin/archivist"
     },
     "sandbox": {
-        "features": [
-            "hub"
-        ],
         "services": [
-            "fuchsia.diagnostics.Archive",
+            "fuchsia.sys.internal.ComponentEventProvider",
             "fuchsia.sys.Launcher"
         ]
     }

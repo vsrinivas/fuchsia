@@ -9,11 +9,10 @@
     },
     "sandbox": {
         "features": [
-            "isolated-temp",
-            "hub"
+            "isolated-temp"
         ],
         "services": [
-            "fuchsia.diagnostics.Archive",
+            "fuchsia.sys.internal.ComponentEventProvider",
             "fuchsia.sys.Launcher"
         ]
     }
