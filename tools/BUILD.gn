@@ -7,7 +7,7 @@ group("tools") {
 
   public_deps = [
     ":infratools",
-    "//tools/bindc",
+    "//tools/bindc:host",
     "//tools/blackout:all",
     "//tools/build",
     "//tools/debroot($host_toolchain)",
