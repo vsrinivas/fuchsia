@@ -614,7 +614,7 @@ impl Executor {
              Use `run_singlethreaded` instead.",
         );
         if let Some(_) = self.next_packet {
-            panic!("Error: called `run_singlethreaded` on an executor with a packet waiting");
+            panic!("Error: called `run` on an executor with a packet waiting");
         }
 
         let pair = Arc::new((Mutex::new(None), Condvar::new()));
