@@ -10,30 +10,10 @@
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/focus/tests/mocks/mock_focuser.h"
+#include "src/ui/a11y/lib/testing/view_ref_helper.h"
 #include "src/ui/a11y/lib/util/util.h"
 
 namespace accessibility_test {
-
-namespace {
-class ViewRefHelper {
- public:
-  ViewRefHelper() {
-    FX_CHECK(zx::eventpair::create(0u, &view_ref_.reference, &eventpair_peer_) == ZX_OK);
-  }
-
-  // Helper function for sending reset signal to the view_ref_.
-  void SendEventPairSignal() { eventpair_peer_.reset(); }
-
-  fuchsia::ui::views::ViewRef GetViewRef() const { return a11y::Clone(view_ref_); }
-
- private:
-  fuchsia::ui::views::ViewRef view_ref_;
-
-  // The event signaling pair member, used to invalidate the View Ref.
-  zx::eventpair eventpair_peer_;
-};
-
-}  // namespace
 
 class A11yFocusManagerTest : public gtest::RealLoopFixture {
  public:
@@ -47,7 +27,7 @@ class A11yFocusManagerTest : public gtest::RealLoopFixture {
   void CheckViewInFocus(const ViewRefHelper& view_ref_helper, uint32_t node_id) const {
     auto a11y_focus = a11y_focus_manager_->GetA11yFocus();
     ASSERT_TRUE(a11y_focus.has_value());
-    EXPECT_EQ(a11y::GetKoid(view_ref_helper.GetViewRef()), a11y_focus.value().view_ref_koid);
+    EXPECT_EQ(a11y::GetKoid(view_ref_helper.Clone()), a11y_focus.value().view_ref_koid);
     EXPECT_EQ(node_id, a11y_focus.value().node_id);
   }
 
@@ -55,7 +35,7 @@ class A11yFocusManagerTest : public gtest::RealLoopFixture {
   void CheckViewNotInFocus(const ViewRefHelper& view_ref_helper) const {
     auto a11y_focus = a11y_focus_manager_->GetA11yFocus();
     ASSERT_TRUE(a11y_focus.has_value());
-    EXPECT_NE(a11y::GetKoid(view_ref_helper.GetViewRef()), a11y_focus.value().view_ref_koid);
+    EXPECT_NE(a11y::GetKoid(view_ref_helper.Clone()), a11y_focus.value().view_ref_koid);
   }
 
   MockFocuser focuser_;
@@ -76,7 +56,7 @@ TEST_F(A11yFocusManagerTest, AddViewRefForNewView) {
   ViewRefHelper view_ref_helper;
 
   // Call AddViewRef for view_ref.
-  a11y_focus_manager_->AddViewRef(view_ref_helper.GetViewRef());
+  a11y_focus_manager_->AddViewRef(view_ref_helper.Clone());
 
   // A11y focus should be set to the newly received view_ref.
   CheckViewInFocus(view_ref_helper, a11y::A11yFocusManager::kRootNodeId);
@@ -87,12 +67,12 @@ TEST_F(A11yFocusManagerTest, AddViewRefForExistingView) {
   ViewRefHelper view_ref_helper_1, view_ref_helper_2;
 
   // Add view_ref_1 by calling AddViewRef(). This should set focus to view_ref_1.
-  a11y_focus_manager_->AddViewRef(view_ref_helper_1.GetViewRef());
+  a11y_focus_manager_->AddViewRef(view_ref_helper_1.Clone());
   // Add view_ref_2 by calling AddViewRef(). This should set focus to view_ref_2.
-  a11y_focus_manager_->AddViewRef(view_ref_helper_2.GetViewRef());
+  a11y_focus_manager_->AddViewRef(view_ref_helper_2.Clone());
 
   // Change focus to view_ref_1.
-  a11y_focus_manager_->AddViewRef(view_ref_helper_1.GetViewRef());
+  a11y_focus_manager_->AddViewRef(view_ref_helper_1.Clone());
 
   // A11y focus should be set to view_ref_1.
   CheckViewInFocus(view_ref_helper_1, a11y::A11yFocusManager::kRootNodeId);
@@ -105,7 +85,7 @@ TEST_F(A11yFocusManagerTest, SetA11yFocusViewNotExist) {
   uint32_t view_1_focused_node = 5;
   bool set_focus_status = true;
   a11y_focus_manager_->SetA11yFocus(
-      a11y::GetKoid(view_ref_helper.GetViewRef()), view_1_focused_node,
+      a11y::GetKoid(view_ref_helper.Clone()), view_1_focused_node,
       [&set_focus_status](bool status) { set_focus_status = status; });
   RunLoopUntilIdle();
 
@@ -117,13 +97,13 @@ TEST_F(A11yFocusManagerTest, SetA11yFocusViewNotExist) {
 TEST_F(A11yFocusManagerTest, SetA11yFocusRequestViewAlreadyInFocus) {
   ViewRefHelper view_ref_helper;
   // Call AddViewRef for view_ref.
-  a11y_focus_manager_->AddViewRef(view_ref_helper.GetViewRef());
+  a11y_focus_manager_->AddViewRef(view_ref_helper.Clone());
 
   // Call SetA11yFocus on the view which is already in focus.
   uint32_t view_1_focused_node = 5;
   bool set_focus_status = false;
   a11y_focus_manager_->SetA11yFocus(
-      a11y::GetKoid(view_ref_helper.GetViewRef()), view_1_focused_node,
+      a11y::GetKoid(view_ref_helper.Clone()), view_1_focused_node,
       [&set_focus_status](bool status) { set_focus_status = status; });
   RunLoopUntilIdle();
 
@@ -139,15 +119,15 @@ TEST_F(A11yFocusManagerTest, SetA11yFocusRequestFocusViewNotInFocus) {
   ViewRefHelper view_ref_helper_1, view_ref_helper_2;
 
   // Call AddViewRef for view_ref_1.
-  a11y_focus_manager_->AddViewRef(view_ref_helper_1.GetViewRef());
+  a11y_focus_manager_->AddViewRef(view_ref_helper_1.Clone());
   // Call AddViewRef for view_ref_2.
-  a11y_focus_manager_->AddViewRef(view_ref_helper_2.GetViewRef());
+  a11y_focus_manager_->AddViewRef(view_ref_helper_2.Clone());
 
   // Call SetFocus() on view_ref_1.
   uint32_t view_1_focused_node = 5;
   bool set_focus_status = false;
   a11y_focus_manager_->SetA11yFocus(
-      a11y::GetKoid(view_ref_helper_1.GetViewRef()), view_1_focused_node,
+      a11y::GetKoid(view_ref_helper_1.Clone()), view_1_focused_node,
       [&set_focus_status](bool status) { set_focus_status = status; });
   RunLoopUntilIdle();
 
@@ -155,7 +135,7 @@ TEST_F(A11yFocusManagerTest, SetA11yFocusRequestFocusViewNotInFocus) {
   EXPECT_TRUE(set_focus_status);
   // Check RequestFocus() is called.
   EXPECT_TRUE(focuser_.GetFocusRequestReceived());
-  EXPECT_EQ(focuser_.GetViewRefKoid(), a11y::GetKoid(view_ref_helper_1.GetViewRef()));
+  EXPECT_EQ(focuser_.GetViewRefKoid(), a11y::GetKoid(view_ref_helper_1.Clone()));
   // Check view_ref_1 is in focus.
   CheckViewInFocus(view_ref_helper_1, view_1_focused_node);
 }
@@ -166,9 +146,9 @@ TEST_F(A11yFocusManagerTest, RequestFocusFails) {
   ViewRefHelper view_ref_helper_1, view_ref_helper_2;
 
   // Call AddViewRef for view_ref_1.
-  a11y_focus_manager_->AddViewRef(view_ref_helper_1.GetViewRef());
+  a11y_focus_manager_->AddViewRef(view_ref_helper_1.Clone());
   // Call AddViewRef for view_ref_2.
-  a11y_focus_manager_->AddViewRef(view_ref_helper_2.GetViewRef());
+  a11y_focus_manager_->AddViewRef(view_ref_helper_2.Clone());
 
   // Set focuser to throw error.
   focuser_.SetThrowError(true);
@@ -177,7 +157,7 @@ TEST_F(A11yFocusManagerTest, RequestFocusFails) {
   uint32_t view_1_focused_node = 5;
   bool set_focus_status = true;
   a11y_focus_manager_->SetA11yFocus(
-      a11y::GetKoid(view_ref_helper_1.GetViewRef()), view_1_focused_node,
+      a11y::GetKoid(view_ref_helper_1.Clone()), view_1_focused_node,
       [&set_focus_status](bool status) { set_focus_status = status; });
   RunLoopUntilIdle();
 
@@ -192,7 +172,7 @@ TEST_F(A11yFocusManagerTest, FocusedViewClosed) {
   ViewRefHelper view_ref_helper;
 
   // Call AddViewRef for view
-  a11y_focus_manager_->AddViewRef(view_ref_helper.GetViewRef());
+  a11y_focus_manager_->AddViewRef(view_ref_helper.Clone());
 
   // Send ZX_EVENTPAIR_PEER_CLOSED signal for view_ref.
   view_ref_helper.SendEventPairSignal();
@@ -209,8 +189,8 @@ TEST_F(A11yFocusManagerTest, NonFocusedViewClosed) {
   ViewRefHelper view_ref_helper_1, view_ref_helper_2;
 
   // Call AddViewRef for both the views.
-  a11y_focus_manager_->AddViewRef(view_ref_helper_1.GetViewRef());
-  a11y_focus_manager_->AddViewRef(view_ref_helper_2.GetViewRef());
+  a11y_focus_manager_->AddViewRef(view_ref_helper_1.Clone());
+  a11y_focus_manager_->AddViewRef(view_ref_helper_2.Clone());
 
   // Send ZX_EVENTPAIR_PEER_CLOSED signal for viewref_helper_1.
   view_ref_helper_1.SendEventPairSignal();
@@ -219,7 +199,7 @@ TEST_F(A11yFocusManagerTest, NonFocusedViewClosed) {
   uint32_t focused_node_id = 5;
   bool set_focus_status = true;
   a11y_focus_manager_->SetA11yFocus(
-      a11y::GetKoid(view_ref_helper_1.GetViewRef()), focused_node_id,
+      a11y::GetKoid(view_ref_helper_1.Clone()), focused_node_id,
       [&set_focus_status](bool status) { set_focus_status = status; });
 
   // view_ref_1 should be deleted and hence SetA11yFocus() above to view_ref_1 should fail.

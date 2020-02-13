@@ -23,5 +23,6 @@ executable("focus_manager_tests") {
     "//src/lib/syslog/cpp",
     "//src/ui/a11y/lib/screen_reader/focus",
     "//src/ui/a11y/lib/screen_reader/focus/tests/mocks",
+    "//src/ui/a11y/lib/testing",
   ]
 }

@@ -8,6 +8,7 @@ group("testing") {
   public_deps = [
     ":formatting",
     ":input",
+    ":view_ref_helper",
   ]
 }
 
@@ -35,5 +36,21 @@ source_set("input") {
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input.accessibility",
     "//src/ui/lib/glm_workaround",
+  ]
+}
+
+source_set("view_ref_helper") {
+  testonly = true
+
+  public = [ "view_ref_helper.h" ]
+
+  sources = [ "view_ref_helper.cc" ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.views",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+    "//src/ui/a11y/lib/util",
   ]
 }
