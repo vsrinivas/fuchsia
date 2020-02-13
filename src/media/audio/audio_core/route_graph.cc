@@ -136,7 +136,6 @@ void RouteGraph::SetRendererRoutingProfile(const AudioObject& renderer, RoutingP
   }
 
   if (link_matrix_.AreLinked(*it->second.ref, *output.device)) {
-    FX_LOGS(WARNING) << "renderer already linked";
     return;
   }
 
