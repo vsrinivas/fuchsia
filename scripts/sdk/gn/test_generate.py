@@ -10,6 +10,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 
@@ -18,7 +19,8 @@ GENERATE_FILEPATH = os.path.join(SCRIPT_DIR, 'generate.py')
 generate = imp.load_source('generate', GENERATE_FILEPATH)
 
 TMP_DIR_NAME = tempfile.mkdtemp(prefix='tmp_unittest_%s_' % 'GNGenerateTest')
-
+TMP_ARCH_DIR = tempfile.mkdtemp(prefix='tmp_unittest_%s_' % 'GNGenArchiveTest')
+TMP_ARCHIVE_PATH = os.path.join(TMP_ARCH_DIR, 'gn.tar.gz')
 
 class GNGenerateTest(unittest.TestCase):
 
@@ -38,11 +40,18 @@ class GNGenerateTest(unittest.TestCase):
             [
                 "--output",
                 TMP_DIR_NAME,
+                "--output-archive",
+                TMP_ARCHIVE_PATH,
                 "--directory",
                 os.path.join(SCRIPT_DIR, 'testdata'),
             ])
         self.verify_contents(TMP_DIR_NAME)
-        self.verify_manifest(TMP_DIR_NAME)
+        # verify tarball
+        tar = tarfile.open(TMP_ARCHIVE_PATH)
+        tar.extractall(TMP_ARCH_DIR)
+        tar.close()
+        os.remove(TMP_ARCHIVE_PATH)
+        self.verify_manifest(TMP_ARCH_DIR)
 
     def verify_contents(self, outdir):
         # update_golden.py doesn't copy bin and build subdirectories because we

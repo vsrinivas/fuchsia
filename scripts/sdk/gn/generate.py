@@ -16,6 +16,7 @@ import os
 import shutil
 import stat
 import sys
+import tarfile
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FUCHSIA_ROOT = os.path.dirname(  # $root
@@ -366,6 +367,20 @@ def create_test_workspace(output):
 
     return True
 
+def create_archive(output_archive, output):
+    # If file already exists remove it
+    if os.path.exists(output_archive):
+        os.remove(output_archive)
+    # If GN SDK directory is empty throw an error
+    if not os.path.exists(output):
+        return False
+    # Create GN SDK archive
+    with tarfile.open(output_archive, "w:gz") as archive_file:
+        archive_file.add(output, arcname='')
+
+    return True
+
+
 
 def main(args_list=None):
     parser = argparse.ArgumentParser(
@@ -380,20 +395,25 @@ def main(args_list=None):
         help='Path to the directory where to install the SDK',
         required=True)
     parser.add_argument(
+        '--output-archive',
+        help='Path to add the SDK archive file (e.g. "path/to/gn.tar.gz"')
+    parser.add_argument(
         '--tests', help='Path to the directory where to generate tests')
     if args_list:
         args = parser.parse_args(args_list)
     else:
         args = parser.parse_args()
 
+
     return run_generator(
         archive=args.archive,
         directory=args.directory,
         output=args.output,
-        tests=args.tests)
+        tests=args.tests,
+        output_archive=args.output_archive)
 
 
-def run_generator(archive, directory, output, tests=''):
+def run_generator(archive, directory, output, tests='', output_archive=''):
     """Run the generator. Returns 0 on success, non-zero otherwise.
 
     Note that only one of archive or directory should be specified.
@@ -424,6 +444,10 @@ def run_generator(archive, directory, output, tests=''):
         # Copy the GN SDK to the test workspace
         wrkspc_sdk_dir = os.path.join(tests, 'third_party', 'fuchsia-sdk')
         shutil.copytree(output, wrkspc_sdk_dir)
+
+    if output_archive:
+        if not create_archive(output_archive, output):
+            return 1
 
     return 0
 
