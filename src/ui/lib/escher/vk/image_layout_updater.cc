@@ -76,8 +76,17 @@ void ImageLayoutUpdater::ScheduleSetImageInitialLayout(const escher::ImagePtr& i
                                                        vk::ImageLayout new_layout) {
   FXL_DCHECK(image->layout() == vk::ImageLayout::eUndefined ||
              image->layout() == vk::ImageLayout::ePreinitialized);
-  FXL_CHECK(images_to_set_.find(image) == images_to_set_.end())
-      << "Initial layout can be set only once for each image.";
+  if (images_to_set_.find(image) != images_to_set_.end()) {
+    // Check to see if we're trying to set the same layout to the
+    // same image that is already scheduled to be updated.
+    for (const auto& pending : pending_image_layout_to_set_) {
+      if (pending.first == image && pending.second == new_layout) {
+        FXL_CHECK(pending.second == new_layout)
+            << "Attempting to set two different initial layouts.";
+        return;
+      }
+    }
+  }
   images_to_set_.insert(image);
   pending_image_layout_to_set_.emplace_back(image, new_layout);
 }

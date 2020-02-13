@@ -138,27 +138,5 @@ VK_TEST_F(ImageLayoutUpdaterTest, SubmitToGraphicsCommandBuffer) {
   EXPECT_TRUE(cmds_submitted);
 }
 
-VK_TEST_F(ImageLayoutUpdaterTest, SetLayoutOnSameImageDeathTest) {
-  constexpr vk::ImageLayout kOldLayout = vk::ImageLayout::eUndefined;
-  constexpr vk::ImageLayout kNewLayout = vk::ImageLayout::eTransferSrcOptimal;
-
-  Escher *escher = EscherEnvironment::GetGlobalTestEnvironment()->GetEscher();
-  NaiveGpuAllocator naive_gpu_allocator(escher->vulkan_context());
-
-  // Death test: We should not set the initial layout of the same image twice.
-  ASSERT_DEATH(
-      {
-        auto image = Create128x128EscherImage(escher, &naive_gpu_allocator,
-                                              vk::ImageUsageFlagBits::eTransferSrc);
-        EXPECT_EQ(image->layout(), kOldLayout);
-        auto image_layout_updater = ImageLayoutUpdater::New(escher->GetWeakPtr());
-        image_layout_updater->ScheduleSetImageInitialLayout(image, kNewLayout);
-        image_layout_updater->ScheduleSetImageInitialLayout(image, kNewLayout);
-        image_layout_updater->Submit();
-      },
-      "Initial layout can be set only once for each image.");
-  escher->vk_device().waitIdle();
-}
-
 }  // namespace test
 }  // namespace escher
