@@ -24,12 +24,38 @@ uint32_t CicFilter::Filter(uint32_t index,  // e.g. 0.
                            uint32_t output_total_channels,  // e.f. 2.
                            uint32_t output_channel,         // e.g. 0  or 1.
                            uint32_t multiplier_shift) {
-  constexpr uint32_t input_bits_per_channel = 32;
-  constexpr uint32_t input_bits_per_sample = 64;
+#ifdef TESTING_CAPTURE_PDM
+  static_cast<void>(integrator_state);
+  static_cast<void>(differentiator_state);
 
+  // Since input bits per channel is 32, we use 32 bits pointers.
   uint32_t* in = static_cast<uint32_t*>(input);
   uint32_t* in_end = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(input) + input_size);
-  // 16 output bits per sample.
+
+  // Since output bits per channel is 32, we use 32 bits pointers.
+  uint32_t* out = static_cast<uint32_t*>(output);
+
+  if (index > kMaxIndex) {
+    return 0;
+  }
+
+  uint32_t amount_pcm = 0;
+  while (in < in_end) {
+    uint32_t bits = in[input_channel];
+    in += input_total_channels;
+    out[output_channel] = bits;
+    out += output_total_channels;
+    amount_pcm += static_cast<uint32_t>(output_total_channels * sizeof(int32_t));
+  }
+#else
+  constexpr uint32_t input_bits_per_channel = 32;
+  constexpr uint32_t input_bits_per_sample = 64;  // One PDM sample for L and R channels.
+
+  // Since input bits per channel is 32, we use 32 bits pointers.
+  uint32_t* in = static_cast<uint32_t*>(input);
+  uint32_t* in_end = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(input) + input_size);
+
+  // 16 output bits per channel.
   uint16_t* out = static_cast<uint16_t*>(output);
 
   if (index > kMaxIndex) {
@@ -69,9 +95,10 @@ uint32_t CicFilter::Filter(uint32_t index,  // e.g. 0.
     } else {
       result <<= multiplier_shift;
     }
-    out[output_channel] = static_cast<int16_t>(result >> 16);  // 16 output bits per sample.
+    out[output_channel] = static_cast<int16_t>(result >> 16);  // 16 output bits per channel.
     out += output_total_channels;
     amount_pcm += static_cast<uint32_t>(output_total_channels * sizeof(int16_t));
   }
+#endif
   return amount_pcm;
 }

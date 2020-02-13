@@ -21,13 +21,11 @@
 
 class SynAudioInDevice {
  public:
-// In DEMO_MODE we can record only 2 mics so we can play it back as a 2 channel input to audio play.
-//#define DEMO_MODE
-#ifdef DEMO_MODE
-  static constexpr size_t kNumberOfChannels = 2;
-#else
+  // Change number of channels to 2 to demo recording of 2 channels that can be played back
+  // in the same device (by default configured to use 2 channels for output).
+  // Change number of channels to 1 to capture only one channel for instance when capturing PDM
+  // using the TESTING_CAPTURE_PDM flag.
   static constexpr size_t kNumberOfChannels = 3;
-#endif
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(SynAudioInDevice);
 

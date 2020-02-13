@@ -105,7 +105,8 @@ void SynAudioInDevice::ProcessDma(uint32_t index) {
         {std::optional<Parameter>({2, 0, 2}), std::optional<Parameter>()},           // index 1.
     };
     uint32_t amount_pcm = 0;
-    for (uint32_t i = 0; i < 2; ++i) {  // Either input channel (rising or falled edge PDM capture).
+    // Either input channel (rising or falled edge PDM capture), unless it is only one channel.
+    for (uint32_t i = 0; i < (kNumberOfChannels > 1 ? 2 : 1); ++i) {
       if (parameters[index][i].has_value()) {
         zxlogf(TRACE, "audio: %u  decoding from 0x%08X  amount 0x%08X  into 0x%08X\n", index,
                dma_buffer_current_[index], amount_pdm, ring_buffer_current_);
