@@ -1,0 +1,48 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_source_set.gni")
+
+template("zx_library") {
+  not_needed(invoker,
+             [
+               "static",
+               "shared",
+               "host",
+             ])
+  is_kernel = defined(invoker.kernel) && invoker.kernel
+
+  assert(!is_kernel, "Kernel libraries not supported")
+  assert(defined(invoker.sdk),
+         "Can only migrate libraries exposed to the GN build")
+  assert(invoker.sdk == "source",
+         "Only libraries exposed as sources are supported")
+
+  sdkable = defined(invoker.sdk_publishable) && invoker.sdk_publishable
+
+  target_type = "source_set"
+  if (sdkable) {
+    target_type = "sdk_source_set"
+  }
+
+  main_target_name = target_name
+  config_target_name = "$target_name.config"
+
+  config(config_target_name) {
+    include_dirs = [ "include" ]
+  }
+
+  target(target_type, main_target_name) {
+    if (defined(invoker.sdk_headers)) {
+      public = []
+      foreach(header, invoker.sdk_headers) {
+        public += [ "include/$header" ]
+      }
+    }
+
+    sources = invoker.sources
+
+    public_configs = [ ":$config_target_name" ]
+  }
+}
