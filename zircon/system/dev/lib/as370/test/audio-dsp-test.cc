@@ -9,7 +9,7 @@
 
 namespace audio {
 
-TEST(CicFilter, OnesFilled) {
+TEST(CicFilterTest, OnesFilled) {
   CicFilter filter;
   std::array<uint8_t, 0x40> in;
   std::array<uint8_t, 0x10>
@@ -22,7 +22,7 @@ TEST(CicFilter, OnesFilled) {
   EXPECT_BYTES_EQ(out.begin(), expected, out.size());
 }
 
-TEST(CicFilter, OnesFilledAmplified) {
+TEST(CicFilterTest, OnesFilledAmplified) {
   CicFilter filter;
   std::array<uint8_t, 0x40> in;
   std::array<uint8_t, 0x10>
@@ -37,7 +37,7 @@ TEST(CicFilter, OnesFilledAmplified) {
   EXPECT_BYTES_EQ(out.begin(), expected, out.size());
 }
 
-TEST(CicFilter, ZerosAndOnesEqual) {
+TEST(CicFilterTest, ZerosAndOnesEqual) {
   CicFilter filter;
   std::array<uint8_t, 0x40> in;
   std::array<uint8_t, 0x10>
@@ -48,6 +48,19 @@ TEST(CicFilter, ZerosAndOnesEqual) {
   filter.Filter(0, in.begin(), in.size(), out.begin(), 2, 0, 2, 0, output_channel);
   uint16_t expected[] = {0x0006, 0x0000, 0x003c, 0x0000, 0x0038, 0x0000, 0x0004, 0x0000};
   EXPECT_BYTES_EQ(out.begin(), expected, out.size());
+}
+
+TEST(CicFilterTest, ManyZerosAndOnesEqual) {
+  CicFilter filter;
+  std::array<uint8_t, 0x4000> in;
+  std::array<uint8_t, 0x1000>
+      out;        // every 64 bits in, generate 32 bits that are converted to 16 bits.
+  in.fill(0xf0);  // alternate few ones and few zeros to get eventually all 0s.
+  out.fill(0);
+  constexpr uint32_t output_channel = 0;
+  filter.Filter(0, in.begin(), in.size(), out.begin(), 2, 0, 2, 0, output_channel);
+  uint16_t expected[0xd00] = {0};
+  EXPECT_BYTES_EQ(out.end() - countof(expected), expected, countof(expected));
 }
 
 }  // namespace audio
