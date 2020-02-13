@@ -2,5 +2,5 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Supply build-time configuration data to components"
-  path: /docs/development/components/config_data.md
+- title: "Run an example component"
+  path: /docs/development/run/run-examples.md

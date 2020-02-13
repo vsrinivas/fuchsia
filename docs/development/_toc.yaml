@@ -15,6 +15,9 @@ toc:
 - title: "Build Fuchsia"
   section:
   - include: /docs/development/build/_toc.yaml
+- title: "Run components"
+  section:
+  - include: /docs/development/run/_toc.yaml
 - heading: "Write code"
 - title: "Modify the kernel"
   section:

@@ -1,14 +1,17 @@
-# Supplying Build-time Configuration Data to Components
+# Supply build-time configuration data to components
+
+Note: This guide uses the [components v1](/docs/glossary.md#components-v1)
+architecture.
 
 ## Terminology
 
-**Base** - collection of software that constitutes the core of the system and is
+Base: A collection of software that constitutes the core of the system and is
 updated atomically as part of a system update.
 
-**component** - a unit of execution started by the component framework which
+Component: A unit of execution started by the component framework which
 constructs its sandbox environment.
 
-**[package](/src/sys/pkg/bin/pm/README.md#structure-of-a-fuchsia-package)** - a unit of distribution in Fuchsia which is a collection of files
+Package: A unit of distribution in Fuchsia which is a collection of files. See [the Fuchsia package manager](/src/sys/pkg/bin/pm/README.md#structure-of-a-fuchsia-package){:.external}.
 
 ## Scope
 

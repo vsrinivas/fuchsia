@@ -10,5 +10,3 @@ toc:
   path: /docs/development/build/build_information.md
 - title: "Build Clang toolchain"
   path: /docs/development/build/toolchain.md
-- title: "Run the examples"
-  path: /docs/development/build/run-examples.md
