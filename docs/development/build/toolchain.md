@@ -1,4 +1,4 @@
-# Toolchain
+# Build Clang toolchain
 
 Fuchsia is using Clang as the official compiler.
 

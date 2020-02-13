@@ -12,3 +12,5 @@ toc:
   path: /docs/development/debugging/ui_tips.md
 - title: "Packet capture"
   path: /docs/development/debugging/packet_capture.md
+- title: "Run Clang static analysis"
+  path: /docs/development/debugging/static_analysis.md

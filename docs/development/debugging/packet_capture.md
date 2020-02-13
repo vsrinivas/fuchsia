@@ -12,7 +12,7 @@ Packet capture is a fundamental tool for developing, debugging, and testing netw
 
 ## Prepare the image {#prepare-image}
 
-`netdump` is part of the [universe dependency list](/docs/development/build/boards_and_products.md#universe) of the core product. If a package server is available, there is no extra step to prepare the image. Just running `netdump` will fetch the binary.
+`netdump` is part of the [universe dependency list](/docs/concepts/build_system/boards_and_products.md#universe) of the core product. If a package server is available, there is no extra step to prepare the image. Just running `netdump` will fetch the binary.
 
 If the package server is not available, make sure to bundle `netdump` into your set of base packages.
 

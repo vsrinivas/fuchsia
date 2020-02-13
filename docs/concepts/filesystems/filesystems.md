@@ -249,7 +249,7 @@ filesystems to a namespace from the command line.
 [Blobfs](/zircon/system/uapp/blobfs/)
 is a simple, flat filesystem optimized for “write-once, then read-only” [signed
 data](/docs/concepts/storage/merkleroot.md), such as
-[packages](/docs/concepts/storage/package.md).
+[packages](/docs/concepts/packages/package.md).
 Other than two small prerequisites (file names which are deterministic, content
 addressable hashes of a file’s Merkle Tree root, for integrity-verification)
 and forward knowledge of file size (identified to Blobfs by a call to

@@ -5,7 +5,7 @@ you need to publish your prebuilt packages to
 Chrome Infrastructure Package Deployment
 ([CIPD](https://github.com/luci/luci-go/tree/master/cipd){: .external}).
 A prebuilt package is a Fuchsia archive
-([FAR](/docs/concepts/storage/archive_format.md)) file that
+([FAR](/docs/concepts/packages/archive_format.md)) file that
 contains the binaries and metadata of your software.
 
 Once you set up continuous integration (CI) with Fuchsia,

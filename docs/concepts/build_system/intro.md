@@ -1,6 +1,6 @@
-# A Short Introduction to GN
+# Introduction to GN
 
-This is a quick introduction to GN's terms and way of thinking.  This should be
+This is an introduction to GN's terms and way of thinking. This should be
 sufficient background to get your bearings in GN and how it's used in Zircon.
 GN (and the Zircon build) are more complicated than the below will discuss, but
 the average developer will not need to understand most of it on a deeper level.

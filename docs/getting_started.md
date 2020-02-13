@@ -55,7 +55,7 @@ fx build
 The `fx set` command configures the contents of your build and generates
 build rules and metadata in the default output directories, `out/default` and
 `out/default.zircon`. The argument `core.x64` refers to
-[product and board definitions](development/build/boards_and_products.md) that
+[product and board definitions](/docs/concepts/build_system/boards_and_products.md) that
 describe, among other things, what packages are built and available
 to your Fuchsia device.
 
@@ -72,7 +72,7 @@ packages and other build artifacts. If you modify source code,
 you can do an incremental build by re-running the `fx build` command alone.
 `fx -i build` starts a watcher and automatically builds whenever a file is changed.
 
-See the [underlying build system](development/build/README.md) for more details.
+See the [underlying build system](/docs/concepts/build_system/index.md) for more details.
 
 {% dynamic if user.is_googler %}
 ### Accelerate the build with goma
@@ -186,7 +186,7 @@ dm reboot
 
 Almost everything that exists on a Fuchsia system is stored in a Fuchsia
 package. A typical development
-[workflow](development/build/package_update.md) involves re-building and
+[workflow](/docs/concepts/packages/package_update.md) involves re-building and
 pushing Fuchsia packages to a development device or QEMU virtual device.
 
 Make a change to the rolldice binary in `examples/rolldice/src/main.rs`.

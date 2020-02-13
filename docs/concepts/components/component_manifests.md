@@ -589,8 +589,8 @@ This section may be omitted.
 [doc-legacy-manifest]: /docs/concepts/storage/component_manifest.md
 [doc-module-facets]: /docs/concepts/modular/module_facet.md
 [doc-outgoing-directory]: /docs/concepts/system/abi/system.md#outgoing-directory
-[doc-package-url]: /docs/concepts/storage/package_url.md
-[doc-packages]: /docs/concepts/storage/package.md
+[doc-package-url]: /docs/concepts/packages/package_url.md
+[doc-packages]: /docs/concepts/packages/package.md
 [doc-realm-definitions]: realms.md#definitions
 [doc-static-children]: realms.md#static-children
 [examples-routing]: /examples/components/routing

@@ -2,17 +2,11 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Archive format"
-  path: /docs/concepts/storage/archive_format.md
 - title: "Block devices"
   path: /docs/concepts/storage/block_devices.md
-- title: "Component Manifests"
+- title: "Component manifests"
   path: /docs/concepts/storage/component_manifest.md
-- title: "Ledger"
-  path: https://fuchsia.googlesource.com/fuchsia/+/master/src/ledger/docs/README.md
 - title: "Merkle roots"
   path:  /docs/concepts/storage/merkleroot.md
-- title: "Packages"
-  path: /docs/concepts/storage/package.md
-- title: "Package URIs"
-  path: /docs/concepts/storage/package_url.md
+- title: "Ledger"
+  path: https://fuchsia.googlesource.com/fuchsia/+/master/src/ledger/docs/README.md

@@ -2,39 +2,13 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Build system"
-  path: /docs/development/build
-- title: "Fuchsia build information"
-  path: /docs/development/build/build_information.md
-- title: "The build system"
-  path: /docs/development/build/overview.md
-- title: "Build system policies"
-  path: /docs/development/build/policies.md
 - title: "Build and pave quickstart"
   path: /docs/development/build/build_and_pave_quickstart.md
 - title: "fx workflows"
   path: /docs/development/build/fx.md
+- title: "Retrieve build information"
+  path: /docs/development/build/build_information.md
+- title: "Build Clang toolchain"
+  path: /docs/development/build/toolchain.md
 - title: "Run the examples"
   path: /docs/development/build/run-examples.md
-- title: "Boards and products"
-  path: /docs/development/build/boards_and_products.md
-- title: "Multi device setup"
-  path: /docs/development/build/multi_device.md
-- title: "Toolchain"
-  path: /docs/development/build/toolchain.md
-- title: "Static analysis"
-  path: /docs/development/build/static_analysis.md
-- title: "Tools dashboards"
-  path: /docs/development/build/tools-dashboards.md
-- title: "Fuchsia build system: variants"
-  path: /docs/development/build/variants.md
-- title: "Bundles"
-  path: /docs/development/build/bundles.md
-- title: "Developing with Fuchsia packages"
-  path: /docs/development/build/package_update.md
-- title: "A short introduction to GN"
-  path: /docs/development/build/intro.md
-- title: "GN in Zircon"
-  path: /docs/development/build/zircon_gn.md
-- title: "GN build arguments"
-  path: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/master/docs/gen/build_arguments.md

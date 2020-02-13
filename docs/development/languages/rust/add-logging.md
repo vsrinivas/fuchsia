@@ -51,7 +51,7 @@ do the following:
 
 You can declare your component's dependencies and source files in the `BUILD.gn`.
 
-For more information, see [A Short Introduction to GN](/docs/development/build/intro.md).
+For more information, see [Introduction to GN](/docs/concepts/build_system/intro.md).
 
 1.  Open  the `BUILD.gn` in your chosen text editor.
 

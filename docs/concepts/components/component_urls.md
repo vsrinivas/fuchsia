@@ -78,9 +78,9 @@ https://en.wikipedia.org/wiki/Hippos
 [doc-manifests-declaration]: component_manifests.md#component-declaration
 [doc-monikers]: monikers.md
 [doc-resolvers]: resolvers.md
-[doc-package]: /docs/concepts/storage/package.md
-[doc-package-url]: /docs/concepts/storage/package_url.md
-[doc-package-url-resource-path]: /docs/concepts/storage/package_url.md#resource-paths
+[doc-package]: /docs/concepts/packages/package.md
+[doc-package-url]: /docs/concepts/packages/package_url.md
+[doc-package-url-resource-path]: /docs/concepts/packages/package_url.md#resource-paths
 [doc-resolvers]: resolvers.md
 [doc-runners]: runners.md
 [wiki-url]: https://en.wikipedia.org/wiki/URL

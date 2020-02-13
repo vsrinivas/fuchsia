@@ -1,4 +1,4 @@
-# Fuchsia Build Information
+# Retrieve build information
 
 Metrics and error reports are collected from devices in several ways:
 Cobalt, feedback reports, crashpad crashes, manual reports from developers

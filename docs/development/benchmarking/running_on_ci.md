@@ -73,7 +73,7 @@ Please see the [Performance Dashboard User Guide]
 Note: We do not yet have a User guide for the [Performance Dashboard Version 2].
 
 [benchmark results schema]: results_schema.md
-[Fuchsia Build overview]: /docs/development/build/overview.md
+[Fuchsia Build overview]: /docs/concepts/build_system/fuchsia_build_system_overview.md
 [Performance Dashboard]: https://chromeperf.appspot.com/report
 [Performance Dashboard User Guide]: catapult_user_guide.md
 [Performance Dashboard Version 2]: https://v2spa-dot-chromeperf.appspot.com/

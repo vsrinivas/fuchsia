@@ -10,6 +10,9 @@ toc:
 - title: "Booting"
   section:
   - include: /docs/concepts/booting/_toc.yaml
+- title: "Build system"
+  section:
+  - include: /docs/concepts/build_system/_toc.yaml
 - title: "Components"
   section:
   - include: /docs/concepts/components/_toc.yaml
@@ -40,6 +43,9 @@ toc:
 - title: "Networking"
   section:
   - include: /docs/concepts/networking/_toc.yaml
+- title: "Packages"
+  section:
+  - include: /docs/concepts/packages/_toc.yaml
 - title: "Session"
   section:
   - include: /docs/concepts/session/_toc.yaml

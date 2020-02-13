@@ -12,7 +12,7 @@ toc:
   section:
   - include: /docs/development/hardware/_toc.yaml
 - heading: "Build and run"
-- title: "Build"
+- title: "Build Fuchsia"
   section:
   - include: /docs/development/build/_toc.yaml
 - heading: "Write code"

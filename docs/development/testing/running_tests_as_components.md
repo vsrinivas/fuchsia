@@ -201,7 +201,7 @@ customize `fx test`:
 - Package name:
 
     Provide a
-    [package name](/docs/concepts/storage/package_url.md#package-name) to
+    [package name](/docs/concepts/packages/package_url.md#package-name) to
     run all test components in that package:
 
     <pre class="prettyprint">
@@ -211,7 +211,7 @@ customize `fx test`:
 - Component name:
 
     Provide a
-    [resource-path](/docs/concepts/storage/package_url.md#resource-paths) to
+    [resource-path](/docs/concepts/packages/package_url.md#resource-paths) to
     test a single component in a package:
 
     <pre class="prettyprint">
@@ -337,4 +337,4 @@ provided to `run-test-component`.
 [rust_testing]: ../languages/rust/testing.md
 [test_package]: /docs/concepts/testing/test_component.md
 [isolated-storage]: /docs/concepts/testing/test_component.md#isolated_storage
-[fuchsia_package_url]: /docs/concepts/storage/package_url.md
+[fuchsia_package_url]: /docs/concepts/packages/package_url.md

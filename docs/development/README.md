@@ -12,10 +12,10 @@ and debugging Fuchsia and programs running on Fuchsia.
    covers getting the source, building and running Fuchsia.
  - [Source code](source_code/README.md)
  - [fx workflows](build/fx.md)
- - [Multiple device setup](build/multi_device.md)
- - [Pushing a package](build/package_update.md)
+ - [Multiple device setup](hardware/multi_device.md)
+ - [Pushing a package](/docs/concepts/packages/package_update.md)
  - [Working across different petals](source_code/working_across_petals.md)
- - [Build system](build/README.md)
+ - [Build system](/docs/concepts/build_system/index.md)
  - [Workflow tips and FAQ](source_code/workflow_tips_and_faq.md)
  - [Testing FAQ](testing/faq.md)
 

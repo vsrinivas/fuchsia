@@ -1,4 +1,4 @@
-# Multi Device Setup
+# Set up multiple Fuchsia devices
 
 This guide will walk you through the process of getting two Fuchsia devices
 set up and synchronizing story state using the

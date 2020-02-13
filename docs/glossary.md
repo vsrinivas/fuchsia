@@ -352,7 +352,7 @@ qualities suitable for user interfaces.
 The Fuchsia Archive Format is a container for files to be used by Zircon and
 Fuchsia.
 
--   [FAR Spec](/docs/concepts/storage/archive_format.md)
+-   [FAR Spec](/docs/concepts/packages/archive_format.md)
 
 ### **FBL** {#fbl}
 
@@ -401,7 +401,7 @@ identified using [fuchsia-pkg URLs](#fuchsia-pkg-url).
 
 ### **fuchsia-pkg URL** {#fuchsia-pkg-url}
 
-The [fuchsia-pkg URL](/docs/concepts/storage/package_url.md) scheme is a means for referring
+The [fuchsia-pkg URL](/docs/concepts/packages/package_url.md) scheme is a means for referring
 to a repository, a package, or a package resource. The syntax is
 `fuchsia-pkg://<repo-hostname>[/<pkg-name>][#<path>]]`. E.g., for the component
 `echo_client_dart.cmx` published under the package `echo_dart`'s `meta`
@@ -440,7 +440,7 @@ repository.
 
 -   [Language and operation](https://gn.googlesource.com/gn/+/master/docs/language.md)
 -   [Reference](https://gn.googlesource.com/gn/+/master/docs/reference.md)
--   [Fuchsia build overview](development/build/overview.md)
+-   [Fuchsia build overview](/docs/concepts/build_system/fuchsia_build_system_overview.md)
 
 ### **Handle** {#handle}
 
@@ -557,7 +557,7 @@ as [GN](#gn) in Fuchsia.
 
 -   [Manual](https://ninja-build.org/manual.html)
 -   [Ninja rules in GN](https://gn.googlesource.com/gn/+/master/docs/reference.md#ninja_rules)
--   [Fuchsia build overview](development/build/overview.md)
+-   [Fuchsia build overview](/docs/concepts/build_system/fuchsia_build_system_overview.md)
 
 ### **Outgoing directory** {#outgoing-directory}
 

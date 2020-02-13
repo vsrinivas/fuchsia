@@ -528,5 +528,12 @@ Users should always start with `fx help <command>`.
 `fx help` with no other arguments provides a list of all available commands
 in `fx`, as well as documentation for `fx` global flags.
 
-[build-overview]: /docs/development/build/overview.md
+## Displaying pending commits {#displaying-pending-commits}
+
+`fx pending-commits` displays the commits not yet rolled to global
+  integration.
+
+To view Fuchsia's integration dashboard, see [Builders](https://luci-milo.appspot.com/p/fuchsia).
+
+[build-overview]: /docs/concepts/build_system/fuchsia_build_system_overview.md
 [executing-tests]: /docs/development/testing/running_tests_as_components.md
