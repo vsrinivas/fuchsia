@@ -158,7 +158,6 @@ if (current_cpu != "") {
       "fidl-coding-tables",
 #------------------
 #------------------
-      "fidl-llcpp-interop",
 #------------------
 #------------------
       "fidl-simple",

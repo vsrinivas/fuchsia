@@ -2,54 +2,87 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fidl.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
 
-# This file will evaluated in $default_toolchain when processing the
-# fidl_library() invocations below.  But that toolchain doesn't support
-# compiling targets, so don't define the actual target there.
-if (current_toolchain != default_toolchain) {
-  zx_test("fidl-llcpp-interop") {
-    sources = [
-      "basictypes_tests.cc",
-      "controlflow_tests.cc",
-      "dirent_tests.cc",
-    ]
-    deps = [
-      ":fidl.test.llcpp.basictypes.c",
-      ":fidl.test.llcpp.basictypes.llcpp",
-      ":fidl.test.llcpp.controlflow.c",
-      ":fidl.test.llcpp.controlflow.llcpp",
-      ":fidl.test.llcpp.dirent.c",
-      ":fidl.test.llcpp.dirent.llcpp",
-      "$zx/system/ulib/async:async-cpp",
-      "$zx/system/ulib/async:async-default",
-      "$zx/system/ulib/async-loop:async-loop-cpp",
-      "$zx/system/ulib/async-loop:async-loop-default.static",
-      "$zx/system/ulib/fbl",
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/fidl",
-      "$zx/system/ulib/fidl:fidl-llcpp",
-      "$zx/system/ulib/fidl-async",
-      "$zx/system/ulib/fidl-async:fidl-async-cpp",
-      "$zx/system/ulib/fidl-utils",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zx",
-      "$zx/system/ulib/zxtest",
-    ]
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("fidl-llcpp-interop") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
   }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  sources = [
+    "basictypes_tests.cc",
+    "controlflow_tests.cc",
+    "dirent_tests.cc",
+  ]
+  deps = [
+    ":fidl.test.llcpp.basictypes_c",
+    ":fidl.test.llcpp.basictypes_llcpp",
+    ":fidl.test.llcpp.controlflow_c",
+    ":fidl.test.llcpp.controlflow_llcpp",
+    ":fidl.test.llcpp.dirent_c",
+    ":fidl.test.llcpp.dirent_llcpp",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/fidl-llcpp",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+  ]
 }
 
-fidl_library("fidl.test.llcpp.basictypes") {
+migrated_manifest("fidl-llcpp-interop-manifest") {
+  deps = [ ":fidl-llcpp-interop" ]
+}
+
+fidl("fidl.test.llcpp.basictypes") {
   visibility = [ ":*" ]
   sources = [ "basictypes.test.fidl" ]
+
+  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
+  excluded_checks = [ "too-many-nested-libraries" ]
 }
 
-fidl_library("fidl.test.llcpp.controlflow") {
+fidl("fidl.test.llcpp.controlflow") {
   visibility = [ ":*" ]
   sources = [ "controlflow.fidl" ]
+
+  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
+  excluded_checks = [ "too-many-nested-libraries" ]
 }
 
-fidl_library("fidl.test.llcpp.dirent") {
+fidl("fidl.test.llcpp.dirent") {
   visibility = [ ":*" ]
   sources = [ "dirent.fidl" ]
+
+  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
+  excluded_checks = [ "too-many-nested-libraries" ]
 }
