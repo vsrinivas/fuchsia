@@ -45,6 +45,7 @@ class Appmgr {
   std::string sysmgr_url_;
   fidl::VectorPtr<std::string> sysmgr_args_;
   RestartBackOff sysmgr_backoff_;
+  bool sysmgr_retry_crashes_;
   bool sysmgr_permanently_failed_;
   StorageWatchdog storage_watchdog_;
 

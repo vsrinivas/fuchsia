@@ -24,6 +24,7 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       sysmgr_url_(std::move(args.sysmgr_url)),
       sysmgr_args_(std::move(args.sysmgr_args)),
       sysmgr_backoff_(kMinSmsmgrBackoff, kMaxSysmgrBackoff, kSysmgrAliveReset),
+      sysmgr_retry_crashes_(args.retry_sysmgr_crash),
       sysmgr_permanently_failed_(false),
       storage_watchdog_(StorageWatchdog("/data", "/data/cache")) {
   // 0. Start storage watchdog for cache storage
@@ -86,11 +87,17 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       } else {
         FXL_LOG(ERROR) << "sysmgr exited with status " << status;
       }
+
+      if (!sysmgr_retry_crashes_) {
+        FXL_CHECK(ZX_OK == status)
+            << "sysmgr retries are disabled and it failed ("
+            << sys::TerminationReasonToString(termination_reason) << ", status " << status << ")";
+      }
     };
     root_realm_->CreateComponent(std::move(launch_info), sysmgr_.NewRequest());
   };
 
-  if (!args.retry_sysmgr_crash) {
+  if (!sysmgr_retry_crashes_) {
     run_sysmgr();
     return;
   }
