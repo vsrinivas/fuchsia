@@ -1,0 +1,20 @@
+{
+    "program": {
+        "binary": "bin/headless_root_presenter"
+    },
+    "sandbox": {
+        "dev": [
+            "class/input"
+        ],
+        "features": [
+            "config-data"
+        ],
+        "services": [
+            "fuchsia.recovery.FactoryReset",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.activity.Tracker"
+        ]
+    }
+}

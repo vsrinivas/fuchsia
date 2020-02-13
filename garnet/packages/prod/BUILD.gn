@@ -51,7 +51,7 @@ group("scenic") {
     "//src/ui/bin/activity",
     "//src/ui/bin/ime:ime_service",
     "//src/ui/bin/root_presenter",
-    "//src/ui/policy:configs",
+    "//src/ui/bin/root_presenter:configs",
     "//src/ui/scenic",
   ]
 }

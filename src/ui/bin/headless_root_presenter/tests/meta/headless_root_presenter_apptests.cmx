@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/headless_root_presenter_apptests"
+    },
+    "sandbox": {
+        "dev": [
+            "class/input"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

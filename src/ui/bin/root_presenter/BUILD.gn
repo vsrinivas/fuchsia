@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 
 package("root_presenter") {
@@ -26,6 +27,16 @@ package("root_presenter") {
       dest = "root_presenter.cmx"
     },
   ]
+}
+
+group("configs") {
+  deps = [ ":root_presenter_config" ]
+}
+
+config_data("root_presenter_config") {
+  for_pkg = "sysmgr"
+  outputs = [ "root_presenter.config" ]
+  sources = [ "services.config" ]
 }
 
 group("tests") {

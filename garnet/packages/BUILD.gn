@@ -29,6 +29,5 @@ group("garnet") {
     "//garnet/packages/config:thermd",
     "//garnet/packages/prod:all",
     "//src/connectivity/wlan:service",
-    "//src/ui/policy:configs",
   ]
 }
