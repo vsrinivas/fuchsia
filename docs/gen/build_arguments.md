@@ -254,7 +254,7 @@ binaries are included in the final image.
 
 **Current value (from the default):** `[]`
 
-From //build/images/recovery/BUILD.gn:15
+From //build/images/recovery/BUILD.gn:13
 
 ### bootfs_extra
 List of extra manifest entries for files to add to the BOOTFS.
@@ -584,7 +584,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/0e1e9a6b33d1954de157708eab4de9f6d5134486/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/6b19b1736cbfcd3b52002e4b27ef570b954b7883/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -599,7 +599,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/0e1e9a6b33d1954de157708eab4de9f6d5134486/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/6b19b1736cbfcd3b52002e4b27ef570b954b7883/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -649,7 +649,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/0e1e9a6b33d1954de157708eab4de9f6d5134486/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/6b19b1736cbfcd3b52002e4b27ef570b954b7883/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -813,6 +813,12 @@ You can still build //build/images:netboot explicitly even if enable_netboot is 
 
 From //build/images/BUILD.gn:36
 
+### enable_user_pci
+
+**Current value (from the default):** `false`
+
+From //zircon/system/dev/bus/pci/pci.gni:6
+
 ### escher_test_for_glsl_spirv_mismatch
 If true, this enables the |SpirvNotChangedTest| to check if the precompiled
 shaders on disk are up to date and reflect the current shader source code
@@ -925,7 +931,7 @@ From //build/unification/images/BUILD.gn:14
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/0e1e9a6b33d1954de157708eab4de9f6d5134486/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/6b19b1736cbfcd3b52002e4b27ef570b954b7883/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enable flutter_driver builds. This is effective only on debug builds.
@@ -938,14 +944,14 @@ From //src/experiences/session_shells/ermine/shell/BUILD.gn:21
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/0e1e9a6b33d1954de157708eab4de9f6d5134486/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/6b19b1736cbfcd3b52002e4b27ef570b954b7883/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/0e1e9a6b33d1954de157708eab4de9f6d5134486/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/6b19b1736cbfcd3b52002e4b27ef570b954b7883/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -2210,12 +2216,6 @@ Use link time optimization (LTO).
 **Current value (from the default):** `false`
 
 From //build/config/lto/config.gni:7
-
-### use_mock_magma
-
-**Current value (from the default):** `false`
-
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:25](https://fuchsia.googlesource.com/third_party/mesa/+/38dff41dd0cc4fefec47b441f899b0cb196040c2/src/intel/vulkan/BUILD.gn#25)
 
 ### use_netstack3
 
