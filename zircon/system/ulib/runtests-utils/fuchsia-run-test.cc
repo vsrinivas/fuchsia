@@ -235,7 +235,15 @@ bool SetUpForTestComponent(const char* argv[], size_t argc, fbl::String* out_com
     component_executor = kRunTestSuitePath;
     component_url = v2_info.component_url;
   } else {
-    // Can't find either cmx or cm file, this test is not a component.
+    // Can't find either cmx or cm file, this test is not a component. Ensure it is not a binary
+    // from /pkgfs/packages.
+    if (strncmp(test_path, kPkgPrefix, fbl::count_of(kPkgPrefix)) == 0) {
+      fprintf(stderr,
+              "FAILURE: Test path '%s' starts with /pkgfs/packages, which is no longer supported.",
+              test_path);
+      return false;
+    }
+
     return true;
   }
 
