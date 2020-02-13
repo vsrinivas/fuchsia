@@ -6,7 +6,7 @@ zx_executable("pwrbtn-monitor") {
   sources = [ "pwrbtn-monitor.cc" ]
   deps = [
     "$zx/system/fidl/fuchsia-device-manager:c",
-    "$zx/system/fidl/fuchsia-hardware-input:c",
+    "$zx/system/fidl/fuchsia-hardware-input:llcpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",

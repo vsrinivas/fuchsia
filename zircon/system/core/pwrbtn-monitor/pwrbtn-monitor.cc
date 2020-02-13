@@ -4,31 +4,31 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/device/manager/c/fidl.h>
+#include <fuchsia/hardware/input/llcpp/fidl.h>
+#include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/watcher.h>
+#include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/processargs.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
 
+#include <utility>
+
+#include <ddk/device.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <fuchsia/device/manager/c/fidl.h>
-#include <fuchsia/hardware/input/c/fidl.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/watcher.h>
-#include <lib/fdio/cpp/caller.h>
-#include <lib/zx/channel.h>
-#include <zircon/processargs.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
-#include <ddk/device.h>
-
-#include <utility>
 
 #define INPUT_PATH "/input"
 
@@ -78,7 +78,7 @@ zx_status_t FindSystemPowerDown(const hid::DeviceDescriptor* desc, uint8_t* repo
 }
 
 struct PowerButtonInfo {
-  fbl::unique_fd fd;
+  std::optional<llcpp::fuchsia::hardware::input::Device::SyncClient> client;
   uint8_t report_id;
   size_t bit_offset;
   bool has_report_id_byte;
@@ -89,42 +89,27 @@ static zx_status_t InputDeviceAdded(int dirfd, int event, const char* name, void
     return ZX_OK;
   }
 
-  fbl::unique_fd fd;
-  {
-    int raw_fd;
-    if ((raw_fd = openat(dirfd, name, O_RDWR)) < 0) {
-      return ZX_OK;
-    }
-    fd.reset(raw_fd);
+  // Open the fd and get a FIDL client.
+  int fd;
+  if ((fd = openat(dirfd, name, O_RDWR)) < 0) {
+    return ZX_OK;
   }
-  fdio_cpp::FdioCaller caller(std::move(fd));
-
-  // Retrieve and parse the report descriptor
-  uint16_t desc_len = 0;
-  zx_status_t status =
-      fuchsia_hardware_input_DeviceGetReportDescSize(caller.borrow_channel(), &desc_len);
+  zx::channel chan;
+  zx_status_t status = fdio_get_service_handle(fd, chan.reset_and_get_address());
   if (status != ZX_OK) {
-    return ZX_OK;
+    return status;
   }
-  if (desc_len > fuchsia_hardware_input_MAX_DESC_LEN) {
-    return ZX_OK;
-  }
+  auto client = llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(chan));
 
-  fbl::AllocChecker ac;
-  fbl::Array<uint8_t> raw_desc(new (&ac) uint8_t[desc_len](), desc_len);
-  if (!ac.check()) {
-    return ZX_OK;
-  }
-
-  size_t actual_size;
-  status = fuchsia_hardware_input_DeviceGetReportDesc(caller.borrow_channel(), raw_desc.data(),
-                                                      raw_desc.size(), &actual_size);
-  if (status != ZX_OK || actual_size != raw_desc.size()) {
+  // Get the report descriptor.
+  auto result = client.GetReportDesc();
+  if (result.status() != ZX_OK) {
     return ZX_OK;
   }
 
   hid::DeviceDescriptor* desc;
-  if (hid::ParseReportDescriptor(raw_desc.data(), raw_desc.size(), &desc) != hid::kParseOk) {
+  if (hid::ParseReportDescriptor(result->desc.data(), result->desc.count(), &desc) !=
+      hid::kParseOk) {
     return ZX_OK;
   }
   auto cleanup_desc = fbl::MakeAutoCall([desc]() { hid::FreeDeviceDescriptor(desc); });
@@ -137,7 +122,7 @@ static zx_status_t InputDeviceAdded(int dirfd, int event, const char* name, void
   }
 
   auto info = reinterpret_cast<PowerButtonInfo*>(cookie);
-  info->fd = caller.release();
+  info->client = std::move(client);
   info->report_id = report_id;
   info->bit_offset = bit_offset;
   info->has_report_id_byte = (desc->rep_count > 1 || desc->report[0].report_id != 0);
@@ -191,36 +176,30 @@ int main(int argc, char** argv) {
   }
   dirfd.reset();
 
-  fdio_cpp::FdioCaller caller(std::move(info.fd));
-  uint16_t report_size = 0;
-  if (fuchsia_hardware_input_DeviceGetMaxInputReportSize(caller.borrow_channel(), &report_size) !=
-      ZX_OK) {
-    printf("pwrbtn-monitor: Failed to to get max report size\n");
-    return 1;
-  }
+  auto& client = *info.client;
 
-  // Double-check the size looks right
-  const size_t byte_index = info.has_report_id_byte + info.bit_offset / 8;
-  if (report_size <= byte_index) {
-    printf("pwrbtn-monitor: Suspicious looking max report size\n");
-    return 1;
+  // Get the report event.
+  //
+  // // Get the report event.
+  zx::event report_event;
+  {
+    auto result = client.GetReportsEvent();
+    if ((result.status() != ZX_OK) || (result->status != ZX_OK)) {
+      return 1;
+    }
+    report_event = std::move(result->event);
   }
-
-  fbl::AllocChecker ac;
-  fbl::Array<uint8_t> report(new (&ac) uint8_t[report_size](), report_size);
-  if (!ac.check()) {
-    return 1;
-  }
-
-  info.fd = caller.release();
 
   // Watch the power button device for reports
   while (true) {
-    ssize_t r = read(info.fd.get(), report.data(), report.size());
-    if (r < 0) {
-      printf("pwrbtn-monitor: got read error %zd, bailing\n", r);
+    report_event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr);
+
+    auto result = client.ReadReport();
+    if (result.status() != ZX_OK || result->status != ZX_OK) {
       return 1;
     }
+
+    const fidl::VectorView<uint8_t>& report = result->data;
 
     // Ignore reports from different report IDs
     if (info.has_report_id_byte && report[0] != info.report_id) {
@@ -228,12 +207,8 @@ int main(int argc, char** argv) {
       continue;
     }
 
-    if (static_cast<size_t>(r) <= byte_index) {
-      printf("pwrbtn-monitor: input-watcher: too short\n");
-      continue;
-    }
-
     // Check if the power button is pressed, and request a poweroff if so.
+    const size_t byte_index = info.has_report_id_byte + info.bit_offset / 8;
     if (report[byte_index] & (1u << (info.bit_offset % 8))) {
       auto status = send_poweroff();
       if (status != ZX_OK) {
