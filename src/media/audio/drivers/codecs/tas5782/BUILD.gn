@@ -55,6 +55,7 @@ test("tas5782-test") {
     "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
+    "//zircon/system/banjo/ddk.protocol.i2c",
   ]
 }
 

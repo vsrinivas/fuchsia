@@ -7,7 +7,6 @@
 #include <fuchsia/hardware/mediacodec/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/svc/cpp/services.h>
 #include <zircon/status.h>
 
 #include <algorithm>
