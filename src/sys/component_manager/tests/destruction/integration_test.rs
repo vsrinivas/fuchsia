@@ -52,10 +52,12 @@ async fn destruction() -> Result<(), Error> {
             DrainedEvent {
                 event_type: StopInstance::TYPE,
                 target_moniker: "./coll:root:1/trigger_a:0".to_string(),
+                capability_id: None,
             },
             DrainedEvent {
                 event_type: StopInstance::TYPE,
                 target_moniker: "./coll:root:1/trigger_b:0".to_string(),
+                capability_id: None,
             },
         ],
     );
@@ -65,6 +67,7 @@ async fn destruction() -> Result<(), Error> {
         vec![DrainedEvent {
             event_type: StopInstance::TYPE,
             target_moniker: "./coll:root:1".to_string(),
+            capability_id: None,
         }],
     );
 
@@ -74,10 +77,12 @@ async fn destruction() -> Result<(), Error> {
             DrainedEvent {
                 event_type: PostDestroyInstance::TYPE,
                 target_moniker: "./coll:root:1/trigger_a:0".to_string(),
+                capability_id: None,
             },
             DrainedEvent {
                 event_type: PostDestroyInstance::TYPE,
                 target_moniker: "./coll:root:1/trigger_b:0".to_string(),
+                capability_id: None,
             },
         ],
     );
@@ -87,6 +92,7 @@ async fn destruction() -> Result<(), Error> {
         vec![DrainedEvent {
             event_type: PostDestroyInstance::TYPE,
             target_moniker: "./coll:root:1".to_string(),
+            capability_id: None,
         }],
     );
 

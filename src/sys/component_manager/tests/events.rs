@@ -413,6 +413,7 @@ pub trait RoutingProtocol {
 pub struct DrainedEvent {
     pub event_type: fevents::EventType,
     pub target_moniker: String,
+    pub capability_id: Option<String>,
 }
 
 /// Soaks events from an EventStream, allowing them to be
@@ -444,7 +445,18 @@ impl EventSink {
                         .as_ref()
                         .expect("Failed to get target moniker from Event")
                         .clone();
-                    let drained_event = DrainedEvent { event_type, target_moniker };
+                    let capability_id = if let Some(event_payload) = event.event_payload.as_ref() {
+                        event_payload
+                            .routing_payload
+                            .as_ref()
+                            .expect("Failed to get routing payload from Event")
+                            .capability_id
+                            .to_owned()
+                    } else {
+                        None
+                    };
+
+                    let drained_event = DrainedEvent { event_type, target_moniker, capability_id };
 
                     // Insert the event into the list
                     {
