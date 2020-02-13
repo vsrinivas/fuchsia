@@ -63,10 +63,10 @@ fn sbc_test_suite() -> Result<()> {
                     channel_map: vec![AudioChannelId::Cf],
                 },
                 output_packet_count: 94,
-                expected_digest: ExpectedDigest::new(
+                expected_digests: vec![ExpectedDigest::new(
                     "Sbc: 44.1kHz/Loudness/Mono/bitpool 56/blocks 8/subbands 4",
                     "5c65a88bda3f132538966d87df34aa8675f85c9892b7f9f5571f76f3c7813562",
-                ),
+                )],
             }],
         };
 
@@ -97,10 +97,10 @@ fn aac_test_suite() -> Result<()> {
                 },
                 output_packet_count: 5,
                 output_file: None,
-                expected_digest: ExpectedDigest::new(
+                expected_digests: vec![ExpectedDigest::new(
                     "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Raw",
                     "3457e04babe80c5364215f66e74f51f871850c0a1c45f8cd69c76ad5fe54f97d",
-                ),
+                )],
             }],
         };
 
@@ -131,10 +131,10 @@ fn aac_adts_test_suite() -> Result<()> {
                 },
                 output_packet_count: 5,
                 output_file: None,
-                expected_digest: ExpectedDigest::new(
+                expected_digests: vec![ExpectedDigest::new(
                     "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Adts",
                     "5c4f55f178d08805ad31db5b1b3c999936c67cd334e7630f653785d50a270963",
-                ),
+                )],
             }],
         };
 
@@ -165,10 +165,10 @@ fn aac_latm_test_suite() -> Result<()> {
                 },
                 output_packet_count: 5,
                 output_file: None,
-                expected_digest: ExpectedDigest::new(
+                expected_digests: vec![ExpectedDigest::new(
                     "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Latm/MuxConfig",
                     "30045910e5781f6550354e8c04b439eafa03912c1e48978b24e493aff62ceeb6",
-                ),
+                )],
             }],
         };
 
@@ -194,10 +194,10 @@ fn aac_latm_test_suite() -> Result<()> {
                 },
                 output_packet_count: 5,
                 output_file: None,
-                expected_digest: ExpectedDigest::new(
+                expected_digests: vec![ExpectedDigest::new(
                     "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Latm/NoMuxConfig",
                     "a3e77ac5c6c4118afd01a53bb53fd9e524e9daedd0a7ad85608206347ad271e9",
-                ),
+                )],
             }],
         };
 

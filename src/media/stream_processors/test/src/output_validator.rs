@@ -136,7 +136,7 @@ impl OutputValidator for FormatValidator {
 /// Validates that an output's data exactly matches an expected hash, including oob_bytes
 pub struct BytesValidator {
     pub output_file: Option<&'static str>,
-    pub expected_digest: ExpectedDigest,
+    pub expected_digests: Vec<ExpectedDigest>,
 }
 
 impl BytesValidator {
@@ -156,10 +156,11 @@ impl BytesValidator {
         }
 
         let digest = hasher.finish().bytes();
-        if self.expected_digest.bytes != digest {
+
+        if let None = self.expected_digests.iter().find(|e| e.bytes == digest) {
             return Err(FatalError(format!(
-                "Expected {}; got {}",
-                self.expected_digest,
+                "Expected one of {:?}; got {}",
+                self.expected_digests,
                 encode(digest)
             ))
             .into());
@@ -213,6 +214,12 @@ impl ExpectedDigest {
 }
 
 impl fmt::Display for ExpectedDigest {
+    fn fmt(&self, w: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(w, "{:?}", self)
+    }
+}
+
+impl fmt::Debug for ExpectedDigest {
     fn fmt(&self, w: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(w, "ExpectedDigest {{\n")?;
         write!(w, "\tlabel: {}", self.label)?;

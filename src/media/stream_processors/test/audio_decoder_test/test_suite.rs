@@ -15,7 +15,7 @@ pub struct AudioDecoderHashTest {
     pub output_file: Option<&'static str>,
     pub stream: Rc<dyn ElementaryStream>,
     pub output_packet_count: usize,
-    pub expected_digest: ExpectedDigest,
+    pub expected_digests: Vec<ExpectedDigest>,
     pub expected_output_format: FormatDetails,
 }
 
@@ -42,7 +42,7 @@ impl AudioDecoderTestCase {
                     Rc::new(FormatValidator { expected_format: hash_test.expected_output_format }),
                     Rc::new(BytesValidator {
                         output_file: hash_test.output_file,
-                        expected_digest: hash_test.expected_digest,
+                        expected_digests: hash_test.expected_digests,
                     }),
                 ],
                 stream_options: Some(StreamOptions {

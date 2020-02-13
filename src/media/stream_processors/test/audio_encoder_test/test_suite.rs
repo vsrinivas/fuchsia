@@ -28,7 +28,7 @@ pub struct AudioEncoderHashTest {
     pub output_file: Option<&'static str>,
     pub input_format: PcmFormat,
     pub output_packet_count: usize,
-    pub expected_digest: ExpectedDigest,
+    pub expected_digests: Vec<ExpectedDigest>,
 }
 
 impl AudioEncoderTestCase {
@@ -65,7 +65,7 @@ impl AudioEncoderTestCase {
                     }),
                     Rc::new(BytesValidator {
                         output_file: hash_test.output_file,
-                        expected_digest: hash_test.expected_digest,
+                        expected_digests: hash_test.expected_digests,
                     }),
                 ],
                 stream_options: Some(StreamOptions {

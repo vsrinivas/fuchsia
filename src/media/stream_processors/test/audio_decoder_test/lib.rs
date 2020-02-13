@@ -67,10 +67,10 @@ fn sbc_decode() -> Result<()> {
             output_file: None,
             stream: stream,
             output_packet_count: 23,
-            expected_digest: ExpectedDigest::new(
+            expected_digests: vec![ExpectedDigest::new(
                 "Pcm: 44.1kHz/16bit/Mono",
                 "03b47b3ec7f7dcb41456c321377c61984966ea308b853d385194683e13f9836b",
-            ),
+            )],
             expected_output_format: output_format,
         }],
     };
@@ -108,10 +108,10 @@ fn sbc_decode_large_input_chunk() -> Result<()> {
             output_file: None,
             stream: large_input_chunk_stream,
             output_packet_count: 23,
-            expected_digest: ExpectedDigest::new(
+            expected_digests: vec![ExpectedDigest::new(
                 "Large chunk Pcm: 44.1kHz/16bit/Mono",
                 "03b47b3ec7f7dcb41456c321377c61984966ea308b853d385194683e13f9836b",
-            ),
+            )],
             expected_output_format: output_format2,
         }],
     };
