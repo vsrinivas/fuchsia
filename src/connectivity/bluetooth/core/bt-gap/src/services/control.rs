@@ -5,7 +5,8 @@
 use {
     anyhow::{format_err, Error},
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_bluetooth_control::{self as control, ControlRequest, ControlRequestStream},
+    fidl_fuchsia_bluetooth_control::{self as fctrl, ControlRequest, ControlRequestStream},
+    fidl_fuchsia_bluetooth_sys as fsys,
     fuchsia_bluetooth::{bt_fidl_status, types::PeerId},
     fuchsia_syslog::fx_log_warn,
     futures::prelude::*,
@@ -62,6 +63,21 @@ async fn handle_disconnect(hd: HostDispatcher, device_id: &str) -> types::Result
     hd.disconnect(parse_peer_id(device_id)?).await
 }
 
+fn input_cap_to_sys(ioc: fctrl::InputCapabilityType) -> fsys::InputCapability {
+    match ioc {
+        fctrl::InputCapabilityType::None => fsys::InputCapability::None,
+        fctrl::InputCapabilityType::Confirmation => fsys::InputCapability::Confirmation,
+        fctrl::InputCapabilityType::Keyboard => fsys::InputCapability::Keyboard,
+    }
+}
+
+fn output_cap_to_sys(ioc: fctrl::OutputCapabilityType) -> fsys::OutputCapability {
+    match ioc {
+        fctrl::OutputCapabilityType::None => fsys::OutputCapability::None,
+        fctrl::OutputCapabilityType::Display => fsys::OutputCapability::Display,
+    }
+}
+
 async fn handler(
     hd: HostDispatcher,
     session: &mut ControlSession,
@@ -92,7 +108,7 @@ async fn handler(
             responder.send(&mut resp)
         }
         ControlRequest::SetIoCapabilities { input, output, control_handle: _ } => {
-            hd.set_io_capability(input, output);
+            hd.set_io_capability(input_cap_to_sys(input), output_cap_to_sys(output));
             Ok(())
         }
         ControlRequest::Forget { device_id, responder } => {
@@ -105,7 +121,7 @@ async fn handler(
         }
         ControlRequest::GetKnownRemoteDevices { responder } => {
             let mut devices: Vec<_> =
-                hd.get_peers().into_iter().map(control::RemoteDevice::from).collect();
+                hd.get_peers().into_iter().map(fctrl::RemoteDevice::from).collect();
             responder.send(&mut devices.iter_mut())
         }
         ControlRequest::IsBluetoothAvailable { responder } => {
@@ -128,7 +144,7 @@ async fn handler(
         }
         ControlRequest::GetAdapters { responder } => {
             let mut adapters: Vec<_> =
-                hd.get_adapters().await.into_iter().map(control::AdapterInfo::from).collect();
+                hd.get_adapters().await.into_iter().map(fctrl::AdapterInfo::from).collect();
             responder.send(Some(&mut adapters.iter_mut()))
         }
         ControlRequest::SetActiveAdapter { identifier, responder } => {
@@ -137,7 +153,7 @@ async fn handler(
         }
         ControlRequest::GetActiveAdapterInfo { responder } => {
             let host_info = hd.get_active_host_info();
-            responder.send(host_info.map(control::AdapterInfo::from).as_mut())
+            responder.send(host_info.map(fctrl::AdapterInfo::from).as_mut())
         }
         ControlRequest::RequestDiscovery { discovery, responder } => {
             let mut resp = if discovery {

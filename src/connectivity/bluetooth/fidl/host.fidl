@@ -152,13 +152,10 @@ protocol Host {
     EnablePrivacy(bool enabled);
 
     /// Assigns the pairing delegate that will respond to authentication challenges using the given
-    /// I/O capabilities. Setting a pairing delegate cancels any on-going pairing procedure started
+    /// I/O capabilities. Calling this method cancels any on-going pairing procedure started
     /// using a previous delegate. Pairing requests will be rejected if no PairingDelegate has been
     /// assigned.
-    SetPairingDelegate(
-        fuchsia.bluetooth.control.InputCapabilityType input,
-        fuchsia.bluetooth.control.OutputCapabilityType output,
-        fuchsia.bluetooth.control.PairingDelegate? delegate);
+    SetPairingDelegate(sys.InputCapability input, sys.OutputCapability output, sys.PairingDelegate delegate);
 
     /// Adds existing bonded devices to the host. The host will be configured to automatically connect
     /// to these devices when they are in range and connectable. Future connections will be encrypted

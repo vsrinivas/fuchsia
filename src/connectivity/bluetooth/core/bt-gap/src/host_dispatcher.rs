@@ -8,12 +8,12 @@ use {
     fidl_fuchsia_bluetooth::{Appearance, DeviceClass, Error as FidlError, ErrorCode},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_control::{
-        self as control, ControlControlHandle, HostData, InputCapabilityType, LocalKey,
-        OutputCapabilityType, PairingDelegateProxy, PairingOptions,
+        self as control, ControlControlHandle, HostData, LocalKey, PairingOptions,
     },
     fidl_fuchsia_bluetooth_gatt::{LocalServiceDelegateRequest, Server_Marker, Server_Proxy},
     fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
+    fidl_fuchsia_bluetooth_sys::{InputCapability, OutputCapability},
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_bluetooth::{
         self as bt,
@@ -148,8 +148,8 @@ struct HostDispatcherState {
     appearance: Appearance,
     discovery: Option<Weak<DiscoveryRequestToken>>,
     discoverable: Option<Weak<DiscoverableRequestToken>>,
-    pub input: InputCapabilityType,
-    pub output: OutputCapabilityType,
+    pub input: InputCapability,
+    pub output: OutputCapability,
     peers: HashMap<PeerId, Inspectable<Peer>>,
 
     // Sender end of a futures::mpsc channel to send LocalServiceDelegateRequests
@@ -158,7 +158,7 @@ struct HostDispatcherState {
     // them along a clone of this channel to GAS
     gas_channel_sender: mpsc::Sender<LocalServiceDelegateRequest>,
 
-    pub pairing_delegate: Option<PairingDelegateProxy>,
+    pub pairing_delegate: Option<control::PairingDelegateProxy>,
     pub event_listeners: Vec<Weak<ControlControlHandle>>,
 
     // Pending requests to obtain a Host.
@@ -190,7 +190,10 @@ impl HostDispatcherState {
     /// Used to set the pairing delegate. If there is a prior pairing delegate connected to the
     /// host it will fail. It checks if the existing stored connection is closed, and will
     /// overwrite it if so.
-    pub fn set_pairing_delegate(&mut self, delegate: Option<PairingDelegateProxy>) -> bool {
+    pub fn set_pairing_delegate(
+        &mut self,
+        delegate: Option<control::PairingDelegateProxy>,
+    ) -> bool {
         self.inspect.has_pairing_delegate.set(delegate.is_some().to_property());
         match delegate {
             Some(delegate) => {
@@ -212,7 +215,7 @@ impl HostDispatcherState {
 
     /// Returns the current pairing delegate proxy if it exists and has not been closed. Clears the
     /// if the handle is closed.
-    pub fn pairing_delegate(&mut self) -> Option<PairingDelegateProxy> {
+    pub fn pairing_delegate(&mut self) -> Option<control::PairingDelegateProxy> {
         if let Some(delegate) = &self.pairing_delegate {
             if delegate.is_closed() {
                 self.inspect.has_pairing_delegate.set(false.to_property());
@@ -223,7 +226,7 @@ impl HostDispatcherState {
     }
 
     /// Set the IO capabilities of the system
-    pub fn set_io_capability(&mut self, input: InputCapabilityType, output: OutputCapabilityType) {
+    pub fn set_io_capability(&mut self, input: InputCapability, output: OutputCapability) {
         self.input = input;
         self.output = output;
         self.inspect.input_capability.set(&input.debug());
@@ -333,8 +336,8 @@ impl HostDispatcher {
             host_devices: HashMap::new(),
             name,
             appearance,
-            input: InputCapabilityType::None,
-            output: OutputCapabilityType::None,
+            input: InputCapability::None,
+            output: OutputCapability::None,
             peers: HashMap::new(),
             gas_channel_sender,
             stash,
@@ -397,7 +400,7 @@ impl HostDispatcher {
         self.state.write().set_active_adapter(adapter_id)
     }
 
-    pub fn set_pairing_delegate(&self, delegate: Option<PairingDelegateProxy>) -> bool {
+    pub fn set_pairing_delegate(&self, delegate: Option<control::PairingDelegateProxy>) -> bool {
         self.state.write().set_pairing_delegate(delegate)
     }
 
@@ -557,7 +560,7 @@ impl HostDispatcher {
         }
     }
 
-    pub fn set_io_capability(&self, input: InputCapabilityType, output: OutputCapabilityType) {
+    pub fn set_io_capability(&self, input: InputCapability, output: OutputCapability) {
         self.state.write().set_io_capability(input, output);
     }
 
@@ -574,7 +577,7 @@ impl HostDispatcher {
 
     /// Returns the current pairing delegate proxy if it exists and has not been closed. Clears the
     /// if the handle is closed.
-    pub fn pairing_delegate(&self) -> Option<PairingDelegateProxy> {
+    pub fn pairing_delegate(&self) -> Option<control::PairingDelegateProxy> {
         self.state.write().pairing_delegate()
     }
 
