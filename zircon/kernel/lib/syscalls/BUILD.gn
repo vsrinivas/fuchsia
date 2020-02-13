@@ -4,29 +4,118 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-library("syscalls") {
-  visibility = [
-    "$zx/kernel/*",
-    "$zx/system/ulib/zircon:*",
-    "$zx/system/utest/core/bad-syscall:*",
-  ]
+import("$zx/public/gn/host_tool_action.gni")
+import("kazoo.gni")
 
-  # This can be used for headers only by the vDSO and test code.
-  kernel = true
-  static = true
-  sources = []
+if (current_toolchain == default_toolchain) {
+  host_tool_action("generate_syscalls.kazoo") {
+    tool = "$zx/tools/fidl:fidlc"
+    sources = [
+      "$zx/vdso/alias_workarounds.fidl",
+      "$zx/vdso/bti.fidl",
+      "$zx/vdso/cache.fidl",
+      "$zx/vdso/channel.fidl",
+      "$zx/vdso/clock.fidl",
+      "$zx/vdso/cprng.fidl",
+      "$zx/vdso/debug.fidl",
+      "$zx/vdso/debuglog.fidl",
+      "$zx/vdso/event.fidl",
+      "$zx/vdso/eventpair.fidl",
+      "$zx/vdso/exception.fidl",
+      "$zx/vdso/fifo.fidl",
+      "$zx/vdso/framebuffer.fidl",
+      "$zx/vdso/futex.fidl",
+      "$zx/vdso/guest.fidl",
+      "$zx/vdso/handle.fidl",
+      "$zx/vdso/interrupt.fidl",
+      "$zx/vdso/iommu.fidl",
+      "$zx/vdso/ioports.fidl",
+      "$zx/vdso/job.fidl",
+      "$zx/vdso/ktrace.fidl",
+      "$zx/vdso/misc.fidl",
+      "$zx/vdso/mtrace.fidl",
+      "$zx/vdso/object.fidl",
+      "$zx/vdso/pager.fidl",
+      "$zx/vdso/pc.fidl",
+      "$zx/vdso/pci.fidl",
+      "$zx/vdso/pmt.fidl",
+      "$zx/vdso/port.fidl",
+      "$zx/vdso/process.fidl",
+      "$zx/vdso/profile.fidl",
+      "$zx/vdso/resource.fidl",
+      "$zx/vdso/rights.fidl",
+      "$zx/vdso/smc.fidl",
+      "$zx/vdso/socket.fidl",
+      "$zx/vdso/stream.fidl",
+      "$zx/vdso/syscall.fidl",
+      "$zx/vdso/system.fidl",
+      "$zx/vdso/task.fidl",
+      "$zx/vdso/thread.fidl",
+      "$zx/vdso/timer.fidl",
+      "$zx/vdso/vcpu.fidl",
+      "$zx/vdso/vmar.fidl",
+      "$zx/vdso/vmo.fidl",
+      "$zx/vdso/zx.fidl",
+    ]
+    outputs = [ syscall_ir_json ]
+    args = [
+      "--json",
+      rebase_path(syscall_ir_json, root_build_dir),
+      "--files",
+    ]
+    foreach(fidl, sources) {
+      args += [ rebase_path(fidl, root_build_dir) ]
+    }
+  }
+} else {
+  group("syscall-abi") {
+    visibility = [
+      ":*",
+      "$zx/kernel/arch/$zircon_cpu:*",
+      "$zx/system/ulib/zircon:*",
+      "$zx/system/utest/core/bad-syscall:*",
+    ]
 
-  # Depend on the files generated from the syscall IDL.
-  public_deps = [ "$zx/vdso:private($default_toolchain)" ]
+    public_configs = [ ":syscall-abi.config" ]
+    deps = [ ":syscall-abi.generate" ]
+  }
 
-  if (is_kernel) {
-    deps = [ ":impl" ]
+  config("syscall-abi.config") {
+    visibility = [ ":syscall-abi" ]
+    include_dirs = [ target_gen_dir ]
+  }
+
+  kazoo("syscall-abi.generate") {
+    visibility = [ ":syscall-abi" ]
+
+    # TODO(mcgrathr): Rename these from <zircon/...> to <lib/syscalls/...>?
+    gen = [
+      {
+        args = [ "--syscall-numbers" ]
+        outputs = [ "$target_gen_dir/zircon/zx-syscall-numbers.h" ]
+      },
+      {
+        args = [ "--kernel-header" ]
+        outputs = [ "$target_gen_dir/zircon/syscall-definitions.h" ]
+      },
+      {
+        args = [ "--kernel-wrappers" ]
+        outputs = [ "$target_gen_dir/zircon/syscall-kernel-wrappers.inc" ]
+      },
+      {
+        args = [ "--kernel-branches" ]
+        outputs = [ "$target_gen_dir/zircon/syscall-kernel-branches.S" ]
+      },
+      {
+        args = [ "--json" ]
+        outputs = [ "$target_gen_dir/zircon/definitions.json" ]
+      },
+    ]
   }
 }
 
 if (is_kernel) {
-  source_set("impl") {
-    visibility = [ ":*" ]
+  source_set("syscalls") {
     sources = [
       "channel.cc",
       "clock.cc",
@@ -59,7 +148,7 @@ if (is_kernel) {
     ]
     deps = [
       ":dispatch",
-      ":headers",
+      ":syscall-abi",
       "$zx/kernel/dev/udisplay",
       "$zx/kernel/lib/cmdline",
       "$zx/kernel/lib/console",
@@ -87,7 +176,7 @@ if (is_kernel) {
   source_set("dispatch") {
     sources = [ "syscalls.cc" ]
     deps = [
-      ":headers",
+      ":syscall-abi",
       "$zx/kernel/lib/userabi:headers",
     ]
   }

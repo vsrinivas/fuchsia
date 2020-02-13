@@ -5,21 +5,19 @@
 #include "tools/kazoo/output_util.h"
 #include "tools/kazoo/outputs.h"
 
-bool SyscallNumbersOutput(const SyscallLibrary& library, Writer* writer) {
-  if (!CopyrightHeaderWithCppComments(writer)){
+bool UserHeaderOutput(const SyscallLibrary& library, Writer* writer) {
+  if (!CopyrightHeaderWithCppComments(writer)) {
     return false;
   }
 
-  size_t i = 0;
   for (const auto& syscall : library.syscalls()) {
-    if (syscall->HasAttribute("vdsocall")) {
+    if (syscall->HasAttribute("internal")) {
       continue;
     }
-    writer->Printf("#define ZX_SYS_%s %zu\n", syscall->name().c_str(), i);
-    ++i;
-  }
 
-  writer->Printf("#define ZX_SYS_COUNT %zu\n", i);
+    CDeclaration(*syscall, "__EXPORT extern ", "zx_", writer);
+    CDeclaration(*syscall, "__EXPORT extern ", "_zx_", writer);
+  }
 
   return true;
 }

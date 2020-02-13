@@ -17,7 +17,6 @@ zx_library("hypervisor") {
     "$zx/kernel/arch/$zircon_cpu/hypervisor",
     "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/ktrace",
     "$zx/kernel/lib/unittest",
     "$zx/system/ulib/bitmap",
   ]
@@ -30,8 +29,5 @@ zx_library("hypervisor") {
 
     # <hypervisor/guest_physical_address_space.h> has #include <vm/vm_aspace.h>.
     "$zx/kernel/vm:headers",
-
-    # <hypervisor/interrupt_tracker.h> has #include <lib/ktrace.h>.
-    "$zx/kernel/lib/ktrace:headers",
   ]
 }

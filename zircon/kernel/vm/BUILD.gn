@@ -37,7 +37,6 @@ zx_library("vm") {
     "$zx/kernel/lib/counters",
     "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/ktrace",
     "$zx/kernel/lib/user_copy",
     "$zx/kernel/lib/userabi",
     "$zx/system/ulib/pretty",

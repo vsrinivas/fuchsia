@@ -2,33 +2,39 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-library("ktrace") {
-  kernel = true
-  sources = [
-    "ktrace.cc",
-    "string_ref.cc",
-  ]
-  deps = [
-    "$zx/kernel/hypervisor:headers",
-    "$zx/kernel/lib/cmdline",
-    "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/syscalls:headers",
-    "$zx/kernel/object:headers",
-    "$zx/system/ulib/zircon-internal",
-  ]
+import("$zx/kernel/lib/syscalls/kazoo.gni")
 
-  public_deps = [ ":suppress-warning" ]
-}
-
-group("suppress-warning") {
-  visibility = [ ":*" ]
-  public_configs = [ ":suppress-warning.config" ]
-}
-
-config("suppress-warning.config") {
-  visibility = [ ":*" ]
+config("config") {
+  include_dirs = [ "include" ]
   if (!is_gcc) {
     # Silence warning in Clang about GNU extension used in string_ref.h.
     cflags_cc = [ "-Wno-gnu-string-literal-operator-template" ]
   }
+}
+
+source_set("ktrace") {
+  sources = [
+    "include/lib/ktrace/string_ref.h",
+    "ktrace.cc",
+    "string_ref.cc",
+  ]
+  include_dirs = [ target_gen_dir ]
+  deps = [
+    ":ktrace-info",
+    "$zx/kernel/hypervisor",
+    "$zx/kernel/lib/cmdline",
+    "$zx/kernel/lib/ktl",
+    "$zx/system/ulib/zircon-internal",
+  ]
+  public_configs = [ ":config" ]
+}
+
+kazoo("ktrace-info") {
+  visibility = [ ":*" ]
+  gen = [
+    {
+      args = [ "--ktrace" ]
+      outputs = [ "$target_gen_dir/zircon/syscall-ktrace-info.inc" ]
+    },
+  ]
 }

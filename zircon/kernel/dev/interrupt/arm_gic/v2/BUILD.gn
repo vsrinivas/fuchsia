@@ -18,7 +18,6 @@ zx_library("v2") {
     "$zx/kernel/dev/pdev",
     "$zx/kernel/dev/pdev/interrupt",
     "$zx/kernel/lib/fbl",
-    "$zx/kernel/lib/ktrace",
     "$zx/kernel/lib/pow2_range_allocator",
     "$zx/kernel/lib/topology",
   ]

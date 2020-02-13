@@ -4,7 +4,7 @@
 
 #include "private.h"
 
-__EXPORT void _zx_cprng_draw(void* buffer, size_t len) {
+void _zx_cprng_draw(void* buffer, size_t len) {
   uint8_t* ptr = static_cast<uint8_t*>(buffer);
   while (len != 0) {
     size_t chunk = len;

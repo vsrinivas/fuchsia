@@ -15,6 +15,5 @@ zx_library("v3") {
     "$zx/kernel/dev/pcie",
     "$zx/kernel/dev/pdev",
     "$zx/kernel/dev/pdev/interrupt",
-    "$zx/kernel/lib/ktrace",
   ]
 }

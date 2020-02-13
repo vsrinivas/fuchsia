@@ -18,4 +18,6 @@ syscall_entry_begin \name
 syscall_entry_end \name \public
 .endm
 
+#include <zircon/syscalls-arm64.S>
+
 #include "syscalls-stubs.S"

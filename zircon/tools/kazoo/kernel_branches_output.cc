@@ -5,21 +5,19 @@
 #include "tools/kazoo/output_util.h"
 #include "tools/kazoo/outputs.h"
 
-bool SyscallNumbersOutput(const SyscallLibrary& library, Writer* writer) {
+bool KernelBranchesOutput(const SyscallLibrary& library, Writer* writer) {
   if (!CopyrightHeaderWithCppComments(writer)){
     return false;
   }
 
-  size_t i = 0;
+  writer->Puts("start_syscall_dispatch\n");
   for (const auto& syscall : library.syscalls()) {
     if (syscall->HasAttribute("vdsocall")) {
       continue;
     }
-    writer->Printf("#define ZX_SYS_%s %zu\n", syscall->name().c_str(), i);
-    ++i;
+    writer->Printf("syscall_dispatch %zu %s\n", syscall->num_kernel_args(),
+                   syscall->name().c_str());
   }
-
-  writer->Printf("#define ZX_SYS_COUNT %zu\n", i);
 
   return true;
 }

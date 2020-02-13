@@ -56,4 +56,6 @@ syscall_entry_begin \name
 syscall_entry_end \name \public
 .endm
 
+#include <zircon/syscalls-x86.S>
+
 #include "syscalls-stubs.S"

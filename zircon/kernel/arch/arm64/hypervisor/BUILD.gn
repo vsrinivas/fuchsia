@@ -22,7 +22,6 @@ source_set("hypervisor") {
     "$zx/kernel/dev/timer/arm_generic",
     "$zx/kernel/hypervisor:headers",
     "$zx/kernel/lib/ktl",
-    "$zx/kernel/lib/ktrace",
     "$zx/system/ulib/affine",
   ]
 }

@@ -57,8 +57,7 @@ if (current_toolchain == default_toolchain) {
         "$zx/system/ulib/zircon-internal:headers.config",
 
         # <lib/ktrace.h> has #include <lib/ktrace/string_ref.h>.
-        "$zx/kernel/lib/ktrace:headers.config",
-        "$zx/kernel/lib/ktrace:suppress-warning.config",
+        "$zx/kernel/lib/ktrace:config",
 
         # <kernel/thread.h> has #include <fbl/macros.h>
         "$zx/system/ulib/fbl:headers.config",

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/kernel/lib/syscalls/kazoo.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
 import("$zx/public/gn/zbi.gni")
@@ -190,6 +191,7 @@ if (is_kernel) {
     visibility = [ ":*" ]
     sources = [ "vdso.cc" ]
     deps = [
+      ":gen-categories",
       ":headers",
       ":rodso",
       ":vdso-code.h",
@@ -225,6 +227,16 @@ if (is_kernel) {
   config("vdso-code-header.config") {
     visibility = [ ":vdso-code-header" ]
     include_dirs = [ target_gen_dir ]
+  }
+
+  kazoo("gen-categories") {
+    visibility = [ ":*" ]
+    gen = [
+      {
+        args = [ "--category" ]
+        outputs = [ "$target_gen_dir/zircon/syscall-category.inc" ]
+      },
+    ]
   }
 
   decompress_zbi = zbi_compression_algorithm != "none"

@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/syscalls.h>
+
 #include "private.h"
 
-__EXPORT zx_status_t _zx_system_get_version(char* version, size_t len) {
+zx_status_t _zx_system_get_version(char* version, size_t len) {
   if (len < sizeof(DATA_CONSTANTS.version_string))
     return ZX_ERR_BUFFER_TOO_SMALL;
   for (size_t i = 0; i < sizeof(DATA_CONSTANTS.version_string); ++i)

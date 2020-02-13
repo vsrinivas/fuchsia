@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/syscalls.h>
+
 #include "private.h"
 
 #ifdef __x86_64__
 #include <x86intrin.h>
 #endif
 
-__EXPORT zx_ticks_t _zx_ticks_get(void) {
+zx_ticks_t _zx_ticks_get(void) {
 #if __aarch64__
   // read the virtual counter
   zx_ticks_t ticks;

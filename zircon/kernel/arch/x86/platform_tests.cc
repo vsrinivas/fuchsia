@@ -736,12 +736,10 @@ static bool test_spectre_v2_mitigations() {
   bool sp_match;
 
   // Execute x86_ras_fill and make sure %rsp is unchanged.
-  __asm__ __volatile__(
-      "mov %%rsp, %%r11\n"
-      "call x86_ras_fill\n"
-      "cmp %%rsp, %%r11\n"
-      "setz %0"
-      : "=r"(sp_match)::"memory", "%r11");
+  __asm__ __volatile__("mov %%rsp, %%r11\n"
+                       "call x86_ras_fill\n"
+                       "cmp %%rsp, %%r11\n"
+                       "setz %0" :  "=r"(sp_match) :: "memory", "%r11");
   EXPECT_EQ(sp_match, true);
 
   END_TEST;

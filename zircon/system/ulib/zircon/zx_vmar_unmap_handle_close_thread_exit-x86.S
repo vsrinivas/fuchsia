@@ -4,7 +4,7 @@
 
 #include "syscall-entry.h"
 #include "zircon-syscall-x86.S"
-#include <lib/syscalls/zx-syscall-numbers.h>
+#include <zircon/zx-syscall-numbers.h>
 
 .text
 

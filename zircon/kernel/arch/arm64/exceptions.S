@@ -9,7 +9,7 @@
 #include <arch/arm64.h>
 #include <arch/arm64/asm.h>
 #include <arch/asm_macros.h>
-#include <lib/syscalls/zx-syscall-numbers.h>
+#include <zircon/zx-syscall-numbers.h>
 
 #ifndef __has_feature
 #define __has_feature(x) 0
@@ -444,24 +444,6 @@ LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
     .Lsyscall_table:
 .endm
 
-// One of these macros is invoked by kernel.inc for each syscall.
-
-// These don't have kernel entry points.
-#define VDSO_SYSCALL(...)
-
-// These are the direct kernel entry points.
-#define KERNEL_SYSCALL(name, type, attrs, nargs, arglist, prototype) \
-  syscall_dispatch nargs, name
-#define INTERNAL_SYSCALL(...) KERNEL_SYSCALL(__VA_ARGS__)
-#define BLOCKING_SYSCALL(...) KERNEL_SYSCALL(__VA_ARGS__)
-
-start_syscall_dispatch
-
-#include <lib/syscalls/kernel.inc>
-
-#undef VDSO_SYSCALL
-#undef KERNEL_SYSCALL
-#undef INTERNAL_SYSCALL
-#undef BLOCKING_SYSCALL
+#include <zircon/syscall-kernel-branches.S>
 
 END_FUNCTION(arm64_syscall_dispatcher)

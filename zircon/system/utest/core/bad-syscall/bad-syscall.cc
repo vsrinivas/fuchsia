@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/syscalls/zx-syscall-numbers.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/process.h>
-#include <zircon/syscalls.h>
-
 #include <cinttypes>
 #include <cstdio>
 #include <cstdlib>
 
 #include <arch/kernel_aspace.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/process.h>
+#include <zircon/zx-syscall-numbers.h>
+#include <zircon/syscalls.h>
 #include <zxtest/zxtest.h>
 
 extern "C" zx_status_t bad_syscall(uint64_t num);
@@ -80,10 +79,10 @@ TEST(BadAccessTest, ChannelReadHandle) {
 
   uint32_t actual_bytes, actual_handles;
   EXPECT_STATUS(channel_b.read(
-                    /*flags=*/0, /*bytes=*/nullptr,
-                    /*handles=*/reinterpret_cast<zx_handle_t*>(unmapped_addr),
-                    /*num_bytes=*/0, /*num_handles=*/1, &actual_bytes, &actual_handles),
-                ZX_ERR_INVALID_ARGS);
+                /*flags=*/0, /*bytes=*/nullptr,
+                /*handles=*/reinterpret_cast<zx_handle_t*>(unmapped_addr),
+                /*num_bytes=*/0, /*num_handles=*/1, &actual_bytes, &actual_handles),
+            ZX_ERR_INVALID_ARGS);
 }
 
 }  // namespace

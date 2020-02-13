@@ -11,6 +11,25 @@
 #include <zircon/syscalls/types.h>
 #include <zircon/types.h>
 
+// Forward declaration so it can be used in abigen-generated sys_* prototypes.
+class user_out_handle;
+
+#if defined(__clang__)
+#define ZX_ACQUIRE_HANDLE __attribute__((acquire_handle("Fuchsia")))
+#define ZX_ACQUIRE_HANDLE_UNCHECKED __attribute__((acquire_handle("FuchsiaUnchecked")))
+#define ZX_RELEASE_HANDLE __attribute__((release_handle("Fuchsia")))
+#define ZX_USE_HANDLE __attribute__((use_handle("Fuchsia")))
+#define ZX_USE_HANDLE_UNCHECKED __attribute__((use_handle("FuchsiaUnchecked")))
+#else
+#define ZX_ACQUIRE_HANDLE
+#define ZX_ACQUIRE_HANDLE_UNCHECKED
+#define ZX_RELEASE_HANDLE
+#define ZX_USE_HANDLE
+#define ZX_USE_HANDLE_UNCHECKED
+#endif
+
+#include <zircon/syscall-definitions.h>
+
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
 
@@ -67,30 +86,5 @@ bool DebuggingSyscallsEnabled();
 
 // Returns |true| if serial port syscalls have been enabled (see kernel.enable-serial-syscalls).
 bool SerialSyscallsEnabled();
-
-// One of these macros is invoked by kernel.inc for each syscall.
-
-// These don't have kernel entry points.
-#define VDSO_SYSCALL(...)
-
-// These are the direct kernel entry points.
-#define KERNEL_SYSCALL(name, type, attrs, nargs, arglist, prototype) \
-  attrs type sys_##name prototype;
-#define INTERNAL_SYSCALL(...) KERNEL_SYSCALL(__VA_ARGS__)
-#define BLOCKING_SYSCALL(...) KERNEL_SYSCALL(__VA_ARGS__)
-
-#ifdef __clang__
-#define _ZX_SYSCALL_ANNO(anno) __attribute__((anno))
-#else
-#define _ZX_SYSCALL_ANNO(anno)
-#endif
-
-#include <lib/syscalls/kernel.inc>
-
-#undef VDSO_SYSCALL
-#undef KERNEL_SYSCALL
-#undef INTERNAL_SYSCALL
-#undef BLOCKING_SYSCALL
-#undef _ZX_SYSCALL_ANNO
 
 #endif  // ZIRCON_KERNEL_LIB_SYSCALLS_PRIV_H_
