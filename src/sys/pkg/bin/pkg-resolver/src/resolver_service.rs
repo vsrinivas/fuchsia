@@ -50,7 +50,8 @@ pub fn make_package_fetch_queue(
 
 pub async fn run_resolver_service(
     cache: PackageCache,
-    rewrites: Arc<RwLock<RewriteManager>>,
+    repo_manager: Arc<RwLock<RepositoryManager>>,
+    rewriter: Arc<RwLock<RewriteManager>>,
     package_fetcher: Arc<PackageFetcher>,
     stream: PackageResolverRequestStream,
 ) -> Result<(), Error> {
@@ -70,12 +71,20 @@ pub async fn run_resolver_service(
                         fx_log_warn!("resolve does not support selectors yet");
                     }
                     let status =
-                        resolve(&rewrites, &cache, &package_fetcher, package_url, dir).await;
+                        resolve(&rewriter, &cache, &package_fetcher, package_url, dir).await;
                     responder.send(Status::from(status).into_raw())?;
                     Ok(())
                 }
-                PackageResolverRequest::GetHash { package_url: _, responder } => {
-                    responder.send(&mut Err(Status::NOT_SUPPORTED.into_raw()))?;
+                PackageResolverRequest::GetHash { package_url, responder } => {
+                    match get_hash(&rewriter, &repo_manager, &package_url.url).await {
+                        Ok(blob_id) => {
+                            fx_log_info!("hash of {} is {}", package_url.url, blob_id);
+                            responder.send(&mut Ok(blob_id.into()))?;
+                        }
+                        Err(status) => {
+                            responder.send(&mut Err(status.into_raw()))?;
+                        }
+                    }
                     Ok(())
                 }
             }
@@ -83,23 +92,14 @@ pub async fn run_resolver_service(
         .await
 }
 
-/// Resolve the package.
-///
-/// FIXME: the update policy is currently ignored.
-async fn resolve<'a>(
-    rewrites: &'a Arc<RwLock<RewriteManager>>,
-    cache: &'a PackageCache,
-    package_fetcher: &'a Arc<PackageFetcher>,
-    pkg_url: String,
-    dir_request: ServerEnd<DirectoryMarker>,
-) -> Result<(), Status> {
-    let url = match PkgUrl::parse(&pkg_url) {
+fn rewrite_url(rewriter: &RwLock<RewriteManager>, pkg_url: &str) -> Result<PkgUrl, Status> {
+    let url = match PkgUrl::parse(pkg_url) {
         Ok(url) => url,
         Err(err) => {
-            return Err(handle_bad_package_url(err, &pkg_url));
+            return Err(handle_bad_package_url(err, pkg_url));
         }
     };
-    let url = rewrites.read().rewrite(url);
+    let url = rewriter.read().rewrite(url);
 
     // While the fuchsia-pkg:// spec allows resource paths, the package resolver should not be
     // given one.
@@ -107,7 +107,33 @@ async fn resolve<'a>(
         fx_log_err!("package url should not contain a resource name: {}", url);
         return Err(Status::INVALID_ARGS);
     }
+    Ok(url)
+}
 
+async fn get_hash(
+    rewriter: &RwLock<RewriteManager>,
+    repo_manager: &RwLock<RepositoryManager>,
+    pkg_url: &str,
+) -> Result<BlobId, Status> {
+    let url = rewrite_url(rewriter, pkg_url)?;
+    trace::duration_begin!("app", "get-hash", "url" => pkg_url);
+    let hash_or_status = repo_manager.read().get_package_hash(&url).await;
+    trace::duration_end!("app", "get-hash", "status" => Status::from(hash_or_status.err().unwrap_or(Status::OK)).to_string().as_str());
+    hash_or_status
+}
+
+/// Resolve the package.
+///
+/// FIXME: at the moment, we are proxying to Amber to resolve a package name and variant to a
+/// merkleroot. Because of this, we cant' implement the update policy, so we just ignore it.
+async fn resolve(
+    rewriter: &RwLock<RewriteManager>,
+    cache: &PackageCache,
+    package_fetcher: &PackageFetcher,
+    pkg_url: String,
+    dir_request: ServerEnd<DirectoryMarker>,
+) -> Result<(), Status> {
+    let url = rewrite_url(rewriter, &pkg_url)?;
     trace::duration_begin!("app", "resolve", "url" => pkg_url.as_str());
     let queued_fetch = package_fetcher.push(url, ());
     let merkle_or_status = queued_fetch.await.expect("expected queue to be open");

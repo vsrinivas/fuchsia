@@ -11,7 +11,7 @@ use {
         PackageResolverAdminProxy, PackageResolverMarker, PackageResolverProxy,
         RepositoryManagerMarker, RepositoryManagerProxy, UpdatePolicy,
     },
-    fidl_fuchsia_pkg_ext::{RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs},
+    fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs},
     fidl_fuchsia_pkg_rewrite::{
         EngineMarker as RewriteEngineMarker, EngineProxy as RewriteEngineProxy,
     },
@@ -389,6 +389,12 @@ impl<P: PkgFs> TestEnv<P> {
         url: &str,
     ) -> impl Future<Output = Result<DirectoryProxy, Status>> {
         resolve_package(&self.proxies.resolver, url)
+    }
+
+    pub fn get_hash(&self, url: impl Into<String>) -> impl Future<Output = Result<BlobId, Status>> {
+        let fut =
+            self.proxies.resolver.get_hash(&mut fidl_fuchsia_pkg::PackageUrl { url: url.into() });
+        async move { fut.await.unwrap().map(|blob_id| blob_id.into()).map_err(|i| Status::from_raw(i)) }
     }
 
     pub async fn pkg_resolver_inspect_hierarchy(&self) -> NodeHierarchy {

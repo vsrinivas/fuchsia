@@ -137,12 +137,14 @@ fn main() -> Result<(), Error> {
 
     let resolver_cb = {
         let cache = cache.clone();
+        let repo_manager = Arc::clone(&repo_manager);
         let rewrite_manager = Arc::clone(&rewrite_manager);
         let package_fetcher = Arc::clone(&package_fetcher);
         move |stream| {
             fasync::spawn_local(
                 resolver_service::run_resolver_service(
                     cache.clone(),
+                    Arc::clone(&repo_manager),
                     Arc::clone(&rewrite_manager),
                     Arc::clone(&package_fetcher),
                     stream,

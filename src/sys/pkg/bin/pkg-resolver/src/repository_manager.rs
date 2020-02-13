@@ -242,8 +242,6 @@ impl RepositoryManager {
         cache: &'a PackageCache,
         blob_fetcher: &'a BlobFetcher,
     ) -> LocalBoxFuture<'a, Result<BlobId, Status>> {
-        // Check if we actually have a repository defined for this URL. If not, exit early
-        // with NOT_FOUND.
         let config = if let Some(config) = self.get(url.repo()) {
             Arc::clone(config)
         } else {
@@ -259,12 +257,39 @@ impl RepositoryManager {
 
         async move {
             let repo = fut.await?;
-            crate::cache::cache_package_using_rust_tuf(repo, &config, url, cache, blob_fetcher)
-                .await
-                .map_err(|e| {
+            crate::cache::cache_package(repo, &config, url, cache, blob_fetcher).await.map_err(
+                |e| {
                     fx_log_err!("while fetching package {} using rust tuf: {}", url, e);
                     e.to_resolve_status()
-                })
+                },
+            )
+        }
+        .boxed_local()
+    }
+
+    pub fn get_package_hash<'a>(
+        &self,
+        url: &'a PkgUrl,
+    ) -> LocalBoxFuture<'a, Result<BlobId, Status>> {
+        let config = if let Some(config) = self.get(url.repo()) {
+            Arc::clone(config)
+        } else {
+            return futures::future::ready(Err(Status::NOT_FOUND)).boxed_local();
+        };
+
+        let fut = connect_to_rust_tuf_client(
+            Arc::clone(&self.rust_tuf_conns),
+            Arc::clone(&config),
+            Arc::clone(&self.inspect.repos_node),
+            url.repo(),
+        );
+
+        async move {
+            let repo = fut.await?;
+            crate::cache::merkle_for_url(repo, url).await.map(|(blob_id, _)| blob_id).map_err(|e| {
+                fx_log_err!("while fetching package hash {} using rust tuf: {}", url, e);
+                e.to_resolve_status()
+            })
         }
         .boxed_local()
     }

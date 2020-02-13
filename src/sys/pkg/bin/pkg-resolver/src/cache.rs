@@ -146,26 +146,14 @@ impl From<PackageOpenError> for Status {
     }
 }
 
-pub async fn cache_package_using_rust_tuf<'a>(
+pub async fn cache_package<'a>(
     repo: Arc<AsyncMutex<Repository>>,
     config: &'a RepositoryConfig,
     url: &'a PkgUrl,
     cache: &'a PackageCache,
     blob_fetcher: &'a BlobFetcher,
 ) -> Result<BlobId, CacheError> {
-    let (merkle, size) =
-        merkle_for_url_using_rust_tuf(repo, url).await.map_err(CacheError::MerkleFor)?;
-    cache_package(merkle, size, config, url, cache, blob_fetcher).await
-}
-
-pub async fn cache_package<'a>(
-    merkle: BlobId,
-    size: u64,
-    config: &'a RepositoryConfig,
-    url: &'a PkgUrl,
-    cache: &'a PackageCache,
-    blob_fetcher: &'a BlobFetcher,
-) -> Result<BlobId, CacheError> {
+    let (merkle, size) = merkle_for_url(repo, url).await.map_err(CacheError::MerkleFor)?;
     // If a merkle pin was specified, use it, but only after having verified that the name and
     // variant exist in the TUF repo.  Note that this doesn't guarantee that the merkle pinned
     // package ever actually existed in the repo or that the merkle pin refers to the named
@@ -342,7 +330,7 @@ impl ToResolveStatus for FetchError {
     }
 }
 
-async fn merkle_for_url_using_rust_tuf<'a>(
+pub async fn merkle_for_url<'a>(
     repo: Arc<AsyncMutex<Repository>>,
     url: &'a PkgUrl,
 ) -> Result<(BlobId, u64), MerkleForError> {
