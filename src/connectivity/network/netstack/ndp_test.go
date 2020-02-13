@@ -7,8 +7,6 @@ package netstack
 import (
 	"context"
 	"fmt"
-	"syscall/zx"
-	"syscall/zx/zxwait"
 	"testing"
 	"time"
 
@@ -29,8 +27,6 @@ const (
 	middleLifetimeTimeout = middleLifetime * time.Second
 	incrementalTimeout    = 100 * time.Millisecond
 	defaultLifetime       = time.Hour
-
-	onInterfaceChangedEventTimeout = time.Second
 )
 
 var (
@@ -89,54 +85,6 @@ func waitForEmptyQueue(n *ndpDispatcher) {
 			break
 		}
 		<-n.testNotifyCh
-	}
-}
-
-// Test that netstack service clients are notified when DAD completes.
-func TestNDPDAD(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	ndpDisp := newNDPDispatcherForTest()
-	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
-	ndpDisp.start(ctx)
-
-	eth := deviceForAddEth(ethernet.Info{}, t)
-	ifs, err := ns.addEth("/path", netstack.InterfaceConfig{Name: "name"}, &eth)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := ifs.eth.Up(); err != nil {
-		t.Fatalf("ifs.eth.Up(): %s", err)
-	}
-
-	req, cli, err := netstack.NewNetstackInterfaceRequest()
-	if err != nil {
-		t.Fatalf("netstack.NewNetstackInterfaceRequest(): %s", err)
-	}
-	defer cli.Close()
-	if _, err := ns.netstackService.BindingSet.Add(&netstack.NetstackStub{Impl: &netstackImpl{ns: ns}}, req.ToChannel(), nil); err != nil {
-		t.Fatalf("netstackService.BindingSet.Add(_, _, nil): %s", err)
-	}
-
-	ndpDisp.OnDuplicateAddressDetectionStatus(ifs.nicid, testLinkLocalV6Addr1, false, nil)
-	waitForEmptyQueue(ndpDisp)
-
-	// Should get an OnInterfacesChanged event since we invalidated the address.
-	signals, err := zxwait.Wait(*cli.Channel.Handle(), zx.SignalChannelReadable|zx.SignalChannelPeerClosed, zx.Sys_deadline_after(zx.Duration(onInterfaceChangedEventTimeout.Nanoseconds())))
-	if err != nil {
-		t.Fatalf("zxwait.Wait(_, zx.SignalChannelReadable|zx.SignalChannelPeerClosed, %s): %s", onInterfaceChangedEventTimeout, err)
-	}
-	if signals&zx.SignalChannelReadable == 0 {
-		t.Fatalf("got zxwait.Wait(_, zx.SignalChannelReadable|zx.SignalChannelPeerClosed, %s) = %b, want = %b", onInterfaceChangedEventTimeout, signals, zx.SignalChannelReadable)
-	}
-
-	interfaces, err := cli.ExpectOnInterfacesChanged()
-	if err != nil {
-		t.Fatalf("cli.ExpectOnInterfacesChanged(): %s", err)
-	}
-	if l := len(interfaces); l != 1 {
-		t.Errorf("got len(interfaces) = %d, want = 1", l)
 	}
 }
 
@@ -457,15 +405,6 @@ func TestNDPInvalidateUnknownAutoGenAddr(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req, cli, err := netstack.NewNetstackInterfaceRequest()
-	if err != nil {
-		t.Fatalf("netstack.NewNetstackInterfaceRequest(): %s", err)
-	}
-	defer cli.Close()
-	if _, err := ns.netstackService.BindingSet.Add(&netstack.NetstackStub{Impl: &netstackImpl{ns: ns}}, req.ToChannel(), nil); err != nil {
-		t.Fatalf("netstackService.BindingSet.Add(_, _, nil): %s", err)
-	}
-
 	// Invalidate the auto-generated address addrWithPrefix from eth (even
 	// though we do not yet know about it).
 	ndpDisp.OnAutoGenAddressInvalidated(ifs.nicid, addrWithPrefix)
@@ -474,12 +413,6 @@ func TestNDPInvalidateUnknownAutoGenAddr(t *testing.T) {
 		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs.nicid, addrWithPrefix, err)
 	} else if has {
 		t.Fatalf("unexpected addr = %s for nicID (%d)", addrWithPrefix, ifs.nicid)
-	}
-
-	// Should not get an OnInterfacesChanged event since the address was unknown.
-	signals, err := zxwait.Wait(*cli.Channel.Handle(), zx.SignalChannelReadable|zx.SignalChannelPeerClosed, zx.Sys_deadline_after(zx.Duration(onInterfaceChangedEventTimeout.Nanoseconds())))
-	if err, ok := err.(*zx.Error); !ok || err == nil || err.Status != zx.ErrTimedOut {
-		t.Fatalf("got zxwait.Wait(_, zx.SignalChannelReadable|zx.SignalChannelPeerClosed, %s) = (%b, %v), want = (_, %v)", onInterfaceChangedEventTimeout, signals, err, zx.ErrTimedOut)
 	}
 }
 
@@ -507,15 +440,6 @@ func TestSLAAC(t *testing.T) {
 	ifs2, err := ns.addEth("/path2", netstack.InterfaceConfig{Name: "name2"}, &eth2)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	req, cli, err := netstack.NewNetstackInterfaceRequest()
-	if err != nil {
-		t.Fatalf("netstack.NewNetstackInterfaceRequest(): %s", err)
-	}
-	defer cli.Close()
-	if _, err := ns.netstackService.BindingSet.Add(&netstack.NetstackStub{Impl: &netstackImpl{ns: ns}}, req.ToChannel(), nil); err != nil {
-		t.Fatalf("netstackService.BindingSet.Add(_, _, nil): %s", err)
 	}
 
 	// Test auto-generating a new address on eth1.
@@ -589,23 +513,6 @@ func TestSLAAC(t *testing.T) {
 		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs1.nicid, nic1Addr1, err)
 	} else if !has {
 		t.Fatalf("missing addr = %s for nicID (%d)", nic1Addr1, ifs1.nicid)
-	}
-
-	// Should get an OnInterfacesChanged event since we invalidated the address.
-	signals, err := zxwait.Wait(*cli.Channel.Handle(), zx.SignalChannelReadable|zx.SignalChannelPeerClosed, zx.Sys_deadline_after(zx.Duration(onInterfaceChangedEventTimeout.Nanoseconds())))
-	if err != nil {
-		t.Fatalf("zxwait.Wait(_, zx.SignalChannelReadable|zx.SignalChannelPeerClosed, %s): %s", onInterfaceChangedEventTimeout, err)
-	}
-	if signals&zx.SignalChannelReadable == 0 {
-		t.Fatalf("got zxwait.Wait(_, zx.SignalChannelReadable|zx.SignalChannelPeerClosed, %s) = %b, want = %b", onInterfaceChangedEventTimeout, signals, zx.SignalChannelReadable)
-	}
-
-	interfaces, err := cli.ExpectOnInterfacesChanged()
-	if err != nil {
-		t.Fatalf("cli.ExpectOnInterfacesChanged(): %s", err)
-	}
-	if l := len(interfaces); l != 2 {
-		t.Errorf("got len(interfaces) = %d, want = 2", l)
 	}
 }
 
