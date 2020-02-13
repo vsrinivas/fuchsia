@@ -85,7 +85,7 @@ impl TestHelper {
         let (sender, receiver) = oneshot::channel::<()>();
         let mut sender = Some(sender);
         self.run_until_complete_or_timeout(
-            5.seconds(),
+            120.seconds(),
             "receive a WlanmacStart event",
             move |event| match event {
                 wlantap::WlantapPhyEvent::WlanmacStart { .. } => {

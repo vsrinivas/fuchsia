@@ -18,7 +18,7 @@ async fn verify_ethernet() {
     let _helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
-    let mut retry = test_utils::RetryWithBackoff::new(5.seconds());
+    let mut retry = test_utils::RetryWithBackoff::infinite_with_max_interval(5.seconds());
     loop {
         let client = create_eth_client(&CLIENT_MAC_ADDR)
             .await
