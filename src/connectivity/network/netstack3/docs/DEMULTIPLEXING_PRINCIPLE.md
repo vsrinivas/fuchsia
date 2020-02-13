@@ -72,10 +72,10 @@ either A or B, violating rule (2), or that the traffic was unambiguously
 destined to socket B, violating rule (3)).
 
 Consider what might happen if we don't abide by this principle. We might have
-two UDP sockets - socket A with local address 1.1.1.1:1234 and remote address
-*:*, and socket B with local address 1.1.1.1:1234 and remote address
-2.2.2.2:5678. If an inbound packet is received from 2.2.2.2:5678 to
-1.1.1.1:1234, which socket should it be delivered to? It's possible that the
+two UDP sockets - socket A with local address `1.1.1.1:1234` and remote address
+`*:*`, and socket B with local address `1.1.1.1:1234` and remote address
+`2.2.2.2:5678`. If an inbound packet is received from `2.2.2.2:5678` to
+`1.1.1.1:1234`, which socket should it be delivered to? It's possible that the
 remote host is attempting to communicate with socket A. It's also possible that
 socket B previously sent a packet, and the remote host is responding to it.
 There's no way to tell which is the case, and so it's ambiguous which socket
