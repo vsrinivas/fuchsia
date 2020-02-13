@@ -8,16 +8,17 @@
             "isolated-persistent-storage"
         ],
         "services": [
-            "fuchsia.identity.account.AccountManager",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.deprecatedtimezone.Timezone",
             "fuchsia.device.manager.Administrator",
             "fuchsia.devicesettings.DeviceSettingsManager",
-            "fuchsia.ui.lifecycle.LifecycleController",
-            "fuchsia.ui.policy.Presenter",
+            "fuchsia.identity.account.AccountManager",
+            "fuchsia.settings.Intl",
             "fuchsia.setui.SetUiService",
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.lifecycle.LifecycleController",
+            "fuchsia.ui.policy.Presenter",
             "fuchsia.wlan.service.Wlan"
         ]
     }
