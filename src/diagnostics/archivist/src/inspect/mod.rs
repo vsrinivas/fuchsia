@@ -499,7 +499,11 @@ impl ReaderServer {
                         }
                     }
                     Err(e) => {
-                        eprintln!("Archivist failed to convert snapshot to hierarchy: {:?}", e);
+                        eprintln!(
+                            "Archivist failed to convert snapshot from component: {:?} to 
+hierarchy: {:?}",
+                            sanitized_moniker, e
+                        );
                         None
                     }
                 })

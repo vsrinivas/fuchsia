@@ -136,10 +136,10 @@ fn read(snapshot: &Snapshot) -> Result<PartialNodeHierarchy, Error> {
 fn scan_blocks<'a>(snapshot: &'a Snapshot) -> Result<ScanResult<'a>, Error> {
     let mut result = ScanResult::new(snapshot);
     for block in snapshot.scan() {
-        if block.index() == 0 && block.block_type() != BlockType::Header {
+        if block.index() == 0 && block.block_type_or()? != BlockType::Header {
             return Err(format_err!("expected header block on index 0"));
         }
-        match block.block_type() {
+        match block.block_type_or()? {
             BlockType::NodeValue => {
                 result.parse_node(&block)?;
             }
