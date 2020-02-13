@@ -31,3 +31,16 @@ Provides I2C devices writes and reads.
    Examples:
    `i2cutil /dev/class/i2c/000 t w 5 r 1` (equivalent to example a) within section 1 above).
    `i2cutil /dev/class/i2c/000 t w 0x20 0x3d 0x80` (equivalent to example b) within 2 above).
+
+4. `i2cutil p[ing]`
+
+   Pings all devices in `/dev/class/i2c` by reading from each devices' address 0x00. Example:
+   `i2cutil p
+    /dev/class/i2c/000: OK
+    [00164.657] 04506:05266> i2c: error on bus
+    Error -1
+    /dev/class/i2c/001: ERROR
+    /dev/class/i2c/002: OK
+    /dev/class/i2c/003: OK
+    /dev/class/i2c/004: OK`
+

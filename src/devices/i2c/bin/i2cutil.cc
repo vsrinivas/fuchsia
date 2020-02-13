@@ -12,6 +12,8 @@
 #include <stdio.h>
 #include <zircon/status.h>
 
+#include <filesystem>
+
 #include <fbl/auto_call.h>
 #include <pretty/hexdump.h>
 
@@ -20,6 +22,7 @@ static void usage(char* prog) {
   printf(" %s w[rite]    DEVICE DATA...                                          Write bytes\n", prog);
   printf(" %s r[ead]     DEVICE ADDRESS                                          Reads one byte\n", prog);
   printf(" %s t[ransact] DEVICE [w|r] [DATA...|LENGTH] [w|r] [DATA...|LENGTH]... Transaction\n", prog);
+  printf(" %s p[ing]                                                             Ping devices\n", prog);
 }
 
 static void convert_args(char** argv, size_t length, uint8_t* buffer) {
@@ -158,7 +161,7 @@ static zx_status_t transact(llcpp::fuchsia::hardware::i2c::Device2::SyncClient c
   return status;
 }
 
-static int device_cmd(int argc, char** argv) {
+static int device_cmd(int argc, char** argv, bool print_out) {
   if (argc < 3) {
     usage(argv[0]);
     return -1;
@@ -213,7 +216,7 @@ static int device_cmd(int argc, char** argv) {
       status = read_byte(std::move(client),
                          fbl::Span<uint8_t>(write_buffer.get(), n_write_bytes),
                          &out_byte);
-      if (status == ZX_OK) {
+      if (status == ZX_OK && print_out) {
         hexdump8_ex(&out_byte, 1, 0);
       }
       break;
@@ -235,11 +238,34 @@ static int device_cmd(int argc, char** argv) {
       return -1;
   }
   if (status == ZX_OK) {
-    printf("Success\n");
+    if (print_out) {
+      printf("Success\n");
+    }
   } else {
     printf("Error %d\n", status);
   }
   return status;
+}
+
+static int ping_cmd() {
+  const char* c_dir = "/dev/class/i2c";
+  DIR* dir = opendir(c_dir);
+  if (!dir) {
+    printf("Directory %s not found\n", c_dir);
+    return -1;
+  }
+
+  std::filesystem::path dir_path(c_dir);
+  struct dirent* de;
+  while ((de = readdir(dir))) {
+    std::filesystem::path dev_path = dir_path;
+    dev_path /= std::filesystem::path(de->d_name);
+    const char* argv[] = {"i2cutil_ping", "r", dev_path.c_str(), "0x00"};
+    char** argv_main = (char**)(&argv);
+    auto status = device_cmd(countof(argv), argv_main, false);
+    printf("%s: %s\n", dev_path.c_str(), status == ZX_OK ? "OK" : "ERROR");
+  }
+  return 0;
 }
 
 int main(int argc, char** argv) {
@@ -251,7 +277,10 @@ int main(int argc, char** argv) {
     case 'w':
     case 'r':
     case 't':
-      return device_cmd(argc, argv);
+      return device_cmd(argc, argv, true);
+      break;
+    case 'p':
+      return ping_cmd();
       break;
 
   default:
