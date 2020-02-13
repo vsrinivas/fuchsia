@@ -32,6 +32,12 @@ readonly RAW_LINES="// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // linking requirements for later blocks is explicitly suggested by
 // https://doc.rust-lang.org/reference/items/external-blocks.html#the-link-attribute.
 #[link(name = \"usb_bulk\", kind = \"static\")]
+extern \"C\" {}
+
+// Configure linkage for MacOS.
+#[cfg(target_os = \"macos\")]
+#[link(name = \"IOKit\", kind = \"framework\")]
+#[link(name = \"CoreFoundation\", kind = \"framework\")]
 extern \"C\" {}"
 
 bindgen \

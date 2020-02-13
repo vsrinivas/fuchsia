@@ -16,9 +16,10 @@
 #[link(name = "usb_bulk", kind = "static")]
 extern "C" {}
 
-#[cfg(target_os="macos")]
-#[link(name="IOKit", kind="framework")]
-#[link(name="CoreFoundation", kind="framework")]
+// Configure linkage for MacOS.
+#[cfg(target_os = "macos")]
+#[link(name = "IOKit", kind = "framework")]
+#[link(name = "CoreFoundation", kind = "framework")]
 extern "C" {}
 
 pub type __uint8_t = ::std::os::raw::c_uchar;
