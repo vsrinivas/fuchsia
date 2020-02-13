@@ -97,10 +97,16 @@ fn aac_test_suite() -> Result<()> {
                 },
                 output_packet_count: 5,
                 output_file: None,
-                expected_digests: vec![ExpectedDigest::new(
-                    "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Raw",
-                    "3457e04babe80c5364215f66e74f51f871850c0a1c45f8cd69c76ad5fe54f97d",
-                )],
+                expected_digests: vec![
+                    ExpectedDigest::new(
+                        "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Raw Arm",
+                        "11fe39d40b09c3158172adf86ecb715d98f5e0ca9d5b541629ac80922f79fc1c",
+                    ),
+                    ExpectedDigest::new(
+                        "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Raw x64",
+                        "5be551b15b856508a186daa008e06b5ea2d7c2b18ae7977c5037ddee92d4ef9b",
+                    ),
+                ],
             }],
         };
 
@@ -131,10 +137,16 @@ fn aac_adts_test_suite() -> Result<()> {
                 },
                 output_packet_count: 5,
                 output_file: None,
-                expected_digests: vec![ExpectedDigest::new(
-                    "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Adts",
-                    "5c4f55f178d08805ad31db5b1b3c999936c67cd334e7630f653785d50a270963",
-                )],
+                expected_digests: vec![
+                    ExpectedDigest::new(
+                        "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Adts Arm",
+                        "c9d1ebb5844b9d90c09b0a26db14ddcf4189e77087efc064061f1c88df51e296",
+                    ),
+                    ExpectedDigest::new(
+                        "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Adts x64",
+                        "e88afc9130dc3cf429719f4e66fa7c60a17161c5ac30b37c527ab98e83f30750",
+                    ),
+                ],
             }],
         };
 
@@ -165,10 +177,16 @@ fn aac_latm_test_suite() -> Result<()> {
                 },
                 output_packet_count: 5,
                 output_file: None,
-                expected_digests: vec![ExpectedDigest::new(
-                    "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Latm/MuxConfig",
-                    "30045910e5781f6550354e8c04b439eafa03912c1e48978b24e493aff62ceeb6",
-                )],
+                expected_digests: vec![
+                    ExpectedDigest::new(
+                        "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Latm/MuxConfig Arm",
+                        "85ce565087981c36e47c873be7df2d57d3c0e8273e6641477e1b6d20c41c29b4",
+                    ),
+                    ExpectedDigest::new(
+                        "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Latm/MuxConfig x64",
+                        "6f2eadfe6dd88b189a38b00b9711160fea4b2d8a6acc24ea9008708d2a355735",
+                    ),
+                ],
             }],
         };
 
@@ -194,10 +212,16 @@ fn aac_latm_test_suite() -> Result<()> {
                 },
                 output_packet_count: 5,
                 output_file: None,
-                expected_digests: vec![ExpectedDigest::new(
-                    "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Latm/NoMuxConfig",
-                    "a3e77ac5c6c4118afd01a53bb53fd9e524e9daedd0a7ad85608206347ad271e9",
-                )],
+                expected_digests: vec![
+                    ExpectedDigest::new(
+                        "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Latm/NoMuxConfig Arm",
+                        "09f7e4a6c55873f21772a8ef6d28d96eab287a93290d6d3cd612a11bc2abe6e3",
+                    ),
+                    ExpectedDigest::new(
+                        "Aac: 44.1kHz/Mono/V5/Mpeg2 LC/Latm/NoMuxConfig x64",
+                        "a139f287f77c06e3f0a318a8712ea2cabf93c94b7b7106825747f3dd752fc7c0",
+                    ),
+                ],
             }],
         };
 

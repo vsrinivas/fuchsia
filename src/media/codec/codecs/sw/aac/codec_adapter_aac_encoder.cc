@@ -510,6 +510,13 @@ CodecAdapterAacEncoder::CreateEncoder(const fuchsia::media::PcmFormat& pcm_forma
     }
   }
 
+  // Enable extra psychoacoustic processing for better audio quality. Not observed to use an
+  // appreciable amount of extra CPU.
+  uint32_t afterburner = 1;
+  if ((status = aacEncoder_SetParam(encoder, AACENC_AFTERBURNER, afterburner)) != AACENC_OK) {
+    return fit::error(status);
+  }
+
   if ((status = aacEncoder_SetParam(encoder, AACENC_SIGNALING_MODE, SIG_EXPLICIT_BW_COMPATIBLE)) !=
       AACENC_OK) {
     return fit::error(status);
