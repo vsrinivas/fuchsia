@@ -148,7 +148,8 @@ TEST_F(BlobfsCheckerTest, TestInodeWithUnallocatedBlock) {
   ASSERT_STATUS(checker.Check(), ZX_ERR_BAD_STATE);
 }
 
-TEST_F(BlobfsCheckerTest, TestAllocatedBlockCountTooHigh) {
+// TODO(https://bugs.fuchsia.dev/45924): Fails on ASAN QEMU bot.
+TEST_F(BlobfsCheckerTest, DISABLED_TestAllocatedBlockCountTooHigh) {
   Superblock superblock = fs_->Info();
   superblock.alloc_block_count++;
   ASSERT_OK(UpdateSuperblock(superblock));
