@@ -522,10 +522,9 @@ TEST(DeviceControllerIntegrationTest, TestRebindWithMakeVisible_Failure) {
   ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr));
 
   fbl::unique_fd test_fd, parent_fd, child_fd;
-  zx::channel test_channel, parent_channel;
   ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
                                                           "sys/platform/11:0e:0", &test_fd));
-  ASSERT_OK(fdio_get_service_handle(test_fd.release(), test_channel.reset_and_get_address()));
+  zx::channel parent_channel;
   ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
       devmgr.devfs_root(), "sys/platform/11:0e:0/devhost-test-parent", &parent_fd));
   ASSERT_OK(fdio_get_service_handle(parent_fd.release(), parent_channel.reset_and_get_address()));

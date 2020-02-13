@@ -72,8 +72,9 @@ zx_status_t TestDevhostDriverChild::Bind() {
 
 zx_status_t TestDevhostDriverChild::Init() {
   if (!metadata_.make_device_visible_success) {
-    // Fail the makedevice viisble. Remove the device.
+    // Fail the makedevice visible. Remove the device.
     DdkAsyncRemove();
+    return ZX_OK;
   }
   DdkMakeVisible();
   return ZX_OK;
