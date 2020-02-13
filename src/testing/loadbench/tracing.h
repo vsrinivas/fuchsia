@@ -8,7 +8,9 @@
 #include <lib/zircon-internal/ktrace.h>
 
 #include <array>
+#include <map>
 #include <string>
+#include <vector>
 
 #include "utility.h"
 
@@ -36,6 +38,7 @@ class KTraceRecord {
   std::optional<std::array<uint32_t, 2>> Get64BitPayload() const;
   std::optional<std::array<uint64_t, 2>> Get128BitPayload() const;
   std::optional<const uint64_t> GetFlowID() const;
+  std::optional<const uint64_t> GetAssociatedThread() const;
 
   uint32_t GetEvent() const { return event_; }
   TagDefinition* GetInfo() const { return info_; }
@@ -75,6 +78,27 @@ class Tracing {
 
   virtual ~Tracing() { Stop(); }
 
+  struct DurationStats {
+    uint64_t begin_ts = 0;
+    uint64_t end_ts = 0;
+    uint64_t wall_duration = 0;
+    std::optional<std::array<uint64_t, 2>> payload = std::nullopt;
+
+    DurationStats(uint64_t begin) { begin_ts = begin; }
+  };
+
+  struct QueuingStats {
+    uint64_t begin_ts = 0;
+    uint64_t end_ts = 0;
+    uint64_t queuing_time = 0;
+    uint64_t associated_thread = 0;
+
+    QueuingStats(uint64_t begin, uint64_t thread) {
+      begin_ts = begin;
+      associated_thread = thread;
+    }
+  };
+
   // Rewinds kernel trace buffer.
   void Rewind();
 
@@ -93,6 +117,11 @@ class Tracing {
   // Reads trace buffer and converts output into human-readable format. Stores in location defined
   // by <filepath>. Will overwrite any existing files with same name.
   bool WriteHumanReadable(std::ostream& filepath);
+
+  // Picks out traces pertaining to name in string_ref and runs stats on them. Returns false if name
+  // not found.
+  bool PopulateDurationStats(std::string string_ref, std::vector<DurationStats>* duration_stats,
+                             std::map<uint64_t, QueuingStats>* queuing_stats);
 
   bool running() const { return running_; }
 

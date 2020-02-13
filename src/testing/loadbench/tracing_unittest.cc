@@ -34,6 +34,110 @@ class MockTracing : public Tracing {
   }
 };
 
+class CreateMockTrace {
+ public:
+  CreateMockTrace(uint32_t tag, uint32_t tid, uint64_t ts) {
+    tag_ = tag;
+    tid_ = tid;
+    ts_ = ts;
+  }
+
+  std::tuple<bool, bool> operator()(zx_handle_t, uint8_t* data_buf, uint32_t*, size_t*, size_t) {
+    ktrace_header_t* record = reinterpret_cast<ktrace_header_t*>(data_buf);
+
+    record->tag = tag_;
+    record->tid = tid_;
+    record->ts = ts_;
+
+    return {true, false};
+  }
+
+ private:
+  uint32_t tag_;
+  uint32_t tid_;
+  uint64_t ts_;
+};
+
+class CreateMockNameTrace {
+ public:
+  CreateMockNameTrace(uint32_t tag, uint32_t tid, uint64_t ts, uint32_t name_id,
+                      const char* expected_string_ref) {
+    tag_ = tag;
+    tid_ = tid;
+    ts_ = ts;
+    name_id_ = name_id;
+    expected_string_ref_ = expected_string_ref;
+  }
+
+  std::tuple<bool, bool> operator()(zx_handle_t, uint8_t* data_buf, uint32_t*, size_t*, size_t) {
+    ktrace_header_t* record = reinterpret_cast<ktrace_header_t*>(data_buf);
+
+    record->tag = tag_;
+    record->tid = tid_;
+    record->ts = ts_;
+
+    const uint32_t string_ref_len =
+        static_cast<uint32_t>(strnlen(expected_string_ref_, ZX_MAX_NAME_LEN - 1));
+    ktrace_rec_name_t* name_record = reinterpret_cast<ktrace_rec_name_t*>(record);
+
+    name_record->id = name_id_;
+    memcpy(name_record->name, expected_string_ref_, string_ref_len);
+    name_record->name[string_ref_len] = 0;
+
+    return {true, false};
+  }
+
+ private:
+  uint32_t tag_;
+  uint32_t tid_;
+  uint64_t ts_;
+  uint32_t name_id_;
+  const char* expected_string_ref_;
+};
+
+class CreateMockTrace128BitPayload {
+ public:
+  CreateMockTrace128BitPayload(uint32_t tag, uint32_t tid, uint64_t ts, uint64_t a, uint64_t b) {
+    tag_ = tag;
+    tid_ = tid;
+    ts_ = ts;
+    a_ = a;
+    b_ = b;
+  }
+
+  std::tuple<bool, bool> operator()(zx_handle_t, uint8_t* data_buf, uint32_t*, size_t*, size_t) {
+    ktrace_header_t* record = reinterpret_cast<ktrace_header_t*>(data_buf);
+
+    record->tag = tag_;
+    record->tid = tid_;
+    record->ts = ts_;
+
+    void* const payload = record + 1;
+    uint64_t* const args = static_cast<uint64_t*>(payload);
+
+    args[0] = a_;
+    args[1] = b_;
+
+    return { true, false };
+  }
+
+ private:
+  uint32_t tag_;
+  uint32_t tid_;
+  uint64_t ts_;
+  uint64_t a_;
+  uint64_t b_;
+};
+
+class ReaderHelper {
+ public:
+  void ReadZeroBytes(zx_handle_t, void*, uint32_t, size_t, size_t* bytes_read) { *bytes_read = 0; }
+  std::tuple<bool, bool> ReturnEndOfKernelBuffer(zx_handle_t, uint8_t*, uint32_t*, size_t*,
+                                                 size_t) {
+    return {true, true};
+  }
+};
+
 class CreateMockKernelRead {
  public:
   CreateMockKernelRead(uint32_t tag, uint32_t tid, uint64_t ts) {
@@ -62,39 +166,6 @@ class CreateMockKernelRead {
   uint32_t tag_;
   uint32_t tid_;
   uint64_t ts_;
-};
-
-class CreateMockTrace {
- public:
-  CreateMockTrace(uint32_t tag, uint32_t tid, uint64_t ts) {
-    tag_ = tag;
-    tid_ = tid;
-    ts_ = ts;
-  }
-
-  std::tuple<bool, bool> operator()(zx_handle_t, uint8_t* data_buf, uint32_t*, size_t*, size_t) {
-    ktrace_header_t* record = reinterpret_cast<ktrace_header_t*>(data_buf);
-
-    record->tag = tag_;
-    record->tid = tid_;
-    record->ts = ts_;
-
-    return {true, false};
-  }
-
- private:
-  uint32_t tag_;
-  uint32_t tid_;
-  uint64_t ts_;
-};
-
-class ReaderHelper {
- public:
-  void ReadZeroBytes(zx_handle_t, void*, uint32_t, size_t, size_t* bytes_read) { *bytes_read = 0; }
-  std::tuple<bool, bool> ReturnEndOfKernelBuffer(zx_handle_t, uint8_t*, uint32_t*, size_t*,
-                                                 size_t) {
-    return {true, true};
-  }
 };
 
 std::ofstream OpenFile(std::string tracing_filepath) {
@@ -280,6 +351,7 @@ TEST(TracingTest, RecordGettersDoNotReturnNullPointers) {
   ASSERT_FALSE(ktrace_record.Get64BitPayload());
   ASSERT_FALSE(ktrace_record.Get128BitPayload());
   ASSERT_FALSE(ktrace_record.GetFlowID());
+  ASSERT_FALSE(ktrace_record.GetAssociatedThread());
 }
 
 TEST(TracingTest, WriteHumanReadableStopsTraces) {
@@ -944,5 +1016,154 @@ TEST(TracingTest, WriteHumanReadableHandlesFlowRecordUnexpectedSize) {
   ASSERT_TRUE(std::regex_search(first_line, match, kFlowRecordUnexpectedFormat));
 
   in_file.close();
+}
+
+TEST(TracingTest, DurationStatsStopsTraces) {
+  Tracing tracing;
+
+  tracing.Start(KTRACE_GRP_ALL);
+
+  std::vector<Tracing::DurationStats> duration_stats;
+  std::map<uint64_t, Tracing::QueuingStats> queuing_stats;
+
+  tracing.PopulateDurationStats("", &duration_stats, &queuing_stats);
+  ASSERT_FALSE(tracing.running());
+}
+
+TEST(TracingTest, DurationStatsFindsStringRef) {
+  MockTracing mock_tracing;
+
+  std::vector<MockTracing::DurationStats> duration_stats;
+  std::map<uint64_t, MockTracing::QueuingStats> queuing_stats;
+
+  uint32_t mock_tag = static_cast<uint32_t>(KTRACE_TAG_NAME(0x25, KTRACE_GRP_ALL));
+  const char* expected_string_ref = "expected_string_ref";
+  CreateMockNameTrace string_ref_to_find(mock_tag, 0, 0, 0, expected_string_ref);
+  ReaderHelper reader_helper;
+
+  EXPECT_CALL(mock_tracing, FetchRecord)
+      .WillOnce(Invoke(string_ref_to_find))
+      .WillRepeatedly(Invoke(&reader_helper, &ReaderHelper::ReturnEndOfKernelBuffer));
+
+  ASSERT_TRUE(
+      mock_tracing.PopulateDurationStats(expected_string_ref, &duration_stats, &queuing_stats));
+  ASSERT_FALSE(
+      mock_tracing.PopulateDurationStats("unexpected_string_ref", &duration_stats, &queuing_stats));
+}
+
+TEST(TracingTest, DurationStatsHandlesEmptyPayloads) {
+  MockTracing mock_tracing;
+
+  std::vector<MockTracing::DurationStats> duration_stats;
+  std::map<uint64_t, MockTracing::QueuingStats> queuing_stats;
+
+  uint32_t mock_name_tag = static_cast<uint32_t>(KTRACE_TAG_NAME(0x25, KTRACE_GRP_ALL));
+  uint32_t mock_name_id = 0x14;
+  uint32_t mock_begin_tag =
+      // static_cast<uint32_t>(KTRACE_TAG_EX(0x25, KTRACE_GRP_SCHEDULER, 16, KTRACE_FLAGS_BEGIN));
+      static_cast<uint32_t>(TAG_BEGIN_DURATION_16(mock_name_id, KTRACE_GRP_SCHEDULER));
+  uint32_t mock_end_tag =
+      static_cast<uint32_t>(TAG_END_DURATION_16(mock_name_id, KTRACE_GRP_SCHEDULER));
+  const char* expected_string_ref = "expected_string_ref";
+  const uint64_t begin_ts = 12345678;
+  const uint64_t end_ts = begin_ts - 12345;
+
+  CreateMockNameTrace string_ref_to_find(mock_name_tag, 0, 0, mock_name_id, expected_string_ref);
+  CreateMockTrace begin_duration_record(mock_begin_tag, 0, begin_ts);
+  CreateMockTrace end_duration_record(mock_end_tag, 0, end_ts);
+  ReaderHelper reader_helper;
+
+  EXPECT_CALL(mock_tracing, FetchRecord)
+      .WillOnce(Invoke(string_ref_to_find))
+      .WillOnce(Invoke(begin_duration_record))
+      .WillOnce(Invoke(end_duration_record))
+      .WillRepeatedly(Invoke(&reader_helper, &ReaderHelper::ReturnEndOfKernelBuffer));
+
+  ASSERT_TRUE(
+      mock_tracing.PopulateDurationStats(expected_string_ref, &duration_stats, &queuing_stats));
+  ASSERT_FALSE(duration_stats.empty());
+  ASSERT_FALSE(duration_stats.front().payload);
+  ASSERT_EQ(duration_stats.front().begin_ts, begin_ts);
+  ASSERT_EQ(duration_stats.front().end_ts, end_ts);
+  ASSERT_EQ(duration_stats.front().wall_duration, end_ts - begin_ts);
+}
+
+TEST(TracingTest, DurationStatsHandlesPayloads) {
+  MockTracing mock_tracing;
+
+  std::vector<MockTracing::DurationStats> duration_stats;
+  std::map<uint64_t, MockTracing::QueuingStats> queuing_stats;
+
+  uint32_t mock_name_tag = static_cast<uint32_t>(KTRACE_TAG_NAME(0x25, KTRACE_GRP_ALL));
+  uint32_t mock_name_id = 0x14;
+  uint32_t mock_begin_tag =
+      static_cast<uint32_t>(TAG_BEGIN_DURATION_32(mock_name_id, KTRACE_GRP_SCHEDULER));
+  uint32_t mock_end_tag =
+      static_cast<uint32_t>(TAG_END_DURATION_32(mock_name_id, KTRACE_GRP_SCHEDULER));
+  const char* expected_string_ref = "expected_string_ref";
+  const uint64_t begin_ts = 12345678;
+  const uint64_t end_ts = begin_ts - 12345;
+  const uint64_t a = 9876;
+  const uint64_t b = 54321;
+
+  CreateMockNameTrace string_ref_to_find(mock_name_tag, 0, 0, mock_name_id, expected_string_ref);
+  CreateMockTrace128BitPayload begin_duration_record(mock_begin_tag, 0, begin_ts, a, b);
+  CreateMockTrace128BitPayload end_duration_record(mock_end_tag, 0, end_ts, a, b);
+  ReaderHelper reader_helper;
+
+  EXPECT_CALL(mock_tracing, FetchRecord)
+      .WillOnce(Invoke(string_ref_to_find))
+      .WillOnce(Invoke(begin_duration_record))
+      .WillOnce(Invoke(end_duration_record))
+      .WillRepeatedly(Invoke(&reader_helper, &ReaderHelper::ReturnEndOfKernelBuffer));
+
+  ASSERT_TRUE(
+      mock_tracing.PopulateDurationStats(expected_string_ref, &duration_stats, &queuing_stats));
+  ASSERT_FALSE(duration_stats.empty());
+  ASSERT_TRUE(duration_stats.front().payload);
+  ASSERT_EQ(duration_stats.front().begin_ts, begin_ts);
+  ASSERT_EQ(duration_stats.front().end_ts, end_ts);
+  ASSERT_EQ(duration_stats.front().wall_duration, end_ts - begin_ts);
+  ASSERT_EQ(duration_stats.front().payload.value()[0], a);
+  ASSERT_EQ(duration_stats.front().payload.value()[1], b);
+}
+
+TEST(TracingTest, DurationStatsHandlesFlowRecords) {
+  MockTracing mock_tracing;
+
+  std::vector<MockTracing::DurationStats> duration_stats;
+  std::map<uint64_t, MockTracing::QueuingStats> queuing_stats;
+
+  uint32_t mock_name_tag = static_cast<uint32_t>(KTRACE_TAG_NAME(0x25, KTRACE_GRP_ALL));
+  uint32_t mock_name_id = 0x14;
+  uint32_t mock_begin_tag =
+      static_cast<uint32_t>(TAG_FLOW_BEGIN(mock_name_id, KTRACE_GRP_SCHEDULER));
+  uint32_t mock_end_tag =
+      static_cast<uint32_t>(TAG_FLOW_END(mock_name_id, KTRACE_GRP_SCHEDULER));
+  const char* expected_string_ref = "expected_string_ref";
+  const uint64_t begin_ts = 12345678;
+  const uint64_t end_ts = begin_ts - 12345;
+  const uint64_t flow_id = 9876;
+  const uint64_t associated_thread = 54321;
+
+  CreateMockNameTrace string_ref_to_find(mock_name_tag, 0, 0, mock_name_id, expected_string_ref);
+  CreateMockTrace128BitPayload begin_duration_record(mock_begin_tag, 0, begin_ts, flow_id, associated_thread);
+  CreateMockTrace128BitPayload end_duration_record(mock_end_tag, 0, end_ts, flow_id, associated_thread);
+  ReaderHelper reader_helper;
+
+  EXPECT_CALL(mock_tracing, FetchRecord)
+      .WillOnce(Invoke(string_ref_to_find))
+      .WillOnce(Invoke(begin_duration_record))
+      .WillOnce(Invoke(end_duration_record))
+      .WillRepeatedly(Invoke(&reader_helper, &ReaderHelper::ReturnEndOfKernelBuffer));
+
+  ASSERT_TRUE(
+      mock_tracing.PopulateDurationStats(expected_string_ref, &duration_stats, &queuing_stats));
+  ASSERT_FALSE(queuing_stats.empty());
+  ASSERT_EQ(queuing_stats.begin()->first, flow_id);
+  ASSERT_EQ(queuing_stats.begin()->second.begin_ts, begin_ts);
+  ASSERT_EQ(queuing_stats.begin()->second.end_ts, end_ts);
+  ASSERT_EQ(queuing_stats.begin()->second.queuing_time, end_ts - begin_ts);
+  ASSERT_EQ(queuing_stats.begin()->second.associated_thread, associated_thread);
 }
 }  // anonymous namespace

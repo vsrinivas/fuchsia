@@ -7,7 +7,6 @@
 #include <lib/zircon-internal/ktrace.h>
 
 #include <fstream>
-#include <iomanip>
 
 #include "src/lib/fxl/logging.h"
 
@@ -120,6 +119,15 @@ std::optional<const uint64_t> KTraceRecord::GetFlowID() const {
   }
 
   return reinterpret_cast<const uint64_t*>(rec_16b_ + 1)[0];
+}
+
+std::optional<const uint64_t> KTraceRecord::GetAssociatedThread() const {
+  // Incorrect record type.
+  if (rec_16b_ == nullptr || !is_named_ || !is_flow_ || KTRACE_LEN(rec_16b_->tag) != 32) {
+    return std::nullopt;
+  }
+
+  return reinterpret_cast<const uint64_t*>(rec_16b_ + 1)[1];
 }
 
 // Performs same action as zx_ktrace_read and does necessary checks.
@@ -483,4 +491,103 @@ bool Tracing::WriteHumanReadable(std::ostream& human_readable_file) {
                       << "\n";
 
   return true;
+}
+
+// Picks out traces pertaining to name in string_ref and populates stats on them. Returns false if
+// name not found.
+bool Tracing::PopulateDurationStats(std::string string_ref,
+                                    std::vector<DurationStats>* duration_stats,
+                                    std::map<uint64_t, QueuingStats>* queuing_stats) {
+  if (running_) {
+    FXL_LOG(WARNING) << "Tracing was running when duration stats were started. Tracing stopped.";
+    Stop();
+  }
+
+  const size_t buf_len = 256;
+  uint8_t data_buf[buf_len];
+  size_t bytes_read_per_fetch = 0;
+  uint32_t offset = 0;
+  bool string_ref_found = false;
+  uint32_t desired_event_name_id;
+
+  bool done = false;
+    while (!done) {
+      auto [read_success, buffer_end] =
+          FetchRecord(root_resource_, data_buf, &offset, &bytes_read_per_fetch, buf_len);
+
+      if (!read_success) {
+        FXL_LOG(WARNING) << "Error reading traces, trace read stopped.";
+        return false;
+      } else if (buffer_end) {
+        done = true;
+        continue;
+      }
+
+      const auto record_opt = KTraceRecord::ParseRecord(data_buf, buf_len);
+
+      if (!record_opt) {
+        FXL_LOG(WARNING) << "Error reading traces, trace read stopped.";
+        return false;
+      }
+
+    auto& record = record_opt.value();
+
+    if (!record.IsNamed()) {
+      ktrace_rec_name_t* name_record = nullptr;
+
+      if (!string_ref_found && record.GetNameRecord(&name_record)) {
+        if (name_record->name == string_ref) {
+          desired_event_name_id = name_record->id;
+          string_ref_found = true;
+        }
+      }
+    } else if (string_ref_found) /* Named event. */ {
+      // Match duration records for given string ref.
+      ktrace_header_t* rec;
+      if (!record.Get16BRecord(&rec)) {
+        FXL_LOG(WARNING) << "Record error.";
+        return false;
+      }
+
+      if (record.IsDuration() && KTRACE_EVENT_NAME_ID(rec->tag) == desired_event_name_id) {
+        if (record.IsBegin()) {
+          duration_stats->push_back(DurationStats(rec->ts));
+        } else if (!duration_stats->empty()) {
+          auto& latest_record = duration_stats->back();
+
+          latest_record.end_ts = rec->ts;
+          latest_record.wall_duration = latest_record.end_ts - latest_record.begin_ts;
+          latest_record.payload = record.Get128BitPayload();
+        }
+      } else if (record.IsFlow()) {
+        if (!record.GetFlowID() || !record.GetAssociatedThread()) {
+          FXL_LOG(WARNING) << "Record error.";
+          return false;
+        }
+
+        const auto flow_id = record.GetFlowID().value();
+        const auto associated_thread = record.GetAssociatedThread().value();
+
+        if (record.IsBegin()) {
+          queuing_stats->emplace(flow_id, QueuingStats(rec->ts, associated_thread));
+        } else {
+          auto flow_iter = queuing_stats->find(flow_id);
+
+          if (flow_iter == queuing_stats->end()) {
+            continue;
+          } else {
+            flow_iter->second.end_ts = rec->ts;
+            flow_iter->second.queuing_time = flow_iter->second.end_ts - flow_iter->second.begin_ts;
+          }
+        }
+      }
+    }
+  }
+
+  if (!string_ref_found) {
+    FXL_LOG(WARNING) << "No trace found with name " << string_ref << ".";
+    return false;
+  }
+
+  return string_ref_found;
 }
