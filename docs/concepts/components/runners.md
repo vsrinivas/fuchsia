@@ -1,7 +1,8 @@
 # Component Runners
 
-A runner is a protocol that provides a runtime environment for other components.
-For example:
+A runner is a protocol that provides a runtime environment for components; in
+other words, a runner actually *runs* a component.
+Some example runners are:
 
 -   The component manager comes with an built in [ELF runner][elf-runner] which
     launches binaries using the ELF file format.
@@ -9,8 +10,45 @@ For example:
 -   The Chromium web runner provides a runtime for components implemented as web
     pages.
 
-The following sections give details about how components can use a particular
-runner, and how new runners can be implemented.
+The component framework decouples _what_ to execute from _how_ to execute it.
+The component manager identifies what to execute and the runner knows how to
+execute it. The runner and component manager communicate through a
+well-defined API.
+
+As stated in the [introduction][intro], a component can be implemented in any
+programming language (eg. Dart) and against any framework (eg. Flutter) for
+which a suitable component runner exists. Thus, the component framework is
+runtime-agnostic and can support new runtimes without requiring any changes to
+the component manager.
+
+When the component manager decides to start a component, it loads information
+describing the component into a
+[`fuchsia.sys2.ComponentStartInfo`][sdk-component-runner] and sends that
+information to the runner when it invokes the runner's
+[`Start`][sdk-component-runner] method. The
+[`ComponentStartInfo`][sdk-component-runner]
+contains the following information: the component's URL, the component's
+namespace, the contents of the component's package, and more. Then the runner
+starts the component in a way appropriate for that component. To run the
+component the runner may choose a strategy such as the following:
+
+-  Start a new process for the component.
+-  Locate the component together in the same process as other components.
+-  Run the component in the same process as the runner.
+-  Execute the component as a job on a remote computer.
+
+The [`fuchsia.sys2.ComponentController`][sdk-component-runner] protocol
+represents the component's excution. The runner is the server of this protocol,
+and the component manager is the client. This protocol allows the component
+manager to tell the runner about actions it needs to take on the component. For
+example, if the component manager decides a component needs to stop running, the
+component manager uses the [`ComponentController`][sdk-component-runner] to stop
+the component. Typically the runner will serve the
+[`ComponentController`][sdk-component-runner] protocol, and when the runner
+serves a request, it is free to communicate with the component itself in
+whatever way is appropriate. For example, the ELF runner might send a message
+over a channel to the component running in another process, whereas the Dart
+runner might directly invoke a callback method in a Dart-based component.
 
 ## Using a runner
 
@@ -136,6 +174,7 @@ The created runner capability may then be [offered][offer] to children, or
 [elf-runner]: elf_runner.md
 [expose]: component_manifests.md#expose
 [hub]: hub.md
+[intro]: introduction.md#a-component-is-a-hermetic-composable-isolated-program
 [offer]: component_manifests.md#offer
 [sdk-component-controller]: /sdk/fidl/fuchsia.sys2/runtime/component_runner.fidl
 [sdk-component-runner]: /sdk/fidl/fuchsia.sys2/runtime/component_runner.fidl
