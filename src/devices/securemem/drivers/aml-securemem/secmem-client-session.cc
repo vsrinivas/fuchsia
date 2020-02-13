@@ -71,15 +71,15 @@ zx_status_t SecmemClientSession::Init() {
   // Crashes happen about 10% of the time, so 10 retries should greatly reduce the probability.
   constexpr uint32_t kRetryCount = 10;
   for (uint32_t i = 0; i < kRetryCount; i++) {
-    result = TEEC_OpenSession(context_, &session_.value(), &kSecmemUuid,
-                                          TEEC_LOGIN_PUBLIC, NULL, NULL, &return_origin);
+    result = TEEC_OpenSession(context_, &session_.value(), &kSecmemUuid, TEEC_LOGIN_PUBLIC, NULL,
+                              NULL, &return_origin);
     if (result == TEEC_SUCCESS) {
       break;
     } else {
       // fxb/37747 - The TA sometimes crashes when opening a session on sherlock. The crashes seem
       // uncorrelated, so retrying works.
       LOG(ERROR, "TEEC_OpenSession failed - Retrying - result: %" PRIx32 " origin: %" PRIu32,
-        result, return_origin);
+          result, return_origin);
     }
   }
   if (result != TEEC_SUCCESS) {

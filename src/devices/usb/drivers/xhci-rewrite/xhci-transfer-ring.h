@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_TRANSFER_RING_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_TRANSFER_RING_H_
 #include <map>
 
 #include <ddk/protocol/usb/request.h>
@@ -137,3 +138,5 @@ class CommandRing : public TransferRing {
   }
 };
 }  // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_TRANSFER_RING_H_

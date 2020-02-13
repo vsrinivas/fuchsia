@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_LIGHT_SENSOR_DRIVERS_AMS_LIGHT_TCS3400_REGS_H_
+#define SRC_DEVICES_LIGHT_SENSOR_DRIVERS_AMS_LIGHT_TCS3400_REGS_H_
 
 // clang-format off
 /* Regsiter Map */
@@ -41,3 +42,5 @@
 #define TCS_I2C_ENABLE_INT_ENABLE                   TCS_I2C_BIT(4)
 #define TCS_I2C_ENABLE_SLEEP_AFTER_INT              TCS_I2C_BIT(6)
 // clang-format on
+
+#endif  // SRC_DEVICES_LIGHT_SENSOR_DRIVERS_AMS_LIGHT_TCS3400_REGS_H_

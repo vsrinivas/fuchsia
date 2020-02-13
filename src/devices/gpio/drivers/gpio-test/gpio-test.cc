@@ -4,12 +4,13 @@
 
 #include "gpio-test.h"
 
-#include <memory>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#include <memory>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>

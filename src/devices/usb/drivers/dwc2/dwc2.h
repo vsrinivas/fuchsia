@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_USB_DWC2_DWC2_H_
-#define ZIRCON_SYSTEM_DEV_USB_DWC2_DWC2_H_
+#ifndef SRC_DEVICES_USB_DRIVERS_DWC2_DWC2_H_
+#define SRC_DEVICES_USB_DRIVERS_DWC2_DWC2_H_
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
@@ -151,4 +151,4 @@ class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protoco
 
 }  // namespace dwc2
 
-#endif  // ZIRCON_SYSTEM_DEV_USB_DWC2_DWC2_H_
+#endif  // SRC_DEVICES_USB_DRIVERS_DWC2_DWC2_H_

@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_AHCI_SATA_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_AHCI_SATA_H_
 
-#include <ddk/protocol/block.h>
 #include <lib/zx/time.h>
+#include <zircon/listnode.h>
+
+#include <ddk/device.h>
+#include <ddk/protocol/block.h>
 
 #include "ahci.h"
 
@@ -167,3 +171,5 @@ static inline void block_complete(sata_txn_t* txn, zx_status_t status) {
 }
 
 }  // namespace ahci
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_AHCI_SATA_H_

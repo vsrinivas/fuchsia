@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BLOCK_ZXCRYPT_DEVICE_INFO_H_
-#define ZIRCON_SYSTEM_DEV_BLOCK_ZXCRYPT_DEVICE_INFO_H_
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_INFO_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_INFO_H_
+
+#include <lib/zx/vmo.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <zircon/types.h>
 
 #include <ddk/device.h>
 #include <ddktl/protocol/block.h>
 #include <ddktl/protocol/block/partition.h>
 #include <ddktl/protocol/block/volume.h>
 #include <fbl/macros.h>
-#include <lib/zx/vmo.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <zircon/types.h>
 #include <zxcrypt/ddk-volume.h>
 
 namespace zxcrypt {
@@ -58,4 +59,4 @@ struct DeviceInfo {
 
 }  // namespace zxcrypt
 
-#endif  // ZIRCON_SYSTEM_DEV_BLOCK_ZXCRYPT_DEVICE_INFO_H_
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_INFO_H_

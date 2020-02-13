@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_GAUSS_PDM_INPUT_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_GAUSS_PDM_INPUT_H_
 
 #include <ddk/device.h>
 #include <ddk/protocol/platform/device.h>
@@ -12,3 +13,5 @@ typedef struct {
   pdev_protocol_t pdev;
   // more stuff will be added here
 } gauss_pdm_input_t;
+
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_GAUSS_PDM_INPUT_H_

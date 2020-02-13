@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_UI_INPUT_DRIVERS_BMA253_BMA253_H_
+#define SRC_UI_INPUT_DRIVERS_BMA253_BMA253_H_
 
+#include <lib/device-protocol/i2c-channel.h>
+#include <lib/simplehid/simplehid.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>
 
 #include <ddktl/device.h>
-#include <lib/device-protocol/i2c-channel.h>
 #include <fbl/mutex.h>
 #include <hid/bma253.h>
-#include <lib/simplehid/simplehid.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 namespace accel {
 
@@ -59,3 +60,5 @@ class Bma253 : public DeviceType, public ddk::HidbusProtocol<Bma253, ddk::base_p
 };
 
 }  // namespace accel
+
+#endif  // SRC_UI_INPUT_DRIVERS_BMA253_BMA253_H_

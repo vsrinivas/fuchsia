@@ -11,8 +11,8 @@
 
 namespace {
 
-using fvm::Header;
 using fvm::FormatInfo;
+using fvm::Header;
 using fvm::VPartition;
 using fvm::VPartitionManager;
 
@@ -83,8 +83,8 @@ class BlockDeviceTest : public zxtest::Test {
     block_info_t info;
     size_t block_op_size;
     block_device_.BlockImplQuery(&info, &block_op_size);
-    device_ = std::make_unique<VPartitionManager>(nullptr, info, block_op_size,
-                                                  block_device_.proto());
+    device_ =
+        std::make_unique<VPartitionManager>(nullptr, info, block_op_size, block_device_.proto());
 
     Header superblock = MakeSuperBlock(kDiskSize, kPartitionTableSize, kAllocTableSize);
     FormatInfo format_info = FormatInfo::FromSuperBlock(superblock);
@@ -111,7 +111,8 @@ TEST_F(BlockDeviceTest, QueueTrimOneSlice) {
   op.trim.length = kOperationLength;
   op.trim.offset_dev = kBlocksPerSlice / 2;
 
-  partition_->BlockImplQueue(&op, [](void*, zx_status_t status, block_op_t*){}, nullptr);
+  partition_->BlockImplQueue(
+      &op, [](void*, zx_status_t status, block_op_t*) {}, nullptr);
   EXPECT_EQ(1, block_device_.num_calls());
   EXPECT_EQ(kOperationLength, block_device_.trim_length());
 }
@@ -127,7 +128,8 @@ TEST_F(BlockDeviceTest, QueueTrimConsecutiveSlices) {
   op.trim.length = kOperationLength;
   op.trim.offset_dev = kBlocksPerSlice - kOperationLength / 2;
 
-  partition_->BlockImplQueue(&op, [](void*, zx_status_t status, block_op_t*){}, nullptr);
+  partition_->BlockImplQueue(
+      &op, [](void*, zx_status_t status, block_op_t*) {}, nullptr);
   EXPECT_EQ(1, block_device_.num_calls());
   EXPECT_EQ(kOperationLength, block_device_.trim_length());
 }
@@ -144,7 +146,8 @@ TEST_F(BlockDeviceTest, QueueTrimDisjointSlices) {
   op.trim.length = kOperationLength;
   op.trim.offset_dev = kBlocksPerSlice * 2 - kOperationLength / 2;
 
-  partition_->BlockImplQueue(&op, [](void*, zx_status_t status, block_op_t*){}, nullptr);
+  partition_->BlockImplQueue(
+      &op, [](void*, zx_status_t status, block_op_t*) {}, nullptr);
   EXPECT_EQ(2, block_device_.num_calls());
   EXPECT_EQ(kOperationLength, block_device_.trim_length());
 }

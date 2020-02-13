@@ -1783,8 +1783,8 @@ zx_status_t UsbXhci::HciFinalize() {
   HCSPARAMS2 hcsparams2 = HCSPARAMS2::Get().ReadFrom(&mmio_.value());
   RuntimeRegisterOffset offset = RuntimeRegisterOffset::Get().ReadFrom(&mmio_.value());
   runtime_offset_ = offset;
-  uint32_t buffers =
-      hcsparams2.MAX_SCRATCHPAD_BUFFERS_LOW() | ((hcsparams2.MAX_SCRATCHPAD_BUFFERS_HIGH() << 5) + 1);
+  uint32_t buffers = hcsparams2.MAX_SCRATCHPAD_BUFFERS_LOW() |
+                     ((hcsparams2.MAX_SCRATCHPAD_BUFFERS_HIGH() << 5) + 1);
   scratchpad_buffers_ = std::make_unique<std::optional<dma_buffer::ContiguousBuffer>[]>(buffers);
   if (ROUNDUP(buffers * sizeof(uint64_t), ZX_PAGE_SIZE) > ZX_PAGE_SIZE) {
     // We can't create multi-page contiguously physical uncached buffers.

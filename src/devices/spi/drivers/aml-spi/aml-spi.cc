@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 #include "aml-spi.h"
-#include "registers.h"
+
+#include <lib/device-protocol/platform-device.h>
 #include <string.h>
 #include <threads.h>
+#include <zircon/types.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -13,11 +16,11 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/spiimpl.h>
-#include <hw/reg.h>
-#include <lib/device-protocol/platform-device.h>
-#include <zircon/types.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+#include <hw/reg.h>
+
+#include "registers.h"
 
 namespace spi {
 

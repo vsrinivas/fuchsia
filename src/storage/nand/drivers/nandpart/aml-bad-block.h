@@ -2,20 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_NAND_DRIVERS_NANDPART_AML_BAD_BLOCK_H_
+#define SRC_STORAGE_NAND_DRIVERS_NANDPART_AML_BAD_BLOCK_H_
 
-#include <stddef.h>
-
-#include <ddk/metadata/bad-block.h>
-
-#include <fbl/array.h>
-#include <fbl/ref_ptr.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
-#include <lib/zircon-internal/thread_annotations.h>
+#include <stddef.h>
 #include <zircon/types.h>
 
 #include <utility>
+
+#include <ddk/metadata/bad-block.h>
+#include <fbl/array.h>
+#include <fbl/ref_ptr.h>
 
 #include "bad-block.h"
 
@@ -121,3 +121,5 @@ class AmlBadBlock : public BadBlock {
   uint32_t bad_block_table_len_;
 };
 }  // namespace nand
+
+#endif  // SRC_STORAGE_NAND_DRIVERS_NANDPART_AML_BAD_BLOCK_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_H_
-#define ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_H_
+#ifndef SRC_DEVICES_SERIAL_DRIVERS_FTDI_FTDI_H_
+#define SRC_DEVICES_SERIAL_DRIVERS_FTDI_FTDI_H_
 
 #include <fuchsia/hardware/ftdi/llcpp/fidl.h>
 
@@ -169,4 +169,4 @@ class FtdiDevice : public DeviceType,
 
 }  // namespace ftdi_serial
 
-#endif  // ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_H_
+#endif  // SRC_DEVICES_SERIAL_DRIVERS_FTDI_FTDI_H_

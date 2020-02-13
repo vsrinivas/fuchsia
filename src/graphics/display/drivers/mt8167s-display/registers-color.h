@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_REGISTERS_COLOR_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_REGISTERS_COLOR_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_REGISTERS_COLOR_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_REGISTERS_COLOR_H_
 
 #include <hwreg/bitfields.h>
 #include <hwreg/mmio.h>
@@ -53,4 +53,4 @@ class ColorCm2EnReg : public hwreg::RegisterBase<ColorCm2EnReg, uint32_t> {
 
 }  // namespace mt8167s_display
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_REGISTERS_COLOR_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_REGISTERS_COLOR_H_

@@ -6,11 +6,13 @@
 
 #include <lib/mmio/mmio.h>
 #include <lib/zx/vmo.h>
-#include <memory>
-#include <optional>
-#include <soc/mt8167/mt8167-usb.h>
 #include <zircon/hw/usb.h>
 #include <zircon/types.h>
+
+#include <memory>
+#include <optional>
+
+#include <soc/mt8167/mt8167-usb.h>
 #include <zxtest/zxtest.h>
 
 namespace mt_usb_hci {

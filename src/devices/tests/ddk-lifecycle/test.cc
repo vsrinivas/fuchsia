@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/platform-defs.h>
 #include <fuchsia/device/lifecycle/test/llcpp/fidl.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-#include <zxtest/zxtest.h>
 
 #include <vector>
+
+#include <ddk/platform-defs.h>
+#include <zxtest/zxtest.h>
 
 using driver_integration_test::IsolatedDevmgr;
 using llcpp::fuchsia::device::lifecycle::test::Lifecycle;
@@ -42,8 +43,7 @@ class LifecycleTest : public zxtest::Test {
     zx::channel local, remote;
     ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-    auto result = TestDevice::Call::SubscribeToLifecycle(
-        zx::unowned(chan_), std::move(remote));
+    auto result = TestDevice::Call::SubscribeToLifecycle(zx::unowned(chan_), std::move(remote));
     ASSERT_OK(result.status());
     ASSERT_FALSE(result->result.is_err());
     lifecycle_chan_ = std::move(local);
@@ -68,8 +68,8 @@ void LifecycleTest::WaitPreRelease(uint64_t child_id) {
       removed = true;
       return ZX_OK;
     };
-    ASSERT_OK(Lifecycle::Call::HandleEvents(
-        zx::unowned_channel(lifecycle_chan_), std::move(event_handlers)));
+    ASSERT_OK(Lifecycle::Call::HandleEvents(zx::unowned_channel(lifecycle_chan_),
+                                            std::move(event_handlers)));
   }
   ASSERT_EQ(device_id, child_id);
 }

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_VIM_DISPLAY_VPU_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_VIM_DISPLAY_VPU_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_VPU_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_VPU_H_
 
 // clang-format off
 /* HHI */
@@ -622,4 +622,4 @@ struct RdmaContainer {
 
 __END_CDECLS
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_VIM_DISPLAY_VPU_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_VPU_H_

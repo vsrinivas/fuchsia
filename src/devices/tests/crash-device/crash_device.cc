@@ -23,7 +23,7 @@ class CrashDevice : public CrashDeviceType {
     zxlogf(INFO, "Crash-device open, will crash on purpose!\n");
     // We crash using a bad access here instead of just asserting false because there are some bots
     // in CQ that are looking for the ASSERT FAILED message to mark runs as failed.
-    int * x = nullptr;
+    int* x = nullptr;
     *x = 2;
     return ZX_OK;
   }

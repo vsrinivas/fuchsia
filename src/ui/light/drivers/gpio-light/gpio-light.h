@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_LIGHT_GPIO_LIGHT_GPIO_LIGHT_H_
-#define ZIRCON_SYSTEM_DEV_LIGHT_GPIO_LIGHT_GPIO_LIGHT_H_
+#ifndef SRC_UI_LIGHT_DRIVERS_GPIO_LIGHT_GPIO_LIGHT_H_
+#define SRC_UI_LIGHT_DRIVERS_GPIO_LIGHT_GPIO_LIGHT_H_
 
 #include <fuchsia/hardware/light/llcpp/fidl.h>
 #include <threads.h>
@@ -85,4 +85,4 @@ class GpioLight : public GpioLightType,
 
 }  // namespace gpio_light
 
-#endif  // ZIRCON_SYSTEM_DEV_LIGHT_GPIO_LIGHT_GPIO_LIGHT_H_
+#endif  // SRC_UI_LIGHT_DRIVERS_GPIO_LIGHT_GPIO_LIGHT_H_

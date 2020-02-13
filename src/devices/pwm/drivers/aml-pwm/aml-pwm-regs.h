@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_PWM_AML_PWM_AML_PWM_REGS_H_
-#define ZIRCON_SYSTEM_DEV_PWM_AML_PWM_AML_PWM_REGS_H_
+#ifndef SRC_DEVICES_PWM_DRIVERS_AML_PWM_AML_PWM_REGS_H_
+#define SRC_DEVICES_PWM_DRIVERS_AML_PWM_AML_PWM_REGS_H_
 
 #include <zircon/types.h>
 
@@ -79,4 +79,4 @@ class BlinkReg : public hwreg::RegisterBase<BlinkReg, uint32_t> {
 
 }  // namespace pwm
 
-#endif  // ZIRCON_SYSTEM_DEV_PWM_AML_PWM_AML_PWM_REGS_H_
+#endif  // SRC_DEVICES_PWM_DRIVERS_AML_PWM_AML_PWM_REGS_H_

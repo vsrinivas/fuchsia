@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_CLK_MSM8X53_CLK_MSM8X53_CLK_REGS_H_
-#define ZIRCON_SYSTEM_DEV_CLK_MSM8X53_CLK_MSM8X53_CLK_REGS_H_
+#ifndef SRC_DEVICES_CLOCK_DRIVERS_MSM8X53_CLK_MSM8X53_CLK_REGS_H_
+#define SRC_DEVICES_CLOCK_DRIVERS_MSM8X53_CLK_MSM8X53_CLK_REGS_H_
 
 namespace msm8x53 {
 
@@ -1074,4 +1074,4 @@ constexpr struct msm_clk_voter kMsmClkVoters[] = {
 
 }  // namespace clk
 
-#endif  // ZIRCON_SYSTEM_DEV_CLK_MSM8X53_CLK_MSM8X53_CLK_REGS_H_
+#endif  // SRC_DEVICES_CLOCK_DRIVERS_MSM8X53_CLK_MSM8X53_CLK_REGS_H_

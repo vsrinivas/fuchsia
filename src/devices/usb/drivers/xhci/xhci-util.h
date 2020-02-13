@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_UTIL_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_UTIL_H_
 
 #include <lib/sync/completion.h>
 
-#include "xhci.h"
 #include "xhci-transfer.h"
+#include "xhci.h"
 
 namespace usb_xhci {
 
@@ -40,3 +41,5 @@ zx_status_t xhci_send_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint
 uint32_t* xhci_get_next_ext_cap(void* mmio, uint32_t* prev_cap, uint32_t* match_cap_id);
 
 }  // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_UTIL_H_

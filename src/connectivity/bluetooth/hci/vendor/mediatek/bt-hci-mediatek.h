@@ -2,18 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_MEDIATEK_BT_HCI_MEDIATEK_H_
+#define SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_MEDIATEK_BT_HCI_MEDIATEK_H_
+
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/interrupt.h>
+#include <lib/zx/vmo.h>
+#include <threads.h>
 
 #include <ddk/protocol/bt/hci.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/sdio.h>
 #include <fbl/auto_lock.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/interrupt.h>
-#include <lib/zx/vmo.h>
-#include <threads.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 namespace bluetooth {
 
@@ -111,3 +113,5 @@ class BtHciMediatek : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_B
 };
 
 }  // namespace bluetooth
+
+#endif  // SRC_CONNECTIVITY_BLUETOOTH_HCI_VENDOR_MEDIATEK_BT_HCI_MEDIATEK_H_

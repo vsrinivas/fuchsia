@@ -2,8 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BLOCK_ZXCRYPT_DEVICE_H_
-#define ZIRCON_SYSTEM_DEV_BLOCK_ZXCRYPT_DEVICE_H_
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_H_
+
+#include <lib/zx/port.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <zircon/compiler.h>
+#include <zircon/device/block.h>
+#include <zircon/listnode.h>
+#include <zircon/types.h>
+
+#include <atomic>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
@@ -15,15 +25,6 @@
 #include <ddktl/protocol/block/volume.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
-#include <lib/zx/port.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <zircon/compiler.h>
-#include <zircon/device/block.h>
-#include <zircon/listnode.h>
-#include <zircon/types.h>
-
-#include <atomic>
 
 #include "device-info.h"
 #include "extra.h"
@@ -33,8 +34,8 @@ namespace zxcrypt {
 
 // See ddk::Device in ddktl/device.h
 class Device;
-using DeviceType = ddk::Device<Device, ddk::GetProtocolable, ddk::GetSizable,
-                               ddk::UnbindableDeprecated>;
+using DeviceType =
+    ddk::Device<Device, ddk::GetProtocolable, ddk::GetSizable, ddk::UnbindableDeprecated>;
 
 // |zxcrypt::Device| is an encrypted block device filter driver.  It is created by
 // |zxcrypt::DeviceManager::Unseal| and transparently encrypts writes to/decrypts reads from a
@@ -145,4 +146,4 @@ class Device final : public DeviceType,
 
 }  // namespace zxcrypt
 
-#endif  // ZIRCON_SYSTEM_DEV_BLOCK_ZXCRYPT_DEVICE_H_
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_H_

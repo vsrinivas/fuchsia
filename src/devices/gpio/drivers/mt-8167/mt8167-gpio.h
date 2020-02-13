@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_GPIO_MT_8167_MT8167_GPIO_H_
-#define ZIRCON_SYSTEM_DEV_GPIO_MT_8167_MT8167_GPIO_H_
+#ifndef SRC_DEVICES_GPIO_DRIVERS_MT_8167_MT8167_GPIO_H_
+#define SRC_DEVICES_GPIO_DRIVERS_MT_8167_MT8167_GPIO_H_
 
+#include <lib/device-protocol/platform-device.h>
+#include <lib/zx/interrupt.h>
+#include <lib/zx/port.h>
 #include <threads.h>
 
 #include <ddk/platform-defs.h>
@@ -13,9 +16,6 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/gpioimpl.h>
 #include <fbl/array.h>
-#include <lib/device-protocol/platform-device.h>
-#include <lib/zx/interrupt.h>
-#include <lib/zx/port.h>
 
 #include "mt8167-gpio-regs.h"
 
@@ -90,4 +90,4 @@ class Mt8167GpioDevice : public DeviceType,
 };
 }  // namespace gpio
 
-#endif  // ZIRCON_SYSTEM_DEV_GPIO_MT_8167_MT8167_GPIO_H_
+#endif  // SRC_DEVICES_GPIO_DRIVERS_MT_8167_MT8167_GPIO_H_

@@ -5,8 +5,13 @@
 #include "sdio-controller-device.h"
 
 #include <inttypes.h>
+#include <lib/fzl/vmo-mapper.h>
+#include <lib/zx/clock.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/driver/binding.h>
+#include <zircon/process.h>
+#include <zircon/threads.h>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -15,11 +20,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <hw/sdio.h>
-#include <lib/fzl/vmo-mapper.h>
-#include <lib/zx/clock.h>
-#include <zircon/driver/binding.h>
-#include <zircon/process.h>
-#include <zircon/threads.h>
 
 namespace {
 

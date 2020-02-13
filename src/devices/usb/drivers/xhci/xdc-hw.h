@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XDC_HW_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_XDC_HW_H_
 
 #include <assert.h>
 
@@ -125,3 +126,5 @@ static_assert(sizeof(xdc_context_data_t) == 0xC0, "xdc context data wrong size")
 #define EP_IN_DEV_CTX_IDX                 3
 
 } // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_XDC_HW_H_

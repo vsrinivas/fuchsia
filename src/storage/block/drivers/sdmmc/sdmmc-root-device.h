@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDMMC_ROOT_DEVICE_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDMMC_ROOT_DEVICE_H_
 
 #include <threads.h>
 
@@ -39,3 +40,5 @@ class SdmmcRootDevice : public SdmmcRootDeviceType {
 };
 
 }  // namespace sdmmc
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDMMC_ROOT_DEVICE_H_

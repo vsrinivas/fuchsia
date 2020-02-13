@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BLOCK_FVM_FVM_PRIVATE_H_
-#define ZIRCON_SYSTEM_DEV_BLOCK_FVM_FVM_PRIVATE_H_
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_FVM_FVM_PRIVATE_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_FVM_FVM_PRIVATE_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdbool.h>
@@ -212,4 +212,4 @@ zx_status_t fvm_bind(zx_device_t* dev);
 
 __END_CDECLS
 
-#endif  // ZIRCON_SYSTEM_DEV_BLOCK_FVM_FVM_PRIVATE_H_
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_FVM_FVM_PRIVATE_H_

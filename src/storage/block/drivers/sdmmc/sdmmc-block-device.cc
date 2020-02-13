@@ -5,15 +5,15 @@
 #include "sdmmc-block-device.h"
 
 #include <inttypes.h>
+#include <lib/fzl/vmo-mapper.h>
+#include <zircon/hw/gpt.h>
+#include <zircon/process.h>
+#include <zircon/threads.h>
 
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <hw/sdmmc.h>
-#include <lib/fzl/vmo-mapper.h>
-#include <zircon/hw/gpt.h>
-#include <zircon/process.h>
-#include <zircon/threads.h>
 
 namespace {
 

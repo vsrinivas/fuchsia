@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_THERMAL_DRIVERS_MTK_THERMAL_MTK_THERMAL_REG_H_
+#define SRC_DEVICES_THERMAL_DRIVERS_MTK_THERMAL_MTK_THERMAL_REG_H_
+
+#include <lib/mmio/mmio.h>
 
 #include <hwreg/bitfields.h>
-#include <lib/mmio/mmio.h>
 
 namespace thermal {
 
@@ -437,3 +439,5 @@ class VprocCon10 : public hwreg::RegisterBase<VprocCon10, uint16_t> {
 };
 
 }  // namespace thermal
+
+#endif  // SRC_DEVICES_THERMAL_DRIVERS_MTK_THERMAL_MTK_THERMAL_REG_H_

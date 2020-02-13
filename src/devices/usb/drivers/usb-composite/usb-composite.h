@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_USB_COMPOSITE_USB_COMPOSITE_H_
+#define SRC_DEVICES_USB_DRIVERS_USB_COMPOSITE_USB_COMPOSITE_H_
 
 #include <ddk/binding.h>
 #include <ddktl/device.h>
@@ -72,3 +73,5 @@ class UsbComposite : public UsbCompositeType {
 };
 
 }  // namespace usb_composite
+
+#endif  // SRC_DEVICES_USB_DRIVERS_USB_COMPOSITE_USB_COMPOSITE_H_

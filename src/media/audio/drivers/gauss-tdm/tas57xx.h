@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_AUDIO_GAUSS_TDM_TAS57XX_H_
-#define ZIRCON_SYSTEM_DEV_AUDIO_GAUSS_TDM_TAS57XX_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_GAUSS_TDM_TAS57XX_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_GAUSS_TDM_TAS57XX_H_
 
 #include <memory>
 
@@ -42,4 +42,4 @@ class Tas57xx : public std::unique_ptr<Tas57xx> {
 }  // namespace gauss
 }  // namespace audio
 
-#endif  // ZIRCON_SYSTEM_DEV_AUDIO_GAUSS_TDM_TAS57XX_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_GAUSS_TDM_TAS57XX_H_

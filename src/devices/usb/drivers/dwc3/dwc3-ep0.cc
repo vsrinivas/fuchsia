@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <stdio.h>
+#include <string.h>
+
 #include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 
-#include "dwc3.h"
 #include "dwc3-regs.h"
 #include "dwc3-types.h"
-
-#include <stdio.h>
-#include <string.h>
+#include "dwc3.h"
 
 #define EP0_LOCK(dwc) (&(dwc)->eps[EP0_OUT].lock)
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_AML_TSENSOR_H_
-#define ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_AML_TSENSOR_H_
+#ifndef SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_TSENSOR_H_
+#define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_TSENSOR_H_
 
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/device-protocol/platform-device.h>
@@ -60,4 +60,4 @@ class AmlTSensor {
 };
 }  // namespace thermal
 
-#endif  // ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_AML_TSENSOR_H_
+#endif  // SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_TSENSOR_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_NELSON_USB_PHY_USB_PHY_REGS_H_
+#define SRC_DEVICES_USB_DRIVERS_NELSON_USB_PHY_USB_PHY_REGS_H_
 
 #include <zircon/types.h>
 
@@ -186,3 +187,5 @@ class UNKNOWN_REGISTER1 : public hwreg::RegisterBase<UNKNOWN_REGISTER1, uint32_t
 };
 
 }  // namespace nelson_usb_phy
+
+#endif  // SRC_DEVICES_USB_DRIVERS_NELSON_USB_PHY_USB_PHY_REGS_H_

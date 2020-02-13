@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_CLK_MSM8X53_CLK_MSM8X53_CLK_H_
-#define ZIRCON_SYSTEM_DEV_CLK_MSM8X53_CLK_MSM8X53_CLK_H_
+#ifndef SRC_DEVICES_CLOCK_DRIVERS_MSM8X53_CLK_MSM8X53_CLK_H_
+#define SRC_DEVICES_CLOCK_DRIVERS_MSM8X53_CLK_MSM8X53_CLK_H_
+
+#include <fuchsia/hardware/clock/c/fidl.h>
+#include <lib/mmio/mmio.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/clockimpl.h>
 #include <fbl/mutex.h>
-#include <fuchsia/hardware/clock/c/fidl.h>
-#include <lib/mmio/mmio.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <soc/msm8x53/msm8x53-clock.h>
 
 namespace clk {
@@ -87,4 +88,4 @@ class Msm8x53Clk : public DeviceType,
 
 }  // namespace clk
 
-#endif  // ZIRCON_SYSTEM_DEV_CLK_MSM8X53_CLK_MSM8X53_CLK_H_
+#endif  // SRC_DEVICES_CLOCK_DRIVERS_MSM8X53_CLK_MSM8X53_CLK_H_

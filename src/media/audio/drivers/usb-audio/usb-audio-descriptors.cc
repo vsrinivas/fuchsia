@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "usb-audio-descriptors.h"
+
+#include <utility>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <pretty/hexdump.h>
 
-#include <utility>
-
 #include "debug-logging.h"
-#include "usb-audio-descriptors.h"
 
 namespace audio {
 namespace usb {

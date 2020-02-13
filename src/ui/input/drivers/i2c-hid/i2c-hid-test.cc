@@ -390,7 +390,6 @@ TEST_F(I2cHidTest, HidTestDedupeReportsNoIrq) {
   for (size_t i = 0; i < returned_rpt3.size(); i++) {
     EXPECT_EQ(returned_rpt3[i], rpt3[i]);
   }
-
 }
 
 }  // namespace i2c_hid

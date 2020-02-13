@@ -2,13 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_VIM_DISPLAY_HDMITX_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_VIM_DISPLAY_HDMITX_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_HDMITX_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_HDMITX_H_
 
 #include <assert.h>
-#include <ddk/device.h>
-#include <ddk/io-buffer.h>
-#include <ddk/protocol/platform/device.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,6 +13,10 @@
 #include <threads.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
+
+#include <ddk/device.h>
+#include <ddk/io-buffer.h>
+#include <ddk/protocol/platform/device.h>
 
 #include "dwc-hdmi.h"
 #include "vpu.h"
@@ -331,4 +332,4 @@ void hdmi_shutdown(struct vim2_display* display);
 
 __END_CDECLS
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_VIM_DISPLAY_HDMITX_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_HDMITX_H_

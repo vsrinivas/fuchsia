@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_DRIVERS_AML_GPU_T931_GPU_H_
+#define SRC_GRAPHICS_DRIVERS_AML_GPU_T931_GPU_H_
 
 #include <soc/aml-common/aml-gpu.h>
 #include <soc/aml-t931/t931-hw.h>
@@ -33,3 +34,5 @@ static aml_gpu_block_t t931_gpu_blocks = {
             T931_FCLK_DIV2P5,
         },
 };
+
+#endif  // SRC_GRAPHICS_DRIVERS_AML_GPU_T931_GPU_H_

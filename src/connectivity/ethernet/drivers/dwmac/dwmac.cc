@@ -3,16 +3,22 @@
 // found in the LICENSE file.
 
 #include "dwmac.h"
-#include "dw-gmac-dma.h"
+
+#include <lib/device-protocol/platform-device.h>
+#include <lib/fzl/vmar-manager.h>
+#include <lib/operation/ethernet.h>
+#include <lib/zx/clock.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <zircon/compiler.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 #include <ddk/protocol/ethernet/mac.h>
-#include <lib/device-protocol/platform-device.h>
-#include <lib/operation/ethernet.h>
-#include <lib/zx/clock.h>
 #include <ddk/protocol/platform/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
@@ -21,11 +27,8 @@
 #include <fbl/ref_ptr.h>
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
-#include <lib/fzl/vmar-manager.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/types.h>
-#include <zircon/compiler.h>
+
+#include "dw-gmac-dma.h"
 
 namespace eth {
 
@@ -374,9 +377,7 @@ zx_status_t DWMacDevice::EthMacRegisterCallbacks(const eth_mac_callbacks_t* cbs)
 
 DWMacDevice::DWMacDevice(zx_device_t* device, pdev_protocol_t* pdev,
                          eth_board_protocol_t* eth_board)
-    : ddk::Device<DWMacDevice, ddk::UnbindableNew>(device),
-      pdev_(pdev),
-      eth_board_(eth_board) {}
+    : ddk::Device<DWMacDevice, ddk::UnbindableNew>(device), pdev_(pdev), eth_board_(eth_board) {}
 
 void DWMacDevice::ReleaseBuffers() {
   // Unpin the memory used for the dma buffers

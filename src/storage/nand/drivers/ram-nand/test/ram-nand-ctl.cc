@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fuchsia/hardware/nand/c/fidl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,8 +13,6 @@
 
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
-#include <lib/fdio/cpp/caller.h>
 #include <ramdevice-client/ramnand.h>
 #include <zxtest/zxtest.h>
 

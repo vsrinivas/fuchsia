@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-
-#include <ddk/driver.h>
-#include <ddk/binding.h>
-#include <ddktl/device.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
+
+#include <memory>
+
+#include <ddk/binding.h>
+#include <ddk/driver.h>
+#include <ddktl/device.h>
 
 #include "ramdisk.h"
 

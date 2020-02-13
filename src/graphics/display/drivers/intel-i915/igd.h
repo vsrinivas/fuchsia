@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_IGD_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_IGD_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_IGD_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_IGD_H_
 
-#include <ddk/protocol/pci.h>
-#include <hwreg/bitfields.h>
 #include <inttypes.h>
 #include <lib/zx/vmo.h>
 #include <stddef.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
+
+#include <ddk/protocol/pci.h>
+#include <hwreg/bitfields.h>
 
 #include "registers-ddi.h"
 
@@ -267,4 +268,4 @@ class IgdOpRegion {
 
 }  // namespace i915
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_IGD_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_IGD_H_

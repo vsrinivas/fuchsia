@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_ASIX_88772B_ASIX_88772B_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_ASIX_88772B_ASIX_88772B_H_
 
 // clang-format off
 
@@ -96,3 +97,5 @@
 #define ASIX_MEDIUM_MODE_JE     (1 << 10)
 #define ASIX_MEDIUM_MODE_SBP    (1 << 11)
 #define ASIX_MEDIUM_MODE_SM     (1 << 12)
+
+#endif  // SRC_CONNECTIVITY_ETHERNET_DRIVERS_ASIX_88772B_ASIX_88772B_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_MACROS_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_MACROS_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_MACROS_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_MACROS_H_
 
 #include <ddk/debug.h>
 
@@ -24,4 +24,4 @@
 #define LOG_TRACE(fmt, ...) zxlogf(TRACE, "i915: " fmt, ##__VA_ARGS__)
 #define LOG_SPEW(fmt, ...) zxlogf(SPEW, "i915: " fmt, ##__VA_ARGS__)
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_MACROS_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_MACROS_H_

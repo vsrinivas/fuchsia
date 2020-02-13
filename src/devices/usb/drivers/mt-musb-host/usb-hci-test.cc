@@ -7,9 +7,10 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/vmo.h>
+#include <zircon/types.h>
+
 #include <soc/mt8167/mt8167-hw.h>
 #include <soc/mt8167/mt8167-usb.h>
-#include <zircon/types.h>
 #include <zxtest/zxtest.h>
 
 namespace mt_usb_hci {

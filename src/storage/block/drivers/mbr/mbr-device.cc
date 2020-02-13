@@ -3,12 +3,21 @@
 // found in the LICENSE file.
 
 #include "mbr-device.h"
-#include "mbr.h"
+
+#include <inttypes.h>
+#include <lib/sync/completion.h>
+#include <lib/zx/vmo.h>
+#include <string.h>
+#include <zircon/assert.h>
+#include <zircon/compiler.h>
+#include <zircon/device/block.h>
+#include <zircon/errors.h>
+#include <zircon/status.h>
+#include <zircon/threads.h>
+#include <zircon/types.h>
 
 #include <algorithm>
-#include <inttypes.h>
 #include <memory>
-#include <string.h>
 #include <utility>
 
 #include <ddk/binding.h>
@@ -21,15 +30,8 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <gpt/c/gpt.h>
-#include <lib/sync/completion.h>
-#include <lib/zx/vmo.h>
-#include <zircon/assert.h>
-#include <zircon/compiler.h>
-#include <zircon/device/block.h>
-#include <zircon/errors.h>
-#include <zircon/status.h>
-#include <zircon/threads.h>
-#include <zircon/types.h>
+
+#include "mbr.h"
 
 namespace {
 

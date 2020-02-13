@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_SECUREMEM_AML_SECUREMEM_LOG_H_
-#define ZIRCON_SYSTEM_DEV_SECUREMEM_AML_SECUREMEM_LOG_H_
+#ifndef SRC_DEVICES_SECUREMEM_DRIVERS_AML_SECUREMEM_LOG_H_
+#define SRC_DEVICES_SECUREMEM_DRIVERS_AML_SECUREMEM_LOG_H_
 
 // for kDeviceName
 #include <ddk/debug.h>
@@ -18,4 +18,4 @@
   zxlogf(severity, "[%s:%s:%d] " fmt "\n", amlogic_secure_mem::kDeviceName, __func__, __LINE__, \
          ##__VA_ARGS__)
 
-#endif  // ZIRCON_SYSTEM_DEV_SECUREMEM_AML_SECUREMEM_LOG_H_
+#endif  // SRC_DEVICES_SECUREMEM_DRIVERS_AML_SECUREMEM_LOG_H_

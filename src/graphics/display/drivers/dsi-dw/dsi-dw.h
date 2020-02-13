@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DSI_DW_DSI_DW_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_DSI_DW_DSI_DW_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DSI_DW_DSI_DW_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_DSI_DW_DSI_DW_H_
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
@@ -99,4 +99,4 @@ class DsiDw : public DeviceType, public ddk::DsiImplProtocol<DsiDw, ddk::base_pr
 
 }  // namespace dsi_dw
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_DSI_DW_DSI_DW_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_DSI_DW_DSI_DW_H_

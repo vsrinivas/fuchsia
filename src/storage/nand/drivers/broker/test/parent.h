@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_NAND_BROKER_TEST_PARENT_H_
-#define ZIRCON_SYSTEM_DEV_NAND_BROKER_TEST_PARENT_H_
+#ifndef SRC_STORAGE_NAND_DRIVERS_BROKER_TEST_PARENT_H_
+#define SRC_STORAGE_NAND_DRIVERS_BROKER_TEST_PARENT_H_
 
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <limits.h>
@@ -56,4 +56,4 @@ class ParentDevice {
 
 extern ParentDevice* g_parent_device_;
 
-#endif  // ZIRCON_SYSTEM_DEV_NAND_BROKER_TEST_PARENT_H_
+#endif  // SRC_STORAGE_NAND_DRIVERS_BROKER_TEST_PARENT_H_

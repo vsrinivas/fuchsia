@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_INPUT_HID_HID_PARSER_H_
-#define ZIRCON_SYSTEM_DEV_INPUT_HID_HID_PARSER_H_
+#ifndef SRC_UI_INPUT_DRIVERS_HID_HID_PARSER_H_
+#define SRC_UI_INPUT_DRIVERS_HID_HID_PARSER_H_
 
 #include <stdint.h>
 #include <zircon/types.h>
@@ -31,4 +31,4 @@ zx_status_t hid_lib_parse_reports(const uint8_t* buf, const size_t buf_len, hid_
 
 __END_CDECLS
 
-#endif  // ZIRCON_SYSTEM_DEV_INPUT_HID_HID_PARSER_H_
+#endif  // SRC_UI_INPUT_DRIVERS_HID_HID_PARSER_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_SIMPLE_SIMPLE_DISPLAY_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_SIMPLE_SIMPLE_DISPLAY_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_SIMPLE_SIMPLE_DISPLAY_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_SIMPLE_SIMPLE_DISPLAY_H_
 
 #include <zircon/compiler.h>
 #include <zircon/pixelformat.h>
@@ -82,4 +82,4 @@ zx_status_t bind_simple_pci_display(zx_device_t* dev, const char* name, uint32_t
 zx_status_t bind_simple_pci_display_bootloader(zx_device_t* dev, const char* name, uint32_t bar);
 __END_CDECLS
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_SIMPLE_SIMPLE_DISPLAY_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_SIMPLE_SIMPLE_DISPLAY_H_

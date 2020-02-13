@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_
-#define ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_
+#ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_
+#define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
@@ -215,4 +215,4 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
 }  // namespace sysmem_driver
 
-#endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_
+#endif  // SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_LOGICAL_BUFFER_COLLECTION_H_

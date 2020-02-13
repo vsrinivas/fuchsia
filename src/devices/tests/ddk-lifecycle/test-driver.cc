@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/device/lifecycle/test/llcpp/fidl.h>
+
+#include <vector>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -10,9 +14,6 @@
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
-#include <fuchsia/device/lifecycle/test/llcpp/fidl.h>
-
-#include <vector>
 
 #include "test-driver-child.h"
 #include "zircon/errors.h"
@@ -28,7 +29,6 @@ using DeviceType = ddk::Device<TestLifecycleDriver, ddk::UnbindableNew, ddk::Mes
 
 class TestLifecycleDriver : public DeviceType, public TestDevice::Interface {
  public:
-
   explicit TestLifecycleDriver(zx_device_t* parent) : DeviceType(parent) {}
   ~TestLifecycleDriver() {}
 
@@ -75,9 +75,8 @@ void TestLifecycleDriver::DdkChildPreRelease(void* child_ctx) {
   auto child_matcher = [&](fbl::RefPtr<TestLifecycleDriverChild> child_to_remove) {
     return child_to_remove.get() == child;
   };
-  children_.erase(
-      std::remove_if(children_.begin(), children_.end(), child_matcher),
-      children_.end());
+  children_.erase(std::remove_if(children_.begin(), children_.end(), child_matcher),
+                  children_.end());
 }
 
 void TestLifecycleDriver::AddChild(bool complete_init, int32_t init_status,
@@ -167,4 +166,4 @@ ZIRCON_DRIVER_BEGIN(TestLifecycle, driver_ops, "zircon", "0.1", 2)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_TEST),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_PID, PDEV_PID_LIFECYCLE_TEST),
 ZIRCON_DRIVER_END(TestLifecycle)
-// clang-format on
+    // clang-format on

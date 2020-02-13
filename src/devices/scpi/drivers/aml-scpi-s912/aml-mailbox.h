@@ -2,23 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_SCPI_DRIVERS_AML_SCPI_S912_AML_MAILBOX_H_
+#define SRC_DEVICES_SCPI_DRIVERS_AML_SCPI_S912_AML_MAILBOX_H_
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
-#include <ddk/platform-defs.h>
-#include <lib/device-protocol/platform-device.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/device.h>
-#include <lib/mmio/mmio.h>
 #include <lib/device-protocol/pdev.h>
-#include <ddktl/protocol/mailbox.h>
-#include <hw/reg.h>
+#include <lib/device-protocol/platform-device.h>
+#include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
 
 #include <optional>
+
+#include <ddk/debug.h>
+#include <ddk/driver.h>
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/platform/device.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/mailbox.h>
+#include <hw/reg.h>
 
 #define GET_NUM_WORDS(x) ((x) / 4 + (((x) % 4) ? 1 : 0))
 
@@ -75,3 +77,5 @@ class AmlMailbox : public DeviceType, public ddk::MailboxProtocol<AmlMailbox, dd
 };
 
 }  // namespace mailbox
+
+#endif  // SRC_DEVICES_SCPI_DRIVERS_AML_SCPI_S912_AML_MAILBOX_H_

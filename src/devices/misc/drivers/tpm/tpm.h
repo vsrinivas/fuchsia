@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_MISC_DRIVERS_TPM_TPM_H_
+#define SRC_DEVICES_MISC_DRIVERS_TPM_TPM_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stddef.h>
@@ -134,3 +135,5 @@ enum tpm_result {
 }  // namespace tpm
 
 #endif  // __cplusplus
+
+#endif  // SRC_DEVICES_MISC_DRIVERS_TPM_TPM_H_

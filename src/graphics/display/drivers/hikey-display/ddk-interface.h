@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_HIKEY_DISPLAY_DDK_INTERFACE_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_HIKEY_DISPLAY_DDK_INTERFACE_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_HIKEY_DISPLAY_DDK_INTERFACE_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_HIKEY_DISPLAY_DDK_INTERFACE_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/pixelformat.h>
@@ -86,4 +86,4 @@ class HiDisplay : public DeviceType,
 };
 }  // namespace hi_display
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_HIKEY_DISPLAY_DDK_INTERFACE_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_HIKEY_DISPLAY_DDK_INTERFACE_H_

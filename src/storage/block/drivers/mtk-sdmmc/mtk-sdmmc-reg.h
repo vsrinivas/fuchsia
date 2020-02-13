@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_MTK_SDMMC_MTK_SDMMC_REG_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_MTK_SDMMC_MTK_SDMMC_REG_H_
 
 #include <hw/sdmmc.h>
 #include <hwreg/bitfields.h>
@@ -327,3 +328,5 @@ class BDmaDescriptorInfo : public hwreg::RegisterBase<BDmaDescriptorInfo, uint32
 };
 
 }  // namespace sdmmc
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_MTK_SDMMC_MTK_SDMMC_REG_H_

@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <vector>
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_AHCI_TEST_FAKE_BUS_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_AHCI_TEST_FAKE_BUS_H_
 
 #include <lib/sync/completion.h>
+
+#include <vector>
 
 #include "../ahci.h"
 #include "../bus.h"
@@ -85,3 +86,5 @@ class FakeBus : public Bus {
 };
 
 }  // namespace ahci
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_AHCI_TEST_FAKE_BUS_H_

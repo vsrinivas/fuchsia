@@ -4,10 +4,11 @@
 
 #include "ltr-578als.h"
 
-#include <fbl/vector.h>
 #include <lib/mock-hidbus-ifc/mock-hidbus-ifc.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/sync/completion.h>
+
+#include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 
 namespace light {

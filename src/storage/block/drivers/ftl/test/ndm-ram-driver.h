@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_FTL_TEST_NDM_RAM_DRIVER_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_FTL_TEST_NDM_RAM_DRIVER_H_
 
 #include <inttypes.h>
-
-#include <fbl/array.h>
 #include <lib/ftl/ndm-driver.h>
 #include <zircon/types.h>
+
+#include <fbl/array.h>
 
 struct TestOptions {
   int ecc_error_interval;  // Controls simulation of ECC errors.
@@ -76,3 +77,5 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
   int bad_block_interval_ = 0;  // Controls simulation of bad blocks.
   uint32_t num_bad_blocks_ = 0;
 };
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_FTL_TEST_NDM_RAM_DRIVER_H_

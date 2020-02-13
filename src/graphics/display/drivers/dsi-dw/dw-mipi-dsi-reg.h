@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DSI_DW_DW_MIPI_DSI_REG_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_DSI_DW_DW_MIPI_DSI_REG_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DSI_DW_DW_MIPI_DSI_REG_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_DSI_DW_DW_MIPI_DSI_REG_H_
 
 #include <hwreg/bitfields.h>
 
@@ -538,4 +538,4 @@ class DsiDwIntMsk1Reg : public hwreg::RegisterBase<DsiDwIntMsk1Reg, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<DsiDwIntMsk1Reg>(DW_DSI_INT_MSK1); }
 };
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_DSI_DW_DW_MIPI_DSI_REG_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_DSI_DW_DW_MIPI_DSI_REG_H_

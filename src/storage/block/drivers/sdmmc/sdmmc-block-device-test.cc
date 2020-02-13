@@ -5,12 +5,12 @@
 #include "sdmmc-block-device.h"
 
 #include <endian.h>
+#include <lib/fake_ddk/fake_ddk.h>
+#include <lib/fzl/vmo-mapper.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <hw/sdmmc.h>
-#include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fzl/vmo-mapper.h>
 #include <zxtest/zxtest.h>
 
 #include "fake-sdmmc-device.h"

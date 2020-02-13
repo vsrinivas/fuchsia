@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_USB_TEST_FLASH_PROGRAMMER_FLASH_PROGRAMMER_H_
+#define SRC_DEVICES_USB_DRIVERS_USB_TEST_FLASH_PROGRAMMER_FLASH_PROGRAMMER_H_
+
+#include <fuchsia/hardware/usb/fwloader/c/fidl.h>
+#include <lib/zx/vmo.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <fuchsia/hardware/usb/fwloader/c/fidl.h>
-#include <lib/zx/vmo.h>
 #include <usb/usb.h>
 
 namespace usb {
 
 class FlashProgrammer;
-using FlashProgrammerBase = ddk::Device<FlashProgrammer, ddk::Messageable,
-                                        ddk::UnbindableNew>;
+using FlashProgrammerBase = ddk::Device<FlashProgrammer, ddk::Messageable, ddk::UnbindableNew>;
 
 class FlashProgrammer : public FlashProgrammerBase,
                         public ddk::EmptyProtocol<ZX_PROTOCOL_USB_FWLOADER> {
@@ -48,3 +49,5 @@ class FlashProgrammer : public FlashProgrammerBase,
 };
 
 }  // namespace usb
+
+#endif  // SRC_DEVICES_USB_DRIVERS_USB_TEST_FLASH_PROGRAMMER_FLASH_PROGRAMMER_H_

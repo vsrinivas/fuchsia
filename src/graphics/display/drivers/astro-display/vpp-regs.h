@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_VPP_REGS_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_VPP_REGS_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_VPP_REGS_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_VPP_REGS_H_
 
 // VPP register is part of VPU register space
 #define DOLBY_PATH_CTRL (0x1a0c << 2)
@@ -113,4 +113,4 @@
 
 #define VPP_DUMMY_DATA (0x1d00 << 2)
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_VPP_REGS_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_VPP_REGS_H_

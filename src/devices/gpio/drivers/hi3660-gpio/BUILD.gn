@@ -16,6 +16,7 @@ driver_module("hi3660-gpio") {
   include_dirs = [ "//src/devices/gpio/drivers/pl061/include" ]
 
   deps = [
+    "//src/devices/gpio/drivers/pl061",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/device-protocol-platform-device",
@@ -25,7 +26,6 @@ driver_module("hi3660-gpio") {
     "//zircon/system/banjo/ddk.protocol.gpioimpl",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//src/devices/gpio/drivers/pl061",
   ]
 }
 

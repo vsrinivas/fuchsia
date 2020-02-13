@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_I2C_INTEL_I2C_INTEL_I2C_SUBORDINATE_H_
-#define ZIRCON_SYSTEM_DEV_I2C_INTEL_I2C_INTEL_I2C_SUBORDINATE_H_
+#ifndef SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_SUBORDINATE_H_
+#define SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_SUBORDINATE_H_
 
 #include <stdint.h>
 #include <zircon/listnode.h>
@@ -40,4 +40,4 @@ zx_status_t intel_serialio_i2c_subordinate_transfer(
 zx_status_t intel_serialio_i2c_subordinate_get_irq(
     intel_serialio_i2c_subordinate_device_t* subordinate, zx_handle_t* out);
 
-#endif  // ZIRCON_SYSTEM_DEV_I2C_INTEL_I2C_INTEL_I2C_SUBORDINATE_H_
+#endif  // SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_SUBORDINATE_H_

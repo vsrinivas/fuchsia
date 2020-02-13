@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_LIGHT_SENSOR_DRIVERS_LITE_ON_LTR_578ALS_H_
+#define SRC_DEVICES_LIGHT_SENSOR_DRIVERS_LITE_ON_LTR_578ALS_H_
+
+#include <lib/device-protocol/i2c-channel.h>
+#include <lib/simplehid/simplehid.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/port.h>
 
 #include <ddktl/device.h>
-#include <lib/device-protocol/i2c-channel.h>
 #include <ddktl/protocol/hidbus.h>
 #include <fbl/mutex.h>
 #include <hid/ltr-578als.h>
-#include <lib/simplehid/simplehid.h>
-#include <lib/zx/port.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 namespace light {
 
@@ -58,3 +60,5 @@ class Ltr578Als : public DeviceType, public ddk::HidbusProtocol<Ltr578Als, ddk::
 };
 
 }  // namespace light
+
+#endif  // SRC_DEVICES_LIGHT_SENSOR_DRIVERS_LITE_ON_LTR_578ALS_H_

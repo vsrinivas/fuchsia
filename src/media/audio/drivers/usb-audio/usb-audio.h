@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_H_
+
+#include <zircon/compiler.h>
+#include <zircon/hw/usb.h>
+#include <zircon/hw/usb/audio.h>
 
 #include <ddk/device.h>
 #include <fbl/array.h>
 #include <usb/usb.h>
-#include <zircon/compiler.h>
-#include <zircon/hw/usb.h>
-#include <zircon/hw/usb/audio.h>
 
 namespace audio {
 namespace usb {
@@ -29,3 +31,5 @@ fbl::Array<uint8_t> FetchStringDescriptor(const usb_protocol_t& usb, uint8_t des
 
 }  // namespace usb
 }  // namespace audio
+
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_H_

@@ -2,21 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_REQUEST_QUEUE_H_
+#define SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_REQUEST_QUEUE_H_
 
-#include "usb-transaction.h"
-
-#include <atomic>
-#include <fbl/condition_variable.h>
-#include <fbl/mutex.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
-#include <memory>
-#include <threads.h>
-#include <usb/request-cpp.h>
-#include <zircon/hw/usb.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <threads.h>
+#include <zircon/hw/usb.h>
 #include <zircon/types.h>
+
+#include <atomic>
+#include <memory>
+
+#include <fbl/condition_variable.h>
+#include <fbl/mutex.h>
+#include <usb/request-cpp.h>
+
+#include "usb-transaction.h"
 
 namespace mt_usb_hci {
 
@@ -163,3 +166,5 @@ class InterruptQueue : public TransactionQueue {
 };
 
 }  // namespace mt_usb_hci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_REQUEST_QUEUE_H_

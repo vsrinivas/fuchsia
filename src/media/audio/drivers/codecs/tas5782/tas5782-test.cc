@@ -6,6 +6,7 @@
 
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/sync/completion.h>
+
 #include <mock/ddktl/protocol/gpio.h>
 #include <zxtest/zxtest.h>
 

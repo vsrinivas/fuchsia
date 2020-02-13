@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_MTK_SDMMC_DMA_DESCRIPTORS_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_MTK_SDMMC_DMA_DESCRIPTORS_H_
 
 #include "mtk-sdmmc.h"
 
@@ -79,3 +80,5 @@ struct BDmaDescriptor {
 };
 
 }  // namespace sdmmc
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_MTK_SDMMC_DMA_DESCRIPTORS_H_

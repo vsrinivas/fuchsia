@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_ETHERNET_RNDIS_RNDISHOST_H_
-#define ZIRCON_SYSTEM_DEV_ETHERNET_RNDIS_RNDISHOST_H_
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_RNDIS_RNDISHOST_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_RNDIS_RNDISHOST_H_
 
 #include <stdint.h>
 #include <zircon/compiler.h>
@@ -238,4 +238,4 @@ class RndisHost : public RndisHostType,
   uint8_t control_receive_buffer_[RNDIS_CONTROL_BUFFER_SIZE];
 };
 
-#endif  // ZIRCON_SYSTEM_DEV_ETHERNET_RNDIS_RNDISHOST_H_
+#endif  // SRC_CONNECTIVITY_ETHERNET_DRIVERS_RNDIS_RNDISHOST_H_

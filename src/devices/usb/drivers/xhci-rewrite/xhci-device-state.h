@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_DEVICE_STATE_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_DEVICE_STATE_H_
 
 #include <optional>
 
@@ -98,3 +99,5 @@ class DeviceState {
   std::optional<dma_buffer::PagedBuffer> device_context_ __TA_GUARDED(transaction_lock_);
 };
 }  // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_DEVICE_STATE_H_

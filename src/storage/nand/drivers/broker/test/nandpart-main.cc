@@ -4,6 +4,7 @@
 
 #include <lib/devmgr-integration-test/fixture.h>
 #include <zircon/hw/gpt.h>
+
 #include <zxtest/zxtest.h>
 
 #include "parent.h"
@@ -44,46 +45,46 @@ constexpr fuchsia_hardware_nand_PartitionMap kPartitionMap = {
 ParentDevice* g_parent_device_;
 
 int main(int argc, char** argv) {
-    ParentDevice::TestConfig config = {};
-    config.info = kNandInfo;
-    config.partition_map = kPartitionMap;
+  ParentDevice::TestConfig config = {};
+  config.info = kNandInfo;
+  config.partition_map = kPartitionMap;
 
-    ParentDevice parent(config);
-    if (!parent.IsValid()) {
-        printf("Unable to create ram-nand device\n");
-        return -1;
-    }
+  ParentDevice parent(config);
+  if (!parent.IsValid()) {
+    printf("Unable to create ram-nand device\n");
+    return -1;
+  }
 
-    // TODO(ZX-3193)
+  // TODO(ZX-3193)
 #if OPENAT_FIXED
-    // Wait for nandpart to spawn.
-    fbl::unique_fd dir(dup(parent.get()));
-    fbl::unique_fd nandpart;
-    zx_status_t status = devmgr_integration_test::WaitForFile(
-        dir, "test", zx::deadline_after(zx::sec(1)), &nandpart);
-    if (status != ZX_OK) {
-        printf("Unable to attach to device: %d\n", status);
-        return -1;
-    }
+  // Wait for nandpart to spawn.
+  fbl::unique_fd dir(dup(parent.get()));
+  fbl::unique_fd nandpart;
+  zx_status_t status =
+      devmgr_integration_test::WaitForFile(dir, "test", zx::deadline_after(zx::sec(1)), &nandpart);
+  if (status != ZX_OK) {
+    printf("Unable to attach to device: %d\n", status);
+    return -1;
+  }
 #else
-    usleep(50000);
+  usleep(50000);
 #endif
 
-    // Construct path to nandpart partition.
-    char path[PATH_MAX];
-    strcpy(path, parent.Path());
-    strcat(path, "/test");
+  // Construct path to nandpart partition.
+  char path[PATH_MAX];
+  strcpy(path, parent.Path());
+  strcat(path, "/test");
 
-    ParentDevice::TestConfig nandpart_config = {};
-    nandpart_config.path = path;
+  ParentDevice::TestConfig nandpart_config = {};
+  nandpart_config.path = path;
 
-    ParentDevice nandpart_parent(nandpart_config);
-    if (!nandpart_parent.IsValid()) {
-        printf("Unable to attach to device\n");
-        return -1;
-    }
+  ParentDevice nandpart_parent(nandpart_config);
+  if (!nandpart_parent.IsValid()) {
+    printf("Unable to attach to device\n");
+    return -1;
+  }
 
-    g_parent_device_ = &nandpart_parent;
+  g_parent_device_ = &nandpart_parent;
 
-    return RUN_ALL_TESTS(argc, argv);
+  return RUN_ALL_TESTS(argc, argv);
 }

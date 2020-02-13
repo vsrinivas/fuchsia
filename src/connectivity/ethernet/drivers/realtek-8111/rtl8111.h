@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_REALTEK_8111_RTL8111_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_REALTEK_8111_RTL8111_H_
 
 // clang-format off
 
@@ -90,3 +91,5 @@
 #define RX_DESC_OWN (1 << 31)
 #define RX_DESC_EOR (1 << 30)
 #define RX_DESC_LEN_MASK 0x3fff
+
+#endif  // SRC_CONNECTIVITY_ETHERNET_DRIVERS_REALTEK_8111_RTL8111_H_

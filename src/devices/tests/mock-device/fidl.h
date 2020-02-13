@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_TEST_MOCK_DEVICE_FIDL_H_
-#define ZIRCON_SYSTEM_DEV_TEST_MOCK_DEVICE_FIDL_H_
+#ifndef SRC_DEVICES_TESTS_MOCK_DEVICE_FIDL_H_
+#define SRC_DEVICES_TESTS_MOCK_DEVICE_FIDL_H_
 
 #include <fuchsia/device/mock/llcpp/fidl.h>
 #include <lib/fidl/llcpp/vector_view.h>
@@ -23,4 +23,4 @@ zx_status_t WaitForPerformActions(const zx::channel& c,
 
 }  // namespace mock_device
 
-#endif  // ZIRCON_SYSTEM_DEV_TEST_MOCK_DEVICE_FIDL_H_
+#endif  // SRC_DEVICES_TESTS_MOCK_DEVICE_FIDL_H_

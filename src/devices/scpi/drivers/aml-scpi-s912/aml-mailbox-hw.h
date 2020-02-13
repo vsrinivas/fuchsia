@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_SCPI_DRIVERS_AML_SCPI_S912_AML_MAILBOX_HW_H_
+#define SRC_DEVICES_SCPI_DRIVERS_AML_SCPI_S912_AML_MAILBOX_HW_H_
 
 typedef struct {
   uint32_t set_offset;
@@ -55,3 +56,5 @@ static aml_mailbox_block_t vim2_mailbox_block[] = {
         .payload_offset = 0x180 << 2,
     },
 };
+
+#endif  // SRC_DEVICES_SCPI_DRIVERS_AML_SCPI_S912_AML_MAILBOX_HW_H_

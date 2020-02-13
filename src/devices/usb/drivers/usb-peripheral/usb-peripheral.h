@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_USB_PERIPHERAL_USB_PERIPHERAL_H_
+#define SRC_DEVICES_USB_DRIVERS_USB_PERIPHERAL_USB_PERIPHERAL_H_
+
+#include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
+#include <lib/zx/channel.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -14,8 +18,6 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
-#include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
-#include <lib/zx/channel.h>
 #include <usb/request-cpp.h>
 
 /*
@@ -213,3 +215,5 @@ class UsbPeripheral : public UsbPeripheralType,
 };
 
 }  // namespace usb_peripheral
+
+#endif  // SRC_DEVICES_USB_DRIVERS_USB_PERIPHERAL_USB_PERIPHERAL_H_

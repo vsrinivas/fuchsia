@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_I2C_I2C_I2C_CHILD_H_
-#define ZIRCON_SYSTEM_DEV_I2C_I2C_I2C_CHILD_H_
+#ifndef SRC_DEVICES_I2C_DRIVERS_I2C_I2C_CHILD_H_
+#define SRC_DEVICES_I2C_DRIVERS_I2C_I2C_CHILD_H_
 
 #include <fuchsia/hardware/i2c/llcpp/fidl.h>
 
@@ -61,4 +61,4 @@ class I2cChild : public I2cChildType,
 
 }  // namespace i2c
 
-#endif  // ZIRCON_SYSTEM_DEV_I2C_I2C_I2C_CHILD_H_
+#endif  // SRC_DEVICES_I2C_DRIVERS_I2C_I2C_CHILD_H_

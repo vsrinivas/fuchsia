@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_AML_USB_PHY_V2_USB_PHY_REGS_H_
+#define SRC_DEVICES_USB_DRIVERS_AML_USB_PHY_V2_USB_PHY_REGS_H_
+
+#include <zircon/types.h>
 
 #include <hwreg/bitfields.h>
-#include <zircon/types.h>
 
 namespace aml_usb_phy {
 
@@ -124,3 +126,5 @@ class PLL_REGISTER_40 : public hwreg::RegisterBase<PLL_REGISTER_40, uint32_t> {
 };
 
 }  // namespace aml_usb_phy
+
+#endif  // SRC_DEVICES_USB_DRIVERS_AML_USB_PHY_V2_USB_PHY_REGS_H_

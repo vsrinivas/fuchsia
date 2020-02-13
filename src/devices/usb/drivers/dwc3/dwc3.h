@@ -2,26 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_DWC3_DWC3_H_
+#define SRC_DEVICES_USB_DRIVERS_DWC3_DWC3_H_
 
-#include <ddk/device.h>
-#include <ddk/io-buffer.h>
 #include <lib/device-protocol/platform-device.h>
-#include <ddk/protocol/platform/device.h>
-#include <ddk/protocol/usb/dci.h>
-#include <ddk/protocol/usb/modeswitch.h>
 #include <lib/mmio/mmio.h>
-#include <fbl/mutex.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/interrupt.h>
+#include <threads.h>
 #include <zircon/device/usb-peripheral.h>
 #include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
-#include <threads.h>
-
 #include <optional>
+
+#include <ddk/device.h>
+#include <ddk/io-buffer.h>
+#include <ddk/protocol/platform/device.h>
+#include <ddk/protocol/usb/dci.h>
+#include <ddk/protocol/usb/modeswitch.h>
+#include <fbl/mutex.h>
 
 #include "dwc3-types.h"
 
@@ -187,3 +188,5 @@ void dwc3_print_status(dwc3_t* dwc);
 __BEGIN_CDECLS
 zx_status_t dwc3_bind(void* ctx, zx_device_t* parent);
 __END_CDECLS
+
+#endif  // SRC_DEVICES_USB_DRIVERS_DWC3_DWC3_H_

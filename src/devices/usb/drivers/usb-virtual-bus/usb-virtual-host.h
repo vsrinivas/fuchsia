@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_USB_VIRTUAL_HOST_H_
+#define SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_USB_VIRTUAL_HOST_H_
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
@@ -49,3 +50,5 @@ class UsbVirtualHost : public UsbVirtualHostType,
 };
 
 }  // namespace usb_virtual_bus
+
+#endif  // SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_USB_VIRTUAL_HOST_H_

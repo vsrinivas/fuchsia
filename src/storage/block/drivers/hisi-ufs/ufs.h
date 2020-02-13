@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_HISI_UFS_UFS_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_HISI_UFS_UFS_H_
+
+#include <threads.h>
+#include <zircon/compiler.h>
 
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/block.h>
 #include <ddk/protocol/platform/bus.h>
-#include <threads.h>
-#include <zircon/compiler.h>
 
 #define UFS_BIT(x) (1L << (x))
 #define LOWER_32_BITS(x) ((uint32_t)((x)&0xFFFFFFFFUL))
@@ -514,3 +516,5 @@ void ufshc_disable_auto_h8(volatile void* regs);
 void ufshc_check_h8(volatile void* regs);
 zx_status_t ufshc_init(ufshc_dev_t* dev, ufs_hba_variant_ops_t* ufs_hi3660_vops);
 zx_status_t ufs_create_worker_thread(ufshc_dev_t* dev);
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_HISI_UFS_UFS_H_

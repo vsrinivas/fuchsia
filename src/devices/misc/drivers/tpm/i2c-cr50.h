@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_MISC_DRIVERS_TPM_I2C_CR50_H_
+#define SRC_DEVICES_MISC_DRIVERS_TPM_I2C_CR50_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/handle.h>
@@ -121,3 +122,5 @@ class I2cCr50Interface : public HardwareInterface {
 };
 
 }  // namespace tpm
+
+#endif  // SRC_DEVICES_MISC_DRIVERS_TPM_I2C_CR50_H_

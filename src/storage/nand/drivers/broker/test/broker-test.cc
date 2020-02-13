@@ -6,8 +6,8 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/nand/c/fidl.h>
-#include <lib/fdio/watcher.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/watcher.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>

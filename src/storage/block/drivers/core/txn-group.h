@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BLOCK_CORE_TXN_GROUP_H_
-#define ZIRCON_SYSTEM_DEV_BLOCK_CORE_TXN_GROUP_H_
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_CORE_TXN_GROUP_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_CORE_TXN_GROUP_H_
 
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -60,4 +60,4 @@ class TransactionGroup {
   uint32_t ctr_ TA_GUARDED(lock_);  // How many ops does the block device need to complete?
 };
 
-#endif  // ZIRCON_SYSTEM_DEV_BLOCK_CORE_TXN_GROUP_H_
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_CORE_TXN_GROUP_H_

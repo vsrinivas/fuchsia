@@ -1,17 +1,18 @@
-#ifndef ZIRCON_SYSTEM_DEV_SERIAL_NUC_SERIAL_NUC_SERIAL_H_
-#define ZIRCON_SYSTEM_DEV_SERIAL_NUC_SERIAL_NUC_SERIAL_H_
+#ifndef SRC_DEVICES_SERIAL_DRIVERS_UART16550_UART16550_H_
+#define SRC_DEVICES_SERIAL_DRIVERS_UART16550_UART16550_H_
 
-#include <ddktl/device.h>
-#include <ddktl/protocol/acpi.h>
-#include <ddktl/protocol/serialimpl.h>
-#include <fbl/function.h>
-#include <hwreg/bitfields.h>
 #include <lib/zx/fifo.h>
 #include <zircon/compiler.h>
 
 #include <mutex>
 #include <thread>
 #include <vector>
+
+#include <ddktl/device.h>
+#include <ddktl/protocol/acpi.h>
+#include <ddktl/protocol/serialimpl.h>
+#include <fbl/function.h>
+#include <hwreg/bitfields.h>
 
 namespace uart16550 {
 
@@ -123,4 +124,4 @@ class Uart16550 : public DeviceType, public ddk::SerialImplProtocol<Uart16550, d
 
 }  // namespace uart16550
 
-#endif  // ZIRCON_SYSTEM_DEV_SERIAL_NUC_SERIAL_NUC_SERIAL_H_
+#endif  // SRC_DEVICES_SERIAL_DRIVERS_UART16550_UART16550_H_

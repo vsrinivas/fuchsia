@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_GXL_BLOCKS_H_
+#define SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_GXL_BLOCKS_H_
+
+#include <soc/aml-meson/gxl-clk.h>
 
 #include "aml-clk-blocks.h"
-#include <soc/aml-meson/gxl-clk.h>
 
 #define GXL_HHI_GCLK_MPEG0 (0x50 << 2)
 #define GXL_HHI_GCLK_MPEG1 (0x51 << 2)
@@ -113,3 +115,5 @@ static meson_clk_gate_t gxl_clk_gates[] = {
 
 static_assert(gxl_clk::CLK_GXL_COUNT == countof(gxl_clk_gates),
               "gxl_clk_gates[] and gxl_clk_gate_idx count mismatch");
+
+#endif  // SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_GXL_BLOCKS_H_

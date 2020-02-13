@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_MISC_DRIVERS_TPM_TPM_COMMANDS_H_
+#define SRC_DEVICES_MISC_DRIVERS_TPM_TPM_COMMANDS_H_
 
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #define TPM_TAG_RSP_COMMAND 196
 
@@ -54,3 +56,5 @@ struct tpm_shutdown_resp {
   struct tpm_resp_header hdr;
 } __PACKED;
 uint32_t tpm_init_shutdown(struct tpm_shutdown_cmd *cmd, uint16_t type);
+
+#endif  // SRC_DEVICES_MISC_DRIVERS_TPM_TPM_COMMANDS_H_

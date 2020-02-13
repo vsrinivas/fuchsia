@@ -4,29 +4,30 @@
 
 #include "xhci.h"
 
-#include <ddk/debug.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
-#include <hw/arch_ops.h>
-#include <hw/reg.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
-#include <usb/usb-request.h>
+#include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
 #include <bits/limits.h>
+#include <ddk/debug.h>
 #include <ddk/io-buffer.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <hw/arch_ops.h>
+#include <hw/reg.h>
+#include <usb/usb-request.h>
+
 #include "xhci-device-manager.h"
 #include "xhci-root-hub.h"
 #include "xhci-transfer.h"
 #include "xhci-util.h"
-#include <zircon/errors.h>
 
 namespace usb_xhci {
 

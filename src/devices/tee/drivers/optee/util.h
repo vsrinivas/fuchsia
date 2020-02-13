@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_TEE_OPTEE_UTIL_H_
-#define ZIRCON_SYSTEM_DEV_TEE_OPTEE_UTIL_H_
+#ifndef SRC_DEVICES_TEE_DRIVERS_OPTEE_UTIL_H_
+#define SRC_DEVICES_TEE_DRIVERS_OPTEE_UTIL_H_
 
 #include <fuchsia/hardware/tee/llcpp/fidl.h>
 #include <inttypes.h>
@@ -36,4 +36,4 @@ static_assert(sizeof(Uuid) == 16, "Uuid must remain exactly 16 bytes");
 
 }  // namespace optee
 
-#endif  // ZIRCON_SYSTEM_DEV_TEE_OPTEE_UTIL_H_
+#endif  // SRC_DEVICES_TEE_DRIVERS_OPTEE_UTIL_H_

@@ -2,23 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_NAND_DRIVERS_RAM_NAND_RAM_NAND_H_
+#define SRC_STORAGE_NAND_DRIVERS_RAM_NAND_RAM_NAND_H_
 
+#include <fuchsia/hardware/nand/c/fidl.h>
 #include <inttypes.h>
+#include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/vmo.h>
 #include <limits.h>
 #include <threads.h>
+#include <zircon/listnode.h>
+#include <zircon/types.h>
 
 #include <ddk/protocol/nand.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/nand.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
-#include <lib/sync/completion.h>
-#include <lib/zx/vmo.h>
-#include <zircon/listnode.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/types.h>
 
 // Wrapper for fuchsia_hardware_nand_Info. It simplifies initialization of NandDevice.
 struct NandParams : public fuchsia_hardware_nand_Info {
@@ -45,8 +46,8 @@ struct NandParams : public fuchsia_hardware_nand_Info {
 };
 
 class NandDevice;
-using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::UnbindableDeprecated,
-                               ddk::Messageable>;
+using DeviceType =
+    ddk::Device<NandDevice, ddk::GetSizable, ddk::UnbindableDeprecated, ddk::Messageable>;
 
 // Provides the bulk of the functionality for a ram-backed NAND device.
 class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::base_protocol> {
@@ -105,3 +106,5 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(NandDevice);
 };
+
+#endif  // SRC_STORAGE_NAND_DRIVERS_RAM_NAND_RAM_NAND_H_

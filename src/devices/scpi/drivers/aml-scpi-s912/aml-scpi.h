@@ -2,22 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_SCPI_DRIVERS_AML_SCPI_S912_AML_SCPI_H_
+#define SRC_DEVICES_SCPI_DRIVERS_AML_SCPI_S912_AML_SCPI_H_
 
-#include <ddk/debug.h>
-#include <ddk/platform-defs.h>
-#include <lib/device-protocol/platform-device.h>
-#include <ddktl/device.h>
-#include <lib/device-protocol/pdev.h>
-#include <ddktl/protocol/mailbox.h>
-#include <ddktl/protocol/scpi.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
-#include <hw/reg.h>
+#include <lib/device-protocol/pdev.h>
+#include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
 
 #include <optional>
+
+#include <ddk/debug.h>
+#include <ddk/platform-defs.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/mailbox.h>
+#include <ddktl/protocol/scpi.h>
+#include <hw/reg.h>
 
 #define SCPI_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define SCPI_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
@@ -136,3 +138,5 @@ class AmlSCPI : public DeviceType, public ddk::ScpiProtocol<AmlSCPI, ddk::base_p
 };
 
 }  // namespace scpi
+
+#endif  // SRC_DEVICES_SCPI_DRIVERS_AML_SCPI_S912_AML_SCPI_H_

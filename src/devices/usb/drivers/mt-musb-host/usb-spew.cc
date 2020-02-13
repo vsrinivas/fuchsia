@@ -4,8 +4,9 @@
 
 #include "usb-spew.h"
 
-#include <ddk/debug.h>
 #include <stdio.h>
+
+#include <ddk/debug.h>
 
 namespace mt_usb_hci {
 

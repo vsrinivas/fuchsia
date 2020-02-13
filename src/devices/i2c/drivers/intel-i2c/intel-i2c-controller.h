@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_I2C_INTEL_I2C_INTEL_I2C_CONTROLLER_H_
-#define ZIRCON_SYSTEM_DEV_I2C_INTEL_I2C_INTEL_I2C_CONTROLLER_H_
+#ifndef SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_CONTROLLER_H_
+#define SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_CONTROLLER_H_
 
 #include <stdint.h>
 #include <threads.h>
@@ -196,4 +196,4 @@ void intel_serialio_i2c_get_tx_fifo_threshold(intel_serialio_i2c_device_t* contr
 zx_status_t intel_serialio_i2c_set_tx_fifo_threshold(intel_serialio_i2c_device_t* controller,
                                                      uint32_t threshold);
 
-#endif  // ZIRCON_SYSTEM_DEV_I2C_INTEL_I2C_INTEL_I2C_CONTROLLER_H_
+#endif  // SRC_DEVICES_I2C_DRIVERS_INTEL_I2C_INTEL_I2C_CONTROLLER_H_

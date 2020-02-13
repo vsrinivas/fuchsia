@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_USB_BUS_USB_DEVICE_H_
+#define SRC_DEVICES_USB_DRIVERS_USB_BUS_USB_DEVICE_H_
 
 #include <fuchsia/hardware/usb/device/llcpp/fidl.h>
 #include <lib/sync/completion.h>
@@ -210,3 +211,5 @@ class UsbDevice : public UsbDeviceType,
 };
 
 }  // namespace usb_bus
+
+#endif  // SRC_DEVICES_USB_DRIVERS_USB_BUS_USB_DEVICE_H_

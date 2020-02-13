@@ -4,14 +4,14 @@
 
 #include "vim-spdif-audio-stream.h"
 
+#include <limits>
+#include <numeric>
+#include <utility>
+
 #include <digest/digest.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <soc/aml-s912/s912-audio.h>
-
-#include <limits>
-#include <numeric>
-#include <utility>
 
 #include "hdmitx.h"
 #include "vim-display.h"

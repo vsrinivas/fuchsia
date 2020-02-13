@@ -2,21 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "dwc3.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
-#include <usb/usb-request.h>
 #include <fbl/auto_lock.h>
 #include <hw/reg.h>
 #include <pretty/hexdump.h>
+#include <usb/usb-request.h>
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-
-#include "dwc3.h"
 #include "dwc3-regs.h"
 #include "dwc3-types.h"
 

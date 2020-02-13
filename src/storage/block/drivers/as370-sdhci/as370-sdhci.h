@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_AS370_SDHCI_AS370_SDHCI_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_AS370_SDHCI_AS370_SDHCI_H_
+
+#include <lib/mmio/mmio.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/sdhci.h>
-#include <lib/mmio/mmio.h>
 
 namespace sdhci {
 
 class As370Sdhci;
 using DeviceType = ddk::Device<As370Sdhci>;
 
-class As370Sdhci : public DeviceType,
-                   public ddk::SdhciProtocol<As370Sdhci, ddk::base_protocol> {
+class As370Sdhci : public DeviceType, public ddk::SdhciProtocol<As370Sdhci, ddk::base_protocol> {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -33,9 +34,7 @@ class As370Sdhci : public DeviceType,
 
  private:
   As370Sdhci(zx_device_t* parent, ddk::MmioBuffer core_mmio, zx::interrupt irq)
-      : DeviceType(parent),
-        core_mmio_(std::move(core_mmio)),
-        irq_(std::move(irq)) {}
+      : DeviceType(parent), core_mmio_(std::move(core_mmio)), irq_(std::move(irq)) {}
 
   int IrqThread();
 
@@ -44,3 +43,5 @@ class As370Sdhci : public DeviceType,
 };
 
 }  // namespace sdhci
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_AS370_SDHCI_AS370_SDHCI_H_

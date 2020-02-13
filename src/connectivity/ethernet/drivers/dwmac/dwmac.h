@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_ETHERNET_DWMAC_DWMAC_H_
-#define ZIRCON_SYSTEM_DEV_ETHERNET_DWMAC_DWMAC_H_
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_DWMAC_DWMAC_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_DWMAC_DWMAC_H_
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
@@ -198,4 +198,4 @@ class DWMacDevice : public ddk::Device<DWMacDevice, ddk::UnbindableNew>,
 
 }  // namespace eth
 
-#endif  // ZIRCON_SYSTEM_DEV_ETHERNET_DWMAC_DWMAC_H_
+#endif  // SRC_CONNECTIVITY_ETHERNET_DRIVERS_DWMAC_DWMAC_H_

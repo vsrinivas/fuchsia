@@ -51,7 +51,7 @@ void Adv7533::Adv7533EdidChannelRead(uint8_t d1, uint8_t len) {
 zx_status_t Adv7533::Adv7533Init(pdev_protocol_t* pdev_) {
   uint8_t g = 0;
 
-#if 0 // This needs to be rewritten to use composite protocol instead.
+#if 0  // This needs to be rewritten to use composite protocol instead.
   zx_status_t status;
   size_t actual;
 

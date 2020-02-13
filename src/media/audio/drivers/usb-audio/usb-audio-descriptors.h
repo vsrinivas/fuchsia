@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_DESCRIPTORS_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_DESCRIPTORS_H_
+
+#include <sys/types.h>
+#include <threads.h>
+#include <zircon/hw/usb.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <ddk/protocol/usb.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <zircon/hw/usb.h>
-#include <zircon/types.h>
-#include <zircon/syscalls.h>
-
-#include <threads.h>
-#include <sys/types.h>
 
 namespace audio {
 namespace usb {
@@ -78,3 +79,5 @@ class DescriptorListMemory : public fbl::RefCounted<DescriptorListMemory> {
 
 }  // namespace usb
 }  // namespace audio
+
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_DESCRIPTORS_H_

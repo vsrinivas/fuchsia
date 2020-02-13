@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fbl/alloc_checker.h>
-
 #include "fake-bus.h"
 
 #include <stdio.h>
+
+#include <fbl/alloc_checker.h>
 
 namespace ahci {
 

@@ -4,8 +4,9 @@
 
 #include "ovl.h"
 
-#include <fbl/alloc_checker.h>
 #include <math.h>
+
+#include <fbl/alloc_checker.h>
 
 #include "registers-ovl.h"
 

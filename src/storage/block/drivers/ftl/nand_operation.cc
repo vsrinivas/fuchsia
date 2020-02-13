@@ -4,9 +4,10 @@
 
 #include "nand_operation.h"
 
+#include <zircon/process.h>
+
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <zircon/process.h>
 
 namespace ftl {
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_AML_VOLTAGE_H_
-#define ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_AML_VOLTAGE_H_
+#ifndef SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_VOLTAGE_H_
+#define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_VOLTAGE_H_
 
 #include <lib/mmio/mmio.h>
 #include <zircon/errors.h>
@@ -76,4 +76,4 @@ class AmlVoltageRegulator {
 };
 }  // namespace thermal
 
-#endif  // ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_AML_VOLTAGE_H_
+#endif  // SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_VOLTAGE_H_

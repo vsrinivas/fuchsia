@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_CLK_MTK_CLK_MTK_CLK_H_
-#define ZIRCON_SYSTEM_DEV_CLK_MTK_CLK_MTK_CLK_H_
+#ifndef SRC_DEVICES_CLOCK_DRIVERS_MTK_CLK_MTK_CLK_H_
+#define SRC_DEVICES_CLOCK_DRIVERS_MTK_CLK_MTK_CLK_H_
+
+#include <fuchsia/hardware/clock/c/fidl.h>
+#include <lib/mmio/mmio.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/clockimpl.h>
-#include <fuchsia/hardware/clock/c/fidl.h>
-#include <lib/mmio/mmio.h>
 
 namespace clk {
 
@@ -48,4 +49,4 @@ class MtkClk : public DeviceType, public ddk::ClockImplProtocol<MtkClk, ddk::bas
 
 }  // namespace clk
 
-#endif  // ZIRCON_SYSTEM_DEV_CLK_MTK_CLK_MTK_CLK_H_
+#endif  // SRC_DEVICES_CLOCK_DRIVERS_MTK_CLK_MTK_CLK_H_

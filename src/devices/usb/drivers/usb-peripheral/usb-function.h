@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_USB_PERIPHERAL_USB_FUNCTION_H_
+#define SRC_DEVICES_USB_DRIVERS_USB_PERIPHERAL_USB_FUNCTION_H_
+
+#include <fuchsia/hardware/usb/peripheral/c/fidl.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/usb/dci.h>
 #include <ddktl/protocol/usb/function.h>
 #include <fbl/array.h>
 #include <fbl/ref_counted.h>
-#include <fuchsia/hardware/usb/peripheral/c/fidl.h>
 
 #include "usb-peripheral.h"
 
@@ -72,3 +74,5 @@ class UsbFunction : public UsbFunctionType,
 };
 
 }  // namespace usb_peripheral
+
+#endif  // SRC_DEVICES_USB_DRIVERS_USB_PERIPHERAL_USB_FUNCTION_H_

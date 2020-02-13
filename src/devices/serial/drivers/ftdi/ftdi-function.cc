@@ -3,6 +3,20 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <zircon/device/usb-peripheral.h>
+#include <zircon/hw/usb/hid.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+
+#include <atomic>
+#include <memory>
+#include <vector>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -14,21 +28,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
-#include <zircon/device/usb-peripheral.h>
-#include <zircon/hw/usb/hid.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-#include <lib/zircon-internal/thread_annotations.h>
-
-#include <atomic>
-#include <memory>
-#include <vector>
 
 #define BULK_MAX_PACKET 512
 #define FTDI_STATUS_SIZE 2

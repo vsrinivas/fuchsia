@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BLOCK_AHCI_CONTROLLER_H_
-#define ZIRCON_SYSTEM_DEV_BLOCK_AHCI_CONTROLLER_H_
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_AHCI_CONTROLLER_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_AHCI_CONTROLLER_H_
 
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
 #include <zircon/types.h>
+
+#include <memory>
 
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
@@ -111,4 +113,4 @@ class Controller {
 
 }  // namespace ahci
 
-#endif  // ZIRCON_SYSTEM_DEV_BLOCK_AHCI_CONTROLLER_H_
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_AHCI_CONTROLLER_H_

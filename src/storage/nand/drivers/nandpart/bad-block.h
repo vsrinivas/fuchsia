@@ -2,22 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_NAND_DRIVERS_NANDPART_BAD_BLOCK_H_
+#define SRC_STORAGE_NAND_DRIVERS_NANDPART_BAD_BLOCK_H_
+
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/vmo.h>
+#include <zircon/types.h>
+
+#include <utility>
 
 #include <ddk/driver.h>
 #include <ddk/metadata/bad-block.h>
 #include <ddk/protocol/nand.h>
 #include <ddktl/protocol/nand.h>
-
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <lib/zx/vmo.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/types.h>
-
-#include <utility>
 
 namespace nand {
 
@@ -61,3 +62,5 @@ class BadBlock : public fbl::RefCounted<BadBlock> {
 };
 
 }  // namespace nand
+
+#endif  // SRC_STORAGE_NAND_DRIVERS_NANDPART_BAD_BLOCK_H_

@@ -2,12 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_MBR_MBR_DEVICE_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_MBR_MBR_DEVICE_H_
+
+#include <inttypes.h>
+#include <lib/sync/completion.h>
+#include <string.h>
+#include <zircon/status.h>
 
 #include <cstddef>
-#include <inttypes.h>
 #include <memory>
-#include <string.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
@@ -16,16 +20,14 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <gpt/c/gpt.h>
-#include <lib/sync/completion.h>
-#include <zircon/status.h>
 
 #include "mbr.h"
 
 namespace mbr {
 
 class MbrDevice;
-using DeviceType = ddk::Device<MbrDevice, ddk::GetProtocolable, ddk::GetSizable,
-                               ddk::UnbindableNew>;
+using DeviceType =
+    ddk::Device<MbrDevice, ddk::GetProtocolable, ddk::GetSizable, ddk::UnbindableNew>;
 
 class MbrDevice final : public DeviceType,
                         public ddk::BlockImplProtocol<MbrDevice, ddk::base_protocol>,
@@ -92,3 +94,5 @@ class MbrDevice final : public DeviceType,
 };
 
 }  // namespace mbr
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_MBR_MBR_DEVICE_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_CLK_AMLOGIC_CLK_AML_G12B_BLOCKS_H_
-#define ZIRCON_SYSTEM_DEV_CLK_AMLOGIC_CLK_AML_G12B_BLOCKS_H_
+#ifndef SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_G12B_BLOCKS_H_
+#define SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_G12B_BLOCKS_H_
 
 #include <soc/aml-meson/g12b-clk.h>
 
@@ -181,4 +181,4 @@ static const char* const g12b_clk_table[] = {
     "mipi_csi_phy1_clk_out",      // 126
 };
 
-#endif  // ZIRCON_SYSTEM_DEV_CLK_AMLOGIC_CLK_AML_G12B_BLOCKS_H_
+#endif  // SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_G12B_BLOCKS_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_HIKEY_USB_HIKEY_USB_H_
+#define SRC_DEVICES_USB_DRIVERS_HIKEY_USB_HIKEY_USB_H_
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
@@ -54,3 +55,5 @@ class HikeyUsb : public HikeyUsbType,
 };
 
 }  // namespace hikey_usb
+
+#endif  // SRC_DEVICES_USB_DRIVERS_HIKEY_USB_HIKEY_USB_H_

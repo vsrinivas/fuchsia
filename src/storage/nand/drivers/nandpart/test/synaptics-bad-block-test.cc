@@ -4,13 +4,14 @@
 
 #include "synaptics-bad-block.h"
 
+#include <lib/fzl/vmo-mapper.h>
+
 #include <array>
 #include <map>
 #include <vector>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <lib/fzl/vmo-mapper.h>
 #include <zxtest/zxtest.h>
 
 namespace nand {

@@ -3,6 +3,14 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <zircon/assert.h>
+#include <zircon/syscalls.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -11,13 +19,6 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/device.h>
 #include <hw/reg.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <zircon/assert.h>
-#include <zircon/syscalls.h>
 
 #include "hdmitx.h"
 #include "vim-display.h"

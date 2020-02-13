@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BLOCK_CORE_MANAGER_H_
-#define ZIRCON_SYSTEM_DEV_BLOCK_CORE_MANAGER_H_
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_CORE_MANAGER_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_CORE_MANAGER_H_
 
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
@@ -78,4 +78,4 @@ class Manager {
   std::unique_ptr<Server> server_;
 };
 
-#endif  // ZIRCON_SYSTEM_DEV_BLOCK_CORE_MANAGER_H_
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_CORE_MANAGER_H_

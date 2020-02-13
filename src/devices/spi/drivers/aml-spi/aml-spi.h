@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/mmio/mmio.h>
+
 #include <ddk/protocol/platform/device.h>
+#include <ddktl/device.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/spiimpl.h>
-#include <ddktl/device.h>
 #include <fbl/vector.h>
-#include <lib/mmio/mmio.h>
 #include <soc/aml-common/aml-spi.h>
 
 namespace spi {

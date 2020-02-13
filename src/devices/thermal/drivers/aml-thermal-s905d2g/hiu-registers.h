@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_HIU_REGISTERS_H_
-#define ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_HIU_REGISTERS_H_
+#ifndef SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_HIU_REGISTERS_H_
+#define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_HIU_REGISTERS_H_
 
 #include <zircon/types.h>
 
@@ -37,4 +37,4 @@ class SysCpuClkControl0 : public hwreg::RegisterBase<SysCpuClkControl0, uint32_t
 
 }  // namespace thermal
 
-#endif  // ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_HIU_REGISTERS_H_
+#endif  // SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_HIU_REGISTERS_H_

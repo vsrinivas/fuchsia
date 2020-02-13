@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_PCI_IDS_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_PCI_IDS_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_PCI_IDS_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_PCI_IDS_H_
 
 #include <stdint.h>
 #include <zircon/assert.h>
@@ -30,4 +30,4 @@ inline bool is_kbl_y(uint16_t device_id) { return device_id == 0x591c || device_
 
 }  // namespace i915
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_PCI_IDS_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_PCI_IDS_H_

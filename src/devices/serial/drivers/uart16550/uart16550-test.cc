@@ -4,11 +4,12 @@
 
 #include "uart16550.h"
 
-#include <ddk/protocol/serial.h>
-#include <ddk/protocol/serialimpl.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-function/mock-function.h>
 #include <lib/zx/event.h>
+
+#include <ddk/protocol/serial.h>
+#include <ddk/protocol/serialimpl.h>
 #include <zxtest/zxtest.h>
 
 namespace {

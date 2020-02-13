@@ -6,6 +6,7 @@
 
 #include <lib/mock-function/mock-function.h>
 #include <lib/mock-sdio/mock-sdio.h>
+
 #include <zxtest/zxtest.h>
 
 namespace bluetooth {

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_INPUT_FOCALTECH_FT_DEVICE_H_
-#define ZIRCON_SYSTEM_DEV_INPUT_FOCALTECH_FT_DEVICE_H_
+#ifndef SRC_UI_INPUT_DRIVERS_FOCALTECH_FT_DEVICE_H_
+#define SRC_UI_INPUT_DRIVERS_FOCALTECH_FT_DEVICE_H_
 
 #include <lib/zx/interrupt.h>
 #include <threads.h>
@@ -126,4 +126,4 @@ class FtDevice : public ddk::Device<FtDevice, ddk::UnbindableNew>,
 };
 }  // namespace ft
 
-#endif  // ZIRCON_SYSTEM_DEV_INPUT_FOCALTECH_FT_DEVICE_H_
+#endif  // SRC_UI_INPUT_DRIVERS_FOCALTECH_FT_DEVICE_H_

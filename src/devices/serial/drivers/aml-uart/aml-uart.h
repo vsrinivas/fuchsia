@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_SERIAL_AML_UART_AML_UART_H_
-#define ZIRCON_SYSTEM_DEV_SERIAL_AML_UART_AML_UART_H_
+#ifndef SRC_DEVICES_SERIAL_DRIVERS_AML_UART_AML_UART_H_
+#define SRC_DEVICES_SERIAL_DRIVERS_AML_UART_AML_UART_H_
 
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fit/function.h>
@@ -106,4 +106,4 @@ class AmlUart : public DeviceType,
 
 }  // namespace serial
 
-#endif  // ZIRCON_SYSTEM_DEV_SERIAL_AML_UART_AML_UART_H_
+#endif  // SRC_DEVICES_SERIAL_DRIVERS_AML_UART_AML_UART_H_

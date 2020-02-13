@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_I2C_MT8167_I2C_MT8167_I2C_REGS_H_
-#define ZIRCON_SYSTEM_DEV_I2C_MT8167_I2C_MT8167_I2C_REGS_H_
+#ifndef SRC_DEVICES_I2C_DRIVERS_MT8167_I2C_MT8167_I2C_REGS_H_
+#define SRC_DEVICES_I2C_DRIVERS_MT8167_I2C_MT8167_I2C_REGS_H_
+
+#include <zircon/types.h>
 
 #include <hwreg/bitfields.h>
 #include <soc/mt8167/mt8167-hw.h>
-#include <zircon/types.h>
 
 namespace mt8167_i2c {
 
@@ -240,4 +241,4 @@ class XoRegs : public ddk::MmioBuffer {
 
 }  // namespace mt8167_i2c
 
-#endif  // ZIRCON_SYSTEM_DEV_I2C_MT8167_I2C_MT8167_I2C_REGS_H_
+#endif  // SRC_DEVICES_I2C_DRIVERS_MT8167_I2C_MT8167_I2C_REGS_H_

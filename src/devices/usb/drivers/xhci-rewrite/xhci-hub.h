@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_HUB_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_HUB_H_
 
 #include <zircon/hw/usb.h>
 
@@ -23,3 +24,5 @@ struct HubInfo {
   uint8_t parent_port_number = 0;
 };
 }  // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_HUB_H_

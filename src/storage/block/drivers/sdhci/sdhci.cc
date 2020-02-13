@@ -12,15 +12,15 @@
 #include "sdhci.h"
 
 #include <inttypes.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/pmt.h>
+#include <lib/zx/time.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/phys-iter.h>
 #include <ddk/protocol/block.h>
 #include <fbl/alloc_checker.h>
-#include <lib/zx/clock.h>
-#include <lib/zx/pmt.h>
-#include <lib/zx/time.h>
 
 #include "sdhci-reg.h"
 
@@ -42,11 +42,11 @@ constexpr int kDmaDescCount = 512;
 // 64k max per descriptor
 static constexpr size_t kMaxDescriptorLength = 0x1'0000;  // 64k
 
-constexpr zx::duration kResetTime                = zx::sec(1);
-constexpr zx::duration kClockStabilizationTime   = zx::msec(150);
+constexpr zx::duration kResetTime = zx::sec(1);
+constexpr zx::duration kClockStabilizationTime = zx::msec(150);
 constexpr zx::duration kVoltageStabilizationTime = zx::msec(5);
-constexpr zx::duration kInhibitWaitTime          = zx::msec(1);
-constexpr zx::duration kWaitYieldTime            = zx::usec(1);
+constexpr zx::duration kInhibitWaitTime = zx::msec(1);
+constexpr zx::duration kWaitYieldTime = zx::usec(1);
 
 constexpr bool SdmmcCmdRspBusy(uint32_t cmd_flags) { return cmd_flags & SDMMC_RESP_LEN_48B; }
 

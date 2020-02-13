@@ -53,15 +53,18 @@ void DdkFidlDevice::GetChannel(GetChannelCompleter::Sync completer) {
   auto context = std::make_unique<CompletionContext>();
   context->completer = completer.ToAsync();
 
-  ZX_ASSERT(ZX_OK == DdkScheduleWork([](void* ctx) {
-    auto context = std::unique_ptr<CompletionContext>(reinterpret_cast<CompletionContext*>(ctx));
+  ZX_ASSERT(ZX_OK == DdkScheduleWork(
+                         [](void* ctx) {
+                           auto context = std::unique_ptr<CompletionContext>(
+                               reinterpret_cast<CompletionContext*>(ctx));
 
-    zx::channel local;
-    zx::channel remote;
-    zx::channel::create(0, &local, &remote);
-    __UNUSED auto dummy = local.release();
-    context->completer->Reply(std::move(remote));
-  }, context.release()));
+                           zx::channel local;
+                           zx::channel remote;
+                           zx::channel::create(0, &local, &remote);
+                           __UNUSED auto dummy = local.release();
+                           context->completer->Reply(std::move(remote));
+                         },
+                         context.release()));
 }
 
 zx_status_t DdkFidlDevice::Bind() { return DdkAdd("ddk-async-fidl"); }

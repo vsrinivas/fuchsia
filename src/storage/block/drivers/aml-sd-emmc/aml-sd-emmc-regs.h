@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_REGS_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_REGS_H_
+
+#include <zircon/types.h>
 
 #include <hwreg/bitfields.h>
-#include <zircon/types.h>
 
 constexpr uint32_t kAmlSdEmmcClockOffset = 0x00;
 constexpr uint32_t kAmlSdEmmcDelayV2Offset = 0x04;
@@ -322,3 +324,5 @@ class AmlSdEmmcAdjustV2 : public hwreg::RegisterBase<AmlSdEmmcAdjustV2, uint32_t
   DEF_FIELD(21, 16, adj_delay);
   DEF_BIT(22, adj_auto);
 };
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_REGS_H_

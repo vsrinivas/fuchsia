@@ -2,17 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BLOCK_ZXCRYPT_DEVICE_MANAGER_H_
-#define ZIRCON_SYSTEM_DEV_BLOCK_ZXCRYPT_DEVICE_MANAGER_H_
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_MANAGER_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_MANAGER_H_
+
+#include <stddef.h>
+#include <stdint.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 #include <zxcrypt/volume.h>
 
 namespace zxcrypt {
@@ -75,4 +76,4 @@ class DeviceManager final : public DeviceManagerType {
 
 }  // namespace zxcrypt
 
-#endif  // ZIRCON_SYSTEM_DEV_BLOCK_ZXCRYPT_DEVICE_MANAGER_H_
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_DEVICE_MANAGER_H_

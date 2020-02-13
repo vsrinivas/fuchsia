@@ -7,6 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fake_ddk/fake_ddk.h>
+
 #include <mock/ddktl/protocol/gpio.h>
 #include <mock/ddktl/protocol/scpi.h>
 #include <zxtest/zxtest.h>

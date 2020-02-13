@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_MISC_CPU_TRACE_PERF_MON_H_
-#define ZIRCON_SYSTEM_DEV_MISC_CPU_TRACE_PERF_MON_H_
+#ifndef SRC_DEVICES_MISC_DRIVERS_CPU_TRACE_PERF_MON_H_
+#define SRC_DEVICES_MISC_DRIVERS_CPU_TRACE_PERF_MON_H_
 
 #include <fuchsia/perfmon/cpu/llcpp/fidl.h>
 #include <lib/zx/bti.h>
@@ -215,4 +215,4 @@ class PerfmonDevice : public DeviceType, public fidl_perfmon::Controller::Interf
 
 }  // namespace perfmon
 
-#endif  // ZIRCON_SYSTEM_DEV_MISC_CPU_TRACE_PERF_MON_H_
+#endif  // SRC_DEVICES_MISC_DRIVERS_CPU_TRACE_PERF_MON_H_

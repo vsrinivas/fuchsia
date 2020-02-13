@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_USB_XHCI_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_USB_XHCI_H_
 
 #include <lib/device-protocol/pdev.h>
 
@@ -80,3 +81,5 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 };
 
 }  // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_USB_XHCI_H_

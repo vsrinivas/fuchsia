@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDIO_CONTROLLER_DEVICE_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDIO_CONTROLLER_DEVICE_H_
+
+#include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <array>
 #include <atomic>
@@ -14,8 +18,6 @@
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <lib/sync/completion.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 #include "sdio-function-device.h"
 #include "sdmmc-device.h"
@@ -132,3 +134,5 @@ class SdioControllerDevice : public SdioControllerDeviceType,
 };
 
 }  // namespace sdmmc
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDIO_CONTROLLER_DEVICE_H_

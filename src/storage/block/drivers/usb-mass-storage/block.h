@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_USB_MASS_STORAGE_BLOCK_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_USB_MASS_STORAGE_BLOCK_H_
 
-#include "usb-mass-storage.h"
+#include <stdint.h>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
 #include <fbl/function.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <stdint.h>
+
+#include "usb-mass-storage.h"
 
 namespace ums {
 
@@ -80,3 +83,5 @@ class UmsBlockDevice : public DeviceType,
   BlockDeviceParameters parameters_;
 };
 }  // namespace ums
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_USB_MASS_STORAGE_BLOCK_H_

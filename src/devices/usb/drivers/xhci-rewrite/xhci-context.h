@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_CONTEXT_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_CONTEXT_H_
 #include <lib/fit/bridge.h>
 #include <lib/fit/function.h>
 
@@ -38,3 +39,5 @@ struct TRBContext : fbl::DoublyLinkedListable<std::unique_ptr<TRBContext>>,
 };
 
 }  // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_CONTEXT_H_

@@ -200,7 +200,7 @@ zx_status_t NandDevice::WorkerThread() {
     nand::BorrowedOperationQueue<> queue(std::move(txn_queue_));
     al.release();
     auto txn = queue.pop();
-    while(txn != std::nullopt) {
+    while (txn != std::nullopt) {
       DoIo(*std::move(txn));
       txn = queue.pop();
     }

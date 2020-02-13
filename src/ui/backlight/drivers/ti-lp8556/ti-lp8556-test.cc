@@ -4,10 +4,10 @@
 
 #include "ti-lp8556.h"
 
-#include <map>
-
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
+
+#include <map>
 
 #include <ddk/metadata.h>
 #include <fbl/span.h>
@@ -131,13 +131,7 @@ TEST_F(Lp8556DeviceTest, Brightness) {
 
 TEST_F(Lp8556DeviceTest, InitRegisters) {
   constexpr uint8_t kInitialRegisterValues[] = {
-      0x01, 0x85,
-      0xa2, 0x30,
-      0xa3, 0x32,
-      0xa5, 0x54,
-      0xa7, 0xf4,
-      0xa9, 0x60,
-      0xae, 0x09,
+      0x01, 0x85, 0xa2, 0x30, 0xa3, 0x32, 0xa5, 0x54, 0xa7, 0xf4, 0xa9, 0x60, 0xae, 0x09,
   };
 
   Bind ddk;
@@ -174,13 +168,7 @@ TEST_F(Lp8556DeviceTest, InitNoRegisters) {
 
 TEST_F(Lp8556DeviceTest, InitInvalidRegisters) {
   constexpr uint8_t kInitialRegisterValues[] = {
-      0x01, 0x85,
-      0xa2, 0x30,
-      0xa3, 0x32,
-      0xa5, 0x54,
-      0xa7, 0xf4,
-      0xa9, 0x60,
-      0xae,
+      0x01, 0x85, 0xa2, 0x30, 0xa3, 0x32, 0xa5, 0x54, 0xa7, 0xf4, 0xa9, 0x60, 0xae,
   };
 
   Bind ddk;
@@ -206,8 +194,10 @@ TEST_F(Lp8556DeviceTest, InitTooManyRegisters) {
 
 TEST_F(Lp8556DeviceTest, InitOverwriteBrightnessRegisters) {
   constexpr uint8_t kInitialRegisterValues[] = {
-      kBacklightBrightnessLsbReg, 0xab,
-      kBacklightBrightnessMsbReg, 0xcd,
+      kBacklightBrightnessLsbReg,
+      0xab,
+      kBacklightBrightnessMsbReg,
+      0xcd,
   };
 
   Bind ddk;

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BACKLIGHT_SG_MICRO_SGM37603A_H_
-#define ZIRCON_SYSTEM_DEV_BACKLIGHT_SG_MICRO_SGM37603A_H_
+#ifndef SRC_UI_BACKLIGHT_DRIVERS_SG_MICRO_SGM37603A_H_
+#define SRC_UI_BACKLIGHT_DRIVERS_SG_MICRO_SGM37603A_H_
 
 #include <fuchsia/hardware/backlight/llcpp/fidl.h>
 #include <lib/device-protocol/i2c-channel.h>
@@ -82,4 +82,4 @@ class Sgm37603a : public DeviceType,
 
 }  // namespace backlight
 
-#endif  // ZIRCON_SYSTEM_DEV_BACKLIGHT_SG_MICRO_SGM37603A_H_
+#endif  // SRC_UI_BACKLIGHT_DRIVERS_SG_MICRO_SGM37603A_H_

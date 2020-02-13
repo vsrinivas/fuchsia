@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_GPIO_DRIVERS_PL061_INCLUDE_GPIO_PL061_PL061_H_
+#define SRC_DEVICES_GPIO_DRIVERS_PL061_INCLUDE_GPIO_PL061_PL061_H_
+
+#include <threads.h>
+#include <zircon/listnode.h>
+#include <zircon/types.h>
 
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/gpioimpl.h>
 #include <ddk/protocol/platform/device.h>
-#include <zircon/listnode.h>
-#include <zircon/types.h>
-#include <threads.h>
 
 typedef struct {
   list_node_t node;
@@ -23,3 +25,5 @@ typedef struct {
 
 // PL061 GPIO protocol ops uses pl061_gpios_t* for ctx
 extern gpio_impl_protocol_ops_t pl061_proto_ops;
+
+#endif  // SRC_DEVICES_GPIO_DRIVERS_PL061_INCLUDE_GPIO_PL061_PL061_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_USB_BUS_USB_BUS_H_
+#define SRC_DEVICES_USB_DRIVERS_USB_BUS_USB_BUS_H_
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/usb/bus.h>
@@ -56,3 +57,5 @@ class UsbBus : public UsbBusType,
 };
 
 }  // namespace usb_bus
+
+#endif  // SRC_DEVICES_USB_DRIVERS_USB_BUS_USB_BUS_H_

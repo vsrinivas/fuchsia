@@ -7,12 +7,12 @@
 #include <endian.h>
 #include <inttypes.h>
 #include <string.h>
-
-#include <ddk/debug.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
+
+#include <ddk/debug.h>
 
 namespace mbr {
 

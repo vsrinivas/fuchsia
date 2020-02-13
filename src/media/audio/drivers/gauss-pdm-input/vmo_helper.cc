@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
-#include <ddktl/device.h>
+#include "vmo_helper.h"
+
 #include <lib/zx/vmar.h>
 
-#include "vmo_helper.h"
+#include <ddk/debug.h>
+#include <ddktl/device.h>
 
 namespace audio {
 namespace gauss {

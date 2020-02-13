@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_SERIAL_DRIVERS_SERIAL_ASYNC_SERIAL_H_
+#define SRC_DEVICES_SERIAL_DRIVERS_SERIAL_ASYNC_SERIAL_H_
 
 #include <fuchsia/hardware/serial/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -59,3 +60,5 @@ class SerialDevice : public DeviceType,
 };
 
 }  // namespace serial
+
+#endif  // SRC_DEVICES_SERIAL_DRIVERS_SERIAL_ASYNC_SERIAL_H_

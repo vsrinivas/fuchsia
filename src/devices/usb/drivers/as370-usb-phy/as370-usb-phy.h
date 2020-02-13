@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_AS370_USB_PHY_AS370_USB_PHY_H_
+#define SRC_DEVICES_USB_DRIVERS_AS370_USB_PHY_AS370_USB_PHY_H_
 
 #include <lib/device-protocol/pdev.h>
-#include <ddktl/device.h>
 #include <lib/mmio/mmio.h>
+
+#include <ddktl/device.h>
 
 #include "dwc2-device.h"
 
@@ -46,3 +48,5 @@ class UsbPhy : public UsbPhyType {
 };
 
 }  // namespace as370_usb_phy
+
+#endif  // SRC_DEVICES_USB_DRIVERS_AS370_USB_PHY_AS370_USB_PHY_H_

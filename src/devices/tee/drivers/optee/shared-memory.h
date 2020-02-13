@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_TEE_OPTEE_SHARED_MEMORY_H_
-#define ZIRCON_SYSTEM_DEV_TEE_OPTEE_SHARED_MEMORY_H_
+#ifndef SRC_DEVICES_TEE_DRIVERS_OPTEE_SHARED_MEMORY_H_
+#define SRC_DEVICES_TEE_DRIVERS_OPTEE_SHARED_MEMORY_H_
 
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
@@ -204,4 +204,4 @@ class SharedMemoryManager {
 
 }  // namespace optee
 
-#endif  // ZIRCON_SYSTEM_DEV_TEE_OPTEE_SHARED_MEMORY_H_
+#endif  // SRC_DEVICES_TEE_DRIVERS_OPTEE_SHARED_MEMORY_H_

@@ -3,26 +3,29 @@
 // found in the LICENSE file.
 
 #include "usb-hci.h"
-#include "trace.h"
-#include "usb-device.h"
-#include "usb-root-hub.h"
-#include "usb-spew.h"
+
+#include <lib/device-protocol/pdev.h>
+#include <lib/zx/time.h>
+#include <zircon/hw/usb.h>
+#include <zircon/status.h>
 
 #include <algorithm>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
-#include <lib/device-protocol/pdev.h>
-#include <lib/zx/time.h>
 #include <soc/mt8167/mt8167-usb-phy.h>
 #include <soc/mt8167/mt8167-usb.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
-#include <zircon/hw/usb.h>
-#include <zircon/status.h>
+
+#include "trace.h"
+#include "usb-device.h"
+#include "usb-root-hub.h"
+#include "usb-spew.h"
 
 namespace mt_usb_hci {
 namespace regs = board_mt8167;

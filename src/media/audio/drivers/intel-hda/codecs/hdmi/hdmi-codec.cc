@@ -4,13 +4,14 @@
 
 #include "hdmi-codec.h"
 
+#include <stdio.h>
+
 #include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 #include <fbl/auto_lock.h>
 #include <intel-hda/codec-utils/stream-base.h>
-#include <stdio.h>
 
 namespace audio {
 namespace intel_hda {
@@ -38,9 +39,7 @@ zx_status_t HdmiCodec::Init(zx_device_t* codec_dev) {
   return ZX_OK;
 }
 
-zx_status_t HdmiCodec::Start() {
-  return ZX_OK;
-}
+zx_status_t HdmiCodec::Start() { return ZX_OK; }
 
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};

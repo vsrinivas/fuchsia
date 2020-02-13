@@ -6,10 +6,10 @@
 
 #include <memory>
 
-#include <fbl/array.h>
 #include <ddk/driver.h>
-#include <ddktl/protocol/nand.h>
 #include <ddktl/protocol/badblock.h>
+#include <ddktl/protocol/nand.h>
+#include <fbl/array.h>
 #include <zxtest/zxtest.h>
 
 namespace ftl {

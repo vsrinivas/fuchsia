@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 #include "usb-device.h"
-#include "trace.h"
+
+#include <zircon/status.h>
 
 #include <ddk/debug.h>
 #include <soc/mt8167/mt8167-usb.h>
-#include <zircon/status.h>
+
+#include "trace.h"
 
 namespace mt_usb_hci {
 

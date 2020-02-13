@@ -4,11 +4,12 @@
 
 #include "osd.h"
 
+#include <float.h>
+#include <math.h>
+
 #include <ddk/debug.h>
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
-#include <float.h>
-#include <math.h>
 
 #include "rdma-regs.h"
 #include "vpp-regs.h"

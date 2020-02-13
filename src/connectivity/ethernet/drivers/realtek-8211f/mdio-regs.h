@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_REALTEK_8211F_MDIO_REGS_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_REALTEK_8211F_MDIO_REGS_H_
 
 #define MII_BMCR 0x00        /* Basic mode control register */
 #define MII_BMSR 0x01        /* Basic mode status register  */
@@ -57,3 +58,5 @@
 #define BMSR_100HALF 0x2000      /* Can do 100mbps, half-duplex */
 #define BMSR_100FULL 0x4000      /* Can do 100mbps, full-duplex */
 #define BMSR_100BASE4 0x8000     /* Can do 100mbps, 4k packets  */
+
+#endif  // SRC_CONNECTIVITY_ETHERNET_DRIVERS_REALTEK_8211F_MDIO_REGS_H_

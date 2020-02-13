@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_GTT_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_GTT_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_GTT_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_GTT_H_
 
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
@@ -79,4 +79,4 @@ class Gtt {
 
 }  // namespace i915
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_GTT_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_GTT_H_

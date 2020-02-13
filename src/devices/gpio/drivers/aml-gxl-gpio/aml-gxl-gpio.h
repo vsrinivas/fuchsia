@@ -2,20 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_GPIO_DRIVERS_AML_GXL_GPIO_AML_GXL_GPIO_H_
+#define SRC_DEVICES_GPIO_DRIVERS_AML_GXL_GPIO_AML_GXL_GPIO_H_
+
+#include <inttypes.h>
+#include <lib/mmio/mmio.h>
+
+#include <utility>
 
 #include <ddk/protocol/platform/bus.h>
 #include <ddktl/device.h>
-#include <lib/mmio/mmio.h>
 #include <ddktl/protocol/gpioimpl.h>
 #include <ddktl/protocol/platform/device.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 #include <hw/reg.h>
-#include <inttypes.h>
-
-#include <utility>
 
 namespace gpio {
 
@@ -136,3 +138,5 @@ class AmlGxlGpio : public DeviceType, public ddk::GpioImplProtocol<AmlGxlGpio, d
 };
 
 }  // namespace gpio
+
+#endif  // SRC_DEVICES_GPIO_DRIVERS_AML_GXL_GPIO_AML_GXL_GPIO_H_

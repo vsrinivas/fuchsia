@@ -4,9 +4,15 @@
 
 #include "ram-nand.h"
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <zircon/assert.h>
+#include <zircon/driver/binding.h>
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+
+#include <utility>
 
 #include <ddk/metadata.h>
 #include <ddk/metadata/bad-block.h>
@@ -15,12 +21,6 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
-#include <zircon/assert.h>
-#include <zircon/driver/binding.h>
-#include <zircon/process.h>
-#include <zircon/syscalls.h>
-
-#include <utility>
 
 namespace {
 

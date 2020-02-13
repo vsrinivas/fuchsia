@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_UI_LIGHT_DRIVERS_LP50XX_LIGHT_LP50XX_REGS_H_
+#define SRC_UI_LIGHT_DRIVERS_LP50XX_LIGHT_LP50XX_REGS_H_
 #include <hwreg/i2c.h>
 
 namespace lp50xx_light {
@@ -51,3 +52,5 @@ class ResetReg : public hwreg::I2cRegisterBase<ResetReg, uint8_t, sizeof(uint8_t
 };
 
 }  // namespace lp50xx_light
+
+#endif  // SRC_UI_LIGHT_DRIVERS_LP50XX_LIGHT_LP50XX_REGS_H_

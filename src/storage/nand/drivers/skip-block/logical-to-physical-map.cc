@@ -4,9 +4,9 @@
 
 #include "logical-to-physical-map.h"
 
-#include <fbl/algorithm.h>
-
 #include <utility>
+
+#include <fbl/algorithm.h>
 
 namespace nand {
 

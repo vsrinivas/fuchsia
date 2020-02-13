@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_AML_THERMAL_H_
-#define ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_AML_THERMAL_H_
+#ifndef SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_THERMAL_H_
+#define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_THERMAL_H_
 
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -110,4 +110,4 @@ class AmlThermal : public DeviceType, public ddk::ThermalProtocol<AmlThermal, dd
 };
 }  // namespace thermal
 
-#endif  // ZIRCON_SYSTEM_DEV_THERMAL_AML_THERMAL_S905D2G_AML_THERMAL_H_
+#endif  // SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_THERMAL_H_

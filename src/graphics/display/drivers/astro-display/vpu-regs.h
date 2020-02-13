@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_VPU_REGS_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_VPU_REGS_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_VPU_REGS_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_VPU_REGS_H_
 #include <hwreg/bitfields.h>
 #include <hwreg/mmio.h>
 
@@ -263,4 +263,4 @@ class VdInIfMuxCtrlReg : public hwreg::RegisterBase<VdInIfMuxCtrlReg, uint32_t> 
 
 }  // namespace astro_display
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_VPU_REGS_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_VPU_REGS_H_

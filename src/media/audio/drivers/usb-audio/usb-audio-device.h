@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_DEVICE_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_DEVICE_H_
+
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <ddk/protocol/usb.h>
 #include <ddktl/device.h>
@@ -11,11 +14,10 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
+#include "debug-logging.h"
 #include "usb-audio-control-interface.h"
 #include "usb-audio-descriptors.h"
-#include "debug-logging.h"
 
 namespace audio {
 namespace usb {
@@ -83,3 +85,5 @@ class UsbAudioDevice : public UsbAudioDeviceBase, public fbl::RefCounted<UsbAudi
 
 }  // namespace usb
 }  // namespace audio
+
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_DEVICE_H_

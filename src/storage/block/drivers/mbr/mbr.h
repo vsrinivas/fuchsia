@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_MBR_MBR_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_MBR_MBR_H_
+
+#include <inttypes.h>
+#include <zircon/status.h>
 
 #include <cstddef>
-#include <inttypes.h>
-
-#include <zircon/status.h>
 
 namespace mbr {
 
@@ -53,3 +54,5 @@ static_assert(sizeof(MbrPartitionEntry) == kMbrPartitionEntrySize,
               "mbr::MbrPartitionEntry is the wrong size");
 
 }  // namespace mbr
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_MBR_MBR_H_

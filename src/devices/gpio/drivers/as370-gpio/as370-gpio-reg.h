@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_GPIO_DRIVERS_AS370_GPIO_AS370_GPIO_REG_H_
+#define SRC_DEVICES_GPIO_DRIVERS_AS370_GPIO_AS370_GPIO_REG_H_
 
 #include <hwreg/bitfields.h>
 
@@ -18,3 +19,5 @@ class IoCntl : public hwreg::RegisterBase<IoCntl, uint32_t> {
 };
 
 }  // namespace gpio
+
+#endif  // SRC_DEVICES_GPIO_DRIVERS_AS370_GPIO_AS370_GPIO_REG_H_

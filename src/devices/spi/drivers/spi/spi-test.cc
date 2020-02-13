@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "spi.h"
+
+#include <lib/fake_ddk/fake_ddk.h>
+#include <lib/spi/spi.h>
+
 #include <ddk/metadata.h>
 #include <ddk/metadata/spi.h>
 #include <ddktl/protocol/platform/bus.h>
-#include <lib/fake_ddk/fake_ddk.h>
-#include <lib/spi/spi.h>
 #include <zxtest/zxtest.h>
-#include "spi.h"
 
 namespace spi {
 

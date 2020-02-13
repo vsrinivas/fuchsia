@@ -2,21 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_HCI_H_
+#define SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_HCI_H_
 
-#include "usb-device.h"
-#include "usb-root-hub.h"
-
-#include <array>
-#include <ddktl/device.h>
-#include <ddktl/protocol/usb/bus.h>
-#include <ddktl/protocol/usb/hci.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
+
+#include <array>
 #include <memory>
 #include <optional>
 #include <thread>
+
+#include <ddktl/device.h>
+#include <ddktl/protocol/usb/bus.h>
+#include <ddktl/protocol/usb/hci.h>
+
+#include "usb-device.h"
+#include "usb-root-hub.h"
 
 namespace mt_usb_hci {
 
@@ -121,3 +124,5 @@ class UsbHci : public DeviceType, public ddk::UsbHciProtocol<UsbHci, ddk::base_p
 };
 
 }  // namespace mt_usb_hci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_HCI_H_

@@ -15,13 +15,13 @@ driver_module("fidl-llcpp-driver") {
 
   deps = [
     "//src/devices/lib/driver",
+    "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
   ]
 }
 

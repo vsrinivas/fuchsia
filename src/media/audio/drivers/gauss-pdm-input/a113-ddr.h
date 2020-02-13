@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_A113_DDR_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_A113_DDR_H_
 
 #include <zircon/types.h>
 
@@ -48,3 +49,5 @@ uint32_t a113_toddr_get_int_status(a113_audio_device_t* audio_device);
 void a113_toddr_clear_interrupt(a113_audio_device_t* audio_device, uint32_t interrupt_mask);
 
 __END_CDECLS
+
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_A113_DDR_H_

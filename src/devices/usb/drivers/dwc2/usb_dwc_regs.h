@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_USB_DWC2_USB_DWC_REGS_H_
-#define ZIRCON_SYSTEM_DEV_USB_DWC2_USB_DWC_REGS_H_
+#ifndef SRC_DEVICES_USB_DRIVERS_DWC2_USB_DWC_REGS_H_
+#define SRC_DEVICES_USB_DRIVERS_DWC2_USB_DWC_REGS_H_
 
 #include <zircon/hw/usb.h>
 
@@ -533,4 +533,4 @@ class PCGCCTL : public hwreg::RegisterBase<PCGCCTL, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<PCGCCTL>(0xE00); }
 };
 
-#endif  // ZIRCON_SYSTEM_DEV_USB_DWC2_USB_DWC_REGS_H_
+#endif  // SRC_DEVICES_USB_DRIVERS_DWC2_USB_DWC_REGS_H_

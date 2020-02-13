@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_INPUT_USB_HID_USB_HID_FUNCTION_H_
-#define ZIRCON_SYSTEM_DEV_INPUT_USB_HID_USB_HID_FUNCTION_H_
+#ifndef SRC_UI_INPUT_DRIVERS_USB_HID_USB_HID_FUNCTION_H_
+#define SRC_UI_INPUT_DRIVERS_USB_HID_USB_HID_FUNCTION_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/hw/usb/hid.h>
@@ -93,4 +93,4 @@ class FakeUsbHidFunction : public DeviceType {
 
 }  // namespace usb_hid_function
 
-#endif  // ZIRCON_SYSTEM_DEV_INPUT_USB_HID_USB_HID_FUNCTION_H_
+#endif  // SRC_UI_INPUT_DRIVERS_USB_HID_USB_HID_FUNCTION_H_

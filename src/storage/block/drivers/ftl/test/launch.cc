@@ -2,29 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <stdio.h>
-#include <unistd.h>
+#include "launch.h"
 
 #include <lib/fdio/spawn.h>
 #include <lib/zx/process.h>
 #include <lib/zx/time.h>
+#include <stdio.h>
+#include <unistd.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
-
-#include "launch.h"
 
 namespace {
 
 zx::process Launch(const char* const* argv) {
   ZX_ASSERT(argv);
 
-  fdio_spawn_action_t actions[1] = {
-    {
+  fdio_spawn_action_t actions[1] = {{
       .action = FDIO_SPAWN_ACTION_SET_NAME,
       .name = {.data = "worker"},
-    }
-  };
+  }};
   char error[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
   zx_handle_t subprocess;
   zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[0], argv, NULL,

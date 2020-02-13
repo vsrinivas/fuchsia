@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_NAND_DRIVERS_SKIP_BLOCK_LOGICAL_TO_PHYSICAL_MAP_H_
+#define SRC_STORAGE_NAND_DRIVERS_SKIP_BLOCK_LOGICAL_TO_PHYSICAL_MAP_H_
 
-#include <fbl/array.h>
-#include <fbl/macros.h>
 #include <zircon/types.h>
 
 #include <utility>
+
+#include <fbl/array.h>
+#include <fbl/macros.h>
 
 namespace nand {
 
@@ -52,3 +54,5 @@ class LogicalToPhysicalMap {
 };
 
 }  // namespace nand
+
+#endif  // SRC_STORAGE_NAND_DRIVERS_SKIP_BLOCK_LOGICAL_TO_PHYSICAL_MAP_H_

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "ftl_test_observer.h"
+
 #include <errno.h>
 #include <fcntl.h>
-
-#include <fbl/unique_fd.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fdio/namespace.h>
-#include <zxtest/zxtest.h>
 
-#include "ftl_test_observer.h"
+#include <fbl/unique_fd.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 

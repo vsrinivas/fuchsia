@@ -31,6 +31,7 @@ class FenceTest : public zxtest::Test {
   async::TestLoop& loop() { return loop_; }
   fbl::RefPtr<Fence> fence() { return fence_; }
   TestCallback& cb() { return cb_; }
+
  private:
   async::TestLoop loop_;
   fbl::RefPtr<Fence> fence_;

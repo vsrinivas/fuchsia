@@ -60,65 +60,65 @@ const fuchsia_hardware_nand_Info kDefaultNandInfo = {.page_size = 4096,
 ParentDevice* g_parent_device_;
 
 int main(int argc, char** argv) {
-    ParentDevice::TestConfig config = {};
-    config.info = kDefaultNandInfo;
+  ParentDevice::TestConfig config = {};
+  config.info = kDefaultNandInfo;
 
-    while (true) {
-        struct option options[] = {
-            {"device", required_argument, nullptr, 'd'},
-            {"broker", no_argument, nullptr, 'b'},
-            {"first-block", required_argument, nullptr, 'f'},
-            {"num-blocks", required_argument, nullptr, 'n'},
-            {"help", no_argument, nullptr, 'h'},
-            {"list", no_argument, nullptr, 'l'},
-            {"case", required_argument, nullptr, 'c'},
-            {"test", required_argument, nullptr, 't'},
-            {nullptr, 0, nullptr, 0},
-        };
-        int opt_index;
-        int c = getopt_long(argc, argv, "d:bhlc:t:", options, &opt_index);
-        if (c < 0) {
-            break;
-        }
-        switch (c) {
-        case 'd':
-            config.path = optarg;
-            break;
-        case 'b':
-            config.is_broker = true;
-            break;
-        case 'f':
-            config.first_block = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
-            break;
-        case 'n':
-            config.num_blocks = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
-            break;
-        case 'h':
-            printf("%s\n", kUsageMessage);
-            break;
-        }
+  while (true) {
+    struct option options[] = {
+        {"device", required_argument, nullptr, 'd'},
+        {"broker", no_argument, nullptr, 'b'},
+        {"first-block", required_argument, nullptr, 'f'},
+        {"num-blocks", required_argument, nullptr, 'n'},
+        {"help", no_argument, nullptr, 'h'},
+        {"list", no_argument, nullptr, 'l'},
+        {"case", required_argument, nullptr, 'c'},
+        {"test", required_argument, nullptr, 't'},
+        {nullptr, 0, nullptr, 0},
+    };
+    int opt_index;
+    int c = getopt_long(argc, argv, "d:bhlc:t:", options, &opt_index);
+    if (c < 0) {
+      break;
     }
-
-    if (config.first_block && !config.num_blocks) {
-        printf("num-blocks required when first-block is set\n");
-        return -1;
+    switch (c) {
+      case 'd':
+        config.path = optarg;
+        break;
+      case 'b':
+        config.is_broker = true;
+        break;
+      case 'f':
+        config.first_block = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
+        break;
+      case 'n':
+        config.num_blocks = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
+        break;
+      case 'h':
+        printf("%s\n", kUsageMessage);
+        break;
     }
+  }
 
-    ParentDevice parent(config);
-    if (!parent.IsValid()) {
-        printf("Unable to open the nand device\n");
-        return -1;
+  if (config.first_block && !config.num_blocks) {
+    printf("num-blocks required when first-block is set\n");
+    return -1;
+  }
+
+  ParentDevice parent(config);
+  if (!parent.IsValid()) {
+    printf("Unable to open the nand device\n");
+    return -1;
+  }
+
+  if (config.path && !config.first_block) {
+    printf("About to overwrite device. Press y to confirm.\n");
+    int c = getchar();
+    if (c != 'y') {
+      return -1;
     }
+  }
 
-    if (config.path && !config.first_block) {
-        printf("About to overwrite device. Press y to confirm.\n");
-        int c = getchar();
-        if (c != 'y') {
-            return -1;
-        }
-    }
+  g_parent_device_ = &parent;
 
-    g_parent_device_ = &parent;
-
-    return RUN_ALL_TESTS(argc, argv);
+  return RUN_ALL_TESTS(argc, argv);
 }

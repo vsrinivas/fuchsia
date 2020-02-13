@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_CONTROLLER_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_CONTROLLER_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_CONTROLLER_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_CONTROLLER_H_
 
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -150,8 +150,10 @@ class Controller : public ControllerParent,
   void PopulateDisplayAudio(const fbl::RefPtr<DisplayInfo>& info);
   zx_status_t CreateClient(bool is_vc, zx::channel device, zx::channel client);
 
-  void OpenVirtconController(zx::channel device, zx::channel controller, OpenVirtconControllerCompleter::Sync _completer) override;
-  void OpenController(zx::channel device, zx::channel controller, OpenControllerCompleter::Sync _completer) override;
+  void OpenVirtconController(zx::channel device, zx::channel controller,
+                             OpenVirtconControllerCompleter::Sync _completer) override;
+  void OpenController(zx::channel device, zx::channel controller,
+                      OpenControllerCompleter::Sync _completer) override;
 
   // mtx_ is a global lock on state shared among clients.
   mutable mtx_t mtx_;
@@ -167,7 +169,8 @@ class Controller : public ControllerParent,
   bool vc_ready_ __TA_GUARDED(mtx());
   ClientProxy* primary_client_ __TA_GUARDED(mtx()) = nullptr;
   bool primary_ready_ __TA_GUARDED(mtx());
-  llcpp::fuchsia::hardware::display::VirtconMode vc_mode_ __TA_GUARDED(mtx()) = llcpp::fuchsia::hardware::display::VirtconMode::INACTIVE;
+  llcpp::fuchsia::hardware::display::VirtconMode vc_mode_ __TA_GUARDED(mtx()) =
+      llcpp::fuchsia::hardware::display::VirtconMode::INACTIVE;
   ClientProxy* active_client_ __TA_GUARDED(mtx()) = nullptr;
 
   async::Loop loop_;
@@ -179,4 +182,4 @@ class Controller : public ControllerParent,
 
 }  // namespace display
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_CONTROLLER_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_CONTROLLER_H_

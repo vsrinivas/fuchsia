@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BLOCK_CORE_IOBUFFER_H_
-#define ZIRCON_SYSTEM_DEV_BLOCK_CORE_IOBUFFER_H_
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_CORE_IOBUFFER_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_CORE_IOBUFFER_H_
 
 #include <lib/zx/vmo.h>
 #include <zircon/device/block.h>
@@ -36,4 +36,4 @@ class IoBuffer : public fbl::WAVLTreeContainable<fbl::RefPtr<IoBuffer>>,
   const vmoid_t vmoid_;
 };
 
-#endif  // ZIRCON_SYSTEM_DEV_BLOCK_CORE_IOBUFFER_H_
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_CORE_IOBUFFER_H_

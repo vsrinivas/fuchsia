@@ -48,7 +48,5 @@ driver_module("ddk-test") {
 }
 
 migrated_manifest("ddk-test-manifest") {
-  deps = [
-    ":ddk-test",
-  ]
+  deps = [ ":ddk-test" ]
 }

@@ -2,12 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_OSD_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_OSD_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_OSD_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_OSD_H_
 
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/protocol/display/controller.h>
-#include <fbl/mutex.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
@@ -16,6 +13,10 @@
 #include <zircon/compiler.h>
 
 #include <optional>
+
+#include <ddk/protocol/platform/device.h>
+#include <ddktl/protocol/display/controller.h>
+#include <fbl/mutex.h>
 
 #include "common.h"
 
@@ -119,4 +120,4 @@ class Osd {
 
 }  // namespace astro_display
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_OSD_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_OSD_H_

@@ -2,13 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "controller.h"
+
 #include <inttypes.h>
+#include <lib/device-protocol/pci.h>
+#include <lib/zx/clock.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/assert.h>
+#include <zircon/listnode.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -17,16 +25,8 @@
 #include <ddk/io-buffer.h>
 #include <ddk/phys-iter.h>
 #include <ddk/protocol/pci.h>
-#include <lib/device-protocol/pci.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <lib/zx/clock.h>
-#include <zircon/assert.h>
-#include <zircon/listnode.h>
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
-
-#include "controller.h"
 
 #include "pci-bus.h"
 #include "sata.h"

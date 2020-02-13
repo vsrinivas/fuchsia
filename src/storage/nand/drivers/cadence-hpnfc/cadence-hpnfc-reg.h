@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_NAND_DRIVERS_CADENCE_HPNFC_CADENCE_HPNFC_REG_H_
+#define SRC_STORAGE_NAND_DRIVERS_CADENCE_HPNFC_CADENCE_HPNFC_REG_H_
 
 #include <hwreg/bitfields.h>
 
@@ -204,3 +205,5 @@ class RbnSettings : public hwreg::RegisterBase<RbnSettings, uint32_t> {
 };
 
 }  // namespace rawnand
+
+#endif  // SRC_STORAGE_NAND_DRIVERS_CADENCE_HPNFC_CADENCE_HPNFC_REG_H_

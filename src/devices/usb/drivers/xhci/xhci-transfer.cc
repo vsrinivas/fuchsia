@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "xhci-transfer.h"
+
+#include <stdio.h>
+#include <string.h>
+#include <threads.h>
+#include <zircon/assert.h>
+#include <zircon/hw/usb.h>
+
 #include <ddk/debug.h>
 #include <ddk/phys-iter.h>
 #include <ddk/protocol/usb/hci.h>
 #include <fbl/auto_lock.h>
-#include <zircon/assert.h>
-#include <zircon/hw/usb.h>
-#include <stdio.h>
-#include <string.h>
-#include <threads.h>
 
-#include "xhci-transfer.h"
 #include "xhci-trb.h"
 #include "xhci-util.h"
 

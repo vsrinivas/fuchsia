@@ -2,18 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_TRB_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_TRB_H_
+
+#include <zircon/listnode.h>
 
 #include <cassert>
+#include <memory>
 
 #include <bits/limits.h>
-#include "trb-sizes.h"
-#include "xhci-hw.h"
 #include <ddk/io-buffer.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
-#include <memory>
-#include <zircon/listnode.h>
+
+#include "trb-sizes.h"
+#include "xhci-hw.h"
 
 namespace usb_xhci {
 
@@ -173,3 +176,5 @@ struct xhci_t;
 zx_status_t xhci_enlarge_ring(xhci_t* xhci, xhci_transfer_ring_t* transfer);
 
 }  // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_TRB_H_

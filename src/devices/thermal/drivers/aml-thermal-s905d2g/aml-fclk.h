@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_FCLK_H_
+#define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_FCLK_H_
 
 typedef struct {
   uint32_t rate;
@@ -20,3 +21,5 @@ const aml_fclk_rate_table_t* s905d2_fclk_get_rate_table(void);
 size_t s905d2_fclk_get_rate_table_count(void);
 
 __END_CDECLS
+
+#endif  // SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_FCLK_H_

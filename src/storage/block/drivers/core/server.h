@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BLOCK_CORE_SERVER_H_
-#define ZIRCON_SYSTEM_DEV_BLOCK_CORE_SERVER_H_
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_CORE_SERVER_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_CORE_SERVER_H_
 
 #include <lib/fzl/fifo.h>
 #include <lib/sync/completion.h>
@@ -105,4 +105,4 @@ class Server {
   vmoid_t last_id_ TA_GUARDED(server_lock_);
 };
 
-#endif  // ZIRCON_SYSTEM_DEV_BLOCK_CORE_SERVER_H_
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_CORE_SERVER_H_

@@ -4,16 +4,17 @@
 
 #include "i2c_client.h"
 
+#include <lib/device-protocol/i2c-channel.h>
+#include <lib/mock-i2c/mock-i2c.h>
+#include <zircon/errors.h>
+
+#include <memory>
+
 #include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <fbl/array.h>
 #include <hwreg/bitfields.h>
-#include <lib/device-protocol/i2c-channel.h>
-#include <lib/mock-i2c/mock-i2c.h>
-#include <zircon/errors.h>
 #include <zxtest/zxtest.h>
-
-#include <memory>
 
 namespace audio::alc5663 {
 namespace {

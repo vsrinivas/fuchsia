@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <algorithm>
+#include "port.h"
+
 #include <inttypes.h>
+#include <lib/zx/clock.h>
 #include <unistd.h>
+
+#include <algorithm>
 
 #include <ddk/debug.h>
 #include <ddk/phys-iter.h>
 #include <fbl/auto_lock.h>
-#include <lib/zx/clock.h>
 
-#include "port.h"
 #include "controller.h"
 
 #define PAGE_MASK (PAGE_SIZE - 1ull)

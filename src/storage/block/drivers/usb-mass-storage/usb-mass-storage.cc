@@ -915,4 +915,4 @@ ZIRCON_DRIVER_BEGIN(usb_mass_storage, ums::usb_mass_storage_driver_ops, "zircon"
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_MSC_SCSI),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_MSC_BULK_ONLY),
 ZIRCON_DRIVER_END(usb_mass_storage)
-// clang-format on
+    // clang-format on

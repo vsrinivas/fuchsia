@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/device.h>
-#include <ddktl/device.h>
 #include <lib/device-protocol/i2c-channel.h>
-#include <lib/mmio/mmio.h>
 #include <lib/device-protocol/pdev.h>
-#include <ddktl/protocol/ethernet/board.h>
-#include <ddktl/protocol/gpio.h>
+#include <lib/mmio/mmio.h>
 #include <threads.h>
 
 #include <optional>
+
+#include <ddk/device.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/ethernet/board.h>
+#include <ddktl/protocol/gpio.h>
 
 namespace eth {
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_CLK_SYN_CLK_SYN_CLK_H_
-#define ZIRCON_SYSTEM_DEV_CLK_SYN_CLK_SYN_CLK_H_
+#ifndef SRC_DEVICES_CLOCK_DRIVERS_SYN_CLK_SYN_CLK_H_
+#define SRC_DEVICES_CLOCK_DRIVERS_SYN_CLK_SYN_CLK_H_
 
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -61,4 +61,4 @@ class SynClk : public DeviceType, public ddk::ClockImplProtocol<SynClk, ddk::bas
 
 }  // namespace clk
 
-#endif  // ZIRCON_SYSTEM_DEV_CLK_SYN_CLK_SYN_CLK_H_
+#endif  // SRC_DEVICES_CLOCK_DRIVERS_SYN_CLK_SYN_CLK_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_DWC3_DWC3_TYPES_H_
+#define SRC_DEVICES_USB_DRIVERS_DWC3_DWC3_TYPES_H_
 
 // Transfer Request Block
 typedef struct {
@@ -118,3 +119,5 @@ typedef struct {
 // for DEVT_LINK_STATE_CHANGE
 #define DEVT_LINK_STATE_CHANGE_SS (1 << 4)         // Set if link is super speed
 #define DEVT_LINK_STATE_CHANGE_STATE(s) ((s)&0xf)  // Same as DSTS state
+
+#endif  // SRC_DEVICES_USB_DRIVERS_DWC3_DWC3_TYPES_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_AUDIO_SHERLOCK_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
-#define ZIRCON_SYSTEM_DEV_AUDIO_SHERLOCK_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_SHERLOCK_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_SHERLOCK_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/pinned-vmo.h>
@@ -71,4 +71,4 @@ class SherlockAudioStreamOut : public SimpleAudioStream {
 }  // namespace sherlock
 }  // namespace audio
 
-#endif  // ZIRCON_SYSTEM_DEV_AUDIO_SHERLOCK_TDM_OUTPUT_AUDIO_STREAM_OUT_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_SHERLOCK_TDM_OUTPUT_AUDIO_STREAM_OUT_H_

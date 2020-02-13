@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_INPUT_HID_HID_INSTANCE_H_
-#define ZIRCON_SYSTEM_DEV_INPUT_HID_HID_INSTANCE_H_
+#ifndef SRC_UI_INPUT_DRIVERS_HID_HID_INSTANCE_H_
+#define SRC_UI_INPUT_DRIVERS_HID_HID_INSTANCE_H_
 
 #include <fuchsia/hardware/input/llcpp/fidl.h>
 
@@ -93,4 +93,4 @@ class HidInstance : public HidInstanceDeviceType,
 
 }  // namespace hid_driver
 
-#endif  // ZIRCON_SYSTEM_DEV_INPUT_HID_HID_INSTANCE_H_
+#endif  // SRC_UI_INPUT_DRIVERS_HID_HID_INSTANCE_H_

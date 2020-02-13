@@ -4,10 +4,11 @@
 
 #include "synaptics-bad-block.h"
 
+#include <lib/sync/completion.h>
+
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <lib/sync/completion.h>
 
 namespace {
 

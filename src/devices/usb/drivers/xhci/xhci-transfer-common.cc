@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
-#include <usb/usb-request.h>
+#include "xhci-transfer-common.h"
+
 #include <string.h>
 
-#include "xhci-transfer-common.h"
+#include <ddk/debug.h>
+#include <usb/usb-request.h>
 
 namespace usb_xhci {
 

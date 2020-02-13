@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CODECS_QEMU_QEMU_STREAM_H_
-#define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CODECS_QEMU_QEMU_STREAM_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CODECS_QEMU_QEMU_STREAM_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CODECS_QEMU_QEMU_STREAM_H_
 
 #include <fbl/ref_ptr.h>
 #include <intel-hda/codec-utils/stream-base.h>
@@ -41,4 +41,4 @@ class QemuStream : public IntelHDAStreamBase {
 }  // namespace intel_hda
 }  // namespace audio
 
-#endif  // ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CODECS_QEMU_QEMU_STREAM_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CODECS_QEMU_QEMU_STREAM_H_

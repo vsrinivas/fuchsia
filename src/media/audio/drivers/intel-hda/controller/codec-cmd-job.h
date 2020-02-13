@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_CODEC_CMD_JOB_H_
-#define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_CODEC_CMD_JOB_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_CODEC_CMD_JOB_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_CODEC_CMD_JOB_H_
 
 #include <memory>
 #include <utility>
@@ -63,4 +63,4 @@ class CodecCmdJob : public fbl::DoublyLinkedListable<std::unique_ptr<CodecCmdJob
 // instantiated in a separate translation unit.
 FWD_DECL_STATIC_SLAB_ALLOCATOR(::audio::intel_hda::CodecCmdJobAllocTraits);
 
-#endif  // ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_CODEC_CMD_JOB_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_CODEC_CMD_JOB_H_

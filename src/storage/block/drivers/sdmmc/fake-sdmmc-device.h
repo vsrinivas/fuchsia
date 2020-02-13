@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_SDMMC_FAKE_SDMMC_DEVICE_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_SDMMC_FAKE_SDMMC_DEVICE_H_
+
+#include <lib/fake_ddk/fake_ddk.h>
+#include <zircon/driver/binding.h>
 
 #include <array>
 #include <map>
@@ -11,8 +15,6 @@
 #include <ddktl/protocol/sdio.h>
 #include <ddktl/protocol/sdmmc.h>
 #include <fbl/span.h>
-#include <lib/fake_ddk/fake_ddk.h>
-#include <zircon/driver/binding.h>
 
 namespace sdmmc {
 
@@ -164,3 +166,5 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
 };
 
 }  // namespace sdmmc
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_SDMMC_FAKE_SDMMC_DEVICE_H_

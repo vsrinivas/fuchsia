@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_FAKE_FAKE_DISPLAY_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_FAKE_FAKE_DISPLAY_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_FAKE_FAKE_DISPLAY_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_FAKE_FAKE_DISPLAY_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
 #include <sys/types.h>
@@ -151,4 +151,4 @@ class FakeDisplay : public DeviceType,
 
 }  // namespace fake_display
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_FAKE_FAKE_DISPLAY_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_FAKE_FAKE_DISPLAY_H_

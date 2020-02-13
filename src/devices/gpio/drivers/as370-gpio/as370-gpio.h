@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_GPIO_AS370_GPIO_AS370_GPIO_H_
-#define ZIRCON_SYSTEM_DEV_GPIO_AS370_GPIO_AS370_GPIO_H_
+#ifndef SRC_DEVICES_GPIO_DRIVERS_AS370_GPIO_AS370_GPIO_H_
+#define SRC_DEVICES_GPIO_DRIVERS_AS370_GPIO_AS370_GPIO_H_
 
 #include <lib/mmio/mmio.h>
 #include <threads.h>
@@ -64,4 +64,4 @@ class As370Gpio : public ddk::Device<As370Gpio, ddk::UnbindableNew>,
 
 }  // namespace gpio
 
-#endif  // ZIRCON_SYSTEM_DEV_GPIO_AS370_GPIO_AS370_GPIO_H_
+#endif  // SRC_DEVICES_GPIO_DRIVERS_AS370_GPIO_AS370_GPIO_H_

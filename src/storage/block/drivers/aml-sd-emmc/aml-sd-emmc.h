@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BLOCK_AML_SD_EMMC_AML_SD_EMMC_H_
-#define ZIRCON_SYSTEM_DEV_BLOCK_AML_SD_EMMC_AML_SD_EMMC_H_
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_H_
 
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
@@ -132,4 +132,4 @@ class AmlSdEmmc : public AmlSdEmmcType, public ddk::SdmmcProtocol<AmlSdEmmc, ddk
 
 }  // namespace sdmmc
 
-#endif  // ZIRCON_SYSTEM_DEV_BLOCK_AML_SD_EMMC_AML_SD_EMMC_H_
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_AML_SD_EMMC_AML_SD_EMMC_H_

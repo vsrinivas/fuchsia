@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_EVENT_RING_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_EVENT_RING_H_
 #include <lib/dma-buffer/buffer.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
@@ -179,3 +180,5 @@ class EventRing {
   uint64_t* dcbaa_;
 };
 }  // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_EVENT_RING_H_

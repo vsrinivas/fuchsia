@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "sdmmc-device.h"
+
 #include <endian.h>
 #include <inttypes.h>
+#include <lib/zx/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,10 +15,7 @@
 #include <ddk/protocol/sdio.h>
 #include <ddk/protocol/sdmmc.h>
 #include <hw/sdio.h>
-#include <lib/zx/time.h>
 #include <pretty/hexdump.h>
-
-#include "sdmmc-device.h"
 
 namespace {
 

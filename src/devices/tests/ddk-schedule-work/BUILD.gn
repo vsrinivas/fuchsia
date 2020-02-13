@@ -71,7 +71,6 @@ executable("ddk-schedule-work-perf") {
   ]
 }
 
-
 migrated_manifest("ddk-schedule-work-test-manifest") {
   deps = [ ":ddk-schedule-work-test" ]
 }

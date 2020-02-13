@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_NAND_AML_RAWNAND_AML_RAWNAND_H_
-#define ZIRCON_SYSTEM_DEV_NAND_AML_RAWNAND_AML_RAWNAND_H_
+#ifndef SRC_STORAGE_NAND_DRIVERS_AML_RAWNAND_AML_RAWNAND_H_
+#define SRC_STORAGE_NAND_DRIVERS_AML_RAWNAND_AML_RAWNAND_H_
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
@@ -201,4 +201,4 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
 
 }  // namespace amlrawnand
 
-#endif  // ZIRCON_SYSTEM_DEV_NAND_AML_RAWNAND_AML_RAWNAND_H_
+#endif  // SRC_STORAGE_NAND_DRIVERS_AML_RAWNAND_AML_RAWNAND_H_

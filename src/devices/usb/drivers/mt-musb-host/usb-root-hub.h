@@ -2,22 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include "usb-device.h"
+#ifndef SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_ROOT_HUB_H_
+#define SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_ROOT_HUB_H_
 
 #include <endian.h>
+#include <lib/mmio/mmio.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <threads.h>
+#include <zircon/hw/usb.h>
+#include <zircon/hw/usb/hub.h>
+#include <zircon/types.h>
+
+#include <memory>
+
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
-#include <lib/mmio/mmio.h>
-#include <memory>
-#include <threads.h>
 #include <usb/request-cpp.h>
-#include <zircon/hw/usb.h>
-#include <zircon/hw/usb/hub.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/types.h>
+
+#include "usb-device.h"
 
 namespace mt_usb_hci {
 
@@ -299,3 +302,5 @@ class UsbRootHub : public UsbDevice {
 };
 
 }  // namespace mt_usb_hci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_ROOT_HUB_H_

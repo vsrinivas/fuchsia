@@ -1,7 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_REALTEK_8211F_RTL8211F_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_REALTEK_8211F_RTL8211F_H_
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet/mac.h>
@@ -27,3 +28,5 @@ class PhyDevice : public DeviceType {
 };
 
 }  // namespace phy
+
+#endif  // SRC_CONNECTIVITY_ETHERNET_DRIVERS_REALTEK_8211F_RTL8211F_H_

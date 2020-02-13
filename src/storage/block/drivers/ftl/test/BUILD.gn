@@ -13,8 +13,8 @@ source_set("shared") {
     "ndm-ram-driver.cc",
   ]
   public_deps = [
-    "//zircon/public/lib/fake_ddk",
     "//src/storage/block/drivers/ftl:common",
+    "//zircon/public/lib/fake_ddk",
   ]
 }
 

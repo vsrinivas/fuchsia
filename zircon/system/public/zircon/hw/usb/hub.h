@@ -5,6 +5,9 @@
 #ifndef SYSROOT_ZIRCON_HW_USB_HUB_H_
 #define SYSROOT_ZIRCON_HW_USB_HUB_H_
 
+#include <zircon/compiler.h>
+#include <zircon/types.h>
+
 // clang-format off
 
 __BEGIN_CDECLS

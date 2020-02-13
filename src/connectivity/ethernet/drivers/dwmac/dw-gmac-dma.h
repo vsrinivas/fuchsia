@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_DWMAC_DW_GMAC_DMA_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_DWMAC_DW_GMAC_DMA_H_
 
 // clang-format off
 
@@ -246,3 +247,5 @@ enum inter_frame_gap {
 #define BMSR_100FULL        0x4000  /* Can do 100mbps, full-duplex */
 #define BMSR_100BASE4       0x8000  /* Can do 100mbps, 4k packets  */
 
+
+#endif  // SRC_CONNECTIVITY_ETHERNET_DRIVERS_DWMAC_DW_GMAC_DMA_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_NAND_AML_RAWNAND_ONFI_H_
-#define ZIRCON_SYSTEM_DEV_NAND_AML_RAWNAND_ONFI_H_
+#ifndef SRC_STORAGE_NAND_DRIVERS_AML_RAWNAND_ONFI_H_
+#define SRC_STORAGE_NAND_DRIVERS_AML_RAWNAND_ONFI_H_
 
 #include <lib/zx/time.h>
 #include <zircon/types.h>
@@ -105,4 +105,4 @@ class Onfi {
   fbl::Function<uint8_t()> read_byte_;
 };
 
-#endif  // ZIRCON_SYSTEM_DEV_NAND_AML_RAWNAND_ONFI_H_
+#endif  // SRC_STORAGE_NAND_DRIVERS_AML_RAWNAND_ONFI_H_

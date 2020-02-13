@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_FTL_OOB_DOUBLER_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_FTL_OOB_DOUBLER_H_
 
 #include <ddk/driver.h>
 #include <ddk/protocol/nand.h>
@@ -27,3 +28,5 @@ class OobDoubler {
 };
 
 }  // namespace ftl.
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_FTL_OOB_DOUBLER_H_

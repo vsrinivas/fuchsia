@@ -3,18 +3,17 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <ddk/debug.h>
-#include <zircon/assert.h>
-
-#include <usb/usb-request.h>
-#include <fbl/auto_lock.h>
-
-#include "dwc3.h"
-#include "dwc3-regs.h"
-#include "dwc3-types.h"
-
 #include <stdio.h>
 #include <string.h>
+#include <zircon/assert.h>
+
+#include <ddk/debug.h>
+#include <fbl/auto_lock.h>
+#include <usb/usb-request.h>
+
+#include "dwc3-regs.h"
+#include "dwc3-types.h"
+#include "dwc3.h"
 
 #define EP_FIFO_SIZE PAGE_SIZE
 

@@ -2,15 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hw/reg.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <threads.h>
-
 #include <zircon/assert.h>
 #include <zircon/threads.h>
-
-#include <fbl/array.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -19,9 +15,10 @@
 #include <ddk/protocol/clockimpl.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
-
 #include <dev/clk/hisi-lib/hisi-clk.h>
 #include <dev/clk/hisi-lib/hisi-gate.h>
+#include <fbl/array.h>
+#include <hw/reg.h>
 #include <soc/hi3660/hi3660-hw.h>
 
 namespace hisi_clock {

@@ -13,11 +13,11 @@ driver_module("bt-transport-usb") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "bt-transport-usb.c" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.bt.hci",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/usb",
-    "//sdk/banjo/ddk.protocol.bt.hci",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/banjo/ddk.protocol.usb.request",

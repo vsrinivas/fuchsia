@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_FTL_NAND_OPERATION_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_FTL_NAND_OPERATION_H_
+
+#include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/sync/completion.h>
 
 #include <memory>
 
 #include <ddk/protocol/nand.h>
 #include <fbl/macros.h>
-#include <lib/sync/completion.h>
-#include <lib/fzl/owned-vmo-mapper.h>
 
 #include "oob_doubler.h"
 
@@ -49,3 +51,5 @@ class NandOperation {
 };
 
 }  // namespace ftl.
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_FTL_NAND_OPERATION_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_VIM_DISPLAY_VIM_SPDIF_AUDIO_STREAM_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_VIM_DISPLAY_VIM_SPDIF_AUDIO_STREAM_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_VIM_SPDIF_AUDIO_STREAM_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_VIM_SPDIF_AUDIO_STREAM_H_
 
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
@@ -90,4 +90,4 @@ class Vim2SpdifAudioStream : public SimpleAudioStream {
 }  // namespace vim2
 }  // namespace audio
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_VIM_DISPLAY_VIM_SPDIF_AUDIO_STREAM_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_VIM_SPDIF_AUDIO_STREAM_H_

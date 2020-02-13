@@ -153,8 +153,8 @@ TEST_F(IntegrationTest, SendVsyncsAfterEmptyConfig) {
       zx::sec(1)));
 
   // Empty vsync for last client. Nothing should be sent to the new client.
-  controller()->DisplayControllerInterfaceOnDisplayVsync(
-      primary_client->display_id(), 0u, nullptr, 0);
+  controller()->DisplayControllerInterfaceOnDisplayVsync(primary_client->display_id(), 0u, nullptr,
+                                                         0);
 
   // Send a second vsync, using the config the client applied.
   count = primary_client->vsync_count();

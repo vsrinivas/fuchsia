@@ -4,8 +4,9 @@
 
 #include "hdmi-display.h"
 
-#include <ddk/driver.h>
 #include <lib/edid/edid.h>
+
+#include <ddk/driver.h>
 
 #include "intel-i915.h"
 #include "macros.h"

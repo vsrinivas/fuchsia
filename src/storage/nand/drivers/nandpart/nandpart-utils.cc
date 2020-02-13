@@ -6,10 +6,10 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/assert.h>
 
 #include <ddk/debug.h>
 #include <fbl/algorithm.h>
-#include <zircon/assert.h>
 
 // Checks that the partition map is valid, sorts it in partition order, and
 // ensures blocks are on erase block boundaries.

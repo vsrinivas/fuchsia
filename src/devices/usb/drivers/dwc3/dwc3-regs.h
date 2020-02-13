@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_DWC3_DWC3_REGS_H_
+#define SRC_DEVICES_USB_DRIVERS_DWC3_DWC3_REGS_H_
+
+#include <zircon/types.h>
 
 #include <hwreg/bitfields.h>
-#include <zircon/types.h>
 
 // Global Core Control Register
 class GCTL : public hwreg::RegisterBase<GCTL, uint32_t> {
@@ -329,3 +331,5 @@ class DEPCMD : public hwreg::RegisterBase<DEPCMD, uint32_t> {
   static constexpr uint32_t DEPENDXFER = 8;   // End Transfer
   static constexpr uint32_t DEPSTARTCFG = 9;  // Start New Configuration
 };
+
+#endif  // SRC_DEVICES_USB_DRIVERS_DWC3_DWC3_REGS_H_

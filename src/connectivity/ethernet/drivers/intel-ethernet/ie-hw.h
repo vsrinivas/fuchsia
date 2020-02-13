@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_INTEL_ETHERNET_IE_HW_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_INTEL_ETHERNET_IE_HW_H_
 
 // See: PCI/PCI-X Family of Gigabit Ethernet Controllers
 //      Software Developer's Manual
@@ -228,3 +229,5 @@ typedef struct ie_txd {
              // the I211 writes back an Rx descriptor to
              // memory.
 #define IE_EEC_AUTO_RD (1u << 9)
+
+#endif  // SRC_CONNECTIVITY_ETHERNET_DRIVERS_INTEL_ETHERNET_IE_HW_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_TRANSFER_COMMON_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_TRANSFER_COMMON_H_
 
 #include <ddk/phys-iter.h>
 #include <ddk/protocol/usb/request.h>
@@ -39,3 +40,5 @@ zx_status_t xhci_queue_data_trbs(xhci_transfer_ring_t* ring, xhci_transfer_state
                                  usb_request_t* req, int interrupter_target, bool isochronous);
 
 }  // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_TRANSFER_COMMON_H_

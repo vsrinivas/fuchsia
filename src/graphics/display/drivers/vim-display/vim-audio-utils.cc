@@ -4,9 +4,9 @@
 
 #include "vim-audio-utils.h"
 
-#include <fbl/alloc_checker.h>
-
 #include <utility>
+
+#include <fbl/alloc_checker.h>
 
 namespace audio {
 namespace vim2 {

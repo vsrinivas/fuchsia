@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_MIDI_SOURCE_H_
-#define ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_MIDI_SOURCE_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_MIDI_SOURCE_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_MIDI_SOURCE_H_
 
 #include <fuchsia/hardware/midi/llcpp/fidl.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <usb/request-cpp.h>
 #include <usb/usb.h>
 
@@ -73,4 +73,4 @@ class UsbMidiSource : public UsbMidiSourceBase,
 }  // namespace usb
 }  // namespace audio
 
-#endif  // ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_MIDI_SOURCE_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_MIDI_SOURCE_H_

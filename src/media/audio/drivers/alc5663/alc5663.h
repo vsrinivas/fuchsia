@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_CODEC_ALC5663_ALC5663_H_
-#define ZIRCON_SYSTEM_DEV_CODEC_ALC5663_ALC5663_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_ALC5663_ALC5663_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_ALC5663_ALC5663_H_
 
 #include <lib/device-protocol/i2c-channel.h>
 #include <zircon/types.h>
@@ -109,4 +109,4 @@ zx_status_t CalculatePllParams(uint32_t input_freq, uint32_t desired_freq, PllPa
 
 }  // namespace audio::alc5663
 
-#endif  // ZIRCON_SYSTEM_DEV_CODEC_ALC5663_ALC5663_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_ALC5663_ALC5663_H_

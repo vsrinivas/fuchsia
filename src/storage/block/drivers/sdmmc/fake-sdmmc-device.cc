@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hw/sdmmc.h>
-#include <hw/sdio.h>
-#include <zxtest/zxtest.h>
-
 #include "fake-sdmmc-device.h"
+
+#include <hw/sdio.h>
+#include <hw/sdmmc.h>
+#include <zxtest/zxtest.h>
 
 namespace sdmmc {
 

@@ -6,13 +6,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/device/usb-peripheral-test.h>
+#include <zircon/device/usb-peripheral.h>
+
 #include <thread>
 
 #include <fbl/auto_call.h>
 #include <usbhost/usbhost.h>
 #include <zxtest/zxtest.h>
-#include <zircon/device/usb-peripheral-test.h>
-#include <zircon/device/usb-peripheral.h>
 
 namespace {
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_MACROS_H_
-#define ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_MACROS_H_
+#ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_MACROS_H_
+#define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_MACROS_H_
 
 #include <ddk/debug.h>
 
@@ -20,4 +20,4 @@
 
 #define DRIVER_TRACE(fmt, ...) LOG(TRACE, fmt, ##__VA_ARGS__)
 
-#endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_MACROS_H_
+#endif  // SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_MACROS_H_

@@ -2,9 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_CLK_H_
+#define SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_CLK_H_
 
-#include "aml-clk-blocks.h"
+#include <fuchsia/hardware/clock/c/fidl.h>
+#include <lib/device-protocol/platform-device.h>
+#include <lib/mmio/mmio.h>
+#include <lib/zircon-internal/thread_annotations.h>
+
+#include <optional>
+
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/platform/device.h>
@@ -12,17 +19,14 @@
 #include <ddktl/protocol/clockimpl.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
-#include <fuchsia/hardware/clock/c/fidl.h>
 #include <hwreg/mmio.h>
-#include <lib/device-protocol/platform-device.h>
-#include <lib/mmio/mmio.h>
-#include <lib/zircon-internal/thread_annotations.h>
-
 #include <soc/aml-s905d2/s905d2-hiu.h>
 
-#include <optional>
+#include "aml-clk-blocks.h"
 
-namespace ddk { class PBusProtocolClient; }
+namespace ddk {
+class PBusProtocolClient;
+}
 
 namespace amlogic_clock {
 
@@ -89,7 +93,7 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
   size_t gate_count_ = 0;
 
   // Clock muxes.
-  const meson_clk_mux_t * muxes_ = nullptr;
+  const meson_clk_mux_t* muxes_ = nullptr;
   size_t mux_count_ = 0;
 
   aml_hiu_dev_t hiudev_;
@@ -103,3 +107,5 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
 };
 
 }  // namespace amlogic_clock
+
+#endif  // SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_CLK_H_

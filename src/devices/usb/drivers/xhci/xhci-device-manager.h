@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_DEVICE_MANAGER_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_DEVICE_MANAGER_H_
 
+#include <stdbool.h>
+#include <zircon/hw/usb.h>
 #include <zircon/hw/usb/hub.h>
 #include <zircon/types.h>
-#include <stdbool.h>
 
 namespace usb_xhci {
 
@@ -28,3 +30,5 @@ zx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed
                                const usb_hub_descriptor_t* descriptor);
 
 }  // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_DEVICE_MANAGER_H_

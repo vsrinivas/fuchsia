@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_DISP_RDMA_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_DISP_RDMA_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_DISP_RDMA_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_DISP_RDMA_H_
 
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
@@ -80,4 +80,4 @@ class DispRdma {
 
 }  // namespace mt8167s_display
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_DISP_RDMA_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_DISP_RDMA_H_

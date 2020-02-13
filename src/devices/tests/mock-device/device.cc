@@ -205,17 +205,18 @@ void MockDevice::DdkRelease() {
   // Launch a thread to do the actual joining and delete, since this could get
   // called from a thread.
   thrd_t thrd;
-  int ret = thrd_create(&thrd,
-                        [](void* arg) {
-                          auto me = static_cast<MockDevice*>(arg);
-                          fbl::AutoLock guard(&me->lock_);
-                          for (auto& t : me->threads_) {
-                            thrd_join(t, nullptr);
-                          }
-                          delete me;
-                          return 0;
-                        },
-                        this);
+  int ret = thrd_create(
+      &thrd,
+      [](void* arg) {
+        auto me = static_cast<MockDevice*>(arg);
+        fbl::AutoLock guard(&me->lock_);
+        for (auto& t : me->threads_) {
+          thrd_join(t, nullptr);
+        }
+        delete me;
+        return 0;
+      },
+      this);
   ZX_ASSERT(ret == thrd_success);
   thrd_detach(thrd);
 }

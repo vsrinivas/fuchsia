@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_NAND_DRIVERS_NANDPART_SYNAPTICS_BAD_BLOCK_H_
+#define SRC_STORAGE_NAND_DRIVERS_NANDPART_SYNAPTICS_BAD_BLOCK_H_
 
 #include "bad-block.h"
 
@@ -82,3 +83,5 @@ class SynapticsBadBlock : public BadBlock {
 };
 
 }  // namespace nand
+
+#endif  // SRC_STORAGE_NAND_DRIVERS_NANDPART_SYNAPTICS_BAD_BLOCK_H_

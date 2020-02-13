@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_HW_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_HW_H_
 
 // clang-format off
 
@@ -567,3 +568,5 @@ static inline void trb_set_control(xhci_trb_t* trb, uint32_t type, uint32_t flag
 }
 
 } // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_HW_H_

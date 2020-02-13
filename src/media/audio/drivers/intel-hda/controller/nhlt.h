@@ -6,8 +6,8 @@
 // Table (NHLT), which in turn provides details about the system's audio
 // capabilities.
 
-#ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_NHLT_H_
-#define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_NHLT_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_NHLT_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_NHLT_H_
 
 #include <zircon/compiler.h>
 
@@ -58,4 +58,4 @@ class Nhlt {
 
 }  // namespace audio::intel_hda
 
-#endif  // ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_NHLT_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_NHLT_H_

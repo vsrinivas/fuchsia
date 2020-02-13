@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_TEST_BASE_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_TEST_BASE_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_TEST_BASE_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_TEST_BASE_H_
 
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <lib/async-loop/default.h>
@@ -283,4 +283,4 @@ class TestBase : public zxtest::Test {
 
 }  // namespace display
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_TEST_BASE_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_TEST_BASE_H_

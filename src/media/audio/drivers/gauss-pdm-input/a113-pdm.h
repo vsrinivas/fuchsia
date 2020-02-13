@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_A113_PDM_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_A113_PDM_H_
 
 #include <zircon/types.h>
 
@@ -20,3 +21,5 @@ void a113_pdm_filter_ctrl(a113_audio_device_t* audio_device);
 void a113_pdm_fifo_reset(a113_audio_device_t* audio_device);
 void a113_pdm_enable(a113_audio_device_t* audio_device, int is_enable);
 __END_CDECLS
+
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_A113_PDM_H_

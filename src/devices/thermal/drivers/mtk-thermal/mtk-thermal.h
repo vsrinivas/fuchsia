@@ -2,21 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_THERMAL_DRIVERS_MTK_THERMAL_MTK_THERMAL_H_
+#define SRC_DEVICES_THERMAL_DRIVERS_MTK_THERMAL_MTK_THERMAL_H_
 
-#include <threads.h>
-
-#include <ddktl/protocol/composite.h>
-#include <lib/device-protocol/platform-device.h>
-#include <ddktl/device.h>
-#include <ddktl/protocol/empty-protocol.h>
-#include <ddktl/protocol/platform/device.h>
-#include <fbl/mutex.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
+#include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
+#include <threads.h>
+
+#include <ddktl/device.h>
+#include <ddktl/protocol/composite.h>
+#include <ddktl/protocol/empty-protocol.h>
+#include <ddktl/protocol/platform/device.h>
+#include <fbl/mutex.h>
 
 #include "mtk-thermal-reg.h"
 
@@ -137,3 +138,5 @@ class MtkThermal : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_THER
 };
 
 }  // namespace thermal
+
+#endif  // SRC_DEVICES_THERMAL_DRIVERS_MTK_THERMAL_MTK_THERMAL_H_

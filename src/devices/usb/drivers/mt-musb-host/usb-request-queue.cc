@@ -3,14 +3,16 @@
 // found in the LICENSE file.
 
 #include "usb-request-queue.h"
-#include "trace.h"
-#include "usb-spew.h"
 
-#include <ddk/debug.h>
-#include <fbl/auto_lock.h>
 #include <lib/zx/time.h>
 #include <zircon/hw/usb.h>
 #include <zircon/status.h>
+
+#include <ddk/debug.h>
+#include <fbl/auto_lock.h>
+
+#include "trace.h"
+#include "usb-spew.h"
 
 namespace mt_usb_hci {
 

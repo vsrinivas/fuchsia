@@ -4,8 +4,9 @@
 
 #include "hi3660-dsi.h"
 
-#include <hw/reg.h>
 #include <unistd.h>
+
+#include <hw/reg.h>
 
 #include "hidisplay-regs.h"
 

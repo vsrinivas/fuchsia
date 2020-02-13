@@ -4,6 +4,8 @@
 
 #include "tas5805.h"
 
+#include <lib/device-protocol/i2c.h>
+
 #include <algorithm>
 #include <memory>
 
@@ -13,7 +15,6 @@
 #include <ddk/protocol/i2c.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <lib/device-protocol/i2c.h>
 
 namespace {
 // clang-format off

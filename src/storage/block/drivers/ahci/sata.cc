@@ -2,27 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/binding.h>
+#include "sata.h"
 
 #include <byteswap.h>
 #include <fcntl.h>
 #include <inttypes.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/param.h>
-
-#include <fbl/alloc_checker.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/param.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
-#include "sata.h"
+#include <ddk/binding.h>
+#include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <fbl/alloc_checker.h>
+
 #include "controller.h"
 
 #define SATA_FLAG_DMA (1 << 0)

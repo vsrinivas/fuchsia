@@ -39,7 +39,5 @@ fidl("fuchsia.device.mock") {
 }
 
 migrated_manifest("mock-device-manifest") {
-  deps = [
-    ":mock-device",
-  ]
+  deps = [ ":mock-device" ]
 }

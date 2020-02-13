@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_ROOT_HUB_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_ROOT_HUB_H_
+
+#include <zircon/hw/usb/hub.h>
+#include <zircon/listnode.h>
 
 #include <ddk/protocol/usb/request.h>
 #include <fbl/array.h>
-#include <zircon/hw/usb/hub.h>
-#include <zircon/listnode.h>
 
 #include "xhci-trb.h"
 
@@ -41,3 +43,5 @@ zx_status_t xhci_rh_usb_request_queue(xhci_t* xhci, usb_request_t* req, int rh_i
 void xhci_handle_root_hub_change(xhci_t* xhci);
 
 }  // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_ROOT_HUB_H_

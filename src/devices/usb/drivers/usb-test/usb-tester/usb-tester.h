@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_USB_TEST_USB_TESTER_USB_TESTER_H_
+#define SRC_DEVICES_USB_DRIVERS_USB_TEST_USB_TESTER_USB_TESTER_H_
+
+#include <fuchsia/hardware/usb/tester/c/fidl.h>
+#include <lib/sync/completion.h>
+
+#include <optional>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/array.h>
 #include <fbl/vector.h>
-#include <fuchsia/hardware/usb/tester/c/fidl.h>
-#include <lib/sync/completion.h>
-#include <optional>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
 
@@ -164,3 +167,5 @@ class UsbTester : public UsbTesterBase, public ddk::EmptyProtocol<ZX_PROTOCOL_US
 };
 
 }  // namespace usb
+
+#endif  // SRC_DEVICES_USB_DRIVERS_USB_TEST_USB_TESTER_USB_TESTER_H_

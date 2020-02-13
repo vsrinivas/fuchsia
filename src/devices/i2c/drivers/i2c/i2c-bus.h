@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_I2C_I2C_I2C_BUS_H_
-#define ZIRCON_SYSTEM_DEV_I2C_I2C_I2C_BUS_H_
+#ifndef SRC_DEVICES_I2C_DRIVERS_I2C_I2C_BUS_H_
+#define SRC_DEVICES_I2C_DRIVERS_I2C_I2C_BUS_H_
 
 #include <lib/sync/completion.h>
 #include <threads.h>
@@ -53,4 +53,4 @@ class I2cBus : public fbl::RefCounted<I2cBus> {
 
 }  // namespace i2c
 
-#endif  // ZIRCON_SYSTEM_DEV_I2C_I2C_I2C_BUS_H_
+#endif  // SRC_DEVICES_I2C_DRIVERS_I2C_I2C_BUS_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_AML_CANVAS_DMC_REGS_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_AML_CANVAS_DMC_REGS_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AML_CANVAS_DMC_REGS_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_AML_CANVAS_DMC_REGS_H_
 
 #include <hw/reg.h>
 #include <hwreg/bitfields.h>
@@ -65,4 +65,4 @@ class CanvasLutAddr : public hwreg::RegisterBase<CanvasLutAddr, uint32_t> {
 
 }  // namespace aml_canvas
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_AML_CANVAS_DMC_REGS_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AML_CANVAS_DMC_REGS_H_

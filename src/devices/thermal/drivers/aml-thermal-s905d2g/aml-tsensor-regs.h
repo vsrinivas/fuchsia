@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hwreg/bitfields.h>
 #include <zircon/types.h>
 
-#pragma once
+#include <hwreg/bitfields.h>
+
+#ifndef SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_TSENSOR_REGS_H_
+#define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_TSENSOR_REGS_H_
 
 // clang-format off
 
@@ -140,3 +142,5 @@ public:
 
 
 } // namespace thermal
+
+#endif  // SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_TSENSOR_REGS_H_

@@ -4,17 +4,17 @@
 
 #include "xhci-root-hub.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <usb/usb-request.h>
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-
-#include "xhci.h"
 #include "xhci-device-manager.h"
+#include "xhci.h"
 
 namespace usb_xhci {
 

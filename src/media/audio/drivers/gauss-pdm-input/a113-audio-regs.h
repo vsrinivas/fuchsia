@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_A113_AUDIO_REGS_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_A113_AUDIO_REGS_H_
 
 // Register offsets for the A113G chip. Taken from the A113G datasheet.
 
@@ -255,3 +256,5 @@
 #define EE_AUDIO_POW_DET_TH_LO 0x182
 #define EE_AUDIO_POW_DET_VALUE 0x183
 #define EE_AUDIO_SECURITY_CTRL 0x193
+
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_A113_AUDIO_REGS_H_

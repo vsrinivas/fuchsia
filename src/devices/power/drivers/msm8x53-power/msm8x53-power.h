@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_POWER_DRIVERS_MSM8X53_POWER_MSM8X53_POWER_H_
+#define SRC_DEVICES_POWER_DRIVERS_MSM8X53_POWER_MSM8X53_POWER_H_
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
@@ -80,3 +81,5 @@ class Msm8x53Power : public Msm8x53PowerType,
 };
 
 }  // namespace power
+
+#endif  // SRC_DEVICES_POWER_DRIVERS_MSM8X53_POWER_MSM8X53_POWER_H_

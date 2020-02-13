@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_REGISTERS_PIPE_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_REGISTERS_PIPE_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_REGISTERS_PIPE_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_REGISTERS_PIPE_H_
 
 #include <assert.h>
 #include <zircon/pixelformat.h>
@@ -470,4 +470,4 @@ typedef struct pipe_arming_regs {
 
 }  // namespace registers
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_REGISTERS_PIPE_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_REGISTERS_PIPE_H_

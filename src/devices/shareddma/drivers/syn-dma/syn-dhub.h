@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_SHAREDDMA_SYN_DMA_SYN_DHUB_H_
-#define ZIRCON_SYSTEM_DEV_SHAREDDMA_SYN_DMA_SYN_DHUB_H_
+#ifndef SRC_DEVICES_SHAREDDMA_DRIVERS_SYN_DMA_SYN_DHUB_H_
+#define SRC_DEVICES_SHAREDDMA_DRIVERS_SYN_DMA_SYN_DHUB_H_
 #include <assert.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/mmio/mmio.h>
@@ -112,4 +112,4 @@ class SynDhub : public DeviceType, public ddk::SharedDmaProtocol<SynDhub, ddk::b
 
 }  // namespace as370
 
-#endif  // ZIRCON_SYSTEM_DEV_SHAREDDMA_SYN_DMA_SYN_DHUB_H_
+#endif  // SRC_DEVICES_SHAREDDMA_DRIVERS_SYN_DMA_SYN_DHUB_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_SERIAL_USB_CDC_ACM_USB_CDC_ACM_H_
-#define ZIRCON_SYSTEM_DEV_SERIAL_USB_CDC_ACM_USB_CDC_ACM_H_
+#ifndef SRC_DEVICES_SERIAL_DRIVERS_USB_CDC_ACM_USB_CDC_ACM_H_
+#define SRC_DEVICES_SERIAL_DRIVERS_USB_CDC_ACM_USB_CDC_ACM_H_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,8 +22,7 @@
 namespace usb_cdc_acm_serial {
 
 class UsbCdcAcmDevice;
-using DeviceType = ddk::Device<UsbCdcAcmDevice, ddk::UnbindableNew, ddk::Readable,
-                               ddk::Writable>;
+using DeviceType = ddk::Device<UsbCdcAcmDevice, ddk::UnbindableNew, ddk::Readable, ddk::Writable>;
 class UsbCdcAcmDevice : public DeviceType,
                         public ddk::SerialImplProtocol<UsbCdcAcmDevice, ddk::base_protocol> {
  public:
@@ -108,4 +107,4 @@ class UsbCdcAcmDevice : public DeviceType,
 
 }  // namespace usb_cdc_acm_serial
 
-#endif  // ZIRCON_SYSTEM_DEV_SERIAL_USB_CDC_ACM_USB_CDC_ACM_H_
+#endif  // SRC_DEVICES_SERIAL_DRIVERS_USB_CDC_ACM_USB_CDC_ACM_H_

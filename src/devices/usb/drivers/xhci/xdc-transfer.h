@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XDC_TRANSFER_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_XDC_TRANSFER_H_
 
 #include "xdc.h"
 
@@ -24,3 +25,5 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, 
     __TA_REQUIRES(xdc->lock);
 
 }  // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_XDC_TRANSFER_H_

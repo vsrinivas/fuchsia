@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_SPI_DRIVERS_SPI_SPI_H_
+#define SRC_DEVICES_SPI_DRIVERS_SPI_SPI_H_
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/spiimpl.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
+
 #include "spi-child.h"
 
 namespace spi {
@@ -34,3 +36,5 @@ class SpiDevice : public SpiDeviceType {
 };
 
 }  // namespace spi
+
+#endif  // SRC_DEVICES_SPI_DRIVERS_SPI_SPI_H_

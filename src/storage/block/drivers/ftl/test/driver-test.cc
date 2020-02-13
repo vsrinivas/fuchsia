@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "ndm-ram-driver.h"
-
 #include <zxtest/zxtest.h>
+
+#include "ndm-ram-driver.h"
 
 namespace {
 

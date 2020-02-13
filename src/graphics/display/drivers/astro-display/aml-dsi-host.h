@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_AML_DSI_HOST_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_AML_DSI_HOST_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_AML_DSI_HOST_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_AML_DSI_HOST_H_
 
 #include <unistd.h>
 #include <zircon/compiler.h>
@@ -75,4 +75,4 @@ class AmlDsiHost {
 
 }  // namespace astro_display
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_AML_DSI_HOST_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_AML_DSI_HOST_H_

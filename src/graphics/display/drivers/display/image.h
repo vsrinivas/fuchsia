@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_IMAGE_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_IMAGE_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_IMAGE_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_IMAGE_H_
 
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <lib/zx/vmo.h>
@@ -119,4 +119,4 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
 
 }  // namespace display
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_IMAGE_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_IMAGE_H_

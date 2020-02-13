@@ -4,10 +4,10 @@
 
 #include "cadence-hpnfc.h"
 
+#include <lib/fake_ddk/fake_ddk.h>
 #include <limits.h>
 
 #include <fbl/algorithm.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <soc/as370/as370-nand.h>
 #include <zxtest/zxtest.h>

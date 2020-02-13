@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_LIGHT_SENSOR_AMS_LIGHT_TCS3400_H_
-#define ZIRCON_SYSTEM_DEV_LIGHT_SENSOR_AMS_LIGHT_TCS3400_H_
+#ifndef SRC_DEVICES_LIGHT_SENSOR_DRIVERS_AMS_LIGHT_TCS3400_H_
+#define SRC_DEVICES_LIGHT_SENSOR_DRIVERS_AMS_LIGHT_TCS3400_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
@@ -71,4 +71,4 @@ class Tcs3400Device : public DeviceType,
 };
 }  // namespace tcs
 
-#endif  // ZIRCON_SYSTEM_DEV_LIGHT_SENSOR_AMS_LIGHT_TCS3400_H_
+#endif  // SRC_DEVICES_LIGHT_SENSOR_DRIVERS_AMS_LIGHT_TCS3400_H_

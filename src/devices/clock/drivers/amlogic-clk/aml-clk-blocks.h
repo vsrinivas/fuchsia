@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_CLK_BLOCKS_H_
+#define SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_CLK_BLOCKS_H_
 
 #include <zircon/types.h>
 
@@ -17,10 +18,12 @@ typedef struct meson_clk_msr {
 } meson_clk_msr_t;
 
 typedef struct meson_clk_mux {
-  uint32_t reg;        // Offset from Clock Base in bytes.
-  uint32_t mask;       // Right Justified Mask of the mux selection bits.
-  uint32_t shift;      // Offset of the Mux input index in the register in bits.
-  uint32_t n_inputs;   // Number of possible inputs to select from.
-  const uint32_t *inputs;   // If set, this field maps indicies to mux selection values
-                            // since indices must always be in the range [0, n_inputs).
+  uint32_t reg;            // Offset from Clock Base in bytes.
+  uint32_t mask;           // Right Justified Mask of the mux selection bits.
+  uint32_t shift;          // Offset of the Mux input index in the register in bits.
+  uint32_t n_inputs;       // Number of possible inputs to select from.
+  const uint32_t *inputs;  // If set, this field maps indicies to mux selection values
+                           // since indices must always be in the range [0, n_inputs).
 } meson_clk_mux_t;
+
+#endif  // SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_CLK_BLOCKS_H_

@@ -2,24 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <memory>
-
-#include <threads.h>
-
-#include <ddktl/device.h>
-#include <ddktl/protocol/block.h>
-#include <ddktl/protocol/block/partition.h>
-#include <fbl/mutex.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/operation/block.h>
 #include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/vmo.h>
+#include <threads.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
+
+#include <memory>
+
+#include <ddktl/device.h>
+#include <ddktl/protocol/block.h>
+#include <ddktl/protocol/block/partition.h>
+#include <fbl/mutex.h>
 
 namespace ramdisk {
 

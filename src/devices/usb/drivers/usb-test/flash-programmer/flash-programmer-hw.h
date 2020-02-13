@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_USB_TEST_FLASH_PROGRAMMER_FLASH_PROGRAMMER_HW_H_
+#define SRC_DEVICES_USB_DRIVERS_USB_TEST_FLASH_PROGRAMMER_FLASH_PROGRAMMER_HW_H_
 
 // clang-format off
 
@@ -11,3 +12,5 @@
 
 // Vendor commands
 #define FLASH_PROGRAMMER_WRITE 0xBA
+
+#endif  // SRC_DEVICES_USB_DRIVERS_USB_TEST_FLASH_PROGRAMMER_FLASH_PROGRAMMER_HW_H_

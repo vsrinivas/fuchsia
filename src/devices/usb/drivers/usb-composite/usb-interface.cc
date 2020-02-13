@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "usb-interface.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb/composite.h>
 #include <usb/usb-request.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 
 #include "usb-composite.h"
-#include "usb-interface.h"
 
 namespace usb_composite {
 

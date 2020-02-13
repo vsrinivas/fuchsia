@@ -2,9 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_USB_MASS_STORAGE_USB_MASS_STORAGE_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_USB_MASS_STORAGE_USB_MASS_STORAGE_H_
+
+#include <inttypes.h>
+#include <lib/async-loop/default.h>
+#include <lib/async-loop/loop.h>
+#include <lib/fidl-async/bind.h>
+#include <lib/sync/completion.h>
+#include <threads.h>
+#include <zircon/assert.h>
+#include <zircon/device/block.h>
+#include <zircon/hw/usb.h>
+#include <zircon/hw/usb/ums.h>
+#include <zircon/listnode.h>
 
 #include <atomic>
+#include <memory>
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/protocol/block.h>
@@ -16,20 +31,8 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <inttypes.h>
-#include <lib/async-loop/default.h>
-#include <lib/async-loop/loop.h>
-#include <lib/fidl-async/bind.h>
-#include <lib/sync/completion.h>
-#include <memory>
-#include <threads.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
-#include <zircon/assert.h>
-#include <zircon/device/block.h>
-#include <zircon/hw/usb.h>
-#include <zircon/hw/usb/ums.h>
-#include <zircon/listnode.h>
 
 namespace ums {
 
@@ -162,3 +165,5 @@ class UsbMassStorageDevice : public MassStorageDeviceType {
   fbl::Array<fbl::RefPtr<ums::UmsBlockDevice>> block_devs_;
 };
 }  // namespace ums
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_USB_MASS_STORAGE_USB_MASS_STORAGE_H_

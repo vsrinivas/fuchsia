@@ -49,4 +49,3 @@ protocol OwnedChannelDevice {
     ScheduleWork(uint32 batch_size, uint32 num_work_items)
         -> (LatencyHistogram histogram) error zx.status;
 };
-

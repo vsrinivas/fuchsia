@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_COMMON_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_COMMON_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_COMMON_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_COMMON_H_
 #include <hwreg/mmio.h>
 
 #define DISPLAY_MASK(start, count) (((1 << (count)) - 1) << (start))
@@ -92,4 +92,4 @@ constexpr uint8_t BOARD_REV_EVT_1 = 2;
 constexpr uint8_t BOARD_REV_EVT_2 = 3;
 constexpr uint8_t BOARD_REV_UNKNOWN = 0xff;
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_COMMON_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_COMMON_H_

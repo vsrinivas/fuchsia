@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_REGISTERS_DPLL_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_REGISTERS_DPLL_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_REGISTERS_DPLL_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_REGISTERS_DPLL_H_
 
 #include <assert.h>
+
 #include <hwreg/bitfields.h>
 
 #include "registers-ddi.h"
@@ -164,4 +165,4 @@ class Lcpll1Control : public hwreg::RegisterBase<Lcpll1Control, uint32_t> {
 
 }  // namespace registers
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_REGISTERS_DPLL_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_REGISTERS_DPLL_H_

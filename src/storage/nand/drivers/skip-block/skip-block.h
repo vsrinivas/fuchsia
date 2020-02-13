@@ -2,23 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_NAND_DRIVERS_SKIP_BLOCK_SKIP_BLOCK_H_
+#define SRC_STORAGE_NAND_DRIVERS_SKIP_BLOCK_SKIP_BLOCK_H_
 
+#include <fuchsia/hardware/skipblock/llcpp/fidl.h>
 #include <inttypes.h>
+#include <lib/operation/nand.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <zircon/types.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/badblock.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/nand.h>
-
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
-#include <fuchsia/hardware/skipblock/llcpp/fidl.h>
-#include <lib/operation/nand.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/types.h>
 
 #include "logical-to-physical-map.h"
 
@@ -31,8 +31,8 @@ using ::llcpp::fuchsia::hardware::skipblock::ReadWriteOperation;
 using ::llcpp::fuchsia::hardware::skipblock::WriteBytesOperation;
 
 class SkipBlockDevice;
-using DeviceType = ddk::Device<SkipBlockDevice, ddk::GetSizable, ddk::UnbindableNew,
-                               ddk::Messageable>;
+using DeviceType =
+    ddk::Device<SkipBlockDevice, ddk::GetSizable, ddk::UnbindableNew, ddk::Messageable>;
 
 class SkipBlockDevice : public DeviceType,
                         public ::llcpp::fuchsia::hardware::skipblock::SkipBlock::Interface,
@@ -93,3 +93,5 @@ class SkipBlockDevice : public DeviceType,
 };
 
 }  // namespace nand
+
+#endif  // SRC_STORAGE_NAND_DRIVERS_SKIP_BLOCK_SKIP_BLOCK_H_

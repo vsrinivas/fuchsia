@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/device/manager/test/c/fidl.h>
+
 #include <vector>
 
 #include <ddk/binding.h>
@@ -11,11 +13,9 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
-#include <fuchsia/device/manager/test/c/fidl.h>
 
 class IsolatedDevMgrTestDriver;
-using DeviceType = ddk::Device<IsolatedDevMgrTestDriver, ddk::UnbindableNew,
-                               ddk::Messageable>;
+using DeviceType = ddk::Device<IsolatedDevMgrTestDriver, ddk::UnbindableNew, ddk::Messageable>;
 class IsolatedDevMgrTestDriver : public DeviceType {
  public:
   IsolatedDevMgrTestDriver(zx_device_t* parent) : DeviceType(parent) {}

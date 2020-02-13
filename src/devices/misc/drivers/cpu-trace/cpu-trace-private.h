@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_MISC_DRIVERS_CPU_TRACE_CPU_TRACE_PRIVATE_H_
+#define SRC_DEVICES_MISC_DRIVERS_CPU_TRACE_CPU_TRACE_PRIVATE_H_
+
+#include <zircon/types.h>
 
 #include <ddk/device.h>
-#include <zircon/types.h>
 
 #ifdef __x86_64__
 
@@ -24,5 +26,7 @@ zx_status_t perfmon_bind(void* ctx, zx_device_t* parent);
 // The zx_mtrace_control syscall.
 // A pointer to the syscall is provided during driver construction so that a fake version can
 // be provided in the tests.
-using mtrace_control_func_t = zx_status_t (zx_handle_t handle, uint32_t kind, uint32_t action,
-                                           uint32_t options, void* buf, size_t buf_size);
+using mtrace_control_func_t = zx_status_t(zx_handle_t handle, uint32_t kind, uint32_t action,
+                                          uint32_t options, void* buf, size_t buf_size);
+
+#endif  // SRC_DEVICES_MISC_DRIVERS_CPU_TRACE_CPU_TRACE_PRIVATE_H_

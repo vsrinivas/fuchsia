@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+
+#include <bits/limits.h>
 #include <fbl/auto_lock.h>
 #include <hw/arch_ops.h>
 
-#include <bits/limits.h>
 #include "xhci.h"
 
 namespace usb_xhci {

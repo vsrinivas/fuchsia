@@ -2,6 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/dotmatrixdisplay/c/fidl.h>
+#include <lib/device-protocol/i2c-channel.h>
+#include <lib/device-protocol/i2c.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <threads.h>
+
+#include <array>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -13,13 +21,6 @@
 #include <ddktl/protocol/i2c.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <fuchsia/hardware/dotmatrixdisplay/c/fidl.h>
-#include <lib/device-protocol/i2c-channel.h>
-#include <lib/device-protocol/i2c.h>
-#include <threads.h>
-#include <lib/zircon-internal/thread_annotations.h>
-
-#include <array>
 
 class Ssd1306;
 using DeviceType = ddk::Device<Ssd1306, ddk::UnbindableNew, ddk::Messageable>;

@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
-#include <hw/arch_ops.h>
+#include "xhci-util.h"
+
 #include <stdio.h>
 
-#include "xhci-util.h"
+#include <ddk/debug.h>
+#include <hw/arch_ops.h>
 
 namespace usb_xhci {
 

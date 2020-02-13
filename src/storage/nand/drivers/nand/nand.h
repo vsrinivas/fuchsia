@@ -2,9 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_NAND_DRIVERS_NAND_NAND_H_
+#define SRC_STORAGE_NAND_DRIVERS_NAND_NAND_H_
 
+#include <lib/fzl/vmo-mapper.h>
+#include <lib/operation/nand.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>
+#include <zircon/types.h>
 
 #include <ddk/driver.h>
 #include <ddktl/device.h>
@@ -13,10 +18,6 @@
 #include <fbl/condition_variable.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
-#include <lib/fzl/vmo-mapper.h>
-#include <lib/operation/nand.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/types.h>
 
 namespace nand {
 
@@ -83,3 +84,5 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
 };
 
 }  // namespace nand
+
+#endif  // SRC_STORAGE_NAND_DRIVERS_NAND_NAND_H_

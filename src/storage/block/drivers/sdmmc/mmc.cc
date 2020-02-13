@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sdmmc-block-device.h"
-
 #include <inttypes.h>
+#include <lib/zx/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,8 +12,9 @@
 #include <ddk/device.h>
 #include <ddk/protocol/sdmmc.h>
 #include <hw/sdmmc.h>
-#include <lib/zx/time.h>
 #include <pretty/hexdump.h>
+
+#include "sdmmc-block-device.h"
 
 namespace {
 

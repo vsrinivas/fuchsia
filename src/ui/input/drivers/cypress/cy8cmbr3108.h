@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_INPUT_CYPRESS_CY8CMBR3108_H_
-#define ZIRCON_SYSTEM_DEV_INPUT_CYPRESS_CY8CMBR3108_H_
+#ifndef SRC_UI_INPUT_DRIVERS_CYPRESS_CY8CMBR3108_H_
+#define SRC_UI_INPUT_DRIVERS_CYPRESS_CY8CMBR3108_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
 
@@ -84,4 +84,4 @@ class Cy8cmbr3108 : public Cy8cmbr3108Type,
 
 }  // namespace cypress
 
-#endif  // ZIRCON_SYSTEM_DEV_INPUT_CYPRESS_CY8CMBR3108_H_
+#endif  // SRC_UI_INPUT_DRIVERS_CYPRESS_CY8CMBR3108_H_

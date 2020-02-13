@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
-
-#include <stdint.h>
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_AHCI_AHCI_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_AHCI_AHCI_H_
 
 #include <limits.h>
+#include <stdint.h>
 
 #define AHCI_MAX_PORTS 32
 #define AHCI_MAX_COMMANDS 32
@@ -206,3 +206,5 @@ static_assert(sizeof(ahci_ct_t) == 0x80, "unexpected command table header size")
 static_assert(sizeof(ahci_prd_t) == 0x10, "unexpected prd entry size");
 
 }  // namespace ahci
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_AHCI_AHCI_H_

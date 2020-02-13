@@ -2,8 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BLOCK_SDHCI_SDHCI_H_
-#define ZIRCON_SYSTEM_DEV_BLOCK_SDHCI_SDHCI_H_
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_SDHCI_SDHCI_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_SDHCI_SDHCI_H_
+
+#include <lib/mmio/mmio.h>
+#include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/interrupt.h>
+#include <zircon/threads.h>
 
 #include <ddk/io-buffer.h>
 #include <ddktl/device.h>
@@ -12,12 +19,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <hw/sdmmc.h>
-#include <lib/mmio/mmio.h>
-#include <lib/sync/completion.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <lib/zx/bti.h>
-#include <lib/zx/interrupt.h>
-#include <zircon/threads.h>
 
 #include "sdhci-reg.h"
 
@@ -168,4 +169,4 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
 
 }  // namespace sdhci
 
-#endif  // ZIRCON_SYSTEM_DEV_BLOCK_SDHCI_SDHCI_H_
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_SDHCI_SDHCI_H_

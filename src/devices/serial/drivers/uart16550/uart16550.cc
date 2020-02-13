@@ -4,17 +4,18 @@
 
 #include "uart16550.h"
 
+#include <fuchsia/hardware/serial/c/fidl.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
+
+#include <algorithm>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/protocol/serial.h>
 #include <ddk/protocol/serialimpl.h>
-#include <fuchsia/hardware/serial/c/fidl.h>
 #include <hw/inout.h>
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
-
-#include <algorithm>
 
 namespace {
 

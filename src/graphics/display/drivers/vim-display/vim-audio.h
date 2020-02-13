@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_VIM_DISPLAY_VIM_AUDIO_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_VIM_DISPLAY_VIM_AUDIO_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_VIM_AUDIO_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_VIM_AUDIO_H_
 
-#include <ddk/protocol/platform/device.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
+
+#include <ddk/protocol/platform/device.h>
 
 __BEGIN_CDECLS
 struct vim2_display;  // fwd decl
@@ -15,10 +16,11 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
-#include <fbl/macros.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
+
+#include <fbl/macros.h>
 
 #include "vim-audio-utils.h"
 #include "vim-spdif-audio-stream.h"
@@ -64,4 +66,4 @@ void vim2_audio_on_display_added(const struct vim2_display* display, uint64_t di
 void vim2_audio_on_display_removed(const struct vim2_display* display, uint64_t display_id);
 __END_CDECLS
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_VIM_DISPLAY_VIM_AUDIO_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_VIM_DISPLAY_VIM_AUDIO_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_FTL_BLOCK_DEVICE_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_FTL_BLOCK_DEVICE_H_
 
 #include <lib/ftl/volume.h>
 #include <lib/sync/completion.h>
@@ -125,3 +126,5 @@ class BlockDevice : public DeviceType,
 };
 
 }  // namespace ftl
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_FTL_BLOCK_DEVICE_H_

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "ftl-shell.h"
-
 #include <stdlib.h>
 #include <time.h>
 
@@ -12,6 +10,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
+
+#include "ftl-shell.h"
 
 namespace {
 
@@ -530,8 +530,8 @@ using FtlUpgradeTest = FtlTestWithDriverAccess;
 
 // Verifies that the NDM header at page |page_num| matches the desired version.
 // |buffer| is a scratch buffer to read the page.
-void CheckNdmHeaderVersion(NdmRamDriver* driver, uint32_t page_num, uint16_t major,
-                           uint16_t minor, void* buffer) {
+void CheckNdmHeaderVersion(NdmRamDriver* driver, uint32_t page_num, uint16_t major, uint16_t minor,
+                           void* buffer) {
   struct Header {
     uint16_t major_version;
     uint16_t minor_version;

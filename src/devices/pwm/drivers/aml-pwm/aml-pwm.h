@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_PWM_AML_PWM_AML_PWM_H_
-#define ZIRCON_SYSTEM_DEV_PWM_AML_PWM_AML_PWM_H_
+#ifndef SRC_DEVICES_PWM_DRIVERS_AML_PWM_AML_PWM_H_
+#define SRC_DEVICES_PWM_DRIVERS_AML_PWM_AML_PWM_H_
 
 #include <lib/mmio/mmio.h>
 #include <zircon/types.h>
@@ -113,4 +113,4 @@ class AmlPwmDevice : public AmlPwmDeviceType,
 
 }  // namespace pwm
 
-#endif  // ZIRCON_SYSTEM_DEV_PWM_AML_PWM_AML_PWM_H_
+#endif  // SRC_DEVICES_PWM_DRIVERS_AML_PWM_AML_PWM_H_

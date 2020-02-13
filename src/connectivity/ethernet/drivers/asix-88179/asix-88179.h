@@ -2,25 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_ETHERNET_ASIX_88179_ASIX_88179_H_
-#define ZIRCON_SYSTEM_DEV_ETHERNET_ASIX_88179_ASIX_88179_H_
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_ASIX_88179_ASIX_88179_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_ASIX_88179_ASIX_88179_H_
 
+#include <lib/operation/ethernet.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <optional>
+#include <queue>
+#include <thread>
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/ethernet.h>
 #include <fbl/auto_lock.h>
-#include <lib/operation/ethernet.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
-
-#include <queue>
-#include <thread>
 
 namespace eth {
 
@@ -176,4 +175,4 @@ class Asix88179Ethernet : public DeviceType,
 
 }  // namespace eth
 
-#endif  // ZIRCON_SYSTEM_DEV_ETHERNET_ASIX_88179_ASIX_88179_H_
+#endif  // SRC_CONNECTIVITY_ETHERNET_DRIVERS_ASIX_88179_ASIX_88179_H_

@@ -4,13 +4,14 @@
 
 #include "nand_driver.h"
 
+#include <zircon/assert.h>
+
 #include <memory>
 #include <new>
 
 #include <ddk/debug.h>
 #include <ddktl/protocol/badblock.h>
 #include <fbl/array.h>
-#include <zircon/assert.h>
 
 #include "nand_operation.h"
 #include "oob_doubler.h"
@@ -21,9 +22,7 @@ extern thread_local int g_nand_op_count;
 
 namespace {
 
-void CountNestedOperation() {
-  ftl::g_nand_op_count++;
-}
+void CountNestedOperation() { ftl::g_nand_op_count++; }
 
 uint32_t GetParameter(const char* key) {
   const char* value = getenv(key);

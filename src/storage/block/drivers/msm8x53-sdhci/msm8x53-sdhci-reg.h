@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_MSM8X53_SDHCI_MSM8X53_SDHCI_REG_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_MSM8X53_SDHCI_MSM8X53_SDHCI_REG_H_
 
 #include <hwreg/bitfields.h>
 
@@ -24,3 +25,5 @@ class HcVendorSpec3 : public hwreg::RegisterBase<HcVendorSpec3, uint32_t> {
 };
 
 }  // namespace sdhci
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_MSM8X53_SDHCI_MSM8X53_SDHCI_REG_H_

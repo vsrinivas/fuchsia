@@ -4,13 +4,15 @@
 
 #include "usb-root-hub.h"
 
-#include <algorithm>
-#include <ddk/debug.h>
 #include <lib/zx/time.h>
+#include <zircon/status.h>
+
+#include <algorithm>
 #include <memory>
 #include <optional>
+
+#include <ddk/debug.h>
 #include <soc/mt8167/mt8167-usb.h>
-#include <zircon/status.h>
 
 namespace mt_usb_hci {
 namespace regs = board_mt8167;

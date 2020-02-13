@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BLOCK_SDHCI_SDHCI_REG_H_
-#define ZIRCON_SYSTEM_DEV_BLOCK_SDHCI_SDHCI_REG_H_
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_SDHCI_SDHCI_REG_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_SDHCI_SDHCI_REG_H_
 
 #include <hwreg/bitfields.h>
 
@@ -276,13 +276,13 @@ class InterruptSignalEnable : public hwreg::RegisterBase<InterruptSignalEnable, 
 
 class HostControl2 : public hwreg::RegisterBase<HostControl2, uint16_t> {
  public:
-  static constexpr uint16_t kUhsModeSdr12  = 0b000;
-  static constexpr uint16_t kUhsModeSdr25  = 0b001;
-  static constexpr uint16_t kUhsModeSdr50  = 0b010;
+  static constexpr uint16_t kUhsModeSdr12 = 0b000;
+  static constexpr uint16_t kUhsModeSdr25 = 0b001;
+  static constexpr uint16_t kUhsModeSdr50 = 0b010;
   static constexpr uint16_t kUhsModeSdr104 = 0b011;
-  static constexpr uint16_t kUhsModeDdr50  = 0b100;
+  static constexpr uint16_t kUhsModeDdr50 = 0b100;
   // Note: this is not standard and may not match all controllers.
-  static constexpr uint16_t kUhsModeHs400  = 0b101;
+  static constexpr uint16_t kUhsModeHs400 = 0b101;
 
   static auto Get() { return hwreg::RegisterAddr<HostControl2>(0x3e); }
 
@@ -360,4 +360,4 @@ class HostControllerVersion : public hwreg::RegisterBase<HostControllerVersion, 
 
 }  // namespace sdhci
 
-#endif  // ZIRCON_SYSTEM_DEV_BLOCK_SDHCI_SDHCI_REG_H_
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_SDHCI_SDHCI_REG_H_

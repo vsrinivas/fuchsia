@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_USB_USB_VIRTUAL_BUS_USB_VIRTUAL_BUS_H_
-#define ZIRCON_SYSTEM_DEV_USB_USB_VIRTUAL_BUS_USB_VIRTUAL_BUS_H_
+#ifndef SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_USB_VIRTUAL_BUS_H_
+#define SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_USB_VIRTUAL_BUS_H_
 
 #include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
 #include <lib/sync/completion.h>
@@ -132,4 +132,4 @@ class UsbVirtualBus : public UsbVirtualBusType,
 
 }  // namespace usb_virtual_bus
 
-#endif  // ZIRCON_SYSTEM_DEV_USB_USB_VIRTUAL_BUS_USB_VIRTUAL_BUS_H_
+#endif  // SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_USB_VIRTUAL_BUS_H_

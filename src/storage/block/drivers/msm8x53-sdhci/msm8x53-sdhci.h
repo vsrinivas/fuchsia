@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_MSM8X53_SDHCI_MSM8X53_SDHCI_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_MSM8X53_SDHCI_MSM8X53_SDHCI_H_
+
+#include <lib/mmio/mmio.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/sdhci.h>
-#include <lib/mmio/mmio.h>
 
 namespace sdhci {
 
@@ -47,3 +49,5 @@ class Msm8x53Sdhci : public DeviceType,
 };
 
 }  // namespace sdhci
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_MSM8X53_SDHCI_MSM8X53_SDHCI_H_

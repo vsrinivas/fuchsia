@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_NVME_NVME_HW_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_NVME_NVME_HW_H_
 
 #include <assert.h>
 #include <stdint.h>
@@ -296,3 +297,5 @@ static_assert(sizeof(nvme_identify_ns_t) == 4096, "");
 #define NSFEAT_DEALLOC_BLOCK_ERROR (1 << 2)
 #define NSFEAT_LOCAL_ATOMIC_SIZES (1 << 1)
 #define NSFEAT_THING_PROVISIONING (1 << 0)
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_NVME_NVME_HW_H_

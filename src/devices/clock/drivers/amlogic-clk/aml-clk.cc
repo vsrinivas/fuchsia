@@ -13,11 +13,9 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/protocol/platform/bus.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-
-#include <ddktl/protocol/platform/bus.h>
-
 #include <soc/aml-meson/aml-clk-common.h>
 
 #include "aml-axg-blocks.h"
@@ -79,7 +77,7 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio,
 
       break;
     }
-    case PDEV_DID_AMLOGIC_SM1_CLK : {
+    case PDEV_DID_AMLOGIC_SM1_CLK: {
       // Nelson
       gates_ = sm1_clk_gates;
       gate_count_ = countof(sm1_clk_gates);
@@ -200,13 +198,13 @@ zx_status_t AmlClock::ClockImplEnable(uint32_t clk) {
     case aml_clk_common::aml_clk_type::kMesonPll:
       return ClkTogglePll(clkid, true);
     default:
-    // Not a supported clock type?
-    return ZX_ERR_NOT_SUPPORTED;
+      // Not a supported clock type?
+      return ZX_ERR_NOT_SUPPORTED;
   }
 }
 
 zx_status_t AmlClock::ClockImplDisable(uint32_t clk) {
-    // Determine which clock type we're trying to control.
+  // Determine which clock type we're trying to control.
   aml_clk_common::aml_clk_type type = aml_clk_common::AmlClkType(clk);
   const uint16_t clkid = aml_clk_common::AmlClkIndex(clk);
 
@@ -216,8 +214,8 @@ zx_status_t AmlClock::ClockImplDisable(uint32_t clk) {
     case aml_clk_common::aml_clk_type::kMesonPll:
       return ClkTogglePll(clkid, false);
     default:
-    // Not a supported clock type?
-    return ZX_ERR_NOT_SUPPORTED;
+      // Not a supported clock type?
+      return ZX_ERR_NOT_SUPPORTED;
   };
 }
 
@@ -305,14 +303,13 @@ zx_status_t AmlClock::IsSupportedMux(const uint32_t id, const uint16_t kSupporte
   }
 
   if (index >= mux_count_) {
-    zxlogf(ERROR, "%s: Mux index out of bounds, count = %lu, idx = %u\n",
-                  __func__, mux_count_, index);
+    zxlogf(ERROR, "%s: Mux index out of bounds, count = %lu, idx = %u\n", __func__, mux_count_,
+           index);
     return ZX_ERR_OUT_OF_RANGE;
   }
 
   return ZX_OK;
 }
-
 
 zx_status_t AmlClock::ClockImplSetInput(uint32_t id, uint32_t idx) {
   constexpr uint16_t kSupported = static_cast<uint16_t>(aml_clk_common::aml_clk_type::kMesonMux);
@@ -328,8 +325,8 @@ zx_status_t AmlClock::ClockImplSetInput(uint32_t id, uint32_t idx) {
   const meson_clk_mux_t& mux = muxes_[index];
 
   if (idx >= mux.n_inputs) {
-    zxlogf(ERROR, "%s: mux input index out of bounds, max = %u, idx = %u.\n",
-                  __func__, mux.n_inputs, idx);
+    zxlogf(ERROR, "%s: mux input index out of bounds, max = %u, idx = %u.\n", __func__,
+           mux.n_inputs, idx);
     return ZX_ERR_OUT_OF_RANGE;
   }
 
@@ -350,8 +347,8 @@ zx_status_t AmlClock::ClockImplSetInput(uint32_t id, uint32_t idx) {
 
 zx_status_t AmlClock::ClockImplGetNumInputs(uint32_t id, uint32_t* out_num_inputs) {
   constexpr uint16_t kSupported =
-    (static_cast<uint16_t>(aml_clk_common::aml_clk_type::kMesonMux) |
-     static_cast<uint16_t>(aml_clk_common::aml_clk_type::kMesonMuxRo));
+      (static_cast<uint16_t>(aml_clk_common::aml_clk_type::kMesonMux) |
+       static_cast<uint16_t>(aml_clk_common::aml_clk_type::kMesonMuxRo));
 
   zx_status_t st = IsSupportedMux(id, kSupported);
   if (st != ZX_OK) {
@@ -370,8 +367,8 @@ zx_status_t AmlClock::ClockImplGetNumInputs(uint32_t id, uint32_t* out_num_input
 zx_status_t AmlClock::ClockImplGetInput(uint32_t id, uint32_t* out_input) {
   // Bitmask representing clock types that support this operation.
   constexpr uint16_t kSupported =
-    (static_cast<uint16_t>(aml_clk_common::aml_clk_type::kMesonMux) |
-     static_cast<uint16_t>(aml_clk_common::aml_clk_type::kMesonMuxRo));
+      (static_cast<uint16_t>(aml_clk_common::aml_clk_type::kMesonMux) |
+       static_cast<uint16_t>(aml_clk_common::aml_clk_type::kMesonMuxRo));
 
   zx_status_t st = IsSupportedMux(id, kSupported);
   if (st != ZX_OK) {

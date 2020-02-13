@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_G12A_BLOCKS_H_
+#define SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_G12A_BLOCKS_H_
+
+#include <soc/aml-meson/g12a-clk.h>
 
 #include "aml-clk-blocks.h"
-#include <soc/aml-meson/g12a-clk.h>
 
 // TODO(braval): Use common bitfield header (ZX-2526) when available for
 //               macros used below to avoid duplication.
@@ -359,3 +361,5 @@ static const char* const g12a_clk_table[] = {
     "audio_spdifin_mst_clk",      // 121
     "mod_audio_pdm_dclk_o",       // 122
 };
+
+#endif  // SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_G12A_BLOCKS_H_

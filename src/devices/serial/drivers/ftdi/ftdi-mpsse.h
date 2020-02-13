@@ -2,21 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_MPSSE_H_
-#define ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_MPSSE_H_
+#ifndef SRC_DEVICES_SERIAL_DRIVERS_FTDI_FTDI_MPSSE_H_
+#define SRC_DEVICES_SERIAL_DRIVERS_FTDI_FTDI_MPSSE_H_
 
+#include <lib/sync/completion.h>
+#include <lib/zx/event.h>
+#include <lib/zx/time.h>
 #include <stdint.h>
 #include <threads.h>
+#include <zircon/types.h>
 
 #include <vector>
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddktl/protocol/serialimpl.h>
-#include <lib/sync/completion.h>
-#include <lib/zx/event.h>
-#include <lib/zx/time.h>
-#include <zircon/types.h>
 
 namespace ftdi_mpsse {
 
@@ -82,4 +82,4 @@ class Mpsse {
 
 }  // namespace ftdi_mpsse
 
-#endif  // ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_MPSSE_H_
+#endif  // SRC_DEVICES_SERIAL_DRIVERS_FTDI_FTDI_MPSSE_H_

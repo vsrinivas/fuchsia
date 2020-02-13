@@ -2,7 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_H_
+
+#include <lib/mmio/mmio.h>
+#include <lib/sync/completion.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/interrupt.h>
+#include <lib/zx/profile.h>
+#include <limits.h>
+#include <threads.h>
+#include <zircon/hw/usb.h>
+#include <zircon/listnode.h>
+#include <zircon/types.h>
+
+#include <atomic>
 
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
@@ -11,19 +25,7 @@
 #include <ddk/protocol/usb/request.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
-#include <lib/mmio/mmio.h>
-#include <lib/sync/completion.h>
-#include <lib/zx/bti.h>
-#include <lib/zx/interrupt.h>
-#include <lib/zx/profile.h>
 #include <usb/usb-request.h>
-#include <zircon/hw/usb.h>
-#include <zircon/listnode.h>
-#include <zircon/types.h>
-
-#include <atomic>
-#include <limits.h>
-#include <threads.h>
 
 #include "trb-sizes.h"
 #include "xhci-hw.h"
@@ -258,3 +260,5 @@ void xhci_request_queue(xhci_t* xhci, usb_request_t* req,
                         const usb_request_complete_t* complete_cb);
 
 }  // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_H_

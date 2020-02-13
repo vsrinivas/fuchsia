@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_NAND_DRIVERS_NANDPART_NANDPART_H_
+#define SRC_STORAGE_NAND_DRIVERS_NANDPART_NANDPART_H_
+
+#include <zircon/types.h>
+
+#include <utility>
 
 #include <ddk/device.h>
 #include <ddk/protocol/nand.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/badblock.h>
 #include <ddktl/protocol/nand.h>
-
 #include <fbl/array.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
-#include <zircon/types.h>
-
-#include <utility>
 
 #include "bad-block.h"
 
@@ -86,3 +87,5 @@ class NandPartDevice : public DeviceType,
 };
 
 }  // namespace nand
+
+#endif  // SRC_STORAGE_NAND_DRIVERS_NANDPART_NANDPART_H_

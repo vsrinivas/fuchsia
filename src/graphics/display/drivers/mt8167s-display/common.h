@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_COMMON_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_COMMON_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_COMMON_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_COMMON_H_
+#include <zircon/pixelformat.h>
+
 #include <ddk/protocol/display/controller.h>
 #include <hwreg/mmio.h>
-#include <zircon/pixelformat.h>
 
 #define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define DISP_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
@@ -83,4 +84,4 @@ enum MutexMode {
   MUTEX_DPI1,
 };
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_MT8167S_DISPLAY_COMMON_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_MT8167S_DISPLAY_COMMON_H_

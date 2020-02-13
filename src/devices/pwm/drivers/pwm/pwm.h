@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_PWM_PWM_PWM_H_
-#define ZIRCON_SYSTEM_DEV_PWM_PWM_PWM_H_
+#ifndef SRC_DEVICES_PWM_DRIVERS_PWM_PWM_H_
+#define SRC_DEVICES_PWM_DRIVERS_PWM_PWM_H_
 
 #include <ddk/metadata/pwm.h>
 #include <ddk/platform-defs.h>
@@ -42,4 +42,4 @@ class PwmDevice : public PwmDeviceType, public ddk::PwmProtocol<PwmDevice, ddk::
 
 }  // namespace pwm
 
-#endif  // ZIRCON_SYSTEM_DEV_PWM_PWM_PWM_H_
+#endif  // SRC_DEVICES_PWM_DRIVERS_PWM_PWM_H_

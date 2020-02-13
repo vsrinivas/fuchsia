@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_GPIO_AML_AXG_GPIO_S905D2_BLOCKS_H_
-#define ZIRCON_SYSTEM_DEV_GPIO_AML_AXG_GPIO_S905D2_BLOCKS_H_
+#ifndef SRC_DEVICES_GPIO_DRIVERS_AML_AXG_GPIO_S905D2_BLOCKS_H_
+#define SRC_DEVICES_GPIO_DRIVERS_AML_AXG_GPIO_S905D2_BLOCKS_H_
 
 #include <array>
 
@@ -290,4 +290,4 @@ static AmlGpioInterrupt s905d2_interrupt_block = {
 
 }  // namespace gpio
 
-#endif  // ZIRCON_SYSTEM_DEV_GPIO_AML_AXG_GPIO_S905D2_BLOCKS_H_
+#endif  // SRC_DEVICES_GPIO_DRIVERS_AML_AXG_GPIO_S905D2_BLOCKS_H_

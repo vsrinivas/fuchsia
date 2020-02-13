@@ -2,14 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_TRANSACTION_H_
+#define SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_TRANSACTION_H_
 
-#include <atomic>
-#include <fbl/mutex.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
-#include <zircon/hw/usb.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <zircon/hw/usb.h>
+
+#include <atomic>
+
+#include <fbl/mutex.h>
 
 namespace mt_usb_hci {
 
@@ -338,3 +341,5 @@ class Interrupt : public BulkBase {
 };
 
 }  // namespace mt_usb_hci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_TRANSACTION_H_

@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <byteswap.h>
-
 #include <lib/zx/clock.h>
+
 #include <zxtest/zxtest.h>
 
-#include "fake-bus.h"
 #include "../controller.h"
+#include "fake-bus.h"
 
 namespace ahci {
 

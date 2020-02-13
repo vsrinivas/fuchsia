@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_SYNCHRONOUS_EXECUTOR_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_SYNCHRONOUS_EXECUTOR_H_
 
 #include <lib/fit/promise.h>
 #include <lib/fit/scheduler.h>
@@ -78,3 +79,5 @@ class synchronous_executor final : public fit::executor {
 };
 
 }  // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_SYNCHRONOUS_EXECUTOR_H_

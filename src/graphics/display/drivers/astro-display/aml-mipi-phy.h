@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_AML_MIPI_PHY_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_AML_MIPI_PHY_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_AML_MIPI_PHY_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_AML_MIPI_PHY_H_
 
-#include <ddk/protocol/platform/device.h>
-#include <ddktl/device.h>
-#include <ddktl/protocol/dsiimpl.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 
 #include <optional>
+
+#include <ddk/protocol/platform/device.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/dsiimpl.h>
 
 #include "aml-dsi.h"
 #include "common.h"
@@ -69,4 +70,4 @@ class AmlMipiPhy {
 
 }  // namespace astro_display
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_ASTRO_DISPLAY_AML_MIPI_PHY_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_ASTRO_DISPLAY_AML_MIPI_PHY_H_

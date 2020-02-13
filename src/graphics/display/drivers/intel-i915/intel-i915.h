@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_INTEL_I915_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_INTEL_I915_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_INTEL_I915_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_INTEL_I915_H_
 
 #if __cplusplus
 
@@ -280,4 +280,4 @@ __BEGIN_CDECLS
 zx_status_t intel_i915_bind(void* ctx, zx_device_t* parent);
 __END_CDECLS
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_INTEL_I915_INTEL_I915_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_INTEL_I915_H_

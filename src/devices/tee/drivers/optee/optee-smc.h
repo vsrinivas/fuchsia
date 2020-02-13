@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_SMC_H_
+#define SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_SMC_H_
 
 #include <zircon/assert.h>
 
@@ -383,3 +384,5 @@ enum SharedMemoryType : uint64_t {
 };
 
 }  // namespace optee
+
+#endif  // SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_SMC_H_

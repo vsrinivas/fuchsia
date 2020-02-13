@@ -2,17 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_DEVICE_H_
+#define SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_DEVICE_H_
 
-#include "usb-request-queue.h"
-
-#include <array>
-#include <fbl/array.h>
 #include <lib/mmio/mmio.h>
-#include <memory>
-#include <usb/request-cpp.h>
 #include <zircon/hw/usb.h>
 #include <zircon/types.h>
+
+#include <array>
+#include <memory>
+
+#include <fbl/array.h>
+#include <usb/request-cpp.h>
+
+#include "usb-request-queue.h"
 
 namespace mt_usb_hci {
 
@@ -107,3 +110,5 @@ class HardwareDevice : public UsbDevice {
 };
 
 }  // namespace mt_usb_hci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_DEVICE_H_

@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_GPIO_DRIVERS_GPIO_TEST_GPIO_TEST_H_
+#define SRC_DEVICES_GPIO_DRIVERS_GPIO_TEST_GPIO_TEST_H_
+
+#include <lib/zx/interrupt.h>
+#include <threads.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/gpio.h>
 #include <fbl/array.h>
-#include <lib/zx/interrupt.h>
-
-#include <threads.h>
 
 namespace gpio_test {
 
@@ -49,3 +50,5 @@ class GpioTest : public GpioTestType {
 };
 
 }  // namespace gpio_test
+
+#endif  // SRC_DEVICES_GPIO_DRIVERS_GPIO_TEST_GPIO_TEST_H_

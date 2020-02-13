@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_GPIO_DRIVERS_GPIO_GPIO_H_
+#define SRC_DEVICES_GPIO_DRIVERS_GPIO_GPIO_H_
 
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
@@ -39,3 +40,5 @@ class GpioDevice : public GpioDeviceType, public ddk::GpioProtocol<GpioDevice, d
 };
 
 }  // namespace gpio
+
+#endif  // SRC_DEVICES_GPIO_DRIVERS_GPIO_GPIO_H_

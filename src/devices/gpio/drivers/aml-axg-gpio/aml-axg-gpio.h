@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_GPIO_AML_AXG_GPIO_AML_AXG_GPIO_H_
-#define ZIRCON_SYSTEM_DEV_GPIO_AML_AXG_GPIO_AML_AXG_GPIO_H_
+#ifndef SRC_DEVICES_GPIO_DRIVERS_AML_AXG_GPIO_AML_AXG_GPIO_H_
+#define SRC_DEVICES_GPIO_DRIVERS_AML_AXG_GPIO_AML_AXG_GPIO_H_
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
@@ -119,4 +119,4 @@ class AmlAxgGpio : public DeviceType, public ddk::GpioImplProtocol<AmlAxgGpio, d
 
 }  // namespace gpio
 
-#endif  // ZIRCON_SYSTEM_DEV_GPIO_AML_AXG_GPIO_AML_AXG_GPIO_H_
+#endif  // SRC_DEVICES_GPIO_DRIVERS_AML_AXG_GPIO_AML_AXG_GPIO_H_

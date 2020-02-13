@@ -4,12 +4,12 @@
 
 #include "tlv320adc.h"
 
+#include <lib/device-protocol/i2c.h>
 #include <string.h>
 
 #include <ddk/protocol/i2c.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <lib/device-protocol/i2c.h>
 
 namespace audio {
 namespace mt8167 {

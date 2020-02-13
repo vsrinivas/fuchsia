@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_MIDI_SINK_H_
-#define ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_MIDI_SINK_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_MIDI_SINK_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_MIDI_SINK_H_
 
 #include <fuchsia/hardware/midi/llcpp/fidl.h>
 #include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <usb/request-cpp.h>
 #include <usb/usb.h>
 
@@ -19,8 +19,8 @@ namespace audio {
 namespace usb {
 
 class UsbMidiSink;
-using UsbMidiSinkBase = ddk::Device<UsbMidiSink, ddk::UnbindableNew, ddk::Openable,
-                                    ddk::Closable, ddk::Writable, ddk::Messageable>;
+using UsbMidiSinkBase = ddk::Device<UsbMidiSink, ddk::UnbindableNew, ddk::Openable, ddk::Closable,
+                                    ddk::Writable, ddk::Messageable>;
 
 class UsbMidiSink : public UsbMidiSinkBase,
                     public llcpp::fuchsia::hardware::midi::Device::Interface,
@@ -74,4 +74,4 @@ class UsbMidiSink : public UsbMidiSinkBase,
 }  // namespace usb
 }  // namespace audio
 
-#endif  // ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_MIDI_SINK_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_MIDI_SINK_H_

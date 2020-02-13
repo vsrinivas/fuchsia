@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_ID_MAP_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_ID_MAP_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_ID_MAP_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_ID_MAP_H_
 
 #include <fbl/intrusive_hash_table.h>
 
@@ -24,4 +24,4 @@ class IdMappable : public fbl::SinglyLinkedListable<T> {
 
 }  // namespace display
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_DISPLAY_ID_MAP_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_DISPLAY_ID_MAP_H_

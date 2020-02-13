@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_USB_TEST_FX3_FX3_H_
+#define SRC_DEVICES_USB_DRIVERS_USB_TEST_FX3_FX3_H_
 
 // clang-format off
 
@@ -12,3 +13,5 @@
 
 // Vendor commands
 #define FX3_REQ_FIRMWARE_TRANSFER 0xA0
+
+#endif  // SRC_DEVICES_USB_DRIVERS_USB_TEST_FX3_FX3_H_

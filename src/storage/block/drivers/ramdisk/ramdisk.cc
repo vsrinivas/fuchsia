@@ -2,23 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <atomic>
-#include <limits>
-#include <memory>
+#include "ramdisk.h"
 
 #include <inttypes.h>
-#include <threads.h>
-
-#include <ddk/driver.h>
-#include <fbl/auto_lock.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
+#include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
 #include <zircon/types.h>
 
-#include "ramdisk.h"
+#include <atomic>
+#include <limits>
+#include <memory>
+
+#include <ddk/driver.h>
+#include <fbl/auto_lock.h>
+
 #include "zircon/errors.h"
 
 namespace ramdisk {

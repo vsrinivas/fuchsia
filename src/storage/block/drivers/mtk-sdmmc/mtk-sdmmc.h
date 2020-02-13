@@ -2,24 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_MTK_SDMMC_MTK_SDMMC_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_MTK_SDMMC_MTK_SDMMC_H_
 
+#include <lib/mmio/mmio.h>
+#include <lib/sync/completion.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/interrupt.h>
 #include <threads.h>
+
+#include <utility>
 
 #include <ddk/io-buffer.h>
 #include <ddk/phys-iter.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <lib/mmio/mmio.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/sdmmc.h>
 #include <fbl/auto_lock.h>
-#include <lib/sync/completion.h>
-#include <lib/zx/interrupt.h>
 #include <soc/mt8167/mt8167-sdmmc.h>
-#include <lib/zircon-internal/thread_annotations.h>
-
-#include <utility>
 
 #include "mtk-sdmmc-reg.h"
 
@@ -189,3 +190,5 @@ class TuneWindow {
 };
 
 }  // namespace sdmmc
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_MTK_SDMMC_MTK_SDMMC_H_

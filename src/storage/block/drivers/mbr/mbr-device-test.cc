@@ -5,6 +5,11 @@
 #include "mbr-device.h"
 
 #include <inttypes.h>
+#include <lib/fake_ddk/fake_ddk.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <zircon/device/block.h>
+#include <zircon/errors.h>
+#include <zircon/hw/gpt.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -15,11 +20,6 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <gpt/c/gpt.h>
-#include <lib/fake_ddk/fake_ddk.h>
-#include <zircon/device/block.h>
-#include <zircon/errors.h>
-#include <zircon/hw/gpt.h>
-#include <lib/zircon-internal/thread_annotations.h>
 #include <zxtest/zxtest.h>
 
 #include "mbr-test-data.h"

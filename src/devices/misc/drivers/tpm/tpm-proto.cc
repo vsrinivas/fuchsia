@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
+#include <lib/zx/time.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <zircon/syscalls.h>
-#include <lib/zx/time.h>
+
+#include <ddk/debug.h>
+
 #include "tpm.h"
 
 // TPM_ACCESS bitmasks

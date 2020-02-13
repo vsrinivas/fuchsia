@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_INPUT_I2C_HID_I2C_HID_H_
-#define ZIRCON_SYSTEM_DEV_INPUT_I2C_HID_I2C_HID_H_
+#ifndef SRC_UI_INPUT_DRIVERS_I2C_HID_I2C_HID_H_
+#define SRC_UI_INPUT_DRIVERS_I2C_HID_I2C_HID_H_
 
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/i2c.h>
@@ -103,4 +103,4 @@ class I2cHidbus : public DeviceType, public ddk::HidbusProtocol<I2cHidbus, ddk::
 
 }  // namespace i2c_hid
 
-#endif  // ZIRCON_SYSTEM_DEV_INPUT_I2C_HID_I2C_HID_H_
+#endif  // SRC_UI_INPUT_DRIVERS_I2C_HID_I2C_HID_H_

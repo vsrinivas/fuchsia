@@ -4,12 +4,13 @@
 
 #include "aml-sd-emmc.h"
 
+#include <lib/fake_ddk/fake_ddk.h>
+#include <threads.h>
+
 #include <vector>
 
 #include <hw/sdmmc.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <soc/aml-s912/s912-hw.h>
-#include <threads.h>
 #include <zxtest/zxtest.h>
 
 #include "aml-sd-emmc-regs.h"

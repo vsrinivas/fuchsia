@@ -2,10 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_GPIO_QCOM_GPIO_QCOM_GPIO_H_
-#define ZIRCON_SYSTEM_DEV_GPIO_QCOM_GPIO_QCOM_GPIO_H_
+#ifndef SRC_DEVICES_GPIO_DRIVERS_QCOM_GPIO_QCOM_GPIO_H_
+#define SRC_DEVICES_GPIO_DRIVERS_QCOM_GPIO_QCOM_GPIO_H_
 
+#include <lib/device-protocol/pdev.h>
+#include <lib/device-protocol/platform-device.h>
+#include <lib/zx/interrupt.h>
+#include <lib/zx/port.h>
 #include <threads.h>
+#include <zircon/types.h>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
@@ -17,11 +22,6 @@
 #include <ddktl/protocol/platform/device.h>
 #include <fbl/array.h>
 #include <hwreg/bitfields.h>
-#include <lib/device-protocol/pdev.h>
-#include <lib/device-protocol/platform-device.h>
-#include <lib/zx/interrupt.h>
-#include <lib/zx/port.h>
-#include <zircon/types.h>
 
 #include "qcom-gpio-regs.h"
 
@@ -83,4 +83,4 @@ class QcomGpioDevice : public DeviceType,
 };
 }  // namespace gpio
 
-#endif  // ZIRCON_SYSTEM_DEV_GPIO_QCOM_GPIO_QCOM_GPIO_H_
+#endif  // SRC_DEVICES_GPIO_DRIVERS_QCOM_GPIO_QCOM_GPIO_H_

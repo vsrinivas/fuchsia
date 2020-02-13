@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_INPUT_HID_BUTTONS_HID_BUTTONS_H_
-#define ZIRCON_SYSTEM_DEV_INPUT_HID_BUTTONS_HID_BUTTONS_H_
+#ifndef SRC_UI_INPUT_DRIVERS_HID_BUTTONS_HID_BUTTONS_H_
+#define SRC_UI_INPUT_DRIVERS_HID_BUTTONS_HID_BUTTONS_H_
 
 #include <fuchsia/buttons/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -252,4 +252,4 @@ class ButtonsNotifyInterface : public Buttons::Interface {
 
 }  // namespace buttons
 
-#endif  // ZIRCON_SYSTEM_DEV_INPUT_HID_BUTTONS_HID_BUTTONS_H_
+#endif  // SRC_UI_INPUT_DRIVERS_HID_BUTTONS_HID_BUTTONS_H_

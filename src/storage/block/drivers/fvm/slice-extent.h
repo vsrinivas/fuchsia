@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BLOCK_FVM_SLICE_EXTENT_H_
-#define ZIRCON_SYSTEM_DEV_BLOCK_FVM_SLICE_EXTENT_H_
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_FVM_SLICE_EXTENT_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_FVM_SLICE_EXTENT_H_
 
 #ifdef __cplusplus
 
@@ -90,4 +90,4 @@ class SliceExtent : public fbl::WAVLTreeContainable<std::unique_ptr<SliceExtent>
 
 #endif  // __cplusplus
 
-#endif  // ZIRCON_SYSTEM_DEV_BLOCK_FVM_SLICE_EXTENT_H_
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_FVM_SLICE_EXTENT_H_

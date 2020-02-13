@@ -4,10 +4,11 @@
 
 #include "lcd.h"
 
+#include <lib/mipi-dsi/mipi-dsi.h>
+
 #include <ddk/debug.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <lib/mipi-dsi/mipi-dsi.h>
 
 #include "common.h"
 

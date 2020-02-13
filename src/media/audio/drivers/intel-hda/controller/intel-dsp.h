@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_DSP_H_
-#define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_DSP_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_DSP_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_DSP_H_
 
 #include <lib/fzl/vmo-mapper.h>
 #include <limits.h>
@@ -58,7 +58,7 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
 
   void DeviceShutdown();
   zx_status_t Suspend(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason,
-               uint8_t* out_state) override final;
+                      uint8_t* out_state) override final;
 
   // ZX_PROTOCOL_IHDA_CODEC Interface
   zx_status_t CodecGetDispatcherChannel(zx_handle_t* remote_endpoint_out);
@@ -167,4 +167,4 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
 }  // namespace intel_hda
 }  // namespace audio
 
-#endif  // ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_INTEL_DSP_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_DSP_H_

@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
-#include <hw/arch_ops.h>
-
-#include "dwc3.h"
-#include "dwc3-regs.h"
-
-#include <fbl/auto_lock.h>
 #include <stdio.h>
 #include <unistd.h>
+
+#include <ddk/debug.h>
+#include <fbl/auto_lock.h>
+#include <hw/arch_ops.h>
+
+#include "dwc3-regs.h"
+#include "dwc3.h"
 
 static void dwc3_handle_ep_event(dwc3_t* dwc, uint32_t event) {
   uint32_t type = DEPEVT_TYPE(event);

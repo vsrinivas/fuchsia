@@ -2,7 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_SERIAL_DRIVERS_SERIAL_SERIAL_H_
+#define SRC_DEVICES_SERIAL_DRIVERS_SERIAL_SERIAL_H_
+
+#include <fuchsia/hardware/serial/llcpp/fidl.h>
+#include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/event.h>
+#include <lib/zx/socket.h>
+#include <zircon/types.h>
 
 #include <ddk/driver.h>
 #include <ddktl/device.h>
@@ -10,11 +17,6 @@
 #include <ddktl/protocol/serial.h>
 #include <ddktl/protocol/serialimpl.h>
 #include <fbl/mutex.h>
-#include <fuchsia/hardware/serial/llcpp/fidl.h>
-#include <lib/zx/event.h>
-#include <lib/zx/socket.h>
-#include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/types.h>
 
 namespace serial {
 
@@ -67,3 +69,5 @@ class SerialDevice : public DeviceType,
 };
 
 }  // namespace serial
+
+#endif  // SRC_DEVICES_SERIAL_DRIVERS_SERIAL_SERIAL_H_

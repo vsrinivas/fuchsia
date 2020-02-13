@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_INPUT_HIDCTL_HIDCTL_H_
-#define ZIRCON_SYSTEM_DEV_INPUT_HIDCTL_HIDCTL_H_
+#ifndef SRC_UI_INPUT_DRIVERS_HIDCTL_HIDCTL_H_
+#define SRC_UI_INPUT_DRIVERS_HIDCTL_HIDCTL_H_
 
 #include <fuchsia/hardware/hidctl/c/fidl.h>
 #include <lib/zx/socket.h>
@@ -75,4 +75,4 @@ class HidDevice : public ddk::Device<HidDevice, ddk::UnbindableDeprecated>,
 
 }  // namespace hidctl
 
-#endif  // ZIRCON_SYSTEM_DEV_INPUT_HIDCTL_HIDCTL_H_
+#endif  // SRC_UI_INPUT_DRIVERS_HIDCTL_HIDCTL_H_

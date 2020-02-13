@@ -2,7 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_GAUSS_PDM_INPUT_STREAM_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_GAUSS_PDM_INPUT_STREAM_H_
+
+#include <fuchsia/hardware/audio/llcpp/fidl.h>
+
+#include <atomic>
+#include <utility>
 
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
@@ -10,27 +16,20 @@
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
-#include <fuchsia/hardware/audio/llcpp/fidl.h>
-
-#include <atomic>
-#include <utility>
 
 #include "a113-ddr.h"
 #include "a113-pdm.h"
 #include "audio-proto/audio-proto.h"
 #include "dispatcher-pool/dispatcher-channel.h"
 #include "dispatcher-pool/dispatcher-execution-domain.h"
-
-#include "a113-ddr.h"
-#include "a113-pdm.h"
 #include "vmo_helper.h"
 
 namespace audio {
 namespace gauss {
 
 class GaussPdmInputStream;
-using GaussPdmInputStreamBase = ddk::Device<GaussPdmInputStream, ddk::Messageable,
-                                            ddk::UnbindableNew>;
+using GaussPdmInputStreamBase =
+    ddk::Device<GaussPdmInputStream, ddk::Messageable, ddk::UnbindableNew>;
 
 class GaussPdmInputStream : public GaussPdmInputStreamBase,
                             public ddk::EmptyProtocol<ZX_PROTOCOL_AUDIO_INPUT>,
@@ -130,3 +129,5 @@ class GaussPdmInputStream : public GaussPdmInputStreamBase,
 
 }  // namespace gauss
 }  // namespace audio
+
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_GAUSS_PDM_INPUT_STREAM_H_

@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <optional>
+
 #include <ddktl/device.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <optional>
 
 class TestLifecycleDriverChild;
 using DeviceType = ddk::Device<TestLifecycleDriverChild, ddk::Initializable, ddk::UnbindableNew>;

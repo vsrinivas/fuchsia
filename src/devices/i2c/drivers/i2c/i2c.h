@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_I2C_DRIVERS_I2C_I2C_H_
+#define SRC_DEVICES_I2C_DRIVERS_I2C_I2C_H_
 
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
@@ -37,3 +38,5 @@ class I2cDevice : public I2cDeviceType {
 };
 
 }  // namespace i2c
+
+#endif  // SRC_DEVICES_I2C_DRIVERS_I2C_I2C_H_

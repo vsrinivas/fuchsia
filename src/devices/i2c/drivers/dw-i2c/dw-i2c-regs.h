@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_I2C_DW_I2C_DW_I2C_REGS_H_
-#define ZIRCON_SYSTEM_DEV_I2C_DW_I2C_DW_I2C_REGS_H_
+#ifndef SRC_DEVICES_I2C_DRIVERS_DW_I2C_DW_I2C_REGS_H_
+#define SRC_DEVICES_I2C_DRIVERS_DW_I2C_DW_I2C_REGS_H_
 
 #include <hwreg/bitfields.h>
 
@@ -483,4 +483,4 @@ class CompTypeReg : public hwreg::RegisterBase<CompTypeReg, uint32_t> {
 
 }  // namespace dw_i2c
 
-#endif  // ZIRCON_SYSTEM_DEV_I2C_DW_I2C_DW_I2C_REGS_H_
+#endif  // SRC_DEVICES_I2C_DRIVERS_DW_I2C_DW_I2C_REGS_H_

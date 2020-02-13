@@ -162,8 +162,7 @@ class ScheduleWorkCaller {
     do {
       auto real_batch_size = std::min(batch_size, work_items_left);
 
-      auto result2 =
-          OwnedChannelDevice::Call::ScheduleWork(zx::unowned(local), 1, real_batch_size);
+      auto result2 = OwnedChannelDevice::Call::ScheduleWork(zx::unowned(local), 1, real_batch_size);
       if (result2.status() != ZX_OK) {
         return result2.status();
       }

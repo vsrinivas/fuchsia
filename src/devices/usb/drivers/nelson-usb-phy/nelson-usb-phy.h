@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_NELSON_USB_PHY_NELSON_USB_PHY_H_
+#define SRC_DEVICES_USB_DRIVERS_NELSON_USB_PHY_NELSON_USB_PHY_H_
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
@@ -90,3 +91,5 @@ class NelsonUsbPhy : public NelsonUsbPhyType,
 };
 
 }  // namespace nelson_usb_phy
+
+#endif  // SRC_DEVICES_USB_DRIVERS_NELSON_USB_PHY_NELSON_USB_PHY_H_

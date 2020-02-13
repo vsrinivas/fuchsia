@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_THERMAL_DRIVERS_AS370_THERMAL_AS370_THERMAL_REG_H_
+#define SRC_DEVICES_THERMAL_DRIVERS_AS370_THERMAL_AS370_THERMAL_REG_H_
 
 #include <hwreg/bitfields.h>
 
@@ -29,3 +30,5 @@ class PvtStatus : public hwreg::RegisterBase<PvtStatus, uint32_t> {
 };
 
 }  // namespace thermal
+
+#endif  // SRC_DEVICES_THERMAL_DRIVERS_AS370_THERMAL_AS370_THERMAL_REG_H_

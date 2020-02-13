@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_AHCI_BUS_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_AHCI_BUS_H_
+
+#include <lib/zx/pmt.h>
+#include <lib/zx/vmo.h>
+#include <zircon/types.h>
 
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
 #include <fbl/macros.h>
-#include <lib/zx/pmt.h>
-#include <lib/zx/vmo.h>
-#include <zircon/types.h>
 
 namespace ahci {
 
@@ -61,3 +63,5 @@ class Bus {
 };
 
 }  // namespace ahci
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_AHCI_BUS_H_

@@ -165,9 +165,7 @@ class EthernetDeviceTest {
     ASSERT_OK(edev->AddDevice(&out));
   }
 
-  ~EthernetDeviceTest() {
-    edev0->DestroyAllEthDev();
-  }
+  ~EthernetDeviceTest() { edev0->DestroyAllEthDev(); }
 
   void Start() {
     zx_status_t out_status = ZX_ERR_INTERNAL;

@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <endian.h>
 #include "tpm-commands.h"
+
+#include <endian.h>
 
 uint32_t tpm_init_getrandom(struct tpm_getrandom_cmd *cmd, uint16_t bytes_requested) {
   cmd->hdr.tag = htobe16(TPM_ST_NO_SESSIONS);

@@ -4,11 +4,12 @@
 
 #include "igd.h"
 
-#include <hwreg/bitfields.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/zx/object.h>
 #include <lib/zx/vmar.h>
 #include <limits.h>
+
+#include <hwreg/bitfields.h>
 
 #include "intel-i915.h"
 #include "macros.h"

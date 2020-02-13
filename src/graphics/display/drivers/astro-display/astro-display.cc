@@ -530,9 +530,8 @@ zx_status_t AstroDisplay::SetupDisplayInterface() {
   fbl::AutoLock lock(&display_lock_);
 
   // Support Astro, Sherlock and Nelson at the moment
-  if ((board_info_.pid != PDEV_PID_ASTRO) &&
-      (board_info_.pid != PDEV_PID_SHERLOCK) &&
-      (board_info_.pid != PDEV_PID_NELSON) ) {
+  if ((board_info_.pid != PDEV_PID_ASTRO) && (board_info_.pid != PDEV_PID_SHERLOCK) &&
+      (board_info_.pid != PDEV_PID_NELSON)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

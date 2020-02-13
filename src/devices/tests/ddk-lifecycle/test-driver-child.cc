@@ -19,8 +19,8 @@ zx_status_t TestLifecycleDriverChild::Create(zx_device_t* parent, bool complete_
                                              zx_status_t init_status,
                                              fbl::RefPtr<TestLifecycleDriverChild>* out_device) {
   fbl::AllocChecker ac;
-  auto device = fbl::MakeRefCountedChecked<TestLifecycleDriverChild>(
-      &ac, parent, complete_init, init_status);
+  auto device =
+      fbl::MakeRefCountedChecked<TestLifecycleDriverChild>(&ac, parent, complete_init, init_status);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

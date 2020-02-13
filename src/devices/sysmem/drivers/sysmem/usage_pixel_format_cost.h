@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_USAGE_PIXEL_FORMAT_COST_H_
-#define ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_USAGE_PIXEL_FORMAT_COST_H_
+#ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_USAGE_PIXEL_FORMAT_COST_H_
+#define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_USAGE_PIXEL_FORMAT_COST_H_
 
 #include <fuchsia/sysmem/c/fidl.h>
 
@@ -46,4 +46,4 @@ class UsagePixelFormatCost {
 
 }  // namespace sysmem_driver
 
-#endif  // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_USAGE_PIXEL_FORMAT_COST_H_
+#endif  // SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_USAGE_PIXEL_FORMAT_COST_H_

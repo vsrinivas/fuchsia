@@ -4,11 +4,13 @@
 
 #include "block.h"
 
-#include "usb-mass-storage.h"
-#include <ddk/debug.h>
-#include <fbl/alloc_checker.h>
 #include <stdio.h>
 #include <string.h>
+
+#include <ddk/debug.h>
+#include <fbl/alloc_checker.h>
+
+#include "usb-mass-storage.h"
 #define block_op_to_txn(op) containerof(op, Transaction, op)
 
 namespace ums {

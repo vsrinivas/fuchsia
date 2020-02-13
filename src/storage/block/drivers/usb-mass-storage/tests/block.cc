@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 #include "../block.h"
-#include "../usb-mass-storage.h"
-#include <fbl/string.h>
+
 #include <lib/fake_ddk/fake_ddk.h>
 
+#include <fbl/string.h>
 #include <unittest/unittest.h>
+
+#include "../usb-mass-storage.h"
 
 namespace {
 

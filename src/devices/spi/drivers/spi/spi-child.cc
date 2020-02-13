@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "spi-child.h"
+
 #include <ddktl/fidl.h>
 #include <fbl/vector.h>
 

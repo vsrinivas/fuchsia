@@ -5,12 +5,13 @@
 // Temporary Clock and PLL management until the clock protocol is fully
 // developed.
 
-#include <hwreg/bitfields.h>
-#include <hwreg/mmio.h>
-#include <hw/reg.h>
+#include "aml-pcie-clk.h"
+
 #include <zircon/syscalls.h>
 
-#include "aml-pcie-clk.h"
+#include <hw/reg.h>
+#include <hwreg/bitfields.h>
+#include <hwreg/mmio.h>
 
 #define AXG_MIPI_CNTL0 0xa5b80000
 

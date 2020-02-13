@@ -5,20 +5,18 @@
 #include "aml-clk.h"
 
 #include <ddk/platform-defs.h>
+#include <soc/aml-meson/aml-clk-common.h>
+#include <soc/aml-meson/axg-clk.h>
+#include <soc/aml-meson/g12a-clk.h>
+#include <soc/aml-meson/sm1-clk.h>
+#include <soc/aml-s905d2/s905d2-hw.h>
+#include <soc/aml-s905d3/s905d3-hw.h>
+#include <soc/aml-s912/s912-hw.h>
 #include <zxtest/zxtest.h>
 
 #include "aml-axg-blocks.h"
-#include <soc/aml-meson/axg-clk.h>
-#include <soc/aml-s912/s912-hw.h>
-
 #include "aml-g12a-blocks.h"
-#include <soc/aml-meson/g12a-clk.h>
-#include <soc/aml-s905d2/s905d2-hw.h>
-#include <soc/aml-meson/aml-clk-common.h>
-
 #include "aml-sm1-blocks.h"
-#include <soc/aml-meson/sm1-clk.h>
-#include <soc/aml-s905d3/s905d3-hw.h>
 
 namespace amlogic_clock {
 
@@ -82,7 +80,6 @@ TEST(ClkTestAml, AxgEnableDisableAll) {
 
   EXPECT_EQ(memcmp(actual.get(), expected.get(), S912_HIU_LENGTH), 0);
 }
-
 
 TEST(ClkTestAml, G12aEnableDisableAll) {
   auto actual = std::make_unique<uint8_t[]>(S905D2_HIU_LENGTH);
@@ -211,13 +208,9 @@ static void TestPlls(const uint32_t did) {
   }
 }
 
-TEST(ClkTestAml, G12aSetRate) {
-  TestPlls(PDEV_DID_AMLOGIC_G12A_CLK);
-}
+TEST(ClkTestAml, G12aSetRate) { TestPlls(PDEV_DID_AMLOGIC_G12A_CLK); }
 
-TEST(ClkTestAml, G12bSetRate) {
-  TestPlls(PDEV_DID_AMLOGIC_G12B_CLK);
-}
+TEST(ClkTestAml, G12bSetRate) { TestPlls(PDEV_DID_AMLOGIC_G12B_CLK); }
 
 TEST(ClkTestAml, Sm1MuxRo) {
   auto regs = std::make_unique<uint8_t[]>(S905D3_HIU_LENGTH);

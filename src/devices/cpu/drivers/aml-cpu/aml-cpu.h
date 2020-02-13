@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_CPU_AML_CPU_AML_CPU_H_
-#define ZIRCON_SYSTEM_DEV_CPU_AML_CPU_AML_CPU_H_
+#ifndef SRC_DEVICES_CPU_DRIVERS_AML_CPU_AML_CPU_H_
+#define SRC_DEVICES_CPU_DRIVERS_AML_CPU_AML_CPU_H_
 
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/cpu/ctrl/llcpp/fidl.h>
@@ -18,8 +18,8 @@ namespace fuchsia_cpuctrl = ::llcpp::fuchsia::hardware::cpu::ctrl;
 namespace fuchsia_thermal = ::llcpp::fuchsia::hardware::thermal;
 
 class AmlCpu;
-using DeviceType = ddk::Device<AmlCpu, ddk::Messageable,
-                               ddk::PerformanceTunable, ddk::AutoSuspendable>;
+using DeviceType =
+    ddk::Device<AmlCpu, ddk::Messageable, ddk::PerformanceTunable, ddk::AutoSuspendable>;
 
 class AmlCpu : public DeviceType,
                public ddk::EmptyProtocol<ZX_PROTOCOL_CPU_CTRL>,
@@ -54,4 +54,4 @@ class AmlCpu : public DeviceType,
 
 }  // namespace amlogic_cpu
 
-#endif  // ZIRCON_SYSTEM_DEV_CPU_AML_CPU_AML_CPU_H_
+#endif  // SRC_DEVICES_CPU_DRIVERS_AML_CPU_AML_CPU_H_

@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hwreg/bitfields.h>
 #include <lib/mmio/mmio.h>
-#include <soc/mt8167/mt8167-hw.h>
 #include <zircon/types.h>
+
+#include <hwreg/bitfields.h>
+#include <soc/mt8167/mt8167-hw.h>
 
 namespace {
 // There are 2 sets of GPIO Pull settings register banks, those under GPIO and those under IOCFG.

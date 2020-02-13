@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BLOCK_ZXCRYPT_EXTRA_H_
-#define ZIRCON_SYSTEM_DEV_BLOCK_ZXCRYPT_EXTRA_H_
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_EXTRA_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_EXTRA_H_
 
-#include <ddk/protocol/block.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
+
+#include <ddk/protocol/block.h>
 
 namespace zxcrypt {
 
@@ -47,4 +48,4 @@ block_op_t* ExtraToBlock(extra_op_t* extra, size_t op_size);
 
 }  // namespace zxcrypt
 
-#endif  // ZIRCON_SYSTEM_DEV_BLOCK_ZXCRYPT_EXTRA_H_
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_ZXCRYPT_EXTRA_H_

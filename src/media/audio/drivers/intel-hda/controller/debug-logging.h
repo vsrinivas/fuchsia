@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_DEBUG_LOGGING_H_
-#define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_DEBUG_LOGGING_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_DEBUG_LOGGING_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_DEBUG_LOGGING_H_
 
 #include <inttypes.h>
 
@@ -21,4 +21,4 @@ constexpr size_t LOG_PREFIX_STORAGE = 32;
 #define LOG_EX(level, obj, fmt, ...) zxlogf(level, "[%s] " fmt, (obj).log_prefix(), ##__VA_ARGS__)
 #define LOG(level, fmt, ...) LOG_EX(level, *this, fmt, ##__VA_ARGS__)
 
-#endif  // ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_DEBUG_LOGGING_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_DEBUG_LOGGING_H_

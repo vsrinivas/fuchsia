@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_USB_DFU_USB_DFU_H_
+#define SRC_DEVICES_USB_DRIVERS_USB_DFU_USB_DFU_H_
 
-#include <usb/usb.h>
-#include <ddktl/device.h>
-#include <ddktl/protocol/empty-protocol.h>
 #include <lib/zx/vmo.h>
 #include <zircon/hw/usb/dfu.h>
+
+#include <ddktl/device.h>
+#include <ddktl/protocol/empty-protocol.h>
+#include <usb/usb.h>
 
 namespace usb {
 
@@ -59,3 +61,5 @@ class Dfu : public DfuBase, public ddk::EmptyProtocol<ZX_PROTOCOL_USB_FWLOADER> 
 };
 
 }  // namespace usb
+
+#endif  // SRC_DEVICES_USB_DRIVERS_USB_DFU_USB_DFU_H_

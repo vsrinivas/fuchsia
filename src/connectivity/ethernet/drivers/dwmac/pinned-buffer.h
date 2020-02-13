@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_ETHERNET_DWMAC_PINNED_BUFFER_H_
-#define ZIRCON_SYSTEM_DEV_ETHERNET_DWMAC_PINNED_BUFFER_H_
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_DWMAC_PINNED_BUFFER_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_DWMAC_PINNED_BUFFER_H_
 
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/bti.h>
@@ -37,4 +37,4 @@ class PinnedBuffer : public fbl::RefCounted<PinnedBuffer> {
   std::unique_ptr<zx_paddr_t[]> paddrs_;
 };
 
-#endif  // ZIRCON_SYSTEM_DEV_ETHERNET_DWMAC_PINNED_BUFFER_H_
+#endif  // SRC_CONNECTIVITY_ETHERNET_DRIVERS_DWMAC_PINNED_BUFFER_H_

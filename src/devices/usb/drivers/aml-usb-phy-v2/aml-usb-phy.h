@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_AML_USB_PHY_V2_AML_USB_PHY_H_
+#define SRC_DEVICES_USB_DRIVERS_AML_USB_PHY_V2_AML_USB_PHY_H_
 
 #include <lib/device-protocol/pdev.h>
+#include <lib/mmio/mmio.h>
+#include <lib/zx/interrupt.h>
+#include <threads.h>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/usb/phy.h>
 #include <fbl/mutex.h>
-#include <lib/mmio/mmio.h>
-#include <lib/zx/interrupt.h>
-
-#include <threads.h>
 
 #include "dwc2-device.h"
 #include "xhci-device.h"
@@ -80,3 +81,5 @@ class AmlUsbPhy : public AmlUsbPhyType, public ddk::UsbPhyProtocol<AmlUsbPhy, dd
 };
 
 }  // namespace aml_usb_phy
+
+#endif  // SRC_DEVICES_USB_DRIVERS_AML_USB_PHY_V2_AML_USB_PHY_H_

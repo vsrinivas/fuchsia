@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_FTL_NAND_DRIVER_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_FTL_NAND_DRIVER_H_
 
+#include <fuchsia/hardware/nand/c/fidl.h>
 #include <inttypes.h>
+#include <lib/ftl/ndm-driver.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 #include <memory>
 
 #include <ddk/protocol/badblock.h>
 #include <ddk/protocol/nand.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
-#include <lib/ftl/ndm-driver.h>
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 
 namespace ftl {
 
@@ -27,3 +28,5 @@ class NandDriver : public ftl::NdmBaseDriver {
 };
 
 }  // namespace ftl.
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_FTL_NAND_DRIVER_H_

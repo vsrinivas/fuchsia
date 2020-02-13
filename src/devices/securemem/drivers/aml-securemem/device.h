@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_SECUREMEM_AML_SECUREMEM_DEVICE_H_
-#define ZIRCON_SYSTEM_DEV_SECUREMEM_AML_SECUREMEM_DEVICE_H_
+#ifndef SRC_DEVICES_SECUREMEM_DRIVERS_AML_SECUREMEM_DEVICE_H_
+#define SRC_DEVICES_SECUREMEM_DRIVERS_AML_SECUREMEM_DEVICE_H_
 
 #include <fuchsia/hardware/securemem/llcpp/fidl.h>
 #include <lib/fit/result.h>
@@ -83,4 +83,4 @@ class AmlogicSecureMemDevice : public AmlogicSecureMemDeviceBase,
 
 }  // namespace amlogic_secure_mem
 
-#endif  // ZIRCON_SYSTEM_DEV_SECUREMEM_AML_SECUREMEM_DEVICE_H_
+#endif  // SRC_DEVICES_SECUREMEM_DRIVERS_AML_SECUREMEM_DEVICE_H_

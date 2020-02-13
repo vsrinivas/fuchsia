@@ -70,19 +70,13 @@ driver_module("devhost-test-child") {
 }
 
 migrated_manifest("devhost-test-manifest") {
-  deps = [
-    ":devhost-test",
-  ]
+  deps = [ ":devhost-test" ]
 }
 
 migrated_manifest("devhost-test-manual-manifest") {
-  deps = [
-    ":devhost-test-manual",
-  ]
+  deps = [ ":devhost-test-manual" ]
 }
 
 migrated_manifest("devhost-test-child-manifest") {
-  deps = [
-    ":devhost-test-child",
-  ]
+  deps = [ ":devhost-test-child" ]
 }

@@ -6,9 +6,8 @@
 
 #include "server.h"
 
-zx_status_t Message::Create(fbl::RefPtr<IoBuffer> iobuf, Server* server,
-                            block_fifo_request_t* req, size_t block_op_size,
-                            std::unique_ptr<Message>* out) {
+zx_status_t Message::Create(fbl::RefPtr<IoBuffer> iobuf, Server* server, block_fifo_request_t* req,
+                            size_t block_op_size, std::unique_ptr<Message>* out) {
   std::unique_ptr<Message> msg(new (block_op_size) Message());
   if (msg == nullptr) {
     return ZX_ERR_NO_MEMORY;

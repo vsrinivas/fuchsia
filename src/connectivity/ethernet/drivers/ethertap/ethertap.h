@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_ETHERNET_ETHERTAP_ETHERTAP_H_
-#define ZIRCON_SYSTEM_DEV_ETHERNET_ETHERTAP_ETHERTAP_H_
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_ETHERTAP_ETHERTAP_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_ETHERTAP_ETHERTAP_H_
 
 #include <fuchsia/hardware/ethertap/c/fidl.h>
 #include <lib/zx/channel.h>
@@ -76,4 +76,4 @@ class TapDevice : public ddk::Device<TapDevice, ddk::UnbindableDeprecated>,
 
 }  // namespace eth
 
-#endif  // ZIRCON_SYSTEM_DEV_ETHERNET_ETHERTAP_ETHERTAP_H_
+#endif  // SRC_CONNECTIVITY_ETHERNET_DRIVERS_ETHERTAP_ETHERTAP_H_

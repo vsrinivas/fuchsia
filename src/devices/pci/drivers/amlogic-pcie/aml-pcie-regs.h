@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hwreg/bitfields.h>
-#include <hwreg/mmio.h>
 #include <zircon/compiler.h>
 
-#pragma once
+#include <hwreg/bitfields.h>
+#include <hwreg/mmio.h>
+
+#ifndef SRC_DEVICES_PCI_DRIVERS_AMLOGIC_PCIE_AML_PCIE_REGS_H_
+#define SRC_DEVICES_PCI_DRIVERS_AMLOGIC_PCIE_AML_PCIE_REGS_H_
 
 // clang-format off
 // Please don't touch my columns.
@@ -86,3 +88,5 @@ class PciBusReg : public hwreg::RegisterBase<PciBusReg, uint32_t> {
 
 }  // namespace aml
 }  // namespace pcie
+
+#endif  // SRC_DEVICES_PCI_DRIVERS_AMLOGIC_PCIE_AML_PCIE_REGS_H_

@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/vmo.h>
+#include <zircon/types.h>
+
 #include <ddk/io-buffer.h>
 #include <ddk/protocol/platform/device.h>
-#include <zircon/types.h>
-#include <lib/zx/vmo.h>
 
 namespace audio {
 namespace gauss {

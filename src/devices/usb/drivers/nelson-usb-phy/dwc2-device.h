@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_NELSON_USB_PHY_DWC2_DEVICE_H_
+#define SRC_DEVICES_USB_DRIVERS_NELSON_USB_PHY_DWC2_DEVICE_H_
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/usb/phy.h>
@@ -32,3 +33,5 @@ class Dwc2Device : public Dwc2DeviceType,
 };
 
 }  // namespace nelson_usb_phy
+
+#endif  // SRC_DEVICES_USB_DRIVERS_NELSON_USB_PHY_DWC2_DEVICE_H_

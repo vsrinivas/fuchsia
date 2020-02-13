@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_USB_MT_MUSB_PERIPHERAL_MT_USB_H_
-#define ZIRCON_SYSTEM_DEV_USB_MT_MUSB_PERIPHERAL_MT_USB_H_
+#ifndef SRC_DEVICES_USB_DRIVERS_MT_MUSB_PERIPHERAL_MT_USB_H_
+#define SRC_DEVICES_USB_DRIVERS_MT_MUSB_PERIPHERAL_MT_USB_H_
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
@@ -147,4 +147,4 @@ class MtUsb : public MtUsbType, public ddk::UsbDciProtocol<MtUsb, ddk::base_prot
 
 }  // namespace mt_usb
 
-#endif  // ZIRCON_SYSTEM_DEV_USB_MT_MUSB_PERIPHERAL_MT_USB_H_
+#endif  // SRC_DEVICES_USB_DRIVERS_MT_MUSB_PERIPHERAL_MT_USB_H_

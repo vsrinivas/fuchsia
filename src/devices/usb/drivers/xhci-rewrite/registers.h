@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_REGISTERS_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_REGISTERS_H_
 
 #include <zircon/types.h>
 
@@ -668,3 +669,5 @@ struct EndpointContext {
 };
 
 }  // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_REGISTERS_H_

@@ -12,6 +12,8 @@ test("ddk-fidl-test") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test.cc" ]
   deps = [
+    "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_c",
+    "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/devmgr-launcher",
@@ -21,8 +23,6 @@ test("ddk-fidl-test") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_c",
-    "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
   ]
 }
 

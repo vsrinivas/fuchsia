@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_AXG_BLOCKS_H_
+#define SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_AXG_BLOCKS_H_
+
+#include <soc/aml-meson/axg-clk.h>
 
 #include "aml-clk-blocks.h"
-#include <soc/aml-meson/axg-clk.h>
 
 #define AXG_HHI_PCIE_PLL_CNTL6 (0x3C << 2)
 #define AXG_HHI_GCLK_MPEG0 (0x50 << 2)
@@ -74,3 +76,5 @@ static constexpr meson_clk_gate_t axg_clk_gates[] = {
 
 static_assert(axg_clk::CLK_AXG_COUNT == countof(axg_clk_gates),
               "axg_clk_gates[] and axg_clk_gate_idx count mismatch");
+
+#endif  // SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_AXG_BLOCKS_H_

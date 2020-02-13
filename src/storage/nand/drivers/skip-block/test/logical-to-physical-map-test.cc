@@ -4,12 +4,13 @@
 
 #include "logical-to-physical-map.h"
 
-#include <fbl/array.h>
-#include <fbl/vector.h>
-#include <zxtest/zxtest.h>
 #include <zircon/types.h>
 
 #include <utility>
+
+#include <fbl/array.h>
+#include <fbl/vector.h>
+#include <zxtest/zxtest.h>
 
 namespace nand {
 

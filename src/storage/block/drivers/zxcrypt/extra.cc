@@ -4,8 +4,6 @@
 
 #include "extra.h"
 
-#include <ddk/debug.h>
-#include <ddk/protocol/block.h>
 #include <inttypes.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -13,6 +11,9 @@
 #include <zircon/errors.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
+
+#include <ddk/debug.h>
+#include <ddk/protocol/block.h>
 
 #include "debug.h"
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_HIKEY_DISPLAY_COMMON_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_HIKEY_DISPLAY_COMMON_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_HIKEY_DISPLAY_COMMON_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_HIKEY_DISPLAY_COMMON_H_
 
 #include <ddk/debug.h>
 
@@ -33,4 +33,4 @@ extern uint8_t edid_buf_[256];
 
 }  // namespace hi_display
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_HIKEY_DISPLAY_COMMON_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_HIKEY_DISPLAY_COMMON_H_

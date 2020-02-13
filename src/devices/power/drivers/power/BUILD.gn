@@ -18,9 +18,9 @@ driver_module("power") {
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.power",
     "//zircon/system/banjo/ddk.protocol.powerimpl",
-    "//zircon/system/banjo/ddk.protocol.composite",
   ]
 }
 

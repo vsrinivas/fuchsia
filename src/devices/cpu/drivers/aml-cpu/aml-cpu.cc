@@ -11,8 +11,8 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
-#include <ddktl/protocol/thermal.h>
 #include <ddktl/protocol/composite.h>
+#include <ddktl/protocol/thermal.h>
 
 namespace {
 using llcpp::fuchsia::device::MAX_DEVICE_PERFORMANCE_STATES;
@@ -46,8 +46,8 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   size_t actual;
   composite.GetComponents(devices, kComponentCount, &actual);
   if (actual != kComponentCount) {
-    zxlogf(ERROR, "%s: Expected to get %lu components, actually got %lu\n",
-                 __func__, kComponentCount, actual);
+    zxlogf(ERROR, "%s: Expected to get %lu components, actually got %lu\n", __func__,
+           kComponentCount, actual);
     return ZX_ERR_INTERNAL;
   }
 

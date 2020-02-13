@@ -66,19 +66,13 @@ test("ddk-power") {
 }
 
 migrated_manifest("ddk-power-test-manifest") {
-  deps = [
-    ":ddk-power-test",
-  ]
+  deps = [ ":ddk-power-test" ]
 }
 
 migrated_manifest("ddk-power-test-child-manifest") {
-  deps = [
-    ":ddk-power-test-child",
-  ]
+  deps = [ ":ddk-power-test-child" ]
 }
 
 migrated_manifest("ddk-power-manifest") {
-  deps = [
-    ":ddk-power",
-  ]
+  deps = [ ":ddk-power" ]
 }

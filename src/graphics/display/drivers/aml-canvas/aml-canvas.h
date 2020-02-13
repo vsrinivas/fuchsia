@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_AML_CANVAS_AML_CANVAS_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_AML_CANVAS_AML_CANVAS_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AML_CANVAS_AML_CANVAS_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_AML_CANVAS_AML_CANVAS_H_
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
@@ -57,4 +57,4 @@ class AmlCanvas : public DeviceType,
 
 }  // namespace aml_canvas
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_AML_CANVAS_AML_CANVAS_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AML_CANVAS_AML_CANVAS_H_

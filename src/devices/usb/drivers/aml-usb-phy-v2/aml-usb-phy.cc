@@ -5,6 +5,7 @@
 #include "aml-usb-phy.h"
 
 #include <assert.h>
+#include <lib/zx/time.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,10 +17,9 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <fbl/auto_lock.h>
 #include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
 #include <hw/reg.h>
-#include <lib/zx/time.h>
 #include <soc/aml-common/aml-g12-reset.h>
 
 #include "usb-phy-regs.h"

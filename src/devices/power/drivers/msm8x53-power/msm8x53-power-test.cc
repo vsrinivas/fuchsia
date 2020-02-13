@@ -4,9 +4,9 @@
 
 #include "msm8x53-power.h"
 
-#include <soc/msm8x53/msm8x53-power.h>
 #include <fbl/auto_call.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
+#include <soc/msm8x53/msm8x53-power.h>
 #include <zxtest/zxtest.h>
 
 namespace {

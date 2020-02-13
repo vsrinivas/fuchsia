@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_STREAM_H_
-#define ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_STREAM_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_STREAM_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_STREAM_H_
 
 #include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <lib/zx/profile.h>
@@ -181,4 +181,4 @@ class UsbAudioStream : public UsbAudioStreamBase,
 }  // namespace usb
 }  // namespace audio
 
-#endif  // ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_STREAM_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_STREAM_H_

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "dwc3.h"
-#include "dwc3-regs.h"
+#include <stdio.h>
+#include <unistd.h>
 
 #include <fbl/auto_lock.h>
 
-#include <stdio.h>
-#include <unistd.h>
+#include "dwc3-regs.h"
+#include "dwc3.h"
 
 void dwc3_cmd_start_new_config(dwc3_t* dwc, unsigned ep_num, unsigned rsrc_id) {
   auto* mmio = dwc3_mmio(dwc);

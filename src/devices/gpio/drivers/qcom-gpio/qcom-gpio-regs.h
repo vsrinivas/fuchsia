@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hwreg/bitfields.h>
 #include <lib/mmio/mmio.h>
 #include <zircon/types.h>
+
+#include <hwreg/bitfields.h>
 
 namespace gpio {
 

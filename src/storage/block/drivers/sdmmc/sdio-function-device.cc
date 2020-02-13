@@ -4,9 +4,10 @@
 
 #include "sdio-function-device.h"
 
+#include <zircon/driver/binding.h>
+
 #include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
-#include <zircon/driver/binding.h>
 
 #include "sdio-controller-device.h"
 

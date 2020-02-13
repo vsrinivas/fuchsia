@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_GRAPHICS_DRIVERS_AML_GPU_S905D2_GPU_H_
+#define SRC_GRAPHICS_DRIVERS_AML_GPU_S905D2_GPU_H_
 
 #include <soc/aml-common/aml-gpu.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
@@ -34,3 +35,5 @@ static aml_gpu_block_t s905d2_gpu_blocks = {
             S905D2_GP0,
         },
 };
+
+#endif  // SRC_GRAPHICS_DRIVERS_AML_GPU_S905D2_GPU_H_

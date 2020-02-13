@@ -59,9 +59,9 @@ static zx_status_t fidl_get_board_revision(void* ctx, fidl_txn_t* txn) {
   mtx_lock(&sysinfo->lock);
   if (sysinfo->board_revision == 0) {
     size_t actual = 0;
-    status = device_get_metadata(sysinfo->zxdev, DEVICE_METADATA_BOARD_REVISION,
-                                 &sysinfo->board_revision,
-                                 sizeof(sysinfo->board_revision), &actual);
+    status =
+        device_get_metadata(sysinfo->zxdev, DEVICE_METADATA_BOARD_REVISION,
+                            &sysinfo->board_revision, sizeof(sysinfo->board_revision), &actual);
   }
   mtx_unlock(&sysinfo->lock);
 

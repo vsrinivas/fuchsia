@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_USB_COMPOSITE_USB_INTERFACE_H_
+#define SRC_DEVICES_USB_DRIVERS_USB_COMPOSITE_USB_INTERFACE_H_
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/usb.h>
@@ -18,8 +19,7 @@ namespace usb_composite {
 
 class UsbComposite;
 class UsbInterface;
-using UsbInterfaceType = ddk::Device<UsbInterface, ddk::GetProtocolable,
-                                     ddk::UnbindableNew>;
+using UsbInterfaceType = ddk::Device<UsbInterface, ddk::GetProtocolable, ddk::UnbindableNew>;
 
 // This class represents a USB interface in a composite device.
 class UsbInterface : public UsbInterfaceType,
@@ -122,3 +122,5 @@ class UsbInterface : public UsbInterfaceType,
 };
 
 }  // namespace usb_composite
+
+#endif  // SRC_DEVICES_USB_DRIVERS_USB_COMPOSITE_USB_INTERFACE_H_

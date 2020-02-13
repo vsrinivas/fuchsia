@@ -34,8 +34,7 @@ class ScheduleWorkTest : public zxtest::Test {
     ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(
         devmgr_.devfs_root(), "sys/platform/11:0d:0/schedule-work-test", &fd));
     ASSERT_GT(fd.get(), 0);
-    ASSERT_OK(
-        fdio_get_service_handle(fd.release(), chan_.reset_and_get_address()));
+    ASSERT_OK(fdio_get_service_handle(fd.release(), chan_.reset_and_get_address()));
     ASSERT_NE(chan_.get(), ZX_HANDLE_INVALID);
   }
 
@@ -141,4 +140,3 @@ TEST_F(ScheduleWorkTest, ScheduleWorkAsyncLoopManyItemsManyBatches) {
   ASSERT_OK(result2.status());
   ASSERT_FALSE(result2->result.is_err());
 }
-

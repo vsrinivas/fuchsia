@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDMMC_BLOCK_DEVICE_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDMMC_BLOCK_DEVICE_H_
 
+#include <lib/operation/block.h>
+#include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>
 
 #include <array>
@@ -16,8 +19,6 @@
 #include <ddktl/protocol/block/partition.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
-#include <lib/operation/block.h>
-#include <lib/zircon-internal/thread_annotations.h>
 
 #include "sdmmc-device.h"
 
@@ -156,3 +157,5 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
 };
 
 }  // namespace sdmmc
+
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_SDMMC_SDMMC_BLOCK_DEVICE_H_

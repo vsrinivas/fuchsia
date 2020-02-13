@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_GOLDFISH_DISPLAY_DISPLAY_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_GOLDFISH_DISPLAY_DISPLAY_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_GOLDFISH_DISPLAY_DISPLAY_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_GOLDFISH_DISPLAY_DISPLAY_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/pmt.h>
@@ -148,4 +148,4 @@ class Display : public DisplayType,
 
 }  // namespace goldfish
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_GOLDFISH_DISPLAY_DISPLAY_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_GOLDFISH_DISPLAY_DISPLAY_H_

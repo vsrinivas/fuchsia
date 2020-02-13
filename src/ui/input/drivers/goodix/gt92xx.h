@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_INPUT_GOODIX_GT92XX_H_
-#define ZIRCON_SYSTEM_DEV_INPUT_GOODIX_GT92XX_H_
+#ifndef SRC_UI_INPUT_DRIVERS_GOODIX_GT92XX_H_
+#define SRC_UI_INPUT_DRIVERS_GOODIX_GT92XX_H_
 
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/zx/interrupt.h>
@@ -112,4 +112,4 @@ class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::UnbindableNew>,
 };
 }  // namespace goodix
 
-#endif  // ZIRCON_SYSTEM_DEV_INPUT_GOODIX_GT92XX_H_
+#endif  // SRC_UI_INPUT_DRIVERS_GOODIX_GT92XX_H_

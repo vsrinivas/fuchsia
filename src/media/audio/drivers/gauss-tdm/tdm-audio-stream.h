@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_AUDIO_GAUSS_TDM_TDM_AUDIO_STREAM_H_
-#define ZIRCON_SYSTEM_DEV_AUDIO_GAUSS_TDM_TDM_AUDIO_STREAM_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_GAUSS_TDM_TDM_AUDIO_STREAM_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_GAUSS_TDM_TDM_AUDIO_STREAM_H_
 
 #include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <lib/mmio/mmio.h>
@@ -170,4 +170,4 @@ class TdmOutputStream : public TdmAudioStreamBase,
 }  // namespace gauss
 }  // namespace audio
 
-#endif  // ZIRCON_SYSTEM_DEV_AUDIO_GAUSS_TDM_TDM_AUDIO_STREAM_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_GAUSS_TDM_TDM_AUDIO_STREAM_H_

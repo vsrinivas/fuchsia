@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_I2C_H_
-#define ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_I2C_H_
+#ifndef SRC_DEVICES_SERIAL_DRIVERS_FTDI_FTDI_I2C_H_
+#define SRC_DEVICES_SERIAL_DRIVERS_FTDI_FTDI_I2C_H_
 
 #include <fuchsia/hardware/ftdi/llcpp/fidl.h>
 #include <threads.h>
@@ -107,4 +107,4 @@ class FtdiI2c : public DeviceType, public ddk::I2cImplProtocol<FtdiI2c, ddk::bas
 
 }  // namespace ftdi_mpsse
 
-#endif  // ZIRCON_SYSTEM_DEV_SERIAL_FTDI_FTDI_I2C_H_
+#endif  // SRC_DEVICES_SERIAL_DRIVERS_FTDI_FTDI_I2C_H_

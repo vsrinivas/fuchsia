@@ -3,10 +3,11 @@
 // found in the LICENSE file.
 
 #include "usb-function.h"
-#include "usb-peripheral.h"
 
 #include <ddk/debug.h>
 #include <fbl/array.h>
+
+#include "usb-peripheral.h"
 
 namespace usb_peripheral {
 

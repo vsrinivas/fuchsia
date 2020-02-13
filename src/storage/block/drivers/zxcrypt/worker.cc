@@ -4,9 +4,6 @@
 
 #include "worker.h"
 
-#include <crypto/cipher.h>
-#include <ddk/debug.h>
-#include <fbl/auto_call.h>
 #include <inttypes.h>
 #include <lib/zx/port.h>
 #include <stddef.h>
@@ -16,10 +13,14 @@
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
-#include <zxcrypt/ddk-volume.h>
-#include <zxcrypt/volume.h>
 
 #include <utility>
+
+#include <crypto/cipher.h>
+#include <ddk/debug.h>
+#include <fbl/auto_call.h>
+#include <zxcrypt/ddk-volume.h>
+#include <zxcrypt/volume.h>
 
 #include "debug.h"
 #include "device.h"

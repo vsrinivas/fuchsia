@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_INTEL_ETHERNET_IE_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_INTEL_ETHERNET_IE_H_
 
 #include <threads.h>
 
@@ -93,3 +94,5 @@ bool eth_status_online(ethdev_t* eth);
 #define ETH_IRQ_RX IE_INT_RXT0
 #define ETH_IRQ_LSC IE_INT_LSC
 unsigned eth_handle_irq(ethdev_t* eth);
+
+#endif  // SRC_CONNECTIVITY_ETHERNET_DRIVERS_INTEL_ETHERNET_IE_H_

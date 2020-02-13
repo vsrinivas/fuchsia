@@ -4,12 +4,13 @@
 
 #include "device-info.h"
 
-#include <ddk/debug.h>
-#include <fbl/auto_call.h>
-#include <fbl/macros.h>
 #include <inttypes.h>
 #include <lib/zx/vmar.h>
 #include <zircon/status.h>
+
+#include <ddk/debug.h>
+#include <fbl/auto_call.h>
+#include <fbl/macros.h>
 #include <zxcrypt/volume.h>
 
 #include "extra.h"

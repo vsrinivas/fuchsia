@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_CODEC_CONNECTION_H_
-#define ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_CODEC_CONNECTION_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_CODEC_CONNECTION_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_CODEC_CONNECTION_H_
 
 #include <fuchsia/hardware/intel/hda/c/fidl.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -162,4 +162,4 @@ class CodecConnection : public fbl::RefCounted<CodecConnection> {
 }  // namespace intel_hda
 }  // namespace audio
 
-#endif  // ZIRCON_SYSTEM_DEV_AUDIO_INTEL_HDA_CONTROLLER_CODEC_CONNECTION_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_CODEC_CONNECTION_H_

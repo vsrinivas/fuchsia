@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_DISPLAY_DSI_MT_DSI_MT_H_
-#define ZIRCON_SYSTEM_DEV_DISPLAY_DSI_MT_DSI_MT_H_
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_DSI_MT_DSI_MT_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_DSI_MT_DSI_MT_H_
 
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
@@ -85,4 +85,4 @@ class DsiMt : public DeviceType, public ddk::DsiImplProtocol<DsiMt, ddk::base_pr
 
 }  // namespace dsi_mt
 
-#endif  // ZIRCON_SYSTEM_DEV_DISPLAY_DSI_MT_DSI_MT_H_
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_DSI_MT_DSI_MT_H_

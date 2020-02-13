@@ -373,7 +373,6 @@ zx_status_t Server::ProcessCloseVmoRequest(block_fifo_request_t* request) {
 }
 
 zx_status_t Server::ProcessFlushRequest(block_fifo_request_t* request) {
-
   std::unique_ptr<Message> msg;
   zx_status_t status = Message::Create(nullptr, this, request, block_op_size_, &msg);
   if (status != ZX_OK) {

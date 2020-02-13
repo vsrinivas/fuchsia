@@ -2,14 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XDC_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_XDC_H_
+
+#include <lib/sync/completion.h>
+#include <threads.h>
 
 #include <atomic>
+
 #include <ddk/device.h>
-#include <lib/sync/completion.h>
 #include <usb/usb-request.h>
 #include <xdc-server-utils/packet.h>
-#include <threads.h>
 
 #include "xdc-hw.h"
 #include "xhci-transfer-common.h"
@@ -160,3 +163,5 @@ void xdc_write_complete(void* ctx, usb_request_t* req);
 void xdc_read_complete(void* ctx, usb_request_t* req);
 
 }  // namespace usb_xhci
+
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_XDC_H_

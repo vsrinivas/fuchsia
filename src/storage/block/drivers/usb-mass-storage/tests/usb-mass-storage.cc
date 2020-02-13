@@ -3,15 +3,19 @@
 // found in the LICENSE file.
 
 #include "../usb-mass-storage.h"
-#include "../block.h"
+
+#include <lib/fake_ddk/fake_ddk.h>
+#include <zircon/process.h>
+
+#include <variant>
+
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <unittest/unittest.h>
-#include <variant>
-#include <zircon/process.h>
+
+#include "../block.h"
 
 namespace {
 

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_POWER_DRIVERS_POWER_POWER_H_
+#define SRC_DEVICES_POWER_DRIVERS_POWER_POWER_H_
 
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
@@ -40,3 +41,5 @@ class PowerDevice : public PowerDeviceType,
 };
 
 }  // namespace power
+
+#endif  // SRC_DEVICES_POWER_DRIVERS_POWER_POWER_H_

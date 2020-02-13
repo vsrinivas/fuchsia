@@ -5,7 +5,8 @@
 // Thin layer that writes/reads to audio registers in the EE_AUDIO block and
 // the PDM block.
 
-#pragma once
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_A113_AUDIO_DEVICE_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_A113_AUDIO_DEVICE_H_
 
 #include <ddk/device.h>
 #include <ddk/mmio-buffer.h>
@@ -37,3 +38,5 @@ void a113_pdm_write(a113_audio_device_t* audio_device, uint32_t reg, uint32_t va
 void a113_pdm_update_bits(a113_audio_device_t* audio_device, uint32_t reg, uint32_t mask,
                           uint32_t val);
 __END_CDECLS
+
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_GAUSS_PDM_INPUT_A113_AUDIO_DEVICE_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_INPUT_HID_HID_FIFO_H_
-#define ZIRCON_SYSTEM_DEV_INPUT_HID_HID_FIFO_H_
+#ifndef SRC_UI_INPUT_DRIVERS_HID_HID_FIFO_H_
+#define SRC_UI_INPUT_DRIVERS_HID_HID_FIFO_H_
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -38,4 +38,4 @@ void zx_hid_fifo_dump(zx_hid_fifo_t* fifo);
 
 __END_CDECLS
 
-#endif  // ZIRCON_SYSTEM_DEV_INPUT_HID_HID_FIFO_H_
+#endif  // SRC_UI_INPUT_DRIVERS_HID_HID_FIFO_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_ETHERNET_USB_CDC_ECM_USB_CDC_ECM_LIB_H_
-#define ZIRCON_SYSTEM_DEV_ETHERNET_USB_CDC_ECM_USB_CDC_ECM_LIB_H_
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_USB_CDC_ECM_USB_CDC_ECM_LIB_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_USB_CDC_ECM_USB_CDC_ECM_LIB_H_
 
 #include <lib/sync/completion.h>
 #include <threads.h>
@@ -82,4 +82,4 @@ zx_status_t parse_usb_descriptor(usb_desc_iter_t* usb, usb_endpoint_descriptor_t
 
 __END_CDECLS
 
-#endif  // ZIRCON_SYSTEM_DEV_ETHERNET_USB_CDC_ECM_USB_CDC_ECM_LIB_H_
+#endif  // SRC_CONNECTIVITY_ETHERNET_DRIVERS_USB_CDC_ECM_USB_CDC_ECM_LIB_H_

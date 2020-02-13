@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_STREAM_INTERFACE_H_
-#define ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_STREAM_INTERFACE_H_
+#ifndef SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_STREAM_INTERFACE_H_
+#define SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_STREAM_INTERFACE_H_
 
 #include <zircon/device/audio.h>
 #include <zircon/hw/usb/audio.h>
@@ -245,4 +245,4 @@ class UsbAudioStreamInterface
 }  // namespace usb
 }  // namespace audio
 
-#endif  // ZIRCON_SYSTEM_DEV_AUDIO_USB_AUDIO_USB_AUDIO_STREAM_INTERFACE_H_
+#endif  // SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_STREAM_INTERFACE_H_
