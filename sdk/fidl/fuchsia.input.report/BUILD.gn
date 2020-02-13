@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.input.report") {
   sources = [
+    "consumer_control.fidl",
     "descriptor.fidl",
     "device.fidl",
     "keyboard.fidl",

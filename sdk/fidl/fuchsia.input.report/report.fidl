@@ -18,6 +18,9 @@ table InputReport {
     5: TouchInputReport touch;
     /// |keyboard| is the report generated if the device contains a keyboard.
     6: KeyboardInputReport keyboard;
+    /// |consumer_controls| is the report generated if the device contains a
+    /// ConsumerControl device.
+    7: ConsumerControlInputReport consumer_control;
 
     /// Unique ID to connect trace async begin/end events.
     3: uint64 trace_id;

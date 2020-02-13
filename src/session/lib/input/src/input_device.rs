@@ -300,6 +300,7 @@ mod tests {
                         sensor: None,
                         touch: None,
                         keyboard: None,
+                        consumer_control: None,
                     });
                 }
                 _ => {
@@ -323,6 +324,7 @@ mod tests {
                         sensor: None,
                         touch: None,
                         keyboard: None,
+                        consumer_control: None,
                     });
                 }
                 _ => {
@@ -352,6 +354,7 @@ mod tests {
                             }),
                         }),
                         keyboard: None,
+                        consumer_control: None,
                     });
                 }
                 _ => {
@@ -375,6 +378,7 @@ mod tests {
                         sensor: None,
                         touch: None,
                         keyboard: None,
+                        consumer_control: None,
                     });
                 }
                 _ => {
@@ -403,6 +407,7 @@ mod tests {
                             }),
                             output: None,
                         }),
+                        consumer_control: None,
                     });
                 }
                 _ => {
@@ -426,6 +431,7 @@ mod tests {
                         sensor: None,
                         touch: None,
                         keyboard: None,
+                        consumer_control: None,
                     });
                 }
                 _ => {
@@ -467,6 +473,7 @@ mod tests {
                             }),
                             output: None,
                         }),
+                        consumer_control: None,
                     });
                 }
                 _ => {

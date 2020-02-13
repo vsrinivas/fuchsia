@@ -1,0 +1,48 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.input.report;
+
+/// Hardcoded max sizes for ConsumerControl vectors. These sizes should be increased
+/// if we ever see a device with more objects than can be represented.
+const uint32 CONSUMER_CONTROL_MAX_NUM_BUTTONS = 255;
+
+/// These ControlButtons represent on/off buttons whose purpose is to change
+/// the host's configuration.
+enum ConsumerControlButton : uint32 {
+    /// This button represents increasing volume.
+    VOLUME_UP = 1;
+
+    /// This button represents decreasing volume.
+    VOLUME_DOWN = 2;
+
+    /// This button represents pausing.
+    PAUSE = 3;
+
+    /// This button represents factory resetting the host.
+    FACTORY_RESET = 4;
+
+    /// This button represents muting the microphone on the host.
+    MIC_MUTE = 5;
+};
+
+/// Describes the format of the input report that will be sent from the
+/// ConsumerControl device to the host.
+table ConsumerControlInputDescriptor {
+    /// The list of buttons that this device contains.
+    1: vector<ConsumerControlButton>:CONSUMER_CONTROL_MAX_NUM_BUTTONS buttons;
+};
+
+/// A Fuchsia ConsumerControl represents a device thats purpose is to change
+/// values on the host. Typical controls are Volume, Power, Media Playback.
+/// (Consider a TV remote to be a typical ConsumerControl).
+table ConsumerControlDescriptor {
+    1: ConsumerControlInputDescriptor input;
+};
+
+/// A single report created by a ConsumerControl device.
+table ConsumerControlInputReport {
+    /// The list of buttons that are currently pressed down.
+    1: vector<ConsumerControlButton>:CONSUMER_CONTROL_MAX_NUM_BUTTONS pressed_buttons;
+};

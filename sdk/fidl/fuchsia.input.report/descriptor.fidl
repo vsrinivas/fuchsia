@@ -38,6 +38,10 @@ table DeviceDescriptor {
 
     /// When |keyboard| is present the device has a keyboard.
     5: KeyboardDescriptor keyboard;
+
+    /// When |consumer_control| is present the device has a ConsumerControl
+    /// device.
+    6: ConsumerControlDescriptor consumer_control;
 };
 
 /// Describes the output reports that a physical input device will accept.

@@ -26,6 +26,7 @@ pub fn create_keyboard_input_report(
         mouse: None,
         touch: None,
         sensor: None,
+        consumer_control: None,
         trace_id: None,
     }
 }
@@ -80,6 +81,7 @@ pub fn create_mouse_input_report(
         }),
         touch: None,
         sensor: None,
+        consumer_control: None,
         trace_id: None,
     }
 }
@@ -125,6 +127,7 @@ pub fn create_touch_input_report(
         mouse: None,
         touch: Some(fidl_input_report::TouchInputReport { contacts: Some(contacts) }),
         sensor: None,
+        consumer_control: None,
         trace_id: None,
     }
 }
