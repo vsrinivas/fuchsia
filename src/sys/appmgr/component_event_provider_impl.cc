@@ -64,17 +64,12 @@ void ComponentEventProviderImpl::NotifyComponentDirReady(
 
 std::vector<std::string> ComponentEventProviderImpl::RelativeRealmPath(Realm* leaf_realm) {
   std::vector<std::string> relative_realm_path;
-  // We don't want to include this realms label in the realm path. As we don't want to expose this
-  // realm name to the subscribing component running under this realm.
-  if (leaf_realm != realm_) {
-    relative_realm_path.push_back(leaf_realm->label());
-  }
   Realm* realm = leaf_realm;
 
   // We stop traversing the realm tree bottom up until we arrive to this realm_ or the root.
-  while (realm != realm_ && realm_->parent()) {
-    realm = realm->parent();
+  while (realm && realm != realm_) {
     relative_realm_path.push_back(realm->label());
+    realm = realm->parent();
   }
 
   // We arrived to root and we couldn't find |realm_| therefore this realm is not in the path.
@@ -100,7 +95,7 @@ void ComponentEventProviderImpl::NotifyOfExistingComponents() {
     // Make sure we notify about all components in sub-realms of this realm which don't have an
     // event listener attached.
     for (auto& pair : realm->children()) {
-      if (realm != realm_ && !realm->HasComponentEventListenerBound()) {
+      if (!pair.first->HasComponentEventListenerBound()) {
         pending_realms.push(pair.first);
       }
     }

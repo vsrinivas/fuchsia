@@ -97,9 +97,7 @@ impl InspectDataFetcher {
     /// component under the relative realm path given.
     pub async fn get(self) -> Result<Vec<NodeHierarchy>, Error> {
         let timeout = self.timeout;
-        self.get_inspect_data()
-            .on_timeout(timeout.after_now(), || Err(format_err!("Request timed out")))
-            .await
+        self.get_inspect_data().on_timeout(timeout.after_now(), || Ok(Vec::new())).await
     }
 
     async fn get_inspect_data(self) -> Result<Vec<NodeHierarchy>, Error> {
@@ -270,8 +268,7 @@ mod tests {
             .with_timeout(0.nanos())
             .get()
             .await;
-        assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "Request timed out");
+        assert!(result.unwrap().is_empty());
         Ok(())
     }
 

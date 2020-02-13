@@ -15,12 +15,17 @@ group("component_events") {
 test_package("component_events_integration_tests") {
   deps = [
     ":component_events_test",
+    ":observer_integration_test",
     ":test_component",
   ]
 
   tests = [
     {
       name = "component_events_integration_test"
+      environments = basic_envs
+    },
+    {
+      name = "observer_integration_test"
       environments = basic_envs
     },
   ]
@@ -45,7 +50,6 @@ rustc_test("component_events_test") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -55,7 +59,23 @@ rustc_test("component_events_test") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:regex",
-    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
+  ]
+}
+
+rustc_test("observer_integration_test") {
+  name = "observer_integration_test"
+  source_root = "./observer_integration_test.rs"
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/inspect/rust/fuchsia-inspect",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:lazy_static",
   ]
 }
 
