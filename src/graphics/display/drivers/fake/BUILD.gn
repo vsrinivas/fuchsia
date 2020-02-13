@@ -5,7 +5,7 @@
 import("//build/config/fuchsia/rules.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
-driver_module("fake") {
+driver_module("fake-display") {
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -39,5 +39,5 @@ source_set("fake-lib") {
 }
 
 migrated_manifest("fake-manifest") {
-  deps = [ ":fake" ]
+  deps = [ ":fake-display" ]
 }
