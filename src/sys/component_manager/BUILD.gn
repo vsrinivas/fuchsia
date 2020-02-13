@@ -45,7 +45,6 @@ rustc_library("lib") {
     "//src/lib/zircon/rust:fuchsia-zircon-sys",
     "//src/sys/component_manager/tests/fidl:events-rustc",
     "//src/sys/lib/directory_broker",
-    "//src/sys/lib/library_loader:library_loader",
     "//src/sys/lib/runner",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",

@@ -5,7 +5,6 @@
 use {
     crate::{
         builtin::process_launcher::ProcessLauncher,
-        constants::PKG_PATH,
         model::runner::{Runner, RunnerError},
         startup::Arguments,
     },
@@ -13,10 +12,8 @@ use {
     async_trait::async_trait,
     clonable_error::ClonableError,
     fdio::fdio_sys,
-    fidl::endpoints::{ClientEnd, ServerEnd},
-    fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-    },
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_async::EHandle,
     fuchsia_component::client,
@@ -29,14 +26,21 @@ use {
     },
     fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Job, Task},
     futures::future::BoxFuture,
-    library_loader,
     log::warn,
+    std::convert::TryFrom,
     std::{path::Path, sync::Arc},
     thiserror::Error,
 };
 
 // Simple directory type which is used to implement `ComponentStartInfo.runtime_directory`.
 type RuntimeDirectory = Arc<pfs::Simple>;
+
+// Minimum timer slack amount and default mode. The amount should be large enough to allow for some
+// coalescing of timers, but small enough to ensure applications don't miss deadlines.
+//
+// TODO(fxb/43934): For now, set the value to 50us to avoid delaying performance-critical
+// timers in Scenic and other system services.
+const TIMER_SLACK_DURATION: zx::Duration = zx::Duration::from_micros(50);
 
 /// Errors produced by `ElfRunner`.
 #[derive(Debug, Clone, Error)]
@@ -49,6 +53,24 @@ pub enum ElfRunnerError {
     },
     #[error("failed to retrieve job koid for component with url \"{}\": {}", url, err)]
     ComponentJobIdError {
+        url: String,
+        #[source]
+        err: ClonableError,
+    },
+    #[error("failed to set job policy for component with url \"{}\": {}", url, err)]
+    ComponentJobPolicyError {
+        url: String,
+        #[source]
+        err: ClonableError,
+    },
+    #[error("failed to create job for component with url \"{}\": {}", url, err)]
+    ComponentJobCreationError {
+        url: String,
+        #[source]
+        err: ClonableError,
+    },
+    #[error("failed to duplicate job for component with url \"{}\": {}", url, err)]
+    ComponentJobDuplicationError {
         url: String,
         #[source]
         err: ClonableError,
@@ -67,6 +89,27 @@ impl ElfRunnerError {
 
     pub fn component_job_id_error(url: impl Into<String>, err: impl Into<Error>) -> ElfRunnerError {
         ElfRunnerError::ComponentJobIdError { url: url.into(), err: err.into().into() }
+    }
+
+    pub fn component_job_policy_error(
+        url: impl Into<String>,
+        err: impl Into<Error>,
+    ) -> ElfRunnerError {
+        ElfRunnerError::ComponentJobPolicyError { url: url.into(), err: err.into().into() }
+    }
+
+    pub fn component_job_creation_error(
+        url: impl Into<String>,
+        err: impl Into<Error>,
+    ) -> ElfRunnerError {
+        ElfRunnerError::ComponentJobCreationError { url: url.into(), err: err.into().into() }
+    }
+
+    pub fn component_job_duplication_error(
+        url: impl Into<String>,
+        err: impl Into<Error>,
+    ) -> ElfRunnerError {
+        ElfRunnerError::ComponentJobDuplicationError { url: url.into(), err: err.into().into() }
     }
 
     pub fn component_elf_directory_error(url: impl Into<String>) -> ElfRunnerError {
@@ -154,141 +197,76 @@ impl ElfRunner {
         Ok(())
     }
 
-    async fn load_launch_info(
+    async fn configure_launcher(
         &self,
-        url: &str,
+        resolved_url: &String,
         start_info: fsys::ComponentStartInfo,
-        launcher: &fproc::LauncherProxy,
-    ) -> Result<(Option<RuntimeDirectory>, fproc::LaunchInfo), Error> {
+        job: zx::Job,
+        launcher: &fidl_fuchsia_process::LauncherProxy,
+    ) -> Result<Option<(fidl_fuchsia_process::LaunchInfo, RuntimeDirectory)>, RunnerError> {
         let bin_path = runner::get_program_binary(&start_info)
-            .map_err(|e| RunnerError::invalid_args(url, e))?;
-        let bin_arg = &[String::from(
-            PKG_PATH.join(&bin_path).to_str().ok_or(format_err!("invalid binary path"))?,
-        )];
-        let args = runner::get_program_args(&start_info)?;
+            .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
 
-        let name = Path::new(url)
+        let args = runner::get_program_args(&start_info)
+            .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
+
+        // TODO(fxb/45586): runtime_dir may be unavailable in tests. We should fix tests so
+        // that we don't have to have this check here.
+        let runtime_dir = match start_info.runtime_dir {
+            Some(dir) => self.create_runtime_directory(dir, &args).await,
+            None => return Ok(None),
+        };
+
+        let name = Path::new(&resolved_url)
             .file_name()
-            .ok_or(format_err!("invalid url"))?
+            .ok_or(format_err!("invalid url"))
+            .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?
             .to_str()
-            .ok_or(format_err!("invalid url"))?;
+            .ok_or(format_err!("invalid url"))
+            .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
 
         // Convert the directories into proxies, so we can find "/pkg" and open "lib" and bin_path
-        let ns = start_info
-            .ns
-            .unwrap_or(fsys::ComponentNamespace { paths: vec![], directories: vec![] });
-        let mut paths = ns.paths;
-        let directories: Result<Vec<DirectoryProxy>, fidl::Error> =
-            ns.directories.into_iter().map(|d| d.into_proxy()).collect();
-        let mut directories = directories?;
-
-        // Start the library loader service
-        let pkg_str = PKG_PATH.to_str().unwrap();
-        let (ll_client_chan, ll_service_chan) = zx::Channel::create()?;
-        let (_, pkg_proxy) = paths
-            .iter()
-            .zip(directories.iter())
-            .find(|(p, _)| p.as_str() == pkg_str)
-            .ok_or(format_err!("/pkg missing from namespace"))?;
-
-        let lib_proxy = io_util::open_directory(pkg_proxy, &Path::new("lib"), OPEN_RIGHT_READABLE)?;
-
-        // The loader service should only be able to load files from `/pkg/lib`. Giving it a larger
-        // scope is potentially a security vulnerability, as it could make it trivial for parts of
-        // applications to get handles to things the application author didn't intend.
-        library_loader::start(lib_proxy, ll_service_chan);
-
-        let executable_vmo = library_loader::load_vmo(pkg_proxy, &bin_path)
-            .await
-            .context("error loading executable")?;
-
-        let child_job = job_default().create_child_job()?;
-
-        // Set the minimum timer slack amount and default mode. The amount should be large enough to
-        // allow for some coalescing of timers, but small enough to ensure applications don't miss
-        // deadlines.
-        //
-        // Why Late and not Center or Early? Timers firing a little later than requested is not
-        // uncommon in non-realtime systems. Programs are generally tolerant of some
-        // delays. However, timers firing before their dealine can be unexpected and lead to bugs.
-        //
-        // TODO(fxb/43934): For now, set the value to 50us to avoid delaying performance-critical
-        // timers in Scenic and other system services.
-        child_job
-            .set_policy(zx::JobPolicy::TimerSlack(
-                zx::Duration::from_micros(50),
-                zx::JobDefaultTimerMode::Late,
-            ))
-            .context("error setting job policy to configure timer slack")?;
-
-        // TODO(fxb/39947): The hermetic-decompressor library used in fshost requires the ability
-        // to directly create new processes, and this policy breaks that.
-        if url != "fuchsia-boot:///#meta/fshost.cm" {
-            child_job
-                .set_policy(zx::JobPolicy::Basic(
-                    zx::JobPolicyOption::Absolute,
-                    vec![(zx::JobCondition::NewProcess, zx::JobAction::Deny)],
-                ))
-                .context("error setting job policy to deny new processes")?;
-        }
-
-        let child_job_dup = child_job.duplicate_handle(zx::Rights::SAME_RIGHTS)?;
-
-        let mut string_iters: Vec<_> =
-            bin_arg.iter().chain(args.iter()).map(|s| s.bytes()).collect();
-        launcher.add_args(
-            &mut string_iters.iter_mut().map(|iter| iter as &mut dyn ExactSizeIterator<Item = u8>),
-        )?;
-        // TODO: launcher.AddEnvirons
+        let ns = runner::component::ComponentNamespace::try_from(
+            start_info
+                .ns
+                .unwrap_or(fsys::ComponentNamespace { paths: vec![], directories: vec![] }),
+        )
+        .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
 
         let mut handle_infos = vec![];
+
+        // Copy standard input, output and error to process.
         for fd in 0..3 {
-            handle_infos.extend(handle_info_from_fd(fd)?);
+            handle_infos.extend(
+                handle_info_from_fd(fd)
+                    .map_err(|e| RunnerError::component_load_error(resolved_url.clone(), e))?,
+            );
         }
 
-        handle_infos.append(&mut vec![
-            fproc::HandleInfo {
-                handle: ll_client_chan.into_handle(),
-                id: HandleInfo::new(HandleType::LdsvcLoader, 0).as_raw(),
-            },
-            fproc::HandleInfo {
-                handle: child_job_dup.into_handle(),
-                id: HandleInfo::new(HandleType::DefaultJob, 0).as_raw(),
-            },
-        ]);
         if let Some(outgoing_dir) = start_info.outgoing_dir {
             handle_infos.push(fproc::HandleInfo {
                 handle: outgoing_dir.into_handle(),
                 id: HandleInfo::new(HandleType::DirectoryRequest, 0).as_raw(),
             });
         }
-        launcher.add_handles(&mut handle_infos.iter_mut())?;
 
-        let mut name_infos = vec![];
-        while let Some(path) = paths.pop() {
-            if let Some(directory) = directories.pop() {
-                let directory = ClientEnd::new(
-                    directory
-                        .into_channel()
-                        .map_err(|_| format_err!("into_channel failed"))?
-                        .into_zx_channel(),
-                );
-                name_infos.push(fproc::NameInfo { path, directory });
-            }
-        }
-        launcher.add_names(&mut name_infos.iter_mut())?;
+        // Load the component
+        let launch_info =
+            runner::component::configure_launcher(runner::component::LauncherConfigArgs {
+                bin_path: &bin_path,
+                name: &name,
+                args: Some(args),
+                ns: ns,
+                job: Some(job),
+                handle_infos: Some(handle_infos),
+                name_infos: None,
+                environs: None,
+                launcher: &launcher,
+            })
+            .await
+            .map_err(|e| RunnerError::component_load_error(resolved_url.clone(), e))?;
 
-        let mut runtime_dir = None;
-        // TODO(fsamuel): runtime_dir may be unavailable in tests. We should fix tests so
-        // that we don't have to have this check here.
-        if let Some(dir) = start_info.runtime_dir {
-            runtime_dir = Some(self.create_runtime_directory(dir, &args).await);
-        }
-
-        Ok((
-            runtime_dir,
-            fproc::LaunchInfo { executable: executable_vmo, job: child_job, name: name.to_owned() },
-        ))
+        Ok(Some((launch_info, runtime_dir)))
     }
 
     async fn start_component(
@@ -303,26 +281,49 @@ impl ElfRunner {
             .launcher_connector
             .connect()
             .context("failed to connect to launcher service")
-            .map_err(|e| RunnerError::component_load_error(&*resolved_url, e))?;
+            .map_err(|e| RunnerError::component_load_error(resolved_url.clone(), e))?;
 
-        // Load the component
-        let (runtime_dir, mut launch_info) = self
-            .load_launch_info(&resolved_url, start_info, &launcher)
-            .await
-            .context("loading launch info failed")
-            .map_err(|e| RunnerError::component_load_error(&*resolved_url, e))?;
+        let component_job = job_default()
+            .create_child_job()
+            .map_err(|e| ElfRunnerError::component_job_creation_error(resolved_url.clone(), e))?;
 
-        let job_koid = launch_info
-            .job
+        // Set timer slack.
+        //
+        // Why Late and not Center or Early? Timers firing a little later than requested is not
+        // uncommon in non-realtime systems. Programs are generally tolerant of some
+        // delays. However, timers firing before their deadline can be unexpected and lead to bugs.
+        component_job
+            .set_policy(zx::JobPolicy::TimerSlack(
+                TIMER_SLACK_DURATION,
+                zx::JobDefaultTimerMode::Late,
+            ))
+            .map_err(|e| ElfRunnerError::component_job_policy_error(resolved_url.clone(), e))?;
+
+        // TODO(fxb/39947): The hermetic-decompressor library used in fshost requires the ability
+        // to directly create new processes, and this policy breaks that.
+        if resolved_url != "fuchsia-boot:///#meta/fshost.cm" {
+            component_job
+                .set_policy(zx::JobPolicy::Basic(
+                    zx::JobPolicyOption::Absolute,
+                    vec![(zx::JobCondition::NewProcess, zx::JobAction::Deny)],
+                ))
+                .map_err(|e| ElfRunnerError::component_job_policy_error(resolved_url.clone(), e))?;
+        }
+
+        let job_dup = component_job.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(|e| {
+            ElfRunnerError::component_job_duplication_error(resolved_url.clone(), e)
+        })?;
+
+        let (mut launch_info, runtime_dir) =
+            match self.configure_launcher(&resolved_url, start_info, job_dup, &launcher).await? {
+                Some(s) => s,
+                None => return Ok(None),
+            };
+
+        let job_koid = component_job
             .get_koid()
             .map_err(|e| ElfRunnerError::component_job_id_error(resolved_url.clone(), e))?
             .raw_koid();
-
-        let component_job = launch_info
-            .job
-            .as_handle_ref()
-            .duplicate(zx::Rights::SAME_RIGHTS)
-            .expect("handle duplication failed!");
 
         // Launch the component
         let process_koid = async {
@@ -346,17 +347,13 @@ impl ElfRunner {
         .await
         .map_err(|e| RunnerError::component_launch_error(resolved_url.clone(), e))?;
 
-        if let Some(runtime_dir) = runtime_dir {
-            self.create_elf_directory(&runtime_dir, &resolved_url, process_koid, job_koid).await?;
-            let server_stream = server_end.into_stream().expect("failed to convert");
-            let controller = runner::component::Controller::new(
-                ElfComponent::new(runtime_dir, Job::from(component_job)),
-                server_stream,
-            );
-            Ok(Some(controller))
-        } else {
-            Ok(None)
-        }
+        self.create_elf_directory(&runtime_dir, &resolved_url, process_koid, job_koid).await?;
+        let server_stream = server_end.into_stream().expect("failed to convert");
+        let controller = runner::component::Controller::new(
+            ElfComponent::new(runtime_dir, Job::from(component_job)),
+            server_stream,
+        );
+        Ok(Some(controller))
     }
 
     async fn start_async(
@@ -464,7 +461,9 @@ mod tests {
     use {
         super::*,
         fidl::endpoints::{create_proxy, ClientEnd, Proxy},
-        fidl_fuchsia_data as fdata, fuchsia_async as fasync, io_util,
+        fidl_fuchsia_data as fdata,
+        fidl_fuchsia_io::DirectoryProxy,
+        fuchsia_async as fasync, io_util,
         runner::component::Killable,
     };
 
@@ -588,7 +587,8 @@ mod tests {
     // from the test's namespace instead of serving and using a built-in one.
     #[fasync::run_singlethreaded(test)]
     async fn hello_world_fail_test() -> Result<(), Error> {
-        let start_info = hello_world_startinfo(None);
+        let (_runtime_dir_client, runtime_dir_server) = zx::Channel::create()?;
+        let start_info = hello_world_startinfo(Some(ServerEnd::new(runtime_dir_server)));
 
         // Note that value of should_use... is negated
         let args = Arguments {
