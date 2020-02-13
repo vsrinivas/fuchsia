@@ -175,7 +175,7 @@ class VDsoCodeWindow {
     code_window.block_execution(address, size);             \
   } while (0)
 
-// Random attributes in syscalls.abigen become "categories" of syscalls.
+// Random attributes in kazoo fidl files become "categories" of syscalls.
 // For each category, define a function block_<category> to block all the
 // syscalls in that category.  These functions can be used in
 // VDso::CreateVariant (below) to block a category of syscalls for a particular

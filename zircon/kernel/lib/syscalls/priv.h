@@ -11,7 +11,7 @@
 #include <zircon/syscalls/types.h>
 #include <zircon/types.h>
 
-// Forward declaration so it can be used in abigen-generated sys_* prototypes.
+// Forward declaration so it can be used in kazoo-generated sys_* prototypes.
 class user_out_handle;
 
 #if defined(__clang__)
@@ -34,7 +34,7 @@ class user_out_handle;
 #include <object/process_dispatcher.h>
 
 // This is the type of handle result parameters in system call
-// implementation functions (sys_*).  abigen recognizes return values of
+// implementation functions (sys_*).  kazoo recognizes return values of
 // type zx_handle_t and converts them into user_out_handle* instead of into
 // user_out_ptr<zx_handle_t>.  System call implementation functions use the
 // make, dup, or transfer method to turn a Dispatcher pointer or another
@@ -63,7 +63,7 @@ class user_out_handle final {
     return ZX_OK;
   }
 
-  // These methods are called by the abigen-generated wrapper_* functions
+  // These methods are called by the kazoo-generated wrapper_* functions
   // (syscall-kernel-wrappers.inc).  See KernelWrapperGenerator::syscall.
 
   bool begin_copyout(ProcessDispatcher* current_process, user_out_ptr<zx_handle_t> out) const {

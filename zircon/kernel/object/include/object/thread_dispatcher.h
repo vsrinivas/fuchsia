@@ -45,7 +45,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
 
   // When in a blocking syscall, or blocked in an exception, the blocking reason.
   // There is one of these for each syscall marked "blocking".
-  // See syscalls.abigen.
+  // See //zircon/vdso.
   enum class Blocked {
     // Not blocked.
     NONE,
