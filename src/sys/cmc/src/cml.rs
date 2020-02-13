@@ -192,6 +192,7 @@ pub struct Document {
     pub storage: Option<Vec<Storage>>,
     pub facets: Option<Map<String, Value>>,
     pub runners: Option<Vec<Runner>>,
+    pub resolvers: Option<Vec<Resolver>>,
     pub environments: Option<Vec<Environment>>,
 }
 
@@ -231,6 +232,14 @@ impl Document {
     pub fn all_runner_names(&self) -> Vec<&Name> {
         if let Some(runners) = self.runners.as_ref() {
             runners.iter().map(|s| &s.name).collect()
+        } else {
+            vec![]
+        }
+    }
+
+    pub fn all_resolver_names(&self) -> Vec<&Name> {
+        if let Some(resolvers) = self.resolvers.as_ref() {
+            resolvers.iter().map(|s| &s.name).collect()
         } else {
             vec![]
         }
@@ -282,6 +291,7 @@ pub struct Expose {
     pub protocol: Option<OneOrMany<String>>,
     pub directory: Option<String>,
     pub runner: Option<String>,
+    pub resolver: Option<Name>,
     pub from: OneOrMany<Ref>,
     pub r#as: Option<String>,
     pub to: Option<Ref>,
@@ -296,6 +306,7 @@ pub struct Offer {
     pub directory: Option<String>,
     pub storage: Option<String>,
     pub runner: Option<String>,
+    pub resolver: Option<Name>,
     pub from: OneOrMany<Ref>,
     pub to: Vec<Ref>,
     pub r#as: Option<String>,
@@ -331,6 +342,12 @@ pub struct Runner {
     pub path: String,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct Resolver {
+    pub name: Name,
+    pub path: String,
+}
+
 pub trait FromClause {
     fn from(&self) -> OneOrManyBorrow<Ref>;
 }
@@ -341,6 +358,7 @@ pub trait CapabilityClause {
     fn directory(&self) -> &Option<String>;
     fn storage(&self) -> &Option<String>;
     fn runner(&self) -> &Option<String>;
+    fn resolver(&self) -> &Option<Name>;
 
     /// Returns the name of the capability for display purposes.
     /// If `service()` returns `Some`, the capability name must be "service", etc.
@@ -366,6 +384,9 @@ impl CapabilityClause for Use {
     }
     fn runner(&self) -> &Option<String> {
         &self.runner
+    }
+    fn resolver(&self) -> &Option<Name> {
+        &None
     }
     fn capability_name(&self) -> &'static str {
         if self.service.is_some() {
@@ -414,6 +435,9 @@ impl CapabilityClause for Expose {
     fn runner(&self) -> &Option<String> {
         &self.runner
     }
+    fn resolver(&self) -> &Option<Name> {
+        &self.resolver
+    }
     fn capability_name(&self) -> &'static str {
         if self.service.is_some() {
             "service"
@@ -423,6 +447,8 @@ impl CapabilityClause for Expose {
             "directory"
         } else if self.runner.is_some() {
             "runner"
+        } else if self.resolver.is_some() {
+            "resolver"
         } else {
             ""
         }
@@ -457,6 +483,9 @@ impl CapabilityClause for Offer {
     fn runner(&self) -> &Option<String> {
         &self.runner
     }
+    fn resolver(&self) -> &Option<Name> {
+        &self.resolver
+    }
     fn capability_name(&self) -> &'static str {
         if self.service.is_some() {
             "service"
@@ -468,6 +497,8 @@ impl CapabilityClause for Offer {
             "storage"
         } else if self.runner.is_some() {
             "runner"
+        } else if self.resolver.is_some() {
+            "resolver"
         } else {
             ""
         }

@@ -42,6 +42,9 @@ pub struct Document {
     /// Runner capability declarations.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub runners: Option<Vec<Runner>>,
+    /// Resolver capability declarations.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resolvers: Option<Vec<Resolver>>,
     // Environment declarations.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub environments: Option<Vec<Environment>>,
@@ -144,6 +147,15 @@ pub struct Storage {
 pub struct Runner {
     pub name: Name,
     pub source: Ref,
+    pub source_path: Path,
+}
+
+/// A resolver capability. See [`ResolverDecl`].
+///
+/// [`ResolverDecl`]: ../../fidl_fuchsia_sys2/struct.ResolverDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Resolver {
+    pub name: Name,
     pub source_path: Path,
 }
 
@@ -269,6 +281,7 @@ pub enum Expose {
     Protocol(ExposeProtocol),
     Directory(ExposeDirectory),
     Runner(ExposeRunner),
+    Resolver(ExposeResolver),
 }
 
 /// Exposed service capability. See [`ExposeServiceDecl`].
@@ -319,6 +332,17 @@ pub struct ExposeRunner {
     pub target_name: Name,
 }
 
+/// Exposed resolver capability. See [`ExposeResolverDecl`].
+///
+/// [`ExposeResolverDecl`]: ../../fidl_fuchsia_sys2/struct.ExposeResolverDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ExposeResolver {
+    pub source: Ref,
+    pub source_name: Name,
+    pub target: ExposeTarget,
+    pub target_name: Name,
+}
+
 /// Offered capability. See [`OfferDecl`].
 ///
 /// [`OfferDecl`]: ../../fidl_fuchsia_sys2/enum.OfferDecl.html
@@ -330,6 +354,7 @@ pub enum Offer {
     Directory(OfferDirectory),
     Storage(OfferStorage),
     Runner(OfferRunner),
+    Resolver(OfferResolver),
 }
 
 /// Offered service capability. See [`OfferServiceDecl`].
@@ -385,6 +410,17 @@ pub struct OfferStorage {
 /// [`OfferRunnerDecl`]: ../../fidl_fuchsia_sys2/struct.OfferRunnerDecl.html
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OfferRunner {
+    pub source: Ref,
+    pub source_name: Name,
+    pub target: Ref,
+    pub target_name: Name,
+}
+
+/// Offered resolver capability. See [`OfferResolverDecl`].
+///
+/// [`OfferResolverDecl`]: ../../fidl_fuchsia_sys2/struct.OfferResolverDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+pub struct OfferResolver {
     pub source: Ref,
     pub source_name: Name,
     pub target: Ref,

@@ -44,6 +44,7 @@ pub fn parse_cml(value: Value) -> Result<cml::Document, Error> {
         all_children: HashSet::new(),
         all_collections: HashSet::new(),
         all_storage_and_sources: HashMap::new(),
+        all_resolvers: HashSet::new(),
         all_environment_names: HashSet::new(),
     };
     ctx.validate()?;
@@ -133,6 +134,7 @@ struct ValidationContext<'a> {
     all_children: HashSet<&'a cml::Name>,
     all_collections: HashSet<&'a cml::Name>,
     all_storage_and_sources: HashMap<&'a cml::Name, &'a cml::Ref>,
+    all_resolvers: HashSet<&'a cml::Name>,
     all_environment_names: HashSet<&'a cml::Name>,
 }
 
@@ -150,6 +152,7 @@ struct ValidationContext<'a> {
 enum CapabilityId<'a> {
     Path(&'a str),
     Runner(&'a str),
+    Resolver(&'a str),
     StorageType(&'a str),
 }
 
@@ -159,6 +162,7 @@ impl<'a> CapabilityId<'a> {
         match self {
             CapabilityId::Path(p) => p,
             CapabilityId::Runner(r) => r,
+            CapabilityId::Resolver(r) => r,
             CapabilityId::StorageType(s) => s,
         }
     }
@@ -168,6 +172,7 @@ impl<'a> CapabilityId<'a> {
         match self {
             CapabilityId::Path(_) => "path",
             CapabilityId::Runner(_) => "runner",
+            CapabilityId::Resolver(_) => "resolver",
             CapabilityId::StorageType(_) => "storage type",
         }
     }
@@ -207,6 +212,10 @@ impl<'a> CapabilityId<'a> {
             return Ok(vec![CapabilityId::Path(alias.unwrap_or(p))]);
         } else if let Some(p) = clause.runner().as_ref() {
             return Ok(vec![CapabilityId::Runner(alias.unwrap_or(p))]);
+        } else if let Some(p) = clause.resolver().as_ref() {
+            return Ok(vec![CapabilityId::Resolver(
+                alias.map(|s| s.as_str()).unwrap_or(p.as_str()),
+            )]);
         }
 
         // Offers rules prohibit using the "as" clause for storage; this is validated outside the
@@ -236,6 +245,8 @@ impl<'a> ValidationContext<'a> {
             self.document.all_storage_names().into_iter().zip(iter::repeat("storage"));
         let all_runner_names =
             self.document.all_runner_names().into_iter().zip(iter::repeat("runners"));
+        let all_resolver_names =
+            self.document.all_resolver_names().into_iter().zip(iter::repeat("resolvers"));
         let all_environment_names =
             self.document.all_environment_names().into_iter().zip(iter::repeat("environments"));
         ensure_no_duplicate_names(
@@ -243,6 +254,7 @@ impl<'a> ValidationContext<'a> {
                 .chain(all_collection_names)
                 .chain(all_storage_names)
                 .chain(all_runner_names)
+                .chain(all_resolver_names)
                 .chain(all_environment_names),
         )?;
 
@@ -250,6 +262,7 @@ impl<'a> ValidationContext<'a> {
         self.all_children = self.document.all_children_names().into_iter().collect();
         self.all_collections = self.document.all_collection_names().into_iter().collect();
         self.all_storage_and_sources = self.document.all_storage_and_sources();
+        self.all_resolvers = self.document.all_resolver_names().into_iter().collect();
         self.all_environment_names = self.document.all_environment_names().into_iter().collect();
 
         // Validate "children".
@@ -383,6 +396,18 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
+        // Ensure that resolvers exposed from self are defined in `resolvers`.
+        if let Some(resolver_name) = &expose.resolver {
+            // Resolvers can only have a single `from` clause.
+            if *expose.from.one().unwrap() == cml::Ref::Self_ {
+                if !self.all_resolvers.contains(resolver_name) {
+                    return Err(Error::validate(format!(
+                       "Resolver \"{}\" is exposed from self, so it must be declared in \"resolvers\"", resolver_name
+                   )));
+                }
+            }
+        }
+
         // Ensure we haven't already exposed an entity of the same name.
         let capability_ids = CapabilityId::from_clause(expose)?;
         for capability_id in capability_ids {
@@ -418,6 +443,18 @@ impl<'a> ValidationContext<'a> {
                         ))
                     }
                 };
+            }
+        }
+
+        // Ensure that resolvers offered from self are defined in `resolvers`.
+        if let Some(resolver_name) = &offer.resolver {
+            // Resolvers can only have a single `from` clause.
+            if *offer.from.one().unwrap() == cml::Ref::Self_ {
+                if !self.all_resolvers.contains(resolver_name) {
+                    return Err(Error::validate(format!(
+                       "Resolver \"{}\" is offered from self, so it must be declared in \"resolvers\"", resolver_name
+                   )));
+                }
             }
         }
 
@@ -873,6 +910,17 @@ mod tests {
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/subdir")),
         },
+        test_cml_use_resolver_fails => {
+            input = json!({
+                "use": [
+                    {
+                        "resolver": "pkg_resolver",
+                        "from": "realm",
+                    },
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /use/0")),
+        },
 
         // expose
         test_cml_expose => {
@@ -898,7 +946,8 @@ mod tests {
                         "subdir": "blob",
                     },
                     { "directory": "/hub", "from": "framework" },
-                    { "runner": "elf", "from": "#logger",  }
+                    { "runner": "elf", "from": "#logger",  },
+                    { "resolver": "pkg_resolver", "from": "#logger" },
                 ],
                 "children": [
                     {
@@ -1054,6 +1103,34 @@ mod tests {
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /expose/0/subdir")),
         },
+        test_cml_expose_resolver_from_self => {
+            input = json!({
+                "expose": [
+                    {
+                        "resolver": "pkg_resolver",
+                        "from": "self",
+                    },
+                ],
+                "resolvers": [
+                    {
+                        "name": "pkg_resolver",
+                        "path": "/svc/fuchsia.sys2.ComponentResolver",
+                    },
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cml_expose_resolver_from_self_missing => {
+            input = json!({
+                "expose": [
+                    {
+                        "resolver": "pkg_resolver",
+                        "from": "self",
+                    },
+                ],
+            }),
+            result = Err(Error::validate("Resolver \"pkg_resolver\" is exposed from self, so it must be declared in \"resolvers\"")),
+        },
 
         // offer
         test_cml_offer => {
@@ -1110,7 +1187,12 @@ mod tests {
                         "runner": "elf",
                         "from": "realm",
                         "to": [ "#modular", "#logger" ]
-                    }
+                    },
+                    {
+                        "resolver": "pkg_resolver",
+                        "from": "realm",
+                        "to": [ "#modular" ],
+                    },
                 ],
                 "children": [
                     {
@@ -1484,6 +1566,48 @@ mod tests {
                 ]
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /offer/0/subdir")),
+        },
+        test_cml_offer_resolver_from_self => {
+            input = json!({
+                "offer": [
+                    {
+                        "resolver": "pkg_resolver",
+                        "from": "self",
+                        "to": [ "#modular" ],
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "modular",
+                        "url": "fuchsia-pkg://fuchsia.com/modular#meta/modular.cm"
+                    },
+                ],
+                "resolvers": [
+                    {
+                        "name": "pkg_resolver",
+                        "path": "/svc/fuchsia.sys2.ComponentResolver",
+                    },
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cml_offer_resolver_from_self_missing => {
+            input = json!({
+                "offer": [
+                    {
+                        "resolver": "pkg_resolver",
+                        "from": "self",
+                        "to": [ "#modular" ],
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "modular",
+                        "url": "fuchsia-pkg://fuchsia.com/modular#meta/modular.cm"
+                    },
+                ],
+            }),
+            result = Err(Error::validate("Resolver \"pkg_resolver\" is offered from self, so it must be declared in \"resolvers\"")),
         },
 
         // children
@@ -2244,6 +2368,43 @@ mod tests {
             }),
             result = Err(Error::validate("identifier \"logger\" is defined twice, once in \"environments\" and once in \"children\"")),
         },
+
+        // Resolvers
+        test_cml_resolvers_duplicates => {
+            input = json!({
+                "resolvers": [
+                    {
+                        "name": "pkg_resolver",
+                        "path": "/svc/fuchsia.sys2.ComponentResolver",
+                    },
+                    {
+                        "name": "pkg_resolver",
+                        "path": "/svc/my-resolver",
+                    },
+                ]
+            }),
+            result = Err(Error::validate("identifier \"pkg_resolver\" is defined twice, once in \"resolvers\" and once in \"resolvers\"")),
+        },
+        test_cml_resolvers_missing_name => {
+            input = json!({
+                "resolvers": [
+                    {
+                        "path": "/svc/fuchsia.sys2.ComponentResolver",
+                    },
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /resolvers/0/name")),
+        },
+        test_cml_resolvers_missing_path => {
+            input = json!({
+                "resolvers": [
+                    {
+                        "name": "pkg_resolver",
+                    },
+                ]
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "This property is required at /resolvers/0/path")),
+        },
     }
 
     test_validate_cmx! {
@@ -2473,6 +2634,7 @@ mod tests {
             directory: None,
             storage: None,
             runner: None,
+            resolver: None,
             from: OneOrMany::One(cml::Ref::Self_),
             to: vec![],
             r#as: None,

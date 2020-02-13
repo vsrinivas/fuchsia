@@ -144,7 +144,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
         } else if let Some(p) = use_.runner() {
             out_uses.push(cm::Use::Runner(cm::UseRunner { source_name: cm::Name::new(p.clone())? }))
         } else {
-            return Err(Error::internal(format!("no capability")));
+            return Err(Error::internal(format!("no capability in use declaration")));
         };
     }
     Ok(out_uses)
@@ -209,6 +209,15 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
             out_exposes.push(cm::Expose::Runner(cm::ExposeRunner {
                 source,
                 source_name: cm::Name::new(p.clone())?,
+                target,
+                target_name: cm::Name::new(target_id)?,
+            }))
+        } else if let Some(p) = expose.resolver() {
+            let source = extract_single_expose_source(expose)?;
+            let target_id = one_target_capability_id(expose, expose)?;
+            out_exposes.push(cm::Expose::Resolver(cm::ExposeResolver {
+                source,
+                source_name: cm::Name::new(p.to_string())?,
                 target,
                 target_name: cm::Name::new(target_id)?,
             }))
@@ -292,6 +301,17 @@ fn translate_offer(
                 out_offers.push(cm::Offer::Runner(cm::OfferRunner {
                     source: source.clone(),
                     source_name: cm::Name::new(p.clone())?,
+                    target,
+                    target_name: cm::Name::new(target_id)?,
+                }));
+            }
+        } else if let Some(p) = offer.resolver() {
+            let source = extract_single_offer_source(offer)?;
+            let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
+            for (target, target_id) in targets {
+                out_offers.push(cm::Offer::Resolver(cm::OfferResolver {
+                    source: source.clone(),
+                    source_name: cm::Name::new(p.to_string())?,
                     target,
                     target_name: cm::Name::new(target_id)?,
                 }));
@@ -613,6 +633,8 @@ where
             Some(OneOrMany::One(p.clone()))
         } else if let Some(p) = in_obj.runner() {
             Some(OneOrMany::One(p.clone()))
+        } else if let Some(p) = in_obj.resolver() {
+            Some(OneOrMany::One(p.to_string()))
         } else if let Some(type_) = in_obj.storage() {
             match type_.as_str() {
                 "data" => Some(OneOrMany::One("/data".to_string())),

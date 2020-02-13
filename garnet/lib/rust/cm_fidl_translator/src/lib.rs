@@ -79,6 +79,7 @@ impl CmInto<fsys::ExposeDecl> for cm::Expose {
             cm::Expose::Protocol(s) => fsys::ExposeDecl::Protocol(s.cm_into()?),
             cm::Expose::Directory(d) => fsys::ExposeDecl::Directory(d.cm_into()?),
             cm::Expose::Runner(r) => fsys::ExposeDecl::Runner(r.cm_into()?),
+            cm::Expose::Resolver(_) => return Err(Error::internal("unimplemented")),
         })
     }
 }
@@ -100,6 +101,7 @@ impl CmInto<fsys::OfferDecl> for cm::Offer {
             cm::Offer::Directory(d) => fsys::OfferDecl::Directory(d.cm_into()?),
             cm::Offer::Storage(s) => fsys::OfferDecl::Storage(s.cm_into()?),
             cm::Offer::Runner(r) => fsys::OfferDecl::Runner(r.cm_into()?),
+            cm::Offer::Resolver(_) => return Err(Error::internal("unimplemented")),
         })
     }
 }

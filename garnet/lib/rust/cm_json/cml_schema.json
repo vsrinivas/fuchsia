@@ -308,6 +308,11 @@
             "required": [
               "runner"
             ]
+          },
+          {
+            "required": [
+              "resolver"
+            ]
           }
         ],
         "properties": {
@@ -364,6 +369,18 @@
             ],
             "examples": [
               "elf"
+            ]
+          },
+          "resolver": {
+            "title": "Exposed resolver source name",
+            "description": "The name of the resolver being exposed. This is either a resolver provided by the componenet (if from \"self\"), or the name of a resolver exposed by a child (if from \"#$CHILD\").",
+            "allOf": [
+              {
+                "$ref": "#/definitions/name-clause"
+              }
+            ],
+            "examples": [
+              "pkg_resolver"
             ]
           },
           "from": {
@@ -490,6 +507,11 @@
             "required": [
               "runner"
             ]
+          },
+          {
+            "required": [
+              "resolver"
+            ]
           }
         ],
         "properties": {
@@ -558,6 +580,18 @@
             ],
             "examples": [
               "elf"
+            ]
+          },
+          "resolver": {
+            "title": "Offered resolver source name",
+            "description": "The name of the resolver being offered. This is either a resolver provided by the componenet (if from \"self\"), or the name of a resolver offered from another component (if from \"realm\" or \"#$CHILD\").",
+            "allOf": [
+              {
+                "$ref": "#/definitions/name-clause"
+              }
+            ],
+            "examples": [
+              "pkg_resolver"
             ]
           },
           "from": {
@@ -893,7 +927,7 @@
         "properties": {
           "from": {
             "title": "Runner source component",
-            "description": "The component providing the underlying runner service. Either \"realm\", \"self\" or \"#$CHILD\".",
+            "description": "The component providing the underlying runner protocol. Either \"realm\", \"self\" or \"#$CHILD\".",
             "pattern": "^(realm|self|#[0-9a-z_\\-\\.]+)$",
             "allOf": [
               {
@@ -928,6 +962,45 @@
             ],
             "examples": [
               "/elf"
+            ]
+          }
+        }
+      }
+    },
+    "resolvers": {
+      "type": "array",
+      "title": "Resolvers",
+      "description": "Resolvers declared by this component.",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "path"
+        ],
+        "properties": {
+          "name": {
+            "title": "Resolver name",
+            "description": "The name of this resolver.",
+            "allOf": [
+              {
+                "$ref": "#/definitions/name-clause"
+              }
+            ],
+            "examples": [
+              "pkg_resolver"
+            ]
+          },
+          "path": {
+            "title": "The path of the resolver protocol",
+            "description": "The path in the component's outgoing directory providing the resolver protocol.",
+            "allOf": [
+              {
+                "$ref": "#/definitions/path-clause"
+              }
+            ],
+            "examples": [
+              "/svc/fuchsia.sys2.ComponentResolver"
             ]
           }
         }
