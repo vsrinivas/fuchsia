@@ -85,9 +85,7 @@ impl Model {
         let mut cur_realm = self.root_realm.clone();
         for moniker in look_up_abs_moniker.path().iter() {
             cur_realm = {
-                Realm::resolve_decl(&cur_realm).await?;
-                let cur_state = cur_realm.lock_state().await;
-                let cur_state = cur_state.as_ref().expect("look_up_realm: not resolved");
+                let cur_state = cur_realm.lock_resolved_state().await?;
                 if let Some(r) = cur_state.all_child_realms().get(moniker) {
                     r.clone()
                 } else {
@@ -95,7 +93,7 @@ impl Model {
                 }
             };
         }
-        Realm::resolve_decl(&cur_realm).await?;
+        let _ = cur_realm.lock_resolved_state().await?;
         Ok(cur_realm)
     }
 }

@@ -181,19 +181,17 @@ impl RealmCapabilityHostInner {
         exposed_dir: ServerEnd<DirectoryMarker>,
     ) -> Result<(), fcomponent::Error> {
         let partial_moniker = PartialMoniker::new(child.name, child.collection);
-        Realm::resolve_decl(&realm).await.map_err(|e| match e {
-            ModelError::ResolverError { err } => {
-                debug!("failed to resolve: {:?}", err);
-                fcomponent::Error::InstanceCannotResolve
-            }
-            e => {
-                error!("resolve_decl() failed: {}", e);
-                fcomponent::Error::Internal
-            }
-        })?;
         let child_realm = {
-            let realm_state = realm.lock_state().await;
-            let realm_state = realm_state.as_ref().expect("bind_child: not resolved");
+            let realm_state = realm.lock_resolved_state().await.map_err(|e| match e {
+                ModelError::ResolverError { err } => {
+                    debug!("failed to resolve: {:?}", err);
+                    fcomponent::Error::InstanceCannotResolve
+                }
+                e => {
+                    error!("failed to resolve RealmState: {}", e);
+                    fcomponent::Error::Internal
+                }
+            })?;
             realm_state.get_live_child_realm(&partial_moniker).map(|r| r.clone())
         };
         if let Some(child_realm) = child_realm {
@@ -255,12 +253,10 @@ impl RealmCapabilityHostInner {
         collection: fsys::CollectionRef,
         iter: ServerEnd<fsys::ChildIteratorMarker>,
     ) -> Result<(), fcomponent::Error> {
-        Realm::resolve_decl(&realm).await.map_err(|e| {
-            error!("resolve_decl() failed: {:?}", e);
+        let state = realm.lock_resolved_state().await.map_err(|e| {
+            error!("failed to resolve RealmState: {:?}", e);
             fcomponent::Error::Internal
         })?;
-        let state = realm.lock_state().await;
-        let state = state.as_ref().expect("list_children: not resolved");
         let decl = state.decl();
         let _ = decl
             .find_collection(&collection.name)

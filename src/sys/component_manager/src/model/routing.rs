@@ -634,8 +634,7 @@ async fn walk_offer_chain<'a>(
             return Ok(Some(CapabilitySource::Framework { capability, scope_moniker: None }));
         }
         let cur_realm = pos.realm().clone();
-        let cur_realm_state = cur_realm.lock_state().await;
-        let cur_realm_state = cur_realm_state.as_ref().expect("walk_offer_chain: not resolved");
+        let cur_realm_state = cur_realm.lock_resolved_state().await?;
         // This `decl()` is safe because the component must have been resolved to get here
         let decl = cur_realm_state.decl();
         let last_child_moniker = pos.last_child_moniker.as_ref().expect("no child moniker");
@@ -795,9 +794,7 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
         // TODO(xbhatnag): See if the locking needs to be over the entire loop
         // Consider -> let current_decl = { .. };
         let cur_realm = pos.realm().clone();
-        Realm::resolve_decl(&cur_realm).await?;
-        let cur_realm_state = cur_realm.lock_state().await;
-        let cur_realm_state = cur_realm_state.as_ref().expect("walk_expose_chain: not resolved");
+        let cur_realm_state = cur_realm.lock_resolved_state().await?;
         let expose = pos.capability.find_expose_source(cur_realm_state.decl()).ok_or(
             ModelError::capability_discovery_error(format_err!(
                 "no matching exposes found for capability {} from component {}",

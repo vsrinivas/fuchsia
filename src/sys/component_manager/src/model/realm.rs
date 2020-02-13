@@ -27,7 +27,7 @@ use {
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{
         future::{join_all, BoxFuture, Either, FutureExt},
-        lock::{Mutex, MutexLockFuture},
+        lock::{MappedMutexGuard, Mutex, MutexGuard},
     },
     std::convert::TryInto,
     std::iter::Iterator,
@@ -86,19 +86,23 @@ impl Realm {
         }
     }
 
-    /// Locks and returns the realm's mutable state.
-    pub fn lock_state(&self) -> MutexLockFuture<Option<RealmState>> {
-        self.state.lock()
+    /// Locks and returns the realm's mutable state. There is no guarantee that the realm
+    /// has a populated `RealmState`. Use [`lock_resolved_state`] if the `RealmState` should
+    /// be resolved.
+    ///
+    /// [`lock_resolved_state`]: Realm::lock_resolved_state
+    pub async fn lock_state(&self) -> MutexGuard<'_, Option<RealmState>> {
+        self.state.lock().await
     }
 
     /// Locks and returns the realm's execution state.
-    pub fn lock_execution(&self) -> MutexLockFuture<ExecutionState> {
-        self.execution.lock()
+    pub async fn lock_execution(&self) -> MutexGuard<'_, ExecutionState> {
+        self.execution.lock().await
     }
 
     /// Locks and returns the realm's action set.
-    pub fn lock_actions(&self) -> MutexLockFuture<ActionSet> {
-        self.actions.lock()
+    pub async fn lock_actions(&self) -> MutexGuard<'_, ActionSet> {
+        self.actions.lock().await
     }
 
     /// Gets the parent, if it still exists, or returns an `InstanceNotFound` error. Returns `None`
@@ -113,21 +117,24 @@ impl Realm {
             .transpose()
     }
 
-    /// Resolves and populates the component declaration of this realm's Instance, if not already
-    /// populated.
-    pub async fn resolve_decl(realm: &Arc<Self>) -> Result<(), ModelError> {
-        // Call `resolve()` outside of lock.
-        let is_resolved = { realm.lock_state().await.is_some() };
-        if !is_resolved {
-            let component = realm.resolver_registry.resolve(&realm.component_url).await?;
-            Realm::populate_decl(realm, component.decl.ok_or(ModelError::ComponentInvalid)?)
-                .await?;
+    /// Locks and returns a lazily resolved and populated `RealmState`.
+    pub async fn lock_resolved_state<'a>(
+        self: &'a Arc<Self>,
+    ) -> Result<MappedMutexGuard<'a, Option<RealmState>, RealmState>, ModelError> {
+        {
+            let state = self.state.lock().await;
+            if state.is_some() {
+                return Ok(MutexGuard::map(state, |s| s.as_mut().unwrap()));
+            }
+            // Drop the lock before doing the work to resolve the state.
         }
-        Ok(())
+        let component = self.resolver_registry.resolve(&self.component_url).await?;
+        Realm::populate_decl(self, component.decl.ok_or(ModelError::ComponentInvalid)?).await?;
+        Ok(MutexGuard::map(self.state.lock().await, |s| s.as_mut().unwrap()))
     }
 
     /// Populates the component declaration of this realm's Instance using the provided
-    /// `component_decl  if not already populated.
+    /// `component_decl` if not already populated.
     pub async fn populate_decl(
         realm: &Arc<Self>,
         component_decl: fsys::ComponentDecl,
@@ -263,10 +270,8 @@ impl Realm {
                 return Err(ModelError::unsupported("Eager startup"));
             }
         }
-        Realm::resolve_decl(realm).await?;
         let child_realm = {
-            let mut state = realm.lock_state().await;
-            let state = state.as_mut().expect("add_dynamic_child: not resolved");
+            let mut state = realm.lock_resolved_state().await?;
             let collection_decl = state
                 .decl()
                 .find_collection(&collection_name)
@@ -306,10 +311,8 @@ impl Realm {
         realm: Arc<Realm>,
         partial_moniker: &PartialMoniker,
     ) -> Result<Notification, ModelError> {
-        Realm::resolve_decl(&realm).await?;
         let tup = {
-            let mut state = realm.lock_state().await;
-            let state = state.as_mut().expect("remove_dynamic_child: not resolved");
+            let state = realm.lock_resolved_state().await?;
             state.live_child_realms.get(&partial_moniker).map(|t| t.clone())
         };
         if let Some(tup) = tup {
