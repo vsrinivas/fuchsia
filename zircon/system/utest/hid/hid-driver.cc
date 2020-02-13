@@ -112,13 +112,24 @@ TEST_F(HidDriverTest, BootMouseTest) {
   // Open a FIDL channel to the HID device
   zx::channel chan;
   ASSERT_OK(fdio_get_service_handle(fd_device.get(), chan.reset_and_get_address()));
-  auto sync_client = llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(chan));
+  auto client = llcpp::fuchsia::hardware::input::Device::SyncClient(std::move(chan));
+
+  // Get the report event.
+  zx::event report_event;
+  {
+    auto result = client.GetReportsEvent();
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+    report_event = std::move(result->event);
+  }
 
   // Check that the report comes through
   {
+    report_event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr);
+
     hid_boot_mouse_report_t test_report = {};
 
-    auto response = sync_client.ReadReport();
+    auto response = client.ReadReport();
     ASSERT_OK(response.status());
     ASSERT_OK(response->status);
     ASSERT_EQ(response->data.count(), sizeof(test_report));
@@ -130,14 +141,14 @@ TEST_F(HidDriverTest, BootMouseTest) {
 
   // Check that report descriptors have the same length
   {
-    auto response = sync_client.GetReportDescSize();
+    auto response = client.GetReportDescSize();
     ASSERT_OK(response.status());
     ASSERT_EQ(sizeof(kBootMouseReportDesc), response->size);
   }
 
   // Check that report descriptors match completely
   {
-    auto response = sync_client.GetReportDesc();
+    auto response = client.GetReportDesc();
     ASSERT_OK(response.status());
     ASSERT_EQ(response->desc.count(), sizeof(kBootMouseReportDesc));
     for (size_t i = 0; i < sizeof(kBootMouseReportDesc); i++) {
