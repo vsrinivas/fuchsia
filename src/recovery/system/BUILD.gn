@@ -32,14 +32,18 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//src/lib/mapped-vmo",
+    "//src/lib/storage/fs_management",
     "//src/lib/ui/carnelian",
     "//src/lib/ui/fuchsia-framebuffer",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:rouille",
     "//third_party/rust_crates:thiserror",
+    "//zircon/system/fidl/fuchsia-paver:fuchsia-paver-rustc",
   ]
 }
 
@@ -49,7 +53,16 @@ config_data("config") {
   outputs = [ "recovery.config" ]
 }
 
+generate_manifest("blobfs.manifest") {
+  visibility = [ ":*" ]
+  args = [ "--binary=bin/blobfs" ]
+}
+blobfs_manifest_outputs = get_target_outputs(":blobfs.manifest")
+blobfs_manifest_file = blobfs_manifest_outputs[0]
+
 package("system_recovery") {
+  extra = [ blobfs_manifest_file ]
+
   meta = [
     {
       path = rebase_path("meta/system_recovery.cmx")
@@ -57,7 +70,10 @@ package("system_recovery") {
     },
   ]
 
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    ":blobfs.manifest",
+  ]
 
   binaries = [
     {
@@ -67,7 +83,7 @@ package("system_recovery") {
   ]
 }
 
-unittest_package("system_recovery_tests") {
+test_package("system_recovery_tests") {
   deps = [ ":bin_test" ]
 
   tests = [

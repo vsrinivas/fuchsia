@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/system_recovery_bin_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/block"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

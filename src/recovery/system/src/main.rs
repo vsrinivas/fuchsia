@@ -13,6 +13,10 @@ use futures::StreamExt;
 
 mod setup;
 
+// TODO(33662): Remove this when storage reinitialization is used.
+#[allow(dead_code)]
+mod storage;
+
 static FONT_DATA: &'static [u8] =
     include_bytes!("../../../../prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf");
 

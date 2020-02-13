@@ -5,12 +5,15 @@
     "sandbox": {
         "dev": [
             "class/display-controller",
-            "class/input"
+            "class/input",
+            "sys/platform"
         ],
         "services": [
             "fuchsia.net.NameLookup",
+            "fuchsia.paver.Paver",
             "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher",
             "fuchsia.sysmem.Allocator"
         ]
     }
