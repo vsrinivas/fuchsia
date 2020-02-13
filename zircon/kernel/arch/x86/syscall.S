@@ -8,7 +8,7 @@
 #include <asm.h>
 #include <arch/x86/mp.h>
 #include <lib/code_patching.h>
-#include <zircon/zx-syscall-numbers.h>
+#include <lib/syscalls/zx-syscall-numbers.h>
 
 #define DW_REG_rsp        0x7
 #define DW_REG_rip        0x10
@@ -424,4 +424,22 @@ bad:
 
 END_FUNCTION(x86_syscall)
 
-#include <zircon/syscall-kernel-branches.S>
+// One of these macros is invoked by kernel.inc for each syscall.
+
+// These don't have kernel entry points.
+#define VDSO_SYSCALL(...)
+
+// These are the direct kernel entry points.
+#define KERNEL_SYSCALL(name, type, attrs, nargs, arglist, prototype) \
+  syscall_dispatch nargs, name
+#define INTERNAL_SYSCALL(...) KERNEL_SYSCALL(__VA_ARGS__)
+#define BLOCKING_SYSCALL(...) KERNEL_SYSCALL(__VA_ARGS__)
+
+start_syscall_dispatch
+
+#include <lib/syscalls/kernel.inc>
+
+#undef VDSO_SYSCALL
+#undef KERNEL_SYSCALL
+#undef INTERNAL_SYSCALL
+#undef BLOCKING_SYSCALL

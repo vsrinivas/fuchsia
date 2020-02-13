@@ -9,6 +9,7 @@
 #include <lib/cmdline.h>
 #include <lib/ktrace.h>
 #include <lib/ktrace/string_ref.h>
+#include <lib/syscalls/zx-syscall-numbers.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <platform.h>
 #include <string.h>
@@ -17,28 +18,41 @@
 #include <arch/user_copy.h>
 #include <fbl/alloc_checker.h>
 #include <hypervisor/ktrace.h>
+#include <ktl/iterator.h>
 #include <lk/init.h>
 #include <object/thread_dispatcher.h>
 #include <vm/vm_aspace.h>
 
 #define ktrace_ticks_per_ms() (ticks_per_second() / 1000)
 
-// Generated struct that has the syscall index and name.
-static struct ktrace_syscall_info {
-  uint32_t id;
-  uint32_t nargs;
-  const char* name;
-} kt_syscall_info[] = {
-#include <zircon/syscall-ktrace-info.inc>
-    {0, 0, nullptr}};
+namespace {
 
-void ktrace_report_syscalls(ktrace_syscall_info* call) {
-  size_t ix = 0;
-  while (call[ix].name) {
-    ktrace_name_etc(TAG_SYSCALL_NAME, call[ix].id, 0, call[ix].name, true);
-    ++ix;
+// One of these macros is invoked by kernel.inc for each syscall.
+
+// These don't have kernel entry points.
+#define VDSO_SYSCALL(...)
+
+// These are the direct kernel entry points.
+#define KERNEL_SYSCALL(name, type, attrs, nargs, arglist, prototype) [ZX_SYS_##name] = #name,
+#define INTERNAL_SYSCALL(...) KERNEL_SYSCALL(__VA_ARGS__)
+#define BLOCKING_SYSCALL(...) KERNEL_SYSCALL(__VA_ARGS__)
+
+constexpr const char* kSyscallNames[] = {
+#include <lib/syscalls/kernel.inc>
+};
+
+#undef VDSO_SYSCALL
+#undef KERNEL_SYSCALL
+#undef INTERNAL_SYSCALL
+#undef BLOCKING_SYSCALL
+
+void ktrace_report_syscalls() {
+  for (uint32_t i = 0; i < ktl::size(kSyscallNames); ++i) {
+    ktrace_name_etc(TAG_SYSCALL_NAME, i, 0, kSyscallNames[i], true);
   }
 }
+
+}  // namespace
 
 static StringRef* ktrace_find_probe(const char* name) {
   for (StringRef* ref = StringRef::head(); ref != nullptr; ref = ref->next) {
@@ -141,7 +155,7 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
     case KTRACE_ACTION_REWIND:
       // roll back to just after the metadata
       atomic_store(&ks->offset, KTRACE_RECSIZE * 2);
-      ktrace_report_syscalls(kt_syscall_info);
+      ktrace_report_syscalls();
       ktrace_report_probes();
       ktrace_report_vcpu_meta();
       break;
@@ -182,7 +196,6 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
 }
 
 void ktrace_init(unsigned level) {
-
   ktrace_state_t* ks = &KTRACE_STATE;
 
   // There's no utility in setting up ktrace if there's no syscalls to access
@@ -227,7 +240,7 @@ void ktrace_init(unsigned level) {
 
   // enable tracing
   atomic_store(&ks->offset, KTRACE_RECSIZE * 2);
-  ktrace_report_syscalls(kt_syscall_info);
+  ktrace_report_syscalls();
   ktrace_report_probes();
   atomic_store(&ks->grpmask, KTRACE_GRP_TO_MASK(grpmask));
 

@@ -5,7 +5,9 @@
 #include "tools/kazoo/output_util.h"
 
 #include <zircon/assert.h>
+
 #include <string_view>
+
 #include "tools/kazoo/string_util.h"
 
 bool CopyrightHeaderWithCppComments(Writer* writer) {
@@ -243,24 +245,42 @@ std::string GetGoName(const Type& type) {
   // tool that parsed abigen directly.
   // TODO(scottmg|dhobsd): Remove or rationalize these over time.
   std::string name = GetGoNameImpl(type);
-  if (name == "Futex") return "int32";
-  if (name == "Koid") return "uint64";
-  if (name == "Ticks") return "int64";
-  if (name == "Vm_option") return "VMFlag";
-  if (name == "zx_channel_call_args_t") return "ChannelCallArgs";
-  if (name == "zx_clock_t") return "uint32";
-  if (name == "zx_handle_disposition_t") return "HandleDisposition";
-  if (name == "zx_handle_info_t") return "int";
-  if (name == "zx_pci_bar_t") return "uintptr";
-  if (name == "zx_pci_init_arg_t") return "uintptr";
-  if (name == "zx_pcie_device_info_t") return "uintptr";
-  if (name == "zx_port_packet_t") return "int";
-  if (name == "zx_profile_info_t") return "int";
-  if (name == "zx_rights_t") return "Rights";
-  if (name == "zx_smc_parameters_t") return "SMCParameters";
-  if (name == "zx_smc_result_t") return "SMCResult";
-  if (name == "zx_system_powerctl_arg_t") return "int";
-  if (name == "zx_wait_item_t") return "WaitItem";
+  if (name == "Futex")
+    return "int32";
+  if (name == "Koid")
+    return "uint64";
+  if (name == "Ticks")
+    return "int64";
+  if (name == "Vm_option")
+    return "VMFlag";
+  if (name == "zx_channel_call_args_t")
+    return "ChannelCallArgs";
+  if (name == "zx_clock_t")
+    return "uint32";
+  if (name == "zx_handle_disposition_t")
+    return "HandleDisposition";
+  if (name == "zx_handle_info_t")
+    return "int";
+  if (name == "zx_pci_bar_t")
+    return "uintptr";
+  if (name == "zx_pci_init_arg_t")
+    return "uintptr";
+  if (name == "zx_pcie_device_info_t")
+    return "uintptr";
+  if (name == "zx_port_packet_t")
+    return "int";
+  if (name == "zx_profile_info_t")
+    return "int";
+  if (name == "zx_rights_t")
+    return "Rights";
+  if (name == "zx_smc_parameters_t")
+    return "SMCParameters";
+  if (name == "zx_smc_result_t")
+    return "SMCResult";
+  if (name == "zx_system_powerctl_arg_t")
+    return "int";
+  if (name == "zx_wait_item_t")
+    return "WaitItem";
   return name;
 }
 
@@ -275,31 +295,56 @@ std::string GetNativeGoName(const Type& type) {
   // a few hacks here to make it match the previous output of the Go-written
   // tool that parsed abigen directly.
   // TODO(scottmg|dhobsd): Remove or rationalize these over time.
-  if (name == "Duration") return "int64";
-  if (name == "Futex") return "int32";
-  if (name == "Handle") return "uint32";
-  if (name == "Koid") return "uint64";
-  if (name == "Paddr") return "uintptr";
-  if (name == "Signals") return "uint32";
-  if (name == "Status") return "int32";
-  if (name == "Ticks") return "int64";
-  if (name == "Time") return "int64";
-  if (name == "Vaddr") return "uintptr";
-  if (name == "Vm_option") return "uint32";
-  if (name == "zx_channel_call_args_t") return "uintptr";
-  if (name == "zx_clock_t") return "uint32";
-  if (name == "zx_handle_disposition_t") return "uintptr";
-  if (name == "zx_handle_info_t") return "int";
-  if (name == "zx_pci_bar_t") return "uintptr";
-  if (name == "zx_pci_init_arg_t") return "uintptr";
-  if (name == "zx_pcie_device_info_t") return "uintptr";
-  if (name == "zx_port_packet_t") return "int";
-  if (name == "zx_profile_info_t") return "int";
-  if (name == "zx_rights_t") return "uint32";
-  if (name == "zx_smc_parameters_t") return "uintptr";
-  if (name == "zx_smc_result_t") return "uintptr";
-  if (name == "zx_system_powerctl_arg_t") return "int";
-  if (name == "zx_wait_item_t") return "uintptr";
+  if (name == "Duration")
+    return "int64";
+  if (name == "Futex")
+    return "int32";
+  if (name == "Handle")
+    return "uint32";
+  if (name == "Koid")
+    return "uint64";
+  if (name == "Paddr")
+    return "uintptr";
+  if (name == "Signals")
+    return "uint32";
+  if (name == "Status")
+    return "int32";
+  if (name == "Ticks")
+    return "int64";
+  if (name == "Time")
+    return "int64";
+  if (name == "Vaddr")
+    return "uintptr";
+  if (name == "Vm_option")
+    return "uint32";
+  if (name == "zx_channel_call_args_t")
+    return "uintptr";
+  if (name == "zx_clock_t")
+    return "uint32";
+  if (name == "zx_handle_disposition_t")
+    return "uintptr";
+  if (name == "zx_handle_info_t")
+    return "int";
+  if (name == "zx_pci_bar_t")
+    return "uintptr";
+  if (name == "zx_pci_init_arg_t")
+    return "uintptr";
+  if (name == "zx_pcie_device_info_t")
+    return "uintptr";
+  if (name == "zx_port_packet_t")
+    return "int";
+  if (name == "zx_profile_info_t")
+    return "int";
+  if (name == "zx_rights_t")
+    return "uint32";
+  if (name == "zx_smc_parameters_t")
+    return "uintptr";
+  if (name == "zx_smc_result_t")
+    return "uintptr";
+  if (name == "zx_system_powerctl_arg_t")
+    return "int";
+  if (name == "zx_wait_item_t")
+    return "uintptr";
   return name;
 }
 
@@ -324,119 +369,4 @@ uint32_t DJBHash(const std::string& str) {
     h = (h << 5) + h + static_cast<uint32_t>(c);
   }
   return h;
-}
-
-void CSignatureLine(const Syscall& syscall, const char* prefix, const char* name_prefix,
-                    Writer* writer, SignatureNewlineStyle newline_style,
-                    std::vector<std::string>* non_nulls) {
-  const char* newline = newline_style == SignatureNewlineStyle::kAllOneLine ? "" : "\n";
-  const char* indent = newline_style == SignatureNewlineStyle::kAllOneLine ? "" : "    ";
-  writer->Puts(prefix);
-  writer->Printf("%s ", GetCUserModeName(syscall.kernel_return_type()).c_str());
-  writer->Printf("%s%s(%s", name_prefix, syscall.name().c_str(), newline);
-
-  if (syscall.kernel_arguments().size() == 0) {
-    if (newline_style == SignatureNewlineStyle::kOnePerLine) {
-      writer->Puts(indent);
-    }
-    writer->Puts("void");
-  } else {
-    for (size_t i = 0; i < syscall.kernel_arguments().size(); ++i) {
-      const StructMember& arg = syscall.kernel_arguments()[i];
-      const bool last = i == syscall.kernel_arguments().size() - 1;
-      if (newline_style == SignatureNewlineStyle::kOnePerLine) {
-        writer->Puts("    ");  // All indented if one per line.
-      } else if (i != 0) {
-        writer->Puts(" ");  // No space after open ( for single line.
-      }
-      writer->Printf("%s %s", GetCUserModeName(arg.type()).c_str(), arg.name().c_str());
-      std::string attributes =
-          GetHandleOwnershipAttribute(arg, syscall.HasAttribute("HandleUnchecked"));
-      if (!attributes.empty()) {
-        writer->Printf(" %s", attributes.c_str());
-      }
-      if (!last) {
-        writer->Printf(",%s", newline);
-      }
-      if (arg.type().IsPointer() && arg.type().optionality() == Optionality::kOutputNonOptional) {
-        if (non_nulls) {
-          non_nulls->push_back(StringPrintf("%zu", i + 1));
-        }
-      }
-    }
-  }
-  writer->Printf(")");
-}
-
-void CDeclaration(const Syscall& syscall, const char* prefix, const char* name_prefix,
-                  Writer* writer) {
-  std::vector<std::string> non_nulls;
-  CSignatureLine(syscall, prefix, name_prefix, writer, SignatureNewlineStyle::kOnePerLine,
-                 &non_nulls);
-
-  // TODO(syscall-fidl-transition): The order of these post-declaration markup is maintained, but
-  // perhaps it could be simplified once it doesn't need to match.
-
-  if (!non_nulls.empty()) {
-    // TODO(syscall-fidl-transition): abigen only tags non-optional arguments as non-null, but
-    // other input pointers could also perhaps be usefully tagged as well.
-    writer->Printf(" __NONNULL((%s))", JoinStrings(non_nulls, ", ").c_str());
-  }
-  writer->Printf(" __LEAF_FN");
-  if (syscall.HasAttribute("const")) {
-    writer->Puts(" __CONST");
-  }
-  if (syscall.HasAttribute("noreturn")) {
-    writer->Puts(" __NO_RETURN");
-  }
-  writer->Puts(";\n\n");
-}
-
-namespace {
-
-constexpr std::string_view acquire = "ZX_ACQUIRE_HANDLE";
-constexpr std::string_view acquire_unchecked = "ZX_ACQUIRE_HANDLE_UNCHECKED";
-constexpr std::string_view release = "ZX_RELEASE_HANDLE";
-constexpr std::string_view use = "ZX_USE_HANDLE";
-constexpr std::string_view use_unchecked = "ZX_USE_HANDLE_UNCHECKED";
-
-std::string GetHandleOwnershipAttributeImpl(const StructMember& arg, bool unchecked, bool output) {
-  if (arg.attributes().count("Acquire")) {
-    return std::string(unchecked ? acquire_unchecked : acquire);
-  } else if (arg.attributes().count("Release")) {
-    return std::string(release);
-  } else if (arg.attributes().count("Use")) {
-    return std::string(unchecked ? use_unchecked : use);
-  }
-
-  Type innermost_type = arg.type();
-  bool changed;
-  do {
-    changed = false;
-    if (innermost_type.IsPointer()) {
-      innermost_type = arg.type().DataAsPointer().pointed_to_type();
-      changed = true;
-    } else if (innermost_type.IsVector()) {
-      innermost_type = arg.type().DataAsVector().contained_type();
-      changed = true;
-    }
-  } while (changed);
-
-  if (innermost_type.IsHandle()) {
-    if (output) {
-      return std::string(unchecked ? acquire_unchecked : acquire);
-    } else {
-      return std::string(unchecked ? use_unchecked : use);
-    }
-  }
-
-  return std::string();
-}
-
-}  // namespace
-
-std::string GetHandleOwnershipAttribute(const StructMember& arg, bool unchecked) {
-  bool output = arg.type().optionality() == Optionality::kOutputOptional ||
-                arg.type().optionality() == Optionality::kOutputNonOptional;
-  return GetHandleOwnershipAttributeImpl(arg, unchecked, output);
 }

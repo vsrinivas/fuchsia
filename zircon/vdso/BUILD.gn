@@ -1,0 +1,197 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/fidl.gni")
+import("$zx/public/gn/toolchain/c_utils.gni")
+
+declare_args() {
+  # If true, excludes syscalls with the [testonly] attribute.
+  exclude_testonly_syscalls = false
+}
+
+group("vdso") {
+  public_deps = [ ":zz" ]
+}
+
+group("json") {
+  public_deps = [ ":zz.json" ]
+}
+
+# The system calls are defined as if they were a FIDL library, because
+# kazoo consumes the FIDL JSON IR (generated below).  This cannot be used
+# like a normal fidl_library, however.  Only the "json" subtarget is
+# available.
+#
+# TODO(39732): Rename to "zx".
+fidl_library("zz") {
+  visibility = [ ":*" ]
+  targets = [ "fidl_json_rspfile" ]
+  sources = [
+    "alias_workarounds.fidl",
+    "bti.fidl",
+    "cache.fidl",
+    "channel.fidl",
+    "clock.fidl",
+    "cprng.fidl",
+    "debug.fidl",
+    "debuglog.fidl",
+    "event.fidl",
+    "eventpair.fidl",
+    "exception.fidl",
+    "fifo.fidl",
+    "framebuffer.fidl",
+    "futex.fidl",
+    "guest.fidl",
+    "handle.fidl",
+    "interrupt.fidl",
+    "iommu.fidl",
+    "ioports.fidl",
+    "job.fidl",
+    "ktrace.fidl",
+    "misc.fidl",
+    "mtrace.fidl",
+    "object.fidl",
+    "pager.fidl",
+    "pc.fidl",
+    "pci.fidl",
+    "pmt.fidl",
+    "port.fidl",
+    "process.fidl",
+    "profile.fidl",
+    "resource.fidl",
+    "rights.fidl",
+    "smc.fidl",
+    "socket.fidl",
+    "stream.fidl",
+    "syscall.fidl",
+    "system.fidl",
+    "task.fidl",
+    "thread.fidl",
+    "timer.fidl",
+    "vcpu.fidl",
+    "vmar.fidl",
+    "vmo.fidl",
+    "zx.fidl",
+  ]
+}
+
+# The generated stuff is identical regardless of how it gets compiled.
+# Dependents must use "$zx/vdso:public($default_toolchain)" or
+# "$zx/vdso:private($default_toolchain)".
+assert(current_toolchain == default_toolchain)
+
+# This provides the public headers that go with the vDSO API, which are
+# seen as <zircon/...>.
+group("public") {
+  visibility = [ "$zx/system/ulib/zircon/*" ]
+  public_configs = [ ":public.config" ]
+  public_deps = [ ":generate" ]
+}
+
+public_gen_dir = "$root_gen_dir/include/zircon/syscalls"
+config("public.config") {
+  visibility = [ ":public" ]
+  include_dirs = [ "$root_gen_dir/include" ]
+}
+
+# This provides the private headers used by the kernel and vDSO
+# implementation, which are seen as <lib/syscalls/...>.
+group("private") {
+  visibility = [
+    "$zx/kernel/lib/syscalls/*",
+    "$zx/system/ulib/zircon/*",
+  ]
+  public_configs = [ ":private.config" ]
+  public_deps = [ ":generate" ]
+}
+
+private_gen_dir = "$target_gen_dir/include/lib/syscalls"
+config("private.config") {
+  visibility = [ ":private" ]
+  include_dirs = [ "$target_gen_dir/include" ]
+}
+
+# The FIDL compiler translates the sources into generic FIDL JSON IR.
+# This collects the location of that file.
+json_rspfile = "$target_gen_dir/json.rspfile"
+link_output_rspfile("json.rspfile") {
+  visibility = [ ":*" ]
+  outputs = [ json_rspfile ]
+  deps = [ ":json" ]
+}
+
+# The kazoo compiler translates FIDL's IR into syscall-oriented outputs.
+# These are logically distinct things that are used by different modules in
+# the kernel or in public library code.  But they all depend on the same
+# inputs, the front-end work is the same for each one, and the back-end
+# work is not very costly.  So doing a single kazoo run to generate them
+# all together is faster than parallelizing the independent generation
+# steps that duplicate redundant process overhead and front-end work.
+
+public_generated = [
+  {
+    args = [ "--json" ]
+    outputs = [ "$public_gen_dir/definitions.json" ]
+  },
+  {
+    args = [ "--public-header" ]
+    outputs = [ "$public_gen_dir/internal/cdecls.inc" ]
+  },
+  {
+    args = [ "--rust" ]
+    outputs = [ "$public_gen_dir/definitions.rs" ]
+  },
+]
+
+private_generated = [
+  {
+    args = [ "--category" ]
+    outputs = [ "$private_gen_dir/category.inc" ]
+  },
+  {
+    args = [ "--syscall-numbers" ]
+    outputs = [ "$private_gen_dir/zx-syscall-numbers.h" ]
+  },
+  {
+    args = [ "--kernel-header" ]
+    outputs = [ "$private_gen_dir/kernel.inc" ]
+  },
+  {
+    args = [ "--kernel-wrappers" ]
+    outputs = [ "$private_gen_dir/kernel-wrappers.inc" ]
+  },
+  {
+    args = [ "--private-header" ]
+    outputs = [ "$private_gen_dir/syscalls.inc" ]
+  },
+]
+
+host_tool_action("generate") {
+  visibility = [
+    ":private",
+    ":public",
+  ]
+
+  tool = "$zx/tools/kazoo"
+
+  args = []
+  if (exclude_testonly_syscalls) {
+    args += [ "--exclude=testonly" ]
+  }
+
+  outputs = []
+  foreach(gen, public_generated + private_generated) {
+    args += gen.args + rebase_path(gen.outputs, root_build_dir)
+    outputs += gen.outputs
+  }
+
+  deps = [ ":json.rspfile" ]
+  sources = get_target_outputs(deps[0])
+  assert(sources == [ sources[0] ])  # There can be only one.
+  args += [ "@" + rebase_path(sources[0], root_build_dir) ]
+
+  metadata = {
+    generated_sources = rebase_path(outputs, root_build_dir)
+  }
+}

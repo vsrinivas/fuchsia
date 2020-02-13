@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/syscalls.h>
-
-#include <zircon/compiler.h>
 #include "private.h"
 
 namespace {
@@ -29,7 +26,7 @@ void for_each_icache_line(const void* addr, size_t len, T func) {
 
 }  // anonymous namespace
 
-zx_status_t _zx_cache_flush(const void* addr, size_t len, uint32_t options) {
+__EXPORT zx_status_t _zx_cache_flush(const void* addr, size_t len, uint32_t options) {
   switch (options) {
     case ZX_CACHE_FLUSH_INSN:
       break;

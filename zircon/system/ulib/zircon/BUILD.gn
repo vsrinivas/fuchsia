@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/kernel/lib/syscalls/kazoo.gni")
 import("$zx_build/public/gn/config/globals.gni")
 import("$zx_build/public/gn/config/standard.gni")
 import("$zx_build/public/gn/toolchain/environment.gni")
@@ -110,15 +109,13 @@ if (current_toolchain == default_toolchain) {
       "zx_ticks_per_second.cc",
     ]
 
-    configs += [ ":config" ]
-
     deps = [
-      ":generate",
       ":syscall-asm",
+      "$zx/kernel/lib/syscalls:headers",
       "$zx/kernel/lib/userabi:headers",
       "$zx/system/ulib/affine",
     ]
-    public_deps = [ ":generated-public-headers" ]
+    public_deps = [ "$zx/vdso:public($default_toolchain)" ]
 
     # Instruct the linker to preserve the hidden alternate entry points.
     # Note, "./" makes GN realize this is a file rather than a -l switch.
@@ -151,6 +148,8 @@ if (current_toolchain == default_toolchain) {
     link_file = "$target_gen_dir/libzircon.so"
     debug_file = rebase_path("$target_out_dir/libzircon.so.debug")
     write_file(link_file, [ "INPUT($debug_file)" ])
+    gen_include_dir =
+        get_label_info(public_deps[0], "root_gen_dir") + "/include"
     metadata = {
       legacy_sysroot = [
         {
@@ -160,15 +159,15 @@ if (current_toolchain == default_toolchain) {
         {
           include_dirs = rebase_path([
                                        "include",
-                                       root_gen_dir,
+                                       gen_include_dir,
                                      ],
                                      root_build_dir)
         },
         {
           sdk = {
-            include_dir = rebase_path(root_gen_dir, root_build_dir)
+            include_dir = rebase_path(gen_include_dir, root_build_dir)
             headers = [
-              "zircon/syscalls/definitions.h",
+              "zircon/syscalls/internal/cdecls.inc",
               # Note not included in SDK: "zircon/syscalls/definitions.rs",
             ]
           }
@@ -224,65 +223,18 @@ if (current_toolchain == default_toolchain) {
     }
   }
 
-  # Everything with ":config" in configs needs ":generate" in deps.
-  config("config") {
-    visibility = [ ":*" ]
-    include_dirs = [ target_gen_dir ]
-  }
-
   source_set("syscall-asm") {
     sources = [
       "syscalls-$zircon_cpu.S",
       "zx_futex_wake_handle_close_thread_exit-$zircon_cpu.S",
       "zx_vmar_unmap_handle_close_thread_exit-$zircon_cpu.S",
     ]
-    configs += [ ":config" ]
     deps = [
-      ":generate",
-      "$zx/kernel/lib/syscalls:syscall-abi",
+      ":headers",
+      "$zx/kernel/lib/syscalls",
     ]
     if (toolchain.base_environment == "user") {
       configs -= [ "$zx/public/gn/config:user" ]
     }
-  }
-
-  group("generated-public-headers") {
-    public_configs = [ ":generated-public-headers.config" ]
-    deps = [ ":generate" ]
-  }
-
-  config("generated-public-headers.config") {
-    visibility = [ ":generated-public-headers" ]
-    include_dirs = [ root_gen_dir ]
-  }
-
-  kazoo("generate") {
-    visibility = [ ":*" ]
-    gen = [
-      # These are the public headers.
-      {
-        args = [ "--user-header" ]
-        outputs = [ "$root_gen_dir/zircon/syscalls/definitions.h" ]
-      },
-      {
-        args = [ "--rust" ]
-        outputs = [ "$root_gen_dir/zircon/syscalls/definitions.rs" ]
-      },
-
-      # TODO(mcgrathr): Drop the zircon/ prefix from the remaining files.
-      # These are private.
-      {
-        args = [ "--vdso-header" ]
-        outputs = [ "$target_gen_dir/zircon/syscall-vdso-definitions.h" ]
-      },
-      {
-        args = [ "--vdso-wrappers" ]
-        outputs = [ "$target_gen_dir/zircon/syscall-vdso-wrappers.inc" ]
-      },
-      {
-        args = [ "--${zircon_cpu}-asm" ]
-        outputs = [ "$target_gen_dir/zircon/syscalls-$zircon_cpu.S" ]
-      },
-    ]
   }
 }

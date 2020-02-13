@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_KAZOO_OUTPUT_UTIL_H_
-#define TOOLS_KAZOO_OUTPUT_UTIL_H_
+#ifndef ZIRCON_TOOLS_KAZOO_OUTPUT_UTIL_H_
+#define ZIRCON_TOOLS_KAZOO_OUTPUT_UTIL_H_
 
 #include "tools/kazoo/syscall_library.h"
 #include "tools/kazoo/writer.h"
@@ -53,24 +53,4 @@ uint32_t DJBHash(const std::string& str);
 
 enum class SignatureNewlineStyle { kAllOneLine, kOnePerLine };
 
-// Emits a C syscall signature, up to the closing parenthesis of the argument list (but does not
-// include any annotations, nor a trailing semi-colon or opening brace (see CDeclaration() as well).
-// |prefix| is a string that goes before the entire declaration.
-// |name_prefix| is prepended to the function name.
-// |non_nulls| is optional; if it's not null, it will be filled with the indices of the parameters
-// which the input specification says must be non-null arguments.
-void CSignatureLine(const Syscall& syscall, const char* prefix, const char* name_prefix,
-                    Writer* writer, SignatureNewlineStyle newline_style,
-                    std::vector<std::string>* non_nulls);
-
-// Emits a C header declaration for a syscall.
-// |prefix| is a string that goes before the entire declaration.
-// |name_prefix| is prepended to the function name.
-void CDeclaration(const Syscall& syscall, const char* prefix, const char* name_prefix,
-                  Writer* writer);
-
-// Get the Clang attribute that describes the ownership of the handle.
-// Returns empty string for non-handle arguments.
-std::string GetHandleOwnershipAttribute(const StructMember &arg, bool unchecked);
-
-#endif  // TOOLS_KAZOO_OUTPUT_UTIL_H_
+#endif  // ZIRCON_TOOLS_KAZOO_OUTPUT_UTIL_H_

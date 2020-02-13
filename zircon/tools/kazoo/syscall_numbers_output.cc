@@ -6,7 +6,7 @@
 #include "tools/kazoo/outputs.h"
 
 bool SyscallNumbersOutput(const SyscallLibrary& library, Writer* writer) {
-  if (!CopyrightHeaderWithCppComments(writer)){
+  if (!CopyrightHeaderWithCppComments(writer)) {
     return false;
   }
 

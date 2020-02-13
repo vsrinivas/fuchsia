@@ -2,6 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/subtarget_aliases.gni")
+
+# This tells fidl_library() to invoke fidl_json_rspfile().
+fidl_support_templates = [
+  {
+    import = "$zx/public/gn/fidl/json.gni"
+    target = "fidl_json_rspfile"
+    fidlc = "json"
+  },
+]
+
 # This tells fidl_library() how to ask fidlc to generate JSON output.
 fidl_support_fidlc = [
   {
@@ -14,3 +25,39 @@ fidl_support_fidlc = [
     ]
   },
 ]
+
+# Provide FIDL JSON IR for fidl_library().  **Do not use directly!**
+#
+# This is never used directly, but only indirectly by fidl_library().
+# See there for details.
+#
+# This produces a group with the metadata schema required by
+# link_output_rspfile() to identify the JSON IR file.
+template("fidl_json_rspfile") {
+  group("$target_name.json") {
+    forward_variables_from(invoker,
+                           [
+                             "visibility",
+                             "testonly",
+                           ])
+
+    # Depend on the fidlc generation step and describe what it produces.
+    deps = invoker.fidlc_deps
+    metadata = {
+      link_output = rebase_path(invoker.fidlc_outputs, root_build_dir)
+      link_barrier = []
+    }
+  }
+
+  # Things can depend on "fidl/foo:json" rather than "fidl/foo:foo.json".
+  subtarget_aliases(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "visibility",
+                             "testonly",
+                           ])
+    outputs = [ "json" ]
+  }
+
+  not_needed(invoker, "*")
+}

@@ -116,6 +116,7 @@ zx_library("x86") {
     "$zx/kernel/lib/crashlog",
     "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/ktl",
+    "$zx/kernel/lib/ktrace",
     "$zx/kernel/lib/pci",
     "$zx/kernel/lib/perfmon",
     "$zx/kernel/lib/topology",
@@ -156,7 +157,7 @@ source_set("syscall") {
   sources = [ "syscall.S" ]
   deps = [
     "$zx/kernel/lib/code_patching",
-    "$zx/kernel/lib/syscalls:syscall-abi",
+    "$zx/kernel/lib/syscalls",
   ]
 }
 

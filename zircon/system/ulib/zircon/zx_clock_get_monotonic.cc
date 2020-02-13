@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/affine/ratio.h>
-#include <zircon/syscalls.h>
 
 #include "private.h"
 
 // By default, when we get clock monotonic, simply transform the tick counter
 // using the user-mode resident VDSO version of zx_ticks_get.
-zx_time_t _zx_clock_get_monotonic(void) {
+__EXPORT zx_time_t _zx_clock_get_monotonic(void) {
   affine::Ratio ticks_to_mono_ratio(DATA_CONSTANTS.ticks_to_mono_numerator,
                                     DATA_CONSTANTS.ticks_to_mono_denominator);
   return ticks_to_mono_ratio.Scale(VDSO_zx_ticks_get());

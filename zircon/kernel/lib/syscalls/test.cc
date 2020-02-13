@@ -31,7 +31,13 @@ zx_status_t sys_syscall_test_8(int a, int b, int c, int d, int e, int f, int g, 
   return a + b + c + d + e + f + g + h;
 }
 // zx_status_t zx_syscall_test_wrapper
-zx_status_t sys_syscall_test_wrapper(int a, int b, int c) { return a + b + c; }
+zx_status_t sys_syscall_test_wrapper(int a, int b, int c) {
+  if (a < 0 || b < 0 || c < 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  int ret = a + b + c;
+  return (ret > 50 ? ZX_ERR_OUT_OF_RANGE : ret);
+}
 
 // zx_status_t zx_syscall_test_handle_create
 //

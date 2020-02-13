@@ -171,6 +171,14 @@ foreach(gen, _fidl_generators) {
 #       ]
 #     Type: list({protocol, methods})
 #
+#   targets
+#     Optional: Subset of bindings types to generate for this library.
+#     Each element is the name of a template from $fidl_support_templates.
+#     If this is set, then $visibility must be very restricted, since any
+#     public fidl_library() might be used via any and all language bindings.
+#     Type: list(string)
+#     Default: All $fidl_support_templates defined by $fidl_support modules.
+#
 template("fidl_library") {
   if (defined(invoker.fuzzers)) {
     not_needed(invoker, [ "fuzzers" ])
@@ -189,6 +197,40 @@ template("fidl_library") {
                  " it has `.test.fidl` sources; cannot use testonly=false!")
       invoker.testonly = true
     }
+  }
+
+  if (defined(invoker.targets)) {
+    assert(defined(invoker.visibility),
+           "must constrain visibility when constraining targets")
+
+    # Select the subset of fidlc outputs the enabled targets require.
+    targets_gen_templates = []
+    fidlc_needed = []
+    foreach(target, invoker.targets) {
+      found = false
+      foreach(gen, _fidl_gen_templates) {
+        if (gen.target == target) {
+          found = true
+          targets_gen_templates += [ gen ]
+          if (defined(gen.fidlc)) {
+            fidlc_needed += [ gen.fidlc ]
+          }
+        }
+      }
+      assert(found, "fidl_library() doesn't generate $target()")
+    }
+
+    # Generate only those below.
+    targets_gen_fidlc = []
+    foreach(gen, _fidl_gen_fidlc) {
+      if (fidlc_needed + [ gen.name ] - [ gen.name ] != fidlc_needed) {
+        targets_gen_fidlc += [ gen ]
+      }
+    }
+  } else {
+    # Usual case: generate them all.
+    targets_gen_templates = _fidl_gen_templates
+    targets_gen_fidlc = _fidl_gen_fidlc
   }
 
   fidl_target = target_name
@@ -219,7 +261,7 @@ template("fidl_library") {
   gen_target_label = ":$gen_target($default_toolchain)"
 
   gens = []
-  foreach(gen, _fidl_gen_fidlc) {
+  foreach(gen, targets_gen_fidlc) {
     gen_dir = "$fidl_gen_dir/$fidl_target.${gen.name}"
     gen_outputs = []
     gen_args = []
@@ -323,7 +365,7 @@ template("fidl_library") {
   }
 
   # Invoke each template.
-  foreach(gen, _fidl_gen_templates) {
+  foreach(gen, targets_gen_templates) {
     # The target_name for the template is the main FIDL target name.
     # The template will define its targets using appropriate suffixes.
     _fidl_gen_subtarget(fidl_target) {
@@ -335,7 +377,6 @@ template("fidl_library") {
                                  "visibility",
                                  "testonly",
                                ])
-        fidl_sources = invoker.sources
 
         # The bindings-library template can map these to corresponding
         # bindings-library targets.
