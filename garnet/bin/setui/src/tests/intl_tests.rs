@@ -83,12 +83,14 @@ async fn test_intl_e2e() {
         Some(vec![fidl_fuchsia_intl::LocaleId { id: "en-US".to_string() }])
     );
     assert_eq!(settings.temperature_unit, Some(fidl_fuchsia_intl::TemperatureUnit::Celsius));
+    assert_eq!(settings.hour_cycle, Some(fidl_fuchsia_settings::HourCycle::H12));
 
     // Set new values.
     let intl_settings = fidl_fuchsia_settings::IntlSettings {
         locales: Some(vec![fidl_fuchsia_intl::LocaleId { id: "blah".into() }]),
         temperature_unit: Some(fidl_fuchsia_intl::TemperatureUnit::Celsius),
         time_zone_id: Some(fidl_fuchsia_intl::TimeZoneId { id: "GMT".to_string() }),
+        hour_cycle: Some(fidl_fuchsia_settings::HourCycle::H24),
     };
     intl_service.set(intl_settings.clone()).await.expect("set completed").expect("set successful");
 
@@ -120,12 +122,14 @@ async fn test_intl_e2e_set_twice() {
         Some(vec![fidl_fuchsia_intl::LocaleId { id: "en-US".to_string() }])
     );
     assert_eq!(settings.temperature_unit, Some(fidl_fuchsia_intl::TemperatureUnit::Celsius));
+    assert_eq!(settings.hour_cycle, Some(fidl_fuchsia_settings::HourCycle::H12));
 
     // Set new values.
     let mut intl_settings = fidl_fuchsia_settings::IntlSettings::empty();
     let updated_timezone = "GMT";
     intl_settings.time_zone_id =
         Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() });
+    intl_settings.hour_cycle = Some(fidl_fuchsia_settings::HourCycle::H24);
     intl_service.set(intl_settings).await.expect("set completed").expect("set successful");
 
     // Try to set to a new value: this second set should succeed too.
@@ -159,6 +163,7 @@ async fn test_intl_e2e_idempotent_set() {
         Some(vec![fidl_fuchsia_intl::LocaleId { id: "en-US".to_string() }])
     );
     assert_eq!(settings.temperature_unit, Some(fidl_fuchsia_intl::TemperatureUnit::Celsius));
+    assert_eq!(settings.hour_cycle, Some(fidl_fuchsia_settings::HourCycle::H12));
 
     // Set new values.
     let mut intl_settings = fidl_fuchsia_settings::IntlSettings::empty();

@@ -283,13 +283,14 @@ async fn validate_intl_set() -> Result<(), Error> {
     const TEST_TIME_ZONE: &str = "GMT";
     const TEST_TEMPERATURE_UNIT: TemperatureUnit = TemperatureUnit::Celsius;
     const TEST_LOCALE: &str = "blah";
+    const TEST_HOUR_CYCLE: fidl_fuchsia_settings::HourCycle = fidl_fuchsia_settings::HourCycle::H12;
 
     let env = create_service!(Services::Intl,
         IntlRequest::Set { settings, responder } => {
             assert_eq!(Some(TimeZoneId { id: TEST_TIME_ZONE.to_string() }), settings.time_zone_id);
             assert_eq!(Some(TEST_TEMPERATURE_UNIT), settings.temperature_unit);
             assert_eq!(Some(vec![LocaleId { id: TEST_LOCALE.into() }]), settings.locales);
-
+            assert_eq!(Some(TEST_HOUR_CYCLE), settings.hour_cycle);
             responder.send(&mut Ok(()))?;
     });
 
@@ -301,6 +302,7 @@ async fn validate_intl_set() -> Result<(), Error> {
         Some(TimeZoneId { id: TEST_TIME_ZONE.to_string() }),
         Some(TEST_TEMPERATURE_UNIT),
         vec![LocaleId { id: TEST_LOCALE.into() }],
+        Some(TEST_HOUR_CYCLE),
         false,
     )
     .await?;
@@ -312,6 +314,7 @@ async fn validate_intl_watch() -> Result<(), Error> {
     const TEST_TIME_ZONE: &str = "GMT";
     const TEST_TEMPERATURE_UNIT: TemperatureUnit = TemperatureUnit::Celsius;
     const TEST_LOCALE: &str = "blah";
+    const TEST_HOUR_CYCLE: fidl_fuchsia_settings::HourCycle = fidl_fuchsia_settings::HourCycle::H12;
 
     let env = create_service!(Services::Intl,
         IntlRequest::Watch { responder } => {
@@ -319,6 +322,7 @@ async fn validate_intl_watch() -> Result<(), Error> {
                 locales: Some(vec![LocaleId { id: TEST_LOCALE.into() }]),
                 temperature_unit: Some(TEST_TEMPERATURE_UNIT),
                 time_zone_id: Some(TimeZoneId { id: TEST_TIME_ZONE.to_string() }),
+                hour_cycle: Some(TEST_HOUR_CYCLE),
             }))?;
         }
     );
@@ -326,7 +330,7 @@ async fn validate_intl_watch() -> Result<(), Error> {
     let intl_service =
         env.connect_to_service::<IntlMarker>().context("Failed to connect to intl service")?;
 
-    let output = intl::command(intl_service, None, None, vec![], false).await?;
+    let output = intl::command(intl_service, None, None, vec![], None, false).await?;
 
     assert_eq!(
         output,
@@ -336,6 +340,7 @@ async fn validate_intl_watch() -> Result<(), Error> {
                 locales: Some(vec![LocaleId { id: TEST_LOCALE.into() }]),
                 temperature_unit: Some(TEST_TEMPERATURE_UNIT),
                 time_zone_id: Some(TimeZoneId { id: TEST_TIME_ZONE.to_string() }),
+                hour_cycle: Some(TEST_HOUR_CYCLE),
             }
         )
     );

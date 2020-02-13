@@ -131,6 +131,7 @@ impl FIDLClone for fidl_fuchsia_settings::IntlSettings {
             Some(time_zone_id) => Some(time_zone_id.clone()),
             None => None,
         };
+        settings.hour_cycle = self.hour_cycle;
         settings
     }
 }

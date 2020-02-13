@@ -95,7 +95,7 @@ pub fn spawn_intl_fidl_handler(switchboard: SwitchboardHandle, stream: IntlReque
 
 #[cfg(test)]
 mod tests {
-    use crate::switchboard::intl_types::{IntlInfo, LocaleId, TemperatureUnit};
+    use crate::switchboard::intl_types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
 
     use super::*;
 
@@ -109,6 +109,7 @@ mod tests {
                 locales: None,
                 temperature_unit: None,
                 time_zone_id: None,
+                hour_cycle: None,
             })
         );
     }
@@ -121,6 +122,7 @@ mod tests {
             locales: Some(vec![fidl_fuchsia_intl::LocaleId { id: "blah".into() }]),
             temperature_unit: Some(fidl_fuchsia_intl::TemperatureUnit::Celsius),
             time_zone_id: Some(fidl_fuchsia_intl::TimeZoneId { id: TIME_ZONE_ID.to_string() }),
+            hour_cycle: Some(fidl_fuchsia_settings::HourCycle::H12),
         };
 
         let request = SettingRequest::from(intl_settings);
@@ -131,6 +133,7 @@ mod tests {
                 locales: Some(vec![LocaleId { id: "blah".into() }]),
                 temperature_unit: Some(TemperatureUnit::Celsius),
                 time_zone_id: Some(TIME_ZONE_ID.to_string()),
+                hour_cycle: Some(HourCycle::H12),
             })
         );
     }

@@ -19,6 +19,24 @@ protocol Intl {
     Set(IntlSettings settings) -> () error Error;
 };
 
+/// Whether if the time format should be using 12 hour or 24 hour clock. H indicates the
+/// maximum number that the hour indicator will ever show.
+enum HourCycle {
+    UNKNOWN = 0;
+
+    /// 12-hour clock, 0:10am after midnight.
+    H11 = 1;
+
+    /// 12-hour clock, 12:10am after midnight.
+    H12 = 2;
+
+    /// 24-hour clock, 0:10 after midnight.
+    H23 = 3;
+
+    /// 24-hour clock, 24:10 after midnight.
+    H24 = 4;
+};
+
 /// Collection of internationalization-related settings.
 table IntlSettings {
     /// An ordered list of preferred locales.
@@ -29,4 +47,7 @@ table IntlSettings {
 
     /// The currently set time zone.
     3: fuchsia.intl.TimeZoneId time_zone_id;
+
+    /// The preferred hour cycle.
+    4: HourCycle hour_cycle;
 };

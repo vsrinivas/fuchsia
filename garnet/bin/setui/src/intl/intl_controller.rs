@@ -21,7 +21,7 @@ use crate::service_context::ServiceContextHandle;
 use crate::switchboard::base::{
     Merge, SettingRequest, SettingRequestResponder, SettingResponse, SettingType, SwitchboardError,
 };
-use crate::switchboard::intl_types::{IntlInfo, LocaleId, TemperatureUnit};
+use crate::switchboard::intl_types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
 
 type IntlStorage = Arc<Mutex<DeviceStorage<IntlInfo>>>;
 
@@ -33,6 +33,7 @@ impl DeviceStorageCompatible for IntlInfo {
             locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
             temperature_unit: Some(TemperatureUnit::Celsius),
             time_zone_id: Some("UTC".to_string()),
+            hour_cycle: Some(HourCycle::H12),
         }
     }
 }

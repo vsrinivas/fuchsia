@@ -10,6 +10,7 @@ pub async fn command(
     time_zone: Option<fidl_fuchsia_intl::TimeZoneId>,
     temperature_unit: Option<fidl_fuchsia_intl::TemperatureUnit>,
     locales: Vec<fidl_fuchsia_intl::LocaleId>,
+    hour_cycle: Option<fidl_fuchsia_settings::HourCycle>,
     clear_locales: bool,
 ) -> Result<String, Error> {
     let mut settings = IntlSettings::empty();
@@ -23,6 +24,7 @@ pub async fn command(
     }
     settings.temperature_unit = temperature_unit;
     settings.time_zone_id = time_zone;
+    settings.hour_cycle = hour_cycle;
 
     if settings == IntlSettings::empty() {
         // No values set, perform a watch instead.

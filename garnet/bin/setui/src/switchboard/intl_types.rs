@@ -12,6 +12,7 @@ pub struct IntlInfo {
     pub locales: Option<Vec<LocaleId>>,
     pub temperature_unit: Option<TemperatureUnit>,
     pub time_zone_id: Option<String>,
+    pub hour_cycle: Option<HourCycle>,
 }
 
 impl Merge for IntlInfo {
@@ -20,6 +21,7 @@ impl Merge for IntlInfo {
             locales: self.locales.clone().or(other.locales),
             temperature_unit: self.temperature_unit.or(other.temperature_unit),
             time_zone_id: self.time_zone_id.clone().or(other.time_zone_id),
+            hour_cycle: self.hour_cycle.or(other.hour_cycle),
         }
     }
 }
@@ -32,6 +34,7 @@ impl From<fidl_fuchsia_settings::IntlSettings> for IntlInfo {
             }),
             temperature_unit: src.temperature_unit.map(fidl_fuchsia_intl::TemperatureUnit::into),
             time_zone_id: src.time_zone_id.map_or(None, |tz| Some(tz.id)),
+            hour_cycle: src.hour_cycle.map(fidl_fuchsia_settings::HourCycle::into),
         }
     }
 }
@@ -46,6 +49,7 @@ impl Into<fidl_fuchsia_settings::IntlSettings> for IntlInfo {
         intl_settings.temperature_unit = self.temperature_unit.map(TemperatureUnit::into);
         intl_settings.time_zone_id =
             self.time_zone_id.map_or(None, |tz| Some(fidl_fuchsia_intl::TimeZoneId { id: tz }));
+        intl_settings.hour_cycle = self.hour_cycle.map(HourCycle::into);
 
         intl_settings
     }
@@ -88,6 +92,39 @@ impl From<TemperatureUnit> for fidl_fuchsia_intl::TemperatureUnit {
         match src {
             TemperatureUnit::Celsius => fidl_fuchsia_intl::TemperatureUnit::Celsius,
             TemperatureUnit::Fahrenheit => fidl_fuchsia_intl::TemperatureUnit::Fahrenheit,
+        }
+    }
+}
+
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub enum HourCycle {
+    Unknown,
+    H11,
+    H12,
+    H23,
+    H24,
+}
+
+impl From<fidl_fuchsia_settings::HourCycle> for HourCycle {
+    fn from(src: fidl_fuchsia_settings::HourCycle) -> Self {
+        match src {
+            fidl_fuchsia_settings::HourCycle::Unknown => HourCycle::Unknown,
+            fidl_fuchsia_settings::HourCycle::H11 => HourCycle::H11,
+            fidl_fuchsia_settings::HourCycle::H12 => HourCycle::H12,
+            fidl_fuchsia_settings::HourCycle::H23 => HourCycle::H23,
+            fidl_fuchsia_settings::HourCycle::H24 => HourCycle::H24,
+        }
+    }
+}
+
+impl From<HourCycle> for fidl_fuchsia_settings::HourCycle {
+    fn from(src: HourCycle) -> Self {
+        match src {
+            HourCycle::Unknown => fidl_fuchsia_settings::HourCycle::Unknown,
+            HourCycle::H11 => fidl_fuchsia_settings::HourCycle::H11,
+            HourCycle::H12 => fidl_fuchsia_settings::HourCycle::H12,
+            HourCycle::H23 => fidl_fuchsia_settings::HourCycle::H23,
+            HourCycle::H24 => fidl_fuchsia_settings::HourCycle::H24,
         }
     }
 }

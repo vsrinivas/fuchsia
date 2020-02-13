@@ -104,6 +104,9 @@ pub enum SettingClient {
         /// List of locales, separated by spaces.
         locales: Vec<fidl_fuchsia_intl::LocaleId>,
 
+        #[structopt(short = "h", long, parse(try_from_str = "str_to_hour_cycle"))]
+        hour_cycle: Option<fidl_fuchsia_settings::HourCycle>,
+
         #[structopt(long)]
         /// If set, this flag will set locales as an empty list. Overrides the locales arguments.
         clear_locales: bool,
@@ -281,12 +284,18 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             let output = do_not_disturb::command(dnd_service, user_dnd, night_mode_dnd).await?;
             println!("DoNotDisturb: {}", output);
         }
-        SettingClient::Intl { time_zone, temperature_unit, locales, clear_locales } => {
+        SettingClient::Intl { time_zone, temperature_unit, locales, hour_cycle, clear_locales } => {
             let intl_service = connect_to_service::<fidl_fuchsia_settings::IntlMarker>()
                 .context("Failed to connect to intl service")?;
-            let output =
-                intl::command(intl_service, time_zone, temperature_unit, locales, clear_locales)
-                    .await?;
+            let output = intl::command(
+                intl_service,
+                time_zone,
+                temperature_unit,
+                locales,
+                hour_cycle,
+                clear_locales,
+            )
+            .await?;
             println!("Intl: {}", output);
         }
         SettingClient::NightMode { night_mode_enabled } => {
@@ -438,6 +447,17 @@ fn str_to_temperature_unit(src: &str) -> Result<fidl_fuchsia_intl::TemperatureUn
         "c" | "celsius" => Ok(fidl_fuchsia_intl::TemperatureUnit::Celsius),
         "f" | "fahrenheit" => Ok(fidl_fuchsia_intl::TemperatureUnit::Fahrenheit),
         _ => Err("Couldn't parse temperature"),
+    }
+}
+
+fn str_to_hour_cycle(src: &str) -> Result<fidl_fuchsia_settings::HourCycle, &str> {
+    match src.to_lowercase().as_str() {
+        "unknown" => Ok(fidl_fuchsia_settings::HourCycle::Unknown),
+        "h11" => Ok(fidl_fuchsia_settings::HourCycle::H11),
+        "h12" => Ok(fidl_fuchsia_settings::HourCycle::H12),
+        "h23" => Ok(fidl_fuchsia_settings::HourCycle::H23),
+        "h24" => Ok(fidl_fuchsia_settings::HourCycle::H24),
+        _ => Err("Couldn't parse hour cycle"),
     }
 }
 
