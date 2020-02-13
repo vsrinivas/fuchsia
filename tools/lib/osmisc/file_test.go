@@ -53,3 +53,29 @@ func TestFileIsOpen(t *testing.T) {
 		t.Errorf("file is open when it should be closed; fd: %v", tmpFile.Fd())
 	}
 }
+
+func TestCreateFile(t *testing.T) {
+	dir, err := ioutil.TempDir("", "tmpdir")
+	if err != nil {
+		t.Fatalf("failed to create a temporary directory: %v", err)
+	}
+	defer os.RemoveAll(dir)
+
+	path := filepath.Join(dir, "subdir", "subdir2", "file")
+	f, err := CreateFile(path)
+	if err != nil {
+		t.Fatalf("failed to create file: %v", err)
+	}
+	contents := []byte("contents")
+	if _, err := f.Write(contents); err != nil {
+		t.Fatalf("failed to write to file: %v", err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatalf("failed to close file: %v", err)
+	}
+	if b, err := ioutil.ReadFile(path); err != nil {
+		t.Fatalf("failed to read file: %v", err)
+	} else if bytes.Compare(b, contents) != 0 {
+		t.Fatalf("unexpected contents: got %s, expected %s", b, contents)
+	}
+}

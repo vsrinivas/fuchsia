@@ -69,11 +69,12 @@ func TestRecordingOfOutputs(t *testing.T) {
 	}
 	defer os.RemoveAll(dataDir)
 	archivePath := filepath.Join(dataDir, "out.tar")
+	outDir := filepath.Join(dataDir, "out")
 
 	var buf bytes.Buffer
 	producer := tap.NewProducer(&buf)
 	producer.Plan(len(results))
-	o, err := createTestOutputs(producer, dataDir, archivePath)
+	o, err := createTestOutputs(producer, dataDir, archivePath, outDir)
 	if err != nil {
 		t.Fatalf("failed to create a test outputs object: %v", err)
 	}
@@ -193,5 +194,20 @@ ok 2 test_b (10ms)
 
 	if !reflect.DeepEqual(expectedContents, actualContents) {
 		t.Fatalf("unexpected contents from archive:\nexpected: %#v\nactual: %#v\n", expectedContents, actualContents)
+	}
+
+	// Verify that the outDir's contents are as expected.
+	outDirContents := make(map[string]string)
+	for name := range expectedContents {
+		path := filepath.Join(outDir, name)
+		b, err := ioutil.ReadFile(path)
+		if err != nil {
+			t.Errorf("failed to read file %q in out dir: %v", path, err)
+		}
+		outDirContents[name] = string(b)
+	}
+
+	if !reflect.DeepEqual(expectedContents, outDirContents) {
+		t.Fatalf("unexpected contents from out dir:\nexpected: %#v\nactual: %#v\n", expectedContents, outDirContents)
 	}
 }

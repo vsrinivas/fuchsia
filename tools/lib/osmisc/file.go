@@ -4,8 +4,10 @@
 package osmisc
 
 import (
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 )
 
 // CopyFile copies a file to a given destination.
@@ -31,4 +33,12 @@ func CopyFile(src, dest string) error {
 // FileIsOpen returns whether the given file is open or not.
 func FileIsOpen(f *os.File) bool {
 	return f.Fd() != ^uintptr(0)
+}
+
+// CreateFile creates the file specified by the given path and all parent directories if they don't exist.
+func CreateFile(path string) (*os.File, error) {
+	if err := os.MkdirAll(filepath.Dir(path), 0777); err != nil {
+		return nil, fmt.Errorf("failed to make parent dirs of %s: %v", path, err)
+	}
+	return os.Create(path)
 }

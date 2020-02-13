@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/tarutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
@@ -27,9 +28,10 @@ type testOutputs struct {
 	summary runtests.TestSummary
 	tap     *tap.Producer
 	tw      *tar.Writer
+	outDir  string
 }
 
-func createTestOutputs(producer *tap.Producer, dataDir, archivePath string) (*testOutputs, error) {
+func createTestOutputs(producer *tap.Producer, dataDir, archivePath, outDir string) (*testOutputs, error) {
 	var tw *tar.Writer
 	if archivePath != "" {
 		f, err := os.Create(archivePath)
@@ -43,14 +45,15 @@ func createTestOutputs(producer *tap.Producer, dataDir, archivePath string) (*te
 		dataDir: dataDir,
 		tap:     producer,
 		tw:      tw,
+		outDir:  outDir,
 	}, nil
 }
 
 // Record writes the test result to initialized outputs.
 func (o *testOutputs) record(result testrunner.TestResult) error {
-	pathInArchive := filepath.Join(result.Name, runtests.TestOutputFilename)
+	outputRelPath := filepath.Join(result.Name, runtests.TestOutputFilename)
 	// Strip any leading //.
-	pathInArchive = strings.TrimLeft(pathInArchive, "//")
+	outputRelPath = strings.TrimLeft(outputRelPath, "//")
 
 	duration := result.EndTime.Sub(result.StartTime)
 	if duration <= 0 {
@@ -60,7 +63,7 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 	o.summary.Tests = append(o.summary.Tests, runtests.TestDetails{
 		Name:       result.Name,
 		GNLabel:    result.GNLabel,
-		OutputFile: pathInArchive,
+		OutputFile: outputRelPath,
 		Result:     result.Result,
 		StartTime:  result.StartTime,
 		// TODO(fxbug.dev/43518): when 1.13 is available, spell this as `duration.Milliseconds()`.
@@ -71,20 +74,56 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 	desc := fmt.Sprintf("%s (%v)", result.Name, duration)
 	o.tap.Ok(result.Result == runtests.TestSuccess, desc)
 
+	var err error
+	// TODO(fxb/43500): Remove once we've switched to using outDir.
 	if o.tw != nil {
 		stdout := bytes.NewReader(result.Stdout)
 		stderr := bytes.NewReader(result.Stderr)
 		stdio := io.MultiReader(stdout, stderr)
 		size := stdout.Size() + stderr.Size()
-		if err := tarutil.TarFromReader(o.tw, stdio, pathInArchive, size); err != nil {
-			return fmt.Errorf("failed to stdio file for test %q: %v", result.Name, err)
+		err = tarutil.TarFromReader(o.tw, stdio, outputRelPath, size)
+	}
+	if o.outDir != "" {
+		stdout := bytes.NewReader(result.Stdout)
+		stderr := bytes.NewReader(result.Stderr)
+		stdio := io.MultiReader(stdout, stderr)
+		outputRelPath = filepath.Join(o.outDir, outputRelPath)
+		pathWriter, err := osmisc.CreateFile(outputRelPath)
+		if err != nil {
+			return fmt.Errorf("failed to create file: %v", err)
 		}
+		defer pathWriter.Close()
+		_, err = io.Copy(pathWriter, stdio)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to write stdio file for test %q: %v", result.Name, err)
+	}
 
+	if o.tw != nil || o.outDir != "" {
 		for _, sinks := range result.DataSinks {
 			for _, sink := range sinks {
 				sinkSrc := filepath.Join(o.dataDir, sink.File)
-				if err := tarutil.TarFile(o.tw, sinkSrc, sink.File); err != nil {
-					return fmt.Errorf("failed to tar data sink %q: %v", sink.Name, err)
+				// TODO(fxb/43500): Remove once we've switched to outDir.
+				if o.tw != nil {
+					if err := tarutil.TarFile(o.tw, sinkSrc, sink.File); err != nil {
+						return fmt.Errorf("failed to tar data sink %q: %v", sink.Name, err)
+					}
+				}
+				if o.outDir != "" {
+					srcReader, err := os.Open(sinkSrc)
+					if err != nil {
+						return fmt.Errorf("failed to open sink src %q: %v", sink.Name, err)
+					}
+					defer srcReader.Close()
+					dest := filepath.Join(o.outDir, sink.File)
+					destWriter, err := osmisc.CreateFile(dest)
+					if err != nil {
+						return fmt.Errorf("failed to create file: %v", err)
+					}
+					defer destWriter.Close()
+					if _, err := io.Copy(destWriter, srcReader); err != nil {
+						return fmt.Errorf("failed to copy data sink %q to out dir: %v", sink.Name, err)
+					}
 				}
 			}
 		}
@@ -94,15 +133,27 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 
 // Close stops the recording of test outputs; it must be called to finalize them.
 func (o *testOutputs) Close() error {
-	if o.tw == nil {
+	if o.tw == nil && o.outDir == "" {
 		return nil
 	}
-	bytes, err := json.Marshal(o.summary)
+	summaryBytes, err := json.Marshal(o.summary)
 	if err != nil {
 		return err
 	}
-	if err := tarutil.TarBytes(o.tw, bytes, runtests.TestSummaryFilename); err != nil {
-		return err
+	if o.tw != nil {
+		if err := tarutil.TarBytes(o.tw, summaryBytes, runtests.TestSummaryFilename); err != nil {
+			return err
+		}
+		err = o.tw.Close()
 	}
-	return o.tw.Close()
+	if o.outDir != "" {
+		summaryPath := filepath.Join(o.outDir, runtests.TestSummaryFilename)
+		s, err := osmisc.CreateFile(summaryPath)
+		if err != nil {
+			return fmt.Errorf("failed to create file: %v", err)
+		}
+		defer s.Close()
+		_, err = io.Copy(s, bytes.NewBuffer(summaryBytes))
+	}
+	return err
 }

@@ -43,6 +43,9 @@ var (
 	// The path where a tar archive containing test results should be created.
 	archive string
 
+	// The path where a directory containing test results should be created.
+	outDir string
+
 	// Working directory of the local testing subprocesses.
 	localWD string
 
@@ -67,6 +70,7 @@ SSH key corresponding to a authorized key to be set in the environment under
 func init() {
 	flag.BoolVar(&help, "help", false, "Whether to show Usage and exit.")
 	flag.StringVar(&archive, "archive", "", "Optional path where a tar archive containing test results should be created.")
+	flag.StringVar(&outDir, "out-dir", "", "Optional path where a directory containing test results should be created.")
 	flag.StringVar(&localWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
 	flag.BoolVar(&useRuntests, "use-runtests", false, "Whether to default to running fuchsia tests with runtests; if false, run_test_component will be used.")
 	// TODO(fxb/36480): Support different timeouts for different tests.
@@ -106,7 +110,7 @@ func main() {
 
 	tapProducer := tap.NewProducer(os.Stdout)
 	tapProducer.Plan(len(tests))
-	outputs, err := createTestOutputs(tapProducer, testOutdir, archive)
+	outputs, err := createTestOutputs(tapProducer, testOutdir, archive, outDir)
 	if err != nil {
 		log.Fatalf("failed to create test results object: %v", err)
 	}

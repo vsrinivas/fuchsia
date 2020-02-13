@@ -19,6 +19,7 @@ go_library("main") {
     "//tools/build",
     "//tools/lib/color",
     "//tools/lib/logger",
+    "//tools/lib/osmisc",
     "//tools/lib/runner",
     "//tools/lib/tarutil",
     "//tools/net/sshutil",
@@ -40,4 +41,3 @@ go_test("tests") {
     "//third_party/golibs:github.com/google/go-cmp",
   ]
 }
-
