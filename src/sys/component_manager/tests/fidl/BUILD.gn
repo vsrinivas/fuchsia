@@ -23,6 +23,8 @@ fidl("events") {
   name = "fuchsia.test.events"
 
   sources = [ "events.fidl" ]
+
+  public_deps = [ "//sdk/fidl/fuchsia.component" ]
 }
 
 fidl("echofactory") {

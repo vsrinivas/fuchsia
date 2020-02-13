@@ -4,12 +4,11 @@
 
 library fuchsia.test.events;
 
+using fuchsia.component;
+
 /// The maximum number of event types that a receiver can listen to.
 /// This capacity should match the actual number of event types.
 const uint64 MAX_NUM_EVENT_TYPES_RECEIVED = 9;
-
-/// The maximum string length of a component moniker.
-const uint64 MAX_MONIKER_LENGTH = 100;
 
 /// The maximum string length of a capability ID.
 /// This value is currently set arbitrarily.
@@ -60,13 +59,13 @@ xunion CapabilitySource {
 /// Describes a capability provided by the framework
 table FrameworkCapability {
     /// The moniker of the instance that this capability is scoped to.
-    1: string:MAX_MONIKER_LENGTH scope_moniker;
+    1: string:fuchsia.component.MAX_MONIKER_LENGTH scope_moniker;
 };
 
 /// Describes a capability provided by a component
 table ComponentCapability {
     /// The moniker of the instance that is providing this capability.
-    1: string:MAX_MONIKER_LENGTH source_moniker;
+    1: string:fuchsia.component.MAX_MONIKER_LENGTH source_moniker;
 };
 
 /// Encapsulates additional data/protocols for some event types.
@@ -96,7 +95,7 @@ table Event {
     1: EventType event_type;
 
     /// Moniker of instance corresponding to the event
-    2: string:MAX_MONIKER_LENGTH target_moniker;
+    2: string:fuchsia.component.MAX_MONIKER_LENGTH target_moniker;
 
     /// Handler for resuming from event
     3: Handler handler;
