@@ -4,7 +4,7 @@ Because it is not possible to atomically commit a change to multiple Git
 repositories at once, coordinating changes that affect multiple petals.
 For example, an API or ABI change in the Fuchsia tree that affects callers
 in Topaz or Experiences requires either a
-[soft transition](#soft-transitions) or [hard transition](#hard-transitions).
+[soft transition](#soft-transitions) (preferred) or [hard transition](#hard-transitions).
 
 ## Terminology
 
@@ -13,7 +13,7 @@ in Topaz or Experiences requires either a
 For example, `D` might be Fuchsia, and `P` might be Topaz or Experiences.
 *  *integration* - The internal integration repository.
 
-## Soft transitions (Preferred) {:#soft-transitions}
+## Soft transitions {:#soft-transitions}
 
 The preferred way to make changes that span multiple projects is to use a
 *soft transition*. In a soft transition, you make a change to `D` in such a
