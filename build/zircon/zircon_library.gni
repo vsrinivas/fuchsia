@@ -228,6 +228,8 @@ template("zircon_library") {
     forward_variables_from(invoker,
                            "*",
                            [
+                             "compilation_defines",
+                             "compilation_include_dirs",
                              "debug",
                              "deps",
                              "dir",
@@ -248,6 +250,9 @@ template("zircon_library") {
       if (defined(invoker.disable_ubsan) && invoker.disable_ubsan) {
         configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
       }
+      defines = invoker.compilation_defines
+    } else {
+      not_needed(invoker, [ "compilation_defines" ])
     }
     deps = library_deps
     public_deps = library_public_deps

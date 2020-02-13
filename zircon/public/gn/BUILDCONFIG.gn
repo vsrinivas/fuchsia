@@ -487,6 +487,11 @@ template("library") {
       }
     }
 
+    local_defines = []
+    if (defined(invoker.defines)) {
+      local_defines += invoker.defines
+    }
+
     ubsan_config =
         "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use"
     ubsan_disabled =
@@ -507,6 +512,7 @@ template("library") {
           dir = "//zircon/" + rebase_path(".", "//")
           include_dirs = [ "//zircon/" + rebase_path("include", "$zx/") ]
           compilation_include_dirs = local_include_dirs
+          compilation_defines = local_defines
           disable_ubsan = ubsan_disabled
           headers = sdk_headers
           publishable = sdk_publishable
