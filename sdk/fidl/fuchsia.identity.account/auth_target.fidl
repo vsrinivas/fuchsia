@@ -7,6 +7,7 @@ library fuchsia.identity.account;
 using fuchsia.auth;
 using fuchsia.identity.keys;
 using fuchsia.sys;
+using fuchsia.io;
 
 /// A protocol to receive events when the authentication state of an account
 /// changes.
@@ -62,7 +63,8 @@ protocol AuthTarget {
 };
 
 /// A protocol that exposes information about the personae and recovery account
-/// for a Fuchsia account and provides methods to manipulate these.
+/// for a Fuchsia account and provides methods to manipulate these. It also
+/// exposes a writable data directory.
 ///
 /// An Account provides access to sensitive long term identifiers and is only
 /// intended only for use by a small number of trusted system components.
@@ -152,6 +154,20 @@ protocol Account {
     // TODO(dnordstrom): Document the side effects on underlying storage that
     // may still be in use by the client.
     Lock() -> () error Error;
+
+    /// Connects a channel to access a data directory of the account. The directory is
+    /// writable, and is initially empty for a newly created account. The
+    /// directory is persisted according to the lifetime of the account and is
+    /// never modified by the account system.
+    ///
+    /// NOTE: This method should only be called by the root session
+    /// component instance. Multiple component instance clients are not yet
+    /// supported.
+    ///
+    /// `data_directory` The server end of a `fuchsia.io.Directory` channel
+    // TODO(45799): Support multiple component instance clients.
+    GetDataDirectory(request<fuchsia.io.Directory> data_directory)
+        -> () error Error;
 };
 
 /// A protocol that exposes basic information about a Fuchsia persona and access

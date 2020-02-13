@@ -310,6 +310,9 @@ impl Account {
                 let mut response = self.lock().await;
                 responder.send(&mut response)?;
             }
+            AccountRequest::GetDataDirectory { responder, .. } => {
+                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
+            }
         }
         Ok(())
     }

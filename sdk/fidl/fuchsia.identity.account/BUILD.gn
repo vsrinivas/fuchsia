@@ -17,5 +17,6 @@ fidl("fuchsia.identity.account") {
     "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.identity.keys",
     "//sdk/fidl/fuchsia.sys",
+    "//zircon/system/fidl/fuchsia-io",
   ]
 }
