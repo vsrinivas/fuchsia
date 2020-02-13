@@ -260,7 +260,6 @@ if (current_cpu != "") {
       deps += [
         "$zx/system/ulib/ftl-mtd/test",
         "ftl-mtd",
-        "mtd",
       ]
     }
   }

@@ -47,7 +47,6 @@ if (current_os == "linux") {
   listed_tests += [
     "ftl-volume-wrapper",
     "ftl-volume-wrapper-integration",
-    "mtd",
     "nand-volume-driver",
   ]
 }
@@ -92,6 +91,7 @@ group("migrated-tests") {
   if (current_os == "linux") {
     deps += [
       "//src/devices/usb/drivers/usb-peripheral-test",
+      "//zircon/system/utest/mtd",
       "//zircon/system/utest/nand-redundant-storage",
     ]
   }
