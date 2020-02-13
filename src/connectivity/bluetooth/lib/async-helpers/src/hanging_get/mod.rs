@@ -9,6 +9,7 @@
 //! See `crate::hanging_get::server::HangingGetBroker` for documentation on how to use the server
 //! side API.
 
+pub mod client;
 pub mod error;
 pub mod server;
 #[cfg(test)]

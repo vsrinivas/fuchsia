@@ -37,7 +37,6 @@ use crate::inspect_types::StreamingInspectData;
 mod avrcp_relay;
 mod codec;
 mod connected_peers;
-mod hanging_get;
 mod inspect_types;
 mod latm;
 mod peer;

@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
+    async_helpers::hanging_get::client::HangingGetStream,
     bitfield::bitfield,
     bt_avdtp::RtpHeader,
     fidl_fuchsia_media::{
@@ -19,7 +20,6 @@ use {
 };
 
 use crate::codec::CodecExtra;
-use crate::hanging_get::HangingGetStream;
 use crate::latm::AudioMuxElement;
 use crate::DEFAULT_SAMPLE_RATE;
 
