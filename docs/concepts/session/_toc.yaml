@@ -2,7 +2,5 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Overview"
-  path: /docs/concepts/components
 - title: "Introduction to the session framework"
   path: /docs/concepts/session/introduction.md
