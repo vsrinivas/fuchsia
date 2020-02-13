@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_CONTROLLER_H_
-#define SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_CONTROLLER_H_
+#ifndef ZIRCON_SYSTEM_DEV_TEE_OPTEE_OPTEE_CONTROLLER_H_
+#define ZIRCON_SYSTEM_DEV_TEE_OPTEE_OPTEE_CONTROLLER_H_
 
 #include <fuchsia/hardware/tee/llcpp/fidl.h>
 #include <lib/device-protocol/platform-device.h>
@@ -32,7 +32,6 @@ namespace optee {
 namespace fuchsia_hardware_tee = ::llcpp::fuchsia::hardware::tee;
 
 class OpteeClient;
-class OpteeDeviceInfo;
 
 class OpteeController;
 using OpteeControllerBase =
@@ -59,17 +58,18 @@ class OpteeController : public OpteeControllerBase,
   // ddk.protocol.Tee
   zx_status_t TeeConnect(zx::channel tee_device_request, zx::channel service_provider);
 
-  // `DeviceConnector` FIDL protocol
+  // Connects a `fuchsia.tee.Device` protocol request.
+  //
+  // Parameters:
+  //  * service_provider:  The (optional) client end of a channel to the
+  //                       `fuchsia.tee.manager.ServiceProvider` protocol that provides service
+  //                       support for the driver.
+  //  * device_request:    The server end of a channel to the `fuchsia.tee.Device` protocol that
+  //                       is requesting to be served.
   void ConnectTee(zx::channel service_provider, zx::channel tee_request,
-                  ConnectTeeCompleter::Sync _completer) override;
-  void ConnectToDeviceInfo(::zx::channel device_info_request,
-                           ConnectToDeviceInfoCompleter::Sync _completer) override;
-  void ConnectToApplication(llcpp::fuchsia::tee::Uuid application_uuid,
-                            zx::channel service_provider, zx::channel application_request,
-                            ConnectToApplicationCompleter::Sync _completer) override;
+                  ConnectTeeCompleter::Sync completer) override;
 
-  // TODO(44664): Once all clients are transitioned off of the old TEE connection model, remove this
-  // function.
+  // Client FIDL commands
   OsInfo GetOsInfo() const;
 
   uint32_t CallWithMessage(const optee::Message& message, RpcHandler rpc_handler);
@@ -81,8 +81,6 @@ class OpteeController : public OpteeControllerBase,
   SharedMemoryManager::ClientMemoryPool* client_pool() const {
     return shared_memory_manager_->client_pool();
   }
-
-  const GetOsRevisionResult& os_revision() const { return os_revision_; }
 
  private:
   zx_status_t ValidateApiUid() const;
@@ -102,4 +100,4 @@ class OpteeController : public OpteeControllerBase,
 
 }  // namespace optee
 
-#endif  // SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_CONTROLLER_H_
+#endif  // ZIRCON_SYSTEM_DEV_TEE_OPTEE_OPTEE_CONTROLLER_H_

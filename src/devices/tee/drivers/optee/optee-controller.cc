@@ -22,7 +22,6 @@
 #include <tee-client-api/tee-client-types.h>
 
 #include "optee-client.h"
-#include "optee-device-info.h"
 
 namespace optee {
 
@@ -305,13 +304,12 @@ zx_status_t OpteeController::TeeConnect(zx::channel tee_device_request,
                                         zx::channel service_provider) {
   ZX_DEBUG_ASSERT(tee_device_request.is_valid());
 
-  // Create a new `OpteeClient` device and hand off client communication to it.
-  auto client =
-      std::make_unique<OpteeClient>(this, std::move(service_provider),
-                                    std::nullopt /* application_uuid */, true /* use_old_api */);
+  // Create a new OpteeClient device and hand off client communication to it.
+  auto client = std::make_unique<OpteeClient>(this, std::move(service_provider));
 
-  // Add a child `OpteeClient` device instance and have it immediately start serving
-  // `tee_device_request`
+  // Add child client device and have it immediately start serving device_request
+  //
+  // What we really want here is named parameter passing to pass client_remote
   zx_status_t status = client->DdkAdd("optee-client",               // name
                                       DEVICE_ADD_INSTANCE,          // flags
                                       nullptr,                      // props
@@ -324,71 +322,16 @@ zx_status_t OpteeController::TeeConnect(zx::channel tee_device_request,
     return status;
   }
 
-  // devmgr is now in charge of the memory for `client`
-  [[maybe_unused]] auto client_ptr = client.release();
+  // devmgr is now in charge of the memory for the tee client
+  __UNUSED OpteeClient* client_ptr = client.release();
 
   return ZX_OK;
 }
 
-void OpteeController::ConnectTee(zx::channel service_provider, zx::channel tee_request,
-                                 [[maybe_unused]] ConnectTeeCompleter::Sync _completer) {
+void OpteeController::ConnectTee(
+    zx::channel service_provider, zx::channel tee_request,
+    fuchsia_hardware_tee::DeviceConnector::Interface::ConnectTeeCompleter::Sync completer) {
   TeeConnect(std::move(tee_request), std::move(service_provider));
-}
-
-void OpteeController::ConnectToDeviceInfo(
-    zx::channel device_info_request,
-    [[maybe_unused]] ConnectToDeviceInfoCompleter::Sync _completer) {
-  ZX_DEBUG_ASSERT(device_info_request.is_valid());
-
-  // Create a new `OpteeDeviceInfo` device and hand off client communication to it.
-  auto device_info = std::make_unique<OpteeDeviceInfo>(this);
-
-  // Add a child `OpteeDeviceInfo` instance device and have it immediately start serving
-  // `device_info_request`.
-  zx_status_t status = device_info->DdkAdd("optee-client",                // name
-                                           DEVICE_ADD_INSTANCE,           // flags
-                                           nullptr,                       // props
-                                           0,                             // prop_count
-                                           0,                             // proto_id
-                                           nullptr,                       // proxy_args
-                                           device_info_request.release()  // client_remote
-  );
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: failed to create device info child\n");
-    return;
-  }
-
-  // devmgr is now in charge of the memory for `device_info`
-  [[maybe_unused]] auto device_info_ptr = device_info.release();
-}
-
-void OpteeController::ConnectToApplication(
-    llcpp::fuchsia::tee::Uuid application_uuid, zx::channel service_provider,
-    zx::channel application_request,
-    [[maybe_unused]] ConnectToApplicationCompleter::Sync _completer) {
-  ZX_DEBUG_ASSERT(application_request.is_valid());
-
-  // Create a new `OpteeClient` device and hand off client communication to it.
-  auto client = std::make_unique<OpteeClient>(this, std::move(service_provider),
-                                              Uuid(application_uuid), false /* use_old_api */);
-
-  // Add a child `OpteeClient` device instance and have it immediately start serving
-  // `device_request`
-  zx_status_t status = client->DdkAdd("optee-client",                // name
-                                      DEVICE_ADD_INSTANCE,           // flags
-                                      nullptr,                       // props
-                                      0,                             // prop_count
-                                      0,                             // proto_id
-                                      nullptr,                       // proxy_args
-                                      application_request.release()  // client_remote
-  );
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "optee: failed to create device info child (status: %d)\n", status);
-    return;
-  }
-
-  // devmgr is now in charge of the memory for `client`
-  [[maybe_unused]] auto client_ptr = client.release();
 }
 
 OsInfo OpteeController::GetOsInfo() const {

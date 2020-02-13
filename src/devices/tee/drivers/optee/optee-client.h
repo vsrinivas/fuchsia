@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_CLIENT_H_
-#define SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_CLIENT_H_
+#ifndef ZIRCON_SYSTEM_DEV_TEE_OPTEE_OPTEE_CLIENT_H_
+#define ZIRCON_SYSTEM_DEV_TEE_OPTEE_OPTEE_CLIENT_H_
 
 #include <fuchsia/tee/llcpp/fidl.h>
 #include <lib/zx/channel.h>
@@ -15,8 +15,6 @@
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
-// TODO(44644): This may not be necessary after migration.
-#include <utility>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
@@ -30,7 +28,6 @@ namespace optee {
 namespace fuchsia_tee = ::llcpp::fuchsia::tee;
 
 class OpteeClient;
-
 using OpteeClientBase =
     ddk::Device<OpteeClient, ddk::Closable, ddk::Messageable, ddk::UnbindableNew>;
 using OpteeClientProtocol = ddk::EmptyProtocol<ZX_PROTOCOL_TEE>;
@@ -44,15 +41,12 @@ using OpteeClientProtocol = ddk::EmptyProtocol<ZX_PROTOCOL_TEE>;
 class OpteeClient : public OpteeClientBase,
                     public OpteeClientProtocol,
                     public fbl::DoublyLinkedListable<OpteeClient*>,
-                    public fuchsia_tee::Device::Interface,
-                    public fuchsia_tee::Application::Interface {
+                    public fuchsia_tee::Device::Interface {
  public:
-  explicit OpteeClient(OpteeController* controller, zx::channel provider_channel,
-                       std::optional<Uuid> application_uuid, bool use_old_api)
+  explicit OpteeClient(OpteeController* controller, zx::channel provider_channel)
       : OpteeClientBase(controller->zxdev()),
         controller_(controller),
-        provider_channel_(std::move(provider_channel)),
-        application_uuid_(std::move(application_uuid)) {}
+        provider_channel_(std::move(provider_channel)) {}
 
   OpteeClient(const OpteeClient&) = delete;
   OpteeClient& operator=(const OpteeClient&) = delete;
@@ -64,46 +58,18 @@ class OpteeClient : public OpteeClientBase,
 
   void Shutdown();
 
-  // `fuchsia.tee.Device` FIDL Handlers
-  void GetOsInfo(fuchsia_tee::Device::Interface::GetOsInfoCompleter::Sync completer) override;
+  // FIDL Handlers
+  void GetOsInfo(GetOsInfoCompleter::Sync completer) override;
   void OpenSession(fuchsia_tee::Uuid trusted_app,
                    fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-                   fuchsia_tee::Device::Interface::OpenSessionCompleter::Sync completer) override;
-  void InvokeCommand(
-      uint32_t session_id, uint32_t command_id,
-      fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-      fuchsia_tee::Device::Interface::InvokeCommandCompleter::Sync completer) override;
-  void CloseSession(uint32_t session_id,
-                    fuchsia_tee::Device::Interface::CloseSessionCompleter::Sync completer) override;
-
-  // `fuchsia.tee.Application` FIDL Handlers
-  void GetOsInfo(fuchsia_tee::Application::Interface::GetOsInfoCompleter::Sync completer) override;
-  void OpenSession(
-      fuchsia_tee::Uuid trusted_app, fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-      fuchsia_tee::Application::Interface::OpenSessionCompleter::Sync completer) override;
-  void OpenSession2(
-      fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-      fuchsia_tee::Application::Interface::OpenSession2Completer::Sync completer) override;
-  void InvokeCommand(
-      uint32_t session_id, uint32_t command_id,
-      fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-      fuchsia_tee::Application::Interface::InvokeCommandCompleter::Sync completer) override;
-  void CloseSession(
-      uint32_t session_id,
-      fuchsia_tee::Application::Interface::CloseSessionCompleter::Sync completer) override;
+                   OpenSessionCompleter::Sync completer) override;
+  void InvokeCommand(uint32_t session_id, uint32_t command_id,
+                     fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
+                     InvokeCommandCompleter::Sync completer) override;
+  void CloseSession(uint32_t session_id, CloseSessionCompleter::Sync completer) override;
 
  private:
   using SharedMemoryList = fbl::DoublyLinkedList<std::unique_ptr<SharedMemory>>;
-
-  bool use_old_api() const { return !application_uuid_.has_value(); }
-
-  // Shared FIDL handler logic used for migration.
-  //
-  // TODO(44664): Remove these once migration is complete.
-  std::pair<uint32_t, OpResult> OpenSessionInternal(
-      Uuid ta_uuid, fidl::VectorView<fuchsia_tee::Parameter> parameter_set);
-  OpResult InvokeCommandInternal(uint32_t session_id, uint32_t command_id,
-                                 fidl::VectorView<fuchsia_tee::Parameter> parameter_set);
 
   zx_status_t CloseSession(uint32_t session_id);
 
@@ -271,14 +237,8 @@ class OpteeClient : public OpteeClientBase,
   // A lazily-initialized, cached channel to the root storage channel.
   // This may be an invalid channel, which indicates it has not been initialized yet.
   zx::channel root_storage_channel_;
-
-  // The (only) trusted application UUID this client is allowed to use.
-  //
-  // TODO(44664): Currently, no application UUID indicates that the old API is being used.
-  // TODO(44664): Remove optionality once transition to new API is complete.
-  std::optional<Uuid> application_uuid_;
 };
 
 }  // namespace optee
 
-#endif  // SRC_DEVICES_TEE_DRIVERS_OPTEE_OPTEE_CLIENT_H_
+#endif  // ZIRCON_SYSTEM_DEV_TEE_OPTEE_OPTEE_CLIENT_H_

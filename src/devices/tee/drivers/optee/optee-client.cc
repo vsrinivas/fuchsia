@@ -205,15 +205,15 @@ static zx_status_t RecursivelyWalkPath(zx::unowned_channel& root_channel,
   static_assert((kOpenFlags & fuchsia_io::OPEN_FLAG_NOT_DIRECTORY) == 0,
                 "kOpenFlags must not include fuchsia_io::OPEN_FLAG_NOT_DIRECTORY");
   ZX_DEBUG_ASSERT(root_channel->is_valid());
-  ZX_DEBUG_ASSERT(!path.empty());
   ZX_DEBUG_ASSERT(out_node_channel != nullptr);
 
   zx_status_t status;
   zx::channel result_channel;
 
-  if (path == std::filesystem::path(".")) {
+  if (path.empty() || path == std::filesystem::path(".")) {
     // If the path is lexicographically equivalent to the (relative) root directory, clone the
-    // root channel instead of opening the path
+    // root channel instead of opening the path.
+    // An empty path is considered equivalent to the relative root directory.
     zx::channel server_channel;
     status = zx::channel::create(0, &result_channel, &server_channel);
     if (status != ZX_OK) {
@@ -299,56 +299,21 @@ zx_status_t OpteeClient::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     return ZX_ERR_PEER_CLOSED;
   }
   DdkTransaction transaction(txn);
-
-  if (use_old_api()) {
-    fuchsia_tee::Device::Dispatch(this, msg, &transaction);
-  } else {
-    fuchsia_tee::Application::Dispatch(this, msg, &transaction);
-  }
-
+  fuchsia_tee::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 
-void OpteeClient::GetOsInfo(fuchsia_tee::Device::Interface::GetOsInfoCompleter::Sync completer) {
+void OpteeClient::GetOsInfo(GetOsInfoCompleter::Sync completer) {
   auto os_info = controller_->GetOsInfo();
   completer.Reply(os_info.to_llcpp());
 }
 
-void OpteeClient::GetOsInfo(
-    fuchsia_tee::Application::Interface::GetOsInfoCompleter::Sync completer) {
-  auto os_info = controller_->GetOsInfo();
-  completer.Reply(os_info.to_llcpp());
-}
-
-void OpteeClient::OpenSession(
-    fuchsia_tee::Uuid trusted_app, fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-    fuchsia_tee::Device::Interface::OpenSessionCompleter::Sync completer) {
-  auto [session_id, op_result] = OpenSessionInternal(Uuid(trusted_app), parameter_set);
-  completer.Reply(session_id, op_result.to_llcpp());
-}
-
-void OpteeClient::OpenSession(
-    fuchsia_tee::Uuid trusted_app, fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-    fuchsia_tee::Application::Interface::OpenSessionCompleter::Sync completer) {
-  auto [session_id, op_result] = OpenSessionInternal(Uuid(trusted_app), parameter_set);
-  completer.Reply(session_id, op_result.to_llcpp());
-}
-
-void OpteeClient::OpenSession2(
-    fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-    fuchsia_tee::Application::Interface::OpenSession2Completer::Sync completer) {
-  // TODO(44664): This check won't be necessary once transition is complete and UUID is no longer
-  // optional.
-  ZX_DEBUG_ASSERT(application_uuid_.has_value());
-
-  auto [session_id, op_result] = OpenSessionInternal(application_uuid_.value(), parameter_set);
-  completer.Reply(session_id, op_result.to_llcpp());
-}
-
-std::pair<uint32_t, OpResult> OpteeClient::OpenSessionInternal(
-    Uuid ta_uuid, fidl::VectorView<fuchsia_tee::Parameter> parameter_set) {
+void OpteeClient::OpenSession(fuchsia_tee::Uuid trusted_app,
+                              fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
+                              OpenSessionCompleter::Sync completer) {
   constexpr uint32_t kInvalidSession = 0;
 
+  Uuid ta_uuid{trusted_app};
   OpResult result;
 
   auto create_result = OpenSessionMessage::TryCreate(
@@ -358,7 +323,7 @@ std::pair<uint32_t, OpResult> OpteeClient::OpenSessionInternal(
            create_result.error());
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
-    return std::pair(kInvalidSession, std::move(result));
+    completer.Reply(kInvalidSession, result.to_llcpp());
   }
 
   OpenSessionMessage message = create_result.take_value();
@@ -368,14 +333,14 @@ std::pair<uint32_t, OpResult> OpteeClient::OpenSessionInternal(
   if (call_code != kReturnOk) {
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
-    return std::pair(kInvalidSession, std::move(result));
+    completer.Reply(kInvalidSession, result.to_llcpp());
   }
 
   zxlogf(SPEW, "optee: OpenSession returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 "\n", call_code,
          message.return_code(), message.return_origin());
 
   if (ConvertOpteeToZxResult(message.return_code(), message.return_origin(), &result) != ZX_OK) {
-    return std::pair(kInvalidSession, std::move(result));
+    completer.Reply(kInvalidSession, result.to_llcpp());
   }
 
   ParameterSet out_parameter_set;
@@ -385,39 +350,23 @@ std::pair<uint32_t, OpResult> OpteeClient::OpenSessionInternal(
     CloseSession(message.session_id());
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
-    return std::pair(kInvalidSession, std::move(result));
+    completer.Reply(kInvalidSession, result.to_llcpp());
   }
   result.set_parameter_set(std::move(out_parameter_set));
   open_sessions_.insert(message.session_id());
 
-  return std::pair(message.session_id(), std::move(result));
+  completer.Reply(message.session_id(), result.to_llcpp());
 }
 
-void OpteeClient::InvokeCommand(
-    uint32_t session_id, uint32_t command_id,
-    fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-    fuchsia_tee::Device::Interface::InvokeCommandCompleter::Sync completer) {
-  auto result = InvokeCommandInternal(session_id, command_id, parameter_set);
-  completer.Reply(result.to_llcpp());
-}
-
-void OpteeClient::InvokeCommand(
-    uint32_t session_id, uint32_t command_id,
-    fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
-    fuchsia_tee::Application::Interface::InvokeCommandCompleter::Sync completer) {
-  auto result = InvokeCommandInternal(session_id, command_id, parameter_set);
-  completer.Reply(result.to_llcpp());
-}
-
-OpResult OpteeClient::InvokeCommandInternal(
-    uint32_t session_id, uint32_t command_id,
-    fidl::VectorView<fuchsia_tee::Parameter> parameter_set) {
+void OpteeClient::InvokeCommand(uint32_t session_id, uint32_t command_id,
+                                fidl::VectorView<fuchsia_tee::Parameter> parameter_set,
+                                InvokeCommandCompleter::Sync completer) {
   OpResult result;
 
   if (open_sessions_.find(session_id) == open_sessions_.end()) {
     result.set_return_code(TEEC_ERROR_BAD_STATE);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
-    return result;
+    completer.Reply(result.to_llcpp());
   }
 
   auto create_result =
@@ -428,7 +377,7 @@ OpResult OpteeClient::InvokeCommandInternal(
            create_result.error());
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
-    return result;
+    completer.Reply(result.to_llcpp());
   }
 
   InvokeCommandMessage message = create_result.take_value();
@@ -438,25 +387,25 @@ OpResult OpteeClient::InvokeCommandInternal(
   if (call_code != kReturnOk) {
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
-    return result;
+    completer.Reply(result.to_llcpp());
   }
 
   zxlogf(SPEW, "optee: InvokeCommand returned 0x%" PRIx32 " 0x%" PRIx32 " 0x%" PRIx32 "\n",
          call_code, message.return_code(), message.return_origin());
 
   if (ConvertOpteeToZxResult(message.return_code(), message.return_origin(), &result) != ZX_OK) {
-    return result;
+    completer.Reply(result.to_llcpp());
   }
 
   ParameterSet out_parameter_set;
   if (message.CreateOutputParameterSet(&out_parameter_set) != ZX_OK) {
     result.set_return_code(TEEC_ERROR_COMMUNICATION);
     result.set_return_origin(fuchsia_tee::ReturnOrigin::COMMUNICATION);
-    return result;
+    completer.Reply(result.to_llcpp());
   }
   result.set_parameter_set(std::move(out_parameter_set));
 
-  return result;
+  completer.Reply(result.to_llcpp());
 }
 
 zx_status_t OpteeClient::CloseSession(uint32_t session_id) {
@@ -481,17 +430,9 @@ zx_status_t OpteeClient::CloseSession(uint32_t session_id) {
   return ZX_OK;
 }
 
-void OpteeClient::CloseSession(
-    uint32_t session_id, fuchsia_tee::Device::Interface::CloseSessionCompleter::Sync completer) {
+void OpteeClient::CloseSession(uint32_t session_id, CloseSessionCompleter::Sync completer) {
   CloseSession(session_id);
-  completer.Reply();
-}
-
-void OpteeClient::CloseSession(
-    uint32_t session_id,
-    fuchsia_tee::Application::Interface::CloseSessionCompleter::Sync completer) {
-  CloseSession(session_id);
-  completer.Reply();
+  return completer.Reply();
 }
 
 template <typename SharedMemoryPoolTraits>
@@ -769,6 +710,9 @@ zx_status_t OpteeClient::HandleRpcCommand(const RpcFunctionExecuteCommandsArgs& 
       message.set_return_code(TEEC_ERROR_NOT_SUPPORTED);
       return ZX_OK;
     case RpcMessage::Command::kAccessReplayProtectedMemoryBlock:
+      zxlogf(INFO, "optee: RPMB is not yet supported.\n");
+      message.set_return_code(TEEC_ERROR_ITEM_NOT_FOUND);
+      return ZX_OK;
     case RpcMessage::Command::kAccessSqlFileSystem:
     case RpcMessage::Command::kLoadGprof:
       zxlogf(INFO, "optee: received unsupported RPC command\n");
@@ -941,8 +885,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage&& messa
   message.set_return_origin(TEEC_ORIGIN_COMMS);
 
   if (!provider_channel_.is_valid()) {
-    zxlogf(ERROR,
-           "optee: HandleRpcCommandFileSystem() called with !provider_channel_.is_valid()\n");
+    zxlogf(ERROR, "optee: HandleRpcCommandFileSystem() called with !provider_channel_.is_valid()\n");
     // Client did not connect with a Provider so none of these RPCs can be serviced
     message.set_return_code(TEEC_ERROR_BAD_STATE);
     return ZX_ERR_UNAVAILABLE;
@@ -1103,8 +1046,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemCreateFile(
   zx::channel file_channel;
   static constexpr uint32_t kCreateFlags =
       fuchsia_io::OPEN_RIGHT_READABLE | fuchsia_io::OPEN_RIGHT_WRITABLE |
-      fuchsia_io::OPEN_FLAG_CREATE | fuchsia_io::OPEN_FLAG_CREATE_IF_ABSENT |
-      fuchsia_io::OPEN_FLAG_DESCRIBE;
+      fuchsia_io::OPEN_FLAG_CREATE | fuchsia_io::OPEN_FLAG_DESCRIBE;
   static constexpr uint32_t kCreateMode = fuchsia_io::MODE_TYPE_FILE;
   status = OpenObjectInDirectory(zx::unowned_channel(storage_channel), kCreateFlags, kCreateMode,
                                  path.filename().string(), &file_channel);
