@@ -163,4 +163,4 @@ see the following pages:
 *   [Upload changes from multiple repositories](/docs/development/source_code/upload_changes_from_multiple_repositories.md)
 
 More information on the structure of the `fuchsia.git` respository is available in
-[Source code layout](/docs/development/source_code/layout.md).
+[Source code layout](/docs/concepts/source_code/layout.md).

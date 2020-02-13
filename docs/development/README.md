@@ -84,7 +84,7 @@ This section covers developing drivers on Fuchsia.
 This section covers Fuchsia-wide conventions and best practices.
 
  - [Documentation standards](/docs/community/contribute/docs/documentation_standards.md)
- - [Endian Issues](source_code/endian.md) and recommendations
+ - [Endian policy](/docs/development/languages/endian.md)
 
 ## Tracing
 

@@ -49,6 +49,9 @@ toc:
 - title: "Session"
   section:
   - include: /docs/concepts/session/_toc.yaml
+- title: "Source code"
+  section:
+  - include: /docs/concepts/source_code/_toc.yaml
 - title: "Storage"
   section:
   - include: /docs/concepts/storage/_toc.yaml

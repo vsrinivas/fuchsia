@@ -50,6 +50,9 @@ the following source tree configurations:
  * All Source.  This source tree configuration contains all the open and closed
    source code in the Fuchsia Source Tree.
 
+See the [guidelines](third-party-metadata.md) on writing the metadata for
+third-party code in README.fuchsia files.
+
 ## Areas
 
 Most code is organized into a recursive tree of areas. Each area has a regular

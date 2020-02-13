@@ -1,14 +1,16 @@
-# Workflow: Tips
+# Workflow tips and questions
+
+## Workflow tips
 
 This is a list of tips that should help you be more productive when working on fuchsia.
 
-## Gerrit Monitor
+### Install Gerrit Monitor
 
 Install the [Gerrit Monitor](https://chrome.google.com/webstore/detail/gerrit-monitor/leakcdjcdifiihdgalplgkghidmfafoh)
 Chrome extension to have in the Chrome toolbar the list of CLs requiring your
 attention.
 
-## Enabling three-way diffs in Git
+### Enable three-way diffs in Git
 
 By default Git uses two-way diffs when presenting conflicts. It does not
 display what the original text was before the conflict, which makes it [hard to
@@ -18,20 +20,17 @@ You can configure Git to show the original text by enabling three-way diffs:
 
 ```git config --global merge.conflictstyle diff3```
 
-## Enabling fuchsia-specific git commands
+### Enable fuchsia-specific git commands
 
 Add `$FUCHSIA_DIR/scripts/git` to your PATH to be able to use fuchsia-specific git
 commands such as `git fuchsia-review [<commit ref>]`, which opens the current
 or given commit in gerrit.
 
-
-# Workflow: Questions and Answers
+## Questions and answers
 
 You are encouraged to add your own questions (and answers) here!
 
-[TOC]
-
-## Q: Is there a standard Git workflow for Fuchsia?
+### Q: Is there a standard Git workflow for Fuchsia?
 
 There are a wide variety of workflows used by the Fuchsia team. A daily
 workflow to get you started is as follows:
@@ -136,7 +135,7 @@ You can find more information on parts of workflows below.
 You can find more information on general git workflows in [gitworkflows(7)](https://github.com/git/git/blob/master/Documentation/gitworkflows.txt).
 You can find more information on git in general at [git-scm.com/doc](https://git-scm.com/doc).
 
-### Rebasing
+#### Rebasing
 
 Update all projects simultaneously, and rebase your work branch on `JIRI_HEAD`:
 
@@ -149,7 +148,7 @@ $ git rebase JIRI_HEAD
 The `git rebase` to `JIRI_HEAD` should be done in *each* repo where you have
 ongoing work. It's not needed for repos you haven't touched.
 
-### Uploading a new patch set (snapshot) of a change
+#### Uploading a new patch set (snapshot) of a change
 
 You'll need to *upload* a patch set to
 [Gerrit](https://fuchsia-review.googlesource.com/) to have it reviewed by
@@ -175,7 +174,7 @@ $ git commit -a --amend
 $ jiri upload
 ```
 
-### Resolving merge conflicts
+#### Resolving merge conflicts
 
 Attempt a rebase:
 
@@ -188,7 +187,7 @@ $ jiri upload
 But read below about how a `git rebase` can negatively interact with `jiri
 update`.
 
-### Stashing
+#### Stashing
 
 You can save all uncommitted changes aside, and re-apply them at a later time.
 This is often useful when you're starting out with Git.
@@ -199,7 +198,7 @@ $ git stash # uncommitted changes will go away
 $ git stash pop # uncommitted changes will come back
 ```
 
-## Q: I use **fx** and **jiri** a lot. How are they related?
+### Q: I use **fx** and **jiri** a lot. How are they related?
 
 A: They are not related.
 [`jiri`](https://fuchsia.googlesource.com/jiri/+/master/) is a wrapper around
@@ -212,7 +211,7 @@ convenience wrapper around many tools built in the Fuchsia tree, and helps
 with many daily workflow tasks, such as building, running tests, consuming
 logs, connecting to shells on devices, and many other operations.
 
-## Q: Will a git rebase to origin/master mess up my jiri-updated (i.e. synchronized) view of the repository?
+### Q: Will a git rebase to origin/master mess up my jiri-updated (i.e. synchronized) view of the repository?
 
 A: Yes, unless jiri is configured to sync the rebased repository/petal to HEAD
 instead of the globally integrated version. This is not the case if you use the
@@ -237,7 +236,7 @@ be able to build topaz).
 If you have a particular commit that you want jiri to honor, download its
 `jiri.update` file and feed it to `jiri update`.
 
-## Q: What if I need an atomic commit across git repositories?
+### Q: What if I need an atomic commit across git repositories?
 
 A: Can't, sorry. Try to arrange your CLs to not break each petal during a
 transition (i.e., do a [soft
@@ -267,7 +266,7 @@ Alternatively, you *could* do something as follows:
     contract. Make any changes required.
 1.  Delete the clone interface in `lower`.
 
-## Q: How do I do parallel builds from a single set of sources?
+### Q: How do I do parallel builds from a single set of sources?
 
 Note: this answer is subject to change/breakage shortly after authorship.
 
@@ -315,22 +314,22 @@ You can also change which build directory is your current default by using `fx u
 $ fx use out/core.vim2
 ```
 
-## Q: What if I want to build at a previous snapshot across the repos?
+### Q: What if I want to build at a previous snapshot across the repos?
 
 A: You'll need to `jiri update` against a *jiri snapshot file*, an XML file that
 captures the state of each repo tracked by jiri.
 
-## Q: I'm building on Mac, how to do I stop getting spammed with 'incoming network connection' notifications?
+### Q: I'm building on Mac, how to do I stop getting spammed with 'incoming network connection' notifications?
 
 A: You'll want to run `fx setup-macos`, which registers all the relevant Fuchsia
 tools with the MacOS Application Firewall.
 
-## Q: When/how do I make a soft vs hard transition when changing APIs?
+### Q: When/how do I make a soft vs hard transition when changing APIs?
 
 See [this section](working_across_petals.md#hard-and-soft-transitions) about hard
 and soft transitions.
 
-## Q: How do I update a FIDL protocol?
+### Q: How do I update a FIDL protocol?
 
 A: The preferred method for updating a FIDL protocol is to use a *soft
 transition*. In order for a soft transition to work, you need to create an
@@ -355,7 +354,7 @@ Use the following steps to execute a soft transition:
 1.  Publish the Stem repository, typically by waiting for the daily automatic
     publication.
 
-## Q: How do I coordinate changes across multiple Petals?
+### Q: How do I coordinate changes across multiple Petals?
 
 A: Coordinating an atomic change across multiple Petals (or between the Stem
 repository and one or more Petals) requires performing a *hard transition*.
@@ -382,7 +381,7 @@ Use the following steps to execute a hard transition:
     integration. This change should unbreak local integration in the affected
     repositories.
 
-## Q: How do I bisect history to track down when something changed?
+### Q: How do I bisect history to track down when something changed?
 
 A: To bisect history, perform the following steps:
 

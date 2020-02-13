@@ -1,19 +1,19 @@
-# Fuchsia Endian Policy and Recommendations
+# Fuchsia endian policy
 
-## Background
+Although Fuchsia only runs on little endian (LE) CPU architectures,
+the Fuchsia project still needs to consider big endian (BE) issues.
 
-Although we only expect Fuchsia to run on little endian (LE) CPU architectures,
-we still need to consider big endian (BE) issues. This doc explains:
+This page explains:
 
  * Where endian issues arise
  * How to handle them
- * Why we made these choices
+ * Why these choices are made
 
 ## Where endian issues arise
 
 ### Peripheral hardware
 
-A lot of peripheral hardware defines multi-byte BE values which must be
+A lot of peripheral hardware defines multi-byte BE values, which must be
 converted.
 
 ### Legacy formats
@@ -21,7 +21,7 @@ converted.
 Network byte order is BE.
 SCSI data structures are BE.
 
-### BE CPU execution
+### Big endian CPU execution
 
 Even if Fuchsia never runs on a BE CPU (which it might someday, at least in
 theory), some of our code may be ported to a BE CPU.

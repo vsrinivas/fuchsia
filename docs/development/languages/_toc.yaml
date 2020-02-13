@@ -9,6 +9,8 @@ toc:
   - include: /docs/development/editors/_toc.yaml
 - title: "Configure linters and formatter"
   path: /docs/development/languages/lint_and_format.md
+- title: "Fuchsia endian policy"
+  path: /docs/development/languages/endian.md
 - title: "Support new languages"
   section:
   - include: /docs/development/languages/new/_toc.yaml

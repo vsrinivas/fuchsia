@@ -1,20 +1,19 @@
-# Working across different petals
-
-## Hard and Soft Transitions
+# Make changes across different petals
 
 Because it is not possible to atomically commit a change to multiple Git
-repositories at once, coordinating changes that affect multiple petals - for
-example, an API or ABI change in the Fuchsia tree that affects callers in Topaz
-or Experiences - requires either a soft or hard transition.
+repositories at once, coordinating changes that affect multiple petals.
+For example, an API or ABI change in the Fuchsia tree that affects callers
+in Topaz or Experiences requires either a
+[soft transition](#soft-transitions) or [hard transition](#hard-transitions).
 
-### Terminology:
+## Terminology
 
-* *D* - A project used in the Fuchsia tree.
-* *P* - Another project used in the Fuchsia tree with a direct dependency on `D`.
+*  `D` - A project used in the Fuchsia tree.
+*  `P` - Another project used in the Fuchsia tree with a direct dependency on `D`.
 For example, `D` might be Fuchsia, and `P` might be Topaz or Experiences.
-* *integration* - The internal integration repository.
+*  *integration* - The internal integration repository.
 
-### Soft transitions (preferred)
+## Soft transitions (Preferred) {:#soft-transitions}
 
 The preferred way to make changes that span multiple projects is to use a
 *soft transition*. In a soft transition, you make a change to `D` in such a
@@ -31,7 +30,7 @@ Use the following steps to land a soft transition:
 1. Wait for the new revision of `P` to roll into the integration repository.
 1. Land a cleanup change in `D` to remove the old interface.
 
-### Hard transitions
+## Hard transitions {:#hard-transitions}
 
 For some changes, creating a soft transition can be difficult or impossible. For
 those changes, you can make a *hard transition*. In a hard transition, you make
@@ -42,10 +41,10 @@ configured to not automatically rebase changes that edit a manifest file. You
 must manually rebase before merging so that your submit is a pure fast-forward.
 
 Making a hard transition is more stressful than making a soft transition because
-your change will be preventing other changes in 'D' from becoming available in
+your change will be preventing other changes in `D` from becoming available in
 dependent projects between steps 1 and 2.
 
-Only Google developers can make hard transitions.  See internal documentation for
+Only Google developers can make hard transitions. See internal documentation for
 instructions.
 
 [getting-source]: /docs/development/source_code/README.md "Getting source"
