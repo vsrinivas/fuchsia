@@ -14,6 +14,7 @@
 #include <zxtest/zxtest.h>
 
 #include "compression/blob-compressor.h"
+#include "compression/decompressor.h"
 #include "compression/lz4.h"
 #include "compression/zstd-plain.h"
 #include "compression/zstd-seekable.h"

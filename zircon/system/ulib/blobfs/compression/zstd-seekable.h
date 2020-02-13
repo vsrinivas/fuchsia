@@ -14,6 +14,8 @@
 #include <zstd/zstd_seekable.h>
 
 #include "compressor.h"
+#include "decompressor.h"
+#include "seekable-decompressor.h"
 
 namespace blobfs {
 

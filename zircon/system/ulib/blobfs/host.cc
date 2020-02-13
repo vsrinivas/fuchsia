@@ -32,6 +32,7 @@
 #include <safemath/checked_math.h>
 
 #include "compression/compressor.h"
+#include "compression/decompressor.h"
 #include "compression/zstd-plain.h"
 
 using digest::Digest;

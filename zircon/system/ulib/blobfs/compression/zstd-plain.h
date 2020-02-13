@@ -13,6 +13,7 @@
 #include <zstd/zstd.h>
 
 #include "compressor.h"
+#include "decompressor.h"
 
 namespace blobfs {
 
@@ -25,7 +26,7 @@ class ZSTDCompressor : public Compressor {
   static size_t BufferMax(size_t input_length);
 
   static zx_status_t Create(size_t input_size, void* compression_buffer,
-                              size_t compression_buffer_length, std::unique_ptr<ZSTDCompressor>* out);
+                            size_t compression_buffer_length, std::unique_ptr<ZSTDCompressor>* out);
   ~ZSTDCompressor();
 
   ////////////////////////////////////////

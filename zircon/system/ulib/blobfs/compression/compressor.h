@@ -11,13 +11,9 @@
 
 #include <fbl/macros.h>
 
-namespace blobfs {
+#include "algorithm.h"
 
-enum class CompressionAlgorithm {
-  LZ4,
-  ZSTD,
-  ZSTD_SEEKABLE,
-};
+namespace blobfs {
 
 // A `Compressor` is used to compress whole blobs transparently. Note that compressors may add
 // metadata beyond the underlying compression archive format so long as the corresponding
@@ -51,44 +47,6 @@ class Compressor {
   // Finishes the compression process.
   // Must be called before compression is considered complete.
   virtual zx_status_t End() = 0;
-};
-
-// A `Decompressor` is used to decompress whole blobs transparently. See `Compressor` documentation
-// for properties of `Compressor`/`Decompressor` pair implementations.
-class Decompressor {
- public:
-  static zx_status_t Create(CompressionAlgorithm algorithm, std::unique_ptr<Decompressor>* out);
-
-  Decompressor() = default;
-  virtual ~Decompressor() = default;
-  DISALLOW_COPY_ASSIGN_AND_MOVE(Decompressor);
-
-  // Decompresses data archive from buffer, `compressed_buf`, which has size `max_compressed_size`.
-  // The actual archive contents is at most `max_compressed_size`, but may be smaller. Decompressed
-  // data is written to `uncompressed_buf`, which has a size of `*uncompressed_size`. If the return
-  // value is `ZX_OK, then the number of bytes written is written to `uncompressed_buf` is stored in
-  // `*uncompressed_size`.
-  virtual zx_status_t Decompress(void* uncompressed_buf, size_t* uncompressed_size,
-                                 const void* compressed_buf, const size_t max_compressed_size) = 0;
-};
-
-// A `SeekableDecompressor` is used to decompress parts of blobs transparently. See `Compressor`
-// documentation for properties of `Compressor`/`SeekableDecompressor` pair implementations.
-class SeekableDecompressor {
- public:
-  SeekableDecompressor() = default;
-  virtual ~SeekableDecompressor() = default;
-  DISALLOW_COPY_ASSIGN_AND_MOVE(SeekableDecompressor);
-
-  // Decompresses data archive from buffer, `compressed_buf`, which has size `max_compressed_size`,
-  // starting at _uncompressed_ byte offset, `offset`. Decompress at most `uncompressed_size` bytes.
-  // The actual archive contents is at most `max_compressed_size`, but may be smaller. Decompressed
-  // data is written to `uncompressed_buf`, which has a size of `*uncompressed_size`. If the return
-  // value is `ZX_OK, then the number of bytes written is written to `uncompressed_buf` is stored in
-  // `*uncompressed_size`.
-  virtual zx_status_t DecompressRange(void* uncompressed_buf, size_t* uncompressed_size,
-                                      const void* compressed_buf, size_t max_compressed_size,
-                                      size_t offset) = 0;
 };
 
 }  // namespace blobfs
