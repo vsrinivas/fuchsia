@@ -57,6 +57,23 @@ class DosRegisterIo : public ddk::MmioBuffer {
   DosRegisterIo(const mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
 };
 
+// Aobus communicates with the always-on power management processor.
+class AoRegisterIo : public ddk::MmioBuffer {
+ public:
+  AoRegisterIo(const mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
+};
+
+// Hiubus mainly seems to handle clock control and gating.
+class HiuRegisterIo : public ddk::MmioBuffer {
+ public:
+  HiuRegisterIo(const mmio_buffer_t& mmio) : ddk::MmioBuffer(mmio) {}
+};
+
+class ResetRegisterIo : public ddk::MmioView {
+ public:
+  ResetRegisterIo(const mmio_buffer_t& mmio, zx_off_t off) : ddk::MmioView(mmio, off) {}
+};
+
 #define DEFINE_REGISTER(name, type, address)                           \
   class name : public TypedRegisterBase<type, name, uint32_t> {        \
    public:                                                             \

@@ -100,6 +100,8 @@ class DeviceCtx : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_MEDIA
   SocType soc_type_ = SocType::kUnknown;
   std::unique_ptr<CbusRegisterIo> cbus_;
   std::unique_ptr<DosRegisterIo> dosbus_;
+  std::unique_ptr<AoRegisterIo> aobus_;
+  std::unique_ptr<HiuRegisterIo> hiubus_;
   zx::bti bti_;
 
   zx::interrupt enc_interrupt_handle_;
