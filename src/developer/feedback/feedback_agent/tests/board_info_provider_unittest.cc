@@ -40,9 +40,7 @@ using testing::UnorderedElementsAreArray;
 class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
  public:
   BoardInfoProviderTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this),
-        executor_(dispatcher()),
-        cobalt_(dispatcher(), services()) {}
+      : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
   void SetUpBoardProvider(std::unique_ptr<StubBoard> board_provider) {
@@ -55,8 +53,10 @@ class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
   std::map<std::string, std::string> GetBoardInfo(
       const std::set<std::string>& annotations_to_get = {},
       const zx::duration timeout = zx::sec(1)) {
-    BoardInfoProvider provider(annotations_to_get, dispatcher(), services(), timeout, &cobalt_);
+    SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+    Cobalt cobalt(dispatcher(), services());
 
+    BoardInfoProvider provider(annotations_to_get, dispatcher(), services(), timeout, &cobalt);
     auto promise = provider.GetAnnotations();
 
     std::vector<Annotation> annotations;
@@ -84,7 +84,6 @@ class BoardInfoProviderTest : public UnitTestFixture, public CobaltTestFixture {
 
  private:
   std::unique_ptr<StubBoard> board_provider_;
-  Cobalt cobalt_;
 };
 
 BoardInfo CreateBoardInfo(const std::map<std::string, std::string>& annotations) {
@@ -167,7 +166,6 @@ TEST_F(BoardInfoProviderTest, Succeed_MissingAnnotationReturned) {
 
 TEST_F(BoardInfoProviderTest, Check_CobaltLogsTimeout) {
   SetUpBoardProvider(std::make_unique<StubBoardNeverReturns>());
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   auto board_info = GetBoardInfo();
 
@@ -179,6 +177,7 @@ TEST_F(BoardInfoProviderTest, Check_CobaltLogsTimeout) {
 
 TEST_F(BoardInfoProviderTest, Fail_CallGetBoardInfoTwice) {
   SetUpBoardProvider(std::make_unique<StubBoard>(CreateBoardInfo({})));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   Cobalt cobalt(dispatcher(), services());
 
   const zx::duration unused_timeout = zx::sec(1);

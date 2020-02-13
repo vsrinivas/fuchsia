@@ -32,8 +32,10 @@
 #include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_product.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_scenic.h"
+#include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
+#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/archive.h"
 #include "src/lib/files/file.h"
@@ -217,12 +219,11 @@ MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expec
 //
 // This does not test the environment service. It directly instantiates the class, without
 // connecting through FIDL.
-class DataProviderTest : public UnitTestFixture {
+class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
  public:
-  void SetUp() override {
-    SetUpDataProvider(kDefaultConfig);
-    ASSERT_TRUE(InitializeFeedbackId(kFeedbackIdPath));
-  }
+  DataProviderTest() : CobaltTestFixture(/*unit_test_fixture=*/this) {}
+
+  void SetUp() override { ASSERT_TRUE(InitializeFeedbackId(kFeedbackIdPath)); }
 
   void TearDown() override { ASSERT_TRUE(files::DeletePath(kFeedbackIdPath, /*recursive=*/false)); }
 
@@ -287,6 +288,8 @@ class DataProviderTest : public UnitTestFixture {
   }
 
   GetScreenshotResponse GetScreenshot() {
+    FX_CHECK(data_provider_);
+
     GetScreenshotResponse out_response;
     data_provider_->GetScreenshot(ImageEncoding::PNG,
                                   [&out_response](std::unique_ptr<Screenshot> screenshot) {
@@ -297,6 +300,8 @@ class DataProviderTest : public UnitTestFixture {
   }
 
   fit::result<Data, zx_status_t> GetData() {
+    FX_CHECK(data_provider_);
+
     fit::result<Data, zx_status_t> out_result;
     data_provider_->GetData(
         [&out_result](fit::result<Data, zx_status_t> result) { out_result = std::move(result); });
@@ -336,9 +341,10 @@ TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   auto scenic = std::make_unique<StubScenic>();
   scenic->set_take_screenshot_responses(std::move(scenic_responses));
   SetUpScenic(std::move(scenic));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpDataProvider(kDefaultConfig);
 
   GetScreenshotResponse feedback_response = GetScreenshot();
-
   EXPECT_TRUE(get_scenic_responses().empty());
 
   ASSERT_NE(feedback_response.screenshot, nullptr);
@@ -359,6 +365,9 @@ TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
 
 TEST_F(DataProviderTest, GetScreenshot_FailOnScenicNotAvailable) {
   SetUpScenic(nullptr);
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpDataProvider(kDefaultConfig);
+
   GetScreenshotResponse feedback_response = GetScreenshot();
   EXPECT_EQ(feedback_response.screenshot, nullptr);
 }
@@ -369,11 +378,11 @@ TEST_F(DataProviderTest, GetScreenshot_FailOnScenicReturningFailure) {
   auto scenic = std::make_unique<StubScenic>();
   scenic->set_take_screenshot_responses(std::move(scenic_responses));
   SetUpScenic(std::move(scenic));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpDataProvider(kDefaultConfig);
 
   GetScreenshotResponse feedback_response = GetScreenshot();
-
   EXPECT_TRUE(get_scenic_responses().empty());
-
   EXPECT_EQ(feedback_response.screenshot, nullptr);
 }
 
@@ -383,11 +392,11 @@ TEST_F(DataProviderTest, GetScreenshot_FailOnScenicReturningNonBGRA8Screenshot) 
   auto scenic = std::make_unique<StubScenic>();
   scenic->set_take_screenshot_responses(std::move(scenic_responses));
   SetUpScenic(std::move(scenic));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpDataProvider(kDefaultConfig);
 
   GetScreenshotResponse feedback_response = GetScreenshot();
-
   EXPECT_TRUE(get_scenic_responses().empty());
-
   EXPECT_EQ(feedback_response.screenshot, nullptr);
 }
 
@@ -405,6 +414,8 @@ TEST_F(DataProviderTest, GetScreenshot_ParallelRequests) {
   auto scenic = std::make_unique<StubScenic>();
   scenic->set_take_screenshot_responses(std::move(scenic_responses));
   SetUpScenic(std::move(scenic));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpDataProvider(kDefaultConfig);
 
   std::vector<GetScreenshotResponse> feedback_responses;
   for (size_t i = 0; i < num_calls; i++) {
@@ -445,6 +456,8 @@ TEST_F(DataProviderTest, GetScreenshot_ParallelRequests) {
 TEST_F(DataProviderTest, GetScreenshot_OneScenicConnectionPerGetScreenshotCall) {
   // We use a stub that always returns false as we are not interested in the responses.
   SetUpScenic(std::make_unique<StubScenicAlwaysReturnsFalse>());
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpDataProvider(kDefaultConfig);
 
   const size_t num_calls = 5u;
   std::vector<GetScreenshotResponse> feedback_responses;
@@ -465,6 +478,9 @@ TEST_F(DataProviderTest, GetScreenshot_OneScenicConnectionPerGetScreenshotCall) 
 }
 
 TEST_F(DataProviderTest, GetData_SmokeTest) {
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpDataProvider(kDefaultConfig);
+
   fit::result<Data, zx_status_t> result = GetData();
 
   ASSERT_TRUE(result.is_ok());
@@ -481,6 +497,9 @@ TEST_F(DataProviderTest, GetData_SmokeTest) {
 }
 
 TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpDataProvider(kDefaultConfig);
+
   fit::result<Data, zx_status_t> result = GetData();
 
   ASSERT_TRUE(result.is_ok());
@@ -592,6 +611,8 @@ TEST_F(DataProviderTest, GetData_Inspect) {
   // CollectInspectData() has its own set of unit tests so we only cover one chunk of Inspect data
   // here to check that we are attaching the Inspect data.
   SetUpInspect("foo");
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpDataProvider(kDefaultConfig);
 
   fit::result<Data, zx_status_t> result = GetData();
   ASSERT_TRUE(result.is_ok());
@@ -613,9 +634,10 @@ TEST_F(DataProviderTest, GetData_SysLog) {
                       /*timestamp_offset=*/zx::duration(0), {"foo"}),
   });
   const std::string expected_syslog = "[15604.000][07559][07687][foo] INFO: log message\n";
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpDataProvider(kDefaultConfig);
 
   fit::result<Data, zx_status_t> result = GetData();
-
   ASSERT_TRUE(result.is_ok());
 
   const Data& data = result.value();
@@ -630,6 +652,8 @@ TEST_F(DataProviderTest, GetData_SysLog) {
 TEST_F(DataProviderTest, GetData_PreviousSysLog) {
   std::string previous_log_contents("LAST SYSTEM LOG");
   SetUpPreviousSystemLog(previous_log_contents);
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpDataProvider(kDefaultConfig);
 
   fit::result<Data, zx_status_t> result = GetData();
   ASSERT_TRUE(result.is_ok());
@@ -646,9 +670,10 @@ TEST_F(DataProviderTest, GetData_Channel) {
   auto channel_provider = std::make_unique<StubChannelProvider>();
   channel_provider->set_channel("my-channel");
   SetUpChannelProvider(std::move(channel_provider));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpDataProvider(kDefaultConfig);
 
   fit::result<Data, zx_status_t> result = GetData();
-
   ASSERT_TRUE(result.is_ok());
 
   const Data& data = result.value();
@@ -659,6 +684,8 @@ TEST_F(DataProviderTest, GetData_Channel) {
 
 TEST_F(DataProviderTest, GetData_BoardInfo) {
   SetUpBoardProvider(std::make_unique<StubBoard>(CreateBoardInfo()));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpDataProvider(kDefaultConfig);
 
   std::set<std::string> keys;
   for (const auto& [key, _] : kBoardInfoValues) {
@@ -681,6 +708,8 @@ TEST_F(DataProviderTest, GetData_BoardInfo) {
 
 TEST_F(DataProviderTest, GetData_ProductInfo) {
   SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo()));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpDataProvider(kDefaultConfig);
 
   std::set<std::string> keys;
   for (const auto& [key, _] : kProductInfoValues) {
@@ -713,8 +742,10 @@ TEST_F(DataProviderTest, GetData_ProductInfo) {
 }
 
 TEST_F(DataProviderTest, GetData_Time) {
-  fit::result<Data, zx_status_t> result = GetData();
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpDataProvider(kDefaultConfig);
 
+  fit::result<Data, zx_status_t> result = GetData();
   ASSERT_TRUE(result.is_ok());
 
   const Data& data = result.value();
@@ -726,10 +757,13 @@ TEST_F(DataProviderTest, GetData_Time) {
 }
 
 TEST_F(DataProviderTest, GetData_FeedbackId) {
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpDataProvider(kDefaultConfig);
+
   std::string feedback_id;
   ASSERT_TRUE(files::ReadFileToString(kFeedbackIdPath, &feedback_id));
-  fit::result<Data, zx_status_t> result = GetData();
 
+  fit::result<Data, zx_status_t> result = GetData();
   ASSERT_TRUE(result.is_ok());
 
   const Data& data = result.value();
@@ -739,6 +773,7 @@ TEST_F(DataProviderTest, GetData_FeedbackId) {
 }
 
 TEST_F(DataProviderTest, GetData_EmptyAnnotationAllowlist) {
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   SetUpDataProvider(Config{/*annotation_allowlist=*/{}, kDefaultAttachments});
 
   fit::result<Data, zx_status_t> result = GetData();
@@ -749,6 +784,7 @@ TEST_F(DataProviderTest, GetData_EmptyAnnotationAllowlist) {
 }
 
 TEST_F(DataProviderTest, GetData_EmptyAttachmentAllowlist) {
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   SetUpDataProvider(Config{kDefaultAnnotations, /*attachment_allowlist=*/{}});
 
   fit::result<Data, zx_status_t> result = GetData();
@@ -761,6 +797,7 @@ TEST_F(DataProviderTest, GetData_EmptyAttachmentAllowlist) {
 }
 
 TEST_F(DataProviderTest, GetData_EmptyAllowlists) {
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   SetUpDataProvider(Config{/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{}});
 
   fit::result<Data, zx_status_t> result = GetData();
@@ -772,6 +809,7 @@ TEST_F(DataProviderTest, GetData_EmptyAllowlists) {
 }
 
 TEST_F(DataProviderTest, GetData_UnknownAllowlistedAnnotation) {
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   SetUpDataProvider(Config{/*annotation_allowlist=*/{"unknown.annotation"}, kDefaultAttachments});
 
   fit::result<Data, zx_status_t> result = GetData();
@@ -782,6 +820,7 @@ TEST_F(DataProviderTest, GetData_UnknownAllowlistedAnnotation) {
 }
 
 TEST_F(DataProviderTest, GetData_UnknownAllowlistedAttachment) {
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   SetUpDataProvider(Config{kDefaultAnnotations,
                            /*attachment_allowlist=*/{"unknown.attachment"}});
 
@@ -818,12 +857,10 @@ TEST_F(DataProviderTest, Check_IdleTimeout) {
   ASSERT_GE(kGetScreenshotTimeout, kDataProviderIdleTimeout);
   ASSERT_GE(kGetDataTimeout, kDataProviderIdleTimeout);
 
-  SetUpDataProviderOnlyRequestingChannel(kDataProviderIdleTimeout);
-
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   SetUpScenic(std::make_unique<StubScenicNeverReturns>());
   SetUpChannelProvider(std::make_unique<StubChannelProviderNeverReturns>());
-  SetUpBoardProvider(std::make_unique<StubBoard>(CreateBoardInfo()));
-  SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo()));
+  SetUpDataProviderOnlyRequestingChannel(kDataProviderIdleTimeout);
 
   // In the following tests we list the current time of a stopwatch that starts at 0 seconds and
   // the point in time at which the idle timeout function is expected to run. In the circumstance

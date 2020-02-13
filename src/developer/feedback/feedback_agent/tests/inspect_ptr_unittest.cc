@@ -46,6 +46,7 @@ class CollectInspectDataTest : public UnitTestFixture, public CobaltTestFixture 
   }
 
   fit::result<fuchsia::mem::Buffer> CollectInspectData(const zx::duration timeout = zx::sec(1)) {
+    SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
     Cobalt cobalt(dispatcher(), services());
 
     fit::result<fuchsia::mem::Buffer> result;
@@ -77,7 +78,6 @@ TEST_F(CollectInspectDataTest, Succeed_AllInspectData) {
           {"bar1"},
           {},
       })))));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_ok());
@@ -98,7 +98,6 @@ TEST_F(CollectInspectDataTest, Succeed_PartialInspectData) {
   SetUpInspect(std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReader>(
       std::make_unique<StubInspectBatchIteratorNeverRespondsAfterOneBatch>(
           std::vector<std::string>({"foo1", "foo2"})))));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_ok());
@@ -117,7 +116,6 @@ foo2
 TEST_F(CollectInspectDataTest, Fail_NoInspectData) {
   SetUpInspect(std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReader>(
       std::make_unique<StubInspectBatchIterator>(std::vector<std::vector<std::string>>({{}})))));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
@@ -129,7 +127,6 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorClosesConnection) {
   SetUpInspect(std::make_unique<StubInspectArchive>(
       std::make_unique<StubInspectReaderClosesBatchIteratorConnection>(
           std::make_unique<StubInspectBatchIterator>())));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
@@ -140,7 +137,6 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorClosesConnection) {
 TEST_F(CollectInspectDataTest, Fail_BatchIteratorReturnsError) {
   SetUpInspect(std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReader>(
       std::make_unique<StubInspectBatchIteratorReturnsError>())));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
@@ -151,7 +147,6 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorReturnsError) {
 TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
   SetUpInspect(std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReader>(
       std::make_unique<StubInspectBatchIteratorNeverResponds>())));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
@@ -161,7 +156,6 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
 
 TEST_F(CollectInspectDataTest, Fail_ReaderClosesConnection) {
   SetUpInspect(std::make_unique<StubInspectArchiveClosesReaderConnection>());
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
@@ -172,7 +166,6 @@ TEST_F(CollectInspectDataTest, Fail_ReaderClosesConnection) {
 TEST_F(CollectInspectDataTest, Fail_ReaderReturnsError) {
   SetUpInspect(
       std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReaderReturnsError>()));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
@@ -183,7 +176,6 @@ TEST_F(CollectInspectDataTest, Fail_ReaderReturnsError) {
 TEST_F(CollectInspectDataTest, Fail_ReaderNeverResponds) {
   SetUpInspect(
       std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReaderNeverResponds>()));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
@@ -193,7 +185,6 @@ TEST_F(CollectInspectDataTest, Fail_ReaderNeverResponds) {
 
 TEST_F(CollectInspectDataTest, Fail_ArchiveClosesConnection) {
   SetUpInspect(std::make_unique<StubInspectArchiveClosesArchiveConnection>());
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
@@ -203,7 +194,6 @@ TEST_F(CollectInspectDataTest, Fail_ArchiveClosesConnection) {
 
 TEST_F(CollectInspectDataTest, Fail_ArchiveReturnsError) {
   SetUpInspect(std::make_unique<StubInspectArchiveReturnsError>());
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
@@ -213,7 +203,6 @@ TEST_F(CollectInspectDataTest, Fail_ArchiveReturnsError) {
 
 TEST_F(CollectInspectDataTest, Fail_ArchiveNeverResponds) {
   SetUpInspect(std::make_unique<StubInspectArchiveNeverResponds>());
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
@@ -222,7 +211,9 @@ TEST_F(CollectInspectDataTest, Fail_ArchiveNeverResponds) {
 }
 
 TEST_F(CollectInspectDataTest, Fail_CallCollectTwice) {
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   Cobalt cobalt(dispatcher(), services());
+
   const zx::duration unused_timeout = zx::sec(1);
   Inspect inspect(dispatcher(), services(), &cobalt);
   executor_.schedule_task(inspect.Collect(unused_timeout));

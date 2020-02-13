@@ -46,9 +46,7 @@ class ProductInfoProviderTest
       public testing::WithParamInterface<std::map<std::string, std::string>> {
  public:
   ProductInfoProviderTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this),
-        executor_(dispatcher()),
-        cobalt_(dispatcher(), services()) {}
+      : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
   void SetUpProductProvider(std::unique_ptr<StubProduct> product_provider) {
@@ -61,8 +59,10 @@ class ProductInfoProviderTest
   std::map<std::string, std::string> GetProductInfo(
       const std::set<std::string>& annotations_to_get = {},
       const zx::duration timeout = zx::sec(1)) {
-    ProductInfoProvider provider(annotations_to_get, dispatcher(), services(), timeout, &cobalt_);
+    SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+    Cobalt cobalt(dispatcher(), services());
 
+    ProductInfoProvider provider(annotations_to_get, dispatcher(), services(), timeout, &cobalt);
     auto promise = provider.GetAnnotations();
 
     std::vector<Annotation> annotations;
@@ -90,7 +90,6 @@ class ProductInfoProviderTest
 
  private:
   std::unique_ptr<StubProduct> product_provider_;
-  Cobalt cobalt_;
 };
 
 ProductInfo CreateProductInfo(const std::map<std::string, std::string>& annotations) {
@@ -200,7 +199,6 @@ TEST_F(ProductInfoProviderTest, Succeed_ProductInfoReturnsFewerAnnotations) {
 
 TEST_F(ProductInfoProviderTest, Check_CobaltLogsTimeout) {
   SetUpProductProvider(std::make_unique<StubProductNeverReturns>());
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   auto board_info = GetProductInfo();
 
@@ -212,6 +210,7 @@ TEST_F(ProductInfoProviderTest, Check_CobaltLogsTimeout) {
 
 TEST_F(ProductInfoProviderTest, Fail_CallGetProductInfoTwice) {
   SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo({})));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   Cobalt cobalt(dispatcher(), services());
 
   const zx::duration unused_timeout = zx::sec(1);

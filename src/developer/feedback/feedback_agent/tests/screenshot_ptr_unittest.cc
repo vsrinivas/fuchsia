@@ -32,10 +32,7 @@ constexpr bool kSuccess = true;
 
 class TakeScreenshotTest : public UnitTestFixture, public CobaltTestFixture {
  public:
-  TakeScreenshotTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this),
-        executor_(dispatcher()),
-        cobalt_(dispatcher(), services()) {}
+  TakeScreenshotTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
   void SetUpScreenshotProvider(std::unique_ptr<StubScenic> screenshot_provider) {
@@ -46,9 +43,12 @@ class TakeScreenshotTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
   fit::result<ScreenshotData> TakeScreenshot(const zx::duration timeout = zx::sec(1)) {
+    SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+    Cobalt cobalt(dispatcher(), services());
+
     fit::result<ScreenshotData> result;
     executor_.schedule_task(
-        feedback::TakeScreenshot(dispatcher(), services(), timeout, &cobalt_)
+        feedback::TakeScreenshot(dispatcher(), services(), timeout, &cobalt)
             .then([&result](fit::result<ScreenshotData>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
@@ -58,7 +58,6 @@ class TakeScreenshotTest : public UnitTestFixture, public CobaltTestFixture {
 
  private:
   std::unique_ptr<StubScenic> screenshot_provider_;
-  Cobalt cobalt_;
 };
 
 TEST_F(TakeScreenshotTest, Succeed_CheckerboardScreenshot) {
@@ -107,7 +106,6 @@ TEST_F(TakeScreenshotTest, Fail_ScenicClosesConnection) {
 
 TEST_F(TakeScreenshotTest, Fail_ScenicNeverReturns) {
   SetUpScreenshotProvider(std::make_unique<StubScenicNeverReturns>());
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<ScreenshotData> result = TakeScreenshot();
 
@@ -121,9 +119,10 @@ TEST_F(TakeScreenshotTest, Fail_CallTakeScreenshotTwice) {
   std::vector<TakeScreenshotResponse> screenshot_provider_responses;
   screenshot_provider_responses.emplace_back(CreateEmptyScreenshot(), kSuccess);
   auto screenshot_provider = std::make_unique<StubScenic>();
-  Cobalt cobalt(dispatcher(), services());
   screenshot_provider->set_take_screenshot_responses(std::move(screenshot_provider_responses));
   SetUpScreenshotProvider(std::move(screenshot_provider));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  Cobalt cobalt(dispatcher(), services());
 
   const zx::duration unused_timeout = zx::sec(1);
   Scenic scenic(dispatcher(), services(), &cobalt);

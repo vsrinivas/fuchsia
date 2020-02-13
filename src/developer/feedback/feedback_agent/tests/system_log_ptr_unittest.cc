@@ -34,10 +34,7 @@ using testing::UnorderedElementsAreArray;
 
 class CollectSystemLogTest : public UnitTestFixture, public CobaltTestFixture {
  public:
-  CollectSystemLogTest()
-      : CobaltTestFixture(/*unit_test_fixture=*/this),
-        executor_(dispatcher()),
-        cobalt_(dispatcher(), services()) {}
+  CollectSystemLogTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
   void SetUpLogger(std::unique_ptr<StubLogger> logger) {
@@ -48,9 +45,12 @@ class CollectSystemLogTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
   fit::result<fuchsia::mem::Buffer> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
+    SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+    Cobalt cobalt(dispatcher(), services());
+
     fit::result<fuchsia::mem::Buffer> result;
     executor_.schedule_task(
-        feedback::CollectSystemLog(dispatcher(), services(), timeout, &cobalt_)
+        feedback::CollectSystemLog(dispatcher(), services(), timeout, &cobalt)
             .then([&result](fit::result<fuchsia::mem::Buffer>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
@@ -60,7 +60,6 @@ class CollectSystemLogTest : public UnitTestFixture, public CobaltTestFixture {
   async::Executor executor_;
 
   std::unique_ptr<StubLogger> logger_;
-  Cobalt cobalt_;
 };
 
 TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
@@ -128,7 +127,6 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
       BuildLogMessage(FX_LOG_INFO, "this line should be missing from the partial logs"),
   });
   SetUpLogger(std::move(logger));
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
 
   fit::result<fuchsia::mem::Buffer> result = CollectSystemLog(log_collection_timeout);
 
@@ -195,9 +193,9 @@ TEST_F(CollectSystemLogTest, Fail_LogCollectionTimesOut) {
   ASSERT_TRUE(result.is_error());
 }
 
-class LogListenerTest : public UnitTestFixture {
+class LogListenerTest : public UnitTestFixture, public CobaltTestFixture {
  public:
-  LogListenerTest() : executor_(dispatcher()) {}
+  LogListenerTest() : CobaltTestFixture(/*unit_test_fixture=*/this), executor_(dispatcher()) {}
 
  protected:
   async::Executor executor_;
@@ -211,6 +209,7 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
   });
   InjectServiceProvider(logger.get());
 
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   Cobalt cobalt(dispatcher(), services());
 
   // Since we are using a test loop with a fake clock, the actual duration doesn't matter so we can
@@ -237,6 +236,7 @@ TEST_F(LogListenerTest, Fail_CallCollectLogsTwice) {
   });
   InjectServiceProvider(logger.get());
 
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
   Cobalt cobalt(dispatcher(), services());
 
   const zx::duration unused_timeout = zx::sec(1);
