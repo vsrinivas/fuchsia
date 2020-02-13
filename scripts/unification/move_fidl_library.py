@@ -8,36 +8,10 @@ import fileinput
 import os
 import re
 import shutil
-import subprocess
 import sys
 
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-FUCHSIA_ROOT = os.path.dirname(  # $root
-    os.path.dirname(             # scripts
-    SCRIPT_DIR))                 # unification
-JIRI = os.path.join(FUCHSIA_ROOT, '.jiri_root', 'bin', 'jiri')
-FX = os.path.join(FUCHSIA_ROOT, 'scripts', 'fx')
-
-
-def run_command(command):
-    return subprocess.check_output(command, cwd=FUCHSIA_ROOT)
-
-
-def list_projects():
-    data = run_command([JIRI, 'runp', JIRI, 'project'])
-    result = {}
-    current_project = None
-    for line in data.splitlines():
-        match = re.match('^\* project (.*)$', line)
-        if match:
-            current_project = match.group(1)
-            continue
-        match = re.match('^  Path:\s+(.*)$', line)
-        if match:
-            result[current_project] = os.path.abspath(match.group(1))
-            current_project = None
-    return result
+from common import (FUCHSIA_ROOT, run_command, is_tree_clean,
+                    is_in_fuchsia_project, fx_format)
 
 
 def main():
@@ -52,10 +26,7 @@ def main():
     lib_with_dash = args.lib.replace('.', '-')
 
     # Check that the fuchsia.git tree is clean.
-    diff = run_command(['git', 'status', '--porcelain'])
-    if diff:
-        print('Please make sure your tree is clean before running this script')
-        print(diff)
+    if not is_tree_clean():
         return 1
 
     sdk_base = os.path.join(FUCHSIA_ROOT, 'sdk', 'fidl')
@@ -71,7 +42,7 @@ def main():
         for file in files:
             shutil.move(os.path.join(source_dir, file), sdk_dir)
             dest_file = os.path.join(sdk_dir, file)
-            run_command([FX, 'format-code', '--files=' + dest_file])
+            fx_format(dest_file)
         break
 
     # Edit the build file in its new location.
@@ -94,20 +65,7 @@ def main():
         line = line.replace('$zx/system/fidl',
                             '//zircon/system/fidl')
         sys.stdout.write(line)
-    run_command([FX, 'format-code', '--files=' + build_path])
-
-    # Fetch the list of projects managed by Jiri.
-    projects = list_projects()
-    def is_in_fuchsia_project(file):
-        file = os.path.abspath(file)
-        for project, base in projects.iteritems():
-            if project == 'fuchsia':
-                # This is the root of the checkout, won't get any useful
-                # information out of this one.
-                continue
-            if os.path.commonprefix([file, base]) == base:
-                return False
-        return True
+    fx_format(build_path)
 
     # Track whether fuchsia.git was the only affected project.
     multiple_projects_affected = False
@@ -144,7 +102,7 @@ def main():
                 sys.stdout.write(line)
             if has_matches:
                 # Format the file.
-                run_command([FX, 'format-code', '--files=' + file_path])
+                fx_format(file_path)
                 if not is_in_fuchsia_project(file_path):
                     multiple_projects_affected = True
 

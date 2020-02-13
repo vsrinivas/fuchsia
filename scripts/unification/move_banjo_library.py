@@ -8,19 +8,9 @@ import fileinput
 import os
 import re
 import shutil
-import subprocess
 import sys
 
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-FUCHSIA_ROOT = os.path.dirname(  # $root
-    os.path.dirname(             # scripts
-    SCRIPT_DIR))                 # unification
-FX = os.path.join(FUCHSIA_ROOT, 'scripts', 'fx')
-
-
-def run_command(command):
-    return subprocess.check_output(command, cwd=FUCHSIA_ROOT)
+from common import (FUCHSIA_ROOT, run_command, is_tree_clean, fx_format)
 
 
 def main():
@@ -32,10 +22,7 @@ def main():
     lib = args.lib
 
     # Check that the fuchsia.git tree is clean.
-    diff = run_command(['git', 'status', '--porcelain'])
-    if diff:
-        print('Please make sure your tree is clean before running this script')
-        print(diff)
+    if not is_tree_clean():
         return 1
 
     sdk_base = os.path.join(FUCHSIA_ROOT, 'sdk', 'banjo')
@@ -59,7 +46,7 @@ def main():
         line = line.replace('$zx/system/banjo',
                             '//zircon/system/banjo')
         sys.stdout.write(line)
-    run_command([FX, 'format-code', '--files=' + build_path])
+    fx_format(build_path)
 
     # Edit references to the library.
     for base, _, files in os.walk(FUCHSIA_ROOT):
@@ -81,7 +68,7 @@ def main():
                     has_changes = True
                 sys.stdout.write(line)
             if has_changes:
-                run_command([FX, 'format-code', '--files=' + file_path])
+                fx_format(file_path)
 
     for line in fileinput.FileInput(os.path.join(banjo_base, 'BUILD.gn'),
                                     inplace=True):

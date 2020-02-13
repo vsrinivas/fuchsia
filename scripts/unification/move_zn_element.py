@@ -12,11 +12,7 @@ import re
 import subprocess
 import sys
 
-
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-SCRIPTS_DIR = os.path.dirname(SCRIPT_DIR)
-FUCHSIA_ROOT = os.path.dirname(SCRIPTS_DIR)
-FX = os.path.join(SCRIPTS_DIR, 'fx')
+from common import (FUCHSIA_ROOT, run_command, is_tree_clean, fx_format)
 
 SCRIPT_LABEL = '//' + os.path.relpath(os.path.abspath(__file__),
                                       start=FUCHSIA_ROOT)
@@ -184,7 +180,7 @@ def transform_build_file(build):
             build_file.write('}\n')
 
     # Format the file.
-    run_command([FX, 'format-code', '--files=' + build])
+    fx_format(build)
 
     return 0
 
@@ -231,10 +227,7 @@ def main():
 
 def run_convert(args):
     # Check that the fuchsia.git tree is clean.
-    diff = run_command(['git', 'status', '--porcelain'])
-    if diff:
-        print('Please make sure your tree is clean before running this script')
-        print(diff)
+    if not is_tree_clean():
         return 1
 
     # Identify the affected build files.
