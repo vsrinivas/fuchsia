@@ -3,10 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//src/sys/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 
 group("sandbox") {
   testonly = true
   deps = [
+    ":has_pkg",
     "features",
     "services",
   ]
@@ -26,5 +28,16 @@ source_set("namespace_test") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//third_party/googletest:gtest",
+    "//zircon/system/fidl/fuchsia-io:llcpp",
   ]
+}
+
+sandbox_test_package("has_pkg") {
+  sources = [ "has_pkg.cc" ]
+
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
+  ]
+  environments = basic_envs
 }

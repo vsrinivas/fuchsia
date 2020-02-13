@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/sys/test/cpp/fidl.h>
 
 #include <chrono>
@@ -12,7 +13,12 @@
 #include "src/lib/files/file.h"
 #include "src/sys/appmgr/integration_tests/sandbox/namespace_test.h"
 
-TEST_F(NamespaceTest, HasCacheStorage) { ExpectExists("/cache/"); }
+namespace fio = ::llcpp::fuchsia::io;
+
+TEST_F(NamespaceTest, HasCacheStorage) {
+  ExpectExists("/cache");
+  ExpectPathSupportsStrictRights("/cache", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
+}
 
 TEST_F(NamespaceTest, CanClearCacheStorage) {
   fuchsia::sys::test::CacheControlPtr cache;

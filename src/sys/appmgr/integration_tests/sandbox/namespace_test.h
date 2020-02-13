@@ -5,6 +5,7 @@
 #ifndef SRC_SYS_APPMGR_INTEGRATION_TESTS_SANDBOX_NAMESPACE_TEST_H_
 #define SRC_SYS_APPMGR_INTEGRATION_TESTS_SANDBOX_NAMESPACE_TEST_H_
 
+#include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/gtest/real_loop_fixture.h>
@@ -35,6 +36,16 @@ class NamespaceTest : public sys::testing::TestWithEnvironment {
 
   // Expect that a path does not exist, and fail with a descriptive message
   void ExpectDoesNotExist(const char* path);
+
+  // Expect that the given path can be opened with the specified file/directory rights. All
+  // filesystem rights bits can be checked: OPEN_RIGHT_READABLE, _WRITABLE, _EXECUTABLE, and _ADMIN.
+  void ExpectPathSupportsRights(const char* path, uint32_t rights);
+
+  // Expect that the given path can be opened with the specified file/directory rights, but no
+  // greater. All filesystem rights bits can be checked: OPEN_RIGHT_READABLE, _WRITABLE,
+  // _EXECUTABLE, and _ADMIN.
+  void ExpectPathSupportsStrictRights(const char* path, uint32_t rights,
+                                      bool require_access_denied = true);
 
  private:
   std::unique_ptr<sys::ComponentContext> component_context_;

@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/has_pkg"
+    }
+}
