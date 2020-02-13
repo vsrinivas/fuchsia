@@ -653,6 +653,7 @@ mod tests {
     use crate::sensor::AmbientLightInputRpt;
     use anyhow::{format_err, Error};
     use async_trait::async_trait;
+    use std::path::Path;
 
     struct MockSensor {
         illuminence: u16,
@@ -1077,8 +1078,8 @@ mod tests {
                 BrightnessPoint { ambient_lux: 60., display_nits: 50. },
             ],
         };
-        control.store_brightness_table(&brightness_table, "/data/test_file")?;
-        let file = fs::File::open("/data/test_file")?;
+        control.store_brightness_table(&brightness_table, "/data/test_brightness_file")?;
+        let file = fs::File::open("/data/test_brightness_file")?;
         let data = serde_json::from_reader(io::BufReader::new(file))?;
         let BrightnessTable { points: read_points } = data;
         let BrightnessTable { points: write_points } = brightness_table;
@@ -1093,22 +1094,23 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_brightness_table_file_empty_file() {
-        fs::File::create("/data/test_file").unwrap();
-        let result = read_brightness_table_file("/data/test_file");
+        fs::File::create("/data/empty_file").unwrap();
+        let result = read_brightness_table_file("/data/empty_file");
         assert_eq!(true, result.is_err());
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_brightness_table_file_missing_file() {
-        let result = read_brightness_table_file("/data/test_file");
+        assert_eq!(false, Path::new("/data/nonexistent_file").exists());
+        let result = read_brightness_table_file("/data/nonexistent_file");
         assert_eq!(true, result.is_err());
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_brightness_table_file_invalid_data() {
-        let file = fs::File::create("/data/test_file").unwrap();
+        let file = fs::File::create("/data/invalid_brightness_file").unwrap();
         serde_json::to_writer(io::BufWriter::new(file), &1.0).unwrap();
-        let result = read_brightness_table_file("/data/test_file");
+        let result = read_brightness_table_file("/data/invalid_brightness_file");
         assert_eq!(true, result.is_err());
     }
 }
