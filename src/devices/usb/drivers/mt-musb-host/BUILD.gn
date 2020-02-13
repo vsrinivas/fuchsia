@@ -109,6 +109,7 @@ test("mt-hci-request-queue-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.usb.request",
   ]
 }
 

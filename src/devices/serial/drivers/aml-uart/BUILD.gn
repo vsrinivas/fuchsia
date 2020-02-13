@@ -46,6 +46,7 @@ test("aml-uart-test") {
     "aml-uart.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl.async",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",

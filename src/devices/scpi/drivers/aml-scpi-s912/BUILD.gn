@@ -58,6 +58,7 @@ driver_module("scpi") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
+    "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
   ]

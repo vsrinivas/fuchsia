@@ -14,6 +14,7 @@ driver_module("uart16550") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "uart16550.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -37,6 +38,7 @@ test("uart16550-test") {
     "uart16550.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",

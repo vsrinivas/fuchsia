@@ -60,6 +60,7 @@ test("aml-thermal-s912-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.gpio",
+    "//zircon/system/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/banjo/ddk.protocol.scpi:ddk.protocol.scpi_mock",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",

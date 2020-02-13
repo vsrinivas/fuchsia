@@ -41,7 +41,6 @@ driver_module("aml-thermal-s905d2g") {
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.pwm",
-    "//zircon/system/banjo/ddk.protocol.pwm:ddk.protocol.pwm_mock",
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
   ]
@@ -85,6 +84,7 @@ test("aml-thermal-s905d2g-test") {
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.pwm",
+    "//zircon/system/banjo/ddk.protocol.pwm:ddk.protocol.pwm_mock",
     "//zircon/system/banjo/ddk.protocol.scpi",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
   ]
