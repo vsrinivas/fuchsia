@@ -123,7 +123,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/zbi-bootfs/test",
 #------------------
 #------------------
-      "$zx/system/ulib/zircon-crypto/test",
 #------------------
 #------------------
       "$zx/system/ulib/zxtest/test",

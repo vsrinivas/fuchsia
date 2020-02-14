@@ -272,13 +272,10 @@ aggregate_manifest("legacy-aux") {
     ":bin.hermetic-decompressor-fuzzer.ubsan",
 #------------------
 #------------------
-    ":bin.hmac-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.hmac-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.hmac-fuzzer.ubsan",
 #------------------
 #------------------
     ":bin.kernel-cmdline-fuzzer.asan",
@@ -678,7 +675,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.zbi-bootfs-test-test",
 #------------------
 #------------------
-    ":test.sys.zircon-crypto-test",
 #------------------
 #------------------
     ":test.sys.zxcrypt-test",
@@ -881,13 +877,10 @@ aggregate_manifest("legacy-tests") {
     ":bin.hermetic-decompressor-fuzzer.ubsan",
 #------------------
 #------------------
-    ":bin.hmac-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.hmac-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.hmac-fuzzer.ubsan",
 #------------------
 #------------------
     ":bin.kernel-cmdline-fuzzer.asan",
@@ -1278,7 +1271,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.zbi-bootfs-test-test",
 #------------------
 #------------------
-    ":test.sys.zircon-crypto-test",
 #------------------
 #------------------
     ":test.sys.zxcrypt-test",
@@ -1841,13 +1833,10 @@ aggregate_manifest("migrated-aux") {
     #":bin.fsck-msdosfs",
 #------------------
 #------------------
-    #":bin.hmac-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.hmac-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.hmac-fuzzer.ubsan",
 #------------------
 #------------------
     #":bin.kernel-cmdline-fuzzer.asan",
@@ -3301,7 +3290,7 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/ulib/libzbi/test:zbi-manifest",
 #------------------
-    #":test.sys.zircon-crypto-test",
+    "//zircon/system/ulib/zircon-crypto/test:zircon-crypto-manifest",
 #------------------
     "//zircon/system/ulib/zx-panic-libc/test:zx-panic-libc-test-manifest",
     "//zircon/system/ulib/zx/test:zx-manifest",
@@ -3349,13 +3338,10 @@ aggregate_manifest("migrated-tests") {
 #------------------
     "//zircon/system/utest/evil:evil-manifest",
 #------------------
-    #":bin.hmac-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.hmac-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.hmac-fuzzer.ubsan",
 #------------------
 #------------------
     #":bin.kernel-cmdline-fuzzer.asan",
@@ -4000,7 +3986,7 @@ aggregate_manifest("migrated-tests") {
 #------------------
     "//zircon/system/ulib/libzbi/test:zbi-manifest",
 #------------------
-    #":test.sys.zircon-crypto-test",
+    "//zircon/system/ulib/zircon-crypto/test:zircon-crypto-manifest",
 #------------------
     "//zircon/system/ulib/zx-panic-libc/test:zx-panic-libc-test-manifest",
     "//zircon/system/ulib/zx/test:zx-manifest",

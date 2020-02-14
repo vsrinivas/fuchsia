@@ -12,7 +12,6 @@ zircon_fuzzers =
 fuzzer_names = [
   "elfload",
   "hermetic-decompressor",
-  "hmac",
   "kernel-cmdline",
   "lz4",
   "lz4-decompress",
