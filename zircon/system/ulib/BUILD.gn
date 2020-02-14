@@ -222,6 +222,7 @@ group("ulib-host") {
       "$zx/third_party/ulib/usbhost:usbhost-static",
       "mtd",
       "nand-redundant-storage",
+      "unittest:unittest-static",
     ]
   }
 }

@@ -646,7 +646,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.util-test",
 #------------------
 #------------------
 #------------------
@@ -1232,7 +1231,6 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.util-test",
 #------------------
 #------------------
 #------------------
@@ -3237,7 +3235,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/utest/utc-procargs:utc-procargs-manifest",
     "//zircon/system/ulib/utf_conversion/test:utf_conversion-manifest",
 #------------------
-    #":test.sys.util-test",
+    "//zircon/system/utest/util:util-manifest",
 #------------------
     "//zircon/system/utest/vdso-base:vdso-base-manifest",
     "//zircon/system/utest/vdso:vdso-manifest",
@@ -3942,7 +3940,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/utest/utc-procargs:utc-procargs-manifest",
     "//zircon/system/ulib/utf_conversion/test:utf_conversion-manifest",
 #------------------
-    #":test.sys.util-test",
+    "//zircon/system/utest/util:util-manifest",
 #------------------
     "//zircon/system/utest/vdso-base:vdso-base-manifest",
     "//zircon/system/utest/vdso:vdso-manifest",

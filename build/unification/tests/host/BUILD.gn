@@ -58,7 +58,6 @@ listed_tests = [
   "trace-reader-test",
 #------------------
 #------------------
-  "util",
 #------------------
 #------------------
 #------------------
@@ -142,7 +141,7 @@ group("migrated-tests") {
     #"trace-reader-test",
   #------------------
   #------------------
-    #"util",
+    "//zircon/system/utest/util",
   #------------------
   #------------------
     "//zircon/system/ulib/zxtest/test:zxtest",
