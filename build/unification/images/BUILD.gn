@@ -160,46 +160,32 @@ aggregate_manifest("legacy-image") {
   if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
     deps += [
   #------------------
-      ":driver.test-audio-codec",
   #------------------
   #------------------
-      ":driver.test-board",
   #------------------
   #------------------
-      ":driver.test-child-1",
   #------------------
   #------------------
-      ":driver.test-child-2",
   #------------------
   #------------------
-      ":driver.test-child-2.proxy",
   #------------------
   #------------------
-      ":driver.test-child-3",
   #------------------
   #------------------
-      ":driver.test-clock",
   #------------------
   #------------------
-      ":driver.test-composite",
   #------------------
   #------------------
-      ":driver.test-gpio",
   #------------------
   #------------------
-      ":driver.test-i2c",
   #------------------
   #------------------
-      ":driver.test-parent",
   #------------------
   #------------------
-      ":driver.test-power",
   #------------------
   #------------------
-      ":driver.test-pwm",
   #------------------
   #------------------
-      ":driver.test-spi",
   #------------------
   #------------------
       ":driver.test.ddktl-test",
@@ -639,7 +625,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.platform-bus-test",
 #------------------
 #------------------
     ":test.sys.policy-test",
@@ -1235,7 +1220,6 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.platform-bus-test",
 #------------------
 #------------------
     ":test.sys.policy-test",
@@ -1701,46 +1685,46 @@ aggregate_manifest("migrated-image") {
   if (!filter_out_of_astro || on_second_thought_keep_on_astro) {
     deps += [
   #------------------
-      #":driver.test-audio-codec",
+      "//zircon/system/utest/platform-bus:test-audio-codec-manifest",
   #------------------
   #------------------
-      #":driver.test-board",
+      "//zircon/system/utest/platform-bus:test-board-manifest",
   #------------------
   #------------------
-      #":driver.test-child-1",
+      "//zircon/system/utest/platform-bus:test-child-1-manifest",
   #------------------
   #------------------
-      #":driver.test-child-2",
+      "//zircon/system/utest/platform-bus:test-child-2-manifest",
   #------------------
   #------------------
-      #":driver.test-child-2.proxy",
+      "//zircon/system/utest/platform-bus:test-child-2.proxy-manifest",
   #------------------
   #------------------
-      #":driver.test-child-3",
+      "//zircon/system/utest/platform-bus:test-child-3-manifest",
   #------------------
   #------------------
-      #":driver.test-clock",
+      "//zircon/system/utest/platform-bus:test-clock-manifest",
   #------------------
   #------------------
-      #":driver.test-composite",
+      "//zircon/system/utest/platform-bus:test-composite-manifest",
   #------------------
   #------------------
-      #":driver.test-gpio",
+      "//zircon/system/utest/platform-bus:test-gpio-manifest",
   #------------------
   #------------------
-      #":driver.test-i2c",
+      "//zircon/system/utest/platform-bus:test-i2c-manifest",
   #------------------
   #------------------
-      #":driver.test-parent",
+      "//zircon/system/utest/platform-bus:test-parent-manifest",
   #------------------
   #------------------
-      #":driver.test-power",
+      "//zircon/system/utest/platform-bus:test-power-manifest",
   #------------------
   #------------------
-      #":driver.test-pwm",
+      "//zircon/system/utest/platform-bus:test-pwm-manifest",
   #------------------
   #------------------
-      #":driver.test-spi",
+      "//zircon/system/utest/platform-bus:test-spi-manifest",
   #------------------
   #------------------
       #":driver.test.ddktl-test",
@@ -3166,7 +3150,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/utest/perftest:perftest-manifest",
     "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-test-manifest",
 #------------------
-    #":test.sys.platform-bus-test",
+    "//zircon/system/utest/platform-bus:platform-bus-manifest",
 #------------------
 #------------------
     #":test.sys.policy-test",
@@ -3866,7 +3850,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/utest/perftest:perftest-manifest",
     "//src/media/audio/drivers/intel-hda/test:pixelbook-eve-test-manifest",
 #------------------
-    #":test.sys.platform-bus-test",
+    "//zircon/system/utest/platform-bus:platform-bus-manifest",
 #------------------
 #------------------
     #":test.sys.policy-test",
