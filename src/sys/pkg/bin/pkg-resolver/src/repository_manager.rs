@@ -32,7 +32,7 @@ pub struct RepositoryManager {
     dynamic_configs_path: Option<PathBuf>,
     static_configs: HashMap<RepoUrl, InspectableRepositoryConfig>,
     dynamic_configs: HashMap<RepoUrl, InspectableRepositoryConfig>,
-    rust_tuf_conns: Arc<RwLock<HashMap<RepoUrl, Arc<AsyncMutex<Repository>>>>>,
+    repositories: Arc<RwLock<HashMap<RepoUrl, Arc<AsyncMutex<Repository>>>>>,
     inspect: RepositoryManagerInspectState,
 }
 
@@ -146,10 +146,9 @@ impl RepositoryManager {
 
         let config = config.into();
 
-        // Clear any connections so we aren't talking to stale repositories.
-        let connected = self.rust_tuf_conns.write().remove(config.repo_url()).is_some();
+        let connected = self.repositories.write().remove(config.repo_url()).is_some();
         if connected {
-            fx_log_info!("closing connection to {} repo because config changed", config.repo_url());
+            fx_log_info!("re-opening {} repo because config changed", config.repo_url());
         }
 
         let inspectable_config = InspectableRepositoryConfig::new(
@@ -175,13 +174,9 @@ impl RepositoryManager {
             self.dynamic_configs_path.as_ref().ok_or(RemoveError::DynamicConfigurationDisabled)?;
 
         if let Some(config) = self.dynamic_configs.remove(repo_url) {
-            // Clear any connections so we aren't talking to stale repositories.
-            let connected = self.rust_tuf_conns.write().remove(config.repo_url()).is_some();
+            let connected = self.repositories.write().remove(config.repo_url()).is_some();
             if connected {
-                fx_log_info!(
-                    "closing connection to {} repo because config removed",
-                    config.repo_url()
-                );
+                fx_log_info!("closing {}", config.repo_url());
             }
 
             Self::save(&dynamic_configs_path, &mut self.dynamic_configs);
@@ -248,8 +243,8 @@ impl RepositoryManager {
             return futures::future::ready(Err(Status::NOT_FOUND)).boxed_local();
         };
 
-        let fut = connect_to_rust_tuf_client(
-            Arc::clone(&self.rust_tuf_conns),
+        let fut = open_cached_or_new_repository(
+            Arc::clone(&self.repositories),
             Arc::clone(&config),
             Arc::clone(&self.inspect.repos_node),
             url.repo(),
@@ -277,8 +272,8 @@ impl RepositoryManager {
             return futures::future::ready(Err(Status::NOT_FOUND)).boxed_local();
         };
 
-        let fut = connect_to_rust_tuf_client(
-            Arc::clone(&self.rust_tuf_conns),
+        let fut = open_cached_or_new_repository(
+            Arc::clone(&self.repositories),
             Arc::clone(&config),
             Arc::clone(&self.inspect.repos_node),
             url.repo(),
@@ -295,14 +290,14 @@ impl RepositoryManager {
     }
 }
 
-async fn connect_to_rust_tuf_client(
-    rust_tuf_conns: Arc<RwLock<HashMap<RepoUrl, Arc<AsyncMutex<Repository>>>>>,
+async fn open_cached_or_new_repository(
+    repositories: Arc<RwLock<HashMap<RepoUrl, Arc<AsyncMutex<Repository>>>>>,
     config: Arc<RepositoryConfig>,
     inspect_node: Arc<inspect::Node>,
     url: &RepoUrl,
 ) -> Result<Arc<AsyncMutex<Repository>>, Status> {
     // Exit early if we've already connected to this repository.
-    if let Some(conn) = rust_tuf_conns.read().get(url) {
+    if let Some(conn) = repositories.read().get(url) {
         return Ok(conn.clone());
     }
 
@@ -317,8 +312,8 @@ async fn connect_to_rust_tuf_client(
     ));
 
     // It's still possible we raced with some other connection attempt
-    let mut rust_tuf_conns = rust_tuf_conns.write();
-    repo = Arc::clone(rust_tuf_conns.entry(url.clone()).or_insert(repo.clone()));
+    let mut repositories = repositories.write();
+    repo = Arc::clone(repositories.entry(url.clone()).or_insert(repo.clone()));
     return Ok(repo);
 }
 
@@ -487,7 +482,7 @@ impl RepositoryManagerBuilder<inspect::Node> {
                 &inspect.dynamic_configs_node,
             ),
             _experiments: self.experiments,
-            rust_tuf_conns: Arc::new(RwLock::new(HashMap::new())),
+            repositories: Arc::new(RwLock::new(HashMap::new())),
             inspect,
         }
     }

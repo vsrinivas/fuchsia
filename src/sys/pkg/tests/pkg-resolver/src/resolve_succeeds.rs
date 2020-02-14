@@ -755,30 +755,6 @@ async fn dedup_concurrent_content_blob_fetches() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn rust_tuf_experiment_identity() {
-    let env = TestEnvBuilder::new().build();
-    let pkg = Package::identity().await.unwrap();
-    let repo = Arc::new(
-        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-            .add_package(&pkg)
-            .build()
-            .await
-            .unwrap(),
-    );
-    let served_repository = Arc::clone(&repo).server().start().unwrap();
-    let repo_url = "fuchsia-pkg://test".parse().unwrap();
-    let repo_config = served_repository.make_repo_config(repo_url);
-    env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
-
-    // Verify we can resolve a package using rust tuf
-    let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
-    let package = env.resolve_package(&pkg_url).await.expect("package to resolve without error");
-    pkg.verify_contents(&package).await.unwrap();
-    assert_eq!(env.pkgfs.blobfs().list_blobs().unwrap(), repo.list_blobs().unwrap());
-    env.stop().await;
-}
-
-#[fasync::run_singlethreaded(test)]
 async fn https_endpoint() {
     let env = TestEnvBuilder::new().build();
 

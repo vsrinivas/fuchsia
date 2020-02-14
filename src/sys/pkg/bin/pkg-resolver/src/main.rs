@@ -45,7 +45,7 @@ use crate::{
     rewrite_service::RewriteService,
 };
 
-// FIXME: allow for multiple threads and sendable futures once rust_tuf repo updates support it.
+// FIXME: allow for multiple threads and sendable futures once repo updates support it.
 // FIXME(43342): trace durations assume they start and end on the same thread, but since the
 // package resolver's executor is multi-threaded, a trace duration that includes an 'await' may not
 // end on the same thread it starts on, resulting in invalid trace events.
