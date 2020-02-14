@@ -188,7 +188,6 @@ aggregate_manifest("legacy-image") {
   #------------------
   #------------------
   #------------------
-      ":driver.test.ddktl-test",
   #------------------
   #------------------
   #------------------
@@ -1727,7 +1726,7 @@ aggregate_manifest("migrated-image") {
       "//zircon/system/utest/platform-bus:test-spi-manifest",
   #------------------
   #------------------
-      #":driver.test.ddktl-test",
+    "//zircon/system/ulib/ddktl/test:ddktl-test-manifest",
   #------------------
   #------------------
     "//zircon/system/dev/bus/virtio:virtio_block-manifest",

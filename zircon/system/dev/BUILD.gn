@@ -5,7 +5,6 @@
 group("dev") {
   testonly = true
   deps = [
-    "$zx/system/ulib/ddktl/test",
     "$zx/third_party/dev/ethernet/e1000",
     "board",
   ]
