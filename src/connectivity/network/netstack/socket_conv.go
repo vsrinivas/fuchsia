@@ -410,6 +410,17 @@ func getSockOptIP(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 		}
 		return int32(v), nil
 
+	case C.IP_RECVTOS:
+		v, err := ep.GetSockOptBool(tcpip.ReceiveTOSOption)
+		if err != nil {
+			return nil, err
+		}
+		var o int32
+		if v {
+			o = 1
+		}
+		return o, nil
+
 	default:
 		syslog.Infof("unimplemented getsockopt: SOL_IP name=%d", name)
 
@@ -847,6 +858,13 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		}
 		return ep.SetSockOpt(tcpip.IPv4TOSOption(v))
 
+	case C.IP_RECVTOS:
+		v, err := parseIntOrChar(optVal)
+		if err != nil {
+			return nil
+		}
+		return ep.SetSockOptBool(tcpip.ReceiveTOSOption, v != 0)
+
 	case
 		C.IP_ADD_SOURCE_MEMBERSHIP,
 		C.IP_BIND_ADDRESS_NO_PORT,
@@ -867,7 +885,6 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		C.IP_RECVERR,
 		C.IP_RECVOPTS,
 		C.IP_RECVORIGDSTADDR,
-		C.IP_RECVTOS,
 		C.IP_RECVTTL,
 		C.IP_RETOPTS,
 		C.IP_TRANSPARENT,

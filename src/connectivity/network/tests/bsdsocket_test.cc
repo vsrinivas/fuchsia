@@ -210,6 +210,13 @@ class SocketOptsTest : public ::testing::TestWithParam<SocketKind> {
     }
     return {.level = IPPROTO_IP, .option = IP_MULTICAST_IF};
   }
+
+  SockOption GetRecvTOSOption() {
+    if (IsIPv6()) {
+      return {.level = IPPROTO_IPV6, .option = IPV6_RECVTCLASS};
+    }
+    return {.level = IPPROTO_IP, .option = IP_RECVTOS};
+  }
 };
 
 // The SocketOptsTest is adapted from gvisor/tests/syscalls/linux/socket_ip_unbound.cc
@@ -860,6 +867,95 @@ TEST_P(SocketOptsTest, SetUDPMulticastIf_ifaddr) {
   ASSERT_EQ(param_out.s_addr, param_in.imr_address.s_addr);
 
   ASSERT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, ReceiveTOSDefault) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip receive TOS tests on TCP socket";
+  }
+  // TODO(37284): Enable IPV6_RECVTCLASS
+  if (IsIPv6()) {
+    GTEST_SKIP() << "IPV6_RECVTCLASS not yet supported: issue 37284";
+  }
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  SockOption t = GetRecvTOSOption();
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kSockOptOff);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, SetReceiveTOS) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip receive TOS tests on TCP socket";
+  }
+  // TODO(37284): Enable IPV6_RECVTCLASS
+  if (IsIPv6()) {
+    GTEST_SKIP() << "IPV6_RECVTCLASS not yet supported: issue 37284";
+  }
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  SockOption t = GetRecvTOSOption();
+  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn, sizeof(kSockOptOn)), 0)
+      << strerror(errno);
+
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kSockOptOn);
+
+  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOff, sizeof(kSockOptOff)), 0)
+      << strerror(errno);
+
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kSockOptOff);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, SetReceiveTOSChar) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip receive TOS tests on TCP socket";
+  }
+  // TODO(37284): Enable IPV6_RECVTCLASS
+  if (IsIPv6()) {
+    GTEST_SKIP() << "IPV6_RECVTCLASS not yet supported: issue 37284";
+  }
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  constexpr char kSockOptOnChar = kSockOptOn;
+  constexpr char kSockOptOffChar = kSockOptOff;
+
+  SockOption t = GetRecvTOSOption();
+  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar, sizeof(kSockOptOnChar)), 0)
+      << strerror(errno);
+
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kSockOptOn);
+
+  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOffChar, sizeof(kSockOptOffChar)), 0)
+      << strerror(errno);
+
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kSockOptOff);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
 INSTANTIATE_TEST_SUITE_P(LocalhostTest, SocketOptsTest,
