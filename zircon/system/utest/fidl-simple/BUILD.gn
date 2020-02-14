@@ -2,55 +2,81 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx/public/gn/fidl.gni")
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
 
-if (is_fuchsia) {
-  zx_test("fidl-simple") {
-    sources = [
-      "client_tests.c",
-      "ldsvc_tests.c",
-      "server_tests.c",
-      "spaceship_tests.c",
-      "spaceship_tests.cc",
-    ]
-    deps = [
-      ":fidl.test.echo.c",
-      ":fidl.test.spaceship.c",
-      "$zx/system/fidl/fuchsia-ldsvc:c",
-      "$zx/system/fidl/fuchsia-mem:c",
-      "$zx/system/ulib/async",
-      "$zx/system/ulib/async:async-default",
-      "$zx/system/ulib/async-loop",
-      "$zx/system/ulib/async-loop:async-loop-default.static",
-      "$zx/system/ulib/fbl",
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/fidl",
-      "$zx/system/ulib/fidl-utils",
-      "$zx/system/ulib/ldmsg",
-      "$zx/system/ulib/unittest",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zx",
-    ]
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
 
-    # TODO(42496): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    configs +=
-        [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("fidl-simple") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
   }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  sources = [
+    "client_tests.c",
+    "ldsvc_tests.c",
+    "server_tests.c",
+    "spaceship_tests.c",
+    "spaceship_tests.cc",
+  ]
+  deps = [
+    ":fidl.test.echo_c",
+    ":fidl.test.spaceship_c",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+
+    # "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-utils",
+    "//zircon/public/lib/ldmsg",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-ldsvc:c",
+    "//zircon/system/fidl/fuchsia-mem:c",
+  ]
+
+  # TODO(42496): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
-fidl_library("fidl.test.echo") {
+migrated_manifest("fidl-simple-manifest") {
+  deps = [ ":fidl-simple" ]
+}
+
+fidl("fidl.test.echo") {
   visibility = [ ":*" ]
   sources = [ "echo.test.fidl" ]
 }
 
-fidl_library("fidl.test.spaceship") {
+fidl("fidl.test.spaceship") {
   visibility = [ ":*" ]
   sources = [ "spaceship.test.fidl" ]
 }
-
-fidl_library("fidl.test.ctransformer") {
-  visibility = [ ":*" ]
-  sources = [ "ctransformer.test.fidl" ]
-  public_deps = [ "$zx/system/utest/fidl:example" ]
-}
+# fidl("fidl.test.ctransformer") {
+# visibility = [ ":*" ]
+# sources = [ "ctransformer.test.fidl" ]
+# public_deps = [ "//zircon/system/utest/fidl:example" ]
+# }
