@@ -5,7 +5,7 @@ This guide shows you how to build Fuchsia to include an example package
 from Fuchsia source's `//examples` directory and run its component
 on your Fuchsia device.
 
-## Get to know a Fuchsia package
+## Examine a Fuchsia package {#examine-a-fuchsia-package}
 
 Open the [`examples/hello_world/BUILD.gn`](/examples/hello_world/BUILD.gn) file.
 
@@ -63,8 +63,7 @@ To include a package in your Fuchsia image, you have the following options:
     optional packages are fetched and run on-demand,
 
 
-## Include the example package to your Fuchshia image
-{#include-the-example-package-to-your-fuchsia-image}
+## Include the example package to your Fuchshia image {#include-the-example-package-to-your-fuchsia-image}
 
 To include the example package in Universe (so that it can be fetched on-demand),
 use the `--with` flag when setting your product and board environment:
@@ -105,29 +104,29 @@ Hello, World!
 If `fx serve` is not running, the command prints an error message from
 the device:
 
-```
+```uglyprint
 fuchsia-pkg://fuchsia.com/hello_world_cpp#meta/hello_world_cpp.cmx: not found.
 ```
 
 If `fx serve` is running, but the package is not found,
-then consider rebuilding your Fuchsia image to include this package
+then try rebuilding your Fuchsia image to include this package
 and repaving it to the device. See
-[Include the example package to your Fuchsia image](#include-the-example-package-to-your-Fuchsia-image).
+[Include the example package to your Fuchsia image](#include-the-example-package-to-your-Fuchsia-image)
+for details.
 
-### Run the example component using a simple string
-{#run-the-example-component-using-a-simple-string}
+### Run the example component using a simple string {#run-the-example-component-using-a-simple-string}
 
 The `fx shell run` command can match a string to a package URL
 if the string is only mapped to one component
 in your product configuration. For example:
 
-```sh
+```uglyprint
 $ fx shell run hello_world_cpp.cmx
 ```
 
 If multiple matches exist, the command prints the list of matches:
 
-```sh
+```uglyprint
 $ fx shell run hello_world
 fuchsia-pkg://fuchsia.com/hello_world_cpp_tests#meta/hello_world_cpp_unittests.cmx
 fuchsia-pkg://fuchsia.com/hello_world_rust_tests#meta/hello_world_rust_bin_test.cm
