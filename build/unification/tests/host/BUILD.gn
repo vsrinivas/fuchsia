@@ -61,10 +61,8 @@ listed_tests = [
   "util",
 #------------------
 #------------------
-  "zxtest",
 #------------------
 #------------------
-  "zxtest-integration",
 #------------------
 ]
 if (current_os == "linux") {
@@ -147,10 +145,10 @@ group("migrated-tests") {
     #"util",
   #------------------
   #------------------
-    #"zxtest",
+    "//zircon/system/ulib/zxtest/test:zxtest",
   #------------------
   #------------------
-    #"zxtest-integration",
+    "//zircon/system/ulib/zxtest/test/integration:zxtest-integration",
   #------------------
   ]
 

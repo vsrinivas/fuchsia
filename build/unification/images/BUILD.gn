@@ -659,10 +659,8 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.zxtest-integration-test",
 #------------------
 #------------------
-    ":test.sys.zxtest-test",
 #------------------
   ]
 
@@ -1248,10 +1246,8 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.zxtest-integration-test",
 #------------------
 #------------------
-    ":test.sys.zxtest-test",
 #------------------
   ]
 
@@ -3270,10 +3266,10 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/ulib/zxio/test:zxio-manifest",
 #------------------
-    #":test.sys.zxtest-integration-test",
+    "//zircon/system/ulib/zxtest/test/integration:zxtest-integration-manifest",
 #------------------
 #------------------
-    #":test.sys.zxtest-test",
+    "//zircon/system/ulib/zxtest/test:zxtest-manifest",
 #------------------
     "//src/graphics/display/drivers/intel-i915:intel-i915-test-manifest",
   ]
@@ -3974,10 +3970,10 @@ aggregate_manifest("migrated-tests") {
 #------------------
     "//zircon/system/ulib/zxio/test:zxio-manifest",
 #------------------
-    #":test.sys.zxtest-integration-test",
+    "//zircon/system/ulib/zxtest/test/integration:zxtest-integration-manifest",
 #------------------
 #------------------
-    #":test.sys.zxtest-test",
+    "//zircon/system/ulib/zxtest/test:zxtest-manifest",
 #------------------
     "//src/graphics/display/drivers/intel-i915:intel-i915-test-manifest",
     "//zircon/system/ulib/ram-crashlog/test:ram-crashlog-manifest",

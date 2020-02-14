@@ -125,7 +125,6 @@ if (current_cpu != "") {
 #------------------
 #------------------
 #------------------
-      "$zx/system/ulib/zxtest/test",
 #------------------
 #------------------
       "$zx/third_party/ulib/backtrace:test",
@@ -246,7 +245,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/trace-reader:tests",
 #------------------
 #------------------
-      "$zx/system/ulib/zxtest/test",
 #------------------
 #------------------
       "$zx/tools/kazoo:tests",
