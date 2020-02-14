@@ -520,7 +520,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.default-stack-size-phdr-test",
 #------------------
 #------------------
-    ":test.sys.dlfcn-test",
 #------------------
 #------------------
 #------------------
@@ -1107,7 +1106,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.default-stack-size-phdr-test",
 #------------------
 #------------------
-    ":test.sys.dlfcn-test",
 #------------------
 #------------------
 #------------------
@@ -2917,7 +2915,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/disk_inspector/test:disk_inspector_unit-manifest",
     "//src/graphics/display/drivers/display/test:display-core-unittests-manifest",
 #------------------
-    #":test.sys.dlfcn-test",
+    "//zircon/system/utest/dlfcn:dlfcn-manifest",
 #------------------
     "//zircon/system/utest/dlopen-indirect-deps:dlopen-indirect-deps-manifest",
     "//zircon/system/dev/lib/dma-buffer/test:dma-buffer-test-manifest",
@@ -3625,7 +3623,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/disk_inspector/test:disk_inspector_unit-manifest",
     "//src/graphics/display/drivers/display/test:display-core-unittests-manifest",
 #------------------
-    #":test.sys.dlfcn-test",
+    "//zircon/system/utest/dlfcn:dlfcn-manifest",
 #------------------
     "//zircon/system/utest/dlopen-indirect-deps:dlopen-indirect-deps-manifest",
     "//zircon/system/dev/lib/dma-buffer/test:dma-buffer-test-manifest",
