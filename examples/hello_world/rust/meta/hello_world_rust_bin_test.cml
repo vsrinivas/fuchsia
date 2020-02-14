@@ -12,6 +12,9 @@
         },
     ],
     use: [
+        {
+            runner: "elf"
+        },
         // These protocols are used by the RustTestAdapter trampoline
         {
             protocol: [
