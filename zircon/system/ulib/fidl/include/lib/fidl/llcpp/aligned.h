@@ -23,17 +23,15 @@ namespace fidl {
 template <typename T>
 struct aligned final {
  public:
-  aligned(T&& v) : value(std::forward(v.value)) {}
-
   template <typename... Args>
-  aligned(Args... args) : value(std::forward<Args>(args)...) {}
+  aligned(Args&&... args) : value(std::forward<Args>(args)...) {}
 
   aligned& operator=(T&& v) {
     value = std::forward<T>(v);
     return *this;
   }
 
-  operator T() const { return value; }
+  operator typename std::decay_t<T>() const { return value; }
 
   alignas(FIDL_ALIGNMENT) T value;
 };

@@ -11,6 +11,7 @@
 #include <type_traits>
 
 #include "aligned.h"
+#include "array.h"
 #include "unowned_ptr.h"
 
 #define TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR false
@@ -90,10 +91,15 @@ class tracking_ptr final {
     set_unowned(other.get());
   }
   // This constructor exists to strip off 'aligned' from the type (aligned<bool> -> bool).
-  tracking_ptr(unowned_ptr<aligned<ArraylessT>> other) {
-    static_assert(std::alignment_of<aligned<ArraylessT>>::value >= kMinAlignment,
-                  "sanity check: aligned should always be sufficiently aligned");
-    set_unowned(&other->value);
+  tracking_ptr(unowned_ptr<aligned<ArraylessT>> other) { set_unowned(&other->value); }
+  // This constructor exists to strip off 'aligned' from the type (aligned<bool[2]> -> bool).
+  template <typename ArraylessU = ArraylessT, size_t N>
+  tracking_ptr(unowned_ptr<aligned<ArraylessU[N]>> other) {
+    set_unowned(other->value);
+  }
+  template <typename ArraylessU = ArraylessT, size_t N>
+  tracking_ptr(unowned_ptr<aligned<Array<ArraylessU, N>>> other) {
+    set_unowned(other->value.data());
   }
   tracking_ptr(const tracking_ptr&) = delete;
 

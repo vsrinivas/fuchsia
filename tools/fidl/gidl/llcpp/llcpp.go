@@ -358,8 +358,11 @@ func (b *llcppValueBuilder) OnTable(value gidlir.Object, decl *gidlmixer.TableDe
 		fieldDecl, _ := decl.ForKey(field.Key)
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
+		alignedVar := b.newVar()
+		b.Builder.WriteString(fmt.Sprintf("fidl::aligned<%s> %s = std::move(%s);\n", typeName(fieldDecl), alignedVar, fieldVar))
 		b.Builder.WriteString(fmt.Sprintf(
-			"%s.set_%s(fidl::unowned(&%s));\n", builderVar, field.Key.Name, fieldVar))
+			"%s.set_%s(fidl::unowned(&%s));\n", builderVar, field.Key.Name, alignedVar))
+
 	}
 	tableVar := b.newVar()
 	b.Builder.WriteString(fmt.Sprintf(

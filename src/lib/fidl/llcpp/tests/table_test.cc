@@ -8,8 +8,8 @@
 
 TEST(Table, UnownedBuilderBuildTablePrimitive) {
   namespace test = llcpp::fidl::llcpp::types::test;
-  FIDL_ALIGNDECL uint8_t x = 3;
-  FIDL_ALIGNDECL uint8_t y = 100;
+  fidl::aligned<uint8_t> x = 3;
+  fidl::aligned<uint8_t> y = 100;
   auto builder =
       test::SampleTable::UnownedBuilder().set_x(fidl::unowned(&x)).set_y(fidl::unowned(&y));
   const auto& table = builder.build();
@@ -23,8 +23,8 @@ TEST(Table, UnownedBuilderBuildTablePrimitive) {
 
 TEST(Table, BuilderBuildTablePrimitive) {
   namespace test = llcpp::fidl::llcpp::types::test;
-  FIDL_ALIGNDECL uint8_t x = 3;
-  FIDL_ALIGNDECL uint8_t y = 100;
+  fidl::aligned<uint8_t> x = 3;
+  fidl::aligned<uint8_t> y = 100;
   test::SampleTable::Frame frame;
   auto builder = test::SampleTable::Builder(fidl::unowned(&frame))
                      .set_x(fidl::unowned(&x))
@@ -86,7 +86,7 @@ TEST(Table, UnownedBuilderBuildEmptyTable) {
 
 TEST(Table, BuilderBuildEmptyTable) {
   namespace test = llcpp::fidl::llcpp::types::test;
-  test::SampleEmptyTable::Frame frame;
+  fidl::aligned<test::SampleEmptyTable::Frame> frame;
   auto builder = test::SampleEmptyTable::Builder(fidl::unowned(&frame));
   const auto& table = builder.build();
   ASSERT_TRUE(table.IsEmpty());

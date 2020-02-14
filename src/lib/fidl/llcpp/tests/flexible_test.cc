@@ -196,7 +196,7 @@ class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
   }
 
   void GetUnknownTableMoreBytes(GetUnknownTableMoreBytesCompleter::Sync completer) override {
-    fidl::Array<uint8_t, 30> array = {};
+    fidl::aligned<fidl::Array<uint8_t, 30>> array = {};
     auto table_builder =
         test::FlexibleTable::UnownedBuilder().set_want_more_than_30_bytes_at_ordinal_3(
             fidl::unowned(&array));
@@ -204,7 +204,7 @@ class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
   }
 
   void GetUnknownTableMoreHandles(GetUnknownTableMoreHandlesCompleter::Sync completer) override {
-    fidl::Array<zx::handle, 4> array = {};
+    fidl::aligned<fidl::Array<zx::handle, 4>> array = {};
     auto table_builder =
         test::FlexibleTable::UnownedBuilder().set_want_more_than_4_handles_at_ordinal_4(
             fidl::unowned(&array));

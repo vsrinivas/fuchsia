@@ -249,3 +249,25 @@ TEST(TrackingPtr, FidlAligned) {
   fidl::tracking_ptr<uint8_t[]> arr_ptr = fidl::unowned_ptr<fidl::aligned<uint8_t>>(&byte);
   EXPECT_EQ(ptr.get(), &byte.value);
 }
+
+TEST(TrackingPtr, FidlAlignedArray) {
+  fidl::aligned<uint8_t[8]> byteArray;
+  byteArray.value[0] = 0;
+  byteArray.value[1] = 1;
+  fidl::tracking_ptr<uint8_t[]> ptr = fidl::unowned(&byteArray);
+  EXPECT_EQ(ptr[0], 0);
+  EXPECT_EQ(ptr[1], 1);
+
+  fidl::aligned<fidl::Array<uint8_t, 8>> fidlArray;
+  fidlArray.value[0] = 1;
+  fidlArray.value[1] = 2;
+  fidl::tracking_ptr<uint8_t[]> fidlArrayPtr = fidl::unowned(&fidlArray);
+  EXPECT_EQ(fidlArrayPtr[0], 1);
+  EXPECT_EQ(fidlArrayPtr[1], 2);
+
+  // Each fidl_aligned<uint8_t> is 8 bytes while fidl::aligned<uint8_t[8]> contains 1 byte values.
+  fidl::aligned<uint8_t> alignedByteArray[8] = {2, 3};
+  fidl::tracking_ptr<fidl::aligned<uint8_t>[]> alignedArrayPtr = fidl::unowned(alignedByteArray);
+  EXPECT_EQ(alignedArrayPtr[0], 2);
+  EXPECT_EQ(alignedArrayPtr[1], 3);
+}
