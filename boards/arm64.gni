@@ -11,7 +11,7 @@ board_package_labels = [
   "//garnet/bin/thermd:config",
 
   # Include all drivers for now.
-  "//garnet/packages/prod:drivers",
+  "//src:drivers",
   "//src/media/audio/bundles:virtual_audio_driver",
 ]
 

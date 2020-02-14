@@ -68,26 +68,8 @@ group("cpuperf") {
 group("drivers") {
   testonly = true
   public_deps = [
-    "//garnet/packages/prod:bluetooth_drivers",
-    "//garnet/packages/prod:openthread",
-    "//garnet/packages/prod:usb_video",
-    "//garnet/packages/prod:vulkan",
-    "//garnet/packages/prod:wlan_drivers",
-    "//src/camera/drivers",
-    "//src/connectivity/ppp:drivers",
-    "//src/connectivity/telephony:drivers",
-    "//src/graphics/drivers",
-    "//src/media/drivers",
+    "//src:drivers",
   ]
-  if (target_cpu == "arm64") {
-    public_deps += [ "//garnet/packages/prod:amlogic_video_decoder" ]
-  }
-  if (target_cpu == "x64") {
-    public_deps += [
-      "//garnet/packages/prod:goldfish-vulkan",
-      "//garnet/packages/prod:magma-intel-gen",
-    ]
-  }
 }
 
 group("openthread") {
@@ -98,7 +80,6 @@ group("openthread") {
 group("all") {
   testonly = true
   public_deps = [
-    ":drivers",
     "//garnet/packages/prod:atheros",
     "//garnet/packages/prod:bluetooth_a2dp",
     "//garnet/packages/prod:bluetooth_all",
@@ -115,7 +96,6 @@ group("all") {
     "//garnet/packages/prod:cobalt_client",
     "//garnet/packages/prod:cpuperf",
     "//garnet/packages/prod:debug_agent",
-    "//garnet/packages/prod:drivers",
     "//garnet/packages/prod:factory_reset",
     "//garnet/packages/prod:far",
     "//garnet/packages/prod:guest_runner",

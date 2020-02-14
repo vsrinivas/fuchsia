@@ -222,7 +222,7 @@ From //build/board.gni:7
 A list of package labels to include in the 'base' package set. Used by the
 board definition rather than the product definition.
 
-**Current value for `target_cpu = "arm64"`:** `["//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers", "//src/media/audio/bundles:virtual_audio_driver"]`
+**Current value for `target_cpu = "arm64"`:** `["//garnet/bin/thermd", "//garnet/bin/thermd:config", "//src:drivers", "//src/media/audio/bundles:virtual_audio_driver"]`
 
 From //boards/arm64.gni:9
 
@@ -230,7 +230,7 @@ From //boards/arm64.gni:9
 
 From //build/board.gni:11
 
-**Current value for `target_cpu = "x64"`:** `["//garnet/bin/thermd", "//garnet/bin/thermd:config", "//garnet/packages/prod:drivers", "//src/hwinfo:default_board_config", "//src/media/audio/bundles:virtual_audio_driver"]`
+**Current value for `target_cpu = "x64"`:** `["//garnet/bin/thermd", "//garnet/bin/thermd:config", "//src:drivers", "//src/hwinfo:default_board_config", "//src/media/audio/bundles:virtual_audio_driver"]`
 
 From //boards/x64.gni:9
 
