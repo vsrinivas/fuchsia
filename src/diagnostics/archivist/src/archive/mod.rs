@@ -6,6 +6,7 @@ use {
     crate::{
         component_events::{
             ComponentEvent, ComponentEventData, ComponentEventStream, Data, InspectReaderData,
+            RealmPath,
         },
         configs, diagnostics, inspect,
     },
@@ -261,6 +262,7 @@ pub struct Event {
     event_type: String,
     component_name: String,
     component_instance: String,
+    realm_path: String,
     event_files: Vec<String>,
 }
 
@@ -274,8 +276,9 @@ impl Event {
         event_type: impl ToString,
         component_name: impl ToString,
         component_instance: impl ToString,
+        realm_path: RealmPath,
     ) -> Self {
-        Self::new_with_time(Utc::now(), event_type, component_name, component_instance)
+        Self::new_with_time(Utc::now(), event_type, component_name, component_instance, realm_path)
     }
 
     /// Create a new Event at the given time.
@@ -284,12 +287,14 @@ impl Event {
         event_type: impl ToString,
         component_name: impl ToString,
         component_instance: impl ToString,
+        realm_path: RealmPath,
     ) -> Self {
         Event {
             timestamp_nanos: datetime_to_timestamp(&time),
             event_type: event_type.to_string(),
             component_name: component_name.to_string(),
             component_instance: component_instance.to_string(),
+            realm_path: realm_path.into(),
             event_files: vec![],
         }
     }
@@ -446,10 +451,11 @@ impl EventFileGroupWriter {
         event_type: impl ToString,
         component_name: impl ToString,
         component_instance: impl ToString,
+        realm_path: RealmPath,
     ) -> EventBuilder<'_> {
         EventBuilder {
             writer: self,
-            event: Event::new(event_type, component_name, component_instance),
+            event: Event::new(event_type, component_name, component_instance, realm_path),
             event_files: Ok(vec![]),
             event_file_size: 0,
         }
@@ -659,8 +665,12 @@ async fn archive_event(
     let max_archive_size_bytes = configuration.max_archive_size_bytes;
     let max_event_group_size_bytes = configuration.max_event_group_size_bytes;
 
-    let mut log =
-        writer.get_log().new_event(event_name, event_data.component_name, event_data.component_id);
+    let mut log = writer.get_log().new_event(
+        event_name,
+        event_data.component_name,
+        event_data.component_id,
+        event_data.realm_path,
+    );
 
     if let Some(data_map) = event_data.component_data_map {
         for (path, object) in data_map {
@@ -942,7 +952,8 @@ mod tests {
     #[test]
     fn event_creation() {
         let time = Utc::now();
-        let event = Event::new_with_time(time, "START", "component", "instance");
+        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let event = Event::new_with_time(time, "START", "component", "instance", realm_path);
         assert_eq!(time, event.get_timestamp(Utc));
         assert_eq!(
             Event {
@@ -950,6 +961,7 @@ mod tests {
                 event_type: "START".to_string(),
                 component_name: "component".to_string(),
                 component_instance: "instance".to_string(),
+                realm_path: "a/b".to_string(),
                 event_files: vec![],
             },
             event
@@ -958,8 +970,9 @@ mod tests {
 
     #[test]
     fn event_ordering() {
-        let event1 = Event::new("START", "a", "b");
-        let event2 = Event::new("END", "a", "b");
+        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let event1 = Event::new("START", "a", "b", realm_path.clone());
+        let event2 = Event::new("END", "a", "b", realm_path);
         assert!(
             event1.get_timestamp(Utc) < event2.get_timestamp(Utc),
             "Expected {:?} before {:?}",
@@ -970,7 +983,8 @@ mod tests {
 
     #[test]
     fn event_event_files() {
-        let mut event = Event::new("START", "a", "b");
+        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        let mut event = Event::new("START", "a", "b", realm_path);
         event.add_event_file("f1");
         assert_eq!(&vec!["f1"], event.get_event_files());
     }
@@ -993,9 +1007,10 @@ mod tests {
         assert!(meta.is_ok());
         assert!(meta.unwrap().is_file());
 
-        assert!(writer.new_event("START", "test", "0").build().is_ok());
+        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
+        assert!(writer.new_event("START", "test", "0", realm_path.clone()).build().is_ok());
         assert!(writer
-            .new_event("EXIT", "test", "0")
+            .new_event("EXIT", "test", "0", realm_path)
             .add_event_file("root.inspect", b"INSP TEST")
             .build()
             .is_ok());
@@ -1013,10 +1028,15 @@ mod tests {
         let mut archive =
             ArchiveWriter::open(dir.path().join("archive")).expect("failed to create archive");
 
-        archive.get_log().new_event("START", "test", "0").build().expect("failed to write log");
+        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         archive
             .get_log()
-            .new_event("STOP", "test", "0")
+            .new_event("START", "test", "0", realm_path.clone())
+            .build()
+            .expect("failed to write log");
+        archive
+            .get_log()
+            .new_event("STOP", "test", "0", realm_path)
             .add_event_file("root.inspect", b"test")
             .build()
             .expect("failed to write log");
@@ -1044,9 +1064,10 @@ mod tests {
         });
         assert_eq!(2, group_count);
 
+        let realm_path = RealmPath(vec!["a".to_string(), "b".to_string()]);
         let mut stats = archive
             .get_log()
-            .new_event("STOP", "test", "0")
+            .new_event("STOP", "test", "0", realm_path)
             .add_event_file("root.inspect", b"test")
             .build()
             .expect("failed to write log");
