@@ -120,6 +120,11 @@ void AgentRunner::PublishAgentServices(const std::string& requestor_url,
 }
 
 void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url, fit::function<void()> done) {
+  // Drop all new requests if AgentRunner is terminating.
+  if (*terminating_) {
+    return;
+  }
+
   auto agent_it = running_agents_.find(agent_url);
   if (agent_it != running_agents_.end()) {
     if (agent_it->second->state() == AgentContextImpl::State::TERMINATING) {
@@ -163,10 +168,6 @@ void AgentRunner::ConnectToAgent(
     const std::string& requestor_url, const std::string& agent_url,
     fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request,
     fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) {
-  // Drop all new requests if AgentRunner is terminating.
-  if (*terminating_) {
-    return;
-  }
   EnsureAgentIsRunning(
       agent_url, [this, agent_url, requestor_url,
                   incoming_services_request = std::move(incoming_services_request),
@@ -190,10 +191,12 @@ void AgentRunner::ConnectToService(
     std::string requestor_url, std::string agent_url,
     fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request,
     std::string service_name, ::zx::channel channel) {
-  fuchsia::sys::ServiceProviderPtr agent_services;
-  ConnectToAgent(requestor_url, agent_url, agent_services.NewRequest(),
-                 std::move(agent_controller_request));
-  agent_services->ConnectToService(service_name, std::move(channel));
+  EnsureAgentIsRunning(
+      agent_url, [this, agent_url, requestor_url, service_name, channel = std::move(channel),
+                  agent_controller_request = std::move(agent_controller_request)]() mutable {
+        running_agents_[agent_url]->ConnectToService(
+            requestor_url, std::move(agent_controller_request), service_name, std::move(channel));
+      });
 }
 
 void AgentRunner::ConnectToAgentService(const std::string& requestor_url,
@@ -239,11 +242,6 @@ void AgentRunner::ConnectToEntityProvider(
     const std::string& agent_url,
     fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request,
     fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request) {
-  // Drop all new requests if AgentRunner is terminating.
-  if (*terminating_) {
-    return;
-  }
-
   EnsureAgentIsRunning(
       agent_url, [this, agent_url, entity_provider_request = std::move(entity_provider_request),
                   agent_controller_request = std::move(agent_controller_request)]() mutable {

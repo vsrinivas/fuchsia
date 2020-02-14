@@ -4,11 +4,13 @@
 
 #include "src/modular/bin/sessionmgr/agent_runner/agent_context_impl.h"
 
+#include <dirent.h>
 #include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 
 #include <memory>
 
+#include "lib/fdio/directory.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/lib/common/teardown.h"
 
@@ -27,6 +29,22 @@ std::string HashAgentUrl(const std::string& agent_url) {
   std::size_t found = agent_url.find_last_of('/');
   auto last_part = found == agent_url.length() - 1 ? "" : agent_url.substr(found + 1);
   return std::to_string(std::hash<std::string>{}(agent_url)) + last_part;
+}
+
+std::set<std::string> ReadDirHandleContents(zx_handle_t dir_handle) {
+  int dir_fd;
+  FXL_CHECK(fdio_fd_create(dir_handle, &dir_fd) == ZX_OK);
+  FXL_CHECK(dir_fd >= 0) << dir_fd;
+  DIR* dir = fdopendir(dir_fd);
+  FXL_CHECK(dir != nullptr);
+  struct dirent* de;
+  errno = 0;
+  std::set<std::string> out;
+  while ((de = readdir(dir)) != nullptr) {
+    out.insert(de->d_name);
+  }
+  closedir(dir);
+  return out;
 }
 
 };  // namespace
@@ -78,6 +96,10 @@ class AgentContextImpl::InitializeCall : public Operation<> {
 
     agent_context_impl_->app_client_->services().ConnectToService(
         agent_context_impl_->agent_.NewRequest());
+
+    // Enumerate the services that the agent has published in its outgoing directory.
+    agent_context_impl_->agent_outgoing_services_ = ReadDirHandleContents(
+        fdio_service_clone(agent_context_impl_->app_client_->services().directory().get()));
 
     // We only want to use fuchsia::modular::Lifecycle if it exists.
     agent_context_impl_->app_client_->primary_service().set_error_handler(
@@ -160,8 +182,8 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
                                    fuchsia::modular::AppConfig agent_config,
                                    inspect::Node agent_node)
     : url_(agent_config.url),
-      agent_runner_(info.component_context_info.agent_runner),
       component_context_impl_(info.component_context_info, kAgentComponentNamespace, url_, url_),
+      agent_runner_(info.component_context_info.agent_runner),
       token_manager_(info.token_manager),
       entity_provider_runner_(info.component_context_info.entity_provider_runner),
       agent_services_factory_(info.agent_services_factory),
@@ -187,6 +209,31 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
 }
 
 AgentContextImpl::~AgentContextImpl() = default;
+
+void AgentContextImpl::ConnectToService(
+    std::string requestor_url,
+    fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request,
+    std::string service_name, ::zx::channel channel) {
+  // Run this task on the operation queue to ensure that all member variables are
+  // fully initialized before we query their state.
+  operation_queue_.Add(std::make_unique<SyncCall>(
+      [this, requestor_url, agent_controller_request = std::move(agent_controller_request),
+       service_name, channel = std::move(channel)]() mutable {
+        FXL_CHECK(state_ == State::RUNNING);
+
+        if (agent_outgoing_services_.count(service_name) > 0) {
+          app_client_->services().ConnectToService(std::move(channel), service_name);
+        } else {
+          fuchsia::sys::ServiceProviderPtr agent_services;
+          agent_->Connect(requestor_url, agent_services.NewRequest());
+          agent_services->ConnectToService(service_name, std::move(channel));
+        }
+
+        // Add a binding to the |controller|. When all the bindings go away,
+        // the agent will stop.
+        agent_controller_bindings_.AddBinding(this, std::move(agent_controller_request));
+      }));
+}
 
 void AgentContextImpl::NewAgentConnection(
     const std::string& requestor_url,
