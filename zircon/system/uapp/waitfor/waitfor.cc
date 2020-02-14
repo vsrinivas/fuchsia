@@ -7,14 +7,15 @@
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
+#include <memory>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 // for guid printing
+#include <fbl/intrusive_double_list.h>
 #include <zircon/device/block.h>
-#include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 
 #include <gpt/c/gpt.h>
@@ -46,13 +47,22 @@ static bool matched = false;
 static zx_duration_t timeout = 0;
 const char* devclass = NULL;
 
-typedef struct rule {
-  zx_status_t (*func)(const char* arg, int fd);
-  const char* arg;
-  list_node_t node;
-} rule_t;
+class Rule : public fbl::DoublyLinkedListable<std::unique_ptr<Rule>> {
+public:
+  using Func = zx_status_t (*)(const char* arg, int fd);
 
-static list_node_t rules = LIST_INITIAL_VALUE(rules);
+  Rule(Func func, const char* arg) : func_(func), arg_(arg) {}
+
+  zx_status_t CallWithFd(int fd) const {
+    return func_(arg_, fd);
+  }
+
+private:
+  Func func_;
+  const char* arg_;
+};
+
+static fbl::DoublyLinkedList<std::unique_ptr<Rule>> rules;
 
 zx_status_t watchcb(int dirfd, int event, const char* fn, void* cookie) {
   if (event != WATCH_EVENT_ADD_FILE) {
@@ -67,9 +77,8 @@ zx_status_t watchcb(int dirfd, int event, const char* fn, void* cookie) {
     return ZX_OK;
   }
 
-  rule_t* r;
-  list_for_every_entry (&rules, r, rule_t, node) {
-    zx_status_t status = r->func(r->arg, fd);
+  for (const Rule& r : rules) {
+    zx_status_t status = r.CallWithFd(fd);
     switch (status) {
       case ZX_OK:
         // rule matched
@@ -219,14 +228,12 @@ zx_status_t expr_part_name(const char* arg, int fd) {
 }
 
 void new_rule(const char* arg, zx_status_t (*func)(const char* arg, int fd)) {
-  rule_t* r = (rule_t*)malloc(sizeof(rule_t));
-  if (r == NULL) {
+  auto r = std::make_unique<Rule>(func, arg);
+  if (r == nullptr) {
     fprintf(stderr, "waitfor: error: out of memory\n");
     exit(1);
   }
-  r->func = func;
-  r->arg = arg;
-  list_add_tail(&rules, &r->node);
+  rules.push_back(std::move(r));
 }
 
 int main(int argc, char** argv) {
@@ -274,7 +281,7 @@ int main(int argc, char** argv) {
     exit(1);
   }
 
-  if (list_is_empty(&rules)) {
+  if (rules.is_empty()) {
     fprintf(stderr, "waitfor: error: no match expressions specified\n");
     exit(1);
   }
