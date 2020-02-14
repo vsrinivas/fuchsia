@@ -4,7 +4,7 @@
 
 use crate::parser_common::{
     bool_literal, compound_identifier, identifier, many_until_eof, map_err, numeric_literal,
-    string_literal, using_list, ws, BindParserError, CompoundIdentifier, Include, NomSpan,
+    string_literal, using_list, ws, BindParserError, CompoundIdentifier, Include,
 };
 use nom::{
     branch::alt,
@@ -14,7 +14,7 @@ use nom::{
     sequence::{delimited, separated_pair, terminated, tuple},
     IResult,
 };
-use std::convert::TryFrom;
+use std::str::FromStr;
 
 #[derive(Debug, PartialEq)]
 pub struct Ast {
@@ -47,11 +47,11 @@ pub enum Value {
     Enum(String),
 }
 
-impl TryFrom<&str> for Ast {
-    type Error = BindParserError;
+impl FromStr for Ast {
+    type Err = BindParserError;
 
-    fn try_from(input: &str) -> Result<Self, Self::Error> {
-        match library(NomSpan::new(input)) {
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        match library(input) {
             Ok((_, ast)) => Ok(ast),
             Err(nom::Err::Error(e)) => Err(e),
             Err(nom::Err::Failure(e)) => Err(e),
@@ -73,33 +73,31 @@ impl Value {
     }
 }
 
-fn keyword_extend(input: NomSpan) -> IResult<NomSpan, NomSpan, BindParserError> {
+fn keyword_extend(input: &str) -> IResult<&str, &str, BindParserError> {
     ws(tag("extend"))(input)
 }
 
-fn keyword_uint(input: NomSpan) -> IResult<NomSpan, ValueType, BindParserError> {
+fn keyword_uint(input: &str) -> IResult<&str, ValueType, BindParserError> {
     value(ValueType::Number, ws(map_err(tag("uint"), BindParserError::Type)))(input)
 }
 
-fn keyword_string(input: NomSpan) -> IResult<NomSpan, ValueType, BindParserError> {
+fn keyword_string(input: &str) -> IResult<&str, ValueType, BindParserError> {
     value(ValueType::Str, ws(map_err(tag("string"), BindParserError::Type)))(input)
 }
 
-fn keyword_bool(input: NomSpan) -> IResult<NomSpan, ValueType, BindParserError> {
+fn keyword_bool(input: &str) -> IResult<&str, ValueType, BindParserError> {
     value(ValueType::Bool, ws(map_err(tag("bool"), BindParserError::Type)))(input)
 }
 
-fn keyword_enum(input: NomSpan) -> IResult<NomSpan, ValueType, BindParserError> {
+fn keyword_enum(input: &str) -> IResult<&str, ValueType, BindParserError> {
     value(ValueType::Enum, ws(map_err(tag("enum"), BindParserError::Type)))(input)
 }
 
-fn value_list<'a, O, F>(
-    f: F,
-) -> impl Fn(NomSpan<'a>) -> IResult<NomSpan<'a>, Vec<O>, BindParserError>
+fn value_list<'a, O, F>(f: F) -> impl Fn(&'a str) -> IResult<&'a str, Vec<O>, BindParserError>
 where
-    F: Fn(NomSpan<'a>) -> IResult<NomSpan<'a>, O, BindParserError>,
+    F: Fn(&'a str) -> IResult<&'a str, O, BindParserError>,
 {
-    move |input: NomSpan<'a>| {
+    move |input: &'a str| {
         let separator = || ws(map_err(tag(","), BindParserError::ListSeparator));
         let values = separated_nonempty_list(separator(), |s| f(s));
 
@@ -111,41 +109,41 @@ where
         let (input, vals_input) =
             map_err(terminated(take_until(";"), tag(";")), BindParserError::Semicolon)(input)?;
 
-        if vals_input.fragment().is_empty() {
+        if vals_input.is_empty() {
             return Ok((input, Vec::new()));
         }
 
         let list_start = map_err(tag("{"), BindParserError::ListStart);
         let list_end = map_err(tag("}"), BindParserError::ListEnd);
-        let (_, result) = delimited(ws(list_start), ws(values), ws(list_end))(vals_input)?;
+        let (_, result) = delimited(list_start, ws(values), list_end)(vals_input)?;
 
         Ok((input, result))
     }
 }
 
-fn number_value_list(input: NomSpan) -> IResult<NomSpan, Vec<Value>, BindParserError> {
+fn number_value_list(input: &str) -> IResult<&str, Vec<Value>, BindParserError> {
     let token = map_err(tag("="), BindParserError::Assignment);
-    let value = separated_pair(ws(identifier), ws(token), ws(numeric_literal));
+    let value = separated_pair(ws(identifier), token, ws(numeric_literal));
     value_list(map(value, |(ident, val)| Value::Number(ident, val)))(input)
 }
 
-fn string_value_list(input: NomSpan) -> IResult<NomSpan, Vec<Value>, BindParserError> {
+fn string_value_list(input: &str) -> IResult<&str, Vec<Value>, BindParserError> {
     let token = map_err(tag("="), BindParserError::Assignment);
-    let value = separated_pair(ws(identifier), ws(token), ws(string_literal));
+    let value = separated_pair(ws(identifier), token, ws(string_literal));
     value_list(map(value, |(ident, val)| Value::Str(ident, val)))(input)
 }
 
-fn bool_value_list(input: NomSpan) -> IResult<NomSpan, Vec<Value>, BindParserError> {
+fn bool_value_list(input: &str) -> IResult<&str, Vec<Value>, BindParserError> {
     let token = map_err(tag("="), BindParserError::Assignment);
-    let value = separated_pair(ws(identifier), ws(token), ws(bool_literal));
+    let value = separated_pair(ws(identifier), token, ws(bool_literal));
     value_list(map(value, |(ident, val)| Value::Bool(ident, val)))(input)
 }
 
-fn enum_value_list(input: NomSpan) -> IResult<NomSpan, Vec<Value>, BindParserError> {
-    value_list(map(ws(identifier), Value::Enum))(input)
+fn enum_value_list(input: &str) -> IResult<&str, Vec<Value>, BindParserError> {
+    value_list(map(identifier, Value::Enum))(input)
 }
 
-fn declaration(input: NomSpan) -> IResult<NomSpan, Declaration, BindParserError> {
+fn declaration(input: &str) -> IResult<&str, Declaration, BindParserError> {
     let (input, extends) = opt(keyword_extend)(input)?;
 
     let (input, value_type) =
@@ -165,13 +163,13 @@ fn declaration(input: NomSpan) -> IResult<NomSpan, Declaration, BindParserError>
     Ok((input, Declaration { identifier, value_type, extends: extends.is_some(), values: vals }))
 }
 
-fn library_name(input: NomSpan) -> IResult<NomSpan, CompoundIdentifier, BindParserError> {
+fn library_name(input: &str) -> IResult<&str, CompoundIdentifier, BindParserError> {
     let keyword = ws(map_err(tag("library"), BindParserError::LibraryKeyword));
     let terminator = ws(map_err(tag(";"), BindParserError::Semicolon));
     delimited(keyword, ws(compound_identifier), terminator)(input)
 }
 
-fn library(input: NomSpan) -> IResult<NomSpan, Ast, BindParserError> {
+fn library(input: &str) -> IResult<&str, Ast, BindParserError> {
     map(
         tuple((ws(library_name), ws(using_list), many_until_eof(ws(declaration)))),
         |(name, using, declarations)| Ast { name, using, declarations },
@@ -182,49 +180,56 @@ fn library(input: NomSpan) -> IResult<NomSpan, Ast, BindParserError> {
 mod test {
     use super::*;
     use crate::make_identifier;
-    use crate::parser_common::test::check_result;
 
     mod number_value_lists {
         use super::*;
 
         #[test]
         fn single_value() {
-            check_result(
-                number_value_list(NomSpan::new("{abc = 123};")),
-                "",
-                vec![Value::Number("abc".to_string(), 123)],
+            assert_eq!(
+                number_value_list("{abc = 123};"),
+                Ok(("", vec![Value::Number("abc".to_string(), 123)]))
             );
         }
 
         #[test]
         fn multiple_values() {
             // Matches multiple string values.
-            check_result(
-                number_value_list(NomSpan::new("{abc = 123, DEF = 456};")),
-                "",
-                vec![Value::Number("abc".to_string(), 123), Value::Number("DEF".to_string(), 456)],
+            assert_eq!(
+                number_value_list("{abc = 123, DEF = 456};"),
+                Ok((
+                    "",
+                    vec![
+                        Value::Number("abc".to_string(), 123),
+                        Value::Number("DEF".to_string(), 456)
+                    ]
+                ))
             );
-            check_result(
-                number_value_list(NomSpan::new("{abc = 123, DEF = 456, ghi = 0xabc};")),
-                "",
-                vec![
-                    Value::Number("abc".to_string(), 123),
-                    Value::Number("DEF".to_string(), 456),
-                    Value::Number("ghi".to_string(), 0xabc),
-                ],
+            assert_eq!(
+                number_value_list("{abc = 123, DEF = 456, ghi = 0xabc};"),
+                Ok((
+                    "",
+                    vec![
+                        Value::Number("abc".to_string(), 123),
+                        Value::Number("DEF".to_string(), 456),
+                        Value::Number("ghi".to_string(), 0xabc),
+                    ]
+                ))
             );
         }
 
         #[test]
         fn whitespace() {
             // Handles whitespace.
-            check_result(
-                number_value_list(NomSpan::new("{  abc=123,\n\tDEF\t =  0xdef\n};")),
-                "",
-                vec![
-                    Value::Number("abc".to_string(), 123),
-                    Value::Number("DEF".to_string(), 0xdef),
-                ],
+            assert_eq!(
+                number_value_list("{  abc=123,\n\tDEF\t =  0xdef\n};"),
+                Ok((
+                    "",
+                    vec![
+                        Value::Number("abc".to_string(), 123),
+                        Value::Number("DEF".to_string(), 0xdef)
+                    ]
+                ))
             );
         }
 
@@ -232,11 +237,11 @@ mod test {
         fn invalid_values() {
             // Does not match non-number values.
             assert_eq!(
-                number_value_list(NomSpan::new("{abc = \"string\"};")),
+                number_value_list("{abc = \"string\"};"),
                 Err(nom::Err::Error(BindParserError::NumericLiteral("\"string\"}".to_string())))
             );
             assert_eq!(
-                number_value_list(NomSpan::new("{abc = true};")),
+                number_value_list("{abc = true};"),
                 Err(nom::Err::Error(BindParserError::NumericLiteral("true}".to_string())))
             );
         }
@@ -244,10 +249,9 @@ mod test {
         #[test]
         fn trailing_comma() {
             // Matches trailing ','.
-            check_result(
-                number_value_list(NomSpan::new("{abc = 123,};")),
-                "",
-                vec![Value::Number("abc".to_string(), 123)],
+            assert_eq!(
+                number_value_list("{abc = 123,};"),
+                Ok(("", vec![Value::Number("abc".to_string(), 123)]))
             );
         }
 
@@ -255,7 +259,7 @@ mod test {
         fn empty_list() {
             // Does not match empty list.
             assert_eq!(
-                number_value_list(NomSpan::new("{};")),
+                number_value_list("{};"),
                 Err(nom::Err::Error(BindParserError::Identifier("}".to_string())))
             );
         }
@@ -264,17 +268,17 @@ mod test {
         fn invalid_list() {
             // Must have list start and end braces.
             assert_eq!(
-                number_value_list(NomSpan::new("abc = 123};")),
+                number_value_list("abc = 123};"),
                 Err(nom::Err::Error(BindParserError::ListStart("abc = 123}".to_string())))
             );
             assert_eq!(
-                number_value_list(NomSpan::new("{abc = 123;")),
+                number_value_list("{abc = 123;"),
                 Err(nom::Err::Error(BindParserError::ListEnd("".to_string())))
             );
 
             // Must have assignment operator.
             assert_eq!(
-                number_value_list(NomSpan::new("{abc 123};")),
+                number_value_list("{abc 123};"),
                 Err(nom::Err::Error(BindParserError::Assignment("123}".to_string())))
             );
         }
@@ -282,7 +286,7 @@ mod test {
         #[test]
         fn no_list() {
             // Matches no list.
-            check_result(number_value_list(NomSpan::new(";")), "", vec![]);
+            assert_eq!(number_value_list(";"), Ok(("", vec![])));
         }
     }
 
@@ -291,45 +295,50 @@ mod test {
 
         #[test]
         fn single_value() {
-            check_result(
-                string_value_list(NomSpan::new(r#"{abc = "xyz"};"#)),
-                "",
-                vec![Value::Str("abc".to_string(), "xyz".to_string())],
+            assert_eq!(
+                string_value_list(r#"{abc = "xyz"};"#),
+                Ok(("", vec![Value::Str("abc".to_string(), "xyz".to_string())]))
             );
         }
 
         #[test]
         fn multiple_values() {
             // Matches multiple string values.
-            check_result(
-                string_value_list(NomSpan::new(r#"{abc = "xyz", DEF = "UVW"};"#)),
-                "",
-                vec![
-                    Value::Str("abc".to_string(), "xyz".to_string()),
-                    Value::Str("DEF".to_string(), "UVW".to_string()),
-                ],
+            assert_eq!(
+                string_value_list(r#"{abc = "xyz", DEF = "UVW"};"#),
+                Ok((
+                    "",
+                    vec![
+                        Value::Str("abc".to_string(), "xyz".to_string()),
+                        Value::Str("DEF".to_string(), "UVW".to_string())
+                    ]
+                ))
             );
-            check_result(
-                string_value_list(NomSpan::new(r#"{abc = "xyz", DEF = "UVW", ghi = "rst"};"#)),
-                "",
-                vec![
-                    Value::Str("abc".to_string(), "xyz".to_string()),
-                    Value::Str("DEF".to_string(), "UVW".to_string()),
-                    Value::Str("ghi".to_string(), "rst".to_string()),
-                ],
+            assert_eq!(
+                string_value_list(r#"{abc = "xyz", DEF = "UVW", ghi = "rst"};"#),
+                Ok((
+                    "",
+                    vec![
+                        Value::Str("abc".to_string(), "xyz".to_string()),
+                        Value::Str("DEF".to_string(), "UVW".to_string()),
+                        Value::Str("ghi".to_string(), "rst".to_string()),
+                    ]
+                ))
             );
         }
 
         #[test]
         fn whitespace() {
             // Handles whitespace.
-            check_result(
-                string_value_list(NomSpan::new("{  abc=\"xyz\",\n\tDEF\t =  \"UVW\"\n};")),
-                "",
-                vec![
-                    Value::Str("abc".to_string(), "xyz".to_string()),
-                    Value::Str("DEF".to_string(), "UVW".to_string()),
-                ],
+            assert_eq!(
+                string_value_list("{  abc=\"xyz\",\n\tDEF\t =  \"UVW\"\n};"),
+                Ok((
+                    "",
+                    vec![
+                        Value::Str("abc".to_string(), "xyz".to_string()),
+                        Value::Str("DEF".to_string(), "UVW".to_string())
+                    ]
+                ))
             );
         }
 
@@ -337,11 +346,11 @@ mod test {
         fn invalid_values() {
             // Does not match non-string values.
             assert_eq!(
-                string_value_list(NomSpan::new("{abc = 123};")),
+                string_value_list("{abc = 123};"),
                 Err(nom::Err::Error(BindParserError::StringLiteral("123}".to_string())))
             );
             assert_eq!(
-                string_value_list(NomSpan::new("{abc = true};")),
+                string_value_list("{abc = true};"),
                 Err(nom::Err::Error(BindParserError::StringLiteral("true}".to_string())))
             );
         }
@@ -349,10 +358,9 @@ mod test {
         #[test]
         fn trailing_comma() {
             // Matches trailing ','.
-            check_result(
-                string_value_list(NomSpan::new(r#"{abc = "xyz",};"#)),
-                "",
-                vec![Value::Str("abc".to_string(), "xyz".to_string())],
+            assert_eq!(
+                string_value_list(r#"{abc = "xyz",};"#),
+                Ok(("", vec![Value::Str("abc".to_string(), "xyz".to_string())]))
             );
         }
 
@@ -360,7 +368,7 @@ mod test {
         fn empty_list() {
             // Does not match empty list.
             assert_eq!(
-                string_value_list(NomSpan::new("{};")),
+                string_value_list("{};"),
                 Err(nom::Err::Error(BindParserError::Identifier("}".to_string())))
             );
         }
@@ -369,17 +377,17 @@ mod test {
         fn invalid_list() {
             // Must have list start and end braces.
             assert_eq!(
-                string_value_list(NomSpan::new(r#"abc = "xyz"};"#)),
+                string_value_list(r#"abc = "xyz"};"#),
                 Err(nom::Err::Error(BindParserError::ListStart(r#"abc = "xyz"}"#.to_string())))
             );
             assert_eq!(
-                string_value_list(NomSpan::new(r#"{abc = "xyz";"#)),
+                string_value_list(r#"{abc = "xyz";"#),
                 Err(nom::Err::Error(BindParserError::ListEnd("".to_string())))
             );
 
             // Must have assignment operator.
             assert_eq!(
-                number_value_list(NomSpan::new(r#"{abc "xyz"};"#)),
+                number_value_list(r#"{abc "xyz"};"#),
                 Err(nom::Err::Error(BindParserError::Assignment(r#""xyz"}"#.to_string())))
             );
         }
@@ -387,7 +395,7 @@ mod test {
         #[test]
         fn no_list() {
             // Matches no list.
-            check_result(string_value_list(NomSpan::new(";")), "", vec![]);
+            assert_eq!(string_value_list(";"), Ok(("", vec![])));
         }
     }
 
@@ -397,39 +405,50 @@ mod test {
         #[test]
         fn single_value() {
             // Matches one string value.
-            check_result(
-                bool_value_list(NomSpan::new("{abc = true};")),
-                "",
-                vec![Value::Bool("abc".to_string(), true)],
+            assert_eq!(
+                bool_value_list("{abc = true};"),
+                Ok(("", vec![Value::Bool("abc".to_string(), true)]))
             );
         }
 
         #[test]
         fn multiple_values() {
             // Matches multiple string values.
-            check_result(
-                bool_value_list(NomSpan::new("{abc = true, DEF = false};")),
-                "",
-                vec![Value::Bool("abc".to_string(), true), Value::Bool("DEF".to_string(), false)],
+            assert_eq!(
+                bool_value_list("{abc = true, DEF = false};"),
+                Ok((
+                    "",
+                    vec![
+                        Value::Bool("abc".to_string(), true),
+                        Value::Bool("DEF".to_string(), false)
+                    ]
+                ))
             );
-            check_result(
-                bool_value_list(NomSpan::new("{abc = true, DEF = false, ghi = false};")),
-                "",
-                vec![
-                    Value::Bool("abc".to_string(), true),
-                    Value::Bool("DEF".to_string(), false),
-                    Value::Bool("ghi".to_string(), false),
-                ],
+            assert_eq!(
+                bool_value_list("{abc = true, DEF = false, ghi = false};"),
+                Ok((
+                    "",
+                    vec![
+                        Value::Bool("abc".to_string(), true),
+                        Value::Bool("DEF".to_string(), false),
+                        Value::Bool("ghi".to_string(), false),
+                    ]
+                ))
             );
         }
 
         #[test]
         fn whitespace() {
             // Handles whitespace.
-            check_result(
-                bool_value_list(NomSpan::new("{  abc=true,\n\tDEF\t =  false\n};")),
-                "",
-                vec![Value::Bool("abc".to_string(), true), Value::Bool("DEF".to_string(), false)],
+            assert_eq!(
+                bool_value_list("{  abc=true,\n\tDEF\t =  false\n};"),
+                Ok((
+                    "",
+                    vec![
+                        Value::Bool("abc".to_string(), true),
+                        Value::Bool("DEF".to_string(), false),
+                    ]
+                ))
             );
         }
 
@@ -437,11 +456,11 @@ mod test {
         fn invalid_values() {
             // Does not match non-bool values.
             assert_eq!(
-                bool_value_list(NomSpan::new("{abc = 123};")),
+                bool_value_list("{abc = 123};"),
                 Err(nom::Err::Error(BindParserError::BoolLiteral("123}".to_string())))
             );
             assert_eq!(
-                bool_value_list(NomSpan::new("{abc = \"string\"};")),
+                bool_value_list("{abc = \"string\"};"),
                 Err(nom::Err::Error(BindParserError::BoolLiteral("\"string\"}".to_string())))
             );
         }
@@ -449,10 +468,9 @@ mod test {
         #[test]
         fn trailing_comma() {
             // Matches trailing ','.
-            check_result(
-                bool_value_list(NomSpan::new(r#"{abc = true,};"#)),
-                "",
-                vec![Value::Bool("abc".to_string(), true)],
+            assert_eq!(
+                bool_value_list(r#"{abc = true,};"#),
+                Ok(("", vec![Value::Bool("abc".to_string(), true)]))
             );
         }
 
@@ -460,7 +478,7 @@ mod test {
         fn empty_list() {
             // Does not match empty list.
             assert_eq!(
-                bool_value_list(NomSpan::new("{};")),
+                bool_value_list("{};"),
                 Err(nom::Err::Error(BindParserError::Identifier("}".to_string())))
             );
         }
@@ -469,17 +487,17 @@ mod test {
         fn invalid_list() {
             // Must have list start and end braces.
             assert_eq!(
-                bool_value_list(NomSpan::new("abc = true};")),
+                bool_value_list("abc = true};"),
                 Err(nom::Err::Error(BindParserError::ListStart("abc = true}".to_string())))
             );
             assert_eq!(
-                bool_value_list(NomSpan::new("{abc = true;")),
+                bool_value_list("{abc = true;"),
                 Err(nom::Err::Error(BindParserError::ListEnd("".to_string())))
             );
 
             // Must have assignment operator.
             assert_eq!(
-                number_value_list(NomSpan::new("{abc false};")),
+                number_value_list("{abc false};"),
                 Err(nom::Err::Error(BindParserError::Assignment("false}".to_string())))
             );
         }
@@ -487,7 +505,7 @@ mod test {
         #[test]
         fn no_list() {
             // Matches no list
-            check_result(bool_value_list(NomSpan::new(";")), "", vec![]);
+            assert_eq!(bool_value_list(";"), Ok(("", vec![])));
         }
     }
 
@@ -497,78 +515,73 @@ mod test {
         #[test]
         fn single_value() {
             // Matches one identifier.
-            check_result(
-                enum_value_list(NomSpan::new("{abc};")),
-                "",
-                vec![Value::Enum("abc".to_string())],
-            );
+            assert_eq!(enum_value_list("{abc};"), Ok(("", vec![Value::Enum("abc".to_string())])));
         }
 
         #[test]
         fn multiple_values() {
             // Matches multiple identifiers.
-            check_result(
-                enum_value_list(NomSpan::new("{abc,def};")),
-                "",
-                vec![Value::Enum("abc".to_string()), Value::Enum("def".to_string())],
+            assert_eq!(
+                enum_value_list("{abc,def};"),
+                Ok(("", vec![Value::Enum("abc".to_string()), Value::Enum("def".to_string())]))
             );
-            check_result(
-                enum_value_list(NomSpan::new("{abc,def,ghi};")),
-                "",
-                vec![
-                    Value::Enum("abc".to_string()),
-                    Value::Enum("def".to_string()),
-                    Value::Enum("ghi".to_string()),
-                ],
+            assert_eq!(
+                enum_value_list("{abc,def,ghi};"),
+                Ok((
+                    "",
+                    vec![
+                        Value::Enum("abc".to_string()),
+                        Value::Enum("def".to_string()),
+                        Value::Enum("ghi".to_string()),
+                    ]
+                ))
             );
         }
 
         #[test]
         fn whitespace() {
             // Matches multiple identifiers with whitespace.
-            check_result(
-                enum_value_list(NomSpan::new("{abc,   def, \tghi,\n jkl};")),
-                "",
-                vec![
-                    Value::Enum("abc".to_string()),
-                    Value::Enum("def".to_string()),
-                    Value::Enum("ghi".to_string()),
-                    Value::Enum("jkl".to_string()),
-                ],
+            assert_eq!(
+                enum_value_list("{abc,   def, \tghi,\n jkl};"),
+                Ok((
+                    "",
+                    vec![
+                        Value::Enum("abc".to_string()),
+                        Value::Enum("def".to_string()),
+                        Value::Enum("ghi".to_string()),
+                        Value::Enum("jkl".to_string()),
+                    ]
+                ))
             );
         }
 
         #[test]
         fn trailing_comma() {
             // Matches trailing ','.
-            check_result(
-                enum_value_list(NomSpan::new("{abc,};")),
-                "",
-                vec![Value::Enum("abc".to_string())],
-            );
+            assert_eq!(enum_value_list("{abc,};"), Ok(("", vec![Value::Enum("abc".to_string())])));
         }
 
         #[test]
         fn no_list() {
             // Matches no list.
-            check_result(enum_value_list(NomSpan::new(";")), "", vec![]);
+            assert_eq!(enum_value_list(";"), Ok(("", vec![])));
         }
 
         #[test]
         fn invalid_list() {
             // Must have semicolon.
             assert_eq!(
-                enum_value_list(NomSpan::new("{abc,}")),
+                enum_value_list("{abc,}"),
                 Err(nom::Err::Error(BindParserError::Semicolon("{abc,}".to_string())))
             );
 
             // Must have list start and end braces.
             assert_eq!(
-                enum_value_list(NomSpan::new("abc};")),
+                enum_value_list("abc};"),
                 Err(nom::Err::Error(BindParserError::ListStart("abc}".to_string())))
             );
             assert_eq!(
-                enum_value_list(NomSpan::new("{abc;")),
+                enum_value_list("{abc;"),
                 Err(nom::Err::Error(BindParserError::ListEnd("".to_string())))
             );
         }
@@ -577,7 +590,7 @@ mod test {
         fn empty_list() {
             // Does not match empty list.
             assert_eq!(
-                enum_value_list(NomSpan::new("{};")),
+                enum_value_list("{};"),
                 Err(nom::Err::Error(BindParserError::Identifier("}".to_string())))
             );
         }
@@ -589,90 +602,102 @@ mod test {
         #[test]
         fn no_value() {
             // Matches key declaration without values.
-            check_result(
-                declaration(NomSpan::new("uint test;")),
-                "",
-                Declaration {
-                    identifier: make_identifier!["test"],
-                    value_type: ValueType::Number,
-                    extends: false,
-                    values: vec![],
-                },
+            assert_eq!(
+                declaration("uint test;"),
+                Ok((
+                    "",
+                    Declaration {
+                        identifier: make_identifier!["test"],
+                        value_type: ValueType::Number,
+                        extends: false,
+                        values: vec![],
+                    }
+                ))
             );
         }
 
         #[test]
         fn numbers() {
             // Matches numbers.
-            check_result(
-                declaration(NomSpan::new("uint test { x = 1 };")),
-                "",
-                Declaration {
-                    identifier: make_identifier!["test"],
-                    value_type: ValueType::Number,
-                    extends: false,
-                    values: vec![Value::Number("x".to_string(), 1)],
-                },
+            assert_eq!(
+                declaration("uint test { x = 1 };"),
+                Ok((
+                    "",
+                    Declaration {
+                        identifier: make_identifier!["test"],
+                        value_type: ValueType::Number,
+                        extends: false,
+                        values: vec![Value::Number("x".to_string(), 1)],
+                    }
+                ))
             );
         }
 
         #[test]
         fn strings() {
             // Matches strings.
-            check_result(
-                declaration(NomSpan::new(r#"string test { x = "a" };"#)),
-                "",
-                Declaration {
-                    identifier: make_identifier!["test"],
-                    value_type: ValueType::Str,
-                    extends: false,
-                    values: vec![Value::Str("x".to_string(), "a".to_string())],
-                },
+            assert_eq!(
+                declaration(r#"string test { x = "a" };"#),
+                Ok((
+                    "",
+                    Declaration {
+                        identifier: make_identifier!["test"],
+                        value_type: ValueType::Str,
+                        extends: false,
+                        values: vec![Value::Str("x".to_string(), "a".to_string())],
+                    }
+                ))
             );
         }
 
         #[test]
         fn bools() {
             // Matches bools.
-            check_result(
-                declaration(NomSpan::new("bool test { x = false };")),
-                "",
-                Declaration {
-                    identifier: make_identifier!["test"],
-                    value_type: ValueType::Bool,
-                    extends: false,
-                    values: vec![Value::Bool("x".to_string(), false)],
-                },
+            assert_eq!(
+                declaration("bool test { x = false };"),
+                Ok((
+                    "",
+                    Declaration {
+                        identifier: make_identifier!["test"],
+                        value_type: ValueType::Bool,
+                        extends: false,
+                        values: vec![Value::Bool("x".to_string(), false)],
+                    }
+                ))
             );
         }
 
         #[test]
         fn enums() {
             // Matches enums.
-            check_result(
-                declaration(NomSpan::new("enum test { x };")),
-                "",
-                Declaration {
-                    identifier: make_identifier!["test"],
-                    value_type: ValueType::Enum,
-                    extends: false,
-                    values: vec![Value::Enum("x".to_string())],
-                },
+            assert_eq!(
+                declaration("enum test { x };"),
+                Ok((
+                    "",
+                    Declaration {
+                        identifier: make_identifier!["test"],
+                        value_type: ValueType::Enum,
+                        extends: false,
+                        values: vec![Value::Enum("x".to_string())],
+                    }
+                ))
             );
         }
 
         #[test]
         fn extend() {
             // Handles "extend" keyword.
-            check_result(
-                declaration(NomSpan::new("extend uint test { x = 1 };")),
-                "",
-                Declaration {
-                    identifier: make_identifier!["test"],
-                    value_type: ValueType::Number,
-                    extends: true,
-                    values: vec![Value::Number("x".to_string(), 1)],
-                },
+            assert_eq!(
+                declaration("extend uint test { x = 1 };"),
+                Ok((
+                    "",
+                    Declaration {
+                        identifier: make_identifier!["test"],
+                        value_type: ValueType::Number,
+                        extends: true,
+                        values: vec![Value::Number("x".to_string(), 1)],
+                    }
+                ))
             );
         }
 
@@ -680,7 +705,7 @@ mod test {
         fn type_mismatch() {
             // Handles type mismatches.
             assert_eq!(
-                declaration(NomSpan::new("uint test { x = false };")),
+                declaration("uint test { x = false };"),
                 Err(nom::Err::Error(BindParserError::NumericLiteral("false }".to_string())))
             );
         }
@@ -689,33 +714,35 @@ mod test {
         fn invalid() {
             // Must have a type, and an identifier.
             assert_eq!(
-                declaration(NomSpan::new("bool { x = false };")),
+                declaration("bool { x = false };"),
                 Err(nom::Err::Error(BindParserError::Identifier("{ x = false };".to_string())))
             );
             assert_eq!(
-                declaration(NomSpan::new("test { x = false };")),
+                declaration("test { x = false };"),
                 Err(nom::Err::Error(BindParserError::Type("test { x = false };".to_string())))
             );
 
             // Must be terminated by ';'.
             assert_eq!(
-                declaration(NomSpan::new("bool test { x = false }")),
-                Err(nom::Err::Error(BindParserError::Semicolon(" { x = false }".to_string())))
+                declaration("bool test { x = false }"),
+                Err(nom::Err::Error(BindParserError::Semicolon("{ x = false }".to_string())))
             );
         }
 
         #[test]
         fn compound_identifier() {
             // Identifier can be compound.
-            check_result(
-                declaration(NomSpan::new("uint this.is.a.test { x = 1 };")),
-                "",
-                Declaration {
-                    identifier: make_identifier!["this", "is", "a", "test"],
-                    value_type: ValueType::Number,
-                    extends: false,
-                    values: vec![Value::Number("x".to_string(), 1)],
-                },
+            assert_eq!(
+                declaration("uint this.is.a.test { x = 1 };"),
+                Ok((
+                    "",
+                    Declaration {
+                        identifier: make_identifier!["this", "is", "a", "test"],
+                        value_type: ValueType::Number,
+                        extends: false,
+                        values: vec![Value::Number("x".to_string(), 1)],
+                    }
+                ))
             );
         }
 
@@ -723,7 +750,7 @@ mod test {
         fn empty() {
             // Does not match empty string.
             assert_eq!(
-                declaration(NomSpan::new("")),
+                declaration(""),
                 Err(nom::Err::Error(BindParserError::Type("".to_string())))
             );
         }
@@ -734,38 +761,30 @@ mod test {
 
         #[test]
         fn single_name() {
-            check_result(library_name(NomSpan::new("library a;")), "", make_identifier!["a"]);
+            assert_eq!(library_name("library a;"), Ok(("", make_identifier!["a"])));
         }
 
         #[test]
         fn compound_name() {
-            check_result(
-                library_name(NomSpan::new("library a.b;")),
-                "",
-                make_identifier!["a", "b"],
-            );
+            assert_eq!(library_name("library a.b;"), Ok(("", make_identifier!["a", "b"])));
         }
 
         #[test]
         fn whitespace() {
-            check_result(
-                library_name(NomSpan::new("library \n\t a\n\t ;")),
-                "",
-                make_identifier!["a"],
-            );
+            assert_eq!(library_name("library \n\t a\n\t ;"), Ok(("", make_identifier!["a"])));
         }
 
         #[test]
         fn invalid() {
             // Must have a name.
             assert_eq!(
-                library_name(NomSpan::new("library ;")),
+                library_name("library ;"),
                 Err(nom::Err::Error(BindParserError::Identifier(";".to_string())))
             );
 
             // Must be terminated by ';'.
             assert_eq!(
-                library_name(NomSpan::new("library a")),
+                library_name("library a"),
                 Err(nom::Err::Error(BindParserError::Semicolon("".to_string())))
             );
         }
@@ -774,7 +793,7 @@ mod test {
         fn empty() {
             // Does not match empty string.
             assert_eq!(
-                library_name(NomSpan::new("")),
+                library_name(""),
                 Err(nom::Err::Error(BindParserError::LibraryKeyword("".to_string())))
             );
         }
@@ -787,100 +806,107 @@ mod test {
         fn empty() {
             // Does not match empty string.
             assert_eq!(
-                library(NomSpan::new("")),
+                library(""),
                 Err(nom::Err::Error(BindParserError::LibraryKeyword("".to_string())))
             );
         }
 
         #[test]
         fn empty_library() {
-            check_result(
-                library(NomSpan::new("library a;")),
-                "",
-                Ast { name: make_identifier!["a"], using: vec![], declarations: vec![] },
+            assert_eq!(
+                library("library a;"),
+                Ok(("", Ast { name: make_identifier!["a"], using: vec![], declarations: vec![] }))
             );
         }
 
         #[test]
         fn using_list() {
-            check_result(
-                library(NomSpan::new("library a; using c as d;")),
-                "",
-                Ast {
-                    name: make_identifier!["a"],
-                    using: vec![Include {
-                        name: make_identifier!["c"],
-                        alias: Some("d".to_string()),
-                    }],
-                    declarations: vec![],
-                },
+            assert_eq!(
+                library("library a; using c as d;"),
+                Ok((
+                    "",
+                    Ast {
+                        name: make_identifier!["a"],
+                        using: vec![Include {
+                            name: make_identifier!["c"],
+                            alias: Some("d".to_string()),
+                        }],
+                        declarations: vec![]
+                    }
+                ))
             );
         }
 
         #[test]
         fn declarations() {
-            check_result(
-                library(NomSpan::new("library a; uint t { x = 1 };")),
-                "",
-                Ast {
-                    name: make_identifier!["a"],
-                    using: vec![],
-                    declarations: vec![Declaration {
-                        identifier: make_identifier!["t"],
-                        value_type: ValueType::Number,
-                        extends: false,
-                        values: vec![(Value::Number("x".to_string(), 1))],
-                    }],
-                },
+            assert_eq!(
+                library("library a; uint t { x = 1 };"),
+                Ok((
+                    "",
+                    Ast {
+                        name: make_identifier!["a"],
+                        using: vec![],
+                        declarations: vec![Declaration {
+                            identifier: make_identifier!["t"],
+                            value_type: ValueType::Number,
+                            extends: false,
+                            values: vec![(Value::Number("x".to_string(), 1))],
+                        }]
+                    }
+                ))
             );
         }
 
         #[test]
         fn multiple_elements() {
             // Matches library with using list and declarations.
-            check_result(
-                library(NomSpan::new("library a; using b.c as d; extend enum d.t { x };")),
-                "",
-                Ast {
-                    name: make_identifier!["a"],
-                    using: vec![Include {
-                        name: make_identifier!["b", "c"],
-                        alias: Some("d".to_string()),
-                    }],
-                    declarations: vec![Declaration {
-                        identifier: make_identifier!["d", "t"],
-                        value_type: ValueType::Enum,
-                        extends: true,
-                        values: vec![Value::Enum("x".to_string())],
-                    }],
-                },
-            );
-
-            // Matches library with using list and two declarations.
-            check_result(
-                library(NomSpan::new("library a; using b.c as d; extend enum d.t { x }; bool e;")),
-                "",
-                Ast {
-                    name: make_identifier!["a"],
-                    using: vec![Include {
-                        name: make_identifier!["b", "c"],
-                        alias: Some("d".to_string()),
-                    }],
-                    declarations: vec![
-                        Declaration {
+            assert_eq!(
+                library("library a; using b.c as d; extend enum d.t { x };"),
+                Ok((
+                    "",
+                    Ast {
+                        name: make_identifier!["a"],
+                        using: vec![Include {
+                            name: make_identifier!["b", "c"],
+                            alias: Some("d".to_string()),
+                        }],
+                        declarations: vec![Declaration {
                             identifier: make_identifier!["d", "t"],
                             value_type: ValueType::Enum,
                             extends: true,
                             values: vec![Value::Enum("x".to_string())],
-                        },
-                        Declaration {
-                            identifier: make_identifier!["e"],
-                            value_type: ValueType::Bool,
-                            extends: false,
-                            values: vec![],
-                        },
-                    ],
-                },
+                        }]
+                    }
+                ))
+            );
+
+            // Matches library with using list and two declarations.
+            assert_eq!(
+                library("library a; using b.c as d; extend enum d.t { x }; bool e;"),
+                Ok((
+                    "",
+                    Ast {
+                        name: make_identifier!["a"],
+                        using: vec![Include {
+                            name: make_identifier!["b", "c"],
+                            alias: Some("d".to_string()),
+                        }],
+                        declarations: vec![
+                            Declaration {
+                                identifier: make_identifier!["d", "t"],
+                                value_type: ValueType::Enum,
+                                extends: true,
+                                values: vec![Value::Enum("x".to_string())],
+                            },
+                            Declaration {
+                                identifier: make_identifier!["e"],
+                                value_type: ValueType::Bool,
+                                extends: false,
+                                values: vec![],
+                            }
+                        ]
+                    }
+                ))
             );
         }
 
@@ -888,7 +914,7 @@ mod test {
         fn consumes_entire_input() {
             // Must parse entire input.
             assert_eq!(
-                library(NomSpan::new("library a; using b.c as d; invalid input")),
+                library("library a; using b.c as d; invalid input"),
                 Err(nom::Err::Error(BindParserError::Type("invalid input".to_string())))
             );
         }
@@ -897,14 +923,8 @@ mod test {
         fn whitespace() {
             // Handles whitespace.
             assert_eq!(
-                library(NomSpan::new(
-                    "\n\t library a;\t using b.c as d;\n extend enum d.t { x }; \t bool e;\n "
-                ))
-                .unwrap()
-                .1,
-                library(NomSpan::new("library a; using b.c as d; extend enum d.t { x }; bool e;"))
-                    .unwrap()
-                    .1,
+                library("\n\t library a;\t using b.c as d;\n extend enum d.t { x }; \t bool e;\n "),
+                library("library a; using b.c as d; extend enum d.t { x }; bool e;"),
             );
         }
     }
