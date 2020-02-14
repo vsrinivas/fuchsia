@@ -1,61 +1,27 @@
-### Component Manager for Session Framework
+# Component Manager for Session Framework
 
-This is a temporary workaround to allow command line tools to connect to the session manager
-services so that the session manager can launch sessions.
+Reviewed on: 2020-02-04
 
-Once the session manager no longer needs to run under a component manager launched
-by `sysmgr`, and the session manager's services can be routed to command line tools using only
-component manager routing primitives, this will no longer be needed.
+This implementation of [Component Manager](/src/component/component_manager/README.md) allows command line tools to connect to services exposed by [`session_manager`](/src/session/bin/session_manager/README.md) at runtime.
 
-### Concepts
+> TODO(45361): Remove this work-around implementation entirely.
+>
+> See below for details.
 
-The component manager is  started by `sysmgr` with session manager as the root component,
-by specifying the following in a `sysmgr.config`:
+## Building, Running, and Testing
 
-```
-"services": {
-  "some service": [ "component manager url", "session manager url" ]
-},
-"startup_services": [
-  "some service"
-]
-```
+Since this binary is exclusively run in the context of using [`session_manager`](/src/session/bin/session_manager/README.md), refer to the instructions there.
 
-This exposes the service to other components run under `sysmgr` (e.g., a command line tool).
+## Source layout
 
-The session manager exposes the service with the following entry in its `.cml`.
+The entrypoint is in `src/main.rs`.
 
-```
+## Details
 
-"expose": [
-  {
-    "protocol": "some service",
-    "from": "self",
-  }
-],
-```
+It is currently impossible for a command line tool to acquire a service directly from a v2 component. This workaround uses a custom implementation of Component Manager to bridge service brokerage between the world of v1 components and v2 components.
 
-This component manager instance then looks for the service in the session manager's
-`exec/expose/svc` directory and binds it to the component manager's `out/svc`.
+This implementation exposes services from its child's `exec/expose/svc` outgoing directory in *its* `out/svc` directory.
 
-A command line tool then specifies the following in its `.cml`:
+Used in combination with `sysmgr`'s knowledge of components' `out/svc` directories, this component can be used to allow command line tools to ask for specific services and have them provided by an instance of `session_manager`.
 
-```
-"use": [
-        {
-           "protocol": "some service",
-           "from": "realm",
-        }
-    ]
-```
-
-This request is now routed to this component manager via `sysmgr`, as specified in the
-`sysmgr.config` outlined above.
-
-### Building
-
-The binary is included when you add the following to your `fx set`:
-
-```
---with-base=//src/session:all
-```
+For example, it provides [session_manager.config](/src/session/bin/session_manager/meta/session_manager.config) to `sysmgr` and allows [session_control](/src/session/tools/session_control/README.md) to connect to the `fuchsia.session.Launcher` service through `session_control`'s environment.
