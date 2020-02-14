@@ -167,6 +167,96 @@ const (
 	Vmo                        = "vmo"
 )
 
+// Copied from third_party/go/src/syscall/zx/types.go
+type ObjectType uint32 // zx_obj_type_t
+const (
+	ObjectTypeNone = ObjectType(iota)
+	ObjectTypeProcess
+	ObjectTypeThread
+	ObjectTypeVmo
+	ObjectTypeChannel
+	ObjectTypeEvent
+	ObjectTypePort
+	_ // 7
+	_ // 8
+	ObjectTypeInterrupt
+	_ // 10
+	ObjectTypePciDevice
+	ObjectTypeLog
+	_ // 13
+	ObjectTypeSocket
+	ObjectTypeResource
+	ObjectTypeEventPair
+	ObjectTypeJob
+	ObjectTypeVmar
+	ObjectTypeFifo
+	ObjectTypeGuest
+	ObjectTypeVcpu
+	ObjectTypeTimer
+	ObjectTypeIommu
+	ObjectTypeBti
+	ObjectTypeProfile
+	ObjectTypePmt
+	ObjectTypeSuspendToken
+	ObjectTypePager
+)
+
+// TODO(fxb/45998): emit the numeric value of the subtype in fidlc
+func ObjectTypeFromHandleSubtype(val HandleSubtype) ObjectType {
+	switch val {
+	case Bti:
+		return ObjectTypeBti
+	case Channel:
+		return ObjectTypeChannel
+	case DebugLog:
+		return ObjectTypeLog
+	case Event:
+		return ObjectTypeEvent
+	case Eventpair:
+		return ObjectTypeEventPair
+	case Fifo:
+		return ObjectTypeFifo
+	case Guest:
+		return ObjectTypeGuest
+	case Interrupt:
+		return ObjectTypeInterrupt
+	case Iommu:
+		return ObjectTypeIommu
+	case Job:
+		return ObjectTypeJob
+	case Pager:
+		return ObjectTypePager
+	case PciDevice:
+		return ObjectTypePciDevice
+	case Pmt:
+		return ObjectTypePmt
+	case Port:
+		return ObjectTypePort
+	case Process:
+		return ObjectTypeProcess
+	case Profile:
+		return ObjectTypeProfile
+	case Resource:
+		return ObjectTypeResource
+	case Socket:
+		return ObjectTypeSocket
+	case SuspendToken:
+		return ObjectTypeSuspendToken
+	case Thread:
+		return ObjectTypeThread
+	case Time:
+		return ObjectTypeTimer
+	case Vcpu:
+		return ObjectTypeVcpu
+	case Vmar:
+		return ObjectTypeVmar
+	case Vmo:
+		return ObjectTypeVmo
+	default:
+		return ObjectTypeNone
+	}
+}
+
 type HandleRights uint32
 
 type LiteralKind string
