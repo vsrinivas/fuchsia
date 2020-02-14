@@ -40,6 +40,7 @@ typedef uint32_t zx_object_info_topic_t;
 #define ZX_INFO_TIMER                   ((zx_object_info_topic_t) 25u) // zx_info_timer_t[1]
 #define ZX_INFO_STREAM                  ((zx_object_info_topic_t) 26u) // zx_info_stream_t[1]
 #define ZX_INFO_HANDLE_TABLE            ((zx_object_info_topic_t) 27u) // zx_info_handle_extended_t[n]
+#define ZX_INFO_MSI                     ((zx_object_info_topic_t) 28u) // zx_info_msi_t[1]
 
 typedef uint32_t zx_obj_props_t;
 #define ZX_OBJ_PROP_NONE                ((zx_obj_props_t) 0u)
@@ -547,6 +548,18 @@ typedef struct zx_info_resource {
     size_t size;
     char name[ZX_MAX_NAME_LEN];
 } zx_info_resource_t;
+
+typedef struct zx_info_msi {
+  // The target adress for write transactions.
+  uint64_t target_addr;
+  // The data that the device ill write when triggering an IRQ.
+  uint32_t target_data;
+  // The first IRQ in the allocated block.
+  uint32_t base_irq_id;
+  // The number of IRQs in the allocated block.
+  uint32_t num_irq;
+} zx_info_msi_t;
+
 
 #define ZX_INFO_CPU_STATS_FLAG_ONLINE       (1u<<0)
 

@@ -32,6 +32,7 @@ zx_library("object") {
     "log_dispatcher.cc",
     "mbuf.cc",
     "message_packet.cc",
+    "msi_allocation.cc",
     "pager_dispatcher.cc",
     "pci_device_dispatcher.cc",
     "pci_interrupt_dispatcher.cc",
@@ -107,6 +108,7 @@ source_set("tests") {
     "job_policy_tests.cc",
     "mbuf_tests.cc",
     "message_packet_tests.cc",
+    "msi_object_tests.cc",
     "socket_dispatcher_tests.cc",
     "state_tracker_tests.cc",
   ]
