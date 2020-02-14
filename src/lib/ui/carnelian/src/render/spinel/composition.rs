@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{ptr, slice};
+use std::{ops::RangeBounds, ptr, slice, vec::Splice};
 
 use euclid::Rect;
 use spinel_rs_sys::*;
@@ -158,5 +158,13 @@ impl SpinelComposition {
 impl Composition<Spinel> for SpinelComposition {
     fn new(layers: impl IntoIterator<Item = Layer<Spinel>>, background_color: Color) -> Self {
         Self { layers: layers.into_iter().collect(), background_color: background_color.to_f32() }
+    }
+
+    fn splice<R, I>(&mut self, range: R, replace_with: I) -> Splice<'_, I::IntoIter>
+    where
+        R: RangeBounds<usize>,
+        I: IntoIterator<Item = Layer<Spinel>>,
+    {
+        self.layers.splice(range, replace_with)
     }
 }

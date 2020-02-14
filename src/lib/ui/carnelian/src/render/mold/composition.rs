@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::rc::Rc;
+use std::{ops::RangeBounds, rc::Rc, vec::Splice};
 
 use crate::{
     render::{mold::Mold, BlendMode, Composition, Fill, FillRule, Layer, Style},
@@ -65,5 +65,13 @@ impl MoldComposition {
 impl Composition<Mold> for MoldComposition {
     fn new(layers: impl IntoIterator<Item = Layer<Mold>>, background_color: Color) -> Self {
         Self { layers: Rc::new(layers.into_iter().collect()), background_color }
+    }
+
+    fn splice<R, I>(&mut self, range: R, replace_with: I) -> Splice<'_, I::IntoIter>
+    where
+        R: RangeBounds<usize>,
+        I: IntoIterator<Item = Layer<Mold>>,
+    {
+        Rc::get_mut(&mut self.layers).unwrap().splice(range, replace_with)
     }
 }

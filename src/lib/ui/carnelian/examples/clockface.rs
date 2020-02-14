@@ -305,13 +305,16 @@ impl<B: Backend> Scene<B> {
 
 struct Contents<B: Backend> {
     image: B::Image,
+    composition: B::Composition,
     size: Size,
     previous_rasters: Vec<B::Raster>,
 }
 
 impl<B: Backend> Contents<B> {
     fn new(image: B::Image) -> Self {
-        Self { image, size: Size::zero(), previous_rasters: Vec::new() }
+        let composition = Composition::new(std::iter::empty(), BACKGROUND_COLOR);
+
+        Self { image, composition, size: Size::zero(), previous_rasters: Vec::new() }
     }
 
     fn update(&mut self, context: &mut impl Context<B>, scene: &Scene<B>, size: &Size) {
@@ -390,10 +393,9 @@ impl<B: Backend> Contents<B> {
                     blend_mode: BlendMode::Over,
                 },
             }));
+        self.composition.splice(.., layers);
 
-        let composition = Composition::new(layers, BACKGROUND_COLOR);
-
-        context.render(&composition, Some(clip), self.image, &ext);
+        context.render(&self.composition, Some(clip), self.image, &ext);
         context.flush_image(self.image);
 
         // Keep reference to rasters for clearing.

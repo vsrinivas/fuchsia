@@ -2,7 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{fmt::Debug, hash::Hash, ops::Add, u32};
+use std::{
+    fmt::Debug,
+    hash::Hash,
+    ops::{Add, RangeBounds},
+    u32,
+    vec::Splice,
+};
 
 use euclid::{Point2D, Rect, Size2D, Transform2D, Vector2D};
 use fidl::endpoints::ClientEnd;
@@ -211,6 +217,14 @@ pub struct Layer<B: Backend> {
 pub trait Composition<B: Backend> {
     /// Creates a composition of ordered layers where the layers with lower index appear on top.
     fn new(layers: impl IntoIterator<Item = Layer<B>>, background_color: Color) -> Self;
+
+    /// Creates a splicing iterator that replaces the specified range in the composition
+    /// with the given `replace_with` iterator and yields the removed items.
+    /// `replace_with` does not need to be the same length as `range`.
+    fn splice<R, I>(&mut self, range: R, replace_with: I) -> Splice<'_, I::IntoIter>
+    where
+        R: RangeBounds<usize>,
+        I: IntoIterator<Item = Layer<B>>;
 }
 
 #[cfg(test)]

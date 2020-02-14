@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_sysmem::BufferCollectionTokenMarker,
     fuchsia_zircon::{self as zx, ClockId, Time},
     rand::{thread_rng, Rng},
-    std::{collections::BTreeMap, f32, fs},
+    std::{collections::BTreeMap, f32, fs, ops::Range},
 };
 
 const BACKGROUND_COLOR: Color = Color { r: 255, g: 255, b: 255, a: 255 };
@@ -285,34 +285,8 @@ impl<B: Backend> InkFill<B> {
     }
 }
 
-struct Box2D {
-    min: Point,
-    max: Point,
-}
-
-impl Box2D {
-    fn new() -> Self {
-        Box2D {
-            min: Point::new(std::f32::MAX, std::f32::MAX),
-            max: Point::new(std::f32::MIN, std::f32::MIN),
-        }
-    }
-
-    fn union(&self, point: &Point) -> Self {
-        Box2D {
-            min: Point::new(self.min.x.min(point.x), self.min.y.min(point.y)),
-            max: Point::new(self.max.x.max(point.x), self.max.y.max(point.y)),
-        }
-    }
-
-    fn to_rect(&self) -> Rect<f32> {
-        Rect { origin: self.min, size: (self.max - self.min).to_size() }
-    }
-}
-
 struct Segment<B: Backend> {
     path: B::Path,
-    bbox: Box2D,
     raster: Option<B::Raster>,
 }
 
@@ -407,8 +381,7 @@ impl<B: Backend> InkStroke<B> {
     }
 
     fn push_segment(&mut self, context: &mut impl Context<B>, i0: usize, i1: usize) {
-        let (path, bbox) = {
-            let mut bbox = Box2D::new();
+        let path = {
             let mut path_builder = context.path_builder().unwrap();
 
             //
@@ -425,7 +398,6 @@ impl<B: Backend> InkStroke<B> {
                 } else {
                     path_builder.line_to(a);
                 }
-                bbox = bbox.union(&a);
             }
 
             let p_first = &self.points.first().unwrap();
@@ -450,8 +422,6 @@ impl<B: Backend> InkStroke<B> {
                     let mut wrapper = PathBuilderWrapper::<'_, B>::new(&mut path_builder);
                     wrapper.cubic_to(p0, c0, c1, p1, offset);
                     wrapper.cubic_to(p1, c2, c3, p2, offset);
-
-                    bbox = bbox.union(&p0).union(&p1).union(&p2);
                 };
             }
 
@@ -464,7 +434,6 @@ impl<B: Backend> InkStroke<B> {
             for p in self.points[i0..i1].iter().rev() {
                 let a = p.point - p.normal1 * p.thickness;
                 path_builder.line_to(a);
-                bbox = bbox.union(&a);
             }
 
             // Produce start-cap if at the beginning of line and not connected to last point.
@@ -474,10 +443,10 @@ impl<B: Backend> InkStroke<B> {
 
             path_builder.line_to(a0);
 
-            (path_builder.build(), bbox)
+            path_builder.build()
         };
 
-        self.segments.push((i0, Segment { path, bbox, raster: None }));
+        self.segments.push((i0, Segment { path, raster: None }));
     }
 
     fn update_thickness(&mut self, context: &mut impl Context<B>) {
@@ -518,28 +487,23 @@ impl<B: Backend> InkStroke<B> {
         }
 
         // Add any remaining points to last segment.
-        if (self.points.len() - i0) > 1 {
+        if (self.points.len() - i0) > 0 {
             self.push_segment(context, i0, self.points.len());
         }
     }
 
-    fn update(&mut self, context: &mut impl Context<B>, size: &Size) {
-        // Update thickness expects at least one point.
-        if self.points.is_empty() {
-            return;
-        }
-
+    fn update(&mut self, context: &mut impl Context<B>) -> bool {
         self.update_thickness(context);
 
-        // Create raster if bounding box intersects size.
-        let rect = Rect::from_size(*size);
+        let mut changed = false;
         for (_, segment) in self.segments.iter_mut() {
-            if segment.raster.is_none()
-                && self.transform.transform_rect(&segment.bbox.to_rect()).intersects(&rect)
-            {
+            if segment.raster.is_none() {
                 segment.raster = Some(Self::raster(context, &segment.path, &self.transform));
+                changed = true;
             }
         }
+
+        changed
     }
 
     fn transform(&mut self, transform: &Transform2D<f32>) {
@@ -601,8 +565,10 @@ impl<B: Backend> Scene<B> {
         }
     }
 
-    fn push_stroke(&mut self, color: Color, radius: f32) {
-        self.strokes.push(InkStroke::new(color, radius, Transform2D::identity()));
+    fn push_stroke(&mut self, color: Color, radius: f32, p: &Point) {
+        let mut stroke = InkStroke::new(color, radius, Transform2D::identity());
+        stroke.push_point(p);
+        self.strokes.push(stroke);
     }
 
     fn last_stroke(&mut self) -> Option<&mut InkStroke<B>> {
@@ -613,13 +579,38 @@ impl<B: Backend> Scene<B> {
         self.strokes.clear();
     }
 
-    fn update(&mut self, context: &mut impl Context<B>, size: &Size) {
-        for (stroke, _, _) in self.tools.iter_mut() {
-            stroke.update(context, size);
+    fn update_tools(&mut self, context: &mut impl Context<B>) -> Option<Range<usize>> {
+        let mut damage: Option<Range<usize>> = None;
+
+        for (i, (stroke, _, _)) in self.tools.iter_mut().enumerate() {
+            let changed = stroke.update(context);
+            if changed {
+                if let Some(damage) = &mut damage {
+                    damage.end = i + 1;
+                } else {
+                    damage = Some(Range { start: i, end: i + 1 });
+                }
+            }
         }
-        for stroke in self.strokes.iter_mut() {
-            stroke.update(context, size);
+
+        damage
+    }
+
+    fn update_strokes(&mut self, context: &mut impl Context<B>) -> Option<Range<usize>> {
+        let mut damage: Option<Range<usize>> = None;
+
+        for (i, stroke) in self.strokes.iter_mut().enumerate() {
+            let changed = stroke.update(context);
+            if changed {
+                if let Some(value) = damage.take() {
+                    damage = Some(Range { start: value.start, end: i + 1 });
+                } else {
+                    damage = Some(Range { start: i, end: i + 1 });
+                }
+            }
         }
+
+        damage
     }
 
     fn transform(&mut self, transform: &Transform2D<f32>) {
@@ -631,11 +622,27 @@ impl<B: Backend> Scene<B> {
 
 struct Contents<B: Backend> {
     image: B::Image,
+    composition: B::Composition,
+    size: Size,
+    tool_count: usize,
+    tool_damage: Option<Range<usize>>,
+    stroke_count: usize,
+    stroke_damage: Option<Range<usize>>,
 }
 
 impl<B: Backend> Contents<B> {
     fn new(image: B::Image) -> Self {
-        Self { image }
+        let composition = Composition::new(std::iter::empty(), BACKGROUND_COLOR);
+
+        Self {
+            image,
+            composition,
+            size: Size::zero(),
+            tool_count: 0,
+            tool_damage: None,
+            stroke_count: 0,
+            stroke_damage: None,
+        }
     }
 
     fn update(&mut self, context: &mut impl Context<B>, scene: &Scene<B>, size: &Size) {
@@ -644,15 +651,67 @@ impl<B: Backend> Contents<B> {
             Size2D::new(size.width.floor() as u32, size.height.floor() as u32),
         );
 
-        let ext = RenderExt {
-            pre_clear: Some(PreClear { color: BACKGROUND_COLOR }),
-            ..Default::default()
+        let ext = if self.size != *size {
+            self.size = *size;
+            self.tool_damage = Some(Range { start: 0, end: scene.tools.len() });
+            self.stroke_damage = Some(Range { start: 0, end: scene.strokes.len() });
+            RenderExt {
+                pre_clear: Some(PreClear { color: BACKGROUND_COLOR }),
+                ..Default::default()
+            }
+        } else {
+            RenderExt::default()
         };
 
-        let layers = scene
-            .tools
-            .iter()
-            .map(|(stroke, _, _)| Layer {
+        // Update damaged tool layers.
+        if let Some(damage) = self.tool_damage.take() {
+            let layers =
+                scene.tools[damage.start..damage.end].iter().flat_map(|(stroke, fill, _)| {
+                    std::iter::once(Layer {
+                        raster: stroke
+                            .segments
+                            .iter()
+                            .fold(None, |raster_union: Option<B::Raster>, segment| {
+                                if let Some(raster) = &segment.1.raster {
+                                    if let Some(raster_union) = raster_union {
+                                        Some(raster_union + raster.clone())
+                                    } else {
+                                        Some(raster.clone())
+                                    }
+                                } else {
+                                    raster_union
+                                }
+                            })
+                            .unwrap(),
+                        style: Style {
+                            fill_rule: FillRule::NonZero,
+                            fill: Fill::Solid(stroke.color),
+                            blend_mode: BlendMode::Over,
+                        },
+                    })
+                    .chain(std::iter::once(Layer {
+                        raster: fill.raster.clone(),
+                        style: Style {
+                            fill_rule: FillRule::NonZero,
+                            fill: Fill::Solid(fill.color),
+                            blend_mode: BlendMode::Over,
+                        },
+                    }))
+                });
+            let range = (damage.start * 2)..(damage.end * 2);
+            // Add tool layers if needed.
+            if self.tool_count < damage.end {
+                self.composition.splice(range.start.., layers);
+                self.tool_count = damage.end;
+            } else {
+                self.composition.splice(range, layers);
+            }
+        }
+
+        let bottom = self.tool_count * 2 + scene.strokes.len();
+        // Update damaged stroke layers.
+        if let Some(damage) = self.stroke_damage.take() {
+            let layers = scene.strokes[damage.start..damage.end].iter().rev().map(|stroke| Layer {
                 raster: stroke
                     .segments
                     .iter()
@@ -673,46 +732,48 @@ impl<B: Backend> Contents<B> {
                     fill: Fill::Solid(stroke.color),
                     blend_mode: BlendMode::Over,
                 },
-            })
-            .chain(scene.tools.iter().map(|(_, fill, _)| Layer {
-                raster: fill.raster.clone(),
-                style: Style {
-                    fill_rule: FillRule::NonZero,
-                    fill: Fill::Solid(fill.color),
-                    blend_mode: BlendMode::Over,
-                },
-            }))
-            .chain(scene.strokes.iter().rev().filter_map(|stroke| {
-                if let Some(raster) =
-                    stroke.segments.iter().fold(None, |raster_union: Option<B::Raster>, segment| {
-                        if let Some(raster) = &segment.1.raster {
-                            if let Some(raster_union) = raster_union {
-                                Some(raster_union + raster.clone())
-                            } else {
-                                Some(raster.clone())
-                            }
-                        } else {
-                            raster_union
-                        }
-                    })
-                {
-                    Some(Layer {
-                        raster,
-                        style: Style {
-                            fill_rule: FillRule::NonZero,
-                            fill: Fill::Solid(stroke.color),
-                            blend_mode: BlendMode::Over,
-                        },
-                    })
-                } else {
-                    None
-                }
-            }));
+            });
+            // Reverse range.
+            let range = (bottom - damage.end)..(bottom - damage.start);
+            // Add more stroke layers if needed.
+            if self.stroke_count < scene.strokes.len() {
+                let count = scene.strokes.len() - self.stroke_count;
+                self.composition.splice(range.start..(range.end - count), layers);
+                self.stroke_count = scene.strokes.len();
+            } else {
+                self.composition.splice(range, layers);
+            }
+        }
 
-        let composition = Composition::new(layers, BACKGROUND_COLOR);
+        // Remove strokes that are no longer part of the scene.
+        if self.stroke_count > scene.strokes.len() {
+            self.composition.splice(bottom.., std::iter::empty::<Layer<B>>());
+            self.stroke_count = scene.strokes.len();
+        }
 
-        context.render(&composition, Some(clip), self.image, &ext);
+        context.render(&self.composition, Some(clip), self.image, &ext);
         context.flush_image(self.image);
+    }
+
+    fn add_tool_damage(&mut self, range: &Range<usize>) {
+        self.tool_damage = Some(if let Some(damage) = self.tool_damage.take() {
+            Range { start: range.start.min(damage.start), end: range.end.max(damage.end) }
+        } else {
+            range.clone()
+        });
+    }
+
+    fn add_stroke_damage(&mut self, range: &Range<usize>) {
+        self.stroke_damage = Some(if let Some(damage) = self.stroke_damage.take() {
+            Range { start: range.start.min(damage.start), end: range.end.max(damage.end) }
+        } else {
+            range.clone()
+        });
+    }
+
+    fn full_damage(&mut self) {
+        // Empty size will trigger a clear during next update.
+        self.size = Size::zero();
     }
 }
 
@@ -907,11 +968,11 @@ impl<B: Backend, C: Context<B>> ViewAssistant for InkViewAssistant<B, C> {
         Ok(())
     }
 
-    fn update(&mut self, view_context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         let time_now = Time::get(ClockId::Monotonic);
-        let canvas = view_context.canvas.as_ref().unwrap().borrow();
-        let size = &view_context.size;
-        let context = &mut self.context;
+        let canvas = context.canvas.as_ref().unwrap().borrow();
+        let size = &context.size;
+        let mut full_damage = false;
 
         // Process touch device input.
         if let Some(device) = self.touch_device.as_mut() {
@@ -1011,11 +1072,13 @@ impl<B: Backend, C: Context<B>> ViewAssistant for InkViewAssistant<B, C> {
                     ));
                     self.flower = None;
                     self.scene.clear_strokes();
+                    full_damage = true;
                 }
             }
 
             if transform != Transform2D::identity() {
                 self.scene.transform(&transform);
+                full_damage = true;
             }
         }
 
@@ -1046,9 +1109,11 @@ impl<B: Backend, C: Context<B>> ViewAssistant for InkViewAssistant<B, C> {
                             } else {
                                 // Start stroke if we haven't reached the limit.
                                 if self.scene.strokes.len() < MAX_STROKES {
-                                    self.scene
-                                        .push_stroke(COLORS[self.color], PENCILS[self.pencil]);
-                                    self.scene.last_stroke().unwrap().push_point(&point);
+                                    self.scene.push_stroke(
+                                        COLORS[self.color],
+                                        PENCILS[self.pencil],
+                                        &point,
+                                    );
                                     self.last_stylus_point = Some(point);
                                 }
                                 // Disable flower demo.
@@ -1078,11 +1143,11 @@ impl<B: Backend, C: Context<B>> ViewAssistant for InkViewAssistant<B, C> {
 
         // Generate flower when idle after clearing screen.
         if time_now.into_nanos() > self.flower_start.into_nanos() {
-            if self.flower.is_none() {
-                self.scene.push_stroke(COLORS[self.color], PENCILS[self.pencil]);
-            }
-
-            let flower = self.flower.take().unwrap_or_else(|| Flower::new(size.width, size.height));
+            let flower = self.flower.take().unwrap_or_else(|| {
+                let flower = Flower::new(size.width, size.height);
+                self.scene.push_stroke(COLORS[self.color], PENCILS[self.pencil], &flower.points[0]);
+                flower
+            });
 
             // Points per second.
             const SPEED: f32 = 100.0;
@@ -1111,14 +1176,33 @@ impl<B: Backend, C: Context<B>> ViewAssistant for InkViewAssistant<B, C> {
             }
         }
 
-        self.scene.update(context, size);
+        // Full damage for changes that require some amount of clearing.
+        if full_damage {
+            for content in self.contents.values_mut() {
+                content.full_damage();
+            }
+        }
+
+        // Update tools and add damage to each content.
+        if let Some(tool_damage) = self.scene.update_tools(&mut self.context) {
+            for content in self.contents.values_mut() {
+                content.add_tool_damage(&tool_damage);
+            }
+        }
+
+        // Update strokes and add damage to each content.
+        if let Some(stroke_damage) = self.scene.update_strokes(&mut self.context) {
+            for content in self.contents.values_mut() {
+                content.add_stroke_damage(&stroke_damage);
+            }
+        }
 
         // Temporary hack to deal with the fact that carnelian
         // allocates a new buffer for each frame with the same
         // image ID of zero.
         let mut temp_content;
         let content;
-        let image = self.context.get_current_image(view_context);
+        let image = self.context.get_current_image(context);
 
         if canvas.id == 0 {
             temp_content = Contents::new(image);
