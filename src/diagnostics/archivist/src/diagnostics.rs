@@ -6,7 +6,7 @@ use {
     crate::archive::EventFileGroupStatsMap,
     anyhow::Error,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
-    fuchsia_inspect::{component, Node, UintProperty},
+    fuchsia_inspect::{component, health::Reporter, Node, UintProperty},
     lazy_static::lazy_static,
     parking_lot::Mutex,
     std::sync::Arc,
@@ -49,6 +49,7 @@ impl Groups {
 
 pub fn init() {
     //TODO(36574): Replace log calls once archivist can use LogSink service.
+    component::health().set_starting_up();
 }
 
 pub fn root() -> &'static Node {

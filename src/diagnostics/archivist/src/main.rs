@@ -41,9 +41,11 @@ fn main() -> Result<(), Error> {
 
     let provider = connect_to_service::<ComponentEventProviderMarker>()
         .context("failed to connect to entity resolver")?;
-    let events_stream_fut = component_events::listen(provider);
 
     diagnostics::init();
+
+    let events_stream_fut =
+        component_events::listen(provider, diagnostics::root().create_child("event_stats"));
 
     let opt: Args = argh::from_env();
     let log_manager = logs::LogManager::new(diagnostics::root().create_child("log_stats"));
@@ -117,11 +119,7 @@ fn main() -> Result<(), Error> {
                 stream::empty().boxed()
             }
         };
-        archive::run_archivist(
-            archivist_state,
-            events,
-            diagnostics::root().create_child("event_stats"),
-        )
+        archive::run_archivist(archivist_state, events)
     });
     let running_service_fs = fs.collect::<()>().map(Ok);
     let both = future::try_join(running_service_fs, running_archivist);

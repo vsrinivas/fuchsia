@@ -11,7 +11,9 @@ use {
         ComponentEventListenerMarker, ComponentEventListenerRequest,
         ComponentEventListenerRequestStream, ComponentEventProviderProxy, SourceIdentity,
     },
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_async as fasync,
+    fuchsia_inspect::{self as inspect, NumericProperty},
+    fuchsia_zircon as zx,
     futures::{channel::mpsc, stream::BoxStream, SinkExt, StreamExt, TryStreamExt},
     std::{collections::HashMap, path::PathBuf},
 };
@@ -132,22 +134,42 @@ pub enum Data {
     DeprecatedFidl(InspectProxy),
 }
 
-pub async fn listen(provider: ComponentEventProviderProxy) -> Result<ComponentEventStream, Error> {
+/// Subscribe to component lifecycle events.
+/// |node| is the node where stats about events seen will be recorded.
+pub async fn listen(
+    provider: ComponentEventProviderProxy,
+    node: inspect::Node,
+) -> Result<ComponentEventStream, Error> {
     let (events_client_end, listener_request_stream) =
         fidl::endpoints::create_request_stream::<ComponentEventListenerMarker>()?;
     provider.set_listener(events_client_end)?;
     let (sender, receiver) = mpsc::channel(CHANNEL_CAPACITY);
-    EventListenerServer::new(sender).spawn(listener_request_stream);
+    EventListenerServer::new(sender, node).spawn(listener_request_stream);
     Ok(receiver.boxed())
 }
 
 struct EventListenerServer {
     sender: ComponentEventChannel,
+
+    // Inspect stats
+    _node: inspect::Node,
+    components_started: inspect::UintProperty,
+    components_stopped: inspect::UintProperty,
+    diagnostics_directories_seen: inspect::UintProperty,
 }
 
 impl EventListenerServer {
-    fn new(sender: ComponentEventChannel) -> Self {
-        Self { sender }
+    fn new(sender: ComponentEventChannel, node: inspect::Node) -> Self {
+        let components_started = node.create_uint("components_started", 0);
+        let components_stopped = node.create_uint("components_stopped", 0);
+        let diagnostics_directories_seen = node.create_uint("diagnostics_directories_seen", 0);
+        Self {
+            sender,
+            _node: node,
+            components_started,
+            components_stopped,
+            diagnostics_directories_seen,
+        }
     }
 
     fn spawn(self, stream: ComponentEventListenerRequestStream) {
@@ -191,6 +213,7 @@ impl EventListenerServer {
         {
             return Ok(());
         }
+        self.components_started.add(1);
         self.send_event(ComponentEvent::Start(ComponentEventData {
             component_name: component.component_name.unwrap(),
             component_id: component.instance_id.unwrap(),
@@ -207,6 +230,7 @@ impl EventListenerServer {
         {
             return Ok(());
         }
+        self.components_stopped.add(1);
         self.send_event(ComponentEvent::Stop(ComponentEventData {
             component_name: component.component_name.unwrap(),
             component_id: component.instance_id.unwrap(),
@@ -227,6 +251,7 @@ impl EventListenerServer {
         {
             return Ok(());
         }
+        self.diagnostics_directories_seen.add(1);
         let component_hierarchy_path = PathBuf::from(format!(
             "{}/{}/{}",
             component.realm_path.clone().unwrap().join("/"),
@@ -257,6 +282,7 @@ mod tests {
             ComponentEventProviderMarker, ComponentEventProviderRequest, SourceIdentity,
         },
         fuchsia_async as fasync,
+        fuchsia_inspect::assert_inspect_tree,
         futures::{channel::oneshot, TryStreamExt},
     };
 
@@ -347,7 +373,10 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn component_event_stream() {
         let (provider_proxy, listener_receiver) = spawn_fake_component_event_provider();
-        let mut event_stream = listen(provider_proxy).await.expect("failed to listen");
+        let inspector = inspect::Inspector::new();
+        let mut event_stream = listen(provider_proxy, inspector.root().create_child("events"))
+            .await
+            .expect("failed to listen");
         let listener = listener_receiver
             .await
             .expect("failed to receive listener")
@@ -386,6 +415,14 @@ mod tests {
 
         let event = event_stream.next().await.unwrap();
         assert_eq!(event, ComponentEvent::Stop(identity.clone().into()));
+
+        assert_inspect_tree!(inspector, root: {
+            events: {
+                components_started: 1u64,
+                components_stopped: 1u64,
+                diagnostics_directories_seen: 1u64,
+            }
+        });
     }
 
     fn spawn_fake_component_event_provider() -> (

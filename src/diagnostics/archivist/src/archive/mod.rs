@@ -12,7 +12,6 @@ use {
     },
     anyhow::{format_err, Error},
     chrono::prelude::*,
-    fuchsia_inspect::NumericProperty,
     fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
     futures::StreamExt,
     itertools::Itertools,
@@ -763,27 +762,10 @@ async fn archive_event(
 pub async fn run_archivist(
     archivist_state: ArchivistState,
     mut events: ComponentEventStream,
-    event_stats: fuchsia_inspect::Node,
 ) -> Result<(), Error> {
     let state = Arc::new(Mutex::new(archivist_state));
 
-    let components_started = event_stats.create_uint("components_started", 0);
-    let components_stopped = event_stats.create_uint("components_stopped", 0);
-    let out_directories_seen = event_stats.create_uint("out_directories_seen", 0);
-
     while let Some(event) = events.next().await {
-        let state = state.clone();
-        match &event {
-            ComponentEvent::Start(_) => {
-                components_started.add(1);
-            }
-            ComponentEvent::Stop(_) => {
-                components_stopped.add(1);
-            }
-            ComponentEvent::OutDirectoryAppeared(_) => {
-                out_directories_seen.add(1);
-            }
-        };
         process_event(state.clone(), event).await.unwrap_or_else(|e| {
             let mut state = state.lock();
             inspect_log!(state.log_node, event: "Failed to log event", result: format!("{:?}", e));
