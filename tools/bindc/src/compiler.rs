@@ -4,7 +4,6 @@
 
 use crate::bind_library;
 use crate::bind_program::{self, Condition, ConditionOp, Statement};
-use crate::debugger::AstLocation;
 use crate::dependency_graph::{self, DependencyGraph};
 use crate::errors::{self, UserError};
 use crate::make_identifier;
@@ -41,40 +40,37 @@ impl fmt::Display for CompilerError {
 
 pub type SymbolTable = HashMap<CompoundIdentifier, Symbol>;
 
-pub fn read_file(path: &PathBuf) -> Result<String, errors::FileError> {
-    let mut file = File::open(path).map_err(|_| errors::FileError::FileOpenError(path.clone()))?;
-    let mut buf = String::new();
-    file.read_to_string(&mut buf).map_err(|_| errors::FileError::FileReadError(path.clone()))?;
-    Ok(buf)
-}
-
 pub fn compile(
     program: PathBuf,
     libraries: &[PathBuf],
 ) -> Result<Vec<instruction::Instruction>, CompilerError> {
-    let program_str = read_file(&program).map_err(CompilerError::FileError)?;
+    let (symbolic_instructions, _) = compile_to_symbolic(program, libraries)?;
 
-    let (symbolic_instructions, _) = compile_to_symbolic(&program_str, libraries)?;
-
-    Ok(symbolic_instructions
-        .into_iter()
-        .map(|symbolic| symbolic.instruction.to_instruction())
-        .collect())
+    Ok(symbolic_instructions.into_iter().map(|symbolic| symbolic.to_instruction()).collect())
 }
 
-pub fn compile_to_symbolic<'a>(
-    program_str: &'a str,
+pub fn compile_to_symbolic(
+    program: PathBuf,
     libraries: &[PathBuf],
-) -> Result<(Vec<SymbolicInstructionLocated<'a>>, SymbolTable), CompilerError> {
-    let ast = bind_program::Ast::try_from(program_str).map_err(CompilerError::BindParserError)?;
+) -> Result<(Vec<SymbolicInstruction>, SymbolTable), CompilerError> {
+    let mut file = File::open(&program)
+        .map_err(|_| CompilerError::FileError(errors::FileError::FileOpenError(program.clone())))?;
+    let mut buf = String::new();
+    file.read_to_string(&mut buf)
+        .map_err(|_| CompilerError::FileError(errors::FileError::FileReadError(program.clone())))?;
+    let ast = bind_program::Ast::try_from(&*buf).map_err(CompilerError::BindParserError)?;
 
     let mut library_asts = vec![];
     for library in libraries {
-        let library_str = read_file(library).map_err(CompilerError::FileError)?;
-        library_asts.push(
-            bind_library::Ast::try_from(library_str.as_str())
-                .map_err(CompilerError::BindParserError)?,
-        );
+        let mut file = File::open(library).map_err(|_| {
+            CompilerError::FileError(errors::FileError::FileOpenError(program.clone()))
+        })?;
+        let mut buf = String::new();
+        file.read_to_string(&mut buf).map_err(|_| {
+            CompilerError::FileError(errors::FileError::FileReadError(program.clone()))
+        })?;
+        library_asts
+            .push(bind_library::Ast::try_from(&*buf).map_err(CompilerError::BindParserError)?);
     }
 
     let dependencies: Vec<&bind_library::Ast> = resolve_dependencies(&ast, library_asts.iter())?;
@@ -368,12 +364,6 @@ fn get_deprecated_symbols() -> SymbolTable {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct SymbolicInstructionLocated<'a> {
-    pub location: Option<AstLocation<'a>>,
-    pub instruction: SymbolicInstruction,
-}
-
-#[derive(Debug, PartialEq)]
 pub enum SymbolicInstruction {
     AbortIfEqual { lhs: Symbol, rhs: Symbol },
     AbortIfNotEqual { lhs: Symbol, rhs: Symbol },
@@ -418,55 +408,50 @@ impl SymbolicInstruction {
     }
 }
 
-pub fn compile_statements<'a>(
-    statements: Vec<Statement<'a>>,
+pub fn compile_statements(
+    statements: Vec<Statement>,
     symbol_table: &SymbolTable,
-) -> Result<Vec<SymbolicInstructionLocated<'a>>, CompilerError> {
+) -> Result<Vec<SymbolicInstruction>, CompilerError> {
     let mut compiler = Compiler::new(symbol_table);
     compiler.compile_statements(statements)?;
     Ok(compiler.instructions)
 }
 
-struct Compiler<'a, 'b> {
-    instructions: Vec<SymbolicInstructionLocated<'a>>,
+struct Compiler<'a> {
+    instructions: Vec<SymbolicInstruction>,
     next_label_id: u32,
-    symbol_table: &'b SymbolTable,
+    symbol_table: &'a SymbolTable,
 }
 
-impl<'a, 'b> Compiler<'a, 'b> {
-    fn new(symbol_table: &'b SymbolTable) -> Self {
+impl<'a> Compiler<'a> {
+    fn new(symbol_table: &'a SymbolTable) -> Self {
         Compiler { instructions: vec![], next_label_id: 0, symbol_table }
     }
 
-    fn lookup_identifier(&self, identifier: &CompoundIdentifier) -> Result<Symbol, CompilerError> {
-        let symbol = self
-            .symbol_table
-            .get(identifier)
-            .ok_or(CompilerError::UnknownKey(identifier.clone()))?;
+    fn lookup_identifier(&self, identifier: CompoundIdentifier) -> Result<Symbol, CompilerError> {
+        let symbol =
+            self.symbol_table.get(&identifier).ok_or(CompilerError::UnknownKey(identifier))?;
         Ok(symbol.clone())
     }
 
-    fn lookup_value(&self, value: &Value) -> Result<Symbol, CompilerError> {
+    fn lookup_value(&self, value: Value) -> Result<Symbol, CompilerError> {
         match value {
-            Value::NumericLiteral(n) => Ok(Symbol::NumberValue(*n)),
-            Value::StringLiteral(s) => Ok(Symbol::StringValue(s.to_string())),
-            Value::BoolLiteral(b) => Ok(Symbol::BoolValue(*b)),
+            Value::NumericLiteral(n) => Ok(Symbol::NumberValue(n)),
+            Value::StringLiteral(s) => Ok(Symbol::StringValue(s)),
+            Value::BoolLiteral(b) => Ok(Symbol::BoolValue(b)),
             Value::Identifier(ident) => self
                 .symbol_table
-                .get(ident)
-                .ok_or(CompilerError::UnknownKey(ident.clone()))
+                .get(&ident)
+                .ok_or(CompilerError::UnknownKey(ident))
                 .map(|x| x.clone()),
         }
     }
 
-    fn compile_statements(&mut self, statements: Vec<Statement<'a>>) -> Result<(), CompilerError> {
+    fn compile_statements(&mut self, statements: Vec<Statement>) -> Result<(), CompilerError> {
         self.compile_block(statements)?;
 
         // If none of the statements caused an abort, then we should bind the driver.
-        self.instructions.push(SymbolicInstructionLocated {
-            location: None,
-            instruction: SymbolicInstruction::UnconditionalBind,
-        });
+        self.instructions.push(SymbolicInstruction::UnconditionalBind);
 
         Ok(())
     }
@@ -477,59 +462,39 @@ impl<'a, 'b> Compiler<'a, 'b> {
         label
     }
 
-    fn compile_block(&mut self, statements: Vec<Statement<'a>>) -> Result<(), CompilerError> {
+    fn compile_block(&mut self, statements: Vec<Statement>) -> Result<(), CompilerError> {
         let mut iter = statements.into_iter().peekable();
         while let Some(statement) = iter.next() {
             match statement {
-                Statement::ConditionStatement { .. } => {
-                    if let Statement::ConditionStatement {
-                        span: _,
-                        condition: Condition { span: _, lhs, op, rhs },
-                    } = &statement
-                    {
-                        let lhs_symbol = self.lookup_identifier(lhs)?;
-                        let rhs_symbol = self.lookup_value(rhs)?;
-                        let instruction = match op {
-                            ConditionOp::Equals => SymbolicInstruction::AbortIfNotEqual {
-                                lhs: lhs_symbol,
-                                rhs: rhs_symbol,
-                            },
-                            ConditionOp::NotEquals => SymbolicInstruction::AbortIfEqual {
-                                lhs: lhs_symbol,
-                                rhs: rhs_symbol,
-                            },
-                        };
-                        self.instructions.push(SymbolicInstructionLocated {
-                            location: Some(AstLocation::ConditionStatement(statement)),
-                            instruction,
-                        });
-                    }
+                Statement::ConditionStatement {
+                    span: _,
+                    condition: Condition { span: _, lhs, op, rhs },
+                } => {
+                    let lhs_symbol = self.lookup_identifier(lhs)?;
+                    let rhs_symbol = self.lookup_value(rhs)?;
+                    let instruction = match op {
+                        ConditionOp::Equals => SymbolicInstruction::AbortIfNotEqual {
+                            lhs: lhs_symbol,
+                            rhs: rhs_symbol,
+                        },
+                        ConditionOp::NotEquals => {
+                            SymbolicInstruction::AbortIfEqual { lhs: lhs_symbol, rhs: rhs_symbol }
+                        }
+                    };
+                    self.instructions.push(instruction);
                 }
-                Statement::Accept { span, identifier, values } => {
-                    let lhs_symbol = self.lookup_identifier(&identifier)?;
+                Statement::Accept { span: _, identifier, values } => {
+                    let lhs_symbol = self.lookup_identifier(identifier)?;
                     let label_id = self.get_unique_label();
                     for value in values {
-                        self.instructions.push(SymbolicInstructionLocated {
-                            location: Some(AstLocation::AcceptStatementValue {
-                                identifier: identifier.clone(),
-                                value: value.clone(),
-                                span: span.clone(),
-                            }),
-                            instruction: SymbolicInstruction::JumpIfEqual {
-                                lhs: lhs_symbol.clone(),
-                                rhs: self.lookup_value(&value)?,
-                                label: label_id,
-                            },
+                        self.instructions.push(SymbolicInstruction::JumpIfEqual {
+                            lhs: lhs_symbol.clone(),
+                            rhs: self.lookup_value(value)?,
+                            label: label_id,
                         });
                     }
-                    self.instructions.push(SymbolicInstructionLocated {
-                        location: Some(AstLocation::AcceptStatementFailure { identifier, span }),
-                        instruction: SymbolicInstruction::UnconditionalAbort,
-                    });
-                    self.instructions.push(SymbolicInstructionLocated {
-                        location: None,
-                        instruction: SymbolicInstruction::Label(label_id),
-                    });
+                    self.instructions.push(SymbolicInstruction::UnconditionalAbort);
+                    self.instructions.push(SymbolicInstruction::Label(label_id));
                 }
                 Statement::If { span: _, blocks, else_block } => {
                     if !iter.peek().is_none() {
@@ -538,9 +503,7 @@ impl<'a, 'b> Compiler<'a, 'b> {
 
                     let final_label_id = self.get_unique_label();
 
-                    for (condition, block_statements) in blocks {
-                        let Condition { span: _, lhs, op, rhs } = &condition;
-
+                    for (Condition { span: _, lhs, op, rhs }, block_statements) in blocks {
                         let lhs_symbol = self.lookup_identifier(lhs)?;
                         let rhs_symbol = self.lookup_value(rhs)?;
 
@@ -558,27 +521,17 @@ impl<'a, 'b> Compiler<'a, 'b> {
                                 label: label_id,
                             },
                         };
-                        self.instructions.push(SymbolicInstructionLocated {
-                            location: Some(AstLocation::IfCondition(condition)),
-                            instruction,
-                        });
+                        self.instructions.push(instruction);
 
                         // Compile the block itself.
                         self.compile_block(block_statements)?;
 
                         // Jump to after the if statement.
-                        self.instructions.push(SymbolicInstructionLocated {
-                            location: None,
-                            instruction: SymbolicInstruction::UnconditionalJump {
-                                label: final_label_id,
-                            },
-                        });
+                        self.instructions
+                            .push(SymbolicInstruction::UnconditionalJump { label: final_label_id });
 
                         // Insert a label to jump to when the condition fails.
-                        self.instructions.push(SymbolicInstructionLocated {
-                            location: None,
-                            instruction: SymbolicInstruction::Label(label_id),
-                        });
+                        self.instructions.push(SymbolicInstruction::Label(label_id));
                     }
 
                     // Compile the else block.
@@ -588,16 +541,10 @@ impl<'a, 'b> Compiler<'a, 'b> {
                     // could just emit an unconditional bind instead of jumping, since we know that
                     // if statements are terminal, but we do the jump to be consistent with
                     // condition and accept statements.
-                    self.instructions.push(SymbolicInstructionLocated {
-                        location: None,
-                        instruction: SymbolicInstruction::Label(final_label_id),
-                    });
+                    self.instructions.push(SymbolicInstruction::Label(final_label_id));
                 }
                 Statement::Abort { span: _ } => {
-                    self.instructions.push(SymbolicInstructionLocated {
-                        location: Some(AstLocation::AbortStatement(statement)),
-                        instruction: SymbolicInstruction::UnconditionalAbort,
-                    });
+                    self.instructions.push(SymbolicInstruction::UnconditionalAbort);
                 }
             }
         }
@@ -960,18 +907,18 @@ mod test {
 
     #[test]
     fn condition() {
-        let condition_statement = Statement::ConditionStatement {
-            span: Span::new(),
-            condition: Condition {
+        let program = bind_program::Ast {
+            using: vec![],
+            statements: vec![Statement::ConditionStatement {
                 span: Span::new(),
-                lhs: make_identifier!("abc"),
-                op: ConditionOp::Equals,
-                rhs: Value::NumericLiteral(42),
-            },
+                condition: Condition {
+                    span: Span::new(),
+                    lhs: make_identifier!("abc"),
+                    op: ConditionOp::Equals,
+                    rhs: Value::NumericLiteral(42),
+                },
+            }],
         };
-
-        let program =
-            bind_program::Ast { using: vec![], statements: vec![condition_statement.clone()] };
         let mut symbol_table = HashMap::new();
         symbol_table.insert(
             make_identifier!("abc"),
@@ -981,17 +928,11 @@ mod test {
         assert_eq!(
             compile_statements(program.statements, &symbol_table),
             Ok(vec![
-                SymbolicInstructionLocated {
-                    location: Some(AstLocation::ConditionStatement(condition_statement)),
-                    instruction: SymbolicInstruction::AbortIfNotEqual {
-                        lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
-                        rhs: Symbol::NumberValue(42)
-                    }
+                SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+                    rhs: Symbol::NumberValue(42)
                 },
-                SymbolicInstructionLocated {
-                    location: None,
-                    instruction: SymbolicInstruction::UnconditionalBind
-                }
+                SymbolicInstruction::UnconditionalBind
             ])
         );
     }
@@ -1015,100 +956,74 @@ mod test {
         assert_eq!(
             compile_statements(program.statements, &symbol_table),
             Ok(vec![
-                SymbolicInstructionLocated {
-                    location: Some(AstLocation::AcceptStatementValue {
-                        identifier: make_identifier!("abc"),
-                        value: Value::NumericLiteral(42),
-                        span: Span::new()
-                    }),
-                    instruction: SymbolicInstruction::JumpIfEqual {
-                        lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
-                        rhs: Symbol::NumberValue(42),
-                        label: 0
-                    }
+                SymbolicInstruction::JumpIfEqual {
+                    lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+                    rhs: Symbol::NumberValue(42),
+                    label: 0
                 },
-                SymbolicInstructionLocated {
-                    location: Some(AstLocation::AcceptStatementValue {
-                        identifier: make_identifier!("abc"),
-                        value: Value::NumericLiteral(314),
-                        span: Span::new()
-                    }),
-                    instruction: SymbolicInstruction::JumpIfEqual {
-                        lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
-                        rhs: Symbol::NumberValue(314),
-                        label: 0
-                    }
+                SymbolicInstruction::JumpIfEqual {
+                    lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+                    rhs: Symbol::NumberValue(314),
+                    label: 0
                 },
-                SymbolicInstructionLocated {
-                    location: Some(AstLocation::AcceptStatementFailure {
-                        identifier: make_identifier!("abc"),
-                        span: Span::new()
-                    }),
-                    instruction: SymbolicInstruction::UnconditionalAbort
-                },
-                SymbolicInstructionLocated {
-                    location: None,
-                    instruction: SymbolicInstruction::Label(0)
-                },
-                SymbolicInstructionLocated {
-                    location: None,
-                    instruction: SymbolicInstruction::UnconditionalBind
-                },
+                SymbolicInstruction::UnconditionalAbort,
+                SymbolicInstruction::Label(0),
+                SymbolicInstruction::UnconditionalBind,
             ])
         );
     }
 
     #[test]
     fn if_else() {
-        let condition1 = Condition {
-            span: Span::new(),
-            lhs: make_identifier!("abc"),
-            op: ConditionOp::Equals,
-            rhs: Value::NumericLiteral(1),
-        };
-        let condition2 = Condition {
-            span: Span::new(),
-            lhs: make_identifier!("abc"),
-            op: ConditionOp::Equals,
-            rhs: Value::NumericLiteral(2),
-        };
-        let statement1 = Statement::ConditionStatement {
-            span: Span::new(),
-            condition: Condition {
-                span: Span::new(),
-                lhs: make_identifier!("abc"),
-                op: ConditionOp::Equals,
-                rhs: Value::NumericLiteral(2),
-            },
-        };
-        let statement2 = Statement::ConditionStatement {
-            span: Span::new(),
-            condition: Condition {
-                span: Span::new(),
-                lhs: make_identifier!("abc"),
-                op: ConditionOp::Equals,
-                rhs: Value::NumericLiteral(3),
-            },
-        };
-        let statement3 = Statement::ConditionStatement {
-            span: Span::new(),
-            condition: Condition {
-                span: Span::new(),
-                lhs: make_identifier!("abc"),
-                op: ConditionOp::Equals,
-                rhs: Value::NumericLiteral(3),
-            },
-        };
-
         let program = bind_program::Ast {
             using: vec![],
             statements: vec![Statement::If {
                 span: Span::new(),
                 blocks: vec![
-                    (condition1.clone(), vec![statement1.clone()]),
-                    (condition2.clone(), vec![statement2.clone()]),
+                    (
+                        Condition {
+                            span: Span::new(),
+                            lhs: make_identifier!("abc"),
+                            op: ConditionOp::Equals,
+                            rhs: Value::NumericLiteral(1),
+                        },
+                        vec![Statement::ConditionStatement {
+                            span: Span::new(),
+                            condition: Condition {
+                                span: Span::new(),
+                                lhs: make_identifier!("abc"),
+                                op: ConditionOp::Equals,
+                                rhs: Value::NumericLiteral(2),
+                            },
+                        }],
+                    ),
+                    (
+                        Condition {
+                            span: Span::new(),
+                            lhs: make_identifier!("abc"),
+                            op: ConditionOp::Equals,
+                            rhs: Value::NumericLiteral(2),
+                        },
+                        vec![Statement::ConditionStatement {
+                            span: Span::new(),
+                            condition: Condition {
+                                span: Span::new(),
+                                lhs: make_identifier!("abc"),
+                                op: ConditionOp::Equals,
+                                rhs: Value::NumericLiteral(3),
+                            },
+                        }],
+                    ),
                 ],
-                else_block: vec![statement3.clone()],
+                else_block: vec![Statement::ConditionStatement {
+                    span: Span::new(),
+                    condition: Condition {
+                        span: Span::new(),
+                        lhs: make_identifier!("abc"),
+                        op: ConditionOp::Equals,
+                        rhs: Value::NumericLiteral(3),
+                    },
+                }],
             }],
         };
         let mut symbol_table = HashMap::new();
@@ -1120,67 +1035,34 @@ mod test {
         assert_eq!(
             compile_statements(program.statements, &symbol_table),
             Ok(vec![
-                SymbolicInstructionLocated {
-                    location: Some(AstLocation::IfCondition(condition1)),
-                    instruction: SymbolicInstruction::JumpIfNotEqual {
-                        lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
-                        rhs: Symbol::NumberValue(1),
-                        label: 1
-                    }
+                SymbolicInstruction::JumpIfNotEqual {
+                    lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+                    rhs: Symbol::NumberValue(1),
+                    label: 1
                 },
-                SymbolicInstructionLocated {
-                    location: Some(AstLocation::ConditionStatement(statement1)),
-                    instruction: SymbolicInstruction::AbortIfNotEqual {
-                        lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
-                        rhs: Symbol::NumberValue(2)
-                    }
+                SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+                    rhs: Symbol::NumberValue(2)
                 },
-                SymbolicInstructionLocated {
-                    location: None,
-                    instruction: SymbolicInstruction::UnconditionalJump { label: 0 }
+                SymbolicInstruction::UnconditionalJump { label: 0 },
+                SymbolicInstruction::Label(1),
+                SymbolicInstruction::JumpIfNotEqual {
+                    lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+                    rhs: Symbol::NumberValue(2),
+                    label: 2
                 },
-                SymbolicInstructionLocated {
-                    location: None,
-                    instruction: SymbolicInstruction::Label(1)
+                SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+                    rhs: Symbol::NumberValue(3)
                 },
-                SymbolicInstructionLocated {
-                    location: Some(AstLocation::IfCondition(condition2)),
-                    instruction: SymbolicInstruction::JumpIfNotEqual {
-                        lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
-                        rhs: Symbol::NumberValue(2),
-                        label: 2
-                    }
+                SymbolicInstruction::UnconditionalJump { label: 0 },
+                SymbolicInstruction::Label(2),
+                SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+                    rhs: Symbol::NumberValue(3)
                 },
-                SymbolicInstructionLocated {
-                    location: Some(AstLocation::ConditionStatement(statement2)),
-                    instruction: SymbolicInstruction::AbortIfNotEqual {
-                        lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
-                        rhs: Symbol::NumberValue(3)
-                    }
-                },
-                SymbolicInstructionLocated {
-                    location: None,
-                    instruction: SymbolicInstruction::UnconditionalJump { label: 0 }
-                },
-                SymbolicInstructionLocated {
-                    location: None,
-                    instruction: SymbolicInstruction::Label(2)
-                },
-                SymbolicInstructionLocated {
-                    location: Some(AstLocation::ConditionStatement(statement3)),
-                    instruction: SymbolicInstruction::AbortIfNotEqual {
-                        lhs: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
-                        rhs: Symbol::NumberValue(3)
-                    }
-                },
-                SymbolicInstructionLocated {
-                    location: None,
-                    instruction: SymbolicInstruction::Label(0)
-                },
-                SymbolicInstructionLocated {
-                    location: None,
-                    instruction: SymbolicInstruction::UnconditionalBind
-                },
+                SymbolicInstruction::Label(0),
+                SymbolicInstruction::UnconditionalBind,
             ])
         );
     }
@@ -1235,29 +1117,6 @@ mod test {
         assert_eq!(
             compile_statements(program.statements, &symbol_table),
             Err(CompilerError::IfStatementMustBeTerminal)
-        );
-    }
-
-    #[test]
-    fn abort() {
-        let abort_statement = Statement::Abort { span: Span::new() };
-
-        let program =
-            bind_program::Ast { using: vec![], statements: vec![abort_statement.clone()] };
-        let symbol_table = HashMap::new();
-
-        assert_eq!(
-            compile_statements(program.statements, &symbol_table),
-            Ok(vec![
-                SymbolicInstructionLocated {
-                    location: Some(AstLocation::AbortStatement(abort_statement)),
-                    instruction: SymbolicInstruction::UnconditionalAbort
-                },
-                SymbolicInstructionLocated {
-                    location: None,
-                    instruction: SymbolicInstruction::UnconditionalBind
-                }
-            ])
         );
     }
 

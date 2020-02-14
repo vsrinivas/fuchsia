@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::bind_program::{Condition, Statement};
-use crate::compiler::{self, Symbol, SymbolTable, SymbolicInstruction, SymbolicInstructionLocated};
+use crate::compiler::{self, Symbol, SymbolTable, SymbolicInstruction};
 use crate::device_specification::{self, Property};
 use crate::errors::{self, UserError};
-use crate::parser_common::{self, CompoundIdentifier, Span, Value};
+use crate::parser_common::{self, CompoundIdentifier, Value};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
+use std::fs::File;
+use std::io::Read;
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -28,30 +29,24 @@ impl fmt::Display for DebuggerError {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum AstLocation<'a> {
-    ConditionStatement(Statement<'a>),
-    AcceptStatementValue { identifier: CompoundIdentifier, value: Value, span: Span<'a> },
-    AcceptStatementFailure { identifier: CompoundIdentifier, span: Span<'a> },
-    IfCondition(Condition<'a>),
-    AbortStatement(Statement<'a>),
-}
-
 pub fn debug(
     program: PathBuf,
     libraries: &[PathBuf],
     device_file: PathBuf,
 ) -> Result<(), DebuggerError> {
-    let device_str = compiler::read_file(&device_file).map_err(DebuggerError::FileError)?;
-    let program_str = compiler::read_file(&program).map_err(DebuggerError::FileError)?;
+    let mut file = File::open(&device_file).map_err(|_| {
+        DebuggerError::FileError(errors::FileError::FileOpenError(device_file.clone()))
+    })?;
+    let mut buf = String::new();
+    file.read_to_string(&mut buf).map_err(|_| {
+        DebuggerError::FileError(errors::FileError::FileReadError(device_file.clone()))
+    })?;
+    let ast = device_specification::Ast::from_str(&buf).map_err(DebuggerError::BindParserError)?;
 
-    let device_ast =
-        device_specification::Ast::from_str(&device_str).map_err(DebuggerError::BindParserError)?;
+    let (instructions, symbol_table) =
+        compiler::compile_to_symbolic(program, libraries).map_err(DebuggerError::CompilerError)?;
 
-    let (instructions, symbol_table) = compiler::compile_to_symbolic(&program_str, libraries)
-        .map_err(DebuggerError::CompilerError)?;
-
-    let symbolic_properties = properties_to_symbols(&device_ast.properties, &symbol_table)?;
+    let symbolic_properties = properties_to_symbols(&ast.properties, &symbol_table)?;
 
     let binds = evaluate_bind_program(&instructions, &symbolic_properties)?;
 
@@ -101,7 +96,7 @@ fn properties_to_symbols(
 }
 
 fn evaluate_bind_program(
-    instructions: &Vec<SymbolicInstructionLocated>,
+    instructions: &Vec<SymbolicInstruction>,
     properties: &HashMap<Symbol, Symbol>,
 ) -> Result<bool, DebuggerError> {
     let mut instructions = instructions.iter();
@@ -109,7 +104,7 @@ fn evaluate_bind_program(
     while let Some(mut instruction) = instructions.next() {
         let mut jump_label = None;
 
-        match &instruction.instruction {
+        match instruction {
             SymbolicInstruction::AbortIfEqual { lhs, rhs } => {
                 if properties.get(lhs) == Some(rhs) {
                     return Ok(false);
@@ -139,7 +134,7 @@ fn evaluate_bind_program(
         }
 
         if let Some(label) = jump_label {
-            while instruction.instruction != SymbolicInstruction::Label(*label) {
+            while instruction != &SymbolicInstruction::Label(*label) {
                 instruction = instructions.next().ok_or(DebuggerError::MissingLabelError)?;
             }
         }
