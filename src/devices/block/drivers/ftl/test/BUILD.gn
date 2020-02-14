@@ -13,7 +13,7 @@ source_set("shared") {
     "ndm-ram-driver.cc",
   ]
   public_deps = [
-    "//src/storage/block/drivers/ftl:common",
+    "//src/devices/block/drivers/ftl:common",
     "//zircon/public/lib/fake_ddk",
   ]
 }
@@ -41,7 +41,7 @@ test("ftl") {
     "nand_operation_test.cc",
     "oob_doubler_test.cc",
   ]
-  include_dirs = [ "//src/storage/block/drivers/ftl" ]
+  include_dirs = [ "//src/devices/block/drivers/ftl" ]
   deps = [
     ":shared",
     "//zircon/public/lib/unittest",
@@ -70,7 +70,7 @@ test("ftl-integration") {
     "integration_main.cc",
     "launch.cc",
   ]
-  include_dirs = [ "//src/storage/block/drivers/ftl" ]
+  include_dirs = [ "//src/devices/block/drivers/ftl" ]
   deps = [
     "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/devmgr-launcher",
@@ -87,7 +87,7 @@ test("ftl-integration") {
 
 fuzzer("ftl-read-write-fuzzer") {
   sources = [ "ftl-fuzzer.cc" ]
-  include_dirs = [ "//src/storage/block/drivers/ftl" ]
+  include_dirs = [ "//src/devices/block/drivers/ftl" ]
   deps = [ ":shared" ]
 }
 

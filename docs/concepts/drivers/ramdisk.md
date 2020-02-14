@@ -409,7 +409,7 @@ do the data transfer to or from media instantly; no need to defer.
 ## How is the real one more complicated?
 
 The RAM-disk presented above is somewhat simplified from the "real" RAM-disk
-device (present at `//src/storage/block/drivers/ramdisk/ramdisk.c`).
+device (present at `//src/devices/block/drivers/ramdisk/ramdisk.c`).
 
 The real one adds the following functionality:
 

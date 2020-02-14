@@ -9,7 +9,7 @@ bound, the zxcrypt device will publish another block device in the device tree t
 interact with normally.
 
 ## Usage
-zxcrypt contains both a [driver](/src/storage/block/drivers/zxcrypt) and [library](/zircon/system/ulib/zxcrypt)
+zxcrypt contains both a [driver](/src/devices/block/drivers/zxcrypt) and [library](/zircon/system/ulib/zxcrypt)
 Provided by libzxcrypt.so are four functions for managing zxcrypt devices.  Each takes one or more
 `zxcrypt_key_t` keys, which associates the key data, length, and slot in the case of multiple keys.
 * The __zxcrypt_format__ function takes an open block device, and writes the necessary encrypted
@@ -47,7 +47,7 @@ zx_status_t zxcrypt_shred(int fd, const zxcrypt_key_t* key);
 zxcrypt is written as a DDKTL device driver.  [ulib/ddktl](/zircon/system/ulib/ddktl) is a C++ framework
 for writing drivers in Fuchsia.  It allows authors to automatically supply the
 [ulib/ddk](/zircon/system/ulib/ddk) function pointers and callbacks by using templatized mix-ins.  In the
-case of zxcrypt, the [device](/src/storage/block/drivers/zxcrypt/device.h) is "Messageable",
+case of zxcrypt, the [device](/src/devices/block/drivers/zxcrypt/device.h) is "Messageable",
 "IotxnQueueable", "GetSizable", "UnbindableDeprecated", and implements the methods listed in DDKTL's
 [BlockProtocol](/zircon/system/banjo/ddk.protocol.block/block.banjo).
 
@@ -58,7 +58,7 @@ There are two small pieces of functionality which cannot be written in DDKTL and
   and are incompatible with C++ atomics.
 
 ### Worker Threads
-The device starts [worker threads](/src/storage/block/drivers/zxcrypt/worker.h) that run for the duration
+The device starts [worker threads](/src/devices/block/drivers/zxcrypt/worker.h) that run for the duration
 of the device and create a pipeline for all I/O requests.  Each has a type of I/O it operates on, a
 queue of incoming requests I/O that it will wait on, and a data cipher.  When a request is received,
 if the opcode matches the one it is looking for, it will use its cipher to transform the data in the

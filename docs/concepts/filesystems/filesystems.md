@@ -268,7 +268,7 @@ filesystem, found on EFI partitions and many USB sticks.
 
 ### FVM
 
-[Fuchsia Volume Manager](/src/storage/block/drivers/fvm/)
+[Fuchsia Volume Manager](/src/devices/block/drivers/fvm/)
 is a "logical volume manager" that adds flexibility on top of existing block
 devices. The current features include ability to add, remove, extend and
 shrink virtual partitions. To make these features possible, internally, fvm

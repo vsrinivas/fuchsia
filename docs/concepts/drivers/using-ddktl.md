@@ -130,8 +130,8 @@ any **open()**, **close()**, and **read()** client calls
 will now flow to your implementations of **DdkOpen()**, **DdkClose()**,
 and **DdkRead()**, respectively.
 
-As an example, in the directory [`//src/storage/block/drivers/zxcrypt`](/src/storage/block/drivers/zxcrypt)
-we have a typical device declaration ([`device.h`](/src/storage/block/drivers/zxcrypt/device.h)):
+As an example, in the directory [`//src/devices/block/drivers/zxcrypt`](/src/devices/block/drivers/zxcrypt)
+we have a typical device declaration ([`device.h`](/src/devices/block/drivers/zxcrypt/device.h)):
 
 ```c++
 [01] class Device;
@@ -164,7 +164,7 @@ Lines `[11` .. `15]` provide the prototypes for the three optional mixins and th
 mandatory **DdkRelease()** member function.
 
 Here's an example of the `zxcrypt` device's `DdkGetProtocol` implementation (from
-[`device.cc`](/src/storage/block/drivers/zxcrypt/device.cc)):
+[`device.cc`](/src/devices/block/drivers/zxcrypt/device.cc)):
 
 ```c++
 zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out) {
@@ -311,9 +311,9 @@ This usage is typical.
 [bti]: /docs/reference/kernel_objects/bus_transaction_initiator.md
 [crtp]: https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern
 [ddk-tutorial]: /docs/concepts/drivers/ddk-tutorial.md
-[dev/block/zxcrypt/device.cpp]: /src/storage/block/drivers/zxcrypt/device.cc
-[dev/block/zxcrypt/device.h]: /src/storage/block/drivers/zxcrypt/device.h
-[dev/block/zxcrypt]: /src/storage/block/drivers/zxcrypt
+[dev/block/zxcrypt/device.cpp]: /src/devices/block/drivers/zxcrypt/device.cc
+[dev/block/zxcrypt/device.h]: /src/devices/block/drivers/zxcrypt/device.h
+[dev/block/zxcrypt]: /src/devices/block/drivers/zxcrypt
 [include/ddktl/device.h]: /zircon/system/ulib/ddktl/include/ddktl/device.h
 [mixins]: https://en.wikipedia.org/wiki/Mixin
 [usb-xhci.cc]: /src/devices/usb/drivers/xhci/usb-xhci.cc
