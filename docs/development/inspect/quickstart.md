@@ -216,8 +216,7 @@ See below for the quick start guide in your language of choice.
 
   `hello_world_property` owns the Property. When it is destroyed (goes
   out of scope) the underlying Property is deleted and no longer present
-  in your component's Inspect output. This is true for Metrics and child
-  Nodes as well.
+  in your component's Inspect output. This is true for child Nodes as well.
 
   If you are creating a value that doesn't need to be modified, use a
   [`ValueList`](/zircon/system/ulib/inspect/include/lib/inspect/cpp/value_list.h)
@@ -227,7 +226,7 @@ See below for the quick start guide in your language of choice.
 
   Due to space limitations, the Inspect library may be unable to satisfy
   a `Create` request. This error is not surfaced to your code: you will
-  receive a Node/Metric/Property object for which the methods are no-ops.
+  receive a Node/Property object for which the methods are no-ops.
 
   * Pattern: Pass in child Nodes to child objects.
 
@@ -530,9 +529,10 @@ See below for the quick start guide in your language of choice.
 
   Type | Description | Notes
   -----|-------------|-------
-    IntMetric | A metric containing a signed 64-bit integer. | All Languages
-    UIntMetric | A metric containing an unsigned 64-bit integer. | Not supported in Dart
-    DoubleMetric | A metric containing a double floating-point number. | All Languages
+    IntProperty | A metric containing a signed 64-bit integer. | All Languages
+    UIntProperty | A metric containing an unsigned 64-bit integer. | Not supported in Dart
+    DoubleProperty | A metric containing a double floating-point number. | All Languages
+    BoolProperty | A metric containing a double floating-point number. | All Languages
     {Int,Double,UInt}Array | An array of metric types, includes typed wrappers for various histograms. | Same language support as base metric type
     StringProperty | A property with a UTF-8 string value. | All Languages
     ByteVectorProperty | A property with an arbitrary byte value. | All Languages

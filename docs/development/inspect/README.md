@@ -41,6 +41,7 @@ which may be any one of a number of types:
 - `UintProperty` - 64-bit unsigned integer.
 - `IntProperty` - 64-bit signed integer.
 - `DoubleProperty` - 64-bit floating point value.
+- `BoolProperty` - A boolean value.
 
 #### String Types
 
