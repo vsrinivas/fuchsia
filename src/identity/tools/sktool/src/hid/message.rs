@@ -34,7 +34,6 @@ pub struct Message {
     packet_length: u16,
 }
 
-#[allow(dead_code)]
 impl Message {
     /// Creates a new message containing the supplied payload.
     // Note: The supplied payload is padded to a complete final packet internally, hence the
@@ -63,11 +62,13 @@ impl Message {
     }
 
     /// Returns the channel of this message.
+    #[allow(dead_code)]
     pub fn channel(&self) -> u32 {
         self.channel
     }
 
     /// Returns the command of this message.
+    #[allow(dead_code)]
     pub fn command(&self) -> Command {
         self.command
     }
@@ -78,6 +79,7 @@ impl Message {
     }
 
     /// Returns the length of packets this message iterates over.
+    #[allow(dead_code)]
     pub fn packet_length(&self) -> u16 {
         self.packet_length
     }
@@ -199,7 +201,6 @@ pub struct MessageBuilder {
     state: Option<MessageBuilderState>,
 }
 
-#[allow(dead_code)]
 impl MessageBuilder {
     /// Creates a new empty `MessageBuilder`.
     pub fn new() -> MessageBuilder {

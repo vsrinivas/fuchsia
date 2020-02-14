@@ -406,6 +406,7 @@ pub mod fidl {
 #[cfg(test)]
 pub mod fake {
     use crate::hid::connection::Connection;
+    use crate::hid::message::Message;
     use crate::hid::packet::Packet;
     use anyhow::{format_err, Error};
     use async_trait::async_trait;
@@ -499,6 +500,15 @@ pub mod fake {
             &self.enqueue(Operation::WriteFail(packet));
         }
 
+        /// Enqueues an expectation that write will be called on this connection for all the
+        /// packets in the supplied message. The connection will return success for all these
+        /// writes. Panics if called on a connection that has been set to fail.
+        pub fn expect_message_write(&self, message: Message) {
+            for packet in message.into_iter() {
+                &self.enqueue(Operation::WriteSuccess(packet));
+            }
+        }
+
         /// Enqueues an expectation that read will be called on this connection. The connection
         /// will return success and the supplied packet when this read operation occurs.
         /// Panics if called on a connection that has been set to fail.
@@ -511,6 +521,15 @@ pub mod fake {
         /// Panics if called on a connection that has been set to fail.
         pub fn expect_read_error(&self) {
             &self.enqueue(Operation::ReadFail());
+        }
+
+        /// Enqueues an expectation that read will be called on this connection for all the
+        /// packets in the supplied message. The connection will return success for all these
+        /// reads. Panics if called on a connection that has been set to fail.
+        pub fn expect_message_read(&self, message: Message) {
+            for packet in message.into_iter() {
+                &self.enqueue(Operation::ReadSuccess(packet));
+            }
         }
 
         /// Verified that all expected operations have now been completed.

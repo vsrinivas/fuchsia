@@ -4,6 +4,7 @@
 
 use crate::hid::command::Command;
 use crate::hid::connection::{Connection, FidlConnection};
+use crate::hid::message::{BuilderStatus, Message, MessageBuilder};
 use crate::hid::packet::Packet;
 use crate::CtapDevice;
 use anyhow::{format_err, Context as _, Error};
@@ -15,9 +16,12 @@ use fidl::endpoints::create_proxy;
 use fidl_fuchsia_hardware_input::DeviceMarker;
 use fuchsia_async::{Time, TimeoutExt};
 use fuchsia_zircon as zx;
+use futures::lock::Mutex;
+use futures::TryFutureExt;
 use lazy_static::lazy_static;
 use log::{info, warn};
 use rand::{rngs::OsRng, Rng};
+use std::convert::TryFrom;
 use std::fs;
 use std::path::PathBuf;
 
@@ -68,7 +72,10 @@ pub struct Device<C: Connection, R: Rng> {
     /// A `Connection` used to communicate with the device.
     connection: C,
     /// A random number generator used for nonce generation.
-    rng: R,
+    /// The rng is mutex-wrapped to faciliate connection error handling without a mutable reference
+    /// to the device. A lock is held on this mutex during device operations that should not be
+    /// overlapped.
+    rng: Mutex<R>,
     /// The maximum length of outgoing packets.
     packet_length: u16,
     /// The CTAPHID channel to use for all packets.
@@ -110,7 +117,7 @@ impl<C: Connection, R: Rng> Device<C, R> {
             Ok(Some(Device {
                 path,
                 connection,
-                rng,
+                rng: Mutex::new(rng),
                 packet_length,
                 channel: properties.channel,
                 ctaphid_version: properties.ctaphid_version,
@@ -134,32 +141,15 @@ impl<C: Connection, R: Rng> Device<C, R> {
     /// Instructs the device to wink, i.e. perform some vendor-defined visual or audible
     /// identification.
     pub async fn wink(&self) -> Result<(), Error> {
-        let out =
-            Packet::padded_initialization(self.channel, Command::Wink, &[], self.packet_length)?;
-        self.connection
-            .write_packet(out)
-            .await
-            .map_err(|err| format_err!("Error writing wink packet: {:?}", err))?;
-
-        self.connection
-            .read_matching_packet(|packet| {
-                if packet.channel() != self.channel {
-                    // Its normal for reponses to other clients to be present on other channels.
-                    return Ok(false);
-                } else if packet.command()? != Command::Wink {
-                    return Err(format_err!("Received unexpected command in wink response."));
-                }
-                Ok(true)
-            })
-            .on_timeout(Time::after(*TRANSACTION_TIMEOUT), || {
-                Err(format_err!("Timed out waiting for wink response"))
-            })
-            .await?;
+        self.perform_transaction(Command::Wink, &[]).await?;
         Ok(())
     }
 
     /// Performs CTAPHID initialization on the supplied connection using the supplied channel,
     /// returning values extracted from the init response packet if successful.
+    ///
+    /// Callers must ensure that no other operations are conducted on the connection while this
+    /// function is in progress.
     async fn initialize_connection(
         connection: &C,
         rng: &mut R,
@@ -214,6 +204,136 @@ impl<C: Connection, R: Rng> Device<C, R> {
         payload.advance(3);
         let capabilities = Capabilities(payload.get_u8());
         Ok(ConnectionProperties { channel, ctaphid_version, capabilities })
+    }
+
+    /// Builds and sends a CTAPHID message over the connection.
+    ///
+    /// Callers must ensure that no other operations are conducted on the connection while this
+    /// function is in progress.
+    async fn send_message(&self, command: Command, payload: &[u8]) -> Result<(), Error> {
+        let request = Message::new(self.channel, command, payload, self.packet_length)?;
+        for request_packet in request {
+            self.connection
+                .write_packet(request_packet)
+                .await
+                .map_err(|err| format_err!("Error writing transaction packet: {:?}", err))?;
+        }
+        Ok(())
+    }
+
+    /// Receives a complete CTAPHID message over the connection. This method will not timeout and
+    /// will return any errors immediately without trying to correct the state of the connection.
+    ///
+    /// Callers must ensure that no other operations are conducted on the connection while this
+    /// function is in progress.
+    async fn receive_message(&self) -> Result<Message, Error> {
+        let mut response_builder = MessageBuilder::new();
+        loop {
+            let response_packet = self
+                .connection
+                .read_matching_packet(|packet| {
+                    if packet.channel() != self.channel {
+                        // It's normal to see responses to other clients on other channels.
+                        return Ok(false);
+                    } else if packet.is_command(Command::Keepalive) {
+                        // It's normal to receive a keepalive while the device is thinking.
+                        return Ok(false);
+                    }
+                    Ok(true)
+                })
+                .await?;
+            if response_builder.append(response_packet)? == BuilderStatus::Complete {
+                return Message::try_from(response_builder);
+            }
+        }
+    }
+
+    /// Attempts to cancel a pending CTAPHID transaction by sending a cancellation packet and
+    /// swallowing the resulting error packet.
+    ///
+    /// Callers must ensure that no other operations are conducted on the connection while this
+    /// function is in progress.
+    async fn cancel_transaction(&self) -> Result<(), Error> {
+        let cancel_packet =
+            Packet::padded_initialization(self.channel, Command::Cancel, &[], self.packet_length)?;
+        self.connection
+            .write_packet(cancel_packet)
+            .await
+            .map_err(|err| format_err!("Error writing cancellation packet: {:?}", err))?;
+        // If there was a transaction in progress when we sent the cancellation packet it will
+        // fail with an error packet. We wait for and consume any remaining valid packets and the
+        // error packet so the next transaction doesn't have to deal with them.
+        //
+        // If the transaction completed at exactly the same time as we decided to cancel it, no
+        // transaction is in progress and no error packet will be received. In this rare case we
+        // consume any remaining valid packets and continue after TRANSACTION_TIMEOUT.
+        self.connection
+            .read_matching_packet(|packet| {
+                Ok(packet.channel() == self.channel && packet.is_command(Command::Error))
+            })
+            .map_ok(|_| ())
+            .on_timeout(Time::after(*TRANSACTION_TIMEOUT), || Ok(()))
+            .await?;
+        Ok(())
+    }
+
+    /// Performs a CTAPHID transaction, sending the supplied request payload and returning the
+    /// response payload from the device on success.
+    ///
+    /// Reading the response will timeout after waiting for a maximum of TRANSACTION_TIMEOUT, the
+    /// method will attempt to correct connection state if errors are encountered, which may take
+    /// up to one additional TRANSACTION_TIMEOUT.
+    async fn perform_transaction(&self, command: Command, payload: &[u8]) -> Result<Bytes, Error> {
+        // We already need our rng wrapped in a Mutex so it can generate the nonce of a
+        // reinitialization packet if an error occurs. To prevent overlapping transactions on the
+        // same connection we hold the lock on this rng mutex throughout the transaction.
+        let mut rng_lock = self.rng.lock().await;
+        self.send_message(command, payload).await?;
+        let receive_result = self
+            .receive_message()
+            .map_ok(|message| Some(message))
+            .on_timeout(Time::after(*TRANSACTION_TIMEOUT), || Ok(None))
+            .await;
+        match receive_result {
+            Err(err) => {
+                // If a transaction fails, reinitialize the state of the connection.
+                warn!("Reinitializing connection following a transaction failure");
+                if let Err(new_err) =
+                    Self::initialize_connection(&self.connection, &mut rng_lock, self.channel).await
+                {
+                    warn!(
+                        "Error reinitializing connection following a transaction failure {:?}",
+                        new_err
+                    );
+                }
+                warn!("Completed reinitialization following a transaction failure");
+                // But still return the original error.
+                Err(err)
+            }
+            Ok(None) => {
+                // If a transaction timed out, cancel it on the connection.
+                warn!("Cancelling pending transaction following a transaction timeout");
+                self.cancel_transaction().await?;
+                Err(format_err!("Timed out waiting for response to {:?} transaction", command))
+            }
+            Ok(Some(message)) => {
+                if message.command() == command {
+                    Ok(message.payload())
+                } else if message.command() == Command::Error {
+                    Err(format_err!(
+                        "Received CTAPHID error {:?} in response to {:?} transaction",
+                        message.payload().into_buf().bytes(),
+                        command
+                    ))
+                } else {
+                    Err(format_err!(
+                        "Received unexpected command {:?} in response to {:?} transaction",
+                        message.command(),
+                        command
+                    ))
+                }
+            }
+        }
     }
 }
 
@@ -284,37 +404,55 @@ mod tests {
     const BAD_REPORT_DESCRIPTOR: [u8; 3] = [0xba, 0xdb, 0xad];
     const TEST_CHANNEL: u32 = 0x88776655;
     const BAD_CHANNEL: u32 = 0xffeeffee;
-    /// The nonce that a StdRng seeded with zero should generate.
-    const EXPECTED_NONCE: [u8; 8] = [0xe2, 0xcf, 0x59, 0x54, 0x7a, 0x32, 0xae, 0xef];
+    /// The first two nonces that a StdRng seeded with zero should generate.
+    const FIRST_NONCE: [u8; 8] = [0xe2, 0xcf, 0x59, 0x54, 0x7a, 0x32, 0xae, 0xef];
+    const SECOND_NONCE: [u8; 8] = [0xfa, 0x5c, 0x4d, 0xed, 0x87, 0x82, 0xb9, 0xad];
     const DIFFERENT_NONCE: [u8; 8] = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+
+    /// A small payload we use in test errors.
+    const ERROR_PAYLOAD: [u8; 1] = [0xcc];
 
     lazy_static! {
         static ref FIXED_SEED_RNG: StdRng = StdRng::seed_from_u64(0);
+        static ref TRANSACTION_REQUEST: Message =
+            Message::new(TEST_CHANNEL, Command::Msg, &[0x11, 100], REPORT_LENGTH).unwrap();
+        static ref TRANSACTION_RESPONSE: Message =
+            Message::new(TEST_CHANNEL, Command::Msg, &[0x22, 100], REPORT_LENGTH).unwrap();
     }
 
-    /// Builds an expected request packet for the initialization transaction.
-    fn build_init_request(nonce: &[u8]) -> Packet {
-        Packet::padded_initialization(INIT_CHANNEL, Command::Init, nonce, REPORT_LENGTH).unwrap()
+    /// Builds an expected request packet for an initialization transaction sent on channel.
+    fn build_init_request(nonce: &[u8], channel: u32) -> Packet {
+        Packet::padded_initialization(channel, Command::Init, nonce, REPORT_LENGTH).unwrap()
     }
 
-    /// Builds a response packet for the initialization transaction.
-    fn build_init_response(nonce: &[u8], channel: u32, capabilities: u8) -> Packet {
+    /// Builds a response packet for an initialization transaction.
+    fn build_init_response(
+        nonce: &[u8],
+        send_channel: u32,
+        response_channel: u32,
+        capabilities: u8,
+    ) -> Packet {
         let mut payload = Vec::from(nonce);
-        payload.put_u32_be(channel);
+        payload.put_u32_be(response_channel);
         payload.put_u8(2); /* CTAPHID protocol */
         payload.put_u8(0xe1); /* Unused major version */
         payload.put_u8(0xe2); /* Unused minor version */
         payload.put_u8(0xe3); /* Unused build version */
         payload.put_u8(capabilities);
-        Packet::padded_initialization(INIT_CHANNEL, Command::Init, &payload, REPORT_LENGTH).unwrap()
+        Packet::padded_initialization(send_channel, Command::Init, &payload, REPORT_LENGTH).unwrap()
+    }
+
+    /// Builds an simple padded initialization packet sent on channel.
+    fn build_packet(channel: u32, command: Command, payload: &[u8]) -> Packet {
+        Packet::padded_initialization(channel, command, payload, REPORT_LENGTH).unwrap()
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn init_valid_device() -> Result<(), Error> {
+    async fn new_from_connection_valid_device() -> Result<(), Error> {
         // Configure a fake connection to expect an init request and return a response.
         let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
-        con.expect_write(build_init_request(&EXPECTED_NONCE));
-        con.expect_read(build_init_response(&EXPECTED_NONCE, TEST_CHANNEL, 0x04));
+        con.expect_write(build_init_request(&FIRST_NONCE, INIT_CHANNEL));
+        con.expect_read(build_init_response(&FIRST_NONCE, INIT_CHANNEL, TEST_CHANNEL, 0x04));
 
         // Create a device using this connection and a deterministic Rng.
         let dev = Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
@@ -330,21 +468,19 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn init_while_other_traffic_present() -> Result<(), Error> {
+    async fn new_from_connection_while_other_traffic_present() -> Result<(), Error> {
         // Configure a fake connection to expect an init request and return a response.
         let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
-        con.expect_write(build_init_request(&EXPECTED_NONCE));
+        con.expect_write(build_init_request(&FIRST_NONCE, INIT_CHANNEL));
         // Return a valid response to a different command on a different channel. The code under
         // test should ignore this and attempt another read.
-        con.expect_read(
-            Packet::padded_initialization(BAD_CHANNEL, Command::Wink, &[], REPORT_LENGTH).unwrap(),
-        );
+        con.expect_read(build_packet(BAD_CHANNEL, Command::Wink, &[]));
         // Return a valid init packet with a different nonce, possibly in response to a different
         // client that is also going through init. The code under test should ignore this and
         // attempt another read.
-        con.expect_read(build_init_response(&DIFFERENT_NONCE, 0x99999999, 0x04));
+        con.expect_read(build_init_response(&DIFFERENT_NONCE, INIT_CHANNEL, 0x99999999, 0x04));
         // Return the valid init packet in response to our request.
-        con.expect_read(build_init_response(&EXPECTED_NONCE, TEST_CHANNEL, 0x04));
+        con.expect_read(build_init_response(&FIRST_NONCE, INIT_CHANNEL, TEST_CHANNEL, 0x04));
 
         // Attempt to create a device using this connection and a deterministic Rng.
         let dev = Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
@@ -360,7 +496,7 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn init_non_fido_device() -> Result<(), Error> {
+    async fn new_from_connection_non_fido_device() -> Result<(), Error> {
         let con = FakeConnection::new(&BAD_REPORT_DESCRIPTOR);
         assert!(Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
             .await?
@@ -369,7 +505,7 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
-    async fn init_fidl_error() -> Result<(), Error> {
+    async fn new_from_connection_fidl_error() -> Result<(), Error> {
         let mut con = FakeConnection::new(&BAD_REPORT_DESCRIPTOR);
         con.error();
         Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
@@ -379,28 +515,129 @@ mod tests {
     }
 
     #[fasync::run_until_stalled(test)]
+    async fn cancel_transaction_failure() -> Result<(), Error> {
+        // Configure a fake connection to expect a valid initialization then a cancel request,
+        // to which we return a failure.
+        let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
+        con.expect_write(build_init_request(&FIRST_NONCE, INIT_CHANNEL));
+        con.expect_read(build_init_response(&FIRST_NONCE, INIT_CHANNEL, TEST_CHANNEL, 0x01));
+        con.expect_write_error(build_packet(TEST_CHANNEL, Command::Cancel, &[]));
+
+        // Attempt to create a device using this connection then perform a cancel.
+        let dev = Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
+            .await?
+            .expect("Failed to create device");
+        assert!(dev.cancel_transaction().await.is_err());
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn cancel_transaction_success() -> Result<(), Error> {
+        // Configure a fake connection to expect a valid initialization then a cancel request.
+        let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
+        con.expect_write(build_init_request(&FIRST_NONCE, INIT_CHANNEL));
+        con.expect_read(build_init_response(&FIRST_NONCE, INIT_CHANNEL, TEST_CHANNEL, 0x01));
+        con.expect_write(build_packet(TEST_CHANNEL, Command::Cancel, &[]));
+        // Return a packet on a different channel, and then the error cancel is waiting for.
+        con.expect_read(build_packet(BAD_CHANNEL, Command::Wink, &[]));
+        con.expect_read(build_packet(TEST_CHANNEL, Command::Error, &[0xbb]));
+
+        // Attempt to create a device using this connection then perform a cancel.
+        let dev = Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
+            .await?
+            .expect("Failed to create device");
+        assert!(dev.cancel_transaction().await.is_ok());
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn perform_transaction_success() -> Result<(), Error> {
+        // Configure a fake connection and expect standard initialization.
+        let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
+        con.expect_write(build_init_request(&FIRST_NONCE, INIT_CHANNEL));
+        con.expect_read(build_init_response(&FIRST_NONCE, INIT_CHANNEL, TEST_CHANNEL, 0x01));
+
+        // Expect writes for all request packets then reads for all response packets, with a
+        // message on a different channel and a keepalive in between.
+        con.expect_message_write(TRANSACTION_REQUEST.clone());
+        con.expect_read(build_packet(BAD_CHANNEL, Command::Wink, &[]));
+        con.expect_read(build_packet(TEST_CHANNEL, Command::Keepalive, &[]));
+        con.expect_message_read(TRANSACTION_RESPONSE.clone());
+
+        // Attempt to create a device and request a transaction.
+        let dev = Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
+            .await?
+            .expect("Failed to create device");
+        assert_eq!(
+            dev.perform_transaction(Command::Msg, &TRANSACTION_REQUEST.payload()).await?,
+            TRANSACTION_RESPONSE.payload()
+        );
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn perform_transaction_error_response() -> Result<(), Error> {
+        // Configure a fake connection and expect standard initialization.
+        let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
+        con.expect_write(build_init_request(&FIRST_NONCE, INIT_CHANNEL));
+        con.expect_read(build_init_response(&FIRST_NONCE, INIT_CHANNEL, TEST_CHANNEL, 0x01));
+
+        // Expect writes for all request packets then return an error response.
+        con.expect_message_write(TRANSACTION_REQUEST.clone());
+        con.expect_read(build_packet(TEST_CHANNEL, Command::Error, &ERROR_PAYLOAD));
+
+        // Attempt to create a device and request a transaction. This should fail with a debug
+        // string containing the payload of the error.
+        let dev = Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
+            .await?
+            .expect("Failed to create device");
+        let transaction_error = dev
+            .perform_transaction(Command::Msg, &TRANSACTION_REQUEST.payload())
+            .await
+            .expect_err("Transaction with an error response should fail");
+        assert!(format!("{:?}", transaction_error).contains(&format!("{:?}", ERROR_PAYLOAD)));
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn perform_transaction_requiring_reinitialization() -> Result<(), Error> {
+        // Configure a fake connection and expect standard initialization.
+        let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
+        con.expect_write(build_init_request(&FIRST_NONCE, INIT_CHANNEL));
+        con.expect_read(build_init_response(&FIRST_NONCE, INIT_CHANNEL, TEST_CHANNEL, 0x01));
+
+        // Expect writes for all request packets then fail on the read.
+        con.expect_message_write(TRANSACTION_REQUEST.clone());
+        con.expect_read_error();
+        // Expect the device to reinitialize the connection.
+        con.expect_write(build_init_request(&SECOND_NONCE, TEST_CHANNEL));
+        con.expect_read(build_init_response(&SECOND_NONCE, TEST_CHANNEL, TEST_CHANNEL, 0x01));
+
+        // Attempt to create a device and request a transaction. This should fail and invoke a
+        // reinitialization along the way.
+        let dev = Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
+            .await?
+            .expect("Failed to create device");
+        assert!(dev
+            .perform_transaction(Command::Msg, &TRANSACTION_REQUEST.payload())
+            .await
+            .is_err());
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
     async fn wink() -> Result<(), Error> {
         // Configure a fake connection and expect standard initialization.
         let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
-        con.expect_write(build_init_request(&EXPECTED_NONCE));
-        con.expect_read(build_init_response(&EXPECTED_NONCE, TEST_CHANNEL, 0x01));
+        con.expect_write(build_init_request(&FIRST_NONCE, INIT_CHANNEL));
+        con.expect_read(build_init_response(&FIRST_NONCE, INIT_CHANNEL, TEST_CHANNEL, 0x01));
         // Expect a wink request but return a packet on a different channel before success.
-        con.expect_write(
-            Packet::padded_initialization(TEST_CHANNEL, Command::Wink, &[], REPORT_LENGTH).unwrap(),
-        );
-        con.expect_read(
-            Packet::padded_initialization(BAD_CHANNEL, Command::Wink, &[], REPORT_LENGTH).unwrap(),
-        );
-        con.expect_read(
-            Packet::padded_initialization(TEST_CHANNEL, Command::Wink, &[], REPORT_LENGTH).unwrap(),
-        );
+        con.expect_write(build_packet(TEST_CHANNEL, Command::Wink, &[]));
+        con.expect_read(build_packet(BAD_CHANNEL, Command::Wink, &[]));
+        con.expect_read(build_packet(TEST_CHANNEL, Command::Wink, &[]));
         // Now expect a second wink request and return an invalid message on the correct channel.
-        con.expect_write(
-            Packet::padded_initialization(TEST_CHANNEL, Command::Wink, &[], REPORT_LENGTH).unwrap(),
-        );
-        con.expect_read(
-            Packet::padded_initialization(TEST_CHANNEL, Command::Init, &[], REPORT_LENGTH).unwrap(),
-        );
+        con.expect_write(build_packet(TEST_CHANNEL, Command::Wink, &[]));
+        con.expect_read(build_packet(TEST_CHANNEL, Command::Msg, &[]));
 
         // Attempt to create a device and resquest two winks, one successful one not.
         let dev = Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
