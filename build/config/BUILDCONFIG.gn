@@ -1225,6 +1225,16 @@ template("loadable_module") {
     output_file = "$output_dir/$output_file_name"
     link_output_file = "$output_dir/lib.unstripped/$output_file_name"
 
+    add_migration_metadata = true
+    if (defined(invoker.metadata)) {
+      meta = invoker.metadata
+      add_migration_metadata = !defined(meta.migrated_manifest_lines)
+      not_needed([ "meta" ])
+    }
+    if (add_migration_metadata) {
+      rebased_output_file = rebase_path(output_file, root_build_dir)
+    }
+
     metadata = {
       binaries = []
 
@@ -1249,6 +1259,11 @@ template("loadable_module") {
           }
         },
       ]
+
+      if (add_migration_metadata) {
+        migrated_manifest_lines =
+            [ "lib/$output_file_name=$rebased_output_file" ]
+      }
     }
   }
 }
