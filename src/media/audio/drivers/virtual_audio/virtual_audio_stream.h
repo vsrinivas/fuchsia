@@ -62,18 +62,18 @@ class VirtualAudioStream : public audio::SimpleAudioStream {
   // RingBufferShutdown() is unneeded: no hardware shutdown tasks needed...
 
   void ProcessRingNotification();
-  void ProcessAltRingNotification() __TA_REQUIRES(domain_token());
+  void ProcessAltRingNotification();
 
   enum class PlugType { Plug, Unplug };
 
-  void HandlePlugChanges() __TA_REQUIRES(domain_token()) __TA_EXCLUDES(wakeup_queue_lock_);
+  void HandlePlugChanges() __TA_EXCLUDES(wakeup_queue_lock_);
   void HandlePlugChange(PlugType plug_change) __TA_REQUIRES(domain_token());
 
-  void HandleGainRequests() __TA_REQUIRES(domain_token()) __TA_EXCLUDES(wakeup_queue_lock_);
-  void HandleFormatRequests() __TA_REQUIRES(domain_token()) __TA_EXCLUDES(wakeup_queue_lock_);
-  void HandleBufferRequests() __TA_REQUIRES(domain_token()) __TA_EXCLUDES(wakeup_queue_lock_);
-  void HandlePositionRequests() __TA_REQUIRES(domain_token()) __TA_EXCLUDES(wakeup_queue_lock_);
-  void HandleSetNotifications() __TA_REQUIRES(domain_token()) __TA_EXCLUDES(wakeup_queue_lock_);
+  void HandleGainRequests() __TA_EXCLUDES(wakeup_queue_lock_);
+  void HandleFormatRequests() __TA_EXCLUDES(wakeup_queue_lock_);
+  void HandleBufferRequests() __TA_EXCLUDES(wakeup_queue_lock_);
+  void HandlePositionRequests() __TA_EXCLUDES(wakeup_queue_lock_);
+  void HandleSetNotifications() __TA_EXCLUDES(wakeup_queue_lock_);
 
   // Accessed in GetBuffer, defended by token.
   fzl::VmoMapper ring_buffer_mapper_ __TA_GUARDED(domain_token());

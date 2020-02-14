@@ -135,6 +135,8 @@ void VirtualAudioStream::EnqueueNotificationOverride(uint32_t notifications_per_
 }
 
 void VirtualAudioStream::HandlePlugChanges() {
+  audio::ScopedToken t(
+      domain_token());  // This method handles posts to plug_change_wakeup_ sent to dispatcher().
   while (true) {
     PlugType plug_change;
 
@@ -162,6 +164,8 @@ void VirtualAudioStream::HandlePlugChange(PlugType plug_change) {
 }
 
 void VirtualAudioStream::HandleGainRequests() {
+  audio::ScopedToken t(
+      domain_token());  // This method handles posts to gain_request_wakeup_ sent to dispatcher().
   while (true) {
     bool current_mute, current_agc;
     float current_gain_db;
@@ -186,6 +190,8 @@ void VirtualAudioStream::HandleGainRequests() {
 }
 
 void VirtualAudioStream::HandleFormatRequests() {
+  audio::ScopedToken t(
+      domain_token());  // This method handles posts to format_request_wakeup_ sent to dispatcher().
   while (true) {
     uint32_t frames_per_second, sample_format, num_channels;
     zx_duration_t external_delay;
@@ -216,6 +222,8 @@ void VirtualAudioStream::HandleFormatRequests() {
 }
 
 void VirtualAudioStream::HandleBufferRequests() {
+  audio::ScopedToken t(
+      domain_token());  // This method handles posts to buffer_request_wakeup_ sent to dispatcher().
   while (true) {
     zx_status_t status;
     zx::vmo duplicate_ring_buffer_vmo;
@@ -254,6 +262,8 @@ void VirtualAudioStream::HandleBufferRequests() {
 }
 
 void VirtualAudioStream::HandlePositionRequests() {
+  audio::ScopedToken t(domain_token());  // This method handles posts to position_request_wakeup_
+                                         // sent to dispatcher().
   while (true) {
     zx::time start_time;
     uint32_t num_rb_frames, frame_size, frame_rate;
@@ -289,6 +299,8 @@ void VirtualAudioStream::HandlePositionRequests() {
 }
 
 void VirtualAudioStream::HandleSetNotifications() {
+  audio::ScopedToken t(domain_token());  // This method handles posts to set_notifications_wakeup_
+                                         // sent to dispatcher().
   while (true) {
     if (fbl::AutoLock lock(&wakeup_queue_lock_); !notifs_queue_.empty()) {
       alt_notifications_per_ring_ = notifs_queue_.front();
@@ -460,7 +472,8 @@ zx_status_t VirtualAudioStream::Start(uint64_t* out_start_time) {
 // override the notification frequency, and to VAD clients that set it to the same value that
 // AudioCore has selected.
 void VirtualAudioStream::ProcessRingNotification() {
-  audio::ScopedToken t(domain_token());
+  audio::ScopedToken t(
+      domain_token());  // This method handles posts to notify_timer_ sent to dispatcher().
   ZX_DEBUG_ASSERT(notification_period_.get() > 0);
 
   auto monotonic_time = target_notification_time_.get();
@@ -489,6 +502,8 @@ void VirtualAudioStream::ProcessRingNotification() {
 // Handler for sending alternate position notifications: those going to VAD clients that specified a
 // different notification frequency. These are not sent to AudioCore.
 void VirtualAudioStream::ProcessAltRingNotification() {
+  audio::ScopedToken t(
+      domain_token());  // This method handles posts to alt_notify_timer_ sent to dispatcher().
   ZX_DEBUG_ASSERT(using_alt_notifications_);
   ZX_DEBUG_ASSERT(alt_notification_period_.get() > 0);
 
