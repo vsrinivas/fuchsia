@@ -173,25 +173,26 @@ void Session::ProcessQueuedPresents() {
   fence_listener_ = std::make_unique<escher::FenceSetListener>(
       std::move(presents_to_schedule_.front().acquire_fences));
   presents_to_schedule_.front().acquire_fences.clear();
-  fence_listener_->WaitReadyAsync([weak = weak_factory_.GetWeakPtr()] {
-    FXL_CHECK(weak);
+  fence_listener_->WaitReadyAsync(
+      [weak = weak_factory_.GetWeakPtr(), trace_id = ++queue_processing_id_end_] {
+        FXL_CHECK(weak);
 
-    TRACE_DURATION("gfx", "scenic_impl::Session::ProcessQueuedPresents");
-    TRACE_FLOW_END("gfx", "wait for acquire fences", ++(weak->queue_processing_id_end_));
+        TRACE_DURATION("gfx", "scenic_impl::Session::ProcessQueuedPresents");
+        TRACE_FLOW_END("gfx", "wait for acquire fences", trace_id);
 
-    weak->ScheduleNextPresent();
+        weak->ScheduleNextPresent();
 
-    // Lambda won't fire if the object is destroyed, but the session can be killed inside of
-    // SchedulePresent, so we need to guard against that.
-    if (weak) {
-      // Keep going until all queued presents have been scheduled.
-      weak->fence_listener_.reset();
+        // Lambda won't fire if the object is destroyed, but the session can be killed inside of
+        // SchedulePresent, so we need to guard against that.
+        if (weak) {
+          // Keep going until all queued presents have been scheduled.
+          weak->fence_listener_.reset();
 
-      // After we delete the fence listener, this closure may be deleted. In that case, we should no
-      // longer access closed variables, including the this pointer.
-      weak->ProcessQueuedPresents();
-    }
-  });
+          // After we delete the fence listener, this closure may be deleted. In that case, we
+          // should no longer access closed variables, including the this pointer.
+          weak->ProcessQueuedPresents();
+        }
+      });
 }
 
 void Session::SchedulePresentRequest(
@@ -230,7 +231,8 @@ void Session::SchedulePresentRequest(
   presents_to_schedule_.emplace_back(std::move(request));
   commands_pending_present_.clear();
 
-  TRACE_FLOW_BEGIN("gfx", "wait for acquire fences", ++queue_processing_id_begin_);
+  const auto trace_id = ++queue_processing_id_begin_;
+  TRACE_FLOW_BEGIN("gfx", "wait for acquire fences", trace_id);
   ProcessQueuedPresents();
 }
 
