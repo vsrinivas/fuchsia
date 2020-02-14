@@ -112,6 +112,7 @@ impl<'a> Serialize for SerializableHierarchyFields<'a> {
                 Property::Int(name, value) => s.serialize_entry(&name, &value)?,
                 Property::Uint(name, value) => s.serialize_entry(&name, &value)?,
                 Property::Double(name, value) => s.serialize_entry(&name, &value)?,
+                Property::Bool(name, value) => s.serialize_entry(&name, &value)?,
                 Property::Bytes(name, array) => {
                     s.serialize_entry(&name, &format!("b64:{}", base64::encode(&array)))?
                 }

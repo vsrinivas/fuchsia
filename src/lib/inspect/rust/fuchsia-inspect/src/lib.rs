@@ -651,6 +651,28 @@ impl Node {
         let property = self.create_bytes(name, value);
         self.record(property);
     }
+
+    /// Add a bool property to this node.
+    #[must_use]
+    pub fn create_bool(&self, name: impl AsRef<str>, value: bool) -> BoolProperty {
+        self.inner
+            .as_ref()
+            .and_then(|inner| {
+                inner
+                    .state
+                    .lock()
+                    .create_bool(name.as_ref(), value, inner.block_index)
+                    .map(|block| BoolProperty::new(inner.state.clone(), block.index()))
+                    .ok()
+            })
+            .unwrap_or(BoolProperty::new_no_op())
+    }
+
+    /// Creates and saves a bool property for the lifetime of the node.
+    pub fn record_bool(&self, name: impl AsRef<str>, value: bool) {
+        let property = self.create_bool(name, value);
+        self.record(property);
+    }
 }
 
 impl Drop for Node {
@@ -825,6 +847,25 @@ macro_rules! property {
 
 property!(String, str, value.as_bytes());
 property!(Bytes, [u8], value);
+
+inspect_type_impl!(
+    /// Inspect API Bool Property data type.
+    struct BoolProperty
+);
+
+impl<'t> Property<'t> for BoolProperty {
+    type Type = bool;
+
+    fn set(&self, value: bool) {
+        if let Some(ref inner) = self.inner {
+            inner.state.lock().set_bool(inner.block_index, value).unwrap_or_else(|e| {
+                fx_log_err!("Failed to set property. Error: {:?}", e);
+            });
+        }
+    }
+}
+
+drop_value_impl!(BoolProperty);
 
 #[allow(missing_docs)]
 pub trait ArrayProperty {
@@ -1221,6 +1262,30 @@ mod tests {
 
             property.add(8);
             assert_eq!(property_block.uint_value().unwrap(), 10);
+        }
+        assert_eq!(node_block.child_count().unwrap(), 0);
+    }
+
+    #[test]
+    fn bool_property() {
+        // Create and use a default value.
+        let default = BoolProperty::default();
+        default.set(true);
+
+        let mapping = Arc::new(Mapping::allocate(4096).unwrap().0);
+        let state = get_state(mapping.clone());
+        let root = Node::new_root(state);
+        let node = root.create_child("node");
+        let node_block = node.get_block().unwrap();
+        {
+            let property = node.create_bool("property", true);
+            let property_block = property.get_block().unwrap();
+            assert_eq!(property_block.block_type(), BlockType::BoolValue);
+            assert_eq!(property_block.bool_value().unwrap(), true);
+            assert_eq!(node_block.child_count().unwrap(), 1);
+
+            property.set(false);
+            assert_eq!(property_block.bool_value().unwrap(), false);
         }
         assert_eq!(node_block.child_count().unwrap(), 0);
     }

@@ -163,9 +163,10 @@ impl Metrics {
             | BlockType::PropertyValue
             | BlockType::Tombstone
             | BlockType::LinkValue => 0,
-            BlockType::IntValue | BlockType::UintValue | BlockType::DoubleValue => {
-                NUMERIC_TYPE_SIZE
-            }
+            BlockType::IntValue
+            | BlockType::UintValue
+            | BlockType::DoubleValue
+            | BlockType::BoolValue => NUMERIC_TYPE_SIZE,
 
             BlockType::ArrayValue => NUMERIC_TYPE_SIZE * block.array_slots()?,
             BlockType::Name => block.name_length()?,
@@ -183,6 +184,7 @@ impl Metrics {
             BlockType::IntValue
             | BlockType::DoubleValue
             | BlockType::UintValue
+            | BlockType::BoolValue
             | BlockType::Name
             | BlockType::Extent => 8,
         };

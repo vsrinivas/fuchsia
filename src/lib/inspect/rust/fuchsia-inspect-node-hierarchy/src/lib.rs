@@ -329,6 +329,9 @@ pub enum Property {
     /// The value is a double.
     Double(String, f64),
 
+    /// The value is a boolean.
+    Bool(String, bool),
+
     /// The value is a double array.
     DoubleArray(String, ArrayValue<f64>),
 
@@ -435,6 +438,7 @@ impl Property {
             | Property::Uint(name, _)
             | Property::UintArray(name, _)
             | Property::Double(name, _)
+            | Property::Bool(name, _)
             | Property::DoubleArray(name, _) => &name,
         }
     }

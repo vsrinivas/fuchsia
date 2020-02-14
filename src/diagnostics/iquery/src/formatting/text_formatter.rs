@@ -102,6 +102,7 @@ impl TextFormatter {
                 let byte_str = array.to_hex(HEX_DISPLAY_CHUNK_SIZE);
                 format!("{}{} = Binary:\n{}", value_indent, name, byte_str.trim())
             }
+            Property::Bool(name, value) => format!("{}{} = {}", value_indent, name, value),
             Property::IntArray(name, array) => self.output_array(&value_indent, &name, &array),
             Property::UintArray(name, array) => self.output_array(&value_indent, &name, &array),
             Property::DoubleArray(name, array) => self.output_array(&value_indent, &name, &array),

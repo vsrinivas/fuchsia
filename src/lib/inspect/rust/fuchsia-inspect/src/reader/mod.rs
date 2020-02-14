@@ -39,7 +39,7 @@ pub async fn read_from_tree(tree: &TreeProxy) -> Result<NodeHierarchy, Error> {
     tree_reader::read(tree).await
 }
 
-/// A partial node hierarchy representes a node in an inspect tree without
+/// A partial node hierarchy represents a node in an inspect tree without
 /// the linked (lazy) nodes expanded.
 /// Usually a client would prefer to use a `NodeHierarchy` to get the full
 /// inspect tree.
@@ -145,6 +145,9 @@ fn scan_blocks<'a>(snapshot: &'a Snapshot) -> Result<ScanResult<'a>, Error> {
             }
             BlockType::IntValue | BlockType::UintValue | BlockType::DoubleValue => {
                 result.parse_numeric_property(&block)?;
+            }
+            BlockType::BoolValue => {
+                result.parse_bool_property(&block)?;
             }
             BlockType::ArrayValue => {
                 result.parse_array_property(&block)?;
@@ -305,6 +308,19 @@ impl<'a> ScanResult<'a> {
         Ok(())
     }
 
+    fn parse_bool_property(&mut self, block: &ScannedBlock) -> Result<(), Error> {
+        let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
+        let parent = get_or_create_scanned_node!(self.parsed_nodes, block.parent_index()?);
+        match block.block_type() {
+            BlockType::BoolValue => {
+                let value = block.bool_value()?;
+                parent.partial_hierarchy.properties.push(Property::Bool(name, value));
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
     fn parse_array_property(&mut self, block: &ScannedBlock) -> Result<(), Error> {
         let name = self.get_name(block.name_index()?).ok_or(format_err!("failed to parse name"))?;
         let parent = get_or_create_scanned_node!(self.parsed_nodes, block.parent_index()?);
@@ -419,6 +435,7 @@ mod tests {
         let child1 = root.create_child("child-1");
         let _child1_uint = child1.create_uint("property-uint", 10);
         let _child1_double = child1.create_double("property-double", -3.4);
+        let _child1_bool = child1.create_bool("property-bool", true);
 
         let chars = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
         let string_data = chars.iter().cycle().take(6000).collect::<String>();
@@ -434,6 +451,7 @@ mod tests {
 
         let child2 = root.create_child("child-2");
         let _child2_double = child2.create_double("property-double", 5.8);
+        let _child2_bool = child2.create_bool("property-bool", false);
 
         let child3 = child1.create_child("child-1-1");
         let _child3_int = child3.create_int("property-int", -9);
@@ -461,6 +479,7 @@ mod tests {
             "child-1": {
                 "property-uint": 10u64,
                 "property-double": -3.4,
+                "property-bool": true,
                 "property-string": string_data,
                 "property-int-array": vec![1i64, 2, 1, 1, 1, 1, 1],
                 "child-1-1": {
@@ -471,6 +490,7 @@ mod tests {
             },
             "child-2": {
                 "property-double": 5.8,
+                "property-bool": false,
             }
         })
     }

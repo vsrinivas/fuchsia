@@ -146,6 +146,12 @@ impl<T: ReadableBlockContainer> Block<T> {
         Ok(self.read_payload().numeric_value())
     }
 
+    /// Gets the bool values of a BOOL_VALUE block.
+    pub fn bool_value(&self) -> Result<bool, Error> {
+        self.check_type(BlockType::BoolValue)?;
+        Ok(self.read_payload().numeric_value() != 0)
+    }
+
     /// Gets the index of the EXTENT of the PROPERTY block.
     pub fn property_extent_index(&self) -> Result<u32, Error> {
         self.check_type(BlockType::PropertyValue)?;
@@ -681,6 +687,26 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         Ok(())
     }
 
+    /// Converts a block into a BOOL_VALUE block.
+    pub fn become_bool_value(
+        &self,
+        value: bool,
+        name_index: u32,
+        parent_index: u32,
+    ) -> Result<(), Error> {
+        self.write_value_header(BlockType::BoolValue, name_index, parent_index)?;
+        self.set_bool_value(value)
+    }
+
+    /// Sets the value of a BOOL_VALUE block.
+    pub fn set_bool_value(&self, value: bool) -> Result<(), Error> {
+        self.check_type(BlockType::BoolValue)?;
+        let mut payload = self.read_payload();
+        payload.set_numeric_value(value as u64);
+        self.write_payload(payload);
+        Ok(())
+    }
+
     /// Initializes a NODE_VALUE block.
     pub fn become_node(&self, name_index: u32, parent_index: u32) -> Result<(), Error> {
         self.write_value_header(BlockType::NodeValue, name_index, parent_index)?;
@@ -1119,6 +1145,7 @@ mod tests {
             BlockType::PropertyValue,
             BlockType::ArrayValue,
             BlockType::LinkValue,
+            BlockType::BoolValue,
         ]);
         test_ok_types(move |b| b.name_index(), &any_value);
         test_ok_types(move |b| b.parent_index(), &any_value);
@@ -1200,6 +1227,33 @@ mod tests {
         test_ok_types(
             move |b| b.set_uint_value(3),
             &BTreeSet::from_iter(vec![BlockType::UintValue]),
+        );
+    }
+
+    #[test]
+    fn test_bool_value() {
+        test_ok_types(
+            move |b| b.become_bool_value(true, 1, 2),
+            &BTreeSet::from_iter(vec![BlockType::Reserved]),
+        );
+        let container = [0u8; constants::MIN_ORDER_SIZE];
+        let block = get_reserved(&container);
+        assert!(block.become_bool_value(false, 2, 3).is_ok());
+        assert_eq!(block.block_type(), BlockType::BoolValue);
+        assert_eq!(block.name_index().unwrap(), 2);
+        assert_eq!(block.parent_index().unwrap(), 3);
+        assert_eq!(block.bool_value().unwrap(), false);
+        assert_eq!(container[..8], [0xD1, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
+        assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+
+        assert!(block.set_bool_value(true).is_ok());
+        assert_eq!(block.bool_value().unwrap(), true);
+        assert_eq!(container[..8], [0xD1, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
+        assert_eq!(container[8..], [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        test_ok_types(move |b| b.bool_value(), &BTreeSet::from_iter(vec![BlockType::BoolValue]));
+        test_ok_types(
+            move |b| b.set_bool_value(true),
+            &BTreeSet::from_iter(vec![BlockType::BoolValue]),
         );
     }
 

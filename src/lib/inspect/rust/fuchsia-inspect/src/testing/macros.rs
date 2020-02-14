@@ -369,6 +369,7 @@ fn property_type_name(property: &Property) -> &str {
         Property::UintArray(_, _) => "UintArray",
         Property::Double(_, _) => "Double",
         Property::DoubleArray(_, _) => "DoubleArray",
+        Property::Bool(_, _) => "Bool",
     }
 }
 
@@ -377,6 +378,7 @@ impl_property_assertion!(Bytes, Vec<u8>);
 impl_property_assertion!(Uint, u64);
 impl_property_assertion!(Int, i64);
 impl_property_assertion!(Double, f64);
+impl_property_assertion!(Bool, bool);
 impl_array_property_assertion!(DoubleArray, Vec<f64>);
 impl_array_property_assertion!(IntArray, Vec<i64>);
 impl_array_property_assertion!(UintArray, Vec<u64>);

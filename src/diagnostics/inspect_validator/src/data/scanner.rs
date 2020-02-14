@@ -184,6 +184,9 @@ impl Scanner {
                 Ok(BlockType::LinkValue) => {
                     return Err(format_err!("LinkValue isn't supported yet."))
                 }
+                Ok(BlockType::BoolValue) => {
+                    return Err(format_err!("BoolValue isn't supported yet."))
+                }
                 Err(error) => return Err(error),
             }
         }

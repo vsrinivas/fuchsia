@@ -345,6 +345,28 @@ impl State {
         })
     }
 
+    pub fn create_bool(
+        &mut self,
+        name: &str,
+        value: bool,
+        parent_index: u32,
+    ) -> Result<Block<Arc<Mapping>>, Error> {
+        with_header_lock!(self, {
+            let (block, name_block) =
+                self.allocate_reserved_value(name, parent_index, constants::MIN_ORDER_SIZE)?;
+            block.become_bool_value(value, name_block.index(), parent_index)?;
+            Ok(block)
+        })
+    }
+
+    pub fn set_bool(&self, block_index: u32, value: bool) -> Result<(), Error> {
+        with_header_lock!(self, {
+            let block = self.heap.get_block(block_index)?;
+            block.set_bool_value(value)?;
+            Ok(())
+        })
+    }
+
     metric_fns!(int, i64);
     metric_fns!(uint, u64);
     metric_fns!(double, f64);
@@ -789,6 +811,40 @@ mod tests {
 
         // Free property.
         assert!(state.free_property(block.index()).is_ok());
+        let bytes = &state.heap.bytes()[..];
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
+        assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
+    }
+
+    #[test]
+    fn test_bool() {
+        let mut state = get_state(4096);
+
+        // Creates with value
+        let block = state.create_bool("test", true, 0).unwrap();
+        assert_eq!(block.block_type(), BlockType::BoolValue);
+        assert_eq!(block.index(), 1);
+        assert_eq!(block.bool_value().unwrap(), true);
+        assert_eq!(block.name_index().unwrap(), 2);
+        assert_eq!(block.parent_index().unwrap(), 0);
+
+        let name_block = state.heap.get_block(2).unwrap();
+        assert_eq!(name_block.block_type(), BlockType::Name);
+        assert_eq!(name_block.name_length().unwrap(), 4);
+        assert_eq!(name_block.name_contents().unwrap(), "test");
+
+        let bytes = &state.heap.bytes()[..];
+        let snapshot = Snapshot::try_from(bytes).unwrap();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
+        assert_eq!(blocks.len(), 10);
+        assert_eq!(blocks[0].block_type(), BlockType::Header);
+        assert_eq!(blocks[1].block_type(), BlockType::BoolValue);
+        assert_eq!(blocks[2].block_type(), BlockType::Name);
+        assert!(blocks[3..].iter().all(|b| b.block_type() == BlockType::Free));
+
+        // Free metric.
+        assert!(state.free_value(block.index()).is_ok());
         let bytes = &state.heap.bytes()[..];
         let snapshot = Snapshot::try_from(bytes).unwrap();
         let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
