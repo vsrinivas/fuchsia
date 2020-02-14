@@ -3,7 +3,7 @@
   "fidl/fuchsia.bluetooth/appearance.fidl": "b32ebf2d23109e5f5dc31c7be94a2957",
   "fidl/fuchsia.bluetooth/connection_role.fidl": "83b4683d252156ef5f89e58d625a51a1",
   "fidl/fuchsia.bluetooth/device_class.fidl": "00b81fea1e852ba4aed3d2a47798001b",
-  "fidl/fuchsia.bluetooth/id.fidl": "1087e4d322d304473df494ad368917fd",
+  "fidl/fuchsia.bluetooth/id.fidl": "fbc52bcc4800ed73a0d6e7e418bb8257",
   "fidl/fuchsia.bluetooth/nullables.fidl": "989e8f16f2681e449ef5300176b77594",
   "fidl/fuchsia.bluetooth/status.fidl": "f119811211b70e0b1f2377969de1ec4f",
   "fidl/fuchsia.bluetooth/uuid.fidl": "2c418089a57cbe76e1b7906d46553ca4"

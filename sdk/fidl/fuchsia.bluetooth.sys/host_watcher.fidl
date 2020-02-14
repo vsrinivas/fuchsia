@@ -12,7 +12,7 @@ table HostInfo {
     /// Uniquely identifies a host on the current system.
     ///
     /// This field is always present.
-    1: bt.Id id;
+    1: bt.HostId id;
 
     /// The Bluetooth technologies that are supported by this adapter.
     ///
@@ -52,5 +52,5 @@ protocol HostWatcher {
     /// procedures will be terminated.
     ///
     /// * error This can fail if a host with `id` was not found.
-    SetActive(bt.Id id) -> () error zx.status;
+    SetActive(bt.HostId id) -> () error zx.status;
 };

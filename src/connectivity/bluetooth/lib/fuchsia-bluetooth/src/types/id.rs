@@ -60,37 +60,37 @@ impl Into<fidl::PeerId> for PeerId {
     }
 }
 
-/// A Bluetooth generic device id. The id used in Fuchsia Bluetooth.
-/// `Id` can be converted to/from a FIDL Bluetooth Id type.
+/// A Bluetooth Host Adapter id. Uniquely identifiers a bluetooth Host on this system.
+/// `HostId` can be converted to/from a FIDL Bluetooth HostId type.
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
-pub struct Id(pub u64);
+pub struct HostId(pub u64);
 
-impl fmt::Display for Id {
+impl fmt::Display for HostId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         /// Zero-Pad the output string to be 16 characters to maintain formatting consistency.
         write!(f, "{:016x}", self.0)
     }
 }
 
-impl FromStr for Id {
+impl FromStr for HostId {
     type Err = anyhow::Error;
 
-    /// Valid id strings have only Hex characters (0-9, a-f) and are 16 chars long
-    /// to match the 64 bit representation of a Id.
-    fn from_str(src: &str) -> Result<Id, Error> {
-        parse_hex_identifier(&src).map(|r| Id(r))
+    /// Valid HostId strings have only Hex characters (0-9, a-f) and are 16 chars long
+    /// to match the 64 bit representation of a HostId.
+    fn from_str(src: &str) -> Result<HostId, Error> {
+        parse_hex_identifier(&src).map(|r| HostId(r))
     }
 }
 
-impl From<fidl::Id> for Id {
-    fn from(src: fidl::Id) -> Id {
-        Id(src.value)
+impl From<fidl::HostId> for HostId {
+    fn from(src: fidl::HostId) -> HostId {
+        HostId(src.value)
     }
 }
 
-impl Into<fidl::Id> for Id {
-    fn into(self) -> fidl::Id {
-        fidl::Id { value: self.0 }
+impl Into<fidl::HostId> for HostId {
+    fn into(self) -> fidl::HostId {
+        fidl::HostId { value: self.0 }
     }
 }
 
@@ -123,15 +123,15 @@ mod tests {
     fn id_to_string() {
         let testcases = vec![
             // Lowest possible id.
-            (Id(0), "0000000000000000"),
+            (HostId(0), "0000000000000000"),
             // Normal case with padding.
-            (Id(1234567890), "00000000499602d2"),
+            (HostId(1234567890), "00000000499602d2"),
             // Normal case with padding.
-            (Id(123123777771778888), "01b56c6c6d7db348"),
+            (HostId(123123777771778888), "01b56c6c6d7db348"),
             // Normal case without padding.
-            (Id(2000037777717788818), "1bc18fc31e3b0092"),
+            (HostId(2000037777717788818), "1bc18fc31e3b0092"),
             // u64 max test.
-            (Id(std::u64::MAX), "ffffffffffffffff"),
+            (HostId(std::u64::MAX), "ffffffffffffffff"),
         ];
 
         for (id, expected) in testcases {
@@ -167,15 +167,15 @@ mod tests {
     fn id_from_string() {
         let testcases = vec![
             // Largest valid id.
-            ("ffffffffffffffff", Ok(Id(18446744073709551615))),
+            ("ffffffffffffffff", Ok(HostId(18446744073709551615))),
             // Smallest valid id.
-            ("0000000000000000", Ok(Id(0))),
+            ("0000000000000000", Ok(HostId(0))),
             // BT stack wont produce IDs that aren't 16 characters long, but the conversion
             // can handle smaller string ids.
             // In the reverse direction, the string will be padded to 16 characters.
-            ("10", Ok(Id(16))),
+            ("10", Ok(HostId(16))),
             // Normal case.
-            ("fe12ffdda3b89002", Ok(Id(18307976762614124546))),
+            ("fe12ffdda3b89002", Ok(HostId(18307976762614124546))),
             // String with invalid hex chars (i.e not 0-9, A-F).
             ("klinvalidstr", Err(())),
             // String that is too long to be a Id (> 16 chars).
@@ -183,7 +183,7 @@ mod tests {
         ];
 
         for (input, expected) in testcases {
-            assert_eq!(expected, input.parse::<Id>().map_err(|_| ()))
+            assert_eq!(expected, input.parse::<HostId>().map_err(|_| ()))
         }
     }
 
@@ -210,8 +210,8 @@ mod tests {
 
         #[test]
         fn id_into_fidl(n in prop::num::u64::ANY) {
-            let id = Id(n);
-            let fidl_id: fidl::Id = id.into();
+            let id = HostId(n);
+            let fidl_id: fidl::HostId = id.into();
             assert_eq!(n, fidl_id.value);
         }
 
@@ -224,9 +224,9 @@ mod tests {
 
         #[test]
         fn id_from_fidl(n in prop::num::u64::ANY) {
-            let fidl_id = fidl::Id { value: n };
-            let id: Id = fidl_id.into();
-            assert_eq!(Id(n), id);
+            let fidl_id = fidl::HostId { value: n };
+            let id: HostId = fidl_id.into();
+            assert_eq!(HostId(n), id);
         }
     }
 }

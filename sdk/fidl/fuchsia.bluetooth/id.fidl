@@ -4,8 +4,8 @@
 
 library fuchsia.bluetooth;
 
-/// Generic 64-bit identifier type.
-struct Id {
+/// 64-bit unique value used by the system to identify host adapters.
+struct HostId {
     uint64 value;
 };
 

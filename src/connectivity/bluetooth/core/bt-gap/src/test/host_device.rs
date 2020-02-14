@@ -38,7 +38,7 @@ async fn host_device_set_local_name() -> Result<(), Error> {
     let (client, server) = create_fidl_endpoints::<HostMarker>()?;
 
     let info = HostInfo {
-        id: fidl_fuchsia_bluetooth::Id { value: 1 },
+        id: fidl_fuchsia_bluetooth::HostId { value: 1 },
         technology: TechnologyType::DualMode,
         address: Address::Public([0, 0, 0, 0, 0, 0]),
         local_name: None,

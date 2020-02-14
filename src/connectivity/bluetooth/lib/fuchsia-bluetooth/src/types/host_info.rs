@@ -8,7 +8,7 @@ use {
         types::Address,
     },
     anyhow::{format_err, Error},
-    fidl_fuchsia_bluetooth::{Bool, Id},
+    fidl_fuchsia_bluetooth::{Bool, HostId},
     fidl_fuchsia_bluetooth_control as fctrl, fidl_fuchsia_bluetooth_sys as fsys,
     fuchsia_inspect::{self as inspect, Property},
     std::{convert::TryFrom, fmt},
@@ -18,7 +18,7 @@ use {
 #[derive(Clone, Debug, PartialEq)]
 pub struct HostInfo {
     /// Uniquely identifies a host on the current system.
-    pub id: Id,
+    pub id: HostId,
 
     /// The Bluetooth technologies that are supported by this adapter.
     pub technology: fsys::TechnologyType,
@@ -193,7 +193,7 @@ mod tests {
 
     #[test]
     fn from_fidl_technology_not_present() {
-        let info = fsys::HostInfo { id: Some(fbt::Id { value: 1 }), ..empty_info() };
+        let info = fsys::HostInfo { id: Some(fbt::HostId { value: 1 }), ..empty_info() };
         let info = HostInfo::try_from(info);
         assert!(info.is_err());
     }
@@ -201,7 +201,7 @@ mod tests {
     #[test]
     fn from_fidl_address_not_present() {
         let info = fsys::HostInfo {
-            id: Some(fbt::Id { value: 1 }),
+            id: Some(fbt::HostId { value: 1 }),
             technology: Some(fsys::TechnologyType::LowEnergy),
             ..empty_info()
         };
@@ -212,7 +212,7 @@ mod tests {
     #[test]
     fn from_fidl_optional_fields_not_present() {
         let info = fsys::HostInfo {
-            id: Some(fbt::Id { value: 1 }),
+            id: Some(fbt::HostId { value: 1 }),
             technology: Some(fsys::TechnologyType::LowEnergy),
             address: Some(fbt::Address {
                 type_: fbt::AddressType::Public,
@@ -224,7 +224,7 @@ mod tests {
             discovering: None,
         };
         let expected = HostInfo {
-            id: fbt::Id { value: 1 },
+            id: fbt::HostId { value: 1 },
             technology: fsys::TechnologyType::LowEnergy,
             address: Address::Public([1, 2, 3, 4, 5, 6]),
             active: false,
@@ -240,7 +240,7 @@ mod tests {
     #[test]
     fn from_fidl_optional_fields_present() {
         let info = fsys::HostInfo {
-            id: Some(fbt::Id { value: 1 }),
+            id: Some(fbt::HostId { value: 1 }),
             technology: Some(fsys::TechnologyType::LowEnergy),
             address: Some(fbt::Address {
                 type_: fbt::AddressType::Public,
@@ -252,7 +252,7 @@ mod tests {
             discovering: Some(true),
         };
         let expected = HostInfo {
-            id: fbt::Id { value: 1 },
+            id: fbt::HostId { value: 1 },
             technology: fsys::TechnologyType::LowEnergy,
             address: Address::Public([1, 2, 3, 4, 5, 6]),
             active: true,
@@ -268,7 +268,7 @@ mod tests {
     #[test]
     fn to_fidl() {
         let info = HostInfo {
-            id: fbt::Id { value: 1 },
+            id: fbt::HostId { value: 1 },
             technology: fsys::TechnologyType::LowEnergy,
             address: Address::Public([1, 2, 3, 4, 5, 6]),
             active: false,
@@ -277,7 +277,7 @@ mod tests {
             discovering: false,
         };
         let expected = fsys::HostInfo {
-            id: Some(fbt::Id { value: 1 }),
+            id: Some(fbt::HostId { value: 1 }),
             technology: Some(fsys::TechnologyType::LowEnergy),
             address: Some(fbt::Address {
                 type_: fbt::AddressType::Public,
@@ -295,7 +295,7 @@ mod tests {
     #[test]
     fn to_fidl_adapter_info() {
         let info = HostInfo {
-            id: fbt::Id { value: 1 },
+            id: fbt::HostId { value: 1 },
             technology: fsys::TechnologyType::LowEnergy,
             address: Address::Public([1, 2, 3, 4, 5, 6]),
             active: false,
@@ -323,7 +323,7 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let node = inspector.root().create_child("info");
         let info = HostInfo {
-            id: fbt::Id { value: 1 },
+            id: fbt::HostId { value: 1 },
             technology: fsys::TechnologyType::LowEnergy,
             address: Address::Public([1, 2, 3, 4, 5, 6]),
             active: false,
@@ -343,7 +343,7 @@ mod tests {
         });
 
         info.update(HostInfo {
-            id: fbt::Id { value: 1 },
+            id: fbt::HostId { value: 1 },
             technology: fsys::TechnologyType::LowEnergy,
             address: Address::Public([1, 2, 3, 4, 5, 6]),
             active: true,
