@@ -14,6 +14,8 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/lib/sys/cpp",
+    "//src/connectivity/weave/adaptation",
+    "//third_party/openweave-core",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
@@ -24,9 +26,7 @@ executable("bin") {
 
   sources = [ "main.cc" ]
 
-  deps = [
-    ":lib",
-  ]
+  deps = [ ":lib" ]
 }
 
 group("weavestack") {
@@ -60,9 +60,7 @@ executable("unittests") {
 
   testonly = true
 
-  sources = [
-    "app_test.cc",
-  ]
+  sources = [ "app_test.cc" ]
 
   public_deps = [
     ":lib",

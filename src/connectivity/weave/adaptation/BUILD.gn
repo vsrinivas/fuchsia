@@ -1,0 +1,48 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//third_party/openweave-core/device-layer.gni")
+
+openweave_adaptation_layer("adaptation") {
+  sources = [
+    "ble_manager_impl.cpp",
+    "ble_manager_impl.h",
+    "configuration_manager_impl.cpp",
+    "configuration_manager_impl.h",
+    "connectivity_manager_impl.cpp",
+    "connectivity_manager_impl.h",
+    "entropy.cpp",
+    "fuchsia_config.cpp",
+    "fuchsia_config.h",
+    "generic_platform_manager_impl_fuchsia.h",
+    "generic_platform_manager_impl_fuchsia.ipp",
+    "group_key_store_impl.cpp",
+    "group_key_store_impl.h",
+    "network_provisioning_server_impl.cpp",
+    "network_provisioning_server_impl.h",
+    "platform_manager_impl.cpp",
+    "platform_manager_impl.h",
+    "profile_support.cpp",
+    "software_update_manager_impl.cpp",
+    "software_update_manager_impl.h",
+    "warm_platform_config.h",
+    "warm_support.cpp",
+    "weave_device_platform_config.h",
+    "weave_device_platform_event.h",
+  ]
+  public_configs = [ ":adaptation_config" ]
+  include_dirs = [ "." ]
+}
+
+config("adaptation_config") {
+  cflags = [
+    "-DWEAVE_DEVICE_PLATFORM_CONFIG_INCLUDE=\"weave_device_platform_config.h\"",
+    "-DEXTERNAL_CONNECTIVITYMANAGERIMPL_HEADER=\"connectivity_manager_impl.h\"",
+    "-DEXTERNAL_CONFIGURATIONMANAGERIMPL_HEADER=\"configuration_manager_impl.h\"",
+    "-DEXTERNAL_NETWORKPROVISIONINGSERVERIMPL_HEADER=\"network_provisioning_server_impl.h\"",
+    "-DEXTERNAL_BLEMANAGERIMPL_HEADER=\"ble_manager_impl.h\"",
+    "-DEXTERNAL_SOFTWAREUPDATEMANAGERIMPL_HEADER=\"software_update_manager_impl.h\"",
+    "-DEXTERNAL_PLATFORMMANAGERIMPL_HEADER=\"platform_manager_impl.h\"",
+    "-DEXTERNAL_WEAVEDEVICEPLATFORMEVENT_HEADER=\"weave_device_platform_event.h\"",
+  ]
+}

@@ -1,0 +1,9 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+#ifndef SRC_CONNECTIVITY_WEAVE_ADAPTATION_WEAVE_DEVICE_PLATFORM_CONFIG_H_
+#define SRC_CONNECTIVITY_WEAVE_ADAPTATION_WEAVE_DEVICE_PLATFORM_CONFIG_H_
+
+#define WEAVE_DEVICE_CONFIG_ENABLE_SOFTWARE_UPDATE_MANAGER 0
+
+#endif  // SRC_CONNECTIVITY_WEAVE_ADAPTATION_WEAVE_DEVICE_PLATFORM_CONFIG_H_
