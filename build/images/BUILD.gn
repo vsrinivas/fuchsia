@@ -2091,11 +2091,18 @@ group("images") {
     ":record_filesystem_sizes",
     ":root_component_index_metadata",
     ":zedboot-script",
-    "//build/images/recovery",
     "//build/images/zedboot",
   ]
   if (enable_netboot) {
     deps += [ ":netboot-script" ]
+  }
+  # XXX: bootfs_only really means "bringup", and recovery can not build under
+  # these parameters. This is a quickfix, the longer term fix needs to separate
+  # the bringup build into a configuration that only affects the bringup
+  # artifact, and also a better strategy to avoid building non-bringup
+  # artifacts during the bringup build.
+  if (!bootfs_only) {
+    deps += [ "//build/images/recovery" ]
   }
 }
 
