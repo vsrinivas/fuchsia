@@ -27,8 +27,6 @@
 //
 // Width is a power-of-2 of height
 //
-// FIXME(allanmac) -- rename SPN_TILE_* to SPN_DEVICE_TILE_*
-//
 
 #define SPN_TILE_WIDTH                          (1<<SPN_DEVICE_TILE_WIDTH_LOG2)
 #define SPN_TILE_HEIGHT                         (1<<SPN_DEVICE_TILE_HEIGHT_LOG2)
@@ -77,8 +75,8 @@
 #define SPN_BLOCK_ID_TAG_PATH_LINE              0  // 0 -- 4  segments
 #define SPN_BLOCK_ID_TAG_PATH_QUAD              1  // 1 -- 6  segments
 #define SPN_BLOCK_ID_TAG_PATH_CUBIC             2  // 2 -- 8  segments
-#define SPN_BLOCK_ID_TAG_PATH_RAT_QUAD          3  // 3 -- 7  segments : 6 + w0
-#define SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC         4  // 4 -- 10 segments : 8 + w0 + w1
+#define SPN_BLOCK_ID_TAG_PATH_RAT_QUAD          3  // 3 -- 7  segments : 6 + w1      -- w0 = w2 = 1
+#define SPN_BLOCK_ID_TAG_PATH_RAT_CUBIC         4  // 4 -- 10 segments : 8 + w1 + w2 -- w0 = w3 = 1
 // ...
 // tags 5-29 are available
 // ...
@@ -173,11 +171,13 @@
 #define SPN_PATH_HEAD_OFFSET_PRIMS              4
 
 //
-// lines:      26
-// quads:      26
-// cubics:     26
-// rat_quads:  25
-// rat_cubics: 25
+// Counts of the 5 path types are packed into a uvec4
+//
+// lines:      26 -- 64m
+// quads:      26 -- 64m
+// cubics:     26 -- 64m
+// rat_quads:  25 -- 32m
+// rat_cubics: 25 -- 32m
 //
 
 #define SPN_PATH_PRIMS_GET_LINES(p_)       (SPN_BITFIELD_EXTRACT(p_[0], 0,26))                                             // 26
@@ -235,42 +235,60 @@
 //    uvec4 u32v4;
 //
 //    struct spn_cmd_fill {
-//      uint32_t path_h;          // host id
-//      uint32_t na         : 16; // unused
-//      uint32_t cohort     : 16; // cohort is 8-11 bits
-//      uint32_t transform;       // index of transform
-//      uint32_t clip;            // index of clip
+//      uint32_t path_h;               // host id
+//      uint32_t na              : 16; // unused
+//      uint32_t cohort          : 15; // cohort is 8-11 bits
+//      uint32_t transform_type  : 1;  // transform type: 0=affine,1=projective
+//      uint32_t transform;            // transform index
+//      uint32_t clip;                 // clip index
 //    } fill;
 //
 //    struct spn_cmd_rast {
-//      uint32_t node_id;         // device block id
-//      uint32_t node_dword : 16; // block dword offset
-//      uint32_t cohort     : 16; // cohort is 8-11 bits
-//      uint32_t transform;       // index of transform
-//      uint32_t clip;            // index of clip
+//      uint32_t node_id;              // device block id
+//      uint32_t node_dword      : 16; // block dword offset
+//      uint32_t cohort          : 15; // cohort is 8-11 bits
+//      uint32_t transform_type  : 1;  // transform type: 0=affine,1=projective
+//      uint32_t transform             // transform index
+//      uint32_t clip;                 // clip index
 //    } rasterize;
 //
 //  };
 //
-// NOTE: we can pack the transform and clip indices down to a more
-// practical 16 bits in case we want to add additional rasterization
-// command indices or flags.
+//
+// NOTE(allanmac): We can pack the transform and clip indices down to a
+// more practical 16 bits in case we want to add additional
+// rasterization command indices or flags.
 //
 
-#define SPN_CMD_FILL_GET_PATH_H(c_)                c_[0]
-#define SPN_CMD_FILL_GET_COHORT(c_)                SPN_BITFIELD_EXTRACT(c_[1],16,16)
-#define SPN_CMD_FILL_GET_TRANSFORM(c_)             c_[2]
-#define SPN_CMD_FILL_GET_CLIP(c_)                  c_[3]
+#define SPN_CMD_FILL_TRANSFORM_TYPE_AFFINE                 0
+#define SPN_CMD_FILL_TRANSFORM_TYPE_PROJECTIVE             1
 
-#define SPN_CMD_RASTERIZE_GET_COHORT(c_)           SPN_CMD_FILL_GET_COHORT(c_)
-#define SPN_CMD_RASTERIZE_GET_TRANSFORM(c_)        SPN_CMD_FILL_GET_TRANSFORM(c_)
-#define SPN_CMD_RASTERIZE_GET_CLIP(c_)             SPN_CMD_FILL_GET_CLIP(c_)
+#define SPN_CMD_FILL_GET_PATH_H(c_)                        c_[0]
+#define SPN_CMD_FILL_GET_COHORT(c_)                        SPN_BITFIELD_EXTRACT(c_[1],16,15)
+#define SPN_CMD_FILL_GET_TRANSFORM_TYPE(c_)                SPN_BITFIELD_EXTRACT(c_[1],31,1)
+#define SPN_CMD_FILL_GET_TRANSFORM(c_)                     c_[2]
+#define SPN_CMD_FILL_GET_CLIP(c_)                          c_[3]
 
-#define SPN_CMD_RASTERIZE_GET_NODE_ID(c_)          c_[0]
-#define SPN_CMD_RASTERIZE_GET_NODE_DWORD(c_)       SPN_BITFIELD_EXTRACT(c_[1],0,16)
+#define SPN_CMD_FILL_IS_TRANSFORM_TYPE_AFFINE(c_)          ((c_[1] & SPN_BITS_TO_MASK_AT(31,1)) == 0)
+#define SPN_CMD_FILL_IS_TRANSFORM_TYPE_PROJECTIVE(c_)      ((c_[1] & SPN_BITS_TO_MASK_AT(31,1)) != 0)
 
-#define SPN_CMD_RASTERIZE_SET_NODE_ID(c_,n_id_)    c_[0] = n_id_
-#define SPN_CMD_RASTERIZE_SET_NODE_DWORD(c_,n_lo_) c_[1] = SPN_BITFIELD_INSERT(c_[1],n_lo_,0,16)
+//
+//
+//
+
+#define SPN_CMD_RASTERIZE_GET_COHORT(c_)                   SPN_CMD_FILL_GET_COHORT(c_)
+#define SPN_CMD_RASTERIZE_GET_TRANSFORM_TYPE(c_)           SPN_CMD_FILL_GET_TRANSFORM_TYPE(c_)
+#define SPN_CMD_RASTERIZE_GET_TRANSFORM(c_)                SPN_CMD_FILL_GET_TRANSFORM(c_)
+#define SPN_CMD_RASTERIZE_GET_CLIP(c_)                     SPN_CMD_FILL_GET_CLIP(c_)
+
+#define SPN_CMD_RASTERIZE_IS_TRANSFORM_TYPE_AFFINE(c_)     SPN_CMD_FILL_IS_TRANSFORM_TYPE_AFFINE(c_)
+#define SPN_CMD_RASTERIZE_IS_TRANSFORM_TYPE_PROJECTIVE(c_) SPN_CMD_FILL_IS_TRANSFORM_TYPE_PROJECTIVE(c_)
+
+#define SPN_CMD_RASTERIZE_GET_NODE_ID(c_)                  c_[0]
+#define SPN_CMD_RASTERIZE_GET_NODE_DWORD(c_)               SPN_BITFIELD_EXTRACT(c_[1],0,16)
+
+#define SPN_CMD_RASTERIZE_SET_NODE_ID(c_,n_id_)            c_[0] = n_id_
+#define SPN_CMD_RASTERIZE_SET_NODE_DWORD(c_,n_lo_)         c_[1] = SPN_BITFIELD_INSERT(c_[1],n_lo_,0,16)
 
 //
 // Spinel supports a projective transformation matrix with the

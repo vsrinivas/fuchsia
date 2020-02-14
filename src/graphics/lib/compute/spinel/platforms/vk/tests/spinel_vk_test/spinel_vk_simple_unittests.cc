@@ -202,6 +202,33 @@ param const params[] = {
         spn(path_builder_line_to(pb, 2.0f, 2.0f));
       }),
   },
+  {
+    .name      = "tile_collision",  // fxb:43333
+    .surface   = { 3096, 256 },     //
+    .checksums = {                  //
+      { 0x9FF3E860, {} }
+    },
+    .test = std::make_shared<test>(
+      [](spn_path_builder_t pb) {
+        //
+        // This test can't be expressed with SVG because of its path
+        // closing semantics so we put it here.
+        //
+        // This creates 48 staggered copies of a 1x2 pixel rectangle.
+        //
+        // The intent is to force multiple hash collisions in the
+        // rasterizer.
+        //
+        for (uint32_t ii = 0; ii < 48; ii++)
+          {
+            spn(path_builder_move_to(pb, 15.0f + ii * 16 * 4, 8.0f + ii));
+            spn(path_builder_line_to(pb, 15.0f + ii * 16 * 4, 8.0f + ii + 1));
+
+            spn(path_builder_move_to(pb, 17.0f + ii * 16 * 4, 9.0f + ii));
+            spn(path_builder_line_to(pb, 17.0f + ii * 16 * 4, 9.0f + ii - 1));
+          }
+      }),
+  },
 };
 
 //

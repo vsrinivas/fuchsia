@@ -758,7 +758,8 @@
 #define SPN_VK_GLSL_PUSH_KERNEL_SEGMENT_TTCK()   \
   SPN_VK_PUSH_UINT(kv_offset_in)                 \
   SPN_VK_PUSH_UINT(kv_offset_out)                \
-  SPN_VK_PUSH_UINT(kv_count)
+  SPN_VK_PUSH_UINT(kv_count)                     \
+  SPN_VK_PUSH_UINT(padding) // padding for pipeline layout compatibility
 
 #define SPN_VK_GLSL_DECL_KERNEL_SEGMENT_TTCK()                          \
   SPN_VK_GLSL_DS_BLOCK_POOL(0,noaccess,noaccess,noaccess,noaccess);     \

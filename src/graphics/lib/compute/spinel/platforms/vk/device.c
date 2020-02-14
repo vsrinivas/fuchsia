@@ -123,28 +123,6 @@ spn_device_create(struct spn_vk_environment * const               environment,
                                    0,
                                    NULL);
 
-  // {
-  //   VkMemoryPropertyFlagBits const mpfb_local = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-
-  //   //
-  //   // NOTE(allanmac): TRANSFER_SRC bit and INDIRECT are currently
-  //   // enabled -- keep an eye on whether this results in any performance
-  //   // issues by lumping it in with general storage.  If so, then define
-  //   // an additional allocator.
-  //   //
-  //   VkBufferUsageFlags const usage_local = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |   //
-  //                                          VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT |  //
-  //                                          VK_BUFFER_USAGE_TRANSFER_SRC_BIT |     //
-  //                                          VK_BUFFER_USAGE_TRANSFER_DST_BIT;      //
-
-  //   spn_allocator_device_perm_create(&device->allocator.device.perm.local,
-  //                                    environment,
-  //                                    mpfb_local,
-  //                                    usage_local,
-  //                                    0,
-  //                                    NULL);
-  // }
-
   //
   // perm host read / device write
   //
@@ -155,25 +133,6 @@ spn_device_create(struct spn_vk_environment * const               environment,
                                    0,
                                    NULL);
 
-  // {
-  //   //
-  //   // copyback is cached and read-only
-  //   //
-  //   VkMemoryPropertyFlagBits const mpfb_copyback = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |  //
-  //                                                  VK_MEMORY_PROPERTY_HOST_CACHED_BIT |   //
-  //                                                  VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;  //
-
-  //   VkBufferUsageFlags const usage_copyback = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  //
-  //                                             VK_BUFFER_USAGE_TRANSFER_DST_BIT;     //
-
-  //   spn_allocator_device_perm_create(&device->allocator.device.perm.copyback,
-  //                                    environment,
-  //                                    mpfb_copyback,
-  //                                    usage_copyback,
-  //                                    0,
-  //                                    NULL);
-  // }
-
   //
   // perm host write / device read
   //
@@ -183,22 +142,6 @@ spn_device_create(struct spn_vk_environment * const               environment,
                                    config->allocator.device.hw_dr.usage,
                                    0,
                                    NULL);
-
-  // {
-  //   // FIXME(allanmac): this is target configurable
-  //   VkMemoryPropertyFlagBits const mpfb_coherent = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |  //
-  //                                                  VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;  //
-
-  //   VkBufferUsageFlags const usage_coherent = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |  //
-  //                                             VK_BUFFER_USAGE_TRANSFER_SRC_BIT;     //
-
-  //   spn_allocator_device_perm_create(&device->allocator.device.perm.coherent,
-  //                                    environment,
-  //                                    mpfb_coherent,
-  //                                    usage_coherent,
-  //                                    0,
-  //                                    NULL);
-  // }
 
   //
   // temp device-local

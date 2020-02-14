@@ -106,11 +106,12 @@
 
 struct spn_cmd_fill
 {
-  uint32_t path_h;       // host id
-  uint32_t na0    : 16;  // unused
-  uint32_t cohort : 16;  // cohort is limited to 13 bits now, 8 later
-  uint32_t transform;    // index of first quad of transform
-  uint32_t clip;         // index of clip quad
+  uint32_t path_h;              // host id
+  uint32_t na0            : 16; // unused
+  uint32_t cohort         : 15; // cohort is 8-11 bits
+  uint32_t transform_type : 1;  // transform type: 0=affine,1=projective
+  uint32_t transform;           // index of first quad of transform
+  uint32_t clip;                // index of clip quad
 };
 
 STATIC_ASSERT_MACRO_1(sizeof(struct spn_cmd_fill) == sizeof(uint32_t[4]));
@@ -839,18 +840,18 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //
   //        Compute the prefix sum of each path type in the fill's path.
   //
-  //   1.2) FILLS_EXPAND
+  //   1.2) FILLS_DISPATCH
+  //
+  //        Take the atomically updated count of rasterization commands
+  //        and initialize a workgroup triple for
+  //        vkCmdDispatchIndirect().
+  //
+  //   1.3) FILLS_EXPAND
   //
   //        Expand the fill command into rasterization commands and
   //        store them to a temporary buffer:
   //
   //          |<lines><quads><cubics><rat_quads><rat_cubics>|
-  //
-  //   1.3) FILLS_DISPATCH
-  //
-  //        Take the atomically updated count of rasterization commands
-  //        and initialize a workgroup triple for
-  //        vkCmdDispatchIndirect().
   //
   //   1.4) RASTERIZE_LINES/QUADS/CUBICS/RAT_QUADS/RAT_CUBICS
   //
@@ -1138,6 +1139,24 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
 
   ////////////////////////////////////////////////////////////////
   //
+  // PIPELINE: FILLS_DISPATCH
+  //
+  ////////////////////////////////////////////////////////////////
+
+  // no need to set up push constants since they're identical to
+  // FILLS_SCAN and therefore compatible
+
+  // bind the pipeline
+  spn_vk_p_bind_fills_dispatch(instance, cb);
+
+  // a single workgroup initialize the indirect dispatches
+  vkCmdDispatch(cb, 1, 1, 1);
+
+  // compute barrier
+  vk_barrier_compute_w_to_compute_r(cb);
+
+  ////////////////////////////////////////////////////////////////
+  //
   // PIPELINE: FILLS_EXPAND
   //
   ////////////////////////////////////////////////////////////////
@@ -1148,27 +1167,12 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   // bind the pipeline
   spn_vk_p_bind_fills_expand(instance, cb);
 
-  // FIXME(allanmac): size the grid
+  //
+  // FIXME(allanmac): size the grid based on workgroup/subgroup
+  //
 
   // dispatch one workgroup per fill command
   vkCmdDispatch(cb, dispatch->cf.span, 1, 1);
-
-  // compute barrier
-  vk_barrier_compute_w_to_compute_r(cb);
-
-  ////////////////////////////////////////////////////////////////
-  //
-  // PIPELINE: FILLS_DISPATCH
-  //
-  ////////////////////////////////////////////////////////////////
-
-  // no push constants
-
-  // bind the pipeline
-  spn_vk_p_bind_fills_dispatch(instance, cb);
-
-  // a single workgroup initialize the indirect dispatches
-  vkCmdDispatch(cb, 1, 1, 1);
 
   // indirect compute barrier
   vk_barrier_compute_w_to_indirect_compute_r(cb);
@@ -1179,6 +1183,10 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
   //
   ////////////////////////////////////////////////////////////////
 
+  //
+  // FIXME(allanmac): The indirect dispatch may need to handle
+  // workgroups larger than one subgroup.
+  //
 #define SPN_VK_P_BIND_RASTERIZE_NAME(_p) spn_vk_p_bind_rasterize_##_p
 
 #undef SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X
@@ -1365,16 +1373,15 @@ spn_rbi_validate_clip_weakref_indices(struct spn_ring const * const         cf_r
 //
 //
 // src: { sx shx tx  shy sy ty w0 w1 } // row-ordered matrix
-// dst: { sx shy shx sy  tx ty w0 w1 } // GPU-friendly ordering
-//
+// dst: { sx shx shy sy  tx ty w0 w1 } // GPU-friendly ordering
 //
 
 static void
 spn_rbi_transform_copy_lo(struct spn_vec4 * const dst, spn_transform_t const * const src)
 {
   dst->x = src->sx;
-  dst->y = src->shy;
-  dst->z = src->shx;
+  dst->y = src->shx;
+  dst->z = src->shy;
   dst->w = src->sy;
 }
 
@@ -1486,7 +1493,7 @@ spn_rbi_add(struct spn_raster_builder_impl * const impl,
 
   struct spn_cmd_fill cf;
 
-  // initialize the fill command
+  // initialize the fill command cohort
   cf.cohort = dispatch->rc.span;
 
   struct spn_next * const tc_next = &impl->mapped.tc.next;
@@ -1515,6 +1522,19 @@ spn_rbi_add(struct spn_raster_builder_impl * const impl,
           printf("*** %u\n", path->handle);
 #endif
 
+          //
+          // classify the transform
+          //
+          spn_transform_t const * const transform = transforms + ii;
+
+          // if (w0==w1==0) then it's an affine matrix
+          cf.transform_type = (transform->w0 == 0.0f) && (transform->w1 == 0.0f)
+                                ? SPN_CMD_FILL_TRANSFORM_TYPE_AFFINE
+                                : SPN_CMD_FILL_TRANSFORM_TYPE_PROJECTIVE;
+
+          //
+          // determine the transform's index
+          //
           if (!spn_transform_weakrefs_get_index(transform_weakrefs,
                                                 ii,
                                                 &impl->epoch,
@@ -1526,8 +1546,8 @@ spn_rbi_add(struct spn_raster_builder_impl * const impl,
 
               cf.transform = t_idx;
 
-              spn_rbi_transform_copy_lo(impl->mapped.tc.extent + t_idx + 0, transforms + ii);
-              spn_rbi_transform_copy_hi(impl->mapped.tc.extent + t_idx + 1, transforms + ii);
+              spn_rbi_transform_copy_lo(impl->mapped.tc.extent + t_idx + 0, transform);
+              spn_rbi_transform_copy_hi(impl->mapped.tc.extent + t_idx + 1, transform);
 
               impl->wip.tc.span += 2;
             }

@@ -115,6 +115,7 @@ template("spinel_target") {
     "${graphics_compute_dir}/spinel/platforms/vk/vk_layouts.h",
     "${graphics_compute_dir}/spinel/platforms/vk/shaders/core_glsl.h",
     "${graphics_compute_dir}/spinel/platforms/vk/shaders/spn_macros_glsl.h",
+    "${graphics_compute_dir}/spinel/platforms/vk/shaders/rasterize.comp",
   ]
 
   _spn_comp_include_dirs = [

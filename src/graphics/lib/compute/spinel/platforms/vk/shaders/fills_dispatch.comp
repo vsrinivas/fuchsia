@@ -34,16 +34,6 @@
   (SPN_FILLS_DISPATCH_SUBGROUP_SIZE < SPN_BLOCK_ID_TAG_PATH_COUNT)
 
 //
-//
-//
-
-#if SPN_FILLS_DISPATCH_SUBGROUP_SIZE_LT_TAG_PATH_COUNT
-
-#extension GL_KHR_shader_subgroup_ballot : require
-
-#endif
-
-//
 // FILLS DISPATCH
 //
 // This fixes up the (5) path primitive counts so they can be used by
@@ -53,13 +43,13 @@
 // rasterization workgroup type (lines, quads, etc.) knows where to
 // begin the cmd_rast[] buffer.
 //
-// The sum is stored in the 4 element of each quad.
+// The sum is stored in the 4th element of each quad.
 //
 
 layout(local_size_x = SPN_FILLS_DISPATCH_SUBGROUP_SIZE) in;
 
 //
-// main(buffer uint prim_counts[sizeof(uvec4) * 5]);
+//
 //
 
 SPN_VK_GLSL_DECL_KERNEL_FILLS_DISPATCH();
@@ -73,7 +63,7 @@ main()
 {
 #if SPN_FILLS_DISPATCH_SUBGROUP_SIZE_LT_TAG_PATH_COUNT
   //
-  // SIMD4 -- ARM Bifrost and maybe very small future GPUs
+  // SIMD4 -- ARM Bifrost4 and maybe very small future GPUs
   //
   uvec4 dispatch0 = uvec4(0, 1, 1, 0);
   uvec4 dispatch1 = uvec4(0, 1, 1, 0);
@@ -115,14 +105,26 @@ main()
 
   // load
   if (is_valid)
-    dispatch[0] = fill_scan_counts[gl_SubgroupInvocationID];
+    {
+      //
+      // FIXME(allanmac): This needs to setup the dispatch based on
+      // rounded-up workgroup size and not subgroup size.
+      //
+      dispatch[0] = fill_scan_counts[gl_SubgroupInvocationID];
+    }
 
+  //
   // exclusive scan-add of commands by type
+  //
+  // FIXME(allanmac): predicate this to only 5 lanes?
+  //
   dispatch[3] = subgroupExclusiveAdd(dispatch[0]);
 
   // store
   if (is_valid)
-    fill_scan_dispatch[gl_SubgroupInvocationID] = dispatch;
+    {
+      fill_scan_dispatch[gl_SubgroupInvocationID] = dispatch;
+    }
 
     //
     // DEBUG -- DUMP DISPATCHES
