@@ -40,6 +40,7 @@ zx_status_t TestLifecycleDriverChild::Create(zx_device_t* parent, bool complete_
 void TestLifecycleDriverChild::DdkInit(ddk::InitTxn txn) {
   if (complete_init_) {
     txn.Reply(init_status_);
+    replied_to_init_ = true;
   } else {
     init_txn_ = std::move(txn);
   }
@@ -51,11 +52,17 @@ void TestLifecycleDriverChild::DdkUnbindNew(ddk::UnbindTxn txn) {
 }
 
 zx_status_t TestLifecycleDriverChild::CompleteInit() {
-  if (!init_txn_) {
-    zxlogf(ERROR, "Child does not have a pending init txn");
+  if (replied_to_init_) {
+    zxlogf(ERROR, "Already replied to init");
     return ZX_ERR_BAD_STATE;
+  }
+  if (!init_txn_) {
+    // The init hook has not been called yet.
+    complete_init_ = true;
+    return ZX_OK;
   }
   init_txn_->Reply(init_status_);
   init_txn_ = std::nullopt;
+  replied_to_init_ = true;
   return ZX_OK;
 }
