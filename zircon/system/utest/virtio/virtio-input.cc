@@ -8,7 +8,7 @@
 #include <virtio/input.h>
 #include <zxtest/zxtest.h>
 
-#include "../../../system/dev/bus/virtio/input_touch.h"
+#include "src/devices/bus/drivers/virtio/input_touch.h"
 
 namespace virtio {
 

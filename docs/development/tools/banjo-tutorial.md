@@ -550,7 +550,7 @@ Finally, the `constexpr` expression provides a default initialization if require
 ### Using the mixin class
 
 The `I2cProtocol` class can be used as follows (from
-[`//zircon/system/dev/bus/platform/platform-proxy.h`](/zircon/system/dev/bus/platform/platform-proxy.h)):
+[`//src/devices/bus/drivers/platform/platform-proxy.h`](/src/devices/bus/drivers/platform/platform-proxy.h)):
 
 ```c++
 [01] class ProxyI2c : public ddk::I2cProtocol<ProxyI2c> {

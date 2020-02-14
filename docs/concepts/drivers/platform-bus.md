@@ -3,7 +3,7 @@
 ## Introduction
 
 The term **platform bus** refers to a specific Zircon driver with source code located at
-[//fuchsia/zircon/system/dev/bus/platform/](../../../zircon/system/dev/bus/platform/)).
+[//fuchsia/src/devices/bus/drivers/platform/](../../../src/devices/bus/drivers/platform/)).
 However this term also refers to the framework that manages the lower level drivers in Zircon.
 In this document, **platform bus driver** refers to a specific driver and **platform bus**
 refers to the general framework.

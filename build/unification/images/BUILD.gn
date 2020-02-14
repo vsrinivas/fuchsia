@@ -1461,10 +1461,10 @@ aggregate_manifest("migrated-image") {
     "//src/connectivity/bluetooth/hci/transport/usb:bt-transport-usb-manifest",
     "//src/devices/misc/drivers/builtin:builtin-manifest",
 #------------------
-    "//zircon/system/dev/bus/pci:bus-pci-manifest",
+    "//src/devices/bus/drivers/pci:bus-pci-manifest",
 #------------------
 #------------------
-    "//zircon/system/dev/bus/pci:bus-pci.proxy-manifest",
+    "//src/devices/bus/drivers/pci:bus-pci.proxy-manifest",
 #------------------
     "//src/devices/nand/drivers/cadence-hpnfc:cadence-hpnfc-manifest",
     "//src/devices/clock/drivers/clock:clock-manifest",
@@ -1557,8 +1557,8 @@ aggregate_manifest("migrated-image") {
 #------------------
 #------------------
     "//src/devices/rtc/drivers/pl031-rtc:pl031-rtc-manifest",
-    "//zircon/system/dev/bus/platform:platform-bus-manifest",
-    "//zircon/system/dev/bus/platform:platform-bus.proxy-manifest",
+    "//src/devices/bus/drivers/platform:platform-bus-manifest",
+    "//src/devices/bus/drivers/platform:platform-bus.proxy-manifest",
     "//src/devices/power/drivers/power:power-manifest",
     "//src/devices/pwm/drivers/pwm:pwm-manifest",
     "//src/devices/gpio/drivers/qcom-gpio:qcom-gpio-manifest",
@@ -1721,14 +1721,14 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/ulib/ddktl/test:ddktl-test-manifest",
   #------------------
   #------------------
-    "//zircon/system/dev/bus/virtio:virtio_block-manifest",
-    "//zircon/system/dev/bus/virtio:virtio_console-manifest",
-    "//zircon/system/dev/bus/virtio:virtio_ethernet-manifest",
-    "//zircon/system/dev/bus/virtio:virtio_gpu-manifest",
-    "//zircon/system/dev/bus/virtio:virtio_input-manifest",
-    "//zircon/system/dev/bus/virtio:virtio_rng-manifest",
-    "//zircon/system/dev/bus/virtio:virtio_scsi-manifest",
-    "//zircon/system/dev/bus/virtio:virtio_socket-manifest",
+    "//src/devices/bus/drivers/virtio:virtio_block-manifest",
+    "//src/devices/bus/drivers/virtio:virtio_console-manifest",
+    "//src/devices/bus/drivers/virtio:virtio_ethernet-manifest",
+    "//src/devices/bus/drivers/virtio:virtio_gpu-manifest",
+    "//src/devices/bus/drivers/virtio:virtio_input-manifest",
+    "//src/devices/bus/drivers/virtio:virtio_rng-manifest",
+    "//src/devices/bus/drivers/virtio:virtio_scsi-manifest",
+    "//src/devices/bus/drivers/virtio:virtio_socket-manifest",
   #------------------
   #------------------
       #":driver.qemu-arm64",
@@ -3132,10 +3132,10 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/paver/test:paver-test-manifest",
 #------------------
 #------------------
-    "//zircon/system/dev/bus/pci/test:pci-driver-manifest",
+    "//src/devices/bus/drivers/pci/test:pci-driver-manifest",
 #------------------
 #------------------
-    "//zircon/system/dev/bus/pci/test:pci-unit-manifest",
+    "//src/devices/bus/drivers/pci/test:pci-unit-manifest",
 #------------------
     "//src/devices/misc/drivers/cpu-trace:perf-mon-tests-manifest",
     "//zircon/system/utest/perftest:perftest-manifest",
@@ -3255,7 +3255,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/utest/vdso-variant:vdso-variant-helper-manifest",
     "//src/graphics/display/drivers/vim-display:vim-display-test-manifest",
 #------------------
-    "//zircon/system/dev/bus/virtio:virtio-test-manifest",
+    "//src/devices/bus/drivers/virtio:virtio-test-manifest",
 #------------------
     "//zircon/system/utest/virtio:virtio-manifest",
     "//zircon/system/utest/vmo:vmo-manifest",
@@ -3840,10 +3840,10 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/paver/test:paver-test-manifest",
 #------------------
 #------------------
-    "//zircon/system/dev/bus/pci/test:pci-driver-manifest",
+    "//src/devices/bus/drivers/pci/test:pci-driver-manifest",
 #------------------
 #------------------
-    "//zircon/system/dev/bus/pci/test:pci-unit-manifest",
+    "//src/devices/bus/drivers/pci/test:pci-unit-manifest",
 #------------------
     "//src/devices/misc/drivers/cpu-trace:perf-mon-tests-manifest",
     "//zircon/system/utest/perftest:perftest-manifest",
@@ -3959,7 +3959,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/utest/vdso-variant:vdso-variant-manifest",
     "//src/graphics/display/drivers/vim-display:vim-display-test-manifest",
 #------------------
-    "//zircon/system/dev/bus/virtio:virtio-test-manifest",
+    "//src/devices/bus/drivers/virtio:virtio-test-manifest",
 #------------------
     "//zircon/system/utest/virtio:virtio-manifest",
     "//zircon/system/utest/vmo:vmo-manifest",

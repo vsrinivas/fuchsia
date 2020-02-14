@@ -21,7 +21,7 @@ test("virtio") {
   testonly = false
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [
-    "//zircon/system/dev/bus/virtio/input_touch.cc",
+    "//src/devices/bus/drivers/virtio/input_touch.cc",
     "virtio-input.cc",
   ]
   deps = [

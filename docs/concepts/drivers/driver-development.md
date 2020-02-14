@@ -72,7 +72,7 @@ following macro. `"zircon"` is the vendor id and `"0.1"` is the driver version.
 ZIRCON_DRIVER(ahci, ahci_driver_ops, "zircon", "0.1");
 ```
 
-The [PCI driver](/zircon/system/dev/bus/pci/kpci/kpci.c) publishes the matching
+The [PCI driver](/src/devices/bus/drivers/pci/kpci/kpci.c) publishes the matching
 device with the following properties:
 
 ```c
@@ -258,7 +258,7 @@ it needs to call API on the parent device).
 
 `rxrpc()` is invoked on the top half when this channel is written to by the
 bottom half. There is no common wire protocol for this channel. For an
-example, refer to the [PCI driver](/zircon/system/dev/bus/pci).
+example, refer to the [PCI driver](/src/devices/bus/drivers/pci).
 
 Note: This is a mechanism used by various bus devices and not something
 general drivers should have to worry about. (please ping swetland if you think
@@ -342,7 +342,7 @@ Privileged operations such as `zx_vmo_create_contiguous()` and
 [zx_interrupt_create](/docs/reference/syscalls/interrupt_create.md) require a root resource
 handle. This handle is not available to drivers other than the system driver
 ([ACPI](/zircon/system/dev/board/x86) on x86 systems and
-[platform](/zircon/system/dev/bus/platform) on ARM systems). A device should
+[platform](/src/devices/bus/drivers/platform) on ARM systems). A device should
 request its parent to perform such operations for it. Contact the author
 of the parent driver if its protocol does not address this use case.
 

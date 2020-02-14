@@ -817,7 +817,7 @@ From //build/images/BUILD.gn:36
 
 **Current value (from the default):** `false`
 
-From //zircon/system/dev/bus/pci/pci.gni:6
+From //src/devices/bus/drivers/pci/pci.gni:6
 
 ### escher_test_for_glsl_spirv_mismatch
 If true, this enables the |SpirvNotChangedTest| to check if the precompiled
