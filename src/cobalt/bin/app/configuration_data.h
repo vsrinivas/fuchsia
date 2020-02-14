@@ -8,10 +8,28 @@
 #include <iostream>
 #include <string>
 
+#include "src/lib/json_parser/json_parser.h"
+#include "third_party/cobalt/src/lib/statusor/statusor.h"
+#include "third_party/cobalt/src/public/cobalt_service.h"
 #include "third_party/cobalt/src/registry/metric_definition.pb.h"
 #include "third_party/cobalt/src/system_data/configuration_data.h"
 
 namespace cobalt {
+
+// A class for handling parsing and reading values from config.json
+class JSONHelper {
+ public:
+  JSONHelper(const std::string& path);
+
+  lib::statusor::StatusOr<std::string> GetString(const std::string& key) const;
+  lib::statusor::StatusOr<bool> GetBool(const std::string& key) const;
+
+ private:
+  util::Status EnsureKey(const std::string& key) const;
+
+  json::JSONParser json_parser_;
+  rapidjson::Document config_file_contents_;
+};
 
 // Encapsulation of the configuration data used by Cobalt in Fuchsia.
 class FuchsiaConfigurationData {
@@ -33,6 +51,10 @@ class FuchsiaConfigurationData {
 
   cobalt::ReleaseStage GetReleaseStage() const;
 
+  cobalt::CobaltService::DataCollectionPolicy GetDataCollectionPolicy() const;
+
+  bool GetWatchForUserConsent() const;
+
   // Returns the cobalt API key. If it cannot be found, return the default API key.
   std::string GetApiKey() const;
 
@@ -41,8 +63,12 @@ class FuchsiaConfigurationData {
   static const char kDefaultEnvironmentDir[];
   config::Environment backend_environment_;
   config::ConfigurationData backend_configuration_;
-  cobalt::ReleaseStage release_stage_;
   std::string api_key_;
+
+  JSONHelper json_helper_;
+  cobalt::ReleaseStage release_stage_;
+  cobalt::CobaltService::DataCollectionPolicy data_collection_policy_;
+  bool watch_for_user_consent_;
 };
 
 }  // namespace cobalt

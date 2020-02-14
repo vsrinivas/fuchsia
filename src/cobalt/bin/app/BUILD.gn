@@ -44,17 +44,21 @@ source_set("lib") {
     "system_data_updater_impl.h",
     "timer_manager.cc",
     "timer_manager.h",
+    "user_consent_watcher.cc",
+    "user_consent_watcher.h",
     "utils.cc",
     "utils.h",
   ]
 
   public_deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.settings",
     "//sdk/lib/sys/cpp",
     "//src/cobalt/bin/utils:clock",
     "//src/cobalt/bin/utils:fuchsia_http_client",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/json_parser",
     "//src/lib/network_wrapper",
     "//src/lib/syslog/cpp",
     "//third_party/cobalt/src/lib/util:file_util",
@@ -91,9 +95,8 @@ executable("app") {
 config_data("config") {
   for_pkg = "cobalt"
 
-  sources = [ "configs/release_stage_debug" ]
-
-  outputs = [ "release_stage" ]
+  sources = [ "configs/default_config.json" ]
+  outputs = [ "config.json" ]
 }
 
 # In the "user" config, Cobalt will behave like it will on an end-user device, meaning it will only
@@ -101,9 +104,17 @@ config_data("config") {
 config_data("user_config") {
   for_pkg = "cobalt"
 
-  sources = [ "configs/release_stage_ga" ]
+  sources = [ "configs/user_config.json" ]
+  outputs = [ "config.json" ]
+}
 
-  outputs = [ "release_stage" ]
+# In the "userdebug" config, Cobalt will behave like it will on an end-user device, except that it
+# will upload DEBUG metrics.
+config_data("userdebug_config") {
+  for_pkg = "cobalt"
+
+  sources = [ "configs/userdebug_config.json" ]
+  outputs = [ "config.json" ]
 }
 
 package("cobalt") {
@@ -165,6 +176,7 @@ executable("cobalt_app_unittests") {
     "logger_impl_test.cc",
     "system_data_updater_impl_test.cc",
     "timer_manager_test.cc",
+    "user_consent_watcher_test.cc",
   ]
 
   deps = [
@@ -176,6 +188,7 @@ executable("cobalt_app_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/cobalt/src/local_aggregation:event_aggregator_mgr",
     "//third_party/cobalt/src/logger:logger_test_utils",
+    "//third_party/googletest:gmock",
     "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }

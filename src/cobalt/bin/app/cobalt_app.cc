@@ -122,6 +122,8 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
 
   cobalt_service_ = std::make_unique<CobaltService>(std::move(cfg));
 
+  cobalt_service_->SetDataCollectionPolicy(configuration_data_.GetDataCollectionPolicy());
+
   auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   FX_LOGS(INFO) << "Waiting for the system clock to become accurate at: "
                 << std::put_time(std::localtime(&current_time), "%F %T %z");
@@ -150,6 +152,15 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
       system_data_updater_bindings_.GetHandler(system_data_updater_impl_.get()));
 
   controller_impl_ = std::make_unique<CobaltControllerImpl>(dispatcher, cobalt_service_.get());
+
+  if (configuration_data_.GetWatchForUserConsent()) {
+    user_consent_watcher_ = std::make_unique<UserConsentWatcher>(
+        dispatcher, context_->svc(), [this](const CobaltService::DataCollectionPolicy& new_policy) {
+          cobalt_service_->SetDataCollectionPolicy(new_policy);
+        });
+
+    user_consent_watcher_->StartWatching();
+  }
 
   // Add other bindings.
   context_->outgoing()->AddPublicService(controller_bindings_.GetHandler(controller_impl_.get()));

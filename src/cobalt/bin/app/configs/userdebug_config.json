@@ -1,0 +1,5 @@
+{
+  "release_stage": "DEBUG",
+  "default_data_collection_policy": "DO_NOT_UPLOAD",
+  "watch_for_user_consent": true
+}
