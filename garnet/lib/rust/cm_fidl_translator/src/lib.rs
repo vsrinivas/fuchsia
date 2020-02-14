@@ -56,6 +56,7 @@ impl CmInto<fsys::ComponentDecl> for cm::Document {
             storage: self.storage.cm_into()?,
             runners: self.runners.cm_into()?,
             environments: self.environments.cm_into()?,
+            resolvers: None,
         })
     }
 }
@@ -473,6 +474,7 @@ mod tests {
             storage: None,
             runners: None,
             environments: None,
+            resolvers: None,
         }
     }
 
@@ -1645,6 +1647,7 @@ mod tests {
                     storage: Some(storages),
                     runners: Some(runners),
                     environments: Some(environments),
+                    resolvers: None,
                 }
             },
         },

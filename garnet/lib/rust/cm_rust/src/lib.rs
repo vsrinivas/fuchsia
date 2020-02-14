@@ -318,6 +318,7 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
             facets: self.facets.native_into_fidl(),
             runners: self.runners.native_into_fidl(),
             environments: self.environments.native_into_fidl(),
+            resolvers: None,
         }
     }
 }
@@ -1371,6 +1372,7 @@ mod tests {
                 storage: None,
                 runners: None,
                 environments: None,
+                resolvers: None,
             },
             result = ComponentDecl {
                 program: None,
@@ -1588,7 +1590,8 @@ mod tests {
                        name: Some("test_env".to_string()),
                        extends: Some(fsys::EnvironmentExtends::Realm),
                    }
-               ])
+               ]),
+               resolvers: None,
             },
             result = {
                 ComponentDecl {

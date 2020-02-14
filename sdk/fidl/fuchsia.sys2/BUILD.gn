@@ -32,6 +32,7 @@ fidl("fuchsia.sys2") {
     "decls/expose_decl.fidl",
     "decls/offer_decl.fidl",
     "decls/relative_refs.fidl",
+    "decls/resolver_decl.fidl",
     "decls/runner_decl.fidl",
     "decls/storage_decl.fidl",
     "decls/use_decl.fidl",

@@ -1311,6 +1311,7 @@ mod tests {
             children: None,
             collections: None,
             runners: None,
+            resolvers: None,
             environments: None,
         }
     }

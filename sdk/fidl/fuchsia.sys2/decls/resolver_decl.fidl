@@ -1,0 +1,19 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+using fuchsia.component;
+
+/// Declares a resolver which is responsible for resolving component URLs to actual components.
+/// See `fuchsia.sys2.ComponentResolver` for the protocol resolvers are expected to implement.
+table ResolverDecl {
+    /// The name of this resolver.
+    /// Must be non-empty, unique among resolvers declared in the same `ComponentDecl`, and
+    /// contain only the following characters: [a-z0-9-_.].
+    1: fuchsia.component.resolver_name name;
+
+    /// The path of the capability in the declaring component's namespace.
+    2: string:fuchsia.component.MAX_PATH_LENGTH source_path;
+};

@@ -73,8 +73,20 @@ table ComponentDecl {
     /// Runner capabilities can be exposed to the parent's realm or offered to children.
     9: vector<RunnerDecl> runners;
 
-    /// List of environments declared by this component.
+    /// List of environments created by this component.
     /// Environments are assigned to children and control aspects of a child component's
     /// runtime.
     10: vector<EnvironmentDecl>:fuchsia.component.MAX_NUM_ENVIRONMENTS environments;
+
+    /// List of resolver capabilities created by this component.
+    ///
+    /// A component can:
+    ///
+    /// - "expose" a resolver capability to its realm,
+    /// - "offer" a resolver capability to its children.
+    ///
+    /// A component cannot "use" a resolver capability directly. Component manager uses
+    /// a resolver capability on behalf of a component when that component's environment
+    /// contains the resolver capability.
+    11: vector<ResolverDecl>:fuchsia.component.MAX_NUM_RESOLVERS resolvers;
 };

@@ -141,6 +141,7 @@ mod tests {
                     storage: None,
                     runners: None,
                     environments: None,
+                    resolvers: None,
                 }),
                 package: None,
             }))

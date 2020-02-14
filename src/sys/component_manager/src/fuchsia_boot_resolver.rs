@@ -164,6 +164,7 @@ mod tests {
             storage: None,
             runners: None,
             environments: None,
+            resolvers: None,
         };
         assert_eq!(component_decl, component.decl.unwrap());
         assert_eq!(

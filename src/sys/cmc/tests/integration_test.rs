@@ -131,6 +131,7 @@ fn main() {
             // TODO: test storage
             storage: None,
             environments: None,
+            resolvers: None,
         }
     };
     assert_eq!(cm_decl, expected_decl);
