@@ -5,17 +5,14 @@
 package main
 
 import (
-	"archive/tar"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
-	"go.fuchsia.dev/fuchsia/tools/lib/tarutil"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap/lib"
 	"go.fuchsia.dev/fuchsia/tools/testing/testrunner/lib"
@@ -24,30 +21,15 @@ import (
 // testOutput manages the test runner's output drivers. Upon completion, if tar output is
 // initialized, a TAR archive containing all other outputs is produced.
 type testOutputs struct {
-	// DataDir is the dir to write data sinks to.
-	// TODO(fxb/43500): Remove when archive support is removed.
-	dataDir string
 	outDir  string
 	summary runtests.TestSummary
 	tap     *tap.Producer
-	tw      *tar.Writer
 }
 
-func createTestOutputs(producer *tap.Producer, dataDir, archivePath, outDir string) (*testOutputs, error) {
-	var tw *tar.Writer
-	if archivePath != "" {
-		f, err := os.Create(archivePath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create file %q: %v", archivePath, err)
-		}
-		tw = tar.NewWriter(f)
-	}
-
+func createTestOutputs(producer *tap.Producer, outDir string) (*testOutputs, error) {
 	return &testOutputs{
-		dataDir: dataDir,
-		outDir:  outDir,
-		tap:     producer,
-		tw:      tw,
+		outDir: outDir,
+		tap:    producer,
 	}, nil
 }
 
@@ -76,15 +58,6 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 	desc := fmt.Sprintf("%s (%v)", result.Name, duration)
 	o.tap.Ok(result.Result == runtests.TestSuccess, desc)
 
-	var err error
-	// TODO(fxb/43500): Remove once we've switched to using outDir.
-	if o.tw != nil {
-		stdout := bytes.NewReader(result.Stdout)
-		stderr := bytes.NewReader(result.Stderr)
-		stdio := io.MultiReader(stdout, stderr)
-		size := stdout.Size() + stderr.Size()
-		err = tarutil.TarFromReader(o.tw, stdio, outputRelPath, size)
-	}
 	if o.outDir != "" {
 		stdout := bytes.NewReader(result.Stdout)
 		stderr := bytes.NewReader(result.Stderr)
@@ -95,21 +68,8 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 			return fmt.Errorf("failed to create file: %v", err)
 		}
 		defer pathWriter.Close()
-		_, err = io.Copy(pathWriter, stdio)
-	}
-	if err != nil {
-		return fmt.Errorf("failed to write stdio file for test %q: %v", result.Name, err)
-	}
-
-	// TODO(fxb/43500): Remove once we've switched to outDir.
-	if o.tw != nil {
-		for _, sinks := range result.DataSinks {
-			for _, sink := range sinks {
-				sinkSrc := filepath.Join(o.dataDir, sink.File)
-				if err := tarutil.TarFile(o.tw, sinkSrc, sink.File); err != nil {
-					return fmt.Errorf("failed to tar data sink %q: %v", sink.Name, err)
-				}
-			}
+		if _, err := io.Copy(pathWriter, stdio); err != nil {
+			return fmt.Errorf("failed to write stdio file for test %q: %v", result.Name, err)
 		}
 	}
 	return nil
@@ -117,27 +77,19 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 
 // Close stops the recording of test outputs; it must be called to finalize them.
 func (o *testOutputs) Close() error {
-	if o.tw == nil && o.outDir == "" {
+	if o.outDir == "" {
 		return nil
 	}
 	summaryBytes, err := json.Marshal(o.summary)
 	if err != nil {
 		return err
 	}
-	if o.tw != nil {
-		if err := tarutil.TarBytes(o.tw, summaryBytes, runtests.TestSummaryFilename); err != nil {
-			return err
-		}
-		err = o.tw.Close()
+	summaryPath := filepath.Join(o.outDir, runtests.TestSummaryFilename)
+	s, err := osmisc.CreateFile(summaryPath)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %v", err)
 	}
-	if o.outDir != "" {
-		summaryPath := filepath.Join(o.outDir, runtests.TestSummaryFilename)
-		s, err := osmisc.CreateFile(summaryPath)
-		if err != nil {
-			return fmt.Errorf("failed to create file: %v", err)
-		}
-		defer s.Close()
-		_, err = io.Copy(s, bytes.NewBuffer(summaryBytes))
-	}
+	defer s.Close()
+	_, err = io.Copy(s, bytes.NewBuffer(summaryBytes))
 	return err
 }

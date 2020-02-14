@@ -46,10 +46,6 @@ type ZedbootCommand struct {
 	// on the target to be written.
 	filePollInterval time.Duration
 
-	// OutputArchive is a path on host to where the tarball containing the test results
-	// will be output.
-	outputArchive string
-
 	// OutputDir is a path on host to where the directory containing the test results
 	// will be output.
 	outputDir string
@@ -77,7 +73,6 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.imageManifest, "images", "", "path to an image manifest")
 	f.BoolVar(&cmd.netboot, "netboot", false, "if set, botanist will not pave; but will netboot instead")
 	f.StringVar(&cmd.testResultsDir, "results-dir", "/test", "path on target to where test results will be written")
-	f.StringVar(&cmd.outputArchive, "out", "", "path on host to output tarball of test results")
 	f.StringVar(&cmd.outputDir, "out-dir", "", "path of directory on host to output test results")
 	f.StringVar(&cmd.summaryFilename, "summary-name", runtests.TestSummaryFilename, "name of the file in the test directory")
 	f.DurationVar(&cmd.filePollInterval, "poll-interval", 1*time.Minute, "time between checking for summary.json on the target")
@@ -88,13 +83,13 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 
 func (cmd *ZedbootCommand) runTests(ctx context.Context, t tftp.Client, cmdlineArgs []string) error {
 	logger.Debugf(ctx, "waiting for %q\n", cmd.summaryFilename)
-	return runtests.PollForSummary(ctx, t, cmd.summaryFilename, cmd.testResultsDir, cmd.outputArchive, cmd.outputDir, cmd.filePollInterval)
+	return runtests.PollForSummary(ctx, t, cmd.summaryFilename, cmd.testResultsDir, cmd.outputDir, cmd.filePollInterval)
 }
 
 func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) error {
-	// Either outputArchive or outputDir must be provided.
-	if cmd.outputArchive == "" && cmd.outputDir == "" {
-		return fmt.Errorf("must provide either -out or -out-dir")
+	// outputDir must be provided.
+	if cmd.outputDir == "" {
+		return fmt.Errorf("must provide -out-dir")
 	}
 
 	configs, err := target.LoadDeviceConfigs(cmd.configFile)

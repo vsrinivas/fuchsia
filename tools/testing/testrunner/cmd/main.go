@@ -32,7 +32,7 @@ import (
 const (
 	nodenameEnvVar = "FUCHSIA_NODENAME"
 	sshKeyEnvVar   = "FUCHSIA_SSH_KEY"
-	// A directory that will be automatically archived on completion of a task.
+	// A directory that will be automatically isolated on completion of a task.
 	testOutdirEnvVar = "FUCHSIA_TEST_OUTDIR"
 )
 
@@ -40,9 +40,6 @@ const (
 var (
 	// Whether to show Usage and exit.
 	help bool
-
-	// The path where a tar archive containing test results should be created.
-	archive string
 
 	// The path where a directory containing test results should be created.
 	outDir string
@@ -70,7 +67,6 @@ SSH key corresponding to a authorized key to be set in the environment under
 
 func init() {
 	flag.BoolVar(&help, "help", false, "Whether to show Usage and exit.")
-	flag.StringVar(&archive, "archive", "", "Optional path where a tar archive containing test results should be created.")
 	flag.StringVar(&outDir, "out-dir", "", "Optional path where a directory containing test results should be created.")
 	flag.StringVar(&localWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
 	flag.BoolVar(&useRuntests, "use-runtests", false, "Whether to default to running fuchsia tests with runtests; if false, run_test_component will be used.")
@@ -111,7 +107,7 @@ func main() {
 
 	tapProducer := tap.NewProducer(os.Stdout)
 	tapProducer.Plan(len(tests))
-	outputs, err := createTestOutputs(tapProducer, testOutdir, archive, outDir)
+	outputs, err := createTestOutputs(tapProducer, testOutdir)
 	if err != nil {
 		log.Fatalf("failed to create test results object: %v", err)
 	}
@@ -180,7 +176,7 @@ func execute(ctx context.Context, tests []build.Test, outputs *testOutputs, node
 		if nodename == "" {
 			return fmt.Errorf("%s must be set", nodenameEnvVar)
 		}
-		t, err = newFuchsiaSSHTester(ctx, nodename, sshKeyFile, outputs.dataDir, useRuntests)
+		t, err = newFuchsiaSSHTester(ctx, nodename, sshKeyFile, outputs.outDir, useRuntests)
 	} else {
 		// TODO(fxbug.dev/41930): create a serial test runner in this case.
 		return fmt.Errorf("%s must be set", sshKeyEnvVar)

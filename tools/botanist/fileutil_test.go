@@ -5,14 +5,12 @@
 package botanist
 
 import (
-	"archive/tar"
 	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/net/tftp"
@@ -32,33 +30,6 @@ func (t *retryTftpClient) Read(ctx context.Context, path string) (*bytes.Reader,
 	return bytes.NewReader([]byte{42, 42, 42}), nil
 }
 
-// TODO(fxb/43500): Remove once we are no longer using archives.
-func TestFetchAndArchiveFile(t *testing.T) {
-	ta, err := ioutil.TempFile("", t.Name())
-	if err != nil {
-		t.Fatalf("failed to create temp file: %s", err)
-	}
-	defer os.Remove(ta.Name())
-	defer ta.Close()
-
-	tw := tar.NewWriter(ta)
-	defer tw.Close()
-
-	client, err := tftp.NewClient(nil)
-	if err != nil {
-		t.Fatalf("failed to create tftp client: %s", err)
-	}
-
-	tftp := &retryTftpClient{
-		failLimit:  1,
-		ClientImpl: client,
-	}
-
-	if err := FetchAndCopyFile(context.Background(), tftp, tw, "test/test", "test", &sync.Mutex{}, ""); err != nil {
-		t.Errorf("FetchAndArchive failed: %s", err)
-	}
-}
-
 func TestFetchAndCopyFile(t *testing.T) {
 	client, err := tftp.NewClient(nil)
 	if err != nil {
@@ -75,7 +46,7 @@ func TestFetchAndCopyFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(outDir)
-	if err := FetchAndCopyFile(context.Background(), tftp, nil, "test/test", "test", &sync.Mutex{}, outDir); err != nil {
+	if err := FetchAndCopyFile(context.Background(), tftp, "test/test", "test", outDir); err != nil {
 		t.Errorf("FetchAndCopy failed: %s", err)
 	}
 	// Try to read from copied file.

@@ -21,7 +21,6 @@ go_library("main") {
     "//tools/lib/logger",
     "//tools/lib/osmisc",
     "//tools/lib/runner",
-    "//tools/lib/tarutil",
     "//tools/net/sshutil",
     "//tools/testing/runtests",
     "//tools/testing/tap",

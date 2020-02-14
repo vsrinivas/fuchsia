@@ -5,10 +5,8 @@
 package main
 
 import (
-	"archive/tar"
 	"bytes"
 	"encoding/json"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -68,13 +66,12 @@ func TestRecordingOfOutputs(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(dataDir)
-	archivePath := filepath.Join(dataDir, "out.tar")
 	outDir := filepath.Join(dataDir, "out")
 
 	var buf bytes.Buffer
 	producer := tap.NewProducer(&buf)
 	producer.Plan(len(results))
-	o, err := createTestOutputs(producer, outDir, archivePath, outDir)
+	o, err := createTestOutputs(producer, outDir)
 	if err != nil {
 		t.Fatalf("failed to create a test outputs object: %v", err)
 	}
@@ -173,32 +170,6 @@ ok 2 test_b (10ms)
 	actualTAPOutput := strings.TrimSpace(buf.String())
 	if actualTAPOutput != expectedTAPOutput {
 		t.Errorf("unexpected TAP output:\nexpected: %v\nactual: %v\n", expectedTAPOutput, actualTAPOutput)
-	}
-
-	// Verify that the archive's contents are as expected.
-	f, err := os.Open(archivePath)
-	if err != nil {
-		t.Fatalf("failed to open archive %q: %v", archivePath, err)
-	}
-	defer f.Close()
-	tr := tar.NewReader(f)
-	actualContents := make(map[string]string)
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			t.Fatalf("unexpected error in reading archive: %v", err)
-		}
-		content, err := ioutil.ReadAll(tr)
-		if err != nil {
-			t.Fatalf("failed to read %q from the archive: %v", hdr.Name, err)
-		}
-		actualContents[hdr.Name] = string(content)
-	}
-
-	if !reflect.DeepEqual(expectedContents, actualContents) {
-		t.Fatalf("unexpected contents from archive:\nexpected: %#v\nactual: %#v\n", expectedContents, actualContents)
 	}
 
 	// Verify that the outDir's contents are as expected.

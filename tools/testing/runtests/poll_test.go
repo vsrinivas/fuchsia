@@ -5,7 +5,6 @@
 package runtests
 
 import (
-	"archive/tar"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -48,7 +47,6 @@ func TestPollForSummary(t *testing.T) {
 		t.Fatalf("failed to create test results dir: %v", err)
 	}
 	defer os.RemoveAll(testResultsDir)
-	outputArchive := filepath.Join(testResultsDir, "out.tar")
 	outputDir := filepath.Join(testResultsDir, "out")
 
 	outputFileA := filepath.Join("test_a", "stdout-and-stderr.txt")
@@ -86,38 +84,8 @@ func TestPollForSummary(t *testing.T) {
 
 	client := &mockClient{testResultsDir, expectedContents}
 
-	if err := PollForSummary(context.Background(), client, summaryFilename, testResultsDir, outputArchive, "", time.Second); err != nil {
-		t.Errorf("failed to tar test results: %v", err)
-	}
-
-	if err := PollForSummary(context.Background(), client, summaryFilename, testResultsDir, "", outputDir, time.Second); err != nil {
+	if err := PollForSummary(context.Background(), client, summaryFilename, testResultsDir, outputDir, time.Second); err != nil {
 		t.Errorf("failed to copy test results to out dir: %v", err)
-	}
-
-	// Verify that the archive's contents are as expected.
-	f, err := os.Open(outputArchive)
-	if err != nil {
-		t.Fatalf("failed to open archive %q: %v", outputArchive, err)
-	}
-	defer f.Close()
-	tr := tar.NewReader(f)
-	actualContents := make(map[string]string)
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			t.Errorf("unexpected error in reading archive: %v", err)
-		}
-		content, err := ioutil.ReadAll(tr)
-		if err != nil {
-			t.Errorf("failed to read %q from the archive: %v", hdr.Name, err)
-		}
-		actualContents[hdr.Name] = string(content)
-	}
-
-	if !reflect.DeepEqual(expectedContents, actualContents) {
-		t.Errorf("unexpected contents from archive:\nexpected: %#v\nactual: %#v\n", expectedContents, actualContents)
 	}
 
 	// Verify that the outputDir's contents are as expected.
