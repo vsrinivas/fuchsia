@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_REGISTERS_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_REGISTERS_H_
 
+// clang-format off
+
 // This header is intended to be included in both C and ASM
 #define X86_CR0_PE 0x00000001                   /* protected mode enable */
 #define X86_CR0_MP 0x00000002                   /* monitor coprocessor */
@@ -227,6 +229,8 @@ __BEGIN_CDECLS
 
 // Maximum buffer size needed for xsave and variants. To allocate, see ...BUFFER_SIZE below.
 #define X86_MAX_EXTENDED_REGISTER_SIZE 1024
+
+// clang-format on
 
 enum x86_extended_register_feature {
   X86_EXTENDED_REGISTER_X87,
