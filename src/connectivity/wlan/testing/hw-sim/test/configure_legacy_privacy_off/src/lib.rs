@@ -31,28 +31,25 @@ async fn scan(
             "receive a scan response",
             EventHandlerBuilder::new()
                 .on_set_channel(
-                    MatchChannel::new().on_primary(
-                        CHANNEL,
-                        Sequence::start()
-                            .then(
-                                Beacon::send(&phy)
-                                    .bssid(BSS_WPA1)
-                                    .ssid(SSID_WPA1.to_vec())
-                                    .protection(Protection::Wpa1),
-                            )
-                            .then(
-                                Beacon::send(&phy)
-                                    .bssid(BSS_WEP)
-                                    .ssid(SSID_WEP.to_vec())
-                                    .protection(Protection::Wep),
-                            )
-                            .then(
-                                Beacon::send(&phy)
-                                    .bssid(BSS_MIXED)
-                                    .ssid(SSID_MIXED.to_vec())
-                                    .protection(Protection::Wpa1Wpa2Personal),
-                            ),
-                    ),
+                    Sequence::start()
+                        .then(
+                            Beacon::send_on_primary_channel(CHANNEL, &phy)
+                                .bssid(BSS_WPA1)
+                                .ssid(SSID_WPA1.to_vec())
+                                .protection(Protection::Wpa1),
+                        )
+                        .then(
+                            Beacon::send_on_primary_channel(CHANNEL, &phy)
+                                .bssid(BSS_WEP)
+                                .ssid(SSID_WEP.to_vec())
+                                .protection(Protection::Wep),
+                        )
+                        .then(
+                            Beacon::send_on_primary_channel(CHANNEL, &phy)
+                                .bssid(BSS_MIXED)
+                                .ssid(SSID_MIXED.to_vec())
+                                .protection(Protection::Wpa1Wpa2Personal),
+                        ),
                 )
                 .build(),
             wlan_service.scan(&mut ScanRequest { timeout: 5 }),

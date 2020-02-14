@@ -110,6 +110,7 @@ impl<'a> Action<wlantap::SetChannelArgs> for MatchChannel<'a> {
 ///  send a beacon with the provided BSSID + SSID + protection.
 pub struct Beacon<'a> {
     phy: &'a wlantap::WlantapPhyProxy,
+    primary_channel: u8,
     bssid: Bssid,
     ssid: Vec<u8>,
     protection: Protection,
@@ -117,9 +118,10 @@ pub struct Beacon<'a> {
 }
 
 impl<'a> Beacon<'a> {
-    pub fn send(phy: &'a wlantap::WlantapPhyProxy) -> Self {
+    pub fn send_on_primary_channel(primary_channel: u8, phy: &'a wlantap::WlantapPhyProxy) -> Self {
         Self {
-            phy: phy,
+            phy,
+            primary_channel,
             bssid: Bssid([1; 6]),
             ssid: vec![],
             protection: Protection::Open,
@@ -146,15 +148,17 @@ impl<'a> Beacon<'a> {
 
 impl<'a> Action<wlantap::SetChannelArgs> for Beacon<'a> {
     fn run(&mut self, args: &wlantap::SetChannelArgs) {
-        send_beacon(
-            &args.chan,
-            &self.bssid,
-            &self.ssid,
-            &self.protection,
-            &self.phy,
-            self.rssi_dbm,
-        )
-        .unwrap();
+        if args.chan.primary == self.primary_channel {
+            send_beacon(
+                &args.chan,
+                &self.bssid,
+                &self.ssid,
+                &self.protection,
+                &self.phy,
+                self.rssi_dbm,
+            )
+            .unwrap();
+        }
     }
 }
 

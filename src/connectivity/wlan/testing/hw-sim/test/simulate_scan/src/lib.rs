@@ -32,50 +32,44 @@ async fn scan(
             "receive a scan response",
             EventHandlerBuilder::new()
                 .on_set_channel(
-                    MatchChannel::new()
-                        .on_primary(
-                            1,
-                            Beacon::send(&phy)
+                    Sequence::start()
+                        .then(
+                            Beacon::send_on_primary_channel(1, &phy)
                                 .bssid(BSS_FOO)
                                 .ssid(SSID_FOO.to_vec())
                                 .protection(Protection::Wpa2Personal)
                                 .rssi(-60),
                         )
-                        .on_primary(
-                            2,
-                            Beacon::send(&phy)
+                        .then(
+                            Beacon::send_on_primary_channel(2, &phy)
                                 .bssid(BSS_FOO_2)
                                 .ssid(SSID_FOO.to_vec())
                                 .protection(Protection::Open)
                                 .rssi(-60),
                         )
-                        .on_primary(
-                            3,
-                            Beacon::send(&phy)
+                        .then(
+                            Beacon::send_on_primary_channel(3, &phy)
                                 .bssid(BSS_BAR)
                                 .ssid(SSID_BAR.to_vec())
                                 .protection(Protection::Wpa2Personal)
                                 .rssi(-60),
                         )
-                        .on_primary(
-                            4,
-                            Beacon::send(&phy)
+                        .then(
+                            Beacon::send_on_primary_channel(4, &phy)
                                 .bssid(BSS_BAR_2)
                                 .ssid(SSID_BAR.to_vec())
                                 .protection(Protection::Wpa2Personal)
                                 .rssi(-40),
                         )
-                        .on_primary(
-                            5,
-                            Beacon::send(&phy)
+                        .then(
+                            Beacon::send_on_primary_channel(5, &phy)
                                 .bssid(BSS_BAZ)
                                 .ssid(SSID_BAZ.to_vec())
                                 .protection(Protection::Open)
                                 .rssi(-60),
                         )
-                        .on_primary(
-                            6,
-                            Beacon::send(&phy)
+                        .then(
+                            Beacon::send_on_primary_channel(6, &phy)
                                 .bssid(BSS_BAZ_2)
                                 .ssid(SSID_BAZ.to_vec())
                                 .protection(Protection::Wpa2Personal)
