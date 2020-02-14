@@ -218,7 +218,6 @@ if (current_cpu != "") {
         "$zx/system/dev/board/x86:x86-thermal-test",
 #------------------
 #------------------
-        "x86-umip",
 #------------------
       ]
     }

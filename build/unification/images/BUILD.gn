@@ -823,7 +823,6 @@ aggregate_manifest("legacy-aux") {
       ":test.ddk.x86-thermal-test",
 #------------------
 #------------------
-      ":test.sys.x86-umip-test",
 #------------------
     ]
   }
@@ -1286,7 +1285,6 @@ aggregate_manifest("legacy-tests") {
       ":test.ddk.x86-thermal-test",
 #------------------
 #------------------
-      ":test.sys.x86-umip-test",
 #------------------
     ]
   }
@@ -3289,6 +3287,14 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//src/graphics/display/drivers/intel-i915:intel-i915-test-manifest",
   ]
+
+  if (target_cpu == "arm64") {
+    deps += []
+  } else if (target_cpu == "x64") {
+    deps += [
+      "//zircon/system/utest/x86-umip:x86-umip-manifest",
+    ]
+  }
 }
 
 aggregate_manifest("migrated-tests") {
@@ -3986,4 +3992,12 @@ aggregate_manifest("migrated-tests") {
     "//src/graphics/display/drivers/intel-i915:intel-i915-test-manifest",
     "//zircon/system/ulib/ram-crashlog/test:ram-crashlog-manifest",
   ]
+
+  if (target_cpu == "arm64") {
+    deps += []
+  } else if (target_cpu == "x64") {
+    deps += [
+      "//zircon/system/utest/x86-umip:x86-umip-manifest",
+    ]
+  }
 }
