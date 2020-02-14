@@ -307,6 +307,10 @@ config("default_warnings") {
     # TODO(38640): Keep this flag here while it is enabled in ZN to keep the
     # flags unified.
     "-Wno-deprecated-copy",
+
+    # TODO(45689): Temporarily disable this warning until we roll toolchain,
+    # then come back and fix the instances this appears after rolling.
+    "-Wno-non-c-typedef-for-linkage",
   ]
 }
 
