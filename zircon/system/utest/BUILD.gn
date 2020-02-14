@@ -81,7 +81,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/fdio/test",
 #------------------
 #------------------
-      "$zx/system/ulib/fs-pty/test",
 #------------------
 #------------------
       "$zx/system/ulib/ftl:test",

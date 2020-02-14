@@ -589,7 +589,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.lazy_init-test",
 #------------------
 #------------------
-    ":test.sys.libfs-pty-test-test",
 #------------------
 #------------------
     ":test.sys.linenoise-test-test",
@@ -1192,7 +1191,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.lazy_init-test",
 #------------------
 #------------------
-    ":test.sys.libfs-pty-test-test",
 #------------------
 #------------------
     ":test.sys.linenoise-test-test",
@@ -3087,7 +3085,7 @@ aggregate_manifest("migrated-aux") {
     #":test.sys.lazy_init-test",
 #------------------
 #------------------
-    #":test.sys.libfs-pty-test-test",
+    "//zircon/system/ulib/fs-pty/test:libfs-pty-test-manifest",
 #------------------
     "//zircon/system/ulib/hwreg/test:libhwreg-manifest",
     "//zircon/system/ulib/hwreg/test:libhwreg-i2c-manifest",
@@ -3790,7 +3788,7 @@ aggregate_manifest("migrated-tests") {
     #":test.sys.lazy_init-test",
 #------------------
 #------------------
-    #":test.sys.libfs-pty-test-test",
+    "//zircon/system/ulib/fs-pty/test:libfs-pty-test-manifest",
 #------------------
     "//zircon/system/ulib/hwreg/test:libhwreg-manifest",
     "//zircon/system/ulib/hwreg/test:libhwreg-i2c-manifest",
