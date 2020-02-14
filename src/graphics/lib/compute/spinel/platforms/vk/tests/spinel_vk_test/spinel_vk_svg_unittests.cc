@@ -367,6 +367,105 @@ param const params[] = {
       "  </g>\n"
       "</svg>\n")
   },
+  {
+    .name        = "circles",
+    .surface     = { 1024, 1024 },
+    .checksums = {
+      { 0xE86BA68F, {
+          { param::INTEL,  {}                    } } // all intel
+      },
+      { 0xE8458069, {
+          { param::NVIDIA, {}                    } } // all nvidia
+      },
+    },
+    .test = std::make_shared<test>(
+      "<svg version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">\n"
+      "  <circle cx=\"16\"  cy=\"512\" r=\"16\"/>\n"
+      "  <circle cx=\"64\"  cy=\"512\" r=\"32\"/>\n"
+      "  <circle cx=\"160\" cy=\"512\" r=\"64\"/>\n"
+      "  <circle cx=\"352\" cy=\"512\" r=\"128\"/>\n"
+      "  <circle cx=\"736\" cy=\"512\" r=\"256\"/>\n"
+      "</svg>\n")
+  },
+  {
+    .name        = "ellipses",
+    .surface     = { 1024, 1024 },
+
+    .checksums = {
+      { 0xCB49AF86, {
+          { param::INTEL,  {}                    } } // all intel
+      },
+      { 0xCAFA6037, {
+          { param::NVIDIA, {}                    } } // all nvidia
+      },
+    },
+    .test = std::make_shared<test>(
+      "<svg version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">\n"
+      "  <ellipse cx=\"16\"  cy=\"512\" rx=\"16\"  ry=\"32\" />\n"
+      "  <ellipse cx=\"64\"  cy=\"512\" rx=\"32\"  ry=\"64\" />\n"
+      "  <ellipse cx=\"160\" cy=\"512\" rx=\"64\"  ry=\"128\"/>\n"
+      "  <ellipse cx=\"352\" cy=\"512\" rx=\"128\" ry=\"256\"/>\n"
+      "  <ellipse cx=\"736\" cy=\"512\" rx=\"256\" ry=\"512\"/>\n"
+      "</svg>\n")
+  },
+  {
+    .name        = "arcs",
+    .surface     = { 1024, 512 },
+    .checksums = {
+      { 0xC2E4C3A9, {
+          { param::INTEL,  {}                    } } // all intel
+      },
+      { 0xC26C3E22, {
+          { param::NVIDIA, {}                    } } // all nvidia
+      },
+    },
+    .test = std::make_shared<test>(
+      "<svg version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">\n"
+      "  <!-- four cases -->\n"
+      "  <g transform=\"translate(0,0)\">\n"
+      "    <ellipse cx=\"125\" cy=\"125\" rx=\"100\" ry=\"50\" fill=\"green\"/>\n"
+      "    <ellipse cx=\"225\" cy=\"75\" rx=\"100\" ry=\"50\" fill=\"blue\"/>\n"
+      "    <path d=\"M 125,75 a100,50 0 0,0 100,50\" fill=\"red\"/>\n"
+      "  </g>\n"
+      "  <g transform=\"translate(300,0)\">\n"
+      "    <ellipse cx=\"225\" cy=\"75\" rx=\"100\" ry=\"50\" fill=\"blue\"/>\n"
+      "    <ellipse cx=\"125\" cy=\"125\" rx=\"100\" ry=\"50\" fill=\"green\"/>\n"
+      "    <path d=\"M 125,75 a100,50 0 0,1 100,50\" fill=\"red\"/>\n"
+      "  </g>\n"
+      "  <g transform=\"translate(0,250)\">\n"
+      "    <ellipse cx=\"225\" cy=\"75\" rx=\"100\" ry=\"50\" fill=\"blue\"/>\n"
+      "    <ellipse cx=\"125\" cy=\"125\" rx=\"100\" ry=\"50\" fill=\"green\"/>\n"
+      "    <path d=\"M 125,75 a100,50 0 1,0 100,50\" fill=\"red\"/>\n"
+      "  </g>\n"
+      "  <g transform=\"translate(300,250)\">\n"
+      "    <ellipse cx=\"125\" cy=\"125\" rx=\"100\" ry=\"50\" fill=\"green\"/>\n"
+      "    <ellipse cx=\"225\" cy=\"75\" rx=\"100\" ry=\"50\" fill=\"blue\"/>\n"
+      "    <path d=\"M 125,75 a100,50 0 1,1 100,50\" fill=\"red\"/>\n"
+      "  </g>\n"
+      "  <!-- simple -->\n"
+      "  <g transform=\"translate(640,0)\">\n"
+      "    <path d=\"M80 80\n"
+      "             A 45 45, 0, 0, 0, 125 125\n"
+      "             L 125 80 Z\" fill=\"green\"/>\n"
+      "    <path d=\"M230 80\n"
+      "             A 45 45, 0, 1, 0, 275 125\n"
+      "             L 275 80 Z\" fill=\"red\"/>\n"
+      "    <path d=\"M80 230\n"
+      "             A 45 45, 0, 0, 1, 125 275\n"
+      "             L 125 230 Z\" fill=\"purple\"/>\n"
+      "    <path d=\"M230 230\n"
+      "             A 45 45, 0, 1, 1, 275 275\n"
+      "             L 275 230 Z\" fill=\"blue\"/>\n"
+      "  </g>\n"
+      "  <!-- angled -->\n"
+      "  <g transform=\"translate(675,225)\">\n"
+      "    <path d=\"M 110 215\n"
+      "             A 30 50 0 0 1 162.55 162.45 z\n"
+      "             M 172.55 152.45\n"
+      "             A 30 50 -45 0 1 215.1 109.9 z\"/>\n"
+      "  </g>\n"
+      "</svg>")
+  },
 };
 
 //

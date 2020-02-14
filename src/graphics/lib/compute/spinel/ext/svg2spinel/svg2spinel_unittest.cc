@@ -307,3 +307,132 @@ TEST_F(Svg2SpinelTest, project)
 //
 //
 //
+
+TEST_F(Svg2SpinelTest, circle)
+{
+  char const doc[] = { "<svg version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">\n"
+                       "  <circle cx=\"16\"  cy=\"512\" r=\"16\"/>\n"
+                       "</svg>\n" };
+
+  ScopedSvg svg = ScopedSvg::parseString(doc);
+  ASSERT_TRUE(svg.get());
+
+  // create paths
+  spn_path_t * paths = spn_svg_paths_decode(svg.get(), path_builder_);
+  ASSERT_TRUE(paths);
+
+  {
+    const auto & mock_paths = mock_context()->paths();
+    ASSERT_EQ(mock_paths.size(), 1u);
+
+    {
+      const auto & path = mock_paths[0];
+      // MOVE, QUAD, QUAD, QUAD
+      ASSERT_EQ(path.data.size(), 3u + 6u + 6u + 6u);
+
+      //
+      // NOTE(allanmac): circles & ellipses are currently implemented
+      // with 3 quads -- that may change in the future
+      //
+      // NOTE(allanmac): the values aren't integral so just check tags
+      //
+      ASSERT_EQ(path.data[0], ::mock_spinel::Path::MoveTo::kTag);
+      ASSERT_EQ(path.data[3], ::mock_spinel::Path::RatQuadTo::kTag);
+      ASSERT_EQ(path.data[9], ::mock_spinel::Path::RatQuadTo::kTag);
+      ASSERT_EQ(path.data[15], ::mock_spinel::Path::RatQuadTo::kTag);
+    }
+  }
+
+  spn_svg_paths_release(svg.get(), context_, paths);
+}
+
+//
+//
+//
+
+TEST_F(Svg2SpinelTest, ellipse)
+{
+  char const doc[] = { "<svg version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">\n"
+                       "  <ellipse cx=\"16\"  cy=\"512\" rx=\"16\"  ry=\"32\" />\n"
+                       "</svg>\n" };
+
+  ScopedSvg svg = ScopedSvg::parseString(doc);
+  ASSERT_TRUE(svg.get());
+
+  // create paths
+  spn_path_t * paths = spn_svg_paths_decode(svg.get(), path_builder_);
+  ASSERT_TRUE(paths);
+
+  {
+    const auto & mock_paths = mock_context()->paths();
+    ASSERT_EQ(mock_paths.size(), 1u);
+
+    {
+      const auto & path = mock_paths[0];
+      // MOVE, QUAD, QUAD, QUAD
+      ASSERT_EQ(path.data.size(), 3u + 6u + 6u + 6u);
+
+      //
+      // NOTE(allanmac): circles & ellipses are currently implemented
+      // with 3 quads -- that may change in the future
+      //
+      // NOTE(allanmac): the values aren't integral so just check tags
+      //
+      ASSERT_EQ(path.data[0], ::mock_spinel::Path::MoveTo::kTag);
+      ASSERT_EQ(path.data[3], ::mock_spinel::Path::RatQuadTo::kTag);
+      ASSERT_EQ(path.data[9], ::mock_spinel::Path::RatQuadTo::kTag);
+      ASSERT_EQ(path.data[15], ::mock_spinel::Path::RatQuadTo::kTag);
+    }
+  }
+
+  spn_svg_paths_release(svg.get(), context_, paths);
+}
+
+//
+//
+//
+
+TEST_F(Svg2SpinelTest, arc)
+{
+  char const doc[] = { "<svg version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\">\n"
+                       "  <path d=\"M80 80\n"
+                       "           A 45 45, 0, 0, 0, 125 125\n"
+                       "           L 125 80 Z\" fill=\"green\"/>\n"
+                       "</svg>\n" };
+
+  ScopedSvg svg = ScopedSvg::parseString(doc);
+  ASSERT_TRUE(svg.get());
+
+  // create paths
+  spn_path_t * paths = spn_svg_paths_decode(svg.get(), path_builder_);
+  ASSERT_TRUE(paths);
+
+  {
+    const auto & mock_paths = mock_context()->paths();
+    ASSERT_EQ(mock_paths.size(), 1u);
+
+    {
+      const auto & path = mock_paths[0];
+      // MOVE, ARC, LINE, LINE, MOVE
+      ASSERT_EQ(path.data.size(), 3u + 6u + 3u + 3u + 3u);
+
+      //
+      // NOTE(allanmac): this arc is 90 degrees which is currently
+      // represented with one quad -- this may change in the future.
+      //
+      // NOTE(allanmac): the values aren't integral so just check tags
+      //
+      ASSERT_EQ(path.data[0], ::mock_spinel::Path::MoveTo::kTag);
+      ASSERT_EQ(path.data[3], ::mock_spinel::Path::RatQuadTo::kTag);
+      ASSERT_EQ(path.data[9], ::mock_spinel::Path::LineTo::kTag);
+      ASSERT_EQ(path.data[12], ::mock_spinel::Path::LineTo::kTag);
+      ASSERT_EQ(path.data[15], ::mock_spinel::Path::MoveTo::kTag);
+    }
+  }
+
+  spn_svg_paths_release(svg.get(), context_, paths);
+}
+
+//
+//
+//

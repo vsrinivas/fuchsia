@@ -5,10 +5,13 @@
 #include "svg2spinel.h"
 
 #include <float.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "spinel/ext/color/color.h"
+#include "spinel/ext/geometry/ellipse.h"
+#include "spinel/ext/geometry/svg_arc.h"
 #include "spinel/spinel_assert.h"
 #include "spinel/spinel_opcodes.h"
 
@@ -97,26 +100,6 @@ spn_svg_implicit_close_filled_path(spn_path_builder_t pb, float x0, float y0, fl
 //
 //
 
-static void
-spn_svg_arc_decode(bool const                               is_relative,
-                   struct svg_path_cmd_arc_to const * const cmd_arc_to,
-                   float * const                            x,
-                   float * const                            y,
-                   spn_path_builder_t                       pb)
-{
-  float x1 = cmd_arc_to->x;
-  float y1 = cmd_arc_to->y;
-
-  fprintf(stderr, "Error: arc not implemented - requires rationals\n");
-
-  *x = x1;
-  *y = y1;
-}
-
-//
-//
-//
-
 spn_path_t *
 spn_svg_paths_decode(struct svg const * const svg, spn_path_builder_t pb)
 {
@@ -141,11 +124,19 @@ spn_svg_paths_decode(struct svg const * const svg, spn_path_builder_t pb)
             break;
 
           case SVG_PATH_CMD_CIRCLE:
-            fprintf(stderr, "Error: circle not implemented - requires rationals\n");
+            spn(path_builder_ellipse(pb,
+                                     cmd->circle.cx,
+                                     cmd->circle.cy,
+                                     cmd->circle.r,
+                                     cmd->circle.r));
             break;
 
           case SVG_PATH_CMD_ELLIPSE:
-            fprintf(stderr, "Error: ellipse not implemented - requires rationals\n");
+            spn(path_builder_ellipse(pb,
+                                     cmd->ellipse.cx,
+                                     cmd->ellipse.cy,
+                                     cmd->ellipse.rx,
+                                     cmd->ellipse.ry));
             break;
 
           case SVG_PATH_CMD_LINE:
@@ -339,11 +330,54 @@ spn_svg_paths_decode(struct svg const * const svg, spn_path_builder_t pb)
             break;
 
           case SVG_PATH_CMD_ARC_TO:
-            spn_svg_arc_decode(false, &cmd->arc_to, &x, &y, pb);
+            // clang-format off
+            {
+              struct spn_arc_params arc_params;
+
+              spn_svg_arc(x,
+                          y,
+                          cmd->arc_to.x,
+                          cmd->arc_to.y,
+                          cmd->arc_to.rx,
+                          cmd->arc_to.ry,
+                          cmd->arc_to.x_axis_rotation * (float)(M_PI / 180.0),
+                          cmd->arc_to.large_arc_flag != 0.0f,
+                          cmd->arc_to.sweep_flag != 0.0f,
+                          &arc_params);
+
+              spn_path_builder_arc(pb, &arc_params);
+
+              x = cmd->arc_to.x;
+              y = cmd->arc_to.y;
+            }
+            // clang-format on
             break;
 
           case SVG_PATH_CMD_ARC_TO_REL:
-            spn_svg_arc_decode(true, &cmd->arc_to, &x, &y, pb);
+            // clang-format off
+            {
+              struct spn_arc_params arc_params;
+
+              float x1 = x + cmd->arc_to.x;
+              float y1 = y + cmd->arc_to.y;
+
+              spn_svg_arc(x,
+                          y,
+                          x1,
+                          y1,
+                          cmd->arc_to.rx,
+                          cmd->arc_to.ry,
+                          cmd->arc_to.x_axis_rotation * (float)(M_PI / 180.0),
+                          cmd->arc_to.large_arc_flag != 0.0f,
+                          cmd->arc_to.sweep_flag != 0.0f,
+                          &arc_params);
+
+              x = x1;
+              y = y1;
+
+              spn_path_builder_arc(pb, &arc_params);
+            }
+            // clang-format on
             break;
 
           default:

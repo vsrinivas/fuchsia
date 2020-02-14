@@ -18,6 +18,7 @@ source_set("svg2spinel") {
   deps = [
     "${graphics_compute_dir}/spinel:spinel_headers",
     "${graphics_compute_dir}/spinel/ext/color",
+    "${graphics_compute_dir}/spinel/ext/geometry",
     "${graphics_compute_dir}/spinel/ext/transform_stack",
     "${graphics_compute_dir}/svg",
   ]
