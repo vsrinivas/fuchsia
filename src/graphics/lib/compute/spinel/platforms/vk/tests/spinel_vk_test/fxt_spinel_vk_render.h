@@ -15,12 +15,46 @@
 #include <map>
 
 #include "fxt_spinel_vk.h"
+#include "spinel/ext/transform_stack/transform_stack.h"
 #include "spinel/spinel_opcodes.h"
+
 //
 //
 //
 
 namespace spinel::vk::test {
+
+struct test_spinel_vk_render
+{
+  virtual ~test_spinel_vk_render()
+  {
+    ;
+  }
+
+  virtual void
+  create() = 0;
+
+  virtual void
+  dispose() = 0;
+
+  virtual uint32_t
+  layer_count() = 0;
+
+  virtual void
+  paths_create(spn_path_builder_t pb) = 0;
+
+  virtual void
+  rasters_create(spn_raster_builder_t rb, struct transform_stack * const ts) = 0;
+
+  virtual void
+  layers_create(spn_composition_t composition, spn_styling_t styling, bool is_srgb) = 0;
+
+  virtual void
+  paths_dispose(spn_context_t context) = 0;
+
+  virtual void
+  rasters_dispose(spn_context_t context) = 0;
+};
 
 struct param_spinel_vk_render
 {
@@ -38,8 +72,9 @@ struct param_spinel_vk_render
     uint32_t render[4]      = { 0, 0, UINT32_MAX, UINT32_MAX };
   } clip;
 
-  char const * svg   = nullptr;
-  uint32_t     loops = 1;
+  bool is_srgb = false;
+
+  uint32_t loops = 1;
 
   //
   // The map pairs define this relationship:
@@ -69,11 +104,17 @@ struct param_spinel_vk_render
   {
     AMD_V1807B = 0x15DD
   };
+
+  //
+  // test is a shared pointer to an abstract class
+  //
+  std::shared_ptr<test_spinel_vk_render> test;
 };
 
 // Implementing this function is necessary to avoid Valgrind warnings
-// when registering tests parameterized with this struct
-// (see https://bugs.fuchsia.dev/p/fuchsia/issues/detail/?id=43334)
+// when registering tests parameterized with this struct (see
+// https://bugs.fuchsia.dev/p/fuchsia/issues/detail/?id=43334)
+
 void
 PrintTo(const param_spinel_vk_render & param, std::ostream * os);
 

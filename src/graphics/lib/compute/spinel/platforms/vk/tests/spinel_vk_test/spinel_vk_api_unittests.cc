@@ -188,7 +188,7 @@ TEST_F(spinel_vk, dispatch_implicit_rasters_flush)
   //
   // how many to trip bug?
   //
-  uint32_t const count = 255 * 2 + 1; // +0 succeeds
+  uint32_t const count = 255 * 2 + 1;  // +0 succeeds
 
   //
   // Create paths

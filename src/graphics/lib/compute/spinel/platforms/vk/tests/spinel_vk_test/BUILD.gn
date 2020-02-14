@@ -19,8 +19,6 @@ source_set("spinel_vk_test") {
     "fxt_spinel_vk.h",
     "fxt_spinel_vk_render.cc",
     "fxt_spinel_vk_render.h",
-    "fxt_spinel_vk_svg.cc",
-    "fxt_spinel_vk_svg.h",
   ]
   deps = [
     "${graphics_compute_dir}/common",
@@ -43,8 +41,8 @@ graphics_compute_unittests("spinel_vk_api_unittests") {
   deps = [ ":spinel_vk_test" ]
 }
 
-graphics_compute_unittests("spinel_vk_render_unittests") {
-  sources = [ "spinel_vk_render_unittests.cc" ]
+graphics_compute_unittests("spinel_vk_simple_unittests") {
+  sources = [ "spinel_vk_simple_unittests.cc" ]
   deps = [ ":spinel_vk_test" ]
 }
 
@@ -57,7 +55,7 @@ group("vk_unittests") {
   testonly = true
   public_deps = [
     ":spinel_vk_api_unittests",  # basic API tests
-    ":spinel_vk_render_unittests",  # explicit rendering tests
-    ":spinel_vk_svg_unittests",  # svg tests
+    ":spinel_vk_simple_unittests",  # simple rendering tests
+    ":spinel_vk_svg_unittests",  # svg rendering tests
   ]
 }
