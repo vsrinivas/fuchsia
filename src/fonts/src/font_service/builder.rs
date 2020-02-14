@@ -7,7 +7,7 @@ use {
         asset::{AssetCollection, AssetCollectionBuilder},
         family::{FamilyOrAlias, FontFamily},
         typeface::{Collection as TypefaceCollection, Typeface},
-        FontService,
+        AssetId, FontService,
     },
     anyhow::{format_err, Error},
     clonable_error::ClonableError,
@@ -36,7 +36,12 @@ pub struct FontServiceBuilder {
     /// Maps the font family name from the manifest (`families.family`) to a FamilyOrAlias.
     families: BTreeMap<UniCase<String>, FamilyOrAlias>,
     fallback_collection: TypefaceCollection,
+
+    typefaces: BTreeMap<TypefaceId, Arc<Typeface>>,
 }
+
+/// Asset ID and font index.
+type TypefaceId = (AssetId, u32);
 
 impl FontServiceBuilder {
     /// Creates a new, empty builder.
@@ -46,6 +51,7 @@ impl FontServiceBuilder {
             assets: AssetCollectionBuilder::new(),
             families: BTreeMap::new(),
             fallback_collection: TypefaceCollection::new(),
+            typefaces: BTreeMap::new(),
         }
     }
 
@@ -123,7 +129,7 @@ impl FontServiceBuilder {
                 }
             };
 
-            // Register the family's assets.
+            // Register the family's assets and their typefaces.
 
             // We have to use `.drain()` here in order to leave `manifest_family` in a valid state
             // to be able to keep using it further down.
@@ -138,14 +144,23 @@ impl FontServiceBuilder {
                         }
                         .into());
                     }
-                    let typeface = Arc::new(Typeface::new(
-                        asset_id,
-                        manifest_typeface,
-                        manifest_family.generic_family,
-                    )?);
-                    family.faces.add_typeface(typeface.clone());
-                    if manifest_family.fallback {
-                        self.fallback_collection.add_typeface(typeface);
+                    // Deduplicate typefaces across multiple manifests
+                    let typeface_id = (asset_id, manifest_typeface.index);
+                    if !self.typefaces.contains_key(&typeface_id) {
+                        let typeface = Arc::new(
+                            Typeface::new(
+                                asset_id,
+                                manifest_typeface,
+                                manifest_family.generic_family,
+                            )
+                            // We already checked for missing code points above
+                            .unwrap(),
+                        );
+                        self.typefaces.insert(typeface_id, typeface.clone());
+                        family.faces.add_typeface(typeface.clone());
+                        if manifest_family.fallback {
+                            self.fallback_collection.add_typeface(typeface);
+                        }
                     }
                 }
             }
@@ -284,4 +299,133 @@ pub enum FontServiceBuilderError {
     /// The manifest did not have defined code points for a particular typeface.
     #[error("Missing code points for \"{}\"[{}] in {:?}", asset_name, typeface_idx, manifest_path)]
     NoCodePoints { asset_name: String, typeface_idx: u32, manifest_path: Option<PathBuf> },
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        crate::font_service::AssetId,
+        char_set::CharSet,
+        fidl_fuchsia_fonts::{GenericFontFamily, Slant, Width, WEIGHT_NORMAL},
+        manifest::{serde_ext::StyleOptions, v2},
+        maplit::{btreemap, btreeset},
+        pretty_assertions::assert_eq,
+        std::sync::Arc,
+        unicase::UniCase,
+    };
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_multiple_overlapping_manifests() -> Result<(), Error> {
+        let mut builder = FontServiceBuilder::new();
+        builder
+            .add_manifest(FontManifestWrapper::Version2(v2::FontsManifest {
+                families: vec![v2::Family {
+                    name: "Alpha".to_string(),
+                    aliases: vec![v2::FontFamilyAliasSet::without_overrides(vec![
+                        "A", "Aleph", "Alif",
+                    ])?],
+                    generic_family: Some(GenericFontFamily::SansSerif),
+                    fallback: true,
+                    assets: vec![v2::Asset {
+                        file_name: "Alpha-Regular.ttf".to_string(),
+                        location: v2::AssetLocation::LocalFile(v2::LocalFileLocator {
+                            directory: PathBuf::from("/pkg/config/data/assets"),
+                        }),
+                        typefaces: vec![v2::Typeface {
+                            index: 0,
+                            languages: vec!["en".to_string()],
+                            style: v2::Style {
+                                slant: Slant::Upright,
+                                weight: WEIGHT_NORMAL,
+                                width: Width::Normal,
+                            },
+                            code_points: CharSet::new(vec![0x1, 0x2, 0x3]),
+                        }],
+                    }],
+                }],
+            }))
+            .add_manifest(FontManifestWrapper::Version2(v2::FontsManifest {
+                families: vec![v2::Family {
+                    name: "Alpha".to_string(),
+                    aliases: vec![
+                        v2::FontFamilyAliasSet::without_overrides(vec![
+                            "A",
+                            "Aleph",
+                            "Alpha Ordinary",
+                        ])?,
+                        // Note different languages in second manifest's "Alif" alias
+                        v2::FontFamilyAliasSet::new(
+                            vec!["Alif"],
+                            StyleOptions::default(),
+                            vec!["en", "ar"],
+                        )?,
+                    ],
+                    generic_family: Some(GenericFontFamily::SansSerif),
+                    fallback: true,
+                    assets: vec![v2::Asset {
+                        file_name: "Alpha-Regular.ttf".to_string(),
+                        location: v2::AssetLocation::LocalFile(v2::LocalFileLocator {
+                            directory: PathBuf::from("/pkg/config/data/assets"),
+                        }),
+                        typefaces: vec![v2::Typeface {
+                            index: 0,
+                            languages: vec!["en".to_string()],
+                            style: v2::Style {
+                                slant: Slant::Upright,
+                                weight: WEIGHT_NORMAL,
+                                width: Width::Expanded, // Note difference
+                            },
+                            code_points: CharSet::new(vec![0x1, 0x2, 0x3]),
+                        }],
+                    }],
+                }],
+            }));
+
+        let service = builder.build().await?;
+
+        let expected_typeface = Arc::new(Typeface {
+            asset_id: AssetId(0),
+            font_index: 0,
+            slant: Slant::Upright,
+            weight: WEIGHT_NORMAL,
+            width: Width::Normal, // First version wins
+            languages: btreeset!["en".to_string()],
+            char_set: CharSet::new(vec![0x1, 0x2, 0x3]),
+            generic_family: Some(GenericFontFamily::SansSerif),
+        });
+
+        assert_eq!(
+            service.families,
+            btreemap!(
+            UniCase::new("Alpha".to_string()) =>
+                FamilyOrAlias::Family(FontFamily {
+                    name: "Alpha".to_string(),
+                    faces: TypefaceCollection {
+                        faces: vec![expected_typeface.clone()]
+                    },
+                    generic_family: Some(GenericFontFamily::SansSerif)
+            }),
+            UniCase::new("A".to_string()) =>
+                FamilyOrAlias::Alias(UniCase::new("Alpha".to_string()), None),
+            UniCase::new("Aleph".to_string()) =>
+                FamilyOrAlias::Alias(UniCase::new("Alpha".to_string()), None),
+            // First version of "Alif" wins
+            UniCase::new("Alif".to_string()) =>
+                FamilyOrAlias::Alias(UniCase::new("Alpha".to_string()), None),
+            UniCase::new("Alpha Ordinary".to_string()) =>
+                FamilyOrAlias::Alias(UniCase::new("Alpha".to_string()), None),
+            UniCase::new("AlphaOrdinary".to_string()) =>
+                FamilyOrAlias::Alias(UniCase::new("Alpha".to_string()), None),)
+        );
+
+        assert_eq!(service.assets.len(), 1);
+
+        assert_eq!(
+            service.fallback_collection,
+            TypefaceCollection { faces: vec![expected_typeface.clone()] }
+        );
+
+        Ok(())
+    }
 }

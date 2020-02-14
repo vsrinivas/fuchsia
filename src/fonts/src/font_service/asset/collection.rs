@@ -165,6 +165,13 @@ impl AssetCollection {
         Ok(buffer)
     }
 
+    /// Returns the number of assets in the collection
+    #[allow(dead_code)]
+    #[cfg(test)]
+    pub fn len(&self) -> usize {
+        self.id_to_location_map.len()
+    }
+
     /// Gets a `Buffer` for the [`Asset`] corresponding to `id` from a Fuchsia package, using the
     /// directory proxy cache if possible.
     async fn get_package_asset(
