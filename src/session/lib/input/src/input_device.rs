@@ -8,8 +8,10 @@ use {
     async_trait::async_trait,
     fdio,
     fidl_fuchsia_input_report::{InputDeviceMarker, InputReport},
+    fidl_fuchsia_io::OPEN_RIGHT_READABLE,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::channel::mpsc::{Receiver, Sender},
+    io_util::open_directory_in_namespace,
     std::{
         fs::{read_dir, ReadDir},
         path::{Path, PathBuf},
@@ -187,11 +189,12 @@ pub async fn all_devices(
     let input_report_dir = Path::new(INPUT_REPORT_PATH);
     let entries: ReadDir = read_dir(input_report_dir)
         .with_context(|| format!("Failed to read input report directory {}", INPUT_REPORT_PATH))?;
+    let dir_proxy = open_directory_in_namespace(INPUT_REPORT_PATH, OPEN_RIGHT_READABLE)?;
 
     let mut devices: Vec<fidl_fuchsia_input_report::InputDeviceProxy> = vec![];
     for entry in entries.filter_map(Result::ok) {
-        let entry_path = entry.path();
-        if let Ok(input_device) = get_device_from_dir_entry_path(&entry_path) {
+        let entry_path = PathBuf::from(entry.file_name());
+        if let Ok(input_device) = get_device_from_dir_entry_path(&dir_proxy, &entry_path) {
             if is_device_type(&input_device, device_type).await {
                 devices.push(input_device);
             }
@@ -228,11 +231,13 @@ pub async fn get_device_binding(
 /// Returns a proxy to the InputDevice in `entry` if it exists.
 ///
 /// # Parameters
+/// - `dir_proxy`: The directory containing InputDevice connections.
 /// - `entry`: The directory entry that contains an InputDevice.
 ///
 /// # Errors
 /// If there is an error connecting to the InputDevice in `entry`.
 pub fn get_device_from_dir_entry_path(
+    dir_proxy: &fidl_fuchsia_io::DirectoryProxy,
     entry_path: &PathBuf,
 ) -> Result<fidl_fuchsia_input_report::InputDeviceProxy, Error> {
     let input_device_path = entry_path.to_str();
@@ -241,7 +246,8 @@ pub fn get_device_from_dir_entry_path(
     }
 
     let (input_device, server) = fidl::endpoints::create_proxy::<InputDeviceMarker>()?;
-    fdio::service_connect(input_device_path.unwrap(), server.into_channel())?;
+    fdio::service_connect_at(dir_proxy.as_ref(), input_device_path.unwrap(), server.into_channel())
+        .expect("Failed to connect to InputDevice.");
     Ok(input_device)
 }
 
