@@ -7,6 +7,11 @@
 
 #include <map>
 #include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include "src/developer/shell/interpreter/src/nodes.h"
 
 namespace shell {
 namespace interpreter {
@@ -23,12 +28,26 @@ class ExecutionContext {
 
   Interpreter* interpreter() const { return interpreter_; }
   uint64_t id() const { return id_; }
+  bool has_errors() const { return has_errors_; }
+  void set_has_errors() { has_errors_ = true; }
+
+  // Adds an instruction which will be executed by the following Execute.
+  void AddPendingInstruction(std::unique_ptr<Instruction> instruction) {
+    pending_instructions_.emplace_back(std::move(instruction));
+  }
+
+  // Executes all the pending instructions.
+  void Execute();
 
  private:
   // Interpreter which owns the context.
   Interpreter* interpreter_;
   // Context id for the interpreter which owns the context.
   uint64_t id_;
+  // Instructions waiting to be executed.
+  std::vector<std::unique_ptr<Instruction>> pending_instructions_;
+  // True if the context encountered an error.
+  bool has_errors_ = false;
 };
 
 // Defines an interpreter. This is a sand boxed object. That means that one interpreter can
@@ -41,10 +60,18 @@ class Interpreter {
 
   // Called when the interpreter encouter an error.
   virtual void EmitError(ExecutionContext* context, std::string error_message) = 0;
+
+  // Called when a context is ready to terminate. Case where the execution succeeded.
+  virtual void ContextDone(ExecutionContext* context) = 0;
+
   // Called when a context is ready to terminate. Case where the context terminated early because
   // it encountered an analysis/semantic error.
   virtual void ContextDoneWithAnalysisError(ExecutionContext* context) = 0;
 
+  // Called when a context emit a text result.
+  virtual void TextResult(ExecutionContext* context, std::string_view text) = 0;
+
+  // Gets the context for the specified id.
   ExecutionContext* GetContext(uint64_t context_id) const {
     auto context = contexts_.find(context_id);
     if (context != contexts_.end()) {
@@ -54,14 +81,36 @@ class Interpreter {
   }
 
   // Adds a new execution context.
-  void AddContext(uint64_t context_id);
+  ExecutionContext* AddContext(uint64_t context_id);
 
-  // Executes a previously created context.
-  void ExecuteContext(uint64_t context_id);
+  // Erases an execution context.
+  void EraseContext(uint64_t context_id) { contexts_.erase(context_id); }
+
+  // Returns the node with the specified id.
+  Node* GetNode(uint64_t file_id, uint64_t node_id) const {
+    auto result = nodes_.find(std::make_pair(file_id, node_id));
+    if (result == nodes_.end()) {
+      return nullptr;
+    }
+    return result->second;
+  }
+  // Associates a node to an id.
+  void AddNode(uint64_t file_id, uint64_t node_id, Node* node);
+  // Removes the association between a node and an id.
+  void RemoveNode(uint64_t file_id, uint64_t node_id);
+
+  // Inserts an expression into a node.
+  void InsertExpression(ExecutionContext* context, uint64_t container_file_id,
+                        uint64_t container_node_id, std::unique_ptr<Expression> expression);
+  // Inserts an instruction into a node.
+  void InsertInstruction(ExecutionContext* context, uint64_t container_file_id,
+                         uint64_t container_node_id, std::unique_ptr<Instruction> instruction);
 
  private:
   // All the contexts for the interpreter.
   std::map<uint64_t, std::unique_ptr<ExecutionContext>> contexts_;
+  // All the nodes handled by the interpreter.
+  std::map<std::pair<uint64_t, uint64_t>, Node*> nodes_;
 };
 
 }  // namespace interpreter

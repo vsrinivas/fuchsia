@@ -8,6 +8,7 @@
 #include <map>
 #include <memory>
 #include <sstream>
+#include <vector>
 
 #include "fuchsia/shell/cpp/fidl.h"
 #include "fuchsia/sys/cpp/fidl.h"
@@ -30,6 +31,8 @@ class InterpreterTest : public ::testing::Test {
 
  protected:
   std::string GlobalErrors() { return global_error_stream_.str(); }
+  const std::vector<std::string>& results() const { return results_; }
+  bool last_result_partial() const { return last_result_partial_; }
 
   void SetUp() override;
 
@@ -50,6 +53,8 @@ class InterpreterTest : public ::testing::Test {
   uint64_t last_context_id_ = 0;
   std::map<uint64_t, std::unique_ptr<InterpreterTestContext>> contexts_;
   std::stringstream global_error_stream_;
+  std::vector<std::string> results_;
+  bool last_result_partial_ = false;
 };
 
 #endif  // SRC_DEVELOPER_SHELL_INTERPRETER_TEST_INTERPRETER_TEST_H_

@@ -30,6 +30,88 @@ table Location {
     1: NodeId node_id;
 };
 
+/// Defines the builtin types.
+enum BuiltinType : uint32 {
+    /// A Boolean (true/false).
+    BOOL = 0;
+    /// An unicode character.
+    CHAR = 1;
+    /// A UTF8 string.
+    STRING = 2;
+    /// 8 bit signed integer.
+    INT8 = 3;
+    /// 8 bit unsigned integer.
+    UINT8 = 4;
+    /// 16 bit signed integer.
+    INT16 = 5;
+    /// 16 bit unsigned integer.
+    UINT16 = 6;
+    /// 32 bit signed integer.
+    INT32 = 7;
+    /// 32 bit unsigned integer.
+    UINT32 = 8;
+    /// 64 bit signed integer.
+    INT64 = 9;
+    /// 64 bit unsigned integer.
+    UINT64 = 10;
+    /// Infinite precision integer (signed).
+    INTEGER = 11;
+    /// 32 bit floating-point.
+    FLOAT32 = 12;
+    /// 64 bit floating-point.
+    FLOAT64 = 13;
+};
+
+/// Defines a type used by the shell.
+union ShellType {
+    /// Undefined type (can be used when the type can be infered).
+    1: bool undef;
+    /// A builtin type.
+    2: BuiltinType builtin_type;
+};
+
+/// Define an integer value.
+struct IntegerLiteral {
+    /// The absolute value of the value. The first value in the vector is the less significant 64
+    /// bits.
+    vector<uint64>:MAX absolute_value;
+    /// If true, the value is negative (-absolute_value).
+    /// There is no negative zero. That means that, for zero, negative should be false.
+    bool negative;
+};
+
+/// Define a variable.
+struct VariableDefinition {
+    /// The name of the variable.
+    string:MAX name;
+    /// The type of the variable.
+    ShellType type;
+    /// True if the variable can be modified afterward.
+    bool mutable_value;
+    /// The node which defines the initial value.
+    NodeId initial_value;
+};
+
+/// Define a node (expression, instruction, ...).
+union Node {
+    /// An integer value.
+    1: IntegerLiteral integer_literal;
+    /// A variable.
+    2: VariableDefinition variable_definition;
+};
+
+/// Define a node which has to be inserted in the AST. The node will stay pending until it is used
+/// by another node.
+struct NodeDefinition {
+    /// Id of the node.
+    NodeId node_id;
+    /// The node to be defined.
+    Node node;
+    /// If true, instruction nodes are added to the context's pending instructions and other nodes
+    /// are added to the interpreter AST.
+    bool global_node;
+};
+
 /// Defines the protocol to communicate with a shell interpreter.
 [Discoverable]
 protocol Shell {
@@ -37,7 +119,7 @@ protocol Shell {
     ///
     /// - `context_id` the id for the context. This id is provided by the client which must ensure
     ///   that the id is unique. A context_id can be reused as soon as OnExecutionDone is
-    ///   received. 
+    ///   received.
     CreateExecutionContext(uint64 context_id);
 
     /// Executes all the pending instructions. This can generate one or several errors using
@@ -51,6 +133,16 @@ protocol Shell {
     /// - `context_id` the id for the execution context previously created with
     ///   CreateExecutionContext.
     ExecuteExecutionContext(uint64 context_id);
+
+    /// Add nodes to the AST. This message can be used several time to build an AST.
+    ///
+    /// - `context_id` the id for the execution context. Instructions without a container are
+    ///   added to the context's pending instructions. All other nodes without a container are
+    ///   added to the interpreter AST.
+    /// - `nodes` all the node to be inserted. Children must be inserted before their container.
+    ///   That means that you should do a depth first traversal of your graph to generate these
+    ///   calls.
+    AddNodes(uint64 context_id, vector<NodeDefinition>:MAX nodes);
 
     /// Called each time the shell detects an error.
     ///
@@ -69,4 +161,15 @@ protocol Shell {
     /// - `context_id` the execution context id.
     /// - `result` the result of the execution.
     -> OnExecutionDone(uint64 context_id, ExecuteResult result);
+
+    /// Called when an execution context has a textual result. If the result is too big to fit
+    /// into one message, this event is called several times.
+    /// This method is temporary. We will define something more powerful later (streams like stdio,
+    /// typed results, ...).
+    ///
+    /// - `context_id` the execution context id.
+    /// - `result` the text of the result.
+    /// - `partial_result` if true, the result is partial and at least one other event will be
+    ///   called. All the results must be concatenated to reconstruct the original text.
+    -> OnTextResult(uint64 context_id, string:MAX result, bool partial_result);
 };

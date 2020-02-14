@@ -54,6 +54,19 @@ InterpreterTest::InterpreterTest()
     context->result = result;
     Quit();
   };
+
+  shell_.events().OnTextResult = [this](uint64_t context_id, std::string result,
+                                        bool partial_result) {
+    InterpreterTestContext* context = GetContext(context_id);
+    ASSERT_NE(nullptr, context);
+    if (last_result_partial_) {
+      ASSERT_FALSE(results_.empty());
+      results_.back() += result;
+    } else {
+      results_.emplace_back(std::move(result));
+    }
+    last_result_partial_ = partial_result;
+  };
 }
 
 InterpreterTestContext* InterpreterTest::CreateContext() {

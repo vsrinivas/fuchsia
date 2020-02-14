@@ -5,9 +5,21 @@
 import("//build/test/test_package.gni")
 
 static_library("shell_interpreter") {
-  public = [ "src/interpreter.h" ]
+  public = [
+    "src/expressions.h",
+    "src/instructions.h",
+    "src/interpreter.h",
+    "src/nodes.h",
+    "src/types.h",
+  ]
 
-  sources = [ "src/interpreter.cc" ]
+  sources = [
+    "src/expressions.cc",
+    "src/instructions.cc",
+    "src/interpreter.cc",
+    "src/nodes.cc",
+    "src/types.cc",
+  ]
 }
 
 executable("bin") {
