@@ -4,14 +4,9 @@
 
 library fuchsia.session;
 
+using fuchsia.io;
+using fuchsia.io2;
 using fuchsia.url;
-using fuchsia.data;
-
-/// Describes the annotations which is metadata that describes an element.
-table Annotations {
-    /// The user-defined annotations.
-    1: fuchsia.data.Dictionary custom_annotations;
-};
 
 /// The ElementManager is responsible for service requests to add elements to a
 /// session.
@@ -57,21 +52,53 @@ enum ProposeElementError {
     /// There was an error resolving the element's component url.
     NOT_FOUND = 1;
 
-    /// The session rejected the proposal to add the element.
+    /// The session rejected the proposal to add the element. Reasons may include
+    /// errors with components of the ElementSpec. (See `AnnotationError` for
+    /// some specific examples.)
     REJECTED = 2;
 };
 
 /// Error returned from calls to SetAnnotations().
 enum AnnotationError {
     /// The session rejected the annotations to add to the controlled element.
+    /// Reasons for rejection may be due to annotations that violate defined
+    /// type constraints, such as:
+    ///   * The `Value` size exceeds the maximum length, `MAX_TEXT_LENGTH` or `MAX_BUFFER_BYTES`
+    ///   * The total number of annotations on an element exceeds `MAX_ANNOTATIONS`.
     REJECTED = 1;
 };
 
 /// Describes an Element to be added to a session.
 table ElementSpec {
     /// The component URL of the Element.
-    1: string:fuchsia.url.MAX_URL_LENGTH component_url;
+    1: fuchsia.url.Url component_url;
 
-    /// Initial `Annotations` on the element. Optional.
+    /// Initial metadata on the element. Optional.
     2: Annotations annotations;
+
+    // TODO(fxb/44648): Remove this field after converting all components to Component Framework v2,
+    // unless the concept of providing services in this way has been approved for dynamically-routed
+    // v2->v2 interactions.
+    /// Requests the Element Manager forward the given capabilities to the component at launch.
+    /// The Element Manager should forward these capabilities to the relevant Runner, and the
+    /// Runner should expose these capabilities to the launched component's incoming namespace.
+    /// (This mechanism allows backward compatibility for Runners to launch v1 (`.cmx`) components
+    /// that require additional services.)
+    [Transitional = "Until there are no more v1 components consuming CFv2 agent services"]
+    3: AdditionalCapabilities additional_capabilities;
+};
+
+// TODO(fxb/44648): Remove this field after converting all components to Component Framework v2,
+// unless the concept of providing services in this way has been approved for dynamically-routed
+// v2->v2 interactions.
+/// Provides a list of capabilities to be offered to a proposed element, and a Directory from which
+/// another component can connect to the implementations of those capabilities.
+[Transitional = "Until there are no more v1 components consuming CFv2 agent services"]
+struct AdditionalCapabilities {
+    /// A list of capabilities by absolute path name, relative to the given host_directory (for
+    /// example, "/svc/fuchsia.util.SomeService").
+    vector<fuchsia.io2.Path>:MAX paths;
+
+    /// The |Directory| from which the capabilities are served.
+    fuchsia.io.Directory host_directory;
 };

@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
+    fidl::encoding::Decodable,
     fidl_fuchsia_session::{ElementManagerMarker, ElementSpec},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
@@ -20,7 +21,7 @@ async fn main() -> Result<(), Error> {
                 component_url: Some(
                     "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm".to_string(),
                 ),
-                annotations: None,
+                ..ElementSpec::new_empty()
             },
             None,
         )
@@ -33,7 +34,7 @@ async fn main() -> Result<(), Error> {
                 component_url: Some(
                     "fuchsia-pkg://fuchsia.com/spinning_cube#meta/spinning_cube.cmx".to_string(),
                 ),
-                annotations: None,
+                ..ElementSpec::new_empty()
             },
             None,
         )

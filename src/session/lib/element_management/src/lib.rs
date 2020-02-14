@@ -205,6 +205,7 @@ impl ElementManager for SimpleElementManager {
 mod tests {
     use {
         super::{ElementManager, ElementManagerError, SimpleElementManager},
+        fidl::encoding::Decodable,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_component as fcomponent,
         fidl_fuchsia_session::ElementSpec,
@@ -289,7 +290,10 @@ mod tests {
         let mut element_manager = SimpleElementManager::new(realm, Some(launcher));
         assert!(element_manager
             .add_element(
-                ElementSpec { component_url: Some(component_url.to_string()), annotations: None },
+                ElementSpec {
+                    component_url: Some(component_url.to_string()),
+                    ..ElementSpec::new_empty()
+                },
                 child_name,
                 child_collection,
             )
@@ -333,7 +337,10 @@ mod tests {
         let mut element_manager = SimpleElementManager::new(realm, Some(launcher));
         assert!(element_manager
             .add_element(
-                ElementSpec { component_url: Some(a_component_url.to_string()), annotations: None },
+                ElementSpec {
+                    component_url: Some(a_component_url.to_string()),
+                    ..ElementSpec::new_empty()
+                },
                 a_child_name,
                 a_child_collection,
             )
@@ -341,7 +348,10 @@ mod tests {
             .is_ok());
         assert!(element_manager
             .add_element(
-                ElementSpec { component_url: Some(b_component_url.to_string()), annotations: None },
+                ElementSpec {
+                    component_url: Some(b_component_url.to_string()),
+                    ..ElementSpec::new_empty()
+                },
                 b_child_name,
                 b_child_collection,
             )
@@ -380,7 +390,10 @@ mod tests {
         let mut element_manager = SimpleElementManager::new(realm, None);
         assert!(element_manager
             .add_element(
-                ElementSpec { component_url: Some(component_url.to_string()), annotations: None },
+                ElementSpec {
+                    component_url: Some(component_url.to_string()),
+                    ..ElementSpec::new_empty()
+                },
                 child_name,
                 child_collection,
             )
@@ -421,7 +434,10 @@ mod tests {
         let mut element_manager = SimpleElementManager::new(realm, Some(launcher));
         assert!(element_manager
             .add_element(
-                ElementSpec { component_url: Some(component_url.to_string()), annotations: None },
+                ElementSpec {
+                    component_url: Some(component_url.to_string()),
+                    ..ElementSpec::new_empty()
+                },
                 child_name,
                 child_collection,
             )
@@ -443,7 +459,11 @@ mod tests {
 
         assert_eq!(
             element_manager
-                .add_element(ElementSpec { component_url: None, annotations: None }, "", "")
+                .add_element(
+                    ElementSpec { component_url: None, ..ElementSpec::new_empty() },
+                    "",
+                    ""
+                )
                 .await,
             Err(ElementManagerError::url_missing("", ""))
         );
@@ -472,7 +492,7 @@ mod tests {
                 .add_element(
                     ElementSpec {
                         component_url: Some(component_url.to_string()),
-                        annotations: None,
+                        ..ElementSpec::new_empty()
                     },
                     "",
                     "",
@@ -510,7 +530,7 @@ mod tests {
                 .add_element(
                     ElementSpec {
                         component_url: Some(component_url.to_string()),
-                        annotations: None,
+                        ..ElementSpec::new_empty()
                     },
                     "",
                     "",
@@ -551,7 +571,7 @@ mod tests {
                 .add_element(
                     ElementSpec {
                         component_url: Some(component_url.to_string()),
-                        annotations: None,
+                        ..ElementSpec::new_empty()
                     },
                     "",
                     "",
