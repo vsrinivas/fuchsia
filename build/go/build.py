@@ -27,6 +27,10 @@ def main():
     parser.add_argument(
         '--cxx', help='The C++ compiler to use', required=False, default='c++')
     parser.add_argument(
+        '--dump-syms',
+        help='The dump_syms tool to use',
+        required=False)
+    parser.add_argument(
         '--objcopy',
         help='The objcopy tool to use',
         required=False,
@@ -229,6 +233,14 @@ def main():
     # TODO(fxbug.dev/27215): Also invoke the buildidtool in the case of linux
     # once buildidtool knows how to deal in Go's native build ID format.
     supports_build_id = args.current_os == 'fuchsia'
+    if retcode == 0 and args.dump_syms and supports_build_id:
+        if args.current_os == 'fuchsia':
+            with open(dist + ".sym", "w") as f:
+                retcode = subprocess.call(
+                    [args.dump_syms, '-r', '-o', 'Fuchsia', args.output_path],
+                    stdout = f
+                )
+
     if retcode == 0 and args.buildidtool and supports_build_id:
         if not args.build_id_dir:
             raise ValueError('Using --buildidtool requires --build-id-dir')
