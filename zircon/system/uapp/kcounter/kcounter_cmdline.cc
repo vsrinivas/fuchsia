@@ -19,7 +19,7 @@ constexpr int default_period = 3;
 void kcounter_usage(const char* myname, FILE* into) {
   fprintf(into,
           "\
-Usage: %s [-hltvw] [--help] [--list] [--terse] [--verbose] [--watch [period]] [PREFIX...]\n\
+Usage: %s [-hltvw] [--help] [--list] [--terse] [--verbose] [--watch[=period]] [PREFIX...]\n\
 Prints one counter per line.\n\
 With --help or -h, display this help and exit.\n\
 With --list or -l, show names and types rather than values.\n\
