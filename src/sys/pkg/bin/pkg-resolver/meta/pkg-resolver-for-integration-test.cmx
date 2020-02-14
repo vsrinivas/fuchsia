@@ -5,6 +5,7 @@
     "sandbox": {
         "services": [
             "fuchsia.amber.Control",
+            "fuchsia.boot.Arguments",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.pkg.PackageCache",

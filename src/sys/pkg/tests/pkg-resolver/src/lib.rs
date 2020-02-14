@@ -5,6 +5,7 @@
 use {
     anyhow::Error,
     fidl::endpoints::ClientEnd,
+    fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fidl_fuchsia_pkg::{
         ExperimentToggle as Experiment, PackageCacheMarker, PackageResolverAdminMarker,
@@ -33,6 +34,7 @@ use {
         convert::TryInto,
         fs::File,
         io::{self, BufWriter, Read},
+        sync::Arc,
     },
     tempfile::TempDir,
 };
@@ -54,7 +56,43 @@ pub struct Mounts {
     pub pkg_resolver_config_data: DirOrProxy,
 }
 
+#[derive(Serialize)]
+pub struct Config {
+    pub disable_dynamic_configuration: bool,
+}
+
 impl Mounts {
+    pub fn new() -> Self {
+        Self {
+            pkg_resolver_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
+            pkg_resolver_config_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
+        }
+    }
+    pub fn add_config(&self, config: &Config) {
+        if let DirOrProxy::Dir(ref d) = self.pkg_resolver_config_data {
+            let f = File::create(d.path().join("config.json")).unwrap();
+            serde_json::to_writer(BufWriter::new(f), &config).unwrap();
+        } else {
+            panic!("not supported");
+        }
+    }
+
+    pub fn add_static_repository(&self, config: RepositoryConfig) {
+        if let DirOrProxy::Dir(ref d) = self.pkg_resolver_config_data {
+            let static_repo_path = d.path().join("repositories");
+            if !static_repo_path.exists() {
+                std::fs::create_dir(&static_repo_path).unwrap();
+            }
+            let f =
+                File::create(static_repo_path.join(format!("{}.json", config.repo_url().host())))
+                    .unwrap();
+            serde_json::to_writer(BufWriter::new(f), &RepositoryConfigs::Version1(vec![config]))
+                .unwrap();
+        } else {
+            panic!("not supported");
+        }
+    }
+
     pub fn add_dynamic_rewrite_rules(&self, rule_config: &RuleConfig) {
         if let DirOrProxy::Dir(ref d) = self.pkg_resolver_data {
             let f = File::create(d.path().join("rewrites.json")).unwrap();
@@ -109,39 +147,22 @@ pub fn clone_directory_proxy(proxy: &DirectoryProxy) -> zx::Handle {
     client.into()
 }
 
-#[derive(Serialize)]
-pub struct Config {
-    pub disable_dynamic_configuration: bool,
-}
-
-impl Mounts {
-    pub fn new() -> Self {
-        Self {
-            pkg_resolver_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
-            pkg_resolver_config_data: DirOrProxy::Dir(tempfile::tempdir().expect("/tmp to exist")),
-        }
-    }
-    pub fn add_config(&self, config: &Config) {
-        if let DirOrProxy::Dir(ref d) = self.pkg_resolver_config_data {
-            let f = File::create(d.path().join("config.json")).unwrap();
-            serde_json::to_writer(BufWriter::new(f), &config).unwrap();
-        } else {
-            panic!("not supported");
-        }
-    }
-}
-
 pub struct TestEnvBuilder<PkgFsFn, P, MountsFn>
 where
     PkgFsFn: FnOnce() -> P,
 {
     pkgfs: PkgFsFn,
     mounts: MountsFn,
+    boot_arguments_service: Option<BootArgumentsService<'static>>,
 }
 
 impl TestEnvBuilder<fn() -> PkgfsRamdisk, PkgfsRamdisk, fn() -> Mounts> {
     pub fn new() -> Self {
-        Self { pkgfs: || PkgfsRamdisk::start().expect("pkgfs to start"), mounts: || Mounts::new() }
+        Self {
+            pkgfs: || PkgfsRamdisk::start().expect("pkgfs to start"),
+            mounts: || Mounts::new(),
+            boot_arguments_service: None,
+        }
     }
 }
 
@@ -152,7 +173,11 @@ where
     MountsFn: FnOnce() -> Mounts,
 {
     pub fn build(self) -> TestEnv<P> {
-        TestEnv::new_with_pkg_fs_and_mounts((self.pkgfs)(), (self.mounts)())
+        TestEnv::new_with_pkg_fs_and_mounts_and_arguments_service(
+            (self.pkgfs)(),
+            (self.mounts)(),
+            self.boot_arguments_service,
+        )
     }
     pub fn pkgfs<Pother>(
         self,
@@ -161,10 +186,28 @@ where
     where
         Pother: PkgFs + 'static,
     {
-        TestEnvBuilder::<_, Pother, MountsFn> { pkgfs: || pkgfs, mounts: self.mounts }
+        TestEnvBuilder::<_, Pother, MountsFn> {
+            pkgfs: || pkgfs,
+            mounts: self.mounts,
+            boot_arguments_service: self.boot_arguments_service,
+        }
     }
     pub fn mounts(self, mounts: Mounts) -> TestEnvBuilder<PkgFsFn, P, impl FnOnce() -> Mounts> {
-        TestEnvBuilder::<PkgFsFn, P, _> { pkgfs: self.pkgfs, mounts: || mounts }
+        TestEnvBuilder::<PkgFsFn, P, _> {
+            pkgfs: self.pkgfs,
+            mounts: || mounts,
+            boot_arguments_service: self.boot_arguments_service,
+        }
+    }
+    pub fn boot_arguments_service(
+        self,
+        svc: BootArgumentsService<'static>,
+    ) -> TestEnvBuilder<PkgFsFn, P, MountsFn> {
+        TestEnvBuilder::<PkgFsFn, P, _> {
+            pkgfs: self.pkgfs,
+            mounts: self.mounts,
+            boot_arguments_service: Some(svc),
+        }
     }
 }
 
@@ -282,8 +325,33 @@ impl TestEnv<PkgfsRamdisk> {
     }
 }
 
+pub struct BootArgumentsService<'a> {
+    args: &'a [u8],
+}
+impl BootArgumentsService<'_> {
+    pub fn new(args: &'static [u8]) -> Self {
+        Self { args }
+    }
+    async fn run_service(self: Arc<Self>, mut stream: ArgumentsRequestStream) {
+        while let Some(req) = stream.try_next().await.unwrap() {
+            match req {
+                ArgumentsRequest::Get { responder } => {
+                    let size = self.args.len() as u64;
+                    let vmo = fuchsia_zircon::Vmo::create(size).unwrap();
+                    vmo.write(self.args, 0).unwrap();
+                    responder.send(vmo, size).unwrap();
+                }
+            }
+        }
+    }
+}
+
 impl<P: PkgFs> TestEnv<P> {
-    pub fn new_with_pkg_fs_and_mounts(pkgfs: P, mounts: Mounts) -> Self {
+    fn new_with_pkg_fs_and_mounts_and_arguments_service(
+        pkgfs: P,
+        mounts: Mounts,
+        boot_arguments_service: Option<BootArgumentsService<'static>>,
+    ) -> Self {
         let mut pkg_cache = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-cache.cmx"
                 .to_owned(),
@@ -310,6 +378,13 @@ impl<P: PkgFs> TestEnv<P> {
             .add_proxy_service_to::<PackageCacheMarker, _>(
                 pkg_cache.directory_request().unwrap().clone(),
             );
+
+        if let Some(boot_arguments_service) = boot_arguments_service {
+            let mock_arg_svc = Arc::new(boot_arguments_service);
+            fs.add_fidl_service(move |stream: ArgumentsRequestStream| {
+                fasync::spawn(Arc::clone(&mock_arg_svc).run_service(stream));
+            });
+        }
 
         let mut salt = [0; 4];
         zx::cprng_draw(&mut salt[..]).expect("zx_cprng_draw does not fail");

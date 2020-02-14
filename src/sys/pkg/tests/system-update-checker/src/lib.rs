@@ -55,8 +55,7 @@ impl TestEnv {
         let paver = Arc::new(paver);
         let paver_clone = Arc::clone(&paver);
         fs.add_fidl_service(move |stream: PaverRequestStream| {
-            let paver_clone = Arc::clone(&paver_clone);
-            fasync::spawn(paver_clone.run_service(stream));
+            fasync::spawn(Arc::clone(&paver_clone).run_service(stream));
         });
 
         let env = fs

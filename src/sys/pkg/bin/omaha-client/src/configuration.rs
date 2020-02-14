@@ -122,6 +122,7 @@ async fn get_appid_and_channel_from_vbmeta() -> Result<(Option<String>, Option<S
     get_appid_and_channel_from_vbmeta_impl(proxy).await
 }
 
+// TODO(fxb/45976) - use fuchsia.boot.Arguments.GetStrings instead of Get
 async fn get_appid_and_channel_from_vbmeta_impl(
     proxy: ArgumentsProxy,
 ) -> Result<(Option<String>, Option<String>), Error> {

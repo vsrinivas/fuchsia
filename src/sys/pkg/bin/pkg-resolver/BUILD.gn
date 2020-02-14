@@ -57,6 +57,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:url",
+    "//zircon/system/fidl/fuchsia-boot:fuchsia-boot-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 

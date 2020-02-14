@@ -8,13 +8,12 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
     fuchsia_component::server::ServiceFs,
-    fuchsia_inspect::{self as inspect, Property, StringProperty},
+    fuchsia_inspect as inspect,
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
     fuchsia_trace as trace,
     futures::{prelude::*, stream::FuturesUnordered},
     parking_lot::RwLock,
     std::{io, sync::Arc},
-    sysconfig_client,
 };
 
 mod cache;
@@ -23,6 +22,7 @@ mod config;
 mod experiment;
 mod font_package_manager;
 mod inspect_util;
+mod ota_channel;
 mod queue;
 mod repository;
 mod repository_manager;
@@ -39,6 +39,7 @@ use crate::{
     config::Config,
     experiment::Experiments,
     font_package_manager::{FontPackageManager, FontPackageManagerBuilder},
+    ota_channel::ChannelInspectState,
     repository_manager::{RepositoryManager, RepositoryManagerBuilder},
     repository_service::RepositoryService,
     rewrite_manager::{RewriteManager, RewriteManagerBuilder},
@@ -61,31 +62,16 @@ const DYNAMIC_RULES_PATH: &str = "/data/rewrites.json";
 
 const STATIC_FONT_REGISTRY_PATH: &str = "/config/data/font_packages.json";
 
-struct ChannelInspectState {
-    channel_name: StringProperty,
-    tuf_config_name: StringProperty,
-    _node: inspect::Node,
-}
-
-impl ChannelInspectState {
-    fn new(node: inspect::Node) -> Self {
-        Self {
-            channel_name: node
-                .create_string("channel_name", format!("{:?}", Option::<String>::None)),
-            tuf_config_name: node
-                .create_string("tuf_config_name", format!("{:?}", Option::<String>::None)),
-            _node: node,
-        }
-    }
-}
-
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["pkg-resolver"]).expect("can't init logger");
     fuchsia_trace_provider::trace_provider_create_with_fdio();
     fx_log_info!("starting package resolver");
 
     let mut executor = fasync::Executor::new().context("error creating executor")?;
+    executor.run_singlethreaded(main_inner_async())
+}
 
+async fn main_inner_async() -> Result<(), Error> {
     let config = Config::load_from_config_data_or_default();
 
     let pkg_cache =
@@ -97,8 +83,8 @@ fn main() -> Result<(), Error> {
     let cache = PackageCache::new(pkg_cache, pkgfs_install, pkgfs_needs);
 
     let inspector = fuchsia_inspect::Inspector::new();
-    let main_inspect_node = inspector.root().create_child("main");
-    let channel_inspect_state = ChannelInspectState::new(main_inspect_node.create_child("channel"));
+    let channel_inspect_state =
+        ChannelInspectState::new(inspector.root().create_child("omaha_channel"));
 
     let experiment_state = experiment::State::new(inspector.root().create_child("experiments"));
     let experiment_state = Arc::new(RwLock::new(experiment_state));
@@ -110,12 +96,15 @@ fn main() -> Result<(), Error> {
         experiments,
         &config,
     )));
-    let rewrite_manager = Arc::new(RwLock::new(load_rewrite_manager(
-        inspector.root().create_child("rewrite_manager"),
-        &repo_manager.read(),
-        &config,
-        &channel_inspect_state,
-    )));
+    let rewrite_manager = Arc::new(RwLock::new(
+        load_rewrite_manager(
+            inspector.root().create_child("rewrite_manager"),
+            Arc::clone(&repo_manager),
+            &config,
+            &channel_inspect_state,
+        )
+        .await,
+    ));
 
     let futures = FuturesUnordered::new();
 
@@ -220,7 +209,7 @@ fn main() -> Result<(), Error> {
 
     trace::instant!("app", "startup", trace::Scope::Process);
 
-    let () = executor.run_singlethreaded(futures.collect());
+    let () = futures.collect().await;
 
     Ok(())
 }
@@ -257,9 +246,9 @@ fn load_repo_manager(
         .build()
 }
 
-fn load_rewrite_manager(
+async fn load_rewrite_manager(
     node: inspect::Node,
-    repo_manager: &RepositoryManager,
+    repo_manager: Arc<RwLock<RepositoryManager>>,
     config: &Config,
     channel_inspect_state: &ChannelInspectState,
 ) -> RewriteManager {
@@ -284,43 +273,24 @@ fn load_rewrite_manager(
             builder
         });
 
-    // If we have a channel in sysconfig, we don't want to load the dynamic configs. Instead, we'll
-    // construct a unique rule for that channel.
-    let channel = match sysconfig_client::channel::read_channel_config() {
-        Ok(channel) => channel,
-        Err(err) => {
-            fx_log_info!("unable to load channel from sysconfig, using defaults: {}", err);
-            return builder.build();
-        }
-    };
-    let tuf_config_name = channel.tuf_config_name();
-    fx_log_info!("current TUF config name is {}", tuf_config_name);
-
-    let repo = match repo_manager.get_repo_for_channel(tuf_config_name) {
-        Some(repo) => repo,
-        None => {
-            fx_log_err!("unable to find repo for channel, using defaults");
-            return builder.build();
-        }
-    };
-    fx_log_info!("channel repo is {}", repo.repo_url());
-
-    match fidl_fuchsia_pkg_rewrite_ext::Rule::new("fuchsia.com", repo.repo_url().host(), "/", "/") {
-        Ok(rule) => {
-            channel_inspect_state
-                .channel_name
-                .set(format!("{:?}", Some(channel.channel_name())).as_str());
-            channel_inspect_state
-                .tuf_config_name
-                .set(format!("{:?}", Some(channel.tuf_config_name())).as_str());
+    // If we have a channel in vbmeta or sysconfig, we don't want to load the dynamic
+    // configs. Instead, we'll construct a unique rule for that channel.
+    match crate::ota_channel::create_rewrite_rule_for_ota_channel(
+        &channel_inspect_state,
+        &repo_manager.read(),
+    )
+    .await
+    {
+        Ok(Some(rule)) => {
+            fx_log_info!("Created rewrite rule for ota channel: {:?}", rule);
             builder.replace_dynamic_rules(vec![rule]).build()
         }
+        Ok(None) => {
+            fx_log_info!("No ota channel present, so not creating rewrite rule.");
+            builder.build()
+        }
         Err(err) => {
-            fx_log_err!(
-                "failed to make rewrite rule for {}, using defaults: {}",
-                repo.repo_url(),
-                err
-            );
+            fx_log_err!("Failed to create rewrite rule for ota channel with error: {:?}. Falling back to defaults.", err);
             builder.build()
         }
     }

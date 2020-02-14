@@ -36,11 +36,9 @@ async fn test_initial_inspect_state() {
                 static_rules: {},
                 generation: 0u64,
             },
-            main: {
-              channel: {
+            omaha_channel: {
                 tuf_config_name: OptionDebugStringProperty::<String>::None,
-                channel_name: OptionDebugStringProperty::<String>::None,
-              }
+                source: OptionDebugStringProperty::<String>::None,
             },
             experiments: {},
             repository_manager: {
@@ -78,11 +76,9 @@ async fn test_adding_repo_updates_inspect_state() {
                 static_rules: {},
                 generation: 0u64,
             },
-            main: {
-              channel: {
+            omaha_channel: {
                 tuf_config_name: OptionDebugStringProperty::<String>::None,
-                channel_name: OptionDebugStringProperty::<String>::None,
-              }
+                source: OptionDebugStringProperty::<String>::None,
             },
             experiments: {},
             repository_manager: {
@@ -135,11 +131,9 @@ async fn test_resolving_package_updates_inspect_state() {
                 static_rules: {},
                 generation: 0u64,
             },
-            main: {
-              channel: {
-                tuf_config_name: format!("{:?}", Option::<String>::None),
-                channel_name: format!("{:?}", Option::<String>::None),
-              }
+            omaha_channel: {
+                tuf_config_name: OptionDebugStringProperty::<String>::None,
+                source: OptionDebugStringProperty::<String>::None,
             },
             experiments: {},
             repository_manager: {
@@ -188,6 +182,51 @@ async fn test_resolving_package_updates_inspect_state() {
             }
         }
     );
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_channel_in_vbmeta_appears_in_inspect_state() {
+    let repo =
+        Arc::new(RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH).build().await.unwrap());
+    let served_repository = repo.server().start().unwrap();
+    let repo_url = "fuchsia-pkg://test-repo".parse().unwrap();
+    let config = served_repository.make_repo_config(repo_url);
+    let mounts = lib::Mounts::new();
+    mounts.add_static_repository(config.clone());
+    let env = TestEnvBuilder::new()
+        .boot_arguments_service(lib::BootArgumentsService::new(
+            b"foo=bar\0ota_channel=test-channel\0tuf_repo_config=test-repo",
+        ))
+        .mounts(mounts)
+        .build();
+    env.wait_for_pkg_resolver_to_start().await;
+
+    let hierarchy = env.pkg_resolver_inspect_hierarchy().await;
+
+    assert_inspect_tree!(
+        hierarchy,
+        root: contains {
+            rewrite_manager: {
+                dynamic_rules: {
+                   "0": {
+                        path_prefix_replacement: "/",
+                        host_match: "fuchsia.com",
+                        path_prefix_match: "/",
+                        host_replacement: "test-repo",
+                    }
+                },
+                dynamic_rules_path: format!("{:?}", Some(std::path::Path::new("/data/rewrites.json"))),
+                static_rules: {},
+                generation: 0u64,
+            },
+            omaha_channel: {
+                tuf_config_name: "test-repo",
+                source: "Some(VbMeta)"
+            },
+        }
+    );
+
     env.stop().await;
 }
 
