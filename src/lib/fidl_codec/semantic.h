@@ -7,13 +7,106 @@
 
 #include <map>
 #include <memory>
+#include <ostream>
 #include <string>
 #include <vector>
 
 #include "src/lib/fidl_codec/printer.h"
 
 namespace fidl_codec {
+
+class Value;
+class StructValue;
+
 namespace semantic {
+
+// Base class for all expressions (for semantic).
+class Expression {
+ public:
+  Expression() = default;
+  virtual ~Expression() = default;
+
+  // Dump the expression.
+  virtual void Dump(std::ostream& os) const = 0;
+};
+
+inline std::ostream& operator<<(std::ostream& os, const Expression& expression) {
+  expression.Dump(os);
+  return os;
+}
+
+// Defines an expression which accesses the request object.
+class ExpressionRequest : public Expression {
+ public:
+  ExpressionRequest() = default;
+
+  void Dump(std::ostream& os) const override;
+};
+
+// Defines an expression which accesses the handle used to read/write the request.
+class ExpressionHandle : public Expression {
+ public:
+  ExpressionHandle() = default;
+
+  void Dump(std::ostream& os) const override;
+};
+
+// Defines the access to an object field.
+class ExpressionFieldAccess : public Expression {
+ public:
+  ExpressionFieldAccess(std::unique_ptr<Expression> expression, std::string_view field)
+      : expression_(std::move(expression)), field_(field) {}
+
+  void Dump(std::ostream& os) const override;
+
+ private:
+  const std::unique_ptr<Expression> expression_;
+  const std::string field_;
+};
+
+// Defines the slash operator (used to concatenate two paths).
+class ExpressionSlash : public Expression {
+ public:
+  ExpressionSlash(std::unique_ptr<Expression> left, std::unique_ptr<Expression> right)
+      : left_(std::move(left)), right_(std::move(right)) {}
+
+  void Dump(std::ostream& os) const override;
+
+ private:
+  const std::unique_ptr<Expression> left_;
+  const std::unique_ptr<Expression> right_;
+};
+
+// Defines an assignment. An assignment is a rule which infers the semantic of one handle
+// (destination) using the value of an expression (source).
+class Assignment {
+ public:
+  Assignment(std::unique_ptr<Expression> destination, std::unique_ptr<Expression> source)
+      : destination_(std::move(destination)), source_(std::move(source)) {}
+
+  void Dump(std::ostream& os) const;
+
+ private:
+  const std::unique_ptr<Expression> destination_;
+  const std::unique_ptr<Expression> source_;
+};
+
+// Defines the semantic associated to a method. When a method is called, all the semantic rules
+// (the assignments) are executed and add knowledge about the handles involved.
+class MethodSemantic {
+ public:
+  MethodSemantic() = default;
+
+  void AddAssignment(std::unique_ptr<Expression> destination, std::unique_ptr<Expression> source) {
+    assignments_.emplace_back(
+        std::make_unique<Assignment>(std::move(destination), std::move(source)));
+  }
+
+  void Dump(std::ostream& os) const;
+
+ private:
+  std::vector<std::unique_ptr<Assignment>> assignments_;
+};
 
 // Holds the information we have about a handle.
 // Usually we can associate a type to a handle.
@@ -89,8 +182,11 @@ class HandleSemantic {
   }
 
   void AddHandleDescription(zx_koid_t pid, zx_handle_t handle,
-                            const HandleDescription& handle_description) {
-    process_handles_[pid].handles[handle] = std::make_unique<HandleDescription>(handle_description);
+                            const HandleDescription* handle_description) {
+    if (handle_description != nullptr) {
+      process_handles_[pid].handles[handle] =
+          std::make_unique<HandleDescription>(*handle_description);
+    }
   }
 
   void AddHandleDescription(zx_koid_t pid, zx_handle_t handle, std::string_view type) {

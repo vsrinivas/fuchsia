@@ -20,6 +20,7 @@ static_library("fidl_codec") {
     "message_decoder.h",
     "printer.h",
     "semantic.h",
+    "semantic_parser.h",
     "status.h",
     "type_visitor.h",
     "visitor.h",
@@ -35,6 +36,7 @@ static_library("fidl_codec") {
     "message_decoder.cc",
     "printer.cc",
     "semantic.cc",
+    "semantic_parser.cc",
     "status.cc",
     "wire_object.cc",
     "wire_parser.cc",
@@ -56,6 +58,7 @@ executable("fidl_codec_test_bin") {
     "library_loader_test.cc",
     "message_decoder_test.cc",
     "printer_test.cc",
+    "semantic_parser_test.cc",
     "wire_object_test.cc",
     "wire_parser_test.cc",
   ]

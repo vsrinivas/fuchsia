@@ -53,7 +53,7 @@ TEST(LibraryLoader, LoadSimple) {
   ASSERT_NE(library_ptr, nullptr);
 
   std::string kDesiredInterfaceName = "fidl.test.frobinator/Frobinator";
-  const Interface* found_interface = nullptr;
+  Interface* found_interface = nullptr;
   ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
 
   ASSERT_NE(found_interface, nullptr) << "Could not find interface " << kDesiredInterfaceName;
@@ -81,7 +81,7 @@ TEST(LibraryLoader, LoadSimpleOneAtATime) {
   ASSERT_NE(library_ptr, nullptr);
 
   std::string kDesiredInterfaceName = "fidl.test.frobinator/Frobinator";
-  const Interface* found_interface = nullptr;
+  Interface* found_interface = nullptr;
   ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
 
   ASSERT_NE(found_interface, nullptr) << "Could not find interface " << kDesiredInterfaceName;
@@ -132,7 +132,7 @@ TEST(LibraryLoader, LoadSecondWins) {
   ASSERT_NE(library_ptr, nullptr);
 
   std::string kDesiredInterfaceName = "fidl.test.frobinator/Frobinator";
-  const Interface* found_interface = nullptr;
+  Interface* found_interface = nullptr;
   ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
 
   ASSERT_NE(found_interface, nullptr) << "Could not find interface " << kDesiredInterfaceName;
@@ -170,7 +170,7 @@ TEST(LibraryLoader, InspectTypes) {
   ASSERT_NE(library_ptr, nullptr);
 
   std::string kDesiredInterfaceName = "test.fidlcodec.examples/FidlCodecTestInterface";
-  const Interface* found_interface = nullptr;
+  Interface* found_interface = nullptr;
   ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
 
   const InterfaceMethod* found_method = nullptr;
@@ -307,7 +307,7 @@ TEST(LibraryLoader, LoadFromOrdinal) {
   ASSERT_NE(library_ptr, nullptr);
 
   std::string kDesiredInterfaceName = "test.fidlcodec.sys/ComponentController";
-  const Interface* found_interface = nullptr;
+  Interface* found_interface = nullptr;
   ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
 
   const InterfaceMethod* found_method = nullptr;
@@ -339,7 +339,7 @@ void OrdinalCompositionBody(std::vector<std::unique_ptr<std::istream>>* library_
   ASSERT_NE(library_ptr, nullptr);
 
   std::string kDesiredInterfaceName = "test.fidlcodec.examples/ParamProtocol";
-  const Interface* found_interface = nullptr;
+  Interface* found_interface = nullptr;
   ASSERT_TRUE(library_ptr->GetInterfaceByName(kDesiredInterfaceName, &found_interface));
 
   const InterfaceMethod* found_method = nullptr;

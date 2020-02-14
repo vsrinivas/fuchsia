@@ -319,6 +319,15 @@ bool Interface::GetMethodByFullName(const std::string& name,
   return false;
 }
 
+InterfaceMethod* Interface::GetMethodByName(std::string_view name) const {
+  for (const auto& method : methods()) {
+    if (method->name() == name) {
+      return method.get();
+    }
+  }
+  return nullptr;
+}
+
 Library::Library(LibraryLoader* enclosing_loader, rapidjson::Document& json_definition)
     : enclosing_loader_(enclosing_loader), json_definition_(std::move(json_definition)) {
   auto interfaces_array = json_definition_["interface_declarations"].GetArray();
@@ -456,14 +465,14 @@ std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable, std::string&
     xuni->second->DecodeXunionTypes();
     return std::make_unique<UnionType>(std::ref(*xuni->second), is_nullable);
   }
-  const Interface* ifc;
+  Interface* ifc;
   if (GetInterfaceByName(identifier, &ifc)) {
     return std::make_unique<HandleType>();
   }
   return std::make_unique<InvalidType>();
 }
 
-bool Library::GetInterfaceByName(const std::string& name, const Interface** ptr) const {
+bool Library::GetInterfaceByName(std::string_view name, Interface** ptr) const {
   for (const auto& interface : interfaces()) {
     if (interface->name() == name) {
       *ptr = interface.get();

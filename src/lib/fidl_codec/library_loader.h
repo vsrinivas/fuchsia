@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "rapidjson/document.h"
+#include "src/lib/fidl_codec/semantic.h"
 
 // This file contains a programmatic representation of a FIDL schema.  A
 // LibraryLoader loads a set of Libraries.  The libraries contain structs,
@@ -333,6 +334,11 @@ class InterfaceMethod {
     return response_.get();
   }
 
+  const semantic::MethodSemantic* semantic() const { return semantic_.get(); }
+  void set_semantic(std::unique_ptr<semantic::MethodSemantic> semantic) {
+    semantic_ = std::move(semantic);
+  }
+
   std::string fully_qualified_name() const;
 
   InterfaceMethod(const InterfaceMethod& other) = delete;
@@ -348,6 +354,7 @@ class InterfaceMethod {
   const bool is_composed_;
   std::unique_ptr<Struct> request_;
   std::unique_ptr<Struct> response_;
+  std::unique_ptr<semantic::MethodSemantic> semantic_;
 };
 
 class Interface {
@@ -362,8 +369,10 @@ class Interface {
 
   void AddMethodsToIndex(LibraryLoader* library_loader);
 
-  // Sets *|method| to the fully qualified |name|'s InterfaceMethod
+  // Sets *|method| to the fully qualified |name|'s InterfaceMethod (protocol.method).
   bool GetMethodByFullName(const std::string& name, const InterfaceMethod** method) const;
+
+  InterfaceMethod* GetMethodByName(std::string_view name) const;
 
   const std::vector<std::unique_ptr<InterfaceMethod>>& methods() const {
     return interface_methods_;
@@ -390,6 +399,9 @@ class Library {
   const std::string& name() const { return name_; }
   const std::vector<std::unique_ptr<Interface>>& interfaces() const { return interfaces_; }
 
+  // Decode all the values from the JSON definition.
+  void DecodeTypes();
+
   // Decode all the content of this FIDL file.
   bool DecodeAll();
 
@@ -400,7 +412,7 @@ class Library {
   size_t InlineSizeFromIdentifier(std::string& identifier) const;
 
   // Set *ptr to the Interface called |name|
-  bool GetInterfaceByName(const std::string& name, const Interface** ptr) const;
+  bool GetInterfaceByName(std::string_view name, Interface** ptr) const;
 
   // Extract a boolean field from a JSON value.
   bool ExtractBool(const rapidjson::Value* json_definition, std::string_view container_type,
@@ -444,9 +456,6 @@ class Library {
 
  private:
   Library(LibraryLoader* enclosing_loader, rapidjson::Document& json_definition);
-
-  // Decode all the values from the JSON definition.
-  void DecodeTypes();
 
   LibraryLoader* enclosing_loader_;
   rapidjson::Document json_definition_;

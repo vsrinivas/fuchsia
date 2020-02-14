@@ -13,6 +13,22 @@
 namespace fidl_codec {
 namespace semantic {
 
+void ExpressionRequest::Dump(std::ostream& os) const { os << "request"; }
+
+void ExpressionHandle::Dump(std::ostream& os) const { os << "handle"; }
+
+void ExpressionFieldAccess::Dump(std::ostream& os) const { os << *expression_ << '.' << field_; }
+
+void ExpressionSlash::Dump(std::ostream& os) const { os << *left_ << " / " << *right_; }
+
+void Assignment::Dump(std::ostream& os) const { os << *destination_ << " = " << *source_ << '\n'; }
+
+void MethodSemantic::Dump(std::ostream& os) const {
+  for (const auto& assignment : assignments_) {
+    assignment->Dump(os);
+  }
+}
+
 std::string_view HandleDescription::Convert(uint32_t type) {
   switch (type) {
     case PA_PROC_SELF:
