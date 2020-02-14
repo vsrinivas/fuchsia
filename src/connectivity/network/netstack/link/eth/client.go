@@ -367,7 +367,12 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 				}
 			}
 		}(); err != nil {
-			_ = syslog.WarnTf(tag, "TX read loop: %s", err)
+			c.mu.Lock()
+			state := c.state
+			c.mu.Unlock()
+			if state != link.StateClosed {
+				_ = syslog.WarnTf(tag, "TX read loop: %s", err)
+			}
 			c.tx.mu.Lock()
 			c.tx.mu.detached = true
 			c.tx.mu.Unlock()
@@ -419,7 +424,12 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 				}
 			}
 		}(); err != nil {
-			_ = syslog.WarnTf(tag, "TX write loop: %s", err)
+			c.mu.Lock()
+			state := c.state
+			c.mu.Unlock()
+			if state != link.StateClosed {
+				_ = syslog.WarnTf(tag, "TX write loop: %s", err)
+			}
 			c.tx.mu.Lock()
 			c.tx.mu.detached = true
 			c.tx.mu.Unlock()
@@ -505,7 +515,12 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 				}
 			}
 		}(); err != nil {
-			_ = syslog.WarnTf(tag, "RX loop: %s", err)
+			c.mu.Lock()
+			state := c.state
+			c.mu.Unlock()
+			if state != link.StateClosed {
+				_ = syslog.WarnTf(tag, "RX loop: %s", err)
+			}
 		}
 	}()
 

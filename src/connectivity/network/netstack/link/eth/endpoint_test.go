@@ -56,22 +56,30 @@ func prependableComparer(x, y buffer.Prependable) bool {
 func TestEndpoint(t *testing.T) {
 	maxSize := 4096 / uint(unsafe.Sizeof(eth.FifoEntry{}))
 
+	arena, err := eth.NewArena()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	for i := 0; i < bits.Len(maxSize); i++ {
 		depth := uint32(1 << i)
 		t.Run(fmt.Sprintf("depth=%d", depth), func(t *testing.T) {
-			var outFifo, inFifo zx.Handle
-			if status := zx.Sys_fifo_create(uint(depth), uint(unsafe.Sizeof(eth.FifoEntry{})), 0, &outFifo, &inFifo); status != zx.ErrOk {
+			var inRxFifo, outTxFifo zx.Handle
+			if status := zx.Sys_fifo_create(uint(depth), uint(unsafe.Sizeof(eth.FifoEntry{})), 0, &inRxFifo, &outTxFifo); status != zx.ErrOk {
 				t.Fatal(status)
 			}
 			defer func() {
-				_ = outFifo.Close()
-				_ = inFifo.Close()
+				_ = inRxFifo.Close()
+				_ = outTxFifo.Close()
 			}()
-
-			arena, err := eth.NewArena()
-			if err != nil {
-				t.Fatal(err)
+			var inTxFifo, outRxFifo zx.Handle
+			if status := zx.Sys_fifo_create(uint(depth), uint(unsafe.Sizeof(eth.FifoEntry{})), 0, &inTxFifo, &outRxFifo); status != zx.ErrOk {
+				t.Fatal(status)
 			}
+			defer func() {
+				_ = inTxFifo.Close()
+				_ = outRxFifo.Close()
+			}()
 
 			baseDevice := ethernetext.Device{
 				TB: t,
@@ -84,6 +92,9 @@ func TestEndpoint(t *testing.T) {
 				StartImpl: func() (int32, error) {
 					return int32(zx.ErrOk), nil
 				},
+				StopImpl: func() error {
+					return nil
+				},
 				SetClientNameImpl: func(string) (int32, error) {
 					return int32(zx.ErrOk), nil
 				},
@@ -94,12 +105,21 @@ func TestEndpoint(t *testing.T) {
 
 			inDevice := baseDevice
 			inDevice.GetFifosImpl = func() (int32, *ethernet.Fifos, error) {
-				return int32(zx.ErrOk), &ethernet.Fifos{Rx: inFifo, RxDepth: depth}, nil
+				return int32(zx.ErrOk), &ethernet.Fifos{
+					Rx:      inRxFifo,
+					RxDepth: depth,
+					Tx:      inTxFifo,
+					TxDepth: depth,
+				}, nil
 			}
 			inClient, err := eth.NewClient(t.Name(), "in", &inDevice, arena)
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer func() {
+				_ = inClient.Close()
+				inClient.Wait()
+			}()
 			inCh := make(dispatcherChan, depth)
 			defer close(inCh)
 			{
@@ -108,12 +128,12 @@ func TestEndpoint(t *testing.T) {
 			}
 			// Both sides are trying to "seed" the RX direction, which is not valid. Drain the buffers sent
 			// by the "in" client and discard them.
-			if _, err := zxwait.Wait(outFifo, zx.SignalFIFOReadable, zx.TimensecInfinite); err != nil {
+			if _, err := zxwait.Wait(outTxFifo, zx.SignalFIFOReadable, zx.TimensecInfinite); err != nil {
 				t.Fatal(err)
 			}
 			{
 				b := make([]eth.FifoEntry, depth+1)
-				status, count := eth.FifoRead(outFifo, b)
+				status, count := eth.FifoRead(outTxFifo, b)
 				if status != zx.ErrOk {
 					t.Fatal(status)
 				}
@@ -124,12 +144,21 @@ func TestEndpoint(t *testing.T) {
 
 			outDevice := baseDevice
 			outDevice.GetFifosImpl = func() (int32, *ethernet.Fifos, error) {
-				return int32(zx.ErrOk), &ethernet.Fifos{Tx: outFifo, TxDepth: depth}, nil
+				return int32(zx.ErrOk), &ethernet.Fifos{
+					Rx:      outRxFifo,
+					RxDepth: depth,
+					Tx:      outTxFifo,
+					TxDepth: depth,
+				}, nil
 			}
 			outClient, err := eth.NewClient(t.Name(), "out", &outDevice, arena)
 			if err != nil {
 				t.Fatal(err)
 			}
+			defer func() {
+				_ = outClient.Close()
+				outClient.Wait()
+			}()
 			outEndpoint := eth.NewLinkEndpoint(outClient)
 			{
 				var outCh dispatcherChan
@@ -139,47 +168,44 @@ func TestEndpoint(t *testing.T) {
 			const localLinkAddress = tcpip.LinkAddress("\x01\x02\x03\x04\x05\x06")
 			const remoteLinkAddress = tcpip.LinkAddress("\x11\x12\x13\x14\x15\x16")
 			const protocol = tcpip.NetworkProtocolNumber(45)
+
+			// Test that we build the ethernet frame correctly.
+			// Test that we don't accidentally put unused bytes on the wire.
+			const packetHeader = "foo"
+			hdr := buffer.NewPrependable(int(outEndpoint.MaxHeaderLength()) + len(packetHeader) + 5)
+			if want, got := len(packetHeader), copy(hdr.Prepend(len(packetHeader)), packetHeader); got != want {
+				t.Fatalf("got copy() = %d, want = %d", got, want)
+			}
+			const body = "bar"
+			route := stack.Route{
+				LocalLinkAddress:  localLinkAddress,
+				RemoteLinkAddress: remoteLinkAddress,
+			}
+			pb := tcpip.PacketBuffer{
+				Data:   buffer.View(body).ToVectorisedView(),
+				Header: hdr,
+			}
+
 			t.Run("WritePacket", func(t *testing.T) {
 				for i := 0; i < int(depth)*10; i++ {
-					t.Run(fmt.Sprintf("iteration=%d", i), func(t *testing.T) {
-						// Test that we build the ethernet frame correctly.
-						// Test that we don't accidentally put unused bytes on the wire.
-						const packetHeader = "foo"
-						hdr := buffer.NewPrependable(int(outEndpoint.MaxHeaderLength()) + len(packetHeader) + 5)
-						if want, got := len(packetHeader), copy(hdr.Prepend(len(packetHeader)), packetHeader); got != want {
-							t.Fatalf("got copy() = %d, want = %d", got, want)
-						}
-						const body = "bar"
-						if err := outEndpoint.WritePacket(
-							&stack.Route{
-								LocalLinkAddress:  localLinkAddress,
-								RemoteLinkAddress: remoteLinkAddress,
+					if err := outEndpoint.WritePacket(&route, nil, protocol, pb); err != nil {
+						t.Fatal(err)
+					}
+					select {
+					case <-time.After(5 * time.Second):
+						t.Fatalf("timeout waiting for ethernet packet on iteration %d", i)
+					case args := <-inCh:
+						if diff := cmp.Diff(args, DeliverNetworkPacketArgs{
+							SrcLinkAddr: localLinkAddress,
+							DstLinkAddr: remoteLinkAddress,
+							Protocol:    protocol,
+							Pkt: tcpip.PacketBuffer{
+								Data: buffer.View(packetHeader + body).ToVectorisedView(),
 							},
-							nil,
-							protocol,
-							tcpip.PacketBuffer{
-								Data:   buffer.View(body).ToVectorisedView(),
-								Header: hdr,
-							},
-						); err != nil {
-							t.Fatal(err)
+						}, cmp.Comparer(vectorizedViewComparer), cmp.Comparer(prependableComparer)); diff != "" {
+							t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
 						}
-						select {
-						case <-time.After(5 * time.Second):
-							t.Fatal("timeout waiting for ethernet packet")
-						case args := <-inCh:
-							if diff := cmp.Diff(args, DeliverNetworkPacketArgs{
-								SrcLinkAddr: localLinkAddress,
-								DstLinkAddr: remoteLinkAddress,
-								Protocol:    protocol,
-								Pkt: tcpip.PacketBuffer{
-									Data: buffer.View(packetHeader + body).ToVectorisedView(),
-								},
-							}, cmp.Comparer(vectorizedViewComparer), cmp.Comparer(prependableComparer)); diff != "" {
-								t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
-							}
-						}
-					})
+					}
 				}
 			})
 			// ReceivePacket tests that receiving ethernet frames of size
