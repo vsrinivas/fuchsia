@@ -45,20 +45,6 @@ Format::Format(fuchsia::media::AudioStreamType stream_type) : stream_type_(strea
   bytes_per_frame_ *= stream_type_.channels;
 }
 
-Format::Format(const Format& o)
-    : stream_type_(o.stream_type_),
-      frames_per_ns_(o.frames_per_ns_),
-      frame_to_media_ratio_(o.frame_to_media_ratio_),
-      bytes_per_frame_(o.bytes_per_frame_) {}
-
-Format& Format::operator=(const Format& o) {
-  stream_type_ = o.stream_type_;
-  frames_per_ns_ = o.frames_per_ns_;
-  frame_to_media_ratio_ = o.frame_to_media_ratio_;
-  bytes_per_frame_ = o.bytes_per_frame_;
-  return *this;
-}
-
 bool Format::operator==(const Format& other) const {
   // All the other class members are derived from our stream_type, so we don't need to include them
   // here.
@@ -66,8 +52,8 @@ bool Format::operator==(const Format& other) const {
 }
 
 // static
-fbl::RefPtr<Format> Format::Create(fuchsia::media::AudioStreamType format) {
-  return fbl::MakeRefCounted<Format>(format);
+std::shared_ptr<Format> Format::Create(fuchsia::media::AudioStreamType format) {
+  return std::make_shared<Format>(format);
 }
 
 }  // namespace media::audio

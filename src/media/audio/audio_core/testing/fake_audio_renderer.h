@@ -24,7 +24,7 @@ namespace media::audio::testing {
 class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRenderer {
  public:
   static std::shared_ptr<FakeAudioRenderer> Create(async_dispatcher_t* dispatcher,
-                                                   fbl::RefPtr<Format> format,
+                                                   std::shared_ptr<Format> format,
                                                    fuchsia::media::AudioRenderUsage usage,
                                                    LinkMatrix* link_matrix) {
     return std::make_shared<FakeAudioRenderer>(dispatcher, std::move(format), usage, link_matrix);
@@ -32,7 +32,7 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
   static std::shared_ptr<FakeAudioRenderer> CreateWithDefaultFormatInfo(
       async_dispatcher_t* dispatcher, LinkMatrix* link_matrix);
 
-  FakeAudioRenderer(async_dispatcher_t* dispatcher, fbl::RefPtr<Format> format,
+  FakeAudioRenderer(async_dispatcher_t* dispatcher, std::shared_ptr<Format> format,
                     fuchsia::media::AudioRenderUsage usage, LinkMatrix* link_matrix);
 
   // Enqueues a packet that has all samples initialized to |sample| and lasts for |duration|.
@@ -40,7 +40,7 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
                           fit::closure callback = nullptr);
 
   // |media::audio::AudioObject|
-  const fbl::RefPtr<Format>& format() const override { return format_; }
+  const std::shared_ptr<Format>& format() const override { return format_; }
   fit::result<std::shared_ptr<Stream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override;
   void CleanupDestLink(const AudioObject& dest) override;
@@ -73,7 +73,7 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
   zx::duration FindMinLeadTime();
 
   async_dispatcher_t* dispatcher_;
-  fbl::RefPtr<Format> format_ = nullptr;
+  std::shared_ptr<Format> format_ = nullptr;
   fuchsia::media::AudioRenderUsage usage_;
   PacketFactory packet_factory_;
   std::unordered_map<const AudioObject*, std::shared_ptr<PacketQueue>> packet_queues_;

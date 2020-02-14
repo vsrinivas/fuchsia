@@ -9,20 +9,16 @@
 #include <lib/media/cpp/timeline_rate.h>
 #include <stdint.h>
 
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
-
 namespace media::audio {
 
-class Format : public fbl::RefCounted<Format> {
+class Format {
  public:
-  static fbl::RefPtr<Format> Create(fuchsia::media::AudioStreamType format);
+  static std::shared_ptr<Format> Create(fuchsia::media::AudioStreamType format);
 
   Format(fuchsia::media::AudioStreamType format);
 
-  // Allow copy.
-  Format(const Format&);
-  Format& operator=(const Format&);
+  Format(const Format&) = default;
+  Format& operator=(const Format&) = default;
 
   bool operator==(const Format& other) const;
   bool operator!=(const Format& other) const { return !(*this == other); }

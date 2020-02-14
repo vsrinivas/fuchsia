@@ -87,7 +87,7 @@ class AudioRendererImpl : public AudioObject,
   // Hook called when the minimum clock lead time requirement changes.
   void ReportNewMinLeadTime();
 
-  fbl::RefPtr<Format> format_;
+  std::shared_ptr<Format> format_;
 
   fuchsia::media::AudioRenderUsage usage_ = fuchsia::media::AudioRenderUsage::MEDIA;
 
@@ -140,7 +140,7 @@ class AudioRendererImpl : public AudioObject,
 
   // |media::audio::AudioObject|
   void OnLinkAdded() override;
-  const fbl::RefPtr<Format>& format() const final { return format_; }
+  const std::shared_ptr<Format>& format() const final { return format_; }
   std::optional<fuchsia::media::Usage> usage() const override { return {UsageFrom(usage_)}; }
   fit::result<std::shared_ptr<Stream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override;

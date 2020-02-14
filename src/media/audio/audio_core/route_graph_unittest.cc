@@ -46,12 +46,12 @@ class FakeAudioObject : public AudioObject {
     usage_ = std::move(usage);
   }
 
-  const fbl::RefPtr<Format>& format() const override { return format_; }
+  const std::shared_ptr<Format>& format() const override { return format_; }
 
   std::optional<fuchsia::media::Usage> usage() const override { return {fidl::Clone(usage_)}; }
 
  private:
-  fbl::RefPtr<Format> format_ = nullptr;
+  std::shared_ptr<Format> format_ = nullptr;
   fuchsia::media::Usage usage_;
 };
 
