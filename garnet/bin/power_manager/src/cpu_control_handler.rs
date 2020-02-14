@@ -107,8 +107,7 @@ pub struct CpuControlHandlerBuilder<'a> {
 impl<'a> CpuControlHandlerBuilder<'a> {
     pub fn new_with_driver_path(
         cpu_driver_path: String,
-        // TODO(pshickel): Eventually we may want to query capacitance from the CPU driver (same as
-        // we do for CPU P-states)
+        // TODO(fxb/45507): Determine a proper owner for this value.
         capacitance: Farads,
         cpu_stats_handler: Rc<dyn Node>,
         cpu_dev_handler_node: Rc<dyn Node>,

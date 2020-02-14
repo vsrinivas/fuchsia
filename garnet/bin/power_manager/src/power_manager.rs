@@ -65,9 +65,12 @@ impl PowerManager {
 
         let cpu_control_node = cpu_control_handler::CpuControlHandlerBuilder::new_with_driver_path(
             cpu_path.to_string(),
-            // TODO(claridge): This is a dummy value for now. Should the CPU driver provide it in
-            // addition to the P-states?
-            Farads(100.0e-12),
+            // This value is for Astro. It is determined by measuring power consumption under max
+            // load for each P-state and then choosing a capacitance and power offset such that
+            // the model
+            //     power = offset + capacitance * voltage^2 * frequency * load
+            // best fits the data.
+            Farads(120.0e-12),
             cpu_stats_node,
             cpu_dev_handler_node,
         )
@@ -89,15 +92,23 @@ impl PowerManager {
             thermal_limiter_node,
 
             policy_params: thermal_policy::ThermalPolicyParams {
+                // TODO(fxb/45951): Capture design critera for parameters in a simulator-based
+                // unit test where possible.
                 controller_params: thermal_policy::ThermalControllerParams {
                     sample_interval: Seconds(1.0),
-                    filter_time_constant: Seconds(10.0),
+                    filter_time_constant: Seconds(5.0),
                     target_temperature: Celsius(80.0),
                     e_integral_min: -20.0,
                     e_integral_max: 0.0,
-                    sustainable_power: Watts(1.1),
+                    // TOOD(fxb/45942): This is currently set to the maximum power required by the
+                    // Astro CPU via
+                    //     max_power = capacitance * V^2 * f * num_cores,
+                    // where V and f correspond to the highest clock speed. Once CpuControlHandler
+                    // has an explicit initialization phase, it should derive this value instead
+                    // and supply it to the thermal policy.
+                    sustainable_power: Watts(0.876),
                     proportional_gain: 0.0,
-                    integral_gain: 0.2,
+                    integral_gain: 0.08,
                 },
                 thermal_limiting_range: [Celsius(77.0), Celsius(84.0)],
                 thermal_shutdown_temperature: Celsius(95.0),
