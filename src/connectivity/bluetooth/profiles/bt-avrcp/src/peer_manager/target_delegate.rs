@@ -5,8 +5,8 @@
 use super::*;
 
 use fidl_fuchsia_bluetooth_avrcp::{
-    AbsoluteVolumeHandlerProxy, MediaAttributes, NotificationEvent, PlayStatus, TargetAvcError,
-    TargetHandlerProxy, TargetPassthroughError,
+    self as fidl_avrcp, AbsoluteVolumeHandlerProxy, MediaAttributes, NotificationEvent, PlayStatus,
+    TargetAvcError, TargetHandlerProxy, TargetPassthroughError,
 };
 
 /// Delegates commands received on any peer channels to the currently registered target handler and
@@ -171,6 +171,20 @@ impl TargetDelegate {
 
         send_command_fut.await.map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)?
     }
+
+    pub async fn send_list_player_application_setting_attributes_command(
+        &self,
+    ) -> Result<Vec<fidl_avrcp::PlayerApplicationSettingAttributeId>, TargetAvcError> {
+        let send_command_fut = {
+            let inner_guard = self.inner.lock();
+            match &inner_guard.target_handler {
+                Some(target_handler) => target_handler.list_player_application_setting_attributes(),
+                None => return Err(TargetAvcError::RejectedNoAvailablePlayers),
+            }
+        };
+
+        send_command_fut.await.map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)?
+    }
 }
 
 #[cfg(test)]
@@ -218,7 +232,7 @@ mod tests {
     fn test_get_media_attributes() {
         let mut exec = fasync::Executor::new().expect("executor::new failed");
         let target_delegate = TargetDelegate::new();
-        // try with a target handler
+
         let (target_proxy, mut target_stream) = create_proxy_and_stream::<TargetHandlerMarker>()
             .expect("Error creating TargetHandler endpoint");
         assert_matches!(target_delegate.set_target_handler(target_proxy), Ok(()));
@@ -239,6 +253,40 @@ mod tests {
         match exec.run_until_stalled(&mut get_media_attr_fut) {
             Poll::Ready(attributes) => {
                 assert_eq!(attributes, Ok(MediaAttributes::new_empty()));
+            }
+            _ => assert!(false, "unexpected state"),
+        }
+    }
+
+    #[test]
+    // Test getting correct response from a list_player_application_settings command.
+    fn test_list_player_application_settings() {
+        let mut exec = fasync::Executor::new().expect("executor::new failed");
+        let target_delegate = TargetDelegate::new();
+
+        let (target_proxy, mut target_stream) = create_proxy_and_stream::<TargetHandlerMarker>()
+            .expect("Error creating TargetHandler endpoint");
+        assert_matches!(target_delegate.set_target_handler(target_proxy), Ok(()));
+
+        let list_pas_fut =
+            target_delegate.send_list_player_application_setting_attributes_command();
+        pin_utils::pin_mut!(list_pas_fut);
+        assert!(exec.run_until_stalled(&mut list_pas_fut).is_pending());
+
+        let select_next_some_fut = target_stream.select_next_some();
+        pin_utils::pin_mut!(select_next_some_fut);
+        match exec.run_until_stalled(&mut select_next_some_fut) {
+            Poll::Ready(Ok(TargetHandlerRequest::ListPlayerApplicationSettingAttributes {
+                responder,
+            })) => {
+                assert!(responder.send(&mut Ok(vec![])).is_ok());
+            }
+            _ => assert!(false, "unexpected stream state"),
+        };
+
+        match exec.run_until_stalled(&mut list_pas_fut) {
+            Poll::Ready(attributes) => {
+                assert_eq!(attributes, Ok(vec![]));
             }
             _ => assert!(false, "unexpected state"),
         }

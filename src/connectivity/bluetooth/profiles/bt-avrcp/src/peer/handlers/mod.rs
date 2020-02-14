@@ -298,6 +298,21 @@ async fn handle_get_element_attributes(
     Ok(Box::new(response))
 }
 
+async fn handle_list_player_application_setting_attributes(
+    target_delegate: Arc<TargetDelegate>,
+) -> Result<Box<dyn PacketEncodable>, StatusCode> {
+    let attributes = target_delegate
+        .send_list_player_application_setting_attributes_command()
+        .await
+        .map_err(|e| StatusCode::from(e))?;
+
+    let response = ListPlayerApplicationSettingAttributesResponse::new(
+        attributes.len() as u8,
+        attributes.into_iter().map(|a| a.into()).collect(),
+    );
+    Ok(Box::new(response))
+}
+
 /// Sends status command response. Send's Implemented/Stable on response code on success.
 fn send_status_response(
     command: impl IncomingTargetCommand,
@@ -342,12 +357,14 @@ async fn handle_status_command(
         match status_command {
             StatusCommand::GetCapabilities(cmd) => handle_get_capabilities(cmd, delegate).await,
             /* Todo: implement
-            StatusCommand::ListPlayerApplicationSettingAttributes(_) => {}
             StatusCommand::ListPlayerApplicationSettingValues(_) => {}
             StatusCommand::GetCurrentPlayerApplicationSettingValue(_) => {}
             StatusCommand::GetPlayerApplicationSettingAttributeText(_) => {}
             StatusCommand::GetPlayerApplicationSettingValueText(_) => {}
             */
+            StatusCommand::ListPlayerApplicationSettingAttributes(_) => {
+                handle_list_player_application_setting_attributes(delegate).await
+            }
             StatusCommand::GetElementAttributes(cmd) => {
                 handle_get_element_attributes(cmd, delegate).await
             }
@@ -473,8 +490,9 @@ mod test {
     use crate::peer_manager::TargetDelegate;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_avrcp::{
-        AbsoluteVolumeHandlerMarker, AbsoluteVolumeHandlerProxy, AbsoluteVolumeHandlerRequest,
-        TargetAvcError, TargetHandlerMarker, TargetHandlerProxy, TargetHandlerRequest,
+        self as fidl_avrcp, AbsoluteVolumeHandlerMarker, AbsoluteVolumeHandlerProxy,
+        AbsoluteVolumeHandlerRequest, TargetAvcError, TargetHandlerMarker, TargetHandlerProxy,
+        TargetHandlerRequest,
     };
     use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -607,7 +625,9 @@ mod test {
                         responder.send(&mut Ok(()))
                     }
                     TargetHandlerRequest::ListPlayerApplicationSettingAttributes { responder } => {
-                        responder.send(&mut Err(TargetAvcError::RejectedInternalError))
+                        responder.send(&mut Ok(vec![
+                            fidl_avrcp::PlayerApplicationSettingAttributeId::Equalizer,
+                        ]))
                     }
                     TargetHandlerRequest::GetPlayerApplicationSettings {
                         attribute_ids: _,
@@ -741,6 +761,38 @@ mod test {
         // we should still be pending.
         assert!(exec.run_until_stalled(&mut handle_cmd).is_pending());
         // we drop the mock command and if the expected interim wasn't called, the test will fail
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn handle_list_player_application_setting_attributes_cmd() -> Result<(), Error> {
+        let target_proxy = create_dumby_target_handler(false);
+        let cmd_handler = create_command_handler(Some(target_proxy), None);
+
+        // generic vendor status command
+        let packet_body: Vec<u8> = [
+            0x11, // ListPlayerApplicationSettings pdu id
+            0x00, // Single packet
+            0x00, 0x00, // param_len, 0 bytes
+        ]
+        .to_vec();
+        let expected_packet_response: Vec<u8> = [
+            0x11, // ListPlayerApplicationSettings pdu id
+            0x00, // Single packet
+            0x00, 0x02, // param_len, 2 bytes
+            0x01, // Number of settings, 1
+            0x01, // Equalizer
+        ]
+        .to_vec();
+
+        let command = MockAvcCommand::new(
+            AvcPacketType::Command(AvcCommandType::Status),
+            AvcOpCode::VendorDependent,
+            packet_body,
+        )
+        .expect_body(expected_packet_response)
+        .expect_response_type(AvcResponseType::ImplementedStable);
+
+        cmd_handler.handle_command_internal(command).await
     }
 
     /// send passthrough is implemented. expect it's accepted
