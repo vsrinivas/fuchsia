@@ -638,7 +638,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.timers-test",
 #------------------
 #------------------
     ":test.sys.trace-reader-test-test",
@@ -1228,7 +1227,6 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.timers-test",
 #------------------
 #------------------
     ":test.sys.trace-reader-test-test",
@@ -3214,7 +3212,7 @@ aggregate_manifest("migrated-aux") {
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-test-manifest",
     "//zircon/system/utest/time:time-manifest",
 #------------------
-    #":test.sys.timers-test",
+    "//zircon/system/utest/timers:timers-manifest",
 #------------------
     "//zircon/system/ulib/trace-engine/test:hash-table-test-manifest",
     "//zircon/system/ulib/trace-provider/test:provider-test-manifest",
@@ -3919,7 +3917,7 @@ aggregate_manifest("migrated-tests") {
     "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-test-manifest",
     "//zircon/system/utest/time:time-manifest",
 #------------------
-    #":test.sys.timers-test",
+    "//zircon/system/utest/timers:timers-manifest",
 #------------------
     "//zircon/system/ulib/trace-engine/test:hash-table-test-manifest",
     "//zircon/system/ulib/trace-provider/test:provider-test-manifest",
