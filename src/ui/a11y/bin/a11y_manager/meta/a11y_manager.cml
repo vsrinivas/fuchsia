@@ -19,6 +19,9 @@
     ],
     use: [
         {
+            runner: "elf"
+        },
+        {
             protocol: [
                 "/svc/fuchsia.logger.LogSink",
                 "/svc/fuchsia.settings.Accessibility",
