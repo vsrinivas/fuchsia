@@ -75,12 +75,14 @@ install_host_tools("fidl") {
   deps = [
     ":fidlgen_go",
     ":fidlgen_hlcpp",
+    ":fidlgen_libfuzzer",
     ":fidlgen_llcpp",
     ":fidlgen_syzkaller",
   ]
   outputs = [
     "fidlgen_go",
     "fidlgen_hlcpp",
+    "fidlgen_libfuzzer",
     "fidlgen_llcpp",
     "fidlgen_syzkaller",
   ]

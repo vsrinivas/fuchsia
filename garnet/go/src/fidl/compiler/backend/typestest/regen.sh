@@ -31,7 +31,7 @@ fi
 
 FIDLGEN_LIBFUZZER="${FUCHSIA_BUILD_DIR}/host_x64/fidlgen_libfuzzer"
 if [ ! -x "${FIDLGEN_LIBFUZZER}" ]; then
-    echo "error: fidlgen_syzkaller missing; maybe fx clean-build?" 1>&2
+    echo "error: fidlgen_libfuzzer missing; maybe fx clean-build?" 1>&2
     exit 1
 fi
 
