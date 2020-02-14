@@ -22,14 +22,6 @@ static pbus_mmio_t sherlock_video_enc_mmios[] = {
         .base = T931_DOS_BASE,
         .length = T931_DOS_LENGTH,
     },
-    {
-        .base = T931_AOBUS_BASE,
-        .length = T931_AOBUS_LENGTH,
-    },
-    {
-        .base = T931_HIU_BASE,
-        .length = T931_HIU_LENGTH,
-    },
 };
 
 constexpr pbus_bti_t sherlock_video_enc_btis[] = {

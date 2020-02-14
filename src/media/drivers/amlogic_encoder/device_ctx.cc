@@ -25,8 +25,6 @@
 enum MmioRegion {
   kCbus,
   kDosbus,
-  kAobus,
-  kHiubus,
 };
 
 enum Interrupt {
@@ -154,29 +152,13 @@ zx_status_t DeviceCtx::Init() {
   }
   cbus_ = std::make_unique<CbusRegisterIo>(cbus_mmio);
 
-  mmio_buffer_t dosbus_mmio;
-  status = pdev_map_mmio_buffer(&pdev_, kDosbus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &dosbus_mmio);
+  mmio_buffer_t mmio;
+  status = pdev_map_mmio_buffer(&pdev_, kDosbus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (status != ZX_OK) {
     ENCODE_ERROR("Failed map dosbus");
     return ZX_ERR_NO_MEMORY;
   }
-  dosbus_ = std::make_unique<DosRegisterIo>(dosbus_mmio);
-
-  mmio_buffer_t aobus_mmio;
-  status = pdev_map_mmio_buffer(&pdev_, kAobus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &aobus_mmio);
-  if (status != ZX_OK) {
-    ENCODE_ERROR("Failed map aobus");
-    return ZX_ERR_NO_MEMORY;
-  }
-  aobus_ = std::make_unique<AoRegisterIo>(aobus_mmio);
-
-  mmio_buffer_t hiubus_mmio;
-  status = pdev_map_mmio_buffer(&pdev_, kHiubus, ZX_CACHE_POLICY_UNCACHED_DEVICE, &hiubus_mmio);
-  if (status != ZX_OK) {
-    ENCODE_ERROR("Failed map hiubus");
-    return ZX_ERR_NO_MEMORY;
-  }
-  hiubus_ = std::make_unique<HiuRegisterIo>(hiubus_mmio);
+  dosbus_ = std::make_unique<DosRegisterIo>(mmio);
 
   status =
       pdev_get_interrupt(&pdev_, kDosMbox2Irq, 0, enc_interrupt_handle_.reset_and_get_address());
