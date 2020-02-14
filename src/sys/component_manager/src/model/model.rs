@@ -4,8 +4,8 @@
 
 use {
     crate::model::{
-        error::ModelError, moniker::AbsoluteMoniker, realm::Realm, resolver::ResolverRegistry,
-        runner::Runner,
+        environment::Environment, error::ModelError, moniker::AbsoluteMoniker, realm::Realm,
+        resolver::ResolverRegistry, runner::Runner,
     },
     cm_rust::CapabilityName,
     std::collections::HashMap,
@@ -68,7 +68,7 @@ impl Model {
     pub fn new(params: ModelParams) -> Model {
         Model {
             root_realm: Arc::new(Realm::new_root_realm(
-                params.root_resolver_registry,
+                Environment::new_root(params.root_resolver_registry),
                 params.root_component_url,
             )),
             elf_runner: params.elf_runner,

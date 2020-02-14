@@ -28,6 +28,8 @@ pub enum ModelError {
     InstanceNotFound { moniker: AbsoluteMoniker },
     #[error("component collection not found with name {}", name)]
     CollectionNotFound { name: String },
+    #[error("environment {} not found in realm {}", name, moniker)]
+    EnvironmentNotFound { name: String, moniker: AbsoluteMoniker },
     #[error("{} is not supported", feature)]
     Unsupported { feature: String },
     #[error("component declaration invalid")]
@@ -111,6 +113,10 @@ impl ModelError {
 
     pub fn collection_not_found(name: impl Into<String>) -> ModelError {
         ModelError::CollectionNotFound { name: name.into() }
+    }
+
+    pub fn environment_not_found(name: impl Into<String>, moniker: AbsoluteMoniker) -> ModelError {
+        ModelError::EnvironmentNotFound { name: name.into(), moniker }
     }
 
     pub fn unsupported(feature: impl Into<String>) -> ModelError {

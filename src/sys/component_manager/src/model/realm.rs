@@ -5,13 +5,14 @@
 use {
     crate::model::{
         actions::{Action, ActionSet, Notification},
+        environment::Environment,
         error::ModelError,
         exposed_dir::ExposedDir,
         hooks::{Event, EventPayload, Hooks},
         model::Model,
         moniker::{AbsoluteMoniker, ChildMoniker, InstanceId, PartialMoniker},
         namespace::IncomingNamespace,
-        resolver::{Resolver, ResolverRegistry},
+        resolver::Resolver,
         routing,
         runner::{NullRunner, RemoteRunner, Runner},
     },
@@ -48,7 +49,7 @@ use {
 /// that it contains, including component resolution, execution, and service discovery.
 pub struct Realm {
     /// The registry for resolving component URLs within the realm.
-    pub resolver_registry: Arc<ResolverRegistry>,
+    pub environment: Environment,
     /// The component's URL.
     pub component_url: String,
     /// The mode of startup (lazy or eager).
@@ -71,9 +72,9 @@ pub struct Realm {
 
 impl Realm {
     /// Instantiates a new root realm.
-    pub fn new_root_realm(resolver_registry: ResolverRegistry, component_url: String) -> Self {
+    pub fn new_root_realm(environment: Environment, component_url: String) -> Self {
         Self {
-            resolver_registry: Arc::new(resolver_registry),
+            environment,
             abs_moniker: AbsoluteMoniker::root(),
             component_url,
             // Started by main().
@@ -128,7 +129,7 @@ impl Realm {
             }
             // Drop the lock before doing the work to resolve the state.
         }
-        let component = self.resolver_registry.resolve(&self.component_url).await?;
+        let component = self.environment.resolve(&self.component_url).await?;
         Realm::populate_decl(self, component.decl.ok_or(ModelError::ComponentInvalid)?).await?;
         Ok(MutexGuard::map(self.state.lock().await, |s| s.as_mut().unwrap()))
     }
@@ -283,7 +284,7 @@ impl Realm {
                 }
             }
             if let Some(child_realm) =
-                state.add_child_realm(realm, child_decl, Some(collection_name.clone())).await
+                state.add_child_realm(realm, child_decl, Some(collection_name.clone())).await?
             {
                 child_realm
             } else {
@@ -573,7 +574,7 @@ impl RealmState {
             meta_dir: None,
             next_dynamic_instance_id: 1,
         };
-        state.add_static_child_realms(realm, &decl).await;
+        state.add_static_child_realms(realm, &decl).await?;
         Ok(state)
     }
 
@@ -666,6 +667,31 @@ impl RealmState {
         self.child_realms.remove(moniker);
     }
 
+    /// Construct an environment for `child`, inheriting from `realm`'s environment if
+    /// necessary.
+    fn environment_for_child(
+        &self,
+        realm: &Arc<Realm>,
+        child: &ChildDecl,
+    ) -> Result<Environment, ModelError> {
+        if let Some(environment_name) = &child.environment {
+            // The child has an environment assigned to it. Find that environment
+            // in the list of environment declarations.
+            let decl = self
+                .decl
+                .environments
+                .iter()
+                .find(|env| env.name == *environment_name)
+                .ok_or_else(|| {
+                    ModelError::environment_not_found(environment_name, realm.abs_moniker.clone())
+                })?;
+            Ok(Environment::from_decl(realm, decl))
+        } else {
+            // Auto-inherit the environment from this realm.
+            Ok(Environment::new_inheriting(realm))
+        }
+    }
+
     /// Adds a new child of this realm for the given `ChildDecl`. Returns the child realm,
     /// or None if it already existed.
     async fn add_child_realm(
@@ -673,7 +699,7 @@ impl RealmState {
         realm: &Arc<Realm>,
         child: &ChildDecl,
         collection: Option<String>,
-    ) -> Option<Arc<Realm>> {
+    ) -> Result<Option<Arc<Realm>>, ModelError> {
         let instance_id = match collection {
             Some(_) => {
                 let id = self.next_dynamic_instance_id;
@@ -685,10 +711,9 @@ impl RealmState {
         let child_moniker = ChildMoniker::new(child.name.clone(), collection.clone(), instance_id);
         let partial_moniker = child_moniker.to_partial();
         if self.get_live_child_realm(&partial_moniker).is_none() {
-            let abs_moniker = realm.abs_moniker.child(child_moniker.clone());
             let child_realm = Arc::new(Realm {
-                resolver_registry: realm.resolver_registry.clone(),
-                abs_moniker: abs_moniker,
+                environment: self.environment_for_child(realm, child)?,
+                abs_moniker: realm.abs_moniker.child(child_moniker.clone()),
                 component_url: child.url.clone(),
                 startup: child.startup,
                 parent: Some(Arc::downgrade(realm)),
@@ -699,16 +724,21 @@ impl RealmState {
             });
             self.child_realms.insert(child_moniker, child_realm.clone());
             self.live_child_realms.insert(partial_moniker, (instance_id, child_realm.clone()));
-            Some(child_realm)
+            Ok(Some(child_realm))
         } else {
-            None
+            Ok(None)
         }
     }
 
-    async fn add_static_child_realms(&mut self, realm: &Arc<Realm>, decl: &ComponentDecl) {
+    async fn add_static_child_realms(
+        &mut self,
+        realm: &Arc<Realm>,
+        decl: &ComponentDecl,
+    ) -> Result<(), ModelError> {
         for child in decl.children.iter() {
-            self.add_child_realm(realm, child, None).await;
+            self.add_child_realm(realm, child, None).await?;
         }
+        Ok(())
     }
 }
 

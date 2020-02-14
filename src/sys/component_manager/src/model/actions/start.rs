@@ -34,7 +34,7 @@ pub(super) async fn do_start(model: Arc<Model>, realm: Arc<Realm>) -> Result<(),
     }
 
     // Resolve the component.
-    let component = realm.resolver_registry.resolve(&realm.component_url).await?;
+    let component = realm.environment.resolve(&realm.component_url).await?;
     let resolved_url = component.resolved_url.ok_or(ModelError::ComponentInvalid)?;
     let package = component.package;
 

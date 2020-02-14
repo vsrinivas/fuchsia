@@ -5,6 +5,7 @@
 use {
     crate::model::{
         binding::Binder,
+        environment::Environment,
         error::ModelError,
         moniker::AbsoluteMoniker,
         realm::Realm,
@@ -315,7 +316,7 @@ impl Binder for FakeBinder {
     ) -> Result<Arc<Realm>, ModelError> {
         let resolver = ResolverRegistry::new();
         let root_component_url = "test:///root".to_string();
-        Ok(Arc::new(Realm::new_root_realm(resolver, root_component_url)))
+        Ok(Arc::new(Realm::new_root_realm(Environment::new_root(resolver), root_component_url)))
     }
 }
 

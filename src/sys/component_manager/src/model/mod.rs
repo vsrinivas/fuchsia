@@ -14,6 +14,7 @@ pub mod realm;
 pub mod testing;
 
 pub(crate) mod actions;
+pub(crate) mod environment;
 pub(crate) mod events;
 pub(crate) mod resolver;
 pub(crate) mod routing;

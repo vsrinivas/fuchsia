@@ -188,14 +188,9 @@ impl ComponentDeclBuilder {
         Self::new_empty_component().use_runner(TEST_RUNNER_NAME)
     }
 
-    /// Add a child element with the given name, URL, and startup mode.
-    pub fn add_custom_child(mut self, name: &str, url: &str, startup: fsys::StartupMode) -> Self {
-        self.result.children.push(ChildDecl {
-            name: name.to_string(),
-            url: url.to_string(),
-            startup: startup,
-            environment: None,
-        });
+    /// Add a child element.
+    pub fn add_child(mut self, decl: impl Into<cm_rust::ChildDecl>) -> Self {
+        self.result.children.push(decl.into());
         self
     }
 
@@ -209,12 +204,22 @@ impl ComponentDeclBuilder {
 
     /// Add a lazily instantiated child with a default test URL derived from the name.
     pub fn add_lazy_child(self, name: &str) -> Self {
-        self.add_custom_child(name, &format!("test:///{}", name), fsys::StartupMode::Lazy)
+        self.add_child(
+            ChildDeclBuilder::new()
+                .name(name)
+                .url(&format!("test:///{}", name))
+                .startup(fsys::StartupMode::Lazy),
+        )
     }
 
     /// Add an eagerly instantiated child with a default test URL derived from the name.
     pub fn add_eager_child(self, name: &str) -> Self {
-        self.add_custom_child(name, &format!("test:///{}", name), fsys::StartupMode::Eager)
+        self.add_child(
+            ChildDeclBuilder::new()
+                .name(name)
+                .url(&format!("test:///{}", name))
+                .startup(fsys::StartupMode::Eager),
+        )
     }
 
     /// Add a "use" clause, using the given runner.
@@ -264,15 +269,109 @@ impl ComponentDeclBuilder {
         self
     }
 
-    /// Add a custom runner declartion.
+    /// Add a custom runner declaration.
     pub fn runner(mut self, runner: cm_rust::RunnerDecl) -> Self {
         self.result.runners.push(runner);
+        self
+    }
+
+    /// Add an environment declaration.
+    pub fn add_environment(mut self, environment: impl Into<cm_rust::EnvironmentDecl>) -> Self {
+        self.result.environments.push(environment.into());
         self
     }
 
     /// Generate the final ComponentDecl.
     pub fn build(self) -> ComponentDecl {
         self.result
+    }
+}
+
+/// A convenience builder for constructing ChildDecls.
+#[derive(Debug)]
+pub struct ChildDeclBuilder(cm_rust::ChildDecl);
+
+impl ChildDeclBuilder {
+    /// Creates a new builder.
+    pub fn new() -> Self {
+        ChildDeclBuilder(cm_rust::ChildDecl {
+            name: String::new(),
+            url: String::new(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+        })
+    }
+
+    /// Sets the ChildDecl's name.
+    pub fn name(mut self, name: &str) -> Self {
+        self.0.name = name.to_string();
+        self
+    }
+
+    /// Sets the ChildDecl's url.
+    pub fn url(mut self, url: &str) -> Self {
+        self.0.url = url.to_string();
+        self
+    }
+
+    /// Sets the ChildDecl's startup mode.
+    pub fn startup(mut self, startup: fsys::StartupMode) -> Self {
+        self.0.startup = startup;
+        self
+    }
+
+    /// Sets the ChildDecl's environment name.
+    pub fn environment(mut self, environment: &str) -> Self {
+        self.0.environment = Some(environment.to_string());
+        self
+    }
+
+    /// Consumes the builder and returns a ChildDecl.
+    pub fn build(self) -> cm_rust::ChildDecl {
+        self.0
+    }
+}
+
+impl From<ChildDeclBuilder> for cm_rust::ChildDecl {
+    fn from(builder: ChildDeclBuilder) -> Self {
+        builder.build()
+    }
+}
+
+/// A convenience builder for constructing EnvironmentDecls.
+#[derive(Debug)]
+pub struct EnvironmentDeclBuilder(cm_rust::EnvironmentDecl);
+
+impl EnvironmentDeclBuilder {
+    /// Creates a new builder.
+    pub fn new() -> Self {
+        EnvironmentDeclBuilder(cm_rust::EnvironmentDecl {
+            name: String::new(),
+            extends: fsys::EnvironmentExtends::None,
+        })
+    }
+
+    /// Sets the EnvironmentDecl's name.
+    pub fn name(mut self, name: &str) -> Self {
+        self.0.name = name.to_string();
+        self
+    }
+
+    /// Sets whether the environment extends from its realm.
+    pub fn extends(mut self, extends: fsys::EnvironmentExtends) -> Self {
+        self.0.extends = extends;
+        self
+    }
+
+    /// Consumes the builder and returns an EnvironmentDecl.
+    pub fn build(self) -> cm_rust::EnvironmentDecl {
+        self.0
+    }
+}
+
+impl From<EnvironmentDeclBuilder> for cm_rust::EnvironmentDecl {
+    fn from(builder: EnvironmentDeclBuilder) -> Self {
+        builder.build()
     }
 }
 
