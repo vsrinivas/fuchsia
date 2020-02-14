@@ -128,7 +128,7 @@ impl Encodable for ListPlayerApplicationSettingAttributesResponse {
 /// See AVRCP Sec 6.5.2
 #[derive(Debug)]
 pub struct ListPlayerApplicationSettingValuesCommand {
-    player_application_setting_attribute_id: PlayerApplicationSettingAttributeId,
+    pub player_application_setting_attribute_id: PlayerApplicationSettingAttributeId,
 }
 
 impl ListPlayerApplicationSettingValuesCommand {
@@ -186,7 +186,6 @@ pub struct ListPlayerApplicationSettingValuesResponse {
 }
 
 impl ListPlayerApplicationSettingValuesResponse {
-    #[allow(dead_code)]
     pub fn new(
         num_player_application_setting_values: u8,
         player_application_setting_value_ids: Vec<u8>,

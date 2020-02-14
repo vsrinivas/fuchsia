@@ -313,6 +313,27 @@ async fn handle_list_player_application_setting_attributes(
     Ok(Box::new(response))
 }
 
+async fn handle_list_player_application_setting_values(
+    cmd: ListPlayerApplicationSettingValuesCommand,
+) -> Result<Box<dyn PacketEncodable>, StatusCode> {
+    // Currently, media players only support RepeatStatusMode and ShuffleMode.
+    let values: Vec<u8> = match cmd.player_application_setting_attribute_id {
+        PlayerApplicationSettingAttributeId::RepeatStatusMode => {
+            RepeatStatusMode::VARIANTS.to_vec().into_iter().map(|v| u8::from(&v)).collect()
+        }
+        PlayerApplicationSettingAttributeId::ShuffleMode => {
+            ShuffleMode::VARIANTS.to_vec().into_iter().map(|v| u8::from(&v)).collect()
+        }
+        _ => {
+            return Err(StatusCode::InvalidParameter);
+        }
+    };
+
+    let response = ListPlayerApplicationSettingValuesResponse::new(values.len() as u8, values);
+
+    Ok(Box::new(response))
+}
+
 /// Sends status command response. Send's Implemented/Stable on response code on success.
 fn send_status_response(
     command: impl IncomingTargetCommand,
@@ -357,13 +378,15 @@ async fn handle_status_command(
         match status_command {
             StatusCommand::GetCapabilities(cmd) => handle_get_capabilities(cmd, delegate).await,
             /* Todo: implement
-            StatusCommand::ListPlayerApplicationSettingValues(_) => {}
             StatusCommand::GetCurrentPlayerApplicationSettingValue(_) => {}
             StatusCommand::GetPlayerApplicationSettingAttributeText(_) => {}
             StatusCommand::GetPlayerApplicationSettingValueText(_) => {}
             */
             StatusCommand::ListPlayerApplicationSettingAttributes(_) => {
                 handle_list_player_application_setting_attributes(delegate).await
+            }
+            StatusCommand::ListPlayerApplicationSettingValues(cmd) => {
+                handle_list_player_application_setting_values(cmd).await
             }
             StatusCommand::GetElementAttributes(cmd) => {
                 handle_get_element_attributes(cmd, delegate).await
@@ -781,6 +804,39 @@ mod test {
             0x00, 0x02, // param_len, 2 bytes
             0x01, // Number of settings, 1
             0x01, // Equalizer
+        ]
+        .to_vec();
+
+        let command = MockAvcCommand::new(
+            AvcPacketType::Command(AvcCommandType::Status),
+            AvcOpCode::VendorDependent,
+            packet_body,
+        )
+        .expect_body(expected_packet_response)
+        .expect_response_type(AvcResponseType::ImplementedStable);
+
+        cmd_handler.handle_command_internal(command).await
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn handle_list_player_application_setting_values_cmd() -> Result<(), Error> {
+        let target_proxy = create_dumby_target_handler(false);
+        let cmd_handler = create_command_handler(Some(target_proxy), None);
+
+        // generic vendor status command
+        let packet_body: Vec<u8> = [
+            0x12, // ListPlayerApplicationSettingValue pdu id
+            0x00, // Single packet
+            0x00, 0x01, // param_len, 1 byte
+            0x02, // Attribute: RepeatStatusMode
+        ]
+        .to_vec();
+        let expected_packet_response: Vec<u8> = [
+            0x12, // ListPlayerApplicationSettingValue pdu id
+            0x00, // Single packet
+            0x00, 0x05, // param_len, 5 bytes
+            0x04, // Number of settings, 4
+            0x01, 0x02, 0x03, 0x04, // The 4 values RepeatStatusMode can take.
         ]
         .to_vec();
 
