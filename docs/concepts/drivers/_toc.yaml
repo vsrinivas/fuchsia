@@ -33,6 +33,8 @@ toc:
     path: /docs/concepts/drivers/tracing.md
   - title: "Using the C++ DDK template library"
     path: /docs/concepts/drivers/using-ddktl.md
+  - title: "Driver utilities"
+    path: /docs/concepts/drivers/driver-utils.md
 - title: "Driver interfaces"
   section:
   - include: /docs/concepts/drivers/driver_interfaces/_toc.yaml
