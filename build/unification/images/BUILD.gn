@@ -644,10 +644,8 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.trace-reader-test-test",
 #------------------
 #------------------
-    ":test.sys.trace-static-engine-test",
 #------------------
 #------------------
-    ":test.sys.trace-test",
 #------------------
 #------------------
     ":test.sys.util-test",
@@ -1237,10 +1235,8 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.trace-reader-test-test",
 #------------------
 #------------------
-    ":test.sys.trace-static-engine-test",
 #------------------
 #------------------
-    ":test.sys.trace-test",
 #------------------
 #------------------
     ":test.sys.util-test",
@@ -3228,10 +3224,10 @@ aggregate_manifest("migrated-aux") {
     #":test.sys.trace-reader-test-test",
 #------------------
 #------------------
-    #":test.sys.trace-static-engine-test",
+    "//zircon/system/utest/trace:trace-static-engine-manifest",
 #------------------
 #------------------
-    #":test.sys.trace-test",
+    "//zircon/system/utest/trace:trace-manifest",
 #------------------
     "//zircon/system/ulib/trace-vthread/test:trace-vthread-test-manifest",
     "//zircon/system/ulib/trace-vthread/test:trace-vthread-with-static-engine-test-manifest",
@@ -3933,10 +3929,10 @@ aggregate_manifest("migrated-tests") {
     #":test.sys.trace-reader-test-test",
 #------------------
 #------------------
-    #":test.sys.trace-static-engine-test",
+    "//zircon/system/utest/trace:trace-static-engine-manifest",
 #------------------
 #------------------
-    #":test.sys.trace-test",
+    "//zircon/system/utest/trace:trace-manifest",
 #------------------
     "//zircon/system/ulib/trace-vthread/test:trace-vthread-test-manifest",
     "//zircon/system/ulib/trace-vthread/test:trace-vthread-with-static-engine-test-manifest",

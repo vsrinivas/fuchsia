@@ -26,7 +26,7 @@ using trace_site_atomic_state_t = std::atomic<trace_site_state_t>;
 // These are internal values to the trace engine. They are not exported to any
 // user-visible header, so we define our own copies here.
 constexpr trace_site_state_t kSiteStateDisabled = 1u;
-constexpr trace_site_state_t kSiteStateEnabled = 2u;
+//constexpr trace_site_state_t kSiteStateEnabled = 2u;  // Only used by disabled test.
 constexpr trace_site_state_t kSiteStateFlagsMask = 3u;
 
 trace_site_state_t get_site_state(trace_site_t& site) {
@@ -66,29 +66,6 @@ bool TestHardShutdown() {
   fixture_initialize_and_start_tracing();
   fixture_stop_and_terminate_tracing_hard();
   EXPECT_EQ(ZX_ERR_CANCELED, fixture_get_disposition());
-
-  END_TRACE_TEST;
-}
-
-bool test_state() {
-  BEGIN_TRACE_TEST;
-
-  EXPECT_EQ(TRACE_STOPPED, trace_state());
-
-  fixture_initialize_and_start_tracing();
-  EXPECT_EQ(TRACE_STARTED, trace_state());
-
-  fixture_stop_and_terminate_tracing();
-  EXPECT_EQ(TRACE_STOPPED, trace_state());
-
-  // Do the test twice so that we test starting again after just having
-  // stopped.
-
-  fixture_initialize_and_start_tracing();
-  EXPECT_EQ(TRACE_STARTED, trace_state());
-
-  fixture_stop_and_terminate_tracing();
-  EXPECT_EQ(TRACE_STOPPED, trace_state());
 
   END_TRACE_TEST;
 }
@@ -156,6 +133,7 @@ bool TestAcquireContextForCategory() {
   END_TRACE_TEST;
 }
 
+/* Commented out because the test is currently disabled due to a flake.
 bool TestAcquireContextForCategoryCached() {
   BEGIN_TRACE_TEST;
 
@@ -224,6 +202,7 @@ bool TestAcquireContextForCategoryCached() {
 
   END_TRACE_TEST;
 }
+*/
 
 bool TestFlushCategoryCache() {
   BEGIN_TRACE_TEST;
