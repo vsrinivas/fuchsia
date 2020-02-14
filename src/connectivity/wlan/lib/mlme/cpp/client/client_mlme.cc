@@ -34,7 +34,6 @@ namespace wlan_stats = ::fuchsia::wlan::stats;
 
 wlan_client_mlme_config_t ClientMlmeDefaultConfig() {
   return wlan_client_mlme_config_t{
-      .signal_report_beacon_timeout = 10,
       .ensure_on_channel_time = zx::msec(500).get(),
   };
 }

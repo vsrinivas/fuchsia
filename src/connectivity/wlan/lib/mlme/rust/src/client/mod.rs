@@ -78,7 +78,6 @@ pub enum TimedEvent {
 #[repr(C)]
 #[derive(Debug, Clone)]
 pub struct ClientConfig {
-    signal_report_beacon_timeout: usize,
     ensure_on_channel_time: zx::sys::zx_duration_t,
 }
 
@@ -1027,10 +1026,14 @@ impl<'a> BoundClient<'a> {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
+        super::{
+            state::{
+                ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT, DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT,
+            },
+            *,
+        },
         crate::{buffer::FakeBufferProvider, client::lost_bss::LostBssCounter, device::FakeDevice},
         fidl_fuchsia_wlan_common as fidl_common,
-        fuchsia_zircon::DurationNum,
         wlan_common::{assert_variant, ie, test_utils::fake_frames::*, TimeUnit},
     };
     const BSSID: Bssid = Bssid([6u8; 6]);
@@ -1088,8 +1091,7 @@ mod tests {
         }
 
         fn make_mlme_with_device(&mut self, device: Device) -> ClientMlme {
-            let config =
-                ClientConfig { signal_report_beacon_timeout: 99999, ensure_on_channel_time: 0 };
+            let config = ClientConfig { ensure_on_channel_time: 0 };
             let mut mlme = ClientMlme::new(
                 config,
                 device,
@@ -1141,6 +1143,8 @@ mod tests {
     impl BoundClient<'_> {
         fn move_to_associated_state(&mut self) {
             use super::state::*;
+            let status_check_timeout =
+                schedule_association_status_timeout(self.sta.beacon_period, &mut self.ctx.timer);
             let state =
                 States::from(wlan_statemachine::testing::new_state(Associated(Association {
                     aid: 42,
@@ -1149,12 +1153,11 @@ mod tests {
                     ap_vht_op: None,
                     qos: Qos::Disabled,
                     lost_bss_counter: LostBssCounter::start(
-                        &mut self.ctx.timer,
-                        TimeUnit(self.sta.beacon_period).into(),
+                        self.sta.beacon_period,
                         DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT,
                     ),
+                    status_check_timeout,
                 })));
-
             self.sta.state.replace(state);
         }
     }
@@ -1277,6 +1280,8 @@ mod tests {
 
         // Pretend that client is associated by starting LostBssCounter
         client.move_to_associated_state();
+        // clear the LostBssCounter timeout.
+        m.fake_scheduler.deadlines.clear();
 
         // Send scan request to trigger channel switch
         me.on_sme_scan(scan_req());
@@ -1325,7 +1330,17 @@ mod tests {
 
         client.move_to_associated_state();
 
-        // Verify timer is scheduled
+        // Verify timer is scheduled and move the time to immediately before auto deauth is triggered.
+        for _ in
+            0..DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT / ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT
+        {
+            let (id, deadline) = assert_variant!(m.fake_scheduler.next_event(), Some(ev) => ev);
+            m.fake_scheduler.set_time(deadline);
+            me.handle_timed_event(id);
+            assert_eq!(m.fake_device.wlan_queue.len(), 0);
+        }
+
+        // One more timeout to trigger the auto deauth
         let (id, deadline) = assert_variant!(m.fake_scheduler.next_event(), Some(ev) => ev);
 
         // Verify that triggering event at deadline causes deauth
@@ -1365,19 +1380,32 @@ mod tests {
 
         client.move_to_associated_state();
 
-        // Verify timer is scheduled
-        let (id1, deadline1) = assert_variant!(m.fake_scheduler.next_event(), Some(ev) => ev);
+        // Move the countdown to just about to cause auto deauth.
+        for _ in
+            0..DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT / ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT
+        {
+            let (id, deadline) = assert_variant!(m.fake_scheduler.next_event(), Some(ev) => ev);
+            m.fake_scheduler.set_time(deadline);
+            me.handle_timed_event(id);
+            assert_eq!(m.fake_device.wlan_queue.len(), 0);
+        }
 
-        // Receive beacon midway, so triggering event at original deadline would not cause deauth
-        m.fake_scheduler.increment_time(1.second());
+        // Receive beacon midway, so lost bss countdown is reset.
+        // If this beacon is not received, the next timeout will trigger auto deauth.
         me.on_mac_frame(BEACON_FRAME, None);
-        m.fake_scheduler.set_time(deadline1);
-        me.handle_timed_event(id1);
-        assert_eq!(m.fake_device.wlan_queue.len(), 0);
+
+        // Verify auto deauth is not triggered for the entire duration.
+        for _ in
+            0..DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT / ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT
+        {
+            let (id, deadline) = assert_variant!(m.fake_scheduler.next_event(), Some(ev) => ev);
+            m.fake_scheduler.set_time(deadline);
+            me.handle_timed_event(id);
+            assert_eq!(m.fake_device.wlan_queue.len(), 0);
+        }
 
         // Verify more timer is scheduled
         let (id2, deadline2) = assert_variant!(m.fake_scheduler.next_event(), Some(ev) => ev);
-        assert!(deadline2 - deadline1 >= 1.second());
 
         // Verify that triggering event at new deadline causes deauth
         m.fake_scheduler.set_time(deadline2);

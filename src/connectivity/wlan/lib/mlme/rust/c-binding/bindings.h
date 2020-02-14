@@ -188,7 +188,6 @@ typedef struct {
  * Originally added to more easily control behavior in tests.
  */
 typedef struct {
-  uintptr_t signal_report_beacon_timeout;
   zx_duration_t ensure_on_channel_time;
 } wlan_client_mlme_config_t;
 

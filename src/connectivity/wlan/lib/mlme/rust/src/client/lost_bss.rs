@@ -3,201 +3,126 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        client::TimedEvent,
-        timer::{EventId, Timer},
-    },
     fuchsia_zircon::{self as zx, DurationNum},
-    wlan_common::time::TimeUnit,
+    wlan_common::TimeUnit,
 };
 
 /// Struct used to count remaining time BSS has not been detected. Used to determine
 /// when trigger auto deauth.
 #[derive(Debug)]
 pub struct LostBssCounter {
-    /// Period it takes for BSS to send a single beacon
+    /// beacon_period in zx::Duration as obtained from the AP, used to convert beacon_count to time.
     beacon_period: zx::Duration,
-    /// The number of beacon periods where client doesn't receive a single beacon frame
-    /// before it declares BSS as lost
-    full_timeout_beacon_count: u32,
 
-    /// The remaining time we'll wait for a beacon before deauthenticating
-    remaining_timeout: zx::Duration,
-    /// The last time we re-calculated the |remaining_timeout|
-    /// Note: after unpaused, this is set to current time to make computation easier
-    last_accounted: zx::Time,
-    timeout_id: Option<EventId>,
+    /// The number of beacon periods where client doesn't receive a single beacon frame
+    /// before it declares BSS as lost.
+    full_timeout: zx::Duration,
+
+    /// Number of intervals since we last saw a beacon. Reset to 0 as soon as we see a beacon.
+    time_since_last_beacon: zx::Duration,
 }
 
+/// In a typical use case, a full association status check interval is added every time the timeout
+/// fires. This could lead to slight over-counting since the client may have received a beacon
+/// during this period. To counter this effect, call should_deauthenticate() before calling
+/// add_beacon_interval().
 impl LostBssCounter {
-    pub fn start(
-        timer: &mut Timer<TimedEvent>,
-        beacon_period: zx::Duration,
-        full_timeout_beacon_count: u32,
-    ) -> Self {
-        let remaining_timeout = beacon_period * full_timeout_beacon_count;
-        let last_accounted = timer.now();
-        let mut this = Self {
-            beacon_period,
-            full_timeout_beacon_count,
-
-            remaining_timeout,
-            last_accounted,
-            timeout_id: None,
-        };
-        this.schedule_timeout(timer, last_accounted + remaining_timeout);
-        this
-    }
-
-    pub fn pause(&mut self, timer: &mut Timer<TimedEvent>) {
-        if let Some(id) = self.timeout_id.take() {
-            timer.cancel_event(id);
-            let unaccounted_time = timer.now() - self.last_accounted;
-            self.remaining_timeout =
-                std::cmp::max(self.remaining_timeout - unaccounted_time, 0.millis());
+    pub fn start(beacon_period: u16, full_timeout_beacon_count: u32) -> Self {
+        Self {
+            beacon_period: zx::Duration::from(TimeUnit(beacon_period)),
+            full_timeout: zx::Duration::from(TimeUnit(beacon_period))
+                * full_timeout_beacon_count as i64,
+            time_since_last_beacon: 0.nanos(),
         }
     }
 
-    pub fn unpause(&mut self, timer: &mut Timer<TimedEvent>) {
-        let now = timer.now();
-        // Schedule remaining timeout. If there's no remaining timeout, schedule 1 TimeUnit
-        // in advance (1 TimeUnit was selected arbitrarily, we just want some small value
-        // sufficiently far in the future)
-        let deadline = now + std::cmp::max(self.remaining_timeout, TimeUnit(1).into());
-        self.schedule_timeout(timer, deadline);
-        self.last_accounted = now;
+    pub fn reset(&mut self) {
+        self.time_since_last_beacon = 0.nanos();
     }
 
-    pub fn reset_timeout(&mut self, timer: &mut Timer<TimedEvent>) {
-        self.remaining_timeout = self.beacon_period * self.full_timeout_beacon_count;
-        self.last_accounted = timer.now();
+    /// In the most typical use case, a full association status check interval is added when
+    /// the timeout fires. So to prevent auto-deauth from triggering prematurely, it is important to
+    /// call `should_deauthenticate()` first and only call `add_beacon_interval()`
+    /// if `should_deauthenticate()` is false.
+    pub fn should_deauthenticate(&self) -> bool {
+        self.time_since_last_beacon >= self.full_timeout
     }
 
-    /// Return true if BSS is considered lost.
-    #[must_use]
-    pub fn handle_timeout(&mut self, timer: &mut Timer<TimedEvent>) -> bool {
-        // Do nothing if we are not counting lost beacons (e.g. paused when off-channel).
-        if self.timeout_id.is_none() {
-            return false;
-        }
-
-        let now = timer.now();
-        if self.remaining_timeout > now - self.last_accounted {
-            self.remaining_timeout -= now - self.last_accounted;
-            self.last_accounted = now;
-            self.schedule_timeout(timer, now + self.remaining_timeout);
-            return false;
-        }
-        true
+    pub fn add_beacon_interval(&mut self, beacon_intervals_since_last_timeout: u32) {
+        self.time_since_last_beacon += self.beacon_period * beacon_intervals_since_last_timeout;
     }
 
-    fn schedule_timeout(&mut self, timer: &mut Timer<TimedEvent>, deadline: zx::Time) {
-        self.timeout_id.replace(timer.schedule_event(deadline, TimedEvent::LostBssCountdown));
+    /// add_time() is used to record any time that is shorter than a full status check interval.
+    /// (typically when the client goes off-channel to scan while associated).
+    pub fn add_time(&mut self, time: zx::Duration) {
+        self.time_since_last_beacon += time;
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::timer::FakeScheduler, wlan_common::assert_variant};
+    use super::*;
 
+    const TEST_BEACON_PERIOD: u16 = 42;
     const TEST_TIMEOUT_BCN_COUNT: u32 = 1000;
 
     #[test]
     fn test_single_uninterrupted_period() {
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut timer = Timer::new(fake_scheduler.as_scheduler());
-        let mut counter = LostBssCounter::start(&mut timer, bcn_period(), TEST_TIMEOUT_BCN_COUNT);
-
-        let (id, deadline) = assert_variant!(fake_scheduler.next_event(), Some(ev) => ev);
-        assert!(timer.triggered(&id).is_some());
-        assert_eq!(deadline, zx::Time::from_nanos(0) + (bcn_period() * TEST_TIMEOUT_BCN_COUNT));
-        // Verify `handle_timeout` returns true, indicating auto-deauth
-        fake_scheduler.increment_time(bcn_period() * TEST_TIMEOUT_BCN_COUNT);
-        assert!(counter.handle_timeout(&mut timer));
+        let mut counter = LostBssCounter::start(TEST_BEACON_PERIOD, TEST_TIMEOUT_BCN_COUNT);
+        // about to timeout but not yet.
+        counter.add_beacon_interval(TEST_TIMEOUT_BCN_COUNT - 1);
+        assert!(!counter.should_deauthenticate());
+        // any more time will trigger auto deauth
+        counter.add_beacon_interval(1);
+        assert!(counter.should_deauthenticate());
     }
 
     #[test]
     fn test_beacon_received_midway() {
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut timer = Timer::new(fake_scheduler.as_scheduler());
-        let mut counter = LostBssCounter::start(&mut timer, bcn_period(), TEST_TIMEOUT_BCN_COUNT);
-
-        let (id, deadline) = assert_variant!(fake_scheduler.next_event(), Some(ev) => ev);
-        assert!(timer.triggered(&id).is_some());
-        assert_eq!(deadline, zx::Time::from_nanos(0) + (bcn_period() * TEST_TIMEOUT_BCN_COUNT));
+        let mut counter = LostBssCounter::start(TEST_BEACON_PERIOD, TEST_TIMEOUT_BCN_COUNT);
+        counter.add_beacon_interval(TEST_TIMEOUT_BCN_COUNT - 1);
+        assert!(!counter.should_deauthenticate());
 
         // Beacon received some time later, resetting the timeout.
-        fake_scheduler.increment_time(bcn_period() * (TEST_TIMEOUT_BCN_COUNT - 1));
-        counter.reset_timeout(&mut timer);
+        counter.reset();
 
         // Verify that calling `handle_timeout` at originally scheduled time would not
         // return false, indicating no auto-deauth yet
-        fake_scheduler.increment_time(bcn_period());
-        assert!(!counter.handle_timeout(&mut timer));
+        counter.add_beacon_interval(1);
+        assert!(!counter.should_deauthenticate());
+        // But if no beacon is received in timeout + 1 intervals, auto-deauth will trigger
+        counter.add_beacon_interval(TEST_TIMEOUT_BCN_COUNT - 1);
+        assert!(counter.should_deauthenticate());
+    }
 
-        // LostBssCounter should schedule another timeout
-        let (id, deadline) = assert_variant!(fake_scheduler.next_event(), Some(ev) => ev);
-        assert!(timer.triggered(&id).is_some());
-        assert_eq!(
-            deadline,
-            zx::Time::from_nanos(0) + (bcn_period() * (TEST_TIMEOUT_BCN_COUNT * 2 - 1))
+    #[test]
+    fn test_add_time_uninterrupted() {
+        let mut counter = LostBssCounter::start(TEST_BEACON_PERIOD, TEST_TIMEOUT_BCN_COUNT);
+        // about to timeout but not yet.
+        counter.add_time(
+            zx::Duration::from(TimeUnit(TEST_BEACON_PERIOD)) * TEST_TIMEOUT_BCN_COUNT - 1.nanos(),
         );
-
-        // Verify `handle_timeout` returns true, indicating auto-deauth
-        fake_scheduler.increment_time(bcn_period() * (TEST_TIMEOUT_BCN_COUNT - 1));
-        assert!(counter.handle_timeout(&mut timer));
+        assert!(!counter.should_deauthenticate());
+        // any more time will trigger auto deauth
+        counter.add_time(1.nanos());
+        assert!(counter.should_deauthenticate());
     }
 
     #[test]
-    fn test_pause_unpause() {
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut timer = Timer::new(fake_scheduler.as_scheduler());
-        let mut counter = LostBssCounter::start(&mut timer, bcn_period(), TEST_TIMEOUT_BCN_COUNT);
+    fn test_add_time_beacon_received() {
+        let mut counter = LostBssCounter::start(TEST_BEACON_PERIOD, TEST_TIMEOUT_BCN_COUNT);
+        counter.add_beacon_interval(TEST_TIMEOUT_BCN_COUNT - 1);
+        assert!(!counter.should_deauthenticate());
 
-        let (_id, _deadline) = assert_variant!(fake_scheduler.next_event(), Some(ev) => ev);
-        assert_eq!(timer.scheduled_event_count(), 1);
-        counter.pause(&mut timer);
-        assert_eq!(timer.scheduled_event_count(), 0);
+        // Beacon received some time later, resetting the timeout.
+        counter.reset();
 
-        // Timeout shouldn't be triggered while paused, but even if it does, it would
-        // have no effect
-        fake_scheduler.increment_time(bcn_period() * TEST_TIMEOUT_BCN_COUNT * 2);
-        assert!(!counter.handle_timeout(&mut timer));
-
-        // When unpaused, timeout should be rescheduled again
-        counter.unpause(&mut timer);
-        let (id, deadline) = assert_variant!(fake_scheduler.next_event(), Some(ev) => ev);
-        assert!(timer.triggered(&id).is_some());
-        assert_eq!(deadline, zx::Time::from_nanos(0) + (bcn_period() * TEST_TIMEOUT_BCN_COUNT * 3));
-
-        // Verify `handle_timeout` returns true, indicating auto-deauth
-        fake_scheduler.increment_time(bcn_period() * TEST_TIMEOUT_BCN_COUNT);
-        assert!(counter.handle_timeout(&mut timer));
-    }
-
-    #[test]
-    fn test_pause_right_when_timeout_duration_is_exhausted() {
-        let mut fake_scheduler = FakeScheduler::new();
-        let mut timer = Timer::new(fake_scheduler.as_scheduler());
-        let mut counter = LostBssCounter::start(&mut timer, bcn_period(), TEST_TIMEOUT_BCN_COUNT);
-
-        let (_id, _deadline) = assert_variant!(fake_scheduler.next_event(), Some(ev) => ev);
-        fake_scheduler.increment_time(bcn_period() * TEST_TIMEOUT_BCN_COUNT);
-        counter.pause(&mut timer);
-        assert_eq!(timer.scheduled_event_count(), 0);
-
-        // When unpaused, timeout is scheduled again, but 1 beacon period in the future.
-        counter.unpause(&mut timer);
-        let (id, deadline) = assert_variant!(fake_scheduler.next_event(), Some(ev) => ev);
-        assert!(timer.triggered(&id).is_some());
-        assert_eq!(deadline, timer.now() + TimeUnit(1).into());
-
-        // Verify `handle_timeout` returns true, indicating auto-deauth
-        fake_scheduler.increment_time(TimeUnit(1).into());
-        assert!(counter.handle_timeout(&mut timer));
-    }
-
-    fn bcn_period() -> zx::Duration {
-        TimeUnit::DEFAULT_BEACON_INTERVAL.into()
+        // Verify that calling `handle_timeout` at originally scheduled time would not
+        // return false, indicating no auto-deauth yet
+        counter.add_time(zx::Duration::from(TimeUnit(TEST_BEACON_PERIOD)));
+        assert!(!counter.should_deauthenticate());
+        // But if no beacon is received in timeout + 1 intervals, auto-deauth will trigger
+        counter.add_beacon_interval(TEST_TIMEOUT_BCN_COUNT - 1);
+        assert!(counter.should_deauthenticate());
     }
 }

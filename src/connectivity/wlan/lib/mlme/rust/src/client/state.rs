@@ -37,7 +37,10 @@ use {
 const ASSOC_TIMEOUT_BCN_PERIODS: u16 = 10;
 
 /// Number of beacon intervals which beacon is not seen before we declare BSS as lost
-pub(crate) const DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT: u32 = 100;
+pub const DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT: u32 = 100;
+
+/// Number of beacon intervals between association status check (signal report or auto-deatuh).
+pub const ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT: u32 = 10;
 
 type HtOpByteArray = [u8; fidl_mlme::HT_OP_LEN as usize];
 type VhtOpByteArray = [u8; fidl_mlme::VHT_OP_LEN as usize];
@@ -231,10 +234,12 @@ impl Associating {
                     }
                 }
                 let lost_bss_counter = LostBssCounter::start(
-                    &mut sta.ctx.timer,
-                    TimeUnit(sta.sta.beacon_period).into(),
+                    sta.sta.beacon_period,
                     DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT,
                 );
+
+                let status_check_timeout =
+                    schedule_association_status_timeout(sta.sta.beacon_period, &mut sta.ctx.timer);
 
                 Ok(Association {
                     aid: assoc_resp_hdr.aid,
@@ -243,6 +248,7 @@ impl Associating {
                     ap_vht_op,
                     qos: Qos::PendingNegotiation,
                     lost_bss_counter,
+                    status_check_timeout,
                 })
             }
             status_code => {
@@ -332,6 +338,19 @@ fn extract_ht_vht_op<B: ByteSlice>(elements: B) -> (Option<HtOpByteArray>, Optio
     (ht_op, vht_op)
 }
 
+pub fn schedule_association_status_timeout(
+    beacon_period: u16,
+    timer: &mut Timer<TimedEvent>,
+) -> StatusCheckTimeout {
+    let last_fired = timer.now();
+    let deadline = last_fired
+        + zx::Duration::from(TimeUnit(beacon_period)) * ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT;
+    StatusCheckTimeout {
+        last_fired,
+        next_id: timer.schedule_event(deadline, TimedEvent::LostBssCountdown),
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Qos {
     Enabled,
@@ -356,6 +375,13 @@ impl Qos {
         *self == Self::Enabled
     }
 }
+
+#[derive(Debug)]
+pub struct StatusCheckTimeout {
+    last_fired: zx::Time,
+    next_id: EventId,
+}
+
 #[derive(Debug)]
 pub struct Association {
     pub aid: mac::Aid,
@@ -374,6 +400,12 @@ pub struct Association {
     /// |lost_bss_counter| is started when client is associated and used to keep track whether
     /// BSS is still alive nearby.
     pub lost_bss_counter: LostBssCounter,
+
+    /// |timeout| is the timeout that is scheduled for the association status check, which includes
+    /// a) sending signal strength report to SME and b) triggering auto-deauth if necessary.
+    /// It will be cancelled when the client go off-channel for scanning and scheduled again when
+    /// back on channel.
+    pub status_check_timeout: StatusCheckTimeout,
 }
 
 /// Client received a "successful" association response from the BSS.
@@ -390,6 +422,7 @@ impl Associated {
 
     /// Sends an MLME-DEAUTHENTICATE.indication message to MLME's SME peer.
     fn on_deauth_frame(&mut self, sta: &mut BoundClient<'_>, deauth_hdr: &mac::DeauthHdr) {
+        sta.ctx.timer.cancel_event(self.0.status_check_timeout.next_id);
         self.0.controlled_port_open = false;
         self.shutdown_ethernet_and_clear_association(sta);
         let reason_code = fidl_mlme::ReasonCode::from_primitive(deauth_hdr.reason_code.0)
@@ -424,7 +457,7 @@ impl Associated {
     /// Resets LostBssCounter, check buffered frame if available.
     /// TODO(eyw): Record rssi_dbm.
     fn on_beacon_frame<B: ByteSlice>(&mut self, sta: &mut BoundClient<'_>, elements: B) {
-        self.0.lost_bss_counter.reset_timeout(&mut sta.ctx.timer);
+        self.0.lost_bss_counter.reset();
         for (id, body) in ie::Reader::new(elements) {
             match id {
                 ie::Id::TIM => match ie::parse_tim(body) {
@@ -571,6 +604,7 @@ impl Associated {
         sta: &mut BoundClient<'_>,
         req: fidl_mlme::DeauthenticateRequest,
     ) {
+        sta.ctx.timer.cancel_event(self.0.status_check_timeout.next_id);
         self.0.controlled_port_open = false;
         if let Err(e) = sta.send_deauth_frame(mac::ReasonCode(req.reason_code.into_primitive())) {
             error!("Error sending deauthentication frame to BSS: {}", e);
@@ -599,15 +633,37 @@ impl Associated {
     #[must_use]
     /// Returns true if there auto deauthentication is triggered by lack of beacon frames.
     fn on_timeout(&mut self, sta: &mut BoundClient<'_>) -> bool {
-        let auto_deauth = self.0.lost_bss_counter.handle_timeout(&mut sta.ctx.timer);
+        let auto_deauth = self.0.lost_bss_counter.should_deauthenticate();
         if auto_deauth {
             sta.send_deauthenticate_ind(fidl_mlme::ReasonCode::LeavingNetworkDeauth);
             if let Err(e) = sta.send_deauth_frame(mac::ReasonCode::LEAVING_NETWORK_DEAUTH) {
                 warn!("Failed sending deauth frame {:?}", e);
             }
             self.shutdown_ethernet_and_clear_association(sta);
+        } else {
+            // Always check should_deauthenticate() first since even if Client receives a beacon,
+            // it would still add a full association status check interval to the lost BSS counter.
+            self.0.lost_bss_counter.add_beacon_interval(ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT);
+            self.0.status_check_timeout =
+                schedule_association_status_timeout(sta.sta.beacon_period, &mut sta.ctx.timer);
         }
         auto_deauth
+    }
+
+    fn off_channel(&mut self, sta: &mut Client, ctx: &mut Context) {
+        if let Err(e) = sta.send_power_state_frame(ctx, PowerState::DOZE) {
+            warn!("unable to send doze frame: {:?}", e);
+        }
+        self.0.lost_bss_counter.add_time(ctx.timer.now() - self.0.status_check_timeout.last_fired);
+        ctx.timer.cancel_event(self.0.status_check_timeout.next_id);
+    }
+
+    fn on_channel(&mut self, sta: &mut Client, ctx: &mut Context) {
+        if let Err(e) = sta.send_power_state_frame(ctx, PowerState::AWAKE) {
+            warn!("unable to send awake frame: {:?}", e);
+        }
+        self.0.status_check_timeout =
+            schedule_association_status_timeout(sta.beacon_period, &mut ctx.timer);
     }
 }
 
@@ -916,10 +972,7 @@ impl States {
     pub fn pre_switch_off_channel(&mut self, sta: &mut Client, ctx: &mut Context) {
         match self {
             States::Associated(state) => {
-                if let Err(e) = sta.send_power_state_frame(ctx, PowerState::DOZE) {
-                    warn!("unable to send doze frame: {:?}", e);
-                }
-                state.0.lost_bss_counter.pause(&mut ctx.timer)
+                state.off_channel(sta, ctx);
             }
             _ => (),
         }
@@ -928,10 +981,7 @@ impl States {
     pub fn handle_back_on_channel(&mut self, sta: &mut Client, ctx: &mut Context) {
         match self {
             States::Associated(state) => {
-                if let Err(e) = sta.send_power_state_frame(ctx, PowerState::AWAKE) {
-                    warn!("unable to send awake frame: {:?}", e);
-                }
-                state.0.lost_bss_counter.unpause(&mut ctx.timer);
+                state.on_channel(sta, ctx);
             }
             _ => (),
         }
@@ -1033,10 +1083,7 @@ mod tests {
         fn make_ctx_with_device(&mut self, device: Device) -> Context {
             let timer = Timer::<TimedEvent>::new(self.fake_scheduler.as_scheduler());
             Context {
-                config: ClientConfig {
-                    signal_report_beacon_timeout: 99999,
-                    ensure_on_channel_time: 0,
-                },
+                config: ClientConfig { ensure_on_channel_time: 0 },
                 device,
                 buf_provider: FakeBufferProvider::new(),
                 timer,
@@ -1073,17 +1120,19 @@ mod tests {
     }
 
     fn empty_association(sta: &mut BoundClient<'_>) -> Association {
+        let status_check_timeout =
+            schedule_association_status_timeout(sta.sta.beacon_period, &mut sta.ctx.timer);
         Association {
             controlled_port_open: false,
             aid: 0,
             ap_ht_op: None,
             ap_vht_op: None,
             lost_bss_counter: LostBssCounter::start(
-                &mut sta.ctx.timer,
-                TimeUnit::DEFAULT_BEACON_INTERVAL.into(),
+                sta.sta.beacon_period,
                 DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT,
             ),
             qos: Qos::Disabled,
+            status_check_timeout,
         }
     }
 

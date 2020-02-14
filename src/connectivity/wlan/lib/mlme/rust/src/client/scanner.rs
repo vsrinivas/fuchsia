@@ -1213,10 +1213,7 @@ mod tests {
         fn make_ctx_with_device(&mut self, device: Device) -> Context {
             let timer = Timer::<TimedEvent>::new(self.fake_scheduler.as_scheduler());
             Context {
-                config: ClientConfig {
-                    signal_report_beacon_timeout: 99999,
-                    ensure_on_channel_time: 0,
-                },
+                config: ClientConfig { ensure_on_channel_time: 0 },
                 device,
                 buf_provider: FakeBufferProvider::new(),
                 timer,
