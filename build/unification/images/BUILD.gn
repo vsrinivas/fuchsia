@@ -658,7 +658,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.zxcrypt-test",
 #------------------
 #------------------
     ":test.sys.zxtest-integration-test",
@@ -1249,7 +1248,6 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.zxcrypt-test",
 #------------------
 #------------------
     ":test.sys.zxtest-integration-test",
@@ -3270,7 +3268,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/zx-panic-libc/test:zx-panic-libc-test-manifest",
     "//zircon/system/ulib/zx/test:zx-manifest",
 #------------------
-    #":test.sys.zxcrypt-test",
+    "//zircon/system/utest/zxcrypt:zxcrypt-manifest",
 #------------------
     "//zircon/system/ulib/zxio/test:zxio-manifest",
 #------------------
@@ -3974,7 +3972,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/zx-panic-libc/test:zx-panic-libc-test-manifest",
     "//zircon/system/ulib/zx/test:zx-manifest",
 #------------------
-    #":test.sys.zxcrypt-test",
+    "//zircon/system/utest/zxcrypt:zxcrypt-manifest",
 #------------------
     "//zircon/system/ulib/zxio/test:zxio-manifest",
 #------------------

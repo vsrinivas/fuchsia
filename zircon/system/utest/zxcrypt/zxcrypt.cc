@@ -526,39 +526,40 @@ bool TestVmoManyToOne(Volume::Version version, bool fvm) {
 }
 DEFINE_EACH_DEVICE(TestVmoManyToOne)
 
-bool TestVmoStall(Volume::Version version, bool fvm) {
-  BEGIN_TEST;
-  TestDevice device;
-  ASSERT_TRUE(device.SetupDevmgr());
-  ASSERT_TRUE(device.Bind(version, fvm));
-  auto zxcrypt = device.zxcrypt_channel();
-
-  // The device can have up to 4 * max_transfer_size bytes in flight before it begins queuing them
-  // internally.
-  fuchsia_hardware_block_BlockInfo zxcrypt_blk;
-  zx_status_t status;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(zxcrypt->get(), &status, &zxcrypt_blk), ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
-  size_t blks_per_req = 4;
-  size_t max = Volume::kBufferSize / (device.block_size() * blks_per_req);
-  size_t num = max + 1;
-  fbl::AllocChecker ac;
-  std::unique_ptr<block_fifo_request_t[]> requests(new (&ac) block_fifo_request_t[num]);
-  ASSERT_TRUE(ac.check());
-  for (size_t i = 0; i < num; ++i) {
-    requests[i].opcode = (i % 2 == 0 ? BLOCKIO_WRITE : BLOCKIO_READ);
-    requests[i].length = static_cast<uint32_t>(blks_per_req);
-    requests[i].dev_offset = 0;
-    requests[i].vmo_offset = 0;
-  }
-
-  EXPECT_TRUE(device.SleepUntil(max, true /* defer transactions */));
-  EXPECT_EQ(device.block_fifo_txn(requests.get(), num), ZX_OK);
-  EXPECT_TRUE(device.WakeUp());
-
-  END_TEST;
-}
-DEFINE_EACH_DEVICE(TestVmoStall)
+// Disabled (See fxb/31974)
+//bool TestVmoStall(Volume::Version version, bool fvm) {
+//  BEGIN_TEST;
+//  TestDevice device;
+//  ASSERT_TRUE(device.SetupDevmgr());
+//  ASSERT_TRUE(device.Bind(version, fvm));
+//  auto zxcrypt = device.zxcrypt_channel();
+//
+//  // The device can have up to 4 * max_transfer_size bytes in flight before it begins queuing them
+//  // internally.
+//  fuchsia_hardware_block_BlockInfo zxcrypt_blk;
+//  zx_status_t status;
+//  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(zxcrypt->get(), &status, &zxcrypt_blk), ZX_OK);
+//  ASSERT_EQ(status, ZX_OK);
+//  size_t blks_per_req = 4;
+//  size_t max = Volume::kBufferSize / (device.block_size() * blks_per_req);
+//  size_t num = max + 1;
+//  fbl::AllocChecker ac;
+//  std::unique_ptr<block_fifo_request_t[]> requests(new (&ac) block_fifo_request_t[num]);
+//  ASSERT_TRUE(ac.check());
+//  for (size_t i = 0; i < num; ++i) {
+//    requests[i].opcode = (i % 2 == 0 ? BLOCKIO_WRITE : BLOCKIO_READ);
+//    requests[i].length = static_cast<uint32_t>(blks_per_req);
+//    requests[i].dev_offset = 0;
+//    requests[i].vmo_offset = 0;
+//  }
+//
+//  EXPECT_TRUE(device.SleepUntil(max, true /* defer transactions */));
+//  EXPECT_EQ(device.block_fifo_txn(requests.get(), num), ZX_OK);
+//  EXPECT_TRUE(device.WakeUp());
+//
+//  END_TEST;
+//}
+//DEFINE_EACH_DEVICE(TestVmoStall)
 
 bool TestWriteAfterFvmExtend(Volume::Version version) {
   BEGIN_TEST;

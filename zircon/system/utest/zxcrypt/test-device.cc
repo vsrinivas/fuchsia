@@ -60,16 +60,6 @@ zx_status_t ToStatus(ssize_t result) {
   return result < 0 ? static_cast<zx_status_t>(result) : ZX_OK;
 }
 
-// Helper function to build error messages
-char* Error(const char* fmt, ...) {
-  static char err[256];
-  va_list ap;
-  va_start(ap, fmt);
-  vsnprintf(err, sizeof(err), fmt, ap);
-  va_end(ap);
-  return err;
-}
-
 }  // namespace
 
 TestDevice::TestDevice()
