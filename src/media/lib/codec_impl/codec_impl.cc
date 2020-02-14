@@ -3267,6 +3267,7 @@ void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
     }
     stream_->SetFailureSeen();
     // avoid hang in FlushEndOfStreamAndCloseStream_StreamControl
+    // TODO(fxb/43490): Clean this up.
     output_end_of_stream_seen_.notify_all();
 
     // We're failing the current stream.  We should still queue to the output

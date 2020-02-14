@@ -213,10 +213,6 @@ test("h264_decoder_fuzzer_test") {
   sources = [ "test/h264_decoder_fuzzer_test.cc" ]
 
   deps = [ ":decoder_fuzzer" ]
-
-  # In environments without an h264 HW decoder, this test will fall back to a SW
-  # decoder.
-  environments = [ astro_env ] + basic_envs
 }
 
 test("vp9_decoder_fuzzer_test") {

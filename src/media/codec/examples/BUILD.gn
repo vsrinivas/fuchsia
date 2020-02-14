@@ -155,7 +155,6 @@ package("h264_decoder_fuzzer_test") {
 
   deps = [
     "//src/media/codec:codec_factory",
-    "//src/media/codec:codec_runner_sw_ffmpeg",
     "//src/media/codec/examples/use_media_decoder:h264_decoder_fuzzer_test",
   ]
 
@@ -194,7 +193,6 @@ package("vp9_decoder_fuzzer_test") {
 
   deps = [
     "//src/media/codec:codec_factory",
-    "//src/media/codec:codec_runner_sw_ffmpeg",
     "//src/media/codec/examples/use_media_decoder:vp9_decoder_fuzzer_test",
   ]
 

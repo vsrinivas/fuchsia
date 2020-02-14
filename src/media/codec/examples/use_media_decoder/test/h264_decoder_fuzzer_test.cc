@@ -11,6 +11,6 @@ constexpr char kInputFilePath[] = "/pkg/data/bear.h264";
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  return video_fuzzer_test(kInputFilePath, use_h264_decoder, 100,
+  return video_fuzzer_test(kInputFilePath, use_h264_decoder, /*iteration_count=*/100,
                            fxl::CommandLineFromArgcArgv(argc, argv));
 }
