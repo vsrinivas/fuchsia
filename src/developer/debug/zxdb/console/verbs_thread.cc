@@ -24,7 +24,6 @@
 #include "src/developer/debug/zxdb/console/format_frame.h"
 #include "src/developer/debug/zxdb/console/format_location.h"
 #include "src/developer/debug/zxdb/console/format_node_console.h"
-#include "src/developer/debug/zxdb/console/format_register.h"
 #include "src/developer/debug/zxdb/console/format_table.h"
 #include "src/developer/debug/zxdb/console/format_target.h"
 #include "src/developer/debug/zxdb/console/input_location_parser.h"
@@ -54,7 +53,6 @@ constexpr int kForceNumberUnsigned = 6;
 constexpr int kForceNumberHex = 7;
 constexpr int kMaxArraySize = 8;
 constexpr int kRawOutput = 9;
-constexpr int kVerboseBacktrace = 10;
 
 // If the system has at least one running process, returns true. If not, returns false and sets the
 // err.
@@ -162,78 +160,6 @@ Err GetConsoleFormatOptions(const Command& cmd, ConsoleFormatOptions* options) {
   "  -u  Unsigned decimal\n"                                                  \
   "  -x  Unsigned hexadecimal\n"
 
-// backtrace ---------------------------------------------------------------------------------------
-
-const char kBacktraceShortHelp[] = "backtrace / bt: Print a backtrace.";
-const char kBacktraceHelp[] =
-    R"(backtrace / bt
-
-  Prints a backtrace of the thread, including function parameters.
-
-  To see just function names and line numbers, use "frame" or just "f".
-
-Arguments
-
-  -r
-  --raw
-      Expands frames that were collapsed by the "pretty" stack formatter.
-
-  -t
-  --types
-      Include all type information for function parameters.
-
-  -v
-  --verbose
-      Include extra stack frame information:
-       • Full template lists and function parameter types.
-       • Instruction pointer.
-       • Stack pointer.
-       • Stack frame base pointer.
-
-Examples
-
-  t 2 bt
-  thread 2 backtrace
-)";
-Err DoBacktrace(ConsoleContext* context, const Command& cmd) {
-  if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread}); err.has_error())
-    return err;
-
-  if (!cmd.thread())
-    return Err("There is no thread to have frames.");
-
-  FormatStackOptions opts;
-
-  if (!cmd.HasSwitch(kRawOutput))
-    opts.pretty_stack = context->pretty_stack_manager();
-
-  opts.frame.loc = FormatLocationOptions(cmd.target());
-  opts.frame.loc.show_params = cmd.HasSwitch(kForceAllTypes);
-  opts.frame.loc.func.name.elide_templates = true;
-  opts.frame.loc.func.name.bold_last = true;
-  opts.frame.loc.func.params = FormatFunctionNameOptions::kElideParams;
-
-  opts.frame.detail = FormatFrameOptions::kParameters;
-  if (cmd.HasSwitch(kVerboseBacktrace)) {
-    opts.frame.detail = FormatFrameOptions::kVerbose;
-    opts.frame.loc.func.name.elide_templates = false;
-    opts.frame.loc.func.params = FormatFunctionNameOptions::kParamTypes;
-  }
-
-  // These are minimal since there is often a lot of data.
-  opts.frame.variable.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
-  opts.frame.variable.verbosity = cmd.HasSwitch(kForceAllTypes)
-                                      ? ConsoleFormatOptions::Verbosity::kAllTypes
-                                      : ConsoleFormatOptions::Verbosity::kMinimal;
-  opts.frame.variable.pointer_expand_depth = 1;
-  opts.frame.variable.max_depth = 3;
-
-  // Always force update the stack. Various things can have changed and when the user requests
-  // a stack we want to be sure things are correct.
-  Console::get()->Output(FormatStack(cmd.thread(), true, opts));
-  return Err();
-}
-
 // continue ----------------------------------------------------------------------------------------
 
 const char kContinueShortHelp[] = "continue / c: Continue a suspended thread or process.";
@@ -299,115 +225,6 @@ Err DoContinue(ConsoleContext* context, const Command& cmd) {
     if (!VerifySystemHasRunningProcess(&context->session()->system(), &err))
       return err;
     context->session()->system().Continue();
-  }
-
-  return Err();
-}
-
-// down --------------------------------------------------------------------------------------------
-
-const char kDownShortHelp[] = "down: Move down the stack";
-const char kDownHelp[] =
-    R"(down
-
-  Switch the active frame to the one below (forward in time from) the current.
-
-Examples
-
-  down
-      Move one frame down the stack
-
-  t 1 down
-      Move down the stack on thread 1
-)";
-
-// Shows the given frame for when it changes. This encapsulates the formatting options.
-void OutputFrameInfoForChange(const Frame* frame, int id) {
-  FormatFrameOptions opts;
-  opts.loc.func.name.elide_templates = true;
-  opts.loc.func.name.bold_last = true;
-  opts.loc.func.params = FormatFunctionNameOptions::kElideParams;
-
-  opts.variable.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
-  opts.variable.pointer_expand_depth = 1;
-  opts.variable.max_depth = 4;
-
-  Console::get()->Output(FormatFrame(frame, opts, id));
-}
-
-Err DoDown(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadCommand(context, cmd, true, "down"); err.has_error())
-    return err;
-
-  auto id = context->GetActiveFrameIdForThread(cmd.thread());
-  if (id < 0)
-    return Err("Cannot find current frame.");
-
-  if (id == 0)
-    return Err("At bottom of stack.");
-
-  if (cmd.thread()->GetStack().size() == 0)
-    return Err("No stack frames.");
-
-  id -= 1;
-
-  context->SetActiveFrameIdForThread(cmd.thread(), id);
-  OutputFrameInfoForChange(cmd.thread()->GetStack()[id], id);
-  return Err();
-}
-
-// up ----------------------------------------------------------------------------------------------
-
-const char kUpShortHelp[] = "up: Move up the stack";
-const char kUpHelp[] =
-    R"(up
-
-  Switch the active frame to the one above (backward in time from) the current.
-
-Examples
-
-  up
-      Move one frame up the stack
-
-  t 1 up
-      Move up the stack on thread 1
-)";
-Err DoUp(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadCommand(context, cmd, true, "up"); err.has_error())
-    return err;
-
-  // This computes the frame index from the callback in case the user does "up" faster than an
-  // async stack request can complete. Doing the new index computation from the callback ensures
-  // that all commands are executed.
-  auto on_has_frames = [weak_thread = cmd.thread()->GetWeakPtr()](const Err& err) {
-    if (!weak_thread) {
-      Console::get()->Output(Err("Thread destroyed."));
-      return;
-    }
-    const Thread* thread = weak_thread.get();
-
-    ConsoleContext* context = &Console::get()->context();
-    auto id = context->GetActiveFrameIdForThread(thread);
-    if (id < 0 || thread->GetStack().size() == 0) {
-      Console::get()->Output(Err("No current frame."));
-      return;
-    }
-
-    id += 1;
-
-    if (static_cast<size_t>(id) >= thread->GetStack().size()) {
-      Console::get()->Output(Err("At top of stack."));
-      return;
-    }
-
-    context->SetActiveFrameIdForThread(thread, id);
-    OutputFrameInfoForChange(thread->GetStack()[id], id);
-  };
-
-  if (cmd.thread()->GetStack().has_all_frames()) {
-    on_has_frames(Err());
-  } else {
-    cmd.thread()->GetStack().SyncFrames(std::move(on_has_frames));
   }
 
   return Err();
@@ -1069,230 +886,6 @@ Err DoStepi(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// regs --------------------------------------------------------------------------------------------
-
-using debug_ipc::RegisterCategory;
-
-const char kRegsShortHelp[] = "regs / rg: Show the current registers for a thread.";
-const char kRegsHelp[] =
-    R"(regs [(--category|-c)=<category>] [(--extended|-e)] [<regexp>]
-
-  Alias: "rg"
-
-  Shows the current registers for a stack frame. The thread must be stopped.
-  By default the general purpose registers will be shown, but more can be
-  configures through switches.
-
-  When the frame is not the topmost stack frame, the regsiters shown will be
-  only those saved on the stack. The values will reflect the value of the
-  registers at the time that stack frame was active. To get the current CPU
-  registers, run "regs" on frame 0.
-
-Category selection arguments
-
-  -a
-  --all
-      Prints all register categories.
-
-  -g
-  --general  (default)
-      Prints the general CPU registers.
-
-  -f
-  --float
-      Prints the dedicated floating-point registers but most users will want
-      --vector instead. 64-bit ARM uses vector registers for floating
-      point and has no separate floating-point registers. Almost all x64 code
-      also uses vector registers for floating-point computations.
-
-  -v
-  --vector
-      Prints the vector registers. These will be displayed in a table according
-      to the current "vector-format" setting (use "get vector-format" for
-      the current value and options, and "set vector-format <new-value>" to set).
-
-      Note that the vector register table will be displayed with the low values
-      on the right side, which is the opposite order that the expression
-      evaluator (which treats them as arrays) displays them.
-
-  -d
-  --debug
-      Prints the debug registers.
-
-  -e
-  --extended
-      Enables more verbose flag decoding. This will enable more information
-      that is not normally useful for everyday debugging. This includes
-      information such as the system level flags within the RFLAGS register for
-      x86.
-
-Reading and writing individual registers
-
-  The "regs" command only shows full categories of registers. If you want to see
-  individual ones or modify them, use the expression system:
-
-    [zxdb] print $rax
-    41
-
-    [zxdb] print -x $rbx      # Use -x for hex formatting.
-    0x7cc6120190
-
-    [zxdb] print $xmm3
-    {0.0, 3.14159}      # Note [0] index is first in contrast to the table view!
-
-    [zxdb] print $xmm3[0]
-    3.14159
-
-  The print command can also be used to set register values:
-
-    [zxdb] print $rax = 42
-    42
-
-  The "$" may be omitted for registers if there is no collision with program
-  variables.
-
-Examples
-
-  regs
-  thread 4 regs -v
-  process 2 thread 1 regs --all
-  frame 2 regs
-)";
-
-// Switches
-constexpr int kRegsAllSwitch = 1;
-constexpr int kRegsGeneralSwitch = 2;
-constexpr int kRegsFloatingPointSwitch = 3;
-constexpr int kRegsVectorSwitch = 4;
-constexpr int kRegsDebugSwitch = 5;
-constexpr int kRegsExtendedSwitch = 6;
-
-void OnRegsComplete(const Err& cmd_err, const std::vector<debug_ipc::Register>& registers,
-                    const FormatRegisterOptions& options, bool top_stack_frame) {
-  Console* console = Console::get();
-  if (cmd_err.has_error()) {
-    console->Output(cmd_err);
-    return;
-  }
-
-  if (registers.empty()) {
-    if (top_stack_frame) {
-      console->Output("No matching registers.");
-    } else {
-      console->Output("No matching registers saved with this non-topmost stack frame.");
-    }
-    return;
-  }
-
-  // Always output warning first if needed. If the filtering fails it could be because the register
-  // wasn't saved.
-  if (!top_stack_frame) {
-    OutputBuffer warning_out;
-    warning_out.Append(Syntax::kWarning, GetExclamation());
-    warning_out.Append(" Stack frame is not topmost. Only saved registers will be available.\n");
-    console->Output(warning_out);
-  }
-
-  OutputBuffer out;
-  out.Append(Syntax::kComment,
-             "    (Use \"print $registername\" to show a single one, or\n"
-             "     \"print $registername = newvalue\" to set.)\n\n");
-  out.Append(FormatRegisters(options, registers));
-
-  console->Output(out);
-}
-
-// When we request more than one category of registers, this collects all of them and keeps track
-// of how many callbacks are remaining.
-struct RegisterCollector {
-  Err err;  // Most recent error from all callbacks, if any.
-  std::vector<debug_ipc::Register> registers;
-  int remaining_callbacks = 0;
-
-  // Parameters to OnRegsComplete().
-  FormatRegisterOptions options;
-  bool top_stack_frame;
-};
-
-Err DoRegs(ConsoleContext* context, const Command& cmd) {
-  using debug_ipc::RegisterCategory;
-
-  Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "regs");
-  if (err.has_error())
-    return err;
-
-  FormatRegisterOptions options;
-  options.arch = cmd.thread()->session()->arch();
-
-  std::string vec_fmt = cmd.target()->settings().GetString(ClientSettings::Target::kVectorFormat);
-  if (auto found = StringToVectorRegisterFormat(vec_fmt))
-    options.vector_format = *found;
-
-  if (!cmd.args().empty())
-    return Err("\"regs\" takes no arguments. To show an individual register, use \"print\".");
-
-  bool top_stack_frame = (cmd.frame() == cmd.thread()->GetStack()[0]);
-
-  // General purpose are the default. Other categories can only be shown for the top stack frame
-  // since they require reading from the current CPU state.
-  std::set<RegisterCategory> category_set;
-  if (cmd.HasSwitch(kRegsAllSwitch)) {
-    category_set.insert(RegisterCategory::kGeneral);
-    category_set.insert(RegisterCategory::kFloatingPoint);
-    category_set.insert(RegisterCategory::kVector);
-    category_set.insert(RegisterCategory::kDebug);
-  }
-  if (cmd.HasSwitch(kRegsGeneralSwitch))
-    category_set.insert(RegisterCategory::kGeneral);
-  if (cmd.HasSwitch(kRegsFloatingPointSwitch))
-    category_set.insert(RegisterCategory::kFloatingPoint);
-  if (cmd.HasSwitch(kRegsVectorSwitch))
-    category_set.insert(RegisterCategory::kVector);
-  if (cmd.HasSwitch(kRegsDebugSwitch))
-    category_set.insert(RegisterCategory::kDebug);
-
-  // Default to "general" if no categories specified.
-  if (category_set.empty())
-    category_set.insert(RegisterCategory::kGeneral);
-
-  options.extended = cmd.HasSwitch(kRegsExtendedSwitch);
-
-  if (category_set.size() == 1 && *category_set.begin() == RegisterCategory::kGeneral) {
-    // Any available general registers should be available synchronously.
-    auto* regs = cmd.frame()->GetRegisterCategorySync(debug_ipc::RegisterCategory::kGeneral);
-    FXL_DCHECK(regs);
-    OnRegsComplete(Err(), *regs, options, top_stack_frame);
-  } else {
-    auto collector = std::make_shared<RegisterCollector>();
-    collector->remaining_callbacks = static_cast<int>(category_set.size());
-    collector->options = std::move(options);
-    collector->top_stack_frame = top_stack_frame;
-
-    for (auto category : category_set) {
-      cmd.frame()->GetRegisterCategoryAsync(
-          category, true,
-          [collector](const Err& err, const std::vector<debug_ipc::Register>& new_regs) {
-            // Save the new registers.
-            collector->registers.insert(collector->registers.end(), new_regs.begin(),
-                                        new_regs.end());
-
-            // Save the error. Just keep the most recent error if there are multiple.
-            if (err.has_error())
-              collector->err = err;
-
-            FXL_DCHECK(collector->remaining_callbacks > 0);
-            collector->remaining_callbacks--;
-            if (collector->remaining_callbacks == 0) {
-              OnRegsComplete(collector->err, collector->registers, collector->options,
-                             collector->top_stack_frame);
-            }
-          });
-    }
-  }
-
-  return Err();
-}
-
 // until -------------------------------------------------------------------------------------------
 
 const char kUntilShortHelp[] = "until / u: Runs a thread until a location is reached.";
@@ -1425,13 +1018,6 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
       SwitchRecord(kForceNumberHex, false, "", 'x'),
       SwitchRecord(kMaxArraySize, true, "max-array")};
 
-  // backtrace
-  VerbRecord backtrace(&DoBacktrace, {"backtrace", "bt"}, kBacktraceShortHelp, kBacktraceHelp,
-                       CommandGroup::kQuery);
-  backtrace.switches = {force_types, raw, SwitchRecord(kVerboseBacktrace, false, "verbose", 'v')};
-
-  (*verbs)[Verb::kBacktrace] = std::move(backtrace);
-
   (*verbs)[Verb::kContinue] =
       VerbRecord(&DoContinue, {"continue", "cont", "c"}, kContinueShortHelp, kContinueHelp,
                  CommandGroup::kStep, SourceAffinity::kSource);
@@ -1458,16 +1044,6 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   print.param_type = VerbRecord::kOneParam;
   (*verbs)[Verb::kPrint] = std::move(print);
 
-  // regs
-  VerbRecord regs(&DoRegs, {"regs", "rg"}, kRegsShortHelp, kRegsHelp, CommandGroup::kAssembly);
-  regs.switches.emplace_back(kRegsAllSwitch, false, "all", 'a');
-  regs.switches.emplace_back(kRegsGeneralSwitch, false, "general", 'g');
-  regs.switches.emplace_back(kRegsFloatingPointSwitch, false, "float", 'f');
-  regs.switches.emplace_back(kRegsVectorSwitch, false, "vector", 'v');
-  regs.switches.emplace_back(kRegsDebugSwitch, false, "debug", 'd');
-  regs.switches.emplace_back(kRegsExtendedSwitch, false, "extended", 'e');
-  (*verbs)[Verb::kRegs] = std::move(regs);
-
   // step
   SwitchRecord step_force(kStepIntoUnsymbolized, false, "unsymbolized", 'u');
   VerbRecord step(&DoStep, {"step", "s"}, kStepShortHelp, kStepHelp, CommandGroup::kStep,
@@ -1480,11 +1056,6 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kSteps] = GetStepsVerbRecord();
   (*verbs)[Verb::kUntil] = VerbRecord(&DoUntil, &CompleteInputLocation, {"until", "u"},
                                       kUntilShortHelp, kUntilHelp, CommandGroup::kStep);
-
-  // Stack navigation
-  (*verbs)[Verb::kDown] =
-      VerbRecord(&DoDown, {"down"}, kDownShortHelp, kDownHelp, CommandGroup::kGeneral);
-  (*verbs)[Verb::kUp] = VerbRecord(&DoUp, {"up"}, kUpShortHelp, kUpHelp, CommandGroup::kGeneral);
 }
 
 }  // namespace zxdb

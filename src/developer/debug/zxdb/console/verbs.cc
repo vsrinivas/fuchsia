@@ -8,6 +8,7 @@
 #include "src/developer/debug/zxdb/console/commands/verb_attach.h"
 #include "src/developer/debug/zxdb/console/commands/verb_attach_job.h"
 #include "src/developer/debug/zxdb/console/commands/verb_auth.h"
+#include "src/developer/debug/zxdb/console/commands/verb_backtrace.h"
 #include "src/developer/debug/zxdb/console/commands/verb_break.h"
 #include "src/developer/debug/zxdb/console/commands/verb_clear.h"
 #include "src/developer/debug/zxdb/console/commands/verb_cls.h"
@@ -16,6 +17,7 @@
 #include "src/developer/debug/zxdb/console/commands/verb_disable.h"
 #include "src/developer/debug/zxdb/console/commands/verb_disassemble.h"
 #include "src/developer/debug/zxdb/console/commands/verb_disconnect.h"
+#include "src/developer/debug/zxdb/console/commands/verb_down.h"
 #include "src/developer/debug/zxdb/console/commands/verb_enable.h"
 #include "src/developer/debug/zxdb/console/commands/verb_help.h"
 #include "src/developer/debug/zxdb/console/commands/verb_kill.h"
@@ -27,6 +29,7 @@
 #include "src/developer/debug/zxdb/console/commands/verb_ps.h"
 #include "src/developer/debug/zxdb/console/commands/verb_quit.h"
 #include "src/developer/debug/zxdb/console/commands/verb_quit_agent.h"
+#include "src/developer/debug/zxdb/console/commands/verb_regs.h"
 #include "src/developer/debug/zxdb/console/commands/verb_run.h"
 #include "src/developer/debug/zxdb/console/commands/verb_stack.h"
 #include "src/developer/debug/zxdb/console/commands/verb_status.h"
@@ -37,6 +40,7 @@
 #include "src/developer/debug/zxdb/console/commands/verb_sym_search.h"
 #include "src/developer/debug/zxdb/console/commands/verb_sym_stat.h"
 #include "src/developer/debug/zxdb/console/commands/verb_sys_info.h"
+#include "src/developer/debug/zxdb/console/commands/verb_up.h"
 #include "src/developer/debug/zxdb/console/commands/verb_watch.h"
 #include "src/lib/fxl/logging.h"
 
@@ -98,6 +102,7 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     all_verbs[Verb::kAttach] = GetAttachVerbRecord();
     all_verbs[Verb::kAttachJob] = GetAttachJobVerbRecord();
     all_verbs[Verb::kAuth] = GetAuthVerbRecord();
+    all_verbs[Verb::kBacktrace] = GetBacktraceVerbRecord();
     all_verbs[Verb::kBreak] = GetBreakVerbRecord();
     all_verbs[Verb::kClear] = GetClearVerbRecord();
     all_verbs[Verb::kCls] = GetClsVerbRecord();
@@ -106,6 +111,7 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     all_verbs[Verb::kDisable] = GetDisableVerbRecord();
     all_verbs[Verb::kDisconnect] = GetDisconnectVerbRecord();
     all_verbs[Verb::kDisassemble] = GetDisassembleVerbRecord();
+    all_verbs[Verb::kDown] = GetDownVerbRecord();
     all_verbs[Verb::kEnable] = GetEnableVerbRecord();
     all_verbs[Verb::kHelp] = GetHelpVerbRecord();
     all_verbs[Verb::kKill] = GetKillVerbRecord();
@@ -117,6 +123,7 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     all_verbs[Verb::kOpenDump] = GetOpendumpVerbRecord();
     all_verbs[Verb::kQuitAgent] = GetQuitAgentVerbRecord();
     all_verbs[Verb::kQuit] = GetQuitVerbRecord();
+    all_verbs[Verb::kRegs] = GetRegsVerbRecord();
     all_verbs[Verb::kRun] = GetRunVerbRecord();
     all_verbs[Verb::kStatus] = GetStatusVerbRecord();
     all_verbs[Verb::kStdout] = GetStdoutVerbRecord();
@@ -127,6 +134,7 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     all_verbs[Verb::kSymStat] = GetSymStatVerbRecord();
     all_verbs[Verb::kSysInfo] = GetSysInfoVerbRecord();
     all_verbs[Verb::kStack] = GetStackVerbRecord();
+    all_verbs[Verb::kUp] = GetUpVerbRecord();
     all_verbs[Verb::kWatch] = GetWatchVerbRecord();
 
     // Everything but Noun::kNone (= 0) should be in the map.
