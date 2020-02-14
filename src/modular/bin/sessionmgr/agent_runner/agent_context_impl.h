@@ -12,7 +12,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/inspect/cpp/component.h>
 
-#include <set>
 #include <string>
 
 #include "src/lib/fxl/macros.h"
@@ -55,19 +54,8 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   // AgentControllers. Calls into |AgentRunner::RemoveAgent()| to remove itself.
   void StopForTeardown(fit::function<void()> callback);
 
-  // Attempts to connect |channel| to service |service_name| published by the agent.
-  // If possible, connects to a service published in the agent's outgoing directory
-  // and falls back to using fuchsia.modular.Agent/Connect().
-  //
-  // If |agent_controller_request| is non-null, tracks its lifecycle and ensures
-  // this agent does not stop until |agent_controller_request| has closed.
-  void ConnectToService(
-      std::string requestor_url,
-      fidl::InterfaceRequest<fuchsia::modular::AgentController> agent_controller_request,
-      std::string service_name, ::zx::channel channel);
-
   // Called by AgentRunner when a component wants to connect to this agent.
-  // Connections will pend until Agent::Initialize() responds
+  // Connections will pend until fuchsia::modular::Agent::Initialize() responds
   // back, at which point all connections will be forwarded to the agent.
   void NewAgentConnection(
       const std::string& requestor_url,
@@ -132,18 +120,17 @@ class AgentContextImpl : fuchsia::modular::AgentContext,
   fidl::BindingSet<fuchsia::modular::AgentController> agent_controller_bindings_;
   fidl::BindingSet<fuchsia::auth::TokenManager> token_manager_bindings_;
 
-  // The names of services published by the agent in its outgoing directory.
-  std::set<std::string> agent_outgoing_services_;
+  AgentRunner* const agent_runner_;
 
   ComponentContextImpl component_context_impl_;
 
-  // Services provided to the agent in its namespace.
+  // A service provider that represents the services to be added into an
+  // application's namespace.
   component::ServiceProviderImpl service_provider_impl_;
 
-  AgentRunner* const agent_runner_;                     // Not owned.
-  fuchsia::auth::TokenManager* const token_manager_;    // Not owned.
-  EntityProviderRunner* const entity_provider_runner_;  // Not owned.
-  AgentServicesFactory* const agent_services_factory_;  // Not owned.
+  fuchsia::auth::TokenManager* const token_manager_;                              // Not owned.
+  EntityProviderRunner* const entity_provider_runner_;                            // Not owned.
+  AgentServicesFactory* const agent_services_factory_;                            // Not owned.
 
   inspect::Node agent_node_;
 

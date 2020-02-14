@@ -63,7 +63,6 @@ executable("agent_runner_unittest") {
     "//src/modular/bin/sessionmgr/entity_provider_runner",
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/ledger_client:page_client",
-    "//src/modular/lib/pseudo_dir",
     "//src/modular/lib/testing:mock_base",
     "//src/modular/lib/testing:test_with_ledger",
     "//src/modular/tests:fuchsia.testing.modular",

@@ -344,26 +344,21 @@ class RequestorIdCapturingAgent : public modular_testing::FakeComponent,
 
   template <typename Interface>
   void AddAgentService(fidl::InterfaceRequestHandler<Interface> handler) {
-    service_name_to_handler_[Interface::Name_] = [handler = std::move(handler)](zx::channel req) {
-      handler(fidl::InterfaceRequest<Interface>(std::move(req)));
-    };
-  }
-
-  template <typename Interface>
-  void AddPublicService(fidl::InterfaceRequestHandler<Interface> handler) {
-    buffered_add_service_calls_.push_back([this, handler = std::move(handler)]() mutable {
-      component_context()->outgoing()->AddPublicService(std::move(handler));
+    buffered_add_agent_service_calls_.push_back([this, handler = std::move(handler)]() mutable {
+      service_name_to_handler_[Interface::Name_] = [handler = std::move(handler)](zx::channel req) {
+        handler(fidl::InterfaceRequest<Interface>(std::move(req)));
+      };
     });
 
-    FlushAddServiceCallsIfRunning();
+    FlushAddAgentServiceIfRunning();
   }
 
- protected:
+ private:
   // |modular_testing::FakeComponent|
   void OnCreate(fuchsia::sys::StartupInfo startup_info) {
     component_context()->outgoing()->AddPublicService<fuchsia::modular::Agent>(
         agent_bindings_.GetHandler(this));
-    FlushAddServiceCallsIfRunning();
+    FlushAddAgentServiceIfRunning();
   }
 
   // |fuchsia::modular::Agent|
@@ -382,12 +377,12 @@ class RequestorIdCapturingAgent : public modular_testing::FakeComponent,
     }
   }
 
-  void FlushAddServiceCallsIfRunning() {
+  void FlushAddAgentServiceIfRunning() {
     if (is_running()) {
-      for (auto& call : buffered_add_service_calls_) {
+      for (auto& call : buffered_add_agent_service_calls_) {
         call();
       }
-      buffered_add_service_calls_.clear();
+      buffered_add_agent_service_calls_.clear();
     }
   }
 
@@ -396,10 +391,11 @@ class RequestorIdCapturingAgent : public modular_testing::FakeComponent,
   fidl::BindingSet<fuchsia::modular::Agent> agent_bindings_;
   fidl::BindingSet<fuchsia::sys::ServiceProvider> agent_service_provider_bindings_;
 
-  // A mapping of `service name -> service connection handle`.
+  // A mapping of `service name -> service connection handle` which is inflated using
+  // AddService<>().
   std::unordered_map<std::string, fit::function<void(zx::channel)>> service_name_to_handler_;
-  std::vector<fit::closure> buffered_add_service_calls_;
-};  // namespace
+  std::vector<fit::closure> buffered_add_agent_service_calls_;
+};
 
 // Test that an Agent service can be acquired from any of another Agent, a Module, Session or Story
 // Shells, including testing that calls to the Agent.Connect() method (implemented by the agent)
@@ -551,170 +547,6 @@ TEST_F(AgentServicesSFWCompatTest, ConnectToService_FailNoAgentMapping) {
   EXPECT_FALSE(serving_agent->is_running());
   // appmgr / sysmgr result in a peer closed error.
   EXPECT_EQ(status, ZX_ERR_PEER_CLOSED);
-}
-
-// Test that an agent can publish its services using its outgoing directory, and that clients
-// can connect to those services through either ComponentContext.ConnectToAgent*() or
-// sys.ComponentContext.srv().Connect().
-TEST_F(AgentServicesSFWCompatTest, PublishToOutgoingDirectory) {
-  auto serving_agent = RequestorIdCapturingAgent::CreateWithDefaultOptions();
-
-  // Intercept this agent and use it as a client to connect to `serving_agent`.
-  auto agent = modular_testing::FakeAgent::CreateWithDefaultOptions();
-
-  // Set up the test environment with TestProtocol being served by `serving_agent`.
-  auto spec = CreateSpecWithAgentServiceIndex(
-      {{fuchsia::testing::modular::TestProtocol::Name_, serving_agent->url()}});
-  spec.mutable_sessionmgr_config()->mutable_session_agents()->push_back(agent->url());
-
-  modular_testing::TestHarnessBuilder builder(std::move(spec));
-  builder.InterceptComponent(serving_agent->BuildInterceptOptions());
-  builder.InterceptComponent(AddSandboxServices({fuchsia::testing::modular::TestProtocol::Name_},
-                                                agent->BuildInterceptOptions()));
-
-  // Instruct `serving_agent` to serve the TestProtocol, tracking the number of times
-  // the service was successfully connected.
-  int num_connections = 0;
-  std::vector<zx::channel> protocol_requests;
-  // Note that TestProtocol is being served using a sys.OutgoingDirectory.
-  serving_agent->AddPublicService(
-      fit::function<void(fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol>)>(
-          [&](fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol> request) {
-            ++num_connections;
-            protocol_requests.push_back(request.TakeChannel());
-          }));
-  builder.BuildAndRun(test_harness());
-
-  RunLoopUntil([&] { return agent->is_running(); });
-  ASSERT_FALSE(serving_agent->is_running());
-
-  // Attempt to connect to the test service in all ways that are currently supported.
-  std::vector<fuchsia::testing::modular::TestProtocolPtr> protocol_ptrs;
-  std::vector<fuchsia::modular::AgentControllerPtr> agent_controllers;
-
-  // Method 1: Connect using `agent`'s incoming directory
-  protocol_ptrs.push_back(
-      agent->component_context()->svc()->Connect<fuchsia::testing::modular::TestProtocol>());
-
-  // Method 2: Connect using fuchsia.modular.ComponentContext/ConnectToAgentService().
-  fuchsia::modular::AgentServiceRequest agent_service_request;
-  protocol_ptrs.emplace_back();
-  agent_controllers.emplace_back();
-  agent_service_request.set_service_name(fuchsia::testing::modular::TestProtocol::Name_);
-  agent_service_request.set_channel(protocol_ptrs.back().NewRequest().TakeChannel());
-  agent_service_request.set_agent_controller(agent_controllers.back().NewRequest());
-  agent_service_request.set_handler(serving_agent->url());
-  agent->modular_component_context()->ConnectToAgentService(std::move(agent_service_request));
-
-  // Track the number of those connection attempts failed.
-  int num_errors = 0;
-  for (auto& ptr : protocol_ptrs) {
-    ptr.set_error_handler([&](zx_status_t) { ++num_errors; });
-  }
-
-  constexpr int kTotalRequests = 2;
-  RunLoopUntil([&] { return num_connections + num_errors == kTotalRequests; });
-  EXPECT_TRUE(serving_agent->is_running());
-  EXPECT_EQ(num_connections, kTotalRequests);
-  EXPECT_EQ(num_errors, 0);
-}
-
-// If an agent exposes a service via both its outgoing directory and through fuchsia.modular.Agent,
-// prefer the outgoing directory.
-TEST_F(AgentServicesSFWCompatTest, PublishToOugoingDirectoryPrioritizesOutoingDirectory) {
-  auto serving_agent = RequestorIdCapturingAgent::CreateWithDefaultOptions();
-
-  // Intercept this agent and use it as a client to connect to `serving_agent`.
-  auto agent = modular_testing::FakeAgent::CreateWithDefaultOptions();
-
-  // Set up the test environment with TestProtocol being served by `serving_agent`.
-  auto spec = CreateSpecWithAgentServiceIndex(
-      {{fuchsia::testing::modular::TestProtocol::Name_, serving_agent->url()}});
-  spec.mutable_sessionmgr_config()->mutable_session_agents()->push_back(agent->url());
-
-  modular_testing::TestHarnessBuilder builder(std::move(spec));
-  builder.InterceptComponent(serving_agent->BuildInterceptOptions());
-  builder.InterceptComponent(AddSandboxServices({fuchsia::testing::modular::TestProtocol::Name_},
-                                                agent->BuildInterceptOptions()));
-
-  // Publish the service as both an outgoing/public service and an agent service.
-  bool saw_agent_connection = false;
-  bool saw_outgoing_connection = false;
-  serving_agent->AddAgentService(
-      fit::function<void(fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol>)>(
-          [&](fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol> request) {
-            saw_agent_connection = true;
-          }));
-  serving_agent->AddPublicService(
-      fit::function<void(fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol>)>(
-          [&](fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol> request) {
-            saw_outgoing_connection = true;
-          }));
-  builder.BuildAndRun(test_harness());
-
-  RunLoopUntil([&] { return agent->is_running(); });
-  ASSERT_FALSE(serving_agent->is_running());
-
-  auto protocol_ptr =
-      agent->component_context()->svc()->Connect<fuchsia::testing::modular::TestProtocol>();
-
-  RunLoopUntil([&] { return saw_agent_connection || saw_outgoing_connection; });
-  EXPECT_TRUE(saw_outgoing_connection);
-  EXPECT_FALSE(saw_agent_connection);
-}
-
-class NoAgentProtocolAgent : public RequestorIdCapturingAgent {
- public:
-  NoAgentProtocolAgent(modular_testing::FakeComponent::Args args)
-      : RequestorIdCapturingAgent(std::move(args)) {}
-
-  static std::unique_ptr<NoAgentProtocolAgent> CreateWithDefaultOptions() {
-    return std::make_unique<NoAgentProtocolAgent>(modular_testing::FakeComponent::Args{
-        .url = modular_testing::TestHarnessBuilder::GenerateFakeUrl()});
-  }
-
- private:
-  // |modular_testing::FakeComponent|
-  void OnCreate(fuchsia::sys::StartupInfo startup_info) {
-    // Don't publish the fuchsia.modular.Agent service!
-    FlushAddServiceCallsIfRunning();
-  }
-};
-
-// Test that an agent can still serve through its outgoing directory even if it does *not* publish
-// the fuchsia.modular.Agent protocol at all.
-TEST_F(AgentServicesSFWCompatTest, PublishToOutgoingDirectoryStillWorksWithoutAgentProtocol) {
-  auto serving_agent = NoAgentProtocolAgent::CreateWithDefaultOptions();
-
-  // Intercept this agent and use it as a client to connect to `serving_agent`.
-  auto agent = modular_testing::FakeAgent::CreateWithDefaultOptions();
-
-  // Set up the test environment with TestProtocol being served by `serving_agent`.
-  auto spec = CreateSpecWithAgentServiceIndex(
-      {{fuchsia::testing::modular::TestProtocol::Name_, serving_agent->url()}});
-  spec.mutable_sessionmgr_config()->mutable_session_agents()->push_back(agent->url());
-
-  modular_testing::TestHarnessBuilder builder(std::move(spec));
-  builder.InterceptComponent(serving_agent->BuildInterceptOptions());
-  builder.InterceptComponent(AddSandboxServices({fuchsia::testing::modular::TestProtocol::Name_},
-                                                agent->BuildInterceptOptions()));
-
-  // Publish the service as an outgoing/public service.
-  bool saw_outgoing_connection = false;
-  serving_agent->AddPublicService(
-      fit::function<void(fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol>)>(
-          [&](fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol> request) {
-            saw_outgoing_connection = true;
-          }));
-  builder.BuildAndRun(test_harness());
-
-  RunLoopUntil([&] { return agent->is_running(); });
-  ASSERT_FALSE(serving_agent->is_running());
-
-  auto protocol_ptr =
-      agent->component_context()->svc()->Connect<fuchsia::testing::modular::TestProtocol>();
-
-  RunLoopUntil([&] { return saw_outgoing_connection; });
 }
 
 }  // namespace
