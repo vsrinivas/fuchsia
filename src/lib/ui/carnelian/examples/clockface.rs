@@ -306,11 +306,12 @@ impl<B: Backend> Scene<B> {
 struct Contents<B: Backend> {
     image: B::Image,
     size: Size,
+    previous_rasters: Vec<B::Raster>,
 }
 
 impl<B: Backend> Contents<B> {
     fn new(image: B::Image) -> Self {
-        Self { image, size: Size::zero() }
+        Self { image, size: Size::zero(), previous_rasters: Vec::new() }
     }
 
     fn update(&mut self, context: &mut impl Context<B>, scene: &Scene<B>, size: &Size) {
@@ -380,12 +381,28 @@ impl<B: Backend> Contents<B> {
                     fill: Fill::Solid(SHADOW_COLOR),
                     blend_mode: BlendMode::Over,
                 },
+            }))
+            .chain(self.previous_rasters.drain(..).map(|raster| Layer {
+                raster,
+                style: Style {
+                    fill_rule: FillRule::WholeTile,
+                    fill: Fill::Solid(BACKGROUND_COLOR),
+                    blend_mode: BlendMode::Over,
+                },
             }));
 
         let composition = Composition::new(layers, BACKGROUND_COLOR);
 
         context.render(&composition, Some(clip), self.image, &ext);
         context.flush_image(self.image);
+
+        // Keep reference to rasters for clearing.
+        self.previous_rasters.extend(
+            hands
+                .iter()
+                .map(|hand| hand.raster.clone().unwrap())
+                .chain(hands.iter().map(|hand| hand.shadow_raster.clone().unwrap())),
+        );
     }
 }
 

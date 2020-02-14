@@ -169,6 +169,8 @@ pub enum FillRule {
     NonZero,
     /// Points with odd non-zero numbers are filled.
     EvenOdd,
+    /// Points are always filled. Useful for clearing.
+    WholeTile,
 }
 
 /// Raster fill type.

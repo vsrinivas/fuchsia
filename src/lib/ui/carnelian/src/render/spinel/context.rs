@@ -228,7 +228,6 @@ pub struct SpinelContext {
     path_builder: Rc<SpnPathBuilder>,
     raster_builder: Rc<SpnRasterBuilder>,
     compositions: HashMap<SpinelImage, SpnComposition>,
-    prev_compositions: HashMap<SpinelImage, SpinelComposition>,
     vulkan: VulkanContext,
     images: Vec<VulkanImage>,
     image_post_copy_regions: Vec<vk::ImageCopy>,
@@ -631,7 +630,6 @@ impl SpinelContext {
             path_builder,
             raster_builder,
             compositions: HashMap::new(),
-            prev_compositions: HashMap::new(),
             vulkan: VulkanContext {
                 device,
                 vk_i,
@@ -1100,16 +1098,10 @@ impl Context<Spinel> for SpinelContext {
         let spn_composition = *self.compositions.entry(image_id).or_insert_with(|| unsafe {
             init(|ptr| spn!(spn_composition_create(spn_context, ptr)))
         });
-        composition.set_up_spn_composition(
-            spn_composition,
-            clip,
-            self.prev_compositions.get(&image_id),
-        );
+        composition.set_up_spn_composition(spn_composition, clip);
         let spn_styling = composition
-            .spn_styling(&*self.inner.borrow(), self.prev_compositions.get(&image_id))
+            .spn_styling(&*self.inner.borrow())
             .expect("SpinelComposition::spn_styling called from outside SpinelContext::render");
-
-        self.prev_compositions.insert(image_id, composition.clone());
 
         let rs = SpnRenderSubmit {
             ext: &mut rs_image as *mut _ as *mut c_void,

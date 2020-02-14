@@ -10,21 +10,21 @@ use crate::{
 };
 
 fn style_to_ops(style: &Style) -> Vec<mold::tile::Op> {
-    vec![
-        mold::tile::Op::CoverWipZero,
-        match style.fill_rule {
-            FillRule::NonZero => mold::tile::Op::CoverWipNonZero,
-            FillRule::EvenOdd => mold::tile::Op::CoverWipEvenOdd,
-        },
-        match style.fill {
-            Fill::Solid(color) => mold::tile::Op::ColorWipFillSolid(u32::from_be_bytes([
-                color.r, color.g, color.b, color.a,
-            ])),
-        },
-        match style.blend_mode {
-            BlendMode::Over => mold::tile::Op::ColorAccBlendOver,
-        },
-    ]
+    let fill_rule = match style.fill_rule {
+        FillRule::NonZero => vec![mold::tile::Op::CoverWipZero, mold::tile::Op::CoverWipNonZero],
+        FillRule::EvenOdd => vec![mold::tile::Op::CoverWipZero, mold::tile::Op::CoverWipEvenOdd],
+        FillRule::WholeTile => vec![mold::tile::Op::CoverWipZero],
+    };
+    let fill = match style.fill {
+        Fill::Solid(color) => mold::tile::Op::ColorWipFillSolid(u32::from_be_bytes([
+            color.r, color.g, color.b, color.a,
+        ])),
+    };
+    let blend_mode = match style.blend_mode {
+        BlendMode::Over => mold::tile::Op::ColorAccBlendOver,
+    };
+
+    fill_rule.into_iter().chain(std::iter::once(fill)).chain(std::iter::once(blend_mode)).collect()
 }
 
 #[derive(Clone, Debug)]
@@ -40,7 +40,10 @@ impl MoldComposition {
         for (i, layer) in self.layers.iter().enumerate() {
             map.print(
                 i as u32 + 1,
-                mold::Layer::new(mold::Raster::union(layer.raster.raster.iter()), style_to_ops(&layer.style)),
+                mold::Layer::new(
+                    mold::Raster::union(layer.raster.raster.iter()),
+                    style_to_ops(&layer.style),
+                ),
             );
         }
 

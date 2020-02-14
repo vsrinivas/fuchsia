@@ -149,7 +149,7 @@ impl VmoImage {
             self.map
                 .take()
                 .filter(|map| map.width() == width && map.height() == height)
-                .unwrap_or_else(|| mold::tile::Map::new(width, height)),
+                .unwrap_or_else(|| mold::tile::Map::without_partial_updates(width, height)),
         );
 
         let map = self.map.as_mut().unwrap();

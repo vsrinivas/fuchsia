@@ -20,12 +20,12 @@ fn group_layers(
     top_group: SpnGroupId,
     layers: &[Layer<Spinel>],
     layer_id_start: u32,
-    override_color: Option<[f32; 4]>,
 ) {
     fn cmds_len(style: &Style) -> usize {
         let fill_rule_len = match style.fill_rule {
             FillRule::NonZero => 1,
             FillRule::EvenOdd => 1,
+            FillRule::WholeTile => 0,
         };
         let fill_len = match style.fill {
             Fill::Solid(..) => 3,
@@ -64,11 +64,12 @@ fn group_layers(
                 cmds[cursor] = SpnCommand::SpnStylingOpcodeCoverEvenodd;
                 cursor += 1;
             }
+            FillRule::WholeTile => {}
         }
 
         match style.fill {
             Fill::Solid(color) => {
-                let color = override_color.unwrap_or(color.to_f32());
+                let color = color.to_f32();
                 unsafe {
                     spn_styling_layer_fill_rgba_encoder(&mut cmds[cursor], color.as_ptr());
                 }
@@ -91,12 +92,7 @@ pub struct SpinelComposition {
 }
 
 impl SpinelComposition {
-    pub(crate) fn set_up_spn_composition(
-        &self,
-        composition: SpnComposition,
-        clip: Rect<u32>,
-        clear_composition: Option<&Self>,
-    ) {
+    pub(crate) fn set_up_spn_composition(&self, composition: SpnComposition, clip: Rect<u32>) {
         unsafe {
             spn!(spn_composition_reset(composition));
             spn!(spn_composition_set_clip(
@@ -105,11 +101,7 @@ impl SpinelComposition {
             ));
         }
 
-        let layers = self.layers.iter().chain(
-            clear_composition.map(|composition| composition.layers.as_slice()).unwrap_or(&[]),
-        );
-
-        for (i, Layer { raster, .. }) in layers.enumerate() {
+        for (i, Layer { raster, .. }) in self.layers.iter().enumerate() {
             for raster in raster.raster().iter() {
                 unsafe {
                     spn!(spn_composition_place(
@@ -124,17 +116,10 @@ impl SpinelComposition {
         }
     }
 
-    pub(crate) fn spn_styling(
-        &self,
-        context: &InnerContext,
-        clear_composition: Option<&Self>,
-    ) -> Option<SpnStyling> {
-        let len = match clear_composition {
-            Some(composition) => self.layers.len() + composition.layers.len(),
-            None => self.layers.len(),
-        };
+    pub(crate) fn spn_styling(&self, context: &InnerContext) -> Option<SpnStyling> {
+        let len = self.layers.len() as u32;
         let spn_styling = context.get_checked().map(|context| unsafe {
-            init(|ptr| spn!(spn_styling_create(context, ptr, len as u32, len as u32 * 8)))
+            init(|ptr| spn!(spn_styling_create(context, ptr, len, len * 8)))
         })?;
 
         let top_group = unsafe { init(|ptr| spn!(spn_styling_group_alloc(spn_styling, ptr))) };
@@ -142,7 +127,7 @@ impl SpinelComposition {
         unsafe {
             spn!(spn_styling_group_parents(spn_styling, top_group, 0, ptr::null_mut()));
             spn!(spn_styling_group_range_lo(spn_styling, top_group, 0));
-            spn!(spn_styling_group_range_lo(spn_styling, top_group, self.layers.len() as u32 - 1));
+            spn!(spn_styling_group_range_lo(spn_styling, top_group, len - 1));
         }
 
         let cmds_enter = unsafe {
@@ -160,17 +145,7 @@ impl SpinelComposition {
         }
         cmds_leave[3] = SpnCommand::SpnStylingOpcodeColorAccStoreToSurface;
 
-        group_layers(spn_styling, top_group, &self.layers, 0, None);
-
-        if let Some(clear_composition) = clear_composition {
-            group_layers(
-                spn_styling,
-                top_group,
-                &clear_composition.layers,
-                self.layers.len() as u32,
-                Some(self.background_color),
-            );
-        }
+        group_layers(spn_styling, top_group, &self.layers, 0);
 
         unsafe {
             spn!(spn_styling_seal(spn_styling));
