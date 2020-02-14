@@ -96,7 +96,6 @@ class CommandBufferPool;
 class CommandBufferSequencer;
 class ComputeShader;
 class FrameManager;
-class GlslToSpirvCompiler;
 class ImageCache;
 class MeshManager;
 class MeshShaderBinding;

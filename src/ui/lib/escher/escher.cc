@@ -8,8 +8,6 @@
 #include "src/ui/lib/escher/impl/command_buffer_pool.h"
 #include "src/ui/lib/escher/impl/frame_manager.h"
 #if ESCHER_USE_RUNTIME_GLSL
-#include "src/ui/lib/escher/impl/glsl_compiler.h"  // nogncheck
-
 #include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"  // nogncheck
 #endif
 #include "src/ui/lib/escher/impl/image_cache.h"
@@ -80,7 +78,6 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
       transfer_command_buffer_pool_(NewTransferCommandBufferPool(
           vulkan_context_, command_buffer_sequencer_.get(), /*use_protected_memory=*/false)),
 #if ESCHER_USE_RUNTIME_GLSL
-      glsl_compiler_(std::make_unique<impl::GlslToSpirvCompiler>()),
       shaderc_compiler_(std::make_unique<shaderc::Compiler>()),
 #endif
       weak_factory_(this) {

@@ -123,7 +123,6 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
   }
 
 #if ESCHER_USE_RUNTIME_GLSL
-  impl::GlslToSpirvCompiler* glsl_compiler() { return glsl_compiler_.get(); }
   shaderc::Compiler* shaderc_compiler() { return shaderc_compiler_.get(); }
 #endif
 
@@ -169,7 +168,6 @@ class Escher final : public MeshBuilderFactory, public ShaderProgramFactory {
   std::unique_ptr<impl::CommandBufferPool> protected_command_buffer_pool_;
 
 #if ESCHER_USE_RUNTIME_GLSL
-  std::unique_ptr<impl::GlslToSpirvCompiler> glsl_compiler_;
   std::unique_ptr<shaderc::Compiler> shaderc_compiler_;
 #endif
 

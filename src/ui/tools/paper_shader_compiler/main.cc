@@ -10,7 +10,6 @@
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/fs/hack_filesystem.h"
 #include "src/ui/lib/escher/hmd/pose_buffer_latching_shader.h"
-#include "src/ui/lib/escher/impl/glsl_compiler.h"
 #include "src/ui/lib/escher/paper/paper_renderer_config.h"
 #include "src/ui/lib/escher/paper/paper_renderer_static_config.h"
 #include "src/ui/lib/escher/shaders/util/spirv_file_util.h"

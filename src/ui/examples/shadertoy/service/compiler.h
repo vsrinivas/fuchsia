@@ -56,7 +56,7 @@ class Compiler final {
   PipelinePtr CompilePipeline(vk::ShaderModule vertex_module, vk::ShaderModule fragment_module,
                               const escher::MeshSpec& mesh_spec);
 
-  escher::impl::GlslToSpirvCompiler* glsl_compiler();
+  shaderc::Compiler* shaderc_compiler();
 
   // Drains the request queue in a background thread spawned by Compile().
   void ProcessRequestQueue();

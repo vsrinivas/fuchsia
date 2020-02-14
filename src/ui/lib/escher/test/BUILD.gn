@@ -96,10 +96,7 @@ if (is_mac) {
     ]
 
     if (escher_use_runtime_glsl) {
-      sources += [
-        "impl/glsl_compiler_unittest.cc",
-        "vk/shader_module_template_unittest.cc",
-      ]
+      sources += [ "vk/shader_module_template_unittest.cc" ]
     }
 
     deps = [

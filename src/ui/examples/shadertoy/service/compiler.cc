@@ -9,8 +9,9 @@
 #include <lib/async/cpp/task.h>
 
 #include "src/ui/examples/shadertoy/service/renderer.h"
-#include "src/ui/lib/escher/impl/glsl_compiler.h"
 #include "src/ui/lib/escher/impl/mesh_shader_binding.h"
+
+#include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"
 
 namespace {
 
@@ -99,6 +100,26 @@ void main() {
 // ******************* END of Compiler Fragment Shader header *********
 
 )GLSL";
+
+std::vector<uint32_t> CompileToSpirv(shaderc::Compiler* compiler, std::string code,
+                                     shaderc_shader_kind kind, std::string name) {
+  // Initialize compilation options.
+  shaderc::CompileOptions options;
+  options.SetOptimizationLevel(shaderc_optimization_level_performance);
+  // TODO(SCN-665): update this once we can rely upon Vulkan 1.1.
+  options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_0);
+  options.SetWarningsAsErrors();
+
+  auto result =
+      compiler->CompileGlslToSpv(code.data(), code.size(), kind, name.c_str(), "main", options);
+  auto status = result.GetCompilationStatus();
+  if (status != shaderc_compilation_status_success) {
+    FXL_LOG(ERROR) << "Shader compilation failed with status: " << status << ". "
+                   << " Error message: " << result.GetErrorMessage();
+    return std::vector<uint32_t>();
+  }
+  return {result.cbegin(), result.cend()};
+}
 
 }  // anonymous namespace
 
@@ -200,16 +221,17 @@ void Compiler::ProcessRequestQueue() {
 PipelinePtr Compiler::CompileGlslToPipeline(const std::string& glsl_code) {
   auto vk_device = escher_->vulkan_context().device;
 
-  std::future<escher::impl::SpirvData> vertex_spirv_future = glsl_compiler()->Compile(
-      vk::ShaderStageFlagBits::eVertex, {std::string(kVertexShaderSrc)}, std::string(), "main");
+  auto compiler = shaderc_compiler();
+  FXL_DCHECK(compiler);
 
-  std::future<escher::impl::SpirvData> fragment_spirv_future = glsl_compiler()->Compile(
-      vk::ShaderStageFlagBits::eFragment, {std::string(kFragmentShaderHeaderSrc) + glsl_code},
-      std::string(), "main");
+  auto vertex_spirv =
+      CompileToSpirv(compiler, kVertexShaderSrc, shaderc_glsl_vertex_shader, "VertexShader");
+  auto fragment_spirv = CompileToSpirv(compiler, std::string(kFragmentShaderHeaderSrc) + glsl_code,
+                                       shaderc_glsl_fragment_shader, "FragmentShader");
 
   vk::ShaderModule vertex_module;
   {
-    auto spirv = vertex_spirv_future.get();
+    auto spirv = vertex_spirv;
     vk::ShaderModuleCreateInfo module_info;
     module_info.codeSize = spirv.size() * sizeof(uint32_t);
     module_info.pCode = spirv.data();
@@ -223,7 +245,7 @@ PipelinePtr Compiler::CompileGlslToPipeline(const std::string& glsl_code) {
 
   vk::ShaderModule fragment_module;
   {
-    auto spirv = fragment_spirv_future.get();
+    auto spirv = fragment_spirv;
     vk::ShaderModuleCreateInfo module_info;
     module_info.codeSize = spirv.size() * sizeof(uint32_t);
     module_info.pCode = spirv.data();
@@ -384,6 +406,6 @@ PipelinePtr Compiler::ConstructPipeline(vk::ShaderModule vertex_module,
   return fxl::MakeRefCounted<Pipeline>(device, pipeline, pipeline_layout);
 }
 
-escher::impl::GlslToSpirvCompiler* Compiler::glsl_compiler() { return escher_->glsl_compiler(); }
+shaderc::Compiler* Compiler::shaderc_compiler() { return escher_->shaderc_compiler(); }
 
 }  // namespace shadertoy

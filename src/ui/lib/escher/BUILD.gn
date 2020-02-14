@@ -411,15 +411,6 @@ template("escher_library") {
       "vk/vulkan_swapchain_helper.h",
     ]
 
-    # These classes contain hard-coded GLSL strings
-    # which must be compiled at runtime.
-    if (use_runtime_glsl) {
-      sources += [
-        "impl/glsl_compiler.cc",
-        "impl/glsl_compiler.h",
-      ]
-    }
-
     if (is_fuchsia) {
       sources += [
         "flib/fence.h",
