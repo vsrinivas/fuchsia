@@ -29,7 +29,7 @@ pub async fn handle_input(
     scene_manager: FlatSceneManager,
     pointer_hack_server: &PointerHackServer,
 ) -> Result<(), Error> {
-    let input_pipeline = InputPipeline::new2(
+    let input_pipeline = InputPipeline::new(
         vec![
             input_device::InputDeviceType::Mouse,
             input_device::InputDeviceType::Touch,
@@ -40,7 +40,7 @@ pub async fn handle_input(
     .await
     .context("Failed to create InputPipeline.")?;
 
-    input_pipeline.handle_input_events2().await;
+    input_pipeline.handle_input_events().await;
     Ok(())
 }
 
