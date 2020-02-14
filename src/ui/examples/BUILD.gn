@@ -7,20 +7,20 @@ import("//src/lib/vulkan/layers.gni")
 
 group("examples") {
   public_deps = [
-    "bouncing_ball",
-    "embedder",
-    "lab/direct_input",
-    "lab/direct_input/child",
-    "lab/pose_buffer_presenter",
-    "lab/scenic_dev_app",
-    "shadertoy/client",
-    "shadertoy/service",
-    "simplest_app",
-    "simplest_embedder",
-    "spinning_square",
-    "standalone_app",
-    "tile",
-    "yuv_to_image_pipe",
+    ":bouncing_ball",
+    ":direct_input",
+    ":direct_input_child",
+    ":embedder",
+    ":pose_buffer_presenter",
+    ":scenic_dev_app",
+    ":shadertoy_client",
+    ":shadertoy_service",
+    ":simplest_app",
+    ":simplest_embedder",
+    ":spinning_square_view",
+    ":standalone_app",
+    ":tile_view",
+    ":yuv_to_image_pipe",
   ]
 }
 

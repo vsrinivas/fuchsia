@@ -18,21 +18,7 @@ group("scenic") {
   testonly = true
   public_deps = [
     "//garnet/packages/prod:scenic",
-    "//src/ui/examples:bouncing_ball",
-    "//src/ui/examples:direct_input",
-    "//src/ui/examples:direct_input_child",
-    "//src/ui/examples:embedder",
-    "//src/ui/examples:pose_buffer_presenter",
-    "//src/ui/examples:scenic_dev_app",
-    "//src/ui/examples:shadertoy_client",
-    "//src/ui/examples:shadertoy_service",
-    "//src/ui/examples:simplest_app",
-    "//src/ui/examples:simplest_app",
-    "//src/ui/examples:simplest_embedder",
-    "//src/ui/examples:spinning_square_view",
-    "//src/ui/examples:standalone_app",
-    "//src/ui/examples:tile_view",
-    "//src/ui/examples:yuv_to_image_pipe",
+    "//src/ui/examples",
   ]
 }
 
