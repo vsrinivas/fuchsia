@@ -30,24 +30,54 @@ foreach(entry, zircon_test_specs) {
 # This ensures the GN build fails when a test gets removed from ZN, which is
 # critical when migrating tests from ZN to GN.
 listed_tests = [
+#------------------
   "blobfs-host",
+#------------------
+#------------------
   "fidl",
+#------------------
+#------------------
   "fidl-compiler",
+#------------------
+#------------------
   "fs-host",
+#------------------
+#------------------
   "fvm-host",
+#------------------
+#------------------
   "fvm-unit",
+#------------------
+#------------------
   "minfs-host",
+#------------------
+#------------------
   "tests",
+#------------------
+#------------------
   "trace-reader-test",
+#------------------
+#------------------
   "util",
+#------------------
+#------------------
   "zxtest",
+#------------------
+#------------------
   "zxtest-integration",
+#------------------
 ]
 if (current_os == "linux") {
   listed_tests += [
+#------------------
     "ftl-volume-wrapper",
+#------------------
+#------------------
     "ftl-volume-wrapper-integration",
+#------------------
+#------------------
     "nand-volume-driver",
+#------------------
   ]
 }
 
@@ -86,6 +116,42 @@ group("migrated-tests") {
     "//zircon/system/ulib/libzbi/test:zbi",
     "//zircon/system/utest/cmdline",
     "//zircon/system/utest/fit",
+  #------------------
+    #"blobfs-host",
+  #------------------
+  #------------------
+    #"fidl",
+  #------------------
+  #------------------
+    #"fidl-compiler",
+  #------------------
+  #------------------
+    #"fs-host",
+  #------------------
+  #------------------
+    #"fvm-host",
+  #------------------
+  #------------------
+    #"fvm-unit",
+  #------------------
+  #------------------
+    #"minfs-host",
+  #------------------
+  #------------------
+    #"tests",
+  #------------------
+  #------------------
+    #"trace-reader-test",
+  #------------------
+  #------------------
+    #"util",
+  #------------------
+  #------------------
+    #"zxtest",
+  #------------------
+  #------------------
+    #"zxtest-integration",
+  #------------------
   ]
 
   if (current_os == "linux") {
@@ -93,6 +159,15 @@ group("migrated-tests") {
       "//src/devices/usb/drivers/usb-peripheral-test",
       "//zircon/system/utest/mtd",
       "//zircon/system/utest/nand-redundant-storage",
+  #------------------
+      #"ftl-volume-wrapper",
+  #------------------
+  #------------------
+      #"ftl-volume-wrapper-integration",
+  #------------------
+  #------------------
+      #"nand-volume-driver",
+  #------------------
     ]
   }
 }
