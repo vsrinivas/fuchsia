@@ -176,6 +176,8 @@ class TestShaderModuleListener : public ShaderModuleListener {
   int32_t update_count_ = 0;
 };
 
+// TODO(44315): We should have this unit test run using Escher with
+// precompiled shaders and Escher with runtime GLSL.
 VK_TEST_F(ShaderModuleTemplateTest, Listeners) {
   ShaderVariantArgs args({{"ATTR_POSITION_OFFSET", "1"}});
   auto module = module_template()->GetShaderModuleVariant(args);
@@ -189,10 +191,14 @@ VK_TEST_F(ShaderModuleTemplateTest, Listeners) {
   filesystem()->WriteFile(HackFilePath(kComputeShiftedPositionPath), "garbage glsl code");
   EXPECT_EQ(listener.update_count(), 1);
 
-  // Changing a file that was transitively included causes the module's SPIR-V
-  // to be regenerated. (NOTE: HackFilesystem could be smarter and only notify
-  // when something has actually changed, but it doesn't).
+  // If a file that was transitively included is not actually included, the
+  // module's SPIR-V will not be regenerated.
   filesystem()->WriteFile(HackFilePath(kComputeIdentityPositionPath), kComputeIdentityPosition);
+  EXPECT_EQ(listener.update_count(), 1);
+
+  // Changing a file that was transitively included causes the module's SPIR-V
+  // to be regenerated.
+  filesystem()->WriteFile(HackFilePath(kComputeIdentityPositionPath), kComputeShiftedPosition);
   EXPECT_EQ(listener.update_count(), 2);
 }
 }  // anonymous namespace
