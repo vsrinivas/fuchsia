@@ -7,8 +7,6 @@ package system_updater
 import (
 	"flag"
 	"fmt"
-	"os"
-	"path/filepath"
 	"syscall/zx"
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
@@ -111,19 +109,7 @@ func run(ctx *context.Context) (err error) {
 	}
 	defer updatePkg.Close()
 
-	pFile, err := updatePkg.Open("packages")
-	if err != nil {
-		return fmt.Errorf("error opening packages data file! %s", err)
-	}
-	defer pFile.Close()
-
-	iFile, err := os.Open(filepath.Join("/pkg", "data", "images"))
-	if err != nil {
-		return fmt.Errorf("error opening images data file! %s", err)
-	}
-	defer iFile.Close()
-
-	pkgs, imgs, err := ParseRequirements(pFile, iFile)
+	pkgs, imgs, err := ParseRequirements(updatePkg)
 	if err != nil {
 		return fmt.Errorf("could not parse requirements: %s", err)
 	}

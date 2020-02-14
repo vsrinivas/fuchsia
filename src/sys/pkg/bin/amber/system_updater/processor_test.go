@@ -6,7 +6,6 @@ package system_updater
 
 import (
 	"bytes"
-	"io"
 	"testing"
 )
 
@@ -22,42 +21,74 @@ func (b *byteReadCloser) Close() error {
 	return nil
 }
 
-func TestParseRequirements(t *testing.T) {
-	expectedPkgs := map[string]string{
-		"amber/0": "abcdef",
-		"pkgfs/0": "123456789",
+func TestParsePackagesLineFormatted(t *testing.T) {
+	expectedPkgs := [2]string{
+		"fuchsia-pkg://fuchsia.com/amber/0?hash=abcdef",
+		"fuchsia-pkg://fuchsia.com/pkgfs/0?hash=123456789",
 	}
+
+	pFile := newByteReadCloser([]byte("amber/0=abcdef\npkgfs/0=123456789"))
+	pkgs, err := ParsePackagesLineFormatted(pFile)
+	if err != nil {
+		t.Fatalf("Error processing packages: %s", err)
+	}
+
+	if len(expectedPkgs) != len(pkgs) {
+		t.Logf("Length of parsed packages != expected")
+		t.Fail()
+	}
+
+	for i, pkgURI := range pkgs {
+		if expectedPkgs[i] != pkgURI {
+			t.Fail()
+			t.Logf("Expected URI does not match, expected %q, found %q", expectedPkgs[i], pkgURI)
+		}
+	}
+}
+
+func TestParsePackagesJson(t *testing.T) {
+	expectedPkgs := [2]string{
+		"fuchsia-pkg://fuchsia.com/amber/0?hash=abcdef",
+		"fuchsia-pkg://fuchsia.com/pkgfs/0?hash=123456789",
+	}
+
+	pFile := newByteReadCloser([]byte(`
+		{
+			"version": 1,
+			"content": [
+				"fuchsia-pkg://fuchsia.com/amber/0?hash=abcdef",
+				"fuchsia-pkg://fuchsia.com/pkgfs/0?hash=123456789"
+				]
+		}
+	`))
+
+	pkgs, err := ParsePackagesJson(pFile)
+	if err != nil {
+		t.Fatalf("Error processing packages: %s", err)
+	}
+
+	if len(expectedPkgs) != len(pkgs) {
+		t.Logf("Length of parsed packages != expected")
+		t.Fail()
+	}
+
+	for i, pkgURI := range pkgs {
+		if expectedPkgs[i] != pkgURI {
+			t.Fail()
+			t.Logf("Expected URI does not match, expected %q, found %q", expectedPkgs[i], pkgURI)
+		}
+	}
+}
+
+func TestParseImages(t *testing.T) {
 	expectedImgs := map[string]struct{}{
 		"dc38ffa1029c3fd44": {},
 	}
 
-	pFile, iFile := openDataSources()
-	pkgs, imgs, err := ParseRequirements(pFile, iFile)
-
+	iFile := newByteReadCloser([]byte("dc38ffa1029c3fd44\n"))
+	imgs, err := ParseImages(iFile)
 	if err != nil {
-		t.Fatalf("Error processing requirements: %s", err)
-	}
-
-	for _, p := range pkgs {
-		exp, ok := expectedPkgs[p.namever]
-		if !ok {
-			t.Fail()
-			t.Logf("Package %s was found, but not expected", p)
-			continue
-		}
-		if exp != p.merkle {
-			t.Fail()
-			t.Logf("Merkle does not match, expected %q, found %q", exp, p.merkle)
-		}
-		delete(expectedPkgs, p.namever)
-	}
-
-	if len(expectedPkgs) != 0 {
-		for k, v := range expectedPkgs {
-			t.Logf("Package [namever: %q, merkle: %q] was expected, but not found",
-				k, v)
-		}
-		t.Fail()
+		t.Fatalf("Error processing images: %s", err)
 	}
 
 	for _, i := range imgs {
@@ -76,10 +107,4 @@ func TestParseRequirements(t *testing.T) {
 			t.Logf("  %q expected, but not found", i)
 		}
 	}
-}
-
-func openDataSources() (io.ReadCloser, io.ReadCloser) {
-	// fake stub
-	return newByteReadCloser([]byte("amber/0=abcdef\npkgfs/0=123456789")),
-		newByteReadCloser([]byte("dc38ffa1029c3fd44\n"))
 }

@@ -7,10 +7,12 @@ package system_updater
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"syscall/zx"
@@ -24,11 +26,6 @@ import (
 	"fidl/fuchsia/pkg"
 	"syslog"
 )
-
-type Package struct {
-	namever string
-	merkle  string
-}
 
 func ConnectToPackageResolver(context *context.Context) (*pkg.PackageResolverInterface, error) {
 	req, pxy, err := pkg.NewPackageResolverInterfaceRequest()
@@ -102,9 +99,73 @@ func CacheUpdatePackage(updateURL string, resolver *pkg.PackageResolverInterface
 	return pkg, nil
 }
 
-func ParseRequirements(pkgSrc io.ReadCloser, imgSrc io.ReadCloser) ([]*Package, []string, error) {
-	imgs := []string{}
-	pkgs := []*Package{}
+// Packages deserializes the packages.json file in the system update package
+type Packages struct {
+	Version int `json:"version"`
+	// A list of fully qualified URIs
+	URIs []string `json:"content"`
+}
+
+func ParseRequirements(updatePkg *UpdatePackage) ([]string, []string, error) {
+	// First, figure out which packages files we should parse
+	parseJson := true
+	pkgSrc, err := updatePkg.Open("packages.json")
+	// Fall back to line formatted packages file if packages.json not present
+	// Ideally, we'd fall back if specifically given the "file not found" error,
+	// though it's unclear which error that is (syscall.ENOENT did not work)
+	if err != nil {
+		syslog.Infof("parse_requirements: could not open packages.json, falling back to packages.")
+		parseJson = false
+		pkgSrc, err = updatePkg.Open("packages")
+	}
+	if err != nil {
+		return nil, nil, fmt.Errorf("error opening packages data file! %s", err)
+	}
+	defer pkgSrc.Close()
+
+	// Now that we know which packages file to parse, we can parse it.
+	pkgs := []string{}
+	if parseJson {
+		pkgs, err = ParsePackagesJson(pkgSrc)
+	} else {
+		pkgs, err = ParsePackagesLineFormatted(pkgSrc)
+	}
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to parse packages: %v", err)
+	}
+
+	// Finally, we parse images
+	imgSrc, err := os.Open(filepath.Join("/pkg", "data", "images"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("error opening images data file! %s", err)
+	}
+	defer imgSrc.Close()
+
+	imgs, err := ParseImages(imgSrc)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to parse images: %v", err)
+	}
+
+	return pkgs, imgs, nil
+}
+
+func ParsePackagesJson(pkgSrc io.ReadCloser) ([]string, error) {
+	bytes, err := ioutil.ReadAll(pkgSrc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read packages.json with error: %v", err)
+	}
+	var packages Packages
+	if err := json.Unmarshal(bytes, &packages); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal packages.json: %v", err)
+	}
+	if packages.Version != 1 {
+		return nil, fmt.Errorf("unsupported version of packages.json: %v", packages.Version)
+	}
+	return packages.URIs, nil
+}
+
+func ParsePackagesLineFormatted(pkgSrc io.ReadCloser) ([]string, error) {
+	pkgs := []string{}
 
 	rdr := bufio.NewReader(pkgSrc)
 	for {
@@ -113,21 +174,29 @@ func ParseRequirements(pkgSrc io.ReadCloser, imgSrc io.ReadCloser) ([]*Package, 
 		if (err == nil || err == io.EOF) && len(s) > 0 {
 			entry := strings.Split(s, "=")
 			if len(entry) != 2 {
-				return nil, nil, fmt.Errorf("parser: entry format %q", s)
+				return nil, fmt.Errorf("parser: entry format %q", s)
 			} else {
-				pkgs = append(pkgs, &Package{namever: entry[0], merkle: entry[1]})
+				pkgURI := fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s?hash=%s", entry[0], entry[1])
+				pkgs = append(pkgs, pkgURI)
 			}
 		}
 
 		if err != nil {
 			if err != io.EOF {
-				return nil, nil, fmt.Errorf("parser: got error reading packages file %s", err)
+				return nil, fmt.Errorf("parser: got error reading packages file %s", err)
 			}
 			break
 		}
 	}
 
-	rdr = bufio.NewReader(imgSrc)
+	return pkgs, nil
+
+}
+
+func ParseImages(imgSrc io.ReadCloser) ([]string, error) {
+
+	rdr := bufio.NewReader(imgSrc)
+	imgs := []string{}
 
 	for {
 		l, err := rdr.ReadString('\n')
@@ -138,19 +207,19 @@ func ParseRequirements(pkgSrc io.ReadCloser, imgSrc io.ReadCloser) ([]*Package, 
 
 		if err != nil {
 			if err != io.EOF {
-				return nil, nil, fmt.Errorf("parser: got error reading images file %s", err)
+				return nil, fmt.Errorf("parser: got error reading images file %s", err)
 			}
 			break
 		}
 	}
 
-	return pkgs, imgs, nil
+	return imgs, nil
 }
 
-func FetchPackages(pkgs []*Package, resolver *pkg.PackageResolverInterface) error {
+func FetchPackages(pkgs []string, resolver *pkg.PackageResolverInterface) error {
 	var errCount int
-	for _, pkg := range pkgs {
-		if err := fetchPackage(pkg, resolver); err != nil {
+	for _, pkgURI := range pkgs {
+		if err := fetchPackage(pkgURI, resolver); err != nil {
 			syslog.Errorf("fetch error: %s", err)
 			errCount++
 		}
@@ -163,16 +232,15 @@ func FetchPackages(pkgs []*Package, resolver *pkg.PackageResolverInterface) erro
 	return nil
 }
 
-func fetchPackage(p *Package, resolver *pkg.PackageResolverInterface) error {
-	pkgURL := fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s?hash=%s", p.namever, p.merkle)
-	dirPxy, err := resolvePackage(pkgURL, resolver)
+func fetchPackage(pkgURI string, resolver *pkg.PackageResolverInterface) error {
+	dirPxy, err := resolvePackage(pkgURI, resolver)
 	if dirPxy != nil {
 		dirPxy.Close()
 	}
 	return err
 }
 
-func resolvePackage(pkgURL string, resolver *pkg.PackageResolverInterface) (*fuchsiaio.DirectoryInterface, error) {
+func resolvePackage(pkgURI string, resolver *pkg.PackageResolverInterface) (*fuchsiaio.DirectoryInterface, error) {
 	selectors := []string{}
 	updatePolicy := pkg.UpdatePolicy{}
 	dirReq, dirPxy, err := fuchsiaio.NewDirectoryInterfaceRequest()
@@ -180,9 +248,9 @@ func resolvePackage(pkgURL string, resolver *pkg.PackageResolverInterface) (*fuc
 		return nil, err
 	}
 
-	syslog.Infof("requesting %s from update system", pkgURL)
+	syslog.Infof("requesting %s from update system", pkgURI)
 
-	status, err := resolver.Resolve(pkgURL, selectors, updatePolicy, dirReq)
+	status, err := resolver.Resolve(pkgURI, selectors, updatePolicy, dirReq)
 	if err != nil {
 		dirPxy.Close()
 		return nil, fmt.Errorf("fetch: Resolve error: %s", err)
