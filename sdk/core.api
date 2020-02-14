@@ -77,6 +77,7 @@ sdk://fidl/fuchsia.ui.brightness
 sdk://fidl/fuchsia.ui.gfx
 sdk://fidl/fuchsia.ui.input
 sdk://fidl/fuchsia.ui.input2
+sdk://fidl/fuchsia.ui.input3
 sdk://fidl/fuchsia.ui.policy
 sdk://fidl/fuchsia.ui.scenic
 sdk://fidl/fuchsia.ui.types
