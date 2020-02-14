@@ -551,7 +551,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.fidl-coding-tables-test",
 #------------------
 #------------------
 #------------------
@@ -1153,7 +1152,6 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.fidl-coding-tables-test",
 #------------------
 #------------------
 #------------------
@@ -2999,7 +2997,7 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/ulib/fidl-async/test:fidl-async-test-manifest",
 #------------------
-    #":test.sys.fidl-coding-tables-test",
+    "//zircon/system/utest/fidl-coding-tables:fidl-coding-tables-manifest",
 #------------------
 #------------------
     "//zircon/system/utest/fidl-llcpp-interop:fidl-llcpp-interop-manifest",
@@ -3702,7 +3700,7 @@ aggregate_manifest("migrated-tests") {
 #------------------
     "//zircon/system/ulib/fidl-async/test:fidl-async-test-manifest",
 #------------------
-    #":test.sys.fidl-coding-tables-test",
+    "//zircon/system/utest/fidl-coding-tables:fidl-coding-tables-manifest",
 #------------------
 #------------------
     "//zircon/system/utest/fidl-llcpp-interop:fidl-llcpp-interop-manifest",
