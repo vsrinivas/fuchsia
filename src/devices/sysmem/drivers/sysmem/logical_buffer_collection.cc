@@ -548,14 +548,9 @@ void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken
       // channels, and it helps get the VMO handles closed ASAP to avoid letting those continue to
       // use space of a MemoryAllocator's pool of pre-reserved space (for example).
       //
-      // TODO(dustingreen): Consider providing a way for the initiator to close its channel (first)
-      // such that the failure is silent, without silencing this failure on unclean close or
-      // participant close, and without letting participants pretend to be the initiator re.
-      // this failure's silence / non-silence.
-      Fail(
-          "BufferCollection (view) channel failure or closure causing LogicalBufferCollection "
-          "failure - status: %d",
-          status);
+      // TODO(45878): Provide a way to distinguish between BufferCollection clean/unclean close so
+      // that we print an error if participant closes before initiator
+      Fail(nullptr);
       return;
     }
 
