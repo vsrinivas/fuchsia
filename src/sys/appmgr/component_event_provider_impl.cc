@@ -5,6 +5,7 @@
 #include "src/sys/appmgr/component_event_provider_impl.h"
 
 #include <lib/async/default.h>
+#include <zircon/status.h>
 
 #include "src/lib/fxl/logging.h"
 
@@ -14,7 +15,8 @@ ComponentEventProviderImpl::ComponentEventProviderImpl(Realm* realm)
     : executor_(async_get_default_dispatcher()),
       binding_(this),
       realm_(realm),
-      weak_ptr_factory_(this) {}
+      weak_ptr_factory_(this) {
+}
 
 ComponentEventProviderImpl::~ComponentEventProviderImpl() = default;
 
@@ -28,7 +30,17 @@ void ComponentEventProviderImpl::SetListener(
     listener_.Unbind();
     listener_.set_error_handler(nullptr);
   });
-  async::PostTask(async_get_default_dispatcher(), [this] { NotifyOfExistingComponents(); });
+  const zx_status_t status =
+      async::PostTask(async_get_default_dispatcher(), [self = weak_ptr_factory_.GetWeakPtr()] {
+        if (self) {
+          self->NotifyOfExistingComponents();
+        } else {
+          FXL_DLOG(WARNING) << "called posted task after exit, skipping callback";
+        }
+      });
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Could not schedule a notifier: " << zx_status_get_string(status);
+  }
 }
 
 zx_status_t ComponentEventProviderImpl::Connect(

@@ -58,6 +58,7 @@ class ComponentEventProviderImpl : public fuchsia::sys::internal::ComponentEvent
 
   // Returns the relative realm path from the queries |leaf_realm| up to this provider |realm_|.
   std::vector<std::string> RelativeRealmPath(Realm* leaf_realm);
+
 };
 
 }  // namespace component
