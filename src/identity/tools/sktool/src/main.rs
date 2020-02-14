@@ -41,6 +41,8 @@ async fn print_devices() {
                         println!("Error during wink: {:?}", err);
                     }
                 }
+                let ping_result = device.ping(1024).await;
+                println!("Ping of {:?} returned {:?}", device.path(), ping_result);
             }
         }
     }

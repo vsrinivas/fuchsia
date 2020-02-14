@@ -10,7 +10,7 @@ use crate::CtapDevice;
 use anyhow::{format_err, Context as _, Error};
 use async_trait::async_trait;
 use bitfield::bitfield;
-use bytes::{Buf, Bytes, IntoBuf};
+use bytes::{Buf, BufMut, Bytes, BytesMut, IntoBuf};
 use fdio::service_connect;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_hardware_input::DeviceMarker;
@@ -143,6 +143,29 @@ impl<C: Connection, R: Rng> Device<C, R> {
     pub async fn wink(&self) -> Result<(), Error> {
         self.perform_transaction(Command::Wink, &[]).await?;
         Ok(())
+    }
+
+    /// Performs a ping on the device, i.e. send a payload of the specified length and ensures the
+    /// same payload is received in response. The payload is composed of incrementing 16 bit
+    /// numbers and so length must be an even number.
+    pub async fn ping(&self, length: u16) -> Result<(), Error> {
+        if length % 2 != 0 {
+            return Err(format_err!("Ping length must be even"));
+        }
+        let mut request = BytesMut::with_capacity(length as usize);
+        for num in 1..=length / 2 {
+            request.put_u16_be(num);
+        }
+        let response = self.perform_transaction(Command::Ping, &request).await?;
+        if response == request {
+            Ok(())
+        } else {
+            Err(format_err!(
+                "Ping request did not match response: {:02x?} vs {:02x?}",
+                request.into_buf().bytes(),
+                response.into_buf().bytes()
+            ))
+        }
     }
 
     /// Performs CTAPHID initialization on the supplied connection using the supplied channel,
@@ -639,12 +662,36 @@ mod tests {
         con.expect_write(build_packet(TEST_CHANNEL, Command::Wink, &[]));
         con.expect_read(build_packet(TEST_CHANNEL, Command::Msg, &[]));
 
-        // Attempt to create a device and resquest two winks, one successful one not.
+        // Attempt to create a device and request two winks, one successful one not.
         let dev = Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
             .await?
             .expect("Failed to create device");
         assert!(dev.wink().await.is_ok());
         assert!(dev.wink().await.is_err());
+        Ok(())
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn ping() -> Result<(), Error> {
+        // Configure a fake connection and expect standard initialization.
+        let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
+        con.expect_write(build_init_request(&FIRST_NONCE, INIT_CHANNEL));
+        con.expect_read(build_init_response(&FIRST_NONCE, INIT_CHANNEL, TEST_CHANNEL, 0x01));
+
+        // Expect a small ping message and the same message in response.
+        let mut payload = BytesMut::with_capacity(100);
+        for num in 1..=50 {
+            payload.put_u16_be(num);
+        }
+        let message = Message::new(TEST_CHANNEL, Command::Ping, &payload, REPORT_LENGTH)?;
+        con.expect_message_write(message.clone());
+        con.expect_message_read(message);
+
+        // Attempt to create a device and request a ping.
+        let dev = Device::new_from_connection(TEST_PATH.to_string(), con, FIXED_SEED_RNG.clone())
+            .await?
+            .expect("Failed to create device");
+        assert!(dev.ping(100).await.is_ok());
         Ok(())
     }
 }
