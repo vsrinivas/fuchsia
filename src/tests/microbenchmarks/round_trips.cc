@@ -110,11 +110,10 @@ class ThreadOrProcess {
   ~ThreadOrProcess() {
     if (thread_.joinable())
       thread_.join();
-    if (subprocess_ != ZX_HANDLE_INVALID) {
+    if (subprocess_) {
       // Join the process.
-      FXL_CHECK(zx_object_wait_one(subprocess_, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, nullptr) ==
+      FXL_CHECK(subprocess_.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr) ==
                 ZX_OK);
-      zx_handle_close(subprocess_);
     }
   }
 
@@ -134,7 +133,8 @@ class ThreadOrProcess {
 
       char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
       if (fdio_spawn_etc(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, executable_path, args, nullptr,
-                         action_count, actions, &subprocess_, err_msg) != ZX_OK) {
+                         action_count, actions, subprocess_.reset_and_get_address(),
+                         err_msg) != ZX_OK) {
         FXL_LOG(FATAL) << "Subprocess launch failed: " << err_msg;
       }
     } else {
@@ -144,7 +144,7 @@ class ThreadOrProcess {
 
  private:
   std::thread thread_;
-  zx_handle_t subprocess_ = ZX_HANDLE_INVALID;
+  zx::process subprocess_;
 };
 
 // Convenience function for creating a vector of zx::handles.
@@ -212,61 +212,53 @@ class BasicChannelTest {
 class ChannelPortTest {
  public:
   explicit ChannelPortTest(MultiProc multiproc) {
-    zx_handle_t server;
-    FXL_CHECK(zx_channel_create(0, &server, &client_) == ZX_OK);
-    thread_or_process_.Launch("ChannelPortTest::ThreadFunc", MakeHandleVector(server), multiproc);
-    FXL_CHECK(zx_port_create(0, &client_port_) == ZX_OK);
+    zx::channel server;
+    FXL_CHECK(zx::channel::create(0, &server, &client_) == ZX_OK);
+    thread_or_process_.Launch("ChannelPortTest::ThreadFunc", MakeHandleVector(server.release()),
+                              multiproc);
+    FXL_CHECK(zx::port::create(0, &client_port_) == ZX_OK);
   }
 
-  ~ChannelPortTest() {
-    zx_handle_close(client_);
-    zx_handle_close(client_port_);
-  }
-
-  static bool ChannelPortRead(zx_handle_t channel, zx_handle_t port, uint32_t* msg) {
-    FXL_CHECK(zx_object_wait_async(channel, port, 0, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                                   ZX_WAIT_ASYNC_ONCE) == ZX_OK);
+  static bool ChannelPortRead(const zx::channel& channel, const zx::port& port, uint32_t* msg) {
+    FXL_CHECK(channel.wait_async(port, 0, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                 ZX_WAIT_ASYNC_ONCE) == ZX_OK);
 
     zx_port_packet_t packet;
-    FXL_CHECK(zx_port_wait(port, ZX_TIME_INFINITE, &packet) == ZX_OK);
+    FXL_CHECK(port.wait(zx::time::infinite(), &packet) == ZX_OK);
     if (packet.signal.observed & ZX_CHANNEL_PEER_CLOSED)
       return false;
 
     uint32_t bytes_read;
-    FXL_CHECK(zx_channel_read(channel, 0, msg, nullptr, sizeof(*msg), 0, &bytes_read, nullptr) ==
-              ZX_OK);
+    FXL_CHECK(channel.read(0, msg, nullptr, sizeof(*msg), 0, &bytes_read, nullptr) == ZX_OK);
     FXL_CHECK(bytes_read == sizeof(*msg));
     return true;
   }
 
   static void ThreadFunc(std::vector<zx::handle>&& handles) {
     FXL_CHECK(handles.size() == 1);
-    zx_handle_t channel = handles[0].release();
+    zx::channel channel(std::move(handles[0]));
 
-    zx_handle_t port;
-    FXL_CHECK(zx_port_create(0, &port) == ZX_OK);
+    zx::port port;
+    FXL_CHECK(zx::port::create(0, &port) == ZX_OK);
 
     for (;;) {
       uint32_t msg;
       if (!ChannelPortRead(channel, port, &msg))
         break;
-      FXL_CHECK(zx_channel_write(channel, 0, &msg, sizeof(msg), nullptr, 0) == ZX_OK);
+      FXL_CHECK(channel.write(0, &msg, sizeof(msg), nullptr, 0) == ZX_OK);
     }
-
-    zx_handle_close(channel);
-    zx_handle_close(port);
   }
 
   void Run() {
     uint32_t msg = 123;
-    FXL_CHECK(zx_channel_write(client_, 0, &msg, sizeof(msg), nullptr, 0) == ZX_OK);
+    FXL_CHECK(client_.write(0, &msg, sizeof(msg), nullptr, 0) == ZX_OK);
     FXL_CHECK(ChannelPortRead(client_, client_port_, &msg));
   }
 
  private:
-  zx_handle_t client_;
-  zx_handle_t client_port_;
   ThreadOrProcess thread_or_process_;
+  zx::channel client_;
+  zx::port client_port_;
 };
 
 // Test IPC round trips using Zircon channels where the server uses
@@ -318,13 +310,14 @@ class ChannelCallTest {
 class PortTest {
  public:
   explicit PortTest(MultiProc multiproc) {
-    FXL_CHECK(zx_port_create(0, &ports_[0]) == ZX_OK);
-    FXL_CHECK(zx_port_create(0, &ports_[1]) == ZX_OK);
+    FXL_CHECK(zx::port::create(0, &ports_[0]) == ZX_OK);
+    FXL_CHECK(zx::port::create(0, &ports_[1]) == ZX_OK);
 
     std::vector<zx::handle> ports_dup(2);
     for (int i = 0; i < 2; ++i) {
-      FXL_CHECK(zx_handle_duplicate(ports_[i], ZX_RIGHT_SAME_RIGHTS,
-                                    ports_dup[i].reset_and_get_address()) == ZX_OK);
+      zx::port dup;
+      FXL_CHECK(ports_[i].duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) == ZX_OK);
+      ports_dup[i] = std::move(dup);
     }
     thread_or_process_.Launch("PortTest::ThreadFunc", std::move(ports_dup), multiproc);
   }
@@ -334,10 +327,7 @@ class PortTest {
     zx_port_packet_t packet = {};
     packet.type = ZX_PKT_TYPE_USER;
     packet.user.u32[0] = 1;
-    FXL_CHECK(zx_port_queue(ports_[0], &packet) == ZX_OK);
-
-    zx_handle_close(ports_[0]);
-    zx_handle_close(ports_[1]);
+    FXL_CHECK(ports_[0].queue(&packet) == ZX_OK);
   }
 
   static void ThreadFunc(std::vector<zx::handle>&& ports) {
@@ -355,12 +345,12 @@ class PortTest {
   void Run() {
     zx_port_packet_t packet = {};
     packet.type = ZX_PKT_TYPE_USER;
-    FXL_CHECK(zx_port_queue(ports_[0], &packet) == ZX_OK);
-    FXL_CHECK(zx_port_wait(ports_[1], ZX_TIME_INFINITE, &packet) == ZX_OK);
+    FXL_CHECK(ports_[0].queue(&packet) == ZX_OK);
+    FXL_CHECK(ports_[1].wait(zx::time::infinite(), &packet) == ZX_OK);
   }
 
  private:
-  zx_handle_t ports_[2];
+  zx::port ports_[2];
   ThreadOrProcess thread_or_process_;
 };
 
@@ -525,7 +515,7 @@ class FidlTest {
 
   static void ThreadFunc(std::vector<zx::handle>&& handles) {
     FXL_CHECK(handles.size() == 1);
-    zx::channel channel(handles[0].release());
+    zx::channel channel(std::move(handles[0]));
 
     async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
     RoundTripServiceImpl service_impl;
