@@ -20,7 +20,7 @@ const HID_USAGE_KEY_DOWN: u32 = 0x51;
 const HID_USAGE_KEY_UP: u32 = 0x52;
 
 const NON_CONTROL_MODIFIER: u32 =
-    (input::MODIFIER_SUPER | input::MODIFIER_ALT | input::MODIFIER_SHIFT);
+    input::MODIFIER_SUPER | input::MODIFIER_ALT | input::MODIFIER_SHIFT;
 
 /// Converts the given keyboard event into a String suitable to send to the shell.
 /// If the conversion fails for any reason None is returned instead of an Error

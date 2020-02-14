@@ -23,12 +23,12 @@ use fuchsia_syslog::macros::*;
 
 // Values found in:
 //   zircon/system/public/zircon/device/audio.h
-const AUDIO_SAMPLE_FORMAT_8BIT: u32 = (1 << 1);
-const AUDIO_SAMPLE_FORMAT_16BIT: u32 = (1 << 2);
-const AUDIO_SAMPLE_FORMAT_24BIT_IN32: u32 = (1 << 7);
-const AUDIO_SAMPLE_FORMAT_32BIT_FLOAT: u32 = (1 << 9);
+const AUDIO_SAMPLE_FORMAT_8BIT: u32 = 1 << 1;
+const AUDIO_SAMPLE_FORMAT_16BIT: u32 = 1 << 2;
+const AUDIO_SAMPLE_FORMAT_24BIT_IN32: u32 = 1 << 7;
+const AUDIO_SAMPLE_FORMAT_32BIT_FLOAT: u32 = 1 << 9;
 
-const ASF_RANGE_FLAG_FPS_CONTINUOUS: u16 = (1 << 0);
+const ASF_RANGE_FLAG_FPS_CONTINUOUS: u16 = 1 << 0;
 
 // If this changes, so too must the astro audio_core_config.
 const AUDIO_OUTPUT_ID: [u8; 16] = [0x01; 16];
