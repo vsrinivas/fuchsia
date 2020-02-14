@@ -220,18 +220,21 @@ async fn use_from_parent() {
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/file").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/device").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -296,12 +299,14 @@ async fn use_from_grandparent() {
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Self_,
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -317,12 +322,14 @@ async fn use_from_grandparent() {
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("c")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -376,6 +383,7 @@ async fn use_builtin_from_grandparent() {
                     source_path: CapabilityPath::try_from("/svc/builtin.Echo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/builtin.Echo").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -389,6 +397,7 @@ async fn use_builtin_from_grandparent() {
                     source_path: CapabilityPath::try_from("/svc/builtin.Echo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/builtin.Echo").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("c")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -443,12 +452,14 @@ async fn use_from_sibling_no_root() {
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("d".to_string()),
                     source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("c")
                 .add_lazy_child("d")
@@ -523,12 +534,14 @@ async fn use_from_sibling_root() {
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("b".to_string()),
                     source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .add_lazy_child("c")
@@ -606,12 +619,14 @@ async fn use_from_niece() {
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("b".to_string()),
                     source_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foobar").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .add_lazy_child("c")
@@ -710,6 +725,7 @@ async fn use_kitchen_sink() {
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Directory(OfferDirectoryDecl {
                     source: OfferDirectorySource::Child("b".to_string()),
@@ -718,6 +734,7 @@ async fn use_kitchen_sink() {
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .add_lazy_child("c")
@@ -734,12 +751,14 @@ async fn use_kitchen_sink() {
                     target: OfferTarget::Child("e".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Realm,
                     source_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foo_from_a").unwrap(),
                     target: OfferTarget::Child("e".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
                     source: ExposeSource::Child("d".to_string()),
@@ -764,12 +783,14 @@ async fn use_kitchen_sink() {
                     target: OfferTarget::Child("f".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("g".to_string()),
                     source_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foo_from_h").unwrap(),
                     target: OfferTarget::Child("f".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("f")
                 .add_lazy_child("g")
@@ -927,6 +948,7 @@ async fn offer_from_component_manager_namespace() {
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Realm,
@@ -934,6 +956,7 @@ async fn offer_from_component_manager_namespace() {
                         .unwrap(),
                     target_path: CapabilityPath::try_from("/echo/echo").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -1033,12 +1056,14 @@ async fn use_offer_source_not_exposed() {
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     source: OfferServiceSource::Child("b".to_string()),
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .add_lazy_child("c")
@@ -1104,12 +1129,14 @@ async fn use_offer_source_not_offered() {
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     source: OfferServiceSource::Realm,
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("c")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -1232,12 +1259,14 @@ async fn use_from_expose_to_framework() {
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source: OfferServiceSource::Child("b".to_string()),
                     source_path: CapabilityPath::try_from("/svc/bar").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/baz").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .add_lazy_child("c")
@@ -1313,12 +1342,14 @@ async fn offer_from_non_executable() {
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     source: OfferServiceSource::Self_,
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -1374,12 +1405,14 @@ async fn use_in_collection() {
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     source: OfferServiceSource::Self_,
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -1400,12 +1433,14 @@ async fn use_in_collection() {
                     target: OfferTarget::Collection("coll".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     source: OfferServiceSource::Realm,
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target: OfferTarget::Collection("coll".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_collection("coll", fsys::Durability::Transient)
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -1489,12 +1524,14 @@ async fn use_in_collection_not_offered() {
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .offer(OfferDecl::Protocol(OfferProtocolDecl {
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     source: OfferServiceSource::Self_,
                     target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -1574,6 +1611,7 @@ async fn use_directory_with_subdir_from_grandparent() {
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: Some(PathBuf::from("s1/s2")),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -1589,6 +1627,7 @@ async fn use_directory_with_subdir_from_grandparent() {
                     target: OfferTarget::Child("c".to_string()),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: Some(PathBuf::from("s3")),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("c")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -1645,6 +1684,7 @@ async fn use_directory_with_subdir_from_sibling() {
                     target_path: CapabilityPath::try_from("/data/foo").unwrap(),
                     rights: Some(*rights::READ_RIGHTS),
                     subdir: Some(PathBuf::from("s3")),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .add_lazy_child("c")
@@ -2065,6 +2105,7 @@ async fn use_with_destroyed_parent() {
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target: OfferTarget::Collection("coll".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_collection("coll", fsys::Durability::Transient)
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -2078,6 +2119,7 @@ async fn use_with_destroyed_parent() {
                     source_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target_path: CapabilityPath::try_from("/svc/foo").unwrap(),
                     target: OfferTarget::Child("c".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("c")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -2187,6 +2229,7 @@ async fn invalid_offer_from_component_manager() {
                     source: OfferServiceSource::Realm,
                     target_path: CapabilityPath::try_from("/svc/valid").unwrap(),
                     target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)

@@ -9,9 +9,9 @@ use {
         },
     },
     cm_rust::{
-        self, CapabilityPath, ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget,
-        OfferDecl, OfferProtocolDecl, OfferServiceSource, OfferTarget, UseDecl, UseProtocolDecl,
-        UseSource,
+        self, CapabilityPath, DependencyType, ExposeDecl, ExposeProtocolDecl, ExposeSource,
+        ExposeTarget, OfferDecl, OfferProtocolDecl, OfferServiceSource, OfferTarget, UseDecl,
+        UseProtocolDecl, UseSource,
     },
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys,
@@ -261,6 +261,7 @@ async fn use_work_scheduler_control_routed() {
                     source_path: (*WORK_SCHEDULER_CONTROL_CAPABILITY_PATH).clone(),
                     target_path: offer_use_path.clone(),
                     target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -305,6 +306,7 @@ async fn use_work_scheduler_control_error() {
                     source_path: (*WORK_SCHEDULER_CONTROL_CAPABILITY_PATH).clone(),
                     target_path: offer_use_path.clone(),
                     target: OfferTarget::Child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)

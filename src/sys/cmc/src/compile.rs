@@ -228,6 +228,14 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
     Ok(out_exposes)
 }
 
+fn dependency_type_from_string(s: &Option<String>) -> Result<cm::DependencyType, Error> {
+    match s.as_ref().map(|s| s.as_str()) {
+        Some("weak_for_migration") => Ok(cm::DependencyType::WeakForMigration),
+        None | Some("strong") => Ok(cm::DependencyType::Strong),
+        Some(x) => Err(Error::internal(format!("offer: unknown dependency {}", x))),
+    }
+}
+
 /// `offer` rules route multiple capabilities from multiple sources to multiple targets.
 fn translate_offer(
     offer_in: &Vec<cml::Offer>,
@@ -268,6 +276,7 @@ fn translate_offer(
                     source: source.clone(),
                     target,
                     target_path: cm::Path::new(target_id)?,
+                    dependency_type: dependency_type_from_string(&offer.dependency)?,
                 }));
             }
         } else if let Some(p) = offer.directory() {
@@ -281,6 +290,7 @@ fn translate_offer(
                     target_path: cm::Path::new(target_id)?,
                     rights: extract_offer_rights(offer)?,
                     subdir: extract_offer_subdir(offer)?,
+                    dependency_type: dependency_type_from_string(&offer.dependency)?,
                 }));
             }
         } else if let Some(p) = offer.storage() {
@@ -1032,7 +1042,7 @@ mod tests {
                         "service": "/svc/fuchsia.logger.Log",
                         "from": "#logger",
                         "to": [ "#modular" ],
-                        "as": "/svc/fuchsia.logger.SysLog"
+                        "as": "/svc/fuchsia.logger.SysLog",
                     },
                     {
                         "service": "/svc/my.service.Service",
@@ -1042,13 +1052,15 @@ mod tests {
                     {
                         "protocol": "/svc/fuchsia.logger.LegacyLog",
                         "from": "#logger",
-                        "to": [ "#netstack" ]
+                        "to": [ "#netstack" ],
+                        "dependency": "weak_for_migration"
                     },
                     {
                         "protocol": "/svc/fuchsia.logger.LegacyLog",
                         "from": "#logger",
                         "to": [ "#modular" ],
-                        "as": "/svc/fuchsia.logger.LegacySysLog"
+                        "as": "/svc/fuchsia.logger.LegacySysLog",
+                        "dependency": "strong"
                     },
                     {
                         "protocol": [
@@ -1061,7 +1073,8 @@ mod tests {
                     {
                         "directory": "/data/assets",
                         "from": "realm",
-                        "to": [ "#netstack" ]
+                        "to": [ "#netstack" ],
+                        "dependency": "weak_for_migration"
                     },
                     {
                         "directory": "/data/assets",
@@ -1069,6 +1082,7 @@ mod tests {
                         "to": [ "#modular" ],
                         "as": "/data",
                         "subdir": "index/file",
+                        "dependency": "strong"
                     },
                     {
                         "directory": "/hub",
@@ -1197,7 +1211,8 @@ mod tests {
                         "name": "netstack"
                     }
                 },
-                "target_path": "/svc/fuchsia.logger.LegacyLog"
+                "target_path": "/svc/fuchsia.logger.LegacyLog",
+                "dependency_type": "weak_for_migration"
             }
         },
         {
@@ -1213,7 +1228,8 @@ mod tests {
                         "name": "modular"
                     }
                 },
-                "target_path": "/svc/fuchsia.logger.LegacySysLog"
+                "target_path": "/svc/fuchsia.logger.LegacySysLog",
+                "dependency_type": "strong"
             }
         },
         {
@@ -1227,7 +1243,8 @@ mod tests {
                         "name": "modular"
                     }
                 },
-                "target_path": "/svc/fuchsia.setui.SetUiService"
+                "target_path": "/svc/fuchsia.setui.SetUiService",
+                "dependency_type": "strong"
             }
         },
         {
@@ -1241,7 +1258,8 @@ mod tests {
                         "name": "modular"
                     }
                 },
-                "target_path": "/svc/fuchsia.wlan.service.Wlan"
+                "target_path": "/svc/fuchsia.wlan.service.Wlan",
+                "dependency_type": "strong"
             }
         },
         {
@@ -1255,7 +1273,8 @@ mod tests {
                         "name": "netstack"
                     }
                 },
-                "target_path": "/data/assets"
+                "target_path": "/data/assets",
+                "dependency_type": "weak_for_migration"
             }
         },
         {
@@ -1270,7 +1289,8 @@ mod tests {
                     }
                 },
                 "target_path": "/data",
-                "subdir": "index/file"
+                "subdir": "index/file",
+                "dependency_type": "strong"
             }
         },
         {
@@ -1284,7 +1304,8 @@ mod tests {
                         "name": "modular"
                     }
                 },
-                "target_path": "/hub"
+                "target_path": "/hub",
+                "dependency_type": "strong"
             }
         },
         {
@@ -1576,7 +1597,8 @@ mod tests {
                     {
                         "protocol": "/svc/fuchsia.logger.LegacyLog",
                         "from": "#logger",
-                        "to": [ "#netstack", "#modular" ]
+                        "to": [ "#netstack", "#modular" ],
+                        "dependency_type": "strong"
                     },
                 ],
                 "children": [
@@ -1720,7 +1742,8 @@ mod tests {
                         "name": "netstack"
                     }
                 },
-                "target_path": "/svc/fuchsia.logger.LegacyLog"
+                "target_path": "/svc/fuchsia.logger.LegacyLog",
+                "dependency_type": "strong"
             }
         },
         {
@@ -1736,7 +1759,8 @@ mod tests {
                         "name": "modular"
                     }
                 },
-                "target_path": "/svc/fuchsia.logger.LegacyLog"
+                "target_path": "/svc/fuchsia.logger.LegacyLog",
+                "dependency_type": "strong"
             }
         }
     ],

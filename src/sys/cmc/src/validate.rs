@@ -458,6 +458,13 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
+        // Ensure that dependency can only be provided for directories and protocols
+        if offer.dependency.is_some() && offer.directory.is_none() && offer.protocol.is_none() {
+            return Err(Error::validate(
+                "Dependency can only be provided for protocol and directory capabilities",
+            ));
+        }
+
         // Validate every target of this offer.
         for to in offer.to.iter() {
             // Ensure the "to" value is a child.
@@ -1150,7 +1157,8 @@ mod tests {
                     {
                         "protocol": "/svc/fuchsia.fonts.LegacyProvider",
                         "from": "realm",
-                        "to": [ "#echo_server" ]
+                        "to": [ "#echo_server" ],
+                        "dependency": "weak_for_migration"
                     },
                     {
                         "protocol": [
@@ -1158,7 +1166,8 @@ mod tests {
                             "/svc/fuchsia.ui.scenic.Scenic"
                         ],
                         "from": "realm",
-                        "to": [ "#echo_server" ]
+                        "to": [ "#echo_server" ],
+                        "dependency": "strong"
                     },
                     {
                         "directory": "/data/assets",
@@ -1170,13 +1179,15 @@ mod tests {
                         "directory": "/data/index",
                         "subdir": "files",
                         "from": "realm",
-                        "to": [ "#modular" ]
+                        "to": [ "#modular" ],
+                        "dependency": "weak_for_migration"
                     },
                     {
                         "directory": "/hub",
                         "from": "framework",
                         "to": [ "#modular" ],
-                        "as": "/hub"
+                        "as": "/hub",
+                        "dependency": "strong"
                     },
                     {
                         "storage": "data",
@@ -1608,6 +1619,21 @@ mod tests {
                 ],
             }),
             result = Err(Error::validate("Resolver \"pkg_resolver\" is offered from self, so it must be declared in \"resolvers\"")),
+        },
+        test_cml_offer_dependency_on_wrong_type => {
+            input = json!({
+                    "offer": [ {
+                        "service": "/svc/fuchsia.logger.Log",
+                        "from": "realm",
+                        "to": [ "#echo_server" ],
+                        "dependency": "strong"
+                    } ],
+                    "children": [ {
+                            "name": "echo_server",
+                            "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
+                    } ]
+                }),
+            result = Err(Error::validate("Dependency can only be provided for protocol and directory capabilities")),
         },
 
         // children
@@ -2640,6 +2666,7 @@ mod tests {
             r#as: None,
             rights: None,
             subdir: None,
+            dependency: None,
         }
     }
 

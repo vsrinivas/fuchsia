@@ -274,6 +274,15 @@
             "examples": [
               "data/assets"
             ]
+          },
+          "dependency": {
+            "title": "The type of dependency that this offer represents",
+            "description": "A component which receives a weak offer must support the offered capability being unavailable at any point. Defaults to \"strong\". Can only be used on protocols and directories",
+            "type": "string",
+            "enum": [
+              "strong",
+              "weak_for_migration"
+            ]
           }
         }
       }

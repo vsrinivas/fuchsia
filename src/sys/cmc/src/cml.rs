@@ -312,6 +312,7 @@ pub struct Offer {
     pub r#as: Option<String>,
     pub rights: Option<Vec<String>>,
     pub subdir: Option<String>,
+    pub dependency: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]

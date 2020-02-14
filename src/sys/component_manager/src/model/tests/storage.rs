@@ -176,6 +176,7 @@ async fn storage_from_parent_dir_from_grandparent() {
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(fio2::Operations::Connect),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -428,6 +429,7 @@ async fn use_in_collection_from_parent() {
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(fio2::Operations::Connect),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -877,6 +879,7 @@ async fn directories_are_not_storage() {
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(fio2::Operations::Connect),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)
@@ -980,6 +983,7 @@ async fn dir_offered_from_nonexecutable() {
                     target: OfferTarget::Child("b".to_string()),
                     rights: Some(fio2::Operations::Connect),
                     subdir: None,
+                    dependency_type: DependencyType::Strong,
                 }))
                 .add_lazy_child("b")
                 .offer_runner_to_children(TEST_RUNNER_NAME)

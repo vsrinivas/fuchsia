@@ -307,9 +307,9 @@ pub mod tests {
             },
         },
         cm_rust::{
-            CapabilityPath, ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl,
-            OfferProtocolDecl, OfferServiceSource, OfferTarget, UseDecl, UseProtocolDecl,
-            UseSource,
+            CapabilityPath, DependencyType, ExposeDecl, ExposeProtocolDecl, ExposeSource,
+            ExposeTarget, OfferDecl, OfferProtocolDecl, OfferServiceSource, OfferTarget, UseDecl,
+            UseProtocolDecl, UseSource,
         },
         fidl_fuchsia_sys2 as fsys,
         std::{convert::TryFrom, sync::Weak, task::Context},
@@ -760,12 +760,14 @@ pub mod tests {
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: OfferTarget::Child("e".to_string()),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
@@ -909,18 +911,21 @@ pub mod tests {
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: OfferTarget::Child("e".to_string()),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("e".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target: OfferTarget::Child("f".to_string()),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
@@ -1110,24 +1115,28 @@ pub mod tests {
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: OfferTarget::Child("c".to_string()),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: OfferTarget::Child("e".to_string()),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("d".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
                         target: OfferTarget::Child("f".to_string()),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferServiceSource::Child("e".to_string()),
                         source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
                         target: OfferTarget::Child("f".to_string()),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),
@@ -1313,6 +1322,7 @@ pub mod tests {
                         source_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
                         target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
                         target: OfferTarget::Child("d".to_string()),
+                        dependency_type: DependencyType::Strong,
                     }))
                     .offer_runner_to_children(TEST_RUNNER_NAME)
                     .build(),

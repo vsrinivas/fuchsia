@@ -18,6 +18,16 @@ xunion OfferDecl {
     5: OfferRunnerDecl runner;
 };
 
+/// Describes the type of dependency implied by the capability.
+enum DependencyType {
+    /// A strong dependency which may be required by components that use it.
+    STRONG = 1;
+    /// A weak dependency specifically used to mark cyclic dependencies of
+    /// migrated components. Components that use a weak dependency must support
+    /// the dependency being unavailable at arbitrary times.
+    WEAK_FOR_MIGRATION = 2;
+};
+
 /// Declares a service offered by a component to one of its children, which may
 /// have been offered by the component's containing realm, the component itself,
 /// or one of its other children.
@@ -64,6 +74,11 @@ table OfferProtocolDecl {
     ///
     /// Must be an absolute path starting with /.
     4: string:fuchsia.component.MAX_PATH_LENGTH target_path;
+
+    /// The dependency type this offer represents. A component which recieves a
+    /// weak offer must support the offered capability being unavailable at any
+    /// point.
+    5: DependencyType dependency_type;
 };
 
 /// Declares a directory offered by a component to one of its children, which
@@ -91,6 +106,11 @@ table OfferDirectoryDecl {
 
     /// The subdirectory of this directory to offer instead of the root. Optional.
     6: string:fuchsia.component.MAX_PATH_LENGTH subdir;
+
+    /// The dependency type this offer represents. A component which recieves a
+    /// weak offer must support the offered capability being unavailable at any
+    /// point.
+    7: DependencyType dependency_type;
 };
 
 /// Declares a storage capability offered by a component to one of its children,

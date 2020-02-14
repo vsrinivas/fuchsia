@@ -104,7 +104,8 @@
                         "name": "modular"
                     }
                 },
-                "target_path": "/svc/fuchsia.logger.LegacyLog"
+                "target_path": "/svc/fuchsia.logger.LegacyLog",
+                "dependency_type": "strong"
             }
         },
         {

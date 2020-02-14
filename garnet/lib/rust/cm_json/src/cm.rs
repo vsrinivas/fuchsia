@@ -343,6 +343,16 @@ pub struct ExposeResolver {
     pub target_name: Name,
 }
 
+/// Offered dependency type. See ['OfferDecl'].
+///
+/// [`OfferDecl`]: ../../fidl_fuchsia_sys2/enum.OfferDecl.html
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum DependencyType {
+    Strong,
+    WeakForMigration,
+}
+
 /// Offered capability. See [`OfferDecl`].
 ///
 /// [`OfferDecl`]: ../../fidl_fuchsia_sys2/enum.OfferDecl.html
@@ -377,6 +387,8 @@ pub struct OfferProtocol {
     pub source_path: Path,
     pub target: Ref,
     pub target_path: Path,
+    /// Offered capability dependency_type
+    pub dependency_type: DependencyType,
 }
 
 /// Offered directory capability. See [`OfferDirectoryDecl`].
@@ -392,6 +404,7 @@ pub struct OfferDirectory {
     pub rights: Option<Rights>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub subdir: Option<RelativePath>,
+    pub dependency_type: DependencyType,
 }
 
 /// Offered storage capability. See [`OfferStorageDecl`].

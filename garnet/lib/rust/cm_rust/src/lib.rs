@@ -484,6 +484,7 @@ fidl_into_struct!(OfferProtocolDecl, OfferProtocolDecl, fsys::OfferProtocolDecl,
                       source_path: CapabilityPath,
                       target: OfferTarget,
                       target_path: CapabilityPath,
+                      dependency_type: DependencyType,
                   });
 fidl_into_struct!(OfferDirectoryDecl, OfferDirectoryDecl, fsys::OfferDirectoryDecl,
                   fsys::OfferDirectoryDecl,
@@ -494,6 +495,7 @@ fidl_into_struct!(OfferDirectoryDecl, OfferDirectoryDecl, fsys::OfferDirectoryDe
                       target_path: CapabilityPath,
                       rights: Option<fio2::Operations>,
                       subdir: Option<PathBuf>,
+                      dependency_type: DependencyType,
                   });
 fidl_into_struct!(OfferRunnerDecl, OfferRunnerDecl, fsys::OfferRunnerDecl,
                   fsys::OfferRunnerDecl,
@@ -702,6 +704,18 @@ impl FidlIntoNative<CapabilityName> for Option<String> {
 impl NativeIntoFidl<Option<String>> for CapabilityName {
     fn native_into_fidl(self) -> Option<String> {
         Some(self.to_string())
+    }
+}
+
+impl FidlIntoNative<bool> for Option<bool> {
+    fn fidl_into_native(self) -> bool {
+        self.unwrap()
+    }
+}
+
+impl NativeIntoFidl<Option<bool>> for bool {
+    fn native_into_fidl(self) -> Option<bool> {
+        Some(self)
     }
 }
 
@@ -961,6 +975,30 @@ pub struct ServiceSource<T> {
     pub source: T,
     /// The path at which the service is accessible.
     pub source_path: CapabilityPath,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum DependencyType {
+    Strong,
+    WeakForMigration,
+}
+
+impl FidlIntoNative<DependencyType> for Option<fsys::DependencyType> {
+    fn fidl_into_native(self) -> DependencyType {
+        match self.unwrap() {
+            fsys::DependencyType::Strong => DependencyType::Strong,
+            fsys::DependencyType::WeakForMigration => DependencyType::WeakForMigration,
+        }
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::DependencyType>> for DependencyType {
+    fn native_into_fidl(self) -> Option<fsys::DependencyType> {
+        Some(match self {
+            DependencyType::Strong => fsys::DependencyType::Strong,
+            DependencyType::WeakForMigration => fsys::DependencyType::WeakForMigration,
+        })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1485,6 +1523,7 @@ mod tests {
                           }
                        )),
                        target_path: Some("/svc/legacy_mynetstack".to_string()),
+                       dependency_type: Some(fsys::DependencyType::WeakForMigration),
                    }),
                    fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
@@ -1495,6 +1534,7 @@ mod tests {
                        target_path: Some("/data".to_string()),
                        rights: Some(fio2::Operations::Connect),
                        subdir: None,
+                       dependency_type: Some(fsys::DependencyType::Strong),
                    }),
                    fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                        type_: Some(fsys::StorageType::Cache),
@@ -1667,6 +1707,7 @@ mod tests {
                             source_path: "/svc/legacy_netstack".try_into().unwrap(),
                             target: OfferTarget::Child("echo".to_string()),
                             target_path: "/svc/legacy_mynetstack".try_into().unwrap(),
+                            dependency_type: DependencyType::WeakForMigration,
                         }),
                         OfferDecl::Directory(OfferDirectoryDecl {
                             source: OfferDirectorySource::Realm,
@@ -1675,6 +1716,7 @@ mod tests {
                             target_path: "/data".try_into().unwrap(),
                             rights: Some(fio2::Operations::Connect),
                             subdir: None,
+                            dependency_type: DependencyType::Strong,
                         }),
                         OfferDecl::Storage(OfferStorageDecl::Cache(
                             OfferStorage {

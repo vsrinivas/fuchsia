@@ -725,6 +725,9 @@ impl<'a> ValidationContext<'a> {
                     o.target.as_ref(),
                     o.target_path.as_ref(),
                 );
+                if o.dependency_type.is_none() {
+                    self.errors.push(Error::missing_field("OfferProtocolDecl", "dependency_type"));
+                }
             }
             fsys::OfferDecl::Directory(o) => {
                 self.validate_offers_fields(
@@ -735,6 +738,9 @@ impl<'a> ValidationContext<'a> {
                     o.target.as_ref(),
                     o.target_path.as_ref(),
                 );
+                if o.dependency_type.is_none() {
+                    self.errors.push(Error::missing_field("OfferDirectoryDecl", "dependency_type"));
+                }
                 match o.source.as_ref() {
                     Some(fsys::Ref::Self_(_)) => {
                         if o.rights.is_none() {
@@ -1206,8 +1212,8 @@ mod tests {
         super::*,
         fidl_fuchsia_io2 as fio2,
         fidl_fuchsia_sys2::{
-            ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability,
-            EnvironmentDecl, EnvironmentExtends, ExposeDecl, ExposeDirectoryDecl,
+            ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, DependencyType,
+            Durability, EnvironmentDecl, EnvironmentExtends, ExposeDecl, ExposeDirectoryDecl,
             ExposeProtocolDecl, ExposeRunnerDecl, ExposeServiceDecl, FrameworkRef, OfferDecl,
             OfferDirectoryDecl, OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl,
             OfferStorageDecl, RealmRef, Ref, RunnerDecl, SelfRef, StartupMode, StorageDecl,
@@ -2072,6 +2078,7 @@ mod tests {
                         source_path: None,
                         target: None,
                         target_path: None,
+                        dependency_type: None,
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: None,
@@ -2080,6 +2087,7 @@ mod tests {
                         target_path: None,
                         rights: None,
                         subdir: None,
+                        dependency_type: None,
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: None,
@@ -2104,10 +2112,12 @@ mod tests {
                 Error::missing_field("OfferProtocolDecl", "source_path"),
                 Error::missing_field("OfferProtocolDecl", "target"),
                 Error::missing_field("OfferProtocolDecl", "target_path"),
+                Error::missing_field("OfferProtocolDecl", "dependency_type"),
                 Error::missing_field("OfferDirectoryDecl", "source"),
                 Error::missing_field("OfferDirectoryDecl", "source_path"),
                 Error::missing_field("OfferDirectoryDecl", "target"),
                 Error::missing_field("OfferDirectoryDecl", "target_path"),
+                Error::missing_field("OfferDirectoryDecl", "dependency_type"),
                 Error::missing_field("OfferStorageDecl", "type"),
                 Error::missing_field("OfferStorageDecl", "source"),
                 Error::missing_field("OfferStorageDecl", "target"),
@@ -2158,6 +2168,7 @@ mod tests {
                            }
                         )),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
+                        dependency_type: Some(DependencyType::Strong),
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Self_(SelfRef {})),
@@ -2168,6 +2179,7 @@ mod tests {
                            }
                         )),
                         target_path: Some(format!("/{}", "b".repeat(1024))),
+                        dependency_type: Some(DependencyType::WeakForMigration),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2184,6 +2196,7 @@ mod tests {
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
+                        dependency_type: Some(DependencyType::Strong),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef {})),
@@ -2196,6 +2209,7 @@ mod tests {
                         target_path: Some(format!("/{}", "b".repeat(1024))),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
+                        dependency_type: Some(DependencyType::WeakForMigration),
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: Some(StorageType::Data),
@@ -2272,6 +2286,7 @@ mod tests {
                     target_path: Some("/data".to_string()),
                     rights: None,
                     subdir: None,
+                    dependency_type: Some(DependencyType::Strong),
                 })]);
                 decl
             },
@@ -2311,6 +2326,7 @@ mod tests {
                             }
                         )),
                         target_path: Some("/data/realm_assets".to_string()),
+                        dependency_type: Some(DependencyType::Strong),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2327,6 +2343,7 @@ mod tests {
                         target_path: Some("/data".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
+                        dependency_type: Some(DependencyType::WeakForMigration),
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: Some(StorageType::Data),
@@ -2394,6 +2411,7 @@ mod tests {
                             collection: None,
                         })),
                         target_path: Some("/".to_string()),
+                        dependency_type: Some(DependencyType::Strong),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2408,6 +2426,7 @@ mod tests {
                         target_path: Some("/".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: Some("/foo".to_string()),
+                        dependency_type: Some(DependencyType::Strong),
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2475,6 +2494,7 @@ mod tests {
                            }
                         )),
                         target_path: Some("/svc/legacy_logger".to_string()),
+                        dependency_type: Some(DependencyType::WeakForMigration),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2491,6 +2511,7 @@ mod tests {
                         target_path: Some("/data".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
+                        dependency_type: Some(DependencyType::Strong),
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2593,6 +2614,7 @@ mod tests {
                            }
                         )),
                         target_path: Some("/data/legacy_realm_assets".to_string()),
+                        dependency_type: Some(DependencyType::Strong),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Child(ChildRef {
@@ -2606,6 +2628,7 @@ mod tests {
                         target_path: Some("/data".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
+                        dependency_type: Some(DependencyType::WeakForMigration),
                     }),
                 ]);
                 decl.storage = Some(vec![
@@ -2676,6 +2699,7 @@ mod tests {
                         target_path: Some("/data".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
+                        dependency_type: Some(DependencyType::Strong),
                     }),
                     OfferDecl::Service(OfferServiceDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -2694,6 +2718,7 @@ mod tests {
                         target_path: Some("/data".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
+                        dependency_type: Some(DependencyType::WeakForMigration),
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -2767,6 +2792,7 @@ mod tests {
                            }
                         )),
                         target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
+                        dependency_type: Some(DependencyType::WeakForMigration),
                     }),
                     OfferDecl::Protocol(OfferProtocolDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -2775,6 +2801,7 @@ mod tests {
                            CollectionRef { name: "modular".to_string(), }
                         )),
                         target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
+                        dependency_type: Some(DependencyType::Strong),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -2788,6 +2815,7 @@ mod tests {
                         target_path: Some("/data".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
+                        dependency_type: Some(DependencyType::Strong),
                     }),
                     OfferDecl::Directory(OfferDirectoryDecl {
                         source: Some(Ref::Self_(SelfRef{})),
@@ -2798,6 +2826,7 @@ mod tests {
                         target_path: Some("/data".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: None,
+                        dependency_type: Some(DependencyType::WeakForMigration),
                     }),
                     OfferDecl::Storage(OfferStorageDecl {
                         type_: Some(StorageType::Data),

@@ -94,6 +94,15 @@ impl CmInto<fsys::Ref> for cm::ExposeTarget {
     }
 }
 
+impl CmInto<fsys::DependencyType> for cm::DependencyType {
+    fn cm_into(self) -> Result<fsys::DependencyType, Error> {
+        Ok(match self {
+            cm::DependencyType::Strong => fsys::DependencyType::Strong,
+            cm::DependencyType::WeakForMigration => fsys::DependencyType::WeakForMigration,
+        })
+    }
+}
+
 impl CmInto<fsys::OfferDecl> for cm::Offer {
     fn cm_into(self) -> Result<fsys::OfferDecl, Error> {
         Ok(match self {
@@ -221,6 +230,7 @@ impl CmInto<fsys::OfferProtocolDecl> for cm::OfferProtocol {
             source_path: Some(self.source_path.into()),
             target: Some(self.target.cm_into()?),
             target_path: Some(self.target_path.into()),
+            dependency_type: Some(self.dependency_type.cm_into()?),
         })
     }
 }
@@ -237,6 +247,7 @@ impl CmInto<fsys::OfferDirectoryDecl> for cm::OfferDirectory {
                 None => None,
             },
             subdir: self.subdir.map(|s| s.into()),
+            dependency_type: Some(self.dependency_type.cm_into()?),
         })
     }
 }
@@ -900,7 +911,8 @@ mod tests {
                                     "name": "logger"
                                 }
                             },
-                            "target_path": "/data/realm_assets"
+                            "target_path": "/data/realm_assets",
+                            "dependency_type": "strong"
                         },
                     },
                     {
@@ -916,7 +928,8 @@ mod tests {
                             },
                             "target_path": "/data/config",
                             "rights": ["connect"],
-                            "subdir": "fonts"
+                            "subdir": "fonts",
+                            "dependency_type": "weak_for_migration"
                         }
                     },
                     {
@@ -974,7 +987,8 @@ mod tests {
                                     "name": "logger"
                                 }
                             },
-                            "target_path": "/svc/fuchsia.netstack.LegacyNetstack"
+                            "target_path": "/svc/fuchsia.netstack.LegacyNetstack",
+                            "dependency_type": "strong"
                         }
                     },
                     {
@@ -990,7 +1004,8 @@ mod tests {
                                     "name": "modular"
                                 }
                             },
-                            "target_path": "/svc/fuchsia.logger.LegacySysLog"
+                            "target_path": "/svc/fuchsia.logger.LegacySysLog",
+                            "dependency_type": "weak_for_migration"
                         }
                     },
                     {
@@ -1106,6 +1121,7 @@ mod tests {
                         target_path: Some("/data/realm_assets".to_string()),
                         rights: None,
                         subdir: None,
+                        dependency_type: Some(fsys::DependencyType::Strong),
                     }),
                     fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
@@ -1118,6 +1134,7 @@ mod tests {
                         target_path: Some("/data/config".to_string()),
                         rights: Some(fio2::Operations::Connect),
                         subdir: Some("fonts".to_string()),
+                        dependency_type: Some(fsys::DependencyType::WeakForMigration),
                     }),
                     fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                         source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
@@ -1163,6 +1180,7 @@ mod tests {
                            }
                         )),
                         target_path: Some("/svc/fuchsia.netstack.LegacyNetstack".to_string()),
+                        dependency_type: Some(fsys::DependencyType::Strong),
                     }),
                     fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
                         source: Some(fsys::Ref::Child(fsys::ChildRef {
@@ -1176,6 +1194,7 @@ mod tests {
                            }
                         )),
                         target_path: Some("/svc/fuchsia.logger.LegacySysLog".to_string()),
+                        dependency_type: Some(fsys::DependencyType::WeakForMigration),
                     }),
                     fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                         type_: Some(fsys::StorageType::Data),

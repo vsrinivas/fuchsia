@@ -3,10 +3,10 @@ use cm_fidl_translator;
 use fidl_fuchsia_data as fd;
 use fidl_fuchsia_io2 as fio2;
 use fidl_fuchsia_sys2::{
-    ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, Durability, ExposeDecl,
-    ExposeDirectoryDecl, ExposeProtocolDecl, ExposeServiceDecl, FrameworkRef, OfferDecl,
-    OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl, RealmRef, Ref, RunnerDecl, SelfRef,
-    StartupMode, UseDecl, UseProtocolDecl, UseRunnerDecl, UseServiceDecl,
+    ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, DependencyType, Durability,
+    ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeServiceDecl, FrameworkRef,
+    OfferDecl, OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl, RealmRef, Ref, RunnerDecl,
+    SelfRef, StartupMode, UseDecl, UseProtocolDecl, UseRunnerDecl, UseServiceDecl,
 };
 use std::fs::File;
 use std::io::Read;
@@ -86,6 +86,7 @@ fn main() {
                 source_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
                 target: Some(Ref::Collection(CollectionRef { name: "modular".to_string() })),
                 target_path: Some("/svc/fuchsia.logger.LegacyLog".to_string()),
+                dependency_type: Some(DependencyType::Strong),
             }),
             OfferDecl::Runner(OfferRunnerDecl {
                 source: Some(Ref::Realm(RealmRef {})),
