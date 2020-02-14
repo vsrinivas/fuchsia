@@ -48,6 +48,7 @@ matches = "0.1.8"
 maybe-owned = "0.3.2"
 memchr = "2.0"
 nom = { version = "5.0.0", default-features = false, features = ["std", "regexp_macros"] }
+nom_locate = "2.0.0"
 numtoa = "0.1.0"
 num-derive = "0.2.4"
 num-traits= "0.2.5"
@@ -189,6 +190,7 @@ tokio = "0.1.22"
 backtrace-sys = { path = "tiny_mirrors/backtrace-sys" }
 cmake = { path = "tiny_mirrors/cmake"}
 fuchsia-cprng = { path = "../../garnet/public/rust/fuchsia-cprng" }
+nom_locate = { path = "tiny_mirrors/nom_locate" }
 pkg-config = { path = "tiny_mirrors/pkg-config" }
 rust-crypto = { path = "../rust-mirrors/rust-crypto" }
 servo-freetype-sys = { path = "tiny_mirrors/servo-freetype-sys" }

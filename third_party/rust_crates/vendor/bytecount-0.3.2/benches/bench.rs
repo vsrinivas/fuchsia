@@ -5,7 +5,7 @@ extern crate bytecount;
 
 use std::env;
 use std::time::Duration;
-use rand::RngCore;
+use rand::Rng;
 use criterion::{Bencher, Criterion, ParameterizedBenchmark};
 
 use bytecount::{
@@ -14,9 +14,7 @@ use bytecount::{
 };
 
 fn random_bytes(len: usize) -> Vec<u8> {
-    let mut result = vec![0; len];
-    rand::thread_rng().fill_bytes(&mut result);
-    result
+    rand::thread_rng().gen_iter::<u8>().take(len).collect::<Vec<_>>()
 }
 
 static COUNTS : &[usize] = &[0, 10, 20, 30, 40, 50, 60, 70, 80, 90,

@@ -8,12 +8,10 @@ use bytecount::{
     count, naive_count,
     num_chars, naive_num_chars,
 };
-use rand::RngCore;
+use rand::Rng;
 
 fn random_bytes(len: usize) -> Vec<u8> {
-    let mut result = vec![0; len];
-    rand::thread_rng().fill_bytes(&mut result);
-    result
+    rand::thread_rng().gen_iter::<u8>().take(len).collect::<Vec<_>>()
 }
 
 quickcheck! {

@@ -1,0 +1,28 @@
+[package]
+authors = ["Florent FAYOLLE <florent.fayolle69@gmail.com>", "Christopher Durham <cad97@cad97.com>", "Valentin Lorentz <progval+git@progval.net>"]
+categories = ["parsing"]
+description = "A special input type for nom to locate tokens"
+documentation = "https://docs.rs/nom_locate/"
+homepage = "https://github.com/fflorent/nom_locate"
+keywords = ["nom"]
+license = "MIT"
+name = "nom_locate"
+readme = "README.md"
+repository = "https://github.com/fflorent/nom_locate"
+version = "2.0.0"
+edition = "2018"
+
+[badges.travis-ci]
+repository = "fflorent/nom_locate"
+
+[features]
+default = ["std"]
+std = ["nom/std", "alloc"]
+alloc = ["nom/alloc"]
+generic-simd = ["bytecount/generic-simd"]
+runtime-dispatch-simd = ["bytecount/runtime-dispatch-simd"]
+
+[dependencies]
+bytecount = "^0.6"
+memchr = ">=1.0.1, <3.0.0" # ^1.0.0 + ^2.0
+nom = { version = "5.0.0", default-features = false }

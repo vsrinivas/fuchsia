@@ -1,0 +1,70 @@
+language: rust
+sudo: false
+cache: cargo
+dist: trusty
+
+addons:
+  apt:
+    packages:
+      - libcurl4-openssl-dev
+      - libelf-dev
+      - libdw-dev
+      - binutils-dev
+
+# load travis-cargo
+before_script:
+  - |
+      pip install 'travis-cargo<0.2' --user &&
+      export PATH=$HOME/.local/bin:$PATH
+
+script:
+  - |
+      cargo build --no-default-features --features="$FEATURES" &&
+      cargo test --no-default-features --features="$FEATURES" &&
+      travis-cargo --only stable doc
+
+# Inspired from geal/nom
+after_success:
+  - if [ "${TRAVIS_PULL_REQUEST_BRANCH:-$TRAVIS_BRANCH}" != "master" ] && [ "$TRAVIS_RUST_VERSION" == "nightly" ]; then
+      cargo install cargo-benchcmp --force;
+      cargo bench > benches-variable;
+      git fetch;
+      git checkout master;
+      cargo bench > benches-control;
+      cargo benchcmp benches-control benches-variable;
+    fi
+  - cargo coveralls --verbose;
+
+env:
+  global:
+    - TRAVIS_CARGO_NIGHTLY_FEATURE=""
+
+matrix:
+  include:
+    - rust: stable
+      env: FEATURES='default'
+    - rust: stable
+      env: FEATURES='alloc'
+    - rust: stable
+      env: FEATURES=''
+
+    - rust: beta
+      env: FEATURES='default'
+    - rust: beta
+      env: FEATURES='alloc'
+    - rust: beta
+      env: FEATURES=''
+
+    - rust: nightly
+      env: FEATURES='default'
+    - rust: nightly
+      env: FEATURES='alloc'
+    - rust: nightly
+      env: FEATURES=''
+
+  allow_failures:
+    - rust: stable
+      env: FEATURES='alloc'
+
+    - rust: beta
+      env: FEATURES='alloc'

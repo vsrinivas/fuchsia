@@ -251,6 +251,11 @@
             "package_name": "nom"
         },
         {
+            "crate_name": "nom_locate",
+            "crate_type": "lib",
+            "package_name": "nom_locate"
+        },
+        {
             "crate_name": "num",
             "crate_type": "lib",
             "package_name": "num"
@@ -841,6 +846,11 @@
             "crate_name": "nom",
             "crate_type": "lib",
             "package_name": "nom"
+        },
+        {
+            "crate_name": "nom_locate",
+            "crate_type": "lib",
+            "package_name": "nom_locate"
         },
         {
             "crate_name": "num",
