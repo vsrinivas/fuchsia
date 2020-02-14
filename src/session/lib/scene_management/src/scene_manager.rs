@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::graphics_utils::ImageResource, anyhow::Error, async_trait::async_trait,
-    fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
+    crate::display_metrics, crate::graphics_utils::ImageResource, anyhow::Error,
+    async_trait::async_trait, fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
     fidl_fuchsia_ui_scenic as ui_scenic, fuchsia_async as fasync, fuchsia_scenic as scenic,
     fuchsia_scenic, fuchsia_syslog as syslog, futures::future::TryFutureExt, futures::prelude::*,
     parking_lot::Mutex, std::sync::Weak,
@@ -36,7 +36,20 @@ pub trait SceneManager: Sized {
     async fn new(
         scenic: ui_scenic::ScenicProxy,
         display_pixel_density: Option<f32>,
-        viewing_distance: Option<f32>,
+        viewing_distance: Option<display_metrics::ViewingDistance>,
+    ) -> Result<Self, Error>;
+
+    /// Creates a new SceneManager, optionally rotating the display.
+    ///
+    /// Scenic currently requires the screen rotation be set at initialization time only.
+    ///
+    /// # Errors
+    /// Returns an error if a Scenic session could not be initialized, or the scene setup fails.
+    async fn new_with_display_adjustments(
+        scenic: ui_scenic::ScenicProxy,
+        display_pixel_density: Option<f32>,
+        viewing_distance: Option<display_metrics::ViewingDistance>,
+        display_rotation: Option<scenic::DisplayRotation>,
     ) -> Result<Self, Error>;
 
     /// Requests a view from the view provider and adds it to the scene.
@@ -56,6 +69,20 @@ pub trait SceneManager: Sized {
         view_provider: ui_app::ViewProviderProxy,
         name: Option<String>,
     ) -> Result<scenic::EntityNode, Error>;
+
+    /// Removes a node previously returned from add_view_to_scene().
+    ///
+    /// # Parameters
+    /// - `node`: The node to remove. Ownership is transferred to this function,
+    /// so the node cannot be removed twice.
+    ///
+    /// # Returns
+    /// Ok() if successful.
+    ///
+    /// # Errors
+    /// Returns an error if the node was not found in Scenic, likely because the node
+    /// was not created by add_view_to_scene.
+    async fn remove_view_from_scene(&mut self, node: scenic::EntityNode) -> Result<(), Error>;
 
     /// Requests the scenic session from the scene_manager.
     ///
