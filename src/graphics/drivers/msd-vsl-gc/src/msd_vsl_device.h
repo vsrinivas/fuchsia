@@ -58,12 +58,21 @@ class MsdVslDevice : public msd_device_t,
   }
 
  private:
+  static constexpr uint32_t kRingbufferSizeInPages = 1;
+  // Number of new commands added to the ringbuffer for each submitted batch: EVENT WAIT LINK.
+  static constexpr uint32_t kRbInstructionsPerBatch = 3;
+
+  static constexpr uint32_t kInvalidRingbufferOffset = ~0;
+
   // The hardware provides 30 bits for interrupt events and 2 bits for errors.
   static constexpr uint32_t kNumEvents = 30;
   struct Event {
     bool allocated = false;
     bool submitted = false;
     bool free_on_complete = false;
+
+    // The offset following this event in the ringbuffer.
+    uint32_t ringbuffer_offset = kInvalidRingbufferOffset;
     std::unique_ptr<MappedBatch> mapped_batch;
   };
 
@@ -160,6 +169,10 @@ class MsdVslDevice : public msd_device_t,
   std::unique_ptr<magma::PlatformThreadId> device_thread_id_;
   std::atomic_bool stop_device_thread_{false};
 
+  // Stores the largest seen sequence number in all completed events.
+  uint64_t max_completed_sequence_number_ = 0;
+  uint64_t next_sequence_number_ = 1;
+
   class BatchRequest;
   class InterruptRequest;
 
@@ -168,9 +181,7 @@ class MsdVslDevice : public msd_device_t,
   std::mutex device_request_mutex_;
   std::list<std::unique_ptr<DeviceRequest>> device_request_list_;
 
-  MAGMA_GUARDED(events_mutex_) Event events_[kNumEvents] = {};
-  // TODO(fxb/43235): this can be removed once we process events on the device thread.
-  std::mutex events_mutex_;
+  Event events_[kNumEvents] = {};
 
   friend class TestMsdVslDevice;
   friend class TestCommandBuffer;
@@ -178,9 +189,11 @@ class MsdVslDevice : public msd_device_t,
   friend class TestEvents;
   friend class TestEvents_AllocAndFree_Test;
   friend class TestEvents_Submit_Test;
-  friend class TestEvents_Write_Test;
+  friend class TestEvents_WriteSameEvent_Test;
+  friend class TestEvents_WriteUnorderedEventIds_Test;
   friend class MsdVslDeviceTest_FetchEngineDma_Test;
   friend class MsdVslDeviceTest_LoadAddressSpace_Test;
+  friend class MsdVslDeviceTest_RingbufferCanHoldMaxEvents_Test;
 };
 
 #endif  // MSD_VSL_DEVICE_H

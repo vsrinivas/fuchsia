@@ -9,6 +9,7 @@
 #include "helper/platform_device_helper.h"
 #include "magma_vendor_queries.h"
 #include "src/graphics/drivers/msd-vsl-gc/src/address_space.h"
+#include "src/graphics/drivers/msd-vsl-gc/src/instructions.h"
 #include "src/graphics/drivers/msd-vsl-gc/src/msd_vsl_device.h"
 
 // These tests are unit testing the functionality of MsdVslDevice.
@@ -211,4 +212,14 @@ TEST_F(MsdVslDeviceTest, Connections) {
   // Ok to create more now
   connection = device_->Open(0);
   EXPECT_NE(nullptr, connection);
+}
+
+TEST_F(MsdVslDeviceTest, RingbufferCanHoldMaxEvents) {
+  // The ringbuffer starts off with a WAIT-LINK instruction, so subtract this from the total space.
+  uint32_t wait_link_size = 2 * kInstructionDwords * sizeof(uint32_t);
+  uint32_t available_space =
+      (MsdVslDevice::kRingbufferSizeInPages * magma::page_size()) - wait_link_size;
+  uint32_t max_used_space =
+      MsdVslDevice::kRbInstructionsPerBatch * sizeof(uint64_t) * MsdVslDevice::kNumEvents;
+  ASSERT_GE(available_space, max_used_space);
 }

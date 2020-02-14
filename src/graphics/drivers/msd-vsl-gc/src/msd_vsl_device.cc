@@ -129,9 +129,7 @@ bool MsdVslDevice::Init(void* device_handle) {
   if (!page_table_arrays_)
     return DRETF(false, "failed to create page table arrays");
 
-  // TODO(fxb/43043): Implement and test ringbuffer wrapping.
-  const uint32_t kRingbufferSize = magma::page_size();
-  auto buffer = MsdVslBuffer::Create(kRingbufferSize, "ring-buffer");
+  auto buffer = MsdVslBuffer::Create(kRingbufferSizeInPages * magma::page_size(), "ring-buffer");
   buffer->platform_buffer()->SetCachePolicy(MAGMA_CACHE_POLICY_UNCACHED);
   ringbuffer_ = std::make_unique<Ringbuffer>(std::move(buffer), 0 /* start_offset */);
 
@@ -281,20 +279,45 @@ magma::Status MsdVslDevice::ProcessInterrupt() {
   if (bus_error) {
     DMESSAGE("Interrupt thread received bus error");
   }
+  // Though events complete in order, we may receive a single interrupt for multiple events
+  // simultaneously. We should update the ringbuffer head following the event with the
+  // highest sequence number.
+  uint32_t max_seq_num = 0;
+  uint32_t rb_new_head = kInvalidRingbufferOffset;
   // Check which bits are set and complete the corresponding event.
   for (unsigned int i = 0; i < kNumEvents; i++) {
     if (value & (1 << i)) {
+      const auto& batch = events_[i].mapped_batch;
+      // This should never be null as |WriteInterruptEvent| does not allow it.
+      // Ignore it in case it's a spurious interrupt.
+      if (!batch) {
+        DMESSAGE("Ignoring interrupt, event %u did not have an associated mapped batch", i);
+        continue;
+      }
+
+      if (batch->GetSequenceNumber() > max_seq_num) {
+        max_seq_num = batch->GetSequenceNumber();
+        rb_new_head = events_[i].ringbuffer_offset;
+      }
       if (!CompleteInterruptEvent(i)) {
         DMESSAGE("Failed to complete event %u", i);
       }
     }
+  }
+  if (max_seq_num) {
+    DASSERT(rb_new_head != kInvalidRingbufferOffset);
+    DASSERT(max_seq_num > max_completed_sequence_number_);
+    ringbuffer_->update_head(rb_new_head);
+    max_completed_sequence_number_ = max_seq_num;
+  } else {
+    DMESSAGE("Interrupt thread did not find any interrupt events");
   }
   interrupt_->Complete();
   return MAGMA_STATUS_OK;
 }
 
 bool MsdVslDevice::AllocInterruptEvent(bool free_on_complete, uint32_t* out_event_id) {
-  std::lock_guard<std::mutex> lock(events_mutex_);
+  CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
   for (uint32_t i = 0; i < kNumEvents; i++) {
     if (!events_[i].allocated) {
@@ -308,7 +331,7 @@ bool MsdVslDevice::AllocInterruptEvent(bool free_on_complete, uint32_t* out_even
 }
 
 bool MsdVslDevice::FreeInterruptEvent(uint32_t event_id) {
-  std::lock_guard<std::mutex> lock(events_mutex_);
+  CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
   if (event_id >= kNumEvents) {
     return DRETF(false, "Invalid event id %u", event_id);
@@ -323,7 +346,7 @@ bool MsdVslDevice::FreeInterruptEvent(uint32_t event_id) {
 // Writes an event into the end of the ringbuffer.
 bool MsdVslDevice::WriteInterruptEvent(uint32_t event_id,
                                        std::unique_ptr<MappedBatch> mapped_batch) {
-  std::lock_guard<std::mutex> lock(events_mutex_);
+  CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
   if (event_id >= kNumEvents) {
     return DRETF(false, "Invalid event id %u", event_id);
@@ -334,14 +357,20 @@ bool MsdVslDevice::WriteInterruptEvent(uint32_t event_id,
   if (events_[event_id].submitted) {
     return DRETF(false, "Event id %u was already submitted", event_id);
   }
+  if (!mapped_batch) {
+    return DRETF(false, "No mapped batch was provided");
+  }
   events_[event_id].submitted = true;
   events_[event_id].mapped_batch = std::move(mapped_batch);
   MiEvent::write(ringbuffer_.get(), event_id);
+
+  // Save the ringbuffer offset immediately after this event.
+  events_[event_id].ringbuffer_offset = ringbuffer_->tail();
   return true;
 }
 
 bool MsdVslDevice::CompleteInterruptEvent(uint32_t event_id) {
-  std::lock_guard<std::mutex> lock(events_mutex_);
+  CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
   if (event_id >= kNumEvents) {
     return DRETF(false, "Invalid event id %u", event_id);
@@ -624,8 +653,17 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
   uint32_t length = magma::round_up(mapped_batch->GetLength(), sizeof(uint64_t));
 
   // Number of new commands to be added to the ringbuffer - EVENT WAIT LINK.
-  const uint16_t kRbPrefetch = 3;
+  const uint16_t kRbPrefetch = kRbInstructionsPerBatch;
   uint32_t prev_wait_link = ringbuffer_->SubtractOffset(kWaitLinkDwords * sizeof(uint32_t));
+
+  // We need to write the new block of ringbuffer instructions contiguously.
+  // Since only 30 concurrent events are supported, it should not be possible to run out
+  // of space in the ringbuffer.
+  DASSERT(ringbuffer_->ReserveContiguous(kRbPrefetch * sizeof(uint64_t)));
+
+  // Calculate where to jump to after completion of the command buffer.
+  // This will point to EVENT WAIT LINK.
+  uint32_t rb_complete_addr = rb_gpu_addr + ringbuffer_->tail();
 
   if (mapped_batch->IsCommandBuffer()) {
     auto* command_buf = reinterpret_cast<CommandBuffer*>(mapped_batch.get());
@@ -633,15 +671,14 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
     uint32_t write_offset = command_buf->GetBatchBufferWriteOffset();
 
     // Write a LINK at the end of the command buffer that links back to the ringbuffer.
-    if (!WriteLinkCommand(buf, write_offset, length, kRbPrefetch,
-                          static_cast<uint32_t>(rb_gpu_addr + ringbuffer_->tail()))) {
+    if (!WriteLinkCommand(buf, write_offset, length, kRbPrefetch, rb_complete_addr)) {
       return DRETF(false, "Failed to write LINK from command buffer to ringbuffer");
     }
     // Increment the command buffer length to account for the LINK command size.
     length += (kInstructionDwords * sizeof(uint32_t));
   } else {
     // If there is no command buffer, we link directly to the new ringbuffer commands.
-    gpu_addr = rb_gpu_addr + ringbuffer_->tail();
+    gpu_addr = rb_complete_addr;
     length = kRbPrefetch * sizeof(uint64_t);
   }
 
@@ -650,7 +687,9 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
     return DRETF(false, "Can't submit length %u (prefetch 0x%x)", length, prefetch);
 
   // Write the new commands to the end of the ringbuffer.
+  // When adding new instructions, make sure to modify |kRbInstructionsPerBatch| accordingly.
   // Add an EVENT to the end to the ringbuffer.
+  uint32_t new_rb_instructions_start = ringbuffer_->tail();
   if (!WriteInterruptEvent(event_id, std::move(mapped_batch))) {
     return DRETF(false, "Failed to write interrupt event %u\n", event_id);
   }
@@ -658,6 +697,10 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
   if (!AddRingbufferWaitLink()) {
     return DRETF(false, "Failed to add WAIT-LINK to ringbuffer");
   }
+  // Verify the number of instructions we just wrote matches the prefetch value
+  // of the user buffer's LINK command.
+  DASSERT(new_rb_instructions_start ==
+          ringbuffer_->SubtractOffset(kRbInstructionsPerBatch * sizeof(uint64_t)));
 
   DLOG("Submitting buffer at gpu addr 0x%x", gpu_addr);
 
@@ -684,6 +727,11 @@ magma::Status MsdVslDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch) {
                     batch->GetBatchBufferId(), batch->IsCommandBuffer());
   }
   auto address_space = context->exec_address_space();
+
+  batch->SetSequenceNumber(next_sequence_number_);
+  next_sequence_number_++;
+  // TODO(fxb/43815): handle sequence number overflow.
+  DASSERT(next_sequence_number_ > batch->GetSequenceNumber());
 
   uint32_t event_id;
   if (!AllocInterruptEvent(true /* free_on_complete */, &event_id)) {

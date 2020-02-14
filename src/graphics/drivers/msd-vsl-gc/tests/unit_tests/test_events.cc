@@ -13,7 +13,7 @@ class TestEvents : public ::testing::Test {
   static constexpr uint32_t kAddressSpaceIndex = 1;
 
   void SetUp() override {
-    device_ = MsdVslDevice::Create(GetTestDeviceHandle(), true /* start_device_thread */);
+    device_ = MsdVslDevice::Create(GetTestDeviceHandle(), false /* start_device_thread */);
     EXPECT_NE(device_, nullptr);
 
     address_space_owner_ = std::make_unique<AddressSpaceOwner>(device_->GetBusMapper());
@@ -79,7 +79,30 @@ TEST_F(TestEvents, AllocAndFree) {
   ASSERT_FALSE(device_->CompleteInterruptEvent(0));  // Not yet allocated.
 }
 
-TEST_F(TestEvents, Write) {
+TEST_F(TestEvents, WriteSameEvent) {
+  // We need to load the address space as we are writing to the ringbuffer directly,
+  // rather than via SubmitCommandBuffer.
+  ASSERT_TRUE(device_->LoadInitialAddressSpace(address_space_, kAddressSpaceIndex));
+  ASSERT_TRUE(device_->StartRingbuffer(address_space_));
+
+  uint32_t event_id;
+  ASSERT_TRUE(device_->AllocInterruptEvent(false /* free_on_complete */, &event_id));
+
+  auto mapped_batch = std::make_unique<MockMappedBatch>(nullptr);
+  ASSERT_TRUE(device_->WriteInterruptEvent(event_id, std::move(mapped_batch)));
+
+  // Writing the event again should fail as it is still pending.
+  mapped_batch = std::make_unique<MockMappedBatch>(nullptr);
+  ASSERT_FALSE(device_->WriteInterruptEvent(event_id, std::move(mapped_batch)));
+
+  ASSERT_TRUE(device_->CompleteInterruptEvent(event_id));
+
+  // Now that the event completed, writing should succeed.
+  mapped_batch = std::make_unique<MockMappedBatch>(nullptr);
+  ASSERT_TRUE(device_->WriteInterruptEvent(event_id, std::move(mapped_batch)));
+}
+
+TEST_F(TestEvents, WriteUnorderedEventIds) {
   // We need to load the address space as we are writing to the ringbuffer directly,
   // rather than via SubmitCommandBuffer.
   ASSERT_TRUE(device_->LoadInitialAddressSpace(address_space_, kAddressSpaceIndex));
@@ -93,47 +116,45 @@ TEST_F(TestEvents, Write) {
   uint32_t event_ids[MsdVslDevice::kNumEvents] = {};
   std::unique_ptr<magma::PlatformSemaphore> semaphores[MsdVslDevice::kNumEvents] = {};
   for (unsigned int i = 0; i < MsdVslDevice::kNumEvents; i++) {
-    ASSERT_TRUE(device_->AllocInterruptEvent(false /* free_on_complete */, &event_ids[i]));
+    ASSERT_TRUE(device_->AllocInterruptEvent(true /* free_on_complete */, &event_ids[i]));
     auto semaphore = magma::PlatformSemaphore::Create();
     ASSERT_NE(semaphore, nullptr);
     semaphores[i] = std::move(semaphore);
   }
 
-  for (unsigned int i = 0; i < 2; i++) {
-    uint32_t prev_wait_link = ringbuffer->SubtractOffset(kWaitLinkDwords * sizeof(uint32_t));
-    // We will link to the end of the ringbuffer, where we are adding new events.
-    uint32_t rb_link_addr = rb_gpu_addr + ringbuffer->tail();
+  uint32_t prev_wait_link = ringbuffer->SubtractOffset(kWaitLinkDwords * sizeof(uint32_t));
+  // We will link to the end of the ringbuffer, where we are adding new events.
+  uint32_t rb_link_addr = rb_gpu_addr + ringbuffer->tail();
 
-    for (unsigned int j = 0; j < MsdVslDevice::kNumEvents; j++) {
-      auto copy = semaphores[j]->Clone();
-      ASSERT_NE(copy, nullptr);
-      auto mapped_batch = std::make_unique<MockMappedBatch>(std::move(copy));
-      ASSERT_TRUE(device_->WriteInterruptEvent(event_ids[j], std::move(mapped_batch)));
-      // Should not be able to submit the same event while it is still pending.
-      ASSERT_FALSE(device_->WriteInterruptEvent(event_ids[j], nullptr));
-    }
-
-    ASSERT_TRUE(device_->AddRingbufferWaitLink());
-
-    // Link the ringbuffer to the newly written events.
-    uint32_t num_new_rb_instructions = MsdVslDevice::kNumEvents + 2;  // Add 2 for WAIT-LINK.
-    device_->LinkRingbuffer(prev_wait_link, rb_link_addr, num_new_rb_instructions /* prefetch */);
-
-    constexpr uint64_t kTimeoutMs = 5000;
-    for (unsigned int j = 0; j < MsdVslDevice::kNumEvents; j++) {
-      ASSERT_EQ(MAGMA_STATUS_OK, semaphores[j]->Wait(kTimeoutMs).get());
-    }
+  // Write event ids in reverse order, so we can test when it does not match batch sequence order.
+  for (unsigned i = MsdVslDevice::kNumEvents; i-- > 0; ) {
+    auto copy = semaphores[i]->Clone();
+    ASSERT_NE(copy, nullptr);
+    auto mapped_batch = std::make_unique<MockMappedBatch>(std::move(copy));
+    ASSERT_TRUE(device_->WriteInterruptEvent(event_ids[i], std::move(mapped_batch)));
   }
 
-  for (unsigned int i = 0; i < MsdVslDevice::kNumEvents; i++) {
-    ASSERT_TRUE(device_->FreeInterruptEvent(event_ids[i]));
+  ASSERT_TRUE(device_->AddRingbufferWaitLink());
+
+  // Link the ringbuffer to the newly written events.
+  uint32_t num_new_rb_instructions = MsdVslDevice::kNumEvents + 2;  // Add 2 for WAIT-LINK.
+  device_->LinkRingbuffer(prev_wait_link, rb_link_addr, num_new_rb_instructions /* prefetch */);
+
+  device_->StartDeviceThread();
+
+  constexpr uint64_t kTimeoutMs = 5000;
+  for (unsigned int j = 0; j < MsdVslDevice::kNumEvents; j++) {
+    ASSERT_EQ(MAGMA_STATUS_OK, semaphores[j]->Wait(kTimeoutMs).get());
   }
 
   StopRingbuffer();
 }
 
 TEST_F(TestEvents, Submit) {
-  for (int i = 0; i < 50; i++) {
+  device_->StartDeviceThread();
+
+  // Each EVENT WAIT LINK takes 24 bytes, so this should test the ringbuffer wrapping ~5 times.
+  for (int i = 0; i < 1000; i++) {
     auto semaphore = magma::PlatformSemaphore::Create();
     ASSERT_NE(semaphore, nullptr);
 
