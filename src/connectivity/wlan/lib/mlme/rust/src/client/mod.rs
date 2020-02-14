@@ -70,7 +70,9 @@ pub enum TimedEvent {
     Associating,
     ChannelScheduler,
     ScannerProbeDelay(banjo_wlan_info::WlanChannel),
-    LostBssCountdown,
+    /// Association status update includes checking for auto deauthentication due to beacon loss
+    /// and report signal strength
+    AssociationStatusCheck,
 }
 
 /// ClientConfig affects time duration used for different timeouts.
@@ -170,17 +172,13 @@ impl ClientMlme {
         }
 
         if let Some(sta) = self.sta.as_mut() {
-            let body_4byte_aligned = rx_info.map_or(false, |ri| {
-                (ri.rx_flags & banjo_wlan_mac::WlanRxInfoFlags::FRAME_BODY_PADDING_4.0) != 0
-            });
-
             sta.bind(
                 &mut self.ctx,
                 &mut self.scanner,
                 &mut self.chan_sched,
                 &mut self.channel_state,
             )
-            .on_mac_frame(frame, body_4byte_aligned)
+            .on_mac_frame(frame, rx_info)
         }
     }
 
@@ -860,10 +858,13 @@ impl<'a> BoundClient<'a> {
     }
 
     /// Called when an arbitrary frame was received over the air.
-    pub fn on_mac_frame<B: ByteSlice>(&mut self, bytes: B, body_aligned: bool) {
+    pub fn on_mac_frame<B: ByteSlice>(
+        &mut self,
+        bytes: B,
+        rx_info: Option<banjo_wlan_mac::WlanRxInfo>,
+    ) {
         // Safe: |state| is never None and always replaced with Some(..).
-        self.sta.state =
-            Some(self.sta.state.take().unwrap().on_mac_frame(self, bytes, body_aligned));
+        self.sta.state = Some(self.sta.state.take().unwrap().on_mac_frame(self, bytes, rx_info));
     }
 
     pub fn on_eth_frame<B: ByteSlice>(&mut self, frame: B) -> Result<(), Error> {
@@ -1026,15 +1027,12 @@ impl<'a> BoundClient<'a> {
 #[cfg(test)]
 mod tests {
     use {
-        super::{
-            state::{
-                ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT, DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT,
-            },
-            *,
-        },
+        super::{state::DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT, *},
         crate::{buffer::FakeBufferProvider, client::lost_bss::LostBssCounter, device::FakeDevice},
         fidl_fuchsia_wlan_common as fidl_common,
-        wlan_common::{assert_variant, ie, test_utils::fake_frames::*, TimeUnit},
+        wlan_common::{
+            assert_variant, ie, stats::SignalStrengthAverage, test_utils::fake_frames::*, TimeUnit,
+        },
     };
     const BSSID: Bssid = Bssid([6u8; 6]);
     const IFACE_MAC: MacAddr = [7u8; 6];
@@ -1157,6 +1155,7 @@ mod tests {
                         DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT,
                     ),
                     status_check_timeout,
+                    signal_strength_average: SignalStrengthAverage::new(),
                 })));
             self.sta.state.replace(state);
         }
@@ -1321,6 +1320,19 @@ mod tests {
         ][..]);
     }
 
+    // Auto-deauth is tied to singal report by AssociationStatusCheck timeout
+    fn advance_auto_deauth(m: &mut MockObjects, me: &mut ClientMlme, beacon_count: u32) {
+        for _ in 0..beacon_count / super::state::ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT {
+            let (id, deadline) = assert_variant!(m.fake_scheduler.next_event(), Some(ev) => ev);
+            m.fake_scheduler.set_time(deadline);
+            me.handle_timed_event(id);
+            assert_eq!(m.fake_device.wlan_queue.len(), 0);
+            m.fake_device
+                .next_mlme_msg::<fidl_mlme::SignalReportIndication>()
+                .expect("error reading SignalReport.indication");
+        }
+    }
+
     #[test]
     fn test_auto_deauth_uninterrupted_interval() {
         let mut m = MockObjects::new();
@@ -1331,14 +1343,7 @@ mod tests {
         client.move_to_associated_state();
 
         // Verify timer is scheduled and move the time to immediately before auto deauth is triggered.
-        for _ in
-            0..DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT / ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT
-        {
-            let (id, deadline) = assert_variant!(m.fake_scheduler.next_event(), Some(ev) => ev);
-            m.fake_scheduler.set_time(deadline);
-            me.handle_timed_event(id);
-            assert_eq!(m.fake_device.wlan_queue.len(), 0);
-        }
+        advance_auto_deauth(&mut m, &mut me, DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT);
 
         // One more timeout to trigger the auto deauth
         let (id, deadline) = assert_variant!(m.fake_scheduler.next_event(), Some(ev) => ev);
@@ -1346,6 +1351,9 @@ mod tests {
         // Verify that triggering event at deadline causes deauth
         m.fake_scheduler.set_time(deadline);
         me.handle_timed_event(id);
+        m.fake_device
+            .next_mlme_msg::<fidl_mlme::SignalReportIndication>()
+            .expect("error reading SignalReport.indication");
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
         assert_eq!(&m.fake_device.wlan_queue[0].0[..], &[
@@ -1358,12 +1366,12 @@ mod tests {
             0x10, 0, // Sequence Control
             3, 0, // reason code
         ][..]);
-        let eapol_ind = m
+        let deauth_ind = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::DeauthenticateIndication>()
             .expect("error reading DEAUTHENTICATE.indication");
         assert_eq!(
-            eapol_ind,
+            deauth_ind,
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: BSSID.0,
                 reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
@@ -1381,28 +1389,14 @@ mod tests {
         client.move_to_associated_state();
 
         // Move the countdown to just about to cause auto deauth.
-        for _ in
-            0..DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT / ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT
-        {
-            let (id, deadline) = assert_variant!(m.fake_scheduler.next_event(), Some(ev) => ev);
-            m.fake_scheduler.set_time(deadline);
-            me.handle_timed_event(id);
-            assert_eq!(m.fake_device.wlan_queue.len(), 0);
-        }
+        advance_auto_deauth(&mut m, &mut me, DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT);
 
         // Receive beacon midway, so lost bss countdown is reset.
         // If this beacon is not received, the next timeout will trigger auto deauth.
         me.on_mac_frame(BEACON_FRAME, None);
 
         // Verify auto deauth is not triggered for the entire duration.
-        for _ in
-            0..DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT / ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT
-        {
-            let (id, deadline) = assert_variant!(m.fake_scheduler.next_event(), Some(ev) => ev);
-            m.fake_scheduler.set_time(deadline);
-            me.handle_timed_event(id);
-            assert_eq!(m.fake_device.wlan_queue.len(), 0);
-        }
+        advance_auto_deauth(&mut m, &mut me, DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT);
 
         // Verify more timer is scheduled
         let (id2, deadline2) = assert_variant!(m.fake_scheduler.next_event(), Some(ev) => ev);
@@ -1410,6 +1404,9 @@ mod tests {
         // Verify that triggering event at new deadline causes deauth
         m.fake_scheduler.set_time(deadline2);
         me.handle_timed_event(id2);
+        m.fake_device
+            .next_mlme_msg::<fidl_mlme::SignalReportIndication>()
+            .expect("error reading SignalReport.indication");
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
         assert_eq!(&m.fake_device.wlan_queue[0].0[..], &[
@@ -1422,12 +1419,12 @@ mod tests {
             0x10, 0, // Sequence Control
             3, 0, // reason code
         ][..]);
-        let eapol_ind = m
+        let deauth_ind = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::DeauthenticateIndication>()
             .expect("error reading DEAUTHENTICATE.indication");
         assert_eq!(
-            eapol_ind,
+            deauth_ind,
             fidl_mlme::DeauthenticateIndication {
                 peer_sta_address: BSSID.0,
                 reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,

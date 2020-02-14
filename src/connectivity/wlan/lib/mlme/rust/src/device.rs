@@ -711,12 +711,12 @@ mod tests {
         dev.enable_beaconing(OutBuf::from(in_buf, 4), 1, TimeUnit(2))
             .expect("error enabling beaconing");
         assert_variant!(
-            fake_device.bcn_cfg.as_ref(),
-            Some((buf, tim_ele_offset, beacon_interval)) => {
-                assert_eq!(&buf[..], &[1, 2, 3, 4][..]);
-                assert_eq!(*tim_ele_offset, 1);
-                assert_eq!(*beacon_interval, TimeUnit(2));
-            });
+        fake_device.bcn_cfg.as_ref(),
+        Some((buf, tim_ele_offset, beacon_interval)) => {
+            assert_eq!(&buf[..], &[1, 2, 3, 4][..]);
+            assert_eq!(*tim_ele_offset, 1);
+            assert_eq!(*beacon_interval, TimeUnit(2));
+        });
         dev.disable_beaconing().expect("error disabling beaconing");
         assert_variant!(fake_device.bcn_cfg.as_ref(), None);
     }

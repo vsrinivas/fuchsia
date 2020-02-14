@@ -3,10 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
-#include <lib/timekeeper/clock.h>
 
 #include <gtest/gtest.h>
-#include <wlan/common/buffer_writer.h>
 #include <wlan/common/element_splitter.h>
 #include <wlan/common/write_element.h>
 #include <wlan/mlme/ap/tim.h>
@@ -134,11 +132,14 @@ struct ClientTest : public ::testing::Test {
   }
 
   // Auto deauthentication is checked when association status check timeout fires so this is to
-  // mirror the behavior in MLME.
+  // mirror the behavior in MLME. The same timeout also triggers SignalRepport.
   void AdvanceAutoDeauthenticationTimerByBeaconPeriods(size_t periods) {
     for (size_t i = 0; i < periods / kAssociationStatusBeaconCount; i++) {
       IncreaseTimeByBeaconPeriods(kAssociationStatusBeaconCount);
       TriggerTimeout();
+      if (client.OnChannel()) {
+        device.AssertNextMsgFromSmeChannel<wlan_mlme::SignalReportIndication>();
+      }
     }
   }
 

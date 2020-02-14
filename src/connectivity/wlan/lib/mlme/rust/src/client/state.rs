@@ -16,13 +16,16 @@ use {
         key::KeyConfig,
         timer::*,
     },
-    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    banjo_ddk_protocol_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fuchsia_zircon as zx,
     log::{error, info, warn},
     static_assertions::assert_eq_size,
     std::convert::TryInto,
     wlan_common::{
+        energy::DecibelMilliWatt,
         ie,
         mac::{self, MacAddr, PowerState},
+        stats::SignalStrengthAverage,
         tim,
         time::TimeUnit,
     },
@@ -249,6 +252,7 @@ impl Associating {
                     qos: Qos::PendingNegotiation,
                     lost_bss_counter,
                     status_check_timeout,
+                    signal_strength_average: SignalStrengthAverage::new(),
                 })
             }
             status_code => {
@@ -347,7 +351,7 @@ pub fn schedule_association_status_timeout(
         + zx::Duration::from(TimeUnit(beacon_period)) * ASSOCIATION_STATUS_TIMEOUT_BEACON_COUNT;
     StatusCheckTimeout {
         last_fired,
-        next_id: timer.schedule_event(deadline, TimedEvent::LostBssCountdown),
+        next_id: timer.schedule_event(deadline, TimedEvent::AssociationStatusCheck),
     }
 }
 
@@ -406,6 +410,7 @@ pub struct Association {
     /// It will be cancelled when the client go off-channel for scanning and scheduled again when
     /// back on channel.
     pub status_check_timeout: StatusCheckTimeout,
+    pub signal_strength_average: SignalStrengthAverage,
 }
 
 /// Client received a "successful" association response from the BSS.
@@ -453,9 +458,16 @@ impl Associated {
         }
     }
 
+    fn extract_and_record_signal_dbm(&mut self, rx_info: Option<banjo_wlan_mac::WlanRxInfo>) {
+        let rssi_dbm = match rx_info.and_then(|rx_info| ddk::get_rssi_dbm(rx_info)) {
+            Some(dbm) => dbm,
+            None => return,
+        };
+        self.0.signal_strength_average.add(DecibelMilliWatt(rssi_dbm));
+    }
+
     /// Process and inbound beacon frame.
     /// Resets LostBssCounter, check buffered frame if available.
-    /// TODO(eyw): Record rssi_dbm.
     fn on_beacon_frame<B: ByteSlice>(&mut self, sta: &mut BoundClient<'_>, elements: B) {
         self.0.lost_bss_counter.reset();
         for (id, body) in ie::Reader::new(elements) {
@@ -631,8 +643,19 @@ impl Associated {
     }
 
     #[must_use]
+    /// Reports average signal strength to SME and check if auto deauthentication is due.
     /// Returns true if there auto deauthentication is triggered by lack of beacon frames.
     fn on_timeout(&mut self, sta: &mut BoundClient<'_>) -> bool {
+        // timeout should have been cancelled at this point, this is almost always a no-op.
+        sta.ctx.timer.cancel_event(self.0.status_check_timeout.next_id);
+        if let Err(e) = sta.ctx.device.access_sme_sender(|sender| {
+            sender.send_signal_report(&mut fidl_mlme::SignalReportIndication {
+                rssi_dbm: self.0.signal_strength_average.avg_dbm().0,
+            })
+        }) {
+            error!("Error sending MLME-SignalReport: {}", e)
+        }
+
         let auto_deauth = self.0.lost_bss_counter.should_deauthenticate();
         if auto_deauth {
             sta.send_deauthenticate_ind(fidl_mlme::ReasonCode::LeavingNetworkDeauth);
@@ -690,7 +713,6 @@ statemachine!(
     // Disassociation:
     Associating => Authenticated,
     Associated => Authenticated,
-
 );
 
 impl States {
@@ -704,15 +726,20 @@ impl States {
     /// - frames are corrupted (too short)
     /// - frames' frame class is not yet permitted
     pub fn on_mac_frame<B: ByteSlice>(
-        self,
+        mut self,
         sta: &mut BoundClient<'_>,
         bytes: B,
-        body_aligned: bool,
+        rx_info: Option<banjo_wlan_mac::WlanRxInfo>,
     ) -> States {
         // For now, silently drop all frames when we are off channel.
         if !sta.is_on_channel() {
             return self;
         }
+
+        let body_aligned = rx_info.map_or(false, |ri| {
+            (ri.rx_flags & banjo_wlan_mac::WlanRxInfoFlags::FRAME_BODY_PADDING_4.0) != 0
+        });
+
         // Parse mac frame. Drop corrupted ones.
         let mac_frame = match mac::MacFrame::parse(bytes, body_aligned) {
             Some(mac_frame) => mac_frame,
@@ -726,7 +753,9 @@ impl States {
         }
 
         match mac_frame {
-            mac::MacFrame::Mgmt { mgmt_hdr, body, .. } => self.on_mgmt_frame(sta, &mgmt_hdr, body),
+            mac::MacFrame::Mgmt { mgmt_hdr, body, .. } => {
+                self.on_mgmt_frame(sta, &mgmt_hdr, body, rx_info)
+            }
             mac::MacFrame::Data { fixed_fields, addr4, qos_ctrl, body, .. } => {
                 // Drop frames from foreign BSS.
                 match mac::data_bssid(&fixed_fields) {
@@ -734,7 +763,7 @@ impl States {
                     _ => return self,
                 };
 
-                if let States::Associated(state) = &self {
+                if let States::Associated(state) = &mut self {
                     state.on_data_frame(
                         sta,
                         &fixed_fields,
@@ -742,6 +771,7 @@ impl States {
                         qos_ctrl.map(|x| x.get()),
                         body,
                     );
+                    state.extract_and_record_signal_dbm(rx_info);
                 }
 
                 // Drop data frames in all other states
@@ -759,6 +789,7 @@ impl States {
         sta: &mut BoundClient<'_>,
         mgmt_hdr: &mac::MgmtHdr,
         body: B,
+        rx_info: Option<banjo_wlan_mac::WlanRxInfo>,
     ) -> States {
         if mgmt_hdr.addr3 != sta.sta.bssid.0 {
             return self;
@@ -811,6 +842,7 @@ impl States {
                 _ => state.into(),
             },
             States::Associated(mut state) => {
+                state.extract_and_record_signal_dbm(rx_info);
                 state.on_any_mgmt_frame(sta, mgmt_hdr);
                 match mgmt_body {
                     mac::MgmtBody::Beacon { bcn_hdr: _, elements } => {
@@ -873,21 +905,25 @@ impl States {
                     self
                 }
             },
-            TimedEvent::LostBssCountdown => match self {
-                States::Associated(mut state) => {
-                    let should_auto_deauth = state.on_timeout(sta);
-                    match should_auto_deauth {
-                        true => state.transition_to(Joined).into(),
-                        false => state.into(),
+            TimedEvent::AssociationStatusCheck => {
+                match self {
+                    States::Associated(mut state) => {
+                        let should_auto_deauth = state.on_timeout(sta);
+                        match should_auto_deauth {
+                            true => state.transition_to(Joined).into(),
+                            false => state.into(),
+                        }
+                    }
+                    _ => {
+                        error!("received association status update timeout in unexpected state; ignoring");
+                        self
                     }
                 }
-                _ => {
-                    error!("received auto deauthentication timeout in unexpected state; ignoring");
-                    self
-                }
-            },
-
-            _ => self,
+            }
+            event => {
+                error!("unsupported event, {:?}, this should NOT happen", event);
+                self
+            }
         }
     }
 
@@ -1133,6 +1169,7 @@ mod tests {
             ),
             qos: Qos::Disabled,
             status_check_timeout,
+            signal_strength_average: SignalStrengthAverage::new(),
         }
     }
 
@@ -1920,7 +1957,7 @@ mod tests {
             0x10, 0, // Sequence Control
             // Omit IEs
         ];
-        state.on_mac_frame(&mut sta, &beacon[..], false);
+        state.on_mac_frame(&mut sta, &beacon[..], None);
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
     }
 
@@ -1958,7 +1995,7 @@ mod tests {
             // Trailing bytes
             11, 11, 11,
         ];
-        state.on_mac_frame(&mut sta, &bytes[..], false);
+        state.on_mac_frame(&mut sta, &bytes[..], None);
         assert_eq!(m.fake_device.eth_queue.len(), 0);
     }
 
@@ -2010,7 +2047,7 @@ mod tests {
             2, 0, // Txn Sequence Number
             0, 0, // Status Code
         ];
-        state = state.on_mac_frame(&mut sta, &auth_resp_success[..], false);
+        state = state.on_mac_frame(&mut sta, &auth_resp_success[..], None);
         assert_variant!(state, States::Authenticated(_), "not in auth'ed state");
     }
 
@@ -2039,7 +2076,7 @@ mod tests {
             2, 0, // Txn Sequence Number
             42, 0, // Status Code
         ];
-        state = state.on_mac_frame(&mut sta, &auth_resp_failure[..], false);
+        state = state.on_mac_frame(&mut sta, &auth_resp_failure[..], None);
         assert_variant!(state, States::Joined(_), "not in joined state");
     }
 
@@ -2095,7 +2132,7 @@ mod tests {
             // Deauth Header:
             5, 0, // Algorithm Number (Open)
         ];
-        state = state.on_mac_frame(&mut sta, &deauth[..], false);
+        state = state.on_mac_frame(&mut sta, &deauth[..], None);
         assert_variant!(state, States::Joined(_), "not in joined state");
     }
 
@@ -2120,7 +2157,7 @@ mod tests {
             // Deauth Header:
             5, 0, // Algorithm Number (Open)
         ];
-        state = state.on_mac_frame(&mut sta, &deauth[..], false);
+        state = state.on_mac_frame(&mut sta, &deauth[..], None);
         assert_variant!(state, States::Joined(_), "not in joined state");
     }
 
@@ -2149,7 +2186,7 @@ mod tests {
             2, 0, // Txn Sequence Number
             0, 0, // Status Code
         ];
-        state = state.on_mac_frame(&mut sta, &auth_resp_success[..], false);
+        state = state.on_mac_frame(&mut sta, &auth_resp_success[..], None);
         assert_variant!(state, States::Authenticating(_), "not in auth'ing state");
 
         // Verify that an authentication response from the joined BSS still moves the Client
@@ -2168,7 +2205,7 @@ mod tests {
             2, 0, // Txn Sequence Number
             0, 0, // Status Code
         ];
-        state = state.on_mac_frame(&mut sta, &auth_resp_success[..], false);
+        state = state.on_mac_frame(&mut sta, &auth_resp_success[..], None);
         assert_variant!(state, States::Authenticated(_), "not in auth'ed state");
     }
 
@@ -2197,7 +2234,7 @@ mod tests {
             0, 0, // Status Code
             0, 0, // AID
         ];
-        state = state.on_mac_frame(&mut sta, &assoc_resp_success[..], false);
+        state = state.on_mac_frame(&mut sta, &assoc_resp_success[..], None);
         assert_variant!(state, States::Associated(_), "not in associated state");
     }
 
@@ -2226,7 +2263,7 @@ mod tests {
             2, 0, // Status Code (Failed)
             0, 0, // AID
         ];
-        state = state.on_mac_frame(&mut sta, &assoc_resp_success[..], false);
+        state = state.on_mac_frame(&mut sta, &assoc_resp_success[..], None);
         assert_variant!(state, States::Authenticated(_), "not in authenticated state");
     }
 
@@ -2275,7 +2312,7 @@ mod tests {
             // Deauth Header:
             4, 0, // Reason Code
         ];
-        state = state.on_mac_frame(&mut sta, &deauth[..], false);
+        state = state.on_mac_frame(&mut sta, &deauth[..], None);
         assert_variant!(state, States::Joined(_), "not in joined state");
     }
 
@@ -2301,7 +2338,7 @@ mod tests {
             // Deauth Header:
             4, 0, // Reason Code
         ];
-        state = state.on_mac_frame(&mut sta, &disassoc[..], false);
+        state = state.on_mac_frame(&mut sta, &disassoc[..], None);
         assert_variant!(state, States::Authenticated(_), "not in authenticated state");
     }
 
@@ -2327,7 +2364,7 @@ mod tests {
             // Deauth Header:
             4, 0, // Reason Code
         ];
-        state = state.on_mac_frame(&mut sta, &deauth[..], false);
+        state = state.on_mac_frame(&mut sta, &deauth[..], None);
         assert_variant!(state, States::Joined(_), "not in joined state");
     }
 
@@ -2917,7 +2954,7 @@ mod tests {
             5, 4, 0, 0, 0, 0b00000010, // Tim IE: bit 1 in the last octet indicates AID 1
         ];
 
-        state.on_mac_frame(&mut sta, &beacon[..], false);
+        state.on_mac_frame(&mut sta, &beacon[..], None);
 
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         assert_eq!(
@@ -2956,8 +2993,80 @@ mod tests {
             33, 0, // Capabilities
             5, 4, 0, 0, 0, 0, // Tim IE: No buffered frame for any client.
         ];
-        state.on_mac_frame(&mut sta, &beacon[..], false);
+        state.on_mac_frame(&mut sta, &beacon[..], None);
 
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
+    }
+
+    fn rx_info_with_dbm(rssi_dbm: i8) -> banjo_wlan_mac::WlanRxInfo {
+        banjo_wlan_mac::WlanRxInfo {
+            rx_flags: 0,
+            valid_fields: banjo_wlan_info::WlanRxInfoValid::RSSI.0,
+            phy: 0,
+            data_rate: 0,
+            chan: banjo_wlan_info::WlanChannel {
+                primary: 0,
+                cbw: banjo_wlan_info::WlanChannelBandwidth::_20,
+                secondary80: 0,
+            },
+            mcs: 0,
+            rssi_dbm,
+            rcpi_dbmh: 0,
+            snr_dbh: 0,
+        }
+    }
+
+    #[test]
+    fn signal_report() {
+        let mut m = MockObjects::new();
+        let mut ctx = m.make_ctx();
+        let mut sta = make_protected_client_station();
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+
+        let state = States::from(State::from(statemachine::testing::new_state(Associated(
+            empty_association(&mut sta),
+        ))));
+
+        let (id, _dealine) =
+            m.fake_scheduler.next_event().expect("should see a signal report timeout");
+        let event = sta.ctx.timer.triggered(&id).expect("event id should exist");
+        let state = state.on_timed_event(&mut sta, event);
+
+        let signal_ind = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::SignalReportIndication>()
+            .expect("should see a signal report");
+
+        // -128 is the default value, equivalent to 0 watt.
+        assert_eq!(signal_ind.rssi_dbm, -128);
+
+        let beacon = [
+            // Mgmt header
+            0b10000000, 0, // Frame Control
+            0, 0, // Duration
+            6, 6, 6, 6, 6, 6, // Addr1
+            7, 7, 7, 7, 7, 7, // Addr2
+            6, 6, 6, 6, 6, 6, // Addr3
+            0, 0, // Sequence Control
+            // Beacon header:
+            0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+            10, 0, // Beacon interval
+            33, 0, // Capabilities
+        ];
+
+        const EXPECTED_DBM: i8 = -32;
+        let state = state.on_mac_frame(&mut sta, &beacon[..], Some(rx_info_with_dbm(EXPECTED_DBM)));
+
+        let (id, _dealine) =
+            m.fake_scheduler.next_event().expect("should see a signal report timeout");
+        let event = sta.ctx.timer.triggered(&id).expect("event id should exist");
+        let _state = state.on_timed_event(&mut sta, event);
+
+        let signal_ind = m
+            .fake_device
+            .next_mlme_msg::<fidl_mlme::SignalReportIndication>()
+            .expect("should see a signal report");
+
+        assert_eq!(signal_ind.rssi_dbm, EXPECTED_DBM);
     }
 }

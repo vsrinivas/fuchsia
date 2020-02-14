@@ -25,6 +25,7 @@ pub extern "C" fn client_mlme_new(
 ) -> *mut ClientMlme {
     Box::into_raw(Box::new(ClientMlme::new(config, device, buf_provider, scheduler)))
 }
+
 #[no_mangle]
 pub extern "C" fn client_mlme_delete(mlme: *mut ClientMlme) {
     if !mlme.is_null() {
