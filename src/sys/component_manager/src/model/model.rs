@@ -37,9 +37,9 @@ pub struct ModelParams {
     /// specified.
     // TODO(fxb/4761): This is to be removed, and components required to explictly
     // state their runner.
-    pub elf_runner: Arc<dyn Runner + Send + Sync + 'static>,
+    pub elf_runner: Arc<dyn Runner>,
     /// Builtin runners, offered to the root component.
-    pub builtin_runners: HashMap<CapabilityName, Arc<dyn Runner + Send + Sync + 'static>>,
+    pub builtin_runners: HashMap<CapabilityName, Arc<dyn Runner>>,
 }
 
 /// The component model holds authoritative state about a tree of component instances, including
@@ -57,10 +57,10 @@ pub struct Model {
     /// specified.
     // TODO(fxb/4761): This is to be removed, and components required to explictly
     // state their runner.
-    pub elf_runner: Arc<dyn Runner + Send + Sync>,
+    pub elf_runner: Arc<dyn Runner>,
 
     /// Builtin runners, offered to the root component.
-    pub builtin_runners: HashMap<CapabilityName, Arc<dyn Runner + Send + Sync + 'static>>,
+    pub builtin_runners: HashMap<CapabilityName, Arc<dyn Runner>>,
 }
 
 impl Model {

@@ -17,7 +17,7 @@ use {
 /// encapsulates fsys::ComponentController FIDL interfacing concerns.
 /// TODO: Consider defining an internal representation for `fsys::ComponentStartInfo` so as to
 /// further isolate the `Model` from FIDL interfacting concerns.
-pub trait Runner {
+pub trait Runner: Sync + Send {
     fn start(
         &self,
         start_info: fsys::ComponentStartInfo,

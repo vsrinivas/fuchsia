@@ -30,11 +30,11 @@ pub struct BuiltinRunner {
 
 struct BuiltinRunnerInner {
     name: CapabilityName,
-    runner: Arc<dyn Runner + Sync + Send>,
+    runner: Arc<dyn Runner>,
 }
 
 impl BuiltinRunner {
-    pub fn new(name: CapabilityName, runner: Arc<dyn Runner + Sync + Send>) -> Self {
+    pub fn new(name: CapabilityName, runner: Arc<dyn Runner>) -> Self {
         BuiltinRunner { inner: Arc::new(BuiltinRunnerInner { name, runner }) }
     }
 
@@ -75,11 +75,11 @@ impl Hook for BuiltinRunnerInner {
 /// as is required by the capability routing code.
 #[derive(Clone)]
 struct RunnerCapabilityProvider {
-    runner: Arc<dyn Runner + Sync + Send>,
+    runner: Arc<dyn Runner>,
 }
 
 impl RunnerCapabilityProvider {
-    pub fn new(runner: Arc<dyn Runner + Sync + Send>) -> Self {
+    pub fn new(runner: Arc<dyn Runner>) -> Self {
         RunnerCapabilityProvider { runner }
     }
 }

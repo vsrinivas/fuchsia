@@ -219,7 +219,7 @@ impl Realm {
     pub fn resolve_runner<'a>(
         realm: &'a Arc<Realm>,
         model: &'a Arc<Model>,
-    ) -> BoxFuture<'a, Result<Arc<dyn Runner + Send + Sync + 'static>, ModelError>> {
+    ) -> BoxFuture<'a, Result<Arc<dyn Runner>, ModelError>> {
         async move {
             // Fetch component declaration.
             let decl = {
@@ -249,11 +249,11 @@ impl Realm {
                 .await?;
 
                 return Ok(Arc::new(RemoteRunner::new(client_channel.into_proxy().unwrap()))
-                    as Arc<dyn Runner + Send + Sync>);
+                    as Arc<dyn Runner>);
             }
 
             // Otherwise, use a null runner.
-            Ok(Arc::new(NullRunner {}) as Arc<dyn Runner + Send + Sync>)
+            Ok(Arc::new(NullRunner {}) as Arc<dyn Runner>)
         }
         .boxed()
     }
