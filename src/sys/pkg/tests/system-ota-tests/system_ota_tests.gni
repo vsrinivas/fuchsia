@@ -8,7 +8,7 @@ import("//src/sys/pkg/tests/system-tests/system-tests.gni")
 # Placeholder template to enable a soft migration to the new
 # directory.
 template("system_ota_test_suite") {
-  system_test_suite(target_name) {
+  system_test_upgrade_suite(target_name) {
     forward_variables_from(invoker, "*")
   }
 }

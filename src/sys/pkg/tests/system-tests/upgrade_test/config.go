@@ -7,31 +7,20 @@ package upgrade
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"fuchsia.googlesource.com/host_target_testing/artifacts"
-	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/packages"
 	"fuchsia.googlesource.com/host_target_testing/paver"
-	"fuchsia.googlesource.com/host_target_testing/util"
 
-	"golang.org/x/crypto/ssh"
+	"fuchsia.googlesource.com/system_tests/config"
 )
 
 type Config struct {
-	outputDir                string
-	FuchsiaDir               string
-	sshKeyFile               string
-	netaddrPath              string
-	DeviceName               string
-	deviceHostname           string
-	LkgbPath                 string
-	ArtifactsPath            string
-	PackagesPath             string
+	archiveConfig            *config.ArchiveConfig
+	deviceConfig             *config.DeviceConfig
 	downgradeBuilderName     string
 	downgradeBuildID         string
 	downgradeFuchsiaBuildDir string
@@ -39,26 +28,17 @@ type Config struct {
 	upgradeBuildID           string
 	upgradeFuchsiaBuildDir   string
 	LongevityTest            bool
-	archive                  *artifacts.Archive
-	sshPrivateKey            ssh.Signer
 	paveTimeout              time.Duration
 	cycleCount               int
 	cycleTimeout             time.Duration
 }
 
 func NewConfig(fs *flag.FlagSet) (*Config, error) {
-	c := &Config{}
+	c := &Config{
+		archiveConfig: config.NewArchiveConfig(fs),
+		deviceConfig:  config.NewDeviceConfig(fs),
+	}
 
-	testDataPath := filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests")
-
-	fs.StringVar(&c.outputDir, "output-dir", "", "save temporary files to this directory, defaults to a tempdir")
-	fs.StringVar(&c.FuchsiaDir, "fuchsia-dir", os.Getenv("FUCHSIA_DIR"), "fuchsia dir")
-	fs.StringVar(&c.sshKeyFile, "ssh-private-key", os.Getenv("FUCHSIA_SSH_KEY"), "SSH private key file that can access the device")
-	fs.StringVar(&c.netaddrPath, "netaddr-path", filepath.Join(testDataPath, "netaddr"), "zircon netaddr tool path")
-	fs.StringVar(&c.DeviceName, "device", os.Getenv("FUCHSIA_NODENAME"), "device name")
-	fs.StringVar(&c.deviceHostname, "device-hostname", os.Getenv("FUCHSIA_IPV4_ADDR"), "device hostname or IPv4/IPv6 address")
-	fs.StringVar(&c.LkgbPath, "lkgb", filepath.Join(testDataPath, "lkgb"), "path to lkgb, default is $FUCHSIA_DIR/prebuilt/tools/lkgb/lkgb")
-	fs.StringVar(&c.ArtifactsPath, "artifacts", filepath.Join(testDataPath, "artifacts"), "path to the artifacts binary, default is $FUCHSIA_DIR/prebuilt/tools/artifacts/artifacts")
 	fs.StringVar(&c.downgradeBuilderName, "downgrade-builder-name", "", "downgrade to the latest version of this builder")
 	fs.StringVar(&c.downgradeBuildID, "downgrade-build-id", "", "downgrade to this specific build id")
 	fs.StringVar(&c.downgradeFuchsiaBuildDir, "downgrade-fuchsia-build-dir", "", "Path to the downgrade fuchsia build dir")
@@ -66,9 +46,9 @@ func NewConfig(fs *flag.FlagSet) (*Config, error) {
 	fs.StringVar(&c.upgradeBuildID, "upgrade-build-id", os.Getenv("BUILDBUCKET_ID"), "upgrade to this build id (default is $BUILDBUCKET_ID)")
 	fs.StringVar(&c.upgradeFuchsiaBuildDir, "upgrade-fuchsia-build-dir", "", "Path to the upgrade fuchsia build dir")
 	fs.BoolVar(&c.LongevityTest, "longevity-test", false, "Continuously update to the latest repository")
-	fs.DurationVar(&c.paveTimeout, "pave-timeout", 1<<63-1, "Err if a pave it takes longer than this time (default is no timeout)")
+	fs.DurationVar(&c.paveTimeout, "pave-timeout", 1<<63-1, "Err if a pave takes longer than this time (default is no timeout)")
 	fs.IntVar(&c.cycleCount, "cycle-count", 1, "How many cycles to run the test before completing (default is 1)")
-	fs.DurationVar(&c.cycleTimeout, "cycle-timeout", 1<<63-1, "Err if a test cycle it takes longer than this time (default is no timeout)")
+	fs.DurationVar(&c.cycleTimeout, "cycle-timeout", 1<<63-1, "Err if a test cycle takes longer than this time (default is no timeout)")
 
 	return c, nil
 }
@@ -109,67 +89,6 @@ func (c *Config) Validate() error {
 	return nil
 }
 
-func (c *Config) OutputDir() (string, func(), error) {
-	// If we specified an -output-dir, return it, and a cleanup function
-	// that does nothoing.
-	if c.outputDir != "" {
-		return c.outputDir, func() {}, nil
-	}
-
-	// Otherwise create a tempdir, and return a cleanup function that
-	// deletes the tempdir when called.
-	outputDir, err := ioutil.TempDir("", "system_ota_tests")
-	if err != nil {
-		return "", func() {}, err
-	}
-
-	return outputDir, func() { os.RemoveAll(outputDir) }, nil
-}
-
-func (c *Config) SshPrivateKey() (ssh.Signer, error) {
-	if c.sshPrivateKey == nil {
-		if c.sshKeyFile == "" {
-			return nil, fmt.Errorf("ssh private key cannot be empty")
-		}
-
-		key, err := ioutil.ReadFile(c.sshKeyFile)
-		if err != nil {
-			return nil, err
-		}
-
-		privateKey, err := ssh.ParsePrivateKey(key)
-		if err != nil {
-			return nil, err
-		}
-		c.sshPrivateKey = privateKey
-	}
-
-	return c.sshPrivateKey, nil
-}
-
-func (c *Config) NewDeviceClient() (*device.Client, error) {
-	deviceHostname, err := c.DeviceHostname()
-	if err != nil {
-		return nil, err
-	}
-
-	sshPrivateKey, err := c.SshPrivateKey()
-	if err != nil {
-		return nil, err
-	}
-
-	return device.NewClient(deviceHostname, sshPrivateKey)
-}
-
-func (c *Config) BuildArchive() *artifacts.Archive {
-	if c.archive == nil {
-		// Connect to the build archive service.
-		c.archive = artifacts.NewArchive(c.LkgbPath, c.ArtifactsPath)
-	}
-
-	return c.archive
-}
-
 func (c *Config) ShouldRepaveDevice() bool {
 	return c.downgradeBuildID != "" || c.downgradeBuilderName != "" || c.downgradeFuchsiaBuildDir != ""
 }
@@ -179,7 +98,7 @@ func (c *Config) GetDowngradeBuilder() (*artifacts.Builder, error) {
 		return nil, fmt.Errorf("downgrade builder not specified")
 	}
 
-	return c.BuildArchive().GetBuilder(c.downgradeBuilderName), nil
+	return c.archiveConfig.BuildArchive().GetBuilder(c.downgradeBuilderName), nil
 }
 
 func (c *Config) GetDowngradeBuildID() (string, error) {
@@ -203,7 +122,7 @@ func (c *Config) GetUpgradeBuilder() (*artifacts.Builder, error) {
 		return nil, fmt.Errorf("upgrade builder not specified")
 	}
 
-	return c.BuildArchive().GetBuilder(c.upgradeBuilderName), nil
+	return c.archiveConfig.BuildArchive().GetBuilder(c.upgradeBuilderName), nil
 }
 
 func (c *Config) GetUpgradeBuildID() (string, error) {
@@ -229,7 +148,7 @@ func (c *Config) GetDowngradeRepository(dir string) (*packages.Repository, error
 	}
 
 	if buildID != "" {
-		build, err := c.BuildArchive().GetBuildByID(buildID, dir)
+		build, err := c.archiveConfig.BuildArchive().GetBuildByID(buildID, dir)
 		if err != nil {
 			return nil, err
 		}
@@ -251,7 +170,7 @@ func (c *Config) GetUpgradeRepository(dir string) (*packages.Repository, error) 
 	}
 
 	if buildID != "" {
-		build, err := c.BuildArchive().GetBuildByID(buildID, dir)
+		build, err := c.archiveConfig.BuildArchive().GetBuildByID(buildID, dir)
 		if err != nil {
 			return nil, err
 		}
@@ -267,7 +186,7 @@ func (c *Config) GetUpgradeRepository(dir string) (*packages.Repository, error) 
 }
 
 func (c *Config) GetDowngradePaver(dir string) (*paver.Paver, error) {
-	sshPrivateKey, err := c.SshPrivateKey()
+	sshPrivateKey, err := c.deviceConfig.SSHPrivateKey()
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +198,7 @@ func (c *Config) GetDowngradePaver(dir string) (*paver.Paver, error) {
 	}
 
 	if buildID != "" {
-		build, err := c.BuildArchive().GetBuildByID(buildID, dir)
+		build, err := c.archiveConfig.BuildArchive().GetBuildByID(buildID, dir)
 		if err != nil {
 			return nil, err
 		}
@@ -296,27 +215,4 @@ func (c *Config) GetDowngradePaver(dir string) (*paver.Paver, error) {
 	}
 
 	return nil, fmt.Errorf("downgrade paver not specified")
-}
-
-func (c *Config) DeviceHostname() (string, error) {
-	if c.deviceHostname == "" {
-		var err error
-		c.deviceHostname, err = c.netaddr("--nowait", "--timeout=1000", "--fuchsia", c.DeviceName)
-		if err != nil {
-			return "", fmt.Errorf("ERROR: netaddr failed: %s", err)
-		}
-		if c.deviceHostname == "" {
-			return "", fmt.Errorf("unable to determine the device hostname")
-		}
-	}
-
-	return c.deviceHostname, nil
-}
-
-func (c *Config) netaddr(arg ...string) (string, error) {
-	stdout, stderr, err := util.RunCommand(c.netaddrPath, arg...)
-	if err != nil {
-		return "", fmt.Errorf("netaddr failed: %s: %s", err, string(stderr))
-	}
-	return strings.TrimRight(string(stdout), "\n"), nil
 }

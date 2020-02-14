@@ -44,7 +44,7 @@ func TestMain(m *testing.M) {
 func TestOTA(t *testing.T) {
 	ctx := context.Background()
 
-	device, err := c.NewDeviceClient()
+	device, err := c.deviceConfig.NewDeviceClient()
 	if err != nil {
 		t.Fatalf("failed to create ota test client: %s", err)
 	}
@@ -54,7 +54,7 @@ func TestOTA(t *testing.T) {
 	// on the device, which not all test cases know during start. Store the
 	// one true client here, and pass around pointers to the various
 	// functions that may use it or device.Client to interact with the
-	// targer. All OTA attempts must first Close and nil out an existing
+	// target. All OTA attempts must first Close and nil out an existing
 	// rpcClient and replace it with a new one after reboot. The final
 	// rpcClient, if present, will be closed by the defer here.
 	var rpcClient *sl4f.Client
@@ -97,7 +97,7 @@ func testOTAs(t *testing.T, ctx context.Context, device *device.Client, rpcClien
 }
 
 func doTestOTAs(t *testing.T, ctx context.Context, device *device.Client, rpcClient **sl4f.Client) {
-	outputDir, cleanup, err := c.OutputDir()
+	outputDir, cleanup, err := c.archiveConfig.OutputDir()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -189,13 +189,13 @@ func testLongevityOTAAttempt(t *testing.T, ctx context.Context, device *device.C
 }
 
 func doTestLongevityOTAAttempt(t *testing.T, ctx context.Context, device *device.Client, rpcClient **sl4f.Client, buildID string, checkABR bool) {
-	outputDir, cleanup, err := c.OutputDir()
+	outputDir, cleanup, err := c.archiveConfig.OutputDir()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cleanup()
 
-	build, err := c.BuildArchive().GetBuildByID(buildID, outputDir)
+	build, err := c.archiveConfig.BuildArchive().GetBuildByID(buildID, outputDir)
 	if err != nil {
 		t.Fatalf("failed to find build %s: %s", buildID, err)
 	}
@@ -241,7 +241,7 @@ func paveDevice(t *testing.T, ctx context.Context, device *device.Client) *sl4f.
 }
 
 func doPaveDevice(t *testing.T, ctx context.Context, device *device.Client) *sl4f.Client {
-	outputDir, cleanup, err := c.OutputDir()
+	outputDir, cleanup, err := c.archiveConfig.OutputDir()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -269,7 +269,7 @@ func doPaveDevice(t *testing.T, ctx context.Context, device *device.Client) *sl4
 		t.Fatalf("failed to reboot to recovery: %s", err)
 	}
 
-	if err = downgradePaver.Pave(c.DeviceName); err != nil {
+	if err = downgradePaver.Pave(c.deviceConfig.DeviceName); err != nil {
 		t.Fatalf("device failed to pave: %s", err)
 	}
 

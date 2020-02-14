@@ -29,6 +29,12 @@ go_library("system_tests_lib") {
   }
 }
 
+go_test("system_tests_reboot") {
+  gopackages = [ "fuchsia.googlesource.com/system_tests/reboot_test" ]
+  disabled = true
+  deps = [ ":system_tests_lib" ]
+}
+
 go_test("system_tests_upgrade") {
   gopackages = [ "fuchsia.googlesource.com/system_tests/upgrade_test" ]
   disabled = true
@@ -37,7 +43,10 @@ go_test("system_tests_upgrade") {
 
 group("system_tests") {
   testonly = true
-  deps = [ ":system_tests_upgrade($host_toolchain)" ]
+  deps = [
+    ":system_tests_reboot($host_toolchain)",
+    ":system_tests_upgrade($host_toolchain)",
+  ]
 }
 
 group("tests") {

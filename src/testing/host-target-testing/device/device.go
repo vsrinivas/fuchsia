@@ -25,6 +25,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+const rebootCheckPath = "/tmp/ota_test_should_reboot"
+
 // Client manages the connection to the device.
 type Client struct {
 	deviceHostname string
@@ -102,6 +104,37 @@ func (c *Client) GetSystemImageMerkle() (string, error) {
 	return strings.TrimSpace(string(merkle)), nil
 }
 
+// Reboot asks the device to reboot. It waits until the device to reconnect
+// before returning.
+func (c *Client) Reboot(ctx context.Context, repo *packages.Repository, rpcClient **sl4f.Client) error {
+	log.Printf("rebooting")
+
+	if err := c.setupReboot(ctx, rpcClient); err != nil {
+		return err
+	}
+
+	var wg sync.WaitGroup
+	c.RegisterDisconnectListener(&wg)
+
+	err := c.Run("dm reboot", os.Stdout, os.Stderr)
+	if err != nil {
+		if _, ok := err.(*ssh.ExitMissingError); !ok {
+			return fmt.Errorf("failed to reboot: %s", err)
+		}
+	}
+
+	log.Printf("waiting...")
+
+	// Wait until we get a signal that we have disconnected
+	wg.Wait()
+
+	c.verifyReboot(ctx, repo, rpcClient)
+
+	log.Printf("device rebooted")
+
+	return nil
+}
+
 // RebootToRecovery asks the device to reboot into the recovery partition. It
 // waits until the device disconnects before returning.
 func (c *Client) RebootToRecovery() error {
@@ -128,7 +161,28 @@ func (c *Client) RebootToRecovery() error {
 func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository, rpcClient **sl4f.Client) error {
 	log.Printf("triggering OTA")
 
-	rebootCheckPath := "/tmp/ota_test_should_reboot"
+	if err := c.setupReboot(ctx, rpcClient); err != nil {
+		return err
+	}
+
+	var wg sync.WaitGroup
+	c.RegisterDisconnectListener(&wg)
+
+	if err := c.Run("amberctl system_update", os.Stdout, os.Stderr); err != nil {
+		return fmt.Errorf("failed to trigger OTA: %s", err)
+	}
+
+	// Wait until we get a signal that we have disconnected
+	wg.Wait()
+
+	c.verifyReboot(ctx, repo, rpcClient)
+
+	log.Printf("device rebooted")
+
+	return nil
+}
+
+func (c *Client) setupReboot(ctx context.Context, rpcClient **sl4f.Client) error {
 	if *rpcClient != nil {
 		// Write a file to /tmp that should be lost after a reboot, to
 		// ensure the device actually reboots instead of just
@@ -145,16 +199,10 @@ func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository
 		}
 	}
 
-	var wg sync.WaitGroup
-	c.RegisterDisconnectListener(&wg)
+	return nil
+}
 
-	if err := c.Run("amberctl system_update", os.Stdout, os.Stderr); err != nil {
-		return fmt.Errorf("failed to trigger OTA: %s", err)
-	}
-
-	// Wait until we get a signal that we have disconnected
-	wg.Wait()
-
+func (c *Client) verifyReboot(ctx context.Context, repo *packages.Repository, rpcClient **sl4f.Client) error {
 	c.WaitForDeviceToBeConnected()
 
 	if *rpcClient != nil {
@@ -191,8 +239,6 @@ func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository
 			return errors.New("reboot check file exists after an OTA, device did not reboot")
 		}
 	}
-
-	log.Printf("device rebooted")
 
 	return nil
 }
