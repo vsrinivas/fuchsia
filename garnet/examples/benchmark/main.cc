@@ -2,24 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <zircon/syscalls.h>
-
-#include <stdio.h>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/zx/time.h>
+#include <stdio.h>
+#include <zircon/syscalls.h>
+
 #include <trace-provider/provider.h>
 #include <trace/event.h>
-#include <lib/zx/time.h>
 
 int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio provider(loop.dispatcher());
 
-  // Wait for tracing to get set up.  This works around a race condition in
-  // the tracing system (see TO-650).  Without this, the tracing system can
-  // miss some of the initial tracing events we generate later.
+  // Wait for tracing to get set up.  Without this, the tracing system can miss
+  // some of the initial tracing events we generate later.
+  //
+  // TODO(fxb/22911): Replace this sleep with single function that will start
+  // a TraceProvider in a non-racy way.
   puts("Sleeping to allow tracing to start...");
   loop.Run(zx::deadline_after(zx::sec(1)));
 
