@@ -175,8 +175,7 @@ pub async fn model_setup(args: &Arguments) -> Result<Arc<Model>, Error> {
     let params = ModelParams {
         root_component_url: args.root_component_url.clone(),
         root_resolver_registry: resolver_registry,
-        elf_runner: runner.clone(),
-        builtin_runners: vec![("elf".into(), runner.clone() as _)].into_iter().collect(),
+        builtin_runners: vec![("elf".into(), runner as _)].into_iter().collect(),
     };
     let model = Arc::new(Model::new(params));
 

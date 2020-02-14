@@ -241,7 +241,6 @@ impl RoutingTest {
         let model = Arc::new(Model::new(ModelParams {
             root_component_url: format!("test:///{}", builder.root_component),
             root_resolver_registry: resolver,
-            elf_runner: runner.clone(),
             builtin_runners,
         }));
         let builtin_environment =

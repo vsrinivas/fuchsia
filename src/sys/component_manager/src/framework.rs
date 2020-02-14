@@ -418,7 +418,6 @@ mod tests {
             let model = Arc::new(Model::new(ModelParams {
                 root_component_url: "test:///root".to_string(),
                 root_resolver_registry: resolver,
-                elf_runner: mock_runner.clone(),
                 builtin_runners: vec![(test_helpers::TEST_RUNNER_NAME.into(), mock_runner as _)]
                     .into_iter()
                     .collect(),

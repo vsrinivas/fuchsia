@@ -33,11 +33,6 @@ pub struct ModelParams {
     /// The component resolver registry used in the root realm.
     /// In particular, it will be used to resolve the root component itself.
     pub root_resolver_registry: ResolverRegistry,
-    /// Builtin ELF runner, used for starting components with no explicit runner
-    /// specified.
-    // TODO(fxb/4761): This is to be removed, and components required to explictly
-    // state their runner.
-    pub elf_runner: Arc<dyn Runner>,
     /// Builtin runners, offered to the root component.
     pub builtin_runners: HashMap<CapabilityName, Arc<dyn Runner>>,
 }
@@ -53,12 +48,6 @@ pub struct ModelParams {
 pub struct Model {
     pub root_realm: Arc<Realm>,
 
-    /// Builtin ELF runner, used for starting components with no explicit runner
-    /// specified.
-    // TODO(fxb/4761): This is to be removed, and components required to explictly
-    // state their runner.
-    pub elf_runner: Arc<dyn Runner>,
-
     /// Builtin runners, offered to the root component.
     pub builtin_runners: HashMap<CapabilityName, Arc<dyn Runner>>,
 }
@@ -71,7 +60,6 @@ impl Model {
                 Environment::new_root(params.root_resolver_registry),
                 params.root_component_url,
             )),
-            elf_runner: params.elf_runner,
             builtin_runners: params.builtin_runners,
         }
     }

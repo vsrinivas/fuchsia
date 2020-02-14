@@ -517,7 +517,6 @@ pub fn new_test_model(
     Model::new(ModelParams {
         root_component_url: format!("test:///{}", root_component),
         root_resolver_registry: resolver,
-        elf_runner: runner.clone(),
         builtin_runners: vec![(TEST_RUNNER_NAME.into(), runner as _)].into_iter().collect(),
     })
 }

@@ -76,7 +76,7 @@ mod tests {
             error::ModelError,
             model::{Model, ModelParams},
             testing::{
-                mocks::{MockResolver, MockRunner},
+                mocks::MockResolver,
                 test_helpers::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
             },
         },
@@ -145,7 +145,6 @@ mod tests {
         let model = Arc::new(Model::new(ModelParams {
             root_component_url: "test:///root".to_string(),
             root_resolver_registry: registry,
-            elf_runner: Arc::new(MockRunner::new()),
             builtin_runners: HashMap::new(),
         }));
         let realm = model.bind(&vec!["a:0", "b:0"].into()).await?;
@@ -186,7 +185,6 @@ mod tests {
         let model = Arc::new(Model::new(ModelParams {
             root_component_url: "test:///root".to_string(),
             root_resolver_registry: registry,
-            elf_runner: Arc::new(MockRunner::new()),
             builtin_runners: HashMap::new(),
         }));
         let realm = model.bind(&vec!["a:0", "b:0"].into()).await?;
@@ -231,7 +229,6 @@ mod tests {
         let model = Arc::new(Model::new(ModelParams {
             root_component_url: "test:///root".to_string(),
             root_resolver_registry: registry,
-            elf_runner: Arc::new(MockRunner::new()),
             builtin_runners: HashMap::new(),
         }));
         assert_matches!(
