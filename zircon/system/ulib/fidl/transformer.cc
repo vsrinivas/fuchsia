@@ -1115,7 +1115,7 @@ class TransformerBase {
       }
     }();
 
-    // Transform: static-union field to xunion field.
+    // Transform: static-union field to xunion field.
     auto field_position = Position{
         position.src_inline_offset + src_coded_union.data_offset,
         position.src_out_of_line_offset,

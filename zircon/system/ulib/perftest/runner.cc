@@ -539,7 +539,7 @@ int PerfTestMain(int argc, char** argv, const char* test_suite) {
 
   bool success = true;
 
-  // Check whether to run in perf test mode.
+  // Check whether to run in perf test mode.
   if (argc >= 2 && strcmp(argv[1], "-p") == 0) {
     // Drop the "-p" argument.  Keep argv[0] because getopt_long()
     // prints it in error messages.
