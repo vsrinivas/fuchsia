@@ -580,7 +580,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.log-test",
 #------------------
 #------------------
-    ":test.sys.logger-test",
 #------------------
 #------------------
 #------------------
@@ -1174,7 +1173,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.log-test",
 #------------------
 #------------------
-    ":test.sys.logger-test",
 #------------------
 #------------------
 #------------------
@@ -3066,7 +3064,7 @@ aggregate_manifest("migrated-aux") {
     #":test.sys.log-test",
 #------------------
 #------------------
-    #":test.sys.logger-test",
+    "//zircon/system/utest/logger:logger-manifest",
 #------------------
     "//zircon/system/ulib/driver-unit-test/test:logger-unit-manifest",
     "//src/ui/light/drivers/lp50xx-light:lp50xx-light-test-manifest",
@@ -3774,7 +3772,7 @@ aggregate_manifest("migrated-tests") {
     #":test.sys.log-test",
 #------------------
 #------------------
-    #":test.sys.logger-test",
+    "//zircon/system/utest/logger:logger-manifest",
 #------------------
     "//zircon/system/ulib/driver-unit-test/test:logger-unit-manifest",
     "//src/ui/light/drivers/lp50xx-light:lp50xx-light-test-manifest",
