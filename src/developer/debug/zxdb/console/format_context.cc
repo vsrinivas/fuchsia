@@ -114,7 +114,12 @@ OutputBuffer DescribeAsmCallDest(Process* process, uint64_t call_dest) {
 
   std::vector<Location> resolved;
   if (process) {
-    resolved = process->GetSymbols()->ResolveInputLocation(InputLocation(call_dest));
+    // If there are multiple symbols starting at the given location (like nested inline calls), use
+    // the outermost one since this is a jump *to* that location.
+    ResolveOptions options;
+    options.ambiguous_inline = ResolveOptions::kOuter;
+
+    resolved = process->GetSymbols()->ResolveInputLocation(InputLocation(call_dest), options);
     FXL_DCHECK(resolved.size() == 1);  // Addresses should always match one location.
   } else {
     // Can't symbolize, use the address.

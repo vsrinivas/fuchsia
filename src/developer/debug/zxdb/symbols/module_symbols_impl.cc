@@ -198,16 +198,19 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol
   }
 
   // Resolve the file name. Skip for "line 0" entries which are compiled-generated code not
-  // associated with a line entry. Typically there will be a file if we ask, but that's leftover
-  // from the previous row in the table by the state machine and is not relevant.
+  // associated with a line entry, leaving the file name and compilation directory empty. Typically
+  // there will be a file if we ask, but that's leftover from the previous row in the table by the
+  // state machine and is not relevant.
   std::string file_name;
+  std::string compilation_dir;
   if (rows[first_row_index].Line) {
     line_table->getFileNameByIndex(rows[first_row_index].File, "",
                                    llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
                                    file_name);
+    compilation_dir = unit->GetCompilationDir();
   }
 
-  LineDetails result(FileLine(file_name, unit->GetCompilationDir(), rows[first_row_index].Line));
+  LineDetails result(FileLine(file_name, compilation_dir, rows[first_row_index].Line));
 
   // Add entries for each row. The last row doesn't count because it should be
   // an end_sequence marker to provide the ending size of the previous entry.
