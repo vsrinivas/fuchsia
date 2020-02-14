@@ -6,7 +6,7 @@ library fuchsia.ui.input3;
 
 /// Modifiers are special keys that modify the purpose or the function
 /// of other keys when used in combination with them.
-bits Modifiers : uint64 {
+bits Modifiers : uint32 {
     /// Applies when the `CAPS_LOCK` modifier is locked.
     CAPS_LOCK = 0x00000001;
     /// Applies when the `NUM_LOCK` modifier is locked.

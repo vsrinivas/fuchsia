@@ -10,23 +10,18 @@ using fuchsia.ui.views;
 /// physical key events.
 [Discoverable]
 protocol Keyboard {
-    /// Add a key event listener for the specified View.
-    /// If multiple listeners are added, each will receive key events independently and
-    /// should respond with a `Status`.
-    AddListener(fuchsia.ui.views.ViewRef view_ref, KeyboardListener listener) -> ();
+    /// Set key event listener for the specified View.
+    SetListener(fuchsia.ui.views.ViewRef view_ref, KeyboardListener listener) -> ();
 };
 
 /// Client should implement this protocol to get notified of key events.
 protocol KeyboardListener {
     /// Called when a key event takes place, such as key press or release.
-    /// Protocol implementers must respond to acknowledge the event by returning Status
-    /// in a timely manner, i.e. not introducing significant delays to the
-    /// input pipeline (typically 10s of milliseconds).
-    /// Returning `NOT_HANDLED` means the event will propagate to another client or listener.
+    /// Clients must respond to acknowledge the event by returning Status in a timely manner.
     /// Clients that do not acknowledge their events will eventually be disconnected.
     /// Notification is only dispatched when the View is focused (ViewRef is on FocusChain).
     /// Parent Views receive the notification first, child Views last.
-    /// Returning `HANDLED` will stop event propagation to other clients and listeners.
+    /// Returning HANDLED will stop event propagation to other clients.
     OnKeyEvent(KeyEvent event) -> (Status result);
 };
 
@@ -35,6 +30,6 @@ enum Status {
     /// The key event was handled and its further propagation should be stopped.
     HANDLED = 1;
 
-    /// The key event wasn't handled and should be delivered to other clients or listeners.
+    /// The key event wasn't handled and should be delivered to other clients.
     NOT_HANDLED = 2;
 };

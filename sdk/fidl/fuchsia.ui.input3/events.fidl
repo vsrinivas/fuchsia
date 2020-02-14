@@ -9,25 +9,25 @@ using zx;
 /// Type of the keyboard key input event.
 enum KeyEventType {
     /// Key is pressed down.
-    PRESSED = 1;
+    PRESSED = 0;
 
     /// Key is released.
-    RELEASED = 2;
+    RELEASED = 1;
 
     /// Key was pressed while the client wasn't able to receive it, e.g new device connected
     /// with a key held down or before system was started.
     /// Client should not handle this as a key press.
-    SYNC = 3;
+    SYNC = 2;
 
     /// Key was released while the client wasn't able to receive it, e.g device was disconnected
     /// or focus lost.
     /// Client should not handle this as a key release.
-    CANCEL = 4;
+    CANCEL = 3;
 };
 
 /// Keyboard event is generated to reflect key input.
 table KeyEvent {
-    /// Time in nanoseconds when the event was recorded, in the `CLOCK_MONOTONIC` time base.
+    /// Time in nanoseconds when the event was recorded.
     1: zx.time timestamp;
 
     /// Type of event.
@@ -37,18 +37,5 @@ table KeyEvent {
     3: Key key;
 
     /// Modifiers in effect at the time of the event.
-    /// Example:
-    ///  CapsLock is off, user presses CapsLock, then A, then releases both.
-    ///  Event sequence is as follows:
-    ///  1. type: Pressed, key: CapsLock, modifiers: None
-    ///  2. type: Pressed, key: A, modifiers: CapsLock
-    ///  3. type: Released, key: CapsLock, modifiers: CapsLock
-    ///  4. type: Released, key: A, modifiers: CapsLock
-    ///
-    ///  CapsLock is on, user presses CapsLock, then A, then releases both.
-    ///  1. type: Pressed, key: CapsLock, modifiers: CapsLock
-    ///  2. type: Pressed, key: A, modifiers: None
-    ///  3. type: Released, key: CapsLock, modifiers: None
-    ///  4. type: Released, key: A, modifiers: None
     4: Modifiers modifiers;
 };
