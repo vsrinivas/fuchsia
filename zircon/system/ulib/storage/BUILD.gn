@@ -8,10 +8,3 @@ group("storage") {
     "operation",
   ]
 }
-
-group("test") {
-  testonly = true
-  deps = [
-    "buffer/test",
-  ]
-}
