@@ -149,7 +149,7 @@ mod test {
     use crate::bind_library;
     use crate::bind_program::{Condition, ConditionOp, Statement};
     use crate::make_identifier;
-    use crate::parser_common::CompoundIdentifier;
+    use crate::parser_common::{CompoundIdentifier, Span};
 
     #[test]
     fn duplicate_key() {
@@ -166,11 +166,15 @@ mod test {
 
     #[test]
     fn condition_equals() {
-        let statements = vec![Statement::ConditionStatement(Condition {
-            lhs: make_identifier!("abc"),
-            op: ConditionOp::Equals,
-            rhs: Value::NumericLiteral(42),
-        })];
+        let statements = vec![Statement::ConditionStatement {
+            span: Span::new(),
+            condition: Condition {
+                span: Span::new(),
+                lhs: make_identifier!("abc"),
+                op: ConditionOp::Equals,
+                rhs: Value::NumericLiteral(42),
+            },
+        }];
         let mut symbol_table = HashMap::new();
         symbol_table.insert(
             make_identifier!("abc"),
@@ -206,11 +210,15 @@ mod test {
 
     #[test]
     fn condition_not_equals() {
-        let statements = vec![Statement::ConditionStatement(Condition {
-            lhs: make_identifier!("abc"),
-            op: ConditionOp::NotEquals,
-            rhs: Value::NumericLiteral(42),
-        })];
+        let statements = vec![Statement::ConditionStatement {
+            span: Span::new(),
+            condition: Condition {
+                span: Span::new(),
+                lhs: make_identifier!("abc"),
+                op: ConditionOp::NotEquals,
+                rhs: Value::NumericLiteral(42),
+            },
+        }];
         let mut symbol_table = HashMap::new();
         symbol_table.insert(
             make_identifier!("abc"),
@@ -239,6 +247,7 @@ mod test {
     #[test]
     fn accept() {
         let statements = vec![Statement::Accept {
+            span: Span::new(),
             identifier: make_identifier!("abc"),
             values: vec![Value::NumericLiteral(42), Value::NumericLiteral(314)],
         }];
@@ -271,37 +280,52 @@ mod test {
     #[test]
     fn if_else() {
         let statements = vec![Statement::If {
+            span: Span::new(),
             blocks: vec![
                 (
                     Condition {
+                        span: Span::new(),
                         lhs: make_identifier!("abc"),
                         op: ConditionOp::Equals,
                         rhs: Value::NumericLiteral(1),
                     },
-                    vec![Statement::ConditionStatement(Condition {
-                        lhs: make_identifier!("xyz"),
-                        op: ConditionOp::Equals,
-                        rhs: Value::NumericLiteral(1),
-                    })],
+                    vec![Statement::ConditionStatement {
+                        span: Span::new(),
+                        condition: Condition {
+                            span: Span::new(),
+                            lhs: make_identifier!("xyz"),
+                            op: ConditionOp::Equals,
+                            rhs: Value::NumericLiteral(1),
+                        },
+                    }],
                 ),
                 (
                     Condition {
+                        span: Span::new(),
                         lhs: make_identifier!("abc"),
                         op: ConditionOp::Equals,
                         rhs: Value::NumericLiteral(2),
                     },
-                    vec![Statement::ConditionStatement(Condition {
-                        lhs: make_identifier!("xyz"),
-                        op: ConditionOp::Equals,
-                        rhs: Value::NumericLiteral(2),
-                    })],
+                    vec![Statement::ConditionStatement {
+                        span: Span::new(),
+                        condition: Condition {
+                            span: Span::new(),
+                            lhs: make_identifier!("xyz"),
+                            op: ConditionOp::Equals,
+                            rhs: Value::NumericLiteral(2),
+                        },
+                    }],
                 ),
             ],
-            else_block: vec![Statement::ConditionStatement(Condition {
-                lhs: make_identifier!("xyz"),
-                op: ConditionOp::Equals,
-                rhs: Value::NumericLiteral(3),
-            })],
+            else_block: vec![Statement::ConditionStatement {
+                span: Span::new(),
+                condition: Condition {
+                    span: Span::new(),
+                    lhs: make_identifier!("xyz"),
+                    op: ConditionOp::Equals,
+                    rhs: Value::NumericLiteral(3),
+                },
+            }],
         }];
         let mut symbol_table = HashMap::new();
         symbol_table.insert(
@@ -354,12 +378,16 @@ mod test {
     #[test]
     fn abort() {
         let statements = vec![
-            Statement::ConditionStatement(Condition {
-                lhs: make_identifier!("abc"),
-                op: ConditionOp::Equals,
-                rhs: Value::NumericLiteral(42),
-            }),
-            Statement::Abort,
+            Statement::ConditionStatement {
+                span: Span::new(),
+                condition: Condition {
+                    span: Span::new(),
+                    lhs: make_identifier!("abc"),
+                    op: ConditionOp::Equals,
+                    rhs: Value::NumericLiteral(42),
+                },
+            },
+            Statement::Abort { span: Span::new() },
         ];
         let mut symbol_table = HashMap::new();
         symbol_table.insert(
@@ -379,26 +407,42 @@ mod test {
     #[test]
     fn supports_all_value_types() {
         let statements = vec![
-            Statement::ConditionStatement(Condition {
-                lhs: make_identifier!("a"),
-                op: ConditionOp::Equals,
-                rhs: Value::NumericLiteral(42),
-            }),
-            Statement::ConditionStatement(Condition {
-                lhs: make_identifier!("b"),
-                op: ConditionOp::Equals,
-                rhs: Value::BoolLiteral(false),
-            }),
-            Statement::ConditionStatement(Condition {
-                lhs: make_identifier!("c"),
-                op: ConditionOp::Equals,
-                rhs: Value::StringLiteral("string".to_string()),
-            }),
-            Statement::ConditionStatement(Condition {
-                lhs: make_identifier!("d"),
-                op: ConditionOp::Equals,
-                rhs: Value::Identifier(make_identifier!("VALUE")),
-            }),
+            Statement::ConditionStatement {
+                span: Span::new(),
+                condition: Condition {
+                    span: Span::new(),
+                    lhs: make_identifier!("a"),
+                    op: ConditionOp::Equals,
+                    rhs: Value::NumericLiteral(42),
+                },
+            },
+            Statement::ConditionStatement {
+                span: Span::new(),
+                condition: Condition {
+                    span: Span::new(),
+                    lhs: make_identifier!("b"),
+                    op: ConditionOp::Equals,
+                    rhs: Value::BoolLiteral(false),
+                },
+            },
+            Statement::ConditionStatement {
+                span: Span::new(),
+                condition: Condition {
+                    span: Span::new(),
+                    lhs: make_identifier!("c"),
+                    op: ConditionOp::Equals,
+                    rhs: Value::StringLiteral("string".to_string()),
+                },
+            },
+            Statement::ConditionStatement {
+                span: Span::new(),
+                condition: Condition {
+                    span: Span::new(),
+                    lhs: make_identifier!("d"),
+                    op: ConditionOp::Equals,
+                    rhs: Value::Identifier(make_identifier!("VALUE")),
+                },
+            },
         ];
         let mut symbol_table = HashMap::new();
         symbol_table.insert(
@@ -444,24 +488,31 @@ mod test {
     #[test]
     fn full_program() {
         let statements = vec![Statement::If {
+            span: Span::new(),
             blocks: vec![(
                 Condition {
+                    span: Span::new(),
                     lhs: make_identifier!("abc"),
                     op: ConditionOp::Equals,
                     rhs: Value::NumericLiteral(42),
                 },
-                vec![Statement::Abort],
+                vec![Statement::Abort { span: Span::new() }],
             )],
             else_block: vec![
                 Statement::Accept {
+                    span: Span::new(),
                     identifier: make_identifier!("xyz"),
                     values: vec![Value::NumericLiteral(1), Value::NumericLiteral(2)],
                 },
-                Statement::ConditionStatement(Condition {
-                    lhs: make_identifier!("pqr"),
-                    op: ConditionOp::NotEquals,
-                    rhs: Value::BoolLiteral(true),
-                }),
+                Statement::ConditionStatement {
+                    span: Span::new(),
+                    condition: Condition {
+                        span: Span::new(),
+                        lhs: make_identifier!("pqr"),
+                        op: ConditionOp::NotEquals,
+                        rhs: Value::BoolLiteral(true),
+                    },
+                },
             ],
         }];
         let mut symbol_table = HashMap::new();

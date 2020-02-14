@@ -3,23 +3,23 @@
 // found in the LICENSE file.
 
 use crate::parser_common::{
-    compound_identifier, condition_value, many_until_eof, map_err, using_list, ws, BindParserError,
-    CompoundIdentifier, Include, Value,
+    compound_identifier, condition_value, many_until_eof, map_err, skip_ws, using_list, ws,
+    BindParserError, CompoundIdentifier, Include, NomSpan, Span, Value,
 };
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    combinator::{map, opt, value},
+    combinator::{opt, value},
     multi::{many1, separated_nonempty_list},
     sequence::{delimited, preceded, terminated, tuple},
     IResult,
 };
-use std::str::FromStr;
+use std::convert::TryFrom;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Ast {
+pub struct Ast<'a> {
     pub using: Vec<Include>,
-    pub statements: Vec<Statement>,
+    pub statements: Vec<Statement<'a>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -29,26 +29,40 @@ pub enum ConditionOp {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Condition {
+pub struct Condition<'a> {
+    pub span: Span<'a>,
     pub lhs: CompoundIdentifier,
     pub op: ConditionOp,
     pub rhs: Value,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement {
-    ConditionStatement(Condition),
-    Accept { identifier: CompoundIdentifier, values: Vec<Value> },
-    If { blocks: Vec<(Condition, Vec<Statement>)>, else_block: Vec<Statement> },
-    Abort,
+pub enum Statement<'a> {
+    ConditionStatement {
+        span: Span<'a>,
+        condition: Condition<'a>,
+    },
+    Accept {
+        span: Span<'a>,
+        identifier: CompoundIdentifier,
+        values: Vec<Value>,
+    },
+    If {
+        span: Span<'a>,
+        blocks: Vec<(Condition<'a>, Vec<Statement<'a>>)>,
+        else_block: Vec<Statement<'a>>,
+    },
+    Abort {
+        span: Span<'a>,
+    },
 }
 
 // TODO(fxb/35146): Improve error reporting here.
-impl FromStr for Ast {
-    type Err = BindParserError;
+impl<'a> TryFrom<&'a str> for Ast<'a> {
+    type Error = BindParserError;
 
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        match program(input) {
+    fn try_from(input: &'a str) -> Result<Self, Self::Error> {
+        match program(NomSpan::new(input)) {
             Ok((_, ast)) => Ok(ast),
             Err(nom::Err::Error(e)) => Err(e),
             Err(nom::Err::Failure(e)) => Err(e),
@@ -59,56 +73,69 @@ impl FromStr for Ast {
     }
 }
 
-fn condition_op(input: &str) -> IResult<&str, ConditionOp, BindParserError> {
+fn condition_op(input: NomSpan) -> IResult<NomSpan, ConditionOp, BindParserError> {
     let equals = value(ConditionOp::Equals, tag("=="));
     let not_equals = value(ConditionOp::NotEquals, tag("!="));
     map_err(alt((equals, not_equals)), BindParserError::ConditionOp)(input)
 }
 
-fn condition(input: &str) -> IResult<&str, Condition, BindParserError> {
-    let (input, lhs) = ws(compound_identifier)(input)?;
-    let (input, op) = condition_op(input)?;
-    let (input, rhs) = condition_value(input)?;
-    Ok((input, Condition { lhs, op, rhs }))
+fn condition(input: NomSpan) -> IResult<NomSpan, Condition, BindParserError> {
+    let from = skip_ws(input)?;
+    let (input, lhs) = ws(compound_identifier)(from)?;
+    let (input, op) = ws(condition_op)(input)?;
+    let (to, rhs) = ws(condition_value)(input)?;
+
+    let span = Span::from_to(&from, &to);
+    Ok((to, Condition { span, lhs, op, rhs }))
 }
 
-fn condition_statement(input: &str) -> IResult<&str, Statement, BindParserError> {
+fn condition_statement(input: NomSpan) -> IResult<NomSpan, Statement, BindParserError> {
+    let from = skip_ws(input)?;
     let terminator = ws(map_err(tag(";"), BindParserError::Semicolon));
-    map(terminated(condition, terminator), Statement::ConditionStatement)(input)
+    let (to, condition) = terminated(condition, terminator)(from)?;
+
+    let span = Span::from_to(&from, &to);
+    Ok((to, Statement::ConditionStatement { span, condition }))
 }
 
-fn keyword_if(input: &str) -> IResult<&str, &str, BindParserError> {
+fn keyword_if(input: NomSpan) -> IResult<NomSpan, NomSpan, BindParserError> {
     ws(map_err(tag("if"), BindParserError::IfKeyword))(input)
 }
 
-fn keyword_else(input: &str) -> IResult<&str, &str, BindParserError> {
+fn keyword_else(input: NomSpan) -> IResult<NomSpan, NomSpan, BindParserError> {
     ws(map_err(tag("else"), BindParserError::ElseKeyword))(input)
 }
 
-fn if_statement(input: &str) -> IResult<&str, Statement, BindParserError> {
+fn if_statement(input: NomSpan) -> IResult<NomSpan, Statement, BindParserError> {
+    let from = skip_ws(input)?;
+
     let if_block = tuple((preceded(keyword_if, condition), statement_block));
     let if_blocks = separated_nonempty_list(keyword_else, if_block);
 
     let else_block = preceded(keyword_else, statement_block);
 
-    let (input, blocks) = if_blocks(input)?;
-    let (input, else_block) = else_block(input)?;
-    Ok((input, Statement::If { blocks, else_block }))
+    let (input, blocks) = if_blocks(from)?;
+    let (to, else_block) = else_block(input)?;
+
+    let span = Span::from_to(&from, &to);
+    Ok((to, Statement::If { span, blocks, else_block }))
 }
 
-fn statement_block(input: &str) -> IResult<&str, Vec<Statement>, BindParserError> {
-    let block_start = map_err(tag("{"), BindParserError::IfBlockStart);
-    let block_end = map_err(tag("}"), BindParserError::IfBlockEnd);
+fn statement_block(input: NomSpan) -> IResult<NomSpan, Vec<Statement>, BindParserError> {
+    let block_start = ws(map_err(tag("{"), BindParserError::IfBlockStart));
+    let block_end = ws(map_err(tag("}"), BindParserError::IfBlockEnd));
     delimited(block_start, many1(ws(statement)), block_end)(input)
 }
 
-fn keyword_accept(input: &str) -> IResult<&str, &str, BindParserError> {
+fn keyword_accept(input: NomSpan) -> IResult<NomSpan, NomSpan, BindParserError> {
     ws(map_err(tag("accept"), BindParserError::AcceptKeyword))(input)
 }
 
-fn accept(input: &str) -> IResult<&str, Statement, BindParserError> {
-    let list_start = map_err(tag("{"), BindParserError::ListStart);
-    let list_end = map_err(tag("}"), BindParserError::ListEnd);
+fn accept(input: NomSpan) -> IResult<NomSpan, Statement, BindParserError> {
+    let from = skip_ws(input)?;
+
+    let list_start = ws(map_err(tag("{"), BindParserError::ListStart));
+    let list_end = ws(map_err(tag("}"), BindParserError::ListEnd));
     let separator = || ws(map_err(tag(","), BindParserError::ListSeparator));
 
     let values = separated_nonempty_list(separator(), ws(condition_value));
@@ -116,54 +143,59 @@ fn accept(input: &str) -> IResult<&str, Statement, BindParserError> {
     let values = terminated(values, opt(separator()));
     let value_list = delimited(list_start, values, list_end);
 
-    map(
-        preceded(keyword_accept, tuple((ws(compound_identifier), value_list))),
-        |(identifier, values)| Statement::Accept { identifier, values },
-    )(input)
+    let (to, (identifier, values)) =
+        preceded(keyword_accept, tuple((ws(compound_identifier), value_list)))(from)?;
+
+    let span = Span::from_to(&from, &to);
+    Ok((to, Statement::Accept { span, identifier, values }))
 }
 
-fn abort(input: &str) -> IResult<&str, Statement, BindParserError> {
+fn abort(input: NomSpan) -> IResult<NomSpan, Statement, BindParserError> {
+    let from = skip_ws(input)?;
     let keyword_abort = ws(map_err(tag("abort"), BindParserError::AbortKeyword));
     let terminator = ws(map_err(tag(";"), BindParserError::Semicolon));
-    let (input, _) = terminated(keyword_abort, terminator)(input)?;
-    Ok((input, Statement::Abort))
+    let (to, _) = terminated(keyword_abort, terminator)(from)?;
+
+    let span = Span::from_to(&from, &to);
+    Ok((to, Statement::Abort { span }))
 }
 
-fn statement(input: &str) -> IResult<&str, Statement, BindParserError> {
+fn statement(input: NomSpan) -> IResult<NomSpan, Statement, BindParserError> {
     alt((condition_statement, if_statement, accept, abort))(input)
 }
 
-fn program(input: &str) -> IResult<&str, Ast, BindParserError> {
+fn program(input: NomSpan) -> IResult<NomSpan, Ast, BindParserError> {
     let (input, using) = ws(using_list)(input)?;
     let (input, statements) = many_until_eof(ws(statement))(input)?;
     if statements.is_empty() {
         return Err(nom::Err::Error(BindParserError::NoStatements(input.to_string())));
     }
-    Ok(("", Ast { using, statements }))
+    Ok((input, Ast { using, statements }))
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::make_identifier;
+    use crate::parser_common::test::check_result;
 
     mod condition_ops {
         use super::*;
 
         #[test]
         fn equality() {
-            assert_eq!(condition_op("=="), Ok(("", ConditionOp::Equals)));
+            check_result(condition_op(NomSpan::new("==")), "", ConditionOp::Equals);
         }
 
         #[test]
         fn inequality() {
-            assert_eq!(condition_op("!="), Ok(("", ConditionOp::NotEquals)));
+            check_result(condition_op(NomSpan::new("!=")), "", ConditionOp::NotEquals);
         }
 
         #[test]
         fn invalid() {
             assert_eq!(
-                condition_op(">="),
+                condition_op(NomSpan::new(">=")),
                 Err(nom::Err::Error(BindParserError::ConditionOp(">=".to_string())))
             );
         }
@@ -171,7 +203,7 @@ mod test {
         #[test]
         fn empty() {
             assert_eq!(
-                condition_op(""),
+                condition_op(NomSpan::new("")),
                 Err(nom::Err::Error(BindParserError::ConditionOp("".to_string())))
             );
         }
@@ -182,24 +214,39 @@ mod test {
 
         #[test]
         fn equality_condition() {
-            assert_eq!(
-                condition("abc == true"),
-                Ok((
-                    "",
-                    Condition {
-                        lhs: make_identifier!["abc"],
-                        op: ConditionOp::Equals,
-                        rhs: Value::BoolLiteral(true),
-                    }
-                ))
+            check_result(
+                condition(NomSpan::new("abc == true")),
+                "",
+                Condition {
+                    span: Span { offset: 0, line: 1, fragment: "abc == true" },
+                    lhs: make_identifier!["abc"],
+                    op: ConditionOp::Equals,
+                    rhs: Value::BoolLiteral(true),
+                },
             );
         }
 
         #[test]
         fn empty() {
             assert_eq!(
-                condition(""),
+                condition(NomSpan::new("")),
                 Err(nom::Err::Error(BindParserError::Identifier("".to_string())))
+            );
+        }
+
+        #[test]
+        fn span() {
+            // Span doesn't contain leading or trailing whitespace, and offset and line number
+            // are correct.
+            check_result(
+                condition(NomSpan::new(" \n\t\r\nabc \n\t\r\n== \n\t\r\ntrue \n\t\r\n")),
+                " \n\t\r\n",
+                Condition {
+                    span: Span { offset: 5, line: 3, fragment: "abc \n\t\r\n== \n\t\r\ntrue" },
+                    lhs: make_identifier!["abc"],
+                    op: ConditionOp::Equals,
+                    rhs: Value::BoolLiteral(true),
+                },
             );
         }
     }
@@ -209,118 +256,173 @@ mod test {
 
         #[test]
         fn simple() {
-            assert_eq!(
-                if_statement("if a == b { c == 1; } else { d == 2; }"),
-                Ok((
-                    "",
-                    Statement::If {
-                        blocks: vec![(
-                            Condition {
-                                lhs: make_identifier!["a"],
-                                op: ConditionOp::Equals,
-                                rhs: Value::Identifier(make_identifier!["b"]),
-                            },
-                            vec![Statement::ConditionStatement(Condition {
+            check_result(
+                if_statement(NomSpan::new("if a == b { c == 1; } else { d == 2; }")),
+                "",
+                Statement::If {
+                    span: Span {
+                        offset: 0,
+                        line: 1,
+                        fragment: "if a == b { c == 1; } else { d == 2; }",
+                    },
+                    blocks: vec![(
+                        Condition {
+                            span: Span { offset: 3, line: 1, fragment: "a == b" },
+                            lhs: make_identifier!["a"],
+                            op: ConditionOp::Equals,
+                            rhs: Value::Identifier(make_identifier!["b"]),
+                        },
+                        vec![Statement::ConditionStatement {
+                            span: Span { offset: 12, line: 1, fragment: "c == 1;" },
+                            condition: Condition {
+                                span: Span { offset: 12, line: 1, fragment: "c == 1" },
                                 lhs: make_identifier!["c"],
                                 op: ConditionOp::Equals,
                                 rhs: Value::NumericLiteral(1),
-                            })]
-                        )],
-                        else_block: vec![Statement::ConditionStatement(Condition {
+                            },
+                        }],
+                    )],
+                    else_block: vec![Statement::ConditionStatement {
+                        span: Span { offset: 29, line: 1, fragment: "d == 2;" },
+                        condition: Condition {
+                            span: Span { offset: 29, line: 1, fragment: "d == 2" },
                             lhs: make_identifier!["d"],
                             op: ConditionOp::Equals,
                             rhs: Value::NumericLiteral(2),
-                        })],
-                    }
-                ))
+                        },
+                    }],
+                },
             );
         }
 
         #[test]
         fn else_if() {
-            assert_eq!(
-                if_statement("if a == b { c == 1; } else if e == 3 { d == 2; } else { f != 4; }"),
-                Ok((
-                    "",
-                    Statement::If {
-                        blocks: vec![
-                            (
-                                Condition {
-                                    lhs: make_identifier!["a"],
-                                    op: ConditionOp::Equals,
-                                    rhs: Value::Identifier(make_identifier!["b"]),
-                                },
-                                vec![Statement::ConditionStatement(Condition {
+            check_result(
+                if_statement(NomSpan::new(
+                    "if a == b { c == 1; } else if e == 3 { d == 2; } else { f != 4; }",
+                )),
+                "",
+                Statement::If {
+                    span: Span {
+                        offset: 0,
+                        line: 1,
+                        fragment:
+                            "if a == b { c == 1; } else if e == 3 { d == 2; } else { f != 4; }",
+                    },
+                    blocks: vec![
+                        (
+                            Condition {
+                                span: Span { offset: 3, line: 1, fragment: "a == b" },
+                                lhs: make_identifier!["a"],
+                                op: ConditionOp::Equals,
+                                rhs: Value::Identifier(make_identifier!["b"]),
+                            },
+                            vec![Statement::ConditionStatement {
+                                span: Span { offset: 12, line: 1, fragment: "c == 1;" },
+                                condition: Condition {
+                                    span: Span { offset: 12, line: 1, fragment: "c == 1" },
                                     lhs: make_identifier!["c"],
                                     op: ConditionOp::Equals,
                                     rhs: Value::NumericLiteral(1),
-                                })]
-                            ),
-                            (
-                                Condition {
-                                    lhs: make_identifier!["e"],
-                                    op: ConditionOp::Equals,
-                                    rhs: Value::NumericLiteral(3),
                                 },
-                                vec![Statement::ConditionStatement(Condition {
+                            }],
+                        ),
+                        (
+                            Condition {
+                                span: Span { offset: 30, line: 1, fragment: "e == 3" },
+                                lhs: make_identifier!["e"],
+                                op: ConditionOp::Equals,
+                                rhs: Value::NumericLiteral(3),
+                            },
+                            vec![Statement::ConditionStatement {
+                                span: Span { offset: 39, line: 1, fragment: "d == 2;" },
+                                condition: Condition {
+                                    span: Span { offset: 39, line: 1, fragment: "d == 2" },
                                     lhs: make_identifier!["d"],
                                     op: ConditionOp::Equals,
                                     rhs: Value::NumericLiteral(2),
-                                })]
-                            ),
-                        ],
-                        else_block: vec![Statement::ConditionStatement(Condition {
+                                },
+                            }],
+                        ),
+                    ],
+                    else_block: vec![Statement::ConditionStatement {
+                        span: Span { offset: 56, line: 1, fragment: "f != 4;" },
+                        condition: Condition {
+                            span: Span { offset: 56, line: 1, fragment: "f != 4" },
                             lhs: make_identifier!["f"],
                             op: ConditionOp::NotEquals,
                             rhs: Value::NumericLiteral(4),
-                        })],
-                    }
-                ))
+                        },
+                    }],
+                },
             );
         }
 
         #[test]
         fn nested() {
-            assert_eq!(
-                if_statement(
-                    "if a == 1 { if b == 2 { c != 3; } else { c == 3; } } else { d == 2; }"
-                ),
-                Ok((
-                    "",
-                    Statement::If {
-                        blocks: vec![(
-                            Condition {
-                                lhs: make_identifier!["a"],
-                                op: ConditionOp::Equals,
-                                rhs: Value::NumericLiteral(1),
+            check_result(
+                if_statement(NomSpan::new(
+                    "if a == 1 { if b == 2 { c != 3; } else { c == 3; } } else { d == 2; }",
+                )),
+                "",
+                Statement::If {
+                    span: Span {
+                        offset: 0,
+                        line: 1,
+                        fragment:
+                            "if a == 1 { if b == 2 { c != 3; } else { c == 3; } } else { d == 2; }",
+                    },
+                    blocks: vec![(
+                        Condition {
+                            span: Span { offset: 3, line: 1, fragment: "a == 1" },
+                            lhs: make_identifier!["a"],
+                            op: ConditionOp::Equals,
+                            rhs: Value::NumericLiteral(1),
+                        },
+                        vec![Statement::If {
+                            span: Span {
+                                offset: 12,
+                                line: 1,
+                                fragment: "if b == 2 { c != 3; } else { c == 3; }",
                             },
-                            vec![Statement::If {
-                                blocks: vec![(
-                                    Condition {
-                                        lhs: make_identifier!["b"],
-                                        op: ConditionOp::Equals,
-                                        rhs: Value::NumericLiteral(2),
-                                    },
-                                    vec![Statement::ConditionStatement(Condition {
+                            blocks: vec![(
+                                Condition {
+                                    span: Span { offset: 15, line: 1, fragment: "b == 2" },
+                                    lhs: make_identifier!["b"],
+                                    op: ConditionOp::Equals,
+                                    rhs: Value::NumericLiteral(2),
+                                },
+                                vec![Statement::ConditionStatement {
+                                    span: Span { offset: 24, line: 1, fragment: "c != 3;" },
+                                    condition: Condition {
+                                        span: Span { offset: 24, line: 1, fragment: "c != 3" },
                                         lhs: make_identifier!["c"],
                                         op: ConditionOp::NotEquals,
                                         rhs: Value::NumericLiteral(3),
-                                    })],
-                                )],
-                                else_block: vec![Statement::ConditionStatement(Condition {
+                                    },
+                                }],
+                            )],
+                            else_block: vec![Statement::ConditionStatement {
+                                span: Span { offset: 41, line: 1, fragment: "c == 3;" },
+                                condition: Condition {
+                                    span: Span { offset: 41, line: 1, fragment: "c == 3" },
                                     lhs: make_identifier!["c"],
                                     op: ConditionOp::Equals,
                                     rhs: Value::NumericLiteral(3),
-                                })],
-                            }]
-                        )],
-                        else_block: vec![Statement::ConditionStatement(Condition {
+                                },
+                            }],
+                        }],
+                    )],
+                    else_block: vec![Statement::ConditionStatement {
+                        span: Span { offset: 60, line: 1, fragment: "d == 2;" },
+                        condition: Condition {
+                            span: Span { offset: 60, line: 1, fragment: "d == 2" },
                             lhs: make_identifier!["d"],
                             op: ConditionOp::Equals,
                             rhs: Value::NumericLiteral(2),
-                        })],
-                    }
-                ))
+                        },
+                    }],
+                },
             );
         }
 
@@ -328,47 +430,47 @@ mod test {
         fn invalid() {
             // Must have 'if' keyword.
             assert_eq!(
-                if_statement("a == b { c == 1; }"),
+                if_statement(NomSpan::new("a == b { c == 1; }")),
                 Err(nom::Err::Error(BindParserError::IfKeyword("a == b { c == 1; }".to_string())))
             );
 
             // Must have condition.
             assert_eq!(
-                if_statement("if { c == 1; }"),
+                if_statement(NomSpan::new("if { c == 1; }")),
                 Err(nom::Err::Error(BindParserError::Identifier("{ c == 1; }".to_string())))
             );
 
             // Must have else block.
             assert_eq!(
-                if_statement("if a == b { c == 1; }"),
+                if_statement(NomSpan::new("if a == b { c == 1; }")),
                 Err(nom::Err::Error(BindParserError::ElseKeyword("".to_string())))
             );
             assert_eq!(
-                if_statement("if a == b { c == 1; } else if e == 3 { d == 2; }"),
+                if_statement(NomSpan::new("if a == b { c == 1; } else if e == 3 { d == 2; }")),
                 Err(nom::Err::Error(BindParserError::ElseKeyword("".to_string())))
             );
 
             // Must delimit blocks with {}s.
             assert_eq!(
-                if_statement("if a == b c == 1; }"),
+                if_statement(NomSpan::new("if a == b c == 1; }")),
                 Err(nom::Err::Error(BindParserError::IfBlockStart("c == 1; }".to_string())))
             );
             assert_eq!(
-                if_statement("if a == b { c == 1;"),
+                if_statement(NomSpan::new("if a == b { c == 1;")),
                 Err(nom::Err::Error(BindParserError::IfBlockEnd("".to_string())))
             );
 
             // Blocks must not be empty.
             // TODO(fxb/35146): Improve this error message, it currently reports a failure to parse
             // an accept statement due to the way the combinator works for the statement parser.
-            assert!(if_statement("if a == b { } else { c == 1; }").is_err());
-            assert!(if_statement("if a == b { c == 1; } else { }").is_err());
+            assert!(if_statement(NomSpan::new("if a == b { } else { c == 1; }")).is_err());
+            assert!(if_statement(NomSpan::new("if a == b { c == 1; } else { }")).is_err());
         }
 
         #[test]
         fn empty() {
             assert_eq!(
-                if_statement(""),
+                if_statement(NomSpan::new("")),
                 Err(nom::Err::Error(BindParserError::IfKeyword("".to_string())))
             );
         }
@@ -379,43 +481,40 @@ mod test {
 
         #[test]
         fn simple() {
-            assert_eq!(
-                accept("accept a { 1 }"),
-                Ok((
-                    "",
-                    Statement::Accept {
-                        identifier: make_identifier!["a"],
-                        values: vec![Value::NumericLiteral(1)],
-                    }
-                ))
+            check_result(
+                accept(NomSpan::new("accept a { 1 }")),
+                "",
+                Statement::Accept {
+                    span: Span { offset: 0, line: 1, fragment: "accept a { 1 }" },
+                    identifier: make_identifier!["a"],
+                    values: vec![Value::NumericLiteral(1)],
+                },
             );
         }
 
         #[test]
         fn multiple_values() {
-            assert_eq!(
-                accept("accept a { 1, 2 }"),
-                Ok((
-                    "",
-                    Statement::Accept {
-                        identifier: make_identifier!["a"],
-                        values: vec![Value::NumericLiteral(1), Value::NumericLiteral(2),],
-                    }
-                ))
+            check_result(
+                accept(NomSpan::new("accept a { 1, 2 }")),
+                "",
+                Statement::Accept {
+                    span: Span { offset: 0, line: 1, fragment: "accept a { 1, 2 }" },
+                    identifier: make_identifier!["a"],
+                    values: vec![Value::NumericLiteral(1), Value::NumericLiteral(2)],
+                },
             );
         }
 
         #[test]
         fn trailing_comma() {
-            assert_eq!(
-                accept("accept a { 1, 2, }"),
-                Ok((
-                    "",
-                    Statement::Accept {
-                        identifier: make_identifier!["a"],
-                        values: vec![Value::NumericLiteral(1), Value::NumericLiteral(2),],
-                    }
-                ))
+            check_result(
+                accept(NomSpan::new("accept a { 1, 2, }")),
+                "",
+                Statement::Accept {
+                    span: Span { offset: 0, line: 1, fragment: "accept a { 1, 2, }" },
+                    identifier: make_identifier!["a"],
+                    values: vec![Value::NumericLiteral(1), Value::NumericLiteral(2)],
+                },
             );
         }
 
@@ -423,29 +522,29 @@ mod test {
         fn invalid() {
             // Must have accept keyword.
             assert_eq!(
-                accept("a { 1 }"),
+                accept(NomSpan::new("a { 1 }")),
                 Err(nom::Err::Error(BindParserError::AcceptKeyword("a { 1 }".to_string())))
             );
 
             // Must have identifier.
             assert_eq!(
-                accept("accept { 1 }"),
+                accept(NomSpan::new("accept { 1 }")),
                 Err(nom::Err::Error(BindParserError::Identifier("{ 1 }".to_string())))
             );
 
             // Must have at least one value.
             assert_eq!(
-                accept("accept a { }"),
+                accept(NomSpan::new("accept a { }")),
                 Err(nom::Err::Error(BindParserError::ConditionValue("}".to_string())))
             );
 
             // Must delimit blocks with {}s.
             assert_eq!(
-                accept("accept a 1 }"),
+                accept(NomSpan::new("accept a 1 }")),
                 Err(nom::Err::Error(BindParserError::ListStart("1 }".to_string())))
             );
             assert_eq!(
-                accept("accept a { 1"),
+                accept(NomSpan::new("accept a { 1")),
                 Err(nom::Err::Error(BindParserError::ListEnd("".to_string())))
             );
         }
@@ -453,8 +552,23 @@ mod test {
         #[test]
         fn empty() {
             assert_eq!(
-                accept(""),
+                accept(NomSpan::new("")),
                 Err(nom::Err::Error(BindParserError::AcceptKeyword("".to_string())))
+            );
+        }
+
+        #[test]
+        fn span() {
+            // Span doesn't contain leading or trailing whitespace, and line number is correct.
+            check_result(
+                condition(NomSpan::new(" \n\t\r\nabc \n\t\r\n== \n\t\r\ntrue \n\t\r\n")),
+                " \n\t\r\n",
+                Condition {
+                    span: Span { offset: 5, line: 3, fragment: "abc \n\t\r\n== \n\t\r\ntrue" },
+                    lhs: make_identifier!["abc"],
+                    op: ConditionOp::Equals,
+                    rhs: Value::BoolLiteral(true),
+                },
             );
         }
     }
@@ -464,24 +578,28 @@ mod test {
 
         #[test]
         fn simple() {
-            assert_eq!(abort("abort;"), Ok(("", Statement::Abort)));
+            check_result(
+                abort(NomSpan::new("abort;")),
+                "",
+                Statement::Abort { span: Span { offset: 0, line: 1, fragment: "abort;" } },
+            );
         }
 
         #[test]
         fn invalid() {
             // Must have abort keyword.
             assert_eq!(
-                abort("a;"),
+                abort(NomSpan::new("a;")),
                 Err(nom::Err::Error(BindParserError::AbortKeyword("a;".to_string())))
             );
             assert_eq!(
-                abort(";"),
+                abort(NomSpan::new(";")),
                 Err(nom::Err::Error(BindParserError::AbortKeyword(";".to_string())))
             );
 
             // Must have semicolon.
             assert_eq!(
-                abort("abort"),
+                abort(NomSpan::new("abort")),
                 Err(nom::Err::Error(BindParserError::Semicolon("".to_string())))
             );
         }
@@ -489,8 +607,22 @@ mod test {
         #[test]
         fn empty() {
             assert_eq!(
-                abort(""),
+                abort(NomSpan::new("")),
                 Err(nom::Err::Error(BindParserError::AbortKeyword("".to_string())))
+            );
+        }
+
+        #[test]
+        fn span() {
+            // Span doesn't contain leading or trailing whitespace, and line number is correct.
+            check_result(
+                accept(NomSpan::new(" \n\t\r\naccept a \n\t\r\n{ 1 } \n\t\r\n")),
+                " \n\t\r\n",
+                Statement::Accept {
+                    span: Span { offset: 5, line: 3, fragment: "accept a \n\t\r\n{ 1 }" },
+                    identifier: make_identifier!["a"],
+                    values: vec![Value::NumericLiteral(1)],
+                },
             );
         }
     }
@@ -500,26 +632,28 @@ mod test {
 
         #[test]
         fn simple() {
-            assert_eq!(
-                program("using a; x == 1;"),
-                Ok((
-                    "",
-                    Ast {
-                        using: vec![Include { name: make_identifier!["a"], alias: None }],
-                        statements: vec![Statement::ConditionStatement(Condition {
+            check_result(
+                program(NomSpan::new("using a; x == 1;")),
+                "",
+                Ast {
+                    using: vec![Include { name: make_identifier!["a"], alias: None }],
+                    statements: vec![Statement::ConditionStatement {
+                        span: Span { offset: 9, line: 1, fragment: "x == 1;" },
+                        condition: Condition {
+                            span: Span { offset: 9, line: 1, fragment: "x == 1" },
                             lhs: make_identifier!["x"],
                             op: ConditionOp::Equals,
                             rhs: Value::NumericLiteral(1),
-                        })]
-                    }
-                ))
+                        },
+                    }],
+                },
             );
         }
 
         #[test]
         fn empty() {
             assert_eq!(
-                program(""),
+                program(NomSpan::new("")),
                 Err(nom::Err::Error(BindParserError::NoStatements("".to_string())))
             );
         }
@@ -528,26 +662,28 @@ mod test {
         fn requires_statement() {
             // Must have a statement.
             assert_eq!(
-                program("using a;"),
+                program(NomSpan::new("using a;")),
                 Err(nom::Err::Error(BindParserError::NoStatements("".to_string())))
             );
         }
 
         #[test]
         fn using_list_optional() {
-            assert_eq!(
-                program("x == 1;"),
-                Ok((
-                    "",
-                    Ast {
-                        using: vec![],
-                        statements: vec![Statement::ConditionStatement(Condition {
+            check_result(
+                program(NomSpan::new("x == 1;")),
+                "",
+                Ast {
+                    using: vec![],
+                    statements: vec![Statement::ConditionStatement {
+                        span: Span { offset: 0, line: 1, fragment: "x == 1;" },
+                        condition: Condition {
+                            span: Span { offset: 0, line: 1, fragment: "x == 1" },
                             lhs: make_identifier!["x"],
                             op: ConditionOp::Equals,
                             rhs: Value::NumericLiteral(1),
-                        })]
-                    }
-                ))
+                        },
+                    }],
+                },
             );
         }
 
@@ -555,52 +691,71 @@ mod test {
         fn requires_semicolons() {
             // TODO(fxb/35146): Improve the error type that is returned here.
             assert_eq!(
-                program("x == 1"),
+                program(NomSpan::new("x == 1")),
                 Err(nom::Err::Error(BindParserError::AbortKeyword("x == 1".to_string())))
             );
         }
 
         #[test]
         fn multiple_statements() {
-            assert_eq!(
-                program("x == 1; accept y { true } abort; if z == 2 { a != 3; } else { a == 3; }"),
-                Ok((
-                    "",
-                    Ast {
-                        using: vec![],
-                        statements: vec![
-                            Statement::ConditionStatement(Condition {
+            check_result(
+                program(NomSpan::new(
+                    "x == 1; accept y { true } abort; if z == 2 { a != 3; } else { a == 3; }",
+                )),
+                "",
+                Ast {
+                    using: vec![],
+                    statements: vec![
+                        Statement::ConditionStatement {
+                            span: Span { offset: 0, line: 1, fragment: "x == 1;" },
+                            condition: Condition {
+                                span: Span { offset: 0, line: 1, fragment: "x == 1" },
                                 lhs: make_identifier!["x"],
                                 op: ConditionOp::Equals,
                                 rhs: Value::NumericLiteral(1),
-                            }),
-                            Statement::Accept {
-                                identifier: make_identifier!["y"],
-                                values: vec![Value::BoolLiteral(true)],
                             },
-                            Statement::Abort,
-                            Statement::If {
-                                blocks: vec![(
-                                    Condition {
-                                        lhs: make_identifier!["z"],
-                                        op: ConditionOp::Equals,
-                                        rhs: Value::NumericLiteral(2),
-                                    },
-                                    vec![Statement::ConditionStatement(Condition {
+                        },
+                        Statement::Accept {
+                            span: Span { offset: 8, line: 1, fragment: "accept y { true }" },
+                            identifier: make_identifier!["y"],
+                            values: vec![Value::BoolLiteral(true)],
+                        },
+                        Statement::Abort { span: Span { offset: 26, line: 1, fragment: "abort;" } },
+                        Statement::If {
+                            span: Span {
+                                offset: 33,
+                                line: 1,
+                                fragment: "if z == 2 { a != 3; } else { a == 3; }",
+                            },
+                            blocks: vec![(
+                                Condition {
+                                    span: Span { offset: 36, line: 1, fragment: "z == 2" },
+                                    lhs: make_identifier!["z"],
+                                    op: ConditionOp::Equals,
+                                    rhs: Value::NumericLiteral(2),
+                                },
+                                vec![Statement::ConditionStatement {
+                                    span: Span { offset: 45, line: 1, fragment: "a != 3;" },
+                                    condition: Condition {
+                                        span: Span { offset: 45, line: 1, fragment: "a != 3" },
                                         lhs: make_identifier!["a"],
                                         op: ConditionOp::NotEquals,
                                         rhs: Value::NumericLiteral(3),
-                                    })]
-                                )],
-                                else_block: vec![Statement::ConditionStatement(Condition {
+                                    },
+                                }],
+                            )],
+                            else_block: vec![Statement::ConditionStatement {
+                                span: Span { offset: 62, line: 1, fragment: "a == 3;" },
+                                condition: Condition {
+                                    span: Span { offset: 62, line: 1, fragment: "a == 3" },
                                     lhs: make_identifier!["a"],
                                     op: ConditionOp::Equals,
                                     rhs: Value::NumericLiteral(3),
-                                })],
-                            }
-                        ]
-                    }
-                ))
+                                },
+                            }],
+                        },
+                    ],
+                },
             );
         }
     }

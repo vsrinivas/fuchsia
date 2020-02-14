@@ -38,6 +38,8 @@ if (host_toolchain == current_toolchain) {
       "//src/devices/bind/debugger:lib",
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:nom",
+      "//third_party/rust_crates:nom_locate",
+      "//third_party/rust_crates:regex",
     ]
   }
 }
