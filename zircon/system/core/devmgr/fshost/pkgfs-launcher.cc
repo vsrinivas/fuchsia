@@ -105,6 +105,8 @@ zx_status_t pkgfs_ldsvc_load_blob(void* ctx, const char* prefix, const char* nam
   zx_status_t status = fdio_open_fd_at(ldsvc_ctx->blobfs_root_fd.get(), blob,
                                        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd);
   if (status != ZX_OK) {
+    printf("fshost: failed to open pkgfs blob \"%s\": %d (%s)\n", blob, status,
+           zx_status_get_string(status));
     return status;
   }
 
@@ -112,6 +114,7 @@ zx_status_t pkgfs_ldsvc_load_blob(void* ctx, const char* prefix, const char* nam
   status = fdio_get_vmo_exec(fd, exec_vmo.reset_and_get_address());
   close(fd);
   if (status != ZX_OK) {
+    printf("fshost: failed to get vmo for blob \"%s\" (%d)\n", blob, status);
     return status;
   }
 
@@ -122,6 +125,8 @@ zx_status_t pkgfs_ldsvc_load_blob(void* ctx, const char* prefix, const char* nam
   }
   status = zx_object_set_property(exec_vmo.get(), ZX_PROP_NAME, key, strlen(key));
   if (status != ZX_OK) {
+    printf("fshost: failed to set object property ZX_PROP_NAME to %s: %d (%s)\n", key, status,
+           zx_status_get_string(status));
     return status;
   }
 
