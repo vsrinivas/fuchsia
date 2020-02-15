@@ -61,9 +61,8 @@ class Namer {
   std::string random_prefix(std::string label, std::size_t up_to) {
     // normalize any name to at least |up_to| characters, by adding random prefix
     static std::string characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    static unsigned int seed =
-        static_cast<unsigned int>(std::chrono::system_clock::now().time_since_epoch().count());
-    static std::default_random_engine gen(seed);
+    constexpr size_t kSeed = 1337;
+    static std::default_random_engine gen(kSeed);
     static std::uniform_int_distribution<size_t> distribution(0, characters.size() - 1);
     if (label.size() < up_to - 1) {
       label = "_" + label;
