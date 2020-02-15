@@ -9,6 +9,7 @@
 #include <fuchsia/identity/account/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
+#include <fuchsia/settings/cpp/fidl.h>
 #include <fuchsia/setui/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/modular/cpp/agent.h>

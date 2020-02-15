@@ -2,6 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("intl") {
+  public_deps = [
+    "intl_property_provider_impl",
+    "unicode_utils",
+  ]
+}
+
 group("tests") {
   testonly = true
   public_deps = [

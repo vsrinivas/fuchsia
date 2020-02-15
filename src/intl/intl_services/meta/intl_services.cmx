@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/intl_services"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.settings.Intl"
+        ]
+    }
+}

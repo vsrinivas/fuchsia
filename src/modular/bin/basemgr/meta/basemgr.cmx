@@ -8,6 +8,7 @@
             "isolated-persistent-storage"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.deprecatedtimezone.Timezone",
             "fuchsia.device.manager.Administrator",

@@ -13,18 +13,12 @@ group("tests") {
 }
 
 fidl("fidl") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [
-    "too-many-nested-libraries",
-    "vector-bounds-not-specified",
-  ]
-
-  name = "fuchsia.modular.intl.internal"
+  name = "fuchsia.intl.merge"
   visibility = [ ":*" ]
-  sources = [ "internal.fidl" ]
+  sources = [ "merge.fidl" ]
   public_deps = [
     "//sdk/fidl/fuchsia.intl",
-    "//sdk/fidl/fuchsia.setui",
+    "//sdk/fidl/fuchsia.settings",
   ]
 }
 
@@ -37,20 +31,22 @@ source_set("intl_property_provider_impl") {
   deps = [
     ":locale_util",
     "//garnet/public/lib/fostr/fidl/fuchsia.intl",
+    "//garnet/public/lib/fostr/fidl/fuchsia.settings",
+    "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/service/cpp",
     "//src/lib/fxl",
     "//src/lib/icu_data/cpp",
     "//src/lib/syslog/cpp",
-    "//src/modular/lib/fidl:clone",
     "//third_party/icu",
   ]
 
   public_deps = [
     ":fidl",
     "//sdk/fidl/fuchsia.intl",
-    "//sdk/fidl/fuchsia.setui",
+    "//sdk/fidl/fuchsia.settings",
   ]
 }
 
@@ -64,8 +60,8 @@ executable("intl_property_provider_impl_test_bin") {
     ":intl_property_provider_impl",
     "//garnet/bin/trace/tests:component_context",
     "//garnet/public/lib/fostr/fidl/fuchsia.intl",
+    "//garnet/public/lib/fostr/fidl/fuchsia.settings",
     "//garnet/public/lib/gtest",
-    "//sdk/fidl/fuchsia.setui",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fidl_fuchsia_intl_ext/cpp",

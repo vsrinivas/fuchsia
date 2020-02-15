@@ -6,8 +6,8 @@
 #define SRC_LIB_INTL_INTL_PROPERTY_PROVIDER_IMPL_INTL_PROPERTY_PROVIDER_IMPL_H_
 
 #include <fuchsia/intl/cpp/fidl.h>
-#include <fuchsia/modular/intl/internal/cpp/fidl.h>
-#include <fuchsia/setui/cpp/fidl.h>
+#include <fuchsia/intl/merge/cpp/fidl.h>
+#include <fuchsia/settings/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/result.h>
@@ -21,9 +21,23 @@ namespace modular {
 // Implementation of `fuchsia.intl.PropertyProvider`.
 //
 // Serves an up-to-date `fuchsia.intl.Profile`, based on watched user settings.
-class IntlPropertyProviderImpl : fuchsia::intl::PropertyProvider, fuchsia::setui::SettingListener {
+//
+// Example use, with types and required includes elided for brevity is below.
+//
+// ```
+// async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+// auto context = sys::ComponentContext::Create();
+// // Connects to required backend services through context->svc().
+// auto intl = IntlPropertyProviderImpl::Create(context->svc());
+// // Starts serving `fuchsia.intl.PropertyProvider`.
+// context->outgoing()->AddPublicService(intl->GetHandler());
+// // Waits for events in the async loop.
+// loop.Run();
+// ```
+//
+class IntlPropertyProviderImpl final : fuchsia::intl::PropertyProvider {
  public:
-  explicit IntlPropertyProviderImpl(fuchsia::setui::SetUiServicePtr setui_client);
+  explicit IntlPropertyProviderImpl(fuchsia::settings::IntlPtr settings_client_);
 
   // Create an instance of `IntlPropertyProviderImpl`, after using the given `ServiceDirectory` to
   // connect to all of the provider's service dependencies.
@@ -43,15 +57,9 @@ class IntlPropertyProviderImpl : fuchsia::intl::PropertyProvider, fuchsia::setui
   // `fuchsia.intl.PropertyProvider`
   void GetProfile(fuchsia::intl::PropertyProvider::GetProfileCallback callback) override;
 
-  // Called every time the `setui` calls on the listener.  The settings object corresponds to
-  // the setting type that is registered with `setui.Listen`.
-  //
-  // `fuchsia.setui.SettingListener`
-  void Notify(fuchsia::setui::SettingsObject settings) override;
-
  private:
   // Start watching changes in user preferences.  Each setting type is watched separately.
-  void StartSettingsWatcher(fuchsia::setui::SettingType type);
+  void StartSettingsWatcher();
 
   // Load the initial profiles values from user preferences and defaults.
   void LoadInitialValues();
@@ -68,39 +76,25 @@ class IntlPropertyProviderImpl : fuchsia::intl::PropertyProvider, fuchsia::setui
 
   // Replace the stored raw data, and, if the data has actually changed, trigger notifications to
   // watchers and pending requesters.
-  bool UpdateRawData(fuchsia::modular::intl::internal::RawProfileData& new_raw_data);
-
-  // Notify watchers that the `Profile` has changed.
-  void NotifyOnChange();
+  bool UpdateRawData(fuchsia::intl::merge::Data new_raw_data);
 
   // Send the Profile to any queued callers of `GetProfile`.
-  void ProcessGetProfileQueue();
-
-  // Updates the internal intl object state, const referenced.
-  void NotifyInternal(const fuchsia::setui::SettingsObject& settings);
+  void ProcessProfileRequests();
 
   // A snapshot of the assembled intl `Profile`.
   std::optional<fuchsia::intl::Profile> intl_profile_;
 
   // Raw data that will be used to assemble the `Profile`.  Initially empty, and remains empty
-  // until a first successful read result comes in from `setui`.
-  std::optional<fuchsia::modular::intl::internal::RawProfileData> raw_profile_data_;
+  // until a first successful read result comes in.
+  std::optional<fuchsia::intl::merge::Data> raw_profile_data_;
 
   fidl::BindingSet<fuchsia::intl::PropertyProvider> property_provider_bindings_;
 
-  fuchsia::setui::SetUiServicePtr setui_client_;
-
-  // A FIDL connection to the `setui.SettingListener` endpoint which will be called by the
-  // `setui` server to deliver the `Notify` for a setting.
-  fidl::Binding<fuchsia::setui::SettingListener> setting_listener_binding_;
-  // We need separate bindings per type.
-  fidl::Binding<fuchsia::setui::SettingListener> setting_listener_binding_intl_;
+  // The client connecting to the intl service.
+  fuchsia::settings::IntlPtr settings_client_;
 
   // Queue of pending requests
   std::queue<fuchsia::intl::PropertyProvider::GetProfileCallback> get_profile_queue_;
-
-  // A setting object to use for initialization, must be live as long as this object lives.
-  const fuchsia::setui::SettingsObject initial_settings_object_;
 };
 
 }  // namespace modular

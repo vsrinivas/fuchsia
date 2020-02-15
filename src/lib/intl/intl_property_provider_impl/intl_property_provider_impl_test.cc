@@ -5,8 +5,8 @@
 #include "src/lib/intl/intl_property_provider_impl/intl_property_provider_impl.h"
 
 #include <fuchsia/intl/cpp/fidl.h>
-#include <fuchsia/setui/cpp/fidl.h>
-#include <fuchsia/setui/cpp/fidl_test_base.h>
+#include <fuchsia/settings/cpp/fidl.h>
+#include <fuchsia/settings/cpp/fidl_test_base.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -15,6 +15,7 @@
 
 #include "garnet/bin/trace/tests/component_context.h"
 #include "lib/fostr/fidl/fuchsia/intl/formatting.h"
+#include "lib/fostr/fidl/fuchsia/settings/formatting.h"
 #include "src/lib/fidl_fuchsia_intl_ext/cpp/fidl_ext.h"
 #include "src/lib/fxl/log_settings.h"
 #include "src/lib/fxl/logging.h"
@@ -31,79 +32,64 @@ using fuchsia::intl::Profile;
 using fuchsia::intl::PropertyProvider;
 using fuchsia::intl::TemperatureUnit;
 using fuchsia::intl::TimeZoneId;
+using fuchsia::settings::HourCycle;
 using modular::IntlPropertyProviderImpl;
 using sys::testing::ComponentContextProvider;
 
-// Constructs a SettingsObject to be returned to the watchers based on the supplied IANA timezone
-// ID (e.g. "America/New_York").
-fuchsia::setui::SettingsObject SettingFromTimezone(const std::string& tz_id) {
-  fuchsia::setui::TimeZoneInfo time_zone_info;
-  time_zone_info.current = fuchsia::setui::TimeZone::New();
-  time_zone_info.current->id = tz_id;
-
-  fuchsia::setui::SettingsObject object{
-      .setting_type = fuchsia::setui::SettingType::TIME_ZONE,
-  };
-
-  fuchsia::setui::SettingData setting_data;
-  setting_data.set_time_zone_value(std::move(time_zone_info));
-
-  EXPECT_EQ(ZX_OK, setting_data.Clone(&object.data));
-  return object;
+fuchsia::settings::IntlSettings NewSettings(std::vector<std::string> locale_ids,
+                                            HourCycle hour_cycle,
+                                            TemperatureUnit temperature_unit) {
+  EXPECT_FALSE(locale_ids.empty()) << "by settings protocol locale ids must be nonempty";
+  fuchsia::settings::IntlSettings settings;
+  std::vector<LocaleId> locales;
+  for (const auto& locale_id : locale_ids) {
+    locales.emplace_back(LocaleId{
+        .id = locale_id,
+    });
+  }
+  settings.set_locales(std::move(locales));
+  settings.set_temperature_unit(temperature_unit);
+  settings.set_hour_cycle(hour_cycle);
+  return settings;
 }
 
-// Constructs a valid settings object based on the intl settings.
-fuchsia::setui::SettingsObject SettingFromIntl(const fuchsia::setui::IntlSettings& settings) {
-  EXPECT_FALSE(settings.locales.empty())
-      << "Locales must have at least one entry by fuchsia.intl.ProfileProvider spec";
-  fuchsia::setui::SettingData setting_data;
-  setting_data.set_intl(modular::CloneStruct(settings));
-
-  fuchsia::setui::SettingsObject object{
-      .setting_type = fuchsia::setui::SettingType::INTL,
-  };
-  EXPECT_EQ(ZX_OK, setting_data.Clone(&object.data));
-  return object;
-}
-
-class FakeSetUiService : public fuchsia::setui::testing::SetUiService_TestBase {
+// A fake implementation of fuchsia.settings.Intl service.  The Watch protocol specifically is not
+// implemented correctly for multiple watchers.
+class FakeSettingsService : public fuchsia::settings::testing::Intl_TestBase {
  public:
-  FakeSetUiService()
-      : timezone_settings_(SettingFromTimezone("UTC")),
-        intl_settings_(SettingFromIntl(fuchsia::setui::IntlSettings{
-            // At least one locale must be present.
-            .locales = {"en-US"},
-            .hour_cycle = fuchsia::setui::HourCycle::H12,
-            .temperature_unit = fuchsia::setui::TemperatureUnit::FAHRENHEIT,
-        })) {}
+  FakeSettingsService()
+      : intl_settings_(NewSettings({"en-US"}, HourCycle::H12, TemperatureUnit::FAHRENHEIT)),
+        state_changed_(true) {}
 
-  fidl::InterfaceRequestHandler<fuchsia::setui::SetUiService> GetHandler(
+  fidl::InterfaceRequestHandler<fuchsia::settings::Intl> GetHandler(
       async_dispatcher_t* dispatcher = nullptr) {
-    return bindings_.GetHandler(static_cast<fuchsia::setui::SetUiService*>(this), dispatcher);
+    return bindings_.GetHandler(static_cast<fuchsia::settings::Intl*>(this), dispatcher);
   }
 
   // Test method, used to modify the timezone identifier served by the fake setui service.
   void SetTimeZone(const std::string& iana_tz_id) {
-    auto& current_time_zone = timezone_settings_.data.time_zone_value().current;
-    ASSERT_NE(current_time_zone, nullptr);
-    if (iana_tz_id == current_time_zone->id) {
-      return;
-    }
-    fuchsia::setui::SettingsObject new_settings = SettingFromTimezone(iana_tz_id);
-    ASSERT_EQ(ZX_OK, new_settings.Clone(&timezone_settings_));
-    NotifyAll(fuchsia::setui::SettingType::TIME_ZONE);
+    fuchsia::settings::IntlSettings new_settings = modular::CloneStruct(intl_settings_);
+    new_settings.mutable_time_zone_id()->id = iana_tz_id;
+    SetIntl(new_settings);
   }
 
   // Test method, used to modify the fake intl data that this fake service implementation will
   // serve.
-  void SetIntl(const fuchsia::setui::IntlSettings& intl_settings) {
-    // TODO(fmil): Sort out the naming here.
-    fuchsia::setui::SettingsObject intl_object = SettingFromIntl(intl_settings);
-    if (fidl::Equals(intl_settings_, intl_object)) {
+  void SetIntl(const fuchsia::settings::IntlSettings& intl_settings) {
+    if (fidl::Equals(intl_settings_, intl_settings)) {
       return;
     }
-    EXPECT_EQ(ZX_OK, intl_object.Clone(&intl_settings_));
-    NotifyAll(fuchsia::setui::SettingType::INTL);
+    intl_settings_ = modular::CloneStruct(intl_settings);
+    state_changed_ = true;
+    Notify();
+  }
+
+  // Implements `fuchsia.settings.Watch`, but only for a single watcher.
+  void Watch(WatchCallback callback) override {
+    watcher_ = std::move(callback);
+    if (state_changed_) {
+      Notify();
+    }
   }
 
   // Called on all other methods that this fake does not implement.
@@ -111,50 +97,29 @@ class FakeSetUiService : public fuchsia::setui::testing::SetUiService_TestBase {
     FAIL() << "Method not implemented: " << name;
   }
 
-  // Returns the fake settings that are associated with the supplied setting type.
-  const fuchsia::setui::SettingsObject& TypedSettings(fuchsia::setui::SettingType type) {
-    // This is a bit simplistic, but should be enough for our use.
-    return (type == fuchsia::setui::SettingType::TIME_ZONE) ? timezone_settings_ : intl_settings_;
-  }
-
-  // `fuchsia.setuiservice.Watch`
-  void Watch(fuchsia::setui::SettingType type, WatchCallback callback) override {
-    callback(modular::CloneStruct(TypedSettings(type)));
-  }
-
-  // `fuchsia.setuiservice.Listen`.  Forwards all changes for the setting `type` to the supplied
-  // listener by calling its Notify method.
-  void Listen(fuchsia::setui::SettingType type,
-              ::fidl::InterfaceHandle<class fuchsia::setui::SettingListener> listener) override {
-    auto listener_ptr = listener.Bind();
-    listener_ptr->Notify(modular::CloneStruct(TypedSettings(type)));
-    listeners_[type].emplace_back(std::move(listener_ptr));
-  }
-
  private:
-  // Notifies all listeners of the current settings.  May only be called immediately after, the
-  // settings actually have been modified.
-  void NotifyAll(fuchsia::setui::SettingType type) {
-    const auto& typed_listeners = listeners_.find(type);
-    if (typed_listeners == end(listeners_)) {
-      // No listeners registered for this type.
+  void Notify() {
+    if (watcher_ == nullptr) {
+      FX_LOGS(INFO) << "No watcher, not notifying.";
       return;
     }
-    for (auto& listener : typed_listeners->second) {
-      listener->Notify(modular::CloneStruct(TypedSettings(type)));
-    }
+    FX_LOGS(INFO) << "telling watcher it's " << intl_settings_;
+    watcher_(fit::ok(modular::CloneStruct(intl_settings_)));
+    state_changed_ = false;
+    watcher_ = nullptr;
   }
 
-  // The server-side connection for SetUiService.
-  fidl::BindingSet<fuchsia::setui::SetUiService> bindings_;
+  // The server-side connection for Intl service
+  fidl::BindingSet<fuchsia::settings::Intl> bindings_;
 
-  // The listeners that have registered for receiving a particular event type.
-  std::map<fuchsia::setui::SettingType, std::vector<fuchsia::setui::SettingListenerPtr>> listeners_;
+  // The fake implementation of the watch protocol works for one listener only.
+  WatchCallback watcher_;
 
-  // The current timezone settings.
-  fuchsia::setui::SettingsObject timezone_settings_;
-  // The current intl settings.
-  fuchsia::setui::SettingsObject intl_settings_;
+  // Settings reported on a Watch call.
+  fuchsia::settings::IntlSettings intl_settings_;
+
+  // If set, it means that any incoming watch should return immediately.
+  bool state_changed_;
 };
 
 // Tests for `IntlPropertyProviderImpl`.
@@ -168,13 +133,12 @@ class IntlPropertyProviderImplTest : public gtest::RealLoopFixture {
   // Creates a server under test, connecting to the backend FIDL services that
   // are exposed by the test fixture.
   void SetUpInstanceWithIncomingServices() {
-    setui_service_ = std::make_unique<FakeSetUiService>();
+    setui_service_ = std::make_unique<FakeSettingsService>();
     ASSERT_EQ(ZX_OK, provider_.service_directory_provider()->AddService(
                          setui_service_->GetHandler(dispatcher())));
-    fuchsia::setui::SetUiServicePtr setui_client =
-        provider_.context()->svc()->Connect<fuchsia::setui::SetUiService>();
-
-    instance_ = std::make_unique<IntlPropertyProviderImpl>(std::move(setui_client));
+    fuchsia::settings::IntlPtr client =
+        provider_.context()->svc()->Connect<fuchsia::settings::Intl>();
+    instance_ = std::make_unique<IntlPropertyProviderImpl>(std::move(client));
   }
 
   // Makes the service of the unit under test available in the outgoing testing
@@ -194,7 +158,7 @@ class IntlPropertyProviderImplTest : public gtest::RealLoopFixture {
   ComponentContextProvider provider_;
 
   // The fake setui service instance.
-  std::unique_ptr<FakeSetUiService> setui_service_;
+  std::unique_ptr<FakeSettingsService> setui_service_;
 
   // The instance of the server under test.
   std::unique_ptr<IntlPropertyProviderImpl> instance_;
@@ -272,11 +236,8 @@ TEST_F(IntlPropertyProviderImplTest, NotifiesOnTimeZoneChange) {
 }
 
 TEST_F(IntlPropertyProviderImplTest, NotifiesOnLocaleChange) {
-  setui_service_->SetIntl(fuchsia::setui::IntlSettings{
-      .locales = {"nl-NL"},
-      .hour_cycle = fuchsia::setui::HourCycle::H12,
-      .temperature_unit = fuchsia::setui::TemperatureUnit::CELSIUS,
-  });
+  setui_service_->SetIntl(NewSettings({"nl-NL"}, HourCycle::H12, TemperatureUnit::CELSIUS));
+  setui_service_->SetTimeZone("UTC");
   RunLoopUntilIdle();
 
   Profile expected_a{};
@@ -303,11 +264,7 @@ TEST_F(IntlPropertyProviderImplTest, NotifiesOnLocaleChange) {
   RunLoopUntilIdle();
   ASSERT_FALSE(changed);
 
-  setui_service_->SetIntl(fuchsia::setui::IntlSettings{
-      .locales = {"ru-RU"},
-      .hour_cycle = fuchsia::setui::HourCycle::H23,
-      .temperature_unit = fuchsia::setui::TemperatureUnit::CELSIUS,
-  });
+  setui_service_->SetIntl(NewSettings({"ru-RU"}, HourCycle::H23, TemperatureUnit::CELSIUS));
   RunLoopUntilIdle();
   ASSERT_TRUE(changed);
 
@@ -329,12 +286,8 @@ TEST_F(IntlPropertyProviderImplTest, NotifiesOnLocaleChange) {
 }
 
 TEST_F(IntlPropertyProviderImplTest, SettingMix) {
+  setui_service_->SetIntl(NewSettings({"nl-NL"}, HourCycle::H12, TemperatureUnit::CELSIUS));
   setui_service_->SetTimeZone("Europe/Amsterdam");
-  setui_service_->SetIntl(fuchsia::setui::IntlSettings{
-      .locales = {"nl-NL"},
-      .hour_cycle = fuchsia::setui::HourCycle::H12,
-      .temperature_unit = fuchsia::setui::TemperatureUnit::CELSIUS,
-  });
   RunLoopUntilIdle();
 
   auto client = GetClient();
@@ -357,11 +310,7 @@ TEST_F(IntlPropertyProviderImplTest, SettingMix) {
 
   EXPECT_EQ(expected, actual);
 
-  setui_service_->SetIntl(fuchsia::setui::IntlSettings{
-      .locales = {"nl-NL"},
-      .hour_cycle = fuchsia::setui::HourCycle::H23,
-      .temperature_unit = fuchsia::setui::TemperatureUnit::CELSIUS,
-  });
+  setui_service_->SetIntl(NewSettings({"nl-NL"}, HourCycle::H23, TemperatureUnit::CELSIUS));
   RunLoopUntilIdle();
 
   client->GetProfile([&](Profile profile) { actual = std::move(profile); });
@@ -382,12 +331,9 @@ TEST_F(IntlPropertyProviderImplTest, SettingMix) {
 }
 
 TEST_F(IntlPropertyProviderImplTest, Multilocale) {
+  setui_service_->SetIntl(
+      NewSettings({"nl-NL", "nl-BE", "nl", "fr-FR"}, HourCycle::H12, TemperatureUnit::CELSIUS));
   setui_service_->SetTimeZone("Europe/Amsterdam");
-  setui_service_->SetIntl(fuchsia::setui::IntlSettings{
-      .locales = {"nl-NL", "nl-BE", "nl", "fr-FR"},
-      .hour_cycle = fuchsia::setui::HourCycle::H12,
-      .temperature_unit = fuchsia::setui::TemperatureUnit::CELSIUS,
-  });
   RunLoopUntilIdle();
 
   auto client = GetClient();

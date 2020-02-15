@@ -10,6 +10,7 @@
 #include <lib/vfs/cpp/pseudo_file.h>
 #include <zircon/status.h>
 
+#include <fuchsia/stash/cpp/fidl.h>
 #include <src/lib/files/path.h>
 #include <src/lib/files/unique_fd.h>
 #include <src/modular/lib/modular_config/modular_config.h>
@@ -175,6 +176,10 @@ zx_status_t TestHarnessImpl::PopulateEnvServices(sys::testing::EnvironmentServic
   std::map<std::string, std::string> default_svcs = {
       {fuchsia::identity::account::AccountManager::Name_,
        "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx"},
+      {fuchsia::settings::Intl::Name_,
+       "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx"},
+      {fuchsia::stash::Store::Name_,
+       "fuchsia-pkg://fuchsia.com/stash#meta/stash_tests.cmx"},
       {fuchsia::devicesettings::DeviceSettingsManager::Name_,
        "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/"
        "device_settings_manager.cmx"}};

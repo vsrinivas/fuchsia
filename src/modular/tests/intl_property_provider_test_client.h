@@ -14,7 +14,7 @@
 
 namespace modular_tests {
 
-// Simple client reused by various tests to ensure they can get i18l services from the environment.
+// Simple client reused by various tests to ensure they can get i18n services from the environment.
 class IntlPropertyProviderTestClient {
  public:
   IntlPropertyProviderTestClient(const modular_testing::FakeComponent* fake_component)
