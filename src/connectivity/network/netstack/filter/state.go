@@ -72,8 +72,6 @@ const (
 	TCPExpireAfterEstablished = 30 * time.Second
 	TCPExpireDefault          = 24 * time.Hour
 
-	MutexExpireDefault = 5 * time.Minute
-
 	ExpireIntervalMin = 10 * time.Second
 )
 
@@ -330,45 +328,11 @@ func (s *State) updateStateTCPinICMP(dir Direction, seq seqnum) error {
 	return nil
 }
 
-type StatesLockKey tcpip.FullAddress
-type StatesLockValue struct {
-	mut        sync.Mutex
-	expireTime time.Time
-}
-
-func makeStatesLockKey(dir Direction, srcAddr tcpip.Address, dstAddr tcpip.Address, transProto tcpip.TransportProtocolNumber, transportHeader []byte) StatesLockKey {
-	var srcPort, dstPort uint16
-	switch transProto {
-	case header.UDPProtocolNumber:
-		udp := header.UDP(transportHeader)
-		srcPort = udp.SourcePort()
-		dstPort = udp.DestinationPort()
-	case header.TCPProtocolNumber:
-		tcp := header.TCP(transportHeader)
-		srcPort = tcp.SourcePort()
-		dstPort = tcp.DestinationPort()
-	}
-	var extPort uint16
-	var extAddr tcpip.Address
-	switch dir {
-	case Incoming:
-		extPort = srcPort
-		extAddr = srcAddr
-	case Outgoing:
-		extPort = dstPort
-		extAddr = dstAddr
-	}
-
-	return StatesLockKey{Addr: extAddr, Port: extPort}
-}
-
 // States is a collection of State we are tracking.
 type States struct {
 	purgeEnabled uint32
 
-	mut          sync.RWMutex                       // Guards access to lockKeyToMut below
-	lockKeyToMut map[StatesLockKey]*StatesLockValue // Guards access to individual maps below
-
+	mut      sync.Mutex
 	extToGwy map[Key]*State
 	lanToExt map[Key]*State
 }
@@ -376,38 +340,10 @@ type States struct {
 func NewStates() *States {
 	ss := &States{
 		purgeEnabled: 0,
-		lockKeyToMut: make(map[StatesLockKey]*StatesLockValue),
 		extToGwy:     make(map[Key]*State),
 		lanToExt:     make(map[Key]*State),
 	}
 	return ss
-}
-
-func (ss *States) lock(lockKey StatesLockKey) {
-	ss.mut.RLock()
-
-	v, ok := ss.lockKeyToMut[lockKey]
-	if !ok {
-		ss.mut.RUnlock()
-		ss.mut.Lock()
-
-		v, ok = ss.lockKeyToMut[lockKey]
-		if !ok {
-			v = &StatesLockValue{}
-			ss.lockKeyToMut[lockKey] = v
-		}
-		ss.mut.Unlock()
-		ss.mut.RLock()
-	}
-
-	v.mut.Lock()
-	v.expireTime = time.Now().Add(MutexExpireDefault)
-}
-
-func (ss *States) unlock(lockKey StatesLockKey) {
-	v := ss.lockKeyToMut[lockKey]
-	v.mut.Unlock()
-	ss.mut.RUnlock()
 }
 
 func (ss *States) enablePurge() {
@@ -437,12 +373,6 @@ func (ss *States) purgeExpiredEntries(pm *ports.PortManager) {
 			if now.After(s.expireTime) {
 				syslog.VLogTf(syslog.TraceVerbosity, tag, "delete state: %v (LanToExt) expire: %v now: %v", s, s.expireTime, now)
 				delete(ss.lanToExt, k)
-			}
-		}
-		for k, s := range ss.lockKeyToMut {
-			if now.After(s.expireTime) {
-				syslog.VLogTf(syslog.TraceVerbosity, tag, "delete mutex: %v (ext)", k)
-				delete(ss.lockKeyToMut, k)
 			}
 		}
 	}
