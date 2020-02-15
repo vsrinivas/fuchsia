@@ -1326,7 +1326,7 @@ aggregate_manifest("migrated-image") {
 #------------------
     "//src/devices/block/bin/fvm-check:fvm-check-manifest",
     "//src/devices/block/bin/gpt:gpt-manifest",
-    "//zircon/system/uapp/hid:hid-manifest",
+    "//src/ui/input/bin/hid:hid-manifest",
     "//src/devices/i2c/bin/i2c:i2c-manifest",
     "//src/devices/i2c/bin:i2cutil-manifest",
     "//zircon/system/uapp/ihda:ihda-manifest",
