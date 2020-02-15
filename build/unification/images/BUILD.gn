@@ -1308,7 +1308,7 @@ aggregate_manifest("migrated-image") {
 #------------------
     #":bin.console",
 #------------------
-    "//zircon/system/uapp/cpuctl:cpuctl-manifest",
+    "//src/devices/cpu/bin/cpuctl:cpuctl-manifest",
     "//zircon/system/uapp/crasher:crasher-manifest",
 #------------------
     #":bin.device-name-provider",
