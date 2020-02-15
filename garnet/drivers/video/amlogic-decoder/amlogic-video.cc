@@ -54,6 +54,8 @@
 // TODO(fxb/41972): bti::release_quarantine() or zx_bti_release_quarantine() somewhere during
 // startup, after HW is known idle, before we allocate anything from sysmem.
 
+namespace {
+
 // These match the regions exported when the bus device was added.
 enum MmioRegion {
   kCbus,
@@ -81,6 +83,8 @@ enum {
   // without tee
   kMinComponentCount = 3,
 };
+
+}  // namespace
 
 AmlogicVideo::AmlogicVideo() {
   vdec1_core_ = std::make_unique<Vdec1>(this);
@@ -211,7 +215,9 @@ zx_status_t AmlogicVideo::AllocateStreamBuffer(StreamBuffer* buffer, uint32_t si
   return ZX_OK;
 }
 
-zx_status_t AmlogicVideo::InitTeecContext(TeecContext* teec_context) {
+zx_status_t AmlogicVideo::ConnectToTee(fuchsia::tee::DeviceSyncPtr* tee) {
+  ZX_DEBUG_ASSERT(tee);
+
   zx::channel tee_client;
   zx::channel tee_server;
   zx_status_t status = zx::channel::create(/*flags=*/0, &tee_client, &tee_server);
@@ -226,12 +232,29 @@ zx_status_t AmlogicVideo::InitTeecContext(TeecContext* teec_context) {
     return status;
   }
 
-  // Ownership stays with tee_client so the channel will get closed at the end of this method, or
-  // on early return.
-  //
-  // TODO(dustingreen): Find a way to use TEEC_InitializeContext(), or create a more official way to
-  // do this.
-  teec_context->context().imp.tee_channel = tee_client.release();
+  tee->Bind(std::move(tee_client));
+  return ZX_OK;
+}
+
+zx_status_t AmlogicVideo::EnsureSecmemSessionIsConnected() {
+  if (secmem_session_.has_value()) {
+    return ZX_OK;
+  }
+
+  fuchsia::tee::DeviceSyncPtr tee_connection;
+  zx_status_t status = ConnectToTee(&tee_connection);
+  if (status != ZX_OK) {
+    LOG(ERROR, "ConnectToTee() failed - status: %d", status);
+    return status;
+  }
+
+  auto secmem_session_result = SecmemSession::TryOpen(std::move(tee_connection));
+  if (!secmem_session_result.is_ok()) {
+    // Logging handled in `SecmemSession::TryOpen`
+    return ZX_ERR_INTERNAL;
+  }
+
+  secmem_session_.emplace(secmem_session_result.take_value());
   return ZX_OK;
 }
 
@@ -593,24 +616,30 @@ zx_status_t AmlogicVideo::TeeVp9AddHeaders(zx_paddr_t page_phys_base, uint32_t b
                                            uint32_t max_after_size, uint32_t* after_size) {
   ZX_DEBUG_ASSERT(after_size);
   ZX_DEBUG_ASSERT(is_tee_available());
-  ZX_DEBUG_ASSERT(secmem_client_session_);
-  zx_status_t status;
-  for (uint32_t i = 0; i < 20; ++i) {
-    status = secmem_client_session_->GetVp9HeaderSize(page_phys_base, before_size, max_after_size,
-                                                      after_size);
+
+  // TODO(fxb/44674): Remove this retry loop once this issue is resolved.
+  constexpr uint32_t kRetryCount = 20;
+  zx_status_t status = ZX_OK;
+  for (uint32_t i = 0; i < kRetryCount; ++i) {
+    status = EnsureSecmemSessionIsConnected();
     if (status != ZX_OK) {
-      LOG(ERROR, "secmem_client_session_->GetVp9HeaderSize() failed - status: %d", status);
-      secmem_client_session_.reset();
-      status = InitSecmemClientSession();
-      if (status != ZX_OK) {
-        LOG(ERROR, "InitSecmemClientSession() failed - status: %d", status);
-        break;
-      }
       continue;
     }
+
+    status =
+        secmem_session_->GetVp9HeaderSize(page_phys_base, before_size, max_after_size, after_size);
+    if (status != ZX_OK) {
+      LOG(ERROR, "secmem_session_->GetVp9HeaderSize() failed - status: %d", status);
+
+      // Explicitly disconnect and clean up `secmem_session_`.
+      secmem_session_.reset();
+      continue;
+    }
+
     ZX_DEBUG_ASSERT(*after_size <= max_after_size);
     return ZX_OK;
   }
+
   return status;
 }
 
@@ -787,37 +816,23 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   parser_ = std::make_unique<Parser>(this, std::move(parser_interrupt_handle_));
 
   if (is_tee_available()) {
-    status = InitTeecContext(&secmem_teec_context_);
-    if (status != ZX_OK) {
-      LOG(ERROR, "InitTeecContext() failed - status: %d", status);
-      return status;
+    // TODO(fxb/44674): Remove this retry loop once this issue is resolved.
+    constexpr uint32_t kRetryCount = 10;
+    for (uint32_t i = 0; i < kRetryCount; i++) {
+      status = EnsureSecmemSessionIsConnected();
+      if (status == ZX_OK) {
+        break;
+      }
     }
-    status = InitSecmemClientSession();
-    if (status != ZX_OK) {
-      LOG(ERROR, "InitSecmemClientSession() failed - status: %d", status);
-      return status;
+
+    if (!secmem_session_.has_value()) {
+      LOG(ERROR,
+          "OpenSession to secmem failed too many times. Bootloader version may be incorrect.");
+      return ZX_ERR_INTERNAL;
     }
   }
 
   return ZX_OK;
-}
-
-zx_status_t AmlogicVideo::InitSecmemClientSession() {
-  ZX_DEBUG_ASSERT(is_tee_available());
-  zx_status_t status;
-  // secmem TA crashes a lot on sherlock, so far
-  for (uint32_t i = 0; i < 20; ++i) {
-    ZX_DEBUG_ASSERT(!secmem_client_session_);
-    secmem_client_session_.emplace(&secmem_teec_context_.context());
-    status = secmem_client_session_->Init();
-    if (status != ZX_OK) {
-      LOG(ERROR, "secmem_client_session_.Init() failed - status: %d", status);
-      secmem_client_session_.reset();
-      continue;
-    }
-    return ZX_OK;
-  }
-  return status;
 }
 
 zx_status_t AmlogicVideo::PreloadFirmwareViaTee() {
@@ -827,24 +842,25 @@ zx_status_t AmlogicVideo::PreloadFirmwareViaTee() {
   uint32_t firmware_size;
   firmware_->GetWholeBlob(&firmware_data, &firmware_size);
 
+  // TODO(fxb/44764): Remove retry when video_firmware crash is fixed.
   zx_status_t status = ZX_OK;
-  // TODO(fxb/43583): Remove retry when video_firmware crash is fixed.
   constexpr uint32_t kRetryCount = 10;
   for (uint32_t i = 0; i < kRetryCount; i++) {
-    TeecContext teec_context;
-    zx_status_t status = InitTeecContext(&teec_context);
+    fuchsia::tee::DeviceSyncPtr tee_connection;
+    status = ConnectToTee(&tee_connection);
     if (status != ZX_OK) {
-      LOG(ERROR, "InitTeecContext() failed - status: %d", status);
-      return status;
-    }
-
-    VideoFirmwareSession video_firmware_session(&teec_context.context());
-    status = video_firmware_session.Init();
-    if (status != ZX_OK) {
-      LOG(ERROR, "video_firmware_session.Init() failed - status: %d", status);
+      LOG(ERROR, "ConnectToTee() failed - status: %d", status);
       continue;
     }
 
+    auto video_firmware_session_result = VideoFirmwareSession::TryOpen(std::move(tee_connection));
+    if (!video_firmware_session_result.is_ok()) {
+      // Logging handled in `VideoFirmwareSession::TryOpen`
+      status = ZX_ERR_INTERNAL;
+      continue;
+    }
+
+    VideoFirmwareSession video_firmware_session = video_firmware_session_result.take_value();
     status = video_firmware_session.LoadVideoFirmware(firmware_data, firmware_size);
     if (status != ZX_OK) {
       LOG(ERROR, "video_firmware_session.LoadVideoFirmware() failed - status: %d", status);
@@ -852,10 +868,9 @@ zx_status_t AmlogicVideo::PreloadFirmwareViaTee() {
     }
 
     LOG(INFO, "Firmware loaded via video_firmware TA");
-    // ~video_firmware_session
-    // ~teec_context
-    return ZX_OK;
+    break;
   }
+
   return status;
 }
 

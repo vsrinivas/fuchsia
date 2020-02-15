@@ -5,6 +5,7 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_
 
+#include <fuchsia/tee/cpp/fidl.h>
 #include <lib/zx/handle.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
@@ -31,9 +32,8 @@
 #include "firmware_blob.h"
 #include "parser.h"
 #include "registers.h"
-#include "secmem_client_session.h"
+#include "secmem_session.h"
 #include "stream_buffer.h"
-#include "teec_context.h"
 #include "video_decoder.h"
 #include "watchdog.h"
 
@@ -168,13 +168,16 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   friend class TestVP9;
   friend class TestFrameProvider;
 
-  [[nodiscard]] zx_status_t InitTeecContext(TeecContext* teec_context);
+  zx_status_t ConnectToTee(fuchsia::tee::DeviceSyncPtr* tee);
+
+  zx_status_t EnsureSecmemSessionIsConnected();
+
   void InitializeStreamInput(bool use_parser);
 
   [[nodiscard]] zx_status_t ProcessVideoNoParserAtOffset(const void* data, uint32_t len,
                                                          uint32_t current_offset,
                                                          uint32_t* written_out = nullptr);
-  [[nodiscard]] zx_status_t InitSecmemClientSession();
+
   zx_status_t PreloadFirmwareViaTee();
   void InitializeInterrupts();
   void SwapOutCurrentInstance() __TA_REQUIRES(video_decoder_lock_);
@@ -188,8 +191,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // Unlike sysmem and canvas, tee is optional (no tee on vim2).
   tee_protocol_t tee_{};
   bool is_tee_available_ = false;
-  TeecContext secmem_teec_context_{};
-  std::optional<SecmemClientSession> secmem_client_session_;
+  std::optional<SecmemSession> secmem_session_;
 
   DeviceType device_type_ = DeviceType::kUnknown;
   zx::handle secure_monitor_;

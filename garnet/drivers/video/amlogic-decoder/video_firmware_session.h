@@ -5,25 +5,34 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_FIRMWARE_SESSION_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_FIRMWARE_SESSION_H_
 
+#include <fuchsia/tee/cpp/fidl.h>
+#include <lib/fit/result.h>
+
 #include <optional>
 
-#include <tee-client-api/tee_client_api.h>
+#include <tee-client-api/tee-client-types.h>
 
 class VideoFirmwareSession {
  public:
-  explicit VideoFirmwareSession(TEEC_Context* context);
+  static fit::result<VideoFirmwareSession, fuchsia::tee::DeviceSyncPtr> TryOpen(
+      fuchsia::tee::DeviceSyncPtr tee_connection);
+
+  VideoFirmwareSession(VideoFirmwareSession&&) = default;
+  VideoFirmwareSession& operator=(VideoFirmwareSession&&) = default;
+
   ~VideoFirmwareSession();
 
-  [[nodiscard]] zx_status_t Init();
-
   // For now, any TEEC_Result != TEEC_SUCCESS returns ZX_ERR_INTERNAL.
-  [[nodiscard]] zx_status_t LoadVideoFirmware(uint8_t* data, uint32_t size);
+  [[nodiscard]] zx_status_t LoadVideoFirmware(const uint8_t* data, uint32_t size);
   // For now, any TEEC_Result != TEEC_SUCCESS returns ZX_ERR_INTERNAL.
   [[nodiscard]] zx_status_t LoadVideoFirmwareEncoder(uint8_t* data, uint32_t size);
 
  private:
-  TEEC_Context* context_ = {};
-  std::optional<TEEC_Session> session_ = {};
+  explicit VideoFirmwareSession(uint32_t session_id, fuchsia::tee::DeviceSyncPtr tee_connection)
+      : session_id_(session_id), tee_connection_(std::move(tee_connection)) {}
+
+  uint32_t session_id_;
+  fuchsia::tee::DeviceSyncPtr tee_connection_;
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_FIRMWARE_SESSION_H_
