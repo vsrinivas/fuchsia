@@ -11,12 +11,12 @@
 
 namespace component {
 
-ComponentEventProviderImpl::ComponentEventProviderImpl(Realm* realm)
-    : executor_(async_get_default_dispatcher()),
+ComponentEventProviderImpl::ComponentEventProviderImpl(Realm* realm, async_dispatcher_t* dispatcher)
+    : dispatcher_(dispatcher),
+      executor_(dispatcher),
       binding_(this),
       realm_(realm),
-      weak_ptr_factory_(this) {
-}
+      weak_ptr_factory_(this) {}
 
 ComponentEventProviderImpl::~ComponentEventProviderImpl() = default;
 
@@ -30,16 +30,16 @@ void ComponentEventProviderImpl::SetListener(
     listener_.Unbind();
     listener_.set_error_handler(nullptr);
   });
-  const zx_status_t status =
-      async::PostTask(async_get_default_dispatcher(), [self = weak_ptr_factory_.GetWeakPtr()] {
-        if (self) {
-          self->NotifyOfExistingComponents();
-        } else {
-          FXL_DLOG(WARNING) << "called posted task after exit, skipping callback";
-        }
-      });
+  const zx_status_t status = async::PostTask(dispatcher_, [self = weak_ptr_factory_.GetWeakPtr()] {
+    if (!self) {
+      FXL_DLOG(WARNING) << "called posted task after exit, skipping callback";
+      return;
+    }
+    self->NotifyOfExistingComponents();
+  });
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Could not schedule a notifier: " << zx_status_get_string(status);
+    FXL_LOG(ERROR) << "Could not synthesize events for existing components: "
+                   << zx_status_get_string(status);
   }
 }
 

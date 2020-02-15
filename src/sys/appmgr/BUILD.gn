@@ -132,6 +132,7 @@ executable("unittest_bin") {
   sources = [
     "allowlist_unittest.cc",
     "component_controller_unittest.cc",
+    "component_event_provider_unittest.cc",
     "hub/hub_holder_unittest.cc",
     "namespace_builder_unittest.cc",
     "namespace_unittest.cc",
@@ -147,6 +148,7 @@ executable("unittest_bin") {
     ":lib",
     "//garnet/examples/fidl/services:echo",
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/vfs/cpp",

@@ -1146,7 +1146,8 @@ internal::EventNotificationInfo Realm::GetEventNotificationInfo(const std::strin
 zx_status_t Realm::BindComponentEventProvider(
     fidl::InterfaceRequest<fuchsia::sys::internal::ComponentEventProvider> request) {
   if (!component_event_provider_) {
-    component_event_provider_.reset(new ComponentEventProviderImpl(this));
+    component_event_provider_ =
+        std::make_unique<ComponentEventProviderImpl>(this, async_get_default_dispatcher());
   }
   auto status = component_event_provider_->Connect(std::move(request));
   return status;

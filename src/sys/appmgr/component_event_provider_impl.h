@@ -18,7 +18,8 @@ namespace component {
 
 class ComponentEventProviderImpl : public fuchsia::sys::internal::ComponentEventProvider {
  public:
-  ComponentEventProviderImpl(Realm* realm);
+  // Does not take ownership of realm or dispatcher.
+  ComponentEventProviderImpl(Realm* realm, async_dispatcher_t* dispatcher);
   ~ComponentEventProviderImpl() override;
 
   bool listener_bound() { return listener_.is_bound(); }
@@ -46,19 +47,21 @@ class ComponentEventProviderImpl : public fuchsia::sys::internal::ComponentEvent
   void NotifyOfExistingComponents();
 
  private:
+  // Not owned.
+  async_dispatcher_t* const dispatcher_;
   async::Executor executor_;
   fidl::Binding<fuchsia::sys::internal::ComponentEventProvider> binding_;
   fuchsia::sys::internal::ComponentEventListenerPtr listener_;
 
   // The realm to which this ComponentEventProvider belongs. The provider will only notify about
   // events of components in this realm and sub-realms, except for realms that have a provider.
+  // Not owned.
   Realm* const realm_;
 
   fxl::WeakPtrFactory<ComponentEventProviderImpl> weak_ptr_factory_;
 
   // Returns the relative realm path from the queries |leaf_realm| up to this provider |realm_|.
   std::vector<std::string> RelativeRealmPath(Realm* leaf_realm);
-
 };
 
 }  // namespace component
