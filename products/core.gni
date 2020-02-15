@@ -73,6 +73,7 @@ base_package_labels += [
   "//src/sys/appmgr:appmgr_scheme_config",
   "//src/sys/device_settings:device_settings_manager",
   "//src/sys/pkg:core",
+  "//src/sys/pkg:system-update-checker",
   "//src/sys/timekeeper",
   "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
 ]

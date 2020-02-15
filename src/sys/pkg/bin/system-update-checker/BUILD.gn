@@ -7,7 +7,6 @@ import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//src/sys/pkg/bin/system-update-checker/ota_config.gni")
-import("//src/sys/pkg/sysmgr_config.gni")
 
 rustc_binary("bin") {
   name = "system_update_checker"
@@ -102,8 +101,10 @@ ota_config("auto_update") {
   poll_frequency_minutes = 60
 }
 
-sysmgr_config("config") {
-  source = "sysmgr.config"
+config_data("config") {
+  for_pkg = "sysmgr"
+  outputs = [ "system_update_checker_sysmgr.config" ]
+  sources = [ "sysmgr.config" ]
 }
 
 group("tests") {

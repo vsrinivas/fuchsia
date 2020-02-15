@@ -122,8 +122,14 @@ config_data("omaha-client-channels-test-config") {
 
 config_data("omaha-client-sysmgr-config") {
   for_pkg = "sysmgr"
-  outputs = [ "omaha_client.config" ]
+  outputs = [ "omaha_client_sysmgr.config" ]
   sources = [ "sysmgr.config" ]
+}
+
+config_data("as-update-checker") {
+  for_pkg = "sysmgr"
+  outputs = [ "omaha_client_sysmgr.config" ]
+  sources = [ "as_update_checker_sysmgr.config" ]
 }
 
 group("tests") {

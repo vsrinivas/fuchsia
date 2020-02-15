@@ -31,8 +31,14 @@ group("core") {
     "bin/pkg-cache",
     "bin/pkg-resolver",
     "bin/pkgctl",
-    "bin/system-update-checker",
     "bin/update:update-bin",
+  ]
+}
+
+group("system-update-checker") {
+  public_deps = [
+    "bin/system-update-checker",
+    "bin/system-update-checker:config",
   ]
 }
 
@@ -41,6 +47,21 @@ merge_sysmgr_config("core_config") {
   deps = [
     "bin/pkg-cache:config",
     "bin/pkg-resolver:config",
-    "bin/system-update-checker:config",
+  ]
+}
+
+group("omaha-client") {
+  public_deps = [
+    "bin/omaha-client",
+    "bin/omaha-client:omaha-client-config",
+    "bin/omaha-client:omaha-client-sysmgr-config",
+  ]
+}
+
+group("omaha-client-as-update-checker") {
+  public_deps = [
+    "bin/omaha-client",
+    "bin/omaha-client:as-update-checker",
+    "bin/omaha-client:omaha-client-config",
   ]
 }
