@@ -90,7 +90,7 @@ group("ulib") {
     "fs/transaction",
     "ftl",
     "fvm",
-    "fvm/test:fvm-devices",
+    "fvm-devices",
     "fzl",
     "gfx",
     "gfx-font-data",
