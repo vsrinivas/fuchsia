@@ -485,6 +485,13 @@ we explicitly reduce the number of jobs.
 
 From //build/rust/BUILD.gn:15
 
+### config_have_heap
+Tells openweave to include files that require heap access.
+
+**Current value (from the default):** `true`
+
+From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/2886baa162c84851088c540acb440b3b64b36321/config.gni#32)
+
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
 
@@ -584,7 +591,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/6b19b1736cbfcd3b52002e4b27ef570b954b7883/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/caeae87a3aa7f92bd8b56433f967e514316e851e/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -599,7 +606,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/6b19b1736cbfcd3b52002e4b27ef570b954b7883/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/caeae87a3aa7f92bd8b56433f967e514316e851e/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -649,7 +656,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/6b19b1736cbfcd3b52002e4b27ef570b954b7883/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/caeae87a3aa7f92bd8b56433f967e514316e851e/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -931,7 +938,7 @@ From //build/unification/images/BUILD.gn:14
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/6b19b1736cbfcd3b52002e4b27ef570b954b7883/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/caeae87a3aa7f92bd8b56433f967e514316e851e/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enable flutter_driver builds. This is effective only on debug builds.
@@ -944,14 +951,14 @@ From //src/experiences/session_shells/ermine/shell/BUILD.gn:21
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/6b19b1736cbfcd3b52002e4b27ef570b954b7883/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/caeae87a3aa7f92bd8b56433f967e514316e851e/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/6b19b1736cbfcd3b52002e4b27ef570b954b7883/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/caeae87a3aa7f92bd8b56433f967e514316e851e/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1184,6 +1191,44 @@ See symbols/test_data/README.md for how to download the data required for this t
 **Current value (from the default):** `false`
 
 From //src/developer/debug/zxdb/BUILD.gn:13
+
+### inet_config_enable_async_dns_sockets
+Tells inet to support additionally support async dns sockets.
+
+**Current value (from the default):** `true`
+
+From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/2886baa162c84851088c540acb440b3b64b36321/config.gni#17)
+
+### inet_want_endpoint_dns
+Tells inet to include support for the corresponding protocol.
+
+**Current value (from the default):** `true`
+
+From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/2886baa162c84851088c540acb440b3b64b36321/config.gni#10)
+
+### inet_want_endpoint_raw
+
+**Current value (from the default):** `true`
+
+From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/2886baa162c84851088c540acb440b3b64b36321/config.gni#11)
+
+### inet_want_endpoint_tcp
+
+**Current value (from the default):** `true`
+
+From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/2886baa162c84851088c540acb440b3b64b36321/config.gni#12)
+
+### inet_want_endpoint_tun
+
+**Current value (from the default):** `false`
+
+From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/2886baa162c84851088c540acb440b3b64b36321/config.gni#14)
+
+### inet_want_endpoint_udp
+
+**Current value (from the default):** `true`
+
+From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/2886baa162c84851088c540acb440b3b64b36321/config.gni#13)
 
 ### is_debug
 Debug build.
@@ -1743,7 +1788,7 @@ From //build/rust/config.gni:42
 Sets the panic type for Rust on fuchsia.
 Valid values are "unwind" and "abort".
 
-**Current value (from the default):** `"unwind"`
+**Current value (from the default):** `"abort"`
 
 From //build/rust/config.gni:29
 
@@ -2340,6 +2385,41 @@ If false, any unacknowledged SDK change will cause a build failure.
 **Current value (from the default):** `false`
 
 From //build/sdk/config.gni:11
+
+### weave_build_legacy_wdm
+Tells openweave to support legacy WDM mode.
+
+**Current value (from the default):** `false`
+
+From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/2886baa162c84851088c540acb440b3b64b36321/config.gni#29)
+
+### weave_build_warm
+Tells openweave to build WARM libraries.
+
+**Current value (from the default):** `true`
+
+From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/2886baa162c84851088c540acb440b3b64b36321/config.gni#26)
+
+### weave_system_config_use_sockets
+Tells openweave components to use bsd-like sockets.
+
+**Current value (from the default):** `true`
+
+From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/2886baa162c84851088c540acb440b3b64b36321/config.gni#7)
+
+### weave_with_nlfaultinjection
+Tells openweave components to support fault injection.
+
+**Current value (from the default):** `false`
+
+From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/2886baa162c84851088c540acb440b3b64b36321/config.gni#20)
+
+### weave_with_verhoeff
+Tells openweave to support Verhoeff checksum.
+
+**Current value (from the default):** `true`
+
+From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/2886baa162c84851088c540acb440b3b64b36321/config.gni#23)
 
 ### wlancfg_config_type
 Selects the wlan configuration type to use. Choices:
