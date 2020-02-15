@@ -8,14 +8,18 @@ toc:
   path: /docs/concepts/components/introduction.md
 - title: "Concepts"
   section:
+  - title: "Component manager"
+    path: /docs/concepts/components/component_manager.md
   - title: "Component URLs"
     path: /docs/concepts/components/component_urls.md
-  - title: "Lifecycle"
-    path: /docs/concepts/components/lifecycle.md
-  - title: "Hub"
-    path: /docs/concepts/components/hub.md
+  - title: "Declarations"
+    path: /docs/concepts/components/declarations.md
   - title: "Manifests"
     path: /docs/concepts/components/component_manifests.md
+  - title: "Lifecycle"
+    path: /docs/concepts/components/lifecycle.md
+  - title: "Topology"
+    path: /docs/concepts/components/topology.md
   - title: "Monikers"
     path: /docs/concepts/components/monikers.md
   - title: "Realms"
@@ -26,27 +30,24 @@ toc:
     path: /docs/concepts/components/runners.md
   - title: "Services"
     path: /docs/concepts/components/services.md
-  - title: "Shutdown"
-    path: /docs/concepts/components/shutdown.md
-  - title: "Topology"
-    path: /docs/concepts/components/topology.md
-  - title: "Work Scheduler"
-    path: /docs/concepts/components/work_scheduler.md
-- title: "Capabilities"
-  section:
-  - include: /docs/concepts/components/capabilities/_toc.yaml
-- title: "Runners"
+  - title: "Capabilities"
+    section:
+    - include: /docs/concepts/components/capabilities/_toc.yaml
+- title: "Using runners"
   section:
   - title: "ELF runner"
     path: /docs/concepts/components/elf_runner.md
-- title: "Testing"
+- title: "Troubleshooting & testing"
   section:
+  - title: "Hub"
+    path: /docs/concepts/components/hub.md
   - title: "Black box testing"
     path: /docs/concepts/components/black_box_testing.md
-- title: "Diagnostics"
+- title: "Internals"
   section:
-  - include: /docs/concepts/components/inspect/_toc.yaml
-- title: "Implementation details"
-  section:
+  - title: "Design principles"
+    path: /docs/concepts/components/design_principles.md
   - title: "Life of a protocol open"
     path: /docs/concepts/components/life_of_a_protocol_open.md
+  - title: "Inspect file format"
+    path: /docs/concepts/components/inspect/vmo_format.md
