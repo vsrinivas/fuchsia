@@ -47,7 +47,7 @@ void Scenic::CloseSession(scheduling::SessionId session_id) {
   sessions_.erase(session_id);
 
   if (frame_scheduler_) {
-    frame_scheduler_->ClearCallbacksForSession(session_id);
+    frame_scheduler_->RemoveSession(session_id);
   }
   if (view_focuser_registry_) {
     view_focuser_registry_->UnregisterViewFocuser(session_id);

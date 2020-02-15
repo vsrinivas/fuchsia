@@ -8,9 +8,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 
-#include <optional>
 #include <unordered_map>
-#include <variant>
 #include <vector>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -33,10 +31,6 @@
 namespace scenic_impl {
 namespace gfx {
 
-using PresentCallback = fuchsia::ui::scenic::Session::PresentCallback;
-using OnFramePresentedCallback =
-    fit::function<void(fuchsia::scenic::scheduling::FramePresentedInfo info)>;
-
 class CommandContext;
 class Resource;
 
@@ -47,11 +41,7 @@ class Session : public CommandDispatcher {
   // Return type for ApplyScheduledUpdate
   struct ApplyUpdateResult {
     bool success;
-    bool all_fences_ready;
     bool needs_render;
-
-    std::deque<PresentCallback> present1_callbacks;
-    std::deque<scheduling::Present2Info> present2_infos;
   };
 
   Session(SessionId id, SessionContext context,
@@ -65,7 +55,8 @@ class Session : public CommandDispatcher {
 
   // |scenic::CommandDispatcher|
   // Virtual for testing.
-  virtual void DispatchCommand(fuchsia::ui::scenic::Command command) override;
+  virtual void DispatchCommand(fuchsia::ui::scenic::Command command,
+                               scheduling::PresentId) override;
 
   // Apply the operation to the current session state.  Return true if
   // successful, and false if the op is somehow invalid.  In the latter case,
@@ -96,36 +87,14 @@ class Session : public CommandDispatcher {
   ResourceMap* resources() { return &resources_; }
   const ResourceMap* resources() const { return &resources_; }
 
-  // Stashes arguments without applying them and schedules a Present with the frame scheduler. The
-  // arguments will later be applied by ApplyScheduledUpdates(). Virtual for testing.
-  virtual bool ScheduleUpdateForPresent(zx::time presentation_time,
-                                        std::vector<zx::event> release_fences,
-                                        PresentCallback callback);
-
-  // Stashes arguments without applying them and schedules a Present with the frame scheduler. The
-  // arguments will later be applied by ApplyScheduledUpdates(). Virtual for testing.
-  virtual bool ScheduleUpdateForPresent2(zx::time requested_presentation_time,
-                                         std::vector<zx::event> release_fences,
-                                         scheduling::Present2Info present2_info);
-
-  // Called by Engine() when it is notified by the FrameScheduler that a frame should be rendered
-  // for the specified |actual_presentation_time|. Returns ApplyUpdateResult.success as true if
-  // updates were successfully applied, false if updates failed to be applied. Returns
-  // ApplyUpdateResult.needs_render as true if any changes were applied, false if none were.
-  //
-  // |target_presentation_time| is the time the session specified it would like to be scheduled
-  // for, and is used for tracing.
-  // |presentation_interval| is the estimated time until next frame and is returned to the client.
-  // |latched_time| is the deadline such that all updates submitted prior to it were grouped
-  // together.
-  ApplyUpdateResult ApplyScheduledUpdates(CommandContext* command_context,
-                                          zx::time target_presentation_time, zx::time latched_time);
+  // Applies all updates with a PresentId up to and including |present_id| to the scene graph.
+  // This function should be called with monotonically increasing PresentIds.
+  // Returns true if the update succeeds, false otherwise.
+  bool ApplyScheduledUpdates(CommandContext* command_context, scheduling::PresentId present_id);
 
   // Convenience.  Forwards an event to the EventReporter.
   void EnqueueEvent(::fuchsia::ui::gfx::Event event);
   void EnqueueEvent(::fuchsia::ui::input::InputEvent event);
-
-  int64_t presents_in_flight() { return presents_in_flight_; }
 
   fxl::WeakPtr<ViewTreeUpdater> view_tree_updater() { return view_tree_updater_.GetWeakPtr(); }
 
@@ -137,26 +106,19 @@ class Session : public CommandDispatcher {
   friend class GfxCommandApplier;
   bool SetRootView(fxl::WeakPtr<View> view);
 
-  bool ScheduleUpdateCommon(
-      zx::time requested_presentation_time, std::vector<zx::event> release_fences,
-      std::variant<PresentCallback, scheduling::Present2Info> presentation_info);
-
   struct Update {
-    zx::time presentation_time;
-
+    scheduling::PresentId present_id = scheduling::kInvalidPresentId;
     std::vector<::fuchsia::ui::gfx::Command> commands;
-    std::vector<zx::event> release_fences;
-
-    // Holds either Present1's |fuchsia::ui::scenic::PresentCallback| or Present2's |Present2Info|.
-    std::variant<PresentCallback, scheduling::Present2Info> present_information;
+    Update(scheduling::PresentId present_id, ::fuchsia::ui::gfx::Command command)
+        : present_id(present_id) {
+      commands.emplace_back(std::move(command));
+    }
   };
 
   bool ApplyUpdate(CommandContext* command_context,
                    std::vector<::fuchsia::ui::gfx::Command> commands);
-  std::queue<Update> scheduled_updates_;
-  std::vector<zx::event> fences_to_release_on_next_update_;
 
-  zx::time last_applied_update_presentation_time_ = zx::time(0);
+  std::queue<Update> scheduled_updates_;
 
   const scheduling::SessionId id_;
   std::string debug_name_;
@@ -181,25 +143,10 @@ class Session : public CommandDispatcher {
 
   ViewTreeUpdater view_tree_updater_;
 
-  // Tracks the number of method calls for tracing.
-  uint64_t scheduled_update_count_ = 0;
-  uint64_t applied_update_count_ = 0;
-
-  // Combined with |kMaxFramesInFlight|, track how many Present()s the client can still call. We
-  // use this for throttling clients.
-  //
-  // It is incremented on every Present(), and decremented on every OnPresentedCallback().
-  int64_t presents_in_flight_ = 0;
-
-  // TODO(SCN-710): We reallocate this everytime we std::move it into
-  // ScheduleUpdate().  The bug has some ideas about how to do better.
-  std::vector<::fuchsia::ui::gfx::Command> buffered_commands_;
+  scheduling::PresentId last_traced_present_id_ = 0;
 
   inspect_deprecated::Node inspect_node_;
   inspect_deprecated::UIntMetric inspect_resource_count_;
-  inspect_deprecated::UIntMetric inspect_last_applied_target_presentation_time_;
-  inspect_deprecated::UIntMetric inspect_last_applied_requested_presentation_time_;
-  inspect_deprecated::UIntMetric inspect_last_requested_presentation_time_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;  // must be last
 };

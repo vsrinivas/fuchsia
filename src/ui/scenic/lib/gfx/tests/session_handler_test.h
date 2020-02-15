@@ -45,6 +45,8 @@ class SessionHandlerTest : public ErrorReportingTest, public scheduling::Session
     return static_cast<Session*>(command_dispatcher_.get());
   }
 
+  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler() { return frame_scheduler_; }
+
   Scenic* scenic() { return scenic_.get(); }
 
   Engine* engine() { return engine_.get(); }
@@ -52,9 +54,9 @@ class SessionHandlerTest : public ErrorReportingTest, public scheduling::Session
   // |scheduling::SessionUpdater|
   UpdateResults UpdateSessions(
       const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
-      zx::time target_presentation_time, zx::time latched_time, uint64_t trace_id) override;
+      uint64_t trace_id) override;
   // |scheduling::SessionUpdater|
-  void PrepareFrame(zx::time target_presentation_time, uint64_t trace_id) override;
+  void PrepareFrame(uint64_t trace_id) override;
 
   sys::testing::ComponentContextProvider app_context_;
   std::unique_ptr<Scenic> scenic_;

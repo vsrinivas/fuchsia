@@ -4,6 +4,8 @@
 
 #include <lib/gtest/test_loop_fixture.h>
 
+#include "gmock/gmock.h"
+#include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
 #include "src/ui/scenic/lib/scheduling/tests/frame_scheduler_test.h"
 
 using scheduling::Present2Info;
@@ -33,12 +35,11 @@ class MockSessionUpdaterWithFunctionOnUpdate : public MockSessionUpdater {
   // |SessionUpdater|
   SessionUpdater::UpdateResults UpdateSessions(
       const std::unordered_map<SessionId, PresentId>& sessions_to_update,
-      zx::time target_presentation_time, zx::time latched_time, uint64_t trace_id = 0) override {
+      uint64_t trace_id) override {
     if (function_) {
       function_();
     }
-    return MockSessionUpdater::UpdateSessions(std::move(sessions_to_update),
-                                              target_presentation_time, latched_time, trace_id);
+    return MockSessionUpdater::UpdateSessions(std::move(sessions_to_update), trace_id);
   }
 
  private:
@@ -49,28 +50,30 @@ class MockSessionUpdaterWithFunctionOnUpdate : public MockSessionUpdater {
 
 // Schedule an update on the scheduler, and also add a callback in the mock updater which will be
 // invoked when the frame is finished "rendering".
-static void ScheduleUpdateAndCallback(const std::unique_ptr<DefaultFrameScheduler>& scheduler,
-                                      const std::unique_ptr<MockSessionUpdater>& updater,
-                                      SessionId session_id, zx::time presentation_time,
-                                      zx::time acquire_fence_time = zx::time(0)) {
-  scheduler->ScheduleUpdateForSession(presentation_time, {session_id, GetNextPresentId()});
-  updater->AddCallback(session_id, presentation_time, acquire_fence_time);
+static void ScheduleUpdateAndCallback(
+    const std::unique_ptr<DefaultFrameScheduler>& scheduler, SessionId session_id,
+    zx::time presentation_time, OnPresentedCallback callback = [](auto...) {},
+    std::vector<zx::event> release_fences = {}) {
+  scheduling::PresentId present_id =
+      scheduler->RegisterPresent(session_id, std::move(callback), std::move(release_fences));
+  scheduler->ScheduleUpdateForSession(presentation_time,
+                                      {.session_id = session_id, .present_id = present_id});
 }
 
 // Schedule an update on the scheduler, and also add a callback in the mock updater which will be
 // invoked when the frame is finished "rendering".
 static void SchedulePresent2Update(const std::unique_ptr<DefaultFrameScheduler>& scheduler,
-                                   const std::unique_ptr<MockSessionUpdater>& updater,
                                    SessionId session_id, zx::time presentation_time,
-                                   zx::time acquire_fence_time = zx::time(0),
-                                   zx::time latched_time = zx::time(0),
-                                   zx::time present_received_time = zx::time(0)) {
-  Present2Info info = Present2Info(session_id);
-  info.SetLatchedTime(latched_time);
+                                   zx::time present_received_time = zx::time(0),
+                                   std::vector<zx::event> release_fences = {}) {
+  std::variant<OnPresentedCallback, Present2Info> variant;
+  auto& info = variant.emplace<Present2Info>(session_id);
   info.SetPresentReceivedTime(present_received_time);
+  scheduling::PresentId present_id =
+      scheduler->RegisterPresent(session_id, std::move(variant), std::move(release_fences));
 
-  scheduler->ScheduleUpdateForSession(presentation_time, {session_id, GetNextPresentId()});
-  updater->AddPresent2Info(std::move(info), presentation_time, acquire_fence_time);
+  scheduler->ScheduleUpdateForSession(presentation_time,
+                                      {.session_id = session_id, .present_id = present_id});
 }
 
 static void SetSessionUpdateFailedNotExpected(FrameScheduler* scheduler,
@@ -80,16 +83,6 @@ static void SetSessionUpdateFailedNotExpected(FrameScheduler* scheduler,
     // update to fail. Fail the test case.
     EXPECT_FALSE(true);
   });
-}
-
-// Schedule an update on the update manager, and also add a callback in the mock updater which will
-// be invoked when the frame is finished "rendering".
-static std::shared_ptr<const MockSessionUpdater::CallbackStatus> ScheduleUpdateAndCallback(
-    const std::unique_ptr<DefaultFrameScheduler::UpdateManager>& update_manager,
-    MockSessionUpdater* updater, SessionId session_id, zx::time presentation_time,
-    zx::time acquire_fence_time = zx::time(0)) {
-  update_manager->ScheduleUpdate(presentation_time, {session_id, GetNextPresentId()});
-  return updater->AddCallback(session_id, presentation_time, acquire_fence_time);
 }
 
 TEST_F(FrameSchedulerTest, PresentTimeZero_ShouldBeScheduledBeforeNextVsync) {
@@ -102,11 +95,12 @@ TEST_F(FrameSchedulerTest, PresentTimeZero_ShouldBeScheduledBeforeNextVsync) {
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   // Schedule an update for as soon as possible.
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, /* presentation */ zx::time(0));
+  ScheduleUpdateAndCallback(scheduler, kSessionId, /* presentation */ zx::time(0));
 
   // Wait for one vsync period.
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
 
   // Should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -123,12 +117,11 @@ TEST_F(FrameSchedulerTest, Present2WithTimeZero_ShouldBeScheduledBeforeNextVsync
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   // Schedule an update for as soon as possible.
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId,
-                         /* presentation */ zx::time(0));
+  SchedulePresent2Update(scheduler, kSessionId, /* presentation */ zx::time(0));
 
   // Wait for one vsync period.
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
 
   // Should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -150,7 +143,7 @@ TEST_F(FrameSchedulerTest, PresentBiggerThanNextVsync_ShouldBeScheduledAfterNext
   zx::time time_after_vsync =
       vsync_timing_->last_vsync_time() + (vsync_interval + vsync_interval / 2);
 
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId,
+  ScheduleUpdateAndCallback(scheduler, kSessionId,
                             /* presentation time*/ time_after_vsync);
 
   // Wait for one vsync period.
@@ -163,7 +156,7 @@ TEST_F(FrameSchedulerTest, PresentBiggerThanNextVsync_ShouldBeScheduledAfterNext
   // Wait for one more vsync period.
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
 
   // Should have been scheduled and handled now.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -187,7 +180,7 @@ TEST_F(FrameSchedulerTest, Present2BiggerThanNextVsync_ShouldBeScheduledAfterNex
   zx::time time_after_vsync =
       vsync_timing_->last_vsync_time() + (vsync_interval + vsync_interval / 2);
 
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId,
+  SchedulePresent2Update(scheduler, kSessionId,
                          /* presentation time*/ time_after_vsync);
 
   // Wait for one vsync period.
@@ -200,7 +193,7 @@ TEST_F(FrameSchedulerTest, Present2BiggerThanNextVsync_ShouldBeScheduledAfterNex
   // Wait for one more vsync period.
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
 
   // Should have been scheduled and handled now.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -216,9 +209,8 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCall) {
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
 
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, Now());
+  ScheduleUpdateAndCallback(scheduler, kSessionId, Now());
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -230,13 +222,11 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCall) {
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
 
   // End the pending frame.
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 1u);
 
   // Wait for a very long time.
   RunLoopFor(zx::sec(10));
@@ -244,7 +234,6 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCall) {
   // No further render calls should have been made.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 1u);
 }
 
 TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetSingleRenderCall) {
@@ -263,7 +252,7 @@ TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetSingleRenderCall) {
   EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId,
+  SchedulePresent2Update(scheduler, kSessionId,
                          /* presentation time*/ Now());
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
@@ -281,7 +270,7 @@ TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetSingleRenderCall) {
 
   // End the pending frame.
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
   EXPECT_EQ(present_count, 1u);
 
@@ -315,9 +304,8 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCallExactlyOnTime)
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
 
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId,
+  ScheduleUpdateAndCallback(scheduler, kSessionId,
                             future_vsync_time + vsync_timing_->vsync_interval());
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
@@ -330,13 +318,11 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCallExactlyOnTime)
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
 
   // End the pending frame.
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 1u);
 
   // Wait for a very long time.
   RunLoopFor(zx::sec(10));
@@ -344,7 +330,6 @@ TEST_F(FrameSchedulerTest, SinglePresent_ShouldGetSingleRenderCallExactlyOnTime)
   // No further render calls should have been made.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 1u);
 }
 
 TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetSingleRenderCallExactlyOnTime) {
@@ -375,7 +360,7 @@ TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetSingleRenderCallExactlyOnTime
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
   EXPECT_EQ(present_count, 0u);
 
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId,
+  SchedulePresent2Update(scheduler, kSessionId,
                          future_vsync_time + vsync_timing_->vsync_interval());
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
@@ -392,7 +377,7 @@ TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetSingleRenderCallExactlyOnTime
 
   // End the pending frame.
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
   EXPECT_EQ(present_count, 1u);
 
@@ -418,8 +403,8 @@ TEST_F(FrameSchedulerTest, PresentsForTheSameFrame_ShouldGetSingleRenderCall) {
 
   // Schedule two updates for now.
   zx::time now = Now();
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId1, now);
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId2, now);
+  ScheduleUpdateAndCallback(scheduler, kSessionId1, now);
+  ScheduleUpdateAndCallback(scheduler, kSessionId2, now);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -433,7 +418,7 @@ TEST_F(FrameSchedulerTest, PresentsForTheSameFrame_ShouldGetSingleRenderCall) {
 
   // End the pending frame.
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
 
   // Wait for a very long time.
@@ -459,8 +444,8 @@ TEST_F(FrameSchedulerTest, Present2sForTheSameFrame_ShouldGetSingleRenderCall) {
 
   // Schedule two updates for now.
   zx::time now = Now();
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId1, now);
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId2, now);
+  SchedulePresent2Update(scheduler, kSessionId1, now);
+  SchedulePresent2Update(scheduler, kSessionId2, now);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -474,7 +459,7 @@ TEST_F(FrameSchedulerTest, Present2sForTheSameFrame_ShouldGetSingleRenderCall) {
 
   // End the pending frame.
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
 
   // Wait for a very long time.
@@ -498,13 +483,13 @@ TEST_F(FrameSchedulerTest, PresentsForDifferentFrames_ShouldGetSeparateRenderCal
 
   // Schedule an update for now.
   zx::time now = Now();
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, now);
+  ScheduleUpdateAndCallback(scheduler, kSessionId, now);
 
   // Schedule an update for in between the next two vsyncs.
   const auto vsync_interval = vsync_timing_->vsync_interval();
   zx::time time_after_vsync =
       vsync_timing_->last_vsync_time() + vsync_interval + vsync_interval / 2;
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, time_after_vsync);
+  ScheduleUpdateAndCallback(scheduler, kSessionId, time_after_vsync);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -517,7 +502,7 @@ TEST_F(FrameSchedulerTest, PresentsForDifferentFrames_ShouldGetSeparateRenderCal
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
 
   // Wait for one more vsync period.
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
@@ -541,13 +526,12 @@ TEST_F(FrameSchedulerTest, Present2sForDifferentFrames_ShouldGetSeparateRenderCa
 
   // Schedule an update for now.
   zx::time now = Now();
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId, now);
+  SchedulePresent2Update(scheduler, kSessionId, now);
 
   // Schedule an update for in between the next two vsyncs.
   const auto vsync_interval = vsync_timing_->vsync_interval();
-  zx::time time_after_vsync =
-      vsync_timing_->last_vsync_time() + vsync_interval + vsync_interval / 2;
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId, time_after_vsync);
+  zx::time time_after_vsync = now + vsync_interval + vsync_interval / 2;
+  SchedulePresent2Update(scheduler, kSessionId, time_after_vsync);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -560,7 +544,7 @@ TEST_F(FrameSchedulerTest, Present2sForDifferentFrames_ShouldGetSeparateRenderCa
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
 
   // Wait for one more vsync period.
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
@@ -579,11 +563,10 @@ TEST_F(FrameSchedulerTest, SecondPresentDuringRender_ShouldApplyUpdatesAndResche
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
 
   // Schedule an update for now.
   zx::time now = Now();
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, now);
+  ScheduleUpdateAndCallback(scheduler, kSessionId, now);
 
   // Wait for one vsync period.
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
@@ -593,21 +576,18 @@ TEST_F(FrameSchedulerTest, SecondPresentDuringRender_ShouldApplyUpdatesAndResche
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
 
   // Schedule another update for now.
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, now);
+  ScheduleUpdateAndCallback(scheduler, kSessionId, now);
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // Updates should be applied, but not rendered.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 2u);
   EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
 
   // End previous frame.
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 1u);
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
 
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
@@ -615,7 +595,6 @@ TEST_F(FrameSchedulerTest, SecondPresentDuringRender_ShouldApplyUpdatesAndResche
   EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 2u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 2u);
   mock_renderer_->EndFrame(/* frame number */ 1, Now());
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 2u);
 }
 
 TEST_F(FrameSchedulerTest, SecondPresent2DuringRender_ShouldApplyUpdatesAndReschedule) {
@@ -636,7 +615,7 @@ TEST_F(FrameSchedulerTest, SecondPresent2DuringRender_ShouldApplyUpdatesAndResch
 
   // Schedule an update for now.
   zx::time now = Now();
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId, now);
+  SchedulePresent2Update(scheduler, kSessionId, now);
 
   // Wait for one vsync period.
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
@@ -649,7 +628,7 @@ TEST_F(FrameSchedulerTest, SecondPresent2DuringRender_ShouldApplyUpdatesAndResch
   EXPECT_EQ(present_count, 0u);
 
   // Schedule another update for now.
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId, now);
+  SchedulePresent2Update(scheduler, kSessionId, now);
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
   // Updates should be applied, but not rendered.
@@ -659,7 +638,7 @@ TEST_F(FrameSchedulerTest, SecondPresent2DuringRender_ShouldApplyUpdatesAndResch
   EXPECT_EQ(present_count, 0u);
 
   // End previous frame.
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
   EXPECT_EQ(present_count, 1u);
 
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
@@ -684,7 +663,7 @@ TEST_F(FrameSchedulerTest, RenderCalls_ShouldNotExceed_MaxOutstandingFrames) {
   // presented.
   zx::time now = Now();
   for (size_t i = 0; i < maximum_allowed_render_calls + 1; ++i) {
-    ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, now);
+    ScheduleUpdateAndCallback(scheduler, kSessionId, now);
     // Wait for a long time
     zx::duration schedule_frame_wait(5 * vsync_timing_->vsync_interval().get());
     RunLoopFor(schedule_frame_wait);
@@ -714,7 +693,7 @@ TEST_F(FrameSchedulerTest, Present2RenderCalls_ShouldNotExceed_MaxOutstandingFra
   // presented.
   zx::time now = Now();
   for (size_t i = 0; i < maximum_allowed_render_calls + 1; ++i) {
-    SchedulePresent2Update(scheduler, mock_updater_, kSessionId, now);
+    SchedulePresent2Update(scheduler, kSessionId, now);
     // Wait for a long time
     zx::duration schedule_frame_wait(5 * vsync_timing_->vsync_interval().get());
     RunLoopFor(schedule_frame_wait);
@@ -738,20 +717,19 @@ TEST_F(FrameSchedulerTest, SignalSuccessfulPresentCallbackOnlyWhenFramePresented
   SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
   SessionId session_id = 1;
 
   // Schedule an update for now.
   zx::time now = Now();
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, now);
+  ScheduleUpdateAndCallback(scheduler, kSessionId, now);
 
   // Wait for one vsync period.
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 
   // Schedule another update.
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, now);
+  ScheduleUpdateAndCallback(scheduler, kSessionId, now);
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   // Next render doesn't trigger until the previous render is finished.
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
@@ -760,13 +738,11 @@ TEST_F(FrameSchedulerTest, SignalSuccessfulPresentCallbackOnlyWhenFramePresented
   // Drop frame #0. This should not trigger a frame presented signal.
   mock_renderer_->SignalFrameDropped(/* frame number */ 0);
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
 
   // Frame #0 should still have rendered on the GPU; simulate this.
   mock_renderer_->SignalFrameCpuRendered(/* frame number */ 0, Now());
   mock_renderer_->SignalFrameRendered(/* frame number */ 0, Now());
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
 
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
@@ -777,7 +753,6 @@ TEST_F(FrameSchedulerTest, SignalSuccessfulPresentCallbackOnlyWhenFramePresented
   mock_renderer_->SignalFramePresented(/* frame number */ 1, Now());
   // Both callbacks are signaled (the failed frame #0, and the successful
   // frame #1).
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 2u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 2u);
 }
 
@@ -799,14 +774,14 @@ TEST_F(FrameSchedulerTest, SignalSuccessfulPresent2CallbackOnlyWhenFramePresente
 
   // Schedule an update for now.
   zx::time now = Now();
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId, now);
+  SchedulePresent2Update(scheduler, kSessionId, now);
 
   // Wait for one vsync period.
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 
   // Schedule another update.
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId, now);
+  SchedulePresent2Update(scheduler, kSessionId, now);
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   // Next render doesn't trigger until the previous render is finished.
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
@@ -836,27 +811,6 @@ TEST_F(FrameSchedulerTest, SignalSuccessfulPresent2CallbackOnlyWhenFramePresente
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 2u);
 }
 
-TEST_F(FrameSchedulerTest, FailedUpdate_ShouldNotTriggerRenderCall) {
-  auto scheduler = CreateDefaultFrameScheduler();
-
-  constexpr SessionId kSessionId = 1;
-  bool update_failed = false;
-  scheduler->SetOnUpdateFailedCallbackForSession(
-      kSessionId, [&update_failed, id = kSessionId, frame_scheduler = scheduler.get()]() {
-        update_failed = true;
-        // Clear callbacks set on the FrameScheduler when the update fails.
-        frame_scheduler->ClearCallbacksForSession(id);
-      });
-  mock_updater_->SetNextUpdateForSessionFails(kSessionId);
-
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, Now());
-
-  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
-  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
-  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
-  EXPECT_TRUE(update_failed);
-}
-
 TEST_F(FrameSchedulerTest, FailedUpdateWithRender_ShouldNotCrash) {
   auto scheduler = CreateDefaultFrameScheduler();
 
@@ -865,50 +819,26 @@ TEST_F(FrameSchedulerTest, FailedUpdateWithRender_ShouldNotCrash) {
   scheduler->SetOnUpdateFailedCallbackForSession(
       kSessionId1, [&update_failed1, id = kSessionId1, frame_scheduler = scheduler.get()]() {
         update_failed1 = true;
-        // Clear callbacks set on the FrameScheduler when the update fails.
-        frame_scheduler->ClearCallbacksForSession(id);
+        // Remove session from FrameScheduler when the update fails.
+        frame_scheduler->RemoveSession(id);
       });
-  mock_updater_->SetNextUpdateForSessionFails(kSessionId1);
+  mock_updater_->SetUpdateSessionsReturnValue({.sessions_with_failed_updates = {kSessionId1}});
 
   constexpr SessionId kSessionId2 = 2;
   bool update_failed2 = false;
   scheduler->SetOnUpdateFailedCallbackForSession(kSessionId2,
                                                  [&update_failed2]() { update_failed2 = true; });
 
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId1, Now());
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId2, Now());
+  ScheduleUpdateAndCallback(scheduler, kSessionId1, Now());
+  ScheduleUpdateAndCallback(scheduler, kSessionId2, Now());
 
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
   EXPECT_TRUE(update_failed1);
   EXPECT_FALSE(update_failed2);
-}
-
-TEST_F(FrameSchedulerTest, FailedPresent2Update_ShouldNotTriggerRenderCall) {
-  auto scheduler = CreateDefaultFrameScheduler();
-
-  constexpr SessionId kSessionId = 1;
-  bool update_failed = false;
-  scheduler->SetOnUpdateFailedCallbackForSession(
-      kSessionId, [&update_failed, id = kSessionId, frame_scheduler = scheduler.get()]() {
-        update_failed = true;
-        // Clear callbacks set on the FrameScheduler when the update fails.
-        frame_scheduler->ClearCallbacksForSession(id);
-      });
-  mock_updater_->SetNextUpdateForSessionFails(kSessionId);
-
-  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
-  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
-
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId, Now());
-
-  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
-  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
-  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
-  EXPECT_TRUE(update_failed);
 }
 
 TEST_F(FrameSchedulerTest, FailedPresent2UpdateWithRender_ShouldNotCrash) {
@@ -919,22 +849,25 @@ TEST_F(FrameSchedulerTest, FailedPresent2UpdateWithRender_ShouldNotCrash) {
   scheduler->SetOnUpdateFailedCallbackForSession(
       kSessionId1, [&update_failed1, id = kSessionId1, frame_scheduler = scheduler.get()]() {
         update_failed1 = true;
-        // Clear callbacks set on the FrameScheduler when the update fails.
-        frame_scheduler->ClearCallbacksForSession(id);
+        // Remove session from FrameScheduler when the update fails.
+        frame_scheduler->RemoveSession(id);
       });
-  mock_updater_->SetNextUpdateForSessionFails(kSessionId1);
+  mock_updater_->SetUpdateSessionsReturnValue({.sessions_with_failed_updates = {kSessionId1}});
 
   constexpr SessionId kSessionId2 = 2;
   bool update_failed2 = false;
   scheduler->SetOnUpdateFailedCallbackForSession(kSessionId2,
                                                  [&update_failed2]() { update_failed2 = true; });
+  scheduler->SetOnFramePresentedCallbackForSession(kSessionId2, [](auto...) {});
 
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId1, Now());
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId2, Now());
+  SchedulePresent2Update(scheduler, kSessionId1, Now());
+  SchedulePresent2Update(scheduler, kSessionId2, Now());
 
-  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
-  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
+  EXPECT_NO_FATAL_FAILURE(RunLoopFor(zx::duration(vsync_timing_->vsync_interval())));
+  EXPECT_TRUE(update_failed1);
+  EXPECT_FALSE(update_failed2);
+  EXPECT_NO_FATAL_FAILURE(mock_renderer_->EndFrame(/* frame number */ 0, Now()));
+  EXPECT_NO_FATAL_FAILURE(RunLoopFor(zx::duration(vsync_timing_->vsync_interval())));
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
   EXPECT_TRUE(update_failed1);
@@ -950,21 +883,15 @@ TEST_F(FrameSchedulerTest, NoOpUpdateWithSecondPendingUpdate_ShouldBeRescheduled
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId,
-                            Now() + vsync_timing_->vsync_interval());
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId,
+  ScheduleUpdateAndCallback(scheduler, kSessionId, Now() + vsync_timing_->vsync_interval());
+  ScheduleUpdateAndCallback(scheduler, kSessionId,
                             Now() + (vsync_timing_->vsync_interval() + zx::duration(1)));
 
-  mock_updater_->SuppressNeedsRendering(true);
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
-  mock_updater_->SuppressNeedsRendering(false);
-
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
-  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 2u);
-  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 }
 
 TEST_F(FrameSchedulerTest, NoOpPresent2UpdateWithSecondPendingUpdate_ShouldBeRescheduled) {
@@ -977,21 +904,15 @@ TEST_F(FrameSchedulerTest, NoOpPresent2UpdateWithSecondPendingUpdate_ShouldBeRes
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId,
-                         Now() + vsync_timing_->vsync_interval());
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId,
+  SchedulePresent2Update(scheduler, kSessionId, Now() + vsync_timing_->vsync_interval());
+  SchedulePresent2Update(scheduler, kSessionId,
                          Now() + (vsync_timing_->vsync_interval() + zx::duration(1)));
 
-  mock_updater_->SuppressNeedsRendering(true);
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
-  mock_updater_->SuppressNeedsRendering(false);
-
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
-  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 2u);
-  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
 }
 
 TEST_F(FrameSchedulerTest, LowGpuRenderTime_ShouldNotMatter) {
@@ -1008,10 +929,9 @@ TEST_F(FrameSchedulerTest, LowGpuRenderTime_ShouldNotMatter) {
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
 
   // Schedule a frame where the GPU render work finished before the CPU work.
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, Now());
+  ScheduleUpdateAndCallback(scheduler, kSessionId, Now());
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -1028,7 +948,6 @@ TEST_F(FrameSchedulerTest, LowGpuRenderTime_ShouldNotMatter) {
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
   EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
 
   EXPECT_EQ(mock_renderer_->pending_frames(), 1u);
 
@@ -1038,7 +957,6 @@ TEST_F(FrameSchedulerTest, LowGpuRenderTime_ShouldNotMatter) {
   mock_renderer_->SignalFramePresented(/* frame number */ 0, Now());
 
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
-  EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 1u);
 
   // Now we assert that we predict reasonably, given that we had 0 GPU rendering time.
   // Specifically, we should assume we will miss the upcoming frame and aim for the next
@@ -1046,7 +964,7 @@ TEST_F(FrameSchedulerTest, LowGpuRenderTime_ShouldNotMatter) {
   RunLoopFor(zx::msec(91));
 
   // Schedule the frame just a tad too late, given the CPU render duration.
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId, zx::time(0));
+  ScheduleUpdateAndCallback(scheduler, kSessionId, zx::time(0));
 
   // Go to vsync.
   RunLoopUntil(zx::time(vsync_timing_->last_vsync_time() + vsync_timing_->vsync_interval()));
@@ -1088,7 +1006,7 @@ TEST_F(FrameSchedulerTest, LowPresent2GpuRenderTime_ShouldNotMatter) {
   EXPECT_EQ(present_count, 0u);
 
   // Schedule a frame where the GPU render work finished before the CPU work.
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId, Now());
+  SchedulePresent2Update(scheduler, kSessionId, Now());
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
@@ -1123,7 +1041,7 @@ TEST_F(FrameSchedulerTest, LowPresent2GpuRenderTime_ShouldNotMatter) {
   RunLoopFor(zx::msec(91));
 
   // Schedule the frame just a tad too late, given the CPU render duration.
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId, zx::time(0));
+  SchedulePresent2Update(scheduler, kSessionId, zx::time(0));
 
   // Go to vsync.
   RunLoopUntil(zx::time(vsync_timing_->last_vsync_time() + vsync_timing_->vsync_interval()));
@@ -1163,12 +1081,12 @@ TEST_F(FrameSchedulerTest, PresentAndPresent2Clients_CanCoexist) {
   EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
 
   // Schedule updates on both clients.
-  ScheduleUpdateAndCallback(scheduler, mock_updater_, kSessionId1, zx::time(0));
-  SchedulePresent2Update(scheduler, mock_updater_, kSessionId2, zx::time(0));
+  ScheduleUpdateAndCallback(scheduler, kSessionId1, zx::time(0));
+  SchedulePresent2Update(scheduler, kSessionId2, zx::time(0));
 
   // Wait for one vsync period.
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
 
   // Both Present and Present2 should have been scheduled and handled.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -1193,7 +1111,8 @@ TEST_F(FrameSchedulerTest, MultiplePresent2Clients) {
         present_count1 += info.presentation_infos.size();
 
         for (uint64_t i = 0; i < info.presentation_infos.size(); ++i)
-          EXPECT_EQ(info.presentation_infos[i].latched_time(), static_cast<zx_time_t>(kSessionId1));
+          EXPECT_EQ(info.presentation_infos[i].present_received_time(),
+                    static_cast<zx_time_t>(kSessionId1));
       });
 
   constexpr SessionId kSessionId2 = 1;
@@ -1206,7 +1125,8 @@ TEST_F(FrameSchedulerTest, MultiplePresent2Clients) {
         present_count2 += info.presentation_infos.size();
 
         for (uint64_t i = 0; i < info.presentation_infos.size(); ++i)
-          EXPECT_EQ(info.presentation_infos[i].latched_time(), static_cast<zx_time_t>(kSessionId2));
+          EXPECT_EQ(info.presentation_infos[i].present_received_time(),
+                    static_cast<zx_time_t>(kSessionId2));
       });
 
   constexpr SessionId kSessionId3 = 2;
@@ -1219,7 +1139,8 @@ TEST_F(FrameSchedulerTest, MultiplePresent2Clients) {
         present_count3 += info.presentation_infos.size();
 
         for (uint64_t i = 0; i < info.presentation_infos.size(); ++i)
-          EXPECT_EQ(info.presentation_infos[i].latched_time(), static_cast<zx_time_t>(kSessionId3));
+          EXPECT_EQ(info.presentation_infos[i].present_received_time(),
+                    static_cast<zx_time_t>(kSessionId3));
       });
 
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
@@ -1229,14 +1150,14 @@ TEST_F(FrameSchedulerTest, MultiplePresent2Clients) {
   // can differentiate between them in the OnFramePresented callbacks.
   for (uint64_t i = 0; i < kNumPresents; ++i) {
     for (SessionId session_id = 0; session_id < kNumClients; ++session_id) {
-      SchedulePresent2Update(scheduler, mock_updater_, session_id, zx::time(0), zx::time(0),
-                             zx::time(session_id));
+      SchedulePresent2Update(scheduler, session_id, /*presentation_time=*/zx::time(0),
+                             /*present_received_time=*/zx::time(session_id));
     }
   }
 
   // Wait for one vsync period.
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
 
   // All Present2s should have been scheduled and handled in one go.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -1267,11 +1188,11 @@ TEST_F(FrameSchedulerTest, CoalescedPresent2s_CauseASingleOnFramePresentedEvent)
 
   // Schedule updates on both clients.
   for (uint64_t i = 0; i < kNumPresents; ++i)
-    SchedulePresent2Update(scheduler, mock_updater_, kSessionId2, zx::time(0));
+    SchedulePresent2Update(scheduler, kSessionId2, zx::time(0));
 
   // Wait for one vsync period.
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
 
   // All Present2s should have been scheduled and handled in one go.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -1290,12 +1211,11 @@ TEST_F(FrameSchedulerTest, OnFramePresentedEvent_HasPresent2sInOrder) {
 
   // Present in reverse order. This is to ensure that the Presents are ordered by submission, not
   // necessarily latch point or present received values.
-  constexpr zx::time latched_time = zx::time(5);
   constexpr zx::time original_present_received_time = zx::time(4);
   constexpr zx::duration present_delta = zx::duration(-1);
 
   scheduler->SetOnFramePresentedCallbackForSession(
-      kSessionId2, [&present_count, kNumPresents, latched_time, original_present_received_time,
+      kSessionId2, [&present_count, kNumPresents, original_present_received_time,
                     present_delta](fuchsia::scenic::scheduling::FramePresentedInfo info) {
         EXPECT_EQ(info.presentation_infos.size(), kNumPresents);
         present_count += info.presentation_infos.size();
@@ -1304,7 +1224,6 @@ TEST_F(FrameSchedulerTest, OnFramePresentedEvent_HasPresent2sInOrder) {
         for (uint64_t i = 0; i < info.presentation_infos.size(); ++i) {
           EXPECT_EQ(info.presentation_infos[i].present_received_time(),
                     present_received_time.get());
-          EXPECT_EQ(info.presentation_infos[i].latched_time(), latched_time.get());
 
           present_received_time += present_delta;
         }
@@ -1316,15 +1235,15 @@ TEST_F(FrameSchedulerTest, OnFramePresentedEvent_HasPresent2sInOrder) {
   // Schedule updates, changing the present received time for each one.
   zx::time present_received_time = original_present_received_time;
   for (uint64_t i = 0; i < kNumPresents; ++i) {
-    SchedulePresent2Update(scheduler, mock_updater_, kSessionId2, zx::time(0), zx::time(0),
-                           latched_time, present_received_time);
+    SchedulePresent2Update(scheduler, kSessionId2, /*presentation_time=*/zx::time(0),
+                           present_received_time);
 
     present_received_time += present_delta;
   }
 
   // Wait for one vsync period.
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
-  mock_renderer_->EndFrame(/* frame number */ 0, Now());
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
 
   // All Present2s should have been scheduled and handled in one go.
   EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
@@ -1444,443 +1363,90 @@ TEST_F(FrameSchedulerTest, InfinitelyLargePredictionRequest_ShouldBeTruncated) {
   }
 }
 
-// Without calling UpdateManager::RatchetPresentCallbacks(), updates can be applied but the present
-// callbacks will never be invoked.
-TEST(UpdateManagerTest, NoRatchetingMeansNoCallbacks) {
-  auto sum = std::make_unique<DefaultFrameScheduler::UpdateManager>();
-
-  MockSessionUpdater updater;
-  sum->AddSessionUpdater(updater.GetWeakPtr());
-
-  constexpr SessionId kSession1 = 1;
-
-  // Update is not expected to fail.
-  sum->SetOnUpdateFailedCallbackForSession(kSession1, [] { EXPECT_FALSE(true); });
-
-  auto status = ScheduleUpdateAndCallback(sum, &updater, kSession1, zx::time(1), zx::time(1));
-
-  fuchsia::images::PresentationInfo info;
-  info.presentation_interval = 1;
-  info.presentation_time = 1;
-  uint64_t frame_number = 1;
-  zx::time latched_time = zx::time(1);
-
-  auto [render, reschedule] =
-      sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                        zx::duration(info.presentation_interval), frame_number);
-  EXPECT_TRUE(render);
-  EXPECT_FALSE(reschedule);
-  EXPECT_TRUE(status->callback_passed);
-  EXPECT_FALSE(status->callback_invoked);
-
-  // Without calling RatchetPresentCallbacks(), the callbacks won't be invoked. NOTE: this wouldn't
-  // happen in practice; this is just testing/documenting the behavior.
-  sum->SignalPresentCallbacks(info);
-  EXPECT_FALSE(status->callback_invoked);
-  EXPECT_EQ(updater.signal_successful_present_callback_count(), 0U);
-
-  // Do it a few more times to prove that we're not just lucky when the callback is finally invoked.
-  sum->SignalPresentCallbacks(info);
-  EXPECT_FALSE(status->callback_invoked);
-  sum->SignalPresentCallbacks(info);
-  EXPECT_FALSE(status->callback_invoked);
-  sum->SignalPresentCallbacks(info);
-  EXPECT_FALSE(status->callback_invoked);
-  sum->SignalPresentCallbacks(info);
-  EXPECT_FALSE(status->callback_invoked);
-  EXPECT_EQ(updater.signal_successful_present_callback_count(), 0U);
-
-  // Finally, verify that calling RatchetPresentCallbacks() allows the signal to occur.
-  sum->RatchetPresentCallbacks(zx::time(info.presentation_time), frame_number);
-  sum->SignalPresentCallbacks(info);
-  EXPECT_TRUE(status->callback_invoked);
-  EXPECT_EQ(updater.signal_successful_present_callback_count(), 1U);
-
-  // Verify that re-signaling doesn't result in callbacks being invoked again.
-  sum->SignalPresentCallbacks(info);
-  EXPECT_EQ(updater.signal_successful_present_callback_count(), 1U);
-}
-
-// A really slow fence can be repeatedly rescheduled until it is ready.  It will block other updates
-// from running, even if their fences are done.
-TEST(UpdateManagerTest, ReallySlowFence) {
-  auto sum = std::make_unique<DefaultFrameScheduler::UpdateManager>();
-
-  MockSessionUpdater updater;
-  sum->AddSessionUpdater(updater.GetWeakPtr());
-
-  constexpr SessionId kSession1 = 1;
-  // Update is not expected to fail.
-  sum->SetOnUpdateFailedCallbackForSession(kSession1, [] { EXPECT_FALSE(true); });
-
-  auto status1 = ScheduleUpdateAndCallback(sum, &updater, kSession1, zx::time(1), zx::time(3));
-  auto status2 = ScheduleUpdateAndCallback(sum, &updater, kSession1, zx::time(2), zx::time(2));
-  auto status3 = ScheduleUpdateAndCallback(sum, &updater, kSession1, zx::time(3), zx::time(4));
-
-  fuchsia::images::PresentationInfo info;
-  info.presentation_interval = 1;
-
-  // Frame 1: Blocked on first update's fences.
-  info.presentation_time = 1;
-  uint64_t frame_number = 1;
-  zx::time latched_time = zx::time(1);
-  {
-    auto [render, reschedule] =
-        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                          zx::duration(info.presentation_interval), frame_number);
-    EXPECT_FALSE(render);
-    EXPECT_TRUE(reschedule);
-  }
-  EXPECT_FALSE(status1->callback_passed);
-  EXPECT_FALSE(status2->callback_passed);
-  EXPECT_FALSE(status3->callback_passed);
-
-  // Frame 2: Still blocked on first update's fences.
-  info.presentation_time = 2;
-  frame_number = 2;
-  latched_time = zx::time(2);
-  {
-    auto [render, reschedule] =
-        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                          zx::duration(info.presentation_interval), frame_number);
-    EXPECT_FALSE(render);
-    EXPECT_TRUE(reschedule);
-  }
-  EXPECT_FALSE(status1->callback_passed);
-  EXPECT_FALSE(status2->callback_passed);
-  EXPECT_FALSE(status3->callback_passed);
-
-  // Frame 3: First two updates are unblocked, but third is blocked on fences.
-  info.presentation_time = 3;
-  frame_number = 3;
-  latched_time = zx::time(3);
-  {
-    auto [render, reschedule] =
-        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                          zx::duration(info.presentation_interval), frame_number);
-    EXPECT_TRUE(render);
-    EXPECT_TRUE(reschedule);
-  }
-  EXPECT_FALSE(status3->callback_passed);
-  sum->RatchetPresentCallbacks(zx::time(info.presentation_time), frame_number);
-  sum->SignalPresentCallbacks(info);
-  EXPECT_TRUE(status1->callback_invoked);
-  EXPECT_TRUE(status2->callback_invoked);
-  EXPECT_EQ(status1->presentation_info, info);
-  EXPECT_EQ(status2->presentation_info, info);
-
-  // Frame 4: The third update is unblocked, so no reschedule is required.
-  info.presentation_time = 4;
-  frame_number = 4;
-  latched_time = zx::time(4);
-  {
-    auto [render, reschedule] =
-        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                          zx::duration(info.presentation_interval), frame_number);
-    EXPECT_TRUE(render);
-    EXPECT_FALSE(reschedule);
-  }
-  sum->RatchetPresentCallbacks(zx::time(info.presentation_time), frame_number);
-  sum->SignalPresentCallbacks(info);
-  EXPECT_TRUE(status3->callback_invoked);
-  EXPECT_EQ(status3->presentation_info, info);
-}
-
-// Verify that we properly observe all 4 possible responses from ApplyUpdates() in a
-// multi-session/multi-updater scenario.
-TEST(UpdateManagerTest, MultiUpdaterMultiSession) {
-  auto sum = std::make_unique<DefaultFrameScheduler::UpdateManager>();
+// Verify that we properly observe 4 updates for all session updaters.
+TEST_F(FrameSchedulerTest, MultiUpdaterMultiSession) {
+  auto scheduler = CreateDefaultFrameScheduler();
 
   // Pre-declare the Session IDs used in this test.
   constexpr SessionId kSession1 = 1;
   constexpr SessionId kSession2 = 2;
   constexpr SessionId kSession3 = 3;
   constexpr SessionId kSession4 = 4;
-
-  fuchsia::images::PresentationInfo info;
-  info.presentation_interval = 1;
 
   MockSessionUpdater updater1;
   MockSessionUpdater updater2;
-  sum->AddSessionUpdater(updater1.GetWeakPtr());
-  sum->AddSessionUpdater(updater2.GetWeakPtr());
-  updater1.BeRelaxedAboutUnexpectedSessionUpdates();
-  updater2.BeRelaxedAboutUnexpectedSessionUpdates();
+  scheduler->AddSessionUpdater(updater1.GetWeakPtr());
+  scheduler->AddSessionUpdater(updater2.GetWeakPtr());
   // Update is not expected to fail.
-  sum->SetOnUpdateFailedCallbackForSession(kSession1, [] { EXPECT_FALSE(true); });
-  sum->SetOnUpdateFailedCallbackForSession(kSession2, [] { EXPECT_FALSE(true); });
-  sum->SetOnUpdateFailedCallbackForSession(kSession3, [] { EXPECT_FALSE(true); });
-  sum->SetOnUpdateFailedCallbackForSession(kSession4, [] { EXPECT_FALSE(true); });
+  scheduler->SetOnUpdateFailedCallbackForSession(kSession1, [] { EXPECT_FALSE(true); });
+  scheduler->SetOnUpdateFailedCallbackForSession(kSession2, [] { EXPECT_FALSE(true); });
+  scheduler->SetOnUpdateFailedCallbackForSession(kSession3, [] { EXPECT_FALSE(true); });
+  scheduler->SetOnUpdateFailedCallbackForSession(kSession4, [] { EXPECT_FALSE(true); });
 
-  // Frame 1: Too early for any to run.
-  auto status1_1 = ScheduleUpdateAndCallback(sum, &updater1, kSession1, zx::time(2), zx::time(3));
-  {
-    uint64_t frame_number = info.presentation_time = 1;
-    zx::time latched_time = zx::time(1);
-    auto [render, reschedule] =
-        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                          zx::duration(info.presentation_interval), frame_number);
-    EXPECT_FALSE(render);
-    EXPECT_TRUE(reschedule);
-  }
+  ScheduleUpdateAndCallback(scheduler, kSession1, zx::time(2));
+  ScheduleUpdateAndCallback(scheduler, kSession2, zx::time(3));
+  ScheduleUpdateAndCallback(scheduler, kSession3, zx::time(4));
+  ScheduleUpdateAndCallback(scheduler, kSession4, zx::time(5));
+  // Should still only get one combined update for each session.
+  ScheduleUpdateAndCallback(scheduler, kSession4, zx::time(6));
 
-  // Frame 2: Blocked on first update's fences.
-  {
-    uint64_t frame_number = info.presentation_time = 2;
-    zx::time latched_time = zx::time(2);
-    auto [render, reschedule] =
-        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                          zx::duration(info.presentation_interval), frame_number);
-    EXPECT_FALSE(render);
-    EXPECT_TRUE(reschedule);
-  }
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
 
-  // Frame 3: Sessions 1,2,3 unblocked, Session 4 still blocked on fences.
-  auto status2_1 = ScheduleUpdateAndCallback(sum, &updater1, kSession2, zx::time(3), zx::time(3));
-  auto status3_1 = ScheduleUpdateAndCallback(sum, &updater2, kSession3, zx::time(3), zx::time(3));
-  auto status4_1 = ScheduleUpdateAndCallback(sum, &updater2, kSession4, zx::time(3), zx::time(4));
-  {
-    uint64_t frame_number = info.presentation_time = 3;
-    zx::time latched_time = zx::time(3);
-    auto [render, reschedule] =
-        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                          zx::duration(info.presentation_interval), frame_number);
-    EXPECT_TRUE(render);
-    EXPECT_TRUE(reschedule);
-  }
-
-  // Frame 4: Session 4 unblocked (both updates).
-  auto status4_2 = ScheduleUpdateAndCallback(sum, &updater2, kSession4, zx::time(4), zx::time(4));
-  {
-    uint64_t frame_number = info.presentation_time = 4;
-    zx::time latched_time = zx::time(4);
-    auto [render, reschedule] =
-        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                          zx::duration(info.presentation_interval), frame_number);
-    EXPECT_TRUE(render);
-    EXPECT_FALSE(reschedule);
-  }
-
-  // Frame 5: Session 4 schedules update, then dies before update applied.
-  auto status4_3 = ScheduleUpdateAndCallback(sum, &updater2, kSession4, zx::time(5), zx::time(5));
-  updater2.KillSession(kSession4);
-  {
-    uint64_t frame_number = info.presentation_time = 5;
-    zx::time latched_time = zx::time(5);
-    auto [render, reschedule] =
-        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                          zx::duration(info.presentation_interval), frame_number);
-    EXPECT_FALSE(render);
-    EXPECT_FALSE(reschedule);
-  }
+  EXPECT_EQ(updater1.last_sessions_to_update().size(), 4u);
+  EXPECT_EQ(updater2.last_sessions_to_update().size(), 4u);
+  EXPECT_TRUE(updater1.last_sessions_to_update().find(kSession1) !=
+              updater1.last_sessions_to_update().end());
+  EXPECT_TRUE(updater1.last_sessions_to_update().find(kSession2) !=
+              updater1.last_sessions_to_update().end());
+  EXPECT_TRUE(updater1.last_sessions_to_update().find(kSession3) !=
+              updater1.last_sessions_to_update().end());
+  EXPECT_TRUE(updater1.last_sessions_to_update().find(kSession4) !=
+              updater1.last_sessions_to_update().end());
+  EXPECT_TRUE(updater2.last_sessions_to_update().find(kSession1) !=
+              updater2.last_sessions_to_update().end());
+  EXPECT_TRUE(updater2.last_sessions_to_update().find(kSession2) !=
+              updater2.last_sessions_to_update().end());
+  EXPECT_TRUE(updater2.last_sessions_to_update().find(kSession3) !=
+              updater2.last_sessions_to_update().end());
+  EXPECT_TRUE(updater2.last_sessions_to_update().find(kSession4) !=
+              updater2.last_sessions_to_update().end());
 }
 
-// Verify that updaters can be dynamically updated and removed.
-TEST(SessionUpdaterManagerTest, DynamicUpdaterAddRemove) {
-  auto sum = std::make_unique<DefaultFrameScheduler::UpdateManager>();
-
-  // Pre-declare the Session IDs used in this test.
-  constexpr SessionId kSession1 = 1;
-  constexpr SessionId kSession2 = 2;
-  constexpr SessionId kSession3 = 3;
-  constexpr SessionId kSession4 = 4;
-  constexpr SessionId kSession5 = 5;
-
-  // Updates are not expected to fail.
-  sum->SetOnUpdateFailedCallbackForSession(kSession1, [] { EXPECT_FALSE(true); });
-  sum->SetOnUpdateFailedCallbackForSession(kSession2, [] { EXPECT_FALSE(true); });
-  sum->SetOnUpdateFailedCallbackForSession(kSession3, [] { EXPECT_FALSE(true); });
-  sum->SetOnUpdateFailedCallbackForSession(kSession4, [] { EXPECT_FALSE(true); });
-  sum->SetOnUpdateFailedCallbackForSession(kSession5, [] { EXPECT_FALSE(true); });
-
-  fuchsia::images::PresentationInfo info;
-  info.presentation_interval = 1;
-
-  // Frame 1: Too early for any to run.  Even though the updater is deleted, there is still a
-  // reschedule because it was too early to try to apply the updates so the manager's  Unlike the
-  // "MultiUpdaterMultiSession" test above, there is no reschedule because the updater is deleted
-  // before updates are applied.
-  {
-    auto updater1 = std::make_unique<MockSessionUpdater>();
-    sum->AddSessionUpdater(updater1->GetWeakPtr());
-
-    auto status =
-        ScheduleUpdateAndCallback(sum, updater1.get(), kSession1, zx::time(2), zx::time(3));
-    updater1.reset();
-
-    uint64_t frame_number = info.presentation_time = 1;
-    zx::time latched_time = zx::time(1);
-    auto [render, reschedule] =
-        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                          zx::duration(info.presentation_interval), frame_number);
-    EXPECT_FALSE(render);
-    EXPECT_TRUE(reschedule);
-
-    sum->RatchetPresentCallbacks(zx::time(info.presentation_time), frame_number);
-    sum->SignalPresentCallbacks(info);
-    EXPECT_FALSE(status->callback_passed);
-  }
-
-  // Frame 2: Schedule another update, early enough to be applied this time.  Thus, when we destroy
-  // the updater before applying updates, there is no reschedule nor render.
-  {
-    auto updater2 = std::make_unique<MockSessionUpdater>();
-    sum->AddSessionUpdater(updater2->GetWeakPtr());
-
-    auto status =
-        ScheduleUpdateAndCallback(sum, updater2.get(), kSession2, zx::time(2), zx::time(2));
-    updater2.reset();
-
-    uint64_t frame_number = info.presentation_time = 2;
-    zx::time latched_time = zx::time(2);
-    auto [render, reschedule] =
-        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                          zx::duration(info.presentation_interval), frame_number);
-    EXPECT_FALSE(render);
-    EXPECT_FALSE(reschedule);
-
-    sum->RatchetPresentCallbacks(zx::time(info.presentation_time), frame_number);
-    sum->SignalPresentCallbacks(info);
-    EXPECT_FALSE(status->callback_passed);
-  }
-
-  // Frame 3: Schedule another update, again early enough to be applied.  This time we destroy it
-  // after updates but before signaling present callbacks; the callback should therefore be invoked
-  // (and, the scene should be rendered).
-  {
-    auto updater3 = std::make_unique<MockSessionUpdater>();
-    sum->AddSessionUpdater(updater3->GetWeakPtr());
-
-    auto status =
-        ScheduleUpdateAndCallback(sum, updater3.get(), kSession3, zx::time(3), zx::time(3));
-
-    uint64_t frame_number = info.presentation_time = 3;
-    zx::time latched_time = zx::time(3);
-    auto [render, reschedule] =
-        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                          zx::duration(info.presentation_interval), frame_number);
-    EXPECT_TRUE(render);
-    EXPECT_FALSE(reschedule);
-
-    updater3.reset();
-    sum->RatchetPresentCallbacks(zx::time(info.presentation_time), frame_number);
-    sum->SignalPresentCallbacks(info);
-    EXPECT_TRUE(status->callback_passed);
-    EXPECT_TRUE(status->callback_invoked);
-    EXPECT_TRUE(status->updater_disappeared);
-  }
-
-  // For the next few frames, we have multiple updaters at the same time.
-  auto updater4 = std::make_unique<MockSessionUpdater>();
-  auto updater5 = std::make_unique<MockSessionUpdater>();
-  sum->AddSessionUpdater(updater4->GetWeakPtr());
-  sum->AddSessionUpdater(updater5->GetWeakPtr());
-  updater4->BeRelaxedAboutUnexpectedSessionUpdates();
-  updater5->BeRelaxedAboutUnexpectedSessionUpdates();
-
-  auto status4 =
-      ScheduleUpdateAndCallback(sum, updater4.get(), kSession4, zx::time(4), zx::time(4));
-  auto status5 =
-      ScheduleUpdateAndCallback(sum, updater5.get(), kSession5, zx::time(4), zx::time(5));
-
-  // Frame 4: The update for |status4| will be applied, and |status5| will be blocked on its fence
-  // and rescheduled.
-  {
-    uint64_t frame_number = info.presentation_time = 4;
-    zx::time latched_time = zx::time(4);
-    auto [render, reschedule] =
-        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                          zx::duration(info.presentation_interval), frame_number);
-    EXPECT_TRUE(render);
-    EXPECT_TRUE(reschedule);
-
-    sum->RatchetPresentCallbacks(zx::time(info.presentation_time), frame_number);
-    sum->SignalPresentCallbacks(info);
-    EXPECT_TRUE(status4->callback_passed);
-    EXPECT_TRUE(status4->callback_invoked);
-    EXPECT_FALSE(status4->updater_disappeared);
-    EXPECT_FALSE(status5->callback_passed);
-  }
-
-  auto updater6 = std::make_unique<MockSessionUpdater>();
-  sum->AddSessionUpdater(updater6->GetWeakPtr());
-  updater6->BeRelaxedAboutUnexpectedSessionUpdates();
-  auto status6 =
-      ScheduleUpdateAndCallback(sum, updater6.get(), kSession5, zx::time(5), zx::time(5));
-
-  // Frame 5: The updates for both |status5| and |status6| will be applied, so there will be a
-  // render and no reschedule.  Destroy |updater6| before the callbacks are signaled.
-  {
-    uint64_t frame_number = info.presentation_time = 5;
-    zx::time latched_time = zx::time(5);
-    auto [render, reschedule] =
-        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                          zx::duration(info.presentation_interval), frame_number);
-    EXPECT_TRUE(render);
-    EXPECT_FALSE(reschedule);
-
-    sum->RatchetPresentCallbacks(zx::time(info.presentation_time), frame_number);
-    // Unlike where we deleted |updater3| above, we reset after RatcherPresentCallbacks().  This one
-    // is the more common case, but UpdateManager doesn't care.
-    updater6.reset();
-    sum->SignalPresentCallbacks(info);
-    EXPECT_TRUE(status5->callback_passed);
-    EXPECT_TRUE(status5->callback_invoked);
-    EXPECT_TRUE(status6->callback_passed);
-    EXPECT_TRUE(status6->callback_invoked);
-    // As expected, we see that |updater6| was killed while |updater5| remains.
-    EXPECT_FALSE(status5->updater_disappeared);
-    EXPECT_TRUE(status6->updater_disappeared);
-  }
-}
-
-TEST(SessionUpdaterManagerTest, AddSessionUpdatersInSessionUpdater) {
-  auto sum = std::make_unique<DefaultFrameScheduler::UpdateManager>();
+TEST_F(FrameSchedulerTest, AddSessionUpdatersInSessionUpdater) {
+  auto scheduler = CreateDefaultFrameScheduler();
 
   // Pre-declare the Session IDs used in this test.
   constexpr SessionId kSession1 = 1;
   // Updates are not expected to fail.
-  sum->SetOnUpdateFailedCallbackForSession(kSession1, [] { EXPECT_FALSE(true); });
-  fuchsia::images::PresentationInfo info;
-  info.presentation_interval = 1;
+  SetSessionUpdateFailedNotExpected(scheduler.get(), kSession1);
 
   // Creates a mock SessionUpdater that creates 10 SessionUpdaters on every
   // UpdateSessions call.
   constexpr size_t kUpdatersToAddOnEveryUpdate = 10U;
   std::vector<std::unique_ptr<MockSessionUpdater>> session_updaters_created;
-
   auto updater1 = std::make_unique<MockSessionUpdaterWithFunctionOnUpdate>(
-      [sum = sum.get(), &session_updaters_created]() {
+      [scheduler = scheduler.get(), &session_updaters_created]() {
         for (size_t i = 0; i < kUpdatersToAddOnEveryUpdate; i++) {
           auto updater = std::make_unique<MockSessionUpdater>();
-          updater->BeRelaxedAboutUnexpectedSessionUpdates();
-          sum->AddSessionUpdater(updater->GetWeakPtr());
+          scheduler->AddSessionUpdater(updater->GetWeakPtr());
           session_updaters_created.push_back(std::move(updater));
         }
       });
-  sum->AddSessionUpdater(updater1->GetWeakPtr());
+  scheduler->AddSessionUpdater(updater1->GetWeakPtr());
 
   // Frame 1: Updater1 creates 10 new SessionUpdaters this frame, but only
-  //   updater1 will be called to update sessions.
+  // updater1 will be called to update sessions.
+  bool callback_called1 = false;
   {
-    auto status1 =
-        ScheduleUpdateAndCallback(sum, updater1.get(), kSession1, zx::time(1), zx::time(1));
+    ScheduleUpdateAndCallback(scheduler, kSession1, zx::time(0),
+                              [&callback_called1](auto...) { callback_called1 = true; });
     EXPECT_EQ(updater1->update_sessions_call_count(), 0U);
+    RunLoopFor(zx::sec(2));
+    mock_renderer_->EndFrame(/*frame number=*/0, /*time_done=*/Now() + zx::sec(1));
+    RunLoopFor(zx::sec(2));
 
-    uint64_t frame_number = info.presentation_time = 1;
-    zx::time latched_time = zx::time(1);
-    auto [render, reschedule] =
-        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                          zx::duration(info.presentation_interval), frame_number);
-    EXPECT_TRUE(render);
-    EXPECT_FALSE(reschedule);
-
-    sum->RatchetPresentCallbacks(zx::time(info.presentation_time), frame_number);
-    sum->SignalPresentCallbacks(info);
-
-    EXPECT_TRUE(status1->callback_passed && status1->callback_invoked);
-    EXPECT_FALSE(status1->updater_disappeared);
     EXPECT_EQ(updater1->update_sessions_call_count(), 1U);
+    EXPECT_TRUE(callback_called1);
     EXPECT_EQ(session_updaters_created.size(), kUpdatersToAddOnEveryUpdate);
     EXPECT_TRUE(std::all_of(session_updaters_created.begin(), session_updaters_created.end(),
                             [](const auto& session_updater) {
@@ -1891,24 +1457,17 @@ TEST(SessionUpdaterManagerTest, AddSessionUpdatersInSessionUpdater) {
   // Frame 2: updater1 will create another 10 SessionUpdaters this frame, which
   //          will not be updated, while the SessionUpdaters created on previous
   //          frame will be updated now.
+  bool callback_called2 = false;
   {
-    auto status2 =
-        ScheduleUpdateAndCallback(sum, updater1.get(), kSession1, zx::time(2), zx::time(2));
+    ScheduleUpdateAndCallback(scheduler, kSession1, zx::time(0),
+                              [&callback_called2](auto...) { callback_called2 = true; });
     EXPECT_EQ(updater1->update_sessions_call_count(), 1U);
+    RunLoopFor(zx::sec(2));
+    mock_renderer_->EndFrame(/*frame number=*/1, /*time_done=*/Now());
+    RunLoopFor(zx::sec(2));
+    RunLoopUntilIdle();
 
-    uint64_t frame_number = info.presentation_time = 2;
-    zx::time latched_time = zx::time(2);
-    auto [render, reschedule] =
-        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                          zx::duration(info.presentation_interval), frame_number);
-    EXPECT_TRUE(render);
-    EXPECT_FALSE(reschedule);
-
-    sum->RatchetPresentCallbacks(zx::time(info.presentation_time), frame_number);
-    sum->SignalPresentCallbacks(info);
-
-    EXPECT_TRUE(status2->callback_passed && status2->callback_invoked);
-    EXPECT_FALSE(status2->updater_disappeared);
+    EXPECT_TRUE(callback_called2);
     EXPECT_EQ(updater1->update_sessions_call_count(), 2U);
     EXPECT_EQ(session_updaters_created.size(), 2 * kUpdatersToAddOnEveryUpdate);
     EXPECT_TRUE(std::count_if(session_updaters_created.begin(), session_updaters_created.end(),
@@ -1918,69 +1477,332 @@ TEST(SessionUpdaterManagerTest, AddSessionUpdatersInSessionUpdater) {
   }
 }
 
-TEST(SessionUpdaterManagerTest, RemoveSessionUpdatersInSessionUpdater) {
-  auto sum = std::make_unique<DefaultFrameScheduler::UpdateManager>();
+TEST_F(FrameSchedulerTest, SquashedPresents_ShouldSignalAllCallbacksInOrder) {
+  auto scheduler = CreateDefaultFrameScheduler();
 
-  // Pre-declare the Session IDs used in this test.
-  constexpr SessionId kSession1 = 1;
-  // Updates are not expected to fail.
-  sum->SetOnUpdateFailedCallbackForSession(kSession1, [] { EXPECT_FALSE(true); });
-  fuchsia::images::PresentationInfo info;
-  info.presentation_interval = 1;
+  constexpr SessionId kSessionId = 1;
+  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
-  // Creates updaters to be removed later.
-  constexpr size_t kNumOfUpdatersToRemove = 10U;
-  std::vector<std::unique_ptr<MockSessionUpdater>> updaters_to_remove;
-  std::vector<fxl::WeakPtr<MockSessionUpdater>> updaters_to_remove_weak;
+  std::vector<int64_t> callback_order;
+  // Schedule three callbacks, which should be squashed.
+  ScheduleUpdateAndCallback(scheduler, kSessionId, zx::time(0),
+                            [&callback_order](auto...) { callback_order.push_back(1); });
+  ScheduleUpdateAndCallback(scheduler, kSessionId, zx::time(0),
+                            [&callback_order](auto...) { callback_order.push_back(2); });
+  ScheduleUpdateAndCallback(scheduler, kSessionId, zx::time(0),
+                            [&callback_order](auto...) { callback_order.push_back(3); });
 
-  for (size_t i = 0; i < kNumOfUpdatersToRemove; i++) {
-    auto updater = std::make_unique<MockSessionUpdater>();
-    updater->BeRelaxedAboutUnexpectedSessionUpdates();
-    updaters_to_remove_weak.push_back(updater->GetWeakPtr());
-    updaters_to_remove.push_back(std::move(updater));
-  }
+  // Schedule a callback for later, which should not be squashed.
+  ScheduleUpdateAndCallback(scheduler, kSessionId, Now() + zx::sec(1),
+                            [&callback_order](auto...) { callback_order.push_back(4); });
 
-  // Creates a mock SessionUpdater that removes a SessionUpdater on every
-  // UpdateSessions call.
-  auto updater1 = std::make_unique<MockSessionUpdaterWithFunctionOnUpdate>(
-      [updaters_to_remove = std::move(updaters_to_remove)]() mutable {
-        updaters_to_remove.pop_back();
+  RunLoopFor(zx::sec(2));
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
+  RunLoopUntilIdle();
+  EXPECT_THAT(callback_order, ::testing::ElementsAreArray({1, 2, 3}));
+}
+
+TEST_F(FrameSchedulerTest, SquashedPresent2s_ShouldHaveCorrectNumberOfHandledPresentsInCallback) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  constexpr SessionId kSessionId = 1;
+  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
+
+  uint64_t present_count = 0;
+  uint64_t num_callbacks = 0;
+  scheduler->SetOnFramePresentedCallbackForSession(
+      kSessionId,
+      [&present_count, &num_callbacks](fuchsia::scenic::scheduling::FramePresentedInfo info) {
+        present_count += info.presentation_infos.size();
+        ++num_callbacks;
       });
-  updater1->BeRelaxedAboutUnexpectedSessionUpdates();
-  sum->AddSessionUpdater(updater1->GetWeakPtr());
 
-  for (const auto& updater : updaters_to_remove_weak) {
-    sum->AddSessionUpdater(updater->GetWeakPtr());
-  }
+  // Schedule three callbacks, which should be squashed.
+  SchedulePresent2Update(scheduler, kSessionId, zx::time(0));
+  SchedulePresent2Update(scheduler, kSessionId, zx::time(0));
+  SchedulePresent2Update(scheduler, kSessionId, zx::time(0));
 
-  for (size_t frame_number = 1; frame_number <= kNumOfUpdatersToRemove; frame_number++) {
-    auto status1 = ScheduleUpdateAndCallback(sum, updater1.get(), kSession1, zx::time(frame_number),
-                                             zx::time(frame_number));
+  // Schedule a callback for later, which should not be squashed.
+  SchedulePresent2Update(scheduler, kSessionId, Now() + zx::sec(1));
 
-    info.presentation_time = frame_number;
-    zx::time latched_time = zx::time(1);
-    auto [render, reschedule] =
-        sum->ApplyUpdates(zx::time(info.presentation_time), latched_time,
-                          zx::duration(info.presentation_interval), frame_number);
-    EXPECT_TRUE(render);
-    EXPECT_FALSE(reschedule);
+  RunLoopFor(zx::sec(2));
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
+  RunLoopUntilIdle();
+  EXPECT_EQ(present_count, 3u);
+  EXPECT_EQ(num_callbacks, 1u);
+}
 
-    sum->RatchetPresentCallbacks(zx::time(info.presentation_time), frame_number);
-    sum->SignalPresentCallbacks(info);
+TEST_F(FrameSchedulerTest, SkippedPresent_ShouldSignalAllCallbacksInOrder) {
+  auto scheduler = CreateDefaultFrameScheduler();
 
-    EXPECT_TRUE(status1->callback_passed && status1->callback_invoked);
-    EXPECT_FALSE(status1->updater_disappeared);
-    EXPECT_EQ(updater1->update_sessions_call_count(), frame_number);
+  constexpr SessionId kSessionId = 1;
+  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
 
-    size_t remaining_updaters = 0;
-    for (const auto& updater : updaters_to_remove_weak) {
-      if (updater) {
-        EXPECT_TRUE(updater->update_sessions_call_count() == frame_number);
-        ++remaining_updaters;
-      }
-    }
-    EXPECT_TRUE(remaining_updaters + frame_number == kNumOfUpdatersToRemove);
-  }
+  std::vector<int64_t> callback_order;
+  // These will never get scheduled.
+  scheduler->RegisterPresent(kSessionId,
+                             [&callback_order](auto...) { callback_order.push_back(1); },
+                             /*release_fences=*/{});
+  scheduler->RegisterPresent(kSessionId,
+                             [&callback_order](auto...) { callback_order.push_back(2); },
+                             /*release_fences=*/{});
+
+  // Next one should be scheduled and presented.
+  ScheduleUpdateAndCallback(scheduler, kSessionId, zx::time(0),
+                            [&callback_order](auto...) { callback_order.push_back(3); });
+
+  // This should never get scheduled, and it's callback should never be triggered.
+  scheduler->RegisterPresent(kSessionId,
+                             [&callback_order](auto...) { callback_order.push_back(4); },
+                             /*release_fences=*/{});
+
+  RunLoopFor(zx::sec(1));
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
+  RunLoopUntilIdle();
+  EXPECT_THAT(callback_order, ::testing::ElementsAreArray({1, 2, 3}));
+}
+
+// Verify that updaters can be removed after updates have been queued without crashing.
+TEST_F(FrameSchedulerTest, CanRemoveUpdaterWithQueuedUpdates) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  constexpr SessionId kSession1 = 1;
+  scheduler->SetOnUpdateFailedCallbackForSession(kSession1, [] { EXPECT_FALSE(true); });
+
+  auto updater = std::make_unique<MockSessionUpdater>();
+  scheduler->AddSessionUpdater(updater->GetWeakPtr());
+
+  ScheduleUpdateAndCallback(scheduler, kSession1, zx::time(0));
+  updater.reset();
+
+  EXPECT_NO_FATAL_FAILURE(RunLoopFor(zx::duration(vsync_timing_->vsync_interval())));
+}
+
+// Verify that updaters added after updates have been queued still get all updates.
+TEST_F(FrameSchedulerTest, CanAddUpdaterWithQueuedUpdates) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  constexpr SessionId kSession1 = 1;
+  scheduler->SetOnUpdateFailedCallbackForSession(kSession1, [] { EXPECT_FALSE(true); });
+  ScheduleUpdateAndCallback(scheduler, kSession1, zx::time(0));
+
+  auto updater = std::make_unique<MockSessionUpdater>();
+  scheduler->AddSessionUpdater(updater->GetWeakPtr());
+
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
+  EXPECT_EQ(updater->update_sessions_call_count(), 1u);
+}
+
+// Tests creating a session and calling Present several times with release fences. Fences should
+// fire as the subsequent Present call is presented to the display.
+TEST_F(FrameSchedulerTest, ReleaseFences_ShouldBeFiredAfterSubsequentFramePresented) {
+  auto scheduler = CreateDefaultFrameScheduler();
+  constexpr SessionId kSession = 1;
+
+  // Create release fences
+  std::vector<zx::event> release_fences1 = scenic_impl::gfx::test::CreateEventArray(2);
+  zx::event release_fence1 = scenic_impl::gfx::test::CopyEvent(release_fences1.at(0));
+  zx::event release_fence2 = scenic_impl::gfx::test::CopyEvent(release_fences1.at(1));
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+
+  std::vector<zx::event> release_fences2 = scenic_impl::gfx::test::CreateEventArray(1);
+  zx::event release_fence3 = scenic_impl::gfx::test::CopyEvent(release_fences2.at(0));
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+
+  bool callback1_fired = false;
+  ScheduleUpdateAndCallback(
+      scheduler, kSession, zx::time(0), [&callback1_fired](auto...) { callback1_fired = true; },
+      std::move(release_fences1));
+  EXPECT_FALSE(callback1_fired);
+  RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
+  EXPECT_TRUE(callback1_fired);
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+
+  bool callback2_fired = false;
+  ScheduleUpdateAndCallback(
+      scheduler, kSession, Now() + (vsync_timing_->vsync_interval() + zx::duration(1)),
+      [&callback2_fired](auto...) { callback2_fired = true; }, std::move(release_fences2));
+
+  EXPECT_FALSE(callback2_fired);
+  RunLoopFor(zx::sec(1));
+  mock_renderer_->EndFrame(/* frame number */ 1, Now());
+  EXPECT_TRUE(callback2_fired);
+  EXPECT_TRUE(scenic_impl::gfx::test::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+}
+
+// Tests creating a session and calling Present2 several times with release fences. Fences should
+// fire as the subsequent Present call is presented to the display.
+TEST_F(FrameSchedulerTest, ReleaseFences_WithPresent2_ShouldBeFiredAfterSubsequentFramePresented) {
+  auto scheduler = CreateDefaultFrameScheduler();
+  constexpr SessionId kSessionId = 1;
+
+  scheduler->SetOnFramePresentedCallbackForSession(kSessionId, [](auto) {});
+
+  // Create release fences
+  std::vector<zx::event> release_fences1 = scenic_impl::gfx::test::CreateEventArray(2);
+  zx::event release_fence1 = scenic_impl::gfx::test::CopyEvent(release_fences1.at(0));
+  zx::event release_fence2 = scenic_impl::gfx::test::CopyEvent(release_fences1.at(1));
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+
+  std::vector<zx::event> release_fences2 = scenic_impl::gfx::test::CreateEventArray(1);
+  zx::event release_fence3 = scenic_impl::gfx::test::CopyEvent(release_fences2.at(0));
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+
+  bool callback1_fired = false;
+
+  SchedulePresent2Update(scheduler, kSessionId, zx::time(0), zx::time(1),
+                         std::move(release_fences1));
+  EXPECT_FALSE(callback1_fired);
+  RunLoopFor(zx::sec(3));
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+
+  SchedulePresent2Update(scheduler, kSessionId,
+                         Now() + (vsync_timing_->vsync_interval() + zx::duration(1)), zx::time(1),
+                         std::move(release_fences2));
+
+  RunLoopFor(zx::sec(1));
+  mock_renderer_->EndFrame(/* frame number */ 1, Now());
+  EXPECT_TRUE(scenic_impl::gfx::test::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+}
+
+TEST_F(FrameSchedulerTest, SquashedPresents_ShouldHaveAllPreviousFencesSignaled) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  constexpr SessionId kSessionId = 1;
+  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
+
+  // Create release fences
+  std::vector<zx::event> release_fences1 = scenic_impl::gfx::test::CreateEventArray(1);
+  zx::event release_fence1 = scenic_impl::gfx::test::CopyEvent(release_fences1.at(0));
+  std::vector<zx::event> release_fences2 = scenic_impl::gfx::test::CreateEventArray(1);
+  zx::event release_fence2 = scenic_impl::gfx::test::CopyEvent(release_fences2.at(0));
+  std::vector<zx::event> release_fences3 = scenic_impl::gfx::test::CreateEventArray(1);
+  zx::event release_fence3 = scenic_impl::gfx::test::CopyEvent(release_fences3.at(0));
+
+  int64_t present_count = 0;
+  scheduler->SetOnFramePresentedCallbackForSession(
+      kSessionId, [&present_count](fuchsia::scenic::scheduling::FramePresentedInfo info) {
+        present_count += info.presentation_infos.size();
+      });
+
+  // Schedule three presents, which should be squashed. First fence should be signaled.
+  SchedulePresent2Update(scheduler, kSessionId, zx::time(0), zx::time(0),
+                         std::move(release_fences1));
+  SchedulePresent2Update(scheduler, kSessionId, zx::time(0), zx::time(0),
+                         std::move(release_fences2));
+
+  // Schedule a present for later, which should not be part of the squashed presents.
+  SchedulePresent2Update(scheduler, kSessionId, Now() + zx::sec(1), zx::time(0),
+                         std::move(release_fences3));
+
+  RunLoopFor(zx::sec(2));
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
+  RunLoopUntilIdle();
+  EXPECT_EQ(present_count, 2);
+  EXPECT_TRUE(scenic_impl::gfx::test::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+}
+
+TEST_F(FrameSchedulerTest, SkippedPresents_ShouldHaveAllPreviousFencesSignaled) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  constexpr SessionId kSessionId = 1;
+  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
+
+  // Create release fences
+  std::vector<zx::event> release_fences1 = scenic_impl::gfx::test::CreateEventArray(1);
+  zx::event release_fence1 = scenic_impl::gfx::test::CopyEvent(release_fences1.at(0));
+  std::vector<zx::event> release_fences2 = scenic_impl::gfx::test::CreateEventArray(1);
+  zx::event release_fence2 = scenic_impl::gfx::test::CopyEvent(release_fences2.at(0));
+  std::vector<zx::event> release_fences3 = scenic_impl::gfx::test::CreateEventArray(1);
+  zx::event release_fence3 = scenic_impl::gfx::test::CopyEvent(release_fences3.at(0));
+  std::vector<zx::event> release_fences4 = scenic_impl::gfx::test::CreateEventArray(1);
+  zx::event release_fence4 = scenic_impl::gfx::test::CopyEvent(release_fences4.at(0));
+
+  int64_t callback_count = 0;
+  // These will never get scheduled, but will be skipped and fences should be signaled.
+  scheduler->RegisterPresent(
+      kSessionId, [&callback_count](auto...) { ++callback_count; }, std::move(release_fences1));
+  scheduler->RegisterPresent(
+      kSessionId, [&callback_count](auto...) { ++callback_count; }, std::move(release_fences2));
+
+  // Next one should be scheduled and presented. Fences should not be signaled.
+  ScheduleUpdateAndCallback(
+      scheduler, kSessionId, zx::time(0), [&callback_count](auto...) { ++callback_count; },
+      std::move(release_fences3));
+
+  // This should never get scheduled, and it's callback should never be triggered.
+  scheduler->RegisterPresent(
+      kSessionId, [&callback_count](auto...) { ++callback_count; }, std::move(release_fences3));
+
+  RunLoopFor(zx::sec(1));
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
+  RunLoopUntilIdle();
+  EXPECT_EQ(callback_count, 3);
+  EXPECT_TRUE(scenic_impl::gfx::test::IsEventSignalled(release_fence1, ZX_EVENT_SIGNALED));
+  EXPECT_TRUE(scenic_impl::gfx::test::IsEventSignalled(release_fence2, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence3, ZX_EVENT_SIGNALED));
+  EXPECT_FALSE(scenic_impl::gfx::test::IsEventSignalled(release_fence4, ZX_EVENT_SIGNALED));
+}
+
+TEST_F(FrameSchedulerTest, ReleaseFences_ShouldFireInOrder) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  constexpr SessionId kSessionId = 1;
+  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
+
+  std::vector<int> fence_order;
+
+  // Create release fences
+  std::vector<zx::event> release_fences1 = scenic_impl::gfx::test::CreateEventArray(1);
+  zx::event release_fence1 = scenic_impl::gfx::test::CopyEvent(release_fences1.at(0));
+  async::Wait waiter1(release_fence1.get(), ZX_EVENT_SIGNALED, 0,
+                      [&fence_order](auto...) { fence_order.push_back(1); });
+  waiter1.Begin(dispatcher());
+
+  std::vector<zx::event> release_fences2 = scenic_impl::gfx::test::CreateEventArray(1);
+  zx::event release_fence2 = scenic_impl::gfx::test::CopyEvent(release_fences2.at(0));
+  async::Wait waiter2(release_fence2.get(), ZX_EVENT_SIGNALED, 0,
+                      [&fence_order](auto...) { fence_order.push_back(2); });
+  waiter2.Begin(dispatcher());
+
+  std::vector<zx::event> release_fences3 = scenic_impl::gfx::test::CreateEventArray(1);
+  zx::event release_fence3 = scenic_impl::gfx::test::CopyEvent(release_fences3.at(0));
+  async::Wait waiter3(release_fence3.get(), ZX_EVENT_SIGNALED, 0,
+                      [&fence_order](auto...) { fence_order.push_back(3); });
+  waiter3.Begin(dispatcher());
+
+  // These will never get scheduled, but will be skipped and fences should be signaled.
+  scheduler->RegisterPresent(
+      kSessionId, /*callback=*/[](auto...) {}, std::move(release_fences1));
+  scheduler->RegisterPresent(
+      kSessionId, /*callback=*/[](auto...) {}, std::move(release_fences2));
+  scheduler->RegisterPresent(
+      kSessionId, /*callback=*/[](auto...) {}, std::move(release_fences3));
+
+  // Next one should be scheduled and presented, triggering signalling of previous fences.
+  ScheduleUpdateAndCallback(scheduler, kSessionId, zx::time(0), /*callback=*/[](auto...) {},
+                            /*release_fence=*/{});
+
+  RunLoopFor(zx::sec(1));
+  mock_renderer_->EndFrame(/* frame number */ 0, /*time_done*/ Now());
+
+  EXPECT_TRUE(fence_order.empty());
+  RunLoopUntilIdle();
+  EXPECT_THAT(fence_order, ::testing::ElementsAreArray({1, 2, 3}));
 }
 
 }  // namespace test

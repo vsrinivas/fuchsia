@@ -10,6 +10,7 @@
 #include <functional>
 
 #include "src/lib/fxl/macros.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
 
@@ -19,7 +20,7 @@ class CommandDispatcher {
   virtual ~CommandDispatcher() = default;
 
   virtual void SetDebugName(const std::string& debug_name) = 0;
-  virtual void DispatchCommand(fuchsia::ui::scenic::Command command) = 0;
+  virtual void DispatchCommand(fuchsia::ui::scenic::Command command, scheduling::PresentId) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(CommandDispatcher);

@@ -106,7 +106,8 @@ InputCommandDispatcher::InputCommandDispatcher(scheduling::SessionId session_id,
   FXL_CHECK(input_system_);
 }
 
-void InputCommandDispatcher::DispatchCommand(ScenicCommand command) {
+void InputCommandDispatcher::DispatchCommand(ScenicCommand command,
+                                             scheduling::PresentId present_id) {
   TRACE_DURATION("input", "dispatch_command", "command", "ScenicCmd");
   FXL_DCHECK(command.Which() == ScenicCommand::Tag::kInput);
 

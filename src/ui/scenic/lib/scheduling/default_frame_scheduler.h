@@ -20,6 +20,7 @@
 #include "src/ui/scenic/lib/scheduling/frame_stats.h"
 #include "src/ui/scenic/lib/scheduling/id.h"
 #include "src/ui/scenic/lib/scheduling/vsync_timing.h"
+#include "src/ui/scenic/lib/utils/sequential_fence_signaller.h"
 
 namespace scheduling {
 
@@ -50,10 +51,17 @@ class DefaultFrameScheduler : public FrameScheduler {
       SessionId session, OnSessionUpdateFailedCallback update_failed_callback) override;
 
   // |FrameScheduler|
+  PresentId RegisterPresent(SessionId session_id,
+                            std::variant<OnPresentedCallback, Present2Info> present_information,
+                            std::vector<zx::event> release_fences,
+                            PresentId present_id = 0) override;
+
+  // |FrameScheduler|
   //
   // Tell the FrameScheduler to schedule a frame. This is also used for updates triggered by
   // something other than a Session update i.e. an ImagePipe with a new Image to present.
-  void ScheduleUpdateForSession(zx::time presentation_time, SchedulingIdPair id_pair) override;
+  void ScheduleUpdateForSession(zx::time requested_presentation_time,
+                                SchedulingIdPair id_pair) override;
 
   // |FrameScheduler|
   //
@@ -67,7 +75,10 @@ class DefaultFrameScheduler : public FrameScheduler {
       zx::duration requested_prediction_span,
       FrameScheduler::GetFuturePresentationInfosCallback presentation_infos_callback) override;
 
-  void ClearCallbacksForSession(SessionId session_id) override;
+  // |FrameScheduler|
+  //
+  // Remove all state associated with a given session_id.
+  void RemoveSession(SessionId session_id) override;
 
   constexpr static zx::duration kMinPredictedFrameDuration = zx::msec(0);
   constexpr static zx::duration kInitialRenderDuration = zx::msec(5);
@@ -75,100 +86,6 @@ class DefaultFrameScheduler : public FrameScheduler {
 
   // Public for testing.
   constexpr static size_t kMaxOutstandingFrames = 2;
-
-  // Helper class that manages:
-  // - registration of SessionUpdaters
-  // - tracking callbacks that need to be invoked.
-  class UpdateManager {
-   public:
-    UpdateManager() = default;
-
-    // Add |session_updater| to the list of updaters on which |UpdateSessions()| and
-    // |PrepareFrame()| will be invoked.
-    void AddSessionUpdater(fxl::WeakPtr<SessionUpdater> session_updater);
-
-    // Schedules an update for the specified session.  All updaters registered by
-    // |AddSessionUpdater()| are notified when |ApplyUpdates()| is called with an equal or later
-    // presentation time.
-    void ScheduleUpdate(zx::time presentation_time, SchedulingIdPair id_pair);
-
-    // Returned by |ApplyUpdates()|; used by a |FrameScheduler| to decide whether to render a frame
-    // and/or schedule another frame to be rendered.
-    struct ApplyUpdatesResult {
-      bool needs_render;
-      bool needs_reschedule;
-    };
-    // Calls |SessionUpdater::UpdateSessions()| on all updaters, and uses the returned
-    // |SessionUpdater::UpdateResults| to generate the returned |ApplyUpdatesResult|.
-    ApplyUpdatesResult ApplyUpdates(zx::time target_presentation_time, zx::time latched_time,
-                                    zx::duration vsync_interval, uint64_t frame_number);
-
-    // Return true if there are any scheduled session updates that have not yet been applied.
-    bool HasUpdatableSessions() const { return !updatable_sessions_.empty(); }
-
-    zx::time EarliestRequestedPresentationTime() const {
-      FXL_DCHECK(HasUpdatableSessions());
-      return updatable_sessions_.top().requested_presentation_time;
-    }
-
-    // Creates a ratchet point for the updater. All present calls that were updated before this
-    // point will be signaled with the next call to |SignalPresentCallbacks()|.
-    void RatchetPresentCallbacks(zx::time presentation_time, uint64_t frame_number);
-
-    // Signal that all updates before the last ratchet point have been presented.  The signaled
-    // callbacks are every successful present between the last time |SignalPresentCallbacks()| was
-    // called and the most recent call to |RatchetPresentCallbacks()|.
-    void SignalPresentCallbacks(fuchsia::images::PresentationInfo info);
-
-    // Sets a callback to handle a failed session update. This should only be
-    // called once per session.
-    void SetOnUpdateFailedCallbackForSession(
-        SessionId session, FrameScheduler::OnSessionUpdateFailedCallback update_failed_callback);
-
-    // Sets the |fuchsia::ui::scenic::Session::OnFramePresented| event handler. This should only be
-    // called once per session.
-    void SetOnFramePresentedCallbackForSession(SessionId session,
-                                               OnFramePresentedCallback frame_presented_callback);
-
-    // Clears the cached callbacks set per-session.
-    void ClearCallbacksForSession(SessionId session_id);
-
-   private:
-    // Remove all state associated with a given session_id.
-    void RemoveSession(SessionId session_id);
-
-    // Sessions that have updates to apply, sorted by requested presentation time from earliest to
-    // latest.
-    struct SessionUpdate {
-      SessionId session_id;
-      PresentId present_id;
-      zx::time requested_presentation_time;
-
-      bool operator>(const SessionUpdate& rhs) const {
-        return requested_presentation_time > rhs.requested_presentation_time;
-      }
-    };
-    std::priority_queue<SessionUpdate, std::vector<SessionUpdate>, std::greater<SessionUpdate>>
-        updatable_sessions_;
-
-    std::multimap<SessionId, OnPresentedCallback> present1_callbacks_this_frame_;
-    std::multimap<SessionId, OnPresentedCallback> pending_present1_callbacks_;
-
-    std::multimap<SessionId, Present2Info> present2_infos_this_frame_;
-    std::multimap<SessionId, Present2Info> pending_present2_infos_;
-
-    std::map<SessionId, OnFramePresentedCallback> present2_callback_map_;
-    std::map<SessionId, FrameScheduler::OnSessionUpdateFailedCallback> update_failed_callback_map_;
-
-    // Set of SessionUpdaters to update. Stored as a WeakPtr: when the updaters become
-    // invalid, the WeakPtr is removed from this list.
-    std::vector<fxl::WeakPtr<SessionUpdater>> session_updaters_;
-
-    // Stores SessionUpdaters we added to the DefaultFrameScheduler. Upon
-    // ApplyUpdates() is called, these SessionUpdaters will be moved to
-    // the |session_updaters_| vector.
-    std::list<fxl::WeakPtr<SessionUpdater>> new_session_updaters_;
-  };
 
  protected:
   void OnFramePresented(const FrameTimings& timings);
@@ -179,7 +96,11 @@ class DefaultFrameScheduler : public FrameScheduler {
   // Requests a new frame to be drawn, which schedules the next wake up time for rendering. If we've
   // already scheduled a wake up time, it checks if it needs rescheduling and deals with it
   // appropriately.
-  void RequestFrame();
+  void RequestFrame(zx::time requested_presentation_time);
+
+  // Check if there are pending updates, and if there are then find the next lowest requested
+  // presentation time and uses it to request another frame.
+  void HandleNextFrameRequest();
 
   // Update the global scene and then draw it... maybe.  There are multiple reasons why this might
   // not happen.  For example, the swapchain might apply back-pressure if we can't hit our target
@@ -193,8 +114,85 @@ class DefaultFrameScheduler : public FrameScheduler {
       zx::time requested_presentation_time) const;
 
   // Executes updates that are scheduled up to and including a given presentation time.
-  UpdateManager::ApplyUpdatesResult ApplyUpdates(zx::time target_presentation_time,
-                                                 zx::time latched_time);
+  bool ApplyUpdates(zx::time target_presentation_time, zx::time latched_time,
+                    uint64_t frame_number);
+
+  // Return true if there are any scheduled session updates that have not yet been applied.
+  bool HaveUpdatableSessions() const { return !pending_present_requests_.empty(); }
+
+  // Signal all callbacks prepared on frames up to |frame_number|.
+  void SignalPresentCallbacksUpTo(uint64_t frame_number,
+                                  fuchsia::images::PresentationInfo presentation_info);
+
+  // Signal all Present1 callbacks for |id_pair.session| up to |id_pair.present_id|.
+  void SignalPresent1CallbacksUpTo(SchedulingIdPair id_pair,
+                                   fuchsia::images::PresentationInfo presentation_info);
+
+  // Signal all Present2 callbacks for |id_pair.session| up to |id_pair.present_id|.
+  void SignalPresent2CallbackForInfosUpTo(SchedulingIdPair id_pair, zx::time presented_time);
+
+  // Set all unset latched times for each Present2Info of |session_id|, up to and including
+  // |present_id|.
+  void SetLatchedTimeForPresent2Infos(SchedulingIdPair id_pair, zx::time latched_time);
+
+  // Move all fences before |present_id| to the signaller to be signalled at next OnFrameRendered.
+  void MoveReleaseFencesToSignaller(SchedulingIdPair id_pair, uint64_t frame_number);
+
+  // Extracts all presents that should be updated this frame and returns them as a map of SessionIds
+  // to the last PresentId that should be updated for that session.
+  std::unordered_map<SessionId, PresentId> CollectUpdatesForThisFrame(
+      zx::time target_presentation_time);
+
+  // Prepares all per-present data for later OnFrameRendered and OnFramePresented events.
+  void PrepareUpdates(const std::unordered_map<SessionId, PresentId>& updates,
+                      zx::time latched_time, uint64_t frame_number);
+
+  // Cycles through SessionUpdaters, applies updates to each and coalesces their responses.
+  SessionUpdater::UpdateResults ApplyUpdatesToEachUpdater(
+      const std::unordered_map<SessionId, PresentId>& sessions_to_update, uint64_t frame_number);
+
+  // Removes all references to each session passed in and calls their
+  // OnSessionUpdateFailedCallbacks.
+  void RemoveFailedSessions(const std::unordered_set<SessionId>& sessions_with_failed_updates);
+
+  // Map of all pending Present calls ordered by SessionId and then PresentId. Maps to requested
+  // presentation time for each present.
+  std::map<SchedulingIdPair, zx::time> pending_present_requests_;
+
+  struct FrameUpdate {
+    uint64_t frame_number;
+    std::unordered_map<SessionId, PresentId> updated_sessions;
+  };
+  // Queue of session updates mapped to frame numbers. Used when triggering callbacks in
+  // OnFramePresented.
+  std::queue<FrameUpdate> handled_updates_;
+
+  // Ordered maps of per-present data ordered by SessionId and then PresentId.
+  // Per-present callbacks for Present1 and ImagePipe clients.
+  std::map<SchedulingIdPair, OnPresentedCallback> present1_callbacks_;
+  // Per-present info for Present2 clients, to be coalesced before used in callback.
+  std::map<SchedulingIdPair, Present2Info> present2_infos_;
+  // Per-present release fences. To be released as each subsequent present for each session is
+  // rendered.
+  std::map<SchedulingIdPair, std::vector<zx::event>> release_fences_;
+
+  // Map of registered callbacks for Present2 sessions.
+  std::unordered_map<SessionId, OnFramePresentedCallback> present2_callback_map_;
+  // Map of callbacks to fire when a Session update fails.
+  std::unordered_map<SessionId, FrameScheduler::OnSessionUpdateFailedCallback>
+      update_failed_callback_map_;
+
+  utils::SequentialFenceSignaller release_fence_signaller_;
+
+  // Set of SessionUpdaters to update. Stored as a WeakPtr: when the updaters become
+  // invalid, the WeakPtr is removed from this list.
+  std::vector<fxl::WeakPtr<SessionUpdater>> session_updaters_;
+
+  // Stores SessionUpdaters we added to the DefaultFrameScheduler. Upon
+  // ApplyUpdates() is called, these SessionUpdaters will be moved to
+  // the |session_updaters_| vector.
+  // Exists to protect against when new session updaters are added mid-update.
+  std::list<fxl::WeakPtr<SessionUpdater>> new_session_updaters_;
 
   // References.
   async_dispatcher_t* const dispatcher_;
@@ -209,8 +207,7 @@ class DefaultFrameScheduler : public FrameScheduler {
   bool currently_rendering_ = false;
   bool render_pending_ = false;
   zx::time wakeup_time_;
-  zx::time next_presentation_time_;
-  UpdateManager update_manager_;
+  zx::time next_target_presentation_time_;
   std::unique_ptr<FramePredictor> frame_predictor_;
 
   // The async task that wakes up to start rendering.
@@ -223,6 +220,11 @@ class DefaultFrameScheduler : public FrameScheduler {
   inspect_deprecated::UIntMetric inspect_last_successful_render_start_time_;
 
   FrameStats stats_;
+
+  // For tracing.
+  uint64_t request_trace_id_begin_ = 0;
+  uint64_t request_trace_id_end_ = 0;
+  uint64_t frame_render_trace_id_ = 0;
 
   fxl::WeakPtrFactory<DefaultFrameScheduler> weak_factory_;  // must be last
 

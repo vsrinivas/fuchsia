@@ -50,6 +50,15 @@ class DelegatingFrameScheduler : public FrameScheduler {
       FrameScheduler::OnSessionUpdateFailedCallback update_failed_callback) override;
 
   // |FrameScheduler|
+  // Calls RegisterPresent() immediately if a FrameScheduler has been set, otherwise defers the call
+  // until one has been set. Returns a PresentId unique to the session. |present_id| should only be
+  // set when transferring sessions between frame schedulers.
+  PresentId RegisterPresent(SessionId session_id,
+                            std::variant<OnPresentedCallback, Present2Info> present_information,
+                            std::vector<zx::event> release_fences,
+                            PresentId present_id = kInvalidPresentId) override;
+
+  // |FrameScheduler|
   // Calls ScheduleUpdateForSession() immediately if a FrameScheduler has been set; otherwise defers
   // the call until one has been set.
   void ScheduleUpdateForSession(zx::time presentation_time, SchedulingIdPair id_pair) override;
@@ -68,13 +77,13 @@ class DelegatingFrameScheduler : public FrameScheduler {
                                              OnFramePresentedCallback callback) override;
 
   // |FrameScheduler|
-  // Calls ClearCallbacksForSession() immediately if a FrameScheduler has been set;
+  // Calls RemoveSession() immediately if a FrameScheduler has been set;
   // otherwise defers the call until one has been set.
-  void ClearCallbacksForSession(SessionId session_id) override;
+  void RemoveSession(SessionId session_id) override;
 
   // Sets the frame scheduler, which triggers any pending callbacks. This method cannot be called
-  // twice, or called with a null ptr.
-  void SetFrameScheduler(std::shared_ptr<FrameScheduler> frame_scheduler);
+  // twice, or called with a null pointer.
+  void SetFrameScheduler(const std::shared_ptr<FrameScheduler>& frame_scheduler);
 
  private:
   using OnFrameSchedulerAvailableCallback = fit::function<void(FrameScheduler*)>;

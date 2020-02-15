@@ -47,8 +47,7 @@ class ImagePipeUpdaterTest : public ::gtest::TestLoopFixture {
     scheduler_->set_schedule_update_for_session_callback(
         [this](auto...) { ++schedule_call_count_; });
     release_fence_signaller_ = std::make_unique<ReleaseFenceSignallerForTest>();
-    image_pipe_updater_ =
-        std::make_unique<ImagePipeUpdater>(scheduler_, release_fence_signaller_.get());
+    image_pipe_updater_ = std::make_unique<ImagePipeUpdater>(scheduler_);
     SessionContext context{};
     session_ = std::make_unique<gfx::Session>(1, context);
     image_pipe_ = fxl::MakeRefCounted<MockImagePipe>(session_.get());
@@ -176,7 +175,7 @@ TEST_F(ImagePipeUpdaterTest, UpdatesSignaledInOrder_AfterUpdate_ShouldBeSchedule
 
   image_pipe_updater_->UpdateSessions(
       /*sessions_to_update=*/{{image_pipe_updater_->GetSchedulingId(), present_id1}},
-      /*presentation_time=*/zx::time(0), /*latched_time=*/zx::time(0), /*trace_id=*/0);
+      /*trace_id=*/0);
 
   fence2.signal(0u, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
@@ -206,71 +205,11 @@ TEST_F(ImagePipeUpdaterTest, UpdatesSignaledOutOfOrder_AfterUpdate_ShouldNeverBe
 
   image_pipe_updater_->UpdateSessions(
       /*sessions_to_update=*/{{image_pipe_updater_->GetSchedulingId(), present_id2}},
-      /*presentation_time=*/zx::time(0), /*latched_time=*/zx::time(0), /*trace_id=*/0);
+      /*trace_id=*/0);
 
   fence1.signal(0u, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
   EXPECT_EQ(schedule_call_count_, 1);
-}
-
-TEST_F(ImagePipeUpdaterTest, SkippedUpdate_ShouldReturnAllPreviousCallbacksInOrder) {
-  std::vector<zx::event> acquire_fences1 = CreateEventArray(1);
-  zx::event fence1 = CopyEvent(acquire_fences1.at(0));
-  std::vector<zx::event> acquire_fences2 = CreateEventArray(1);
-  zx::event fence2 = CopyEvent(acquire_fences2.at(0));
-
-  std::vector<int> callback_order;
-
-  scheduling::PresentId present_id1 = image_pipe_updater_->ScheduleImagePipeUpdate(
-      /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
-      std::move(acquire_fences1), /*release_fences=*/{},
-      /*callback=*/[&callback_order](auto...) { callback_order.push_back(1); });
-
-  scheduling::PresentId present_id2 = image_pipe_updater_->ScheduleImagePipeUpdate(
-      /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
-      std::move(acquire_fences2), /*release_fences=*/{},
-      /*callback=*/[&callback_order](auto...) { callback_order.push_back(2); });
-
-  RunLoopUntilIdle();
-  EXPECT_EQ(schedule_call_count_, 0);
-
-  fence2.signal(0u, ZX_EVENT_SIGNALED);
-  RunLoopUntilIdle();
-  EXPECT_EQ(schedule_call_count_, 1);
-
-  auto results = image_pipe_updater_->UpdateSessions(
-      /*sessions_to_update=*/{{image_pipe_updater_->GetSchedulingId(), present_id2}},
-      /*presentation_time=*/zx::time(0), /*latched_time=*/zx::time(0), /*trace_id=*/0);
-
-  EXPECT_EQ(results.present1_callbacks.size(), 2u);
-  for (auto& [session_id, callback] : results.present1_callbacks) {
-    callback({});
-  }
-  EXPECT_THAT(callback_order, ::testing::ElementsAreArray({2, 1}));
-}
-
-TEST_F(ImagePipeUpdaterTest, UpdateSessions_ReleasesFencesUpToButNotIncludingPresentId) {
-  std::vector<zx::event> release_fences1 = CreateEventArray(2);
-  zx::event fence1 = CopyEvent(release_fences1.at(0));
-  zx::event fence2 = CopyEvent(release_fences1.at(1));
-  std::vector<zx::event> release_fences2 = CreateEventArray(1);
-  zx::event fence3 = CopyEvent(release_fences2.at(0));
-
-  scheduling::PresentId present_id1 = image_pipe_updater_->ScheduleImagePipeUpdate(
-      /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
-      /*acquire_fences=*/{}, std::move(release_fences1), /*callback=*/[](auto...) {});
-
-  scheduling::PresentId present_id2 = image_pipe_updater_->ScheduleImagePipeUpdate(
-      /*presentation_time=*/zx::time(0), image_pipe_->weak_factory_.GetWeakPtr(),
-      /*acquire_fences=*/{}, std::move(release_fences2), /*callback=*/[](auto...) {});
-
-  image_pipe_updater_->UpdateSessions(
-      /*sessions_to_update=*/{{image_pipe_updater_->GetSchedulingId(), present_id2}},
-      /*presentation_time=*/zx::time(0), /*latched_time=*/zx::time(0), /*trace_id=*/0);
-
-  EXPECT_TRUE(IsEventSignalled(fence1, ZX_EVENT_SIGNALED));
-  EXPECT_TRUE(IsEventSignalled(fence2, ZX_EVENT_SIGNALED));
-  EXPECT_FALSE(IsEventSignalled(fence3, ZX_EVENT_SIGNALED));
 }
 
 }  // namespace test

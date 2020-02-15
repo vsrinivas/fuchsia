@@ -133,7 +133,6 @@ scheduling::PresentId ImagePipe::PresentImage(
     return scheduling::kInvalidPresentId;
   }
 
-  TRACE_FLOW_BEGIN("gfx", "image_pipe_present_image_to_update", image_id);
   const auto present_id = image_pipe_updater_->ScheduleImagePipeUpdate(
       presentation_time, weak_ptr_factory_.GetWeakPtr(), std::move(acquire_fences),
       std::move(release_fences), std::move(callback));
@@ -162,8 +161,6 @@ ImagePipeUpdateResults ImagePipe::Update(scheduling::PresentId present_id) {
     next_image = frames_.front().image;
     FXL_DCHECK(next_image);
     next_image_id = next_image->id();
-
-    TRACE_FLOW_END("gfx", "image_pipe_present_image_to_update", next_image_id);
 
     frames_.pop();
     present_next_image = true;

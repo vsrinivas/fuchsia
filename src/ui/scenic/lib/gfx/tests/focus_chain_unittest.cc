@@ -476,6 +476,7 @@ TEST_F(FocusChainTest, EmptySceneTransitions) {
   });
 
   EXPECT_EQ(CountReceivedFocusChains(), 1u);
+  ASSERT_TRUE(LastFocusChain());
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 1u);
 }
 

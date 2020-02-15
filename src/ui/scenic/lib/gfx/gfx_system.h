@@ -12,14 +12,12 @@
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/engine/gfx_command_applier.h"
-#include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
 #include "src/ui/scenic/lib/scenic/system.h"
 #include "src/ui/scenic/lib/scenic/take_screenshot_delegate_deprecated.h"
 
 namespace scenic_impl {
 namespace gfx {
 
-class Compositor;
 class GfxSystem;
 using GfxSystemWeakPtr = fxl::WeakPtr<GfxSystem>;
 
@@ -46,10 +44,10 @@ class GfxSystem : public System,
   // |scheduling::SessionUpdater|
   virtual UpdateResults UpdateSessions(
       const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
-      zx::time target_presentation_time, zx::time latched_time, uint64_t trace_id) override;
+      uint64_t trace_id) override;
 
   // |scheduling::SessionUpdater|
-  virtual void PrepareFrame(zx::time target_presentation_time, uint64_t trace_id) override;
+  virtual void PrepareFrame(uint64_t trace_id) override;
 
   // For tests.
   SessionManager* session_manager() { return &session_manager_; }
@@ -74,11 +72,6 @@ class GfxSystem : public System,
   SessionManager session_manager_;
 
   std::optional<CommandContext> command_context_;
-
-  // Tracks the number of sessions returning ApplyUpdateResult::needs_render
-  // and uses it for tracing.
-  uint64_t needs_render_count_ = 0;
-  uint64_t processed_needs_render_count_ = 0;
 
   fxl::WeakPtrFactory<GfxSystem> weak_factory_;  // must be last
 };

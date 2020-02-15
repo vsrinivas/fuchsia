@@ -78,24 +78,16 @@ escher::EscherWeakPtr SessionHandlerTest::GetEscherWeakPtr() { return escher::Es
 
 scheduling::SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
-    zx::time target_presentation_time, zx::time latched_time, uint64_t trace_id) {
+    uint64_t trace_id) {
   UpdateResults update_results;
   CommandContext command_context(/*uploader*/ nullptr, /*sysmem*/ nullptr,
                                  /*display_manager*/ nullptr, engine_->scene_graph()->GetWeakPtr());
 
   for (auto [session_id, present_id] : sessions_to_update) {
     auto session = session_manager_->FindSession(session_id);
-    if (!session) {
-      // This means the session that requested the update died after the
-      // request. Requiring the scene to be re-rendered to reflect the session's
-      // disappearance is probably desirable. ImagePipe also relies on this to
-      // be true, since it calls ScheduleUpdate() in its destructor.
-      update_results.needs_render = true;
-      continue;
+    if (session) {
+      session->ApplyScheduledUpdates(&command_context, present_id);
     }
-
-    auto apply_results =
-        session->ApplyScheduledUpdates(&command_context, target_presentation_time, latched_time);
   }
 
   // Flush work to the GPU.
@@ -104,7 +96,7 @@ scheduling::SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
   return update_results;
 }
 
-void SessionHandlerTest::PrepareFrame(zx::time target_presentation_time, uint64_t trace_id) {}
+void SessionHandlerTest::PrepareFrame(uint64_t trace_id) {}
 
 }  // namespace test
 }  // namespace gfx

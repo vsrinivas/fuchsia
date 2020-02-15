@@ -27,6 +27,10 @@ class MockFrameScheduler : public FrameScheduler {
   // |FrameScheduler|
   void SetRenderContinuously(bool render_continuously) override;
 
+  PresentId RegisterPresent(SessionId session_id,
+                            std::variant<OnPresentedCallback, Present2Info> present_information,
+                            std::vector<zx::event> release_fences, PresentId present_id) override;
+
   // |FrameScheduler|
   void SetOnUpdateFailedCallbackForSession(
       SessionId session, OnSessionUpdateFailedCallback update_failed_callback) override {}
@@ -44,7 +48,7 @@ class MockFrameScheduler : public FrameScheduler {
       SessionId session, OnFramePresentedCallback frame_presented_callback) override;
 
   // |FrameScheduler|
-  void ClearCallbacksForSession(SessionId session_id) override {}
+  void RemoveSession(SessionId session_id) override {}
 
   // Testing only. Used for mock method callbacks.
   using OnSetRenderContinuouslyCallback = std::function<void(bool)>;
@@ -54,6 +58,9 @@ class MockFrameScheduler : public FrameScheduler {
           zx::duration requested_prediction_span)>;
   using OnSetOnFramePresentedCallbackForSessionCallback =
       std::function<void(SessionId session, OnFramePresentedCallback callback)>;
+  using RegisterPresentCallback = std::function<void(
+      SessionId session_id, std::variant<OnPresentedCallback, Present2Info> present_information,
+      std::vector<zx::event> release_fences, PresentId present_id)>;
 
   // Testing only. Sets mock method callback.
   void set_set_render_continuously_callback(OnSetRenderContinuouslyCallback callback) {
@@ -76,6 +83,13 @@ class MockFrameScheduler : public FrameScheduler {
     set_on_frame_presented_callback_for_session_callback_ = callback;
   }
 
+  // Testing only. Sets mock method callback.
+  void set_register_present_callback(RegisterPresentCallback callback) {
+    register_present_callback_ = callback;
+  }
+
+  void set_next_present_id(PresentId present_id) { next_present_id_ = present_id; }
+
  private:
   // Testing only. Mock method callbacks.
   OnSetRenderContinuouslyCallback set_render_continuously_callback_;
@@ -83,6 +97,9 @@ class MockFrameScheduler : public FrameScheduler {
   OnGetFuturePresentationInfosCallback get_future_presentation_infos_callback_;
   OnSetOnFramePresentedCallbackForSessionCallback
       set_on_frame_presented_callback_for_session_callback_;
+  RegisterPresentCallback register_present_callback_;
+
+  PresentId next_present_id_;
 };
 
 class MockSessionUpdater : public SessionUpdater {
@@ -91,109 +108,34 @@ class MockSessionUpdater : public SessionUpdater {
 
   // |SessionUpdater|
   SessionUpdater::UpdateResults UpdateSessions(
-      const std::unordered_map<SessionId, PresentId>& sessions_to_update,
-      zx::time target_presentation_time, zx::time latched_time, uint64_t trace_id = 0) override;
+      const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
+      uint64_t trace_id = 0) override {
+    ++update_sessions_call_count_;
+    last_sessions_to_update_ = sessions_to_update;
+    return update_sessions_return_value_;
+  }
 
   // |SessionUpdater|
-  void PrepareFrame(zx::time presentation_time, uint64_t frame_number) override {
-    ++prepare_frame_call_count_;
-  }
+  void PrepareFrame(uint64_t frame_number) override { ++prepare_frame_call_count_; }
 
-  // AddCallback() adds a closure to be returned by UpdateSessions(), and returns a
-  // CallbackStatus struct that can be used to observe the current status of the callback.
-  struct CallbackStatus {
-    // The SessionId that this update corresponds to.
-    SessionId session_id = 0;
-    // Number of times that the update was rescheduled due to the fences not
-    // being ready.
-    size_t reschedule_count = 0;
-    // Becomes true when the associated callback is passed to the UpdateManager, i.e. after the
-    // fences are reached and the update has been "applied" before "rendering".
-    bool callback_passed = false;
-    // Becomes true when the associated callback is invoked (the callback itself is created within
-    // ScheduleUpdate(), and is not visible to the caller).
-    bool callback_invoked = false;
-    // Becomes true when the updater disappears before the callback is invoked.
-    bool updater_disappeared = false;
-    // The PresentationInfo that was passed to the callback, valid only if |callback_invoked| is
-    // true.
-    fuchsia::images::PresentationInfo presentation_info;
-  };
-  std::shared_ptr<const CallbackStatus> AddCallback(SessionId id, zx::time presentation_time,
-                                                    zx::time acquire_fence_time);
-
-  void AddPresent2Info(scheduling::Present2Info info, zx::time presentation_time,
-                       zx::time acquire_fence_time);
-
-  // By default, rendering is enabled and |UpdateSessions()| will return ".needs_render = true" if
-  // any session updates were applied.  This allows a test to override that behavior to
-  // unconditionally disable rendering.
-  void SuppressNeedsRendering(bool should_suppress) { rendering_suppressed_ = should_suppress; }
-
-  // By default, we expect that the sessions identified by UpdateSessions()'s |sessions_to_update|
-  // will all have at least one update queued.  This will not be the case in multi-updater scenarios
-  // (because each updater is responsible for only some of the sessions, and will therefore receive
-  // unknown session IDs); this method relaxes the restriction for those tests.
-  void BeRelaxedAboutUnexpectedSessionUpdates() {
-    be_relaxed_about_unexpected_session_updates_ = true;
-  }
-
-  // Treats session_id as a failed update the next time UpdateSessions is called. This does not
-  // persist for future updates.
-  void SetNextUpdateForSessionFails(SessionId session_id) {
-    sessions_to_fail_on_next_update_.insert(session_id);
-  }
-
-  // Simulate killing of a session.  This simply treats the session (and any associated updates) as
-  // absent during |UpdateSession()|.
-  void KillSession(SessionId session_id) { dead_sessions_.insert(session_id); }
-
-  uint32_t update_sessions_call_count() { return update_sessions_call_count_; }
-  uint32_t prepare_frame_call_count() { return prepare_frame_call_count_; }
-  uint32_t signal_successful_present_callback_count() {
-    return signal_successful_present_callback_count_;
+  void SetUpdateSessionsReturnValue(SessionUpdater::UpdateResults new_value) {
+    update_sessions_return_value_ = new_value;
   }
 
   fxl::WeakPtr<MockSessionUpdater> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
+  uint64_t update_sessions_call_count() { return update_sessions_call_count_; }
+  uint64_t prepare_frame_call_count() { return prepare_frame_call_count_; }
+  std::unordered_map<scheduling::SessionId, scheduling::PresentId> last_sessions_to_update() {
+    return last_sessions_to_update_;
+  };
+
  private:
-  uint32_t update_sessions_call_count_ = 0;
-  uint32_t prepare_frame_call_count_ = 0;
-  uint32_t signal_successful_present_callback_count_ = 0;
+  SessionUpdater::UpdateResults update_sessions_return_value_;
 
-  // Instances are generated by |AddCallback()|, and model the queuing of batched session
-  // updates, and the callback that is invoked once the update has been applied to the
-  // scene, and the corresponding frame rendered.
-  struct Update {
-    // Target presentation time.
-    zx::time target;
-    // Time that the fences will be finished.
-    zx::time fences_done;
-    // Updated to allow the test to track progress.
-    std::shared_ptr<CallbackStatus> status;
-    // Callback that will be invoked when UpdateManager::SignalPresentCallbacks() is called.
-    OnPresentedCallback callback;
-  };
-
-  struct Present2Update {
-    zx::time target_presentation_time;
-    zx::time fences_done_time;
-
-    scheduling::Present2Info present2_info;
-  };
-
-  std::map<SessionId, std::queue<Update>> updates_;
-  std::map<SessionId, std::queue<Present2Update>> present2_updates_;
-
-  std::unordered_set<SessionId> sessions_to_fail_on_next_update_;
-
-  // Stores session IDs that were passed to |UpdateSessions()|, but for which no corresponding
-  // updates were registered.
-  std::set<SessionId> dead_sessions_;
-  bool be_relaxed_about_unexpected_session_updates_ = false;
-
-  // See |SuppressNeedsRendering()|.
-  bool rendering_suppressed_ = false;
+  uint64_t prepare_frame_call_count_ = 0;
+  uint64_t update_sessions_call_count_ = 0;
+  std::unordered_map<scheduling::SessionId, scheduling::PresentId> last_sessions_to_update_;
 
   fxl::WeakPtrFactory<MockSessionUpdater> weak_factory_;  // must be last
 };

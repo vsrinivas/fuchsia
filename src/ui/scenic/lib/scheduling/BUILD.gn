@@ -37,6 +37,7 @@ source_set("frame_scheduler") {
     "//sdk/fidl/fuchsia.scenic.scheduling",
     "//src/lib/fxl",
     "//src/lib/inspect_deprecated",
+    "//src/ui/scenic/lib/utils:utils",
   ]
   public_deps = [
     ":id",

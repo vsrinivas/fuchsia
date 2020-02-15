@@ -33,6 +33,7 @@ executable("unittests") {
     "//src/lib/cobalt/cpp/testing:mock_cobalt_logger",
     "//src/lib/inspect_deprecated:reader",
     "//src/lib/inspect_deprecated/testing",
+    "//src/ui/scenic/lib/gfx/tests/mocks:util",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//src/ui/scenic/lib/scheduling:id",
     "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",

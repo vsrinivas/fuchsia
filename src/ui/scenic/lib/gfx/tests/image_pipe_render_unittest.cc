@@ -11,6 +11,7 @@
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/image_layout_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer_visitor.h"
+#include "src/ui/scenic/lib/gfx/engine/image_pipe_updater.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe2.h"
 #include "src/ui/scenic/lib/gfx/resources/material.h"
@@ -44,9 +45,7 @@ class ImagePipeRenderTest : public VkSessionHandlerTest {
 // updated only after Visit().
 VK_TEST_F(ImagePipeRenderTest, ImageUpdatedOnlyAfterVisit) {
   ResourceId next_id = 1;
-  auto image_pipe_updater =
-      std::make_unique<ImagePipeUpdater>(session()->session_context().frame_scheduler,
-                                         session()->session_context().release_fence_signaller);
+  auto image_pipe_updater = std::make_unique<ImagePipeUpdater>(frame_scheduler());
   ImagePipePtr image_pipe = fxl::MakeRefCounted<ImagePipe>(
       session(), next_id++, std::move(image_pipe_updater), shared_error_reporter());
   MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), next_id++);
@@ -118,9 +117,7 @@ VK_TEST_F(ImagePipeRenderTest, ImageUpdatedOnlyAfterVisit) {
 // being listened to and release fences are signalled.
 VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFrames) {
   ResourceId next_id = 1;
-  auto image_pipe_updater =
-      std::make_unique<ImagePipeUpdater>(session()->session_context().frame_scheduler,
-                                         session()->session_context().release_fence_signaller);
+  auto image_pipe_updater = std::make_unique<ImagePipeUpdater>(frame_scheduler());
   ImagePipePtr image_pipe = fxl::MakeRefCounted<ImagePipe>(
       session(), next_id++, std::move(image_pipe_updater), shared_error_reporter());
   MaterialPtr pipe_material = fxl::MakeRefCounted<Material>(session(), next_id++);
@@ -140,10 +137,9 @@ VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFrames) {
 
   // Make checkerboard the currently displayed image.
   zx::event acquire_fence1 = CreateEvent();
-  zx::event release_fence1 = CreateEvent();
 
   image_pipe->PresentImage(image1_id, zx::time(0), CopyEventIntoFidlArray(acquire_fence1),
-                           CopyEventIntoFidlArray(release_fence1), nullptr);
+                           /*release_fences=*/{}, nullptr);
 
   // Current presented image should be null, since we haven't signalled
   // acquire fence yet.
@@ -178,14 +174,12 @@ VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFrames) {
   // The first image should not have been released.
   ASSERT_FALSE(RunLoopFor(zx::sec(1)));
   Visit(pipe_material.get());
-  ASSERT_FALSE(IsEventSignalled(release_fence1, escher::kFenceSignalled));
 
   // Make gradient the currently displayed image.
   zx::event acquire_fence2 = CreateEvent();
-  zx::event release_fence2 = CreateEvent();
 
   image_pipe->PresentImage(image2_id, zx::time(0), CopyEventIntoFidlArray(acquire_fence2),
-                           CopyEventIntoFidlArray(release_fence2), nullptr);
+                           /*release_fences=*/{}, nullptr);
 
   // Verify that the currently display image hasn't changed yet, since we
   // haven't signalled the acquire fence.
@@ -203,10 +197,6 @@ VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFrames) {
   escher::ImagePtr image2 = image_pipe->GetEscherImage();
   ASSERT_TRUE(image2);
   ASSERT_NE(image1, image2);
-
-  // The first image should have been released.
-  ASSERT_TRUE(IsEventSignalled(release_fence1, escher::kFenceSignalled));
-  ASSERT_FALSE(IsEventSignalled(release_fence2, escher::kFenceSignalled));
 }
 
 }  // namespace test

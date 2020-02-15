@@ -221,74 +221,24 @@ void GfxSystem::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallba
   Screenshotter::TakeScreenshot(engine_, std::move(callback));
 }
 
-// Applies scheduled updates to a session. If the update fails, the session is
-// killed. Returns true if a new render is needed, false otherwise.
 scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
-    zx::time target_presentation_time, zx::time latched_time, uint64_t trace_id) {
+    uint64_t frame_trace_id) {
   scheduling::SessionUpdater::UpdateResults update_results;
-
   if (!command_context_) {
     command_context_ = std::make_optional<CommandContext>(
-        escher_ ? escher::BatchGpuUploader::New(escher_->GetWeakPtr(), trace_id) : nullptr, sysmem_,
-        display_manager_, engine_->scene_graph());
+        escher_ ? escher::BatchGpuUploader::New(escher_->GetWeakPtr(), frame_trace_id) : nullptr,
+        sysmem_, display_manager_, engine_->scene_graph());
   }
-
-  for (auto [session_id, present_id] : sessions_to_update) {
-    TRACE_DURATION("gfx", "GfxSystem::UpdateSessions", "session_id", session_id,
-                   "target_presentation_time", target_presentation_time.get());
-    auto session = session_manager_.FindSession(session_id);
-    if (!session) {
-      // This means the session that requested the update died after the
-      // request. Requiring the scene to be re-rendered to reflect the session's
-      // disappearance is probably desirable. ImagePipe also relies on this to
-      // be true, since it calls ScheduleUpdate() in it's destructor.
-      update_results.needs_render = true;
-      continue;
-    }
-
-    auto apply_results = session->ApplyScheduledUpdates(&(command_context_.value()),
-                                                        target_presentation_time, latched_time);
-
-    if (!apply_results.success) {
-      update_results.sessions_with_failed_updates.insert(session_id);
-    } else {
-      if (!apply_results.all_fences_ready) {
-        update_results.sessions_to_reschedule.insert(session_id);
-
-        // NOTE: one might be tempted to CHECK that the
-        // callbacks/image_pipe_callbacks are empty at this point, reasoning
-        // that if some fences aren't ready, then no callbacks should be
-        // collected.  However, the session may have had multiple queued
-        // updates, some of which had all fences ready and therefore contributed
-        // callbacks.
+  // Apply scheduled updates to each session, and process the changes to the local session scene
+  // graph.
+  for (auto& [session_id, present_id] : sessions_to_update) {
+    TRACE_DURATION("gfx", "GfxSystem::UpdateSessions", "session_id", session_id);
+    if (auto session = session_manager_.FindSession(session_id)) {
+      bool success = session->ApplyScheduledUpdates(&(command_context_.value()), present_id);
+      if (!success) {
+        update_results.sessions_with_failed_updates.insert(session_id);
       }
-
-      //  Collect the callbacks to be passed back in the |UpdateResults|.
-      {
-        // Present1 callbacks.
-        auto itr = apply_results.present1_callbacks.begin();
-        while (itr != apply_results.present1_callbacks.end()) {
-          update_results.present1_callbacks.push_back({session_id, std::move(*itr)});
-          ++itr;
-        }
-        apply_results.present1_callbacks.clear();
-      }
-      {
-        // Present2 callbacks.
-        auto itr = apply_results.present2_infos.begin();
-        while (itr != apply_results.present2_infos.end()) {
-          update_results.present2_infos.push_back({session_id, std::move(*itr)});
-          ++itr;
-        }
-        apply_results.present2_infos.clear();
-      }
-    }
-
-    if (apply_results.needs_render) {
-      TRACE_FLOW_BEGIN("gfx", "needs_render", needs_render_count_);
-      update_results.needs_render = true;
-      ++needs_render_count_;
     }
   }
 
@@ -323,12 +273,7 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
   return update_results;
 }
 
-void GfxSystem::PrepareFrame(zx::time target_presentation_time, uint64_t trace_id) {
-  while (processed_needs_render_count_ < needs_render_count_) {
-    TRACE_FLOW_END("gfx", "needs_render", processed_needs_render_count_);
-    ++processed_needs_render_count_;
-  }
-
+void GfxSystem::PrepareFrame(uint64_t trace_id) {
   if (command_context_) {
     command_context_->Flush();
     command_context_.reset();

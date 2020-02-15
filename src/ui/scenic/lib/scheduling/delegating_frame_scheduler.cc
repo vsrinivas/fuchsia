@@ -5,6 +5,7 @@
 #include "src/ui/scenic/lib/scheduling/delegating_frame_scheduler.h"
 
 #include "src/lib/fxl/logging.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scheduling {
 
@@ -33,6 +34,22 @@ void DelegatingFrameScheduler::SetRenderContinuously(bool render_continuously) {
   CallWhenFrameSchedulerAvailable([render_continuously](FrameScheduler* frame_scheduler) {
     frame_scheduler->SetRenderContinuously(render_continuously);
   });
+}
+
+PresentId DelegatingFrameScheduler::RegisterPresent(
+    SessionId session_id, std::variant<OnPresentedCallback, Present2Info> present_information,
+    std::vector<zx::event> release_fences, PresentId present_id) {
+  // Assuming we never have several levels of delegating frame schedulers |present_id| should never
+  // be set.
+  FXL_CHECK(present_id == kInvalidPresentId);
+  present_id = scheduling::GetNextPresentId();
+  CallWhenFrameSchedulerAvailable([session_id, present_information = std::move(present_information),
+                                   release_fences = std::move(release_fences),
+                                   present_id](FrameScheduler* frame_scheduler) mutable {
+    frame_scheduler->RegisterPresent(session_id, std::move(present_information),
+                                     std::move(release_fences), present_id);
+  });
+  return present_id;
 }
 
 void DelegatingFrameScheduler::SetOnUpdateFailedCallbackForSession(
@@ -69,9 +86,9 @@ void DelegatingFrameScheduler::SetOnFramePresentedCallbackForSession(
   }
 }
 
-void DelegatingFrameScheduler::ClearCallbacksForSession(SessionId session_id) {
+void DelegatingFrameScheduler::RemoveSession(SessionId session_id) {
   CallWhenFrameSchedulerAvailable([session_id](FrameScheduler* frame_scheduler) {
-    frame_scheduler->ClearCallbacksForSession(session_id);
+    frame_scheduler->RemoveSession(session_id);
   });
 }
 
@@ -84,7 +101,8 @@ void DelegatingFrameScheduler::CallWhenFrameSchedulerAvailable(
   }
 }
 
-void DelegatingFrameScheduler::SetFrameScheduler(std::shared_ptr<FrameScheduler> frame_scheduler) {
+void DelegatingFrameScheduler::SetFrameScheduler(
+    const std::shared_ptr<FrameScheduler>& frame_scheduler) {
   if (frame_scheduler_) {
     FXL_LOG(ERROR) << "DelegatingFrameScheduler can only be set once.";
     return;

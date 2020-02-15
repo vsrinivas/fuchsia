@@ -43,7 +43,8 @@ class InputCommandDispatcher : public CommandDispatcher {
   void SetDebugName(const std::string& debug_name) override {}
 
   // |CommandDispatcher|
-  void DispatchCommand(const fuchsia::ui::scenic::Command command) override;
+  void DispatchCommand(const fuchsia::ui::scenic::Command command,
+                       scheduling::PresentId present_id) override;
 
  private:
   // Per-command dispatch logic.

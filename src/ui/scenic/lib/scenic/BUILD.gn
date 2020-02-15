@@ -60,6 +60,7 @@ source_set("event_reporter") {
 source_set("command_dispatcher") {
   sources = [ "command_dispatcher.h" ]
   deps = [ "//src/lib/fxl" ]
+  public_deps = [ "//src/ui/scenic/lib/scheduling:id" ]
 }
 
 source_set("system") {

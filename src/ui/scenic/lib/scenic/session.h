@@ -27,8 +27,6 @@
 
 namespace scenic_impl {
 
-class Scenic;
-
 class Session final : public fuchsia::ui::scenic::Session {
  public:
   Session(SessionId id, fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
@@ -77,6 +75,10 @@ class Session final : public fuchsia::ui::scenic::Session {
   bool is_bound() { return binding_.is_bound(); }
 
   void set_binding_error_handler(fit::function<void(zx_status_t)> error_handler);
+
+  // For testing purposes.
+  // TODO(42510): Remove when test for SetRenderContinuously command is removed.
+  gfx::Session* GetGfxSession();
 
  private:
   // Helper class which manages the reporting of events and errors to Scenic clients.
@@ -148,7 +150,6 @@ class Session final : public fuchsia::ui::scenic::Session {
     uint64_t present_id;
     zx::time requested_presentation_time;
     std::vector<zx::event> acquire_fences;
-    std::vector<zx::event> release_fences;
     std::vector<fuchsia::ui::scenic::Command> commands;
     // Holds either Present1's |fuchsia::ui::scenic::PresentCallback| or Present2's |Present2Info|.
     std::variant<scheduling::OnPresentedCallback, scheduling::Present2Info> present_information;
@@ -177,8 +178,6 @@ class Session final : public fuchsia::ui::scenic::Session {
   void InvokeFuturePresentationTimesCallback(zx_duration_t requested_prediction_span,
                                              RequestPresentationTimesCallback callback);
 
-  gfx::Session* GetGfxSession();
-
   const SessionId id_;
   fidl::InterfacePtr<fuchsia::ui::scenic::SessionListener> listener_;
 
@@ -187,7 +186,6 @@ class Session final : public fuchsia::ui::scenic::Session {
   std::weak_ptr<scheduling::FrameScheduler> frame_scheduler_;
 
   // The unique ID used for a given present.
-  scheduling::PresentId next_present_id_ = 0;
   std::deque<PresentRequest> presents_to_schedule_;
 
   std::vector<fuchsia::ui::scenic::Command> commands_pending_present_;
@@ -209,8 +207,8 @@ class Session final : public fuchsia::ui::scenic::Session {
 
   // Flow event trace ids for the Present acquire fence queue. Since they're handled in order they
   // can simply be incremented as each one is handled.
-  uint64_t queue_processing_id_begin_ = 0;
-  uint64_t queue_processing_id_end_ = 0;
+  uint64_t queue_processing_trace_id_begin_ = 0;
+  uint64_t queue_processing_trace_id_end_ = 0;
 
   std::shared_ptr<EventAndErrorReporter> reporter_;
 

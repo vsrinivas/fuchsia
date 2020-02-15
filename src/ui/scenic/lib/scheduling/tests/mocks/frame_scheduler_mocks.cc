@@ -9,6 +9,17 @@
 namespace scheduling {
 namespace test {
 
+PresentId MockFrameScheduler::RegisterPresent(
+    SessionId session_id, std::variant<OnPresentedCallback, Present2Info> present_information,
+    std::vector<zx::event> release_fences, PresentId present_id) {
+  if (register_present_callback_) {
+    register_present_callback_(session_id, std::move(present_information),
+                               std::move(release_fences), present_id);
+  }
+
+  return present_id != 0 ? present_id : next_present_id_++;
+}
+
 void MockFrameScheduler::SetRenderContinuously(bool render_continuously) {
   if (set_render_continuously_callback_) {
     set_render_continuously_callback_(render_continuously);
@@ -39,125 +50,6 @@ void MockFrameScheduler::SetOnFramePresentedCallbackForSession(
   }
 }
 
-SessionUpdater::UpdateResults MockSessionUpdater::UpdateSessions(
-    const std::unordered_map<SessionId, PresentId>& sessions_to_update, zx::time presentation_time,
-    zx::time wakeup_time, uint64_t trace_id) {
-  ++update_sessions_call_count_;
-
-  UpdateResults results;
-
-  for (auto [session_id, present_id] : sessions_to_update) {
-    if (dead_sessions_.find(session_id) != dead_sessions_.end()) {
-      continue;
-    }
-
-    if (sessions_to_fail_on_next_update_.find(session_id) !=
-        sessions_to_fail_on_next_update_.end()) {
-      results.sessions_with_failed_updates.insert(session_id);
-      // Failure is only for one update, remove from updates to fail set.
-      sessions_to_fail_on_next_update_.erase(session_id);
-      continue;
-    }
-
-    // A client can only be using either Present or Present2 at one time.
-    FXL_CHECK(updates_.find(session_id) == updates_.end() ||
-              present2_updates_.find(session_id) == present2_updates_.end());
-
-    // Handle Present2 updates separately from Present1 updates.
-    if (present2_updates_.find(session_id) != present2_updates_.end()) {
-      auto& queue = present2_updates_[session_id];
-      while (!queue.empty()) {
-        auto& update = queue.front();
-
-        if (update.target_presentation_time > presentation_time) {
-          // Wait until the target presentation_time is reached before "updating".
-          break;
-        } else if (update.fences_done_time > presentation_time) {
-          // Fences aren't ready, so reschedule this session.
-          results.sessions_to_reschedule.insert(session_id);
-          break;
-        } else {
-          // "Apply update" and push the Present2Info.
-          results.present2_infos.push_back({session_id, std::move(update.present2_info)});
-
-          // Since an update was applied, the scene must be re-rendered (unless this is suppressed
-          // for testing purposes).
-          results.needs_render = !rendering_suppressed_;
-        }
-        queue.pop();
-      }
-
-      // Skip the remaining Present1 logic.
-      continue;
-    }
-
-    if (updates_.find(session_id) == updates_.end() || updates_[session_id].empty()) {
-      EXPECT_TRUE(be_relaxed_about_unexpected_session_updates_)
-          << "wasn't expecting update for session: " << session_id;
-      continue;
-    }
-
-    auto& queue = updates_[session_id];
-    while (!queue.empty()) {
-      auto& update = queue.front();
-
-      if (update.target > presentation_time) {
-        // Wait until the target presentation_time is reached before "updating".
-        break;
-      } else if (update.fences_done > presentation_time) {
-        // Fences aren't ready, so reschedule this session.
-        results.sessions_to_reschedule.insert(session_id);
-        ++update.status->reschedule_count;
-        break;
-      } else {
-        // "Apply update" and push the notification callback.
-        FXL_CHECK(!update.status->callback_passed);
-        update.status->callback_passed = true;
-
-        // Wrap the test-provided callback in a closure that updates |num_callback_invocations_|.
-        FXL_CHECK(update.callback);
-        results.present1_callbacks.push_back({session_id, std::move(update.callback)});
-        FXL_CHECK(!update.callback);
-
-        // Since an update was applied, the scene must be re-rendered (unless this is suppressed
-        // for testing purposes).
-        results.needs_render = !rendering_suppressed_;
-      }
-
-      queue.pop();
-    }
-  }
-
-  return results;
-}
-
-std::shared_ptr<const MockSessionUpdater::CallbackStatus> MockSessionUpdater::AddCallback(
-    SessionId session_id, zx::time presentation_time, zx::time acquire_fence_time) {
-  auto status = std::make_shared<CallbackStatus>();
-  status->session_id = session_id;
-
-  updates_[session_id].push({presentation_time, acquire_fence_time, status,
-                             [status, weak_this{weak_factory_.GetWeakPtr()}](
-                                 fuchsia::images::PresentationInfo presentation_info) {
-                               if (weak_this) {
-                                 ++weak_this->signal_successful_present_callback_count_;
-                               } else {
-                                 status->updater_disappeared = true;
-                               }
-                               EXPECT_FALSE(status->callback_invoked);
-                               status->callback_invoked = true;
-                               status->presentation_info = presentation_info;
-                             }});
-
-  return status;
-}
-
-void MockSessionUpdater::AddPresent2Info(scheduling::Present2Info info, zx::time presentation_time,
-                                         zx::time acquire_fence_time) {
-  present2_updates_[info.session_id()].push(
-      {presentation_time, acquire_fence_time, std::move(info)});
-}
-
 RenderFrameResult MockFrameRenderer::RenderFrame(fxl::WeakPtr<FrameTimings> frame_timings,
                                                  zx::time presentation_time) {
   FXL_CHECK(frame_timings);
@@ -183,7 +75,7 @@ void MockFrameRenderer::EndFrame(uint64_t frame_number, zx::time time_done) {
 
 void MockFrameRenderer::SignalFrameRendered(uint64_t frame_number, zx::time time_done) {
   auto find_it = frames_.find(frame_number);
-  FXL_CHECK(find_it != frames_.end());
+  FXL_CHECK(find_it != frames_.end()) << "Couldn't find frame_number " << frame_number;
 
   auto& frame = find_it->second;
   // Frame can't be rendered twice.

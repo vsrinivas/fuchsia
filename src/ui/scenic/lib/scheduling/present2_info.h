@@ -34,6 +34,8 @@ class Present2Info {
   void SetPresentReceivedTime(zx::time present_received_time);
   void SetLatchedTime(zx::time latched_time);
 
+  bool HasLatchedTime() { return present_received_info_.has_latched_time(); }
+
   SessionId session_id() const { return session_id_; }
 
   // Should only be called after you have set all fields in |present_received_info_| and are done

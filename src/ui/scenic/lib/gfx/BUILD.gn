@@ -218,6 +218,7 @@ source_set("gfx") {
     "//src/lib/fxl",
     "//src/lib/inspect_deprecated",
     "//src/lib/vulkan",
+    "//src/ui/lib/escher:escher_no_glslang",
     "//src/ui/scenic/lib/display",
     "//src/ui/scenic/lib/gfx:validate_eventpair",
     "//src/ui/scenic/lib/scenic:command_dispatcher",

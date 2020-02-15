@@ -13,6 +13,7 @@
 #include <queue>
 #include <unordered_map>
 #include <unordered_set>
+#include <variant>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/scheduling/frame_timings.h"
@@ -32,18 +33,6 @@ class SessionUpdater {
  public:
   // Returned by |UpdateSessions()|.
   struct UpdateResults {
-    // Indicates that a frame needs to be rendered.  This is typically due to modification of the
-    // scene graph due to an applied update, but can be for other reasons.
-    bool needs_render = false;
-    // A list of sessions that need to be rescheduled, for example because not all of their acquire
-    // fences were signaled before |UpdateSessions()| was called.
-    std::unordered_set<SessionId> sessions_to_reschedule;
-    // A list of callbacks that should be invoked once the rendered frame is presented (or if the
-    // frame is dropped, once the next frame is presented).
-    std::deque<std::pair<SessionId, OnPresentedCallback>> present1_callbacks;
-    // A list of objects containing information needed for the OnFramePresented event associated
-    // with one or more Present2 calls.
-    std::deque<std::pair<SessionId, scheduling::Present2Info>> present2_infos;
     // SessionIds whose updates failed.
     std::unordered_set<SessionId> sessions_with_failed_updates;
   };
@@ -54,13 +43,11 @@ class SessionUpdater {
   // update is one that is scheduled at or before |presentation_time|, and for which all other
   // preconditions have been met (for example, all acquire fences have been signaled).
   virtual UpdateResults UpdateSessions(
-      const std::unordered_map<SessionId, PresentId>& sessions_to_update,
-      zx::time presentation_time, zx::time latched_time, uint64_t trace_id) = 0;
+      const std::unordered_map<SessionId, PresentId>& sessions_to_update, uint64_t trace_id) = 0;
 
   // Notify updater that no more sessions will be updated before rendering the next frame; now is
-  // the time to do any necessary work before the frame is rendered.  For example, animations might
-  // be run now.
-  virtual void PrepareFrame(zx::time presentation_time, uint64_t trace_id) = 0;
+  // the time to do any necessary work before the frame is rendered.
+  virtual void PrepareFrame(uint64_t trace_id) = 0;
 };
 
 // Result of a call to FrameRenderer::RenderFrame(). See below.
@@ -107,10 +94,18 @@ class FrameScheduler {
   virtual void SetRenderContinuously(bool render_continuously) = 0;
 
   // Sets a callback to handle a failed session update. This should only be
-  // called once per session.
+  // called once per session. When triggered, all references to the Session are also removed from
+  // FrameScheduler.
   using OnSessionUpdateFailedCallback = std::function<void()>;
   virtual void SetOnUpdateFailedCallbackForSession(
       SessionId session, OnSessionUpdateFailedCallback update_failed_callback) = 0;
+
+  // Registers per-present information with the frame scheduler and returns an incrementing
+  // PresentId unique to that session. The |present_id| argument should only be set when
+  // transferring sessions between frame schedulers.
+  virtual PresentId RegisterPresent(
+      SessionId session_id, std::variant<OnPresentedCallback, Present2Info> present_information,
+      std::vector<zx::event> release_fences, PresentId present_id = 0) = 0;
 
   // Tell the FrameScheduler to schedule a frame. This is also used for updates triggered by
   // something other than a Session update i.e. an ImagePipe with a new Image to present.
@@ -128,10 +123,8 @@ class FrameScheduler {
   virtual void SetOnFramePresentedCallbackForSession(SessionId session,
                                                      OnFramePresentedCallback callback) = 0;
 
-  // Clears all callbacks set once per session. If additional updates are scheduled for the
-  // associated session_id, the |OnSessionUpdateFailedCallback| and |OnFramePresentedCallback|
-  // should be re-set.
-  virtual void ClearCallbacksForSession(SessionId session_id) = 0;
+  // Removes all references to |session_id|.
+  virtual void RemoveSession(SessionId session_id) = 0;
 
   // Clients cannot call Present() anymore when |presents_in_flight_| reaches this value. Scenic
   // uses this to apply backpressure to clients.

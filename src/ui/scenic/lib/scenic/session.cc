@@ -35,8 +35,8 @@ void Session::SetFrameScheduler(
   FXL_DCHECK(frame_scheduler_.expired()) << "Error: FrameScheduler already set";
   frame_scheduler_ = frame_scheduler;
 
-  // Initialize OnFramePresented callback.
-  // Check validity because it's not always set in tests.
+  // Initialize FrameScheduler callbacks.
+  // Check validity because frame_scheduler is not always set in tests.
   if (frame_scheduler) {
     frame_scheduler->SetOnUpdateFailedCallbackForSession(id_,
                                                          [weak = weak_factory_.GetWeakPtr()]() {
@@ -77,7 +77,8 @@ void Session::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
     if (!dispatcher) {
       reporter_->EnqueueEvent(std::move(cmd));
     } else if (type_id == System::TypeId::kInput) {
-      dispatcher->DispatchCommand(std::move(cmd));
+      // Input handles commands immediately and doesn't care about present calls.
+      dispatcher->DispatchCommand(std::move(cmd), /*present_id=*/0);
     } else {
       commands_pending_present_.emplace_back(std::move(cmd));
     }
@@ -157,15 +158,21 @@ void Session::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback 
   scheduling::Present2Info present2_info(id_);
   zx::time present_received_time = zx::time(async_now(async_get_default_dispatcher()));
   present2_info.SetPresentReceivedTime(present_received_time);
+  std::variant<scheduling::OnPresentedCallback, scheduling::Present2Info> present2_info_variant;
+  present2_info_variant.emplace<scheduling::Present2Info>(std::move(present2_info));
 
-  SchedulePresentRequest(zx::time(args.requested_presentation_time()),
-                         std::move(*args.mutable_acquire_fences()),
-                         std::move(*args.mutable_release_fences()), std::move(present2_info));
+  SchedulePresentRequest(
+      zx::time(args.requested_presentation_time()), std::move(*args.mutable_acquire_fences()),
+      std::move(*args.mutable_release_fences()), std::move(present2_info_variant));
 }
 
 void Session::ProcessQueuedPresents() {
   if (presents_to_schedule_.empty() || fence_listener_) {
     // The queue is either already being processed or there is nothing in the queue to process.
+
+    // If the queue is empty then trace id's should now be matching.
+    FXL_DCHECK(!presents_to_schedule_.empty() ||
+               queue_processing_trace_id_begin_ == queue_processing_trace_id_end_);
     return;
   }
 
@@ -173,67 +180,59 @@ void Session::ProcessQueuedPresents() {
   fence_listener_ = std::make_unique<escher::FenceSetListener>(
       std::move(presents_to_schedule_.front().acquire_fences));
   presents_to_schedule_.front().acquire_fences.clear();
-  fence_listener_->WaitReadyAsync(
-      [weak = weak_factory_.GetWeakPtr(), trace_id = ++queue_processing_id_end_] {
-        FXL_CHECK(weak);
+  fence_listener_->WaitReadyAsync([weak = weak_factory_.GetWeakPtr()] {
+    FXL_CHECK(weak);
+    weak->ScheduleNextPresent();
 
-        TRACE_DURATION("gfx", "scenic_impl::Session::ProcessQueuedPresents");
-        TRACE_FLOW_END("gfx", "wait for acquire fences", trace_id);
+    // Lambda won't fire if the object is destroyed, but the session can be killed inside of
+    // SchedulePresent, so we need to guard against that.
+    if (weak) {
+      // Keep going until all queued presents have been scheduled.
+      weak->fence_listener_.reset();
 
-        weak->ScheduleNextPresent();
-
-        // Lambda won't fire if the object is destroyed, but the session can be killed inside of
-        // SchedulePresent, so we need to guard against that.
-        if (weak) {
-          // Keep going until all queued presents have been scheduled.
-          weak->fence_listener_.reset();
-
-          // After we delete the fence listener, this closure may be deleted. In that case, we
-          // should no longer access closed variables, including the this pointer.
-          weak->ProcessQueuedPresents();
-        }
-      });
+      // After we delete the fence listener, this closure may be deleted. In that case, we should no
+      // longer access closed variables, including the this pointer.
+      weak->ProcessQueuedPresents();
+    }
+  });
 }
 
 void Session::SchedulePresentRequest(
     zx::time requested_presentation_time, std::vector<zx::event> acquire_fences,
     std::vector<zx::event> release_fences,
     std::variant<scheduling::OnPresentedCallback, scheduling::Present2Info> presentation_info) {
-  const scheduling::PresentId present_id = next_present_id_++;
-
+  TRACE_DURATION("gfx", "scenic_impl::Sesssion::SchedulePresentRequest");
   {
     // Logic verifying client requests presents in-order.
-    zx::time last_scheduled_presentation_time = last_scheduled_presentation_time_;
-    if (!presents_to_schedule_.empty()) {
-      last_scheduled_presentation_time =
-          std::max(last_scheduled_presentation_time,
-                   presents_to_schedule_.back().requested_presentation_time);
-    }
-
-    if (requested_presentation_time < last_scheduled_presentation_time) {
-      reporter_->ERROR() << "scenic_impl::gfx::Session: Present called with out-of-order "
+    if (requested_presentation_time < last_scheduled_presentation_time_) {
+      reporter_->ERROR() << "scenic_impl::Session: Present called with out-of-order "
                             "presentation time. "
                          << "requested presentation time=" << requested_presentation_time
                          << ", last scheduled presentation time="
-                         << last_scheduled_presentation_time << ".";
+                         << last_scheduled_presentation_time_ << ".";
       destroy_session_func_();
       return;
     }
   }
 
-  // Push present to the back of the queue of presents.
-  PresentRequest request{.present_id = present_id,
-                         .requested_presentation_time = requested_presentation_time,
-                         .acquire_fences = std::move(acquire_fences),
-                         .release_fences = std::move(release_fences),
-                         .commands = std::move(commands_pending_present_),
-                         .present_information = std::move(presentation_info)};
-  presents_to_schedule_.emplace_back(std::move(request));
-  commands_pending_present_.clear();
+  last_scheduled_presentation_time_ = requested_presentation_time;
 
-  const auto trace_id = ++queue_processing_id_begin_;
-  TRACE_FLOW_BEGIN("gfx", "wait for acquire fences", trace_id);
-  ProcessQueuedPresents();
+  if (auto scheduler = frame_scheduler_.lock()) {
+    const scheduling::PresentId present_id =
+        scheduler->RegisterPresent(id_, std::move(presentation_info), std::move(release_fences));
+    // Push present to the back of the queue of presents.
+    PresentRequest request{.present_id = present_id,
+                           .requested_presentation_time = requested_presentation_time,
+                           .acquire_fences = std::move(acquire_fences),
+                           .commands = std::move(commands_pending_present_)};
+    presents_to_schedule_.emplace_back(std::move(request));
+    commands_pending_present_.clear();
+
+    TRACE_FLOW_BEGIN("gfx", "wait_for_fences", SESSION_TRACE_ID(id_, present_id));
+    ProcessQueuedPresents();
+  } else {
+    FXL_LOG(WARNING) << "FrameScheduler is missing.";
+  }
 }
 
 void Session::ScheduleNextPresent() {
@@ -243,37 +242,21 @@ void Session::ScheduleNextPresent() {
   FXL_DCHECK(present_request.acquire_fences.empty());
   TRACE_DURATION("gfx", "scenic_impl::Session::ScheduleNextPresent", "session_id", id_,
                  "requested time", present_request.requested_presentation_time.get());
-  TRACE_FLOW_BEGIN("gfx", "scheduled_update", SESSION_TRACE_ID(id_, present_request.present_id));
+  TRACE_FLOW_END("gfx", "wait_for_fences", SESSION_TRACE_ID(id_, present_request.present_id));
 
   for (auto& cmd : present_request.commands) {
     System::TypeId type_id = SystemTypeForCmd(cmd);
     auto dispatcher = type_id != System::TypeId::kInvalid ? dispatchers_[type_id].get() : nullptr;
     FXL_DCHECK(dispatcher);
-    dispatcher->DispatchCommand(std::move(cmd));
+    dispatcher->DispatchCommand(std::move(cmd), present_request.present_id);
   }
 
-  bool present_success = false;
-  if (auto present_callback =
-          std::get_if<scheduling::OnPresentedCallback>(&present_request.present_information)) {
-    // TODO(SCN-469): Move Present logic into Session.
-    present_success = GetGfxSession()->ScheduleUpdateForPresent(
-        present_request.requested_presentation_time, std::move(present_request.release_fences),
-        std::move(*present_callback));
-  } else {
-    FXL_DCHECK(
-        std::holds_alternative<scheduling::Present2Info>(present_request.present_information));
-    present_success = GetGfxSession()->ScheduleUpdateForPresent2(
-        present_request.requested_presentation_time, std::move(present_request.release_fences),
-        scheduling::Present2Info(id_));
+  if (auto scheduler = frame_scheduler_.lock()) {
+    scheduler->ScheduleUpdateForSession(presents_to_schedule_.front().requested_presentation_time,
+                                        {id_, presents_to_schedule_.front().present_id});
   }
 
-  // Pop it off the queue before continuing.
   presents_to_schedule_.pop_front();
-
-  if (!present_success) {
-    destroy_session_func_();
-    return;
-  }
 }
 
 void Session::RequestPresentationTimes(zx_duration_t requested_prediction_span,
