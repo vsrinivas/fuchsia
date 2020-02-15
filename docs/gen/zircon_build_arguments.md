@@ -320,9 +320,9 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 From //kernel/params.gni:46
 
 ### kernel_version_string
-Version string embedded in the kernel for `zx_system_get_version`.
-If set to the default "", a string is generated based on the
-Zircon git revision of the checkout.
+Version string embedded in the kernel for `zx_system_get_version_string`.
+If set to the default "", a string is generated based on the fuchsia.git
+revision of the checkout.
 
 **Current value (from the default):** `""`
 
