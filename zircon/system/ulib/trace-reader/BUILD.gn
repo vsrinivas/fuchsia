@@ -37,30 +37,3 @@ zx_library("trace-reader") {
   configs +=
       [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
 }
-
-zx_test("trace-reader-test") {
-  sources = [
-    "file_reader_tests.cc",
-    "reader_tests.cc",
-    "records_tests.cc",
-  ]
-  deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/trace-engine:trace-engine-headers-for-reader",
-    "$zx/system/ulib/trace-reader",
-    "$zx/system/ulib/zxtest",
-  ]
-  if (is_fuchsia) {
-    deps += [
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zx",
-    ]
-  }
-}
-
-group("tests") {
-  testonly = true
-  deps = [ ":trace-reader-test" ]
-}

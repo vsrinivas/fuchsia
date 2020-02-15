@@ -1,0 +1,30 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_test("trace-reader-test") {
+  sources = [
+    "file_reader_tests.cc",
+    "reader_tests.cc",
+    "records_tests.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/trace-engine:trace-engine-headers-for-reader",
+    "$zx/system/ulib/trace-reader",
+    "$zx/system/ulib/zxtest",
+  ]
+  if (is_fuchsia) {
+    deps += [
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+    ]
+  }
+}
+
+group("test") {
+  testonly = true
+  deps = [ ":trace-reader-test" ]
+}
