@@ -8,9 +8,12 @@
 #include <fuchsia/ui/scenic/internal/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
+#include <unordered_map>
+#include <unordered_set>
+
 #include "lib/fidl/cpp/interface_request.h"
 #include "src/ui/scenic/lib/flatland/hanging_get_helper.h"
-#include "src/ui/scenic/lib/flatland/topology_system.h"
+#include "src/ui/scenic/lib/flatland/transform_graph.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 
@@ -81,7 +84,7 @@ class ContentLinkImpl : public fuchsia::ui::scenic::internal::ContentLink {
 // established.
 class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
  public:
-  explicit LinkSystem(const std::shared_ptr<TopologySystem>& topology_system);
+  explicit LinkSystem(TransformHandle::InstanceId instance_id);
 
   // Because this object captures its "this" pointer in internal closures, it is unsafe to copy or
   // move it. Disable all copy and move operations.
@@ -109,6 +112,9 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // Deregistration is thread safe, but the user of the Link object should be confident (e.g., by
   // tracking release fences) that no other systems will try to reference the Link.
   struct ChildLink {
+    // The handle on which the GraphLinkImpl to the child will live.
+    TransformHandle graph_handle;
+    // The LinkSystem-owned handle that will be a key in the LinkTopologyMap when the link resolves.
     TransformHandle link_handle;
     ObjectLinker::ImportLink importer;
   };
@@ -117,6 +123,9 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // Deregistration is thread safe, but the user of the Link object should be confident (e.g., by
   // tracking release fences) that no other systems will try to reference the Link.
   struct ParentLink {
+    // The handle that the ContentLinkImpl to the parent will live on and will be a value in the
+    // LinkTopologyMap when the link resolves.
+    TransformHandle link_origin;
     ObjectLinker::ExportLink exporter;
   };
 
@@ -124,21 +133,37 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // for the caller's transform hierarchy. |initial_properties| is immediately dispatched to the
   // ParentLink when the Link is resolved, regardless of whether the parent or the child has called
   // |Flatland::Present()|.
+  //
+  // Link handles are excluded from global topologies, so the |graph_handle| is provided by the
+  // parent as the attachment point for the ContentLinkImpl and LinkProperties.
   ChildLink CreateChildLink(
       fuchsia::ui::scenic::internal::ContentLinkToken token,
       fuchsia::ui::scenic::internal::LinkProperties initial_properties,
-      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> content_link);
+      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> content_link,
+      TransformHandle graph_handle);
 
   // Creates the parent end of a link. Once both ends of a Link have been created, the LinkSystem
-  // will create a local topology that connects the internal Link to the |child_handle|.
+  // will create a local topology that connects the internal Link to the ParentLink's |link_origin|.
   ParentLink CreateParentLink(
-      fuchsia::ui::scenic::internal::GraphLinkToken token, TransformHandle child_handle,
-      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::GraphLink> graph_link);
+      fuchsia::ui::scenic::internal::GraphLinkToken token,
+      fidl::InterfaceRequest<fuchsia::ui::scenic::internal::GraphLink> graph_link,
+      TransformHandle link_origin);
 
   // TODO(44334): Temporary storage for LinkProperties.
   void SetLinkProperties(TransformHandle handle,
                          fuchsia::ui::scenic::internal::LinkProperties properties);
   void ClearLinkProperties(TransformHandle handle);
+
+  // The LinkSystem stores topology links as a key-value pair of TransformHandles. The LinkSystem
+  // generates the key and returns it in CreateChildLink() and the value is passed into
+  // CreateParentLink(). Resolving the link places the entry into the map.
+  using LinkTopologyMap = std::unordered_map<TransformHandle, TransformHandle>;
+
+  // Snapshots and returns the current set of links.
+  LinkTopologyMap GetResolvedTopologyLinks();
+
+  // Returns the instance ID used for LinkSystem-authored handles.
+  TransformHandle::InstanceId GetInstanceId() const;
 
   // For use by the core processing loop, this function consumes global information, processes it,
   // and sends all necessary updates to active GraphLink and ContentLink channels.
@@ -150,11 +175,11 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
                    const std::unordered_set<TransformHandle>& live_handles);
 
  private:
-  // The LinkSystem updates the local topology of attachment point link handles. All link handles
-  // are allocated from a separate TransformGraph dedicated to links to centralize cleanup of said
-  // handles.
-  const std::shared_ptr<TopologySystem> topology_system_;
+  TransformHandle::InstanceId instance_id_;
   TransformGraph link_graph_;
+
+  // The set of current link topologies. Access is managed by |map_mutex_|.
+  LinkTopologyMap link_topologies_;
 
   ObjectLinker linker_;
 
@@ -166,7 +191,7 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   std::unordered_map<TransformHandle, std::shared_ptr<GraphLinkImpl>> graph_link_map_;
   std::unordered_map<TransformHandle, std::shared_ptr<ContentLinkImpl>> content_link_map_;
 
-  // TODO(44334): Temporary storage for LinkProperties. Access is also managed by [map_mutex_].
+  // TODO(44334): Temporary storage for LinkProperties. Access is also managed by |map_mutex_|.
   std::unordered_map<TransformHandle, fuchsia::ui::scenic::internal::LinkProperties>
       link_properties_map_;
 

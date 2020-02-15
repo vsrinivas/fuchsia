@@ -16,20 +16,16 @@ using fuchsia::ui::scenic::internal::LayoutInfo;
 
 namespace flatland {
 
-LinkSystem::LinkSystem(const std::shared_ptr<TopologySystem>& topology_system)
-    : topology_system_(topology_system), link_graph_(topology_system_->CreateGraph()) {}
+LinkSystem::LinkSystem(TransformHandle::InstanceId instance_id)
+    : instance_id_(instance_id), link_graph_(instance_id_) {}
 
 LinkSystem::ChildLink LinkSystem::CreateChildLink(
     ContentLinkToken token, fuchsia::ui::scenic::internal::LinkProperties initial_properties,
-    fidl::InterfaceRequest<ContentLink> content_link) {
+    fidl::InterfaceRequest<ContentLink> content_link, TransformHandle graph_handle) {
   FXL_DCHECK(token.value.is_valid());
-  auto impl = std::make_shared<GraphLinkImpl>();
 
-  // Each Link consists of three Transforms -- one provided by the parent, one provided by the
-  // child, and one provided by the link system itself. We create the link transform here, so that
-  // we can return it to the parent Flatland instance, which should add the link transform as a
-  // child to the parent transform.
-  TransformHandle link_handle = link_graph_.CreateTransform();
+  auto impl = std::make_shared<GraphLinkImpl>();
+  const TransformHandle link_handle = link_graph_.CreateTransform();
 
   ObjectLinker::ImportLink importer =
       linker_.CreateImport(std::move(content_link), std::move(token.value),
@@ -37,7 +33,8 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
 
   importer.Initialize(
       /* link_resolved = */
-      [ref = shared_from_this(), impl = impl, link_handle = link_handle,
+      [ref = shared_from_this(), impl = impl, graph_handle = graph_handle,
+       link_handle = link_handle,
        initial_properties = std::move(initial_properties)](GraphLinkRequest request) {
         // Immediately send out the initial properties over the channel. This callback is fired from
         // one of the Flatland instance threads, but since we haven't stored the Link impl anywhere
@@ -53,74 +50,79 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
           // Mutate shared state while holding our mutex.
           std::scoped_lock lock(ref->map_mutex_);
           ref->graph_link_bindings_.AddBinding(impl, std::move(request.interface));
-          ref->graph_link_map_[link_handle] = impl;
-        }
+          ref->graph_link_map_[graph_handle] = impl;
 
-        // The topology is constructed here, instead of in the link_resolved closure of the
-        // ParentLink object, so that its destruction (which depends on the link_handle) can occur
-        // on the same endpoint.
-        //
-        // SetLocalTopology() is threadsafe, so we don't need our lock.
-        ref->topology_system_->SetLocalTopology({{link_handle, 0}, {request.child_handle, 0}});
+          // The topology is constructed here, instead of in the link_resolved closure of the
+          // ParentLink object, so that its destruction (which depends on the link_handle) can occur
+          // on the same endpoint.
+          ref->link_topologies_[link_handle] = request.child_handle;
+        }
       },
       /* link_invalidated = */
-      [ref = shared_from_this(), impl = impl, link_handle = link_handle](bool on_link_destruction) {
+      [ref = shared_from_this(), impl = impl, graph_handle = graph_handle,
+       link_handle = link_handle](bool on_link_destruction) {
         {
           std::scoped_lock lock(ref->map_mutex_);
-          ref->graph_link_map_.erase(link_handle);
+          ref->graph_link_map_.erase(graph_handle);
           ref->graph_link_bindings_.RemoveBinding(impl);
+
+          ref->link_topologies_.erase(link_handle);
           ref->link_graph_.ReleaseTransform(link_handle);
         }
-
-        // ClearLocalTopology() is threadsafe, so we don't need our lock.
-        ref->topology_system_->ClearLocalTopology(link_handle);
       });
 
   return ChildLink({
+      .graph_handle = graph_handle,
       .link_handle = link_handle,
       .importer = std::move(importer),
   });
 }
 
 LinkSystem::ParentLink LinkSystem::CreateParentLink(GraphLinkToken token,
-                                                    TransformHandle child_handle,
-                                                    fidl::InterfaceRequest<GraphLink> graph_link) {
+                                                    fidl::InterfaceRequest<GraphLink> graph_link,
+                                                    TransformHandle link_origin) {
   FXL_DCHECK(token.value.is_valid());
 
   auto impl = std::make_shared<ContentLinkImpl>();
 
   ObjectLinker::ExportLink exporter =
-      linker_.CreateExport({.interface = std::move(graph_link), .child_handle = child_handle},
+      linker_.CreateExport({.interface = std::move(graph_link), .child_handle = link_origin},
                            std::move(token.value), /* error_reporter */ nullptr);
 
   exporter.Initialize(
       /* link_resolved = */
       [ref = shared_from_this(), impl = impl,
-       child_handle = child_handle](fidl::InterfaceRequest<ContentLink> request) {
+       link_origin = link_origin](fidl::InterfaceRequest<ContentLink> request) {
         std::scoped_lock lock(ref->map_mutex_);
         ref->content_link_bindings_.AddBinding(impl, std::move(request));
-        ref->content_link_map_[child_handle] = impl;
+        ref->content_link_map_[link_origin] = impl;
       },
       /* link_invalidated = */
-      [ref = shared_from_this(), impl = impl,
-       child_handle = child_handle](bool on_link_destruction) {
+      [ref = shared_from_this(), impl = impl, link_origin = link_origin](bool on_link_destruction) {
         std::scoped_lock lock(ref->map_mutex_);
-        ref->content_link_map_.erase(child_handle);
+        ref->content_link_map_.erase(link_origin);
         ref->content_link_bindings_.RemoveBinding(impl);
       });
 
   return ParentLink({
+      .link_origin = link_origin,
       .exporter = std::move(exporter),
   });
 }
 
 void LinkSystem::SetLinkProperties(TransformHandle handle,
                                    fuchsia::ui::scenic::internal::LinkProperties properties) {
+  // Link properties should never be set on LinkSystem-created handles.
+  FXL_DCHECK(handle.GetInstanceId() != instance_id_);
+
   std::scoped_lock lock(map_mutex_);
   link_properties_map_[handle] = std::move(properties);
 }
 
 void LinkSystem::ClearLinkProperties(TransformHandle handle) {
+  // Link properties should never be set on LinkSystem-created handles.
+  FXL_DCHECK(handle.GetInstanceId() != instance_id_);
+
   std::scoped_lock lock(map_mutex_);
   link_properties_map_.erase(handle);
 }
@@ -179,5 +181,18 @@ void LinkSystem::UpdateLinks(const TransformGraph::TopologyVector& global_vector
     }
   }
 }
+
+LinkSystem::LinkTopologyMap LinkSystem::GetResolvedTopologyLinks() {
+  LinkTopologyMap copy;
+
+  // Acquire the lock and copy.
+  {
+    std::scoped_lock lock(map_mutex_);
+    copy = link_topologies_;
+  }
+  return copy;
+}
+
+TransformHandle::InstanceId LinkSystem::GetInstanceId() const { return instance_id_; }
 
 }  // namespace flatland

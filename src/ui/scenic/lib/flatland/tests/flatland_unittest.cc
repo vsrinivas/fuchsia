@@ -13,9 +13,9 @@
 using flatland::Flatland;
 using LinkId = flatland::Flatland::LinkId;
 using flatland::LinkSystem;
-using flatland::TopologySystem;
 using flatland::TransformGraph;
 using flatland::TransformHandle;
+using flatland::UberStructSystem;
 using fuchsia::ui::scenic::internal::ContentLink;
 using fuchsia::ui::scenic::internal::ContentLinkStatus;
 using fuchsia::ui::scenic::internal::ContentLinkToken;
@@ -69,16 +69,19 @@ void CreateLink(Flatland* parent, Flatland* child, LinkId id,
 class FlatlandTest : public gtest::TestLoopFixture {
  public:
   FlatlandTest()
-      : topology_system_(std::make_shared<TopologySystem>()),
-        link_system_(std::make_shared<LinkSystem>(topology_system_)) {}
+      : uber_struct_system_(std::make_shared<UberStructSystem>()),
+        link_system_(std::make_shared<LinkSystem>(uber_struct_system_->GetNextInstanceId())) {}
 
-  void TearDown() override { EXPECT_EQ(topology_system_->GetSize(), 0u); }
+  void TearDown() override { EXPECT_EQ(uber_struct_system_->GetSize(), 0u); }
 
-  Flatland CreateFlatland() { return Flatland(link_system_, topology_system_); }
+  Flatland CreateFlatland() { return Flatland(link_system_, uber_struct_system_); }
 
   // The parent transform must be a topology root or ComputeGlobalTopologyVector() will crash.
   bool IsDescendantOf(TransformHandle parent, TransformHandle child) {
-    auto data = topology_system_->ComputeGlobalTopologyVector(parent);
+    auto snapshot = uber_struct_system_->Snapshot();
+    auto links = link_system_->GetResolvedTopologyLinks();
+    auto data = TransformGraph::ComputeGlobalTopologyVector(snapshot, links,
+                                                            link_system_->GetInstanceId(), parent);
     for (auto entry : data.topology_vector) {
       if (entry.handle == child) {
         return true;
@@ -94,14 +97,17 @@ class FlatlandTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
 
     // This is a replica of the core render loop.
-    auto data = topology_system_->ComputeGlobalTopologyVector(root_transform);
+    auto snapshot = uber_struct_system_->Snapshot();
+    auto links = link_system_->GetResolvedTopologyLinks();
+    auto data = TransformGraph::ComputeGlobalTopologyVector(
+        snapshot, links, link_system_->GetInstanceId(), root_transform);
     link_system_->UpdateLinks(data.topology_vector, data.live_handles);
 
     // Run the looper again to process any queued FIDL events (i.e., Link callbacks).
     RunLoopUntilIdle();
   }
 
-  const std::shared_ptr<TopologySystem> topology_system_;
+  const std::shared_ptr<UberStructSystem> uber_struct_system_;
   const std::shared_ptr<LinkSystem> link_system_;
 };
 
@@ -418,9 +424,9 @@ TEST_F(FlatlandTest, GraphLinkReplaceWithoutConnection) {
   fidl::InterfacePtr<GraphLink> graph_link;
   flatland.LinkToParent(std::move(child_token), graph_link.NewRequest());
 
-  ProcessMainLoop(flatland.GetLocalRoot());
+  ProcessMainLoop(flatland.GetRoot());
   PRESENT(flatland, true);
-  ProcessMainLoop(flatland.GetLocalRoot());
+  ProcessMainLoop(flatland.GetRoot());
 
   ContentLinkToken parent_token2;
   GraphLinkToken child_token2;
@@ -433,9 +439,9 @@ TEST_F(FlatlandTest, GraphLinkReplaceWithoutConnection) {
   EXPECT_TRUE(graph_link.is_bound());
   EXPECT_TRUE(graph_link2.is_bound());
 
-  ProcessMainLoop(flatland.GetLocalRoot());
+  ProcessMainLoop(flatland.GetRoot());
   PRESENT(flatland, true);
-  ProcessMainLoop(flatland.GetLocalRoot());
+  ProcessMainLoop(flatland.GetRoot());
 
   EXPECT_FALSE(graph_link.is_bound());
   EXPECT_TRUE(graph_link2.is_bound());
@@ -450,7 +456,7 @@ TEST_F(FlatlandTest, GraphLinkReplaceWithConnection) {
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
   CreateLink(&parent, &child, kLinkId1, &content_link, &graph_link);
-  ProcessMainLoop(parent.GetLocalRoot());
+  ProcessMainLoop(parent.GetRoot());
 
   fidl::InterfacePtr<GraphLink> graph_link2;
 
@@ -469,9 +475,9 @@ TEST_F(FlatlandTest, GraphLinkReplaceWithConnection) {
 
   // Present() replaces the original GraphLink, which also results in the invalidation of both ends
   // of the original link.
-  ProcessMainLoop(parent.GetLocalRoot());
+  ProcessMainLoop(parent.GetRoot());
   PRESENT(child, true);
-  ProcessMainLoop(parent.GetLocalRoot());
+  ProcessMainLoop(parent.GetRoot());
 
   EXPECT_FALSE(content_link.is_bound());
   EXPECT_FALSE(graph_link.is_bound());
@@ -488,12 +494,12 @@ TEST_F(FlatlandTest, GraphLinkUnbindsOnParentDeath) {
   fidl::InterfacePtr<GraphLink> graph_link;
   flatland.LinkToParent(std::move(child_token), graph_link.NewRequest());
 
-  ProcessMainLoop(flatland.GetLocalRoot());
+  ProcessMainLoop(flatland.GetRoot());
   PRESENT(flatland, true);
-  ProcessMainLoop(flatland.GetLocalRoot());
+  ProcessMainLoop(flatland.GetRoot());
 
   parent_token.value.reset();
-  ProcessMainLoop(flatland.GetLocalRoot());
+  ProcessMainLoop(flatland.GetRoot());
 
   EXPECT_FALSE(graph_link.is_bound());
 }
@@ -608,12 +614,12 @@ TEST_F(FlatlandTest, ContentLinkUnbindsOnChildDeath) {
   flatland.CreateLink(kLinkId1, std::move(parent_token), std::move(properties),
                       content_link.NewRequest());
 
-  ProcessMainLoop(flatland.GetLocalRoot());
+  ProcessMainLoop(flatland.GetRoot());
   PRESENT(flatland, true);
-  ProcessMainLoop(flatland.GetLocalRoot());
+  ProcessMainLoop(flatland.GetRoot());
 
   child_token.value.reset();
-  ProcessMainLoop(flatland.GetLocalRoot());
+  ProcessMainLoop(flatland.GetRoot());
 
   EXPECT_FALSE(content_link.is_bound());
 }
@@ -646,9 +652,9 @@ TEST_F(FlatlandTest, ContentLinkIdIsZero) {
   LinkProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
   flatland.CreateLink(0, std::move(parent_token), std::move(properties), content_link.NewRequest());
-  ProcessMainLoop(flatland.GetLocalRoot());
+  ProcessMainLoop(flatland.GetRoot());
   PRESENT(flatland, false);
-  ProcessMainLoop(flatland.GetLocalRoot());
+  ProcessMainLoop(flatland.GetRoot());
 }
 
 TEST_F(FlatlandTest, ContentLinkIdCollision) {
@@ -665,18 +671,18 @@ TEST_F(FlatlandTest, ContentLinkIdCollision) {
   properties.set_logical_size({kDefaultSize, kDefaultSize});
   flatland.CreateLink(kId1, std::move(parent_token), std::move(properties),
                       content_link.NewRequest());
-  ProcessMainLoop(flatland.GetLocalRoot());
+  ProcessMainLoop(flatland.GetRoot());
   PRESENT(flatland, true);
-  ProcessMainLoop(flatland.GetLocalRoot());
+  ProcessMainLoop(flatland.GetRoot());
 
   ContentLinkToken parent_token2;
   GraphLinkToken child_token2;
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token2.value, &child_token2.value));
 
-  ProcessMainLoop(flatland.GetLocalRoot());
+  ProcessMainLoop(flatland.GetRoot());
   flatland.CreateLink(kId1, std::move(parent_token2), std::move(properties),
                       content_link.NewRequest());
-  ProcessMainLoop(flatland.GetLocalRoot());
+  ProcessMainLoop(flatland.GetRoot());
   PRESENT(flatland, false);
 }
 
@@ -709,7 +715,7 @@ TEST_F(FlatlandTest, ValidParentToChildFlow) {
   });
 
   // Without even presenting, the child is able to get the initial properties from the parent.
-  ProcessMainLoop(parent.GetLocalRoot());
+  ProcessMainLoop(parent.GetRoot());
   EXPECT_TRUE(layout_updated);
 }
 
@@ -749,10 +755,10 @@ TEST_F(FlatlandTest, ValidChildToParentFlow) {
   // Flatland instance must Present() so that CONTENT_HAS_PRESENTED can be true.
   EXPECT_FALSE(status_updated);
   PRESENT(parent, true);
-  ProcessMainLoop(parent.GetLocalRoot());
+  ProcessMainLoop(parent.GetRoot());
   PRESENT(child, true);
   EXPECT_FALSE(status_updated);
-  ProcessMainLoop(parent.GetLocalRoot());
+  ProcessMainLoop(parent.GetRoot());
   EXPECT_TRUE(status_updated);
 }
 
@@ -769,7 +775,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
   fidl::InterfacePtr<GraphLink> graph_link;
   CreateLink(&parent, &child, kLinkId, &content_link, &graph_link);
   parent.SetLinkOnTransform(kLinkId, kTransformId);
-  ProcessMainLoop(parent.GetLocalRoot());
+  ProcessMainLoop(parent.GetRoot());
 
   // Confirm that the current layout is the default.
   {
@@ -781,7 +787,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
     });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetLocalRoot());
+    ProcessMainLoop(parent.GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 
@@ -803,7 +809,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
     });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetLocalRoot());
+    ProcessMainLoop(parent.GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 
@@ -820,7 +826,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesDefaultBehavior) {
     graph_link->GetLayout([&](LayoutInfo info) { layout_updated = true; });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetLocalRoot());
+    ProcessMainLoop(parent.GetRoot());
     EXPECT_FALSE(layout_updated);
   }
 }
@@ -846,7 +852,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
     });
 
     EXPECT_EQ(0, num_updates);
-    ProcessMainLoop(parent.GetLocalRoot());
+    ProcessMainLoop(parent.GetRoot());
     EXPECT_EQ(1, num_updates);
   }
 
@@ -879,7 +885,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
     });
 
     EXPECT_EQ(0, num_updates);
-    ProcessMainLoop(parent.GetLocalRoot());
+    ProcessMainLoop(parent.GetRoot());
     EXPECT_EQ(1, num_updates);
   }
 
@@ -896,7 +902,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
   });
 
   EXPECT_EQ(0, num_updates);
-  ProcessMainLoop(parent.GetLocalRoot());
+  ProcessMainLoop(parent.GetRoot());
   EXPECT_EQ(0, num_updates);
 
   // Update the properties twice, once with the old value, once with the new value.
@@ -912,7 +918,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesMultisetBehavior) {
 
   // Confirm that we receive the update.
   EXPECT_EQ(0, num_updates);
-  ProcessMainLoop(parent.GetLocalRoot());
+  ProcessMainLoop(parent.GetRoot());
   EXPECT_EQ(1, num_updates);
 }
 
@@ -936,7 +942,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
     CreateLink(&parent, &children[i], kLinkIds[i], &content_link[i], &graph_link[i]);
     parent.SetLinkOnTransform(kLinkIds[i], kTransformIds[i]);
   }
-  ProcessMainLoop(parent.GetLocalRoot());
+  ProcessMainLoop(parent.GetRoot());
 
   const float kDefaultSize = 1.0f;
 
@@ -950,7 +956,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
     });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetLocalRoot());
+    ProcessMainLoop(parent.GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 
@@ -972,7 +978,7 @@ TEST_F(FlatlandTest, SetLinkPropertiesOnMultipleChildren) {
     });
 
     EXPECT_FALSE(layout_updated);
-    ProcessMainLoop(parent.GetLocalRoot());
+    ProcessMainLoop(parent.GetRoot());
     EXPECT_TRUE(layout_updated);
   }
 }
@@ -1157,11 +1163,11 @@ TEST_F(FlatlandTest, CreateLinkPresentedBeforeLinkToParent) {
   child.LinkToParent(std::move(child_token), child_graph_link.NewRequest());
 
   // The child should only be accessible from the parent when Present() is called on the child.
-  EXPECT_FALSE(IsDescendantOf(parent.GetLocalRoot(), child.GetLocalRoot()));
+  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
   PRESENT(child, true);
 
-  EXPECT_TRUE(IsDescendantOf(parent.GetLocalRoot(), child.GetLocalRoot()));
+  EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 }
 
 TEST_F(FlatlandTest, LinkToParentPresentedBeforeCreateLink) {
@@ -1196,11 +1202,11 @@ TEST_F(FlatlandTest, LinkToParentPresentedBeforeCreateLink) {
   parent.SetLinkOnTransform(kLinkId, kId1);
 
   // The child should only be accessible from the parent when Present() is called on the parent.
-  EXPECT_FALSE(IsDescendantOf(parent.GetLocalRoot(), child.GetLocalRoot()));
+  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
   PRESENT(parent, true);
 
-  EXPECT_TRUE(IsDescendantOf(parent.GetLocalRoot(), child.GetLocalRoot()));
+  EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 }
 
 TEST_F(FlatlandTest, LinkResolvedBeforeEitherPresent) {
@@ -1234,15 +1240,15 @@ TEST_F(FlatlandTest, LinkResolvedBeforeEitherPresent) {
 
   // The child should only be accessible from the parent when Present() is called on both the parent
   // and the child.
-  EXPECT_FALSE(IsDescendantOf(parent.GetLocalRoot(), child.GetLocalRoot()));
+  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
   PRESENT(parent, true);
 
-  EXPECT_FALSE(IsDescendantOf(parent.GetLocalRoot(), child.GetLocalRoot()));
+  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
   PRESENT(child, true);
 
-  EXPECT_TRUE(IsDescendantOf(parent.GetLocalRoot(), child.GetLocalRoot()));
+  EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 }
 
 TEST_F(FlatlandTest, ClearChildLink) {
@@ -1273,14 +1279,14 @@ TEST_F(FlatlandTest, ClearChildLink) {
   PRESENT(parent, true);
   PRESENT(child, true);
 
-  EXPECT_TRUE(IsDescendantOf(parent.GetLocalRoot(), child.GetLocalRoot()));
+  EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
   // Reset the child link using zero as the link id.
   parent.SetLinkOnTransform(0, kId1);
 
   PRESENT(parent, true);
 
-  EXPECT_FALSE(IsDescendantOf(parent.GetLocalRoot(), child.GetLocalRoot()));
+  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 }
 
 TEST_F(FlatlandTest, RelinkUnlinkedParentSameToken) {
@@ -1301,14 +1307,14 @@ TEST_F(FlatlandTest, RelinkUnlinkedParentSameToken) {
 
   PRESENT(parent, true);
 
-  EXPECT_TRUE(IsDescendantOf(parent.GetLocalRoot(), child.GetLocalRoot()));
+  EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
   GraphLinkToken graph_token;
   child.UnlinkFromParent([&graph_token](GraphLinkToken token) { graph_token = std::move(token); });
 
   PRESENT(child, true);
 
-  EXPECT_FALSE(IsDescendantOf(parent.GetLocalRoot(), child.GetLocalRoot()));
+  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
   // The same token can be used to link a different instance.
   Flatland child2 = CreateFlatland();
@@ -1316,10 +1322,10 @@ TEST_F(FlatlandTest, RelinkUnlinkedParentSameToken) {
 
   PRESENT(child2, true);
 
-  EXPECT_TRUE(IsDescendantOf(parent.GetLocalRoot(), child2.GetLocalRoot()));
+  EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child2.GetRoot()));
 
   // The old instance is not re-linked.
-  EXPECT_FALSE(IsDescendantOf(parent.GetLocalRoot(), child.GetLocalRoot()));
+  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 }
 
 TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
@@ -1340,7 +1346,7 @@ TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
 
   PRESENT(parent, true);
 
-  EXPECT_TRUE(IsDescendantOf(parent.GetLocalRoot(), child.GetLocalRoot()));
+  EXPECT_TRUE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
   ContentLinkToken content_token;
   parent.ReleaseLink(
@@ -1348,7 +1354,7 @@ TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
 
   PRESENT(parent, true);
 
-  EXPECT_FALSE(IsDescendantOf(parent.GetLocalRoot(), child.GetLocalRoot()));
+  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 
   // The same token can be used to create a different link to the same child with a different
   // parent.
@@ -1367,10 +1373,10 @@ TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
 
   PRESENT(parent2, true);
 
-  EXPECT_TRUE(IsDescendantOf(parent2.GetLocalRoot(), child.GetLocalRoot()));
+  EXPECT_TRUE(IsDescendantOf(parent2.GetRoot(), child.GetRoot()));
 
   // The old instance is not re-linked.
-  EXPECT_FALSE(IsDescendantOf(parent.GetLocalRoot(), child.GetLocalRoot()));
+  EXPECT_FALSE(IsDescendantOf(parent.GetRoot(), child.GetRoot()));
 }
 
 #undef PRESENT

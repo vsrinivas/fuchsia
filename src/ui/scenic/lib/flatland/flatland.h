@@ -16,9 +16,9 @@
 #include <vector>
 
 #include "src/ui/scenic/lib/flatland/link_system.h"
-#include "src/ui/scenic/lib/flatland/topology_system.h"
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
+#include "src/ui/scenic/lib/flatland/uber_struct_system.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 
 namespace flatland {
@@ -34,7 +34,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // to link to each other through operations that involve tokens and parent/child relationships
   // (e.g., by calling LinkToParent() and CreateLink()).
   explicit Flatland(const std::shared_ptr<LinkSystem>& link_system,
-                    const std::shared_ptr<TopologySystem>& topology_system);
+                    const std::shared_ptr<UberStructSystem>& uber_struct_system);
   ~Flatland();
 
   // Because this object captures its "this" pointer in internal closures, it is unsafe to copy or
@@ -79,8 +79,10 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   void ReleaseLink(LinkId link_id,
                    fuchsia::ui::scenic::internal::Flatland::ReleaseLinkCallback callback) override;
 
-  // For validating the transform hierarchy in tests only.
-  TransformHandle GetLocalRoot() const;
+  // For validating the transform hierarchy in tests only. For the sake of testing, the "root" will
+  // always be the top-most TransformHandle from the TransformGraph owned by this Flatland. If
+  // currently linked to a parent, that means the link_origin. If not, that means the local_root_.
+  TransformHandle GetRoot() const;
 
  private:
   // Users are not allowed to use zero as a transform ID.
@@ -98,9 +100,9 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // A link system shared between Flatland instances, so that links can be made between them.
   std::shared_ptr<LinkSystem> link_system_;
 
-  // A topology system shared between Flatland instances, so that child edges can be made between
-  // them (by way of local topologies on Transforms that are not the local_root_).
-  std::shared_ptr<TopologySystem> topology_system_;
+  // An UberStructSystem shared between Flatland instances. Flatland publishes local data to the
+  // UberStructSystem in order to have it seen by the global render loop.
+  std::shared_ptr<UberStructSystem> uber_struct_system_;
 
   // The set of operations that are pending a call to Present().
   std::vector<fit::function<bool()>> pending_operations_;
@@ -113,6 +115,9 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // be kept alive through child references.
   TransformMap transforms_;
 
+  // A unique ID from the UberStructSystem representing this Flatland instance.
+  const TransformHandle::InstanceId instance_id_;
+
   // A graph representing this flatland instance's local transforms and their relationships.
   TransformGraph transform_graph_;
 
@@ -124,13 +129,8 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // A mapping from user-generated id to ChildLink.
   LinkMap child_links_;
 
-  struct ParentLinkData {
-    LinkSystem::ParentLink link;
-    TransformHandle link_origin;
-  };
-
   // The link from this Flatland instance to our parent.
-  std::optional<ParentLinkData> parent_link_;
+  std::optional<LinkSystem::ParentLink> parent_link_;
 };
 
 }  // namespace flatland

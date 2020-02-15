@@ -9,12 +9,13 @@ source_set("flatland") {
     "hanging_get_helper.h",
     "link_system.cc",
     "link_system.h",
-    "topology_system.cc",
-    "topology_system.h",
     "transform_graph.cc",
     "transform_graph.h",
     "transform_handle.cc",
     "transform_handle.h",
+    "uber_struct.h",
+    "uber_struct_system.cc",
+    "uber_struct_system.h",
   ]
 
   public_deps = [

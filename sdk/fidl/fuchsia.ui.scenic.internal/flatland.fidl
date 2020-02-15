@@ -261,7 +261,8 @@ protocol Flatland {
 
     /// Released Transforms and Content will be garbage collected by the system once they are no
     /// longer necessary for rendering (i.e., there is no path from the Root Transform to the
-    /// object, all pending rendering has completed, and new Content is available).
+    /// object, all pending rendering has completed, and new Content is available). The only
+    /// exceptions are Link objects (see ReleaseLink() for more details).
     ///
     /// However, once released, the id immediately goes out of scope for future function calls, and
     /// can be reused by the client when creating new Transforms and Content.
@@ -271,7 +272,9 @@ protocol Flatland {
     ReleaseTransform(TransformId transform_id);
 
     /// Releasing a Link removes the attached sub-Graph from the scene, even if the Link is still
-    /// connected to a Transform.
+    /// connected to a Transform. Unlike other Content, Links are garbage collected by the system
+    /// during the next Present() because a released Link is guaranteed to provide no renderable
+    /// content.
     ///
     /// Use SetLinkOnTransform(transform_id, 0) to clean up references to deleted Links.
     ///
