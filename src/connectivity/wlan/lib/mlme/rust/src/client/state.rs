@@ -419,7 +419,8 @@ pub struct Associated(pub Association);
 impl Associated {
     /// Processes an inbound diassociation frame.
     /// This always results in an MLME-DISASSOCIATE.indication message to MLME's SME peer.
-    fn on_disassoc_frame(&self, sta: &mut BoundClient<'_>, disassoc_hdr: &mac::DisassocHdr) {
+    fn on_disassoc_frame(&mut self, sta: &mut BoundClient<'_>, disassoc_hdr: &mac::DisassocHdr) {
+        self.pre_leaving_associated_state(sta);
         let reason_code = fidl_mlme::ReasonCode::from_primitive(disassoc_hdr.reason_code.0)
             .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason);
         sta.send_disassoc_ind(reason_code);
@@ -427,9 +428,7 @@ impl Associated {
 
     /// Sends an MLME-DEAUTHENTICATE.indication message to MLME's SME peer.
     fn on_deauth_frame(&mut self, sta: &mut BoundClient<'_>, deauth_hdr: &mac::DeauthHdr) {
-        sta.ctx.timer.cancel_event(self.0.status_check_timeout.next_id);
-        self.0.controlled_port_open = false;
-        self.shutdown_ethernet_and_clear_association(sta);
+        self.pre_leaving_associated_state(sta);
         let reason_code = fidl_mlme::ReasonCode::from_primitive(deauth_hdr.reason_code.0)
             .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason);
         sta.send_deauthenticate_ind(reason_code);
@@ -616,13 +615,11 @@ impl Associated {
         sta: &mut BoundClient<'_>,
         req: fidl_mlme::DeauthenticateRequest,
     ) {
-        sta.ctx.timer.cancel_event(self.0.status_check_timeout.next_id);
-        self.0.controlled_port_open = false;
         if let Err(e) = sta.send_deauth_frame(mac::ReasonCode(req.reason_code.into_primitive())) {
             error!("Error sending deauthentication frame to BSS: {}", e);
         }
 
-        self.shutdown_ethernet_and_clear_association(sta);
+        self.pre_leaving_associated_state(sta);
 
         if let Err(e) = sta.ctx.device.access_sme_sender(|sender| {
             sender.send_deauthenticate_conf(&mut fidl_mlme::DeauthenticateConfirm {
@@ -633,7 +630,9 @@ impl Associated {
         }
     }
 
-    fn shutdown_ethernet_and_clear_association(&self, sta: &mut BoundClient<'_>) {
+    fn pre_leaving_associated_state(&mut self, sta: &mut BoundClient<'_>) {
+        sta.ctx.timer.cancel_event(self.0.status_check_timeout.next_id);
+        self.0.controlled_port_open = false;
         if let Err(e) = sta.ctx.device.set_eth_link_down() {
             error!("Error disabling ethernet device offline: {}", e);
         }
@@ -662,7 +661,7 @@ impl Associated {
             if let Err(e) = sta.send_deauth_frame(mac::ReasonCode::LEAVING_NETWORK_DEAUTH) {
                 warn!("Failed sending deauth frame {:?}", e);
             }
-            self.shutdown_ethernet_and_clear_association(sta);
+            self.pre_leaving_associated_state(sta);
         } else {
             // Always check should_deauthenticate() first since even if Client receives a beacon,
             // it would still add a full association status check interval to the lost BSS counter.
@@ -1698,7 +1697,7 @@ mod tests {
                 reason_code: fidl_mlme::ReasonCode::ApInitiated,
             }
         );
-        // Verify association context is cleard and ethernet port is shut down.
+        // Verify association context is cleared and ethernet port is shut down.
         assert_eq!(0, m.fake_device.assocs.len());
         assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
     }
@@ -1709,7 +1708,18 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
-        let state = Associated(empty_association(&mut sta));
+        let mut state = Associated(empty_association(&mut sta));
+
+        state.0.controlled_port_open = true;
+        // ddk_assoc_ctx must be cleared when MLME receives disassociation frame later.
+        sta.ctx
+            .device
+            .configure_assoc(fake_ddk_assoc_ctx())
+            .expect("valid assoc_ctx should succeed");
+        assert_eq!(1, m.fake_device.assocs.len());
+
+        sta.ctx.device.set_eth_link_up().expect("should succeed");
+        assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::UP);
 
         state.on_disassoc_frame(
             &mut sta,
@@ -1726,6 +1736,12 @@ mod tests {
                 reason_code: mac::ReasonCode::AP_INITIATED.0,
             }
         );
+
+        // Verify association everything is properly cleared.
+        assert_eq!(0, sta.ctx.timer.scheduled_event_count());
+        assert_eq!(false, state.0.controlled_port_open);
+        assert_eq!(0, m.fake_device.assocs.len());
+        assert_eq!(m.fake_device.link_status, crate::device::LinkStatus::DOWN);
     }
 
     #[test]
