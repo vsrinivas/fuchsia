@@ -11,7 +11,7 @@ use {
 mod continuation;
 mod get_capabilities;
 mod get_element_attributes;
-pub mod get_play_status;
+mod get_play_status;
 mod notification;
 pub mod player_application_settings;
 mod rejected;

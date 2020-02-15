@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use super::*;
-use crate::packets::get_play_status::{SONG_LENGTH_NOT_SUPPORTED, SONG_POSITION_NOT_SUPPORTED};
+use crate::packets::{SONG_LENGTH_NOT_SUPPORTED, SONG_POSITION_NOT_SUPPORTED};
 use std::convert::TryInto;
 
 #[derive(Debug, Clone)]
