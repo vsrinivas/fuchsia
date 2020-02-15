@@ -42,7 +42,7 @@ fuchsia_internal/firmware/bluetooth/mt7668 git_revision:ed8b2eb6b877e93afb8a9f92
 
 # Keysafe TA Firmware
 @Subdir firmware/optee/astro
-fuchsia_internal/firmware/optee/astro/808032e0-fd9e-4e6f-8896-544735c98480/prod q_AQJ3ArG0r_pJo6YAWSUS05HNrhEOasuONlL8PKQDUC
+fuchsia_internal/firmware/optee/astro/808032e0-fd9e-4e6f-8896-544735c98480/prod Q1PTuycfNIWR0-E7vvVKtvEVlG5997Awoh_l7vql1mUC
 
 # Secmem TA Firmware
 @Subdir firmware/optee/astro
