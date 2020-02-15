@@ -7,7 +7,7 @@ use {
     anyhow::{format_err, Error},
     fidl::endpoints::DiscoverableService,
     fidl::endpoints::{RequestStream, ServerEnd},
-    fidl_fuchsia_diagnostics::{self, Selector},
+    fidl_fuchsia_diagnostics::{self, BatchIteratorMarker, BatchIteratorRequestStream, Selector},
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_inspect_deprecated::InspectMarker,
     fidl_fuchsia_io::{DirectoryProxy, NodeInfo, CLONE_FLAG_SAME_RIGHTS},
@@ -24,6 +24,7 @@ use {
     },
     fuchsia_zircon::{self as zx, DurationNum, HandleBased},
     futures::future::{join_all, BoxFuture},
+    futures::stream::FusedStream,
     futures::{FutureExt, TryFutureExt, TryStreamExt},
     inspect_fidl_load as deprecated_inspect, io_util,
     parking_lot::{Mutex, RwLock},
@@ -718,7 +719,7 @@ hierarchy: {:?}",
     /// Errors in the returned Vector correspond to IO failures in writing to a VMO. If
     /// a node hierarchy fails to format, its vmo is an empty string.
     fn format_hierarchies(
-        format: fidl_fuchsia_diagnostics::Format,
+        format: &fidl_fuchsia_diagnostics::Format,
         hierarchies: Vec<HierarchyData>,
     ) -> Vec<Result<fidl_fuchsia_diagnostics::FormattedContent, Error>> {
         hierarchies
@@ -760,14 +761,10 @@ hierarchy: {:?}",
 
                     match format {
                         fidl_fuchsia_diagnostics::Format::Json => {
-                            Ok(fidl_fuchsia_diagnostics::FormattedContent::FormattedJsonHierarchy(
-                                mem_buffer,
-                            ))
+                            Ok(fidl_fuchsia_diagnostics::FormattedContent::Json(mem_buffer))
                         }
                         fidl_fuchsia_diagnostics::Format::Text => {
-                            Ok(fidl_fuchsia_diagnostics::FormattedContent::FormattedTextHierarchy(
-                                mem_buffer,
-                            ))
+                            Ok(fidl_fuchsia_diagnostics::FormattedContent::Json(mem_buffer))
                         }
                     }
                 })
@@ -775,22 +772,46 @@ hierarchy: {:?}",
             .collect()
     }
 
+    /// Takes a BatchIterator server channel and upon receiving a GetNext request, serves
+    /// an empty vector denoting that the iterator has reached its end and is terminating.
+    pub async fn serve_terminal_batch(
+        &self,
+        stream: &mut BatchIteratorRequestStream,
+    ) -> Result<(), Error> {
+        if stream.is_terminated() {
+            return Ok(());
+        }
+
+        while let Some(req) = stream.try_next().await? {
+            match req {
+                fidl_fuchsia_diagnostics::BatchIteratorRequest::GetNext { responder } => {
+                    responder.send(&mut Ok(Vec::new()))?;
+                }
+            }
+            break;
+        }
+        Ok(())
+    }
+
     /// Takes a BatchIterator server channel and starts serving snapshotted
     /// Inspect hierarchies to clients as vectors of FormattedContent. The hierarchies
     /// are served in batches of `IN_MEMORY_SNAPSHOT_LIMIT` at a time, and snapshots of
-    /// diagnostics data aren't taken until a component is included in
-    pub async fn serve_snapshot_results(
-        self,
-        batch_iterator_channel: fasync::Channel,
-        format: fidl_fuchsia_diagnostics::Format,
+    /// diagnostics data aren't taken until a component is included in the upcoming batch.
+    ///
+    /// NOTE: This API does not send the terminal empty-vector at the end of the snapshot.
+    pub async fn serve_inspect_snapshot(
+        &self,
+        stream: &mut BatchIteratorRequestStream,
+        format: &fidl_fuchsia_diagnostics::Format,
     ) -> Result<(), Error> {
+        if stream.is_terminated() {
+            return Ok(());
+        }
+
         // We must fetch the repositories in a closure to prevent the
         // repository mutex-guard from leaking into futures.
         let inspect_repo_data = self.inspect_repo.read().fetch_data();
-        let configured_selectors = self.configured_selectors;
-        let mut stream = fidl_fuchsia_diagnostics::BatchIteratorRequestStream::from_channel(
-            batch_iterator_channel,
-        );
+
         let inspect_repo_length = inspect_repo_data.len();
         let mut inspect_repo_iter = inspect_repo_data.into_iter();
         let mut iter = 0;
@@ -798,37 +819,88 @@ hierarchy: {:?}",
         while let Some(req) = stream.try_next().await? {
             match req {
                 fidl_fuchsia_diagnostics::BatchIteratorRequest::GetNext { responder } => {
-                    if iter < max {
-                        let snapshot_batch: Vec<UnpopulatedInspectDataContainer> =
-                            (&mut inspect_repo_iter).take(IN_MEMORY_SNAPSHOT_LIMIT).collect();
+                    let snapshot_batch: Vec<UnpopulatedInspectDataContainer> =
+                        (&mut inspect_repo_iter).take(IN_MEMORY_SNAPSHOT_LIMIT).collect();
 
-                        iter = iter + 1;
+                    iter = iter + 1;
 
-                        // Asynchronously populate data containers with snapshots of relevant
-                        // inspect hierarchies.
-                        let pumped_inspect_data_results =
-                            ReaderServer::pump_inspect_data(snapshot_batch).await;
+                    // Asynchronously populate data containers with snapshots of relevant
+                    // inspect hierarchies.
+                    let pumped_inspect_data_results =
+                        ReaderServer::pump_inspect_data(snapshot_batch).await;
 
-                        // Apply selector filtering to all snapshot inspect hierarchies in the batch.
-                        let batch_hierarchy_data = ReaderServer::filter_snapshots(
-                            &configured_selectors,
-                            pumped_inspect_data_results,
-                        );
+                    // Apply selector filtering to all snapshot inspect hierarchies in the batch.
+                    let batch_hierarchy_data = ReaderServer::filter_snapshots(
+                        &self.configured_selectors,
+                        pumped_inspect_data_results,
+                    );
 
-                        let formatted_content: Vec<
-                            Result<fidl_fuchsia_diagnostics::FormattedContent, Error>,
-                        > = ReaderServer::format_hierarchies(format, batch_hierarchy_data);
+                    let formatted_content: Vec<
+                        Result<fidl_fuchsia_diagnostics::FormattedContent, Error>,
+                    > = ReaderServer::format_hierarchies(format, batch_hierarchy_data);
 
-                        let filtered_results: Vec<fidl_fuchsia_diagnostics::FormattedContent> =
-                            formatted_content.into_iter().filter_map(Result::ok).collect();
+                    let filtered_results: Vec<fidl_fuchsia_diagnostics::FormattedContent> =
+                        formatted_content.into_iter().filter_map(Result::ok).collect();
 
-                        responder.send(&mut Ok(filtered_results))?;
-                    } else {
-                        responder.send(&mut Ok(Vec::new()))?;
-                    }
+                    responder.send(&mut Ok(filtered_results))?;
                 }
             }
+
+            // We've sent all the meaningful content available in snapshot mode.
+            // The terminal value must be handled separately.
+            if iter == max - 1 {
+                break;
+            }
         }
+        Ok(())
+    }
+
+    pub fn stream_inspect(
+        self,
+        stream_mode: fidl_fuchsia_diagnostics::StreamMode,
+        format: fidl_fuchsia_diagnostics::Format,
+        result_stream: ServerEnd<BatchIteratorMarker>,
+    ) -> Result<(), Error> {
+        let result_channel = fasync::Channel::from_channel(result_stream.into_channel())?;
+
+        fasync::spawn(
+            async move {
+                let mut iterator_req_stream =
+                    fidl_fuchsia_diagnostics::BatchIteratorRequestStream::from_channel(
+                        result_channel,
+                    );
+
+                if stream_mode == fidl_fuchsia_diagnostics::StreamMode::Snapshot
+                    || stream_mode == fidl_fuchsia_diagnostics::StreamMode::SnapshotThenSubscribe
+                {
+                    self.serve_inspect_snapshot(&mut iterator_req_stream, &format).await?;
+                }
+
+                if stream_mode == fidl_fuchsia_diagnostics::StreamMode::Subscribe
+                    || stream_mode == fidl_fuchsia_diagnostics::StreamMode::SnapshotThenSubscribe
+                {
+                    eprintln!("not yet supported");
+                }
+
+                self.serve_terminal_batch(&mut iterator_req_stream).await?;
+
+                Ok(())
+            }
+            .unwrap_or_else(|e: anyhow::Error| {
+                eprintln!("Error encountered running inspect stream: {:?}", e);
+            }),
+        );
+
+        Ok(())
+    }
+
+    pub async fn serve_only_snapshot_results(
+        &self,
+        stream: &mut BatchIteratorRequestStream,
+        format: &fidl_fuchsia_diagnostics::Format,
+    ) -> Result<(), Error> {
+        self.serve_inspect_snapshot(stream, &format).await?;
+        self.serve_terminal_batch(stream).await?;
 
         Ok(())
     }
@@ -857,7 +929,19 @@ hierarchy: {:?}",
                             match fasync::Channel::from_channel(result_iterator.into_channel()) {
                                 Ok(channel) => {
                                     responder.send(&mut Ok(()))?;
-                                    server_clone.serve_snapshot_results(channel, format).await?;
+                                    let mut iterator_req_stream =
+                                        BatchIteratorRequestStream::from_channel(channel);
+
+                                    match server_clone
+                                        .serve_only_snapshot_results(
+                                            &mut iterator_req_stream,
+                                            &format,
+                                        )
+                                        .await
+                                    {
+                                        Ok(_) => {}
+                                        Err(_e) => {}
+                                    }
                                 }
                                 Err(_) => {
                                     responder.send(&mut Err(
@@ -866,12 +950,6 @@ hierarchy: {:?}",
                                 }
                             }
                         }
-                        fidl_fuchsia_diagnostics::ReaderRequest::ReadStream {
-                            stream_mode: _,
-                            format: _,
-                            formatted_stream: _,
-                            control_handle: _,
-                        } => {}
                     }
                 }
                 Ok(())
@@ -1222,9 +1300,11 @@ mod tests {
 
         fasync::spawn(async move {
             reader_server
-                .serve_snapshot_results(
-                    fasync::Channel::from_channel(batch_iterator.into_channel()).unwrap(),
-                    fidl_fuchsia_diagnostics::Format::Json,
+                .serve_only_snapshot_results(
+                    &mut BatchIteratorRequestStream::from_channel(
+                        fasync::Channel::from_channel(batch_iterator.into_channel()).unwrap(),
+                    ),
+                    &fidl_fuchsia_diagnostics::Format::Json,
                 )
                 .await
                 .unwrap();
@@ -1239,7 +1319,7 @@ mod tests {
             }
             for formatted_content in next_batch {
                 match formatted_content {
-                    fidl_fuchsia_diagnostics::FormattedContent::FormattedJsonHierarchy(data) => {
+                    fidl_fuchsia_diagnostics::FormattedContent::Json(data) => {
                         let mut buf = vec![0; data.size as usize];
                         data.vmo.read(&mut buf, 0).expect("reading vmo");
                         let hierarchy_string = std::str::from_utf8(&buf).unwrap();

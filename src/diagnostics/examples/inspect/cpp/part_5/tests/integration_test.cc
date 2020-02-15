@@ -89,7 +89,7 @@ class CodelabTest : public sys::testing::TestWithEnvironment {
 
       for (const auto& content : current_entries) {
         std::string json;
-        fsl::StringFromVmo(content.formatted_json_hierarchy(), &json);
+        fsl::StringFromVmo(content.json(), &json);
         if (json.find("sys/inspect_cpp_codelab_part_5.cmx") != std::string::npos) {
           return json;
         }

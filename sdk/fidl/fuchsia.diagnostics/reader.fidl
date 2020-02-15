@@ -14,7 +14,7 @@ const uint16 MAXIMUM_RAW_SELECTOR_LENGTH = 1024;
 /// VMOs and there is a limit of 64 handles per fidl message.
 const uint16 MAXIMUM_ENTRIES_PER_BATCH = 64;
 
-/// Enum describing the potential fail-states of the Accessor service.
+/// Enum describing the potential failure states of configuring diagnostics streams.
 enum AccessorError {
     // A provided selector argument failed to verify/parse.
     // Existing examples:
@@ -22,12 +22,16 @@ enum AccessorError {
     INVALID_SELECTOR = 1;
 };
 
-/// Enum describing the potential fail-states of the Accessor service due to issues
-/// reading the data.
+/// Enum describing the potential failure states of the streaming protocol when serving results
+/// to the client over the result iterator.
 enum ReaderError {
     // An IO error suggests that parsing of data hierarchy VMOs or writing of formatted data to
     // sockets has failed.
     IO = 1;
+
+    // A client error suggesting that the client failed to keep up with the buffered stream and
+    // has lost data, causing the channel to close,
+    BACKLOG_BUFFER_EXCEEDED = 2;
 };
 
 /// Argument used for Archive selectors, can be either the pre-parsed
@@ -37,8 +41,7 @@ xunion SelectorArgument {
     /// and properties in a data hierarchy namespaced by component.
     1: Selector structured_selector;
 
-    /// The Archive protocol parses the raw_selector
-    /// into a structured [fuchsia.diagnostics/Selector]
+    /// A raw string representing a [fuchsia.diagnostics/Selector].
     /// The Selector defines a pattern-matcher which selects for components within a hierarchy
     /// and properties in a data hierarchy namespaced by component.
     /// NOTE: All StringSelectors parsed from the raw_selector will be interperetted in
@@ -50,17 +53,56 @@ xunion SelectorArgument {
 /// A fidl union containing a complete hierarchy of structured diagnostics
 /// data, such that the content can be parsed into a file by itself.
 xunion FormattedContent {
-    /// A complete formatted data hierarchy encoded as json.
-    /// Data hierarchies are the hierarchical representation
-    /// of the structured diagnostics data on the system.
-    /// The VMO will contain up to 1mb of diagnostics data,
-    /// with dropped subtrees if the hierarchy is too large.
-    1: fuchsia.mem.Buffer formatted_json_hierarchy;
+    /// A diagnostics schema encoded as json.
+    /// The VMO will contain up to 1mb of diagnostics data.
+    1: fuchsia.mem.Buffer json;
 
-    /// A complete formatted data hierarchy encoded as text.
-    /// The VMO will contain up to 1mb of diagnostics data,
-    /// with dropped subtrees if the hierarchy is too large.
-    2: fuchsia.mem.Buffer formatted_text_hierarchy;
+    /// A diagnostics schema encoded as text.
+    /// The VMO will contain up to 1mb of diagnostics data.
+    2: fuchsia.mem.Buffer text;
+};
+
+/// Enum specifying the modes by which a user can connect to and stream diagnostics metrics.
+enum StreamMode : uint8 {
+    /// The stream will serve a snapshot of the diagnostics data at the time of
+    /// connection, then end.
+    SNAPSHOT = 1;
+    /// The stream will serve a snapshot of the diagnostics data at the time of
+    /// connection, then subsequent calls to the stream will hang until
+    /// new diagnostics data is available.
+    SNAPSHOT_THEN_SUBSCRIBE = 2;
+    /// Calls to the stream will hang until new diagnostics data is available. Between calls to
+    /// the stream, newly arrived data is buffered.
+    SUBSCRIBE = 3;
+};
+
+// Enum specifying the data types available through the diagnostics platform.
+enum DataType : uint8 {
+    /// Complete inspect hierarchies on the system.
+    INSPECT = 1;
+};
+
+/// Parameters needed to configure a stream of diagnostics information.
+table StreamParameters {
+    /// A [fuchsia.diagnostics/DataType] that specifies the diagnostics data type
+    /// to stream to the client.
+    /// NOTE: REQUIRED
+    1: DataType data_type;
+
+    /// A [fuchsia.diagnostics/StreamMode] that specifies how the
+    /// streaming server provides streamed results.
+    /// NOTE: REQUIRED
+    2: StreamMode stream_mode;
+
+    /// A [fuchsia.diagnostics/Format] that specifies how to format the returned
+    /// diagnostics data.
+    /// NOTE: REQUIRED
+    3: Format format;
+
+    /// A vector of [fuchsia.diagnostics/SelectorArgument] which
+    /// provide additional filters to scope data streams with. If the argument is not provided,
+    /// or the vector is empty, all available results are returned.
+    4: vector<SelectorArgument>:MAX selectors;
 };
 
 /// Outer protocol for interacting with the different diagnostics data sources.
@@ -84,37 +126,24 @@ protocol Archive {
     ReadInspect(request<Reader> inspect_reader, vector<SelectorArgument>:MAX selectors)
         -> () error AccessorError;
 
-    /// Creates a Reader for interacting with structured Log data.
-    /// The resulting interface can be used to analyze structured Log data
-    /// scoped to the components specified by the static configurations of the Accessor
-    /// pipeline that the client connects to, and the provided selectors vector argument.
+    /// Creates an iterator over diagnostics data on the system.
+    ///   * The iterator may be finite by streaming in SNAPSHOT mode, serving only the
+    ///     current state of diagnostics data on the system.
+    ///   * The iterator may be infinite by streaming in either SNAPSHOT_THEN_SUBSCRIBE
+    ///     or SUBSCRIBE mode; the prior first provides iteration over the current state of
+    ///     the sytem, and then both provide ongoing iteration over newly arriving diagnostics
+    ///     data.
     ///
-    /// + request `log_reader` is a [fuchsia.diagnostics/Reader] that processes
-    ///   Reader requests, sitting on top of Log data.
-    /// + request `selectors` is a vector of [fuchsia.diagnostics/SelectorArgument] which
-    ///   provide additional filters to scope data with. If the vector is empty,
-    ///   all available results are returned.
+    /// + request `result stream` a [fuchsia.diagnostics/BatchIterator] that diagnostic
+    ///   records are exposed to the client over.
+    ///   * epitaphs:
+    ///      - INVALID_ARGS: A required argument in the StreamParameters struct was missing.
+    ///      - WRONG_TYPE: A selector provided by the StreamParameters struct was incorrectly
+    ///                    formatted.
     ///
-    /// * error a [fuchsia.diagnostics/AccessorError]
-    ///   value indicating that the provided selectors failed to verify.
-    ReadLogs(request<Reader> log_reader, vector<SelectorArgument>:MAX selectors)
-        -> () error AccessorError;
-
-    /// Creates a Reader for interacting with lifecycle event data.
-    /// The resulting interface can be used to analyze lifecycle event data
-    /// scoped to the components specified by the static configurations of the Accessor
-    /// pipeline that the client connects to, and the provided selectors vector argument.
-    ///
-    /// + request `lifecycle_reader` is a [fuchsia.diagnostics/Reader] that processes Reader
-    ///   requests, sitting on top of lifecycle event data.
-    /// + request `selectors` is a vector of [fuchsia.diagnostics/SelectorArgument] which
-    ///   provide additional filters to scope data with. If the vector is empty,
-    ///   all available results are returned.
-    ///
-    /// * error a [fuchsia.diagnostics/AccessorError]
-    ///   value indicating that the provided selectors failed to verify.
-    ReadLifecycleEvents(request<Reader> lifecycle_reader,
-                        vector<SelectorArgument>:MAX selectors) -> () error AccessorError;
+    /// + request `stream_parameters` is a [fuchsia.diagnostics/StreamParameter] which
+    ///   specifies how to configure the stream.
+    StreamDiagnostics(request<BatchIterator> result_stream, StreamParameters stream_parameters);
 };
 
 /// A protocol to access data from a particular data source.
@@ -135,61 +164,6 @@ protocol Reader {
     ///   connection.
     GetSnapshot(Format format, request<BatchIterator> result_iterator)
         -> () error ReaderError;
-
-    /// Creates a Stream for polling a Reader data sources for new data.
-    /// The resulting interface can be used retrieve the next batch of data matching
-    /// which is within the ComponentSelector and TreeSelector scopes defined by the Archive
-    /// and Reader protocols through which this stream was created, in addition to the
-    /// static configurations that define the allowlist of data the reader has access to.
-    ///
-    /// + request `format_settings` the [fuchsia.diagnostics/FormatSettings] that
-    ///   specifies the format of data returned by the Batch during
-    ///  FormatBatch calls.
-    /// + request `stream_mode` is a [fuchsia.diagnostics/StreamMode] that specifies how the
-    ///   streaming server provides streamed results.
-    ReadStream(StreamMode stream_mode, Format format, request<Stream> formatted_stream);
-};
-
-/// Enum specifying the modes by which a user can connect to and stream diagnostics metrics.
-enum StreamMode : uint8 {
-    /// The first call to FormatBatch will serve the historical polling records of metrics
-    /// configured to store state in buffers, then the server will close.
-    REPLAY_ONLY = 1;
-    /// The first call to FormatBatch will serve the historical polling records of metrics
-    /// configured to store state in buffers, then will close. Subsequent calls to FormatBatch
-    /// will return newly polled records that were taken since the last FormatBatch call.
-    REPLAY_THEN_ONGOING = 2;
-    /// The first call to FormatBatch will return newly polled records that were taken
-    /// since the client connection was established. Subsequent calls to FormatBatch
-    /// will return newly polled records that were taken since the last FormatBatch call.
-    ONGOING_ONLY = 3;
-};
-
-/// Protocol offering an API for batch-retrieving all newly updated diagnostics data sincee
-/// the last call.
-protocol Stream {
-    /// Retrieves the batch of data which has appeared since the last GetNext call and matches
-    /// the configured ComponentSelector and TreeSelector scopes, in addition to the
-    /// static configurations that define the allowlist of data the reader has access to.
-    ///
-    /// The batch of data which has appeared since the last FormatNext call is formatted
-    /// according to the FormatSettings provided to the ReadStream call
-    /// which created the connection and then is served over a BatchIterator.
-    ///
-    /// If no new data has appeared since the last FormatBatch call, the BatchIterator
-    /// that starts serving over `batch_iterator` will just serve an empty vector, and then
-    /// close.
-    ///
-    ///
-    /// + request `batch_iterator` is a [fuchsia.diagnostics.BatchIterator] that
-    ///   processes client requests to fetch [fuchsia.diagnostics/FormattedContent]
-    ///   structs encoding newly available data from the data hierarchies the Reader that spawned
-    ///   this stream is sitting upon.
-    ///
-    /// * error a [fuchsia.diagnostics/ReaderError]
-    ///   value indicating that there was an issue configuring the Batch
-    ///   connection for the stream data.
-    GetBatch(request<BatchIterator> batch_iterator) -> () error ReaderError;
 };
 
 /// Conceptually, a directory iterator, where each element in the iterator is a single

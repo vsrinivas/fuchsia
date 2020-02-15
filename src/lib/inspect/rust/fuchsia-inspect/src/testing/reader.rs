@@ -142,7 +142,7 @@ impl InspectDataFetcher {
                 }
                 for formatted_content in next_batch {
                     match formatted_content {
-                        FormattedContent::FormattedJsonHierarchy(data) => {
+                        FormattedContent::Json(data) => {
                             let mut buf = vec![0; data.size as usize];
                             data.vmo.read(&mut buf, 0).context("reading vmo")?;
                             let hierarchy_json = std::str::from_utf8(&buf).unwrap();

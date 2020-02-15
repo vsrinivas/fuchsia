@@ -28,10 +28,6 @@ class StubInspectReader : public fuchsia::diagnostics::Reader {
   void GetSnapshot(fuchsia::diagnostics::Format format,
                    fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
                    GetSnapshotCallback callback) override;
-  void ReadStream(fuchsia::diagnostics::StreamMode stream_mode, fuchsia::diagnostics::Format format,
-                  fidl::InterfaceRequest<fuchsia::diagnostics::Stream> request) override {
-    FXL_NOTIMPLEMENTED();
-  }
 
  protected:
   std::unique_ptr<StubInspectBatchIteratorBase> batch_iterator_;

@@ -36,14 +36,9 @@ class StubInspectArchive : public fuchsia::diagnostics::Archive {
   void ReadInspect(fidl::InterfaceRequest<fuchsia::diagnostics::Reader> request,
                    std::vector<fuchsia::diagnostics::SelectorArgument> selectors,
                    ReadInspectCallback callback) override;
-  void ReadLogs(fidl::InterfaceRequest<fuchsia::diagnostics::Reader> request,
-                std::vector<fuchsia::diagnostics::SelectorArgument> selectors,
-                ReadLogsCallback callback) override {
-    FXL_NOTIMPLEMENTED();
-  }
-  void ReadLifecycleEvents(fidl::InterfaceRequest<fuchsia::diagnostics::Reader> request,
-                           std::vector<fuchsia::diagnostics::SelectorArgument> selectors,
-                           ReadLifecycleEventsCallback callback) override {
+
+  void StreamDiagnostics(fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
+                         fuchsia::diagnostics::StreamParameters stream_parameters) override {
     FXL_NOTIMPLEMENTED();
   }
 

@@ -136,9 +136,7 @@ async fn retrieve_and_validate_results(
             .iter()
             .map(|entry| {
                 let mem_buf = match entry {
-                    fidl_fuchsia_diagnostics::FormattedContent::FormattedJsonHierarchy(buffer) => {
-                        buffer
-                    }
+                    fidl_fuchsia_diagnostics::FormattedContent::Json(buffer) => buffer,
                     _ => panic!("should be json formatted text"),
                 };
 

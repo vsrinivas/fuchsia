@@ -22,7 +22,7 @@ std::vector<fuchsia::diagnostics::FormattedContent> ToVmo(
     fsl::SizedVmo vmo;
     FXL_CHECK(fsl::VmoFromString(json_chunk, &vmo));
     fuchsia::diagnostics::FormattedContent content;
-    content.set_formatted_json_hierarchy(std::move(vmo).ToTransport());
+    content.set_json(std::move(vmo).ToTransport());
     json_batch_vmo.push_back(std::move(content));
   }
   return json_batch_vmo;

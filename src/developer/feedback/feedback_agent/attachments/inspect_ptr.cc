@@ -187,13 +187,13 @@ void Inspect::AppendNextInspectBatch() {
     }
 
     for (const auto& chunk : batch) {
-      if (!chunk.is_formatted_json_hierarchy()) {
+      if (!chunk.is_json()) {
         FX_LOGS(WARNING) << "Missing JSON Inspect chunk, skipping";
         continue;
       }
 
       std::string json;
-      if (!fsl::StringFromVmo(chunk.formatted_json_hierarchy(), &json)) {
+      if (!fsl::StringFromVmo(chunk.json(), &json)) {
         FX_LOGS(WARNING) << "Failed to convert Inspect data chunk to string, skipping";
         continue;
       }
