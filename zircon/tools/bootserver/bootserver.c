@@ -65,7 +65,7 @@ static bool is_redirected;
 static const char spinner[] = {'|', '/', '-', '\\'};
 static bool no_bind = false;
 
-char* date_string() {
+char* date_string(void) {
   static char date_buf[80];
   time_t t = time(NULL);
   struct tm tm = *localtime(&t);

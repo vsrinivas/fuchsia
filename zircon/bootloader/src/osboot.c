@@ -162,7 +162,7 @@ char key_prompt(const char* valid_keys, int timeout_s) {
   return valid_keys[0];
 }
 
-void do_select_fb() {
+void do_select_fb(void) {
   uint32_t cur_mode = get_gfx_mode();
   uint32_t max_mode = get_gfx_max_mode();
   while (true) {
@@ -223,7 +223,7 @@ void print_cmdline(void) {
 }
 
 static char netboot_cmdline[CMDLINE_MAX];
-void do_netboot() {
+void do_netboot(void) {
   efi_physical_addr mem = 0xFFFFFFFF;
   if (gBS->AllocatePages(AllocateMaxAddress, EfiLoaderData, KBUFSIZE / 4096, &mem)) {
     printf("Failed to allocate network io buffer\n");
