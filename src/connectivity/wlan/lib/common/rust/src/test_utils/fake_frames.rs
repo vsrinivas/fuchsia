@@ -181,7 +181,7 @@ pub fn make_data_frame_amsdu() -> Vec<u8> {
     amsdu_data_frame
 }
 
-pub fn make_eapol_frame() -> (MacAddr, MacAddr, Vec<u8>) {
+pub fn make_eapol_frame(addr1: MacAddr) -> (MacAddr, MacAddr, Vec<u8>) {
     #[rustfmt::skip]
     let mut frame = vec![
         // Data header:
@@ -196,11 +196,13 @@ pub fn make_eapol_frame() -> (MacAddr, MacAddr, Vec<u8>) {
         0x00, 0x00, 0x00, // oui
         0x88, 0x8E, // protocol id (EAPOL)
     ];
+    // overwrite addr1
+    frame[4..10].copy_from_slice(&addr1);
     // EAPOL frame:
     frame.extend(EAPOL_PDU);
 
     // (src, dst, data frame)
-    ([7; 6], [6; 6], frame)
+    ([7; 6], addr1, frame)
 }
 
 pub fn make_data_frame_amsdu_padding_too_short() -> Vec<u8> {

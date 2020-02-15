@@ -422,6 +422,25 @@ impl Client {
             .send_wlan_frame(out_buf, TxFlags::NONE)
             .map_err(|error| Error::Status(format!("error sending power management frame"), error))
     }
+
+    /// Only management and data frames should be processed. Furthermore, the source address should
+    /// be the BSSID the client associated to and the receiver address should either be broadcast
+    /// or the client's MAC address.
+    fn should_handle_frame<B: ByteSlice>(&self, mac_frame: &mac::MacFrame<B>) -> bool {
+        const BROADCAST_MAC_ADDR: [u8; 6] = [0xff; 6];
+        // Technically, |transmitter_addr| and |receiver_addr| would be more accurate but using src
+        // src and dst to be consistent with |data_dst_addr()|.
+        let (src_addr, dst_addr) = match mac_frame {
+            mac::MacFrame::Mgmt { mgmt_hdr, .. } => (Some(mgmt_hdr.addr3), mgmt_hdr.addr1),
+            mac::MacFrame::Data { fixed_fields, .. } => {
+                (mac::data_bssid(&fixed_fields), mac::data_dst_addr(&fixed_fields))
+            }
+            // Control frames are not supported. Drop them.
+            _ => return false,
+        };
+        src_addr.map_or(false, |src_addr| src_addr == self.bssid.0)
+            && (dst_addr == BROADCAST_MAC_ADDR || dst_addr == self.iface_mac)
+    }
 }
 
 pub struct BoundClient<'a> {
@@ -1807,7 +1826,7 @@ mod tests {
 
     #[test]
     fn eapol_frame_controlled_port_closed() {
-        let (src_addr, dst_addr, eapol_frame) = make_eapol_frame();
+        let (src_addr, dst_addr, eapol_frame) = make_eapol_frame(IFACE_MAC);
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         me.make_client_station();
@@ -1830,7 +1849,7 @@ mod tests {
 
     #[test]
     fn eapol_frame_is_controlled_port_open() {
-        let (src_addr, dst_addr, eapol_frame) = make_eapol_frame();
+        let (src_addr, dst_addr, eapol_frame) = make_eapol_frame(IFACE_MAC);
         let mut m = MockObjects::new();
         let mut me = m.make_mlme();
         me.make_client_station();
@@ -2109,6 +2128,130 @@ mod tests {
             .next_mlme_msg::<fidl_mlme::StatsQueryResponse>()
             .expect("Should receive a stats query response");
         assert_eq!(stats_query_resp, stats::empty_stats_query_response());
+    }
+
+    #[test]
+    fn drop_mgmt_frame_wrong_bssid() {
+        let frame = [
+            // Mgmt header 1101 for action frame
+            0b11010000, 0b00000000, // frame control
+            0, 0, // duration
+            7, 7, 7, 7, 7, 7, // addr1
+            6, 6, 6, 6, 6, 6, // addr2
+            0, 0, 0, 0, 0, 0, // addr3 (bssid should have been [6; 6])
+            0x10, 0, // sequence control
+        ];
+        let frame = mac::MacFrame::parse(&frame[..], false).unwrap();
+        assert_eq!(false, make_client_station().should_handle_frame(&frame));
+    }
+
+    #[test]
+    fn drop_mgmt_frame_wrong_dst_addr() {
+        let frame = [
+            // Mgmt header 1101 for action frame
+            0b11010000, 0b00000000, // frame control
+            0, 0, // duration
+            0, 0, 0, 0, 0, 0, // addr1 (dst_addr should have been [7; 6])
+            6, 6, 6, 6, 6, 6, // addr2
+            6, 6, 6, 6, 6, 6, // addr3
+            0x10, 0, // sequence control
+        ];
+        let frame = mac::MacFrame::parse(&frame[..], false).unwrap();
+        assert_eq!(false, make_client_station().should_handle_frame(&frame));
+    }
+
+    #[test]
+    fn mgmt_frame_ok_broadcast() {
+        let frame = [
+            // Mgmt header 1101 for action frame
+            0b11010000, 0b00000000, // frame control
+            0, 0, // duration
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // addr1 (dst_addr is broadcast)
+            6, 6, 6, 6, 6, 6, // addr2
+            6, 6, 6, 6, 6, 6, // addr3
+            0x10, 0, // sequence control
+        ];
+        let frame = mac::MacFrame::parse(&frame[..], false).unwrap();
+        assert_eq!(true, make_client_station().should_handle_frame(&frame));
+    }
+
+    #[test]
+    fn mgmt_frame_ok_client_addr() {
+        let frame = [
+            // Mgmt header 1101 for action frame
+            0b11010000, 0b00000000, // frame control
+            0, 0, // duration
+            7, 7, 7, 7, 7, 7, // addr1 (dst_addr should have been [7; 6])
+            6, 6, 6, 6, 6, 6, // addr2
+            6, 6, 6, 6, 6, 6, // addr3
+            0x10, 0, // sequence control
+        ];
+        let frame = mac::MacFrame::parse(&frame[..], false).unwrap();
+        assert_eq!(true, make_client_station().should_handle_frame(&frame));
+    }
+
+    #[test]
+    fn drop_data_frame_wrong_bssid() {
+        let frame = [
+            // Data header 0100
+            0b01001000,
+            0b00000010, // frame control. right 2 bits of octet 2: from_ds(1), to_ds(0)
+            0, 0, // duration
+            7, 7, 7, 7, 7, 7, // addr1 (dst_addr)
+            0, 0, 0, 0, 0, 0, // addr2 (bssid should have been [6; 6])
+            6, 6, 6, 6, 6, 6, // addr3
+            0x10, 0, // sequence control
+        ];
+        let frame = mac::MacFrame::parse(&frame[..], false).unwrap();
+        assert_eq!(false, make_client_station().should_handle_frame(&frame));
+    }
+
+    #[test]
+    fn drop_data_frame_wrong_dst_addr() {
+        let frame = [
+            // Data header 0100
+            0b01001000,
+            0b00000010, // frame control. right 2 bits of octet 2: from_ds(1), to_ds(0)
+            0, 0, // duration
+            0, 0, 0, 0, 0, 0, // addr1 (dst_addr should have been [7; 6])
+            6, 6, 6, 6, 6, 6, // addr2 (bssid)
+            6, 6, 6, 6, 6, 6, // addr3
+            0x10, 0, // sequence control
+        ];
+        let frame = mac::MacFrame::parse(&frame[..], false).unwrap();
+        assert_eq!(false, make_client_station().should_handle_frame(&frame));
+    }
+
+    #[test]
+    fn data_frame_ok_broadcast() {
+        let frame = [
+            // Data header 0100
+            0b01001000,
+            0b00000010, // frame control. right 2 bits of octet 2: from_ds(1), to_ds(0)
+            0, 0, // duration
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // addr1 (dst_addr is broadcast)
+            6, 6, 6, 6, 6, 6, // addr2 (bssid)
+            6, 6, 6, 6, 6, 6, // addr3
+            0x10, 0, // sequence control
+        ];
+        let frame = mac::MacFrame::parse(&frame[..], false).unwrap();
+        assert_eq!(true, make_client_station().should_handle_frame(&frame));
+    }
+
+    #[test]
+    fn data_frame_ok_client_addr() {
+        let frame = [
+            // Data header 0100
+            0b01001000,
+            0b00000010, // frame control. right 2 bits of octet 2: from_ds(1), to_ds(0)
+            0, 0, // duration
+            7, 7, 7, 7, 7, 7, // addr1 (dst_addr)
+            6, 6, 6, 6, 6, 6, // addr2 (bssid)
+            6, 6, 6, 6, 6, 6, // addr3
+            0x10, 0, // sequence control
+        ];
+        let frame = mac::MacFrame::parse(&frame[..], false).unwrap();
+        assert_eq!(true, make_client_station().should_handle_frame(&frame));
     }
 
     fn send_data_frame(

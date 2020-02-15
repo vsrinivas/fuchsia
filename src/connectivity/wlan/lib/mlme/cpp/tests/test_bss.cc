@@ -549,10 +549,11 @@ std::unique_ptr<Packet> CreateDataFrame(fbl::Span<const uint8_t> payload) {
   auto data_hdr = w.Write<DataFrameHeader>();
   data_hdr->fc.set_type(FrameType::kData);
   data_hdr->fc.set_subtype(DataSubtype::kDataSubtype);
+  data_hdr->fc.set_to_ds(0);
   data_hdr->fc.set_from_ds(1);
-  data_hdr->addr1 = bssid;
+  data_hdr->addr1 = client;
   data_hdr->addr2 = bssid;
-  data_hdr->addr3 = client;
+  data_hdr->addr3 = bssid;
   data_hdr->sc.set_val(42);
 
   auto llc_hdr = w.Write<LlcHeader>();
@@ -589,10 +590,11 @@ std::unique_ptr<Packet> CreateAmsduDataFramePacket(
   auto data_hdr = w.Write<DataFrameHeader>();
   data_hdr->fc.set_type(FrameType::kData);
   data_hdr->fc.set_subtype(DataSubtype::kQosdata);
+  data_hdr->fc.set_to_ds(0);
   data_hdr->fc.set_from_ds(1);
-  data_hdr->addr1 = bssid;
+  data_hdr->addr1 = client;
   data_hdr->addr2 = bssid;
-  data_hdr->addr3 = client;
+  data_hdr->addr3 = bssid;
   data_hdr->sc.set_val(42);
   auto qos_control = w.Write<QosControl>();
   qos_control->set_amsdu_present(1);

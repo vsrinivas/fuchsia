@@ -498,7 +498,7 @@ impl Associated {
         self.request_bu_if_available(
             sta,
             fixed_data_fields.frame_ctrl,
-            mac::data_dst_addr(fixed_data_fields),
+            mac::data_dst_addr(&fixed_data_fields),
         );
 
         sta.handle_data_frame(
@@ -746,6 +746,11 @@ impl States {
             None => return self,
         };
 
+        if !sta.sta.should_handle_frame(&mac_frame) {
+            warn!("Mac frame is either from a foreign BSS or not destined for us. Dropped.");
+            return self;
+        }
+
         // Drop frames which are not permitted in the STA's current state.
         let frame_class = mac::FrameClass::from(&mac_frame);
         if !self.is_frame_class_permitted(frame_class) {
@@ -757,12 +762,6 @@ impl States {
                 self.on_mgmt_frame(sta, &mgmt_hdr, body, rx_info)
             }
             mac::MacFrame::Data { fixed_fields, addr4, qos_ctrl, body, .. } => {
-                // Drop frames from foreign BSS.
-                match mac::data_bssid(&fixed_fields) {
-                    Some(bssid) if bssid == sta.sta.bssid.0 => (),
-                    _ => return self,
-                };
-
                 if let States::Associated(state) = &mut self {
                     state.on_data_frame(
                         sta,
@@ -777,7 +776,7 @@ impl States {
                 // Drop data frames in all other states
                 self
             }
-            // Data and Control frames are not yet supported. Drop them.
+            // Control frames are not yet supported. Drop them.
             _ => self,
         }
     }
@@ -791,10 +790,6 @@ impl States {
         body: B,
         rx_info: Option<banjo_wlan_mac::WlanRxInfo>,
     ) -> States {
-        if mgmt_hdr.addr3 != sta.sta.bssid.0 {
-            return self;
-        }
-
         // Parse management frame. Drop corrupted ones.
         let mgmt_body = match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
             Some(x) => x,
@@ -1781,7 +1776,7 @@ mod tests {
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = Associated(empty_association(&mut sta));
 
-        let (src_addr, dst_addr, eapol_frame) = make_eapol_frame();
+        let (src_addr, dst_addr, eapol_frame) = make_eapol_frame(IFACE_MAC);
         let (fixed, addr4, qos, body) = parse_data_frame(&eapol_frame[..]);
         state.on_data_frame(&mut sta, &fixed, addr4, qos, body);
 
@@ -1807,7 +1802,7 @@ mod tests {
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
         let state = Associated(empty_association(&mut sta));
 
-        let (src_addr, dst_addr, eapol_frame) = make_eapol_frame();
+        let (src_addr, dst_addr, eapol_frame) = make_eapol_frame(IFACE_MAC);
         let (fixed, addr4, qos, body) = parse_data_frame(&eapol_frame[..]);
         state.on_data_frame(&mut sta, &fixed, addr4, qos, body);
 
@@ -2038,7 +2033,7 @@ mod tests {
             // Mgmt Header:
             0b1011_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
-            6, 6, 6, 6, 6, 6, // Addr1
+            3, 3, 3, 3, 3, 3, // Addr1 == IFACE_MAC
             3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
@@ -2067,7 +2062,7 @@ mod tests {
             // Mgmt Header:
             0b1011_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
-            6, 6, 6, 6, 6, 6, // Addr1
+            3, 3, 3, 3, 3, 3, // Addr1 == IFACE_MAC
             3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
@@ -2125,7 +2120,7 @@ mod tests {
             // Mgmt Header:
             0b1100_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
-            6, 6, 6, 6, 6, 6, // Addr1
+            3, 3, 3, 3, 3, 3, // Addr1 == IFACE_MAC
             3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
@@ -2150,7 +2145,7 @@ mod tests {
             // Mgmt Header:
             0b1100_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
-            6, 6, 6, 6, 6, 6, // Addr1
+            3, 3, 3, 3, 3, 3, // Addr1 == IFACE_MAC
             3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
@@ -2196,7 +2191,7 @@ mod tests {
             // Mgmt Header:
             0b1011_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
-            6, 6, 6, 6, 6, 6, // Addr1
+            3, 3, 3, 3, 3, 3, // Addr1 == IFACE_MAC
             3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
@@ -2225,7 +2220,7 @@ mod tests {
             // Mgmt Header:
             0b0001_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
-            6, 6, 6, 6, 6, 6, // Addr1
+            3, 3, 3, 3, 3, 3, // Addr1 == IFACE_MAC
             3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
@@ -2254,7 +2249,7 @@ mod tests {
             // Mgmt Header:
             0b0001_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
-            6, 6, 6, 6, 6, 6, // Addr1
+            3, 3, 3, 3, 3, 3, // Addr1 == IFACE_MAC
             3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
@@ -2305,7 +2300,7 @@ mod tests {
             // Mgmt Header:
             0b1100_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
-            6, 6, 6, 6, 6, 6, // Addr1
+            3, 3, 3, 3, 3, 3, // Addr1 == IFACE_MAC
             3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
@@ -2325,13 +2320,13 @@ mod tests {
         let mut state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
 
-        // Disassociation: Associating > Authenticated
+        // Disassociation: Associated > Authenticated
         #[rustfmt::skip]
         let disassoc = vec![
             // Mgmt Header:
             0b1010_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
-            6, 6, 6, 6, 6, 6, // Addr1
+            3, 3, 3, 3, 3, 3, // Addr1 == IFACE_MAC
             3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
@@ -2357,7 +2352,7 @@ mod tests {
             // Mgmt Header:
             0b1100_00_00, 0b00000000, // Frame Control
             0, 0, // Duration
-            6, 6, 6, 6, 6, 6, // Addr1
+            3, 3, 3, 3, 3, 3, // Addr1 == IFACE_MAC
             3, 3, 3, 3, 3, 3, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0x10, 0, // Sequence Control
@@ -2943,7 +2938,7 @@ mod tests {
             // Mgmt header
             0b10000000, 0, // Frame Control
             0, 0, // Duration
-            6, 6, 6, 6, 6, 6, // Addr1
+            3, 3, 3, 3, 3, 3, // Addr1 == IFACE_MAC
             7, 7, 7, 7, 7, 7, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0, 0, // Sequence Control
@@ -2983,7 +2978,7 @@ mod tests {
             // Mgmt header
             0b10000000, 0, // Frame Control
             0, 0, // Duration
-            6, 6, 6, 6, 6, 6, // Addr1
+            3, 3, 3, 3, 3, 3, // Addr1 == IFACE_MAC
             7, 7, 7, 7, 7, 7, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0, 0, // Sequence Control
@@ -3044,7 +3039,7 @@ mod tests {
             // Mgmt header
             0b10000000, 0, // Frame Control
             0, 0, // Duration
-            6, 6, 6, 6, 6, 6, // Addr1
+            3, 3, 3, 3, 3, 3, // Addr1 == IFACE_MAC
             7, 7, 7, 7, 7, 7, // Addr2
             6, 6, 6, 6, 6, 6, // Addr3
             0, 0, // Sequence Control
