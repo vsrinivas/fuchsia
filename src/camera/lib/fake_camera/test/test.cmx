@@ -1,0 +1,19 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/fake_camera_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

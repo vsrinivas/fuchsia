@@ -14,6 +14,8 @@
 
 namespace camera {
 
+class FakeCameraImpl;
+
 // Implements the FakeStream interface. Unless otherwise noted, all public methods are thread-safe,
 // and all private methods must be called on the loop's thread.
 class FakeStreamImpl : public FakeStream, public fuchsia::camera3::Stream {
@@ -42,6 +44,8 @@ class FakeStreamImpl : public FakeStream, public fuchsia::camera3::Stream {
   fuchsia::camera3::StreamProperties properties_;
   std::queue<fuchsia::camera3::FrameInfo> frames_;
   GetNextFrameCallback frame_request_;
+
+  friend class FakeCameraImpl;
 };
 
 }  // namespace camera

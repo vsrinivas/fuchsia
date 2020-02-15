@@ -12,7 +12,7 @@
 
 namespace camera {
 
-// TODO(msandy): remove when fxb/361307 lands
+// TODO(msandy): remove when fxr/361307 lands
 template <class T>
 static void CloseAllWithEpitaph(fidl::BindingSet<T>& bindings, zx_status_t epitaph_value) {
   for (const auto& binding : bindings.bindings()) {
