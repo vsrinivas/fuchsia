@@ -547,7 +547,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.ftl-lib-test",
 #------------------
 #------------------
     ":test.sys.fvm-unit-test",
@@ -1135,7 +1134,6 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.ftl-lib-test",
 #------------------
 #------------------
     ":test.sys.fvm-unit-test",
@@ -2984,7 +2982,7 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/serial/drivers/ftdi/test:ftdi-i2c-test-manifest",
     "//src/devices/block/drivers/ftl/test:ftl-integration-manifest",
 #------------------
-    #":test.sys.ftl-lib-test",
+    "//zircon/system/ulib/ftl/test:ftl_test-manifest",
 #------------------
     "//src/devices/block/drivers/ftl/test:ftl-manifest",
     "//zircon/system/utest/futex-ownership:futex-ownership-manifest",
@@ -3697,7 +3695,7 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/serial/drivers/ftdi/test:ftdi-i2c-test-manifest",
     "//src/devices/block/drivers/ftl/test:ftl-integration-manifest",
 #------------------
-    #":test.sys.ftl-lib-test",
+    "//zircon/system/ulib/ftl/test:ftl_test-manifest",
 #------------------
     "//src/devices/block/drivers/ftl/test:ftl-manifest",
     "//zircon/system/utest/futex-ownership:futex-ownership-manifest",
