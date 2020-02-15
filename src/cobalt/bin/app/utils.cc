@@ -6,6 +6,7 @@
 
 #include <src/lib/syslog/cpp/logger.h>
 
+#include "src/lib/fxl/logging.h"
 #include "third_party/cobalt/src/lib/util/file_util.h"
 #include "third_party/cobalt/src/lib/util/pem_util.h"
 
@@ -82,7 +83,7 @@ Status ToCobaltStatus(util::Status s) {
 }
 
 std::string ReadPublicKeyPem(const std::string& pem_file_path) {
-  VLOG(2) << "Reading PEM file at " << pem_file_path;
+  FXL_VLOG(2) << "Reading PEM file at " << pem_file_path;
   std::string pem_out;
   FXL_CHECK(util::PemUtil::ReadTextFile(pem_file_path, &pem_out))
       << "Unable to read file public key PEM file from path " << pem_file_path << ".";

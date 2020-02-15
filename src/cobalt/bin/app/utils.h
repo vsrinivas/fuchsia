@@ -12,7 +12,7 @@
 
 #include "third_party/cobalt/src/lib/util/status.h"
 #include "third_party/cobalt/src/logger/status.h"
-#include "third_party/cobalt/src/uploader/shipping_manager.h"
+#include "third_party/cobalt/src/observation_store/observation_store.h"
 
 namespace cobalt {
 

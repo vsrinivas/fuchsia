@@ -11,7 +11,6 @@
 #include "third_party/cobalt/src/local_aggregation/event_aggregator_mgr.h"
 #include "third_party/cobalt/src/observation_store/observation_store.h"
 #include "third_party/cobalt/src/public/cobalt_service.h"
-#include "third_party/cobalt/src/uploader/shipping_manager.h"
 
 namespace cobalt {
 
