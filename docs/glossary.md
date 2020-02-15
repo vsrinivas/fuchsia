@@ -250,7 +250,7 @@ Fuchsia. Includes a runtime as implemented by [appmgr](#appmgr) and
 [sysmgr](#sysmgr), protocols and types as defined in [fuchsia.sys], build-time
 tools such as [cmc], and SDK libraries such as [libsys] and [libsvc].
 
--   [Components v2](#components-v2)
+See also: [Components v2](#components-v2)
 
 [fuchsia.sys]: /sdk/fidl/fuchsia.sys/
 [cmc]: /src/sys/cmc
@@ -264,7 +264,7 @@ implementation. Includes a runtime as implemented by
 [component_manager](#component-manager), protocols and types as defined in
 [fuchsia.sys2], and build-time tools such as [cmc].
 
--   [Components v1](#components-v1)
+See also: [Components v1](#components-v1)
 
 [fuchsia.sys2]: /sdk/fidl/fuchsia.sys2/
 [cmc]: /src/sys/cmc
