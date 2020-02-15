@@ -1,5 +1,9 @@
 {
     "program": {
+        "args": [
+            "--mode",
+            "ALWAYS_SUCCEED"
+        ],
         "binary": "bin/app"
     },
     "sandbox": {

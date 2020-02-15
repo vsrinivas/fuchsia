@@ -31,8 +31,10 @@ use std::sync::Arc;
 
 lazy_static! {
     /// Temporary pre-key material which constitutes a successful authentication
-    /// attempt, for manual and automatic tests.
-    static ref VALID_PREKEY_MATERIAL: Vec<u8>  = vec![77; 32];
+    /// attempt, for manual and automatic tests. This constant is specifically
+    /// for the developer authenticator implementations
+    /// (see src/identity/bin/dev_authenticator) and needs to stay in sync.
+    static ref MAGIC_PREKEY: Vec<u8>  = vec![77; 32];
 }
 
 // A static enrollment id which represents the only enrollment.
@@ -241,7 +243,7 @@ impl AccountHandler {
                                 AccountManagerError::from(authenticator_err).api_error
                             })?;
                         // TODO(45041): Use storage manager for key validation
-                        if prekey_material != *VALID_PREKEY_MATERIAL {
+                        if prekey_material != *MAGIC_PREKEY {
                             warn!("Received unexpected pre-key material from authenticator");
                             return Err(ApiError::Internal);
                         }
@@ -328,7 +330,7 @@ impl AccountHandler {
                     })?;
                 // TODO(45041): Use storage manager for key validation
                 if let Some(prekey_material) = prekey_material {
-                    if prekey_material != *VALID_PREKEY_MATERIAL {
+                    if prekey_material != *MAGIC_PREKEY {
                         info!("Encountered a failed authentication attempt");
                         return Err(ApiError::FailedAuthentication);
                     }
@@ -683,7 +685,7 @@ mod tests {
         };
 
         /// Pre-key material that fails authentication.
-        static ref TEST_INVALID_PREKEY_MATERIAL: Vec<u8>  = vec![80; 32];
+        static ref TEST_NOT_MAGIC_PREKEY: Vec<u8>  = vec![80; 32];
 
         /// Assumed time between a lock request and when the account handler is locked
         static ref LOCK_REQUEST_DURATION: zx::Duration = zx::Duration::from_millis(20);
@@ -976,7 +978,7 @@ mod tests {
         authenticator
             .enqueue(Expected::Enroll { resp: Err(AuthenticationApiError::InvalidAuthContext) });
         authenticator.enqueue(Expected::Enroll {
-            resp: Ok((TEST_ENROLLMENT_DATA.clone(), VALID_PREKEY_MATERIAL.clone())),
+            resp: Ok((TEST_ENROLLMENT_DATA.clone(), MAGIC_PREKEY.clone())),
         });
         let location = TempLocation::new();
         let inspector = Arc::new(Inspector::new());
@@ -1024,13 +1026,13 @@ mod tests {
     fn test_unlock_account_success_without_enrollment_update() {
         let authenticator = FakeAuthenticator::new();
         authenticator.enqueue(Expected::Enroll {
-            resp: Ok((TEST_ENROLLMENT_DATA.clone(), VALID_PREKEY_MATERIAL.clone())),
+            resp: Ok((TEST_ENROLLMENT_DATA.clone(), MAGIC_PREKEY.clone())),
         });
         authenticator.enqueue(Expected::Authenticate {
             req: vec![Enrollment { id: 0, data: TEST_ENROLLMENT_DATA.clone() }],
             resp: Ok(AttemptedEvent {
                 enrollment_id: 0,
-                prekey_material: VALID_PREKEY_MATERIAL.clone(),
+                prekey_material: MAGIC_PREKEY.clone(),
                 timestamp: 1337,
                 updated_enrollment_data: None,
             }),
@@ -1068,13 +1070,13 @@ mod tests {
     fn test_unlock_account_success_with_enrollment_update() {
         let authenticator = FakeAuthenticator::new();
         authenticator.enqueue(Expected::Enroll {
-            resp: Ok((TEST_ENROLLMENT_DATA.clone(), VALID_PREKEY_MATERIAL.clone())),
+            resp: Ok((TEST_ENROLLMENT_DATA.clone(), MAGIC_PREKEY.clone())),
         });
         authenticator.enqueue(Expected::Authenticate {
             req: vec![Enrollment { id: 0, data: TEST_ENROLLMENT_DATA.clone() }],
             resp: Ok(AttemptedEvent {
                 enrollment_id: 0,
-                prekey_material: VALID_PREKEY_MATERIAL.clone(),
+                prekey_material: MAGIC_PREKEY.clone(),
                 timestamp: 1337,
                 updated_enrollment_data: Some(TEST_UPDATED_ENROLLMENT_DATA.clone()),
             }),
@@ -1113,7 +1115,7 @@ mod tests {
 
         // Required for setup
         authenticator.enqueue(Expected::Enroll {
-            resp: Ok((TEST_ENROLLMENT_DATA.clone(), VALID_PREKEY_MATERIAL.clone())),
+            resp: Ok((TEST_ENROLLMENT_DATA.clone(), MAGIC_PREKEY.clone())),
         });
 
         // Aborted authentication attempt
@@ -1127,7 +1129,7 @@ mod tests {
             req: vec![Enrollment { id: 0, data: TEST_ENROLLMENT_DATA.clone() }],
             resp: Ok(AttemptedEvent {
                 enrollment_id: 1,
-                prekey_material: VALID_PREKEY_MATERIAL.clone(),
+                prekey_material: MAGIC_PREKEY.clone(),
                 timestamp: 1337,
                 updated_enrollment_data: Some(TEST_UPDATED_ENROLLMENT_DATA.clone()),
             }),
@@ -1138,7 +1140,7 @@ mod tests {
             req: vec![Enrollment { id: 0, data: TEST_ENROLLMENT_DATA.clone() }],
             resp: Ok(AttemptedEvent {
                 enrollment_id: 0,
-                prekey_material: TEST_INVALID_PREKEY_MATERIAL.clone(),
+                prekey_material: TEST_NOT_MAGIC_PREKEY.clone(),
                 timestamp: 1337,
                 updated_enrollment_data: Some(TEST_UPDATED_ENROLLMENT_DATA.clone()),
             }),
@@ -1677,7 +1679,7 @@ mod tests {
     fn test_lock_request_persistent_account_with_auth_mechanism() {
         let authenticator = FakeAuthenticator::new();
         authenticator.enqueue(Expected::Enroll {
-            resp: Ok((TEST_ENROLLMENT_DATA.clone(), VALID_PREKEY_MATERIAL.clone())),
+            resp: Ok((TEST_ENROLLMENT_DATA.clone(), MAGIC_PREKEY.clone())),
         });
         let location = TempLocation::new();
         let inspector = Arc::new(Inspector::new());

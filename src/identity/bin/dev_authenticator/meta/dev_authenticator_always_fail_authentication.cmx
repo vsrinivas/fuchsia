@@ -1,0 +1,14 @@
+{
+    "program": {
+        "args": [
+            "--mode",
+            "ALWAYS_FAIL_AUTHENTICATION"
+        ],
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
