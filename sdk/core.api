@@ -24,6 +24,7 @@ sdk://fidl/fuchsia.castconfig
 sdk://fidl/fuchsia.castsetup
 sdk://fidl/fuchsia.castsysteminfo
 sdk://fidl/fuchsia.cobalt
+sdk://fidl/fuchsia.component
 sdk://fidl/fuchsia.deprecatedtimezone
 sdk://fidl/fuchsia.developer.tiles
 sdk://fidl/fuchsia.factory
