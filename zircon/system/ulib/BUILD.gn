@@ -214,6 +214,8 @@ group("ulib-host") {
     "libzbi",
     "log",
     "pretty",
+    "trace-engine:trace-engine-headers-for-reader",
+    "trace-reader",
     "unittest:unittest-static",
     "zxtest",
   ]

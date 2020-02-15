@@ -2,29 +2,65 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_test("trace-reader-test") {
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36139.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+test("trace-reader-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
   sources = [
     "file_reader_tests.cc",
     "reader_tests.cc",
     "records_tests.cc",
   ]
-  deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/fit",
-    "$zx/system/ulib/trace-engine:trace-engine-headers-for-reader",
-    "$zx/system/ulib/trace-reader",
-    "$zx/system/ulib/zxtest",
-  ]
   if (is_fuchsia) {
-    deps += [
-      "$zx/system/ulib/fdio",
-      "$zx/system/ulib/zircon",
-      "$zx/system/ulib/zx",
+    deps = [
+      "//zircon/public/lib/fdio",
+      "//zircon/public/lib/zx",
+      "//zircon/public/lib/fbl",
+      "//zircon/public/lib/fit",
+      "//zircon/public/lib/trace-engine-headers-for-reader",
+      "//zircon/public/lib/trace-reader",
+      "//zircon/public/lib/zxtest",
+    ]
+  } else if (is_host) {
+    deps = [
+      "//zircon/public/lib/fbl-host",
+      "//zircon/public/lib/fit-host",
+      "//zircon/public/lib/trace-engine-headers-for-reader-host",
+      "//zircon/public/lib/trace-reader-host",
+      "//zircon/public/lib/zxtest-host",
     ]
   }
 }
 
 group("test") {
   testonly = true
+  deps = [ ":trace-reader-test" ]
+}
+
+migrated_manifest("trace-reader-test-manifest") {
   deps = [ ":trace-reader-test" ]
 }

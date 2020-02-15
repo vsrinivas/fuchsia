@@ -116,7 +116,6 @@ if (current_cpu != "") {
 #------------------
 #------------------
 #------------------
-      "$zx/system/ulib/trace-reader/test",
 #------------------
 #------------------
       "$zx/system/ulib/zbi-bootfs/test",
@@ -239,7 +238,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/minfs/test:minfs-host",
 #------------------
 #------------------
-      "$zx/system/ulib/trace-reader/test",
 #------------------
 #------------------
 #------------------

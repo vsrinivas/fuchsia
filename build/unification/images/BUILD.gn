@@ -641,7 +641,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.trace-reader-test-test",
 #------------------
 #------------------
 #------------------
@@ -1228,7 +1227,6 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.trace-reader-test-test",
 #------------------
 #------------------
 #------------------
@@ -3216,7 +3214,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/trace-engine/test:hash-table-test-manifest",
     "//zircon/system/ulib/trace-provider/test:provider-test-manifest",
 #------------------
-    #":test.sys.trace-reader-test-test",
+    "//zircon/system/ulib/trace-reader/test:trace-reader-test-manifest",
 #------------------
 #------------------
     "//zircon/system/utest/trace:trace-static-engine-manifest",
@@ -3926,7 +3924,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/trace-engine/test:hash-table-test-manifest",
     "//zircon/system/ulib/trace-provider/test:provider-test-manifest",
 #------------------
-    #":test.sys.trace-reader-test-test",
+    "//zircon/system/ulib/trace-reader/test:trace-reader-test-manifest",
 #------------------
 #------------------
     "//zircon/system/utest/trace:trace-static-engine-manifest",
