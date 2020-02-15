@@ -1,0 +1,22 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("test") {
+  testonly = true
+  deps = [ ":ftl_test" ]
+}
+
+zx_test("ftl_test") {
+  output_name = "ftl-lib-test"
+  sources = [
+    "ndm_driver_test.cc",
+    "ndm_test.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/ftl",
+    "$zx/system/ulib/zxtest",
+  ]
+  defines = [ "NDM_DEBUG" ]
+  include_dirs = [ ".." ]
+}

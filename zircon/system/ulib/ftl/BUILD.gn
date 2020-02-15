@@ -59,34 +59,10 @@ zx_library("ftl") {
     deps += [ "$zx/system/ulib/zircon:headers" ]
   }
 
-  configs += [ ":config" ]
+  defines = [ "NDM_DEBUG" ]
 
   # TODO(41889): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
   configs +=
       [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
-}
-
-config("config") {
-  visibility = [ ":*" ]
-  defines = [ "NDM_DEBUG" ]
-  include_dirs = [ "." ]
-}
-
-zx_test("ftl_test") {
-  output_name = "ftl-lib-test"
-  sources = [
-    "test/ndm_driver_test.cc",
-    "test/ndm_test.cc",
-  ]
-  deps = [
-    ":ftl",
-    "$zx/system/ulib/zxtest",
-  ]
-  configs += [ ":config" ]
-}
-
-group("test") {
-  testonly = true
-  deps = [ ":ftl_test" ]
 }
