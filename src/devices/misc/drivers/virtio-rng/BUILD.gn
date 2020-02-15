@@ -1,0 +1,31 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("virtio_rng") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [
+    "rng.cc",
+    "rng_driver.cc",
+  ]
+  deps = [
+    "//src/devices/bus/lib/virtio",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddktl",
+  ]
+}
+
+
+migrated_manifest("virtio_rng-manifest") {
+  deps = [ ":virtio_rng" ]
+}

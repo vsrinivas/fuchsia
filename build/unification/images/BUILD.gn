@@ -1715,14 +1715,14 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/ulib/ddktl/test:ddktl-test-manifest",
   #------------------
   #------------------
-    "//src/devices/bus/drivers/virtio:virtio_block-manifest",
-    "//src/devices/bus/drivers/virtio:virtio_console-manifest",
-    "//src/devices/bus/drivers/virtio:virtio_ethernet-manifest",
-    "//src/devices/bus/drivers/virtio:virtio_gpu-manifest",
-    "//src/devices/bus/drivers/virtio:virtio_input-manifest",
-    "//src/devices/bus/drivers/virtio:virtio_rng-manifest",
-    "//src/devices/bus/drivers/virtio:virtio_scsi-manifest",
-    "//src/devices/bus/drivers/virtio:virtio_socket-manifest",
+    "//src/devices/block/drivers/virtio:virtio_block-manifest",
+    "//src/devices/serial/drivers/virtio-console:virtio_console-manifest",
+    "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet-manifest",
+    "//src/graphics/drivers/virtio:virtio_gpu-manifest",
+    "//src/ui/input/drivers/virtio:virtio_input-manifest",
+    "//src/devices/misc/drivers/virtio-rng:virtio_rng-manifest",
+    "//src/devices/block/drivers/virtio:virtio_scsi-manifest",
+    "//src/devices/misc/drivers/virtio-socket:virtio_socket-manifest",
   #------------------
   #------------------
       #":driver.qemu-arm64",
@@ -3252,9 +3252,11 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/utest/vdso-variant:vdso-variant-helper-manifest",
     "//src/graphics/display/drivers/vim-display:vim-display-test-manifest",
 #------------------
-    "//src/devices/bus/drivers/virtio:virtio-test-manifest",
+    "//src/ui/input/drivers/virtio:virtio-input-test-manifest",
+    "//src/graphics/drivers/virtio:virtio-gpu-test-manifest",
+    "//src/devices/block/drivers/virtio:virtio-block-test-manifest",
+    "//src/devices/block/drivers/virtio:virtio-scsi-test-manifest",
 #------------------
-    "//zircon/system/utest/virtio:virtio-manifest",
     "//zircon/system/utest/vmo:vmo-manifest",
     "//src/devices/usb/drivers/xhci-rewrite:xhci-unittest-manifest",
 #------------------
@@ -3959,9 +3961,11 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/utest/vdso-variant:vdso-variant-manifest",
     "//src/graphics/display/drivers/vim-display:vim-display-test-manifest",
 #------------------
-    "//src/devices/bus/drivers/virtio:virtio-test-manifest",
+    "//src/ui/input/drivers/virtio:virtio-input-test-manifest",
+    "//src/graphics/drivers/virtio:virtio-gpu-test-manifest",
+    "//src/devices/block/drivers/virtio:virtio-block-test-manifest",
+    "//src/devices/block/drivers/virtio:virtio-scsi-test-manifest",
 #------------------
-    "//zircon/system/utest/virtio:virtio-manifest",
     "//zircon/system/utest/vmo:vmo-manifest",
     "//src/devices/usb/drivers/xhci-rewrite:xhci-unittest-manifest",
 #------------------

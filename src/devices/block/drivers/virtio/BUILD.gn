@@ -1,0 +1,142 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("virtio_block") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [ "block_driver.cc" ]
+  deps = [
+    ":block_lib",
+    "//src/devices/bus/lib/virtio",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddktl",
+    "//zircon/system/banjo/ddk.protocol.block",
+  ]
+}
+
+source_set("block_lib") {
+  defines = [ "_ALL_SOURCE" ]
+  sources = [ "block.cc" ]
+  public_deps = [
+    "//src/devices/bus/lib/virtio",
+    "//zircon/public/lib/ddktl",
+    "//zircon/system/banjo/ddk.protocol.block",
+  ]
+}
+
+source_set("scsi_lib") {
+  defines = [ "_ALL_SOURCE" ]
+  sources = [ "scsi.cc" ]
+  public_deps = [
+    "//src/devices/bus/lib/virtio",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/scsi",
+    "//zircon/system/banjo/ddk.protocol.block",
+  ]
+}
+
+driver_module("virtio_scsi") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [ "scsi_driver.cc" ]
+  deps = [
+    "//src/devices/bus/lib/virtio",
+    ":scsi_lib",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddktl",
+  ]
+}
+
+test("virtio-block-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  sources = [
+    "block_test.cc",
+  ]
+  deps = [
+    ":block_lib",
+    "//src/devices/bus/lib/virtio",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fake-bti",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+test("virtio-scsi-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  sources = [
+    "scsi_test.cc",
+  ]
+  deps = [
+    ":scsi_lib",
+    "//src/devices/bus/lib/virtio",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fake-bti",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+
+migrated_manifest("virtio_block-manifest") {
+  deps = [ ":virtio_block" ]
+}
+
+migrated_manifest("virtio_scsi-manifest") {
+  deps = [ ":virtio_scsi" ]
+}
+
+migrated_manifest("virtio-block-test-manifest") {
+  deps = [ ":virtio-block-test" ]
+}
+
+migrated_manifest("virtio-scsi-test-manifest") {
+  deps = [ ":virtio-scsi-test" ]
+}

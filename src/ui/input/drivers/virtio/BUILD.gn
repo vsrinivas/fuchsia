@@ -1,0 +1,71 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+driver_module("virtio_input") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  sources = [
+    "input.cc",
+    "input_driver.cc",
+    "input_kbd.cc",
+    "input_touch.cc",
+  ]
+  deps = [
+    "//src/devices/bus/lib/virtio",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/hid",
+    "//zircon/system/banjo/ddk.protocol.hidbus",
+    "//zircon/system/fidl/fuchsia-hardware-pty:c",
+  ]
+}
+
+test("virtio-input-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  if (is_fuchsia) {
+    testonly = false
+  }
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  sources = [
+    "input_test.cc",
+    "input_touch.cc",
+  ]
+  deps = [
+    "//src/devices/bus/lib/virtio",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/hid-parser",
+    "//zircon/public/lib/fake-bti",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/unittest",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+migrated_manifest("virtio_input-manifest") {
+  deps = [ ":virtio_input" ]
+}
+
+migrated_manifest("virtio-input-test-manifest") {
+  deps = [ ":virtio-input-test" ]
+}
