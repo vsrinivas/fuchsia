@@ -12,7 +12,7 @@ use {
     fuchsia_syslog::fx_log_err,
     futures::{
         channel::mpsc::{Receiver, Sender},
-        SinkExt, StreamExt,
+        SinkExt,
     },
     input_synthesis::usages::is_modifier,
     maplit::hashmap,
@@ -82,10 +82,6 @@ pub struct KeyboardBinding {
     /// The channel to stream InputEvents to.
     event_sender: Sender<input_device::InputEvent>,
 
-    /// The receiving end of the input event channel. Clients use this indirectly via
-    /// [`input_event_stream()`].
-    event_receiver: Receiver<input_device::InputEvent>,
-
     /// Holds information about this device.
     device_descriptor: KeyboardDeviceDescriptor,
 }
@@ -102,12 +98,15 @@ pub async fn all_keyboard_devices() -> Result<Vec<InputDeviceProxy>, Error> {
 ///
 /// # Errors
 /// If there was an error binding to any keyboard.
-pub async fn all_keyboard_bindings() -> Result<Vec<KeyboardBinding>, Error> {
+pub async fn all_keyboard_bindings(
+    input_event_sender: Sender<input_device::InputEvent>,
+) -> Result<Vec<KeyboardBinding>, Error> {
     let device_proxies = all_keyboard_devices().await?;
     let mut device_bindings: Vec<KeyboardBinding> = vec![];
 
     for device_proxy in device_proxies {
-        let device_binding: KeyboardBinding = KeyboardBinding::new(device_proxy).await?;
+        let device_binding: KeyboardBinding =
+            KeyboardBinding::new(device_proxy, input_event_sender.clone()).await?;
         device_bindings.push(device_binding);
     }
 
@@ -119,48 +118,17 @@ pub async fn all_keyboard_bindings() -> Result<Vec<KeyboardBinding>, Error> {
 /// # Errors
 /// If there was an error binding to any keyboard.
 pub async fn all_keyboard_events() -> Result<Receiver<input_device::InputEvent>, Error> {
-    let bindings = all_keyboard_bindings().await?;
     let (event_sender, event_receiver) =
         futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-
-    for mut keyboard in bindings {
-        let mut sender = event_sender.clone();
-        fasync::spawn(async move {
-            while let Some(input_event) = keyboard.input_event_stream().next().await {
-                let _ = sender.try_send(input_event);
-            }
-        });
-    }
+    let _bindings = all_keyboard_bindings(event_sender).await?;
 
     Ok(event_receiver)
-}
-
-/// Retrieves a proxy to the first available keyboard input device.
-///
-/// # Errors
-/// If no keyboard device exists.
-pub async fn any_keyboard_device() -> Result<InputDeviceProxy, Error> {
-    let mut devices = all_keyboard_devices().await?;
-    devices.pop().ok_or(format_err!("Couldn't find a default keyboard."))
-}
-
-/// Returns a [`KeyboardBinding`] to the first avaialble keyboard input device.
-///
-/// # Errors
-/// If no keyboard device exists.
-pub async fn any_keyboard_binding() -> Result<KeyboardBinding, Error> {
-    let device_proxy = any_keyboard_device().await?;
-    KeyboardBinding::new(device_proxy).await
 }
 
 #[async_trait]
 impl input_device::InputDeviceBinding for KeyboardBinding {
     fn input_event_sender(&self) -> Sender<input_device::InputEvent> {
         self.event_sender.clone()
-    }
-
-    fn input_event_stream(&mut self) -> &mut Receiver<input_device::InputEvent> {
-        return &mut self.event_receiver;
     }
 
     fn get_device_descriptor(&self) -> input_device::InputDeviceDescriptor {
@@ -171,16 +139,20 @@ impl input_device::InputDeviceBinding for KeyboardBinding {
 impl KeyboardBinding {
     /// Creates a new [`InputDeviceBinding`] from the `device_proxy`.
     ///
-    /// The binding will start listening for input reports immediately, and they
-    /// can be read from [`input_event_stream()`].
+    /// The binding will start listening for input reports immediately and send new InputEvents
+    /// to the InputPipeline over `input_event_sender`.
     ///
     /// # Parameters
     /// - `device_proxy`: The proxy to bind the new [`InputDeviceBinding`] to.
+    /// - `input_event_sender`: The channel to send new InputEvents to.
     ///
     /// # Errors
     /// If there was an error binding to the proxy.
-    async fn new(device_proxy: InputDeviceProxy) -> Result<Self, Error> {
-        let device_binding = Self::bind_device(&device_proxy).await?;
+    pub async fn new(
+        device_proxy: InputDeviceProxy,
+        input_event_sender: Sender<input_device::InputEvent>,
+    ) -> Result<Self, Error> {
+        let device_binding = Self::bind_device(&device_proxy, input_event_sender).await?;
         input_device::initialize_report_stream(
             device_proxy,
             device_binding.get_device_descriptor(),
@@ -206,7 +178,7 @@ impl KeyboardBinding {
         device_proxy: InputDeviceProxy,
         input_event_sender: Sender<input_device::InputEvent>,
     ) -> Result<Self, Error> {
-        let device_binding = Self::bind_device2(&device_proxy, input_event_sender).await?;
+        let device_binding = Self::bind_device(&device_proxy, input_event_sender).await?;
         input_device::initialize_report_stream(
             device_proxy,
             device_binding.get_device_descriptor(),
@@ -258,42 +230,12 @@ impl KeyboardBinding {
     ///
     /// # Parameters
     /// - `device`: The device to use to initalize the binding.
-    ///
-    /// # Errors
-    /// If the device descriptor could not be retrieved, or the descriptor could
-    /// not be parsed correctly.
-    async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error> {
-        match device.get_descriptor().await?.keyboard {
-            Some(fidl_fuchsia_input_report::KeyboardDescriptor {
-                input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor { keys }),
-                output: _,
-            }) => {
-                let (event_sender, event_receiver) =
-                    futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-                Ok(KeyboardBinding {
-                    event_sender,
-                    event_receiver,
-                    device_descriptor: KeyboardDeviceDescriptor { keys: keys.unwrap_or_default() },
-                })
-            }
-
-            device_descriptor => Err(format_err!(
-                "Keyboard Device Descriptor failed to parse: \n {:?}",
-                device_descriptor
-            )),
-        }
-    }
-
-    /// Binds the provided input device to a new instance of `Self`.
-    ///
-    /// # Parameters
-    /// - `device`: The device to use to initalize the binding.
     /// - `input_event_sender`: The channel to send new InputEvents to.
     ///
     /// # Errors
     /// If the device descriptor could not be retrieved, or the descriptor could
     /// not be parsed correctly.
-    async fn bind_device2(
+    async fn bind_device(
         device: &InputDeviceProxy,
         input_event_sender: Sender<input_device::InputEvent>,
     ) -> Result<Self, Error> {
@@ -301,15 +243,10 @@ impl KeyboardBinding {
             Some(fidl_fuchsia_input_report::KeyboardDescriptor {
                 input: Some(fidl_fuchsia_input_report::KeyboardInputDescriptor { keys }),
                 output: _,
-            }) => {
-                let (_dummy_event_sender, dummy_event_receiver) =
-                    futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-                Ok(KeyboardBinding {
-                    event_sender: input_event_sender,
-                    event_receiver: dummy_event_receiver,
-                    device_descriptor: KeyboardDeviceDescriptor { keys: keys.unwrap_or_default() },
-                })
-            }
+            }) => Ok(KeyboardBinding {
+                event_sender: input_event_sender,
+                device_descriptor: KeyboardDeviceDescriptor { keys: keys.unwrap_or_default() },
+            }),
             device_descriptor => Err(format_err!(
                 "Keyboard Device Descriptor failed to parse: \n {:?}",
                 device_descriptor
@@ -439,8 +376,7 @@ impl KeyboardBinding {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::testing_utilities;
+    use {super::*, crate::testing_utilities, fuchsia_async as fasync, futures::StreamExt};
 
     /// Tests that a key that is present in the new report, but was not present in the previous report
     /// is propagated as pressed.

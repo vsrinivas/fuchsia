@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_input_report::{InputDeviceMarker, InputReport},
     fidl_fuchsia_io::OPEN_RIGHT_READABLE,
     fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::channel::mpsc::{Receiver, Sender},
+    futures::channel::mpsc::Sender,
     io_util::open_directory_in_namespace,
     std::{
         fs::{read_dir, ReadDir},
@@ -22,7 +22,7 @@ use {
 pub const INPUT_EVENT_BUFFER_SIZE: usize = 100;
 
 /// The path to the input-report directory.
-static INPUT_REPORT_PATH: &str = "/dev/class/input-report";
+pub static INPUT_REPORT_PATH: &str = "/dev/class/input-report";
 
 /// An [`InputEvent`] holds information about an input event and the device that produced the event.
 #[derive(Clone, Debug, PartialEq)]
@@ -93,9 +93,6 @@ pub enum InputDeviceType {
 pub trait InputDeviceBinding: Send {
     /// Returns information about the input device.
     fn get_device_descriptor(&self) -> InputDeviceDescriptor;
-
-    /// Returns a stream of input events generated from the bound device.
-    fn input_event_stream(&mut self) -> &mut Receiver<InputEvent>;
 
     /// Returns the input event stream's sender.
     fn input_event_sender(&self) -> Sender<InputEvent>;

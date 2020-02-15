@@ -8,12 +8,9 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_input_report as fidl,
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport},
-    fidl_fuchsia_ui_input as fidl_ui_input, fuchsia_async as fasync,
+    fidl_fuchsia_ui_input as fidl_ui_input,
     fuchsia_syslog::fx_log_err,
-    futures::{
-        channel::mpsc::{Receiver, Sender},
-        StreamExt,
-    },
+    futures::channel::mpsc::{Receiver, Sender},
     maplit::hashmap,
     std::collections::HashMap,
     std::iter::FromIterator,
@@ -143,10 +140,6 @@ pub struct TouchBinding {
     /// The channel to stream InputEvents to.
     event_sender: Sender<InputEvent>,
 
-    /// The receiving end of the input event channel. Clients use this indirectly via
-    /// [`input_event_stream()`].
-    event_receiver: Receiver<InputEvent>,
-
     /// Holds information about this device.
     device_descriptor: TouchDeviceDescriptor,
 }
@@ -163,12 +156,15 @@ pub async fn all_touch_devices() -> Result<Vec<InputDeviceProxy>, Error> {
 ///
 /// # Errors
 /// If there was an error binding to any touch device.
-pub async fn all_touch_bindings() -> Result<Vec<TouchBinding>, Error> {
+pub async fn all_touch_bindings(
+    input_event_sender: Sender<input_device::InputEvent>,
+) -> Result<Vec<TouchBinding>, Error> {
     let device_proxies = all_touch_devices().await?;
     let mut device_bindings: Vec<TouchBinding> = vec![];
 
     for device_proxy in device_proxies {
-        let device_binding: TouchBinding = TouchBinding::new(device_proxy).await?;
+        let device_binding: TouchBinding =
+            TouchBinding::new(device_proxy, input_event_sender.clone()).await?;
         device_bindings.push(device_binding);
     }
 
@@ -180,48 +176,17 @@ pub async fn all_touch_bindings() -> Result<Vec<TouchBinding>, Error> {
 /// # Errors
 /// If there was an error binding to any touch device.
 pub async fn all_touch_events() -> Result<Receiver<InputEvent>, Error> {
-    let bindings = all_touch_bindings().await?;
     let (event_sender, event_receiver) =
         futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-
-    for mut touch in bindings {
-        let mut sender = event_sender.clone();
-        fasync::spawn(async move {
-            while let Some(input_event) = touch.input_event_stream().next().await {
-                let _ = sender.try_send(input_event);
-            }
-        });
-    }
+    let _bindings = all_touch_bindings(event_sender).await?;
 
     Ok(event_receiver)
-}
-
-/// Retrieves a proxy to the first available mouse input device.
-///
-/// # Errors
-/// If no touch device exists.
-pub async fn any_touch_device() -> Result<InputDeviceProxy, Error> {
-    let mut devices = all_touch_devices().await?;
-    devices.pop().ok_or(format_err!("Couldn't find a default touch device."))
-}
-
-/// Returns a [`TouchBinding`] to the first avaialble touch input device.
-///
-/// # Errors
-/// If no touch device exists.
-pub async fn any_touch_binding() -> Result<TouchBinding, Error> {
-    let device_proxy = any_touch_device().await?;
-    TouchBinding::new(device_proxy).await
 }
 
 #[async_trait]
 impl input_device::InputDeviceBinding for TouchBinding {
     fn input_event_sender(&self) -> Sender<InputEvent> {
         self.event_sender.clone()
-    }
-
-    fn input_event_stream(&mut self) -> &mut Receiver<InputEvent> {
-        return &mut self.event_receiver;
     }
 
     fn get_device_descriptor(&self) -> input_device::InputDeviceDescriptor {
@@ -232,16 +197,20 @@ impl input_device::InputDeviceBinding for TouchBinding {
 impl TouchBinding {
     /// Creates a new [`InputDeviceBinding`] from the `device_proxy`.
     ///
-    /// The binding will start listening for input reports immediately, and they
-    /// can be read from [`input_event_stream()`].
+    /// The binding will start listening for input reports immediately and send new InputEvents
+    /// to the InputPipeline over `input_event_sender`.
     ///
     /// # Parameters
     /// - `device_proxy`: The proxy to bind the new [`InputDeviceBinding`] to.
+    /// - `input_event_sender`: The channel to send new InputEvents to.
     ///
     /// # Errors
     /// If there was an error binding to the proxy.
-    async fn new(device_proxy: InputDeviceProxy) -> Result<Self, Error> {
-        let device_binding = Self::bind_device(&device_proxy).await?;
+    pub async fn new(
+        device_proxy: InputDeviceProxy,
+        input_event_sender: Sender<input_device::InputEvent>,
+    ) -> Result<Self, Error> {
+        let device_binding = Self::bind_device(&device_proxy, input_event_sender).await?;
         input_device::initialize_report_stream(
             device_proxy,
             device_binding.get_device_descriptor(),
@@ -267,7 +236,7 @@ impl TouchBinding {
         device_proxy: InputDeviceProxy,
         input_event_sender: Sender<input_device::InputEvent>,
     ) -> Result<Self, Error> {
-        let device_binding = Self::bind_device2(&device_proxy, input_event_sender).await?;
+        let device_binding = Self::bind_device(&device_proxy, input_event_sender).await?;
         input_device::initialize_report_stream(
             device_proxy,
             device_binding.get_device_descriptor(),
@@ -282,53 +251,12 @@ impl TouchBinding {
     ///
     /// # Parameters
     /// - `device`: The device to use to initalize the binding.
-    ///
-    /// # Errors
-    /// If the device descriptor could not be retrieved, or the descriptor could
-    /// not be parsed correctly.
-    async fn bind_device(device: &InputDeviceProxy) -> Result<Self, Error> {
-        let device_descriptor: fidl_fuchsia_input_report::DeviceDescriptor =
-            device.get_descriptor().await?;
-
-        match device_descriptor.touch {
-            Some(fidl_fuchsia_input_report::TouchDescriptor {
-                input:
-                    Some(fidl_fuchsia_input_report::TouchInputDescriptor {
-                        contacts: Some(contact_descriptors),
-                        max_contacts: _,
-                        touch_type: _,
-                    }),
-            }) => {
-                let (event_sender, event_receiver) =
-                    futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-
-                Ok(TouchBinding {
-                    event_sender,
-                    event_receiver,
-                    device_descriptor: TouchDeviceDescriptor {
-                        device_id: 0,
-                        contacts: contact_descriptors
-                            .iter()
-                            .map(TouchBinding::parse_contact_descriptor)
-                            .filter_map(Result::ok)
-                            .collect(),
-                    },
-                })
-            }
-            descriptor => Err(format_err!("Touch Descriptor failed to parse: \n {:?}", descriptor)),
-        }
-    }
-
-    /// Binds the provided input device to a new instance of `Self`.
-    ///
-    /// # Parameters
-    /// - `device`: The device to use to initalize the binding.
     /// - `input_event_sender`: The channel to send new InputEvents to.
     ///
     /// # Errors
     /// If the device descriptor could not be retrieved, or the descriptor could
     /// not be parsed correctly.
-    async fn bind_device2(
+    async fn bind_device(
         device: &InputDeviceProxy,
         input_event_sender: Sender<input_device::InputEvent>,
     ) -> Result<Self, Error> {
@@ -343,22 +271,17 @@ impl TouchBinding {
                         max_contacts: _,
                         touch_type: _,
                     }),
-            }) => {
-                let (_dummy_event_sender, dummy_event_receiver) =
-                    futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-                Ok(TouchBinding {
-                    event_sender: input_event_sender,
-                    event_receiver: dummy_event_receiver,
-                    device_descriptor: TouchDeviceDescriptor {
-                        device_id: 0,
-                        contacts: contact_descriptors
-                            .iter()
-                            .map(TouchBinding::parse_contact_descriptor)
-                            .filter_map(Result::ok)
-                            .collect(),
-                    },
-                })
-            }
+            }) => Ok(TouchBinding {
+                event_sender: input_event_sender,
+                device_descriptor: TouchDeviceDescriptor {
+                    device_id: 0,
+                    contacts: contact_descriptors
+                        .iter()
+                        .map(TouchBinding::parse_contact_descriptor)
+                        .filter_map(Result::ok)
+                        .collect(),
+                },
+            }),
             descriptor => Err(format_err!("Touch Descriptor failed to parse: \n {:?}", descriptor)),
         }
     }
@@ -501,9 +424,13 @@ fn send_events(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::testing_utilities::{
-        create_touch_contact, create_touch_event, create_touch_input_report,
+    use {
+        super::*,
+        crate::testing_utilities::{
+            create_touch_contact, create_touch_event, create_touch_input_report,
+        },
+        fuchsia_async as fasync,
+        futures::StreamExt,
     };
 
     // Tests that a input report with a new contact generates an event with an add and a down.

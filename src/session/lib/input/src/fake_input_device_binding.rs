@@ -3,37 +3,19 @@
 // found in the LICENSE file.
 
 use {
-    crate::input_device,
-    crate::keyboard,
-    async_trait::async_trait,
-    futures::channel::mpsc::{Receiver, Sender},
+    crate::input_device, crate::keyboard, async_trait::async_trait, futures::channel::mpsc::Sender,
 };
 
 /// A fake [`InputDeviceBinding`] for testing.
 pub struct FakeInputDeviceBinding {
     /// The channel to stream InputEvents to.
     event_sender: Sender<input_device::InputEvent>,
-
-    /// The receiving end of the input event channel. Clients use this indirectly via
-    /// [`input_event_stream()`].
-    event_receiver: Receiver<input_device::InputEvent>,
 }
 
 #[allow(dead_code)]
 impl FakeInputDeviceBinding {
-    pub fn new() -> Self {
-        let (event_sender, event_receiver) =
-            futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-        FakeInputDeviceBinding { event_sender, event_receiver }
-    }
-
-    pub fn new2(input_event_sender: Sender<input_device::InputEvent>) -> Self {
-        let (_dummy_event_sender, dummy_event_receiver) =
-            futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-        FakeInputDeviceBinding {
-            event_sender: input_event_sender,
-            event_receiver: dummy_event_receiver,
-        }
+    pub fn new(input_event_sender: Sender<input_device::InputEvent>) -> Self {
+        FakeInputDeviceBinding { event_sender: input_event_sender }
     }
 }
 
@@ -43,10 +25,6 @@ impl input_device::InputDeviceBinding for FakeInputDeviceBinding {
         input_device::InputDeviceDescriptor::Keyboard(keyboard::KeyboardDeviceDescriptor {
             keys: vec![],
         })
-    }
-
-    fn input_event_stream(&mut self) -> &mut Receiver<input_device::InputEvent> {
-        return &mut self.event_receiver;
     }
 
     fn input_event_sender(&self) -> Sender<input_device::InputEvent> {

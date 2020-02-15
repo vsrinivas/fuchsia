@@ -17,9 +17,6 @@ use {
     std::path::PathBuf,
 };
 
-/// The path to the input-report directory.
-static INPUT_REPORT_PATH: &str = "/dev/class/input-report";
-
 /// An [`InputPipeline`] manages input events from input devices through input handlers.
 ///
 /// # Example
@@ -43,9 +40,6 @@ static INPUT_REPORT_PATH: &str = "/dev/class/input-report";
 /// input_pipeline.handle_input_events().await;
 /// ```
 pub struct InputPipeline {
-    /// The bindings to input devices that this [`InputPipeline`] manages.
-    device_bindings: Vec<Box<dyn input_device::InputDeviceBinding>>,
-
     /// The input handlers that will dispatch InputEvents from the `device_bindings`.
     /// The order of handlers in `input_handlers` is the order
     input_handlers: Vec<Box<dyn input_handler::InputHandler>>,
@@ -62,22 +56,49 @@ impl InputPipeline {
     /// Creates a new [`InputPipeline`].
     ///
     /// # Parameters
-    /// - `device_bindings`: The bindings to input devices that the [`InputPipeline`] manages.
+    /// - `device_types`: The types of devices the new [`InputPipeline`] will support.
     /// - `input_handlers`: The input handlers that the [`InputPipeline`] sends InputEvents to.
     ///                     Handlers process InputEvents in the order that they appear in
     ///                     `input_handlers`.
-    pub fn new(
-        device_bindings: Vec<Box<dyn input_device::InputDeviceBinding>>,
+    ///
+    /// Example:
+    /// let input_pipeline = InputPipeline::new_pipeline(
+    ///     vec![
+    ///         input_device::InputDeviceType::Mouse,
+    ///         input_device::InputDeviceType::Touch,
+    ///         input_device::InputDeviceType::Keyboard,
+    ///     ],
+    ///     input_handlers(scene_manager, pointer_hack_server).await);
+    pub async fn new(
+        device_types: Vec<input_device::InputDeviceType>,
         input_handlers: Vec<Box<dyn input_handler::InputHandler>>,
-    ) -> Self {
+    ) -> Result<Self, Error> {
         let (input_event_sender, input_event_receiver) =
             futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-        InputPipeline {
-            device_bindings: device_bindings,
-            input_handlers,
-            input_event_sender,
-            input_event_receiver,
-        }
+
+        let input_pipeline =
+            InputPipeline { input_handlers, input_event_sender, input_event_receiver };
+
+        // Watches the input device directory for new input devices. Creates new InputDeviceBindings
+        // that send InputEvents to `input_event_receiver`.
+        let input_event_sender = input_pipeline.input_event_sender.clone();
+        let device_watcher = Self::get_device_watcher().await?;
+        let dir_proxy =
+            open_directory_in_namespace(input_device::INPUT_REPORT_PATH, OPEN_RIGHT_READABLE)?;
+        fasync::spawn(async move {
+            let mut bindings = HashMap::new();
+            let _ = Self::watch_for_devices(
+                device_watcher,
+                dir_proxy,
+                device_types,
+                input_event_sender,
+                &mut bindings,
+                false, /* break_on_idle */
+            )
+            .await;
+        });
+
+        Ok(input_pipeline)
     }
 
     /// Creates a new [`InputPipeline`].
@@ -103,18 +124,15 @@ impl InputPipeline {
         let (input_event_sender, input_event_receiver) =
             futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
 
-        let input_pipeline = InputPipeline {
-            device_bindings: vec![],
-            input_handlers,
-            input_event_sender,
-            input_event_receiver,
-        };
+        let input_pipeline =
+            InputPipeline { input_handlers, input_event_sender, input_event_receiver };
 
         // Watches the input device directory for new input devices. Creates new InputDeviceBindings
         // that send InputEvents to `input_event_receiver`.
         let input_event_sender = input_pipeline.input_event_sender.clone();
         let device_watcher = Self::get_device_watcher().await?;
-        let dir_proxy = open_directory_in_namespace(INPUT_REPORT_PATH, OPEN_RIGHT_READABLE)?;
+        let dir_proxy =
+            open_directory_in_namespace(input_device::INPUT_REPORT_PATH, OPEN_RIGHT_READABLE)?;
         fasync::spawn(async move {
             let mut bindings = HashMap::new();
             let _ = Self::watch_for_devices(
@@ -131,17 +149,14 @@ impl InputPipeline {
         Ok(input_pipeline)
     }
 
-    /// Sends all InputEvents received by the `device_bindings` through all `input_handlers`.
+    /// Sends all InputEvents from `input_event_receiver` to all `input_handlers`.
     pub async fn handle_input_events(mut self) {
-        let mut event_streams = vec![];
-        for device in &mut self.device_bindings {
-            event_streams.push(device.input_event_stream());
-        }
-        let mut event_stream = futures::stream::select_all(event_streams);
-
-        while let Some(input_event) = event_stream.next().await {
+        while let Some(input_event) = self.input_event_receiver.next().await {
             let mut result_events: Vec<input_device::InputEvent> = vec![input_event];
+            // Pass the InputEvent through all InputHandlers
             for input_handler in &mut self.input_handlers {
+                // The outputted events from one InputHandler serves as the input
+                // events for the next InputHandler.
                 let mut next_result_events: Vec<input_device::InputEvent> = vec![];
                 for event in result_events {
                     next_result_events.append(&mut input_handler.handle_input_event(event).await);
@@ -177,8 +192,10 @@ impl InputPipeline {
     /// # Errors
     /// If the input report directory cannot be read.
     async fn get_device_watcher() -> Result<Watcher, Error> {
-        let input_report_dir_proxy =
-            open_directory_in_namespace(INPUT_REPORT_PATH, io_util::OPEN_RIGHT_READABLE)?;
+        let input_report_dir_proxy = open_directory_in_namespace(
+            input_device::INPUT_REPORT_PATH,
+            io_util::OPEN_RIGHT_READABLE,
+        )?;
         Watcher::new(input_report_dir_proxy).await
     }
 
@@ -330,10 +347,12 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn multiple_devices_single_handler() {
         // Create two fake device bindings.
-        let first_device_binding = fake_input_device_binding::FakeInputDeviceBinding::new();
-        let first_device_binding_sender = first_device_binding.input_event_sender();
-        let second_device_binding = fake_input_device_binding::FakeInputDeviceBinding::new();
-        let second_device_binding_sender = second_device_binding.input_event_sender();
+        let (input_event_sender, input_event_receiver) =
+            futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
+        let first_device_binding =
+            fake_input_device_binding::FakeInputDeviceBinding::new(input_event_sender.clone());
+        let second_device_binding =
+            fake_input_device_binding::FakeInputDeviceBinding::new(input_event_sender.clone());
 
         // Create a fake input handler.
         let (handler_event_sender, mut handler_event_receiver) =
@@ -341,14 +360,15 @@ mod tests {
         let input_handler = fake_input_handler::FakeInputHandler::new(handler_event_sender);
 
         // Build the input pipeline.
-        let input_pipeline = InputPipeline::new(
-            vec![Box::new(first_device_binding), Box::new(second_device_binding)],
-            vec![Box::new(input_handler)],
-        );
+        let input_pipeline = InputPipeline {
+            input_handlers: vec![Box::new(input_handler)],
+            input_event_sender,
+            input_event_receiver,
+        };
 
         // Send an input event from each device.
-        let first_device_event = send_input_event(first_device_binding_sender);
-        let second_device_event = send_input_event(second_device_binding_sender);
+        let first_device_event = send_input_event(first_device_binding.input_event_sender());
+        let second_device_event = send_input_event(second_device_binding.input_event_sender());
 
         // Run the pipeline.
         fasync::spawn(async {
@@ -366,90 +386,11 @@ mod tests {
     /// Tests that an input pipeline handles events through multiple input handlers.
     #[fasync::run_singlethreaded(test)]
     async fn single_device_multiple_handlers() {
-        // Create a fake device binding.
-        let device_binding = fake_input_device_binding::FakeInputDeviceBinding::new();
-        let device_binding_sender = device_binding.input_event_sender();
-
-        // Create two fake input handlers.
-        let (first_handler_event_sender, mut first_handler_event_receiver) =
-            futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-        let first_input_handler =
-            fake_input_handler::FakeInputHandler::new(first_handler_event_sender);
-        let (second_handler_event_sender, mut second_handler_event_receiver) =
-            futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-        let second_input_handler =
-            fake_input_handler::FakeInputHandler::new(second_handler_event_sender);
-
-        // Build the input pipeline.
-        let input_pipeline = InputPipeline::new(
-            vec![Box::new(device_binding)],
-            vec![Box::new(first_input_handler), Box::new(second_input_handler)],
-        );
-
-        // Send an input event.
-        let input_event = send_input_event(device_binding_sender);
-
-        // Run the pipeline.
-        fasync::spawn(async {
-            input_pipeline.handle_input_events().await;
-        });
-
-        // Assert both handlers receive the event.
-        let first_handler_event = first_handler_event_receiver.next().await;
-        assert_eq!(first_handler_event, Some(input_event.clone()));
-        let second_handler_event = second_handler_event_receiver.next().await;
-        assert_eq!(second_handler_event, Some(input_event));
-    }
-
-    /// Tests that an input pipeline handles events from multiple devices.
-    #[fasync::run_singlethreaded(test)]
-    async fn multiple_devices_single_handler_new2() {
-        // Create two fake device bindings.
-        let (input_event_sender, input_event_receiver) =
-            futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-        let first_device_binding =
-            fake_input_device_binding::FakeInputDeviceBinding::new2(input_event_sender.clone());
-        let second_device_binding =
-            fake_input_device_binding::FakeInputDeviceBinding::new2(input_event_sender.clone());
-
-        // Create a fake input handler.
-        let (handler_event_sender, mut handler_event_receiver) =
-            futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-        let input_handler = fake_input_handler::FakeInputHandler::new(handler_event_sender);
-
-        // Build the input pipeline.
-        let input_pipeline = InputPipeline {
-            device_bindings: vec![],
-            input_handlers: vec![Box::new(input_handler)],
-            input_event_sender,
-            input_event_receiver,
-        };
-
-        // Send an input event from each device.
-        let first_device_event = send_input_event(first_device_binding.input_event_sender());
-        let second_device_event = send_input_event(second_device_binding.input_event_sender());
-
-        // Run the pipeline.
-        fasync::spawn(async {
-            input_pipeline.handle_input_events2().await;
-        });
-
-        // Assert the handler receives the events.
-        let first_handled_event = handler_event_receiver.next().await;
-        assert_eq!(first_handled_event, Some(first_device_event));
-
-        let second_handled_event = handler_event_receiver.next().await;
-        assert_eq!(second_handled_event, Some(second_device_event));
-    }
-
-    /// Tests that an input pipeline handles events through multiple input handlers.
-    #[fasync::run_singlethreaded(test)]
-    async fn single_device_multiple_handlers_new2() {
         // Create two fake device bindings.
         let (input_event_sender, input_event_receiver) =
             futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
         let input_device_binding =
-            fake_input_device_binding::FakeInputDeviceBinding::new2(input_event_sender.clone());
+            fake_input_device_binding::FakeInputDeviceBinding::new(input_event_sender.clone());
 
         // Create two fake input handlers.
         let (first_handler_event_sender, mut first_handler_event_receiver) =
@@ -463,7 +404,6 @@ mod tests {
 
         // Build the input pipeline.
         let input_pipeline = InputPipeline {
-            device_bindings: vec![],
             input_handlers: vec![Box::new(first_input_handler), Box::new(second_input_handler)],
             input_event_sender,
             input_event_receiver,
@@ -474,7 +414,7 @@ mod tests {
 
         // Run the pipeline.
         fasync::spawn(async {
-            input_pipeline.handle_input_events2().await;
+            input_pipeline.handle_input_events().await;
         });
 
         // Assert both handlers receive the event.
