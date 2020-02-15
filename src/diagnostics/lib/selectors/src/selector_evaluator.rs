@@ -1,16 +1,12 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
 
 use {
     crate::selectors,
     anyhow::{format_err, Error},
     fidl_fuchsia_diagnostics::{Selector, StringSelector},
     std::collections::HashSet,
-    std::path::PathBuf,
     std::sync::Arc,
 };
 
@@ -186,7 +182,7 @@ fn evaluate_single_generation(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fidl_fuchsia_diagnostics::ComponentSelector};
+    use super::*;
 
     #[test]
     fn canonical_automata_simulator_test() {

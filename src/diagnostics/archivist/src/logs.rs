@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(dead_code)]
-
 use anyhow::{Context as _, Error};
 use fidl::endpoints::ClientEnd;
 use fuchsia_async as fasync;
@@ -138,15 +136,11 @@ impl<T> MemoryBoundedBuffer<T> {
     pub fn iter_mut(&mut self) -> IterMut<'_, T> {
         IterMut { inner: self.inner.iter_mut() }
     }
-
-    fn len(&self) -> usize {
-        self.total_size
-    }
 }
 
 /// Structure that holds stats for the log manager.
 struct LogManagerStats {
-    node: inspect::Node,
+    _node: inspect::Node,
     total_logs: inspect::UintProperty,
     kernel_logs: inspect::UintProperty,
     logsink_logs: inspect::UintProperty,
@@ -170,7 +164,7 @@ impl LogManagerStats {
         let fatal_logs = node.create_uint("fatal_logs", 0);
 
         Self {
-            node,
+            _node: node,
             kernel_logs,
             logsink_logs,
             total_logs,
@@ -232,11 +226,6 @@ struct LogManagerShared {
 #[derive(Clone)]
 pub struct LogManager {
     shared_members: Arc<Mutex<LogManagerShared>>,
-}
-
-enum LogType {
-    Kernel,
-    Syslog,
 }
 
 impl LogManager {
@@ -678,9 +667,9 @@ mod tests {
 
     struct TestHarness {
         log_proxy: LogProxy,
-        log_sink_proxy: LogSinkProxy,
         sin: zx::Socket,
         inspector: inspect::Inspector,
+        _log_sink_proxy: LogSinkProxy,
     }
 
     impl TestHarness {
@@ -705,7 +694,7 @@ mod tests {
 
             log_sink_proxy.connect(sout).expect("unable to connect out socket to log sink");
 
-            Self { log_proxy, log_sink_proxy, sin, inspector }
+            Self { log_proxy, _log_sink_proxy: log_sink_proxy, sin, inspector }
         }
 
         /// Run a filter test, returning the Inspector to check Inspect output.

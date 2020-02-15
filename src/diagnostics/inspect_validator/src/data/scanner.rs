@@ -11,7 +11,7 @@ use {
         format::{
             block::{ArrayFormat, Block, PropertyFormat},
             block_type::BlockType,
-            constants::{MAX_ORDER_SIZE, MIN_ORDER_SIZE},
+            constants::MIN_ORDER_SIZE,
         },
         reader as ireader,
     },
@@ -158,11 +158,6 @@ fn check_zero_bits(
     }
     Ok(())
 }
-
-// TODO(fxb/39975): Depending on the resolution of fxb/40012, remove the allow(dead_code) or move
-// this const into mod test.
-#[allow(dead_code)]
-const MAX_BLOCK_BITS: usize = MAX_ORDER_SIZE * BITS_PER_BYTE;
 
 impl Scanner {
     pub fn scan(snapshot: ireader::snapshot::Snapshot, buffer: &[u8]) -> Result<Self, Error> {
@@ -606,6 +601,9 @@ mod tests {
             constants,
         },
     };
+
+    // TODO(fxb/39975): Depending on the resolution of fxb/40012, move this const out of mod test.
+    const MAX_BLOCK_BITS: usize = constants::MAX_ORDER_SIZE * BITS_PER_BYTE;
 
     fn copy_into(source: &[u8], dest: &mut [u8], offset: usize) {
         dest[offset..offset + source.len()].copy_from_slice(source);

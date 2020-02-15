@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(dead_code)]
 use {
     anyhow::{format_err, Error},
     fidl_fuchsia_diagnostics::{self, ComponentSelector, Selector, StringSelector, TreeSelector},
@@ -27,9 +26,6 @@ static ESCAPE_CHARACTER: char = '\\';
 // Pattern used to encode wildcard.
 pub static WILDCARD_SYMBOL_STR: &str = "*";
 pub static WILDCARD_SYMBOL_CHAR: char = '*';
-
-// Pattern used to encode globs.
-static GLOB_SYMBOL: &str = "**";
 
 // Globs will match everything along a moniker, but won't match empty strings.
 static GLOB_REGEX_EQUIVALENT: &str = ".+";

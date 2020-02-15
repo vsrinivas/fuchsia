@@ -20,7 +20,6 @@ pub const VMO_SIZE: u64 = 4096;
 pub struct Puppet {
     vmo: Vmo,
     // Need to remember the connection to avoid dropping the VMO
-    #[allow(dead_code)]
     connection: Connection,
     name: String,
 }
@@ -85,8 +84,7 @@ struct Connection {
     // We need to keep the 'app' un-dropped on non-local connections so the
     // remote program doesn't go away. But we never use it once we have the
     // FIDL connection.
-    #[allow(dead_code)]
-    app: Option<fuchsia_component::client::App>,
+    _app: Option<fuchsia_component::client::App>,
 }
 
 impl Connection {
@@ -104,7 +102,7 @@ impl Connection {
     }
 
     fn new(fidl: validate::ValidateProxy, app: Option<fuchsia_component::client::App>) -> Self {
-        Self { fidl, app }
+        Self { fidl, _app: app }
     }
 
     async fn initialize_vmo(&mut self) -> Result<Vmo, Error> {
