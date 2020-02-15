@@ -38,11 +38,13 @@ rustc_binary("bin") {
   deps = [
     ":lib",
     "//garnet/lib/rust/fidl_fuchsia_net_ext",
+    "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:trust-dns-proto",
     "//third_party/rust_crates:trust-dns-resolver",
   ]
@@ -72,13 +74,5 @@ unittest_package("dns_resolver_tests") {
       name = "dns_resolver_bin_test"
       environments = [ qemu_env ]
     },
-  ]
-}
-
-group("dns") {
-  testonly = true
-  public_deps = [
-    ":dns_resolver",
-    "//src/connectivity/network/dns/config",
   ]
 }
