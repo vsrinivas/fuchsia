@@ -5,7 +5,6 @@
 #include "garnet/testing/benchmarking/benchmarking.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/tests/benchmarks/gfx_benchmarks.h"
 
 namespace {
 
@@ -82,11 +81,11 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
                                           out_file);
   }
 
-  // TODO(PT-181, PT-182): The following input latency and graphics benchmarks
-  // do not make an effort to close the graphics application being benchmarked
-  // at exit (the app will continue to run even after the benchmark driver
-  // process has exited).  Because of this, it is important that they run at the
-  // end, so that the residual graphics application is not running during other
+  // TODO(PT-181, PT-182): The following input latency benchmarks do not make
+  // an effort to close the graphics application being benchmarked at exit
+  // (the app will continue to run even after the benchmark driver process has
+  // exited).  Because of this, it is important that they run at the end, so
+  // that the residual graphics application is not running during other
   // benchmarks. The long term plan is to migrate them away from here and into
   // the e2e testing framework, which is tracked in the TODO bugs.
 
@@ -117,8 +116,6 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
         out_file);
   }
 #endif
-
-  AddGraphicsBenchmarks(benchmarks_runner);
 }
 
 }  // namespace

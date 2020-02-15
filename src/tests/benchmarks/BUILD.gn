@@ -16,16 +16,9 @@ group("benchmarks") {
 executable("fuchsia_benchmarks_bin") {
   output_name = "fuchsia_benchmarks"
 
-  sources = [
-    "benchmarks.cc",
-    "gfx_benchmarks.cc",
-    "gfx_benchmarks.h",
-  ]
+  sources = [ "benchmarks.cc" ]
 
-  deps = [
-    "//garnet/testing/benchmarking:benchmarking",
-    "//garnet/testing/benchmarking:is_vulkan_supported",
-  ]
+  deps = [ "//garnet/testing/benchmarking:benchmarking" ]
 }
 
 zircon_extras_manifest("zircon-test-manifest") {

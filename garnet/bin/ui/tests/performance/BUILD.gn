@@ -8,58 +8,12 @@ import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
-import("//src/lib/vulkan/layers.gni")
 
 group("performance") {
   testonly = true
   deps = [
     ":process_gfx_trace",
     ":process_trace_lib",
-    ":scenic_benchmarks",
-    ":vulkan_is_supported",
-    "vulkan_is_supported",
-  ]
-}
-
-package("vulkan_is_supported") {
-  testonly = true
-
-  deps = [ "vulkan_is_supported" ]
-  binaries = [
-    {
-      name = "vulkan_is_supported"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("vulkan_is_supported/meta/vulkan_is_supported.cmx")
-      dest = "vulkan_is_supported.cmx"
-    },
-  ]
-}
-
-package("scenic_benchmarks") {
-  testonly = true
-
-  deps = [ ":process_gfx_trace" ]
-
-  binaries = [
-    {
-      name = "gfx_benchmarks_standalone.sh"
-      source = rebase_path("gfx_benchmarks_standalone.sh")
-    },
-    {
-      name = "process_gfx_trace"
-    },
-    {
-      name = "run_scenic_benchmark.sh"
-      source = rebase_path("run_scenic_benchmark.sh")
-    },
-    {
-      name = "scenic_benchmark_example.sh"
-      source = rebase_path("scenic_benchmark_example.sh")
-    },
   ]
 }
 

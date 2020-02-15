@@ -19,7 +19,6 @@ test_list = [
   "ledger_perf_test",
   "microbenchmarks_test",
   "rust_inspect_benchmarks_test",
-  "scenic_benchmarks_test",
   "tspec_example_test",
 ]
 foreach(target_name, test_list) {
@@ -64,7 +63,6 @@ copy("runtime_deps") {
 group("package_deps") {
   testonly = true
   public_deps = [
-    "//garnet/bin/ui/tests/performance:scenic_benchmarks",
     "//garnet/examples/benchmark",
     "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
     "//src/ledger:bin",
@@ -80,13 +78,6 @@ group("package_deps") {
     "//src/ui/tools:present_view",
     "//third_party/sbase:date",
     "//third_party/sbase:sleep",
-
-    # These are used by scenic_benchmarks.
-    "//garnet/bin/ui/benchmarks/image_grid_cpp",
-    "//src/ui/examples:standalone_app",
-    "//src/ui/examples:tile_view",
-    "//src/ui/tools:present_view",
-    "//src/ui/tools:set_renderer_params",
 
     # These are used by the test runner in src/tests/benchmarks/,
     # used by the peridot-perf and fuchsia-perfcompare builders.
