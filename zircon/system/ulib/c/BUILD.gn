@@ -86,6 +86,7 @@ zx_library("c") {
             "zircon/process.h",
             "zircon/processargs.h",
             "zircon/rights.h",
+            "zircon/string_view.h",
             "zircon/syscalls.h",
             "zircon/syscalls/clock.h",
             "zircon/syscalls/debug.h",

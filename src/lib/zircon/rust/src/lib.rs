@@ -158,6 +158,7 @@ mod stream;
 mod task;
 mod thread;
 mod time;
+mod version;
 mod vmar;
 mod vmo;
 
@@ -183,6 +184,7 @@ pub use self::stream::*;
 pub use self::task::*;
 pub use self::thread::*;
 pub use self::time::*;
+pub use self::version::*;
 pub use self::vmar::*;
 pub use self::vmo::*;
 pub use fuchsia_zircon_status::*;

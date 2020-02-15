@@ -458,6 +458,9 @@ aggregate_manifest("legacy-aux") {
     ":test.core.time-test",
 #------------------
 #------------------
+    ":test.core.version-test",
+#------------------
+#------------------
     ":test.core.vmar-test",
 #------------------
 #------------------
@@ -1041,6 +1044,9 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
     ":test.core.time-test",
+#------------------
+#------------------
+    ":test.core.version-test",
 #------------------
 #------------------
     ":test.core.vmar-test",
@@ -2773,6 +2779,9 @@ aggregate_manifest("migrated-aux") {
     #":test.core.time-test",
 #------------------
 #------------------
+    #":test.core.version-test",
+#------------------
+#------------------
     #":test.core.vmar-test",
 #------------------
 #------------------
@@ -3479,6 +3488,9 @@ aggregate_manifest("migrated-tests") {
 #------------------
 #------------------
     #":test.core.time-test",
+#------------------
+#------------------
+    #":test.core.version-test",
 #------------------
 #------------------
     #":test.core.vmar-test",

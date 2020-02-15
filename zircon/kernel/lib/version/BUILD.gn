@@ -3,9 +3,9 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # Version string embedded in the kernel for `zx_system_get_version`.
-  # If set to the default "", a string is generated based on the
-  # Zircon git revision of the checkout.
+  # Version string embedded in the kernel for `zx_system_get_version_string`.
+  # If set to the default "", a string is generated based on the fuchsia.git
+  # revision of the checkout.
   kernel_version_string = ""
 }
 

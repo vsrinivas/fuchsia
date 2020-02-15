@@ -118,10 +118,12 @@ TEST(AliasWorkaround, Mappings) {
   CHECK_IS_OPTIONAL();
   CHECK_ARG("size_t*", "x");
 
+  CHECK_ARG("zx_string_view_t*", "y");
+
 #undef CHECK_IS_OPTIONAL
 #undef CHECK_ARG
 
-  EXPECT_EQ(cur_arg, 35u);  // 24 fidl args, and 11 that expand to pointer+size.
+  EXPECT_EQ(cur_arg, 36u);  // 25 fidl args + 11 that expand to pointer+size.
 }
 
 }  // namespace

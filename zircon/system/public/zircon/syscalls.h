@@ -5,6 +5,7 @@
 #ifndef SYSROOT_ZIRCON_SYSCALLS_H_
 #define SYSROOT_ZIRCON_SYSCALLS_H_
 
+#include <zircon/string_view.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/pci.h>
 #include <zircon/syscalls/profile.h>
@@ -30,6 +31,10 @@ __BEGIN_CDECLS
 
 // Compatibility wrappers for deprecated syscalls also go here, when
 // there are any.
+
+// This DEPRECATED interface is replaced by zx_system_get_version_string.
+zx_status_t zx_system_get_version(char* version, size_t version_size) __LEAF_FN;
+zx_status_t _zx_system_get_version(char* version, size_t version_size) __LEAF_FN;
 
 __END_CDECLS
 

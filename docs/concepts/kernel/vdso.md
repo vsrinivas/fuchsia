@@ -179,7 +179,7 @@ runtime of the whole system, though the ABI of the system is that their
 values must be queried at runtime and cannot be compiled into user code.
 These values either are fixed in the kernel at compile time or are
 determined by the kernel at boot time from hardware or boot parameters.
-Examples include [`zx_system_get_version()`],
+Examples include [`zx_system_get_version_string()`],
 [`zx_system_get_num_cpus()`], and [`zx_ticks_per_second()`].
 
 Because these values are constant, there is no need to pay the overhead
@@ -282,6 +282,6 @@ used for normal application code.
 
 [`zx_process_start()]: /docs/reference/syscalls/process_start.md
 [`zx_system_get_num_cpus()`]: /docs/reference/syscalls/system_get_num_cpus.md
-[`zx_system_get_version()`]: /docs/reference/syscalls/system_get_version.md
+[`zx_system_get_version_string()`]: /docs/reference/syscalls/system_get_version_string.md
 [`zx_ticks_per_second()`]: /docs/reference/syscalls/ticks_per_second.md
 [`zx_vmar_map()`]: /docs/reference/syscalls/vmar_map.md

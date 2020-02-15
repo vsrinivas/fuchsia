@@ -4,6 +4,8 @@
 
 // To test PHY and MAC device callback functions.
 
+#include <zircon/syscalls.h>
+
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
 }

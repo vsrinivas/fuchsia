@@ -268,8 +268,8 @@ toc:
   path: /docs/reference/syscalls/system_get_num_cpus.md
 - title: "zx_system_get_physmem"
   path: /docs/reference/syscalls/system_get_physmem.md
-- title: "zx_system_get_version"
-  path: /docs/reference/syscalls/system_get_version.md
+- title: "zx_system_get_version_string"
+  path: /docs/reference/syscalls/system_get_version_string.md
 - title: "zx_system_mexec"
   path: /docs/reference/syscalls/system_mexec.md
 - title: "zx_system_mexec_payload_get"

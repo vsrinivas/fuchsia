@@ -32,8 +32,8 @@ protocol system {
     system_get_num_cpus() -> (uint32 count);
 
     /// Get version string for system.
-    [vdsocall]
-    system_get_version(mutable_string version) -> (status status);
+    [const, vdsocall]
+    system_get_version_string() -> (string_view version);
 
     /// Get amount of physical memory on the system.
     [vdsocall]

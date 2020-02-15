@@ -95,3 +95,6 @@ using vector_void_u32size = vector<byte>;
 
 // TODO(fidlc): (mutable) void*
 using voidptr = uint64;
+
+// This is <zircon/string_view.h>'s zx_string_view_t in C/C++.
+using string_view = uint64;

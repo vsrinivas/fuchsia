@@ -120,5 +120,9 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
     *type = Type(TypePointer(Type(TypeVoid{})), Constness::kMutable);
     return true;
   }
+  if (name == "string_view") {
+    *type = Type(TypeZxBasicAlias("string_view"));
+    return true;
+  }
   return false;
 }

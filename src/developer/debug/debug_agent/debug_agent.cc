@@ -396,9 +396,7 @@ void DebugAgent::OnRemoveBreakpoint(const debug_ipc::RemoveBreakpointRequest& re
 
 void DebugAgent::OnSysInfo(const debug_ipc::SysInfoRequest& request,
                            debug_ipc::SysInfoReply* reply) {
-  char version[64];
-  zx_system_get_version(version, sizeof(version));
-  reply->version = version;
+  reply->version = std::string(zx_system_get_version_string());
 
   reply->num_cpus = zx_system_get_num_cpus();
   reply->memory_mb = zx_system_get_physmem() / kMegabyte;

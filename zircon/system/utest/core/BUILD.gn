@@ -6,13 +6,13 @@ import("$zx/public/gn/test/zbi_test.gni")
 
 # Each subdirectory just provides an eponymous source_set().
 core_tests = [
-  "debug",
   "c11-condvar",
   "c11-mutex",
   "c11-thread",
   "channel",
   "channel-write-etc",
   "clock",
+  "debug",
   "elf-tls",
   "event-pair",
   "fifo",
@@ -42,6 +42,7 @@ core_tests = [
   "sync-mutex",
   "threads",
   "time",
+  "version",
   "vmar",
   "vmo",
 ]

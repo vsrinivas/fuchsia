@@ -47,6 +47,9 @@ using vector_void = vector<byte>;
 using vector_void_u32size = vector<byte>;
 using voidptr = uint64;
 
+struct StringView {};
+using string_view = StringView;
+
 [Transport="Syscall"]
 protocol Aliases {
     SomeFunc(charptr a,
@@ -73,5 +76,6 @@ protocol Aliases {
          optional_signals u,
          optional_time v,
          optional_uint32 w,
-         optional_usize x);
+         optional_usize x,
+         string_view y);
 };

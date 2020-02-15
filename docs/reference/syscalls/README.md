@@ -153,7 +153,7 @@
 + [system_get_features](system_get_features.md) - get hardware-specific features
 + [system_get_num_cpus](system_get_num_cpus.md) - get number of CPUs
 + [system_get_physmem](system_get_physmem.md) - get physical memory size
-+ [system_get_version](system_get_version.md) - get version string
++ [system_get_version_string](system_get_version_string.md) - get version string
 
 ## Debug Logging
 + [debuglog_create](debuglog_create.md) - create a kernel managed debuglog reader or writer

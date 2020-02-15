@@ -30,6 +30,14 @@ pub type zx_time_t = i64;
 pub type zx_vaddr_t = usize;
 pub type zx_vm_option_t = u32;
 
+// TODO: magically coerce this to &`static str somehow?
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_string_view_t {
+    pub c_str: *const u8, // Guaranteed NUL-terminated valid UTF-8.
+    pub length: usize,
+}
+
 pub const ZX_MAX_NAME_LEN: usize = 32;
 
 // TODO: combine these macros with the bitflags and assoc consts macros below

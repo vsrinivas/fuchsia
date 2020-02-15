@@ -25,13 +25,14 @@
 // |++ cache lines sizes (2)
 // |++ ticks to mono ratio (2)
 // |
-// + 2 64-bit integers
+// + 3 64-bit integers
 // | ticks_per_second (1)
 // | physmem amount (1)
+// | version_string_len
 // |
-// + max build ID size (64 bytes)
+// + max version string size (64 bytes)
 //
-#define VDSO_CONSTANTS_SIZE ((8 * 4) + (2 * 8) + MAX_VERSION_STRING_SIZE)
+#define VDSO_CONSTANTS_SIZE ((8 * 4) + (3 * 8) + MAX_VERSION_STRING_SIZE)
 
 #ifndef __ASSEMBLER__
 
@@ -80,7 +81,10 @@ struct vdso_constants {
   // Total amount of physical memory in the system, in bytes.
   uint64_t physmem;
 
-  // A NUL-terminated UTF-8 string returned by zx_system_get_version.
+  // Actual length of .version_string, not including the NUL terminator.
+  uint64_t version_string_len;
+
+  // A NUL-terminated UTF-8 string returned by zx_system_get_version_string.
   char version_string[MAX_VERSION_STRING_SIZE];
 };
 

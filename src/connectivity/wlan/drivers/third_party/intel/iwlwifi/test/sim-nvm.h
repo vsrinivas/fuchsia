@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_SIM_NVM_H_
 
 #include <zircon/status.h>
+#include <zircon/syscalls.h>
 
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"

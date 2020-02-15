@@ -240,9 +240,11 @@ const VDso* VDso::Create(KernelHandle<VmObjectDispatcher>* vmo_kernel_handles) {
       ticks_to_mono_ratio.numerator(),
       ticks_to_mono_ratio.denominator(),
       pmm_count_total_bytes(),
+      strlen(version_string()),
       "",
   };
-  strncpy(constants->version_string, version_string(), sizeof(constants->version_string));
+  ASSERT(constants->version_string_len < sizeof(constants->version_string));
+  memcpy(constants->version_string, version_string(), constants->version_string_len);
 
   // Conditionally patch some of the entry points related to time based on
   // platform details which get determined at runtime.

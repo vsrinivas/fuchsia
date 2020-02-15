@@ -64,7 +64,7 @@ Jiri snapshot of the most recent ‘jiri update’
 ## Kernel version
 
 ### Location
-Stored in vDSO.  Accessed through [`zx_system_get_version`]( /docs/reference/syscalls/system_get_version.md)
+Stored in vDSO.  Accessed through [`zx_system_get_version_string`]( /docs/reference/syscalls/system_get_version_string.md)
 
 ### Description
 Zircon revision computed during the kernel build process.
