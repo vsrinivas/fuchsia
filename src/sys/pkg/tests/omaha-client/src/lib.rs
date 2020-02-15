@@ -84,7 +84,8 @@ impl TestEnv {
         let mounts = Mounts::new();
 
         let mut fs = ServiceFs::new();
-        fs.add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>();
+        fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
+            .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>();
 
         let server = server::OmahaServer::new(response);
         let url = server.start().expect("start server");

@@ -51,6 +51,7 @@ impl TestEnv {
         let mounts = Mounts::new();
 
         let mut fs = ServiceFs::new();
+        fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>();
 
         let paver = Arc::new(paver);
         let paver_clone = Arc::clone(&paver);

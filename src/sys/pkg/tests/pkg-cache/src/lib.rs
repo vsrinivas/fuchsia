@@ -62,7 +62,8 @@ impl TestEnv<PkgfsRamdisk> {
 impl<P: PkgFs> TestEnv<P> {
     fn new(pkgfs: P) -> Self {
         let mut fs = ServiceFs::new();
-        fs.add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>();
+        fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
+            .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>();
 
         let pkg_cache = AppBuilder::new(
             "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache-without-pkgfs.cmx".to_string(),

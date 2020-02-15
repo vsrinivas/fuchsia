@@ -35,6 +35,7 @@ rustc_test("driver") {
     "//third_party/rust_crates:tempfile",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
     "//zircon/system/fidl/fuchsia-device-manager:fuchsia-device-manager-rustc",
+    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
     "//zircon/system/fidl/fuchsia-paver:fuchsia-paver-rustc",
   ]

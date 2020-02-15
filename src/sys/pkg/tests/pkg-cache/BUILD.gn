@@ -26,6 +26,7 @@ rustc_test("driver") {
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:tempfile",
+    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
     "//zircon/system/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
   ]
 }

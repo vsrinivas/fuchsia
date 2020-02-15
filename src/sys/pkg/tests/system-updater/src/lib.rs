@@ -51,6 +51,8 @@ impl TestEnvBuilder {
         let paver_service = Arc::new(self.paver_service_builder.build());
 
         let mut fs = ServiceFs::new();
+        fs.add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>();
+
         let resolver = Arc::new(MockResolverService::new());
         let resolver_clone = resolver.clone();
         fs.add_fidl_service(move |stream: PackageResolverRequestStream| {
