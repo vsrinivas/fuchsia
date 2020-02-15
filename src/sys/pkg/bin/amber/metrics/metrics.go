@@ -24,11 +24,22 @@ const (
 	// https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/fuchsia/software_delivery/config.yaml
 	StatusSuccess Status = iota
 	StatusFailure
+	StatusFailureStorage
+	StatusFailureStorageOutOfSpace
+	StatusFailureNetworking
+	StatusFailureUntrustedTufRepo
 )
 
 func StatusFromError(err error) Status {
 	if err == nil {
 		return StatusSuccess
+	}
+
+	// TODO: Fix when rewriting in rust. The current system_updater implementation
+	// forces us into comparing strings (the other option would be to significantly
+	// change the system updater code, which is impractical since it's being rewritten anyway)
+	if err.Error() == "failed getting packages: fetch: Resolve status: zx.Status(-71)" {
+		return StatusFailureUntrustedTufRepo
 	}
 	return StatusFailure
 }

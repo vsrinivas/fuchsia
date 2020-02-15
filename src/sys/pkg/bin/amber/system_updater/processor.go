@@ -218,15 +218,20 @@ func ParseImages(imgSrc io.ReadCloser) ([]string, error) {
 
 func FetchPackages(pkgs []string, resolver *pkg.PackageResolverInterface) error {
 	var errCount int
+	var firstErr error
 	for _, pkgURI := range pkgs {
 		if err := fetchPackage(pkgURI, resolver); err != nil {
 			syslog.Errorf("fetch error: %s", err)
 			errCount++
+			if firstErr == nil {
+				firstErr = err
+			}
 		}
 	}
 
 	if errCount > 0 {
-		return fmt.Errorf("system update failed, %d packages had errors", errCount)
+		syslog.Errorf("system update failed, %d packages had errors", errCount)
+		return firstErr
 	}
 
 	return nil

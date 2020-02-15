@@ -240,7 +240,7 @@ impl RepositoryManager {
         let config = if let Some(config) = self.get(url.repo()) {
             Arc::clone(config)
         } else {
-            return futures::future::ready(Err(Status::NOT_FOUND)).boxed_local();
+            return futures::future::ready(Err(Status::ADDRESS_UNREACHABLE)).boxed_local();
         };
 
         let fut = open_cached_or_new_repository(
@@ -269,7 +269,7 @@ impl RepositoryManager {
         let config = if let Some(config) = self.get(url.repo()) {
             Arc::clone(config)
         } else {
-            return futures::future::ready(Err(Status::NOT_FOUND)).boxed_local();
+            return futures::future::ready(Err(Status::ADDRESS_UNREACHABLE)).boxed_local();
         };
 
         let fut = open_cached_or_new_repository(

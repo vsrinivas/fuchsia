@@ -779,6 +779,56 @@ async fn test_packages_json_takes_precedence() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn test_metrics_report_untrusted_tuf_repo() {
+    let mut env = TestEnv::new();
+
+    env.register_package("update", "upd4t3")
+        .add_file(
+            "packages.json",
+            "
+          {
+            \"version\": 1,
+            \"content\": [
+              \"fuchsia-pkg://non-existent-repo.com/amber/0?hash=abcdef\",
+              \"fuchsia-pkg://fuchsia.com/pkgfs/0?hash=123456789\"
+              ]
+          }
+        ",
+        )
+        .add_file("zbi", "fake zbi");
+
+    env.resolver.mock_package_result(
+        "fuchsia-pkg://non-existent-repo.com/amber/0?hash=abcdef",
+        Err(Status::ADDRESS_UNREACHABLE),
+    );
+
+    let result = env
+        .run_system_updater(SystemUpdaterArgs {
+            initiator: "manual",
+            target: "m3rk13",
+            update: None,
+            reboot: None,
+        })
+        .await;
+    assert!(result.is_err(), "system_updater succeeded when it should fail");
+
+    let loggers = env.logger_factory.loggers.lock().clone();
+    assert_eq!(loggers.len(), 1);
+    let logger = loggers.into_iter().next().unwrap();
+    assert_eq!(
+        OtaMetrics::from_events(logger.cobalt_events.lock().clone()),
+        OtaMetrics {
+            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
+                as u32,
+            phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
+            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::ErrorUntrustedTufRepo
+                as u32,
+            target: "m3rk13".into(),
+        }
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn test_system_update_no_reboot() {
     let mut env = TestEnv::new();
 
