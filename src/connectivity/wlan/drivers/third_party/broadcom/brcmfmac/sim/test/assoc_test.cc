@@ -62,11 +62,12 @@ class AssocTest : public SimTest {
     std::optional<std::function<void()>> on_assoc_req_callback;
 
     // Track number of association responses
-    size_t assoc_resp_count;
+    size_t assoc_resp_count = 0;
     // Track number of disassociation confs (initiated from self)
-    size_t disassoc_conf_count;
+    size_t disassoc_conf_count = 0;
     // Track number of deauth indications (initiated from AP)
-    size_t deauth_ind_count;
+    size_t deauth_ind_count = 0;
+    size_t signal_ind_count = 0;
   };
 
   struct AssocRespInfo {
@@ -112,6 +113,7 @@ class AssocTest : public SimTest {
   void OnAssocConf(const wlanif_assoc_confirm_t* resp);
   void OnDisassocConf(const wlanif_disassoc_confirm_t* resp);
   void OnDeauthInd(const wlanif_deauth_indication_t* ind);
+  void OnSignalReport(const wlanif_signal_report_indication* ind);
 };
 
 // Since we're acting as wlanif, we need handlers for any protocol calls we may receive
@@ -143,6 +145,10 @@ wlanif_impl_ifc_protocol_ops_t AssocTest::sme_ops_ = {
     .disassoc_conf =
         [](void* cookie, const wlanif_disassoc_confirm_t* resp) {
           static_cast<AssocTest*>(cookie)->OnDisassocConf(resp);
+        },
+    .signal_report =
+        [](void* cookie, const wlanif_signal_report_indication* ind) {
+          static_cast<AssocTest*>(cookie)->OnSignalReport(ind);
         },
 };
 
@@ -236,6 +242,10 @@ void AssocTest::OnDisassocConf(const wlanif_disassoc_confirm_t* resp) {
 }
 
 void AssocTest::OnDeauthInd(const wlanif_deauth_indication_t* ind) { context_.deauth_ind_count++; }
+
+void AssocTest::OnSignalReport(const wlanif_signal_report_indication* ind) {
+  context_.signal_ind_count++;
+}
 
 void AssocTest::StartAssoc() {
   // Send join request
@@ -334,6 +344,7 @@ TEST_F(AssocTest, SimpleTest) {
   env_->Run();
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);
+  EXPECT_EQ(context_.signal_ind_count, 1U);
 }
 
 // Verify that we can associate using only SSID, not BSSID
