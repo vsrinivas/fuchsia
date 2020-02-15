@@ -62,6 +62,17 @@ var _mexampleProtocolMethodRequest = _bindings.CreateLazyMarshaler(exampleProtoc
 func (msg *exampleProtocolMethodRequest) Marshaler() _bindings.Marshaler {
 	return _mexampleProtocolMethodRequest
 }
+
+type exampleProtocolWithCtxMethodRequest struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	Arg exampleusing.Empty`fidl:"0" fidl_offset_v1:"0"`
+}
+
+var _mexampleProtocolWithCtxMethodRequest = _bindings.CreateLazyMarshaler(exampleProtocolWithCtxMethodRequest{})
+
+func (msg *exampleProtocolWithCtxMethodRequest) Marshaler() _bindings.Marshaler {
+	return _mexampleProtocolWithCtxMethodRequest
+}
 type I_exampleUnionTag uint64
 const (
 	ExampleUnionVariant = 1 // 0x00000001
@@ -166,6 +177,17 @@ const (
 	ExampleProtocolMethodGenOrdinal uint64 = 0x1b489f95492fd90e
 )
 
+type ExampleProtocolWithCtxInterface _bindings.ChannelProxy
+
+
+func (p *ExampleProtocolWithCtxInterface) Method(ctx_ _bindings.Context, arg exampleusing.Empty) error {
+	req_ := &exampleProtocolWithCtxMethodRequest{
+		Arg: arg,
+	}
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(ExampleProtocolMethodGenOrdinal, req_)
+	return err_
+}
+
 type ExampleProtocolInterface _bindings.ChannelProxy
 
 
@@ -196,6 +218,13 @@ type ExampleProtocol interface {
 type ExampleProtocolTransitionalBase struct {}
 
 
+type ExampleProtocolWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewExampleProtocolWithCtxInterfaceRequest() (ExampleProtocolWithCtxInterfaceRequest, *ExampleProtocolWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return ExampleProtocolWithCtxInterfaceRequest(req), (*ExampleProtocolWithCtxInterface)(cli), err
+}
+
 type ExampleProtocolInterfaceRequest _bindings.InterfaceRequest
 
 func NewExampleProtocolInterfaceRequest() (ExampleProtocolInterfaceRequest, *ExampleProtocolInterface, error) {
@@ -207,27 +236,12 @@ type ExampleProtocolStub struct {
 	Impl ExampleProtocol
 }
 
-func (s_ *ExampleProtocolStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	return s_.DispatchImplWithCtx(ordinal_, ctx_.GetMarshalerContext(), data_, handles_)
-}
-
-func (s_ *ExampleProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	case ExampleProtocolMethodOrdinal:
-		fallthrough
-	case ExampleProtocolMethodGenOrdinal:
-		in_ := exampleProtocolMethodRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_, data_, handles_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		err_ := s_.Impl.Method(in_.Arg)
-		return nil, false, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
-}
-
 func (s_ *ExampleProtocolStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
-	return s_.DispatchImplWithCtx2(args_.Ordinal, args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos)
+	ctx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+	if !ok {
+		return nil, false, _bindings.ErrMissingMarshalerContext
+	}
+	return s_.DispatchImplWithCtx2(args_.Ordinal, ctx, args_.Bytes, args_.HandleInfos)
 }
 
 func (s_ *ExampleProtocolStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
@@ -249,28 +263,17 @@ type ExampleProtocolWithCtxStub struct {
 	Impl ExampleProtocolWithCtx
 }
 
-func (s_ *ExampleProtocolWithCtxStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	case ExampleProtocolMethodOrdinal:
-		fallthrough
-	case ExampleProtocolMethodGenOrdinal:
-		in_ := exampleProtocolMethodRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_.GetMarshalerContext(), data_, handles_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		err_ := s_.Impl.Method(ctx_, in_.Arg)
-		return nil, false, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
-}
-
 func (s_ *ExampleProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
 	case ExampleProtocolMethodOrdinal:
 		fallthrough
 	case ExampleProtocolMethodGenOrdinal:
-		in_ := exampleProtocolMethodRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		in_ := exampleProtocolWithCtxMethodRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		err_ := s_.Impl.Method(args_.Ctx, in_.Arg)

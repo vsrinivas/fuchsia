@@ -56,6 +56,9 @@ func (msg *Handles) Marshaler() _bindings.Marshaler {
 const (
 )
 
+type SomeProtocolWithCtxInterface _bindings.ChannelProxy
+
+
 type SomeProtocolInterface _bindings.ChannelProxy
 
 
@@ -76,6 +79,13 @@ type SomeProtocol interface {
 type SomeProtocolTransitionalBase struct {}
 
 
+type SomeProtocolWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewSomeProtocolWithCtxInterfaceRequest() (SomeProtocolWithCtxInterfaceRequest, *SomeProtocolWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return SomeProtocolWithCtxInterfaceRequest(req), (*SomeProtocolWithCtxInterface)(cli), err
+}
+
 type SomeProtocolInterfaceRequest _bindings.InterfaceRequest
 
 func NewSomeProtocolInterfaceRequest() (SomeProtocolInterfaceRequest, *SomeProtocolInterface, error) {
@@ -87,18 +97,12 @@ type SomeProtocolStub struct {
 	Impl SomeProtocol
 }
 
-func (s_ *SomeProtocolStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	return s_.DispatchImplWithCtx(ordinal_, ctx_.GetMarshalerContext(), data_, handles_)
-}
-
-func (s_ *SomeProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
-}
-
 func (s_ *SomeProtocolStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
-	return s_.DispatchImplWithCtx2(args_.Ordinal, args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos)
+	ctx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+	if !ok {
+		return nil, false, _bindings.ErrMissingMarshalerContext
+	}
+	return s_.DispatchImplWithCtx2(args_.Ordinal, ctx, args_.Bytes, args_.HandleInfos)
 }
 
 func (s_ *SomeProtocolStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
@@ -109,12 +113,6 @@ func (s_ *SomeProtocolStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings
 
 type SomeProtocolWithCtxStub struct {
 	Impl SomeProtocolWithCtx
-}
-
-func (s_ *SomeProtocolWithCtxStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
 }
 
 func (s_ *SomeProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {

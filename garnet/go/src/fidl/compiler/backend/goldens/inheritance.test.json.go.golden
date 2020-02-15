@@ -23,6 +23,17 @@ func (msg *superFooRequest) Marshaler() _bindings.Marshaler {
 	return _msuperFooRequest
 }
 
+type superWithCtxFooRequest struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	S string`fidl:"0," fidl_offset_v1:"0"`
+}
+
+var _msuperWithCtxFooRequest = _bindings.CreateLazyMarshaler(superWithCtxFooRequest{})
+
+func (msg *superWithCtxFooRequest) Marshaler() _bindings.Marshaler {
+	return _msuperWithCtxFooRequest
+}
+
 type superFooResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
 	Y int64`fidl:"0" fidl_offset_v1:"0"`
@@ -32,6 +43,17 @@ var _msuperFooResponse = _bindings.CreateLazyMarshaler(superFooResponse{})
 
 func (msg *superFooResponse) Marshaler() _bindings.Marshaler {
 	return _msuperFooResponse
+}
+
+type superWithCtxFooResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	Y int64`fidl:"0" fidl_offset_v1:"0"`
+}
+
+var _msuperWithCtxFooResponse = _bindings.CreateLazyMarshaler(superWithCtxFooResponse{})
+
+func (msg *superWithCtxFooResponse) Marshaler() _bindings.Marshaler {
+	return _msuperWithCtxFooResponse
 }
 
 type subFooRequest struct {
@@ -45,6 +67,17 @@ func (msg *subFooRequest) Marshaler() _bindings.Marshaler {
 	return _msubFooRequest
 }
 
+type subWithCtxFooRequest struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8"`
+	S string`fidl:"0," fidl_offset_v1:"0"`
+}
+
+var _msubWithCtxFooRequest = _bindings.CreateLazyMarshaler(subWithCtxFooRequest{})
+
+func (msg *subWithCtxFooRequest) Marshaler() _bindings.Marshaler {
+	return _msubWithCtxFooRequest
+}
+
 type subFooResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
 	Y int64`fidl:"0" fidl_offset_v1:"0"`
@@ -55,10 +88,33 @@ var _msubFooResponse = _bindings.CreateLazyMarshaler(subFooResponse{})
 func (msg *subFooResponse) Marshaler() _bindings.Marshaler {
 	return _msubFooResponse
 }
+
+type subWithCtxFooResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	Y int64`fidl:"0" fidl_offset_v1:"0"`
+}
+
+var _msubWithCtxFooResponse = _bindings.CreateLazyMarshaler(subWithCtxFooResponse{})
+
+func (msg *subWithCtxFooResponse) Marshaler() _bindings.Marshaler {
+	return _msubWithCtxFooResponse
+}
 const (
 	SuperFooOrdinal uint64 = 0x2f16c1bc00000000
 	SuperFooGenOrdinal uint64 = 0x4f6c089228ba7c92
 )
+
+type SuperWithCtxInterface _bindings.ChannelProxy
+
+
+func (p *SuperWithCtxInterface) Foo(ctx_ _bindings.Context, s string) (int64, error) {
+	req_ := &superWithCtxFooRequest{
+		S: s,
+	}
+	resp_ := &superWithCtxFooResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(SuperFooGenOrdinal, req_, resp_, SuperFooOrdinal, SuperFooGenOrdinal)
+	return resp_.Y, err_
+}
 
 type SuperInterface _bindings.ChannelProxy
 
@@ -91,6 +147,13 @@ type Super interface {
 type SuperTransitionalBase struct {}
 
 
+type SuperWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewSuperWithCtxInterfaceRequest() (SuperWithCtxInterfaceRequest, *SuperWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return SuperWithCtxInterfaceRequest(req), (*SuperWithCtxInterface)(cli), err
+}
+
 type SuperInterfaceRequest _bindings.InterfaceRequest
 
 func NewSuperInterfaceRequest() (SuperInterfaceRequest, *SuperInterface, error) {
@@ -102,29 +165,12 @@ type SuperStub struct {
 	Impl Super
 }
 
-func (s_ *SuperStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	return s_.DispatchImplWithCtx(ordinal_, ctx_.GetMarshalerContext(), data_, handles_)
-}
-
-func (s_ *SuperStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	case SuperFooOrdinal:
-		fallthrough
-	case SuperFooGenOrdinal:
-		in_ := superFooRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_, data_, handles_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		y, err_ := s_.Impl.Foo(in_.S)
-		out_ := superFooResponse{}
-		out_.Y = y
-		return &out_, true, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
-}
-
 func (s_ *SuperStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
-	return s_.DispatchImplWithCtx2(args_.Ordinal, args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos)
+	ctx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+	if !ok {
+		return nil, false, _bindings.ErrMissingMarshalerContext
+	}
+	return s_.DispatchImplWithCtx2(args_.Ordinal, ctx, args_.Bytes, args_.HandleInfos)
 }
 
 func (s_ *SuperStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
@@ -148,34 +194,21 @@ type SuperWithCtxStub struct {
 	Impl SuperWithCtx
 }
 
-func (s_ *SuperWithCtxStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	case SuperFooOrdinal:
-		fallthrough
-	case SuperFooGenOrdinal:
-		in_ := superFooRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_.GetMarshalerContext(), data_, handles_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		y, err_ := s_.Impl.Foo(ctx_, in_.S)
-		out_ := superFooResponse{}
-		out_.Y = y
-		return &out_, true, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
-}
-
 func (s_ *SuperWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
 	case SuperFooOrdinal:
 		fallthrough
 	case SuperFooGenOrdinal:
-		in_ := superFooRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		in_ := superWithCtxFooRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		y, err_ := s_.Impl.Foo(args_.Ctx, in_.S)
-		out_ := superFooResponse{}
+		out_ := superWithCtxFooResponse{}
 		out_.Y = y
 		return &out_, true, err_
 	}
@@ -206,6 +239,18 @@ const (
 	SubFooOrdinal uint64 = 0x2f16c1bc00000000
 	SubFooGenOrdinal uint64 = 0x4f6c089228ba7c92
 )
+
+type SubWithCtxInterface _bindings.ChannelProxy
+
+
+func (p *SubWithCtxInterface) Foo(ctx_ _bindings.Context, s string) (int64, error) {
+	req_ := &subWithCtxFooRequest{
+		S: s,
+	}
+	resp_ := &subWithCtxFooResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(SubFooGenOrdinal, req_, resp_, SubFooOrdinal, SubFooGenOrdinal)
+	return resp_.Y, err_
+}
 
 type SubInterface _bindings.ChannelProxy
 
@@ -238,6 +283,13 @@ type Sub interface {
 type SubTransitionalBase struct {}
 
 
+type SubWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewSubWithCtxInterfaceRequest() (SubWithCtxInterfaceRequest, *SubWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return SubWithCtxInterfaceRequest(req), (*SubWithCtxInterface)(cli), err
+}
+
 type SubInterfaceRequest _bindings.InterfaceRequest
 
 func NewSubInterfaceRequest() (SubInterfaceRequest, *SubInterface, error) {
@@ -249,29 +301,12 @@ type SubStub struct {
 	Impl Sub
 }
 
-func (s_ *SubStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	return s_.DispatchImplWithCtx(ordinal_, ctx_.GetMarshalerContext(), data_, handles_)
-}
-
-func (s_ *SubStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	case SubFooOrdinal:
-		fallthrough
-	case SubFooGenOrdinal:
-		in_ := subFooRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_, data_, handles_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		y, err_ := s_.Impl.Foo(in_.S)
-		out_ := subFooResponse{}
-		out_.Y = y
-		return &out_, true, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
-}
-
 func (s_ *SubStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
-	return s_.DispatchImplWithCtx2(args_.Ordinal, args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos)
+	ctx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+	if !ok {
+		return nil, false, _bindings.ErrMissingMarshalerContext
+	}
+	return s_.DispatchImplWithCtx2(args_.Ordinal, ctx, args_.Bytes, args_.HandleInfos)
 }
 
 func (s_ *SubStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
@@ -295,34 +330,21 @@ type SubWithCtxStub struct {
 	Impl SubWithCtx
 }
 
-func (s_ *SubWithCtxStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	case SubFooOrdinal:
-		fallthrough
-	case SubFooGenOrdinal:
-		in_ := subFooRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_.GetMarshalerContext(), data_, handles_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		y, err_ := s_.Impl.Foo(ctx_, in_.S)
-		out_ := subFooResponse{}
-		out_.Y = y
-		return &out_, true, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
-}
-
 func (s_ *SubWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
 	case SubFooOrdinal:
 		fallthrough
 	case SubFooGenOrdinal:
-		in_ := subFooRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		in_ := subWithCtxFooRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		y, err_ := s_.Impl.Foo(args_.Ctx, in_.S)
-		out_ := subFooResponse{}
+		out_ := subWithCtxFooResponse{}
 		out_.Y = y
 		return &out_, true, err_
 	}

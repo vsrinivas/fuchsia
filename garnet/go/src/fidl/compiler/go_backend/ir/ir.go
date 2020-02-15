@@ -309,6 +309,9 @@ type Interface struct {
 	// ProxyName is the name of the proxy type for this FIDL interface.
 	ProxyName string
 
+	// ProxyWithCtxName is the name of the proxy type for the with-context FIDL interface.
+	ProxyWithCtxName string
+
 	// ProxyType is concrete type of proxy used for this FIDL interface.
 	ProxyType string
 
@@ -332,6 +335,10 @@ type Interface struct {
 
 	// RequestName is the name of the interface request type for this FIDL interface.
 	RequestName string
+
+	// RequestWithCtxName is the name of the interface request type for the WithCtx version
+	// of this FIDL interface.
+	RequestWithCtxName string
 
 	// ServerName is the name of the server type for this FIDL interface.
 	ServerName string
@@ -360,11 +367,19 @@ type Method struct {
 	// Request represents a golang struct containing the request parameters.
 	Request *Struct
 
+	// RequestWithCtx represents a golang struct containing the request parameters with new
+	// types for the with-Context version of the FIDL interface.
+	RequestWithCtx *Struct
+
 	// HasResponse is true if this method has a response
 	HasResponse bool
 
 	// Response represents an optional golang struct containing the response parameters.
 	Response *Struct
+
+	// ResponseWithCtx represents a golang struct containing the request parameters with new
+	// types for the with-Context version of the FIDL interface.
+	ResponseWithCtx *Struct
 
 	// EventExpectName is the name of the method for the client-side event proxy.
 	// Only relevant if the method is an event.
@@ -447,6 +462,12 @@ type compiler struct {
 	// structs (which are currently equivalent to all the anonymous structs). This is
 	// used to lookup typeshape info when constructing the Methods and their Parameters
 	requestResponseStructs map[types.EncodedCompoundIdentifier]Struct
+
+	// requestResponseWithCtxStructs contains the same keys as requestResponseStructs but
+	// map to Structs which contain the new types generated for the with-Context version of
+	// interfaces. This is so that request/response structs with new and old types can be
+	// generated at the same time, and will be consolidated once the migration is complete.
+	requestResponseWithCtxStructs map[types.EncodedCompoundIdentifier]Struct
 }
 
 // Contains the full set of reserved golang keywords, in addition to a set of
@@ -646,10 +667,10 @@ func (c *compiler) compilePrimitiveSubtype(val types.PrimitiveSubtype) Type {
 	return Type(t)
 }
 
-func (c *compiler) compileType(val types.Type) (r Type, t StackOfBoundsTag) {
+func (c *compiler) compileType(withCtx bool, val types.Type) (r Type, t StackOfBoundsTag) {
 	switch val.Kind {
 	case types.ArrayType:
-		e, et := c.compileType(*val.ElementType)
+		e, et := c.compileType(withCtx, *val.ElementType)
 		r = Type(fmt.Sprintf("[%s]%s", strconv.Itoa(*val.ElementCount), e))
 		t = et
 	case types.StringType:
@@ -680,6 +701,9 @@ func (c *compiler) compileType(val types.Type) (r Type, t StackOfBoundsTag) {
 		r = Type(e)
 	case types.RequestType:
 		e := c.compileCompoundIdentifier(val.RequestSubtype, true, RequestSuffix)
+		if withCtx {
+			e = c.compileCompoundIdentifier(val.RequestSubtype, true, WithCtxSuffix+RequestSuffix)
+		}
 		var nullability int
 		if val.Nullable {
 			nullability = 1
@@ -687,7 +711,7 @@ func (c *compiler) compileType(val types.Type) (r Type, t StackOfBoundsTag) {
 		t.reverseOfBounds = append(t.reverseOfBounds, nullability)
 		r = Type(e)
 	case types.VectorType:
-		e, et := c.compileType(*val.ElementType)
+		e, et := c.compileType(withCtx, *val.ElementType)
 		if val.ElementCount == nil {
 			et.reverseOfBounds = append(et.reverseOfBounds, math.MaxInt32)
 		} else {
@@ -713,7 +737,11 @@ func (c *compiler) compileType(val types.Type) (r Type, t StackOfBoundsTag) {
 		case types.EnumDeclType:
 			r = Type(e)
 		case types.InterfaceDeclType:
-			r = Type(e + ProxySuffix)
+			if withCtx {
+				r = Type(e + WithCtxSuffix + ProxySuffix)
+			} else {
+				r = Type(e + ProxySuffix)
+			}
 		case types.StructDeclType:
 			fallthrough
 		case types.UnionDeclType:
@@ -744,7 +772,7 @@ func (c *compiler) compileBitsMember(val types.BitsMember) BitsMember {
 }
 
 func (c *compiler) compileBits(val types.Bits) Bits {
-	t, _ := c.compileType(val.Type)
+	t, _ := c.compileType(false, val.Type)
 	r := Bits{
 		Attributes: val.Attributes,
 		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
@@ -759,7 +787,7 @@ func (c *compiler) compileBits(val types.Bits) Bits {
 func (c *compiler) compileConst(val types.Const) Const {
 	// It's OK to ignore the tag because this type is guaranteed by the frontend
 	// to be either an enum, a primitive, or a string.
-	t, _ := c.compileType(val.Type)
+	t, _ := c.compileType(false, val.Type)
 	return Const{
 		Attributes: val.Attributes,
 		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
@@ -788,8 +816,8 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 	return r
 }
 
-func (c *compiler) compileStructMember(val types.StructMember) StructMember {
-	ty, rbtag := c.compileType(val.Type)
+func (c *compiler) compileStructMember(withCtx bool, val types.StructMember) StructMember {
+	ty, rbtag := c.compileType(withCtx, val.Type)
 	// TODO(fxb/43783) this value is not used but needs to exist since the
 	// bindings will ignore the first element before looking for the bounds
 	rbtag.reverseOfBounds = append(rbtag.reverseOfBounds, val.FieldShapeV1.Offset)
@@ -813,7 +841,7 @@ func (c *compiler) compileStructMember(val types.StructMember) StructMember {
 	}
 }
 
-func (c *compiler) compileStruct(val types.Struct) Struct {
+func (c *compiler) compileStruct(withCtx bool, val types.Struct) Struct {
 	tags := Tags{
 		FidlTag:            "s",
 		FidlSizeV1Tag:      val.TypeShapeV1.InlineSize,
@@ -827,7 +855,7 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 	}
 
 	for _, v := range val.Members {
-		r.Members = append(r.Members, c.compileStructMember(v))
+		r.Members = append(r.Members, c.compileStructMember(withCtx, v))
 	}
 
 	return r
@@ -839,7 +867,7 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 		if member.Reserved {
 			continue
 		}
-		ty, rbtag := c.compileType(member.Type)
+		ty, rbtag := c.compileType(false, member.Type)
 		rbtag.reverseOfBounds = append(rbtag.reverseOfBounds, member.Ordinal)
 		tags := Tags{
 			FidlTag:            rbtag,
@@ -884,7 +912,7 @@ func (c *compiler) compileTable(val types.Table) Table {
 	var members []TableMember
 	for _, member := range val.SortedMembersNoReserved() {
 		var (
-			ty, rbtag   = c.compileType(member.Type)
+			ty, rbtag   = c.compileType(false, member.Type)
 			name        = c.compileIdentifier(member.Name, true, "")
 			privateName = c.compileIdentifier(member.Name, false, "")
 		)
@@ -948,6 +976,13 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 		}
 		requestStruct.Name = c.compileCompoundIdentifier(ifaceName, false, methodName+"Request")
 		r.Request = &requestStruct
+
+		requestWithCtxStruct, ok := c.requestResponseWithCtxStructs[val.RequestPayload]
+		if !ok {
+			log.Panic("Unknown request with-ctx struct: ", val.RequestPayload)
+		}
+		requestWithCtxStruct.Name = c.compileCompoundIdentifier(ifaceName, false, WithCtxSuffix+methodName+"Request")
+		r.RequestWithCtx = &requestWithCtxStruct
 	}
 	if val.HasResponse && val.ResponsePayload != "" {
 		responseStruct, ok := c.requestResponseStructs[val.ResponsePayload]
@@ -956,6 +991,13 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 		}
 		responseStruct.Name = c.compileCompoundIdentifier(ifaceName, false, methodName+"Response")
 		r.Response = &responseStruct
+
+		responseWithCtxStruct, ok := c.requestResponseWithCtxStructs[val.ResponsePayload]
+		if !ok {
+			log.Panic("Unknown response with-ctx struct: ", val.ResponsePayload)
+		}
+		responseWithCtxStruct.Name = c.compileCompoundIdentifier(ifaceName, false, WithCtxSuffix+methodName+"Response")
+		r.ResponseWithCtx = &responseWithCtxStruct
 	}
 	return r
 }
@@ -973,10 +1015,12 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		TransitionalBaseName:        c.compileCompoundIdentifier(val.Name, true, TransitionalBaseSuffix),
 		TransitionalBaseWithCtxName: c.compileCompoundIdentifier(val.Name, true, WithCtxSuffix+TransitionalBaseSuffix),
 		ProxyName:                   c.compileCompoundIdentifier(val.Name, true, ProxySuffix),
+		ProxyWithCtxName:            c.compileCompoundIdentifier(val.Name, true, WithCtxSuffix+ProxySuffix),
 		ProxyType:                   proxyType,
 		StubName:                    c.compileCompoundIdentifier(val.Name, true, StubSuffix),
 		StubWithCtxName:             c.compileCompoundIdentifier(val.Name, true, WithCtxSuffix+StubSuffix),
 		RequestName:                 c.compileCompoundIdentifier(val.Name, true, RequestSuffix),
+		RequestWithCtxName:          c.compileCompoundIdentifier(val.Name, true, WithCtxSuffix+RequestSuffix),
 		EventProxyName:              c.compileCompoundIdentifier(val.Name, true, EventProxySuffix),
 		ServerName:                  c.compileCompoundIdentifier(val.Name, true, ServiceSuffix),
 		ServiceNameConstant:         c.compileCompoundIdentifier(val.Name, true, ServiceNameSuffix),
@@ -1025,11 +1069,12 @@ func Compile(fidlData types.Root) Root {
 
 	// Instantiate a compiler context.
 	c := compiler{
-		decls:                  fidlData.DeclsWithDependencies(),
-		library:                libraryName,
-		libraryDeps:            godeps,
-		usedLibraryDeps:        make(map[string]string),
-		requestResponseStructs: make(map[types.EncodedCompoundIdentifier]Struct),
+		decls:                         fidlData.DeclsWithDependencies(),
+		library:                       libraryName,
+		libraryDeps:                   godeps,
+		usedLibraryDeps:               make(map[string]string),
+		requestResponseStructs:        make(map[types.EncodedCompoundIdentifier]Struct),
+		requestResponseWithCtxStructs: make(map[types.EncodedCompoundIdentifier]Struct),
 	}
 
 	// Compile fidlData into r.
@@ -1051,9 +1096,10 @@ func Compile(fidlData types.Root) Root {
 			// these Structs still need to have their correct name (...Response or
 			// ...Request) generated, which occurs in compileMethod. Only then
 			// are they appended to r.Structs.
-			c.requestResponseStructs[v.Name] = c.compileStruct(v)
+			c.requestResponseStructs[v.Name] = c.compileStruct(false, v)
+			c.requestResponseWithCtxStructs[v.Name] = c.compileStruct(true, v)
 		} else {
-			r.Structs = append(r.Structs, c.compileStruct(v))
+			r.Structs = append(r.Structs, c.compileStruct(false, v))
 		}
 	}
 	for _, v := range fidlData.Unions {
@@ -1078,8 +1124,14 @@ func Compile(fidlData types.Root) Root {
 			if method.Request != nil {
 				r.Structs = append(r.Structs, *method.Request)
 			}
+			if method.RequestWithCtx != nil {
+				r.Structs = append(r.Structs, *method.RequestWithCtx)
+			}
 			if method.Response != nil {
 				r.Structs = append(r.Structs, *method.Response)
+			}
+			if method.ResponseWithCtx != nil {
+				r.Structs = append(r.Structs, *method.ResponseWithCtx)
 			}
 		}
 	}

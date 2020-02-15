@@ -15,6 +15,82 @@ const (
 {{- end }}
 )
 
+type {{ .ProxyWithCtxName }} _bindings.{{ .ProxyType }}
+{{ range .Methods }}
+{{range .DocComments}}
+//{{ . }}
+{{- end}}
+func (p *{{ $.ProxyWithCtxName }}) {{ if .IsEvent -}}
+		{{ .EventExpectName }}
+	{{- else -}}
+		{{ .Name }}
+	{{- end -}}
+	(ctx_ _bindings.Context
+	{{- if .RequestWithCtx -}}
+	{{- range .RequestWithCtx.Members -}}
+		, {{ .PrivateName }} {{ .Type }}
+	{{- end -}}
+	{{- end -}}
+	)
+	{{- if .HasResponse -}}
+	{{- if .ResponseWithCtx }} (
+	{{- range .ResponseWithCtx.Members }}{{ .Type }}, {{ end -}}
+		error)
+	{{- else }} error{{ end -}}
+	{{- else }} error{{ end }} {
+
+	{{- if .HasRequest }}
+	{{- if .RequestWithCtx }}
+	req_ := &{{ .RequestWithCtx.Name }}{
+		{{- range .RequestWithCtx.Members }}
+		{{ .Name }}: {{ .PrivateName }},
+		{{- end }}
+	}
+	{{- else }}
+	var req_ _bindings.Message
+	{{- end }}
+	{{- end }}
+	{{- if .HasResponse }}
+	{{- if .ResponseWithCtx }}
+	resp_ := &{{ .ResponseWithCtx.Name }}{}
+	{{- else }}
+	var resp_ _bindings.Message
+	{{- end }}
+	{{- end }}
+	{{- if .HasRequest }}
+		{{- if .HasResponse }}
+	err_ := ((*_bindings.{{ $.ProxyType }})(p)).Call({{ .Ordinals.Write.Name }}, req_, resp_
+		{{- range $index, $ordinal := .Ordinals.Reads -}}, {{ $ordinal.Name }}{{- end -}})
+		{{- else }}
+	err_ := ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .Ordinals.Write.Name }}, req_)
+		{{- end }}
+	{{- else }}
+		{{- if .HasResponse }}
+	err_ := ((*_bindings.{{ $.ProxyType }})(p)).Recv(
+		{{- with $first_ordinal := index .Ordinals.Reads 0 -}}
+			{{- $first_ordinal.Name -}}
+		{{- end -}}
+		, resp_
+		{{- range $index, $ordinal := .Ordinals.Reads -}}
+			{{- if $index -}}, {{ $ordinal.Name }}{{- end -}}
+		{{- end -}}
+		)
+		{{- else }}
+	err_ := nil
+		{{- end }}
+	{{- end }}
+	{{- if .HasResponse }}
+	{{- if .ResponseWithCtx }}
+	return {{ range .ResponseWithCtx.Members }}resp_.{{ .Name }}, {{ end }}err_
+	{{- else }}
+	return err_
+	{{- end }}
+	{{- else }}
+	return err_
+	{{- end }}
+}
+{{- end }}
+
 type {{ .ProxyName }} _bindings.{{ .ProxyType }}
 {{ range .Methods }}
 {{range .DocComments}}
@@ -101,9 +177,9 @@ type {{ .WithCtxName }} interface {
 	//{{ . }}
 	{{- end}}
 	{{- if .HasRequest }}
-	{{- if .Request }}
+	{{- if .RequestWithCtx }}
 	{{ .Name }}(ctx_ _bindings.Context
-	{{- range .Request.Members -}}
+	{{- range .RequestWithCtx.Members -}}
 		, {{ .PrivateName }} {{ .Type }}
 	{{- end -}}
 	)
@@ -111,8 +187,8 @@ type {{ .WithCtxName }} interface {
 	{{ .Name }}(ctx_ _bindings.Context)
 	{{- end }}
 	{{- if .HasResponse -}}
-	{{- if .Response }} (
-	{{- range .Response.Members }}{{ .Type }}, {{ end -}}
+	{{- if .ResponseWithCtx }} (
+	{{- range .ResponseWithCtx.Members }}{{ .Type }}, {{ end -}}
 		error)
 	{{- else }} error{{ end -}}
 	{{- else }} error{{ end }}
@@ -126,9 +202,9 @@ type {{.TransitionalBaseWithCtxName}} struct {}
 
 {{ range .Methods }}
 {{- if and .IsTransitional .HasRequest }}
-{{- if .Request }}
+{{- if .RequestWithCtx }}
 func (_ *{{$transitionalBaseWithCtxName}}) {{ .Name }} (ctx_ _bindings.Context
-{{- range .Request.Members -}}
+{{- range .RequestWithCtx.Members -}}
 	, {{ .PrivateName }} {{ .Type }}
 {{- end -}}
 )
@@ -136,8 +212,8 @@ func (_ *{{$transitionalBaseWithCtxName}}) {{ .Name }} (ctx_ _bindings.Context
 func (_ *{{$transitionalBaseWithCtxName}}) {{ .Name }} (ctx_ _bindings.Context)
 {{- end }}
 {{- if .HasResponse -}}
-	{{- if .Response }} (
-		{{- range .Response.Members }}{{ .Type }}, {{ end -}}
+	{{- if .ResponseWithCtx }} (
+		{{- range .ResponseWithCtx.Members }}{{ .Type }}, {{ end -}}
 			error)
 	{{- else -}}
 		error
@@ -215,6 +291,13 @@ type {{.TransitionalBaseName}} struct {}
 {{- end }}
 
 {{- if eq .ProxyType "ChannelProxy" }}
+type {{ .RequestWithCtxName }} _bindings.InterfaceRequest
+
+func New{{ .RequestWithCtxName }}() ({{ .RequestWithCtxName }}, *{{ .ProxyWithCtxName }}, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return {{ .RequestWithCtxName }}(req), (*{{ .ProxyWithCtxName }})(cli), err
+}
+
 type {{ .RequestName }} _bindings.InterfaceRequest
 
 func New{{ .RequestName }}() ({{ .RequestName }}, *{{ .ProxyName }}, error) {
@@ -223,6 +306,14 @@ func New{{ .RequestName }}() ({{ .RequestName }}, *{{ .ProxyName }}, error) {
 }
 
 {{- if .ServiceNameString }}
+// Implements ServiceRequest.
+func (_ {{ .RequestWithCtxName }}) Name() string {
+	return {{ .ServiceNameString }}
+}
+func (c {{ .RequestWithCtxName }}) ToChannel() _zx.Channel {
+	return c.Channel
+}
+
 // Implements ServiceRequest.
 func (_ {{ .RequestName }}) Name() string {
 	return {{ .ServiceNameString }}
@@ -239,62 +330,12 @@ type {{ .StubName }} struct {
 	Impl {{ .Name }}
 }
 
-func (s_ *{{ .StubName }}) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	return s_.DispatchImplWithCtx(ordinal_, ctx_.GetMarshalerContext(), data_, handles_)
-}
-
-func (s_ *{{ .StubName }}) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	{{- range .Methods }}
-	{{- if not .IsEvent }}
-	{{- range $index, $ordinal := .Ordinals.Reads }}
-		{{- if $index }}
-		fallthrough
-		{{- end }}
-	case {{ $ordinal.Name }}:
-	{{- end }}
-		{{- if .HasRequest }}
-		{{- if .Request }}
-		in_ := {{ .Request.Name }}{}
-		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_, data_, handles_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		{{- end }}
-		{{- end }}
-		{{ if .Response }}
-		{{- range .Response.Members }}{{ .PrivateName }}, {{ end -}}
-		{{- end -}}
-		err_ := s_.Impl.{{ .Name }}(
-		{{- if .HasRequest }}
-		{{- if .Request -}}
-		{{- range $index, $m := .Request.Members -}}
-		{{- if $index -}}, {{- end -}}
-		in_.{{ $m.Name }}
-		{{- end -}}
-		{{- end -}}
-		{{- end -}}
-		)
-		{{- if .HasResponse }}
-		{{- if .Response }}
-		out_ := {{ .Response.Name }}{}
-		{{- range .Response.Members }}
-		out_.{{ .Name }} = {{ .PrivateName }}
-		{{- end }}
-		return &out_, true, err_
-		{{- else }}
-		return nil, true, err_
-		{{- end }}
-		{{- else }}
-		return nil, false, err_
-		{{- end }}
-	{{- end }}
-	{{- end }}
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
-}
-
 func (s_ *{{ .StubName }}) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
-	return s_.DispatchImplWithCtx2(args_.Ordinal, args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos)
+	ctx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+	if !ok {
+		return nil, false, _bindings.ErrMissingMarshalerContext
+	}
+	return s_.DispatchImplWithCtx2(args_.Ordinal, ctx, args_.Bytes, args_.HandleInfos)
 }
 
 func (s_ *{{ .StubName }}) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
@@ -351,55 +392,6 @@ type {{ .StubWithCtxName }} struct {
 	Impl {{ .WithCtxName }}
 }
 
-func (s_ *{{ .StubWithCtxName }}) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	{{- range .Methods }}
-	{{- if not .IsEvent }}
-	{{- range $index, $ordinal := .Ordinals.Reads }}
-		{{- if $index }}
-		fallthrough
-		{{- end }}
-	case {{ $ordinal.Name }}:
-	{{- end }}
-		{{- if .HasRequest }}
-		{{- if .Request }}
-		in_ := {{ .Request.Name }}{}
-		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_.GetMarshalerContext(), data_, handles_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		{{- end }}
-		{{- end }}
-		{{ if .Response }}
-		{{- range .Response.Members }}{{ .PrivateName }}, {{ end -}}
-		{{- end -}}
-		err_ := s_.Impl.{{ .Name }}(ctx_
-		{{- if .HasRequest -}}
-		{{- if .Request -}}
-		{{- range $index, $m := .Request.Members -}}
-		, in_.{{ $m.Name }}
-		{{- end -}}
-		{{- end -}}
-		{{- end -}}
-		)
-		{{- if .HasResponse }}
-		{{- if .Response }}
-		out_ := {{ .Response.Name }}{}
-		{{- range .Response.Members }}
-		out_.{{ .Name }} = {{ .PrivateName }}
-		{{- end }}
-		return &out_, true, err_
-		{{- else }}
-		return nil, true, err_
-		{{- end }}
-		{{- else }}
-		return nil, false, err_
-		{{- end }}
-	{{- end }}
-	{{- end }}
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
-}
-
 func (s_ *{{ .StubWithCtxName }}) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
 	{{- range .Methods }}
@@ -411,29 +403,33 @@ func (s_ *{{ .StubWithCtxName }}) Dispatch(args_ _bindings.DispatchArgs) (_bindi
 	case {{ $ordinal.Name }}:
 	{{- end }}
 		{{- if .HasRequest }}
-		{{- if .Request }}
-		in_ := {{ .Request.Name }}{}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		{{- if .RequestWithCtx }}
+		in_ := {{ .RequestWithCtx.Name }}{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		{{- end }}
 		{{- end }}
-		{{ if .Response }}
-		{{- range .Response.Members }}{{ .PrivateName }}, {{ end -}}
+		{{ if .ResponseWithCtx }}
+		{{- range .ResponseWithCtx.Members }}{{ .PrivateName }}, {{ end -}}
 		{{- end -}}
 		err_ := s_.Impl.{{ .Name }}(args_.Ctx
 		{{- if .HasRequest -}}
-		{{- if .Request -}}
-		{{- range $index, $m := .Request.Members -}}
+		{{- if .RequestWithCtx -}}
+		{{- range $index, $m := .RequestWithCtx.Members -}}
 		, in_.{{ $m.Name }}
 		{{- end -}}
 		{{- end -}}
 		{{- end -}}
 		)
 		{{- if .HasResponse }}
-		{{- if .Response }}
-		out_ := {{ .Response.Name }}{}
-		{{- range .Response.Members }}
+		{{- if .ResponseWithCtx }}
+		out_ := {{ .ResponseWithCtx.Name }}{}
+		{{- range .ResponseWithCtx.Members }}
 		out_.{{ .Name }} = {{ .PrivateName }}
 		{{- end }}
 		return &out_, true, err_

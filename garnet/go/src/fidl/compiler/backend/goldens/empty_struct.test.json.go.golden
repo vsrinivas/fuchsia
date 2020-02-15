@@ -33,6 +33,17 @@ func (msg *emptyProtocolSendRequest) Marshaler() _bindings.Marshaler {
 	return _memptyProtocolSendRequest
 }
 
+type emptyProtocolWithCtxSendRequest struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	E Empty`fidl:"0" fidl_offset_v1:"0"`
+}
+
+var _memptyProtocolWithCtxSendRequest = _bindings.CreateLazyMarshaler(emptyProtocolWithCtxSendRequest{})
+
+func (msg *emptyProtocolWithCtxSendRequest) Marshaler() _bindings.Marshaler {
+	return _memptyProtocolWithCtxSendRequest
+}
+
 type emptyProtocolReceiveResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
 	E Empty`fidl:"0" fidl_offset_v1:"0"`
@@ -42,6 +53,17 @@ var _memptyProtocolReceiveResponse = _bindings.CreateLazyMarshaler(emptyProtocol
 
 func (msg *emptyProtocolReceiveResponse) Marshaler() _bindings.Marshaler {
 	return _memptyProtocolReceiveResponse
+}
+
+type emptyProtocolWithCtxReceiveResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	E Empty`fidl:"0" fidl_offset_v1:"0"`
+}
+
+var _memptyProtocolWithCtxReceiveResponse = _bindings.CreateLazyMarshaler(emptyProtocolWithCtxReceiveResponse{})
+
+func (msg *emptyProtocolWithCtxReceiveResponse) Marshaler() _bindings.Marshaler {
+	return _memptyProtocolWithCtxReceiveResponse
 }
 
 type emptyProtocolSendAndReceiveRequest struct {
@@ -55,6 +77,17 @@ func (msg *emptyProtocolSendAndReceiveRequest) Marshaler() _bindings.Marshaler {
 	return _memptyProtocolSendAndReceiveRequest
 }
 
+type emptyProtocolWithCtxSendAndReceiveRequest struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	E Empty`fidl:"0" fidl_offset_v1:"0"`
+}
+
+var _memptyProtocolWithCtxSendAndReceiveRequest = _bindings.CreateLazyMarshaler(emptyProtocolWithCtxSendAndReceiveRequest{})
+
+func (msg *emptyProtocolWithCtxSendAndReceiveRequest) Marshaler() _bindings.Marshaler {
+	return _memptyProtocolWithCtxSendAndReceiveRequest
+}
+
 type emptyProtocolSendAndReceiveResponse struct {
 	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
 	E Empty`fidl:"0" fidl_offset_v1:"0"`
@@ -65,6 +98,17 @@ var _memptyProtocolSendAndReceiveResponse = _bindings.CreateLazyMarshaler(emptyP
 func (msg *emptyProtocolSendAndReceiveResponse) Marshaler() _bindings.Marshaler {
 	return _memptyProtocolSendAndReceiveResponse
 }
+
+type emptyProtocolWithCtxSendAndReceiveResponse struct {
+	_ struct{} `fidl:"s" fidl_size_v1:"8" fidl_alignment_v1:"8"`
+	E Empty`fidl:"0" fidl_offset_v1:"0"`
+}
+
+var _memptyProtocolWithCtxSendAndReceiveResponse = _bindings.CreateLazyMarshaler(emptyProtocolWithCtxSendAndReceiveResponse{})
+
+func (msg *emptyProtocolWithCtxSendAndReceiveResponse) Marshaler() _bindings.Marshaler {
+	return _memptyProtocolWithCtxSendAndReceiveResponse
+}
 const (
 	EmptyProtocolSendOrdinal uint64 = 0x1109a64200000000
 	EmptyProtocolSendGenOrdinal uint64 = 0x7a2963cbd88da03
@@ -73,6 +117,32 @@ const (
 	EmptyProtocolSendAndReceiveOrdinal uint64 = 0x7b7cca3c00000000
 	EmptyProtocolSendAndReceiveGenOrdinal uint64 = 0x1e59efe8b1bbd615
 )
+
+type EmptyProtocolWithCtxInterface _bindings.ChannelProxy
+
+
+func (p *EmptyProtocolWithCtxInterface) Send(ctx_ _bindings.Context, e Empty) error {
+	req_ := &emptyProtocolWithCtxSendRequest{
+		E: e,
+	}
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(EmptyProtocolSendGenOrdinal, req_)
+	return err_
+}
+
+func (p *EmptyProtocolWithCtxInterface) ExpectReceive(ctx_ _bindings.Context) (Empty, error) {
+	resp_ := &emptyProtocolWithCtxReceiveResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Recv(EmptyProtocolReceiveOrdinal, resp_, EmptyProtocolReceiveGenOrdinal)
+	return resp_.E, err_
+}
+
+func (p *EmptyProtocolWithCtxInterface) SendAndReceive(ctx_ _bindings.Context, e Empty) (Empty, error) {
+	req_ := &emptyProtocolWithCtxSendAndReceiveRequest{
+		E: e,
+	}
+	resp_ := &emptyProtocolWithCtxSendAndReceiveResponse{}
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(EmptyProtocolSendAndReceiveGenOrdinal, req_, resp_, EmptyProtocolSendAndReceiveOrdinal, EmptyProtocolSendAndReceiveGenOrdinal)
+	return resp_.E, err_
+}
 
 type EmptyProtocolInterface _bindings.ChannelProxy
 
@@ -121,6 +191,13 @@ type EmptyProtocol interface {
 type EmptyProtocolTransitionalBase struct {}
 
 
+type EmptyProtocolWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewEmptyProtocolWithCtxInterfaceRequest() (EmptyProtocolWithCtxInterfaceRequest, *EmptyProtocolWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return EmptyProtocolWithCtxInterfaceRequest(req), (*EmptyProtocolWithCtxInterface)(cli), err
+}
+
 type EmptyProtocolInterfaceRequest _bindings.InterfaceRequest
 
 func NewEmptyProtocolInterfaceRequest() (EmptyProtocolInterfaceRequest, *EmptyProtocolInterface, error) {
@@ -132,38 +209,12 @@ type EmptyProtocolStub struct {
 	Impl EmptyProtocol
 }
 
-func (s_ *EmptyProtocolStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	return s_.DispatchImplWithCtx(ordinal_, ctx_.GetMarshalerContext(), data_, handles_)
-}
-
-func (s_ *EmptyProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	case EmptyProtocolSendOrdinal:
-		fallthrough
-	case EmptyProtocolSendGenOrdinal:
-		in_ := emptyProtocolSendRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_, data_, handles_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		err_ := s_.Impl.Send(in_.E)
-		return nil, false, err_
-	case EmptyProtocolSendAndReceiveOrdinal:
-		fallthrough
-	case EmptyProtocolSendAndReceiveGenOrdinal:
-		in_ := emptyProtocolSendAndReceiveRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_, data_, handles_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		e, err_ := s_.Impl.SendAndReceive(in_.E)
-		out_ := emptyProtocolSendAndReceiveResponse{}
-		out_.E = e
-		return &out_, true, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
-}
-
 func (s_ *EmptyProtocolStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
-	return s_.DispatchImplWithCtx2(args_.Ordinal, args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos)
+	ctx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+	if !ok {
+		return nil, false, _bindings.ErrMissingMarshalerContext
+	}
+	return s_.DispatchImplWithCtx2(args_.Ordinal, ctx, args_.Bytes, args_.HandleInfos)
 }
 
 func (s_ *EmptyProtocolStub) DispatchImplWithCtx2(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handleInfos_ []_zx.HandleInfo) (_bindings.Message, bool, error) {
@@ -196,39 +247,17 @@ type EmptyProtocolWithCtxStub struct {
 	Impl EmptyProtocolWithCtx
 }
 
-func (s_ *EmptyProtocolWithCtxStub) DispatchImpl(ctx_ _bindings.Context, ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	switch ordinal_ {
-	case EmptyProtocolSendOrdinal:
-		fallthrough
-	case EmptyProtocolSendGenOrdinal:
-		in_ := emptyProtocolSendRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_.GetMarshalerContext(), data_, handles_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		err_ := s_.Impl.Send(ctx_, in_.E)
-		return nil, false, err_
-	case EmptyProtocolSendAndReceiveOrdinal:
-		fallthrough
-	case EmptyProtocolSendAndReceiveGenOrdinal:
-		in_ := emptyProtocolSendAndReceiveRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext(ctx_.GetMarshalerContext(), data_, handles_, &in_); err_ != nil {
-			return nil, false, err_
-		}
-		e, err_ := s_.Impl.SendAndReceive(ctx_, in_.E)
-		out_ := emptyProtocolSendAndReceiveResponse{}
-		out_.E = e
-		return &out_, true, err_
-	}
-	return nil, false, _bindings.ErrUnknownOrdinal
-}
-
 func (s_ *EmptyProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
 	switch args_.Ordinal {
 	case EmptyProtocolSendOrdinal:
 		fallthrough
 	case EmptyProtocolSendGenOrdinal:
-		in_ := emptyProtocolSendRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		in_ := emptyProtocolWithCtxSendRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		err_ := s_.Impl.Send(args_.Ctx, in_.E)
@@ -236,12 +265,16 @@ func (s_ *EmptyProtocolWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bin
 	case EmptyProtocolSendAndReceiveOrdinal:
 		fallthrough
 	case EmptyProtocolSendAndReceiveGenOrdinal:
-		in_ := emptyProtocolSendAndReceiveRequest{}
-		if _, _, err_ := _bindings.UnmarshalWithContext2(args_.Ctx.GetMarshalerContext(), args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+		in_ := emptyProtocolWithCtxSendAndReceiveRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
 			return nil, false, err_
 		}
 		e, err_ := s_.Impl.SendAndReceive(args_.Ctx, in_.E)
-		out_ := emptyProtocolSendAndReceiveResponse{}
+		out_ := emptyProtocolWithCtxSendAndReceiveResponse{}
 		out_.E = e
 		return &out_, true, err_
 	}
