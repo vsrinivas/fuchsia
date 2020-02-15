@@ -95,9 +95,12 @@ void Vdec1::PowerOn() {
           ? kG12xFclkDiv4
           : kGxmFclkDiv4;
 
-  HhiVdecClkCntl::Get().FromValue(0).set_vdec_en(true).set_vdec_sel(clock_sel).WriteTo(
-      mmio()->hiubus);
-  DosGclkEn::Get().FromValue(0x3ff).WriteTo(mmio()->dosbus);
+  HhiVdecClkCntl::Get()
+      .ReadFrom(mmio()->hiubus)
+      .set_vdec_en(true)
+      .set_vdec_sel(clock_sel)
+      .WriteTo(mmio()->hiubus);
+  DosGclkEn::Get().ReadFrom(mmio()->dosbus).set_vdec_en(0x3ff).WriteTo(mmio()->dosbus);
   DosMemPdVdec::Get().FromValue(0).WriteTo(mmio()->dosbus);
   {
     auto temp = AoRtiGenPwrIso0::Get().ReadFrom(mmio()->aobus);
@@ -123,7 +126,11 @@ void Vdec1::PowerOff() {
     temp.WriteTo(mmio()->aobus);
   }
   DosMemPdVdec::Get().FromValue(~0u).WriteTo(mmio()->dosbus);
-  HhiVdecClkCntl::Get().FromValue(0).set_vdec_en(false).set_vdec_sel(3).WriteTo(mmio()->hiubus);
+  HhiVdecClkCntl::Get()
+      .ReadFrom(mmio()->hiubus)
+      .set_vdec_en(false)
+      .set_vdec_sel(3)
+      .WriteTo(mmio()->hiubus);
 
   {
     auto temp = AoRtiGenPwrSleep0::Get().ReadFrom(mmio()->aobus);

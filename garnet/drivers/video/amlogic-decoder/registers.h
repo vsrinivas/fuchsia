@@ -126,7 +126,10 @@ REGISTER_NAME(DosSwReset0, DosRegisterIo, 0x3f00)
   DEF_BIT(1, vdec_dos_reg_internal);
 };
 
-DEFINE_REGISTER(DosGclkEn, DosRegisterIo, 0x3f01);
+REGISTER_NAME(DosGclkEn, DosRegisterIo, 0x3f01)
+  DEF_FIELD(9, 0, vdec_en);
+};
+
 DEFINE_REGISTER(DosMemPdVdec, DosRegisterIo, 0x3f30);
 DEFINE_REGISTER(DosMemPdHevc, DosRegisterIo, 0x3f33);
 

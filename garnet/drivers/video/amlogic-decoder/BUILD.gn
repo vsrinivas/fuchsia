@@ -173,6 +173,7 @@ if (target_cpu == "arm64") {
       "tests/integration/video_frame_helpers.h",
       "tests/test_support.cc",
       "tests/unit_tests/test_binding.cc",
+      "tests/unit_tests/test_vdec1.cc",
       "tests/unit_tests/test_vp9.cc",
     ]
   }
