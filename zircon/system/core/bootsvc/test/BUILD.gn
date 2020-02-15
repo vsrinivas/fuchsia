@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/package.gni")
 import("$zx/public/gn/test/zbi_test.gni")
 
 group("test") {
@@ -32,9 +33,9 @@ zx_executable("bootsvc-integration-test") {
     "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
     "$zx/third_party/ulib/safemath",
     "..:util",
   ]
@@ -52,6 +53,16 @@ zbi_input("integration-test-deps") {
     ":integration-test-factory-item",
     ":integration-test-image-arg",
     ":shutdown-flag",
+
+    # Include a fake file in the ZBI in meta/, so we can test against a file that shouldn't be
+    # executable.
+    ":fake-cm-file",
+
+    # Include some fake libraries at both packaged and unpackaged locations to test that they can be
+    # opened executable. This is done so that the test doesn't need to look at different paths
+    # depending on whether the build is using sanitizers.
+    ":fake-packaged-library",
+    ":fake-unpackaged-library",
 
     # Pull in the dependencies of devcoordinator so that we can test
     # requesting libdriver.so from the bootsvc loader service.
@@ -110,6 +121,32 @@ zbi_input("integration-test-image-arg") {
   deps = [ ":bootsvc-integration-test-image-arg" ]
   type = "IMAGE_ARGS"
   sources = get_target_outputs(deps[0])
+}
+
+generated_file("gen-dummy-file") {
+  outputs = [ "$target_out_dir/$target_name" ]
+  contents = "doesn't matter"
+}
+
+resource("fake-cm-file") {
+  visibility = [ ":*" ]
+  deps = [ ":gen-dummy-file" ]
+  sources = [ "$target_out_dir/gen-dummy-file" ]
+  outputs = [ "meta/fake.cm" ]
+}
+
+resource("fake-packaged-library") {
+  visibility = [ ":*" ]
+  deps = [ ":gen-dummy-file" ]
+  sources = [ "$target_out_dir/gen-dummy-file" ]
+  outputs = [ "${bootfs_package_prefix}dummy_pkg/lib/dummy.so" ]
+}
+
+resource("fake-unpackaged-library") {
+  visibility = [ ":*" ]
+  deps = [ ":gen-dummy-file" ]
+  sources = [ "$target_out_dir/gen-dummy-file" ]
+  outputs = [ "lib/dummy.so" ]
 }
 
 zbi_test("bootsvc-integration-tests") {

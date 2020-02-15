@@ -35,7 +35,18 @@ bool WindowMatchesVMO(zx_handle_t vmo, zx_off_t offset, zx_off_t length) {
 }  // namespace
 
 VnodeVmo::VnodeVmo(Vfs* vfs, zx_handle_t vmo, zx_off_t offset, zx_off_t length)
-    : VnodeMemfs(vfs), vmo_(vmo), offset_(offset), length_(length), have_local_clone_(false) {}
+    : VnodeMemfs(vfs), vmo_(vmo), offset_(offset), length_(length), have_local_clone_(false) {
+  // Check whether the backing VMO has ZX_RIGHT_EXECUTE, which influences later validation and
+  // behavior.
+  zx_info_handle_basic_t handle_info;
+  zx_status_t status =
+      zx_object_get_info(vmo_, ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info), NULL, NULL);
+  if (status != ZX_OK) {
+    fprintf(stderr, "zx_object_get_info failed in VnodeVmo constructor: %d\n", status);
+    return;
+  }
+  executable_ = ((handle_info.rights & ZX_RIGHT_EXECUTE) != 0);
+}
 
 VnodeVmo::~VnodeVmo() {
   if (have_local_clone_) {
@@ -45,32 +56,27 @@ VnodeVmo::~VnodeVmo() {
 
 fs::VnodeProtocolSet VnodeVmo::GetProtocols() const { return fs::VnodeProtocol::kMemory; }
 
-bool VnodeVmo::ValidateRights(fs::Rights rights) { return !rights.write; }
+bool VnodeVmo::ValidateRights(fs::Rights rights) {
+  return !rights.write && (!rights.execute || executable_);
+}
 
 zx_status_t VnodeVmo::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
-                                             [[maybe_unused]] fs::Rights rights,
-                                             fs::VnodeRepresentation* info) {
-  zx_info_handle_basic_t handle_info;
-  zx_status_t status =
-      zx_object_get_info(vmo_, ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info), NULL, NULL);
-  if (status != ZX_OK) {
-    return status;
-  }
-
+                                             fs::Rights rights, fs::VnodeRepresentation* info) {
   if (!have_local_clone_ && !WindowMatchesVMO(vmo_, offset_, length_)) {
-    status = MakeLocalClone(handle_info.rights & ZX_RIGHT_EXECUTE);
+    zx_status_t status = MakeLocalClone();
     if (status != ZX_OK) {
       return status;
     }
   }
 
-  // Drop write rights.
+  // Ensure that we return predictable rights to the client side, e.g. no SET_PROPERTY.
   zx_handle_t vmo;
-  status =
-      zx_handle_duplicate(vmo_,
-                          ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY |
-                              (handle_info.rights & ZX_RIGHT_EXECUTE),  // Preserve exec if present.
-                          &vmo);
+  zx_rights_t handle_rights =
+      ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_GET_PROPERTY;
+  if (rights.execute) {
+    handle_rights |= ZX_RIGHT_EXECUTE;
+  }
+  zx_status_t status = zx_handle_duplicate(vmo_, handle_rights, &vmo);
   if (status != ZX_OK) {
     return status;
   }
@@ -109,20 +115,15 @@ zx_status_t VnodeVmo::GetAttributes(fs::VnodeAttributes* attr) {
 }
 
 zx_status_t VnodeVmo::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
-  if (!have_local_clone_ && !WindowMatchesVMO(vmo_, offset_, length_)) {
-    zx_info_handle_basic_t handle_info;
-    zx_status_t status = zx_object_get_info(vmo_, ZX_INFO_HANDLE_BASIC, &handle_info,
-                                            sizeof(handle_info), NULL, NULL);
-    if (status != ZX_OK) {
-      return status;
-    }
-    status = MakeLocalClone(handle_info.rights & ZX_RIGHT_EXECUTE);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
   if (flags & ::llcpp::fuchsia::io::VMO_FLAG_WRITE) {
     return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  if (!have_local_clone_ && !WindowMatchesVMO(vmo_, offset_, length_)) {
+    zx_status_t status = MakeLocalClone();
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   // Let clients map and set the names of their VMOs.
@@ -144,25 +145,18 @@ zx_status_t VnodeVmo::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   return ZX_OK;
 }
 
-zx_status_t VnodeVmo::MakeLocalClone(bool executable) {
+zx_status_t VnodeVmo::MakeLocalClone() {
+  // Creating a COPY_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the parent VMO has it. Adding
+  // CHILD_NO_WRITE still creates a snapshot and a new VMO object, which e.g. can have a unique
+  // ZX_PROP_NAME value, but the returned handle lacks WRITE and maintains EXECUTE.
   zx_handle_t tmp_vmo;
-  zx_status_t status =
-      zx_vmo_create_child(vmo_, ZX_VMO_CHILD_COPY_ON_WRITE, offset_, length_, &tmp_vmo);
+  zx_status_t status = zx_vmo_create_child(vmo_, ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_NO_WRITE,
+                                           offset_, length_, &tmp_vmo);
   if (status != ZX_OK) {
     return status;
   }
 
-  // Restore ZX_RIGHT_EXECUTE, if necessary.
-  // TODO(mdempsky): Use non-COW clone once available.
-  if (executable) {
-    status = zx_vmo_replace_as_executable(tmp_vmo, ZX_HANDLE_INVALID, &vmo_);
-    if (status != ZX_OK) {
-      return status;
-    }
-  } else {
-    vmo_ = tmp_vmo;
-  }
-
+  vmo_ = tmp_vmo;
   offset_ = 0;
   have_local_clone_ = true;
   return ZX_OK;

@@ -5,6 +5,7 @@
 #include "bootfs-service.h"
 
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/bootfs/parser.h>
 #include <sys/stat.h>
 #include <zircon/compiler.h>
@@ -20,10 +21,69 @@
 
 #include "util.h"
 
+namespace fio = ::llcpp::fuchsia::io;
+
 namespace bootsvc {
 
-zx_status_t BootfsService::Create(async_dispatcher_t* dispatcher, fbl::RefPtr<BootfsService>* out) {
-  auto svc = fbl::AdoptRef(new BootfsService());
+namespace {
+
+// 'Packages' in bootfs can contain executable files but we need to account for the package name
+// path component, which can be anything. For example, 'pkg/my_package/bin' should be executable but
+// 'pkg/my_package/foo' should not.
+static constexpr const char* kBootfsPackagePrefix = "pkg/";
+static constexpr const char* kExecutablePackageDirectories[] = {
+    "bin/",
+    "lib/",
+};
+
+static bool PathInExecutablePackageDirectory(const char* path) {
+  // All packages in bootfs are located under a single directory.
+  if (strncmp(kBootfsPackagePrefix, path, strlen(kBootfsPackagePrefix)) != 0) {
+    return false;
+  }
+
+  // Advance past the path separator separating the package name and path inside the package.
+  const char* inside_pkg = strchr(path + strlen(kBootfsPackagePrefix), '/');
+  if (inside_pkg == nullptr) {
+    return false;
+  }
+  inside_pkg++;
+
+  // Finally, check if the path inside the package is one of the allowlisted paths.
+  for (const char* prefix : kExecutablePackageDirectories) {
+    if (strncmp(prefix, inside_pkg, strlen(prefix)) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Other top-level directories in bootfs that are allowed to contain executable files (i.e. files
+// for which bootfs should allow opening with OPEN_RIGHT_EXECUTABLE).
+static constexpr const char* kExecutableDirectories[] = {
+    "bin/", "driver/", "lib/", "kernel/lib/", "kernel/vdso/", "test/",
+};
+
+static bool PathInExecutableDirectory(const char* path) {
+  if (PathInExecutablePackageDirectory(path)) {
+    return true;
+  }
+
+  for (const char* prefix : kExecutableDirectories) {
+    if (strncmp(prefix, path, strlen(prefix)) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+}  // namespace
+
+BootfsService::BootfsService(zx::resource vmex_rsrc) : vmex_rsrc_(std::move(vmex_rsrc)) {}
+
+zx_status_t BootfsService::Create(async_dispatcher_t* dispatcher, zx::resource vmex_rsrc,
+                                  fbl::RefPtr<BootfsService>* out) {
+  auto svc = fbl::AdoptRef(new BootfsService(std::move(vmex_rsrc)));
 
   zx_status_t status = memfs::Vfs::Create("<root>", &svc->vfs_, &svc->root_);
   if (status != ZX_OK) {
@@ -42,14 +102,27 @@ zx_status_t BootfsService::AddBootfs(zx::vmo bootfs_vmo) {
     return status;
   }
 
+  // The bootfs VnodeVmo nodes are all created from the same backing VMO with differing offsets, and
+  // memfs creates clones as needed. Executable files use a duplicate handle to this same VMO which
+  // has ZX_RIGHT_EXECUTE added. This is done once here rather than in PublishUnownedVmo to avoid
+  // lots of repetitive unnecessary syscalls for every executable file.
+  zx::vmo bootfs_exec_vmo;
+  status = DuplicateAsExecutable(bootfs_vmo, &bootfs_exec_vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
   // Load all of the entries in the bootfs into the FS
-  status = parser.Parse([this, &bootfs_vmo](const zbi_bootfs_dirent_t* entry) -> zx_status_t {
-    PublishUnownedVmo(entry->name, bootfs_vmo, entry->data_off, entry->data_len);
+  status = parser.Parse([this, &bootfs_vmo,
+                         &bootfs_exec_vmo](const zbi_bootfs_dirent_t* entry) -> zx_status_t {
+    const zx::vmo& vmo = (PathInExecutableDirectory(entry->name)) ? bootfs_exec_vmo : bootfs_vmo;
+    PublishUnownedVmo(entry->name, vmo, entry->data_off, entry->data_len);
     return ZX_OK;
   });
-  // Add this VMO to our list of parts even on failure, since we may have
+  // Add these VMOs to our list of owned VMOs even on failure, since we may have
   // added a file
   owned_vmos_.push_back(std::move(bootfs_vmo));
+  owned_vmos_.push_back(std::move(bootfs_exec_vmo));
   return status;
 }
 
@@ -57,29 +130,30 @@ zx_status_t BootfsService::CreateRootConnection(zx::channel* out) {
   return CreateVnodeConnection(vfs_.get(), root_, fs::Rights::ReadExec(), out);
 }
 
-zx_status_t BootfsService::Open(const char* path, zx::vmo* vmo, size_t* size) {
-  auto open_result = vfs_->Open(root_, path, fs::VnodeConnectionOptions::ReadOnly().set_no_remote(),
-                                fs::Rights::ReadOnly(), 0);
+zx_status_t BootfsService::Open(const char* path, bool executable, zx::vmo* vmo, size_t* size) {
+  if (path != nullptr && (path[0] == '/' || path[0] == 0)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto open_options =
+      executable ? fs::VnodeConnectionOptions::ReadExec() : fs::VnodeConnectionOptions::ReadOnly();
+  open_options.set_no_remote();
+
+  // fdio cannot be used since it is synchronous, and the filesystem we're opening from is
+  // in-process and single threaded, but using the ulib/fs APIs directly instead of going through
+  // the fuchsia.io APIs risks behavior differences or skipped checks.
+  auto open_result = vfs_->Open(root_, path, open_options, fs::Rights::ReadOnly(), 0);
   if (open_result.is_error()) {
     return open_result.error();
   }
   ZX_ASSERT(open_result.is_ok());
   fbl::RefPtr<fs::Vnode> node = std::move(open_result.ok().vnode);
-  fs::VnodeRepresentation info;
-  zx_status_t status = node->GetNodeInfo(fs::Rights::ReadOnly(), &info);
-  if (status != ZX_OK) {
-    return status;
-  }
 
-  if (!info.is_memory()) {
-    return ZX_ERR_WRONG_TYPE;
-  }
-  fs::VnodeRepresentation::Memory& memory = info.memory();
-  ZX_ASSERT(memory.offset == 0);
-
-  *vmo = std::move(memory.vmo);
-  *size = memory.length;
-  return ZX_OK;
+  // memfs doesn't currently do anything different for VMO_FLAG_PRIVATE, but it may in the future,
+  // and this matches the flags used by fdio_get_vmo_clone/exec.
+  uint32_t vmo_flags = fio::VMO_FLAG_READ | fio::VMO_FLAG_PRIVATE;
+  vmo_flags |= executable ? fio::VMO_FLAG_EXEC : 0;
+  return node->GetVmo(vmo_flags, vmo, size);
 }
 
 BootfsService::~BootfsService() {
@@ -91,6 +165,24 @@ BootfsService::~BootfsService() {
     parts.reset();
   };
   vfs_->Shutdown(std::move(callback));
+}
+
+zx_status_t BootfsService::DuplicateAsExecutable(const zx::vmo& vmo, zx::vmo* out_vmo) {
+  zx::vmo out;
+  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &out);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // TODO(fxb/45994): Update zx::vmo::replace_as_executable to take a zx::resource& instead of a
+  // zx::handle&
+  status = out.replace_as_executable(*zx::unowned_handle(vmex_rsrc_.get()), &out);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  *out_vmo = std::move(out);
+  return ZX_OK;
 }
 
 zx_status_t BootfsService::PublishVmo(const char* path, zx::vmo vmo, zx_off_t off, size_t len) {
@@ -105,11 +197,12 @@ zx_status_t BootfsService::PublishVmo(const char* path, zx::vmo vmo, zx_off_t of
 zx_status_t BootfsService::PublishUnownedVmo(const char* path, const zx::vmo& vmo, zx_off_t off,
                                              size_t len) {
   ZX_ASSERT(root_ != nullptr);
-  fbl::RefPtr<memfs::VnodeDir> vnb(root_);
-  zx_status_t r;
-  if ((path[0] == '/') || (path[0] == 0))
+  if ((path[0] == '/') || (path[0] == 0)) {
     return ZX_ERR_INVALID_ARGS;
-  for (;;) {
+  }
+
+  fbl::RefPtr<memfs::VnodeDir> vnb(root_);
+  while (true) {
     const char* nextpath = strchr(path, '/');
     if (nextpath == nullptr) {
       if (path[0] == 0) {
@@ -123,13 +216,12 @@ zx_status_t BootfsService::PublishUnownedVmo(const char* path, const zx::vmo& vm
       }
 
       fbl::RefPtr<fs::Vnode> out;
-      r = vnb->Lookup(&out, fbl::StringPiece(path, nextpath - path));
-      if (r == ZX_ERR_NOT_FOUND) {
-        r = vnb->Create(&out, fbl::StringPiece(path, nextpath - path), S_IFDIR);
+      zx_status_t status = vnb->Lookup(&out, fbl::StringPiece(path, nextpath - path));
+      if (status == ZX_ERR_NOT_FOUND) {
+        status = vnb->Create(&out, fbl::StringPiece(path, nextpath - path), S_IFDIR);
       }
-
-      if (r < 0) {
-        return r;
+      if (status != ZX_OK) {
+        return status;
       }
       vnb = fbl::RefPtr<memfs::VnodeDir>::Downcast(std::move(out));
       path = nextpath + 1;
@@ -185,6 +277,20 @@ void BootfsService::PublishStartupVmos(uint8_t type, const char* debug_type_name
     if (!strcmp(name + kVmoSubdirLen, "crashlog")) {
       // the crashlog has a special home
       strcpy(name, kLastPanicFilePath);
+    }
+
+    // If this should be an executable file, we duplicate a new handle with ZX_RIGHT_EXECUTE to use
+    // below. If the VMO is still owned, we simply replace it; no need to keep the old handle. In
+    // either case, the new VMO handle is owned.
+    if (PathInExecutableDirectory(name)) {
+      zx::unowned_vmo old_vmo((owned_vmo.is_valid()) ? owned_vmo.get() : vmo->get());
+      status = DuplicateAsExecutable(*old_vmo, &owned_vmo);
+      if (status != ZX_OK) {
+        printf("bootfs: failed to create executable handle for %s %i: %s", debug_type_name, i,
+               zx_status_get_string(status));
+        continue;
+      }
+      vmo = zx::unowned_vmo(owned_vmo);
     }
 
     if (owned_vmo.is_valid()) {

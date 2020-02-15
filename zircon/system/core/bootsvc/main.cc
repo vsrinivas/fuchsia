@@ -11,6 +11,7 @@
 #include <lib/zx/debuglog.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
+#include <lib/zx/resource.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
 #include <zircon/boot/image.h>
@@ -18,6 +19,7 @@
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/resource.h>
 #include <zircon/syscalls/system.h>
 
 #include <sstream>
@@ -34,6 +36,8 @@
 #include "util.h"
 
 namespace {
+
+static constexpr const char kBootfsVmexName[] = "bootfs_vmex";
 
 // Wire up stdout so that printf() and friends work.
 zx_status_t SetupStdout(const zx::debuglog& log) {
@@ -84,14 +88,20 @@ zx_status_t ExtractBootArgsFromImage(fbl::Vector<char>* buf, const zx::vmo& imag
 zx_status_t ExtractBootArgsFromBootfs(fbl::Vector<char>* buf,
                                       const fbl::RefPtr<bootsvc::BootfsService>& bootfs) {
   // TODO(teisenbe): Rename this file
-  const char* config_path = "/config/devmgr";
+  const char* config_path = "config/devmgr";
 
+  // This config file may not be present depending on the device, but errors besides NOT_FOUND
+  // should not be ignored.
   zx::vmo config_vmo;
   uint64_t file_size;
-  zx_status_t status = bootfs->Open(config_path, &config_vmo, &file_size);
-  if (status != ZX_OK) {
+  zx_status_t status = bootfs->Open(config_path, /*executable=*/false, &config_vmo, &file_size);
+  if (status == ZX_ERR_NOT_FOUND) {
+    printf("bootsvc: No boot config found in bootfs, skipping\n");
     return ZX_OK;
+  } else if (status != ZX_OK) {
+    return status;
   }
+
   auto config = std::make_unique<char[]>(file_size);
   status = config_vmo.read(config.get(), 0, file_size);
   if (status != ZX_OK) {
@@ -164,8 +174,7 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
 void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
                        fbl::RefPtr<bootsvc::SvcfsService> svcfs,
                        fbl::RefPtr<bootsvc::BootfsLoaderService> loader_svc,
-                       const zx::resource& root_rsrc, const zx::debuglog& log,
-                       async::Loop& loop) {
+                       const zx::resource& root_rsrc, const zx::debuglog& log, async::Loop& loop) {
   const char* bootsvc_next = getenv("bootsvc.next");
   if (bootsvc_next == nullptr) {
     bootsvc_next =
@@ -184,7 +193,7 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
   zx::vmo program;
   uint64_t file_size;
   const char* next_program = next_args[0].c_str();
-  zx_status_t status = bootfs->Open(next_program, &program, &file_size);
+  zx_status_t status = bootfs->Open(next_program, /*executable=*/true, &program, &file_size);
   ZX_ASSERT_MSG(status == ZX_OK, "bootsvc: failed to open '%s': %s\n", next_program,
                 zx_status_get_string(status));
 
@@ -293,10 +302,22 @@ int main(int argc, char** argv) {
   zx::vmo bootfs_vmo(zx_take_startup_handle(PA_HND(PA_VMO_BOOTFS, 0)));
   ZX_ASSERT(bootfs_vmo.is_valid());
 
+  // Take the root resource
+  printf("bootsvc: Taking root resource handle...\n");
+  zx::resource root_resource(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
+  ZX_ASSERT_MSG(root_resource.is_valid(), "Invalid root resource handle\n");
+
+  // Create a VMEX resource object to provide the bootfs service.
+  zx::resource bootfs_vmex_rsrc;
+  status = zx::resource::create(root_resource, ZX_RSRC_KIND_VMEX, 0, 0, kBootfsVmexName,
+                                sizeof(kBootfsVmexName), &bootfs_vmex_rsrc);
+  ZX_ASSERT_MSG(status == ZX_OK, "Failed to create VMEX resource");
+
   // Set up the bootfs service
   printf("bootsvc: Creating bootfs service...\n");
   fbl::RefPtr<bootsvc::BootfsService> bootfs_svc;
-  status = bootsvc::BootfsService::Create(loop.dispatcher(), &bootfs_svc);
+  status =
+      bootsvc::BootfsService::Create(loop.dispatcher(), std::move(bootfs_vmex_rsrc), &bootfs_svc);
   ZX_ASSERT_MSG(status == ZX_OK, "BootfsService creation failed: %s\n",
                 zx_status_get_string(status));
   status = bootfs_svc->AddBootfs(std::move(bootfs_vmo));
@@ -318,11 +339,6 @@ int main(int argc, char** argv) {
   status = LoadBootArgs(bootfs_svc, image_vmo, &item_map, &args_vmo, &args_size);
   ZX_ASSERT_MSG(status == ZX_OK, "Loading boot arguments failed: %s\n",
                 zx_status_get_string(status));
-
-  // Take the root resource
-  printf("bootsvc: Taking root resource handle...\n");
-  zx::resource root_resource(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
-  ZX_ASSERT_MSG(root_resource.is_valid(), "Invalid root resource handle\n");
 
   // Set up the svcfs service
   printf("bootsvc: Creating svcfs service...\n");
@@ -356,8 +372,8 @@ int main(int argc, char** argv) {
   // it may issue requests to the loader, which runs in the async loop that
   // starts running after this.
   printf("bootsvc: Launching next process...\n");
-  std::thread(LaunchNextProcess, bootfs_svc, svcfs_svc, loader_svc,
-              std::cref(root_resource), std::cref(log), std::ref(loop))
+  std::thread(LaunchNextProcess, bootfs_svc, svcfs_svc, loader_svc, std::cref(root_resource),
+              std::cref(log), std::ref(loop))
       .detach();
 
   // Begin serving the bootfs fileystem and loader

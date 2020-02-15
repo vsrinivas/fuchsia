@@ -34,7 +34,7 @@ zx_executable("bin") {
   deps = [
     ":util",
     "$zx/system/fidl/fuchsia-boot:c",
-    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/fidl/fuchsia-kernel:llcpp",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async:async-default",

@@ -8,6 +8,7 @@
 #include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/debuglog.h>
@@ -17,10 +18,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <zircon/boot/image.h>
+#include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls/system.h>
 
+#include <cstdint>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -28,9 +31,11 @@
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "../util.h"
+
+namespace {
 
 namespace fio = ::llcpp::fuchsia::io;
 
@@ -54,45 +59,41 @@ void print_test_success_string() {
   zx_debuglog_write(log.get(), 0, ZBI_TEST_SUCCESS_STRING, sizeof(ZBI_TEST_SUCCESS_STRING));
 }
 
-int main(int argc, char** argv) {
-  // Copy arguments for later use in tests.
-  for (int i = 0; i < argc; ++i) {
-    arguments.push_back(fbl::String(argv[i]));
+// Consumes the given fd and returns the result of a call to fuchsia.io.Node.NodeGetFlags.
+uint32_t fd_get_flags(fbl::unique_fd fd) {
+  zx::channel file_channel;
+  if (fdio_fd_transfer(fd.release(), file_channel.reset_and_get_address()) != ZX_OK) {
+    return 0;
   }
 
-  int result = unittest_run_all_tests(argc, argv) ? 0 : -1;
-  if (result == 0) {
-    print_test_success_string();
+  fio::Node::SyncClient client(std::move(file_channel));
+  auto result = client.NodeGetFlags();
+  if (result.status() != ZX_OK) {
+    return 0;
   }
-
-  // Sleep 3 seconds to allow buffers to flush before powering off
-  zx::nanosleep(zx::deadline_after(zx::sec(3)));
-
-  // Return. WAIT, how does this test manage to finish if "success" is QEMU
-  // turning off? The ZBI that this is packaged on should set the
-  // bootsvc.on_next_process_exit flag so that bootsvc turns the system off
-  // when the "next process" (in this case, this test) exits.
-  return result;
+  fio::Node::NodeGetFlagsResponse* response = result.Unwrap();
+  if (response->s != ZX_OK) {
+    return 0;
+  }
+  return response->flags;
 }
 
-namespace {
+zx_rights_t get_rights(const zx::object_base& handle) {
+  zx_info_handle_basic_t info;
+  zx_status_t status = handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  return status == ZX_OK ? info.rights : ZX_RIGHT_NONE;
+}
 
 // Make sure the loader works
-bool TestLoader() {
-  BEGIN_TEST;
-
+TEST(BootsvcIntegrationTest, Loader) {
   // Request loading a library we don't use
   void* ptr = dlopen("libdriver.so", RTLD_LAZY | RTLD_LOCAL);
   ASSERT_NOT_NULL(ptr);
   dlclose(ptr);
-
-  END_TEST;
 }
 
 // Make sure that bootsvc gave us a namespace with only /boot and /svc.
-bool TestNamespace() {
-  BEGIN_TEST;
-
+TEST(BootsvcIntegrationTest, Namespace) {
   fdio_flat_namespace_t* ns;
   ASSERT_EQ(fdio_ns_export_root(&ns), ZX_OK);
 
@@ -106,22 +107,70 @@ bool TestNamespace() {
   EXPECT_STR_EQ(ns->path[1], "/svc");
   free(ns);
 
-  // /boot should be RX and /svc should be RW. This uses a roundabout way to check connection rights
-  // on a fuchsia.io.Directory, since GetFlags is only on fuchsia.io/File
-  // TODO(fxb/37419): Once fuchsia.io/Node supports GetFlags, we should update this to use that
-  // instead of just testing rights through a Directory.Open
-  int fd;
+  // /boot should be RX and /svc should be RW. We use OPEN_FLAG_POSIX + fuchsia.io.Node.NodeGetFlags
+  // to check that these are also the maximum rights supported.
+  fbl::unique_fd fd;
+  EXPECT_EQ(ZX_OK, fdio_open_fd(
+                       "/boot",
+                       fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE | fio::OPEN_FLAG_POSIX,
+                       fd.reset_and_get_address()));
+  EXPECT_EQ(fd_get_flags(std::move(fd)), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
   EXPECT_EQ(ZX_OK,
-            fdio_open_fd("/boot", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd));
-  EXPECT_EQ(ZX_ERR_ACCESS_DENIED, fdio_open_fd("/boot",
-                                               fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE |
-                                                   fio::OPEN_RIGHT_EXECUTABLE,
-                                               &fd));
-  EXPECT_EQ(ZX_OK, fdio_open_fd("/svc", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, &fd));
-  EXPECT_EQ(ZX_ERR_ACCESS_DENIED,
-            fdio_open_fd("/svc", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd));
+            fdio_open_fd("/svc",
+                         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE | fio::OPEN_FLAG_POSIX,
+                         fd.reset_and_get_address()));
+  EXPECT_EQ(fd_get_flags(std::move(fd)), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE);
+}
 
-  END_TEST;
+// We simply check here whether files can be opened with OPEN_RIGHT_EXECUTABLE or not.
+//
+// Also, this test really needs to be able to open specific files, which unfortunately means some
+// specific lists of files to test against that make this a bit fragile. Opening subdirectories
+// doesn't get us coverage because we only limit the rights that you can open the files with.
+TEST(BootsvcIntegrationTest, BootfsExecutability) {
+  const char* kExecutableFiles[] = {
+      "/boot/pkg/bootsvc/bin/bootsvc",
+      "/boot/pkg/dummy_pkg/lib/dummy.so",
+      "/boot/driver/component.so",
+      "/boot/lib/dummy.so",
+      "/boot/kernel/lib/hermetic/decompress-zbi.so",
+      "/boot/kernel/vdso/full",
+  };
+  for (const char* file : kExecutableFiles) {
+    fbl::unique_fd fd;
+    EXPECT_EQ(ZX_OK,
+              fdio_open_fd(file, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+                           fd.reset_and_get_address()),
+              "open %s exec", file);
+
+    zx::vmo vmo;
+    EXPECT_EQ(ZX_OK, fdio_get_vmo_exec(fd.get(), vmo.reset_and_get_address()), "get_vmo_exec %s",
+              file);
+    EXPECT_TRUE(vmo.is_valid());
+    EXPECT_EQ(ZX_RIGHT_EXECUTE, get_rights(vmo) & ZX_RIGHT_EXECUTE);
+  }
+
+  const char* kNonExecutableFiles[] = {
+      "/boot/meta/fake.cm",
+      "/boot/kernel/counters/desc",
+  };
+  for (const char* file : kNonExecutableFiles) {
+    fbl::unique_fd fd;
+    EXPECT_EQ(ZX_ERR_ACCESS_DENIED,
+              fdio_open_fd(file, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+                           fd.reset_and_get_address()),
+              "open %s exec", file);
+    EXPECT_EQ(ZX_OK, fdio_open_fd(file, fio::OPEN_RIGHT_READABLE, fd.reset_and_get_address()),
+              "open %s read-only", file);
+
+    zx::vmo vmo;
+    EXPECT_EQ(ZX_OK, fdio_get_vmo_clone(fd.get(), vmo.reset_and_get_address()), "get_vmo_clone %s",
+              file);
+    // Because of particulars of how fdio works with vmofiles, this returns INVALID_ARGS on failure
+    // instead of ACCESS_DENIED (basically because it fails during a handle_replace inside fdio).
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, fdio_get_vmo_exec(fd.get(), vmo.reset_and_get_address()),
+              "get_vmo_exec %s", file);
+  }
 }
 
 // Make sure that bootsvc passed along program arguments from bootsvc.next
@@ -130,20 +179,14 @@ bool TestNamespace() {
 // As documented in TESTING, this test relies on these tests being run by using
 // a boot cmdline that includes 'bootsvc.next=bin/bootsvc-integration-test,testargument' so
 // that we can test the parsing on bootsvc.next.
-bool TestArguments() {
-  BEGIN_TEST;
-
+TEST(BootsvcIntegrationTest, Arguments) {
   ASSERT_EQ(arguments.size(), 2);
   EXPECT_STR_EQ(arguments[0].c_str(), "bin/bootsvc-integration-test");
   EXPECT_STR_EQ(arguments[1].c_str(), "testargument");
-
-  END_TEST;
 }
 
 // Make sure the fuchsia.boot.Arguments service works
-bool TestBootArguments() {
-  BEGIN_TEST;
-
+TEST(BootsvcIntegrationTest, BootArguments) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   ASSERT_EQ(ZX_OK, status);
@@ -166,14 +209,10 @@ bool TestBootArguments() {
     ASSERT_EQ(ZX_OK, status);
     ASSERT_EQ(ZX_DEFAULT_VMO_RIGHTS & ~ZX_RIGHT_WRITE, info.rights);
   }
-
-  END_TEST;
 }
 
 // Make sure the fuchsia.boot.FactoryItems service works
-bool TestFactoryItems() {
-  BEGIN_TEST;
-
+TEST(BootsvcIntegrationTest, FactoryItems) {
   zx::channel local_items, remote_items;
   zx_status_t status = zx::channel::create(0, &local_items, &remote_items);
   ASSERT_EQ(ZX_OK, status);
@@ -213,14 +252,11 @@ bool TestFactoryItems() {
     ASSERT_EQ(ZX_OK, payload.read(buf, 0, sizeof(buf)));
     ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(kExpected), buf, sizeof(buf), "");
   }
-  END_TEST;
 }
 
 // Make sure that bootsvc parsed and passed boot args from ZBI_ITEM_IMAGE_ARGS
 // correctly.
-bool TestBootArgsFromImage() {
-  BEGIN_TEST;
-
+TEST(BootsvcIntegrationTest, BootArgsFromImage) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   ASSERT_EQ(ZX_OK, status);
@@ -244,14 +280,10 @@ bool TestBootArgsFromImage() {
   static constexpr char kExpected[] = "testkey=testvalue";
   auto actual = reinterpret_cast<const uint8_t*>(buf.get());
   ASSERT_BYTES_EQ(reinterpret_cast<const uint8_t*>(kExpected), actual, sizeof(kExpected) - 1, "");
-
-  END_TEST;
 }
 
 // Make sure the fuchsia.boot.Items service works
-bool TestBootItems() {
-  BEGIN_TEST;
-
+TEST(BootsvcIntegrationTest, BootItems) {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   ASSERT_EQ(ZX_OK, status);
@@ -293,14 +325,10 @@ bool TestBootItems() {
     }
 #endif
   }
-
-  END_TEST;
 }
 
 // Check that the kernel-provided VDSOs were added to /boot/kernel/vdso
-bool TestVdsosPresent() {
-  BEGIN_TEST;
-
+TEST(BootsvcIntegrationTest, VdsosPresent) {
   DIR* dir = opendir("/boot/kernel/vdso");
   ASSERT_NOT_NULL(dir);
 
@@ -316,19 +344,27 @@ bool TestVdsosPresent() {
   ASSERT_GT(count, 0);
 
   closedir(dir);
-
-  END_TEST;
 }
 
 }  // namespace
 
-BEGIN_TEST_CASE(bootsvc_integration_tests)
-RUN_TEST(TestLoader)
-RUN_TEST(TestNamespace)
-RUN_TEST(TestArguments)
-RUN_TEST(TestBootArguments)
-RUN_TEST(TestBootArgsFromImage)
-RUN_TEST(TestBootItems)
-RUN_TEST(TestFactoryItems)
-RUN_TEST(TestVdsosPresent)
-END_TEST_CASE(bootsvc_integration_tests)
+int main(int argc, char** argv) {
+  // Copy arguments for later use in tests.
+  for (int i = 0; i < argc; ++i) {
+    arguments.push_back(fbl::String(argv[i]));
+  }
+
+  int result = RUN_ALL_TESTS(argc, argv);
+  if (result == 0) {
+    print_test_success_string();
+  }
+
+  // Sleep 3 seconds to allow buffers to flush before powering off
+  zx::nanosleep(zx::deadline_after(zx::sec(3)));
+
+  // Return. WAIT, how does this test manage to finish if "success" is QEMU
+  // turning off? The ZBI that this is packaged on should set the
+  // bootsvc.on_next_process_exit flag so that bootsvc turns the system off
+  // when the "next process" (in this case, this test) exits.
+  return result;
+}

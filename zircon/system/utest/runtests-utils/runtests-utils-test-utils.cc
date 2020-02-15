@@ -29,8 +29,8 @@ namespace runtests {
 
 fbl::String packaged_script_dir() {
   fbl::String test_root_dir(getenv("TEST_ROOT_DIR"));
-  fbl::String all_test_data_dir(JoinPath(test_root_dir, "testdata"));
-  fbl::String runtests_utils_test_data_dir(JoinPath(all_test_data_dir, "runtests-utils"));
+  fbl::String runtests_utils_test_data_dir(
+      JoinPath(test_root_dir, "test/sys/runtests-utils-testdata"));
   return runtests_utils_test_data_dir;
 }
 
@@ -48,8 +48,7 @@ PackagedScriptFile::~PackagedScriptFile() {}
 
 fbl::StringPiece PackagedScriptFile::path() const { return path_.ToStringPiece(); }
 
-ScopedStubFile::ScopedStubFile(const fbl::StringPiece path)
-  : path_(path) {
+ScopedStubFile::ScopedStubFile(const fbl::StringPiece path) : path_(path) {
   const int fd = open(path_.data(), O_CREAT | O_WRONLY, S_IRWXU);
   ZX_ASSERT_MSG(-1 != fd, "%s", strerror(errno));
   ZX_ASSERT_MSG(-1 != close(fd), "%s", strerror(errno));

@@ -85,7 +85,7 @@ resource("packaged-publish-data-helper") {
   # TODO(44278): restore to true when properly convert to GN idioms.
   testonly = false
   deps = [ ":publish-data-helper" ]
-  dest = "testdata/runtests-utils/publish-data/publish-data-helper"
+  dest = "test/sys/runtests-utils-testdata/publish-data/publish-data-helper"
   source = "$root_out_dir/publish-data-helper"
 }
 
@@ -93,7 +93,7 @@ resource("test-data") {
   # TODO(44278): restore to true when properly convert to GN idioms.
   testonly = false
   contents = [ "Hello world!" ]
-  dest = "testdata/runtests-utils/test-data"
+  dest = "test/sys/runtests-utils-testdata/test-data"
 }
 
 # Generates a build script with a sensible #! depending on what our target is.
@@ -116,7 +116,7 @@ template("runtests_test_script") {
   }
 
   genfile =
-      "$target_out_dir/testdata/runtests-utils/${subdirectory}${target_name}"
+      "$target_out_dir/test/sys/runtests-utils-testdata/${subdirectory}${target_name}"
   rebased_genfile = rebase_path(genfile)
 
   action("${target_name}.txt") {
@@ -133,7 +133,7 @@ template("runtests_test_script") {
     # TODO(44278): restore to true when properly convert to GN idioms.
     testonly = false
     deps = [ ":${target_name}.txt" ]
-    dest = "testdata/runtests-utils/${subdirectory}${target_name}"
+    dest = "test/sys/runtests-utils-testdata/${subdirectory}${target_name}"
     source = genfile
   }
 }
@@ -199,7 +199,7 @@ runtests_test_script("succeed-with-echo.sh") {
 
 runtests_test_script("test-root-dir.sh") {
   # Used by RunTestRootDir.
-  contents = "read line < \$TEST_ROOT_DIR/testdata/runtests-utils/test-data\necho \\\"\$line\\\"\n"
+  contents = "read line < \$TEST_ROOT_DIR/test/sys/runtests-utils-testdata/test-data\necho \\\"\$line\\\"\n"
 }
 
 runtests_test_script("test-inf-loop.sh") {

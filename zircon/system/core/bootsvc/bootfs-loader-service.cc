@@ -21,7 +21,7 @@ zx_status_t BootfsLoaderService::LoadObject(const char* name, zx::vmo* vmo_out) 
     return ZX_ERR_BAD_PATH;
   }
   uint64_t size;
-  return bootfs_->Open(tmp, vmo_out, &size);
+  return bootfs_->Open(tmp, /*executable=*/true, vmo_out, &size);
 }
 
 zx_status_t BootfsLoaderService::LoadAbspath(const char* name, zx::vmo* vmo) {

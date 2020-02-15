@@ -188,13 +188,6 @@ zx_handle_t reserve_low_address_space(zx_handle_t log, zx_handle_t root_vmar) {
                                          handles[kUserbootDecompressor], handles[kFirstVdso],
                                          handles[kZbi])};
 
-  // TODO(mdempsky): Push further down the stack? Seems unnecessary to
-  // mark the entire bootfs VMO as executable.
-  status = bootfs_vmo.replace_as_executable(
-      // TODO(mcgrathr): takes zx::handle, not zx::resource
-      *zx::unowned_handle{root_resource.get()}, &bootfs_vmo);
-  check(log.get(), status, "zx_vmo_replace_as_executable");
-
   // Map in the bootfs so we can look for files in it.
   struct bootfs bootfs;
   bootfs_mount(vmar_self.get(), log.get(), bootfs_vmo.get(), &bootfs);

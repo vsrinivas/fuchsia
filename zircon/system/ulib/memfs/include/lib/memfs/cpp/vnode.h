@@ -169,11 +169,12 @@ class VnodeVmo final : public VnodeMemfs {
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final;
   zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) final;
-  zx_status_t MakeLocalClone(bool executable);
+  zx_status_t MakeLocalClone();
 
   zx_handle_t vmo_;
   zx_off_t offset_;
   zx_off_t length_;
+  bool executable_;
   bool have_local_clone_;
 };
 
