@@ -1315,7 +1315,7 @@ aggregate_manifest("migrated-image") {
 #------------------
     "//src/devices/block/bin/disk-inspect:disk-inspect-manifest",
     "//zircon/system/uapp/dlog:dlog-manifest",
-    "//zircon/system/uapp/driverctl:driverctl-manifest",
+    "//src/devices/bin/driverctl:driverctl-manifest",
     "//zircon/system/ulib/driver-info/app:driverinfo-manifest",
     "//zircon/system/uapp/fs-fsck:fsck-manifest",
 #------------------
@@ -1350,7 +1350,7 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/uapp/ktrace:ktrace-manifest",
     "//zircon/system/uapp/loadgen:loadgen-manifest",
     "//src/devices/block/bin/lsblk:lsblk-manifest",
-    "//zircon/system/uapp/lsdev:lsdev-manifest",
+    "//src/devices/bin/lsdev:lsdev-manifest",
     "//zircon/system/uapp/lspwr:lspwr-manifest",
     "//src/devices/usb/bin/lsusb:lsusb-manifest",
     "//zircon/system/uapp/lz4:lz4-manifest",
@@ -1400,7 +1400,7 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/uapp/trace-benchmark:trace-benchmark-manifest",
     "//zircon/system/uapp/trace-example:trace-example-manifest",
     "//zircon/system/uapp/fs-umount:umount-manifest",
-    "//zircon/system/uapp/unbind:unbind-manifest",
+    "//src/devices/bin/unbind:unbind-manifest",
     "//src/devices/usb/bin/usb-fwloader:usb-fwloader-manifest",
     "//src/devices/usb/bin/usbctl:usbctl-manifest",
     "//zircon/system/uapp/psutils:vmaps-manifest",
