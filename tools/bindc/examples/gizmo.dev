@@ -1,0 +1,4 @@
+deprecated.BIND_PROTOCOL = deprecated.usb.BIND_PROTOCOL.DEVICE
+deprecated.BIND_USB_VID = deprecated.usb.BIND_USB_VID.REALTEK
+deprecated.BIND_USB_CLASS = deprecated.usb.BIND_USB_CLASS.VIDEO
+deprecated.BIND_USB_SUBCLASS = deprecated.usb.BIND_USB_SUBCLASS.VIDEO_CONTROL

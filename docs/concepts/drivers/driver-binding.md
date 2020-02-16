@@ -29,7 +29,10 @@ removed and all bind property keys will be defined in bind libraries.
 The compiler takes a list of library sources, and one program source. For example:
 
 ```
-bindc --include pci.lib,usb.lib --output gizmo.h gizmo.bind
+fx bindc \
+  --include src/devices/bind/deprecated.usb/deprecated.usb.bind \
+  --output tools/bindc/examples/gizmo.h \
+  tools/bindc/examples/gizmo.bind
 ```
 
 Currently, it produces a C header file that may be included by a driver. The header file defines a
@@ -46,7 +49,7 @@ ZIRCON_DRIVER(Driver, Ops, VendorName, Version)
 For more details, see [the driver development documentation]
 (/docs/concepts/drivers/driver-development).
 
-## Bind rules
+## Bind rules {#bind-rules}
 
 A bind program defines the conditions to call a driver's `bind()` hook. Each statement in the bind
 program is a condition over the properties of the device that must hold true in order for the
@@ -63,21 +66,23 @@ There are four kinds of statements:
 
 ### Example
 
+This example bind program can be found at [//tools/bindc/examples/gizmo.bind](/tools/bindc/examples/gizmo.bind).
+
 ```
 using deprecated.usb;
 
 // The device must be a USB device.
 deprecated.BIND_PROTOCOL == deprecated.usb.BIND_PROTOCOL.DEVICE;
 
-if (deprecated.BIND_USB_VID == deprecated.usb.INTEL) {
-  // If the device's vendor is Intel, the device ID must be one of the following values:
-  accept deprecated.BIND_USB_DID {
-    1337,
-    0xcafe,
-  };
-} else if (deprecated.BIND_USB_VID == deprecated.usb.REALTEK) {
-  // If the device's vendor is Realtek, the device class must be audio.
-  deprecated.BIND_USB_CLASS = deprecated.usb.BIND_USB_CLASS.AUDIO;
+if deprecated.BIND_USB_VID == deprecated.usb.BIND_USB_VID.INTEL {
+  // If the device's vendor is Intel, the device class must be audio.
+  deprecated.BIND_USB_CLASS == deprecated.usb.BIND_USB_CLASS.AUDIO;
+} else if deprecated.BIND_USB_VID == deprecated.usb.BIND_USB_VID.REALTEK {
+  // If the device's vendor is Realtek, the device class must be one of the following values:
+  accept deprecated.BIND_USB_CLASS {
+    deprecated.usb.BIND_USB_CLASS.COMM,
+    deprecated.usb.BIND_USB_CLASS.VIDEO,
+  }
 } else {
   // If the vendor is neither Intel or Realtek, do not bind.
   abort;
@@ -139,7 +144,7 @@ using
 ```
 
 A string literal matches the regex `”[^”]*”`, and a numeric literal matches the regex `[0-9]+` or
-`0x[0-9A-F]+.`
+`0x[0-9A-F]+`.
 
 The bind compiler will ignore (treat as whitespace) any line prefixed by `//`, and any multiple
 lines delimited by `/*` and `*/`.
@@ -158,7 +163,7 @@ bind_rules("bind") {
 
 For more details, refer to [//build/bind/bind.gni](/build/bind/bind.gni).
 
-## Bind libraries
+## Bind libraries {#bind-libraries}
 
 A bind library defines a set of properties that drivers may assign to their children. Also,
 bind programs may refer to bind libraries.
@@ -276,7 +281,7 @@ using
 ```
 
 A string literal matches the regex `”[^”]*”`, and a numeric literal matches the regex `[0-9]+` or
-`0x[0-9A-F]+.`
+`0x[0-9A-F]+`.
 
 The bind compiler will ignore (treat as whitespace) any line prefixed by `//`, and any multiple
 lines delimited by `/*` and `*/`.
@@ -293,3 +298,107 @@ bind_library(<library name>) {
 ```
 
 For more details, refer to [//build/bind/bind.gni](/build/bind/bind.gni).
+
+## Debugger
+
+The debugger is a host tool that can be used to run a bind program against a
+device with a particular set of properties. It outputs a trace of the bind
+program's execution, describing why the driver would or would not bind to the
+device. You can specify the device with a file listing the device's properties.
+
+### Running the debugger {#running-the-debugger}
+
+You can run the debugger with the `--debug` option in the bind compiler.
+
+```
+fx bindc \
+  --include src/devices/bind/deprecated.usb/deprecated.usb.bind \
+  --debug tools/bindc/examples/gizmo.dev \
+  tools/bindc/examples/gizmo.bind
+```
+
+The bind program source and the library sources are in the formats described in
+the [bind rules](#bind-rules) and [bind libraries](#bind-libraries) sections,
+respectively. The `--debug` option takes a  file containing a specification of
+the device to run the bind program against.
+
+Note: The `--debug` and `--output` options are mutually exclusive, so the C
+header file will not be generated when running the compiler in debug mode.
+
+### Device specification file
+
+The debugger takes a file specifying the device to run the bind program against.
+This specification is simply a list of key-value pairs describing the properties
+of the device.
+
+#### Example
+
+This example device specification can be found at
+[//tools/bindc/examples/gizmo.dev](/tools/bindc/examples/gizmo.dev).
+
+```
+deprecated.BIND_PROTOCOL = deprecated.usb.BIND_PROTOCOL.DEVICE
+deprecated.BIND_USB_VID = deprecated.usb.BIND_USB_VID.REALTEK
+deprecated.BIND_USB_CLASS = deprecated.usb.BIND_USB_CLASS.VIDEO
+deprecated.BIND_USB_SUBCLASS = deprecated.usb.BIND_USB_SUBCLASS.VIDEO_CONTROL
+```
+
+#### Grammar
+
+```
+device-specification = ( property )* ;
+
+property = compound-identifier , "=" , value ;
+
+compound-identifier = IDENTIFIER ( "." , IDENTIFIER )* ;
+
+value = compound-identifier | STRING-LITERAL | NUMERIC-LITERAL | "true" | "false" ;
+```
+
+An identifier matches the regex `[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9])?`.
+
+A string literal matches the regex `”[^”]*”`, and a numeric literal matches the
+regex `[0-9]+` or
+`0x[0-9A-F]+`.
+
+The bind compiler will ignore (treat as whitespace) any line prefixed by `//`,
+and any multiple
+lines delimited by `/*` and `*/`.
+
+### Debugger output
+
+The output of the debugger is a trace of the bind program's execution. The trace
+contains information about whether each statement in the bind program succeeded,
+and why or why not. For example, if a condition statement failed because the
+device did not have the required value, the debugger will output what the actual
+value of the device was (or the fact that the device had no value for that
+property). The trace also includes information about which branches were taken
+in if statements.
+
+#### Example
+
+The output of the debugger when running the command
+[above](#running-the-debugger) is:
+
+```
+Line 4: Condition statement succeeded: deprecated.BIND_PROTOCOL == deprecated.usb.BIND_PROTOCOL.DEVICE;
+Line 6: If statement condition failed: deprecated.BIND_USB_VID == deprecated.usb.BIND_USB_VID.INTEL
+    Actual value of `deprecated.BIND_USB_VID` was `deprecated.usb.BIND_USB_VID.REALTEK` [0xbda].
+Line 9: If statement condition succeeded: deprecated.BIND_USB_VID == deprecated.usb.BIND_USB_VID.REALTEK
+Line 11: Accept statement succeeded.
+    Value of `deprecated.BIND_USB_CLASS` was `deprecated.usb.BIND_USB_CLASS.VIDEO` [0xe].
+Driver binds to device.
+```
+
+The trace shows the outcome of each statement which was reached while executing
+the bind program:
+
+- The device has the USB device protocol, so the first condition statement is
+satisfied.
+- The device's vendor ID is REALTEK, so the second branch of the if statement is
+taken.
+- The device has one of the two accepted classes (video), so the accept
+statement is satisfied.
+
+The debugger outputs that the driver would successfully bind to a device with
+these properties.
