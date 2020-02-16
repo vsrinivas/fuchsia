@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fuchsia_zircon as zx,
 };
 
 /// Creates a child in the specified `Realm`.
@@ -48,25 +48,27 @@ pub async fn create_child_component(
 /// - `realm`: The `Realm` the child will bound in.
 ///
 /// # Returns
-/// `Ok` if the child was bound successfully.
+/// `Ok` Result with a client-side channel bound to the component's `exposed_dir`. This directory
+/// contains the capabilities that the child exposed to its realm (as declared, for instance, in the
+/// `expose` declaration of the component's `.cml` file).
 pub async fn bind_child_component(
     child_name: &str,
     collection_name: &str,
     realm: &fsys::RealmProxy,
-) -> Result<(), fcomponent::Error> {
+) -> Result<zx::Channel, fcomponent::Error> {
     let mut child_ref = fsys::ChildRef {
         name: child_name.to_string(),
         collection: Some(collection_name.to_string()),
     };
 
-    let (_, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>()
+    let (client_end, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
         .map_err(|_| fcomponent::Error::Internal)?;
     realm
         .bind_child(&mut child_ref, server_end)
         .await
         .map_err(|_| fcomponent::Error::Internal)??;
 
-    Ok(())
+    Ok(client_end.into_channel().unwrap().into_zx_channel())
 }
 
 /// Destroys a child in the specified `Realm`. This call is expects a matching call to have been
@@ -99,15 +101,41 @@ mod tests {
     use {
         super::{bind_child_component, create_child_component, destroy_child_component},
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+        fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+        fuchsia_async as fasync,
         futures::prelude::*,
+        lazy_static::lazy_static,
+        std::sync::Mutex,
     };
+
+    /// A mutually exclusive counter that is not shareable, but can be defined statically for the
+    /// duration of a test.
+    struct Counter {
+        count: Mutex<usize>,
+    }
+
+    impl Counter {
+        /// Initializes a new counter to the given value.
+        fn new(initial: usize) -> Self {
+            Counter { count: Mutex::new(initial) }
+        }
+
+        /// Increments the counter by one.
+        fn inc(&self) {
+            *self.count.lock().unwrap() += 1;
+        }
+
+        /// Returns the current value of the counter.
+        fn get(&self) -> usize {
+            *self.count.lock().unwrap()
+        }
+    }
 
     /// Spawns a local `fidl_fuchsia_sys2::Realm` server, and returns a proxy to the spawned server.
     /// The provided `request_handler` is notified when an incoming request is received.
     ///
     /// # Parameters
-    /// - `request_handler`: A function which is called with incoming requests to the spawned
+    /// - `request_handler`: A function that is called with incoming requests to the spawned
     ///                      `Realm` server.
     /// # Returns
     /// A `RealmProxy` to the spawned server.
@@ -125,6 +153,26 @@ mod tests {
         });
 
         realm_proxy
+    }
+
+    /// Spawns a local handler for the given `fidl_fuchsia_io::Directory` request stream.
+    /// The provided `request_handler` is notified when an incoming request is received.
+    ///
+    /// # Parameters
+    /// - `directory_server`: A server request stream from a Directory proxy server endpoint.
+    /// - `request_handler`: A function that is called with incoming requests to the spawned
+    ///                      `Directory` server.
+    fn spawn_directory_server<F: 'static>(
+        mut directory_server: fio::DirectoryRequestStream,
+        request_handler: F,
+    ) where
+        F: Fn(fio::DirectoryRequest) + Send,
+    {
+        fasync::spawn(async move {
+            while let Some(directory_request) = directory_server.try_next().await.unwrap() {
+                request_handler(directory_request);
+            }
+        });
     }
 
     /// Tests that creating a child results in the appropriate call to the `RealmProxy`.
@@ -219,6 +267,75 @@ mod tests {
         });
 
         assert!(bind_child_component("", "", &realm_proxy).await.is_ok());
+    }
+
+    /// Tests that binding a child returns the childs exposed Directory.
+    #[fasync::run_singlethreaded(test)]
+    async fn bind_child_exposed_dir_success() {
+        // Make a static call counter to avoid unneeded complexity with cloned Arc<Mutex>.
+        lazy_static! {
+            static ref CALL_COUNT: Counter = Counter::new(0);
+        }
+
+        let directory_request_handler = |directory_request| match directory_request {
+            fio::DirectoryRequest::Open {
+                flags: _, // assume: fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
+                mode: _,  // assume: FDIO_CONNECT_MODE,
+                path: fake_capability_path,
+                object: _, // assume: fidl::endpoints::ServerEnd<NodeMarker>,
+                control_handle: _,
+            } => {
+                CALL_COUNT.inc();
+                assert_eq!(fake_capability_path, "fake_capability_path");
+            }
+            _ => {
+                assert!(false);
+            }
+        };
+
+        let realm_proxy = spawn_realm_server(move |realm_request| match realm_request {
+            fsys::RealmRequest::BindChild {
+                child: _,
+                exposed_dir: exposed_dir_server,
+                responder,
+            } => {
+                CALL_COUNT.inc();
+                spawn_directory_server(
+                    exposed_dir_server.into_stream().unwrap(),
+                    directory_request_handler,
+                );
+                let _ = responder.send(&mut Ok(()));
+            }
+            _ => {
+                assert!(false);
+            }
+        });
+
+        let exposed_dir = bind_child_component("", "", &realm_proxy).await.unwrap();
+
+        // Create a proxy of any FIDL protocol, with any `await`-able method.
+        // (`fio::DirectoryMarker` here is arbitrary.)
+        let (client_end, server_end) =
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+
+        // Connect should succeed, but it is still an asynchronous operation.
+        // The `directory_request_handler` is not called yet.
+        assert!(fdio::service_connect_at(
+            &exposed_dir,
+            "fake_capability_path",
+            server_end.into_channel()
+        )
+        .is_ok());
+
+        // Attempting to invoke and await an arbitrary method to ensure the
+        // `directory_request_handler` responds to the Open() method and increment
+        // the CALL_COUNT.
+        //
+        // Since this is a fake capability (of any arbitrary type), it should fail.
+        assert!(client_end.rewind().await.is_err());
+
+        // Calls to Realm::BindChild and Directory::Open should have happened.
+        assert_eq!(CALL_COUNT.get(), 2);
     }
 
     /// Tests that an error received when binding a child results in an appropriate error from
