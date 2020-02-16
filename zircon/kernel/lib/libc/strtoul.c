@@ -6,7 +6,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <ctype.h>
-#include <errno.h>
 #include <stdlib.h>
 
 unsigned long strtoul(const char *nptr, char **endptr, int base) {
@@ -14,7 +13,6 @@ unsigned long strtoul(const char *nptr, char **endptr, int base) {
   unsigned long ret = 0;
 
   if (base < 0 || base == 1 || base > 36) {
-    errno = EINVAL;
     return 0;
   }
 
@@ -62,7 +60,6 @@ unsigned long strtoul(const char *nptr, char **endptr, int base) {
     new_ret = ret * base;
     if (new_ret / base != ret || new_ret + v < new_ret || ret == ULONG_MAX) {
       ret = ULONG_MAX;
-      errno = ERANGE;
     } else {
       ret = new_ret + v;
     }

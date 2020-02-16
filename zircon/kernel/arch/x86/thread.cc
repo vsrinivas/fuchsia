@@ -12,7 +12,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <x86intrin.h>
 
 #include <arch/x86.h>
 #include <arch/x86/descriptor.h>

@@ -23,6 +23,13 @@
 #define _FMA4INTRIN_H_INCLUDED
 #define _XOPMMINTRIN_H_INCLUDED
 #endif
+
+#if !defined(__clang__)
+// GCC's <x86intrin.h> indirectly includes its <mm_malloc.h>, which
+// is useless to us but requires an <errno.h> with declarations.
+#define _MM_MALLOC_H_INCLUDED
+#endif
+
 #include <x86intrin.h>
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_X86INTRIN_H_

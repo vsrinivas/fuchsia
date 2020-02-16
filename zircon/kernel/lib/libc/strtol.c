@@ -29,7 +29,6 @@
  */
 
 #include <ctype.h>
-#include <errno.h>
 #include <limits.h>
 #include <stdlib.h>
 
@@ -112,7 +111,6 @@ long strtol(const char *nptr, char **endptr, int base) {
       if (acc < cutoff || (acc == cutoff && c > cutlim)) {
         any = -1;
         acc = LONG_MIN;
-        errno = ERANGE;
       } else {
         any = 1;
         acc *= base;
@@ -122,7 +120,6 @@ long strtol(const char *nptr, char **endptr, int base) {
       if (acc > cutoff || (acc == cutoff && c > cutlim)) {
         any = -1;
         acc = LONG_MAX;
-        errno = ERANGE;
       } else {
         any = 1;
         acc *= base;
