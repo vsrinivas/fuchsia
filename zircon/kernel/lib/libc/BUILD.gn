@@ -4,7 +4,6 @@
 
 source_set("libc") {
   sources = [
-    "atoi.c",
     "atomic.cc",
     "cxa_atexit.cc",
     "cxa_pure_virtual.cc",
@@ -14,6 +13,7 @@ source_set("libc") {
     "rand.c",
     "stdio.c",
     "strtol.c",
+    "strtoul.c",
   ]
   deps = [
     ":ctype",

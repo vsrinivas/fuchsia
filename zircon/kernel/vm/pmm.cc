@@ -196,7 +196,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
   } else if (!strcmp(argv[1].str, "oom")) {
     uint64_t rate = 0;
     if (argc > 2) {
-      rate = atoi(argv[2].str) * 1024 * 1024 / PAGE_SIZE;
+      rate = strtoul(argv[2].str, nullptr, 0) * 1024 * 1024 / PAGE_SIZE;
     }
 
     uint64_t pages_till_oom;

@@ -19,13 +19,8 @@
 
 __BEGIN_CDECLS
 
-int atoi(const char *num);
-unsigned int atoui(const char *num);
-long atol(const char *num);
-unsigned long atoul(const char *num);
-unsigned long long atoull(const char *num);
-
 long strtol(const char *nptr, char **endptr, int base);
+unsigned long int strtoul(const char *nptr, char **endptr, int base);
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -37,7 +32,6 @@ long strtol(const char *nptr, char **endptr, int base);
 #define IS_ALIGNED(a, b) (!(((uintptr_t)(a)) & (((uintptr_t)(b)) - 1)))
 
 void abort(void) __attribute__((noreturn));
-unsigned long int strtoul(const char *nptr, char **endptr, int base);
 char *getenv(const char *name);
 
 __END_CDECLS
