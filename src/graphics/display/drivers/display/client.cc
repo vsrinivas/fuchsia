@@ -11,12 +11,14 @@
 #include <lib/image-format/image_format.h>
 #include <lib/zx/channel.h>
 #include <math.h>
+#include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/pixelformat.h>
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -29,6 +31,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 
+#include "lib/fidl-async/cpp/async_bind.h"
 #include "lib/fidl-async/cpp/bind.h"
 
 namespace fhd = llcpp::fuchsia::hardware::display;
@@ -1655,12 +1658,22 @@ zx_status_t Client::Init(zx::channel server_channel) {
 
   server_handle_ = server_channel.get();
 
-  fidl::OnChannelClosedFn<Client> cb = [](Client* client) {
-    zxlogf(TRACE, "Client closed\n");
-    client->TearDown();
+  fidl::OnUnboundFn<Client> cb = [](Client* client, fidl::UnboundReason reason, zx::channel ch) {
+    // DdkRelease will call unbind before releasing the client. Therefore, we do not want
+    // to perform any client operations (since it will be released)
+    if (reason != fidl::UnboundReason::kUnbind) {
+      client->TearDown();
+    }
   };
 
-  fidl::Bind(controller_->loop().dispatcher(), std::move(server_channel), this, std::move(cb));
+  auto res = fidl::AsyncBind(controller_->loop().dispatcher(), std::move(server_channel), this,
+                             std::move(cb));
+  if (!res.is_ok()) {
+    zxlogf(ERROR, "%s: Failed to bind to FIDL Server (%d)\n", __func__, res.error());
+    return res.error();
+  }
+  // keep a copy of fidl binding so we can safely unbind from it during shutdown
+  fidl_binding_ = res.take_value();
 
   zx::channel sysmem_allocator_request;
   zx::channel::create(0, &sysmem_allocator_request, &sysmem_allocator_);
@@ -1692,18 +1705,31 @@ Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc, uint32_t 
 Client::~Client() { ZX_DEBUG_ASSERT(server_handle_ == ZX_HANDLE_INVALID); }
 
 void ClientProxy::SetOwnership(bool is_owner) {
-  auto task = new async::Task();
-  task->set_handler([client_handler = &handler_, is_owner](async_dispatcher_t* dispatcher,
-                                                           async::Task* task, zx_status_t status) {
+  fbl::AllocChecker ac;
+  auto task = fbl::make_unique_checked<async::Task>(&ac);
+  if (!ac.check()) {
+    zxlogf(WARN, "Failed to allocate set ownership task\n");
+    return;
+  }
+  task->set_handler([this, client_handler = &handler_, is_owner](
+                        async_dispatcher_t* /*dispatcher*/, async::Task* task, zx_status_t status) {
     if (status == ZX_OK && client_handler->IsValid()) {
       client_handler->SetOwnership(is_owner);
     }
-
-    delete task;
+    // update client_scheduled_tasks_
+    mtx_lock(&this->task_mtx_);
+    auto it = std::find_if(client_scheduled_tasks_.begin(), client_scheduled_tasks_.end(),
+                           [&](std::unique_ptr<async::Task>& t) { return t.get() == task; });
+    // Current task must have been added to the list.
+    ZX_DEBUG_ASSERT(it != client_scheduled_tasks_.end());
+    client_scheduled_tasks_.erase(it);
+    mtx_unlock(&this->task_mtx_);
   });
-  if (task->Post(controller_->loop().dispatcher()) != ZX_OK) {
-    delete task;
+  mtx_lock(&task_mtx_);
+  if (task->Post(controller_->loop().dispatcher()) == ZX_OK) {
+    client_scheduled_tasks_.push_back(std::move(task));
   }
+  mtx_unlock(&task_mtx_);
 }
 
 void ClientProxy::OnDisplaysChanged(const uint64_t* displays_added, size_t added_count,
@@ -1713,23 +1739,31 @@ void ClientProxy::OnDisplaysChanged(const uint64_t* displays_added, size_t added
 
 void ClientProxy::ReapplyConfig() {
   fbl::AllocChecker ac;
-  auto task = new (&ac) async::Task();
+  auto task = fbl::make_unique_checked<async::Task>(&ac);
   if (!ac.check()) {
     zxlogf(WARN, "Failed to reapply config\n");
     return;
   }
 
-  task->set_handler([client_handler = &handler_](async_dispatcher_t* dispatcher, async::Task* task,
-                                                 zx_status_t status) {
+  task->set_handler([this, client_handler = &handler_](async_dispatcher_t* /*dispatcher*/,
+                                                       async::Task* task, zx_status_t status) {
     if (status == ZX_OK && client_handler->IsValid()) {
       client_handler->ApplyConfig();
     }
-
-    delete task;
+    // update client_scheduled_tasks_
+    mtx_lock(&this->task_mtx_);
+    auto it = std::find_if(client_scheduled_tasks_.begin(), client_scheduled_tasks_.end(),
+                           [&](std::unique_ptr<async::Task>& t) { return t.get() == task; });
+    // Current task must have been added to the list.
+    ZX_DEBUG_ASSERT(it != client_scheduled_tasks_.end());
+    client_scheduled_tasks_.erase(it);
+    mtx_unlock(&this->task_mtx_);
   });
-  if (task->Post(controller_->loop().dispatcher()) != ZX_OK) {
-    delete task;
+  mtx_lock(&task_mtx_);
+  if (task->Post(controller_->loop().dispatcher()) == ZX_OK) {
+    client_scheduled_tasks_.push_back(std::move(task));
   }
+  mtx_unlock(&task_mtx_);
 }
 
 zx_status_t ClientProxy::OnCaptureComplete() {
@@ -1823,9 +1857,30 @@ void ClientProxy::DdkUnbindNew(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-void ClientProxy::DdkRelease() { delete this; }
+void ClientProxy::DdkRelease() {
+  // Schedule release on controller loop. This way, we can safely cancel any pending tasks before
+  // releasing the client.
+  auto* task = new async::Task();
+  task->set_handler(
+      [this](async_dispatcher_t* /*dispatcher*/, async::Task* task, zx_status_t /*status*/) {
+        this->handler_.CancelFidlBind();
+        mtx_lock(&this->task_mtx_);
+        for (auto& t : this->client_scheduled_tasks_) {
+          t->Cancel();
+        }
+        client_scheduled_tasks_.clear();
+        mtx_unlock(&this->task_mtx_);
+        delete task;
+        delete this;
+      });
+
+  // We should be able to post a task to the loop since DdkRelease on client should be called
+  // before controller loop is shutdown.
+  ZX_DEBUG_ASSERT(task->Post(controller_->loop().dispatcher()) == ZX_OK);
+}
 
 zx_status_t ClientProxy::Init(zx::channel server_channel) {
+  mtx_init(&task_mtx_, mtx_plain);
   server_channel_ = zx::unowned_channel(server_channel);
   return handler_.Init(std::move(server_channel));
 }
@@ -1844,7 +1899,7 @@ ClientProxy::ClientProxy(Controller* controller, bool is_vc, uint32_t client_id,
       server_channel_(zx::unowned_channel(server_channel)),
       handler_(controller_, this, is_vc_, client_id, std::move(server_channel)) {}
 
-ClientProxy::~ClientProxy() {}
+ClientProxy::~ClientProxy() { mtx_destroy(&task_mtx_); }
 
 }  // namespace display
 

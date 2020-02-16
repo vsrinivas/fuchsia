@@ -16,12 +16,14 @@
 #include <lib/zx/event.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <zircon/fidl.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
 #include <map>
 #include <memory>
+#include <vector>
 
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
@@ -33,7 +35,9 @@
 #include "fence.h"
 #include "id-map.h"
 #include "image.h"
+#include "lib/fidl-async/cpp/async_bind.h"
 #include "lib/fidl-async/cpp/bind.h"
+#include "lib/fidl/llcpp/array.h"
 
 namespace display {
 
@@ -162,6 +166,13 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface,
   // Test helpers
   size_t TEST_imported_images_count() const { return images_.size(); }
 
+  void CancelFidlBind() {
+    if (fidl_binding_.has_value()) {
+      fidl_binding_->Unbind();
+      fidl_binding_.reset();
+    }
+  }
+
  private:
   bool _ImportEvent(zx::event event, uint64_t id) __TA_EXCLUDES(fence_mtx_);
 
@@ -280,6 +291,8 @@ class Client : public llcpp::fuchsia::hardware::display::Controller::Interface,
 
   uint64_t GetActiveCaptureImage() { return current_capture_image_; }
 
+  fit::optional<fidl::BindingRef> fidl_binding_;
+
   // Capture related book keeping
   uint64_t capture_fence_id_ = INVALID_ID;
   uint64_t current_capture_image_ = INVALID_ID;
@@ -344,6 +357,9 @@ class ClientProxy : public ClientParent {
   Client handler_;
   bool enable_vsync_ = false;
   bool enable_capture_ = false;
+
+  mtx_t task_mtx_;
+  std::vector<std::unique_ptr<async::Task>> client_scheduled_tasks_ __TA_GUARDED(task_mtx_);
 
   // This variable is used to limit the number of errors logged in case of channel oom error
   static constexpr uint32_t kChannelOomPrintFreq = 600;  // 1 per 10 seconds (assuming 60fps)
