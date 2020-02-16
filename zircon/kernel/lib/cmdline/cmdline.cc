@@ -128,21 +128,6 @@ bool Cmdline::GetBool(const char* key, bool default_value) const {
   return true;
 }
 
-uint32_t Cmdline::GetUInt32(const char* key, uint32_t default_value) const {
-  const char* value_str = GetString(key);
-  if (value_str == nullptr || *value_str == '\0') {
-    return default_value;
-  }
-
-  char* end;
-  auto res = strtol(value_str, &end, 0);
-  uint32_t value = (res < 0) ? default_value : static_cast<uint32_t>(res);
-  if (*end != '\0') {
-    return default_value;
-  }
-  return value;
-}
-
 uint64_t Cmdline::GetUInt64(const char* key, uint64_t default_value) const {
   const char* value_str = GetString(key);
   if (value_str == nullptr || *value_str == '\0') {
@@ -150,11 +135,16 @@ uint64_t Cmdline::GetUInt64(const char* key, uint64_t default_value) const {
   }
 
   char* end;
-  long long value = strtoll(value_str, &end, 0);
+  static_assert(sizeof(unsigned long int) == sizeof(uint64_t));
+  uint64_t value = strtol(value_str, &end, 0);
   if (*end != '\0') {
     return default_value;
   }
   return value;
+}
+
+uint32_t Cmdline::GetUInt32(const char* key, uint32_t default_value) const {
+  return static_cast<uint32_t>(Cmdline::GetUInt64(key, default_value));
 }
 
 size_t Cmdline::size() const {
