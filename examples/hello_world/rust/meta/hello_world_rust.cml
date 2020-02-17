@@ -2,4 +2,7 @@
     program: {
         binary: "bin/hello_world_rust",
     },
+    use: [
+        { runner: "elf" }
+    ]
 }
