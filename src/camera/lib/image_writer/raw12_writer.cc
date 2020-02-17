@@ -5,6 +5,7 @@
 #include "src/camera/lib/image_writer/raw12_writer.h"
 
 #include <array>
+#include <cmath>
 #include <vector>
 
 #include "src/lib/syslog/cpp/logger.h"

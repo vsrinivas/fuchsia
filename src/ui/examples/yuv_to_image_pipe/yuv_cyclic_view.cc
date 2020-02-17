@@ -6,6 +6,7 @@
 
 #include <lib/ui/scenic/cpp/commands.h>
 
+#include <cmath>
 #include <iostream>
 
 namespace yuv_to_image_pipe {

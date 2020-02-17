@@ -5,6 +5,8 @@
 #ifndef SRC_UI_TESTING_VIEWS_ROTATED_SQUARE_VIEW_H_
 #define SRC_UI_TESTING_VIEWS_ROTATED_SQUARE_VIEW_H_
 
+#include <cmath>
+
 #include "src/ui/testing/views/background_view.h"
 
 namespace scenic {

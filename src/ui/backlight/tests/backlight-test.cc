@@ -10,6 +10,7 @@
 #include <array>
 #include <filesystem>
 #include <vector>
+#include <cmath>
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>

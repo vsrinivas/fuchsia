@@ -5,6 +5,7 @@
 #include "svg_bounds.h"
 
 #include <float.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
