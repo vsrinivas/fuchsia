@@ -47,16 +47,15 @@ zx_status_t sys_debug_read(zx_handle_t handle, user_out_ptr<char> ptr, size_t ma
 
   size_t idx = 0;
   for (; idx < max_len; ++idx) {
-    int intc = getchar();
-    if (intc < 0) {
-      return intc;
+    char c;
+    int err = platform_dgetc(&c, true);
+    if (err < 0) {
+      return err;
     }
 
-    if (intc == '\r') {
-      intc = '\n';
+    if (c == '\r') {
+      c = '\n';
     }
-
-    char c = static_cast<char>(intc);
 
     status = ptr.copy_array_to_user(&c, 1, idx);
     if (status != ZX_OK) {

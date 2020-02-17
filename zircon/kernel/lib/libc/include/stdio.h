@@ -15,12 +15,6 @@
 
 __BEGIN_CDECLS
 
-int putchar(int c);
-
-int puts(const char *str);
-
-int getchar(void);
-
 #if !DISABLE_DEBUG_OUTPUT
 #define printf(x...) _printf(x)
 #define vprintf(x...) _vprintf(x)
