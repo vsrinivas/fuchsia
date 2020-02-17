@@ -5,10 +5,8 @@
 use {
     crate::model::{
         environment::Environment, error::ModelError, moniker::AbsoluteMoniker, realm::Realm,
-        resolver::ResolverRegistry, runner::Runner,
+        resolver::ResolverRegistry,
     },
-    cm_rust::CapabilityName,
-    std::collections::HashMap,
     std::sync::Arc,
 };
 
@@ -33,23 +31,14 @@ pub struct ModelParams {
     /// The component resolver registry used in the root realm.
     /// In particular, it will be used to resolve the root component itself.
     pub root_resolver_registry: ResolverRegistry,
-    /// Builtin runners, offered to the root component.
-    pub builtin_runners: HashMap<CapabilityName, Arc<dyn Runner>>,
 }
 
 /// The component model holds authoritative state about a tree of component instances, including
 /// each instance's identity, lifecycle, capabilities, and topological relationships.  It also
 /// provides operations for instantiating, destroying, querying, and controlling component
 /// instances at runtime.
-///
-/// To facilitate unit testing, the component model does not directly perform IPC.  Instead, it
-/// delegates external interfacing concerns to other objects that implement traits such as
-/// `Runner` and `Resolver`.
 pub struct Model {
     pub root_realm: Arc<Realm>,
-
-    /// Builtin runners, offered to the root component.
-    pub builtin_runners: HashMap<CapabilityName, Arc<dyn Runner>>,
 }
 
 impl Model {
@@ -60,7 +49,6 @@ impl Model {
                 Environment::new_root(params.root_resolver_registry),
                 params.root_component_url,
             )),
-            builtin_runners: params.builtin_runners,
         }
     }
 

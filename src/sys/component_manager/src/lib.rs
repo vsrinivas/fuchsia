@@ -9,12 +9,12 @@
 
 pub mod builtin_environment;
 pub mod capability;
+pub mod elf_runner;
 pub mod klog;
 pub mod model;
 pub mod path;
 pub mod startup;
 
-pub(crate) mod elf_runner;
 pub(crate) mod framework;
 pub(crate) mod fuchsia_base_pkg_resolver;
 pub(crate) mod fuchsia_boot_resolver;

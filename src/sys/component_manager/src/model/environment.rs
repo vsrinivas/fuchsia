@@ -82,7 +82,6 @@ mod tests {
         },
         fuchsia_async as fasync,
         matches::assert_matches,
-        std::collections::HashMap,
     };
 
     #[test]
@@ -145,7 +144,6 @@ mod tests {
         let model = Arc::new(Model::new(ModelParams {
             root_component_url: "test:///root".to_string(),
             root_resolver_registry: registry,
-            builtin_runners: HashMap::new(),
         }));
         let realm = model.bind(&vec!["a:0", "b:0"].into()).await?;
         assert_eq!(realm.component_url, "test:///b");
@@ -185,7 +183,6 @@ mod tests {
         let model = Arc::new(Model::new(ModelParams {
             root_component_url: "test:///root".to_string(),
             root_resolver_registry: registry,
-            builtin_runners: HashMap::new(),
         }));
         let realm = model.bind(&vec!["a:0", "b:0"].into()).await?;
         assert_eq!(realm.component_url, "test:///b");
@@ -229,7 +226,6 @@ mod tests {
         let model = Arc::new(Model::new(ModelParams {
             root_component_url: "test:///root".to_string(),
             root_resolver_registry: registry,
-            builtin_runners: HashMap::new(),
         }));
         assert_matches!(
             model.bind(&vec!["a:0", "b:0"].into()).await,

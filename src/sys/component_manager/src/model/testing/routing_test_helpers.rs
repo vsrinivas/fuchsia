@@ -241,12 +241,15 @@ impl RoutingTest {
         let model = Arc::new(Model::new(ModelParams {
             root_component_url: format!("test:///{}", builder.root_component),
             root_resolver_registry: resolver,
-            builtin_runners,
         }));
-        let builtin_environment =
-            BuiltinEnvironment::new(&startup_args, &model, ComponentManagerConfig::default())
-                .await
-                .expect("builtin environment setup failed");
+        let builtin_environment = BuiltinEnvironment::new(
+            &startup_args,
+            &model,
+            ComponentManagerConfig::default(),
+            &builtin_runners,
+        )
+        .await
+        .expect("builtin environment setup failed");
 
         model.root_realm.hooks.install(builder.additional_hooks).await;
         model.root_realm.hooks.install(echo_service.hooks()).await;

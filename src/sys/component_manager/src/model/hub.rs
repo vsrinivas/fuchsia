@@ -792,14 +792,15 @@ mod tests {
         let model = Arc::new(Model::new(ModelParams {
             root_component_url,
             root_resolver_registry: resolver,
-            builtin_runners: vec![(TEST_RUNNER_NAME.into(), runner.clone() as _)]
-                .into_iter()
-                .collect(),
         }));
-        let builtin_environment =
-            BuiltinEnvironment::new(&startup_args, &model, ComponentManagerConfig::default())
-                .await
-                .expect("failed to set up builtin environment");
+        let builtin_environment = BuiltinEnvironment::new(
+            &startup_args,
+            &model,
+            ComponentManagerConfig::default(),
+            &vec![(TEST_RUNNER_NAME.into(), runner.clone() as _)].into_iter().collect(),
+        )
+        .await
+        .expect("failed to set up builtin environment");
         let hub_proxy = builtin_environment
             .bind_service_fs_for_hub(&model)
             .await

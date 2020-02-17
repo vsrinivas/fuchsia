@@ -6,6 +6,7 @@ use {
     anyhow::Error,
     component_manager_lib::{
         builtin_environment::BuiltinEnvironment,
+        elf_runner::{ElfRunner, ProcessLauncherConnector},
         model::{
             binding::Binder, model::ComponentManagerConfig, moniker::AbsoluteMoniker,
             testing::test_helpers,
@@ -18,7 +19,7 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceObj},
     futures::prelude::*,
     log::*,
-    std::{path::PathBuf, process},
+    std::{path::PathBuf, process, sync::Arc},
 };
 
 /// This is a temporary workaround to allow command line tools to connect to the session manager
@@ -86,8 +87,18 @@ async fn main() -> Result<(), Error> {
     };
 
     let model = startup::model_setup(&args).await?;
-    let builtin_environment =
-        BuiltinEnvironment::new(&args, &model, ComponentManagerConfig::default()).await?;
+
+    // Create an ELF runner for the root component.
+    let launcher_connector = ProcessLauncherConnector::new(&args);
+    let runner = Arc::new(ElfRunner::new(launcher_connector));
+
+    let builtin_environment = BuiltinEnvironment::new(
+        &args,
+        &model,
+        ComponentManagerConfig::default(),
+        &vec![("elf".into(), runner as _)].into_iter().collect(),
+    )
+    .await?;
     let hub_proxy = builtin_environment.bind_service_fs_for_hub(&model).await?;
 
     let root_moniker = AbsoluteMoniker::root();

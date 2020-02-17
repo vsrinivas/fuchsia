@@ -418,14 +418,18 @@ mod tests {
             let model = Arc::new(Model::new(ModelParams {
                 root_component_url: "test:///root".to_string(),
                 root_resolver_registry: resolver,
-                builtin_runners: vec![(test_helpers::TEST_RUNNER_NAME.into(), mock_runner as _)]
-                    .into_iter()
-                    .collect(),
             }));
             let builtin_environment = Arc::new(
-                BuiltinEnvironment::new(&startup_args, &model, config)
-                    .await
-                    .expect("failed to set up builtin environment"),
+                BuiltinEnvironment::new(
+                    &startup_args,
+                    &model,
+                    config,
+                    &vec![(test_helpers::TEST_RUNNER_NAME.into(), mock_runner as _)]
+                        .into_iter()
+                        .collect(),
+                )
+                .await
+                .expect("failed to set up builtin environment"),
             );
             let builtin_environment_inner = builtin_environment.clone();
             model.root_realm.hooks.install(hooks).await;

@@ -504,7 +504,6 @@ pub async fn wait_for_runner_request(
 pub fn new_test_model(
     root_component: &'static str,
     components: Vec<(&'static str, ComponentDecl)>,
-    runner: Arc<MockRunner>,
 ) -> Model {
     let mut resolver = ResolverRegistry::new();
 
@@ -517,7 +516,6 @@ pub fn new_test_model(
     Model::new(ModelParams {
         root_component_url: format!("test:///{}", root_component),
         root_resolver_registry: resolver,
-        builtin_runners: vec![(TEST_RUNNER_NAME.into(), runner as _)].into_iter().collect(),
     })
 }
 
@@ -549,16 +547,21 @@ impl ActionsTest {
         let _ = klog::KernelLogger::init();
 
         let runner = Arc::new(MockRunner::new());
-        let model = Arc::new(new_test_model(root_component, components, runner.clone()));
+        let model = Arc::new(new_test_model(root_component, components));
 
         // TODO(fsamuel): Don't install the Hub's hooks because the Hub expects components
         // to start and stop in a certain lifecycle ordering. In particular, some unit
         // tests will destroy component instances before binding to their parents.
         let args = Arguments { use_builtin_process_launcher: false, ..Default::default() };
         let builtin_environment = Arc::new(
-            BuiltinEnvironment::new(&args, &model, ComponentManagerConfig::default())
-                .await
-                .expect("failed to set up builtin environment"),
+            BuiltinEnvironment::new(
+                &args,
+                &model,
+                ComponentManagerConfig::default(),
+                &vec![(TEST_RUNNER_NAME.into(), runner.clone() as _)].into_iter().collect(),
+            )
+            .await
+            .expect("failed to set up builtin environment"),
         );
         let builtin_environment_inner = builtin_environment.clone();
         let test_hook = TestHook::new();

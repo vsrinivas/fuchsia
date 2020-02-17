@@ -20,6 +20,7 @@ use {
             events::core::EventSourceFactory,
             hub::Hub,
             model::{ComponentManagerConfig, Model},
+            runner::Runner,
         },
         root_realm_stop_notifier::RootRealmStopNotifier,
         runner::BuiltinRunner,
@@ -71,6 +72,7 @@ impl BuiltinEnvironment {
         args: &Arguments,
         model: &Arc<Model>,
         config: ComponentManagerConfig,
+        builtin_runners: &HashMap<CapabilityName, Arc<dyn Runner>>,
     ) -> Result<BuiltinEnvironment, ModelError> {
         // Set up ProcessLauncher if available.
         let process_launcher = if args.use_builtin_process_launcher {
@@ -146,11 +148,11 @@ impl BuiltinEnvironment {
         let hub = Hub::new(args.root_component_url.clone())?;
 
         // Set up the builtin runners.
-        let mut builtin_runners = HashMap::new();
-        for (name, runner) in model.builtin_runners.iter() {
+        let mut builtin_runner_hooks = HashMap::new();
+        for (name, runner) in builtin_runners.iter() {
             let runner = BuiltinRunner::new(name.clone(), runner.clone());
             model.root_realm.hooks.install(vec![runner.hook()]).await;
-            builtin_runners.insert(name.clone(), runner);
+            builtin_runner_hooks.insert(name.clone(), runner);
         }
 
         // Set up the root realm stop notifier.
@@ -178,7 +180,7 @@ impl BuiltinEnvironment {
             work_scheduler,
             realm_capability_host,
             hub,
-            builtin_runners,
+            builtin_runners: builtin_runner_hooks,
             event_source_factory,
             stop_notifier: Mutex::new(Some(stop_notifier)),
         })

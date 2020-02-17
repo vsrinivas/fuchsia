@@ -9,6 +9,7 @@ use {
     anyhow::{Context as _, Error},
     component_manager_lib::{
         builtin_environment::BuiltinEnvironment,
+        elf_runner::{ElfRunner, ProcessLauncherConnector},
         klog,
         model::{
             binding::Binder,
@@ -91,8 +92,18 @@ fn main() -> Result<(), Error> {
 
 async fn run_root(args: startup::Arguments) -> Result<(Arc<Model>, BuiltinEnvironment), Error> {
     let model = startup::model_setup(&args).await.context("failed to set up model")?;
-    let builtin_environment =
-        BuiltinEnvironment::new(&args, &model, ComponentManagerConfig::default()).await?;
+
+    // Create an ELF runner for the root component.
+    let launcher_connector = ProcessLauncherConnector::new(&args);
+    let runner = Arc::new(ElfRunner::new(launcher_connector));
+
+    let builtin_environment = BuiltinEnvironment::new(
+        &args,
+        &model,
+        ComponentManagerConfig::default(),
+        &vec![("elf".into(), runner as _)].into_iter().collect(),
+    )
+    .await?;
     builtin_environment.bind_service_fs_to_out(&model).await?;
 
     let root_moniker = AbsoluteMoniker::root();

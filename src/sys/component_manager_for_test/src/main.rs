@@ -6,6 +6,7 @@ use {
     anyhow::Error,
     component_manager_lib::{
         builtin_environment::BuiltinEnvironment,
+        elf_runner::{ElfRunner, ProcessLauncherConnector},
         model::{
             binding::Binder, model::ComponentManagerConfig, moniker::AbsoluteMoniker,
             testing::test_helpers,
@@ -19,7 +20,7 @@ use {
     fuchsia_syslog as syslog,
     futures::prelude::*,
     log::*,
-    std::{path::PathBuf, process},
+    std::{path::PathBuf, process, sync::Arc},
 };
 
 /// This is a prototype used with ftf to launch v2 tests.
@@ -38,9 +39,21 @@ async fn main() -> Result<(), Error> {
         }
     };
     info!("Component manager for test is starting up...");
+
     let model = startup::model_setup(&args).await?;
-    let builtin_environment =
-        BuiltinEnvironment::new(&args, &model, ComponentManagerConfig::default()).await?;
+
+    // Create an ELF runner for the root component.
+    let launcher_connector = ProcessLauncherConnector::new(&args);
+    let runner = Arc::new(ElfRunner::new(launcher_connector));
+
+    // Set up environment.
+    let builtin_environment = BuiltinEnvironment::new(
+        &args,
+        &model,
+        ComponentManagerConfig::default(),
+        &vec![("elf".into(), runner as _)].into_iter().collect(),
+    )
+    .await?;
     let hub_proxy = builtin_environment.bind_service_fs_for_hub(&model).await?;
 
     let root_moniker = AbsoluteMoniker::root();
