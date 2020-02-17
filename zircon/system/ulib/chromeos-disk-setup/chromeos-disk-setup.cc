@@ -40,7 +40,10 @@ bool part_name_eql(const gpt_partition_t* part, const char* name) {
   }
   char buf[GPT_NAME_LEN] = {0};
   utf16_to_cstring(&buf[0], (const uint16_t*)part->name, GPT_NAME_LEN / 2);
-  return !strncmp(buf, name, GPT_NAME_LEN);
+  // We use a case-insenstive comparison to be compatible with the previous naming scheme.
+  // On a ChromeOS device, all of the kernel partitions share a common GUID type, so we
+  // distinguish Zircon kernel partitions based on name.
+  return !strncasecmp(buf, name, GPT_NAME_LEN);
 }
 
 // part_name_guid_eql returns true if the given partition has the given name and

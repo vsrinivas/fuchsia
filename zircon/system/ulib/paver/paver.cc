@@ -445,8 +445,7 @@ void Paver::FindBootManager(zx::channel boot_manager, bool initialize,
 }
 
 void DataSink::ReadAsset(::llcpp::fuchsia::paver::Configuration configuration,
-                         ::llcpp::fuchsia::paver::Asset asset,
-                         ReadAssetCompleter::Sync completer) {
+                         ::llcpp::fuchsia::paver::Asset asset, ReadAssetCompleter::Sync completer) {
   ::llcpp::fuchsia::mem::Buffer buf;
   zx_status_t status = sink_.ReadAsset(configuration, asset, &buf);
   if (status == ZX_OK) {
