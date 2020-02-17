@@ -12,7 +12,6 @@
 #include <lib/crypto/global_prng.h>
 #include <lib/ktrace.h>
 #include <list.h>
-#include <rand.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/rights.h>

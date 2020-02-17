@@ -10,8 +10,8 @@
 #include <malloc.h>
 #include <platform.h>
 #include <pow2.h>
-#include <rand.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 

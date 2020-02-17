@@ -8,7 +8,6 @@
 #include <err.h>
 #include <inttypes.h>
 #include <platform.h>
-#include <rand.h>
 #include <stdio.h>
 #include <zircon/types.h>
 

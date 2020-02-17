@@ -13,7 +13,6 @@
 #include <inttypes.h>
 #include <lib/heap.h>
 #include <lib/ktrace.h>
-#include <rand.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>

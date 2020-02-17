@@ -5,8 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <rand.h>
-#include <sys/types.h>
+#include <stdlib.h>
 
 #include <kernel/atomic.h>
 

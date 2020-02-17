@@ -12,7 +12,7 @@
 #include <lib/unittest/unittest.h>
 #include <platform.h>
 #include <pow2.h>
-#include <rand.h>
+#include <stdlib.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/types.h>

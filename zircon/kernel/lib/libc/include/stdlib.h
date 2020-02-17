@@ -8,9 +8,7 @@
 #ifndef ZIRCON_KERNEL_LIB_LIBC_INCLUDE_STDLIB_H_
 #define ZIRCON_KERNEL_LIB_LIBC_INCLUDE_STDLIB_H_
 
-#include <endian.h>
 #include <malloc.h>
-#include <rand.h>
 #include <stddef.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -32,7 +30,14 @@ unsigned long int strtoul(const char *nptr, char **endptr, int base);
 #define IS_ALIGNED(a, b) (!(((uintptr_t)(a)) & (((uintptr_t)(b)) - 1)))
 
 void abort(void) __attribute__((noreturn));
-char *getenv(const char *name);
+
+#define RAND_MAX (0x7fffffff)
+
+int rand(void);
+void srand(unsigned int seed);
+
+// Note: POSIX.1 specifies unsigned int, but we use uint64_t instead.
+int rand_r(uint64_t* seed);
 
 __END_CDECLS
 

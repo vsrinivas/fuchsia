@@ -8,6 +8,7 @@
 #include <arch.h>
 #include <ctype.h>
 #include <debug.h>
+#include <endian.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
 #include <list.h>

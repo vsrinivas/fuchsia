@@ -8,8 +8,8 @@
 #include <inttypes.h>
 #include <lib/debuglog.h>
 #include <platform.h>
-#include <rand.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <zircon/types.h>
 
