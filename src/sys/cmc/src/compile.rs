@@ -743,12 +743,22 @@ mod tests {
             input = json!({
                 "program": {
                     "binary": "bin/app"
-                }
+                },
+                "use": [
+                    { "runner": "elf" }
+                ]
             }),
             output = r#"{
     "program": {
         "binary": "bin/app"
-    }
+    },
+    "uses": [
+        {
+            "runner": {
+                "source_name": "elf"
+            }
+        }
+    ]
 }"#,
         },
 
@@ -1584,6 +1594,7 @@ mod tests {
                     { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
                     { "protocol": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
                     { "protocol": [ "/fonts/ReallyGoodFonts", "/fonts/IWouldNeverUseTheseFonts"]},
+                    { "runner": "elf" },
                 ],
                 "expose": [
                     { "directory": "/volumes/blobfs", "from": "self", "rights": ["r*"]},
@@ -1674,6 +1685,11 @@ mod tests {
                 },
                 "source_path": "/fonts/IWouldNeverUseTheseFonts",
                 "target_path": "/fonts/IWouldNeverUseTheseFonts"
+            }
+        },
+        {
+            "runner": {
+                "source_name": "elf"
             }
         }
     ],

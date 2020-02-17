@@ -310,6 +310,13 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
+        // Ensure we don't have a component with a "program" block which fails
+        // to specify a runner.
+        self.validate_runner_specified(
+            self.document.program.as_ref(),
+            self.document.r#use.as_ref(),
+        )?;
+
         Ok(())
     }
 
@@ -653,6 +660,34 @@ impl<'a> ValidationContext<'a> {
         }
         Ok(())
     }
+
+    /// Ensure we don't have a component with a "program" block which fails
+    /// to specify a runner.
+    fn validate_runner_specified(
+        &self,
+        program: Option<&serde_json::map::Map<String, serde_json::value::Value>>,
+        use_: Option<&Vec<cml::Use>>,
+    ) -> Result<(), Error> {
+        // Components that have no "program" don't need a runner.
+        if program.is_none() {
+            return Ok(());
+        }
+
+        // Otherwise, ensure a runner is being used.
+        let mut found_runner = false;
+        if let Some(use_) = use_ {
+            found_runner = use_.iter().any(|u| u.runner.is_some())
+        }
+        if !found_runner {
+            return Err(Error::validate(concat!(
+                "Component has a 'program' block defined, but doesn't 'use' ",
+                "a runner capability. Components need to 'use' a runner ",
+                "to actually execute code."
+            )));
+        }
+
+        Ok(())
+    }
 }
 
 /// Given an iterator with `(key, name)` tuples, ensure that `key` doesn't
@@ -799,7 +834,12 @@ mod tests {
             result = Ok(()),
         },
         test_cml_program => {
-            input = json!({"program": { "binary": "bin/app" }}),
+            input = json!(
+                {
+                    "program": { "binary": "bin/app" },
+                    "use": [ { "runner": "elf" } ],
+                }
+            ),
             result = Ok(()),
         },
         test_cml_program_no_binary => {
@@ -2393,6 +2433,10 @@ mod tests {
                  ]
             }),
             result = Err(Error::validate("identifier \"logger\" is defined twice, once in \"environments\" and once in \"children\"")),
+        },
+        test_cml_program_no_runner => {
+            input = json!({"program": { "binary": "bin/app" }}),
+            result = Err(Error::validate("Component has a \'program\' block defined, but doesn\'t \'use\' a runner capability. Components need to \'use\' a runner to actually execute code.")),
         },
 
         // Resolvers
