@@ -13,6 +13,7 @@ driver_module("imx227_driver") {
     "imx227_test.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.mipicsi",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -29,7 +30,6 @@ driver_module("imx227_driver") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.clock",
-    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.bus",

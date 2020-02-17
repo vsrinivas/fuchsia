@@ -8,6 +8,7 @@ import("//build/unification/images/migrated_manifest.gni")
 
 source_set("common") {
   public_deps = [
+    "//sdk/banjo/ddk.protocol.composite",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/audio-driver-proto",
     "//zircon/public/lib/audio-proto-utils",
@@ -26,7 +27,6 @@ source_set("common") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.amlogiccanvas",
-    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.display.controller",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2cimpl",

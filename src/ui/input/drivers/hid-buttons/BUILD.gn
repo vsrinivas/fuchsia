@@ -24,6 +24,7 @@ source_set("common") {
   sources = [ "hid-buttons.cc" ]
 
   public_deps = [
+    "//sdk/banjo/ddk.protocol.composite",
     "//sdk/fidl/fuchsia.buttons:fuchsia.buttons_llcpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
@@ -37,7 +38,6 @@ source_set("common") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.buttons",
-    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.hidbus",
   ]

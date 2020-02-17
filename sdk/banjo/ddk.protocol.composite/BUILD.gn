@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/banjo.gni")
+import("//build/banjo/banjo.gni")
 
-banjo_library("ddk.protocol.composite") {
+banjo("ddk.protocol.composite") {
   sources = [ "composite.banjo" ]
 
-  public_deps = [ "$zx/system/banjo/ddk.driver" ]
+  deps = [ "//zircon/system/banjo/ddk.driver" ]
 }

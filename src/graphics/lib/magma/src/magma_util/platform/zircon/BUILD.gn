@@ -115,10 +115,10 @@ source_set("device") {
     "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/zx",
     "..:device_header",
+    "//sdk/banjo/ddk.protocol.composite",
     "//src/devices/lib/driver",
     "//zircon/public/lib/device-protocol-pci",
     "//zircon/public/lib/device-protocol-platform-device",
-    "//zircon/system/banjo/ddk.protocol.composite",
   ]
 }
 

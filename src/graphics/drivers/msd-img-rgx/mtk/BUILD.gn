@@ -31,6 +31,7 @@ template("driver_source_template") {
 
     public_deps = [
       "../include",
+      "//sdk/banjo/ddk.protocol.composite",
       "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
       "//src/devices/lib/driver",
       "//src/graphics/lib/magma/src/magma_util:macros",
@@ -48,7 +49,6 @@ template("driver_source_template") {
       "//zircon/public/lib/fidl-utils",
       "//zircon/public/lib/mmio",
       "//zircon/system/banjo/ddk.protocol.clock",
-      "//zircon/system/banjo/ddk.protocol.composite",
       "//zircon/system/banjo/ddk.protocol.platform.device",
     ]
     if (invoker.developer_build) {

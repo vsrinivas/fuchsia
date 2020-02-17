@@ -26,12 +26,12 @@ source_set("sdio") {
   ]
   public = [ "sdio_device.h" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.composite",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bcdc",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//zircon/public/lib/broadcom",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace-driver",
-    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/public",
   ]
   public_deps = [

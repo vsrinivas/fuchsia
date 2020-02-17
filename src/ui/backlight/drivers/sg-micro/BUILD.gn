@@ -14,6 +14,7 @@ driver_module("sg-micro") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "sgm37603a.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.composite",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -26,7 +27,6 @@ driver_module("sg-micro") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.i2c",
   ]
@@ -43,6 +43,7 @@ test("sgm37603a-test") {
     "sgm37603a.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.composite",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_llcpp",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -57,7 +58,6 @@ test("sgm37603a-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.gpio",
   ]
 }

@@ -40,6 +40,7 @@ source_set("common") {
   ]
 
   public_deps = [
+    "//sdk/banjo/ddk.protocol.composite",
     "//src/storage/deprecated-fs-fidl-handler",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -56,7 +57,6 @@ source_set("common") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxio",
-    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/fidl/fuchsia-device:llcpp",
     "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/fidl/fuchsia-device-manager:llcpp",

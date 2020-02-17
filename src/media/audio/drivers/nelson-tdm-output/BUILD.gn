@@ -16,6 +16,7 @@ driver_module("nelson-tdm-output") {
     "codec.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.composite",
     "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/audio-driver-proto",
@@ -33,7 +34,6 @@ driver_module("nelson-tdm-output") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.clock",
     "//zircon/system/banjo/ddk.protocol.codec",
-    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.platform.device",
   ]
 }

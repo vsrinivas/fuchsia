@@ -20,6 +20,7 @@ driver_module("syn-dma") {
   }
   sources = [ "syn-dhub.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.composite",
     "//src/devices/lib/driver",
     "//zircon/public/lib/as370",
     "//zircon/public/lib/ddk",
@@ -34,7 +35,6 @@ driver_module("syn-dma") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.shareddma",
@@ -60,6 +60,7 @@ test("syn-dhub-test") {
     "syn-dhub.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.composite",
     "//zircon/public/lib/as370",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -78,7 +79,6 @@ test("syn-dhub-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.shareddma",

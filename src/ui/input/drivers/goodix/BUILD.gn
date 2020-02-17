@@ -14,6 +14,7 @@ driver_module("goodix") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "gt92xx.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.composite",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -27,7 +28,6 @@ driver_module("goodix") {
     "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.clock",
-    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.hidbus",
     "//zircon/system/banjo/ddk.protocol.i2c",
@@ -51,6 +51,7 @@ test("gt92xx-test") {
     "gt92xx.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.composite",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-i2c",
@@ -66,7 +67,6 @@ test("gt92xx-test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//zircon/system/banjo/ddk.protocol.hidbus",

@@ -13,12 +13,12 @@ driver_module("power") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "power.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.composite",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.power",
     "//zircon/system/banjo/ddk.protocol.powerimpl",
   ]

@@ -22,6 +22,7 @@ driver_module("xhci-rewrite") {
     "xhci-transfer-ring.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.usb.hci",
     "//sdk/banjo/ddk.protocol.usb.phy",
     "//sdk/fidl/fuchsia.usb.debug:fuchsia.usb.debug_c",
@@ -41,7 +42,6 @@ driver_module("xhci-rewrite") {
     "//zircon/public/lib/usb",
     "//zircon/public/lib/xdc-server-utils",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.pci",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.usb",
@@ -74,6 +74,7 @@ test("xhci-unittest") {
     "xhci-enumeration.cc",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.serialimpl.async",
     "//sdk/banjo/ddk.protocol.usb.hci",
     "//sdk/banjo/ddk.protocol.usb.phy",
@@ -94,7 +95,6 @@ test("xhci-unittest") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/banjo/ddk.protocol.acpi",
-    "//zircon/system/banjo/ddk.protocol.composite",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/fidl/fuchsia-hardware-serial:c",
