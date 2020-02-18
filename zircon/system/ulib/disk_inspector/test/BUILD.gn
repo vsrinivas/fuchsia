@@ -38,6 +38,7 @@ test("disk_inspector_unit") {
   output_name = "disk-inspector-unit-test"
   sources = [
     "basic_types_test.cc",
+    "command_test.cc",
     "disk_primitive_test.cc",
     "disk_struct_test.cc",
     "inspector_transaction_handler_test.cc",
@@ -45,9 +46,9 @@ test("disk_inspector_unit") {
   ]
   deps = [
     "//zircon/public/lib/block-client",
-    "//zircon/public/lib/fake-device",
-    "//zircon/public/lib/disk_inspector",
     "//zircon/public/lib/buffer",
+    "//zircon/public/lib/disk_inspector",
+    "//zircon/public/lib/fake-device",
     "//zircon/public/lib/operation",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",

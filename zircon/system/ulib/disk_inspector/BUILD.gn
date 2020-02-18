@@ -6,6 +6,8 @@ zx_library("disk_inspector") {
   sdk = "source"
   sdk_headers = [
     "disk_inspector/inspector_transaction_handler.h",
+    "disk_inspector/command_handler.h",
+    "disk_inspector/command.h",
     "disk_inspector/common_types.h",
     "disk_inspector/disk_inspector.h",
     "disk_inspector/disk_obj.h",
@@ -15,6 +17,7 @@ zx_library("disk_inspector") {
   ]
   static = true
   sources = [
+    "command.cc",
     "disk_inspector.cc",
     "disk_struct.cc",
   ]
