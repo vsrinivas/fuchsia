@@ -245,14 +245,25 @@ void Ramdisk::ProcessRequests() {
   block::BorrowedOperationQueue<> deferred_list;
 
   for (;;) {
-    for (;;) {
+    do {
+      txn = std::nullopt;
+
       {
         fbl::AutoLock lock(&lock_);
-        txn = std::nullopt;
         dead = dead_;
         asleep = asleep_;
         defer = (flags_ & fuchsia_hardware_ramdisk_RAMDISK_FLAG_RESUME_ON_WAKE) != 0;
         blocks = pre_sleep_write_block_count_;
+
+        if (dead) {
+          while ((txn = deferred_list.pop())) {
+            txn->Complete(ZX_ERR_BAD_STATE);
+          }
+          while ((txn = txn_list_.pop())) {
+            txn->Complete(ZX_ERR_BAD_STATE);
+          }
+          return;
+        }
 
         if (!asleep) {
           // If we are awake, try grabbing pending transactions from the deferred list.
@@ -266,20 +277,12 @@ void Ramdisk::ProcessRequests() {
         }
       }
 
-      if (dead) {
-        if (txn) {
-          txn->Complete(ZX_ERR_INTERNAL);
-        }
-        return;
-      }
-
       if (!txn) {
         sync_completion_wait(&signal_, ZX_TIME_INFINITE);
-      } else {
         sync_completion_reset(&signal_);
-        break;
       }
-    }
+
+    } while (!txn);
 
     uint64_t txn_blocks = txn->operation()->rw.length;
     if (txn->operation()->command == BLOCK_OP_READ || blocks == 0 || blocks > txn_blocks) {

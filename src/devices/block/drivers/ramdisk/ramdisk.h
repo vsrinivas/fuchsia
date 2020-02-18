@@ -120,9 +120,15 @@ class Ramdisk : public RamdiskDeviceType,
 
   // True if the ramdisk is "sleeping", and deferring all upcoming requests,
   // or dropping them if |RAMDISK_FLAG_RESUME_ON_WAKE| is not set.
+  //
+  // This functionality is used by the journaling tests.  Maybe to be used in other tests.  It gives
+  // precise control over what data is preserve.  Do not use outside of tests.
   bool asleep_ TA_GUARDED(lock_) = false;
+
   // The number of blocks-to-be-written that should be processed.
   // When this reaches zero, the ramdisk will set |asleep| to true.
+  //
+  // See |asleep_| comment above for reasoning.
   uint64_t pre_sleep_write_block_count_ TA_GUARDED(lock_) = 0;
   fuchsia_hardware_ramdisk_BlockWriteCounts block_counts_ TA_GUARDED(lock_){};
 
