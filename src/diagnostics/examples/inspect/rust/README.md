@@ -2,7 +2,7 @@
 
 Reviewed on: 2020-01-10
 
-This directory contains the example program for the Inspect C++ Codelab.
+This directory contains the example program for the Inspect Rust Codelab.
 
 ## Building
 
