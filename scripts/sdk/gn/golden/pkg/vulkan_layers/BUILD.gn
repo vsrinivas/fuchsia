@@ -42,7 +42,7 @@ copy("VkLayer_image_pipe_swapchain_config") {
 
 copy("VkLayer_image_pipe_swapchain_lib") {
   sources = [
-    "../../arch/${target_cpu}/dist/VkLayer_image_pipe_swapchain.so",
+    "../../arch/${target_cpu}/dist/libVkLayer_image_pipe_swapchain.so",
   ]
   outputs = [
     "${root_out_dir}/lib/{{source_file_part}}",

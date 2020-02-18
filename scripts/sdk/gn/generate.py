@@ -34,7 +34,7 @@ class GNBuilder(Frontend):
 
   Based on the metadata in the IDK used, this frontend generates GN
   specific build rules for using the contents of the IDK. It also adds a
-  collection of tools for inteacting with devices and emulators running
+  collection of tools for interacting with devices and emulators running
   Fuchsia.
 
   The templates used are in the templates directory, and the static content that
@@ -286,7 +286,12 @@ class GNBuilder(Frontend):
             self.copy_files(binaries[arch])
 
         def _filename_no_ext(name):
-            return os.path.splitext(os.path.basename(name))[0]
+            # TODO(fxb/45508): Clean up this workaround once the binaries have
+            # been fixed to have the correct names.
+            basename = os.path.basename(name)
+            if basename[:3] == 'lib':
+              basename = basename[3:]
+            return os.path.splitext(basename)[0]
 
         data = model.VulkanLibrary()
         # Pair each json resource with its corresponding binary. Each such pair
@@ -303,6 +308,7 @@ class GNBuilder(Frontend):
             filtered = [
                 n for n in binary_names if _filename_no_ext(n) == layer_name
             ]
+
             if filtered:
                 # Replace harcoded arch in the found binary filename.
                 binary = filtered[0].replace(
