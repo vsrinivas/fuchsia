@@ -28,6 +28,7 @@ executable("tests") {
   deps = [
     ":mock-device",
     "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.device.test",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-cpp",
@@ -40,7 +41,6 @@ executable("tests") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/inspector",
     "//zircon/system/fidl/fuchsia-device",
-    "//zircon/system/fidl/fuchsia-device-test",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io",
   ]
 }

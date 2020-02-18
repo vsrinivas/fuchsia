@@ -9,6 +9,7 @@ rustc_binary("util") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test-rustc",
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
     "//src/connectivity/wlan/lib/wlan_dev",
     "//src/lib/fdio/rust:fdio",
@@ -19,6 +20,5 @@ rustc_binary("util") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
-    "//zircon/system/fidl/fuchsia-device-test:fuchsia-device-test-rustc",
   ]
 }

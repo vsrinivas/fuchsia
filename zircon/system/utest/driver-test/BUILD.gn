@@ -23,6 +23,7 @@ test("driver-test") {
   test_group = "ddk"
   sources = [ "main.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_llcpp",
     "//zircon/public/lib/devmgr-integration-test",
     "//zircon/public/lib/devmgr-launcher",
     "//zircon/public/lib/fbl",
@@ -30,7 +31,6 @@ test("driver-test") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-device:c",
     "//zircon/system/fidl/fuchsia-device:llcpp",
-    "//zircon/system/fidl/fuchsia-device-test:llcpp",
   ]
 }
 

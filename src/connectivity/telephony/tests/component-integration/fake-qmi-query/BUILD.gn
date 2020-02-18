@@ -9,6 +9,7 @@ rustc_test("fake-qmi-query") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/files_async",
+    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test-rustc",
     "//sdk/fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",
     "//src/connectivity/telephony/lib/qmi",
     "//src/connectivity/telephony/lib/tel-devmgr/fidl:devmgr-rustc",
@@ -25,7 +26,6 @@ rustc_test("fake-qmi-query") {
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-device:fuchsia-device-rustc",
-    "//zircon/system/fidl/fuchsia-device-test:fuchsia-device-test-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
   non_rust_deps = [ "//zircon/public/lib/syslog" ]
