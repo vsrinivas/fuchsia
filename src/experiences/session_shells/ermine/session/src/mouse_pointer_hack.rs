@@ -57,6 +57,7 @@ impl InputHandler for MousePointerHack {
             input_device::InputEvent {
                 device_event: input_device::InputDeviceEvent::Mouse(mouse_event),
                 device_descriptor: input_device::InputDeviceDescriptor::Mouse(mouse_descriptor),
+                ..
             } => {
                 self.update_cursor_position(&mouse_event).await;
                 self.send_event_to_listeners(

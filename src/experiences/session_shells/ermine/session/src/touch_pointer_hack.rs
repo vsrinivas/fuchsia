@@ -47,6 +47,7 @@ impl InputHandler for TouchPointerHack {
                 device_event: input_device::InputDeviceEvent::Touch(touch_event),
                 device_descriptor:
                     input_device::InputDeviceDescriptor::Touch(touch_device_descriptor),
+                ..
             } => {
                 self.handle_touch_event(touch_event, touch_device_descriptor).await;
             }
