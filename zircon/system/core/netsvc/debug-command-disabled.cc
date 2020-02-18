@@ -4,4 +4,9 @@
 
 #include "netboot.h"
 
-void netboot_run_cmd(const char* cmd) {}
+#include <stdio.h>
+#include <lib/fdio/io.h>
+
+void netboot_run_cmd(const char* cmd) {
+  printf("rejecting net cmd [%.6s ..]. This configuration has this feature disabled.\n", cmd);
+}
