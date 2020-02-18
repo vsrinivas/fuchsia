@@ -5,6 +5,7 @@
 library fuchsia.io.test;
 
 using fuchsia.mem;
+using fuchsia.io;
 
 // TODO(fxb/33880): Implement full testing framework. For now, we are
 // hard-coding the desired directory layout manually in separate "Get"
@@ -28,6 +29,9 @@ using fuchsia.mem;
 ///
 /// See `src/storage/conformance/README.md` for an overview of io conformance
 /// testing.
+/// TODO(tianruichen): Remove these TestCases in favor of separate io1 and
+/// io2 harnesses such as Io1TestHarness listed below. This old model should not
+/// be used.
 [Discoverable]
 protocol TestCases {
     /// Prepares a test case with an empty directory. The directory metadata
@@ -91,4 +95,30 @@ service Harness {
 
     /// Set up test cases and serve the `fuchsia.io2` protocol.
     TestCases v2;
+};
+
+/// Temporary protocol for child components of test component to expose their
+/// harness protocol to prevent race conditions by just having the child
+/// component expose their protocol.
+/// TODO(fxb/45684): Change this to use ComponentManager events for connections
+/// once available.
+[Discoverable]
+protocol HarnessReceiver {
+    // Send Io1TestHarness to for receiver to connect to.
+    SendIo1Harness(Io1TestHarness harness);
+};
+
+/// Copy of TestCases to allow testing adding additional protocols without
+/// affecting existing users of TestCases
+/// TODO(fxb/45610): Merge this and the above test cases once we come up with a
+/// good enough set of functions that we have enough flexibility to create
+/// variable directory structures to test.
+[Discoverable]
+protocol Io1TestHarness {
+    GetEmptyDirectory(request<fuchsia.io.Directory> directory_request);
+    GetDirectoryWithVmoFile(fuchsia.mem.Range buffer,
+                            request<fuchsia.io.Directory> directory_request);
+    GetDirectoryWithRemoteDirectory(string:fuchsia.io.MAX_PATH path,
+                                    fuchsia.io.Directory remote_directory,
+                                    request<fuchsia.io.Directory> directory_request);
 };

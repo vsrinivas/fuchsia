@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "test/io1_conformance_test"
+    },
+    "sandbox": {
+        "features": [
+            "hub"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
