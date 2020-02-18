@@ -11,6 +11,7 @@ driver_module("control_driver") {
   sources = [ "control_device.cc" ]
 
   deps = [
+    "//sdk/banjo/ddk.protocol.goldfish.control",
     "//sdk/banjo/ddk.protocol.goldfish.pipe",
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_c",
     "//src/devices/lib/driver",
@@ -27,7 +28,6 @@ driver_module("control_driver") {
     "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.goldfish.control",
     "//zircon/system/fidl/fuchsia-sysmem:c",
   ]
 
