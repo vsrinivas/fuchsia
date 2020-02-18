@@ -19,6 +19,7 @@ driver_module("virtio_console") {
     "console_driver.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.hardware.virtioconsole:fuchsia.hardware.virtioconsole_llcpp",
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/driver",
     "//zircon/public/lib/async-loop-cpp",
@@ -27,11 +28,9 @@ driver_module("virtio_console") {
     "//zircon/public/lib/fs",
     "//zircon/public/lib/fs-pty",
     "//zircon/system/fidl/fuchsia-hardware-pty:c",
-    "//zircon/system/fidl/fuchsia-hardware-virtioconsole:llcpp",
   ]
 }
 
 migrated_manifest("virtio_console-manifest") {
   deps = [ ":virtio_console" ]
 }
-

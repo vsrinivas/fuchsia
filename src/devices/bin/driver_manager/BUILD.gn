@@ -46,6 +46,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.virtioconsole:fuchsia.hardware.virtioconsole_llcpp",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/storage/deprecated-fs-fidl-handler",
@@ -80,7 +81,6 @@ source_set("lib") {
     "//zircon/system/fidl/fuchsia-hardware-power-statecontrol",
     "//zircon/system/fidl/fuchsia-hardware-power-statecontrol:c",
     "//zircon/system/fidl/fuchsia-hardware-power-statecontrol:llcpp",
-    "//zircon/system/fidl/fuchsia-hardware-virtioconsole:llcpp",
     "//zircon/system/fidl/fuchsia-io:c",
     "//zircon/system/fidl/fuchsia-ldsvc:llcpp",
     "//zircon/system/fidl/fuchsia-mem:c",

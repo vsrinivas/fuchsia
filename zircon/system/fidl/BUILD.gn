@@ -151,7 +151,6 @@ group("fidl") {
     "fuchsia-hardware-usb-virtual-bus",
 #------------------
 #------------------
-    "fuchsia-hardware-virtioconsole",
 #------------------
 #------------------
     "fuchsia-hardware-vsock",
