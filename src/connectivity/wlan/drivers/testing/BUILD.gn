@@ -24,6 +24,7 @@ driver_module("wlanphy-testdev") {
     "//garnet/lib/wlan/protocol",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//sdk/banjo/ddk.protocol.sdio",
+    "//sdk/banjo/ddk.protocol.test",
     "//sdk/banjo/ddk.protocol.wlanphy",
     "//sdk/fidl/fuchsia.wlan.device",
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device_llcpp",
@@ -35,7 +36,6 @@ driver_module("wlanphy-testdev") {
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.test",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

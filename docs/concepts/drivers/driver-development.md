@@ -323,7 +323,7 @@ approach but it may not be as useful.
 
 
 The bindings defined in
-[test.banjo](/zircon/system/banjo/ddk.protocol.test/test.banjo) are used
+[test.banjo](/sdk/banjo/ddk.protocol.test/test.banjo) are used
 for testing libraries that run as part of a driver. For an example, refer to
 [system/ulib/ddk/test](/zircon/system/ulib/ddk/test). The test harness for these
 tests is

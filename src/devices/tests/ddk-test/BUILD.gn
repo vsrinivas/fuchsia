@@ -30,6 +30,7 @@ driver_module("ddk-test") {
     "usb-request-test.c",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.test",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fake-bti",
@@ -38,7 +39,6 @@ driver_module("ddk-test") {
     "//zircon/public/lib/unittest",
     "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.protocol.test",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/banjo/ddk.protocol.usb.request",
   ]
