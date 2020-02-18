@@ -59,7 +59,10 @@ test("zircon-crypto") {
 
 fuzzer("hmac-fuzzer") {
   sources = [ "hmac-fuzzer.cc" ]
-  deps = [ "//zircon/public/lib/fbl" ]
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zircon-crypto",
+  ]
 }
 
 migrated_manifest("zircon-crypto-manifest") {
