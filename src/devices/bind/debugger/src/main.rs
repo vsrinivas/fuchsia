@@ -42,21 +42,6 @@ async fn main() {
 
     let bind_program = match service.get_bind_program(&opt.driver_path).await {
         Err(fidl_err) => {
-            eprintln!("FIDL call to get device properties failed: {}", fidl_err);
-            std::process::exit(1);
-        }
-        Ok(Err(zx_err)) => {
-            eprintln!(
-                "FIDL call to get device properties returned an error: {}",
-                zx::Status::from_raw(zx_err)
-            );
-            std::process::exit(1);
-        }
-        Ok(Ok(program)) => program,
-    };
-
-    let device_properties = match service.get_device_properties(&opt.device_path).await {
-        Err(fidl_err) => {
             eprintln!("FIDL call to get bind program failed: {}", fidl_err);
             std::process::exit(1);
         }
@@ -67,13 +52,28 @@ async fn main() {
             );
             std::process::exit(1);
         }
+        Ok(Ok(program)) => program,
+    };
+
+    let device_properties = match service.get_device_properties(&opt.device_path).await {
+        Err(fidl_err) => {
+            eprintln!("FIDL call to get device properties failed: {}", fidl_err);
+            std::process::exit(1);
+        }
+        Ok(Err(zx_err)) => {
+            eprintln!(
+                "FIDL call to get device properties returned an error: {}",
+                zx::Status::from_raw(zx_err)
+            );
+            std::process::exit(1);
+        }
         Ok(Ok(props)) => props,
     };
 
     let raw_instructions = bind_program
         .into_iter()
-        .map(|instruction| RawInstruction([instruction.op, instruction.arg]))
-        .collect::<Vec<RawInstruction<[u32; 2]>>>();
+        .map(|instruction| RawInstruction([instruction.op, instruction.arg, instruction.debug]))
+        .collect::<Vec<RawInstruction<[u32; 3]>>>();
 
     let device_properties =
         device_properties.into_iter().map(DeviceProperty::from).collect::<Vec<DeviceProperty>>();

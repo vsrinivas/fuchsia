@@ -6,6 +6,7 @@ use crate::bind_program::{Condition, ConditionOp, Statement};
 use crate::compiler::{self, Symbol, SymbolTable, SymbolicInstruction, SymbolicInstructionLocated};
 use crate::device_specification::{self, Property};
 use crate::errors::{self, UserError};
+use crate::instruction::{InstructionDebugInfo, RawAstLocation};
 use crate::parser_common::{self, CompoundIdentifier, Span, Value};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -44,9 +45,41 @@ struct DeviceValue {
 pub enum AstLocation<'a> {
     ConditionStatement(Statement<'a>),
     AcceptStatementValue { identifier: CompoundIdentifier, value: Value, span: Span<'a> },
-    AcceptStatementFailure { identifier: CompoundIdentifier, span: Span<'a> },
+    AcceptStatementFailure { identifier: CompoundIdentifier, symbol: Symbol, span: Span<'a> },
     IfCondition(Condition<'a>),
     AbortStatement(Statement<'a>),
+}
+
+impl<'a> AstLocation<'a> {
+    pub fn to_instruction_debug_info(self) -> InstructionDebugInfo {
+        match self {
+            AstLocation::ConditionStatement(statement) => InstructionDebugInfo {
+                line: statement.get_span().line,
+                ast_location: RawAstLocation::ConditionStatement,
+                extra: 0,
+            },
+            AstLocation::AcceptStatementValue { span, .. } => InstructionDebugInfo {
+                line: span.line,
+                ast_location: RawAstLocation::AcceptStatementValue,
+                extra: 0,
+            },
+            AstLocation::AcceptStatementFailure { span, symbol, .. } => InstructionDebugInfo {
+                line: span.line,
+                ast_location: RawAstLocation::AcceptStatementFailure,
+                extra: symbol.to_bytecode(),
+            },
+            AstLocation::IfCondition(condition) => InstructionDebugInfo {
+                line: condition.span.line,
+                ast_location: RawAstLocation::IfCondition,
+                extra: 0,
+            },
+            AstLocation::AbortStatement(statement) => InstructionDebugInfo {
+                line: statement.get_span().line,
+                ast_location: RawAstLocation::AbortStatement,
+                extra: 0,
+            },
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -298,7 +331,7 @@ impl<'a> Debugger<'a> {
                 self.output.push(DebuggerOutput::AbortStatement { statement });
                 Ok(())
             }
-            Some(AstLocation::AcceptStatementFailure { identifier, span }) => {
+            Some(AstLocation::AcceptStatementFailure { identifier, span, symbol: _ }) => {
                 self.output.push(DebuggerOutput::AcceptStatementFailure { identifier, span });
                 Ok(())
             }
@@ -945,7 +978,7 @@ mod test {
             abort;
         } else {
             accept xyz {1, 2};
-            pqr == true;
+            pqr != true;
         }
         */
 

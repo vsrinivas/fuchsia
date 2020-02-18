@@ -22,6 +22,8 @@ struct BindInstruction {
     uint32 op;
     /// bitfield that encodes the arguments
     uint32 arg;
+    /// bitfield that encodes debugging information
+    uint32 debug;
 };
 
 // Identifier used to let the devcoordinator describe specific devices during

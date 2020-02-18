@@ -4,8 +4,8 @@
 
 //! A Fuchsia Driver Bind Program compiler
 
-use bind_debugger::instruction::{Condition, Instruction};
-use bindc::{compiler, debugger};
+use bind_debugger::instruction::{Condition, Instruction, InstructionDebug};
+use bind_debugger::{compiler, offline_debugger};
 use std::fmt::Write;
 use std::fs::File;
 use std::io::{self, BufRead};
@@ -51,17 +51,20 @@ struct Opt {
 }
 
 fn write_bind_template(
-    mut instructions: Vec<Instruction>,
+    mut instructions: Vec<InstructionDebug>,
     disable_autobind: bool,
 ) -> Option<String> {
     if disable_autobind {
-        instructions.insert(0, Instruction::Abort(Condition::NotEqual(AUTOBIND_PROPERTY, 0)));
+        instructions.insert(
+            0,
+            InstructionDebug::new(Instruction::Abort(Condition::NotEqual(AUTOBIND_PROPERTY, 0))),
+        );
     }
     let bind_count = instructions.len();
     let binding = instructions
         .into_iter()
-        .map(|instr| instr.encode_pair())
-        .map(|(word0, word1)| format!("{{{:#x},{:#x}}},", word0, word1))
+        .map(|instr| instr.encode())
+        .map(|(word0, word1, word2)| format!("{{{:#x},{:#x},{:#x}}},", word0, word1, word2))
         .collect::<String>();
     let mut output = String::new();
     output
@@ -98,7 +101,7 @@ fn main() {
     }
 
     if let Some(device_file) = opt.device_file {
-        if let Err(err) = debugger::debug(opt.input, &includes, device_file) {
+        if let Err(err) = offline_debugger::debug(opt.input, &includes, device_file) {
             eprintln!("Debugger failed with error:");
             eprintln!("{}", err);
             std::process::exit(1);
@@ -145,17 +148,17 @@ mod tests {
 
     #[test]
     fn one_instruction() {
-        let instructions = vec![Instruction::Match(Condition::Always)];
+        let instructions = vec![InstructionDebug::new(Instruction::Match(Condition::Always))];
         let out_string = write_bind_template(instructions, false).unwrap();
         assert!(out_string.contains("ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, 1)"));
-        assert!(out_string.contains("{0x1000000,0x0}"));
+        assert!(out_string.contains("{0x1000000,0x0,0x0}"));
     }
 
     #[test]
     fn disable_autobind() {
-        let instructions = vec![Instruction::Match(Condition::Always)];
+        let instructions = vec![InstructionDebug::new(Instruction::Match(Condition::Always))];
         let out_string = write_bind_template(instructions, true).unwrap();
         assert!(out_string.contains("ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, 2)"));
-        assert!(out_string.contains("{0x20000002,0x0}"));
+        assert!(out_string.contains("{0x20000002,0x0,0x0}"));
     }
 }

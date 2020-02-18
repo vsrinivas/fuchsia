@@ -57,6 +57,17 @@ pub enum Statement<'a> {
     },
 }
 
+impl<'a> Statement<'a> {
+    pub fn get_span(&'a self) -> &'a Span<'a> {
+        match self {
+            Statement::ConditionStatement { span, .. } => span,
+            Statement::Accept { span, .. } => span,
+            Statement::If { span, .. } => span,
+            Statement::Abort { span } => span,
+        }
+    }
+}
+
 // TODO(fxb/35146): Improve error reporting here.
 impl<'a> TryFrom<&'a str> for Ast<'a> {
     type Error = BindParserError;

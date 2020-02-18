@@ -4,12 +4,12 @@
 
 use crate::bind_library;
 use crate::bind_program::{self, Condition, ConditionOp, Statement};
-use crate::debugger::AstLocation;
 use crate::dependency_graph::{self, DependencyGraph};
 use crate::errors::{self, UserError};
+use crate::instruction;
 use crate::make_identifier;
+use crate::offline_debugger::AstLocation;
 use crate::parser_common::{self, CompoundIdentifier, Include, Value};
-use bind_debugger::instruction;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt;
@@ -51,15 +51,12 @@ pub fn read_file(path: &PathBuf) -> Result<String, errors::FileError> {
 pub fn compile(
     program: PathBuf,
     libraries: &[PathBuf],
-) -> Result<Vec<instruction::Instruction>, CompilerError> {
+) -> Result<Vec<instruction::InstructionDebug>, CompilerError> {
     let program_str = read_file(&program).map_err(CompilerError::FileError)?;
 
     let (symbolic_instructions, _) = compile_to_symbolic(&program_str, libraries)?;
 
-    Ok(symbolic_instructions
-        .into_iter()
-        .map(|symbolic| symbolic.instruction.to_instruction())
-        .collect())
+    Ok(symbolic_instructions.into_iter().map(|symbolic| symbolic.to_instruction()).collect())
 }
 
 pub fn compile_to_symbolic<'a>(
@@ -125,7 +122,7 @@ pub enum Symbol {
 
 impl Symbol {
     #[allow(dead_code)]
-    fn to_bytecode(&self) -> u32 {
+    pub fn to_bytecode(&self) -> u32 {
         // We can only support numeric values until the bytecode representation is changed to handle
         // strings.
         match self {
@@ -261,116 +258,141 @@ fn construct_symbol_table(
 
 /// Hard code these symbols during the migration from macros to bind programs. Eventually these
 /// will be defined in libraries and the compiler will emit strings for them in the bytecode.
-fn get_deprecated_symbols() -> SymbolTable {
-    let mut symbol_table = HashMap::new();
-    let mut insert_deprecated = |key, value| {
-        symbol_table.insert(make_identifier!("deprecated", key), Symbol::DeprecatedKey(value));
-    };
+fn deprecated_keys() -> Vec<(String, u32)> {
+    let mut keys = Vec::new();
 
-    insert_deprecated("BIND_PROTOCOL", 0x0001);
+    keys.push(("BIND_PROTOCOL".to_string(), 0x0001));
 
-    insert_deprecated("BIND_PLATFORM_DEV_VID", 0x0300);
-    insert_deprecated("BIND_PCI_VID", 0x0100);
+    keys.push(("BIND_PLATFORM_DEV_VID".to_string(), 0x0300));
+    keys.push(("BIND_PCI_VID".to_string(), 0x0100));
 
-    insert_deprecated("BIND_PCI_DID", 0x0101);
-    insert_deprecated("BIND_PCI_CLASS", 0x0102);
-    insert_deprecated("BIND_PCI_SUBCLASS", 0x0103);
-    insert_deprecated("BIND_PCI_INTERFACE", 0x0104);
-    insert_deprecated("BIND_PCI_REVISION", 0x0105);
+    keys.push(("BIND_PCI_DID".to_string(), 0x0101));
+    keys.push(("BIND_PCI_CLASS".to_string(), 0x0102));
+    keys.push(("BIND_PCI_SUBCLASS".to_string(), 0x0103));
+    keys.push(("BIND_PCI_INTERFACE".to_string(), 0x0104));
+    keys.push(("BIND_PCI_REVISION".to_string(), 0x0105));
 
     // usb binding variables at 0x02XX
     // these are used for both ZX_PROTOCOL_USB and ZX_PROTOCOL_USB_FUNCTION
-    insert_deprecated("BIND_USB_VID", 0x0200);
-    insert_deprecated("BIND_USB_PID", 0x0201);
-    insert_deprecated("BIND_USB_CLASS", 0x0202);
-    insert_deprecated("BIND_USB_SUBCLASS", 0x0203);
-    insert_deprecated("BIND_USB_PROTOCOL", 0x0204);
+    keys.push(("BIND_USB_VID".to_string(), 0x0200));
+    keys.push(("BIND_USB_PID".to_string(), 0x0201));
+    keys.push(("BIND_USB_CLASS".to_string(), 0x0202));
+    keys.push(("BIND_USB_SUBCLASS".to_string(), 0x0203));
+    keys.push(("BIND_USB_PROTOCOL".to_string(), 0x0204));
 
     // Platform bus binding variables at 0x03XX
-    insert_deprecated("BIND_PLATFORM_DEV_VID", 0x0300);
-    insert_deprecated("BIND_PLATFORM_DEV_PID", 0x0301);
-    insert_deprecated("BIND_PLATFORM_DEV_DID", 0x0302);
-    insert_deprecated("BIND_PLATFORM_PROTO", 0x0303);
+    keys.push(("BIND_PLATFORM_DEV_VID".to_string(), 0x0300));
+    keys.push(("BIND_PLATFORM_DEV_PID".to_string(), 0x0301));
+    keys.push(("BIND_PLATFORM_DEV_DID".to_string(), 0x0302));
+    keys.push(("BIND_PLATFORM_PROTO".to_string(), 0x0303));
 
     // ACPI binding variables at 0x04XX
     // The _HID is a 7- or 8-byte string. Because a bind property is 32-bit, use 2
     // properties to bind using the _HID. They are encoded in big endian order for
     // human readability. In the case of 7-byte _HID's, the 8th-byte shall be 0.
-    insert_deprecated("BIND_ACPI_HID_0_3", 0x0400);
-    insert_deprecated("BIND_ACPI_HID_4_7", 0x0401);
+    keys.push(("BIND_ACPI_HID_0_3".to_string(), 0x0400));
+    keys.push(("BIND_ACPI_HID_4_7".to_string(), 0x0401));
     // The _CID may be a valid HID value or a bus-specific string. The ACPI bus
     // driver only publishes those that are valid HID values.
-    insert_deprecated("BIND_ACPI_CID_0_3", 0x0402);
-    insert_deprecated("BIND_ACPI_CID_4_7", 0x0403);
+    keys.push(("BIND_ACPI_CID_0_3".to_string(), 0x0402));
+    keys.push(("BIND_ACPI_CID_4_7".to_string(), 0x0403));
 
     // Intel HDA Codec binding variables at 0x05XX
-    insert_deprecated("BIND_IHDA_CODEC_VID", 0x0500);
-    insert_deprecated("BIND_IHDA_CODEC_DID", 0x0501);
-    insert_deprecated("BIND_IHDA_CODEC_MAJOR_REV", 0x0502);
-    insert_deprecated("BIND_IHDA_CODEC_MINOR_REV", 0x0503);
-    insert_deprecated("BIND_IHDA_CODEC_VENDOR_REV", 0x0504);
-    insert_deprecated("BIND_IHDA_CODEC_VENDOR_STEP", 0x0505);
+    keys.push(("BIND_IHDA_CODEC_VID".to_string(), 0x0500));
+    keys.push(("BIND_IHDA_CODEC_DID".to_string(), 0x0501));
+    keys.push(("BIND_IHDA_CODEC_MAJOR_REV".to_string(), 0x0502));
+    keys.push(("BIND_IHDA_CODEC_MINOR_REV".to_string(), 0x0503));
+    keys.push(("BIND_IHDA_CODEC_VENDOR_REV".to_string(), 0x0504));
+    keys.push(("BIND_IHDA_CODEC_VENDOR_STEP".to_string(), 0x0505));
 
     // Serial binding variables at 0x06XX
-    insert_deprecated("BIND_SERIAL_CLASS", 0x0600);
-    insert_deprecated("BIND_SERIAL_VID", 0x0601);
-    insert_deprecated("BIND_SERIAL_PID", 0x0602);
+    keys.push(("BIND_SERIAL_CLASS".to_string(), 0x0600));
+    keys.push(("BIND_SERIAL_VID".to_string(), 0x0601));
+    keys.push(("BIND_SERIAL_PID".to_string(), 0x0602));
 
     // NAND binding variables at 0x07XX
-    insert_deprecated("BIND_NAND_CLASS", 0x0700);
+    keys.push(("BIND_NAND_CLASS".to_string(), 0x0700));
 
     // Bluetooth binding variables at 0x08XX
-    insert_deprecated("BIND_BT_GATT_SVC_UUID16", 0x0800);
+    keys.push(("BIND_BT_GATT_SVC_UUID16".to_string(), 0x0800));
     // 128-bit UUID is split across 4 32-bit unsigned ints
-    insert_deprecated("BIND_BT_GATT_SVC_UUID128_1", 0x0801);
-    insert_deprecated("BIND_BT_GATT_SVC_UUID128_2", 0x0802);
-    insert_deprecated("BIND_BT_GATT_SVC_UUID128_3", 0x0803);
-    insert_deprecated("BIND_BT_GATT_SVC_UUID128_4", 0x0804);
+    keys.push(("BIND_BT_GATT_SVC_UUID128_1".to_string(), 0x0801));
+    keys.push(("BIND_BT_GATT_SVC_UUID128_2".to_string(), 0x0802));
+    keys.push(("BIND_BT_GATT_SVC_UUID128_3".to_string(), 0x0803));
+    keys.push(("BIND_BT_GATT_SVC_UUID128_4".to_string(), 0x0804));
 
     // SDIO binding variables at 0x09XX
-    insert_deprecated("BIND_SDIO_VID", 0x0900);
-    insert_deprecated("BIND_SDIO_PID", 0x0901);
-    insert_deprecated("BIND_SDIO_FUNCTION", 0x0902);
+    keys.push(("BIND_SDIO_VID".to_string(), 0x0900));
+    keys.push(("BIND_SDIO_PID".to_string(), 0x0901));
+    keys.push(("BIND_SDIO_FUNCTION".to_string(), 0x0902));
 
     // I2C binding variables at 0x0A0X
-    insert_deprecated("BIND_I2C_CLASS", 0x0A00);
-    insert_deprecated("BIND_I2C_BUS_ID", 0x0A01);
-    insert_deprecated("BIND_I2C_ADDRESS", 0x0A02);
+    keys.push(("BIND_I2C_CLASS".to_string(), 0x0A00));
+    keys.push(("BIND_I2C_BUS_ID".to_string(), 0x0A01));
+    keys.push(("BIND_I2C_ADDRESS".to_string(), 0x0A02));
 
     // GPIO binding variables at 0x0A1X
-    insert_deprecated("BIND_GPIO_PIN", 0x0A10);
+    keys.push(("BIND_GPIO_PIN".to_string(), 0x0A10));
 
     // POWER binding variables at 0x0A2X
-    insert_deprecated("BIND_POWER_DOMAIN", 0x0A20);
-    insert_deprecated("BIND_POWER_DOMAIN_COMPOSITE", 0x0A21);
+    keys.push(("BIND_POWER_DOMAIN".to_string(), 0x0A20));
+    keys.push(("BIND_POWER_DOMAIN_COMPOSITE".to_string(), 0x0A21));
 
     // POWER binding variables at 0x0A3X
-    insert_deprecated("BIND_CLOCK_ID", 0x0A30);
+    keys.push(("BIND_CLOCK_ID".to_string(), 0x0A30));
 
     // SPI binding variables at 0x0A4X
-    insert_deprecated("BIND_SPI_CLASS", 0x0A40);
-    insert_deprecated("BIND_SPI_BUS_ID", 0x0A41);
-    insert_deprecated("BIND_SPI_CHIP_SELECT", 0x0A42);
+    keys.push(("BIND_SPI_CLASS".to_string(), 0x0A40));
+    keys.push(("BIND_SPI_BUS_ID".to_string(), 0x0A41));
+    keys.push(("BIND_SPI_CHIP_SELECT".to_string(), 0x0A42));
 
     // Fuchsia-defined topological path properties are at 0x0B00 through 0x0B7F.
     // Vendor-defined topological path properties are at 0x0B80 to 0x0BFF.
     // For vendor properties, it is recommended that a vendor ID be included
     // and checked via some other property.
-    insert_deprecated("BIND_TOPO_START", 0x0B00);
-    insert_deprecated("BIND_TOPO_PCI", 0x0B00);
-    insert_deprecated("BIND_TOPO_I2C", 0x0B01);
-    insert_deprecated("BIND_TOPO_SPI", 0x0B02);
-    insert_deprecated("BIND_TOPO_VENDOR_START", 0x0B80);
-    insert_deprecated("BIND_TOPO_VENDOR_END", 0x0BFF);
-    insert_deprecated("BIND_TOPO_END", 0x0BFF);
+    keys.push(("BIND_TOPO_START".to_string(), 0x0B00));
+    keys.push(("BIND_TOPO_PCI".to_string(), 0x0B00));
+    keys.push(("BIND_TOPO_I2C".to_string(), 0x0B01));
+    keys.push(("BIND_TOPO_SPI".to_string(), 0x0B02));
+    keys.push(("BIND_TOPO_VENDOR_START".to_string(), 0x0B80));
+    keys.push(("BIND_TOPO_VENDOR_END".to_string(), 0x0BFF));
+    keys.push(("BIND_TOPO_END".to_string(), 0x0BFF));
 
+    keys
+}
+
+fn get_deprecated_symbols() -> SymbolTable {
+    let mut symbol_table = HashMap::new();
+    for (key, value) in deprecated_keys() {
+        symbol_table.insert(make_identifier!("deprecated", key), Symbol::DeprecatedKey(value));
+    }
     symbol_table
+}
+
+pub fn get_deprecated_key_identifiers() -> HashMap<u32, String> {
+    let mut key_identifiers = HashMap::new();
+    for (key, value) in deprecated_keys() {
+        key_identifiers.insert(value, make_identifier!("deprecated", key).to_string());
+    }
+    key_identifiers
 }
 
 #[derive(Debug, PartialEq)]
 pub struct SymbolicInstructionLocated<'a> {
     pub location: Option<AstLocation<'a>>,
     pub instruction: SymbolicInstruction,
+}
+
+impl<'a> SymbolicInstructionLocated<'a> {
+    pub fn to_instruction(self) -> instruction::InstructionDebug {
+        instruction::InstructionDebug {
+            instruction: self.instruction.to_instruction(),
+            debug: match self.location {
+                Some(location) => location.to_instruction_debug_info(),
+                None => instruction::InstructionDebugInfo::none(),
+            },
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -386,7 +408,7 @@ pub enum SymbolicInstruction {
 }
 
 impl SymbolicInstruction {
-    fn to_instruction(self) -> instruction::Instruction {
+    pub fn to_instruction(self) -> instruction::Instruction {
         match self {
             SymbolicInstruction::AbortIfEqual { lhs, rhs } => instruction::Instruction::Abort(
                 instruction::Condition::Equal(lhs.to_bytecode(), rhs.to_bytecode()),
@@ -523,7 +545,11 @@ impl<'a, 'b> Compiler<'a, 'b> {
                         });
                     }
                     self.instructions.push(SymbolicInstructionLocated {
-                        location: Some(AstLocation::AcceptStatementFailure { identifier, span }),
+                        location: Some(AstLocation::AcceptStatementFailure {
+                            identifier,
+                            symbol: lhs_symbol,
+                            span,
+                        }),
                         instruction: SymbolicInstruction::UnconditionalAbort,
                     });
                     self.instructions.push(SymbolicInstructionLocated {
@@ -1042,6 +1068,7 @@ mod test {
                 SymbolicInstructionLocated {
                     location: Some(AstLocation::AcceptStatementFailure {
                         identifier: make_identifier!("abc"),
+                        symbol: Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
                         span: Span::new()
                     }),
                     instruction: SymbolicInstruction::UnconditionalAbort

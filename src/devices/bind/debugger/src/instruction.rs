@@ -27,10 +27,17 @@ impl From<fidl_fuchsia_device_manager::DeviceProperty> for DeviceProperty {
 }
 
 bitfield! {
-    /// Each instruction is a pair of 32 bit unsigned integers divided as
-    /// follows.
-    /// lsb           msb
-    /// COAABBBB VVVVVVVV  Condition Opcode paramA paramB Value
+    /// Each instruction is three 32 bit unsigned integers divided as follows.
+    /// lsb                    msb
+    /// COAABBBB VVVVVVVV DDDDDDDD Condition Opcode paramA paramB Value Debug
+    ///
+    /// The Debug field contains the following information:
+    ///  - line: The source code line which the instruction was compiled from.
+    ///  - ast_location: Where in the AST the instruction was compiled from, encoded by the
+    ///      RawAstLocation enum.
+    ///  - extra: Additional debugging information, meaning depends on the value of ast_location.
+    ///      If ast_location is AcceptStatementFailure, extra is the key of the accept statement.
+    ///      Otherwise, extra is unused.
     pub struct RawInstruction([u32]);
     u32;
     pub condition, set_condition: 31, 28;
@@ -38,9 +45,12 @@ bitfield! {
     pub parameter_a, set_parameter_a: 23, 16;
     pub parameter_b, set_parameter_b: 15, 0;
     pub value, set_value: 63, 32;
+    pub line, set_line: 95, 88;
+    pub ast_location, set_ast_location: 87, 80;
+    pub extra, set_extra: 79, 64;
 }
 
-impl fmt::Display for RawInstruction<[u32; 2]> {
+impl fmt::Display for RawInstruction<[u32; 3]> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -55,7 +65,7 @@ impl fmt::Display for RawInstruction<[u32; 2]> {
 }
 
 /// These should match the values in <zircon/driver/binding.h>, e.g. COND_AL = 0
-#[derive(FromPrimitive, PartialEq)]
+#[derive(FromPrimitive, PartialEq, Clone, Copy, Debug)]
 pub enum RawCondition {
     Always = 0,
     Equal,
@@ -63,7 +73,7 @@ pub enum RawCondition {
 }
 
 /// These should match the values in <zircon/driver/binding.h>, e.g. OP_ABORT = 0
-#[derive(FromPrimitive, PartialEq)]
+#[derive(FromPrimitive, PartialEq, Clone, Copy)]
 pub enum RawOp {
     Abort = 0,
     Match,
@@ -98,12 +108,7 @@ pub enum Instruction {
 }
 
 impl Instruction {
-    pub fn encode_pair(self) -> (u32, u32) {
-        let RawInstruction([word0, word1]) = self.to_raw();
-        (word0, word1)
-    }
-
-    pub fn to_raw(self) -> RawInstruction<[u32; 2]> {
+    pub fn to_raw(self) -> RawInstruction<[u32; 3]> {
         let (c, o, a, b, v) = match self {
             Instruction::Abort(condition) => {
                 let (c, b, v) = condition.to_raw();
@@ -119,12 +124,65 @@ impl Instruction {
             }
             Instruction::Label(a) => (RawCondition::Always as u32, RawOp::Label as u32, a, 0, 0),
         };
-        let mut raw_instruction = RawInstruction([0, 0]);
+        let mut raw_instruction = RawInstruction([0, 0, 0]);
         raw_instruction.set_condition(c);
         raw_instruction.set_operation(o);
         raw_instruction.set_parameter_a(a);
         raw_instruction.set_parameter_b(b);
         raw_instruction.set_value(v);
+        raw_instruction
+    }
+}
+
+#[derive(FromPrimitive, PartialEq)]
+pub enum RawAstLocation {
+    Invalid = 0,
+    ConditionStatement,
+    AcceptStatementValue,
+    AcceptStatementFailure,
+    IfCondition,
+    AbortStatement,
+}
+
+pub struct InstructionDebugInfo {
+    pub line: u32,
+    pub ast_location: RawAstLocation,
+    pub extra: u32,
+}
+
+impl InstructionDebugInfo {
+    pub fn none() -> Self {
+        InstructionDebugInfo { line: 0, ast_location: RawAstLocation::Invalid, extra: 0 }
+    }
+
+    fn to_raw(self) -> (u32, u32, u32) {
+        (self.line, self.ast_location as u32, self.extra)
+    }
+}
+
+pub struct InstructionDebug {
+    pub instruction: Instruction,
+    pub debug: InstructionDebugInfo,
+}
+
+impl InstructionDebug {
+    pub fn new(instruction: Instruction) -> Self {
+        InstructionDebug { instruction, debug: InstructionDebugInfo::none() }
+    }
+
+    pub fn encode(self) -> (u32, u32, u32) {
+        let RawInstruction([word0, word1, word2]) = self.to_raw();
+        (word0, word1, word2)
+    }
+
+    pub fn to_raw(self) -> RawInstruction<[u32; 3]> {
+        let mut raw_instruction = self.instruction.to_raw();
+
+        let (line, ast_location, extra) = self.debug.to_raw();
+        raw_instruction.set_line(line);
+        raw_instruction.set_ast_location(ast_location);
+        raw_instruction.set_extra(extra);
+
         raw_instruction
     }
 }
@@ -236,6 +294,6 @@ mod tests {
         assert_eq!(raw_instruction.operation(), 2);
         assert_eq!(raw_instruction.parameter_a(), 42);
         assert_eq!(raw_instruction.parameter_b(), 23);
-        assert_eq!(raw_instruction.value(), 1234)
+        assert_eq!(raw_instruction.value(), 1234);
     }
 }

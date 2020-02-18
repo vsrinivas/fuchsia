@@ -6,7 +6,7 @@
 
 #![allow(dead_code)]
 
-use bind_debugger::instruction::{Condition, Instruction};
+use crate::instruction::{Condition, Instruction};
 
 fn c_macro_invocation(macro_name: &str, arguments: &Vec<String>) -> String {
     let mut parts = vec![macro_name, "("];

@@ -85,11 +85,13 @@ void BindCompositeDefineComposite(const fbl::RefPtr<Device>& platform_bus,
     component.parts[0].match_program[0] = ::llcpp::fuchsia::device::manager::BindInstruction{
         .op = always.op,
         .arg = always.arg,
+        .debug = always.debug,
     };
     component.parts[1].match_program_count = 1;
     component.parts[1].match_program[0] = ::llcpp::fuchsia::device::manager::BindInstruction{
         .op = protocol.op,
         .arg = protocol.arg,
+        .debug = always.debug,
     };
     components.push_back(component);
   }

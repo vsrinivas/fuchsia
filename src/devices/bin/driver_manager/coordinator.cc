@@ -1798,6 +1798,7 @@ void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
     instructions.push_back(llcpp::fuchsia::device::manager::BindInstruction{
         .op = driver->binding[i].op,
         .arg = driver->binding[i].arg,
+        .debug = driver->binding[i].debug,
     });
   }
   completer.ReplySuccess(::fidl::VectorView(instructions));

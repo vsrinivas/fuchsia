@@ -36,7 +36,7 @@ __BEGIN_CDECLS
 // flags may be tested by comparison against BIND_FLAGS
 
 #define BINDINST(c, o, a, b, v) \
-  { (((c)&0xF) << 28) | (((o)&0xF) << 24) | (((a)&0xFF) << 16) | ((b)&0xFFFF), (v) }
+  { (((c)&0xF) << 28) | (((o)&0xF) << 24) | (((a)&0xFF) << 16) | ((b)&0xFFFF), (v), 0 /* debug */ }
 
 #define BINDINST_CC(n) ((n) >> 28)
 #define BINDINST_OP(n) (((n) >> 24) & 0xF)
@@ -175,6 +175,7 @@ __BEGIN_CDECLS
 typedef struct zx_bind_inst {
   uint32_t op;
   uint32_t arg;
+  uint32_t debug;
 } zx_bind_inst_t;
 
 typedef struct zx_device_prop {

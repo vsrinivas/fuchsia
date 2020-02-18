@@ -1031,6 +1031,7 @@ zx_status_t devhost_device_add_composite(const fbl::RefPtr<zx_device_t>& dev, co
         bind_instructions[k] = fuchsia::device::manager::BindInstruction{
             .op = comp_desc->components[i].parts[j].match_program[k].op,
             .arg = comp_desc->components[i].parts[j].match_program[k].arg,
+            .debug = comp_desc->components[i].parts[j].match_program[k].debug,
         };
       }
       auto part = fuchsia::device::manager::DeviceComponentPart{
