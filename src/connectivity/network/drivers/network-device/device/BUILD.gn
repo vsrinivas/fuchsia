@@ -23,6 +23,7 @@ ddk_source_split("device") {
   ]
 
   public_deps = [
+    "//sdk/banjo/ddk.protocol.network.device",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
@@ -31,7 +32,6 @@ ddk_source_split("device") {
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/sync",
-    "//zircon/system/banjo/ddk.protocol.network.device",
   ]
 }
 
