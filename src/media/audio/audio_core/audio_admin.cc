@@ -37,7 +37,7 @@ AudioAdmin::AudioAdmin(UsageGainAdjustment* gain_adjustment, async_dispatcher_t*
     : AudioAdmin(
           BehaviorGain{
               .none_gain_db = 0.0f,
-              .duck_gain_db = -14.0f,
+              .duck_gain_db = -35.0f,
               .mute_gain_db = fuchsia::media::audio::MUTED_GAIN_DB,
           },
           gain_adjustment, policy_action_reporter, fidl_dispatcher) {}

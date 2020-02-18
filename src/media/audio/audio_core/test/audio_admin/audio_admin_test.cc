@@ -31,7 +31,7 @@ class AudioAdminTest : public HermeticAudioTest {
 
   static constexpr int16_t kInitialCaptureData = 0x7fff;
   static constexpr int16_t kPlaybackData1 = 0x1111;
-  static constexpr int16_t kDuckedPlaybackData1 = 0x0368;  // reduced by 14dB
+  static constexpr int16_t kDuckedPlaybackData1 = 0x4e;  // reduced by 35dB
   static constexpr int16_t kPlaybackData2 = 0x2222;
 
   static void SetUpTestSuite();
