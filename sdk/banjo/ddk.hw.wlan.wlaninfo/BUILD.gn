@@ -6,5 +6,5 @@ import("//build/banjo/banjo.gni")
 
 banjo("ddk.hw.wlan.wlaninfo") {
   sources = [ "wlaninfo.banjo" ]
-  deps = [ "//zircon/system/banjo/ddk.hw.wlan.ieee80211" ]
+  deps = [ "//sdk/banjo/ddk.hw.wlan.ieee80211" ]
 }

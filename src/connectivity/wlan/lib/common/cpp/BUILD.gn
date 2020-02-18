@@ -46,6 +46,7 @@ source_set("common") {
   ]
 
   public_deps = [
+    "//sdk/banjo/ddk.hw.wlan.ieee80211",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//sdk/banjo/ddk.protocol.wlanphyimpl",
     "//sdk/fidl/fuchsia.wlan.mlme",
@@ -55,7 +56,6 @@ source_set("common") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/system/banjo/ddk.hw.wlan.ieee80211",
   ]
 
   public_configs = [ ":wlan_common_config" ]

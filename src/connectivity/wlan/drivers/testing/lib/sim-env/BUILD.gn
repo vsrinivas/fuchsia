@@ -15,8 +15,8 @@ static_library("sim-env") {
 
   public_deps = [
     "//garnet/lib/wlan/protocol:protocol",
+    "//sdk/banjo/ddk.hw.wlan.ieee80211",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo",
     "//src/connectivity/wlan/lib/common/cpp:common",
-    "//zircon/system/banjo/ddk.hw.wlan.ieee80211",
   ]
 }
