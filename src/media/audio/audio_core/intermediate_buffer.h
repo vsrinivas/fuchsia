@@ -5,6 +5,8 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_INTERMEDIATE_BUFFER_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_INTERMEDIATE_BUFFER_H_
 
+#include <lib/fzl/owned-vmo-mapper.h>
+
 #include <memory>
 
 #include "src/media/audio/audio_core/stream.h"
@@ -17,7 +19,7 @@ class IntermediateBuffer : public Stream {
   IntermediateBuffer(const Format& output_format, uint32_t size_in_frames,
                      fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames);
 
-  void* buffer() const { return buffer_.get(); }
+  void* buffer() const { return vmo_.start(); }
   size_t frame_count() const { return frame_count_; }
 
   // |media::audio::Stream|
@@ -27,7 +29,7 @@ class IntermediateBuffer : public Stream {
   TimelineFunctionSnapshot ReferenceClockToFractionalFrames() const override;
 
  private:
-  std::unique_ptr<uint8_t[]> buffer_;
+  fzl::OwnedVmoMapper vmo_;
   uint32_t frame_count_;
   fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames_;
 };

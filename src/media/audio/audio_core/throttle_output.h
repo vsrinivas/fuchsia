@@ -40,7 +40,11 @@ class ThrottleOutput : public AudioOutput {
         .channels = 1,
         .frames_per_second = 48000,
     });
-    SetupMixTask(mix_format, 0, TimelineFunction());
+
+    // This must be non-0, but it doesn't actually matter much since we'll never mix with a throttle
+    // output.
+    static const uint32_t kMaxBatchSize = PAGE_SIZE;
+    SetupMixTask(mix_format, kMaxBatchSize, TimelineFunction());
   }
 
   ~ThrottleOutput() override = default;

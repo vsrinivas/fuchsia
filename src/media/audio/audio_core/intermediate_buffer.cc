@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/intermediate_buffer.h"
 
+#include "src/lib/syslog/cpp/logger.h"
+
 namespace media::audio {
 
 IntermediateBuffer::IntermediateBuffer(
@@ -12,13 +14,17 @@ IntermediateBuffer::IntermediateBuffer(
     : Stream(format),
       frame_count_(size_in_frames),
       reference_clock_to_fractional_frames_(reference_clock_to_fractional_frames) {
-  buffer_ = std::make_unique<uint8_t[]>(frame_count_ * format.bytes_per_frame());
+  zx_status_t status =
+      vmo_.CreateAndMap(frame_count_ * format.bytes_per_frame(), "intermediate-buffer");
+  if (status != ZX_OK) {
+    FX_PLOGS(FATAL, status) << "Failed to create intermediate buffer VMO";
+  }
 }
 
 std::optional<Stream::Buffer> IntermediateBuffer::LockBuffer(zx::time ref_time, int64_t frame,
                                                              uint32_t frame_count) {
   auto clamped_length = std::min<uint32_t>(frame_count, frame_count_);
-  return Stream::Buffer(frame, clamped_length, buffer_.get(), true);
+  return Stream::Buffer(frame, clamped_length, vmo_.start(), true);
 }
 
 Stream::TimelineFunctionSnapshot IntermediateBuffer::ReferenceClockToFractionalFrames() const {
