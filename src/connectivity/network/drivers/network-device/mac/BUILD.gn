@@ -14,13 +14,13 @@ ddk_source_split("mac") {
   ]
 
   public_deps = [
+    "//sdk/banjo/ddk.protocol.network.mac",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fidl-utils",
     "//zircon/public/lib/fzl",
-    "//zircon/system/banjo/ddk.protocol.network.mac",
   ]
 }
 
