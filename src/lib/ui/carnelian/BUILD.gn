@@ -570,7 +570,7 @@ package("infinite_scroll_rs") {
   foreach(shader, shaders) {
     resources += [
       {
-        path = rebase_path("examples/shaders/${shader}")
+        path = rebase_path("src/render/shaders/${shader}")
         file_name = get_path_info(shader, "file")
         dest = "shaders/${file_name}"
       },

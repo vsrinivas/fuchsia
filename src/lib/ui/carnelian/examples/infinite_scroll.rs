@@ -6,10 +6,11 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
-        make_app_assistant, AnimationMode, App, AppAssistant, FontFace, FrameBufferPtr, Point,
-        Rect, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey, ViewMode,
+        make_app_assistant, render::*, AnimationMode, App, AppAssistant, Color, FontFace,
+        FrameBufferPtr, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
+        ViewKey, ViewMode,
     },
-    euclid::{Transform2D, Vector2D},
+    euclid::{Point2D, Rect, Size2D, Transform2D, Vector2D},
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_input_report as hid_input_report,
     fidl_fuchsia_sysmem::BufferCollectionTokenMarker,
@@ -31,15 +32,7 @@ use {
     textwrap::wrap_iter,
 };
 
-mod spinel_utils;
-
-use crate::spinel_utils::{
-    Composition, Context, CopyRegion, MoldContext, Path, PathBuilder, Raster, RenderExt,
-    SpinelContext,
-};
-
-const APP_NAME: &'static [u8; 19usize] = b"infinite_scroll_rs\0";
-const BACKGROUND_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
+const BACKGROUND_COLOR: Color = Color { r: 255, g: 255, b: 255, a: 255 };
 
 // Clamp scroll offset to this range for sanity.
 const SCROLL_OFFSET_RANGE: [u32; 2] = [0, 1000000];
@@ -147,10 +140,11 @@ impl AppAssistant for InfiniteScrollAppAssistant {
             .duplicate(std::u32::MAX, token_request)
             .expect("duplicate");
         let config = &fb.borrow().get_config();
+        let size = Size2D::new(config.width, config.height);
 
         if args.use_mold {
             Ok(Box::new(InfiniteScrollViewAssistant::new(
-                MoldContext::new(token, config),
+                Mold::new_context(token, size),
                 args.scale,
                 args.scroll_method,
                 args.exposure,
@@ -159,21 +153,8 @@ impl AppAssistant for InfiniteScrollAppAssistant {
                 args.disable_text,
             )))
         } else {
-            const BLOCK_POOL_SIZE: u64 = 1 << 26; // 64 MB
-            const HANDLE_COUNT: u32 = 1 << 14; // 16K handles
-            const LAYERS_COUNT: u32 = 1024;
-            const CMDS_COUNT: u32 = 8192;
-
             Ok(Box::new(InfiniteScrollViewAssistant::new(
-                SpinelContext::new(
-                    token,
-                    config,
-                    APP_NAME.as_ptr(),
-                    BLOCK_POOL_SIZE,
-                    HANDLE_COUNT,
-                    LAYERS_COUNT,
-                    CMDS_COUNT,
-                ),
+                Spinel::new_context(token, size),
                 args.scale,
                 args.scroll_method,
                 args.exposure,
@@ -209,7 +190,7 @@ impl Box2D {
         }
     }
 
-    fn to_rect(&self) -> Rect {
+    fn to_rect(&self) -> Rect<f32> {
         Rect { origin: self.min, size: (self.max - self.min).to_size() }
     }
 }
@@ -219,8 +200,8 @@ fn lerp(t: f32, p0: Point, p1: Point) -> Point {
 }
 
 // TODO: Remove and use spn_path_builder_cubic_to.
-fn cubic(
-    path_builder: &mut dyn PathBuilder,
+fn cubic<B: Backend>(
+    path_builder: &mut impl PathBuilder<B>,
     p0: Point,
     p1: Point,
     p2: Point,
@@ -235,8 +216,8 @@ fn cubic(
 
     const PIXEL_ACCURACY: f32 = 0.25;
     if deviation_squared < PIXEL_ACCURACY {
-        path_builder.move_to(&p0);
-        path_builder.line_to(&p3);
+        path_builder.move_to(p0);
+        path_builder.line_to(p3);
         *bounding_box = bounding_box.union(&p0).union(&p3);
         return;
     }
@@ -246,7 +227,7 @@ fn cubic(
     let increment = (subdivisions as f32).recip();
     let mut t = 0.0;
 
-    path_builder.move_to(&p0);
+    path_builder.move_to(p0);
     *bounding_box = bounding_box.union(&p0);
     for _ in 0..subdivisions - 1 {
         t += increment;
@@ -255,15 +236,15 @@ fn cubic(
             lerp(t, lerp(t, p0, p1), lerp(t, p1, p2)),
             lerp(t, lerp(t, p1, p2), lerp(t, p2, p3)),
         );
-        path_builder.line_to(&p_next);
+        path_builder.line_to(p_next);
         *bounding_box = bounding_box.union(&p_next);
     }
-    path_builder.line_to(&p3);
+    path_builder.line_to(p3);
     *bounding_box = bounding_box.union(&p3);
 }
 
 // TODO: Remove and use spn_path_builder_quad_to.
-fn quad(path_builder: &mut dyn PathBuilder, p0: Point, p1: Point, p2: Point) {
+fn quad<B: Backend>(path_builder: &mut impl PathBuilder<B>, p0: Point, p1: Point, p2: Point) {
     duration!("gfx", "quad");
 
     let deviation_x = (p0.x + p2.x - 2.0 * p1.x).abs();
@@ -272,8 +253,8 @@ fn quad(path_builder: &mut dyn PathBuilder, p0: Point, p1: Point, p2: Point) {
 
     const PIXEL_ACCURACY: f32 = 0.25;
     if deviation_squared < PIXEL_ACCURACY {
-        path_builder.move_to(&p0);
-        path_builder.line_to(&p2);
+        path_builder.move_to(p0);
+        path_builder.line_to(p2);
         return;
     }
 
@@ -283,26 +264,26 @@ fn quad(path_builder: &mut dyn PathBuilder, p0: Point, p1: Point, p2: Point) {
 
     let mut t = 0.0;
 
-    path_builder.move_to(&p0);
+    path_builder.move_to(p0);
     for _ in 0..subdivisions - 1 {
         t += increment;
         let p_next = lerp(t, lerp(t, p0, p1), lerp(t, p1, p2));
 
-        path_builder.line_to(&p_next);
+        path_builder.line_to(p_next);
     }
-    path_builder.line_to(&p2);
+    path_builder.line_to(p2);
 }
 
-struct Glyph {
-    path: Rc<RefCell<Path>>,
-    bounding_box: Rect,
+struct Glyph<B: Backend> {
+    path: Rc<RefCell<B::Path>>,
+    bounding_box: Rect<f32>,
 }
 
-impl Glyph {
-    fn new(context: &mut dyn Context, face: &FontFace<'_>, size: f32, id: GlyphId) -> Self {
+impl<B: Backend> Glyph<B> {
+    fn new(context: &mut impl Context<B>, face: &FontFace<'_>, size: f32, id: GlyphId) -> Self {
         duration!("gfx", "Glyph::new");
 
-        let path_builder = context.path_builder();
+        let mut path_builder = context.path_builder().unwrap();
         let mut bounding_box = Box2D::new();
         let scale = Scale::uniform(size);
 
@@ -312,8 +293,6 @@ impl Glyph {
             };
         }
 
-        path_builder.begin();
-
         let glyph = face.font.glyph(id).scaled(scale);
         if let Some(glyph_box) = glyph.exact_bounding_box() {
             let contours = glyph.shape().unwrap();
@@ -321,12 +300,12 @@ impl Glyph {
                 for segment in &contour.segments {
                     match segment {
                         Segment::Line(line) => {
-                            path_builder.move_to(&flip_y!(line.p[1]));
-                            path_builder.line_to(&flip_y!(line.p[0]));
+                            path_builder.move_to(flip_y!(line.p[1]));
+                            path_builder.line_to(flip_y!(line.p[0]));
                         }
                         Segment::Curve(curve) => {
                             quad(
-                                path_builder,
+                                &mut path_builder,
                                 flip_y!(curve.p[2]),
                                 flip_y!(curve.p[1]),
                                 flip_y!(curve.p[0]),
@@ -341,25 +320,25 @@ impl Glyph {
         }
 
         Self {
-            path: Rc::new(RefCell::new(path_builder.end())),
+            path: Rc::new(RefCell::new(path_builder.build())),
             bounding_box: bounding_box.to_rect(),
         }
     }
 }
 
-struct Text {
-    paths: Vec<(Vector2D<f32>, Rc<RefCell<Path>>, Rect, Option<Raster>)>,
-    bounding_box: Rect,
+struct Text<B: Backend> {
+    paths: Vec<(Vector2D<f32>, Rc<RefCell<B::Path>>, Rect<f32>, Option<B::Raster>)>,
+    bounding_box: Rect<f32>,
 }
 
-impl Text {
+impl<B: Backend> Text<B> {
     fn new(
-        context: &mut dyn Context,
+        context: &mut impl Context<B>,
         text: &str,
         size: f32,
         wrap: usize,
         face: &FontFace<'_>,
-        glyphs: &mut BTreeMap<GlyphId, Glyph>,
+        glyphs: &mut BTreeMap<GlyphId, Glyph<B>>,
     ) -> Self {
         duration!("gfx", "Text::new");
 
@@ -398,24 +377,22 @@ impl Text {
     }
 }
 
-struct Flower {
-    path: Path,
-    bounding_box: Rect,
+struct Flower<B: Backend> {
+    path: B::Path,
+    bounding_box: Rect<f32>,
 }
 
-impl Flower {
-    fn new(context: &mut dyn Context, petal_count: usize, r1: f32, r2: f32) -> Self {
+impl<B: Backend> Flower<B> {
+    fn new(context: &mut impl Context<B>, petal_count: usize, r1: f32, r2: f32) -> Self {
         duration!("gfx", "Flower::new");
 
         let mut bounding_box = Box2D::new();
-        let path_builder = context.path_builder();
+        let mut path_builder = context.path_builder().unwrap();
         let mut rng = thread_rng();
         let u: f32 = rng.gen_range(10.0, 100.0) / 100.0;
         let v: f32 = rng.gen_range(0.0, 90.0) / 100.0;
         let dt: f32 = f32::consts::PI / (petal_count as f32);
         let mut t: f32 = 0.0;
-
-        path_builder.begin();
 
         let mut p0 = Point::new(t.cos() * r1, t.sin() * r1);
         for _ in 0..petal_count {
@@ -433,25 +410,30 @@ impl Flower {
             let p5 = Point::new(x3 + y3 * u, y3 - x3 * u);
             let p6 = Point::new(x3, y3);
 
-            cubic(path_builder, p0, p1, p2, p3, &mut bounding_box);
-            cubic(path_builder, p3, p4, p5, p6, &mut bounding_box);
+            cubic(&mut path_builder, p0, p1, p2, p3, &mut bounding_box);
+            cubic(&mut path_builder, p3, p4, p5, p6, &mut bounding_box);
 
             p0 = p6;
             t += dt * 2.0;
         }
 
-        Self { path: path_builder.end(), bounding_box: bounding_box.to_rect() }
+        Self { path: path_builder.build(), bounding_box: bounding_box.to_rect() }
     }
 }
 
-fn random_color_element() -> f32 {
+fn random_color_element() -> u8 {
     let mut rng = thread_rng();
-    let c: f32 = rng.gen_range(0.0, 1.0);
+    let c: u8 = rng.gen_range(0, 255);
     c
 }
 
-fn random_color() -> [f32; 4] {
-    [random_color_element(), random_color_element(), random_color_element(), 1.0]
+fn random_color() -> Color {
+    Color {
+        r: random_color_element(),
+        g: random_color_element(),
+        b: random_color_element(),
+        a: 255,
+    }
 }
 
 const ITEM_TYPE_TITLE: i32 = 0;
@@ -460,16 +442,16 @@ const ITEM_TYPE_BODY_MAX: i32 = 3;
 const ITEM_TYPE_FLOWER: i32 = 4;
 const ITEM_TYPE_COUNT: i32 = 5;
 
-struct Item {
-    paths: Vec<(Vector2D<f32>, Rc<RefCell<Path>>, Rect, Option<Raster>)>,
+struct Item<B: Backend> {
+    paths: Vec<(Vector2D<f32>, Rc<RefCell<B::Path>>, Rect<f32>, Option<B::Raster>)>,
     origin: Point,
-    bounding_box: (Rect, Path, Option<Rc<RefCell<Raster>>>),
+    bounding_box: (Rect<f32>, B::Path, Option<B::Raster>),
     txty: [f32; 2],
-    color: [f32; 4],
+    color: Color,
     id: i32,
 }
 
-struct Scene {
+struct Scene<B: Backend> {
     scale: f32,
     exposure: f32,
     max_columns: u32,
@@ -477,13 +459,13 @@ struct Scene {
     scroll_offset_y: u32,
     last_scroll_offset_y: u32,
     raster_ty: f32,
-    title_glyphs: BTreeMap<GlyphId, Glyph>,
-    body_glyphs: BTreeMap<GlyphId, Glyph>,
-    columns: Vec<VecDeque<Item>>,
+    title_glyphs: BTreeMap<GlyphId, Glyph<B>>,
+    body_glyphs: BTreeMap<GlyphId, Glyph<B>>,
+    columns: Vec<VecDeque<Item<B>>>,
     total_items: usize,
 }
 
-impl Scene {
+impl<B: Backend> Scene<B> {
     fn new(scale: f32, exposure: f32, max_columns: u32, text_disabled: bool) -> Self {
         // Equal amount of coordinate space above and below.
         let scroll_offset_y = (SCROLL_OFFSET_RANGE[0] + SCROLL_OFFSET_RANGE[1]) / 2;
@@ -504,14 +486,14 @@ impl Scene {
     }
 
     fn new_item(
-        context: &mut dyn Context,
+        context: &mut impl Context<B>,
         scale: f32,
-        title_glyphs: &mut BTreeMap<GlyphId, Glyph>,
-        body_glyphs: &mut BTreeMap<GlyphId, Glyph>,
+        title_glyphs: &mut BTreeMap<GlyphId, Glyph<B>>,
+        body_glyphs: &mut BTreeMap<GlyphId, Glyph<B>>,
         id: i32,
         column_width: f32,
         text_disabled: bool,
-    ) -> Item {
+    ) -> Item<B> {
         let item_type =
             if text_disabled { ITEM_TYPE_FLOWER } else { id.rem_euclid(ITEM_TYPE_COUNT) };
         // Alternate between title, body, and flower shape.
@@ -529,7 +511,7 @@ impl Scene {
                     text.paths,
                     text.bounding_box.round_out(),
                     Point::new(0.0, 0.0),
-                    [0.0, 0.0, 0.0, 1.0],
+                    Color { r: 0, g: 0, b: 0, a: 255 },
                 )
             }
             ITEM_TYPE_BODY_MIN..=ITEM_TYPE_BODY_MAX => {
@@ -547,7 +529,7 @@ impl Scene {
                     text.paths,
                     text.bounding_box.round_out(),
                     Point::new(0.0, 0.0),
-                    [0.0, 0.0, 0.0, 1.0],
+                    Color { r: 0, g: 0, b: 0, a: 255 },
                 )
             }
             ITEM_TYPE_FLOWER => {
@@ -581,27 +563,26 @@ impl Scene {
             _ => unreachable!(),
         };
 
-        let path_builder = context.path_builder();
-        path_builder.begin();
-        path_builder.move_to(&bounding_box.origin);
-        path_builder.line_to(&bounding_box.top_right());
-        path_builder.line_to(&bounding_box.bottom_right());
-        path_builder.line_to(&bounding_box.bottom_left());
-        path_builder.line_to(&bounding_box.origin);
+        let mut path_builder = context.path_builder().unwrap();
+        path_builder.move_to(bounding_box.origin);
+        path_builder.line_to(bounding_box.top_right());
+        path_builder.line_to(bounding_box.bottom_right());
+        path_builder.line_to(bounding_box.bottom_left());
+        path_builder.line_to(bounding_box.origin);
 
         let bounding_box = bounding_box.translate(&origin.to_vector());
 
         Item {
             paths,
             origin,
-            bounding_box: (bounding_box, path_builder.end(), None),
+            bounding_box: (bounding_box, path_builder.build(), None),
             txty: [0.0, 0.0],
             color,
             id,
         }
     }
 
-    fn update(&mut self, context: &mut dyn Context, size: &Size, scroll_delta: i32) {
+    fn update(&mut self, context: &mut impl Context<B>, size: &Size, scroll_delta: i32) {
         counter!("gfx", "scroll_dy", 0, "dy" => scroll_delta.abs());
 
         let new_offset = self.scroll_offset_y as i32 + scroll_delta;
@@ -613,6 +594,7 @@ impl Scene {
         const COLUMN_SIZE: f32 = 400.0;
         const PADDING: f32 = 50.0;
         const MIN_MARGIN: f32 = 50.0;
+        const DISCARD_EXTRA_DISTANCE: f32 = 2048.0;
 
         let column_size = (COLUMN_SIZE * self.scale) as usize;
         let padding = PADDING * self.scale;
@@ -623,7 +605,6 @@ impl Scene {
             .max(1);
         let margin = (width - column_count * column_size) / (column_count + 1);
 
-        let mut styling_changed = false;
         if column_count != self.columns.len() {
             self.columns = (0..column_count).map(|_| VecDeque::new()).collect();
         }
@@ -638,23 +619,31 @@ impl Scene {
             }
         }
 
+        // Discard distance needs to be at least height for clearing. Extra distance
+        // avoids unncessary work by keeping items around that are likely to become
+        // visible again. This improves performance at the cost of increased memory
+        // usage.
+        let discard_distance = size.height + DISCARD_EXTRA_DISTANCE;
+
         self.total_items = 0;
         for (i, column) in self.columns.iter_mut().enumerate() {
             let margin = margin + (column_size + margin) * i;
 
-            // Remove items at the bottom of column that are no longer visible.
+            // Remove items at the bottom of column that are no longer visible and
+            // outside discard distance.
             while !column.is_empty()
-                && (column.back().unwrap().bounding_box.0.min_y() - top) > size.height
+                && (column.back().unwrap().bounding_box.0.min_y() - top)
+                    > (size.height + discard_distance)
             {
                 column.pop_back();
-                styling_changed = true;
             }
 
-            // Remove items at the top of column that are no longer visible.
-            while !column.is_empty() && (column.front().unwrap().bounding_box.0.max_y() - top) < 0.0
+            // Remove items at the top of column that are no longer visible and
+            // outside discard distance.
+            while !column.is_empty()
+                && (column.front().unwrap().bounding_box.0.max_y() - top) < -discard_distance
             {
                 column.pop_front();
-                styling_changed = true;
             }
 
             // Add new items at the bottom of column to fill visible region.
@@ -684,7 +673,6 @@ impl Scene {
                 item.bounding_box.0 = item.bounding_box.0.translate(&offset);
                 item.txty[1] = self.raster_ty;
                 column.push_back(item);
-                styling_changed = true;
             }
 
             // Add new items at the top of column to fill visible region.
@@ -716,78 +704,28 @@ impl Scene {
                 item.bounding_box.0 = item.bounding_box.0.translate(&offset);
                 item.txty[1] = self.raster_ty;
                 column.push_front(item);
-                styling_changed = true;
             }
 
             self.total_items += column.len();
         }
-
-        if styling_changed {
-            context.styling().unseal();
-            context.styling().reset();
-
-            let group_id =
-                context.styling().alloc_group(0, self.total_items as u32, &BACKGROUND_COLOR);
-
-            for (i, item) in self.columns.iter().flat_map(|c| c.iter()).enumerate() {
-                context.styling().group_layer(&group_id, i as u32, &item.color);
-            }
-
-            context.styling().group_layer(&group_id, self.total_items as u32, &BACKGROUND_COLOR);
-
-            context.styling().seal();
-        }
-    }
-}
-
-struct Contents {
-    scroll_method: ScrollMethod,
-    image_id: u32,
-    composition_id: u32,
-    scroll_offset_y: u32,
-    size: Size,
-    exts: Vec<RenderExt>,
-    clear_rasters: Vec<Rc<RefCell<Raster>>>,
-    full_clear_raster: Option<Raster>,
-    previous_rasters: Vec<Rc<RefCell<Raster>>>,
-}
-
-impl Contents {
-    fn new(context: &mut dyn Context, index: u32, scroll_method: ScrollMethod) -> Self {
-        // Use index as image and composition IDs.
-        let image_id = index;
-        context.image_from_index(image_id, index);
-        let composition_id = index;
-
-        Self {
-            scroll_method,
-            image_id,
-            composition_id,
-            scroll_offset_y: 0,
-            size: Size::zero(),
-            exts: Vec::new(),
-            clear_rasters: Vec::new(),
-            full_clear_raster: None,
-            previous_rasters: Vec::new(),
-        }
     }
 
-    fn set_scene_raster_ty(scene: &mut Scene, raster_ty: f32) {
-        if raster_ty != scene.raster_ty {
-            let dy = raster_ty - scene.raster_ty;
-            for item in scene.columns.iter_mut().flat_map(|c| c.iter_mut()) {
+    fn set_raster_ty(&mut self, raster_ty: f32) {
+        if raster_ty != self.raster_ty {
+            let dy = raster_ty - self.raster_ty;
+            for item in self.columns.iter_mut().flat_map(|c| c.iter_mut()) {
                 item.txty[1] += dy;
                 item.bounding_box.2 = None;
                 for (_, _, _, raster) in item.paths.iter_mut() {
                     raster.take();
                 }
             }
-            scene.raster_ty = raster_ty;
+            self.raster_ty = raster_ty;
         }
     }
 
-    fn set_scene_items_ty(scene: &mut Scene, ty: f32) {
-        for item in scene.columns.iter_mut().flat_map(|c| c.iter_mut()) {
+    fn set_items_ty(&mut self, ty: f32) {
+        for item in self.columns.iter_mut().flat_map(|c| c.iter_mut()) {
             item.txty[1] = ty;
             item.bounding_box.2 = None;
             for (_, _, _, raster) in item.paths.iter_mut() {
@@ -796,106 +734,188 @@ impl Contents {
         }
     }
 
-    fn build_rasters_for_viewport(context: &mut dyn Context, scene: &mut Scene, viewport: &Rect) {
-        const CLIP: [f32; 4] = [std::f32::MIN, std::f32::MIN, std::f32::MAX, std::f32::MAX];
-
-        for item in scene.columns.iter_mut().flat_map(|c| c.iter_mut()) {
-            if item.bounding_box.2.is_none() {
-                let new_raster = {
-                    let raster_builder = context.raster_builder();
-                    let transform = Transform2D::create_translation(
-                        item.origin.x + item.txty[0],
-                        item.origin.y + item.txty[1],
-                    );
-                    raster_builder.begin();
-                    raster_builder.add(&item.bounding_box.1, &transform, &CLIP);
-                    raster_builder.end()
-                };
-                item.bounding_box.2.replace(Rc::new(RefCell::new(new_raster)));
-            }
+    fn build_rasters_for_viewport(&mut self, context: &mut impl Context<B>, viewport: &Rect<f32>) {
+        for item in self.columns.iter_mut().flat_map(|c| c.iter_mut()) {
             if viewport.intersects(&item.bounding_box.0) {
                 for (offset, path, bounding_box, raster) in item.paths.iter_mut() {
                     let bounding_box = bounding_box.translate(&Vector2D::new(
                         item.origin.x + offset.x,
                         item.origin.y + offset.y,
                     ));
-                    if viewport.intersects(&bounding_box) {
-                        if raster.is_none() {
-                            let new_raster = {
-                                let raster_builder = context.raster_builder();
-                                let transform = Transform2D::create_translation(
-                                    item.origin.x + offset.x + item.txty[0],
-                                    item.origin.y + offset.y + item.txty[1],
-                                );
-                                raster_builder.begin();
-                                raster_builder.add(&path.borrow(), &transform, &CLIP);
-                                raster_builder.end()
-                            };
-                            raster.replace(new_raster);
-                        }
+                    if raster.is_none() && viewport.intersects(&bounding_box) {
+                        let new_raster = {
+                            let mut raster_builder = context.raster_builder().unwrap();
+                            let transform = Transform2D::create_translation(
+                                item.origin.x + offset.x + item.txty[0],
+                                item.origin.y + offset.y + item.txty[1],
+                            );
+                            raster_builder.add(&path.borrow(), Some(&transform));
+                            raster_builder.build()
+                        };
+                        raster.replace(new_raster);
                     }
                 }
             }
         }
     }
 
-    fn update_composition(
+    fn build_clear_rasters_for_viewport(
         &mut self,
-        composition: &mut dyn Composition,
-        scene: &mut Scene,
-        clip: &[u32; 4],
-        viewport: &Rect,
+        context: &mut impl Context<B>,
+        viewport: &Rect<f32>,
     ) {
-        composition.unseal();
-        composition.reset();
-        composition.set_clip(clip);
-
-        // Place clear rasters in clear layer.
-        // TODO: Replace with better partial update system.
-        if let Some(raster) = &self.full_clear_raster {
-            composition.place(raster, scene.total_items as u32);
-        }
-        for raster in self.clear_rasters.iter() {
-            composition.place(&raster.borrow(), scene.total_items as u32);
-        }
-
-        for (i, item) in scene.columns.iter_mut().flat_map(|c| c.iter_mut()).enumerate() {
-            if viewport.intersects(&item.bounding_box.0) {
-                for (_, _, _, raster) in item.paths.iter_mut() {
-                    if let Some(raster) = raster {
-                        composition.place(raster, i as u32);
-                    }
-                }
+        for item in self.columns.iter_mut().flat_map(|c| c.iter_mut()) {
+            if item.bounding_box.2.is_none() && viewport.intersects(&item.bounding_box.0) {
+                let new_raster = {
+                    let mut raster_builder = context.raster_builder().unwrap();
+                    let transform = Transform2D::create_translation(
+                        item.origin.x + item.txty[0],
+                        item.origin.y + item.txty[1],
+                    );
+                    raster_builder.add(&item.bounding_box.1, Some(&transform));
+                    raster_builder.build()
+                };
+                item.bounding_box.2.replace(new_raster);
             }
-            // Keep reference to bounding box rasters for clearing.
-            self.previous_rasters.push(item.bounding_box.2.as_ref().unwrap().clone());
         }
-
-        composition.seal();
     }
 
-    fn update(&mut self, context: &mut dyn Context, scene: &mut Scene, size: &Size) {
+    fn prepend_clear_layers_to_composition(
+        &self,
+        composition: &mut B::Composition,
+        viewport: &Rect<f32>,
+    ) {
+        let layers = self
+            .columns
+            .iter()
+            .flat_map(|column| column.iter())
+            .filter(|item| viewport.intersects(&item.bounding_box.0))
+            .filter_map(|item| {
+                if let Some(raster) = &item.bounding_box.2 {
+                    Some(Layer {
+                        raster: raster.clone(),
+                        style: Style {
+                            fill_rule: FillRule::WholeTile,
+                            fill: Fill::Solid(BACKGROUND_COLOR),
+                            blend_mode: BlendMode::Over,
+                        },
+                    })
+                } else {
+                    None
+                }
+            });
+
+        composition.splice(..0, layers);
+    }
+
+    fn prepend_layers_to_composition(
+        &self,
+        composition: &mut B::Composition,
+        viewport: &Rect<f32>,
+    ) {
+        let layers = self
+            .columns
+            .iter()
+            .flat_map(|column| column.iter())
+            .filter(|item| viewport.intersects(&item.bounding_box.0))
+            .filter_map(|item| {
+                if let Some(raster) = item.paths.iter().fold(
+                    None,
+                    |raster_union: Option<B::Raster>, (_, _, _, raster)| {
+                        if let Some(raster) = raster {
+                            if let Some(raster_union) = raster_union {
+                                Some(raster_union + raster.clone())
+                            } else {
+                                Some(raster.clone())
+                            }
+                        } else {
+                            raster_union
+                        }
+                    },
+                ) {
+                    Some(Layer {
+                        raster,
+                        style: Style {
+                            fill_rule: FillRule::NonZero,
+                            fill: Fill::Solid(item.color),
+                            blend_mode: BlendMode::Over,
+                        },
+                    })
+                } else {
+                    None
+                }
+            });
+
+        composition.splice(..0, layers);
+    }
+}
+
+struct Contents<B: Backend> {
+    image: B::Image,
+    scroll_method: ScrollMethod,
+    scroll_offset_y: u32,
+    size: Size,
+    composition: B::Composition,
+    full_clear_raster: Option<B::Raster>,
+}
+
+impl<B: Backend> Contents<B> {
+    fn new(image: B::Image, scroll_method: ScrollMethod) -> Self {
+        let composition = Composition::new(std::iter::empty(), BACKGROUND_COLOR);
+
+        Self {
+            image,
+            scroll_method,
+            scroll_offset_y: 0,
+            size: Size::zero(),
+            composition,
+            full_clear_raster: None,
+        }
+    }
+
+    fn update(
+        &mut self,
+        context: &mut impl Context<B>,
+        scene: &mut Scene<B>,
+        size: &Size,
+        staging_image: &mut Option<B::Image>,
+    ) {
         let width = size.width.floor() as u32;
         let height = size.height.floor() as u32;
 
-        self.exts.clear();
-        if self.size != *size {
-            self.exts.push(RenderExt::PreClear(BACKGROUND_COLOR));
-        }
+        let mut ext = if self.size != *size {
+            RenderExt {
+                pre_clear: Some(PreClear { color: BACKGROUND_COLOR }),
+                ..Default::default()
+            }
+        } else {
+            RenderExt::default()
+        };
 
         match self.scroll_method {
             // Method 1: Translate paths and redraw the whole scene each frame.
             ScrollMethod::Redraw => {
+                // Add clear layers from previous viewport.
+                let viewport = Rect::new(
+                    Point::new(0.0, self.scroll_offset_y as f32),
+                    Size::new(width as f32, height as f32),
+                );
+                scene.set_raster_ty(-(self.scroll_offset_y as f32));
+                scene.build_clear_rasters_for_viewport(context, &viewport);
+                self.composition.splice(.., std::iter::empty::<Layer<B>>());
+                scene.prepend_clear_layers_to_composition(&mut self.composition, &viewport);
+
+                // Add layers for current viewport.
                 let viewport = Rect::new(
                     Point::new(0.0, scene.scroll_offset_y as f32),
                     Size::new(width as f32, height as f32),
                 );
-                Self::set_scene_raster_ty(scene, -(scene.scroll_offset_y as f32));
-                Self::build_rasters_for_viewport(context, scene, &viewport);
-                let composition = context.composition(self.composition_id);
-                let clip: [u32; 4] = [0, 0, width, height];
-                self.update_composition(composition, scene, &clip, &viewport);
-                context.render(self.image_id, self.composition_id, &clip, &self.exts);
+                scene.set_raster_ty(-(scene.scroll_offset_y as f32));
+                scene.build_rasters_for_viewport(context, &viewport);
+                scene.prepend_layers_to_composition(&mut self.composition, &viewport);
+
+                // Render scene.
+                context.render(&self.composition, None, self.image, &ext);
             }
             // Method 2: Copy the image area that is still visible and redraw exposed region.
             ScrollMethod::CopyRedraw => {
@@ -909,49 +929,70 @@ impl Contents {
                 } else {
                     0
                 };
-                let mut clip: [u32; 4] = [0, 0, width, height];
+                let mut clip = Rect::new(Point2D::new(0, 0), Size2D::new(width, height));
                 // Determine area to copy and clip to render depending on scroll direction.
                 if scroll_height > 0 {
                     match scroll_distance {
                         // Area at top exposed.
                         x if x > 0.0 => {
-                            clip[1] = scroll_height;
-                            self.exts.push(RenderExt::PreCopy((
-                                self.image_id,
-                                CopyRegion {
-                                    src_offset: [0, scroll_amount],
-                                    dst_offset: [0, 0],
-                                    extent: [width, height - scroll_amount],
+                            clip.origin.y = scroll_height;
+                            clip.size.height = height - scroll_height;
+                            ext.pre_copy = Some(PreCopy {
+                                image: self.image,
+                                copy_region: CopyRegion {
+                                    src_offset: Point2D::new(0, scroll_amount),
+                                    dst_offset: Point2D::new(0, 0),
+                                    extent: Size2D::new(width, height - scroll_amount),
                                 },
-                            )));
+                            });
                         }
                         // Area at bottom exposed.
                         x if x < 0.0 => {
-                            clip[3] = height - scroll_height;
-                            self.exts.push(RenderExt::PreCopy((
-                                self.image_id,
-                                CopyRegion {
-                                    src_offset: [0, 0],
-                                    dst_offset: [0, scroll_amount],
-                                    extent: [width, height - scroll_amount],
+                            clip.origin.y = 0;
+                            clip.size.height = height - scroll_height;
+                            ext.pre_copy = Some(PreCopy {
+                                image: self.image,
+                                copy_region: CopyRegion {
+                                    src_offset: Point2D::new(0, 0),
+                                    dst_offset: Point2D::new(0, scroll_amount),
+                                    extent: Size2D::new(width, height - scroll_amount),
                                 },
-                            )));
+                            });
                         }
                         // No new contents exposed.
                         _ => {
-                            clip[3] = 0;
+                            clip.size.height = 0;
                         }
                     }
                 }
+
+                // Add clear layers from previous viewport of clip.
                 let viewport = Rect::new(
-                    Point::new(clip[0] as f32, clip[1] as f32 + scene.scroll_offset_y as f32),
-                    Size::new((clip[2] - clip[0]) as f32, (clip[3] - clip[1]) as f32),
+                    Point::new(
+                        clip.origin.x as f32,
+                        clip.origin.y as f32 + self.scroll_offset_y as f32,
+                    ),
+                    Size::new(clip.size.width as f32, clip.size.height as f32),
                 );
-                Self::set_scene_raster_ty(scene, -(scene.scroll_offset_y as f32));
-                Self::build_rasters_for_viewport(context, scene, &viewport);
-                let composition = context.composition(self.composition_id);
-                self.update_composition(composition, scene, &clip, &viewport);
-                context.render(self.image_id, self.composition_id, &clip, &self.exts);
+                scene.set_raster_ty(-(self.scroll_offset_y as f32));
+                scene.build_clear_rasters_for_viewport(context, &viewport);
+                self.composition.splice(.., std::iter::empty::<Layer<B>>());
+                scene.prepend_clear_layers_to_composition(&mut self.composition, &viewport);
+
+                // Add layers for current viewport of clip.
+                let viewport = Rect::new(
+                    Point::new(
+                        clip.origin.x as f32,
+                        clip.origin.y as f32 + scene.scroll_offset_y as f32,
+                    ),
+                    Size::new(clip.size.width as f32, clip.size.height as f32),
+                );
+                scene.set_raster_ty(-(scene.scroll_offset_y as f32));
+                scene.build_rasters_for_viewport(context, &viewport);
+                scene.prepend_layers_to_composition(&mut self.composition, &viewport);
+
+                // Render clip.
+                context.render(&self.composition, Some(clip), self.image, &ext);
             }
             // Method 3: Allocate temporary buffer and use a sliding offset to minimize
             // redraw. Contents of temporary buffer is copied to image after rendering.
@@ -1010,33 +1051,64 @@ impl Contents {
                     bottom_y1 = (bottom_y1 + 31) & !31;
                 }
 
-                // Large enough to not conflict with buffer collection indexes.
-                const STAGING_ID: u32 = 100;
+                let image = staging_image
+                    .take()
+                    .unwrap_or_else(|| context.new_image(Size2D::new(width, buffer_height)));
 
-                // Acquire staging image and setup rendering to it.
-                context.image(STAGING_ID, &[width, buffer_height]);
-                let image_id = STAGING_ID;
-                let composition_id = STAGING_ID;
-
-                // Offset in temporary buffer that translate to top of output.
+                // Offset in staging image that translate to top of output.
                 let y_start = next_y0;
-                // Offset that needs to be applied to contents in order to
-                // render at the correct location in temporary buffer.
+                // Offsets that needs to be applied to contents in order to
+                // render at the correct location in staging image.
                 let mut dy = (top / buffer_height) * buffer_height;
+
+                // Build a full clear raster if size has changed.
+                if self.size != *size {
+                    let path = {
+                        let mut path_builder = context.path_builder().unwrap();
+                        path_builder.move_to(Point::zero());
+                        path_builder.line_to(Point::new(width as f32, 0.0));
+                        path_builder.line_to(Point::new(width as f32, buffer_height as f32));
+                        path_builder.line_to(Point::new(0.0, buffer_height as f32));
+                        path_builder.line_to(Point::zero());
+                        path_builder.build()
+                    };
+                    let raster = {
+                        let mut raster_builder = context.raster_builder().unwrap();
+                        raster_builder.add(&path, Some(&Transform2D::identity()));
+                        raster_builder.build()
+                    };
+                    self.full_clear_raster.replace(raster);
+                }
 
                 // Translate intersecting paths and render bottom span if needed.
                 if bottom_y0 < bottom_y1 {
+                    let mut composition = Composition::new(
+                        std::iter::once(Layer {
+                            raster: self.full_clear_raster.clone().unwrap(),
+                            style: Style {
+                                fill_rule: FillRule::WholeTile,
+                                fill: Fill::Solid(BACKGROUND_COLOR),
+                                blend_mode: BlendMode::Over,
+                            },
+                        }),
+                        BACKGROUND_COLOR,
+                    );
+
                     let viewport = Rect::new(
                         Point::new(0.0, (dy + bottom_y0) as f32),
                         Size::new(width as f32, (bottom_y1 - bottom_y0) as f32),
                     );
-                    let clip: [u32; 4] = [0, bottom_y0, width, bottom_y1];
-                    Self::set_scene_items_ty(scene, -(dy as f32));
-                    Self::build_rasters_for_viewport(context, scene, &viewport);
-                    let composition = context.composition(composition_id);
-                    self.update_composition(composition, scene, &clip, &viewport);
-                    context.render(image_id, composition_id, &clip, &self.exts);
-                    self.exts.clear();
+                    scene.set_items_ty(-(dy as f32));
+                    scene.build_rasters_for_viewport(context, &viewport);
+                    scene.prepend_layers_to_composition(&mut composition, &viewport);
+
+                    let clip = Rect::new(
+                        Point2D::new(0, bottom_y0),
+                        Size2D::new(width, bottom_y1 - bottom_y0),
+                    );
+                    context.render(&composition, Some(clip), image, &ext);
+
+                    ext.pre_clear = None;
                 }
 
                 // Offset contents of top span if it is below top of output.
@@ -1053,67 +1125,49 @@ impl Contents {
                 };
 
                 // Copy temporary buffer to output image and apply motion blur.
-                self.exts.push(RenderExt::PostCopy((
-                    self.image_id,
-                    BACKGROUND_COLOR,
-                    [0, exposure],
-                    CopyRegion {
-                        src_offset: [0, y_start],
-                        dst_offset: [0, 0],
-                        extent: [width, height],
+                ext.post_copy = Some(PostCopy {
+                    image: self.image,
+                    color: BACKGROUND_COLOR,
+                    exposure_distance: Vector2D::new(0, exposure),
+                    copy_region: CopyRegion {
+                        src_offset: Point2D::new(0, y_start),
+                        dst_offset: Point2D::new(0, 0),
+                        extent: Size2D::new(width, height),
                     },
-                )));
+                });
+
+                let mut composition = Composition::new(
+                    std::iter::once(Layer {
+                        raster: self.full_clear_raster.clone().unwrap(),
+                        style: Style {
+                            fill_rule: FillRule::WholeTile,
+                            fill: Fill::Solid(BACKGROUND_COLOR),
+                            blend_mode: BlendMode::Over,
+                        },
+                    }),
+                    BACKGROUND_COLOR,
+                );
 
                 // Translate intersecting paths and render top span.
                 let viewport = Rect::new(
                     Point::new(0.0, (dy + top_y0) as f32),
                     Size::new(width as f32, (top_y1 - top_y0) as f32),
                 );
-                let clip: [u32; 4] = [0, top_y0, width, top_y1];
-                Self::set_scene_items_ty(scene, -(dy as f32));
-                Self::build_rasters_for_viewport(context, scene, &viewport);
-                let composition = context.composition(composition_id);
-                self.update_composition(composition, scene, &clip, &viewport);
-                context.render(image_id, composition_id, &clip, &self.exts);
+                scene.set_items_ty(-(dy as f32));
+                scene.build_rasters_for_viewport(context, &viewport);
+                scene.prepend_layers_to_composition(&mut composition, &viewport);
 
-                // Drop previous rasters as not used for clearing.
-                self.previous_rasters.clear();
+                let clip = Rect::new(Point2D::new(0, top_y0), Size2D::new(width, top_y1 - top_y0));
+                context.render(&composition, Some(clip), image, &ext);
 
-                // Instead build a full clear raster if size has changed.
-                if self.size != *size {
-                    let path = {
-                        let path_builder = context.path_builder();
-                        path_builder.begin();
-                        path_builder.move_to(&Point::zero());
-                        path_builder.line_to(&Point::new(width as f32, 0.0));
-                        path_builder.line_to(&Point::new(width as f32, buffer_height as f32));
-                        path_builder.line_to(&Point::new(0.0, buffer_height as f32));
-                        path_builder.line_to(&Point::zero());
-                        path_builder.end()
-                    };
-                    let raster = {
-                        const CLIP: [f32; 4] =
-                            [std::f32::MIN, std::f32::MIN, std::f32::MAX, std::f32::MAX];
-                        let raster_builder = context.raster_builder();
-                        raster_builder.begin();
-                        raster_builder.add(&path, &Transform2D::identity(), &CLIP);
-                        raster_builder.end()
-                    };
-                    self.full_clear_raster.replace(raster);
-                }
+                staging_image.replace(image);
             }
         }
 
-        context.image(self.image_id, &[0, 0]).flush();
+        context.flush_image(self.image);
 
         self.size = *size;
         self.scroll_offset_y = scene.scroll_offset_y;
-
-        // Rebuild clear raster list.
-        self.clear_rasters.clear();
-        for raster in self.previous_rasters.drain(..) {
-            self.clear_rasters.push(raster);
-        }
     }
 }
 
@@ -1266,12 +1320,12 @@ impl FlingCurve {
     }
 }
 
-struct InfiniteScrollViewAssistant<T> {
-    context: T,
+struct InfiniteScrollViewAssistant<B: Backend, C: Context<B>> {
+    context: C,
     scroll_method: ScrollMethod,
     touch_sampling_offset: zx::Duration,
-    scene: Scene,
-    contents: BTreeMap<u64, Contents>,
+    scene: Scene<B>,
+    contents: BTreeMap<u64, Contents<B>>,
     last_presentation_time: Time,
     touch_device: Option<TouchDevice>,
     touch_points: Vec<Point>,
@@ -1282,11 +1336,12 @@ struct InfiniteScrollViewAssistant<T> {
     fling_curve: Option<FlingCurve>,
     fake_scroll_start: Time,
     fake_scroll_velocity: Option<f32>,
+    staging_image: Option<B::Image>,
 }
 
-impl<T: Context> InfiniteScrollViewAssistant<T> {
+impl<B: Backend, C: Context<B>> InfiniteScrollViewAssistant<B, C> {
     pub fn new(
-        context: T,
+        context: C,
         scale: f32,
         scroll_method: ScrollMethod,
         exposure: f32,
@@ -1317,11 +1372,12 @@ impl<T: Context> InfiniteScrollViewAssistant<T> {
             fling_curve: None,
             fake_scroll_start,
             fake_scroll_velocity: None,
+            staging_image: None,
         }
     }
 }
 
-impl<T: Context> ViewAssistant for InfiniteScrollViewAssistant<T> {
+impl<B: Backend, C: Context<B>> ViewAssistant for InfiniteScrollViewAssistant<B, C> {
     fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         Ok(())
     }
@@ -1333,7 +1389,6 @@ impl<T: Context> ViewAssistant for InfiniteScrollViewAssistant<T> {
         let size = &context.size;
         let presentation_time = context.presentation_time;
         let elapsed = presentation_time - self.last_presentation_time;
-        let context = &mut self.context;
         let scroll_method = self.scroll_method;
 
         // Scroll distance is set by input processing code below.
@@ -1483,24 +1538,25 @@ impl<T: Context> ViewAssistant for InfiniteScrollViewAssistant<T> {
         }
 
         // Update the scene using our scroll delta.
-        self.scene.update(context, size, scroll_delta);
+        self.scene.update(&mut self.context, size, scroll_delta);
 
         // Temporary hack to deal with the fact that carnelian
         // allocates a new buffer for each frame with the same
         // image ID of zero.
         let mut temp_content;
         let content;
+        let image = self.context.get_current_image(context);
 
         if canvas.id == 0 {
-            temp_content = Contents::new(context, canvas.index, scroll_method);
+            temp_content = Contents::new(image, scroll_method);
             content = &mut temp_content;
         } else {
             content = self
                 .contents
                 .entry(canvas.id)
-                .or_insert_with(|| Contents::new(context, canvas.index, scroll_method));
+                .or_insert_with(|| Contents::new(image, scroll_method));
         }
-        content.update(context, &mut self.scene, size);
+        content.update(&mut self.context, &mut self.scene, size, &mut self.staging_image);
 
         self.last_presentation_time = presentation_time;
 
@@ -1512,7 +1568,7 @@ impl<T: Context> ViewAssistant for InfiniteScrollViewAssistant<T> {
     }
 
     fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat {
-        self.context.get_pixel_format()
+        self.context.pixel_format()
     }
 }
 
