@@ -12,6 +12,7 @@
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
+namespace {
 
 // If client does not specify a ref_time for Play, pad it by this amount
 constexpr zx::duration kPaddingForUnspecifiedRefTime = zx::msec(20);
@@ -20,6 +21,12 @@ constexpr zx::duration kPaddingForUnspecifiedRefTime = zx::msec(20);
 // specifies ref_time but uses PlayNoReply (thus doesn't want the callback
 // telling them what actual ref_time was), secretly pad by this amount.
 constexpr zx::duration kPaddingForPlayNoReplyWithRefTime = zx::msec(10);
+
+// 4 slabs will allow each renderer to create >500 packets. Any client creating any more packets
+// than this that are outstanding at the same time will be disconnected.
+constexpr size_t kMaxPacketAllocatorSlabs = 4;
+
+}  // namespace
 
 std::unique_ptr<AudioRendererImpl> AudioRendererImpl::Create(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
@@ -54,6 +61,7 @@ AudioRendererImpl::AudioRendererImpl(
       audio_renderer_binding_(this, std::move(audio_renderer_request)),
       pts_ticks_per_second_(1000000000, 1),
       reference_clock_to_fractional_frames_(fbl::MakeRefCounted<VersionedTimelineFunction>()),
+      packet_allocator_(kMaxPacketAllocatorSlabs, true),
       link_matrix_(*link_matrix) {
   TRACE_DURATION("audio", "AudioRendererImpl::AudioRendererImpl");
   FX_DCHECK(admin);
@@ -498,9 +506,15 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
   start_pts = FractionalFrames<int64_t>(start_pts.Floor());
 
   // Create the packet.
-  auto packet_ref = fbl::MakeRefCounted<Packet>(payload_buffer, packet.payload_offset,
-                                                FractionalFrames<uint32_t>(frame_count), start_pts,
-                                                dispatcher_, std::move(callback));
+  auto packet_ref = packet_allocator_.New(payload_buffer, packet.payload_offset,
+                                          FractionalFrames<uint32_t>(frame_count), start_pts,
+                                          dispatcher_, std::move(callback));
+  if (!packet_ref) {
+    FX_LOGS(ERROR) << "Client created too many concurrent Packets; Allocator has created "
+                   << packet_allocator_.obj_count() << " / " << packet_allocator_.max_obj_count()
+                   << " max allocations";
+    return;
+  }
 
   // The end pts is the value we will use for the next packet's start PTS, if the user does not
   // provide an explicit PTS.

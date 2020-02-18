@@ -108,17 +108,17 @@ TEST_F(MixStageTest, MixUniformFormats) {
   //       -----------------------------------
   // pass |     1     |     2     |     3     |
   //       -----------------------------------
+  testing::PacketFactory packet_factory1(dispatcher(), kDefaultFormat, PAGE_SIZE);
   {
-    testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
-    packet_queue1->PushPacket(packet_factory.CreatePacket(0.1, zx::msec(1)));
-    packet_queue1->PushPacket(packet_factory.CreatePacket(0.2, zx::msec(2)));
-    packet_queue1->PushPacket(packet_factory.CreatePacket(0.3, zx::msec(3)));
+    packet_queue1->PushPacket(packet_factory1.CreatePacket(0.1, zx::msec(1)));
+    packet_queue1->PushPacket(packet_factory1.CreatePacket(0.2, zx::msec(2)));
+    packet_queue1->PushPacket(packet_factory1.CreatePacket(0.3, zx::msec(3)));
   }
+  testing::PacketFactory packet_factory2(dispatcher(), kDefaultFormat, PAGE_SIZE);
   {
-    testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
-    packet_queue2->PushPacket(packet_factory.CreatePacket(0.7, zx::msec(3)));
-    packet_queue2->PushPacket(packet_factory.CreatePacket(0.5, zx::msec(2)));
-    packet_queue2->PushPacket(packet_factory.CreatePacket(0.3, zx::msec(1)));
+    packet_queue2->PushPacket(packet_factory2.CreatePacket(0.7, zx::msec(3)));
+    packet_queue2->PushPacket(packet_factory2.CreatePacket(0.5, zx::msec(2)));
+    packet_queue2->PushPacket(packet_factory2.CreatePacket(0.3, zx::msec(1)));
   }
 
   int64_t output_frame_start = 0;

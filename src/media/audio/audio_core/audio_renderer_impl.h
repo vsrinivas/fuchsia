@@ -184,6 +184,7 @@ class AudioRendererImpl : public AudioObject,
   fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames_;
 
   std::unordered_map<const AudioObject*, std::shared_ptr<PacketQueue>> packet_queues_;
+  Packet::Allocator packet_allocator_;
 
   WavWriter<kEnableRendererWavWriters> wav_writer_;
 

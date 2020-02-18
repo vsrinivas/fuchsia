@@ -56,7 +56,7 @@ class PacketQueueTest : public gtest::TestLoopFixture {
         *release_flag = true;
       }
     };
-    return fbl::MakeRefCounted<Packet>(it->second, 0, length, start, dispatcher(), callback);
+    return allocator_.New(it->second, 0, length, start, dispatcher(), callback);
   }
 
   size_t released_packet_count() const { return released_packet_count_; }
@@ -64,6 +64,7 @@ class PacketQueueTest : public gtest::TestLoopFixture {
   zx::time time_after(zx::duration duration) { return zx::time(duration.to_nsecs()); }
 
  private:
+  Packet::Allocator allocator_{1, true};
   size_t released_packet_count_ = 0;
   std::unordered_map<uint32_t, fbl::RefPtr<RefCountedVmoMapper>> payload_buffers_;
 };

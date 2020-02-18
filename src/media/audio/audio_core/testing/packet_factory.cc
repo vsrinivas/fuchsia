@@ -37,8 +37,8 @@ fbl::RefPtr<Packet> PacketFactory::CreatePacket(float sample, zx::duration durat
   }
 
   auto packet_ref =
-      fbl::MakeRefCounted<Packet>(vmo_ref_, payload_offset, FractionalFrames<uint32_t>(frame_count),
-                                  next_pts_, dispatcher_, std::move(callback));
+      allocator_.New(vmo_ref_, payload_offset, FractionalFrames<uint32_t>(frame_count), next_pts_,
+                     dispatcher_, std::move(callback));
   next_pts_ = packet_ref->end();
   return packet_ref;
 }

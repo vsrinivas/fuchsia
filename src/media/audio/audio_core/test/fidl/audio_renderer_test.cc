@@ -230,6 +230,31 @@ TEST_F(AudioRendererTest, SendPacketInvokesCallbacksInOrder) {
   EXPECT_EQ(4u, callback_count);
 }
 
+TEST_F(AudioRendererTest, SendTooManyPacketsDisconnects) {
+  // Configure with one buffer and a valid stream type.
+  CreateAndAddPayloadBuffer(0);
+  audio_renderer_->SetPcmStreamType(kTestStreamType);
+
+  // Send a packet (we don't care about the actual packet data here).
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 0;
+  packet.payload_offset = 0;
+  packet.payload_size = kValidPayloadSize;
+
+  // The exact limit is a function of the size of some internal data structures. We verify this
+  // limit is somewhere between 500 and 600 packets.
+  for (int i = 0; i < 500; ++i) {
+    audio_renderer_->SendPacketNoReply(std::move(packet));
+  }
+  AssertConnectedAndDiscardAllPackets();
+
+  for (int i = 0; i < 600; ++i) {
+    audio_renderer_->SendPacketNoReply(std::move(packet));
+  }
+  SetNegativeExpectations();
+  RunLoopUntil([this]() { return error_occurred_; });
+}
+
 //
 // SendPacketNoReply tests.
 //

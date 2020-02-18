@@ -10,22 +10,28 @@
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/slab_allocator.h>
 #include <trace/event.h>
 
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/frames.h"
 #include "src/media/audio/audio_core/utils.h"
 
 namespace media::audio {
 
-// TODO(johngro): Consider moving instances of this class to a slab allocation
-// pattern.  They are the most frequently allocated object in the mixer (easily
-// 100s per second) and they do not live very long at all (300-400mSec at most),
-// so they could easily be causing heap fragmentation issues.
-class Packet : public fbl::RefCounted<Packet> {
+class Packet;
+
+namespace internal {
+using PacketAllocatorTraits =
+    ::fbl::SlabAllocatorTraits<fbl::RefPtr<Packet>, fbl::DEFAULT_SLAB_ALLOCATOR_SLAB_SIZE,
+                               ::fbl::Mutex, fbl::SlabAllocatorFlavor::INSTANCED, true>;
+}
+
+class Packet : public fbl::SlabAllocated<internal::PacketAllocatorTraits>,
+               public fbl::RefCounted<Packet> {
  public:
-  Packet(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, size_t vmo_offset_bytes,
-         FractionalFrames<uint32_t> frac_frame_len, FractionalFrames<int64_t> start_frame,
-         async_dispatcher_t* callback_dispatcher, fit::closure callback);
+  using AllocatorTraits = internal::PacketAllocatorTraits;
+  using Allocator = ::fbl::SlabAllocator<AllocatorTraits>;
 
   ~Packet();
 
@@ -48,6 +54,15 @@ class Packet : public fbl::RefCounted<Packet> {
   FractionalFrames<uint32_t> length() const { return length_; }
 
   void* payload() { return reinterpret_cast<uint8_t*>(vmo_ref_->start()) + vmo_offset_bytes_; }
+
+ protected:
+  friend Allocator;
+
+  // fbl::SlabAllocated _requires_ instances to be sourced from an fbl::SlabAllocator. Make this
+  // ctor non-public to prevent other ways of instantiation.
+  Packet(fbl::RefPtr<RefCountedVmoMapper> vmo_ref, size_t vmo_offset_bytes,
+         FractionalFrames<uint32_t> frac_frame_len, FractionalFrames<int64_t> start_frame,
+         async_dispatcher_t* callback_dispatcher, fit::closure callback);
 
  private:
   fbl::RefPtr<RefCountedVmoMapper> vmo_ref_;

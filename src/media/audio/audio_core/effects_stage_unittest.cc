@@ -41,6 +41,8 @@ class EffectsStageTest : public testing::ThreadingModelFixture {
 };
 
 TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
+  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
+
   // Create a packet queue to use as our source stream.
   auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
       TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
@@ -60,7 +62,6 @@ TEST_F(EffectsStageTest, ApplyEffectsToSourceStream) {
   auto effects_stage = EffectsStage::Create(effects, stream);
 
   // Enqueue 10ms of frames in the packet queue.
-  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
   stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10)));
 
   // Read from the effects stage. Since our effect adds 1.0 to each sample, and we populated the
