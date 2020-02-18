@@ -9,6 +9,10 @@ group("tests") {
   deps = [ "tests" ]
 }
 
+group("config") {
+  deps = [ "config" ]
+}
+
 executable("bin") {
   sources = [ "main.cc" ]
 
@@ -24,7 +28,10 @@ executable("bin") {
 }
 
 package("intl_services") {
-  deps = [ ":bin" ]
+  deps = [
+    ":bin",
+    "config:sysmgr",
+  ]
 
   binaries = [
     {

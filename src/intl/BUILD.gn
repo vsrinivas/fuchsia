@@ -6,6 +6,10 @@ group("intl") {
   deps = [ "intl_services" ]
 }
 
+group("config") {
+  deps = [ "intl_services:config" ]
+}
+
 group("tests") {
   testonly = true
   deps = [

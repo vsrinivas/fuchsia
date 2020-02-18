@@ -1,0 +1,19 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Please see the README.md file for details.
+
+import("//build/config.gni")
+
+# Groups all configurations.
+group("config") {
+  deps = [ ":sysmgr" ]
+}
+
+# Sysmgr configuration for products that require `intl_services` to be available.
+config_data("sysmgr") {
+  for_pkg = "sysmgr"
+  outputs = [ "intl_services.config" ]
+  sources = [ "sysmgr_config.json" ]
+}
