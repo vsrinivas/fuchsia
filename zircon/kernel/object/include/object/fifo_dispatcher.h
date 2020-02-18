@@ -52,7 +52,7 @@ class FifoDispatcher final : public PeeredDispatcher<FifoDispatcher, ZX_DEFAULT_
   uint32_t tail_ TA_GUARDED(get_lock());
   ktl::unique_ptr<uint8_t[]> data_ TA_GUARDED(get_lock());
 
-  static constexpr uint32_t kMaxSizeBytes = PAGE_SIZE;
+  static constexpr uint32_t kMaxSizeBytes = ZX_FIFO_MAX_SIZE_BYTES;
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_FIFO_DISPATCHER_H_
