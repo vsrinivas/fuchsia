@@ -118,27 +118,36 @@ impl SpinelComposition {
     }
 
     pub(crate) fn spn_styling(&self, context: &InnerContext) -> Option<SpnStyling> {
+        const PARENTS: u32 = 0; // spn_styling_group_parents
+        const ENTER_CMDS: u32 = 1; // spn_styling_group_enter
+        const LEAVE_CMDS: u32 = 4; // spn_styling_group_leave
+        const GROUP_SIZE: u32 = 6; // spn_styling_group_alloc
+        const MAX_LAYER_CMDS: u32 = 6; // spn_styling_group_layer
+
         let len = self.layers.len() as u32;
+        let styling_len = len * MAX_LAYER_CMDS + PARENTS + ENTER_CMDS + LEAVE_CMDS + GROUP_SIZE;
         let spn_styling = context.get_checked().map(|context| unsafe {
-            init(|ptr| spn!(spn_styling_create(context, ptr, len, len * 8)))
+            init(|ptr| spn!(spn_styling_create(context, ptr, len, styling_len)))
         })?;
 
         let top_group = unsafe { init(|ptr| spn!(spn_styling_group_alloc(spn_styling, ptr))) };
 
         unsafe {
-            spn!(spn_styling_group_parents(spn_styling, top_group, 0, ptr::null_mut()));
+            spn!(spn_styling_group_parents(spn_styling, top_group, PARENTS, ptr::null_mut()));
             spn!(spn_styling_group_range_lo(spn_styling, top_group, 0));
             spn!(spn_styling_group_range_lo(spn_styling, top_group, len - 1));
         }
 
         let cmds_enter = unsafe {
-            let data = init(|ptr| spn!(spn_styling_group_enter(spn_styling, top_group, 1, ptr)));
+            let data =
+                init(|ptr| spn!(spn_styling_group_enter(spn_styling, top_group, ENTER_CMDS, ptr)));
             slice::from_raw_parts_mut(data, 1)
         };
         cmds_enter[0] = SpnCommand::SpnStylingOpcodeColorAccZero;
 
         let cmds_leave = unsafe {
-            let data = init(|ptr| spn!(spn_styling_group_leave(spn_styling, top_group, 4, ptr)));
+            let data =
+                init(|ptr| spn!(spn_styling_group_leave(spn_styling, top_group, LEAVE_CMDS, ptr)));
             slice::from_raw_parts_mut(data, 4)
         };
         unsafe {
