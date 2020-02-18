@@ -13,7 +13,22 @@ bool DebuggingSyscallsEnabled() {
   return enabled;
 }
 
-bool SerialSyscallsEnabled() {
-  static bool enabled = gCmdline.GetBool("kernel.enable-serial-syscalls", false);
-  return enabled;
+SerialState SerialSyscallsEnabled() {
+  static const char* serial = []() {
+    return gCmdline.GetString("kernel.enable-serial-syscalls");
+  }();
+
+  if (serial == nullptr) {
+    return SerialState::kDisabled;
+  }
+
+  if (strcmp(serial, "true") == 0) {
+    return SerialState::kEnabled;
+  }
+
+  if (strcmp(serial, "output-only") == 0) {
+    return SerialState::kOutputOnly;
+  }
+
+  return SerialState::kDisabled;
 }

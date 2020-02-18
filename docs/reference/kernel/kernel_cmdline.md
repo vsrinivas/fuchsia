@@ -235,12 +235,20 @@ are:
 - `zx_system_mexec()`
 - `zx_system_mexec_payload_get()`
 
-## kernel.enable-serial-syscalls=\<bool>
+## kernel.enable-serial-syscalls=\<string>
 
-When disabled, the serial port syscalls will fail with `ZX_ERR_NOT_SUPPORTED`.
-Defaults to false (serial port disabled). These are:
-- `zx_debug_read()`
-- `zx_debug_write()`
+Can be one of three values:
+- `false`
+- `true`
+- `output-only`
+
+When `false` (the default), both `zx_debug_read()` and `zx_debug_write()` will fail with
+`ZX_ERR_NOT_SUPPORTED`.
+
+When `output-only`, `zx_debug_read()` will fail with `ZX_ERR_NOT_SUPPORTED`, but `zx_debug_write()`
+will work normally.
+
+When `true`, both will work normally.
 
 ## kernel.entropy-mixin=\<hex>
 

@@ -35,7 +35,7 @@ zx_status_t sys_debug_read(zx_handle_t handle, user_out_ptr<char> ptr, size_t ma
                            user_out_ptr<size_t> len) {
   LTRACEF("ptr %p\n", ptr.get());
 
-  if (!SerialSyscallsEnabled()) {
+  if (SerialSyscallsEnabled() != SerialState::kEnabled) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -70,7 +70,8 @@ zx_status_t sys_debug_read(zx_handle_t handle, user_out_ptr<char> ptr, size_t ma
 zx_status_t sys_debug_write(user_in_ptr<const char> ptr, size_t len) {
   LTRACEF("ptr %p, len %zu\n", ptr.get(), len);
 
-  if (!SerialSyscallsEnabled()) {
+  if (SerialSyscallsEnabled() != SerialState::kEnabled &&
+      SerialSyscallsEnabled() != SerialState::kOutputOnly) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

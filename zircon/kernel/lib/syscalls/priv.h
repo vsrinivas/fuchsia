@@ -65,8 +65,14 @@ class user_out_handle final {
 // Returns |true| if debugging syscalls have been enabled (see kernel.enable-debugging-syscalls).
 bool DebuggingSyscallsEnabled();
 
-// Returns |true| if serial port syscalls have been enabled (see kernel.enable-serial-syscalls).
-bool SerialSyscallsEnabled();
+enum class SerialState {
+  kDisabled,    // Fully disabled: kernel.enable-serial-syscalls=false, or unspecified, or any other
+                // unrecognized value.
+  kEnabled,     // Fully enabled, both input and output: kernel.enable-serial-syscalls=true
+  kOutputOnly,  // Output enabled, input disabled: kernel.enable-serial-syscalls=output-only
+};
+
+SerialState SerialSyscallsEnabled();
 
 // One of these macros is invoked by kernel.inc for each syscall.
 
