@@ -10,6 +10,7 @@ import 'package:meta/meta.dart';
 
 import 'dump.dart';
 import 'sl4f_client.dart';
+import 'storage.dart';
 import 'trace_processing/metrics_results.dart';
 import 'trace_processing/metrics_spec.dart';
 import 'trace_processing/trace_importing.dart';
@@ -98,7 +99,8 @@ class Performance {
   /// and then saves it to the dump directory.
   ///
   /// A [trace] call with the same [traceName], [binary], and [compress] must
-  /// have successfully completed before calling [downloadTraceFile].
+  /// have successfully completed before calling [downloadTraceFile]. The trace
+  /// file will be removed from the target device once it is downloaded.
   ///
   /// Returns the download trace [File].
   Future<File> downloadTraceFile(String traceName,
@@ -116,6 +118,8 @@ class Performance {
           {'path': tracePath, 'offset': response['next_offset']});
       contents += base64.decode(response['data']);
     }
+
+    await Storage(_sl4f).deleteFile(tracePath);
 
     return _dump.writeAsBytes('$traceName-trace', extension, contents);
   }

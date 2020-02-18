@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
@@ -45,6 +46,8 @@ void main() {
           unorderedMatches([
             matches(RegExp(r'-test-trace-trace.json$')),
           ]));
+      expect(await listDir(sl4fDriver, '/tmp'),
+          isNot(contains(matches(RegExp(r'test-trace-trace.json$')))));
     });
 
     test('download large trace', () async {
@@ -71,4 +74,13 @@ void main() {
       expect(stat.size, equals(40 * 1024 * 1024));
     });
   }, timeout: Timeout(_timeout));
+}
+
+Future<List<String>> listDir(sl4f.Sl4f sl4f, String dir) async {
+  final process = await sl4f.ssh.start('ls $dir');
+  if (await process.exitCode != 0) {
+    fail('unable to run ls under $dir');
+  }
+  final findResult = await process.stdout.transform(utf8.decoder).join();
+  return findResult.split('\n');
 }
