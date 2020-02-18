@@ -6,10 +6,10 @@
 
 #include "object/handle.h"
 
-#include <fbl/conditional_select_nospec.h>
 #include <lib/counters.h>
 #include <pow2.h>
 
+#include <fbl/conditional_select_nospec.h>
 #include <object/dispatcher.h>
 
 namespace {
@@ -67,7 +67,7 @@ void Handle::set_process_id(zx_koid_t pid) {
 // Returns a new |base_value| based on the value stored in the free
 // arena slot pointed to by |addr|. The new value will be different
 // from the last |base_value| used by this slot.
-uint32_t Handle::GetNewBaseValue(void* addr) {
+uint32_t HandleTableArena::GetNewBaseValue(void* addr) {
   // Get the index of this slot within the arena.
   uint32_t handle_index = HandleToIndex(reinterpret_cast<Handle*>(addr));
   DEBUG_ASSERT((handle_index & ~kHandleIndexMask) == 0);
@@ -87,12 +87,12 @@ uint32_t Handle::GetNewBaseValue(void* addr) {
 // Allocate space for a Handle from the arena, but don't instantiate the
 // object.  |base_value| gets the value for Handle::base_value_.  |what|
 // says whether this is allocation or duplication, for the error message.
-void* Handle::Alloc(const fbl::RefPtr<Dispatcher>& dispatcher, const char* what,
-                    uint32_t* base_value) {
+void* HandleTableArena::Alloc(const fbl::RefPtr<Dispatcher>& dispatcher, const char* what,
+                              uint32_t* base_value) {
   size_t outstanding_handles;
   {
-    void* addr = HandleTableArena::arena_.Alloc();
-    outstanding_handles = HandleTableArena::arena_.DiagnosticCount();
+    void* addr = arena_.Alloc();
+    outstanding_handles = arena_.DiagnosticCount();
     if (likely(addr)) {
       if (outstanding_handles > kHighHandleCount) {
         // TODO: Avoid calling this for every handle after
@@ -116,7 +116,7 @@ void* Handle::Alloc(const fbl::RefPtr<Dispatcher>& dispatcher, const char* what,
 
 HandleOwner Handle::Make(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights) {
   uint32_t base_value;
-  void* addr = Alloc(dispatcher, "new", &base_value);
+  void* addr = HandleTableArena::Alloc(dispatcher, "new", &base_value);
   if (unlikely(!addr))
     return nullptr;
   kcounter_add(handle_count_made, 1);
@@ -126,7 +126,7 @@ HandleOwner Handle::Make(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights)
 
 HandleOwner Handle::Make(KernelHandle<Dispatcher> kernel_handle, zx_rights_t rights) {
   uint32_t base_value;
-  void* addr = Alloc(kernel_handle.dispatcher(), "new", &base_value);
+  void* addr = HandleTableArena::Alloc(kernel_handle.dispatcher(), "new", &base_value);
   if (unlikely(!addr))
     return nullptr;
   kcounter_add(handle_count_made, 1);
@@ -143,7 +143,7 @@ Handle::Handle(fbl::RefPtr<Dispatcher> dispatcher, zx_rights_t rights, uint32_t 
 
 HandleOwner Handle::Dup(Handle* source, zx_rights_t rights) {
   uint32_t base_value;
-  void* addr = Alloc(source->dispatcher(), "duplicate", &base_value);
+  void* addr = HandleTableArena::Alloc(source->dispatcher(), "duplicate", &base_value);
   if (unlikely(!addr))
     return nullptr;
   kcounter_add(handle_count_duped, 1);
@@ -185,16 +185,16 @@ void Handle::TearDown() {
   DEBUG_ASSERT(base_value() == old_base_value);
 }
 
-void Handle::Delete() {
-  fbl::RefPtr<Dispatcher> disp = dispatcher();
+void HandleTableArena::Delete(Handle* handle) {
+  fbl::RefPtr<Dispatcher> disp = handle->dispatcher();
 
   if (disp->is_waitable())
-    disp->Cancel(this);
+    disp->Cancel(handle);
 
-  TearDown();
+  handle->TearDown();
 
   bool zero_handles = disp->decrement_handle_count();
-  HandleTableArena::arena_.Free(this);
+  arena_.Free(handle);
 
   if (zero_handles)
     disp->on_zero_handles();
@@ -210,8 +210,8 @@ Handle* Handle::FromU32(uint32_t value) {
     return nullptr;
   handle_addr = HandleTableArena::arena_.Confine(handle_addr);
   auto handle = reinterpret_cast<Handle*>(handle_addr);
-  return reinterpret_cast<Handle*>(fbl::conditional_select_nospec_eq(handle->base_value(), value,
-                                                                     handle_addr, 0));
+  return reinterpret_cast<Handle*>(
+      fbl::conditional_select_nospec_eq(handle->base_value(), value, handle_addr, 0));
 }
 
 uint32_t Handle::Count(const fbl::RefPtr<const Dispatcher>& dispatcher) {
@@ -228,6 +228,6 @@ uintptr_t Handle::IndexToHandle(uint32_t index) {
   return reinterpret_cast<uintptr_t>(HandleTableArena::arena_.Base()) + index * sizeof(Handle);
 }
 
-uint32_t Handle::HandleToIndex(Handle* handle) {
-  return static_cast<uint32_t>(handle - reinterpret_cast<Handle*>(HandleTableArena::arena_.Base()));
+uint32_t HandleTableArena::HandleToIndex(Handle* handle) {
+  return static_cast<uint32_t>(handle - reinterpret_cast<Handle*>(arena_.Base()));
 }

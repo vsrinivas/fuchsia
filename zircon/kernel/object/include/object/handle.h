@@ -142,21 +142,14 @@ class Handle final {
   // Called only by Dup.
   Handle(Handle* rhs, zx_rights_t rights, uint32_t base_value);
 
-  // Private subroutines of Make and Dup.
-  static void* Alloc(const fbl::RefPtr<Dispatcher>&, const char* what, uint32_t* base_value);
-  static uint32_t GetNewBaseValue(void* addr);
-
-  // Handle should never be destroyed by anything other than Delete,
+  // Handle should never be destroyed by anything other than HandleTableArena::Delete,
   // which uses TearDown to do the actual destruction.
   ~Handle() = default;
   void TearDown();
-  void Delete();
 
   // NOTE! This can return an invalid address.  It must be checked
   // against the arena bounds before being cast to a Handle*.
   static uintptr_t IndexToHandle(uint32_t index);
-
-  static uint32_t HandleToIndex(Handle* handle);
 
   // Only HandleOwner is allowed to call Delete.
   friend class HandleOwner;
@@ -180,7 +173,18 @@ class Handle final {
 };
 
 class HandleTableArena {
+ public:
+  // Alloc runturns storage for a handle. GetNewBaseValue is a helper needed to actually create a
+  // Handle.
+  static void* Alloc(const fbl::RefPtr<Dispatcher>&, const char* what, uint32_t* base_value);
+  static uint32_t GetNewBaseValue(void* addr);
+
+  static void Delete(Handle* handle);
+
  private:
+  // A helper for the GetNewBaseValue computation.
+  static uint32_t HandleToIndex(Handle* handle);
+
   // Validate that all the fields we need to preserve fit within the preservation window.
   static_assert(offsetof(Handle, process_id_) + sizeof(Handle::process_id_) <=
                 Handle::PreserveSize);
@@ -197,7 +201,7 @@ class HandleTableArena {
 // because Handle is an incomplete type at that point.
 inline void HandleOwner::Destroy() {
   if (h_)
-    h_->Delete();
+    HandleTableArena::Delete(h_);
 }
 
 // A minimal wrapper around a Dispatcher which is owned by the kernel.
