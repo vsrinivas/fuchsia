@@ -23,6 +23,8 @@ VulkanDeviceQueuesPtr VkSessionTest::CreateVulkanDeviceQueues(bool use_protected
   auto vulkan_queues = VulkanDeviceQueues::New(
       vulkan_instance,
       {{VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME, VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME,
+
+        VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME, VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
         VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME},
        {},
        vk::SurfaceKHR(),

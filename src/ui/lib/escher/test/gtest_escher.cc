@@ -4,6 +4,8 @@
 
 #include "src/ui/lib/escher/test/gtest_escher.h"
 
+#include <vulkan/vulkan.h>
+
 #include "src/ui/lib/escher/escher_process_init.h"
 
 #include <vulkan/vulkan.hpp>
@@ -41,17 +43,20 @@ void EscherEnvironment::SetUp() {
 
     VulkanDeviceQueues::Params device_params(
         {{VK_KHR_SAMPLER_YCBCR_CONVERSION_EXTENSION_NAME, VK_KHR_MAINTENANCE1_EXTENSION_NAME,
-          VK_KHR_BIND_MEMORY_2_EXTENSION_NAME, VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
-          VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME},
+          VK_KHR_BIND_MEMORY_2_EXTENSION_NAME,
+
+          VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME, VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME},
          {},
          vk::SurfaceKHR()});
-#ifdef OS_FUCHSIA
+#ifdef VK_USE_PLATFORM_FUCHSIA
+    device_params.required_extension_names.insert(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
     device_params.required_extension_names.insert(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
     device_params.required_extension_names.insert(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
 #endif
     vulkan_instance_ = VulkanInstance::New(instance_params);
     vulkan_device_ = VulkanDeviceQueues::New(vulkan_instance_, device_params);
     escher_ = std::make_unique<Escher>(vulkan_device_);
+    FXL_CHECK(escher_);
 
 #if ESCHER_USE_RUNTIME_GLSL
     escher::GlslangInitializeProcess();
