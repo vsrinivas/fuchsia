@@ -92,32 +92,32 @@ TEST_F(OutputPipelineTest, Trim) {
   pipeline->AddInput(stream4, UsageFrom(fuchsia::media::AudioRenderUsage::COMMUNICATION));
 
   bool packet_released[8] = {};
+  testing::PacketFactory packet_factory1(dispatcher(), kDefaultFormat, PAGE_SIZE);
   {
-    testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
-    stream1->PushPacket(packet_factory.CreatePacket(
+    stream1->PushPacket(packet_factory1.CreatePacket(
         1.0, zx::msec(5), [&packet_released] { packet_released[0] = true; }));
-    stream1->PushPacket(packet_factory.CreatePacket(
+    stream1->PushPacket(packet_factory1.CreatePacket(
         1.0, zx::msec(5), [&packet_released] { packet_released[1] = true; }));
   }
+  testing::PacketFactory packet_factory2(dispatcher(), kDefaultFormat, PAGE_SIZE);
   {
-    testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
-    stream2->PushPacket(packet_factory.CreatePacket(
+    stream2->PushPacket(packet_factory2.CreatePacket(
         1.0, zx::msec(5), [&packet_released] { packet_released[2] = true; }));
-    stream2->PushPacket(packet_factory.CreatePacket(
+    stream2->PushPacket(packet_factory2.CreatePacket(
         1.0, zx::msec(5), [&packet_released] { packet_released[3] = true; }));
   }
+  testing::PacketFactory packet_factory3(dispatcher(), kDefaultFormat, PAGE_SIZE);
   {
-    testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
-    stream3->PushPacket(packet_factory.CreatePacket(
+    stream3->PushPacket(packet_factory3.CreatePacket(
         1.0, zx::msec(5), [&packet_released] { packet_released[4] = true; }));
-    stream3->PushPacket(packet_factory.CreatePacket(
+    stream3->PushPacket(packet_factory3.CreatePacket(
         1.0, zx::msec(5), [&packet_released] { packet_released[5] = true; }));
   }
+  testing::PacketFactory packet_factory4(dispatcher(), kDefaultFormat, PAGE_SIZE);
   {
-    testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
-    stream4->PushPacket(packet_factory.CreatePacket(
+    stream4->PushPacket(packet_factory4.CreatePacket(
         1.0, zx::msec(5), [&packet_released] { packet_released[6] = true; }));
-    stream4->PushPacket(packet_factory.CreatePacket(
+    stream4->PushPacket(packet_factory4.CreatePacket(
         1.0, zx::msec(5), [&packet_released] { packet_released[7] = true; }));
   }
 

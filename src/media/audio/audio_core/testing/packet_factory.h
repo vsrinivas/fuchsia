@@ -28,6 +28,7 @@ class PacketFactory {
   const Format& format() const { return format_; }
 
  private:
+  Packet::Allocator allocator_{1, true};
   async_dispatcher_t* dispatcher_;
   Format format_;
   fbl::RefPtr<RefCountedVmoMapper> vmo_ref_;

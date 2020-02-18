@@ -76,10 +76,10 @@ class TapStageTest : public testing::ThreadingModelFixture {
   }
 
  private:
+  testing::PacketFactory packet_factory_{dispatcher(), kDefaultFormat, 4 * PAGE_SIZE};
   std::shared_ptr<PacketQueue> packet_queue_;
   std::shared_ptr<RingBuffer> ring_buffer_;
   std::shared_ptr<TapStage> tap_;
-  testing::PacketFactory packet_factory_{dispatcher(), kDefaultFormat, 4 * PAGE_SIZE};
 };
 
 TEST_F(TapStageTest, CopySinglePacket) {
