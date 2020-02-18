@@ -167,7 +167,6 @@ group("banjo") {
     "ddk.protocol.usb",
 #------------------
 #------------------
-    "ddk.protocol.usb.bus",
 #------------------
 #------------------
     "ddk.protocol.usb.composite",

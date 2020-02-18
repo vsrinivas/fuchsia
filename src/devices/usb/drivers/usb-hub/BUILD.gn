@@ -13,12 +13,12 @@ driver_module("usb-hub") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "usb-hub.c" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.usb.bus",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/usb",
     "//zircon/system/banjo/ddk.protocol.usb",
-    "//zircon/system/banjo/ddk.protocol.usb.bus",
     "//zircon/system/banjo/ddk.protocol.usb.composite",
     "//zircon/system/banjo/ddk.protocol.usb.hub",
     "//zircon/system/banjo/ddk.protocol.usb.request",

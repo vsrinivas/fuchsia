@@ -4,13 +4,11 @@
 
 import("//build/banjo/banjo.gni")
 
-banjo("ddk.protocol.usb.hci") {
-  sources = [ "usb-hci.banjo" ]
+banjo("ddk.protocol.usb.bus") {
+  sources = [ "usb-bus.banjo" ]
   deps = [
-    "//sdk/banjo/ddk.protocol.usb.bus",
-    "//zircon/system/banjo/ddk.physiter",
+    "//zircon/system/banjo/ddk.driver",
     "//zircon/system/banjo/ddk.protocol.usb.hub",
-    "//zircon/system/banjo/ddk.protocol.usb.request",
     "//zircon/system/banjo/zircon.hw.usb",
     "//zircon/system/banjo/zircon.hw.usb.hub",
   ]
