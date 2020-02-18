@@ -27,13 +27,37 @@ driver_module("usb-hid") {
   ]
 }
 
-driver_module("usb-hid-fake-usb") {
+driver_module("usb-one-endpoint-hid-fake-usb") {
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
   configs += [ "//build/unification/config:zircon-migrated" ]
-  sources = [ "usb-hid-function.cc" ]
+  sources = [ "function/one-endpoint-hid-function.cc" ]
+  deps = [
+    "//sdk/banjo/ddk.protocol.usb.function",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/banjo/ddk.protocol.hidbus",
+    "//zircon/system/banjo/ddk.protocol.usb",
+    "//zircon/system/banjo/ddk.protocol.usb.request",
+  ]
+}
+
+driver_module("usb-two-endpoint-hid-fake-usb") {
+  defines = [ "_ALL_SOURCE" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "function/two-endpoint-hid-function.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.usb.function",
     "//src/devices/lib/driver",
@@ -56,5 +80,8 @@ migrated_manifest("usb-hid-manifest") {
 }
 
 migrated_manifest("usb-hid-fake-usb-manifest") {
-  deps = [ ":usb-hid-fake-usb" ]
+  deps = [
+    ":usb-one-endpoint-hid-fake-usb",
+    ":usb-two-endpoint-hid-fake-usb",
+  ]
 }

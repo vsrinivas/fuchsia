@@ -52,7 +52,8 @@ mode with no modifications to the device driver.
 
 Examples of usb-function drivers:
 
-* [usb-hid-function driver](/src/ui/input/drivers/usb-hid/usb-hid-function.cc)
+* [one-endpoint-hid-function driver](/src/ui/input/drivers/usb-hid/function/one-endpoint-hid-function.cc)
+* [two-endpoint-hid-function driver](/src/ui/input/drivers/usb-hid/function/two-endpoint-hid-function.cc)
 * [ftdi-function driver](/src/devices/serial/drivers/ftdi/ftdi-function.cc)
 
 The usb-function driver needs to implement the

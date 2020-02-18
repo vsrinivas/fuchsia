@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "usb-hid-function.h"
+#include "two-endpoint-hid-function.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -25,7 +25,7 @@
 
 constexpr int BULK_MAX_PACKET = 512;
 
-namespace usb_hid_function {
+namespace two_endpoint_hid_function {
 
 static const uint8_t boot_mouse_r_desc[50] = {
     0x05, 0x01,  // Usage Page (Generic Desktop Ctrls)
@@ -201,10 +201,9 @@ zx_status_t FakeUsbHidFunction::Bind() {
   }
   status = function_.AllocEp(USB_DIR_IN, &descriptor_->interrupt_in.bEndpointAddress);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "FakeUsbHidFunction: usb_function_alloc_ep for endpoint out failed\n");
+    zxlogf(ERROR, "FakeUsbHidFunction: usb_function_alloc_ep for endpoint in failed\n");
     return status;
   }
-
   status = function_.AllocEp(USB_DIR_OUT, &descriptor_->interrupt_out.bEndpointAddress);
   if (status != ZX_OK) {
     zxlogf(ERROR, "FakeUsbHidFunction: usb_function_alloc_ep for endpoint out failed\n");
@@ -221,6 +220,7 @@ zx_status_t FakeUsbHidFunction::Bind() {
   active_ = true;
   thrd_create(
       &thread_, [](void* ctx) { return static_cast<FakeUsbHidFunction*>(ctx)->Thread(); }, this);
+
   status = DdkAdd("usb-hid-function");
   if (status != ZX_OK) {
     return status;
@@ -266,18 +266,19 @@ void FakeUsbHidFunction::UsbEndpointOutCallback(usb_request_t* request) {
   event_.Signal();
 }
 
-static constexpr zx_driver_ops_t driver_ops = []() {
+static constexpr zx_driver_ops_t two_endpoint_hid_driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
   ops.bind = bind;
   return ops;
 }();
 
-}  // namespace usb_hid_function
+}  // namespace two_endpoint_hid_function
 
 // clang-format off
-ZIRCON_DRIVER_BEGIN(usb_hid_function, usb_hid_function::driver_ops, "zircon", "0.1", 2)
+ZIRCON_DRIVER_BEGIN(two_endpoint_hid_function, two_endpoint_hid_function::two_endpoint_hid_driver_ops, "zircon", "0.1", 3)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_FUNCTION),
-    BI_MATCH_IF(EQ, BIND_USB_CLASS, USB_CLASS_HID),
-ZIRCON_DRIVER_END(usb_hid_function)
+    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_HID),
+    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_TEST_HID_TWO_ENDPOINT),
+ZIRCON_DRIVER_END(two_endpoint_hid_function)
     // clang-format on

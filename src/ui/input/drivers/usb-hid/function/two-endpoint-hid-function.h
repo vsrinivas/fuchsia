@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_INPUT_DRIVERS_USB_HID_USB_HID_FUNCTION_H_
-#define SRC_UI_INPUT_DRIVERS_USB_HID_USB_HID_FUNCTION_H_
+#ifndef SRC_UI_INPUT_DRIVERS_USB_HID_FUNCTION_TWO_ENDPOINT_HID_FUNCTION_H_
+#define SRC_UI_INPUT_DRIVERS_USB_HID_FUNCTION_TWO_ENDPOINT_HID_FUNCTION_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/hw/usb/hid.h>
@@ -20,7 +20,7 @@
 #include <usb/request-cpp.h>
 #include <usb/usb.h>
 
-namespace usb_hid_function {
+namespace two_endpoint_hid_function {
 
 // This driver is for testing the USB-HID driver. It binds as a peripheral USB
 // device and sends fake HID report descriptors and HID reports. The tests for
@@ -91,6 +91,6 @@ class FakeUsbHidFunction : public DeviceType {
   fbl::Mutex mtx_;
 };
 
-}  // namespace usb_hid_function
+}  // namespace two_endpoint_hid_function
 
-#endif  // SRC_UI_INPUT_DRIVERS_USB_HID_USB_HID_FUNCTION_H_
+#endif  // SRC_UI_INPUT_DRIVERS_USB_HID_FUNCTION_TWO_ENDPOINT_HID_FUNCTION_H_
