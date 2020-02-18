@@ -35,6 +35,7 @@ openweave_adaptation_layer("adaptation") {
 }
 
 config("adaptation_config") {
+  include_dirs = [ "." ]
   cflags = [
     "-DWEAVE_DEVICE_PLATFORM_CONFIG_INCLUDE=\"weave_device_platform_config.h\"",
     "-DEXTERNAL_CONNECTIVITYMANAGERIMPL_HEADER=\"connectivity_manager_impl.h\"",

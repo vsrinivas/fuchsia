@@ -80,14 +80,7 @@ class BLEManagerImpl final : public BLEManager,
     uint16_t Unused : 4;
   };
 
-  WoBLEConState mCons[kMaxConnections];
   WoBLEServiceMode mServiceMode;
-  uint16_t mServiceAttrHandle;
-  uint16_t mRXCharAttrHandle;
-  uint16_t mTXCharAttrHandle;
-  uint16_t mTXCharCCCDAttrHandle;
-  uint16_t mFlags;
-  char mDeviceName[kMaxDeviceNameLength + 1];
 };
 
 /**
