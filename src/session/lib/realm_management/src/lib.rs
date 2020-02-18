@@ -105,31 +105,8 @@ mod tests {
         fuchsia_async as fasync,
         futures::prelude::*,
         lazy_static::lazy_static,
-        std::sync::Mutex,
+        test_util::Counter,
     };
-
-    /// A mutually exclusive counter that is not shareable, but can be defined statically for the
-    /// duration of a test.
-    struct Counter {
-        count: Mutex<usize>,
-    }
-
-    impl Counter {
-        /// Initializes a new counter to the given value.
-        fn new(initial: usize) -> Self {
-            Counter { count: Mutex::new(initial) }
-        }
-
-        /// Increments the counter by one.
-        fn inc(&self) {
-            *self.count.lock().unwrap() += 1;
-        }
-
-        /// Returns the current value of the counter.
-        fn get(&self) -> usize {
-            *self.count.lock().unwrap()
-        }
-    }
 
     /// Spawns a local `fidl_fuchsia_sys2::Realm` server, and returns a proxy to the spawned server.
     /// The provided `request_handler` is notified when an incoming request is received.
