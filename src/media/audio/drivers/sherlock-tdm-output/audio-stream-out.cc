@@ -38,6 +38,31 @@ constexpr size_t kRingBufferSize =
 SherlockAudioStreamOut::SherlockAudioStreamOut(zx_device_t* parent)
     : SimpleAudioStream(parent, false), pdev_(parent) {}
 
+zx_status_t SherlockAudioStreamOut::InitCodecs() {
+  audio_en_.Write(1);  // Enable codecs by setting SOC_AUDIO_EN.
+
+  auto status = codecs_[0]->Init(0);  // Use TDM slot 0.
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to initialize codec 0\n", __FILE__);
+    audio_en_.Write(0);
+    return status;
+  }
+  status = codecs_[1]->Init(1);  // Use TDM slot 1.
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to initialize codec 1\n", __FILE__);
+    audio_en_.Write(0);
+    return status;
+  }
+  status = codecs_[2]->Init(0);  // Use TDM slot 0.
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to initialize codec 2\n", __FILE__);
+    audio_en_.Write(0);
+    return status;
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t SherlockAudioStreamOut::InitPdev() {
   composite_protocol_t composite;
 
@@ -126,11 +151,11 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
   // Strength 1 for mclk (bit 18,  GPIOAO(9)), GPIO offsets are in 4 bytes units.
   mmio->SetBit<uint32_t>(18, 4 * T931_AO_PAD_DS_A);
 
-  audio_en_.Write(1);  // SOC_AUDIO_EN.
-
-  codecs_[0]->Init(0);  // Use TDM slot 0.
-  codecs_[1]->Init(1);  // Use TDM slot 1.
-  codecs_[2]->Init(0);  // Use TDM slot 0.
+  status = InitCodecs();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not init codecs - %d\n", __func__, status);
+    return status;
+  }
 
   InitBuffer(kRingBufferSize);
 

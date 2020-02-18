@@ -30,6 +30,19 @@ constexpr size_t RB_SIZE = fbl::round_up<size_t, size_t>(48000 * 2 * 2u, PAGE_SI
 
 AstroAudioStreamOut::AstroAudioStreamOut(zx_device_t* parent) : SimpleAudioStream(parent, false) {}
 
+zx_status_t AstroAudioStreamOut::InitCodec() {
+  audio_en_.Write(1);  // Enable codec by setting SOC_AUDIO_EN.
+
+  auto status = codec_->Init();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s failed to initialize codec\n", __FILE__);
+    audio_en_.Write(0);
+    return status;
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t AstroAudioStreamOut::InitPDev() {
   composite_protocol_t composite;
 
@@ -65,6 +78,7 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
     zxlogf(ERROR, "%s failed to allocate i2c\n", __func__);
     return ZX_ERR_NO_RESOURCES;
   }
+
   codec_ = Tas27xx::Create(std::move(i2c));
   if (!codec_) {
     zxlogf(ERROR, "%s could not get tas27xx\n", __func__);
@@ -88,10 +102,11 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
     return ZX_ERR_NO_MEMORY;
   }
 
-  // Enable Codec
-  audio_en_.Write(1);
-
-  codec_->Init();
+  status = InitCodec();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not initialize codec - %d\n", __FILE__, status);
+    return status;
+  }
 
   // Initialize the ring buffer
   InitBuffer(RB_SIZE);

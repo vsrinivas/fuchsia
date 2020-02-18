@@ -43,6 +43,11 @@ class AstroAudioStreamOut : public SimpleAudioStream {
   zx_status_t SetGain(const audio_proto::SetGainReq& req) __TA_REQUIRES(domain_token()) override;
   void ShutdownHook() __TA_REQUIRES(domain_token()) override;
 
+  zx_status_t InitCodec();  // protected for unit test.
+
+  std::unique_ptr<Tas27xx> codec_;    // protected for unit test.
+  ddk::GpioProtocolClient audio_en_;  // protected for unit test.
+
  private:
   friend class fbl::RefPtr<AstroAudioStreamOut>;
 
@@ -50,7 +55,7 @@ class AstroAudioStreamOut : public SimpleAudioStream {
 
   zx_status_t AddFormats() __TA_REQUIRES(domain_token());
   zx_status_t InitBuffer(size_t size);
-  zx_status_t InitPDev();
+  virtual zx_status_t InitPDev();  // virtual for unit testing.
   void ProcessRingNotification();
 
   uint32_t us_per_notification_ = 0;
@@ -60,13 +65,10 @@ class AstroAudioStreamOut : public SimpleAudioStream {
 
   ddk::PDev pdev_;
 
-  std::unique_ptr<Tas27xx> codec_;
-
   zx::vmo ring_buffer_vmo_;
   fzl::PinnedVmo pinned_ring_buffer_;
 
   std::unique_ptr<AmlTdmDevice> aml_audio_;
-  ddk::GpioProtocolClient audio_en_;
   ddk::GpioProtocolClient audio_fault_;
 
   zx::bti bti_;

@@ -15,16 +15,17 @@
 
 namespace audio {
 
-class Tas5720 final {
+class Tas5720 {  // Not final for unit testing.
  public:
   static std::unique_ptr<Tas5720> Create(ddk::I2cChannel i2c);
 
   explicit Tas5720(const ddk::I2cChannel& i2c) : i2c_(i2c) {}
+  virtual ~Tas5720() = default;
 
   bool ValidGain(float gain);
-  zx_status_t SetGain(float gain);
+  virtual zx_status_t SetGain(float gain);  // virtual for unit testing.
   bool ValidGain(float gain) const;
-  zx_status_t Init(std::optional<uint8_t> slot);
+  virtual zx_status_t Init(std::optional<uint8_t> slot);  // virtual for unit testing.
   zx_status_t Reset();
   zx_status_t Standby();
   zx_status_t ExitStandby();

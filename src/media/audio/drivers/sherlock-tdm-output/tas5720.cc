@@ -22,7 +22,6 @@ constexpr uint8_t kRegDigitalControl1     = 0x02;
 constexpr uint8_t kRegDigitalControl2     = 0x03;
 constexpr uint8_t kRegVolumeControl       = 0x04;
 constexpr uint8_t kRegAnalogControl       = 0x06;
-constexpr uint8_t kRegFaultCfgErrorStatus = 0x08;
 constexpr uint8_t kRegDigitalClipper2     = 0x10;
 constexpr uint8_t kRegDigitalClipper1     = 0x11;
 // clang-format on
@@ -64,42 +63,64 @@ zx_status_t Tas5720::SetGain(float gain) {
 bool Tas5720::ValidGain(float gain) const { return (gain <= kMaxGain) && (gain >= kMinGain); }
 
 zx_status_t Tas5720::Init(std::optional<uint8_t> slot) {
-  Standby();
-  WriteReg(kRegDigitalControl1, 0x45);  // Use Slot, Stereo Left Justified.
+  auto status = Standby();
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = WriteReg(kRegDigitalControl1, 0x45);  // Use Slot, Stereo Left Justified.
+  if (status != ZX_OK) {
+    return status;
+  }
   if (!slot.has_value() || slot.value() >= 8) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  WriteReg(kRegDigitalControl2, slot.value() | 0x10);  // Muted.
-  WriteReg(kRegAnalogControl, 0x55);                   // PWM rate 16 x lrclk, gain 20.7 dBV.
-  WriteReg(kRegDigitalClipper2, 0xFF);                 // Disabled.
-  WriteReg(kRegDigitalClipper1, 0xFC);                 // Disabled.
-  ExitStandby();
-  SetGain(-12.f);  // Conservative default gain.
-  uint8_t val = 0;
-  ReadReg(kRegFaultCfgErrorStatus, &val);
-  if (val != 0x00) {
-    return ZX_ERR_INTERNAL;
+  status = WriteReg(kRegDigitalControl2, slot.value() | 0x10);  // Muted.
+  if (status != ZX_OK) {
+    return status;
   }
-  return ZX_OK;
+  status = WriteReg(kRegAnalogControl, 0x55);  // PWM rate 16 x lrclk, gain 20.7 dBV.
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = WriteReg(kRegDigitalClipper2, 0xFF);  // Disabled.
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = WriteReg(kRegDigitalClipper1, 0xFC);  // Disabled.
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = ExitStandby();
+  if (status != ZX_OK) {
+    return status;
+  }
+  return SetGain(-12.f);  // Conservative default gain.
 }
 
 zx_status_t Tas5720::Standby() {
   uint8_t r;
-  ReadReg(kRegPowerControl, &r);
+  auto status = ReadReg(kRegPowerControl, &r);
+  if (status != ZX_OK) {
+    return status;
+  }
   r = static_cast<uint8_t>(r & ~(0x01));  // SPK_SD.
   r = static_cast<uint8_t>(r | (0x02));   // SPK_SLEEP.
-  WriteReg(kRegPowerControl, r);
-  return ZX_OK;
+  return WriteReg(kRegPowerControl, r);
 }
 
 zx_status_t Tas5720::ExitStandby() {
   uint8_t r;
-  ReadReg(kRegPowerControl, &r);
+  auto status = ReadReg(kRegPowerControl, &r);
+  if (status != ZX_OK) {
+    return status;
+  }
   r = static_cast<uint8_t>(r | 0x01);  // SPK_SD.
-  WriteReg(kRegPowerControl, r);
+  status = WriteReg(kRegPowerControl, r);
+  if (status != ZX_OK) {
+    return status;
+  }
   r = static_cast<uint8_t>(r & ~(0x02));  // SPK_SLEEP.
-  WriteReg(kRegPowerControl, r);
-  return ZX_OK;
+  return WriteReg(kRegPowerControl, r);
 }
 
 zx_status_t Tas5720::WriteReg(uint8_t reg, uint8_t value) {

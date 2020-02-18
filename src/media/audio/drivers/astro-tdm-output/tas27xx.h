@@ -40,20 +40,21 @@ class Tas27xx : public std::unique_ptr<Tas27xx> {
   float GetMaxGain() const { return kMaxGain; }
   float GetGainStep() const { return kGainStep; }
 
-  zx_status_t Init();
+  virtual zx_status_t Init();  // virtual for unit testing.
   zx_status_t Reset();
   zx_status_t Standby();
   zx_status_t ExitStandby();
   zx_status_t Mute(bool mute);
+
+ protected:
+  Tas27xx(ddk::I2cChannel&& i2c) : i2c_(i2c) {}  // protected for unit testing.
+  virtual ~Tas27xx() = default;                  // protected for unit testing.
 
  private:
   friend class std::default_delete<Tas27xx>;
   static constexpr float kMaxGain = 0;
   static constexpr float kMinGain = -100.0;
   static constexpr float kGainStep = 0.5;
-
-  Tas27xx(ddk::I2cChannel&& i2c) : i2c_(i2c) {}
-  ~Tas27xx() = default;
 
   zx_status_t WriteReg(uint8_t reg, uint8_t value);
   uint8_t ReadReg(uint8_t reg);

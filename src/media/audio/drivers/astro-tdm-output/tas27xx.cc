@@ -48,41 +48,45 @@ zx_status_t Tas27xx::SetGain(float gain) {
 bool Tas27xx::ValidGain(float gain) { return (gain <= kMaxGain) && (gain >= kMinGain); }
 
 zx_status_t Tas27xx::Init() {
-  zx_status_t status;
-
   // Put part in active, but muted state
-  Standby();
+  auto status = Standby();
+  if (status != ZX_OK) {
+    return status;
+  }
 
   // 128 clocks per frame, manually configure dividers
   status = WriteReg(CLOCK_CFG, (0x06 << 2) | 1);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // 48kHz, FSYNC on high to low transition
   // Disable autorate detection
   status = WriteReg(TDM_CFG0, (1 << 4) | (0x03 << 1) | 1);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // Left justified, offset 0 bclk, clock on falling edge of sclk
   //  our fsync is on falling edge, so first bit after falling edge is valid
   status = WriteReg(TDM_CFG1, (0 << 1) | 1);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // Mono (L+R)/2, 32bit sample, 32bit slot
   status = WriteReg(TDM_CFG2, (0x03 << 4) | (0x00 << 2) | 0x03);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
   // Left channel slot 0, Right channel slot 1
   status = WriteReg(TDM_CFG3, (1 << 4) | 0);
-  if (status != ZX_OK)
+  if (status != ZX_OK) {
     return status;
+  }
 
-  SetGain(0);
-
-  return ZX_OK;
+  return SetGain(0);
 }
 
 // Standby puts the part in active, but muted state

@@ -46,12 +46,18 @@ class SherlockAudioStreamOut : public SimpleAudioStream {
   zx_status_t SetGain(const audio_proto::SetGainReq& req) TA_REQ(domain_token()) override;
   void ShutdownHook() TA_REQ(domain_token()) override;
 
+  virtual zx_status_t InitPdev() TA_REQ(domain_token());  // virtual and protected for unit test.
+  zx_status_t InitCodecs() TA_REQ(domain_token());        // protected for unit test.
+
+  fbl::Array<std::unique_ptr<Tas5720>> codecs_
+      TA_GUARDED(domain_token());                                // protected for unit test.
+  ddk::GpioProtocolClient audio_en_ TA_GUARDED(domain_token());  // protected for unit test.
+
  private:
   friend class fbl::RefPtr<SherlockAudioStreamOut>;
 
   zx_status_t AddFormats() TA_REQ(domain_token());
   zx_status_t InitBuffer(size_t size) TA_REQ(domain_token());
-  zx_status_t InitPdev() TA_REQ(domain_token());
   void ProcessRingNotification();
 
   uint32_t us_per_notification_ = 0;
@@ -59,11 +65,9 @@ class SherlockAudioStreamOut : public SimpleAudioStream {
       notify_timer_ TA_GUARDED(domain_token()){this};
   ddk::PDev pdev_ TA_GUARDED(domain_token());
   metadata::Codec codecs_types_ TA_GUARDED(domain_token());
-  fbl::Array<std::unique_ptr<Tas5720>> codecs_ TA_GUARDED(domain_token());
   zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_token());
   fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(domain_token());
   std::unique_ptr<AmlTdmDevice> aml_audio_;
-  ddk::GpioProtocolClient audio_en_ TA_GUARDED(domain_token());
   ddk::GpioProtocolClient audio_fault_ TA_GUARDED(domain_token());
   zx::bti bti_ TA_GUARDED(domain_token());
 };
