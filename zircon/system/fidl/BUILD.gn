@@ -195,7 +195,6 @@ group("fidl") {
     "fuchsia-posix-socket",
 #------------------
 #------------------
-    "fuchsia-power",
 #------------------
 #------------------
     "fuchsia-process",
