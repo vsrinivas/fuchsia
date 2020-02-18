@@ -14,6 +14,7 @@ group("tests") {
 test("io_conformance_fdio") {
   sources = [ "fdio.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.io.test",
     "//sdk/lib/sys/cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
@@ -21,7 +22,6 @@ test("io_conformance_fdio") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/system/fidl/fuchsia-io",
-    "//zircon/system/fidl/fuchsia-io-test",
   ]
 }
 

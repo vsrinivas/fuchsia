@@ -10,6 +10,7 @@ executable("bin") {
   output_name = "io_conformance_harness_sdkcpp"
   sources = [ "harness.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.io.test",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/vfs/cpp",
     "//src/lib/syslog/cpp",
@@ -18,7 +19,6 @@ executable("bin") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fdio",
     "//zircon/system/fidl/fuchsia-io",
-    "//zircon/system/fidl/fuchsia-io-test",
   ]
 }
 
