@@ -17,7 +17,10 @@ import("//build/unification/images/migrated_manifest.gni")
 
 group("psutils") {
   testonly = true
-  deps = [ ":ps" ]
+  deps = [
+    ":handles",
+    ":ps",
+  ]
 }
 
 test("ps") {
@@ -35,6 +38,25 @@ test("ps") {
   ]
 }
 
+test("handles") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [ "handles_test.cc" ]
+  deps = [
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/pretty",
+    "//zircon/public/lib/task-utils",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/uapp/psutils:handles_internal",
+  ]
+}
+
 migrated_manifest("ps-manifest") {
   deps = [ ":ps" ]
+}
+
+migrated_manifest("handles-manifest") {
+  deps = [ ":handles" ]
 }

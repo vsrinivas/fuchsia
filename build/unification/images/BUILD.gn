@@ -1339,6 +1339,7 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/uapp/minfs:minfs-manifest",
     "//zircon/system/uapp/psutils:kill-manifest",
     "//zircon/system/uapp/psutils:killall-manifest",
+    "//zircon/system/uapp/psutils:handles-manifest",
 #------------------
     #":bin.kilo",
 #------------------
@@ -3145,6 +3146,7 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/utest/profile:profile-manifest",
     "//zircon/system/utest/property:property-manifest",
     "//zircon/system/utest/psutils:ps-manifest",
+    "//zircon/system/utest/psutils:handles-manifest",
     "//zircon/system/utest/pty:pty-manifest",
 #------------------
     #":test.sys.ptysvc-test-test",
@@ -3858,6 +3860,7 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/utest/profile:profile-manifest",
     "//zircon/system/utest/property:property-manifest",
     "//zircon/system/utest/psutils:ps-manifest",
+    "//zircon/system/utest/psutils:handles-manifest",
     "//zircon/system/utest/pty:pty-manifest",
 #------------------
     #":test.sys.ptysvc-test-test",

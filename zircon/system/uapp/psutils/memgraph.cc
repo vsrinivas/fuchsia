@@ -7,18 +7,20 @@
 
 #include <getopt.h>
 #include <inttypes.h>
-#include <new>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-
 #include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/syscalls/object.h>
+
+#include <new>
+
 #include <task-utils/walker.h>
 
+#include "object-utils.h"
 #include "resources.h"
 #include "vmo-utils.h"
 
@@ -26,58 +28,6 @@
 #include "memgraph-schema.h"
 
 namespace {
-
-const char* obj_type_get_name(zx_obj_type_t type) {
-  switch (type) {
-    case ZX_OBJ_TYPE_NONE:
-      return "none";
-    case ZX_OBJ_TYPE_PROCESS:
-      return "process";
-    case ZX_OBJ_TYPE_THREAD:
-      return "thread";
-    case ZX_OBJ_TYPE_VMO:
-      return "vmo";
-    case ZX_OBJ_TYPE_CHANNEL:
-      return "channel";
-    case ZX_OBJ_TYPE_EVENT:
-      return "event";
-    case ZX_OBJ_TYPE_PORT:
-      return "port";
-    case ZX_OBJ_TYPE_INTERRUPT:
-      return "interrupt";
-    case ZX_OBJ_TYPE_PCI_DEVICE:
-      return "pci_device";
-    case ZX_OBJ_TYPE_LOG:
-      return "log";
-    case ZX_OBJ_TYPE_SOCKET:
-      return "socket";
-    case ZX_OBJ_TYPE_RESOURCE:
-      return "resource";
-    case ZX_OBJ_TYPE_EVENTPAIR:
-      return "eventpair";
-    case ZX_OBJ_TYPE_JOB:
-      return "job";
-    case ZX_OBJ_TYPE_VMAR:
-      return "vmar";
-    case ZX_OBJ_TYPE_FIFO:
-      return "fifo";
-    case ZX_OBJ_TYPE_GUEST:
-      return "guest";
-    case ZX_OBJ_TYPE_VCPU:
-      return "vcpu";
-    case ZX_OBJ_TYPE_TIMER:
-      return "timer";
-    case ZX_OBJ_TYPE_IOMMU:
-      return "iommu";
-    case ZX_OBJ_TYPE_BTI:
-      return "bti";
-    case ZX_OBJ_TYPE_PROFILE:
-      return "profile";
-    default:
-      return "unknown";
-  }
-}
-
 // Prints info about VMOs and their relationship to a process.
 // Assumes we're in the middle of dumping a process.
 // TODO(dbort): Insert some special entry if count < avail?

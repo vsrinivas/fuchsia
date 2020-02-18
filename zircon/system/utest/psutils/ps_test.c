@@ -11,7 +11,7 @@
 
 // Last character koid of deepest entry was getting dropped, see
 // https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=7014#c48.
-TEST(PrintTable, FullKoid) {
+TEST(PsUtilsPrintTable, FullKoid) {
   char buf[4096];
   FILE* f = fmemopen(buf, sizeof(buf), "w");
   ASSERT_TRUE(f != NULL);
@@ -64,17 +64,17 @@ TEST(PrintTable, FullKoid) {
             0);
 }
 
-TEST(PsUtils, PrintAll) {
+TEST(PsUtilsPs, PrintAll) {
   ps_options_t options = {.also_show_threads = false, .only_show_jobs = false, .format_unit = 0};
   ASSERT_OK(show_all_jobs(&options));
 }
 
-TEST(PsUtils, PrintAllThreads) {
+TEST(PsUtilsPs, PrintAllThreads) {
   ps_options_t options = {.also_show_threads = true, .only_show_jobs = false, .format_unit = 0};
   ASSERT_OK(show_all_jobs(&options));
 }
 
-TEST(PsUtils, PrintAllJobs) {
+TEST(PsUtilsPs, PrintAllJobs) {
   ps_options_t options = {.also_show_threads = false, .only_show_jobs = true, .format_unit = 0};
   ASSERT_OK(show_all_jobs(&options));
 }
