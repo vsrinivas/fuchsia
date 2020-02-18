@@ -1107,7 +1107,7 @@ impl Context<Spinel> for SpinelContext {
             ext: &mut rs_image as *mut _ as *mut c_void,
             styling: spn_styling,
             composition: spn_composition,
-            clip: [clip.origin.x, clip.origin.y, clip.size.width, clip.size.height],
+            clip: [clip.min_x(), clip.min_y(), clip.max_x(), clip.max_y()],
         };
 
         unsafe {

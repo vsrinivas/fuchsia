@@ -94,10 +94,11 @@ pub struct SpinelComposition {
 impl SpinelComposition {
     pub(crate) fn set_up_spn_composition(&self, composition: SpnComposition, clip: Rect<u32>) {
         unsafe {
+            let clip = [clip.min_x(), clip.min_y(), clip.max_x(), clip.max_y()];
             spn!(spn_composition_reset(composition));
             spn!(spn_composition_set_clip(
                 composition,
-                [clip.origin.x, clip.origin.y, clip.size.width, clip.size.height].as_ptr(),
+                clip.as_ptr(),
             ));
         }
 
