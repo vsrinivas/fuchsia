@@ -177,6 +177,7 @@ driver_module("test-spi") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "test/spi.cc" ]
   deps = [
+    "//sdk/banjo/ddk.protocol.spiimpl",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -185,7 +186,6 @@ driver_module("test-spi") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.spi",
-    "//zircon/system/banjo/ddk.protocol.spiimpl",
   ]
 }
 

@@ -16,6 +16,7 @@ driver_module("aml-spi") {
   sources = [ "aml-spi.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.spiimpl",
     "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
@@ -25,7 +26,6 @@ driver_module("aml-spi") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.gpio",
-    "//zircon/system/banjo/ddk.protocol.spiimpl",
   ]
 }
 

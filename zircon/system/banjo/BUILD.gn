@@ -151,7 +151,6 @@ group("banjo") {
     "ddk.protocol.spi",
 #------------------
 #------------------
-    "ddk.protocol.spiimpl",
 #------------------
 #------------------
     "ddk.protocol.sysmem",
