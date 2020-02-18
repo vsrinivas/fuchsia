@@ -49,6 +49,7 @@ test("aml-uart-test") {
     "//sdk/banjo/ddk.protocol.composite",
     "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl.async",
+    "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
@@ -67,7 +68,6 @@ test("aml-uart-test") {
     "//zircon/system/banjo/ddk.protocol.acpi",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/fidl/fuchsia-hardware-serial:c",
   ]
 }
 

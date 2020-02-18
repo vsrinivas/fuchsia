@@ -16,10 +16,10 @@ driver_module("bt-transport-uart") {
     "//sdk/banjo/ddk.protocol.bt.hci",
     "//sdk/banjo/ddk.protocol.serial",
     "//sdk/banjo/ddk.protocol.serialimpl.async",
+    "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/sync",
-    "//zircon/system/fidl/fuchsia-hardware-serial:c",
   ]
 }
 

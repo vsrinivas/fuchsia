@@ -78,6 +78,7 @@ test("xhci-unittest") {
     "//sdk/banjo/ddk.protocol.serialimpl.async",
     "//sdk/banjo/ddk.protocol.usb.hci",
     "//sdk/banjo/ddk.protocol.usb.phy",
+    "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/device-protocol-pci",
@@ -97,7 +98,6 @@ test("xhci-unittest") {
     "//zircon/system/banjo/ddk.protocol.acpi",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
-    "//zircon/system/fidl/fuchsia-hardware-serial:c",
   ]
 }
 

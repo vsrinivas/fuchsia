@@ -70,11 +70,10 @@ protocol NewDevice {
 
     /// Reads data from the serial port
     Read() -> (vector<uint8>:MAX data) error zx.status;
-    
+
     /// Writes data to the serial port
     Write(vector<uint8>:MAX data) -> () error zx.status;
 };
-
 
 protocol NewDeviceProxy {
     GetChannel(request<NewDevice> req);
