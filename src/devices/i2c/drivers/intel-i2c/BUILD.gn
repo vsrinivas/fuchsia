@@ -19,6 +19,7 @@ driver_module("intel-i2c") {
     "intel-i2c-subordinate.c",
   ]
   deps = [
+    "//sdk/banjo/ddk.protocol.i2cimpl",
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddk",
@@ -26,7 +27,6 @@ driver_module("intel-i2c") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/banjo/ddk.protocol.i2c",
-    "//zircon/system/banjo/ddk.protocol.i2cimpl",
     "//zircon/system/banjo/ddk.protocol.pci",
   ]
   public_configs = [ ":internal" ]

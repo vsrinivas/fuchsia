@@ -29,6 +29,7 @@ source_set("shared") {
   ]
   public_deps = [
     "//sdk/banjo/ddk.protocol.display.capture",
+    "//sdk/banjo/ddk.protocol.i2cimpl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -46,7 +47,6 @@ source_set("shared") {
     "//zircon/public/lib/trace-driver",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.display.controller",
-    "//zircon/system/banjo/ddk.protocol.i2cimpl",
     "//zircon/system/fidl/fuchsia-hardware-display:llcpp",
     "//zircon/system/fidl/fuchsia-sysmem:c",
   ]

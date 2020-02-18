@@ -9,6 +9,7 @@ import("//build/unification/images/migrated_manifest.gni")
 source_set("common") {
   public_deps = [
     "//sdk/banjo/ddk.protocol.composite",
+    "//sdk/banjo/ddk.protocol.i2cimpl",
     "//zircon/public/lib/amlogic",
     "//zircon/public/lib/audio-driver-proto",
     "//zircon/public/lib/audio-proto-utils",
@@ -29,7 +30,6 @@ source_set("common") {
     "//zircon/system/banjo/ddk.protocol.amlogiccanvas",
     "//zircon/system/banjo/ddk.protocol.display.controller",
     "//zircon/system/banjo/ddk.protocol.gpio",
-    "//zircon/system/banjo/ddk.protocol.i2cimpl",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-sysmem:c",
