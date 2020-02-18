@@ -20,7 +20,7 @@ enum HidReportType : uint8 {
 
 enum HidProtocol : uint8 {
     BOOT = 0;
-    REPORT = 0;
+    REPORT = 1;
 };
 
 enum HidDeviceClass : uint8 {

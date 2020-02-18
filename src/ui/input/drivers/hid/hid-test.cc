@@ -556,11 +556,13 @@ TEST_F(HidDeviceTest, SettingBootModeMouse) {
   const uint8_t* desc = get_paradise_touchpad_v1_report_desc(&desc_size);
   fake_hidbus_.SetDescriptor(desc, desc_size);
 
-  // This info is the reason why the device will be set to a boot mouse mode.
   hid_info_t info = {};
   info.device_class = HID_DEVICE_CLASS_POINTER;
   info.boot_device = true;
   fake_hidbus_.SetHidInfo(info);
+
+  // Set the device to boot protocol.
+  fake_hidbus_.HidbusSetProtocol(HID_PROTOCOL_BOOT);
 
   ASSERT_OK(device_->Bind(client_));
 
@@ -584,11 +586,13 @@ TEST_F(HidDeviceTest, SettingBootModeKbd) {
   const uint8_t* desc = get_paradise_touchpad_v1_report_desc(&desc_size);
   fake_hidbus_.SetDescriptor(desc, desc_size);
 
-  // This info is the reason why the device will be set to a boot mouse mode.
   hid_info_t info = {};
   info.device_class = HID_DEVICE_CLASS_KBD;
   info.boot_device = true;
   fake_hidbus_.SetHidInfo(info);
+
+  // Set the device to boot protocol.
+  fake_hidbus_.HidbusSetProtocol(HID_PROTOCOL_BOOT);
 
   ASSERT_OK(device_->Bind(client_));
 
