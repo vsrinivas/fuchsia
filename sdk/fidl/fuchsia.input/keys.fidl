@@ -1,0 +1,347 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.input;
+
+/// A Fuchsia key represents a control that can be pressed or released such as a key or
+/// a button on a keyboard or another input device.
+///
+/// The ordinal index for enum elements is derived from the USB HID Usage Tables at the
+/// time of definition. It is a 32 bit unsigned integer representing the USB HID Usage
+/// where the low 16 bits are the USB HID Usage ID and the high 16 bits are the
+/// USB HID Usage Page.
+///
+/// The descriptions for each value in the enum assume a US English keyboard layout.
+/// Actual behavior varies by layout.
+enum Key : uint32 {
+    /// Keyboard a and A
+    A = 0x00070004;
+
+    /// Keyboard b and B
+    B = 0x00070005;
+
+    /// Keyboard c and C
+    C = 0x00070006;
+
+    /// Keyboard d and D
+    D = 0x00070007;
+
+    /// Keyboard e and E
+    E = 0x00070008;
+
+    /// Keyboard f and F
+    F = 0x00070009;
+
+    /// Keyboard g and G
+    G = 0x0007000a;
+
+    /// Keyboard h and H
+    H = 0x0007000b;
+
+    /// Keyboard i and I
+    I = 0x0007000c;
+
+    /// Keyboard j and J
+    J = 0x0007000d;
+
+    /// Keyboard k and K
+    K = 0x0007000e;
+
+    /// Keyboard l and L
+    L = 0x0007000f;
+
+    /// Keyboard m and M
+    M = 0x00070010;
+
+    /// Keyboard n and N
+    N = 0x00070011;
+
+    /// Keyboard o and O
+    O = 0x00070012;
+
+    /// Keyboard p and P
+    P = 0x00070013;
+
+    /// Keyboard q and Q
+    Q = 0x00070014;
+
+    /// Keyboard r and R
+    R = 0x00070015;
+
+    /// Keyboard s and S
+    S = 0x00070016;
+
+    /// Keyboard t and T
+    T = 0x00070017;
+
+    /// Keyboard u and U
+    U = 0x00070018;
+
+    /// Keyboard v and V
+    V = 0x00070019;
+
+    /// Keyboard w and W
+    W = 0x0007001a;
+
+    /// Keyboard x and X
+    X = 0x0007001b;
+
+    /// Keyboard y and Y
+    Y = 0x0007001c;
+
+    /// Keyboard z and Z
+    Z = 0x0007001d;
+
+    /// Keyboard 1 and !
+    KEY_1 = 0x0007001e;
+
+    /// Keyboard 2 and @
+    KEY_2 = 0x0007001f;
+
+    /// Keyboard 3 and #
+    KEY_3 = 0x00070020;
+
+    /// Keyboard 4 and $
+    KEY_4 = 0x00070021;
+
+    /// Keyboard 5 and %
+    KEY_5 = 0x00070022;
+
+    /// Keyboard 6 and ^
+    KEY_6 = 0x00070023;
+
+    /// Keyboard 7 and &
+    KEY_7 = 0x00070024;
+
+    /// Keyboard 8 and *
+    KEY_8 = 0x00070025;
+
+    /// Keyboard 9 and (
+    KEY_9 = 0x00070026;
+
+    /// Keyboard 0 and )
+    KEY_0 = 0x00070027;
+
+    /// Keyboard Enter (Return)
+    ENTER = 0x00070028;
+
+    /// Keyboard Escape
+    ESCAPE = 0x00070029;
+
+    /// Keyboard Backspace (Backward Delete)
+    BACKSPACE = 0x0007002a;
+
+    /// Keyboard Tab
+    TAB = 0x0007002b;
+
+    /// Keyboard Spacebar
+    SPACE = 0x0007002c;
+
+    /// Keyboard - and (underscore)
+    MINUS = 0x0007002d;
+
+    /// Keyboard = and +
+    EQUALS = 0x0007002e;
+
+    /// Keyboard [ and {
+    LEFT_BRACE = 0x0007002f;
+
+    /// Keyboard ] and }
+    RIGHT_BRACE = 0x00070030;
+
+    /// Keyboard \ and |
+    BACKSLASH = 0x00070031;
+
+    /// Keyboard Non-US # and ~
+    NON_US_HASH = 0x00070032;
+
+    /// Keyboard ; and :
+    SEMICOLON = 0x00070033;
+
+    /// Keyboard ' and "
+    APOSTROPHE = 0x00070034;
+
+    /// Keyboard Grave Accent and Tilde
+    GRAVE_ACCENT = 0x00070035;
+
+    /// Keyboard , and <
+    COMMA = 0x00070036;
+
+    /// Keyboard . and >
+    DOT = 0x00070037;
+
+    /// Keyboard / and ?
+    SLASH = 0x00070038;
+
+    /// Keyboard Caps Lock
+    CAPS_LOCK = 0x00070039;
+
+    /// Keyboard F1
+    F1 = 0x0007003a;
+
+    /// Keyboard F2
+    F2 = 0x0007003b;
+
+    /// Keyboard F3
+    F3 = 0x0007003c;
+
+    /// Keyboard F4
+    F4 = 0x0007003d;
+
+    /// Keyboard F5
+    F5 = 0x0007003e;
+
+    /// Keyboard F6
+    F6 = 0x0007003f;
+
+    /// Keyboard F7
+    F7 = 0x00070040;
+
+    /// Keyboard F8
+    F8 = 0x00070041;
+
+    /// Keyboard F9
+    F9 = 0x00070042;
+
+    /// Keyboard F10
+    F10 = 0x00070043;
+
+    /// Keyboard F11
+    F11 = 0x00070044;
+
+    /// Keyboard F12
+    F12 = 0x00070045;
+
+    /// Keyboard Print Screen
+    PRINT_SCREEN = 0x00070046;
+
+    /// Keyboard Scroll Lock
+    SCROLL_LOCK = 0x00070047;
+
+    /// Keyboard Pause
+    PAUSE = 0x00070048;
+
+    /// Keyboard Insert
+    INSERT = 0x00070049;
+
+    /// Keyboard Home
+    HOME = 0x0007004a;
+
+    /// Keyboard Page Up
+    PAGE_UP = 0x0007004b;
+
+    /// Keyboard Forward Delete
+    DELETE = 0x0007004c;
+
+    /// Keyboard End
+    END = 0x0007004d;
+
+    /// Keyboard Page Down
+    PAGE_DOWN = 0x0007004e;
+
+    /// Keyboard Right Arrow
+    RIGHT = 0x0007004f;
+
+    /// Keyboard Left Arrow
+    LEFT = 0x00070050;
+
+    /// Keyboard Down Arrow
+    DOWN = 0x00070051;
+
+    /// Keyboard Up Arrow
+    UP = 0x00070052;
+
+    /// Keyboard Non-US \ and |
+    NON_US_BACKSLASH = 0x00070064;
+
+    /// Keyboard Left Control
+    LEFT_CTRL = 0x000700e0;
+
+    /// Keyboard Left Shift
+    LEFT_SHIFT = 0x000700e1;
+
+    /// Keyboard Left Alt
+    LEFT_ALT = 0x000700e2;
+
+    /// Keyboard Left GUI (Meta, Windows)
+    LEFT_META = 0x000700e3;
+
+    /// Keyboard Right Control
+    RIGHT_CTRL = 0x000700e4;
+
+    /// Keyboard Right Shift
+    RIGHT_SHIFT = 0x000700e5;
+
+    /// Keyboard Right Alt
+    RIGHT_ALT = 0x000700e6;
+
+    /// Keyboard Right GUI (Meta, Windows)
+    RIGHT_META = 0x000700e7;
+
+    /// Keyboard Menu
+    MENU = 0x00070076;
+
+    /// Keypad Num Lock and Clear
+    NUM_LOCK = 0x00070053;
+
+    /// Keypad /
+    KEYPAD_SLASH = 0x00070054;
+
+    /// Keypad *
+    KEYPAD_ASTERISK = 0x00070055;
+
+    /// Keypad -
+    KEYPAD_MINUS = 0x00070056;
+
+    /// Keypad +
+    KEYPAD_PLUS = 0x00070057;
+
+    /// Keypad ENTER
+    KEYPAD_ENTER = 0x00070058;
+
+    /// Keypad 1 and End
+    KEYPAD_1 = 0x00070059;
+
+    /// Keypad 2 and Down Arrow
+    KEYPAD_2 = 0x0007005a;
+
+    /// Keypad 3 and Page Down
+    KEYPAD_3 = 0x0007005b;
+
+    /// Keypad 4 and Left Arrow
+    KEYPAD_4 = 0x0007005c;
+
+    /// Keypad 5
+    KEYPAD_5 = 0x0007005d;
+
+    /// Keypad 6 and Right Arrow
+    KEYPAD_6 = 0x0007005e;
+
+    /// Keypad 7 and Home
+    KEYPAD_7 = 0x0007005f;
+
+    /// Keypad 8 and Up Arrow
+    KEYPAD_8 = 0x00070060;
+
+    /// Keypad 9 and Page Up
+    KEYPAD_9 = 0x00070061;
+
+    /// Keypad 0 and Insert
+    KEYPAD_0 = 0x00070062;
+
+    /// Keypad . and Delete
+    KEYPAD_DOT = 0x00070063;
+
+    /// Keypad =
+    KEYPAD_EQUALS = 0x00070067;
+
+    /// Mute
+    MEDIA_MUTE = 0x000c00e2;
+
+    /// Volume Increment
+    MEDIA_VOLUME_INCREMENT = 0x000c00e9;
+
+    /// Volume Decrement
+    MEDIA_VOLUME_DECREMENT = 0x000c00ea;
+};

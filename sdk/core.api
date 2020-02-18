@@ -35,6 +35,7 @@ sdk://fidl/fuchsia.hardware.goldfish
 sdk://fidl/fuchsia.hardware.power.statecontrol
 sdk://fidl/fuchsia.hwinfo
 sdk://fidl/fuchsia.images
+sdk://fidl/fuchsia.input
 sdk://fidl/fuchsia.inspect
 sdk://fidl/fuchsia.intl
 sdk://fidl/fuchsia.io
