@@ -5,5 +5,5 @@
 library deprecated.composite;
 
 extend uint deprecated.BIND_PROTOCOL {
-  DEVICE = 34,
+  DEVICE = 7,
 };
