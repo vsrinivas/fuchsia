@@ -7,11 +7,14 @@ library fuchsia.input.report;
 /// A hardcoded number of max contacts per report. This should be increased in the future if
 /// we see devices with more than the max amount.
 const uint32 TOUCH_MAX_CONTACTS = 10;
+const uint32 TOUCH_MAX_NUM_BUTTONS = 10;
 
 /// The device type from which the touch originated.
 enum TouchType : uint32 {
     /// A touch screen has direct finger input associated with a display.
     TOUCHSCREEN = 1;
+    /// A touch pad is a pointer device that tracks finger positions.
+    TOUCHPAD = 2;
 };
 
 /// `ContactDescriptor` describes the fields associated with a touch on a touch device.
@@ -43,6 +46,9 @@ table TouchInputDescriptor {
 
     /// The type of touch device being used.
     3: TouchType touch_type;
+
+    /// Identifiers for the physical buttons on a touch device.
+    4: vector<uint8>:TOUCH_MAX_NUM_BUTTONS buttons;
 };
 
 /// The capabilities of a touch device.
@@ -81,4 +87,7 @@ table ContactInputReport {
 table TouchInputReport {
     /// The contacts currently being reported by the device.
     1: vector<ContactInputReport>:TOUCH_MAX_CONTACTS contacts;
+
+    /// Identifiers for currently pressed buttons.
+    2: vector<uint8>:TOUCH_MAX_NUM_BUTTONS pressed_buttons;
 };

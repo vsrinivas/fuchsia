@@ -88,8 +88,12 @@ void SetTouchInputDescriptor(FidlTouchInputDescriptor* descriptor) {
 
   descriptor->contacts_view = fidl::VectorView<fuchsia_input_report::ContactInputDescriptor>(
       descriptor->contacts_built.data(), descriptor->data.num_contacts);
-
   descriptor->builder.set_contacts(fidl::unowned(&descriptor->contacts_view));
+
+  descriptor->buttons_view =
+      fidl::VectorView<uint8_t>(descriptor->data.buttons.data(), descriptor->data.num_buttons);
+  descriptor->builder.set_buttons(fidl::unowned(&descriptor->buttons_view));
+
   descriptor->builder.set_max_contacts(fidl::unowned(&descriptor->data.max_contacts));
   descriptor->builder.set_touch_type(fidl::unowned(&descriptor->data.touch_type));
 
@@ -126,6 +130,10 @@ void SetTouchInputReport(FidlTouchInputReport* report) {
   report->contacts_view = fidl::VectorView<fuchsia_input_report::ContactInputReport>(
       report->contacts_built.data(), report->data.num_contacts);
   report->builder.set_contacts(fidl::unowned(&report->contacts_view));
+
+  report->pressed_buttons_view = fidl::VectorView<uint8_t>(report->data.pressed_buttons.data(),
+                                                           report->data.num_pressed_buttons);
+  report->builder.set_pressed_buttons(fidl::unowned(&report->pressed_buttons_view));
 
   report->report = report->builder.build();
 }
@@ -315,6 +323,12 @@ TouchDescriptor ToTouchDescriptor(const fuchsia_input_report::TouchDescriptor& f
     if (fidl_descriptor.input().has_max_contacts()) {
       input.max_contacts = fidl_descriptor.input().max_contacts();
     }
+    if (fidl_descriptor.input().has_buttons()) {
+      input.num_buttons = fidl_descriptor.input().buttons().count();
+      for (size_t i = 0; i < input.num_buttons; i++) {
+        input.buttons[i] = fidl_descriptor.input().buttons()[i];
+      }
+    }
 
     if (fidl_descriptor.input().has_contacts()) {
       input.num_contacts = fidl_descriptor.input().contacts().count();
@@ -421,6 +435,12 @@ TouchInputReport ToTouchInputReport(const fuchsia_input_report::TouchInputReport
         contact.contact_height = fidl_contact.contact_height();
       }
       report.contacts[i] = contact;
+    }
+  }
+  if (fidl_report.has_pressed_buttons()) {
+    report.num_pressed_buttons = fidl_report.pressed_buttons().count();
+    for (size_t i = 0; i < report.num_pressed_buttons; i++) {
+      report.pressed_buttons[i] = fidl_report.pressed_buttons()[i];
     }
   }
   return report;

@@ -56,6 +56,7 @@ struct FidlTouchInputDescriptor {
   std::array<fuchsia_input_report::ContactInputDescriptor, fuchsia_input_report::TOUCH_MAX_CONTACTS>
       contacts_built;
   std::array<FidlContactInputDescriptor, fuchsia_input_report::TOUCH_MAX_CONTACTS> contacts_builder;
+  fidl::VectorView<uint8_t> buttons_view;
 
   TouchInputDescriptor data;
 };
@@ -131,6 +132,7 @@ struct FidlTouchInputReport {
   std::array<fuchsia_input_report::ContactInputReport, fuchsia_input_report::TOUCH_MAX_CONTACTS>
       contacts_built;
   fidl::VectorView<fuchsia_input_report::ContactInputReport> contacts_view;
+  fidl::VectorView<uint8_t> pressed_buttons_view;
 
   // Holds the actual data that the builders/views point to.
   TouchInputReport data;

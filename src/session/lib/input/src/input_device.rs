@@ -354,6 +354,7 @@ mod tests {
                                 contacts: None,
                                 max_contacts: None,
                                 touch_type: None,
+                                buttons: None,
                             }),
                         }),
                         keyboard: None,
@@ -468,6 +469,7 @@ mod tests {
                                 contacts: None,
                                 max_contacts: None,
                                 touch_type: None,
+                                buttons: None,
                             }),
                         }),
                         keyboard: Some(fidl_fuchsia_input_report::KeyboardDescriptor {

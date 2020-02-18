@@ -173,6 +173,10 @@ TEST(FidlTest, TouchInputDescriptor) {
 
   touch_desc.input->num_contacts = 1;
 
+  touch_desc.input->num_buttons = 2;
+  touch_desc.input->buttons[0] = 1;
+  touch_desc.input->buttons[1] = 2;
+
   hid_input_report::ReportDescriptor desc;
   desc.descriptor = touch_desc;
 
@@ -192,6 +196,11 @@ TEST(FidlTest, TouchInputDescriptor) {
   TestAxis(*touch_desc.input->contacts[0].position_x, *new_desc.input->contacts[0].position_x);
   TestAxis(*touch_desc.input->contacts[0].position_y, *new_desc.input->contacts[0].position_y);
   TestAxis(*touch_desc.input->contacts[0].pressure, *new_desc.input->contacts[0].pressure);
+
+  ASSERT_EQ(touch_desc.input->num_buttons, new_desc.input->num_buttons);
+  for (size_t i = 0; i < touch_desc.input->num_buttons; i++) {
+    ASSERT_EQ(touch_desc.input->buttons[i], new_desc.input->buttons[i]);
+  }
 }
 
 TEST(FidlTest, TouchInputReport) {
@@ -204,6 +213,9 @@ TEST(FidlTest, TouchInputReport) {
   touch_report.contacts[0].pressure = 345;
   touch_report.contacts[0].contact_width = 678;
   touch_report.contacts[0].contact_height = 789;
+  touch_report.num_pressed_buttons = 2;
+  touch_report.pressed_buttons[0] = 123;
+  touch_report.pressed_buttons[1] = 234;
 
   hid_input_report::InputReport report;
   report.report = touch_report;
@@ -222,6 +234,10 @@ TEST(FidlTest, TouchInputReport) {
   EXPECT_EQ(touch_report.contacts[0].pressure, new_touch.contacts[0].pressure);
   EXPECT_EQ(touch_report.contacts[0].contact_width, new_touch.contacts[0].contact_width);
   EXPECT_EQ(touch_report.contacts[0].contact_height, new_touch.contacts[0].contact_height);
+  EXPECT_EQ(touch_report.num_pressed_buttons, new_touch.num_pressed_buttons);
+  for (size_t i = 0; i < touch_report.num_pressed_buttons; i++) {
+    EXPECT_EQ(touch_report.pressed_buttons[i], new_touch.pressed_buttons[i]);
+  }
 }
 
 TEST(FidlTest, KeyboardInputDescriptor) {

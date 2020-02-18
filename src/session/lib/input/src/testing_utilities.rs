@@ -125,7 +125,10 @@ pub fn create_touch_input_report(
         event_time: None,
         keyboard: None,
         mouse: None,
-        touch: Some(fidl_input_report::TouchInputReport { contacts: Some(contacts) }),
+        touch: Some(fidl_input_report::TouchInputReport {
+            contacts: Some(contacts),
+            pressed_buttons: None,
+        }),
         sensor: None,
         consumer_control: None,
         trace_id: None,

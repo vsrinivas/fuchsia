@@ -70,6 +70,9 @@ struct TouchInputDescriptor {
   /// This describes each of the contact capabilities.
   std::array<ContactInputDescriptor, fuchsia_input_report::TOUCH_MAX_CONTACTS> contacts;
   size_t num_contacts = 0;
+
+  std::array<uint8_t, fuchsia_input_report::TOUCH_MAX_NUM_BUTTONS> buttons;
+  size_t num_buttons = 0;
 };
 
 struct TouchDescriptor {
@@ -94,6 +97,9 @@ struct TouchInputReport {
   /// The contacts currently being reported by the device.
   std::array<ContactInputReport, fuchsia_input_report::TOUCH_MAX_CONTACTS> contacts;
   size_t num_contacts = 0;
+
+  std::array<uint8_t, fuchsia_input_report::TOUCH_MAX_NUM_BUTTONS> pressed_buttons;
+  size_t num_pressed_buttons = 0;
 };
 
 struct KeyboardInputDescriptor {

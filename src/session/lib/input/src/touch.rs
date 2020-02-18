@@ -270,6 +270,7 @@ impl TouchBinding {
                         contacts: Some(contact_descriptors),
                         max_contacts: _,
                         touch_type: _,
+                        buttons: _,
                     }),
             }) => Ok(TouchBinding {
                 event_sender: input_event_sender,
