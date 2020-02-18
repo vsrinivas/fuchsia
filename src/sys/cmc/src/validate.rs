@@ -150,7 +150,9 @@ struct ValidationContext<'a> {
 /// namespace they are in.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 enum CapabilityId<'a> {
-    Path(&'a str),
+    Service(&'a str),
+    Protocol(&'a str),
+    Directory(&'a str),
     Runner(&'a str),
     Resolver(&'a str),
     StorageType(&'a str),
@@ -160,20 +162,33 @@ impl<'a> CapabilityId<'a> {
     /// Return the string ID of this clause.
     pub fn as_str(&self) -> &'a str {
         match self {
-            CapabilityId::Path(p) => p,
-            CapabilityId::Runner(r) => r,
-            CapabilityId::Resolver(r) => r,
-            CapabilityId::StorageType(s) => s,
+            CapabilityId::Service(p)
+            | CapabilityId::Protocol(p)
+            | CapabilityId::Directory(p)
+            | CapabilityId::Runner(p)
+            | CapabilityId::Resolver(p)
+            | CapabilityId::StorageType(p) => p,
         }
     }
 
     /// Human readable description of this capability type.
     pub fn type_str(&self) -> &'static str {
         match self {
-            CapabilityId::Path(_) => "path",
+            CapabilityId::Service(_) => "service",
+            CapabilityId::Protocol(_) => "protocol",
+            CapabilityId::Directory(_) => "directory",
             CapabilityId::Runner(_) => "runner",
             CapabilityId::Resolver(_) => "resolver",
             CapabilityId::StorageType(_) => "storage type",
+        }
+    }
+
+    /// Return the directory containing the capability.
+    pub fn get_dir_path(&self) -> Option<&Path> {
+        match self {
+            CapabilityId::Directory(p) => Some(Path::new(p)),
+            CapabilityId::Service(p) | CapabilityId::Protocol(p) => Path::new(p).parent(),
+            _ => None,
         }
     }
 
@@ -193,23 +208,23 @@ impl<'a> CapabilityId<'a> {
         // using the "as" clause to rename if neccessary.
         let alias = clause.r#as();
         if let Some(svc) = clause.service().as_ref() {
-            return Ok(vec![CapabilityId::Path(alias.unwrap_or(svc))]);
+            return Ok(vec![CapabilityId::Service(alias.unwrap_or(svc))]);
         } else if let Some(OneOrMany::One(protocol)) = clause.protocol().as_ref() {
-            return Ok(vec![CapabilityId::Path(alias.unwrap_or(protocol))]);
+            return Ok(vec![CapabilityId::Protocol(alias.unwrap_or(protocol))]);
         } else if let Some(OneOrMany::Many(protocols)) = clause.protocol().as_ref() {
             return match (alias, protocols.len()) {
-                (Some(valid_alias), 1) => Ok(vec![CapabilityId::Path(valid_alias)]),
+                (Some(valid_alias), 1) => Ok(vec![CapabilityId::Protocol(valid_alias)]),
 
                 (Some(_), _) => Err(Error::validate(
                     "\"as\" field can only be specified when one `protocol` is supplied.",
                 )),
 
                 (None, _) => {
-                    Ok(protocols.iter().map(|svc: &String| CapabilityId::Path(svc)).collect())
+                    Ok(protocols.iter().map(|svc: &String| CapabilityId::Protocol(svc)).collect())
                 }
             };
         } else if let Some(p) = clause.directory().as_ref() {
-            return Ok(vec![CapabilityId::Path(alias.unwrap_or(p))]);
+            return Ok(vec![CapabilityId::Directory(alias.unwrap_or(p))]);
         } else if let Some(p) = clause.runner().as_ref() {
             return Ok(vec![CapabilityId::Runner(alias.unwrap_or(p))]);
         } else if let Some(p) = clause.resolver().as_ref() {
@@ -274,7 +289,7 @@ impl<'a> ValidationContext<'a> {
 
         // Validate "use".
         if let Some(uses) = self.document.r#use.as_ref() {
-            let mut used_ids = HashSet::new();
+            let mut used_ids = HashMap::new();
             for use_ in uses.iter() {
                 self.validate_use(&use_, &mut used_ids)?;
             }
@@ -282,7 +297,7 @@ impl<'a> ValidationContext<'a> {
 
         // Validate "expose".
         if let Some(exposes) = self.document.expose.as_ref() {
-            let mut used_ids = HashSet::new();
+            let mut used_ids = HashMap::new();
             for expose in exposes.iter() {
                 self.validate_expose(&expose, &mut used_ids)?;
             }
@@ -344,7 +359,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_use(
         &self,
         use_: &'a cml::Use,
-        used_ids: &mut HashSet<CapabilityId<'a>>,
+        used_ids: &mut HashMap<&'a str, CapabilityId<'a>>,
     ) -> Result<(), Error> {
         let storage = use_.storage.as_ref().map(|s| s.as_str());
         match (storage, &use_.r#as) {
@@ -363,12 +378,54 @@ impl<'a> ValidationContext<'a> {
         // Disallow multiple capability ids of the same name.
         let capability_ids = CapabilityId::from_clause(use_)?;
         for capability_id in capability_ids {
-            if !used_ids.insert(capability_id) {
+            if used_ids.insert(capability_id.as_str(), capability_id).is_some() {
                 return Err(Error::validate(format!(
                     "\"{}\" is a duplicate \"use\" target {}",
                     capability_id.as_str(),
                     capability_id.type_str()
                 )));
+            }
+            let dir = match capability_id.get_dir_path() {
+                Some(d) => d,
+                None => continue,
+            };
+
+            // Validate that paths-based capabilities (service, directory, protocol)
+            // are not prefixes of each other.
+            for (_, used_id) in used_ids.iter() {
+                if capability_id == *used_id {
+                    continue;
+                }
+                let used_dir = match used_id.get_dir_path() {
+                    Some(d) => d,
+                    None => continue,
+                };
+
+                if match (used_id, capability_id) {
+                    // Directories can't be the same or partially overlap.
+                    (CapabilityId::Directory(_), CapabilityId::Directory(_)) => {
+                        dir == used_dir || dir.starts_with(used_dir) || used_dir.starts_with(dir)
+                    }
+
+                    // Protocols and Services can't overlap with Directories.
+                    (_, CapabilityId::Directory(_)) | (CapabilityId::Directory(_), _) => {
+                        dir == used_dir || dir.starts_with(used_dir) || used_dir.starts_with(dir)
+                    }
+
+                    // Protocols and Services containing directories may be same, but
+                    // partial overlap is disallowed.
+                    (_, _) => {
+                        dir != used_dir && (dir.starts_with(used_dir) || used_dir.starts_with(dir))
+                    }
+                } {
+                    return Err(Error::validate(format!(
+                        "{} \"{}\" is a prefix of \"use\" target {} \"{}\"",
+                        capability_id.type_str(),
+                        capability_id.as_str(),
+                        used_id.type_str(),
+                        used_id.as_str()
+                    )));
+                }
             }
         }
 
@@ -386,7 +443,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_expose(
         &self,
         expose: &'a cml::Expose,
-        used_ids: &mut HashSet<CapabilityId<'a>>,
+        used_ids: &mut HashMap<&'a str, CapabilityId<'a>>,
     ) -> Result<(), Error> {
         self.validate_from_clause("expose", expose)?;
 
@@ -418,7 +475,7 @@ impl<'a> ValidationContext<'a> {
         // Ensure we haven't already exposed an entity of the same name.
         let capability_ids = CapabilityId::from_clause(expose)?;
         for capability_id in capability_ids {
-            if !used_ids.insert(capability_id) {
+            if used_ids.insert(capability_id.as_str(), capability_id).is_some() {
                 return Err(Error::validate(format!(
                     "\"{}\" is a duplicate \"expose\" target {} for \"{}\"",
                     capability_id.as_str(),
@@ -434,7 +491,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_offer(
         &self,
         offer: &'a cml::Offer,
-        used_ids: &mut HashMap<&'a cml::Name, HashSet<CapabilityId<'a>>>,
+        used_ids: &mut HashMap<&'a cml::Name, HashMap<&'a str, CapabilityId<'a>>>,
     ) -> Result<(), Error> {
         self.validate_from_clause("offer", offer)?;
 
@@ -499,9 +556,9 @@ impl<'a> ValidationContext<'a> {
 
             // Ensure that a target is not offered more than once.
             let target_cap_ids = CapabilityId::from_clause(offer)?;
-            let ids_for_entity = used_ids.entry(to_target).or_insert(HashSet::new());
+            let ids_for_entity = used_ids.entry(to_target).or_insert(HashMap::new());
             for target_cap_id in target_cap_ids {
-                if !ids_for_entity.insert(target_cap_id) {
+                if ids_for_entity.insert(target_cap_id.as_str(), target_cap_id).is_some() {
                     return Err(Error::validate(format!(
                         "\"{}\" is a duplicate \"offer\" target {} for \"{}\"",
                         target_cap_id.as_str(),
@@ -924,7 +981,7 @@ mod tests {
                   { "protocol": "/svc/fuchsia.sys2.Realm", "from": "framework" },
                 ],
             }),
-            result = Err(Error::validate("\"/svc/fuchsia.sys2.Realm\" is a duplicate \"use\" target path")),
+            result = Err(Error::validate("\"/svc/fuchsia.sys2.Realm\" is a duplicate \"use\" target protocol")),
         },
         test_cml_use_bad_duplicate_protocol => {
             input = json!({
@@ -969,6 +1026,33 @@ mod tests {
             result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /use/0")),
         },
 
+        test_cml_use_disallows_nested_dirs => {
+            input = json!({
+                "use": [
+                    { "directory": "/foo/bar", "rights": [ "r*" ] },
+                    { "directory": "/foo/bar/baz", "rights": [ "r*" ] },
+                ],
+            }),
+            result = Err(Error::validate("directory \"/foo/bar/baz\" is a prefix of \"use\" target directory \"/foo/bar\"")),
+        },
+        test_cml_use_disallows_common_prefixes_protocol => {
+            input = json!({
+                "use": [
+                    { "directory": "/foo/bar", "rights": [ "r*" ] },
+                    { "protocol": "/foo/bar/fuchsia.2" },
+                ],
+            }),
+            result = Err(Error::validate("protocol \"/foo/bar/fuchsia.2\" is a prefix of \"use\" target directory \"/foo/bar\"")),
+        },
+        test_cml_use_disallows_common_prefixes_service => {
+            input = json!({
+                "use": [
+                    { "directory": "/foo/bar", "rights": [ "r*" ] },
+                    { "service": "/foo/bar/baz/fuchsia.logger.Log" },
+                ],
+            }),
+            result = Err(Error::validate("service \"/foo/bar/baz/fuchsia.logger.Log\" is a prefix of \"use\" target directory \"/foo/bar\"")),
+        },
         // expose
         test_cml_expose => {
             input = json!({
@@ -1065,7 +1149,7 @@ mod tests {
                 ]
             }),
             result = Err(Error::validate(
-                    "\"/thing\" is a duplicate \"expose\" target path for \"realm\""
+                    "\"/thing\" is a duplicate \"expose\" target directory for \"realm\""
             )),
         },
         test_cml_expose_invalid_multiple_from => {
@@ -1123,7 +1207,7 @@ mod tests {
                     },
                 ],
             }),
-            result = Err(Error::validate("\"/svc/A\" is a duplicate \"expose\" target path for \"realm\"")),
+            result = Err(Error::validate("\"/svc/A\" is a duplicate \"expose\" target protocol for \"realm\"")),
         },
         test_cml_expose_empty_protocols => {
             input = json!({
@@ -1530,7 +1614,7 @@ mod tests {
                     }
                 ]
             }),
-            result = Err(Error::validate("\"/thing\" is a duplicate \"offer\" target path for \"#echo_server\"")),
+            result = Err(Error::validate("\"/thing\" is a duplicate \"offer\" target directory for \"#echo_server\"")),
         },
         test_cml_offer_duplicate_storage_types => {
             input = json!({
@@ -2722,28 +2806,28 @@ mod tests {
                 service: Some("/a".to_string()),
                 ..empty_offer()
             })?,
-            vec![CapabilityId::Path("/a")]
+            vec![CapabilityId::Service("/a")]
         );
         assert_eq!(
             CapabilityId::from_clause(&cml::Offer {
                 protocol: Some(OneOrMany::One("/a".to_string())),
                 ..empty_offer()
             })?,
-            vec![CapabilityId::Path("/a")]
+            vec![CapabilityId::Protocol("/a")]
         );
         assert_eq!(
             CapabilityId::from_clause(&cml::Offer {
                 protocol: Some(OneOrMany::Many(vec!["/a".to_string(), "/b".to_string()])),
                 ..empty_offer()
             })?,
-            vec![CapabilityId::Path("/a"), CapabilityId::Path("/b")]
+            vec![CapabilityId::Protocol("/a"), CapabilityId::Protocol("/b")]
         );
         assert_eq!(
             CapabilityId::from_clause(&cml::Offer {
                 directory: Some("/a".to_string()),
                 ..empty_offer()
             })?,
-            vec![CapabilityId::Path("/a")]
+            vec![CapabilityId::Directory("/a")]
         );
         assert_eq!(
             CapabilityId::from_clause(&cml::Offer {
@@ -2760,7 +2844,7 @@ mod tests {
                 r#as: Some("/b".to_string()),
                 ..empty_offer()
             })?,
-            vec![CapabilityId::Path("/b")]
+            vec![CapabilityId::Service("/b")]
         );
 
         // Error case.
