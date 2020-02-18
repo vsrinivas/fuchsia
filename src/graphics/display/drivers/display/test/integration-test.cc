@@ -163,4 +163,42 @@ TEST_F(IntegrationTest, SendVsyncsAfterEmptyConfig) {
       [count, p = primary_client.get()]() { return p->vsync_count() > count; }, zx::sec(1)));
 }
 
+TEST_F(IntegrationTest, SendVsyncsAfterClientsBail) {
+  TestFidlClient vc_client(sysmem_.get());
+  ASSERT_TRUE(vc_client.CreateChannel(display_fidl()->get(), /*is_vc=*/true));
+  {
+    fbl::AutoLock lock(vc_client.mtx());
+    EXPECT_EQ(ZX_OK, vc_client.dc_->SetDisplayLayers(1, {}).status());
+    EXPECT_EQ(ZX_OK, vc_client.dc_->ApplyConfig().status());
+  }
+
+  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
+  ASSERT_TRUE(primary_client->Bind(dispatcher()));
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
+
+  // Present an image
+  EXPECT_OK(primary_client->PresentImage());
+  display()->SendVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, id = primary_client->display_id()]() {
+        fbl::AutoLock lock(controller()->mtx());
+        auto info = display_info(id);
+        return info->vsync_layer_count == 1;
+      },
+      zx::sec(1)));
+
+  // Send the controller a vsync for an image it won't recognize anymore.
+  const uint64_t handles[] = {0UL};
+  controller()->DisplayControllerInterfaceOnDisplayVsync(
+      primary_client->display_id(), 0u, handles, 1);
+
+  // Send a second vsync, using the config the client applied.
+  display()->SendVsync();
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [p = primary_client.get()]() { return p->vsync_count() == 2; }, zx::sec(1)));
+  EXPECT_EQ(2, primary_client->vsync_count());
+}
+
 }  // namespace display

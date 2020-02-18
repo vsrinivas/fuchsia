@@ -162,7 +162,7 @@ class Controller : public ControllerParent,
   DisplayInfo::Map displays_ __TA_GUARDED(mtx());
   bool vc_applied_ = false;
   uint32_t applied_stamp_ = UINT32_MAX;
-  uint32_t applied_client_id_ = UINT32_MAX;
+  uint32_t applied_client_id_ = 0;
 
   uint32_t next_client_id_ __TA_GUARDED(mtx()) = 1;
   ClientProxy* vc_client_ __TA_GUARDED(mtx()) = nullptr;
