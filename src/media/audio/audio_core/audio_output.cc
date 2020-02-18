@@ -104,6 +104,7 @@ fit::result<std::shared_ptr<Mixer>, zx_status_t> AudioOutput::InitializeSourceLi
 }
 
 void AudioOutput::CleanupSourceLink(const AudioObject& source, std::shared_ptr<Stream> stream) {
+  TRACE_DURATION("audio", "AudioOutput::CleanupSourceLink");
   if (stream) {
     pipeline_->RemoveInput(*stream);
   }
@@ -111,6 +112,7 @@ void AudioOutput::CleanupSourceLink(const AudioObject& source, std::shared_ptr<S
 
 fit::result<std::shared_ptr<Stream>, zx_status_t> AudioOutput::InitializeDestLink(
     const AudioObject& dest) {
+  TRACE_DURATION("audio", "AudioOutput::InitializeDestLink");
   if (!pipeline_) {
     return fit::error(ZX_ERR_BAD_STATE);
   }

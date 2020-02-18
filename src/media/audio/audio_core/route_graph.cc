@@ -62,6 +62,7 @@ void RouteGraph::SetThrottleOutput(ThreadingModel* threading_model,
 }
 
 void RouteGraph::AddOutput(AudioDevice* output) {
+  TRACE_DURATION("audio", "RouteGraph::AddOutput");
   AUD_VLOG(TRACE) << "Added output device to route graph: " << output;
 
   outputs_.push_front(output);
@@ -69,6 +70,7 @@ void RouteGraph::AddOutput(AudioDevice* output) {
 }
 
 void RouteGraph::RemoveOutput(AudioDevice* output) {
+  TRACE_DURATION("audio", "RouteGraph::RemoveOutput");
   AUD_VLOG(TRACE) << "Removing output device from graph: " << output;
 
   auto it = std::find(outputs_.begin(), outputs_.end(), output);
@@ -82,6 +84,7 @@ void RouteGraph::RemoveOutput(AudioDevice* output) {
 }
 
 void RouteGraph::AddInput(AudioDevice* input) {
+  TRACE_DURATION("audio", "RouteGraph::AddInput");
   AUD_VLOG(TRACE) << "Added input device to route graph: " << input;
 
   inputs_.push_front(input);
@@ -89,6 +92,7 @@ void RouteGraph::AddInput(AudioDevice* input) {
 }
 
 void RouteGraph::RemoveInput(AudioDevice* input) {
+  TRACE_DURATION("audio", "RouteGraph::RemoveInput");
   AUD_VLOG(TRACE) << "Removing input device to route graph: " << input;
 
   auto it = std::find(inputs_.begin(), inputs_.end(), input);
@@ -102,6 +106,7 @@ void RouteGraph::RemoveInput(AudioDevice* input) {
 }
 
 void RouteGraph::AddRenderer(std::unique_ptr<AudioObject> renderer) {
+  TRACE_DURATION("audio", "RouteGraph::AddRenderer");
   FX_DCHECK(throttle_output_);
   FX_DCHECK(renderer->is_audio_renderer());
   AUD_VLOG(TRACE) << "Adding renderer route graph: " << renderer.get();
@@ -111,6 +116,7 @@ void RouteGraph::AddRenderer(std::unique_ptr<AudioObject> renderer) {
 }
 
 void RouteGraph::SetRendererRoutingProfile(const AudioObject& renderer, RoutingProfile profile) {
+  TRACE_DURATION("audio", "RouteGraph::SetRendererRoutingProfile");
   FX_DCHECK(renderer.is_audio_renderer());
   FX_DCHECK(renderer.format_valid() || !profile.routable)
       << "AudioRenderer without PCM format was added to route graph";
@@ -145,6 +151,7 @@ void RouteGraph::SetRendererRoutingProfile(const AudioObject& renderer, RoutingP
 }
 
 void RouteGraph::RemoveRenderer(const AudioObject& renderer) {
+  TRACE_DURATION("audio", "RouteGraph::RemoveRenderer");
   FX_DCHECK(renderer.is_audio_renderer());
   AUD_VLOG(TRACE) << "Removing renderer from route graph: " << &renderer;
 
@@ -159,6 +166,7 @@ void RouteGraph::RemoveRenderer(const AudioObject& renderer) {
 }
 
 void RouteGraph::AddCapturer(std::unique_ptr<AudioObject> capturer) {
+  TRACE_DURATION("audio", "RouteGraph::AddCapturer");
   FX_DCHECK(capturer->is_audio_capturer());
   AUD_VLOG(TRACE) << "Adding capturer to route graph: " << capturer.get();
 
@@ -167,6 +175,7 @@ void RouteGraph::AddCapturer(std::unique_ptr<AudioObject> capturer) {
 }
 
 void RouteGraph::SetCapturerRoutingProfile(const AudioObject& capturer, RoutingProfile profile) {
+  TRACE_DURATION("audio", "RouteGraph::SetCapturerRoutingProfile");
   FX_DCHECK(capturer.is_audio_capturer());
   AUD_VLOG(TRACE) << "Setting capturer route profile: " << &capturer;
 
@@ -199,6 +208,7 @@ void RouteGraph::SetCapturerRoutingProfile(const AudioObject& capturer, RoutingP
 }
 
 void RouteGraph::RemoveCapturer(const AudioObject& capturer) {
+  TRACE_DURATION("audio", "RouteGraph::RemoveCapturer");
   FX_DCHECK(capturer.is_audio_capturer());
   AUD_VLOG(TRACE) << "Removing capturer from route graph: " << &capturer;
 
@@ -214,6 +224,7 @@ void RouteGraph::RemoveCapturer(const AudioObject& capturer) {
 
 // TODO(39627): Only accept capturers of loopback type.
 void RouteGraph::AddLoopbackCapturer(std::unique_ptr<AudioObject> loopback_capturer) {
+  TRACE_DURATION("audio", "RouteGraph::AddLoopbackCapturer");
   FX_DCHECK(loopback_capturer->is_audio_capturer());
   AUD_VLOG(TRACE) << "Adding loopback capturer to route graph: " << loopback_capturer.get();
 
@@ -225,6 +236,7 @@ void RouteGraph::AddLoopbackCapturer(std::unique_ptr<AudioObject> loopback_captu
 // TODO(39627): Only accept capturers of loopback type.
 void RouteGraph::SetLoopbackCapturerRoutingProfile(const AudioObject& loopback_capturer,
                                                    RoutingProfile profile) {
+  TRACE_DURATION("audio", "RouteGraph::SetLoopbackCapturerRoutingProfile");
   FX_DCHECK(loopback_capturer.is_audio_capturer());
   AUD_VLOG(TRACE) << "Setting loopback capturer route profile: " << &loopback_capturer;
 
@@ -258,6 +270,7 @@ void RouteGraph::SetLoopbackCapturerRoutingProfile(const AudioObject& loopback_c
 
 // TODO(39627): Only accept capturers of loopback type.
 void RouteGraph::RemoveLoopbackCapturer(const AudioObject& loopback_capturer) {
+  TRACE_DURATION("audio", "RouteGraph::RemoveLoopbackCapturer");
   FX_DCHECK(loopback_capturer.is_audio_capturer());
   AUD_VLOG(TRACE) << "Setting loopback capturer from route graph: " << &loopback_capturer;
 
@@ -272,12 +285,14 @@ void RouteGraph::RemoveLoopbackCapturer(const AudioObject& loopback_capturer) {
 }
 
 void RouteGraph::UpdateGraphForDeviceChange() {
+  TRACE_DURATION("audio", "RouteGraph::UpdateGraphForDeviceChange");
   auto [targets, unlink_command] = CalculateTargets();
   targets_ = targets;
   Unlink(unlink_command);
 
   if (std::any_of(unlink_command.renderers.begin(), unlink_command.renderers.end(),
                   [](auto unlink) { return unlink; })) {
+    TRACE_DURATION("audio", "RouteGraph::UpdateGraphForDeviceChange.renderers");
     std::for_each(renderers_.begin(), renderers_.end(), [this](auto& renderer) {
       Target output;
       if (!renderer.second.profile.routable ||
@@ -292,6 +307,7 @@ void RouteGraph::UpdateGraphForDeviceChange() {
   }
 
   if (unlink_command.loopback_capturers && targets_.loopback.is_linkable()) {
+    TRACE_DURATION("audio", "RouteGraph::UpdateGraphForDeviceChange.loopback_capturers");
     std::for_each(loopback_capturers_.begin(), loopback_capturers_.end(),
                   [this, target = targets_.loopback](auto& loopback_capturer) {
                     if (!loopback_capturer.second.profile.routable ||
@@ -306,6 +322,7 @@ void RouteGraph::UpdateGraphForDeviceChange() {
   }
 
   if (unlink_command.capturers && targets_.capture.is_linkable()) {
+    TRACE_DURATION("audio", "RouteGraph::UpdateGraphForDeviceChange.capturers");
     std::for_each(capturers_.begin(), capturers_.end(),
                   [this, target = targets_.capture](auto& capturer) {
                     if (!capturer.second.profile.routable ||
@@ -321,6 +338,7 @@ void RouteGraph::UpdateGraphForDeviceChange() {
 }
 
 std::pair<RouteGraph::Targets, RouteGraph::UnlinkCommand> RouteGraph::CalculateTargets() const {
+  TRACE_DURATION("audio", "RouteGraph::CalculateTargets");
   // We generate a new set of targets.
   // We generate an unlink command to unlink anything linked to a target which has changed.
 
@@ -377,6 +395,7 @@ std::pair<RouteGraph::Targets, RouteGraph::UnlinkCommand> RouteGraph::CalculateT
 }
 
 void RouteGraph::Unlink(UnlinkCommand unlink_command) {
+  TRACE_DURATION("audio", "RouteGraph::Unlink");
   std::for_each(renderers_.begin(), renderers_.end(), [this, &unlink_command](auto& renderer) {
     if (renderer.second.profile.usage.is_render_usage() &&
         unlink_command

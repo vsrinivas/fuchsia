@@ -64,8 +64,12 @@ AudioRendererImpl::AudioRendererImpl(
 
   volume_manager_.AddStream(this);
 
-  audio_renderer_binding_.set_error_handler(
-      [this](zx_status_t status) { route_graph_.RemoveRenderer(*this); });
+  audio_renderer_binding_.set_error_handler([this](zx_status_t status) {
+    TRACE_DURATION("audio", "AudioRendererImpl::audio_renderer_binding_.error_handler", "zx_status",
+                   status);
+    FX_PLOGS(INFO, status) << "Client disconnected";
+    route_graph_.RemoveRenderer(*this);
+  });
 }
 
 AudioRendererImpl::~AudioRendererImpl() {

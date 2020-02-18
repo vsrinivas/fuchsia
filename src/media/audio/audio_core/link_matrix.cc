@@ -30,6 +30,7 @@ zx_status_t LinkMatrix::LinkObjects(std::shared_ptr<AudioObject> source,
                                     std::shared_ptr<AudioObject> dest,
                                     std::shared_ptr<const LoudnessTransform> loudness_transform)
     FXL_LOCKS_EXCLUDED(lock_) {
+  TRACE_DURATION("audio", "LinkMatrix::LinkObjects");
   CheckLinkIsValid(source.get(), dest.get());
 
   auto dest_link_init_result = source->InitializeDestLink(*dest);
@@ -57,6 +58,7 @@ zx_status_t LinkMatrix::LinkObjects(std::shared_ptr<AudioObject> source,
 }
 
 void LinkMatrix::Unlink(AudioObject& key) FXL_LOCKS_EXCLUDED(lock_) {
+  TRACE_DURATION("audio", "LinkMatrix::Unlink");
   std::lock_guard<std::mutex> lock(lock_);
 
   auto dest_list = DestLinkSet(&key);
@@ -99,9 +101,11 @@ void LinkMatrix::Unlink(AudioObject& key) FXL_LOCKS_EXCLUDED(lock_) {
 
 void LinkMatrix::ForEachDestLink(const AudioObject& object, fit::function<void(LinkHandle)> f)
     FXL_LOCKS_EXCLUDED(lock_) {
+  TRACE_DURATION("audio", "LinkMatrix::ForEachDestLink");
   std::lock_guard<std::mutex> lock(lock_);
 
   for (auto& link : DestLinkSet(&object)) {
+    TRACE_DURATION("audio", "LinkMatrix::ForEachDestLink.link");
     if (auto ptr = link.object.lock()) {
       f(LinkHandle{.object = ptr,
                    .loudness_transform = link.loudness_transform,
@@ -113,9 +117,11 @@ void LinkMatrix::ForEachDestLink(const AudioObject& object, fit::function<void(L
 
 void LinkMatrix::ForEachSourceLink(const AudioObject& object, fit::function<void(LinkHandle)> f)
     FXL_LOCKS_EXCLUDED(lock_) {
+  TRACE_DURATION("audio", "LinkMatrix::ForEachSourceLink");
   std::lock_guard<std::mutex> lock(lock_);
 
   for (auto& link : SourceLinkSet(&object)) {
+    TRACE_DURATION("audio", "LinkMatrix::ForEachSourceLink.link");
     if (auto ptr = link.object.lock()) {
       f(LinkHandle{.object = ptr,
                    .loudness_transform = link.loudness_transform,
@@ -139,6 +145,7 @@ size_t LinkMatrix::SourceLinkCount(const AudioObject& object) {
 
 void LinkMatrix::DestLinks(const AudioObject& object, std::vector<LinkHandle>* store)
     FXL_LOCKS_EXCLUDED(lock_) {
+  TRACE_DURATION("audio", "LinkMatrix::DestLinks");
   std::lock_guard<std::mutex> lock(lock_);
 
   OnlyStrongLinks(DestLinkSet(&object), store);
@@ -146,12 +153,14 @@ void LinkMatrix::DestLinks(const AudioObject& object, std::vector<LinkHandle>* s
 
 void LinkMatrix::SourceLinks(const AudioObject& object, std::vector<LinkHandle>* store)
     FXL_LOCKS_EXCLUDED(lock_) {
+  TRACE_DURATION("audio", "LinkMatrix::SourceLinks");
   std::lock_guard<std::mutex> lock(lock_);
 
   OnlyStrongLinks(SourceLinkSet(&object), store);
 }
 
 bool LinkMatrix::AreLinked(const AudioObject& source, AudioObject& dest) FXL_LOCKS_EXCLUDED(lock_) {
+  TRACE_DURATION("audio", "LinkMatrix::AreLinked");
   std::lock_guard<std::mutex> lock(lock_);
 
   auto dests = DestLinkSet(&source);
@@ -161,6 +170,7 @@ bool LinkMatrix::AreLinked(const AudioObject& source, AudioObject& dest) FXL_LOC
 }
 
 void LinkMatrix::OnlyStrongLinks(LinkSet& link_set, std::vector<LinkHandle>* store) {
+  TRACE_DURATION("audio", "LinkMatrix::OnlyStrongLinks");
   store->clear();
   for (const auto& link : link_set) {
     if (auto ptr = link.object.lock()) {
