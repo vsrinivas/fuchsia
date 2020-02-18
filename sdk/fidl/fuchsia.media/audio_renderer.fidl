@@ -98,8 +98,8 @@ protocol AudioRenderer {
     // rate?
     SetReferenceClock(handle reference_clock);
 
-    /// Sets the usage of the render stream. This must be called before a call to
-    /// |SetPcmStreamType|.
+    /// Sets the usage of the render stream. This method may not be called after 
+    /// `SetPcmStreamType` is called. The default usage is `MEDIA`.
     SetUsage(AudioRenderUsage usage);
 
     /// Sets the type of the stream to be delivered by the client. Using this

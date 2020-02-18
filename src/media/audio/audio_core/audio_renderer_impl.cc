@@ -139,6 +139,7 @@ void AudioRendererImpl::RecomputeMinLeadTime() {
 void AudioRendererImpl::SetUsage(fuchsia::media::AudioRenderUsage usage) {
   TRACE_DURATION("audio", "AudioRendererImpl::SetUsage");
   if (format_) {
+    FX_LOGS(ERROR) << "SetUsage called after SetPcmStreamType.";
     route_graph_.RemoveRenderer(*this);
     return;
   }
