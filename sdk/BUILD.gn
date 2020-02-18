@@ -286,6 +286,7 @@ sdk("fuchsia_dart2") {
 
     # TODO(viktard): remove, needed to soft transition
     # https://fuchsia-review.googlesource.com/c/fuchsia/+/295264
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_sdk",
     "//sdk/fidl/fuchsia.ui.input2:fuchsia.ui.input2_sdk",
 
     # TODO(SCN-1343): Remove this temporary dependency.
