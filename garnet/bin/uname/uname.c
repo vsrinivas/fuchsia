@@ -129,13 +129,7 @@ int main(int argc, char *const argv[]) {
 
   /* Kernel version */
   if (selected_options & DUMP_KERNEL_VERSION) {
-    char kernel_version[256];
-    if (zx_system_get_version(kernel_version, sizeof(kernel_version)) ==
-        ZX_OK) {
-      print_string(kernel_version);
-    } else {
-      print_string("unknown");
-    }
+    print_string(zx_system_get_version_string().c_str);
   }
 
   /* Machine type */
