@@ -79,8 +79,9 @@ TEST_F(AudioOutputTest, ProcessTrimsInputStreamsIfNoMixJobProvided) {
   auto renderer =
       testing::FakeAudioRenderer::CreateWithDefaultFormatInfo(dispatcher(), &link_matrix_);
   static const TimelineFunction kOneFramePerMs = TimelineFunction(TimelineRate(1, 1'000'000));
-  audio_output_->SetupMixTask(renderer->format()->stream_type(), zx::msec(1).to_msecs(),
-                              kOneFramePerMs);
+  auto format_result = Format::Create(renderer->format()->stream_type());
+  ASSERT_TRUE(format_result.is_ok());
+  audio_output_->SetupMixTask(format_result.value(), zx::msec(1).to_msecs(), kOneFramePerMs);
   link_matrix_.LinkObjects(renderer, audio_output_,
                            std::make_shared<MappedLoudnessTransform>(volume_curve_));
 

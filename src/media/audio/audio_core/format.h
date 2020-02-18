@@ -13,9 +13,7 @@ namespace media::audio {
 
 class Format {
  public:
-  static std::shared_ptr<Format> Create(fuchsia::media::AudioStreamType format);
-
-  Format(fuchsia::media::AudioStreamType format);
+  static fit::result<Format> Create(fuchsia::media::AudioStreamType stream_type);
 
   Format(const Format&) = default;
   Format& operator=(const Format&) = default;
@@ -33,6 +31,9 @@ class Format {
   uint32_t bytes_per_frame() const { return bytes_per_frame_; }
 
  private:
+  Format(fuchsia::media::AudioStreamType stream_type, TimelineRate frames_per_ns,
+         TimelineRate frame_to_media_ratio, uint32_t bytes_per_frame);
+
   fuchsia::media::AudioStreamType stream_type_;
   TimelineRate frames_per_ns_;
   TimelineRate frame_to_media_ratio_;

@@ -180,8 +180,7 @@ class AudioCapturerImpl : public AudioObject,
   void FinishBuffers(const PcbList& finished_buffers) FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
   // Mixer helper.
-  void UpdateFormat(fuchsia::media::AudioStreamType stream_type)
-      FXL_LOCKS_EXCLUDED(mix_domain_->token());
+  void UpdateFormat(Format format) FXL_LOCKS_EXCLUDED(mix_domain_->token());
 
   fit::promise<> Cleanup() FXL_LOCKS_EXCLUDED(mix_domain_->token());
   void CleanupFromMixThread() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());

@@ -45,10 +45,11 @@ const zx::duration kFenceTimePadding = zx::msec(3);
 constexpr float kInitialCaptureGainDb = Gain::kUnityGainDb;
 constexpr int64_t kMaxTimePerCapture = ZX_MSEC(50);
 
-constexpr fuchsia::media::AudioStreamType kInitialFormat{
-    .sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
-    .channels = 1,
-    .frames_per_second = 8000};
+const Format kInitialFormat =
+    Format::Create({.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
+                    .channels = 1,
+                    .frames_per_second = 8000})
+        .take_value();
 
 }  // namespace
 
@@ -238,39 +239,16 @@ void AudioCapturerImpl::SetPcmStreamType(fuchsia::media::AudioStreamType stream_
     return;
   }
 
-  // Sanity check the details of the mode request.
-  if ((stream_type.channels < fuchsia::media::MIN_PCM_CHANNEL_COUNT) ||
-      (stream_type.channels > fuchsia::media::MAX_PCM_CHANNEL_COUNT)) {
-    FX_LOGS(ERROR) << "Bad channel count, " << stream_type.channels << " is not in the range ["
-                   << fuchsia::media::MIN_PCM_CHANNEL_COUNT << ", "
-                   << fuchsia::media::MAX_PCM_CHANNEL_COUNT << "]";
+  auto format_result = Format::Create(stream_type);
+  if (format_result.is_error()) {
+    FX_LOGS(ERROR) << "AudioCapturer: PcmStreamType is invalid";
     return;
-  }
-
-  if ((stream_type.frames_per_second < fuchsia::media::MIN_PCM_FRAMES_PER_SECOND) ||
-      (stream_type.frames_per_second > fuchsia::media::MAX_PCM_FRAMES_PER_SECOND)) {
-    FX_LOGS(ERROR) << "Bad frame rate, " << stream_type.frames_per_second
-                   << " is not in the range [" << fuchsia::media::MIN_PCM_FRAMES_PER_SECOND << ", "
-                   << fuchsia::media::MAX_PCM_FRAMES_PER_SECOND << "]";
-    return;
-  }
-
-  switch (stream_type.sample_format) {
-    case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
-    case fuchsia::media::AudioSampleFormat::SIGNED_16:
-    case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-    case fuchsia::media::AudioSampleFormat::FLOAT:
-      break;
-
-    default:
-      FX_LOGS(ERROR) << "Bad sample format " << fidl::ToUnderlying(stream_type.sample_format);
-      return;
   }
 
   REP(SettingCapturerStreamType(*this, stream_type));
 
   // Success, record our new format.
-  UpdateFormat(stream_type);
+  UpdateFormat(format_result.take_value());
 
   cleanup.cancel();
 }
@@ -1068,11 +1046,11 @@ void AudioCapturerImpl::FinishBuffers(const PcbList& finished_buffers) {
   }
 }
 
-void AudioCapturerImpl::UpdateFormat(fuchsia::media::AudioStreamType stream_type) {
+void AudioCapturerImpl::UpdateFormat(Format format) {
   TRACE_DURATION("audio", "AudioCapturerImpl::UpdateFormat");
   // Record our new format.
   FX_DCHECK(state_.load() == State::WaitingForVmo);
-  format_ = Format(stream_type);
+  format_ = format;
 
   // Pre-compute the ratio between frames and clock mono ticks. Also figure out
   // the maximum number of frames we are allowed to mix and capture at a time.

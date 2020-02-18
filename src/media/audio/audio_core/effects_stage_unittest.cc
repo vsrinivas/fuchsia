@@ -19,11 +19,13 @@ using testing::FloatEq;
 namespace media::audio {
 namespace {
 
-const Format kDefaultFormat = Format(fuchsia::media::AudioStreamType{
-    .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-    .channels = 2,
-    .frames_per_second = 48000,
-});
+const Format kDefaultFormat =
+    Format::Create(fuchsia::media::AudioStreamType{
+                       .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                       .channels = 2,
+                       .frames_per_second = 48000,
+                   })
+        .take_value();
 
 class EffectsStageTest : public testing::ThreadingModelFixture {
  protected:

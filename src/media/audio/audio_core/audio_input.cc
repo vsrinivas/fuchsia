@@ -77,11 +77,18 @@ void AudioInput::OnDriverInfoFetched() {
     ShutdownSelf();
     return;
   }
-  Format selected_format = Format(fuchsia::media::AudioStreamType{
+
+  auto format_result = Format::Create(fuchsia::media::AudioStreamType{
       .sample_format = pref_fmt,
       .channels = pref_chan,
       .frames_per_second = pref_fps,
   });
+  if (format_result.is_error()) {
+    FX_LOGS(ERROR) << "Driver format is invalid";
+    ShutdownSelf();
+    return;
+  }
+  auto& selected_format = format_result.value();
 
   const auto& hw_gain = driver()->hw_gain_state();
   if (hw_gain.min_gain > hw_gain.max_gain) {

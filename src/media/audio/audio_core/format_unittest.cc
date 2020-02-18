@@ -10,61 +10,70 @@ namespace media::audio {
 namespace {
 
 TEST(FormatTest, OperatorEquals) {
-  Format format1 = Format(fuchsia::media::AudioStreamType{
-      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-      .channels = 2,
-      .frames_per_second = 48000,
-  });
-  Format format2 = Format(fuchsia::media::AudioStreamType{
-      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-      .channels = 2,
-      .frames_per_second = 48000,
-  });
+  Format format1 = Format::Create(fuchsia::media::AudioStreamType{
+                                      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                                      .channels = 2,
+                                      .frames_per_second = 48000,
+                                  })
+                       .take_value();
+  Format format2 = Format::Create(fuchsia::media::AudioStreamType{
+                                      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                                      .channels = 2,
+                                      .frames_per_second = 48000,
+                                  })
+                       .take_value();
 
   EXPECT_EQ(format1, format2);
 }
 
 TEST(FormatTest, OperatorEqualsDifferentChannels) {
-  Format format1 = Format(fuchsia::media::AudioStreamType{
-      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-      .channels = 2,
-      .frames_per_second = 48000,
-  });
-  Format format2 = Format(fuchsia::media::AudioStreamType{
-      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-      .channels = 1,
-      .frames_per_second = 48000,
-  });
+  Format format1 = Format::Create(fuchsia::media::AudioStreamType{
+                                      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                                      .channels = 2,
+                                      .frames_per_second = 48000,
+                                  })
+                       .take_value();
+  Format format2 = Format::Create(fuchsia::media::AudioStreamType{
+                                      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                                      .channels = 1,
+                                      .frames_per_second = 48000,
+                                  })
+                       .take_value();
 
   EXPECT_NE(format1, format2);
 }
 
 TEST(FormatTest, OperatorEqualsDifferentRates) {
-  Format format1 = Format(fuchsia::media::AudioStreamType{
-      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-      .channels = 2,
-      .frames_per_second = 48000,
-  });
-  Format format2 = Format(fuchsia::media::AudioStreamType{
-      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-      .channels = 2,
-      .frames_per_second = 96000,
-  });
+  Format format1 = Format::Create(fuchsia::media::AudioStreamType{
+                                      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                                      .channels = 2,
+                                      .frames_per_second = 48000,
+                                  })
+                       .take_value();
+  Format format2 = Format::Create(fuchsia::media::AudioStreamType{
+                                      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                                      .channels = 2,
+                                      .frames_per_second = 96000,
+                                  })
+                       .take_value();
 
   EXPECT_NE(format1, format2);
 }
 
 TEST(FormatTest, OperatorEqualsDifferentSampleFormats) {
-  Format format1 = Format(fuchsia::media::AudioStreamType{
-      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-      .channels = 2,
-      .frames_per_second = 48000,
-  });
-  Format format2 = Format(fuchsia::media::AudioStreamType{
-      .sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8,
-      .channels = 2,
-      .frames_per_second = 48000,
-  });
+  Format format1 = Format::Create(fuchsia::media::AudioStreamType{
+                                      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                                      .channels = 2,
+                                      .frames_per_second = 48000,
+                                  })
+                       .take_value();
+  Format format2 =
+      Format::Create(fuchsia::media::AudioStreamType{
+                         .sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8,
+                         .channels = 2,
+                         .frames_per_second = 48000,
+                     })
+          .take_value();
 
   EXPECT_NE(format1, format2);
 }

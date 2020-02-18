@@ -41,7 +41,14 @@ class FakeAudioObject : public AudioObject {
   FakeAudioObject(AudioObject::Type object_type, bool valid_format, fuchsia::media::Usage usage)
       : AudioObject(object_type) {
     if (valid_format) {
-      format_ = Format::Create({.sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8});
+      auto format_result = Format::Create({
+          .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+          .channels = 1,
+          .frames_per_second = 48000,
+      });
+      FX_CHECK(format_result.is_ok());
+
+      format_ = std::make_shared<Format>(format_result.take_value());
     }
     usage_ = std::move(usage);
   }

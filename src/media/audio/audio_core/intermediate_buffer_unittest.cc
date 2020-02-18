@@ -9,11 +9,13 @@
 namespace media::audio {
 namespace {
 
-static const Format kFormat = Format({
-    .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-    .channels = 2,
-    .frames_per_second = 48000,
-});
+static const Format kFormat =
+    Format::Create({
+                       .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                       .channels = 2,
+                       .frames_per_second = 48000,
+                   })
+        .take_value();
 
 class IntermediateBufferTest : public ::testing::Test {};
 

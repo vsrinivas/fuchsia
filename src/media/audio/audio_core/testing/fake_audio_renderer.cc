@@ -24,7 +24,9 @@ const fuchsia::media::AudioStreamType kDefaultStreamType{
 // static
 std::shared_ptr<FakeAudioRenderer> FakeAudioRenderer::CreateWithDefaultFormatInfo(
     async_dispatcher_t* dispatcher, LinkMatrix* link_matrix) {
-  return FakeAudioRenderer::Create(dispatcher, Format::Create(kDefaultStreamType),
+  auto format_result = Format::Create(kDefaultStreamType);
+  FX_CHECK(format_result.is_ok());
+  return FakeAudioRenderer::Create(dispatcher, std::make_shared<Format>(format_result.value()),
                                    fuchsia::media::AudioRenderUsage::MEDIA, link_matrix);
 }
 

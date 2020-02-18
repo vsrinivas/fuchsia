@@ -20,11 +20,14 @@ using testing::Pointwise;
 namespace media::audio {
 namespace {
 
-const Format kDefaultFormat = Format(fuchsia::media::AudioStreamType{
-    .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-    .channels = 2,
-    .frames_per_second = 48000,
-});
+const Format kDefaultFormat =
+    Format::Create(fuchsia::media::AudioStreamType{
+                       .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                       .channels = 2,
+                       .frames_per_second = 48000,
+                   })
+        .take_value();
+
 const TimelineFunction kDefaultTransform = TimelineFunction(
     TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
                  zx::sec(1).to_nsecs()));

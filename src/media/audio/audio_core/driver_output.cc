@@ -337,11 +337,16 @@ void DriverOutput::OnDriverInfoFetched() {
   }
 
   // TODO(mpuryear): Save to the hub the configured format for this output.
-  Format format(fuchsia::media::AudioStreamType{
+  auto format_result = Format::Create(fuchsia::media::AudioStreamType{
       .sample_format = pref_fmt,
       .channels = pref_chan,
       .frames_per_second = pref_fps,
   });
+  if (format_result.is_error()) {
+    FX_LOGS(ERROR) << "Driver format is invalid";
+    return;
+  }
+  auto& format = format_result.value();
 
   // Select our output producer
   output_producer_ = OutputProducer::Select(format.stream_type());
@@ -453,11 +458,16 @@ void DriverOutput::OnDriverStartComplete() {
   //
   // TODO(39886): The intermediate buffer probably does not need to be as large as the entire ring
   // buffer.  Consider limiting this to be something only slightly larger than a nominal mix job.
-  Format mix_format = Format(fuchsia::media::AudioStreamType{
+  auto format_result = Format::Create(fuchsia::media::AudioStreamType{
       .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
       .channels = format->channels(),
       .frames_per_second = format->frames_per_second(),
   });
+  if (format_result.is_error()) {
+    FX_LOGS(ERROR) << "Driver format is invalid";
+    return;
+  }
+  auto& mix_format = format_result.value();
 
   TimelineRate fractional_frames_per_frame =
       TimelineRate(FractionalFrames<uint32_t>(1).raw_value());

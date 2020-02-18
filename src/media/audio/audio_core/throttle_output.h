@@ -35,16 +35,17 @@ class ThrottleOutput : public AudioOutput {
     //
     // Longer term we should just have something like a 'NullMixStage' that only
     // has this trim capability.
-    Format mix_format = Format(fuchsia::media::AudioStreamType{
+    auto mix_format = Format::Create(fuchsia::media::AudioStreamType{
         .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
         .channels = 1,
         .frames_per_second = 48000,
     });
+    FX_DCHECK(mix_format.is_ok());
 
     // This must be non-0, but it doesn't actually matter much since we'll never mix with a throttle
     // output.
     static const uint32_t kMaxBatchSize = PAGE_SIZE;
-    SetupMixTask(mix_format, kMaxBatchSize, TimelineFunction());
+    SetupMixTask(mix_format.take_value(), kMaxBatchSize, TimelineFunction());
   }
 
   ~ThrottleOutput() override = default;

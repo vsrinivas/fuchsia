@@ -23,11 +23,12 @@ class PacketQueueTest : public gtest::TestLoopFixture {
     auto one_frame_per_ms = fbl::MakeRefCounted<VersionedTimelineFunction>(
         TimelineFunction(TimelineRate(FractionalFrames<uint32_t>(1).raw_value(), 1'000'000)));
     return std::make_unique<PacketQueue>(
-        Format{{
-            .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-            .channels = 2,
-            .frames_per_second = 48000,
-        }},
+        Format::Create({
+                           .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                           .channels = 2,
+                           .frames_per_second = 48000,
+                       })
+            .take_value(),
         std::move(one_frame_per_ms));
   }
 

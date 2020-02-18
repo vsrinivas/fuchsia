@@ -290,11 +290,13 @@ TEST_F(LinkMatrixTest, InitializationHooks) {
   auto source = std::make_shared<MockObject>(AudioObject::Type::AudioRenderer);
   auto dest = std::make_shared<MockObject>(AudioObject::Type::Output);
 
-  auto stream = std::make_shared<PacketQueue>(Format{{
-      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-      .channels = 2,
-      .frames_per_second = 48000,
-  }});
+  auto stream = std::make_shared<PacketQueue>(
+      Format::Create({
+                         .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                         .channels = 2,
+                         .frames_per_second = 48000,
+                     })
+          .take_value());
   source->set_stream(stream);
 
   under_test.LinkObjects(source, dest, std::make_shared<FakeLoudnessTransform>());
@@ -313,11 +315,13 @@ TEST_F(LinkMatrixTest, LinkHandleHasStream) {
   auto source = std::make_shared<MockObject>(AudioObject::Type::AudioRenderer);
   auto dest = std::make_shared<MockObject>(AudioObject::Type::Output);
 
-  auto stream = std::make_shared<PacketQueue>(Format{{
-      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-      .channels = 2,
-      .frames_per_second = 48000,
-  }});
+  auto stream = std::make_shared<PacketQueue>(
+      Format::Create({
+                         .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+                         .channels = 2,
+                         .frames_per_second = 48000,
+                     })
+          .take_value());
   source->set_stream(stream);
 
   under_test.LinkObjects(source, dest, std::make_shared<FakeLoudnessTransform>());

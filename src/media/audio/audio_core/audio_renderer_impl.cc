@@ -228,7 +228,7 @@ void AudioRendererImpl::ComputePtsToFracFrames(int64_t first_pts) {
 //
 // AudioRenderer Interface
 //
-void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format) {
+void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) {
   TRACE_DURATION("audio", "AudioRendererImpl::SetPcmStreamType");
   auto cleanup = fit::defer([this]() { route_graph_.RemoveRenderer(*this); });
 
@@ -240,48 +240,14 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
     return;
   }
 
-  // Sanity check the requested format
-  switch (format.sample_format) {
-    case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
-    case fuchsia::media::AudioSampleFormat::SIGNED_16:
-    case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-    case fuchsia::media::AudioSampleFormat::FLOAT:
-      break;
-
-    default:
-      FX_LOGS(ERROR) << "Unsupported sample format (" << fidl::ToUnderlying(format.sample_format)
-                     << ") in fuchsia::media::AudioRendererImpl::SetPcmStreamType.";
-      return;
-  }
-
-  if ((format.channels < fuchsia::media::MIN_PCM_CHANNEL_COUNT) ||
-      (format.channels > fuchsia::media::MAX_PCM_CHANNEL_COUNT)) {
-    FX_LOGS(ERROR)
-        << "Invalid channel count (" << format.channels
-        << ") in fuchsia::media::AudioRendererImpl::SetPcmStreamType. Must be in the range ["
-        << fuchsia::media::MIN_PCM_CHANNEL_COUNT << ", " << fuchsia::media::MAX_PCM_CHANNEL_COUNT
-        << "]";
+  auto format_result = Format::Create(stream_type);
+  if (format_result.is_error()) {
+    FX_LOGS(ERROR) << "AudioRenderer: PcmStreamType is invalid";
     return;
   }
+  format_ = std::make_shared<Format>(format_result.take_value());
 
-  if ((format.frames_per_second < fuchsia::media::MIN_PCM_FRAMES_PER_SECOND) ||
-      (format.frames_per_second > fuchsia::media::MAX_PCM_FRAMES_PER_SECOND)) {
-    FX_LOGS(ERROR)
-        << "Invalid frame rate (" << format.frames_per_second
-        << ") in fuchsia::media::AudioRendererImpl::SetPcmStreamType. Must be in the range ["
-        << fuchsia::media::MIN_PCM_FRAMES_PER_SECOND << ", "
-        << fuchsia::media::MAX_PCM_FRAMES_PER_SECOND << "]";
-    return;
-  }
-
-  REP(SettingRendererStreamType(*this, format));
-
-  // Create a new format info object so we can create links to outputs.
-  fuchsia::media::AudioStreamType cfg;
-  cfg.sample_format = format.sample_format;
-  cfg.channels = format.channels;
-  cfg.frames_per_second = format.frames_per_second;
-  format_ = Format::Create(cfg);
+  REP(SettingRendererStreamType(*this, stream_type));
 
   route_graph_.SetRendererRoutingProfile(*this, {.routable = true, .usage = GetStreamUsage()});
   volume_manager_.NotifyStreamChanged(this);

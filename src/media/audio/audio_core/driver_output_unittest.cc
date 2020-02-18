@@ -18,6 +18,7 @@
 #include "src/media/audio/audio_core/testing/stub_device_registry.h"
 #include "src/media/audio/audio_core/testing/test_process_config.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
+#include "src/media/audio/lib/logging/logging.h"
 
 using testing::Each;
 using testing::Eq;
