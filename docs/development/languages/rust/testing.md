@@ -167,6 +167,30 @@ issue is tracked by BLD-338.
 For information on packaging and running tests, please refer to the
 [documentation on running tests as components][component_tests].
 
+### Helpful crates
+
+The following in-tree third-party crates can help you write tests:
+
+* [`matches`]: provides the macro `assert_matches!`, making pattern assertions ergonomic.
+* [`pretty_assertions`]: provides an alternative `assert_eq!` macro that displays a colored diff
+  when the assertion fails.
+
+These can be included in your `BUILD.gn` under `test_deps`.
+
+```gn
+rustc_binary("bin") {
+  name = "my_test"
+  with_unit_tests = true
+  edition = "2018"
+
+  test_deps = [
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:pretty_assertions",
+  ]
+}
+```
 
 [component_tests]:/docs/development/testing/running_tests_as_components.md
 [example-src]: /examples/hello_world/rust
+[`matches`]: https://fuchsia-docs.firebaseapp.com/rust/matches/index.html
+[`pretty_assertions`]: https://fuchsia-docs.firebaseapp.com/rust/pretty_assertions/index.html
