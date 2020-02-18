@@ -113,8 +113,7 @@ func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, 
 			tcpConnectionsReset := stats.TCP.EstablishedResets.Value()
 			tcpConnectionsTimedOut := stats.TCP.EstablishedTimedout.Value()
 
-			// TODO: replace with time.Duration.Microseconds when it's available.
-			period := ts.Sub(previousTime).Nanoseconds() / 1e3
+			period := ts.Sub(previousTime).Microseconds()
 			previousTime = ts
 			events := []cobalt.CobaltEvent{
 				{
