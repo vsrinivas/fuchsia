@@ -18,6 +18,8 @@ static const fidl_type_t HandlebtinonnullableTable = {.type_tag=kFidlTypeHandle,
 
 static const fidl_type_t HandlechannelnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
 
+static const fidl_type_t HandleclocknonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CLOCK, .nullable=kFidlNullability_Nonnullable}}};
+
 static const fidl_type_t HandledebuglognonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_LOG, .nullable=kFidlNullability_Nonnullable}}};
 
 static const fidl_type_t HandleeventnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_EVENT, .nullable=kFidlNullability_Nonnullable}}};
@@ -73,37 +75,38 @@ static const struct FidlStructField Fields25fidl_test_handles_Handles[] = {
     /*FidlStructField*/{.type=&HandlehandlenonnullableTable, .offset=0u, .padding=0u},
     /*FidlStructField*/{.type=&HandlebtinonnullableTable, .offset=4u, .padding=0u},
     /*FidlStructField*/{.type=&HandlechannelnonnullableTable, .offset=8u, .padding=0u},
-    /*FidlStructField*/{.type=&HandledebuglognonnullableTable, .offset=12u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleeventnonnullableTable, .offset=16u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleeventpairnonnullableTable, .offset=20u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleexceptionnonnullableTable, .offset=24u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlefifononnullableTable, .offset=28u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleguestnonnullableTable, .offset=32u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleinterruptnonnullableTable, .offset=36u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleiommunonnullableTable, .offset=40u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlejobnonnullableTable, .offset=44u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlepagernonnullableTable, .offset=48u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlepcidevicenonnullableTable, .offset=52u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlepmtnonnullableTable, .offset=56u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleportnonnullableTable, .offset=60u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleprocessnonnullableTable, .offset=64u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleprofilenonnullableTable, .offset=68u, .padding=0u},
-    /*FidlStructField*/{.type=&HandleresourcenonnullableTable, .offset=72u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlesocketnonnullableTable, .offset=76u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlesuspendtokennonnullableTable, .offset=80u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlethreadnonnullableTable, .offset=84u, .padding=0u},
-    /*FidlStructField*/{.type=&HandletimernonnullableTable, .offset=88u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlevcpunonnullableTable, .offset=92u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlevmarnonnullableTable, .offset=96u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlevmononnullableTable, .offset=100u, .padding=0u},
+    /*FidlStructField*/{.type=&HandleclocknonnullableTable, .offset=12u, .padding=0u},
+    /*FidlStructField*/{.type=&HandledebuglognonnullableTable, .offset=16u, .padding=0u},
+    /*FidlStructField*/{.type=&HandleeventnonnullableTable, .offset=20u, .padding=0u},
+    /*FidlStructField*/{.type=&HandleeventpairnonnullableTable, .offset=24u, .padding=0u},
+    /*FidlStructField*/{.type=&HandleexceptionnonnullableTable, .offset=28u, .padding=0u},
+    /*FidlStructField*/{.type=&HandlefifononnullableTable, .offset=32u, .padding=0u},
+    /*FidlStructField*/{.type=&HandleguestnonnullableTable, .offset=36u, .padding=0u},
+    /*FidlStructField*/{.type=&HandleinterruptnonnullableTable, .offset=40u, .padding=0u},
+    /*FidlStructField*/{.type=&HandleiommunonnullableTable, .offset=44u, .padding=0u},
+    /*FidlStructField*/{.type=&HandlejobnonnullableTable, .offset=48u, .padding=0u},
+    /*FidlStructField*/{.type=&HandlepagernonnullableTable, .offset=52u, .padding=0u},
+    /*FidlStructField*/{.type=&HandlepcidevicenonnullableTable, .offset=56u, .padding=0u},
+    /*FidlStructField*/{.type=&HandlepmtnonnullableTable, .offset=60u, .padding=0u},
+    /*FidlStructField*/{.type=&HandleportnonnullableTable, .offset=64u, .padding=0u},
+    /*FidlStructField*/{.type=&HandleprocessnonnullableTable, .offset=68u, .padding=0u},
+    /*FidlStructField*/{.type=&HandleprofilenonnullableTable, .offset=72u, .padding=0u},
+    /*FidlStructField*/{.type=&HandleresourcenonnullableTable, .offset=76u, .padding=0u},
+    /*FidlStructField*/{.type=&HandlesocketnonnullableTable, .offset=80u, .padding=0u},
+    /*FidlStructField*/{.type=&HandlesuspendtokennonnullableTable, .offset=84u, .padding=0u},
+    /*FidlStructField*/{.type=&HandlethreadnonnullableTable, .offset=88u, .padding=0u},
+    /*FidlStructField*/{.type=&HandletimernonnullableTable, .offset=92u, .padding=0u},
+    /*FidlStructField*/{.type=&HandlevcpunonnullableTable, .offset=96u, .padding=0u},
+    /*FidlStructField*/{.type=&HandlevmarnonnullableTable, .offset=100u, .padding=0u},
     /*FidlStructField*/{.type=&HandlevmononnullableTable, .offset=104u, .padding=0u},
-    /*FidlStructField*/{.type=&HandlehandlenonnullableTable, .offset=108u, .padding=0u},
+    /*FidlStructField*/{.type=&HandlevmononnullableTable, .offset=108u, .padding=0u},
     /*FidlStructField*/{.type=&HandlehandlenonnullableTable, .offset=112u, .padding=0u},
     /*FidlStructField*/{.type=&HandlehandlenonnullableTable, .offset=116u, .padding=0u},
-    /*FidlStructField*/{.type=&Protocol30fidl_test_handles_SomeProtocolnonnullableTable, .offset=120u, .padding=0u},
-    /*FidlStructField*/{.type=&Request30fidl_test_handles_SomeProtocolnonnullableTable, .offset=124u, .padding=0u}
+    /*FidlStructField*/{.type=&HandlehandlenonnullableTable, .offset=120u, .padding=0u},
+    /*FidlStructField*/{.type=&Protocol30fidl_test_handles_SomeProtocolnonnullableTable, .offset=124u, .padding=0u},
+    /*FidlStructField*/{.type=&Request30fidl_test_handles_SomeProtocolnonnullableTable, .offset=128u, .padding=0u}
 };
-const fidl_type_t fidl_test_handles_HandlesTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields25fidl_test_handles_Handles, .field_count=32u, .size=128u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.handles/Handles", .alt_type=&v1_fidl_test_handles_HandlesTable}}};
+const fidl_type_t fidl_test_handles_HandlesTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields25fidl_test_handles_Handles, .field_count=33u, .size=132u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.handles/Handles", .alt_type=&v1_fidl_test_handles_HandlesTable}}};
 
 // Coding tables for v1 wire format.
 
@@ -115,6 +118,8 @@ static const fidl_type_t v1_HandlehandlenonnullableTable = {.type_tag=kFidlTypeH
 static const fidl_type_t v1_HandlebtinonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_BTI, .nullable=kFidlNullability_Nonnullable}}};
 
 static const fidl_type_t v1_HandlechannelnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
+
+static const fidl_type_t v1_HandleclocknonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CLOCK, .nullable=kFidlNullability_Nonnullable}}};
 
 static const fidl_type_t v1_HandledebuglognonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_LOG, .nullable=kFidlNullability_Nonnullable}}};
 
@@ -171,35 +176,36 @@ static const struct FidlStructField Fields28v1_fidl_test_handles_Handles[] = {
     /*FidlStructField*/{.type=&v1_HandlehandlenonnullableTable, .offset=0u, .padding=0u},
     /*FidlStructField*/{.type=&v1_HandlebtinonnullableTable, .offset=4u, .padding=0u},
     /*FidlStructField*/{.type=&v1_HandlechannelnonnullableTable, .offset=8u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandledebuglognonnullableTable, .offset=12u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandleeventnonnullableTable, .offset=16u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandleeventpairnonnullableTable, .offset=20u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandleexceptionnonnullableTable, .offset=24u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandlefifononnullableTable, .offset=28u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandleguestnonnullableTable, .offset=32u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandleinterruptnonnullableTable, .offset=36u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandleiommunonnullableTable, .offset=40u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandlejobnonnullableTable, .offset=44u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandlepagernonnullableTable, .offset=48u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandlepcidevicenonnullableTable, .offset=52u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandlepmtnonnullableTable, .offset=56u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandleportnonnullableTable, .offset=60u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandleprocessnonnullableTable, .offset=64u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandleprofilenonnullableTable, .offset=68u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandleresourcenonnullableTable, .offset=72u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandlesocketnonnullableTable, .offset=76u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandlesuspendtokennonnullableTable, .offset=80u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandlethreadnonnullableTable, .offset=84u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandletimernonnullableTable, .offset=88u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandlevcpunonnullableTable, .offset=92u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandlevmarnonnullableTable, .offset=96u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandlevmononnullableTable, .offset=100u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandleclocknonnullableTable, .offset=12u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandledebuglognonnullableTable, .offset=16u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandleeventnonnullableTable, .offset=20u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandleeventpairnonnullableTable, .offset=24u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandleexceptionnonnullableTable, .offset=28u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandlefifononnullableTable, .offset=32u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandleguestnonnullableTable, .offset=36u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandleinterruptnonnullableTable, .offset=40u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandleiommunonnullableTable, .offset=44u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandlejobnonnullableTable, .offset=48u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandlepagernonnullableTable, .offset=52u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandlepcidevicenonnullableTable, .offset=56u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandlepmtnonnullableTable, .offset=60u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandleportnonnullableTable, .offset=64u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandleprocessnonnullableTable, .offset=68u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandleprofilenonnullableTable, .offset=72u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandleresourcenonnullableTable, .offset=76u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandlesocketnonnullableTable, .offset=80u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandlesuspendtokennonnullableTable, .offset=84u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandlethreadnonnullableTable, .offset=88u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandletimernonnullableTable, .offset=92u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandlevcpunonnullableTable, .offset=96u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandlevmarnonnullableTable, .offset=100u, .padding=0u},
     /*FidlStructField*/{.type=&v1_HandlevmononnullableTable, .offset=104u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_HandlehandlenonnullableTable, .offset=108u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_HandlevmononnullableTable, .offset=108u, .padding=0u},
     /*FidlStructField*/{.type=&v1_HandlehandlenonnullableTable, .offset=112u, .padding=0u},
     /*FidlStructField*/{.type=&v1_HandlehandlenonnullableTable, .offset=116u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_Protocol33v1_fidl_test_handles_SomeProtocolnonnullableTable, .offset=120u, .padding=0u},
-    /*FidlStructField*/{.type=&v1_Request33v1_fidl_test_handles_SomeProtocolnonnullableTable, .offset=124u, .padding=0u}
+    /*FidlStructField*/{.type=&v1_HandlehandlenonnullableTable, .offset=120u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_Protocol33v1_fidl_test_handles_SomeProtocolnonnullableTable, .offset=124u, .padding=0u},
+    /*FidlStructField*/{.type=&v1_Request33v1_fidl_test_handles_SomeProtocolnonnullableTable, .offset=128u, .padding=0u}
 };
-const fidl_type_t v1_fidl_test_handles_HandlesTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields28v1_fidl_test_handles_Handles, .field_count=32u, .size=128u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.handles/Handles", .alt_type=&fidl_test_handles_HandlesTable}}};
+const fidl_type_t v1_fidl_test_handles_HandlesTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields28v1_fidl_test_handles_Handles, .field_count=33u, .size=132u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.handles/Handles", .alt_type=&fidl_test_handles_HandlesTable}}};
 

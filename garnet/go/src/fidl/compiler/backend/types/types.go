@@ -141,6 +141,7 @@ const (
 	Handle       HandleSubtype = "handle"
 	Bti                        = "bti"
 	Channel                    = "channel"
+	Clock                      = "clock"
 	DebugLog                   = "debuglog"
 	Event                      = "event"
 	Eventpair                  = "eventpair"

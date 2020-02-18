@@ -184,6 +184,7 @@ var primitiveTypes = map[types.PrimitiveSubtype]string{
 var handleSubtypes = map[types.HandleSubtype]string{
 	types.Bti:          "zx_bti",
 	types.Channel:      "zx_chan",
+	types.Clock:        "zx_clock",
 	types.DebugLog:     "zx_log",
 	types.Event:        "zx_event",
 	types.Eventpair:    "zx_eventpair",

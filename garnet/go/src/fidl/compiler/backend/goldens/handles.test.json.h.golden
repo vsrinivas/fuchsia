@@ -36,6 +36,8 @@ class Handles final {
   
   ::zx::channel channel_handle{};
   
+  ::zx::clock clock_handle{};
+  
   ::zx::debuglog debuglog_handle{};
   
   ::zx::event event_handle{};
@@ -235,7 +237,7 @@ namespace fidl {
 
 template <>
 struct CodingTraits<::fidl::test::handles::Handles>
-    : public EncodableCodingTraits<::fidl::test::handles::Handles, 128> {};
+    : public EncodableCodingTraits<::fidl::test::handles::Handles, 132> {};
 
 inline zx_status_t Clone(const ::fidl::test::handles::Handles& value,
                          ::fidl::test::handles::Handles* result) {
@@ -252,6 +254,9 @@ struct Equality<::fidl::test::handles::Handles> {
       return false;
     }
     if (!::fidl::Equals(_lhs.channel_handle, _rhs.channel_handle)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.clock_handle, _rhs.clock_handle)) {
       return false;
     }
     if (!::fidl::Equals(_lhs.debuglog_handle, _rhs.debuglog_handle)) {

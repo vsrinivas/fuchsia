@@ -8,6 +8,7 @@ fidl_test_handles_HandlesInLine {
        plain_handle flags[fidl_handle_presence, int32]
        bti_handle flags[fidl_handle_presence, int32]
        channel_handle flags[fidl_handle_presence, int32]
+       clock_handle flags[fidl_handle_presence, int32]
        debuglog_handle flags[fidl_handle_presence, int32]
        event_handle flags[fidl_handle_presence, int32]
        eventpair_handle flags[fidl_handle_presence, int32]
@@ -45,6 +46,7 @@ fidl_test_handles_HandlesHandles {
        plain_handle zx_handle
        bti_handle zx_bti
        channel_handle zx_chan
+       clock_handle zx_clock
        debuglog_handle zx_log
        event_handle zx_event
        eventpair_handle zx_eventpair

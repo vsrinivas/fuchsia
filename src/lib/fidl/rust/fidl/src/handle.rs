@@ -24,6 +24,7 @@ pub mod fuchsia_handles {
     pub use zx::MessageBuf;
 
     pub use zx::Channel;
+    pub use zx::Clock;
     pub use zx::DebugLog;
     pub use zx::Event;
     pub use zx::EventPair;
@@ -226,6 +227,7 @@ pub mod non_fuchsia_handles {
         };
     }
 
+    declare_unsupported_fidl_handle!(Clock);
     declare_unsupported_fidl_handle!(DebugLog);
     declare_unsupported_fidl_handle!(Event);
     declare_unsupported_fidl_handle!(EventPair);

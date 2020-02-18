@@ -27,6 +27,7 @@ enum struct HandleSubtype : zx_obj_type_t {
 
   kBti = ZX_OBJ_TYPE_BTI,
   kChannel = ZX_OBJ_TYPE_CHANNEL,
+  kClock = ZX_OBJ_TYPE_CLOCK,
   kEvent = ZX_OBJ_TYPE_EVENT,
   kEventpair = ZX_OBJ_TYPE_EVENTPAIR,
   kException = ZX_OBJ_TYPE_EXCEPTION,

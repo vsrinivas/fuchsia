@@ -4,107 +4,60 @@
 
 // Forward declarations for old <-> V1 mappings
 
-extern const fidl_type_t example_ExampleProtocolMethodRequestTable;
-extern const fidl_type_t example_ExampleXUnionTable;
-extern const fidl_type_t example_ExampleXUnionNullableRefTable;
-extern const fidl_type_t example_ExampleUnionTable;
-extern const fidl_type_t example_ExampleStructTable;
-extern const fidl_type_t v1_example_ExampleProtocolMethodRequestTable;
-extern const fidl_type_t v1_example_ExampleXUnionTable;
-extern const fidl_type_t v1_example_ExampleXUnionNullableRefTable;
-extern const fidl_type_t v1_example_ExampleUnionTable;
-extern const fidl_type_t v1_example_ExampleStructTable;
+extern const fidl_type_t fidl_test_json_ParentFirstRequestTable;
+extern const fidl_type_t fidl_test_json_ChildFirstRequestTable;
+extern const fidl_type_t fidl_test_json_ChildSecondRequestTable;
+extern const fidl_type_t v1_fidl_test_json_ParentFirstRequestTable;
+extern const fidl_type_t v1_fidl_test_json_ChildFirstRequestTable;
+extern const fidl_type_t v1_fidl_test_json_ChildSecondRequestTable;
 
 // Coding tables for old wire format.
 
-extern const fidl_type_t exampleusing_EmptyTable;
-extern const fidl_type_t example_ExampleXUnionTable;
-extern const fidl_type_t example_ExampleXUnionNullableRefTable;
-extern const fidl_type_t example_ExampleUnionTable;
-extern const fidl_type_t example_ExampleTableTable;
-extern const fidl_type_t example_ExampleStructTable;
-extern const fidl_type_t example_ExampleEnumTable;
-extern const fidl_type_t example_ExampleBitsTable;
 
 
-extern const fidl_type_t example_ExampleProtocolMethodRequestTable;
-static const struct FidlStructField Fields36example_ExampleProtocolMethodRequest[] = {
-    /*FidlStructField*/{.type=&exampleusing_EmptyTable, .offset=16u, .padding=7u}
+static const fidl_type_t Request21fidl_test_json_ParentnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
+
+extern const fidl_type_t fidl_test_json_ParentFirstRequestTable;
+static const struct FidlStructField Fields33fidl_test_json_ParentFirstRequest[] = {
+    /*FidlStructField*/{.type=&Request21fidl_test_json_ParentnonnullableTable, .offset=16u, .padding=4u}
 };
-const fidl_type_t example_ExampleProtocolMethodRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields36example_ExampleProtocolMethodRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="example/ExampleProtocolMethodRequest", .alt_type=&v1_example_ExampleProtocolMethodRequestTable}}};
+const fidl_type_t fidl_test_json_ParentFirstRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields33fidl_test_json_ParentFirstRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.json/ParentFirstRequest", .alt_type=&v1_fidl_test_json_ParentFirstRequestTable}}};
 
-
-static const struct FidlXUnionField Fields21example_ExampleXUnion[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=1u, .hashed_ordinal=1300389554u, .explicit_ordinal=1u}
+extern const fidl_type_t fidl_test_json_ChildFirstRequestTable;
+static const struct FidlStructField Fields32fidl_test_json_ChildFirstRequest[] = {
+    /*FidlStructField*/{.type=&Request21fidl_test_json_ParentnonnullableTable, .offset=16u, .padding=4u}
 };
-const fidl_type_t example_ExampleXUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields21example_ExampleXUnion, .nullable=kFidlNullability_Nonnullable, .name="example/ExampleXUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_example_ExampleXUnionTable}}};
-static const struct FidlXUnionField Fields32example_ExampleXUnionNullableRef[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=1u, .hashed_ordinal=1300389554u, .explicit_ordinal=1u}
-};
-const fidl_type_t example_ExampleXUnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields32example_ExampleXUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="example/ExampleXUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_example_ExampleXUnionNullableRefTable}}};
-static const struct FidlUnionField Fields20example_ExampleUnion[] = {
-    /*FidlUnionField*/{.type=NULL, .padding=0u, .xunion_ordinal=1u}
-};
-const fidl_type_t example_ExampleUnionTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields20example_ExampleUnion, .field_count=1u, .data_offset=4u, .size=8u, .name="example/ExampleUnion", .alt_type=&v1_example_ExampleUnionTable}}};
+const fidl_type_t fidl_test_json_ChildFirstRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields32fidl_test_json_ChildFirstRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.json/ChildFirstRequest", .alt_type=&v1_fidl_test_json_ChildFirstRequestTable}}};
 
-static const struct FidlTableField Fields20example_ExampleTable[] = {
-    /*FidlTableField*/{.type=&fidl_internal_kUint32Table, .ordinal=1u}
+extern const fidl_type_t fidl_test_json_ChildSecondRequestTable;
+static const struct FidlStructField Fields33fidl_test_json_ChildSecondRequest[] = {
+    /*FidlStructField*/{.type=&Request21fidl_test_json_ParentnonnullableTable, .offset=16u, .padding=4u}
 };
-const fidl_type_t example_ExampleTableTable = {.type_tag=kFidlTypeTable, {.coded_table={.fields=Fields20example_ExampleTable, .field_count=1u, .name="example/ExampleTable"}}};
+const fidl_type_t fidl_test_json_ChildSecondRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields33fidl_test_json_ChildSecondRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.json/ChildSecondRequest", .alt_type=&v1_fidl_test_json_ChildSecondRequestTable}}};
 
-static const struct FidlStructField Fields21example_ExampleStruct[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=0u}
-};
-const fidl_type_t example_ExampleStructTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields21example_ExampleStruct, .field_count=1u, .size=4u, .max_out_of_line=0u, .contains_union=false, .name="example/ExampleStruct", .alt_type=&v1_example_ExampleStructTable}}};
-
-static bool EnumValidatorFor_example_ExampleEnum(uint64_t v) { return (v == 1ul) || false; }
-const fidl_type_t example_ExampleEnumTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_example_ExampleEnum, .name="example/ExampleEnum"}}};
-
-const fidl_type_t example_ExampleBitsTable = {.type_tag=kFidlTypeBits, {.coded_bits={.underlying_type=kFidlCodedPrimitive_Uint32, .mask=1ul, .name="example/ExampleBits"}}};
 
 // Coding tables for v1 wire format.
 
-extern const fidl_type_t v1_exampleusing_EmptyTable;
-extern const fidl_type_t v1_example_ExampleXUnionTable;
-extern const fidl_type_t v1_example_ExampleXUnionNullableRefTable;
-extern const fidl_type_t v1_example_ExampleUnionTable;
-extern const fidl_type_t v1_example_ExampleTableTable;
-extern const fidl_type_t v1_example_ExampleStructTable;
-extern const fidl_type_t v1_example_ExampleEnumTable;
-extern const fidl_type_t v1_example_ExampleBitsTable;
 
 
-extern const fidl_type_t v1_example_ExampleProtocolMethodRequestTable;
-static const struct FidlStructField Fields39v1_example_ExampleProtocolMethodRequest[] = {
-    /*FidlStructField*/{.type=&v1_exampleusing_EmptyTable, .offset=16u, .padding=7u}
+static const fidl_type_t v1_Request24v1_fidl_test_json_ParentnonnullableTable = {.type_tag=kFidlTypeHandle, {.coded_handle={.handle_subtype=ZX_OBJ_TYPE_CHANNEL, .nullable=kFidlNullability_Nonnullable}}};
+
+extern const fidl_type_t v1_fidl_test_json_ParentFirstRequestTable;
+static const struct FidlStructField Fields36v1_fidl_test_json_ParentFirstRequest[] = {
+    /*FidlStructField*/{.type=&v1_Request24v1_fidl_test_json_ParentnonnullableTable, .offset=16u, .padding=4u}
 };
-const fidl_type_t v1_example_ExampleProtocolMethodRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields39v1_example_ExampleProtocolMethodRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="example/ExampleProtocolMethodRequest", .alt_type=&example_ExampleProtocolMethodRequestTable}}};
+const fidl_type_t v1_fidl_test_json_ParentFirstRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields36v1_fidl_test_json_ParentFirstRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.json/ParentFirstRequest", .alt_type=&fidl_test_json_ParentFirstRequestTable}}};
 
+extern const fidl_type_t v1_fidl_test_json_ChildFirstRequestTable;
+static const struct FidlStructField Fields35v1_fidl_test_json_ChildFirstRequest[] = {
+    /*FidlStructField*/{.type=&v1_Request24v1_fidl_test_json_ParentnonnullableTable, .offset=16u, .padding=4u}
+};
+const fidl_type_t v1_fidl_test_json_ChildFirstRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields35v1_fidl_test_json_ChildFirstRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.json/ChildFirstRequest", .alt_type=&fidl_test_json_ChildFirstRequestTable}}};
 
-static const struct FidlXUnionField Fields24v1_example_ExampleXUnion[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=1u, .hashed_ordinal=1300389554u, .explicit_ordinal=1u}
+extern const fidl_type_t v1_fidl_test_json_ChildSecondRequestTable;
+static const struct FidlStructField Fields36v1_fidl_test_json_ChildSecondRequest[] = {
+    /*FidlStructField*/{.type=&v1_Request24v1_fidl_test_json_ParentnonnullableTable, .offset=16u, .padding=4u}
 };
-const fidl_type_t v1_example_ExampleXUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields24v1_example_ExampleXUnion, .nullable=kFidlNullability_Nonnullable, .name="example/ExampleXUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&example_ExampleXUnionTable}}};
-static const struct FidlXUnionField Fields35v1_example_ExampleXUnionNullableRef[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=1u, .hashed_ordinal=1300389554u, .explicit_ordinal=1u}
-};
-const fidl_type_t v1_example_ExampleXUnionNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields35v1_example_ExampleXUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="example/ExampleXUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&example_ExampleXUnionNullableRefTable}}};
-static const struct FidlXUnionField Fields23v1_example_ExampleUnion[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u}
-};
-const fidl_type_t v1_example_ExampleUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields23v1_example_ExampleUnion, .nullable=kFidlNullability_Nonnullable, .name="example/ExampleUnion", .strictness=kFidlStrictness_Strict, .alt_type=&example_ExampleUnionTable}}};
-static const struct FidlTableField Fields23v1_example_ExampleTable[] = {
-    /*FidlTableField*/{.type=&fidl_internal_kUint32Table, .ordinal=1u}
-};
-const fidl_type_t v1_example_ExampleTableTable = {.type_tag=kFidlTypeTable, {.coded_table={.fields=Fields23v1_example_ExampleTable, .field_count=1u, .name="example/ExampleTable"}}};
+const fidl_type_t v1_fidl_test_json_ChildSecondRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields36v1_fidl_test_json_ChildSecondRequest, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="fidl.test.json/ChildSecondRequest", .alt_type=&fidl_test_json_ChildSecondRequestTable}}};
 
-static const struct FidlStructField Fields24v1_example_ExampleStruct[] = {
-    /*FidlStructField*/{.type=NULL, .padding_offset=4u, .padding=0u}
-};
-const fidl_type_t v1_example_ExampleStructTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields24v1_example_ExampleStruct, .field_count=1u, .size=4u, .max_out_of_line=0u, .contains_union=false, .name="example/ExampleStruct", .alt_type=&example_ExampleStructTable}}};
-
-static bool EnumValidatorFor_v1_example_ExampleEnum(uint64_t v) { return (v == 1ul) || false; }
-const fidl_type_t v1_example_ExampleEnumTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_v1_example_ExampleEnum, .name="example/ExampleEnum"}}};
-
-const fidl_type_t v1_example_ExampleBitsTable = {.type_tag=kFidlTypeBits, {.coded_bits={.underlying_type=kFidlCodedPrimitive_Uint32, .mask=1ul, .name="example/ExampleBits"}}};
 

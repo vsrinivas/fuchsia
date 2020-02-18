@@ -110,6 +110,7 @@ struct Handles {
 
     handle<bti> bti_handle;
     handle<channel> channel_handle;
+    handle<clock> clock_handle;
     handle<debuglog> debuglog_handle;
     handle<event> event_handle;
     handle<eventpair> eventpair_handle;

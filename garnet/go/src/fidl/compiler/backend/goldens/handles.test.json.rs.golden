@@ -28,6 +28,7 @@ pub struct Handles {
   pub plain_handle: fidl::Handle,
   pub bti_handle: fidl::Bti,
   pub channel_handle: fidl::Channel,
+  pub clock_handle: fidl::Clock,
   pub debuglog_handle: fidl::DebugLog,
   pub event_handle: fidl::Event,
   pub eventpair_handle: fidl::EventPair,
@@ -74,124 +75,128 @@ fidl_struct! {
       ty: fidl::Channel,
       offset_v1: 8,
     },
+    clock_handle {
+      ty: fidl::Clock,
+      offset_v1: 12,
+    },
     debuglog_handle {
       ty: fidl::DebugLog,
-      offset_v1: 12,
+      offset_v1: 16,
     },
     event_handle {
       ty: fidl::Event,
-      offset_v1: 16,
+      offset_v1: 20,
     },
     eventpair_handle {
       ty: fidl::EventPair,
-      offset_v1: 20,
+      offset_v1: 24,
     },
     exception_handle {
       ty: fidl::Exception,
-      offset_v1: 24,
+      offset_v1: 28,
     },
     fifo_handle {
       ty: fidl::Fifo,
-      offset_v1: 28,
+      offset_v1: 32,
     },
     guest_handle {
       ty: fidl::Guest,
-      offset_v1: 32,
+      offset_v1: 36,
     },
     interrupt_handle {
       ty: fidl::Interrupt,
-      offset_v1: 36,
+      offset_v1: 40,
     },
     iommu_handle {
       ty: fidl::Iommu,
-      offset_v1: 40,
+      offset_v1: 44,
     },
     job_handle {
       ty: fidl::Job,
-      offset_v1: 44,
+      offset_v1: 48,
     },
     pager_handle {
       ty: fidl::Pager,
-      offset_v1: 48,
+      offset_v1: 52,
     },
     pcidevice_handle {
       ty: fidl::PciDevice,
-      offset_v1: 52,
+      offset_v1: 56,
     },
     pmt_handle {
       ty: fidl::Pmt,
-      offset_v1: 56,
+      offset_v1: 60,
     },
     port_handle {
       ty: fidl::Port,
-      offset_v1: 60,
+      offset_v1: 64,
     },
     process_handle {
       ty: fidl::Process,
-      offset_v1: 64,
+      offset_v1: 68,
     },
     profile_handle {
       ty: fidl::Profile,
-      offset_v1: 68,
+      offset_v1: 72,
     },
     resource_handle {
       ty: fidl::Resource,
-      offset_v1: 72,
+      offset_v1: 76,
     },
     socket_handle {
       ty: fidl::Socket,
-      offset_v1: 76,
+      offset_v1: 80,
     },
     suspendtoken_handle {
       ty: fidl::SuspendToken,
-      offset_v1: 80,
+      offset_v1: 84,
     },
     thread_handle {
       ty: fidl::Thread,
-      offset_v1: 84,
+      offset_v1: 88,
     },
     timer_handle {
       ty: fidl::Timer,
-      offset_v1: 88,
+      offset_v1: 92,
     },
     vcpu_handle {
       ty: fidl::Vcpu,
-      offset_v1: 92,
+      offset_v1: 96,
     },
     vmar_handle {
       ty: fidl::Vmar,
-      offset_v1: 96,
+      offset_v1: 100,
     },
     vmo_handle {
       ty: fidl::Vmo,
-      offset_v1: 100,
+      offset_v1: 104,
     },
     rights_handle {
       ty: fidl::Vmo,
-      offset_v1: 104,
+      offset_v1: 108,
     },
     aliased_plain_handle_field {
       ty: fidl::Handle,
-      offset_v1: 108,
+      offset_v1: 112,
     },
     aliased_subtype_handle_field {
       ty: fidl::Handle,
-      offset_v1: 112,
+      offset_v1: 116,
     },
     aliased_rights_handle_field {
       ty: fidl::Handle,
-      offset_v1: 116,
+      offset_v1: 120,
     },
     some_protocol {
       ty: fidl::endpoints::ClientEnd<SomeProtocolMarker>,
-      offset_v1: 120,
+      offset_v1: 124,
     },
     request_some_protocol {
       ty: fidl::endpoints::ServerEnd<SomeProtocolMarker>,
-      offset_v1: 124,
+      offset_v1: 128,
     },
   ],
-  size_v1: 128,
+  size_v1: 132,
   align_v1: 4,
 }
 

@@ -137,6 +137,7 @@ macro_rules! assoc_values {
 }
 
 mod channel;
+mod clock;
 mod cprng;
 mod debuglog;
 mod event;
@@ -163,6 +164,7 @@ mod vmar;
 mod vmo;
 
 pub use self::channel::*;
+pub use self::clock::*;
 pub use self::cprng::*;
 pub use self::debuglog::*;
 pub use self::event::*;

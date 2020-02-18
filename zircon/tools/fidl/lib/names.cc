@@ -131,6 +131,8 @@ std::string NameHandleSubtype(types::HandleSubtype subtype) {
       return "bti";
     case types::HandleSubtype::kChannel:
       return "channel";
+    case types::HandleSubtype::kClock:
+      return "clock";
     case types::HandleSubtype::kEvent:
       return "event";
     case types::HandleSubtype::kEventpair:
@@ -263,6 +265,8 @@ std::string NameHandleZXObjType(types::HandleSubtype subtype) {
       return "ZX_OBJ_TYPE_BTI";
     case types::HandleSubtype::kChannel:
       return "ZX_OBJ_TYPE_CHANNEL";
+    case types::HandleSubtype::kClock:
+      return "ZX_OBJ_TYPE_CLOCK";
     case types::HandleSubtype::kEvent:
       return "ZX_OBJ_TYPE_EVENT";
     case types::HandleSubtype::kEventpair:

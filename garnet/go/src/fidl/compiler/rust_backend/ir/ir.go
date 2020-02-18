@@ -363,6 +363,7 @@ var primitiveTypes = map[types.PrimitiveSubtype]string{
 var handleSubtypes = map[types.HandleSubtype]string{
 	types.Bti:          "Bti",
 	types.Channel:      "Channel",
+	types.Clock:        "Clock",
 	types.DebugLog:     "DebugLog",
 	types.Event:        "Event",
 	types.Eventpair:    "EventPair",

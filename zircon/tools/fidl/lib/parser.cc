@@ -68,6 +68,7 @@ Parser::Parser(Lexer* lexer, ErrorReporter* error_reporter,
   handle_subtype_table_ = {
       {"bti", types::HandleSubtype::kBti},
       {"channel", types::HandleSubtype::kChannel},
+      {"clock", types::HandleSubtype::kClock},
       {"debuglog", types::HandleSubtype::kLog},
       {"event", types::HandleSubtype::kEvent},
       {"eventpair", types::HandleSubtype::kEventpair},

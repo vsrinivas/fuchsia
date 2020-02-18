@@ -1373,6 +1373,7 @@
                 "handle",
                 "bti",
                 "channel",
+                "clock",
                 "debuglog",
                 "event",
                 "eventpair",

@@ -1458,6 +1458,7 @@ mod zx_encoding {
     use fuchsia_zircon as zx;
 
     type ZxChannel = zx::Channel;
+    type ZxClock = zx::Clock;
     type ZxDebugLog = zx::DebugLog;
     type ZxEvent = zx::Event;
     type ZxEventPair = zx::EventPair;
@@ -1476,6 +1477,7 @@ mod zx_encoding {
     type ZxVmo = zx::Vmo;
     handle_based_codable![
         ZxChannel,
+        ZxClock,
         ZxDebugLog,
         ZxEvent,
         ZxEventPair,

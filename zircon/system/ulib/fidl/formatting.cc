@@ -170,6 +170,9 @@ void FormatTypeName(StringBuilder* str, const fidl_type_t* type) {
           case ZX_OBJ_TYPE_CHANNEL:
             str->Append("channel");
             break;
+          case ZX_OBJ_TYPE_CLOCK:
+            str->Append("clock");
+            break;
           case ZX_OBJ_TYPE_EVENT:
             str->Append("event");
             break;

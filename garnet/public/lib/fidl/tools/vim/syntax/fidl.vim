@@ -28,7 +28,7 @@ syn match fidlType "\<handle\>?\?"
 " Exhaustive list of the handle types is listed below.  Highlight anything else
 " as invalid.
 syn match fidlBadType "\<handle<[^>]*>?\?"
-syn match fidlType "\<handle<\(channel\|debuglog\|event\|eventpair\|fifo\|guest\|interrupt\|iommu\|job\|pager\|pcidevice\|pmt\|port\|process\|profile\|resource\|socket\|suspendtoken\|thread\|timer\|vcpu\|vmar\|vmo\)>?\?"
+syn match fidlType "\<handle<\(channel\|clock\|debuglog\|event\|eventpair\|fifo\|guest\|interrupt\|iommu\|job\|pager\|pcidevice\|pmt\|port\|process\|profile\|resource\|socket\|suspendtoken\|thread\|timer\|vcpu\|vmar\|vmo\)>?\?"
 
 syn match fidlType "\<string\>\%(:\%(\d\+\|\K\k*\%(\.\K\k*\)*\)\)\??\?"
 syn match fidlType "\<bool\>"

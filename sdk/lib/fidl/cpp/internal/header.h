@@ -16,6 +16,7 @@
 #ifdef __Fuchsia__
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
