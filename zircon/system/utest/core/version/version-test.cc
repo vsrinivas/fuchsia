@@ -9,6 +9,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "cxx14.h"
+
 namespace {
 
 TEST(VersionTest, ZxStringView) {
@@ -47,6 +49,18 @@ TEST(VersionTest, StdString) {
   EXPECT_EQ(s.size(), zxsv.length);
   EXPECT_STR_EQ(s.c_str(), zxsv.c_str);
   EXPECT_TRUE(s == zxsv.c_str);
+}
+
+// zxtest is not API-compatible with C++14, so just these helper functions
+// are compiled separately with -std=c++14.
+TEST(VersionTest, CXX14StdString) {
+  zx_string_view_t zxsv = zx_system_get_version_string();
+  std::string s = AssignSystemGetVersionString();
+  EXPECT_EQ(s.size(), zxsv.length);
+  EXPECT_STR_EQ(s.c_str(), zxsv.c_str);
+  EXPECT_TRUE(s == zxsv.c_str);
+
+  EXPECT_TRUE(ReturnSystemGetVersionString() == s);
 }
 
 }  // namespace

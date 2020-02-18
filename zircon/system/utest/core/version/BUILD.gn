@@ -6,8 +6,23 @@ source_set("version") {
   testonly = true
   sources = [ "version-test.cc" ]
   deps = [
+    ":cxx14",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zxtest",
   ]
+}
+
+source_set("cxx14") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [
+    "cxx14.cc",
+    "cxx14.h",
+  ]
+  deps = [ "$zx/system/ulib/zircon" ]
+
+  # Remove the default -std=c++17 and compile with c++14.
+  configs -= [ "$zx/public/gn/config:language" ]
+  cflags_cc = [ "-std=c++14" ]
 }
