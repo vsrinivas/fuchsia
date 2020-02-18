@@ -170,7 +170,7 @@ TEST_F(spinel_vk, path_builder_lost)
 }
 
 //
-// go/fxr/344936
+// fxr:344936
 //
 TEST_F(spinel_vk, dispatch_implicit_rasters_flush)
 {
@@ -269,9 +269,75 @@ TEST_F(spinel_vk, dispatch_implicit_rasters_flush)
 }
 
 //
-//
+// Work-in-progress path is lost: fxb:46116
 //
 
+TEST_F(spinel_vk, wip_path_is_lost)
+{
+  spn_path_builder_t pb;
+
+  spn(path_builder_create(context, &pb));
+
+  //
+  // generate 2 paths:
+  //
+  //   - path #1 is simple
+  //   - path #2 is:
+  //     - the path is started
+  //     - the path builder is flushed
+  //     - the path is continued
+  //
+  spn_path_t paths[2];
+
+  //
+  // path #1: generate a simple path
+  //
+  // this will occupy 2 blocks
+  //
+  spn(path_builder_begin(pb));
+
+  spn(path_builder_move_to(pb, 0.0f, 0.0f));
+  spn(path_builder_line_to(pb, 8.0f, 8.0f));
+  spn(path_builder_line_to(pb, 0.0f, 8.0f));
+  spn(path_builder_line_to(pb, 0.0f, 0.0f));
+
+  spn(path_builder_end(pb, paths + 0));
+
+  //
+  // path #2: start the path
+  //
+  spn(path_builder_begin(pb));
+
+  spn(path_builder_move_to(pb, 0.0f, 0.0f));
+  spn(path_builder_line_to(pb, 8.0f, 8.0f));
+  spn(path_builder_line_to(pb, 0.0f, 8.0f));
+  spn(path_builder_line_to(pb, 0.0f, 0.0f));
+
+  spn(path_builder_flush(pb));
+
+  spn(path_builder_end(pb, paths + 1));
+
+  //
+  // drain everything
+  //
+  spn(vk_context_wait(context, 0, NULL, true, 10L * 1000L * 1000L * 1000L));
+
+  //
+  // release paths
+  //
+  spn(path_release(context, paths, 2));
+
+  spn(vk_context_wait(context, 0, NULL, true, 10L * 1000L * 1000L * 1000L));
+
+  //
+  // release the builders
+  //
+  spn(path_builder_release(pb));
+}
+
+//
+//
+//
 }  // namespace spinel::vk::test
 
 //

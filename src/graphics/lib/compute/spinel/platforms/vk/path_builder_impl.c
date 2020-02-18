@@ -78,9 +78,14 @@
 STATIC_ASSERT_MACRO_1(sizeof(union spn_path_header) == SPN_PATH_HEAD_DWORDS * sizeof(uint32_t));
 
 //
-// There are always as many 24-byte dispatch records as there are
-// fences in the fence pool.  This simplifies reasoning about
-// concurrency.
+// A dispatch record represents a continguous region of the ring that
+// can be copied from the host to device.
+//
+// There should enough dispatch records available so that if they're all
+// in flight then either a PCIe or memory bandwidth "roofline" limit is
+// reached.
+//
+// The expectation is that the path builder will *not* be CPU bound.
 //
 
 struct spn_pbi_span_head
@@ -93,10 +98,9 @@ struct spn_pbi_dispatch
 {
   struct spn_pbi_span_head blocks;
   struct spn_pbi_span_head paths;
-  uint32_t                 rolling;
 
-  bool unreleased;
-
+  uint32_t          rolling;
+  bool              unreleased;
   spn_dispatch_id_t id;
 };
 
@@ -352,13 +356,16 @@ spn_pbi_dispatch_init(struct spn_path_builder_impl * const impl,
 
   struct spn_pbi_dispatch * const dispatch = spn_pbi_dispatch_idx(impl, dispatches_ring->head);
 
+  // head is the wip path's head idx
   dispatch->blocks.span = 0;
-  dispatch->blocks.head = impl->mapped.ring.head;
-  dispatch->rolling     = impl->mapped.rolling;
+  dispatch->blocks.head = impl->wip.head.idx;
 
+  // no paths have been appended
   dispatch->paths.span = 0;
   dispatch->paths.head = impl->paths.next.head;
 
+  // rolling is the wip's path's rolling counter
+  dispatch->rolling    = impl->wip.head.rolling;
   dispatch->unreleased = false;
 
   spn(device_dispatch_acquire(impl->device, SPN_DISPATCH_STAGE_PATH_BUILDER, &dispatch->id));
@@ -379,6 +386,18 @@ spn_pbi_dispatch_drop(struct spn_path_builder_impl * const impl)
     }
 
   spn_pbi_dispatch_init(impl, ring);
+
+  //
+  // Verifies conservation of ring blocks
+  //
+#ifndef NDEBUG
+  if (impl->path_builder->state == SPN_PATH_BUILDER_STATE_BUILDING)
+    {
+      struct spn_pbi_dispatch * const dispatch = spn_pbi_dispatch_head(impl);
+
+      assert(dispatch->blocks.head == impl->wip.head.idx);
+    }
+#endif
 }
 
 static void
@@ -393,7 +412,7 @@ spn_pbi_dispatch_append(struct spn_path_builder_impl * const impl,
 }
 
 static bool
-spn_pbi_is_wip_dispatch_empty(struct spn_pbi_dispatch const * const dispatch)
+spn_pbi_is_dispatch_empty(struct spn_pbi_dispatch const * const dispatch)
 {
   return dispatch->paths.span == 0;
 }
@@ -481,7 +500,7 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
   struct spn_pbi_dispatch * const dispatch = spn_pbi_dispatch_head(impl);
 
   // anything to launch?
-  if (spn_pbi_is_wip_dispatch_empty(dispatch))
+  if (spn_pbi_is_dispatch_empty(dispatch))
     return SPN_SUCCESS;
 
   SPN_VK_TRACE_PATH_BUILDER_DISPATCH_FLUSH(impl, impl->dispatches.ring.head);
@@ -693,26 +712,25 @@ spn_pbi_acquire_node_segs_block(struct spn_path_builder_impl * const impl, uint3
 
   if (spn_ring_is_empty(ring))
     {
-      struct spn_pbi_dispatch const * const dispatch = spn_pbi_dispatch_head(impl);
-
-      // If dispatch is empty and the work in progress is going to
-      // exceed the size of the ring then this is a fatal error. At
-      // this point, we can kill the path builder instead of the
-      // device.
-      if (spn_pbi_is_wip_dispatch_empty(dispatch))
+      //
+      // If the work in progress is going to exceed the size of the ring
+      // then this is a fatal error. At this point, we can kill the path
+      // builder instead of the device.
+      //
+      if (impl->wip.header.blocks >= impl->mapped.ring.size)
         {
           spn_pbi_lost(impl);
 
-          return SPN_ERROR_PATH_BUILDER_LOST;  // FIXME -- return a "TOO_LONG" error?
+          return SPN_ERROR_PATH_BUILDER_LOST;  // FIXME(allanmac): return a "TOO_LONG" error?
         }
 
       //
-      // otherwise, launch whatever is in the ring...
+      // Otherwise, launch whatever is in the ring...
       //
       spn_pbi_flush(impl);
 
       //
-      // ... and wait for space
+      // ... and wait for blocks to appear in the ring!
       //
       do
         {
@@ -734,9 +752,6 @@ static void
 spn_pbi_acquire_head(struct spn_path_builder_impl * const impl)
 {
   uint32_t const idx = spn_pbi_acquire_head_block(impl);
-
-  impl->wip.head.idx     = idx;
-  impl->wip.head.rolling = impl->mapped.rolling;
 
   spn_pbi_cmd_append(impl, idx, SPN_PATHS_COPY_CMD_TYPE_HEAD);
 
@@ -920,6 +935,7 @@ spn_pbi_prims_pack(struct spn_path_builder_impl * const impl)
                                                impl->wip.prims.cubic,
                                                impl->wip.prims.rat_quad,
                                                impl->wip.prims.rat_cubic);
+
   impl->wip.header.prims = prims;
 }
 
@@ -927,12 +943,12 @@ spn_pbi_prims_pack(struct spn_path_builder_impl * const impl)
 //
 //
 
-static spn_result_t
-spn_pbi_begin(struct spn_path_builder_impl * const impl)
+static void
+spn_pbi_wip_reset(struct spn_path_builder_impl * const impl)
 {
-  // init path builder counters
   struct spn_path_builder * const pb = impl->path_builder;
 
+  // init path builder counters
 #undef SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X
 #define SPN_PATH_BUILDER_PRIM_TYPE_EXPAND_X(_p, _i, _n) pb->cn.rem._p = 0;
 
@@ -945,12 +961,24 @@ spn_pbi_begin(struct spn_path_builder_impl * const impl)
   impl->wip.header.blocks = 0;
   impl->wip.header.nodes  = 0;
 
-  // reset prim counters
-  spn_pbi_prims_zero(impl);
-
   // reset bounds
   impl->wip.header.bounds = (struct spn_vec4){ +FLT_MIN, +FLT_MIN, -FLT_MIN, -FLT_MIN };
 
+  // save mapped head to wip
+  impl->wip.head.idx     = impl->mapped.ring.head;
+  impl->wip.head.rolling = impl->mapped.rolling;
+
+  // reset prim counters
+  spn_pbi_prims_zero(impl);
+}
+
+//
+//
+//
+
+static spn_result_t
+spn_pbi_begin(struct spn_path_builder_impl * const impl)
+{
   // acquire head block
   spn_pbi_acquire_head(impl);
 
@@ -997,7 +1025,11 @@ spn_pbi_end(struct spn_path_builder_impl * const impl, spn_path_t * const path)
   // copy header to mapped coherent head block
   memcpy(head, impl->wip.header.u32aN, sizeof(impl->wip.header));
 
-  if (spn_pbi_dispatch_head(impl)->blocks.span >= impl->config.eager_size)
+  // reset wip
+  spn_pbi_wip_reset(impl);
+
+  // eagerly flush?
+  if (dispatch->blocks.span >= impl->config.eager_size)
     {
       spn_pbi_flush(impl);
     }
@@ -1119,6 +1151,9 @@ spn_path_builder_impl_create(struct spn_device * const        device,
 
   uint32_t const ring_size = config->path_builder.size.ring;
 
+  //
+  // initialize mapped counters
+  //
   spn_ring_init(&impl->mapped.ring, ring_size);
 
   impl->mapped.rolling = 0;
@@ -1147,7 +1182,7 @@ spn_path_builder_impl_create(struct spn_device * const        device,
   impl->mapped.cmds = impl->mapped.blocks.u32 + cmds_offset;
 
   //
-  // allocate release resources
+  // allocate path release extent
   //
   size_t const paths_size = sizeof(*impl->paths.extent) * ring_size;
 
@@ -1155,10 +1190,19 @@ spn_path_builder_impl_create(struct spn_device * const        device,
 
   spn_next_init(&impl->paths.next, ring_size);
 
+  //
+  // reset wip after mapped counters and path release extent
+  //
+  spn_pbi_wip_reset(impl);
+
+  //
+  // allocate dispatches ring
+  //
   size_t const dispatches_size = sizeof(*impl->dispatches.extent) * max_in_flight;
 
-  impl->dispatches.extent =
-    spn_allocator_host_perm_alloc(perm, SPN_MEM_FLAGS_READ_WRITE, dispatches_size);
+  impl->dispatches.extent = spn_allocator_host_perm_alloc(perm,  //
+                                                          SPN_MEM_FLAGS_READ_WRITE,
+                                                          dispatches_size);
 
   spn_ring_init(&impl->dispatches.ring, max_in_flight);
 
