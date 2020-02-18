@@ -14,6 +14,7 @@ xunion ExposeDecl {
     2: ExposeProtocolDecl protocol;
     3: ExposeDirectoryDecl directory;
     4: ExposeRunnerDecl runner;
+    5: ExposeResolverDecl resolver;
 };
 
 /// Declares a service exposed to a component's containing realm, such as a
@@ -109,4 +110,22 @@ table ExposeRunnerDecl {
 
     /// The name by which the capability is being exposed.
     4: fuchsia.component.runner_name target_name;
+};
+
+/// Declares a resolver exposed to a component's containing realm, such as a
+/// resolver exposed by the component or one of its children at runtime.
+table ExposeResolverDecl {
+    /// The provider of the capability relative to the component itself. Must
+    /// be `self` or `child`.
+    1: Ref source;
+
+    /// The name of the resolver, by which it was presented to this component.
+    2: fuchsia.component.resolver_name source_name;
+
+    /// The destination to which the resolver is exposed: either the component's realm or the
+    /// framework.
+    3: Ref target;
+
+    /// The name by which the capability is being exposed.
+    4: fuchsia.component.resolver_name target_name;
 };

@@ -197,7 +197,9 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
                     fsys::ExposeDecl::Runner(r) => {
                         exposes.push(ExposeDecl::Runner(r.fidl_into_native()))
                     }
-                    fsys::ExposeDecl::__UnknownVariant { .. } => panic!("invalid variant"),
+                    fsys::ExposeDecl::Resolver(_) | fsys::ExposeDecl::__UnknownVariant { .. } => {
+                        panic!("invalid variant")
+                    }
                 }
             }
             for ((target, target_path), sources) in services.into_iter() {
@@ -232,7 +234,9 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
                     fsys::OfferDecl::Runner(s) => {
                         offers.push(OfferDecl::Runner(s.fidl_into_native()))
                     }
-                    fsys::OfferDecl::__UnknownVariant { .. } => panic!("invalid variant"),
+                    fsys::OfferDecl::Resolver(_) | fsys::OfferDecl::__UnknownVariant { .. } => {
+                        panic!("invalid variant")
+                    }
                 }
             }
             for ((target, target_path), sources) in services.into_iter() {

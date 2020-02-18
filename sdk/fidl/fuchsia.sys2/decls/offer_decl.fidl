@@ -16,6 +16,7 @@ xunion OfferDecl {
     3: OfferDirectoryDecl directory;
     4: OfferStorageDecl storage;
     5: OfferRunnerDecl runner;
+    6: OfferResolverDecl resolver;
 };
 
 /// Describes the type of dependency implied by the capability.
@@ -145,4 +146,23 @@ table OfferRunnerDecl {
 
     /// Name under which the capability is being offered.
     4: fuchsia.component.runner_name target_name;
+};
+
+/// Declares a resolver capability offered by a component to one of its children, which
+/// may have been offered by the component's containing realm, the component itself,
+/// or one of its other children.
+table OfferResolverDecl {
+    /// The provider of the capability relative to the component itself. Must be
+    /// `realm`, `self`, or `child`.
+    1: Ref source;
+
+    /// Name of the resolver being offered.
+    2: fuchsia.component.resolver_name source_name;
+
+    /// Reference to the target of the capability. Must be `child` or
+    /// `collection`.
+    3: Ref target;
+
+    /// Name under which the capability is being offered.
+    4: fuchsia.component.resolver_name target_name;
 };

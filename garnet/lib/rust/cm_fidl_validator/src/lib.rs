@@ -607,7 +607,7 @@ impl<'a> ValidationContext<'a> {
                     prev_runner_names,
                 );
             }
-            fsys::ExposeDecl::__UnknownVariant { .. } => {
+            fsys::ExposeDecl::Resolver(_) | fsys::ExposeDecl::__UnknownVariant { .. } => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "expose"));
             }
         }
@@ -775,7 +775,7 @@ impl<'a> ValidationContext<'a> {
                     o.target_name.as_ref(),
                 );
             }
-            fsys::OfferDecl::__UnknownVariant { .. } => {
+            fsys::OfferDecl::Resolver(_) | fsys::OfferDecl::__UnknownVariant { .. } => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "offer"));
             }
         }
