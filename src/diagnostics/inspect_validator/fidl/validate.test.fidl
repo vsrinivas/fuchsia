@@ -79,14 +79,13 @@ struct CreateStringProperty {
     string value;
 };
 
-/// Tells the puppet to create a property with the given boolean value.
-struct CreateBooleanProperty {
-  uint32 parent;
-  uint32 id;
-  string name;
-  bool value;
+/// Tells the puppet to create a property with the given bool value.
+struct CreateBoolProperty {
+    uint32 parent;
+    uint32 id;
+    string name;
+    bool value;
 };
-
 
 /// Tells the puppet to delete an existing property.
 struct DeleteProperty {
@@ -118,9 +117,9 @@ struct SetString {
     string value;
 };
 
-struct SetBoolean {
-  uint32 id;
-  bool value;
+struct SetBool {
+    uint32 id;
+    bool value;
 };
 
 struct CreateArrayProperty {
@@ -181,15 +180,15 @@ struct InsertMultiple {
 
 /// Tells the puppet to do something to modify the VMO.
 xunion Action {
-     1: CreateNode create_node;
-     2: DeleteNode delete_node;
-     3: CreateNumericProperty create_numeric_property;
-     4: CreateBytesProperty create_bytes_property;
-     5: CreateStringProperty create_string_property;
-     6: DeleteProperty delete_property;
-     7: SetNumber set_number;
-     8: SetString set_string;
-     9: SetBytes set_bytes;
+    1: CreateNode create_node;
+    2: DeleteNode delete_node;
+    3: CreateNumericProperty create_numeric_property;
+    4: CreateBytesProperty create_bytes_property;
+    5: CreateStringProperty create_string_property;
+    6: DeleteProperty delete_property;
+    7: SetNumber set_number;
+    8: SetString set_string;
+    9: SetBytes set_bytes;
     10: AddNumber add_number;
     11: SubtractNumber subtract_number;
     12: CreateArrayProperty create_array_property;
@@ -200,8 +199,8 @@ xunion Action {
     17: CreateExponentialHistogram create_exponential_histogram;
     18: Insert insert;
     19: InsertMultiple insert_multiple;
-    20: CreateBooleanProperty create_boolean_property;
-    21: SetBoolean set_boolean;
+    20: CreateBoolProperty create_bool_property;
+    21: SetBool set_bool;
 };
 
 [Discoverable]

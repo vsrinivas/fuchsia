@@ -34,6 +34,7 @@ enum Property {
     Uint(UintProperty),
     Double(DoubleProperty),
     Bytes(BytesProperty),
+    Bool(BoolProperty),
     IntArray(IntArrayProperty),
     UintArray(UintArrayProperty),
     DoubleArray(DoubleArrayProperty),
@@ -89,6 +90,10 @@ impl Actor {
                     Property::String(self.find_parent(parent)?.create_string(name, value)),
                 );
             }
+            Action::CreateBoolProperty(CreateBoolProperty { parent, id, name, value }) => {
+                self.properties
+                    .insert(id, Property::Bool(self.find_parent(parent)?.create_bool(name, value)));
+            }
             Action::DeleteProperty(DeleteProperty { id }) => {
                 self.properties.remove(&id);
             }
@@ -135,6 +140,12 @@ impl Actor {
                 Property::Bytes(p) => p.set(&value),
                 unexpected => {
                     return Err(format_err!("Illegal property {:?} for SetBytes", unexpected))
+                }
+            },
+            Action::SetBool(SetBool { id, value }) => match self.find_property(id)? {
+                Property::Bool(p) => p.set(value),
+                unexpected => {
+                    return Err(format_err!("Illegal property {:?} for SetBool", unexpected))
                 }
             },
             Action::CreateArrayProperty(CreateArrayProperty {

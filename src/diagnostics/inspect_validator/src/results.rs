@@ -54,9 +54,11 @@ impl Summary for Action {
             }
             Action::CreateBytesProperty(_) => "CreateProperty(Bytes)".to_string(),
             Action::CreateStringProperty(_) => "CreateProperty(String)".to_string(),
+            Action::CreateBoolProperty(_) => "CreateProperty(Bool)".to_string(),
             Action::DeleteProperty(_) => "DeleteProperty".to_string(),
             Action::SetBytes(_) => "Set(Bytes)".to_string(),
             Action::SetString(_) => "Set(String)".to_string(),
+            Action::SetBool(_) => "Set(Bool)".to_string(),
             Action::AddNumber(AddNumber { value, .. }) => format!("Add({})", value.summary()),
             Action::SubtractNumber(SubtractNumber { value, .. }) => {
                 format!("Subtract({})", value.summary())

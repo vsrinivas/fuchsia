@@ -79,6 +79,7 @@ enum Payload {
     Int(i64),
     Uint(u64),
     Double(f64),
+    Bool(bool),
     IntArray(Vec<i64>, ArrayFormat),
     UintArray(Vec<u64>, ArrayFormat),
     DoubleArray(Vec<f64>, ArrayFormat),
@@ -227,6 +228,12 @@ impl Data {
                 name,
                 value,
             }) => self.add_property(*parent, *id, name, Payload::String(value.to_string())),
+            validate::Action::CreateBoolProperty(validate::CreateBoolProperty {
+                parent,
+                id,
+                name,
+                value,
+            }) => self.add_property(*parent, *id, name, Payload::Bool(*value)),
             validate::Action::DeleteProperty(validate::DeleteProperty { id }) => {
                 self.delete_property(*id)
             }
@@ -244,6 +251,9 @@ impl Data {
             }
             validate::Action::SetString(validate::SetString { id, value }) => {
                 self.set_string(*id, value)
+            }
+            validate::Action::SetBool(validate::SetBool { id, value }) => {
+                self.set_bool(*id, *value)
             }
             validate::Action::CreateArrayProperty(validate::CreateArrayProperty {
                 parent,
@@ -749,6 +759,22 @@ impl Data {
         Ok(())
     }
 
+    fn set_bool(&mut self, id: u32, value: bool) -> Result<(), Error> {
+        if let Some(property) = self.properties.get_mut(&id) {
+            match &property {
+                Property { payload: Payload::Bool(_), .. } => {
+                    property.payload = Payload::Bool(value)
+                }
+                unexpected => {
+                    return Err(format_err!("Bad type {:?} trying to set bool", unexpected))
+                }
+            }
+        } else {
+            return Err(format_err!("Tried to set bool on nonexistent property {}", id));
+        }
+        Ok(())
+    }
+
     // ***** Here are the functions to compare two Data (by converting to a
     // ***** fully informative string).
 
@@ -931,6 +957,8 @@ mod tests {
         assert!(info.to_string().contains(
             "DEhist: DoubleArray([56.0, 27.0, 7.0, 0.0, 0.0, 0.0, 0.0], ExponentialHistogram)"
         ));
+        info.apply(&create_bool_property!(parent: ROOT_ID, id: 17, name: "bool", value: true))?;
+        assert!(info.to_string().contains("bool: Bool(true)"));
 
         info.apply(&delete_property!(id: 3))?;
         assert!(!info.to_string().contains("int-42") && info.to_string().contains("stringfoo"));
@@ -960,6 +988,8 @@ mod tests {
         assert!(!info.to_string().contains("UEhist"));
         info.apply(&delete_property!(id: 16))?;
         assert!(!info.to_string().contains("DEhist"));
+        info.apply(&delete_property!(id: 17))?;
+        assert!(!info.to_string().contains("bool"));
         info.apply(&delete_node!(id:2))?;
         assert!(!info.to_string().contains("grandchild") && info.to_string().contains("child"));
         info.apply(&delete_node!( id: 1 ))?;
@@ -1596,8 +1626,7 @@ mod tests {
         remote.apply(&create_string_property!(parent: 1, id: 2, name: "prop1", value: "bar"))?;
         let diff_string = "-- DIFF --\n\nSame:3 lines\nLocal: > >  prop1: \
              String(\"foo\")\nOther: > >  prop1: String(\"bar\")\nSame:3 lines\n\n";
-        let full_string =
-            "-- LOCAL --\n root ->\n\n>  node ->\n> >  prop1: String(\"foo\")\
+        let full_string = "-- LOCAL --\n root ->\n\n>  node ->\n> >  prop1: String(\"foo\")\
              \n\n\n\n-- OTHER --\n root ->\n\n>  node ->\n> >  prop1: \
              String(\"bar\")\n\n\n\n";
         match local.compare(&mut remote, DiffType::Diff) {

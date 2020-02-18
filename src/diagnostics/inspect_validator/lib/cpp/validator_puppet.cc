@@ -25,7 +25,7 @@ using test::inspect::validate::TestResult;
 using Value =
     fit::variant<fit::monostate, inspect::Node, inspect::IntProperty, inspect::UintProperty,
                  inspect::DoubleProperty, inspect::StringProperty, inspect::ByteVectorProperty,
-                 inspect::IntArray, inspect::UintArray, inspect::DoubleArray,
+                 inspect::BoolProperty, inspect::IntArray, inspect::UintArray, inspect::DoubleArray,
                  inspect::LinearIntHistogram, inspect::LinearUintHistogram,
                  inspect::LinearDoubleHistogram, inspect::ExponentialIntHistogram,
                  inspect::ExponentialUintHistogram, inspect::ExponentialDoubleHistogram>;
@@ -67,6 +67,9 @@ class Puppet : public test::inspect::validate::Validate {
       case Action::Tag::kCreateStringProperty:
         callback(HandleCreateString(action));
         break;
+      case Action::Tag::kCreateBoolProperty:
+        callback(HandleCreateBool(action));
+        break;
       case Action::Tag::kSetNumber:
         callback(HandleSetNumber(action));
         break;
@@ -81,6 +84,9 @@ class Puppet : public test::inspect::validate::Validate {
         break;
       case Action::Tag::kSetBytes:
         callback(HandleSetBytes(action));
+        break;
+      case Action::Tag::kSetBool:
+        callback(HandleSetBool(action));
         break;
       case Action::Tag::kCreateArrayProperty:
         callback(HandleCreateArray(action));
@@ -225,6 +231,23 @@ class Puppet : public test::inspect::validate::Validate {
     return TestResult::OK;
   }
 
+  TestResult HandleCreateBool(const Action& raw_action) {
+    auto& action = raw_action.create_bool_property();
+
+    if (ValueMapContains(action.id)) {
+      return TestResult::FAILED;
+    }
+
+    auto* parent = GetNode(action.parent);
+    if (!parent) {
+      return TestResult::FAILED;
+    }
+
+    value_map_.emplace(action.id, parent->CreateBool(action.name, action.value));
+
+    return TestResult::OK;
+  }
+
   TestResult HandleDeleteProperty(const Action& raw_action) {
     auto& action = raw_action.delete_property();
 
@@ -283,6 +306,17 @@ class Puppet : public test::inspect::validate::Validate {
     auto& action = raw_action.set_bytes();
 
     if (auto* val = GetFromValueMap<inspect::ByteVectorProperty>(action.id)) {
+      val->Set(action.value);
+      return TestResult::OK;
+    } else {
+      return TestResult::FAILED;
+    }
+  }
+
+  TestResult HandleSetBool(const Action& raw_action) {
+    auto& action = raw_action.set_bool();
+
+    if (auto* val = GetFromValueMap<inspect::BoolProperty>(action.id)) {
       val->Set(action.value);
       return TestResult::OK;
     } else {

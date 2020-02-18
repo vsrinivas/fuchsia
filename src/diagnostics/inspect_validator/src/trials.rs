@@ -22,6 +22,7 @@ pub fn real_trials() -> Vec<Trial> {
         basic_double(),
         basic_string(),
         basic_bytes(),
+        basic_bool(),
         basic_int_array(),
         basic_uint_array(),
         basic_double_array(),
@@ -87,6 +88,18 @@ macro_rules! create_string_property {
 }
 
 #[macro_export]
+macro_rules! create_bool_property {
+    (parent: $parent:expr, id: $id:expr, name: $name:expr, value: $value:expr) => {
+        validate::Action::CreateBoolProperty(validate::CreateBoolProperty {
+            parent: $parent,
+            id: $id,
+            name: $name.into(),
+            value: $value.into(),
+        })
+    };
+}
+
+#[macro_export]
 macro_rules! set_string {
     (id: $id:expr, value: $value:expr) => {
         validate::Action::SetString(validate::SetString { id: $id, value: $value.into() })
@@ -104,6 +117,13 @@ macro_rules! set_bytes {
 macro_rules! set_number {
     (id: $id:expr, value: $value:expr) => {
         validate::Action::SetNumber(validate::SetNumber { id: $id, value: $value })
+    };
+}
+
+#[macro_export]
+macro_rules! set_bool {
+    (id: $id:expr, value: $value:expr) => {
+        validate::Action::SetBool(validate::SetBool { id: $id, value: $value.into() })
     };
 }
 
@@ -256,6 +276,18 @@ fn basic_bytes() -> Trial {
             set_bytes!(id: 8, value: vec![3u8, 4, 5, 6, 7]),
             set_bytes!(id: 8, value: vec![8u8]),
             delete_property!(id: 8),
+        ])],
+    }
+}
+
+fn basic_bool() -> Trial {
+    Trial {
+        name: "Basic Bool".into(),
+        steps: vec![Step::Actions(vec![
+            create_bool_property!(parent: ROOT_ID, id: 1, name: "bool", value: true),
+            set_bool!(id: 1, value: false),
+            set_bool!(id: 1, value: true),
+            delete_property!(id: 1),
         ])],
     }
 }

@@ -172,15 +172,13 @@ impl Scanner {
                 | Ok(BlockType::UintValue)
                 | Ok(BlockType::DoubleValue)
                 | Ok(BlockType::ArrayValue)
-                | Ok(BlockType::PropertyValue) => ret.process_property(block, buffer)?,
+                | Ok(BlockType::PropertyValue)
+                | Ok(BlockType::BoolValue) => ret.process_property(block, buffer)?,
                 Ok(BlockType::Extent) => ret.process_extent(block, buffer)?,
                 Ok(BlockType::Name) => ret.process_name(block, buffer)?,
                 Ok(BlockType::Tombstone) => ret.process_tombstone(block)?,
                 Ok(BlockType::LinkValue) => {
                     return Err(format_err!("LinkValue isn't supported yet."))
-                }
-                Ok(BlockType::BoolValue) => {
-                    return Err(format_err!("BoolValue isn't supported yet."))
                 }
                 Err(error) => return Err(error),
             }
@@ -395,6 +393,7 @@ impl Scanner {
             BlockType::IntValue => ScannedPayload::Int(block.int_value()?),
             BlockType::UintValue => ScannedPayload::Uint(block.uint_value()?),
             BlockType::DoubleValue => ScannedPayload::Double(block.double_value()?),
+            BlockType::BoolValue => ScannedPayload::Bool(block.bool_value()?),
             BlockType::PropertyValue => {
                 let format = block.property_format()?;
                 let length = block.property_total_length()?;
@@ -501,6 +500,7 @@ impl Scanner {
             ScannedPayload::Int(data) => Payload::Int(*data),
             ScannedPayload::Uint(data) => Payload::Uint(*data),
             ScannedPayload::Double(data) => Payload::Double(*data),
+            ScannedPayload::Bool(data) => Payload::Bool(*data),
             ScannedPayload::IntArray(data, format) => {
                 Payload::IntArray(data.clone(), format.clone())
             }
@@ -582,6 +582,7 @@ enum ScannedPayload {
     Int(i64),
     Uint(u64),
     Double(f64),
+    Bool(bool),
     IntArray(Vec<i64>, ArrayFormat),
     UintArray(Vec<u64>, ArrayFormat),
     DoubleArray(Vec<f64>, ArrayFormat),
