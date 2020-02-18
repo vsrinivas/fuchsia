@@ -239,7 +239,7 @@ struct SinglyLinkedListable {
 
 template <typename T, typename NodeTraits_ = DefaultSinglyLinkedListTraits<T>,
           typename TagType_ = DefaultObjectTag, SizeOrder ListSizeOrder_ = SizeOrder::N>
-class SinglyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
+class __POINTER(T) SinglyLinkedList : private internal::SizeTracker<ListSizeOrder_> {
  private:
   // Private fwd decls of the iterator implementation.
   template <typename IterTraits>

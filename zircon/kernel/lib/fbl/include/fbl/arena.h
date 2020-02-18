@@ -27,7 +27,7 @@ namespace fbl {
 //
 // The overhead per object is two pointers (16 bytes in 64-bits)
 
-class Arena {
+class __OWNER(void) Arena {
  public:
   Arena() = default;
   ~Arena();
@@ -127,7 +127,7 @@ class Arena {
 //    use fbl::NullMutex to use external serialization.
 //
 template <typename T, typename Mtx>
-class TypedArena {
+class __OWNER(T) TypedArena {
  public:
   zx_status_t Init(const char* name, size_t max_count) TA_NO_THREAD_SAFETY_ANALYSIS {
     return arena_.Init(name, sizeof(T), max_count);

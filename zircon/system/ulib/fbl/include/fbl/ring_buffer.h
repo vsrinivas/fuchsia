@@ -18,7 +18,7 @@ namespace fbl {
 // |RingBuffer| is a statically-allocated, typed ring buffer container.
 //  This container is not thread safe.
 template <typename T, uint32_t N>
-class RingBuffer {
+class __OWNER(T) RingBuffer {
  public:
   constexpr RingBuffer() = default;
   ~RingBuffer() { clear(); }

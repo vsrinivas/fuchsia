@@ -14,6 +14,8 @@
 
 #include <safemath/checked_math.h>
 
+#include "src/lib/containers/cpp/ownership.h"
+
 namespace containers {
 namespace internal {
 
@@ -44,7 +46,7 @@ static inline uintptr_t get_uintptr(const T* t) {
 //
 // The current API does not support moving overlapping ranges.
 template <typename T>
-class VectorBuffer {
+class __OWNER(T) VectorBuffer {
  public:
   constexpr VectorBuffer() = default;
 

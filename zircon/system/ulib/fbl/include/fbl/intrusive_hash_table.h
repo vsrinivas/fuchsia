@@ -61,7 +61,7 @@ template <typename _KeyType, typename _PtrType, typename _BucketType = SinglyLin
           typename _HashTraits = DefaultHashTraits<
               _KeyType, typename internal::ContainerPtrTraits<_PtrType>::ValueType, _HashType,
               _NumBuckets>>
-class HashTable {
+class __POINTER(_KeyType) HashTable {
  private:
   // Private fwd decls of the iterator implementation.
   template <typename IterTraits>

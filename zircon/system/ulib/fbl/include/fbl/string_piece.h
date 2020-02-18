@@ -9,6 +9,7 @@
 #include <type_traits>
 
 #include <fbl/string_traits.h>
+#include <zircon/compiler.h>
 
 namespace fbl {
 
@@ -29,7 +30,7 @@ constexpr static size_t constexpr_strlen(const char* str) {
 //
 // Basically, these aren't C strings, don't think otherwise.
 // The string piece does not own the data it points to.
-class StringPiece {
+class __POINTER(char) StringPiece {
  public:
   constexpr StringPiece() : data_(nullptr), length_(0U) {}
 
