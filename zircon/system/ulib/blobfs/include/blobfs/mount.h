@@ -41,6 +41,7 @@ enum class Writability {
 // Toggles that may be set on blobfs during initialization.
 struct MountOptions {
   Writability writability = Writability::Writable;
+  bool verbose = false;
   bool metrics = false;
   bool journal = false;
   bool pager = false;
