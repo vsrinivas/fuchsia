@@ -1863,7 +1863,6 @@ void ClientProxy::DdkRelease() {
   auto* task = new async::Task();
   task->set_handler(
       [this](async_dispatcher_t* /*dispatcher*/, async::Task* task, zx_status_t /*status*/) {
-        this->handler_.CancelFidlBind();
         mtx_lock(&this->task_mtx_);
         for (auto& t : this->client_scheduled_tasks_) {
           t->Cancel();
@@ -1874,8 +1873,9 @@ void ClientProxy::DdkRelease() {
         delete this;
       });
 
-  // We should be able to post a task to the loop since DdkRelease on client should be called
-  // before controller loop is shutdown.
+  // We should be able to post tasks to the loop since DdkRelease on client should be called before
+  // controller loop is shutdown.
+  this->handler_.CancelFidlBind();
   ZX_DEBUG_ASSERT(task->Post(controller_->loop().dispatcher()) == ZX_OK);
 }
 
