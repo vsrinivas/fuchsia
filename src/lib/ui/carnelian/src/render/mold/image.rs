@@ -12,7 +12,7 @@ use mapped_vmo::Mapping;
 use crate::render::mold::MoldComposition;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct MoldImage(pub(crate) u32);
+pub struct MoldImage(pub(crate) usize);
 
 #[derive(Clone, Debug)]
 struct ColorBuffer {

@@ -230,6 +230,7 @@ pub struct SpinelContext {
     compositions: HashMap<SpinelImage, SpnComposition>,
     vulkan: VulkanContext,
     images: Vec<VulkanImage>,
+    index_map: HashMap<u32, usize>,
     image_post_copy_regions: Vec<vk::ImageCopy>,
 }
 
@@ -646,6 +647,7 @@ impl SpinelContext {
                 motioncopy_shader: None,
             },
             images: vec![],
+            index_map: HashMap::new(),
             image_post_copy_regions: vec![],
         }
     }
@@ -707,7 +709,7 @@ impl Context<Spinel> for SpinelContext {
 
     fn new_image(&mut self, size: Size2D<u32>) -> SpinelImage {
         let vulkan = &self.vulkan;
-        let image = SpinelImage(self.images.len() as u32);
+        let image = SpinelImage(self.images.len());
         self.images.push(VulkanImage::new(
             vulkan.device,
             &vulkan.vk_i,
@@ -721,11 +723,14 @@ impl Context<Spinel> for SpinelContext {
     }
 
     fn get_current_image(&mut self, context: &ViewAssistantContext<'_>) -> SpinelImage {
-        let id = context.canvas.as_ref().unwrap().borrow().index;
+        let image_index = context.canvas.as_ref().unwrap().borrow().index;
 
-        if (id as usize) >= self.images.len() {
-            let vulkan = &self.vulkan;
-            self.images.push(VulkanImage::from_buffer_collection(
+        let vulkan = &self.vulkan;
+        let images = &mut self.images;
+
+        let index = self.index_map.entry(image_index).or_insert_with(|| {
+            let index = images.len();
+            images.push(VulkanImage::from_buffer_collection(
                 vulkan.device,
                 &vulkan.vk_i,
                 &vulkan.vk_ext,
@@ -733,11 +738,14 @@ impl Context<Spinel> for SpinelContext {
                 vulkan.height,
                 vulkan.format,
                 vulkan.buffer_collection,
-                id,
+                image_index,
+                SpinelImage(index)
             ));
-        }
 
-        SpinelImage(id)
+            index
+        });
+
+        SpinelImage(*index)
     }
 
     fn flush_image(&mut self, _image: SpinelImage) {}

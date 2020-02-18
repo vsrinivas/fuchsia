@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{cell::RefCell, mem, u32};
+use std::{cell::RefCell, collections::HashMap, mem, u32};
 
 use euclid::{Rect, Size2D};
 use fidl::endpoints::{ClientEnd, ServerEnd};
@@ -131,6 +131,7 @@ pub struct MoldContext {
     buffer_collection: BufferCollectionSynchronousProxy,
     size: Size2D<u32>,
     images: Vec<RefCell<VmoImage>>,
+    index_map: HashMap<u32, usize>,
 }
 
 impl MoldContext {
@@ -150,7 +151,7 @@ impl MoldContext {
             .set_constraints(true, &mut constraints)
             .expect("failed to set constraints on sysmem buffer");
 
-        Self { buffer_collection, size, images: vec![] }
+        Self { buffer_collection, size, images: vec![], index_map: HashMap::new() }
     }
 }
 
@@ -168,26 +169,33 @@ impl Context<Mold> for MoldContext {
     }
 
     fn new_image(&mut self, size: Size2D<u32>) -> MoldImage {
-        let image = MoldImage(self.images.len() as u32);
+        let image = MoldImage(self.images.len());
         self.images.push(RefCell::new(VmoImage::new(size.width, size.height)));
 
         image
     }
 
     fn get_current_image(&mut self, context: &ViewAssistantContext<'_>) -> MoldImage {
-        let id = context.canvas.as_ref().unwrap().borrow().index;
+        let image_index = context.canvas.as_ref().unwrap().borrow().index;
 
-        if (id as usize) >= self.images.len() {
-            let buffer_collection = &mut self.buffer_collection;
-            self.images.push(RefCell::new(VmoImage::from_buffer_collection(
+        let buffer_collection = &mut self.buffer_collection;
+        let images = &mut self.images;
+        let width = self.size.width;
+        let height = self.size.height;
+
+        let index = self.index_map.entry(image_index).or_insert_with(|| {
+            let index = images.len();
+            images.push(RefCell::new(VmoImage::from_buffer_collection(
                 buffer_collection,
-                self.size.width,
-                self.size.height,
-                id,
+                width,
+                height,
+                image_index,
             )));
-        }
 
-        MoldImage(id)
+            index
+        });
+
+        MoldImage(*index)
     }
 
     fn flush_image(&mut self, image: MoldImage) {
@@ -245,7 +253,8 @@ impl Context<Mold> for MoldContext {
                 .images
                 .get(dst_image_id.0 as usize)
                 .expect(&format!("invalid PostCopy image {:?}", dst_image_id))
-                .borrow_mut();
+                .try_borrow_mut()
+                .expect(&format!("image {:?} as already used for rendering", dst_image_id));
 
             let src_bytes_per_row = image.bytes_per_row();
             let dst_bytes_per_row = dst_image.bytes_per_row();

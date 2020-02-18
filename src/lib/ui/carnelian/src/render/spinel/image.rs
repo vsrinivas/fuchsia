@@ -200,7 +200,7 @@ pub(crate) fn update_descriptor_set(
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct SpinelImage(pub(crate) u32);
+pub struct SpinelImage(pub(crate) usize);
 
 #[derive(Debug)]
 pub(crate) struct VulkanImage {
@@ -307,6 +307,7 @@ impl VulkanImage {
         format: vk::Format,
         collection: BufferCollectionFUCHSIA,
         index: u32,
+        id: SpinelImage,
     ) -> Self {
         let vk = device_pointers(vk_i, device);
         let image =
@@ -407,7 +408,7 @@ impl VulkanImage {
             cb: Cell::default(),
             queue: Cell::default(),
             fence: Cell::default(),
-            id: SpinelImage(index),
+            id,
         }
     }
 
