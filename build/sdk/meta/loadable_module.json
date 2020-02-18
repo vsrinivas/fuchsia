@@ -25,6 +25,10 @@
           "description": "Name of the module",
           "type": "string"
         },
+        "root": {
+          "description": "The root of the element in the SDK",
+          "type": "string"
+        },
         "resources": {
           "description": "Resource files associated with the module",
           "type": "array",

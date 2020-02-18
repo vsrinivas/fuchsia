@@ -94,6 +94,7 @@ sdk_atom("vulkan_layers") {
     value = {
       type = "loadable_module"
       name = "vulkan_layers"
+      root = "pkg/vulkan_layers"
       resources = []
       resources = sdk_resources
       binaries = {

@@ -21,7 +21,9 @@ impl FileProvider for LoadableModule {
 }
 
 pub fn merge_loadable_module<F: TarballContent>(
-    meta_path: &str, base: &impl InputTarball<F>, complement: &impl InputTarball<F>,
+    meta_path: &str,
+    base: &impl InputTarball<F>,
+    complement: &impl InputTarball<F>,
     output: &mut impl OutputTarball<F>,
 ) -> Result<()> {
     let base_meta: LoadableModule = base.get_metadata(meta_path)?;
@@ -53,6 +55,7 @@ mod tests {
         {
             "name": "foobar",
             "type": "loadable_module",
+            "root": "pkg/foobar",
             "resources": [
                 "pkg/foobar/res.one",
                 "pkg/foobar/res.two"
@@ -68,6 +71,7 @@ mod tests {
         {
             "name": "foobar",
             "type": "loadable_module",
+            "root": "pkg/foobar",
             "resources": [
                 "pkg/foobar/res.one",
                 "pkg/foobar/res.two"
@@ -108,6 +112,7 @@ mod tests {
         {
             "name": "foobar",
             "type": "loadable_module",
+            "root": "pkg/foobar",
             "resources": [
                 "pkg/foobar/res.one"
             ],
@@ -123,6 +128,7 @@ mod tests {
         {
             "name": "foobar",
             "type": "loadable_module",
+            "root": "pkg/foobar",
             "resources": [
                 "pkg/foobar/res.two"
             ],

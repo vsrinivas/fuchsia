@@ -17,6 +17,7 @@ pub struct LoadableModule {
     pub kind: ElementType,
     pub resources: Vec<File>,
     pub binaries: HashMap<TargetArchitecture, Vec<File>>,
+    pub root: File,
 }
 
 impl JsonObject for LoadableModule {
@@ -36,6 +37,7 @@ mod tests {
         {
             "name": "foobar",
             "type": "loadable_module",
+            "root": "pkg/foobar",
             "resources": [
                 "pkg/foobar/res.one",
                 "pkg/foobar/res.two"
@@ -60,6 +62,7 @@ mod tests {
         {
             "name": "foobar",
             "type": "loadable_module",
+            "root": "pkg/foobar",
             "resources": [
                 "pkg/foobar/res.one",
                 "pkg/foobar/res.two"
