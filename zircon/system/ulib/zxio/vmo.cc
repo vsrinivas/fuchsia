@@ -118,22 +118,25 @@ zx_status_t zxio_vmo_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset,
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
 
   sync_mutex_lock(&file->lock);
-  zx_off_t at;
+  zx_off_t origin;
   switch (start) {
     case ZXIO_SEEK_ORIGIN_START:
-      at = offset;
+      origin = 0;
       break;
     case ZXIO_SEEK_ORIGIN_CURRENT:
-      // TODO: This code does not appear to handle overflow correctly.
-      at = file->offset + offset;
+      origin = file->offset;
       break;
     case ZXIO_SEEK_ORIGIN_END:
-      // TODO: This code does not appear to handle overflow correctly.
-      at = file->size + offset;
+      origin = file->size;
       break;
     default:
       sync_mutex_unlock(&file->lock);
       return ZX_ERR_INVALID_ARGS;
+  }
+  zx_off_t at;
+  if (add_overflow(origin, offset, &at)) {
+    sync_mutex_unlock(&file->lock);
+    return ZX_ERR_OUT_OF_RANGE;
   }
   if (at > file->size) {
     sync_mutex_unlock(&file->lock);

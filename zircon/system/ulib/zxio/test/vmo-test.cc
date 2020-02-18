@@ -8,18 +8,22 @@
 #include <lib/zxio/zxio.h>
 #include <limits.h>
 
+#include <zircon/compiler.h>
 #include <zxtest/zxtest.h>
+
+constexpr size_t kSize = 300;
+constexpr zx_off_t kInitialSeek = 4;
 
 constexpr const char* ALPHABET = "abcdefghijklmnopqrstuvwxyz";
 
 class VmoTest : public zxtest::Test {
  public:
   void SetUp() override {
-    ASSERT_OK(zx::vmo::create(300u, 0u, &backing));
+    ASSERT_OK(zx::vmo::create(kSize, 0u, &backing));
     ASSERT_OK(backing.write(ALPHABET, 0, len));
     ASSERT_OK(backing.write(ALPHABET, len, len + len));
 
-    zxio_vmo_init(&storage, std::move(backing), /* initial seek */ 4);
+    ASSERT_OK(zxio_vmo_init(&storage, std::move(backing), kInitialSeek));
     io = &storage.io;
   }
 
@@ -100,4 +104,95 @@ TEST_F(VmoTest, GetExact) {
   zx::vmo vmo;
   size_t size = 0u;
   ASSERT_STATUS(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_exact(io, vmo.reset_and_get_address(), &size));
+}
+
+TEST_F(VmoTest, SeekNegativeOverflow) {
+  // We set up a large negative seek (larger than the page-rounded-up size of the VMO underlying
+  // us).
+  constexpr int64_t kTooFarBackwards = -8192;
+
+  // Seek somewhere slightly more random than the start.
+  size_t original_seek = 23;
+  size_t new_seek = 42;
+  ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_START, original_seek, &new_seek));
+  ASSERT_EQ(original_seek, new_seek);
+
+  // Seeking backwards from the start past zero should fail, without moving the seek pointer.
+  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE, zxio_seek(io, ZXIO_SEEK_ORIGIN_START, kTooFarBackwards, &new_seek));
+  ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, 0, &new_seek));
+  ASSERT_EQ(original_seek, new_seek);
+
+  new_seek = 42;
+
+  // Seeking backwards from the seek pointer past zero should fail, without moving the seek pointer.
+  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE, zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, kTooFarBackwards, &new_seek));
+  ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, 0, &new_seek));
+  ASSERT_EQ(original_seek, new_seek);
+
+  new_seek = 42;
+
+  // Seeking backwards from the end past zero should fail, without moving the seek pointer.
+  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE, zxio_seek(io, ZXIO_SEEK_ORIGIN_END, kTooFarBackwards, &new_seek));
+  ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, 0, &new_seek));
+  ASSERT_EQ(original_seek, new_seek);
+}
+
+// This sets up the same test case, but with a huge backing VMO. Specifically, the backing VMO needs
+// to be large enough that adding a signed 64 bit value to its length is large enough to overflow an
+// unsigned 64 bit value.
+
+constexpr size_t kEighthOfMax = 0x2000000000000000;
+static_assert(kEighthOfMax * 8 == 0);
+constexpr size_t kHugeSize = kEighthOfMax * 7;
+
+class HugeVmoTest : public zxtest::Test {
+ public:
+  void SetUp() override {
+    ASSERT_OK(zx::vmo::create(kHugeSize, 0u, &backing));
+    ASSERT_OK(backing.write(ALPHABET, 0, len));
+    ASSERT_OK(backing.write(ALPHABET, len, len + len));
+
+    ASSERT_OK(zxio_vmo_init(&storage, std::move(backing), 0));
+    io = &storage.io;
+  }
+
+  void TearDown() override { ASSERT_OK(zxio_close(io)); }
+
+ protected:
+  zx::vmo backing;
+  size_t len = strlen(ALPHABET);
+  zxio_storage_t storage;
+  zxio_t* io;
+};
+
+TEST_F(HugeVmoTest, SeekPositiveOverflow) {
+  // Check that our expected-to-overflow values actually overflow.
+  constexpr int64_t kTooFarForwards = kEighthOfMax * 2;
+  static_assert(kHugeSize + kTooFarForwards < kHugeSize);
+
+  // Seek to the end.
+  size_t original_seek;
+  ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_END, 0, &original_seek));
+  ASSERT_EQ(original_seek, kHugeSize);
+
+  constexpr size_t dummy_seek = 42;
+
+  size_t new_seek = dummy_seek;
+
+  // There's no tests for seeking forwards from the start of the file past infinity, since a int64_t
+  // isn't big enough to cause the overflow.
+
+  // Seeking forward from the seek pointer past past infinity should fail, without moving the seek
+  // pointer.
+  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE, zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, kTooFarForwards, &new_seek));
+  ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, 0, &new_seek));
+  ASSERT_EQ(original_seek, new_seek);
+
+  new_seek = 42;
+
+  // Seeking forward from the end past past infinity should fail, without moving the seek
+  // pointer.
+  ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE, zxio_seek(io, ZXIO_SEEK_ORIGIN_END, kTooFarForwards, &new_seek));
+  ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, 0, &new_seek));
+  ASSERT_EQ(original_seek, new_seek);
 }
