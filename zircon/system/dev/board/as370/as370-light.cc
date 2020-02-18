@@ -6,6 +6,7 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
+#include <ddk/metadata/lights.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 
@@ -26,6 +27,29 @@ zx_status_t As370::LightInit() {
   gpio_impl_.Write(4, 1);
   gpio_impl_.Write(4, 0);
   gpio_impl_.Write(4, 1);
+
+  constexpr LightsConfig kConfigs[] = {
+      {.brightness = true, .rgb = true, .init_on = false, .group_id = 1},
+      {.brightness = true, .rgb = true, .init_on = false, .group_id = 0},
+      {.brightness = true, .rgb = true, .init_on = false, .group_id = 0},
+      {.brightness = true, .rgb = true, .init_on = false, .group_id = 0},
+      {.brightness = true, .rgb = true, .init_on = false, .group_id = 0},
+      {.brightness = true, .rgb = true, .init_on = false, .group_id = 1},
+  };
+  using LightName = char[ZX_MAX_NAME_LEN];
+  constexpr LightName kLightGroupNames[] = {"GROUP_OF_4", "GROUP_OF_2"};
+  static const pbus_metadata_t light_metadata[] = {
+      {
+          .type = DEVICE_METADATA_LIGHTS,
+          .data_buffer = &kConfigs,
+          .data_size = sizeof(kConfigs),
+      },
+      {
+          .type = DEVICE_METADATA_LIGHTS_GROUP_NAME,
+          .data_buffer = &kLightGroupNames,
+          .data_size = sizeof(kLightGroupNames),
+      },
+  };
 
   // Composite binding rules for TI LED driver.
   static const zx_bind_inst_t root_match[] = {
@@ -52,6 +76,8 @@ zx_status_t As370::LightInit() {
   light_dev.vid = PDEV_VID_TI;
   light_dev.pid = PDEV_PID_TI_LP5018;
   light_dev.did = PDEV_DID_TI_LED;
+  light_dev.metadata_list = light_metadata;
+  light_dev.metadata_count = countof(light_metadata);
 
   status = pbus_.CompositeDeviceAdd(&light_dev, components, countof(components), UINT32_MAX);
   if (status != ZX_OK) {

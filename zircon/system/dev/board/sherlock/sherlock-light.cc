@@ -88,8 +88,8 @@ zx_status_t Sherlock::LightInit() {
   using LightName = char[ZX_MAX_NAME_LEN];
   constexpr LightName kLightNames[] = {"AMBER_LED", "GREEN_LED"};
   constexpr LightsConfig kConfigs[] = {
-      {.brightness = true, .rgb = false, .init_on = true},
-      {.brightness = true, .rgb = false, .init_on = false},
+      {.brightness = true, .rgb = false, .init_on = true, .group_id = -1},
+      {.brightness = true, .rgb = false, .init_on = false, .group_id = -1},
   };
   static const pbus_metadata_t light_metadata[] = {
       {

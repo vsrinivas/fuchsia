@@ -11,6 +11,7 @@ typedef struct LightsConfig {
   bool brightness;
   bool rgb;
   bool init_on;
+  int32_t group_id;
 } lights_config_t;
 
 #endif  // DDK_METADATA_LIGHTS_H_

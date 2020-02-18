@@ -20,6 +20,7 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
+#include <ddk/metadata/lights.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
 #include <ddktl/fidl.h>
@@ -83,30 +84,35 @@ bool Lp50xxLight::BlinkTest() {
 }
 
 zx_status_t Lp50xxLight::Lp50xxRegConfig() {
+  uint32_t led_count = 0;
   switch (pid_) {
     case PDEV_PID_TI_LP5018:
-      led_count_ = 6;
+      led_count = 6;
       led_color_addr_ = 0x0f;
       reset_addr_ = 0x27;
       break;
     case PDEV_PID_TI_LP5024:
-      led_count_ = 8;
+      led_count = 8;
       led_color_addr_ = 0x0f;
       reset_addr_ = 0x27;
       break;
     case PDEV_PID_TI_LP5030:
-      led_count_ = 10;
+      led_count = 10;
       led_color_addr_ = 0x14;
       reset_addr_ = 0x38;
       break;
     case PDEV_PID_TI_LP5036:
-      led_count_ = 12;
+      led_count = 12;
       led_color_addr_ = 0x14;
       reset_addr_ = 0x38;
       break;
     default:
       zxlogf(ERROR, "%s: unsupported PID %u\n", __func__, pid_);
       return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (led_count != led_count_) {
+    zxlogf(ERROR, "%s: incorrect number of LEDs %u != %u\n", __func__, led_count_, led_count);
+    return ZX_ERR_INTERNAL;
   }
 
   return ZX_OK;
@@ -210,6 +216,98 @@ void Lp50xxLight::SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::R
   completer.Reply(status);
 }
 
+void Lp50xxLight::GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync completer) {
+  if (group_id >= group2led_.size()) {
+    completer.Reply(ZX_ERR_INVALID_ARGS, nullptr);
+    return;
+  }
+
+  char name[kNameLength];
+  if (group_names_.size() > 0) {
+    snprintf(name, sizeof(name), "%s\n", &group_names_[group_id * kNameLength]);
+  } else {
+    // Return "led-group-X" if no metadata was provided.
+    snprintf(name, sizeof(name), "led-group-%u\n", group_id);
+  }
+
+  ::llcpp::fuchsia::hardware::light::GroupInfo info = {
+      .name = ::fidl::StringView(name, strlen(name)),
+      .count = static_cast<uint32_t>(group2led_[group_id].size()),
+      .capability = ::llcpp::fuchsia::hardware::light::Capability::RGB,
+  };
+  completer.Reply(ZX_OK, &info);
+}
+
+void Lp50xxLight::GetGroupCurrentSimpleValue(uint32_t group_id,
+                                             GetGroupCurrentSimpleValueCompleter::Sync completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED, ::fidl::VectorView<bool>(nullptr, 0));
+}
+
+void Lp50xxLight::SetGroupSimpleValue(uint32_t group_id, ::fidl::VectorView<bool> values,
+                                      SetGroupSimpleValueCompleter::Sync completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+}
+
+void Lp50xxLight::GetGroupCurrentBrightnessValue(
+    uint32_t group_id, GetGroupCurrentBrightnessValueCompleter::Sync completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED, ::fidl::VectorView<uint8_t>(nullptr, 0));
+}
+
+void Lp50xxLight::SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<uint8_t> values,
+                                          SetGroupBrightnessValueCompleter::Sync completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+}
+
+void Lp50xxLight::GetGroupCurrentRgbValue(uint32_t group_id,
+                                          GetGroupCurrentRgbValueCompleter::Sync completer) {
+  ::fidl::VectorView<::llcpp::fuchsia::hardware::light::Rgb> empty(nullptr, 0);
+  if (group_id >= group2led_.size()) {
+    completer.Reply(ZX_ERR_INVALID_ARGS, empty);
+    return;
+  }
+
+  zx_status_t status = ZX_OK;
+  std::vector<::llcpp::fuchsia::hardware::light::Rgb> out;
+  for (auto led : group2led_[group_id]) {
+    if (led >= led_count_) {
+      completer.Reply(ZX_ERR_INVALID_ARGS, empty);
+      return;
+    }
+
+    llcpp::fuchsia::hardware::light::Rgb rgb = {};
+    if ((status = GetRgbValue(led, &rgb)) != ZX_OK) {
+      break;
+    }
+    out.emplace_back(rgb);
+  }
+  completer.Reply(status, (status == ZX_OK)
+                              ? ::fidl::VectorView<::llcpp::fuchsia::hardware::light::Rgb>(
+                                    out.data(), out.size())
+                              : empty);
+}
+
+void Lp50xxLight::SetGroupRgbValue(uint32_t group_id,
+                                   ::fidl::VectorView<llcpp::fuchsia::hardware::light::Rgb> values,
+                                   SetGroupRgbValueCompleter::Sync completer) {
+  if (group_id >= group2led_.size()) {
+    completer.Reply(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  zx_status_t status = ZX_OK;
+  for (uint32_t i = 0; i < group2led_[group_id].size(); i++) {
+    if (group2led_[group_id][i] >= led_count_) {
+      completer.Reply(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+
+    if ((status = SetRgbValue(group2led_[group_id][i], values[i])) != ZX_OK) {
+      break;
+    }
+  }
+  completer.Reply(status);
+}
+
 zx_status_t Lp50xxLight::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
   llcpp::fuchsia::hardware::light::Light::Dispatch(this, msg, &transaction);
@@ -256,6 +354,52 @@ zx_status_t Lp50xxLight::InitHelper() {
   }
   pid_ = info.pid;
   i2c_ = std::move(i2c);
+
+  fbl::AllocChecker ac;
+  size_t metadata_size;
+  if ((status = device_get_metadata_size(parent(), DEVICE_METADATA_LIGHTS, &metadata_size)) !=
+      ZX_OK) {
+    zxlogf(ERROR, "%s: couldn't get metadata size\n", __func__);
+    return status;
+  }
+  auto configs =
+      fbl::Array<lights_config_t>(new (&ac) lights_config_t[metadata_size], metadata_size);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  if ((status = device_get_metadata(parent(), DEVICE_METADATA_LIGHTS, configs.data(), metadata_size,
+                                    &actual)) != ZX_OK) {
+    return status;
+  }
+  if ((actual != metadata_size) || (actual % sizeof(lights_config_t) != 0)) {
+    zxlogf(ERROR, "%s: wrong metadata size\n", __func__);
+    return ZX_ERR_INVALID_ARGS;
+  }
+  led_count_ = static_cast<uint32_t>(metadata_size) / sizeof(lights_config_t);
+
+  for (uint32_t i = 0; i < led_count_; i++) {
+    group2led_[configs[i].group_id].push_back(i);
+  }
+
+  if ((status = device_get_metadata_size(parent(), DEVICE_METADATA_LIGHTS_GROUP_NAME,
+                                         &metadata_size)) != ZX_OK) {
+    zxlogf(ERROR, "%s: couldn't get metadata size\n", __func__);
+    return status;
+  }
+  group_names_ = fbl::Array<char>(new (&ac) char[metadata_size], metadata_size);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  if ((status = device_get_metadata(parent(), DEVICE_METADATA_LIGHTS_GROUP_NAME,
+                                    group_names_.data(), metadata_size, &actual)) != ZX_OK) {
+    return status;
+  }
+  if ((actual != metadata_size) || (actual % kNameLength != 0) ||
+      static_cast<uint32_t>(metadata_size / kNameLength) != group2led_.size()) {
+    zxlogf(ERROR, "%s: wrong metadata size\n", __func__);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   return ZX_OK;
 }
 

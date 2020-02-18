@@ -23,6 +23,7 @@ class Lp50xxLightTest : public Lp50xxLight {
     mock_i2c.ExpectWriteStop({0x00, 0x40}).ExpectWriteStop({0x01, 0x3C});
 
     pid_ = PDEV_PID_TI_LP5018;
+    led_count_ = 6;
     return ZX_OK;
   }
 

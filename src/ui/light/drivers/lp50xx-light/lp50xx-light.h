@@ -9,6 +9,8 @@
 #include <lib/device-protocol/i2c.h>
 #include <threads.h>
 
+#include <map>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/gpio.h>
@@ -51,35 +53,20 @@ class Lp50xxLight : public Lp50xxLightType,
   void SetRgbValue(uint32_t index, llcpp::fuchsia::hardware::light::Rgb value,
                    SetRgbValueCompleter::Sync completer) override;
 
-  void GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
-  }
+  void GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync completer) override;
   void GetGroupCurrentSimpleValue(uint32_t group_id,
-                                  GetGroupCurrentSimpleValueCompleter::Sync completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, ::fidl::VectorView<bool>(nullptr, 0));
-  }
+                                  GetGroupCurrentSimpleValueCompleter::Sync completer) override;
   void SetGroupSimpleValue(uint32_t group_id, ::fidl::VectorView<bool> values,
-                           SetGroupSimpleValueCompleter::Sync completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED);
-  }
+                           SetGroupSimpleValueCompleter::Sync completer) override;
   void GetGroupCurrentBrightnessValue(
-      uint32_t group_id, GetGroupCurrentBrightnessValueCompleter::Sync completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED, ::fidl::VectorView<uint8_t>(nullptr, 0));
-  }
+      uint32_t group_id, GetGroupCurrentBrightnessValueCompleter::Sync completer) override;
   void SetGroupBrightnessValue(uint32_t group_id, ::fidl::VectorView<uint8_t> values,
-                               SetGroupBrightnessValueCompleter::Sync completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED);
-  }
+                               SetGroupBrightnessValueCompleter::Sync completer) override;
   void GetGroupCurrentRgbValue(uint32_t group_id,
-                               GetGroupCurrentRgbValueCompleter::Sync completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED,
-                    ::fidl::VectorView<::llcpp::fuchsia::hardware::light::Rgb>(nullptr, 0));
-  }
+                               GetGroupCurrentRgbValueCompleter::Sync completer) override;
   void SetGroupRgbValue(uint32_t group_id,
                         ::fidl::VectorView<llcpp::fuchsia::hardware::light::Rgb> values,
-                        SetGroupRgbValueCompleter::Sync completer) override {
-    completer.Reply(ZX_ERR_NOT_SUPPORTED);
-  }
+                        SetGroupRgbValueCompleter::Sync completer) override;
 
   bool BlinkTest();
   zx_status_t Init();
@@ -95,6 +82,8 @@ class Lp50xxLight : public Lp50xxLightType,
   ddk::I2cProtocolClient i2c_;
 
  private:
+  friend class Lp50xxLightTest;
+
   static constexpr uint32_t kComponentCount = 2;
   static constexpr uint32_t kPdevComponent = 0;
   static constexpr uint32_t kI2cComponent = 1;
@@ -106,6 +95,8 @@ class Lp50xxLight : public Lp50xxLightType,
   uint32_t led_count_ = 0;
   uint32_t led_color_addr_ = 0;
   uint32_t reset_addr_ = 0;
+  fbl::Array<char> group_names_;
+  std::map<uint32_t, std::vector<uint32_t>> group2led_;
 };
 
 }  // namespace lp50xx_light
