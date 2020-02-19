@@ -353,9 +353,7 @@ void InterceptionWorkflow::Launch(zxdb::Target* target, const std::vector<std::s
         request, [this, target = target->GetWeakPtr(), on_err = std::move(on_err)](
                      const zxdb::Err& err, debug_ipc::LaunchReply reply) {
           if (err.ok() && (reply.status != debug_ipc::kZxOk)) {
-            std::stringstream status;
-            StatusName(reply.status, status);
-            zxdb::Err status_err(zxdb::ErrType::kGeneral, status.str());
+            zxdb::Err status_err(zxdb::ErrType::kGeneral, fidl_codec::StatusName(reply.status));
             on_err(status_err);
           } else {
             on_err(err);

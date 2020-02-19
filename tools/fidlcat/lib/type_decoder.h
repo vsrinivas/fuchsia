@@ -17,6 +17,7 @@
 #include <ostream>
 
 #include "src/lib/fidl_codec/printer.h"
+#include "src/lib/fidl_codec/status.h"
 #include "zircon/system/public/zircon/syscalls/debug.h"
 
 namespace fidlcat {
@@ -144,7 +145,6 @@ void SignalName(zx_signals_t signals, std::ostream& os);
 void SocketCreateOptionsName(uint32_t options, std::ostream& os);
 void SocketReadOptionsName(uint32_t options, std::ostream& os);
 void SocketShutdownOptionsName(uint32_t options, std::ostream& os);
-void StatusName(zx_status_t status, std::ostream& os);
 void StatusName(const fidl_codec::Colors& colors, zx_status_t status, std::ostream& os);
 void SystemEventTypeName(zx_system_event_type_t type, std::ostream& os);
 void SystemPowerctlName(uint32_t powerctl, std::ostream& os);
@@ -230,7 +230,7 @@ class DisplayStatus {
 };
 
 inline std::ostream& operator<<(std::ostream& os, const DisplayStatus& status) {
-  StatusName(status.status(), os);
+  os << fidl_codec::StatusName(status.status());
   return os;
 }
 

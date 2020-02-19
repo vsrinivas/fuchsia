@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <ostream>
 
+#include "src/lib/fxl/logging.h"
 #include "zircon/system/public/zircon/syscalls/debug.h"
 
 namespace fidl_codec {
@@ -76,19 +77,39 @@ class PrettyPrinter {
     return *this;
   }
 
+  PrettyPrinter& operator<<(int32_t data) {
+    FXL_DCHECK((os_.flags() & os_.basefield) == os_.dec);
+    *this << std::to_string(data);
+    return *this;
+  }
+
+  PrettyPrinter& operator<<(uint32_t data) {
+    if (((os_.flags() & os_.basefield) == os_.dec) || (data == 0)) {
+      *this << std::to_string(data);
+    } else {
+      os_ << data;
+      int data_size = 0;
+      while (data > 0) {
+        data /= 16;
+        data_size++;
+      }
+      remaining_size_ -= data_size;
+    }
+    return *this;
+  }
+
   PrettyPrinter& operator<<(uint64_t data) {
-    os_ << data;
-    int base = 10;
-    if ((os_.flags() & os_.basefield) == os_.hex) {
-      base = 16;
+    if (((os_.flags() & os_.basefield) == os_.dec) || (data == 0)) {
+      *this << std::to_string(data);
+    } else {
+      os_ << data;
+      int data_size = 0;
+      while (data > 0) {
+        data /= 16;
+        data_size++;
+      }
+      remaining_size_ -= data_size;
     }
-    int data_size = 1;
-    data /= base;
-    while (data > 0) {
-      data /= base;
-      data_size++;
-    }
-    remaining_size_ -= data_size;
     return *this;
   }
 

@@ -9,6 +9,7 @@
 
 #include "src/lib/fidl_codec/wire_object.h"
 #include "src/lib/fidl_codec/wire_types.h"
+#include "tools/fidlcat/lib/type_decoder.h"
 
 namespace fidlcat {
 
@@ -25,6 +26,12 @@ class FidlcatPrinter : public fidl_codec::PrettyPrinter {
         decoder_(decoder) {}
 
   void DisplayHandle(const zx_handle_info_t& handle) override;
+  void DisplayStatus(zx_status_t status);
+  void DisplayTime(zx_time_t time_ns);
+  bool DisplayReturnedValue(SyscallReturnType type, int64_t returned_value);
+  void DisplayInline(
+      const std::vector<std::unique_ptr<fidl_codec::StructMember>>& members,
+      const std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>>& values);
 
  private:
   SyscallDecoder* decoder_;
@@ -65,7 +72,7 @@ class Event {
   int64_t timestamp_;
 };
 
-// Events which represent the arguments of a syscall (When the syscall is called).
+// Event which represent the arguments of a syscall (When the syscall is called).
 class InvokedEvent : public Event {
  public:
   InvokedEvent(int64_t timestamp, const Thread* thread, const Syscall* syscall)
@@ -92,11 +99,49 @@ class InvokedEvent : public Event {
     inline_fields_.emplace(std::make_pair(member, std::move(value)));
   }
 
-  void PrettyPrint(fidl_codec::PrettyPrinter& printer);
+  void PrettyPrint(FidlcatPrinter& printer);
 
  private:
   const Thread* const thread_;
   const Syscall* const syscall_;
+  std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>> inline_fields_;
+  std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>> outline_fields_;
+};
+
+// Event that represents the return value and out parameters when a syscall returns.
+class OutputEvent : public Event {
+ public:
+  OutputEvent(int64_t timestamp, const Thread* thread, const Syscall* syscall,
+              int64_t returned_value)
+      : Event(timestamp), thread_(thread), syscall_(syscall), returned_value_(returned_value) {}
+
+  const Thread* thread() const { return thread_; }
+  const Syscall* syscall() const { return syscall_; }
+  const std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>>&
+  inline_fields() const {
+    return inline_fields_;
+  }
+  const std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>>&
+  outline_fields() const {
+    return outline_fields_;
+  }
+
+  void AddInlineField(const fidl_codec::StructMember* member,
+                      std::unique_ptr<fidl_codec::Value> value) {
+    inline_fields_.emplace(std::make_pair(member, std::move(value)));
+  }
+
+  void AddOutlineField(const fidl_codec::StructMember* member,
+                       std::unique_ptr<fidl_codec::Value> value) {
+    inline_fields_.emplace(std::make_pair(member, std::move(value)));
+  }
+
+  void PrettyPrint(FidlcatPrinter& printer);
+
+ private:
+  const Thread* const thread_;
+  const Syscall* const syscall_;
+  int64_t returned_value_;
   std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>> inline_fields_;
   std::map<const fidl_codec::StructMember*, std::unique_ptr<fidl_codec::Value>> outline_fields_;
 };

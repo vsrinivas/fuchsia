@@ -279,6 +279,10 @@ void Syscall::ComputeTypes() {
     fidl_codec_values_ready_ = false;
     return;
   }
+  if (!fidlcat::ComputeTypes(outputs_, &output_inline_members_, &output_outline_members_)) {
+    fidl_codec_values_ready_ = false;
+    return;
+  }
 }
 
 void SyscallDecoderDispatcher::DecodeSyscall(InterceptingThreadObserver* thread_observer,

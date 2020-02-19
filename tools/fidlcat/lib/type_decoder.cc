@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <iomanip>
 #include <ostream>
+#include <sstream>
 
 #include "src/lib/fidl_codec/status.h"
 
@@ -508,8 +509,6 @@ void SocketShutdownOptionsName(uint32_t options, std::ostream& os) {
   SocketShutdownOptionsNameCase(ZX_SOCKET_SHUTDOWN_WRITE);
   SocketShutdownOptionsNameCase(ZX_SOCKET_SHUTDOWN_READ);
 }
-
-void StatusName(zx_status_t status, std::ostream& os) { os << fidl_codec::StatusName(status); }
 
 void StatusName(const fidl_codec::Colors& colors, zx_status_t status, std::ostream& os) {
   if (status == ZX_OK) {
