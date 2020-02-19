@@ -16,5 +16,6 @@ group("lib") {
     "format_conversion",
     "image_writer",
     "stream_utils",
+    "virtual_camera",
   ]
 }

@@ -6,7 +6,7 @@ import("//build/package.gni")
 import("//build/test.gni")
 
 executable("test") {
-  output_name = "virtual_camera_test"
+  output_name = "virtual_camera_driver_test"
   testonly = true
   sources = [
     "stream_tester.cc",

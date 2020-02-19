@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "test/virtual_camera_test"
+        "binary": "test/virtual_camera_driver_test"
     },
     "sandbox": {
         "services": [
