@@ -76,6 +76,30 @@
       },
       "required": [ "device_id", "supported_output_stream_types", "eligible_for_loopback" ],
       "additionalProperties": false
+    },
+    "thermal_policy_entry" : {
+      "type": "object",
+      "properties" : {
+        "target_name": "string",
+        "_comment": "string",
+        "states": {
+          "type" : "array",
+          "items" : {
+            "type" : "object",
+            "properties": {
+              "trip_point" : {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "_comment": "string",
+              "config" : {}
+            },
+            "required": [ "trip_point", "config" ]
+          }
+        }
+      },
+      "required": [ "target_name", "states" ]
     }
   },
   "type": "object",
@@ -87,6 +111,10 @@
     "output_devices" : {
       "type": "array",
       "items" : { "$ref" : "#/definitions/output_device_profile" }
+    },
+    "thermal_policy": {
+      "type" : "array",
+      "items": { "$ref" : "#/definitions/thermal_policy_entry" }
     }
   },
   "required": ["volume_curve"],

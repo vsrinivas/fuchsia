@@ -421,5 +421,71 @@ TEST(ProcessConfigLoaderTest, RejectConfigWithMultipleLoopbackStages) {
   ASSERT_DEATH(ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename), "");
 }
 
+TEST(ProcessConfigLoaderTest, LoadProcessConfigWithThermalPolicy) {
+  static const std::string kConfigWithThermalPolicy =
+      R"JSON({
+    "volume_curve": [
+      {
+          "level": 0.0,
+          "db": -160.0
+      },
+      {
+          "level": 1.0,
+          "db": 0.0
+      }
+    ],
+    "thermal_policy" : [
+      {
+          "target_name": "target name 0",
+          "states": [
+            {
+              "trip_point": 50,
+              "config": "config 0 50"
+            }
+          ]
+      },
+      {
+          "target_name": "target name 1",
+          "states": [
+            {
+              "trip_point": 25,
+              "config": "config 1 25"
+            },
+            {
+              "trip_point": 50,
+              "config": "config 1 50"
+            },
+            {
+              "trip_point": 75,
+              "config": "config 1 75"
+            }
+          ]
+      }
+    ]
+  })JSON";
+  ASSERT_TRUE(files::WriteFile(kTestAudioCoreConfigFilename, kConfigWithThermalPolicy.data(),
+                               kConfigWithThermalPolicy.size()));
+
+  const auto config = ProcessConfigLoader::LoadProcessConfig(kTestAudioCoreConfigFilename);
+  ASSERT_TRUE(config);
+  EXPECT_EQ(2u, config->thermal_config().entries().size());
+
+  auto& entry0 = config->thermal_config().entries()[0];
+  EXPECT_EQ("target name 0", entry0.target_name());
+  EXPECT_EQ(1u, entry0.states().size());
+  EXPECT_EQ(50u, entry0.states()[0].trip_point());
+  EXPECT_EQ("config 0 50", entry0.states()[0].config());
+
+  auto& entry1 = config->thermal_config().entries()[1];
+  EXPECT_EQ("target name 1", entry1.target_name());
+  EXPECT_EQ(3u, entry1.states().size());
+  EXPECT_EQ(25u, entry1.states()[0].trip_point());
+  EXPECT_EQ("config 1 25", entry1.states()[0].config());
+  EXPECT_EQ(50u, entry1.states()[1].trip_point());
+  EXPECT_EQ("config 1 50", entry1.states()[1].config());
+  EXPECT_EQ(75u, entry1.states()[2].trip_point());
+  EXPECT_EQ("config 1 75", entry1.states()[2].config());
+}
+
 }  // namespace
 }  // namespace media::audio

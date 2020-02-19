@@ -128,6 +128,9 @@ source_set("audio_core_lib") {
     "stream_volume_manager.h",
     "tap_stage.cc",
     "tap_stage.h",
+    "thermal_agent.cc",
+    "thermal_agent.h",
+    "thermal_config.h",
     "threading_model.cc",
     "threading_model.h",
     "throttle_output.h",
@@ -156,6 +159,7 @@ source_set("audio_core_lib") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace",
     "//zircon/system/fidl/fuchsia-cobalt",
+    "//zircon/system/fidl/fuchsia-thermal",
   ]
 
   deps = [
@@ -231,6 +235,7 @@ executable("unittest_bin") {
     "routing_config_unittest.cc",
     "stream_volume_manager_unittest.cc",
     "tap_stage_unittest.cc",
+    "thermal_agent_unittest.cc",
     "threading_model_unittest.cc",
     "usage_reporter_impl_unittest.cc",
     "usage_settings_unittest.cc",

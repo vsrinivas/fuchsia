@@ -16,6 +16,7 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
             "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.thermal.Controller",
             "fuchsia.tracing.provider.Registry"
         ]
     }

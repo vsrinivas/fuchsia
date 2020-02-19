@@ -36,6 +36,10 @@ static constexpr char kJsonKeyOutputDevices[] = "output_devices";
 static constexpr char kJsonKeySupportedOutputStreamTypes[] = "supported_output_stream_types";
 static constexpr char kJsonKeyEligibleForLoopback[] = "eligible_for_loopback";
 static constexpr char kJsonKeyIndependentVolumeControl[] = "independent_volume_control";
+static constexpr char kJsonKeyThermalPolicy[] = "thermal_policy";
+static constexpr char kJsonKeyTargetName[] = "target_name";
+static constexpr char kJsonKeyStates[] = "states";
+static constexpr char kJsonKeyTripPoint[] = "trip_point";
 
 void CountLoopbackStages(const PipelineConfig::MixGroup& mix_group, uint32_t* count) {
   if (mix_group.loopback) {
@@ -233,6 +237,41 @@ ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
                          independent_volume_control, std::move(pipeline_config))};
 }
 
+ThermalConfig::Entry ParseThermalPolicyEntryFromJsonObject(const rapidjson::Value& value) {
+  FX_CHECK(value.IsObject());
+
+  auto target_name_it = value.FindMember(kJsonKeyTargetName);
+  FX_CHECK(target_name_it != value.MemberEnd());
+  FX_CHECK(target_name_it->value.IsString());
+  const auto* target_name = target_name_it->value.GetString();
+
+  auto states_it = value.FindMember(kJsonKeyStates);
+  FX_CHECK(states_it != value.MemberEnd());
+  FX_CHECK(states_it->value.IsArray());
+  auto states_array = states_it->value.GetArray();
+
+  std::vector<ThermalConfig::State> states;
+  states.reserve(states_array.Size());
+
+  for (const auto& state : states_array) {
+    FX_CHECK(state.IsObject());
+
+    auto trip_point_it = state.FindMember(kJsonKeyTripPoint);
+    FX_CHECK(trip_point_it != state.MemberEnd());
+    FX_CHECK(trip_point_it->value.IsUint());
+    FX_CHECK(trip_point_it->value.GetUint() >= 1);
+    FX_CHECK(trip_point_it->value.GetUint() <= 100);
+    auto trip_point = trip_point_it->value.GetUint();
+
+    auto config_it = state.FindMember(kJsonKeyConfig);
+    FX_CHECK(config_it != state.MemberEnd());
+    FX_CHECK(config_it->value.IsString());
+    states.emplace_back(trip_point, config_it->value.GetString());
+  }
+
+  return ThermalConfig::Entry(target_name, states);
+}
+
 void ParseOutputDevicePoliciesFromJsonObject(const rapidjson::Value& device_profiles,
                                              ProcessConfigBuilder* config_builder) {
   FX_CHECK(device_profiles.IsArray());
@@ -245,6 +284,16 @@ void ParseOutputDevicePoliciesFromJsonObject(const rapidjson::Value& device_prof
 
   FX_CHECK(all_supported_usages.size() == fuchsia::media::RENDER_USAGE_COUNT)
       << "Not all output usages are supported in the config";
+}
+
+void ParseThermalPolicyFromJsonObject(const rapidjson::Value& value,
+                                      ProcessConfigBuilder* config_builder) {
+  FX_CHECK(value.IsArray());
+
+  for (const auto& thermal_policy_entry : value.GetArray()) {
+    config_builder->AddThermalPolicyEntry(
+        ParseThermalPolicyEntryFromJsonObject(thermal_policy_entry));
+  }
 }
 
 }  // namespace
@@ -300,6 +349,11 @@ fit::result<ProcessConfig, std::string> ProcessConfigLoader::ParseProcessConfig(
   auto output_devices_it = doc.FindMember(kJsonKeyOutputDevices);
   if (output_devices_it != doc.MemberEnd()) {
     ParseOutputDevicePoliciesFromJsonObject(output_devices_it->value, &config_builder);
+  }
+
+  auto thermal_policy_it = doc.FindMember(kJsonKeyThermalPolicy);
+  if (thermal_policy_it != doc.MemberEnd()) {
+    ParseThermalPolicyFromJsonObject(thermal_policy_it->value, &config_builder);
   }
 
   return fit::ok(config_builder.Build());

@@ -29,12 +29,20 @@ ProcessConfigBuilder& ProcessConfigBuilder::AddDeviceRoutingProfile(
   return *this;
 }
 
+ProcessConfigBuilder& ProcessConfigBuilder::AddThermalPolicyEntry(
+    ThermalConfig::Entry thermal_policy_entry) {
+  thermal_config_entries_.push_back(std::move(thermal_policy_entry));
+  return *this;
+}
+
 ProcessConfig ProcessConfigBuilder::Build() {
   std::optional<VolumeCurve> maybe_curve = std::nullopt;
   default_volume_curve_.swap(maybe_curve);
   FX_CHECK(maybe_curve) << "Missing required VolumeCurve member";
-  return ProcessConfig(std::move(*maybe_curve), RoutingConfig(std::move(device_profiles_),
-                                                              std::move(default_device_profile_)));
+  return ProcessConfig(
+      std::move(*maybe_curve),
+      RoutingConfig(std::move(device_profiles_), std::move(default_device_profile_)),
+      ThermalConfig(std::move(thermal_config_entries_)));
 }
 
 }  // namespace media::audio
