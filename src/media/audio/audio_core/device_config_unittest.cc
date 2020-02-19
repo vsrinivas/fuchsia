@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/audio_core/routing_config.h"
+#include "src/media/audio/audio_core/device_config.h"
 
 #include <gtest/gtest.h>
 
@@ -14,30 +14,30 @@ namespace {
 const auto kVolumeCurve = VolumeCurve::DefaultForMinGain(-160.0f);
 const auto kConfig = ProcessConfig::Builder().SetDefaultVolumeCurve(kVolumeCurve).Build();
 
-TEST(DeviceProfileTest, TransformForDependentVolumeControl) {
+TEST(OutputDeviceProfileTest, TransformForDependentVolumeControl) {
   const auto handle = ProcessConfig::set_instance(kConfig);
 
   const auto default_tf = kConfig.default_loudness_transform();
 
   const auto eligible_for_loopback = false;
-  const auto usage_support_set = RoutingConfig::UsageSupportSet{};
-  EXPECT_EQ(RoutingConfig::DeviceProfile(eligible_for_loopback, usage_support_set,
-                                         /*independent_volume_control=*/false)
+  const auto usage_support_set = DeviceConfig::UsageSupportSet{};
+  EXPECT_EQ(DeviceConfig::OutputDeviceProfile(eligible_for_loopback, usage_support_set,
+                                              /*independent_volume_control=*/false)
                 .loudness_transform(),
             default_tf);
 }
 
-TEST(DeviceProfileTest, TransformForIndependentVolumeControl) {
+TEST(OutputDeviceProfileTest, TransformForIndependentVolumeControl) {
   const auto handle = ProcessConfig::set_instance(kConfig);
 
   const auto default_tf = kConfig.default_loudness_transform();
 
   const auto eligible_for_loopback = false;
-  const auto usage_support_set = RoutingConfig::UsageSupportSet{};
+  const auto usage_support_set = DeviceConfig::UsageSupportSet{};
 
   const auto independent_volume_tf =
-      RoutingConfig::DeviceProfile(eligible_for_loopback, usage_support_set,
-                                   /*independent_volume_control=*/true)
+      DeviceConfig::OutputDeviceProfile(eligible_for_loopback, usage_support_set,
+                                        /*independent_volume_control=*/true)
           .loudness_transform();
 
   EXPECT_NE(independent_volume_tf, default_tf);

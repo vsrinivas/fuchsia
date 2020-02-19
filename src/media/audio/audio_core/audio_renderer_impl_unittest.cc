@@ -47,7 +47,7 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
         }()),
         admin_(&gain_adjustment_, dispatcher(), &policy_action_reporter_),
         volume_manager_(dispatcher()),
-        route_graph_(routing_config_, &link_matrix_),
+        route_graph_(device_config_, &link_matrix_),
         vmar_(fzl::VmarManager::Create(kAudioRendererUnittestVmarSize, nullptr,
                                        kAudioRendererUnittestVmarFlags)) {
     fzl::VmoMapper vmo_mapper;
@@ -109,7 +109,7 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
 
   testing::StubDeviceRegistry device_registry_;
   StreamVolumeManager volume_manager_;
-  RoutingConfig routing_config_;
+  DeviceConfig device_config_;
   LinkMatrix link_matrix_;
   RouteGraph route_graph_;
 

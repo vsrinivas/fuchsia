@@ -89,14 +89,14 @@ class FakeAudioOutput : public AudioOutput {
   }
 };
 
-static const RoutingConfig kConfigNoPolicy = RoutingConfig();
+static const DeviceConfig kConfigNoPolicy = DeviceConfig();
 
 class RouteGraphTest : public testing::ThreadingModelFixture {
  public:
   RouteGraphTest() : RouteGraphTest(kConfigNoPolicy) {}
 
-  RouteGraphTest(const RoutingConfig& routing_config)
-      : under_test_(routing_config, &link_matrix_),
+  RouteGraphTest(const DeviceConfig& device_config)
+      : under_test_(device_config, &link_matrix_),
         throttle_output_(
             ThrottleOutput::Create(&threading_model(), &device_registry_, &link_matrix_)) {
     Logging::Init(-media::audio::SPEW, {"route_graph_test"});
@@ -680,9 +680,9 @@ TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableLoopbackCapturer) {
 const audio_stream_unique_id_t kSupportsAllDeviceId = audio_stream_unique_id_t{.data = {0x33}};
 const audio_stream_unique_id_t kUnconfiguredDeviceId = audio_stream_unique_id_t{.data = {0x45}};
 
-static const RoutingConfig kConfigWithMediaExternalRoutingPolicy = RoutingConfig(
+static const DeviceConfig kConfigWithMediaExternalRoutingPolicy = DeviceConfig(
     /*profiles=*/{{kSupportsAllDeviceId,
-                   RoutingConfig::DeviceProfile(
+                   DeviceConfig::OutputDeviceProfile(
                        /*eligible_for_loopback=*/true,
                        /*output_usage_support_set=*/
                        {fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND),
@@ -690,7 +690,7 @@ static const RoutingConfig kConfigWithMediaExternalRoutingPolicy = RoutingConfig
                         fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::INTERRUPTION),
                         fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT),
                         fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::COMMUNICATION)})}},
-    /*default=*/{RoutingConfig::DeviceProfile(
+    /*default=*/{DeviceConfig::OutputDeviceProfile(
         /*eligible_for_loopback=*/true, /*output_usage_support_set=*/{
             fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA)})});
 
@@ -741,9 +741,9 @@ TEST_F(RouteGraphWithMediaExternalPolicyTest, InterruptionDoesNotRouteToUnsuppor
 
 const audio_stream_unique_id_t kSupportsLoopbackDeviceId = audio_stream_unique_id_t{.data = {0x7a}};
 
-static const RoutingConfig kConfigWithExternNonLoopbackDevicePolicy = RoutingConfig(
+static const DeviceConfig kConfigWithExternNonLoopbackDevicePolicy = DeviceConfig(
     /*profiles=*/{{kSupportsAllDeviceId,
-                   RoutingConfig::DeviceProfile(
+                   DeviceConfig::OutputDeviceProfile(
                        /*eligible_for_loopback=*/true,
                        /*output_usage_support_set=*/
                        {fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND),
@@ -752,11 +752,11 @@ static const RoutingConfig kConfigWithExternNonLoopbackDevicePolicy = RoutingCon
                         fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT),
                         fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::COMMUNICATION)})},
                   {kSupportsLoopbackDeviceId,
-                   RoutingConfig::DeviceProfile(
+                   DeviceConfig::OutputDeviceProfile(
                        /*eligible_for_loopback=*/true,
                        /*output_usage_support_set=*/
                        {fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND)})}},
-    /*default=*/{RoutingConfig::DeviceProfile(
+    /*default=*/{DeviceConfig::OutputDeviceProfile(
         /*eligible_for_loopback=*/false, /*output_usage_support_set=*/{
             fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND),
             fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA),

@@ -166,7 +166,7 @@ PipelineConfig::MixGroup ParseMixGroupFromJsonObject(const rapidjson::Value& val
   return mix_group;
 }
 
-std::pair<std::optional<audio_stream_unique_id_t>, RoutingConfig::DeviceProfile>
+std::pair<std::optional<audio_stream_unique_id_t>, DeviceConfig::OutputDeviceProfile>
 ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
                                         std::unordered_set<uint32_t>* all_supported_usages) {
   FX_CHECK(value.IsObject());
@@ -209,7 +209,7 @@ ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
   auto& supported_output_stream_types_value = supported_output_stream_types_it->value;
   FX_CHECK(supported_output_stream_types_value.IsArray());
 
-  RoutingConfig::UsageSupportSet supported_output_stream_types;
+  DeviceConfig::UsageSupportSet supported_output_stream_types;
   for (const auto& stream_type : supported_output_stream_types_value.GetArray()) {
     FX_CHECK(stream_type.IsString());
     const auto supported_usage = fidl::ToUnderlying(UsageFromString(stream_type.GetString()));
@@ -232,7 +232,7 @@ ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
     pipeline_config = PipelineConfig::Default();
   }
 
-  return {device_id, RoutingConfig::DeviceProfile(
+  return {device_id, DeviceConfig::OutputDeviceProfile(
                          eligible_for_loopback, std::move(supported_output_stream_types),
                          independent_volume_control, std::move(pipeline_config))};
 }
@@ -272,14 +272,14 @@ ThermalConfig::Entry ParseThermalPolicyEntryFromJsonObject(const rapidjson::Valu
   return ThermalConfig::Entry(target_name, states);
 }
 
-void ParseOutputDevicePoliciesFromJsonObject(const rapidjson::Value& device_profiles,
+void ParseOutputDevicePoliciesFromJsonObject(const rapidjson::Value& output_device_profiles,
                                              ProcessConfigBuilder* config_builder) {
-  FX_CHECK(device_profiles.IsArray());
+  FX_CHECK(output_device_profiles.IsArray());
 
   std::unordered_set<uint32_t> all_supported_usages;
-  for (const auto& device_profile : device_profiles.GetArray()) {
-    config_builder->AddDeviceRoutingProfile(
-        ParseDeviceRoutingProfileFromJsonObject(device_profile, &all_supported_usages));
+  for (const auto& output_device_profile : output_device_profiles.GetArray()) {
+    config_builder->AddDeviceProfile(
+        ParseDeviceRoutingProfileFromJsonObject(output_device_profile, &all_supported_usages));
   }
 
   FX_CHECK(all_supported_usages.size() == fuchsia::media::RENDER_USAGE_COUNT)

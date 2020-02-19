@@ -16,8 +16,8 @@
 
 #include "src/media/audio/audio_core/audio_input.h"
 #include "src/media/audio/audio_core/audio_output.h"
+#include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/link_matrix.h"
-#include "src/media/audio/audio_core/routing_config.h"
 #include "src/media/audio/audio_core/threading_model.h"
 
 namespace media::audio {
@@ -42,7 +42,7 @@ class RouteGraph {
  public:
   // Constructs a graph from the given config and link matrix. Each parameter must outlive the
   // RouteGraph.
-  RouteGraph(const RoutingConfig& routing_config, LinkMatrix* link_matrix);
+  RouteGraph(const DeviceConfig& device_config, LinkMatrix* link_matrix);
 
   ~RouteGraph();
 
@@ -135,7 +135,7 @@ class RouteGraph {
     bool capturers = false;
   };
 
-  const RoutingConfig::DeviceProfile& DeviceProfile(AudioDevice* device) const;
+  const DeviceConfig::OutputDeviceProfile& OutputDeviceProfile(AudioDevice* device) const;
 
   void UpdateGraphForDeviceChange();
 
@@ -150,7 +150,7 @@ class RouteGraph {
 
   LinkMatrix& link_matrix_;
 
-  const RoutingConfig& routing_config_;
+  const DeviceConfig& device_config_;
 
   Targets targets_;
 

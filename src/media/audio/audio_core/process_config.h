@@ -8,8 +8,8 @@
 #include <optional>
 
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
-#include "src/media/audio/audio_core/routing_config.h"
 #include "src/media/audio/audio_core/thermal_config.h"
 #include "src/media/audio/audio_core/volume_curve.h"
 
@@ -20,16 +20,17 @@ class ProcessConfig;
 class ProcessConfigBuilder {
  public:
   ProcessConfigBuilder& SetDefaultVolumeCurve(VolumeCurve curve);
-  ProcessConfigBuilder& AddDeviceRoutingProfile(
-      std::pair<std::optional<audio_stream_unique_id_t>, RoutingConfig::DeviceProfile>
+  ProcessConfigBuilder& AddDeviceProfile(
+      std::pair<std::optional<audio_stream_unique_id_t>, DeviceConfig::OutputDeviceProfile>
           keyed_profile);
   ProcessConfigBuilder& AddThermalPolicyEntry(ThermalConfig::Entry thermal_policy_entry);
   ProcessConfig Build();
 
  private:
   std::optional<VolumeCurve> default_volume_curve_;
-  std::vector<std::pair<audio_stream_unique_id_t, RoutingConfig::DeviceProfile>> device_profiles_;
-  std::optional<RoutingConfig::DeviceProfile> default_device_profile_;
+  std::vector<std::pair<audio_stream_unique_id_t, DeviceConfig::OutputDeviceProfile>>
+      output_device_profiles_;
+  std::optional<DeviceConfig::OutputDeviceProfile> default_output_device_profile_;
   std::vector<ThermalConfig::Entry> thermal_config_entries_;
 };
 
@@ -68,15 +69,15 @@ class ProcessConfig {
   }
 
   using Builder = ProcessConfigBuilder;
-  ProcessConfig(VolumeCurve curve, RoutingConfig routing_config, ThermalConfig thermal_config)
+  ProcessConfig(VolumeCurve curve, DeviceConfig device_config, ThermalConfig thermal_config)
       : default_volume_curve_(std::move(curve)),
         default_loudness_transform_(
             std::make_shared<MappedLoudnessTransform>(default_volume_curve_)),
-        routing_config_(std::move(routing_config)),
+        device_config_(std::move(device_config)),
         thermal_config_(std::move(thermal_config)) {}
 
   const VolumeCurve& default_volume_curve() const { return default_volume_curve_; }
-  const RoutingConfig& routing_config() const { return routing_config_; }
+  const DeviceConfig& device_config() const { return device_config_; }
   const ThermalConfig& thermal_config() const { return thermal_config_; }
   const std::shared_ptr<LoudnessTransform>& default_loudness_transform() const {
     return default_loudness_transform_;
@@ -87,7 +88,7 @@ class ProcessConfig {
 
   VolumeCurve default_volume_curve_;
   std::shared_ptr<LoudnessTransform> default_loudness_transform_;
-  RoutingConfig routing_config_;
+  DeviceConfig device_config_;
   ThermalConfig thermal_config_;
 };
 

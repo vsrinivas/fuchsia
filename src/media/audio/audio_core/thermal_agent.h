@@ -10,7 +10,7 @@
 
 #include <vector>
 
-#include "src/media/audio/audio_core/routing_config.h"
+#include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/thermal_config.h"
 
 namespace media::audio {
@@ -35,7 +35,7 @@ class ThermalAgent : public fuchsia::thermal::Actor {
       fit::function<void(const std::string& target_name, const std::string& config)>;
 
   ThermalAgent(fuchsia::thermal::ControllerPtr thermal_controller,
-               const ThermalConfig& thermal_config, const RoutingConfig& routing_config,
+               const ThermalConfig& thermal_config, const DeviceConfig& device_config,
                SetConfigCallback set_config_callback);
 
  private:
@@ -45,7 +45,7 @@ class ThermalAgent : public fuchsia::thermal::Actor {
   // Finds the nominal config string for the specified target. Returns no value if the specified
   // target could not be found.
   std::optional<std::string> FindNominalConfigForTarget(const std::string& target_name,
-                                                        const RoutingConfig& routing_config);
+                                                        const DeviceConfig& device_config);
 
   fuchsia::thermal::ControllerPtr thermal_controller_;
   fidl::Binding<fuchsia::thermal::Actor> binding_;

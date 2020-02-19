@@ -19,9 +19,9 @@ class TestProcessConfig {
   TestProcessConfig()
       : TestProcessConfig(
             ProcessConfig::Builder()
-                .AddDeviceRoutingProfile(
+                .AddDeviceProfile(
                     {std::nullopt,
-                     RoutingConfig::DeviceProfile(
+                     DeviceConfig::OutputDeviceProfile(
                          /* eligible_for_loopback */ true,
                          {fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND),
                           fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA),

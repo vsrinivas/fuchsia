@@ -20,8 +20,8 @@ std::array<fuchsia::media::AudioRenderUsage, fuchsia::media::RENDER_USAGE_COUNT>
 
 }  // namespace
 
-RouteGraph::RouteGraph(const RoutingConfig& routing_config, LinkMatrix* link_matrix)
-    : link_matrix_(*link_matrix), routing_config_(routing_config) {
+RouteGraph::RouteGraph(const DeviceConfig& device_config, LinkMatrix* link_matrix)
+    : link_matrix_(*link_matrix), device_config_(device_config) {
   FX_DCHECK(link_matrix);
 
   static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND) == 0);
@@ -352,14 +352,14 @@ std::pair<RouteGraph::Targets, RouteGraph::UnlinkCommand> RouteGraph::CalculateT
           continue;
         }
 
-        const auto& profile = DeviceProfile(output);
+        const auto& profile = OutputDeviceProfile(output);
         if (profile.supports_usage(usage)) {
           return Target(output, profile.loudness_transform());
         }
       }
 
       return Target(throttle_output_.get(),
-                    DeviceProfile(throttle_output_.get()).loudness_transform());
+                    OutputDeviceProfile(throttle_output_.get()).loudness_transform());
     }();
 
     unlink_renderers[idx] = targets_.render[idx].device != new_render_targets[idx].device;
@@ -371,7 +371,7 @@ std::pair<RouteGraph::Targets, RouteGraph::UnlinkCommand> RouteGraph::CalculateT
         continue;
       }
 
-      const auto& profile = DeviceProfile(output);
+      const auto& profile = OutputDeviceProfile(output);
       if (profile.eligible_for_loopback()) {
         return Target(output, profile.loudness_transform());
       }
@@ -382,7 +382,7 @@ std::pair<RouteGraph::Targets, RouteGraph::UnlinkCommand> RouteGraph::CalculateT
 
   auto new_capture_device = inputs_.empty() ? nullptr : inputs_.front();
   auto new_capture_target_transform =
-      new_capture_device ? DeviceProfile(new_capture_device).loudness_transform() : nullptr;
+      new_capture_device ? OutputDeviceProfile(new_capture_device).loudness_transform() : nullptr;
   auto new_capture_target = Target(new_capture_device, new_capture_target_transform);
 
   return {
@@ -425,14 +425,15 @@ RouteGraph::Target RouteGraph::OutputForUsage(const fuchsia::media::Usage& usage
   return targets_.render[idx];
 }
 
-const RoutingConfig::DeviceProfile& RouteGraph::DeviceProfile(AudioDevice* device) const {
+const DeviceConfig::OutputDeviceProfile& RouteGraph::OutputDeviceProfile(
+    AudioDevice* device) const {
   auto driver = device->driver();
   if (!driver) {
-    return routing_config_.default_device_profile();
+    return device_config_.default_output_device_profile();
   }
 
   const auto& device_id = driver->persistent_unique_id();
-  return routing_config_.device_profile(device_id);
+  return device_config_.output_device_profile(device_id);
 }
 
 }  // namespace media::audio

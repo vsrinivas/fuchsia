@@ -82,20 +82,23 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
   ASSERT_TRUE(process_config);
 
   using fuchsia::media::AudioRenderUsage;
-  auto& config = process_config->routing_config();
+  auto& config = process_config->device_config();
 
-  EXPECT_TRUE(config.device_profile(expected_id).supports_usage(AudioRenderUsage::MEDIA));
-  EXPECT_TRUE(config.device_profile(expected_id).supports_usage(AudioRenderUsage::INTERRUPTION));
-  EXPECT_FALSE(config.device_profile(expected_id).supports_usage(AudioRenderUsage::SYSTEM_AGENT));
+  EXPECT_TRUE(config.output_device_profile(expected_id).supports_usage(AudioRenderUsage::MEDIA));
+  EXPECT_TRUE(
+      config.output_device_profile(expected_id).supports_usage(AudioRenderUsage::INTERRUPTION));
+  EXPECT_FALSE(
+      config.output_device_profile(expected_id).supports_usage(AudioRenderUsage::SYSTEM_AGENT));
 
-  EXPECT_FALSE(config.device_profile(unknown_id).supports_usage(AudioRenderUsage::INTERRUPTION));
-  EXPECT_TRUE(config.device_profile(unknown_id).supports_usage(AudioRenderUsage::MEDIA));
+  EXPECT_FALSE(
+      config.output_device_profile(unknown_id).supports_usage(AudioRenderUsage::INTERRUPTION));
+  EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(AudioRenderUsage::MEDIA));
 
-  EXPECT_TRUE(config.device_profile(expected_id).eligible_for_loopback());
-  EXPECT_FALSE(config.device_profile(unknown_id).eligible_for_loopback());
+  EXPECT_TRUE(config.output_device_profile(expected_id).eligible_for_loopback());
+  EXPECT_FALSE(config.output_device_profile(unknown_id).eligible_for_loopback());
 
-  EXPECT_FALSE(config.device_profile(expected_id).independent_volume_control());
-  EXPECT_TRUE(config.device_profile(unknown_id).independent_volume_control());
+  EXPECT_FALSE(config.output_device_profile(expected_id).independent_volume_control());
+  EXPECT_TRUE(config.output_device_profile(unknown_id).independent_volume_control());
 }
 
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {
@@ -136,12 +139,13 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {
   ASSERT_TRUE(process_config);
 
   using fuchsia::media::AudioRenderUsage;
-  auto& config = process_config->routing_config();
+  auto& config = process_config->device_config();
 
-  EXPECT_TRUE(config.device_profile(unknown_id).supports_usage(AudioRenderUsage::INTERRUPTION));
-  EXPECT_TRUE(config.device_profile(unknown_id).supports_usage(AudioRenderUsage::MEDIA));
+  EXPECT_TRUE(
+      config.output_device_profile(unknown_id).supports_usage(AudioRenderUsage::INTERRUPTION));
+  EXPECT_TRUE(config.output_device_profile(unknown_id).supports_usage(AudioRenderUsage::MEDIA));
 
-  EXPECT_TRUE(config.device_profile(unknown_id).eligible_for_loopback());
+  EXPECT_TRUE(config.output_device_profile(unknown_id).eligible_for_loopback());
 }
 
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyInsufficientCoverage) {
@@ -269,7 +273,8 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
   const audio_stream_unique_id_t device_id = {.data = {0x34, 0x38, 0x4e, 0x7d, 0xa9, 0xd5, 0x2c,
                                                        0x80, 0x62, 0xa9, 0x76, 0x5b, 0xae, 0xb6,
                                                        0x05, 0x3a}};
-  const auto& root = config->routing_config().device_profile(device_id).pipeline_config().root();
+  const auto& root =
+      config->device_config().output_device_profile(device_id).pipeline_config().root();
   {  // 'linearize' mix_group
     const auto& mix_group = root;
     EXPECT_EQ("", mix_group.name);

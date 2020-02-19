@@ -108,7 +108,7 @@ TEST_F(ThermalAgentTest, NoConfigEntries) {
   fake_thermal_controller.Bind(thermal_controller.NewRequest());
 
   ThermalAgent under_test(std::move(thermal_controller), process_config.thermal_config(),
-                          process_config.routing_config(), ConfigCallback());
+                          process_config.device_config(), ConfigCallback());
 
   RunLoopUntilIdle();
   EXPECT_NE(ZX_OK, fake_thermal_controller.binding_error());
@@ -131,9 +131,8 @@ TEST_F(ThermalAgentTest, OneConfigEntry) {
       ProcessConfigBuilder()
           .SetDefaultVolumeCurve(
               VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
-          .AddDeviceRoutingProfile(
-              {std::nullopt,
-               RoutingConfig::DeviceProfile(false, {}, false, std::move(pipeline_config))})
+          .AddDeviceProfile({std::nullopt, DeviceConfig::OutputDeviceProfile(
+                                               false, {}, false, std::move(pipeline_config))})
           .AddThermalPolicyEntry(ThermalConfig::Entry(kTargetName, states))
           .Build();
   fuchsia::thermal::ControllerPtr thermal_controller;
@@ -141,7 +140,7 @@ TEST_F(ThermalAgentTest, OneConfigEntry) {
   fake_thermal_controller.Bind(thermal_controller.NewRequest());
 
   ThermalAgent under_test(std::move(thermal_controller), process_config.thermal_config(),
-                          process_config.routing_config(), ConfigCallback());
+                          process_config.device_config(), ConfigCallback());
 
   RunLoopUntilIdle();
   EXPECT_NE(ZX_OK, fake_thermal_controller.binding_error());
@@ -203,9 +202,8 @@ TEST_F(ThermalAgentTest, MultipleConfigEntries) {
       ProcessConfigBuilder()
           .SetDefaultVolumeCurve(
               VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
-          .AddDeviceRoutingProfile(
-              {std::nullopt,
-               RoutingConfig::DeviceProfile(false, {}, false, std::move(pipeline_config))})
+          .AddDeviceProfile({std::nullopt, DeviceConfig::OutputDeviceProfile(
+                                               false, {}, false, std::move(pipeline_config))})
           .AddThermalPolicyEntry(ThermalConfig::Entry(kTargetName0, states0))
           .AddThermalPolicyEntry(ThermalConfig::Entry(kTargetName1, states1))
           .AddThermalPolicyEntry(ThermalConfig::Entry(kTargetName2, states2))
@@ -215,7 +213,7 @@ TEST_F(ThermalAgentTest, MultipleConfigEntries) {
   fake_thermal_controller.Bind(thermal_controller.NewRequest());
 
   ThermalAgent under_test(std::move(thermal_controller), process_config.thermal_config(),
-                          process_config.routing_config(), ConfigCallback());
+                          process_config.device_config(), ConfigCallback());
 
   RunLoopUntilIdle();
   EXPECT_NE(ZX_OK, fake_thermal_controller.binding_error());

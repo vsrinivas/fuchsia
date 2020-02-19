@@ -47,7 +47,7 @@ std::vector<std::string> ConfigsByState(const std::vector<ThermalConfig::State>&
 }  // namespace
 
 ThermalAgent::ThermalAgent(fuchsia::thermal::ControllerPtr thermal_controller,
-                           const ThermalConfig& thermal_config, const RoutingConfig& routing_config,
+                           const ThermalConfig& thermal_config, const DeviceConfig& device_config,
                            SetConfigCallback set_config_callback)
     : thermal_controller_(std::move(thermal_controller)),
       binding_(this),
@@ -71,7 +71,7 @@ ThermalAgent::ThermalAgent(fuchsia::thermal::ControllerPtr thermal_controller,
   std::vector<uint32_t> trip_points(trip_points_set.begin(), trip_points_set.end());
 
   for (auto& entry : thermal_config.entries()) {
-    auto nominal_config = FindNominalConfigForTarget(entry.target_name(), routing_config);
+    auto nominal_config = FindNominalConfigForTarget(entry.target_name(), device_config);
     if (nominal_config.has_value()) {
       targets_.emplace_back(entry.target_name(),
                             ConfigsByState(entry.states(), nominal_config.value(), trip_points));
@@ -116,11 +116,11 @@ void ThermalAgent::SetThermalState(uint32_t state, SetThermalStateCallback callb
 }
 
 std::optional<std::string> ThermalAgent::FindNominalConfigForTarget(
-    const std::string& target_name, const RoutingConfig& routing_config) {
+    const std::string& target_name, const DeviceConfig& device_config) {
   // For 'special' target names (not effect names), this method must return a string. An empty
   // string is fine. The remainder of this method assumes the |target_name| references an effect.
 
-  const PipelineConfig::Effect* effect = routing_config.FindEffect(target_name);
+  const PipelineConfig::Effect* effect = device_config.FindEffect(target_name);
   return effect ? std::optional(effect->effect_config) : std::nullopt;
 }
 

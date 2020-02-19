@@ -14,18 +14,18 @@ ProcessConfigBuilder& ProcessConfigBuilder::SetDefaultVolumeCurve(VolumeCurve cu
   return *this;
 }
 
-ProcessConfigBuilder& ProcessConfigBuilder::AddDeviceRoutingProfile(
-    std::pair<std::optional<audio_stream_unique_id_t>, RoutingConfig::DeviceProfile>
+ProcessConfigBuilder& ProcessConfigBuilder::AddDeviceProfile(
+    std::pair<std::optional<audio_stream_unique_id_t>, DeviceConfig::OutputDeviceProfile>
         keyed_profile) {
   auto& [device_id, profile] = keyed_profile;
   if (!device_id.has_value()) {
-    FX_CHECK(!default_device_profile_.has_value())
+    FX_CHECK(!default_output_device_profile_.has_value())
         << "Config specifies two default output usage support sets; must have only one.";
-    default_device_profile_ = std::move(profile);
+    default_output_device_profile_ = std::move(profile);
     return *this;
   }
 
-  device_profiles_.push_back({std::move(*device_id), profile});
+  output_device_profiles_.push_back({std::move(*device_id), profile});
   return *this;
 }
 
@@ -41,7 +41,7 @@ ProcessConfig ProcessConfigBuilder::Build() {
   FX_CHECK(maybe_curve) << "Missing required VolumeCurve member";
   return ProcessConfig(
       std::move(*maybe_curve),
-      RoutingConfig(std::move(device_profiles_), std::move(default_device_profile_)),
+      DeviceConfig(std::move(output_device_profiles_), std::move(default_output_device_profile_)),
       ThermalConfig(std::move(thermal_config_entries_)));
 }
 
