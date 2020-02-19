@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use super::*;
+
 use {
     bt_avctp::pub_decodable_enum, fidl::encoding::Decodable as FidlDecodable,
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp, std::convert::TryFrom,
@@ -20,7 +22,7 @@ pub use self::{
 use crate::packets::Error;
 
 pub_decodable_enum!(
-    PlayerApplicationSettingAttributeId <u8, Error> {
+    PlayerApplicationSettingAttributeId <u8, Error, InvalidParameter> {
         Equalizer => 0x01,
         RepeatStatusMode => 0x02,
         ShuffleMode => 0x03,
@@ -71,7 +73,7 @@ impl From<PlayerApplicationSettingAttributeId> for fidl_avrcp::PlayerApplication
 }
 
 pub_decodable_enum!(
-    RepeatStatusMode <u8, Error> {
+    RepeatStatusMode <u8, Error, OutOfRange> {
         Off => 0x01,
         SingleTrackRepeat => 0x02,
         AllTrackRepeat => 0x03,
@@ -102,7 +104,7 @@ impl From<RepeatStatusMode> for fidl_avrcp::RepeatStatusMode {
 }
 
 pub_decodable_enum!(
-    ShuffleMode <u8, Error> {
+    ShuffleMode <u8, Error, OutOfRange> {
         Off => 0x01,
         AllTrackShuffle => 0x02,
         GroupShuffle => 0x03,
@@ -130,7 +132,7 @@ impl From<ShuffleMode> for fidl_avrcp::ShuffleMode {
 }
 
 pub_decodable_enum!(
-    ScanMode <u8, Error> {
+    ScanMode <u8, Error, OutOfRange> {
         Off => 0x01,
         AllTrackScan => 0x02,
         GroupScan => 0x03,
@@ -158,7 +160,7 @@ impl From<ScanMode> for fidl_avrcp::ScanMode {
 }
 
 pub_decodable_enum!(
-    Equalizer <u8, Error> {
+    Equalizer <u8, Error, OutOfRange> {
         Off => 0x01,
         On => 0x02,
     }

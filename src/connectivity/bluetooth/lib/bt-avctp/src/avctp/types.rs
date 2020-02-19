@@ -58,7 +58,7 @@ impl From<[u8; 2]> for ProfileId {
 pub_decodable_enum! {
     /// Indicates whether this packet is part of a fragmented packet set.
     /// See Section 6.1
-    PacketType<u8, Error> {
+    PacketType<u8, Error, OutOfRange> {
         Single => 0x00,
         Start => 0x01,
         Continue => 0x02,
@@ -69,7 +69,7 @@ pub_decodable_enum! {
 pub_decodable_enum! {
     /// Specifies the type of the packet as being either Command or Response
     /// See Section 6.1.1
-    MessageType<u8, Error> {
+    MessageType<u8, Error, OutOfRange> {
         Command => 0x00,
         Response => 0x01,
     }

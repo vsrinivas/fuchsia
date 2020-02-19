@@ -16,12 +16,14 @@ impl GetPlayStatusCommand {
     }
 }
 
-impl VendorDependent for GetPlayStatusCommand {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for GetPlayStatusCommand {
     fn pdu_id(&self) -> PduId {
         PduId::GetPlayStatus
     }
 }
 
+/// Specifies the AVC command type for this AVC command packet
 impl VendorCommand for GetPlayStatusCommand {
     fn command_type(&self) -> AvcCommandType {
         AvcCommandType::Status
@@ -77,7 +79,8 @@ impl GetPlayStatusResponse {
     }
 }
 
-impl VendorDependent for GetPlayStatusResponse {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for GetPlayStatusResponse {
     fn pdu_id(&self) -> PduId {
         PduId::GetPlayStatus
     }
@@ -86,7 +89,7 @@ impl VendorDependent for GetPlayStatusResponse {
 impl Decodable for GetPlayStatusResponse {
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < RESPONSE_LEN {
-            return Err(Error::InvalidMessage);
+            return Err(Error::InvalidMessageLength);
         }
 
         let mut temp = [0; SONG_LENGTH_LEN];
@@ -110,7 +113,7 @@ impl Encodable for GetPlayStatusResponse {
 
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
         if buf.len() < self.encoded_len() {
-            return Err(Error::OutOfRange);
+            return Err(Error::BufferLengthOutOfRange);
         }
 
         let sl_bytes = u32::to_be_bytes(self.song_length);

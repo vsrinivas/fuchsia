@@ -4,8 +4,7 @@
 
 use std::u8;
 
-use crate::packets::player_application_settings::PlayerApplicationSettingAttributeId;
-use crate::packets::*;
+use super::*;
 
 /// Packet format for a SetPlayerApplicationSettingValue command.
 /// See AVRCP Sec 6.5.4
@@ -25,12 +24,14 @@ impl SetPlayerApplicationSettingValueCommand {
     }
 }
 
-impl VendorDependent for SetPlayerApplicationSettingValueCommand {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for SetPlayerApplicationSettingValueCommand {
     fn pdu_id(&self) -> PduId {
         PduId::SetPlayerApplicationSettingValue
     }
 }
 
+/// Specifies the AVC command type for this AVC command packet
 impl VendorCommand for SetPlayerApplicationSettingValueCommand {
     fn command_type(&self) -> AvcCommandType {
         AvcCommandType::Control
@@ -70,11 +71,11 @@ impl Encodable for SetPlayerApplicationSettingValueCommand {
     }
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
         if buf.len() < self.encoded_len() {
-            return Err(Error::OutOfRange);
+            return Err(Error::InvalidMessageLength);
         }
         if self.num_player_application_setting_attributes as usize != self.attribute_id_values.len()
         {
-            return Err(Error::Encoding);
+            return Err(Error::ParameterEncodingError);
         }
         buf[0] = u8::from(self.num_player_application_setting_attributes);
         let mut idx: usize = 0;
@@ -103,7 +104,8 @@ impl SetPlayerApplicationSettingValueResponse {
     }
 }
 
-impl VendorDependent for SetPlayerApplicationSettingValueResponse {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for SetPlayerApplicationSettingValueResponse {
     fn pdu_id(&self) -> PduId {
         PduId::SetPlayerApplicationSettingValue
     }
@@ -139,7 +141,7 @@ mod tests {
         );
         let settings_vec = settings_to_vec(&settings);
         let response = SetPlayerApplicationSettingValueCommand::new(settings_vec);
-        assert_eq!(response.pdu_id(), PduId::SetPlayerApplicationSettingValue);
+        assert_eq!(response.raw_pdu_id(), u8::from(&PduId::SetPlayerApplicationSettingValue));
         assert_eq!(response.command_type(), AvcCommandType::Control);
         assert_eq!(response.encoded_len(), 5);
         let mut buf = vec![0; response.encoded_len()];
@@ -178,7 +180,7 @@ mod tests {
     // Test SetPlayerApplicationSettingValue response encoding success.
     fn test_set_player_application_setting_value_response_encode() {
         let response = SetPlayerApplicationSettingValueResponse::new();
-        assert_eq!(response.pdu_id(), PduId::SetPlayerApplicationSettingValue);
+        assert_eq!(response.raw_pdu_id(), u8::from(&PduId::SetPlayerApplicationSettingValue));
         assert_eq!(response.encoded_len(), 0); // empty payload for command
         let mut buf = vec![0; response.encoded_len()];
         assert!(response.encode(&mut buf[..]).is_ok());

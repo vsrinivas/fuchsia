@@ -18,14 +18,14 @@ pub struct RejectResponse {
 impl RejectResponse {
     /// We expect the PDU we are receiving is defined so we take a PduId type instead of U8 because
     /// otherwise we are likely to respond with a NotImplemented instead of a rejection.
-    pub fn new(pdu_id: &PduId, status_code: &StatusCode) -> Self {
-        Self { pdu_id: u8::from(pdu_id), status_code: u8::from(status_code) }
+    pub fn new(pdu_id: u8, status_code: StatusCode) -> Self {
+        Self { pdu_id, status_code: u8::from(&status_code) }
     }
 }
 
-impl VendorDependent for RejectResponse {
-    fn pdu_id(&self) -> PduId {
-        PduId::try_from(self.pdu_id).unwrap()
+impl VendorDependentRawPdu for RejectResponse {
+    fn raw_pdu_id(&self) -> u8 {
+        self.pdu_id
     }
 }
 
@@ -36,7 +36,7 @@ impl Encodable for RejectResponse {
 
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
         if buf.len() < 1 {
-            return Err(Error::OutOfRange);
+            return Err(Error::InvalidMessageLength);
         }
 
         buf[0] = self.status_code;
@@ -50,8 +50,11 @@ mod tests {
 
     #[test]
     fn test_reject_response() {
-        let b = RejectResponse::new(&PduId::RegisterNotification, &StatusCode::InvalidParameter);
-        assert_eq!(b.pdu_id(), PduId::RegisterNotification);
+        let b = RejectResponse::new(
+            u8::from(&PduId::RegisterNotification),
+            StatusCode::InvalidParameter,
+        );
+        assert_eq!(b.raw_pdu_id(), u8::from(&PduId::RegisterNotification));
         assert_eq!(b.encoded_len(), 1);
         let mut buf = vec![0; b.encoded_len()];
         assert!(b.encode(&mut buf[..]).is_ok());

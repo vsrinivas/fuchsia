@@ -65,18 +65,10 @@ impl ControlChannelHandler {
 
         let body = &packet_body[preamble.encoded_len()..];
 
-        let pdu_id = match PduId::try_from(preamble.pdu_id) {
-            Err(e) => {
-                fx_log_err!("Unknown pdu {} received {:#?}: {:?}", preamble.pdu_id, body, e);
-                let _ = command.send_response(AvcResponseType::NotImplemented, packet_body);
-                return;
-            }
-            Ok(x) => x,
-        };
-
         // The only PDU that you can send a Notify on is RegisterNotification.
-        if pdu_id != PduId::RegisterNotification {
-            let reject_response = RejectResponse::new(&pdu_id, &StatusCode::InvalidParameter);
+        if preamble.pdu_id != u8::from(&PduId::RegisterNotification) {
+            let reject_response =
+                RejectResponse::new(preamble.pdu_id, StatusCode::InvalidParameter);
             let packet = reject_response.encode_packet().unwrap();
             let _ = command.send_response(AvcResponseType::Rejected, &packet[..]);
             return;
@@ -90,8 +82,8 @@ impl ControlChannelHandler {
                         *notification_command.event_id()
                     );
                     let reject_response = RejectResponse::new(
-                        &PduId::RegisterNotification,
-                        &StatusCode::InvalidParameter,
+                        u8::from(&PduId::RegisterNotification),
+                        StatusCode::InvalidParameter,
                     );
                     let packet =
                         reject_response.encode_packet().expect("unable to encode rejection packet");
@@ -107,8 +99,10 @@ impl ControlChannelHandler {
                     body,
                     e
                 );
-                let reject_response =
-                    RejectResponse::new(&PduId::RegisterNotification, &StatusCode::InvalidCommand);
+                let reject_response = RejectResponse::new(
+                    u8::from(&PduId::RegisterNotification),
+                    StatusCode::InvalidCommand,
+                );
                 let packet =
                     reject_response.encode_packet().expect("unable to encode rejection packet");
                 // TODO: validate this correct error code to respond in this case.
@@ -145,7 +139,8 @@ impl ControlChannelHandler {
                 }
                 _ => {
                     fx_vlog!(tag: "avrcp", 2, "Unable to parse GetCapabilitiesCommand, sending rejection.");
-                    let response = RejectResponse::new(&pdu_id, &StatusCode::InvalidParameter);
+                    let response =
+                        RejectResponse::new(u8::from(&pdu_id), StatusCode::InvalidParameter);
                     let buf = response.encode_packet().map_err(|e| Error::PacketError(e))?;
                     Ok((AvcResponseType::Rejected, buf))
                 }
@@ -265,20 +260,15 @@ impl ControlChannelHandler {
                             Error::PacketError(PacketError::OutOfRange) => {
                                 StatusCode::InvalidParameter
                             }
-                            Error::PacketError(PacketError::InvalidHeader) => {
-                                StatusCode::ParameterContentError
-                            }
                             Error::PacketError(PacketError::InvalidMessage) => {
                                 StatusCode::ParameterContentError
-                            }
-                            Error::PacketError(PacketError::UnsupportedMessage) => {
-                                StatusCode::InternalError
                             }
                             _ => StatusCode::InternalError,
                         };
 
                         let pdu_id = PduId::try_from(preamble.pdu_id).expect("Handled above.");
-                        let reject_response = RejectResponse::new(&pdu_id, &response_error_code);
+                        let reject_response =
+                            RejectResponse::new(u8::from(&pdu_id), response_error_code);
                         if let Ok(packet) = reject_response.encode_packet() {
                             if let Err(e) =
                                 command.send_response(AvcResponseType::Rejected, &packet[..])

@@ -28,23 +28,30 @@ pub use {
 pub enum Error {
     /// The value that was sent on the wire was out of range.
     #[error("Value was out of range")]
-    OutOfRange,
+    InvalidMessageLength,
 
-    /// The header was invalid.
-    #[error("Invalid header for a message")]
-    InvalidHeader,
+    /// A specific parameter ID was not understood.
+    /// This specifically includes:
+    /// PDU ID, Capability ID, Event ID, Player Application Setting Attribute ID, Player Application
+    /// Setting Value ID, and Element Attribute ID
+    #[error("Unrecognized parameter id for a message")]
+    InvalidParameter,
 
     /// The body format was invalid.
     #[error("Failed to parse message contents")]
     InvalidMessage,
 
-    /// The packet is unhandled but not necessarily invalid.
-    #[error("Message is unsupported but not necessarily invalid")]
-    UnsupportedMessage,
+    /// A message couldn't be encoded. Passed in buffer was too short.
+    #[error("Encoding buffer too small")]
+    BufferLengthOutOfRange,
 
-    /// A message couldn't be encoded.
+    /// A message couldn't be encoded. Logical error with parameters.
     #[error("Encountered an error encoding a message")]
-    Encoding,
+    ParameterEncodingError,
+
+    /// A enum value is out of expected range
+    #[error("Value is out of expected range for enum")]
+    OutOfRange,
 
     #[doc(hidden)]
     #[error("__Nonexhaustive error should never be created.")]
@@ -56,7 +63,7 @@ pub type PacketResult<T> = result::Result<T, Error>;
 pub_decodable_enum! {
     /// Common charset IDs from the MIB Enum we may see in AVRCP. See:
     /// https://www.iana.org/assignments/character-sets/character-sets.xhtml
-    CharsetId<u16, Error> {
+    CharsetId<u16, Error, OutOfRange> {
         Ascii => 3,
         Iso8859_1 => 4,
         Utf8 => 106,
@@ -68,7 +75,7 @@ pub_decodable_enum! {
 }
 
 pub_decodable_enum! {
-    MediaAttributeId<u8, Error> {
+    MediaAttributeId<u8, Error, OutOfRange> {
         Title => 0x1,
         ArtistName => 0x2,
         AlbumName => 0x3,
@@ -81,7 +88,7 @@ pub_decodable_enum! {
 }
 
 pub_decodable_enum! {
-    PduId<u8, Error> {
+    PduId<u8, Error, InvalidParameter> {
         GetCapabilities => 0x10,
         ListPlayerApplicationSettingAttributes => 0x11,
         ListPlayerApplicationSettingValues => 0x12,
@@ -104,7 +111,7 @@ pub_decodable_enum! {
 }
 
 pub_decodable_enum! {
-    PacketType<u8, Error> {
+    PacketType<u8, Error, OutOfRange> {
         Single => 0b00,
         Start => 0b01,
         Continue => 0b10,
@@ -114,21 +121,43 @@ pub_decodable_enum! {
 
 // TODO(BT-2221): Missing browsing channel specific status codes. Add when we add browse channel.
 pub_decodable_enum! {
-    StatusCode<u8, Error> {
+    StatusCode<u8, Error, OutOfRange> {
         InvalidCommand => 0x00,
         InvalidParameter => 0x01,
         ParameterContentError => 0x02,
         InternalError => 0x03,
         Success => 0x04,
         UidChanged => 0x05,
+        InvalidPlayerId => 0x11,
         NoAvailablePlayers => 0x15,
         AddressedPlayerChanged => 0x16,
     }
 }
 
+impl From<fidl_avrcp::TargetAvcError> for StatusCode {
+    fn from(src: fidl_avrcp::TargetAvcError) -> StatusCode {
+        match src {
+            fidl_avrcp::TargetAvcError::RejectedInvalidCommand => StatusCode::InvalidCommand,
+            fidl_avrcp::TargetAvcError::RejectedInvalidParameter => StatusCode::InvalidParameter,
+            fidl_avrcp::TargetAvcError::RejectedParameterContentError => {
+                StatusCode::ParameterContentError
+            }
+            fidl_avrcp::TargetAvcError::RejectedInternalError => StatusCode::InternalError,
+            fidl_avrcp::TargetAvcError::RejectedUidChanged => StatusCode::UidChanged,
+            fidl_avrcp::TargetAvcError::RejectedInvalidPlayerId => StatusCode::InvalidPlayerId,
+            fidl_avrcp::TargetAvcError::RejectedNoAvailablePlayers => {
+                StatusCode::NoAvailablePlayers
+            }
+            fidl_avrcp::TargetAvcError::RejectedAddressedPlayerChanged => {
+                StatusCode::AddressedPlayerChanged
+            }
+        }
+    }
+}
+
 // Shared by get_play_status and notification
 pub_decodable_enum! {
-    PlaybackStatus<u8, Error> {
+    PlaybackStatus<u8, Error, OutOfRange> {
         Stopped => 0x00,
         Playing => 0x01,
         Paused => 0x02,
@@ -165,7 +194,7 @@ impl From<PlaybackStatus> for fidl_avrcp::PlaybackStatus {
 }
 
 pub_decodable_enum! {
-    PlayerApplicationSettingAttributeId<u8, Error> {
+    PlayerApplicationSettingAttributeId<u8, Error, InvalidParameter> {
         Equalizer => 0x01,
         RepeatStatusMode => 0x02,
         ShuffleMode => 0x03,
@@ -224,7 +253,7 @@ pub trait Decodable<E = Error>: Sized {
 }
 
 /// A encodable type can write itself into a byte buffer.
-pub trait Encodable<E = Error>: Sized {
+pub trait Encodable<E = Error> {
     /// Returns the number of bytes necessary to encode |self|
     fn encoded_len(&self) -> usize;
 
@@ -285,18 +314,39 @@ impl Encodable for VendorDependentPreamble {
     }
 }
 
-/// Provides methods to encode one or more vendor dependent packets with their preambles. Uses to
-/// decode.
-/// TODO(2743): Add support for VendorResponse trait for RejectResponse.
-pub trait VendorDependent: Encodable {
-    /// Protocol Data Unit type.
-    fn pdu_id(&self) -> PduId;
+const AVC_PAYLOAD_SIZE: usize = 508; // 512 - 4 byte preamble
 
+pub trait VendorDependentRawPdu {
+    /// Protocol Data Unit type.
+    fn raw_pdu_id(&self) -> u8;
+}
+
+pub trait VendorDependentPdu {
+    fn pdu_id(&self) -> PduId;
+}
+
+impl<T: VendorDependentPdu> VendorDependentRawPdu for T {
+    fn raw_pdu_id(&self) -> u8 {
+        u8::from(&self.pdu_id())
+    }
+}
+
+pub trait PacketEncodable {
+    /// Encode packet for single command/response.
+    fn encode_packet(&self) -> Result<Vec<u8>, Error>;
+
+    /// Encode packet(s) and split at AVC 512 byte limit.
+    /// For use with AVC.
+    fn encode_packets(&self) -> Result<Vec<Vec<u8>>, Error>;
+}
+
+/// Provides methods to encode one or more vendor dependent packets with their preambles.
+impl<T: VendorDependentRawPdu + Encodable> PacketEncodable for T {
     // This default trait impl is tested in rejected.rs.
     /// Encode packet for single command/response.
     fn encode_packet(&self) -> Result<Vec<u8>, Error> {
         let len = self.encoded_len();
-        let preamble = VendorDependentPreamble::new_single(u8::from(&self.pdu_id()), len as u16);
+        let preamble = VendorDependentPreamble::new_single(self.raw_pdu_id(), len as u16);
         let prelen = preamble.encoded_len();
         let mut buf = vec![0; len + prelen];
         preamble.encode(&mut buf[..])?;
@@ -304,35 +354,23 @@ pub trait VendorDependent: Encodable {
         Ok(buf)
     }
 
-    const AVC_PAYLOAD_SIZE: usize = 508; // 512 - 4 byte preamble
-
     // This default trait impl is tested in get_element_attributes.rs.
-    /// Encode packets for potential multiple continuation responses.
     fn encode_packets(&self) -> Result<Vec<Vec<u8>>, Error> {
         let mut buf = vec![0; self.encoded_len()];
         self.encode(&mut buf[..])?;
 
         let mut payloads = vec![];
         let mut len_remaining = self.encoded_len();
-        let mut packet_type = if len_remaining > Self::AVC_PAYLOAD_SIZE {
-            PacketType::Start
-        } else {
-            PacketType::Single
-        };
+        let mut packet_type =
+            if len_remaining > AVC_PAYLOAD_SIZE { PacketType::Start } else { PacketType::Single };
         let mut offset = 0;
 
         loop {
             // length - preamble size
-            let current_len = if len_remaining > Self::AVC_PAYLOAD_SIZE {
-                Self::AVC_PAYLOAD_SIZE
-            } else {
-                len_remaining
-            };
-            let preamble = VendorDependentPreamble::new(
-                u8::from(&self.pdu_id()),
-                packet_type,
-                current_len as u16,
-            );
+            let current_len =
+                if len_remaining > AVC_PAYLOAD_SIZE { AVC_PAYLOAD_SIZE } else { len_remaining };
+            let preamble =
+                VendorDependentPreamble::new(self.raw_pdu_id(), packet_type, current_len as u16);
 
             let mut payload_buf = vec![0; preamble.encoded_len()];
             preamble.encode(&mut payload_buf[..])?;
@@ -343,7 +381,7 @@ pub trait VendorDependent: Encodable {
             offset += current_len;
             if len_remaining == 0 {
                 break;
-            } else if len_remaining <= Self::AVC_PAYLOAD_SIZE {
+            } else if len_remaining <= AVC_PAYLOAD_SIZE {
                 packet_type = PacketType::Stop;
             } else {
                 packet_type = PacketType::Continue;
@@ -353,7 +391,9 @@ pub trait VendorDependent: Encodable {
     }
 }
 
-pub trait VendorCommand: VendorDependent {
+/// Specifies the AVC command type for this packet. Used only on Command packet and not
+/// response packet encoders.
+pub trait VendorCommand: VendorDependentPdu {
     /// Command type.
     fn command_type(&self) -> AvcCommandType;
 }
@@ -378,7 +418,7 @@ impl Encodable for RawVendorDependentPacket {
 
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
         if buf.len() != self.payload.len() {
-            return Err(Error::OutOfRange);
+            return Err(Error::InvalidMessageLength);
         }
 
         buf.copy_from_slice(&self.payload[..]);
@@ -386,7 +426,8 @@ impl Encodable for RawVendorDependentPacket {
     }
 }
 
-impl VendorDependent for RawVendorDependentPacket {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for RawVendorDependentPacket {
     fn pdu_id(&self) -> PduId {
         self.pdu_id
     }
@@ -394,6 +435,7 @@ impl VendorDependent for RawVendorDependentPacket {
 
 // TODO(41343): Specify the command type with the REPL when sending raw packets.
 // For now, default to Control.
+/// Specifies the AVC command type for this AVC command packet
 impl VendorCommand for RawVendorDependentPacket {
     fn command_type(&self) -> AvcCommandType {
         AvcCommandType::Control
@@ -424,6 +466,7 @@ mod tests {
         let expected = fidl::PlaybackStatus::Playing;
         assert_eq!(expected, status);
     }
+
     #[test]
     fn test_playback_status_from_fidl() {
         let status = fidl::PlaybackStatus::Stopped;

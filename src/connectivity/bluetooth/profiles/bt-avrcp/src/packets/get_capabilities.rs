@@ -6,7 +6,7 @@ use super::*;
 
 pub_decodable_enum!(
     /// AVRCP 1.6.1 section 6.4.1 Table 6.5
-    GetCapabilitiesCapabilityId <u8, Error> {
+    GetCapabilitiesCapabilityId <u8, Error, InvalidParameter> {
         CompanyId => 0x02,
         EventsId => 0x03,
     }
@@ -28,12 +28,14 @@ impl GetCapabilitiesCommand {
     }
 }
 
-impl VendorDependent for GetCapabilitiesCommand {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for GetCapabilitiesCommand {
     fn pdu_id(&self) -> PduId {
         PduId::GetCapabilities
     }
 }
 
+/// Specifies the AVC command type for this AVC command packet
 impl VendorCommand for GetCapabilitiesCommand {
     fn command_type(&self) -> AvcCommandType {
         AvcCommandType::Status
@@ -54,6 +56,9 @@ impl Encodable for GetCapabilitiesCommand {
     }
 
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
+        if buf.len() < 1 {
+            return Err(Error::BufferLengthOutOfRange);
+        }
         buf[0] = u8::from(&self.capability_id);
         Ok(())
     }
@@ -114,7 +119,8 @@ impl GetCapabilitiesResponse {
     }
 }
 
-impl VendorDependent for GetCapabilitiesResponse {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for GetCapabilitiesResponse {
     fn pdu_id(&self) -> PduId {
         PduId::GetCapabilities
     }
@@ -123,12 +129,12 @@ impl VendorDependent for GetCapabilitiesResponse {
 impl Decodable for GetCapabilitiesResponse {
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 2 {
-            return Err(Error::OutOfRange);
+            return Err(Error::InvalidMessageLength);
         }
         let capability_id = GetCapabilitiesCapabilityId::try_from(buf[0])?;
         let capability_count = buf[1] as usize;
         if capability_count > 0 && buf.len() == 2 {
-            return Err(Error::OutOfRange);
+            return Err(Error::InvalidMessageLength);
         }
         let capabilities = match capability_id {
             GetCapabilitiesCapabilityId::CompanyId => {
@@ -170,11 +176,12 @@ impl Encodable for GetCapabilitiesResponse {
 
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
         if buf.len() < self.encoded_len() {
-            return Err(Error::OutOfRange);
+            return Err(Error::BufferLengthOutOfRange);
         }
 
         buf[0] = u8::from(&self.capability_id);
-        buf[1] = u8::try_from(self.capabilities.len()).map_err(|_| Error::Encoding)?;
+        buf[1] =
+            u8::try_from(self.capabilities.len()).map_err(|_| Error::ParameterEncodingError)?;
         match self.capability_id {
             GetCapabilitiesCapabilityId::CompanyId => {
                 let mut i = 2;
@@ -185,7 +192,7 @@ impl Encodable for GetCapabilitiesResponse {
                         buf[i + 2] = *b3;
                         i += 3;
                     } else {
-                        return Err(Error::Encoding);
+                        return Err(Error::ParameterEncodingError);
                     }
                 }
             }
@@ -196,7 +203,7 @@ impl Encodable for GetCapabilitiesResponse {
                         buf[i] = *b1;
                         i += 1;
                     } else {
-                        return Err(Error::Encoding);
+                        return Err(Error::InvalidParameter);
                     }
                 }
             }
@@ -214,7 +221,7 @@ mod tests {
     fn test_get_capabilities_response_company_encode() {
         let b = GetCapabilitiesResponse::new_btsig_company();
         assert!(b.has_bt_sig_company());
-        assert_eq!(b.pdu_id(), PduId::GetCapabilities);
+        assert_eq!(b.raw_pdu_id(), u8::from(&PduId::GetCapabilities));
         assert_eq!(b.capability_id(), GetCapabilitiesCapabilityId::CompanyId);
         assert_eq!(b.encoded_len(), 5); // 1 company + len + capability id
         let mut buf = vec![0; b.encoded_len()];
@@ -257,7 +264,7 @@ mod tests {
     /// Test GetCapabilitiesResponse event encoding (all events)
     fn test_get_capabilities_response_event_encode_all() {
         let b = GetCapabilitiesResponse::new_events(NotificationEventId::VALUES);
-        assert_eq!(b.pdu_id(), PduId::GetCapabilities);
+        assert_eq!(b.raw_pdu_id(), u8::from(&PduId::GetCapabilities));
         assert_eq!(b.capability_id(), GetCapabilitiesCapabilityId::EventsId);
         assert_eq!(b.encoded_len(), 2 + NotificationEventId::VALUES.len()); // all the events + len + capability id
         let mut buf = vec![0; b.encoded_len()];
@@ -307,7 +314,7 @@ mod tests {
     /// Test GetCapabilitiesCommand company encoding
     fn test_get_capabilities_command_company_encode() {
         let b = GetCapabilitiesCommand::new(GetCapabilitiesCapabilityId::CompanyId);
-        assert_eq!(b.pdu_id(), PduId::GetCapabilities);
+        assert_eq!(b.raw_pdu_id(), u8::from(&PduId::GetCapabilities));
         assert_eq!(b.command_type(), AvcCommandType::Status);
         assert_eq!(b.capability_id(), GetCapabilitiesCapabilityId::CompanyId);
         assert_eq!(b.encoded_len(), 1); // capability id
@@ -325,7 +332,7 @@ mod tests {
     /// Test GetCapabilitiesCommand event encoding
     fn test_get_capabilities_command_event_encode() {
         let b = GetCapabilitiesCommand::new(GetCapabilitiesCapabilityId::EventsId);
-        assert_eq!(b.pdu_id(), PduId::GetCapabilities);
+        assert_eq!(b.raw_pdu_id(), u8::from(&PduId::GetCapabilities));
         assert_eq!(b.command_type(), AvcCommandType::Status);
         assert_eq!(b.capability_id(), GetCapabilitiesCapabilityId::EventsId);
         assert_eq!(b.encoded_len(), 1); // capability id

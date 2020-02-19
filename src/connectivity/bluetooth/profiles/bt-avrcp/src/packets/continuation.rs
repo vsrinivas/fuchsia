@@ -11,8 +11,8 @@ pub struct RequestContinuingResponseCommand {
 }
 
 impl RequestContinuingResponseCommand {
-    pub fn new(pdu_id: u8) -> Self {
-        Self { pdu_id }
+    pub fn new(pdu_id: &PduId) -> Self {
+        Self { pdu_id: u8::from(pdu_id) }
     }
 
     #[allow(dead_code)] // TODO(BT-2218): WIP. Remove once used.
@@ -21,12 +21,14 @@ impl RequestContinuingResponseCommand {
     }
 }
 
-impl VendorDependent for RequestContinuingResponseCommand {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for RequestContinuingResponseCommand {
     fn pdu_id(&self) -> PduId {
         PduId::RequestContinuingResponse
     }
 }
 
+/// Specifies the AVC command type for this AVC command packet
 impl VendorCommand for RequestContinuingResponseCommand {
     fn command_type(&self) -> AvcCommandType {
         AvcCommandType::Control
@@ -36,7 +38,7 @@ impl VendorCommand for RequestContinuingResponseCommand {
 impl Decodable for RequestContinuingResponseCommand {
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
-            return Err(Error::OutOfRange);
+            return Err(Error::InvalidMessageLength);
         }
 
         Ok(Self { pdu_id: buf[0] })
@@ -50,7 +52,7 @@ impl Encodable for RequestContinuingResponseCommand {
 
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
         if buf.len() < 1 {
-            return Err(Error::OutOfRange);
+            return Err(Error::BufferLengthOutOfRange);
         }
 
         buf[0] = self.pdu_id;
@@ -67,8 +69,8 @@ pub struct AbortContinuingResponseCommand {
 
 impl AbortContinuingResponseCommand {
     #[allow(dead_code)]
-    pub fn new(pdu_id: u8) -> Self {
-        Self { pdu_id }
+    pub fn new(pdu_id: &PduId) -> Self {
+        Self { pdu_id: u8::from(pdu_id) }
     }
 
     #[allow(dead_code)]
@@ -77,12 +79,14 @@ impl AbortContinuingResponseCommand {
     }
 }
 
-impl VendorDependent for AbortContinuingResponseCommand {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for AbortContinuingResponseCommand {
     fn pdu_id(&self) -> PduId {
         PduId::AbortContinuingResponse
     }
 }
 
+/// Specifies the AVC command type for this AVC command packet
 impl VendorCommand for AbortContinuingResponseCommand {
     fn command_type(&self) -> AvcCommandType {
         AvcCommandType::Control
@@ -92,7 +96,7 @@ impl VendorCommand for AbortContinuingResponseCommand {
 impl Decodable for AbortContinuingResponseCommand {
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
-            return Err(Error::OutOfRange);
+            return Err(Error::InvalidMessageLength);
         }
 
         Ok(Self { pdu_id: buf[0] })
@@ -106,7 +110,7 @@ impl Encodable for AbortContinuingResponseCommand {
 
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
         if buf.len() < 1 {
-            return Err(Error::OutOfRange);
+            return Err(Error::BufferLengthOutOfRange);
         }
 
         buf[0] = self.pdu_id;
@@ -126,7 +130,8 @@ impl AbortContinuingResponseResponse {
     }
 }
 
-impl VendorDependent for AbortContinuingResponseResponse {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for AbortContinuingResponseResponse {
     fn pdu_id(&self) -> PduId {
         PduId::AbortContinuingResponse
     }
@@ -154,8 +159,8 @@ mod tests {
 
     #[test]
     fn test_request_continuing_response_encode() {
-        let b = RequestContinuingResponseCommand::new(0x10);
-        assert_eq!(b.pdu_id(), PduId::RequestContinuingResponse);
+        let b = RequestContinuingResponseCommand::new(&PduId::GetCapabilities);
+        assert_eq!(b.raw_pdu_id(), u8::from(&PduId::RequestContinuingResponse));
         assert_eq!(b.command_type(), AvcCommandType::Control);
         assert_eq!(b.encoded_len(), 1);
         let mut buf = vec![0; b.encoded_len()];
@@ -181,7 +186,7 @@ mod tests {
             0x10, //payload
         ])
         .expect("unable to parse packet");
-        assert_eq!(b.pdu_id(), PduId::RequestContinuingResponse);
+        assert_eq!(b.raw_pdu_id(), u8::from(&PduId::RequestContinuingResponse));
         assert_eq!(b.pdu_id_response(), 0x10);
         assert_eq!(b.encoded_len(), 1);
         let mut buf = vec![0; b.encoded_len()];
@@ -191,8 +196,8 @@ mod tests {
 
     #[test]
     fn test_abort_continuing_response_command_encode() {
-        let b = AbortContinuingResponseCommand::new(0x10);
-        assert_eq!(b.pdu_id(), PduId::AbortContinuingResponse);
+        let b = AbortContinuingResponseCommand::new(&PduId::GetCapabilities);
+        assert_eq!(b.raw_pdu_id(), u8::from(&PduId::AbortContinuingResponse));
         assert_eq!(b.command_type(), AvcCommandType::Control);
         assert_eq!(b.encoded_len(), 1);
         let mut buf = vec![0; b.encoded_len()];
@@ -218,7 +223,7 @@ mod tests {
             0x10, //payload
         ])
         .expect("unable to parse packet");
-        assert_eq!(b.pdu_id(), PduId::AbortContinuingResponse);
+        assert_eq!(b.raw_pdu_id(), u8::from(&PduId::AbortContinuingResponse));
         assert_eq!(b.pdu_id_response(), 0x10);
         assert_eq!(b.encoded_len(), 1);
         let mut buf = vec![0; b.encoded_len()];
@@ -229,7 +234,7 @@ mod tests {
     #[test]
     fn test_abort_continuing_response_response_encode() {
         let b = AbortContinuingResponseResponse::new();
-        assert_eq!(b.pdu_id(), PduId::AbortContinuingResponse);
+        assert_eq!(b.raw_pdu_id(), u8::from(&PduId::AbortContinuingResponse));
         assert_eq!(b.encoded_len(), 0);
         let mut buf = vec![0; b.encoded_len()];
         assert!(b.encode(&mut buf[..]).is_ok());
@@ -250,7 +255,7 @@ mod tests {
     #[test]
     fn test_abort_continuing_response_response_decode() {
         let b = AbortContinuingResponseResponse::decode(&[]).expect("unable to parse packet");
-        assert_eq!(b.pdu_id(), PduId::AbortContinuingResponse);
+        assert_eq!(b.raw_pdu_id(), u8::from(&PduId::AbortContinuingResponse));
         assert_eq!(b.encoded_len(), 0);
         let mut buf = vec![0; b.encoded_len()];
         assert!(b.encode(&mut buf[..]).is_ok());

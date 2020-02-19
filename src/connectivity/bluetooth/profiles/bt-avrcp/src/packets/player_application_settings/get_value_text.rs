@@ -4,8 +4,7 @@
 
 use std::u8;
 
-use crate::packets::player_application_settings::PlayerApplicationSettingAttributeId;
-use crate::packets::*;
+use super::*;
 
 #[derive(Debug)]
 /// AVRCP 1.6.1 section 6.5.6 GetPlayerApplicationSettingValueText command.
@@ -24,12 +23,14 @@ impl GetPlayerApplicationSettingValueTextCommand {
     }
 }
 
-impl VendorDependent for GetPlayerApplicationSettingValueTextCommand {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for GetPlayerApplicationSettingValueTextCommand {
     fn pdu_id(&self) -> PduId {
         PduId::GetPlayerApplicationSettingValueText
     }
 }
 
+/// Specifies the AVC command type for this AVC command packet
 impl VendorCommand for GetPlayerApplicationSettingValueTextCommand {
     fn command_type(&self) -> AvcCommandType {
         AvcCommandType::Status
@@ -71,14 +72,14 @@ impl Encodable for GetPlayerApplicationSettingValueTextCommand {
     }
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
         if buf.len() < self.encoded_len() {
-            return Err(Error::OutOfRange);
+            return Err(Error::InvalidMessageLength);
         }
 
         buf[0] = u8::from(&self.attribute_id);
         buf[1] = self.num_values;
 
         if self.num_values != self.value_ids.len() as u8 {
-            return Err(Error::Encoding);
+            return Err(Error::ParameterEncodingError);
         }
 
         for (i, v_id) in self.value_ids.iter().enumerate() {
@@ -129,12 +130,14 @@ impl GetPlayerApplicationSettingValueTextResponse {
     }
 }
 
-impl VendorDependent for GetPlayerApplicationSettingValueTextResponse {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for GetPlayerApplicationSettingValueTextResponse {
     fn pdu_id(&self) -> PduId {
         PduId::GetPlayerApplicationSettingValueText
     }
 }
 
+/// Specifies the AVC command type for this AVC command packet
 impl VendorCommand for GetPlayerApplicationSettingValueTextResponse {
     fn command_type(&self) -> AvcCommandType {
         AvcCommandType::Status
@@ -164,7 +167,7 @@ impl Decodable for GetPlayerApplicationSettingValueTextResponse {
 
             let str_length: usize = buf[buf_idx + 3] as usize;
             if (buf_idx + 4 + str_length) > buf.len() {
-                return Err(Error::OutOfRange);
+                return Err(Error::InvalidMessageLength);
             }
             let mut value_string = vec![0; str_length];
             value_string.copy_from_slice(&buf[buf_idx + 4..buf_idx + 4 + str_length]);
@@ -193,7 +196,7 @@ impl Encodable for GetPlayerApplicationSettingValueTextResponse {
     }
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
         if buf.len() < self.encoded_len() {
-            return Err(Error::OutOfRange);
+            return Err(Error::InvalidMessageLength);
         }
 
         buf[0] = u8::from(self.num_values);
@@ -201,11 +204,11 @@ impl Encodable for GetPlayerApplicationSettingValueTextResponse {
         // There must be at least 1 value ID provided.
         // See AVRCP Sec 6.5.6
         if self.num_values < 1 {
-            return Err(Error::Encoding);
+            return Err(Error::ParameterEncodingError);
         }
 
         if self.num_values as usize != self.value_infos.len() {
-            return Err(Error::Encoding);
+            return Err(Error::ParameterEncodingError);
         }
         let mut idx = 1;
         for info in self.value_infos.iter() {
@@ -235,7 +238,7 @@ mod tests {
             PlayerApplicationSettingAttributeId::Equalizer,
             vec![0x01, 0x02],
         );
-        assert_eq!(command.pdu_id(), PduId::GetPlayerApplicationSettingValueText);
+        assert_eq!(command.raw_pdu_id(), u8::from(&PduId::GetPlayerApplicationSettingValueText));
         assert_eq!(command.encoded_len(), 4);
         let mut buf = vec![0; command.encoded_len()];
         assert!(command.encode(&mut buf[..]).is_ok());
@@ -250,7 +253,7 @@ mod tests {
             PlayerApplicationSettingAttributeId::Equalizer,
             vec![0x01, 0x02],
         );
-        assert_eq!(command.pdu_id(), PduId::GetPlayerApplicationSettingValueText);
+        assert_eq!(command.raw_pdu_id(), u8::from(&PduId::GetPlayerApplicationSettingValueText));
         assert_eq!(command.encoded_len(), 4);
         // Smaller buffer size.
         let mut buf = vec![0; command.encoded_len() - 1];
@@ -299,7 +302,7 @@ mod tests {
             ValueInfo::new(0x05, CharsetId::Ucs2, 1, "t".as_bytes().to_vec()),
         ];
         let response = GetPlayerApplicationSettingValueTextResponse::new(value_infos);
-        assert_eq!(response.pdu_id(), PduId::GetPlayerApplicationSettingValueText);
+        assert_eq!(response.raw_pdu_id(), u8::from(&PduId::GetPlayerApplicationSettingValueText));
         assert_eq!(response.encoded_len(), 24);
         let mut buf = vec![0; response.encoded_len()];
         assert!(response.encode(&mut buf[..]).is_ok());

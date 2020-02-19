@@ -37,7 +37,7 @@ mod handlers;
 mod tasks;
 
 use crate::{
-    packets::{Error as PacketError, VendorCommand, *},
+    packets::{Error as PacketError, *},
     peer_manager::TargetDelegate,
     profile::{AvrcpService, ProfileService},
     types::StateChangeListener,
@@ -216,7 +216,7 @@ impl Drop for RemotePeer {
 
 async fn send_vendor_dependent_command_internal(
     peer: Arc<RwLock<RemotePeer>>,
-    command: &(impl VendorDependent + VendorCommand),
+    command: &(impl VendorDependentPdu + PacketEncodable + VendorCommand),
 ) -> Result<Vec<u8>, Error> {
     let avc_peer = peer.write().control_connection()?;
     let mut buf = vec![];
@@ -257,7 +257,7 @@ async fn send_vendor_dependent_command_internal(
             }
         };
 
-        let command = RequestContinuingResponseCommand::new(u8::from(&command.pdu_id()));
+        let command = RequestContinuingResponseCommand::new(&command.pdu_id());
         let packet = command.encode_packet().expect("unable to encode packet");
 
         stream = avc_peer.send_vendor_dependent_command(command.command_type(), &packet[..])?;
@@ -356,7 +356,7 @@ impl RemotePeerHandle {
     /// will return a result of the decoded packet or an error for any non stable response received
     pub fn send_vendor_dependent_command<'a>(
         &self,
-        command: &'a (impl VendorDependent + VendorCommand),
+        command: &'a (impl PacketEncodable + VendorCommand),
     ) -> impl Future<Output = Result<Vec<u8>, Error>> + 'a {
         send_vendor_dependent_command_internal(self.peer.clone(), command)
     }

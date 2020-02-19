@@ -40,12 +40,14 @@ impl GetElementAttributesCommand {
     }
 }
 
-impl VendorDependent for GetElementAttributesCommand {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for GetElementAttributesCommand {
     fn pdu_id(&self) -> PduId {
         PduId::GetElementAttributes
     }
 }
 
+/// Specifies the AVC command type for this AVC command packet
 impl VendorCommand for GetElementAttributesCommand {
     fn command_type(&self) -> AvcCommandType {
         AvcCommandType::Status
@@ -56,13 +58,13 @@ impl Decodable for GetElementAttributesCommand {
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < IDENTIFIER_LEN + ATTRIBUTE_COUNT_LEN {
             // 8 byte identifier + 1 byte attribute count
-            return Err(Error::InvalidMessage);
+            return Err(Error::InvalidMessageLength);
         }
 
         let identifier = &buf[..IDENTIFIER_LEN];
         if identifier != &[0; IDENTIFIER_LEN] {
             // Only supported command is NOW_PLAYING (0x00 x8)
-            return Err(Error::UnsupportedMessage);
+            return Err(Error::InvalidParameter);
         }
         let attribute_count = buf[IDENTIFIER_LEN] as usize;
 
@@ -73,7 +75,7 @@ impl Decodable for GetElementAttributesCommand {
             if buf.len()
                 < IDENTIFIER_LEN + ATTRIBUTE_COUNT_LEN + (attribute_count * ATTRIBUTE_ID_LEN)
             {
-                return Err(Error::InvalidMessage);
+                return Err(Error::InvalidMessageLength);
             }
 
             attributes = vec![];
@@ -102,7 +104,7 @@ impl Encodable for GetElementAttributesCommand {
 
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
         if buf.len() < self.encoded_len() {
-            return Err(Error::OutOfRange);
+            return Err(Error::BufferLengthOutOfRange);
         }
 
         // Only supported command is NOW_PLAYING (0x00 x8)
@@ -111,7 +113,7 @@ impl Encodable for GetElementAttributesCommand {
             buf[ATTRIBUTE_COUNT_OFFSET] = 0;
         } else {
             buf[ATTRIBUTE_COUNT_OFFSET] =
-                u8::try_from(self.attributes.len()).map_err(|_| Error::OutOfRange)?;
+                u8::try_from(self.attributes.len()).map_err(|_| Error::InvalidMessageLength)?;
             // Attributes are excessively long at 4 bytes. We only care about the last byte.
             // Skip the first 3 bytes.
             const START_OFFSET: usize = IDENTIFIER_LEN + ATTRIBUTE_COUNT_LEN + 3;
@@ -146,7 +148,8 @@ pub struct GetElementAttributesResponse {
     pub default_cover_art: Option<String>,
 }
 
-impl VendorDependent for GetElementAttributesResponse {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for GetElementAttributesResponse {
     fn pdu_id(&self) -> PduId {
         PduId::GetElementAttributes
     }
@@ -155,7 +158,7 @@ impl VendorDependent for GetElementAttributesResponse {
 impl Decodable for GetElementAttributesResponse {
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
-            return Err(Error::OutOfRange);
+            return Err(Error::InvalidMessageLength);
         }
 
         let mut response = Self::default();
@@ -166,8 +169,9 @@ impl Decodable for GetElementAttributesResponse {
 
         let mut offset = ATTRIBUTE_COUNT_LEN; // skip attribute count
         loop {
-            let attribute_header =
-                buf.get(offset..offset + ATTRIBUTE_RESPONSE_HEADER_LEN).ok_or(Error::OutOfRange)?;
+            let attribute_header = buf
+                .get(offset..offset + ATTRIBUTE_RESPONSE_HEADER_LEN)
+                .ok_or(Error::InvalidMessageLength)?;
 
             let attribute = MediaAttributeId::try_from(attribute_header[ATTRIBUTE_ID_OFFSET])?;
             let _charset_id = ((attribute_header[ATTRIBUTE_CHARSET_OFFSET] as u16) << 8)
@@ -180,7 +184,7 @@ impl Decodable for GetElementAttributesResponse {
 
             if attribute_len > 0 {
                 let attribute_value =
-                    buf.get(offset..offset + attribute_len).ok_or(Error::OutOfRange)?;
+                    buf.get(offset..offset + attribute_len).ok_or(Error::InvalidMessageLength)?;
 
                 // TODO(BT-2219): validate charset_id is UTF8 or ASCII
                 let attribute_string = String::from_utf8_lossy(attribute_value).to_string();
@@ -233,7 +237,7 @@ impl Encodable for GetElementAttributesResponse {
 
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
         if buf.len() < self.encoded_len() {
-            return Err(Error::OutOfRange);
+            return Err(Error::BufferLengthOutOfRange);
         }
 
         // The first field is attribute count. We count our attributes as we encode set it at the end.
@@ -245,7 +249,7 @@ impl Encodable for GetElementAttributesResponse {
                 attribute_count += 1;
                 let attribute_header = buf
                     .get_mut(offset..offset + ATTRIBUTE_RESPONSE_HEADER_LEN)
-                    .ok_or(Error::OutOfRange)?;
+                    .ok_or(Error::BufferLengthOutOfRange)?;
 
                 let strlen = u16::try_from(s.len()).unwrap_or(std::u16::MAX) as usize;
                 let charset_id = u16::from(&CharsetId::Utf8);
@@ -294,7 +298,7 @@ mod tests {
                 MediaAttributeId::DefaultCoverArt
             ]
         );
-        assert_eq!(b.pdu_id(), PduId::GetElementAttributes);
+        assert_eq!(b.raw_pdu_id(), u8::from(&PduId::GetElementAttributes));
         assert_eq!(b.command_type(), AvcCommandType::Status);
         assert_eq!(b.encoded_len(), 9); // identifier, length
         let mut buf = vec![0; b.encoded_len()];
@@ -314,7 +318,7 @@ mod tests {
             MediaAttributeId::Title,
             MediaAttributeId::ArtistName,
         ]);
-        assert_eq!(b.pdu_id(), PduId::GetElementAttributes);
+        assert_eq!(b.raw_pdu_id(), u8::from(&PduId::GetElementAttributes));
         assert_eq!(b.command_type(), AvcCommandType::Status);
         assert_eq!(b.attributes(), &[MediaAttributeId::Title, MediaAttributeId::ArtistName]);
         assert_eq!(b.encoded_len(), 8 + 1 + 4 + 4); // identifier, length, 2 attributes
@@ -351,7 +355,7 @@ mod tests {
             0x00, // 0 attributes for all
         ])
         .expect("unable to decode");
-        assert_eq!(b.pdu_id(), PduId::GetElementAttributes);
+        assert_eq!(b.raw_pdu_id(), u8::from(&PduId::GetElementAttributes));
         assert_eq!(
             b.attributes(),
             &[
@@ -374,7 +378,7 @@ mod tests {
             title: Some(String::from("Test")),
             ..GetElementAttributesResponse::default()
         };
-        assert_eq!(b.pdu_id(), PduId::GetElementAttributes);
+        assert_eq!(b.raw_pdu_id(), u8::from(&PduId::GetElementAttributes));
         assert_eq!(b.encoded_len(), 1 + 8 + 4); // count, attribute header (8), attribute encoded len (len of "Test")
         let mut buf = vec![0; b.encoded_len()];
         assert!(b.encode(&mut buf[..]).is_ok());
@@ -400,7 +404,7 @@ mod tests {
             'T' as u8, 'e' as u8, 's' as u8, 't' as u8, // attribute payload
         ])
         .expect("unable to decode packet");
-        assert_eq!(b.pdu_id(), PduId::GetElementAttributes);
+        assert_eq!(b.raw_pdu_id(), u8::from(&PduId::GetElementAttributes));
         assert_eq!(b.encoded_len(), 1 + 8 + 4); // count, attribute header (8), attribute encoded len (len of "Test")
         assert_eq!(b.title, Some(String::from("Test")));
     }

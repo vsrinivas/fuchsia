@@ -8,7 +8,7 @@ use crate::{pub_decodable_enum, Decodable, Encodable, Error, Result};
 pub_decodable_enum! {
     /// AV/C Command and Response types.
     /// See AV/C General Specification Section 5.3.1 and 5.3.2
-    CommandType<u8, Error> {
+    CommandType<u8, Error, OutOfRange> {
         Control => 0x00,
         Status => 0x01,
         SpecificInquiry => 0x02,
@@ -20,7 +20,7 @@ pub_decodable_enum! {
 pub_decodable_enum! {
     /// AV/C Command and Response types.
     /// See AV/C General Specification Section 5.3.1 and 5.3.2
-    ResponseType<u8, Error> {
+    ResponseType<u8, Error, OutOfRange> {
         NotImplemented => 0x08,
         Accepted => 0x09,
         Rejected => 0x0a,
@@ -57,7 +57,7 @@ impl PacketType {
 pub_decodable_enum! {
     /// AV/C Op Codes
     /// See AV/C General Specification Section 5.3.1
-    OpCode<u8, Error> {
+    OpCode<u8, Error, OutOfRange> {
         VendorDependent => 0x00,
         UnitInfo => 0x30,
         SubUnitInfo => 0x31,
@@ -68,7 +68,7 @@ pub_decodable_enum! {
 pub_decodable_enum! {
     /// Most common subunits from the AV/C General Specification in AVRCP
     /// All AVRCP commands are transacted on the panel subunit according to the Panel Specification
-    SubunitType<u8, Error> {
+    SubunitType<u8, Error, OutOfRange> {
         Panel => 0x09,
         Unit => 0x1F,
     }
@@ -323,5 +323,4 @@ mod test {
             Error::InvalidHeader
         );
     }
-
 }

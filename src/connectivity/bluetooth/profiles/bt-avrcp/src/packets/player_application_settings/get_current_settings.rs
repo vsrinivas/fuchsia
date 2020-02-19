@@ -4,9 +4,7 @@
 
 use std::u8;
 
-use crate::packets;
-use crate::packets::player_application_settings::PlayerApplicationSettingAttributeId;
-use crate::packets::*;
+use super::*;
 
 /// Packet format for a GetCurrentPlayerApplicationSettingValue command.
 /// See AVRCP Sec 6.5.3
@@ -25,12 +23,14 @@ impl GetCurrentPlayerApplicationSettingValueCommand {
     }
 }
 
-impl VendorDependent for GetCurrentPlayerApplicationSettingValueCommand {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for GetCurrentPlayerApplicationSettingValueCommand {
     fn pdu_id(&self) -> PduId {
         PduId::GetCurrentPlayerApplicationSettingValue
     }
 }
 
+/// Specifies the AVC command type for this AVC command packet
 impl VendorCommand for GetCurrentPlayerApplicationSettingValueCommand {
     fn command_type(&self) -> AvcCommandType {
         AvcCommandType::Status
@@ -67,18 +67,18 @@ impl Encodable for GetCurrentPlayerApplicationSettingValueCommand {
     }
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
         if buf.len() < self.encoded_len() {
-            return Err(Error::OutOfRange);
+            return Err(Error::InvalidMessageLength);
         }
         buf[0] = u8::from(self.num_attribute_ids);
 
         // There must be at least 1 attribute ID provided.
         // See AVRCP Sec 6.5.3
         if self.num_attribute_ids < 1 {
-            return Err(Error::Encoding);
+            return Err(Error::ParameterEncodingError);
         }
 
         if self.num_attribute_ids as usize != self.attribute_ids.len() {
-            return Err(Error::Encoding);
+            return Err(Error::ParameterEncodingError);
         }
         for (i, id) in self.attribute_ids.iter().enumerate() {
             buf[i + 1] = u8::from(id);
@@ -104,7 +104,8 @@ impl GetCurrentPlayerApplicationSettingValueResponse {
     }
 }
 
-impl VendorDependent for GetCurrentPlayerApplicationSettingValueResponse {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for GetCurrentPlayerApplicationSettingValueResponse {
     fn pdu_id(&self) -> PduId {
         PduId::GetCurrentPlayerApplicationSettingValue
     }
@@ -120,7 +121,7 @@ impl Decodable for GetCurrentPlayerApplicationSettingValueResponse {
         // There must be at least 1 attribute (ID,Value) pair provided.
         // See AVRCP Sec 6.5.3
         if num_values < 1 {
-            return Err(Error::OutOfRange);
+            return Err(Error::InvalidMessageLength);
         }
 
         let mut idx = 1;
@@ -145,10 +146,10 @@ impl Encodable for GetCurrentPlayerApplicationSettingValueResponse {
     }
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
         if buf.len() < self.encoded_len() {
-            return Err(Error::OutOfRange);
+            return Err(Error::InvalidMessageLength);
         }
         if self.num_values as usize != self.attribute_values.len() {
-            return Err(Error::Encoding);
+            return Err(Error::ParameterEncodingError);
         }
         buf[0] = u8::from(self.num_values);
         let mut idx: usize = 0;
@@ -165,7 +166,7 @@ impl Encodable for GetCurrentPlayerApplicationSettingValueResponse {
 }
 
 impl TryFrom<GetCurrentPlayerApplicationSettingValueResponse> for PlayerApplicationSettings {
-    type Error = packets::Error;
+    type Error = Error;
     fn try_from(
         src: GetCurrentPlayerApplicationSettingValueResponse,
     ) -> Result<PlayerApplicationSettings, Error> {
@@ -221,7 +222,7 @@ mod tests {
             PlayerApplicationSettingAttributeId::ScanMode,
         ];
         let command = GetCurrentPlayerApplicationSettingValueCommand::new(attribute_ids);
-        assert_eq!(command.pdu_id(), PduId::GetCurrentPlayerApplicationSettingValue);
+        assert_eq!(command.raw_pdu_id(), u8::from(&PduId::GetCurrentPlayerApplicationSettingValue));
         assert_eq!(command.command_type(), AvcCommandType::Status);
         assert_eq!(command.encoded_len(), 3);
         let mut buf = vec![0; command.encoded_len()];
@@ -256,7 +257,10 @@ mod tests {
             (PlayerApplicationSettingAttributeId::ShuffleMode, 0x01),
         ];
         let response = GetCurrentPlayerApplicationSettingValueResponse::new(response_vals);
-        assert_eq!(response.pdu_id(), PduId::GetCurrentPlayerApplicationSettingValue);
+        assert_eq!(
+            response.raw_pdu_id(),
+            u8::from(&PduId::GetCurrentPlayerApplicationSettingValue)
+        );
         assert_eq!(response.encoded_len(), 7);
         let mut buf = vec![0; response.encoded_len()];
         assert!(response.encode(&mut buf[..]).is_ok());

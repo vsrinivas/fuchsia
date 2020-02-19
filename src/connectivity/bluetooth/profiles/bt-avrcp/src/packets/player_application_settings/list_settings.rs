@@ -4,8 +4,7 @@
 
 use std::u8;
 
-use crate::packets::player_application_settings::PlayerApplicationSettingAttributeId;
-use crate::packets::*;
+use super::*;
 
 /// Packet format for a ListPlayerApplicationSettingAttributes command.
 /// See AVRCP Sec 6.5.1
@@ -18,12 +17,14 @@ impl ListPlayerApplicationSettingAttributesCommand {
     }
 }
 
-impl VendorDependent for ListPlayerApplicationSettingAttributesCommand {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for ListPlayerApplicationSettingAttributesCommand {
     fn pdu_id(&self) -> PduId {
         PduId::ListPlayerApplicationSettingAttributes
     }
 }
 
+/// Specifies the AVC command type for this AVC command packet
 impl VendorCommand for ListPlayerApplicationSettingAttributesCommand {
     fn command_type(&self) -> AvcCommandType {
         AvcCommandType::Status
@@ -74,7 +75,8 @@ impl ListPlayerApplicationSettingAttributesResponse {
     }
 }
 
-impl VendorDependent for ListPlayerApplicationSettingAttributesResponse {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for ListPlayerApplicationSettingAttributesResponse {
     fn pdu_id(&self) -> PduId {
         PduId::ListPlayerApplicationSettingAttributes
     }
@@ -112,7 +114,7 @@ impl Encodable for ListPlayerApplicationSettingAttributesResponse {
     }
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
         if buf.len() < self.encoded_len() {
-            return Err(Error::OutOfRange);
+            return Err(Error::InvalidMessageLength);
         }
         buf[0] = self.num_player_application_setting_attributes;
         for (i, id) in self.player_application_setting_attribute_ids.iter().enumerate() {
@@ -137,12 +139,14 @@ impl ListPlayerApplicationSettingValuesCommand {
     }
 }
 
-impl VendorDependent for ListPlayerApplicationSettingValuesCommand {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for ListPlayerApplicationSettingValuesCommand {
     fn pdu_id(&self) -> PduId {
         PduId::ListPlayerApplicationSettingValues
     }
 }
 
+/// Specifies the AVC command type for this AVC command packet
 impl VendorCommand for ListPlayerApplicationSettingValuesCommand {
     fn command_type(&self) -> AvcCommandType {
         AvcCommandType::Status
@@ -166,7 +170,7 @@ impl Encodable for ListPlayerApplicationSettingValuesCommand {
     }
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
         if buf.len() < self.encoded_len() {
-            return Err(Error::OutOfRange);
+            return Err(Error::InvalidMessageLength);
         }
         buf[0] = u8::from(&self.player_application_setting_attribute_id);
         Ok(())
@@ -195,7 +199,8 @@ impl ListPlayerApplicationSettingValuesResponse {
     }
 }
 
-impl VendorDependent for ListPlayerApplicationSettingValuesResponse {
+/// Packet PDU ID for vendor dependent packet encoding.
+impl VendorDependentPdu for ListPlayerApplicationSettingValuesResponse {
     fn pdu_id(&self) -> PduId {
         PduId::ListPlayerApplicationSettingValues
     }
@@ -231,7 +236,7 @@ impl Encodable for ListPlayerApplicationSettingValuesResponse {
     }
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
         if buf.len() < self.encoded_len() {
-            return Err(Error::OutOfRange);
+            return Err(Error::InvalidMessageLength);
         }
         buf[0] = self.num_player_application_setting_values;
         for (i, id) in self.player_application_setting_value_ids.iter().enumerate() {
@@ -249,7 +254,10 @@ mod tests {
     // Test ListPlayerApplicationSettingAttributes command encoding success.
     fn test_list_player_application_setting_attributes_command_encode() {
         let attributes = ListPlayerApplicationSettingAttributesCommand::new();
-        assert_eq!(attributes.pdu_id(), PduId::ListPlayerApplicationSettingAttributes);
+        assert_eq!(
+            attributes.raw_pdu_id(),
+            u8::from(&PduId::ListPlayerApplicationSettingAttributes)
+        );
         assert_eq!(attributes.command_type(), AvcCommandType::Status);
         assert_eq!(attributes.encoded_len(), 0); // empty payload for command
         let mut buf = vec![0; attributes.encoded_len()];
@@ -274,7 +282,7 @@ mod tests {
                 PlayerApplicationSettingAttributeId::RepeatStatusMode,
             ],
         );
-        assert_eq!(response.pdu_id(), PduId::ListPlayerApplicationSettingAttributes);
+        assert_eq!(response.raw_pdu_id(), u8::from(&PduId::ListPlayerApplicationSettingAttributes));
         // 1 + 2 for the 2 ids.
         assert_eq!(response.encoded_len(), 3);
         let mut buf = vec![0; response.encoded_len()];
@@ -305,7 +313,7 @@ mod tests {
         let attribute_id = ListPlayerApplicationSettingValuesCommand::new(
             PlayerApplicationSettingAttributeId::ScanMode,
         );
-        assert_eq!(attribute_id.pdu_id(), PduId::ListPlayerApplicationSettingValues);
+        assert_eq!(attribute_id.raw_pdu_id(), u8::from(&PduId::ListPlayerApplicationSettingValues));
         assert_eq!(attribute_id.command_type(), AvcCommandType::Status);
         // Empty payload for command
         assert_eq!(attribute_id.encoded_len(), 1);
@@ -331,7 +339,7 @@ mod tests {
     // Test ListPlayerApplicationSettingValues response encoding success.
     fn test_list_player_application_setting_values_response_encode() {
         let response = ListPlayerApplicationSettingValuesResponse::new(2, vec![0x01, 0x03]);
-        assert_eq!(response.pdu_id(), PduId::ListPlayerApplicationSettingValues);
+        assert_eq!(response.raw_pdu_id(), u8::from(&PduId::ListPlayerApplicationSettingValues));
         // 1 + 2 for the 2 id's.
         assert_eq!(response.encoded_len(), 3);
         let mut buf = vec![0; response.encoded_len()];
