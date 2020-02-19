@@ -142,13 +142,39 @@ zx_status_t OpteeController::InitializeSharedMemory() {
 
   // The Secure World memory is located at a fixed physical address in RAM, so we have to request
   // the platform device map the physical vmo for us.
-  // TODO(rjascani): This currently maps the entire range of the Secure OS memory because pdev
-  // doesn't currently have a way of only mapping a portion of it. OP-TEE tells us exactly the
-  // physical sub range to use.
   static constexpr uint32_t kSecureWorldMemoryMmioIndex = 0;
+  pdev_mmio_t mmio_dev;
+  status = pdev_get_mmio(&pdev_proto_, kSecureWorldMemoryMmioIndex, &mmio_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "optee: Unable to get secure world mmio\n");
+    return status;
+  }
+
+  // Briefly pin the first page of this VMO to determine the secure world's base physical address.
+  zx_paddr_t mmio_vmo_paddr;
+  zx::pmt pmt;
+  status = bti.pin(ZX_BTI_PERM_READ | ZX_BTI_CONTIGUOUS, *zx::unowned_vmo(mmio_dev.vmo),
+                   /*offset=*/0, ZX_PAGE_SIZE, &mmio_vmo_paddr, /*num_addrs=*/1, &pmt);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "optee: Unable to pin secure world memory\n");
+    return status;
+  }
+
+  status = pmt.unpin();
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+
+  zx_paddr_t sw_base_paddr = mmio_vmo_paddr + mmio_dev.offset;
+  size_t sw_size = mmio_dev.size;
+  if (shared_mem_start < sw_base_paddr ||
+      (shared_mem_start + shared_mem_size) > (sw_base_paddr + sw_size)) {
+    zxlogf(ERROR, "optee: Shared Memory outside of secure world range\n");
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
   mmio_buffer_t mmio;
-  status = pdev_map_mmio_buffer(&pdev_proto_, kSecureWorldMemoryMmioIndex, ZX_CACHE_POLICY_CACHED,
-                                &mmio);
+  size_t vmo_relative_offset = shared_mem_start - mmio_vmo_paddr;
+  status = mmio_buffer_init(&mmio, vmo_relative_offset, shared_mem_size, mmio_dev.vmo,
+                            ZX_CACHE_POLICY_CACHED);
   if (status != ZX_OK) {
     zxlogf(ERROR, "optee: Unable to map secure world memory\n");
     return status;
