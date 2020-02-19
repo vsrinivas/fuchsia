@@ -1,52 +1,56 @@
 # Components
 
 This section contains documentation about components in the new component
-framework ("components v2").
+framework ([components v2][glossary-components-v2]).
 
 Components are the basic unit of executable software on Fuchsia.
 
-Note: the component framework is under active development. This document
-only covers the [new architecture][glossary-components-v2] implemented by
-`component_manager`. The [old architecture][glossary-components-v1] implemented
-by `appmgr` is still in use but will be removed once the transition to the
-new architecture is complete.
+Note: The component framework is under active development. This document
+only covers the new architecture (components v2) implemented by
+`component_manager`. The old architecture ([components v1][glossary-components-v1])
+implemented by `appmgr` is still in use but will be removed once
+the transition to the new architecture is complete.
 
-**Architectural concepts**
+## Architectural concepts
 
-- [Introduction](introduction.md): what are components and the component
+- [Introduction](introduction.md): What are components and the component
   framework.
-- [Component manager](component_manager.md): the runtime.
-- [Declarations](declarations.md): describe components themselves.
-- [Lifecycle](declarations.md): component instance progression from creation to
+- [Component manager](component_manager.md): The runtime.
+- [Declarations](declarations.md): Describe components themselves.
+- [Lifecycle](declarations.md): Component instance progression from creation to
   destruction.
-- [Realms](realms.md): sub-trees of the component instance topology.
+- [Realms](realms.md): Sub-trees of the component instance topology.
 - [Component URLs](component_urls.md): URLs that identify components.
-- [Monikers](monikers.md): identifiers for component instances.
+- [Monikers](monikers.md): Identifiers for component instances.
 
-**Developing components**
+## Developing components
 
-- [Capabilities](capabilities/README.md): different types of capabilities and
+- [Capabilities](capabilities/README.md): Different types of capabilities and
   how to route them between components.
-- [Component manifests](component_manifests.md): how to define a component for
+- [Component manifests](component_manifests.md): How to define a component for
   the framework.
-- [ELF runner](elf_runner.md): how to launch a component from an ELF file.
+- [ELF runner](elf_runner.md): How to launch a component from an ELF file.
   Typically useful for developing system components in C++, Rust, or Go.
 
-**Extending the component framework**
+## Extending the component framework
 
-- [Runners](runners.md): instantiate components; add support for more
+- [Runners](runners.md): Instantiate components; add support for more
   runtimes.
-- [Resolvers](resolvers.md): find components from URLs; add support for
+- [Resolvers](resolvers.md): Find components from URLs; add support for
   methods of software packaging and distribution.
 
-**Debugging & troubleshooting**
+## Debugging and troubleshooting
 
-- [Hub](hub.md): a live view of the component topology at runtime.
-- [Black box testing](black_box_testing.md): integration testing framework.
+- [Hub](hub.md): A live view of the component topology at runtime.
+- [Black box testing](black_box_testing.md): Integration testing framework.
 
-**Internals**
+## Internals
 
-- [Design principles](design_principles.md): guidelines for arriving at
+- [Design principles](design_principles.md): Guidelines for arriving at
   architectural decisions.
-- [Life of a protocol open](life_of_a_protocol_open.md): how components connect
+- [Life of a protocol open](life_of_a_protocol_open.md): How components connect
   to protocols in their namespaces.
+
+[glossary-components-v1]: /docs/glossary.md#components-v1
+[glossary-components-v2]: /docs/glossary.md#components-v2
+

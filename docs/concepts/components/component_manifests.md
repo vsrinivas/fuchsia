@@ -1,9 +1,9 @@
+# Component manifests {#component-manifests}
+
 Note: This document describes manifests for the new Component Manager. If your
 component launches with [appmgr][doc-glossary-appmgr], indicated for instance by
 your manifest file ending in a `.cmx` extension, then refer to
 [legacy documentation][doc-legacy-manifest]
-
-# Component manifests {#component-manifests}
 
 A [component manifest](#component-manifest) is a file that defines a component
 by encoding a [component declaration](#component-declaration). This document
