@@ -114,39 +114,33 @@ template("zircon_library") {
   }
 
   foreach(suffix, ["", "-host"]) {
-    # Update reference to uboringssl, which really only forwards to boringssl.
-    if (library_deps + [ "//zircon/public/lib/uboringssl$suffix" ] -
-        [ "//zircon/public/lib/uboringssl$suffix" ] != library_deps) {
-      library_deps -= [ "//zircon/public/lib/uboringssl$suffix" ]
-      library_deps += [ "//zircon/public/lib/boringssl$suffix" ]
-    }
-    if (library_public_deps + [ "//zircon/public/lib/uboringssl$suffix" ] -
-        [ "//zircon/public/lib/uboringssl$suffix" ] != library_public_deps) {
-      library_public_deps -= [ "//zircon/public/lib/uboringssl$suffix" ]
-      library_public_deps += [ "//zircon/public/lib/boringssl$suffix" ]
+    # Update references to boringssl.
+    foreach(prefix, ["", "u"]) {
+      if (library_deps + [ "//zircon/public/lib/${prefix}boringssl$suffix" ] -
+          [ "//zircon/public/lib/${prefix}boringssl$suffix" ] != library_deps) {
+        library_deps -= [ "//zircon/public/lib/${prefix}boringssl$suffix" ]
+        library_deps += [ "//third_party/boringssl" ]
+      }
+      if (library_public_deps + [ "//zircon/public/lib/${prefix}boringssl$suffix" ] -
+          [ "//zircon/public/lib/${prefix}boringssl$suffix" ] != library_public_deps) {
+        library_public_deps -= [ "//zircon/public/lib/${prefix}boringssl$suffix" ]
+        library_public_deps += [ "//third_party/boringssl" ]
+      }
     }
 
     # Update reference to zstd libraries, for which there exist targets under
     # //third_party/zstd.
-    if (library_deps + [ "//zircon/public/lib/zstd$suffix" ] -
-        [ "//zircon/public/lib/zstd$suffix" ] != library_deps) {
-      library_deps -= [ "//zircon/public/lib/zstd$suffix" ]
-      library_deps += [ "//third_party/zstd" ]
-    }
-    if (library_public_deps + [ "//zircon/public/lib/zstd$suffix" ] -
-        [ "//zircon/public/lib/zstd$suffix" ] != library_public_deps) {
-      library_public_deps -= [ "//zircon/public/lib/zstd$suffix" ]
-      library_public_deps += [ "//third_party/zstd" ]
-    }
-    if (library_deps + [ "//zircon/public/lib/zstdseek$suffix" ] -
-        [ "//zircon/public/lib/zstdseek$suffix" ] != library_deps) {
-      library_deps -= [ "//zircon/public/lib/zstdseek$suffix" ]
-      library_deps += [ "//third_party/zstd:zstdseek" ]
-    }
-    if (library_public_deps + [ "//zircon/public/lib/zstdseek$suffix" ] -
-        [ "//zircon/public/lib/zstdseek$suffix" ] != library_public_deps) {
-      library_public_deps -= [ "//zircon/public/lib/zstdseek$suffix" ]
-      library_public_deps += [ "//third_party/zstd:zstdseek" ]
+    foreach(library, ["zstd", "zstdseek"]) {
+      if (library_deps + [ "//zircon/public/lib/$library$suffix" ] -
+          [ "//zircon/public/lib/$library$suffix" ] != library_deps) {
+        library_deps -= [ "//zircon/public/lib/$library$suffix" ]
+        library_deps += [ "//third_party/zstd:$library" ]
+      }
+      if (library_public_deps + [ "//zircon/public/lib/$library$suffix" ] -
+          [ "//zircon/public/lib/$library$suffix" ] != library_public_deps) {
+        library_public_deps -= [ "//zircon/public/lib/$library$suffix" ]
+        library_public_deps += [ "//third_party/zstd:$library" ]
+      }
     }
   }
 
