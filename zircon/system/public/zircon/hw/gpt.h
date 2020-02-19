@@ -196,7 +196,7 @@ static_assert(GPT_ENTRY_SIZE == sizeof(gpt_entry_t), "Gpt entry size invalid");
 }
 #define GUID_VBMETA_B_NAME "vbmeta_b"
 
-#define GUID_VBMETA_R_STRING "6A2460C3-CD11-4E8B-A880-12CCE268ED0A"
+#define GUID_VBMETA_R_STRING "6A2460C3-CD11-4E8B-80A8-12CCE268ED0A"
 #define GUID_VBMETA_R_VALUE {                      \
     0xc3, 0x60, 0x24, 0x6a,                        \
     0x11, 0xcd,                                    \
