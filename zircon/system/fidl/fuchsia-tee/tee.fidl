@@ -122,6 +122,7 @@ protocol Device {
 };
 
 /// Provides information about the TEE device.
+[Discoverable]
 protocol DeviceInfo {
     /// Obtains information about the TEE OS.
     GetOsInfo() -> (OsInfo info);
