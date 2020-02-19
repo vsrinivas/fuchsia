@@ -26,9 +26,6 @@ enum ExposedServices {
 /// this session's CML file.
 const ELEMENT_COLLECTION_NAME: &str = "elements";
 
-/// The maximum number of concurrent requests.
-const NUM_CONCURRENT_REQUESTS: usize = 5;
-
 /// This session exposes one service which is offered to all elements started in the session and
 /// prints a string when an element sends a request to said service.
 ///
@@ -42,25 +39,24 @@ async fn main() -> Result<(), Error> {
 
     fs.take_and_serve_directory_handle()?;
 
-    fs.for_each_concurrent(
-        NUM_CONCURRENT_REQUESTS,
-        move |service_request: ExposedServices| async move {
-            match service_request {
-                ExposedServices::ElementPing(request_stream) => {
-                    handle_element_ping_requests(request_stream)
-                        .await
-                        .expect("Failed to run element ping service.");
-                }
-                ExposedServices::ElementManager(request_stream) => {
-                    handle_element_manager_requests(request_stream)
-                        .await
-                        .expect("Failed to run element manager service.");
-                }
-            }
-        },
-    )
-    .await;
+    let realm =
+        connect_to_service::<fsys::RealmMarker>().context("Could not connect to Realm service.")?;
+    let element_manager = SimpleElementManager::new(realm);
 
+    while let Some(service_request) = fs.next().await {
+        match service_request {
+            ExposedServices::ElementPing(request_stream) => {
+                handle_element_ping_requests(request_stream)
+                    .await
+                    .expect("Failed to run element ping service.");
+            }
+            ExposedServices::ElementManager(request_stream) => {
+                handle_element_manager_requests(request_stream, &element_manager)
+                    .await
+                    .expect("Failed to run element manager service.");
+            }
+        }
+    }
     Ok(())
 }
 
@@ -89,10 +85,9 @@ async fn handle_element_ping_requests(mut stream: ElementPingRequestStream) -> R
 /// `Ok` if the element manager ran successfully, or an `ElementManagerError` if execution halted unexpectedly.
 async fn handle_element_manager_requests(
     mut stream: ElementManagerRequestStream,
+    element_manager: &impl ElementManager,
 ) -> Result<(), Error> {
-    let realm =
-        connect_to_service::<fsys::RealmMarker>().context("Could not connect to Realm service.")?;
-    let mut element_manager = SimpleElementManager::new(realm, None);
+    let mut elements = vec![];
     while let Some(request) =
         stream.try_next().await.context("Error handling element manager request stream")?
     {
@@ -103,13 +98,16 @@ async fn handle_element_manager_requests(
                 child_name.make_ascii_lowercase();
 
                 let mut result = match element_manager
-                    .add_element(spec, &child_name, ELEMENT_COLLECTION_NAME)
+                    .launch_element(spec, &child_name, ELEMENT_COLLECTION_NAME)
                     .await
                 {
+                    Ok(element) => {
+                        elements.push(element);
+                        Ok(())
+                    }
                     // Most of the errors which could be encountered when adding an element are
                     // not the result of an error by the FIDL client. This lists all the cases
                     // explicitly, but it's up to each session to decide how to map the errors.
-                    Ok(_) => Ok(()),
                     Err(ElementManagerError::UrlMissing { .. }) => {
                         Err(ProposeElementError::NotFound)
                     }
@@ -117,6 +115,9 @@ async fn handle_element_manager_requests(
                         Err(ProposeElementError::Rejected)
                     }
                     Err(ElementManagerError::NotBound { .. }) => Err(ProposeElementError::Rejected),
+                    Err(ElementManagerError::NotLaunched { .. }) => {
+                        Err(ProposeElementError::Rejected)
+                    }
                 };
 
                 let _ = responder.send(&mut result);

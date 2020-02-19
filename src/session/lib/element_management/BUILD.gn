@@ -13,7 +13,6 @@ rustc_library("element_management") {
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -24,6 +23,12 @@ rustc_library("element_management") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
+  ]
+
+  test_deps = [
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//src/lib/test_util",
+    "//third_party/rust_crates:lazy_static",
   ]
 }
 
