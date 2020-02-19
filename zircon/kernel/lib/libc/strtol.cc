@@ -87,7 +87,7 @@ long strtol(const char *nptr, char **endptr, int base) {
    * overflow.
    */
   cutoff = neg ? LONG_MIN : LONG_MAX;
-  cutlim = cutoff % base;
+  cutlim = static_cast<int>(cutoff % base);
   cutoff /= base;
   if (neg) {
     if (cutlim > 0) {

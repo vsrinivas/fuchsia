@@ -173,7 +173,7 @@ PRINTF_DECL(_printf_engine)
   } while (0)
 #define OUTPUT_CHAR(c)        \
   do {                        \
-    char __temp[1] = {c};     \
+    char __temp[1] = {static_cast<char>(c)};     \
     OUTPUT_STRING(__temp, 1); \
   } while (0)
 
@@ -228,7 +228,7 @@ PRINTF_DECL(_printf_engine)
         if (c == '*') {
           fmt++;
           flags |= FIELDWIDTHFLAG;
-          format_num = va_arg(ap, intmax_t);
+          format_num = va_arg(ap, int);
         } else if (c == 's') {
           // %.s is invalid, and testing glibc printf it
           // results in no output so force skipping the 's'

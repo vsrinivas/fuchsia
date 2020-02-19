@@ -18,7 +18,7 @@ int rand_r(uint64_t* seed) {
     uint64_t old_seed = atomic_load_u64_relaxed(seed);
     uint64_t new_seed = 6364136223846793005ULL * old_seed + 1;
     if (atomic_cmpxchg_u64_relaxed(seed, &old_seed, new_seed)) {
-      return new_seed >> 33;
+      return static_cast<int>(new_seed >> 33);
     }
   }
 }

@@ -8,11 +8,11 @@ source_set("libc") {
     "cxa_atexit.cc",
     "cxa_pure_virtual.cc",
     "cxx_allocator.cc",
-    "printf.c",
-    "rand.c",
-    "stdio.c",
-    "strtol.c",
-    "strtoul.c",
+    "printf.cc",
+    "rand.cc",
+    "stdio.cc",
+    "strtol.cc",
+    "strtoul.cc",
   ]
   deps = [
     ":ctype",
@@ -25,7 +25,7 @@ source_set("libc") {
 }
 
 source_set("ctype") {
-  sources = [ "ctype.c" ]
+  sources = [ "ctype.cc" ]
 }
 
 source_set("tests") {
