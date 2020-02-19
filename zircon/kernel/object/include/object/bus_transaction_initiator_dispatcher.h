@@ -73,7 +73,7 @@ class BusTransactionInitiatorDispatcher final
   // Used to unregister a PMT pointer during PMT destruction
   void RemovePmo(PinnedMemoryTokenDispatcher* pmt);
 
-  // Remove |pmt| from pinned_memory_ and append it to the quarantine_ list.
+  // Append |pmt| to the quarantine_ list. |pmt| is not removed from pinned_memory_.
   // This will prevent its underlying VMO from being unpinned until the
   // quarantine is cleared.
   void Quarantine(fbl::RefPtr<PinnedMemoryTokenDispatcher> pmt) TA_EXCL(get_lock());
