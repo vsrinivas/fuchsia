@@ -5,7 +5,6 @@
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
-#include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/test/vk_debug_report_collector.h"
 
 using namespace escher;
@@ -54,7 +53,6 @@ void VkSessionTest::TearDown() {
 
   image_factory_.reset();
   release_fence_signaller_.reset();
-  escher_.reset();
   sysmem_.reset();
   display_manager_.reset();
 }
@@ -72,21 +70,17 @@ VkSessionTest::VkSessionTest()
 SessionContext VkSessionTest::CreateSessionContext() {
   auto session_context = SessionTest::CreateSessionContext();
 
-  auto vulkan_device = CreateVulkanDeviceQueues();
-
-  FXL_DCHECK(!escher_);
   FXL_DCHECK(!release_fence_signaller_);
   FXL_DCHECK(!image_factory_);
 
-  escher_ = std::make_unique<Escher>(vulkan_device);
   release_fence_signaller_ =
-      std::make_unique<ReleaseFenceSignaller>(escher_->command_buffer_sequencer());
-  image_factory_ =
-      std::make_unique<ImageFactoryAdapter>(escher_->gpu_allocator(), escher_->resource_recycler());
+      std::make_unique<ReleaseFenceSignaller>(escher()->command_buffer_sequencer());
+  image_factory_ = std::make_unique<ImageFactoryAdapter>(escher()->gpu_allocator(),
+                                                         escher()->resource_recycler());
 
-  session_context.vk_device = escher_->vk_device();
-  session_context.escher = escher_.get();
-  session_context.escher_resource_recycler = escher_->resource_recycler();
+  session_context.vk_device = escher()->vk_device();
+  session_context.escher = escher();
+  session_context.escher_resource_recycler = escher()->resource_recycler();
   session_context.escher_image_factory = image_factory_.get();
   session_context.release_fence_signaller = release_fence_signaller_.get();
 
@@ -94,7 +88,7 @@ SessionContext VkSessionTest::CreateSessionContext() {
 }
 
 CommandContext VkSessionTest::CreateCommandContext() {
-  return CommandContext(escher::BatchGpuUploader::New(escher_->GetWeakPtr(), /* trace_id = */ 0),
+  return CommandContext(escher::BatchGpuUploader::New(escher()->GetWeakPtr(), /* trace_id = */ 0),
                         sysmem_.get(), display_manager_.get(), fxl::WeakPtr<SceneGraph>(/*empty*/));
 }
 

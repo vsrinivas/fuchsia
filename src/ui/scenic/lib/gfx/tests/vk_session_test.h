@@ -5,6 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_GFX_TESTS_VK_SESSION_TEST_H_
 #define SRC_UI_SCENIC_LIB_GFX_TESTS_VK_SESSION_TEST_H_
 
+#include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/test/vk_debug_report_callback_registry.h"
 #include "src/ui/lib/escher/test/vk_debug_report_collector.h"
 #include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
@@ -21,7 +22,7 @@ class VkSessionTest : public SessionTest {
   void SetUp() override;
   void TearDown() override;
 
-  escher::Escher* escher() { return escher_.get(); }
+  escher::Escher* escher() { return escher::test::GetEscher(); }
 
  protected:
   VkSessionTest();
@@ -42,7 +43,6 @@ class VkSessionTest : public SessionTest {
  private:
   std::unique_ptr<Sysmem> sysmem_;
   std::unique_ptr<display::DisplayManager> display_manager_;
-  std::unique_ptr<escher::Escher> escher_;
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
   std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller_;
 
