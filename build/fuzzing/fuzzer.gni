@@ -157,26 +157,47 @@ set_defaults("fuzzer") {
 
 # Defines a package of fuzzers
 #
-# The fuzzers_package template is used to bundle several fuzzers and their
-# associated data into a single Fuchsia package.
+# The fuzzers_package template is used to bundle several fuzzers and their associated data into a
+# single Fuchsia package.
 #
 # Parameters
+#   fuzzer_profiles (optional)
+#     [list of scopes] Each fuzzer profile describes how a set of fuzzers can be built. This
+#     parameter is required if the `fuzzers` parameter is not provided. The scopes include the
+#     following fields:
 #
-#   fuzzers (required)
-#     [list of labels] The fuzzer() labels to include in this package.
+#       fuzzers (required)
+#         [list of labels] The fuzzer() labels to include.
 #
-#   sanitizers (optional)
-#     [list of variants] A set of sanitizer variants.  The resulting package
-#     will contain binaries for each sanitizer/fuzzer combination. Defaults to
-#     [ "asan", "ubsan" ]
+#       sanitizers (required)
+#         [list of variants] A set of sanitizer variants.  The resulting package will contain a
+#         fuzzer binary when this list contains the toolchain variant selected for the fuzzer label,
+#         and a fuzzer unit test otherwise.
 #
+#       fuzz_host (optional)
+#         [boolean] Indicates whether to also build fuzzer binaries on host. Defaults to false.
+#
+#       host_only (optional)
+#         [boolean] Indicates whether to skip the Fuchsia fuzzers package. Implies `fuzz_host`.
+#         Defaults to false.
+#
+#   fuzzers (optional)
 #   fuzz_host (optional)
-#     [boolean] Indicates whether to also build fuzzer binaries on host.
-#     Defaults to false.
-#
 #   host_only (optional)
-#     [boolean] Indicates whether to skip the Fuchsia fuzzers package. Implies `fuzz_host`.
-#     Defaults to false.
+#     Same meaning as in `fuzzer_profiles`. When provided, these create a "default" fuzzer profile
+#     with an implied sanitizer list of [ "asan", "ubsan" ]. `fuzzers` is required if either
+#     `fuzz_host` or `host_only` is present.
+#
+#   fuzzers_manifest (optional)
+#     [scope] Specifies how to read fuzzer names from a manifest file. The fuzzers are added to the
+#     "default" fuzzer profile. This parameter is useful for including fuzzers from another build,
+#     e.g. pre-unification Zircon fuzzers. The scope has two fields:
+#
+#        target (required)
+#           [label] The GN target that produces the manifest.
+#
+#        output (required)
+#           [path] The path to the generated manifest file.
 #
 #   meta (optional)
 #   binaries (optional)
@@ -191,165 +212,118 @@ set_defaults("fuzzer") {
 #   deps (optional)
 #   public_deps (optional)
 #   data_deps (optional)
-#   testonly (optional)
 #     Usual GN meanings.
 template("fuzzers_package") {
-  assert(defined(invoker.fuzzers), "fuzzers must be defined for $target_name}")
+  assert(defined(invoker.fuzzers) || defined(invoker.fuzzer_profiles),
+         "`fuzzers` or `fuzzer_profiles` must be defined for $target_name}")
 
-  if (defined(invoker.sanitizers)) {
-    sanitizers = invoker.sanitizers
+  # This target will create a group with up to three parts: a package of fuzzers and/or fuzzer
+  # tests, a set of host fuzzers treated as host tools, and a group of host fuzzer tests. Which
+  # fuzzers are included in each part depends of the associated fuzzer profile and current
+  # toolchain variant.
+  group_target_name = target_name
+  group_deps = []
+  fuzzed = []
+  tested = []
+  host_fuzzed = []
+  host_tested = []
+
+  # Add the default C/C++ fuzzer profile, if needed.
+  fuzzer_profiles = []
+  if (defined(invoker.fuzzers)) {
+    fuzzer_profiles += [
+      {
+        fuzzers = invoker.fuzzers
+        sanitizers = [
+          "asan",
+          "ubsan",
+        ]
+        fuzz_host = defined(invoker.fuzz_host) && invoker.fuzz_host
+        host_only = defined(invoker.host_only) && invoker.host_only
+      },
+    ]
   } else {
-    sanitizers = [
-      "asan",
-      "ubsan",
-    ]
+    assert(!defined(invoker.fuzz_host),
+           "`fuzz_host` without `fuzzers` has no effect")
+    assert(!defined(invoker.host_only),
+           "`host_only` without `fuzzers` has no effect")
+  }
+  if (defined(invoker.fuzzer_profiles)) {
+    fuzzer_profiles += invoker.fuzzer_profiles
   }
 
-  pkg = {
-    name = target_name
-    is_fuzzed = false
-    meta = []
-    binaries = []
-    resources = []
-    deps = []
-    extra = []
-    fuzzers = []
-    host = defined(invoker.fuzz_host) && invoker.fuzz_host
-    host_only = defined(invoker.host_only) && invoker.host_only
-    host_deps = []
-    host_outputs = []
-    tests = []
-    test_meta = []
-    test_deps = []
-  }
+  # Distribute fuzzers among the three parts depending based on the fuzzer profile and the variants
+  # selected in args.gn.
+  foreach(fuzzer_profile, fuzzer_profiles) {
+    assert(defined(fuzzer_profile.fuzzers),
+           "missing `fuzzers` in fuzzer profile in $target_name")
+    assert(defined(fuzzer_profile.sanitizers),
+           "missing `sanitizers` in fuzzer profile in $target_name")
+    fuzzed_by_profile = []
+    tested_by_profile = []
 
-  if (pkg.host_only) {
-    pkg.host = true
-  }
-
-  # Collect the selected fuzzers listed in this package based on the variants
-  # selected in args.gn and filtered by the package's list of supported
-  # sanitizers.
-  foreach(sanitizer, sanitizers) {
-    foreach(fuzzer, invoker.fuzzers) {
-      selected = false
-      foreach(selector, select_variant_canonical) {
-        if (!selected && selector.variant == "${sanitizer}-fuzzer" &&
-            ((defined(selector.target_type) &&
-              selector.target_type == [ "fuzzed_executable" ]) ||
-             (defined(selector.name) && selector.name == [ fuzzer ]) ||
-             (defined(selector.output_name) &&
-              selector.output_name == [ fuzzer ]))) {
-          selected = true
-          fuzzer_name = get_label_info(fuzzer, "name")
-          fuzzer_path = get_label_info(fuzzer, "target_gen_dir")
-          fuzzer_label = get_label_info(fuzzer, "label_no_toolchain")
-
-          # Package details.
-          pkg.meta += [
-            {
-              path = "${fuzzer_path}/${fuzzer_name}.cmx"
-              dest = "${fuzzer_name}.cmx"
-            },
-          ]
-          pkg.binaries += [
-            {
-              name = "${fuzzer_name}"
-            },
-          ]
-          pkg.resources += [
-            {
-              path = "${fuzzer_path}/${fuzzer_name}/dictionary"
-              dest = "${fuzzer_name}/dictionary"
-            },
-            {
-              path = "${fuzzer_path}/${fuzzer_name}/options"
-              dest = "${fuzzer_name}/options"
-            },
-          ]
-          pkg.deps += [
-            "${fuzzer_label}",
-            "${fuzzer_label}.cmx",
-            "${fuzzer_label}_dictionary",
-            "${fuzzer_label}_options",
-          ]
-          pkg.fuzzers += [ fuzzer_name ]
-
-          # Host fuzzers
-          pkg.host_deps += [ fuzzer_label ]
-          pkg.host_outputs += [ fuzzer_name ]
+    # Compare each selected variant with a profile's supported sanitizers. Unselected fuzzers are
+    # built as uninstrumented unit tests instead; see `test("${fuzzer_name}_test")` above.
+    foreach(selector, select_variant_canonical) {
+      foreach(sanitizer, fuzzer_profile.sanitizers) {
+        if (selector.variant == "${sanitizer}-fuzzer") {
+          # Check if the variant is applied to all fuzzers.
+          if (defined(selector.target_type) &&
+              selector.target_type == [ "fuzzed_executable" ]) {
+            fuzzed_by_profile += fuzzer_profile.fuzzers
+          } else {
+            # Check if the variant is applied to specific binary names.
+            foreach(fuzzer, fuzzer_profile.fuzzers) {
+              if ((defined(selector.name) && selector.name == [ fuzzer ]) ||
+                  (defined(selector.output_name) &&
+                   selector.output_name == [ fuzzer ])) {
+                fuzzed_by_profile += [ fuzzer ]
+              } else {
+                tested_by_profile += [ fuzzer ]
+              }
+            }
+          }
         }
       }
-      pkg.is_fuzzed = pkg.is_fuzzed || selected
+    }
+
+    # If no sanitizer matched a select variant, all fuzzers become tests.
+    if (fuzzed_by_profile == []) {
+      tested_by_profile += fuzzer_profile.fuzzers
+    }
+
+    # Add the fuzzers and tests from this profile to the aggregated lists.
+    host_only = defined(fuzzer_profile.host_only) && fuzzer_profile.host_only
+    if (!host_only) {
+      fuzzed += fuzzed_by_profile
+      tested += tested_by_profile
+    }
+    if ((defined(fuzzer_profile.fuzz_host) && fuzzer_profile.fuzz_host) ||
+        host_only) {
+      host_fuzzed += fuzzed_by_profile
+      host_tested += tested_by_profile
     }
   }
 
-  # Fuzzer tests
-  foreach(fuzzer, invoker.fuzzers) {
-    fuzzer_name = get_label_info(fuzzer, "name")
-    fuzzer_path = get_label_info(fuzzer, "target_gen_dir")
-    fuzzer_label = get_label_info(fuzzer, "label_no_toolchain")
-    pkg.tests += [
-      {
-        name = "${fuzzer_name}_test"
-      },
-    ]
-    pkg.test_meta += [
-      {
-        path = "${fuzzer_path}/${fuzzer_name}_test.cmx"
-        dest = "${fuzzer_name}_test.cmx"
-      },
-    ]
-    pkg.test_deps += [
-      "${fuzzer_label}_test",
-      "${fuzzer_label}_test.cmx",
-    ]
+  # Fuzzers imported via manifest are always selected.
+  forward_variables_from(invoker, [ "fuzzers_manifest" ])
+  prebuilt_fuzzed = []
+  if (defined(fuzzers_manifest)) {
+    prebuilt_fuzzed += read_file(fuzzers_manifest.output, "json")
   }
 
-  # Include fuzzers passed by manifest, i.e. Zircon fuzzers
-  if (defined(invoker.fuzzers_manifest)) {
-    fuzzers_manifest = invoker.fuzzers_manifest
-    pkg.deps += [ fuzzers_manifest.target ]
-    pkg.extra += get_target_outputs(fuzzers_manifest.target)
-    pkg.fuzzers += read_file(fuzzers_manifest.output, "json")
-    pkg.is_fuzzed = true
-  }
-
-  if (pkg.host) {
-    if (pkg.is_fuzzed) {
-      # Fuzzed build: Treat host fuzzers as tools. If we get to the point of having name collisions,
-      # we'll need to extend `install_host_tools` to allow copying to specific subdirectories of
-      # `host_tools_dir`
-      install_host_tools("host_${pkg.name}") {
-        testonly = true
-        deps = pkg.host_deps
-        outputs = pkg.host_outputs
-      }
-      pkg.deps += [ ":host_${pkg.name}" ]
-    } else {
-      # Non-fuzzed build: just ensure the test deps build.
-      group("host_${pkg.name}") {
-        visibility = [ ":*" ]
-        testonly = true
-        deps = []
-        foreach(test_dep, pkg.test_deps) {
-          deps += [ "$test_dep($host_toolchain)" ]
-        }
-      }
-      pkg.test_deps += [ ":host_${pkg.name}" ]
-    }
-  }
-
-  if (pkg.host_only) {
-    # Simple group for host-only builds
-    group(target_name) {
+  # Assemble a Fuchsia package of fuzzers and/or unit tests.
+  if (fuzzed != [] || prebuilt_fuzzed != [] || tested != []) {
+    package_target_name = target_name + "_pkg"
+    package(package_target_name) {
+      package_name = group_target_name
       testonly = true
-      deps = [ ":host_${pkg.name}" ]
-    }
-  } else {
-    package(target_name) {
+      visibility = [ ":*" ]
+
+      # Allow callers to set most package parameters.
       meta = []
       binaries = []
+      tests = []
       resources = []
       extra = []
       deps = []
@@ -357,46 +331,131 @@ template("fuzzers_package") {
                              "*",
                              [
                                "fuzzers",
+                               "fuzzers_manifest",
+                               "fuzzer_profiles",
                                "metadata",
                                "sanitizers",
+                               "testonly",
                                "visibility",
                              ])
 
-      # Explicitly forward visibility for nested scopes.
-      forward_variables_from(invoker, [ "visibility" ])
-      testonly = true
+      # Add selected fuzzers
+      foreach(fuzzer, fuzzed) {
+        fuzzer_name = get_label_info(fuzzer, "name")
+        fuzzer_path = get_label_info(fuzzer, "target_gen_dir")
+        fuzzer_label = get_label_info(fuzzer, "label_no_toolchain")
 
-      if (pkg.is_fuzzed) {
-        # Fuzzed build: Assemble the Fuchsia package
-        meta += pkg.meta
-        binaries += pkg.binaries
-        resources += pkg.resources
-        extra += pkg.extra
-        deps += pkg.deps
+        meta += [
+          {
+            path = "${fuzzer_path}/${fuzzer_name}.cmx"
+            dest = "${fuzzer_name}.cmx"
+          },
+        ]
+        binaries += [
+          {
+            name = "${fuzzer_name}"
+          },
+        ]
+        resources += [
+          {
+            path = "${fuzzer_path}/${fuzzer_name}/dictionary"
+            dest = "${fuzzer_name}/dictionary"
+          },
+          {
+            path = "${fuzzer_path}/${fuzzer_name}/options"
+            dest = "${fuzzer_name}/options"
+          },
+        ]
+        deps += [
+          "${fuzzer_label}",
+          "${fuzzer_label}.cmx",
+          "${fuzzer_label}_dictionary",
+          "${fuzzer_label}_options",
+        ]
+      }
 
-        # This metadata will be used to generate out/default/fuzzers.json
-        metadata = {
-          fuzz_spec = []
-          if (defined(invoker.metadata)) {
-            forward_variables_from(invoker.metadata, "*")
-          }
-          fuzz_spec += [
-            {
-              fuzzers_package = pkg.name
-              fuzzers = pkg.fuzzers
-              fuzz_host = pkg.host
-            },
-          ]
+      # Add fuzzer tests for those not selected.
+      foreach(fuzzer, tested) {
+        fuzzer_name = get_label_info(fuzzer, "name")
+        fuzzer_path = get_label_info(fuzzer, "target_gen_dir")
+        fuzzer_label = get_label_info(fuzzer, "label_no_toolchain")
+
+        meta += [
+          {
+            path = "${fuzzer_path}/${fuzzer_name}_test.cmx"
+            dest = "${fuzzer_name}_test.cmx"
+          },
+        ]
+        tests += [
+          {
+            name = "${fuzzer_name}_test"
+          },
+        ]
+        deps += [
+          "${fuzzer_label}_test",
+          "${fuzzer_label}_test.cmx",
+        ]
+      }
+
+      if (defined(fuzzers_manifest)) {
+        deps += [ fuzzers_manifest.target ]
+        extra += get_target_outputs(fuzzers_manifest.target)
+      }
+
+      # This metadata will be used to generate out/default/fuzzers.json
+      metadata = {
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*", [ "fuzz_spec" ])
         }
-      } else {
-        # Non-fuzzed build: Assemble the fuzzer test package. This uses `package` instead of
-        #`test_package`, as the latter only provides an inconvenient constraint on where the cmx file
-        # must come from.
-        meta = pkg.test_meta
-        tests = pkg.tests
-        deps += pkg.test_deps
+        fuzz_spec = [
+          {
+            fuzzers_package = package_name
+            fuzzers = fuzzed + prebuilt_fuzzed
+            fuzz_host = host_fuzzed != []
+          },
+        ]
       }
     }
+    group_deps += [ ":$package_target_name" ]
+  }
+
+  # Treat host fuzzers as tools. If we get to the point of having name collisions, we'll need to
+  # extend `install_host_tools` to allow copying to specific subdirectories of `host_tools_dir`.
+  if (host_fuzzed != []) {
+    host_fuzzers_target_name = target_name + "_host"
+    install_host_tools(host_fuzzers_target_name) {
+      testonly = true
+      visibility = [ ":*" ]
+      deps = []
+      outputs = []
+      foreach(fuzzer, host_fuzzed) {
+        deps += [ get_label_info(fuzzer, "label_no_toolchain") ]
+        outputs += [ get_label_info(fuzzer, "name") ]
+      }
+    }
+    group_deps += [ ":$host_fuzzers_target_name" ]
+  }
+
+  # For host fuzzer tests, just ensure the deps build.
+  if (host_tested != []) {
+    host_tests_target_name = target_name + "_host_tests"
+    group(host_tests_target_name) {
+      testonly = true
+      visibility = [ ":*" ]
+      deps = []
+      foreach(fuzzer, host_tested) {
+        fuzzer_label = get_label_info(fuzzer, "label_no_toolchain")
+        deps += [ "${fuzzer_label}_test($host_toolchain)" ]
+      }
+    }
+    group_deps += [ ":$host_tests_target_name" ]
+  }
+
+  # Include everything in the group
+  group(group_target_name) {
+    forward_variables_from(invoker, [ "visibility" ])
+    testonly = true
+    deps = group_deps
   }
 }
 
