@@ -59,6 +59,7 @@ source_set("src") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
   ]
 }
