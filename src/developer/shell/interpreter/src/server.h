@@ -83,15 +83,15 @@ class ServerInterpreter : public Interpreter {
   void EraseServerContext(uint64_t context_id) { contexts_.erase(context_id); }
 
   // Adds an expression to this context. The expression then waits to be used by another node.
-  // The argument global_node should always be false.
+  // The argument root_node should always be false.
   void AddExpression(ServerInterpreterContext* context, std::unique_ptr<Expression> expression,
-                     bool global_node);
+                     bool root_node);
 
-  // Adds an instruction to this context. If global_node is true, the instruction is added to the
+  // Adds an instruction to this context. If root_node is true, the instruction is added to the
   // interpreter context's pending instruction list.
   // If global node is false, the instructions waits to be used by another node.
   void AddInstruction(ServerInterpreterContext* context, std::unique_ptr<Instruction> instruction,
-                      bool global_node);
+                      bool root_node);
 
   // Retrives the expression for the given context/node id. If the expression is not found, it emits
   // an error.
@@ -153,12 +153,11 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
   // Helpers to be able to create AST nodes.
   void AddIntegerLiteral(ServerInterpreterContext* context, uint64_t node_file_id,
                          uint64_t node_node_id, const llcpp::fuchsia::shell::IntegerLiteral& node,
-                         bool global_node);
+                         bool root_node);
 
   void AddVariableDefinition(ServerInterpreterContext* context, uint64_t node_file_id,
                              uint64_t node_node_id,
-                             const llcpp::fuchsia::shell::VariableDefinition& node,
-                             bool global_node);
+                             const llcpp::fuchsia::shell::VariableDefinition& node, bool root_node);
 
   // The handle to communicate with the client.
   zx_handle_t handle_;

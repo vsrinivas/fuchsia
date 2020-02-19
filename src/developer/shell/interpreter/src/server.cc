@@ -112,17 +112,18 @@ void ServerInterpreter::CreateServerContext(ExecutionContext* context) {
 }
 
 void ServerInterpreter::AddExpression(ServerInterpreterContext* context,
-                                      std::unique_ptr<Expression> expression, bool global_node) {
-  if (global_node) {
-    EmitError(context->execution_context(), "Node " + expression->StringId() + " can't be global.");
+                                      std::unique_ptr<Expression> expression, bool root_node) {
+  if (root_node) {
+    EmitError(context->execution_context(),
+              "Node " + expression->StringId() + " can't be a root node.");
     return;
   }
   context->AddExpression(std::move(expression));
 }
 
 void ServerInterpreter::AddInstruction(ServerInterpreterContext* context,
-                                       std::unique_ptr<Instruction> instruction, bool global_node) {
-  if (global_node) {
+                                       std::unique_ptr<Instruction> instruction, bool root_node) {
+  if (root_node) {
     context->execution_context()->AddPendingInstruction(std::move(instruction));
   } else {
     context->AddInstruction(std::move(instruction));
@@ -183,10 +184,10 @@ void Service::AddNodes(uint64_t context_id,
     for (const auto& node : nodes) {
       if (node.node.is_integer_literal()) {
         AddIntegerLiteral(context, node.node_id.file_id, node.node_id.node_id,
-                          node.node.integer_literal(), node.global_node);
+                          node.node.integer_literal(), node.root_node);
       } else if (node.node.is_variable_definition()) {
         AddVariableDefinition(context, node.node_id.file_id, node.node_id.node_id,
-                              node.node.variable_definition(), node.global_node);
+                              node.node.variable_definition(), node.root_node);
       } else {
         interpreter_->EmitError(context->execution_context(),
                                 "Can't create node " + std::to_string(node.node_id.file_id) + ":" +
@@ -198,8 +199,7 @@ void Service::AddNodes(uint64_t context_id,
 
 void Service::AddIntegerLiteral(ServerInterpreterContext* context, uint64_t node_file_id,
                                 uint64_t node_node_id,
-                                const llcpp::fuchsia::shell::IntegerLiteral& node,
-                                bool global_node) {
+                                const llcpp::fuchsia::shell::IntegerLiteral& node, bool root_node) {
   if (node.absolute_value.count() > 1) {
     interpreter_->EmitError(context->execution_context(),
                             "Infinite precision integers not supported for node " +
@@ -213,19 +213,19 @@ void Service::AddIntegerLiteral(ServerInterpreterContext* context, uint64_t node
   bool negative = node.negative && (absolute_value > 0);
   auto result = std::make_unique<IntegerLiteral>(interpreter(), node_file_id, node_node_id,
                                                  absolute_value, negative);
-  interpreter_->AddExpression(context, std::move(result), global_node);
+  interpreter_->AddExpression(context, std::move(result), root_node);
 }
 
 void Service::AddVariableDefinition(ServerInterpreterContext* context, uint64_t node_file_id,
                                     uint64_t node_node_id,
                                     const llcpp::fuchsia::shell::VariableDefinition& node,
-                                    bool global_node) {
+                                    bool root_node) {
   std::unique_ptr<Expression> initial_value = interpreter_->GetExpression(
       context, NodeId(node.initial_value.file_id, node.initial_value.node_id));
   auto result = std::make_unique<VariableDefinition>(interpreter(), node_file_id, node_node_id,
                                                      GetView(node.name), GetType(node.type),
                                                      node.mutable_value, std::move(initial_value));
-  interpreter_->AddInstruction(context, std::move(result), global_node);
+  interpreter_->AddInstruction(context, std::move(result), root_node);
 }
 
 Server::Server() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}

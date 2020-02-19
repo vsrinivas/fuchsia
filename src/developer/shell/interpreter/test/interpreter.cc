@@ -108,12 +108,12 @@ class NodeBuilder {
   std::vector<fuchsia::shell::NodeDefinition>* nodes() { return &nodes_; }
 
   // Adds a node definition to the list of nodes.
-  fuchsia::shell::NodeId AddNode(fuchsia::shell::Node* node, bool global_node) {
+  fuchsia::shell::NodeId AddNode(fuchsia::shell::Node* node, bool root_node) {
     fuchsia::shell::NodeDefinition node_definition;
     fuchsia::shell::NodeId node_id{file_id_, ++last_node_id_};
     node_definition.node_id = node_id;
     node_definition.node = std::move(*node);
-    node_definition.global_node = global_node;
+    node_definition.root_node = root_node;
     nodes_.emplace_back(std::move(node_definition));
     return node_id;
   }
@@ -124,17 +124,17 @@ class NodeBuilder {
     std::vector<uint64_t> values;
     values.push_back(absolute_value);
     node.set_integer_literal({std::move(values), negative});
-    return AddNode(&node, /*global_node=*/false);
+    return AddNode(&node, /*root_node=*/false);
   }
 
   // Adds a variable definition to the list of nodes.
   fuchsia::shell::NodeId VariableDefinition(const char* name, fuchsia::shell::ShellType type,
                                             bool mutable_value,
                                             fuchsia::shell::NodeId initial_value,
-                                            bool global_node = true) {
+                                            bool root_node = true) {
     fuchsia::shell::Node node;
     node.set_variable_definition({name, std::move(type), mutable_value, initial_value});
-    return AddNode(&node, global_node);
+    return AddNode(&node, root_node);
   }
 
  private:
@@ -182,7 +182,7 @@ TEST_F(InterpreterTest, GlobalExpression) {
   fuchsia::shell::Node node;
   std::vector<uint64_t> values;
   node.set_integer_literal({std::move(values), false});
-  builder.AddNode(&node, /*global_node=*/true);
+  builder.AddNode(&node, /*root_node=*/true);
 
   shell()->AddNodes(context->id, std::move(*builder.nodes()));
   shell()->ExecuteExecutionContext(context->id);
@@ -191,7 +191,7 @@ TEST_F(InterpreterTest, GlobalExpression) {
   ASSERT_EQ(fuchsia::shell::ExecuteResult::ANALYSIS_ERROR, context->result);
 
   std::string error_result = context->error_stream.str();
-  ASSERT_EQ("Node 1:1 can't be global.\n", error_result);
+  ASSERT_EQ("Node 1:1 can't be a root node.\n", error_result);
 }
 
 TEST_F(InterpreterTest, BadAst) {
