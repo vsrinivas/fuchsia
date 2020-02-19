@@ -10,28 +10,40 @@ using fuchsia.media;
 
 using SessionId = uint64;
 
-/// SessionInfoDelta holds a description of a given session. The first
-/// time a client receives this, it is a state of the world. On successive
-/// receipts of this table, only the changed fields will be present (this
-/// property is not recursive; top-level fields if set are snapshots).
+/// SessionInfoDelta holds a description of a media session.
 table SessionInfoDelta {
     /// The domain on which the session takes place. A domain identifies a set of
-    /// mutually compatable media targets and sessions; sessions on a domain may
+    /// mutually compatible media targets and sessions; sessions on a domain may
     /// be played back on targets of the same domain.
+    ///
+    /// This field is always present.
     1: Domain domain;
-    /// Whether the entry point for the media into our device network is the local
-    /// machine; this should be true if this is the device streaming from
-    /// a music service, but false if this machine is just receiving an audio stream
-    /// to act as a speaker.
+    /// Whether the source of the media playback is on this device.
+    ///
+    /// This field is present only if known.
     2: bool is_local;
-    /// If this is set, the playback is taking place local to the device.
+    /// If this is `true`, the playback is taking place local to the device.
     /// Playing on the device speaker is local, playing on a remote speaker
     /// is not. This is only set when the session is playing back; a paused
     /// session is not active.
+    ///
+    /// This field is always present.
     3: bool is_locally_active;
+    /// The status of the player.
+    ///
+    /// This field is always present.
     4: PlayerStatus player_status;
+    /// Metadata describing the media session.
+    ///
+    /// This field is always present.
     5: fuchsia.media.Metadata metadata;
+    /// Images associated with the media or its source.
+    ///
+    /// This field is always present.
     6: vector<MediaImage> media_images;
+    /// The capabilities the player of the media implements.
+    ///
+    /// This field is always present.
     7: PlayerCapabilities player_capabilities;
 };
 
