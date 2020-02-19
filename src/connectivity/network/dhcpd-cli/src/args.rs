@@ -1571,6 +1571,7 @@ pub enum Parameter {
     PermittedMacs(PermittedMacs),
     StaticallyAssignedAddrs(StaticallyAssignedAddrs),
     ArpProbe(ArpProbe),
+    BoundDevices(BoundDevices),
 }
 
 impl Into<fidl_fuchsia_net_dhcp::ParameterName> for Parameter {
@@ -1584,6 +1585,7 @@ impl Into<fidl_fuchsia_net_dhcp::ParameterName> for Parameter {
                 fidl_fuchsia_net_dhcp::ParameterName::StaticallyAssignedAddrs
             }
             Parameter::ArpProbe(_) => fidl_fuchsia_net_dhcp::ParameterName::ArpProbe,
+            Parameter::BoundDevices(_) => fidl_fuchsia_net_dhcp::ParameterName::BoundDeviceNames,
         }
     }
 }
@@ -1597,6 +1599,7 @@ impl Into<fidl_fuchsia_net_dhcp::Parameter> for Parameter {
             Parameter::PermittedMacs(v) => v.into(),
             Parameter::StaticallyAssignedAddrs(v) => v.into(),
             Parameter::ArpProbe(v) => v.into(),
+            Parameter::BoundDevices(v) => v.into(),
         }
     }
 }
@@ -1802,3 +1805,23 @@ pub struct MNode {}
 #[derive(Clone, Copy, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "h-node")]
 pub struct HNode {}
+
+/// The names of the network devices on which the server will listen.
+#[derive(Clone, Debug, FromArgs, PartialEq)]
+#[argh(subcommand, name = "bound-device-names")]
+pub struct BoundDevices {
+    /// the names of the network devices on which the server will listen. If
+    /// this vector is empty, the server will listen on all devices and will
+    /// process incoming DHCP messages regardless of the device on which they
+    /// arrive. If this vector is not empty, then the server will only listen
+    /// for incoming DHCP messages on the named network devices contained by
+    /// this vector.
+    #[argh(positional)]
+    pub names: Vec<String>,
+}
+
+impl Into<fidl_fuchsia_net_dhcp::Parameter> for BoundDevices {
+    fn into(self) -> fidl_fuchsia_net_dhcp::Parameter {
+        fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(self.names)
+    }
+}
