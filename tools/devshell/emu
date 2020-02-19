@@ -12,7 +12,7 @@
 ##   -ds <size> extends the fvm image size to <size> bytes. Default is twice the original size
 ##   -N run with emulated nic via tun/tap
 ##   -I <ifname> uses the tun/tap interface named ifname
-##   -u <path> execute aemu if-up script, default is no script
+##   -u <path> execute emu if-up script, default is no script
 ##   -e <directory> location of emulator, defaults to looking in prebuilt/third_party/aemu/PLATFORM
 ##   -g <port> enable gRPC service on port to control the emulator, default is 5556 when WebRTC service is enabled
 ##   -r <fps> webrtc frame rate when using gRPC service, default is 30
@@ -280,7 +280,7 @@ if (( NET )); then
       IFNAME="tap0"
     fi
     if [[ ! -c "/dev/$IFNAME" ]]; then
-      echo "To use aemu with networking on macOS, install the tun/tap driver:"
+      echo "To use emu with networking on macOS, install the tun/tap driver:"
       echo "http://tuntaposx.sourceforge.net/download.xhtml"
       exit 1
     fi
@@ -295,7 +295,7 @@ if (( NET )); then
     fi
     TAP_IFS=$(ip tuntap show 2>/dev/null)
     if [[ ! "$TAP_IFS" =~ ${IFNAME}: ]]; then
-      echo "To use aemu with networking on Linux, configure tun/tap:"
+      echo "To use emu with networking on Linux, configure tun/tap:"
       echo
       echo "sudo ip tuntap add dev $IFNAME mode tap user $USER && \\"
       echo "sudo ip link set $IFNAME up"
