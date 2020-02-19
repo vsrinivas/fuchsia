@@ -6,7 +6,9 @@
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/testing/fake_launcher.h>
 
+#include "src/camera/bin/device_watcher/device_instance.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 class DeviceWatcherTest : public gtest::TestLoopFixture {
@@ -38,10 +40,15 @@ class DeviceWatcherTest : public gtest::TestLoopFixture {
 constexpr uint16_t kFakeVendorId = 0xFFFF;
 constexpr uint16_t kFakeProductId = 0xABCD;
 
-class FakeCamera : public fuchsia::camera2::hal::Controller {
+class FakeCamera : public fuchsia::hardware::camera::Device,
+                   public fuchsia::camera2::hal::Controller {
  public:
-  FakeCamera(fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> request)
-      : binding_(this, std::move(request)) {}
+  FakeCamera(fidl::InterfaceRequest<fuchsia::hardware::camera::Device> request)
+      : camera_binding_(this, std::move(request)), controller_binding_(this) {}
+  void GetChannel(zx::channel channel) override {}
+  void GetChannel2(zx::channel channel) override {
+    ZX_ASSERT(controller_binding_.Bind(std::move(channel)) == ZX_OK);
+  }
   void GetConfigs(fuchsia::camera2::hal::Controller::GetConfigsCallback callback) override {}
   void CreateStream(uint32_t config_index, uint32_t stream_index, uint32_t image_format_index,
                     fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection,
@@ -56,13 +63,14 @@ class FakeCamera : public fuchsia::camera2::hal::Controller {
   }
 
  private:
-  fidl::Binding<fuchsia::camera2::hal::Controller> binding_;
+  fidl::Binding<fuchsia::hardware::camera::Device> camera_binding_;
+  fidl::Binding<fuchsia::camera2::hal::Controller> controller_binding_;
 };
 
 TEST_F(DeviceWatcherTest, WatchDevicesFindsCameras) {
-  fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller;
-  FakeCamera fake(controller.NewRequest());
-  tester_->InjectDevice(std::move(controller));
+  fidl::InterfaceHandle<fuchsia::hardware::camera::Device> camera;
+  FakeCamera fake(camera.NewRequest());
+  tester_->InjectDevice(std::move(camera));
   std::set<uint64_t> cameras;
 
   // Wait until the watcher has discovered the real camera and the injected fake camera.
@@ -84,4 +92,31 @@ TEST_F(DeviceWatcherTest, WatchDevicesFindsCameras) {
     }
   }
   ASSERT_EQ(cameras.size(), kExpectedCameras);
+}
+
+TEST_F(DeviceWatcherTest, InstanceLaunches) {
+  sys::testing::FakeLauncher fake_launcher;
+  constexpr auto kCameraDeviceUrl = "fuchsia-pkg://fuchsia.com/camera_device#meta/manifest.cmx";
+  bool camera_launched = false;
+  fake_launcher.RegisterComponent(
+      kCameraDeviceUrl, [&](fuchsia::sys::LaunchInfo launch_info,
+                            fidl::InterfaceRequest<fuchsia::sys::ComponentController> request) {
+        EXPECT_EQ(launch_info.url, kCameraDeviceUrl);
+        ASSERT_TRUE(launch_info.arguments.has_value());
+        EXPECT_EQ(launch_info.arguments.value().size(), 1u);
+        request.Close(ZX_ERR_PEER_CLOSED);
+        camera_launched = true;
+      });
+  fuchsia::sys::LauncherPtr launcher;
+  fake_launcher.GetHandler()(launcher.NewRequest());
+  bool component_unavailable_received = false;
+  auto result =
+      DeviceInstance::Create(launcher, nullptr, [&]() { component_unavailable_received = true; });
+  ASSERT_TRUE(result.is_ok());
+  auto instance = result.take_value();
+  // The instance should attempt to launch the component. Then, upon seeing the controller request
+  // close, it should call the component_unavailable callback.
+  while (!HasFailure() && (!camera_launched || !component_unavailable_received)) {
+    RunLoopUntilIdle();
+  }
 }

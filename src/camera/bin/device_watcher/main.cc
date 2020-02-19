@@ -19,29 +19,21 @@
 
 constexpr auto kCameraPath = "/dev/class/camera";
 
-static fit::result<fidl::InterfaceHandle<fuchsia::camera2::hal::Controller>, zx_status_t>
-GetController(std::string path) {
-  fuchsia::hardware::camera::DeviceSyncPtr camera;
+static fit::result<fuchsia::hardware::camera::DeviceHandle, zx_status_t> GetCamera(
+    std::string path) {
+  fuchsia::hardware::camera::DeviceHandle camera;
   zx_status_t status = fdio_service_connect(path.c_str(), camera.NewRequest().TakeChannel().get());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
     return fit::error(status);
   }
 
-  fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller;
-  status = camera->GetChannel2(controller.NewRequest().TakeChannel());
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status);
-    return fit::error(status);
-  }
-
-  return fit::ok(std::move(controller));
+  return fit::ok(std::move(camera));
 }
 
 class DeviceWatcherTesterImpl : public fuchsia::camera::test::DeviceWatcherTester {
  public:
-  using InjectDeviceCallback =
-      fit::function<void(fidl::InterfaceHandle<fuchsia::camera2::hal::Controller>)>;
+  using InjectDeviceCallback = fit::function<void(fuchsia::hardware::camera::DeviceHandle)>;
   DeviceWatcherTesterImpl(InjectDeviceCallback callback) : callback_(std::move(callback)) {}
   fidl::InterfaceRequestHandler<fuchsia::camera::test::DeviceWatcherTester> GetHandler() {
     return fit::bind_member(this, &DeviceWatcherTesterImpl::OnNewRequest);
@@ -53,8 +45,8 @@ class DeviceWatcherTesterImpl : public fuchsia::camera::test::DeviceWatcherTeste
   }
 
   // |fuchsia::camera::test::DeviceWatcherTester|
-  void InjectDevice(fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller) override {
-    callback_(std::move(controller));
+  void InjectDevice(fuchsia::hardware::camera::DeviceHandle camera) override {
+    callback_(std::move(camera));
   }
 
   fidl::BindingSet<fuchsia::camera::test::DeviceWatcherTester> bindings_;
@@ -67,7 +59,14 @@ int main(int argc, char* argv[]) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
 
-  auto result = DeviceWatcherImpl::Create();
+  fuchsia::sys::LauncherHandle launcher;
+  zx_status_t status = context->svc()->Connect(launcher.NewRequest());
+  if (status != ZX_OK) {
+    FX_PLOGS(FATAL, status) << "Failed to connect to launcher service.";
+    return EXIT_FAILURE;
+  }
+
+  auto result = DeviceWatcherImpl::Create(std::move(launcher));
   if (result.is_error()) {
     FX_PLOGS(FATAL, result.error());
     return EXIT_FAILURE;
@@ -79,15 +78,15 @@ int main(int argc, char* argv[]) {
       kCameraPath,
       [&](int dir_fd, std::string path) {
         auto full_path = std::string(kCameraPath) + "/" + path;
-        auto result = GetController(full_path);
+        auto result = GetCamera(full_path);
         if (result.is_error()) {
-          FX_PLOGS(INFO, result.error()) << "Couldn't get controller from " << full_path
+          FX_PLOGS(INFO, result.error()) << "Couldn't get camera from " << full_path
                                          << ". This device will not be exposed to clients.";
           return;
         }
         auto add_result = server->AddDevice(result.take_value());
         if (add_result.is_error()) {
-          FX_PLOGS(WARNING, add_result.error()) << "Failed to add controller from " << full_path
+          FX_PLOGS(WARNING, add_result.error()) << "Failed to add camera from " << full_path
                                                 << ". This device will not be exposed to clients.";
           return;
         }
@@ -100,20 +99,19 @@ int main(int argc, char* argv[]) {
 
   context->outgoing()->AddPublicService(server->GetHandler());
 
-  DeviceWatcherTesterImpl tester(
-      [&](fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller) {
-        auto result = server->AddDevice(std::move(controller));
-        if (result.is_error()) {
-          FX_PLOGS(ERROR, result.error()) << "Failed to add test device.";
-          return;
-        }
-        server->UpdateClients();
-      });
+  DeviceWatcherTesterImpl tester([&](fuchsia::hardware::camera::DeviceHandle device) {
+    auto result = server->AddDevice(std::move(device));
+    if (result.is_error()) {
+      FX_PLOGS(ERROR, result.error()) << "Failed to add test device.";
+      return;
+    }
+    server->UpdateClients();
+  });
 
   context->outgoing()->AddPublicService(tester.GetHandler());
 
   // Run should never return.
-  zx_status_t status = loop.Run();
+  status = loop.Run();
   FX_PLOGS(FATAL, status) << "Loop exited unexpectedly.";
   return EXIT_FAILURE;
 }

@@ -7,6 +7,7 @@
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/binding.h>
@@ -18,13 +19,15 @@
 #include <set>
 #include <unordered_map>
 
+#include "src/camera/bin/device_watcher/device_instance.h"
+
 using ClientId = uint64_t;
 using TransientDeviceId = uint64_t;
 using PersistentDeviceId = uint64_t;
 
 struct UniqueDevice {
   TransientDeviceId id;
-  fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller;
+  std::unique_ptr<DeviceInstance> instance;
 };
 
 using DevicesMap = std::unordered_map<PersistentDeviceId, UniqueDevice>;
@@ -33,9 +36,10 @@ class DeviceWatcherImpl {
  public:
   DeviceWatcherImpl();
   ~DeviceWatcherImpl();
-  static fit::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> Create();
+  static fit::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> Create(
+      fuchsia::sys::LauncherHandle launcher);
   fit::result<PersistentDeviceId, zx_status_t> AddDevice(
-      fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller);
+      fuchsia::hardware::camera::DeviceHandle camera);
   void UpdateClients();
   fidl::InterfaceRequestHandler<fuchsia::camera3::DeviceWatcher> GetHandler();
 
@@ -45,9 +49,10 @@ class DeviceWatcherImpl {
   // Implements the server endpoint for a single client, and maintains per-client state.
   class Client : public fuchsia::camera3::DeviceWatcher {
    public:
-    Client();
+    Client(DeviceWatcherImpl& watcher);
     static fit::result<std::unique_ptr<Client>, zx_status_t> Create(
-        ClientId id, fidl::InterfaceRequest<fuchsia::camera3::DeviceWatcher> request,
+        DeviceWatcherImpl& watcher, ClientId id,
+        fidl::InterfaceRequest<fuchsia::camera3::DeviceWatcher> request,
         async_dispatcher_t* dispatcher);
     void UpdateDevices(const DevicesMap& devices);
     operator bool();
@@ -59,6 +64,7 @@ class DeviceWatcherImpl {
     void ConnectToDevice(TransientDeviceId id,
                          fidl::InterfaceRequest<fuchsia::camera3::Device> request) override;
 
+    DeviceWatcherImpl& watcher_;
     ClientId id_;
     fidl::Binding<fuchsia::camera3::DeviceWatcher> binding_;
     WatchDevicesCallback callback_;
@@ -67,6 +73,7 @@ class DeviceWatcherImpl {
   };
 
   async::Loop loop_;
+  fuchsia::sys::LauncherPtr launcher_;
   TransientDeviceId device_id_next_ = 1;
   DevicesMap devices_;
   ClientId client_id_next_ = 1;

@@ -6,22 +6,23 @@ import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//src/camera/debug.gni")
 
-executable("bin") {
-  output_name = "device_watcher"
-
+source_set("lib") {
   sources = [
+    "device_instance.cc",
+    "device_instance.h",
     "device_watcher_impl.cc",
     "device_watcher_impl.h",
-    "main.cc",
   ]
 
-  deps = [
+  public_deps = [
     ":fuchsia.camera.test",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/fidl/fuchsia.camera3",
     "//sdk/fidl/fuchsia.hardware.camera",
+    "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/vfs/cpp",
     "//src/lib/fsl",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
@@ -29,7 +30,18 @@ executable("bin") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fit",
+    "//zircon/system/fidl/fuchsia-io",
   ]
+
+  defines = [ camera_debug_define ]
+}
+
+executable("bin") {
+  output_name = "device_watcher"
+
+  sources = [ "main.cc" ]
+
+  deps = [ ":lib" ]
 
   defines = [ camera_debug_define ]
 }
@@ -39,7 +51,7 @@ fidl("fuchsia.camera.test") {
 
   sources = [ "device_watcher_tester.test.fidl" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.camera2.hal" ]
+  public_deps = [ "//sdk/fidl/fuchsia.hardware.camera" ]
 }
 
 package("camera_device_watcher") {

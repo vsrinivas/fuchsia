@@ -4,7 +4,9 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink"
+            "fuchsia.camera2.hal.Controller",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sysmem.Allocator"
         ]
     }
 }
