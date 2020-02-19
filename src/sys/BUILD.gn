@@ -8,6 +8,7 @@ group("sys") {
     "cmc",
     "component_manager",
     "component_test_runner",
+    "core",
     "pkg",
     "timekeeper",
   ]

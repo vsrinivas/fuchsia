@@ -71,6 +71,7 @@ base_package_labels += [
   "//src/sys/appmgr:appmgr_deprecated_shell_allowlist",
   "//src/sys/appmgr:appmgr_global_data_allowlist",
   "//src/sys/appmgr:appmgr_scheme_config",
+  "//src/sys/core",
   "//src/sys/device_settings:device_settings_manager",
   "//src/sys/pkg:core",
   "//src/sys/pkg:system-update-checker",

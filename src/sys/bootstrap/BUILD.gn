@@ -1,4 +1,4 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -7,6 +7,9 @@ import("//build/images/manifest.gni")
 
 cm_compile("root.cm") {
   data = rebase_path("meta/root.cml")
+}
+cm_compile("bootstrap.cm") {
+  data = rebase_path("meta/bootstrap.cml")
 }
 
 # TODO(BLD-448): These should move into their appropriate packages that are
@@ -31,6 +34,7 @@ cm_compile("fshost.cm") {
 # TODO(BLD-448): Should become a package just containing the root manifests.
 generate_manifest("root_manifests.bootfs") {
   deps = [
+    ":bootstrap.cm",
     ":console.cm",
     ":driver_manager.cm",
     ":fshost.cm",
@@ -40,6 +44,7 @@ generate_manifest("root_manifests.bootfs") {
   ]
 
   root_cm_out = get_target_outputs(":root.cm")
+  bootstrap_cm_out = get_target_outputs(":bootstrap.cm")
   devc_cm_out = get_target_outputs(":driver_manager.cm")
   fshost_cm_out = get_target_outputs(":fshost.cm")
   console_cm_out = get_target_outputs(":console.cm")
@@ -47,6 +52,7 @@ generate_manifest("root_manifests.bootfs") {
   sysinfo_cm_out = get_target_outputs(":sysinfo.cm")
   args = [
     "--entry=meta/root.cm=" + rebase_path(root_cm_out[0]),
+    "--entry=meta/bootstrap.cm=" + rebase_path(bootstrap_cm_out[0]),
     "--entry=meta/driver_manager.cm=" + rebase_path(devc_cm_out[0]),
     "--entry=meta/console.cm=" + rebase_path(console_cm_out[0]),
     "--entry=meta/ptysvc.cm=" + rebase_path(ptysvc_cm_out[0]),

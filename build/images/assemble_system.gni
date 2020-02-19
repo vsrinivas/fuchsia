@@ -107,27 +107,17 @@ template("assemble_system") {
   package_metadata_list("meta_far_merkle_index") {
     testonly = true
     visibility = [ ":*" ]
-    outputs = [
-      meta_far_merkle_index,
-    ]
+    outputs = [ meta_far_merkle_index ]
     data_keys = [ "meta_far_merkle_index_entries" ]
-    deps = [
-      ":base_packages",
-    ]
+    deps = [ ":base_packages" ]
   }
 
   action("pkgsvr_index") {
     visibility = [ ":*" ]
     testonly = true
-    inputs = [
-      meta_far_merkle_index,
-    ]
-    outputs = [
-      "$target_out_dir/$target_name",
-    ]
-    deps = [
-      ":meta_far_merkle_index",
-    ]
+    inputs = [ meta_far_merkle_index ]
+    outputs = [ "$target_out_dir/$target_name" ]
+    deps = [ ":meta_far_merkle_index" ]
     script = "//build/images/manifest_content_expand.sh"
     args = rebase_path(inputs, root_build_dir) +
            rebase_path(outputs, root_build_dir)
@@ -137,14 +127,10 @@ template("assemble_system") {
   generated_file("system_image.manifest_args") {
     visibility = [ ":*" ]
     testonly = true
-    outputs = [
-      system_image_manifest_args,
-    ]
+    outputs = [ system_image_manifest_args ]
     data_keys = [ "system_image_rsps" ]
     walk_keys = [ "package_barrier" ]
-    deps = [
-      ":base_packages",
-    ]
+    deps = [ ":base_packages" ]
   }
 
   boot_manifest = "$target_out_dir/boot.manifest"
@@ -200,9 +186,7 @@ template("assemble_system") {
   collect_blob_manifest("blob.manifest") {
     testonly = true
     visibility = [ ":*" ]
-    outputs = [
-      blob_manifest,
-    ]
+    outputs = [ blob_manifest ]
     deps = [
       ":base_packages",
       ":system_image.meta",
@@ -213,18 +197,12 @@ template("assemble_system") {
   zircon_tool_action("blob.blk") {
     visibility = [ ":*" ]
     testonly = true
-    deps = [
-      ":blob.manifest",
-    ]
+    deps = [ ":blob.manifest" ]
     blob_image_path = "$target_out_dir/$target_name"
     blob_size_list = "$root_build_dir/${image_name}_blob.sizes"
-    outputs = [
-      blob_image_path,
-    ]
+    outputs = [ blob_image_path ]
     depfile = blob_image_path + ".d"
-    inputs = [
-      blob_manifest,
-    ]
+    inputs = [ blob_manifest ]
     tool = "blobfs"
     args = [
       "--depfile",
@@ -246,9 +224,7 @@ template("assemble_system") {
     data_image_path = "$target_out_dir/data.blk"
     visibility = [ ":*" ]
     testonly = true
-    outputs = [
-      data_image_path,
-    ]
+    outputs = [ data_image_path ]
     tool = "minfs"
     args = [
       rebase_path(data_image_path, root_build_dir),
@@ -277,14 +253,10 @@ template("assemble_system") {
     visibility = [ ":*" ]
     testonly = true
     script = "//build/images/manifest.py"
-    outputs = [
-      "$target_out_dir/$target_name",
-    ]
+    outputs = [ "$target_out_dir/$target_name" ]
     args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
     sources = []
-    deps = [
-      ":system_image.manifest",
-    ]
+    deps = [ ":system_image.manifest" ]
 
     if (!bootfs_only) {
       pkgfs = "bin/" + pkgfs_binary_name
@@ -352,7 +324,7 @@ template("assemble_system") {
   coordinator_target_name = get_label_info(coordinator_label, "name")
   coordinator_manifest = coordinator_target_dir + "/" + coordinator_target_name
 
-  root_manifests_label = "//src/sys/root:root_manifests.bootfs"
+  root_manifests_label = "//src/sys/bootstrap:root_manifests.bootfs"
   root_manifests_target_dir =
       get_label_info(root_manifests_label, "target_out_dir")
   root_manifests_target_name = get_label_info(root_manifests_label, "name")
@@ -398,9 +370,7 @@ template("assemble_system") {
     ]
     manifest = [
       {
-        outputs = [
-          "config/devmgr",
-        ]
+        outputs = [ "config/devmgr" ]
         sources = get_target_outputs(":devmgr_config.txt")
       },
     ]

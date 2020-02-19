@@ -8,6 +8,7 @@ assemble_system("guest") {
   base_packages = [
     "//src/sys/appmgr",
     "//src/sys/appmgr:appmgr_scheme_config",
+    "//src/sys/core",
     "//src/virtualization/tests:guest_integration_tests_utils",
     "//src/virtualization/packages/zircon_guest:services_config",
     "//garnet/bin/run",

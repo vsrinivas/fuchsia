@@ -672,7 +672,7 @@ component_manager_target_name = get_label_info(component_manager_label, "name")
 component_manager_manifest =
     component_manager_target_dir + "/" + component_manager_target_name
 
-root_manifests_label = "//src/sys/root:root_manifests.bootfs"
+root_manifests_label = "//src/sys/bootstrap:root_manifests.bootfs"
 root_manifests_target_dir =
     get_label_info(root_manifests_label, "target_out_dir")
 root_manifests_target_name = get_label_info(root_manifests_label, "name")

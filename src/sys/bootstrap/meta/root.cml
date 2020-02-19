@@ -1,0 +1,143 @@
+{
+  "children": [
+    {
+      "name": "bootstrap",
+      "url": "fuchsia-boot:///#meta/bootstrap.cm",
+    },
+    {
+      "name": "core",
+      "url": "fuchsia-pkg://fuchsia.com/core#meta/core.cm",
+      "startup": "eager",
+    },
+  ],
+  "offer": [
+    // Capabilities routed from "realm" at the root are either provided by
+    // bootsvc through component_manager's namespace or by component_manager
+    // itself as a builtin service
+    {
+      "directory": "/boot",
+      "from": "realm",
+      "to": [ "#bootstrap", "#core" ],
+      "rights": ["rx*"],
+    },
+    {
+      "protocol": [
+        "/svc/fuchsia.boot.Arguments",
+        "/svc/fuchsia.boot.FactoryItems",
+        "/svc/fuchsia.boot.ReadOnlyLog",
+        "/svc/fuchsia.boot.RootJob",
+        "/svc/fuchsia.boot.RootJobForInspect",
+        "/svc/fuchsia.boot.RootResource",
+        "/svc/fuchsia.boot.WriteOnlyLog",
+        "/svc/fuchsia.kernel.Stats",
+        "/svc/fuchsia.process.Launcher",
+      ],
+      "from": "realm",
+      "to": [ "#bootstrap", "#core" ],
+    },
+    {
+      "protocol": [
+        "/svc/fuchsia.boot.Items",
+      ],
+      "from": "realm",
+      "to": [ "#bootstrap" ],
+    },
+    // ...and the rest of these are services provided by components for each other
+    {
+      "directory": "/dev",
+      "from": "#bootstrap",
+      "to": [ "#core" ],
+    },
+    {
+      "directory": "/minfs",
+      "from": "#bootstrap",
+      "to": [ "#core" ],
+    },
+    {
+      "directory": "/pkgfs",
+      "from": "#bootstrap",
+      "to": [ "#core" ],
+    },
+    {
+      "directory": "/system",
+      "from": "#bootstrap",
+      "to": [ "#core" ],
+    },
+    {
+      "directory": "/blob",
+      "from": "#bootstrap",
+      "to": [ "#core" ],
+    },
+    {
+      "directory": "/tmp",
+      "from": "#bootstrap",
+      "to": [ "#core" ],
+    },
+    {
+      "protocol": [
+        "/svc/fuchsia.device.NameProvider",
+        "/svc/fuchsia.device.manager.Administrator",
+        "/svc/fuchsia.device.manager.DebugDumper",
+        "/svc/fuchsia.device.manager.BindDebugger",
+        "/svc/fuchsia.hardware.pty.Device",
+        "/svc/fuchsia.kernel.Counter",
+        "/svc/fuchsia.kernel.DebugBroker",
+        "/svc/fuchsia.paver.Paver",
+        "/svc/fuchsia.scheduler.ProfileProvider",
+        "/svc/fuchsia.sysinfo.SysInfo",
+        "/svc/fuchsia.virtualconsole.SessionManager",
+      ],
+      "from": "#bootstrap",
+      "to": [ "#core" ],
+    },
+
+    // Non-zircon services for svchost
+    {
+      "protocol": [
+        "/svc/fuchsia.amber.Control",
+        "/svc/fuchsia.devicesettings.DeviceSettingsManager",
+        "/svc/fuchsia.cobalt.LoggerFactory",
+        "/svc/fuchsia.exception.Handler",
+        "/svc/fuchsia.logger.Log",
+        "/svc/fuchsia.logger.LogSink",
+        "/svc/fuchsia.net.NameLookup",
+        "/svc/fuchsia.net.stack.Log",
+        "/svc/fuchsia.net.stack.Stack",
+        "/svc/fuchsia.netstack.Netstack",
+        "/svc/fuchsia.pkg.PackageResolver",
+        "/svc/fuchsia.pkg.RepositoryManager",
+        "/svc/fuchsia.pkg.rewrite.Engine",
+        "/svc/fuchsia.posix.socket.Provider",
+        "/svc/fuchsia.process.Resolver",
+        "/svc/fuchsia.sys.Environment",
+        "/svc/fuchsia.sys.Launcher",
+        "/svc/fuchsia.tracing.controller.Controller",
+        "/svc/fuchsia.tracing.provider.Registry",
+        "/svc/fuchsia.wlan.service.Wlan",
+      ],
+      "from": "#core",
+      "to": [ "#bootstrap" ],
+    },
+    // driver_manager needs the v1 hub for the serial console
+    {
+      "directory": "/hub",
+      "from": "#core",
+      "to": [ "#bootstrap" ],
+    },
+
+    // Offer the ELF runner to children.
+    {
+      "runner": "elf",
+      "from": "realm",
+      "to": [
+          "#bootstrap",
+          "#core",
+      ],
+    },
+  ],
+  "expose": [
+    // This handle is used by component manager to resolve packages from the
+    // base package set.
+    { "directory": "/pkgfs-delayed", "from": "#bootstrap", "as": "/pkgfs" },
+  ]
+}

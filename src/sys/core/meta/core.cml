@@ -1,0 +1,124 @@
+// Non-executable realm provisioning components and capabilities that are consistent across
+// products.
+{
+  "children": [
+    {
+      "name": "appmgr",
+      "url": "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm",
+      "startup": "eager",
+    },
+  ],
+  "expose": [
+    // Non-zircon services for svchost
+    {
+      "protocol": [
+        "/svc/fuchsia.amber.Control",
+        "/svc/fuchsia.devicesettings.DeviceSettingsManager",
+        "/svc/fuchsia.exception.Handler",
+        "/svc/fuchsia.cobalt.LoggerFactory",
+        "/svc/fuchsia.logger.Log",
+        "/svc/fuchsia.logger.LogSink",
+        "/svc/fuchsia.net.NameLookup",
+        "/svc/fuchsia.net.stack.Log",
+        "/svc/fuchsia.net.stack.Stack",
+        "/svc/fuchsia.netstack.Netstack",
+        "/svc/fuchsia.pkg.PackageResolver",
+        "/svc/fuchsia.pkg.RepositoryManager",
+        "/svc/fuchsia.pkg.rewrite.Engine",
+        "/svc/fuchsia.posix.socket.Provider",
+        "/svc/fuchsia.process.Resolver",
+        "/svc/fuchsia.sys.Environment",
+        "/svc/fuchsia.sys.Launcher",
+        "/svc/fuchsia.tracing.controller.Controller",
+        "/svc/fuchsia.tracing.provider.Registry",
+        "/svc/fuchsia.wlan.service.Wlan",
+      ],
+      "from": "#appmgr",
+    },
+    // device_manager needs the hub for the serial console
+    {
+      "directory": "/hub",
+      "from": "#appmgr",
+    },
+  ],
+  "offer": [
+    // Passing from root realm to appmgr
+    {
+      "protocol": [
+        "/svc/fuchsia.boot.Arguments",
+        "/svc/fuchsia.boot.FactoryItems",
+        "/svc/fuchsia.boot.ReadOnlyLog",
+        "/svc/fuchsia.boot.RootJob",
+        "/svc/fuchsia.boot.RootJobForInspect",
+        "/svc/fuchsia.boot.RootResource",
+        "/svc/fuchsia.boot.WriteOnlyLog",
+        "/svc/fuchsia.kernel.Stats",
+        "/svc/fuchsia.process.Launcher",
+        "/svc/fuchsia.device.NameProvider",
+        "/svc/fuchsia.device.manager.Administrator",
+        "/svc/fuchsia.device.manager.DebugDumper",
+        "/svc/fuchsia.kernel.Counter",
+        "/svc/fuchsia.kernel.DebugBroker",
+        "/svc/fuchsia.paver.Paver",
+        "/svc/fuchsia.scheduler.ProfileProvider",
+        "/svc/fuchsia.virtualconsole.SessionManager",
+        "/svc/fuchsia.hardware.pty.Device",
+        "/svc/fuchsia.sysinfo.SysInfo",
+      ],
+      "from": "realm",
+      "to": [ "#appmgr" ],
+    },
+    {
+      "directory": "/boot",
+      "from": "realm",
+      "to": [ "#appmgr" ],
+    },
+    {
+      "directory": "/dev",
+      "from": "realm",
+      "to": [ "#appmgr" ],
+    },
+    {
+      "directory": "/minfs",
+      "from": "realm",
+      "to": [ "#appmgr" ],
+    },
+    {
+      "directory": "/pkgfs",
+      "from": "realm",
+      "to": [ "#appmgr" ],
+    },
+    {
+      "directory": "/system",
+      "from": "realm",
+      "to": [ "#appmgr" ],
+    },
+    {
+      "directory": "/blob",
+      "from": "realm",
+      "to": [ "#appmgr" ],
+    },
+    {
+      "directory": "/volume",
+      "from": "realm",
+      "to": [ "#appmgr" ],
+    },
+    {
+      "directory": "/install",
+      "from": "realm",
+      "to": [ "#appmgr" ],
+    },
+    {
+      "directory": "/tmp",
+      "from": "realm",
+      "to": [ "#appmgr" ],
+    },
+
+    // Offer the ELF runner to children.
+    {
+      "runner": "elf",
+      "from": "realm",
+      "to": [ "#appmgr" ],
+    },
+  ],
+}
