@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/vdso/vdso.gni")
+
 zx_library("c") {
   shared = true
   static = false
@@ -158,6 +160,9 @@ zx_library("c") {
             "../../vdso/vmo.fidl",
             "../../vdso/zx.fidl",
           ]
+          if (!exclude_testonly_syscalls) {
+            headers += [ "zircon/testonly-syscalls.h" ]
+          }
         }
       },
       {

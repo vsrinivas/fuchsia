@@ -4,7 +4,7 @@
 
 #include <perftest/perftest.h>
 #include <zircon/assert.h>
-#include <zircon/syscalls.h>
+#include <zircon/testonly-syscalls.h>
 
 namespace {
 

@@ -23,6 +23,7 @@ bool KernelWrappersOutput(const SyscallLibrary& library, Writer* writer);
 bool KtraceOutput(const SyscallLibrary& library, Writer* writer);
 bool PrivateDeclarationsOutput(const SyscallLibrary& library, Writer* writer);
 bool PublicDeclarationsOutput(const SyscallLibrary& library, Writer* writer);
+bool TestonlyPublicDeclarationsOutput(const SyscallLibrary& library, Writer* writer);
 bool RustOutput(const SyscallLibrary& library, Writer* writer);
 bool SyscallNumbersOutput(const SyscallLibrary& library, Writer* writer);
 

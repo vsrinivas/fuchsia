@@ -164,7 +164,27 @@ bool PublicDeclarationsOutput(const SyscallLibrary& library, Writer* writer) {
 )");
 
   for (const auto& syscall : library.syscalls()) {
-    if (!syscall->HasAttribute("internal")) {
+    if (!syscall->HasAttribute("internal") && !syscall->HasAttribute("testonly")) {
+      CDeclarationMacro(*syscall, "_ZX_SYSCALL_DECL", GetCUserModeName, writer);
+    }
+  }
+
+  return true;
+}
+
+bool TestonlyPublicDeclarationsOutput(const SyscallLibrary& library, Writer* writer) {
+  if (!CopyrightHeaderWithCppComments(writer)) {
+    return false;
+  }
+
+  writer->Puts(R"(#ifndef _ZX_SYSCALL_DECL
+#error "<zircon/testonly-syscalls.h> is the public API header"
+#endif
+
+)");
+
+  for (const auto& syscall : library.syscalls()) {
+    if (!syscall->HasAttribute("internal") && syscall->HasAttribute("testonly")) {
       CDeclarationMacro(*syscall, "_ZX_SYSCALL_DECL", GetCUserModeName, writer);
     }
   }

@@ -28,6 +28,7 @@ struct CommandLineOptions {
   std::optional<std::string> public_header;
   std::optional<std::string> rust;
   std::optional<std::string> syscall_numbers;
+  std::optional<std::string> testonly_public_header;
 };
 
 constexpr const char kHelpIntro[] = R"(kazoo [ <options> ] <fidlc-ir.json>
@@ -72,7 +73,7 @@ constexpr const char kKernelWrappersHelp[] = R"(  --kernel-wrappers=FILENAME
 constexpr const char kPrivateHeaderHelp[] = R"(  --private-header=FILENAME
     The output name for the .inc file used for the vDSO-private header.)";
 
-constexpr const char kPublicHeaderHelp[] = R"(  --private-header=FILENAME
+constexpr const char kPublicHeaderHelp[] = R"(  --public-header=FILENAME
     The output name for the .inc file used for the public vDSO API header.)";
 
 constexpr const char kRustHelp[] = R"(  --rust=FILENAME
@@ -80,6 +81,9 @@ constexpr const char kRustHelp[] = R"(  --rust=FILENAME
 
 constexpr const char kSyscallNumbersHelp[] = R"(  --syscall-numbers=FILENAME
     The output name for the .h file used for syscall numbers.)";
+
+constexpr const char kTestonlyPublicHeaderHelp[] = R"(  --testonly-public-header=FILENAME
+    The output name for the .inc file used for the testonly public vDSO API header.)";
 
 const char kHelpHelp[] = R"(  --help
   -h
@@ -111,6 +115,8 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("public-header", 0, kPublicHeaderHelp, &CommandLineOptions::public_header);
   parser.AddSwitch("rust", 0, kRustHelp, &CommandLineOptions::rust);
   parser.AddSwitch("syscall-numbers", 0, kSyscallNumbersHelp, &CommandLineOptions::syscall_numbers);
+  parser.AddSwitch("testonly-public-header", 0, kTestonlyPublicHeaderHelp,
+                   &CommandLineOptions::testonly_public_header);
 
   bool requested_help = false;
   parser.AddGeneralSwitch("help", 'h', kHelpHelp, [&requested_help]() { requested_help = true; });
@@ -176,6 +182,7 @@ int main(int argc, const char* argv[]) {
       {&options.kernel_wrappers, KernelWrappersOutput},
       {&options.private_header, PrivateDeclarationsOutput},
       {&options.public_header, PublicDeclarationsOutput},
+      {&options.testonly_public_header, TestonlyPublicDeclarationsOutput},
       {&options.rust, RustOutput},
       {&options.syscall_numbers, SyscallNumbersOutput},
   };

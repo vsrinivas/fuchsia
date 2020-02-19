@@ -4,11 +4,7 @@
 
 import("$zx/public/gn/fidl.gni")
 import("$zx/public/gn/toolchain/c_utils.gni")
-
-declare_args() {
-  # If true, excludes syscalls with the [testonly] attribute.
-  exclude_testonly_syscalls = false
-}
+import("vdso.gni")
 
 group("vdso") {
   public_deps = [ ":zz" ]
@@ -143,6 +139,15 @@ public_generated = [
     outputs = [ "$public_gen_dir/definitions.rs" ]
   },
 ]
+
+if (!exclude_testonly_syscalls) {
+  public_generated += [
+    {
+      args = [ "--testonly-public-header" ]
+      outputs = [ "$public_gen_dir/internal/testonly-cdecls.inc" ]
+    },
+  ]
+}
 
 private_generated = [
   {
