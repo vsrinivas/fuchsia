@@ -15,7 +15,6 @@ source_set("lib") {
   public_deps = [
     "//sdk/lib/sys/cpp",
     "//src/connectivity/weave/adaptation",
-    "//third_party/openweave-core",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

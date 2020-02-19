@@ -31,19 +31,19 @@ openweave_adaptation_layer("adaptation") {
     "weave_device_platform_event.h",
   ]
   public_configs = [ ":adaptation_config" ]
-  include_dirs = [ "." ]
+  public_deps = [ "//third_party/openweave-core" ]
 }
 
 config("adaptation_config") {
   include_dirs = [ "." ]
-  cflags = [
-    "-DWEAVE_DEVICE_PLATFORM_CONFIG_INCLUDE=\"weave_device_platform_config.h\"",
-    "-DEXTERNAL_CONNECTIVITYMANAGERIMPL_HEADER=\"connectivity_manager_impl.h\"",
-    "-DEXTERNAL_CONFIGURATIONMANAGERIMPL_HEADER=\"configuration_manager_impl.h\"",
-    "-DEXTERNAL_NETWORKPROVISIONINGSERVERIMPL_HEADER=\"network_provisioning_server_impl.h\"",
-    "-DEXTERNAL_BLEMANAGERIMPL_HEADER=\"ble_manager_impl.h\"",
-    "-DEXTERNAL_SOFTWAREUPDATEMANAGERIMPL_HEADER=\"software_update_manager_impl.h\"",
-    "-DEXTERNAL_PLATFORMMANAGERIMPL_HEADER=\"platform_manager_impl.h\"",
-    "-DEXTERNAL_WEAVEDEVICEPLATFORMEVENT_HEADER=\"weave_device_platform_event.h\"",
+  defines = [
+    "EXTERNAL_BLEMANAGERIMPL_HEADER=\"ble_manager_impl.h\"",
+    "EXTERNAL_CONFIGURATIONMANAGERIMPL_HEADER=\"configuration_manager_impl.h\"",
+    "EXTERNAL_CONNECTIVITYMANAGERIMPL_HEADER=\"connectivity_manager_impl.h\"",
+    "EXTERNAL_NETWORKPROVISIONINGSERVERIMPL_HEADER=\"network_provisioning_server_impl.h\"",
+    "EXTERNAL_PLATFORMMANAGERIMPL_HEADER=\"platform_manager_impl.h\"",
+    "EXTERNAL_SOFTWAREUPDATEMANAGERIMPL_HEADER=\"software_update_manager_impl.h\"",
+    "EXTERNAL_WEAVEDEVICEPLATFORMEVENT_HEADER=\"weave_device_platform_event.h\"",
+    "WEAVE_DEVICE_PLATFORM_CONFIG_INCLUDE=\"weave_device_platform_config.h\"",
   ]
 }
