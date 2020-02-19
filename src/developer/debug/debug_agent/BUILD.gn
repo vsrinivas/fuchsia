@@ -286,7 +286,7 @@ test_package("debug_agent_tests") {
       name = "debug_test_true"
     },
     {
-      name = "hw_breakpointer"
+      name = "test_suite"
     },
     {
       name = "hw_watchpointer"
@@ -317,8 +317,8 @@ test_package("debug_agent_tests") {
       dest = "limbo_caller.cmx"
     },
     {
-      path = "meta/hw_breakpointer.cmx"
-      dest = "hw_breakpointer.cmx"
+      path = "meta/test_suite.cmx"
+      dest = "debug_agent_test_suite.cmx"
     },
   ]
 

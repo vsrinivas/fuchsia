@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "hw_breakpointer_helpers.h"
+#include "test_suite_helpers.h"
 
 // This is a self contained binary that is meant to be run *manually*. This is the smallest code
 // that can be used to reproduce a HW breakpoint exception.

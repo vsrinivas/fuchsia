@@ -169,7 +169,6 @@ int ConsoleMain(int argc, const char* argv[]) {
     Session session;
     buffer.set_data_available_callback([&session]() { session.OnStreamReadable(); });
 
-    // TODO(donosoc): Do correct category setup.
     debug_ipc::SetLogCategories({debug_ipc::LogCategory::kAll});
     if (options.debug_mode) {
       debug_ipc::SetDebugMode(true);

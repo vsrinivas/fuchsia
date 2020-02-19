@@ -1,7 +1,6 @@
 per-file bindc=alexlegg@google.com
 per-file blobstats=raggi@google.com
 per-file bt-snoop-from-bugreport=belgum@google.com
-per-file bugreport=donosoc@google.com
 per-file bugreport=frousseau@google.com
 per-file clang-tidy=juliehockett@google.com
 per-file component-graph=benwright@google.com
@@ -9,7 +8,6 @@ per-file component-surveyor=geb@google.com
 per-file dart-remote-test=zra@google.com
 per-file dart-tunnel=zra@google.com
 per-file debug=brettw@google.com
-per-file debug=donosoc@google.com
 per-file debug=sadmac@google.com
 per-file delta,save-package-stats=kevinwells@google.com,raggi@google.com
 per-file exec-host-tests=joshuaseaton@google.com

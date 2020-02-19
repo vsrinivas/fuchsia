@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/hw_breakpointer"
+        "binary": "bin/test_suite"
     },
     "sandbox": {
         "services": [

@@ -37,7 +37,6 @@ static constexpr uint64_t CNTKCTL_EL1_ENABLE_VIRTUAL_COUNTER = 1 << 1;
 // Initial value for MSDCR_EL1 when starting userspace, which disables all debug exceptions.
 // Instruction Breakpoint Exceptions (software breakpoints) cannot be disabled and MDSCR does not
 // affect single-step behaviour.
-// TODO(donosoc): Enable HW exceptions when debug context switch is implemented.
 static constexpr uint32_t MSDCR_EL1_INITIAL_VALUE = 0;
 
 // Performance Monitors Count Enable Set, EL0.

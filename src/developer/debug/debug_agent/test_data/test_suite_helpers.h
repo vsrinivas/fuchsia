@@ -1,8 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_DATA_HW_BREAKPOINTER_HELPERS_H_
-#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_DATA_HW_BREAKPOINTER_HELPERS_H_
+#ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_DATA_TEST_SUITE_HELPERS_H_
+#define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_DATA_TEST_SUITE_HELPERS_H_
 
 #include <lib/fit/defer.h>
 #include <lib/zx/event.h>
@@ -170,4 +170,4 @@ zx_status_t WaitForServer(const zx::eventpair& event, zx::time deadline = zx::ti
 
 #define ARRAY_SIZE(a) (sizeof((a)) / sizeof((a))[0])
 
-#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_DATA_HW_BREAKPOINTER_HELPERS_H_
+#endif  // SRC_DEVELOPER_DEBUG_DEBUG_AGENT_TEST_DATA_TEST_SUITE_HELPERS_H_

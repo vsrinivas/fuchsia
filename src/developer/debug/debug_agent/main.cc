@@ -149,7 +149,6 @@ int main(int argc, const char* argv[]) {
     return 1;
   }
 
-  // TODO(donosoc): Do correct category setup.
   debug_ipc::SetLogCategories({LogCategory::kAll});
   if (options.debug_mode) {
     printf("Running the debug agent in debug mode.\n");

@@ -104,13 +104,13 @@ group("helper_executables") {
     ":backtrace_request",
     ":debug_test_false",
     ":debug_test_true",
-    ":hw_breakpointer",
     ":hw_watchpointer",
     ":limbo_caller",
     ":multi_threaded",
     ":printer",
     ":process_loop",
     ":process_spawner",
+    ":test_suite",
     ":thread_signals",
   ]
 }
@@ -132,14 +132,14 @@ executable("debug_test_false") {
   sources = [ "false.c" ]
 }
 
-executable("hw_breakpointer") {
+executable("test_suite") {
   testonly = true
-  output_name = "hw_breakpointer"
+  output_name = "test_suite"
 
   sources = [
-    "hw_breakpointer.cc",
-    "hw_breakpointer_helpers.cc",
-    "hw_breakpointer_helpers.h",
+    "test_suite.cc",
+    "test_suite_helpers.cc",
+    "test_suite_helpers.h",
   ]
 
   deps = [

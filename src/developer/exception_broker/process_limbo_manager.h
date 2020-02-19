@@ -52,16 +52,14 @@ class ProcessLimboManager {
   // Corresponds to the return value of |WatchProcessesWaitingOnException|.
   std::vector<ProcessExceptionMetadata> ListProcessesInLimbo();
 
-  // TODO(donosoc): This is an extremely naive approach.
-  //                There are several policies to make this more robust:
+  // TODO(45962): This is an extremely naive approach. There are several policies to make this more
+  //              robust:
   //                - Put a ceiling on the amount of exceptions to be held.
   //                - Define an eviction policy (FIFO probably).
   //                - Set a timeout for exceptions (configurable).
   //                - Decide on a throttle mechanism (if the same process is crashing continously).
   std::map<zx_koid_t, ProcessException> limbo_;
 
-  // TODO(donosoc): This should be moved into reading a config file at startup.
-  //                Exposed for testing purposes.
   bool active_ = false;
 
   std::vector<fxl::WeakPtr<ProcessLimboHandler>> handlers_;

@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include "hw_breakpointer_helpers.h"
+#include "test_suite_helpers.h"
 
 #if defined(__x86_64__)
 #include <zircon/hw/debug/x86.h>
