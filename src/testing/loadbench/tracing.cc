@@ -584,10 +584,5 @@ bool Tracing::PopulateDurationStats(std::string string_ref,
     }
   }
 
-  if (!string_ref_found) {
-    FXL_LOG(WARNING) << "No trace found with name " << string_ref << ".";
-    return false;
-  }
-
   return string_ref_found;
 }
