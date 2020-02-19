@@ -21,15 +21,3 @@ executable("bin") {
     "//zircon/system/fidl/fuchsia-io",
   ]
 }
-
-package("io_conformance_harness_sdkcpp") {
-  deps = [ ":bin" ]
-  meta = [
-    {
-      path = rebase_path("meta/io_conformance_harness_sdkcpp.cmx")
-      dest = "io_conformance_harness_sdkcpp.cmx"
-    },
-  ]
-  testonly = true
-  binary = "io_conformance_harness_sdkcpp"
-}
