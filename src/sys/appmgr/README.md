@@ -8,9 +8,9 @@ by `devmgr`.
 
 See:
 
-* [Boot sequence](/docs/concepts/framework/boot_sequence)
-* [Sandboxing](/docs/concepts/framework/sandboxing)
-* [Package metadata](/docs/concepts/storage/package_metadata)
+* [Boot sequence](/docs/concepts/framework/boot_sequence.md)
+* [Sandboxing](/docs/concepts/framework/sandboxing.md)
+* [Package](/docs/concepts/storage/package.md)
 
 ## Building
 
