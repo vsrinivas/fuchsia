@@ -2,16 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
-use fidl::endpoints::ServerEnd;
-use fidl_fuchsia_net_oldhttp as oldhttp;
-use fuchsia_async as fasync;
-use fuchsia_component::server::ServiceFs;
-use fuchsia_hyper as fhyper;
-use fuchsia_zircon as zx;
-use futures::compat::Future01CompatExt;
-use futures::prelude::*;
-use hyper;
+use {
+    anyhow::Error,
+    bytes::Bytes,
+    fidl_fuchsia_net_http as net_http, fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    fuchsia_hyper as fhyper, fuchsia_zircon as zx,
+    futures::{
+        compat::{Future01CompatExt, Stream01CompatExt},
+        future::BoxFuture,
+        prelude::*,
+        StreamExt,
+    },
+    hyper,
+    log::{debug, error, info, trace},
+};
+
+static LOG_VERBOSITY: u16 = 1;
+static MAX_REDIRECTS: u8 = 10;
 
 fn version_to_str(version: hyper::Version) -> &'static str {
     match version {
@@ -22,166 +30,320 @@ fn version_to_str(version: hyper::Version) -> &'static str {
     }
 }
 
-fn to_status_line(version: hyper::Version, status: hyper::StatusCode) -> String {
+fn to_status_line(version: hyper::Version, status: hyper::StatusCode) -> Vec<u8> {
     match status.canonical_reason() {
-        None => format!("HTTP/{} {}", version_to_str(version), status.as_str()),
+        None => format!("HTTP/{} {}", version_to_str(version), status.as_str()).as_bytes().to_vec(),
         Some(canonical_reason) => {
             format!("HTTP/{} {} {}", version_to_str(version), status.as_str(), canonical_reason)
+                .as_bytes()
+                .to_vec()
         }
     }
 }
 
-async fn to_body(body_opt: Option<Box<oldhttp::UrlBody>>) -> Result<hyper::Body, zx::Status> {
-    if let Some(body) = body_opt {
-        match *body {
-            oldhttp::UrlBody::Stream(socket) => {
-                let stream = fasync::Socket::from_socket(socket)?
-                    .into_datagram_stream()
-                    .map_err(|status| Error::from(status));
-                Ok(hyper::Body::wrap_stream(futures::stream::TryStreamExt::compat(stream)))
-            }
-            oldhttp::UrlBody::Buffer(buffer) => {
-                let mut bytes = vec![0; buffer.size as usize];
-                buffer.vmo.read(&mut bytes, 0)?;
-                Ok(hyper::Body::from(bytes))
-            }
-        }
+struct RedirectInfo {
+    url: Option<hyper::Uri>,
+    referrer: Option<hyper::Uri>,
+    method: hyper::Method,
+}
+
+fn redirect_info(
+    old_uri: &hyper::Uri,
+    method: &hyper::Method,
+    hyper_response: &hyper::Response<hyper::Body>,
+) -> Option<RedirectInfo> {
+    if hyper_response.status().is_redirection() {
+        Some(RedirectInfo {
+            url: hyper_response
+                .headers()
+                .get(hyper::header::LOCATION)
+                .and_then(|loc| calculate_redirect(old_uri, loc)),
+            referrer: hyper_response
+                .headers()
+                .get(hyper::header::REFERER)
+                .and_then(|loc| calculate_redirect(old_uri, loc)),
+            method: if hyper_response.status() == hyper::StatusCode::SEE_OTHER {
+                hyper::Method::GET
+            } else {
+                method.clone()
+            },
+        })
     } else {
-        Ok(hyper::Body::empty())
+        None
     }
 }
 
-fn to_success_response<B>(request_url: String, resp: hyper::Response<B>) -> oldhttp::UrlResponse {
-    let headers = resp
+async fn to_success_response(
+    current_url: &hyper::Uri,
+    current_method: &hyper::Method,
+    mut hyper_response: hyper::Response<hyper::Body>,
+) -> Result<net_http::Response, zx::Status> {
+    let redirect_info = redirect_info(current_url, current_method, &hyper_response);
+    let headers = hyper_response
         .headers()
         .iter()
-        .map(|(name, value)| oldhttp::HttpHeader {
-            name: name.to_string(),
-            value: String::from_utf8_lossy(value.as_bytes()).to_string(),
+        .map(|(name, value)| net_http::Header {
+            name: name.as_str().as_bytes().to_vec(),
+            value: value.as_bytes().to_vec(),
         })
         .collect();
-    oldhttp::UrlResponse {
-        status_code: resp.status().as_u16() as u32,
-        // TODO: Actually return the body.
-        body: None,
-        url: Some(request_url),
+
+    let (tx, rx) = zx::Socket::create(zx::SocketOpts::STREAM)?;
+    let response = net_http::Response {
         error: None,
-        status_line: Some(to_status_line(resp.version(), resp.status())),
+        body: Some(rx),
+        final_url: Some(current_url.to_string().as_bytes().to_vec()),
+        status_code: Some(hyper_response.status().as_u16() as u32),
+        status_line: Some(to_status_line(hyper_response.version(), hyper_response.status())),
         headers: Some(headers),
-        // TODO: Parse the MIME type from the Content-Type header. The C++
-        // implementation of oldhttp doesn't parse the MIME type either.
-        mime_type: None,
-        // TODO: Parse the charset from the Content-Type header. The C++
-        // implementation of oldhttp doesn't parse the charset either.
-        charset: None,
-        // TODO: Compute the redirect. The C++ implementation of oldhttp doesn't
-        // compute the redirect either.
-        redirect_method: None,
-        redirect_url: None,
-        redirect_referrer: None,
-    }
+        redirect: redirect_info.map(|info| net_http::RedirectTarget {
+            method: Some(info.method.to_string()),
+            url: info.url.map(|u| u.to_string().as_bytes().to_vec()),
+            referrer: info.referrer.map(|r| r.to_string().as_bytes().to_vec()),
+        }),
+    };
+
+    fasync::spawn(async move {
+        let mut hyper_body = hyper_response.body_mut().compat();
+        while let Some(chunk) = hyper_body.next().await {
+            if let Ok(chunk) = chunk {
+                let _ = tx.write(&chunk);
+            }
+        }
+    });
+
+    Ok(response)
 }
 
-// These codes are supposed to match http_error_list.h, but it's unclear how
-// to relate these two error domains.
-fn to_error_code(error: &hyper::Error) -> i32 {
+fn to_fidl_error(error: &hyper::Error) -> net_http::Error {
+    // TODO(zmbush): Handle more error cases when hyper is updated.
     if error.is_parse() {
-        -320
-    } else if error.is_connect() {
-        -15
-    } else if error.is_canceled() {
-        -3
+        net_http::Error::UnableToParse
     } else if error.is_closed() {
-        -3
+        net_http::Error::ChannelClosed
+    } else if error.is_connect() {
+        net_http::Error::Connect
     } else {
-        -2
+        net_http::Error::Internal
     }
 }
 
-fn to_error_response(error: hyper::Error) -> oldhttp::UrlResponse {
-    oldhttp::UrlResponse {
-        status_code: 0,
+fn to_error_response(error: hyper::Error) -> net_http::Response {
+    net_http::Response {
+        error: Some(to_fidl_error(&error)),
         body: None,
-        url: None,
-        error: Some(Box::new(oldhttp::HttpError {
-            code: to_error_code(&error),
-            description: Some(error.to_string()),
-        })),
+        final_url: None,
+        status_code: None,
         status_line: None,
         headers: None,
-        mime_type: None,
-        charset: None,
-        redirect_method: None,
-        redirect_url: None,
-        redirect_referrer: None,
+        redirect: None,
     }
 }
 
-fn spawn_old_url_loader(server: ServerEnd<oldhttp::UrlLoaderMarker>) {
-    fasync::spawn(
+struct Loader {
+    method: hyper::Method,
+    url: hyper::Uri,
+    headers: hyper::HeaderMap,
+    body: Vec<u8>,
+}
+
+impl Loader {
+    async fn new(req: net_http::Request) -> Result<Self, Error> {
+        let method =
+            hyper::Method::from_bytes(req.method.unwrap_or_else(|| "GET".to_string()).as_bytes())?;
+        if let Some(url) = req.url {
+            let url = hyper::Uri::from_shared(Bytes::from(url.to_vec()))?;
+            let mut headers = hyper::HeaderMap::new();
+            if let Some(h) = req.headers {
+                for header in &h {
+                    headers.insert(
+                        hyper::header::HeaderName::from_bytes(&header.name)?,
+                        hyper::header::HeaderValue::from_bytes(&header.value)?,
+                    );
+                }
+            }
+
+            let body = match req.body {
+                Some(net_http::Body::Buffer(buffer)) => {
+                    let mut bytes = vec![0; buffer.size as usize];
+                    buffer.vmo.read(&mut bytes, 0)?;
+                    bytes
+                }
+                Some(net_http::Body::Stream(socket)) => {
+                    let mut stream = fasync::Socket::from_socket(socket)?
+                        .into_datagram_stream()
+                        .map_err(|status| Error::from(status));
+                    let mut bytes = Vec::new();
+                    while let Some(chunk) = stream.next().await {
+                        bytes.extend(chunk?);
+                    }
+                    bytes
+                }
+                None => Vec::new(),
+            };
+
+            trace!("Starting request {} {}", method, url);
+
+            Ok(Loader { method, url, headers, body })
+        } else {
+            Err(Error::msg("Request missing URL"))
+        }
+    }
+
+    fn build_request(&self) -> Result<hyper::Request<hyper::Body>, http::Error> {
+        let mut builder = hyper::Request::builder();
+        builder.method(&self.method);
+        builder.uri(&self.url);
+        for (name, value) in &self.headers {
+            builder.header(name, value);
+        }
+        builder.body(self.body.clone().into())
+    }
+
+    fn start(
+        mut self,
+        loader_client: net_http::LoaderClientProxy,
+    ) -> BoxFuture<'static, Result<(), Error>> {
         async move {
             let client = fhyper::new_client();
-            let c = &client;
-            let stream = server.into_stream()?;
+            let hyper_response = match client.request(self.build_request()?).compat().await {
+                Ok(response) => response,
+                Err(error) => {
+                    info!("Received network level error from hyper: {}", error);
+                    // We don't care if on_response never returns, since this is the last callback.
+                    let _ = loader_client.on_response(to_error_response(error)).await;
+                    return Ok(());
+                }
+            };
+            let redirect = redirect_info(&self.url, &self.method, &hyper_response);
+
+            if let Some(redirect) = redirect {
+                if let Some(url) = redirect.url {
+                    self.url = url;
+                    self.method = redirect.method;
+                    trace!("Reporting redirect to OnResponse: {} {}", self.method, self.url);
+                    match loader_client
+                        .on_response(
+                            to_success_response(&self.url, &self.method, hyper_response).await?,
+                        )
+                        .await
+                    {
+                        Err(e) => {
+                            debug!("Not redirecting because: {}", e);
+                            return Ok(());
+                        }
+                        _ => {}
+                    }
+                    trace!("Redirect allowed to {} {}", self.method, self.url);
+                    self.start(loader_client).await?;
+
+                    return Ok(());
+                }
+            }
+
+            // We don't care if on_response never returns, since this is the last callback.
+            let _ = loader_client
+                .on_response(to_success_response(&self.url, &self.method, hyper_response).await?)
+                .await;
+
+            Ok(())
+        }
+        .boxed()
+    }
+
+    fn fetch(
+        mut self,
+        redirects_remaining: u8,
+    ) -> BoxFuture<
+        'static,
+        Result<
+            Result<(hyper::Response<hyper::Body>, hyper::Uri, hyper::Method), hyper::Error>,
+            http::Error,
+        >,
+    > {
+        async move {
+            let client = fhyper::new_client();
+            let result = client.request(self.build_request()?).compat().await;
+
+            Ok(match result {
+                Ok(hyper_response) => {
+                    if redirects_remaining > 0 {
+                        let redirect = redirect_info(&self.url, &self.method, &hyper_response);
+                        if let Some(redirect) = redirect {
+                            if let Some(url) = redirect.url {
+                                self.url = url;
+                                self.method = redirect.method;
+                                trace!("Redirecting to {} {}", self.method, self.url);
+                                return self.fetch(redirects_remaining - 1).await;
+                            }
+                        }
+                    }
+                    Ok((hyper_response, self.url, self.method))
+                }
+                Err(e) => {
+                    info!("Received network level error from hyper: {}", e);
+                    Err(e)
+                }
+            })
+        }
+        .boxed()
+    }
+}
+
+fn calculate_redirect(
+    old_url: &hyper::Uri,
+    location: &hyper::header::HeaderValue,
+) -> Option<hyper::Uri> {
+    let old_parts = old_url.clone().into_parts();
+    let mut new_parts =
+        hyper::Uri::from_shared(Bytes::from(location.as_bytes())).ok()?.into_parts();
+    if new_parts.scheme.is_none() {
+        new_parts.scheme = old_parts.scheme;
+    }
+    if new_parts.authority.is_none() {
+        new_parts.authority = old_parts.authority;
+    }
+    Some(hyper::Uri::from_parts(new_parts).ok()?)
+}
+
+fn spawn_server(stream: net_http::LoaderRequestStream) {
+    fasync::spawn(
+        async move {
             stream
                 .err_into()
                 .try_for_each_concurrent(None, |message| async move {
                     match message {
-                        oldhttp::UrlLoaderRequest::Start { request, responder } => {
-                            let mut builder = hyper::Request::builder();
-                            builder.method(request.method.as_str());
-                            builder.uri(&request.url);
-                            if let Some(headers) = request.headers {
-                                for header in &headers {
-                                    builder.header(header.name.as_str(), header.value.as_str());
+                        net_http::LoaderRequest::Fetch { request, responder } => {
+                            debug!("Fetch request received: {:?}", request);
+                            let result = Loader::new(request).await?.fetch(MAX_REDIRECTS).await?;
+                            responder.send(match result {
+                                Ok((hyper_response, final_url, final_method)) => {
+                                    to_success_response(&final_url, &final_method, hyper_response)
+                                        .await?
                                 }
-                            }
-                            let req = builder.body(to_body(request.body).await?)?;
-                            let result = c.request(req).compat().await;
-                            responder.send(&mut match result {
-                                Ok(resp) => to_success_response(request.url, resp),
                                 Err(error) => to_error_response(error),
                             })?;
                         }
-                        // TODO: Implement FollowRedirect. The C++ implementation of oldhttp doesn't
-                        // follow redirects either.
-                        oldhttp::UrlLoaderRequest::FollowRedirect { responder: _ } => (),
-                        oldhttp::UrlLoaderRequest::QueryStatus { responder } => {
-                            // TODO: We should cache the error and report it here.
-                            responder.send(&mut oldhttp::UrlLoaderStatus {
-                                error: None,
-                                is_loading: false,
-                            })?;
+                        net_http::LoaderRequest::Start { request, client, control_handle } => {
+                            debug!("Start request received: {:?}", request);
+                            Loader::new(request).await?.start(client.into_proxy()?).await?;
+                            control_handle.shutdown();
                         }
-                    };
+                    }
                     Ok(())
                 })
                 .await
         }
-        .unwrap_or_else(|e: anyhow::Error| eprintln!("{:?}", e)),
-    );
-}
-
-fn spawn_old_server(stream: oldhttp::HttpServiceRequestStream) {
-    fasync::spawn(
-        async move {
-            stream
-                .err_into()
-                .try_for_each_concurrent(None, |message| async move {
-                    let oldhttp::HttpServiceRequest::CreateUrlLoader { loader, .. } = message;
-                    spawn_old_url_loader(loader);
-                    Ok(())
-                })
-                .await
-        }
-        .unwrap_or_else(|e: anyhow::Error| eprintln!("{:?}", e)),
+        .unwrap_or_else(|e: anyhow::Error| error!("{:?}", e)),
     );
 }
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init()?;
+    fuchsia_syslog::set_verbosity(LOG_VERBOSITY);
     let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(spawn_old_server);
+    fs.dir("svc").add_fidl_service(spawn_server);
     fs.take_and_serve_directory_handle()?;
     let () = fs.collect().await;
     Ok(())

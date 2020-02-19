@@ -23,6 +23,7 @@ meta_package_labels += [
 base_package_labels += [
   "//build/info:build-info",
   "//garnet/bin/http",
+  "//src/connectivity/network/http_client",
   "//garnet/bin/log_listener:log_listener",
   "//garnet/bin/log_listener:log_listener_shell",
   "//garnet/bin/network_time_service",
