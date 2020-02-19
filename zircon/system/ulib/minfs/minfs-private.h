@@ -74,6 +74,9 @@ inline void ValidateVmoSize(zx_handle_t vmo, blk_t blk) {
   ZX_ASSERT(zx_vmo_get_size(vmo, &size) == ZX_OK);
   ZX_ASSERT_MSG(size >= min, "VMO size %" PRIu64 " too small for access at block %u\n", size, blk);
 }
+
+using MountState = llcpp::fuchsia::minfs::MountState;
+
 #endif  // __Fuchsia__
 
 // SyncVnode flags
@@ -90,6 +93,7 @@ class VnodeMinfs;
 using SyncCallback = fs::Vnode::SyncCallback;
 
 #ifndef __Fuchsia__
+
 // Store start block + length for all extents. These may differ from info block for
 // sparse files.
 class BlockOffsets {
@@ -338,6 +342,11 @@ class Minfs :
 
   // Record the location, size, and number of all non-free block regions.
   fbl::Vector<BlockRegion> GetAllocatedRegions() const;
+
+  // Returns the current state of mounted filesystem.
+  // "state" is intentionally losely defined to allow
+  // adding more information in the near future.
+  MountState GetMountState() const { return mount_state_; }
 #endif
 
   // InspectableFilesystem interface.
@@ -432,6 +441,7 @@ class Minfs :
   MinfsMetrics metrics_ = {};
   std::unique_ptr<fs::Journal> journal_;
   uint64_t fs_id_ = 0;
+  MountState mount_state_ = {};
 #else
   // Store start block + length for all extents. These may differ from info block for
   // sparse files.

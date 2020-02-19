@@ -25,6 +25,24 @@ struct Metrics {
     uint64 vnodes_opened_cache_hit;
 };
 
+struct MountState {
+    // True if the fileystem is operational in readonly state. There may have been
+    // writes during mount or during replaying journal.
+    bool readonly_after_initialization;
+
+    // True if the mounted filesystem is collecting metrics.
+    bool collect_metrics;
+
+    // True if the mounted filesystem is in verbose mode.
+    bool verbose;
+
+    // True if the journalled writes were allowed during mount.
+    bool repair_filesystem;
+
+    // True if the journaling is enabled.
+    bool use_journal;
+};
+
 // Describes a contiguous run of allocated blocks.
 struct BlockRegion {
     uint64 offset;
@@ -41,4 +59,7 @@ protocol Minfs {
 
     // Retrieve information about allocated regions on the filesystem.
     GetAllocatedRegions() -> (zx.status status, handle<vmo>? regions, uint64 count);
+
+    // Get mount state.
+    GetMountState() -> (zx.status status, MountState? mount_state);
 };

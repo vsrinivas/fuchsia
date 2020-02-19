@@ -165,6 +165,7 @@ class VnodeMinfs : public fs::Vnode,
   void GetMetrics(GetMetricsCompleter::Sync completer) final;
   void ToggleMetrics(bool enabled, ToggleMetricsCompleter::Sync completer) final;
   void GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync completer) final;
+  void GetMountState(GetMountStateCompleter::Sync completer) final;
 
 #endif
   Minfs* Vfs() { return fs_; }

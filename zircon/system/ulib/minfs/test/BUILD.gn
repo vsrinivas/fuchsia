@@ -70,11 +70,13 @@ zx_test("minfs-integration") {
     "integration/integration_main.cc",
     "integration/mount_test.cc",
     "integration/power_test.cc",
+    "integration/runtime_state_test.cc",
     "integration/truncate_test.cc",
   ]
   deps = [
     ":integration-fixtures",
     "$zx/system/fidl/fuchsia-io:llcpp",
+    "$zx/system/fidl/fuchsia-minfs:llcpp",
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async:async-default",
@@ -83,6 +85,7 @@ zx_test("minfs-integration") {
     "$zx/system/ulib/async-loop:async-loop-default.static",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
+    "$zx/system/ulib/fdio-caller",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fs-test-utils",
     "$zx/system/ulib/fs/test/posix:posix_tests",

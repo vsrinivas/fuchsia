@@ -1203,6 +1203,13 @@ zx_status_t Minfs::Create(std::unique_ptr<Bcache> bc, const MountOptions& option
     fs->StopWriteback();
   }
   fs->SetReadonly(options.readonly_after_initialization);
+  fs->mount_state_ = {
+      .readonly_after_initialization = options.readonly_after_initialization,
+      .collect_metrics = options.metrics,
+      .verbose = options.verbose,
+      .repair_filesystem = options.repair_filesystem,
+      .use_journal = options.use_journal,
+  };
 #endif
 
   *out = std::move(fs);
