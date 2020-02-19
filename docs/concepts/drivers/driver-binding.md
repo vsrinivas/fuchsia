@@ -301,12 +301,24 @@ For more details, refer to [//build/bind/bind.gni](/build/bind/bind.gni).
 
 ## Debugger
 
-The debugger is a host tool that can be used to run a bind program against a
-device with a particular set of properties. It outputs a trace of the bind
-program's execution, describing why the driver would or would not bind to the
-device. You can specify the device with a file listing the device's properties.
+The debugger can be used to run a bind program against a particular device. It
+outputs a trace of the bind program's execution, describing why the driver
+would or would not bind to the device.
 
-### Running the debugger {#running-the-debugger}
+You can run the debugger in the following ways:
+
+ - **[As a host tool.](#running-the-debugger-host)** You provide the bind program
+   source file and a file listing the properties of the device. This is useful
+   during bind program development for testing the outcome of a program against
+   different combinations of device properties.
+ - **[On the target device.](#running-the-debugger-target)** You specify the driver
+   path and the device path within the system. This is useful for figuring out why
+   a driver did or did not bind to a particular device.
+
+Note: The debugger can only be used with bind programs written in the bind language
+described in this page.
+
+### Running the debugger as a host tool {#running-the-debugger-host}
 
 You can run the debugger with the `--debug` option in the bind compiler.
 
@@ -325,13 +337,13 @@ the device to run the bind program against.
 Note: The `--debug` and `--output` options are mutually exclusive, so the C
 header file will not be generated when running the compiler in debug mode.
 
-### Device specification file
+#### Device specification file
 
 The debugger takes a file specifying the device to run the bind program against.
 This specification is simply a list of key-value pairs describing the properties
 of the device.
 
-#### Example
+##### Example
 
 This example device specification can be found at
 [//tools/bindc/examples/gizmo.dev](/tools/bindc/examples/gizmo.dev).
@@ -343,7 +355,7 @@ deprecated.BIND_USB_CLASS = deprecated.usb.BIND_USB_CLASS.VIDEO
 deprecated.BIND_USB_SUBCLASS = deprecated.usb.BIND_USB_SUBCLASS.VIDEO_CONTROL
 ```
 
-#### Grammar
+##### Grammar
 
 ```
 device-specification = ( property )* ;
@@ -365,6 +377,68 @@ The bind compiler will ignore (treat as whitespace) any line prefixed by `//`,
 and any multiple
 lines delimited by `/*` and `*/`.
 
+### Running the debugger on the target device {#running-the-debugger-target}
+
+The debugger is run using its package URL. For example:
+
+```
+fx run fuchsia-pkg://fuchsia.com/bind_debugger#meta/bind_debugger.cmx \
+    /system/driver/bt-hci-intel.so \
+    class/bt-transport/000
+```
+
+The command takes the path of the driver to debug and the path of the device to
+debug it against.
+
+#### Device path
+
+There are two ways to specify the device:
+
+ - Its path within /dev/class, e.g. `class/bt-transport/000`.
+ - Its topological path, e.g. `sys/pci/00:14.0/xhci/usb-bus/003/003/ifc-000/bt_transport_usb`.
+
+Both of the paths are relative to /dev/.
+
+The topological path can be determined from the ouptut of `dm dump`. For example,
+tracing the path to the node `[bt_transport_usb]` in the output below gives the
+topological path `sys/pci/00:14.0/xhci/usb-bus/003/003/ifc-000/bt_transport_usb`.
+
+```
+[root]
+   <root> pid=3456
+      [null] pid=3456 /boot/driver/builtin.so
+      [zero] pid=3456 /boot/driver/builtin.so
+   [misc]
+      <misc> pid=3525
+         [demo-fifo] pid=3525 /boot/driver/demo-fifo.so
+         [ktrace] pid=3525 /boot/driver/ktrace.so
+   [sys]
+      <sys> pid=3369 /boot/driver/platform-bus.so
+         [pci] pid=3369 /boot/driver/platform-bus-x86.so
+            [00:00.0] pid=3369 /boot/driver/bus-pci.so
+            [00:14.0] pid=3369 /boot/driver/bus-pci.so
+               <00:14.0> pid=4384 /boot/driver/bus-pci.proxy.so
+                  [xhci] pid=4384 /boot/driver/xhci.so
+                     [xdc] pid=4384 /boot/driver/xhci.so
+                     [usb-bus] pid=4384 /boot/driver/usb-bus.so
+                        [001] pid=4384 /boot/driver/usb-bus.so
+                           [001] pid=4384 /boot/driver/usb-composite.so
+                              [ifc-000] pid=4384 /boot/driver/usb-composite.so
+                                 [usb-hid] pid=4384 /boot/driver/usb-hid.so
+                                    [hid-device-000] pid=4384 /boot/driver/hid.so
+                        [002] pid=4384 /boot/driver/usb-bus.so
+                           [002] pid=4384 /boot/driver/usb-composite.so
+                              [ifc-000] pid=4384 /boot/driver/usb-composite.so
+                                 [usb-hid] pid=4384 /boot/driver/usb-hid.so
+                                    [hid-device-000] pid=4384 /boot/driver/hid.so
+                        [003] pid=4384 /boot/driver/usb-bus.so
+                           [003] pid=4384 /boot/driver/usb-composite.so
+                              [ifc-000] pid=4384 /boot/driver/usb-composite.so
+                                 [bt_transport_usb] pid=4384 /boot/driver/bt-transport-usb.so
+                                    [bt_hci_intel] pid=4384 /system/driver/bt-hci-intel.so
+                                       [bt_host] pid=4384 /system/driver/bt-host.so
+```
+
 ### Debugger output
 
 The output of the debugger is a trace of the bind program's execution. The trace
@@ -377,8 +451,8 @@ in if statements.
 
 #### Example
 
-The output of the debugger when running the command
-[above](#running-the-debugger) is:
+The output of the debugger when running the host tool command
+[above](#running-the-debugger-host) is:
 
 ```
 Line 4: Condition statement succeeded: deprecated.BIND_PROTOCOL == deprecated.usb.BIND_PROTOCOL.DEVICE;
@@ -389,6 +463,11 @@ Line 11: Accept statement succeeded.
     Value of `deprecated.BIND_USB_CLASS` was `deprecated.usb.BIND_USB_CLASS.VIDEO` [0xe].
 Driver binds to device.
 ```
+
+If you run the debugger on the Fuchsia target device, you will see similar output
+information. However, information such as identifiers and source code snippets may
+be missing, since the system only stores the bind program bytecode, not the
+source code.
 
 The trace shows the outcome of each statement which was reached while executing
 the bind program:
