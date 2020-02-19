@@ -182,7 +182,7 @@ template("assemble_system") {
     package_name = "system_image"
   }
 
-  blob_manifest = "$root_build_dir/${image_name}_blob.manifest"
+  blob_manifest = "$target_out_dir/${image_name}_blob.manifest"
   collect_blob_manifest("blob.manifest") {
     testonly = true
     visibility = [ ":*" ]

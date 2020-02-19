@@ -375,7 +375,7 @@ if (!bootfs_only) {
   # that need to go into the blobfs image.  That is everything from the
   # system_image manifest, everything from each package manifest, and
   # all the synthesized meta.far files.
-  blob_manifest = "$root_build_dir/blob.manifest"
+  blob_manifest = "$target_out_dir/blob.manifest"
 
   collect_blob_manifest("blob.manifest") {
     testonly = true

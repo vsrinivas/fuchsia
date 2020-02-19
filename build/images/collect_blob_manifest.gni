@@ -4,8 +4,10 @@
 
 import("//build/package.gni")
 
-# collect from the transitive closure of package dependencies all blobs into a
-# single de-duplicated manfiest file.
+# Collect from the transitive closure of package dependencies all blobs into a
+# single de-duplicated manfiest file. The paths in the manifest file will be
+# adjusted to be relative to the directory in which the output manifest lives,
+# as is required for input to blobfs.
 #
 # Paramters
 #
@@ -62,7 +64,7 @@ template("collect_blob_manifest") {
       ":" + list_name,
     ]
 
-    script = "//build/images/manifest_list_collect_unique_blobs.sh"
+    script = "//build/images/manifest_list_collect_unique_blobs.py"
     args = [
       rebase_path(inputs[0], root_build_dir),
       rebase_path(outputs[0], root_build_dir),
