@@ -92,9 +92,12 @@ void AudioDevice::SetGainInfo(const fuchsia::media::AudioGainInfo& info, uint32_
 zx_status_t AudioDevice::Init() {
   TRACE_DURATION("audio", "AudioDevice::Init");
   WakeupEvent::ProcessHandler process_handler(
-      [output = shared_from_this()](WakeupEvent* event) -> zx_status_t {
-        OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &output->mix_domain());
-        output->OnWakeup();
+      [weak_output = weak_from_this()](WakeupEvent* event) -> zx_status_t {
+        auto output = weak_output.lock();
+        if (output) {
+          OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &output->mix_domain());
+          output->OnWakeup();
+        }
         return ZX_OK;
       });
 
