@@ -98,7 +98,7 @@ int worker_rw(worker_t* w, bool do_read) {
     xfer = 3000 + (rand32(&w->rops) % (xfer - 3000));
   }
 
-  int r;
+  ssize_t r;
   if (do_read) {
     uint8_t buffer[FBUFSIZE];
     if ((r = read(w->fd, buffer, xfer)) < 0) {
@@ -147,8 +147,8 @@ int worker_writer(worker_t* w) {
 
 bool worker_new(env_t* env, const char* where, const char* fn, int (*work)(worker_t* w),
                 uint32_t size, uint32_t flags) {
-  worker_t* w = calloc(1, sizeof(worker_t));
-  ASSERT_NE(w, NULL, "");
+  worker_t* w = static_cast<worker_t*>(calloc(1, sizeof(worker_t)));
+  ASSERT_NE(w, nullptr, "");
 
   w->env = env;
 
@@ -285,7 +285,7 @@ static bool init_environment(env_t* env) {
 }
 
 static int do_threaded_work(void* arg) {
-  worker_t* w = arg;
+  worker_t* w = static_cast<worker_t*>(arg);
 
   fprintf(stderr, "work thread(%s) started\n", w->name);
   while ((w->status = w->work(w)) == BUSY) {
@@ -310,8 +310,8 @@ static bool test_work_concurrently(void) {
     // start the workers on separate threads
     thrd_t t;
     ASSERT_EQ(thrd_create(&t, do_threaded_work, w), thrd_success, "");
-    thread_list_t* thread = malloc(sizeof(thread_list_t));
-    ASSERT_NE(thread, NULL, "");
+    thread_list_t* thread = static_cast<thread_list_t*>(malloc(sizeof(thread_list_t)));
+    ASSERT_NE(thread, nullptr, "");
     thread->t = t;
     list_add_tail(&env.threads, &thread->node);
   }

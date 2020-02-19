@@ -71,8 +71,8 @@ typedef struct thread_list {
 } thread_list_t;
 
 static bool worker_new(env_t* env, const char* fn, uint32_t size) {
-  worker_t* w = calloc(1, sizeof(worker_t));
-  ASSERT_NE(w, NULL, "");
+  worker_t* w = static_cast<worker_t*>(calloc(1, sizeof(worker_t)));
+  ASSERT_NE(w, nullptr, "");
 
   // per-thread random seed
   struct timespec ts;
@@ -95,7 +95,7 @@ static bool worker_new(env_t* env, const char* fn, uint32_t size) {
 
 static void free_workers(env_t* env) {
   worker_t* all_workers = env->all_workers;
-  for (worker_t* w = all_workers; w != NULL;) {
+  for (worker_t* w = all_workers; w != nullptr;) {
     worker_t* next = w->next;
     free(w);
     w = next;
@@ -116,7 +116,7 @@ static struct {
 
 static bool init_environment(env_t* env) {
   // tests are run repeatedly, so reinitialize each time
-  env->all_workers = NULL;
+  env->all_workers = nullptr;
 
   list_initialize(&env->threads);
 
@@ -139,7 +139,7 @@ static bool init_environment(env_t* env) {
 // wait until test finishes or timer suggests we may be hung
 static const unsigned TEST_MAX_RUNTIME = 120;  // 120 sec max
 static int log_timer(void* arg) {
-  env_t* env = arg;
+  env_t* env = static_cast<env_t*>(arg);
   struct timespec ts;
   clock_gettime(CLOCK_REALTIME, &ts);
   ts.tv_sec += TEST_MAX_RUNTIME;
@@ -459,7 +459,7 @@ static int task_utime_fd(worker_t* w) {
 static int task_seek_fd_end(worker_t* w) {
   task_debug_op(w, "t: seek_fd_end");
   if (w->fd >= 0) {
-    int rc = lseek(w->fd, 0, SEEK_END);
+    off_t rc = lseek(w->fd, 0, SEEK_END);
     if (rc < 0) {
       // errno may be one of ??
       task_error(w, "t: seek_fd_end", "lseek");
@@ -473,7 +473,7 @@ static int task_seek_fd_start(worker_t* w) {
   // fseek(fd, SEEK_SET, 0)
   task_debug_op(w, "t: seek_fd_start");
   if (w->fd >= 0) {
-    int rc = lseek(w->fd, 0, SEEK_SET);
+    off_t rc = lseek(w->fd, 0, SEEK_SET);
     if (rc < 0) {
       // errno may be one of ??
       task_error(w, "t: seek_fd_start", "lseek");
@@ -528,8 +528,8 @@ static void add_random_ops(env_t* env) {
   for (unsigned i = 0; i < countof(OPS); i++) {
     n_ops += OPS[i].weight;
   }
-  random_op_t* ops_list = malloc(n_ops * sizeof(random_op_t));
-  assert(ops_list != NULL);
+  random_op_t* ops_list = static_cast<random_op_t*>(malloc(n_ops * sizeof(random_op_t)));
+  assert(ops_list != nullptr);
 
   unsigned op = 0;
   for (unsigned i = 0; i < countof(OPS); i++) {
@@ -546,7 +546,7 @@ static const unsigned N_SERIAL_OPS = 4;  // yield every 1/n ops
 
 static const unsigned MAX_OPS = 1000;
 static int do_random_ops(void* arg) {
-  worker_t* w = arg;
+  worker_t* w = static_cast<worker_t*>(arg);
   env_t* env = w->env;
 
   // for some big number of operations
@@ -579,13 +579,13 @@ bool test_random_op_multithreaded(void) {
   env_t env;
   ASSERT_TRUE(init_environment(&env), "");
 
-  for (worker_t* w = env.all_workers; w != NULL; w = w->next) {
+  for (worker_t* w = env.all_workers; w != nullptr; w = w->next) {
     // start the workers on separate threads
     thrd_t t;
     ASSERT_EQ(thrd_create(&t, do_random_ops, w), thrd_success, "");
 
-    thread_list_t* thread = malloc(sizeof(thread_list_t));
-    ASSERT_NE(thread, NULL, "");
+    thread_list_t* thread = static_cast<thread_list_t*>(malloc(sizeof(thread_list_t)));
+    ASSERT_NE(thread, nullptr, "");
     thread->t = t;
     list_add_tail(&env.threads, &thread->node);
   }
@@ -594,7 +594,7 @@ bool test_random_op_multithreaded(void) {
   ASSERT_EQ(thrd_create(&timer_thread, log_timer, &env), thrd_success, "");
 
   thread_list_t* next;
-  thread_list_t* prev = NULL;
+  thread_list_t* prev = nullptr;
   list_for_every_entry (&env.threads, next, thread_list_t, node) {
     int rc;
     ASSERT_EQ(thrd_join(next->t, &rc), thrd_success, "");

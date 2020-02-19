@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UTEST_FS_FILESYSTEMS_H_
+#define ZIRCON_SYSTEM_UTEST_FS_FILESYSTEMS_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -17,6 +18,8 @@
 #include <zircon/device/block.h>
 
 __BEGIN_CDECLS
+
+extern const char* kMountPath;
 
 typedef struct fs_info {
   const char* name;
@@ -145,3 +148,5 @@ inline bool can_execute_test(const fs_info_t* info, const test_disk_t* requested
   RUN_FOR_ALL_FILESYSTEMS_SIZE(case_name, default_test_disk, CASE_TESTS)
 
 __END_CDECLS
+
+#endif  // ZIRCON_SYSTEM_UTEST_FS_FILESYSTEMS_H_

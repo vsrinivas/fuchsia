@@ -26,7 +26,7 @@ bool fcheck_dir_contents(DIR* dir, expected_dirent_t* edirents, size_t len) {
   size_t seen = 0;
   while (seen != len) {
     struct dirent* de = readdir(dir);
-    ASSERT_NE(de, NULL, "Didn't see all expected direntries");
+    ASSERT_NE(de, nullptr, "Didn't see all expected direntries");
     bool found = false;
     for (size_t i = 0; i < len; i++) {
       if (strcmp(edirents[i].d_name, de->d_name) == 0) {
@@ -42,7 +42,7 @@ bool fcheck_dir_contents(DIR* dir, expected_dirent_t* edirents, size_t len) {
     ASSERT_TRUE(found, "Saw an unexpected dirent");
   }
 
-  ASSERT_EQ(readdir(dir), NULL, "There exists an entry we didn't expect to see");
+  ASSERT_EQ(readdir(dir), nullptr, "There exists an entry we didn't expect to see");
 
   // Flip 'seen' back to false so the array of expected dirents can be reused
   for (size_t i = 0; i < len; i++) {
@@ -64,8 +64,8 @@ bool check_dir_contents(const char* dirname, expected_dirent_t* edirents, size_t
 bool check_file_contents(int fd, const uint8_t* buf, size_t length) {
   BEGIN_HELPER;
   ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0, "");
-  uint8_t* out = malloc(length);
-  ASSERT_NE(out, NULL, "Failed to allocate checking buffer");
+  uint8_t* out = static_cast<uint8_t*>(malloc(length));
+  ASSERT_NE(out, nullptr, "Failed to allocate checking buffer");
   ASSERT_STREAM_ALL(read, fd, out, length);
   ASSERT_EQ(memcmp(buf, out, length), 0, "");
   free(out);

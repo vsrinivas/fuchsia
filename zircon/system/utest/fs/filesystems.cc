@@ -27,7 +27,6 @@
 #include <ramdevice-client/ramdisk.h>
 
 const char* kTmpfsPath = "/fs-test-tmp";
-const char* kMountPath = "/fs-test-tmp/mount";
 const char* kDevPath = "/dev";
 
 bool use_real_disk = false;

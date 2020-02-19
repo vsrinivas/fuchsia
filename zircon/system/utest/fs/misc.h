@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UTEST_FS_MISC_H_
+#define ZIRCON_SYSTEM_UTEST_FS_MISC_H_
 
 #include <dirent.h>
 #include <errno.h>
@@ -14,8 +15,6 @@
 #include <zircon/compiler.h>
 
 // Filesystem test utilities
-
-__BEGIN_CDECLS
 
 #define ASSERT_STREAM_ALL(op, fd, buf, len) ASSERT_EQ(op(fd, (buf), (len)), (ssize_t)(len), "");
 
@@ -34,4 +33,4 @@ bool check_file_contents(int fd, const uint8_t* buf, size_t length);
 // Unmount and remount our filesystem, simulating a reboot
 bool check_remount(void);
 
-__END_CDECLS
+#endif  // ZIRCON_SYSTEM_UTEST_FS_MISC_H_
