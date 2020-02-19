@@ -63,7 +63,7 @@ To include a package in your Fuchsia image, you have the following options:
     optional packages are fetched and run on-demand,
 
 
-## Include the example package to your Fuchshia image {#include-the-example-package-to-your-fuchsia-image}
+## Include the example package in your Fuchshia image {#include-the-example-package-in-your-fuchsia-image}
 
 To include the example package in Universe (so that it can be fetched on-demand),
 use the `--with` flag when setting your product and board environment:
@@ -111,7 +111,7 @@ fuchsia-pkg://fuchsia.com/hello_world_cpp#meta/hello_world_cpp.cmx: not found.
 If `fx serve` is running, but the package is not found,
 then try rebuilding your Fuchsia image to include this package
 and repaving it to the device. See
-[Include the example package to your Fuchsia image](#include-the-example-package-to-your-Fuchsia-image)
+[Include the example package in your Fuchsia image](#include-the-example-package-in-your-fuchsia-image)
 for details.
 
 ### Run the example component using a simple string {#run-the-example-component-using-a-simple-string}
