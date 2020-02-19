@@ -17,7 +17,7 @@ driver_module("aml-securemem") {
   sources = [
     "device.cc",
     "device.h",
-    "secmem-client-session.cc",
+    "secmem-session.cc",
     "sysmem-secure-mem-server.cc",
   ]
 
@@ -35,12 +35,13 @@ driver_module("aml-securemem") {
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/safemath",
-    "//zircon/public/lib/tee-client-api-static",
+    "//zircon/public/lib/tee-client-api-headers",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/banjo/ddk.protocol.tee",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
+    "//zircon/system/fidl/fuchsia-tee",
   ]
 }
 
@@ -57,7 +58,7 @@ test("aml-securemem-test") {
   sources = [
     "device.cc",
     "device.h",
-    "secmem-client-session.cc",
+    "secmem-session.cc",
     "sysmem-secure-mem-server.cc",
     "test/aml-securemem-test.cc",
   ]
@@ -82,6 +83,7 @@ test("aml-securemem-test") {
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/banjo/ddk.protocol.tee",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
+    "//zircon/system/fidl/fuchsia-tee",
   ]
 }
 
