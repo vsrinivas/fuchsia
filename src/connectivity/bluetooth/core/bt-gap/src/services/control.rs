@@ -7,8 +7,11 @@ use {
     fidl::endpoints::RequestStream,
     fidl_fuchsia_bluetooth_control::{self as fctrl, ControlRequest, ControlRequestStream},
     fidl_fuchsia_bluetooth_sys as fsys,
-    fuchsia_bluetooth::{bt_fidl_status, types::PeerId},
-    fuchsia_syslog::fx_log_warn,
+    fuchsia_bluetooth::{
+        bt_fidl_status,
+        types::{HostId, PeerId},
+    },
+    fuchsia_syslog::{fx_log_info, fx_log_warn},
     futures::prelude::*,
     std::sync::Arc,
 };
@@ -148,8 +151,16 @@ async fn handler(
             responder.send(Some(&mut adapters.iter_mut()))
         }
         ControlRequest::SetActiveAdapter { identifier, responder } => {
-            let result = hd.set_active_adapter(identifier.clone());
-            responder.send(&mut status_response(result))
+            match identifier.parse::<HostId>() {
+                Ok(id) => {
+                    let result = hd.set_active_host(id);
+                    responder.send(&mut status_response(result))
+                }
+                Err(err) => {
+                    fx_log_info!("fuchsia.bluetooth.control.Control client tried to set invalid active adapter: {}", identifier);
+                    responder.send(&mut bt_fidl_status!(Failed, format!("{}", err)))
+                }
+            }
         }
         ControlRequest::GetActiveAdapterInfo { responder } => {
             let host_info = hd.get_active_host_info();

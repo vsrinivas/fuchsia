@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_bluetooth_sys::{HostInfo as FidlHostInfo, TechnologyType},
     fuchsia_bluetooth::{
         inspect::{placeholder_node, Inspectable},
-        types::{Address, BondingData, HostInfo, Peer, PeerId},
+        types::{Address, BondingData, HostId, HostInfo, Peer, PeerId},
     },
     futures::{future, join, stream::StreamExt},
     parking_lot::RwLock,
@@ -38,7 +38,7 @@ async fn host_device_set_local_name() -> Result<(), Error> {
     let (client, server) = create_fidl_endpoints::<HostMarker>()?;
 
     let info = HostInfo {
-        id: fidl_fuchsia_bluetooth::HostId { value: 1 },
+        id: HostId(1),
         technology: TechnologyType::DualMode,
         address: Address::Public([0, 0, 0, 0, 0, 0]),
         local_name: None,

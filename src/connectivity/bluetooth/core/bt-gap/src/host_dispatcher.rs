@@ -18,7 +18,7 @@ use {
     fuchsia_bluetooth::{
         self as bt,
         inspect::{DebugExt, Inspectable, ToProperty},
-        types::{Address, BondingData, HostInfo, Identity, Peer, PeerId},
+        types::{Address, BondingData, HostId, HostInfo, Identity, Peer, PeerId},
     },
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
@@ -137,8 +137,8 @@ impl HostDispatcherInspect {
 /// It appears as a Host to higher level systems, and is responsible for
 /// routing commands to the appropriate HostAdapter
 struct HostDispatcherState {
-    host_devices: HashMap<String, Arc<RwLock<HostDevice>>>,
-    active_id: Option<String>,
+    host_devices: HashMap<HostId, Arc<RwLock<HostDevice>>>,
+    active_id: Option<HostId>,
 
     // Component storage.
     pub stash: Stash,
@@ -169,14 +169,14 @@ struct HostDispatcherState {
 
 impl HostDispatcherState {
     /// Set the active adapter for this HostDispatcher
-    pub fn set_active_adapter(&mut self, adapter_id: String) -> types::Result<()> {
-        if let Some(ref id) = self.active_id {
-            if *id == adapter_id {
+    pub fn set_active_host(&mut self, adapter_id: HostId) -> types::Result<()> {
+        if let Some(id) = self.active_id {
+            if id == adapter_id {
                 return Ok(());
             }
 
             // Shut down the previously active host.
-            let _ = self.host_devices[id].write().close();
+            let _ = self.host_devices[&id].write().close();
         }
 
         if self.host_devices.contains_key(&adapter_id) {
@@ -235,27 +235,20 @@ impl HostDispatcherState {
 
     /// Return the active id. If the ID is currently not set,
     /// it will make the first ID in it's host_devices active
-    fn get_active_id(&mut self) -> Option<String> {
-        match self.active_id {
-            None => match self.host_devices.keys().next() {
-                None => None,
-                Some(id) => {
-                    let id = Some(id.clone());
-                    self.set_active_id(id);
-                    self.active_id.clone()
-                }
-            },
-            ref id => id.clone(),
-        }
+    fn get_active_id(&mut self) -> Option<HostId> {
+        let active = self.active_id.clone();
+        active.or_else(|| {
+            self.host_devices.keys().next().cloned().map(|id| {
+                self.set_active_id(Some(id));
+                id
+            })
+        })
     }
 
     /// Return the active host. If the Host is currently not set,
     /// it will make the first ID in it's host_devices active
     fn get_active_host(&mut self) -> Option<Arc<RwLock<HostDevice>>> {
-        self.get_active_id()
-            .as_ref()
-            .and_then(|id| self.host_devices.get(id))
-            .map(|host| host.clone())
+        self.get_active_id().and_then(|id| self.host_devices.get(&id)).cloned()
     }
 
     /// Resolves all pending OnAdapterFuture's. Called when we leave the init period (by seeing the
@@ -266,8 +259,8 @@ impl HostDispatcherState {
         }
     }
 
-    fn add_host(&mut self, id: String, host: Arc<RwLock<HostDevice>>) {
-        fx_log_info!("Host added: {:?}", host.read().get_info().id);
+    fn add_host(&mut self, id: HostId, host: Arc<RwLock<HostDevice>>) {
+        fx_log_info!("Host added: {}", id.to_string());
         self.host_devices.insert(id, host.clone());
 
         // Update inspect state
@@ -285,8 +278,11 @@ impl HostDispatcherState {
     }
 
     /// Updates the active adapter and notifies listeners
-    fn set_active_id(&mut self, id: Option<String>) {
-        fx_log_info!("New active adapter: {:?}", id);
+    fn set_active_id(&mut self, id: Option<HostId>) {
+        fx_log_info!(
+            "New active adapter: {}",
+            id.map_or("<none>".to_string(), |id| id.to_string())
+        );
         self.active_id = id;
         if let Some(host_info) = self.get_active_host_info() {
             let mut adapter_info = control::AdapterInfo::from(host_info);
@@ -396,8 +392,8 @@ impl HostDispatcher {
     }
 
     /// Set the active adapter for this HostDispatcher
-    pub fn set_active_adapter(&self, adapter_id: String) -> types::Result<()> {
-        self.state.write().set_active_adapter(adapter_id)
+    pub fn set_active_host(&self, host: HostId) -> types::Result<()> {
+        self.state.write().set_active_host(host)
     }
 
     pub fn set_pairing_delegate(&self, delegate: Option<control::PairingDelegateProxy>) -> bool {
@@ -706,7 +702,7 @@ impl HostDispatcher {
         start_pairing_delegate(self.clone(), host_device.clone())?;
 
         // TODO(fxb/36378): Remove conversions to String when fuchsia.bluetooth.sys is supported.
-        let id = host_device.read().get_info().id.value.to_string();
+        let id = host_device.read().get_info().id.into();
         self.state.write().add_host(id, host_device.clone());
 
         // Start listening to Host interface events.
@@ -722,22 +718,24 @@ impl HostDispatcher {
     }
 
     pub fn rm_adapter(&self, host_path: &Path) {
-        fx_log_info!("Host removed: {:?}", host_path);
-
         let mut hd = self.state.write();
         let active_id = hd.active_id.clone();
 
         // Get the host IDs that match `host_path`.
-        let ids: Vec<String> = hd
+        let ids: Vec<HostId> = hd
             .host_devices
             .iter()
             .filter(|(_, ref host)| host.read().path == host_path)
             .map(|(k, _)| k.clone())
             .collect();
+
+        let id_strs: Vec<String> = ids.iter().map(|id| id.to_string()).collect();
+        fx_log_info!("Host removed: {} (path: {:?})", id_strs.join(","), host_path);
+
         for id in &ids {
             hd.host_devices.remove(id);
             hd.notify_event_listeners(|listener| {
-                let _ = listener.send_on_adapter_removed(id);
+                let _ = listener.send_on_adapter_removed(&id.to_string());
             })
         }
 

@@ -5,10 +5,10 @@
 use {
     crate::{
         inspect::{DebugExt, InspectData, Inspectable, IsInspectable, ToProperty},
-        types::Address,
+        types::{Address, HostId},
     },
     anyhow::{format_err, Error},
-    fidl_fuchsia_bluetooth::{Bool, HostId},
+    fidl_fuchsia_bluetooth::Bool,
     fidl_fuchsia_bluetooth_control as fctrl, fidl_fuchsia_bluetooth_sys as fsys,
     fuchsia_inspect::{self as inspect, Property},
     std::{convert::TryFrom, fmt},
@@ -46,7 +46,7 @@ impl TryFrom<&fsys::HostInfo> for HostInfo {
     type Error = Error;
     fn try_from(src: &fsys::HostInfo) -> Result<HostInfo, Self::Error> {
         Ok(HostInfo {
-            id: src.id.ok_or(format_err!("HostInfo.id is mandatory!"))?,
+            id: HostId::from(src.id.ok_or(format_err!("HostInfo.id is mandatory!"))?),
             technology: src.technology.ok_or(format_err!("HostInfo.technology is mandatory!"))?,
             address: src.address.ok_or(format_err!("HostInfo.address is mandatory!"))?.into(),
             active: src.active.unwrap_or(false),
@@ -67,7 +67,7 @@ impl TryFrom<fsys::HostInfo> for HostInfo {
 impl From<&HostInfo> for fsys::HostInfo {
     fn from(src: &HostInfo) -> fsys::HostInfo {
         fsys::HostInfo {
-            id: Some(src.id),
+            id: Some(src.id.into()),
             technology: Some(src.technology),
             address: Some(src.address.into()),
             active: Some(src.active),
@@ -89,7 +89,7 @@ impl From<HostInfo> for fsys::HostInfo {
 impl From<HostInfo> for fctrl::AdapterInfo {
     fn from(src: HostInfo) -> fctrl::AdapterInfo {
         fctrl::AdapterInfo {
-            identifier: src.id.value.to_string(),
+            identifier: src.id.to_string(),
             technology: match src.technology {
                 fsys::TechnologyType::LowEnergy => fctrl::TechnologyType::LowEnergy,
                 fsys::TechnologyType::Classic => fctrl::TechnologyType::Classic,
@@ -109,7 +109,7 @@ impl From<HostInfo> for fctrl::AdapterInfo {
 impl fmt::Display for HostInfo {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(fmt, "HostInfo:")?;
-        writeln!(fmt, "\tidentifier:\t{}", self.id.value)?;
+        writeln!(fmt, "\tidentifier:\t{}", self.id.to_string())?;
         writeln!(fmt, "\taddress:\t{}", self.address)?;
         writeln!(fmt, "\ttechnology:\t{:?}", self.technology)?;
         writeln!(
@@ -140,7 +140,7 @@ pub struct HostInfoInspect {
 
 impl HostInfoInspect {
     fn update(&mut self, info: &HostInfo) {
-        self.identifier.set(info.id.value);
+        self.identifier.set(info.id.0);
         self.technology.set(&info.technology.debug());
         self.active.set(info.active.to_property());
         self.discoverable.set(info.discoverable.to_property());
@@ -155,7 +155,7 @@ impl IsInspectable for HostInfo {
 impl InspectData<HostInfo> for HostInfoInspect {
     fn new(info: &HostInfo, inspect: inspect::Node) -> HostInfoInspect {
         HostInfoInspect {
-            identifier: inspect.create_uint("identifier", info.id.value),
+            identifier: inspect.create_uint("identifier", info.id.0),
             technology: inspect.create_string("technology", info.technology.debug()),
             active: inspect.create_uint("active", info.active.to_property()),
             discoverable: inspect.create_uint("discoverable", info.discoverable.to_property()),
@@ -224,7 +224,7 @@ mod tests {
             discovering: None,
         };
         let expected = HostInfo {
-            id: fbt::HostId { value: 1 },
+            id: HostId(1),
             technology: fsys::TechnologyType::LowEnergy,
             address: Address::Public([1, 2, 3, 4, 5, 6]),
             active: false,
@@ -252,7 +252,7 @@ mod tests {
             discovering: Some(true),
         };
         let expected = HostInfo {
-            id: fbt::HostId { value: 1 },
+            id: HostId(1),
             technology: fsys::TechnologyType::LowEnergy,
             address: Address::Public([1, 2, 3, 4, 5, 6]),
             active: true,
@@ -268,7 +268,7 @@ mod tests {
     #[test]
     fn to_fidl() {
         let info = HostInfo {
-            id: fbt::HostId { value: 1 },
+            id: HostId(1),
             technology: fsys::TechnologyType::LowEnergy,
             address: Address::Public([1, 2, 3, 4, 5, 6]),
             active: false,
@@ -295,7 +295,7 @@ mod tests {
     #[test]
     fn to_fidl_adapter_info() {
         let info = HostInfo {
-            id: fbt::HostId { value: 1 },
+            id: HostId(1),
             technology: fsys::TechnologyType::LowEnergy,
             address: Address::Public([1, 2, 3, 4, 5, 6]),
             active: false,
@@ -304,7 +304,7 @@ mod tests {
             discovering: false,
         };
         let expected = fctrl::AdapterInfo {
-            identifier: "1".to_string(),
+            identifier: "0000000000000001".to_string(),
             technology: fctrl::TechnologyType::LowEnergy,
             address: "06:05:04:03:02:01".to_string(),
             state: Some(Box::new(fctrl::AdapterState {
@@ -323,7 +323,7 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let node = inspector.root().create_child("info");
         let info = HostInfo {
-            id: fbt::HostId { value: 1 },
+            id: HostId(1),
             technology: fsys::TechnologyType::LowEnergy,
             address: Address::Public([1, 2, 3, 4, 5, 6]),
             active: false,
@@ -343,7 +343,7 @@ mod tests {
         });
 
         info.update(HostInfo {
-            id: fbt::HostId { value: 1 },
+            id: HostId(1),
             technology: fsys::TechnologyType::LowEnergy,
             address: Address::Public([1, 2, 3, 4, 5, 6]),
             active: true,
