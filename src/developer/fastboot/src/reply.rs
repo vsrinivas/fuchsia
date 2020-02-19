@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow::anyhow, std::convert::TryFrom, std::fmt};
+use {
+    anyhow::anyhow,
+    std::convert::{From, TryFrom},
+    std::fmt,
+};
 
 // Client response with a single packet no greater than 64 bytes. The first four bytes of the
 // response are “OKAY”, “FAIL”, “DATA”, or “INFO”. Additional bytes may contain an (ascii)
@@ -50,7 +54,11 @@ impl TryFrom<Vec<u8>> for Reply {
             "OKAY" => Ok(Reply::Okay(reply_data_str)),
             "DATA" => {
                 if reply_data_str.len() != DATA_SIZE_LENGTH {
-                    return Err(anyhow!("DATA response packet size is {}", reply_data_str.len()));
+                    return Err(anyhow!(
+                        "DATA response packet size is {} expected {}",
+                        reply_data_str.len(),
+                        DATA_SIZE_LENGTH
+                    ));
                 }
                 match u32::from_str_radix(&reply_data_str, 16) {
                     Ok(ds) => Ok(Reply::Data(ds)),
@@ -58,6 +66,17 @@ impl TryFrom<Vec<u8>> for Reply {
                 }
             }
             _ => Err(anyhow!("Unknown reply type: {}", String::from_utf8_lossy(reply_type))),
+        }
+    }
+}
+
+impl From<Reply> for Vec<u8> {
+    fn from(reply: Reply) -> Vec<u8> {
+        match reply {
+            Reply::Info(s) => [b"INFO", &s.into_bytes()[..]].concat(),
+            Reply::Fail(s) => [b"FAIL", &s.into_bytes()[..]].concat(),
+            Reply::Okay(s) => [b"OKAY", &s.into_bytes()[..]].concat(),
+            Reply::Data(s) => [b"DATA", &format!("{:08X}", s).into_bytes()[..]].concat(),
         }
     }
 }
