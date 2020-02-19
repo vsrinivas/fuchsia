@@ -27,8 +27,13 @@ fuzzers_package("example_fuzzers") {
     ":trap_fuzzer",
     ":fuzzed_data_provider_fuzzer",
     ":corpus_fuzzer",
+    ":oom_fuzzer",
   ]
   fuzz_host = true
+}
+
+fuzzer("oom_fuzzer") {
+  sources = [ "oom.cc" ]
 }
 
 fuzzer("overflow_fuzzer") {
