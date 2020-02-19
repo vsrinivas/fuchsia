@@ -15,6 +15,7 @@ sdk://fidl/fuchsia.bluetooth.a2dp
 sdk://fidl/fuchsia.bluetooth.control
 sdk://fidl/fuchsia.bluetooth.gatt
 sdk://fidl/fuchsia.bluetooth.le
+sdk://fidl/fuchsia.bluetooth.sys
 sdk://fidl/fuchsia.camera
 sdk://fidl/fuchsia.camera2
 sdk://fidl/fuchsia.camera2.hal

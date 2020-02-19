@@ -1,0 +1,8 @@
+{
+  "fidl/fuchsia.bluetooth.sys/access.fidl": "e1158310b8e4874312ee5a4e24b4cfaa",
+  "fidl/fuchsia.bluetooth.sys/bootstrap.fidl": "528837ca2aa246b152986c0b712ce96c",
+  "fidl/fuchsia.bluetooth.sys/host_watcher.fidl": "ea7b53b8ca8a322a7a704231933c6326",
+  "fidl/fuchsia.bluetooth.sys/identity.fidl": "76b8a445af52284f561301942c420d9d",
+  "fidl/fuchsia.bluetooth.sys/pairing_delegate.fidl": "c0263db7fc96b6884fe703d520c2560f",
+  "fidl/fuchsia.bluetooth.sys/peer.fidl": "d36740311b79bed83733020124a39e9e"
+}

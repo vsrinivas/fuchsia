@@ -91,6 +91,7 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.camera:fuchsia.camera_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.camera2:fuchsia.camera2_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal_sdk($fidl_toolchain)",
