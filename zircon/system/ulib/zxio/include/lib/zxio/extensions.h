@@ -76,16 +76,15 @@ typedef struct zxio_node {
 // non-Node methods.
 typedef struct zxio_extension_ops {
   // A hook to destroy any resources held by the custom transport before the
-  // node portion is destroyed, as part of a |zxio_close| or |zxio_release|.
+  // node portion is invalidated, as part of a |zxio_close| or |zxio_release|.
   //
   // If this entry is |nullptr|, the default behavior is to do nothing for the
   // custom part (i.e. treat them as pure data).
   void (*destroy)(zxio_node_t* io);
 
   // Specifies whether running |zxio_close| on this node should call
-  // |fuchsia.io/Node.Close| and block, before closing the channel itself.
-  // If true, the node will not call the FIDL |Close| method, instead
-  // closing the channel directly (equivalent to a non-blocking close).
+  // |fuchsia.io/Node.Close| and block.
+  // If true, the node will not call the FIDL |Close| method.
   //
   // If a |zxio_extension_ops_t| was not specified when initializing the node,
   // the default behavior is to call |Close| and block.

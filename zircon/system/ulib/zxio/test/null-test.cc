@@ -16,8 +16,6 @@ TEST(NullTest, Basic) {
             zxio_wait_one(&io, ZXIO_SIGNAL_READABLE, ZX_TIME_INFINITE, &observed));
 
   zx_handle_t handle = ZX_HANDLE_INVALID;
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_release(&io, &handle));
-  ASSERT_EQ(ZX_HANDLE_INVALID, handle);
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_clone(&io, &handle));
   ASSERT_EQ(ZX_HANDLE_INVALID, handle);
 
@@ -62,4 +60,14 @@ TEST(NullTest, Basic) {
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_dirent_iterator_next(&iter, &entry));
 
   ASSERT_OK(zxio_close(&io));
+  ASSERT_OK(zxio_destroy(&io));
+}
+
+TEST(NullTest, Release) {
+  zxio_t io;
+  zxio_null_init(&io);
+  zx_handle_t handle = ZX_HANDLE_INVALID;
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_release(&io, &handle));
+  ASSERT_EQ(ZX_HANDLE_INVALID, handle);
+  ASSERT_OK(zxio_destroy(&io));
 }

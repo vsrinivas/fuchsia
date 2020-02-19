@@ -77,7 +77,6 @@ class ExtensionNode : public zxtest::Test {
     if (result.is_error()) {
       return nullptr;
     }
-    binding_ = std::make_optional<fidl::BindingRef>(result.take_value());
     return static_cast<ServerImpl*>(server_.get());
   }
 
@@ -86,7 +85,6 @@ class ExtensionNode : public zxtest::Test {
   zx::channel control_server_end_;
   std::unique_ptr<TestServerBase> server_;
   std::unique_ptr<async::Loop> loop_;
-  std::optional<fidl::BindingRef> binding_;
 };
 
 TEST_F(ExtensionNode, DefaultBehaviors) {
@@ -103,6 +101,7 @@ TEST_F(ExtensionNode, DefaultBehaviors) {
   ASSERT_EQ(0, server->num_close());
   ASSERT_OK(zxio_close(&node.io));
   ASSERT_EQ(1, server->num_close());
+  ASSERT_OK(zxio_destroy(&node.io));
 }
 
 TEST_F(ExtensionNode, CloseError) {
@@ -118,6 +117,7 @@ TEST_F(ExtensionNode, CloseError) {
   ASSERT_NO_FAILURES(server = StartServer<TestServer>());
 
   ASSERT_STATUS(ZX_ERR_IO, zxio_close(&node.io));
+  ASSERT_OK(zxio_destroy(&node.io));
 }
 
 TEST_F(ExtensionNode, SkipClose) {
@@ -130,13 +130,13 @@ TEST_F(ExtensionNode, SkipClose) {
   };
   zxio_node_init(&node, control_client_end_.release(), &extension_ops);
 
-  class TestServer : public TestServerBase {};
-  TestServer* server;
-  ASSERT_NO_FAILURES(server = StartServer<TestServer>());
+  TestServerBase* server;
+  ASSERT_NO_FAILURES(server = StartServer<TestServerBase>());
 
   ASSERT_EQ(0, server->num_close());
   ASSERT_STATUS(ZX_OK, zxio_close(&node.io));
   ASSERT_EQ(0, server->num_close());
+  ASSERT_OK(zxio_destroy(&node.io));
 }
 
 TEST_F(ExtensionNode, OverrideOperations) {
@@ -161,7 +161,10 @@ TEST_F(ExtensionNode, OverrideOperations) {
       zxio_node_init(this, client.release(), &kExtensionOps);
     }
 
-    ~MyIo() { ASSERT_OK(zxio_close(**this)); }
+    ~MyIo() {
+      ASSERT_OK(zxio_close(**this));
+      ASSERT_OK(zxio_destroy(**this));
+    }
 
     zxio_t* operator*() { return &this->zxio_node_t::io; }
 
@@ -217,4 +220,5 @@ TEST_F(ExtensionNode, GetAttr) {
   ASSERT_EQ(kContentSize, attr.content_size);
 
   ASSERT_OK(zxio_close(&node.io));
+  ASSERT_OK(zxio_destroy(&node.io));
 }

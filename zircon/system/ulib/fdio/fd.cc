@@ -54,6 +54,8 @@ zx_status_t fdio_fd_transfer(int fd, zx_handle_t* out_handle) {
   if (status != ZX_OK) {
     return status;
   }
+  // Unwrapping here is safe, because |fdio_unbind_from_fd| will only succeed
+  // if we have the last unique reference to |io|.
   status = fdio_get_ops(io)->unwrap(io, out_handle);
   fdio_release(io);
   return status;

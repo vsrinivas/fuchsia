@@ -25,22 +25,39 @@ __BEGIN_CDECLS
 //
 // # Threading model
 //
-// Most operations on zxio_t objects can be called from any thread with
-// external synchronization. However, the caller needs to synchronize
-// operations that consume the zxio_t with other operations.
+// Most operations on zxio_t objects can be called concurrently from any thread.
+// However, the caller needs to synchronize |zxio_destroy| and |zxio_release|
+// with other operations. Specifically, no operations may be called concurrently
+// with |zxio_destroy| or |zxio_release| on the same |zxio_t|.
 typedef struct zxio_tag zxio_t;
 
 // Node
 
-// Attempt to destroy |io| and produce a |zx_handle_t|.
-//
-// Recovers the underlying |zx_handle_t| for |io| if one exists. Does not
-// terminate the connection with the server.
+// Attempt to destroy |io|.
 //
 // Does not block.
 //
 // Always consumes |io|.
+zx_status_t zxio_destroy(zxio_t* io);
+
+// Extracts the underlying |zx_handle_t| for |io| if one exists. Does not
+// terminate the connection with the server.
+//
+// Does not block.
+//
+// Does not consume |io|. However, after this method returns, future I/O on this
+// object are guaranteed to return |ZX_ERR_BAD_HANDLE|.
 zx_status_t zxio_release(zxio_t* io, zx_handle_t* out_handle);
+
+// Signals an intent to terminate connection with the server. Where applicable,
+// waits for an acknowledgement from the server which may communicate any I/O
+// errors.
+//
+// At the same time, attempts to interrupt any concurrent operation on |io|.
+//
+// Does not consume |io|. However, after this method returns, future I/O on this
+// object are guaranteed to return |ZX_ERR_BAD_HANDLE|.
+zx_status_t zxio_close(zxio_t* io);
 
 // Attempt to create a |zx_handle_t| that represents another session with |io|.
 //
@@ -51,11 +68,6 @@ zx_status_t zxio_release(zxio_t* io, zx_handle_t* out_handle);
 //
 // Does not consume |io|.
 zx_status_t zxio_clone(zxio_t* io, zx_handle_t* out_handle);
-
-// Terminates connection with the server.
-//
-// Always consumes |io|.
-zx_status_t zxio_close(zxio_t* io);
 
 // Wait for |signals| to be asserted for |io|.
 //
@@ -293,7 +305,7 @@ typedef struct zxio_dirent_iterator {
 // Initializes a |zxio_dirent_iterator_t| for the given |directory|.
 //
 // At most one |zxio_dirent_iterator_t| can be active for a given |directory|
-// at a time.
+// at a time. The lifetime of |directory| must be greater than that of |iterator|.
 //
 // The initialized iterator should be destroyed by calling
 // |zxio_dirent_iterator_destroy| when no longer used.

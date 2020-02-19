@@ -176,6 +176,11 @@ class Remote {
   zx::channel Release() {
     zx::channel control(rio_->control);
     rio_->control = ZX_HANDLE_INVALID;
+    return control;
+  }
+
+  void Destroy() {
+    Release().reset();
     if (rio_->event != ZX_HANDLE_INVALID) {
       zx_handle_close(rio_->event);
       rio_->event = ZX_HANDLE_INVALID;
@@ -184,7 +189,6 @@ class Remote {
       zx_handle_close(rio_->stream);
       rio_->stream = ZX_HANDLE_INVALID;
     }
-    return control;
   }
 
  private:
@@ -360,9 +364,15 @@ fio::NodeAttributes ToNodeAttributes(zxio_node_attr_t attr, ToIo1ModePermissions
   };
 }
 
+zx_status_t zxio_remote_destroy(zxio_t* io) {
+  Remote rio(io);
+  rio.Destroy();
+  return ZX_OK;
+}
+
 zx_status_t zxio_remote_close(zxio_t* io) {
   Remote rio(io);
-  return zxio_raw_remote_close(rio.Release());
+  return zxio_raw_remote_close(rio.control());
 }
 
 zx_status_t zxio_remote_release(zxio_t* io, zx_handle_t* out_handle) {
@@ -795,6 +805,7 @@ zx_status_t zxio_remote_isatty(zxio_t* io, bool* tty) {
 
 static constexpr zxio_ops_t zxio_remote_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
+  ops.destroy = zxio_remote_destroy;
   ops.close = zxio_remote_close;
   ops.release = zxio_remote_release;
   ops.clone = zxio_remote_clone;
@@ -869,6 +880,7 @@ zx_status_t zxio_dir_attr_set(zxio_t* io, const zxio_node_attr_t* attr) {
 
 static constexpr zxio_ops_t zxio_dir_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
+  ops.destroy = zxio_remote_destroy;
   ops.close = zxio_remote_close;
   ops.release = zxio_remote_release;
   ops.clone = zxio_remote_clone;
@@ -941,6 +953,7 @@ zx_status_t zxio_file_attr_set(zxio_t* io, const zxio_node_attr_t* attr) {
 
 static constexpr zxio_ops_t zxio_file_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
+  ops.destroy = zxio_remote_destroy;
   ops.close = zxio_remote_close;
   ops.release = zxio_remote_release;
   ops.clone = zxio_remote_clone;
@@ -983,9 +996,12 @@ uint32_t zxio_abilities_to_posix_permissions_for_directory(zxio_abilities_t abil
   return ToIo1ModePermissionsForDirectory()(abilities);
 }
 
-zx_status_t zxio_raw_remote_close(zx::channel control) {
-  auto result = fio::Node::Call::Close(zx::unowned_channel(control));
-  return result.ok() ? result.Unwrap()->s : result.status();
+zx_status_t zxio_raw_remote_close(zx::unowned_channel control) {
+  auto result = fio::Node::Call::Close(std::move(control));
+  if (result.status() != ZX_OK) {
+    return result.status();
+  }
+  return result.Unwrap()->s;
 }
 
 zx_status_t zxio_raw_remote_clone(zx::unowned_channel source, zx_handle_t* out_handle) {

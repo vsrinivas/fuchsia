@@ -92,11 +92,12 @@ TEST(DebugDataTest, LoadConfig) {
   ASSERT_OK(fdio_ns_bind(ns, directory.c_str(), c2.release()));
   auto unbind = fbl::MakeAutoCall([&]() { fdio_ns_unbind(ns, directory.c_str()); });
 
+  async::Loop svc_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
   debugdata::DebugData svc(fbl::unique_fd{fdio_ns_opendir(ns)});
-  fidl::Bind(loop.dispatcher(), std::move(server), &svc);
-  ASSERT_OK(loop.StartThread());
+  fidl::Bind(svc_loop.dispatcher(), std::move(server), &svc);
+  ASSERT_OK(svc_loop.StartThread());
 
   const auto path = (directory / filename).string();
 
@@ -105,6 +106,7 @@ TEST(DebugDataTest, LoadConfig) {
   ASSERT_OK(result.status());
   zx::vmo vmo = std::move(result->config);
 
+  svc_loop.Shutdown();
   loop.Shutdown();
   vfs.reset();
 

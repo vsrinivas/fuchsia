@@ -25,7 +25,11 @@ class VmoFileNonZeroOffsetTest : public zxtest::Test {
     io = &storage.io;
   }
 
-  void TearDown() override { ASSERT_OK(zxio_close(io)); }
+  void TearDown() override {
+    h2.reset();
+    ASSERT_STATUS(ZX_ERR_PEER_CLOSED, zxio_close(io));
+    ASSERT_OK(zxio_destroy(io));
+  }
 
  protected:
   zx::vmo backing;
@@ -128,5 +132,7 @@ TEST(VmoFileTest, GetExact) {
   ASSERT_OK(vmo.read(dest, 0, 4));
   ASSERT_BYTES_EQ(ALPHABET, dest, 4);
 
-  ASSERT_OK(zxio_close(io));
+  h2.reset();
+  ASSERT_STATUS(ZX_ERR_PEER_CLOSED, zxio_close(io));
+  ASSERT_OK(zxio_destroy(io));
 }

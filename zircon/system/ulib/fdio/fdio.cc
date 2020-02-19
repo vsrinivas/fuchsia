@@ -17,6 +17,7 @@ struct fdio {
 
   // The number of references on this object. Note that each appearance
   // in the fd table counts as one reference on the corresponding object.
+  // Ongoing operations will also contribute to the refcount.
   std::atomic_int_fast32_t refcount;
 
   // The number of times this fdio object appears in the fd table.
@@ -91,6 +92,7 @@ void fdio_acquire(fdio_t* io) { io->refcount.fetch_add(1); }
 
 void fdio_release(fdio_t* io) {
   if (io->refcount.fetch_sub(1) == 1) {
+    zxio_destroy(fdio_get_zxio(io));
     delete io;
   }
 }

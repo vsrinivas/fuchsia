@@ -47,8 +47,16 @@ typedef struct fdio_ops {
   zx_status_t (*close)(fdio_t* io);
   zx_status_t (*open)(fdio_t* io, const char* path, uint32_t flags, uint32_t mode, fdio_t** out);
   zx_status_t (*clone)(fdio_t* io, zx_handle_t* out_handle);
+
   // |unwrap| releases the underlying handle if applicable.
+  // The caller must ensure there are no concurrent operations on |io|.
+  //
+  // For example, |fdio_fd_transfer| will call |fdio_unbind_from_fd| which will
+  // only succeed when the caller has the last unique reference to the |fdio_t|,
+  // thus ensuring that the fd is only transferred when there are no concurrent
+  // operations.
   zx_status_t (*unwrap)(fdio_t* io, zx_handle_t* out_handle);
+
   // |borrow_channel| borrows the underlying handle if applicable.
   zx_status_t (*borrow_channel)(fdio_t* io, zx_handle_t* out_handle);
   void (*wait_begin)(fdio_t* io, uint32_t events, zx_handle_t* handle, zx_signals_t* signals);

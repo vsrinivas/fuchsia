@@ -7,6 +7,7 @@
 
 #include <lib/zxio/extensions.h>
 #include <lib/zxio/zxio.h>
+#include <lib/zx/event.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
@@ -62,6 +63,8 @@ zx_status_t zxio_vmo_do_vector(size_t start, size_t length, size_t* offset,
 
 }  // namespace
 
+bool zxio_is_valid(const zxio_t* io);
+
 zx_status_t zxio_datagram_pipe_read_vector(zxio_t* io, const zx_iovec_t* vector,
                                            size_t vector_count, zxio_flags_t flags,
                                            size_t* out_actual);
@@ -78,8 +81,8 @@ void zxio_node_init(zxio_node_t* node, zx_handle_t control, const zxio_extension
 // These operate on the raw FIDL channel directly, as |node| and |remote|
 // have different object layouts.
 
-// Closes the remote object and consumes |control|.
-zx_status_t zxio_raw_remote_close(zx::channel control);
+// Send a |fuchsia.io/Node.Close| message on |control|. Note: does not close the channel.
+zx_status_t zxio_raw_remote_close(zx::unowned_channel control);
 
 zx_status_t zxio_raw_remote_clone(zx::unowned_channel source, zx_handle_t* out_handle);
 

@@ -11,12 +11,10 @@
 
 #include "private.h"
 
-namespace fio = ::llcpp::fuchsia::io;
-
 static_assert(sizeof(zxio_vmo_t) <= sizeof(zxio_storage_t),
               "zxio_vmo_t must fit inside zxio_storage_t.");
 
-static zx_status_t zxio_vmo_close(zxio_t* io) {
+static zx_status_t zxio_vmo_destroy(zxio_t* io) {
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
   file->~zxio_vmo_t();
   return ZX_OK;
@@ -25,7 +23,6 @@ static zx_status_t zxio_vmo_close(zxio_t* io) {
 static zx_status_t zxio_vmo_release(zxio_t* io, zx_handle_t* out_handle) {
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
   *out_handle = file->vmo.release();
-  file->~zxio_vmo_t();
   return ZX_OK;
 }
 
@@ -151,7 +148,7 @@ zx_status_t zxio_vmo_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offset,
 
 static constexpr zxio_ops_t zxio_vmo_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
-  ops.close = zxio_vmo_close;
+  ops.destroy = zxio_vmo_destroy;
   ops.release = zxio_vmo_release;
   ops.clone = zxio_vmo_clone;
   ops.attr_get = zxio_vmo_attr_get;

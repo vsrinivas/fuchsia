@@ -504,16 +504,26 @@ static fdio_ops_t fdio_datagram_socket_ops = {
 
 static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
+  ops.destroy = [](zxio_t* io) {
+    auto zs = reinterpret_cast<zxio_datagram_socket_t*>(io);
+    zs->~zxio_datagram_socket_t();
+    return ZX_OK;
+  };
   ops.close = [](zxio_t* io) {
     auto zs = reinterpret_cast<zxio_datagram_socket_t*>(io);
-    auto response = zs->client.Close();
-    zs->~zxio_datagram_socket_t();
-    return response.status();
+    // TODO(fxb/45407): When the syscall to detach a handle from its object is added,
+    // we should use that to mark the handle as detached, instead of closing
+    // the handle with risks of race behavior.
+    zs->event.reset();
+    auto close_result = zs->client.Close();
+    if (close_result.status() != ZX_OK) {
+      return close_result.status();
+    }
+    return close_result->s;
   };
   ops.release = [](zxio_t* io, zx_handle_t* out_handle) {
     auto zs = reinterpret_cast<zxio_datagram_socket_t*>(io);
     *out_handle = zs->client.mutable_channel()->release();
-    zs->~zxio_datagram_socket_t();
     return ZX_OK;
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
@@ -676,6 +686,12 @@ static fdio_ops_t fdio_stream_socket_ops = {
 
 static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
+  ops.destroy = [](zxio_t* io) {
+    auto zs = reinterpret_cast<zxio_stream_socket_t*>(io);
+    zxio_destroy(&zs->pipe.io);
+    zs->~zxio_stream_socket_t();
+    return ZX_OK;
+  };
   ops.close = [](zxio_t* io) {
     auto zs = reinterpret_cast<zxio_stream_socket_t*>(io);
     // N.B. we don't call zs->control.Close() because such a call would block
@@ -688,13 +704,11 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
     // might want to block here, but the knowledge of blocking-or-not is not
     // available in this context, and the consequence of this deviation is judged
     // (by me - tamird@) to be minor.
-    zs->~zxio_stream_socket_t();
-    return ZX_OK;
+    return zxio_close(&zs->pipe.io);
   };
   ops.release = [](zxio_t* io, zx_handle_t* out_handle) {
     auto zs = reinterpret_cast<zxio_stream_socket_t*>(io);
     *out_handle = zs->client.mutable_channel()->release();
-    zs->~zxio_stream_socket_t();
     return ZX_OK;
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {

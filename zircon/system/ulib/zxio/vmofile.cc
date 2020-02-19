@@ -14,10 +14,15 @@
 
 namespace fio = ::llcpp::fuchsia::io;
 
-static zx_status_t zxio_vmofile_close(zxio_t* io) {
+static zx_status_t zxio_vmofile_destroy(zxio_t* io) {
   auto file = reinterpret_cast<zxio_vmofile_t*>(io);
   file->~zxio_vmofile_t();
   return ZX_OK;
+}
+
+static zx_status_t zxio_vmofile_close(zxio_t* io) {
+  auto file = reinterpret_cast<zxio_vmofile_t*>(io);
+  return file->control.Close().status();
 }
 
 static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
@@ -36,7 +41,6 @@ static zx_status_t zxio_vmofile_release(zxio_t* io, zx_handle_t* out_handle) {
   }
 
   *out_handle = file->control.mutable_channel()->release();
-  file->~zxio_vmofile_t();
   return ZX_OK;
 }
 
@@ -180,6 +184,7 @@ static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t*
 
 static constexpr zxio_ops_t zxio_vmofile_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
+  ops.destroy = zxio_vmofile_destroy;
   ops.close = zxio_vmofile_close;
   ops.release = zxio_vmofile_release;
   ops.clone = zxio_vmofile_clone;

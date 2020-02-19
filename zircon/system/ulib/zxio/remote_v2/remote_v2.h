@@ -21,7 +21,9 @@ class RemoteV2 {
 
   [[nodiscard]] zx::unowned_stream stream() const { return zx::unowned_stream(rio_->stream); }
 
-  zx::handle Release();
+  void Destroy();
+
+  zx::channel Release();
 
  private:
   zxio_remote_v2_t* rio_;

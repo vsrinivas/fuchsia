@@ -27,7 +27,10 @@ class VmoTest : public zxtest::Test {
     io = &storage.io;
   }
 
-  void TearDown() override { ASSERT_OK(zxio_close(io)); }
+  void TearDown() override {
+    ASSERT_OK(zxio_close(io));
+    ASSERT_OK(zxio_destroy(io));
+  }
 
  protected:
   zx::vmo backing;
@@ -195,4 +198,23 @@ TEST_F(HugeVmoTest, SeekPositiveOverflow) {
   ASSERT_STATUS(ZX_ERR_OUT_OF_RANGE, zxio_seek(io, ZXIO_SEEK_ORIGIN_END, kTooFarForwards, &new_seek));
   ASSERT_OK(zxio_seek(io, ZXIO_SEEK_ORIGIN_CURRENT, 0, &new_seek));
   ASSERT_EQ(original_seek, new_seek);
+}
+
+class VmoCloseTest : public VmoTest {
+ public:
+  void TearDown() override { /* The test case body will exercise closing and destroying */ }
+};
+
+TEST_F(VmoCloseTest, UseAfterClose) {
+  char buffer[16] = {};
+  size_t actual = 0u;
+  ASSERT_OK(zxio_read_at(io, 0, buffer, 6, 0, &actual));
+  EXPECT_EQ(actual, 6);
+
+  ASSERT_OK(zxio_close(io));
+  actual = 0;
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE, zxio_read_at(io, 0, buffer, 6, 0, &actual));
+  EXPECT_EQ(actual, 0);
+
+  ASSERT_OK(zxio_destroy(io));
 }

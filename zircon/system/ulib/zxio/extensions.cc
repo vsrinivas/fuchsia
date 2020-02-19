@@ -43,11 +43,9 @@ zx_status_t zxio_node_close(zxio_t* io) {
   if (node->extension_ops && node->extension_ops->destroy) {
     node->extension_ops->destroy(to_node(io));
   }
-  zx::channel control(node->control);
-  node->control = ZX_HANDLE_INVALID;
   zx_status_t status = ZX_OK;
   if (!node->extension_ops || !node->extension_ops->skip_close_call) {
-    status = zxio_raw_remote_close(std::move(control));
+    status = zxio_raw_remote_close(zx::unowned_channel(node->control));
   }
   return status;
 }
@@ -58,6 +56,20 @@ zx_status_t zxio_node_release(zxio_t* io, zx_handle_t* out_handle) {
     node->extension_ops->destroy(to_node(io));
   }
   *out_handle = node->control;
+  node->control = ZX_HANDLE_INVALID;
+  return ZX_OK;
+}
+
+zx_status_t zxio_node_destroy(zxio_t* io) {
+  zxio_node_internal_t* node = to_internal(io);
+  // If |io| has not been closed/released, we need to destroy the resources
+  // held by the custom transport.
+  if (zxio_is_valid(io)) {
+    if (node->extension_ops && node->extension_ops->destroy) {
+      node->extension_ops->destroy(to_node(io));
+    }
+  }
+  zx_handle_close(node->control);
   node->control = ZX_HANDLE_INVALID;
   return ZX_OK;
 }
@@ -96,6 +108,7 @@ zx_status_t zxio_node_write_vector(zxio_t* io, const zx_iovec_t* vector, size_t 
 
 static constexpr zxio_ops_t zxio_node_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
+  ops.destroy = zxio_node_destroy;
   ops.close = zxio_node_close;
   ops.release = zxio_node_release;
   ops.clone = zxio_node_clone;

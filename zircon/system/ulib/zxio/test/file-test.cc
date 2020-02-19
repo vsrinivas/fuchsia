@@ -5,12 +5,15 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl-async/cpp/async_bind.h>
+#include <lib/sync/completion.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/ops.h>
 
 #include <atomic>
+#include <future>
 #include <memory>
+#include <thread>
 
 #include <zxtest/zxtest.h>
 
@@ -29,6 +32,8 @@ class TestServerBase : public fio::File::Interface {
   void Close(CloseCompleter::Sync completer) override {
     num_close_.fetch_add(1);
     completer.Reply(ZX_OK);
+    // After the reply, we should close the connection.
+    completer.Close(ZX_OK);
   }
 
   void Clone(uint32_t flags, zx::channel object, CloneCompleter::Sync completer) override {
@@ -113,10 +118,11 @@ class File : public zxtest::Test {
     if (status != ZX_OK) {
       return status;
     }
-
-    status = fidl::Bind(loop_->dispatcher(), std::move(server_end), server_.get());
-    if (status != ZX_OK) {
-      return status;
+    fit::result<fidl::BindingRef, zx_status_t> bind_result =
+        fidl::AsyncBind(loop_->dispatcher(), std::move(server_end), server_.get());
+    EXPECT_TRUE(bind_result.is_ok());
+    if (bind_result.is_error()) {
+      return bind_result.error();
     }
 
     auto result = fio::File::Call::Describe(client_end.borrow());
@@ -130,10 +136,11 @@ class File : public zxtest::Test {
                           result->info.mutable_file().stream.release());
   }
 
-  void TearDown() final {
+  void TearDown() override {
     ASSERT_EQ(0, server_->num_close());
     ASSERT_OK(zxio_close(&file_.io));
     ASSERT_EQ(1, server_->num_close());
+    ASSERT_OK(zxio_destroy(&file_.io));
   }
 
  protected:
@@ -341,6 +348,59 @@ TEST_F(File, ReadWriteStream) {
   ASSERT_NO_FAILURES(server = StartServer<TestServerStream>());
   ASSERT_OK(OpenFile());
   ASSERT_NO_FAILURES(FileTestSuite::ReadWrite(&file_.io));
+}
+
+class FileConcurrentAccess : public File {
+ public:
+  void TearDown() override {
+    // Stop closing the zxio on behalf of the test case.
+  }
+};
+
+TEST_F(FileConcurrentAccess, CloseShouldInterruptOtherOps) {
+  class TestServer : public TestServerBase {
+   public:
+    void GetAttr(GetAttrCompleter::Sync completer) override {
+      // Forever delay the response... until the server is destroyed.
+      // This implies the client would have to rely on |zxio_close|
+      // to interrupt |zxio_attr_get|.
+      EXPECT_FALSE(completer_.has_value());
+      sync_completion_signal(&called_get_attr_);
+      completer_ = completer.ToAsync();
+    }
+    virtual ~TestServer() {
+      ASSERT_TRUE(completer_.has_value());
+      completer_->Close(ZX_ERR_IO);
+    }
+    sync_completion_t* called_get_attr() { return &called_get_attr_; }
+   private:
+    sync_completion_t called_get_attr_;
+    std::optional<GetAttrCompleter::Async> completer_;
+  };
+  TestServer* server;
+  ASSERT_NO_FAILURES(server = StartServer<TestServer>());
+  ASSERT_OK(OpenFile());
+
+  std::atomic<bool> get_attr_returned = false;
+  std::future<zx_status_t> concurrent = std::async(std::launch::async, [&]{
+    zxio_node_attr_t attr;
+    zx_status_t status = zxio_attr_get(&file_.io, &attr);
+    get_attr_returned.store(true);
+    return status;
+  });
+
+  // First ensure |zxio_attr_get| has been blocked on the FIDL call.
+  ASSERT_OK(sync_completion_wait_deadline(server->called_get_attr(), ZX_TIME_INFINITE));
+
+  ASSERT_FALSE(get_attr_returned.load());
+  ASSERT_EQ(0, server->num_close());
+  ASSERT_OK(zxio_close(&file_.io));
+  ASSERT_EQ(1, server->num_close());
+
+  concurrent.wait();
+  ASSERT_TRUE(get_attr_returned.load());
+  ASSERT_STATUS(ZX_ERR_PEER_CLOSED, concurrent.get());
+  ASSERT_OK(zxio_destroy(&file_.io));
 }
 
 }  // namespace
