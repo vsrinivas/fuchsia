@@ -17,9 +17,9 @@
 SysmemSecureMemServer::SysmemSecureMemServer(thrd_t ddk_dispatcher_thread,
                                              zx::channel tee_client_channel)
     : ddk_dispatcher_thread_(ddk_dispatcher_thread),
+      tee_client_channel_(std::move(tee_client_channel)),
       loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
-  ZX_DEBUG_ASSERT(tee_client_channel);
-  tee_connection_.Bind(std::move(tee_client_channel));
+  ZX_DEBUG_ASSERT(tee_client_channel_);
 }
 
 SysmemSecureMemServer::~SysmemSecureMemServer() {
@@ -135,29 +135,34 @@ void SysmemSecureMemServer::PostToLoop(fit::closure to_run) {
   closure_queue_.Enqueue(std::move(to_run));
 }
 
-bool SysmemSecureMemServer::TrySetupSecmemSession() {
+zx_status_t SysmemSecureMemServer::TrySetupSecmemClientSession() {
   ZX_DEBUG_ASSERT(thrd_current() == loop_thread_);
   // We only try this once; if it doesn't work the first time, it's very
   // unlikely to work on retry anyway, and this avoids some retry complexity.
-  if (!has_attempted_secmem_session_connection_) {
-    ZX_DEBUG_ASSERT(tee_connection_.is_bound());
-    ZX_DEBUG_ASSERT(!secmem_session_.has_value());
-
-    has_attempted_secmem_session_connection_ = true;
-
-    auto session_result = SecmemSession::TryOpen(std::move(tee_connection_));
-    if (!session_result.is_ok()) {
-      // Logging handled in `SecmemSession::TryOpen`
-      tee_connection_ = session_result.take_error();
-      return false;
-    }
-
-    secmem_session_.emplace(session_result.take_value());
-    LOG(INFO, "Successfully connected to secmem session");
-    return true;
+  if (!is_setup_secmem_client_session_attempted_) {
+    is_setup_secmem_client_session_attempted_ = true;
+    // This is skipping over TEEC_InitializeContext(), which doesn't presently
+    // have a way to specify a pre-existing FIDL channel, or any way to connect
+    // that's suitable to establish a loopback connection.  It's fine that we're
+    // skipping is_global_platform_compliant(); we already know that's true.
+    //
+    // While we could do this on the thread that calls the constructor,
+    // TEEC_InitializeContext() would want to be called from the loop_thread_,
+    // so do this here in case we switch to TEEC_InitializeContext().
+    //
+    // TODO(dustingreen): Regardless of whether we split tee-client-api into an
+    // outer and inner lib, it'd be good for the tee-client-api (inner or only)
+    // to have an entry point to init a context from a channel.  Unfortunately
+    // that entry point is outside the spec the other TEEC_ calls are following
+    // but that's probably ok.  Or, we could use tee.Device directly without
+    // using any of the tee-client-api.
+    ZX_DEBUG_ASSERT(tee_client_channel_);
+    context_.imp.tee_channel = tee_client_channel_.release();
+    ZX_DEBUG_ASSERT(!secmem_client_session_);
+    secmem_client_session_.emplace(&context_);
+    setup_secmem_client_session_status_ = secmem_client_session_->Init();
   }
-
-  return secmem_session_.has_value();
+  return setup_secmem_client_session_status_;
 }
 
 void SysmemSecureMemServer::EnsureLoopDone(bool is_success) {
@@ -171,21 +176,23 @@ void SysmemSecureMemServer::EnsureLoopDone(bool is_success) {
   is_loop_done_ = true;
   closure_queue_.StopAndClear();
   loop_.Quit();
-  if (has_attempted_secmem_session_connection_ && secmem_session_.has_value()) {
+  if (is_setup_secmem_client_session_attempted_) {
     ZX_DEBUG_ASSERT(thrd_current() == loop_thread_);
+    ZX_DEBUG_ASSERT(secmem_client_session_);
     if (is_protect_memory_range_active_) {
       TEEC_Result tee_status =
-          secmem_session_->ProtectMemoryRange(protect_start_, protect_length_, false);
+          secmem_client_session_->ProtectMemoryRange(protect_start_, protect_length_, false);
       if (tee_status != TEEC_SUCCESS) {
-        LOG(ERROR, "SecmemSession::ProtectMemoryRange(false) failed - TEEC_Result %d", tee_status);
-        ZX_PANIC("SecmemSession::ProtectMemoryRange(false) failed - TEEC_Result %d", tee_status);
+        LOG(ERROR, "secmem_sesson_.ProtectMemoryRange(false) failed - tee_status: %d", tee_status);
+        ZX_PANIC("secmem_sesson_.ProtectMemoryRange(false) failed - tee_status: %d", tee_status);
       }
       is_protect_memory_range_active_ = false;
     }
-    secmem_session_.reset();
+    secmem_client_session_.reset();
+    TEEC_FinalizeContext(&context_);
   } else {
     // We could be running on the loop_thread_ or the ddk_dispatcher_thread_ in this case.
-    ZX_DEBUG_ASSERT(!secmem_session_);
+    ZX_DEBUG_ASSERT(!secmem_client_session_);
     ZX_DEBUG_ASSERT(context_.imp.tee_channel == ZX_HANDLE_INVALID);
   }
   if (secure_mem_server_done_) {
@@ -204,14 +211,15 @@ zx_status_t SysmemSecureMemServer::GetPhysicalSecureHeapsInternal(
   }
   is_get_physical_secure_heaps_called_ = true;
 
-  if (!TrySetupSecmemSession()) {
-    // Logging handled in `TrySetupSecmemSession`
-    return ZX_ERR_INTERNAL;
+  zx_status_t status = TrySetupSecmemClientSession();
+  if (status != ZX_OK) {
+    LOG(ERROR, "TrySetupSecmemClientSession() failed - status: %d", status);
+    return status;
   }
 
   uint64_t vdec_phys_base;
   size_t vdec_size;
-  zx_status_t status = SetupVdec(&vdec_phys_base, &vdec_size);
+  status = SetupVdec(&vdec_phys_base, &vdec_size);
   if (status != ZX_OK) {
     LOG(ERROR, "SetupVdec failed - status: %d", status);
     return status;
@@ -234,9 +242,10 @@ zx_status_t SysmemSecureMemServer::SetPhysicalSecureHeapsInternal(
   }
   is_set_physical_secure_heaps_called_ = true;
 
-  if (!TrySetupSecmemSession()) {
-    // Logging handled in `TrySetupSecmemSession`
-    return ZX_ERR_INTERNAL;
+  zx_status_t status = TrySetupSecmemClientSession();
+  if (status != ZX_OK) {
+    LOG(ERROR, "TrySetupSecmemClientSession() failed - status: %d", status);
+    return status;
   }
 
   // This implementation is amlogic-specific; we expect exactly 1 heap which is
@@ -251,7 +260,7 @@ zx_status_t SysmemSecureMemServer::SetPhysicalSecureHeapsInternal(
     return ZX_ERR_INVALID_ARGS;
   }
 
-  zx_status_t status = ProtectMemoryRange(heap.physical_address, heap.size_bytes);
+  status = ProtectMemoryRange(heap.physical_address, heap.size_bytes);
   if (status != ZX_OK) {
     LOG(ERROR, "ProtectMemoryRange() failed - status: %d", status);
     return status;
@@ -265,13 +274,14 @@ zx_status_t SysmemSecureMemServer::SetPhysicalSecureHeapsInternal(
 
 zx_status_t SysmemSecureMemServer::SetupVdec(uint64_t* physical_address, size_t* size_bytes) {
   ZX_DEBUG_ASSERT(thrd_current() == loop_thread_);
-  ZX_DEBUG_ASSERT(has_attempted_secmem_session_connection_);
-  ZX_DEBUG_ASSERT(secmem_session_.has_value());
+  ZX_DEBUG_ASSERT(is_setup_secmem_client_session_attempted_);
+  ZX_DEBUG_ASSERT(setup_secmem_client_session_status_ == ZX_OK);
   uint32_t start;
   uint32_t length;
-  TEEC_Result tee_status = secmem_session_->AllocateSecureMemory(&start, &length);
+  TEEC_Result tee_status = secmem_client_session_->AllocateSecureMemory(&start, &length);
   if (tee_status != TEEC_SUCCESS) {
-    LOG(ERROR, "SecmemSession::AllocateSecureMemory() failed - TEEC_Result %" PRIu32, tee_status);
+    LOG(ERROR, "secmem_client_session_.AllocateSecureMemory() failed - tee_status: %" PRIu32,
+        tee_status);
     return ZX_ERR_INTERNAL;
   }
   *physical_address = start;
@@ -282,8 +292,8 @@ zx_status_t SysmemSecureMemServer::SetupVdec(uint64_t* physical_address, size_t*
 zx_status_t SysmemSecureMemServer::ProtectMemoryRange(uint64_t physical_address,
                                                       size_t size_bytes) {
   ZX_DEBUG_ASSERT(thrd_current() == loop_thread_);
-  ZX_DEBUG_ASSERT(has_attempted_secmem_session_connection_);
-  ZX_DEBUG_ASSERT(secmem_session_.has_value());
+  ZX_DEBUG_ASSERT(is_setup_secmem_client_session_attempted_);
+  ZX_DEBUG_ASSERT(setup_secmem_client_session_status_ == ZX_OK);
   if (!safemath::IsValueInRangeForNumericType<uint32_t>(physical_address)) {
     LOG(ERROR, "heap.physical_address > 0xFFFFFFFF");
     return ZX_ERR_INVALID_ARGS;
@@ -296,11 +306,11 @@ zx_status_t SysmemSecureMemServer::ProtectMemoryRange(uint64_t physical_address,
     LOG(ERROR, "start + size overflow");
     return ZX_ERR_INVALID_ARGS;
   }
-  auto start = static_cast<uint32_t>(physical_address);
-  auto length = static_cast<uint32_t>(size_bytes);
-  TEEC_Result tee_status = secmem_session_->ProtectMemoryRange(start, length, true);
+  uint32_t start = static_cast<uint32_t>(physical_address);
+  uint32_t length = static_cast<uint32_t>(size_bytes);
+  TEEC_Result tee_status = secmem_client_session_->ProtectMemoryRange(start, length, true);
   if (tee_status != TEEC_SUCCESS) {
-    LOG(ERROR, "SecmemSession::ProtectMemoryRange() failed - TEEC_Result %d returning status: %d",
+    LOG(ERROR, "secmem_sesson_.ProtectMemoryRange() failed - tee_status: %d returning status: %d",
         tee_status, ZX_ERR_INTERNAL);
     return ZX_ERR_INTERNAL;
   }

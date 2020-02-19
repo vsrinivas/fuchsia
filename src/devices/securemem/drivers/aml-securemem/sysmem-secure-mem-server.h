@@ -10,11 +10,9 @@
 #include <lib/closure-queue/closure_queue.h>
 #include <threads.h>
 
-#include <optional>
-
 #include <tee-client-api/tee_client_api.h>
 
-#include "secmem-session.h"
+#include "secmem-client-session.h"
 
 // This is used with fidl::Bind() to dispatch fuchsia::sysmem::Tee requests.
 class SysmemSecureMemServer : public llcpp::fuchsia::sysmem::SecureMem::Interface {
@@ -41,7 +39,7 @@ class SysmemSecureMemServer : public llcpp::fuchsia::sysmem::SecureMem::Interfac
  private:
   void PostToLoop(fit::closure to_run);
 
-  bool TrySetupSecmemSession();
+  zx_status_t TrySetupSecmemClientSession();
   void EnsureLoopDone(bool is_success);
 
   zx_status_t GetPhysicalSecureHeapsInternal(llcpp::fuchsia::sysmem::PhysicalSecureHeaps* heaps);
@@ -54,7 +52,7 @@ class SysmemSecureMemServer : public llcpp::fuchsia::sysmem::SecureMem::Interfac
   zx_status_t ProtectMemoryRange(uint64_t physical_address, uint64_t size_bytes);
 
   thrd_t ddk_dispatcher_thread_ = {};
-  fuchsia::tee::DeviceSyncPtr tee_connection_ = {};
+  zx::channel tee_client_channel_;
   TEEC_Context context_ = {};
   async::Loop loop_;
   thrd_t loop_thread_ = {};
@@ -65,10 +63,11 @@ class SysmemSecureMemServer : public llcpp::fuchsia::sysmem::SecureMem::Interfac
   bool is_get_physical_secure_heaps_called_ = {};
   bool is_set_physical_secure_heaps_called_ = {};
 
-  // We try to open a SecmemSession once.  If that fails, we remember the status and
-  // EnsureSecmemSession() will return that status without trying Init() again.
-  bool has_attempted_secmem_session_connection_ = false;
-  std::optional<SecmemSession> secmem_session_ = std::nullopt;
+  // We try to Init() SecmemClientSession once.  If that fails, we remember the status and
+  // EnsureSecmemClientSession() will return that status without trying Init() again.
+  bool is_setup_secmem_client_session_attempted_ = {};
+  zx_status_t setup_secmem_client_session_status_ = {};
+  std::optional<SecmemClientSession> secmem_client_session_;
 
   bool is_protect_memory_range_active_ = {};
   uint32_t protect_start_ = {};
