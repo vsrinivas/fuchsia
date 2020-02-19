@@ -23,6 +23,8 @@ dart_test("sl4f_test") {
     "//third_party/dart-pkg/pub/test",
   ]
 
+  non_dart_deps = [ ":runtime_deps" ]
+
   environments = [
     nuc_env,
 
@@ -34,6 +36,20 @@ dart_test("sl4f_test") {
       tags = [ "e2e-fyi" ]
     },
   ]
+}
+
+copy("runtime_deps") {
+  _data_dir = "$target_gen_dir/runtime_deps"
+
+  sources = [ "$root_out_dir/trace2json" ]
+
+  outputs = [ "$_data_dir/{{source_file_part}}" ]
+
+  metadata = {
+    test_runtime_deps = [ "$_data_dir/trace2json" ]
+  }
+
+  deps = [ "//garnet/bin/trace2json:bin" ]
 }
 
 group("test") {

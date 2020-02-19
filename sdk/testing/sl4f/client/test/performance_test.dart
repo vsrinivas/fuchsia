@@ -318,4 +318,73 @@ void main(List<String> args) {
     expect(verifyMockDumpWriteAsBytes.captured,
         ['chunked-trace', 'json', largeData]);
   });
+
+  test('convert trace', () async {
+    final mockRunProcessObserver = MockRunProcessObserver();
+    final performance =
+        FakePerformanceTools(mockSl4f, mockDump, mockRunProcessObserver);
+    final convertedTraces = [
+      await performance.convertTraceFileToJson(
+          '/path/to/trace2json', File('/path/to/trace.fxt')),
+      await performance.convertTraceFileToJson(
+          '/path/to/trace2json', File('/path/to/trace.fxt.gz')),
+      await performance.convertTraceFileToJson(
+          '/path/to/trace2json', File('/path/to/trace.fxt'),
+          compressedOutput: true),
+      await performance.convertTraceFileToJson(
+          '/path/to/trace2json', File('/path/to/trace.fxt.gz'),
+          compressedOutput: true),
+      // These compressedInput values intentionally do not match the file
+      // extensions to test that the code isn't ignoring the compressedInput
+      // argument.
+      await performance.convertTraceFileToJson(
+          '/path/to/trace2json', File('/path/to/trace.fxt'),
+          compressedInput: true, compressedOutput: true),
+      await performance.convertTraceFileToJson(
+          '/path/to/trace2json', File('/path/to/trace.fxt.gz'),
+          compressedInput: false, compressedOutput: true),
+    ];
+    expect(convertedTraces[0].path, '/path/to/trace.json');
+    expect(convertedTraces[1].path, '/path/to/trace.json');
+    expect(convertedTraces[2].path, '/path/to/trace.json.gz');
+    expect(convertedTraces[3].path, '/path/to/trace.json.gz');
+    expect(convertedTraces[4].path, '/path/to/trace.json.gz');
+    expect(convertedTraces[5].path, '/path/to/trace.json.gz');
+
+    final verifyMockRunProcessObserver = verify(mockRunProcessObserver
+        .runProcess(argThat(endsWith('trace2json')), captureAny))
+      ..called(6);
+    final capturedArgs = verifyMockRunProcessObserver.captured;
+    expect(capturedArgs[0], [
+      '--input-file=/path/to/trace.fxt',
+      '--output-file=/path/to/trace.json'
+    ]);
+    expect(capturedArgs[1], [
+      '--input-file=/path/to/trace.fxt.gz',
+      '--output-file=/path/to/trace.json',
+      '--compressed-input'
+    ]);
+    expect(capturedArgs[2], [
+      '--input-file=/path/to/trace.fxt',
+      '--output-file=/path/to/trace.json.gz',
+      '--compressed-output'
+    ]);
+    expect(capturedArgs[3], [
+      '--input-file=/path/to/trace.fxt.gz',
+      '--output-file=/path/to/trace.json.gz',
+      '--compressed-input',
+      '--compressed-output'
+    ]);
+    expect(capturedArgs[4], [
+      '--input-file=/path/to/trace.fxt',
+      '--output-file=/path/to/trace.json.gz',
+      '--compressed-input',
+      '--compressed-output'
+    ]);
+    expect(capturedArgs[5], [
+      '--input-file=/path/to/trace.fxt.gz',
+      '--output-file=/path/to/trace.json.gz',
+      '--compressed-output'
+    ]);
+  });
 }
