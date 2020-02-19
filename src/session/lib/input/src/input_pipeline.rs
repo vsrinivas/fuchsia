@@ -17,13 +17,13 @@ use {
     std::path::PathBuf,
 };
 
-/// An [`InputPipeline`] manages input events from input devices through input handlers.
+/// An [`InputPipeline`] manages input devices and propagates input events through input handlers.
+///
+/// On creation, clients declare what types of input devices an [`InputPipeline`] manages. The
+/// [`InputPipeline`] will continuously detect new input devices of supported type(s).
 ///
 /// # Example
 /// ```
-/// let keyboard_binding: KeyboardBinding = InputDeviceBinding::any_device().await?;
-/// let touch_binding: touch::TouchBinding = InputDeviceBinding::any_device().await?;
-///
 /// let ime_handler =
 ///     ImeHandler::new(scene_manager.session.clone(), scene_manager.compositor_id).await?;
 /// let touch_handler = TouchHandler::new(
@@ -34,7 +34,10 @@ use {
 /// ).await?;
 ///
 /// let input_pipeline = InputPipeline::new(
-///     vec![Box::new(keyboard_binding)],
+///     vec![
+///         input_device::InputDeviceType::Touch,
+///         input_device::InputDeviceType::Keyboard,
+///     ],
 ///     vec![Box::new(ime_handler), Box::new(touch_handler)],
 /// );
 /// input_pipeline.handle_input_events().await;
@@ -60,15 +63,6 @@ impl InputPipeline {
     /// - `input_handlers`: The input handlers that the [`InputPipeline`] sends InputEvents to.
     ///                     Handlers process InputEvents in the order that they appear in
     ///                     `input_handlers`.
-    ///
-    /// Example:
-    /// let input_pipeline = InputPipeline::new_pipeline(
-    ///     vec![
-    ///         input_device::InputDeviceType::Mouse,
-    ///         input_device::InputDeviceType::Touch,
-    ///         input_device::InputDeviceType::Keyboard,
-    ///     ],
-    ///     input_handlers(scene_manager, pointer_hack_server).await);
     pub async fn new(
         device_types: Vec<input_device::InputDeviceType>,
         input_handlers: Vec<Box<dyn input_handler::InputHandler>>,
