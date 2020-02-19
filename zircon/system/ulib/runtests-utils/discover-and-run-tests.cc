@@ -70,7 +70,9 @@ int Usage(const char* name, const fbl::Vector<fbl::String>& default_test_dirs) {
           "   -P: Turn ON Performance tests (off by default) [2] \n"
           "   -p: Turn OFF Performance tests                 [2] \n"
           "   -a: Turn on All tests                              \n"
-          "   -t: Filter tests by name                           \n"
+          "   -t: Filter tests found in directory globs by these \n"
+          "       basenames. Also accepts fuchsia-pkg URIs, which\n"
+          "       are run regardless of directory globs.         \n"
           "       (accepts a comma-separated list)               \n"
           "   -f: Run tests specified in this file [3]           \n"
           "   -r: Repeat the test suite this many times          \n"
@@ -312,6 +314,7 @@ int DiscoverAndRunTests(int argc, const char* const* argv,
       fprintf(stderr, "Failed to find tests in dirs: %s\n", strerror(err));
       return EXIT_FAILURE;
     }
+    CopyFuchsiaPkgURIs(basename_whitelist, &test_paths);
   } else {
     fprintf(stderr,
             "Test list path, test directory globs or default test directories must be specified.");

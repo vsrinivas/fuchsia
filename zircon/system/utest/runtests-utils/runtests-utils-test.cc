@@ -32,6 +32,32 @@ namespace {
 
 static constexpr size_t kOneMegabyte = 1 << 20;
 
+bool CopyFuchsiaPkgURIsWithInput() {
+  BEGIN_TEST;
+
+  fbl::Vector<fbl::String> input;
+  input.push_back("fuchsia-pkg://foo/bar");
+  input.push_back("not-a-uri");
+  fbl::Vector<fbl::String> output;
+  CopyFuchsiaPkgURIs(input, &output);
+  EXPECT_EQ(1, output.size());
+  EXPECT_STR_EQ(input[0].c_str(), output[0].c_str());
+
+  END_TEST;
+}
+
+bool CopyFuchsiaPkgURIsNoInput() {
+  BEGIN_TEST;
+
+  fbl::Vector<fbl::String> input;
+  input.push_back("not-a-uri");
+  fbl::Vector<fbl::String> output;
+  CopyFuchsiaPkgURIs(input, &output);
+  EXPECT_EQ(0, output.size());
+
+  END_TEST;
+}
+
 bool ParseTestNamesEmptyStr() {
   BEGIN_TEST;
 
@@ -800,6 +826,11 @@ bool DiscoverAndRunTestsWithSyslogOutput() {
 
   END_TEST;
 }
+
+BEGIN_TEST_CASE(CopyFuchsiaPkgURIs)
+RUN_TEST(CopyFuchsiaPkgURIsWithInput)
+RUN_TEST(CopyFuchsiaPkgURIsNoInput)
+END_TEST_CASE(CopyFuchsiaPkgURIs)
 
 BEGIN_TEST_CASE(ParseTestNames)
 RUN_TEST(ParseTestNamesEmptyStr)

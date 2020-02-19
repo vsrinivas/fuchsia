@@ -407,4 +407,17 @@ bool RunTests(const fbl::Vector<fbl::String>& test_paths, const fbl::Vector<fbl:
   return true;
 }
 
+bool IsFuchsiaPkgURI(const char* s) {
+  const char prefix[] = "fuchsia-pkg://";
+  const size_t prefix_len = sizeof(prefix) - 1;
+  return 0 == strncmp(s, prefix, prefix_len);
+}
+
+void CopyFuchsiaPkgURIs(const fbl::Vector<fbl::String>& inputs, fbl::Vector<fbl::String>* outputs) {
+  for (const fbl::String& input : inputs) {
+    if (IsFuchsiaPkgURI(input.c_str())) {
+      outputs->push_back(input);
+    }
+  }
+}
 }  // namespace runtests

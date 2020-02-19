@@ -209,42 +209,54 @@ void TestFileComponentInfo(const fbl::String& path, ComponentInfo* v1_info_out,
 // |false|: if setup fails.
 bool SetUpForTestComponent(const char* argv[], size_t argc, fbl::String* out_component_url,
                            fbl::String* out_component_executor) {
-  // Values used when running the test as a component.
-  ComponentInfo v1_info, v2_info;
   const char* test_path = argv[0];
-
-  TestFileComponentInfo(test_path, &v1_info, &v2_info);
-  // If we get a non empty |cmx_file_path|, check that it exists, and if
-  // present launch the test as component using generated |component_url|.
-  if (v1_info.manifest_path == "") {
-    // test is not a component.
-    return true;
-  }
-
   struct stat s;
-
   const char* component_executor = "";
   fbl::String component_url;
 
-  // cmx file is present
-  if (stat(v1_info.manifest_path.c_str(), &s) == 0) {
-    component_executor = kRunTestComponentPath;
-    component_url = v1_info.component_url;
-  } else if (stat(v2_info.manifest_path.c_str(), &s) == 0) {
-    // cm file is present
-    component_executor = kRunTestSuitePath;
-    component_url = v2_info.component_url;
-  } else {
-    // Can't find either cmx or cm file, this test is not a component. Ensure it is not a binary
-    // from /pkgfs/packages.
-    if (strncmp(test_path, kPkgPrefix, fbl::count_of(kPkgPrefix)) == 0) {
-      fprintf(stderr,
-              "FAILURE: Test path '%s' starts with /pkgfs/packages, which is no longer supported.",
-              test_path);
+  if (IsFuchsiaPkgURI(test_path)) {
+    component_url = test_path;
+    const char* last_three_chars_of_url = &(test_path[strlen(test_path) - 3]);
+    if (0 == strncmp(last_three_chars_of_url, "cmx", 3)) {  // v1 component
+      component_executor = kRunTestComponentPath;
+    } else if (0 == strncmp(last_three_chars_of_url, ".cm", 3)) {  // v2
+      component_executor = kRunTestSuitePath;
+    } else {
+      fprintf(stderr, "FAILURE: component URL has unexpected format: %s\n", test_path);
       return false;
     }
+  } else {  // TODO(43448): Remove this code path once testrunner always provides URI.
+    ComponentInfo v1_info, v2_info;
 
-    return true;
+    TestFileComponentInfo(test_path, &v1_info, &v2_info);
+    // If we get a non empty |cmx_file_path|, check that it exists, and if
+    // present launch the test as component using generated |component_url|.
+    if (v1_info.manifest_path == "") {
+      // test is not a component.
+      return true;
+    }
+
+    // cmx file is present
+    if (stat(v1_info.manifest_path.c_str(), &s) == 0) {
+      component_executor = kRunTestComponentPath;
+      component_url = v1_info.component_url;
+    } else if (stat(v2_info.manifest_path.c_str(), &s) == 0) {
+      // cm file is present
+      component_executor = kRunTestSuitePath;
+      component_url = v2_info.component_url;
+    } else {
+      // Can't find either cmx or cm file, this test is not a component. Ensure it is not a binary
+      // from /pkgfs/packages.
+      if (strncmp(test_path, kPkgPrefix, fbl::count_of(kPkgPrefix)) == 0) {
+        fprintf(
+            stderr,
+            "FAILURE: Test path '%s' starts with /pkgfs/packages, which is no longer supported.\n",
+            test_path);
+        return false;
+      }
+
+      return true;
+    }
   }
 
   // Check whether the executor is present and print a more helpful error, rather than failing later
@@ -255,7 +267,7 @@ bool SetUpForTestComponent(const char* argv[], size_t argc, fbl::String* out_com
   } else {
     fprintf(stderr,
             "FAILURE: Cannot find '%s', cannot run %s as component."
-            "binary.",
+            "binary.\n",
             component_executor, test_path);
     return false;
   }
