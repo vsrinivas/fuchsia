@@ -127,57 +127,40 @@ void LinkSystem::ClearLinkProperties(TransformHandle handle) {
   link_properties_map_.erase(handle);
 }
 
-void LinkSystem::UpdateLinks(const TransformGraph::TopologyVector& global_vector,
+void LinkSystem::UpdateLinks(const TransformGraph::TopologyVector& global_topology,
                              const std::unordered_set<TransformHandle>& live_handles) {
   std::scoped_lock lock(map_mutex_);
 
-  for (auto graph_link_kv : graph_link_map_) {
+  for (auto& graph_link_kv : graph_link_map_) {
     graph_link_kv.second->UpdateLinkStatus(live_handles.count(graph_link_kv.first)
                                                ? GraphLinkStatus::CONNECTED_TO_DISPLAY
                                                : GraphLinkStatus::DISCONNECTED_FROM_DISPLAY);
   }
 
-  for (size_t i = 0; i < global_vector.size(); ++i) {
-    TransformHandle handle = global_vector[i].handle;
-
-    auto content_iter = content_link_map_.find(handle);
+  for (const auto& entry : global_topology) {
+    auto content_iter = content_link_map_.find(entry.handle);
     if (content_iter != content_link_map_.end()) {
       // Confirm that the ContentLink handle has at least one child (i.e., the link_origin of the
       // child Flatland instance). If not, then the child has not yet called Present().
-      if (i + 1 == global_vector.size()) {
-        continue;
-      }
-
-      if (global_vector[i + 1].parent_index == i) {
+      if (entry.child_count > 0) {
         content_iter->second->UpdateLinkStatus(ContentLinkStatus::CONTENT_HAS_PRESENTED);
       }
     }
 
-    auto graph_iter = graph_link_map_.find(handle);
-    if (graph_iter != graph_link_map_.end()) {
-      // For now, this code walks up the TopologyVector, looking for the closest ancestor that
-      // has LinkProperties set on it.
-      int probe_index = i;
-      do {
-        TransformHandle handle = global_vector[probe_index].handle;
-        auto properties_iter = link_properties_map_.find(handle);
-        if (properties_iter != link_properties_map_.end()) {
-          if (properties_iter->second.has_logical_size()) {
-            LayoutInfo info;
-            info.set_logical_size(properties_iter->second.logical_size());
-            graph_iter->second->UpdateLayoutInfo(std::move(info));
-          }
-          break;
+    // For a particular Link, the LinkProperties and GraphLinkImpl both live on the ChildLink's
+    // |link_handle|. They can show up in either order (LinkProperties before GraphLinkImpl if the
+    // parent Flatland calls Present() first, other way around if the link resolves first), so one
+    // being present without another is not a bug.
+    auto properties_kv = link_properties_map_.find(entry.handle);
+    if (properties_kv != link_properties_map_.end()) {
+      auto graph_iter = graph_link_map_.find(entry.handle);
+      if (graph_iter != graph_link_map_.end()) {
+        if (properties_kv->second.has_logical_size()) {
+          LayoutInfo info;
+          info.set_logical_size(properties_kv->second.logical_size());
+          graph_iter->second->UpdateLayoutInfo(std::move(info));
         }
-        probe_index = global_vector[probe_index].parent_index;
-      } while (probe_index != 0);
-
-      // Because we expect all children to be created under parents that have set properties on
-      // their transforms, walking up to the top of the topology vector is likely a bug. In
-      // practice, we don't expect to search more than a couple entries up the chain before we find
-      // an appropriate entry in the map.
-      FXL_DCHECK(probe_index != 0)
-          << "GraphLink " << handle << " did not find a parent transform with LinkProperties set";
+      }
     }
   }
 }

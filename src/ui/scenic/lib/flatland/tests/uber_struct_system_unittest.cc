@@ -107,11 +107,11 @@ TEST(UberStructSystemTest, BasicTopologyRetrieval) {
 
   // This test consists of three isolated vectors. We confirm that we get back the appropriate
   // vector when we query for the root node of each topology.
-  TransformGraph::TopologyVector vectors[] = {{{{0, 0}, 0}, {{0, 1}, 0}},   // 0:0 - 0:1
+  TransformGraph::TopologyVector vectors[] = {{{{0, 0}, 1}, {{0, 1}, 0}},   // 0:0 - 0:1
                                                                             //
-                                              {{{1, 0}, 0}, {{1, 1}, 0}},   // 1:0 - 1:1
+                                              {{{1, 0}, 1}, {{1, 1}, 0}},   // 1:0 - 1:1
                                                                             //
-                                              {{{2, 0}, 0}, {{2, 1}, 0}}};  // 2:0 - 2:1
+                                              {{{2, 0}, 1}, {{2, 1}, 0}}};  // 2:0 - 2:1
 
   for (const auto& v : vectors) {
     auto uber_struct = std::make_unique<UberStruct>();
@@ -158,23 +158,23 @@ TEST(UberStructSystemTest, GlobalTopologyMultithreadedUpdates) {
   //       \   \
   //         7   13
   TransformGraph::TopologyVector vectors[] = {
-      {{{1, 0}, 0}, {link_2, 0}, {link_3, 0}},  // 1:0 - 0:2
+      {{{1, 0}, 2}, {link_2, 0}, {link_3, 0}},  // 1:0 - 0:2
                                                 //     \
                                                 //       0:3
                                                 //
-      {{{2, 0}, 0}, {link_4, 0}, {link_5, 0}},  // 2:0 - 0:4
+      {{{2, 0}, 2}, {link_4, 0}, {link_5, 0}},  // 2:0 - 0:4
                                                 //     \
                                                 //       0:5
                                                 //
-      {{{3, 0}, 0}, {link_6, 0}, {link_7, 0}},  // 3:0 - 0:6
+      {{{3, 0}, 2}, {link_6, 0}, {link_7, 0}},  // 3:0 - 0:6
                                                 //     \
                                                 //       0:7
                                                 //
-      {{{4, 0}, 0}, {link_8, 0}, {link_9, 0}},  // 3:0 - 0:8
+      {{{4, 0}, 2}, {link_8, 0}, {link_9, 0}},  // 3:0 - 0:8
                                                 //     \
                                                 //       0:9
                                                 //
-      {{{6, 0}, 0}, {link12, 0}, {link13, 0}},  // 6:0 - 0:12
+      {{{6, 0}, 2}, {link12, 0}, {link13, 0}},  // 6:0 - 0:12
                                                 //     \
                                                 //       0:13
                                                 //
@@ -201,23 +201,23 @@ TEST(UberStructSystemTest, GlobalTopologyMultithreadedUpdates) {
   //       \   \
   //         7   8
   TransformGraph::TopologyVector alternate_vectors[] = {
-      {{{1, 0}, 0}, {link_3, 0}, {{0, 2}, 0}},  // 1:0 - 0:3
+      {{{1, 0}, 2}, {link_3, 0}, {{0, 2}, 0}},  // 1:0 - 0:3
                                                 //     \
                                                 //       0:2
                                                 //
-      {{{2, 0}, 0}, {link_6, 0}, {link_7, 0}},  // 2:0 - 0:6
+      {{{2, 0}, 2}, {link_6, 0}, {link_7, 0}},  // 2:0 - 0:6
                                                 //     \
                                                 //       0:7
                                                 //
-      {{{3, 0}, 0}, {link_4, 0}, {link_5, 0}},  // 3:0 - 0:4
+      {{{3, 0}, 2}, {link_4, 0}, {link_5, 0}},  // 3:0 - 0:4
                                                 //     \
                                                 //       0:5
                                                 //
-      {{{4, 0}, 0}, {link13, 0}, {link12, 0}},  // 3:0 - 0:13
+      {{{4, 0}, 2}, {link13, 0}, {link12, 0}},  // 3:0 - 0:13
                                                 //     \
                                                 //       0:12
                                                 //
-      {{{6, 0}, 0}, {link_9, 0}, {link_8, 0}},  // 6:0 - 0:9
+      {{{6, 0}, 2}, {link_9, 0}, {link_8, 0}},  // 6:0 - 0:9
                                                 //     \
                                                 //       0:8
                                                 //
@@ -247,8 +247,8 @@ TEST(UberStructSystemTest, GlobalTopologyMultithreadedUpdates) {
     system.SetUberStruct(v[0].handle.GetInstanceId(), std::move(uber_struct));
   }
 
-  // The expected output parent indices should be the same regardless.
-  const std::vector<uint64_t> expected_indices = {0, 0, 1, 2, 2, 1, 0, 6, 7, 7, 6};
+  // The expected output child counts should be the same regardless.
+  const std::vector<uint64_t> expected_child_counts = {2, 2, 2, 0, 0, 0, 2, 2, 0, 0, 0};
 
   std::vector<std::thread> threads;
   bool run = true;
@@ -278,18 +278,17 @@ TEST(UberStructSystemTest, GlobalTopologyMultithreadedUpdates) {
 
   for (uint64_t i = 0; i < kNumChecks; ++i) {
     // Because the threads always swap out each graph with an equivalent alternate graph, any
-    // intermediate state, with a mix of graphs, should always produce the same set of parent
-    // indexes.
+    // intermediate state, with a mix of graphs, should always produce the same set of child counts.
     auto output = TransformGraph::ComputeGlobalTopologyVector(system.Snapshot(), links,
                                                               kLinkInstanceId, {1, 0});
     CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
 
-    std::vector<uint64_t> parent_indices;
-    parent_indices.resize(output.topology_vector.size());
+    std::vector<uint64_t> child_counts;
+    child_counts.resize(output.topology_vector.size());
     for (uint64_t i = 0; i < output.topology_vector.size(); i++) {
-      parent_indices[i] = output.topology_vector[i].parent_index;
+      child_counts[i] = output.topology_vector[i].child_count;
     }
-    EXPECT_THAT(parent_indices, ::testing::ElementsAreArray(expected_indices));
+    EXPECT_THAT(child_counts, ::testing::ElementsAreArray(expected_child_counts));
 
     // This sleep triggers the Compute call at a random point in the middle of all of the
     // thread updates.

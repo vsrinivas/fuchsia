@@ -191,9 +191,10 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   std::unordered_map<TransformHandle, std::shared_ptr<GraphLinkImpl>> graph_link_map_;
   std::unordered_map<TransformHandle, std::shared_ptr<ContentLinkImpl>> content_link_map_;
 
-  // TODO(44334): Temporary storage for LinkProperties. Access is also managed by |map_mutex_|.
-  std::unordered_map<TransformHandle, fuchsia::ui::scenic::internal::LinkProperties>
-      link_properties_map_;
+  // TODO(44334): Temporary storage for LinkProperties. Access is also managed by [map_mutex_].
+  using LinkPropertiesMap =
+      std::unordered_map<TransformHandle, fuchsia::ui::scenic::internal::LinkProperties>;
+  LinkPropertiesMap link_properties_map_;
 
   // Any FIDL requests that have to be bound, are bound in these BindingSets. All impl classes are
   // referenced by both these sets and the Flatland instance that created them via creation of a

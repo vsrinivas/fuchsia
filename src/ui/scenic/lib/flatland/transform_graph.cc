@@ -120,7 +120,7 @@ TransformGraph::TopologyData TransformGraph::ComputeAndCleanup(TransformHandle s
   data.sorted_transforms =
       Traverse(start, children_copy, &data.cyclical_edges, max_iterations - data.iterations);
   data.iterations += data.sorted_transforms.size();
-  for (auto [transform, parent_index] : data.sorted_transforms) {
+  for (auto [transform, child_count] : data.sorted_transforms) {
     auto [start, end] = EqualRangeAllPriorities(children_copy, transform);
     if (start != children_copy.cend()) {
       children_copy.erase(start, end);
@@ -134,7 +134,7 @@ TransformGraph::TopologyData TransformGraph::ComputeAndCleanup(TransformHandle s
     auto working_transforms =
         Traverse(transform, children_copy, &data.cyclical_edges, max_iterations - data.iterations);
     data.iterations += working_transforms.size();
-    for (auto [transform, parent_index] : working_transforms) {
+    for (auto [transform, child_count] : working_transforms) {
       auto [start, end] = EqualRangeAllPriorities(children_copy, transform);
       if (start != children_copy.cend()) {
         children_copy.erase(start, end);
@@ -174,12 +174,15 @@ TransformGraph::TopologyVector TransformGraph::Traverse(TransformHandle start,
 
   std::vector<IteratorPair> iterator_stack;
   std::vector<TransformHandle> ancestors;
+  std::vector<uint64_t> parent_indices;
 
   // Add the starting handle to the output, and initialize our state.
-  retval.push_back({start, 0});
-  iterator_stack.push_back(EqualRangeAllPriorities(children, start));
+  auto start_pair = EqualRangeAllPriorities(children, start);
+  iterator_stack.push_back(start_pair);
+  retval.push_back(
+      {start, static_cast<uint64_t>(std::distance(start_pair.first, start_pair.second))});
   ancestors.push_back(start);
-  uint64_t parent_index = 0;
+  parent_indices.push_back(0);
 
   // Iterate until we're done, or until we run out of space
   while (!iterator_stack.empty() && retval.size() < max_length) {
@@ -189,8 +192,9 @@ TransformGraph::TopologyVector TransformGraph::Traverse(TransformHandle start,
     if (child_iter == end_iter) {
       iterator_stack.pop_back();
       ancestors.pop_back();
-      FXL_DCHECK(parent_index < retval.size());
-      parent_index = retval[parent_index].parent_index;
+      if (!parent_indices.empty()) {
+        parent_indices.pop_back();
+      }
       continue;
     }
 
@@ -203,14 +207,15 @@ TransformGraph::TopologyVector TransformGraph::Traverse(TransformHandle start,
     // Search from the bottom of the stack (since it's more likely), looking for a cycle.
     if (std::find(ancestors.crbegin(), ancestors.crend(), child) != ancestors.crend()) {
       FXL_DCHECK(cycles);
-      cycles->insert({retval[parent_index].handle, child});
+      FXL_DCHECK(!parent_indices.empty());
+      cycles->insert({retval[parent_indices.back()].handle, child});
     } else {
       // If the child is not part of a cycle, add it to the sorted list and update our state.
-      int new_parent_index = retval.size();
-      retval.push_back({child, parent_index});
-      iterator_stack.push_back(EqualRangeAllPriorities(children, child));
+      parent_indices.push_back(retval.size());
+      auto pair = EqualRangeAllPriorities(children, child);
+      iterator_stack.push_back(pair);
+      retval.push_back({child, static_cast<uint64_t>(std::distance(pair.first, pair.second))});
       ancestors.push_back(child);
-      parent_index = new_parent_index;
     }
   }
 
@@ -230,10 +235,9 @@ TransformGraph::GlobalTopologyData TransformGraph::ComputeGlobalTopologyVector(
   // we can do index comparisons.
   std::vector<std::pair<const TransformGraph::TopologyVector&, /*local_index=*/uint64_t>>
       vector_stack;
-  // This is a map from a TransformHandle and a local parent index, to the global parent index.
-  std::unordered_map<std::pair</*transform_handle=*/TransformHandle, /*local_index=*/uint64_t>,
-                     /*global_index=*/uint64_t, pair_hash>
-      global_index_map;
+  // This is a stack of global parent indices and the number of children left to process for that
+  // parent.
+  std::vector<std::pair</*parent_index=*/uint64_t, /*children_left=*/uint64_t>> parent_counts;
   TransformGraph::TopologyVector retval;
   std::unordered_set<TransformHandle> live_transforms;
 
@@ -253,67 +257,89 @@ TransformGraph::GlobalTopologyData TransformGraph::ComputeGlobalTopologyVector(
     }
 
     auto current_transform = vector[iterator_index].handle;
-    auto current_root_handle = vector[0].handle;
-    uint64_t local_parent_index = vector[iterator_index].parent_index;
+
+    // Mark that a child has been processed for the latest parent.
+    if (!parent_counts.empty()) {
+      --parent_counts.back().second;
+    }
 
     // If we are processing a link transform, find the other end of the link (if it exists).
     if (current_transform.GetInstanceId() == link_instance_id) {
+      // Decrement the parent's child count until the link is successfully resolved. An unresolved
+      // link effectively means the parent had one fewer child.
+      FXL_DCHECK(!parent_counts.empty());
+      auto& parent_entry = retval[parent_counts.back().first];
+      --parent_entry.child_count;
+
       // Regardless of whether or not the link has resolved, the link node has been processed, so
       // advance beyond it.
       ++iterator_index;
 
-      // If the link has resolved and the child topology is present, add the new topology to process
-      // to the stack.
+      // If the link doesn't exist, skip the link handle.
       auto link_iter = links.find(current_transform);
-      if (link_iter != links.end()) {
-        auto new_vector_iter = uber_structs.find(link_iter->second.GetInstanceId());
-        if (new_vector_iter != uber_structs.end()) {
-          const auto& new_vector = new_vector_iter->second->local_topology;
-          auto new_root_transform = new_vector[0].handle;
-
-          FXL_DCHECK(!new_vector.empty());
-          FXL_DCHECK(new_vector[0].parent_index == 0);
-
-          // Skip this new topology if it doesn't actually belong to the handle specified. This can
-          // occur if a new UberStruct has not been registered for the corresponding instance ID,
-          // but the link to it has resolved.
-          if (new_root_transform != link_iter->second) {
-            continue;
-          }
-
-          // Thanks to one-view-per-session semantics, we should never cycle through the
-          // topological vectors, so we don't need to handle cycles. We DCHECK here just to be sure.
-          FXL_DCHECK(
-              std::find_if(vector_stack.cbegin(), vector_stack.cend(),
-                           [&](std::pair<const TransformGraph::TopologyVector&, uint64_t> entry) {
-                             return entry.first == new_vector;
-                           }) == vector_stack.cend());
-
-          // Push the root of the new vector. Its parent index will be the parent of the link
-          // transform currently being processed. This must be done here because the new root's
-          // parent is in a different topology vector (which would overcomplicate the logic below).
-          uint64_t new_global_index = retval.size();
-          global_index_map[{new_root_transform, 0}] = new_global_index;
-          uint64_t global_parent_index =
-              global_index_map[{current_root_handle, local_parent_index}];
-          retval.push_back({new_root_transform, global_parent_index});
-          live_transforms.insert(new_root_transform);
-
-          // Skip the root of the new vector in the next iteration since it was processed above.
-          vector_stack.emplace_back(new_vector, 1);
-        }
+      if (link_iter == links.end()) {
+        continue;
       }
+
+      // If the link exists but doesn't have an UberStruct, skip the link handle.
+      auto new_vector_iter = uber_structs.find(link_iter->second.GetInstanceId());
+      if (new_vector_iter == uber_structs.end()) {
+        continue;
+      }
+
+      // If the link exists and has an UberStruct but does not begin with the specified handle, skip
+      // the new topology. This can occur if a new UberStruct has not been registered for the
+      // corresponding instance ID but the link to it has resolved.
+      const auto& new_vector = new_vector_iter->second->local_topology;
+      FXL_DCHECK(!new_vector.empty());
+      auto new_entry = new_vector[0];
+
+      if (new_entry.handle != link_iter->second) {
+        continue;
+      }
+
+      // Thanks to one-view-per-session semantics, we should never cycle through the
+      // topological vectors, so we don't need to handle cycles. We DCHECK here just to be sure.
+      FXL_DCHECK(
+          std::find_if(vector_stack.cbegin(), vector_stack.cend(),
+                       [&](std::pair<const TransformGraph::TopologyVector&, uint64_t> entry) {
+                         return entry.first == new_vector;
+                       }) == vector_stack.cend());
+
+      // At this point, the link is resolved. This means the link did actually result in the parent
+      // having an additional child, but that child needs to be processed, so the stack of remaining
+      // children to process for each parent needs to be increment as well.
+      ++parent_entry.child_count;
+      ++parent_counts.back().second;
+
+      vector_stack.emplace_back(new_vector, 0);
       continue;
     }
 
     // Push the current transform and update the "iterator".
-    uint64_t new_global_index = retval.size();
-    global_index_map[{current_root_handle, iterator_index}] = new_global_index;
-    uint64_t global_parent_index = global_index_map[{current_root_handle, local_parent_index}];
-    retval.push_back({current_transform, global_parent_index});
-    live_transforms.insert(current_transform);
+    uint64_t new_parent_index = retval.size();
+    auto current_entry = vector[iterator_index];
+    retval.push_back(current_entry);
+    live_transforms.insert(current_entry.handle);
+
+    // If this entry was the last child for the previous parent, pop that off the stack.
+    if (!parent_counts.empty() && parent_counts.back().second == 0) {
+      parent_counts.pop_back();
+    }
+
+    // If this entry has children, push it onto the parent stack.
+    if (current_entry.child_count != 0) {
+      parent_counts.emplace_back(new_parent_index, current_entry.child_count);
+    }
+
     ++iterator_index;
   }
+
+  // Validates that every child of every parent was processed. If the last handle processed was an
+  // unresolved link handle, its parent will be the only thing left on the stack with 0 children to
+  // avoid extra unnecessary cleanup logic.
+  FXL_DCHECK(parent_counts.empty() ||
+             (parent_counts.size() == 1 && parent_counts.back().second == 0));
 
   return {.topology_vector = std::move(retval), .live_handles = std::move(live_transforms)};
 }

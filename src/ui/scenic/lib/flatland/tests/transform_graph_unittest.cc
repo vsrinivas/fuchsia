@@ -11,6 +11,7 @@
 
 #include <gtest/gtest.h>
 
+#include "gmock/gmock.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/flatland/uber_struct.h"
 
@@ -60,14 +61,14 @@ TreeTransforms CreateTree(TransformGraph& graph) {
 
 bool IsValidTopologicalSort(const TreeTransforms& transforms,
                             const TransformGraph::TopologyVector& vector) {
-  static constexpr uint64_t kTreeParentIndices[] = {0, 0, 1, 1, 0, 4, 4};
+  static constexpr uint64_t kTreeChildCounts[] = {2, 2, 0, 0, 2, 0, 0};
 
   bool valid = true;
 
   valid &= vector.size() == kNumTreeTransforms;
   for (uint64_t i = 0; i < kNumTreeTransforms; ++i) {
     valid &= vector[i].handle == transforms[i];
-    valid &= vector[i].parent_index == kTreeParentIndices[i];
+    valid &= vector[i].child_count == kTreeChildCounts[i];
   }
 
   return valid;
@@ -225,7 +226,7 @@ TEST(TransformGraphTest, CycleDetection) {
   TransformGraph graph;
 
   static constexpr uint64_t kNumTransforms = 5;
-  static constexpr uint64_t kExpectedParentIndices[] = {0, 0, 1, 2, 3};
+  static constexpr uint64_t kExpectedChildCounts[] = {1, 1, 1, 1, 0};
 
   auto transforms = CreateTransforms<kNumTransforms>(graph);
 
@@ -236,7 +237,7 @@ TEST(TransformGraphTest, CycleDetection) {
   auto data = graph.ComputeAndCleanup(transforms[0], kLongIterationLength);
   for (uint64_t i = 0; i < kNumTransforms; ++i) {
     EXPECT_EQ(data.sorted_transforms[i].handle, transforms[i]);
-    EXPECT_EQ(data.sorted_transforms[i].parent_index, kExpectedParentIndices[i]);
+    EXPECT_EQ(data.sorted_transforms[i].child_count, kExpectedChildCounts[i]);
   }
   EXPECT_TRUE(data.cyclical_edges.empty());
 
@@ -493,7 +494,7 @@ TEST(TransformGraphTest, GlobalTopologyLinkExpansion) {
 
   auto link_2 = GetLinkHandle(2);
 
-  TransformGraph::TopologyVector vectors[] = {{{{1, 0}, 0}, {link_2, 0}},  // 1:0 - 0:2
+  TransformGraph::TopologyVector vectors[] = {{{{1, 0}, 1}, {link_2, 0}},  // 1:0 - 0:2
                                               {{{2, 0}, 0}}};              // 2:0
 
   MakeLink(links, 2);  // 0:2 - 2:0
@@ -507,14 +508,14 @@ TEST(TransformGraphTest, GlobalTopologyLinkExpansion) {
   // Combined, the global vector looks like this (the link handle is ommitted):
   //
   // 1:0 - 2:0
-  TransformGraph::TopologyVector expected_output = {{{1, 0}, 0}, {{2, 0}, 0}};
+  TransformGraph::TopologyVector expected_topology = {{{1, 0}, 1}, {{2, 0}, 0}};
   auto output =
       TransformGraph::ComputeGlobalTopologyVector(uber_structs, links, kLinkInstanceId, {1, 0});
   CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
-  EXPECT_EQ(expected_output, output.topology_vector);
+  EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
 }
 
-TEST(UberStructSystemTest, GlobalTopologyIncompleteLink) {
+TEST(TransformGraphTest, GlobalTopologyIncompleteLink) {
   std::unordered_map<TransformHandle::InstanceId, std::shared_ptr<UberStruct>> uber_structs;
   std::unordered_map<TransformHandle, TransformHandle> links;
 
@@ -523,13 +524,13 @@ TEST(UberStructSystemTest, GlobalTopologyIncompleteLink) {
   // The link is in the middle of the topology to demonstrate that the topology it links to replaces
   // it in the correct order.
   TransformGraph::TopologyVector vectors[] = {
-      {{{1, 0}, 0}, {{1, 1}, 0}, {link_2, 0}, {{1, 2}, 0}},  // 1:0 - 1:1
+      {{{1, 0}, 3}, {{1, 1}, 0}, {link_2, 0}, {{1, 2}, 0}},  // 1:0 - 1:1
                                                              //   \ \
                                                              //    \  0:2
                                                              //     \
                                                              //       1:2
                                                              //
-      {{{2, 0}, 0}, {{2, 1}, 0}}};                           // 2:0 - 2:1
+      {{{2, 0}, 1}, {{2, 1}, 0}}};                           // 2:0 - 2:1
 
   // With only the first vector updated, we get the same result as the original topology, excluding
   // the link handle.
@@ -537,7 +538,7 @@ TEST(UberStructSystemTest, GlobalTopologyIncompleteLink) {
   // 1:0 - 1:1
   //     \
   //       1:2
-  TransformGraph::TopologyVector expected_topology = {{{1, 0}, 0}, {{1, 1}, 0}, {{1, 2}, 0}};
+  TransformGraph::TopologyVector expected_topology = {{{1, 0}, 2}, {{1, 1}, 0}, {{1, 2}, 0}};
 
   auto uber_struct = std::make_unique<UberStruct>();
   uber_struct->local_topology = vectors[0];
@@ -546,7 +547,7 @@ TEST(UberStructSystemTest, GlobalTopologyIncompleteLink) {
   auto output =
       TransformGraph::ComputeGlobalTopologyVector(uber_structs, links, kLinkInstanceId, {1, 0});
   CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
-  EXPECT_EQ(expected_topology, output.topology_vector);
+  EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
 
   // With the second vector updated, we still get the same result because the two are not linked.
   //
@@ -560,7 +561,7 @@ TEST(UberStructSystemTest, GlobalTopologyIncompleteLink) {
   output =
       TransformGraph::ComputeGlobalTopologyVector(uber_structs, links, kLinkInstanceId, {1, 0});
   CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
-  EXPECT_EQ(expected_topology, output.topology_vector);
+  EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
 
   // When the link becomes available, the full topology is available, excluding the link handle.
   //
@@ -569,23 +570,23 @@ TEST(UberStructSystemTest, GlobalTopologyIncompleteLink) {
   //    \  2:0 - 2:1
   //     \
   //       1:2
-  expected_topology = {{{1, 0}, 0}, {{1, 1}, 0}, {{2, 0}, 0}, {{2, 1}, 2}, {{1, 2}, 0}};
+  expected_topology = {{{1, 0}, 3}, {{1, 1}, 0}, {{2, 0}, 1}, {{2, 1}, 0}, {{1, 2}, 0}};
 
   MakeLink(links, 2);  // 0:2 - 2:0
 
   output =
       TransformGraph::ComputeGlobalTopologyVector(uber_structs, links, kLinkInstanceId, {1, 0});
   CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
-  EXPECT_EQ(expected_topology, output.topology_vector);
+  EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
 }
 
-TEST(UberStructSystemTest, GlobalTopologyLinksMismatchedUberStruct) {
+TEST(TransformGraphTest, GlobalTopologyLinksMismatchedUberStruct) {
   std::unordered_map<TransformHandle::InstanceId, std::shared_ptr<UberStruct>> uber_structs;
   std::unordered_map<TransformHandle, TransformHandle> links;
 
   auto link_2 = GetLinkHandle(2);
 
-  TransformGraph::TopologyVector vectors[] = {{{{1, 0}, 0}, {link_2, 0}},  // 1:0 - 0:2
+  TransformGraph::TopologyVector vectors[] = {{{{1, 0}, 1}, {link_2, 0}},  // 1:0 - 0:2
                                                                            //
                                               {{{2, 0}, 0}}};              // 2:0
 
@@ -604,7 +605,7 @@ TEST(UberStructSystemTest, GlobalTopologyLinksMismatchedUberStruct) {
   auto output =
       TransformGraph::ComputeGlobalTopologyVector(uber_structs, links, kLinkInstanceId, {1, 0});
   CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
-  EXPECT_EQ(expected_topology, output.topology_vector);
+  EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
 
   // Changing the link to the right root handle of 2:0 completes the topology.
   MakeLink(links, 2);  // 0:2 - 2:0
@@ -612,26 +613,26 @@ TEST(UberStructSystemTest, GlobalTopologyLinksMismatchedUberStruct) {
   // So the expected topology, excluding the link handle:
   //
   // 1:0 - 2:0
-  expected_topology = {{{1, 0}, 0}, {{2, 0}, 0}};
+  expected_topology = {{{1, 0}, 1}, {{2, 0}, 0}};
 
   output =
       TransformGraph::ComputeGlobalTopologyVector(uber_structs, links, kLinkInstanceId, {1, 0});
   CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
-  EXPECT_EQ(expected_topology, output.topology_vector);
+  EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
 }
 
-TEST(UberStructSystemTest, GlobalTopologyDiamondInheritance) {
+TEST(TransformGraphTest, GlobalTopologyDiamondInheritance) {
   std::unordered_map<TransformHandle::InstanceId, std::shared_ptr<UberStruct>> uber_structs;
   std::unordered_map<TransformHandle, TransformHandle> links;
 
   auto link_2 = GetLinkHandle(2);
   auto link_3 = GetLinkHandle(3);
 
-  TransformGraph::TopologyVector vectors[] = {{{{1, 0}, 0}, {link_2, 0}, {link_3, 0}},  // 1:0 - 0:2
+  TransformGraph::TopologyVector vectors[] = {{{{1, 0}, 2}, {link_2, 0}, {link_3, 0}},  // 1:0 - 0:2
                                                                                         //     \
                                                                                         //       0:3
                                                                                         //
-                                              {{{2, 0}, 0}, {{2, 1}, 0}, {link_3, 0}},  // 2:0 - 2:1
+                                              {{{2, 0}, 2}, {{2, 1}, 0}, {link_3, 0}},  // 2:0 - 2:1
                                                                                         //     \
                                                                                         //       0:3
                                                                                         //
@@ -653,12 +654,12 @@ TEST(UberStructSystemTest, GlobalTopologyDiamondInheritance) {
   //     \       3:0
   //      \
   //       3:0
-  TransformGraph::TopologyVector expected_output = {
-      {{1, 0}, 0}, {{2, 0}, 0}, {{2, 1}, 1}, {{3, 0}, 1}, {{3, 0}, 0}};
+  TransformGraph::TopologyVector expected_topology = {
+      {{1, 0}, 2}, {{2, 0}, 2}, {{2, 1}, 0}, {{3, 0}, 0}, {{3, 0}, 0}};
   auto output =
       TransformGraph::ComputeGlobalTopologyVector(uber_structs, links, kLinkInstanceId, {1, 0});
   CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
-  EXPECT_EQ(expected_output, output.topology_vector);
+  EXPECT_THAT(output.topology_vector, ::testing::ElementsAreArray(expected_topology));
 }
 
 #undef CHECK_GLOBAL_TOPOLOGY_DATA

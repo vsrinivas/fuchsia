@@ -28,18 +28,18 @@ class TransformGraph {
   // An entry in a TopologyVector. See TopologyVector for more information.
   struct TopologyEntry {
     TransformHandle handle;
-    uint64_t parent_index;
+    uint64_t child_count;
 
     bool operator==(const TopologyEntry& rhs) const {
-      return handle == rhs.handle && parent_index == rhs.parent_index;
+      return handle == rhs.handle && child_count == rhs.child_count;
     }
   };
 
   // A list of transforms, sorted in topological (i.e., depth-first) order. For each transform,
-  // there is also a parent index -- the index in this vector of that element's parent. Since
-  // transforms can appear in the list multiple times, each element in the list stores its own
-  // parent index. The parent index should always be an earlier element in the list, since the
-  // entries are sorted topologically.
+  // there is also a child count -- the number of direct children that element has. Any transform
+  // with a non-zero child count is immediately followed by its first child in the TopologyVector.
+  // Because the topology vector is depth-first, a child's children (if it has any) will be listed
+  // before that child's siblings.
   using TopologyVector = std::vector<TopologyEntry>;
 
   // A collection of directed edges, the key in the map is the parent transform and the values are
