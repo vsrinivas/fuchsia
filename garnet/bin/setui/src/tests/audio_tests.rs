@@ -4,6 +4,7 @@
 
 #[cfg(test)]
 use {
+    crate::agent::restore_agent::RestoreAgent,
     crate::audio::default_audio_info,
     crate::fidl_clone::FIDLClone,
     crate::registry::device_storage::testing::*,
@@ -396,6 +397,37 @@ async fn test_earcons_with_active_stream() {
     );
 }
 
+/// Test that the audio settings are restored correctly.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_volume_restore() {
+    let (service_registry, fake_services) = create_services().await;
+    let storage_factory = InMemoryStorageFactory::create_handle();
+    let expected_info = (0.9, false);
+    {
+        let store = storage_factory.lock().await.get_store::<AudioInfo>();
+        let mut stored_info = default_audio_info();
+        for stream in stored_info.streams.iter_mut() {
+            if stream.stream_type == AudioStreamType::Media {
+                stream.user_volume_level = expected_info.0;
+                stream.user_volume_muted = expected_info.1;
+            }
+        }
+        assert!(store.lock().await.write(&stored_info, false).await.is_ok());
+    }
+
+    let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
+        .service(Box::new(ServiceRegistry::serve(service_registry)))
+        .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
+        .settings(&[SettingType::Audio])
+        .spawn()
+        .unwrap();
+    assert!(env.completion_rx.await.unwrap().is_ok());
+
+    let stored_info =
+        fake_services.audio_core.lock().await.get_level_and_mute(AudioRenderUsage::Media).unwrap();
+    assert_eq!(stored_info, expected_info);
+}
+
 // Test to ensure mic input change events are received.
 // TODO(fxb/41006): Add a request.
 #[fuchsia_async::run_singlethreaded(test)]
@@ -486,6 +518,7 @@ async fn test_persisted_values_applied_at_start() {
 
     let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), storage_factory)
         .service(ServiceRegistry::serve(service_registry))
+        .agents(&[Arc::new(Mutex::new(RestoreAgent::new()))])
         .settings(&[SettingType::Audio])
         .spawn_and_get_nested_environment()
         .await
