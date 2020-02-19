@@ -694,7 +694,7 @@ int iwl_trans_pcie_tx(struct iwl_trans* trans, struct sk_buff* skb, struct iwl_d
                       int txq_id);
 void iwl_pcie_txq_check_wrptrs(struct iwl_trans* trans);
 zx_status_t iwl_trans_pcie_send_hcmd(struct iwl_trans* trans, struct iwl_host_cmd* cmd);
-void iwl_pcie_cmdq_reclaim(struct iwl_trans* trans, int txq_id, int idx);
+zx_status_t iwl_pcie_cmdq_reclaim(struct iwl_trans* trans, int txq_id, uint32_t idx);
 void iwl_pcie_gen2_txq_inc_wr_ptr(struct iwl_trans* trans, struct iwl_txq* txq);
 void iwl_pcie_hcmd_complete(struct iwl_trans* trans, struct iwl_rx_cmd_buffer* rxb);
 void iwl_trans_pcie_reclaim(struct iwl_trans* trans, int txq_id, int ssn,
@@ -941,15 +941,15 @@ static inline void iwl_stop_queue(struct iwl_trans* trans, struct iwl_txq* txq) 
         IWL_DEBUG_TX_QUEUES(trans, "hwq %d already stopped\n", txq->id);
     }
 }
+#endif  // NEEDS_PORTING
 
 static inline bool iwl_queue_used(const struct iwl_txq* q, int i) {
-    int index = iwl_pcie_get_cmd_index(q, i);
-    int r = iwl_pcie_get_cmd_index(q, q->read_ptr);
-    int w = iwl_pcie_get_cmd_index(q, q->write_ptr);
+  int index = iwl_pcie_get_cmd_index(q, i);
+  int r = iwl_pcie_get_cmd_index(q, q->read_ptr);
+  int w = iwl_pcie_get_cmd_index(q, q->write_ptr);
 
-    return w >= r ? (index >= r && index < w) : !(index < r && index >= w);
+  return w >= r ? (index >= r && index < w) : !(index < r && index >= w);
 }
-#endif  // NEEDS_PORTING
 
 static inline bool iwl_is_rfkill_set(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);

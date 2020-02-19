@@ -973,29 +973,31 @@ error:
   return ret;
 }
 
-#if 0   // NEEDS_PORTING
 static inline void iwl_pcie_txq_progress(struct iwl_txq* txq) {
-    lockdep_assert_held(&txq->lock);
+  lockdep_assert_held(&txq->lock);
 
-    if (!txq->wd_timeout) { return; }
+  if (!txq->wd_timeout) {
+    return;
+  }
 
-    /*
-     * station is asleep and we send data - that must
-     * be uAPSD or PS-Poll. Don't rearm the timer.
-     */
-    if (txq->frozen) { return; }
+  /*
+   * station is asleep and we send data - that must
+   * be uAPSD or PS-Poll. Don't rearm the timer.
+   */
+  if (txq->frozen) {
+    return;
+  }
 
-    /*
-     * if empty delete timer, otherwise move timer forward
-     * since we're making progress on this queue
-     */
-    if (txq->read_ptr == txq->write_ptr) {
-        del_timer(&txq->stuck_timer);
-    } else {
-        mod_timer(&txq->stuck_timer, jiffies + txq->wd_timeout);
-    }
+  /*
+   * if empty delete timer, otherwise move timer forward
+   * since we're making progress on this queue
+   */
+  if (txq->read_ptr == txq->write_ptr) {
+    iwlwifi_timer_stop(&txq->stuck_timer);
+  } else {
+    iwlwifi_timer_set(&txq->stuck_timer, txq->wd_timeout);
+  }
 }
-#endif  // NEEDS_PORTING
 
 /* Frees buffers until index _not_ inclusive */
 void iwl_trans_pcie_reclaim(struct iwl_trans* trans, int txq_id, int ssn,
@@ -1141,7 +1143,6 @@ static zx_status_t iwl_pcie_set_cmd_in_flight(struct iwl_trans* trans,
   return ZX_OK;
 }
 
-#if 0   // NEEDS_PORTING
 /*
  * iwl_pcie_cmdq_reclaim - Reclaim TX command queue entries already Tx'd
  *
@@ -1149,45 +1150,50 @@ static zx_status_t iwl_pcie_set_cmd_in_flight(struct iwl_trans* trans,
  * need to be reclaimed. As result, some free space forms.  If there is
  * enough free space (> low mark), wake the stack that feeds us.
  */
-void iwl_pcie_cmdq_reclaim(struct iwl_trans* trans, int txq_id, int idx) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    struct iwl_txq* txq = trans_pcie->txq[txq_id];
-    unsigned long flags;
-    int nfreed = 0;
-    uint16_t r;
+zx_status_t iwl_pcie_cmdq_reclaim(struct iwl_trans* trans, int txq_id, uint32_t idx) {
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  struct iwl_txq* txq = trans_pcie->txq[txq_id];
+  int nfreed = 0;
 
-    lockdep_assert_held(&txq->lock);
+  // Ensure the tx_id is pointing to the cmd_queue.
+  if (txq_id != trans_pcie->cmd_queue) {
+    IWL_WARN(trans, "wrong command queue %d (should be %d)\n", txq_id, trans_pcie->cmd_queue);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-    idx = iwl_pcie_get_cmd_index(txq, idx);
-    r = iwl_pcie_get_cmd_index(txq, txq->read_ptr);
+  lockdep_assert_held(&txq->lock);
 
-    if (idx >= trans->cfg->base_params->max_tfd_queue_size || (!iwl_queue_used(txq, idx))) {
-        WARN_ONCE(
-            test_bit(txq_id, trans_pcie->queue_used),
-            "%s: Read index for DMA queue txq id (%d), index %d is out of range [0-%d] %d %d.\n",
-            __func__, txq_id, idx, trans->cfg->base_params->max_tfd_queue_size, txq->write_ptr,
-            txq->read_ptr);
-        return;
+  idx = iwl_pcie_get_cmd_index(txq, idx);
+  uint16_t r = iwl_pcie_get_cmd_index(txq, txq->read_ptr);
+
+  if (idx >= trans->cfg->base_params->max_tfd_queue_size || (!iwl_queue_used(txq, idx))) {
+    if (test_bit(txq_id, trans_pcie->queue_used)) {
+      IWL_WARN(trans, "DMA queue txq_id (%d), read index %d is out of range [0-%d] wp:%d rp:%d\n",
+               txq_id, idx, trans->cfg->base_params->max_tfd_queue_size, txq->write_ptr,
+               txq->read_ptr);
     }
+    return ZX_ERR_OUT_OF_RANGE;
+  }
 
-    for (idx = iwl_queue_inc_wrap(trans, idx); r != idx; r = iwl_queue_inc_wrap(trans, r)) {
-        txq->read_ptr = iwl_queue_inc_wrap(trans, txq->read_ptr);
+  for (idx = iwl_queue_inc_wrap(trans, idx); r != idx; r = iwl_queue_inc_wrap(trans, r)) {
+    txq->read_ptr = iwl_queue_inc_wrap(trans, txq->read_ptr);
 
-        if (nfreed++ > 0) {
-            IWL_ERR(trans, "HCMD skipped: index (%d) %d %d\n", idx, txq->write_ptr, r);
-            iwl_force_nmi(trans);
-        }
+    if (nfreed++ > 0) {
+      IWL_ERR(trans, "HCMD skipped: index (%d) %d %d\n", idx, txq->write_ptr, r);
+      iwl_force_nmi(trans);
+      return ZX_ERR_BAD_STATE;
     }
+  }
 
-    if (txq->read_ptr == txq->write_ptr) {
-        spin_lock_irqsave(&trans_pcie->reg_lock, flags);
-        iwl_pcie_clear_cmd_in_flight(trans);
-        spin_unlock_irqrestore(&trans_pcie->reg_lock, flags);
-    }
+  if (txq->read_ptr == txq->write_ptr) {
+    mtx_lock(&trans_pcie->reg_lock);
+    iwl_pcie_clear_cmd_in_flight(trans);
+    mtx_unlock(&trans_pcie->reg_lock);
+  }
 
-    iwl_pcie_txq_progress(txq);
+  iwl_pcie_txq_progress(txq);
+  return ZX_OK;
 }
-#endif  // NEEDS_PORTING
 
 static int iwl_pcie_txq_set_ratid_map(struct iwl_trans* trans, uint16_t ra_tid, uint16_t txq_id) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
@@ -1786,9 +1792,7 @@ void iwl_pcie_hcmd_complete(struct iwl_trans* trans, struct iwl_rx_cmd_buffer* r
     iwl_op_mode_async_cb(trans->op_mode, cmd);
   }
 
-#if 0   // NEEDS_PORTING
-    iwl_pcie_cmdq_reclaim(trans, txq_id, index);
-#endif  // NEEDS_PORTING
+  iwl_pcie_cmdq_reclaim(trans, txq_id, index);
 
   if (!(meta->flags & CMD_ASYNC)) {
     if (!test_bit(STATUS_SYNC_HCMD_ACTIVE, &trans->status)) {

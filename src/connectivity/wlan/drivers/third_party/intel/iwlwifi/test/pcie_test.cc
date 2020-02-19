@@ -63,21 +63,29 @@ static void FakeEchoWrite32(struct iwl_trans* trans, uint32_t ofs, uint32_t val)
   resp_pkt->len_n_flags = cpu_to_le32(0);
   resp_pkt->hdr.cmd = ECHO_CMD;
   resp_pkt->hdr.group_id = 0;
-  resp_pkt->hdr.sequence = 0;
+
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  struct iwl_txq* txq = trans_pcie->txq[trans_pcie->cmd_queue];
+  resp_pkt->hdr.sequence =
+      cpu_to_le16(QUEUE_TO_SEQ(trans_pcie->cmd_queue) | INDEX_TO_SEQ(txq->read_ptr));
 
   // iwl_pcie_hcmd_complete() will require the txq->lock. However, we already have done it in
   // iwl_trans_pcie_send_hcmd(). So release the lock before calling it. Note that this is safe
   // because in the test, it is always single thread and has no race.
   //
+  // Also, iwl_pcie_enqueue_hcmd() holds the reg_lock to keep the write_ptr and cmd_in_flight
+  // state consistent. However, there is also a code path via iwl_pcie_hcmd_complete() that
+  // requires to hold the reg_lock which will cause a lockup if we do not unlock here.
+  //
   // The GCC pragma is to depress the compile warning on mutex check.
   //
-  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-  struct iwl_txq* txq = trans_pcie->txq[trans_pcie->cmd_queue];
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wthread-safety-analysis"
+  mtx_unlock(&trans_pcie->reg_lock);
   mtx_unlock(&txq->lock);
   iwl_pcie_hcmd_complete(trans, &rxcb);
   mtx_lock(&txq->lock);
+  mtx_lock(&trans_pcie->reg_lock);
 
   io_buffer_release(&io_buf);
 }
@@ -601,10 +609,13 @@ TEST_F(TxTest, SyncHostCommandEmpty) {
 //
 TEST_F(TxTest, UnmapCmdQueue) {
   ASSERT_OK(iwl_pcie_tx_init(trans_));
-  trans_ops_.write32 = FakeEchoWrite32;
 
+  // We avoid using FakeEchoWrite32 so that commands will stay in flight and
+  // not get completed. This allows us to test the unmap API
+  //
+  // Note, we need the commands to be ASYNC to avoid timeout error.
   struct iwl_host_cmd hcmd = {
-      .flags = CMD_WANT_SKB,
+      .flags = CMD_ASYNC,
       .id = ECHO_CMD,
   };
   hcmd.len[0] = 0;
@@ -642,6 +653,89 @@ TEST_F(TxTest, UnmapCmdQueue) {
       EXPECT_EQ(0, tfd_fh->num_tbs);
     }
   }
+}
+
+//
+// Ensure iwl_pcie_cmdq_reclaim() operates only on cmd_queue.
+//
+TEST_F(TxTest, ReclaimCmdQueueInvalidQueueID) {
+  ASSERT_OK(iwl_pcie_tx_init(trans_));
+
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans_);
+  int txq_id = trans_pcie->cmd_queue;
+  struct iwl_txq* txq = trans_pcie->txq[txq_id];
+  txq->wd_timeout = 0;
+  txq->read_ptr = 0;
+  txq->write_ptr = 1;
+
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, iwl_pcie_cmdq_reclaim(trans_, txq_id + 1, 0));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, iwl_pcie_cmdq_reclaim(trans_, txq_id - 1, 0));
+  ASSERT_EQ(ZX_OK, iwl_pcie_cmdq_reclaim(trans_, txq_id, 0));
+}
+
+//
+// Test for handling of invalid index values.
+//
+TEST_F(TxTest, ReclaimCmdQueueInvalidIndex) {
+  ASSERT_OK(iwl_pcie_tx_init(trans_));
+
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans_);
+  int txq_id = trans_pcie->cmd_queue;
+  struct iwl_txq* txq = trans_pcie->txq[txq_id];
+  txq->wd_timeout = 0;
+  txq->read_ptr = 0;
+  txq->write_ptr = 1;
+
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, iwl_pcie_cmdq_reclaim(trans_, txq_id, 1));
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, iwl_pcie_cmdq_reclaim(trans_, txq_id, 2));
+
+  uint32_t idx = trans_->cfg->base_params->max_tfd_queue_size + 1;
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, iwl_pcie_cmdq_reclaim(trans_, txq_id, idx));
+
+  ASSERT_EQ(ZX_OK, iwl_pcie_cmdq_reclaim(trans_, txq_id, 0));
+}
+
+//
+// The iwl_pcie_cmdq_reclaim() expects the passed index to reclaim exactly
+// a single slot. It considers any index passed that requires multiple reclaim
+// as an error.
+//
+TEST_F(TxTest, ReclaimCmdQueueMultiReclaim) {
+  ASSERT_OK(iwl_pcie_tx_init(trans_));
+
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans_);
+  int txq_id = trans_pcie->cmd_queue;
+  struct iwl_txq* txq = trans_pcie->txq[txq_id];
+  txq->wd_timeout = 0;
+  txq->read_ptr = 0;
+  txq->write_ptr = 3;
+
+  // In this case, the read_ptr will have to be advanced more than once
+  // to match the passed index of 2. This should be considered as bad state.
+  ASSERT_EQ(ZX_ERR_BAD_STATE, iwl_pcie_cmdq_reclaim(trans_, txq_id, 2));
+}
+
+//
+// Ensure the inflight flag is cleared (or not) as appropriate.
+//
+TEST_F(TxTest, ReclaimCmdQueueInFlightFlag) {
+  ASSERT_OK(iwl_pcie_tx_init(trans_));
+
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans_);
+  int txq_id = trans_pcie->cmd_queue;
+  struct iwl_txq* txq = trans_pcie->txq[txq_id];
+  txq->wd_timeout = 0;
+  txq->read_ptr = 2;
+  txq->write_ptr = 4;
+  trans_pcie->ref_cmd_in_flight = true;
+
+  iwl_pcie_cmdq_reclaim(trans_, txq_id, 2);
+  ASSERT_TRUE(trans_pcie->ref_cmd_in_flight);
+
+  // Once index 3 is reclaimed, the readptr will move to 4 which should
+  // make it equal to the write_ptr. This will clear the inflight flag.
+  iwl_pcie_cmdq_reclaim(trans_, txq_id, 3);
+  ASSERT_FALSE(trans_pcie->ref_cmd_in_flight);
 }
 
 class StuckTimerTest : public PcieTest {
