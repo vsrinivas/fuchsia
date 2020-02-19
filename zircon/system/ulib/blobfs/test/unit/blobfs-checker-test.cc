@@ -14,6 +14,7 @@
 #include <zxtest/zxtest.h>
 
 #include "blobfs.h"
+#include "utils.h"
 
 namespace blobfs {
 namespace {
@@ -42,46 +43,11 @@ class BlobfsCheckerTest : public zxtest::Test {
     ASSERT_OK(Blobfs::Create(loop_.dispatcher(), std::move(device), &options, &fs_));
   }
 
-  // ToDeviceBlocks converts betweens the different block sizes used by blobfs
-  // and the underlying block device.
-  uint64_t ToDeviceBlocks(uint64_t fs_block) const {
-    return fs_block * (kBlobfsBlockSize / kBlockSize);
-  }
-
   // UpdateSuperblock writes the provided superblock to the block device and
   // forces blobfs to reload immediately.
   zx_status_t UpdateSuperblock(Superblock& superblock) {
-    zx::vmo vmo;
     size_t superblock_size = kBlobfsBlockSize * SuperblockBlocks(superblock);
-    zx_status_t status = zx::vmo::create(superblock_size, 0, &vmo);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    fuchsia_hardware_block_VmoId vmoid;
-    status = fs_->Device()->BlockAttachVmo(vmo, &vmoid);
-    if (status != ZX_OK) {
-      return status;
-    }
-    status = vmo.write(&superblock, 0, superblock_size);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    block_fifo_request_t request = {
-        .opcode = BLOCKIO_WRITE,
-        .reqid = 1,
-        .group = 0,
-        .vmoid = vmoid.id,
-        .length = static_cast<uint32_t>(ToDeviceBlocks(SuperblockBlocks(superblock))),
-        .vmo_offset = 0,
-        .dev_offset = 0,
-    };
-    status = fs_->Device()->FifoTransaction(&request, 1);
-    if (status != ZX_OK) {
-      return status;
-    }
-
+    DeviceBlockWrite(fs_->Device(), &superblock, superblock_size, kSuperblockOffset);
     return static_cast<TestBlobfs*>(fs_.get())->Reload();
   }
 
@@ -148,12 +114,17 @@ TEST_F(BlobfsCheckerTest, TestInodeWithUnallocatedBlock) {
   ASSERT_STATUS(checker.Check(), ZX_ERR_BAD_STATE);
 }
 
-// TODO(https://bugs.fuchsia.dev/45924): Fails on ASAN QEMU bot.
-TEST_F(BlobfsCheckerTest, DISABLED_TestAllocatedBlockCountTooHigh) {
+// TODO(https://bugs.fuchsia.dev/45924): determine why running this test on an
+// empty blobfs fails on ASAN QEMU bot.
+TEST_F(BlobfsCheckerTest, TestAllocatedBlockCountTooHigh) {
+  fbl::RefPtr<fs::Vnode> root;
+  ASSERT_OK(fs_->OpenRootNode(&root));
+  AddRandomBlob(root.get());
+  EXPECT_OK(Sync());
+
   Superblock superblock = fs_->Info();
   superblock.alloc_block_count++;
   ASSERT_OK(UpdateSuperblock(superblock));
-  EXPECT_OK(Sync());
 
   BlobfsChecker checker(std::move(fs_));
   ASSERT_STATUS(checker.Check(), ZX_ERR_BAD_STATE);
@@ -184,10 +155,14 @@ TEST_F(BlobfsCheckerTest, TestFewerThanMinimumBlocksAllocated) {
 }
 
 TEST_F(BlobfsCheckerTest, TestAllocatedInodeCountTooHigh) {
+  fbl::RefPtr<fs::Vnode> root;
+  ASSERT_OK(fs_->OpenRootNode(&root));
+  AddRandomBlob(root.get());
+  EXPECT_OK(Sync());
+
   Superblock superblock = fs_->Info();
   superblock.alloc_inode_count++;
   UpdateSuperblock(superblock);
-  EXPECT_OK(Sync());
 
   BlobfsChecker checker(std::move(fs_));
   ASSERT_STATUS(checker.Check(), ZX_ERR_BAD_STATE);
