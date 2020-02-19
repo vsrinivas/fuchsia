@@ -61,6 +61,20 @@ impl PathBuilder<Spinel> for SpinelPathBuilder {
         self
     }
 
+    fn quad_to(&mut self, p1: Point, p2: Point) -> &mut Self {
+        unsafe {
+            spn!(spn_path_builder_quad_to(*self.path_builder, p1.x, p1.y, p2.x, p2.y));
+        }
+        self
+    }
+
+    fn cubic_to(&mut self, p1: Point, p2: Point, p3: Point) -> &mut Self {
+        unsafe {
+            spn!(spn_path_builder_cubic_to(*self.path_builder, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y));
+        }
+        self
+    }
+
     fn build(self) -> SpinelPath {
         SpinelPath {
             context: Rc::clone(&self.context),

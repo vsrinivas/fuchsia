@@ -114,6 +114,13 @@ impl<'a, B: Backend> InkPathBuilder for PathBuilderWrapper<'a, B> {
     fn line_to(&mut self, p: Point) {
         self.path_builder.line_to(p);
     }
+
+    fn cubic_to(&mut self, _p0: Point, p1: Point, p2: Point, p3: Point, offset: Vector2D<f32>) {
+        let p1 = p1 + offset;
+        let p2 = p2 + offset;
+        let p3 = p3 + offset;
+        self.path_builder.cubic_to(p1, p2, p3);
+    }
 }
 
 struct Circle {

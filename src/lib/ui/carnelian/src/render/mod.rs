@@ -146,6 +146,10 @@ pub trait PathBuilder<B: Backend> {
     fn move_to(&mut self, point: Point) -> &mut Self;
     /// Create line from end-point to point and update end-point.
     fn line_to(&mut self, point: Point) -> &mut Self;
+    /// Create quadratic Bézier from end-point to `p2` with `p1` as control point.
+    fn quad_to(&mut self, p1: Point, p2: Point) -> &mut Self;
+    /// Create cubic Bézier from end-point to `p3` with `p1` and `p2` as control points.
+    fn cubic_to(&mut self, p1: Point, p2: Point, p3: Point) -> &mut Self;
     /// Closes the path with a line if not yet closed and builds the path.
     ///
     /// Consumes the builder; another one can be requested from the `Context`.

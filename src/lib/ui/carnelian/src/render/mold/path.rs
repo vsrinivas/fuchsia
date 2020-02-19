@@ -53,6 +53,23 @@ impl PathBuilder<Mold> for MoldPathBuilder {
         self
     }
 
+    fn quad_to(&mut self, p1: Point, p2: Point) -> &mut Self {
+        let p1 = to_mold_point(p1);
+        let p2 = to_mold_point(p2);
+        self.path.quad(self.end_point, p1, p2);
+        self.end_point = p2;
+        self
+    }
+
+    fn cubic_to(&mut self, p1: Point, p2: Point, p3: Point) -> &mut Self {
+        let p1 = to_mold_point(p1);
+        let p2 = to_mold_point(p2);
+        let p3 = to_mold_point(p3);
+        self.path.cubic(self.end_point, p1, p2, p3);
+        self.end_point = p3;
+        self
+    }
+
     fn build(self) -> MoldPath {
         MoldPath { path: Rc::new(self.path) }
     }

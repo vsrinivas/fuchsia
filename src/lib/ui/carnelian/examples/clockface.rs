@@ -71,11 +71,6 @@ fn line<B: Backend>(path_builder: &mut impl PathBuilder<B>, p0: Point, p1: Point
     path_builder.line_to(p1);
 }
 
-fn lerp(t: f32, p0: Point, p1: Point) -> Point {
-    Point::new(p0.x * (1.0 - t) + p1.x * t, p0.y * (1.0 - t) + p1.y * t)
-}
-
-// TODO: Remove and use spn_path_builder_cubic_to.
 fn cubic<B: Backend>(
     path_builder: &mut impl PathBuilder<B>,
     p0: Point,
@@ -83,31 +78,8 @@ fn cubic<B: Backend>(
     p2: Point,
     p3: Point,
 ) {
-    // Adjust if resolution is expected to be significantly different.
-    const RESOLUTION: f32 = 1024.0;
-    let deviation_x = (p0.x + p2.x - 3.0 * (p1.x + p2.x)).abs() * RESOLUTION;
-    let deviation_y = (p0.y + p2.y - 3.0 * (p1.y + p2.y)).abs() * RESOLUTION;
-    let deviation_squared = deviation_x * deviation_x + deviation_y * deviation_y;
-    const PIXEL_ACCURACY: f32 = 0.25;
-    if deviation_squared < PIXEL_ACCURACY {
-        line(path_builder, p0, p3);
-        return;
-    }
-    const TOLERANCE: f32 = 3.0;
-    let subdivisions = 1 + (TOLERANCE * deviation_squared).sqrt().sqrt().floor() as usize;
-    let increment = (subdivisions as f32).recip();
-    let mut t = 0.0;
     path_builder.move_to(p0);
-    for _ in 0..subdivisions - 1 {
-        t += increment;
-        let p_next = lerp(
-            t,
-            lerp(t, lerp(t, p0, p1), lerp(t, p1, p2)),
-            lerp(t, lerp(t, p1, p2), lerp(t, p2, p3)),
-        );
-        path_builder.line_to(p_next);
-    }
-    path_builder.line_to(p3);
+    path_builder.cubic_to(p1, p2, p3);
 }
 
 struct RoundedLine<B: Backend> {

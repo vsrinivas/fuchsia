@@ -210,14 +210,15 @@ fn cubic<B: Backend>(
 ) {
     duration!("gfx", "cubic");
 
+    path_builder.move_to(p0);
+    path_builder.cubic_to(p1, p2, p3);
+
     let deviation_x = (p0.x + p2.x - 3.0 * (p1.x + p2.x)).abs();
     let deviation_y = (p0.y + p2.y - 3.0 * (p1.y + p2.y)).abs();
     let deviation_squared = deviation_x * deviation_x + deviation_y * deviation_y;
 
     const PIXEL_ACCURACY: f32 = 0.25;
     if deviation_squared < PIXEL_ACCURACY {
-        path_builder.move_to(p0);
-        path_builder.line_to(p3);
         *bounding_box = bounding_box.union(&p0).union(&p3);
         return;
     }
@@ -227,7 +228,6 @@ fn cubic<B: Backend>(
     let increment = (subdivisions as f32).recip();
     let mut t = 0.0;
 
-    path_builder.move_to(p0);
     *bounding_box = bounding_box.union(&p0);
     for _ in 0..subdivisions - 1 {
         t += increment;
@@ -236,42 +236,9 @@ fn cubic<B: Backend>(
             lerp(t, lerp(t, p0, p1), lerp(t, p1, p2)),
             lerp(t, lerp(t, p1, p2), lerp(t, p2, p3)),
         );
-        path_builder.line_to(p_next);
         *bounding_box = bounding_box.union(&p_next);
     }
-    path_builder.line_to(p3);
     *bounding_box = bounding_box.union(&p3);
-}
-
-// TODO: Remove and use spn_path_builder_quad_to.
-fn quad<B: Backend>(path_builder: &mut impl PathBuilder<B>, p0: Point, p1: Point, p2: Point) {
-    duration!("gfx", "quad");
-
-    let deviation_x = (p0.x + p2.x - 2.0 * p1.x).abs();
-    let deviation_y = (p0.y + p2.y - 2.0 * p1.y).abs();
-    let deviation_squared = deviation_x * deviation_x + deviation_y * deviation_y;
-
-    const PIXEL_ACCURACY: f32 = 0.25;
-    if deviation_squared < PIXEL_ACCURACY {
-        path_builder.move_to(p0);
-        path_builder.line_to(p2);
-        return;
-    }
-
-    const TOLERANCE: f32 = 3.0;
-    let subdivisions = 1 + (TOLERANCE * deviation_squared).sqrt().sqrt().floor() as usize;
-    let increment = (subdivisions as f32).recip();
-
-    let mut t = 0.0;
-
-    path_builder.move_to(p0);
-    for _ in 0..subdivisions - 1 {
-        t += increment;
-        let p_next = lerp(t, lerp(t, p0, p1), lerp(t, p1, p2));
-
-        path_builder.line_to(p_next);
-    }
-    path_builder.line_to(p2);
 }
 
 struct Glyph<B: Backend> {
@@ -304,12 +271,8 @@ impl<B: Backend> Glyph<B> {
                             path_builder.line_to(flip_y!(line.p[0]));
                         }
                         Segment::Curve(curve) => {
-                            quad(
-                                &mut path_builder,
-                                flip_y!(curve.p[2]),
-                                flip_y!(curve.p[1]),
-                                flip_y!(curve.p[0]),
-                            );
+                            path_builder.move_to(flip_y!(curve.p[2]));
+                            path_builder.quad_to(flip_y!(curve.p[1]), flip_y!(curve.p[0]));
                         }
                     }
                 }
