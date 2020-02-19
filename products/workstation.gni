@@ -31,6 +31,11 @@ cache_package_labels += [
   "//src/power:battery",
 ]
 
+universe_package_labels += [
+  "//src/ui/examples:spinning_square_view",
+  "//src/ui/examples:bouncing_ball",
+]
+
 kernel_cmdline_args += [
   # hide the virtual console on boot
   "virtcon.hide-on-boot",
