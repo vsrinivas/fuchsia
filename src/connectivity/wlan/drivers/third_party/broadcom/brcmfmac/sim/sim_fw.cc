@@ -303,13 +303,6 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       }
       break;
     }
-    case BRCMF_C_GET_RSSI: {
-      if ((status = SIM_FW_CHK_CMD_LEN(dcmd->len, sizeof(int32_t))) == ZX_OK) {
-        int32_t rssi = -20;
-        std::memcpy(data, &rssi, sizeof(rssi));
-      }
-      break;
-    }
     default:
       BRCMF_DBG(SIM, "Unimplemented firmware message %d\n", dcmd->cmd);
       return ZX_ERR_NOT_SUPPORTED;

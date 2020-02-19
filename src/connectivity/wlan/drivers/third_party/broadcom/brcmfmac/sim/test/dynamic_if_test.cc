@@ -136,9 +136,6 @@ wlanif_impl_ifc_protocol_ops_t DynamicIfTest::sme_ops_ = {
         [](void* cookie, const wlanif_stop_confirm_t* resp) {
           ASSERT_EQ(resp->result_code, WLAN_STOP_RESULT_SUCCESS);
         },
-    .signal_report =
-        [](void* cookie, const wlanif_signal_report_indication* ind) {
-        },
 };
 
 void DynamicIfTest::CreateInterface(wlan_info_mac_role_t role) {
