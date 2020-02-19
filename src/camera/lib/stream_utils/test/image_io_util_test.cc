@@ -68,10 +68,13 @@ TEST(ImageIOUtilTest, WriteToDiskCorrectly) {
 
   ASSERT_TRUE(files::IsFile(image_io_util->GetFilepath(0)));
 
-  auto read_bytes_pair = files::ReadFileToBytes(image_io_util->GetFilepath(0));
-  ASSERT_EQ(read_bytes_pair.second, static_cast<int>(kTestSize));
+  std::vector<uint8_t> data;
+  auto read_status = files::ReadFileToVector(image_io_util->GetFilepath(0), &data);
+  ASSERT_TRUE(read_status);
+
+  ASSERT_EQ(data.size(), kTestSize);
   for (uint32_t i = 0; i < kTestSize; ++i) {
-    ASSERT_EQ(read_bytes_pair.first[i], kTestData[i]);
+    ASSERT_EQ(data[i], kTestData[i]);
   }
 }
 
