@@ -16,7 +16,7 @@ use {
     fidl_fuchsia_tee::DeviceMarker,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::fx_log_err,
+    fuchsia_syslog::{self as syslog, fx_log_err},
     fuchsia_vfs_watcher as vfs,
     futures::{
         future::{abortable, Aborted},
@@ -30,6 +30,8 @@ const DEV_TEE_PATH: &str = "/dev/class/tee";
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    syslog::init_with_tags(&["tee_manager"])?;
+
     let mut device_list = Vec::new();
 
     // Enumerate existing TEE devices
