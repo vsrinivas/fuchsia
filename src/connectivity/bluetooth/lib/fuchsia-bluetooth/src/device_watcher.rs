@@ -6,7 +6,7 @@ use {
     crate::util::open_rdwr,
     anyhow::{format_err, Error},
     fuchsia_async::{DurationExt, TimeoutExt},
-    fuchsia_syslog::fx_log_info,
+    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_vfs_watcher::{WatchEvent, Watcher as VfsWatcher},
     fuchsia_zircon as zx,
     futures::{Future, TryStreamExt},
@@ -132,7 +132,7 @@ impl DeviceWatcher {
                 let dev = match DeviceFile::open(&path) {
                     Ok(d) => d,
                     Err(e) => {
-                        eprintln!(
+                        fx_log_err!(
                             "Failed to open file (path: {}) {:#?}",
                             path.to_string_lossy(),
                             e
@@ -213,11 +213,12 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     #[ignore] // TODO(35077) Re-enable once test flake is resolved
     async fn test_watch_new() {
+        fuchsia_syslog::init_with_tags(&[]).expect("Initializing syslog should not fail");
         let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, timeout())
             .await
             .expect("Failed to create watcher for test devices");
         let dev = create_test_dev("test-watch-new").expect("Failed to create test device");
-        eprintln!("created: {:?}", dev.topo_path());
+        fx_log_err!("created: {:?}", dev.topo_path());
         let found = watcher
             .watch_new(dev.topo_path(), WatchFilter::AddedOnly)
             .await

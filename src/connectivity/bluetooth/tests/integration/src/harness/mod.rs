@@ -5,10 +5,10 @@
 use {
     anyhow::{Context as _, Error},
     fuchsia_async as fasync,
+    fuchsia_syslog::{fx_log_info, fx_log_err},
     futures::future::BoxFuture,
     futures::{future, select, Future, FutureExt},
     pin_utils::pin_mut,
-    std::io::Write,
 };
 
 #[macro_use]
@@ -72,19 +72,18 @@ where
 
 /// Sets up the test environment and the given test case. Each integration test case is an
 /// asynchronous function from some harness `H` to the result of the test run.
-pub fn run_test<F, H, Fut>(test_func: F) -> Result<(), Error>
+pub fn run_test<H, Fut>(test: impl FnOnce(H) -> Fut + Send + 'static, name: &str) -> Result<(), Error>
 where
-    F: FnOnce(H) -> Fut + Send + 'static,
     Fut: Future<Output = Result<(), Error>> + Send + 'static,
     H: TestHarness,
 {
     let mut executor = fasync::Executor::new().context("error creating event loop")?;
-    let result = executor.run_singlethreaded(run_with_harness(test_func));
+    fx_log_info!("[ RUN      ] {}...", name);
+    let result = executor.run_singlethreaded(run_with_harness(test));
     if let Err(err) = &result {
-        println!("\x1b[31mFAILED\x1b[0m");
-        println!("Error running test: {}", err);
+        fx_log_err!("[   \x1b[31mFAILED\x1b[0m ] {}: Error running test: {}", name, err);
     } else {
-        println!("\x1b[32mPASSED\x1b[0m");
+        fx_log_info!("[   \x1b[32mPASSED\x1b[0m ] {}", name);
     }
     result
 }
@@ -147,27 +146,20 @@ where
     }
 }
 
-pub fn print_test_name(name: &str) {
-    print!("  {}...", name);
-    std::io::stdout().flush().unwrap();
-}
-
 // Prints out the test name and runs the test.
 macro_rules! run_test {
     ($name:ident) => {{
-        crate::harness::print_test_name(stringify!($name));
-        crate::harness::run_test($name)
+        crate::harness::run_test($name, stringify!($name))
     }};
 }
 
 macro_rules! run_suite {
     ($name:tt, [$($test:ident),+]) => {{
-        println!(">>> Running {} tests:", $name);
+        fuchsia_syslog::fx_log_info!(">>> Running {} tests:", $name);
         {
             use fuchsia_bluetooth::util::CollectExt;
             vec![$( run_test!($test), )*].into_iter().collect_results()?;
         }
-        println!();
         Ok(())
     }}
 }
