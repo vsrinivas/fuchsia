@@ -176,7 +176,7 @@ class Power {
     final List<Map<String, dynamic>> results = [
       {
         'label': testCaseResults.label,
-        'test_suite': 'power_test',
+        'test_suite': 'fuchsia.power.assistant_power',
         'unit': unitToCatapultConverterString(testCaseResults.unit),
         'values': testCaseResults.values,
         'split_first': testCaseResults.splitFirst,
