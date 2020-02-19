@@ -12,6 +12,8 @@ source_set("screen_reader") {
     "explore_action.h",
     "screen_reader.cc",
     "screen_reader.h",
+    "screen_reader_context.cc",
+    "screen_reader_context.h",
   ]
 
   public_deps = [
@@ -27,6 +29,7 @@ source_set("screen_reader") {
     "//sdk/lib/sys/cpp",
     "//src/lib/syslog/cpp",
     "//src/ui/a11y/lib/gesture_manager",
+    "//src/ui/a11y/lib/screen_reader/focus",
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/tts",
     "//src/ui/a11y/lib/view",

@@ -13,6 +13,7 @@ executable("screen_reader_tests") {
   sources = [
     "default_action_unittest.cc",
     "explore_action_unittest.cc",
+    "screen_reader_context_unittest.cc",
     "screen_reader_unittest.cc",
   ]
 
@@ -24,6 +25,7 @@ executable("screen_reader_tests") {
     "//src/ui/a11y/bin/a11y_manager/tests/util",
     "//src/ui/a11y/lib/gesture_manager",
     "//src/ui/a11y/lib/screen_reader",
+    "//src/ui/a11y/lib/screen_reader/focus/tests/mocks",
     "//src/ui/a11y/lib/screen_reader/tests/mocks",
     "//src/ui/a11y/lib/semantics/tests/mocks",
     "//src/ui/a11y/lib/testing:input",
