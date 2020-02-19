@@ -108,7 +108,7 @@ pub struct QmuxHeader {
     pub transaction_id: u16, // TODO this needs to be u16 for anything not a CTL
 }
 
-pub fn parse_qmux_header<T: Buf>(mut buf: T) -> Result<(QmuxHeader, T), QmuxError> {
+pub fn parse_qmux_header<T: Buf>(buf: &mut T) -> Result<QmuxHeader, QmuxError> {
     // QMUX headers start with 0x01
     if 0x01 != buf.get_u8() {
         return Err(QmuxError::Invalid);
@@ -130,10 +130,7 @@ pub fn parse_qmux_header<T: Buf>(mut buf: T) -> Result<(QmuxHeader, T), QmuxErro
         transaction_id = buf.get_u16_le();
         // The bits for the ctrl flags are shifted by one in non CTL messages
     }
-    Ok((
-        QmuxHeader { length, ctrl_flags, svc_type, client_id, svc_ctrl_flags, transaction_id },
-        buf,
-    ))
+    Ok(QmuxHeader { length, ctrl_flags, svc_type, client_id, svc_ctrl_flags, transaction_id })
 }
 
 /// Shared transport channel
@@ -205,8 +202,8 @@ impl QmiTransport {
                     Poll::Ready(Err(e)) => return Err(QmuxError::ClientRead(e)),
                     Poll::Pending => return Ok(false),
                 }
-                let buf = Cursor::new(buf.bytes());
-                let (header, buf) = parse_qmux_header(buf)?;
+                let mut buf = Cursor::new(buf.bytes());
+                let header = parse_qmux_header(&mut buf)?;
 
                 // TODO add indication support here, only handles responses for now
                 // This is a response for ONLY the CTL interface, will need indication support
@@ -224,7 +221,7 @@ impl QmiTransport {
                     if let Some(&MessageInterest::Discard) = (*interest_slab).get(raw_tx_id) {
                         interest_slab.remove(raw_tx_id);
                     } else if let Some(entry) = interest_slab.get_mut(raw_tx_id) {
-                        let dst: Vec<u8> = buf.collect::<Vec<u8>>();
+                        let dst: Vec<u8> = buf.bytes().to_vec();
                         let new_buf = zx::MessageBuf::new_with(dst, Vec::new());
                         let old_entry =
                             std::mem::replace(entry, MessageInterest::Received(new_buf));

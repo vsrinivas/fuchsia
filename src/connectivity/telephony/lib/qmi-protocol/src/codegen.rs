@@ -155,16 +155,14 @@ impl<'a, W: io::Write> Codegen<'a, W> {
     fn codegen_svc_decode_field(&mut self, field: &TLV) -> Result<(), Error> {
         match field.ty {
             QmiType::Str => {
-                writeln_indent!(self, "let dst = buf.by_ref().take(tlv_len as usize).collect();");
+                writeln_indent!(self, "let mut dst = vec![0; tlv_len as usize];");
+                writeln_indent!(self, "buf.copy_to_slice(&mut dst[..]);");
                 writeln_indent!(self, "total_len -= tlv_len;");
+                writeln_indent!(self, "let str = String::from_utf8(dst);");
                 if field.optional {
-                    writeln_indent!(
-                        self,
-                        "{} = Some(String::from_utf8(dst).unwrap());",
-                        field.param
-                    );
+                    writeln_indent!(self, "{} = str;", field.param);
                 } else {
-                    writeln_indent!(self, "{} = String::from_utf8(dst).unwrap();", field.param);
+                    writeln_indent!(self, "{} = str.unwrap();", field.param);
                 }
             }
             sized_type => {

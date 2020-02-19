@@ -159,7 +159,7 @@ where
 
 fn read_pmkid(input: &[u8]) -> IResult<&[u8], pmkid::Pmkid> {
     let f = |bytes| {
-        let pmkid_data = Bytes::from(bytes);
+        let pmkid_data = Bytes::copy_from_slice(bytes);
         return pmkid::new(pmkid_data);
     };
 

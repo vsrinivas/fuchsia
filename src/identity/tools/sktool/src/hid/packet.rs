@@ -5,10 +5,9 @@
 use crate::hid::command::Command;
 use crate::hid::util::pad;
 use anyhow::{format_err, Error};
-use bytes::{buf::Iter, Buf, BufMut, Bytes, BytesMut, IntoBuf};
+use bytes::{buf::IntoIter, Buf, BufMut, Bytes, BytesMut};
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
-use std::io::Cursor;
 
 /// The header length for an initialization packet: 4 byte channel ID, 1 byte command, 2 byte len.
 pub const INIT_HEADER_LENGTH: u16 = 7;
@@ -110,23 +109,23 @@ impl Packet {
             if len < (INIT_HEADER_LENGTH + INIT_MIN_PAYLOAD_LENGTH) as usize {
                 return Err(format_err!("Data too short for initialization packet"));
             };
-            let mut buf = data.into_buf();
+            let mut buf: Bytes = data.into();
             Packet::initialization(
-                /*channel*/ buf.get_u32_be(),
+                /*channel*/ buf.get_u32(),
                 /*command*/ Command::try_from(buf.get_u8() & 0x7F)?,
-                /*message length*/ buf.get_u16_be(),
-                /*payload*/ buf.bytes(),
+                /*message length*/ buf.get_u16(),
+                /*payload*/ buf.to_bytes(),
             )
         } else {
             // Continuation packet.
             if len < (CONT_HEADER_LENGTH + CONT_MIN_PAYLOAD_LENGTH) as usize {
                 return Err(format_err!("Data too short for continuation packet"));
             }
-            let mut buf = data.into_buf();
+            let mut buf: Bytes = data.into();
             Packet::continuation(
-                /*channel*/ buf.get_u32_be(),
+                /*channel*/ buf.get_u32(),
                 /*sequence*/ buf.get_u8(),
-                /*payload*/ buf.bytes(),
+                /*payload*/ buf.to_bytes(),
             )
         }
     }
@@ -193,16 +192,16 @@ impl Into<Bytes> for Packet {
         match self {
             Packet::Initialization { channel, command, message_length, payload } => {
                 let mut data = BytesMut::with_capacity(INIT_HEADER_LENGTH as usize + payload.len());
-                data.put_u32_be(channel);
+                data.put_u32(channel);
                 // Setting the MSB on a command byte identifies an init packet.
                 data.put_u8(0x80 | command as u8);
-                data.put_u16_be(message_length);
+                data.put_u16(message_length);
                 data.put(payload);
                 Bytes::from(data)
             }
             Packet::Continuation { channel, sequence, payload } => {
                 let mut data = BytesMut::with_capacity(CONT_HEADER_LENGTH as usize + payload.len());
-                data.put_u32_be(channel);
+                data.put_u32(channel);
                 data.put_u8(sequence);
                 data.put(payload);
                 Bytes::from(data)
@@ -213,13 +212,13 @@ impl Into<Bytes> for Packet {
 
 impl IntoIterator for Packet {
     type Item = u8;
-    type IntoIter = Iter<Cursor<Bytes>>;
+    type IntoIter = IntoIter<Bytes>;
 
     fn into_iter(self) -> Self::IntoIter {
         // TODO(jsankey): It would be more efficient to iterate over our internal data rather than
         // creating a copy to iterate over `Bytes`.
         let bytes: Bytes = self.into();
-        bytes.into_buf().iter()
+        bytes.into_iter()
     }
 }
 

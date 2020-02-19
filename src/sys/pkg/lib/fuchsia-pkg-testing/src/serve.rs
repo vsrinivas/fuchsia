@@ -7,7 +7,6 @@
 use {
     crate::repo::Repository,
     anyhow::{format_err, Error},
-    bytes::Buf,
     chrono::Utc,
     fidl_fuchsia_pkg_ext::RepositoryConfig,
     fuchsia_async::{self as fasync, net::TcpListener, EHandle},
@@ -322,7 +321,14 @@ async fn get(url: impl AsRef<str>) -> Result<Vec<u8>, Error> {
         return Err(format_err!("unexpected status code: {:?}", response.status()));
     }
 
-    let body = response.into_body().compat().try_concat().await?.collect();
+    let body = response
+        .into_body()
+        .compat()
+        .try_fold(Vec::new(), |mut vec, b| async move {
+            vec.extend(b);
+            Ok(vec)
+        })
+        .await?;
 
     Ok(body)
 }

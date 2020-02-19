@@ -126,8 +126,8 @@ impl GroupKey {
         let handler = match &cfg.role {
             Role::Supplicant => RoleHandler::Supplicant(Supplicant {
                 cfg,
-                kck: Bytes::from(kck),
-                kek: Bytes::from(kek),
+                kck: Bytes::copy_from_slice(kck),
+                kek: Bytes::copy_from_slice(kek),
             }),
             _ => return Err(format_err!("Authenticator not yet support in Group-Key Handshake")),
         };

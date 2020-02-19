@@ -10,7 +10,7 @@ use crate::CtapDevice;
 use anyhow::{format_err, Context as _, Error};
 use async_trait::async_trait;
 use bitfield::bitfield;
-use bytes::{Buf, BufMut, Bytes, BytesMut, IntoBuf};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use fdio::service_connect;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_hardware_input::DeviceMarker;
@@ -154,7 +154,7 @@ impl<C: Connection, R: Rng> Device<C, R> {
         }
         let mut request = BytesMut::with_capacity(length as usize);
         for num in 1..=length / 2 {
-            request.put_u16_be(num);
+            request.put_u16(num);
         }
         let response = self.perform_transaction(Command::Ping, &request).await?;
         if response == request {
@@ -162,8 +162,8 @@ impl<C: Connection, R: Rng> Device<C, R> {
         } else {
             Err(format_err!(
                 "Ping request did not match response: {:02x?} vs {:02x?}",
-                request.into_buf().bytes(),
-                response.into_buf().bytes()
+                request.bytes(),
+                response.bytes()
             ))
         }
     }
@@ -202,7 +202,7 @@ impl<C: Connection, R: Rng> Device<C, R> {
                     ));
                 }
 
-                let mut payload = packet.payload().into_buf();
+                let mut payload = packet.payload().clone();
                 let mut received_nonce = [0u8; NONCE_LENGTH as usize];
                 payload.copy_to_slice(&mut received_nonce);
                 if received_nonce != nonce {
@@ -218,10 +218,10 @@ impl<C: Connection, R: Rng> Device<C, R> {
             })
             .await?;
 
-        let mut payload = packet.payload().into_buf();
+        let mut payload = packet.payload().clone();
         // Skip the nonce we validated while matching the packet.
         payload.advance(NONCE_LENGTH as usize);
-        let channel = payload.get_u32_be();
+        let channel = payload.get_u32();
         let ctaphid_version = payload.get_u8();
         // Skip the 3 bytes of device-specific version information.
         payload.advance(3);
@@ -345,7 +345,7 @@ impl<C: Connection, R: Rng> Device<C, R> {
                 } else if message.command() == Command::Error {
                     Err(format_err!(
                         "Received CTAPHID error {:?} in response to {:?} transaction",
-                        message.payload().into_buf().bytes(),
+                        message.payload().bytes(),
                         command
                     ))
                 } else {
@@ -456,7 +456,7 @@ mod tests {
         capabilities: u8,
     ) -> Packet {
         let mut payload = Vec::from(nonce);
-        payload.put_u32_be(response_channel);
+        payload.put_u32(response_channel);
         payload.put_u8(2); /* CTAPHID protocol */
         payload.put_u8(0xe1); /* Unused major version */
         payload.put_u8(0xe2); /* Unused minor version */
@@ -681,7 +681,7 @@ mod tests {
         // Expect a small ping message and the same message in response.
         let mut payload = BytesMut::with_capacity(100);
         for num in 1..=50 {
-            payload.put_u16_be(num);
+            payload.put_u16(num);
         }
         let message = Message::new(TEST_CHANNEL, Command::Ping, &payload, REPORT_LENGTH)?;
         con.expect_message_write(message.clone());

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Error};
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 
 /// Convenience method to create a new `Bytes` with the supplied input padded to the specified
 /// `length` using with zeros.
@@ -17,10 +17,10 @@ pub fn pad(data: &[u8], length: u16) -> Result<Bytes, Error> {
     if data.len() > length as usize {
         return Err(format_err!("Data to pad exceeded requested length"));
     }
-    let mut bytes = Bytes::with_capacity(length as usize);
+    let mut bytes = BytesMut::with_capacity(length as usize);
     bytes.extend(data);
     bytes.extend(&vec![0; length as usize - data.len()]);
-    Ok(bytes)
+    Ok(bytes.freeze())
 }
 
 #[cfg(test)]

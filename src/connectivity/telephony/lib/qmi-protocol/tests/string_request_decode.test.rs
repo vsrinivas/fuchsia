@@ -20,9 +20,11 @@ impl Decodable for TestResp {
             total_len -= 2;
             match msg_id {
                 1 => {
-                    let dst = buf.by_ref().take(tlv_len as usize).collect();
+                    let mut dst = vec![0; tlv_len as usize];
+                    buf.copy_to_slice(&mut dst[..]);
                     total_len -= tlv_len;
-                    blah = String::from_utf8(dst).unwrap();
+                    let str = String::from_utf8(dst);
+                    blah = str.unwrap();
                 }
                 0 => { eprintln!("Found a type of 0, modem gave a bad TLV, trying to recover"); break; }
                 e_code => {

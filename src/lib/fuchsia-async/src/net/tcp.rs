@@ -6,7 +6,6 @@
 
 use {
     crate::net::{set_nonblock, EventedFd},
-    bytes::{Buf, BufMut},
     futures::{
         future::Future,
         io::{AsyncRead, AsyncWrite},
@@ -16,7 +15,7 @@ use {
     },
     net2::{TcpBuilder, TcpStreamExt},
     std::{
-        io::{self, Read, Write},
+        io,
         marker::Unpin,
         net::{self, SocketAddr},
         ops::Deref,
@@ -220,42 +219,6 @@ impl TcpStream {
             ConnectState::Connected => {
                 Poll::Ready(Err(io::Error::from_raw_os_error(libc::EISCONN)))
             }
-        }
-    }
-
-    /// Polls on attempting to read data from this stream into a `BufMut`.
-    pub fn read_buf<B: BufMut>(
-        &self,
-        buf: &mut B,
-        cx: &mut Context<'_>,
-    ) -> Poll<io::Result<usize>> {
-        match (&self.stream).as_ref().read(unsafe { buf.bytes_mut() }) {
-            Ok(n) => {
-                unsafe {
-                    buf.advance_mut(n);
-                }
-                Poll::Ready(Ok(n))
-            }
-            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                self.stream.need_read(cx);
-                Poll::Pending
-            }
-            Err(e) => Poll::Ready(Err(e)),
-        }
-    }
-
-    /// Polls on attempting to write data into this stream from a `Buf`.
-    pub fn write_buf<B: Buf>(&self, buf: &mut B, cx: &mut Context<'_>) -> Poll<io::Result<usize>> {
-        match (&self.stream).as_ref().write(buf.bytes()) {
-            Ok(n) => {
-                buf.advance(n);
-                Poll::Ready(Ok(n))
-            }
-            Err(ref e) if e.kind() == io::ErrorKind::WouldBlock => {
-                self.stream.need_write(cx);
-                Poll::Pending
-            }
-            Err(e) => Poll::Ready(Err(e)),
         }
     }
 

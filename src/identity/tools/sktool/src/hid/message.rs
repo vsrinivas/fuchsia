@@ -75,7 +75,7 @@ impl Message {
 
     /// Returns the payload of this message, without any padding.
     pub fn payload(&self) -> Bytes {
-        self.payload.slice_to(self.payload_length as usize)
+        self.payload.slice(..self.payload_length as usize)
     }
 
     /// Returns the length of packets this message iterates over.
@@ -111,38 +111,43 @@ impl Iterator for MessageIterator {
     type Item = Packet;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let message = &self.message;
-        let cont_packet_count = cont_packet_count(message.payload_length, message.packet_length);
-        let init_payload_length = (message.packet_length - INIT_HEADER_LENGTH) as usize;
+        let Self {
+            message: Message { channel, command, payload, payload_length, packet_length },
+            next_index,
+        } = self;
+        let init_payload_length = (*packet_length - INIT_HEADER_LENGTH) as usize;
+        let channel = *channel;
+        let command = *command;
         // Note: We ensured that a message payload was padded out to allow a complete last packet
         // when the message was constructed, hence it is legal to slice complete packets from that
         // payload here, even when they extend past the message length.
-        match self.next_index {
-            0 => {
-                self.next_index += 1;
-                Some(Packet::Initialization {
-                    channel: message.channel,
-                    command: message.command,
-                    message_length: message.payload_length,
-                    payload: message.payload.slice_to(init_payload_length),
-                })
+        let item = match next_index {
+            0 => Some(Packet::Initialization {
+                channel,
+                command,
+                message_length: *payload_length,
+                payload: payload.slice(..init_payload_length),
+            }),
+            &mut next_index => {
+                if next_index > cont_packet_count(*payload_length, *packet_length) {
+                    None
+                } else {
+                    // Note: The first continuation packet is sequence number=0, which is our index=1.
+                    let sequence = next_index - 1;
+                    let cont_payload_length = (*packet_length - CONT_HEADER_LENGTH) as usize;
+                    let start_offset =
+                        init_payload_length + (sequence as usize * cont_payload_length);
+                    let end_offset = start_offset + cont_payload_length;
+                    Some(Packet::Continuation {
+                        channel,
+                        sequence,
+                        payload: payload.slice(start_offset..end_offset),
+                    })
+                }
             }
-            next_index if next_index <= cont_packet_count => {
-                // Note: The first continuation packet is sequence number=0, which is our index=1.
-                let sequence = self.next_index - 1;
-                let cont_payload_length = (message.packet_length - CONT_HEADER_LENGTH) as usize;
-                let start_offset = init_payload_length + (sequence as usize * cont_payload_length);
-                self.next_index += 1;
-                Some(Packet::Continuation {
-                    channel: message.channel,
-                    sequence,
-                    payload: message
-                        .payload
-                        .slice(start_offset, start_offset + cont_payload_length),
-                })
-            }
-            _ => None,
-        }
+        };
+        *next_index += 1;
+        item
     }
 }
 
