@@ -9,6 +9,7 @@
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
@@ -67,7 +68,9 @@ class Session : private fuchsia::ui::scenic::SessionListener {
   //
   // Callbacks will be run on the async dispatcher specified by |dispatcher|, or
   // the default dispatcher for the current thread if unspecified.
-  explicit Session(fuchsia::ui::scenic::Scenic* scenic, async_dispatcher_t* dispatcher = nullptr);
+  explicit Session(fuchsia::ui::scenic::Scenic* scenic,
+                   fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser = nullptr,
+                   async_dispatcher_t* dispatcher = nullptr);
 
   // Callbacks for SessionListener will be run on the async dispatcher specified
   // by |dispatcher|, or the default dispatcher for the current thread if
