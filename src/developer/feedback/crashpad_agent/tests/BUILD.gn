@@ -66,6 +66,9 @@ test_package("crashpad_agent_tests") {
       dest = "database_unittest"
     },
     {
+      name = "feedback_data_provider_unittest"
+    },
+    {
       # Binary name on the host. We prefix it with "crashpad_agent" to reduce collisions.
       name = "crashpad_agent_inspect_manager_unittest"
 
@@ -141,6 +144,7 @@ test_package("crashpad_agent_tests") {
     ":crashpad_agent_integration_test",
     ":crashpad_agent_unittest",
     ":database_unittest",
+    ":feedback_data_provider_unittest",
     ":inspect_manager_unittest",
     ":privacy_settings_ptr_unittest",
     ":queue_unittest",
@@ -242,6 +246,25 @@ executable("database_unittest") {
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
     "//src/developer/feedback/utils:cobalt",
+    "//src/lib/fsl:fsl",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("feedback_data_provider_unittest") {
+  testonly = true
+
+  sources = [
+    "feedback_data_provider_unittest.cc",
+    "stub_feedback_data_provider.cc",
+    "stub_feedback_data_provider.h",
+  ]
+
+  deps = [
+    "//src/developer/feedback/crashpad_agent:src",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
     "//src/lib/fsl:fsl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",

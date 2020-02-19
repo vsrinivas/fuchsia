@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_CRASHPAD_AGENT_TESTS_STUB_FEEDBACK_DATA_PROVIDER_H_
 
 #include <fuchsia/feedback/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 
@@ -38,7 +38,8 @@ class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
   fidl::InterfaceRequestHandler<fuchsia::feedback::DataProvider> GetHandler() {
     return [this](fidl::InterfaceRequest<fuchsia::feedback::DataProvider> request) {
       total_num_bindings_++;
-      bindings_.AddBinding(this, std::move(request));
+      binding_ = std::make_unique<fidl::Binding<fuchsia::feedback::DataProvider>>(
+          this, std::move(request));
     };
   }
 
@@ -50,7 +51,8 @@ class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
   }
 
   uint64_t total_num_bindings() { return total_num_bindings_; }
-  size_t current_num_bindings() { return bindings_.size(); }
+  bool is_bound() { return binding_->is_bound(); }
+  void CloseConnection() { binding_->Close(ZX_ERR_PEER_CLOSED); }
 
   const std::map<std::string, std::string>& annotations() { return annotations_; }
   bool has_attachment_bundle_key() { return !attachment_bundle_key_.empty(); }
@@ -61,7 +63,7 @@ class StubFeedbackDataProvider : public fuchsia::feedback::DataProvider {
   const std::string attachment_bundle_key_;
 
  private:
-  fidl::BindingSet<fuchsia::feedback::DataProvider> bindings_;
+  std::unique_ptr<fidl::Binding<fuchsia::feedback::DataProvider>> binding_;
   uint64_t total_num_bindings_ = 0;
 };
 

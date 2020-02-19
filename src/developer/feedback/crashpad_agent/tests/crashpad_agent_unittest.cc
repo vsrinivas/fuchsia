@@ -389,19 +389,6 @@ class CrashpadAgentTest : public UnitTestFixture, public CobaltTestFixture {
     return result.take_value();
   }
 
-  uint64_t total_num_feedback_data_provider_bindings() {
-    if (!feedback_data_provider_) {
-      return 0u;
-    }
-    return feedback_data_provider_->total_num_bindings();
-  }
-  size_t current_num_feedback_data_provider_bindings() {
-    if (!feedback_data_provider_) {
-      return 0u;
-    }
-    return feedback_data_provider_->current_num_bindings();
-  }
-
  private:
   // Returns all the attachment subdirectories under the over-arching attachment directory in the
   // database.
@@ -738,50 +725,6 @@ TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackData) {
   CheckAttachmentsInDatabase({kSingleAttachmentKey});
   CheckAnnotationsOnServer();
   CheckAttachmentsOnServer({kSingleAttachmentKey});
-}
-
-TEST_F(CrashpadAgentTest, Succeed_OnNoFeedbackDataProvider) {
-  SetUpAgentDefaultConfig({kUploadSuccessful});
-  // We pass a nullptr stub so there will be no fuchsia.feedback.DataProvider service to connect to.
-  SetUpFeedbackDataProvider(nullptr);
-  SetUpStubUtc({kExternalResponse});
-
-  // Run the loop so crashpad_agent can confirm the UTC time is correct.
-  RunLoopUntilIdle();
-
-  EXPECT_TRUE(FileOneCrashReportWithSingleAttachment().is_ok());
-  CheckAttachmentsInDatabase({kSingleAttachmentKey});
-  CheckAnnotationsOnServer();
-  CheckAttachmentsOnServer({kSingleAttachmentKey});
-}
-
-TEST_F(CrashpadAgentTest, Succeed_OnFeedbackDataProviderTakingTooLong) {
-  SetUpAgentDefaultConfig({kUploadSuccessful});
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderNeverReturning>());
-  SetUpStubUtc({kExternalResponse});
-
-  fit::result<void, zx_status_t> result = FileOneCrashReportWithSingleAttachment();
-  RunLoopFor(zx::sec(30) + zx::sec(5));
-
-  EXPECT_TRUE(result.is_ok());
-  CheckAttachmentsInDatabase({kSingleAttachmentKey});
-  CheckAnnotationsOnServer();
-  CheckAttachmentsOnServer({kSingleAttachmentKey});
-}
-
-TEST_F(CrashpadAgentTest, Check_OneFeedbackDataProviderConnectionPerAnalysis) {
-  const size_t num_calls = 5u;
-  SetUpAgentDefaultConfig(std::vector<bool>(num_calls, true));
-  // We use a stub that returns no data as we are not interested in the payload, just the number of
-  // different connections to the stub.
-  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProviderReturnsNoData>());
-
-  for (size_t i = 0; i < num_calls; i++) {
-    FileOneCrashReportWithSingleAttachment();
-  }
-
-  EXPECT_EQ(total_num_feedback_data_provider_bindings(), num_calls);
-  EXPECT_EQ(current_num_feedback_data_provider_bindings(), 0u);
 }
 
 TEST_F(CrashpadAgentTest, Check_CobaltAfterSuccessfulUpload) {

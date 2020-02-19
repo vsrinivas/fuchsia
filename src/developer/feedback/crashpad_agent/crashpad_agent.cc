@@ -19,7 +19,6 @@
 
 #include "src/developer/feedback/crashpad_agent/config.h"
 #include "src/developer/feedback/crashpad_agent/crash_server.h"
-#include "src/developer/feedback/crashpad_agent/feedback_data_provider_ptr.h"
 #include "src/developer/feedback/crashpad_agent/report_util.h"
 #include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/files/file.h"
@@ -115,7 +114,8 @@ CrashpadAgent::CrashpadAgent(async_dispatcher_t* dispatcher,
       queue_(std::move(queue)),
       crash_server_(std::move(crash_server)),
       info_(std::move(info_context)),
-      privacy_settings_watcher_(dispatcher, services_, &settings_) {
+      privacy_settings_watcher_(dispatcher, services_, &settings_),
+      data_provider_(dispatcher_, services_) {
   FXL_DCHECK(dispatcher_);
   FXL_DCHECK(services_);
   FXL_DCHECK(queue_);
@@ -144,14 +144,13 @@ void CrashpadAgent::File(fuchsia::feedback::CrashReport report, FileCallback cal
   }
   FX_LOGS(INFO) << "Generating crash report for " << report.program_name();
 
-  auto promise = GetFeedbackData(dispatcher_, services_, kFeedbackDataCollectionTimeout)
+  auto promise = data_provider_.GetData(kFeedbackDataCollectionTimeout)
                      .then([this, report = std::move(report)](
                                fit::result<Data>& result) mutable -> fit::result<void> {
                        Data feedback_data;
                        if (result.is_ok()) {
                          feedback_data = result.take_value();
                        }
-
                        const std::string program_name = report.program_name();
 
                        std::map<std::string, std::string> annotations;
