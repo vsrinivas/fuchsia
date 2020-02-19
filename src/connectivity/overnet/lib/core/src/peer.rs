@@ -24,6 +24,7 @@ use fidl_fuchsia_overnet_protocol::{
 use futures::{lock::Mutex, pin_mut, prelude::*, select};
 use std::{
     convert::TryInto,
+    pin::Pin,
     rc::{Rc, Weak},
     task::{Context, Poll},
 };
@@ -76,7 +77,7 @@ impl Peer {
     // Common parts of new_client, new_server - create the peer object, get it routed
     fn new_instance(
         node_id: NodeId,
-        conn: Box<quiche::Connection>,
+        conn: Pin<Box<quiche::Connection>>,
         endpoint: Endpoint,
         current_link: &Weak<Link>,
         commands: Option<futures::channel::mpsc::Sender<ClientPeerCommand>>,
@@ -107,7 +108,7 @@ impl Peer {
     /// publishing link metadata
     pub fn new_client(
         node_id: NodeId,
-        conn: Box<quiche::Connection>,
+        conn: Pin<Box<quiche::Connection>>,
         current_link: &Weak<Link>,
         link_status_observer: Observer<Vec<LinkStatus>>,
         service_observer: Observer<Vec<String>>,
@@ -142,7 +143,7 @@ impl Peer {
     /// Construct a new server peer - spawns tasks to handle responding to control stream requests
     pub fn new_server(
         node_id: NodeId,
-        conn: Box<quiche::Connection>,
+        conn: Pin<Box<quiche::Connection>>,
         current_link: &Weak<Link>,
         router: &Rc<Router>,
     ) -> Result<Rc<Self>, Error> {

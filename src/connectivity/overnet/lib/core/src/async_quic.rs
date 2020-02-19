@@ -17,8 +17,26 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::task::{Context, Poll, Waker};
 use std::time::Instant;
 
+pub trait PinConnection {
+    fn pin_it(self) -> Pin<Box<quiche::Connection>>
+    where
+        Self: Sized;
+}
+
+impl PinConnection for Box<quiche::Connection> {
+    fn pin_it(self) -> Pin<Box<quiche::Connection>> {
+        Pin::new(self)
+    }
+}
+
+impl PinConnection for Pin<Box<quiche::Connection>> {
+    fn pin_it(self) -> Pin<Box<quiche::Connection>> {
+        self
+    }
+}
+
 struct IO {
-    conn: Box<quiche::Connection>,
+    conn: Pin<Box<quiche::Connection>>,
     seen_established: bool,
     waiting_for_conn_send: Option<Waker>,
     waiting_for_stream_recv: BTreeMap<u64, Waker>,
@@ -87,7 +105,7 @@ struct AsyncConnectionInner {
 pub struct AsyncConnection(Rc<AsyncConnectionInner>);
 
 impl AsyncConnection {
-    pub fn from_connection(conn: Box<quiche::Connection>, endpoint: Endpoint) -> Self {
+    pub fn from_connection(conn: Pin<Box<quiche::Connection>>, endpoint: Endpoint) -> Self {
         let inner = Rc::new(AsyncConnectionInner {
             io: RefCell::new(IO {
                 conn,
@@ -423,7 +441,7 @@ pub(crate) mod test_util {
             .take(quiche::MAX_CONN_ID_LEN)
             .collect();
         let client = AsyncConnection::from_connection(
-            quiche::connect(None, &scid, &mut client_config()?)?,
+            quiche::connect(None, &scid, &mut client_config()?)?.pin_it(),
             Endpoint::Client,
         );
         let scid: Vec<u8> = rand::thread_rng()
@@ -431,7 +449,7 @@ pub(crate) mod test_util {
             .take(quiche::MAX_CONN_ID_LEN)
             .collect();
         let server = AsyncConnection::from_connection(
-            quiche::accept(&scid, None, &mut server_config()?)?,
+            quiche::accept(&scid, None, &mut server_config()?)?.pin_it(),
             Endpoint::Server,
         );
         spawn(log_errors(
