@@ -126,10 +126,8 @@ fn empty() {
             |_p, sink| future::ready(Ok(sink.seal(AlphabeticalTraversal::End))),
             |_name| future::ready(Err(Status::NOT_FOUND)),
         ),
-        |root| {
-            async move {
-                assert_close!(root);
-            }
+        |root| async move {
+            assert_close!(root);
         },
     );
 }
@@ -148,11 +146,9 @@ fn empty_with_watchers() {
         watcher_events_consumer,
     );
 
-    test_server_client(OPEN_RIGHT_READABLE, server, |root| {
-        async move {
-            assert_close!(root);
-            watcher_events.disconnect();
-        }
+    test_server_client(OPEN_RIGHT_READABLE, server, |root| async move {
+        assert_close!(root);
+        watcher_events.disconnect();
     })
     .exec(exec)
     .run();
@@ -210,15 +206,13 @@ fn static_entries() {
         })
     };
 
-    run_server_client(OPEN_RIGHT_READABLE, lazy(get_entry_names, get_entry), |root| {
-        async move {
-            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-            open_as_file_assert_content!(&root, flags, "one", "File one content");
-            open_as_file_assert_content!(&root, flags, "two", "File two content");
-            open_as_file_assert_content!(&root, flags, "three", "File three content");
+    run_server_client(OPEN_RIGHT_READABLE, lazy(get_entry_names, get_entry), |root| async move {
+        let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+        open_as_file_assert_content!(&root, flags, "one", "File one content");
+        open_as_file_assert_content!(&root, flags, "two", "File two content");
+        open_as_file_assert_content!(&root, flags, "three", "File three content");
 
-            assert_close!(root);
-        }
+        assert_close!(root);
     });
 }
 
@@ -247,47 +241,45 @@ fn static_entries_with_traversal() {
         })
     };
 
-    run_server_client(OPEN_RIGHT_READABLE, lazy(get_entry_names, get_entry), |root| {
-        async move {
-            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-            {
-                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                expected
-                    .add(DIRENT_TYPE_DIRECTORY, b".")
-                    .add(DIRENT_TYPE_DIRECTORY, b"etc")
-                    .add(DIRENT_TYPE_FILE, b"files");
+    run_server_client(OPEN_RIGHT_READABLE, lazy(get_entry_names, get_entry), |root| async move {
+        let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+        {
+            let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+            expected
+                .add(DIRENT_TYPE_DIRECTORY, b".")
+                .add(DIRENT_TYPE_DIRECTORY, b"etc")
+                .add(DIRENT_TYPE_FILE, b"files");
 
-                assert_read_dirents!(root, 1000, expected.into_vec());
-            }
-
-            {
-                let etc_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
-
-                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                expected
-                    .add(DIRENT_TYPE_DIRECTORY, b".")
-                    .add(DIRENT_TYPE_FILE, b"fstab")
-                    .add(DIRENT_TYPE_DIRECTORY, b"ssh");
-
-                assert_read_dirents!(etc_dir, 1000, expected.into_vec());
-                assert_close!(etc_dir);
-            }
-
-            {
-                let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
-
-                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"sshd_config");
-
-                assert_read_dirents!(ssh_dir, 1000, expected.into_vec());
-                assert_close!(ssh_dir);
-            }
-
-            open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
-            open_as_file_assert_content!(&root, flags, "files", "Content");
-
-            assert_close!(root);
+            assert_read_dirents!(root, 1000, expected.into_vec());
         }
+
+        {
+            let etc_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
+
+            let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+            expected
+                .add(DIRENT_TYPE_DIRECTORY, b".")
+                .add(DIRENT_TYPE_FILE, b"fstab")
+                .add(DIRENT_TYPE_DIRECTORY, b"ssh");
+
+            assert_read_dirents!(etc_dir, 1000, expected.into_vec());
+            assert_close!(etc_dir);
+        }
+
+        {
+            let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
+
+            let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+            expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"sshd_config");
+
+            assert_read_dirents!(ssh_dir, 1000, expected.into_vec());
+            assert_close!(ssh_dir);
+        }
+
+        open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+        open_as_file_assert_content!(&root, flags, "files", "Content");
+
+        assert_close!(root);
     });
 }
 
@@ -459,11 +451,9 @@ fn dynamic_entries() {
             let count = count.clone();
             async move {
                 let entry = |count: u8| {
-                    Ok(read_only(move || {
-                        async move {
-                            let content = format!("Content: {}", count);
-                            Ok(content.into_bytes())
-                        }
+                    Ok(read_only(move || async move {
+                        let content = format!("Content: {}", count);
+                        Ok(content.into_bytes())
                     }) as Arc<dyn DirectoryEntry>)
                 };
 
@@ -482,18 +472,16 @@ fn dynamic_entries() {
         }
     };
 
-    run_server_client(OPEN_RIGHT_READABLE, lazy(get_entry_names, get_entry), |root| {
-        async move {
-            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+    run_server_client(OPEN_RIGHT_READABLE, lazy(get_entry_names, get_entry), |root| async move {
+        let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-            open_as_file_assert_content!(&root, flags, "file1", "Content: 1");
-            open_as_file_assert_content!(&root, flags, "file1", "Content: 2");
-            open_as_file_assert_content!(&root, flags, "file2", "Content: 12");
-            open_as_file_assert_content!(&root, flags, "file2", "Content: 22");
-            open_as_file_assert_content!(&root, flags, "file1", "Content: 23");
+        open_as_file_assert_content!(&root, flags, "file1", "Content: 1");
+        open_as_file_assert_content!(&root, flags, "file1", "Content: 2");
+        open_as_file_assert_content!(&root, flags, "file2", "Content: 12");
+        open_as_file_assert_content!(&root, flags, "file2", "Content: 22");
+        open_as_file_assert_content!(&root, flags, "file1", "Content: 23");
 
-            assert_close!(root);
-        }
+        assert_close!(root);
     });
 }
 
@@ -581,17 +569,14 @@ fn watch_empty() {
         |_name| future::ready(Err(Status::NOT_FOUND)),
         watcher_stream,
     );
-    test_server_client(OPEN_RIGHT_READABLE, root, |root| {
-        async move {
-            let mask =
-                WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-            let watcher_client = assert_watch!(root, mask);
+    test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+        let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let watcher_client = assert_watch!(root, mask);
 
-            assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
+        assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
 
-            drop(watcher_client);
-            assert_close!(root);
-        }
+        drop(watcher_client);
+        assert_close!(root);
     })
     .exec(exec)
     .run();
@@ -616,24 +601,21 @@ fn watch_non_empty() {
         watcher_stream,
     );
 
-    test_server_client(OPEN_RIGHT_READABLE, root, |root| {
-        async move {
-            let mask =
-                WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-            let watcher_client = assert_watch!(root, mask);
+    test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+        let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let watcher_client = assert_watch!(root, mask);
 
-            assert_watcher_one_message_watched_events!(
-                watcher_client,
-                { EXISTING, "." },
-                { EXISTING, "one" },
-                { EXISTING, "three" },
-                { EXISTING, "two" },
-            );
-            assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
+        assert_watcher_one_message_watched_events!(
+            watcher_client,
+            { EXISTING, "." },
+            { EXISTING, "one" },
+            { EXISTING, "three" },
+            { EXISTING, "two" },
+        );
+        assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
 
-            drop(watcher_client);
-            assert_close!(root);
-        }
+        drop(watcher_client);
+        assert_close!(root);
     })
     .exec(exec)
     .run();
@@ -658,36 +640,33 @@ fn watch_two_watchers() {
         watcher_stream,
     );
 
-    test_server_client(OPEN_RIGHT_READABLE, root, |root| {
-        async move {
-            let mask =
-                WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-            let watcher1_client = assert_watch!(root, mask);
+    test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+        let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let watcher1_client = assert_watch!(root, mask);
 
-            assert_watcher_one_message_watched_events!(
-                watcher1_client,
-                { EXISTING, "." },
-                { EXISTING, "one" },
-                { EXISTING, "three" },
-                { EXISTING, "two" },
-            );
-            assert_watcher_one_message_watched_events!(watcher1_client, { IDLE, vec![] });
+        assert_watcher_one_message_watched_events!(
+            watcher1_client,
+            { EXISTING, "." },
+            { EXISTING, "one" },
+            { EXISTING, "three" },
+            { EXISTING, "two" },
+        );
+        assert_watcher_one_message_watched_events!(watcher1_client, { IDLE, vec![] });
 
-            let watcher2_client = assert_watch!(root, mask);
+        let watcher2_client = assert_watch!(root, mask);
 
-            assert_watcher_one_message_watched_events!(
-                watcher2_client,
-                { EXISTING, "." },
-                { EXISTING, "one" },
-                { EXISTING, "three" },
-                { EXISTING, "two" },
-            );
-            assert_watcher_one_message_watched_events!(watcher2_client, { IDLE, vec![] });
+        assert_watcher_one_message_watched_events!(
+            watcher2_client,
+            { EXISTING, "." },
+            { EXISTING, "one" },
+            { EXISTING, "three" },
+            { EXISTING, "two" },
+        );
+        assert_watcher_one_message_watched_events!(watcher2_client, { IDLE, vec![] });
 
-            drop(watcher1_client);
-            drop(watcher2_client);
-            assert_close!(root);
-        }
+        drop(watcher1_client);
+        drop(watcher2_client);
+        assert_close!(root);
     })
     .exec(exec)
     .run();
@@ -712,16 +691,14 @@ fn watch_with_mask() {
         watcher_stream,
     );
 
-    test_server_client(OPEN_RIGHT_READABLE, root, |root| {
-        async move {
-            let mask = WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-            let watcher_client = assert_watch!(root, mask);
+    test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+        let mask = WATCH_MASK_IDLE | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let watcher_client = assert_watch!(root, mask);
 
-            assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
+        assert_watcher_one_message_watched_events!(watcher_client, { IDLE, vec![] });
 
-            drop(watcher_client);
-            assert_close!(root);
-        }
+        drop(watcher_client);
+        assert_close!(root);
     })
     .exec(exec)
     .run();
@@ -743,29 +720,27 @@ fn watch_addition() {
         watcher_stream,
     );
 
-    test_server_client(OPEN_RIGHT_READABLE, root, |root| {
-        async move {
-            let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-            let watcher_client = assert_watch!(root, mask);
+    test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+        let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let watcher_client = assert_watch!(root, mask);
 
-            watcher_sender
-                .unbounded_send(WatcherEvent::Added(vec!["two".to_string()]))
-                .expect("watcher_sender.send() failed");
+        watcher_sender
+            .unbounded_send(WatcherEvent::Added(vec!["two".to_string()]))
+            .expect("watcher_sender.send() failed");
 
-            assert_watcher_one_message_watched_events!(watcher_client, { ADDED, "two" });
+        assert_watcher_one_message_watched_events!(watcher_client, { ADDED, "two" });
 
-            watcher_sender
-                .unbounded_send(WatcherEvent::Added(vec!["three".to_string(), "four".to_string()]))
-                .expect("watcher_sender.send() failed");
+        watcher_sender
+            .unbounded_send(WatcherEvent::Added(vec!["three".to_string(), "four".to_string()]))
+            .expect("watcher_sender.send() failed");
 
-            assert_watcher_one_message_watched_events!(
-                watcher_client,
-                { ADDED, "three" },
-                { ADDED, "four" },
-            );
+        assert_watcher_one_message_watched_events!(
+            watcher_client,
+            { ADDED, "three" },
+            { ADDED, "four" },
+        );
 
-            assert_close!(root);
-        }
+        assert_close!(root);
     })
     .exec(exec)
     .run();
@@ -792,32 +767,27 @@ fn watch_removal() {
         watcher_stream,
     );
 
-    test_server_client(OPEN_RIGHT_READABLE, root, |root| {
-        async move {
-            let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-            let watcher_client = assert_watch!(root, mask);
+    test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+        let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let watcher_client = assert_watch!(root, mask);
 
-            watcher_sender
-                .unbounded_send(WatcherEvent::Removed(vec!["two".to_string()]))
-                .expect("watcher_sender.send() failed");
+        watcher_sender
+            .unbounded_send(WatcherEvent::Removed(vec!["two".to_string()]))
+            .expect("watcher_sender.send() failed");
 
-            assert_watcher_one_message_watched_events!(watcher_client, { REMOVED, "two" });
+        assert_watcher_one_message_watched_events!(watcher_client, { REMOVED, "two" });
 
-            watcher_sender
-                .unbounded_send(WatcherEvent::Removed(vec![
-                    "three".to_string(),
-                    "four".to_string(),
-                ]))
-                .expect("watcher_sender.send() failed");
+        watcher_sender
+            .unbounded_send(WatcherEvent::Removed(vec!["three".to_string(), "four".to_string()]))
+            .expect("watcher_sender.send() failed");
 
-            assert_watcher_one_message_watched_events!(
-                watcher_client,
-                { REMOVED, "three" },
-                { REMOVED, "four" },
-            );
+        assert_watcher_one_message_watched_events!(
+            watcher_client,
+            { REMOVED, "three" },
+            { REMOVED, "four" },
+        );
 
-            assert_close!(root);
-        }
+        assert_close!(root);
     })
     .exec(exec)
     .run();
@@ -843,13 +813,11 @@ fn watch_watcher_stream_closed() {
         watcher_stream,
     );
 
-    test_server_client(OPEN_RIGHT_READABLE, root, |root| {
-        async move {
-            let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE;
-            assert_watch_err!(root, mask, Status::NOT_SUPPORTED);
+    test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+        let mask = WATCH_MASK_EXISTING | WATCH_MASK_IDLE;
+        assert_watch_err!(root, mask, Status::NOT_SUPPORTED);
 
-            assert_close!(root);
-        }
+        assert_close!(root);
     })
     .exec(exec)
     .run();
@@ -874,22 +842,20 @@ fn watch_close_watcher_stream() {
         watcher_stream,
     );
 
-    test_server_client(OPEN_RIGHT_READABLE, root, |root| {
-        async move {
-            let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-            let watcher_client = assert_watch!(root, mask);
+    test_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
+        let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+        let watcher_client = assert_watch!(root, mask);
 
-            watcher_sender
-                .unbounded_send(WatcherEvent::Added(vec!["four".to_string()]))
-                .expect("watcher_sender.send() failed");
+        watcher_sender
+            .unbounded_send(WatcherEvent::Added(vec!["four".to_string()]))
+            .expect("watcher_sender.send() failed");
 
-            assert_watcher_one_message_watched_events!(watcher_client, { ADDED, "four" });
+        assert_watcher_one_message_watched_events!(watcher_client, { ADDED, "four" });
 
-            watcher_sender.close_channel();
+        watcher_sender.close_channel();
 
-            assert_channel_closed!(watcher_client);
-            assert_close!(root);
-        }
+        assert_channel_closed!(watcher_client);
+        assert_close!(root);
     })
     .exec(exec)
     .run();
@@ -908,11 +874,9 @@ fn link_from_lazy_into_mutable() {
             let count = count.clone();
             async move {
                 let count = count.fetch_add(1, Ordering::Relaxed) + 1;
-                Ok(read_only(move || {
-                    async move {
-                        let content = format!("Connection {}", count);
-                        Ok(content.into_bytes())
-                    }
+                Ok(read_only(move || async move {
+                    let content = format!("Connection {}", count);
+                    Ok(content.into_bytes())
                 }) as Arc<dyn DirectoryEntry>)
             }
         }
@@ -923,56 +887,54 @@ fn link_from_lazy_into_mutable() {
         "tmp" => mut_pseudo_directory! {}
     };
 
-    test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| {
-        async move {
-            let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-            let rw_flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
+    test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| async move {
+        let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+        let rw_flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
 
-            let etc = open_get_directory_proxy_assert_ok!(&proxy, ro_flags, "etc");
-            let tmp = open_get_directory_proxy_assert_ok!(&proxy, rw_flags, "tmp");
+        let etc = open_get_directory_proxy_assert_ok!(&proxy, ro_flags, "etc");
+        let tmp = open_get_directory_proxy_assert_ok!(&proxy, rw_flags, "tmp");
 
-            let tmp_watcher_client = {
-                let mask = WATCH_MASK_EXISTING | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
-                let watcher_client = assert_watch!(tmp, mask);
-                assert_watcher_one_message_watched_events!(watcher_client, { EXISTING, "." });
-                watcher_client
-            };
+        let tmp_watcher_client = {
+            let mask = WATCH_MASK_EXISTING | WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
+            let watcher_client = assert_watch!(tmp, mask);
+            assert_watcher_one_message_watched_events!(watcher_client, { EXISTING, "." });
+            watcher_client
+        };
 
-            open_as_file_assert_content!(&etc, ro_flags, "passwd", "Connection 1");
+        open_as_file_assert_content!(&etc, ro_flags, "passwd", "Connection 1");
 
-            let tmp_token = assert_get_token!(&tmp);
-            assert_link!(&etc, "passwd", tmp_token, "linked-passwd");
+        let tmp_token = assert_get_token!(&tmp);
+        assert_link!(&etc, "passwd", tmp_token, "linked-passwd");
 
-            assert_watcher_one_message_watched_events!(
-                tmp_watcher_client,
-                { ADDED, "linked-passwd" },
-            );
+        assert_watcher_one_message_watched_events!(
+            tmp_watcher_client,
+            { ADDED, "linked-passwd" },
+        );
 
-            {
-                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"passwd");
+        {
+            let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+            expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"passwd");
 
-                assert_read_dirents!(etc, 1000, expected.into_vec());
-            }
-
-            {
-                let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
-                expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"linked-passwd");
-
-                assert_read_dirents!(tmp, 1000, expected.into_vec());
-            }
-
-            let linked_passwd = open_get_file_proxy_assert_ok!(&tmp, ro_flags, "linked-passwd");
-            assert_read!(linked_passwd, "Connection 2");
-
-            open_as_file_assert_content!(&etc, ro_flags, "passwd", "Connection 3");
-
-            drop(tmp_watcher_client);
-            assert_close!(linked_passwd);
-            assert_close!(tmp);
-            assert_close!(etc);
-            assert_close!(proxy);
+            assert_read_dirents!(etc, 1000, expected.into_vec());
         }
+
+        {
+            let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
+            expected.add(DIRENT_TYPE_DIRECTORY, b".").add(DIRENT_TYPE_FILE, b"linked-passwd");
+
+            assert_read_dirents!(tmp, 1000, expected.into_vec());
+        }
+
+        let linked_passwd = open_get_file_proxy_assert_ok!(&tmp, ro_flags, "linked-passwd");
+        assert_read!(linked_passwd, "Connection 2");
+
+        open_as_file_assert_content!(&etc, ro_flags, "passwd", "Connection 3");
+
+        drop(tmp_watcher_client);
+        assert_close!(linked_passwd);
+        assert_close!(tmp);
+        assert_close!(etc);
+        assert_close!(proxy);
     })
     .token_registry(token_registry::Simple::new())
     .run();

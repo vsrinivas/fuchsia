@@ -32,17 +32,21 @@ use {
 
 #[test]
 fn construction() {
-    run_server_client(OPEN_FLAG_NODE_REFERENCE, endpoint(|_scope, _channel| ()), |proxy| {
-        async move {
+    run_server_client(
+        OPEN_FLAG_NODE_REFERENCE,
+        endpoint(|_scope, _channel| ()),
+        |proxy| async move {
             assert_close!(proxy);
-        }
-    });
+        },
+    );
 }
 
 #[test]
 fn get_attr() {
-    run_server_client(OPEN_FLAG_NODE_REFERENCE, endpoint(|_scope, _channel| ()), |proxy| {
-        async move {
+    run_server_client(
+        OPEN_FLAG_NODE_REFERENCE,
+        endpoint(|_scope, _channel| ()),
+        |proxy| async move {
             assert_get_attr!(
                 proxy,
                 NodeAttributes {
@@ -56,8 +60,8 @@ fn get_attr() {
                 }
             );
             assert_close!(proxy);
-        }
-    });
+        },
+    );
 }
 
 #[test]
@@ -67,26 +71,26 @@ fn describe() {
 
     let server = endpoint(|_scope, _channel| ());
 
-    run_client(exec, || {
-        async move {
-            let (proxy, server_end) =
-                create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
+    run_client(exec, || async move {
+        let (proxy, server_end) =
+            create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
-            let flags = OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE;
-            server.open(scope, flags, 0, Path::empty(), server_end.into_channel().into());
+        let flags = OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE;
+        server.open(scope, flags, 0, Path::empty(), server_end.into_channel().into());
 
-            assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
-                assert_eq!(s, ZX_OK);
-                assert_eq!(info, Some(Box::new(NodeInfo::Service(Service {}))));
-            });
-        }
+        assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
+            assert_eq!(s, ZX_OK);
+            assert_eq!(info, Some(Box::new(NodeInfo::Service(Service {}))));
+        });
     });
 }
 
 #[test]
 fn clone() {
-    run_server_client(OPEN_FLAG_NODE_REFERENCE, endpoint(|_scope, _channel| ()), |first_proxy| {
-        async move {
+    run_server_client(
+        OPEN_FLAG_NODE_REFERENCE,
+        endpoint(|_scope, _channel| ()),
+        |first_proxy| async move {
             assert_get_attr!(
                 first_proxy,
                 NodeAttributes {
@@ -122,14 +126,16 @@ fn clone() {
 
             assert_close!(second_proxy);
             assert_close!(first_proxy);
-        }
-    });
+        },
+    );
 }
 
 #[test]
 fn clone_same_rights() {
-    run_server_client(OPEN_FLAG_NODE_REFERENCE, endpoint(|_scope, _channel| ()), |first_proxy| {
-        async move {
+    run_server_client(
+        OPEN_FLAG_NODE_REFERENCE,
+        endpoint(|_scope, _channel| ()),
+        |first_proxy| async move {
             assert_get_attr!(
                 first_proxy,
                 NodeAttributes {
@@ -165,6 +171,6 @@ fn clone_same_rights() {
 
             assert_close!(second_proxy);
             assert_close!(first_proxy);
-        }
-    });
+        },
+    );
 }

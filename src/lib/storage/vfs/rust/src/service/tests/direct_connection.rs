@@ -68,14 +68,12 @@ fn simple_endpoint() {
                 })
                 .unwrap();
         }),
-        |node_proxy| {
-            async move {
-                let proxy = EchoProxy::from_channel(node_proxy.into_channel().unwrap());
+        |node_proxy| async move {
+            let proxy = EchoProxy::from_channel(node_proxy.into_channel().unwrap());
 
-                let response = proxy.echo_string(Some("test")).await.unwrap();
+            let response = proxy.echo_string(Some("test")).await.unwrap();
 
-                assert_eq!(response, Some("test".to_string()));
-            }
+            assert_eq!(response, Some("test".to_string()));
         },
     );
 }
@@ -85,14 +83,12 @@ fn simple_host() {
     run_server_client(
         READ_WRITE,
         host(|requests| echo_server(requests, None, None)),
-        |node_proxy| {
-            async move {
-                let proxy = EchoProxy::from_channel(node_proxy.into_channel().unwrap());
+        |node_proxy| async move {
+            let proxy = EchoProxy::from_channel(node_proxy.into_channel().unwrap());
 
-                let response = proxy.echo_string(Some("test")).await.unwrap();
+            let response = proxy.echo_string(Some("test")).await.unwrap();
 
-                assert_eq!(response, Some("test".to_string()));
-            }
+            assert_eq!(response, Some("test".to_string()));
         },
     );
 }

@@ -362,7 +362,10 @@ macro_rules! open_get_file_proxy_assert_ok {
 
         open_get_proxy_assert!($proxy, $flags, $path, FileMarker, FileEvent::OnOpen_ { s, info }, {
             assert_eq!(Status::from_raw(s), Status::OK);
-            assert_eq!(info, Some(Box::new(NodeInfo::File(FileObject { event: None, stream: None }))),);
+            assert_eq!(
+                info,
+                Some(Box::new(NodeInfo::File(FileObject { event: None, stream: None }))),
+            );
         })
     }};
 }
@@ -450,7 +453,10 @@ macro_rules! clone_get_file_proxy_assert_ok {
 
         clone_get_proxy_assert!($proxy, $flags, FileMarker, FileEvent::OnOpen_ { s, info }, {
             assert_eq!(Status::from_raw(s), Status::OK);
-            assert_eq!(info, Some(Box::new(NodeInfo::File(FileObject { event: None, stream: None }))),);
+            assert_eq!(
+                info,
+                Some(Box::new(NodeInfo::File(FileObject { event: None, stream: None }))),
+            );
         })
     }};
 }

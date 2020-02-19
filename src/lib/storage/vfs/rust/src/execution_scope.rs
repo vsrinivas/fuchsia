@@ -419,76 +419,68 @@ mod tests {
 
     #[test]
     fn spawn_with_shutdown() {
-        run_test(|scope| {
-            async move {
-                let (processing_done_sender, processing_done_receiver) = oneshot::channel();
-                let (shutdown_complete_sender, shutdown_complete_receiver) = oneshot::channel();
+        run_test(|scope| async move {
+            let (processing_done_sender, processing_done_receiver) = oneshot::channel();
+            let (shutdown_complete_sender, shutdown_complete_receiver) = oneshot::channel();
 
-                scope
-                    .spawn_with_shutdown(|_shutdown| {
-                        async move {
-                            processing_done_receiver.await.unwrap();
-                            shutdown_complete_sender.send(()).unwrap();
-                        }
-                    })
-                    .unwrap();
+            scope
+                .spawn_with_shutdown(|_shutdown| async move {
+                    processing_done_receiver.await.unwrap();
+                    shutdown_complete_sender.send(()).unwrap();
+                })
+                .unwrap();
 
-                processing_done_sender.send(()).unwrap();
+            processing_done_sender.send(()).unwrap();
 
-                shutdown_complete_receiver.await.unwrap();
-            }
+            shutdown_complete_receiver.await.unwrap();
         });
     }
 
     #[test]
     fn explicit_shutdown() {
-        run_test(|scope| {
-            async move {
-                let (tick_sender, tick_receiver) = mpsc::unbounded();
-                let (tick_confirmation_sender, mut tick_confirmation_receiver) = mpsc::unbounded();
-                let (shutdown_complete_sender, shutdown_complete_receiver) = oneshot::channel();
+        run_test(|scope| async move {
+            let (tick_sender, tick_receiver) = mpsc::unbounded();
+            let (tick_confirmation_sender, mut tick_confirmation_receiver) = mpsc::unbounded();
+            let (shutdown_complete_sender, shutdown_complete_receiver) = oneshot::channel();
 
-                let tick_count = Arc::new(AtomicUsize::new(0));
+            let tick_count = Arc::new(AtomicUsize::new(0));
 
-                scope
-                    .spawn_with_shutdown({
-                        let tick_count = tick_count.clone();
+            scope
+                .spawn_with_shutdown({
+                    let tick_count = tick_count.clone();
 
-                        |shutdown| {
-                            async move {
-                                let mut tick_receiver = tick_receiver.fuse();
-                                let mut shutdown = shutdown.fuse();
-                                loop {
-                                    select! {
-                                        tick = tick_receiver.next() => {
-                                            tick.unwrap();
-                                            tick_count.fetch_add(1, Ordering::Relaxed);
-                                            tick_confirmation_sender.unbounded_send(()).unwrap();
-                                        },
-                                        _ = shutdown => break,
-                                    }
-                                }
-                                shutdown_complete_sender.send(()).unwrap();
+                    |shutdown| async move {
+                        let mut tick_receiver = tick_receiver.fuse();
+                        let mut shutdown = shutdown.fuse();
+                        loop {
+                            select! {
+                                tick = tick_receiver.next() => {
+                                    tick.unwrap();
+                                    tick_count.fetch_add(1, Ordering::Relaxed);
+                                    tick_confirmation_sender.unbounded_send(()).unwrap();
+                                },
+                                _ = shutdown => break,
                             }
                         }
-                    })
-                    .unwrap();
+                        shutdown_complete_sender.send(()).unwrap();
+                    }
+                })
+                .unwrap();
 
-                assert_eq!(tick_count.load(Ordering::Relaxed), 0);
+            assert_eq!(tick_count.load(Ordering::Relaxed), 0);
 
-                tick_sender.unbounded_send(()).unwrap();
-                tick_confirmation_receiver.next().await.unwrap();
-                assert_eq!(tick_count.load(Ordering::Relaxed), 1);
+            tick_sender.unbounded_send(()).unwrap();
+            tick_confirmation_receiver.next().await.unwrap();
+            assert_eq!(tick_count.load(Ordering::Relaxed), 1);
 
-                tick_sender.unbounded_send(()).unwrap();
-                tick_confirmation_receiver.next().await.unwrap();
-                assert_eq!(tick_count.load(Ordering::Relaxed), 2);
+            tick_sender.unbounded_send(()).unwrap();
+            tick_confirmation_receiver.next().await.unwrap();
+            assert_eq!(tick_count.load(Ordering::Relaxed), 2);
 
-                scope.shutdown();
+            scope.shutdown();
 
-                shutdown_complete_receiver.await.unwrap();
-                assert_eq!(tick_count.load(Ordering::Relaxed), 2);
-            }
+            shutdown_complete_receiver.await.unwrap();
+            assert_eq!(tick_count.load(Ordering::Relaxed), 2);
         });
     }
 
