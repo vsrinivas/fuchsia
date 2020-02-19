@@ -7,7 +7,6 @@
 #include <err.h>
 #include <inttypes.h>
 #include <lib/unittest/unittest.h>
-#include <malloc.h>
 #include <platform.h>
 #include <pow2.h>
 #include <stdio.h>

@@ -27,8 +27,8 @@
 #include <lib/affine/ratio.h>
 #include <lib/counters.h>
 #include <list.h>
-#include <malloc.h>
 #include <platform.h>
+#include <stdlib.h>
 #include <trace.h>
 #include <zircon/compiler.h>
 #include <zircon/time.h>

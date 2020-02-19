@@ -35,7 +35,7 @@ if (current_toolchain == default_toolchain) {
         # <stdio.h> has #include <lib/io.h>.
         "$zx/kernel/lib/io:headers.config",
 
-        # <malloc.h> has #include <lib/heap.h>.
+        # <stdlib.h> has #include <lib/heap.h>.
         "$zx/kernel/lib/heap:headers.config",
 
         # <kernel/percpu.h> has #include <lib/lazy_init/lazy_init.h>.

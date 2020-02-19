@@ -6,9 +6,9 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
-#include <malloc.h>
 #include <platform.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <zircon/types.h>
 

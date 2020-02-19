@@ -25,9 +25,9 @@
 #include <lib/ktrace.h>
 #include <lib/version.h>
 #include <list.h>
-#include <malloc.h>
 #include <platform.h>
 #include <printf.h>
+#include <stdlib.h>
 #include <string.h>
 #include <target.h>
 #include <zircon/time.h>

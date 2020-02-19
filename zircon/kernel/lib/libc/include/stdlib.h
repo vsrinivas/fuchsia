@@ -8,7 +8,7 @@
 #ifndef ZIRCON_KERNEL_LIB_LIBC_INCLUDE_STDLIB_H_
 #define ZIRCON_KERNEL_LIB_LIBC_INCLUDE_STDLIB_H_
 
-#include <malloc.h>
+#include <lib/heap.h>  //  lib/heap provides malloc/free definitions.
 #include <stddef.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -37,7 +37,7 @@ int rand(void);
 void srand(unsigned int seed);
 
 // Note: POSIX.1 specifies unsigned int, but we use uint64_t instead.
-int rand_r(uint64_t* seed);
+int rand_r(uint64_t *seed);
 
 __END_CDECLS
 
