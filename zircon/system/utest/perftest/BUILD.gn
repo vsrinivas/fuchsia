@@ -22,18 +22,8 @@ test("perftest") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "perf-test"
   sources = [
-    "clock-test.cc",
-    "handle-creation-test.cc",
-    "malloc-test.cc",
-    "memcpy-test.cc",
-    "mutex-test.cc",
-    "null-test.cc",
-    "object-wait-test.cc",
     "results-test.cc",
     "runner-test.cc",
-    "sleep-test.cc",
-    "syscalls-test.cc",
-    "timer-test.cc",
   ]
   deps = [
     "//zircon/public/lib/async",

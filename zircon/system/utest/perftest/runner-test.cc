@@ -394,5 +394,5 @@ RUN_TEST(TestParsingCommandArgs)
 END_TEST_CASE(perftest_runner_test)
 
 int main(int argc, char** argv) {
-  return perftest::PerfTestMain(argc, argv, "fuchsia.microbenchmarks");
+  return unittest_run_all_tests(argc, argv) ? 0 : -1;
 }
