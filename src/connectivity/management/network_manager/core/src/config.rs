@@ -5,14 +5,16 @@
 use {
     crate::{address::LifIpAddr, error, lifmgr, ElementId},
     eui48::MacAddress,
+    serde::{de, Deserialize, Deserializer},
     serde_derive::{Deserialize, Serialize},
     serde_json::Value,
     std::collections::HashSet,
     std::convert::{TryFrom, TryInto},
     std::fs::File,
     std::io::Read,
-    std::net,
+    std::net::{self, IpAddr},
     std::path::{Path, PathBuf},
+    std::str::FromStr,
     valico::json_schema::{self, schema},
 };
 
@@ -92,8 +94,33 @@ pub enum PortSpeed {
     SpeedUnknown,
 }
 
+/// The forwarding actions for ACLs.
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
+#[serde(deny_unknown_fields, rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ForwardingAction {
+    Accept,
+    Drop,
+}
+
+/// The direction of the connection.
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
+#[serde(deny_unknown_fields, rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum Direction {
+    In,
+    Out,
+    Both,
+}
+
+/// The protocol to match.
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
+#[serde(deny_unknown_fields, rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum Protocol {
+    Tcp,
+    Udp,
+    Any,
+}
+
 // TODO(cgibson): VLANs.
-// TODO(cgibson): ACLs.
 // TODO(cgibson): WLAN.
 // TODO(cgibson): Need to figure out versioning. Having "unknown" fields and "flatten"'ing them
 // into an `extras` field might be an interesting experiment.
@@ -188,17 +215,48 @@ pub struct IpAddressConfig {
     pub dhcp_server: Option<DhcpServer>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Copy, Clone)]
+pub struct NetIpAddr(pub IpAddr);
+
+impl From<fidl_fuchsia_net::IpAddress> for NetIpAddr {
+    fn from(addr: fidl_fuchsia_net::IpAddress) -> Self {
+        NetIpAddr(match addr {
+            fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address { addr }) => {
+                addr.into()
+            }
+            fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address { addr }) => {
+                addr.into()
+            }
+        })
+    }
+}
+
+impl From<NetIpAddr> for fidl_fuchsia_net::IpAddress {
+    fn from(netipaddr: NetIpAddr) -> Self {
+        let addr = netipaddr.0;
+        match addr {
+            IpAddr::V4(v4addr) => {
+                fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                    addr: v4addr.octets(),
+                })
+            }
+            IpAddr::V6(v6addr) => {
+                fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
+                    addr: v6addr.octets(),
+                })
+            }
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct IpAddress {
     // If omitted, the default is to enable a DHCP client on this interface.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dhcp_client: Option<bool>,
-    // If an IP address is provided, it must be paired with a prefix length.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ip: Option<net::IpAddr>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub prefix_length: Option<u8>,
+    pub cidr_address: Option<CidrAddress>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -247,7 +305,93 @@ pub struct EthernetConfig {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
-pub struct Acls {}
+pub struct Acls {
+    pub acl_entries: Vec<AclEntry>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct AclEntry {
+    pub config: FilterConfig,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ipv4: Option<IpFilter>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ipv6: Option<IpFilter>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct FilterConfig {
+    pub forwarding_action: ForwardingAction,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub direction: Option<Direction>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub comment: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct IpFilter {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub src_address: Option<CidrAddress>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dst_address: Option<CidrAddress>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub src_ports: Option<PortRange>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dst_ports: Option<PortRange>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub protocol: Option<Protocol>,
+}
+
+#[derive(Serialize, Debug, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct PortRange {
+    pub from: u16,
+    pub to: u16,
+}
+
+/// Converts a port number from a string into a `u16`.
+fn make_port(port: &str) -> error::Result<u16> {
+    port.parse::<u16>().map_err(|e| {
+        error::NetworkManager::CONFIG(error::Config::Malformed {
+            msg: format!("Failed to make new port range from: '{}': {}", port, e),
+        })
+    })
+}
+
+impl FromStr for PortRange {
+    type Err = error::NetworkManager;
+    fn from_str(ports: &str) -> error::Result<Self> {
+        let mut iter = ports.trim().split("-").fuse();
+        let first = iter.next().ok_or_else(|| {
+            error::NetworkManager::CONFIG(error::Config::Malformed {
+                msg: format!("invalid port range: {}", ports),
+            })
+        })?;
+        let second = iter.next().unwrap_or(first);
+        let range = std::ops::RangeInclusive::new(make_port(first)?, make_port(second)?);
+        Ok(PortRange { from: *range.start(), to: *range.end() })
+    }
+}
+
+impl<'de> Deserialize<'de> for PortRange {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let p = String::deserialize(deserializer)?;
+        FromStr::from_str(&p).map_err(de::Error::custom)
+    }
+}
+
+impl From<&PortRange> for fidl_fuchsia_router_config::PortRange {
+    fn from(range: &PortRange) -> Self {
+        fidl_fuchsia_router_config::PortRange { from: range.from, to: range.to }
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(deny_unknown_fields)]
@@ -400,6 +544,71 @@ pub struct Config {
     device_config: Option<DeviceConfig>,
     startup_path: Option<PathBuf>,
     paths: DeviceConfigPaths,
+}
+
+#[derive(Serialize, Clone, Debug, Eq, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct CidrAddress {
+    pub ip: NetIpAddr,
+    pub prefix_length: u8,
+}
+
+impl FromStr for CidrAddress {
+    type Err = String;
+    fn from_str(cidr_address: &str) -> Result<Self, Self::Err> {
+        let mut iter = cidr_address.trim().split('/');
+        let addr: IpAddr = iter
+            .next()
+            .ok_or(format!("invalid CIDR formatted IP address string: {}", cidr_address))?
+            .parse()
+            .map_err(|e| format!("failed while parsing CIDR address: {}", e))?;
+        let prefix_length = iter
+            .next()
+            .ok_or(format!("invalid CIDR formatted IP address string: {}", cidr_address))?
+            .parse::<u8>()
+            .map_err(|e| format!("failed while parsing CIDR address prefix: {}", e))?;
+        if iter.next().is_some() {
+            return Err(format!("invalid CIDR formatted IP address string: {}", cidr_address));
+        }
+
+        Ok(CidrAddress { ip: NetIpAddr(addr), prefix_length })
+    }
+}
+
+impl<'de> Deserialize<'de> for CidrAddress {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        FromStr::from_str(&s).map_err(de::Error::custom)
+    }
+}
+
+impl From<&CidrAddress> for fidl_fuchsia_router_config::CidrAddress {
+    fn from(cidr_addr: &CidrAddress) -> Self {
+        fidl_fuchsia_router_config::CidrAddress {
+            address: Some(cidr_addr.ip.into()),
+            prefix_length: Some(cidr_addr.prefix_length),
+        }
+    }
+}
+
+impl TryFrom<fidl_fuchsia_router_config::CidrAddress> for CidrAddress {
+    type Error = error::NetworkManager;
+    fn try_from(cidr_addr: fidl_fuchsia_router_config::CidrAddress) -> error::Result<Self> {
+        let ip = cidr_addr.address.ok_or_else(|| {
+            error::NetworkManager::CONFIG(error::Config::Malformed {
+                msg: format!("Failed to convert invalid FIDL CidrAddress: {:?}", cidr_addr),
+            })
+        })?;
+        let prefix_length = cidr_addr.prefix_length.ok_or_else(|| {
+            error::NetworkManager::CONFIG(error::Config::Malformed {
+                msg: format!("Failed to convert invalid FIDL CidrAddress: {:?}", cidr_addr),
+            })
+        })?;
+        Ok(CidrAddress { ip: ip.into(), prefix_length })
+    }
 }
 
 const UNNAMED_BRIDGE: &str = "unnamed_bridge";
@@ -683,11 +892,9 @@ impl Config {
 
     /// Validates an [`config::IpAddress`].
     fn validate_ip_address(&self, addr: &IpAddress) -> error::Result<()> {
-        let has_static = addr.ip.is_some() || addr.prefix_length.is_some();
-        let valid_static = !(addr.ip.is_some() ^ addr.prefix_length.is_some());
-        let dhcp = addr.dhcp_client.unwrap_or(false);
-        let valid_xor = dhcp ^ has_static;
-        if valid_xor && valid_static {
+        let has_static = addr.cidr_address.is_some();
+        let has_dhcp_client = addr.dhcp_client.unwrap_or(false);
+        if has_static ^ has_dhcp_client {
             Ok(())
         } else {
             Err(error::NetworkManager::CONFIG(error::Config::Malformed {
@@ -714,9 +921,13 @@ impl Config {
                             error: "configuring dhcp client and server on same interface is invalid".to_string(),
                             }));
                         }
-                        let addr =
-                            LifIpAddr { address: a.ip.unwrap(), prefix: a.prefix_length.unwrap() };
-                        pool_in_range |= dhcp_server.validate_addresses(&addr);
+                        if let Some(cidr_addr) = a.cidr_address.as_ref() {
+                            let addr = LifIpAddr {
+                                address: cidr_addr.ip.0,
+                                prefix: cidr_addr.prefix_length,
+                            };
+                            pool_in_range |= dhcp_server.validate_addresses(&addr);
+                        }
                     }
                 }
                 if !pool_in_range {
@@ -785,6 +996,39 @@ impl Config {
     /// Returns all the configured [`config::Interfaces`].
     pub fn interfaces(&self) -> Option<&Vec<Interfaces>> {
         self.device().ok().and_then(|x| x.interfaces.as_ref())
+    }
+
+    /// Returns the configured [`config::Acls`].
+    pub fn acls(&self) -> Option<&Acls> {
+        self.device().ok().and_then(|x| x.acls.as_ref())
+    }
+
+    /// Returns all configured [`config::AclEntry`]'s for the given topological path.
+    pub fn get_acl_entries<'a>(
+        &'a self,
+        topo_path: &'a str,
+    ) -> Option<impl Iterator<Item = &'a AclEntry> + 'a> {
+        self.acls().map(|acls| {
+            acls.acl_entries.iter().filter_map(move |entry| {
+                return if let Some(device_id) = &entry.config.device_id {
+                    if !topo_path.contains(device_id) {
+                        info!(
+                            "No matching filter rule found for: device_id: {} in topo_path: {}",
+                            device_id, topo_path
+                        );
+                        return None;
+                    }
+                    info!(
+                        "Matched new filter rule: device_id: {} in topo_path: {}",
+                        device_id, topo_path
+                    );
+                    Some(entry)
+                } else {
+                    info!("Matched new global filter rule for topo_path: {}", topo_path);
+                    Some(entry)
+                };
+            })
+        })
     }
 
     /// Returns the [`config::Interface`] that matches the device_id contained in `topo_path`.
@@ -888,13 +1132,15 @@ impl Config {
     ) {
         if let Some(c) = ipconfig {
             if let Some(dhcp_client) = c.dhcp_client {
-                // TODO(dpradilla): do not allow this if dhcps_erver configuration is present.
+                // TODO(dpradilla): do not allow this if dhcp_server configuration is present.
                 properties.dhcp =
                     if dhcp_client { lifmgr::Dhcp::Client } else { lifmgr::Dhcp::None };
             }
+
             // TODO(42315): LIFProperties doesn't support IPv6 addresses yet.
-            if let (Some(address), Some(prefix)) = (c.ip, c.prefix_length) {
-                properties.address_v4 = Some(LifIpAddr { address, prefix });
+            if let Some(addr) = c.cidr_address.as_ref() {
+                properties.address_v4 =
+                    Some(LifIpAddr { address: addr.ip.0, prefix: addr.prefix_length });
             }
         }
 
@@ -1226,7 +1472,7 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::address::LifIpAddr;
+
     use crate::error::NetworkManager::CONFIG;
     use fuchsia_async as fasync;
     use std::fs;
@@ -1252,11 +1498,7 @@ mod tests {
             subinterfaces: Some(vec![Subinterface {
                 admin_state: Some(AdminState::Up),
                 ipv4: Some(IpAddressConfig {
-                    addresses: vec![IpAddress {
-                        dhcp_client: Some(true),
-                        ip: None,
-                        prefix_length: None,
-                    }],
+                    addresses: vec![IpAddress { dhcp_client: Some(true), cidr_address: None }],
                     dhcp_server: None,
                 }),
                 ipv6: None,
@@ -1269,7 +1511,6 @@ mod tests {
     fn build_full_config() -> DeviceConfig {
         DeviceConfig {
             device: Device {
-                acls: None,
                 interfaces: Some(vec![
                     Interfaces {
                         interface: Interface {
@@ -1288,8 +1529,10 @@ mod tests {
                                 ipv4: Some(IpAddressConfig {
                                     addresses: vec![IpAddress {
                                         dhcp_client: None,
-                                        ip: Some("192.0.2.1".parse().unwrap()),
-                                        prefix_length: Some(24),
+                                        cidr_address: Some(CidrAddress {
+                                            ip: NetIpAddr("192.0.2.1".parse().unwrap()),
+                                            prefix_length: 24,
+                                        }),
                                     }],
                                     dhcp_server: None,
                                 }),
@@ -1314,8 +1557,10 @@ mod tests {
                                 ipv4: Some(IpAddressConfig {
                                     addresses: vec![IpAddress {
                                         dhcp_client: None,
-                                        ip: Some("192.0.2.1".parse().unwrap()),
-                                        prefix_length: Some(24),
+                                        cidr_address: Some(CidrAddress {
+                                            ip: NetIpAddr("192.0.2.1".parse().unwrap()),
+                                            prefix_length: 24,
+                                        }),
                                     }],
                                     dhcp_server: None,
                                 }),
@@ -1340,8 +1585,10 @@ mod tests {
                                 ipv4: Some(IpAddressConfig {
                                     addresses: vec![IpAddress {
                                         dhcp_client: Some(false),
-                                        ip: Some("192.168.0.1".parse().unwrap()),
-                                        prefix_length: Some(32),
+                                        cidr_address: Some(CidrAddress {
+                                            ip: NetIpAddr("192.168.0.1".parse().unwrap()),
+                                            prefix_length: 32,
+                                        }),
                                     }],
                                     dhcp_server: Some(DhcpServer {
                                         enabled: true,
@@ -1393,8 +1640,10 @@ mod tests {
                                 ipv4: Some(IpAddressConfig {
                                     addresses: vec![IpAddress {
                                         dhcp_client: None,
-                                        ip: Some("192.0.2.1".parse().unwrap()),
-                                        prefix_length: Some(24),
+                                        cidr_address: Some(CidrAddress {
+                                            ip: NetIpAddr("192.0.2.1".parse().unwrap()),
+                                            prefix_length: 24,
+                                        }),
                                     }],
                                     dhcp_server: None,
                                 }),
@@ -1419,8 +1668,7 @@ mod tests {
                                 ipv4: Some(IpAddressConfig {
                                     addresses: vec![IpAddress {
                                         dhcp_client: Some(true),
-                                        ip: None,
-                                        prefix_length: None,
+                                        cidr_address: None,
                                     }],
                                     dhcp_server: None,
                                 }),
@@ -1445,8 +1693,10 @@ mod tests {
                                 ipv4: Some(IpAddressConfig {
                                     addresses: vec![IpAddress {
                                         dhcp_client: None,
-                                        ip: Some("192.0.2.1".parse().unwrap()),
-                                        prefix_length: Some(24),
+                                        cidr_address: Some(CidrAddress {
+                                            ip: NetIpAddr("192.0.2.1".parse().unwrap()),
+                                            prefix_length: 24,
+                                        }),
                                     }],
                                     dhcp_server: None,
                                 }),
@@ -1471,8 +1721,10 @@ mod tests {
                                 ipv4: Some(IpAddressConfig {
                                     addresses: vec![IpAddress {
                                         dhcp_client: None,
-                                        ip: Some("192.0.2.1".parse().unwrap()),
-                                        prefix_length: Some(24),
+                                        cidr_address: Some(CidrAddress {
+                                            ip: NetIpAddr("192.0.2.1".parse().unwrap()),
+                                            prefix_length: 24,
+                                        }),
                                     }],
                                     dhcp_server: None,
                                 }),
@@ -1497,8 +1749,10 @@ mod tests {
                                 ipv4: Some(IpAddressConfig {
                                     addresses: vec![IpAddress {
                                         dhcp_client: None,
-                                        ip: Some("192.0.2.1".parse().unwrap()),
-                                        prefix_length: Some(24),
+                                        cidr_address: Some(CidrAddress {
+                                            ip: NetIpAddr("192.0.2.1".parse().unwrap()),
+                                            prefix_length: 24,
+                                        }),
                                     }],
                                     dhcp_server: None,
                                 }),
@@ -1538,8 +1792,10 @@ mod tests {
                                 ipv4: Some(IpAddressConfig {
                                     addresses: vec![IpAddress {
                                         dhcp_client: None,
-                                        ip: Some("192.0.2.1".parse().unwrap()),
-                                        prefix_length: Some(24),
+                                        cidr_address: Some(CidrAddress {
+                                            ip: NetIpAddr("192.0.2.1".parse().unwrap()),
+                                            prefix_length: 24,
+                                        }),
                                     }],
                                     dhcp_server: Some(DhcpServer {
                                         enabled: true,
@@ -1557,6 +1813,42 @@ mod tests {
                     },
                 ]),
                 services: Some(Services { ip_forwarding: Some(IpForwarding { enabled: true }) }),
+                acls: Some(Acls {
+                    acl_entries: vec![
+                        AclEntry {
+                            config: FilterConfig {
+                                forwarding_action: ForwardingAction::Drop,
+                                device_id: Some("test_wan_up_id".to_string()),
+                                direction: Some(Direction::In),
+                                comment: None,
+                            },
+                            ipv4: Some(IpFilter {
+                                src_address: None,
+                                dst_address: Some("192.168.0.0/24".to_string().parse().unwrap()),
+                                src_ports: None,
+                                dst_ports: Some(PortRange { from: 8080, to: 8081 }),
+                                protocol: Some(Protocol::Any),
+                            }),
+                            ipv6: None,
+                        },
+                        AclEntry {
+                            config: FilterConfig {
+                                forwarding_action: ForwardingAction::Drop,
+                                device_id: Some("test_lan_up_id".to_string()),
+                                direction: None,
+                                comment: Some("Block traffic to sshd from the wlan".to_string()),
+                            },
+                            ipv4: Some(IpFilter {
+                                src_address: None,
+                                src_ports: None,
+                                dst_address: Some("0.0.0.0/0".to_string().parse().unwrap()),
+                                dst_ports: Some(PortRange { from: 2222, to: 2222 }),
+                                protocol: Some(Protocol::Any),
+                            }),
+                            ipv6: None,
+                        },
+                    ],
+                }),
             },
         }
     }
@@ -1816,11 +2108,7 @@ mod tests {
         let test_subif = vec![Subinterface {
             admin_state: Some(AdminState::Up),
             ipv4: Some(IpAddressConfig {
-                addresses: vec![IpAddress {
-                    dhcp_client: Some(true),
-                    ip: None,
-                    prefix_length: None,
-                }],
+                addresses: vec![IpAddress { dhcp_client: Some(true), cidr_address: None }],
                 dhcp_server: None,
             }),
             ipv6: None,
@@ -1834,11 +2122,7 @@ mod tests {
         let test_subif = vec![Subinterface {
             admin_state: Some(AdminState::Up),
             ipv4: Some(IpAddressConfig {
-                addresses: vec![IpAddress {
-                    dhcp_client: Some(true),
-                    ip: None,
-                    prefix_length: None,
-                }],
+                addresses: vec![IpAddress { dhcp_client: Some(true), cidr_address: None }],
                 dhcp_server: Some(DhcpServer {
                     dhcp_pool: DhcpPool {
                         start: "192.168.2.100".parse().unwrap(),
@@ -1861,8 +2145,10 @@ mod tests {
             ipv4: Some(IpAddressConfig {
                 addresses: vec![IpAddress {
                     dhcp_client: Some(false),
-                    ip: Some("127.0.0.1".parse().unwrap()),
-                    prefix_length: Some(32),
+                    cidr_address: Some(CidrAddress {
+                        ip: NetIpAddr("127.0.0.1".parse().unwrap()),
+                        prefix_length: 32,
+                    }),
                 }],
                 dhcp_server: None,
             }),
@@ -1877,11 +2163,7 @@ mod tests {
         let test_subif = vec![Subinterface {
             admin_state: Some(AdminState::Up),
             ipv4: Some(IpAddressConfig {
-                addresses: vec![IpAddress {
-                    dhcp_client: Some(false),
-                    ip: None,
-                    prefix_length: None,
-                }],
+                addresses: vec![IpAddress { dhcp_client: Some(false), cidr_address: None }],
                 dhcp_server: None,
             }),
             ipv6: None,
@@ -1898,8 +2180,10 @@ mod tests {
             ipv4: Some(IpAddressConfig {
                 addresses: vec![IpAddress {
                     dhcp_client: None,
-                    ip: Some("127.0.0.1".parse().unwrap()),
-                    prefix_length: Some(32),
+                    cidr_address: Some(CidrAddress {
+                        ip: NetIpAddr("127.0.0.1".parse().unwrap()),
+                        prefix_length: 32,
+                    }),
                 }],
                 dhcp_server: None,
             }),
@@ -1917,8 +2201,7 @@ mod tests {
             ipv4: Some(IpAddressConfig {
                 addresses: vec![IpAddress {
                     dhcp_client: None,
-                    ip: Some("192.168.2.1".parse().unwrap()),
-                    prefix_length: Some(24),
+                    cidr_address: Some("192.168.2.1/24".parse().unwrap()),
                 }],
                 dhcp_server: Some(DhcpServer {
                     dhcp_pool: DhcpPool {
@@ -1944,8 +2227,10 @@ mod tests {
             ipv4: Some(IpAddressConfig {
                 addresses: vec![IpAddress {
                     dhcp_client: None,
-                    ip: Some("192.168.2.1".parse().unwrap()),
-                    prefix_length: Some(30),
+                    cidr_address: Some(CidrAddress {
+                        ip: NetIpAddr("192.168.2.1".parse().unwrap()),
+                        prefix_length: 30,
+                    }),
                 }],
                 dhcp_server: Some(DhcpServer {
                     dhcp_pool: DhcpPool {
@@ -1968,7 +2253,7 @@ mod tests {
         let test_subif = vec![Subinterface {
             admin_state: Some(AdminState::Up),
             ipv4: Some(IpAddressConfig {
-                addresses: vec![IpAddress { dhcp_client: None, ip: None, prefix_length: None }],
+                addresses: vec![IpAddress { dhcp_client: None, cidr_address: None }],
                 dhcp_server: None,
             }),
             ipv6: None,
@@ -2093,8 +2378,7 @@ mod tests {
                         "addresses": [
                           {
                             "dhcp_client": false,
-                            "ip": "1.1.1.1",
-                            "prefix_length": 32
+                            "cidr_address": "1.1.1.1/32"
                           }
                         ]
                       }
@@ -2115,8 +2399,7 @@ mod tests {
                         "addresses": [
                           {
                             "dhcp_client": false,
-                            "ip": "192.168.1.1",
-                            "prefix_length": 24
+                            "cidr_address": "192.168.1.1/24"
                           }
                         ],
                         "dhcp_server": {
@@ -2167,8 +2450,7 @@ mod tests {
                         "addresses": [
                           {
                             "dhcp_client": false,
-                            "ip": "1.1.1.1",
-                            "prefix_length": 32
+                            "cidr_address": "1.1.1.1/32"
                           }
                         ]
                       }
@@ -2192,8 +2474,7 @@ mod tests {
                         "addresses": [
                           {
                             "dhcp_client": false,
-                            "ip": "1.1.1.1",
-                            "prefix_length": 32
+                            "cidr_address": "1.1.1.1/32"
                           }
                         ]
                       }
@@ -2227,8 +2508,7 @@ mod tests {
                         "addresses": [
                           {
                             "dhcp_client": false,
-                            "ip": "192.168.1.1",
-                            "prefix_length": 24
+                            "cidr_address": "192.168.1.1/24"
                           }
                         ],
                         "dhcp_server": {
@@ -2275,8 +2555,7 @@ mod tests {
                         "addresses": [
                           {
                             "dhcp_client": false,
-                            "ip": "192.168.1.1",
-                            "prefix_length": 24
+                            "cidr_address": "192.168.1.1/24"
                           }
                         ],
                         "dhcp_server": {
@@ -2330,8 +2609,7 @@ mod tests {
                         "addresses": [
                           {
                             "dhcp_client": false,
-                            "ip": "192.168.1.1",
-                            "prefix_length": 24
+                            "cidr_address": "192.168.1.1/24"
                           }
                         ],
                         "dhcp_server": {
@@ -2495,8 +2773,10 @@ mod tests {
         let test_config = create_test_config_no_paths();
         let ipconfig = IpAddress {
             dhcp_client: Some(false),
-            ip: Some("127.0.0.1".parse().unwrap()),
-            prefix_length: Some(32),
+            cidr_address: Some(CidrAddress {
+                ip: NetIpAddr("127.0.0.1".parse().unwrap()),
+                prefix_length: 32,
+            }),
         };
         let mut properties: lifmgr::LIFProperties = lifmgr::LIFProperties::default();
         test_config.set_ip_address_config(&mut properties, Some(&ipconfig));
@@ -2511,7 +2791,7 @@ mod tests {
         );
 
         // Make sure DHCP client can be enabled when no static IP configuration is present.
-        let ipconfig = IpAddress { dhcp_client: Some(true), ip: None, prefix_length: None };
+        let ipconfig = IpAddress { dhcp_client: Some(true), cidr_address: None };
         let mut properties: lifmgr::LIFProperties =
             lifmgr::LIFProperties { enabled: true, ..Default::default() };
         test_config.set_ip_address_config(&mut properties, Some(&ipconfig));
@@ -2523,8 +2803,10 @@ mod tests {
         // is turned off when both are set.
         let ipconfig = IpAddress {
             dhcp_client: Some(true),
-            ip: Some("127.0.0.1".parse().unwrap()),
-            prefix_length: Some(32),
+            cidr_address: Some(CidrAddress {
+                ip: NetIpAddr("127.0.0.1".parse().unwrap()),
+                prefix_length: 32,
+            }),
         };
         let mut properties: lifmgr::LIFProperties =
             lifmgr::LIFProperties { enabled: true, ..Default::default() };
@@ -2820,8 +3102,10 @@ mod tests {
             ipv4: Some(IpAddressConfig {
                 addresses: vec![IpAddress {
                     dhcp_client: Some(false),
-                    ip: Some("192.168.0.1".parse().unwrap()),
-                    prefix_length: Some(32),
+                    cidr_address: Some(CidrAddress {
+                        ip: NetIpAddr("192.168.0.1".parse().unwrap()),
+                        prefix_length: 32,
+                    }),
                 }],
                 dhcp_server: None,
             }),
@@ -2860,8 +3144,10 @@ mod tests {
                     ipv4: Some(IpAddressConfig {
                         addresses: vec![IpAddress {
                             dhcp_client: None,
-                            ip: Some("192.0.2.1".parse().unwrap()),
-                            prefix_length: Some(24),
+                            cidr_address: Some(CidrAddress {
+                                ip: NetIpAddr("192.0.2.1".parse().unwrap()),
+                                prefix_length: 24,
+                            }),
                         }],
                         dhcp_server: Some(DhcpServer {
                             enabled: true,
@@ -2952,6 +3238,127 @@ mod tests {
         ] {
             let got = allocation.try_into();
             assert_eq!(&got, want, "{}: got {:?} want {:?}", testcase, got, want);
+        }
+    }
+
+    #[test]
+    fn test_get_acl_entries() {
+        let mut test_config = create_test_config_no_paths();
+        test_config.device_config = Some(build_full_config());
+        match test_config.get_acl_entries("test_wan_up_id") {
+            Some(v) => {
+                let mut p = v.peekable();
+                assert_eq!(p.peek().unwrap().config.forwarding_action, ForwardingAction::Drop);
+                assert_eq!(p.peek().unwrap().config.direction.as_ref(), Some(&Direction::In));
+                assert_eq!(
+                    p.peek().unwrap().ipv4.as_ref(),
+                    Some(&IpFilter {
+                        src_address: None,
+                        src_ports: None,
+                        dst_address: Some("192.168.0.0/24".to_string().parse().unwrap()),
+                        dst_ports: Some(PortRange { from: 8080, to: 8081 }),
+                        protocol: Some(Protocol::Any),
+                    })
+                );
+            }
+            None => panic!("Unexpected 'None' response."),
+        };
+    }
+
+    #[test]
+    fn test_acl_entry_deserialize() {
+        let valid_config = r#"{
+            "device": {
+                "acls": {
+                    "acl_entries": [
+                        {
+                            "config": {
+                                "forwarding_action": "DROP",
+                                "device_id": "wlanif-client",
+                                "comment": "Block traffic to sshd from the wlan"
+                            },
+                            "ipv4": {
+                                "dst_address": "0.0.0.0/0",
+                                "dst_ports": "22"
+                            }
+                        }
+                    ]
+                }
+            }
+        }"#;
+        match serde_json::from_str::<serde_json::Value>(&valid_config) {
+            Ok(_) => (),
+            Err(e) => panic!("Got unexpected error result: {}", e),
+        }
+    }
+
+    #[test]
+    fn test_to_cidr_address_fromstr() {
+        let v4 = "192.168.0.32";
+        let v6 = "::1";
+
+        // Valid IPv4 CIDR address format.
+        match format!("{}/24", v4).parse::<CidrAddress>() {
+            Ok(addr) => {
+                assert_eq!(addr.ip, NetIpAddr(v4.parse().unwrap()));
+                assert_eq!(addr.prefix_length, 24);
+            }
+            Err(e) => panic!("Unexpected 'Error' result: {:?}", e),
+        }
+
+        // Valid IPv6 CIDR address format.
+        match format!("{}/128", v6).parse::<CidrAddress>() {
+            Ok(addr) => {
+                assert_eq!(addr.ip, NetIpAddr(v6.parse().unwrap()));
+                assert_eq!(addr.prefix_length, 128);
+            }
+            Err(e) => panic!("Unexpected 'Error' result: {:?}", e),
+        }
+
+        // Invalid IPv4 CIDR address: Missing a prefix length.
+        match v4.parse::<CidrAddress>() {
+            Ok(v) => panic!("Unexpected 'Ok' result: {:?}", v),
+            Err(_) => (),
+        }
+
+        // Invalid IPv6 CIDR address: Missing a prefix length.
+        match v6.parse::<CidrAddress>() {
+            Ok(v) => panic!("Unexpected 'Ok' result: {:?}", v),
+            Err(_) => (),
+        }
+
+        // Invalid IPv4 CIDR address: Bad IP address.
+        match "192.168.1/24".parse::<CidrAddress>() {
+            Ok(v) => panic!("Unexpected 'Ok' result: {:?}", v),
+            Err(_) => (),
+        }
+    }
+
+    #[test]
+    fn test_parse_port_range_fromstr() {
+        // A single `port` value between 0-65k should parse: the start and end values should be the
+        // same.
+        match "22".parse::<PortRange>() {
+            Ok(v) => {
+                assert_eq!(v.from, 22u16);
+                assert_eq!(v.to, 22u16);
+            }
+            Err(e) => panic!("Unexpected 'Error' result: {:?}", e),
+        }
+
+        // Valid port range should parse successfully.
+        match "6667-6669".parse::<PortRange>() {
+            Ok(v) => {
+                assert_eq!(v.from, 6667u16);
+                assert_eq!(v.to, 6669u16);
+            }
+            Err(e) => panic!("Unexpected 'Error' result: {:?}", e),
+        }
+
+        // Multiple port ranges are not supported yet: fxb/45891.
+        match "6666,6667-6669".parse::<PortRange>() {
+            Ok(v) => panic!("Unexpected 'Ok' result: {:?}", v),
+            Err(_) => (),
         }
     }
 }

@@ -105,8 +105,8 @@ impl EventLoop {
             // else down, restructure packet filter rules, etc.
             error!("Failed to load a device config: {}", e);
         }
-        self.device.populate_state().await?;
         self.device.setup_services().await?;
+        self.device.populate_state().await?;
 
         loop {
             match self.event_recv.next().await {
@@ -303,9 +303,11 @@ impl EventLoop {
             RouterAdminRequest::SetFilter { rule, responder } => {
                 let r = self
                     .device
-                    .set_filter(rule)
+                    // TODO(45024): The Router Config FIDL API doesn't have a way to provide a
+                    // specific interface identifier.
+                    .set_filter_on_interface(&rule, 0u32)
                     .await
-                    .context("Error installing new packet filter rule");
+                    .context("Error installing new packet filter on all interfaces");
                 match r {
                     Ok(()) => responder.send(None, None),
                     Err(e) => responder.send(None, internal_error!(e.to_string())),

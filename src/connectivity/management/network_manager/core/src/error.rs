@@ -10,6 +10,7 @@ use thiserror::Error;
 pub type Result<T> = std::result::Result<T, NetworkManager>;
 
 /// Top-level error type the network manager.
+// TODO(45692): CamelCase these enums.
 #[derive(Error, Debug, PartialEq)]
 pub enum NetworkManager {
     /// Errors related to LIF and LIFManager
@@ -21,9 +22,9 @@ pub enum NetworkManager {
     /// Errors related to Services.
     #[error("{}", _0)]
     SERVICE(Service),
-    /// Errors related to Config Persistence.
+    /// Errors related to Configuration.
     #[error("{}", _0)]
-    Config(Config),
+    CONFIG(Config),
     /// Errors related to HAL layer.
     #[error("{}", _0)]
     HAL(Hal),
@@ -33,20 +34,12 @@ pub enum NetworkManager {
     /// Internal errors with an attached context.
     #[error("An error occurred.")]
     INTERNAL,
-    /// Config errors.
-    #[error("{}", _0)]
-    CONFIG(Config),
     // Add error types here.
 }
 
-impl From<Lif> for NetworkManager {
-    fn from(e: Lif) -> Self {
-        NetworkManager::LIF(e)
-    }
-}
-impl From<Port> for NetworkManager {
-    fn from(e: Port) -> Self {
-        NetworkManager::PORT(e)
+impl From<Config> for NetworkManager {
+    fn from(e: Config) -> Self {
+        NetworkManager::CONFIG(e)
     }
 }
 impl From<Hal> for NetworkManager {
@@ -54,9 +47,19 @@ impl From<Hal> for NetworkManager {
         NetworkManager::HAL(e)
     }
 }
+impl From<Lif> for NetworkManager {
+    fn from(e: Lif) -> Self {
+        NetworkManager::LIF(e)
+    }
+}
 impl From<Oir> for NetworkManager {
     fn from(e: Oir) -> Self {
         NetworkManager::OIR(e)
+    }
+}
+impl From<Port> for NetworkManager {
+    fn from(e: Port) -> Self {
+        NetworkManager::PORT(e)
     }
 }
 impl From<Service> for NetworkManager {
@@ -126,6 +129,8 @@ pub enum Service {
     ErrorClearingPacketFilterRules,
     #[error("Failed to get packet filter rules")]
     ErrorGettingPacketFilterRules,
+    #[error("Error while parsing packet filter rule: {}", msg)]
+    ErrorParsingPacketFilterRule { msg: String },
     #[error("Failed to enable IP forwarding")]
     ErrorEnableIpForwardingFailed,
     #[error("Failed to disable IP forwarding")]
@@ -138,8 +143,12 @@ pub enum Service {
     NatAlreadyEnabled,
     #[error("NAT is not enabled")]
     NatNotEnabled,
+    #[error("Error while configuring NAT: {}", msg)]
+    NatConfigError { msg: String },
     #[error("Service is not supported")]
     NotSupported,
+    #[error("FIDL service error: {}", msg)]
+    FidlError { msg: String },
 }
 
 /// Error type for packet HAL.
@@ -178,6 +187,8 @@ pub enum Config {
     Malformed { msg: String },
     #[error("Operation not supported: {}", msg)]
     NotSupported { msg: String },
+    #[error("Failed to get ACL entries")]
+    FailedToGetAclEntries,
 }
 
 /// Error type for OIR.

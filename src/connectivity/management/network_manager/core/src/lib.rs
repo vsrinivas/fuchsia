@@ -180,12 +180,36 @@ impl DeviceState {
         }
     }
 
+    /// Restores the `topo_path`'s configured packet filters.
+    ///
+    /// This method uses [`portmgr::PortId`]'s to install the packet filter rule on the correct
+    /// interface. This means that the port must be registered with port manager before this method
+    /// is called otherwise the `nicid` lookup will fail.
+    pub async fn apply_packet_filters(&self, topo_path: &str) -> error::Result<()> {
+        let acls = self
+            .config
+            .get_acl_entries(topo_path)
+            .ok_or_else(|| error::NetworkManager::CONFIG(error::Config::FailedToGetAclEntries))?;
+        let pid = self
+            .port_manager
+            .port_id(topo_path)
+            .ok_or_else(|| error::NetworkManager::PORT(error::Port::NotFound))?;
+        for entry in acls {
+            for rule in self.packet_filter.parse_aclentry(entry).await?.iter() {
+                self.set_filter_on_interface(rule, pid.to_u32()).await?;
+            }
+        }
+        Ok(())
+    }
+
     /// Restores state of global system options and services from stored configuration.
     pub async fn setup_services(&self) -> error::Result<()> {
         info!("Restoring system services state...");
         self.hal.set_ip_forwarding(self.config.get_ip_forwarding_state()).await?;
+        self.packet_filter.clear_filters().await?;
         // TODO(cgibson): Configure DHCP server.
-        // TODO(cgibson): Configure packet filters.
+        // TODO(cgibson): Apply global packet filtering rules (i.e. rules that apply to all
+        // interfaces) when we support a wildcard device_id's.
         Ok(())
     }
 
@@ -195,6 +219,8 @@ impl DeviceState {
         let properties = self.config.create_wan_properties(topological_path)?;
         let lif = self.create_lif(LIFType::WAN, wan_name, None, &[pid]).await?;
         self.update_lif_properties(lif.id().uuid(), &properties).await?;
+        self.apply_packet_filters(topological_path).await?;
+        self.hal.set_interface_state(pid, true).await?;
         info!("WAN configured: pid: {:?}, lif: {:?}, properties: {:?} ", pid, lif, properties);
         Ok(())
     }
@@ -217,6 +243,7 @@ impl DeviceState {
         let properties = self.config.create_routed_vlan_properties(&routed_vlan)?;
         let lif = self.create_lif(LIFType::LAN, bridge_name, Some(vlan_id), pids).await?;
         self.update_lif_properties(lif.id().uuid(), &properties).await?;
+        // TODO(cgibson): Add support for packet filtering on bridge ports.
         info!("Created new LAN bridge with properties: {:?}", properties);
         Ok(())
     }
@@ -231,6 +258,7 @@ impl DeviceState {
         let lif = self.create_lif(LIFType::LAN, name, None, pids).await?;
         info!("LAN configured: pids: {:?} lif: {:?} properties: {:?} ", pids, lif, properties);
         self.update_lif_properties(lif.id().uuid(), &properties).await?;
+        self.apply_packet_filters(topological_path).await?;
         for pid in pids {
             self.hal.set_interface_state(*pid, true).await?
         }
@@ -630,9 +658,13 @@ impl DeviceState {
         self.service_manager.is_nat_enabled()
     }
 
-    /// Installs a new packet filter rule.
-    pub async fn set_filter(&self, rule: netconfig::FilterRule) -> error::Result<()> {
-        match self.packet_filter.set_filter(rule).await {
+    /// Installs a new packet filter [`netconfig::FilterRule`] on the provided `nicid`.
+    pub async fn set_filter_on_interface(
+        &self,
+        rule: &netconfig::FilterRule,
+        nicid: u32,
+    ) -> error::Result<()> {
+        match self.packet_filter.set_filter(rule, nicid).await {
             Ok(_) => Ok(()),
             Err(e) => {
                 warn!("Failed to set new filter rules: {:?}", e);

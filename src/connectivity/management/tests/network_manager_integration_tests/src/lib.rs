@@ -289,7 +289,7 @@ async fn test_commands() {
          ("show dnsconfig",
           "DnsResolverConfig \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, search: DnsSearch \\{ servers: \\[\\], domain_name: None \\}, policy: Static \\}",
           "Get DNS config"),
-         ("show filterstate", "0 filters installed.*",""),
+         ("show filterstate", "0 filters installed.*", ""),
          ("show forwardstate 0",
           "Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}",""),
           ("show lanconfig 0",
@@ -785,9 +785,9 @@ async fn test_wan_state() {
 #[test]
 async fn test_filters() {
     let commands = test_suite![
-        ("show filterstate", "0 filters installed",""),
-        ("set filter allow 0.0.0.0/0 22-22 0.0.0.0/0 22-22", "Response: \\(None, None\\)",""),
-        ("show filterstate", "2 filters installed\n\\[FilterRule \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, action: Allow, selector: FlowSelector \\{ src_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), src_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), dst_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), dst_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), protocol: Some\\(Tcp\\) \\} \\}, FilterRule \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, action: Allow, selector: FlowSelector \\{ src_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), src_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), dst_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), dst_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), protocol: Some\\(Udp\\) \\} \\}\\]",""),
+        ("show filterstate", "0 filters installed", "test starts with no filters installed yet."),
+        ("set filter allow 0.0.0.0/0 22-22 0.0.0.0/0 22-22", "Response: \\(None, None\\)", ""),
+        ("show filterstate", "2 filters installed\n\\[FilterRule \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, action: Allow, selector: FlowSelector \\{ src_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), src_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), dst_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), dst_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), protocol: Some\\(Tcp\\) \\} \\}, FilterRule \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, action: Allow, selector: FlowSelector \\{ src_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), src_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), dst_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), dst_ports: Some\\(\\[PortRange \\{ from: 22, to: 22 \\}\\]\\), protocol: Some\\(Udp\\) \\} \\}\\]\n", "A TCP and a UDP packet filter should be installed for port 22"),
     ];
 
     let sandbox = connect_to_service::<SandboxMarker>().expect("Can't connect to sandbox");
@@ -1078,12 +1078,31 @@ async fn test_link_events() {
 #[test]
 async fn test_flush_filter_rules() {
     let device = test_device().await;
-    execute_test_suite(&device, test_suite![
-        // ("command to test", "expected regex match statement", description),
-       ("show filterstate", "0 filters installed.*", "test starts with no filters installed yet."),
-       ("set filter allow 127.0.0.1/32 31337-31337 0.0.0.0/0 31337-31337 tcp", "Response: \\(None, None\\)", "add a new filter rule"),
-       ("show filterstate", "1 filters installed\\n\\[FilterRule \\{ element: Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, action: Allow, selector: FlowSelector \\{ src_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[127, 0, 0, 1\\] \\}\\)\\), prefix_length: Some\\(32\\) \\}\\), src_ports: Some\\(\\[PortRange \\{ from: 31337, to: 31337 \\}\\]\\), dst_address: Some\\(CidrAddress \\{ address: Some\\(Ipv4\\(Ipv4Address \\{ addr: \\[0, 0, 0, 0\\] \\}\\)\\), prefix_length: Some\\(0\\) \\}\\), dst_ports: Some\\(\\[PortRange \\{ from: 31337, to: 31337 \\}\\]\\), protocol: Some\\(Tcp\\) \\} \\}\\]", "test that the new filter shows up in the rule set"),
-       ("set delete-filter 0", "Response: None", "deletes the new filter rule"),
-       ("show filterstate", "0 filters installed.*", "no filters installed again."),
-    ]).await;
+    execute_test_suite(
+        &device,
+        test_suite![
+            // ("command to test", "expected regex match statement", description),
+            (
+                "show filterstate",
+                "0 filters installed.*",
+                "test starts with no packet filters installed"
+            ),
+            (
+                "set filter allow 127.0.0.1/32 31337-31337 0.0.0.0/0 31337-31337 tcp",
+                "Response: \\(None, None\\)",
+                "adds a new single packet filter rule"
+            ),
+            (
+                "show filterstate",
+                "1 filters installed.*",
+                "test that the new filter is present in the ruleset"
+            ),
+            ("set delete-filter 0", "Response: None", "deletes the new filter rule"),
+            // TODO(44183): Once we are tracking rule insertion and deletion we can make this clear
+            // individual rules. But for the moment, this will clear all rules, despite what ID you
+            // provide.
+            ("show filterstate", "0 filters installed.*", "all filters have been deleted."),
+        ],
+    )
+    .await;
 }

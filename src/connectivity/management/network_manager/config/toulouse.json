@@ -13,8 +13,7 @@
                         "ipv4": {
                             "addresses": [
                                 {
-                                    "ip": "192.168.51.1",
-                                    "prefix_length": 24
+                                    "cidr_address": "192.168.51.1/24"
                                 }
                             ],
                             "dhcp_server": {
@@ -138,16 +137,14 @@
                             "ipv4": {
                                 "addresses": [
                                     {
-                                        "ip": "127.0.0.1",
-                                        "prefix_length": 8
+                                        "cidr_address": "127.0.0.1/8"
                                     }
                                 ]
                             },
                             "ipv6": {
                                 "addresses": [
                                     {
-                                        "ip": "::1",
-                                        "prefix_length": 128
+                                        "cidr_address": "::1/128"
                                     }
                                 ]
                             }

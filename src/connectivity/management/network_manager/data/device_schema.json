@@ -128,6 +128,19 @@
         "32", "128"
       ]
     },
+    "cidr_address": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [ "ip", "prefix_length" ],
+      "properties": {
+        "ip": {
+          "$ref": "#/definitions/ip"
+        },
+        "prefix_length": {
+          "$ref": "#/definitions/prefix_length"
+        }
+      }
+    },
     "ip_address_config": {
       "type": "object",
       "description": "The IP configuration for this interface.",
@@ -138,24 +151,14 @@
       "properties": {
         "addresses": {
           "type": "array",
-          "descrption": "Describes the IP address configuration.",
+          "description": "Describes the IP address configuration.",
           "additionalItems": false,
           "items": {
             "dhcp_client": {
               "$ref": "#/definitions/dhcp_client"
             },
-            "address": {
-              "type": "object",
-              "additionalProperties": false,
-              "required": [ "ip", "prefix_length" ],
-              "properties": {
-                "ip": {
-                  "$ref": "#/definitions/ip"
-                },
-                "prefix_length": {
-                  "$ref": "#/definitions/prefix_length"
-                }
-              }
+            "cidr_address": {
+              "$ref": "#/definitions/cidr_address"
             },
             "dhcp_server": {
               "$ref": "#/definitions/dhcp_server"
@@ -245,7 +248,7 @@
                       "description": "Subinterface describes a Logical Interface (LIF)",
                       "properties": {
                         "admin_state": {
-                          "description": "The admininistrative state of this subinterface",
+                          "description": "The administrative state of this subinterface",
                           "$ref": "#/definitions/admin_states"
                         },
                         "ipv4": {
@@ -339,8 +342,133 @@
         },
         "acls": {
           "type": "object",
+          "description": "Configuration for packet filtering rules",
           "additionalProperties": false,
-          "description": "TODO(cgibson): Implement me."
+          "properties": {
+            "acl_entries": {
+              "type": "array",
+              "required": ["config"],
+              "items": {
+                "config": {
+                  "required": ["forwarding_action"],
+                  "properties": {
+                    "comment": {
+                      "type": "string",
+                      "description": "An optional comment describing this rule."
+                    },
+                    "device_id": {
+                      "type": "string",
+                      "description": "The Device ID to install this rule on. If omitted, installs the rule on all ports."
+                    },
+                    "direction": {
+                      "type": "string",
+                      "description": "The direction of the connection.",
+                      "enum": [
+                        "IN",
+                        "OUT",
+                        "BOTH"
+                      ],
+                      "default": "BOTH"
+                    },
+                    "forwarding_action": {
+                      "type": "string",
+                      "description": "Whether to accept or drop a matching connection.",
+                      "enum": [
+                        "ACCEPT",
+                        "DROP"
+                      ]
+                    }
+                  },
+                  "ipv4": {
+                    "src_address": {
+                      "type": "string",
+                      "description": "Source IPv4 address including prefix-length",
+                      "examples": [
+                        "192.168.0.0/24"
+                      ]
+                    },
+                    "dst_address": {
+                      "type": "string",
+                      "description": "Destination IPv4 address including prefix-length",
+                      "examples": [
+                        "10.0.10.20/32"
+                      ]
+                    },
+                    "src_ports": {
+                      "type": "string",
+                      "title": "The source port to match.",
+                      "description": "Port ranges are supported. Omit to match all source ports.",
+                      "examples": [
+                        "22,80,6667-6669"
+                      ]
+                    },
+                    "dst_ports": {
+                      "type": "string",
+                      "title": "The destination port to match.",
+                      "description": "Port ranges are supported. Omit to match all destination ports.",
+                      "examples": [
+                        "22,80,6667-6669"
+                      ]
+                    },
+                    "protocol": {
+                      "type": "string",
+                      "description": "The IP protocol to match.",
+                      "enum": [
+                        "TCP",
+                        "UDP",
+                        "ICMP",
+                        "ANY"
+                      ],
+                      "default": "ANY"
+                    }
+                  },
+                  "ipv6": {
+                    "src_address": {
+                      "type": "string",
+                      "description": "Source IPv6 address including prefix-length",
+                      "examples": [
+                        "fe80::a928:1677:47d9:88ab/64"
+                      ]
+                    },
+                    "dst_address": {
+                      "type": "string",
+                      "description": "Destination IPv6 address including prefix-length",
+                      "examples": [
+                        "fe80::a928:1677:47d9:88ab/64"
+                      ]
+                    },
+                    "src_ports": {
+                      "type": "string",
+                      "title": "The source port to match.",
+                      "description": "Port ranges are supported. Omit to match all source ports.",
+                      "examples": [
+                        "22,80,6667-6669"
+                      ]
+                    },
+                    "dst_ports": {
+                      "type": "string",
+                      "title": "The destination port to match.",
+                      "description": "Port ranges are supported. Omit to match all destination ports.",
+                      "examples": [
+                        "22,80,6667-6669"
+                      ]
+                    },
+                    "protocol": {
+                      "type": "string",
+                      "description": "The IP protocol to match.",
+                      "enum": [
+                        "TCP",
+                        "UDP",
+                        "ICMP",
+                        "ANY"
+                      ],
+                      "default": "ANY"
+                    }
+                  }
+                }
+              }
+            }
+          }
         },
         "services": {
           "type": "object",
