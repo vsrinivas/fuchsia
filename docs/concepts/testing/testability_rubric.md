@@ -225,6 +225,14 @@ load along with environmental factors like temperature.
 
     This code sample was adapted from [task-test.cc](https://fuchsia-review.googlesource.com/c/fuchsia/+/326106/7/src/camera/drivers/hw_accel/ge2d/test/task-test.cc#48).
 
+### Regression tests for race conditions
+
+It is difficult to write regression tests for race conditions that don't have a high
+false-pass rate. If you can write a test that deterministically reproduces the issue,
+you should do that. Otherwise, if the data race was fixed by improving the locking
+scheme used, you can add thread annotations as a regression test. For other races,
+you should attempt to design APIs that prevent the existence of the race condition.
+
 ## Recently removed exemptions
 
 *   **Engprod scripts** (e.g. `fx` commands) and associated configuration files**
