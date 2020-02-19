@@ -7,6 +7,12 @@ import("//build/packages/prebuilt_package.gni")
 import("//build/packages/prebuilt_test_manifest.gni")
 import("//src/lib/icu/tzdata/icu_tzdata_config_data.gni")
 
+declare_args() {
+  # Set to use the most recent canary version of prebuilt Chromium components
+  # otherwise the most recently validated version is used.
+  use_chromium_canary = false
+}
+
 group("chromium") {
   public_deps = [
     ":web_engine",
@@ -21,6 +27,14 @@ group("web_engine") {
   ]
 }
 
+prebuilt_archive_base_path = "//prebuilt/third_party/chromium"
+debug_archive_base_path = "//prebuilt/build_ids/" + target_cpu + "/chromium"
+
+if (use_chromium_canary) {
+  prebuilt_archive_base_path += "_latest"
+  debug_archive_base_path += "_latest"
+}
+
 config_data("web_engine_config") {
   visibility = [ ":web_engine" ]
 
@@ -32,9 +46,9 @@ prebuilt_package("web_engine_pkg") {
   visibility = [ ":web_engine" ]
 
   package_name = "web_engine"
-  archive = "//prebuilt/third_party/chromium/arch/$target_cpu/web_engine.far"
-  debug_archive =
-      "//prebuilt/build_ids/$target_cpu/chromium/web_engine.symbols.tar.bz2"
+  archive =
+      prebuilt_archive_base_path + "/arch/" + target_cpu + "/web_engine.far"
+  debug_archive = debug_archive_base_path + "/web_engine.symbols.tar.bz2"
 }
 
 group("web_runner") {
@@ -56,9 +70,9 @@ prebuilt_package("web_runner_pkg") {
   visibility = [ ":web_runner" ]
 
   package_name = "web_runner"
-  archive = "//prebuilt/third_party/chromium/arch/$target_cpu/web_runner.far"
-  debug_archive =
-      "//prebuilt/build_ids/$target_cpu/chromium/web_runner.symbols.tar.bz2"
+  archive =
+      prebuilt_archive_base_path + "/arch/" + target_cpu + "/web_runner.far"
+  debug_archive = debug_archive_base_path + "/web_runner.symbols.tar.bz2"
 }
 
 # Prebuilt FAR tests
@@ -77,7 +91,11 @@ group("chromium_tests_group") {
 }
 
 prebuilt_test_manifest("chromium_tests") {
-  archive_dir = "//prebuilt/third_party/chromium_tests/arch/x64"
+  if (use_chromium_canary) {
+    archive_dir = "//prebuilt/third_party/chromium_tests_latest/arch/x64"
+  } else {
+    archive_dir = "//prebuilt/third_party/chromium_tests/arch/x64"
+  }
   environments = test_env
 }
 
