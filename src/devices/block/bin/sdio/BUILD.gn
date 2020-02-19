@@ -1,0 +1,49 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/unification/images/migrated_manifest.gni")
+
+executable("sdio") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  sources = [
+    "main.cc",
+    "sdio.cc",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.sdio:llcpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+test("sdio-test") {
+  # Dependent manifests unfortunately cannot be marked as `testonly`.
+  # TODO(44278): Remove when converting this file to proper GN build idioms.
+  testonly = false
+  configs += [ "//build/unification/config:zircon-migrated" ]
+  output_name = "sdio-test"
+  sources = [
+    "sdio-test.cc",
+    "sdio.cc",
+  ]
+  include_dirs = [ "." ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.sdio:llcpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+migrated_manifest("sdio-manifest") {
+  deps = [ ":sdio" ]
+}
+
+migrated_manifest("sdio-test-manifest") {
+  deps = [ ":sdio-test" ]
+}

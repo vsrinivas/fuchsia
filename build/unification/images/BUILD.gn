@@ -1380,6 +1380,7 @@ aggregate_manifest("migrated-image") {
     #":bin.sh",
 #------------------
     "//zircon/system/uapp/psutils:signal-manifest",
+    "//src/devices/block/bin/sdio:sdio-manifest",
     "//zircon/system/uapp/spawn:spawn-manifest",
     "//zircon/system/uapp/spiutil:spiutil-manifest",
     "//zircon/system/uapp/storage-metrics:storage-metrics-manifest",
@@ -3276,6 +3277,9 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/zxtest/test:zxtest-manifest",
 #------------------
     "//src/graphics/display/drivers/intel-i915:intel-i915-test-manifest",
+#------------------
+#------------------
+    "//src/devices/block/bin/sdio:sdio-test-manifest",
   ]
 
   if (target_cpu == "arm64") {
@@ -3989,6 +3993,9 @@ aggregate_manifest("migrated-tests") {
 #------------------
     "//src/graphics/display/drivers/intel-i915:intel-i915-test-manifest",
     "//zircon/system/ulib/ram-crashlog/test:ram-crashlog-manifest",
+#------------------
+#------------------
+    "//src/devices/block/bin/sdio:sdio-test-manifest",
   ]
 
   if (target_cpu == "arm64") {

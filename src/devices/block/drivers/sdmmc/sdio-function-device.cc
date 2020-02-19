@@ -13,6 +13,8 @@
 
 namespace sdmmc {
 
+using ::llcpp::fuchsia::hardware::sdio::SdioHwInfo;
+
 zx_status_t SdioFunctionDevice::Create(zx_device_t* parent, SdioControllerDevice* sdio_parent,
                                        std::unique_ptr<SdioFunctionDevice>* out_dev) {
   fbl::AllocChecker ac;
@@ -93,6 +95,152 @@ zx_status_t SdioFunctionDevice::SdioDoVendorControlRwByte(bool write, uint8_t ad
                                                           uint8_t write_byte,
                                                           uint8_t* out_read_byte) {
   return sdio_parent_->SdioDoVendorControlRwByte(write, addr, write_byte, out_read_byte);
+}
+
+void SdioFunctionDevice::GetDevHwInfo(GetDevHwInfoCompleter::Sync completer) {
+  sdio_hw_info_t hw_info = {};
+  zx_status_t status = SdioGetDevHwInfo(&hw_info);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+
+  SdioHwInfo fidl_hw_info;
+  static_assert(sizeof(fidl_hw_info) == sizeof(hw_info));
+  memcpy(&fidl_hw_info, &hw_info, sizeof(fidl_hw_info));
+
+  completer.ReplySuccess(fidl_hw_info);
+}
+
+void SdioFunctionDevice::EnableFn(EnableFnCompleter::Sync completer) {
+  zx_status_t status = SdioEnableFn();
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess();
+}
+
+void SdioFunctionDevice::DisableFn(DisableFnCompleter::Sync completer) {
+  zx_status_t status = SdioDisableFn();
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess();
+}
+
+void SdioFunctionDevice::EnableFnIntr(EnableFnIntrCompleter::Sync completer) {
+  zx_status_t status = SdioEnableFnIntr();
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess();
+}
+
+void SdioFunctionDevice::DisableFnIntr(DisableFnIntrCompleter::Sync completer) {
+  zx_status_t status = SdioDisableFnIntr();
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess();
+}
+
+void SdioFunctionDevice::UpdateBlockSize(uint16_t blk_sz, bool deflt,
+                                         UpdateBlockSizeCompleter::Sync completer) {
+  zx_status_t status = SdioUpdateBlockSize(blk_sz, deflt);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess();
+}
+
+void SdioFunctionDevice::GetBlockSize(GetBlockSizeCompleter::Sync completer) {
+  uint16_t cur_blk_size;
+  zx_status_t status = SdioGetBlockSize(&cur_blk_size);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess(cur_blk_size);
+}
+
+void SdioFunctionDevice::DoRwTxn(SdioRwTxn txn, DoRwTxnCompleter::Sync completer) {
+  sdio_rw_txn_t sdio_txn = {};
+  sdio_txn.addr = txn.addr;
+  sdio_txn.data_size = txn.data_size;
+  sdio_txn.incr = txn.incr;
+  sdio_txn.write = txn.write;
+  sdio_txn.use_dma = txn.use_dma;
+  sdio_txn.buf_offset = txn.buf_offset;
+  if (txn.use_dma) {
+    sdio_txn.dma_vmo = txn.dma_vmo.get();
+    sdio_txn.virt_buffer = nullptr;
+    sdio_txn.virt_size = 0;
+  } else {
+    sdio_txn.dma_vmo = ZX_HANDLE_INVALID;
+    sdio_txn.virt_buffer = txn.virt.mutable_data();
+    sdio_txn.virt_size = txn.virt.count();
+  }
+
+  zx_status_t status = SdioDoRwTxn(&sdio_txn);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess(std::move(txn));
+}
+
+void SdioFunctionDevice::DoRwByte(bool write, uint32_t addr, uint8_t write_byte,
+                                  DoRwByteCompleter::Sync completer) {
+  zx_status_t status = SdioDoRwByte(write, addr, write_byte, &write_byte);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess(write_byte);
+}
+
+void SdioFunctionDevice::GetInBandIntr(GetInBandIntrCompleter::Sync completer) {
+  zx::interrupt irq;
+  zx_status_t status = SdioGetInBandIntr(&irq);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess(std::move(irq));
+}
+
+void SdioFunctionDevice::IoAbort(IoAbortCompleter::Sync completer) {
+  zx_status_t status = SdioIoAbort();
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess();
+}
+
+void SdioFunctionDevice::IntrPending(IntrPendingCompleter::Sync completer) {
+  bool pending;
+  zx_status_t status = SdioIntrPending(&pending);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess(pending);
+}
+
+void SdioFunctionDevice::DoVendorControlRwByte(bool write, uint8_t addr, uint8_t write_byte,
+                                               DoVendorControlRwByteCompleter::Sync completer) {
+  zx_status_t status = SdioDoVendorControlRwByte(write, addr, write_byte, &write_byte);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+  completer.ReplySuccess(write_byte);
 }
 
 }  // namespace sdmmc
