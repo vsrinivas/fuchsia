@@ -32,7 +32,6 @@ using ::llcpp::fuchsia::paver::Configuration;
 enum class Partition {
   kUnknown,
   kBootloader,
-  kEfi,
   kZirconA,
   kZirconB,
   kZirconR,
