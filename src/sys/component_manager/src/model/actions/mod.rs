@@ -92,12 +92,12 @@ struct ActionStatus {
 
 struct ActionStatusInner {
     result: Option<Result<(), ModelError>>,
-    waker: Option<Waker>,
+    wakers: Vec<Waker>,
 }
 
 impl ActionStatus {
     fn new() -> Self {
-        ActionStatus { inner: Mutex::new(ActionStatusInner { result: None, waker: None }) }
+        ActionStatus { inner: Mutex::new(ActionStatusInner { result: None, wakers: vec![] }) }
     }
 }
 
@@ -150,7 +150,7 @@ impl ActionSet {
         drop(realm);
         let mut inner = status.inner.lock().await;
         inner.result = Some(res);
-        if let Some(waker) = inner.waker.take() {
+        for waker in inner.wakers.drain(..) {
             waker.wake();
         }
     }
@@ -176,7 +176,7 @@ impl ActionSet {
                         // The action is not finished yet. Get a waker for the current task by
                         // returning it from a `PollFn`, which is provided the context.
                         let waker = poll_fn(|cx| Poll::Ready(cx.waker().clone())).await;
-                        inner.waker.get_or_insert(waker);
+                        inner.wakers.push(waker);
                     }
                 }
                 // The action is not finished yet, so suspend it. `finish()` will wake up the task.
@@ -312,6 +312,7 @@ pub mod tests {
             UseProtocolDecl, UseSource,
         },
         fidl_fuchsia_sys2 as fsys,
+        futures::{channel::mpsc, SinkExt, StreamExt},
         std::{convert::TryFrom, sync::Weak, task::Context},
     };
 
@@ -321,42 +322,64 @@ pub mod tests {
         };
     }
 
+    async fn register_action_in_new_task(
+        action: Action,
+        realm: Arc<Realm>,
+        mut responder: mpsc::Sender<Result<(), ModelError>>,
+    ) {
+        let (mut starter_tx, mut starter_rx) = mpsc::channel(0);
+        fasync::spawn(async move {
+            let mut action_set = realm.lock_actions().await;
+
+            // Register action, and get notifications. Use `register_inner` because this test
+            // does not cover the actions themselves.
+            let (mut notification, _needs_handle) = action_set.register_inner(action);
+
+            // Notifications have not completed yet, because they have not finished. Note calling
+            // `poll()` will cause a waker to be installed.
+            let waker = poll_fn(|cx| Poll::Ready(cx.waker().clone())).await;
+            let mut cx = Context::from_waker(&waker);
+            assert!(is_pending(notification.as_mut().poll(&mut cx)));
+
+            // Signal to test that action is registered.
+            starter_tx.send(()).await.unwrap();
+
+            // Drop `action_set` to release the lock.
+            drop(action_set);
+
+            let res = notification.await;
+
+            // If the notification was received successfully then we will get to this point.
+            responder.send(res).await.expect("failed to send response");
+        });
+        starter_rx.next().await.expect("Unable to receive start signal");
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn action_set() {
         let test = ActionsTest::new("root", vec![], None).await;
         let realm = test.model.root_realm.clone();
-        let mut action_set = realm.lock_actions().await;
 
-        // Register some actions, and get notifications. Use `register_inner` because this test
-        // does not cover the actions themselves.
-        let (mut nf1, needs_handle) = action_set.register_inner(Action::Destroy);
-        assert!(needs_handle);
-        let (mut nf2, needs_handle) = action_set.register_inner(Action::Shutdown);
-        assert!(needs_handle);
-        let (mut nf3, needs_handle) = action_set.register_inner(Action::Destroy);
-        assert!(!needs_handle);
+        let (tx, mut rx) = mpsc::channel(0);
 
-        // Notifications have not completed yet, because they have not finished. Note calling
-        // `poll()` will cause a waker to be installed.
-        let waker = poll_fn(|cx| Poll::Ready(cx.waker().clone())).await;
-        let mut cx = Context::from_waker(&waker);
-        assert!(is_pending(nf1.as_mut().poll(&mut cx)));
-        assert!(is_pending(nf2.as_mut().poll(&mut cx)));
-        assert!(is_pending(nf3.as_mut().poll(&mut cx)));
-
-        drop(action_set);
+        register_action_in_new_task(Action::Destroy, realm.clone(), tx.clone()).await;
+        register_action_in_new_task(Action::Shutdown, realm.clone(), tx.clone()).await;
+        register_action_in_new_task(Action::Destroy, realm.clone(), tx.clone()).await;
 
         // Complete actions, while checking notifications.
         ActionSet::finish(realm.clone(), &Action::Destroy, Ok(())).await;
         let ok: Result<(), ModelError> = Ok(());
         let err: Result<(), ModelError> = Err(ModelError::ComponentInvalid);
-        results_eq!(nf1.await, ok);
-        assert!(is_pending(nf2.as_mut().poll(&mut cx)));
-        results_eq!(nf3.await, ok);
+        let res = rx.next().await.expect("Unable to receive result of Notification");
+        results_eq!(res, ok);
+        let res = rx.next().await.expect("Unable to receive result of Notification");
+        results_eq!(res, ok);
+
         ActionSet::finish(realm.clone(), &Action::Shutdown, Err(ModelError::ComponentInvalid))
             .await;
         ActionSet::finish(realm.clone(), &Action::Shutdown, Ok(())).await;
-        results_eq!(nf2.await, err);
+        let res = rx.next().await.expect("Unable to receive result of Notification");
+        results_eq!(res, err);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
