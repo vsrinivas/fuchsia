@@ -11,7 +11,6 @@
 #include <string_view>
 #include <vector>
 
-#include "fuchsia/shell/cpp/fidl.h"
 #include "fuchsia/shell/llcpp/fidl.h"
 #include "lib/async-loop/cpp/loop.h"
 #include "src/developer/shell/interpreter/src/interpreter.h"
@@ -122,31 +121,26 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
                 AddNodesCompleter::Sync _completer) override;
 
   // Helpers to be able to send events to the client.
-  zx_status_t OnError(uint64_t context_id, std::vector<fuchsia::shell::Location>& locations,
-                      std::string error_message) {
-    fidl::Encoder encoder(fuchsia::shell::internal::kShell_OnError_GenOrdinal);
-    auto message = fuchsia::shell::Shell_ResponseEncoder::OnError(&encoder, &context_id, &locations,
-                                                                  &error_message);
-    return message.Write(handle_, 0);
+  zx_status_t OnError(uint64_t context_id, std::vector<llcpp::fuchsia::shell::Location>& locations,
+                      const std::string& error_message) {
+    return llcpp::fuchsia::shell::Shell::SendOnErrorEvent(::zx::unowned_channel(handle_),
+                                                          context_id, fidl::VectorView(locations),
+                                                          fidl::StringView(error_message));
   }
 
-  zx_status_t OnError(uint64_t context_id, std::string error_message) {
-    std::vector<fuchsia::shell::Location> locations;
+  zx_status_t OnError(uint64_t context_id, const std::string& error_message) {
+    std::vector<llcpp::fuchsia::shell::Location> locations;
     return OnError(context_id, locations, error_message);
   }
 
-  zx_status_t OnExecutionDone(uint64_t context_id, fuchsia::shell::ExecuteResult result) {
-    fidl::Encoder encoder(fuchsia::shell::internal::kShell_OnExecutionDone_GenOrdinal);
-    auto message =
-        fuchsia::shell::Shell_ResponseEncoder::OnExecutionDone(&encoder, &context_id, &result);
-    return message.Write(handle_, 0);
+  zx_status_t OnExecutionDone(uint64_t context_id, llcpp::fuchsia::shell::ExecuteResult result) {
+    return llcpp::fuchsia::shell::Shell::SendOnExecutionDoneEvent(::zx::unowned_channel(handle_),
+                                                                  context_id, result);
   }
 
-  zx_status_t OnTextResult(uint64_t context_id, std::string result, bool partial_result) {
-    fidl::Encoder encoder(fuchsia::shell::internal::kShell_OnTextResult_GenOrdinal);
-    auto message = fuchsia::shell::Shell_ResponseEncoder::OnTextResult(&encoder, &context_id,
-                                                                       &result, &partial_result);
-    return message.Write(handle_, 0);
+  zx_status_t OnTextResult(uint64_t context_id, const std::string& result, bool partial_result) {
+    return llcpp::fuchsia::shell::Shell::SendOnTextResultEvent(
+        ::zx::unowned_channel(handle_), context_id, fidl::StringView(result), partial_result);
   }
 
  private:

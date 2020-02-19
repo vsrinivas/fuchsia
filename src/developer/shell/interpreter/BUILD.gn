@@ -34,7 +34,6 @@ executable("bin") {
     ":shell_interpreter",
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
-    "//src/developer/shell/fidl/fuchsia.shell:shell",
     "//src/developer/shell/fidl/fuchsia.shell:shell_llcpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-default",

@@ -14,6 +14,7 @@
 #include "src/developer/shell/interpreter/src/instructions.h"
 #include "src/developer/shell/interpreter/src/types.h"
 #include "src/lib/fxl/logging.h"
+#include "zircon/process.h"
 #include "zircon/processargs.h"
 #include "zircon/status.h"
 
@@ -86,12 +87,12 @@ void ServerInterpreter::EmitError(ExecutionContext* context, std::string error_m
 
 void ServerInterpreter::ContextDone(ExecutionContext* context) {
   FXL_DCHECK(context != nullptr);
-  service_->OnExecutionDone(context->id(), fuchsia::shell::ExecuteResult::OK);
+  service_->OnExecutionDone(context->id(), llcpp::fuchsia::shell::ExecuteResult::OK);
 }
 
 void ServerInterpreter::ContextDoneWithAnalysisError(ExecutionContext* context) {
   FXL_DCHECK(context != nullptr);
-  service_->OnExecutionDone(context->id(), fuchsia::shell::ExecuteResult::ANALYSIS_ERROR);
+  service_->OnExecutionDone(context->id(), llcpp::fuchsia::shell::ExecuteResult::ANALYSIS_ERROR);
 }
 
 void ServerInterpreter::TextResult(ExecutionContext* context, std::string_view text) {
