@@ -79,7 +79,6 @@ static inline zx_status_t i2c_write_read_sync(const i2c_protocol_t* i2c, const v
 #else
   i2c_write_read_ctx_t ctx;
 #endif
-  sync_completion_reset(&ctx.completion);
   ctx.read_buf = read_buf;
   ctx.read_length = read_length;
 

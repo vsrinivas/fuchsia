@@ -34,25 +34,85 @@ zx_status_t sync_completion_wait_deadline(sync_completion_t* completion, zx_time
     return ZX_OK;
   }
 
-  // There are only two choices here.  The previous state was
-  // UNSIGNALED_WITH_WAITERS (and we changed nothing), or it was UNSIGNALED
-  // (and we just transitioned it to UWW).  Either way, we expect the state to
-  // be UWW by the time we join the wait queue.  If it is anything else
-  // (BAD_STATE), then it must have achieved SIGNALED at some point in the
-  // past.  Likewise (ignoring the race described below), if we get ZX_OK
-  // back, then we must have been woken by some other thread which was
-  // signaling our completion.
-  switch (_zx_futex_wait(futex, UNSIGNALED_WITH_WAITERS, ZX_HANDLE_INVALID, deadline)) {
-    case ZX_OK:
-    case ZX_ERR_BAD_STATE:
-      return ZX_OK;
+  while (true) {
+    switch (_zx_futex_wait(futex, UNSIGNALED_WITH_WAITERS, ZX_HANDLE_INVALID, deadline)) {
+      case ZX_OK:
+        // We just woke up because of an explicit zx_futex_wake which found us
+        // waiting in this futex's wait queue.  Verify that the state is
+        // something _other_ than UNSIGNALED_WITH_WAITERS.  If it is, then we
+        // must have been signaled at some point in the past.
+        //
+        // If not, then there is one of two things going on.  The common
+        // possibility is that we got hit with a lingering, in-flight, futex
+        // wake operation.  The common flow would be as follows (although, many
+        // variants could exist).
+        //
+        // Given two threads, T1 and T2, and a completion C.
+        //
+        // 1) T1 calls C.wait, and has made it to this point.  It is calling
+        //    futex_wait, but has not made it all of the way into the kernel.
+        // 2) T2 calls C.signal.  It has swapped the state from UWW to S, and it
+        //    is about to call futex_wake.
+        // 3) T1 makes it into zx_futex_wait and fails the state check.  The
+        //    state is now SIGNALLED.  T1 wakes and unwinds, as it should since
+        //    it was signalled.
+        // 4) T1 either destroys and recreates C at the same memory location, or
+        //    it simply resets C.  The state of C is now UNSIGNALED
+        // 5) T1 fully waits on C.  The state is now UWW, and T1 has made it all
+        //    of the way into the kernel, passed the futex state check, and joined
+        //    the kernel wait queue.
+        // 6) T2 finally runs again.  Its call to futex_wake causes T1 to wake
+        //    up.
+        //
+        // Without the check below, T1 is going to wake in a spurious fashion,
+        // which we really do not want.  With the check, T1 will see the state
+        // as _still_ being UWW, and it will try again.
+        //
+        // Another scenario might go like this.
+        //
+        // 1) Start with T1 currently parked in C.  It is fully in the
+        //    kernel wait queue and the state of C is UWW.
+        // 2) T2 calls signal and makes it all of the way through the process.
+        //    It has exited the signal function, and the state of the C is UWW.
+        //    T1 has been released from the wait queue and is in the process of
+        //    unwinding.
+        // 3) Some other thread T3, (T3 could == T2, does not have to) calls reset,
+        //    then wait.  C's state is now UWW and T3 is on the way down to join
+        //    the kernel wait queue.
+        // 4) T1 unwinds fully, it makes the check here, and loops back around
+        //    going to sleep again.
+        //
+        // In this case, we appear to have "missed" the event.
+        //
+        // So, with all of that said, the currently defined proper behavior is
+        // to "miss" the event.  This has been pretty thoroughly debated, and
+        // the short answer is that disallowing this type of spurious wakeup is
+        // more valuable than disallowing any sort of "missed" signal.  If you
+        // have code which depends on never "missing" a signal in the fashion
+        // described above, you should use a different synchronization primitive
+        // than this one.
+        //
+        if (atomic_load_explicit(futex, memory_order_acquire) != UNSIGNALED_WITH_WAITERS) {
+          return ZX_OK;
+        }
+        break;
 
-    case ZX_ERR_TIMED_OUT:
-      return ZX_ERR_TIMED_OUT;
+      // There are only two choices here.  The previous state was
+      // UNSIGNALED_WITH_WAITERS (and we changed nothing), or it was UNSIGNALED
+      // (and we just transitioned it to UWW).  Either way, we expect the state to
+      // be UWW by the time we join the wait queue.  If it is anything else
+      // (BAD_STATE), then it must have achieved SIGNALED at some point in the
+      // past.
+      case ZX_ERR_BAD_STATE:
+        return ZX_OK;
 
-    case ZX_ERR_INVALID_ARGS:
-    default:
-      __builtin_trap();
+      case ZX_ERR_TIMED_OUT:
+        return ZX_ERR_TIMED_OUT;
+
+      case ZX_ERR_INVALID_ARGS:
+      default:
+        __builtin_trap();
+    }
   }
 }
 

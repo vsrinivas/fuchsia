@@ -15,6 +15,7 @@
 #include <zircon/threads.h>
 
 #include <array>
+#include <limits>
 
 #include <zxtest/zxtest.h>
 
@@ -30,7 +31,10 @@ struct TestThread {
     ZX_ASSERT(completion_ == nullptr);
     ZX_ASSERT(completion != nullptr);
 
+    // Remember our deadline, and make sure that our exited flag has been
+    // cleared before starting the thread.
     deadline_ = deadline;
+    exited_.store(false);
 
     auto thunk = [](void* ctx) -> int {
       auto thiz = reinterpret_cast<TestThread*>(ctx);
@@ -76,10 +80,12 @@ struct TestThread {
 
   zx_status_t status() const { return status_.load(); }
   bool started() const { return (completion_ != nullptr); }
+  bool exited() const { return exited_.load(); }
 
  private:
   int DoBlock() {
     status_.store(sync_completion_wait_deadline(completion_, deadline_.get()));
+    exited_.store(true);
     return 0;
   }
 
@@ -89,6 +95,7 @@ struct TestThread {
 
   sync_completion_t* completion_ = nullptr;
   std::atomic<zx_status_t> status_;
+  std::atomic<bool> exited_{true};
 };
 
 template <size_t N>
@@ -291,6 +298,43 @@ TEST(SyncCompletionTest, SignalRequeue) {
     thread.Join(false);
     ASSERT_OK(thread.status());
   }
+}
+
+TEST(SyncCompletionTest, SpuriousWakeupHandled) {
+  sync_completion_t completion;
+  std::array<TestThread, 1> threads;
+  auto& thread = threads[0];
+
+  // Start the test thread and wait until we know that it is blocked in the futex.
+  ASSERT_NO_FATAL_FAILURES(thread.StartAndBlock("SpuriousWakeupHandled", &completion));
+  ASSERT_NO_FATAL_FAILURES(WaitForAllBlockedOnFutex(threads));
+
+  // Peek under the implementation hood into the completion_t implementation,
+  // and wake any threads waiting on the internal futex.  This should simulate a
+  // spurious futex wake.
+  ASSERT_OK(zx_futex_wake(&completion.futex, UINT32_MAX));
+
+  // Now wait some amount of time, and then check to see if our thread has set
+  // the exiting flag.  Note that this is a best effort test only.  We are
+  // attempting to prove that the thread has woken up, checked its internal
+  // state, and gone back to sleep on the futex.  Unfortunately, because the
+  // user-mode observable thread state is not atomically updated with the wake
+  // operation (the lower level kernel-thread-state is, but we cannot observe
+  // it), we cannot simply wait for the thread to block again and _then_ check
+  // the exiting flag.  Instead, we have to pick a timeout and keep it
+  // relatively short (100mSec in this case).  If this catches a problem, we
+  // know it is a real problem, but if it doesn't, it is technically possible
+  // that there is a problem, but it just was not detected because of timing.
+  zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+  ASSERT_FALSE(thread.exited());
+
+  // Now deliberately signal the thread, and wait for it to exit.  Check that it
+  // set the exited flag on the way out.
+  thread.Join(true);
+  ASSERT_TRUE(thread.exited());
+
+  // Final sanity checks and we are done.
+  ASSERT_OK(thread.status());
 }
 
 }  // namespace
