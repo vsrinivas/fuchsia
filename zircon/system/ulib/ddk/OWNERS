@@ -1,4 +1,5 @@
-ravoorir@google.com
-teisenbe@google.com
+include /src/devices/OWNERS
 
 per-file platform-defs.h=*
+
+# COMPONENT: Zircon>FDF
