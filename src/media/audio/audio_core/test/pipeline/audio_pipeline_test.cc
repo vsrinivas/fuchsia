@@ -520,9 +520,8 @@ TEST_F(AudioPipelineTest, RenderWithPts) {
   }
 }
 
-// If we issue DiscardAllPackets during Playback, PTS should reset to zero. Otherwise, we would
-// observe the second set of packets interpreted as being in the past, and thus dropped.
-TEST_F(AudioPipelineTest, DiscardDuringRenderResetsPts) {
+// If we issue DiscardAllPackets during Playback, PTS should not change.
+TEST_F(AudioPipelineTest, DiscardDuringPlayback) {
   ASSERT_TRUE(received_min_lead_time_);
   uint32_t num_packets = kNumPayloads;
 
@@ -568,11 +567,12 @@ TEST_F(AudioPipelineTest, DiscardDuringRenderResetsPts) {
         << ") -- should be silence after " << silent_frame;
   }
 
-  // We interrupted the first stream without stopping. DiscardAllPackets should reset PTS to 0. Now
-  // play a new stream, starting 40 ms after the new PTS 0. Between Left|Right, initial data values
-  // were odd|even; these are even|odd, for quick contrast when visually inspecting the buffer.
+  // We interrupted the first stream without stopping. Now play a new stream, starting at a PTS of
+  // 40 ms after last region of audio frames appeared in the ring buffer. Between Left|Right,
+  // initial data values were odd|even; these are even|odd, for quick contrast when visually
+  // inspecting the buffer.
   int16_t initial_data_value = 0x4000;
-  int64_t initial_pts = kDefaultFrameRate * 40 / 1000;
+  int64_t initial_pts = silent_frame + (kDefaultFrameRate * 40 / 1000);
   CreateAndSendPackets(num_packets, initial_data_value, initial_pts);
 
   received_packet_completion_ = false;
@@ -610,15 +610,17 @@ TEST_F(AudioPipelineTest, DiscardDuringRenderResetsPts) {
         << "Before and after Discard/refeed, ends of initial data are unequal";
   }
 
-  // There will be a gap between Discard and the new stream.
-  // Start of the new data written after the Discard
+  // Expect that the next set of packets is correctly appearing at the correct pts.
   nonzero_frame_2 = NextContiguousSnapshotFrame(true, silent_frame_2);
-  if (nonzero_frame_2 >= kRingFrames) {
+  if (nonzero_frame_2 != initial_pts) {
     DisplaySnapshotSectionsForFrames(nonzero_frame, silent_frame_2);
     ASSERT_LT(nonzero_frame_2, kRingFrames)
         << "Ring contains no data after frame " << silent_frame_2 << " ("
         << (silent_frame_2 / kSectionFrames) << ":" << std::hex << (silent_frame_2 % kSectionFrames)
         << ")";
+    ASSERT_EQ(nonzero_frame_2, initial_pts)
+        << "Frame incorrectly scheduled after DiscardAllPackets; expected at frame " << initial_pts
+        << ", but got " << nonzero_frame_2;
   }
 
   // End of the new data written after the Discard
