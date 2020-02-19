@@ -52,7 +52,24 @@ def main():
     # Rewrite the library's build file.
     import_added = False
     for line in fileinput.FileInput(build_path, inplace=True):
+        # Remove references to libzircon.
+        if '$zx/system/ulib/zircon' in line and not 'zircon-internal' in line:
+            line = ''
+        # Update references to libraries.
+        line = line.replace('$zx/system/ulib', '//zircon/public/lib')
+        line = line.replace('$zx/system/dev/lib', '//zircon/public/lib')
+        # Update known configs.
+        line = line.replace('$zx_build/public/gn/config:static-libc++',
+                            '//build/config/fuchsia:static_cpp_standard_library')
+        # Update references to Zircon in general.
+        line = line.replace('$zx', '//zircon')
+        # Update deps on libdriver.
+        line = line.replace('//zircon/public/lib/driver', '//src/devices/lib/driver')
+        # Remove header target specifier.
+        line = line.replace('.headers', '')
+        line = line.replace(':headers', '')
         sys.stdout.write(line)
+
         if not line.strip() and not import_added:
             import_added = True
             sys.stdout.write('##########################################\n')

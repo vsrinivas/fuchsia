@@ -5,15 +5,28 @@
 import("//build/cpp/sdk_source_set.gni")
 
 template("zx_library") {
+  template_params = [
+    "static",
+    "shared",
+    "host",
+    "kernel",
+    "sdk",
+    "sdk_headers",
+    "sdk_publishable",
+  ]
+
+  # The following parameters are just ignored, as in the GN build the shape of
+  # a library is driven by the value of the "sdk" parameter.
   not_needed(invoker,
              [
                "static",
                "shared",
                "host",
              ])
-  is_kernel = defined(invoker.kernel) && invoker.kernel
 
-  assert(!is_kernel, "Kernel libraries not supported")
+  assert(!defined(invoker.kernel) || !invoker.kernel,
+         "Kernel libraries not supported")
+
   assert(defined(invoker.sdk),
          "Can only migrate libraries exposed to the GN build")
   assert(invoker.sdk == "source",
@@ -34,6 +47,13 @@ template("zx_library") {
   }
 
   target(target_type, main_target_name) {
+    forward_variables_from(invoker, "*", template_params)
+
+    # Binaries depending on migrated libraries cannot be marked as testonly, and
+    # therefore neither can the libraries themselves.
+    # See fxb/44278 for more info.
+    testonly = false
+
     if (defined(invoker.sdk_headers)) {
       public = []
       foreach(header, invoker.sdk_headers) {
@@ -41,8 +61,10 @@ template("zx_library") {
       }
     }
 
-    sources = invoker.sources
-
     public_configs = [ ":$config_target_name" ]
   }
+}
+
+set_defaults("zx_library") {
+  configs = default_common_binary_configs
 }
