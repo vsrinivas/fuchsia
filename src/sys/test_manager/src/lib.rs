@@ -154,7 +154,6 @@ async fn run_test<W: std::marker::Unpin + AsyncWrite>(
                         "FAILED".to_string()
                     }
                     test_executor::Outcome::Skipped => "SKIPPED".to_string(),
-                    test_executor::Outcome::Inconclusive => "INCONCLUSIVE".to_string(),
                     test_executor::Outcome::Error => {
                         test_outcome = Outcome::Error;
                         "ERROR".to_string()

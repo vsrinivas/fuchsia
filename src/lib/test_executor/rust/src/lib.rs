@@ -36,8 +36,6 @@ pub enum Outcome {
     Failed,
     /// Test case skipped.
     Skipped,
-    /// Test outcome is inconclusive.
-    Inconclusive,
     /// Test case did not communicate the outcome.
     Error,
 }
@@ -208,7 +206,6 @@ pub async fn run_and_collect_results(
                         fidl_fuchsia_test::Status::Passed => Outcome::Passed,
                         fidl_fuchsia_test::Status::Failed => Outcome::Failed,
                         fidl_fuchsia_test::Status::Skipped => Outcome::Skipped,
-                        fidl_fuchsia_test::Status::Inconclusive => Outcome::Inconclusive,
                     },
                     // This will happen when test protocol is not properly implemented
                     // by the test and it forgets to set the outcome.

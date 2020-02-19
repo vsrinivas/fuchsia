@@ -90,7 +90,6 @@ pub async fn run_test<W: Write>(
                         test_outcome = TestOutcome::Error;
                         "ERROR".to_string()
                     }
-                    test_executor::Outcome::Inconclusive => "INCONCLUSIVE".to_string(),
                 };
                 writeln!(writer, "[{}]\t{}", outcome_str, test_case_name)
                     .expect("Cannot write logs");

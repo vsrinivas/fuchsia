@@ -30,18 +30,6 @@ enum Status {
     /// The test was disabled by the developer.
     /// A precondition for running the test was not satisfied.
     SKIPPED = 3;
-
-    /// The test was inconclusive.
-    /// An inconclusive outcome typically indicates a problem that is unrelated
-    /// to the subject under test.
-    ///
-    /// Examples:
-    /// The test could not accurately determine whether the intended
-    /// behavior was actually observed.
-    /// The test was canceled prior to completion.
-    /// The test infrastructure needed to run the test was not available.
-    /// An unknown error occurred while attempting to run the test.
-    INCONCLUSIVE = 4;
 };
 
 /// Specification of a test to run.
