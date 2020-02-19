@@ -34,7 +34,6 @@ using fuchsia::sys::TerminationReason;
 
 namespace {
 constexpr char kEnvPrefix[] = "test_env_";
-constexpr char kConfigPath[] = "/pkgfs/packages/run_test_component/0/data/environment.config";
 
 void PrintUsage() {
   fprintf(stderr, R"(
@@ -108,13 +107,6 @@ bool ConnectToRequiredEnvironment(const run::EnvironmentType& env_type, zx::chan
 }  // namespace
 
 int main(int argc, const char** argv) {
-  run::EnvironmentConfig config;
-  config.ParseFromFile(kConfigPath);
-  if (config.HasError()) {
-    fprintf(stderr, "Error parsing config file %s: %s\n", kConfigPath, config.error_str().c_str());
-    return 1;
-  }
-
   // Services which we get from /svc. They might be different depending on in which shell this
   // binary is launched from, so can't use it to create underlying environment.
   auto namespace_services = sys::ServiceDirectory::CreateFromNamespace();
@@ -187,8 +179,9 @@ int main(int argc, const char** argv) {
   fuchsia::sys::LauncherPtr launcher;
   std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_env;
 
-  auto map_entry = config.url_map().find(parse_result.launch_info.url);
-  if (map_entry != config.url_map().end()) {
+  run::EnvironmentConfig config;
+  auto map_entry = config.url_map()->find(parse_result.launch_info.url);
+  if (map_entry != config.url_map()->end()) {
     if (test_metadata.HasServices()) {
       fprintf(stderr,
               "Cannot run this test in sys/root environment as it defines "
