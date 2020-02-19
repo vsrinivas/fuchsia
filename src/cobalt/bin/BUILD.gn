@@ -78,8 +78,17 @@ test_package("cobalt_tests") {
       # instead. This version is run in the stand-alone cobalt_client CI.
       # It should not be run outside of CI, since it populates a test pipeline
       # whose output is inspected.
-      disabled = true
-      environments = basic_envs
+      environments = [
+        {
+          dimensions = {
+            # The test doesn't care about what device it runs on, but it needs
+            # internet acess. As of writing, this is the only device type that
+            # has that.
+            device_type = "Intel NUC Kit NUC7i5DNHE"
+          }
+          tags = [ "cobalt-prober" ]
+        },
+      ]
     },
   ]
 }
