@@ -53,6 +53,7 @@ test_package("shell_tests") {
     "//src/developer/shell/josh/lib:js_libs",
     "//src/developer/shell/josh/lib:spawn_child_test_util",
     "//src/developer/shell/mirror:sh_mirror_tests_bin",
+    "//src/developer/shell/parser:parser_tests_bin",
   ]
 
   binaries = [
@@ -68,6 +69,10 @@ test_package("shell_tests") {
     },
     {
       name = "josh_tests_bin"
+      environments = basic_envs
+    },
+    {
+      name = "parser_tests_bin"
       environments = basic_envs
     },
   ]
