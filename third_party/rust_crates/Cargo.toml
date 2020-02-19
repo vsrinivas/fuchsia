@@ -178,6 +178,7 @@ indoc = "0.3.3"
 pulldown-cmark = "0.6.0"
 proc-macro2 = "1.0.1"
 quote = "1.0.2"
+signal-hook = "0.1.13"
 syn = { version = "1.0.5", features = ["full", "visit-mut", "extra-traits"] }
 synstructure = "0.12.1"
 tar = "0.4.25"

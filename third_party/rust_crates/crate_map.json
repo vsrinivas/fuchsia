@@ -993,6 +993,11 @@
             "package_name": "serde_json"
         },
         {
+            "crate_name": "signal_hook",
+            "crate_type": "lib",
+            "package_name": "signal-hook"
+        },
+        {
             "crate_name": "slab",
             "crate_type": "lib",
             "package_name": "slab"
