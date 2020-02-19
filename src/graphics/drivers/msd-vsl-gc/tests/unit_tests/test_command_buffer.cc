@@ -2,66 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "test_command_buffer.h"
+
 #include "gtest/gtest.h"
 #include "helper/platform_device_helper.h"
 #include "src/graphics/drivers/msd-vsl-gc/src/command_buffer.h"
 #include "src/graphics/drivers/msd-vsl-gc/src/instructions.h"
 #include "src/graphics/drivers/msd-vsl-gc/src/msd_vsl_device.h"
-
-class TestCommandBuffer : public ::testing::Test {
- public:
-  static constexpr uint32_t kAddressSpaceIndex = 1;
-
-  void SetUp() override {
-    device_ = MsdVslDevice::Create(GetTestDeviceHandle(), true /* start_device_thread */);
-    ASSERT_NE(device_, nullptr);
-    ASSERT_TRUE(device_->IsIdle());
-
-    address_space_owner_ = std::make_unique<AddressSpaceOwner>(device_->GetBusMapper());
-    address_space_ = AddressSpace::Create(address_space_owner_.get(), kAddressSpaceIndex);
-    ASSERT_NE(address_space_, nullptr);
-
-    device_->page_table_arrays()->AssignAddressSpace(kAddressSpaceIndex, address_space_.get());
-
-    std::weak_ptr<MsdVslConnection> connection;
-    context_ = std::make_shared<MsdVslContext>(connection, address_space_);
-    ASSERT_NE(context_, nullptr);
-  }
-
- protected:
-  class AddressSpaceOwner : public AddressSpace::Owner {
-   public:
-    AddressSpaceOwner(magma::PlatformBusMapper* bus_mapper) : bus_mapper_(bus_mapper) {}
-    virtual ~AddressSpaceOwner() = default;
-
-    void AddressSpaceReleased(AddressSpace* address_space) override {}
-
-    magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_; }
-
-   private:
-    magma::PlatformBusMapper* bus_mapper_;
-  };
-
-  // Creates a buffer of |buffer_size| bytes, and maps the buffer to |gpu_addr|.
-  // |map_page_count| may be less bytes than buffer size.
-  void CreateAndMapBuffer(uint32_t buffer_size, uint32_t map_page_count, uint32_t gpu_addr,
-                          std::shared_ptr<MsdVslBuffer>* out_buffer);
-
-  // Creates a new command buffer.
-  // |data_size| is the actual length of the user provided data and may be smaller than
-  // the size of |buffer|.
-  // |signal| is an optional semaphore. If present, it will be signalled after the batch
-  // is submitted via |SubmitBatch| and execution completes.
-  void CreateAndPrepareBatch(std::shared_ptr<MsdVslBuffer> buffer, uint32_t data_size,
-                             uint32_t batch_offset,
-                             std::shared_ptr<magma::PlatformSemaphore> signal,
-                             std::unique_ptr<CommandBuffer>* out_batch);
-
-  std::unique_ptr<MsdVslDevice> device_;
-  std::shared_ptr<MsdVslContext> context_;
-  std::unique_ptr<AddressSpaceOwner> address_space_owner_;
-  std::shared_ptr<AddressSpace> address_space_;
-};
 
 void TestCommandBuffer::CreateAndMapBuffer(uint32_t buffer_size, uint32_t map_page_count,
                                            uint32_t gpu_addr,
@@ -77,11 +24,11 @@ void TestCommandBuffer::CreateAndMapBuffer(uint32_t buffer_size, uint32_t map_pa
 
   std::shared_ptr<GpuMapping> gpu_mapping;
   magma::Status status = AddressSpace::MapBufferGpu(
-      address_space_, msd_buffer, gpu_addr, 0 /* page_offset */, map_page_count, &gpu_mapping);
+      address_space(), msd_buffer, gpu_addr, 0 /* page_offset */, map_page_count, &gpu_mapping);
   ASSERT_TRUE(status.ok());
   ASSERT_NE(gpu_mapping, nullptr);
 
-  ASSERT_TRUE(address_space_->AddMapping(std::move(gpu_mapping)));
+  ASSERT_TRUE(address_space()->AddMapping(std::move(gpu_mapping)));
 
   *out_buffer = msd_buffer;
 }
@@ -97,7 +44,7 @@ void TestCommandBuffer::CreateAndPrepareBatch(std::shared_ptr<MsdVslBuffer> buff
       .wait_semaphore_count = 0,
       .signal_semaphore_count = signal ? 1 : 0u,
   });
-  auto batch = std::make_unique<CommandBuffer>(context_, 0, std::move(command_buffer));
+  auto batch = std::make_unique<CommandBuffer>(context(), 0, std::move(command_buffer));
   ASSERT_NE(batch, nullptr);
 
   std::vector<CommandBuffer::ExecResource> resources;
@@ -113,40 +60,6 @@ void TestCommandBuffer::CreateAndPrepareBatch(std::shared_ptr<MsdVslBuffer> buff
                                          std::move(signal_semaphores)));
   ASSERT_TRUE(batch->PrepareForExecution());
   *out_batch = std::move(batch);
-}
-
-// Tests submitting a simple batch that also provides a non-zero batch offset.
-TEST_F(TestCommandBuffer, SubmitBatchWithOffset) {
-  constexpr uint32_t kBufferSize = 4096;
-  constexpr uint32_t kMapPageCount = 1;
-  constexpr uint32_t kDataSize = 4;
-  // The user data will start at a non-zero offset.
-  constexpr uint32_t kBatchOffset = 80;
-  constexpr uint32_t gpu_addr = 0x10000;
-
-  std::shared_ptr<MsdVslBuffer> buffer;
-  ASSERT_NO_FATAL_FAILURE(CreateAndMapBuffer(kBufferSize, kMapPageCount, gpu_addr, &buffer));
-
-  // Write a WAIT command at offset |kBatchOffset|.
-  uint32_t* cmd_ptr;
-  ASSERT_TRUE(buffer->platform_buffer()->MapCpu(reinterpret_cast<void**>(&cmd_ptr)));
-  BufferWriter buf_writer(cmd_ptr, kBufferSize, kBatchOffset);
-  MiWait::write(&buf_writer);
-  ASSERT_TRUE(buffer->platform_buffer()->UnmapCpu());
-
-  // Submit the batch and verify we get a completion event.
-  auto semaphore = magma::PlatformSemaphore::Create();
-  EXPECT_NE(semaphore, nullptr);
-
-  std::unique_ptr<CommandBuffer> batch;
-  ASSERT_NO_FATAL_FAILURE(
-      CreateAndPrepareBatch(buffer, kDataSize, kBatchOffset, semaphore->Clone(), &batch));
-  ASSERT_TRUE(batch->IsValidBatchBuffer());
-
-  ASSERT_TRUE(device_->SubmitBatch(std::move(batch)).ok());
-
-  constexpr uint64_t kTimeoutMs = 1000;
-  EXPECT_EQ(MAGMA_STATUS_OK, semaphore->Wait(kTimeoutMs).get());
 }
 
 // Unit tests for |IsValidBatchBatch|.

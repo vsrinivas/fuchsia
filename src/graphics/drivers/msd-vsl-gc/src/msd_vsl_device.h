@@ -185,7 +185,7 @@ class MsdVslDevice : public msd_device_t,
 
   friend class TestMsdVslDevice;
   friend class TestCommandBuffer;
-  friend class TestCommandBuffer_SubmitBatchWithOffset_Test;
+  friend class TestExec_SubmitBatchWithOffset_Test;
   friend class TestEvents;
   friend class TestEvents_AllocAndFree_Test;
   friend class TestEvents_Submit_Test;
