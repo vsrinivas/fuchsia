@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BUS_VIRTIO_DRIVER_UTILS_H_
-#define ZIRCON_SYSTEM_DEV_BUS_VIRTIO_DRIVER_UTILS_H_
+#ifndef SRC_DEVICES_BUS_LIB_VIRTIO_DRIVER_UTILS_H_
+#define SRC_DEVICES_BUS_LIB_VIRTIO_DRIVER_UTILS_H_
 
 #include <lib/fit/result.h>
 #include <stdlib.h>
@@ -42,4 +42,4 @@ zx_status_t CreateAndBind(void* /*ctx*/, zx_device_t* device) {
   return status;
 }
 
-#endif  // ZIRCON_SYSTEM_DEV_BUS_VIRTIO_DRIVER_UTILS_H_
+#endif  // SRC_DEVICES_BUS_LIB_VIRTIO_DRIVER_UTILS_H_

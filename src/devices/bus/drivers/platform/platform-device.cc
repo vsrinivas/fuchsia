@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/syscalls/resource.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -16,7 +17,6 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <fbl/function.h>
-#include <zircon/syscalls/resource.h>
 
 #include "platform-bus.h"
 
@@ -40,7 +40,11 @@ zx_status_t PlatformDevice::Create(const pbus_dev_t* pdev, zx_device_t* parent, 
 
 PlatformDevice::PlatformDevice(zx_device_t* parent, PlatformBus* bus, Type type,
                                const pbus_dev_t* pdev)
-    : PlatformDeviceType(parent), bus_(bus), type_(type), vid_(pdev->vid), pid_(pdev->pid),
+    : PlatformDeviceType(parent),
+      bus_(bus),
+      type_(type),
+      vid_(pdev->vid),
+      pid_(pdev->pid),
       did_(pdev->did) {
   strlcpy(name_, pdev->name, sizeof(name_));
 }
@@ -69,11 +73,10 @@ zx_status_t PlatformDevice::Init(const pbus_dev_t* pdev) {
     pbus_ops_.protocol_device_add = [](void* ctx, uint32_t proto_id, const pbus_dev_t* dev) {
       return ZX_ERR_NOT_SUPPORTED;
     };
-    pbus_ops_.composite_device_add = [](void* ctx, const pbus_dev_t* dev,
-                                        const device_component_t* components_list,
-                                        size_t components_count,
-                                        uint32_t t_coresident_device_index)
-                                        { return ZX_ERR_NOT_SUPPORTED; };
+    pbus_ops_.composite_device_add =
+        [](void* ctx, const pbus_dev_t* dev, const device_component_t* components_list,
+           size_t components_count,
+           uint32_t t_coresident_device_index) { return ZX_ERR_NOT_SUPPORTED; };
   }
 
   return ZX_OK;
@@ -417,38 +420,38 @@ zx_status_t PlatformDevice::DdkRxrpc(zx_handle_t channel) {
   resp_len = sizeof(*resp);
 
   switch (req_header->op) {
-  case PDEV_GET_MMIO:
-    status = RpcGetMmio(req->index, &resp->paddr, &resp->length, resp_handles,
-                        &resp_handle_count);
-    break;
-  case PDEV_GET_INTERRUPT:
-    status = RpcGetInterrupt(req->index, &resp->irq, &resp->mode, resp_handles,
-                             &resp_handle_count);
-    break;
-  case PDEV_GET_BTI:
-    status = RpcGetBti(req->index, resp_handles, &resp_handle_count);
-    break;
-  case PDEV_GET_SMC:
-    status = RpcGetSmc(req->index, resp_handles, &resp_handle_count);
-    break;
-  case PDEV_GET_DEVICE_INFO:
-    status = RpcGetDeviceInfo(&resp->device_info);
-    break;
-  case PDEV_GET_BOARD_INFO:
-    status = bus_->PBusGetBoardInfo(&resp->board_info);
-    break;
-  case PDEV_GET_METADATA: {
-    auto resp = reinterpret_cast<rpc_pdev_metadata_rsp_t*>(resp_buf);
-    static_assert(sizeof(*resp) == sizeof(resp_buf), "");
-    auto buf_size = static_cast<uint32_t>(sizeof(resp_buf) - sizeof(*resp_header));
-    status = RpcGetMetadata(req->index, &resp->pdev.metadata_type, resp->metadata,
-                            buf_size, &resp->pdev.metadata_length);
-    resp_len += resp->pdev.metadata_length;
-    break;
-  }
-  default:
-    zxlogf(ERROR, "%s: unknown pdev op %u\n", __func__, req_header->op);
-    return ZX_ERR_INTERNAL;
+    case PDEV_GET_MMIO:
+      status =
+          RpcGetMmio(req->index, &resp->paddr, &resp->length, resp_handles, &resp_handle_count);
+      break;
+    case PDEV_GET_INTERRUPT:
+      status =
+          RpcGetInterrupt(req->index, &resp->irq, &resp->mode, resp_handles, &resp_handle_count);
+      break;
+    case PDEV_GET_BTI:
+      status = RpcGetBti(req->index, resp_handles, &resp_handle_count);
+      break;
+    case PDEV_GET_SMC:
+      status = RpcGetSmc(req->index, resp_handles, &resp_handle_count);
+      break;
+    case PDEV_GET_DEVICE_INFO:
+      status = RpcGetDeviceInfo(&resp->device_info);
+      break;
+    case PDEV_GET_BOARD_INFO:
+      status = bus_->PBusGetBoardInfo(&resp->board_info);
+      break;
+    case PDEV_GET_METADATA: {
+      auto resp = reinterpret_cast<rpc_pdev_metadata_rsp_t*>(resp_buf);
+      static_assert(sizeof(*resp) == sizeof(resp_buf), "");
+      auto buf_size = static_cast<uint32_t>(sizeof(resp_buf) - sizeof(*resp_header));
+      status = RpcGetMetadata(req->index, &resp->pdev.metadata_type, resp->metadata, buf_size,
+                              &resp->pdev.metadata_length);
+      resp_len += resp->pdev.metadata_length;
+      break;
+    }
+    default:
+      zxlogf(ERROR, "%s: unknown pdev op %u\n", __func__, req_header->op);
+      return ZX_ERR_INTERNAL;
   }
 
   // set op to match request so zx_channel_write will return our response
@@ -496,9 +499,8 @@ zx_status_t PlatformDevice::Start() {
       {BIND_PLATFORM_DEV_PID, 0, pid_},
       {BIND_PLATFORM_DEV_DID, 0, did_},
   };
-  zx_status_t status =
-      DdkAdd(name, device_add_flags, props, fbl::count_of(props), ZX_PROTOCOL_PDEV,
-             (type_ == Isolated ? argstr : nullptr));
+  zx_status_t status = DdkAdd(name, device_add_flags, props, fbl::count_of(props), ZX_PROTOCOL_PDEV,
+                              (type_ == Isolated ? argstr : nullptr));
   if (status != ZX_OK) {
     return status;
   }

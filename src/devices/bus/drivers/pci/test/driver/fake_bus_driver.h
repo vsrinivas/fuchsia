@@ -1,16 +1,17 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_TEST_DRIVER_FAKE_BUS_DRIVER_H_
+#define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_DRIVER_FAKE_BUS_DRIVER_H_
+
+#include <ddk/device.h>
+#include <ddktl/device.h>
 
 #include "../fakes/fake_bus.h"
 #include "../fakes/fake_config.h"
 #include "../fakes/fake_pciroot.h"
 #include "../fakes/fake_upstream_node.h"
 #include "driver_tests.h"
-
-#include <ddk/device.h>
-#include <ddktl/device.h>
 
 namespace pci {
 
@@ -45,3 +46,5 @@ class FakeBusDriver : public FakeBusDriverType {
   const pci_bdf_t test_bdf_ = {PCI_TEST_BUS_ID, PCI_TEST_DEV_ID, PCI_TEST_FUNC_ID};
 };
 }  // namespace pci
+
+#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_TEST_DRIVER_FAKE_BUS_DRIVER_H_

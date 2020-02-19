@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_DEVICE_H_
+#define SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_DEVICE_H_
+
+#include <lib/zx/bti.h>
+#include <lib/zx/channel.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform/bus.h>
 #include <ddktl/protocol/platform/device.h>
 #include <fbl/vector.h>
-#include <lib/zx/bti.h>
-#include <lib/zx/channel.h>
 
 #include "device-resources.h"
 #include "proxy-protocol.h"
@@ -50,7 +52,6 @@ class PlatformDevice : public PlatformDeviceType,
     // The PDEV protocol is proxied by the devmgr "component" driver.
     Component,
   };
-
 
   // Creates a new PlatformDevice instance.
   // *flags* contains zero or more PDEV_ADD_* flags from the platform bus protocol.
@@ -111,3 +112,5 @@ class PlatformDevice : public PlatformDeviceType,
 };
 
 }  // namespace platform_bus
+
+#endif  // SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_DEVICE_H_

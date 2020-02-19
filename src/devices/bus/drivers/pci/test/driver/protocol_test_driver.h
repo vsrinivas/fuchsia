@@ -1,16 +1,19 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_TEST_DRIVER_PROTOCOL_TEST_DRIVER_H_
+#define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_DRIVER_PROTOCOL_TEST_DRIVER_H_
 
-#include "driver_tests.h"
+#include <fuchsia/device/test/c/fidl.h>
+
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/pci.h>
-#include <fuchsia/device/test/c/fidl.h>
 #include <pretty/hexdump.h>
 #include <zxtest/base/observer.h>
 #include <zxtest/zxtest.h>
+
+#include "driver_tests.h"
 
 class TestObserver : public zxtest::LifecycleObserver {
  public:
@@ -64,3 +67,5 @@ class PciProtocolTests : public zxtest::Test {
 
   ProtocolTestDriver* drv_;
 };
+
+#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_TEST_DRIVER_PROTOCOL_TEST_DRIVER_H_

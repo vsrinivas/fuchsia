@@ -5,6 +5,7 @@
 #include "device_proxy.h"
 
 #include <cstring>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 

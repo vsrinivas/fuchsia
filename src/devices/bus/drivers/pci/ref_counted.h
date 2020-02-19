@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_REF_COUNTED_H_
+#define SRC_DEVICES_BUS_DRIVERS_PCI_REF_COUNTED_H_
 
 #include <assert.h>
-#include <fbl/ref_counted.h>
 #include <zircon/compiler.h>
+
+#include <fbl/ref_counted.h>
 
 /**
  * Notes on class hierarchy and RefCounting
@@ -129,3 +131,5 @@
   void AddRef() final { ref_count_impl_.AddRef(); }                               \
   bool Release() final __WARN_UNUSED_RESULT { return ref_count_impl_.Release(); } \
   using __force_semicolon = int
+
+#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_REF_COUNTED_H_

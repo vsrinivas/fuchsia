@@ -280,7 +280,7 @@ static zx_status_t kpci_rxrpc(void* ctx, zx_handle_t ch) {
 
 err:;
   pci_msg_t resp = {
-      .hdr = {}, // initialized below
+      .hdr = {},  // initialized below
   };
   fidl_init_txn_header(&resp.hdr, req.hdr.txid, st);
   zx_handle_close(handle);

@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_ROOT_H_
+#define SRC_DEVICES_BUS_DRIVERS_PCI_ROOT_H_
+
+#include <zircon/compiler.h>
+
+#include <fbl/intrusive_wavl_tree.h>
+#include <fbl/macros.h>
+#include <fbl/ref_ptr.h>
 
 #include "allocation.h"
 #include "ref_counted.h"
 #include "upstream_node.h"
-#include <fbl/intrusive_wavl_tree.h>
-#include <fbl/macros.h>
-#include <fbl/ref_ptr.h>
-#include <zircon/compiler.h>
 
 namespace pci {
 // Forward declaration of Bus to avoid recursive header inclusion between
@@ -69,3 +72,5 @@ class PcieRoot : public PciRoot {
 };
 
 }  // namespace pci
+
+#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_ROOT_H_

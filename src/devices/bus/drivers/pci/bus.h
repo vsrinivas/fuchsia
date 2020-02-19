@@ -1,8 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_BUS_H_
-#define ZIRCON_SYSTEM_DEV_BUS_PCI_BUS_H_
+#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_BUS_H_
+#define SRC_DEVICES_BUS_DRIVERS_PCI_BUS_H_
 
 #include <list>
 #include <memory>
@@ -93,4 +93,4 @@ class Bus : public PciBusType, public BusLinkInterface {
 
 }  // namespace pci
 
-#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_BUS_H_
+#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_BUS_H_

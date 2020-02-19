@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 #include "config.h"
-#include "common.h"
 
 #include <assert.h>
+#include <inttypes.h>
+
 #include <ddk/debug.h>
 #include <ddktl/protocol/pciroot.h>
-#include <inttypes.h>
 #include <pretty/hexdump.h>
+
+#include "common.h"
 
 namespace pci {
 

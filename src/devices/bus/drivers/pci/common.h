@@ -1,8 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_COMMON_H_
-#define ZIRCON_SYSTEM_DEV_BUS_PCI_COMMON_H_
+#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_COMMON_H_
+#define SRC_DEVICES_BUS_DRIVERS_PCI_COMMON_H_
 
 #include <zircon/hw/pci.h>
 
@@ -153,4 +153,4 @@ constexpr uint64_t PCI_PIO_ADDR_SPACE_MASK = 0xFFFFFFFF;
 constexpr uint64_t PCI_PIO_ADDR_SPACE_SIZE = 0x100000000;
 #endif  // #if defined(__x86_64__)
 
-#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_COMMON_H_
+#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_COMMON_H_

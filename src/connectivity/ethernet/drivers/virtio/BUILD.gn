@@ -30,4 +30,3 @@ driver_module("virtio_ethernet") {
 migrated_manifest("virtio_ethernet-manifest") {
   deps = [ ":virtio_ethernet" ]
 }
-

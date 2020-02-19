@@ -1,8 +1,8 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef ZIRCON_SYSTEM_DEV_BUS_VIRTIO_RNG_H_
-#define ZIRCON_SYSTEM_DEV_BUS_VIRTIO_RNG_H_
+#ifndef SRC_DEVICES_BUS_DRIVERS_VIRTIO_RNG_H_
+#define SRC_DEVICES_BUS_DRIVERS_VIRTIO_RNG_H_
 
 #include <stdlib.h>
 #include <zircon/compiler.h>
@@ -58,4 +58,4 @@ class RngDevice : public Device, public ddk::Device<RngDevice> {
 
 }  // namespace virtio
 
-#endif  // ZIRCON_SYSTEM_DEV_BUS_VIRTIO_RNG_H_
+#endif  // SRC_DEVICES_BUS_DRIVERS_VIRTIO_RNG_H_

@@ -33,4 +33,3 @@ source_set("virtio") {
     "//zircon/system/banjo/ddk.protocol.pci",
   ]
 }
-

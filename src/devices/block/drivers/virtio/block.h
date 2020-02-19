@@ -1,8 +1,8 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef ZIRCON_SYSTEM_DEV_BUS_VIRTIO_BLOCK_H_
-#define ZIRCON_SYSTEM_DEV_BUS_VIRTIO_BLOCK_H_
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_VIRTIO_BLOCK_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_VIRTIO_BLOCK_H_
 
 #include <lib/sync/completion.h>
 #include <stdlib.h>
@@ -124,4 +124,4 @@ class BlockDevice : public Device,
 
 }  // namespace virtio
 
-#endif  // ZIRCON_SYSTEM_DEV_BUS_VIRTIO_BLOCK_H_
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_VIRTIO_BLOCK_H_

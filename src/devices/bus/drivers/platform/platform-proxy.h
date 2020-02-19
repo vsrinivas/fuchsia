@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_PROXY_H_
+#define SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_PROXY_H_
+
+#include <lib/zx/channel.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform/device.h>
 #include <fbl/vector.h>
-#include <lib/zx/channel.h>
 
 #include "proxy-protocol.h"
 
@@ -76,3 +78,5 @@ class PlatformProxy : public PlatformProxyType,
 };
 
 }  // namespace platform_bus
+
+#endif  // SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_PROXY_H_

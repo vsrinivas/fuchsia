@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BUS_VIRTIO_SCSI_H_
-#define ZIRCON_SYSTEM_DEV_BUS_VIRTIO_SCSI_H_
+#ifndef SRC_STORAGE_BLOCK_DRIVERS_VIRTIO_SCSI_H_
+#define SRC_STORAGE_BLOCK_DRIVERS_VIRTIO_SCSI_H_
 
 #include <lib/scsi/scsilib_controller.h>
 #include <lib/sync/completion.h>
@@ -104,4 +104,4 @@ class ScsiDevice : public virtio::Device,
 
 }  // namespace virtio
 
-#endif  // ZIRCON_SYSTEM_DEV_BUS_VIRTIO_SCSI_H_
+#endif  // SRC_STORAGE_BLOCK_DRIVERS_VIRTIO_SCSI_H_

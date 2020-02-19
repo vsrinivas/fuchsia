@@ -254,7 +254,8 @@ TEST_F(PciDeviceTests, MsiCapabilityTest) {
 
 // Ensure we parse MSIX capabilities properly in the Virtio-input device.
 TEST_F(PciDeviceTests, MsixCapabilityTest) {
-  auto& dev = CreateTestDevice(kFakeVirtioInputDeviceConfig.data(), kFakeVirtioInputDeviceConfig.max_size());
+  auto& dev = CreateTestDevice(kFakeVirtioInputDeviceConfig.data(),
+                               kFakeVirtioInputDeviceConfig.max_size());
   ASSERT_EQ(false, CURRENT_TEST_HAS_FAILURES());
   ASSERT_NE(nullptr, dev.capabilities().msix);
 

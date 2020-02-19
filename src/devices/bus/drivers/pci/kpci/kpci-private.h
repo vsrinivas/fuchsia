@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_KPCI_KPCI_PRIVATE_H_
+#define SRC_DEVICES_BUS_DRIVERS_PCI_KPCI_KPCI_PRIVATE_H_
+
+#include <zircon/fidl.h>
+#include <zircon/types.h>
 
 #include <ddk/device.h>
 #include <ddk/protocol/pciroot.h>
 #include <ddk/protocol/platform/device.h>
-#include <zircon/fidl.h>
-#include <zircon/types.h>
 
 typedef struct kpci_device {
   zx_device_t* zxdev;
@@ -81,3 +83,5 @@ typedef struct {
     zx_handle_t handle;
   };
 } pci_msg_t;
+
+#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_KPCI_KPCI_PRIVATE_H_

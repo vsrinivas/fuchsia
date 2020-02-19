@@ -10,12 +10,12 @@
 #include <string.h>
 #include <threads.h>
 
+#include <utility>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-
-#include <utility>
 
 namespace platform_bus {
 

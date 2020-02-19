@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_BUS_DRIVERS_PLATFORM_DEVICE_RESOURCES_H_
+#define SRC_DEVICES_BUS_DRIVERS_PLATFORM_DEVICE_RESOURCES_H_
 
 #include <ddk/protocol/platform/bus.h>
 #include <fbl/array.h>
@@ -45,3 +46,5 @@ class DeviceResources {
 };
 
 }  // namespace platform_bus
+
+#endif  // SRC_DEVICES_BUS_DRIVERS_PLATFORM_DEVICE_RESOURCES_H_

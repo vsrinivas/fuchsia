@@ -1,7 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_UPSTREAM_NODE_H_
+#define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_UPSTREAM_NODE_H_
 
 #include "../../ref_counted.h"
 #include "../../upstream_node.h"
@@ -30,3 +31,5 @@ class FakeUpstreamNode : public UpstreamNode {
 };
 
 }  // namespace pci
+
+#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_UPSTREAM_NODE_H_

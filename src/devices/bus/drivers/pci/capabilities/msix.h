@@ -1,8 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_CAPABILITIES_MSIX_H_
-#define ZIRCON_SYSTEM_DEV_BUS_PCI_CAPABILITIES_MSIX_H_
+#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_CAPABILITIES_MSIX_H_
+#define SRC_DEVICES_BUS_DRIVERS_PCI_CAPABILITIES_MSIX_H_
 
 #include <hwreg/bitfields.h>
 
@@ -158,4 +158,4 @@ class MsixCapability : public Capability {
 
 }  // namespace pci
 
-#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_CAPABILITIES_MSIX_H_
+#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_CAPABILITIES_MSIX_H_

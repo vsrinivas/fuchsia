@@ -1,16 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_CONFIG_H_
+#define SRC_DEVICES_BUS_DRIVERS_PCI_CONFIG_H_
 
-#include <ddk/mmio-buffer.h>
-#include <ddktl/protocol/pciroot.h>
 #include <endian.h>
-#include <hwreg/bitfields.h>
 #include <lib/mmio/mmio.h>
 #include <stdio.h>
 #include <zircon/hw/pci.h>
 #include <zircon/types.h>
+
+#include <ddk/mmio-buffer.h>
+#include <ddktl/protocol/pciroot.h>
+#include <hwreg/bitfields.h>
 
 namespace pci {
 namespace config {
@@ -241,3 +243,5 @@ class ProxyConfig final : public Config {
 };
 
 }  // namespace pci
+
+#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_CONFIG_H_

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_BUS_DRIVERS_PLATFORM_PROXY_PROTOCOL_H_
+#define SRC_DEVICES_BUS_DRIVERS_PLATFORM_PROXY_PROTOCOL_H_
 
 #include <ddk/protocol/platform/device.h>
 
@@ -62,3 +63,5 @@ struct rpc_pdev_metadata_rsp_t {
 };
 
 }  // namespace platform_bus
+
+#endif  // SRC_DEVICES_BUS_DRIVERS_PLATFORM_PROXY_PROTOCOL_H_

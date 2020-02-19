@@ -1,14 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_ECAM_H_
+#define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_ECAM_H_
 
-#include "../../common.h"
+#include <lib/mmio/mmio.h>
+#include <zircon/hw/pci.h>
 
 #include <ddktl/protocol/pciroot.h>
 #include <hwreg/bitfields.h>
-#include <lib/mmio/mmio.h>
-#include <zircon/hw/pci.h>
+
+#include "../../common.h"
 
 struct IoBaseAddress {
   uint32_t value;
@@ -293,3 +295,5 @@ class FakeEcam {
   FakeDeviceConfig* configs_;
   size_t config_cnt_;
 };
+
+#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_ECAM_H_

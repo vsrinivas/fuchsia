@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_UPSTREAM_NODE_H_
-#define ZIRCON_SYSTEM_DEV_BUS_PCI_UPSTREAM_NODE_H_
+#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_UPSTREAM_NODE_H_
+#define SRC_DEVICES_BUS_DRIVERS_PCI_UPSTREAM_NODE_H_
 
 #include <sys/types.h>
 #include <zircon/types.h>
@@ -69,4 +69,4 @@ class UpstreamNode {
 
 }  // namespace pci
 
-#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_UPSTREAM_NODE_H_
+#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_UPSTREAM_NODE_H_

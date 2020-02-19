@@ -55,8 +55,8 @@ driver_module("virtio_scsi") {
   }
   sources = [ "scsi_driver.cc" ]
   deps = [
-    "//src/devices/bus/lib/virtio",
     ":scsi_lib",
+    "//src/devices/bus/lib/virtio",
     "//src/devices/lib/driver",
     "//zircon/public/lib/ddktl",
   ]
@@ -77,9 +77,7 @@ test("virtio-block-test") {
       configs -= fdio_config
     }
   }
-  sources = [
-    "block_test.cc",
-  ]
+  sources = [ "block_test.cc" ]
   deps = [
     ":block_lib",
     "//src/devices/bus/lib/virtio",
@@ -108,9 +106,7 @@ test("virtio-scsi-test") {
       configs -= fdio_config
     }
   }
-  sources = [
-    "scsi_test.cc",
-  ]
+  sources = [ "scsi_test.cc" ]
   deps = [
     ":scsi_lib",
     "//src/devices/bus/lib/virtio",
@@ -123,7 +119,6 @@ test("virtio-scsi-test") {
     "//zircon/public/lib/zxtest",
   ]
 }
-
 
 migrated_manifest("virtio_block-manifest") {
   deps = [ ":virtio_block" ]

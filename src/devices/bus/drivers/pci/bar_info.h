@@ -1,8 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef ZIRCON_SYSTEM_DEV_BUS_PCI_BAR_INFO_H_
-#define ZIRCON_SYSTEM_DEV_BUS_PCI_BAR_INFO_H_
+#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_BAR_INFO_H_
+#define SRC_DEVICES_BUS_DRIVERS_PCI_BAR_INFO_H_
 
 #include "allocation.h"
 
@@ -19,4 +19,4 @@ struct BarInfo {
   std::unique_ptr<pci::PciAllocation> allocation;
 };
 
-#endif  // ZIRCON_SYSTEM_DEV_BUS_PCI_BAR_INFO_H_
+#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_BAR_INFO_H_

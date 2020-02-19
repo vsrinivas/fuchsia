@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_BUS_H_
+#define SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_BUS_H_
 
 #include <fuchsia/sysinfo/llcpp/fidl.h>
 #include <lib/sync/completion.h>
@@ -126,3 +127,5 @@ __BEGIN_CDECLS
 zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const char* name, const char* args,
                                 zx_handle_t rpc_channel);
 __END_CDECLS
+
+#endif  // SRC_DEVICES_BUS_DRIVERS_PLATFORM_PLATFORM_BUS_H_

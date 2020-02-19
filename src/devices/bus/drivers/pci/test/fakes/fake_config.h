@@ -1,16 +1,20 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_CONFIG_H_
+#define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_CONFIG_H_
+
+#include <lib/mmio/mmio.h>
+#include <lib/zx/vmo.h>
+#include <zircon/hw/pci.h>
+
+#include <cstdint>
+
+#include <fbl/algorithm.h>
 
 #include "../../common.h"
 #include "../../config.h"
 #include "test_device.h"
-#include <cstdint>
-#include <fbl/algorithm.h>
-#include <lib/mmio/mmio.h>
-#include <lib/zx/vmo.h>
-#include <zircon/hw/pci.h>
 
 namespace pci {
 
@@ -75,3 +79,5 @@ class FakeMmioConfig final : public MmioConfig {
 };
 
 }  // namespace pci
+
+#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_CONFIG_H_

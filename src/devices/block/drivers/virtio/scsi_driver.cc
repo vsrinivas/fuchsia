@@ -6,8 +6,8 @@
 
 #include <ddk/driver.h>
 
-#include "src/devices/bus/lib/virtio/driver_utils.h"
 #include "scsi.h"
+#include "src/devices/bus/lib/virtio/driver_utils.h"
 
 static const zx_driver_ops_t virtio_scsi_driver_ops = []() {
   zx_driver_ops_t ops = {};

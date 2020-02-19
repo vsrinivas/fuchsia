@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_BUS_VIRTIO_BACKENDS_PCI_H_
-#define ZIRCON_SYSTEM_DEV_BUS_VIRTIO_BACKENDS_PCI_H_
+#ifndef SRC_DEVICES_BUS_LIB_VIRTIO_BACKENDS_PCI_H_
+#define SRC_DEVICES_BUS_LIB_VIRTIO_BACKENDS_PCI_H_
 
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -143,4 +143,4 @@ class PciModernBackend : public PciBackend {
 
 }  // namespace virtio
 
-#endif  // ZIRCON_SYSTEM_DEV_BUS_VIRTIO_BACKENDS_PCI_H_
+#endif  // SRC_DEVICES_BUS_LIB_VIRTIO_BACKENDS_PCI_H_

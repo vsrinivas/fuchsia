@@ -1,7 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_BRIDGE_H_
+#define SRC_DEVICES_BUS_DRIVERS_PCI_BRIDGE_H_
+
+#include <sys/types.h>
+#include <zircon/compiler.h>
+#include <zircon/errors.h>
+
+#include <fbl/macros.h>
+#include <fbl/ref_ptr.h>
+#include <region-alloc/region-alloc.h>
 
 #include "allocation.h"
 #include "common.h"
@@ -9,12 +18,6 @@
 #include "device.h"
 #include "ref_counted.h"
 #include "upstream_node.h"
-#include <fbl/macros.h>
-#include <fbl/ref_ptr.h>
-#include <region-alloc/region-alloc.h>
-#include <sys/types.h>
-#include <zircon/compiler.h>
-#include <zircon/errors.h>
 
 namespace pci {
 
@@ -76,3 +79,5 @@ class Bridge : public pci::Device, public UpstreamNode {
 };
 
 }  // namespace pci
+
+#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_BRIDGE_H_

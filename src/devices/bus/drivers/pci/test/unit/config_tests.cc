@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/limits.h>
+
+#include <ddktl/protocol/pciroot.h>
+#include <zxtest/zxtest.h>
+
 #include "../../config.h"
 #include "../fakes/fake_pciroot.h"
-#include <ddktl/protocol/pciroot.h>
-#include <zircon/limits.h>
-#include <zxtest/zxtest.h>
 
 namespace pci {
 

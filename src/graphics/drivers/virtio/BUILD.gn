@@ -51,9 +51,7 @@ test("virtio-gpu-test") {
       configs -= fdio_config
     }
   }
-  sources = [
-    "gpu_test.cc",
-  ]
+  sources = [ "gpu_test.cc" ]
   deps = [
     ":gpu_lib",
     "//src/devices/bus/lib/virtio",

@@ -1,7 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef SRC_DEVICES_BUS_DRIVERS_PCI_TEST_DRIVER_DRIVER_TESTS_H_
+#define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_DRIVER_DRIVER_TESTS_H_
 
 // Constants used for the driver protocol tests.
 #include <inttypes.h>
@@ -15,3 +16,5 @@
 
 constexpr char kFakeBusDriverName[] = "pcictl";
 constexpr char kProtocolTestDriverName[] = "pciproto";
+
+#endif  // SRC_DEVICES_BUS_DRIVERS_PCI_TEST_DRIVER_DRIVER_TESTS_H_

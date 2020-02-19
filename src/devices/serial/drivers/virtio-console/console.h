@@ -1,8 +1,8 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#ifndef ZIRCON_SYSTEM_DEV_BUS_VIRTIO_CONSOLE_H_
-#define ZIRCON_SYSTEM_DEV_BUS_VIRTIO_CONSOLE_H_
+#ifndef SRC_DEVICES_BUS_DRIVERS_VIRTIO_CONSOLE_H_
+#define SRC_DEVICES_BUS_DRIVERS_VIRTIO_CONSOLE_H_
 
 #include <fuchsia/hardware/virtioconsole/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -119,4 +119,4 @@ class ConsoleDevice : public Device,
 
 }  // namespace virtio
 
-#endif  // ZIRCON_SYSTEM_DEV_BUS_VIRTIO_CONSOLE_H_
+#endif  // SRC_DEVICES_BUS_DRIVERS_VIRTIO_CONSOLE_H_
