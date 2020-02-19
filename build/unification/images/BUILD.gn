@@ -1578,7 +1578,6 @@ aggregate_manifest("migrated-image") {
     "//src/graphics/display/drivers/ssd1306:ssd1306-manifest",
     "//src/devices/clock/drivers/syn-clk:syn-clk-manifest",
     "//src/devices/shareddma/drivers/syn-dma:syn-dma-manifest",
-    "//src/devices/misc/drivers/sysinfo:sysinfo-manifest",
     "//src/devices/sysmem/drivers/sysmem:sysmem-manifest",
     "//src/media/audio/drivers/codecs/tas5782:tas5782-manifest",
     "//src/media/audio/drivers/codecs/tas5805:tas5805-manifest",

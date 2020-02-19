@@ -28,6 +28,12 @@ driver_module("platform-bus") {
   ]
   deps = [
     "//src/devices/lib/driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.clockimpl",
     "//zircon/system/banjo/ddk.protocol.gpio",
     "//zircon/system/banjo/ddk.protocol.gpioimpl",
@@ -37,15 +43,6 @@ driver_module("platform-bus") {
     "//zircon/system/banjo/ddk.protocol.powerimpl",
     "//zircon/system/banjo/ddk.protocol.sysmem",
     "//zircon/system/fidl/fuchsia-boot:c",
-
-    #TODO(puneetha) : remove c and keep only llcpp when sysinfo driver is removed
-    "//zircon/public/lib/ddk",
-    "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-sysinfo:c",
     "//zircon/system/fidl/fuchsia-sysinfo:llcpp",
   ]
 }
