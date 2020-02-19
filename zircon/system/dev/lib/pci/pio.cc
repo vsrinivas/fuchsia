@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include <assert.h>
+#include <lib/pci/pio.h>
+#include <zircon/hw/pci.h>
+#include <zircon/types.h>
+
 #include <fbl/auto_lock.h>
 #include <hw/inout.h>
 #include <hwreg/bitfields.h>
-#include <pci/pio.h>
-#include <zircon/hw/pci.h>
-#include <zircon/types.h>
 
 #ifdef __x86_64__
 

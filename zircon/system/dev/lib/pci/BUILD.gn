@@ -4,6 +4,16 @@
 
 zx_library("pci") {
   sdk = "source"
-  sdk_headers = [ "include/lib/pci/root.h" ]
-  sources = []
+  sdk_headers = [
+    "include/lib/pci/pio.h",
+    "include/lib/pci/root.h",
+  ]
+  sources = [ "pio.cc" ]
+  public_deps = [
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/zx",
+  ]
 }

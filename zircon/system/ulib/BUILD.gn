@@ -126,7 +126,6 @@ group("ulib") {
     "mipi-dsi",
     "mock-function",
     "paver",
-    "pci",
     "perftest",
     "pretty",
     "profile",

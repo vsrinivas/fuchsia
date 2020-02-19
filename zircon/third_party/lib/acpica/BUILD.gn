@@ -235,9 +235,9 @@ static_library("acpica") {
       "source/components/utilities/utxfmutex.c",
     ]
     deps = [
+      "$zx/system/dev/lib/pci",
       "$zx/system/ulib/ddk",
       "$zx/system/ulib/fbl",
-      "$zx/system/ulib/pci",
       "$zx/system/ulib/zircon-internal",
     ]
     defines = []

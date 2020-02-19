@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <lib/pci/pio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <limits.h>
 #include <pthread.h>
@@ -25,7 +26,6 @@
 #include <fbl/intrusive_hash_table.h>
 #include <fbl/intrusive_single_list.h>
 #include <hw/inout.h>
-#include <pci/pio.h>
 
 #if !defined(__x86_64__) && !defined(__x86__)
 #error "Unsupported architecture"

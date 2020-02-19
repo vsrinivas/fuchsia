@@ -4,11 +4,12 @@
 //
 #include <endian.h>
 #include <inttypes.h>
+#include <lib/pci/pio.h>
+#include <lib/pci/root.h>
 #include <zircon/compiler.h>
 #include <zircon/hw/i2c.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
-#include <lib/pci/root.h>
 
 #include <memory>
 
@@ -17,7 +18,6 @@
 #include <ddk/protocol/auxdata.h>
 #include <ddk/protocol/pciroot.h>
 #include <ddk/protocol/sysmem.h>
-#include <pci/pio.h>
 
 #include "acpi-private.h"
 #include "dev.h"
