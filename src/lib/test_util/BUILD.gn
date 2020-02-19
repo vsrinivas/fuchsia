@@ -7,9 +7,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("test_util") {
   with_unit_tests = true
   edition = "2018"
-
-  # TODO(BLD-492): Enable once testonly test_deps are properly supported.
-  # testonly = true
+  testonly = true
 
   deps = [ "//third_party/rust_crates:lazy_static" ]
 }
