@@ -856,21 +856,13 @@ struct Contents<B: Backend> {
     scroll_offset_y: u32,
     size: Size,
     composition: B::Composition,
-    full_clear_raster: Option<B::Raster>,
 }
 
 impl<B: Backend> Contents<B> {
     fn new(image: B::Image, scroll_method: ScrollMethod) -> Self {
         let composition = Composition::new(std::iter::empty(), BACKGROUND_COLOR);
 
-        Self {
-            image,
-            scroll_method,
-            scroll_offset_y: 0,
-            size: Size::zero(),
-            composition,
-            full_clear_raster: None,
-        }
+        Self { image, scroll_method, scroll_offset_y: 0, size: Size::zero(), composition }
     }
 
     fn update(
@@ -1012,15 +1004,18 @@ impl<B: Backend> Contents<B> {
                 // Damage is the full area by default.
                 let mut damage_y0 = next_y0;
                 let mut damage_y1 = next_y1;
+                let mut clear_offset = 0;
 
                 // Determine smaller damage area based on scroll direction.
                 if self.size == *size && scroll_amount < height as i32 {
                     if scroll_distance >= 0 {
                         damage_y0 = (bottom - scroll_amount as u32) % buffer_height;
                         damage_y1 = bottom % buffer_height;
+                        clear_offset = -(buffer_height as i32);
                     } else {
                         damage_y0 = top % buffer_height;
                         damage_y1 = (top + scroll_amount as u32) % buffer_height;
+                        clear_offset = buffer_height as i32;
                     }
                 }
 
@@ -1061,38 +1056,17 @@ impl<B: Backend> Contents<B> {
                 // render at the correct location in staging image.
                 let mut dy = (top / buffer_height) * buffer_height;
 
-                // Build a full clear raster if size has changed.
-                if self.size != *size {
-                    let path = {
-                        let mut path_builder = context.path_builder().unwrap();
-                        path_builder.move_to(Point::zero());
-                        path_builder.line_to(Point::new(width as f32, 0.0));
-                        path_builder.line_to(Point::new(width as f32, buffer_height as f32));
-                        path_builder.line_to(Point::new(0.0, buffer_height as f32));
-                        path_builder.line_to(Point::zero());
-                        path_builder.build()
-                    };
-                    let raster = {
-                        let mut raster_builder = context.raster_builder().unwrap();
-                        raster_builder.add(&path, Some(&Transform2D::identity()));
-                        raster_builder.build()
-                    };
-                    self.full_clear_raster.replace(raster);
-                }
-
                 // Translate intersecting paths and render bottom span if needed.
                 if bottom_y0 < bottom_y1 {
-                    let mut composition = Composition::new(
-                        std::iter::once(Layer {
-                            raster: self.full_clear_raster.clone().unwrap(),
-                            style: Style {
-                                fill_rule: FillRule::WholeTile,
-                                fill: Fill::Solid(BACKGROUND_COLOR),
-                                blend_mode: BlendMode::Over,
-                            },
-                        }),
-                        BACKGROUND_COLOR,
+                    let mut composition = Composition::new(std::iter::empty(), BACKGROUND_COLOR);
+                    let clear_dy = (dy as i32 + clear_offset) as u32;
+                    let viewport = Rect::new(
+                        Point::new(0.0, (clear_dy + bottom_y0) as f32),
+                        Size::new(width as f32, (bottom_y1 - bottom_y0) as f32),
                     );
+                    scene.set_items_ty(-(clear_dy as f32));
+                    scene.build_clear_rasters_for_viewport(context, &viewport);
+                    scene.prepend_clear_layers_to_composition(&mut composition, &viewport);
 
                     let viewport = Rect::new(
                         Point::new(0.0, (dy + bottom_y0) as f32),
@@ -1136,17 +1110,16 @@ impl<B: Backend> Contents<B> {
                     },
                 });
 
-                let mut composition = Composition::new(
-                    std::iter::once(Layer {
-                        raster: self.full_clear_raster.clone().unwrap(),
-                        style: Style {
-                            fill_rule: FillRule::WholeTile,
-                            fill: Fill::Solid(BACKGROUND_COLOR),
-                            blend_mode: BlendMode::Over,
-                        },
-                    }),
-                    BACKGROUND_COLOR,
+                let mut composition = Composition::new(std::iter::empty(), BACKGROUND_COLOR);
+
+                let clear_dy = (dy as i32 + clear_offset) as u32;
+                let viewport = Rect::new(
+                    Point::new(0.0, (clear_dy + top_y0) as f32),
+                    Size::new(width as f32, (top_y1 - top_y0) as f32),
                 );
+                scene.set_items_ty(-(clear_dy as f32));
+                scene.build_clear_rasters_for_viewport(context, &viewport);
+                scene.prepend_clear_layers_to_composition(&mut composition, &viewport);
 
                 // Translate intersecting paths and render top span.
                 let viewport = Rect::new(
