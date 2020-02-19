@@ -13,3 +13,15 @@ group("drivers") {
     "test_utils",
   ]
 }
+
+group("sherlock") {
+  testonly = true
+  deps = [
+    "bus",
+    "controller",
+    "hw_accel",
+    "isp",
+    "sensors",
+    "test_utils",
+  ]
+}
