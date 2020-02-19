@@ -76,7 +76,7 @@ def main():
             sys.stdout.write('# Though under //zircon, this build file #\n')
             sys.stdout.write('# is meant to be used in the Fuchsia GN  #\n')
             sys.stdout.write('# build.                                 #\n')
-            sys.stdout.write('# See fxb/36139.                         #\n')
+            sys.stdout.write('# See fxb/36548.                         #\n')
             sys.stdout.write('##########################################\n')
             sys.stdout.write('\n')
             sys.stdout.write('assert(!defined(zx) || zx != "/", "This file can only be used in the Fuchsia GN build.")\n')
@@ -144,7 +144,7 @@ def main():
     run_command(['git', 'checkout', '-b', 'lib-move-' + lib, 'JIRI_HEAD'])
     run_command(['git', 'add', FUCHSIA_ROOT])
     message = [
-        '[unification] Move //zircon/system/' + lib + ' to the GN build',
+        '[unification] Move //zircon/system/' + args.lib + ' to the GN build',
         '',
         'Generated with: ' + SCRIPT_LABEL + ' ' + args.lib,
         '',
