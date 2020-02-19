@@ -44,6 +44,10 @@ impl VendorCommand for GetCapabilitiesCommand {
 
 impl Decodable for GetCapabilitiesCommand {
     fn decode(buf: &[u8]) -> PacketResult<Self> {
+        if buf.len() < 1 {
+            return Err(Error::InvalidMessageLength);
+        }
+
         let capability_id = GetCapabilitiesCapabilityId::try_from(buf[0])?;
 
         Ok(Self { capability_id })
@@ -261,6 +265,12 @@ mod tests {
     }
 
     #[test]
+    /// Test GetCapabilitiesResponse decode error too short
+    fn test_get_capabilities_response_decode_bad_short() {
+        assert!(GetCapabilitiesResponse::decode(&[]).is_err());
+    }
+
+    #[test]
     /// Test GetCapabilitiesResponse event encoding (all events)
     fn test_get_capabilities_response_event_encode_all() {
         let b = GetCapabilitiesResponse::new_events(NotificationEventId::VALUES);
@@ -308,6 +318,12 @@ mod tests {
             0x01, 0x02, // two params
         ])
         .is_err());
+    }
+
+    #[test]
+    /// Test GetCapabilitiesCommand decode error too short
+    fn test_get_capabilities_command_decode_bad_short() {
+        assert!(GetCapabilitiesCommand::decode(&[]).is_err());
     }
 
     #[test]
