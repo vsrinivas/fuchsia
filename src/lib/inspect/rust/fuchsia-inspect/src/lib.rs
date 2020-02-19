@@ -24,10 +24,6 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_syslog::macros::*,
-    fuchsia_vfs_pseudo_fs_mt::{
-        directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
-        pseudo_directory, service as pseudo_fs_service,
-    },
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{future::BoxFuture, prelude::*},
     lazy_static::lazy_static,
@@ -41,6 +37,10 @@ use {
             atomic::{AtomicUsize, Ordering},
             Arc,
         },
+    },
+    vfs::{
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
+        pseudo_directory, service as pseudo_fs_service,
     },
 };
 

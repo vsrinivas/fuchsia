@@ -159,11 +159,11 @@ mod tests {
         fidl_fuchsia_data as fdata,
         fidl_fuchsia_io::NodeMarker,
         fuchsia_async as fasync,
-        fuchsia_vfs_pseudo_fs_mt::{
+        std::path::Path,
+        vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path,
             pseudo_directory,
         },
-        std::path::Path,
     };
 
     fn new_fake_pkgfs() -> DirectoryProxy {

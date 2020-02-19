@@ -26,18 +26,17 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
     fuchsia_async::EHandle,
-    fuchsia_trace as trace,
-    fuchsia_vfs_pseudo_fs_mt::{
-        directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
-        execution_scope::ExecutionScope, file::pcb::asynchronous::read_only_static,
-        path::Path as pfsPath,
-    },
-    fuchsia_zircon as zx,
+    fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::Mutex},
     std::{
         collections::HashMap,
         path::PathBuf,
         sync::{Arc, Weak},
+    },
+    vfs::{
+        directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
+        execution_scope::ExecutionScope, file::pcb::asynchronous::read_only_static,
+        path::Path as pfsPath,
     },
 };
 
@@ -702,11 +701,11 @@ mod tests {
         },
         fidl_fuchsia_io2 as fio2,
         fuchsia_async::EHandle,
-        fuchsia_vfs_pseudo_fs_mt::{
+        std::{convert::TryFrom, path::Path},
+        vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
             file::pcb::asynchronous::read_only_static, path::Path as pfsPath, pseudo_directory,
         },
-        std::{convert::TryFrom, path::Path},
     };
 
     /// Hosts an out directory with a 'foo' file.

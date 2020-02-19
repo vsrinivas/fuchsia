@@ -105,7 +105,7 @@ mod tests {
         fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
         fidl_fuchsia_sys2::ComponentDecl,
         fuchsia_async::{self as fasync, EHandle},
-        fuchsia_vfs_pseudo_fs_mt::{
+        vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
             file::pcb::asynchronous::read_only_static, path, pseudo_directory,
         },

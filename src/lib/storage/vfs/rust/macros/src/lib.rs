@@ -25,7 +25,7 @@ use {
     },
 };
 
-/// See [fuchsia-vfs/pseudo-fs-mt/src/lib.rs] for the documentation for this macro usage.
+/// See [//src/lib/storage/vfs/rust:vfs/src/lib.rs] for the documentation for this macro usage.
 //
 // TODO(fxb/35904) It would be nice to provide support for "shorthand" syntax for the on_read
 // expression.  When the value of the expression is a String, &str, &[u8], or &[u8; N] it can be
@@ -91,13 +91,13 @@ fn pseudo_directory_impl(mutable: bool, input: TokenStream) -> TokenStream {
     // Should be def_site, but it is behind cfg(procmacro2_semver_exempt).
     let span = Span::call_site();
 
-    let directory_mod: Path = parse_quote!(::fuchsia_vfs_pseudo_fs_mt::directory);
+    let directory_mod: Path = parse_quote!(::vfs::directory);
     let specific_directory_type: Path = if mutable {
         parse_quote!(#directory_mod::mutable::simple)
     } else {
         parse_quote!(#directory_mod::immutable::simple)
     };
-    let macro_mod: Path = parse_quote!(::fuchsia_vfs_pseudo_fs_mt::pseudo_directory);
+    let macro_mod: Path = parse_quote!(::vfs::pseudo_directory);
 
     let (dir_var, constructor, result) = match parsed.assign_to {
         Some(ident) => (

@@ -338,13 +338,13 @@ mod tests {
         fidl_test_processbuilder::{UtilMarker, UtilProxy},
         fuchsia_async::{self as fasync, EHandle},
         fuchsia_runtime::{job_default, HandleType},
-        fuchsia_vfs_pseudo_fs_mt::{
-            directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-            file::pcb::asynchronous::read_only_static, path, pseudo_directory,
-        },
         fuchsia_zircon::HandleBased,
         futures::lock::Mutex,
         std::{fs::File, mem, path::Path},
+        vfs::{
+            directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+            file::pcb::asynchronous::read_only_static, path, pseudo_directory,
+        },
     };
 
     extern "C" {

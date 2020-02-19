@@ -29,9 +29,6 @@ use {
     },
     fidl_fuchsia_sys2 as fsys,
     fuchsia_async::EHandle,
-    fuchsia_vfs_pseudo_fs_mt::{
-        self as fvfs, directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-    },
     fuchsia_zircon as zx,
     fuchsia_zircon::HandleBased,
     futures::lock::Mutex,
@@ -46,6 +43,7 @@ use {
         sync::Arc,
     },
     tempfile::TempDir,
+    vfs::{self as fvfs, directory::entry::DirectoryEntry, execution_scope::ExecutionScope},
 };
 
 /// Construct a capability path for the hippo service.

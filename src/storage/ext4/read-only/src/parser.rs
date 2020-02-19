@@ -41,14 +41,14 @@ use {
             MIN_EXT4_SIZE, ROOT_INODE_NUM,
         },
     },
-    fuchsia_vfs_pseudo_fs_mt::{
-        directory::immutable, file::pcb::asynchronous::read_only_const, tree_builder::TreeBuilder,
-    },
     std::{
         mem::size_of,
         path::{Component, Path},
         str,
         sync::Arc,
+    },
+    vfs::{
+        directory::immutable, file::pcb::asynchronous::read_only_const, tree_builder::TreeBuilder,
     },
 };
 

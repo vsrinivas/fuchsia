@@ -13,13 +13,13 @@ use {
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_async as fasync,
-    fuchsia_vfs_pseudo_fs_mt::{
-        self as fvfs, directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
+    futures::TryStreamExt,
+    std::{collections::HashMap, convert::TryFrom, sync::Arc},
+    vfs::{
+        self, directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
         execution_scope::ExecutionScope, file::pcb::asynchronous::read_only_const,
         tree_builder::TreeBuilder,
     },
-    futures::TryStreamExt,
-    std::{collections::HashMap, convert::TryFrom, sync::Arc},
 };
 
 /// Used to construct and then host an outgoing directory.
@@ -84,7 +84,7 @@ impl OutDir {
                 ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
                 OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                 MODE_TYPE_DIRECTORY,
-                fvfs::path::Path::empty(),
+                vfs::path::Path::empty(),
                 ServerEnd::new(server_end.into_channel()),
             );
         })

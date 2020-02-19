@@ -184,8 +184,6 @@ group("all") {
     "//src/lib/inspect/rust:tests",
     "//src/lib/intl:tests",
     "//src/lib/pkg_url:pkg_url_unittests",
-    "//src/lib/storage:fuchsia-vfs-tests",
-    "//src/lib/storage/pseudo-fs-mt/macros:tests",
     "//src/lib/ui/base_view:base_view_unittests",
     "//src/lib/url:url_tests",
     "//src/lib/uuid:uuid_tests",

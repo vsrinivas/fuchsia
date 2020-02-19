@@ -21,10 +21,6 @@ use {
     fidl_fuchsia_io::{DirectoryMarker, NodeMarker},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_async::EHandle,
-    fuchsia_vfs_pseudo_fs_mt::{
-        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-        file::pcb::asynchronous::read_only_static, path::Path, pseudo_directory,
-    },
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::{future::BoxFuture, lock::Mutex, prelude::*},
     std::{
@@ -32,6 +28,10 @@ use {
         collections::{HashMap, HashSet},
         convert::TryFrom,
         sync::{Arc, Mutex as SyncMutex},
+    },
+    vfs::{
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+        file::pcb::asynchronous::read_only_static, path::Path, pseudo_directory,
     },
 };
 

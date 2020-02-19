@@ -11,10 +11,10 @@ use {
     fidl_fuchsia_io::{MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fuchsia_async as fasync, fuchsia_runtime,
     fuchsia_syslog::fx_log_info,
-    fuchsia_vfs_pseudo_fs_mt::{
+    fuchsia_zircon as zx, io_util,
+    vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path, pseudo_directory,
     },
-    fuchsia_zircon as zx, io_util,
 };
 
 #[fasync::run_singlethreaded]

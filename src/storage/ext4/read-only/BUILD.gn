@@ -15,8 +15,8 @@ rustc_library("ext4-read-only") {
 
   deps = [
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/storage/pseudo-fs-mt",
-    "//src/lib/storage/pseudo-fs-mt/macros",
+    "//src/lib/storage/vfs/rust:vfs",
+    "//src/lib/storage/vfs/rust/macros",
     "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",

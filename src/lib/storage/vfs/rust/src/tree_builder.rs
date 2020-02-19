@@ -374,7 +374,7 @@ mod tests {
     // separate form the above.  "use crate::pseudo_directory" generates a warning referring to
     // "issue #52234 <https://github.com/rust-lang/rust/issues/52234>".
     #[proc_macro_hack(support_nested)]
-    use fuchsia_vfs_pseudo_fs_mt_macros::pseudo_directory;
+    use vfs_macros::pseudo_directory;
 
     #[test]
     fn two_files() {

@@ -103,16 +103,16 @@ pub mod pseudo_directory;
 /// };
 /// ```
 #[proc_macro_hack(support_nested)]
-pub use fuchsia_vfs_pseudo_fs_mt_macros::pseudo_directory;
+pub use vfs_macros::pseudo_directory;
 
 /// This macro is identical to [`pseudo_directory!`], except that it constructs instances of
 /// [`directory::mutable::simple()`], allowing the clients connected over the FIDL connection to
 /// modify this directory.  Clients operations are still checked against specific connection
 /// permissions as specified in the `io.fidl` protocol.
 #[proc_macro_hack(support_nested)]
-pub use fuchsia_vfs_pseudo_fs_mt_macros::mut_pseudo_directory;
+pub use vfs_macros::mut_pseudo_directory;
 
 // This allows the pseudo_directory! macro to use absolute paths within this crate to refer to the
 // helper functions. External crates that use pseudo_directory! will rely on the pseudo_directory
 // export above.
-extern crate self as fuchsia_vfs_pseudo_fs_mt;
+extern crate self as vfs;

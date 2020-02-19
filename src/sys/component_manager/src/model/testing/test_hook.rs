@@ -18,10 +18,6 @@ use {
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::DirectoryMarker,
     fuchsia_async::EHandle,
-    fuchsia_vfs_pseudo_fs_mt::{
-        directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
-        execution_scope::ExecutionScope, path::Path as pfsPath,
-    },
     fuchsia_zircon as zx,
     futures::{executor::block_on, future::BoxFuture, lock::Mutex, prelude::*},
     std::{
@@ -32,6 +28,10 @@ use {
         path::PathBuf,
         pin::Pin,
         sync::{Arc, Weak},
+    },
+    vfs::{
+        directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
+        execution_scope::ExecutionScope, path::Path as pfsPath,
     },
 };
 

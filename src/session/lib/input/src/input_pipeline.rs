@@ -281,14 +281,14 @@ mod tests {
         fidl::endpoints::create_proxy,
         fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
         fidl_fuchsia_ui_input as fidl_ui_input, fuchsia_async as fasync,
-        fuchsia_vfs_pseudo_fs_mt::{
-            directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
-            pseudo_directory, service as pseudo_fs_service,
-        },
         futures::channel::mpsc::Sender,
         futures::FutureExt,
         rand::Rng,
         std::collections::HashSet,
+        vfs::{
+            directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
+            pseudo_directory, service as pseudo_fs_service,
+        },
     };
 
     /// Returns the InputEvent sent over `sender`.

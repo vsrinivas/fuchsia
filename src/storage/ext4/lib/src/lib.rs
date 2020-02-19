@@ -9,9 +9,9 @@ use {
         structs::{self, MIN_EXT4_SIZE},
     },
     fidl_fuchsia_mem::Buffer,
-    fuchsia_vfs_pseudo_fs_mt::directory::entry::DirectoryEntry,
     fuchsia_zircon::Status,
     std::sync::Arc,
+    vfs::directory::entry::DirectoryEntry,
 };
 
 #[derive(Debug, PartialEq)]
@@ -39,7 +39,7 @@ mod tests {
     use super::construct_fs;
 
     // macros
-    use fuchsia_vfs_pseudo_fs_mt::{
+    use vfs::{
         assert_close, assert_event, assert_read, assert_read_dirents, open_as_file_assert_content,
         open_get_file_proxy_assert_ok, open_get_proxy_assert,
     };
@@ -50,11 +50,9 @@ mod tests {
             DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN, OPEN_FLAG_DESCRIBE,
             OPEN_RIGHT_READABLE,
         },
-        fuchsia_vfs_pseudo_fs_mt::directory::test_utils::{
-            run_server_client, DirentsSameInodeBuilder,
-        },
         fuchsia_zircon::Vmo,
         std::fs,
+        vfs::directory::test_utils::{run_server_client, DirentsSameInodeBuilder},
     };
 
     #[test]

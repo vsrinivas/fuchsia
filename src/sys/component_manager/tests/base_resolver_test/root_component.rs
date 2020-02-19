@@ -9,12 +9,12 @@ use {
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::*,
     fuchsia_runtime,
-    fuchsia_vfs_pseudo_fs_mt::{
+    fuchsia_zircon::{self as zx},
+    io_util,
+    vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
         pseudo_directory,
     },
-    fuchsia_zircon::{self as zx},
-    io_util,
 };
 
 #[fasync::run_singlethreaded]

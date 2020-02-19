@@ -41,7 +41,7 @@ pub type SpawnError = task::SpawnError;
 ///
 /// Actual execution will be delegated to an "upstream" executor - something that implements
 /// [`Spawn`].  In a sense, this is somewhat of an analog of a multithreaded capable
-/// [`FuturesUnordered`], but this some additional functionality specific to the pseudo-fs-mt
+/// [`FuturesUnordered`], but this some additional functionality specific to the vfs
 /// library.
 ///
 /// Use [`ExecutionScope::from_executor()`] or [`ExecutionScope::build()`] to construct new
@@ -92,7 +92,7 @@ impl ExecutionScope {
     /// returns `Pending`.  If you need to perform any shutdown operations, use
     /// [`spawn_with_shutdown`] instead.
     ///
-    /// For the "pseudo-fs-mt" library it is more convenient that this method allows non-exclusive
+    /// For the "vfs" library it is more convenient that this method allows non-exclusive
     /// access.  And as the implementation is employing internal mutability there are no downsides.
     /// This way `ExecutionScope` can actually also implement [`Spawn`] - it just was not necessary
     /// for now.
@@ -112,7 +112,7 @@ impl ExecutionScope {
     /// a message is received over the channel.  If you do not need a custom shutdown process you
     /// can use [`spawn`] method instead.
     ///
-    /// For the "pseudo-fs-mt" library it is more convenient that this method allows non-exclusive
+    /// For the "vfs" library it is more convenient that this method allows non-exclusive
     /// access.  And as the implementation is employing internal mutability there are no downsides.
     /// This way `ExecutionScope` can actually also implement [`Spawn`] - it just was not necessary
     /// for now.

@@ -20,11 +20,11 @@ use {
     },
     fuchsia_async::{self, EHandle},
     fuchsia_component::server::ServiceFs,
-    fuchsia_vfs_pseudo_fs_mt::{execution_scope::ExecutionScope, path::Path},
     futures::{
         future::TryFutureExt,
         stream::{StreamExt, TryStreamExt},
     },
+    vfs::{execution_scope::ExecutionScope, path::Path},
 };
 
 async fn run_ext4_server(mut stream: Server_RequestStream) -> Result<(), Error> {

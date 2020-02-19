@@ -22,9 +22,6 @@ use {
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_io::{self as fio, DirectoryProxy, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_vfs_pseudo_fs_mt::{
-        directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
-    },
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{
         future::{join_all, BoxFuture, Either, FutureExt},
@@ -40,6 +37,7 @@ use {
         path::PathBuf,
         sync::{Arc, Weak},
     },
+    vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path},
 };
 
 /// A realm is a container for an individual component instance and its children.  It is provided

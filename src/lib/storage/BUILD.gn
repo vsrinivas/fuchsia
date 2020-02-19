@@ -9,8 +9,8 @@ group("storage") {
   deps = [
     "fs_management",
     "pseudo-fs",
-    "pseudo-fs-mt",
     "ramdevice_client",
+    "vfs/rust:vfs",
   ]
 }
 
@@ -18,18 +18,19 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":fuchsia-vfs-tests",
+    ":vfs_tests",
     "fs_management:tests",
     "ramdevice_client:tests",
+    "vfs/rust/macros:tests",
   ]
 }
 
-test_package("fuchsia-vfs-tests") {
+test_package("vfs_tests") {
   deps = [
     "fuchsia-vfs-watcher:fuchsia-vfs-watcher_test",
     "fuchsia-watch:fuchsia-watch_test",
     "pseudo-fs:pseudo-fs_test",
-    "pseudo-fs-mt:pseudo-fs-mt_test",
+    "vfs/rust:vfs_test",
   ]
 
   tests = [
@@ -44,8 +45,8 @@ test_package("fuchsia-vfs-tests") {
       environments = basic_envs
     },
     {
-      name = "fuchsia_vfs_pseudo_fs_mt_lib_test"
-      dest = "fuchsia_vfs_pseudo_fs_mt_test"
+      name = "vfs_lib_test"
+      dest = "vfs_test"
       environments = basic_envs
     },
     {

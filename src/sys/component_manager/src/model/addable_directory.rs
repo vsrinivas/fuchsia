@@ -4,15 +4,15 @@
 
 use {
     crate::model::{error::ModelError, moniker::AbsoluteMoniker},
-    fuchsia_vfs_pseudo_fs_mt::directory::{
+    std::sync::Arc,
+    vfs::directory::{
         entry::DirectoryEntry, entry_container::DirectlyMutable, immutable::simple as pfs,
     },
-    std::sync::Arc,
 };
 
 type Directory = Arc<pfs::Simple>;
 
-/// Trait that attempts to add an entry to a pseudo-fs-mt directory, without waiting for a result.
+/// Trait that attempts to add an entry to a vfs directory, without waiting for a result.
 /// This wraps the `add_entry` method of structs that implement DirectoryEntry, streamlining
 /// the error type to `ModelError`.
 pub trait AddableDirectory {

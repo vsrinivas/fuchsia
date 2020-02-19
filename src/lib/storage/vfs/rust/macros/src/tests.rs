@@ -46,8 +46,8 @@ fn empty() {
     check_pseudo_directory_impl(
         "",
         "{ \
-             use :: fuchsia_vfs_pseudo_fs_mt :: directory :: entry_container :: DirectlyMutable ; \
-             let __dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: immutable :: simple ( ) ; \
+             use :: vfs :: directory :: entry_container :: DirectlyMutable ; \
+             let __dir = :: vfs :: directory :: immutable :: simple ( ) ; \
              __dir \
          }"
     );
@@ -63,9 +63,9 @@ fn one_entry() {
         "#
         ),
         "{ \
-             use :: fuchsia_vfs_pseudo_fs_mt :: directory :: entry_container :: DirectlyMutable ; \
-             let __dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: immutable :: simple ( ) ; \
-             :: fuchsia_vfs_pseudo_fs_mt :: pseudo_directory :: unwrap_add_entry_span ( \
+             use :: vfs :: directory :: entry_container :: DirectlyMutable ; \
+             let __dir = :: vfs :: directory :: immutable :: simple ( ) ; \
+             :: vfs :: pseudo_directory :: unwrap_add_entry_span ( \
                  \"name\" , \"Span\" , \
                  __dir . clone ( ) . add_entry ( \"name\" , read_only_static ( \"content\" ) ) ) ; \
              __dir \
@@ -84,12 +84,12 @@ fn two_entries() {
         "#
         ),
         "{ \
-             use :: fuchsia_vfs_pseudo_fs_mt :: directory :: entry_container :: DirectlyMutable ; \
-             let __dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: immutable :: simple ( ) ; \
-             :: fuchsia_vfs_pseudo_fs_mt :: pseudo_directory :: unwrap_add_entry_span ( \
+             use :: vfs :: directory :: entry_container :: DirectlyMutable ; \
+             let __dir = :: vfs :: directory :: immutable :: simple ( ) ; \
+             :: vfs :: pseudo_directory :: unwrap_add_entry_span ( \
                  \"first\" , \"Span\" , \
                  __dir . clone ( ) . add_entry ( \"first\" , read_only_static ( \"A\" ) ) ) ; \
-             :: fuchsia_vfs_pseudo_fs_mt :: pseudo_directory :: unwrap_add_entry_span ( \
+             :: vfs :: pseudo_directory :: unwrap_add_entry_span ( \
                  \"second\" , \"Span\" , \
                  __dir . clone ( ) . add_entry ( \"second\" , read_only_static ( \"B\" ) ) ) ; \
              __dir \
@@ -109,12 +109,12 @@ fn assign_to() {
         "#
         ),
         "{ \
-             use :: fuchsia_vfs_pseudo_fs_mt :: directory :: entry_container :: DirectlyMutable ; \
-             my_dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: immutable :: simple ( ) ; \
-             :: fuchsia_vfs_pseudo_fs_mt :: pseudo_directory :: unwrap_add_entry_span ( \
+             use :: vfs :: directory :: entry_container :: DirectlyMutable ; \
+             my_dir = :: vfs :: directory :: immutable :: simple ( ) ; \
+             :: vfs :: pseudo_directory :: unwrap_add_entry_span ( \
                  \"first\" , \"Span\" , \
                  my_dir . clone ( ) . add_entry ( \"first\" , read_only_static ( \"A\" ) ) ) ; \
-             :: fuchsia_vfs_pseudo_fs_mt :: pseudo_directory :: unwrap_add_entry_span ( \
+             :: vfs :: pseudo_directory :: unwrap_add_entry_span ( \
                  \"second\" , \"Span\" , \
                  my_dir . clone ( ) . add_entry ( \"second\" , read_only_static ( \"B\" ) ) ) ; \
              my_dir . clone ( ) \
@@ -132,9 +132,9 @@ fn entry_has_name_from_ref() {
         "#
         ),
         "{ \
-             use :: fuchsia_vfs_pseudo_fs_mt :: directory :: entry_container :: DirectlyMutable ; \
-             let __dir = :: fuchsia_vfs_pseudo_fs_mt :: directory :: immutable :: simple ( ) ; \
-             :: fuchsia_vfs_pseudo_fs_mt :: pseudo_directory :: unwrap_add_entry_span ( \
+             use :: vfs :: directory :: entry_container :: DirectlyMutable ; \
+             let __dir = :: vfs :: directory :: immutable :: simple ( ) ; \
+             :: vfs :: pseudo_directory :: unwrap_add_entry_span ( \
                  test_name , \"Span\" , \
                  __dir . clone ( ) . add_entry ( test_name , read_only_static ( \"content\" ) ) ) ; \
              __dir \

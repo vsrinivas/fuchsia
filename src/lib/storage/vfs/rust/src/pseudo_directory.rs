@@ -39,7 +39,7 @@ mod tests {
     use proc_macro_hack::proc_macro_hack;
 
     #[proc_macro_hack]
-    use fuchsia_vfs_pseudo_fs_mt_macros::pseudo_directory_max_filename;
+    use vfs_macros::pseudo_directory_max_filename;
 
     #[test]
     fn macros_max_filename_constant() {

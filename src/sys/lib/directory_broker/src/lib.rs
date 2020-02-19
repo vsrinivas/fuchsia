@@ -4,13 +4,13 @@
 use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, DIRENT_TYPE_SERVICE, INO_UNKNOWN},
-    fuchsia_vfs_pseudo_fs_mt as fvfs,
-    fuchsia_vfs_pseudo_fs_mt::{
+    parking_lot::Mutex,
+    std::sync::Arc,
+    vfs as fvfs,
+    vfs::{
         directory::entry::DirectoryEntry, directory::entry::EntryInfo,
         execution_scope::ExecutionScope, path::Path,
     },
-    parking_lot::Mutex,
-    std::sync::Arc,
 };
 
 pub type RoutingFn = Box<dyn FnMut(u32, u32, String, ServerEnd<NodeMarker>) + Send + Sync>;

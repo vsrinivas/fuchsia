@@ -14,7 +14,7 @@ rustc_library("directory_broker") {
 
   deps = [
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/storage/pseudo-fs-mt",
+    "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:void",

@@ -11,14 +11,14 @@ use {
     fidl_fuchsia_io_test::{HarnessRequest, TestCasesRequest, TestCasesRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_vfs_pseudo_fs_mt::{
+    fuchsia_zircon as zx,
+    futures::prelude::*,
+    vfs::{
         directory::{entry::DirectoryEntry, entry_container::DirectlyMutable, mutable::simple},
         execution_scope::ExecutionScope,
         file::vmo::asynchronous::{read_only, NewVmo},
         path::Path,
     },
-    fuchsia_zircon as zx,
-    futures::prelude::*,
 };
 
 struct Harness(HarnessRequest);

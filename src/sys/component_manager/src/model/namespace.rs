@@ -13,14 +13,14 @@ use {
     fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeMarker},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_async::EHandle,
-    fuchsia_vfs_pseudo_fs_mt::{
-        directory::entry::DirectoryEntry, directory::entry_container::DirectlyMutable,
-        directory::immutable::simple as pfs, execution_scope::ExecutionScope, path::Path,
-    },
     fuchsia_zircon as zx,
     futures::future::{AbortHandle, Abortable, BoxFuture},
     log::*,
     std::{collections::HashMap, sync::Arc},
+    vfs::{
+        directory::entry::DirectoryEntry, directory::entry_container::DirectlyMutable,
+        directory::immutable::simple as pfs, execution_scope::ExecutionScope, path::Path,
+    },
 };
 
 type Directory = Arc<pfs::Simple>;

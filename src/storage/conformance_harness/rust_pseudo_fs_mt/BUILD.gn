@@ -14,7 +14,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.io.test:fuchsia.io.test-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/storage/pseudo-fs-mt",
+    "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]

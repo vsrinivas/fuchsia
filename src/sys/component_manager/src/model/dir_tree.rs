@@ -14,9 +14,9 @@ use {
     },
     cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
     directory_broker::{DirectoryBroker, RoutingFn},
-    fuchsia_vfs_pseudo_fs_mt::directory::immutable::simple as pfs,
     std::collections::HashMap,
     std::sync::Arc,
+    vfs::directory::immutable::simple as pfs,
 };
 
 type Directory = Arc<pfs::Simple>;
@@ -211,11 +211,9 @@ mod tests {
         fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
         fidl_fuchsia_io2 as fio2,
         fuchsia_async::EHandle,
-        fuchsia_vfs_pseudo_fs_mt::{
-            directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path,
-        },
         fuchsia_zircon as zx,
         std::convert::TryFrom,
+        vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path},
     };
 
     #[fuchsia_async::run_singlethreaded(test)]

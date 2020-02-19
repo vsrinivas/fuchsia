@@ -27,13 +27,13 @@ use {
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_sys2 as fsys, files_async, fuchsia_async as fasync,
-    fuchsia_vfs_pseudo_fs_mt::directory::entry::DirectoryEntry,
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::{channel::mpsc::Receiver, StreamExt, TryStreamExt},
     std::collections::HashSet,
     std::default::Default,
     std::path::Path,
     std::sync::Arc,
+    vfs::directory::entry::DirectoryEntry,
 };
 
 pub struct ComponentInfo {

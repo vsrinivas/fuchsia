@@ -6,7 +6,7 @@ import("//build/rust/rustc_macro.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_macro("macros") {
-  name = "fuchsia_vfs_pseudo_fs_mt_macros"
+  name = "vfs_macros"
   version = "0.1.0"
   edition = "2018"
 
@@ -20,7 +20,7 @@ rustc_macro("macros") {
 
 if (host_toolchain == current_toolchain) {
   rustc_test("tests") {
-    name = "fuchsia_vfs_pseudo_fs_mt_macros_lib_test"
+    name = "vfs_macros_lib_test"
     edition = "2018"
 
     deps = [

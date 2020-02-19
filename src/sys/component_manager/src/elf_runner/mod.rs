@@ -18,18 +18,18 @@ use {
     fuchsia_async::EHandle,
     fuchsia_component::client,
     fuchsia_runtime::{job_default, HandleInfo, HandleType},
-    fuchsia_vfs_pseudo_fs_mt::{
-        directory::entry::DirectoryEntry, directory::entry_container::DirectlyMutable,
-        directory::immutable::simple as pfs, execution_scope::ExecutionScope,
-        file::pcb::asynchronous::read_only_static, path::Path as fvfsPath, pseudo_directory,
-        tree_builder::TreeBuilder,
-    },
     fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Job, Task},
     futures::future::BoxFuture,
     log::warn,
     std::convert::TryFrom,
     std::{path::Path, sync::Arc},
     thiserror::Error,
+    vfs::{
+        directory::entry::DirectoryEntry, directory::entry_container::DirectlyMutable,
+        directory::immutable::simple as pfs, execution_scope::ExecutionScope,
+        file::pcb::asynchronous::read_only_static, path::Path as fvfsPath, pseudo_directory,
+        tree_builder::TreeBuilder,
+    },
 };
 
 // Simple directory type which is used to implement `ComponentStartInfo.runtime_directory`.
