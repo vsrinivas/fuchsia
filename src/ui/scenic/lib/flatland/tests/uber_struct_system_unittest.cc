@@ -12,6 +12,8 @@
 
 #include "gmock/gmock.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/scenic/lib/flatland/global_topology_data.h"
+#include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 
 using flatland::TransformHandle;
@@ -24,7 +26,7 @@ constexpr TransformHandle::InstanceId kLinkInstanceId = 0;
 TransformHandle GetLinkHandle(uint64_t instance_id) { return {kLinkInstanceId, instance_id}; }
 
 // Creates a link in |links| to the the graph rooted at |instance_id:0|.
-void MakeLink(std::unordered_map<TransformHandle, TransformHandle>& links, uint64_t instance_id) {
+void MakeLink(flatland::LinkSystem::LinkTopologyMap& links, uint64_t instance_id) {
   links[GetLinkHandle(instance_id)] = {instance_id, 0};
 }
 
@@ -36,8 +38,7 @@ namespace test {
 // This is a macro so that, if the various test macros fail, we get a line number associated with a
 // particular call in a unit test.
 //
-// |data| is a TopologySystem::GlobalTopologyData object. |link_id| is the instance ID for link
-// handles.
+// |data| is a GlobalTopologyData object. |link_id| is the instance ID for link handles.
 #define CHECK_GLOBAL_TOPOLOGY_DATA(data, link_id)       \
   {                                                     \
     std::unordered_set<TransformHandle> all_handles;    \
@@ -235,7 +236,7 @@ TEST(UberStructSystemTest, GlobalTopologyMultithreadedUpdates) {
   };
 
   // Every relevant 0:X node should link to X:0.
-  std::unordered_map<TransformHandle, TransformHandle> links;
+  LinkSystem::LinkTopologyMap links;
   for (uint64_t i = 2; i <= 13; ++i) {
     MakeLink(links, i);
   }
@@ -278,9 +279,10 @@ TEST(UberStructSystemTest, GlobalTopologyMultithreadedUpdates) {
 
   for (uint64_t i = 0; i < kNumChecks; ++i) {
     // Because the threads always swap out each graph with an equivalent alternate graph, any
-    // intermediate state, with a mix of graphs, should always produce the same set of child counts.
-    auto output = TransformGraph::ComputeGlobalTopologyVector(system.Snapshot(), links,
-                                                              kLinkInstanceId, {1, 0});
+    // intermediate state, with a mix of graphs, should always produce the same set of parent
+    // indexes.
+    auto output = GlobalTopologyData::ComputeGlobalTopologyData(system.Snapshot(), links,
+                                                                kLinkInstanceId, {1, 0});
     CHECK_GLOBAL_TOPOLOGY_DATA(output, 0u);
 
     std::vector<uint64_t> child_counts;

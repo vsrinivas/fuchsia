@@ -6,15 +6,12 @@
 #define SRC_UI_SCENIC_LIB_FLATLAND_TRANSFORM_GRAPH_H_
 
 #include <map>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 
 namespace flatland {
-
-struct UberStruct;
 
 // Represents a set of transforms within the scope of a single Flatland instance.
 //
@@ -126,37 +123,6 @@ class TransformGraph {
   // If max_iterations is reached, the transform graph will be in an invalid state, and should be
   // reset before any further methods are called.
   TopologyData ComputeAndCleanup(TransformHandle start, uint64_t max_iterations);
-
-  // For ease of computation, we return both the topology vector, as well as a set containing every
-  // TransformHandle within that vector.
-  struct GlobalTopologyData {
-    TransformGraph::TopologyVector topology_vector;
-    std::unordered_set<TransformHandle> live_handles;
-  };
-
-  // TODO(45931): move global topology computation outside of this class to remove the dependency
-  // on UberStruct.
-
-  // Computes the topologically sorted vector consisting of all TransformHandles reachable from
-  // |root|.
-  //
-  // |root.GetInstanceId()| must be a key in |uber_structs|, and |root| must also be the first
-  // TransformHandle in the topology vector of the UberStruct at that key.
-  //
-  // When the function encounters a TransformHandle whose instance ID is the |link_instance_id|,
-  // it will search for that handle in the |links| map. If a value is found, that value is treated
-  // as the root transform for a new local topology. If this new root transform has an entry in
-  // |uber_structs| AND the first entry of that UberStruct's topology vector matches the new root
-  // transform, then the new local topology is folded into the return topological vector. If either
-  // of the aforementioned conditions is false, the TransformHandle on the other end of the link
-  // will not be included.
-  //
-  // TransformHandles with the |link_instance_id| are never included in the final topology.
-  static GlobalTopologyData ComputeGlobalTopologyVector(
-      const std::unordered_map<TransformHandle::InstanceId, std::shared_ptr<UberStruct>>&
-          uber_structs,
-      const std::unordered_map<TransformHandle, TransformHandle>& links,
-      TransformHandle::InstanceId link_instance_id, TransformHandle root);
 
  private:
   // Store each transform with a priority to allow callers to specify a single child edge to be

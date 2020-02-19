@@ -36,7 +36,7 @@ class UberStructSystem {
   void ClearUberStruct(TransformHandle::InstanceId id);
 
   // Snapshots the current map of UberStructs and returns the copy.
-  std::unordered_map<TransformHandle::InstanceId, std::shared_ptr<UberStruct>> Snapshot();
+  UberStruct::InstanceMap Snapshot();
 
   // For validating cleanup logic in tests.
   size_t GetSize();
@@ -45,10 +45,10 @@ class UberStructSystem {
   std::atomic<TransformHandle::InstanceId> next_graph_id_ = 0;
 
   // TODO(44335): This map is modified by Flatland instances when Flatland::Present() is called, and
-  // read within ComputeGlobalTopologyVector() on the render thread, producing a possible priority
+  // read within ComputeGlobalTopologyData() on the render thread, producing a possible priority
   // inversion between the two threads.
   std::mutex map_mutex_;
-  std::unordered_map<TransformHandle::InstanceId, std::shared_ptr<UberStruct>> uber_struct_map_;
+  UberStruct::InstanceMap uber_struct_map_;
 };
 
 }  // namespace flatland

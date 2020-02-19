@@ -9,6 +9,7 @@
 #include <unordered_map>
 
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
+#include "src/ui/scenic/lib/flatland/transform_handle.h"
 
 namespace flatland {
 
@@ -19,6 +20,8 @@ namespace flatland {
 // state of a Flatland instance, it must be stateless. It should contain only data and no references
 // to external resources.
 struct UberStruct {
+  using InstanceMap = std::unordered_map<TransformHandle::InstanceId, std::shared_ptr<UberStruct>>;
+
   TransformGraph::TopologyVector local_topology;
 };
 

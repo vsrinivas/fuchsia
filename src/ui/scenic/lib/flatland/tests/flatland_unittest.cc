@@ -9,9 +9,11 @@
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
+#include "src/ui/scenic/lib/flatland/global_topology_data.h"
 
 using flatland::Flatland;
 using LinkId = flatland::Flatland::LinkId;
+using flatland::GlobalTopologyData;
 using flatland::LinkSystem;
 using flatland::TransformGraph;
 using flatland::TransformHandle;
@@ -76,12 +78,12 @@ class FlatlandTest : public gtest::TestLoopFixture {
 
   Flatland CreateFlatland() { return Flatland(link_system_, uber_struct_system_); }
 
-  // The parent transform must be a topology root or ComputeGlobalTopologyVector() will crash.
+  // The parent transform must be a topology root or ComputeGlobalTopologyData() will crash.
   bool IsDescendantOf(TransformHandle parent, TransformHandle child) {
     auto snapshot = uber_struct_system_->Snapshot();
     auto links = link_system_->GetResolvedTopologyLinks();
-    auto data = TransformGraph::ComputeGlobalTopologyVector(snapshot, links,
-                                                            link_system_->GetInstanceId(), parent);
+    auto data = GlobalTopologyData::ComputeGlobalTopologyData(
+        snapshot, links, link_system_->GetInstanceId(), parent);
     for (auto entry : data.topology_vector) {
       if (entry.handle == child) {
         return true;
@@ -99,7 +101,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
     // This is a replica of the core render loop.
     auto snapshot = uber_struct_system_->Snapshot();
     auto links = link_system_->GetResolvedTopologyLinks();
-    auto data = TransformGraph::ComputeGlobalTopologyVector(
+    auto data = GlobalTopologyData::ComputeGlobalTopologyData(
         snapshot, links, link_system_->GetInstanceId(), root_transform);
     link_system_->UpdateLinks(data.topology_vector, data.live_handles);
 

@@ -29,9 +29,8 @@ void UberStructSystem::ClearUberStruct(TransformHandle::InstanceId id) {
   }
 }
 
-std::unordered_map<TransformHandle::InstanceId, std::shared_ptr<UberStruct>>
-UberStructSystem::Snapshot() {
-  std::unordered_map<TransformHandle::InstanceId, std::shared_ptr<UberStruct>> copy;
+UberStruct::InstanceMap UberStructSystem::Snapshot() {
+  UberStruct::InstanceMap copy;
 
   // Acquire the lock and copy.
   {
