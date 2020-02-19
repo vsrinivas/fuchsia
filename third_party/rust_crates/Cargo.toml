@@ -79,6 +79,7 @@ static_assertions = "1.1.0"
 structopt = "0.2.14"
 tempfile = "3.1"
 termion = "1.5.3"
+test-case = "1.0.0"
 thiserror = "1.0.9"
 timebomb = "0.1.2"
 tracing = { version = "0.1.10", features = ["log"] }

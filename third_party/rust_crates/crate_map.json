@@ -546,6 +546,11 @@
             "package_name": "termion"
         },
         {
+            "crate_name": "test_case",
+            "crate_type": "proc-macro",
+            "package_name": "test-case"
+        },
+        {
             "crate_name": "textwrap",
             "crate_type": "lib",
             "package_name": "textwrap"
@@ -1041,6 +1046,11 @@
             "crate_name": "termion",
             "crate_type": "lib",
             "package_name": "termion"
+        },
+        {
+            "crate_name": "test_case",
+            "crate_type": "proc-macro",
+            "package_name": "test-case"
         },
         {
             "crate_name": "thiserror",
