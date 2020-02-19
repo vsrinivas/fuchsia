@@ -18,6 +18,8 @@ namespace hid_input_report {
 ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report_descriptor) {
   ContactConfig contacts[fuchsia_input_report::TOUCH_MAX_CONTACTS];
   size_t num_contacts = 0;
+  hid::Attributes buttons[fuchsia_input_report::TOUCH_MAX_NUM_BUTTONS];
+  uint8_t num_buttons = 0;
   TouchInputDescriptor descriptor = {};
 
   // Traverse up the nested collections to the Application collection.
@@ -35,6 +37,9 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
   if (main_collection->usage ==
       hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTouchScreen)) {
     descriptor.touch_type = fuchsia_input_report::TouchType::TOUCHSCREEN;
+  } else if (main_collection->usage ==
+             hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTouchPad)) {
+    descriptor.touch_type = fuchsia_input_report::TouchType::TOUCHPAD;
   } else {
     return ParseResult::kParseNoCollection;
   }
@@ -43,6 +48,16 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
 
   for (size_t i = 0; i < hid_report_descriptor.input_count; i++) {
     const hid::ReportField field = hid_report_descriptor.input_fields[i];
+
+    // Process the global items.
+    if (field.attr.usage.page == hid::usage::Page::kButton) {
+      if (num_buttons == fuchsia_input_report::TOUCH_MAX_NUM_BUTTONS) {
+        return kParseTooManyItems;
+      }
+      buttons[num_buttons] = field.attr;
+      descriptor.buttons[num_buttons] = static_cast<uint8_t>(field.attr.usage.usage);
+      num_buttons++;
+    }
 
     // Process touch points. Don't process the item if it's not part of a touch point collection.
     if (field.col->usage !=
@@ -107,6 +122,11 @@ ParseResult Touch::ParseReportDescriptor(const hid::ReportDescriptor& hid_report
   for (size_t i = 0; i < num_contacts; i++) {
     contacts_[i] = contacts[i];
   }
+  for (size_t i = 0; i < num_buttons; i++) {
+    buttons_[i] = buttons[i];
+  }
+  num_buttons_ = num_buttons;
+  descriptor.num_buttons = num_buttons;
 
   descriptor.max_contacts = static_cast<uint32_t>(num_contacts);
   descriptor.num_contacts = num_contacts;
@@ -131,6 +151,18 @@ ParseResult Touch::ParseInputReport(const uint8_t* data, size_t len, InputReport
   }
 
   double value_out;
+
+  // Extract the global items.
+  for (size_t i = 0; i < num_buttons_; i++) {
+    if (hid::ExtractAsUnitType(data, len, buttons_[i], &value_out)) {
+      uint8_t pressed = (value_out > 0) ? 1 : 0;
+      if (pressed) {
+        touch_report.pressed_buttons[touch_report.num_pressed_buttons] =
+            static_cast<uint8_t>(buttons_[i].usage.usage);
+        touch_report.num_pressed_buttons++;
+      }
+    }
+  }
 
   // Extract each touch item.
   size_t contact_num = 0;

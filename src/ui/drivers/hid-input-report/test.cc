@@ -401,6 +401,34 @@ TEST_F(HidDevTest, GetTouchInputReportTest) {
   dev_ops.ops->close(dev_ops.ctx, 0);
 }
 
+TEST_F(HidDevTest, GetTouchPadDescTest) {
+  size_t desc_len;
+  const uint8_t* report_desc = get_paradise_touchpad_v1_report_desc(&desc_len);
+  std::vector<uint8_t> desc(report_desc, report_desc + desc_len);
+  fake_hid_.SetReportDesc(desc);
+
+  device_->Bind();
+
+  // Open an instance device.
+  zx_device_t* open_dev;
+  ASSERT_OK(device_->DdkOpen(&open_dev, 0));
+  // Opening the device created an instance device to be created, and we can
+  // get its arguments here.
+  ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
+
+  auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+  fuchsia_input_report::InputDevice::ResultOf::GetDescriptor result = sync_client.GetDescriptor();
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->descriptor.has_touch());
+  ASSERT_TRUE(result->descriptor.touch().has_input());
+  fuchsia_input_report::TouchInputDescriptor& touch = result->descriptor.touch().input();
+
+  ASSERT_EQ(fuchsia_input_report::TouchType::TOUCHPAD, touch.touch_type());
+
+  // Close the instance device.
+  dev_ops.ops->close(dev_ops.ctx, 0);
+}
+
 TEST_F(HidDevTest, KeyboardTest) {
   size_t keyboard_descriptor_size;
   const uint8_t* keyboard_descriptor = get_boot_kbd_report_desc(&keyboard_descriptor_size);

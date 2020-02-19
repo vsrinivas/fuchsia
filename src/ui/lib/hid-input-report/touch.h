@@ -33,6 +33,9 @@ class Touch : public Device {
   };
   ContactConfig contacts_[fuchsia_input_report::TOUCH_MAX_CONTACTS] = {};
 
+  hid::Attributes buttons_[fuchsia_input_report::TOUCH_MAX_NUM_BUTTONS] = {};
+  size_t num_buttons_ = 0;
+
   TouchDescriptor descriptor_ = {};
 
   size_t report_size_ = 0;

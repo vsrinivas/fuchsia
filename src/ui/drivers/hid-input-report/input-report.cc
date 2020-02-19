@@ -113,6 +113,9 @@ bool InputReport::ParseHidInputReportDescriptor(const hid::ReportDescriptor* rep
   } else if (collection->usage.page == ::hid::usage::Page::kDigitizer &&
              (collection->usage.usage == ::hid::usage::Digitizer::kTouchScreen)) {
     parse_device = std::make_unique<hid_input_report::Touch>();
+  } else if (collection->usage.page == ::hid::usage::Page::kDigitizer &&
+             (collection->usage.usage == ::hid::usage::Digitizer::kTouchPad)) {
+    parse_device = std::make_unique<hid_input_report::Touch>();
   } else if (collection->usage.page == ::hid::usage::Page::kGenericDesktop &&
              (collection->usage.usage == ::hid::usage::GenericDesktop::kKeyboard)) {
     parse_device = std::make_unique<hid_input_report::Keyboard>();

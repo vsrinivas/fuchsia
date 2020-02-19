@@ -128,6 +128,7 @@ struct FidlContactInputReport {
 struct FidlTouchInputReport {
   fuchsia_input_report::TouchInputReport report;
   fuchsia_input_report::TouchInputReport::UnownedBuilder builder;
+
   std::array<FidlContactInputReport, fuchsia_input_report::TOUCH_MAX_CONTACTS> contacts;
   std::array<fuchsia_input_report::ContactInputReport, fuchsia_input_report::TOUCH_MAX_CONTACTS>
       contacts_built;
