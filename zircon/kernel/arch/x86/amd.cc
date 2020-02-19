@@ -95,6 +95,46 @@ static void x86_amd_cpu_set_stibp(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
   msr->write_msr(/*index=*/X86_MSR_IA32_SPEC_CTRL, value | X86_SPEC_CTRL_STIBP);
 }
 
+void x86_amd_init_percpu_17h_zen1_quirks(cpu_id::CpuId* cpuid, MsrAccess* msr) {
+  // See: Revision Guide for AMD Family 17h Models 00h-0Fh Processors, #55449
+  auto processor_id = cpuid->ReadProcessorId();
+
+  // 1021: Load Operation May Receive Stale Data From Older Store Operation
+  uint64_t value = msr->read_msr(0xC001'1029);
+  value |= (1ull << 13);
+  msr->write_msr(0xC001'1029, value);
+
+  // 1033: A Lock Operation May Cause the System to Hang
+  if (processor_id.model() == 0x1 && processor_id.stepping() == 0x1) {
+    value = msr->read_msr(0xC001'1020);
+    value |= (1ull << 4);
+    msr->write_msr(0xC001'1020, value);
+  }
+
+  // 1049: FCMOV Instruction May Not Execute Correctly
+  value = msr->read_msr(0xC001'1028);
+  value |= (1ull << 4);
+  msr->write_msr(0xC001'1028, value);
+
+  // 1090
+  if (processor_id.model() == 0x1 && processor_id.stepping() == 0x1) {
+    value = msr->read_msr(0xC001'1023);
+    value |= (1ull << 8);
+    msr->write_msr(0xC001'1023, value);
+  }
+
+  // 1091: 4K Address Boundary Crossing Load Operation May Receive Stale Data
+  value = msr->read_msr(0xC001'102D);
+  value |= (1ull << 34);
+  msr->write_msr(0xC001'102D, value);
+
+  // 1095: Potential Violation of Read Ordering In Lock Operation in SMT Mode
+  // TODO(fxb/37450): Do not apply this workaround if SMT is disabled.
+  value = msr->read_msr(0xc001'1020);
+  value |= (1ull << 57);
+  msr->write_msr(0xC001'1020, value);
+}
+
 void x86_amd_init_percpu(void) {
   cpu_id::CpuId cpuid;
   MsrAccess msr;
@@ -109,5 +149,15 @@ void x86_amd_init_percpu(void) {
   } else if (x86_get_disable_spec_mitigations() == false &&
              cpuid.ReadFeatures().HasFeature(cpu_id::Features::AMD_STIBP_ALWAYS_ON)) {
     x86_amd_cpu_set_stibp(&cpuid, &msr);
+  }
+
+  // Quirks
+  auto processor_id = cpuid.ReadProcessorId();
+  switch (processor_id.family()) {
+  case 0x17:
+    if (processor_id.model() > 0x0 && processor_id.model() <= 0xF) {
+      x86_amd_init_percpu_17h_zen1_quirks(&cpuid, &msr);
+    }
+    break;
   }
 }
