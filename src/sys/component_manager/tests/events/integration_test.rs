@@ -92,8 +92,8 @@ async fn scoped_events_test() -> Result<(), Error> {
         events_echo.message,
         concat!(
             "Events: [",
-            "DrainedEvent { event_type: RouteCapability, target_moniker: \"./echo_server:0\", capability_id: Some(\"elf\") }, ",
-            "DrainedEvent { event_type: BeforeStartInstance, target_moniker: \"./echo_server:0\", capability_id: None }",
+            "RecordedEvent { event_type: RouteCapability, target_moniker: \"./echo_server:0\", capability_id: Some(\"elf\") }, ",
+            "RecordedEvent { event_type: BeforeStartInstance, target_moniker: \"./echo_server:0\", capability_id: None }",
             "]"
         )
     );

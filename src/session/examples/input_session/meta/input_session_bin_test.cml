@@ -4,7 +4,9 @@
         args: ["/pkg/test/input_session_bin_test",],
     },
     use: [
-        { runner: "elf" },
+        {
+            runner: "elf"
+        },
         {
             directory: "/dev/class/input-report",
             from: "realm",
@@ -13,17 +15,50 @@
             ],
         },
         {
-            protocol: "/svc/fuchsia.logger.LogSink",
+            protocol: [
+                "/svc/fuchsia.test.events.EventSourceSync",
+                "/svc/fuchsia.sys2.Realm",
+            ],
+            from: "framework"
         },
-        // The last "use" statement is needed for the RustTestAdapter trampoline
         {
-            protocol: "/svc/fuchsia.process.Launcher",
+            protocol: [
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.cobalt.LoggerFactory",
+                "/svc/fuchsia.logger.LogSink",
+            ],
         },
     ],
     expose: [
         {
             protocol: "/svc/fuchsia.test.Suite",
             from: "self",
+        },
+    ],
+    offer: [
+        {
+            protocol: "/svc/fuchsia.logger.LogSink",
+            from: "realm",
+            to: [ "#session" ],
+        },
+        {
+            directory: "/dev/class/input-report",
+            from: "realm",
+            to: [ "#session" ],
+            rights: [
+                "r*",
+            ],
+        },
+        {
+            runner: "elf",
+            from: "realm",
+            to: [ "#session" ],
+        },
+    ],
+    collections: [
+        {
+            name: "session",
+            durability: "transient",
         },
     ],
 }

@@ -26,9 +26,13 @@ rustc_binary("input_session_bin") {
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
+    "//src/session/bin/session_manager:lib",
     "//src/session/lib/input",
+    "//src/sys/component_manager/tests:test_utils_lib",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:futures-util",
     "//third_party/rust_crates:thiserror",
   ]
 }

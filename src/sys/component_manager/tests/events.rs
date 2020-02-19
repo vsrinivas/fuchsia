@@ -14,7 +14,7 @@ use {
         lock::Mutex,
         StreamExt,
     },
-    std::sync::Arc,
+    std::{convert::TryFrom, sync::Arc},
 };
 
 /// A wrapper over the EventSourceSync FIDL proxy.
@@ -124,6 +124,43 @@ impl EventSource {
 
     pub async fn start_component_tree(&self) -> Result<(), Error> {
         self.proxy.start_component_tree().await.context("could not start component tree")?;
+        Ok(())
+    }
+
+    /// Verifies that the given events are received in order. Based on the vector of events
+    /// passed in this function will subscribe to an event stream with  the relevant event types
+    /// and verify that the correct events for the component are received in the correct order.
+    ///
+    /// # Parameters
+    /// - `expected_events`: A Vector of [`RecordedEvent`]s that represent which events are
+    /// expected and in what order
+    ///
+    /// # Notes
+    /// This function only listens for events directed at a component, not its Realm so any events
+    /// with a target_moniker of "." are ignored.
+    pub async fn expect_events(&self, expected_events: Vec<RecordedEvent>) -> Result<(), Error> {
+        let mut event_types = vec![];
+        for event in &expected_events {
+            event_types.push(event.event_type);
+        }
+        event_types.dedup();
+
+        let event_stream = self.subscribe(event_types).await?;
+        let mut expected_events = expected_events;
+
+        while let Ok(event) = event_stream.next().await {
+            let recorded_event = RecordedEvent::try_from(&event)?;
+            // Skip events directed at the Realm insted of the component.
+            if recorded_event.target_moniker != "." {
+                let expected_event = expected_events.remove(0);
+                assert_eq!(expected_event, recorded_event);
+                event.resume().await?;
+                if expected_events.is_empty() {
+                    break;
+                }
+            }
+        }
+
         Ok(())
     }
 }
@@ -408,18 +445,82 @@ pub trait RoutingProtocol {
     }
 }
 
-/// Describes an event drained out by the EventSink
-#[derive(Eq, PartialEq, PartialOrd, Ord, Debug)]
-pub struct DrainedEvent {
+/// Describes an event recorded by the EventSink
+#[derive(Eq, PartialOrd, Ord, Debug)]
+pub struct RecordedEvent {
     pub event_type: fevents::EventType,
     pub target_moniker: String,
     pub capability_id: Option<String>,
 }
 
+/// This implementation of PartialEq allows comparison between `RecordedEvent`s when the order in
+/// which components are launched can't be guaranteed. Tests can use a wild card in the
+/// `target_moniker` instead of needing to have the correct number. For example a test can use the
+/// the following `RecordedEvent`
+/// ```
+/// RecordedEvent {
+///    event_type: EventType::RouteCapability,
+///    target_moniker: "./session:session:*".to_string(),
+///    capability_id: Some("elf".to_string()),
+/// },
+/// ```
+/// to match another `RecordedEvent` with the target_moniker of "./session:session:1" or
+/// "./session:session:2". If both target_monikers have numbers those numbers are still compared as
+/// expected.
+impl PartialEq<RecordedEvent> for RecordedEvent {
+    fn eq(&self, other: &RecordedEvent) -> bool {
+        let targets_match = if self.target_moniker.contains(":")
+            && other.target_moniker.contains(":")
+        {
+            let my_split = self.target_moniker.rfind(':').unwrap();
+            let my_comp = &self.target_moniker[..my_split];
+            let my_index = &self.target_moniker[my_split + 1..];
+
+            let other_split = other.target_moniker.rfind(':').unwrap();
+            let other_comp = &other.target_moniker[..other_split];
+            let other_index = &other.target_moniker[other_split + 1..];
+
+            let indicies_match =
+                if my_index == "*" || other_index == "*" { true } else { my_index == other_index };
+
+            my_comp == other_comp && indicies_match
+        } else {
+            self.target_moniker == other.target_moniker
+        };
+
+        self.event_type == other.event_type
+            && self.capability_id == other.capability_id
+            && targets_match
+    }
+}
+
+impl TryFrom<&fevents::Event> for RecordedEvent {
+    type Error = anyhow::Error;
+
+    fn try_from(event: &fevents::Event) -> Result<Self, Self::Error> {
+        // Construct the RecordedEvent from the Event
+        let event_type = event.event_type.ok_or_else(|| format_err!("No event type"))?;
+        let target_moniker =
+            event.target_moniker.as_ref().ok_or_else(|| format_err!("No target moniker"))?.clone();
+        let capability_id = if let Some(event_payload) = event.event_payload.as_ref() {
+            event_payload
+                .routing_payload
+                .as_ref()
+                .ok_or_else(|| format_err!("No event payload"))?
+                .capability_id
+                .to_owned()
+        } else {
+            None
+        };
+
+        Ok(RecordedEvent { event_type, target_moniker, capability_id })
+    }
+}
+
 /// Soaks events from an EventStream, allowing them to be
 /// drained at a later point in time.
 pub struct EventSink {
-    drained_events: Arc<Mutex<Vec<DrainedEvent>>>,
+    drained_events: Arc<Mutex<Vec<RecordedEvent>>>,
 }
 
 impl EventSink {
@@ -438,25 +539,9 @@ impl EventSink {
                         .await
                         .expect("Failed to get next event from EventStreamSync");
 
-                    // Construct the DrainedEvent from the Event
-                    let event_type = event.event_type.expect("Failed to get event type from Event");
-                    let target_moniker = event
-                        .target_moniker
-                        .as_ref()
-                        .expect("Failed to get target moniker from Event")
-                        .clone();
-                    let capability_id = if let Some(event_payload) = event.event_payload.as_ref() {
-                        event_payload
-                            .routing_payload
-                            .as_ref()
-                            .expect("Failed to get routing payload from Event")
-                            .capability_id
-                            .to_owned()
-                    } else {
-                        None
-                    };
-
-                    let drained_event = DrainedEvent { event_type, target_moniker, capability_id };
+                    // Construct the RecordedEvent from the Event
+                    let drained_event = RecordedEvent::try_from(&event)
+                        .expect("Failed to convert Event to RecordedEvent");
 
                     // Insert the event into the list
                     {
@@ -472,7 +557,7 @@ impl EventSink {
         Self { drained_events }
     }
 
-    pub async fn drain(&self) -> Vec<DrainedEvent> {
+    pub async fn drain(&self) -> Vec<RecordedEvent> {
         // Lock and drain out all events from the vector
         let mut drained_events = self.drained_events.lock().await;
         drained_events.drain(..).collect()

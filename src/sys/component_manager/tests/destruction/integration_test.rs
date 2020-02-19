@@ -12,9 +12,9 @@ use {
 
 /// Drains the required number of events, sorts them and compares them
 /// to the expected events
-fn expect_next(events: &mut Vec<DrainedEvent>, expected: Vec<DrainedEvent>) {
+fn expect_next(events: &mut Vec<RecordedEvent>, expected: Vec<RecordedEvent>) {
     let num_events: usize = min(expected.len(), events.len());
-    let mut next: Vec<DrainedEvent> = events.drain(0..num_events).collect();
+    let mut next: Vec<RecordedEvent> = events.drain(0..num_events).collect();
     next.sort_unstable();
     assert_eq!(next, expected);
 }
@@ -49,12 +49,12 @@ async fn destruction() -> Result<(), Error> {
     expect_next(
         &mut events,
         vec![
-            DrainedEvent {
+            RecordedEvent {
                 event_type: StopInstance::TYPE,
                 target_moniker: "./coll:root:1/trigger_a:0".to_string(),
                 capability_id: None,
             },
-            DrainedEvent {
+            RecordedEvent {
                 event_type: StopInstance::TYPE,
                 target_moniker: "./coll:root:1/trigger_b:0".to_string(),
                 capability_id: None,
@@ -64,7 +64,7 @@ async fn destruction() -> Result<(), Error> {
 
     expect_next(
         &mut events,
-        vec![DrainedEvent {
+        vec![RecordedEvent {
             event_type: StopInstance::TYPE,
             target_moniker: "./coll:root:1".to_string(),
             capability_id: None,
@@ -74,12 +74,12 @@ async fn destruction() -> Result<(), Error> {
     expect_next(
         &mut events,
         vec![
-            DrainedEvent {
+            RecordedEvent {
                 event_type: PostDestroyInstance::TYPE,
                 target_moniker: "./coll:root:1/trigger_a:0".to_string(),
                 capability_id: None,
             },
-            DrainedEvent {
+            RecordedEvent {
                 event_type: PostDestroyInstance::TYPE,
                 target_moniker: "./coll:root:1/trigger_b:0".to_string(),
                 capability_id: None,
@@ -89,7 +89,7 @@ async fn destruction() -> Result<(), Error> {
 
     expect_next(
         &mut events,
-        vec![DrainedEvent {
+        vec![RecordedEvent {
             event_type: PostDestroyInstance::TYPE,
             target_moniker: "./coll:root:1".to_string(),
             capability_id: None,

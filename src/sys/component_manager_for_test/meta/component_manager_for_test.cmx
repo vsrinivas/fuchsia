@@ -1,16 +1,25 @@
 {
     "program": {
+        "args": [
+            "--debug"
+        ],
         "binary": "bin/component_manager_for_test_bin"
     },
     "sandbox": {
+        "dev": [
+            "class/input-report"
+        ],
         "features": [
             "deprecated-ambient-replace-as-executable",
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.sys.Loader",
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
-            "fuchsia.logger.LogSink"
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.sys2.Realm"
         ]
     }
 }

@@ -90,6 +90,7 @@
                 "/svc/fuchsia.stash.Store",
                 "/svc/fuchsia.sys.Environment",
                 "/svc/fuchsia.sys.Launcher", // so that the session can launch cmx components
+                "/svc/fuchsia.sys2.Realm",
                 "/svc/fuchsia.timezone.Timezone",
                 "/svc/fuchsia.tracing.provider.Registry",
                 "/svc/fuchsia.ui.brightness.Control",
