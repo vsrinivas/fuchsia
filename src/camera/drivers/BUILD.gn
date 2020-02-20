@@ -11,6 +11,7 @@ group("drivers") {
     "isp",
     "sensors",
     "test_utils",
+    "usb_video",
   ]
 }
 
