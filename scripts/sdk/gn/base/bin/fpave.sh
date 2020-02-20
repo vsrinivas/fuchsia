@@ -99,10 +99,6 @@ if [[ ! -d "${FUCHSIA_SDK_PATH}" ]]; then
   exit 2
 fi
 
-if [[ ! -f "${AUTH_KEYS_FILE}" ]]; then
-    AUTH_KEYS_FILE="${FUCHSIA_SDK_PATH}/authkeys.txt"
-fi
-
 SDK_ID=$(get-sdk-version "${FUCHSIA_SDK_PATH}")
 
 if [[ ! -v  IMAGE_NAME ]]; then
@@ -181,9 +177,15 @@ if [[ "${PREPARE_ONLY}" == "yes" ]]; then
 fi
 
 if [[ ! -f "${AUTH_KEYS_FILE}" ]]; then
-  # Store the SSL auth keys to a file for sending to the device.
-  if ! ssh-add -L > "${AUTH_KEYS_FILE}"; then
-    fx-error "Cannot determine authorized keys: $(cat "${AUTH_KEYS_FILE}")."
+  if [[ "${AUTH_KEYS_FILE}" == "" ]]; then
+    AUTH_KEYS_FILE="${FUCHSIA_SDK_PATH}/authkeys.txt"
+    # Store the SSL auth keys to a file for sending to the device.
+    if ! ssh-add -L > "${AUTH_KEYS_FILE}"; then
+      fx-error "Cannot determine authorized keys: $(cat "${AUTH_KEYS_FILE}")."
+      exit 1
+    fi
+  else
+    fx-error "Argument --authorized-keys was specified as ${AUTH_KEYS_FILE} but it does not exist"
     exit 1
   fi
 fi
