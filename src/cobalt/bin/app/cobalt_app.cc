@@ -80,7 +80,7 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
   }
 
   auto internal_project_context = global_project_context_factory->NewProjectContext(
-      logger::kCustomerName, logger::kProjectName);
+      logger::kCustomerId, logger::kProjectId);
   if (!internal_project_context) {
     FX_LOGS(ERROR) << "The CobaltRegistry bundled with Cobalt does not "
                       "include the expected internal metrics project. "
