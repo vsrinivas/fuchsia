@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::packets::Error as PacketError;
 use {
     anyhow::Error,
     bt_avctp::Error as AvctpError,
@@ -20,6 +19,8 @@ use {
     },
     thiserror::Error,
 };
+
+use crate::packets::Error as PacketError;
 
 // TODO(BT-2197): change to the BT shared peer id type when the BrEdr protocol changes over.
 pub type PeerId = String;

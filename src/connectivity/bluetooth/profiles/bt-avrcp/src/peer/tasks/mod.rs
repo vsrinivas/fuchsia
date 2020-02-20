@@ -11,11 +11,11 @@ use notification_stream::NotificationStream;
 /// handler. This started only when we have connection and when we have either a target or
 /// controller SDP profile record for the current peer.
 async fn process_control_stream(peer: Arc<RwLock<RemotePeer>>) {
-    let (command_handler, connection) = {
+    let connection = {
         let peer_guard = peer.read();
 
         match peer_guard.control_channel.connection() {
-            Some(connection) => (peer_guard.command_handler.clone(), connection.clone()),
+            Some(connection) => connection.clone(),
             None => return,
         }
     };
@@ -25,9 +25,9 @@ async fn process_control_stream(peer: Arc<RwLock<RemotePeer>>) {
     while let Some(result) = command_stream.next().await {
         match result {
             Ok(command) => {
-                if let Err(e) =
-                    ControlChannelHandler::handle_command(command_handler.clone(), command).await
-                {
+                let handle_command_fut = { peer.read().command_handler.handle_command(command) };
+
+                if let Err(e) = handle_command_fut.await {
                     fx_log_info!("Command returned error from command handler {:?}", e);
                 }
             }

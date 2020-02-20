@@ -20,7 +20,7 @@ use {
         stream::{FusedStream, SelectAll, StreamExt, TryStreamExt},
         Future, Stream,
     },
-    parking_lot::{Mutex, RwLock},
+    parking_lot::RwLock,
     pin_utils::pin_mut,
     std::{
         collections::HashMap,
@@ -86,7 +86,7 @@ struct RemotePeer {
 
     /// Processes commands received as AVRCP target and holds state for continuations and requested
     /// notifications for the control channel.
-    command_handler: Arc<Mutex<ControlChannelHandler>>,
+    command_handler: ControlChannelHandler,
 
     /// Used to signal state changes and to notify and wake the state change observer currently
     /// processing this peer.
@@ -115,10 +115,7 @@ impl RemotePeer {
             control_channel: PeerChannel::Disconnected,
             controller_listeners: Vec::new(),
             profile_svc,
-            command_handler: Arc::new(Mutex::new(ControlChannelHandler::new(
-                &peer_id,
-                target_delegate,
-            ))),
+            command_handler: ControlChannelHandler::new(&peer_id, target_delegate),
             state_change_listener: StateChangeListener::new(),
             attempt_connection: true,
             notification_cache: HashMap::new(),
@@ -154,7 +151,7 @@ impl RemotePeer {
     fn reset_peer_state(&mut self) {
         fx_vlog!(tag: "avrcp", 2, "reset_peer_state {:?}", self.peer_id);
         self.notification_cache.clear();
-        self.command_handler.lock().reset();
+        self.command_handler.reset();
     }
 
     /// `attempt_reconnection` will cause state_watcher to attempt to make an outgoing connection when
