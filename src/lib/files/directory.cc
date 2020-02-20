@@ -78,6 +78,7 @@ bool ReadDirContentsAt(int root_fd, const std::string& path, std::vector<std::st
   }
   DIR* dir = fdopendir(fd);
   if (!dir) {
+    close(fd);
     return false;
   }
   struct dirent* de;
