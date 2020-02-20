@@ -279,7 +279,8 @@ TEST_F(EfiPartitionerTests, DISABLED_InitializePartitionsWithoutExplicitDevice) 
                                                     paver::Arch::kX64, std::nullopt, &partitioner));
 }
 
-TEST_F(EfiPartitionerTests, DISABLED_InitializeWithMultipleCandidateGPTsFailsWithoutExplicitDevice) {
+TEST_F(EfiPartitionerTests,
+       DISABLED_InitializeWithMultipleCandidateGPTsFailsWithoutExplicitDevice) {
   std::unique_ptr<BlockDevice> gpt_dev1, gpt_dev2;
   constexpr uint64_t kBlockCount = (1LU << 34) / kBlockSize;
   ASSERT_NO_FATAL_FAILURES(
@@ -626,7 +627,7 @@ TEST_F(SherlockPartitionerTests, DISABLED_InitializePartitionTable) {
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kZirconA, &partition));
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kZirconB, &partition));
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kZirconR, &partition));
-  EXPECT_OK(partitioner->FindPartition(paver::Partition::kABRMeta, &partition));
+  EXPECT_OK(partitioner->FindPartition(paver::Partition::kAbrMeta, &partition));
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kVbMetaA, &partition));
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kVbMetaB, &partition));
   EXPECT_OK(partitioner->FindPartition(paver::Partition::kVbMetaR, &partition));

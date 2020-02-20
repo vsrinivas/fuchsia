@@ -38,7 +38,7 @@ enum class Partition {
   kVbMetaA,
   kVbMetaB,
   kVbMetaR,
-  kABRMeta,
+  kAbrMeta,
   kFuchsiaVolumeManager,
 };
 

@@ -1230,7 +1230,7 @@ zx_status_t FixedDevicePartitioner::FindPartition(
       memcpy(type, vbmeta_r_type, GPT_GUID_LEN);
       break;
     }
-    case Partition::kABRMeta: {
+    case Partition::kAbrMeta: {
       const uint8_t abr_meta_type[GPT_GUID_LEN] = GUID_ABR_META_VALUE;
       memcpy(type, abr_meta_type, GPT_GUID_LEN);
       break;
@@ -1359,7 +1359,7 @@ zx_status_t SherlockPartitioner::FindPartition(
       memcpy(type, vbmeta_r_type, GPT_GUID_LEN);
       break;
     }
-    case Partition::kABRMeta: {
+    case Partition::kAbrMeta: {
       const uint8_t abr_meta_type[GPT_GUID_LEN] = GUID_ABR_META_VALUE;
       memcpy(type, abr_meta_type, GPT_GUID_LEN);
       break;
@@ -1656,7 +1656,7 @@ zx_status_t AstroPartitioner::FindPartition(Partition partition_type,
     case Partition::kVbMetaA:
     case Partition::kVbMetaB:
     case Partition::kVbMetaR:
-    case Partition::kABRMeta: {
+    case Partition::kAbrMeta: {
       const auto type = [&]() {
         switch (partition_type) {
           case Partition::kVbMetaA:
@@ -1665,7 +1665,7 @@ zx_status_t AstroPartitioner::FindPartition(Partition partition_type,
             return sysconfig::SyncClient::PartitionType::kVerifiedBootMetadataB;
           case Partition::kVbMetaR:
             return sysconfig::SyncClient::PartitionType::kVerifiedBootMetadataR;
-          case Partition::kABRMeta:
+          case Partition::kAbrMeta:
             return sysconfig::SyncClient::PartitionType::kABRMetadata;
           default:
             break;

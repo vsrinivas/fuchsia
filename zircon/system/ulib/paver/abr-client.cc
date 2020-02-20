@@ -204,7 +204,7 @@ zx_status_t AstroClient::Create(fbl::unique_fd devfs_root, std::unique_ptr<abr::
   }
 
   std::unique_ptr<paver::PartitionClient> partition;
-  if (zx_status_t status = partitioner->FindPartition(paver::Partition::kABRMeta, &partition);
+  if (zx_status_t status = partitioner->FindPartition(paver::Partition::kAbrMeta, &partition);
       status != ZX_OK) {
     return status;
   }
@@ -221,7 +221,7 @@ zx_status_t SherlockClient::Create(fbl::unique_fd devfs_root, std::unique_ptr<ab
   }
 
   std::unique_ptr<paver::PartitionClient> partition;
-  if (zx_status_t status = partitioner->FindPartition(paver::Partition::kABRMeta, &partition);
+  if (zx_status_t status = partitioner->FindPartition(paver::Partition::kAbrMeta, &partition);
       status != ZX_OK) {
     return status;
   }
