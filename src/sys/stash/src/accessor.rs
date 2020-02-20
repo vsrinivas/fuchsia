@@ -10,7 +10,7 @@ use fidl_fuchsia_stash::{
     MAX_KEY_SIZE, MAX_STRING_SIZE,
 };
 use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log_err, fx_log_info};
+use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon_sys;
 use futures::lock::Mutex;
 use futures::{TryFutureExt, TryStreamExt};
@@ -62,7 +62,6 @@ impl Accessor {
     /// Retrieves a value from the store. If a value has been modified and commit() hasn't been
     /// called yet, the modified version will be returned.
     pub async fn get_value<'a>(&'a self, key: &'a str) -> Result<Option<Value>, Error> {
-        fx_log_info!("retrieving value for key: {}", key);
         let store_manager = self.store_manager.lock().await;
 
         if let Some(o_val) = self.fields_updated.lock().await.get(key) {

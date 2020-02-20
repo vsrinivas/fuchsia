@@ -10,7 +10,7 @@ use anyhow::{Context as _, Error};
 use fidl::endpoints::ServiceMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_syslog::{fx_log_err, fx_log_info};
+use fuchsia_syslog::fx_log_err;
 use futures::lock::Mutex;
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use std::convert::{TryFrom, TryInto};
@@ -109,7 +109,6 @@ fn stash_server(
 ) {
     fasync::spawn(
         async move {
-            fx_log_info!("new connection");
             let mut state = instance::Instance {
                 client_name: None,
                 enable_bytes: enable_bytes,
@@ -123,7 +122,6 @@ fn stash_server(
                             control_handle.shutdown();
                             return Err(e);
                         }
-                        fx_log_info!("identified new client: {}", name);
                     }
                     StoreRequest::CreateAccessor {
                         read_only,
@@ -134,7 +132,6 @@ fn stash_server(
                             control_handle.shutdown();
                             return Err(e);
                         }
-                        fx_log_info!("created new accessor");
                     }
                 }
             }
