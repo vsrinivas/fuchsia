@@ -82,8 +82,8 @@ impl Discovery {
         }
     }
 
-    fn make_session_info_stream(
-        &mut self,
+    fn sessions_info_stream(
+        &self,
         filter: Filter,
     ) -> impl Stream<Item = (u64, SessionsWatcherEvent)> + Unpin + Send + 'static {
         let queue: Vec<FilterApplicant<(u64, PlayerEvent)>> =
@@ -91,6 +91,27 @@ impl Discovery {
         stream::iter(queue)
             .chain(self.player_update_sender.new_receiver())
             .filter_map(watcher_filter(filter))
+    }
+
+    fn single_session_info_stream(
+        &self,
+        session_id: u64,
+    ) -> impl Stream<Item = SessionInfoDelta> + Unpin + Send + 'static {
+        self.sessions_info_stream(Filter::new(WatchOptions {
+            allowed_sessions: Some(vec![session_id]),
+            ..Decodable::new_empty()
+        }))
+        .filter_map(move |(id, event)| {
+            if id != session_id {
+                fx_log_warn!(tag: LOG_TAG, "Watcher did not filter sessions by id");
+                future::ready(None)
+            } else {
+                match event {
+                    SessionsWatcherEvent::Updated(update) => future::ready(Some(update)),
+                    _ => future::ready(None),
+                }
+            }
+        })
     }
 
     /// Connects a client to a single session if that session exists.
@@ -111,22 +132,7 @@ impl Discovery {
             }
         };
 
-        let session_info_stream = self
-            .make_session_info_stream(Filter::new(WatchOptions {
-                allowed_sessions: Some(vec![session_id]),
-                ..Decodable::new_empty()
-            }))
-            .filter_map(move |(id, event)| {
-                if id != session_id {
-                    fx_log_warn!(tag: LOG_TAG, "Watcher did not filter sessions by id");
-                    future::ready(None)
-                } else {
-                    match event {
-                        SessionsWatcherEvent::Updated(update) => future::ready(Some(update)),
-                        _ => future::ready(None),
-                    }
-                }
-            });
+        let session_info_stream = self.single_session_info_stream(session_id);
 
         let (mut control_request_sink, control_request_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
         let (mut status_request_sink, status_request_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
@@ -171,7 +177,7 @@ impl Discovery {
             }
         };
 
-        let session_info_stream = self.make_session_info_stream(Filter::new(watch_options));
+        let session_info_stream = self.sessions_info_stream(Filter::new(watch_options));
         let sink = FlowControlledProxySink::from(proxy);
         let event_forward = session_info_stream.map(Ok).forward(sink).boxed();
 
