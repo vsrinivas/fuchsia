@@ -10,8 +10,8 @@ group("tests") {
   testonly = true
 
   deps = [
-    "facet_parser:tests",
     ":cmx_tests",
+    "facet_parser:tests",
   ]
 }
 
@@ -57,6 +57,9 @@ executable("cmx_unittests") {
     "//third_party/googletest:gmock",
     "//third_party/rapidjson",
   ]
+
+  # TODO(46552): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("cmx_tests") {
