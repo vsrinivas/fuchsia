@@ -14,7 +14,14 @@ enum Error {
     /// more specific statuses. Retry is optional.
     INTERNAL = 1;
 
-    // TODO: Add more error codes.
+    /// An HTTP parse error.
+    UNABLE_TO_PARSE = 2;
+
+    /// Indicates a channel (client or body sender) is closed.
+    CHANNEL_CLOSED = 3;
+
+    /// Error occurred while connecting.
+    CONNECT = 4;
 };
 
 /// An HTTP header field.
