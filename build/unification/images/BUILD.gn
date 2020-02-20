@@ -1351,7 +1351,7 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/uapp/loadgen:loadgen-manifest",
     "//src/devices/block/bin/lsblk:lsblk-manifest",
     "//src/devices/bin/lsdev:lsdev-manifest",
-    "//zircon/system/uapp/lspwr:lspwr-manifest",
+    "//src/devices/power/bin/lspwr:lspwr-manifest",
     "//src/devices/usb/bin/lsusb:lsusb-manifest",
     "//zircon/system/uapp/lz4:lz4-manifest",
     "//zircon/system/uapp/psutils:memgraph-manifest",
