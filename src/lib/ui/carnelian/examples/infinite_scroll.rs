@@ -1518,7 +1518,6 @@ impl<B: Backend, C: Context<B>> ViewAssistant for InfiniteScrollViewAssistant<B,
 }
 
 fn main() -> Result<(), Error> {
-    // TODO: Remove this trace provider when carnelian supports tracing.
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
     App::run(make_app_assistant::<InfiniteScrollAppAssistant>())

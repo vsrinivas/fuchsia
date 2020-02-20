@@ -13,6 +13,8 @@ use {
     euclid::{Angle, Point2D, Rect, Size2D, Transform2D, Vector2D},
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_sysmem::BufferCollectionTokenMarker,
+    fuchsia_trace::{self, duration},
+    fuchsia_trace_provider,
     std::{collections::BTreeMap, f32},
 };
 
@@ -400,6 +402,7 @@ impl<B: Backend, C: Context<B>> ViewAssistant for ClockfaceViewAssistant<B, C> {
     }
 
     fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+        duration!("gfx", "update");
         let canvas = context.canvas.as_ref().unwrap().borrow();
         let size = &context.size;
 
@@ -434,5 +437,7 @@ impl<B: Backend, C: Context<B>> ViewAssistant for ClockfaceViewAssistant<B, C> {
 }
 
 fn main() -> Result<(), Error> {
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
+
     App::run(make_app_assistant::<ClockfaceAppAssistant>())
 }

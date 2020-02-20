@@ -13,6 +13,8 @@ use {
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_hardware_input as hid, fidl_fuchsia_input_report as hid_input_report,
     fidl_fuchsia_sysmem::BufferCollectionTokenMarker,
+    fuchsia_trace::{self, duration},
+    fuchsia_trace_provider,
     fuchsia_zircon::{self as zx, ClockId, Time},
     rand::{thread_rng, Rng},
     std::{collections::BTreeMap, f32, fs, ops::Range},
@@ -976,6 +978,7 @@ impl<B: Backend, C: Context<B>> ViewAssistant for InkViewAssistant<B, C> {
     }
 
     fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
+        duration!("gfx", "update");
         let time_now = Time::get(ClockId::Monotonic);
         let canvas = context.canvas.as_ref().unwrap().borrow();
         let size = &context.size;
@@ -1233,5 +1236,7 @@ impl<B: Backend, C: Context<B>> ViewAssistant for InkViewAssistant<B, C> {
 }
 
 fn main() -> Result<(), Error> {
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
+
     App::run(make_app_assistant::<InkAppAssistant>())
 }
