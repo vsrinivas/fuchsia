@@ -1,0 +1,151 @@
+#!/bin/bash
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test "mkzedboot" script.
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/mkzedboot"
+  "tools/devshell/lib/image_build_vars.sh"
+  "tools/devshell/lib/vars.sh"
+)
+
+BT_MOCKED_TOOLS=(
+   # FX tools.
+  "tools/devshell/list-usb-disks"
+  "tools/devshell/lib/prebuilt.sh"
+
+  # Host tools.
+  "out/default/host-tools/cgpt"
+
+  # System utilites
+  "bin/dd"
+  "bin/diskutil"
+  "bin/eject"
+  "bin/sudo"
+)
+
+BT_MKDIR_DEPS=(
+  ".jiri_root"
+  "boards"
+  "dev"
+  "out/default"
+  "products"
+)
+
+BT_SET_UP() {
+  # Set up the testing framework.
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+
+  # Set up a dummy "image_paths.sh" file used by x64 EFI builds.
+  cat > "${BT_TEMP_DIR}/out/default/image_paths.sh" <<EOF
+    IMAGE_ZEDBOOT_ESP=zedboot.esp.blk
+EOF
+
+  # Set up a fake USB device; just a plain 128MiB file.
+  USB_DRIVE="${BT_TEMP_DIR}/dev/sda"
+  dd if=/dev/zero of="${USB_DRIVE}" bs=1024 seek=$((128*1024-1)) count=1 >/dev/null 2>/dev/null
+  echo ${USB_DRIVE} > ${BT_TEMP_DIR}/tools/devshell/list-usb-disks.mock_stdout
+
+  # Set up mocked replacements for system utils.
+  export PATH="${BT_TEMP_DIR}/bin:${PATH}"
+}
+
+# Ensure that help is displayed if not argument is given.
+TEST_fx-mkzedboot-no-args() {
+  BT_EXPECT_FAIL ${fx} mkzedboot 2> stderr
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING stderr 'device argument required'
+}
+
+# Ensure that invalid USB disks are detected.
+TEST_fx-mkzedboot-invalid-arg() {
+  BT_EXPECT_FAIL ${fx} mkzedboot /xxx/invalid 2> stderr
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING stderr 'does not look like a USB device'
+}
+
+# "force" should allow us to write to something that doesn't look like a USB device.
+TEST_fx-mkzedboot-force-write() {
+  # Modify "list-usb-disks" to not return anything as a USB disk.
+  echo > ${BT_TEMP_DIR}/tools/devshell/list-usb-disks.mock_stdout
+
+  # Force write to the USB drive.
+  BT_EXPECT ${fx} mkzedboot -f ${USB_DRIVE} 2> stderr
+
+  # Ensure we wrote to the file.
+  source "${BT_TEMP_DIR}/bin/dd.mock_state"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "of=${USB_DRIVE}"
+}
+
+# Write an EFI USB disk
+TEST_fx-mkzedboot-efi() {
+  # Set up an "image_paths.sh" file used by x64 EFI builds.
+  cat > "${BT_TEMP_DIR}/out/default/image_paths.sh" <<EOF
+    IMAGE_ZEDBOOT_ESP=zedboot.esp.blk
+EOF
+
+  # Write to /dev/sda
+  BT_ASSERT ${fx} mkzedboot ${USB_DRIVE}
+
+  # Ensure we created the GPT.
+  source "${BT_TEMP_DIR}/out/default/host-tools/cgpt.mock_state.1"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "cgpt create ${USB_DRIVE}"
+
+  # Ensure we marked the device as bootable.
+  source "${BT_TEMP_DIR}/out/default/host-tools/cgpt.mock_state.2"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "cgpt boot -p ${USB_DRIVE}"
+
+  # Ensure we added an ESP partition.
+  source "${BT_TEMP_DIR}/out/default/host-tools/cgpt.mock_state.3"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "cgpt add"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" " -t efi "
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" " -l esp "
+
+  # We should have copied the ESP version of Zedboot.
+  source "${BT_TEMP_DIR}/bin/dd.mock_state"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "zedboot.esp.blk"
+}
+
+# Write a Chromeboot vboot USB disk
+TEST_fx-mkzedboot-vboot() {
+  # Set up an "image_paths.sh" file used by x64 EFI builds.
+  cat > "${BT_TEMP_DIR}/out/default/image_paths.sh" <<EOF
+IMAGE_ZIRCONR_SIGNEDZBI=zedboot.vboot
+EOF
+
+  # Write to /dev/sda
+  BT_ASSERT ${fx} mkzedboot ${USB_DRIVE}
+
+  # Ensure we created the GPT.
+  source "${BT_TEMP_DIR}/out/default/host-tools/cgpt.mock_state.1"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "cgpt create ${USB_DRIVE}"
+
+  # Ensure we marked the device as bootable.
+  source "${BT_TEMP_DIR}/out/default/host-tools/cgpt.mock_state.2"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "cgpt boot -p ${USB_DRIVE}"
+
+  # Ensure we set up VBOOT partitions:
+  #   1. reserved
+  #   2. vboot image
+  source "${BT_TEMP_DIR}/out/default/host-tools/cgpt.mock_state.3"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "cgpt add"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" " -t reserved "
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" " -l reserved "
+  source "${BT_TEMP_DIR}/out/default/host-tools/cgpt.mock_state.4"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "cgpt add"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" " -t kernel "
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" " -l zedboot "
+
+  # Ensure we set the kernel partition to bootable.
+  source "${BT_TEMP_DIR}/out/default/host-tools/cgpt.mock_state.5"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "cgpt add -i 2"  # Modify partition
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" " -P 2 "  # Priority 2
+
+  # We should have copied the Signed ZBI version of Zedboot.
+  source "${BT_TEMP_DIR}/bin/dd.mock_state"
+  BT_EXPECT_STRING_CONTAINS_SUBSTRING "${BT_MOCK_ARGS[*]}" "zedboot.vboot"
+}
+
+BT_RUN_TESTS "$@"
