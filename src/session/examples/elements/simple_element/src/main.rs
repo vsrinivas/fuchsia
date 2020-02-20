@@ -9,6 +9,7 @@ use {
     fuchsia_async as fasync, fuchsia_component::client::connect_to_service,
 };
 
+/// An `Element` that connects to the `ElementPing` Service and calls the `ping` method.
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let element_ping = connect_to_service::<ElementPingMarker>()

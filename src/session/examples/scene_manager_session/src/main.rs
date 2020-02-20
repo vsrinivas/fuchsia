@@ -1,3 +1,7 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 use {
     anyhow::Error,
     fidl_fuchsia_ui_scenic::ScenicMarker,
@@ -10,6 +14,8 @@ use {
     scene_management::{self, SceneManager},
 };
 
+/// Connects to the `scenic` service and creates an instance of the `FlatSceneManager`. It then
+/// sets the cursor position to the middle of the screen.
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fsyslog::init_with_tags(&["scene_manager_session"]).expect("Failed to init syslog");
@@ -50,5 +56,13 @@ fn clamp(target: &mut f32, min: f32, max: f32) {
     }
     if *target > max {
         *target = max;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn dummy_test() {
+        println!("Don't panic!(), you've got this!");
     }
 }

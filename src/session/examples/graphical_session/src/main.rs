@@ -7,8 +7,8 @@ use anyhow::Error;
 mod app;
 mod view;
 
-// TODO(38577): Write example tests for the graphical session.
-
+/// Entry point for the `graphical_session`. It creates an instance of the `App`, runs it, and
+/// waits for it to finish.
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let mut app = app::App::new().await?;

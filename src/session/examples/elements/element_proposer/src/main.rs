@@ -10,6 +10,8 @@ use {
     fuchsia_component::client::connect_to_service,
 };
 
+/// Connect to the `ElementManager` service and propose two elements; the `simple_element` from
+/// these examples and `spinning_cube` from //src/experiences/examples.
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let element_manager = connect_to_service::<ElementManagerMarker>()

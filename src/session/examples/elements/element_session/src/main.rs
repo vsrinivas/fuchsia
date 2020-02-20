@@ -17,12 +17,11 @@ use {
     rand::{distributions::Alphanumeric, thread_rng, Rng},
 };
 
+/// This enum allows the session to match on incoming messages.
 enum ExposedServices {
     ElementManager(ElementManagerRequestStream),
     ElementPing(ElementPingRequestStream),
 }
-
-// TODO(38577): Write example tests for the element session.
 
 /// The child collection to add elements to. This must match a collection name declared in
 /// this session's CML file.
