@@ -131,22 +131,22 @@ struct Field final {
 // Describes the base fields present for all blocks.
 struct BlockFields {
   using Order = Field<0, 3>;
-  using Type = Field<4, 7>;
+  using Type = Field<8, 15>;
 };
 
 struct HeaderBlockFields final : public BlockFields {
-  using Version = Field<8, 31>;
+  using Version = Field<16, 31>;
   using MagicNumber = Field<32, 63>;
 };
 
 struct FreeBlockFields final : public BlockFields {
-  using NextFreeBlock = Field<8, 35>;
+  using NextFreeBlock = Field<16, 39>;
 };
 
 // Describes the fields common to all value blocks.
 struct ValueBlockFields final : public BlockFields {
-  using ParentIndex = Field<8, 35>;
-  using NameIndex = Field<36, 63>;
+  using ParentIndex = Field<16, 39>;
+  using NameIndex = Field<40, 63>;
 };
 
 struct PropertyBlockPayload final {
@@ -163,11 +163,11 @@ struct ArrayBlockPayload final {
 };
 
 struct ExtentBlockFields final : public BlockFields {
-  using NextExtentIndex = Field<8, 35>;
+  using NextExtentIndex = Field<16, 39>;
 };
 
 struct NameBlockFields final : public BlockFields {
-  using Length = Field<8, 19>;
+  using Length = Field<16, 27>;
 };
 
 struct LinkBlockPayload final {

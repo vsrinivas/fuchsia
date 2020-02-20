@@ -28,6 +28,9 @@ static_assert(kMinVmoSize >= kMaxOrderSize, "Maximum order size must fit in the 
 // The magic number for verifying the VMO format.
 constexpr char kMagicNumber[5] = "INSP";
 
+// The version of Inspect Format we support.
+constexpr size_t kVersion = 1;
+
 template <typename T>
 constexpr size_t OrderToSize(T order) {
   return kMinOrderSize << order;

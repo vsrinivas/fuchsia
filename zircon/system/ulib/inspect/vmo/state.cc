@@ -154,7 +154,7 @@ std::shared_ptr<State> State::Create(std::unique_ptr<Heap> heap) {
   auto* block = heap->GetBlock(header);
   block->header = HeaderBlockFields::Order::Make(GetOrder(block)) |
                   HeaderBlockFields::Type::Make(BlockType::kHeader) |
-                  HeaderBlockFields::Version::Make(0);
+                  HeaderBlockFields::Version::Make(kVersion);
   memcpy(&block->header_data[4], kMagicNumber, 4);
   block->payload.u64 = 0;
 

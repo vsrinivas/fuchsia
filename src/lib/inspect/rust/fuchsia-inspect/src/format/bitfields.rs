@@ -13,24 +13,31 @@ bitfield! {
     /// the HEADER block.
     pub struct BlockHeader(u64);
     pub u8, order, set_order: 3, 0;
-    pub u8, block_type, set_block_type: 7, 4;
+    pub u8, block_type, set_block_type: 15, 8;
+    pub u8, block_type_v0, set_block_type_v0: 7, 4;
 
     // Only for a HEADER block
-    pub u32, header_version, set_header_version: 31, 8;
+    pub u32, header_version, set_header_version: 31, 16;
+    pub u32, header_version_v0, set_header_version_v0: 31, 8;
     pub u32, header_magic, set_header_magic: 63, 32;
 
     // Only for *_VALUE blocks
-    pub u32, value_name_index, set_value_name_index: 63, 36;
-    pub u32, value_parent_index, set_value_parent_index: 35, 8;
+    pub u32, value_name_index, set_value_name_index: 63, 40;
+    pub u32, value_parent_index, set_value_parent_index: 39, 16;
+    pub u32, value_name_index_v0, set_value_name_index_v0: 63, 36;
+    pub u32, value_parent_index_v0, set_value_parent_index_v0: 35, 8;
 
     // Only for FREE blocks
-    pub u32, free_next_index, set_free_next_index: 35, 8;
+    pub u32, free_next_index, set_free_next_index: 39, 16;
+    pub u32, free_next_index_v0, _: 35, 8;
 
     // Only for NAME blocks
-    pub u16, name_length, set_name_length: 19, 8;
+    pub u16, name_length, set_name_length: 27, 16;
+    pub u16, name_length_v0, _: 19, 8;
 
     // Only for EXTENT blocks
-    pub u32, extent_next_index, set_extent_next_index: 35, 8;
+    pub u32, extent_next_index, set_extent_next_index: 39, 16;
+    pub u32, extent_next_index_v0, _: 35, 8;
 
     pub value, _: 63, 0;
 }
@@ -77,7 +84,7 @@ mod tests {
         assert_eq!(header.order(), 13);
         assert_eq!(header.header_version(), 1);
         assert_eq!(header.header_magic(), magic);
-        assert_eq!(header.value(), 0x494e53500000013d);
+        assert_eq!(header.value(), 0x494e53500001030d);
     }
 
     #[test]

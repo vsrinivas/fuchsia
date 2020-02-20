@@ -37,6 +37,16 @@ pub enum PropertyFormat {
 pub struct Block<T> {
     index: u32,
     container: T,
+    pub(in crate) version: Option<usize>,
+}
+
+macro_rules! versioned_get {
+    ($version:expr, $value:ident, $method:ident) => {
+        match $version {
+            Some(0) => paste::expr! { $value.[<$method _v0>]() },
+            _ => $value.$method(),
+        }
+    };
 }
 
 pub trait ReadableBlockContainer {
@@ -90,7 +100,16 @@ impl WritableBlockContainer for Arc<Mapping> {
 impl<T: ReadableBlockContainer> Block<T> {
     /// Creates a new block.
     pub fn new(container: T, index: u32) -> Self {
-        Block { container: container, index: index }
+        Block { container, index, version: None }
+    }
+
+    /// Creates a new block with the given version.
+    pub(in crate) fn new_with_version(container: T, index: u32, version: usize) -> Self {
+        Block { container, index, version: Some(version) }
+    }
+
+    pub(in crate) fn make_v0(&mut self) {
+        self.version = Some(0);
     }
 
     /// Returns index of the block in the vmo.
@@ -112,7 +131,8 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Returns the version of a HEADER block.
     pub fn header_version(&self) -> Result<u32, Error> {
         self.check_type(BlockType::Header)?;
-        Ok(self.read_header().header_version())
+        let header = self.read_header();
+        Ok(versioned_get!(self.version, header, header_version))
     }
 
     /// Returns the generation count of a HEADER block.
@@ -176,7 +196,8 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Returns the next EXTENT in an EXTENT chain.
     pub fn next_extent(&self) -> Result<u32, Error> {
         self.check_type(BlockType::Extent)?;
-        Ok(self.read_header().extent_next_index())
+        let header = self.read_header();
+        Ok(versioned_get!(self.version, header, extent_next_index))
     }
 
     /// Returns the payload bytes value of an EXTENT block.
@@ -191,7 +212,8 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Gets the NAME block index of a *_VALUE block.
     pub fn name_index(&self) -> Result<u32, Error> {
         self.check_any_value()?;
-        Ok(self.read_header().value_name_index())
+        let header = self.read_header();
+        Ok(versioned_get!(self.version, header, value_name_index))
     }
 
     /// Gets the format of an ARRAY_VALUE block.
@@ -300,7 +322,8 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Get the parent block index of a *_VALUE block.
     pub fn parent_index(&self) -> Result<u32, Error> {
         self.check_any_value()?;
-        Ok(self.read_header().value_parent_index())
+        let header = self.read_header();
+        Ok(versioned_get!(self.version, header, value_parent_index))
     }
 
     /// Get the child count of a NODE_VALUE block.
@@ -312,13 +335,15 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Get next free block
     pub fn free_next_index(&self) -> Result<u32, Error> {
         self.check_type(BlockType::Free)?;
-        Ok(self.read_header().free_next_index())
+        let header = self.read_header();
+        Ok(versioned_get!(self.version, header, free_next_index))
     }
 
     /// Get the length of the name of a NAME block
     pub fn name_length(&self) -> Result<usize, Error> {
         self.check_type(BlockType::Name)?;
-        Ok(self.read_header().name_length().to_usize().unwrap())
+        let header = self.read_header();
+        Ok(versioned_get!(self.version, header, name_length).to_usize().unwrap())
     }
 
     /// Returns the contents of a NAME block.
@@ -332,12 +357,15 @@ impl<T: ReadableBlockContainer> Block<T> {
 
     /// Returns the type of a block. Panics on an invalid value.
     pub fn block_type(&self) -> BlockType {
-        BlockType::from_u8(self.read_header().block_type()).unwrap()
+        let header = self.read_header();
+        let block_type = versioned_get!(self.version, header, block_type);
+        BlockType::from_u8(block_type).unwrap()
     }
 
     /// Returns the type of a block or an error if invalid.
     pub fn block_type_or(&self) -> Result<BlockType, Error> {
-        let raw_type = self.read_header().block_type();
+        let header = self.read_header();
+        let raw_type = versioned_get!(self.version, header, block_type);
         BlockType::from_u8(raw_type)
             .ok_or_else(|| format_err!("Invalid block type {} at index {}", raw_type, self.index()))
     }
@@ -345,7 +373,9 @@ impl<T: ReadableBlockContainer> Block<T> {
     /// Check that the block type is |block_type|
     fn check_type(&self, block_type: BlockType) -> Result<(), Error> {
         if cfg!(debug_assertions) {
-            return self.check_type_eq(self.read_header().block_type(), block_type);
+            let header = self.read_header();
+            let self_type = versioned_get!(self.version, header, block_type);
+            return self.check_type_eq(self_type, block_type);
         }
         Ok(())
     }
@@ -927,18 +957,18 @@ mod tests {
         assert_eq!(block.order(), 3);
         assert_eq!(block.free_next_index().unwrap(), 1);
         assert_eq!(block.block_type(), BlockType::Free);
-        assert_eq!(container[..8], [0x03, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x03, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
     }
 
     #[test]
     fn test_block_type_or() {
         let mut container = [0u8; constants::MIN_ORDER_SIZE];
-        container[0] = 0x20;
+        container[1] = 0x02;
         let block = Block::new(&container[..], 0);
         assert_eq!(block.block_type_or().unwrap(), BlockType::Header);
         let mut container = [0u8; constants::MIN_ORDER_SIZE];
-        container[0] = 0xf0;
+        container[1] = 0x0f;
         let block = Block::new(&container[..], 0);
         assert!(block.block_type_or().is_err());
     }
@@ -968,11 +998,11 @@ mod tests {
         assert_eq!(block2.block_type(), BlockType::Free);
         assert_eq!(block2.free_next_index().unwrap(), 2);
 
-        assert_eq!(container[..8], [0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(container[8..16], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
-        assert_eq!(container[16..24], [0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[16..24], [0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(container[24..32], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
-        assert_eq!(container[32..40], [0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[32..40], [0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(container[40..48], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
     }
 
@@ -992,7 +1022,7 @@ mod tests {
         let block = Block::new_free(&container[..], 0, 1, 2).unwrap();
         assert!(block.become_reserved().is_ok());
         assert_eq!(block.block_type(), BlockType::Reserved);
-        assert_eq!(container[..8], [0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
     }
 
@@ -1006,7 +1036,7 @@ mod tests {
         assert_eq!(block.order(), 0);
         assert_eq!(block.header_magic().unwrap(), constants::HEADER_MAGIC_NUMBER);
         assert_eq!(block.header_version().unwrap(), constants::HEADER_VERSION_NUMBER);
-        assert_eq!(container[..8], [0x20, 0x00, 0x00, 0x00, 0x49, 0x4e, 0x53, 0x50]);
+        assert_eq!(container[..8], [0x00, 0x02, 0x01, 0x00, 0x49, 0x4e, 0x53, 0x50]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
         test_ok_types(move |b| b.become_header(), &BTreeSet::from_iter(vec![BlockType::Reserved]));
@@ -1018,7 +1048,7 @@ mod tests {
     fn test_lock_unlock_header() {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let block = get_header(&container);
-        let header_bytes: [u8; 8] = [0x20, 0x00, 0x00, 0x00, 0x49, 0x4e, 0x53, 0x50];
+        let header_bytes: [u8; 8] = [0x00, 0x02, 0x01, 0x00, 0x49, 0x4e, 0x53, 0x50];
         // Can't unlock unlocked header.
         assert!(block.unlock_header().is_err());
         assert!(block.lock_header().is_ok());
@@ -1061,7 +1091,7 @@ mod tests {
         assert!(block.become_tombstone().is_ok());
         assert_eq!(block.block_type(), BlockType::Tombstone);
         assert_eq!(block.child_count().unwrap(), 4);
-        assert_eq!(container[..8], [0xa1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(container[8..], [0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         test_ok_types(
             move |b| b.become_tombstone(),
@@ -1074,11 +1104,11 @@ mod tests {
         let container = [0u8; constants::MIN_ORDER_SIZE];
         let block = get_reserved(&container);
         assert!(block.become_node(2, 3).is_ok());
-        assert_eq!(container[..8], [0x31, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x03, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert!(block.set_child_count(4).is_ok());
         assert_eq!(block.child_count().unwrap(), 4);
-        assert_eq!(container[..8], [0x31, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x03, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00]);
         assert_eq!(container[8..], [0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         let types = BTreeSet::from_iter(vec![BlockType::Tombstone, BlockType::NodeValue]);
         test_ok_types(move |b| b.child_count(), &types);
@@ -1091,7 +1121,7 @@ mod tests {
         let block = Block::new_free(&container[..], 0, 1, 1).unwrap();
         assert!(block.set_free_next_index(3).is_ok());
         assert_eq!(block.free_next_index().unwrap(), 3);
-        assert_eq!(container[..8], [0x01, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         test_error_types(
             move |b| {
@@ -1109,7 +1139,7 @@ mod tests {
         assert!(block.become_extent(3).is_ok());
         assert_eq!(block.block_type(), BlockType::Extent);
         assert_eq!(block.next_extent().unwrap(), 3);
-        assert_eq!(container[..8], [0x81, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x08, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(container[8..16], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
         assert_eq!(block.extent_set_contents(&"test-rust-inspect".as_bytes()).unwrap(), 17);
@@ -1160,12 +1190,12 @@ mod tests {
         assert_eq!(block.name_index().unwrap(), 2);
         assert_eq!(block.parent_index().unwrap(), 3);
         assert_eq!(block.double_value().unwrap(), 1.0);
-        assert_eq!(container[..8], [0x61, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x06, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f]);
 
         assert!(block.set_double_value(5.0).is_ok());
         assert_eq!(block.double_value().unwrap(), 5.0);
-        assert_eq!(container[..8], [0x61, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x06, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x40]);
 
         let types = BTreeSet::from_iter(vec![BlockType::DoubleValue]);
@@ -1190,12 +1220,12 @@ mod tests {
         assert_eq!(block.name_index().unwrap(), 2);
         assert_eq!(block.parent_index().unwrap(), 3);
         assert_eq!(block.int_value().unwrap(), 1);
-        assert_eq!(container[..8], [0x41, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x1, 0x04, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00]);
         assert_eq!(container[8..], [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
         assert!(block.set_int_value(-5).is_ok());
         assert_eq!(block.int_value().unwrap(), -5);
-        assert_eq!(container[..8], [0x41, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x1, 0x04, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00]);
         assert_eq!(container[8..], [0xfb, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
 
         let types = BTreeSet::from_iter(vec![BlockType::IntValue]);
@@ -1216,12 +1246,12 @@ mod tests {
         assert_eq!(block.name_index().unwrap(), 2);
         assert_eq!(block.parent_index().unwrap(), 3);
         assert_eq!(block.uint_value().unwrap(), 1);
-        assert_eq!(container[..8], [0x51, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x05, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00]);
         assert_eq!(container[8..], [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
         assert!(block.set_uint_value(5).is_ok());
         assert_eq!(block.uint_value().unwrap(), 5);
-        assert_eq!(container[..8], [0x51, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x05, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00]);
         assert_eq!(container[8..], [0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         test_ok_types(move |b| b.uint_value(), &BTreeSet::from_iter(vec![BlockType::UintValue]));
         test_ok_types(
@@ -1243,12 +1273,12 @@ mod tests {
         assert_eq!(block.name_index().unwrap(), 2);
         assert_eq!(block.parent_index().unwrap(), 3);
         assert_eq!(block.bool_value().unwrap(), false);
-        assert_eq!(container[..8], [0xD1, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x0D, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
         assert!(block.set_bool_value(true).is_ok());
         assert_eq!(block.bool_value().unwrap(), true);
-        assert_eq!(container[..8], [0xD1, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x0D, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00]);
         assert_eq!(container[8..], [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         test_ok_types(move |b| b.bool_value(), &BTreeSet::from_iter(vec![BlockType::BoolValue]));
         test_ok_types(
@@ -1265,7 +1295,7 @@ mod tests {
         assert_eq!(block.block_type(), BlockType::NodeValue);
         assert_eq!(block.name_index().unwrap(), 2);
         assert_eq!(block.parent_index().unwrap(), 3);
-        assert_eq!(container[..8], [0x31, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x03, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         test_ok_types(
             move |b| b.become_node(1, 2),
@@ -1282,7 +1312,7 @@ mod tests {
         assert_eq!(block.name_index().unwrap(), 2);
         assert_eq!(block.parent_index().unwrap(), 3);
         assert_eq!(block.property_format().unwrap(), PropertyFormat::Bytes);
-        assert_eq!(container[..8], [0x71, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x07, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10]);
 
         let mut bad_format_bytes = [0u8; constants::MIN_ORDER_SIZE];
@@ -1293,12 +1323,12 @@ mod tests {
 
         assert!(block.set_property_extent_index(4).is_ok());
         assert_eq!(block.property_extent_index().unwrap(), 4);
-        assert_eq!(container[..8], [0x71, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x07, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x10]);
 
         assert!(block.set_property_total_length(10).is_ok());
         assert_eq!(block.property_total_length().unwrap(), 10);
-        assert_eq!(container[..8], [0x71, 0x03, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x07, 0x03, 0x00, 0x00, 0x02, 0x00, 0x00]);
         assert_eq!(container[8..], [0x0a, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x10]);
 
         let types = BTreeSet::from_iter(vec![BlockType::PropertyValue]);
@@ -1320,7 +1350,7 @@ mod tests {
         assert_eq!(block.block_type(), BlockType::Name);
         assert_eq!(block.name_length().unwrap(), 17);
         assert_eq!(block.name_contents().unwrap(), "test-rust-inspect");
-        assert_eq!(container[..8], [0x91, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x09, 0x11, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(&container[8..25], "test-rust-inspect".as_bytes());
         assert_eq!(container[25..], [0, 0, 0, 0, 0, 0, 0]);
         let mut bad_name_bytes = [0u8; constants::MIN_ORDER_SIZE * 2];
@@ -1374,7 +1404,7 @@ mod tests {
         }
         assert!(block.array_set_uint_slot(4, 3).is_err());
         assert!(block.array_set_uint_slot(7, 5).is_err());
-        assert_eq!(container[..8], [0xb2, 0x02, 0x00, 0x00, 0x30, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x02, 0x0b, 0x02, 0x00, 0x00, 0x03, 0x00, 0x00]);
         assert_eq!(container[8..16], [0x15, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         for i in 0..4 {
             assert_eq!(
@@ -1450,7 +1480,7 @@ mod tests {
         assert_eq!(block.link_content_index().unwrap(), 3);
         assert_eq!(block.block_type(), BlockType::LinkValue);
         assert_eq!(block.link_node_disposition().unwrap(), LinkNodeDisposition::Inline);
-        assert_eq!(container[..8], [0xc1, 0x02, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00]);
+        assert_eq!(container[..8], [0x01, 0x0c, 0x02, 0x00, 0x00, 0x01, 0x00, 0x00]);
         assert_eq!(container[8..], [0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10]);
 
         let types = BTreeSet::from_iter(vec![BlockType::LinkValue]);

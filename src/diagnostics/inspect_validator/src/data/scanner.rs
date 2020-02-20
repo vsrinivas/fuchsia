@@ -312,7 +312,7 @@ impl Scanner {
     }
 
     fn process_extent(&mut self, block: Block<&[u8]>, buffer: &[u8]) -> Result<(), Error> {
-        check_zero_bits(buffer, &block, 36, 63)?;
+        check_zero_bits(buffer, &block, 40, 63)?;
         self.extents.insert(
             block.index(),
             ScannedExtent {
@@ -325,7 +325,7 @@ impl Scanner {
     }
 
     fn process_name(&mut self, block: Block<&[u8]>, buffer: &[u8]) -> Result<(), Error> {
-        check_zero_bits(buffer, &block, 20, 63)?;
+        check_zero_bits(buffer, &block, 28, 63)?;
         self.names.insert(
             block.index(),
             ScannedName { name: block.name_contents()?, metrics: Metrics::analyze(block)? },
@@ -736,26 +736,26 @@ mod tests {
         );
         try_byte(
             &mut buffer,
-            (NUMBER, 0),
-            0x50,
+            (NUMBER, 1),
+            5,
             Some(" root ->\n\n>  node ->\n> >  number: Uint(0)\n\n\n"),
         );
         try_byte(
             &mut buffer,
-            (NUMBER, 0),
-            0x60,
+            (NUMBER, 1),
+            6,
             Some(" root ->\n\n>  node ->\n> >  number: Double(0.0)\n\n\n"),
         );
         try_byte(
             &mut buffer,
-            (NUMBER, 0),
-            0x70,
+            (NUMBER, 1),
+            7,
             Some(" root ->\n\n>  node ->\n> >  number: String(\"\")\n\n\n"),
         );
         // Array block will have illegal Array Entry Type of 0.
-        try_byte(&mut buffer, (NUMBER, 0), 0xb0, None);
+        try_byte(&mut buffer, (NUMBER, 1), 0xb0, None);
         // 15 is an illegal block type.
-        try_byte(&mut buffer, (NUMBER, 0), 0xf0, None);
+        try_byte(&mut buffer, (NUMBER, 1), 0xf, None);
         number_header.set_order(2);
         number_header.set_block_type(BlockType::ArrayValue.to_u8().unwrap());
         put_header(&number_header, &mut buffer, NUMBER);

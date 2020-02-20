@@ -139,7 +139,8 @@ Block MakeDoubleBlock(uint64_t header, double payload) {
 Block MakeHeader(uint64_t generation) {
   Block ret;
   ret.header = HeaderBlockFields::Type::Make(BlockType::kHeader) |
-               HeaderBlockFields::Order::Make(0) | HeaderBlockFields::Version::Make(0);
+               HeaderBlockFields::Order::Make(0) |
+               HeaderBlockFields::Version::Make(inspect::internal::kVersion);
   memcpy(&ret.header_data[4], kMagicNumber, 4);
   ret.payload.u64 = generation;
   return ret;
