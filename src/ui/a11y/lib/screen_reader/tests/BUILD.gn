@@ -34,4 +34,7 @@ executable("screen_reader_tests") {
     "//src/ui/a11y/lib/view",
     "//src/ui/lib/glm_workaround",
   ]
+
+  # TODO(46525): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }

@@ -25,4 +25,7 @@ source_set("configuration") {
     "//src/lib/syslog/cpp",
     "//src/ui/scenic/lib/gfx",
   ]
+
+  # TODO(46525): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
