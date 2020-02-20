@@ -1,0 +1,199 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// A library of protocols for routing media between devices.
+///
+/// This library is based on "targets", which are devices or groups of devices
+/// which can render media sessions. See `fuchsia.media.sessions2` for media
+/// session details.
+///
+/// Through the `Discovery` protocol, clients can discover what media targets
+/// are available on the network, and select them to render media sessions.
+library fuchsia.media.target;
+
+using fuchsia.media;
+using fuchsia.media.audio;
+using fuchsia.media.sessions2;
+
+/// A unique id for a target.
+using Id = uint64;
+
+/// A user-visible name for a target to display in user interface or read
+/// in voice interfaces.
+using DisplayName = string:200;
+
+/// A protocol for discovering media targets.
+[Discoverable]
+protocol Discovery {
+    compose Group;
+    compose Selector;
+
+    /// Watches for bindings of media sessions to targets.
+    ///
+    /// A media session is rendered on the target to which it is bound.
+    ///
+    /// First, existing bindings will be returned. Then, bindings added
+    /// and removed since connection will be returned as deltas on the
+    /// initial set.
+    GetNextSessionBinding() -> (SessionBindingWatchEvent event);
+
+    /// Connects to a target by id. Drops the given channel if no such
+    /// target exists.
+    ConnectToTarget(Id target_id, request<Target> target_request);
+};
+
+/// A binding between a session and a target, indicating the media session
+/// is rendered on the target.
+struct SessionBinding {
+    fuchsia.media.sessions2.SessionId session_id;
+    Id target_id;
+};
+
+union SessionBindingWatchEvent {
+    /// An already existing binding at the time of connection.
+    1: SessionBinding existing;
+    /// Indicates the full set of bindings from the time of connection have
+    /// been enumerated. No more `existing` events will be received.
+    2: Void idle;
+    /// A new binding added since connection.
+    3: SessionBinding added;
+    /// A binding removed.
+    4: SessionBinding removed;
+};
+
+/// A target is a device or group of devices on which media can be rendered,
+/// such as a speaker which renders audio.
+protocol Target {
+    compose GroupEditor;
+    compose Group;
+    compose VolumeControl;
+};
+
+struct TargetChange {
+    Id new_target_id;
+};
+
+/// A protocol for adding and removing members of a group target.
+[FragileBase]
+protocol GroupEditor {
+    /// Adds a target to this group target.
+    ///
+    /// If the added target is a group of devices, all the devices in that group
+    /// are added to this group. A group itself cannot be a member of a group.
+    ///
+    /// Returns the id of the new target if a new group was created to fulfill this
+    /// request.
+    AddTarget(Id target_id) -> (TargetChange? target_change) error Error;
+
+    /// Removes a target from this group. Returns the id of the new target
+    /// if a new group was created to fulfill this request.
+    RemoveTarget(Id target_id) -> (TargetChange? target_change) error Error;
+};
+
+/// A protocol for watching the members of a group.
+[FragileBase]
+protocol Group {
+    /// Watches for changes to the set of registered targets. Leave a request
+    /// hanging to get replies when changes occur. New clients will be caught
+    /// up with the state of the world.
+    ///
+    /// First, existing targets will be returned. Then, targets added and removed
+    /// since connection will be returned as deltas on the initial set.
+    GetNextTarget() -> (TargetWatchEvent target_watch_event);
+};
+
+struct Void {
+};
+
+union TargetWatchEvent {
+    /// An already existing target at the time of connection.
+    1: Description existing;
+    /// Indicates the full set of targets from the time of connection have
+    /// been enumerated. No more `existing` events will be received.
+    2: Void idle;
+    /// A new target added since connection.
+    3: Description added;
+    /// A target’s description was updated.
+    4: Description updated;
+    /// A target removed.
+    5: Id removed;
+};
+
+/// A protocol to control the volume of target.
+[FragileBase]
+protocol VolumeControl {
+    /// Binds to the target's volume control. If this target is a group,
+    /// all member volumes are influenced. These settings persist
+    /// for the lifetime of the target.
+    BindVolumeControl(request<fuchsia.media.audio.VolumeControl> volume_control_request);
+
+    /// Binds to the target's volume control as a member of the given group.
+    /// The request channel is dropped if the target is not a member of the group.
+    ///
+    /// This volume control influences the volume of this target only when it is
+    /// participating as a member of the group. This is used to adjust the balance
+    /// of volume among members of a group. These settings persist for the lifetime
+    /// of the target
+    BindMemberVolumeControl(
+        Id group,
+        request<fuchsia.media.audio.VolumeControl> volume_control_request);
+};
+
+/// A description of a target.
+table Description {
+    /// Identifies the target.
+    1: Id target_id;
+    /// Enumerates of the interoperability features the device supports.
+    2: CapabilityFlags capability_flags;
+    3: DisplayName display_name;
+    4: fuchsia.media.Metadata metadata;
+};
+
+/// Capabilities of the target.
+bits CapabilityFlags : uint64 {
+    /// Indicates the target can receive a transfer of a
+    /// media session from another target.
+    TRANSFER_TO = 0x01;
+    /// Indicates the target can transfer a media session
+    /// to another target.
+    TRANSFER_FROM = 0x02;
+    /// Indicates the target can participate in rendering
+    /// media with other devices.
+    MULTI_TARGET_PLAYBACK = 0x04;
+    /// Indicates the target can render video.
+    VIDEO = 0x08;
+};
+
+/// A protocol for selecting a media target. Commands on this protocol can
+/// change the target on which a media session is rendered.
+[FragileBase]
+protocol Selector {
+    /// Renders the media session specified by `session_id` on the target
+    /// specified by `target_id`.
+    BindTarget(
+        fuchsia.media.sessions2.SessionId session_id,
+        Id target_id) -> () error Error;
+
+    /// Renders the media session specified by `session_id` on the set of
+    /// targets specified by `target_ids`.
+    ///
+    /// This may create a new group target which contains all the specified
+    /// targets as members, if one does not exist. The group target may be
+    /// temporary, only existing for the lifetime of playback, and not
+    /// discoverable through `Discovery`.
+    BindGroupTarget(
+        fuchsia.media.sessions2.SessionId session_id,
+        vector<Id>:100 target_ids
+        ) -> (Id target_id) error Error;
+};
+
+enum Error {
+    NOT_A_GROUP = 0;
+    UNKNOWN_ON_DOMAIN = 1;
+    CANNOT_BE_GROUPED = 2;
+    NOT_MEMBER_OF_GROUP = 3;
+    TRANSFER_FROM_TARGET_UNSUPPORTED = 4;
+    TRANSFER_TO_TARGET_UNSUPPORTED = 5;
+    MULTI_TARGET_PLAYBACK_UNSUPPORTED = 6;
+};

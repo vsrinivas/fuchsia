@@ -119,6 +119,7 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.media.playback:fuchsia.media.playback_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.media.target:fuchsia.media.target_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.memorypressure:fuchsia.memorypressure_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.migration:fuchsia.migration_sdk($fidl_toolchain)",
