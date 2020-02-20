@@ -15,7 +15,7 @@ void FakeAp::SetChannel(const wlan_channel_t& channel) {
   zx::duration diff_to_next_beacon = beacon_state_.next_beacon_time - environment_->GetTime();
 
   // If any station is associating with this AP, trigger channel switch.
-  if (!clients_.empty() && beacon_state_.is_beaconing &&
+  if (GetNumAssociatedClient() > 0 && beacon_state_.is_beaconing &&
       (CSA_beacon_interval_ >= diff_to_next_beacon)) {
     // If a new CSA is triggered, then it will override the previous one, and schedule a new channel
     // switch time.
@@ -66,6 +66,36 @@ void FakeAp::SetCSABeaconInterval(zx::duration interval) {
   CSA_beacon_interval_ = interval;
 }
 
+zx_status_t FakeAp::SetSecurity(struct Security sec) {
+  // Should we clean the associated client list when we change security protocol?
+  if (!clients_.empty())
+    return ZX_ERR_BAD_STATE;
+
+  security_ = sec;
+  if (sec.cipher_suite == IEEE80211_CIPHER_SUITE_WEP_40 ||
+      sec.cipher_suite == IEEE80211_CIPHER_SUITE_TKIP ||
+      sec.cipher_suite == IEEE80211_CIPHER_SUITE_WEP_104) {
+    // Here we set auth_type to AUTH_TYPE_OPEN as default, this can be manually changed by calling
+    // SetAuthType().
+    SetAuthType(AUTH_TYPE_OPEN);
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t FakeAp::SetAuthType(SimAuthType auth_type) {
+  if (!clients_.empty())
+    return ZX_ERR_BAD_STATE;
+  security_.auth_handling_mode_ = auth_type;
+  if (auth_type == AUTH_TYPE_DISABLED) {
+    beacon_state_.beacon_frame_.capability_info_.set_privacy(0);
+  } else {
+    beacon_state_.beacon_frame_.capability_info_.set_privacy(1);
+  }
+
+  return ZX_OK;
+}
+
 bool FakeAp::CanReceiveChannel(const wlan_channel_t& channel) {
   // For now, require an exact match
   return ((channel.primary == chan_.primary) && (channel.cbw == chan_.cbw) &&
@@ -111,6 +141,42 @@ void FakeAp::DisableBeacon() {
   ZX_ASSERT(environment_->CancelNotification(this, beacon_state_.beacon_notification_id) == ZX_OK);
 }
 
+std::shared_ptr<FakeAp::Client> FakeAp::AddClient(common::MacAddr mac_addr) {
+  auto client = std::make_shared<Client>(mac_addr, Client::NOT_AUTHENTICATED);
+  clients_.push_back(client);
+  return client;
+}
+
+std::shared_ptr<FakeAp::Client> FakeAp::FindClient(wlan::common::MacAddr mac_addr) {
+  for (auto it = clients_.begin(); it != clients_.end(); it++) {
+    if (mac_addr == (*it)->mac_addr_) {
+      return *it;
+    }
+  }
+
+  return std::shared_ptr<FakeAp::Client>(nullptr);
+}
+
+void FakeAp::RemoveClient(common::MacAddr mac_addr) {
+  for (auto it = clients_.begin(); it != clients_.end();) {
+    if (mac_addr == (*it)->mac_addr_) {
+      it = clients_.erase(it);
+    } else {
+      it++;
+    }
+  }
+}
+
+uint32_t FakeAp::GetNumAssociatedClient() {
+  uint32_t client_count = 0;
+  for (auto it = clients_.begin(); it != clients_.end(); it++) {
+    if ((*it)->status_ == Client::ASSOCIATED) {
+      client_count++;
+    }
+  }
+  return client_count;
+}
+
 void FakeAp::ScheduleAssocResp(uint16_t status, const common::MacAddr& dst) {
   auto handler = new std::function<void()>;
   *handler = std::bind(&FakeAp::HandleAssocRespNotification, this, status, dst);
@@ -121,6 +187,16 @@ void FakeAp::ScheduleProbeResp(const common::MacAddr& dst) {
   auto handler = new std::function<void()>;
   *handler = std::bind(&FakeAp::HandleProbeRespNotification, this, dst);
   environment_->ScheduleNotification(this, probe_resp_interval_, static_cast<void*>(handler));
+}
+
+void FakeAp::ScheduleAuthResp(uint16_t seq_num_in, const common::MacAddr& dst,
+                              SimAuthType auth_type, uint16_t status) {
+  auto handler = new std::function<void()>;
+  uint16_t seq_num_out = seq_num_in + 1;
+
+  *handler =
+      std::bind(&FakeAp::HandleAuthRespNotification, this, seq_num_out, dst, auth_type, status);
+  environment_->ScheduleNotification(this, auth_resp_interval_, static_cast<void*>(handler));
 }
 
 void FakeAp::Rx(const SimFrame* frame, const wlan_channel_t& channel) {
@@ -166,16 +242,28 @@ void FakeAp::RxMgmtFrame(const SimManagementFrame* mgmt_frame) {
         return;
       }
 
-      // Make sure the client is not already associated
-      for (auto client : clients_) {
-        if (client == assoc_req_frame->src_addr_) {
-          // Client is already associated
-          ScheduleAssocResp(WLAN_STATUS_CODE_REFUSED_TEMPORARILY, assoc_req_frame->src_addr_);
+      auto client = FindClient(assoc_req_frame->src_addr_);
+      // Make sure the client is not associated.
+      if (client && client->status_ == Client::ASSOCIATED) {
+        ScheduleAssocResp(WLAN_STATUS_CODE_REFUSED_TEMPORARILY, assoc_req_frame->src_addr_);
+        return;
+      }
+
+      // If authentication is needed, we do one more check below
+      if (security_.auth_handling_mode_ != AUTH_TYPE_DISABLED) {
+        // if client exist, we remove if from the list, no matter it's AUTHENTICATED OR NOT
+        if (!client || client->status_ != Client::AUTHENTICATED) {
+          // If the status of this client is AUTHENTICATING, we also remove it from the list.
+          if (client)
+            RemoveClient(assoc_req_frame->src_addr_);
+          ScheduleAssocResp(WLAN_STATUS_CODE_REFUSED, assoc_req_frame->src_addr_);
           return;
         }
       }
 
-      clients_.push_back(assoc_req_frame->src_addr_);
+      if (!client)
+        client = AddClient(assoc_req_frame->src_addr_);
+      client->status_ = Client::ASSOCIATED;
       ScheduleAssocResp(WLAN_STATUS_CODE_SUCCESS, assoc_req_frame->src_addr_);
       break;
     }
@@ -189,12 +277,90 @@ void FakeAp::RxMgmtFrame(const SimManagementFrame* mgmt_frame) {
 
       // Make sure the client is already associated
       for (auto client : clients_) {
-        if (client == disassoc_req_frame->src_addr_) {
+        if (client->mac_addr_ == disassoc_req_frame->src_addr_ &&
+            client->status_ == Client::ASSOCIATED) {
           // Client is already associated
-          clients_.remove(disassoc_req_frame->src_addr_);
+          RemoveClient(disassoc_req_frame->src_addr_);
           return;
         }
       }
+      break;
+    }
+
+    case SimManagementFrame::FRAME_TYPE_AUTH: {
+      // If AP is open, ignore any authentication, clients should get this information from beacon
+      // or probe request.
+      if (security_.auth_handling_mode_ == AUTH_TYPE_DISABLED) {
+        return;
+      }
+
+      auto auth_req_frame = static_cast<const SimAuthFrame*>(mgmt_frame);
+      if (auth_req_frame->dst_addr_ != bssid_) {
+        return;
+      }
+
+      if (assoc_handling_mode_ == ASSOC_IGNORED) {
+        return;
+      }
+
+      if (assoc_handling_mode_ == ASSOC_REJECTED) {
+        ScheduleAuthResp(auth_req_frame->seq_num_, auth_req_frame->src_addr_,
+                         auth_req_frame->auth_type_, WLAN_STATUS_CODE_REFUSED);
+        return;
+      }
+
+      // Filt out invalid authentication request frames.
+      if (auth_req_frame->seq_num_ != 1 &&
+          (auth_req_frame->seq_num_ != 3 || auth_req_frame->auth_type_ == AUTH_TYPE_OPEN)) {
+        RemoveClient(auth_req_frame->src_addr_);
+        return;
+      }
+
+      // Status of auth req should be WLAN_STATUS_CODE_SUCCESS
+      if (auth_req_frame->status_ != WLAN_STATUS_CODE_SUCCESS) {
+        RemoveClient(auth_req_frame->src_addr_);
+        return;
+      }
+
+      // If it's not matching AP's authentication handling mode, just reply a refuse.
+      if (auth_req_frame->auth_type_ != security_.auth_handling_mode_) {
+        RemoveClient(auth_req_frame->src_addr_);
+        ScheduleAuthResp(auth_req_frame->seq_num_, auth_req_frame->src_addr_,
+                         auth_req_frame->auth_type_, WLAN_STATUS_CODE_REFUSED);
+        return;
+      }
+
+      // Make sure this client is not associated to continue authentication
+      auto client = FindClient(auth_req_frame->src_addr_);
+      if (client && client->status_ == Client::ASSOCIATED) {
+        return;
+      }
+
+      if (!client) {
+        // A new client need to conduct authentication
+        if (auth_req_frame->seq_num_ != 1)
+          return;
+        client = AddClient(auth_req_frame->src_addr_);
+      }
+
+      if (security_.auth_handling_mode_ == AUTH_TYPE_OPEN) {
+        // Even when the client status is AUTHENTICATED, we will send out a auth resp frame to let
+        // client's status catch up in a same pace as AP.
+        client->status_ = Client::AUTHENTICATED;
+      } else if (security_.auth_handling_mode_ == AUTH_TYPE_SHARED_KEY) {
+        if (client->status_ == Client::NOT_AUTHENTICATED) {
+          // We've already checked whether the seq_num is 1.
+          client->status_ = Client::AUTHENTICATING;
+        } else if (client->status_ == Client::AUTHENTICATING) {
+          if (auth_req_frame->seq_num_ == 3)
+            client->status_ = Client::AUTHENTICATED;
+          // If the seq num is 1, we will just send out a resp and keep the status.
+        }
+        // If the status is already AUTHENTICATED, we will just send out a resp and keep the status.
+      }
+
+      ScheduleAuthResp(auth_req_frame->seq_num_, auth_req_frame->src_addr_,
+                       auth_req_frame->auth_type_, WLAN_STATUS_CODE_SUCCESS);
       break;
     }
 
@@ -207,10 +373,10 @@ zx_status_t FakeAp::DisassocSta(const common::MacAddr& sta_mac, uint16_t reason)
   // Make sure the client is already associated
   SimDisassocReqFrame disassoc_req_frame(this, bssid_, sta_mac, reason);
   for (auto client : clients_) {
-    if (client == sta_mac) {
+    if (client->mac_addr_ == sta_mac && client->status_ == Client::ASSOCIATED) {
       // Client is already associated
       environment_->Tx(&disassoc_req_frame, chan_);
-      clients_.remove(sta_mac);
+      RemoveClient(sta_mac);
       return ZX_OK;
     }
   }
@@ -243,7 +409,14 @@ void FakeAp::HandleAssocRespNotification(uint16_t status, common::MacAddr dst) {
 
 void FakeAp::HandleProbeRespNotification(common::MacAddr dst) {
   SimProbeRespFrame probe_resp_frame(this, bssid_, dst, ssid_);
+  probe_resp_frame.capability_info_.set_val(beacon_state_.beacon_frame_.capability_info_.val());
   environment_->Tx(&probe_resp_frame, chan_);
+}
+
+void FakeAp::HandleAuthRespNotification(uint16_t seq_num, common::MacAddr dst,
+                                        SimAuthType auth_type, uint16_t status) {
+  SimAuthFrame auth_resp_frame(this, bssid_, dst, seq_num, auth_type, status);
+  environment_->Tx(&auth_resp_frame, chan_);
 }
 
 void FakeAp::ReceiveNotification(void* payload) {

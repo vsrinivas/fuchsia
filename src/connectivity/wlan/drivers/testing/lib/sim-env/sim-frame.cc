@@ -84,4 +84,7 @@ SimManagementFrame::SimMgmtFrameType SimDisassocReqFrame::MgmtFrameType() const 
   return FRAME_TYPE_DISASSOC_REQ;
 }
 
+SimAuthFrame::~SimAuthFrame() {}
+SimManagementFrame::SimMgmtFrameType SimAuthFrame::MgmtFrameType() const { return FRAME_TYPE_AUTH; }
+
 }  // namespace wlan::simulation

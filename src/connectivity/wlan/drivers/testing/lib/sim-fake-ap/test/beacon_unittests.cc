@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
+#include <wlan/protocol/ieee80211.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-sta-ifc.h"
@@ -28,6 +29,7 @@ class BeaconTest : public ::testing::Test, public simulation::StationIfc {
     uint8_t channel_switch_count_ = 0;
     wlan_ssid_t ssid_;
     common::MacAddr bssid_;
+    bool privacy = false;
   };
 
   BeaconTest() : ap_(&env_) { env_.AddStation(this); }
@@ -38,6 +40,8 @@ class BeaconTest : public ::testing::Test, public simulation::StationIfc {
   void UpdateBeaconCallback();
   void AssocCallback();
   void ChannelSwitchCallback(wlan_channel_t& channel, zx::duration& interval);
+  void SetSecurityCallback(wlan::simulation::FakeAp::Security sec);
+  void SetAuthTypeCallback(simulation::SimAuthType auth_type);
   void StopBeaconCallback();
 
   // Test validation routines
@@ -45,12 +49,20 @@ class BeaconTest : public ::testing::Test, public simulation::StationIfc {
   void ValidateUpdateBeacons();
   void ValidateChannelSwitchBeacons();
   void ValidateOverlapChannelSwitches();
+  void ValidateSetSecurity();
+  void ValidateSetAuthType();
 
   void ScheduleCall(void (BeaconTest::*fn)(), zx::duration when);
   void ScheduleChannelSwitchCall(void (BeaconTest::*fn)(wlan_channel_t& channel,
                                                         zx::duration& interval),
                                  zx::duration when, const wlan_channel_t& channel,
                                  const zx::duration& interval);
+
+  void ScheduleSetSecurityCall(void (BeaconTest::*fn)(wlan::simulation::FakeAp::Security sec),
+                               zx::duration when, ieee80211_cipher_suite cipher);
+
+  void ScheduleSetAuthTypeCall(void (BeaconTest::*fn)(simulation::SimAuthType auth_type),
+                               zx::duration when, simulation::SimAuthType auth_type);
 
   simulation::Environment env_;
   simulation::FakeAp ap_;
@@ -76,7 +88,7 @@ void BeaconTest::Rx(const simulation::SimFrame* frame, const wlan_channel_t& cha
   auto beacon_frame = static_cast<const simulation::SimBeaconFrame*>(mgmt_frame);
   beacons_received_.emplace_back(env_.GetTime(), channel, beacon_frame->ssid_,
                                  beacon_frame->bssid_);
-
+  beacons_received_.back().privacy = beacon_frame->capability_info_.privacy() ? true : false;
   auto ie = beacon_frame->FindIE(simulation::InformationElement::IE_TYPE_CSA);
   if (ie) {
     CSA_beacon_count++;
@@ -113,6 +125,22 @@ void BeaconTest::ScheduleChannelSwitchCall(void (BeaconTest::*fn)(wlan_channel_t
                                            const zx::duration& interval) {
   auto cb_fn = new std::function<void()>;
   *cb_fn = std::bind(fn, this, channel, interval);
+  env_.ScheduleNotification(this, when, cb_fn);
+}
+
+void BeaconTest::ScheduleSetSecurityCall(
+    void (BeaconTest::*fn)(wlan::simulation::FakeAp::Security sec), zx::duration when,
+    ieee80211_cipher_suite cipher) {
+  simulation::FakeAp::Security sec = {.cipher_suite = cipher};
+  auto cb_fn = new std::function<void()>;
+  *cb_fn = std::bind(fn, this, sec);
+  env_.ScheduleNotification(this, when, cb_fn);
+}
+
+void BeaconTest::ScheduleSetAuthTypeCall(void (BeaconTest::*fn)(simulation::SimAuthType auth_type),
+                                         zx::duration when, simulation::SimAuthType auth_type) {
+  auto cb_fn = new std::function<void()>;
+  *cb_fn = std::bind(fn, this, auth_type);
   env_.ScheduleNotification(this, when, cb_fn);
 }
 
@@ -410,4 +438,79 @@ TEST_F(BeaconTest, StopBeaconWhenSwitching) {
   EXPECT_GE(env_.GetTime(), ABSOLUTE_TIME(kVeryShortEndTime));
   EXPECT_EQ(ap_.GetChannel().primary, kFirstChannelSwitched.primary);
 }
+
+/*** Set Security/AuthType test ***/
+
+// Check whether privacy bit is set correctly in when AP is set to different security and
+// authentication types.
+
+const size_t kValidCount = 3;
+constexpr zx::duration kSecurityEndTime = zx::msec(300);
+
+void BeaconTest::SetSecurityCallback(wlan::simulation::FakeAp::Security sec) {
+  ap_.SetSecurity(sec);
+}
+
+void BeaconTest::SetAuthTypeCallback(simulation::SimAuthType auth_type) {
+  ap_.SetAuthType(auth_type);
+}
+
+void BeaconTest::ValidateSetSecurity() {
+  size_t count = 0;
+  while (count < kValidCount) {
+    ASSERT_EQ(beacons_received_.empty(), false);
+    Beacon received_beacon = beacons_received_.front();
+    EXPECT_EQ(received_beacon.privacy, true);
+    beacons_received_.pop_front();
+    count++;
+  }
+  EXPECT_EQ(beacons_received_.empty(), true);
+}
+
+void BeaconTest::ValidateSetAuthType() {
+  ASSERT_EQ(beacons_received_.empty(), false);
+  Beacon received_beacon = beacons_received_.front();
+  EXPECT_EQ(received_beacon.privacy, true);
+  beacons_received_.pop_front();
+
+  ASSERT_EQ(beacons_received_.empty(), false);
+  received_beacon = beacons_received_.front();
+  EXPECT_EQ(received_beacon.privacy, true);
+  beacons_received_.pop_front();
+
+  ASSERT_EQ(beacons_received_.empty(), false);
+  received_beacon = beacons_received_.front();
+  EXPECT_EQ(received_beacon.privacy, false);
+  beacons_received_.pop_front();
+
+  EXPECT_EQ(beacons_received_.empty(), true);
+}
+
+TEST_F(BeaconTest, SetSecurity) {
+  ScheduleCall(&BeaconTest::StartBeaconCallback, kStartTime);
+  ScheduleSetSecurityCall(&BeaconTest::SetSecurityCallback, zx::msec(0),
+                          IEEE80211_CIPHER_SUITE_WEP_40);
+  ScheduleSetSecurityCall(&BeaconTest::SetSecurityCallback, zx::msec(100),
+                          IEEE80211_CIPHER_SUITE_TKIP);
+  ScheduleSetSecurityCall(&BeaconTest::SetSecurityCallback, zx::msec(200),
+                          IEEE80211_CIPHER_SUITE_WEP_104);
+  ScheduleCall(&BeaconTest::StopBeaconCallback, kSecurityEndTime);
+  env_.Run();
+  ValidateSetSecurity();
+}
+
+TEST_F(BeaconTest, SetAuthType) {
+  ScheduleCall(&BeaconTest::StartBeaconCallback, kStartTime);
+  ScheduleSetAuthTypeCall(&BeaconTest::SetAuthTypeCallback, zx::msec(0),
+                          simulation::AUTH_TYPE_OPEN);
+  ScheduleSetAuthTypeCall(&BeaconTest::SetAuthTypeCallback, zx::msec(100),
+                          simulation::AUTH_TYPE_SHARED_KEY);
+  ScheduleSetAuthTypeCall(&BeaconTest::SetAuthTypeCallback, zx::msec(200),
+                          simulation::AUTH_TYPE_DISABLED);
+  ScheduleCall(&BeaconTest::StopBeaconCallback, kSecurityEndTime);
+
+  env_.Run();
+  ValidateSetAuthType();
+}
+
 }  // namespace wlan::testing

@@ -45,7 +45,7 @@ void validateChannel(const wlan_channel_t& channel) {
 }
 
 void AssocTest::DisassocFromAp(const common::MacAddr& sta, uint16_t reason) {
-  EXPECT_EQ(ap_.GetNumClients(), 1U);
+  EXPECT_EQ(ap_.GetNumAssociatedClient(), 1U);
   ap_.DisassocSta(sta, reason);
 }
 
@@ -87,6 +87,22 @@ void AssocTest::ReceiveNotification(void* payload) {
    1s: send assoc request on different channel
    2s: send assoc request with different bssid
  */
+
+TEST_F(AssocTest, RefuseIfNotAuthenticated) {
+  ap_.SetAuthType(simulation::AUTH_TYPE_OPEN);
+
+  auto handler = new std::function<void()>;
+  simulation::SimAssocReqFrame assoc_req_frame(this, kClientMacAddr, kApBssid);
+  *handler = std::bind(&simulation::Environment::Tx, &env_, &assoc_req_frame, kDefaultChannel);
+  env_.ScheduleNotification(this, zx::usec(50), static_cast<void*>(handler));
+
+  env_.Run();
+
+  EXPECT_EQ(assoc_status_list_.front(), (uint16_t)WLAN_STATUS_CODE_REFUSED);
+  assoc_status_list_.pop_front();
+  EXPECT_EQ(assoc_status_list_.size(), 0U);
+}
+
 TEST_F(AssocTest, IgnoredRequests) {
   constexpr wlan_channel_t kWrongChannel = {
       .primary = 10, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
@@ -219,7 +235,7 @@ TEST_F(AssocTest, DisassocFromSta) {
   EXPECT_EQ(assoc_resp_count_, 1U);
   ASSERT_EQ(assoc_status_list_.size(), (size_t)1);
   EXPECT_EQ(assoc_status_list_.front(), (uint16_t)WLAN_STATUS_CODE_SUCCESS);
-  EXPECT_EQ(ap_.GetNumClients(), 0U);
+  EXPECT_EQ(ap_.GetNumAssociatedClient(), 0U);
   assoc_status_list_.pop_front();
 }
 
@@ -248,7 +264,7 @@ TEST_F(AssocTest, DisassocFromAp) {
   EXPECT_EQ(assoc_resp_count_, 1U);
   ASSERT_EQ(assoc_status_list_.size(), (size_t)1);
   EXPECT_EQ(assoc_status_list_.front(), (uint16_t)WLAN_STATUS_CODE_SUCCESS);
-  EXPECT_EQ(ap_.GetNumClients(), 0U);
+  EXPECT_EQ(ap_.GetNumAssociatedClient(), 0U);
   EXPECT_EQ(disassoc_req_count_, 1U);
   EXPECT_EQ(disassoc_status_list_.front(), kApDisassocReason);
   assoc_status_list_.pop_front();

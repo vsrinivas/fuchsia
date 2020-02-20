@@ -24,6 +24,7 @@ class FrameIETest : public ::testing::Test {
   simulation::SimAssocReqFrame assoc_req_frame_;
   simulation::SimAssocRespFrame assoc_resp_frame_;
   simulation::SimDisassocReqFrame disassoc_req_frame_;
+  simulation::SimAuthFrame auth_frame_;
 };
 
 // Verify type functions return correct value
@@ -45,6 +46,7 @@ TEST_F(FrameIETest, TypeTest) {
   EXPECT_EQ(disassoc_req_frame_.FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
   EXPECT_EQ(disassoc_req_frame_.MgmtFrameType(),
             simulation::SimManagementFrame::FRAME_TYPE_DISASSOC_REQ);
+  EXPECT_EQ(auth_frame_.MgmtFrameType(), simulation::SimManagementFrame::FRAME_TYPE_AUTH);
 }
 
 // Test for operations about IEs.

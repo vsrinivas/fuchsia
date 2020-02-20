@@ -66,7 +66,8 @@ class SimManagementFrame : public SimFrame {
     FRAME_TYPE_PROBE_RESP,
     FRAME_TYPE_ASSOC_REQ,
     FRAME_TYPE_ASSOC_RESP,
-    FRAME_TYPE_DISASSOC_REQ
+    FRAME_TYPE_DISASSOC_REQ,
+    FRAME_TYPE_AUTH
   };
 
   SimManagementFrame(){};
@@ -178,6 +179,33 @@ class SimDisassocReqFrame : public SimManagementFrame {
   common::MacAddr src_addr_;
   common::MacAddr dst_addr_;
   uint16_t reason_;
+};
+
+// AUTH_TYPE used by AP and authentication frame
+enum SimAuthType { AUTH_TYPE_DISABLED, AUTH_TYPE_OPEN, AUTH_TYPE_SHARED_KEY };
+
+// Only one type of authentication frame for request and response
+class SimAuthFrame : public SimManagementFrame {
+ public:
+  SimAuthFrame() = default;
+  explicit SimAuthFrame(StationIfc* sender, const common::MacAddr& src, const common::MacAddr& dst,
+                        uint16_t seq, SimAuthType auth_type, uint16_t status)
+      : SimManagementFrame(sender),
+        src_addr_(src),
+        dst_addr_(dst),
+        seq_num_(seq),
+        auth_type_(auth_type),
+        status_(status){};
+
+  ~SimAuthFrame() override;
+
+  SimMgmtFrameType MgmtFrameType() const override;
+
+  common::MacAddr src_addr_;
+  common::MacAddr dst_addr_;
+  uint16_t seq_num_;
+  SimAuthType auth_type_;
+  uint16_t status_;
 };
 
 }  // namespace wlan::simulation

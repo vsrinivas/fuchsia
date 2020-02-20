@@ -29,11 +29,22 @@ class FakeAp : public StationIfc {
   enum AssocHandling { ASSOC_ALLOWED, ASSOC_IGNORED, ASSOC_REJECTED };
 
   struct Security {
+    enum SimAuthType auth_handling_mode_ = AUTH_TYPE_DISABLED;
     enum ieee80211_cipher_suite cipher_suite;
 
     static constexpr size_t kMaxKeyLen = 32;
     size_t key_len;
     std::array<uint8_t, kMaxKeyLen> key;
+  };
+
+  struct Client {
+    // AUTHENTICATING is the status where AP has sent out second auth frame, and waiting for the
+    // third, this only apply to AUTH_SHARED mode.
+    enum Status { NOT_AUTHENTICATED, AUTHENTICATING, AUTHENTICATED, ASSOCIATED };
+
+    Client(common::MacAddr mac_addr, Status status) : mac_addr_(mac_addr), status_(status) {}
+    common::MacAddr mac_addr_;
+    Status status_;
   };
 
   FakeAp() = delete;
@@ -62,13 +73,16 @@ class FakeAp : public StationIfc {
   wlan_channel_t GetChannel() { return chan_; }
   common::MacAddr GetBssid() { return bssid_; }
   wlan_ssid_t GetSsid() { return ssid_; }
-  uint32_t GetNumClients() { return clients_.size(); }
+  uint32_t GetNumAssociatedClient();
 
   // Will we receive a message sent on the specified channel?
   bool CanReceiveChannel(const wlan_channel_t& channel);
 
   // When this is not called, the default is open network.
-  void SetSecurity(struct Security sec) { security_ = sec; }
+  zx_status_t SetSecurity(struct Security sec);
+
+  // Set AP authentication type
+  zx_status_t SetAuthType(SimAuthType auth_type);
 
   // Start beaconing. Sends first beacon immediately and schedules beacons to occur every
   // beacon_period until disabled.
@@ -89,17 +103,25 @@ class FakeAp : public StationIfc {
   void ReceiveNotification(void* payload) override;
 
  private:
+  std::shared_ptr<Client> AddClient(common::MacAddr mac_addr);
+  std::shared_ptr<Client> FindClient(common::MacAddr mac_addr);
+  void RemoveClient(common::MacAddr mac_addr);
+
   void RxMgmtFrame(const SimManagementFrame* mgmt_frame);
 
   void ScheduleNextBeacon();
   void ScheduleAssocResp(uint16_t status, const common::MacAddr& dst);
   void ScheduleProbeResp(const common::MacAddr& dst);
+  void ScheduleAuthResp(uint16_t seq_num_in, const common::MacAddr& dst, SimAuthType auth_type,
+                        uint16_t status);
 
   // Event handlers
   void HandleBeaconNotification();
   void HandleStopCSABeaconNotification();
   void HandleAssocRespNotification(uint16_t status, common::MacAddr dst);
   void HandleProbeRespNotification(common::MacAddr dst);
+  void HandleAuthRespNotification(uint16_t seq_num, common::MacAddr dst, SimAuthType auth_type,
+                                  uint16_t status);
 
   // The environment in which this fake AP is operating.
   Environment* environment_;
@@ -140,8 +162,10 @@ class FakeAp : public StationIfc {
   zx::duration disassoc_resp_interval_ = zx::msec(1);
   // Delay between an probe request and an probe response
   zx::duration probe_resp_interval_ = zx::msec(1);
+  // Delay between an auth request and an auth response
+  zx::duration auth_resp_interval_ = zx::msec(1);
 
-  std::list<common::MacAddr> clients_;
+  std::list<std::shared_ptr<Client>> clients_;
 };
 
 }  // namespace wlan::simulation
