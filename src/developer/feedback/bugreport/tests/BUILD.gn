@@ -49,6 +49,9 @@ executable("bugreport_unittest") {
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(46542): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("bugreport_integration_test") {
@@ -65,6 +68,9 @@ executable("bugreport_integration_test") {
     "//third_party/googletest:gtest",
     "//zircon/system/fidl/fuchsia-mem",
   ]
+
+  # TODO(46542): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("command_line_options_unittest") {
