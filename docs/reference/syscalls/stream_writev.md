@@ -26,9 +26,8 @@ zx_status_t zx_stream_writev(zx_handle_t handle,
 current seek offset, from the buffers specified by *vector* and *num_vector*.
 If successful, the number of bytes actually written are return via *actual*.
 
-If the *options* for the stream object contain **ZX_STREAM_MODE_APPEND**, the
-seek offset of the stream is atomically set to the content size of the stream
-prior to writing the data.
+If *options* contains **ZX_STREAM_APPEND**, the seek offset of the stream is
+atomically set to the content size of the stream prior to writing the data.
 
 If the write operation would write beyond the end of the stream, the function
 will attempt to increase the content size of the stream in order to receive the
@@ -45,8 +44,6 @@ been changed to an unspecified value.
 
 If the contents of *vector* change during this operation, if any of the buffers
 overlap, or if any of the buffers overlap *vector*, the behavior is unspecified.
-
-*options* is reserved for future use and must be 0.
 
 ## RIGHTS
 
@@ -67,7 +64,8 @@ overlap, or if any of the buffers overlap *vector*, the behavior is unspecified.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have the **ZX_RIGHT_WRITE** right.
 
-**ZX_ERR_INVALID_ARGS**   *vector* is an invalid `zx_iovec_t`.
+**ZX_ERR_INVALID_ARGS**   *vector* is an invalid `zx_iovec_t` or *options* has an
+unsupported bit set to 1.
 
 **ZX_ERR_NOT_FOUND**  the *vector* address, or an address specified within
 *vector* does not map to address in address space.

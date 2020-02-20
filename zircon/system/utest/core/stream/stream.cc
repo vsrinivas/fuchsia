@@ -523,4 +523,55 @@ TEST(StreamTestCase, ReadVectorAlias) {
   ASSERT_OK(stream.readv(0, multivec, kVectorCount, nullptr));
 }
 
+TEST(StreamTestCase, Append) {
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+  ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
+  size_t content_size = 26u;
+  ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size)));
+
+  zx::stream stream;
+  char buffer[17] = "0123456789ABCDEF";
+  zx_iovec_t vec = {
+      .buffer = buffer,
+      .capacity = sizeof(buffer),
+  };
+
+  ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_WRITE, vmo, 0, &stream));
+  zx_info_stream_t info = {};
+  ASSERT_OK(stream.get_info(ZX_INFO_STREAM, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_EQ(ZX_STREAM_MODE_WRITE, info.options);
+  EXPECT_EQ(0u, info.seek);
+  EXPECT_EQ(26u, info.content_size);
+
+  vec.capacity = 7u;
+  size_t actual = 42u;
+  ASSERT_OK(stream.writev(ZX_STREAM_APPEND, &vec, 1, &actual));
+  EXPECT_EQ(7u, actual);
+  EXPECT_STR_EQ("abcdefghijklmnopqrstuvwxyz0123456", GetData(vmo).c_str());
+
+  memset(&info, 0, sizeof(info));
+  ASSERT_OK(stream.get_info(ZX_INFO_STREAM, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_EQ(ZX_STREAM_MODE_WRITE, info.options);
+  EXPECT_EQ(33u, info.seek);
+  EXPECT_EQ(33u, info.content_size);
+
+  vec.capacity = 26u;
+  for (size_t size = info.content_size; size + vec.capacity < PAGE_SIZE; size += vec.capacity) {
+    ASSERT_OK(stream.writev(ZX_STREAM_APPEND, &vec, 1, &actual));
+    EXPECT_EQ(vec.capacity, actual);
+  }
+
+  ASSERT_OK(stream.get_info(ZX_INFO_STREAM, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_GT(PAGE_SIZE, info.content_size);
+
+  ASSERT_OK(stream.writev(ZX_STREAM_APPEND, &vec, 1, &actual));
+  EXPECT_EQ(PAGE_SIZE - info.content_size, actual);
+
+  ASSERT_EQ(ZX_ERR_NO_SPACE, stream.writev(ZX_STREAM_APPEND, &vec, 1, &actual));
+
+  vec.capacity = UINT64_MAX;
+  ASSERT_EQ(ZX_ERR_FILE_BIG, stream.writev(ZX_STREAM_APPEND, &vec, 1, &actual));
+}
+
 }  // namespace

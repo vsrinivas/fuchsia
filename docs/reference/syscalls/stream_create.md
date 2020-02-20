@@ -38,9 +38,6 @@ right on the created stream object.
 **ZX_ERR_ACCESS_DENIED**.  Otherwise, **ZX_RIGHT_WRITE** will be included as a
 right on the created stream object.
 
-**ZX_STREAM_MODE_APPEND**   The stream is in append mode.  See
-[`zx_stream_writev()`] for the effect of this option.
-
 ## RIGHTS
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->

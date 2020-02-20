@@ -58,7 +58,7 @@ zx_status_t sys_stream_writev(zx_handle_t handle, uint32_t options,
                               user_out_ptr<size_t> out_actual) {
   LTRACEF("handle %x\n", handle);
 
-  if (options != 0) {
+  if (options & ~ZX_STREAM_APPEND) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -74,8 +74,13 @@ zx_status_t sys_stream_writev(zx_handle_t handle, uint32_t options,
   }
 
   size_t actual = 0;
-  status =
-      stream->WriteVector(up->aspace().get(), make_user_in_iovec(vector, vector_count), &actual);
+  if (options & ZX_STREAM_APPEND) {
+    status =
+        stream->AppendVector(up->aspace().get(), make_user_in_iovec(vector, vector_count), &actual);
+  } else {
+    status =
+        stream->WriteVector(up->aspace().get(), make_user_in_iovec(vector, vector_count), &actual);
+  }
 
   if (status == ZX_OK && out_actual) {
     status = out_actual.copy_to_user(actual);

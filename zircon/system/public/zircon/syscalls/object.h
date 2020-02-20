@@ -194,6 +194,8 @@ typedef struct zx_info_stream {
     // The options passed to zx_stream_create().
     uint32_t options;
 
+    uint8_t padding1[4];
+
     // The current seek offset.
     //
     // Used by zx_stream_readv and zx_stream_writev to determine where to read

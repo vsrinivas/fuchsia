@@ -59,7 +59,8 @@ overlap, or if any of the buffers overlap *vector*, the behavior is unspecified.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have the **ZX_RIGHT_READ** right.
 
-**ZX_ERR_INVALID_ARGS**  *vector* is an invalid `zx_iovec_t`.
+**ZX_ERR_INVALID_ARGS**  *vector* is an invalid `zx_iovec_t` or *options* is
+nonzero.
 
 **ZX_ERR_NOT_FOUND**  the *vector* address, or an address specified within
 *vector* does not map to address in address space.

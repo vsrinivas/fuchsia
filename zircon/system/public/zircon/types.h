@@ -316,9 +316,10 @@ typedef struct zx_iovec {
 // These can be passed to zx_stream_create().
 #define ZX_STREAM_MODE_READ                 ((uint32_t)1u << 0)
 #define ZX_STREAM_MODE_WRITE                ((uint32_t)1u << 1)
-#define ZX_STREAM_MODE_APPEND               ((uint32_t)1u << 2)
-#define ZX_STREAM_CREATE_MASK               (ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE | \
-                                            ZX_STREAM_MODE_APPEND)
+#define ZX_STREAM_CREATE_MASK               (ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE)
+
+// These can be passed to zx_stream_writev().
+#define ZX_STREAM_APPEND                    ((uint32_t)1u << 0)
 
 typedef uint32_t zx_stream_seek_origin_t;
 #define ZX_STREAM_SEEK_ORIGIN_START      ((zx_stream_seek_origin_t)0u)

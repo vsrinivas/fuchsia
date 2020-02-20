@@ -162,6 +162,42 @@ zx_status_t StreamDispatcher::WriteVectorAt(VmAspace* current_aspace, user_in_io
   return vmo_->WriteVector(current_aspace, user_data, length, offset);
 }
 
+zx_status_t StreamDispatcher::AppendVector(VmAspace* current_aspace, user_in_iovec_t user_data,
+                                           size_t* out_actual) {
+  canary_.Assert();
+
+  size_t total_capacity;
+  zx_status_t status = user_data.GetTotalCapacity(&total_capacity);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  size_t length = 0u;
+  uint64_t offset = 0u;
+
+  {
+    Guard<fbl::Mutex> guard{get_lock()};
+
+    offset = vmo_->GetContentSize();
+
+    size_t requested_content_size = 0u;
+    if (add_overflow(offset, total_capacity, &requested_content_size)) {
+      return ZX_ERR_FILE_BIG;
+    }
+
+    size_t content_size = vmo_->ExpandContentIfNeeded(requested_content_size);
+    if (offset >= content_size) {
+      return ZX_ERR_NO_SPACE;
+    }
+
+    length = fbl::min(total_capacity, content_size - offset);
+    seek_ = offset + length;
+  }
+
+  *out_actual = length;
+  return vmo_->WriteVector(current_aspace, user_data, length, offset);
+}
+
 zx_status_t StreamDispatcher::Seek(zx_stream_seek_origin_t whence, int64_t offset,
                                    zx_off_t* out_seek) {
   canary_.Assert();
@@ -198,4 +234,13 @@ zx_status_t StreamDispatcher::Seek(zx_stream_seek_origin_t whence, int64_t offse
   seek_ = target;
   *out_seek = seek_;
   return ZX_OK;
+}
+
+void StreamDispatcher::GetInfo(zx_info_stream_t* info) const {
+  canary_.Assert();
+
+  Guard<fbl::Mutex> guard{get_lock()};
+  info->options = options_;
+  info->seek = seek_;
+  info->content_size = vmo_->GetContentSize();
 }

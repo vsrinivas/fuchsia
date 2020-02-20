@@ -26,6 +26,7 @@
 #include <object/resource.h>
 #include <object/resource_dispatcher.h>
 #include <object/socket_dispatcher.h>
+#include <object/stream_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <object/timer_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
@@ -617,6 +618,19 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       zx_info_timer info = {};
       timer->GetInfo(&info);
+
+      return single_record_result(_buffer, buffer_size, _actual, _avail, info);
+    }
+
+    case ZX_INFO_STREAM: {
+      fbl::RefPtr<StreamDispatcher> stream;
+      zx_status_t status = up->GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &stream);
+      if (status != ZX_OK) {
+        return status;
+      }
+
+      zx_info_stream_t info = {};
+      stream->GetInfo(&info);
 
       return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }

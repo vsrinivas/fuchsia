@@ -31,7 +31,10 @@ class StreamDispatcher final : public SoloDispatcher<StreamDispatcher, ZX_DEFAUL
   zx_status_t WriteVector(VmAspace* current_aspace, user_in_iovec_t user_data, size_t* out_actual);
   zx_status_t WriteVectorAt(VmAspace* current_aspace, user_in_iovec_t user_data, zx_off_t offset,
                             size_t* out_actual);
+  zx_status_t AppendVector(VmAspace* current_aspace, user_in_iovec_t user_data, size_t* out_actual);
   zx_status_t Seek(zx_stream_seek_origin_t whence, int64_t offset, zx_off_t* out_seek);
+
+  void GetInfo(zx_info_stream_t* info) const;
 
  private:
   explicit StreamDispatcher(uint32_t options, fbl::RefPtr<VmObjectDispatcher> vmo, zx_off_t seek);

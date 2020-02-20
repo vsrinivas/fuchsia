@@ -27,10 +27,6 @@ zx_status_t zx_stream_writev_at(zx_handle_t handle,
 given *offset*, from the buffers specified by *vector* and *num_vector*.
 If successful, the number of bytes actually written are return via *actual*.
 
-If the *options* for the stream object contain **ZX_STREAM_MODE_APPEND**, this
-function returns **ZX_ERR_BAD_STATE**. Consider using [`zx_stream_writev`] to
-write data to the stream.
-
 If the write operation would write beyond the end of the stream, the function
 will attempt to increase the content size of the stream in order to receive the
 given data.  If the resize operation fails after some amount of data was
@@ -66,13 +62,13 @@ overlap, or if any of the buffers overlap *vector*, the behavior is unspecified.
 
 **ZX_ERR_ACCESS_DENIED**  *handle* does not have the ZX_RIGHT_WRITE right.
 
-**ZX_ERR_INVALID_ARGS** *vector* is an invalid zx_iovec_t.
+**ZX_ERR_INVALID_ARGS** *vector* is an invalid zx_iovec_t or *options* has an
+unsupported bit set to 1.
 
 **ZX_ERR_NOT_FOUND**  the *vector* address, or an address specified within
 *vector* does not map to address in address space.
 
-**ZX_ERR_BAD_STATE**  the *options* for the stream contain
-**ZX_STREAM_MODE_APPEND** or the underlying data source cannot be written.
+**ZX_ERR_BAD_STATE**  the underlying data source cannot be written.
 
 **ZX_ERR_FILE_BIG**  the stream has exceeded a predefined maximum size limit.
 
