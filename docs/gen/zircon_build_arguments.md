@@ -241,7 +241,7 @@ If true, excludes syscalls with the [testonly] attribute.
 
 **Current value (from the default):** `false`
 
-From //vdso/BUILD.gn:10
+From //vdso/vdso.gni:7
 
 ### fidl_write_v1_wireformat
 

@@ -104,7 +104,7 @@ of an OTA. These pacakages are updated as an atomic unit during an OTA
 process and are immutable and are a superset of the TCB (Trusted Computing
 Base) for a product. These packages are never evicted by the system.
 
-**Current value for `target_cpu = "arm64"`:** `["//build/info:build-info", "//garnet/bin/http", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/stash:stash", "//garnet/bin/stash_ctl:stash_ctl", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/lowpan/service", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network/netcfg", "//src/connectivity/network/netcfg:config", "//src/connectivity/network/netcfg:filter_config", "//src/connectivity/network:config", "//src/connectivity/wlan:service", "//src/developer/exception_broker", "//src/developer/feedback/boot_log_checker", "//src/developer/feedback/boot_log_checker:config", "//src/developer/feedback/bugreport", "//src/developer/feedback/crashpad_agent", "//src/developer/feedback/feedback_agent", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/identity/bin:core", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_package_resolver_allowlist_userdebug", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_component_event_provider_allowlist", "//src/sys/appmgr:appmgr_deprecated_shell_allowlist", "//src/sys/appmgr:appmgr_global_data_allowlist", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:system-update-checker", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "arm64"`:** `["//build/info:build-info", "//garnet/bin/http", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/stash:stash", "//garnet/bin/stash_ctl:stash_ctl", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/lowpan/service", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network/netcfg", "//src/connectivity/network/netcfg:config", "//src/connectivity/network/netcfg:filter_config", "//src/connectivity/network:config", "//src/connectivity/wlan:service", "//src/developer/exception_broker", "//src/developer/feedback/boot_log_checker", "//src/developer/feedback/boot_log_checker:config", "//src/developer/feedback/bugreport", "//src/developer/feedback/crashpad_agent", "//src/developer/feedback/feedback_agent", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/identity/bin:core", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_package_resolver_allowlist_userdebug", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_component_event_provider_allowlist", "//src/sys/appmgr:appmgr_deprecated_shell_allowlist", "//src/sys/appmgr:appmgr_global_data_allowlist", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:system-update-checker", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -112,7 +112,7 @@ From //root_build_dir/args.gn:3
 
 From //BUILD.gn:20
 
-**Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/http", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/stash:stash", "//garnet/bin/stash_ctl:stash_ctl", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/lowpan/service", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network/netcfg", "//src/connectivity/network/netcfg:config", "//src/connectivity/network/netcfg:filter_config", "//src/connectivity/network:config", "//src/connectivity/wlan:service", "//src/developer/exception_broker", "//src/developer/feedback/boot_log_checker", "//src/developer/feedback/boot_log_checker:config", "//src/developer/feedback/bugreport", "//src/developer/feedback/crashpad_agent", "//src/developer/feedback/feedback_agent", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/identity/bin:core", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_package_resolver_allowlist_userdebug", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_component_event_provider_allowlist", "//src/sys/appmgr:appmgr_deprecated_shell_allowlist", "//src/sys/appmgr:appmgr_global_data_allowlist", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:system-update-checker", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//bundles:kitchen_sink"]`
+**Current value for `target_cpu = "x64"`:** `["//build/info:build-info", "//garnet/bin/http", "//garnet/bin/log_listener:log_listener", "//garnet/bin/log_listener:log_listener_shell", "//garnet/bin/network_time_service", "//garnet/bin/scpi", "//garnet/bin/setui:setui_service", "//garnet/bin/sshd-host", "//garnet/bin/sshd-host:config", "//garnet/bin/stash:stash", "//garnet/bin/stash_ctl:stash_ctl", "//garnet/bin/sysmgr", "//garnet/bin/sysmgr:network_config", "//garnet/bin/sysmgr:services_config", "//garnet/bin/timezone", "//src/cobalt/bin/app:cobalt", "//src/cobalt/bin/app:cobalt_registry", "//src/cobalt/bin/app:config", "//src/cobalt/bin/system-metrics:cobalt_system_metrics", "//src/connectivity/bluetooth:core", "//src/connectivity/lowpan/service", "//src/connectivity/management/reachability", "//src/connectivity/management/reachability:reachability_sysmgr_config", "//src/connectivity/network/mdns/bundles:config", "//src/connectivity/network/mdns/bundles:services", "//src/connectivity/network/net-cli", "//src/connectivity/network/netcfg", "//src/connectivity/network/netcfg:config", "//src/connectivity/network/netcfg:filter_config", "//src/connectivity/network:config", "//src/connectivity/wlan:service", "//src/developer/exception_broker", "//src/developer/feedback/boot_log_checker", "//src/developer/feedback/boot_log_checker:config", "//src/developer/feedback/bugreport", "//src/developer/feedback/crashpad_agent", "//src/developer/feedback/feedback_agent", "//src/diagnostics/archivist", "//src/diagnostics/archivist:with_default_config", "//src/hwinfo:hwinfo", "//src/identity/bin:core", "//src/media/audio/bundles:audio_config", "//src/recovery/factory_reset", "//src/security/policy:appmgr_package_resolver_allowlist_userdebug", "//src/security/root_ssl_certificates", "//src/sys/appmgr", "//src/sys/appmgr:appmgr_component_event_provider_allowlist", "//src/sys/appmgr:appmgr_deprecated_shell_allowlist", "//src/sys/appmgr:appmgr_global_data_allowlist", "//src/sys/appmgr:appmgr_scheme_config", "//src/sys/core", "//src/sys/device_settings:device_settings_manager", "//src/sys/pkg:core", "//src/sys/pkg:system-update-checker", "//src/sys/timekeeper", "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config", "//bundles:kitchen_sink"]`
 
 From //root_build_dir/args.gn:3
 
@@ -382,7 +382,7 @@ pressure arises or other policies indicate.
 
 **Current value for `target_cpu = "arm64"`:** `[]`
 
-From //products/core.gni:81
+From //products/core.gni:82
 
 **Overridden from the default:** `[]`
 
@@ -390,7 +390,7 @@ From //BUILD.gn:28
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
-From //products/core.gni:81
+From //products/core.gni:82
 
 **Overridden from the default:** `[]`
 
@@ -490,7 +490,7 @@ Tells openweave to include files that require heap access.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f1fd30776dcc83d0f09d675a3ae185078bda275/config.gni#32)
+From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/23558077124f603e2db9c74c8d6544536e518a22/config.gni#32)
 
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
@@ -503,13 +503,13 @@ From //build/config/BUILD.gn:13
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/9ed82905471121a59fb8827627df3a98b7cdfe55/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/22701bb0e448dc7cf48a4de32457a6ae464d21bc/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/9ed82905471121a59fb8827627df3a98b7cdfe55/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/22701bb0e448dc7cf48a4de32457a6ae464d21bc/util/net/tls.gni#22)
 
 ### create_kernel_service_snapshot
 
@@ -591,7 +591,7 @@ This defaults to JIT, use `fx set <ARCH> --args
 
 **Current value (from the default):** `"dart_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/caeae87a3aa7f92bd8b56433f967e514316e851e/runtime/dart/dart_component.gni#19)
+From [//topaz/runtime/dart/dart_component.gni:19](https://fuchsia.googlesource.com/topaz/+/9bd8cf685fe1dfbda92b73781065398392039f91/runtime/dart/dart_component.gni#19)
 
 ### dart_enable_wasm
 Whether dart:wasm should be enabled.
@@ -606,7 +606,7 @@ we use to build products.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/caeae87a3aa7f92bd8b56433f967e514316e851e/runtime/dart/config.gni#10)
+From [//topaz/runtime/dart/config.gni:10](https://fuchsia.googlesource.com/topaz/+/9bd8cf685fe1dfbda92b73781065398392039f91/runtime/dart/config.gni#10)
 
 ### dart_lib_export_symbols
 Whether libdart should export the symbols of the Dart API.
@@ -656,7 +656,7 @@ Whether experimental space dart mode is enabled for Dart applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/caeae87a3aa7f92bd8b56433f967e514316e851e/runtime/dart/dart_component.gni#35)
+From [//topaz/runtime/dart/dart_component.gni:35](https://fuchsia.googlesource.com/topaz/+/9bd8cf685fe1dfbda92b73781065398392039f91/runtime/dart/dart_component.gni#35)
 
 ### dart_target_arch
 Explicitly set the target architecture to use a simulator.
@@ -938,7 +938,7 @@ From //build/unification/images/BUILD.gn:14
 
 **Current value (from the default):** `"flutter_jit_app"`
 
-From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/caeae87a3aa7f92bd8b56433f967e514316e851e/runtime/dart/dart_component.gni#12)
+From [//topaz/runtime/dart/dart_component.gni:12](https://fuchsia.googlesource.com/topaz/+/9bd8cf685fe1dfbda92b73781065398392039f91/runtime/dart/dart_component.gni#12)
 
 ### flutter_driver_enabled
 Enable flutter_driver builds. This is effective only on debug builds.
@@ -951,14 +951,14 @@ From //src/experiences/session_shells/ermine/shell/BUILD.gn:21
 
 **Current value (from the default):** `true`
 
-From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/caeae87a3aa7f92bd8b56433f967e514316e851e/runtime/dart/dart_component.gni#26)
+From [//topaz/runtime/dart/dart_component.gni:26](https://fuchsia.googlesource.com/topaz/+/9bd8cf685fe1dfbda92b73781065398392039f91/runtime/dart/dart_component.gni#26)
 
 ### flutter_space_dart
 Whether experimental space dart mode is enabled for Flutter applications.
 
 **Current value (from the default):** `false`
 
-From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/caeae87a3aa7f92bd8b56433f967e514316e851e/runtime/dart/dart_component.gni#32)
+From [//topaz/runtime/dart/dart_component.gni:32](https://fuchsia.googlesource.com/topaz/+/9bd8cf685fe1dfbda92b73781065398392039f91/runtime/dart/dart_component.gni#32)
 
 ### font_catalog_paths
 
@@ -1197,38 +1197,38 @@ Tells inet to support additionally support async dns sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f1fd30776dcc83d0f09d675a3ae185078bda275/config.gni#17)
+From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/23558077124f603e2db9c74c8d6544536e518a22/config.gni#17)
 
 ### inet_want_endpoint_dns
 Tells inet to include support for the corresponding protocol.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f1fd30776dcc83d0f09d675a3ae185078bda275/config.gni#10)
+From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/23558077124f603e2db9c74c8d6544536e518a22/config.gni#10)
 
 ### inet_want_endpoint_raw
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f1fd30776dcc83d0f09d675a3ae185078bda275/config.gni#11)
+From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/23558077124f603e2db9c74c8d6544536e518a22/config.gni#11)
 
 ### inet_want_endpoint_tcp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f1fd30776dcc83d0f09d675a3ae185078bda275/config.gni#12)
+From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/23558077124f603e2db9c74c8d6544536e518a22/config.gni#12)
 
 ### inet_want_endpoint_tun
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f1fd30776dcc83d0f09d675a3ae185078bda275/config.gni#14)
+From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/23558077124f603e2db9c74c8d6544536e518a22/config.gni#14)
 
 ### inet_want_endpoint_udp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f1fd30776dcc83d0f09d675a3ae185078bda275/config.gni#13)
+From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/23558077124f603e2db9c74c8d6544536e518a22/config.gni#13)
 
 ### is_debug
 Debug build.
@@ -2207,7 +2207,7 @@ include those labels in this variable.
 
 **Current value for `target_cpu = "arm64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:83
+From //products/core.gni:84
 
 **Overridden from the default:** `[]`
 
@@ -2215,7 +2215,7 @@ From //BUILD.gn:42
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/tools/vboot_reference:cgpt_host", "//garnet/tools/vboot_reference:futility_host", "//bundles:tools"]`
 
-From //products/core.gni:83
+From //products/core.gni:84
 
 **Overridden from the default:** `[]`
 
@@ -2241,12 +2241,28 @@ package.
 
 From //build/images/BUILD.gn:482
 
+### use_cast_runner_canary
+If true then the most recent canary version of the Cast Runner is used,
+otherwise the most recently validated version is used.
+
+**Current value (from the default):** `false`
+
+From //src/cast/BUILD.gn:11
+
 ### use_ccache
 Set to true to enable compiling with ccache
 
 **Current value (from the default):** `false`
 
 From //build/toolchain/ccache.gni:9
+
+### use_chromium_canary
+Set to use the most recent canary version of prebuilt Chromium components
+otherwise the most recently validated version is used.
+
+**Current value (from the default):** `false`
+
+From //src/chromium/BUILD.gn:13
 
 ### use_goma
 Set to true to enable distributed compilation using Goma.
@@ -2391,35 +2407,35 @@ Tells openweave to support legacy WDM mode.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f1fd30776dcc83d0f09d675a3ae185078bda275/config.gni#29)
+From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/23558077124f603e2db9c74c8d6544536e518a22/config.gni#29)
 
 ### weave_build_warm
 Tells openweave to build WARM libraries.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f1fd30776dcc83d0f09d675a3ae185078bda275/config.gni#26)
+From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/23558077124f603e2db9c74c8d6544536e518a22/config.gni#26)
 
 ### weave_system_config_use_sockets
 Tells openweave components to use bsd-like sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f1fd30776dcc83d0f09d675a3ae185078bda275/config.gni#7)
+From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/23558077124f603e2db9c74c8d6544536e518a22/config.gni#7)
 
 ### weave_with_nlfaultinjection
 Tells openweave components to support fault injection.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f1fd30776dcc83d0f09d675a3ae185078bda275/config.gni#20)
+From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/23558077124f603e2db9c74c8d6544536e518a22/config.gni#20)
 
 ### weave_with_verhoeff
 Tells openweave to support Verhoeff checksum.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/5f1fd30776dcc83d0f09d675a3ae185078bda275/config.gni#23)
+From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/23558077124f603e2db9c74c8d6544536e518a22/config.gni#23)
 
 ### wlancfg_config_type
 Selects the wlan configuration type to use. Choices:
