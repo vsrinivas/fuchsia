@@ -10,7 +10,6 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_ui_input as fidl_ui_input, fidl_fuchsia_ui_scenic as fidl_ui_scenic,
     fuchsia_scenic as scenic,
-    fuchsia_zircon::{ClockId, Time},
 };
 
 /// An input handler that parses touch events and forwards them to Scenic.
@@ -43,8 +42,9 @@ impl InputHandler for TouchHandler {
                 device_event: input_device::InputDeviceEvent::Touch(touch_event),
                 device_descriptor:
                     input_device::InputDeviceDescriptor::Touch(touch_device_descriptor),
+                event_time,
             } => {
-                self.handle_touch_event(touch_event, touch_device_descriptor);
+                self.handle_touch_event(touch_event, touch_device_descriptor, event_time);
                 // Consume the event (i.e., don't forward it to the next handler).
                 vec![]
             }
@@ -91,10 +91,12 @@ impl TouchHandler {
     /// # Parameters
     /// - `touch_event`: The touch event to send to Scenic.
     /// - `touch_descriptor`: The descriptor for the device that sent the touch event.
+    /// - `event_time`: The time in nanoseconds when the event was first recorded.
     fn handle_touch_event(
         &self,
         touch_event: touch::TouchEvent,
         touch_descriptor: touch::TouchDeviceDescriptor,
+        event_time: input_device::EventTime,
     ) {
         // The order in which events are sent to clients.
         let ordered_phases = vec![
@@ -110,7 +112,12 @@ impl TouchHandler {
             let contacts: Vec<touch::TouchContact> =
                 touch_event.contacts.get(&phase).map_or(vec![], |contacts| contacts.to_vec());
             for contact in contacts {
-                let command = self.create_pointer_input_command(phase, contact, &touch_descriptor);
+                let command = self.create_pointer_input_command(
+                    phase,
+                    contact,
+                    &touch_descriptor,
+                    event_time,
+                );
                 locked_session.enqueue(command);
             }
         }
@@ -123,16 +130,18 @@ impl TouchHandler {
     /// - `phase`: The phase of the touch contact.
     /// - `contact`: The touch contact to create the event for.
     /// - `touch_descriptor`: The device descriptor for the device that generated the event.
+    /// - `event_time`: The time in nanoseconds when the event was first recorded.
     fn create_pointer_input_command(
         &self,
         phase: fidl_ui_input::PointerEventPhase,
         contact: touch::TouchContact,
         touch_descriptor: &touch::TouchDeviceDescriptor,
+        event_time: input_device::EventTime,
     ) -> fidl_ui_scenic::Command {
         let (x, y) = self.device_coordinate_from_contact(&contact, &touch_descriptor);
 
         let pointer_event = fidl_ui_input::PointerEvent {
-            event_time: Time::get(ClockId::Monotonic).into_nanos() as u64,
+            event_time,
             device_id: touch_descriptor.device_id,
             pointer_id: contact.id,
             type_: fidl_ui_input::PointerEventType::Touch,
@@ -191,7 +200,7 @@ mod tests {
         super::*,
         crate::testing_utilities::{create_touch_contact, create_touch_event},
         fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_scenic as fidl_ui_scenic,
-        fuchsia_async as fasync,
+        fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::StreamExt,
         maplit::hashmap,
     };
@@ -220,13 +229,15 @@ mod tests {
     /// - `x`: The x location of the event.
     /// - `y`: The y location of the event.
     /// - `phase`: The phase of the event.
+    /// - `event_time`: The time of the event.
     fn create_pointer_event(
         x: f32,
         y: f32,
         phase: fidl_ui_input::PointerEventPhase,
+        event_time: input_device::EventTime,
     ) -> fidl_ui_input::PointerEvent {
         fidl_ui_input::PointerEvent {
-            event_time: Time::get(ClockId::Monotonic).into_nanos() as u64,
+            event_time: event_time,
             device_id: 1,
             pointer_id: 1,
             type_: fidl_ui_input::PointerEventType::Touch,
@@ -254,7 +265,7 @@ mod tests {
                     compositor_id: _,
                     pointer_event:
                         fidl_ui_input::PointerEvent {
-                            event_time: _,
+                            event_time,
                             device_id,
                             pointer_id,
                             type_: _,
@@ -267,6 +278,7 @@ mod tests {
                         },
                 },
             )) => {
+                assert_eq!(event_time, expected_event.event_time);
                 assert_eq!(device_id, expected_event.device_id);
                 assert_eq!(pointer_id, expected_event.pointer_id);
                 assert_eq!(phase, expected_event.phase);
@@ -298,6 +310,8 @@ mod tests {
         .expect("Failed to create TouchHandler.");
 
         let descriptor = get_touch_device_descriptor();
+        let event_time =
+            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
         let input_events = vec![create_touch_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Add
@@ -305,12 +319,13 @@ mod tests {
                 fidl_ui_input::PointerEventPhase::Down
                     => vec![create_touch_contact(TOUCH_ID, 20, 40)],
             },
+            event_time,
             &descriptor,
         )];
 
         let expected_commands = vec![
-            create_pointer_event(20.0, 40.0, fidl_ui_input::PointerEventPhase::Add),
-            create_pointer_event(20.0, 40.0, fidl_ui_input::PointerEventPhase::Down),
+            create_pointer_event(20.0, 40.0, fidl_ui_input::PointerEventPhase::Add, event_time),
+            create_pointer_event(20.0, 40.0, fidl_ui_input::PointerEventPhase::Down, event_time),
         ];
 
         assert_input_event_sequence_generates_scenic_events!(
@@ -340,6 +355,8 @@ mod tests {
         .expect("Failed to create TouchHandler.");
 
         let descriptor = get_touch_device_descriptor();
+        let event_time =
+            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
         let input_events = vec![create_touch_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Up
@@ -347,12 +364,13 @@ mod tests {
                 fidl_ui_input::PointerEventPhase::Remove
                     => vec![create_touch_contact(TOUCH_ID, 20, 40)],
             },
+            event_time,
             &descriptor,
         )];
 
         let expected_commands = vec![
-            create_pointer_event(20.0, 40.0, fidl_ui_input::PointerEventPhase::Up),
-            create_pointer_event(20.0, 40.0, fidl_ui_input::PointerEventPhase::Remove),
+            create_pointer_event(20.0, 40.0, fidl_ui_input::PointerEventPhase::Up, event_time),
+            create_pointer_event(20.0, 40.0, fidl_ui_input::PointerEventPhase::Remove, event_time),
         ];
 
         assert_input_event_sequence_generates_scenic_events!(
@@ -384,6 +402,8 @@ mod tests {
         .expect("Failed to create TouchHandler.");
 
         let descriptor = get_touch_device_descriptor();
+        let event_time =
+            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
         let input_events = vec![create_touch_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Add
@@ -393,16 +413,28 @@ mod tests {
                 fidl_ui_input::PointerEventPhase::Move
                     => vec![create_touch_contact(TOUCH_ID, X*2, Y*2)]
             },
+            event_time,
             &descriptor,
         )];
 
         let expected_commands = vec![
-            create_pointer_event(X as f32, Y as f32, fidl_ui_input::PointerEventPhase::Add),
-            create_pointer_event(X as f32, Y as f32, fidl_ui_input::PointerEventPhase::Down),
+            create_pointer_event(
+                X as f32,
+                Y as f32,
+                fidl_ui_input::PointerEventPhase::Add,
+                event_time,
+            ),
+            create_pointer_event(
+                X as f32,
+                Y as f32,
+                fidl_ui_input::PointerEventPhase::Down,
+                event_time,
+            ),
             create_pointer_event(
                 (X * 2) as f32,
                 (Y * 2) as f32,
                 fidl_ui_input::PointerEventPhase::Move,
+                event_time,
             ),
         ];
 

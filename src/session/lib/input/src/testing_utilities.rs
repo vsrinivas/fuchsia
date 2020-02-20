@@ -6,11 +6,18 @@
 use {
     crate::{input_device, keyboard, mouse, touch},
     fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_input as fidl_ui_input,
-    fidl_fuchsia_ui_input2 as fidl_ui_input2,
+    fidl_fuchsia_ui_input2 as fidl_ui_input2, fuchsia_zircon as zx,
     maplit::hashmap,
     std::collections::HashMap,
     std::collections::HashSet,
 };
+
+/// Returns the current time as an i64 for InputReports and input_device::EventTime for InputEvents.
+#[cfg(test)]
+pub fn event_times() -> (i64, input_device::EventTime) {
+    let event_time = zx::Time::get(zx::ClockId::Monotonic).into_nanos();
+    (event_time, event_time as input_device::EventTime)
+}
 
 /// Creates a [`fidl_input_report::InputReport`] with a keyboard report.
 ///
@@ -19,9 +26,10 @@ use {
 #[cfg(test)]
 pub fn create_keyboard_input_report(
     pressed_keys: Vec<fidl_ui_input2::Key>,
+    event_time: i64,
 ) -> fidl_input_report::InputReport {
     fidl_input_report::InputReport {
-        event_time: None,
+        event_time: Some(event_time),
         keyboard: Some(fidl_input_report::KeyboardInputReport { pressed_keys: Some(pressed_keys) }),
         mouse: None,
         touch: None,
@@ -43,6 +51,7 @@ pub fn create_keyboard_event(
     pressed_keys: Vec<fidl_ui_input2::Key>,
     released_keys: Vec<fidl_ui_input2::Key>,
     modifiers: Option<fidl_ui_input2::Modifiers>,
+    event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
     input_device::InputEvent {
@@ -54,6 +63,7 @@ pub fn create_keyboard_event(
             modifiers: modifiers,
         }),
         device_descriptor: device_descriptor.clone(),
+        event_time: event_time,
     }
 }
 
@@ -63,14 +73,16 @@ pub fn create_keyboard_event(
 /// - `x`: The x location of the mouse report, in input device coordinates.
 /// - `y`: The y location of the mouse report, in input device coordinates.
 /// - `buttons`: The buttons to report as pressed in the mouse report.
+/// - `event_time`: The time of event.
 #[cfg(test)]
 pub fn create_mouse_input_report(
     x: i64,
     y: i64,
     buttons: Vec<u8>,
+    event_time: i64,
 ) -> fidl_input_report::InputReport {
     fidl_input_report::InputReport {
-        event_time: None,
+        event_time: Some(event_time),
         keyboard: None,
         mouse: Some(fidl_input_report::MouseInputReport {
             movement_x: Some(x),
@@ -93,6 +105,7 @@ pub fn create_mouse_input_report(
 /// - `movement_y`: The y-movement to report in the event.
 /// - `phase`: The phase of the buttons in the event.
 /// - `buttons`: The buttons to report in the event.
+/// - `event_time`: The time of event.
 /// - `device_descriptor`: The device descriptor to add to the event.
 #[cfg(test)]
 pub fn create_mouse_event(
@@ -100,6 +113,7 @@ pub fn create_mouse_event(
     movement_y: i64,
     phase: fidl_ui_input::PointerEventPhase,
     buttons: HashSet<mouse::MouseButton>,
+    event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
     input_device::InputEvent {
@@ -110,19 +124,22 @@ pub fn create_mouse_event(
             buttons,
         }),
         device_descriptor: device_descriptor.clone(),
+        event_time: event_time,
     }
 }
 
 /// Creates a [`fidl_input_report::InputReport`] with a touch report.
 ///
 /// # Parameters
-/// - `contacts`: the contacts in the touch report.
+/// - `contacts`: The contacts in the touch report.
+/// - `event_time`: The time of event.
 #[cfg(test)]
 pub fn create_touch_input_report(
     contacts: Vec<fidl_input_report::ContactInputReport>,
+    event_time: i64,
 ) -> fidl_input_report::InputReport {
     fidl_input_report::InputReport {
-        event_time: None,
+        event_time: Some(event_time),
         keyboard: None,
         mouse: None,
         touch: Some(fidl_input_report::TouchInputReport {
@@ -150,14 +167,13 @@ pub fn create_touch_contact(id: u32, position_x: i64, position_y: i64) -> touch:
 /// Creates a [`touch::TouchEvent`] with the provided parameters.
 ///
 /// # Parameters
-/// - `contact_id`: The unique identifier for the contact.
-/// - `position_x`: The x-position to report in the event.
-/// - `position_y`: The y-position to report in the event.
-/// - `phase`: The phase of the contact in the event.
+/// - `contacts`: The contacts in the touch report.
+/// - `event_time`: The time of event.
 /// - `device_descriptor`: The device descriptor to add to the event.
 #[cfg(test)]
 pub fn create_touch_event(
     mut contacts: HashMap<fidl_ui_input::PointerEventPhase, Vec<touch::TouchContact>>,
+    event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
     contacts.entry(fidl_ui_input::PointerEventPhase::Add).or_insert(vec![]);
@@ -169,6 +185,7 @@ pub fn create_touch_event(
     input_device::InputEvent {
         device_event: input_device::InputDeviceEvent::Touch(touch::TouchEvent { contacts }),
         device_descriptor: device_descriptor.clone(),
+        event_time: event_time,
     }
 }
 

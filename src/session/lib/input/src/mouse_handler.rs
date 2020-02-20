@@ -9,7 +9,6 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_ui_input as fidl_ui_input, fidl_fuchsia_ui_scenic as fidl_ui_scenic,
     fuchsia_scenic as scenic,
-    fuchsia_zircon::{ClockId, Time},
     futures::{channel::mpsc::Sender, SinkExt},
     std::collections::HashSet,
 };
@@ -55,12 +54,14 @@ impl InputHandler for MouseHandler {
             input_device::InputEvent {
                 device_event: input_device::InputDeviceEvent::Mouse(mouse_event),
                 device_descriptor: input_device::InputDeviceDescriptor::Mouse(mouse_descriptor),
+                event_time,
             } => {
                 self.update_cursor_position(&mouse_event).await;
                 self.send_events_to_scenic(
                     mouse_event.phase,
                     &mouse_event.buttons,
                     &mouse_descriptor,
+                    event_time,
                 )
                 .await;
                 vec![]
@@ -134,16 +135,19 @@ impl MouseHandler {
     /// # Parameters
     /// - `phase`: The phase of the buttons associated with the mouse event.
     /// - `buttons`: The buttons associated with the event.
+    /// - `device_descriptor`: The descriptor for the input device generating the input reports.
+    /// - `event_time`: The time in nanoseconds when the event was first recorded.
     async fn send_events_to_scenic(
         &self,
         phase: fidl_ui_input::PointerEventPhase,
         buttons: &HashSet<mouse::MouseButton>,
         device_descriptor: &mouse::MouseDeviceDescriptor,
+        event_time: input_device::EventTime,
     ) {
         let buttons = mouse::get_u32_from_buttons(buttons);
 
         let pointer_event = fidl_ui_input::PointerEvent {
-            event_time: Time::get(ClockId::Monotonic).into_nanos() as u64,
+            event_time,
             device_id: device_descriptor.device_id,
             pointer_id: 0,
             type_: fidl_ui_input::PointerEventType::Mouse,
@@ -171,7 +175,8 @@ impl MouseHandler {
 mod tests {
     use {
         super::*, crate::testing_utilities::create_mouse_event,
-        fidl_fuchsia_ui_scenic as fidl_ui_scenic, fuchsia_async as fasync, futures::StreamExt,
+        fidl_fuchsia_ui_scenic as fidl_ui_scenic, fuchsia_async as fasync, fuchsia_zircon as zx,
+        futures::StreamExt,
     };
 
     const SCENIC_COMPOSITOR_ID: u32 = 1;
@@ -188,14 +193,17 @@ mod tests {
     /// - `x`: The x location of the event.
     /// - `y`: The y location of the event.
     /// - `phase`: The phase of the event.
+    /// - `device_id`: The id of the device where this event originated.
+    /// - `event_time: The time of the event.
     fn create_pointer_event(
         x: f32,
         y: f32,
         phase: fidl_ui_input::PointerEventPhase,
         device_id: u32,
+        event_time: input_device::EventTime,
     ) -> fidl_ui_input::PointerEvent {
         fidl_ui_input::PointerEvent {
-            event_time: Time::get(ClockId::Monotonic).into_nanos() as u64,
+            event_time: event_time,
             device_id,
             pointer_id: 0,
             type_: fidl_ui_input::PointerEventType::Mouse,
@@ -223,7 +231,7 @@ mod tests {
                     compositor_id: _,
                     pointer_event:
                         fidl_ui_input::PointerEvent {
-                            event_time: _,
+                            event_time,
                             device_id,
                             pointer_id,
                             type_,
@@ -236,6 +244,7 @@ mod tests {
                         },
                 },
             )) => {
+                assert_eq!(event_time, expected_event.event_time);
                 assert_eq!(type_, fidl_ui_input::PointerEventType::Mouse);
                 assert_eq!(device_id, expected_event.device_id);
                 assert_eq!(pointer_id, expected_event.pointer_id);
@@ -273,11 +282,14 @@ mod tests {
         const CURSOR_X_MOVEMENT: i64 = 50;
         const CURSOR_Y_MOVEMENT: i64 = 75;
         let descriptor = mouse_device_descriptor(DEVICE_ID);
+        let event_time =
+            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
             CURSOR_X_MOVEMENT,
             CURSOR_Y_MOVEMENT,
             fidl_ui_input::PointerEventPhase::Move,
             HashSet::<mouse::MouseButton>::new(),
+            event_time,
             &descriptor,
         )];
 
@@ -286,6 +298,7 @@ mod tests {
             CURSOR_Y_MOVEMENT as f32,
             fidl_ui_input::PointerEventPhase::Move,
             DEVICE_ID,
+            event_time,
         )];
 
         assert_input_event_sequence_generates_scenic_events!(
@@ -327,11 +340,14 @@ mod tests {
         const CURSOR_X_MOVEMENT: f32 = SCENIC_DISPLAY_WIDTH + 2.0;
         const CURSOR_Y_MOVEMENT: f32 = SCENIC_DISPLAY_HEIGHT + 2.0;
         let descriptor = mouse_device_descriptor(DEVICE_ID);
+        let event_time =
+            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
             CURSOR_X_MOVEMENT as i64,
             CURSOR_Y_MOVEMENT as i64,
             fidl_ui_input::PointerEventPhase::Move,
             HashSet::<mouse::MouseButton>::new(),
+            event_time,
             &descriptor,
         )];
 
@@ -340,6 +356,7 @@ mod tests {
             SCENIC_DISPLAY_HEIGHT,
             fidl_ui_input::PointerEventPhase::Move,
             DEVICE_ID,
+            event_time,
         )];
 
         assert_input_event_sequence_generates_scenic_events!(
@@ -381,16 +398,24 @@ mod tests {
         const CURSOR_X_MOVEMENT: i64 = -20;
         const CURSOR_Y_MOVEMENT: i64 = -15;
         let descriptor = mouse_device_descriptor(DEVICE_ID);
+        let event_time =
+            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
         let input_events = vec![create_mouse_event(
             CURSOR_X_MOVEMENT,
             CURSOR_Y_MOVEMENT,
             fidl_ui_input::PointerEventPhase::Move,
             HashSet::<mouse::MouseButton>::new(),
+            event_time,
             &descriptor,
         )];
 
-        let expected_commands =
-            vec![create_pointer_event(0.0, 0.0, fidl_ui_input::PointerEventPhase::Move, DEVICE_ID)];
+        let expected_commands = vec![create_pointer_event(
+            0.0,
+            0.0,
+            fidl_ui_input::PointerEventPhase::Move,
+            DEVICE_ID,
+            event_time,
+        )];
 
         assert_input_event_sequence_generates_scenic_events!(
             input_handler: mouse_handler,

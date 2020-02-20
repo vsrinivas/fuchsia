@@ -24,6 +24,9 @@ pub const INPUT_EVENT_BUFFER_SIZE: usize = 100;
 /// The path to the input-report directory.
 pub static INPUT_REPORT_PATH: &str = "/dev/class/input-report";
 
+/// An `EventTime` indicates the time in nanoseconds when an event was first recorded.
+pub type EventTime = u64;
+
 /// An [`InputEvent`] holds information about an input event and the device that produced the event.
 #[derive(Clone, Debug, PartialEq)]
 pub struct InputEvent {
@@ -32,6 +35,9 @@ pub struct InputEvent {
 
     /// The `device_descriptor` contains static information about the device that generated the input event.
     pub device_descriptor: InputDeviceDescriptor,
+
+    /// The time in nanoseconds when the event was first recorded.
+    pub event_time: EventTime,
 }
 
 /// An [`InputDeviceEvent`] represents an input event from an input device.
@@ -248,6 +254,17 @@ pub fn get_device_from_dir_entry_path(
     Ok(input_device)
 }
 
+/// Returns the event time if it exists, otherwise returns the current time.
+///
+/// # Parameters
+/// - `event_time`: The event time from an InputReport.
+pub fn event_time_or_now(event_time: Option<i64>) -> EventTime {
+    match event_time {
+        Some(time) => time as EventTime,
+        None => zx::Time::get(zx::ClockId::Monotonic).into_nanos() as EventTime,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -281,6 +298,18 @@ mod tests {
         });
 
         input_device_proxy
+    }
+
+    #[test]
+    fn max_event_time() {
+        let event_time = event_time_or_now(Some(std::i64::MAX));
+        assert_eq!(event_time, std::i64::MAX as EventTime);
+    }
+
+    #[test]
+    fn min_event_time() {
+        let event_time = event_time_or_now(Some(std::i64::MIN));
+        assert_eq!(event_time, std::i64::MIN as EventTime);
     }
 
     // Tests that is_device_type() returns true for InputDeviceType::Mouse when a mouse exists.

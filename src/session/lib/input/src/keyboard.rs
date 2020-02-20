@@ -270,10 +270,14 @@ impl KeyboardBinding {
             .and_then(|unwrapped_report| KeyboardBinding::parse_pressed_keys(&unwrapped_report))
             .unwrap_or_default();
 
+        let event_time: input_device::EventTime =
+            input_device::event_time_or_now(report.event_time);
+
         KeyboardBinding::send_key_events(
             &new_keys,
             &previous_keys,
             device_descriptor.clone(),
+            event_time,
             input_event_sender.clone(),
         );
 
@@ -302,10 +306,14 @@ impl KeyboardBinding {
     /// # Parameters
     /// - `new_keys`: The keys which are currently pressed, as reported by the bound device.
     /// - `previous_keys`: The keys which were pressed in the previous input report.
+    /// - `device_descriptor`: The descriptor for the input device generating the input reports.
+    /// - `event_time`: The time in nanoseconds when the event was first recorded.
+    /// - `input_event_sender`: The sender for the device binding's input event stream.
     fn send_key_events(
         new_keys: &Vec<Key>,
         previous_keys: &Vec<Key>,
         device_descriptor: input_device::InputDeviceDescriptor,
+        event_time: input_device::EventTime,
         mut input_event_sender: Sender<input_device::InputEvent>,
     ) {
         // Filter out the keys which were present in the previous keyboard report to avoid sending
@@ -336,6 +344,7 @@ impl KeyboardBinding {
                         modifiers: modifiers,
                     }),
                     device_descriptor,
+                    event_time,
                 })
                 .await
             {
@@ -359,10 +368,17 @@ mod tests {
         let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
             keys: vec![Key::A],
         });
+        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
 
-        let reports = vec![testing_utilities::create_keyboard_input_report(vec![Key::A])];
-        let expected_events =
-            vec![testing_utilities::create_keyboard_event(vec![Key::A], vec![], None, &descriptor)];
+        let reports =
+            vec![testing_utilities::create_keyboard_input_report(vec![Key::A], event_time_i64)];
+        let expected_events = vec![testing_utilities::create_keyboard_event(
+            vec![Key::A],
+            vec![],
+            None,
+            event_time_u64,
+            &descriptor,
+        )];
 
         assert_input_report_sequence_generates_events!(
             input_reports: reports,
@@ -379,15 +395,28 @@ mod tests {
         let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
             keys: vec![Key::A],
         });
+        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
 
         let reports = vec![
-            testing_utilities::create_keyboard_input_report(vec![Key::A]),
-            testing_utilities::create_keyboard_input_report(vec![]),
+            testing_utilities::create_keyboard_input_report(vec![Key::A], event_time_i64),
+            testing_utilities::create_keyboard_input_report(vec![], event_time_i64),
         ];
 
         let expected_events = vec![
-            testing_utilities::create_keyboard_event(vec![Key::A], vec![], None, &descriptor),
-            testing_utilities::create_keyboard_event(vec![], vec![Key::A], None, &descriptor),
+            testing_utilities::create_keyboard_event(
+                vec![Key::A],
+                vec![],
+                None,
+                event_time_u64,
+                &descriptor,
+            ),
+            testing_utilities::create_keyboard_event(
+                vec![],
+                vec![Key::A],
+                None,
+                event_time_u64,
+                &descriptor,
+            ),
         ];
 
         assert_input_report_sequence_generates_events!(
@@ -405,15 +434,28 @@ mod tests {
         let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
             keys: vec![Key::A],
         });
+        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
 
         let reports = vec![
-            testing_utilities::create_keyboard_input_report(vec![Key::A]),
-            testing_utilities::create_keyboard_input_report(vec![Key::A]),
+            testing_utilities::create_keyboard_input_report(vec![Key::A], event_time_i64),
+            testing_utilities::create_keyboard_input_report(vec![Key::A], event_time_i64),
         ];
 
         let expected_events = vec![
-            testing_utilities::create_keyboard_event(vec![Key::A], vec![], None, &descriptor),
-            testing_utilities::create_keyboard_event(vec![], vec![], None, &descriptor),
+            testing_utilities::create_keyboard_event(
+                vec![Key::A],
+                vec![],
+                None,
+                event_time_u64,
+                &descriptor,
+            ),
+            testing_utilities::create_keyboard_event(
+                vec![],
+                vec![],
+                None,
+                event_time_u64,
+                &descriptor,
+            ),
         ];
 
         assert_input_report_sequence_generates_events!(
@@ -430,15 +472,28 @@ mod tests {
         let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
             keys: vec![Key::A, Key::B],
         });
+        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
 
         let reports = vec![
-            testing_utilities::create_keyboard_input_report(vec![Key::A]),
-            testing_utilities::create_keyboard_input_report(vec![Key::B]),
+            testing_utilities::create_keyboard_input_report(vec![Key::A], event_time_i64),
+            testing_utilities::create_keyboard_input_report(vec![Key::B], event_time_i64),
         ];
 
         let expected_events = vec![
-            testing_utilities::create_keyboard_event(vec![Key::A], vec![], None, &descriptor),
-            testing_utilities::create_keyboard_event(vec![Key::B], vec![Key::A], None, &descriptor),
+            testing_utilities::create_keyboard_event(
+                vec![Key::A],
+                vec![],
+                None,
+                event_time_u64,
+                &descriptor,
+            ),
+            testing_utilities::create_keyboard_event(
+                vec![Key::B],
+                vec![Key::A],
+                None,
+                event_time_u64,
+                &descriptor,
+            ),
         ];
 
         assert_input_report_sequence_generates_events!(
@@ -455,13 +510,18 @@ mod tests {
         let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
             keys: vec![Key::LeftShift],
         });
+        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
 
-        let reports = vec![testing_utilities::create_keyboard_input_report(vec![Key::LeftShift])];
+        let reports = vec![testing_utilities::create_keyboard_input_report(
+            vec![Key::LeftShift],
+            event_time_i64,
+        )];
 
         let expected_events = vec![testing_utilities::create_keyboard_event(
             vec![Key::LeftShift],
             vec![],
             Some(Modifiers::Shift | Modifiers::LeftShift),
+            event_time_u64,
             &descriptor,
         )];
 
@@ -480,11 +540,15 @@ mod tests {
         let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
             keys: vec![Key::A, Key::LeftShift],
         });
+        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
 
         let reports = vec![
-            testing_utilities::create_keyboard_input_report(vec![Key::LeftShift]),
-            testing_utilities::create_keyboard_input_report(vec![Key::LeftShift, Key::A]),
-            testing_utilities::create_keyboard_input_report(vec![Key::A]),
+            testing_utilities::create_keyboard_input_report(vec![Key::LeftShift], event_time_i64),
+            testing_utilities::create_keyboard_input_report(
+                vec![Key::LeftShift, Key::A],
+                event_time_i64,
+            ),
+            testing_utilities::create_keyboard_input_report(vec![Key::A], event_time_i64),
         ];
 
         let expected_events = vec![
@@ -492,18 +556,21 @@ mod tests {
                 vec![Key::LeftShift],
                 vec![],
                 Some(Modifiers::Shift | Modifiers::LeftShift),
+                event_time_u64,
                 &descriptor,
             ),
             testing_utilities::create_keyboard_event(
                 vec![Key::A],
                 vec![],
                 Some(Modifiers::Shift | Modifiers::LeftShift),
+                event_time_u64,
                 &descriptor,
             ),
             testing_utilities::create_keyboard_event(
                 vec![],
                 vec![Key::LeftShift],
                 None,
+                event_time_u64,
                 &descriptor,
             ),
         ];

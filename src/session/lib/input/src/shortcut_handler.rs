@@ -28,6 +28,7 @@ impl InputHandler for ShortcutHandler {
                 device_event: input_device::InputDeviceEvent::Keyboard(keyboard_device_event),
                 device_descriptor:
                     input_device::InputDeviceDescriptor::Keyboard(_keyboard_device_descriptor),
+                event_time: _,
             } => {
                 let pressed_keys: Vec<fidl_ui_input2::KeyEvent> = keyboard_device_event
                     .get_keys(fidl_ui_input2::KeyEventPhase::Pressed)
@@ -132,7 +133,7 @@ async fn handle_key_event(
 mod tests {
     use {
         super::*, crate::keyboard, crate::testing_utilities, fuchsia_async as fasync,
-        futures::StreamExt,
+        fuchsia_zircon as zx, futures::StreamExt,
     };
 
     /// Creates an [`ShortcutHandler`] for tests.
@@ -165,6 +166,7 @@ mod tests {
     async fn press_key(
         press_key: Key,
         modifiers: Option<Modifiers>,
+        event_time: input_device::EventTime,
         mut shortcut_handler: ShortcutHandler,
     ) -> Vec<input_device::InputEvent> {
         let device_descriptor =
@@ -175,6 +177,7 @@ mod tests {
             vec![press_key],
             vec![],
             modifiers,
+            event_time,
             &device_descriptor,
         );
         shortcut_handler.handle_input_event(input_event).await
@@ -184,6 +187,7 @@ mod tests {
     async fn release_key(
         release_key: Key,
         modifiers: Option<Modifiers>,
+        event_time: input_device::EventTime,
         mut shortcut_handler: ShortcutHandler,
     ) -> Vec<input_device::InputEvent> {
         let device_descriptor =
@@ -194,6 +198,7 @@ mod tests {
             vec![],
             vec![release_key],
             modifiers,
+            event_time,
             &device_descriptor,
         );
         shortcut_handler.handle_input_event(input_event).await
@@ -205,8 +210,10 @@ mod tests {
         let shortcut_handler = create_shortcut_handler(false);
         let modifiers = None;
         let key = Key::A;
+        let event_time =
+            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
 
-        let was_handled = press_key(key, modifiers, shortcut_handler).await;
+        let was_handled = press_key(key, modifiers, event_time, shortcut_handler).await;
         assert_eq!(was_handled.len(), 1);
 
         let device_descriptor =
@@ -217,6 +224,7 @@ mod tests {
             vec![key],
             vec![],
             modifiers,
+            event_time,
             &device_descriptor,
         );
 
@@ -226,10 +234,13 @@ mod tests {
     /// Tests that a press key shortcut is consumed.
     #[fasync::run_singlethreaded(test)]
     async fn press_key_activates_shortcut() {
+        let event_time =
+            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
         let shortcut_handler = create_shortcut_handler(true);
         let was_handled = press_key(
             Key::LeftShift,
             Some(Modifiers::LeftShift | Modifiers::Shift),
+            event_time,
             shortcut_handler,
         )
         .await;
@@ -242,8 +253,10 @@ mod tests {
         let shortcut_handler = create_shortcut_handler(false);
         let key = Key::A;
         let modifiers = None;
+        let event_time =
+            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
 
-        let was_handled = release_key(key, modifiers, shortcut_handler).await;
+        let was_handled = release_key(key, modifiers, event_time, shortcut_handler).await;
         assert_eq!(was_handled.len(), 1);
 
         let device_descriptor =
@@ -254,6 +267,7 @@ mod tests {
             vec![],
             vec![key],
             modifiers,
+            event_time,
             &device_descriptor,
         );
 
@@ -264,10 +278,13 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn release_key_triggers_shortcut() {
         let shortcut_handler = create_shortcut_handler(true);
+        let event_time =
+            zx::Time::get(zx::ClockId::Monotonic).into_nanos() as input_device::EventTime;
 
         let was_handled = release_key(
             Key::LeftShift,
             Some(Modifiers::LeftShift | Modifiers::Shift),
+            event_time,
             shortcut_handler,
         )
         .await;

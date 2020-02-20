@@ -21,11 +21,13 @@ async fn main() -> Result<(), Error> {
             input_device::InputEvent {
                 device_event: input_device::InputDeviceEvent::Mouse(mouse_event_descriptor),
                 device_descriptor: _,
+                event_time,
             } => {
                 fx_log_info!("movement_x: {}", mouse_event_descriptor.movement_x);
                 fx_log_info!("movement_y: {}", mouse_event_descriptor.movement_y);
                 fx_log_info!("phase: {:?}", mouse_event_descriptor.phase);
                 fx_log_info!("buttons: {:?}", mouse_event_descriptor.buttons);
+                fx_log_info!("event_time: {:?}", event_time);
             }
             _ => {}
         }

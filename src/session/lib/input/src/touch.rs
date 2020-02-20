@@ -266,13 +266,13 @@ impl TouchBinding {
     /// The [`InputEvent`]s are sent to the device binding owner via [`sender`].
     ///
     /// # Parameters
-    /// `report`: The incoming [`InputReport`].
-    /// `previous_report`: The previous [`InputReport`] seen for the same device. This can be
+    /// - `report`: The incoming [`InputReport`].
+    /// - `previous_report`: The previous [`InputReport`] seen for the same device. This can be
     ///                    used to determine, for example, which keys are no longer present in
     ///                    a keyboard report to generate key released events. If `None`, no
     ///                    previous report was found.
-    /// `device_descriptor`: The descriptor for the input device generating the input reports.
-    /// `input_event_sender`: The sender for the device binding's input event stream.
+    /// - `device_descriptor`: The descriptor for the input device generating the input reports.
+    /// - `input_event_sender`: The sender for the device binding's input event stream.
     ///
     /// # Returns
     /// An [`InputReport`] which will be passed to the next call to [`process_reports`], as
@@ -321,7 +321,10 @@ impl TouchBinding {
                 .filter(|contact| !current_contacts.contains_key(&contact.id)),
         );
 
-        send_events(
+        let event_time: input_device::EventTime =
+            input_device::event_time_or_now(report.event_time);
+
+        send_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Add => added_contacts.clone(),
                 fidl_ui_input::PointerEventPhase::Down => added_contacts,
@@ -330,6 +333,7 @@ impl TouchBinding {
                 fidl_ui_input::PointerEventPhase::Remove => removed_contacts,
             },
             device_descriptor,
+            event_time,
             input_event_sender,
         );
 
@@ -383,14 +387,23 @@ fn touch_contacts_from_touch_report(
     contacts.into_iter().map(|contact| (contact.id, contact)).collect()
 }
 
-fn send_events(
+/// Sends a TouchEvent over `input_event_sender`.
+///
+/// # Parameters
+/// - `contacts`: The contact points relevant to the new TouchEvent.
+/// - `device_descriptor`: The descriptor for the input device generating the input reports.
+/// - `event_time`: The time in nanoseconds when the event was first recorded.
+/// - `input_event_sender`: The sender for the device binding's input event stream.
+fn send_event(
     contacts: HashMap<fidl_ui_input::PointerEventPhase, Vec<TouchContact>>,
     device_descriptor: &input_device::InputDeviceDescriptor,
+    event_time: input_device::EventTime,
     input_event_sender: &mut Sender<input_device::InputEvent>,
 ) {
     match input_event_sender.try_send(input_device::InputEvent {
         device_event: input_device::InputDeviceEvent::Touch(TouchEvent { contacts }),
         device_descriptor: device_descriptor.clone(),
+        event_time,
     }) {
         Err(e) => fx_log_err!("Failed to send TouchEvent with error: {:?}", e),
         _ => {}
@@ -402,7 +415,7 @@ mod tests {
     use {
         super::*,
         crate::testing_utilities::{
-            create_touch_contact, create_touch_event, create_touch_input_report,
+            self, create_touch_contact, create_touch_event, create_touch_input_report,
         },
         fuchsia_async as fasync,
         futures::StreamExt,
@@ -417,6 +430,7 @@ mod tests {
             device_id: 1,
             contacts: vec![],
         });
+        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
 
         let contact = fidl_fuchsia_input_report::ContactInputReport {
             contact_id: Some(TOUCH_ID),
@@ -426,7 +440,7 @@ mod tests {
             contact_width: None,
             contact_height: None,
         };
-        let reports = vec![create_touch_input_report(vec![contact])];
+        let reports = vec![create_touch_input_report(vec![contact], event_time_i64)];
 
         let expected_events = vec![create_touch_event(
             hashmap! {
@@ -435,6 +449,7 @@ mod tests {
                 fidl_ui_input::PointerEventPhase::Down
                     => vec![create_touch_contact(TOUCH_ID, 0, 0)],
             },
+            event_time_u64,
             &descriptor,
         )];
 
@@ -455,6 +470,7 @@ mod tests {
             device_id: 1,
             contacts: vec![],
         });
+        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
 
         let contact = fidl_fuchsia_input_report::ContactInputReport {
             contact_id: Some(TOUCH_ID),
@@ -464,8 +480,10 @@ mod tests {
             contact_width: None,
             contact_height: None,
         };
-        let reports =
-            vec![create_touch_input_report(vec![contact]), create_touch_input_report(vec![])];
+        let reports = vec![
+            create_touch_input_report(vec![contact], event_time_i64),
+            create_touch_input_report(vec![], event_time_i64),
+        ];
 
         let expected_events = vec![
             create_touch_event(
@@ -475,6 +493,7 @@ mod tests {
                     fidl_ui_input::PointerEventPhase::Down
                         => vec![create_touch_contact(TOUCH_ID, 0, 0)],
                 },
+                event_time_u64,
                 &descriptor,
             ),
             create_touch_event(
@@ -484,6 +503,7 @@ mod tests {
                     fidl_ui_input::PointerEventPhase::Remove
                         => vec![create_touch_contact(TOUCH_ID, 0, 0)],
                 },
+                event_time_u64,
                 &descriptor,
             ),
         ];
@@ -507,6 +527,7 @@ mod tests {
             device_id: 1,
             contacts: vec![],
         });
+        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
 
         let first_contact = fidl_fuchsia_input_report::ContactInputReport {
             contact_id: Some(TOUCH_ID),
@@ -526,8 +547,8 @@ mod tests {
         };
 
         let reports = vec![
-            create_touch_input_report(vec![first_contact]),
-            create_touch_input_report(vec![second_contact]),
+            create_touch_input_report(vec![first_contact], event_time_i64),
+            create_touch_input_report(vec![second_contact], event_time_i64),
         ];
 
         let expected_events = vec![
@@ -538,6 +559,7 @@ mod tests {
                     fidl_ui_input::PointerEventPhase::Down
                         => vec![create_touch_contact(TOUCH_ID, FIRST_X, FIRST_Y)],
                 },
+                event_time_u64,
                 &descriptor,
             ),
             create_touch_event(
@@ -545,6 +567,7 @@ mod tests {
                     fidl_ui_input::PointerEventPhase::Move
                         => vec![create_touch_contact(TOUCH_ID, FIRST_X*2, FIRST_Y*2)],
                 },
+                event_time_u64,
                 &descriptor,
             ),
         ];

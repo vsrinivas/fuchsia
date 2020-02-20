@@ -27,6 +27,7 @@ async fn main() -> Result<(), Error> {
             input_device::InputEvent {
                 device_event: input_device::InputDeviceEvent::Mouse(mouse_event_descriptor),
                 device_descriptor: _,
+                event_time: _,
             } => {
                 x += mouse_event_descriptor.movement_x as f32;
                 y += mouse_event_descriptor.movement_y as f32;

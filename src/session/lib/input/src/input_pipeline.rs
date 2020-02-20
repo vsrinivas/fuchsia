@@ -207,7 +207,7 @@ mod tests {
         crate::mouse,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-        fidl_fuchsia_ui_input as fidl_ui_input, fuchsia_async as fasync,
+        fidl_fuchsia_ui_input as fidl_ui_input, fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::channel::mpsc::Sender,
         futures::FutureExt,
         rand::Rng,
@@ -234,6 +234,8 @@ mod tests {
             device_descriptor: input_device::InputDeviceDescriptor::Mouse(
                 mouse::MouseDeviceDescriptor { device_id: 1 },
             ),
+            event_time: zx::Time::get(zx::ClockId::Monotonic).into_nanos()
+                as input_device::EventTime,
         };
         match sender.try_send(input_event.clone()) {
             Err(_) => assert!(false),
