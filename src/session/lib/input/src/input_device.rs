@@ -214,13 +214,13 @@ pub async fn get_device_binding(
 ) -> Result<Box<dyn InputDeviceBinding>, Error> {
     match device_type {
         InputDeviceType::Mouse => {
-            Ok(Box::new(mouse::MouseBinding::new2(device_proxy, input_event_sender).await?))
+            Ok(Box::new(mouse::MouseBinding::new(device_proxy, input_event_sender).await?))
         }
         InputDeviceType::Touch => {
-            Ok(Box::new(touch::TouchBinding::new2(device_proxy, input_event_sender).await?))
+            Ok(Box::new(touch::TouchBinding::new(device_proxy, input_event_sender).await?))
         }
         InputDeviceType::Keyboard => {
-            Ok(Box::new(keyboard::KeyboardBinding::new2(device_proxy, input_event_sender).await?))
+            Ok(Box::new(keyboard::KeyboardBinding::new(device_proxy, input_event_sender).await?))
         }
     }
 }

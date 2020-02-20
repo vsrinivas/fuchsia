@@ -163,32 +163,6 @@ impl KeyboardBinding {
         Ok(device_binding)
     }
 
-    /// Creates a new [`InputDeviceBinding`] from the `device_proxy`.
-    ///
-    /// The binding will start listening for input reports immediately and send new InputEvents
-    /// to the InputPipeline over `input_event_sender`.
-    ///
-    /// # Parameters
-    /// - `device_proxy`: The proxy to bind the new [`InputDeviceBinding`] to.
-    /// - `input_event_sender`: The channel to send new InputEvents to.
-    ///
-    /// # Errors
-    /// If there was an error binding to the proxy.
-    pub async fn new2(
-        device_proxy: InputDeviceProxy,
-        input_event_sender: Sender<input_device::InputEvent>,
-    ) -> Result<Self, Error> {
-        let device_binding = Self::bind_device(&device_proxy, input_event_sender).await?;
-        input_device::initialize_report_stream(
-            device_proxy,
-            device_binding.get_device_descriptor(),
-            device_binding.input_event_sender(),
-            Self::process_reports,
-        );
-
-        Ok(device_binding)
-    }
-
     /// Converts a vector of keyboard keys to the appropriate [`Modifiers`] bitflags.
     ///
     /// For example, if `keys` contains `Key::LeftAlt`, the bitflags will contain

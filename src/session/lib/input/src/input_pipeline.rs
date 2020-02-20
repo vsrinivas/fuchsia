@@ -95,75 +95,8 @@ impl InputPipeline {
         Ok(input_pipeline)
     }
 
-    /// Creates a new [`InputPipeline`].
-    ///
-    /// # Parameters
-    /// - `device_types`: The types of devices the new [`InputPipeline`] will support.
-    /// - `input_handlers`: The input handlers that the [`InputPipeline`] sends InputEvents to.
-    ///                     Handlers process InputEvents in the order that they appear in
-    ///                     `input_handlers`.
-    ///
-    /// Example:
-    /// let input_pipeline = InputPipeline::new_pipeline(
-    ///     vec![
-    ///         input_device::InputDeviceType::Mouse,
-    ///         input_device::InputDeviceType::Touch,
-    ///         input_device::InputDeviceType::Keyboard,
-    ///     ],
-    ///     input_handlers(scene_manager, pointer_hack_server).await);
-    pub async fn new2(
-        device_types: Vec<input_device::InputDeviceType>,
-        input_handlers: Vec<Box<dyn input_handler::InputHandler>>,
-    ) -> Result<Self, Error> {
-        let (input_event_sender, input_event_receiver) =
-            futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-
-        let input_pipeline =
-            InputPipeline { input_handlers, input_event_sender, input_event_receiver };
-
-        // Watches the input device directory for new input devices. Creates new InputDeviceBindings
-        // that send InputEvents to `input_event_receiver`.
-        let input_event_sender = input_pipeline.input_event_sender.clone();
-        let device_watcher = Self::get_device_watcher().await?;
-        let dir_proxy =
-            open_directory_in_namespace(input_device::INPUT_REPORT_PATH, OPEN_RIGHT_READABLE)?;
-        fasync::spawn(async move {
-            let mut bindings = HashMap::new();
-            let _ = Self::watch_for_devices(
-                device_watcher,
-                dir_proxy,
-                device_types,
-                input_event_sender,
-                &mut bindings,
-                false, /* break_on_idle */
-            )
-            .await;
-        });
-
-        Ok(input_pipeline)
-    }
-
     /// Sends all InputEvents from `input_event_receiver` to all `input_handlers`.
     pub async fn handle_input_events(mut self) {
-        while let Some(input_event) = self.input_event_receiver.next().await {
-            let mut result_events: Vec<input_device::InputEvent> = vec![input_event];
-            // Pass the InputEvent through all InputHandlers
-            for input_handler in &mut self.input_handlers {
-                // The outputted events from one InputHandler serves as the input
-                // events for the next InputHandler.
-                let mut next_result_events: Vec<input_device::InputEvent> = vec![];
-                for event in result_events {
-                    next_result_events.append(&mut input_handler.handle_input_event(event).await);
-                }
-                result_events = next_result_events;
-            }
-        }
-
-        fx_log_err!("Input pipeline stopped handling input events.");
-    }
-
-    /// Sends all InputEvents from `input_event_receiver` to all `input_handlers`.
-    pub async fn handle_input_events2(mut self) {
         while let Some(input_event) = self.input_event_receiver.next().await {
             let mut result_events: Vec<input_device::InputEvent> = vec![input_event];
             // Pass the InputEvent through all InputHandlers
