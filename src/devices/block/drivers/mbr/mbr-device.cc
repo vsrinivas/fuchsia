@@ -107,7 +107,7 @@ zx_status_t MbrReadHeader(const ddk::BlockProtocolClient& parent_proto, mbr::Mbr
     return status;
   }
 
-  if ((status = mbr::Mbr::Parse(buffer, sizeof(buffer), mbr_out)) != ZX_OK) {
+  if ((status = mbr::Parse(buffer, sizeof(buffer), mbr_out)) != ZX_OK) {
     zxlogf(ERROR, "mbr: Failed to parse MBR: %s\n", zx_status_get_string(status));
     return status;
   }

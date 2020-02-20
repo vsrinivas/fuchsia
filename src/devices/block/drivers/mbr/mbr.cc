@@ -16,7 +16,7 @@
 
 namespace mbr {
 
-zx_status_t Mbr::Parse(const uint8_t* buffer, size_t bufsz, Mbr* out) {
+zx_status_t Parse(const uint8_t* buffer, size_t bufsz, Mbr* out) {
   if (bufsz < kMbrSize) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }

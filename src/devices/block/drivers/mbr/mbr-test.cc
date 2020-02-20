@@ -4,9 +4,6 @@
 
 #include "mbr.h"
 
-#include <inttypes.h>
-#include <zircon/errors.h>
-
 #include <zxtest/zxtest.h>
 
 #include "mbr-test-data.h"
@@ -16,7 +13,7 @@ namespace mbr {
 TEST(MbrTest, ParseShortBuffer) {
   Mbr mbr;
   uint8_t buffer[511] = {0};
-  EXPECT_EQ(Mbr::Parse(buffer, sizeof(buffer), &mbr), ZX_ERR_BUFFER_TOO_SMALL);
+  EXPECT_EQ(mbr::Parse(buffer, sizeof(buffer), &mbr), ZX_ERR_BUFFER_TOO_SMALL);
 }
 
 TEST(MbrTest, InvalidBootSignature) {
@@ -25,12 +22,12 @@ TEST(MbrTest, InvalidBootSignature) {
   memcpy(buffer, kFuchsiaMbr, sizeof(buffer));
   buffer[510] = 0x12;
   buffer[511] = 0x34;
-  EXPECT_EQ(Mbr::Parse(buffer, sizeof(buffer), &mbr), ZX_ERR_NOT_SUPPORTED);
+  EXPECT_EQ(mbr::Parse(buffer, sizeof(buffer), &mbr), ZX_ERR_NOT_SUPPORTED);
 }
 
 TEST(MbrTest, Parse) {
   Mbr mbr;
-  EXPECT_OK(Mbr::Parse(kFuchsiaMbr, sizeof(kFuchsiaMbr), &mbr));
+  EXPECT_OK(mbr::Parse(kFuchsiaMbr, sizeof(kFuchsiaMbr), &mbr));
 
   MbrPartitionEntry partition;
   memcpy(&partition, &mbr.partitions[0], kMbrPartitionEntrySize);
