@@ -21,15 +21,14 @@ group("tests") {
     ":dart_target_tests",
     ":dart_unittests",
     "bin/terminal_settings_agent:tests",
+    "session_shells/ermine/session:tests",
   ]
 }
 
 # Dart tests which can run on target
 group("dart_target_tests") {
   testonly = true
-  public_deps = [
-    "bin:dart_target_tests",
-  ]
+  public_deps = [ "bin:dart_target_tests" ]
 }
 
 # Dart unit tests which can run on the host or target

@@ -58,3 +58,11 @@ async fn main() -> Result<(), Error> {
 
     loop {}
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn dummy_test() {
+        assert_eq!(true, true);
+    }
+}
