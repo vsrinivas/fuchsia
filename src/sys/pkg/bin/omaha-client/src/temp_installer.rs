@@ -6,8 +6,10 @@
 //! delete this and switch to the one in mod installer once the FIDL API is ready.
 
 use crate::install_plan::FuchsiaInstallPlan;
+use anyhow::anyhow;
 use fidl_fuchsia_sys::LauncherProxy;
-use fuchsia_component::client::{launcher, AppBuilder, ExitStatus};
+use fuchsia_component::client::{connect_to_service, launcher, AppBuilder, ExitStatus};
+use fuchsia_zircon as zx;
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use omaha_client::{
@@ -15,8 +17,6 @@ use omaha_client::{
     protocol::request::InstallSource,
 };
 use thiserror::Error;
-
-type Result<T> = std::result::Result<T, FuchsiaInstallError>;
 
 #[derive(Debug, Error)]
 pub enum FuchsiaInstallError {
@@ -39,7 +39,7 @@ pub struct FuchsiaInstaller {
 }
 
 impl FuchsiaInstaller {
-    pub fn new() -> Result<Self> {
+    pub fn new() -> Result<Self, FuchsiaInstallError> {
         Ok(FuchsiaInstaller { launcher: launcher()? })
     }
 
@@ -59,7 +59,7 @@ impl Installer for FuchsiaInstaller {
         &mut self,
         install_plan: &FuchsiaInstallPlan,
         _observer: Option<&dyn ProgressObserver>,
-    ) -> BoxFuture<'_, Result<()>> {
+    ) -> BoxFuture<'_, Result<(), FuchsiaInstallError>> {
         let url = install_plan.url.to_string();
         let initiator = match install_plan.install_source {
             InstallSource::ScheduledTask => "automatic",
@@ -76,6 +76,18 @@ impl Installer for FuchsiaInstaller {
                 .await?
                 .ok()
                 .map_err(FuchsiaInstallError::Installer)
+        }
+        .boxed()
+    }
+
+    fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>> {
+        async move {
+            zx::Status::ok(
+                connect_to_service::<fidl_fuchsia_device_manager::AdministratorMarker>()?
+                    .suspend(fidl_fuchsia_device_manager::SUSPEND_FLAG_REBOOT)
+                    .await?,
+            )
+            .map_err(|e| anyhow!("Suspend error: {}", e))
         }
         .boxed()
     }

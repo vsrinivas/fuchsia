@@ -78,4 +78,8 @@ impl Installer for StubInstaller {
             future::ready(Ok(())).boxed()
         }
     }
+
+    fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>> {
+        future::ready(Ok(())).boxed()
+    }
 }
