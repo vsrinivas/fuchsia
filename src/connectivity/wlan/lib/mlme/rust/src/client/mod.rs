@@ -424,10 +424,9 @@ impl Client {
     }
 
     /// Only management and data frames should be processed. Furthermore, the source address should
-    /// be the BSSID the client associated to and the receiver address should either be broadcast
+    /// be the BSSID the client associated to and the receiver address should either be non-unicast
     /// or the client's MAC address.
     fn should_handle_frame<B: ByteSlice>(&self, mac_frame: &mac::MacFrame<B>) -> bool {
-        const BROADCAST_MAC_ADDR: [u8; 6] = [0xff; 6];
         // Technically, |transmitter_addr| and |receiver_addr| would be more accurate but using src
         // src and dst to be consistent with |data_dst_addr()|.
         let (src_addr, dst_addr) = match mac_frame {
@@ -439,8 +438,15 @@ impl Client {
             _ => return false,
         };
         src_addr.map_or(false, |src_addr| src_addr == self.bssid.0)
-            && (dst_addr == BROADCAST_MAC_ADDR || dst_addr == self.iface_mac)
+            && (!is_unicast(dst_addr) || dst_addr == self.iface_mac)
     }
+}
+
+/// A MAC address is a unicast address if the least significant bit of the first octet is 0.
+/// See "individual/group bit" in
+/// https://standards.ieee.org/content/dam/ieee-standards/standards/web/documents/tutorials/macgrp.pdf
+fn is_unicast(addr: MacAddr) -> bool {
+    addr[0] & 1 == 0
 }
 
 pub struct BoundClient<'a> {
@@ -2128,6 +2134,19 @@ mod tests {
             .next_mlme_msg::<fidl_mlme::StatsQueryResponse>()
             .expect("Should receive a stats query response");
         assert_eq!(stats_query_resp, stats::empty_stats_query_response());
+    }
+
+    #[test]
+    fn unicast_addresses() {
+        assert!(is_unicast([0; 6]));
+        assert!(is_unicast([0xfe; 6]));
+    }
+
+    #[test]
+    fn non_unicast_addresses() {
+        assert!(!is_unicast([0xff; 6])); // broadcast
+        assert!(!is_unicast([0x33, 0x33, 0, 0, 0, 0])); // IPv6 multicast
+        assert!(!is_unicast([0x01, 0x00, 0x53, 0, 0, 0])); // IPv4 multicast
     }
 
     #[test]
