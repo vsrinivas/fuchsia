@@ -323,6 +323,12 @@ class GNBuilder(Frontend):
                 name=layer_name,
                 config=os.path.relpath(res, start=local_pkg),
                 binary=os.path.relpath(binary, start=local_pkg))
+            # Special case: VkLayer_image_pipe_swapchain has an undocumented
+            # data_dep on trace-engine. There currently is no way to recognize
+            # these exceptions through atom metadata alone (fxb/46250).
+            if layer_name == 'VkLayer_image_pipe_swapchain':
+                layer.data_deps.append('trace-engine')
+
             data.layers.append(layer)
 
         base = self.dest(local_pkg)

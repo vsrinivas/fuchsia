@@ -97,7 +97,8 @@ class VulkanLibrary(object):
 
 class VulkanLayer(object):
 
-    def __init__(self, name, config, binary):
+    def __init__(self, name, config, binary, data_deps=None):
         self.name = name
         self.config = config
         self.binary = binary
+        self.data_deps = data_deps if data_deps is not None else []

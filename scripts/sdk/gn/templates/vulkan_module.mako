@@ -27,6 +27,9 @@ group("${layer.name}") {
   data_deps = [
     ":${layer.name}_config",
     ":${layer.name}_lib",
+    % for dep in layer.data_deps:
+    "../${dep}",
+    % endfor
   ]
 }
 

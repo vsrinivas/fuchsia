@@ -53,6 +53,7 @@ group("VkLayer_image_pipe_swapchain") {
   data_deps = [
     ":VkLayer_image_pipe_swapchain_config",
     ":VkLayer_image_pipe_swapchain_lib",
+    "../trace-engine",
   ]
 }
 
