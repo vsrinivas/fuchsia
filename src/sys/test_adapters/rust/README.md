@@ -51,24 +51,21 @@ package("my_rust_package") {
 }
 ```
 
-In the cml file use the Rust Test Adapter as the binary and pass the url to your
-package in the args for the program. You will also need to `use` both `fuchsia.process.Launcher`
-and `fuchsia.logger.LogSink`.
+In the cml file use the Rust Test Adapter as the binary and pass the full url to
+your package in the args for the program. You will also need to `use` both
+`fuchsia.process.Launcher` and `fuchsia.logger.LogSink`.
 ```
 {
-    "program": {
-        "binary": "bin/rust_test_adapter",
-        "args": [
-            "test/my_rust_package",
-        ]
+    program": {
+        binary: "bin/rust_test_adapter",
+        args: [ "/pkg/test/my_rust_package" ],
     },
-
-    "use": [
+    use: [
         {
-            "protocol": "/svc/fuchsia.process.Launcher",
-        },
-        {
-            "protocol": "/svc/fuchsia.logger.LogSink",
+            protocol: [
+                "/svc/fuchsia.process.Launcher",
+                "/svc/fuchsia.logger.LogSink",
+            ]
         },
     ],
 }
