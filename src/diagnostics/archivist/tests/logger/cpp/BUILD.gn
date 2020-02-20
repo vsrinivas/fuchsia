@@ -25,4 +25,7 @@ executable("logger_integration_cpp_tests") {
     "//zircon/public/lib/syslog",
     "//zircon/system/fidl/fuchsia-logger",
   ]
+
+  # TODO(46532): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
