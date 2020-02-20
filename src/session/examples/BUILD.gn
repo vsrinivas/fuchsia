@@ -17,6 +17,6 @@ group("tests") {
   deps = [
     "//src/session/examples/elements:tests",
     "//src/session/examples/graphical_session:tests",
-    #"//src/session/examples/input_session:tests",
+    "//src/session/examples/input_session:tests",
   ]
 }

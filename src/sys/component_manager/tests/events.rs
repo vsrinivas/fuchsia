@@ -17,6 +17,13 @@ use {
     std::{convert::TryFrom, sync::Arc},
 };
 
+/// Ordering is used by `EventSource::expect_events`to determine if it should allow events to be
+/// verified in any order or only in the order specified by the test.
+pub enum Ordering {
+    Ordered,
+    Unordered,
+}
+
 /// A wrapper over the EventSourceSync FIDL proxy.
 /// Provides all of the FIDL methods with a cleaner, simpler interface.
 /// Refer to events.fidl for a detailed description of this protocol.
@@ -127,18 +134,23 @@ impl EventSource {
         Ok(())
     }
 
-    /// Verifies that the given events are received in order. Based on the vector of events
-    /// passed in this function will subscribe to an event stream with  the relevant event types
-    /// and verify that the correct events for the component are received in the correct order.
+    /// Verifies that the given events are received from the event system. Based on the vector of
+    /// events passed in this function will subscribe to an event stream with the relevant event
+    /// types and verify that the correct events for the component are received.
     ///
     /// # Parameters
-    /// - `expected_events`: A Vector of [`RecordedEvent`]s that represent which events are
-    /// expected and in what order
+    /// - `ordering`: Tells `expect_events` whether it should verify that the events match the order
+    ///               provided in the vector or if they can be in any order.
+    /// - `expected_events`: A Vector of `RecordedEvent`s that represent which events are expected
     ///
     /// # Notes
     /// This function only listens for events directed at a component, not its Realm so any events
     /// with a target_moniker of "." are ignored.
-    pub async fn expect_events(&self, expected_events: Vec<RecordedEvent>) -> Result<(), Error> {
+    pub async fn expect_events(
+        &self,
+        ordering: Ordering,
+        expected_events: Vec<RecordedEvent>,
+    ) -> Result<(), Error> {
         let mut event_types = vec![];
         for event in &expected_events {
             event_types.push(event.event_type);
@@ -152,7 +164,22 @@ impl EventSource {
             let recorded_event = RecordedEvent::try_from(&event)?;
             // Skip events directed at the Realm insted of the component.
             if recorded_event.target_moniker != "." {
-                let expected_event = expected_events.remove(0);
+                let expected_event;
+                match ordering {
+                    Ordering::Ordered => expected_event = expected_events.remove(0),
+                    Ordering::Unordered => {
+                        if let Some((index, _)) = expected_events
+                            .iter()
+                            .enumerate()
+                            .find(|&event| event.1 == &recorded_event)
+                        {
+                            expected_event = expected_events.remove(index);
+                        } else {
+                            panic!("Failed to find event: {:?}", recorded_event);
+                        }
+                    }
+                }
+
                 assert_eq!(expected_event, recorded_event);
                 event.resume().await?;
                 if expected_events.is_empty() {

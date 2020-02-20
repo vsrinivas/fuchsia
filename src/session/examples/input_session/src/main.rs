@@ -43,10 +43,10 @@ mod tests {
         fuchsia_async as fasync,
         futures::future,
         session_manager_lib,
-        test_utils_lib::events::{EventSource, RecordedEvent},
+        test_utils_lib::events::{EventSource, Ordering, RecordedEvent},
     };
 
-    /// Verifies that the session is routed the expected capabilities in the expected order.
+    /// Verifies that the session is routed the expected capabilities.
     #[fasync::run_singlethreaded(test)]
     async fn test_capability_routing() {
         let event_source = EventSource::new().expect("EventSource is unavailable");
@@ -73,7 +73,7 @@ mod tests {
             ];
 
             event_source
-                .expect_events(expected_events)
+                .expect_events(Ordering::Unordered, expected_events)
                 .await
                 .expect("Failed to expect capability events");
         };
@@ -109,7 +109,7 @@ mod tests {
             ];
 
             event_source
-                .expect_events(expected_events)
+                .expect_events(Ordering::Ordered, expected_events)
                 .await
                 .expect("Failed to expect lifecycle events");
         };
