@@ -551,11 +551,15 @@ struct AacEncoderSettings {
     AacAudioObjectType aot;
 };
 
+table H264EncoderSettings {
+};
+
 /// Settings for encoders that tell them how to encode raw
 /// formats.
 xunion EncoderSettings {
     1: SbcEncoderSettings sbc;
     2: AacEncoderSettings aac;
+    3: H264EncoderSettings h264;
 };
 
 /// FormatDetails
