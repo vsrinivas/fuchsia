@@ -12,9 +12,6 @@ const std::vector<std::shared_ptr<Node>> Terminal::kEmptyChildren = {};
 
 std::string Terminal::ToString(std::string_view unit) const {
   std::string prefix;
-  if (!name().empty()) {
-    prefix = std::string(name()) + ":";
-  }
 
   return prefix + "'" + std::string(unit.substr(start(), size_)) + "'";
 }
@@ -22,11 +19,7 @@ std::string Terminal::ToString(std::string_view unit) const {
 std::string Nonterminal::ToString(std::string_view unit) const {
   std::stringstream out;
 
-  if (!name().empty()) {
-    out << name();
-  }
-
-  out << "(";
+  out << Name() << "(";
 
   std::string spacer = "";
   for (const auto& child : Children()) {

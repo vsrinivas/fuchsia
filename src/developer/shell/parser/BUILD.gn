@@ -9,6 +9,8 @@ static_library("parser") {
   sources = [
     "ast.cc",
     "ast.h",
+    "combinators.cc",
+    "combinators.h",
     "parse_result.cc",
     "parse_result.h",
     "parser.cc",
@@ -21,7 +23,11 @@ static_library("parser") {
 }
 
 test("parser_tests_bin") {
-  sources = [ "text_match_test.cc" ]
+  sources = [
+    "combinator_test.cc",
+    "parser_test.cc",
+    "text_match_test.cc",
+  ]
 
   deps = [
     ":parser",

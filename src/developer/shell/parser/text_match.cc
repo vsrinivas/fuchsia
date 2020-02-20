@@ -136,4 +136,49 @@ fit::function<ParseResultStream(ParseResultStream)> Token(const std::string& tok
   };
 }
 
+fit::function<ParseResultStream(ParseResultStream)> Token(
+    fit::function<ParseResultStream(ParseResultStream)> parser) {
+  return [parser = std::move(parser)](ParseResultStream prefix) {
+    return parser(std::move(prefix).Mark()).Reduce<ast::TokenResult>().Map([](ParseResult result) {
+      // The goal here is to return a single terminal representing the parsed region of the result,
+      // but terminals don't have children, and thus can't have errors. As such, if we have error
+      // children, we return an unnamed non-terminal, where we combine all the regular parse results
+      // into single tokens, but leave the error tokens in place. So if we parsed ('foo' 'bar'
+      // 'baz'), we'd finish with just 'foobarbaz' on the stack, but if we parsed ('foo' 'bar'
+      // E[Expected 'baz']) we'd end with ('foobar' E[Expected 'baz']).
+      std::optional<size_t> start = std::nullopt;
+      size_t end;
+      std::vector<std::shared_ptr<ast::Node>> children;
+      for (const auto& child : result.node()->Children()) {
+        if (child->IsError()) {
+          if (start) {
+            children.push_back(std::make_shared<ast::Terminal>(*start, child->start()));
+          }
+          children.push_back(child);
+          start = std::nullopt;
+        } else {
+          if (!start) {
+            start = child->start();
+          }
+
+          end = child->start() + child->Size();
+        }
+      }
+
+      if (start) {
+        children.push_back(std::make_shared<ast::Terminal>(*start, end - *start));
+      }
+
+      std::shared_ptr<ast::Node> new_child;
+      if (children.size() == 1) {
+        new_child = children.front();
+      } else {
+        new_child = std::make_shared<ast::TokenResult>(result.node()->start(), std::move(children));
+      }
+
+      return result.SetNode(new_child);
+    });
+  };
+}
+
 }  // namespace shell::parser

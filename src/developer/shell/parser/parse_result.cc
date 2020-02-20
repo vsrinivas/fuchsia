@@ -4,43 +4,90 @@
 
 #include "src/developer/shell/parser/parse_result.h"
 
+#include <deque>
+
 namespace shell::parser {
+namespace {
 
-ParseResult ParseResult::Reduce(const std::optional<std::string_view>& name) {
-  std::vector<std::shared_ptr<ast::Node>> children;
-  std::shared_ptr<Frame> cur;
+// Helper class to allow us to fork ParseResultStreams. Forking a stream means we get two streams,
+// and each stream will yield the same results if we call Next() on it in order, *independent of*
+// whether we call Next() on the other stream.
+//
+// Doing that means caching certain results when one side of the fork consumes them before the
+// other, and this class holds the state involved in that.
+class StreamFork {
+ public:
+  StreamFork(ParseResultStream stream) : stream_(std::move(stream)) {}
 
-  if (!frame_) {
-    return End();
+  // Handle a call to Next() for the A side of the stream.
+  ParseResult ANext() {
+    if (!end_ && a_results_.empty()) {
+      Enqueue();
+    }
+
+    if (end_) {
+      return *end_;
+    }
+
+    auto ret = a_results_.front();
+    a_results_.pop_front();
+    return ret;
   }
 
-  // We have a dummy marker frame at the bottom of the stack, so we'll always hit the end conditon
-  // here.
-  for (cur = frame_; !cur->is_marker_frame(); cur = cur->prev) {
-    if (!cur->node->is_whitespace()) {
-      children.push_back(cur->node);
+  // Handle a call to Next() for the B side of the stream.
+  ParseResult BNext() {
+    if (!end_ && b_results_.empty()) {
+      Enqueue();
+    }
+
+    if (end_) {
+      return *end_;
+    }
+
+    auto ret = b_results_.front();
+    b_results_.pop_front();
+    return ret;
+  }
+
+ private:
+  // Poll the original stream and store its output in each of the two queues that feed our forked
+  // stream.
+  void Enqueue() {
+    if (end_) {
+      return;
+    }
+
+    auto result = stream_.Next();
+
+    if (!result) {
+      end_ = result;
+    } else {
+      a_results_.push_back(result);
+      b_results_.push_back(result);
     }
   }
 
-  // If we didn't arrive at the beginning of the stack, also pop the marker.
-  if (!cur->is_stack_bottom()) {
-    cur = cur->prev;
-  }
+  ParseResultStream stream_;
+  std::deque<ParseResult> a_results_;
+  std::deque<ParseResult> b_results_;
+  std::optional<ParseResult> end_ = std::nullopt;
+};
 
-  std::reverse(children.begin(), children.end());
+}  // namespace
 
-  auto start = offset_;
+std::pair<ParseResultStream, ParseResultStream> ParseResultStream::Fork() && {
+  bool ok = this->ok();
+  auto fork = std::make_shared<StreamFork>(std::move(*this));
 
-  if (!children.empty()) {
-    start = children.front()->start();
-  }
+  auto a = ParseResultStream(ok, [fork]() mutable { return fork->ANext(); });
+  auto b = ParseResultStream(ok, [fork]() mutable { return fork->BNext(); });
 
-  auto node = std::make_shared<ast::Nonterminal>(start, std::move(children));
-  if (name) {
-    node->set_name(*name);
-  }
+  return {std::move(a), std::move(b)};
+}
 
-  return ParseResult(tail_, offset_, error_insert_, error_delete_, error_internal_, node, cur);
+ParseResultStream ParseResultStream::Fail() && {
+  ok_ = false;
+  return std::move(*this);
 }
 
 ParseResultStream ParseResultStream::Follow(fit::function<ParseResultStream(ParseResult)> next) && {
@@ -48,6 +95,13 @@ ParseResultStream ParseResultStream::Follow(fit::function<ParseResultStream(Pars
   // parser. In the future lots of interesting error handling stuff will happen here (backtracking!)
   // but for now this will do.
   return next(Next());
+}
+
+ParseResultStream ParseResultStream::Map(fit::function<ParseResult(ParseResult)> mapper) && {
+  auto ok = ok_;
+  return ParseResultStream(ok, [old = std::move(*this), mapper = std::move(mapper)]() mutable {
+    return mapper(old.Next());
+  });
 }
 
 }  // namespace shell::parser

@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_SHELL_PARSER_PARSE_RESULT_H_
 #define SRC_DEVELOPER_SHELL_PARSER_PARSE_RESULT_H_
 
+#include <set>
 #include <string_view>
 
 #include "lib/fit/function.h"
@@ -25,6 +26,7 @@ class ParseResult {
   };
 
  public:
+  ParseResult(const ParseResult &) = default;
   explicit ParseResult(std::string_view text) : ParseResult(text, 0, 0, 0, 0, nullptr, nullptr) {}
 
   size_t offset() const { return offset_; }
@@ -38,9 +40,21 @@ class ParseResult {
                        std::make_shared<ast::Terminal>(offset_, size), frame_);
   }
 
+  // Swap the node in the current frame. Essentially this is a Pop() followed by a Push(). Usually
+  // the new node will be some modification of the current node, but instead of popping, modifying,
+  // and pushing, it's usually more efficient to peek the current node with node(), create the
+  // modified node, then do all the stack alteration in one operation.
+  //
+  // An example use case would be the parser-modifying version of Token(), which parses a new
+  // non-terminal on the stack, then concatenates its children to create a new terminal instead.
+  ParseResult SetNode(std::shared_ptr<ast::Node> node) {
+    return ParseResult(tail_, offset_, error_insert_, error_delete_, error_internal_, node,
+                       frame_->prev);
+  }
+
   // Insert an error indicating a token of the given size was expected. ident names the token in the
   // error message. The parse position does not change.
-  ParseResult Expected(size_t size, const std::string& ident) {
+  ParseResult Expected(size_t size, const std::string &ident) {
     return ParseResult(tail_, offset_, error_insert_ + size, error_delete_, error_internal_,
                        std::make_unique<ast::Error>(offset_, 0, "Expected " + ident), frame_);
   }
@@ -54,9 +68,21 @@ class ParseResult {
         frame_);
   }
 
+  // Push an error on to the stack and add internal error to this state.
+  ParseResult InjectError(size_t error_amount, std::shared_ptr<ast::Node> error_node) {
+    return ParseResult(tail_, offset_, error_insert_, error_delete_, error_internal_ + error_amount,
+                       error_node, frame_);
+  }
+
   // A null parse result for this position indicating no further error alternatives.
   ParseResult End() {
     return ParseResult(tail_, offset_, error_insert_, error_delete_, error_internal_);
+  }
+
+  // Push a marker frame onto the stack. The next Reduce() call will reduce up to here.
+  ParseResult Mark() {
+    return ParseResult(tail_, offset_, error_insert_, error_delete_, error_internal_, nullptr,
+                       frame_);
   }
 
   // Pops from the stack until a marker frame or the top of the stack is encountered, then produces
@@ -67,7 +93,8 @@ class ParseResult {
   // 2) Assorted parsers are run, pushing the children of the node onto the stack as they go.
   // 3) Reduce() is called and turns the nodes between the marker and the stack top into a new
   //    nonterminal.
-  ParseResult Reduce(const std::optional<std::string_view>& name = std::nullopt);
+  template <typename T>
+  ParseResult Reduce(bool pop_marker = true);
 
   operator bool() const { return frame_ != nullptr; }
 
@@ -125,30 +152,89 @@ class ParseResult {
 class ParseResultStream {
  public:
   ParseResultStream(bool ok, fit::function<ParseResult()> next) : ok_(ok), next_(std::move(next)) {}
-  ParseResultStream(const char* text) : ParseResultStream(std::string_view(text)) {}
+  ParseResultStream(const char *text) : ParseResultStream(std::string_view(text)) {}
   ParseResultStream(std::string_view text) : ParseResultStream(ParseResult(text)) {}
   explicit ParseResultStream(ParseResult result)
-      : ok_(true), next_([result]() mutable {
+      : ParseResultStream(/*ok=*/true, [result]() mutable {
           auto ret = result;
           result = result.End();
           return ret;
         }) {}
 
-  // Whether the parse succeeded. If so, the first call to Next() will yield an error-free parse
-  // (though if the start state already aggregated error, it may still have an error score).
+  // Whether the last combinator succeeded.
   bool ok() { return ok_; }
 
   // Retrieve the next element from the stream.
   ParseResult Next() { return next_(); }
 
+  // Push a marker frame onto the stack for each result we yield. This is how we parse
+  // non-terminals. We push a marker, start parsing the child nodes of the non-terminal, then call
+  // Reduce() to pop everything up to and including the marker and make them children of a new node.
+  ParseResultStream Mark() && {
+    return std::move(*this).Map([](ParseResult p) { return p.Mark(); });
+  }
+
+  // Reduce every result that is output from this stream. This is the other half of Mark() and is
+  // used to turn stacks of child nodes into single non-terminals.
+  template <typename T>
+  ParseResultStream Reduce(bool pop_marker = true) && {
+    return std::move(*this).Map([pop_marker](ParseResult p) { return p.Reduce<T>(pop_marker); });
+  }
+
+  // Fork a parse result stream into two identical streams. Each will yield the same data, and data
+  // will be queued such that calling Next on one will not affect the output of the other.
+  std::pair<ParseResultStream, ParseResultStream> Fork() &&;
+
+  // Set ok() to false.
+  ParseResultStream Fail() &&;
+
   // Attempt to parse the tail left after each parse result in this stream with the results of
   // another parser.
   ParseResultStream Follow(fit::function<ParseResultStream(ParseResult)> next) &&;
+
+  // Rewrite the results output from this stream.
+  ParseResultStream Map(fit::function<ParseResult(ParseResult)> mapper) &&;
 
  private:
   bool ok_;
   fit::function<ParseResult()> next_;
 };
+
+template <typename T>
+ParseResult ParseResult::Reduce(bool pop_marker) {
+  std::vector<std::shared_ptr<ast::Node>> children;
+  std::shared_ptr<Frame> cur;
+
+  if (!frame_) {
+    return End();
+  }
+
+  // We have a dummy marker frame at the bottom of the stack, so we'll always hit the end conditon
+  // here.
+  for (cur = frame_; !cur->is_marker_frame(); cur = cur->prev) {
+    if (!cur->node->IsWhitespace()) {
+      children.push_back(cur->node);
+    }
+  }
+
+  // If we didn't arrive at the beginning of the stack, also pop the marker (unless we were told not
+  // to by the caller).
+  if (pop_marker && !cur->is_stack_bottom()) {
+    cur = cur->prev;
+  }
+
+  std::reverse(children.begin(), children.end());
+
+  auto start = offset_;
+
+  if (!children.empty()) {
+    start = children.front()->start();
+  }
+
+  auto node = std::make_shared<T>(start, std::move(children));
+
+  return ParseResult(tail_, offset_, error_insert_, error_delete_, error_internal_, node, cur);
+}
 
 }  // namespace shell::parser
 

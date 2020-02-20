@@ -28,6 +28,10 @@ fit::function<ParseResultStream(ParseResultStream)> CharGroup(const std::string&
 // Produce a parser to parse a fixed text string.
 fit::function<ParseResultStream(ParseResultStream)> Token(const std::string& token);
 
+// Run a given parser, but merge all the text it outputs into a single non-terminal;
+fit::function<ParseResultStream(ParseResultStream)> Token(
+    fit::function<ParseResultStream(ParseResultStream)> parser);
+
 }  // namespace shell::parser
 
 #endif  // SRC_DEVELOPER_SHELL_PARSER_TEXT_MATCH_H_

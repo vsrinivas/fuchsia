@@ -5,6 +5,7 @@
 #include "src/developer/shell/parser/text_match.h"
 
 #include "gtest/gtest.h"
+#include "src/developer/shell/parser/ast_test.h"
 
 namespace shell::parser {
 
@@ -18,7 +19,7 @@ TEST(TextMatchTest, TokenSingle) {
   ASSERT_TRUE(result);
   EXPECT_EQ(3u, result.offset());
   EXPECT_EQ(0u, result.error_score());
-  EXPECT_EQ("('bob')", result.Reduce().node()->ToString(kTestString));
+  EXPECT_EQ("('bob')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 
   result = match.Next();
   EXPECT_FALSE(result);
@@ -34,7 +35,7 @@ TEST(TextMatchTest, TokenMulti) {
   ASSERT_TRUE(result);
   EXPECT_EQ(3u, result.offset());
   EXPECT_EQ(0u, result.error_score());
-  EXPECT_EQ("('bob')", result.Reduce().node()->ToString(kTestString));
+  EXPECT_EQ("('bob')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 
   result = match.Next();
   EXPECT_FALSE(result);
@@ -50,13 +51,14 @@ TEST(TextMatchTest, TokenAmongJunk) {
   ASSERT_TRUE(result);
   EXPECT_EQ(5u, result.offset());
   EXPECT_EQ(2u, result.error_score());
-  EXPECT_EQ("(E[Unexpected '##'] 'bob')", result.Reduce().node()->ToString(kTestString));
+  EXPECT_EQ("(E[Unexpected '##'] 'bob')",
+            result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 
   result = match.Next();
   ASSERT_TRUE(result);
   EXPECT_EQ(0u, result.offset());
   EXPECT_EQ(3u, result.error_score());
-  EXPECT_EQ("(E[Expected 'bob'])", result.Reduce().node()->ToString(kTestString));
+  EXPECT_EQ("(E[Expected 'bob'])", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 
   result = match.Next();
   EXPECT_FALSE(result);
@@ -72,7 +74,7 @@ TEST(TextMatchTest, AnyChar) {
   ASSERT_TRUE(result);
   EXPECT_EQ(1u, result.offset());
   EXPECT_EQ(0u, result.error_score());
-  EXPECT_EQ("('b')", result.Reduce().node()->ToString(kTestString));
+  EXPECT_EQ("('b')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 
   result = match.Next();
   EXPECT_FALSE(result);
@@ -88,7 +90,7 @@ TEST(TextMatchTest, AnyCharMulti) {
   ASSERT_TRUE(result);
   EXPECT_EQ(1u, result.offset());
   EXPECT_EQ(0u, result.error_score());
-  EXPECT_EQ("('b')", result.Reduce().node()->ToString(kTestString));
+  EXPECT_EQ("('b')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 
   result = match.Next();
   EXPECT_FALSE(result);
@@ -104,13 +106,14 @@ TEST(TextMatchTest, AnyCharAmongJunk) {
   ASSERT_TRUE(result);
   EXPECT_EQ(0u, result.offset());
   EXPECT_EQ(1u, result.error_score());
-  EXPECT_EQ("(E[Expected letter])", result.Reduce().node()->ToString(kTestString));
+  EXPECT_EQ("(E[Expected letter])", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 
   result = match.Next();
   ASSERT_TRUE(result);
   EXPECT_EQ(3u, result.offset());
   EXPECT_EQ(2u, result.error_score());
-  EXPECT_EQ("(E[Unexpected '##'] 'b')", result.Reduce().node()->ToString(kTestString));
+  EXPECT_EQ("(E[Unexpected '##'] 'b')",
+            result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 
   result = match.Next();
   EXPECT_FALSE(result);
@@ -126,7 +129,7 @@ TEST(TextMatchTest, AnyCharBut) {
   ASSERT_TRUE(result);
   EXPECT_EQ(1u, result.offset());
   EXPECT_EQ(0u, result.error_score());
-  EXPECT_EQ("('b')", result.Reduce().node()->ToString(kTestString));
+  EXPECT_EQ("('b')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 
   result = match.Next();
   EXPECT_FALSE(result);
@@ -142,7 +145,7 @@ TEST(TextMatchTest, AnyCharButMulti) {
   ASSERT_TRUE(result);
   EXPECT_EQ(1u, result.offset());
   EXPECT_EQ(0u, result.error_score());
-  EXPECT_EQ("('b')", result.Reduce().node()->ToString(kTestString));
+  EXPECT_EQ("('b')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 
   result = match.Next();
   EXPECT_FALSE(result);
@@ -158,13 +161,15 @@ TEST(TextMatchTest, AnyCharButAmongJunk) {
   ASSERT_TRUE(result);
   EXPECT_EQ(0u, result.offset());
   EXPECT_EQ(1u, result.error_score());
-  EXPECT_EQ("(E[Expected non-numeric])", result.Reduce().node()->ToString(kTestString));
+  EXPECT_EQ("(E[Expected non-numeric])",
+            result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 
   result = match.Next();
   ASSERT_TRUE(result);
   EXPECT_EQ(3u, result.offset());
   EXPECT_EQ(2u, result.error_score());
-  EXPECT_EQ("(E[Unexpected '##'] 'b')", result.Reduce().node()->ToString(kTestString));
+  EXPECT_EQ("(E[Unexpected '##'] 'b')",
+            result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 
   result = match.Next();
   EXPECT_FALSE(result);
@@ -180,7 +185,7 @@ TEST(TextMatchTest, CharGroup) {
   ASSERT_TRUE(result);
   EXPECT_EQ(1u, result.offset());
   EXPECT_EQ(0u, result.error_score());
-  EXPECT_EQ("('b')", result.Reduce().node()->ToString(kTestString));
+  EXPECT_EQ("('b')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 
   result = match.Next();
   EXPECT_FALSE(result);
@@ -196,7 +201,7 @@ TEST(TextMatchTest, CharGroupMulti) {
   ASSERT_TRUE(result);
   EXPECT_EQ(1u, result.offset());
   EXPECT_EQ(0u, result.error_score());
-  EXPECT_EQ("('b')", result.Reduce().node()->ToString(kTestString));
+  EXPECT_EQ("('b')", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 
   result = match.Next();
   EXPECT_FALSE(result);
@@ -212,13 +217,14 @@ TEST(TextMatchTest, CharGroupAmongJunk) {
   ASSERT_TRUE(result);
   EXPECT_EQ(0u, result.offset());
   EXPECT_EQ(1u, result.error_score());
-  EXPECT_EQ("(E[Expected letter])", result.Reduce().node()->ToString(kTestString));
+  EXPECT_EQ("(E[Expected letter])", result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 
   result = match.Next();
   ASSERT_TRUE(result);
   EXPECT_EQ(3u, result.offset());
   EXPECT_EQ(2u, result.error_score());
-  EXPECT_EQ("(E[Unexpected '##'] 'b')", result.Reduce().node()->ToString(kTestString));
+  EXPECT_EQ("(E[Unexpected '##'] 'b')",
+            result.Reduce<ast::TestNode>().node()->ToString(kTestString));
 
   result = match.Next();
   EXPECT_FALSE(result);

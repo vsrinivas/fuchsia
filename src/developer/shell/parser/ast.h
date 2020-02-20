@@ -23,10 +23,6 @@ class Node {
   virtual ~Node() = default;
 
   size_t start() const { return start_; }
-  std::string_view name() const { return name_; }
-  void set_name(std::string_view name) { name_ = name; }
-  bool is_whitespace() const { return is_whitespace_; }
-  void set_whitespace(bool is_whitespace = true) { is_whitespace_ = is_whitespace; }
 
   // Child nodes of this node. Always empty for terminals, may be empty for non-terminals.
   virtual const std::vector<std::shared_ptr<Node>>& Children() const = 0;
@@ -38,20 +34,15 @@ class Node {
   // Number of characters this node corresponds to in the original text.
   virtual size_t Size() const = 0;
 
-  // A node is considered a Meta node if it has no assigned name and is not a terminal.
-  virtual bool IsMeta() const { return name_.empty() && !is_whitespace(); }
-
+  // Whether this node marks a parse error.
   virtual bool IsError() const { return false; }
+
+  // Whether this node is a whitespace node.
+  virtual bool IsWhitespace() const { return false; }
 
  private:
   // Offset into the original text where the text this node corresponds to starts.
   const size_t start_;
-
-  // Whether this node is considered whitespace.
-  bool is_whitespace_ = false;
-
-  // Name of this node. Indicates the type of production it represents.
-  std::string_view name_ = "";
 };
 
 // Superclass of all terminal nodes in our AST.
@@ -63,7 +54,6 @@ class Terminal : public Node {
   size_t Size() const override { return size_; }
 
   std::string ToString(std::string_view unit) const override;
-  bool IsMeta() const override { return false; }
 
  private:
   static const std::vector<std::shared_ptr<Node>> kEmptyChildren;
@@ -90,6 +80,9 @@ class Nonterminal : public Node {
   Nonterminal(size_t start, std::vector<std::shared_ptr<Node>> children)
       : Node(start), children_(std::move(children)) {}
 
+  // Name of this node as a string.
+  virtual std::string_view Name() const = 0;
+
   const std::vector<std::shared_ptr<Node>>& Children() const override { return children_; }
   size_t Size() const override {
     if (children_.empty()) {
@@ -103,6 +96,46 @@ class Nonterminal : public Node {
 
  private:
   std::vector<std::shared_ptr<Node>> children_;
+};
+
+// Result of an attempt to parse a single token. Usually that will result in a terminal, but if
+// there are errors, we may get one of these instead. Its children will be error nodes and the
+// fragments of the token that parsed correctly.
+class TokenResult : public Nonterminal {
+ public:
+  TokenResult(size_t start, std::vector<std::shared_ptr<Node>> children)
+      : Nonterminal(start, std::move(children)) {}
+
+  std::string_view Name() const override { return ""; }
+
+  // If one of these ends up in output outside of the Token() combinator, then it's definitely an
+  // error.
+  bool IsError() const override { return true; }
+};
+
+class Whitespace : public Nonterminal {
+ public:
+  Whitespace(size_t start, std::vector<std::shared_ptr<Node>> children)
+      : Nonterminal(start, std::move(children)) {}
+
+  std::string_view Name() const override { return "Whitespace"; }
+  bool IsWhitespace() const override { return true; }
+};
+
+class Program : public Nonterminal {
+ public:
+  Program(size_t start, std::vector<std::shared_ptr<Node>> children)
+      : Nonterminal(start, std::move(children)) {}
+
+  std::string_view Name() const override { return "Program"; }
+};
+
+class VariableDecl : public Nonterminal {
+ public:
+  VariableDecl(size_t start, std::vector<std::shared_ptr<Node>> children)
+      : Nonterminal(start, std::move(children)) {}
+
+  std::string_view Name() const override { return "VariableDecl"; }
 };
 
 }  // namespace shell::parser::ast
