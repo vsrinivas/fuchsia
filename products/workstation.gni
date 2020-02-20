@@ -4,7 +4,11 @@
 
 import("//products/terminal.gni")
 
-base_package_labels -= [ "//garnet/bin/terminal:tiles_with_terminal_config" ]
+base_package_labels -= [
+  "//garnet/bin/terminal:tiles_with_terminal_config",
+  "//src/ui/bin/root_presenter",
+  "//src/ui/bin/root_presenter:configs",
+ ]
 
 base_package_labels += [
   "//garnet/packages/config:shortcut",
@@ -23,6 +27,10 @@ base_package_labels += [
   "//src/ui/bin/shortcut",
   "//third_party/dart-pkg/git/flutter/examples/flutter_gallery",
   "//topaz/shell/story_shell_labs",
+]
+
+cache_package_labels -= [
+  "//src/ui/tools/tiles",
 ]
 
 cache_package_labels += [
