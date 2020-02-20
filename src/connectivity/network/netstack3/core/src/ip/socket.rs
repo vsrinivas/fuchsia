@@ -4,13 +4,14 @@
 
 //! IPv4 and IPv6 sockets.
 
+use core::cmp::Ordering;
 use core::marker::PhantomData;
 
 use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::SpecifiedAddr;
 use packet::{BufferMut, Serializer};
 
-use crate::device::DeviceId;
+use crate::device::{AddressEntry, DeviceId};
 use crate::error::NoRouteError;
 use crate::ip::forwarding::ForwardingTable;
 use crate::ip::{IpExt, IpProto};
@@ -279,7 +280,7 @@ impl<D: EventDispatcher> IpSocketContext<Ipv4> for Context<D> {
 
         super::lookup_route(self, remote_ip).ok_or(NoRouteError).and_then(|dst| {
             let local_ip = if let Some(local_ip) = local_ip {
-                if crate::device::get_ip_addr_subnets::<_, Ipv4Addr>(self, dst.device)
+                if crate::device::get_assigned_ip_addr_subnets::<_, Ipv4Addr>(self, dst.device)
                     .any(|addr_sub| local_ip == addr_sub.addr())
                 {
                     local_ip
@@ -295,7 +296,7 @@ impl<D: EventDispatcher> IpSocketContext<Ipv4> for Context<D> {
                     .addr()
             };
             Ok(IpSock {
-                // `get_ip_addr_subnet` and `get_ip_addr_subnets` both return
+                // `get_ip_addr_subnet` and `get_assigned_ip_addr_subnets` both return
                 // `AddrSubnet`s, which guarantee that their addresses are
                 // unicast address in their subnets. That satisfies the
                 // invariant on this field.
@@ -334,19 +335,41 @@ impl<D: EventDispatcher> IpSocketContext<Ipv6> for Context<D> {
         }
 
         super::lookup_route(self, remote_ip).ok_or(NoRouteError).and_then(|dst| {
-            let local_ip = if let Some(local_ip) = local_ip {
-                if crate::device::get_ip_addr_state(self, dst.device, &local_ip).is_some() {
-                    local_ip
+            let (local_ip, device) = if let Some(local_ip) = local_ip {
+                // TODO(joshlf):
+                // - Allow the specified local IP to be the local IP of a
+                //   different device so long as we're operating in the weak
+                //   host model.
+                // - What about when the socket is bound to a device? How does
+                //   that affect things?
+                if crate::device::get_ip_addr_state(self, dst.device, &local_ip)
+                    .map(|state| !state.is_tentative())
+                    .unwrap_or(false)
+                {
+                    (local_ip, dst.device)
                 } else {
                     return Err(NoRouteError);
                 }
             } else {
-                // TODO(joshlf): Are we sure that a device route can never be
-                // set for a device without an IP address? At the least, this is
-                // not currently enforced anywhere, and is a DoS vector.
-                crate::device::get_ip_addr_subnet(self, dst.device)
-                    .expect("IP device route set for device without IP address")
-                    .addr()
+                // TODO(joshlf):
+                // - If device binding is used, then we should only consider the
+                //   addresses of the device being bound to.
+                // - If we are operating in the strong host model, then perhaps
+                //   we should restrict ourselves to addresses associated with
+                //   the device found by looking up the remote in the forwarding
+                //   table? This I'm less sure of.
+
+                select_ipv6_source_address(
+                    remote_ip,
+                    dst.device,
+                    crate::device::list_devices(self)
+                        .map(|device_id| {
+                            crate::device::get_ip_addr_subnets(self, device_id)
+                                .map(move |a| (a, device_id))
+                        })
+                        .flatten(),
+                )
+                .ok_or(NoRouteError)?
             };
             Ok(IpSock {
                 // `get_ip_addr_subnet` and `get_ip_addr_subnets` both return
@@ -364,11 +387,119 @@ impl<D: EventDispatcher> IpSocketContext<Ipv6> for Context<D> {
                         hop_limit.unwrap_or(super::DEFAULT_TTL),
                         proto,
                     ),
-                    device: dst.device,
+                    device,
                     next_hop: dst.next_hop,
                 },
             })
         })
+    }
+}
+
+/// Select the source address for an IPv6 socket using the algorithm defined in
+/// [RFC 6724 Section 5].
+///
+/// This algorithm is only applicable when the user has not explicitly specified
+/// a source address.
+///
+/// `remote_ip` is the remote IP address of the socket, `outbound_device` is the
+/// device over which outbound traffic to `remote_ip` is sent (according to the
+/// forwarding table), and `addresses` is an iterator of all addresses on all
+/// devices. The algorithm works by iterating over `addresses` and selecting the
+/// address which is most preferred according to a set of selection criteria.
+fn select_ipv6_source_address<
+    'a,
+    Instant: 'a,
+    I: Iterator<Item = (&'a AddressEntry<Ipv6Addr, Instant>, DeviceId)>,
+>(
+    remote_ip: SpecifiedAddr<Ipv6Addr>,
+    outbound_device: DeviceId,
+    addresses: I,
+) -> Option<(SpecifiedAddr<Ipv6Addr>, DeviceId)> {
+    // Source address selection as defined in RFC 6724 Section 5.
+    //
+    // The algorithm operates by defining a partial ordering on available source
+    // addresses, and choosing one of the best address as defined by that
+    // ordering (given multiple best addresses, the choice from among those is
+    // implementation-defined). The partial order is defined in terms of a
+    // sequence of rules. If a given rule defines an order between two
+    // addresses, then that is their order. Otherwise, the next rule must be
+    // consulted, and so on until all of the rules are exhausted.
+
+    addresses
+        // Tentative addresses are not considered available to the source
+        // selection algorithm.
+        .filter(|(a, _)| !a.state().is_tentative())
+        .max_by(|(a, a_device), (b, b_device)| {
+            select_ipv6_source_address_cmp(remote_ip, outbound_device, a, a_device, b, b_device)
+        })
+        .map(|(addr, device)| (addr.addr_sub().addr(), device))
+}
+
+/// Comparison operator used by `select_ipv6_source_address_cmp`.
+fn select_ipv6_source_address_cmp<Instant>(
+    remote_ip: SpecifiedAddr<Ipv6Addr>,
+    outbound_device: DeviceId,
+    a: &AddressEntry<Ipv6Addr, Instant>,
+    a_device: &DeviceId,
+    b: &AddressEntry<Ipv6Addr, Instant>,
+    b_device: &DeviceId,
+) -> Ordering {
+    // TODO(fxb/46822): Implement rules 2, 4, 5.5, 6, 7, and 8.
+
+    let a_state = a.state();
+    let a = a.addr_sub().addr();
+    let b_state = b.state();
+    let b = b.addr_sub().addr();
+
+    // Assertions required in order for this implementation to be valid.
+
+    // Required by the implementation of Rule 1.
+    debug_assert!(!(a == remote_ip && b == remote_ip));
+
+    // Required by the implementation of Rule 3.
+    debug_assert!(!a_state.is_tentative());
+    debug_assert!(!b_state.is_tentative());
+
+    if (a == remote_ip) != (b == remote_ip) {
+        // Rule 1: Prefer same address.
+        //
+        // Note that both `a` and `b` cannot be equal to `remote_ip` since that
+        // would imply that we had added the same address twice to the same
+        // device.
+        //
+        // If `(a == remote_ip) != (b == remote_ip)`, then exactly one of them
+        // is equal. If this inequality does not hold, then they must both be
+        // unequal to `remote_ip`. In the first case, we have a tie, and in the
+        // second case, the rule doesn't apply. In either case, we move onto the
+        // next rule.
+        if a == remote_ip {
+            Ordering::Greater
+        } else {
+            Ordering::Less
+        }
+    } else if a_state != b_state {
+        // Rule 3: Avoid deprecated addresses.
+        //
+        // Note that, since we've already filtered out tentative addresses, the
+        // only two possible states are deprecated and assigned. Thus, `a_state
+        // != b_state` and `a_state.is_deprecated()` together imply that
+        // `b_state` is assigned. Conversely, `a_state != b_state` and
+        // `!a_state.is_deprecated()` together imply that `b_state` is
+        // deprecated.
+        if a_state.is_deprecated() {
+            Ordering::Less
+        } else {
+            Ordering::Greater
+        }
+    } else if (a_device == &outbound_device) != (b_device == &outbound_device) {
+        // Rule 5: Prefer outgoing interface.
+        if a_device == &outbound_device {
+            Ordering::Greater
+        } else {
+            Ordering::Less
+        }
+    } else {
+        Ordering::Equal
     }
 }
 
@@ -573,10 +704,12 @@ pub(crate) mod testutil {
 
 #[cfg(test)]
 mod tests {
+    use net_types::ip::AddrSubnet;
     use net_types::Witness;
     use packet::InnerPacketBuilder;
 
     use super::*;
+    use crate::device::{AddressConfigurationType, AddressState};
     use crate::testutil::*;
 
     #[test]
@@ -935,6 +1068,125 @@ mod tests {
             .unwrap_err()
             .1,
             SendError::Unroutable
+        );
+    }
+
+    #[test]
+    fn test_select_ipv6_source_address() {
+        use AddressState::*;
+
+        //
+        // Test the comparison operator used by `select_ipv6_source_address` by
+        // separately testing each comparison condition
+        //
+
+        /// Construct a new `AddressEntry` with reasonable defaults for this
+        /// test.
+        fn new_addr_entry(addr: Ipv6Addr, state: AddressState) -> AddressEntry<Ipv6Addr, ()> {
+            AddressEntry::new(
+                AddrSubnet::new(addr, 128).unwrap(),
+                state,
+                AddressConfigurationType::Manual,
+                None,
+            )
+        }
+
+        let remote =
+            SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 1]))
+                .unwrap();
+        let local0 =
+            SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 2]))
+                .unwrap();
+        let local1 =
+            SpecifiedAddr::new(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 3]))
+                .unwrap();
+        let dev0 = DeviceId::new_ethernet(0);
+        let dev1 = DeviceId::new_ethernet(1);
+        let dev2 = DeviceId::new_ethernet(2);
+
+        // Rule 1: Prefer same address
+        assert_eq!(
+            select_ipv6_source_address_cmp(
+                remote,
+                dev0,
+                &new_addr_entry(*remote, Assigned),
+                &dev1,
+                &new_addr_entry(*local0, Assigned),
+                &dev2
+            ),
+            Ordering::Greater
+        );
+        assert_eq!(
+            select_ipv6_source_address_cmp(
+                remote,
+                dev0,
+                &new_addr_entry(*local0, Assigned),
+                &dev1,
+                &new_addr_entry(*remote, Assigned),
+                &dev2
+            ),
+            Ordering::Less
+        );
+
+        // Rule 3: Avoid deprecated states
+        assert_eq!(
+            select_ipv6_source_address_cmp(
+                remote,
+                dev0,
+                &new_addr_entry(*local0, Deprecated),
+                &dev1,
+                &new_addr_entry(*local1, Assigned),
+                &dev2
+            ),
+            Ordering::Less
+        );
+        assert_eq!(
+            select_ipv6_source_address_cmp(
+                remote,
+                dev0,
+                &new_addr_entry(*local0, Assigned),
+                &dev1,
+                &new_addr_entry(*local1, Deprecated),
+                &dev2
+            ),
+            Ordering::Greater
+        );
+
+        // Rule 5: Prefer outgoing interface
+        assert_eq!(
+            select_ipv6_source_address_cmp(
+                remote,
+                dev0,
+                &new_addr_entry(*local0, Assigned),
+                &dev0,
+                &new_addr_entry(*local1, Assigned),
+                &dev2
+            ),
+            Ordering::Greater
+        );
+        assert_eq!(
+            select_ipv6_source_address_cmp(
+                remote,
+                dev0,
+                &new_addr_entry(*local0, Assigned),
+                &dev1,
+                &new_addr_entry(*local1, Assigned),
+                &dev0
+            ),
+            Ordering::Less
+        );
+
+        // Otherwise, they're equal
+        assert_eq!(
+            select_ipv6_source_address_cmp(
+                remote,
+                dev0,
+                &new_addr_entry(*local0, Assigned),
+                &dev1,
+                &new_addr_entry(*local1, Assigned),
+                &dev2
+            ),
+            Ordering::Equal
         );
     }
 }

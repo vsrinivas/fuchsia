@@ -3501,8 +3501,8 @@ mod tests {
     use crate::device::{
         add_ip_addr_subnet, del_ip_addr,
         ethernet::{EthernetLinkDevice, EthernetTimerId},
-        get_ip_addr_state, get_ip_addr_subnets, get_ipv6_hop_limit, get_mtu, is_in_ip_multicast,
-        is_routing_enabled, set_routing_enabled, DeviceId, DeviceLayerTimerId,
+        get_assigned_ip_addr_subnets, get_ip_addr_state, get_ipv6_hop_limit, get_mtu,
+        is_in_ip_multicast, is_routing_enabled, set_routing_enabled, DeviceId, DeviceLayerTimerId,
         DeviceLayerTimerIdInner, EthernetDeviceId,
     };
     use crate::ip::IPV6_MIN_MTU;
@@ -4346,8 +4346,14 @@ mod tests {
 
         // they should now realize the address they intend to use has a duplicate
         // in the local network
-        assert_eq!(get_ip_addr_subnets::<_, Ipv6Addr>(net.context("local"), device_id).count(), 0);
-        assert_eq!(get_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id).count(), 0);
+        assert_eq!(
+            get_assigned_ip_addr_subnets::<_, Ipv6Addr>(net.context("local"), device_id).count(),
+            0
+        );
+        assert_eq!(
+            get_assigned_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id).count(),
+            0
+        );
 
         // Both devices should not be in the multicast group
         assert!(!is_in_ip_multicast(net.context("local"), device_id, multicast_addr));
@@ -4416,7 +4422,10 @@ mod tests {
 
         net.step();
 
-        assert_eq!(get_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id).count(), 1);
+        assert_eq!(
+            get_assigned_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id).count(),
+            1
+        );
         // let's make sure that our local node still can use that address
         assert!(NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
             net.context("local"),
@@ -4553,8 +4562,14 @@ mod tests {
 
         // they should now realize the address they intend to use has a duplicate
         // in the local network
-        assert_eq!(get_ip_addr_subnets::<_, Ipv6Addr>(net.context("local"), device_id).count(), 1);
-        assert_eq!(get_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id).count(), 1);
+        assert_eq!(
+            get_assigned_ip_addr_subnets::<_, Ipv6Addr>(net.context("local"), device_id).count(),
+            1
+        );
+        assert_eq!(
+            get_assigned_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id).count(),
+            1
+        );
     }
 
     #[test]

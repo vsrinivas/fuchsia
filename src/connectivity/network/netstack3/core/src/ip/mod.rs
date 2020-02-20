@@ -1236,7 +1236,7 @@ fn deliver_ipv4<D: EventDispatcher>(
     //   put real thought into what our host model should be (NET-1011).
     let dst_ip = dst_ip.get();
 
-    crate::device::get_ip_addr_subnets::<_, Ipv4Addr>(ctx, device)
+    crate::device::get_assigned_ip_addr_subnets::<_, Ipv4Addr>(ctx, device)
         .map(AddrSubnet::into_addr_subnet)
         .any(|(addr, subnet)| dst_ip == addr.get() || dst_ip == subnet.broadcast())
         || dst_ip.is_global_broadcast()

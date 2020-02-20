@@ -48,7 +48,7 @@ use log::trace;
 pub use crate::data_structures::{IdMap, IdMapCollection, IdMapCollectionKey};
 pub use crate::device::ndp::NdpConfigurations;
 pub use crate::device::{
-    get_ip_addr_subnets, initialize_device, receive_frame, remove_device, DeviceId,
+    get_assigned_ip_addr_subnets, initialize_device, receive_frame, remove_device, DeviceId,
     DeviceLayerEventDispatcher,
 };
 pub use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError};
@@ -474,9 +474,9 @@ pub fn get_all_ip_addr_subnets<'a, D: EventDispatcher>(
     ctx: &'a Context<D>,
     device: DeviceId,
 ) -> impl 'a + Iterator<Item = AddrSubnetEither> {
-    let addr_v4 = crate::device::get_ip_addr_subnets::<_, Ipv4Addr>(ctx, device)
+    let addr_v4 = crate::device::get_assigned_ip_addr_subnets::<_, Ipv4Addr>(ctx, device)
         .map(|a| AddrSubnetEither::V4(a));
-    let addr_v6 = crate::device::get_ip_addr_subnets::<_, Ipv6Addr>(ctx, device)
+    let addr_v6 = crate::device::get_assigned_ip_addr_subnets::<_, Ipv6Addr>(ctx, device)
         .map(|a| AddrSubnetEither::V6(a));
 
     addr_v4.chain(addr_v6)

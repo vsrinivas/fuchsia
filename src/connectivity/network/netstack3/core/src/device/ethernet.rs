@@ -488,26 +488,27 @@ pub(super) fn get_ip_addr_subnet<C: EthernetIpDeviceContext, A: IpAddress>(
     device_id: C::DeviceId,
 ) -> Option<AddrSubnet<A>> {
     #[ipv4addr]
-    return get_ip_addr_subnets(ctx, device_id).nth(0);
+    return get_assigned_ip_addr_subnets(ctx, device_id).nth(0);
     #[ipv6addr]
-    return get_ip_addr_subnets(ctx, device_id).find(|a| {
+    return get_assigned_ip_addr_subnets(ctx, device_id).find(|a| {
         let addr: SpecifiedAddr<Ipv6Addr> = a.addr();
         !addr.is_linklocal()
     });
 }
 
-/// Get the IP address and subnet pais associated with this device.
+/// Get the IP address and subnet pais associated with this device which are in
+/// the assigned state.
 ///
-/// Note, tentative IP addresses (addresses which are not yet fully bound to a
-/// device) and deprecated IP addresses (addresses which have been assigned but
-/// should no longer be used for new connections) will not be returned by
-/// `get_ip_addr_subnets`.
+/// Tentative IP addresses (addresses which are not yet fully bound to a device)
+/// and deprecated IP addresses (addresses which have been assigned but should
+/// no longer be used for new connections) will not be returned by
+/// `get_assigned_ip_addr_subnets`.
 ///
 /// Returns an [`Iterator`] of `AddrSubnet<A>`.
 ///
 /// See [`Tentative`] and [`AddrSubnet`] for more information.
 #[specialize_ip_address]
-pub(super) fn get_ip_addr_subnets<C: EthernetIpDeviceContext, A: IpAddress>(
+pub(super) fn get_assigned_ip_addr_subnets<C: EthernetIpDeviceContext, A: IpAddress>(
     ctx: &C,
     device_id: C::DeviceId,
 ) -> FilterMap<
@@ -533,24 +534,17 @@ pub(super) fn get_ip_addr_subnets<C: EthernetIpDeviceContext, A: IpAddress>(
     )
 }
 
-/// Get the IP address and subnet associated with this device, including tentative
-/// addresses.
-///
-/// Note, deprecated IP addresses (addresses which have been assigned but should no
-/// longer be used for new connections) will not be returned by
-/// `get_ip_addr_subnets_with_tentative`.
+/// Get the IP address/subnet pairs associated with this device, including
+/// tentative and deprecated addresses.
 ///
 /// Returns an [`Iterator`] of `Tentative<AddrSubnet<A>>`.
 ///
 /// See [`Tentative`] and [`AddrSubnet`] for more information.
 #[specialize_ip_address]
-pub(super) fn get_ip_addr_subnets_with_tentative<C: EthernetIpDeviceContext, A: IpAddress>(
+pub(super) fn get_ip_addr_subnets<C: EthernetIpDeviceContext, A: IpAddress>(
     ctx: &C,
     device_id: C::DeviceId,
-) -> FilterMap<
-    Iter<AddressEntry<A, C::Instant>>,
-    fn(&AddressEntry<A, C::Instant>) -> Option<Tentative<AddrSubnet<A>>>,
-> {
+) -> Iter<AddressEntry<A, C::Instant>> {
     let state = ctx.get_state_with(device_id).ip();
 
     #[ipv4addr]
@@ -559,11 +553,7 @@ pub(super) fn get_ip_addr_subnets_with_tentative<C: EthernetIpDeviceContext, A: 
     #[ipv6addr]
     let addresses = &state.ipv6_addr_sub;
 
-    addresses.iter().filter_map(|a| match a.state() {
-        AddressState::Assigned => Some(Tentative::new_permanent(*a.addr_sub())),
-        AddressState::Tentative => Some(Tentative::new_tentative(*a.addr_sub())),
-        AddressState::Deprecated => None,
-    })
+    addresses.iter()
 }
 
 /// Get the state of an address on a device.

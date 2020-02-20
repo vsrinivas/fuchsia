@@ -657,6 +657,11 @@ impl AddressState {
     pub(crate) fn is_tentative(self) -> bool {
         self == AddressState::Tentative
     }
+
+    /// Is this address deprecated?
+    pub(crate) fn is_deprecated(self) -> bool {
+        self == AddressState::Deprecated
+    }
 }
 
 /// The type of address configuraion.
@@ -672,19 +677,19 @@ pub(crate) enum AddressConfigurationType {
 /// Data associated with an IP addressess on an interface.
 #[derive(Clone)]
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
-pub struct AddressEntry<S: IpAddress, T: Instant, A: Witness<S> = SpecifiedAddr<S>> {
+pub struct AddressEntry<S: IpAddress, Instant, A: Witness<S> = SpecifiedAddr<S>> {
     addr_sub: AddrSubnet<S, A>,
     state: AddressState,
     configuration_type: AddressConfigurationType,
-    valid_until: Option<T>,
+    valid_until: Option<Instant>,
 }
 
-impl<S: IpAddress, T: Instant, A: Witness<S>> AddressEntry<S, T, A> {
+impl<S: IpAddress, Instant, A: Witness<S>> AddressEntry<S, Instant, A> {
     pub(crate) fn new(
         addr_sub: AddrSubnet<S, A>,
         state: AddressState,
         configuration_type: AddressConfigurationType,
-        valid_until: Option<T>,
+        valid_until: Option<Instant>,
     ) -> Self {
         Self { addr_sub, state, configuration_type, valid_until }
     }
@@ -701,12 +706,14 @@ impl<S: IpAddress, T: Instant, A: Witness<S>> AddressEntry<S, T, A> {
         self.configuration_type
     }
 
-    pub(crate) fn valid_until(&self) -> Option<T> {
-        self.valid_until
-    }
-
     pub(crate) fn mark_permanent(&mut self) {
         self.state = AddressState::Assigned;
+    }
+}
+
+impl<S: IpAddress, Instant: Copy, A: Witness<S>> AddressEntry<S, Instant, A> {
+    pub(crate) fn valid_until(&self) -> Option<Instant> {
+        self.valid_until
     }
 }
 
@@ -849,6 +856,28 @@ pub fn remove_device<D: EventDispatcher>(
     }
 }
 
+/// List the device IDs of all devices that exist and are initialized.
+pub(crate) fn list_devices<'a, D: EventDispatcher>(
+    ctx: &'a Context<D>,
+) -> impl 'a + Iterator<Item = DeviceId> {
+    // NOTE(joshlf): This unused closure exists so that any modifications to the
+    // `DeviceProtocol` enum will cause this function to stop compiling. This is
+    // to call out the fact that, when the `DeviceProtocol` enum is updated,
+    // this function needs to be updated too!
+    let _ = |proto: DeviceProtocol| match proto {
+        DeviceProtocol::Ethernet => (),
+    };
+
+    // UPDATE ME when `DeviceProtocol` enum changes!
+    ctx.state().device.ethernet.iter().filter_map(|(id, state)| {
+        if state.common.is_initialized() {
+            Some(DeviceId::new_ethernet(id))
+        } else {
+            None
+        }
+    })
+}
+
 /// Send an IP packet in a device layer frame.
 ///
 /// `send_ip_frame` accepts a device ID, a local IP address, and a
@@ -926,18 +955,36 @@ pub(crate) fn get_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     }
 }
 
-/// Get the IP addresses and associated subnets for a device.
+/// Get the IP address and subnet pairs associated with this device which are in
+/// the assigned state.
 ///
-/// Note, tentative IP addresses (addresses which are not yet fully bound to a
-/// device) will not be returned by `get_ip_addr_subnets`.
+/// Tentative IP addresses (addresses which are not yet fully bound to a device)
+/// and deprecated IP addresses (addresses which have been assigned but should
+/// no longer be used for new connections) will not be returned by
+/// `get_assigned_ip_addr_subnets`.
 ///
 /// Returns an [`Iterator`] of `AddrSubnet<A>`.
 ///
 /// See [`Tentative`] and [`AddrSubnet`] for more information.
-pub fn get_ip_addr_subnets<'a, D: EventDispatcher, A: IpAddress>(
+pub fn get_assigned_ip_addr_subnets<'a, D: EventDispatcher, A: IpAddress>(
     ctx: &'a Context<D>,
     device: DeviceId,
 ) -> impl 'a + Iterator<Item = AddrSubnet<A>> {
+    match device.protocol {
+        DeviceProtocol::Ethernet => {
+            self::ethernet::get_assigned_ip_addr_subnets(ctx, device.id.into())
+        }
+    }
+}
+
+/// Get the IP address/subnet pairs associated with this device, including
+/// tentative and deprecated addresses.
+///
+/// Returns an [`Iterator`] of `AddressEntry<A, D::Instant>`.
+pub fn get_ip_addr_subnets<'a, D: EventDispatcher, A: IpAddress>(
+    ctx: &'a Context<D>,
+    device: DeviceId,
+) -> impl 'a + Iterator<Item = &'a AddressEntry<A, D::Instant>> {
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::get_ip_addr_subnets(ctx, device.id.into()),
     }
