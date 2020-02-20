@@ -26,7 +26,7 @@ impl PowerManager {
         Ok(pm)
     }
 
-    pub fn init<'a, 'b>(
+    pub async fn init<'a, 'b>(
         &mut self,
         service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
     ) -> Result<(), Error> {
@@ -35,14 +35,14 @@ impl PowerManager {
         inspector.serve(service_fs)?;
 
         match self.board.as_ref() {
-            "astro" => self.init_astro(service_fs),
+            "astro" => self.init_astro(service_fs).await,
             _ => Err(format_err!("Invalid target: {}", self.board)),
         }?;
 
         Ok(())
     }
 
-    fn init_astro<'a, 'b>(
+    async fn init_astro<'a, 'b>(
         &mut self,
         service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
     ) -> Result<(), Error> {
@@ -52,7 +52,7 @@ impl PowerManager {
         .build()?;
         self.nodes.push(cpu_temperature.clone());
 
-        let cpu_stats_node = cpu_stats_handler::CpuStatsHandlerBuilder::new().build()?;
+        let cpu_stats_node = cpu_stats_handler::CpuStatsHandlerBuilder::new().build().await?;
         self.nodes.push(cpu_stats_node.clone());
 
         let cpu_path = "/dev/class/cpu-ctrl/000";
@@ -74,7 +74,8 @@ impl PowerManager {
             cpu_stats_node,
             cpu_dev_handler_node,
         )
-        .build()?;
+        .build()
+        .await?;
         self.nodes.push(cpu_control_node.clone());
 
         let sys_pwr_handler =

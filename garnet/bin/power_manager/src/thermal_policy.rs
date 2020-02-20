@@ -849,7 +849,12 @@ mod tests {
 
             let cpu_params = sim_params.cpu_params.clone();
             let sim = Simulator::new(sim_params);
-            let thermal_policy = Self::init_thermal_policy(&sim, &cpu_params, policy_params);
+            let thermal_policy = match executor.run_until_stalled(&mut Box::pin(
+                Self::init_thermal_policy(&sim, &cpu_params, policy_params),
+            )) {
+                futures::task::Poll::Ready(policy) => policy,
+                _ => panic!("Failed to create ThermalPolicy"),
+            };
 
             // Run the thermal policy once to initialize. The future must be dropped to eliminate
             // its borrow of `thermal_policy`.
@@ -863,7 +868,7 @@ mod tests {
         }
 
         /// Initializes the ThermalPolicy. Helper function for new().
-        fn init_thermal_policy(
+        async fn init_thermal_policy(
             sim: &Rc<RefCell<Simulator>>,
             cpu_params: &SimulatedCpuParams,
             policy_params: ThermalPolicyParams,
@@ -872,7 +877,8 @@ mod tests {
                 Simulator::make_temperature_fetcher(&sim),
             );
             let cpu_stats_node =
-                cpu_stats_handler::tests::setup_test_node(Simulator::make_idle_times_fetcher(&sim));
+                cpu_stats_handler::tests::setup_test_node(Simulator::make_idle_times_fetcher(&sim))
+                    .await;
             let sys_pwr_handler = system_power_handler::tests::setup_test_node(
                 Simulator::make_shutdown_function(&sim),
             );
@@ -894,7 +900,8 @@ mod tests {
                 cpu_control_params,
                 cpu_stats_node.clone(),
                 cpu_dev_handler,
-            );
+            )
+            .await;
 
             let thermal_limiter_node = thermal_limiter::tests::setup_test_node();
 

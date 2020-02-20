@@ -58,7 +58,7 @@ impl<'a> CpuStatsHandlerBuilder<'a> {
         self
     }
 
-    pub fn build(self) -> Result<Rc<CpuStatsHandler>, Error> {
+    pub async fn build(self) -> Result<Rc<CpuStatsHandler>, Error> {
         // Optionally use the default proxy
         let proxy = if self.stats_svc_proxy.is_none() {
             connect_proxy::<fstats::StatsMarker>(&CPU_STATS_SVC.to_string())?
@@ -69,11 +69,16 @@ impl<'a> CpuStatsHandlerBuilder<'a> {
         // Optionally use the default inspect root node
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
 
-        Ok(Rc::new(CpuStatsHandler {
+        let node = Rc::new(CpuStatsHandler {
             stats_svc_proxy: proxy,
             cpu_idle_stats: RefCell::new(Default::default()),
             inspect: InspectData::new(inspect_root, "CpuStatsHandler".to_string()),
-        }))
+        });
+
+        // Seed the idle stats
+        node.cpu_idle_stats.replace(node.get_idle_stats().await?);
+
+        Ok(node)
     }
 }
 
@@ -130,14 +135,7 @@ impl CpuStatsHandler {
     async fn handle_get_total_cpu_load(&self) -> Result<MessageReturn, PowerManagerError> {
         fuchsia_trace::duration!("power_manager", "CpuStatsHandler::handle_get_total_cpu_load");
         let new_stats = self.get_idle_stats().await?;
-
-        // If the cached idle stats' idle_times vector has a length of 0, it means we have never
-        // cached the idle stats before. In this case, we should just return a value of 0.0.
-        let load = if self.cpu_idle_stats.borrow().idle_times.len() == 0 {
-            0.0
-        } else {
-            Self::calculate_total_cpu_load(&self.cpu_idle_stats.borrow(), &new_stats)
-        };
+        let load = Self::calculate_total_cpu_load(&self.cpu_idle_stats.borrow(), &new_stats);
 
         self.inspect.log_cpu_load(load as f64);
         fuchsia_trace::instant!(
@@ -334,18 +332,19 @@ pub mod tests {
     /// Creates a test CpuStatsHandler node, with the provided closure giving per-CPU idle times
     /// that will be reported in CpuStats. The number of CPUs is implied by the length of the
     /// closure's returned Vec.
-    pub fn setup_test_node(
+    pub async fn setup_test_node(
         get_idle_times: impl FnMut() -> Vec<Nanoseconds> + 'static,
     ) -> Rc<CpuStatsHandler> {
         CpuStatsHandlerBuilder::new()
             .with_proxy(setup_fake_service(get_idle_times))
             .build()
+            .await
             .unwrap()
     }
 
     /// Creates a test CpuStatsHandler that reports zero idle times, with `TEST_NUM_CORES` CPUs.
-    pub fn setup_simple_test_node() -> Rc<CpuStatsHandler> {
-        setup_test_node(|| vec![Nanoseconds(0); TEST_NUM_CORES as usize])
+    pub async fn setup_simple_test_node() -> Rc<CpuStatsHandler> {
+        setup_test_node(|| vec![Nanoseconds(0); TEST_NUM_CORES as usize]).await
     }
 
     /// This test creates a CpuStatsHandler node and sends it the 'GetNumCpus' message. The
@@ -353,7 +352,7 @@ pub mod tests {
     /// are reported (in the test configuration, it should report `TEST_NUM_CORES`).
     #[fasync::run_singlethreaded(test)]
     async fn test_get_num_cpus() {
-        let node = setup_simple_test_node();
+        let node = setup_simple_test_node().await;
         let num_cpus = node.handle_message(&Message::GetNumCpus).await.unwrap();
         if let MessageReturn::GetNumCpus(n) = num_cpus {
             assert_eq!(n, TEST_NUM_CORES);
@@ -369,16 +368,7 @@ pub mod tests {
     ///        the test configuration
     #[fasync::run_singlethreaded(test)]
     async fn test_handle_get_cpu_load() {
-        let node = setup_simple_test_node();
-
-        if let MessageReturn::GetTotalCpuLoad(load) =
-            node.handle_message(&Message::GetTotalCpuLoad).await.unwrap()
-        {
-            // The first call should return a load of 0.0
-            assert_eq!(load, 0.0);
-        } else {
-            assert!(false);
-        }
+        let node = setup_simple_test_node().await;
 
         if let MessageReturn::GetTotalCpuLoad(load) =
             node.handle_message(&Message::GetTotalCpuLoad).await.unwrap()
@@ -419,7 +409,7 @@ pub mod tests {
     /// Tests that an unsupported message is handled gracefully and an Unsupported error is returned
     #[fasync::run_singlethreaded(test)]
     async fn test_unsupported_msg() {
-        let node = setup_simple_test_node();
+        let node = setup_simple_test_node().await;
         match node.handle_message(&Message::ReadTemperature).await {
             Err(PowerManagerError::Unsupported) => {}
             e => panic!("Unexpected return value: {:?}", e),
@@ -434,10 +424,10 @@ pub mod tests {
             .with_proxy(setup_fake_service(|| vec![Nanoseconds(0); TEST_NUM_CORES as usize]))
             .with_inspect_root(inspector.root())
             .build()
+            .await
             .unwrap();
 
         // For each message, the node will query CPU load and log the sample into Inspect
-        node.handle_message(&Message::GetTotalCpuLoad).await.unwrap(); // first reading gives 0 load
         node.handle_message(&Message::GetTotalCpuLoad).await.unwrap();
 
         assert_inspect_tree!(
@@ -446,10 +436,6 @@ pub mod tests {
                 CpuStatsHandler: {
                     cpu_loads: {
                         "0": {
-                            load: 0.0,
-                            "@time": inspect::testing::AnyProperty
-                        },
-                        "1": {
                             load: TEST_NUM_CORES as f64,
                             "@time": inspect::testing::AnyProperty
                         }

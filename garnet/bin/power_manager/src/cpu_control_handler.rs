@@ -12,7 +12,7 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_cpu_ctrl as fcpuctrl;
 use fuchsia_inspect::{self as inspect, Property};
-use std::cell::{Cell, RefCell, RefMut};
+use std::cell::Cell;
 use std::rc::Rc;
 
 /// Node: CpuControlHandler
@@ -146,7 +146,7 @@ impl<'a> CpuControlHandlerBuilder<'a> {
         self
     }
 
-    pub fn build(self) -> Result<Rc<CpuControlHandler>, Error> {
+    pub async fn build(self) -> Result<Rc<CpuControlHandler>, Error> {
         // Optionally use the default proxy
         let proxy = if self.cpu_ctrl_proxy.is_none() {
             connect_proxy::<fcpuctrl::DeviceMarker>(&self.cpu_driver_path)?
@@ -156,23 +156,74 @@ impl<'a> CpuControlHandlerBuilder<'a> {
 
         // Optionally use the default inspect root node
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
+        let inspect_data =
+            InspectData::new(inspect_root, format!("CpuControlHandler ({})", self.cpu_driver_path));
 
-        Ok(Rc::new(CpuControlHandler {
-            cpu_driver_path: self.cpu_driver_path.clone(),
-            cpu_control_params: RefCell::new(CpuControlParams {
-                p_states: Vec::new(),
-                capacitance: self.capacitance,
-                num_cores: 0,
-            }),
-            current_p_state_index: Cell::new(None),
+        // Query the CPU parameters
+        let cpu_control_params =
+            Self::get_cpu_params(&self.cpu_driver_path, &proxy, self.capacitance).await?;
+        inspect_data.set_cpu_control_params(&cpu_control_params);
+
+        let node = Rc::new(CpuControlHandler {
+            cpu_driver_path: self.cpu_driver_path,
+            cpu_control_params,
+            current_p_state_index: Cell::new(0),
             cpu_stats_handler: self.cpu_stats_handler,
             cpu_dev_handler_node: self.cpu_dev_handler_node,
-            cpu_ctrl_proxy: proxy,
-            inspect: InspectData::new(
-                inspect_root,
-                format!("CpuControlHandler ({})", self.cpu_driver_path),
-            ),
-        }))
+            _cpu_ctrl_proxy: proxy,
+            inspect: inspect_data,
+        });
+
+        // Initialize current P-state index
+        node.get_current_p_state_index().await?;
+
+        Ok(node)
+    }
+
+    /// Query the CPU parameters from the CpuCtrl driver.
+    async fn get_cpu_params(
+        cpu_driver_path: &String,
+        cpu_ctrl_proxy: &fcpuctrl::DeviceProxy,
+        capacitance: Farads,
+    ) -> Result<CpuControlParams, Error> {
+        fuchsia_trace::duration!(
+            "power_manager",
+            "CpuControlHandlerBuilder::get_cpu_params",
+            "driver" => cpu_driver_path.as_str()
+        );
+
+        // Query P-state metadata from the CpuCtrl interface. Each supported performance state
+        // has accompanying P-state metadata.
+        let mut p_states = Vec::new();
+        for i in 0..dev_control_handler::MAX_PERF_STATES {
+            if let Ok(info) = cpu_ctrl_proxy.get_performance_state_info(i).await? {
+                p_states.push(PState {
+                    frequency: Hertz(info.frequency_hz as f64),
+                    voltage: Volts(info.voltage_uv as f64 / 1e6),
+                });
+            } else {
+                break;
+            }
+        }
+
+        let params = CpuControlParams {
+            p_states,
+            num_cores: cpu_ctrl_proxy.get_num_logical_cores().await? as u32,
+            capacitance,
+        };
+        params.validate()?;
+
+        fuchsia_trace::instant!(
+            "power_manager",
+            "CpuControlHandlerBuilder::received_cpu_params",
+            fuchsia_trace::Scope::Thread,
+            "valid" => 1,
+            "p_states" => format!("{:?}", params.p_states).as_str(),
+            "capacitance" => params.capacitance.0,
+            "num_cores" => params.num_cores
+        );
+
+        Ok(params)
     }
 }
 
@@ -180,12 +231,11 @@ pub struct CpuControlHandler {
     /// The path to the driver that this node controls.
     cpu_driver_path: String,
 
-    /// The parameters of the CPU domain which are lazily queried from the CPU driver.
-    cpu_control_params: RefCell<CpuControlParams>,
+    /// The parameters of the CPU domain which are queried from the CPU driver.
+    cpu_control_params: CpuControlParams,
 
-    /// The current CPU P-state index which is initially None and lazily queried from the CPU
-    /// DeviceControlHandler node.
-    current_p_state_index: Cell<Option<usize>>,
+    /// The current CPU P-state index which is queried from the CPU DeviceControlHandler node.
+    current_p_state_index: Cell<usize>,
 
     /// The node which will provide CPU load information. It is expected that this node responds to
     /// the GetTotalCpuLoad message.
@@ -196,52 +246,13 @@ pub struct CpuControlHandler {
     cpu_dev_handler_node: Rc<dyn Node>,
 
     /// A proxy handle to communicate with the CPU driver CpuCtrl interface.
-    cpu_ctrl_proxy: fcpuctrl::DeviceProxy,
+    _cpu_ctrl_proxy: fcpuctrl::DeviceProxy,
 
     /// A struct for managing Component Inspection data
     inspect: InspectData,
 }
 
 impl CpuControlHandler {
-    /// Construct CpuControlParams by querying the required information from the CpuCtrl interface.
-    async fn get_cpu_params(&self) -> Result<(), Error> {
-        fuchsia_trace::duration!(
-            "power_manager",
-            "CpuControlHandler::get_cpu_params",
-            "driver" => self.cpu_driver_path.as_str()
-        );
-        // Query P-state metadata from the CpuCtrl interface. Each supported performance state
-        // has accompanying P-state metadata.
-        let mut p_states = Vec::new();
-        for i in 0..dev_control_handler::MAX_PERF_STATES {
-            if let Ok(info) = self.cpu_ctrl_proxy.get_performance_state_info(i).await? {
-                p_states.push(PState {
-                    frequency: Hertz(info.frequency_hz as f64),
-                    voltage: Volts(info.voltage_uv as f64 / 1e6),
-                });
-            } else {
-                break;
-            }
-        }
-
-        let mut params = self.cpu_control_params.borrow_mut();
-        params.p_states = p_states;
-        params.num_cores = self.cpu_ctrl_proxy.get_num_logical_cores().await? as u32;
-        params.validate()?;
-        self.inspect.set_cpu_control_params(&params);
-        fuchsia_trace::instant!(
-            "power_manager",
-            "CpuControlHandler::received_cpu_params",
-            fuchsia_trace::Scope::Thread,
-            "valid" => 1,
-            "p_states" => format!("{:?}", params.p_states).as_str(),
-            "capacitance" => params.capacitance.0,
-            "num_cores" => params.num_cores
-        );
-
-        Ok(())
-    }
-
     /// Returns the total CPU load (averaged since the previous call)
     async fn get_load(&self) -> Result<f32, Error> {
         fuchsia_trace::duration!(
@@ -287,21 +298,7 @@ impl CpuControlHandler {
             "max_power" => max_power.0
         );
 
-        // Lazily query the current P-state index on the first iteration
-        let current_p_state_index = {
-            if self.current_p_state_index.get().is_none() {
-                self.current_p_state_index.set(Some(self.get_current_p_state_index().await?));
-            }
-            self.current_p_state_index.get().unwrap()
-        };
-
-        // Lazily query the CpuControlParams on the first iteration
-        let cpu_params = {
-            if self.cpu_control_params.borrow().p_states.len() == 0 {
-                self.get_cpu_params().await?;
-            }
-            self.cpu_control_params.borrow()
-        };
+        let current_p_state_index = self.current_p_state_index.get();
 
         // The operation completion rate over the last sample interval is
         //     num_operations / sample_interval,
@@ -314,12 +311,12 @@ impl CpuControlHandler {
             // TODO(pshickel): Eventually we'll need a way to query the load only from the cores we
             // care about. As far as I can tell, there isn't currently a way to correlate the CPU
             // info coming from CpuStats with that from CpuCtrl.
-            let last_frequency = cpu_params.p_states[current_p_state_index].frequency;
+            let last_frequency = self.cpu_control_params.p_states[current_p_state_index].frequency;
             last_frequency.mul_scalar(last_load)
         };
 
         // If no P-states meet the selection criterion, use the lowest-power state.
-        let mut p_state_index = cpu_params.p_states.len() - 1;
+        let mut p_state_index = self.cpu_control_params.p_states.len() - 1;
 
         self.inspect.last_op_rate.set(last_operation_rate.0);
         self.inspect.last_load.set(last_load);
@@ -338,36 +335,41 @@ impl CpuControlHandler {
             "last_load" => last_load
         );
 
-        for (i, state) in cpu_params.p_states.iter().enumerate() {
+        for (i, state) in self.cpu_control_params.p_states.iter().enumerate() {
             // We estimate that the operation rate over the next interval will be the min of
             // the last operation rate and the frequency of the P-state under consideration.
             //
             // Note that we don't currently account for a rise in frequency allowing for a possible
             // increase in the operation rate.
-            let max_operation_rate = state.frequency.mul_scalar(cpu_params.num_cores as f64);
+            let max_operation_rate =
+                state.frequency.mul_scalar(self.cpu_control_params.num_cores as f64);
             let estimated_operation_rate = if max_operation_rate < last_operation_rate {
                 max_operation_rate
             } else {
                 last_operation_rate
             };
 
-            let estimated_power =
-                get_cpu_power(cpu_params.capacitance, state.voltage, estimated_operation_rate);
+            let estimated_power = get_cpu_power(
+                self.cpu_control_params.capacitance,
+                state.voltage,
+                estimated_operation_rate,
+            );
             if estimated_power <= *max_power {
                 p_state_index = i;
                 break;
             }
         }
 
-        if p_state_index != self.current_p_state_index.get().unwrap() {
+        if p_state_index != current_p_state_index {
             fuchsia_trace::instant!(
                 "power_manager",
                 "CpuControlHandler::updated_p_state_index",
                 fuchsia_trace::Scope::Thread,
                 "driver" => self.cpu_driver_path.as_str(),
-                "old_index" => self.current_p_state_index.get().unwrap() as u32,
+                "old_index" => current_p_state_index as u32,
                 "new_index" => p_state_index as u32
             );
+
             // Tell the CPU DeviceControlHandler to update the performance state
             self.send_message(
                 &self.cpu_dev_handler_node,
@@ -376,7 +378,7 @@ impl CpuControlHandler {
             .await?;
 
             // Cache the new P-state index for calculations on the next iteration
-            self.current_p_state_index.set(Some(p_state_index));
+            self.current_p_state_index.set(p_state_index);
             self.inspect.p_state_index.set(p_state_index as u64);
         }
 
@@ -426,7 +428,7 @@ impl InspectData {
         InspectData { root_node, p_state_index, last_op_rate, last_load }
     }
 
-    fn set_cpu_control_params(&self, params: &RefMut<CpuControlParams>) {
+    fn set_cpu_control_params(&self, params: &CpuControlParams) {
         let cpu_params_node = self.root_node.create_child("cpu_control_params");
 
         // Iterate `params.p_states` in reverse order so that the Inspect nodes appear in the same
@@ -487,7 +489,7 @@ pub mod tests {
         proxy
     }
 
-    pub fn setup_test_node(
+    pub async fn setup_test_node(
         params: CpuControlParams,
         cpu_stats_handler: Rc<dyn Node>,
         cpu_dev_handler_node: Rc<dyn Node>,
@@ -501,6 +503,7 @@ pub mod tests {
             cpu_dev_handler_node,
         )
         .build()
+        .await
         .unwrap()
     }
 
@@ -512,13 +515,18 @@ pub mod tests {
     /// Tests that an unsupported message is handled gracefully and an Unsupported error is returned
     #[fasync::run_singlethreaded(test)]
     async fn test_unsupported_msg() {
-        let cpu_stats_node = cpu_stats_handler::tests::setup_simple_test_node();
+        let cpu_stats_node = cpu_stats_handler::tests::setup_simple_test_node().await;
         let devhost_node = dev_control_handler::tests::setup_simple_test_node();
         let cpu_ctrl_node = setup_test_node(
-            CpuControlParams { num_cores: 0, p_states: vec![], capacitance: Farads(0.0) },
+            CpuControlParams {
+                num_cores: 1,
+                p_states: vec![PState { frequency: Hertz(0.0), voltage: Volts(0.0) }],
+                capacitance: Farads(0.0),
+            },
             cpu_stats_node,
             devhost_node.clone(),
-        );
+        )
+        .await;
         match cpu_ctrl_node.handle_message(&Message::ReadTemperature).await {
             Err(PowerManagerError::Unsupported) => {}
             e => panic!("Unexpected return value: {:?}", e),
@@ -536,9 +544,7 @@ pub mod tests {
     /// and parameters to choose the appropriate P-states.
     #[fasync::run_singlethreaded(test)]
     async fn test_set_max_power_consumption() {
-        // With these PStates and capacitance, the modeled power consumption (W) is:
-        //  - 4.05
-        //  - 1.8
+        // Arbitrary CpuControlParams chosen to allow the node to demonstrate P-state selection
         let cpu_params = CpuControlParams {
             num_cores: 4,
             p_states: vec![
@@ -547,43 +553,48 @@ pub mod tests {
             ],
             capacitance: Farads(100.0e-12),
         };
-        let cpu_stats_node = cpu_stats_handler::tests::setup_simple_test_node();
-        let devhost_node = dev_control_handler::tests::setup_simple_test_node();
-        let cpu_ctrl_node = setup_test_node(cpu_params, cpu_stats_node, devhost_node.clone());
 
-        // Allow power consumption greater than all PStates, expect to be in state 0
-        let max_power = Watts(5.0);
-        match cpu_ctrl_node
-            .handle_message(&Message::SetMaxPowerConsumption(max_power))
-            .await
-            .unwrap()
+        // The modeled power consumption at each P-state
+        let power_consumption: Vec<Watts> = cpu_params
+            .p_states
+            .iter()
+            .map(|p_state| {
+                get_cpu_power(
+                    cpu_params.capacitance,
+                    p_state.voltage,
+                    p_state.frequency.mul_scalar(cpu_params.num_cores as f64),
+                )
+            })
+            .collect();
+
+        let cpu_stats_node = cpu_stats_handler::tests::setup_simple_test_node().await;
+        let devhost_node = dev_control_handler::tests::setup_simple_test_node();
+        let cpu_ctrl_node = setup_test_node(cpu_params, cpu_stats_node, devhost_node.clone()).await;
+
+        // Test case 1: Allow power consumption of the highest P-state; expect to be in P-state 0
+        let commanded_power = power_consumption[0].mul_scalar(1.01);
+        match cpu_ctrl_node.handle_message(&Message::SetMaxPowerConsumption(commanded_power)).await
         {
-            MessageReturn::SetMaxPowerConsumption => {}
+            Ok(MessageReturn::SetMaxPowerConsumption) => {}
             e => panic!("Unexpected return value: {:?}", e),
         }
         assert_eq!(get_perf_state(devhost_node.clone()).await, 0);
 
-        // Lower power consumption limit such that we expect to switch to state 1
-        let max_power = Watts(4.0);
-        match cpu_ctrl_node
-            .handle_message(&Message::SetMaxPowerConsumption(max_power))
-            .await
-            .unwrap()
+        // Test case 2: Lower power consumption to that of P-state 1; expect to be in P-state 1
+        let commanded_power = power_consumption[1].mul_scalar(0.99);
+        match cpu_ctrl_node.handle_message(&Message::SetMaxPowerConsumption(commanded_power)).await
         {
-            MessageReturn::SetMaxPowerConsumption => {}
+            Ok(MessageReturn::SetMaxPowerConsumption) => {}
             e => panic!("Unexpected return value: {:?}", e),
         }
         assert_eq!(get_perf_state(devhost_node.clone()).await, 1);
 
-        // If we cannot accomodate the power limit, we should still be in the least power consuming
-        // state
-        let max_power = Watts(0.0);
-        match cpu_ctrl_node
-            .handle_message(&Message::SetMaxPowerConsumption(max_power))
-            .await
-            .unwrap()
+        // Test case 3: Reduce the power consumption limit below the lowest P-state; expect to
+        // remain in P-state 1
+        let commanded_power = Watts(0.0);
+        match cpu_ctrl_node.handle_message(&Message::SetMaxPowerConsumption(commanded_power)).await
         {
-            MessageReturn::SetMaxPowerConsumption => {}
+            Ok(MessageReturn::SetMaxPowerConsumption) => {}
             e => panic!("Unexpected return value: {:?}", e),
         }
         assert_eq!(get_perf_state(devhost_node.clone()).await, 1);
@@ -599,23 +610,17 @@ pub mod tests {
         let params = CpuControlParams { num_cores, p_states: vec![p_state], capacitance };
 
         let inspector = inspect::Inspector::new();
-        let node = CpuControlHandlerBuilder::new_with_proxy(
+        let _node = CpuControlHandlerBuilder::new_with_proxy(
             "Fake".to_string(),
             setup_fake_service(params),
             capacitance,
-            cpu_stats_handler::tests::setup_simple_test_node(),
+            cpu_stats_handler::tests::setup_simple_test_node().await,
             dev_control_handler::tests::setup_simple_test_node(),
         )
         .with_inspect_root(inspector.root())
         .build()
+        .await
         .unwrap();
-
-        // Sending this message causes the node to lazily query the CpuParams from the fake driver.
-        // After this point, the CpuParams should be populated into the Inspect tree.
-        match node.handle_message(&Message::SetMaxPowerConsumption(Watts(1.0))).await.unwrap() {
-            MessageReturn::SetMaxPowerConsumption => {}
-            e => panic!("Unexpected return value: {:?}", e),
-        }
 
         assert_inspect_tree!(
             inspector,

@@ -55,8 +55,8 @@ async fn main() -> Result<(), Error> {
 
     // Setup the PowerManager
     let board = get_board_name().await?;
-    let mut pm = PowerManager::new(board).context("failed to create PowerManager")?;
-    pm.init(&mut fs).context("failed to init PowerManager")?;
+    let mut pm = PowerManager::new(board)?;
+    pm.init(&mut fs).await?;
 
     // Allow our services to be discovered.
     fs.take_and_serve_directory_handle()?;
