@@ -356,7 +356,7 @@ pub struct PortRange {
 /// Converts a port number from a string into a `u16`.
 fn make_port(port: &str) -> error::Result<u16> {
     port.parse::<u16>().map_err(|e| {
-        error::NetworkManager::CONFIG(error::Config::Malformed {
+        error::NetworkManager::Config(error::Config::Malformed {
             msg: format!("Failed to make new port range from: '{}': {}", port, e),
         })
     })
@@ -367,7 +367,7 @@ impl FromStr for PortRange {
     fn from_str(ports: &str) -> error::Result<Self> {
         let mut iter = ports.trim().split("-").fuse();
         let first = iter.next().ok_or_else(|| {
-            error::NetworkManager::CONFIG(error::Config::Malformed {
+            error::NetworkManager::Config(error::Config::Malformed {
                 msg: format!("invalid port range: {}", ports),
             })
         })?;
@@ -463,13 +463,13 @@ impl DhcpPool {
     /// Validate a [`config::dhcp_pool`] configuration.
     fn validate(&self, config_path: &str) -> error::Result<()> {
         if !self.start.is_private() || !self.end.is_private() {
-            return Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+            return Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
                 path: config_path.to_string(),
                 error: "DhcpPool start and end must be private addresses.".to_string(),
             }));
         }
         if u32::from(self.start) > u32::from(self.end) {
-            return Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+            return Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
                 path: config_path.to_string(),
                 error: "DhcpPool start and end is not a valid range.".to_string(),
             }));
@@ -495,7 +495,7 @@ impl TryFrom<&StaticIpAllocations> for lifmgr::DhcpReservation {
             Some(allocations.device_name.to_string())
         };
         if !allocations.mac_address.is_unicast() || allocations.mac_address.is_nil() {
-            return Err(error::NetworkManager::CONFIG(error::Config::NotSupported {
+            return Err(error::NetworkManager::Config(error::Config::NotSupported {
                 msg: "Invalid mac address".to_string(),
             }));
         }
@@ -512,13 +512,13 @@ impl StaticIpAllocations {
     /// Validate a [`config::StaticIpAllocations`] configuration.
     fn validate(&self, config_path: &str) -> error::Result<()> {
         if !self.ip_address.is_private() {
-            return Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+            return Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
                 path: config_path.to_string(),
                 error: "must be private addresses.".to_string(),
             }));
         }
         if !self.mac_address.is_unicast() || self.mac_address.is_nil() {
-            return Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+            return Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
                 path: config_path.to_string(),
                 error: "not a valid MAC address".to_string(),
             }));
@@ -598,12 +598,12 @@ impl TryFrom<fidl_fuchsia_router_config::CidrAddress> for CidrAddress {
     type Error = error::NetworkManager;
     fn try_from(cidr_addr: fidl_fuchsia_router_config::CidrAddress) -> error::Result<Self> {
         let ip = cidr_addr.address.ok_or_else(|| {
-            error::NetworkManager::CONFIG(error::Config::Malformed {
+            error::NetworkManager::Config(error::Config::Malformed {
                 msg: format!("Failed to convert invalid FIDL CidrAddress: {:?}", cidr_addr),
             })
         })?;
         let prefix_length = cidr_addr.prefix_length.ok_or_else(|| {
-            error::NetworkManager::CONFIG(error::Config::Malformed {
+            error::NetworkManager::Config(error::Config::Malformed {
                 msg: format!("Failed to convert invalid FIDL CidrAddress: {:?}", cidr_addr),
             })
         })?;
@@ -690,7 +690,7 @@ impl Config {
         match self.validate_with_schema(&loaded_config).await {
             Ok(_) => {
                 self.device_config = Some(serde_json::from_value(loaded_config).map_err(|e| {
-                    error::NetworkManager::CONFIG(error::Config::FailedToDeserializeConfig {
+                    error::NetworkManager::Config(error::Config::FailedToDeserializeConfig {
                         path: String::from(loaded_path.to_string_lossy()),
                         error: e.to_string(),
                     })
@@ -719,13 +719,13 @@ impl Config {
         if config_path.is_file() {
             let mut contents = String::new();
             let mut f = File::open(config_path).map_err(|e| {
-                error::NetworkManager::CONFIG(error::Config::ConfigNotLoaded {
+                error::NetworkManager::Config(error::Config::ConfigNotLoaded {
                     path: String::from(config_path.to_string_lossy()),
                     error: e.to_string(),
                 })
             })?;
             f.read_to_string(&mut contents).map_err(|e| {
-                error::NetworkManager::CONFIG(error::Config::ConfigNotLoaded {
+                error::NetworkManager::Config(error::Config::ConfigNotLoaded {
                     path: String::from(config_path.to_string_lossy()),
                     error: e.to_string(),
                 })
@@ -734,14 +734,14 @@ impl Config {
             // into memory and deserialize it using serde_json::from_str(), than using
             // serde_json::from_reader(), see: https://github.com/serde-rs/json/issues/160.
             let json: Value = serde_json::from_str(&contents).map_err(|e| {
-                error::NetworkManager::CONFIG(error::Config::FailedToDeserializeConfig {
+                error::NetworkManager::Config(error::Config::FailedToDeserializeConfig {
                     path: String::from(config_path.to_string_lossy()),
                     error: e.to_string(),
                 })
             })?;
             return Ok(json);
         }
-        Err(error::NetworkManager::CONFIG(error::Config::ConfigNotFound {
+        Err(error::NetworkManager::Config(error::Config::ConfigNotFound {
             path: String::from(config_path.to_string_lossy()),
         }))
     }
@@ -761,7 +761,7 @@ impl Config {
         let mut scope = json_schema::Scope::new();
         let schema = scope.compile_and_return(device_schema, false).map_err(|e| {
             error!("Failed to validate schema: {:?}", e);
-            error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+            error::NetworkManager::Config(error::Config::FailedToValidateConfig {
                 path: String::from(self.device_schema_path().to_string_lossy()),
                 error: schema_error(e),
             })
@@ -780,7 +780,7 @@ impl Config {
             // The ordering in which valico emits these errors is unstable. Sort error messages so
             // that the resulting message is predictable.
             err_msgs.sort_unstable();
-            return Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+            return Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
                 path: String::from(self.startup_path().to_string_lossy()),
                 error: err_msgs.join(", "),
             }));
@@ -798,7 +798,7 @@ impl Config {
         match (intf.subinterfaces.as_ref(), intf.switched_vlan.as_ref(), intf.routed_vlan.as_ref())
         {
             (Some(_), None, None) | (None, Some(_), None) | (None, None, Some(_)) => Ok(()),
-            _ => Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+            _ => Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
                 path: String::from(self.startup_path().to_string_lossy()),
                 error: concat!(
                     "Interface must be exactly one of either: ",
@@ -817,7 +817,7 @@ impl Config {
         match &intf.config.interface_type {
             InterfaceType::IfUplink => {
                 if intf.subinterfaces.is_none() {
-                    return Err(error::NetworkManager::CONFIG(
+                    return Err(error::NetworkManager::Config(
                         error::Config::FailedToValidateConfig {
                             path: String::from(self.startup_path().to_string_lossy()),
                             error: concat!(
@@ -834,7 +834,7 @@ impl Config {
             }
             InterfaceType::IfEthernet => {
                 if intf.subinterfaces.is_none() && intf.switched_vlan.is_none() {
-                    return Err(error::NetworkManager::CONFIG(
+                    return Err(error::NetworkManager::Config(
                         error::Config::FailedToValidateConfig {
                             path: String::from(self.startup_path().to_string_lossy()),
                             error: concat!(
@@ -851,7 +851,7 @@ impl Config {
             }
             InterfaceType::IfRoutedVlan => {
                 if intf.routed_vlan.is_none() {
-                    return Err(error::NetworkManager::CONFIG(
+                    return Err(error::NetworkManager::Config(
                         error::Config::FailedToValidateConfig {
                             path: String::from(self.startup_path().to_string_lossy()),
                             error: concat!(
@@ -867,7 +867,7 @@ impl Config {
             }
             InterfaceType::IfLoopback => {
                 if intf.subinterfaces.is_none() {
-                    return Err(error::NetworkManager::CONFIG(
+                    return Err(error::NetworkManager::Config(
                         error::Config::FailedToValidateConfig {
                             path: String::from(self.startup_path().to_string_lossy()),
                             error: concat!(
@@ -881,7 +881,7 @@ impl Config {
             }
             // Add additional type validation here.
             t => {
-                return Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+                return Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
                     path: String::from(self.startup_path().to_string_lossy()),
                     error: format!("Interface type {:?} not supported", t),
                 }))
@@ -897,7 +897,7 @@ impl Config {
         if has_static ^ has_dhcp_client {
             Ok(())
         } else {
-            Err(error::NetworkManager::CONFIG(error::Config::Malformed {
+            Err(error::NetworkManager::Config(error::Config::Malformed {
                 msg: format!("Invalid IpAddress configuration: {:?}", addr),
             }))
         }
@@ -916,7 +916,7 @@ impl Config {
                     self.validate_ip_address(&a)?;
                     if let Some(dhcp_server) = &v4addr.dhcp_server {
                         if a.dhcp_client.unwrap_or(false) {
-                            return Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+                            return Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
                             path: String::from(self.startup_path().to_string_lossy()),
                             error: "configuring dhcp client and server on same interface is invalid".to_string(),
                             }));
@@ -931,7 +931,7 @@ impl Config {
                     }
                 }
                 if !pool_in_range {
-                    return Err(error::NetworkManager::CONFIG(
+                    return Err(error::NetworkManager::Config(
                         error::Config::FailedToValidateConfig {
                             path: String::from(self.startup_path().to_string_lossy()),
                             error: "DhcpPool is not related to any IP address".to_string(),
@@ -961,7 +961,7 @@ impl Config {
         let intfs = match self.interfaces() {
             Some(intfs) => intfs,
             None => {
-                return Err(error::NetworkManager::CONFIG(error::Config::NotFound {
+                return Err(error::NetworkManager::Config(error::Config::NotFound {
                     msg: "Config contains no interfaces".to_string(),
                 }));
             }
@@ -971,7 +971,7 @@ impl Config {
 
             // Interface names must be unique.
             if intf_names.contains(&intfs.interface.config.name) {
-                return Err(error::NetworkManager::CONFIG(error::Config::FailedToValidateConfig {
+                return Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
                     path: String::from(self.startup_path().to_string_lossy()),
                     error: format!(
                         "Duplicate interface names detected: '{}'",
@@ -987,7 +987,7 @@ impl Config {
     /// Returns [`config::Device`] from the config.
     pub fn device(&self) -> error::Result<&Device> {
         self.device_config.as_ref().map(|c| &c.device).ok_or_else(|| {
-            error::NetworkManager::CONFIG(error::Config::NotFound {
+            error::NetworkManager::Config(error::Config::NotFound {
                 msg: "Device was not found yet. Is the config loaded?".to_string(),
             })
         })
@@ -1076,7 +1076,7 @@ impl Config {
         if let Some(intf) = self.get_interface_by_device_id(topo_path) {
             return Ok(intf.config.name.clone());
         }
-        Err(error::NetworkManager::CONFIG(error::Config::NotFound {
+        Err(error::NetworkManager::Config(error::Config::NotFound {
             msg: format!("Getting interface name for {} failed.", topo_path),
         }))
     }
@@ -1091,7 +1091,7 @@ impl Config {
     ) -> error::Result<(Option<&'a IpAddress>, Option<&'a IpAddress>)> {
         if let Some(subifs) = &intf.subinterfaces {
             if subifs.is_empty() {
-                return Err(error::NetworkManager::CONFIG(error::Config::Malformed {
+                return Err(error::NetworkManager::Config(error::Config::Malformed {
                     msg: "Interface must have at least one \'subinterface\' definition".to_string(),
                 }));
             }
@@ -1104,7 +1104,7 @@ impl Config {
             let v6addr = subif.ipv6.as_ref().and_then(|c| c.addresses.iter().next());
             return Ok((v4addr, v6addr));
         }
-        Err(error::NetworkManager::CONFIG(error::Config::NotFound {
+        Err(error::NetworkManager::Config(error::Config::NotFound {
             msg: format!(
                 "Could not find an IP config defined on the provided interface: {:?}",
                 intf
@@ -1181,7 +1181,7 @@ impl Config {
         let intf = match self.get_interface_by_device_id(topo_path) {
             Some(x) => x,
             None => {
-                return Err(error::NetworkManager::CONFIG(error::Config::Malformed {
+                return Err(error::NetworkManager::Config(error::Config::Malformed {
                     msg: format!(
                         "Cannot find an Interface matching `device_id` from topo path: {}",
                         topo_path
@@ -1192,7 +1192,7 @@ impl Config {
         let subifs = match &intf.subinterfaces {
             Some(subif) => subif,
             None => {
-                return Err(error::NetworkManager::CONFIG(error::Config::Malformed {
+                return Err(error::NetworkManager::Config(error::Config::Malformed {
                     msg: "An uplink must have a \'subinterface\' configuration".to_string(),
                 }));
             }
@@ -1200,7 +1200,7 @@ impl Config {
 
         // TODO(42315): LIFProperties does not support multiple addresses yet.
         if subifs.len() != 1 {
-            return Err(error::NetworkManager::CONFIG(error::Config::NotSupported {
+            return Err(error::NetworkManager::Config(error::Config::NotSupported {
                 msg: "Multiple subinterfaces on a single interface are not supported".to_string(),
             }));
         }
@@ -1262,7 +1262,7 @@ impl Config {
         self.get_interface_by_device_id(topo_path)
             .and_then(|intf| intf.switched_vlan.as_ref())
             .ok_or_else(|| {
-                error::NetworkManager::CONFIG(error::Config::NotFound {
+                error::NetworkManager::Config(error::Config::NotFound {
                     msg: format!("Failed to find interface matching: {}", topo_path),
                 })
             })
@@ -1291,7 +1291,7 @@ impl Config {
             InterfaceMode::Access => match switched_vlan.access_vlan {
                 Some(vid) => switched_vlan_ids.push(vid),
                 None => {
-                    return Err(error::NetworkManager::CONFIG(error::Config::Malformed {
+                    return Err(error::NetworkManager::Config(error::Config::Malformed {
                         msg: format!(
                             "Expecting access port to have 'access_vlan': {:?}",
                             switched_vlan
@@ -1301,7 +1301,7 @@ impl Config {
             },
             // TODO(cgibson): Implement trunk VLANs when netstack supports it.
             InterfaceMode::Trunk => {
-                return Err(error::NetworkManager::CONFIG(error::Config::NotSupported {
+                return Err(error::NetworkManager::Config(error::Config::NotSupported {
                     msg: "Trunk VLANs are not supported yet.".to_string(),
                 }));
             }
@@ -1316,7 +1316,7 @@ impl Config {
                 }
             }
         }
-        Err(error::NetworkManager::CONFIG(error::Config::NotFound {
+        Err(error::NetworkManager::Config(error::Config::NotFound {
             msg: format!(
                 "Switched VLAN port does not resolve to a routed VLAN: {:?}",
                 switched_vlan
@@ -1332,7 +1332,7 @@ impl Config {
         let mut ports = ports.peekable();
         if ports.peek().is_none() {
             warn!("Provided list of ports was empty?");
-            return Err(error::NetworkManager::CONFIG(error::Config::Malformed {
+            return Err(error::NetworkManager::Config(error::Config::Malformed {
                 msg: "Provided list of ports was empty?".to_string(),
             }));
         }
@@ -1345,7 +1345,7 @@ impl Config {
                     if v == r {
                         Some(r)
                     } else {
-                        return Err(error::NetworkManager::CONFIG(error::Config::Malformed {
+                        return Err(error::NetworkManager::Config(error::Config::Malformed {
                             msg: "switched_vlan ports do not resolve to the same RoutedVlan"
                                 .to_string(),
                         }));
@@ -1354,7 +1354,7 @@ impl Config {
             }
         }
         routed_vlan.ok_or_else(|| {
-            error::NetworkManager::CONFIG(error::Config::Malformed {
+            error::NetworkManager::Config(error::Config::Malformed {
                 msg: "switched_vlan ports do not resolve to the same RoutedVlan".to_string(),
             })
         })
@@ -1451,7 +1451,7 @@ impl Config {
     /// [`error::Config::NotFound`] error.
     fn get_services(&self) -> error::Result<&Services> {
         self.device()?.services.as_ref().ok_or_else(|| {
-            error::NetworkManager::CONFIG(error::Config::NotFound {
+            error::NetworkManager::Config(error::Config::NotFound {
                 msg: "\'services\' definition was not found".to_string(),
             })
         })
@@ -1472,8 +1472,6 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    use crate::error::NetworkManager::CONFIG;
     use fuchsia_async as fasync;
     use std::fs;
 
@@ -1887,7 +1885,7 @@ mod tests {
         // Missing config should raise an `error::Config::ConfigNotFound`.
         let doesntexist = String::from("/doesntexist");
         match test_config.try_load_config(Path::new(&doesntexist)).await {
-            Err(CONFIG(error::Config::ConfigNotFound { path })) => {
+            Err(error::NetworkManager::Config(error::Config::ConfigNotFound { path })) => {
                 assert_eq!(doesntexist, path);
             }
             Ok(r) => panic!("Got unexpected 'Ok' result: {}", r),
@@ -1897,7 +1895,10 @@ mod tests {
         // An invalid config should fail to deserialize.
         let invalid_empty = String::from("/pkg/data/invalid_empty.json");
         match test_config.try_load_config(Path::new(&invalid_empty)).await {
-            Err(CONFIG(error::Config::FailedToDeserializeConfig { path, error: _ })) => {
+            Err(error::NetworkManager::Config(error::Config::FailedToDeserializeConfig {
+                path,
+                error: _,
+            })) => {
                 assert_eq!(invalid_empty, path);
             }
             Ok(r) => panic!("Got unexpected 'Ok' result: {}", r),
@@ -2169,7 +2170,7 @@ mod tests {
             ipv6: None,
         }];
         match test_config.validate_subinterfaces(&test_subif) {
-            Err(CONFIG(error::Config::Malformed { msg: _ })) => (),
+            Err(error::NetworkManager::Config(error::Config::Malformed { msg: _ })) => (),
             Err(e) => panic!("Got unexpected error result: {}", e),
             Ok(_) => panic!("Got unexpected 'Ok' result!"),
         }
@@ -2245,7 +2246,10 @@ mod tests {
             ipv6: None,
         }];
         match test_config.validate_subinterfaces(&test_subif) {
-            Err(CONFIG(error::Config::FailedToValidateConfig { path: _, error: _ })) => (),
+            Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
+                path: _,
+                error: _,
+            })) => (),
             Err(e) => panic!("Got unexpected error result: {}", e),
             Ok(_) => panic!("Got unexpected 'Ok' result!"),
         }
@@ -2259,7 +2263,7 @@ mod tests {
             ipv6: None,
         }];
         match test_config.validate_subinterfaces(&test_subif) {
-            Err(CONFIG(error::Config::Malformed { msg: _ })) => (),
+            Err(error::NetworkManager::Config(error::Config::Malformed { msg: _ })) => (),
             Err(e) => panic!("Got unexpected error result: {}", e),
             Ok(_) => panic!("Got unexpected 'Ok' result!"),
         }
@@ -2486,7 +2490,7 @@ mod tests {
             ]
           }
         }"#,
-                Err(CONFIG(error::Config::FailedToValidateConfig {
+                Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
                     path: "".to_string(),
                     error: "Interface must be exactly one of either: \'subinterfaces\', \'routed_vlan\', or \'switched_vlan\'".to_string(),
                 })),
@@ -2533,7 +2537,7 @@ mod tests {
             ]
           }
         }"#,
-                Err(CONFIG(error::Config::FailedToValidateConfig {
+                Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
                     path: "".to_string(),
                     error: "DhcpPool is not related to any IP address".to_string()
                 })),
@@ -2587,7 +2591,7 @@ mod tests {
             ]
           }
         }"#,
-                Err(CONFIG(error::Config::FailedToValidateConfig {
+                Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
                     path: "".to_string(),
                     error: "DhcpPool is not related to any IP address".to_string()
                 })),
@@ -2634,7 +2638,7 @@ mod tests {
             ]
           }
         }"#,
-                Err(CONFIG(error::Config::FailedToValidateConfig {
+                Err(error::NetworkManager::Config(error::Config::FailedToValidateConfig {
                     path: "".to_string(),
                     error: "not a valid MAC address".to_string()
                 })),
@@ -2927,13 +2931,13 @@ mod tests {
         let mut test_config = create_test_config_no_paths();
         test_config.device_config = Some(build_full_config());
         match test_config.get_interface_name("") {
-            Err(error::NetworkManager::CONFIG(error::Config::NotFound { msg: _ })) => (),
+            Err(error::NetworkManager::Config(error::Config::NotFound { msg: _ })) => (),
             Err(e) => panic!("Got unexpected 'Err' result: {}", e),
             Ok(r) => panic!("Got unexpected 'Ok' result: {}", r),
         }
         match test_config.get_interface_name("bridge") {
             Ok(r) => panic!("Got unexpected 'Ok' result: {}", r),
-            Err(error::NetworkManager::CONFIG(error::Config::NotFound { msg: _ })) => (),
+            Err(error::NetworkManager::Config(error::Config::NotFound { msg: _ })) => (),
             Err(e) => panic!("Got unexpected 'Err' result: {}", e),
         }
         let expected_name = "test_wan_up".to_string();
@@ -3059,7 +3063,7 @@ mod tests {
         test_config.device_config = new_config;
         // Should fail because VLAN ID 4000 does not match the routed_vlan configuration.
         match test_config.resolve_to_routed_vlans(&new_sv) {
-            Err(CONFIG(error::Config::NotFound { msg: _ })) => (),
+            Err(error::NetworkManager::Config(error::Config::NotFound { msg: _ })) => (),
             Err(e) => panic!("Got unexpected 'Error' result: {}", e),
             Ok(r) => panic!("Got unexpected 'Ok' result: {:?}", r),
         }
@@ -3215,7 +3219,9 @@ mod tests {
                     ip_address: "192.168.0.1".parse().unwrap(),
                     mac_address: MacAddress::parse_str("00:00:00:00:00:00").unwrap(),
                 },
-                Err(CONFIG(error::Config::NotSupported { msg: "Invalid mac address".to_string() })),
+                Err(error::NetworkManager::Config(error::Config::NotSupported {
+                    msg: "Invalid mac address".to_string(),
+                })),
             ),
             (
                 "broadcast mac",
@@ -3224,7 +3230,9 @@ mod tests {
                     ip_address: "192.168.0.1".parse().unwrap(),
                     mac_address: MacAddress::parse_str("ff:ff:ff:ff:ff:ff").unwrap(),
                 },
-                Err(CONFIG(error::Config::NotSupported { msg: "Invalid mac address".to_string() })),
+                Err(error::NetworkManager::Config(error::Config::NotSupported {
+                    msg: "Invalid mac address".to_string(),
+                })),
             ),
             (
                 "mcast mac",
@@ -3233,7 +3241,9 @@ mod tests {
                     ip_address: "192.168.0.1".parse().unwrap(),
                     mac_address: MacAddress::parse_str("01:01:02:03:04:05").unwrap(),
                 },
-                Err(CONFIG(error::Config::NotSupported { msg: "Invalid mac address".to_string() })),
+                Err(error::NetworkManager::Config(error::Config::NotSupported {
+                    msg: "Invalid mac address".to_string(),
+                })),
             ),
         ] {
             let got = allocation.try_into();

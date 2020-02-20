@@ -189,11 +189,11 @@ impl DeviceState {
         let acls = self
             .config
             .get_acl_entries(topo_path)
-            .ok_or_else(|| error::NetworkManager::CONFIG(error::Config::FailedToGetAclEntries))?;
+            .ok_or_else(|| error::NetworkManager::Config(error::Config::FailedToGetAclEntries))?;
         let pid = self
             .port_manager
             .port_id(topo_path)
-            .ok_or_else(|| error::NetworkManager::PORT(error::Port::NotFound))?;
+            .ok_or_else(|| error::NetworkManager::Port(error::Port::NotFound))?;
         for entry in acls {
             for rule in self.packet_filter.parse_aclentry(entry).await?.iter() {
                 self.set_filter_on_interface(rule, pid.to_u32()).await?;
@@ -231,7 +231,7 @@ impl DeviceState {
             self.port_manager
                 .topo_path(*pid)
                 .ok_or_else(|| {
-                    error::NetworkManager::CONFIG(error::Config::NotFound {
+                    error::NetworkManager::Config(error::Config::NotFound {
                         msg: format!("topo_path not found in port manager map: {:?}", pid),
                     })
                 })
@@ -326,7 +326,7 @@ impl DeviceState {
                 if let Some(id) = self.port_manager.port_id(&event.topological_path) {
                     if pid != *id {
                         error!("port {:?} already exists with id {:?}", event.topological_path, id);
-                        return Err(error::NetworkManager::OIR(error::Oir::InconsistentState));
+                        return Err(error::NetworkManager::Oir(error::Oir::InconsistentState));
                     }
                     return Ok(());
                 }
@@ -443,7 +443,7 @@ impl DeviceState {
     ) -> error::Result<lifmgr::LIF> {
         if ports.is_empty() {
             // At least one port is needed.
-            return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+            return Err(error::NetworkManager::Lif(error::Lif::NotSupported));
         }
         let reserved: Vec<PortId> = ports
             .iter()
@@ -451,7 +451,7 @@ impl DeviceState {
             .collect();
         if reserved.len() != ports.len() {
             self.release_ports(&reserved);
-            return Err(error::NetworkManager::LIF(error::Lif::InvalidPort));
+            return Err(error::NetworkManager::Lif(error::Lif::InvalidPort));
         }
 
         // TODO(cgibson): Once we can configure VLANs, we need to handle VLAN ID 0 vs None, since
@@ -505,7 +505,7 @@ impl DeviceState {
         let lif = match lif {
             None => {
                 info!("delete_lif: lif not found {:?} ", lif_id);
-                return Err(error::NetworkManager::LIF(error::Lif::NotFound));
+                return Err(error::NetworkManager::Lif(error::Lif::NotFound));
             }
             Some(x) => x.clone(),
         };
@@ -520,7 +520,7 @@ impl DeviceState {
         self.release_ports(&ports.collect::<Vec<PortId>>());
         // delete from database
         if self.lif_manager.remove_lif(lif_id).is_none() {
-            return Err(error::NetworkManager::LIF(error::Lif::NotFound));
+            return Err(error::NetworkManager::Lif(error::Lif::NotFound));
         }
         Ok(())
     }
@@ -534,7 +534,7 @@ impl DeviceState {
         let lif = match self.lif_manager.lif_mut(&lif_id) {
             None => {
                 info!("update_lif_properties: lif not found {:?} ", lif_id);
-                return Err(error::NetworkManager::LIF(error::Lif::NotFound));
+                return Err(error::NetworkManager::Lif(error::Lif::NotFound));
             }
             Some(x) => x,
         };
@@ -554,7 +554,7 @@ impl DeviceState {
         let lif = match self.lif_manager.lif_mut(&lif_id) {
             None => {
                 info!("update_lif_properties: lif not found {:?} ", lif_id);
-                return Err(error::NetworkManager::LIF(error::Lif::NotFound));
+                return Err(error::NetworkManager::Lif(error::Lif::NotFound));
             }
             Some(x) => x,
         };
@@ -574,8 +574,8 @@ impl DeviceState {
             // then NAT is not yet ready to be enabled until we have more configuration
             // data.
             Ok(_)
-            | Err(error::NetworkManager::SERVICE(error::Service::UpdateNatPendingConfig))
-            | Err(error::NetworkManager::SERVICE(error::Service::NatNotEnabled)) => {}
+            | Err(error::NetworkManager::Service(error::Service::UpdateNatPendingConfig))
+            | Err(error::NetworkManager::Service(error::Service::NatNotEnabled)) => {}
             Err(e) => {
                 // Otherwise, this was an actual error and we should not increment the
                 // version number.
@@ -619,16 +619,16 @@ impl DeviceState {
     /// Enables NAT.
     pub async fn enable_nat(&mut self) -> error::Result<()> {
         if self.service_manager.is_nat_enabled() {
-            return Err(error::NetworkManager::SERVICE(error::Service::NatAlreadyEnabled));
+            return Err(error::NetworkManager::Service(error::Service::NatAlreadyEnabled));
         }
         if let Err(e) = self.hal.set_ip_forwarding(true).await {
             warn!("Failed to enable IP forwarding: {:?}", e);
-            return Err(error::NetworkManager::SERVICE(
+            return Err(error::NetworkManager::Service(
                 error::Service::ErrorEnableIpForwardingFailed,
             ));
         }
         match self.packet_filter.update_nat_config(self.service_manager.get_nat_config()).await {
-            Err(error::NetworkManager::SERVICE(error::Service::NatNotEnabled)) => {
+            Err(error::NetworkManager::Service(error::Service::NatNotEnabled)) => {
                 self.service_manager.enable_nat();
                 self.packet_filter.update_nat_config(self.service_manager.get_nat_config()).await
             }
@@ -640,11 +640,11 @@ impl DeviceState {
     /// Disables NAT.
     pub async fn disable_nat(&mut self) -> error::Result<()> {
         if !self.service_manager.is_nat_enabled() {
-            return Err(error::NetworkManager::SERVICE(error::Service::NatNotEnabled));
+            return Err(error::NetworkManager::Service(error::Service::NatNotEnabled));
         }
         if let Err(e) = self.hal.set_ip_forwarding(false).await {
             warn!("Failed to disable IP forwarding: {:?}", e);
-            return Err(error::NetworkManager::SERVICE(
+            return Err(error::NetworkManager::Service(
                 error::Service::ErrorDisableIpForwardingFailed,
             ));
         }
@@ -668,7 +668,7 @@ impl DeviceState {
             Ok(_) => Ok(()),
             Err(e) => {
                 warn!("Failed to set new filter rules: {:?}", e);
-                Err(error::NetworkManager::SERVICE(error::Service::ErrorAddingPacketFilterRules))
+                Err(error::NetworkManager::Service(error::Service::ErrorAddingPacketFilterRules))
             }
         }
     }
@@ -685,7 +685,7 @@ impl DeviceState {
             Ok(_) => Ok(()),
             Err(e) => {
                 warn!("Failed to clear filter rules: {:?}", e);
-                Err(error::NetworkManager::SERVICE(error::Service::ErrorClearingPacketFilterRules))
+                Err(error::NetworkManager::Service(error::Service::ErrorClearingPacketFilterRules))
             }
         }
     }
@@ -694,7 +694,7 @@ impl DeviceState {
     pub async fn get_filters(&self) -> error::Result<Vec<netconfig::FilterRule>> {
         self.packet_filter.get_filters().await.map_err(|e| {
             warn!("Failed to get filter rules: {:?}", e);
-            error::NetworkManager::SERVICE(error::Service::ErrorGettingPacketFilterRules)
+            error::NetworkManager::Service(error::Service::ErrorGettingPacketFilterRules)
         })
     }
 
@@ -707,7 +707,7 @@ impl DeviceState {
         if domain.is_some() {
             //TODO(dpradilla): lift this restriction.
             warn!("setting the dns search domain name is not supported {:?}", domain);
-            return Err(error::NetworkManager::SERVICE(error::Service::NotSupported));
+            return Err(error::NetworkManager::Service(error::Service::NotSupported));
         }
         let p = if policy == netconfig::DnsPolicy::NotSet {
             DnsPolicy::default()

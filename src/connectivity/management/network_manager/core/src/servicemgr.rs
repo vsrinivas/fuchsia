@@ -56,7 +56,7 @@ impl Manager {
                 "DHCP server cant be enabled, as there is an active DHCP client on {}",
                 lif.id().uuid
             );
-            return Err(error::NetworkManager::SERVICE(error::Service::NotEnabled));
+            return Err(error::NetworkManager::Service(error::Service::NotEnabled));
         }
         Ok(self.dhcp_server.insert(lif.id().uuid))
     }
@@ -74,7 +74,7 @@ impl Manager {
     /// Enables a DHCP client on the given interface.
     pub fn enable_client(&mut self, lif: &LIF) -> error::Result<bool> {
         if self.dhcp_server.contains(&lif.id().uuid) {
-            return Err(error::NetworkManager::SERVICE(error::Service::NotEnabled));
+            return Err(error::NetworkManager::Service(error::Service::NotEnabled));
         }
         Ok(self.dhcp_client.insert(lif.id().uuid))
     }

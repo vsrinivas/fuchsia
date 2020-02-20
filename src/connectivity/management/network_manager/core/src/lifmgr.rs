@@ -57,15 +57,15 @@ impl LIF {
         match l_type {
             LIFType::WAN => {
                 if port_list.len() != 1 {
-                    return Err(error::NetworkManager::LIF(error::Lif::InvalidNumberOfPorts));
+                    return Err(error::NetworkManager::Lif(error::Lif::InvalidNumberOfPorts));
                 }
             }
             LIFType::LAN => {
                 if port_list.is_empty() {
-                    return Err(error::NetworkManager::LIF(error::Lif::InvalidNumberOfPorts));
+                    return Err(error::NetworkManager::Lif(error::Lif::InvalidNumberOfPorts));
                 }
             }
-            _ => return Err(error::NetworkManager::LIF(error::Lif::TypeNotSupported)),
+            _ => return Err(error::NetworkManager::Lif(error::Lif::TypeNotSupported)),
         };
         let ports: HashSet<PortId> = port_list.iter().cloned().collect();
         let id = ElementId::new(v);
@@ -99,13 +99,13 @@ impl LIF {
         match self.l_type {
             LIFType::LAN => {
                 if self.ports.len() <= 1 {
-                    return Err(error::NetworkManager::LIF(error::Lif::InvalidNumberOfPorts));
+                    return Err(error::NetworkManager::Lif(error::Lif::InvalidNumberOfPorts));
                 }
             }
             LIFType::WAN => {
-                return Err(error::NetworkManager::LIF(error::Lif::InvalidNumberOfPorts))
+                return Err(error::NetworkManager::Lif(error::Lif::InvalidNumberOfPorts))
             }
-            _ => return Err(error::NetworkManager::LIF(error::Lif::TypeNotSupported)),
+            _ => return Err(error::NetworkManager::Lif(error::Lif::TypeNotSupported)),
         }
         if !self.ports.contains(&p) {
             return Ok(());
@@ -116,7 +116,7 @@ impl LIF {
     }
 
     fn set_vlan(&mut self, _v: Version, _vlan: u16) -> error::Result<()> {
-        Err(error::NetworkManager::LIF(error::Lif::NotSupported))
+        Err(error::NetworkManager::Lif(error::Lif::NotSupported))
     }
 
     /// Updates the version and properties associated with this interface.
@@ -350,42 +350,42 @@ impl LIFProperties {
             }
             Some(cfg) => {
                 info!("connection_type {:?}", cfg);
-                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+                return Err(error::NetworkManager::Lif(error::Lif::NotSupported));
             }
         };
         match &p.connection_parameters {
             None => {}
             Some(cfg) => {
                 info!("connection parameters {:?}", cfg);
-                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+                return Err(error::NetworkManager::Lif(error::Lif::NotSupported));
             }
         };
         match &p.hostname {
             None => {}
             Some(cfg) => {
                 info!("hostname {:?}", cfg);
-                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+                return Err(error::NetworkManager::Lif(error::Lif::NotSupported));
             }
         };
         match &p.clone_mac {
             None => {}
             Some(cfg) => {
                 info!("clone mac {:?}", cfg);
-                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+                return Err(error::NetworkManager::Lif(error::Lif::NotSupported));
             }
         };
         match &p.mtu {
             None => {}
             Some(cfg) => {
                 info!("mtu  {:?}", cfg);
-                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+                return Err(error::NetworkManager::Lif(error::Lif::NotSupported));
             }
         };
         match &p.metric {
             None => {}
             Some(cfg) => {
                 info!("metric {:?}", cfg);
-                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+                return Err(error::NetworkManager::Lif(error::Lif::NotSupported));
             }
         };
         match &p.address_method {
@@ -409,18 +409,18 @@ impl LIFProperties {
                         "Setting a static ip is not allowed when \
                                  a dhcp client is configured"
                     );
-                    return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                    return Err(error::NetworkManager::Lif(error::Lif::InvalidParameter));
                 }
                 let v4addr = LifIpAddr::from(p.address_v4.as_ref().unwrap());
                 if !v4addr.is_ipv4() {
-                    return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                    return Err(error::NetworkManager::Lif(error::Lif::InvalidParameter));
                 }
                 info!("Setting WAN IPv4 address to {:?}/{:?}", address, prefix_length);
                 self.address_v4 = Some(v4addr);
             }
             _ => {
                 warn!("invalid address {:?}", p.address_v4);
-                return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                return Err(error::NetworkManager::Lif(error::Lif::InvalidParameter));
             }
         };
         match &p.gateway_v4 {
@@ -431,7 +431,7 @@ impl LIFProperties {
                         "Setting an ipv4 gateway is not allowed when \
                                  a dhcp client is configured"
                     );
-                    return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                    return Err(error::NetworkManager::Lif(error::Lif::InvalidParameter));
                 }
                 warn!("setting gateway not supportted {:?}", gw);
                 // TODO(dpradilla): verify gateway is local
@@ -445,7 +445,7 @@ impl LIFProperties {
             }
             Some(cfg) => {
                 info!("v6 mode {:?}", cfg);
-                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+                return Err(error::NetworkManager::Lif(error::Lif::NotSupported));
             }
         };
         match &p.address_v6 {
@@ -457,13 +457,13 @@ impl LIFProperties {
                 info!("Setting WAN IPv6 to {:?}/{:?}", address, prefix_length);
                 let a = LifIpAddr::from(p.address_v6.as_ref().unwrap());
                 if !a.is_ipv6() {
-                    return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                    return Err(error::NetworkManager::Lif(error::Lif::InvalidParameter));
                 }
                 self.address_v6 = vec![a];
             }
             _ => {
                 warn!("invalid address {:?}", p.address_v6);
-                return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                return Err(error::NetworkManager::Lif(error::Lif::InvalidParameter));
             }
         };
         match &p.gateway_v6 {
@@ -472,7 +472,7 @@ impl LIFProperties {
                 info!("setting gateway {:?}", gw);
                 //  TODO(dpradilla): implement. - verify gw is in local network
                 warn!("setting gateway not supportted {:?}", gw);
-                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+                return Err(error::NetworkManager::Lif(error::Lif::NotSupported));
             }
         };
         if let Some(enable) = &p.enable {
@@ -510,13 +510,13 @@ impl LIFProperties {
                 info!("Setting LAN IPv4 address to {:?}/{:?}", address, prefix_length);
                 let v4addr = LifIpAddr::from(p.address_v4.as_ref().unwrap());
                 if !v4addr.is_ipv4() {
-                    return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                    return Err(error::NetworkManager::Lif(error::Lif::InvalidParameter));
                 }
                 self.address_v4 = Some(v4addr);
             }
             _ => {
                 warn!("invalid address {:?}", p.address_v4);
-                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+                return Err(error::NetworkManager::Lif(error::Lif::NotSupported));
             }
         };
         match &p.address_v6 {
@@ -528,13 +528,13 @@ impl LIFProperties {
                 info!("Setting LAN IPv6 address to {:?}/{:?}", address, prefix_length);
                 let a = LifIpAddr::from(p.address_v6.as_ref().unwrap());
                 if !a.is_ipv6() {
-                    return Err(error::NetworkManager::LIF(error::Lif::InvalidParameter));
+                    return Err(error::NetworkManager::Lif(error::Lif::InvalidParameter));
                 }
                 self.address_v6 = vec![a];
             }
             _ => {
                 warn!("invalid address {:?}", p.address_v6);
-                return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
+                return Err(error::NetworkManager::Lif(error::Lif::NotSupported));
             }
         };
 
@@ -577,13 +577,13 @@ impl LIFManager {
     /// It verifies LIF is valid and does not colide with an exisiting one.
     pub fn add_lif(&mut self, l: &LIF) -> error::Result<()> {
         if self.lifs.contains_key(&l.id.uuid) {
-            return Err(error::NetworkManager::LIF(error::Lif::DuplicateLIF));
+            return Err(error::NetworkManager::Lif(error::Lif::DuplicateLIF));
         }
         if self.lif_names.contains(&l.name) {
-            return Err(error::NetworkManager::LIF(error::Lif::InvalidName));
+            return Err(error::NetworkManager::Lif(error::Lif::InvalidName));
         }
         if l.vlan != 0 && self.lif_vlans.contains(&l.vlan) {
-            return Err(error::NetworkManager::LIF(error::Lif::InvalidVlan));
+            return Err(error::NetworkManager::Lif(error::Lif::InvalidVlan));
         }
         // TODO(dpradilla): Verify ports not in use by other lif and ports actually exist.
         // This will change if switch trunk ports are supported, in that case, a trunk port can be
@@ -1091,7 +1091,7 @@ mod tests {
                     enable_dhcp_server: Some(true),
                     enable_dns_forwarder: None,
                 }),
-                Err(error::NetworkManager::LIF(error::Lif::InvalidParameter)),
+                Err(error::NetworkManager::Lif(error::Lif::InvalidParameter)),
                 "dhcp server, ipv4 and ipv6 reversed, should not pass.",
             ),
             (
@@ -1164,7 +1164,7 @@ mod tests {
                     mtu: None,
                     enable: None,
                 }),
-                Err(error::NetworkManager::LIF(error::Lif::InvalidParameter)),
+                Err(error::NetworkManager::Lif(error::Lif::InvalidParameter)),
                 "wan ip v4 in wrong place",
             ),
             (
@@ -1262,7 +1262,7 @@ mod tests {
                     mtu: None,
                     enable: None,
                 }),
-                Err(error::NetworkManager::LIF(error::Lif::InvalidParameter)),
+                Err(error::NetworkManager::Lif(error::Lif::InvalidParameter)),
                 "wan invalid address method",
             ),
             (

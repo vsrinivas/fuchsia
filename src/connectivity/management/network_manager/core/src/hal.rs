@@ -344,17 +344,17 @@ impl NetCfg {
             .await
             .map_err(|e| {
                 error!("Failed creating bridge {:?}", e);
-                error::NetworkManager::HAL(error::Hal::OperationFailed)
+                error::NetworkManager::Hal(error::Hal::OperationFailed)
             })?;
         if error.status != netstack::Status::Ok {
             error!("Failed creating bridge {:?}", error);
-            return Err(error::NetworkManager::HAL(error::Hal::OperationFailed));
+            return Err(error::NetworkManager::Hal(error::Hal::OperationFailed));
         }
         info!("bridge created {:?}", bridge_id);
         if let Some(i) = self.get_interface(bridge_id.into()).await {
             Ok(i)
         } else {
-            Err(error::NetworkManager::HAL(error::Hal::BridgeNotFound))
+            Err(error::NetworkManager::Hal(error::Hal::BridgeNotFound))
         }
     }
 
@@ -376,7 +376,7 @@ impl NetCfg {
             .add_interface_address(StackPortId::from(pid).to_u64(), &mut addr.into())
             .await;
         info!("set_ip_address {:?}: {:?}: {:?}", pid, addr, r);
-        r.squash_result().map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))
+        r.squash_result().map_err(|_| error::NetworkManager::Hal(error::Hal::OperationFailed))
     }
 
     /// Removes an IP address.
@@ -397,7 +397,7 @@ impl NetCfg {
             )
             .await;
         info!("unset_ip_address {:?}: {:?}: {:?}", pid, addr, r);
-        r.map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))?;
+        r.map_err(|_| error::NetworkManager::Hal(error::Hal::OperationFailed))?;
 
         Ok(())
     }
@@ -415,7 +415,7 @@ impl NetCfg {
 
         r.squash_result()
             .with_context(|| "failed setting interface state".to_string())
-            .map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))
+            .map_err(|_| error::NetworkManager::Hal(error::Hal::OperationFailed))
     }
 
     /// Sets the state of the DHCP client on the specified interface.
@@ -427,7 +427,7 @@ impl NetCfg {
                 .context("dhcp client: failed to create fidl endpoints")?;
         if let Err(e) = self.netstack.get_dhcp_client(pid.to_u32(), server_end).await {
             warn!("failed to create fidl endpoint for dhch client: {:?}", e);
-            return Err(error::NetworkManager::HAL(error::Hal::OperationFailed));
+            return Err(error::NetworkManager::Hal(error::Hal::OperationFailed));
         }
         let r = if enable {
             dhcp_client.start().await.context("failed to start dhcp client")?
@@ -436,7 +436,7 @@ impl NetCfg {
         };
         if let Err(e) = r {
             warn!("failed to start dhcp client: {:?}", e);
-            return Err(error::NetworkManager::HAL(error::Hal::OperationFailed));
+            return Err(error::NetworkManager::Hal(error::Hal::OperationFailed));
         }
         info!("DHCP client on nicid: {}, enabled: {}", pid.to_u32(), enable);
         Ok(())
@@ -474,7 +474,7 @@ impl NetCfg {
             self.stack.disable_ip_forwarding()
         }
         .await;
-        r.map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))
+        r.map_err(|_| error::NetworkManager::Hal(error::Hal::OperationFailed))
     }
 
     /// Updates a configured IP address.
@@ -595,7 +595,7 @@ impl NetCfg {
             .with_context(|| "failed setting interface state".to_string())
             .map_err(|e| {
                 error!("set_dns_resolver error {:?}", e);
-                error::NetworkManager::HAL(error::Hal::OperationFailed)
+                error::NetworkManager::Hal(error::Hal::OperationFailed)
             })
     }
 
@@ -621,7 +621,7 @@ impl NetCfg {
                 ),
             )
             .await
-            .map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))?;
+            .map_err(|_| error::NetworkManager::Hal(error::Hal::OperationFailed))?;
         info!("added port with id {:?}", nic_id);
 
         Ok(StackPortId::from(u64::from(nic_id)).into())

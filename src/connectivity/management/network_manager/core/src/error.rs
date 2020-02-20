@@ -15,72 +15,72 @@ pub type Result<T> = std::result::Result<T, NetworkManager>;
 pub enum NetworkManager {
     /// Errors related to LIF and LIFManager
     #[error("{}", _0)]
-    LIF(Lif),
+    Lif(Lif),
     /// Errors related to Port and PortManager
     #[error("{}", _0)]
-    PORT(Port),
+    Port(Port),
     /// Errors related to Services.
     #[error("{}", _0)]
-    SERVICE(Service),
+    Service(Service),
     /// Errors related to Configuration.
     #[error("{}", _0)]
-    CONFIG(Config),
+    Config(Config),
     /// Errors related to HAL layer.
     #[error("{}", _0)]
-    HAL(Hal),
+    Hal(Hal),
     /// Errors related to OIR.
     #[error("{}", _0)]
-    OIR(Oir),
+    Oir(Oir),
     /// Internal errors with an attached context.
     #[error("An error occurred.")]
-    INTERNAL,
+    Internal,
     // Add error types here.
 }
 
 impl From<Config> for NetworkManager {
     fn from(e: Config) -> Self {
-        NetworkManager::CONFIG(e)
+        NetworkManager::Config(e)
     }
 }
 impl From<Hal> for NetworkManager {
     fn from(e: Hal) -> Self {
-        NetworkManager::HAL(e)
+        NetworkManager::Hal(e)
     }
 }
 impl From<Lif> for NetworkManager {
     fn from(e: Lif) -> Self {
-        NetworkManager::LIF(e)
+        NetworkManager::Lif(e)
     }
 }
 impl From<Oir> for NetworkManager {
     fn from(e: Oir) -> Self {
-        NetworkManager::OIR(e)
+        NetworkManager::Oir(e)
     }
 }
 impl From<Port> for NetworkManager {
     fn from(e: Port) -> Self {
-        NetworkManager::PORT(e)
+        NetworkManager::Port(e)
     }
 }
 impl From<Service> for NetworkManager {
     fn from(e: Service) -> Self {
-        NetworkManager::SERVICE(e)
+        NetworkManager::Service(e)
     }
 }
 impl From<std::io::Error> for NetworkManager {
     fn from(_: std::io::Error) -> Self {
-        NetworkManager::INTERNAL
+        NetworkManager::Internal
     }
 }
 // TODO(bwb): fix error types
 impl From<Error> for NetworkManager {
     fn from(_: anyhow::Error) -> Self {
-        NetworkManager::INTERNAL
+        NetworkManager::Internal
     }
 }
 impl From<serde_json::error::Error> for NetworkManager {
     fn from(_: serde_json::error::Error) -> Self {
-        NetworkManager::INTERNAL
+        NetworkManager::Internal
     }
 }
 

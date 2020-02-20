@@ -46,7 +46,7 @@ impl TryFrom<&config::IpFilter> for netconfig::FilterRule {
             .as_ref()
             .map(|s| {
                 s.try_into().map_err(|e| {
-                    error::NetworkManager::CONFIG(error::Config::Malformed {
+                    error::NetworkManager::Config(error::Config::Malformed {
                         msg: format!("Failed to convert ip filter rule: {:?}", e),
                     })
                 })
@@ -58,7 +58,7 @@ impl TryFrom<&config::IpFilter> for netconfig::FilterRule {
             .as_ref()
             .map(|s| {
                 Some(s.try_into().map_err(|e| {
-                    error::NetworkManager::CONFIG(error::Config::Malformed {
+                    error::NetworkManager::Config(error::Config::Malformed {
                         msg: format!("Failed to convert ip filter rule: {:?}", e),
                     })
                 }))
@@ -256,7 +256,7 @@ fn from_cidr_address(
             let ip = match cidr_addr.address {
                 Some(a) => a,
                 None => {
-                    return Err(error::NetworkManager::SERVICE(
+                    return Err(error::NetworkManager::Service(
                         error::Service::ErrorParsingPacketFilterRule {
                             msg: "CidrAddress is missing an IP address".to_string(),
                         },
@@ -266,7 +266,7 @@ fn from_cidr_address(
             let prefix = match cidr_addr.prefix_length {
                 Some(p) => p,
                 None => {
-                    return Err(error::NetworkManager::SERVICE(
+                    return Err(error::NetworkManager::Service(
                         error::Service::ErrorParsingPacketFilterRule {
                             msg: "CidrAddress is missing the prefix length".to_string(),
                         },
@@ -288,7 +288,7 @@ fn from_nat_config(
     let src_subnet = match &nat_config.local_subnet {
         Some(subnet) => fidl_fuchsia_net::Subnet::from(subnet),
         None => {
-            return Err(error::NetworkManager::SERVICE(error::Service::NatConfigError {
+            return Err(error::NetworkManager::Service(error::Service::NatConfigError {
                 msg: "NatConfig must have a local_subnet set".to_string(),
             }))
         }
@@ -299,13 +299,13 @@ fn from_nat_config(
                 addr: a.octets(),
             }),
             IpAddr::V6(_) => {
-                return Err(error::NetworkManager::SERVICE(error::Service::NatConfigError {
+                return Err(error::NetworkManager::Service(error::Service::NatConfigError {
                     msg: "IPv6 is not supported".to_string(),
                 }))
             }
         },
         None => {
-            return Err(error::NetworkManager::SERVICE(error::Service::NatConfigError {
+            return Err(error::NetworkManager::Service(error::Service::NatConfigError {
                 msg: "NatConfig must have a global_ip set".to_string(),
             }))
         }
@@ -313,7 +313,7 @@ fn from_nat_config(
     let nicid = match nat_config.pid {
         Some(pid) => pid.to_u32(),
         None => {
-            return Err(error::NetworkManager::SERVICE(error::Service::NatConfigError {
+            return Err(error::NetworkManager::Service(error::Service::NatConfigError {
                 msg: "NatConfig must have a pid set".to_string(),
             }))
         }
@@ -366,12 +366,12 @@ impl PacketFilter {
         let netfilter_rules: Vec<netfilter::Rule> = match self.filter_svc.get_rules().await {
             Ok((rules, _, Status::Ok)) => rules,
             Ok((_, _, status)) => {
-                return Err(error::NetworkManager::SERVICE(error::Service::FidlError {
+                return Err(error::NetworkManager::Service(error::Service::FidlError {
                     msg: format!("Failed to get filters: Status was: {:?}", status),
                 }))
             }
             Err(e) => {
-                return Err(error::NetworkManager::SERVICE(error::Service::FidlError {
+                return Err(error::NetworkManager::Service(error::Service::FidlError {
                     msg: format!("Request to packet filter FIDL service failed: {}", e),
                 }))
             }
@@ -381,7 +381,7 @@ impl PacketFilter {
             .into_iter()
             .map(|rule| match to_filter_rule(rule) {
                 Ok(f) => Ok(f),
-                Err(e) => Err(error::NetworkManager::SERVICE(
+                Err(e) => Err(error::NetworkManager::Service(
                     error::Service::ErrorParsingPacketFilterRule {
                         msg: format!("Failed to parse filter rule: {:?}", e),
                     },
@@ -413,12 +413,12 @@ impl PacketFilter {
         let (mut existing_rules, generation) = match self.filter_svc.get_rules().await {
             Ok((rules, generation, Status::Ok)) => (rules, generation),
             Ok((_, _, status)) => {
-                return Err(error::NetworkManager::SERVICE(error::Service::FidlError {
+                return Err(error::NetworkManager::Service(error::Service::FidlError {
                     msg: format!("Failed to get filters: Status was: {:?}", status),
                 }))
             }
             Err(e) => {
-                return Err(error::NetworkManager::SERVICE(error::Service::FidlError {
+                return Err(error::NetworkManager::Service(error::Service::FidlError {
                     msg: format!("Request to packet filter FIDL service failed: {}", e),
                 }))
             }
@@ -434,11 +434,11 @@ impl PacketFilter {
         match self.filter_svc.update_rules(&mut existing_rules.iter_mut(), generation).await {
             Ok(Status::Ok) => Ok(()),
             Ok(status) => {
-                Err(error::NetworkManager::SERVICE(error::Service::ErrorParsingPacketFilterRule {
+                Err(error::NetworkManager::Service(error::Service::ErrorParsingPacketFilterRule {
                     msg: format!("Failed to add new packet filter: {:?}", status),
                 }))
             }
-            Err(e) => Err(error::NetworkManager::SERVICE(error::Service::FidlError {
+            Err(e) => Err(error::NetworkManager::Service(error::Service::FidlError {
                 msg: format!("Request to packet filter FIDL service failed: {:?}", e),
             })),
         }
@@ -454,13 +454,13 @@ impl PacketFilter {
             Ok((_, generation, Status::Ok)) => generation,
             Ok((_, _, status)) => {
                 warn!("Failed to get generation number! Status was: {:?}", status);
-                return Err(error::NetworkManager::SERVICE(
+                return Err(error::NetworkManager::Service(
                     error::Service::ErrorClearingPacketFilterRules,
                 ));
             }
             Err(e) => {
                 warn!("fidl error: {:?}", e);
-                return Err(error::NetworkManager::SERVICE(
+                return Err(error::NetworkManager::Service(
                     error::Service::ErrorClearingPacketFilterRules,
                 ));
             }
@@ -469,11 +469,11 @@ impl PacketFilter {
             Ok(Status::Ok) => Ok(()),
             Ok(status) => {
                 warn!("failed to clear filter state: {:?}", status);
-                Err(error::NetworkManager::SERVICE(error::Service::ErrorClearingPacketFilterRules))
+                Err(error::NetworkManager::Service(error::Service::ErrorClearingPacketFilterRules))
             }
             Err(e) => {
                 warn!("fidl error: {:?}", e);
-                Err(error::NetworkManager::SERVICE(error::Service::ErrorClearingPacketFilterRules))
+                Err(error::NetworkManager::Service(error::Service::ErrorClearingPacketFilterRules))
             }
         }
     }
@@ -490,7 +490,7 @@ impl PacketFilter {
         })?;
         // Make sure that NAT is enabled before we try to install any rules.
         if !nat_config.enable {
-            return Err(error::NetworkManager::SERVICE(error::Service::NatNotEnabled));
+            return Err(error::NetworkManager::Service(error::Service::NatNotEnabled));
         }
         // TODO(cgibson): NAT should work on IP packets, we shouldn't need to provide a proto field
         // here. This is a bug: fxb/35950.
@@ -539,22 +539,22 @@ impl PacketFilter {
             Ok((_, generation, Status::Ok)) => generation,
             Ok((_, _, status)) => {
                 warn!("Failed to update NAT, status was: {:?}", status);
-                return Err(error::NetworkManager::SERVICE(error::Service::ErrorUpdateNatFailed));
+                return Err(error::NetworkManager::Service(error::Service::ErrorUpdateNatFailed));
             }
             Err(e) => {
                 warn!("fidl error: {:?}", e);
-                return Err(error::NetworkManager::SERVICE(error::Service::ErrorUpdateNatFailed));
+                return Err(error::NetworkManager::Service(error::Service::ErrorUpdateNatFailed));
             }
         };
         match self.filter_svc.update_nat_rules(&mut nat_rules.iter_mut(), generation).await {
             Ok(Status::Ok) => Ok(()),
             Ok(status) => {
                 warn!("Failed to set NAT state: {:?}", status);
-                Err(error::NetworkManager::SERVICE(error::Service::ErrorUpdateNatFailed))
+                Err(error::NetworkManager::Service(error::Service::ErrorUpdateNatFailed))
             }
             Err(e) => {
                 warn!("fidl error: {:?}", e);
-                Err(error::NetworkManager::SERVICE(error::Service::ErrorUpdateNatFailed))
+                Err(error::NetworkManager::Service(error::Service::ErrorUpdateNatFailed))
             }
         }
     }
@@ -569,22 +569,22 @@ impl PacketFilter {
             Ok((_, generation, Status::Ok)) => generation,
             Ok((_, _, status)) => {
                 warn!("Failed to get generation number! Status was: {:?}", status);
-                return Err(error::NetworkManager::SERVICE(error::Service::ErrorUpdateNatFailed));
+                return Err(error::NetworkManager::Service(error::Service::ErrorUpdateNatFailed));
             }
             Err(e) => {
                 warn!("fidl error: {:?}", e);
-                return Err(error::NetworkManager::SERVICE(error::Service::ErrorUpdateNatFailed));
+                return Err(error::NetworkManager::Service(error::Service::ErrorUpdateNatFailed));
             }
         };
         match self.filter_svc.update_nat_rules(&mut empty_ruleset.iter_mut(), generation).await {
             Ok(Status::Ok) => Ok(()),
             Ok(status) => {
                 warn!("failed to set NAT state: {:?}", status);
-                Err(error::NetworkManager::SERVICE(error::Service::ErrorUpdateNatFailed))
+                Err(error::NetworkManager::Service(error::Service::ErrorUpdateNatFailed))
             }
             Err(e) => {
                 warn!("fidl error: {:?}", e);
-                Err(error::NetworkManager::SERVICE(error::Service::ErrorUpdateNatFailed))
+                Err(error::NetworkManager::Service(error::Service::ErrorUpdateNatFailed))
             }
         }
     }
