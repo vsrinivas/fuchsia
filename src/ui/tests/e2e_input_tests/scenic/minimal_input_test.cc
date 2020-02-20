@@ -79,17 +79,16 @@ class MinimalClientView : public scenic::BaseView {
   void OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) override {
     if (has_logical_size()) {
       CreateScene(logical_size().x, logical_size().y);
-      session()->Present(zx_clock_get_monotonic(),
-                         [](auto info) { FXL_LOG(INFO) << "Client: scene created."; });
+      InvalidateScene([](auto info) { FXL_LOG(INFO) << "Client: scene created."; });
     }
   }
 
   // |scenic::BaseView|
   void OnScenicEvent(fuchsia::ui::scenic::Event event) override {
     if (event.is_gfx() && event.gfx().is_view_attached_to_scene()) {
-      // TODO(fxb/41382): Remove this extra Present() call. Today we need it to ensure the ViewTree
-      // connection gets flushed on time.
-      session()->Present(zx_clock_get_monotonic(), [this](auto info) {
+      // TODO(fxb/41382): Remove this extra InvalidateScene() call. Today we need it to ensure the
+      // ViewTree connection gets flushed on time.
+      InvalidateScene([this](auto info) {
         // When view is connected to scene (a proxy for "has rendered"), trigger input injection.
         FXL_LOG(INFO) << "Client: view attached to scene.";
         FXL_CHECK(on_view_attached_to_scene_) << "on_view_attached_to_scene_ was not set!";
@@ -174,20 +173,19 @@ class MinimalInputTest : public gtest::RealLoopFixture {
 
 TEST_F(MinimalInputTest, Tap) {
   // Set up inputs. Fires when client view's content is connected to the scene.
-  fit::function<void()> on_view_attached_to_scene =
-      [this] {
-        FXL_LOG(INFO) << "Client: injecting input.";
-        FXL_CHECK(display_width_ > 0 && display_height_ > 0) << "precondition";
-        {
-          std::string x = std::to_string(display_width_ / 2);
-          std::string y = std::to_string(display_height_ / 2);
-          std::string width = "--width=" + std::to_string(display_width_);
-          std::string height = "--height=" + std::to_string(display_height_);
-          InjectInput({"tap",  // Tap at the center of the display
-                       x.c_str(), y.c_str(), width.c_str(), height.c_str(), nullptr});
-        }
-        ++injection_count_;
-      };
+  fit::function<void()> on_view_attached_to_scene = [this] {
+    FXL_LOG(INFO) << "Client: injecting input.";
+    FXL_CHECK(display_width_ > 0 && display_height_ > 0) << "precondition";
+    {
+      std::string x = std::to_string(display_width_ / 2);
+      std::string y = std::to_string(display_height_ / 2);
+      std::string width = "--width=" + std::to_string(display_width_);
+      std::string height = "--height=" + std::to_string(display_height_);
+      InjectInput({"tap",  // Tap at the center of the display
+                   x.c_str(), y.c_str(), width.c_str(), height.c_str(), nullptr});
+    }
+    ++injection_count_;
+  };
 
   // Set up expectations. Fires when we see the "quit" condition.
   fit::function<void(const std::vector<InputEvent>&)> on_terminate =

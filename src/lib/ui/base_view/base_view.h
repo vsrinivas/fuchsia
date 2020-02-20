@@ -36,6 +36,8 @@ struct ViewContext {
 class BaseView : private fuchsia::ui::scenic::SessionListener,
                  private fuchsia::ui::input::InputMethodEditorClient {
  public:
+  using PresentCallback = fit::function<void(const fuchsia::images::PresentationInfo& info)>;
+
   // Subclasses are typically created by ViewProviderService::CreateView(),
   // which provides the necessary args to pass down to this base class.
   BaseView(ViewContext context, const std::string& debug_name);
@@ -89,8 +91,9 @@ class BaseView : private fuchsia::ui::scenic::SessionListener,
   void SetReleaseHandler(fit::function<void(zx_status_t)> callback);
 
   // Invalidates the scene, causing |OnSceneInvalidated()| to be invoked
-  // during the next frame.
-  void InvalidateScene();
+  // during the next frame. When the Present() callback corresponding to this
+  // invalidate is invoked, the optional |present_callback| will also be invoked.
+  void InvalidateScene(PresentCallback present_callback = nullptr);
 
   // Called when it's time for the view to update its scene contents due to
   // invalidation.  The new contents are presented once this function returns.
@@ -189,6 +192,7 @@ class BaseView : private fuchsia::ui::scenic::SessionListener,
   zx_time_t last_presentation_time_ = 0;
   size_t session_present_count_ = 0;
   bool invalidate_pending_ = false;
+  std::vector<PresentCallback> callbacks_for_next_present_;
   bool present_pending_ = false;
   bool enable_ime_ = false;
 };

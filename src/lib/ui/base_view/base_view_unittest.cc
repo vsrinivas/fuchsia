@@ -119,4 +119,38 @@ TEST_F(BaseViewTest, HandlesMultiplePresentCalls) {
   RunLoopUntilIdle();
 }
 
+TEST_F(BaseViewTest, InvalidateCallbackInvoked) {
+  // Expect Present() calls in initialization.
+  EXPECT_CALL(*fake_scenic_.mock_session(), Present(_, _, _, _))
+      .WillRepeatedly([](uint64_t presentation_time, std::vector<zx::event> acquire_fences,
+                         std::vector<zx::event> release_fences, Session::PresentCallback callback) {
+        callback(fuchsia::images::PresentationInfo());
+      });
+  RunLoopUntilIdle();
+  ASSERT_TRUE(testing::Mock::VerifyAndClear(fake_scenic_.mock_session()));
+
+  size_t num_present_callbacks = 0;
+  EXPECT_CALL(*fake_scenic_.mock_session(), Present(_, _, _, _))
+      .Times(2)
+      .WillRepeatedly([&num_present_callbacks](uint64_t presentation_time,
+                                               std::vector<zx::event> acquire_fences,
+                                               std::vector<zx::event> release_fences,
+                                               Session::PresentCallback callback) {
+        num_present_callbacks++;
+        callback(fuchsia::images::PresentationInfo());
+      });
+  base_view_->InvalidateScene();
+  base_view_->DoPresentScene();
+
+  // Now that there's a PresentScene pending, expect that InvalidateScene() will trigger
+  // a second Present, and won't receive it's callback until the second present.
+  bool callback_invoked;
+  base_view_->InvalidateScene([&num_present_callbacks, &callback_invoked](auto) {
+    EXPECT_EQ(num_present_callbacks, 2u);
+    callback_invoked = true;
+  });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(callback_invoked);
+}
+
 }  // namespace scenic

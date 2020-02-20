@@ -50,8 +50,11 @@ void BaseView::SetReleaseHandler(fit::function<void(zx_status_t)> callback) {
   listener_binding_.set_error_handler(std::move(callback));
 }
 
-void BaseView::InvalidateScene() {
+void BaseView::InvalidateScene(PresentCallback present_callback) {
   TRACE_DURATION("view", "BaseView::InvalidateScene");
+  if (present_callback) {
+    callbacks_for_next_present_.push_back(std::move(present_callback));
+  }
   if (invalidate_pending_)
     return;
 
@@ -145,25 +148,32 @@ void BaseView::PresentScene(zx_time_t presentation_time) {
   TRACE_FLOW_BEGIN("gfx", "Session::Present", session_present_count_);
   ++session_present_count_;
 
-  session()->Present(presentation_time, [this](fuchsia::images::PresentationInfo info) {
-    TRACE_DURATION("view", "BaseView::PresentationCallback");
-    TRACE_FLOW_END("gfx", "present_callback", info.presentation_time);
+  session()->Present(
+      presentation_time, [this, present_callbacks = std::move(callbacks_for_next_present_)](
+                             fuchsia::images::PresentationInfo info) mutable {
+        TRACE_DURATION("view", "BaseView::PresentationCallback");
+        TRACE_FLOW_END("gfx", "present_callback", info.presentation_time);
 
-    FXL_DCHECK(present_pending_);
+        FXL_DCHECK(present_pending_);
 
-    zx_time_t next_presentation_time = info.presentation_time + info.presentation_interval;
+        zx_time_t next_presentation_time = info.presentation_time + info.presentation_interval;
 
-    bool present_needed = false;
-    if (invalidate_pending_) {
-      invalidate_pending_ = false;
-      OnSceneInvalidated(std::move(info));
-      present_needed = true;
-    }
+        bool present_needed = false;
+        if (invalidate_pending_) {
+          invalidate_pending_ = false;
+          OnSceneInvalidated(std::move(info));
+          present_needed = true;
+        }
 
-    present_pending_ = false;
-    if (present_needed)
-      PresentScene(next_presentation_time);
-  });
+        for (auto& callback : present_callbacks) {
+          callback(info);
+        }
+
+        present_pending_ = false;
+        if (present_needed)
+          PresentScene(next_presentation_time);
+      });
+  callbacks_for_next_present_.clear();
 }
 
 // |fuchsia::ui::input::InputMethodEditorClient|
