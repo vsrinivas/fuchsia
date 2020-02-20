@@ -134,23 +134,17 @@ typedef volatile struct vol_circ_list {
   } /*lint -e(717) */                               \
   while (0)
 
-#define RD16_LE(addr) (ui16)((*((ui8*)(addr) + 0) << 0) | (*((ui8*)(addr) + 1) << 8))
+#define RD16_LE(addr)  (ui16)(((ui16)((ui8*)(addr))[0] <<  0) | \
+                              ((ui16)((ui8*)(addr))[1] <<  8))
 
-#define RD24_LE(addr) \
-  (ui32)((*((ui8*)(addr) + 0) << 0) | (*((ui8*)(addr) + 1) << 8) | (*((ui8*)(addr) + 2) << 16))
+#define RD24_LE(addr)  (ui32)(((ui32)((ui8*)(addr))[0] <<  0) | \
+                              ((ui32)((ui8*)(addr))[1] <<  8) | \
+                              ((ui32)((ui8*)(addr))[2] << 16))
 
-#define RD32_LE(addr)                                                                            \
-  (ui32)((*((ui8*)(addr) + 0) << 0) | (*((ui8*)(addr) + 1) << 8) | (*((ui8*)(addr) + 2) << 16) | \
-         (*((ui8*)(addr) + 3) << 24))
-
-#define RD16_BE(addr) (ui16)((*((ui8*)(addr) + 0) << 8) | (*((ui8*)(addr) + 1) << 0))
-
-#define RD24_BE(addr) \
-  (ui32)((*((ui8*)(addr) + 0) << 16) | (*((ui8*)(addr) + 1) << 8) | (*((ui8*)(addr) + 2) << 0))
-
-#define RD32_BE(addr)                                                                             \
-  (ui32)((*((ui8*)(addr) + 0) << 24) | (*((ui8*)(addr) + 1) << 16) | (*((ui8*)(addr) + 2) << 8) | \
-         (*((ui8*)(addr) + 3) << 0))
+#define RD32_LE(addr)  (ui32)(((ui32)((ui8*)(addr))[0] <<  0) | \
+                              ((ui32)((ui8*)(addr))[1] <<  8) | \
+                              ((ui32)((ui8*)(addr))[2] << 16) | \
+                              ((ui32)((ui8*)(addr))[3] << 24))
 
 #define SWAP32(val)                                                                        \
   ((((val)&0x000000FFU) << 24) | (((val)&0x0000FF00U) << 8) | (((val)&0x00FF0000U) >> 8) | \
