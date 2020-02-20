@@ -36,4 +36,7 @@ rustc_binary("bt-integration-tests") {
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
   ]
+
+  # TODO(46537): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
