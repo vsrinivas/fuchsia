@@ -3,15 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    async_trait::async_trait,
-    fidl_fuchsia_ui_input as fidl_ui_input,
-    fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy,
-    fuchsia_zircon::{ClockId, Time},
-    futures::lock::Mutex,
-    input::input_device,
-    input::input_handler::InputHandler,
-    input::touch,
-    std::sync::Arc,
+    async_trait::async_trait, fidl_fuchsia_ui_input as fidl_ui_input,
+    fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy, futures::lock::Mutex,
+    input::input_device, input::input_handler::InputHandler, input::touch, std::sync::Arc,
 };
 
 /// A [`TouchPointerHack`] observes touch events and sends them to observers.
@@ -47,9 +41,9 @@ impl InputHandler for TouchPointerHack {
                 device_event: input_device::InputDeviceEvent::Touch(touch_event),
                 device_descriptor:
                     input_device::InputDeviceDescriptor::Touch(touch_device_descriptor),
-                ..
+                event_time,
             } => {
-                self.handle_touch_event(touch_event, touch_device_descriptor).await;
+                self.handle_touch_event(touch_event, touch_device_descriptor, *event_time).await;
             }
             _ => {}
         }
@@ -71,6 +65,7 @@ impl TouchPointerHack {
         &self,
         touch_event: &touch::TouchEvent,
         touch_descriptor: &touch::TouchDeviceDescriptor,
+        event_time: input_device::EventTime,
     ) {
         // The order in which events are sent to clients.
         let ordered_phases = vec![
@@ -85,8 +80,12 @@ impl TouchPointerHack {
             let contacts: Vec<touch::TouchContact> =
                 touch_event.contacts.get(&phase).map_or(vec![], |contacts| contacts.to_vec());
             for contact in contacts {
-                let mut command =
-                    self.create_pointer_input_command(phase, contact, &touch_descriptor);
+                let mut command = self.create_pointer_input_command(
+                    phase,
+                    contact,
+                    event_time,
+                    &touch_descriptor,
+                );
                 let listeners = self.listeners.lock().await;
                 for listener in &mut listeners.iter() {
                     let listener = listener;
@@ -101,12 +100,13 @@ impl TouchPointerHack {
         &self,
         phase: fidl_ui_input::PointerEventPhase,
         contact: touch::TouchContact,
+        event_time: input_device::EventTime,
         touch_descriptor: &touch::TouchDeviceDescriptor,
     ) -> fidl_ui_input::PointerEvent {
         let (x, y) = self.device_coordinate_from_contact(&contact, &touch_descriptor);
 
         fidl_ui_input::PointerEvent {
-            event_time: Time::get(ClockId::Monotonic).into_nanos() as u64,
+            event_time: event_time,
             device_id: touch_descriptor.device_id,
             pointer_id: contact.id,
             type_: fidl_ui_input::PointerEventType::Touch,

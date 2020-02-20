@@ -3,16 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    async_trait::async_trait,
-    fidl_fuchsia_ui_input as fidl_ui_input,
-    fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy,
-    fuchsia_zircon::{ClockId, Time},
-    futures::lock::Mutex,
-    input::input_device,
-    input::input_handler::InputHandler,
-    input::mouse,
-    std::collections::HashSet,
-    std::sync::Arc,
+    async_trait::async_trait, fidl_fuchsia_ui_input as fidl_ui_input,
+    fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy, futures::lock::Mutex,
+    input::input_device, input::input_handler::InputHandler, input::mouse,
+    std::collections::HashSet, std::sync::Arc,
 };
 
 /// The location of a mouse cursor.
@@ -57,12 +51,13 @@ impl InputHandler for MousePointerHack {
             input_device::InputEvent {
                 device_event: input_device::InputDeviceEvent::Mouse(mouse_event),
                 device_descriptor: input_device::InputDeviceDescriptor::Mouse(mouse_descriptor),
-                ..
+                event_time,
             } => {
                 self.update_cursor_position(&mouse_event).await;
                 self.send_event_to_listeners(
                     mouse_event.phase,
                     &mouse_event.buttons,
+                    *event_time,
                     &mouse_descriptor,
                 )
                 .await;
@@ -127,17 +122,19 @@ impl MousePointerHack {
     /// # Parameters
     /// - `phase`: The phase of the buttons associated with the mouse event.
     /// - `buttons`: The buttons associated with the event.
+    /// - `event_time`: The time the event was first reported.
     /// - `device_descriptor`: The descriptor for the device that generated the event.
     async fn send_event_to_listeners(
         &self,
         phase: fidl_ui_input::PointerEventPhase,
         buttons: &HashSet<mouse::MouseButton>,
+        event_time: input_device::EventTime,
         device_descriptor: &mouse::MouseDeviceDescriptor,
     ) {
         let buttons = mouse::get_u32_from_buttons(buttons);
 
         let mut pointer = fidl_ui_input::PointerEvent {
-            event_time: Time::get(ClockId::Monotonic).into_nanos() as u64,
+            event_time: event_time,
             device_id: device_descriptor.device_id,
             pointer_id: 0,
             type_: fidl_ui_input::PointerEventType::Mouse,
