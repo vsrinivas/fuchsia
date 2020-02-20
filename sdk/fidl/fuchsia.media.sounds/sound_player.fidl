@@ -50,4 +50,7 @@ protocol Player {
 enum PlaySoundError {
     /// The `id` passed to `PlaySound` is not recognized.
     NO_SUCH_SOUND = 1;
+
+    /// Underlying audio renderer failed.
+    RENDERER_FAILED = 2;
 };

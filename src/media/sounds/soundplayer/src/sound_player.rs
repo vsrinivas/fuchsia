@@ -11,7 +11,7 @@ use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sounds::*;
 use fuchsia_component as component;
 use fuchsia_zircon::{self as zx, HandleBased};
-use futures::{self, join, lock::Mutex, prelude::*, stream::FuturesUnordered};
+use futures::{self, join, prelude::*, stream::FuturesUnordered};
 use std::{collections::HashMap, io::BufReader};
 
 /// Implements `fuchsia.media.sounds.Player`.
@@ -25,7 +25,6 @@ impl SoundPlayer {
     }
 
     pub async fn serve(mut self, mut request_stream: PlayerRequestStream) -> Result<()> {
-        let saved_renderer: Mutex<Option<Renderer>> = Mutex::new(None);
         let mut futures = FuturesUnordered::new();
 
         loop {
@@ -62,24 +61,23 @@ impl SoundPlayer {
                         }
                         PlayerRequest::PlaySound { id, usage, responder } => {
                             if let Some(sound) = self.sounds_by_id.get(&id) {
-                                let renderer = saved_renderer.lock().await.take()
-                                    .filter(|r| r.usage == usage)
-                                    .map_or_else(|| Renderer::new(usage), |r| Ok(r))?;
-                                match renderer.prepare_packet(sound) {
-                                    Ok(packet) =>
-                                        futures.push(renderer.play_packet(packet)
-                                            .and_then(|renderer| {
-                                                responder.send(&mut Ok(())).unwrap_or(());
-                                                saved_renderer.lock()
-                                                    .map(|mut opt| {
-                                                        opt.replace(renderer); Ok(())
-                                                    } )
-                                            })
-                                            .map_err(move |error| {
-                                                fuchsia_syslog::fx_log_err!("Unable to play sound {}: {}", id, error)
-                                            })),
-                                    Err(error) =>
-                                        fuchsia_syslog::fx_log_err!("Unable to play sound {}: {}", id, error)
+                                if let Ok(renderer) = Renderer::new(usage) {
+                                    match renderer.prepare_packet(sound) {
+                                        Ok(packet) =>
+                                            futures.push(renderer.play_packet(packet)
+                                                .map_err(move |error| {
+                                                    fuchsia_syslog::fx_log_err!("Unable to play sound {}: {}", id, error)
+                                                })
+                                                .map(|renderer| {
+                                                    responder.send(&mut Ok(())).unwrap_or(());
+                                                })),
+                                        Err(error) => {
+                                            fuchsia_syslog::fx_log_err!("Unable to play sound {}: {}", id, error);
+                                            responder.send(&mut Err(PlaySoundError::RendererFailed)).unwrap_or(());
+                                        }
+                                    }
+                                } else {
+                                    responder.send(&mut Err(PlaySoundError::RendererFailed)).unwrap_or(());
                                 }
                             } else {
                                 responder.send(&mut Err(PlaySoundError::NoSuchSound)).unwrap_or(());
@@ -138,7 +136,6 @@ impl Sound {
 
 struct Renderer {
     proxy: AudioRendererProxy,
-    usage: AudioRenderUsage,
 }
 
 impl Renderer {
@@ -151,7 +148,7 @@ impl Renderer {
             .create_audio_renderer(server_endpoint)
             .context("Creating audio renderer")?;
 
-        let new_self = Self { proxy: client_endpoint.into_proxy()?, usage };
+        let new_self = Self { proxy: client_endpoint.into_proxy()? };
         new_self.proxy.set_usage(usage)?;
         Ok(new_self)
     }

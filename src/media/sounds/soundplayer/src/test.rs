@@ -12,7 +12,7 @@ use fuchsia_component::client::{launch, App};
 use fuchsia_component::server::*;
 use fuchsia_zircon::{self as zx, prelude::AsHandleRef};
 use futures::{channel::oneshot, StreamExt};
-use std::fs::File;
+use std::{fs::File, vec::Vec};
 
 const SOUNDPLAYER_URL: &str = "fuchsia-pkg://fuchsia.com/soundplayer#meta/soundplayer.cmx";
 const PAYLOAD_SIZE: usize = 1024;
@@ -26,7 +26,7 @@ async fn integration_buffer() -> Result<()> {
 
     let service = TestService::new(
         sender,
-        RendererExpectations {
+        vec![RendererExpectations {
             vmo_koid: Some(koid),
             packet: StreamPacket {
                 pts: 0,
@@ -39,7 +39,7 @@ async fn integration_buffer() -> Result<()> {
             },
             stream_type: stream_type.clone(),
             usage: USAGE,
-        },
+        }],
     );
 
     service
@@ -67,7 +67,7 @@ async fn integration_file() -> Result<()> {
 
     let service = TestService::new(
         sender,
-        RendererExpectations {
+        vec![RendererExpectations {
             vmo_koid: None,
             packet: StreamPacket {
                 pts: 0,
@@ -84,7 +84,7 @@ async fn integration_file() -> Result<()> {
                 frames_per_second: 44100,
             },
             usage: USAGE,
-        },
+        }],
     );
 
     let duration = service
@@ -93,6 +93,76 @@ async fn integration_file() -> Result<()> {
         .await
         .context("Calling add_sound_from_file")?;
     assert!(duration == Ok(DURATION));
+    service
+        .sound_player
+        .play_sound(0, USAGE)
+        .await
+        .context("Calling play_sound")?
+        .map_err(|err| anyhow::format_err!("Error playing sound: {:?}", err))?;
+    service.sound_player.remove_sound(0).expect("Calling remove_sound");
+
+    receiver.await.map_err(|_| anyhow::format_err!("Error awaiting test completion"))
+}
+
+#[fasync::run_singlethreaded]
+#[test]
+async fn integration_file_twice() -> Result<()> {
+    let (sender, receiver) = oneshot::channel::<()>();
+
+    let service = TestService::new(
+        sender,
+        vec![
+            RendererExpectations {
+                vmo_koid: None,
+                packet: StreamPacket {
+                    pts: 0,
+                    payload_buffer_id: 0,
+                    payload_offset: 0,
+                    payload_size: FILE_PAYLOAD_SIZE,
+                    flags: 0,
+                    buffer_config: 0,
+                    stream_segment_id: 0,
+                },
+                stream_type: AudioStreamType {
+                    sample_format: AudioSampleFormat::Signed16,
+                    channels: 1,
+                    frames_per_second: 44100,
+                },
+                usage: USAGE,
+            },
+            RendererExpectations {
+                vmo_koid: None,
+                packet: StreamPacket {
+                    pts: 0,
+                    payload_buffer_id: 0,
+                    payload_offset: 0,
+                    payload_size: FILE_PAYLOAD_SIZE,
+                    flags: 0,
+                    buffer_config: 0,
+                    stream_segment_id: 0,
+                },
+                stream_type: AudioStreamType {
+                    sample_format: AudioSampleFormat::Signed16,
+                    channels: 1,
+                    frames_per_second: 44100,
+                },
+                usage: USAGE,
+            },
+        ],
+    );
+
+    let duration = service
+        .sound_player
+        .add_sound_from_file(0, resource_file("sfx.wav").expect("Reading sound file"))
+        .await
+        .context("Calling add_sound_from_file")?;
+    assert!(duration == Ok(DURATION));
+    service
+        .sound_player
+        .play_sound(0, USAGE)
+        .await
+        .context("Calling play_sound")?
+        .map_err(|err| anyhow::format_err!("Error playing sound: {:?}", err))?;
     service
         .sound_player
         .play_sound(0, USAGE)
@@ -128,16 +198,20 @@ struct TestService {
 }
 
 impl TestService {
-    fn new(sender: oneshot::Sender<()>, renderer_expectations: RendererExpectations) -> Self {
+    fn new(
+        sender: oneshot::Sender<()>,
+        mut renderer_expectations: Vec<RendererExpectations>,
+    ) -> Self {
         let mut service_fs = ServiceFs::new();
         let mut sender_option = Some(sender);
 
         service_fs
             .add_fidl_service(move |request_stream: AudioRequestStream| {
+                let r = renderer_expectations.pop().expect("Audio service created too many times.");
                 spawn_log_error(
                     FakeAudio::new(
-                        sender_option.take().expect("Audio service created twice."),
-                        renderer_expectations.clone(),
+                        r,
+                        if renderer_expectations.is_empty() { sender_option.take() } else { None },
                     )
                     .serve(request_stream),
                 );
@@ -179,26 +253,24 @@ struct RendererExpectations {
 
 struct FakeAudio {
     renderer_expectations: RendererExpectations,
-    sender: oneshot::Sender<()>,
+    sender: Option<oneshot::Sender<()>>,
 }
 
 impl FakeAudio {
-    fn new(sender: oneshot::Sender<()>, renderer_expectations: RendererExpectations) -> Self {
-        Self { sender, renderer_expectations }
+    fn new(
+        renderer_expectations: RendererExpectations,
+        sender: Option<oneshot::Sender<()>>,
+    ) -> Self {
+        Self { renderer_expectations, sender }
     }
 
-    async fn serve(self, mut request_stream: AudioRequestStream) -> Result<()> {
-        let mut sender_option = Some(self.sender);
-
+    async fn serve(mut self, mut request_stream: AudioRequestStream) -> Result<()> {
         while let Some(request) = request_stream.next().await {
             match request? {
                 AudioRequest::CreateAudioRenderer { audio_renderer_request, .. } => {
                     spawn_log_error(
-                        FakeAudioRenderer::new(
-                            sender_option.take().expect("AudioRenderer created twice."),
-                            self.renderer_expectations,
-                        )
-                        .serve(audio_renderer_request.into_stream()?),
+                        FakeAudioRenderer::new(self.renderer_expectations, self.sender.take())
+                            .serve(audio_renderer_request.into_stream()?),
                     );
                 }
                 _ => {
@@ -217,8 +289,11 @@ struct FakeAudioRenderer {
 }
 
 impl FakeAudioRenderer {
-    fn new(sender: oneshot::Sender<()>, renderer_expectations: RendererExpectations) -> Self {
-        Self { sender: Some(sender), renderer_expectations }
+    fn new(
+        renderer_expectations: RendererExpectations,
+        sender: Option<oneshot::Sender<()>>,
+    ) -> Self {
+        Self { renderer_expectations, sender }
     }
 
     async fn serve(mut self, mut request_stream: AudioRendererRequestStream) -> Result<()> {
@@ -253,7 +328,9 @@ impl FakeAudioRenderer {
 
                     assert!(id == payload_id.expect("RemovePayloadBuffer called with no buffer"));
                     let _ = payload_id.take();
-                    self.sender.take().unwrap().send(()).expect("Sending on completion channel");
+                    if let Some(sender) = self.sender.take() {
+                        sender.send(()).expect("Sending on completion channel");
+                    }
                 }
                 AudioRendererRequest::SendPacket { packet, responder, .. } => {
                     assert!(set_usage_called);
