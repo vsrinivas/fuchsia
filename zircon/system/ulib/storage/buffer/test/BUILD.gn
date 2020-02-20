@@ -40,12 +40,13 @@ test("storage_buffer") {
   sources = [
     "block_buffer_view_test.cc",
     "blocking_ring_buffer_test.cc",
+    "owned_vmoid_test.cc",
     "ring_buffer_test.cc",
     "vmo_buffer_test.cc",
   ]
   deps = [
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/buffer",
+    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zxtest",
   ]
 }

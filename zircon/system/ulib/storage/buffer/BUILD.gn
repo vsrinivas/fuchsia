@@ -8,6 +8,7 @@ zx_library("buffer") {
     "storage/buffer/block_buffer_view.h",
     "storage/buffer/block_buffer.h",
     "storage/buffer/blocking_ring_buffer.h",
+    "storage/buffer/owned_vmoid.h",
     "storage/buffer/ring_buffer.h",
     "storage/buffer/vmo_buffer.h",
     "storage/buffer/vmoid_registry.h",
@@ -19,6 +20,7 @@ zx_library("buffer") {
   if (is_fuchsia) {
     sources += [
       "blocking_ring_buffer.cc",
+      "owned_vmoid.cc",
       "ring_buffer.cc",
       "vmo_buffer.cc",
     ]

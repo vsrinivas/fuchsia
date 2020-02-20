@@ -99,13 +99,12 @@ zx_status_t Blob::InitMerkleTreeVerifier(std::unique_ptr<MerkleTreeVerifier>* ve
       return status;
     }
 
-    vmoid_t merkle_vmoid;
-    status = blobfs_->AttachVmo(merkle_mapping_.vmo(), &merkle_vmoid);
+    storage::OwnedVmoid merkle_vmoid(blobfs_);
+    status = merkle_vmoid.AttachVmo(merkle_mapping_.vmo());
     if (status != ZX_OK) {
       FS_TRACE_ERROR("Failed to attach Merkle VMO to blkdev: %s\n", zx_status_get_string(status));
       return status;
     }
-    auto detach = fbl::MakeAutoCall([this, &merkle_vmoid]() { blobfs_->DetachVmo(merkle_vmoid); });
 
     fs::Ticker ticker(blobfs_->Metrics().Collecting());
     fs::ReadTxn txn(blobfs_);
@@ -113,7 +112,8 @@ zx_status_t Blob::InitMerkleTreeVerifier(std::unique_ptr<MerkleTreeVerifier>* ve
     const uint64_t data_start = DataStartBlock(blobfs_->Info());
     status = StreamBlocks(&block_iter, merkle_blocks,
                           [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                            txn.Enqueue(merkle_vmoid, vmo_offset, dev_offset + data_start, length);
+                            txn.Enqueue(merkle_vmoid.vmoid(), vmo_offset, dev_offset + data_start,
+                                        length);
                             return ZX_OK;
                           });
 
@@ -199,7 +199,7 @@ zx_status_t Blob::InitVmos() {
     return status;
   }
 
-  if ((status = blobfs_->AttachVmo(mapping_.vmo(), &vmoid_)) != ZX_OK) {
+  if ((status = vmoid_.AttachVmo(mapping_.vmo())) != ZX_OK) {
     FS_TRACE_ERROR("Failed to attach VMO to block device; error: %s\n",
                    zx_status_get_string(status));
     return status;
@@ -288,15 +288,12 @@ zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
     FS_TRACE_ERROR("Failed to initialized compressed vmo; error: %d\n", status);
     return status;
   }
-  vmoid_t compressed_vmoid;
-  status = blobfs_->AttachVmo(compressed_mapper.vmo(), &compressed_vmoid);
+  storage::OwnedVmoid compressed_vmoid(blobfs_);
+  status = compressed_vmoid.AttachVmo(compressed_mapper.vmo());
   if (status != ZX_OK) {
     FS_TRACE_ERROR("Failed to attach compressed VMO to blkdev: %d\n", status);
     return status;
   }
-
-  auto detach =
-      fbl::MakeAutoCall([this, &compressed_vmoid]() { blobfs_->DetachVmo(compressed_vmoid); });
 
   const uint64_t kDataStart = DataStartBlock(blobfs_->Info());
   BlockIterator block_iter = blobfs_->BlockIteratorByNodeIndex(GetMapIndex());
@@ -304,7 +301,7 @@ zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
   // Read the uncompressed merkle tree into the start of the blob's VMO.
   status = StreamBlocks(&block_iter, merkle_blocks,
                         [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                          txn.Enqueue(vmoid_, vmo_offset, dev_offset + kDataStart, length);
+                          txn.Enqueue(vmoid_.vmoid(), vmo_offset, dev_offset + kDataStart, length);
                           return ZX_OK;
                         });
   if (status != ZX_OK) {
@@ -317,7 +314,7 @@ zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
 
   status = StreamBlocks(&block_iter, compressed_blocks,
                         [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-                          txn.Enqueue(compressed_vmoid, vmo_offset - merkle_blocks,
+                          txn.Enqueue(compressed_vmoid.vmoid(), vmo_offset - merkle_blocks,
                                       dev_offset + kDataStart, length);
                           return ZX_OK;
                         });
@@ -374,7 +371,7 @@ zx_status_t Blob::InitUncompressed() {
   const uint64_t data_start = DataStartBlock(blobfs_->Info());
   zx_status_t status = StreamBlocks(
       &block_iter, length, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-        txn.Enqueue(vmoid_, vmo_offset, dev_offset + data_start, length);
+        txn.Enqueue(vmoid_.vmoid(), vmo_offset, dev_offset + data_start, length);
         return ZX_OK;
       });
 
@@ -410,6 +407,7 @@ Blob::Blob(Blobfs* bs, const Digest& digest)
       blobfs_(bs),
       flags_(kBlobStateEmpty),
       syncing_(false),
+      vmoid_(bs),
       clone_watcher_(this) {}
 
 void Blob::BlobCloseHandles() {
@@ -493,7 +491,7 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
       ZX_OK) {
     return status;
   }
-  if ((status = blobfs_->AttachVmo(mapping.vmo(), &vmoid_)) != ZX_OK) {
+  if ((status = vmoid_.AttachVmo(mapping.vmo())) != ZX_OK) {
     return status;
   }
 
@@ -946,9 +944,7 @@ void Blob::ActivateLowMemory() {
   // We shouldn't be putting the blob into a low-memory state while it is still mapped.
   ZX_ASSERT(clone_watcher_.object() == ZX_HANDLE_INVALID);
   page_watcher_.reset();
-  if (mapping_.vmo()) {
-    blobfs_->DetachVmo(vmoid_);
-  }
+  vmoid_.Reset();
   mapping_.Reset();
   merkle_mapping_.Reset();
 }

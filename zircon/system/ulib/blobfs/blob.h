@@ -32,6 +32,7 @@
 #include <fs/vfs.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
+#include <storage/buffer/owned_vmoid.h>
 
 #include "allocator/allocator.h"
 #include "allocator/extent-reserver.h"
@@ -265,7 +266,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   // Maps |mapping_.vmo()| at the block device layer.
   // When the user pager is enabled, this is only used on the write path.
-  vmoid_t vmoid_ = {};
+  storage::OwnedVmoid vmoid_;
 
   // Watches any clones of "vmo_" provided to clients.
   // Observes the ZX_VMO_ZERO_CHILDREN signal.
