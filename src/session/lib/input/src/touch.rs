@@ -283,10 +283,10 @@ impl TouchBinding {
         device_descriptor: &input_device::InputDeviceDescriptor,
         input_event_sender: &mut Sender<InputEvent>,
     ) -> Option<InputReport> {
+        // Input devices can have multiple types so ensure `report` is a TouchInputReport.
         let touch_report: &fidl_fuchsia_input_report::TouchInputReport = match &report.touch {
             Some(touch) => touch,
             None => {
-                fx_log_err!("Not processing non-touch report.");
                 return previous_report;
             }
         };

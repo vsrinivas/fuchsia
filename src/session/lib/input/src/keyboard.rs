@@ -250,6 +250,12 @@ impl KeyboardBinding {
         device_descriptor: &input_device::InputDeviceDescriptor,
         input_event_sender: &mut Sender<input_device::InputEvent>,
     ) -> Option<InputReport> {
+        // Input devices can have multiple types so ensure `report` is a KeyboardInputReport.
+        match &report.keyboard {
+            None => return previous_report,
+            _ => (),
+        };
+
         let new_keys = match KeyboardBinding::parse_pressed_keys(&report) {
             Some(keys) => keys,
             None => {

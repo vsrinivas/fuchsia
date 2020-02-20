@@ -8,7 +8,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_input_report as fidl_input_report,
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport},
-    fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_syslog::fx_log_err,
     futures::channel::mpsc::{Receiver, Sender},
     std::collections::HashSet,
     std::iter::FromIterator,
@@ -199,11 +199,10 @@ impl MouseBinding {
         device_descriptor: &input_device::InputDeviceDescriptor,
         input_event_sender: &mut Sender<input_device::InputEvent>,
     ) -> Option<InputReport> {
-        // Fail early if the new InputReport isn't a MouseInputReport
+        // Input devices can have multiple types so ensure `report` is a MouseInputReport.
         let mouse_report: &fidl_input_report::MouseInputReport = match &report.mouse {
             Some(mouse) => mouse,
             None => {
-                fx_log_info!("Not processing non-mouse InputReport.");
                 return previous_report;
             }
         };
