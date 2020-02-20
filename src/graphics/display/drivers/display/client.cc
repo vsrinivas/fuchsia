@@ -1876,7 +1876,8 @@ void ClientProxy::DdkRelease() {
   // We should be able to post tasks to the loop since DdkRelease on client should be called before
   // controller loop is shutdown.
   this->handler_.CancelFidlBind();
-  ZX_DEBUG_ASSERT(task->Post(controller_->loop().dispatcher()) == ZX_OK);
+  auto status = task->Post(controller_->loop().dispatcher());
+  ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
 zx_status_t ClientProxy::Init(zx::channel server_channel) {
