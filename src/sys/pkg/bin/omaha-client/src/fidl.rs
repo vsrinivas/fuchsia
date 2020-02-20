@@ -506,8 +506,8 @@ mod tests {
     use crate::channel::ChannelConfig;
     use fidl::endpoints::{create_proxy, create_proxy_and_stream};
     use fidl_fuchsia_update::{ManagerMarker, MonitorEvent, MonitorMarker, Options};
-    use fidl_fuchsia_update_channelcontrol::ChannelControlMarker;
     use fidl_fuchsia_update_channel::ProviderMarker;
+    use fidl_fuchsia_update_channelcontrol::ChannelControlMarker;
     use fuchsia_inspect::{assert_inspect_tree, Inspector};
     use omaha_client::{common::App, protocol::Cohort};
 

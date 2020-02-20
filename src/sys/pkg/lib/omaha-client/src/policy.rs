@@ -117,5 +117,8 @@ pub trait PolicyEngine {
 
     /// Given the current State, the current PolicyData, can the proposed InstallPlan
     /// be executed at this time.
-    fn update_can_start(&mut self, proposed_install_plan: &impl Plan) -> BoxFuture<'_, UpdateDecision>;
+    fn update_can_start(
+        &mut self,
+        proposed_install_plan: &impl Plan,
+    ) -> BoxFuture<'_, UpdateDecision>;
 }

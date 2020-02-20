@@ -7,7 +7,10 @@ use futures::prelude::*;
 use hyper::{Body, Request, Response};
 
 pub trait HttpRequest {
-    fn request(&mut self, req: Request<Body>) -> BoxFuture<'_, Result<Response<Body>, hyper::Error>>;
+    fn request(
+        &mut self,
+        req: Request<Body>,
+    ) -> BoxFuture<'_, Result<Response<Body>, hyper::Error>>;
 }
 
 #[cfg(test)]
@@ -17,7 +20,10 @@ pub mod mock;
 pub struct StubHttpRequest;
 
 impl HttpRequest for StubHttpRequest {
-    fn request(&mut self, _req: Request<Body>) -> BoxFuture<'_, Result<Response<Body>, hyper::Error>> {
+    fn request(
+        &mut self,
+        _req: Request<Body>,
+    ) -> BoxFuture<'_, Result<Response<Body>, hyper::Error>> {
         future::ok(Response::new(Body::empty())).boxed()
     }
 }

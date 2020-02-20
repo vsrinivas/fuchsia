@@ -13,7 +13,10 @@ pub struct FuchsiaHyperHttpRequest {
 }
 
 impl HttpRequest for FuchsiaHyperHttpRequest {
-    fn request(&mut self, req: Request<Body>) -> BoxFuture<'_, Result<Response<Body>, hyper::Error>> {
+    fn request(
+        &mut self,
+        req: Request<Body>,
+    ) -> BoxFuture<'_, Result<Response<Body>, hyper::Error>> {
         self.client.request(req).compat().boxed()
     }
 }

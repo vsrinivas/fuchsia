@@ -121,7 +121,10 @@ impl PolicyEngine for FuchsiaPolicyEngine {
         future::ready(decision).boxed()
     }
 
-    fn update_can_start(&mut self, proposed_install_plan: &impl Plan) -> BoxFuture<'_, UpdateDecision> {
+    fn update_can_start(
+        &mut self,
+        proposed_install_plan: &impl Plan,
+    ) -> BoxFuture<'_, UpdateDecision> {
         let decision = FuchsiaPolicy::update_can_start(
             &PolicyData { current_time: clock::now() },
             proposed_install_plan,
