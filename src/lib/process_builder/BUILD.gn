@@ -67,6 +67,9 @@ rustc_binary("root_job_test_runner") {
     "//third_party/rust_crates:thiserror",
     "//zircon/system/fidl/fuchsia-boot:fuchsia-boot-rustc",
   ]
+
+  # TODO(46556): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 fidl("test-util-fidl") {
