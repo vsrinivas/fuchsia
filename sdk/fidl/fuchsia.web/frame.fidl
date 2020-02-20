@@ -69,6 +69,36 @@ enum FrameError : int32 {
     NO_DATA_IN_MESSAGE = 4;
 };
 
+/// Identifies a type of permission that may be granted to a web origin.
+enum PermissionType : uint16 {
+    /// Permission to access microphone(s).
+    MICROPHONE = 1;
+
+    /// Permission to access camera(s).
+    CAMERA = 2;
+
+    /// Permission to use device identifier(s) for EME.
+    PROTECTED_MEDIA_IDENTIFIER = 3;
+
+    /// Permission to use persistent storage.
+    PERSISTENT_STORAGE = 4;
+};
+
+/// Describes a web permission. In the future, it may be extended with
+/// type-specific fields.
+table PermissionDescriptor {
+    1: PermissionType type;
+};
+
+/// A state for a web permission.
+enum PermissionState : uint8 {
+    /// Permission is denied.
+    DENIED = 1;
+
+    /// Permission is granted.
+    GRANTED = 2;
+};
+
 protocol Frame {
     /// Creates a new view using the specified `view_token`. Caller should pass the other end of
     /// the token to [`fuchsia.ui.gfx.ViewHolderArgs/token`] to attach the new view to a view tree.
@@ -227,6 +257,13 @@ protocol Frame {
     /// remove any prior forced content dimensions.
     [Transitional]
     ForceContentDimensions(fuchsia.ui.gfx.vec2? web_dips);
+
+    /// Sets permission state for the specified `permission` and `web_origin`. By default all
+    /// permissions are denied.
+    [Transitional]
+    SetPermissionState(PermissionDescriptor permission,
+                       Url web_origin,
+                       PermissionState state);
 };
 
 table WebMessage {
