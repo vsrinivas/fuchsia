@@ -1,0 +1,98 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media.tuning;
+
+using fuchsia.media;
+using zx;
+
+/// Specification of an audio stream effect name and compiled library module.
+///
+/// A valid `AudioEffectType` includes a specific module and audio effect name,
+/// such as module 'google_audio_effects.so' with name 'equalizer'.
+struct AudioEffectType {
+    /// Library module associated with the effect, such as 'my_audio_effects.so'.
+    string:64 module_name;
+    /// Name of the effect type within the module.
+    string:255 effect_name;
+};
+
+/// Details of an audio effect and its configuration to be applied to an audio stream(s).
+///
+/// An audio effect type can be instantiated multiple times, differentiable by its unique
+/// name. For example, an 'equalizer' effect type can be instantiated twice as
+/// 'equalizer1' and 'equalizer2'.
+struct AudioEffectConfig {
+    /// Unique identifier of the audio effect instance.
+    string:64 instance_name;
+    /// Detailed specification of the audio effect type.
+    AudioEffectType type;
+    /// JSON string of the audio effect configuration to be applied to an audio stream(s).
+    string:4096 configuration;
+};
+
+/// Association of a volume level with its decibel value.
+struct Volume {
+    /// Specific volume level identifier in the range [0.0, 1.0].
+    float level;
+    /// Decibel value of the associated volume level in the range [-120.0, 0.0].
+    float decibel;
+};
+
+/// Audio effects configuration details applied to audio streams within
+/// a device's media pipeline.
+table AudioMixGroup {
+    /// Identifier of the audio effects mix detailed in this object.
+    1: string:32 name;
+    /// True if the device profile is eligible for loopback capture.
+    2: bool loopback;
+    /// Audio effect configurations applied to the specified `streams`.
+    3: vector<AudioEffectConfig>:16 effects;
+    /// Set of audio effect mixes, each of which consist of various effects configurations.
+    4: vector<AudioMixGroup>:16 inputs;
+    /// Names of the audio streams to which the `effects` are applied.
+    5: vector<fuchsia.media.AudioRenderUsage>:8 streams;
+};
+
+/// Specification of the audio effects mixes and volume curve for a device.
+table AudioDeviceTuningProfile {
+    /// Details of the media pipeline effects configuration.
+    1: AudioMixGroup pipeline;
+    /// Set of associations between volume level and decibel value.
+    2: vector<Volume>:16 volume_curve;
+};
+
+[Discoverable]
+protocol AudioTuner {
+    /// Provides names of audio effects classes available for tuning.
+    GetAvailableAudioEffects() -> (vector<AudioEffectName>:16 effects);
+
+    /// Provides the current, tunable audio effects configuration and
+    /// volume settings for the given device.
+    GetAudioDeviceProfile(string:32 device_id) -> (AudioDeviceTuningProfile profile);
+
+    /// Provides the device's current default audio effects configuration and
+    /// volume settings, which are read-only and unaffected by the audio tuner.
+    GetDefaultAudioDeviceProfile(string:32 device_id) -> (AudioDeviceTuningProfile profile);
+
+    /// Updates the audio effects configuration and volume settings of the given
+    /// device with the provided profile.
+    SetAudioDeviceProfile(string:32 device_id, AudioDeviceTuningProfile profile)
+        -> (zx.status status);
+
+    /// Deletes the current, tunable audio effects configuration and volume settings
+    /// for the given device.
+    DeleteAudioDeviceProfile(string:32 device_id) -> (zx.status status);
+
+    /// Applies the provided `AudioEffectConfig` to the specified device's tuning profile in the media
+    /// pipeline.
+    ///
+    /// A single audio effect class can be instantiated multiple times, with each instance
+    /// able to be applied to the same media pipeline.  The `AudioEffectConfig.instance_name` is scoped
+    /// to the specified device.
+    ///
+    /// For example, two 'equalizer' effect instances named 'equalizer1' and 'equalizer2'
+    /// can be applied to the same media pipeline.
+    SetAudioEffectConfig(string:32 device_id, AudioEffectConfig effect) -> (zx.status status);
+};
