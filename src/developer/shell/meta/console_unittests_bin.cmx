@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/console_unittests_bin"
+    }
+}

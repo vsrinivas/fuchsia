@@ -146,7 +146,7 @@ std::unique_ptr<Expression> ServerInterpreter::GetExpression(ServerInterpreterCo
 
 void connect(void* untyped_context, const char* service_name, zx_handle_t service_request) {
   auto server = static_cast<Server*>(untyped_context);
-  server->IncommingConnection(service_request);
+  server->IncomingConnection(service_request);
 }
 
 void Service::CreateExecutionContext(uint64_t context_id,
@@ -255,8 +255,9 @@ bool Server::Listen() {
   return true;
 }
 
-void Server::IncommingConnection(zx_handle_t service_request) {
-  fidl::Bind(loop_.dispatcher(), zx::channel(service_request), AddConnection(service_request));
+zx_status_t Server::IncomingConnection(zx_handle_t service_request) {
+  return fidl::Bind(loop_.dispatcher(), zx::channel(service_request),
+                    AddConnection(service_request));
 }
 
 }  // namespace server

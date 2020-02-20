@@ -49,6 +49,7 @@ test_package("shell_tests") {
   rootjob_svc = "//build"
   deps = [
     ":generate_fidl_json",
+    "//src/developer/shell/console:console_unittests_bin",
     "//src/developer/shell/josh:josh_tests_bin",
     "//src/developer/shell/josh/lib:js_libs",
     "//src/developer/shell/josh/lib:spawn_child_test_util",
@@ -63,6 +64,10 @@ test_package("shell_tests") {
   ]
 
   tests = [
+    {
+      name = "console_unittests_bin"
+      environments = basic_envs
+    },
     {
       name = "sh_mirror_tests_bin"
       environments = basic_envs
@@ -90,7 +95,7 @@ group("tests") {
   ]
 }
 
-# "josh" is Javascript Object SHell.  We can change the name later.
+# "josh" is Javascript Object SHell.
 package("josh") {
   # TODO(jeremymanson): This is only testonly because sdk:core is.  We should undo that.
   testonly = true
@@ -107,4 +112,21 @@ package("josh") {
   ]
   extra = get_target_outputs(":generate_fidl_json") +
           [ "$target_gen_dir/josh/lib/libs.manifest" ]
+}
+
+# "cliff" is the CLI For Fuchsia.  Need a better name.
+package("cliff") {
+  # TODO(jeremymanson): This is only testonly because sdk:core is.  We should undo that.
+  testonly = true
+  deps = [
+    "//src/developer/shell:generate_fidl_json",
+    "//src/developer/shell/console:bin",
+  ]
+  binaries = [
+    {
+      name = "cliff"
+      shell = true
+    },
+  ]
+  extra = get_target_outputs(":generate_fidl_json")
 }

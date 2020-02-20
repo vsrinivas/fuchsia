@@ -160,7 +160,7 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
   std::unique_ptr<ServerInterpreter> interpreter_;
 };
 
-// Class which accept connections from clients. Each time a new connection is accepted, a Service
+// Class which accepts connections from clients. Each time a new connection is accepted, a Service
 // object is created.
 class Server {
  public:
@@ -174,8 +174,14 @@ class Server {
   }
 
   bool Listen();
-  void IncommingConnection(zx_handle_t service_request);
+
+  // Listens for connections on the given channel instead of setting up a service.
+  // Returns whether we were able to bind to the given |channel|.  On error, |channel| is closed and
+  // we do not bind.
+  zx_status_t IncomingConnection(zx_handle_t service_request);
   void Run() { loop_.Run(); }
+
+  async::Loop* loop() { return &loop_; }
 
  private:
   async::Loop loop_;
