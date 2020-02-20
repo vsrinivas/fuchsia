@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Error};
+use anyhow::{anyhow, format_err, Error};
 use fidl::endpoints::{create_endpoints, create_request_stream};
 use fidl_fuchsia_auth::{
     AuthenticationContextProviderMarker, AuthenticationContextProviderRequest,
 };
 use fidl_fuchsia_identity_account::{
-    AccountManagerMarker, AccountManagerProxy, Error as ApiError, Lifetime, Scenario,
+    AccountManagerMarker, AccountManagerProxy, AccountProxy, Error as ApiError, Lifetime, Scenario,
     ThreatScenario,
 };
 use fidl_fuchsia_stash::StoreMarker;
-use fuchsia_async as fasync;
+use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
 use fuchsia_component::client::{launch, App};
 use fuchsia_component::fuchsia_single_component_package_url;
 use fuchsia_component::server::{NestedEnvironment, ServiceFs};
+use fuchsia_zircon as zx;
 use futures::future::join;
 use futures::prelude::*;
 use lazy_static::lazy_static;
@@ -24,18 +25,32 @@ use std::ops::Deref;
 /// Type alias for the LocalAccountId FIDL type
 type LocalAccountId = u64;
 
+const ALWAYS_SUCCEED_AUTH_MECHANISM_ID: &str =
+    "fuchsia-pkg://fuchsia.com/dev_authenticator#meta/dev_authenticator_always_succeed.cmx";
+
+const ALWAYS_FAIL_AUTHENTICATION_AUTH_MECHANISM_ID: &str = concat!(
+    "fuchsia-pkg://fuchsia.com/dev_authenticator",
+    "#meta/dev_authenticator_always_fail_authentication.cmx"
+);
+
 lazy_static! {
     /// URL for account manager.
     static ref ACCOUNT_MANAGER_URL: String =
         String::from(fuchsia_single_component_package_url!("account_manager"));
 
     /// Arguments passed to account manager started in test environment.
-    static ref ACCOUNT_MANAGER_ARGS: Vec<String> = vec![String::from("--dev-auth-providers")];
+    static ref ACCOUNT_MANAGER_ARGS: Vec<String> = vec![
+        "--dev-auth-providers".to_string(),
+        "--dev-auth-mechanisms".to_string(),
+    ];
 
     static ref TEST_SCENARIO: Scenario = Scenario {
         include_test: false,
         threat_scenario: ThreatScenario::BasicAttacker,
     };
+
+    /// Maximum time between a lock request and when the account is locked
+    static ref LOCK_REQUEST_DURATION: zx::Duration = zx::Duration::from_seconds(5);
 }
 
 /// Calls provision_new_account on the supplied account_manager, returning an error on any
@@ -43,9 +58,10 @@ lazy_static! {
 async fn provision_new_account(
     account_manager: &AccountManagerProxy,
     lifetime: Lifetime,
+    auth_mechanism_id: Option<&str>,
 ) -> Result<LocalAccountId, Error> {
     account_manager
-        .provision_new_account(lifetime, None)
+        .provision_new_account(lifetime, auth_mechanism_id)
         .await?
         .map_err(|error| format_err!("ProvisionNewAccount returned error: {:?}", error))
 }
@@ -141,38 +157,47 @@ fn create_account_manager(env: Option<String>) -> Result<NestedAccountManagerPro
     })
 }
 
+/// Locks an account and waits for the channel to close.
+async fn lock_and_check(account: &AccountProxy) -> Result<(), Error> {
+    account.lock().await?.map_err(|err| anyhow!("Lock failed: {:?}", err))?;
+    account
+        .take_event_stream()
+        .for_each(|_| async move {}) // Drain
+        .map(|_| Ok(())) // Completed drain results in ok
+        .on_timeout(LOCK_REQUEST_DURATION.after_now(), || Err(anyhow!("Locking timeout exceeded")))
+        .await
+}
+
 // TODO(jsankey): Work with ComponentFramework and cramertj@ to develop a nice Rust equivalent of
 // the C++ TestWithEnvironment fixture to provide isolated environments for each test case.  We
 // are currently creating a new environment for account manager to run in, but the tests
 // themselves run in a single environment.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_provision_new_account() -> Result<(), Error> {
-    let account_manager = create_account_manager(None)
-        .expect("Failed to launch account manager in nested environment.");
+    let account_manager = create_account_manager(None)?;
 
     // Verify we initially have no accounts.
     assert_eq!(account_manager.get_account_ids().await?, vec![]);
 
     // Provision a new account.
-    let account_1 = provision_new_account(&account_manager, Lifetime::Persistent).await?;
+    let account_1 = provision_new_account(&account_manager, Lifetime::Persistent, None).await?;
     assert_eq!(account_manager.get_account_ids().await?, vec![account_1]);
 
     // Provision a second new account and verify it has a different ID.
-    let account_2 = provision_new_account(&account_manager, Lifetime::Persistent).await?;
+    let account_2 = provision_new_account(&account_manager, Lifetime::Persistent, None).await?;
     assert_ne!(account_1, account_2);
 
-    // No auth mechanisms are installed
-    assert_eq!(
-        account_manager
-            .provision_new_account(Lifetime::Persistent, Some("<AUTH MECHANISM ID>"))
-            .await?,
-        Err(ApiError::NotFound)
-    );
+    // Provision account with an auth mechanism
+    let account_3 = account_manager
+        .provision_new_account(Lifetime::Persistent, Some(ALWAYS_SUCCEED_AUTH_MECHANISM_ID))
+        .await?
+        .unwrap();
 
     let account_ids = account_manager.get_account_ids().await?;
-    assert_eq!(account_ids.len(), 2);
+    assert_eq!(account_ids.len(), 3);
     assert!(account_ids.contains(&account_1));
     assert!(account_ids.contains(&account_2));
+    assert!(account_ids.contains(&account_3));
 
     // Auth state is not yet supported
     assert_eq!(
@@ -184,9 +209,130 @@ async fn test_provision_new_account() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn test_provision_then_lock_then_unlock_account() -> Result<(), Error> {
+    let account_manager = create_account_manager(None)?;
+
+    // Provision account with an auth mechanism that passes authentication
+    let account_id = provision_new_account(
+        &account_manager,
+        Lifetime::Persistent,
+        Some(ALWAYS_SUCCEED_AUTH_MECHANISM_ID),
+    )
+    .await?;
+    let (acp_client_end, _) = create_endpoints()?;
+    let (account_client_end, account_server_end) = create_endpoints()?;
+    assert_eq!(
+        account_manager.get_account(account_id, acp_client_end, account_server_end).await?,
+        Ok(())
+    );
+    let account_proxy = account_client_end.into_proxy()?;
+
+    // Lock the account and ensure that it's locked
+    lock_and_check(&account_proxy).await?;
+
+    // Unlock the account and re-acquire a channel
+    let (acp_client_end, _) = create_endpoints()?;
+    let (account_client_end, account_server_end) = create_endpoints()?;
+    assert_eq!(
+        account_manager.get_account(account_id, acp_client_end, account_server_end).await?,
+        Ok(())
+    );
+    let account_proxy = account_client_end.into_proxy()?;
+    assert!(account_proxy.get_account_name().await.is_ok());
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_unlock_account() -> Result<(), Error> {
+    let account_manager =
+        create_account_manager(Some("test_successful_authentication".to_string()))?;
+
+    // Provision account with an auth mechanism that passes authentication
+    let account_id = provision_new_account(
+        &account_manager,
+        Lifetime::Persistent,
+        Some(ALWAYS_SUCCEED_AUTH_MECHANISM_ID),
+    )
+    .await?;
+
+    // Restart the account manager, now the account should be locked
+    std::mem::drop(account_manager);
+    let account_manager =
+        create_account_manager(Some("test_successful_authentication".to_string()))?;
+
+    // Unlock the account and acquire a channel to it
+    let (acp_client_end, _) = create_endpoints()?;
+    let (account_client_end, account_server_end) = create_endpoints()?;
+    assert_eq!(
+        account_manager.get_account(account_id, acp_client_end, account_server_end).await?,
+        Ok(())
+    );
+    let account_proxy = account_client_end.into_proxy()?;
+    assert!(account_proxy.get_account_name().await.is_ok());
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_provision_then_lock_then_unlock_fail_authentication() -> Result<(), Error> {
+    let account_manager = create_account_manager(None)?;
+
+    // Provision account with an auth mechanism that fails authentication
+    let account_id = provision_new_account(
+        &account_manager,
+        Lifetime::Persistent,
+        Some(ALWAYS_FAIL_AUTHENTICATION_AUTH_MECHANISM_ID),
+    )
+    .await?;
+    let (acp_client_end, _) = create_endpoints()?;
+    let (account_client_end, account_server_end) = create_endpoints()?;
+    assert_eq!(
+        account_manager.get_account(account_id, acp_client_end, account_server_end).await?,
+        Ok(())
+    );
+    let account_proxy = account_client_end.into_proxy()?;
+
+    // Lock the account and ensure that it's locked
+    lock_and_check(&account_proxy).await?;
+
+    // Attempting to unlock the account fails with an authentication error
+    let (acp_client_end, _) = create_endpoints()?;
+    let (_, account_server_end) = create_endpoints()?;
+    assert_eq!(
+        account_manager.get_account(account_id, acp_client_end, account_server_end).await?,
+        Err(ApiError::FailedAuthentication)
+    );
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_unlock_account_fail_authentication() -> Result<(), Error> {
+    let account_manager = create_account_manager(Some("test_fail_authentication".to_string()))?;
+
+    // Provision account with an auth mechanism that fails authentication
+    let account_id = provision_new_account(
+        &account_manager,
+        Lifetime::Persistent,
+        Some(ALWAYS_FAIL_AUTHENTICATION_AUTH_MECHANISM_ID),
+    )
+    .await?;
+
+    // Restart the account manager, now the account should be locked
+    std::mem::drop(account_manager);
+    let account_manager = create_account_manager(Some("test_fail_authentication".to_string()))?;
+
+    // Attempting to unlock the account fails with an authentication error
+    let (acp_client_end, _) = create_endpoints()?;
+    let (_, account_server_end) = create_endpoints()?;
+    assert_eq!(
+        account_manager.get_account(account_id, acp_client_end, account_server_end).await?,
+        Err(ApiError::FailedAuthentication)
+    );
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn test_provision_new_account_from_auth_provider() -> Result<(), Error> {
-    let account_manager = create_account_manager(None)
-        .expect("Failed to launch account manager in nested environment.");
+    let account_manager = create_account_manager(None)?;
 
     // Verify we initially have no accounts.
     assert_eq!(account_manager.get_account_ids().await?, vec![]);
@@ -215,12 +361,11 @@ async fn test_provision_new_account_from_auth_provider() -> Result<(), Error> {
 
 // This represents two nearly identical tests, one with ephemeral and one with persistent accounts
 async fn get_account_and_persona_helper(lifetime: Lifetime) -> Result<(), Error> {
-    let account_manager = create_account_manager(None)
-        .expect("Failed to launch account manager in nested environment.");
+    let account_manager = create_account_manager(None)?;
 
     assert_eq!(account_manager.get_account_ids().await?, vec![]);
 
-    let account = provision_new_account(&account_manager, lifetime).await?;
+    let account = provision_new_account(&account_manager, lifetime, None).await?;
     // Connect a channel to the newly created account and verify it's usable.
     let (acp_client_end, _) = create_endpoints()?;
     let (account_client_end, account_server_end) = create_endpoints()?;
@@ -231,6 +376,9 @@ async fn get_account_and_persona_helper(lifetime: Lifetime) -> Result<(), Error>
     let account_proxy = account_client_end.into_proxy()?;
     let account_auth_state = account_proxy.get_auth_state(&mut TEST_SCENARIO.clone()).await?;
     assert_eq!(account_auth_state, Err(ApiError::UnsupportedOperation));
+
+    // Cannot lock account not protected by an auth mechanism
+    assert_eq!(account_proxy.lock().await?, Err(ApiError::FailedPrecondition));
     assert_eq!(account_proxy.get_lifetime().await?, lifetime);
 
     // Connect a channel to the account's default persona and verify it's usable.
@@ -256,13 +404,12 @@ async fn test_get_ephemeral_account_and_persona() -> Result<(), Error> {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_account_deletion() -> Result<(), Error> {
-    let account_manager = create_account_manager(None)
-        .expect("Failed to launch account manager in nested environment.");
+    let account_manager = create_account_manager(None)?;
 
     assert_eq!(account_manager.get_account_ids().await?, vec![]);
 
-    let account_1 = provision_new_account(&account_manager, Lifetime::Persistent).await?;
-    let account_2 = provision_new_account(&account_manager, Lifetime::Persistent).await?;
+    let account_1 = provision_new_account(&account_manager, Lifetime::Persistent, None).await?;
+    let account_2 = provision_new_account(&account_manager, Lifetime::Persistent, None).await?;
     let existing_accounts = account_manager.get_account_ids().await?;
     assert!(existing_accounts.contains(&account_1));
     assert!(existing_accounts.contains(&account_2));
@@ -287,22 +434,20 @@ async fn test_account_deletion() -> Result<(), Error> {
 /// accounts created in that previous lifetime.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_lifecycle() -> Result<(), Error> {
-    let account_manager = create_account_manager(Some("test_account_deletion".to_string()))
-        .expect("Failed to launch account manager in nested environment.");
+    let account_manager = create_account_manager(Some("test_account_deletion".to_string()))?;
 
     assert_eq!(account_manager.get_account_ids().await?, vec![]);
 
-    let account_1 = provision_new_account(&account_manager, Lifetime::Persistent).await?;
-    let account_2 = provision_new_account(&account_manager, Lifetime::Persistent).await?;
-    let account_3 = provision_new_account(&account_manager, Lifetime::Ephemeral).await?;
+    let account_1 = provision_new_account(&account_manager, Lifetime::Persistent, None).await?;
+    let account_2 = provision_new_account(&account_manager, Lifetime::Persistent, None).await?;
+    let account_3 = provision_new_account(&account_manager, Lifetime::Ephemeral, None).await?;
 
     let existing_accounts = account_manager.get_account_ids().await?;
     assert_eq!(existing_accounts.len(), 3);
 
     // Kill and restart account manager in the same environment
     std::mem::drop(account_manager);
-    let account_manager = create_account_manager(Some("test_account_deletion".to_string()))
-        .expect("Failed to launch account manager in nested environment.");
+    let account_manager = create_account_manager(Some("test_account_deletion".to_string()))?;
 
     let existing_accounts = account_manager.get_account_ids().await?;
     assert_eq!(existing_accounts.len(), 2); // The ephemeral account was dropped

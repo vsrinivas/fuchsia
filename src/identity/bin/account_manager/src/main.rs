@@ -40,6 +40,9 @@ use std::sync::Arc;
 /// This flag (prefixed with `--`) results in a set of hermetic auth providers.
 const DEV_AUTH_PROVIDERS_FLAG: &str = "dev-auth-providers";
 
+/// This flag (prefixed with `--`) results in a set of hermetic auth mechanisms.
+const DEV_AUTH_MECHANISMS_FLAG: &str = "dev-auth-mechanisms";
+
 /// This flag (prefixed with `--`) starts account manager with the prototype
 /// account transfer interfaces enabled.
 const PROTOTYPE_TRANSFER_FLAG: &str = "prototype-account-transfer";
@@ -51,6 +54,15 @@ lazy_static! {
     /// (Temporary) Configuration for a fixed set of authentication mechanisms,
     /// used until file-based configuration is available.
     static ref DEFAULT_AUTHENTICATION_MECHANISM_IDS: Vec<String> = vec![];
+
+    /// Configuration for a set of fake authentication mechanisms used for
+    /// testing.
+    static ref DEV_AUTHENTICATION_MECHANISM_IDS: Vec<String> = vec![
+        concat!("fuchsia-pkg://fuchsia.com/dev_authenticator",
+                "#meta/dev_authenticator_always_succeed.cmx").to_string(),
+        concat!("fuchsia-pkg://fuchsia.com/dev_authenticator",
+                "#meta/dev_authenticator_always_fail_authentication.cmx").to_string(),
+    ];
 
     /// (Temporary) Configuration for a fixed set of auth providers used until file-based
     /// configuration is available.
@@ -81,6 +93,11 @@ fn main() -> Result<(), Error> {
         DEV_AUTH_PROVIDERS_FLAG,
         "use dev auth providers instead of the default set, for tests",
     );
+    opts.optflag(
+        "",
+        DEV_AUTH_MECHANISMS_FLAG,
+        "use dev authenticators instead of the default set, for tests",
+    );
     opts.optflag("", PROTOTYPE_TRANSFER_FLAG, "Publish prototype account transfer interfaces.");
 
     let args: Vec<String> = std::env::args().collect();
@@ -89,6 +106,11 @@ fn main() -> Result<(), Error> {
         &DEV_AUTH_PROVIDERS_CONFIG
     } else {
         &DEFAULT_AUTH_PROVIDERS_CONFIG
+    };
+    let auth_mechanism_ids: &Vec<_> = if options.opt_present(DEV_AUTH_MECHANISMS_FLAG) {
+        &DEV_AUTHENTICATION_MECHANISM_IDS
+    } else {
+        &DEFAULT_AUTHENTICATION_MECHANISM_IDS
     };
 
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
@@ -104,7 +126,7 @@ fn main() -> Result<(), Error> {
         AccountManager::<AccountHandlerConnectionImpl>::new(
             PathBuf::from(DATA_DIR),
             &auth_provider_config,
-            &*DEFAULT_AUTHENTICATION_MECHANISM_IDS,
+            &auth_mechanism_ids,
             &inspector,
         )
         .map_err(|e| {
