@@ -2,7 +2,7 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Editors"
+- title: "Overview"
   path: /docs/development/editors
 - title: "YouCompleteMe integration"
   path: /docs/development/editors/youcompleteme.md

@@ -19,6 +19,9 @@ toc:
   section:
   - include: /docs/development/run/_toc.yaml
 - heading: "Write code"
+- title: "Configure editors"
+  section:
+  - include: /docs/development/editors/_toc.yaml
 - title: "Modify the kernel"
   section:
   - include: /docs/development/kernel/_toc.yaml

@@ -4,9 +4,6 @@
 toc:
 - title: "Overview"
   path: /docs/development/languages
-- title: "Configure editors"
-  section:
-  - include: /docs/development/editors/_toc.yaml
 - title: "Configure linters and formatter"
   path: /docs/development/languages/lint_and_format.md
 - title: "Fuchsia endian policy"
