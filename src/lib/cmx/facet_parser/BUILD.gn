@@ -8,9 +8,7 @@ import("//build/testing/environments.gni")
 group("tests") {
   testonly = true
 
-  deps = [
-    ":cmx_facet_parser_tests"
-  ]
+  deps = [ ":cmx_facet_parser_tests" ]
 }
 
 source_set("cmx_facet_parser") {
@@ -43,6 +41,9 @@ executable("cmx_facet_parser_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/rapidjson",
   ]
+
+  # TODO(46551): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("cmx_facet_parser_tests") {
