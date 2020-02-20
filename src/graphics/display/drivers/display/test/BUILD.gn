@@ -29,6 +29,9 @@ test("display-core-unittests") {
     "//zircon/system/fidl/fuchsia-hardware-display:llcpp",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
   ]
+
+  # TODO(46393): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 source_set("base") {
