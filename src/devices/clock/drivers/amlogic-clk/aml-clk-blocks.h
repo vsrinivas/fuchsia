@@ -7,9 +7,18 @@
 
 #include <zircon/types.h>
 
+// MMIO ranges that can contain clock gates.
+enum meson_register_sets {
+  // HIU is the default set of registers.
+  kMesonRegisterSetHiu = 0,
+  kMesonRegisterSetDos,
+};
+
 typedef struct meson_clk_gate {
-  uint32_t reg;  // Offset from Clock Base Addr in bytes.
-  uint32_t bit;  // Offset into this register.
+  uint32_t reg;           // Offset from Clock Base Addr in bytes.
+  uint32_t bit;           // Offset into this register.
+  uint32_t register_set;  // Index determining which set of registers the clock belongs to.
+  uint32_t mask;          // If this is nonzero, |bit| is ignored and this mask is used instead.
 } meson_clk_gate_t;
 
 typedef struct meson_clk_msr {

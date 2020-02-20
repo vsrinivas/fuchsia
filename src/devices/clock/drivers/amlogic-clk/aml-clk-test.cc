@@ -28,9 +28,20 @@ constexpr uint64_t gigahertz(uint64_t hz) { return megahertz(hz) * 1000; }
 
 class AmlClockTest : public AmlClock {
  public:
-  AmlClockTest(mmio_buffer_t mmio_buffer, uint32_t did)
-      : AmlClock(nullptr, ddk::MmioBuffer(mmio_buffer), std::nullopt, did) {}
+  AmlClockTest(mmio_buffer_t mmio_buffer, mmio_buffer_t dosbus_buffer, uint32_t did)
+      : AmlClock(nullptr, ddk::MmioBuffer(mmio_buffer), ddk::MmioBuffer(dosbus_buffer),
+                 std::nullopt, did) {}
 };
+
+std::tuple<std::unique_ptr<uint8_t[]>, mmio_buffer_t> MakeDosbusMmio() {
+  auto value = std::make_unique<uint8_t[]>(S912_DOS_LENGTH);
+  mmio_buffer_t buffer;
+  buffer.vaddr = value.get();
+  buffer.offset = 0;
+  buffer.size = S912_DOS_LENGTH;
+  buffer.vmo = ZX_HANDLE_INVALID;
+  return std::make_tuple(std::move(value), buffer);
+}
 
 TEST(ClkTestAml, AxgEnableDisableAll) {
   auto actual = std::make_unique<uint8_t[]>(S912_HIU_LENGTH);
@@ -42,7 +53,9 @@ TEST(ClkTestAml, AxgEnableDisableAll) {
   buffer.size = S912_HIU_LENGTH;
   buffer.vmo = ZX_HANDLE_INVALID;
 
-  AmlClockTest clk(buffer, PDEV_DID_AMLOGIC_AXG_CLK);
+  auto [dos_data, dos_buffer] = MakeDosbusMmio();
+
+  AmlClockTest clk(buffer, dos_buffer, PDEV_DID_AMLOGIC_AXG_CLK);
 
   // Initialization sets a bunch of registers that we don't care about, so we
   // can reset the array to a clean slate.
@@ -55,6 +68,8 @@ TEST(ClkTestAml, AxgEnableDisableAll) {
   constexpr uint16_t kClkEnd = static_cast<uint16_t>(axg_clk::CLK_AXG_COUNT);
 
   for (uint16_t i = kClkStart; i < kClkEnd; ++i) {
+    if (axg_clk_gates[i].register_set != kMesonRegisterSetHiu)
+      continue;
     const uint32_t reg = axg_clk_gates[i].reg;
     const uint32_t bit = (1u << axg_clk_gates[i].bit);
     uint32_t* ptr = reinterpret_cast<uint32_t*>(&expected[reg]);
@@ -68,6 +83,8 @@ TEST(ClkTestAml, AxgEnableDisableAll) {
   EXPECT_EQ(memcmp(actual.get(), expected.get(), S912_HIU_LENGTH), 0);
 
   for (uint16_t i = kClkStart; i < kClkEnd; ++i) {
+    if (axg_clk_gates[i].register_set != kMesonRegisterSetHiu)
+      continue;
     const uint32_t reg = axg_clk_gates[i].reg;
     const uint32_t bit = (1u << axg_clk_gates[i].bit);
     uint32_t* ptr = reinterpret_cast<uint32_t*>(&expected[reg]);
@@ -91,7 +108,8 @@ TEST(ClkTestAml, G12aEnableDisableAll) {
   buffer.size = S905D2_HIU_LENGTH;
   buffer.vmo = ZX_HANDLE_INVALID;
 
-  AmlClockTest clk(buffer, PDEV_DID_AMLOGIC_G12A_CLK);
+  auto [dos_data, dos_buffer] = MakeDosbusMmio();
+  AmlClockTest clk(buffer, dos_buffer, PDEV_DID_AMLOGIC_G12A_CLK);
 
   // Initialization sets a bunch of registers that we don't care about, so we
   // can reset the array to a clean slate.
@@ -104,6 +122,8 @@ TEST(ClkTestAml, G12aEnableDisableAll) {
   constexpr uint16_t kClkEnd = static_cast<uint16_t>(g12a_clk::CLK_G12A_COUNT);
 
   for (uint16_t i = kClkStart; i < kClkEnd; ++i) {
+    if (g12a_clk_gates[i].register_set != kMesonRegisterSetHiu)
+      continue;
     const uint32_t reg = g12a_clk_gates[i].reg;
     const uint32_t bit = (1u << g12a_clk_gates[i].bit);
     uint32_t* ptr = reinterpret_cast<uint32_t*>(&expected[reg]);
@@ -117,6 +137,8 @@ TEST(ClkTestAml, G12aEnableDisableAll) {
   EXPECT_EQ(memcmp(actual.get(), expected.get(), S905D2_HIU_LENGTH), 0);
 
   for (uint16_t i = kClkStart; i < kClkEnd; ++i) {
+    if (g12a_clk_gates[i].register_set != kMesonRegisterSetHiu)
+      continue;
     const uint32_t reg = g12a_clk_gates[i].reg;
     const uint32_t bit = (1u << g12a_clk_gates[i].bit);
     uint32_t* ptr = reinterpret_cast<uint32_t*>(&expected[reg]);
@@ -140,7 +162,8 @@ TEST(ClkTestAml, Sm1EnableDisableAll) {
   buffer.size = S905D3_HIU_LENGTH;
   buffer.vmo = ZX_HANDLE_INVALID;
 
-  AmlClockTest clk(buffer, PDEV_DID_AMLOGIC_SM1_CLK);
+  auto [dos_data, dos_buffer] = MakeDosbusMmio();
+  AmlClockTest clk(buffer, dos_buffer, PDEV_DID_AMLOGIC_SM1_CLK);
 
   // Initialization sets a bunch of registers that we don't care about, so we
   // can reset the array to a clean slate.
@@ -153,6 +176,8 @@ TEST(ClkTestAml, Sm1EnableDisableAll) {
   constexpr uint16_t kClkEnd = static_cast<uint16_t>(sm1_clk::CLK_SM1_GATE_COUNT);
 
   for (uint16_t i = kClkStart; i < kClkEnd; ++i) {
+    if (sm1_clk_gates[i].register_set != kMesonRegisterSetHiu)
+      continue;
     const uint32_t reg = sm1_clk_gates[i].reg;
     const uint32_t bit = (1u << sm1_clk_gates[i].bit);
     uint32_t* ptr = reinterpret_cast<uint32_t*>(&expected[reg]);
@@ -166,6 +191,8 @@ TEST(ClkTestAml, Sm1EnableDisableAll) {
   EXPECT_EQ(memcmp(actual.get(), expected.get(), S905D3_HIU_LENGTH), 0);
 
   for (uint16_t i = kClkStart; i < kClkEnd; ++i) {
+    if (sm1_clk_gates[i].register_set != kMesonRegisterSetHiu)
+      continue;
     const uint32_t reg = sm1_clk_gates[i].reg;
     const uint32_t bit = (1u << sm1_clk_gates[i].bit);
     uint32_t* ptr = reinterpret_cast<uint32_t*>(&expected[reg]);
@@ -179,6 +206,25 @@ TEST(ClkTestAml, Sm1EnableDisableAll) {
   EXPECT_EQ(memcmp(actual.get(), expected.get(), S905D3_HIU_LENGTH), 0);
 }
 
+TEST(ClkTestAml, G12aEnableDos) {
+  auto actual = std::make_unique<uint8_t[]>(S905D2_HIU_LENGTH);
+
+  mmio_buffer_t buffer;
+  buffer.vaddr = actual.get();
+  buffer.offset = 0;
+  buffer.size = S905D2_HIU_LENGTH;
+  buffer.vmo = ZX_HANDLE_INVALID;
+
+  auto [dos_data, dos_buffer] = MakeDosbusMmio();
+  AmlClockTest clk(buffer, dos_buffer, PDEV_DID_AMLOGIC_G12A_CLK);
+  memset(dos_data.get(), 0, S905D2_DOS_LENGTH);
+
+  zx_status_t st = clk.ClockImplEnable(g12a_clk::CLK_DOS_GCLK_VDEC);
+  EXPECT_OK(st);
+
+  EXPECT_EQ(0x3ff, reinterpret_cast<uint32_t*>(dos_data.get())[0x3f01]);
+}
+
 static void TestPlls(const uint32_t did) {
   auto ignored = std::make_unique<uint8_t[]>(S905D2_HIU_LENGTH);
   mmio_buffer_t buffer;
@@ -187,7 +233,8 @@ static void TestPlls(const uint32_t did) {
   buffer.size = S905D2_HIU_LENGTH;
   buffer.vmo = ZX_HANDLE_INVALID;
 
-  AmlClockTest clk(buffer, did);
+  auto [dos_data, dos_buffer] = MakeDosbusMmio();
+  AmlClockTest clk(buffer, dos_buffer, did);
 
   constexpr uint16_t kPllStart = 0;
   constexpr uint16_t kPllEnd = HIU_PLL_COUNT;
@@ -220,7 +267,8 @@ TEST(ClkTestAml, Sm1MuxRo) {
   buffer.size = S905D3_HIU_LENGTH;
   buffer.vmo = ZX_HANDLE_INVALID;
 
-  AmlClockTest clk(buffer, PDEV_DID_AMLOGIC_SM1_CLK);
+  auto [dos_data, dos_buffer] = MakeDosbusMmio();
+  AmlClockTest clk(buffer, dos_buffer, PDEV_DID_AMLOGIC_SM1_CLK);
 
   // Ensure that SetInput fails for RO muxes.
   zx_status_t st = clk.ClockImplSetInput(sm1_clk::CLK_MPEG_CLK_SEL, 0);
@@ -258,7 +306,8 @@ TEST(ClkTestAml, Sm1Mux) {
   buffer.size = S905D3_HIU_LENGTH;
   buffer.vmo = ZX_HANDLE_INVALID;
 
-  AmlClockTest clk(buffer, PDEV_DID_AMLOGIC_SM1_CLK);
+  auto [dos_data, dos_buffer] = MakeDosbusMmio();
+  AmlClockTest clk(buffer, dos_buffer, PDEV_DID_AMLOGIC_SM1_CLK);
 
   const uint32_t newParentIdx = test_mux.n_inputs - 1;
   zx_status_t st = clk.ClockImplSetInput(kTestMux, newParentIdx);

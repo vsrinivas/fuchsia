@@ -8,8 +8,8 @@
 #include <ddk/metadata/clock.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-#include <soc/aml-meson/g12b-clk.h>
 #include <soc/aml-a311d/a311d-hw.h>
+#include <soc/aml-meson/g12b-clk.h>
 
 #include "vim3.h"
 
@@ -18,6 +18,10 @@ static const pbus_mmio_t clk_mmios[] = {
     {
         .base = A311D_HIU_BASE,
         .length = A311D_HIU_LENGTH,
+    },
+    {
+        .base = A311D_DOS_BASE,
+        .length = A311D_DOS_LENGTH,
     },
 };
 

@@ -28,14 +28,18 @@ namespace amlogic_clock {
 
 // MMIO Indexes
 static constexpr uint32_t kHiuMmio = 0;
-static constexpr uint32_t kMsrMmio = 1;
+static constexpr uint32_t kDosbusMmio = 1;
+static constexpr uint32_t kMsrMmio = 2;
 
 #define MSR_WAIT_BUSY_RETRIES 5
 #define MSR_WAIT_BUSY_TIMEOUT_US 10000
 
-AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio,
+AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio, ddk::MmioBuffer dosbus_mmio,
                    std::optional<ddk::MmioBuffer> msr_mmio, uint32_t device_id)
-    : DeviceType(device), hiu_mmio_(std::move(hiu_mmio)), msr_mmio_(std::move(msr_mmio)) {
+    : DeviceType(device),
+      hiu_mmio_(std::move(hiu_mmio)),
+      dosbus_mmio_(std::move(dosbus_mmio)),
+      msr_mmio_(std::move(msr_mmio)) {
   // Populate the correct register blocks.
   switch (device_id) {
     case PDEV_DID_AMLOGIC_AXG_CLK: {
@@ -105,13 +109,20 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
   }
 
   std::optional<ddk::MmioBuffer> hiu_mmio = std::nullopt;
+  std::optional<ddk::MmioBuffer> dosbus_mmio = std::nullopt;
   std::optional<ddk::MmioBuffer> msr_mmio = std::nullopt;
 
-  // All AML clocks have HIU regs but only some support MSR regs.
+  // All AML clocks have HIU and dosbus regs but only some support MSR regs.
   // Figure out which of the varieties we're dealing with.
   status = pdev.MapMmio(kHiuMmio, &hiu_mmio);
   if (status != ZX_OK || !hiu_mmio) {
     zxlogf(ERROR, "aml-clk: failed to map HIU regs, status = %d\n", status);
+    return status;
+  }
+
+  status = pdev.MapMmio(kDosbusMmio, &dosbus_mmio);
+  if (status != ZX_OK || !dosbus_mmio) {
+    zxlogf(ERROR, "aml-clk: failed to map DOS regs, status = %d\n", status);
     return status;
   }
 
@@ -124,7 +135,7 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
     return status;
   }
 
-  if (info.mmio_count > 1) {
+  if (info.mmio_count > kMsrMmio) {
     status = pdev.MapMmio(kMsrMmio, &msr_mmio);
     if (status != ZX_OK) {
       zxlogf(ERROR, "aml-clk: failed to map MSR regs, status = %d\n", status);
@@ -138,8 +149,8 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
     return ZX_ERR_INTERNAL;
   }
 
-  auto clock_device = std::make_unique<amlogic_clock::AmlClock>(parent, std::move(*hiu_mmio),
-                                                                *std::move(msr_mmio), info.did);
+  auto clock_device = std::make_unique<amlogic_clock::AmlClock>(
+      parent, std::move(*hiu_mmio), *std::move(dosbus_mmio), *std::move(msr_mmio), info.did);
 
   status = clock_device->DdkAdd("clocks");
   if (status != ZX_OK) {
@@ -178,10 +189,22 @@ zx_status_t AmlClock::ClkToggle(uint32_t clk, const bool enable) {
 
   fbl::AutoLock al(&lock_);
 
+  uint32_t mask = gate->mask ? gate->mask : (1 << gate->bit);
+  ddk::MmioBuffer* mmio;
+  switch (gate->register_set) {
+    case kMesonRegisterSetHiu:
+      mmio = &hiu_mmio_;
+      break;
+    case kMesonRegisterSetDos:
+      mmio = &dosbus_mmio_;
+      break;
+    default:
+      ZX_ASSERT(false);
+  }
   if (enable) {
-    hiu_mmio_.SetBits32(1 << gate->bit, gate->reg);
+    mmio->SetBits32(mask, gate->reg);
   } else {
-    hiu_mmio_.ClearBits32(1 << gate->bit, gate->reg);
+    mmio->ClearBits32(mask, gate->reg);
   }
 
   return ZX_OK;

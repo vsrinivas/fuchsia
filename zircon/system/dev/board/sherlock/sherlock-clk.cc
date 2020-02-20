@@ -21,6 +21,10 @@ static const pbus_mmio_t clk_mmios[] = {
         .base = T931_HIU_BASE,
         .length = T931_HIU_LENGTH,
     },
+    {
+        .base = T931_DOS_BASE,
+        .length = T931_DOS_LENGTH,
+    },
     // CLK MSR block
     {
         .base = T931_MSR_CLK_BASE,
@@ -36,6 +40,8 @@ static const clock_id_t clock_ids[] = {
     {g12b_clk::G12B_CLK_SYS_CPU_CLK_DIV16},
     {g12b_clk::G12B_CLK_SYS_PLLB_DIV16},
     {g12b_clk::G12B_CLK_SYS_CPUB_CLK_DIV16},
+    // For video decoder
+    {g12b_clk::G12B_CLK_DOS_GCLK_VDEC},
 };
 
 static const pbus_metadata_t clock_metadata[] = {

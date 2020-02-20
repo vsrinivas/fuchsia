@@ -16,6 +16,8 @@
 #define AXG_HHI_GCLK_AO (0x55 << 2)
 #define AXG_HHI_MPEG_CLK_CNTL (0x5D << 2)
 
+#define AXG_DOS_GCLK_EN0 (0x3f01 << 2)
+
 static constexpr meson_clk_gate_t axg_clk_gates[] = {
     // MPEG0 Clock Gates
     {.reg = AXG_HHI_GCLK_MPEG0, .bit = 0},   // CLK_AXG_DDR
@@ -72,6 +74,11 @@ static constexpr meson_clk_gate_t axg_clk_gates[] = {
     // Etc...
     {.reg = AXG_HHI_MPEG_CLK_CNTL, .bit = 7},   // CLK_AXG_CLK81
     {.reg = AXG_HHI_PCIE_PLL_CNTL6, .bit = 4},  // CLK_CML0_EN
+
+    {.reg = AXG_DOS_GCLK_EN0,
+     .bit = 0,
+     .register_set = kMesonRegisterSetDos,
+     .mask = 0x3ff},  // CLK_DOS_GCLK_VDEC
 };
 
 static_assert(axg_clk::CLK_AXG_COUNT == countof(axg_clk_gates),

@@ -5,11 +5,11 @@
 #ifndef ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_A311D_A311D_HW_H_
 #define ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_A311D_A311D_HW_H_
 
-//HIU - includes clock control registers
+// HIU - includes clock control registers
 #define A311D_HIU_BASE 0xff63c000
 #define A311D_HIU_LENGTH 0x2000
 
-//gpio
+// gpio
 #define A311D_GPIO_BASE 0xff634400
 #define A311D_GPIO_LENGTH 0x400
 #define A311D_GPIO_AO_BASE 0xff800000
@@ -17,26 +17,30 @@
 #define A311D_GPIO_INTERRUPT_BASE 0xffd00000
 #define A311D_GPIO_INTERRUPT_LENGTH 0x10000
 
-//i2c
-#define A311D_I2C_AOBUS_BASE   0xff805000
+// i2c
+#define A311D_I2C_AOBUS_BASE 0xff805000
 #define A311D_I2C_AOBUS_LENGTH 0x1000
+
+// Video decoder/encoder bus.
+#define A311D_DOS_BASE 0xff620000
+#define A311D_DOS_LENGTH 0x10000
 
 #define A311D_EE_I2C_M0_BASE 0xffd1f000
 #define A311D_EE_I2C_M1_BASE 0xffd1e000
 #define A311D_EE_I2C_M2_BASE 0xffd1d000
 #define A311D_EE_I2C_M3_BASE 0xffd1c000
 #define A311D_EE_I2C_M3_LENGTH 0x1000
-//spicc
+// spicc
 #define A311D_SPICC0_BASE 0xffd13000
 #define A311D_SPICC1_BASE 0xffd15000
 
-//Peripherals - datasheet is nondescript about this section, but it contains
+// Peripherals - datasheet is nondescript about this section, but it contains
 //  top level ethernet control and temp sensor registers
 #define A311D_PERIPHERALS_BASE 0xff634000
 #define A311D_PERIPHERALS_LENGTH 0x1000
 
-//Ethernet
-#define A311D_ETH_PHY_BASE   0xff64c000
+// Ethernet
+#define A311D_ETH_PHY_BASE 0xff64c000
 #define A311D_ETH_PHY_LENGTH 0x2000
 #define A311D_ETH_MAC_BASE 0xff3f0000
 #define A311D_ETH_MAC_LENGTH 0x10000

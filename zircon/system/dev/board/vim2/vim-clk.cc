@@ -16,6 +16,10 @@ static const pbus_mmio_t clk_mmios[] = {
         .base = S912_HIU_BASE,
         .length = S912_HIU_LENGTH,
     },
+    {
+        .base = S912_DOS_BASE,
+        .length = S912_DOS_LENGTH,
+    },
 };
 
 zx_status_t Vim::ClkInit() {

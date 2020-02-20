@@ -21,6 +21,10 @@ constexpr pbus_mmio_t clk_mmios[] = {
         .base = S905D2_HIU_BASE,
         .length = S905D2_HIU_LENGTH,
     },
+    {
+        .base = S905D2_DOS_BASE,
+        .length = S905D2_DOS_LENGTH,
+    },
     // CLK MSR block
     {
         .base = S905D2_MSR_CLK_BASE,

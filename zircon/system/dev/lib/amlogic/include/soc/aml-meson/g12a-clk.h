@@ -78,7 +78,8 @@ constexpr uint32_t CLK_VCLK2_ENCL = AmlClkId(62, clk_type::kMesonGate);
 constexpr uint32_t CLK_VCLK2_VENCLMMC = AmlClkId(63, clk_type::kMesonGate);
 constexpr uint32_t CLK_VCLK2_VENCL = AmlClkId(64, clk_type::kMesonGate);
 constexpr uint32_t CLK_VCLK2_OTHER1 = AmlClkId(65, clk_type::kMesonGate);
-constexpr uint32_t CLK_G12A_COUNT = 66;
+constexpr uint32_t CLK_DOS_GCLK_VDEC = AmlClkId(66, clk_type::kMesonGate);
+constexpr uint32_t CLK_G12A_COUNT = 67;
 
 
 // kMesonPllClocks

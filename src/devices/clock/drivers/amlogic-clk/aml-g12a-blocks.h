@@ -147,6 +147,8 @@ constexpr uint32_t kHhiAxiPipelCntl          = (0xF4 << 2);
 constexpr uint32_t kHhiBt656ClkCntl          = (0xF5 << 2);
 constexpr uint32_t kHhiCdacClkCntl           = (0xF6 << 2);
 constexpr uint32_t kHhiSpiccClkCntl          = (0xF7 << 2);
+
+constexpr uint32_t kDosGclkEn0               = (0x3f01 << 2);
 // clang-format on
 
 // NOTE: This list only contains the clocks in use currently and
@@ -223,6 +225,11 @@ static constexpr meson_clk_gate_t g12a_clk_gates[] = {
     {.reg = kHhiGclk2Other, .bit = 24},  // CLK_VCLK2_VENCLMMC
     {.reg = kHhiGclk2Other, .bit = 25},  // CLK_VCLK2_VENCL
     {.reg = kHhiGclk2Other, .bit = 26},  // CLK_VCLK2_OTHER1
+
+    {.reg = kDosGclkEn0,
+     .bit = 0,
+     .register_set = kMesonRegisterSetDos,
+     .mask = 0x3ff},  // CLK_DOS_GCLK_VDEC
 };
 
 static_assert(g12a_clk::CLK_G12A_COUNT == countof(g12a_clk_gates),

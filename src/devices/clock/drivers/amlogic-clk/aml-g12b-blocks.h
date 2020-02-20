@@ -26,6 +26,8 @@
 #define G12B_HHI_TS_CLK_CNTL (0x64 << 2)
 #define G12B_HHI_XTAL_DIVN_CNTL (0x2f << 2)
 
+#define G12B_DOS_GCLK_EN0 (0x3f01 << 2)
+
 // NOTE: This list only contains the clocks in use currently and
 //       not all available clocks.
 static constexpr meson_clk_gate_t g12b_clk_gates[] = {
@@ -37,6 +39,11 @@ static constexpr meson_clk_gate_t g12b_clk_gates[] = {
     // SYS CPUB Clock gates.
     {.reg = G12B_HHI_SYS_CPUB_CLK_CNTL1, .bit = 24},  // G12B_CLK_SYS_PLLB_DIV16
     {.reg = G12B_HHI_SYS_CPUB_CLK_CNTL1, .bit = 1},   // G12B_CLK_SYS_CPUB_CLK_DIV16
+
+    {.reg = G12B_DOS_GCLK_EN0,
+     .bit = 0,
+     .register_set = kMesonRegisterSetDos,
+     .mask = 0x3ff},  // G12B_CLK_DOS_GCLK_VDEC
 
 };
 

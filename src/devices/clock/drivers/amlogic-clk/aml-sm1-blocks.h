@@ -14,6 +14,9 @@ namespace sm1_clk {
 constexpr uint32_t kHhiGp1PllCntl0 = 0x18;
 constexpr uint32_t kHhiSysCpuClkCntl5 = 0x87;
 constexpr uint32_t kHhiSysCpuClkCntl6 = 0x88;
+
+constexpr uint32_t kDosGclkEn0 = (0x3f01 << 2);
+
 }  // namespace sm1_clk
 
 static constexpr meson_clk_gate_t sm1_clk_gates[] = {
@@ -95,6 +98,11 @@ static constexpr meson_clk_gate_t sm1_clk_gates[] = {
     {.reg = kHhiTsClkCntl, .bit = 8},      // CLK_TS_CLK
     {.reg = kHhiSpiccClkCntl, .bit = 6},   // CLK_SPICC0_GATE
     {.reg = kHhiSpiccClkCntl, .bit = 22},  // CLK_SPICC1_GATE
+
+    {.reg = kDosGclkEn0,
+     .bit = 0,
+     .register_set = kMesonRegisterSetDos,
+     .mask = 0x3ff},  // CLK_DOS_GCLK_VDEC
 
     // SM1 Specific Clock Gates.
     {.reg = kHhiGclkMpeg1, .bit = 18},  // CLK_CSI_DIG
