@@ -15,7 +15,7 @@ use std::pin::Pin;
 use std::rc::{Rc, Weak};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::task::{Context, Poll, Waker};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 pub trait PinConnection {
     fn pin_it(self) -> Pin<Box<quiche::Connection>>
@@ -92,7 +92,14 @@ impl IO {
     }
 
     fn update_timeout(&mut self) {
-        self.timeout.push(self.conn.timeout().map(|d| Instant::now() + d));
+        // TODO: the max(d, 1ms) below is a hedge against unreasonable values coming out of quiche.
+        // In particular, at least one version has been observed to produce 0 length durations,
+        // which jams us on some platforms/executors into a spin loop, freezing out other activity.
+        self.timeout.push(
+            self.conn
+                .timeout()
+                .map(|d| Instant::now() + std::cmp::max(d, Duration::from_millis(1))),
+        );
     }
 }
 
