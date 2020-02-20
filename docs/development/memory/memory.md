@@ -259,8 +259,8 @@ usage and availability.
 ```
 $ kstats -m
 --- 2017-06-07T05:51:08.021Z ---
-     total       free       VMOs      kheap      kfree      wired        mmu
-   2046.9M    1943.8M      20.7M       1.1M       0.9M      72.6M       7.8M
+mem total      free      VMOs     kheap     kfree     wired       mmu       ipc     other
+    2048M   1686.4M    317.8M      5.1M      0.9M     17.8M     20.0M      0.1M      0.0M
 
 --- 2017-06-07T05:51:09.021Z ---
 ...
@@ -268,8 +268,8 @@ $ kstats -m
 
 Fields:
 
--   `2017-06-07T05:51:08.021Z`: Timestamp of when the stats were collected, as
-    an ISO 8601 string.
+-   The `-t` option show the timestamp `2017-06-07T05:51:08.021Z`, when the stats
+    were collected, as an ISO 8601 string.
 -   `total`: The total amount of physical memory available to the system.
 -   `free`: The amount of unallocated memory.
 -   `VMOs`: The amount of memory committed to VMOs, both kernel and user. A
@@ -282,6 +282,8 @@ Fields:
     data like the ram disk and kernel image, and for early-boot dynamic memory.
 -   `mmu`: The amount of memory used for architecture-specific MMU metadata like
     page tables.
+-   `ipc`: The amount of memory used for interprocess communication.
+-   `other`: Everything else as `other`.
 
 ### Dump the kernel address space
 
