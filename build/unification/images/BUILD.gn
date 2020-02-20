@@ -1394,7 +1394,7 @@ aggregate_manifest("migrated-image") {
     #":bin.sysinfo",
 #------------------
     "//zircon/system/uapp/tee-test:tee-test-manifest",
-    "//zircon/system/uapp/thermal-cli:thermal-cli-manifest",
+    "//src/devices/thermal/bin/thermal-cli:thermal-cli-manifest",
     "//zircon/system/uapp/psutils:threads-manifest",
     "//zircon/system/uapp/psutils:top-manifest",
     "//zircon/system/uapp/trace-benchmark:trace-benchmark-manifest",
@@ -3201,7 +3201,7 @@ aggregate_manifest("migrated-aux") {
 #------------------
     "//zircon/system/ulib/tftp/test:tftp-test-manifest",
 #------------------
-    "//zircon/system/uapp/thermal-cli:thermal-cli-test-manifest",
+    "//src/devices/thermal/bin/thermal-cli:thermal-cli-manifest",
     "//zircon/system/utest/thread-initial-state:thread-initial-state-manifest",
     "//zircon/system/utest/thread-safe-deleter:thread-safe-deleter-manifest",
     "//zircon/system/utest/thread-state:thread-state-manifest",
@@ -3920,7 +3920,7 @@ aggregate_manifest("migrated-tests") {
 #------------------
     "//zircon/system/ulib/tftp/test:tftp-test-manifest",
 #------------------
-    "//zircon/system/uapp/thermal-cli:thermal-cli-test-manifest",
+    "//src/devices/thermal/bin/thermal-cli:thermal-cli-manifest",
     "//zircon/system/utest/thread-initial-state:thread-initial-state-manifest",
     "//zircon/system/utest/thread-safe-deleter:thread-safe-deleter-manifest",
     "//zircon/system/utest/thread-state:thread-state-manifest",
