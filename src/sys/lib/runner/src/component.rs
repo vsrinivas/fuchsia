@@ -205,21 +205,8 @@ pub struct LauncherConfigArgs<'a> {
 pub async fn configure_launcher(
     config_args: LauncherConfigArgs<'_>,
 ) -> Result<fproc::LaunchInfo, LaunchError> {
-    let mut handle_infos = config_args.handle_infos.unwrap_or(vec![]);
-    let mut name_infos = config_args.name_infos.unwrap_or(vec![]);
-    let args = config_args.args.unwrap_or(vec![]);
-
-    let bin_arg = &[String::from(
-        PKG_PATH
-            .join(&config_args.bin_path)
-            .to_str()
-            .ok_or(LaunchError::InvalidBinaryPath(config_args.bin_path.to_string()))?,
-    )];
-
-    // Start the library loader service
+    // Locate the '/pkg' directory proxy previously added to the new component's namespace.
     let pkg_str = PKG_PATH.to_str().unwrap();
-    let (ll_client_chan, ll_service_chan) =
-        zx::Channel::create().map_err(LaunchError::ChannelCreation)?;
     let (_, pkg_proxy) = config_args
         .ns
         .items
@@ -227,25 +214,37 @@ pub async fn configure_launcher(
         .find(|(p, _)| p.as_str() == pkg_str)
         .ok_or(LaunchError::MissingPkg)?;
 
-    let lib_proxy = io_util::open_directory(pkg_proxy, &Path::new("lib"), OPEN_RIGHT_READABLE)
-        .map_err(|e| LaunchError::LibLoadError(e.to_string()))?;
-
-    // The loader service should only be able to load files from `/pkg/lib`. Giving it a larger
-    // scope is potentially a security vulnerability, as it could make it trivial for parts of
-    // applications to get handles to things the application author didn't intend.
-    library_loader::start(lib_proxy, ll_service_chan);
-
+    // library_loader provides a helper function that we use to load the main executable from the
+    // package directory as a VMO in the same way that dynamic libraries are loaded. Doing this
+    // first allows launching to fail quickly and clearly in case the main executable can't be
+    // loaded with ZX_RIGHT_EXECUTE from the package directory.
     let executable_vmo = library_loader::load_vmo(pkg_proxy, &config_args.bin_path)
         .await
         .map_err(|e| LaunchError::LoadingExecutable(e.to_string()))?;
 
+    // The loader service should only be able to load files from `/pkg/lib`. Giving it a larger
+    // scope is potentially a security vulnerability, as it could make it trivial for parts of
+    // applications to get handles to things the application author didn't intend.
+    let lib_proxy = io_util::open_directory(pkg_proxy, &Path::new("lib"), OPEN_RIGHT_READABLE)
+        .map_err(|e| LaunchError::LibLoadError(e.to_string()))?;
+    let (ll_client_chan, ll_service_chan) =
+        zx::Channel::create().map_err(LaunchError::ChannelCreation)?;
+    library_loader::start(lib_proxy, ll_service_chan);
+
+    // Get the provided job to create the new process in, if one was provided, or else create a new
+    // child job of this process's (this process that this code is running in) own 'default job'.
     let job = config_args
         .job
         .unwrap_or(job_default().create_child_job().map_err(LaunchError::JobCreation)?);
 
-    let job_dup =
-        job.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(LaunchError::DuplicateJob)?;
-
+    // Build the command line args for the new process and send them to the launcher.
+    let bin_arg = &[String::from(
+        PKG_PATH
+            .join(&config_args.bin_path)
+            .to_str()
+            .ok_or(LaunchError::InvalidBinaryPath(config_args.bin_path.to_string()))?,
+    )];
+    let args = config_args.args.unwrap_or(vec![]);
     let mut string_iters: Vec<_> = bin_arg.iter().chain(args.iter()).map(|s| s.bytes()).collect();
     config_args
         .launcher
@@ -254,6 +253,13 @@ pub async fn configure_launcher(
         )
         .map_err(|e| LaunchError::AddArgs(e.to_string()))?;
 
+    // Get any initial handles to provide to the new process, if any were provided by the caller.
+    // Add handles for the new process's default job (by convention, this is the same job that the
+    // new process is launched in) and the fuchsia.ldsvc.Loader service created above, then send to
+    // the launcher.
+    let job_dup =
+        job.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(LaunchError::DuplicateJob)?;
+    let mut handle_infos = config_args.handle_infos.unwrap_or(vec![]);
     handle_infos.append(&mut vec![
         fproc::HandleInfo {
             handle: ll_client_chan.into_handle(),
@@ -264,14 +270,13 @@ pub async fn configure_launcher(
             id: HandleInfo::new(HandleType::DefaultJob, 0).as_raw(),
         },
     ]);
-
     config_args
         .launcher
         .add_handles(&mut handle_infos.iter_mut())
         .map_err(|e| LaunchError::AddHandles(e.to_string()))?;
 
+    // Send environment variables for the new process, if any, to the launcher.
     let environs: Vec<_> = config_args.environs.unwrap_or(vec![]);
-
     if environs.len() > 0 {
         let mut environs_iters: Vec<_> = environs.iter().map(|s| s.bytes()).collect();
         config_args
@@ -284,6 +289,9 @@ pub async fn configure_launcher(
             .map_err(|e| LaunchError::AddEnvirons(e.to_string()))?;
     }
 
+    // Combine any manually provided namespace entries with the provided ComponentNamespace, and
+    // then send the new process's namespace to the launcher.
+    let mut name_infos = config_args.name_infos.unwrap_or(vec![]);
     for (path, directory) in config_args.ns.items {
         let directory = ClientEnd::new(
             directory
@@ -293,7 +301,6 @@ pub async fn configure_launcher(
         );
         name_infos.push(fproc::NameInfo { path, directory });
     }
-
     config_args
         .launcher
         .add_names(&mut name_infos.iter_mut())
@@ -559,7 +566,7 @@ mod tests {
                     launcher: &launcher_proxy,
                 })
                 .await,
-                Err(LaunchError::LibLoadError(
+                Err(LaunchError::LoadingExecutable(
                     "A FIDL client encountered an IO error writing a \
                  request into a channel: PEER_CLOSED"
                         .to_owned()
