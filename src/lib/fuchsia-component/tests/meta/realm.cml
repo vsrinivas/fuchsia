@@ -1,0 +1,27 @@
+// This realm contains the test cases for fuchsia_component_v2_test.
+{
+    "program": {
+        "binary": "bin/realm",
+    },
+    "use": [
+        { "runner": "elf" },
+        {
+            "protocol": [
+                // Needed to instantiate dynamic components.
+                "/svc/fuchsia.sys2.Realm",
+                // Needed to use test events, so we can wait on destroy.
+                "/svc/fuchsia.test.events.EventSourceSync",
+            ],
+            "from": "framework"
+        },
+    ],
+    "offer": [
+        { "runner": "elf", "from": "realm", "to": [ "#coll" ] },
+    ],
+    "collections": [
+        {
+            "name": "coll",
+            "durability": "transient",
+        },
+    ],
+}

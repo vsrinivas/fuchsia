@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "test/fuchsia_component_v2_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.sys.Environment",
+            "fuchsia.logger.LogSink"
+        ],
+        "features": [
+            "hub"
+        ]
+    }
+}
