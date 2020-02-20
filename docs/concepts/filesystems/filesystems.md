@@ -332,4 +332,4 @@ some partitions are copied from host to target. So the partitions and FVM
 file itself may be created on host. To do this there is host side utility
 [here](/zircon/tools/fvm).
 Integrity of the FVM device/file can be verbosely verified with
-[fvm-check](/zircon/system/uapp/fvm-check)
+[fvm-check](/src/devices/block/bin/fvm-check)

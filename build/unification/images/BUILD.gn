@@ -1300,8 +1300,8 @@ aggregate_manifest("migrated-image") {
 
     # Please uncomment and update to //zircon/whatever below, but keep these
     # unsorted to avoid trivial rebase collisions.
-    "//zircon/system/uapp/biotime:biotime-manifest",
-    "//zircon/system/uapp/blktest:blktest-manifest",
+    "//src/devices/block/bin/biotime:biotime-manifest",
+    "//src/devices/block/bin/blktest:blktest-manifest",
     "//zircon/system/uapp/blobfs:blobfs-manifest",
     "//zircon/system/uapp/clock:clkctl-manifest",
     "//zircon/system/uapp/clock:clock-manifest",
@@ -1313,7 +1313,7 @@ aggregate_manifest("migrated-image") {
 #------------------
     #":bin.device-name-provider",
 #------------------
-    "//zircon/system/uapp/disk-inspect:disk-inspect-manifest",
+    "//src/devices/block/bin/disk-inspect:disk-inspect-manifest",
     "//zircon/system/uapp/dlog:dlog-manifest",
     "//zircon/system/uapp/driverctl:driverctl-manifest",
     "//zircon/system/ulib/driver-info/app:driverinfo-manifest",
@@ -1324,15 +1324,15 @@ aggregate_manifest("migrated-image") {
 #------------------
     #":bin.fshost",
 #------------------
-    "//zircon/system/uapp/fvm-check:fvm-check-manifest",
-    "//zircon/system/uapp/gpt:gpt-manifest",
+    "//src/devices/block/bin/fvm-check:fvm-check-manifest",
+    "//src/devices/block/bin/gpt:gpt-manifest",
     "//zircon/system/uapp/hid:hid-manifest",
     "//src/devices/i2c/bin/i2c:i2c-manifest",
     "//src/devices/i2c/bin:i2cutil-manifest",
     "//zircon/system/uapp/ihda:ihda-manifest",
     "//zircon/system/uapp/disk-pave:install-disk-image-manifest",
-    "//zircon/system/uapp/iochk:iochk-manifest",
-    "//zircon/system/uapp/iotime:iotime-manifest",
+    "//src/devices/block/bin/iochk:iochk-manifest",
+    "//src/devices/block/bin/iotime:iotime-manifest",
 #------------------
     #":bin.kcounter",
 #------------------
@@ -1349,7 +1349,7 @@ aggregate_manifest("migrated-image") {
 #------------------
     "//zircon/system/uapp/ktrace:ktrace-manifest",
     "//zircon/system/uapp/loadgen:loadgen-manifest",
-    "//zircon/system/uapp/lsblk:lsblk-manifest",
+    "//src/devices/block/bin/lsblk:lsblk-manifest",
     "//zircon/system/uapp/lsdev:lsdev-manifest",
     "//zircon/system/uapp/lspwr:lspwr-manifest",
     "//src/devices/usb/bin/lsusb:lsusb-manifest",
@@ -1361,8 +1361,8 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/uapp/fs-mkfs:mkfs-manifest",
     "//zircon/system/uapp/fs-mount:mount-manifest",
     "//zircon/system/uapp/mutex_pi_exerciser:mutex_pi_exerciser-manifest",
-    "//zircon/system/uapp/nand-loader:nand-loader-manifest",
-    "//zircon/system/uapp/nand-util:nand-util-manifest",
+    "//src/devices/nand/bin/nand-loader:nand-loader-manifest",
+    "//src/devices/nand/bin/nand-util:nand-util-manifest",
 #------------------
     #":bin.netsvc",
 #------------------
@@ -3087,7 +3087,7 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/nand/drivers/aml-rawnand/test:aml-rawnand-unittest-manifest",
     "//src/devices/nand/drivers/broker/test:nand-broker-manifest",
     "//src/devices/nand/drivers/nand/test:nand-unittest-manifest",
-    "//zircon/system/uapp/nand-util:nand-util-test-manifest",
+    "//src/devices/nand/bin/nand-util:nand-util-test-manifest",
     "//src/devices/nand/drivers/broker/test:nandpart-broker-manifest",
     "//src/devices/nand/drivers/nandpart:nandpart-test-manifest",
 #------------------
@@ -3806,7 +3806,7 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/nand/drivers/aml-rawnand/test:aml-rawnand-unittest-manifest",
     "//src/devices/nand/drivers/broker/test:nand-broker-manifest",
     "//src/devices/nand/drivers/nand/test:nand-unittest-manifest",
-    "//zircon/system/uapp/nand-util:nand-util-test-manifest",
+    "//src/devices/nand/bin/nand-util:nand-util-test-manifest",
     "//src/devices/nand/drivers/broker/test:nandpart-broker-manifest",
     "//src/devices/nand/drivers/nandpart:nandpart-test-manifest",
 #------------------
