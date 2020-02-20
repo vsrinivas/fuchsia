@@ -16,7 +16,7 @@ class MsdVslConnection {
  public:
   class Owner {
    public:
-    virtual magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) = 0;
+    virtual magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch, bool do_flush) = 0;
   };
 
   MsdVslConnection(Owner* owner, std::shared_ptr<AddressSpace> address_space,

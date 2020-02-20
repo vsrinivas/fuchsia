@@ -23,15 +23,17 @@ static constexpr uint32_t kInterruptIndex = 0;
 
 class MsdVslDevice::BatchRequest : public DeviceRequest {
  public:
-  BatchRequest(std::unique_ptr<MappedBatch> batch) : batch_(std::move(batch)) {}
+  BatchRequest(std::unique_ptr<MappedBatch> batch, bool do_flush)
+      : batch_(std::move(batch)), do_flush_(do_flush) {}
 
  protected:
   magma::Status Process(MsdVslDevice* device) override {
-    return device->ProcessBatch(std::move(batch_));
+    return device->ProcessBatch(std::move(batch_), do_flush_);
   }
 
  private:
   std::unique_ptr<MappedBatch> batch_;
+  bool do_flush_;
 };
 
 class MsdVslDevice::InterruptRequest : public DeviceRequest {
@@ -616,12 +618,49 @@ bool MsdVslDevice::WriteLinkCommand(magma::PlatformBuffer* buf, uint32_t write_o
   return true;
 }
 
+bool MsdVslDevice::SubmitFlushTlb(std::shared_ptr<AddressSpace> address_space) {
+  uint64_t rb_gpu_addr;
+  bool res = ringbuffer_->GetGpuAddress(&rb_gpu_addr);
+  if (!res) {
+    return DRETF(false, "Failed to get ringbuffer gpu address");
+  }
+
+  uint32_t prev_wait_link = ringbuffer_->SubtractOffset(kWaitLinkDwords * sizeof(uint32_t));
+
+  static constexpr uint32_t kRbPrefetch = kRbInstructionsPerFlush;
+  // We need to write the new block of ringbuffer instructions contiguously.
+  // Since only 30 concurrent events are supported, it should not be possible to run out
+  // of space in the ringbuffer.
+  DASSERT(ringbuffer_->ReserveContiguous(kRbPrefetch * sizeof(uint64_t)));
+
+  // Save the gpu address pointing to the new instructions so we can link to it.
+  uint32_t gpu_addr = rb_gpu_addr + ringbuffer_->tail();
+
+  auto reg = registers::MmuConfig::Get().addr();
+  constexpr uint32_t flush_command = 0x8 | 0x10;
+  MiLoadState::write(ringbuffer_.get(), reg, flush_command);
+  MiSemaphore::write(ringbuffer_.get(), MiRecipient::Fe, MiRecipient::Pe);
+  MiStall::write(ringbuffer_.get(), MiRecipient::Fe, MiRecipient::Pe);
+
+  if (!AddRingbufferWaitLink()) {
+    return DRETF(false, "Failed to add WAIT-LINK to ringbuffer");
+  }
+
+  DLOG("Submitting flush TLB command");
+
+  if (!LinkRingbuffer(prev_wait_link, gpu_addr, kRbPrefetch)) {
+    return DRETF(false, "Failed to link ringbuffer");
+  }
+
+  return true;
+}
+
 // When submitting a command buffer, we modify the following:
 //  1) add a LINK from the command buffer to the end of the ringbuffer
 //  2) add an EVENT and WAIT-LINK pair to the end of the ringbuffer
 //  3) modify the penultimate WAIT in the ringbuffer to LINK to the command buffer
 bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_space,
-                                       uint32_t address_space_index,
+                                       uint32_t address_space_index, bool do_flush,
                                        std::unique_ptr<MappedBatch> mapped_batch,
                                        uint32_t event_id) {
   // Check if we have loaded an address space and enabled the MMU.
@@ -643,6 +682,9 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
   // by the hardware.
   if (!mapped_address_space || (mapped_address_space.get() != address_space.get())) {
     return DRETF(false, "Switching ringbuffer contexts not yet supported");
+  }
+  if (do_flush && !SubmitFlushTlb(address_space)) {
+    return DRETF(false, "Failed to submit flush tlb command");
   }
   uint64_t rb_gpu_addr;
   bool res = ringbuffer_->GetGpuAddress(&rb_gpu_addr);
@@ -710,15 +752,15 @@ bool MsdVslDevice::SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_spa
   return true;
 }
 
-magma::Status MsdVslDevice::SubmitBatch(std::unique_ptr<MappedBatch> batch) {
+magma::Status MsdVslDevice::SubmitBatch(std::unique_ptr<MappedBatch> batch, bool do_flush) {
   DLOG("SubmitBatch");
   CHECK_THREAD_NOT_CURRENT(device_thread_id_);
 
-  EnqueueDeviceRequest(std::make_unique<BatchRequest>(std::move(batch)));
+  EnqueueDeviceRequest(std::make_unique<BatchRequest>(std::move(batch), do_flush));
   return MAGMA_STATUS_OK;
 }
 
-magma::Status MsdVslDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch) {
+magma::Status MsdVslDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch, bool do_flush) {
   CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
   auto context = batch->GetContext().lock();
@@ -738,8 +780,8 @@ magma::Status MsdVslDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch) {
     // TODO(fxb/39354): queue the buffer to try again after an interrupt completes.
     return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "No events remaining");
   }
-  if (!SubmitCommandBuffer(address_space, address_space->page_table_array_slot(), std::move(batch),
-                           event_id)) {
+  if (!SubmitCommandBuffer(address_space, address_space->page_table_array_slot(), do_flush,
+                           std::move(batch), event_id)) {
     return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to submit command buffer");
   }
 

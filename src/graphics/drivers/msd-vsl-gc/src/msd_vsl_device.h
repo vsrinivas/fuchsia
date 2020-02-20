@@ -59,8 +59,13 @@ class MsdVslDevice : public msd_device_t,
 
  private:
   static constexpr uint32_t kRingbufferSizeInPages = 1;
-  // Number of new commands added to the ringbuffer for each submitted batch: EVENT WAIT LINK.
+  // Number of new commands added to the ringbuffer for each submitted batch:
+  // EVENT, WAIT, LINK
   static constexpr uint32_t kRbInstructionsPerBatch = 3;
+  // Number of new instructions added to the ringbuffer for flushing the TLB:
+  // LOAD_STATE, SEMAPHORE, STALL, WAIT, LINK
+  // This is in addition to |kRbInstructionsPerBatch|.
+  static constexpr uint32_t kRbInstructionsPerFlush = 5;
 
   static constexpr uint32_t kInvalidRingbufferOffset = ~0;
 
@@ -127,11 +132,14 @@ class MsdVslDevice : public msd_device_t,
   // to the device.
   bool SubmitCommandBufferNoMmu(uint64_t bus_addr, uint32_t length,
                                 uint16_t* prefetch_out = nullptr);
-  bool SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_space,
-                           uint32_t address_space_index, std::unique_ptr<MappedBatch> mapped_batch,
-                           uint32_t event_id);
 
-  magma::Status ProcessBatch(std::unique_ptr<MappedBatch> batch);
+  bool SubmitFlushTlb(std::shared_ptr<AddressSpace> address_space);
+
+  bool SubmitCommandBuffer(std::shared_ptr<AddressSpace> address_space,
+                           uint32_t address_space_index, bool do_flush,
+                           std::unique_ptr<MappedBatch> mapped_batch, uint32_t event_id);
+
+  magma::Status ProcessBatch(std::unique_ptr<MappedBatch> batch, bool do_flush);
 
   magma::RegisterIo* register_io() { return register_io_.get(); }
 
@@ -144,7 +152,7 @@ class MsdVslDevice : public msd_device_t,
   }
 
   // MsdVslConnection::Owner
-  magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override;
+  magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch, bool do_flush = false) override;
 
   PageTableArrays* page_table_arrays() { return page_table_arrays_.get(); }
 
@@ -185,6 +193,7 @@ class MsdVslDevice : public msd_device_t,
 
   friend class TestMsdVslDevice;
   friend class TestCommandBuffer;
+  friend class TestExec_ReuseGpuAddress_Test;
   friend class TestExec_SubmitBatchWithOffset_Test;
   friend class TestEvents;
   friend class TestEvents_AllocAndFree_Test;

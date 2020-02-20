@@ -11,6 +11,14 @@ class TestCommandBuffer : public ::testing::Test {
  public:
   static constexpr uint32_t kAddressSpaceIndex = 1;
 
+  struct BufferDesc {
+    uint32_t buffer_size;
+    uint32_t map_page_count;
+    uint32_t data_size;
+    uint32_t batch_offset;
+    uint32_t gpu_addr;
+  };
+
   void SetUp() override {
     device_ = MsdVslDevice::Create(GetTestDeviceHandle(), true /* start_device_thread */);
     ASSERT_NE(device_, nullptr);
@@ -59,6 +67,9 @@ class TestCommandBuffer : public ::testing::Test {
     *out_client = std::make_unique<Client>(connection, context, address_space);
   }
 
+  // Creates a buffer of |buffer_size| and stores it in |out_buffer|.
+  void CreateMsdBuffer(uint32_t buffer_size, std::shared_ptr<MsdVslBuffer>* out_buffer);
+
   // Creates a buffer of |buffer_size| bytes, and maps the buffer to |gpu_addr|.
   // |map_page_count| may be less bytes than buffer size.
   void CreateAndMapBuffer(uint32_t buffer_size, uint32_t map_page_count, uint32_t gpu_addr,
@@ -73,6 +84,12 @@ class TestCommandBuffer : public ::testing::Test {
                              uint32_t batch_offset,
                              std::shared_ptr<magma::PlatformSemaphore> signal,
                              std::unique_ptr<CommandBuffer>* out_batch);
+
+  // Creates a buffer from |buffer_desc|, writes a test instruction to it and
+  // submits it as a command buffer. This will wait for execution to complete.
+  // If |out_buffer| is non-null, it will be populated with the created buffer.
+  void CreateAndSubmitBuffer(const BufferDesc& buffer_desc,
+                             std::shared_ptr<MsdVslBuffer>* out_buffer = nullptr);
 
   std::shared_ptr<MsdVslConnection> connection() { return client_->connection; }
   std::shared_ptr<MsdVslContext> context() { return client_->context; }

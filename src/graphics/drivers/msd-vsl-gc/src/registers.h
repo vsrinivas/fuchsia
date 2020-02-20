@@ -178,6 +178,11 @@ class Specs4 : public magma::RegisterBase {
   static auto Get() { return magma::RegisterAddr<Specs4>(0x9C); }
 };
 
+class MmuConfig : public magma::RegisterBase {
+ public:
+  static auto Get() { return magma::RegisterAddr<MmuConfig>(0x184); }
+};
+
 class MmuPageTableArrayConfig : public magma::RegisterBase {
  public:
   DEF_FIELD(15, 0, index);
