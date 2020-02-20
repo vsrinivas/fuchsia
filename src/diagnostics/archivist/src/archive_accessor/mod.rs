@@ -56,29 +56,6 @@ impl ArchiveAccessor {
         ArchiveAccessor { inspect_repo: inspect_repo }
     }
 
-    fn handle_read_inspect(
-        &self,
-        selectors: Vec<fidl_fuchsia_diagnostics::SelectorArgument>,
-        inspect_reader: ServerEnd<fidl_fuchsia_diagnostics::ReaderMarker>,
-        responder: fidl_fuchsia_diagnostics::ArchiveReadInspectResponder,
-    ) -> Result<(), Error> {
-        match validate_and_parse_selectors(selectors) {
-            Ok(selector_vec) => {
-                responder.send(&mut Ok(()))?;
-                let inspect_reader_server =
-                    inspect::ReaderServer::new(self.inspect_repo.clone(), selector_vec);
-                inspect_reader_server.create_inspect_reader(inspect_reader).unwrap_or_else(|_| {
-                    eprintln!("Inspect Reader session crashed.");
-                });
-                Ok(())
-            }
-            Err(e) => {
-                responder.send(&mut Err(e))?;
-                Ok(())
-            }
-        }
-    }
-
     fn handle_stream_inspect(
         &self,
         result_stream: ServerEnd<BatchIteratorMarker>,
@@ -138,9 +115,6 @@ impl ArchiveAccessor {
             async move {
                 while let Some(req) = stream.try_next().await? {
                     match req {
-                        ArchiveRequest::ReadInspect { inspect_reader, selectors, responder } => {
-                            self.handle_read_inspect(selectors, inspect_reader, responder)?;
-                        }
                         ArchiveRequest::StreamDiagnostics {
                             result_stream,
                             stream_parameters,

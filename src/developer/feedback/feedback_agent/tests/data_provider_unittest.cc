@@ -28,7 +28,6 @@
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_inspect_archive.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_inspect_batch_iterator.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_inspect_reader.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_product.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_scenic.h"
@@ -248,11 +247,11 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
   }
 
   void SetUpInspect(const std::string& inspect_chunk) {
-    inspect_archive_ = std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReader>(
+    inspect_archive_ = std::make_unique<StubInspectArchive>(
         std::make_unique<StubInspectBatchIterator>(std::vector<std::vector<std::string>>({
             {inspect_chunk},
             {},
-        }))));
+        })));
     InjectServiceProvider(inspect_archive_.get());
   }
 

@@ -5,8 +5,8 @@
 use {
     anyhow::{format_err, Context, Error},
     fidl_fuchsia_diagnostics::{
-        ArchiveMarker, BatchIteratorMarker, Format, FormattedContent, ReaderMarker,
-        SelectorArgument,
+        ArchiveMarker, BatchIteratorMarker, DataType, Format, FormattedContent, SelectorArgument,
+        StreamMode, StreamParameters,
     },
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_component::client,
@@ -51,16 +51,22 @@ impl ComponentSelector {
     }
 }
 
-impl Into<Vec<SelectorArgument>> for ComponentSelector {
+impl Into<Vec<SelectorArgument>> for &ComponentSelector {
     fn into(self) -> Vec<SelectorArgument> {
         let relative_moniker = self.relative_moniker_str();
         // If not tree selectors were provided, select the full tree.
         if self.tree_selectors.is_empty() {
-            vec![SelectorArgument::RawSelector(format!("{}:root", relative_moniker))]
+            vec![SelectorArgument::RawSelector(format!("{}:root", relative_moniker.clone()))]
         } else {
             self.tree_selectors
-                .into_iter()
-                .map(|s| SelectorArgument::RawSelector(format!("{}:{}", relative_moniker, s)))
+                .iter()
+                .map(|s| {
+                    SelectorArgument::RawSelector(format!(
+                        "{}:{}",
+                        relative_moniker.clone(),
+                        s.clone()
+                    ))
+                })
                 .collect()
         }
     }
@@ -104,23 +110,8 @@ impl InspectDataFetcher {
         let archive =
             client::connect_to_service::<ArchiveMarker>().context("connect to archive")?;
 
-        let (reader, server_end) =
-            fidl::endpoints::create_proxy::<ReaderMarker>().context("connect to reader")?;
-
-        let mut arguments = self
-            .selectors
-            .into_iter()
-            .map(|s| {
-                let arguments: Vec<SelectorArgument> = s.into();
-                arguments.into_iter()
-            })
-            .flatten()
-            .collect::<Vec<SelectorArgument>>();
-
-        let read_fut = archive.read_inspect(server_end, &mut arguments.iter_mut());
-        read_fut.await.context("get inspect reader")?.unwrap();
-
         let mut retry = 0;
+
         loop {
             if retry > *MAX_RETRIES {
                 return Err(format_err!("Maximum retries"));
@@ -128,10 +119,26 @@ impl InspectDataFetcher {
 
             let (iterator, server_end) = fidl::endpoints::create_proxy::<BatchIteratorMarker>()
                 .context("failed to create iterator proxy")?;
-            reader
-                .get_snapshot(Format::Json, server_end)
-                .await
-                .context("get BatchIterator")?
+
+            let selector_args = self
+                .selectors
+                .iter()
+                .map(|s| {
+                    let arguments: Vec<SelectorArgument> = s.into();
+                    arguments.into_iter()
+                })
+                .flatten()
+                .collect::<Vec<SelectorArgument>>();
+
+            let mut stream_parameters = StreamParameters::empty();
+            stream_parameters.stream_mode = Some(StreamMode::Snapshot);
+            stream_parameters.data_type = Some(DataType::Inspect);
+            stream_parameters.format = Some(Format::Json);
+            stream_parameters.selectors = Some(selector_args);
+
+            archive
+                .stream_diagnostics(server_end, stream_parameters)
+                .context("get BatchIterator")
                 .unwrap();
 
             let mut result = Vec::new();
@@ -276,7 +283,7 @@ mod tests {
     async fn component_selector() {
         let selector = ComponentSelector::new(vec!["a.cmx".to_string()]);
         assert_eq!(selector.relative_moniker_str(), "a.cmx");
-        let arguments: Vec<SelectorArgument> = selector.into();
+        let arguments: Vec<SelectorArgument> = (&selector).into();
         assert_eq!(arguments, vec![SelectorArgument::RawSelector("a.cmx:root".to_string())]);
 
         let selector =
@@ -284,7 +291,7 @@ mod tests {
         assert_eq!(selector.relative_moniker_str(), "b/c/a.cmx");
 
         let selector = selector.with_tree_selector("root/b/c:d").with_tree_selector("root/e:f");
-        let arguments: Vec<SelectorArgument> = selector.into();
+        let arguments: Vec<SelectorArgument> = (&selector).into();
         assert_eq!(
             arguments,
             vec![

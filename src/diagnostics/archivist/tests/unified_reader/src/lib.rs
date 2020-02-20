@@ -97,29 +97,30 @@ async fn setup_environment() -> Result<(App, App), Error> {
 // matches the golden file.
 async fn retrieve_and_validate_results(
     archivist: &App,
-    custom_selectors: Vec<&mut SelectorArgument>,
+    custom_selectors: Vec<&str>,
     golden_file: &PathBuf,
     expected_results_count: usize,
 ) {
     let archive_accessor = archivist.connect_to_service::<ArchiveMarker>().unwrap();
 
-    let (reader_consumer, reader_server) = create_proxy().unwrap();
-
-    archive_accessor
-        .read_inspect(reader_server, &mut custom_selectors.into_iter())
-        .await
-        .context("setting up the reader server")
-        .expect("fidl channels should be fine")
-        .expect("setting up the server shouldn't have any issues.");
-
     loop {
         let (batch_consumer, batch_server) = create_proxy().unwrap();
-        reader_consumer
-            .get_snapshot(fidl_fuchsia_diagnostics::Format::Json, batch_server)
-            .await
-            .context("requesting format")
-            .expect("fidl channel should be fine.")
-            .expect("should have been trivial to format");
+
+        let mut stream_parameters = fidl_fuchsia_diagnostics::StreamParameters::empty();
+        stream_parameters.stream_mode = Some(fidl_fuchsia_diagnostics::StreamMode::Snapshot);
+        stream_parameters.data_type = Some(fidl_fuchsia_diagnostics::DataType::Inspect);
+        stream_parameters.format = Some(fidl_fuchsia_diagnostics::Format::Json);
+        stream_parameters.selectors = Some(
+            custom_selectors
+                .iter()
+                .map(|s| SelectorArgument::RawSelector(s.to_string()))
+                .collect::<Vec<fidl_fuchsia_diagnostics::SelectorArgument>>(),
+        );
+
+        archive_accessor
+            .stream_diagnostics(batch_server, stream_parameters)
+            .context("get BatchIterator")
+            .unwrap();
 
         let first_result = batch_consumer
             .get_next()
@@ -237,9 +238,7 @@ async fn unified_reader() -> Result<(), Error> {
     // Then verify that from the expected data, we can retrieve one specific value.
     retrieve_and_validate_results(
         &archivist_app,
-        vec![&mut SelectorArgument::RawSelector(
-            "iquery_example_component.cmx:*:lazy-*".to_string(),
-        )],
+        vec!["iquery_example_component.cmx:*:lazy-*"],
         &*SINGLE_VALUE_CLIENT_SELECTOR_JSON_PATH,
         1,
     )
@@ -251,7 +250,7 @@ async fn unified_reader() -> Result<(), Error> {
     // Then verify that subtree selection retrieves all trees under and including root.
     retrieve_and_validate_results(
         &archivist_app,
-        vec![&mut SelectorArgument::RawSelector("iquery_example_component.cmx:root".to_string())],
+        vec!["iquery_example_component.cmx:root"],
         &*ALL_GOLDEN_JSON_PATH,
         3,
     )

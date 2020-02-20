@@ -57,7 +57,7 @@ fit::promise<fuchsia::mem::Buffer> Inspect::Collect(zx::duration timeout) {
   }
 
   // We start the Inspect data collection.
-  GetInspectReader();
+  StreamInspectSnapshot();
 
   // We wait on one way to finish the flow, joining whichever data has been collected.
   return done_.consumer.promise_or(fit::error())
@@ -116,15 +116,6 @@ void Inspect::SetUp() {
     done_.completer.complete_error();
   });
 
-  reader_.set_error_handler([this](zx_status_t status) {
-    if (!done_.completer) {
-      return;
-    }
-
-    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.diagnostics.Reader";
-    done_.completer.complete_error();
-  });
-
   snapshot_iterator_.set_error_handler([this](zx_status_t status) {
     if (!done_.completer) {
       return;
@@ -135,37 +126,13 @@ void Inspect::SetUp() {
   });
 }
 
-void Inspect::GetInspectReader() {
-  archive_->ReadInspect(reader_.NewRequest(), /*selectors=*/{}, [this](auto result) {
-    if (!done_.completer) {
-      return;
-    }
-
-    if (result.is_err()) {
-      FX_LOGS(ERROR) << "Failed to connect to Inspect reader: " << result.err();
-      done_.completer.complete_error();
-      return;
-    }
-
-    GetInspectSnapshot();
-  });
-}
-
-void Inspect::GetInspectSnapshot() {
-  reader_->GetSnapshot(
-      fuchsia::diagnostics::Format::JSON, snapshot_iterator_.NewRequest(), [this](auto result) {
-        if (!done_.completer) {
-          return;
-        }
-
-        if (result.is_err()) {
-          FX_LOGS(ERROR) << "Failed to retrieve Inspect snapshot: " << result.err();
-          done_.completer.complete_error();
-          return;
-        }
-
-        AppendNextInspectBatch();
-      });
+void Inspect::StreamInspectSnapshot() {
+  fuchsia::diagnostics::StreamParameters stream_parameters;
+  stream_parameters.set_data_type(fuchsia::diagnostics::DataType::INSPECT);
+  stream_parameters.set_stream_mode(fuchsia::diagnostics::StreamMode::SNAPSHOT);
+  stream_parameters.set_format(fuchsia::diagnostics::Format::JSON);
+  archive_->StreamDiagnostics(snapshot_iterator_.NewRequest(), std::move(stream_parameters));
+  AppendNextInspectBatch();
 }
 
 void Inspect::AppendNextInspectBatch() {

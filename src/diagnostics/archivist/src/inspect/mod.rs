@@ -893,74 +893,6 @@ hierarchy: {:?}",
 
         Ok(())
     }
-
-    pub async fn serve_only_snapshot_results(
-        &self,
-        stream: &mut BatchIteratorRequestStream,
-        format: &fidl_fuchsia_diagnostics::Format,
-    ) -> Result<(), Error> {
-        self.serve_inspect_snapshot(stream, &format).await?;
-        self.serve_terminal_batch(stream).await?;
-
-        Ok(())
-    }
-
-    /// Takes a Reader server end, and starts hosting a Reader service exposing
-    /// Inspect data on the system. This data is scoped by the static selectors contained
-    /// in the InspectDataRepository provided to the ReaderServer constructor.
-    pub fn create_inspect_reader(
-        self,
-        server_end: ServerEnd<fidl_fuchsia_diagnostics::ReaderMarker>,
-    ) -> Result<(), Error> {
-        let server_chan = fasync::Channel::from_channel(server_end.into_channel())?;
-
-        fasync::spawn(
-            async move {
-                let mut stream =
-                    fidl_fuchsia_diagnostics::ReaderRequestStream::from_channel(server_chan);
-                while let Some(req) = stream.try_next().await? {
-                    match req {
-                        fidl_fuchsia_diagnostics::ReaderRequest::GetSnapshot {
-                            format,
-                            result_iterator,
-                            responder,
-                        } => {
-                            let server_clone = self.clone();
-                            match fasync::Channel::from_channel(result_iterator.into_channel()) {
-                                Ok(channel) => {
-                                    responder.send(&mut Ok(()))?;
-                                    let mut iterator_req_stream =
-                                        BatchIteratorRequestStream::from_channel(channel);
-
-                                    match server_clone
-                                        .serve_only_snapshot_results(
-                                            &mut iterator_req_stream,
-                                            &format,
-                                        )
-                                        .await
-                                    {
-                                        Ok(_) => {}
-                                        Err(_e) => {}
-                                    }
-                                }
-                                Err(_) => {
-                                    responder.send(&mut Err(
-                                        fidl_fuchsia_diagnostics::ReaderError::Io,
-                                    ))?;
-                                }
-                            }
-                        }
-                    }
-                }
-                Ok(())
-            }
-            .unwrap_or_else(|e: anyhow::Error| {
-                eprintln!("running inspect reader: {:?}", e);
-            }),
-        );
-
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -1300,13 +1232,11 @@ mod tests {
 
         fasync::spawn(async move {
             reader_server
-                .serve_only_snapshot_results(
-                    &mut BatchIteratorRequestStream::from_channel(
-                        fasync::Channel::from_channel(batch_iterator.into_channel()).unwrap(),
-                    ),
-                    &fidl_fuchsia_diagnostics::Format::Json,
+                .stream_inspect(
+                    fidl_fuchsia_diagnostics::StreamMode::Snapshot,
+                    fidl_fuchsia_diagnostics::Format::Json,
+                    batch_iterator,
                 )
-                .await
                 .unwrap();
         });
 

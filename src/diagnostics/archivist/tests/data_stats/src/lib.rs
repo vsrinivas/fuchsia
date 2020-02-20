@@ -80,24 +80,23 @@ async fn data_stats() -> Result<(), Error> {
         .add_dir_to_namespace("/test_data".into(), File::open(test_data_path)?)?
         .spawn(&launcher)?;
     let archive_accessor = archivist.connect_to_service::<ArchiveMarker>().unwrap();
-    let (reader_consumer, reader_server) = create_proxy().unwrap();
-    archive_accessor
-        .read_inspect(reader_server, &mut Vec::new().into_iter())
-        .await
-        .context("setting up the reader server")
-        .expect("fidl channels should be fine")
-        .expect("setting up the server shouldn't have any issues.");
 
     let retrieve_first_real_result = || {
         async move {
             loop {
                 let (batch_consumer, batch_server) = create_proxy().unwrap();
-                reader_consumer
-                    .get_snapshot(fidl_fuchsia_diagnostics::Format::Json, batch_server)
-                    .await
-                    .context("requesting format")
-                    .expect("fidl should be fine")
-                    .expect("should have been trivial to format");
+
+                let mut stream_parameters = fidl_fuchsia_diagnostics::StreamParameters::empty();
+                stream_parameters.stream_mode =
+                    Some(fidl_fuchsia_diagnostics::StreamMode::Snapshot);
+                stream_parameters.data_type = Some(fidl_fuchsia_diagnostics::DataType::Inspect);
+                stream_parameters.format = Some(fidl_fuchsia_diagnostics::Format::Json);
+                stream_parameters.selectors = None;
+
+                archive_accessor
+                    .stream_diagnostics(batch_server, stream_parameters)
+                    .context("get BatchIterator")
+                    .unwrap();
 
                 let first_result = batch_consumer
                     .get_next()

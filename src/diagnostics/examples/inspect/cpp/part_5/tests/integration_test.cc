@@ -64,16 +64,15 @@ class CodelabTest : public sys::testing::TestWithEnvironment {
     fuchsia::diagnostics::ArchivePtr archive;
     real_services()->Connect(archive.NewRequest());
 
-    fuchsia::diagnostics::ReaderPtr reader;
-    archive->ReadInspect(reader.NewRequest(), {} /* selectors */,
-                         [](auto res) { ASSERT_FALSE(res.is_err()) << "Failed to get reader"; });
-
     while (true) {
       ContentVector current_entries;
 
       fuchsia::diagnostics::BatchIteratorPtr iterator;
-      reader->GetSnapshot(fuchsia::diagnostics::Format::JSON, iterator.NewRequest(),
-                          [](auto res) { ASSERT_FALSE(res.is_err()) << "Failed to get snapshot"; });
+      fuchsia::diagnostics::StreamParameters stream_parameters;
+      stream_parameters.set_data_type(fuchsia::diagnostics::DataType::INSPECT);
+      stream_parameters.set_stream_mode(fuchsia::diagnostics::StreamMode::SNAPSHOT);
+      stream_parameters.set_format(fuchsia::diagnostics::Format::JSON);
+      archive->StreamDiagnostics(iterator.NewRequest(), std::move(stream_parameters));
 
       bool done = false;
       iterator->GetNext([&](auto result) {

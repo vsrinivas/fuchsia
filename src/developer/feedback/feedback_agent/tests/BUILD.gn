@@ -533,8 +533,6 @@ source_set("stub_inspect") {
     "stub_inspect_archive.h",
     "stub_inspect_batch_iterator.cc",
     "stub_inspect_batch_iterator.h",
-    "stub_inspect_reader.cc",
-    "stub_inspect_reader.h",
   ]
 
   public_deps = [

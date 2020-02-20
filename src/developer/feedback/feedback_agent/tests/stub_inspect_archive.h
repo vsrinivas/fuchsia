@@ -11,7 +11,7 @@
 
 #include <string>
 
-#include "src/developer/feedback/feedback_agent/tests/stub_inspect_reader.h"
+#include "src/developer/feedback/feedback_agent/tests/stub_inspect_batch_iterator.h"
 #include "src/lib/fxl/logging.h"
 
 namespace feedback {
@@ -20,7 +20,8 @@ namespace feedback {
 class StubInspectArchive : public fuchsia::diagnostics::Archive {
  public:
   StubInspectArchive() {}
-  StubInspectArchive(std::unique_ptr<StubInspectReader> reader) : reader_(std::move(reader)) {}
+  StubInspectArchive(std::unique_ptr<StubInspectBatchIteratorBase> batch_iterator)
+      : batch_iterator_(std::move(batch_iterator)) {}
 
   // Returns a request handler for a binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::diagnostics::Archive> GetHandler() {
@@ -32,56 +33,29 @@ class StubInspectArchive : public fuchsia::diagnostics::Archive {
 
   void CloseConnection();
 
-  // |fuchsia.diagnostics.Archive|
-  void ReadInspect(fidl::InterfaceRequest<fuchsia::diagnostics::Reader> request,
-                   std::vector<fuchsia::diagnostics::SelectorArgument> selectors,
-                   ReadInspectCallback callback) override;
-
   void StreamDiagnostics(fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
-                         fuchsia::diagnostics::StreamParameters stream_parameters) override {
-    FXL_NOTIMPLEMENTED();
-  }
+                         fuchsia::diagnostics::StreamParameters stream_parameters) override;
 
  protected:
-  std::unique_ptr<StubInspectReader> reader_;
   std::unique_ptr<fidl::Binding<fuchsia::diagnostics::Archive>> archive_binding_;
-  std::unique_ptr<fidl::Binding<fuchsia::diagnostics::Reader>> reader_binding_;
+  std::unique_ptr<StubInspectBatchIteratorBase> batch_iterator_;
+  std::unique_ptr<fidl::Binding<fuchsia::diagnostics::BatchIterator>> batch_iterator_binding_;
 };
 
 class StubInspectArchiveClosesArchiveConnection : public StubInspectArchive {
  public:
   StubInspectArchiveClosesArchiveConnection() {}
 
-  void ReadInspect(fidl::InterfaceRequest<fuchsia::diagnostics::Reader> request,
-                   std::vector<fuchsia::diagnostics::SelectorArgument> selectors,
-                   ReadInspectCallback callback) override;
+  void StreamDiagnostics(fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
+                         fuchsia::diagnostics::StreamParameters stream_parameters) override;
 };
 
-class StubInspectArchiveClosesReaderConnection : public StubInspectArchive {
+class StubInspectArchiveClosesIteratorConnection : public StubInspectArchive {
  public:
-  StubInspectArchiveClosesReaderConnection() {}
+  StubInspectArchiveClosesIteratorConnection() {}
 
-  void ReadInspect(fidl::InterfaceRequest<fuchsia::diagnostics::Reader> request,
-                   std::vector<fuchsia::diagnostics::SelectorArgument> selectors,
-                   ReadInspectCallback callback) override;
-};
-
-class StubInspectArchiveNeverResponds : public StubInspectArchive {
- public:
-  StubInspectArchiveNeverResponds() {}
-
-  void ReadInspect(fidl::InterfaceRequest<fuchsia::diagnostics::Reader> request,
-                   std::vector<fuchsia::diagnostics::SelectorArgument> selectors,
-                   ReadInspectCallback callback) override;
-};
-
-class StubInspectArchiveReturnsError : public StubInspectArchive {
- public:
-  StubInspectArchiveReturnsError() {}
-
-  void ReadInspect(fidl::InterfaceRequest<fuchsia::diagnostics::Reader> request,
-                   std::vector<fuchsia::diagnostics::SelectorArgument> selectors,
-                   ReadInspectCallback callback) override;
+  void StreamDiagnostics(fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
+                         fuchsia::diagnostics::StreamParameters stream_parameters) override;
 };
 
 }  // namespace feedback

@@ -45,8 +45,7 @@ class Inspect {
 
  private:
   void SetUp();
-  void GetInspectReader();
-  void GetInspectSnapshot();
+  void StreamInspectSnapshot();
   void AppendNextInspectBatch();
 
   async_dispatcher_t* dispatcher_;
@@ -56,7 +55,6 @@ class Inspect {
   bool has_called_collect_ = false;
 
   fuchsia::diagnostics::ArchivePtr archive_;
-  fuchsia::diagnostics::ReaderPtr reader_;
   fuchsia::diagnostics::BatchIteratorPtr snapshot_iterator_;
 
   // Accumulated Inspect data. Each element corresponds to one valid Inspect "block" in JSON format.

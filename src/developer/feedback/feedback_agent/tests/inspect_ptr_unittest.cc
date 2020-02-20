@@ -17,7 +17,6 @@
 
 #include "src/developer/feedback/feedback_agent/tests/stub_inspect_archive.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_inspect_batch_iterator.h"
-#include "src/developer/feedback/feedback_agent/tests/stub_inspect_reader.h"
 #include "src/developer/feedback/testing/cobalt_test_fixture.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
@@ -72,12 +71,12 @@ class CollectInspectDataTest : public UnitTestFixture, public CobaltTestFixture 
 };
 
 TEST_F(CollectInspectDataTest, Succeed_AllInspectData) {
-  SetUpInspect(std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReader>(
+  SetUpInspect(std::make_unique<StubInspectArchive>(
       std::make_unique<StubInspectBatchIterator>(std::vector<std::vector<std::string>>({
           {"foo1", "foo2"},
           {"bar1"},
           {},
-      })))));
+      }))));
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_ok());
@@ -95,9 +94,9 @@ bar1
 }
 
 TEST_F(CollectInspectDataTest, Succeed_PartialInspectData) {
-  SetUpInspect(std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReader>(
+  SetUpInspect(std::make_unique<StubInspectArchive>(
       std::make_unique<StubInspectBatchIteratorNeverRespondsAfterOneBatch>(
-          std::vector<std::string>({"foo1", "foo2"})))));
+          std::vector<std::string>({"foo1", "foo2"}))));
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_ok());
@@ -114,19 +113,8 @@ foo2
 }
 
 TEST_F(CollectInspectDataTest, Fail_NoInspectData) {
-  SetUpInspect(std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReader>(
-      std::make_unique<StubInspectBatchIterator>(std::vector<std::vector<std::string>>({{}})))));
-
-  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
-  ASSERT_TRUE(result.is_error());
-
-  CheckNoTimeout();
-}
-
-TEST_F(CollectInspectDataTest, Fail_BatchIteratorClosesConnection) {
   SetUpInspect(std::make_unique<StubInspectArchive>(
-      std::make_unique<StubInspectReaderClosesBatchIteratorConnection>(
-          std::make_unique<StubInspectBatchIterator>())));
+      std::make_unique<StubInspectBatchIterator>(std::vector<std::vector<std::string>>({{}}))));
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
@@ -135,18 +123,17 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorClosesConnection) {
 }
 
 TEST_F(CollectInspectDataTest, Fail_BatchIteratorReturnsError) {
-  SetUpInspect(std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReader>(
-      std::make_unique<StubInspectBatchIteratorReturnsError>())));
+  SetUpInspect(std::make_unique<StubInspectArchive>(
+      std::make_unique<StubInspectBatchIteratorReturnsError>()));
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
-
   CheckNoTimeout();
 }
 
 TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
-  SetUpInspect(std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReader>(
-      std::make_unique<StubInspectBatchIteratorNeverResponds>())));
+  SetUpInspect(std::make_unique<StubInspectArchive>(
+      std::make_unique<StubInspectBatchIteratorNeverResponds>()));
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
@@ -154,33 +141,13 @@ TEST_F(CollectInspectDataTest, Fail_BatchIteratorNeverResponds) {
   CheckTimeout();
 }
 
-TEST_F(CollectInspectDataTest, Fail_ReaderClosesConnection) {
-  SetUpInspect(std::make_unique<StubInspectArchiveClosesReaderConnection>());
+TEST_F(CollectInspectDataTest, Fail_ArchiveClosesIteratorClosesConnection) {
+  SetUpInspect(std::make_unique<StubInspectArchiveClosesIteratorConnection>());
 
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
   ASSERT_TRUE(result.is_error());
 
   CheckNoTimeout();
-}
-
-TEST_F(CollectInspectDataTest, Fail_ReaderReturnsError) {
-  SetUpInspect(
-      std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReaderReturnsError>()));
-
-  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
-  ASSERT_TRUE(result.is_error());
-
-  CheckNoTimeout();
-}
-
-TEST_F(CollectInspectDataTest, Fail_ReaderNeverResponds) {
-  SetUpInspect(
-      std::make_unique<StubInspectArchive>(std::make_unique<StubInspectReaderNeverResponds>()));
-
-  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
-  ASSERT_TRUE(result.is_error());
-
-  CheckTimeout();
 }
 
 TEST_F(CollectInspectDataTest, Fail_ArchiveClosesConnection) {
@@ -190,24 +157,6 @@ TEST_F(CollectInspectDataTest, Fail_ArchiveClosesConnection) {
   ASSERT_TRUE(result.is_error());
 
   CheckNoTimeout();
-}
-
-TEST_F(CollectInspectDataTest, Fail_ArchiveReturnsError) {
-  SetUpInspect(std::make_unique<StubInspectArchiveReturnsError>());
-
-  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
-  ASSERT_TRUE(result.is_error());
-
-  CheckNoTimeout();
-}
-
-TEST_F(CollectInspectDataTest, Fail_ArchiveNeverResponds) {
-  SetUpInspect(std::make_unique<StubInspectArchiveNeverResponds>());
-
-  fit::result<fuchsia::mem::Buffer> result = CollectInspectData();
-  ASSERT_TRUE(result.is_error());
-
-  CheckTimeout();
 }
 
 TEST_F(CollectInspectDataTest, Fail_CallCollectTwice) {

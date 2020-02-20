@@ -108,24 +108,6 @@ table StreamParameters {
 /// Outer protocol for interacting with the different diagnostics data sources.
 [Discoverable]
 protocol Archive {
-    /// Creates a Reader for interacting with Inspect data.
-    /// The resulting interface can be used to analyze Inspect hierarchy data
-    /// scoped to the components specified by the static configurations of the Accessor
-    /// pipeline that the client connects to, and the provided selectors vector argument.
-    ///
-    /// + request `inspect_reader` is a [fuchsia.diagnostics/Reader] that processes
-    ///   Reader requests, sitting on top of inspect data.
-    /// + request `selectors` is a vector of [fuchsia.diagnostics/SelectorArgument] which
-    ///   provide additional filters to scope data with. If the vector is empty,
-    ///   all available results are returned.
-    ///.
-    /// * error a [fuchsia.diagnostics/AccessorError]
-    ///   value indicating that the provided selectors failed to verify.
-    // TODO(4601): Consider making selectors optional or providing the parameters
-    //             as a table.
-    ReadInspect(request<Reader> inspect_reader, vector<SelectorArgument>:MAX selectors)
-        -> () error AccessorError;
-
     /// Creates an iterator over diagnostics data on the system.
     ///   * The iterator may be finite by streaming in SNAPSHOT mode, serving only the
     ///     current state of diagnostics data on the system.
@@ -144,26 +126,6 @@ protocol Archive {
     /// + request `stream_parameters` is a [fuchsia.diagnostics/StreamParameter] which
     ///   specifies how to configure the stream.
     StreamDiagnostics(request<BatchIterator> result_stream, StreamParameters stream_parameters);
-};
-
-/// A protocol to access data from a particular data source.
-protocol Reader {
-    /// Filters the data hierarchies of components based on the statically provided allowlists
-    /// and the selectors provided by the accessor request, formats these filtered data
-    /// hierarchies according to the specified [fuchsia.diagnostics/FormatSettings]
-    /// argument, then serves the resulting data hierarchies over a BatchIterator.
-    ///
-    /// + request `format_settings` the [fuchsia.diagnostics/FormatSettings] that
-    ///   specifies the format of data returned by the BatchIterator.
-    /// + request `result_iterator` is a [fuchsia.diagnostics.BatchIterator] that
-    ///   processes client requests to fetch [fuchsia.diagnostics/FormattedContent]
-    ///   structs from the current snapshot.
-    ///
-    /// * error a [fuchsia.diagnostics/ReaderError]
-    ///   value indicating that there was an issue configuring the BatchIterator
-    ///   connection.
-    GetSnapshot(Format format, request<BatchIterator> result_iterator)
-        -> () error ReaderError;
 };
 
 /// Conceptually, a directory iterator, where each element in the iterator is a single

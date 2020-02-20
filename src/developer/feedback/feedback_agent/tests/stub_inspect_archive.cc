@@ -14,39 +14,23 @@ void StubInspectArchive::CloseConnection() {
   }
 }
 
-void StubInspectArchive::ReadInspect(fidl::InterfaceRequest<fuchsia::diagnostics::Reader> request,
-                                     std::vector<fuchsia::diagnostics::SelectorArgument> selectors,
-                                     ReadInspectCallback callback) {
-  reader_binding_ = std::make_unique<fidl::Binding<fuchsia::diagnostics::Reader>>(
-      reader_.get(), std::move(request));
-  callback(fit::ok());
+void StubInspectArchive::StreamDiagnostics(
+    fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
+    fuchsia::diagnostics::StreamParameters stream_parameters) {
+  batch_iterator_binding_ = std::make_unique<fidl::Binding<fuchsia::diagnostics::BatchIterator>>(
+      batch_iterator_.get(), std::move(request));
 }
 
-void StubInspectArchiveClosesArchiveConnection::ReadInspect(
-    fidl::InterfaceRequest<fuchsia::diagnostics::Reader> request,
-    std::vector<fuchsia::diagnostics::SelectorArgument> selectors, ReadInspectCallback callback) {
+void StubInspectArchiveClosesArchiveConnection::StreamDiagnostics(
+    fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
+    fuchsia::diagnostics::StreamParameters stream_parameters) {
   CloseConnection();
 }
 
-void StubInspectArchiveClosesReaderConnection::ReadInspect(
-    fidl::InterfaceRequest<fuchsia::diagnostics::Reader> request,
-    std::vector<fuchsia::diagnostics::SelectorArgument> selectors, ReadInspectCallback callback) {
+void StubInspectArchiveClosesIteratorConnection::StreamDiagnostics(
+    fidl::InterfaceRequest<fuchsia::diagnostics::BatchIterator> request,
+    fuchsia::diagnostics::StreamParameters stream_parameters) {
   request.Close(ZX_ERR_PEER_CLOSED);
-}
-
-void StubInspectArchiveNeverResponds::ReadInspect(
-    fidl::InterfaceRequest<fuchsia::diagnostics::Reader> request,
-    std::vector<fuchsia::diagnostics::SelectorArgument> selectors, ReadInspectCallback callback) {
-  // We still need to bind, otherwise it will trigger the reader's error handler and not simulate
-  // ReadInspect() never responding.
-  reader_binding_ = std::make_unique<fidl::Binding<fuchsia::diagnostics::Reader>>(
-      reader_.get(), std::move(request));
-}
-
-void StubInspectArchiveReturnsError::ReadInspect(
-    fidl::InterfaceRequest<fuchsia::diagnostics::Reader> request,
-    std::vector<fuchsia::diagnostics::SelectorArgument> selectors, ReadInspectCallback callback) {
-  callback(fit::error(fuchsia::diagnostics::AccessorError::INVALID_SELECTOR));
 }
 
 }  // namespace feedback
