@@ -1728,7 +1728,7 @@ aggregate_manifest("migrated-image") {
       "//zircon/system/uapp/audio:test-manifest",
       "//src/devices/tests/ddk-schedule-work:ddk-schedule-work-perf-manifest",
       "//zircon/system/uapp/display-test:display-test-manifest",
-      "//zircon/system/uapp/serial-test:serial-test-manifest",
+      "//src/devices/serial/bin/serial-test:serial-test-manifest",
       "//src/devices/usb/bin/xdc-test:xdc-test-manifest",
       "//src/devices/tests/crash-device:crash-device-manifest",
       "//src/devices/tests/ddk-lifecycle:ddk-lifecycle-test-manifest",
