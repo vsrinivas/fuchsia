@@ -264,9 +264,14 @@ ThermalConfig::Entry ParseThermalPolicyEntryFromJsonObject(const rapidjson::Valu
     auto trip_point = trip_point_it->value.GetUint();
 
     auto config_it = state.FindMember(kJsonKeyConfig);
-    FX_CHECK(config_it != state.MemberEnd());
-    FX_CHECK(config_it->value.IsString());
-    states.emplace_back(trip_point, config_it->value.GetString());
+    if (config_it != state.MemberEnd()) {
+      rapidjson::StringBuffer config_buf;
+      rapidjson::Writer<rapidjson::StringBuffer> writer(config_buf);
+      config_it->value.Accept(writer);
+      states.emplace_back(trip_point, config_buf.GetString());
+    } else {
+      states.emplace_back(trip_point, "");
+    }
   }
 
   return ThermalConfig::Entry(target_name, states);

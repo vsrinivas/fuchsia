@@ -445,7 +445,9 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithThermalPolicy) {
           "states": [
             {
               "trip_point": 50,
-              "config": "config 0 50"
+              "config": {
+                "value": "config 0 50"
+              }
             }
           ]
       },
@@ -454,15 +456,21 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithThermalPolicy) {
           "states": [
             {
               "trip_point": 25,
-              "config": "config 1 25"
+              "config": {
+                "value": "config 1 25"
+              }
             },
             {
               "trip_point": 50,
-              "config": "config 1 50"
+              "config": {
+                "value": "config 1 50"
+              }
             },
             {
               "trip_point": 75,
-              "config": "config 1 75"
+              "config": {
+                "value": "config 1 75"
+              }
             }
           ]
       }
@@ -479,17 +487,17 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithThermalPolicy) {
   EXPECT_EQ("target name 0", entry0.target_name());
   EXPECT_EQ(1u, entry0.states().size());
   EXPECT_EQ(50u, entry0.states()[0].trip_point());
-  EXPECT_EQ("config 0 50", entry0.states()[0].config());
+  EXPECT_EQ("{\"value\":\"config 0 50\"}", entry0.states()[0].config());
 
   auto& entry1 = config->thermal_config().entries()[1];
   EXPECT_EQ("target name 1", entry1.target_name());
   EXPECT_EQ(3u, entry1.states().size());
   EXPECT_EQ(25u, entry1.states()[0].trip_point());
-  EXPECT_EQ("config 1 25", entry1.states()[0].config());
+  EXPECT_EQ("{\"value\":\"config 1 25\"}", entry1.states()[0].config());
   EXPECT_EQ(50u, entry1.states()[1].trip_point());
-  EXPECT_EQ("config 1 50", entry1.states()[1].config());
+  EXPECT_EQ("{\"value\":\"config 1 50\"}", entry1.states()[1].config());
   EXPECT_EQ(75u, entry1.states()[2].trip_point());
-  EXPECT_EQ("config 1 75", entry1.states()[2].config());
+  EXPECT_EQ("{\"value\":\"config 1 75\"}", entry1.states()[2].config());
 }
 
 }  // namespace
