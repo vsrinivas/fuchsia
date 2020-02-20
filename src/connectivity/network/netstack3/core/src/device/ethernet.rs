@@ -32,7 +32,7 @@ use crate::device::{
     Tentative,
 };
 use crate::wire::arp::peek_arp_types;
-use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
+use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck};
 #[cfg(test)]
 use crate::Context;
 use crate::Instant;
@@ -423,7 +423,17 @@ pub(super) fn receive_frame<B: BufferMut, C: BufferEthernetIpDeviceContext<B>>(
     mut buffer: B,
 ) {
     trace!("ethernet::receive_frame: device_id = {:?}", device_id);
-    let frame = if let Ok(frame) = buffer.parse::<EthernetFrame<_>>() {
+    // NOTE(joshlf): We do not currently validate that the Ethernet frame
+    // satisfies the minimum length requierment. We expect that if this
+    // requirement is necessary (due to requirements of the physical medium),
+    // the driver or hardware will have checked it, and that if this requirement
+    // is not necessary, it is acceptable for us to operate on a smaller
+    // Ethernet frame. If this becomes insufficient in the future, we may want
+    // to consider making this behavior configurable (at compile time, at
+    // runtime on a global basis, or at runtime on a per-device basis).
+    let frame = if let Ok(frame) =
+        buffer.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::NoCheck)
+    {
         frame
     } else {
         trace!("ethernet::receive_frame: failed to parse ethernet frame");

@@ -128,39 +128,39 @@ impl<D> From<Entry<Ipv6Addr, D>> for EntryEither<D> {
 }
 
 create_protocol_enum!(
-        /// An IP protocol or next header number.
-        ///
-        /// For IPv4, this is the protocol number. For IPv6, this is the next
-        /// header number.
-        #[derive(Copy, Clone, Hash, Eq, PartialEq)]
-        pub enum IpProto: u8 {
-            Icmp, 1, "ICMP";
-            Igmp, 2, "IGMP";
-            Tcp, 6, "TCP";
-            Udp, 17, "UDP";
-            Icmpv6, 58, "ICMPv6";
-            NoNextHeader, 59, "NO NEXT HEADER";
-            _, "IP protocol {}";
-        }
-    );
+    /// An IP protocol or next header number.
+    ///
+    /// For IPv4, this is the protocol number. For IPv6, this is the next
+    /// header number.
+    #[derive(Copy, Clone, Hash, Eq, PartialEq)]
+    pub enum IpProto: u8 {
+        Icmp, 1, "ICMP";
+        Igmp, 2, "IGMP";
+        Tcp, 6, "TCP";
+        Udp, 17, "UDP";
+        Icmpv6, 58, "ICMPv6";
+        NoNextHeader, 59, "NO NEXT HEADER";
+        _, "IP protocol {}";
+    }
+);
 
 create_protocol_enum!(
-        /// An IPv6 Extension Header type.
-        ///
-        /// These are valid next header types for an IPv6 Header that relate to
-        /// extension headers. This enum does not include upper layer protocol
-        /// numbers even though they may be valid Next Header values.
-        #[derive(Copy, Clone, Hash, Eq, PartialEq)]
-        pub(crate) enum Ipv6ExtHdrType: u8 {
-            HopByHopOptions, 0, "IPv6 HOP-BY-HOP OPTIONS HEADER";
-            Routing, 43, "IPv6 ROUTING HEADER";
-            Fragment, 44, "IPv6 FRAGMENT HEADER";
-            EncapsulatingSecurityPayload, 50, "ENCAPSULATING SECURITY PAYLOAD";
-            Authentication, 51, "AUTHENTICATION HEADER";
-            DestinationOptions, 60, "IPv6 DESTINATION OPTIONS HEADER";
-            _,  "IPv6 EXTENSION HEADER {}";
-        }
-    );
+    /// An IPv6 Extension Header type.
+    ///
+    /// These are valid next header types for an IPv6 Header that relate to
+    /// extension headers. This enum does not include upper layer protocol
+    /// numbers even though they may be valid Next Header values.
+    #[derive(Copy, Clone, Hash, Eq, PartialEq)]
+    pub(crate) enum Ipv6ExtHdrType: u8 {
+        HopByHopOptions, 0, "IPv6 HOP-BY-HOP OPTIONS HEADER";
+        Routing, 43, "IPv6 ROUTING HEADER";
+        Fragment, 44, "IPv6 FRAGMENT HEADER";
+        EncapsulatingSecurityPayload, 50, "ENCAPSULATING SECURITY PAYLOAD";
+        Authentication, 51, "AUTHENTICATION HEADER";
+        DestinationOptions, 60, "IPv6 DESTINATION OPTIONS HEADER";
+        _,  "IPv6 EXTENSION HEADER {}";
+    }
+);
 
 /// An extension trait to the `Ip` trait adding an associated `PacketBuilder`
 /// type.

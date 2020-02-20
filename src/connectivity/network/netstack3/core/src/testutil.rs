@@ -31,7 +31,7 @@ use crate::ip::{IpExtByteSlice, IpLayerEventDispatcher, IpProto, IPV6_MIN_MTU};
 use crate::transport::tcp::TcpOption;
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
-use crate::wire::ethernet::EthernetFrame;
+use crate::wire::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
 use crate::wire::icmp::{self as wire_icmp, IcmpMessage, IcmpPacket, IcmpParseArgs};
 use crate::wire::ipv4::Ipv4Packet;
 use crate::wire::ipv6::Ipv6Packet;
@@ -421,7 +421,7 @@ pub(crate) fn verify_tcp_segment(
 pub(crate) fn parse_ethernet_frame(
     mut buf: &[u8],
 ) -> ParseResult<(&[u8], Mac, Mac, Option<EtherType>)> {
-    let frame = (&mut buf).parse::<EthernetFrame<_>>()?;
+    let frame = (&mut buf).parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check)?;
     let src_mac = frame.src_mac();
     let dst_mac = frame.dst_mac();
     let ethertype = frame.ethertype();

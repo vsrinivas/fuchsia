@@ -4,7 +4,6 @@
 
 //! Parsing and serialization of Ethernet frames.
 
-use byteorder::{ByteOrder, NetworkEndian};
 use net_types::ethernet::Mac;
 use packet::{
     BufferView, BufferViewMut, PacketBuilder, PacketConstraints, ParsablePacket, ParseMetadata,
@@ -50,7 +49,24 @@ pub(crate) struct EthernetFrame<B> {
     body: B,
 }
 
-impl<B: ByteSlice> ParsablePacket<B, ()> for EthernetFrame<B> {
+/// Whether or not an Ethernet frame's length should be checked during parsing.
+///
+/// When the `Check` variant is used, the Ethernet frame will be rejected if its
+/// total length (including header, but excluding the Frame Check Sequence (FCS)
+/// footer) is less than the required minimum of 60 bytes.
+#[derive(PartialEq)]
+pub(crate) enum EthernetFrameLengthCheck {
+    /// Check that the Ethernet frame's total length (including header, but
+    /// excluding the Frame Check Sequence (FCS) footer) satisfies the required
+    /// minimum of 60 bytes.
+    Check,
+    /// Do not check the Ethernet frame's total length. The frame will still be
+    /// rejected if a complete, valid header is not present, but the body may be
+    /// 0 bytes long.
+    NoCheck,
+}
+
+impl<B: ByteSlice> ParsablePacket<B, EthernetFrameLengthCheck> for EthernetFrame<B> {
     type Error = ParseError;
 
     fn parse_metadata(&self) -> ParseMetadata {
@@ -60,13 +76,16 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for EthernetFrame<B> {
         ParseMetadata::from_packet(header_len, self.body.len(), 0)
     }
 
-    fn parse<BV: BufferView<B>>(mut buffer: BV, _args: ()) -> ParseResult<Self> {
+    fn parse<BV: BufferView<B>>(
+        mut buffer: BV,
+        length_check: EthernetFrameLengthCheck,
+    ) -> ParseResult<Self> {
         // See for details: https://en.wikipedia.org/wiki/Ethernet_frame#Frame_%E2%80%93_data_link_layer
 
         let hdr_prefix = buffer
             .take_obj_front::<HeaderPrefix>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
-        if buffer.len() < 48 {
+        if length_check == EthernetFrameLengthCheck::Check && buffer.len() < 48 {
             // The minimum frame size (not including the Frame Check Sequence
             // (FCS) footer, which we do not handle in this code) is 60 bytes.
             // We've already consumed 12 bytes for the header prefix, so we must
@@ -80,16 +99,30 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for EthernetFrame<B> {
         // Identifier (TPID). A TPID of TPID_8021Q implies an 802.1Q tag, a TPID
         // of TPID_8021AD implies an 802.1ad tag, and anything else implies that
         // there is no tag - it's a normal ethertype field.
-        let ethertype_or_tpid = NetworkEndian::read_u16(buffer.as_ref());
+        let ethertype_or_tpid = buffer
+            .peek_obj_front::<U16>()
+            .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?
+            .get();
         let (tag, ethertype, body) = match ethertype_or_tpid {
             self::TPID_8021Q | self::TPID_8021AD => (
-                // Infallible since we verified the buffer length above.
-                Some(buffer.take_obj_front().unwrap()),
-                buffer.take_obj_front().unwrap(),
+                Some(
+                    buffer.take_obj_front().ok_or_else(debug_err_fn!(
+                        ParseError::Format,
+                        "too few bytes for header"
+                    ))?,
+                ),
+                buffer
+                    .take_obj_front()
+                    .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?,
                 buffer.into_rest(),
             ),
-            // Infallible since we verified the buffer length above.
-            _ => (None, buffer.take_obj_front().unwrap(), buffer.into_rest()),
+            _ => (
+                None,
+                buffer
+                    .take_obj_front()
+                    .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?,
+                buffer.into_rest(),
+            ),
         };
 
         let frame = EthernetFrame { hdr_prefix, tag, ethertype, body };
@@ -228,6 +261,7 @@ impl PacketBuilder for EthernetFrameBuilder {
 
 #[cfg(test)]
 mod tests {
+    use byteorder::{ByteOrder, NetworkEndian};
     use packet::{
         AsFragmentedByteSlice, Buf, InnerPacketBuilder, ParseBuffer, SerializeBuffer, Serializer,
     };
@@ -265,14 +299,25 @@ mod tests {
 
     #[test]
     fn test_parse() {
-        let (mut buf, body) = new_parse_buf();
-        let mut buf = &mut buf[..];
-        let frame = buf.parse::<EthernetFrame<_>>().unwrap();
+        crate::testutil::set_logger_for_test();
+        let (mut backing_buf, body) = new_parse_buf();
+        let mut buf = &mut backing_buf[..];
+        // Test parsing with a sufficiently long body.
+        let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
         assert_eq!(frame.hdr_prefix.dst_mac, DEFAULT_DST_MAC);
         assert_eq!(frame.hdr_prefix.src_mac, DEFAULT_SRC_MAC);
         assert!(frame.tag.is_none());
         assert_eq!(frame.ethertype(), Some(EtherType::Arp));
         assert_eq!(frame.body(), &body[..]);
+        // Test parsing with a too-short body but length checking disabled.
+        let mut buf = &mut backing_buf[..ETHERNET_HDR_LEN_NO_TAG];
+        let frame =
+            buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::NoCheck).unwrap();
+        assert_eq!(frame.hdr_prefix.dst_mac, DEFAULT_DST_MAC);
+        assert_eq!(frame.hdr_prefix.src_mac, DEFAULT_SRC_MAC);
+        assert!(frame.tag.is_none());
+        assert_eq!(frame.ethertype(), Some(EtherType::Arp));
+        assert_eq!(frame.body(), &[]);
 
         // For both of the TPIDs that imply the existence of a tag, make sure
         // that the tag is present and correct (and that all of the normal
@@ -286,7 +331,8 @@ mod tests {
             // write a valid EtherType
             NetworkEndian::write_u16(&mut buf[TPID_OFFSET + 4..], EtherType::Arp.into());
 
-            let frame = buf.parse::<EthernetFrame<_>>().unwrap();
+            let frame =
+                buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
             assert_eq!(frame.hdr_prefix.dst_mac, DEFAULT_DST_MAC);
             assert_eq!(frame.hdr_prefix.src_mac, DEFAULT_SRC_MAC);
             assert_eq!(frame.ethertype(), Some(EtherType::Arp));
@@ -308,11 +354,19 @@ mod tests {
         let mut buf = [0u8; 1014];
         // an incorrect length results in error
         NetworkEndian::write_u16(&mut buf[ETHERNET_ETHERTYPE_BYTE_OFFSET..], 1001);
-        assert!((&mut buf[..]).parse::<EthernetFrame<_>>().is_err());
+        assert!((&mut buf[..])
+            .parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check)
+            .is_err());
 
         // a correct length results in success
         NetworkEndian::write_u16(&mut buf[ETHERNET_ETHERTYPE_BYTE_OFFSET..], 1000);
-        assert_eq!((&mut buf[..]).parse::<EthernetFrame<_>>().unwrap().ethertype(), None);
+        assert_eq!(
+            (&mut buf[..])
+                .parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check)
+                .unwrap()
+                .ethertype(),
+            None
+        );
 
         // an unrecognized EtherType is returned numerically
         let mut buf = [0u8; 1014];
@@ -321,7 +375,10 @@ mod tests {
             ETHERNET_MAX_ILLEGAL_ETHERTYPE + 1,
         );
         assert_eq!(
-            (&mut buf[..]).parse::<EthernetFrame<_>>().unwrap().ethertype(),
+            (&mut buf[..])
+                .parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check)
+                .unwrap()
+                .ethertype(),
             Some(EtherType::Other(ETHERNET_MAX_ILLEGAL_ETHERTYPE + 1))
         );
     }
@@ -374,7 +431,16 @@ mod tests {
     fn test_parse_error() {
         // 1 byte shorter than the minimum
         let mut buf = [0u8; ETHERNET_MIN_FRAME_LEN - 1];
-        assert!((&mut buf[..]).parse::<EthernetFrame<_>>().is_err());
+        assert!((&mut buf[..])
+            .parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check)
+            .is_err());
+
+        // 1 byte shorter than the minimum header length still fails even if
+        // length checking is disabled
+        let mut buf = [0u8; ETHERNET_HDR_LEN_NO_TAG - 1];
+        assert!((&mut buf[..])
+            .parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::NoCheck)
+            .is_err());
 
         // an ethertype of 1500 should be validated as the length of the body
         let mut buf = [0u8; ETHERNET_MIN_FRAME_LEN];
@@ -382,7 +448,9 @@ mod tests {
             &mut buf[ETHERNET_ETHERTYPE_BYTE_OFFSET..],
             ETHERNET_MIN_ILLEGAL_ETHERTYPE - 1,
         );
-        assert!((&mut buf[..]).parse::<EthernetFrame<_>>().is_err());
+        assert!((&mut buf[..])
+            .parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check)
+            .is_err());
 
         // an ethertype of 1501 is illegal because it's in the range [1501, 1535]
         let mut buf = [0u8; ETHERNET_MIN_FRAME_LEN];
@@ -390,7 +458,9 @@ mod tests {
             &mut buf[ETHERNET_ETHERTYPE_BYTE_OFFSET..],
             ETHERNET_MIN_ILLEGAL_ETHERTYPE,
         );
-        assert!((&mut buf[..]).parse::<EthernetFrame<_>>().is_err());
+        assert!((&mut buf[..])
+            .parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check)
+            .is_err());
 
         // an ethertype of 1535 is illegal
         let mut buf = [0u8; ETHERNET_MIN_FRAME_LEN];
@@ -398,7 +468,9 @@ mod tests {
             &mut buf[ETHERNET_ETHERTYPE_BYTE_OFFSET..],
             ETHERNET_MAX_ILLEGAL_ETHERTYPE,
         );
-        assert!((&mut buf[..]).parse::<EthernetFrame<_>>().is_err());
+        assert!((&mut buf[..])
+            .parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check)
+            .is_err());
     }
 
     #[test]

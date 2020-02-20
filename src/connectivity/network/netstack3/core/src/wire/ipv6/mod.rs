@@ -860,7 +860,7 @@ mod tests {
     use super::*;
     use crate::ip::Ipv6ExtHdrType;
     use crate::testutil::*;
-    use crate::wire::ethernet::EthernetFrame;
+    use crate::wire::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
 
     const DEFAULT_SRC_IP: Ipv6Addr =
         Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
@@ -872,7 +872,7 @@ mod tests {
         use crate::wire::testdata::syn_v6::*;
 
         let mut buf = &ETHERNET_FRAME.bytes[..];
-        let frame = buf.parse::<EthernetFrame<_>>().unwrap();
+        let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
         verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
         let mut body = frame.body();
@@ -894,7 +894,7 @@ mod tests {
         use crate::wire::testdata::dns_request_v6::*;
 
         let mut buf = &ETHERNET_FRAME.bytes[..];
-        let frame = buf.parse::<EthernetFrame<_>>().unwrap();
+        let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
         verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
         let mut body = frame.body();

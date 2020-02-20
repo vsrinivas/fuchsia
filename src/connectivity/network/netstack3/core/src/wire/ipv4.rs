@@ -763,7 +763,7 @@ mod tests {
     use crate::device::ethernet::EtherType;
     use crate::ip::IpExt;
     use crate::testutil::*;
-    use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
+    use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck};
 
     const DEFAULT_SRC_MAC: Mac = Mac::new([1, 2, 3, 4, 5, 6]);
     const DEFAULT_DST_MAC: Mac = Mac::new([7, 8, 9, 0, 1, 2]);
@@ -775,7 +775,7 @@ mod tests {
         use crate::wire::testdata::tls_client_hello_v4::*;
 
         let mut buf = &ETHERNET_FRAME.bytes[..];
-        let frame = buf.parse::<EthernetFrame<_>>().unwrap();
+        let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
         verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
         let mut body = frame.body();
@@ -797,7 +797,7 @@ mod tests {
         use crate::wire::testdata::dns_request_v4::*;
 
         let mut buf = ETHERNET_FRAME.bytes;
-        let frame = buf.parse::<EthernetFrame<_>>().unwrap();
+        let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
         verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
         let mut body = frame.body();
@@ -867,7 +867,7 @@ mod tests {
             ))
             .serialize_vec_outer()
             .unwrap();
-        buffer.parse::<EthernetFrame<_>>().unwrap();
+        buffer.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
         // Test that the Ethernet body is the minimum length, which far exceeds
         // the IPv4 packet header size of 20 bytes (without options).
         assert_eq!(buffer.len(), 46);

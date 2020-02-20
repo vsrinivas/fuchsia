@@ -322,7 +322,7 @@ mod tests {
 
     use super::*;
     use crate::testutil::*;
-    use crate::wire::ethernet::EthernetFrame;
+    use crate::wire::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
 
     const TEST_SENDER_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
     const TEST_TARGET_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
@@ -334,7 +334,7 @@ mod tests {
         use crate::wire::testdata::arp_request::*;
 
         let mut buf = ETHERNET_FRAME.bytes;
-        let frame = buf.parse::<EthernetFrame<_>>().unwrap();
+        let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
         verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
         let (hw, proto) = peek_arp_types(frame.body()).unwrap();

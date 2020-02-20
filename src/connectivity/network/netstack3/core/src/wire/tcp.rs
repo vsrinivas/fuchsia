@@ -547,7 +547,7 @@ mod tests {
     use crate::testutil::benchmarks::{black_box, Bencher};
     use crate::testutil::*;
     use crate::wire::compute_transport_checksum;
-    use crate::wire::ethernet::EthernetFrame;
+    use crate::wire::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
     use crate::wire::ipv4::{Ipv4Header, Ipv4Packet};
     use crate::wire::ipv6::Ipv6Packet;
 
@@ -563,7 +563,7 @@ mod tests {
         use crate::wire::testdata::tls_client_hello_v4::*;
 
         let mut buf = &ETHERNET_FRAME.bytes[..];
-        let frame = buf.parse::<EthernetFrame<_>>().unwrap();
+        let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
         verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
         let mut body = frame.body();
@@ -590,7 +590,7 @@ mod tests {
         use crate::wire::testdata::syn_v6::*;
 
         let mut buf = &ETHERNET_FRAME.bytes[..];
-        let frame = buf.parse::<EthernetFrame<_>>().unwrap();
+        let frame = buf.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
         verify_ethernet_frame(&frame, ETHERNET_FRAME);
 
         let mut body = frame.body();

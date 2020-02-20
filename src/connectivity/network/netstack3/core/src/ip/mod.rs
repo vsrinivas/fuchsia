@@ -1951,7 +1951,7 @@ mod tests {
     use crate::device::{receive_frame, set_routing_enabled, FrameDestination};
     use crate::ip::path_mtu::{get_pmtu, min_mtu};
     use crate::testutil::*;
-    use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder};
+    use crate::wire::ethernet::{EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck};
     use crate::wire::icmp::{
         IcmpDestUnreachable, IcmpEchoRequest, IcmpPacketBuilder, IcmpParseArgs, IcmpUnusedCode,
         Icmpv4DestUnreachableCode, Icmpv6Packet, Icmpv6PacketTooBig, Icmpv6ParameterProblemCode,
@@ -1981,7 +1981,8 @@ mod tests {
         let device_frames = ctx.dispatcher.frames_sent().clone();
         assert!(!device_frames.is_empty());
         let mut buffer = Buf::new(device_frames[offset].1.as_slice(), ..);
-        let _frame = buffer.parse::<EthernetFrame<_>>().unwrap();
+        let _frame =
+            buffer.parse_with::<_, EthernetFrame<_>>(EthernetFrameLengthCheck::Check).unwrap();
         let packet = buffer.parse::<<Ipv6 as IpExtByteSlice<&[u8]>>::Packet>().unwrap();
         let (src_ip, dst_ip, proto, _) = packet.into_metadata();
         assert_eq!(dst_ip, DUMMY_CONFIG_V6.remote_ip.get());
