@@ -46,4 +46,7 @@ executable("reboot_log_handler_unittest") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-net",
   ]
+
+  # TODO(46538): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
