@@ -473,7 +473,7 @@ pub trait RoutingProtocol {
 }
 
 /// Describes an event recorded by the EventSink
-#[derive(Clone, Eq, PartialOrd, Ord, Debug)]
+#[derive(Eq, PartialOrd, Ord, Debug)]
 pub struct RecordedEvent {
     pub event_type: fevents::EventType,
     pub target_moniker: String,
@@ -481,10 +481,9 @@ pub struct RecordedEvent {
 }
 
 /// This implementation of PartialEq allows comparison between `RecordedEvent`s when the order in
-/// which components are launched can't be guaranteed. `target_moniker` can end in a wild card in
-/// `target_moniker` to match by prefix instead of requiring a full match. For example, a test can
-/// use the the following `RecordedEvent`
-///
+/// which components are launched can't be guaranteed. Tests can use a wild card in the
+/// `target_moniker` instead of needing to have the correct number. For example a test can use the
+/// the following `RecordedEvent`
 /// ```
 /// RecordedEvent {
 ///    event_type: EventType::RouteCapability,
@@ -492,26 +491,26 @@ pub struct RecordedEvent {
 ///    capability_id: Some("elf".to_string()),
 /// },
 /// ```
-///
 /// to match another `RecordedEvent` with the target_moniker of "./session:session:1" or
-/// "./session:session:2". If both target_monikers have instance ids they are still compared as
+/// "./session:session:2". If both target_monikers have numbers those numbers are still compared as
 /// expected.
-///
-/// This also works (wild card for name and id):
-///
-/// ```
-/// RecordedEvent {
-///    event_type: EventType::RouteCapability,
-///    target_moniker: "./session:*".to_string(),
-///    capability_id: Some("elf".to_string()),
-/// },
-/// ```
 impl PartialEq<RecordedEvent> for RecordedEvent {
     fn eq(&self, other: &RecordedEvent) -> bool {
-        let targets_match = if self.target_moniker.ends_with("*") {
-            let index = self.target_moniker.rfind('*').unwrap();
-            let prefix = &self.target_moniker[..index];
-            other.target_moniker.starts_with(prefix)
+        let targets_match = if self.target_moniker.contains(":")
+            && other.target_moniker.contains(":")
+        {
+            let my_split = self.target_moniker.rfind(':').unwrap();
+            let my_comp = &self.target_moniker[..my_split];
+            let my_index = &self.target_moniker[my_split + 1..];
+
+            let other_split = other.target_moniker.rfind(':').unwrap();
+            let other_comp = &other.target_moniker[..other_split];
+            let other_index = &other.target_moniker[other_split + 1..];
+
+            let indicies_match =
+                if my_index == "*" || other_index == "*" { true } else { my_index == other_index };
+
+            my_comp == other_comp && indicies_match
         } else {
             self.target_moniker == other.target_moniker
         };
