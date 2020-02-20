@@ -150,7 +150,7 @@ zx_status_t PlatformBus::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
 }
 
 void PlatformBus::GetBoardName(GetBoardNameCompleter::Sync completer) {
-  fbl::AutoLock lock(&board_name_completer_mutex_);
+  fbl::AutoLock lock(&board_info_lock_);
   // Reply immediately if board name is valid
   if (strlen(board_info_.board_name) != 0) {
     return completer.Reply(
@@ -161,6 +161,7 @@ void PlatformBus::GetBoardName(GetBoardNameCompleter::Sync completer) {
 }
 
 void PlatformBus::GetBoardRevision(GetBoardRevisionCompleter::Sync completer) {
+  fbl::AutoLock lock(&board_info_lock_);
   return completer.Reply(ZX_OK, board_info_.board_revision);
 }
 
@@ -172,20 +173,20 @@ void PlatformBus::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter
 }
 
 zx_status_t PlatformBus::PBusGetBoardInfo(pdev_board_info_t* out_info) {
+  fbl::AutoLock lock(&board_info_lock_);
   memcpy(out_info, &board_info_, sizeof(board_info_));
   return ZX_OK;
 }
 
 zx_status_t PlatformBus::PBusSetBoardInfo(const pbus_board_info_t* info) {
+  fbl::AutoLock lock(&board_info_lock_);
   if (info->board_name[0]) {
     zxlogf(INFO, "PlatformBus: setting board name to \"%s\"\n", info->board_name);
+
+    std::vector<GetBoardNameCompleter::Async> completer_tmp_;
     strlcpy(board_info_.board_name, info->board_name, sizeof(board_info_.board_name));
     // Respond to pending boardname requests, if any.
-    std::vector<GetBoardNameCompleter::Async> completer_tmp_;
-    {
-      fbl::AutoLock lock(&board_name_completer_mutex_);
-      board_name_completer_.swap(completer_tmp_);
-    }
+    board_name_completer_.swap(completer_tmp_);
     while (!completer_tmp_.empty()) {
       completer_tmp_.back().Reply(
           ZX_OK, fidl::StringView(board_info_.board_name, strlen(board_info_.board_name)));
@@ -507,6 +508,8 @@ zx_status_t PlatformBus::Init() {
   if (status != ZX_OK) {
     return status;
   }
+
+  fbl::AutoLock lock(&board_info_lock_);
   if (vmo.is_valid()) {
     zbi_platform_id_t platform_id;
     status = vmo.read(&platform_id, 0, sizeof(platform_id));

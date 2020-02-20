@@ -96,14 +96,15 @@ class PlatformBus : public PlatformBusType,
   zx_status_t Init();
 
   zx::channel items_svc_;
-  pdev_board_info_t board_info_ = {};
+
+  // Protects board_name_completer_.
+  fbl::Mutex board_info_lock_;
+  pdev_board_info_t board_info_ __TA_GUARDED(board_info_lock_) = {};
+  // List to cache requests when boardname is not yet set.
+  std::vector<GetBoardNameCompleter::Async> board_name_completer_ __TA_GUARDED(board_info_lock_);
+
   ::llcpp::fuchsia::sysinfo::InterruptControllerType interrupt_controller_type_ =
       ::llcpp::fuchsia::sysinfo::InterruptControllerType::UNKNOWN;
-  // List to cache requests when boardname is not yet set.
-  std::vector<GetBoardNameCompleter::Async> board_name_completer_
-      __TA_GUARDED(board_name_completer_mutex_);
-  // Protects board_name_completer_.
-  fbl::Mutex board_name_completer_mutex_;
 
   // Protocols that are optionally provided by the board driver.
   std::optional<ddk::ClockImplProtocolClient> clock_;
