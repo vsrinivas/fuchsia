@@ -15,8 +15,8 @@ use omaha_client::{
 use std::cmp::max;
 use std::time::Duration;
 
-/// We do periodic update check roughly every 5 hours.
-const PERIODIC_INTERVAL: Duration = Duration::from_secs(5 * 60 * 60);
+/// We do periodic update check roughly every hour.
+const PERIODIC_INTERVAL: Duration = Duration::from_secs(1 * 60 * 60);
 /// Wait at least one minute before checking for updates after startup.
 const STARTUP_DELAY: Duration = Duration::from_secs(60);
 /// Wait 5 minutes before retrying after failed update checks.
