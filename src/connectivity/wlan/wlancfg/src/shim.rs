@@ -84,6 +84,7 @@ async fn handle_request(
 ) -> Result<(), fidl::Error> {
     match req {
         legacy::WlanRequest::Scan { req, responder } => {
+            info!("Received a Scan request from legacy WLAN API.");
             let mut r = scan(client, req).await;
             responder.send(&mut r)
         }

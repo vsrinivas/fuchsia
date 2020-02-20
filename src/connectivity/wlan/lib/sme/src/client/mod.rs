@@ -42,7 +42,7 @@ use {
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect_contrib::{inspect_insert, inspect_log, log::InspectListClosure},
     futures::channel::{mpsc, oneshot},
-    log::error,
+    log::{error, info},
     std::sync::Arc,
     thiserror::Error,
     wep_deprecated,
@@ -258,6 +258,7 @@ impl ClientSme {
         self.state = self.state.take().map(|state| state.cancel_ongoing_connect(&mut self.context));
 
         let ssid = req.ssid;
+        info!("SME received a connect command. Initiating a join scan with targted SSID");
         let (canceled_token, req) = self.scan_sched.enqueue_scan_to_join(JoinScan {
             ssid: ssid.clone(),
             token: ConnectConfig {
@@ -290,6 +291,7 @@ impl ClientSme {
         &mut self,
         scan_type: fidl_common::ScanType,
     ) -> oneshot::Receiver<BssDiscoveryResult> {
+        info!("SME received a scan command, initiating a discovery scan");
         let (responder, receiver) = Responder::new();
         let scan = DiscoveryScan::new(responder, scan_type);
         let req = self.scan_sched.enqueue_scan_to_discover(scan);
