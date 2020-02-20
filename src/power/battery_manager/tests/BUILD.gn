@@ -23,6 +23,9 @@ go_library("battery_manager_lib") {
 go_test("battery_manager_test") {
   gopackages = [ "battery_manager" ]
   deps = [ ":battery_manager_lib" ]
+
+  # TODO(46536): Fix the leaks and remove this.
+  non_go_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("battery_manager_gotests") {
