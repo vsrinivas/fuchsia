@@ -1303,8 +1303,8 @@ aggregate_manifest("migrated-image") {
     "//src/devices/block/bin/biotime:biotime-manifest",
     "//src/devices/block/bin/blktest:blktest-manifest",
     "//zircon/system/uapp/blobfs:blobfs-manifest",
-    "//zircon/system/uapp/clock:clkctl-manifest",
-    "//zircon/system/uapp/clock:clock-manifest",
+    "//src/devices/clock/bin/clock:clkctl-manifest",
+    "//src/devices/clock/bin/clock:clock-manifest",
 #------------------
     #":bin.console",
 #------------------
