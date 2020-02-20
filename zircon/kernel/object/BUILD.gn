@@ -33,6 +33,7 @@ zx_library("object") {
     "mbuf.cc",
     "message_packet.cc",
     "msi_allocation.cc",
+    "msi_dispatcher.cc",
     "pager_dispatcher.cc",
     "pci_device_dispatcher.cc",
     "pci_interrupt_dispatcher.cc",

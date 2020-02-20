@@ -384,6 +384,7 @@ typedef uint32_t zx_obj_type_t;
 #define ZX_OBJ_TYPE_CLOCK           ((zx_obj_type_t)30u)
 #define ZX_OBJ_TYPE_STREAM          ((zx_obj_type_t)31u)
 #define ZX_OBJ_TYPE_MSI_ALLOCATION  ((zx_obj_type_t)32u)
+#define ZX_OBJ_TYPE_MSI_INTERRUPT   ((zx_obj_type_t)33u)
 
 // System ABI commits to having no more than 64 object types.
 //
