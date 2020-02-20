@@ -15,13 +15,6 @@ import("//build/images/shell_commands.gni")
 # Given base, cache, and universe packages, assembles a Fuchsia system
 # containing those packages.
 #
-# This template can be instantiated at most one in a given BUILD.gn file.
-#
-# Unfortunately, we still have some parts of the build that need build-global
-# names. The name of this target is used to disambiguate those names, which
-# means the target_name of this template instance must be unique among
-# instances of the template.
-#
 # Parameters
 #
 #   base_packages (required)
@@ -52,6 +45,9 @@ import("//build/images/shell_commands.gni")
 #
 #   compress_blobs (default: true)
 #     [boolean] Whether the blobs added to the blobfs image should be compressed.
+#
+#   output_dir (optional; default: target_out_dir)
+#     [string] The output directory into which the final system ZBI is written.
 template("assemble_system") {
   base_packages = invoker.base_packages
   cache_packages = []
@@ -81,61 +77,64 @@ template("assemble_system") {
     devmgr_config = invoker.devmgr_config
   }
 
-  shell_commands("shell-commands") {
+  shell_commands("${target_name}_shell-commands") {
+    package_name = "shell-commands"
     testonly = true
     visibility = [ ":*" ]
     deps = base_packages + cache_packages + universe_packages
   }
 
-  config_package("config-data") {
+  config_package("${image_name}_config-data") {
+    package_name = "config-data"
     testonly = true
     visibility = [ ":*" ]
     deps = base_packages + cache_packages + universe_packages
   }
 
-  group("base_packages") {
+  group("${image_name}_base_packages") {
     testonly = true
     visibility = [ ":*" ]
     deps = base_packages + [
-      ":config-data",
-      ":shell-commands",
-      pkgfs_package_label,
-    ]
+             ":${image_name}_config-data",
+             ":${image_name}_shell-commands",
+             pkgfs_package_label,
+           ]
   }
 
-  meta_far_merkle_index = "$target_out_dir/meta_far_merkle_index"
-  package_metadata_list("meta_far_merkle_index") {
+  meta_far_merkle_index = "$target_out_dir/${image_name}_meta_far_merkle_index"
+  package_metadata_list("${image_name}_meta_far_merkle_index") {
     testonly = true
     visibility = [ ":*" ]
     outputs = [ meta_far_merkle_index ]
     data_keys = [ "meta_far_merkle_index_entries" ]
-    deps = [ ":base_packages" ]
+    deps = [ ":${image_name}_base_packages" ]
   }
 
-  action("pkgsvr_index") {
+  action("${image_name}_pkgsvr_index") {
     visibility = [ ":*" ]
     testonly = true
     inputs = [ meta_far_merkle_index ]
-    outputs = [ "$target_out_dir/$target_name" ]
-    deps = [ ":meta_far_merkle_index" ]
+    outputs = [ "$target_out_dir/${target_name}" ]
+    deps = [ ":${image_name}_meta_far_merkle_index" ]
     script = "//build/images/manifest_content_expand.sh"
     args = rebase_path(inputs, root_build_dir) +
            rebase_path(outputs, root_build_dir)
   }
 
-  system_image_manifest_args = "$target_out_dir/system_image.manifest_args"
-  generated_file("system_image.manifest_args") {
+  system_image_manifest_args =
+      "$target_out_dir/${image_name}_system_image.manifest_args"
+  generated_file("${image_name}_system_image.manifest_args") {
     visibility = [ ":*" ]
     testonly = true
     outputs = [ system_image_manifest_args ]
     data_keys = [ "system_image_rsps" ]
     walk_keys = [ "package_barrier" ]
-    deps = [ ":base_packages" ]
+    deps = [ ":${image_name}_base_packages" ]
   }
 
   boot_manifest = "$target_out_dir/boot.manifest"
 
-  generate_manifest("system_image.manifest") {
+  generate_manifest("${image_name}_system_image.manifest") {
     visibility = [ ":*" ]
     testonly = true
 
@@ -147,11 +146,11 @@ template("assemble_system") {
     }
 
     deps = [
-      ":pkgsvr_index",
-      ":system_image.manifest_args",
+      ":${image_name}_pkgsvr_index",
+      ":${image_name}_system_image.manifest_args",
     ]
     json = "//build/images/system_meta_package.json"
-    pkgsvr_index = get_target_outputs(":pkgsvr_index")
+    pkgsvr_index = get_target_outputs(":${image_name}_pkgsvr_index")
 
     sources = [
       json,
@@ -172,34 +171,35 @@ template("assemble_system") {
               rebase_path("$root_build_dir/virtual-console", root_build_dir) ]
   }
 
-  system_manifest_outputs = get_target_outputs(":system_image.manifest")
+  system_manifest_outputs =
+      get_target_outputs(":${image_name}_system_image.manifest")
   assert(boot_manifest == system_manifest_outputs[2])
 
-  pm_build_package("system_image.meta") {
+  pm_build_package("${image_name}_system_image.meta") {
     visibility = [ ":*" ]
     testonly = true
-    manifest = ":system_image.manifest"
+    manifest = ":${image_name}_system_image.manifest"
     package_name = "system_image"
   }
 
   blob_manifest = "$target_out_dir/${image_name}_blob.manifest"
-  collect_blob_manifest("blob.manifest") {
+  collect_blob_manifest("${image_name}_blob.manifest") {
     testonly = true
     visibility = [ ":*" ]
     outputs = [ blob_manifest ]
     deps = [
-      ":base_packages",
-      ":system_image.meta",
+      ":${image_name}_base_packages",
+      ":${image_name}_system_image.meta",
       pkgfs_package_label,
     ]
   }
 
-  zircon_tool_action("blob.blk") {
+  zircon_tool_action("${image_name}_blob.blk") {
     visibility = [ ":*" ]
     testonly = true
-    deps = [ ":blob.manifest" ]
+    deps = [ ":${image_name}_blob.manifest" ]
     blob_image_path = "$target_out_dir/$target_name"
-    blob_size_list = "$root_build_dir/${image_name}_blob.sizes"
+    blob_size_list = "$target_out_dir/${image_name}_blob.sizes"
     outputs = [ blob_image_path ]
     depfile = blob_image_path + ".d"
     inputs = [ blob_manifest ]
@@ -220,8 +220,8 @@ template("assemble_system") {
     ]
   }
 
-  zircon_tool_action("data.blk") {
-    data_image_path = "$target_out_dir/data.blk"
+  zircon_tool_action("${image_name}_data.blk") {
+    data_image_path = "$target_out_dir/${target_name}"
     visibility = [ ":*" ]
     testonly = true
     outputs = [ data_image_path ]
@@ -232,7 +232,7 @@ template("assemble_system") {
     ]
   }
 
-  generate_fvm("fvm.blk") {
+  generate_fvm("${image_name}_fvm.blk") {
     # Referenced by guest_package.
     testonly = true
     output_name = "$target_out_dir/$target_name"
@@ -240,23 +240,23 @@ template("assemble_system") {
     partitions = [
       {
         type = "blob"
-        dep = ":blob.blk"
+        dep = ":${image_name}_blob.blk"
       },
       {
         type = "data"
-        dep = ":data.blk"
+        dep = ":${image_name}_data.blk"
       },
     ]
   }
 
-  action("devmgr_config.txt") {
+  action("${image_name}_devmgr_config.txt") {
     visibility = [ ":*" ]
     testonly = true
     script = "//build/images/manifest.py"
     outputs = [ "$target_out_dir/$target_name" ]
     args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
     sources = []
-    deps = [ ":system_image.manifest" ]
+    deps = [ ":${image_name}_system_image.manifest" ]
 
     if (!bootfs_only) {
       pkgfs = "bin/" + pkgfs_binary_name
@@ -265,10 +265,10 @@ template("assemble_system") {
                           get_label_info(pkgfs_label, "name")
       pkgfs_blob_manifest = "$pkgfs_pkg_out_dir/meta/contents"
       system_image_merkleroot =
-          "$target_out_dir/system_image.meta/meta.far.merkle"
+          "$target_out_dir/${image_name}_system_image.meta/meta.far.merkle"
 
       deps += [
-        ":system_image.meta",
+        ":${image_name}_system_image.meta",
         pkgfs_label,
       ]
 
@@ -346,6 +346,11 @@ template("assemble_system") {
       }
     }
 
+    output_dir = target_out_dir
+    if (defined(invoker.output_dir)) {
+      output_dir = invoker.output_dir
+    }
+
     forward_variables_from(invoker,
                            [
                              "cmdline",
@@ -354,9 +359,9 @@ template("assemble_system") {
 
     testonly = true
     deps = [
-      ":devmgr_config.txt",
-      ":fvm.blk",
-      ":system_image.manifest",
+      ":${image_name}_devmgr_config.txt",
+      ":${image_name}_fvm.blk",
+      ":${image_name}_system_image.manifest",
       component_manager_label,
       coordinator_label,
       root_manifests_label,
@@ -371,12 +376,12 @@ template("assemble_system") {
     manifest = [
       {
         outputs = [ "config/devmgr" ]
-        sources = get_target_outputs(":devmgr_config.txt")
+        sources = get_target_outputs(":${image_name}_devmgr_config.txt")
       },
     ]
 
     if (netboot) {
-      ramdisk_inputs = get_target_outputs(":fvm.blk")
+      ramdisk_inputs = get_target_outputs(":${image_name}_fvm.blk")
     }
   }
 }

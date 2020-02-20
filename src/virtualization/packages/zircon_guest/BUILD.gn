@@ -12,7 +12,9 @@ config_data("services_config") {
   sources = [ "services.config" ]
 }
 
-guest_fvm_blk_label = "//build/images/guest:fvm.blk"
+guest_image_label = "//build/images/guest"
+guest_image_dir = get_label_info(guest_image_label, "target_out_dir")
+guest_fvm_blk_label = "//build/images/guest:guest_fvm.blk"
 
 guest_package("zircon_guest") {
   # This guest package needs to be marked as testonly becuase it contains tests
@@ -22,13 +24,13 @@ guest_package("zircon_guest") {
     "//build/images/guest",
     guest_fvm_blk_label,
   ]
-  zircon = "$root_out_dir/guest.zbi"
+  zircon = guest_image_dir + "/guest.zbi"
 
   cmdline =
       "console.path=/dev/class/console/virtio-console console.is_virtio=true"
 
   disk_filename = "filesystem.fvm"
-  fvm = get_label_info(guest_fvm_blk_label, "target_out_dir") + "/fvm.blk"
+  fvm = guest_image_dir + "/guest_fvm.blk"
   resources = [
     {
       path = rebase_path(fvm)

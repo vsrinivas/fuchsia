@@ -40,9 +40,7 @@ template("config_data") {
                            ])
 
     if (!defined(outputs)) {
-      outputs = [
-        "{{source_file_part}}",
-      ]
+      outputs = [ "{{source_file_part}}" ]
     }
 
     assert(outputs != [] && outputs - [ outputs[0] ] == [],
@@ -89,9 +87,7 @@ template("config_package") {
     # This contract is known to package.gni.
     data_keys = [ "config_package_entries" ]
     walk_keys = [ "config_package_barrier" ]
-    outputs = [
-      config_package_manifest_path,
-    ]
+    outputs = [ config_package_manifest_path ]
   }
 
   package(target_name) {
@@ -99,6 +95,7 @@ template("config_package") {
                            [
                              "data_deps",
                              "deps",
+                             "package_name",
                              "public_deps",
                              "testonly",
                              "visibility",

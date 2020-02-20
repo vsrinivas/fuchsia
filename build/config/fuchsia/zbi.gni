@@ -20,8 +20,9 @@ declare_args() {
 #       [string] These together determine the name of the output file.
 #       If `output_name` is omitted, then the name of the target is
 #       used.  If `output_extension` is "" then `output_name` is the
-#       file name; otherwise, `${output_name}.${output_extension}`;
-#       the output file is always under `root_out_dir`.
+#       file name; otherwise, `${output_name}.${output_extension}`.
+#   output_dir (optional, default: root_out_dir)
+#       [string] the output file is under output_dir.
 #
 #   complete (optional, default: true)
 #       [Boolean] If true, then the output is intended to be a complete ZBI.
@@ -78,7 +79,11 @@ template("zbi") {
     output_file += ".zbi"
   }
 
-  output_file = "$root_out_dir/$output_file"
+  output_dir = root_out_dir
+  if (defined(invoker.output_dir)) {
+    output_dir = invoker.output_dir
+  }
+  output_file = "$output_dir/$output_file"
 
   zircon_tool_action(target_name) {
     forward_variables_from(invoker,
@@ -88,9 +93,7 @@ template("zbi") {
                              "testonly",
                              "visibility",
                            ])
-    outputs = [
-      output_file,
-    ]
+    outputs = [ output_file ]
     depfile = "${output_file}.d"
     inputs = []
 

@@ -29,9 +29,7 @@ template("shell_commands") {
     # This contract is known to package.gni.
     data_keys = [ "shell_binary_entries" ]
     walk_keys = [ "shell_binary_barrier" ]
-    outputs = [
-      shell_commands_manifest_path,
-    ]
+    outputs = [ shell_commands_manifest_path ]
   }
 
   package(target_name) {
@@ -40,12 +38,11 @@ template("shell_commands") {
     }
     forward_variables_from(invoker,
                            [
+                             "package_name",
                              "testonly",
                              "visibility",
                            ])
     extra = [ shell_commands_manifest_path ]
-    deps = [
-      ":$shell_commands_manifest",
-    ]
+    deps = [ ":$shell_commands_manifest" ]
   }
 }

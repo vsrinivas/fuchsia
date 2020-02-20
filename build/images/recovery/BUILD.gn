@@ -39,17 +39,21 @@ recovery_packages = [
 
 assemble_system("recovery") {
   base_packages = recovery_packages
+
   # We avoid compressing blobs in the blobfs image so that they can be more
   # effectively compressed by the ZBI compressor that is tuned to zstd max.
   compress_blobs = false
   netboot = true
   devmgr_config = [ "virtcon.disable=true" ] + zedboot_devmgr_config
-  cmdline = [ "netsvc.disable=false",
+  cmdline = [
+              "netsvc.disable=false",
               "kernel.enable-debugging-syscalls=true",
-              "kernel.enable-serial-syscalls=true", ] +
-            zedboot_cmdline_args +
-            board_zedboot_cmdline_args
+              "kernel.enable-serial-syscalls=true",
+            ] + zedboot_cmdline_args + board_zedboot_cmdline_args
   cmdline_inputs = zedboot_cmdline_files
+
+  # XXX: Temporary: output into root_out_dir as the tests expect that:
+  output_dir = root_out_dir
 
   #XXX(comfoltey) Disable bootfs_allowlist_recovery while build unification is
   # in progress
