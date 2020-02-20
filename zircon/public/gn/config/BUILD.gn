@@ -747,10 +747,6 @@ config("temporarily_disable_ubsan_do_not_use") {
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/ulib/cobalt-client/test:*",
 
-    # TODO(41889): UBSan has found an instance of undefined behavior in this target.
-    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-    "$zx_build/system/ulib/ftl:*",
-
     # TODO(41890): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/ulib/gpt:*",
