@@ -22,3 +22,6 @@ toc:
 - name: "Community"
   contents:
   - include: /docs/community/_toc.yaml
+- name: "Project"
+  contents:
+  - include: /docs/project/_toc.yaml
