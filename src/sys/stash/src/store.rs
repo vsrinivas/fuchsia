@@ -195,7 +195,6 @@ impl StoreManager {
         let backing_file = backing_file.into();
         let store = match fs::read(&backing_file) {
             Ok(buf) => {
-                fx_log_info!("deserializing store from file");
                 Store::deserialize(buf)?
             }
             Err(e) => {
