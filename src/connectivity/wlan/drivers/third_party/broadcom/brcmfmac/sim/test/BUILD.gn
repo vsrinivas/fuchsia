@@ -42,6 +42,9 @@ executable("assoc_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fake_ddk",
   ]
+
+  # TODO(46539): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("create_softap_test") {
@@ -58,6 +61,9 @@ executable("create_softap_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fake_ddk",
   ]
+
+  # TODO(46539): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("dynamic_if_test") {
@@ -73,6 +79,9 @@ executable("dynamic_if_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fake_ddk",
   ]
+
+  # TODO(46539): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("firmware_config_test") {
@@ -88,6 +97,9 @@ executable("firmware_config_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fake_ddk",
   ]
+
+  # TODO(46539): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("lifecycle_test") {
@@ -101,6 +113,9 @@ executable("lifecycle_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fake_ddk",
   ]
+
+  # TODO(46539): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("scan_dwell_time_test") {
@@ -115,6 +130,9 @@ executable("scan_dwell_time_test") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fake_ddk",
   ]
+
+  # TODO(46539): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("passive_scan_test") {
@@ -130,6 +148,9 @@ executable("passive_scan_test") {
     "//zircon/public/lib/fake_ddk",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
+
+  # TODO(46539): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("active_scan_test") {
@@ -145,6 +166,9 @@ executable("active_scan_test") {
     "//zircon/public/lib/fake_ddk",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
+
+  # TODO(46539): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("set_cc_test") {
@@ -159,6 +183,9 @@ executable("set_cc_test") {
     "//zircon/public/lib/fake_ddk",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
+
+  # TODO(46539): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("tx_data_test") {
@@ -174,6 +201,9 @@ executable("tx_data_test") {
     "//zircon/public/lib/fake_ddk",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
+
+  # TODO(46539): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 unittest_package("brcmfmac_sim_test") {
