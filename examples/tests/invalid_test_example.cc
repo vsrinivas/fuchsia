@@ -13,11 +13,11 @@ int main() {
   std::vector<example::TestInput> inputs = {
       {.name = "Example.Test1",
        .status = fuchsia::test::Status::PASSED,
-       .set_outcome_status = false},
+       .set_result_status = false},
       {.name = "Example.Test2", .status = fuchsia::test::Status::PASSED},
       {.name = "Example.Test3",
        .status = fuchsia::test::Status::PASSED,
-       .set_outcome_status = false}};
+       .set_result_status = false}};
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();

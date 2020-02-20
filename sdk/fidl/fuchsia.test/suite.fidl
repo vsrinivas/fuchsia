@@ -43,8 +43,8 @@ table Invocation {
 table RunOptions {
 };
 
-/// Results of invoking a single test case.
-table Outcome {
+/// Result of invoking a single test case.
+table Result {
     /// This member is required.
     1: Status status;
 };
@@ -57,7 +57,7 @@ protocol RunListener {
 
     /// Indicates that an invididual test case has completed and outcome is
     /// available.
-    OnTestCaseFinished(Name name, Outcome outcome);
+    OnTestCaseFinished(Name name, Result result);
 };
 
 [Discoverable]

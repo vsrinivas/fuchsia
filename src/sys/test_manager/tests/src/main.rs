@@ -9,7 +9,7 @@ use {
     anyhow::{Context as _, Error},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_test as ftest, fidl_fuchsia_test_manager as ftest_manager,
-    ftest_manager::Outcome,
+    ftest_manager::Result_,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
@@ -91,7 +91,7 @@ fn connect_test_manager() -> Result<ftest_manager::HarnessProxy, Error> {
 
 async fn run_test(
     logger: fuchsia_zircon::Socket,
-    outcome: &mut ftest::Outcome,
+    result: &mut ftest::Result_,
 ) -> Result<(), Error> {
     let test_url = "fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm";
 
@@ -105,7 +105,7 @@ async fn run_test(
     fasync::spawn_local(async move {
         log_fut.await;
     });
-    let result = proxy.run_suite(test_url, log).await?;
+    let suite_result = proxy.run_suite(test_url, log).await?;
     let logs = log_fut_remote.await?;
     let logs = from_utf8(&logs).expect("should be a valid string").to_string();
 
@@ -113,17 +113,17 @@ async fn run_test(
 [PASSED]	EchoTest
 
 1 out of 1 tests passed...
-fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm completed with outcome: Passed
+fuchsia-pkg://fuchsia.com/example-tests#meta/echo_test_realm.cm completed with result: Passed
 "
     .to_owned();
 
     if expected != logs {
         logger.write(format!("invalid logs:\n{}", logs).as_bytes())?;
-        outcome.status = Some(ftest::Status::Failed);
+        result.status = Some(ftest::Status::Failed);
     }
-    if result != Outcome::Passed {
+    if suite_result != Result_::Passed {
         logger.write(format!("echo test failed with status {:?}", result).as_bytes())?;
-        outcome.status = Some(ftest::Status::Failed);
+        result.status = Some(ftest::Status::Failed);
     }
 
     Ok(())
@@ -148,14 +148,14 @@ async fn run_test_suite(mut stream: ftest::SuiteRequestStream) -> Result<(), Err
                 let (log_end, logger) =
                     fuchsia_zircon::Socket::create(fuchsia_zircon::SocketOpts::empty())
                         .expect("cannot create socket.");
-                let mut outcome = ftest::Outcome { status: Some(ftest::Status::Passed) };
+                let mut result = ftest::Result_ { status: Some(ftest::Status::Passed) };
 
                 proxy
                     .on_test_case_started(test_name, log_end)
                     .expect("on_test_case_started failed");
-                run_test(logger, &mut outcome).await?;
+                run_test(logger, &mut result).await?;
                 proxy
-                    .on_test_case_finished(test_name, outcome)
+                    .on_test_case_finished(test_name, result)
                     .expect("on_test_case_finished failed");
             }
         }

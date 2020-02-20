@@ -13,30 +13,30 @@ use {
 };
 
 #[derive(PartialEq, Debug)]
-pub enum TestOutcome {
+pub enum TestResult {
     Passed,
     Failed,
     Inconclusive,
     Error,
 }
 
-impl fmt::Display for TestOutcome {
+impl fmt::Display for TestResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TestOutcome::Passed => write!(f, "PASSED"),
-            TestOutcome::Failed => write!(f, "FAILED"),
-            TestOutcome::Inconclusive => write!(f, "INCONCLUSIVE"),
-            TestOutcome::Error => write!(f, "ERROR"),
+            TestResult::Passed => write!(f, "PASSED"),
+            TestResult::Failed => write!(f, "FAILED"),
+            TestResult::Inconclusive => write!(f, "INCONCLUSIVE"),
+            TestResult::Error => write!(f, "ERROR"),
         }
     }
 }
 
 // Runs test defined by |url|, and writes logs to writer.
-// Returns (Outcome, Names of tests executed, Names of tests passed)
+// Returns (TestResult, Names of tests executed, Names of tests passed)
 pub async fn run_test<W: Write>(
     url: String,
     writer: &mut W,
-) -> Result<(TestOutcome, Vec<String>, Vec<String>), Error> {
+) -> Result<(TestResult, Vec<String>, Vec<String>), Error> {
     let launcher =
         match fuchsia_component::client::connect_to_service::<fidl_fuchsia_sys::LauncherMarker>() {
             Ok(l) => l,
@@ -50,7 +50,7 @@ pub async fn run_test<W: Write>(
 
     fasync::spawn(remote);
 
-    let mut test_outcome = TestOutcome::Passed;
+    let mut test_result = TestResult::Passed;
 
     let mut test_cases_in_progress = HashSet::new();
     let mut test_cases_executed = HashSet::new();
@@ -66,7 +66,7 @@ pub async fn run_test<W: Write>(
                 test_cases_in_progress.insert(test_case_name.clone());
                 test_cases_executed.insert(test_case_name);
             }
-            TestEvent::TestCaseFinished { test_case_name, outcome } => {
+            TestEvent::TestCaseFinished { test_case_name, result } => {
                 if !test_cases_in_progress.contains(&test_case_name) {
                     return Err(format_err!(
                         "test case: '{}' was never started, still got a finish event",
@@ -74,24 +74,24 @@ pub async fn run_test<W: Write>(
                     ));
                 }
                 test_cases_in_progress.remove(&test_case_name);
-                let outcome_str = match outcome {
-                    test_executor::Outcome::Passed => {
+                let result_str = match result {
+                    test_executor::TestResult::Passed => {
                         test_cases_passed.insert(test_case_name.clone());
                         "PASSED".to_string()
                     }
-                    test_executor::Outcome::Failed => {
-                        if test_outcome == TestOutcome::Passed {
-                            test_outcome = TestOutcome::Failed;
+                    test_executor::TestResult::Failed => {
+                        if test_result == TestResult::Passed {
+                            test_result = TestResult::Failed;
                         }
                         "FAILED".to_string()
                     }
-                    test_executor::Outcome::Skipped => "SKIPPED".to_string(),
-                    test_executor::Outcome::Error => {
-                        test_outcome = TestOutcome::Error;
+                    test_executor::TestResult::Skipped => "SKIPPED".to_string(),
+                    test_executor::TestResult::Error => {
+                        test_result = TestResult::Error;
                         "ERROR".to_string()
                     }
                 };
-                writeln!(writer, "[{}]\t{}", outcome_str, test_case_name)
+                writeln!(writer, "[{}]\t{}", result_str, test_case_name)
                     .expect("Cannot write logs");
             }
             TestEvent::LogMessage { test_case_name, msg } => {
@@ -115,9 +115,9 @@ pub async fn run_test<W: Write>(
     test_cases_in_progress.sort();
 
     if test_cases_in_progress.len() != 0 {
-        match test_outcome {
-            TestOutcome::Passed | TestOutcome::Failed => {
-                test_outcome = TestOutcome::Inconclusive;
+        match test_result {
+            TestResult::Passed | TestResult::Failed => {
+                test_result = TestResult::Inconclusive;
             }
             _ => {}
         }
@@ -133,5 +133,5 @@ pub async fn run_test<W: Write>(
     test_cases_executed.sort();
     test_cases_passed.sort();
 
-    Ok((test_outcome, test_cases_executed, test_cases_passed))
+    Ok((test_result, test_cases_executed, test_cases_passed))
 }

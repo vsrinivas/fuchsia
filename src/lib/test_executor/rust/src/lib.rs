@@ -27,16 +27,16 @@ use {
     zx::HandleBased,
 };
 
-/// Defines the outcome of a test case run.
+/// Defines the result of a test case run.
 #[derive(PartialEq, Debug)]
-pub enum Outcome {
+pub enum TestResult {
     /// Test case passed.
     Passed,
     /// Test case failed.
     Failed,
     /// Test case skipped.
     Skipped,
-    /// Test case did not communicate the outcome.
+    /// Test case did not communicate the result.
     Error,
 }
 
@@ -47,7 +47,7 @@ pub enum Outcome {
 #[derive(PartialEq, Debug)]
 pub enum TestEvent {
     TestCaseStarted { test_case_name: String },
-    TestCaseFinished { test_case_name: String, outcome: Outcome },
+    TestCaseFinished { test_case_name: String, result: TestResult },
     LogMessage { test_case_name: String, msg: String },
 }
 
@@ -195,24 +195,24 @@ pub async fn run_and_collect_results(
                 log_processor.collect_and_send_logs(primary_log, sender.clone());
                 log_processors.insert(name, log_processor);
             }
-            OnTestCaseFinished { name, outcome, control_handle: _ } => {
+            OnTestCaseFinished { name, result, control_handle: _ } => {
                 // get all logs before sending finish event.
                 match log_processors.remove(&name) {
                     Some(mut l) => l.await_logs().await?,
                     None => {}
                 }
-                let outcome = match outcome.status {
+                let result = match result.status {
                     Some(status) => match status {
-                        fidl_fuchsia_test::Status::Passed => Outcome::Passed,
-                        fidl_fuchsia_test::Status::Failed => Outcome::Failed,
-                        fidl_fuchsia_test::Status::Skipped => Outcome::Skipped,
+                        fidl_fuchsia_test::Status::Passed => TestResult::Passed,
+                        fidl_fuchsia_test::Status::Failed => TestResult::Failed,
+                        fidl_fuchsia_test::Status::Skipped => TestResult::Skipped,
                     },
                     // This will happen when test protocol is not properly implemented
-                    // by the test and it forgets to set the outcome.
-                    None => Outcome::Error,
+                    // by the test and it forgets to set the result.
+                    None => TestResult::Error,
                 };
                 sender
-                    .send(TestEvent::TestCaseFinished { test_case_name: name, outcome: outcome })
+                    .send(TestEvent::TestCaseFinished { test_case_name: name, result: result })
                     .await?;
             }
         }

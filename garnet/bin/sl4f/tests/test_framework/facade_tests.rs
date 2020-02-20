@@ -17,11 +17,11 @@ async fn launch_and_test_passing_test() {
         .await
         .expect("Running test should not fail");
 
-    assert_eq!(test_result["outcome"].as_str().unwrap(), "passed");
+    assert_eq!(test_result["result"].as_str().unwrap(), "passed");
     let steps = test_result["steps"].as_array().expect("test result should contain step");
     assert!(steps.len() > 0, "steps_len = {}", steps.len());
     for step in steps.iter() {
-        assert_eq!(step["outcome"].as_str().unwrap(), "passed", "for step: {:#?}", step);
+        assert_eq!(step["status"].as_str().unwrap(), "passed", "for step: {:#?}", step);
 
         // check logs
         let log_file_name = step["primary_log_path"].as_str().expect("can't get log file name");
@@ -47,11 +47,11 @@ async fn launch_and_test_passing_v2_test() {
         .await
         .expect("Running test should not fail");
 
-    assert_eq!(test_result["outcome"].as_str().unwrap(), "passed");
+    assert_eq!(test_result["result"].as_str().unwrap(), "passed");
     let steps = test_result["steps"].as_array().expect("test result should contain step");
     assert!(steps.len() > 0, "steps_len = {}", steps.len());
     for step in steps.iter() {
-        assert_eq!(step["outcome"].as_str().unwrap(), "passed", "for step: {:#?}", step);
+        assert_eq!(step["status"].as_str().unwrap(), "passed", "for step: {:#?}", step);
     }
 }
 
@@ -66,11 +66,11 @@ async fn launch_and_test_failing_test() {
         .await
         .expect("Running test should not fail");
 
-    assert_eq!(test_result["outcome"].as_str().unwrap(), "failed");
+    assert_eq!(test_result["result"].as_str().unwrap(), "failed");
     let steps = test_result["steps"].as_array().expect("test result should contain step");
     assert!(steps.len() > 0, "steps_len = {}", steps.len());
 
-    assert!(steps.iter().find(|s| s["outcome"].as_str().unwrap() == "failed").is_some());
+    assert!(steps.iter().find(|s| s["status"].as_str().unwrap() == "failed").is_some());
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -84,14 +84,11 @@ async fn launch_and_test_incomplete_test() {
         .await
         .expect("Running test should not fail");
 
-    assert_eq!(test_result["outcome"].as_str().unwrap(), "inconclusive");
+    assert_eq!(test_result["result"].as_str().unwrap(), "inconclusive");
     let steps = test_result["steps"].as_array().expect("test result should contain step");
     assert!(steps.len() > 0, "steps_len = {}", steps.len());
 
-    assert_eq!(
-        steps.iter().filter(|s| s["outcome"].as_str().unwrap() == "inconclusive").count(),
-        2
-    );
+    assert_eq!(steps.iter().filter(|s| s["status"].as_str().unwrap() == "inconclusive").count(), 2);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -105,15 +102,15 @@ async fn launch_and_test_invalid_test() {
         .await
         .expect("Running test should not fail");
 
-    assert_eq!(test_result["outcome"].as_str().unwrap(), "error");
+    assert_eq!(test_result["result"].as_str().unwrap(), "error");
     let steps = test_result["steps"].as_array().expect("test result should contain step");
     assert!(steps.len() > 0, "steps_len = {}", steps.len());
 
-    assert_eq!(steps.iter().filter(|s| s["outcome"].as_str().unwrap() == "error").count(), 2);
+    assert_eq!(steps.iter().filter(|s| s["status"].as_str().unwrap() == "error").count(), 2);
 }
 
-fn get_outcome(result: &serde_json::value::Value) -> &serde_json::value::Value {
-    return result["Result"].get("outcome").unwrap();
+fn get_result(result: &serde_json::value::Value) -> &serde_json::value::Value {
+    return result["Result"].get("result").unwrap();
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -133,10 +130,10 @@ async fn run_a_test_plan() {
     assert_eq!(results.len(), 2);
 
     let mut iter = results.iter();
-    let outcome = get_outcome(iter.next().unwrap());
-    assert_eq!(outcome, "passed");
-    let outcome = get_outcome(iter.next().unwrap());
-    assert_eq!(outcome, "failed");
+    let result = get_result(iter.next().unwrap());
+    assert_eq!(result, "passed");
+    let result = get_result(iter.next().unwrap());
+    assert_eq!(result, "failed");
     assert!(iter.next().is_none());
 }
 
@@ -151,10 +148,10 @@ async fn launch_and_run_echo_test() {
         .await
         .expect("Running test should not fail");
 
-    assert_eq!(test_result["outcome"].as_str().unwrap(), "passed");
+    assert_eq!(test_result["result"].as_str().unwrap(), "passed");
     let steps = test_result["steps"].as_array().expect("test result should contain step");
     assert_eq!(steps.len(), 1);
     for step in steps.iter() {
-        assert_eq!(step["outcome"].as_str().unwrap(), "passed", "for step: {:#?}", step);
+        assert_eq!(step["status"].as_str().unwrap(), "passed", "for step: {:#?}", step);
     }
 }

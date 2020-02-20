@@ -81,25 +81,25 @@ impl TestFacade {
         fasync::spawn(remote);
 
         #[derive(PartialEq)]
-        enum TestOutcome {
+        enum Status {
             Passed,
             Failed,
             Inconclusive,
             Error,
         };
 
-        impl fmt::Display for TestOutcome {
+        impl fmt::Display for Status {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 match self {
-                    TestOutcome::Passed => write!(f, "passed"),
-                    TestOutcome::Failed => write!(f, "failed"),
-                    TestOutcome::Inconclusive => write!(f, "inconclusive"),
-                    TestOutcome::Error => write!(f, "error"),
+                    Status::Passed => write!(f, "passed"),
+                    Status::Failed => write!(f, "failed"),
+                    Status::Inconclusive => write!(f, "inconclusive"),
+                    Status::Error => write!(f, "error"),
                 }
             }
         }
 
-        let mut test_outcome = TestOutcome::Passed;
+        let mut status = Status::Passed;
 
         let mut current_step_map = HashMap::new();
 
@@ -116,20 +116,20 @@ impl TestFacade {
 
                     current_step_map.insert(test_case_name, step);
                 }
-                TestEvent::TestCaseFinished { test_case_name, outcome } => {
+                TestEvent::TestCaseFinished { test_case_name, result } => {
                     match current_step_map.get_mut(&test_case_name) {
                         Some(step) => {
-                            step.result.outcome = match outcome {
-                                test_executor::Outcome::Passed => "passed".to_string(),
-                                test_executor::Outcome::Failed => {
-                                    if test_outcome == TestOutcome::Passed {
-                                        test_outcome = TestOutcome::Failed;
+                            step.result.status = match result {
+                                test_executor::TestResult::Passed => "passed".to_string(),
+                                test_executor::TestResult::Failed => {
+                                    if status == Status::Passed {
+                                        status = Status::Failed;
                                     }
                                     "failed".to_string()
                                 }
-                                test_executor::Outcome::Skipped => "skipped".to_string(),
-                                test_executor::Outcome::Error => {
-                                    test_outcome = TestOutcome::Error;
+                                test_executor::TestResult::Skipped => "skipped".to_string(),
+                                test_executor::TestResult::Error => {
+                                    status = Status::Error;
                                     "error".to_string()
                                 }
                             };
@@ -157,15 +157,15 @@ impl TestFacade {
         let mut step_results = Vec::<StepResultItem>::new();
 
         for (_, mut step) in current_step_map {
-            if step.result.outcome == "".to_string() {
+            if step.result.status == "".to_string() {
                 // step not completed, test might have crashed.
-                match test_outcome {
-                    TestOutcome::Passed | TestOutcome::Failed => {
-                        test_outcome = TestOutcome::Inconclusive;
+                match status {
+                    Status::Passed | Status::Failed => {
+                        status = Status::Inconclusive;
                     }
                     _ => {}
                 }
-                step.result.outcome = "inconclusive".to_string();
+                step.result.status = "inconclusive".to_string();
             }
             let logs = step.take_logs();
 
@@ -183,7 +183,7 @@ impl TestFacade {
         }
 
         let mut test_result = TestResult::default();
-        test_result.outcome = test_outcome.to_string();
+        test_result.result = status.to_string();
 
         test_result.steps = step_results;
 

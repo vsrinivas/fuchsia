@@ -5,11 +5,11 @@
 import("//build/rust/rustc_test.gni")
 
 rustc_test("test") {
-  name = "test_outcomes"
+  name = "test_results"
   edition = "2018"
 }
 
-group("test_outcomes") {
+group("test_results") {
   testonly = true
   public_deps = [ ":test" ]
 }

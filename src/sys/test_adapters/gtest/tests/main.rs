@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use regex::Regex;
-use run_test_suite_lib::{run_test, TestOutcome};
+use run_test_suite_lib::{run_test, TestResult};
 use std::str::from_utf8;
 
 // This test also acts as an example on how to write a v2 test.
@@ -23,7 +23,7 @@ async fn launch_and_run_echo_test() {
 
     assert_eq!(from_utf8(&output), Ok(expected_output));
 
-    assert_eq!(result, TestOutcome::Passed);
+    assert_eq!(result, TestResult::Passed);
 
     assert_eq!(executed, vec!["EchoTest.TestEcho"]);
     assert_eq!(passed, vec!["EchoTest.TestEcho"]);
@@ -45,7 +45,7 @@ async fn launch_and_run_simple_test() {
 
     assert_eq!(from_utf8(&output), Ok(expected_output));
 
-    assert_eq!(result, TestOutcome::Passed);
+    assert_eq!(result, TestResult::Passed);
 
     assert_eq!(executed, vec!["SimpleTest.Test"]);
     assert_eq!(passed, vec!["SimpleTest.Test"]);
@@ -82,7 +82,7 @@ async fn launch_and_run_sample_test() {
         output
     );
 
-    assert_eq!(result, TestOutcome::Failed);
+    assert_eq!(result, TestResult::Failed);
 
     assert_eq!(executed, vec!["SampleTest.Failing", "SampleTest.Passing"]);
     assert_eq!(passed, vec!["SampleTest.Passing"]);

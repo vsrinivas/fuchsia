@@ -150,15 +150,15 @@ impl RustTestAdapter {
             proxy.on_test_case_started(&name, log_end).context("on_test_case_started failed")?;
 
             match self.run_test(&name).await {
-                Ok(outcome) => proxy
-                    .on_test_case_finished(&name, outcome)
+                Ok(result) => proxy
+                    .on_test_case_finished(&name, result)
                     .context("on_test_case_finished failed")?,
                 Err(error) => {
                     fx_log_err!("failed to run test. {}", error);
                     proxy
                         .on_test_case_finished(
                             &name,
-                            ftest::Outcome { status: Some(ftest::Status::Failed) },
+                            ftest::Result_ { status: Some(ftest::Status::Failed) },
                         )
                         .context("on_test_case_finished failed")?;
                 }
@@ -223,7 +223,7 @@ impl RustTestAdapter {
 
     /// Launches a process that actually runs the test and parses the resulting json output.
     #[cfg(rust_panic = "unwind")]
-    async fn run_test(&self, name: &str) -> Result<ftest::Outcome, Error> {
+    async fn run_test(&self, name: &str) -> Result<ftest::Result_, Error> {
         let c_test_name = CString::new(name).unwrap();
         let mut args: Vec<&CStr> = vec![&self.c_test_path, &c_test_name];
 
@@ -264,12 +264,12 @@ impl RustTestAdapter {
                                 if let Some(output) = result.output {
                                     fx_log_info!("Test Failed:\n{}", output);
                                 }
-                                return Ok(ftest::Outcome { status: Some(ftest::Status::Failed) });
+                                return Ok(ftest::Result_ { status: Some(ftest::Status::Failed) });
                             }
                             // TODO(b/43756): There isn't an "Ignored" or "Filtered" status yet, so
                             // for now just return that the passed.
                             ResultEvent::Ok | ResultEvent::Ignored | ResultEvent::Filtered => {
-                                return Ok(ftest::Outcome { status: Some(ftest::Status::Passed) })
+                                return Ok(ftest::Result_ { status: Some(ftest::Status::Passed) })
                             }
                             _ => (),
                         }
@@ -285,7 +285,7 @@ impl RustTestAdapter {
 
     /// Launches a process that actually runs the test and parses the resulting json output.
     #[cfg(rust_panic = "abort")]
-    async fn run_test(&self, name: &str) -> Result<ftest::Outcome, Error> {
+    async fn run_test(&self, name: &str) -> Result<ftest::Result_, Error> {
         // Exit codes used by Rust's libtest runner.
         const TR_OK: i64 = 50;
         const TR_FAILED: i64 = 51;
@@ -312,8 +312,8 @@ impl RustTestAdapter {
         let process_info = process.info().context("Error getting info from process")?;
 
         match process_info.return_code {
-            TR_OK => Ok(ftest::Outcome { status: Some(ftest::Status::Passed) }),
-            TR_FAILED => Ok(ftest::Outcome { status: Some(ftest::Status::Failed) }),
+            TR_OK => Ok(ftest::Result_ { status: Some(ftest::Status::Passed) }),
+            TR_FAILED => Ok(ftest::Result_ { status: Some(ftest::Status::Failed) }),
             other => Err(format_err!(
                 "Received unexpected exit code {} from test process\noutput: {}",
                 other,
@@ -347,7 +347,7 @@ mod tests {
     #[derive(PartialEq, Debug)]
     enum ListenerEvent {
         StartTest(String),
-        FinishTest(String, ftest::Outcome),
+        FinishTest(String, ftest::Result_),
     }
 
     async fn collect_results(
@@ -359,8 +359,8 @@ mod tests {
                 OnTestCaseStarted { name, .. } => {
                     events.push(ListenerEvent::StartTest(name));
                 }
-                OnTestCaseFinished { name, outcome, .. } => {
-                    events.push(ListenerEvent::FinishTest(name, outcome))
+                OnTestCaseFinished { name, result, .. } => {
+                    events.push(ListenerEvent::FinishTest(name, result))
                 }
             }
         }
@@ -404,31 +404,31 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_passing_test() {
         let test_info =
-            TestInfo { test_path: String::from("/pkg/bin/test_outcomes"), test_args: vec![] };
+            TestInfo { test_path: String::from("/pkg/bin/test_results"), test_args: vec![] };
 
         let adapter = RustTestAdapter::new(test_info).expect("Cannot create adapter");
         let test_name = String::from("tests::a_passing_test");
-        let outcome = adapter.run_test(&test_name).await.expect("Failed to run test");
+        let result = adapter.run_test(&test_name).await.expect("Failed to run test");
 
-        assert_eq!(ftest::Outcome { status: Some(ftest::Status::Passed) }, outcome);
+        assert_eq!(ftest::Result_ { status: Some(ftest::Status::Passed) }, result);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_failing_test() {
         let test_info =
-            TestInfo { test_path: String::from("/pkg/bin/test_outcomes"), test_args: vec![] };
+            TestInfo { test_path: String::from("/pkg/bin/test_results"), test_args: vec![] };
 
         let adapter = RustTestAdapter::new(test_info).expect("Cannot create adapter");
         let test_name = String::from("tests::b_failing_test");
-        let outcome = adapter.run_test(&test_name).await.expect("Failed to run test");
+        let result = adapter.run_test(&test_name).await.expect("Failed to run test");
 
-        assert_eq!(ftest::Outcome { status: Some(ftest::Status::Failed) }, outcome);
+        assert_eq!(ftest::Result_ { status: Some(ftest::Status::Failed) }, result);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_entire_test_suite() {
         let test_info =
-            TestInfo { test_path: String::from("/pkg/bin/test_outcomes"), test_args: vec![] };
+            TestInfo { test_path: String::from("/pkg/bin/test_results"), test_args: vec![] };
 
         let adapter = RustTestAdapter::new(test_info).expect("Cannot create adapter");
 
@@ -454,17 +454,17 @@ mod tests {
             ListenerEvent::StartTest(String::from("tests::a_passing_test")),
             ListenerEvent::FinishTest(
                 String::from("tests::a_passing_test"),
-                ftest::Outcome { status: Some(ftest::Status::Passed) },
+                ftest::Result_ { status: Some(ftest::Status::Passed) },
             ),
             ListenerEvent::StartTest(String::from("tests::b_failing_test")),
             ListenerEvent::FinishTest(
                 String::from("tests::b_failing_test"),
-                ftest::Outcome { status: Some(ftest::Status::Failed) },
+                ftest::Result_ { status: Some(ftest::Status::Failed) },
             ),
             ListenerEvent::StartTest(String::from("tests::c_passing_test")),
             ListenerEvent::FinishTest(
                 String::from("tests::c_passing_test"),
-                ftest::Outcome { status: Some(ftest::Status::Passed) },
+                ftest::Result_ { status: Some(ftest::Status::Passed) },
             ),
         ];
 

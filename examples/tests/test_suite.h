@@ -25,7 +25,7 @@ struct TestInput {
   /// Skips OnTestCaseFinished if true
   bool incomplete_test = false;
   // will not set status if false.
-  bool set_outcome_status = true;
+  bool set_result_status = true;
 };
 
 class TestSuite : public fuchsia::test::Suite {

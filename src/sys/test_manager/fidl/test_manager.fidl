@@ -13,11 +13,11 @@ using fuchsia.url;
 /// Designed to be used by run_test_suite to execute v2 tests.
 [Discoverable]
 protocol Harness {
-    RunSuite(fuchsia.url.Url suite_url, handle<socket> logger) -> (Outcome outcome);
+    RunSuite(fuchsia.url.Url suite_url, handle<socket> logger) -> (Result result);
 };
 
-/// Outcome of running the suite.
-enum Outcome {
+/// Result of running the suite.
+enum Result {
     /// All tests in the suite passed.
     PASSED = 0;
 

@@ -23,17 +23,17 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-async fn run_echo(echo_str: &str, outcome: &mut ftest::Outcome) -> Result<(), Error> {
+async fn run_echo(echo_str: &str, result: &mut ftest::Result_) -> Result<(), Error> {
     let echo = connect_to_service::<fecho::EchoMarker>().context("error connecting to echo")?;
     match echo.echo_string(Some(echo_str)).await {
-        Ok(result) => {
-            if result != Some(echo_str.to_string()) {
-                outcome.status = Some(ftest::Status::Failed);
-                println!("Echo failed, expected: {}, got: {:?}", echo_str, result);
+        Ok(reply) => {
+            if reply != Some(echo_str.to_string()) {
+                result.status = Some(ftest::Status::Failed);
+                println!("Echo failed, expected: {}, got: {:?}", echo_str, reply);
             }
         }
         Err(e) => {
-            outcome.status = Some(ftest::Status::Failed);
+            result.status = Some(ftest::Status::Failed);
             println!("Echo failed: {}", e);
         }
     }
@@ -58,15 +58,15 @@ async fn run_test_suite(mut stream: ftest::SuiteRequestStream) -> Result<(), Err
                 let (log_end, _logger) =
                     fuchsia_zircon::Socket::create(fuchsia_zircon::SocketOpts::empty())
                         .expect("cannot create socket.");
-                let mut outcome = ftest::Outcome { status: Some(ftest::Status::Passed) };
+                let mut result = ftest::Result_ { status: Some(ftest::Status::Passed) };
 
                 proxy
                     .on_test_case_started("EchoTest", log_end)
                     .expect("on_test_case_started failed");
-                run_echo("test_string1", &mut outcome).await?;
-                run_echo("test_string2", &mut outcome).await?;
+                run_echo("test_string1", &mut result).await?;
+                run_echo("test_string2", &mut result).await?;
                 proxy
-                    .on_test_case_finished("EchoTest", outcome)
+                    .on_test_case_finished("EchoTest", result)
                     .expect("on_test_case_finished failed");
             }
         }

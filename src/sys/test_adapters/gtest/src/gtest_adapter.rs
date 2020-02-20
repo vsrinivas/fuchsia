@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_test::{Outcome, RunListenerProxy, Status},
+    fidl_fuchsia_test::{Result_ as TestResult, RunListenerProxy, Status},
     fuchsia_async as fasync,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
@@ -215,7 +215,7 @@ impl GTestAdapter {
                     .await
                     .context("cannot write logs")?;
                 run_listener
-                    .on_test_case_finished(test, Outcome { status: Some(Status::Failed) })
+                    .on_test_case_finished(test, TestResult { status: Some(Status::Failed) })
                     .context("Cannot send finish event")?;
                 continue; // run next test
             };
@@ -234,7 +234,7 @@ impl GTestAdapter {
                     .await
                     .context("cannot write logs")?;
                 run_listener
-                    .on_test_case_finished(test, Outcome { status: Some(Status::Failed) })
+                    .on_test_case_finished(test, TestResult { status: Some(Status::Failed) })
                     .context("Cannot send finish event")?;
                 continue; // run next test
             }
@@ -249,12 +249,12 @@ impl GTestAdapter {
                             .context("cannot write logs")?;
                     }
                     run_listener
-                        .on_test_case_finished(test, Outcome { status: Some(Status::Failed) })
+                        .on_test_case_finished(test, TestResult { status: Some(Status::Failed) })
                         .context("Cannot send finish event")?;
                 }
                 None => {
                     run_listener
-                        .on_test_case_finished(test, Outcome { status: Some(Status::Passed) })
+                        .on_test_case_finished(test, TestResult { status: Some(Status::Passed) })
                         .context("Cannot send finish event")?;
                 }
             }
@@ -369,7 +369,7 @@ mod tests {
     #[derive(PartialEq, Debug)]
     enum ListenerEvent {
         StartTest(String),
-        FinishTest(String, Outcome),
+        FinishTest(String, TestResult),
     }
 
     async fn collect_listener_event(
@@ -384,8 +384,8 @@ mod tests {
                     ret.push(ListenerEvent::StartTest(name));
                     loggers.push(primary_log);
                 }
-                OnTestCaseFinished { name, outcome, .. } => {
-                    ret.push(ListenerEvent::FinishTest(name, outcome))
+                OnTestCaseFinished { name, result, .. } => {
+                    ret.push(ListenerEvent::FinishTest(name, result))
                 }
             }
         }
@@ -423,22 +423,22 @@ mod tests {
             ListenerEvent::StartTest("SampleTest1.SimpleFail".to_owned()),
             ListenerEvent::FinishTest(
                 "SampleTest1.SimpleFail".to_owned(),
-                Outcome { status: Some(Status::Failed) },
+                TestResult { status: Some(Status::Failed) },
             ),
             ListenerEvent::StartTest("SampleTest1.Crashing".to_owned()),
             ListenerEvent::FinishTest(
                 "SampleTest1.Crashing".to_owned(),
-                Outcome { status: Some(Status::Failed) },
+                TestResult { status: Some(Status::Failed) },
             ),
             ListenerEvent::StartTest("SampleTest2.SimplePass".to_owned()),
             ListenerEvent::FinishTest(
                 "SampleTest2.SimplePass".to_owned(),
-                Outcome { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed) },
             ),
             ListenerEvent::StartTest("Tests/SampleParameterizedTestFixture.Test/2".to_owned()),
             ListenerEvent::FinishTest(
                 "Tests/SampleParameterizedTestFixture.Test/2".to_owned(),
-                Outcome { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed) },
             ),
         ];
 
@@ -491,7 +491,7 @@ mod tests {
             ListenerEvent::StartTest("SampleTest2.SimplePass".to_owned()),
             ListenerEvent::FinishTest(
                 "SampleTest2.SimplePass".to_owned(),
-                Outcome { status: Some(Status::Passed) },
+                TestResult { status: Some(Status::Passed) },
             ),
         ];
 

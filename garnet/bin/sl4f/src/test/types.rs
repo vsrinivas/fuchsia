@@ -12,8 +12,8 @@ use std::collections::HashMap;
 pub struct StepResult {
     /// Name of the step.
     pub name: String,
-    /// Outcome of running step (passed, failed, inconclusive).
-    pub outcome: String,
+    /// Status of running step (passed, failed, inconclusive).
+    pub status: String,
     /// Time taken by test to run.
     pub duration_ms: i64,
     /// Path to log file.
@@ -45,8 +45,8 @@ impl Serialize for StepResultItem {
 /// Result of a single test.
 #[derive(Default, Serialize, Deserialize)]
 pub struct TestResult {
-    /// Outcome of running this test ("passed" if every step passes else "failed").
-    pub outcome: String,
+    /// Result of running this test ("passed" if every step passes else "failed").
+    pub result: String,
     /// Total time taken to run this test.
     pub duration_ms: i64,
     /// Log path which contains all logs for this test.

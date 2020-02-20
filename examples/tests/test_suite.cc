@@ -12,7 +12,7 @@
 namespace example {
 
 using fuchsia::test::Case;
-using fuchsia::test::Outcome;
+using fuchsia::test::Result;
 
 TestSuite::TestSuite(async::Loop* loop, std::vector<TestInput> inputs, Options options)
     : binding_(this), test_inputs_(std::move(inputs)), options_(options), loop_(loop) {}
@@ -65,13 +65,13 @@ void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
         << status;
     FXL_CHECK(ZX_OK == (status = test_case_log.write(0, msg3.data(), msg3.length(), nullptr)))
         << status;
-    Outcome outcome;
+    Result result;
 
     bool send_finished_event = true;
     for (auto& test_input : test_inputs_) {
       if (test_input.name == test_name) {
-        if (test_input.set_outcome_status) {
-          outcome.set_status(test_input.status);
+        if (test_input.set_result_status) {
+          result.set_status(test_input.status);
         }
         send_finished_event = !test_input.incomplete_test;
         break;
@@ -79,7 +79,7 @@ void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
     }
 
     if (send_finished_event) {
-      ptr->OnTestCaseFinished(test_name, std::move(outcome));
+      ptr->OnTestCaseFinished(test_name, std::move(result));
     }
   }
 }

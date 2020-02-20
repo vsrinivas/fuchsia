@@ -7,7 +7,7 @@ use {
     fidl::endpoints,
     fidl_fuchsia_io::{DirectoryMarker, MODE_TYPE_SERVICE},
     fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_manager as ftest_manager,
-    ftest_manager::Outcome,
+    ftest_manager::Result_,
     fuchsia_async as fasync,
     fuchsia_component::client,
     futures::io::AsyncWrite,
@@ -39,11 +39,11 @@ pub async fn run_test_manager(
                         )
                         .await
                         .context("Can't write output")?;
-                    responder.send(Outcome::Error).context("Can't send result back")?;
+                    responder.send(Result_::Error).context("Can't send result back")?;
                     continue;
                 }
 
-                let (outcome, executed, passed) = result.unwrap();
+                let (result, executed, passed) = result.unwrap();
 
                 logger
                     .write(
@@ -54,12 +54,12 @@ pub async fn run_test_manager(
                     .context("Can't write output")?;
                 logger
                     .write(
-                        format!("{} completed with outcome: {:?}\n", suite_url, outcome).as_bytes(),
+                        format!("{} completed with result: {:?}\n", suite_url, result).as_bytes(),
                     )
                     .await
                     .context("Can't write output")?;
 
-                responder.send(outcome).context("Can't send result back")?;
+                responder.send(result).context("Can't send result back")?;
             }
         }
     }
@@ -67,11 +67,11 @@ pub async fn run_test_manager(
 }
 
 // Runs test defined by `suite_url`, and writes logs to writer.
-// Returns (Outcome, Names of tests executed, Names of tests passed).
+// Returns (Result_, Names of tests executed, Names of tests passed).
 async fn run_test<W: std::marker::Unpin + AsyncWrite>(
     suite_url: String,
     writer: &mut W,
-) -> Result<(Outcome, Vec<String>, Vec<String>), Error> {
+) -> Result<(Result_, Vec<String>, Vec<String>), Error> {
     let realm = client::connect_to_service::<fsys::RealmMarker>()
         .context("could not connect to Realm service")?;
 
@@ -115,7 +115,7 @@ async fn run_test<W: std::marker::Unpin + AsyncWrite>(
 
     fasync::spawn(remote);
 
-    let mut test_outcome = Outcome::Passed;
+    let mut test_result = Result_::Passed;
 
     let mut test_cases_in_progress = HashSet::new();
     let mut test_cases_executed = HashSet::new();
@@ -134,7 +134,7 @@ async fn run_test<W: std::marker::Unpin + AsyncWrite>(
                 test_cases_in_progress.insert(test_case_name.clone());
                 test_cases_executed.insert(test_case_name);
             }
-            TestEvent::TestCaseFinished { test_case_name, outcome } => {
+            TestEvent::TestCaseFinished { test_case_name, result } => {
                 if !test_cases_in_progress.contains(&test_case_name) {
                     return Err(format_err!(
                         "test case: '{}' was never started, still got a finish event",
@@ -142,25 +142,25 @@ async fn run_test<W: std::marker::Unpin + AsyncWrite>(
                     ));
                 }
                 test_cases_in_progress.remove(&test_case_name);
-                let outcome_str = match outcome {
-                    test_executor::Outcome::Passed => {
+                let result_str = match result {
+                    test_executor::TestResult::Passed => {
                         test_cases_passed.insert(test_case_name.clone());
                         "PASSED".to_string()
                     }
-                    test_executor::Outcome::Failed => {
-                        if test_outcome == Outcome::Passed {
-                            test_outcome = Outcome::Failed;
+                    test_executor::TestResult::Failed => {
+                        if test_result == Result_::Passed {
+                            test_result = Result_::Failed;
                         }
                         "FAILED".to_string()
                     }
-                    test_executor::Outcome::Skipped => "SKIPPED".to_string(),
-                    test_executor::Outcome::Error => {
-                        test_outcome = Outcome::Error;
+                    test_executor::TestResult::Skipped => "SKIPPED".to_string(),
+                    test_executor::TestResult::Error => {
+                        test_result = Result_::Error;
                         "ERROR".to_string()
                     }
                 };
                 writer
-                    .write(format!("[{}]\t{}\n", outcome_str, test_case_name).as_bytes())
+                    .write(format!("[{}]\t{}\n", result_str, test_case_name).as_bytes())
                     .await
                     .context("Can't write output")?;
             }
@@ -188,9 +188,9 @@ async fn run_test<W: std::marker::Unpin + AsyncWrite>(
     test_cases_in_progress.sort();
 
     if test_cases_in_progress.len() != 0 {
-        match test_outcome {
-            Outcome::Passed | Outcome::Failed => {
-                test_outcome = Outcome::Inconclusive;
+        match test_result {
+            Result_::Passed | Result_::Failed => {
+                test_result = Result_::Inconclusive;
             }
             _ => {}
         }
@@ -209,5 +209,5 @@ async fn run_test<W: std::marker::Unpin + AsyncWrite>(
     test_cases_executed.sort();
     test_cases_passed.sort();
 
-    Ok((test_outcome, test_cases_executed, test_cases_passed))
+    Ok((test_result, test_cases_executed, test_cases_passed))
 }

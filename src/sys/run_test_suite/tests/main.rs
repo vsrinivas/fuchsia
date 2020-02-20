@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use run_test_suite_lib::{run_test, TestOutcome};
+use run_test_suite_lib::{run_test, TestResult};
 use std::collections::HashSet;
 use std::str::from_utf8;
 
@@ -35,7 +35,7 @@ async fn launch_and_test_passing_test() {
 ";
     assert_eq!(from_utf8(&output), Ok(expected_output));
 
-    assert_eq!(result, TestOutcome::Passed);
+    assert_eq!(result, TestResult::Passed);
     assert_eq!(executed, passed);
 
     let expected = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
@@ -71,7 +71,7 @@ async fn launch_and_test_passing_v2_test() {
 ";
     assert_eq!(from_utf8(&output), Ok(expected_output));
 
-    assert_eq!(result, TestOutcome::Passed);
+    assert_eq!(result, TestResult::Passed);
     assert_eq!(executed, passed);
 
     let expected = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
@@ -108,7 +108,7 @@ async fn launch_and_test_failing_test() {
 ";
     assert_eq!(from_utf8(&output), Ok(expected_output));
 
-    assert_eq!(result, TestOutcome::Failed);
+    assert_eq!(result, TestResult::Failed);
 
     assert_eq!(executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
     assert_eq!(passed, vec!["Example.Test1", "Example.Test3"]);
@@ -151,7 +151,7 @@ Example.Test3
 
     assert_eq!(output, expected_output);
 
-    assert_eq!(result, TestOutcome::Inconclusive);
+    assert_eq!(result, TestResult::Inconclusive);
 
     assert_eq!(executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
     assert_eq!(passed, vec!["Example.Test2"]);
@@ -186,7 +186,7 @@ async fn launch_and_test_invalid_test() {
 ";
     assert_eq!(from_utf8(&output), Ok(expected_output));
 
-    assert_eq!(result, TestOutcome::Error);
+    assert_eq!(result, TestResult::Error);
 
     assert_eq!(executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
     assert_eq!(passed, vec!["Example.Test2"]);
@@ -211,7 +211,7 @@ async fn launch_and_run_echo_test() {
 ";
     assert_eq!(from_utf8(&output), Ok(expected_output));
 
-    assert_eq!(result, TestOutcome::Passed);
+    assert_eq!(result, TestResult::Passed);
 
     assert_eq!(executed, vec!["EchoTest"]);
     assert_eq!(passed, vec!["EchoTest"]);
