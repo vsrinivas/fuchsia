@@ -34,6 +34,9 @@ executable("tests") {
     "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(46548): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("get_message_client_bin") {
