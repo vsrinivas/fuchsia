@@ -267,12 +267,21 @@ impl<B: Backend> Glyph<B> {
                 for segment in &contour.segments {
                     match segment {
                         Segment::Line(line) => {
-                            path_builder.move_to(flip_y!(line.p[1]));
-                            path_builder.line_to(flip_y!(line.p[0]));
+                            path_builder.move_to(flip_y!(line.p[0]));
+                            path_builder.line_to(flip_y!(line.p[1]));
                         }
                         Segment::Curve(curve) => {
-                            path_builder.move_to(flip_y!(curve.p[2]));
-                            path_builder.quad_to(flip_y!(curve.p[1]), flip_y!(curve.p[0]));
+                            let p0 = flip_y!(curve.p[0]);
+                            let p1 = flip_y!(curve.p[1]);
+                            let p2 = flip_y!(curve.p[2]);
+
+                            path_builder.move_to(p0);
+                            // TODO: use quad_to when working correctly in spinel backend.
+                            path_builder.cubic_to(
+                                lerp(2.0 / 3.0, p0, p1),
+                                lerp(2.0 / 3.0, p2, p1),
+                                p2,
+                            );
                         }
                     }
                 }
