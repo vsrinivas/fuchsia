@@ -58,6 +58,9 @@ executable("realm_tests") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
+
+  # TODO(46530): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("hub_tests") {
@@ -81,6 +84,9 @@ executable("hub_tests") {
     "//third_party/googletest:gmock",
     "//zircon/public/lib/async-cpp",
   ]
+
+  # TODO(46530): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("echo_server") {
