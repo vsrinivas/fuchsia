@@ -99,6 +99,10 @@ bool ReadFileToVector(const std::string& path, std::vector<uint8_t>* result) {
   return ReadFileDescriptor(fd.get(), result);
 }
 
+bool ReadFileDescriptorToVector(int fd, std::vector<uint8_t>* result) {
+  return ReadFileDescriptor(fd, result);
+}
+
 std::pair<uint8_t*, intptr_t> ReadFileToBytes(const std::string& path) {
   std::pair<uint8_t*, intptr_t> failure_pair{nullptr, -1};
   fbl::unique_fd fd(open(path.c_str(), O_RDONLY | BINARY_MODE));

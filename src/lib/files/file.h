@@ -6,6 +6,7 @@
 #define LIB_FXL_FILES_FILE_H_
 
 #include <stdint.h>
+
 #include <string>
 #include <vector>
 
@@ -36,10 +37,11 @@ bool ReadFileToString(const std::string& path, std::string* result);
 bool ReadFileDescriptorToString(int fd, std::string* result);
 bool ReadFileToStringAt(int dirfd, const std::string& path, std::string* result);
 
-// Reads the contents of the file at the given path and stores the data in
+// Reads the contents of the file at the given path or file descriptor and stores the data in
 // result. Returns true if the file was read successfully, otherwise returns
 // false. If this function returns false, |result| will be the empty string.
 bool ReadFileToVector(const std::string& path, std::vector<uint8_t>* result);
+bool ReadFileDescriptorToVector(int fd, std::vector<uint8_t>* result);
 
 // Reads the contents of the file at the given path and if successful, returns
 // pair of read allocated bytes with data and size of the data if successful.

@@ -6,6 +6,8 @@
 
 #include <fcntl.h>
 
+#include <vector>
+
 #include "gtest/gtest.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
@@ -36,6 +38,38 @@ TEST(File, ReadWriteFileAt) {
   std::string read_content;
   EXPECT_TRUE(files::ReadFileToStringAt(dirfd.get(), filename, &read_content));
   EXPECT_EQ(content, read_content);
+}
+
+TEST(File, ReadFileToVector) {
+  ScopedTempDir dir;
+  std::string filename = "bar";
+  std::string content = "content";
+  std::string path = dir.path() + filename;
+
+  EXPECT_TRUE(files::WriteFile(path, content.c_str(), content.size()));
+
+  std::vector<uint8_t> data;
+  EXPECT_TRUE(files::ReadFileToVector(path, &data));
+
+  std::string string_content(data.begin(), data.end());
+  EXPECT_EQ(content, string_content);
+}
+
+TEST(File, ReadFileDescriptorToVector) {
+  ScopedTempDir dir;
+  std::string filename = "bar";
+  std::string content = "content";
+  std::string path = dir.path() + filename;
+
+  EXPECT_TRUE(files::WriteFile(path, content.c_str(), content.size()));
+
+  auto fd = open(path.c_str(), O_RDONLY);
+  EXPECT_GT(fd, 0);
+  std::vector<uint8_t> data;
+  EXPECT_TRUE(files::ReadFileDescriptorToVector(fd, &data));
+
+  std::string string_content(data.begin(), data.end());
+  EXPECT_EQ(content, string_content);
 }
 
 TEST(File, IsFileAt) {
