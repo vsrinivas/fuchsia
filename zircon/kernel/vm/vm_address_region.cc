@@ -122,6 +122,7 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
 
   vaddr_t new_base = -1;
   if (is_specific) {
+    // This would not overflow because offset <= size_ - 1, base_ + offset <= base_ + size_ - 1.
     new_base = base_ + offset;
     if (!IS_PAGE_ALIGNED(new_base)) {
       return ZX_ERR_INVALID_ARGS;
@@ -345,7 +346,16 @@ fbl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegionLocked(vaddr_t 
   // Find the first region with a base greater than *addr*.  If a region
   // exists for *addr*, it will be immediately before it.
   auto itr = --subregions_.upper_bound(addr);
-  if (!itr.IsValid() || itr->base() > addr || addr > itr->base() + itr->size() - 1) {
+  if (!itr.IsValid()) {
+    return nullptr;
+  }
+  // Subregion size should never be zero unless during unmapping which should never overlap with
+  // this operation.
+  DEBUG_ASSERT(itr->size() > 0);
+  vaddr_t region_end;
+  bool overflowed = add_overflow(itr->base(), itr->size() - 1, &region_end);
+  ASSERT(!overflowed);
+  if (itr->base() > addr || addr > region_end) {
     return nullptr;
   }
 
@@ -448,7 +458,7 @@ bool VmAddressRegion::CheckGapLocked(const ChildList::iterator& prev,
       goto not_found;
     }
   } else {
-    if (gap_beg == base_ + size_) {
+    if (gap_beg - base_ == size_) {
       goto not_found;  // no gap at the end of address space. Stop search
     }
     if (add_overflow(base_, size_ - 1, &gap_end)) {
@@ -561,7 +571,7 @@ void VmAddressRegion::Dump(uint depth, bool verbose) const {
     printf("  ");
   }
   printf("vmar %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx ref %d '%s'\n", this, base_,
-         base_ + size_ - 1, size_, ref_count_debug(), name_);
+         base_ + (size_ - 1), size_, ref_count_debug(), name_);
   for (const auto& child : subregions_) {
     child.Dump(depth + 1, verbose);
   }
@@ -608,9 +618,14 @@ zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
     return ZX_ERR_ACCESS_DENIED;
   }
 
-  const vaddr_t end_addr = base + size;
-  auto end = subregions_.lower_bound(end_addr);
+  // Last byte of the range.
+  vaddr_t end_addr_byte;
+  DEBUG_ASSERT(size > 0);
+  bool overflowed = add_overflow(base, size - 1, &end_addr_byte);
+  ASSERT(!overflowed);
+  auto end = subregions_.upper_bound(end_addr_byte);
   auto begin = UpperBoundInternalLocked(base);
+  vaddr_t op_end_byte = 0;
 
   for (auto curr = begin; curr != end; curr++) {
     // TODO(39861): Allow the |op| range to include child VMARs.
@@ -626,12 +641,15 @@ zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
     if (base < curr->base()) {
       return ZX_ERR_BAD_STATE;
     }
-
-    const vaddr_t curr_end = curr->base() + curr->size();
-    const vaddr_t op_end = fbl::min(curr_end, end_addr);
+    // Last byte of the current region.
+    vaddr_t curr_end_byte = 0;
+    DEBUG_ASSERT(curr->size() > 0);
+    overflowed = add_overflow(curr->base(), curr->size() - 1, &curr_end_byte);
+    op_end_byte = fbl::min(curr_end_byte, end_addr_byte);
     const uint64_t op_offset = (base - curr->base()) + vmo_offset;
-    const size_t op_size = op_end - base;
-    base = op_end;
+    size_t op_size = 0;
+    overflowed = add_overflow(op_end_byte - base, 1, &op_size);
+    ASSERT(!overflowed);
 
     switch (op) {
       case ZX_VMO_OP_DECOMMIT: {
@@ -649,10 +667,18 @@ zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
       default:
         return ZX_ERR_NOT_SUPPORTED;
     };
+    vaddr_t next_base = 0;
+    if (!add_overflow(op_end_byte, 1, &next_base)) {
+      base = next_base;
+    } else {
+      // If this happens, there must not be a next sub region but we break anyway to make sure
+      // we would not infinite loop.
+      break;
+    }
   }
 
   // The |op| range must not have an unmapped region at the end.
-  if (base != end_addr) {
+  if (op_end_byte != end_addr_byte) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -699,7 +725,7 @@ VmAddressRegion::ChildList::iterator VmAddressRegion::UpperBoundInternalLocked(v
   auto itr = --subregions_.upper_bound(base);
   if (!itr.IsValid()) {
     itr = subregions_.begin();
-  } else if (base >= itr->base() + itr->size()) {
+  } else if (base >= itr->base() && base - itr->base() >= itr->size()) {
     // If *base* isn't in this region, ignore it.
     ++itr;
   }
@@ -725,17 +751,24 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
     return ZX_ERR_ACCESS_DENIED;
   }
 
-  const vaddr_t end_addr = base + size;
-  auto end = subregions_.lower_bound(end_addr);
+  // The last byte of the current unmap range.
+  vaddr_t end_addr_byte = 0;
+  DEBUG_ASSERT(size > 0);
+  bool overflowed = add_overflow(base, size - 1, &end_addr_byte);
+  ASSERT(!overflowed);
+  auto end = subregions_.upper_bound(end_addr_byte);
   auto begin = UpperBoundInternalLocked(base);
 
   if (!allow_partial_vmar) {
     // Check if we're partially spanning a subregion, or aren't allowed to
     // destroy regions and are spanning a region, and bail if we are.
     for (auto itr = begin; itr != end; ++itr) {
-      const vaddr_t itr_end = itr->base() + itr->size();
+      vaddr_t itr_end_byte = 0;
+      DEBUG_ASSERT(itr->size() > 0);
+      overflowed = add_overflow(itr->base(), itr->size() - 1, &itr_end_byte);
+      ASSERT(!overflowed);
       if (!itr->is_mapping() &&
-          (!can_destroy_regions || itr->base() < base || itr_end > end_addr)) {
+          (!can_destroy_regions || itr->base() < base || itr_end_byte > end_addr_byte)) {
         return ZX_ERR_INVALID_ARGS;
       }
     }
@@ -751,10 +784,15 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
     VmAddressRegion* up = curr->parent_;
 
     if (curr->is_mapping()) {
-      const vaddr_t curr_end = curr->base() + curr->size();
+      vaddr_t curr_end_byte = 0;
+      DEBUG_ASSERT(curr->size() > 1);
+      overflowed = add_overflow(curr->base(), curr->size() - 1, &curr_end_byte);
+      ASSERT(!overflowed);
       const vaddr_t unmap_base = fbl::max(curr->base(), base);
-      const vaddr_t unmap_end = fbl::min(curr_end, end_addr);
-      const size_t unmap_size = unmap_end - unmap_base;
+      const vaddr_t unmap_end_byte = fbl::min(curr_end_byte, end_addr_byte);
+      size_t unmap_size;
+      overflowed = add_overflow(unmap_end_byte - unmap_base, 1, &unmap_size);
+      ASSERT(!overflowed);
 
       if (unmap_base == curr->base() && unmap_size == curr->size()) {
         // If we're unmapping the entire region, just call Destroy
@@ -787,7 +825,7 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
         fbl::RefPtr<VmAddressRegion> vmar = curr->as_vm_address_region();
         if (!vmar->subregions_.is_empty()) {
           begin = vmar->UpperBoundInternalLocked(base);
-          end = vmar->subregions_.lower_bound(end_addr);
+          end = vmar->subregions_.upper_bound(end_addr_byte);
           itr = begin;
           at_top = false;
         }
@@ -814,7 +852,7 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
         // break out of the loop.
         break;
       }
-      end = up->subregions_.lower_bound(end_addr);
+      end = up->subregions_.upper_bound(end_addr_byte);
       itr = begin;
     }
   }
@@ -843,25 +881,37 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
     return ZX_ERR_NOT_FOUND;
   }
 
-  const vaddr_t end_addr = base + size;
-  const auto end = subregions_.lower_bound(end_addr);
+  // The last byte of the range.
+  vaddr_t end_addr_byte = 0;
+  bool overflowed = add_overflow(base, size - 1, &end_addr_byte);
+  ASSERT(!overflowed);
+  const auto end = subregions_.upper_bound(end_addr_byte);
 
   // Find the first region with a base greater than *base*.  If a region
   // exists for *base*, it will be immediately before it.  If *base* isn't in
   // that entry, bail since it's unmapped.
   auto begin = --subregions_.upper_bound(base);
-  if (!begin.IsValid() || begin->base() + begin->size() <= base) {
+  if (!begin.IsValid() || begin->size() <= base - begin->base()) {
     return ZX_ERR_NOT_FOUND;
   }
 
   // Check if we're overlapping a subregion, or a part of the range is not
   // mapped, or the new permissions are invalid for some mapping in the range.
-  vaddr_t last_mapped = begin->base();
+
+  // The last byte of the last mapped region.
+  vaddr_t last_mapped_byte = begin->base();
+  if (begin->base() != 0) {
+    last_mapped_byte--;
+  }
   for (auto itr = begin; itr != end; ++itr) {
     if (!itr->is_mapping()) {
       return ZX_ERR_INVALID_ARGS;
     }
-    if (itr->base() != last_mapped) {
+    vaddr_t current_begin = 0;
+    // This would not overflow because previous region end + 1 would not overflow.
+    overflowed = add_overflow(last_mapped_byte, 1, &current_begin);
+    ASSERT(!overflowed);
+    if (itr->base() != current_begin) {
       return ZX_ERR_NOT_FOUND;
     }
     if (!itr->is_valid_mapping_flags(new_arch_mmu_flags)) {
@@ -870,10 +920,10 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
     if (itr->as_vm_mapping() == aspace_->vdso_code_mapping_) {
       return ZX_ERR_ACCESS_DENIED;
     }
-
-    last_mapped = itr->base() + itr->size();
+    overflowed = add_overflow(itr->base(), itr->size() - 1, &last_mapped_byte);
+    ASSERT(!overflowed);
   }
-  if (last_mapped < base + size) {
+  if (last_mapped_byte < end_addr_byte) {
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -883,10 +933,15 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
     auto next = itr;
     ++next;
 
-    const vaddr_t curr_end = itr->base() + itr->size();
+    // The last byte of the current region.
+    vaddr_t curr_end_byte = 0;
+    overflowed = add_overflow(itr->base(), itr->size() - 1, &curr_end_byte);
+    ASSERT(!overflowed);
     const vaddr_t protect_base = fbl::max(itr->base(), base);
-    const vaddr_t protect_end = fbl::min(curr_end, end_addr);
-    const size_t protect_size = protect_end - protect_base;
+    const vaddr_t protect_end_byte = fbl::min(curr_end_byte, end_addr_byte);
+    size_t protect_size;
+    overflowed = add_overflow(protect_end_byte - protect_base, 1, &protect_size);
+    ASSERT(!overflowed);
 
     zx_status_t status =
         itr->as_vm_mapping()->ProtectLocked(protect_base, protect_size, new_arch_mmu_flags);
@@ -917,14 +972,18 @@ void VmAddressRegion::ForEachGap(F func, uint8_t align_pow2) {
         return;
       }
     }
-    prev_region_end = ROUNDUP(region.base() + region.size(), align);
+    if (add_overflow(region.base(), region.size(), &prev_region_end)) {
+      // This region is already the last region.
+      return;
+    }
+    prev_region_end = ROUNDUP(prev_region_end, align);
   }
 
   // Grab the gap to the right of the last region (note that if there are no
   // regions, this handles reporting the VMAR's whole span as a gap).
-  const vaddr_t end = base_ + size_;
-  if (end > prev_region_end) {
-    const size_t gap = end - prev_region_end;
+  if (size_ > prev_region_end - base_) {
+    // This is equal to base_ + size_ - prev_region_end, but guarantee no overflow.
+    const size_t gap = size_ - (prev_region_end - base_);
     func(prev_region_end, gap);
   }
 }
@@ -1020,7 +1079,10 @@ zx_status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, ui
   ASSERT(IS_ALIGNED(alloc_spot, align));
 
   // Sanity check that the allocation fits.
-  auto after_iter = subregions_.upper_bound(alloc_spot + size - 1);
+  vaddr_t alloc_last_byte;
+  bool overflowed = add_overflow(alloc_spot, size - 1, &alloc_last_byte);
+  ASSERT(!overflowed);
+  auto after_iter = subregions_.upper_bound(alloc_last_byte);
   auto before_iter = after_iter;
 
   if (after_iter == subregions_.begin() || subregions_.size() == 0) {
