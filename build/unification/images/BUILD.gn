@@ -1382,7 +1382,7 @@ aggregate_manifest("migrated-image") {
     "//zircon/system/uapp/psutils:signal-manifest",
     "//src/devices/block/bin/sdio:sdio-manifest",
     "//zircon/system/uapp/spawn:spawn-manifest",
-    "//zircon/system/uapp/spiutil:spiutil-manifest",
+    "//src/devices/spi/bin/spiutil:spiutil-manifest",
     "//zircon/system/uapp/storage-metrics:storage-metrics-manifest",
 #------------------
     #":bin.svchost",
