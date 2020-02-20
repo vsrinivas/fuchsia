@@ -39,7 +39,7 @@ zx_status_t MerkleTree<T, VP, MT, HL>::SetDataLength(size_t data_len) {
 }
 
 template <typename T, typename VP, class MT, class HL>
-size_t MerkleTree<T, VP, MT, HL>::GetTreeLength() {
+size_t MerkleTree<T, VP, MT, HL>::GetTreeLength() const {
   if (next_.get() == nullptr) {
     return 0;
   }
@@ -73,7 +73,7 @@ template zx_status_t internal::MerkleTree<uint8_t, void *, MerkleTreeCreator,
                                           HashListCreator>::SetDataLength(size_t data_len);
 
 template size_t
-internal::MerkleTree<uint8_t, void *, MerkleTreeCreator, HashListCreator>::GetTreeLength();
+internal::MerkleTree<uint8_t, void *, MerkleTreeCreator, HashListCreator>::GetTreeLength() const;
 
 template zx_status_t internal::MerkleTree<uint8_t, void *, MerkleTreeCreator,
                                           HashListCreator>::SetTree(void *tree, size_t tree_len,
@@ -144,7 +144,7 @@ template zx_status_t internal::MerkleTree<const uint8_t, const void *, MerkleTre
                                           HashListVerifier>::SetDataLength(size_t data_len);
 
 template size_t internal::MerkleTree<const uint8_t, const void *, MerkleTreeVerifier,
-                                     HashListVerifier>::GetTreeLength();
+                                     HashListVerifier>::GetTreeLength() const;
 
 template zx_status_t
 internal::MerkleTree<const uint8_t, const void *, MerkleTreeVerifier, HashListVerifier>::SetTree(

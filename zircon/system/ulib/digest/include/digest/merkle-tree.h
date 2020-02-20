@@ -50,7 +50,7 @@ class MerkleTree {
   // consists of all the nodes containing the digests of child nodes.  It does NOT include the root
   // digest, which must be passed to |Verify| after a trust decision has been made.  This means that
   // when the |data_len| is less than |NodeSize|, this method will return 0.
-  size_t GetTreeLength();
+  size_t GetTreeLength() const;
 
   // Registers |tree| as a Merkle tree for |data_len_| bytes of data, rooted by a digest of given by
   // |root|.
