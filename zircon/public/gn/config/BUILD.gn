@@ -343,13 +343,6 @@ config("opt_level") {
     }
   }
 
-  configs = []
-  if (opt_level > 1) {
-    # Our code should never rely on C's unique function pointer semantics,
-    # which is broken by --icf=all for sometimes substantial space savings.
-    configs += [ ":icf" ]
-  }
-
   asmflags = compiler_flags
   cflags = compiler_flags
   ldflags = compiler_flags
@@ -361,6 +354,15 @@ config("opt_level") {
     } else {
       ldflags += [ "-Wl,-O2" ]
     }
+  }
+}
+
+# This is separate from opt_level so it can be removed.
+config("default_icf") {
+  if (opt_level > 1) {
+    # Our code should never rely on C's unique function pointer semantics,
+    # which is broken by --icf=all for sometimes substantial space savings.
+    configs = [ ":icf" ]
   }
 }
 

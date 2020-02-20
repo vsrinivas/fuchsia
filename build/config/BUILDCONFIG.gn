@@ -195,6 +195,7 @@ if (is_fuchsia) {
     "//build/config/fuchsia:icf",
     "//build/config/fuchsia:large_rust_stack",
     "//build/config/fuchsia:thread_safety_annotations",
+
     # TODO(44795): Change to using //build/config:werror here.
     "//build/config/fuchsia:werror",
 
@@ -222,6 +223,7 @@ default_executable_configs = default_common_binary_configs + [
                                "//build/config:executable_config",
                                "//build/config:default_libs",
                              ]
+
 # The fdio config is added here so that it can later be removed from default
 # configs for targets which do not need it. This cannot be done when the config
 # is added transitively.
@@ -454,6 +456,13 @@ _asan_variant = {
   }
 }
 
+# Disable identical code folding in fuzzer toolchain variants, since accurate
+# stack traces are most useful under fuzzing than reduced binary sizes.
+_fuzzer_remove_common_configs = [ "//build/config/fuchsia:icf" ]
+
+# Disable warnings about symbols that will be provided by compiler runtimes.
+_fuzzer_remove_shared_configs = [ "//build/config:symbol_no_undefined" ]
+
 declare_args() {
   # List of variants that will form the basis for variant toolchains.
   # To make use of a variant, set [`select_variant`](#select_variant).
@@ -564,33 +573,38 @@ declare_args() {
         forward_variables_from(_asan_variant.toolchain_args, "*")
 
         # Unless otherwise noted, these options are the defaults from ClusterFuzz.
-        asan_default_options = string_join(
-                ":",
-                [
-                  "alloc_dealloc_mismatch=0",
-                  "allocator_may_return_null=1",
-                  "check_malloc_usable_size=0",
-                  "detect_leaks=0",
-                  "detect_odr_violation=0",
-                  "malloc_context_size=128",
-                  "max_uar_stack_size_log=16",
-                  "print_scariness=1",
-                  "print_summary=1",
-                  "print_suppressions=0",
-                  "strict_memcmp=0",
-                  "symbolize=0",
-                  "clear_shadow_mmap_threshold=0",  # avoid leaking memory (fxb/34570)
-                ])
+        asan_default_options =
+            string_join(":",
+                        [
+                          "alloc_dealloc_mismatch=0",
+                          "allocator_may_return_null=1",
+                          "check_malloc_usable_size=0",
+                          "detect_leaks=0",
+                          "detect_odr_violation=0",
+                          "malloc_context_size=128",
+                          "max_uar_stack_size_log=16",
+                          "print_scariness=1",
+                          "print_summary=1",
+                          "print_suppressions=0",
+                          "strict_memcmp=0",
+                          "symbolize=0",
+                          "clear_shadow_mmap_threshold=0",  # avoid leaking
+                                                            # memory (fxb/34570)
+                        ])
       }
       configs += [ "//build/config/sanitizers:fuzzer" ]
-      remove_shared_configs = [ "//build/config:symbol_no_undefined" ]
+      configs += _fuzzer_remove_common_configs  # Ensure present when removing.
+      remove_common_configs = _fuzzer_remove_common_configs
+      remove_shared_configs = _fuzzer_remove_shared_configs
     },
     {
       configs = [
         "//build/config/sanitizers:ubsan",
         "//build/config/sanitizers:fuzzer",
       ]
-      remove_shared_configs = [ "//build/config:symbol_no_undefined" ]
+      configs += _fuzzer_remove_common_configs  # Ensure present when removing.
+      remove_common_configs = _fuzzer_remove_common_configs
+      remove_shared_configs = _fuzzer_remove_shared_configs
     },
   ]
 

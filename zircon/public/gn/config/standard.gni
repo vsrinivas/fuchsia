@@ -72,6 +72,7 @@ standard_configs = [
   "$zx/public/gn/config:opt_level",
   "$zx/public/gn/config:symbol_level",
   "$zx/public/gn/config:default_warnings",
+  "$zx/public/gn/config:default_icf",
   "$zx/public/gn/config:default_include_dirs",
   "$zx/public/gn/config:default_frame_pointers",
   "$zx/public/gn/config:default_linker_gc",
