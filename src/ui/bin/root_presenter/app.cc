@@ -29,6 +29,7 @@ App::App(const fxl::CommandLine& command_line, async::Loop* loop)
       fdr_manager_(std::make_unique<FactoryResetManager>(*component_context_.get())),
       activity_notifier_(loop->dispatcher(), ActivityNotifierImpl::kDefaultInterval,
                          *component_context_.get()),
+      focuser_binding_(this),
       media_buttons_handler_(&activity_notifier_) {
   FXL_DCHECK(component_context_);
 
@@ -38,6 +39,8 @@ App::App(const fxl::CommandLine& command_line, async::Loop* loop)
   component_context_->outgoing()->AddPublicService(device_listener_bindings_.GetHandler(this));
   component_context_->outgoing()->AddPublicService(input_receiver_bindings_.GetHandler(this));
   component_context_->outgoing()->AddPublicService(a11y_pointer_event_bindings_.GetHandler(this));
+  component_context_->outgoing()->AddPublicService(
+      a11y_focuser_registry_bindings_.GetHandler(this));
 }
 
 void App::RegisterMediaButtonsListener(
@@ -282,7 +285,7 @@ void App::InitializeServices() {
       Reset();
     });
 
-    session_ = std::make_unique<scenic::Session>(scenic_.get());
+    session_ = std::make_unique<scenic::Session>(scenic_.get(), view_focuser_.NewRequest());
     session_->set_error_handler([this](zx_status_t error) {
       FXL_LOG(ERROR) << "Session died, destroying all presentations.";
       Reset();
@@ -395,4 +398,23 @@ void App::Register(fidl::InterfaceHandle<fuchsia::ui::input::accessibility::Poin
   auto callback = [](bool) {};
   pointer_event_registry_->Register(std::move(pointer_event_listener), std::move(callback));
 }
+
+void App::RegisterFocuser(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) {
+  if (focuser_binding_.is_bound()) {
+    FXL_LOG(INFO) << "Registering a new Focuser for a11y. Dropping the old one.";
+  }
+  focuser_binding_.Bind(std::move(view_focuser));
+}
+
+void App::RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) {
+  fuchsia::ui::views::Focuser_RequestFocus_Result result;
+  if (!view_focuser_) {
+    result.set_err(fuchsia::ui::views::Error::DENIED);
+    callback(std::move(result));
+    focuser_binding_.Close(ZX_ERR_NOT_FOUND);
+  } else {
+    view_focuser_->RequestFocus(std::move(view_ref), std::move(callback));
+  }
+}
+
 }  // namespace root_presenter

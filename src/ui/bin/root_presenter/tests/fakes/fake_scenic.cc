@@ -17,5 +17,13 @@ void FakeScenic::CreateSession(
   fake_session_.Bind(std::move(session), listener.Bind());
 }
 
+void FakeScenic::CreateSession2(
+    fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
+    fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
+    fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) {
+  fake_session_.Bind(std::move(session), listener.Bind());
+  fake_focuser_.Bind(std::move(view_focuser));
+}
+
 }  // namespace testing
 }  // namespace root_presenter

@@ -10,17 +10,18 @@
             "config-data"
         ],
         "services": [
-            "fuchsia.accessibility.Magnifier",
             "fuchsia.accessibility.ColorTransform",
+            "fuchsia.accessibility.Magnifier",
             "fuchsia.recovery.FactoryReset",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.activity.Tracker",
+            "fuchsia.ui.input.ImeService",
             "fuchsia.ui.policy.accessibility.PointerEventRegistry",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.shortcut.Manager",
-            "fuchsia.ui.input.ImeService"
+            "fuchsia.ui.views.accessibility.FocuserRegistry"
         ]
     }
 }
