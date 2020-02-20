@@ -8,12 +8,12 @@ use {
     crate::constants::{CONFIG_JSON_FILE, DAEMON, MAX_RETRY_COUNT},
     anyhow::{Context, Error},
     ffx_daemon::{is_daemon_running, start as start_daemon},
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::{create_proxy, ServiceMarker},
     fidl_fidl_developer_bridge::{DaemonMarker, DaemonProxy},
-    fidl_fuchsia_developer_remotecontrol::RunComponentResponse,
+    fidl_fuchsia_developer_remotecontrol::{ComponentControllerEvent, ComponentControllerMarker},
     fidl_fuchsia_overnet::ServiceConsumerProxyInterface,
     fidl_fuchsia_overnet_protocol::NodeId,
-    futures::TryStreamExt,
+    futures::{StreamExt, TryStreamExt},
     std::env,
     std::process::Command,
 };
@@ -93,18 +93,55 @@ impl Cli {
         }
     }
 
-    pub async fn run_component<'a>(
-        &'a self,
-        url: String,
-        args: &Vec<String>,
-    ) -> Result<RunComponentResponse, Error> {
-        match self.daemon_proxy.run_component(&url, &mut args.iter().map(|s| s.as_str())).await {
-            Ok(r) => {
-                log::info!("SUCCESS: received {:?}", r);
-                return Ok(r);
+    pub async fn run_component<'a>(&'a self, url: String, args: &Vec<String>) -> Result<(), Error> {
+        let (proxy, server_end) = create_proxy::<ComponentControllerMarker>()?;
+        let (sout, cout) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
+        let (serr, cerr) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
+
+        // This is only necessary until Overnet correctly handle setup for passed channels.
+        // TODO(jwing) remove this once that is finished.
+        proxy.ping();
+
+        let out_thread = std::thread::spawn(move || loop {
+            let mut buf = [0u8; 128];
+            let n = cout.read(&mut buf).or::<usize>(Ok(0usize)).unwrap();
+            if n > 0 {
+                print!("{}", String::from_utf8_lossy(&buf));
             }
-            Err(e) => panic!("ERROR: {:?}", e),
-        }
+        });
+
+        let err_thread = std::thread::spawn(move || loop {
+            let mut buf = [0u8; 128];
+            let n = cerr.read(&mut buf).or::<usize>(Ok(0usize)).unwrap();
+            if n > 0 {
+                eprint!("{}", String::from_utf8_lossy(&buf));
+            }
+        });
+
+        let term_thread = std::thread::spawn(move || {
+            let mut e = proxy.take_event_stream().take(1usize);
+            while let Some(result) = futures::executor::block_on(e.next()) {
+                match result {
+                    Ok(ComponentControllerEvent::OnTerminated { exit_code }) => {
+                        println!("Component exited with exit code: {}", exit_code);
+                        break;
+                    }
+                    Err(err) => {
+                        eprintln!("error reading component controller events. Component termination may not be detected correctly. {} ", err);
+                    }
+                }
+            }
+        });
+
+        let _result = self
+            .daemon_proxy
+            .start_component(&url, &mut args.iter().map(|s| s.as_str()), sout, serr, server_end)
+            .await?;
+        term_thread.join().unwrap();
+
+        Ok(())
     }
 
     async fn spawn_daemon() -> Result<(), Error> {
@@ -148,9 +185,7 @@ async fn async_main() -> Result<(), Error> {
         Subcommand::List(_) => exec_list().await,
         Subcommand::RunComponent(c) => {
             match Cli::new().await?.run_component(c.url, &c.args).await {
-                Ok(r) => {
-                    println!("SUCCESS: received {:?}", r);
-                }
+                Ok(r) => {}
                 Err(e) => {
                     println!("ERROR: {:?}", e);
                 }
@@ -185,13 +220,15 @@ mod test {
                     Some(DaemonRequest::EchoString { value, responder }) => {
                         let _ = responder.send(value.as_ref());
                     }
-                    Some(DaemonRequest::RunComponent { component_url, args, responder }) => {
-                        let response = RunComponentResponse {
-                            component_stdout: Some(component_url),
-                            component_stderr: Some(args.join(",")),
-                            exit_code: Some(0),
-                        };
-                        let _ = responder.send(response);
+                    Some(DaemonRequest::StartComponent {
+                        component_url,
+                        args,
+                        component_stdout: _,
+                        component_stderr: _,
+                        controller: _,
+                        responder,
+                    }) => {
+                        let _ = responder.send(&mut Ok(()));
                     }
                     _ => assert!(false),
                 }
@@ -214,17 +251,24 @@ mod test {
     }
 
     #[test]
-    fn test_run_component() {
-        let url = "http://test.com";
+    fn test_run_component() -> Result<(), Error> {
+        let url = "fuchsia-pkg://fuchsia.com/test#meta/test.cmx";
         let args = vec!["test1".to_string(), "test2".to_string()];
+        let (daemon_proxy, stream) = fidl::endpoints::create_proxy_and_stream::<DaemonMarker>()?;
+        let (_, server_end) = create_proxy::<ComponentControllerMarker>()?;
+        let (sout, _) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
+        let (serr, _) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
         hoist::run(async move {
+            // There isn't a lot we can test here right now since this method has an empty response.
+            // We just check for an Ok(()) and leave it to a real integration to test behavior.
             let response = Cli::new_with_proxy(setup_fake_daemon_service())
                 .run_component(url.to_string(), &args)
                 .await
                 .unwrap();
-            assert_eq!(response.exit_code.unwrap(), 0);
-            assert_eq!(response.component_stdout.unwrap(), url.to_string());
-            assert_eq!(response.component_stderr.unwrap(), args.join(","));
         });
+
+        Ok(())
     }
 }

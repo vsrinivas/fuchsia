@@ -67,6 +67,9 @@ impl ComponentController {
                             .context("sending Kill response")?
                     }
                 },
+                rcs::ComponentControllerRequest::Ping { responder } => {
+                    responder.send(true).context("sending ping")?;
+                }
             }
         }
 

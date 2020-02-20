@@ -8,7 +8,6 @@ use {
     fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_device_manager as fdevmgr,
     fuchsia_component::client::{launcher, AppBuilder},
     futures::prelude::*,
-    std::convert::TryInto,
 };
 
 mod component_control;
@@ -32,10 +31,6 @@ impl RemoteControlService {
     ) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await.context("next RemoteControl request")? {
             match request {
-                rcs::RemoteControlRequest::RunComponent { component_url, args, responder } => {
-                    let response = self.spawn_component_and_wait(&component_url, args).await?;
-                    responder.send(response).context("sending RunComponent response")?;
-                }
                 rcs::RemoteControlRequest::StartComponent {
                     component_url,
                     args,
@@ -106,23 +101,6 @@ impl RemoteControlService {
         });
 
         return Ok(());
-    }
-
-    pub async fn spawn_component_and_wait(
-        &self,
-        component_name: &str,
-        argv: Vec<String>,
-    ) -> Result<rcs::RunComponentResponse, Error> {
-        log::info!("Attempting to run component '{}' with argv {:?}...", component_name, argv);
-        let launcher = launcher().expect("Failed to open launcher service");
-        let output = AppBuilder::new(component_name).args(argv).output(&launcher)?.await?;
-
-        let response = rcs::RunComponentResponse {
-            component_stdout: Some(String::from_utf8_lossy(&output.stdout).to_string()),
-            component_stderr: Some(String::from_utf8_lossy(&output.stderr).to_string()),
-            exit_code: Some(output.exit_status.code().try_into().unwrap()),
-        };
-        Ok(response)
     }
 
     pub async fn reboot_device<'a>(
@@ -240,46 +218,8 @@ mod tests {
         return rcs_proxy;
     }
 
-    async fn run_component_test(component_url: &str, argv: Vec<&str>) -> rcs::RunComponentResponse {
-        let (rcs_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<rcs::RemoteControlMarker>().unwrap();
-        fasync::spawn(async move {
-            RemoteControlService::new().unwrap().serve_stream(stream).await.unwrap();
-        });
-
-        return rcs_proxy.run_component(component_url, &mut argv.iter().copied()).await.unwrap();
-    }
-
     #[fasync::run_singlethreaded(test)]
     async fn test_spawn_hello_world() -> Result<(), Error> {
-        let response = run_component_test(
-            "fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx",
-            vec![],
-        )
-        .await;
-
-        assert_eq!(response.component_stdout, Some(String::from("Hello, world!\n")));
-        assert_eq!(response.component_stderr, Some(String::default()));
-        assert_eq!(response.exit_code, Some(0));
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_spawn_non_existent_package() -> Result<(), Error> {
-        let response = run_component_test(
-            "fuchsia-pkg://fuchsia.com/hello_world_rust#meta/this_package_doesnt_exist.cmx",
-            vec![],
-        )
-        .await;
-
-        assert_eq!(response.component_stdout, Some(String::default()));
-        assert_eq!(response.component_stderr, Some(String::default()));
-        assert_eq!(response.exit_code, Some(-1));
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_spawn_hello_world_async() -> Result<(), Error> {
         let rcs_proxy = setup_rcs();
         let (proxy, server_end) = create_proxy::<rcs::ComponentControllerMarker>()?;
         let (sout, cout) =

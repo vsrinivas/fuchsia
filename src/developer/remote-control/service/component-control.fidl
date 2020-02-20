@@ -18,6 +18,10 @@ protocol ComponentController {
     // TODO(fxb/43734) allow waiting on arbitrary components
     -> OnTerminated(int64 exit_code);
 
+    // This is only necessary until Overnet correctly handle setup for passed channels.
+    // TODO(jwing) remove this once that is finished.
+    Ping() -> (bool response);
+
     // Kills the component.
     Kill() -> () error ComponentControlError;
 };

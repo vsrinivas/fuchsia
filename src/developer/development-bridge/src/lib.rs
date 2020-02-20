@@ -104,7 +104,14 @@ impl Daemon {
                     log::info!("echo response sent successfully");
                 }
             }
-            DaemonRequest::RunComponent { component_url, args, responder } => {
+            DaemonRequest::StartComponent {
+                component_url,
+                args,
+                component_stdout: stdout,
+                component_stderr: stderr,
+                controller,
+                responder,
+            } => {
                 if !quiet {
                     log::info!(
                         "Received run component request for string {:?}:{:?}",
@@ -112,11 +119,18 @@ impl Daemon {
                         args
                     );
                 }
-                let response = self
+
+                let mut response = self
                     .remote_control_proxy
-                    .run_component(&component_url, &mut args.iter().map(|s| s.as_str()))
+                    .start_component(
+                        &component_url,
+                        &mut args.iter().map(|s| s.as_str()),
+                        stdout,
+                        stderr,
+                        controller,
+                    )
                     .await?;
-                responder.send(response).context("error sending response")?;
+                responder.send(&mut response).context("error sending response")?;
             }
             _ => {
                 log::info!("Unsupported method");
@@ -132,7 +146,6 @@ impl Daemon {
 async fn next_request(
     stream: &mut ServiceProviderRequestStream,
 ) -> Result<Option<ServiceProviderRequest>, Error> {
-    log::trace!("Awaiting request");
     Ok(stream.try_next().await.context("error running service provider server")?)
 }
 
@@ -188,9 +201,10 @@ pub async fn start() -> Result<(), Error> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use fidl::endpoints::create_proxy;
     use fidl_fidl_developer_bridge::DaemonMarker;
     use fidl_fuchsia_developer_remotecontrol::{
-        RemoteControlMarker, RemoteControlProxy, RemoteControlRequest, RunComponentResponse,
+        ComponentControllerMarker, RemoteControlMarker, RemoteControlProxy, RemoteControlRequest,
     };
 
     fn spawn_daemon_server_with_fake_remote_control(stream: DaemonRequestStream) {
@@ -209,13 +223,8 @@ mod test {
         hoist::spawn(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
-                    Some(RemoteControlRequest::RunComponent { component_url, args, responder }) => {
-                        let response = RunComponentResponse {
-                            component_stdout: Some(component_url),
-                            component_stderr: Some(args.join(",")),
-                            exit_code: Some(0),
-                        };
-                        let _ = responder.send(response);
+                    Some(RemoteControlRequest::StartComponent { responder, .. }) => {
+                        let _ = responder.send(&mut Ok(())).context("sending ok response");
                     }
                     _ => assert!(false),
                 }
@@ -238,20 +247,27 @@ mod test {
     }
 
     #[test]
-    fn test_run_component() {
-        let url = "http://test.com";
+    fn test_start_component() -> Result<(), Error> {
+        let url = "fuchsia-pkg://fuchsia.com/test#meta/test.cmx";
         let args = vec!["test1".to_string(), "test2".to_string()];
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+        let (_, server_end) = create_proxy::<ComponentControllerMarker>()?;
+        let (sout, _) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
+        let (serr, _) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
         hoist::run(async move {
             spawn_daemon_server_with_fake_remote_control(stream);
-            let response = daemon_proxy
-                .run_component(url, &mut args.iter().map(|s| s.as_str()))
+            // There isn't a lot we can test here right now since this method has an empty response.
+            // We just check for an Ok(()) and leave it to a real integration test to test behavior.
+            daemon_proxy
+                .start_component(url, &mut args.iter().map(|s| s.as_str()), sout, serr, server_end)
                 .await
+                .unwrap()
                 .unwrap();
-            assert_eq!(response.exit_code.unwrap(), 0);
-            assert_eq!(response.component_stdout.unwrap(), url.to_string());
-            assert_eq!(response.component_stderr.unwrap(), args.join(","));
         });
+
+        Ok(())
     }
 }
