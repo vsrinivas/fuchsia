@@ -15,4 +15,5 @@ protocol Util {
     GetEnvironment() -> (vector<EnvVar> vars);
     DumpNamespace() -> (string contents);
     ReadFile(string path) -> (string contents);
+    GetLifecycleKoid() -> (uint64 koid);
 };

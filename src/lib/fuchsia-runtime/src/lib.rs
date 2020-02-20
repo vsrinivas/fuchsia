@@ -124,6 +124,12 @@ pub enum HandleType {
     /// Equivalent to PA_FD.
     FileDescriptor = 0x30,
 
+    /// A Handle to a channel on which the process may serve the
+    /// the |fuchsia.process.Lifecycle| protocol.
+    ///
+    /// Equivalent to PA_LIFECYCLE.
+    Lifecycle = 0x3A,
+
     /// Server endpoint for handling connections to appmgr services.
     ///
     /// Equivalent to PA_DIRECTORY_REQUEST.
@@ -137,7 +143,7 @@ pub enum HandleType {
     /// A Handle to a clock object representing UTC.  Used by runtimes to gain
     /// access to UTC time.
     ///
-    /// Equivalent to PA_CLOCK_UTC,
+    /// Equivalent to PA_CLOCK_UTC.
     ClockUtc = 0x40,
 
     /// A handle type with user-defined meaning.

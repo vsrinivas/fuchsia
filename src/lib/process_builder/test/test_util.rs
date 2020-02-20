@@ -7,12 +7,25 @@ use {
     fidl_test_processbuilder::{EnvVar, UtilRequest, UtilRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_runtime::{self as fruntime, HandleInfo, HandleType},
+    fuchsia_zircon::{self as zx, AsHandleRef},
     futures::prelude::*,
     std::env,
     std::fs,
 };
 
 async fn run_util_server(mut stream: UtilRequestStream) -> Result<(), Error> {
+    // If we've been given a lifecycle channel, figure out its koid
+    let lifecycle_koid: u64 =
+        match fruntime::take_startup_handle(HandleInfo::new(HandleType::Lifecycle, 0)) {
+            Some(handle) => handle
+                .as_handle_ref()
+                .get_koid()
+                .expect("failed to get basic lifecycle handle info")
+                .raw_koid(),
+            None => zx::sys::ZX_KOID_INVALID,
+        };
+
     while let Some(req) = stream.try_next().await.context("error running echo server")? {
         match req {
             UtilRequest::GetArguments { responder } => {
@@ -37,6 +50,9 @@ async fn run_util_server(mut stream: UtilRequestStream) -> Result<(), Error> {
                 let contents = fs::read_to_string(path)
                     .unwrap_or_else(|e| format!("read_to_string failed: {}", e));
                 responder.send(&contents).context("error sending response")?;
+            }
+            UtilRequest::GetLifecycleKoid { responder } => {
+                responder.send(lifecycle_koid as u64)?;
             }
         }
     }

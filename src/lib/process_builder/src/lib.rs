@@ -1014,7 +1014,7 @@ mod tests {
     }
 
     // These start_util_with_* tests cover the most common paths through ProcessBuilder and
-    // exercise most of its functionality. They verifies that we can create a new process for a
+    // exercise most of its functionality. They verify that we can create a new process for a
     // "standard" dynamically linked executable and that we can provide arguments, environment
     // variables, namespace entries, and other handles to it through the startup processargs
     // message. The test communicates with the test util process it creates over a test-only FIDL
@@ -1036,6 +1036,55 @@ mod tests {
         let proc_args = proxy.get_arguments().await.context("failed to get args from util")?;
         assert_eq!(proc_args, test_args);
 
+        mem::drop(proxy);
+        check_process_exited_ok(&process).await?;
+        Ok(())
+    }
+
+    // Verify that the lifecycle channel can be passed through the bootstrap
+    // channel. This test checks by creating a channel, passing it through,
+    // asking the remote process for the lifecycle channel's koid, and then
+    // comparing that koid to the one the test recorded.
+    #[fasync::run_singlethreaded(test)]
+    async fn start_util_with_lifecycle_channel() -> Result<(), Error> {
+        let (mut builder, proxy) = setup_test_util_builder(true)?;
+        let (lifecycle_server, _lifecycle_client) = zx::Channel::create()?;
+        let koid = lifecycle_server
+            .as_handle_ref()
+            .basic_info()
+            .expect("error getting server handle info")
+            .koid
+            .raw_koid();
+        builder.add_handles(vec![StartupHandle {
+            handle: lifecycle_server.into_handle(),
+            info: HandleInfo::new(HandleType::Lifecycle, 0),
+        }])?;
+        let process = builder.build().await?.start()?;
+        check_process_running(&process)?;
+
+        // Use the util protocol to confirm that the new process received the
+        // lifecycle channel
+        let reported_koid =
+            proxy.get_lifecycle_koid().await.context("failed getting koid from util")?;
+        assert_eq!(koid, reported_koid);
+        mem::drop(proxy);
+        check_process_exited_ok(&process).await?;
+        Ok(())
+    }
+
+    // Verify that if no lifecycle channel is sent via the bootstrap channel
+    // that the remote process reports ZX_KOID_INVALID for the channel koid.
+    #[fasync::run_singlethreaded(test)]
+    async fn start_util_with_no_lifecycle_channel() -> Result<(), Error> {
+        let (builder, proxy) = setup_test_util_builder(true)?;
+        let process = builder.build().await?.start()?;
+        check_process_running(&process)?;
+
+        // Use the util protocol to confirm that the new process received the
+        // lifecycle channel
+        let reported_koid =
+            proxy.get_lifecycle_koid().await.context("failed getting koid from util")?;
+        assert_eq!(zx::sys::ZX_KOID_INVALID, reported_koid);
         mem::drop(proxy);
         check_process_exited_ok(&process).await?;
         Ok(())

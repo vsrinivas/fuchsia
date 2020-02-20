@@ -139,6 +139,12 @@ struct zx_proc_args {
 // A handle which will be used as a file descriptor.
 #define PA_FD 0x30u
 
+// -- Lifecyle handle --
+//
+// A Handle to a channel on which the process may receive lifecycle events from
+// the ELF runner by serving the |fuchsia.process.Lifecycle| protocol.
+#define PA_LIFECYCLE 0x3Au
+
 // Server endpoint for handling connection to appmgr services.
 #define PA_DIRECTORY_REQUEST 0x3Bu
 
