@@ -1,0 +1,103 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/images/custom_signing.gni")
+import("//build/images/vbmeta.gni")
+
+declare_args() {
+  # Use vboot images
+  use_vboot = false
+
+  # Put the "system image" package in the BOOTFS.  Hence what would
+  # otherwise be /system/... at runtime is /boot/... instead.
+  bootfs_only = false
+
+  # List of arguments to add to /boot/config/devmgr.
+  # These come after synthesized arguments to configure blobfs and pkgfs.
+  devmgr_config = []
+
+  # List of kernel command line arguments to bake into the boot image.
+  # See also [kernel_cmdline](/docs/reference/kernel/kernel_cmdline.md) and
+  # [`devmgr_config`](#devmgr_config).
+  kernel_cmdline_args = []
+
+  # Files containing additional kernel command line arguments to bake into
+  # the boot image.  The contents of these files (in order) come after any
+  # arguments directly in [`kernel_cmdline_args`](#kernel_cmdline_args).
+  # These can be GN `//` source pathnames or absolute system pathnames.
+  kernel_cmdline_files = []
+
+  # List of extra manifest entries for files to add to the BOOTFS.
+  # Each entry can be a "TARGET=SOURCE" string, or it can be a scope
+  # with `sources` and `outputs` in the style of a copy() target:
+  # `outputs[0]` is used as `TARGET` (see `gn help source_expansion`).
+  bootfs_extra = []
+
+  # (deprecated) List of kernel images to include in the update (OTA) package.
+  # If no list is provided, all built kernels are included. The names in the
+  # list are strings that must match the filename to be included in the update
+  # package.
+  update_kernels = []
+
+  # Prebuilt bootloader image to be included into update (OTA) package and
+  # paving process.
+  bootloader_prebuilt = ""
+
+  # HW revision of the bootloader to be included into OTA package and paving
+  # process.
+  bootloader_hw_revision = ""
+
+  # Path to manifest file containing data to place into the initial /data
+  # partition.
+  data_partition_manifest = ""
+
+  # Whether to build the netboot zbi by default.
+  #
+  # You can still build //build/images:netboot explicitly even if enable_netboot is false.
+  enable_netboot = false
+
+  # A list of labels for meta packages to be included in the monolith.
+  meta_package_labels = []
+
+  # arguments to fx flash script
+  zircon_a_partition = ""
+  zircon_b_partition = ""
+  zircon_r_partition = ""
+  vbmeta_a_partition = ""
+  vbmeta_b_partition = ""
+  vbmeta_r_partition = ""
+  active_partition = ""
+  signed_image = false
+  fastboot_product = ""
+  pre_erase_flash = false
+
+  # Whether to include images necessary to run Fuchsia in QEMU in build
+  # archives.
+  add_qemu_to_build_archives = false
+
+  # Additional bootserver args to add to pave.sh. New uses of this should be
+  # added with caution, and ideally discussion. The present use case is to
+  # enable throttling of netboot when specific network adapters are combined
+  # with specific boards, due to driver and hardware challenges.
+  additional_bootserver_arguments = ""
+
+  # Whether to perform check on the build's eligibility for production.
+  # If true, base_packages and cache_packages are checked against dependencies
+  # on :non_production_tag, which is used to tag any non-production GN labels.
+  # Build will fail if such dependency is found.
+  check_production_eligibility = false
+
+  # Whether to compress the blobfs image.
+  compress_blobs = true
+
+  # Build boot images that prefer Zedboot over local boot (only for EFI).
+  always_zedboot = false
+}
+
+assert(custom_signing_script == "" || !use_vboot,
+       "custom_signing_script and use_vboot cannot be used together!")
+
+assert(
+    !include_devmgr_config_in_vbmeta || use_vbmeta,
+    "include_devmgr_config_in_vbmeta cannot be used if use_vbmeta is not set!")

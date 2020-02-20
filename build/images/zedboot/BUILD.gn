@@ -4,6 +4,7 @@
 
 import("//build/board.gni")
 import("//build/config/fuchsia/zbi.gni")
+import("//build/images/args.gni")
 import("//build/images/boot.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/custom_signing.gni")

@@ -253,45 +253,43 @@ template("assemble_system") {
     visibility = [ ":*" ]
     testonly = true
     script = "//build/images/manifest.py"
-    outputs = [ "$target_out_dir/$target_name" ]
+    outputs = [ "$target_out_dir/devmgr_config.txt" ]
     args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
     sources = []
     deps = [ ":${image_name}_system_image.manifest" ]
 
-    if (!bootfs_only) {
-      pkgfs = "bin/" + pkgfs_binary_name
-      pkgfs_label = pkgfs_package_label
-      pkgfs_pkg_out_dir = get_label_info(pkgfs_label, "target_out_dir") + "/" +
-                          get_label_info(pkgfs_label, "name")
-      pkgfs_blob_manifest = "$pkgfs_pkg_out_dir/meta/contents"
-      system_image_merkleroot =
-          "$target_out_dir/${image_name}_system_image.meta/meta.far.merkle"
+    pkgfs = "bin/" + pkgfs_binary_name
+    pkgfs_label = pkgfs_package_label
+    pkgfs_pkg_out_dir = get_label_info(pkgfs_label, "target_out_dir") + "/" +
+                        get_label_info(pkgfs_label, "name")
+    pkgfs_blob_manifest = "$pkgfs_pkg_out_dir/meta/contents"
+    system_image_merkleroot =
+        "$target_out_dir/${image_name}_system_image.meta/meta.far.merkle"
 
-      deps += [
-        ":${image_name}_system_image.meta",
-        pkgfs_label,
-      ]
+    deps += [
+      ":${image_name}_system_image.meta",
+      pkgfs_label,
+    ]
 
-      sources += [
-        pkgfs_blob_manifest,
-        system_image_merkleroot,
-      ]
+    sources += [
+      pkgfs_blob_manifest,
+      system_image_merkleroot,
+    ]
 
-      args += [
-        "--entry=devmgr.require-system=true",
+    args += [
+      "--entry=devmgr.require-system=true",
 
-        "--contents",
-        "--rewrite=*=zircon.system.pkgfs.cmd={target}+{source}",
-        "--entry=${pkgfs}=" +
-            rebase_path(system_image_merkleroot, root_build_dir),
-        "--no-contents",
-        "--reset-rewrite",
+      "--contents",
+      "--rewrite=*=zircon.system.pkgfs.cmd={target}+{source}",
+      "--entry=${pkgfs}=" +
+          rebase_path(system_image_merkleroot, root_build_dir),
+      "--no-contents",
+      "--reset-rewrite",
 
-        "--rewrite=*=zircon.system.pkgfs.file.{target}={source}",
-        "--manifest=" + rebase_path(pkgfs_blob_manifest, root_build_dir),
-        "--reset-rewrite",
-      ]
-    }
+      "--rewrite=*=zircon.system.pkgfs.file.{target}={source}",
+      "--manifest=" + rebase_path(pkgfs_blob_manifest, root_build_dir),
+      "--reset-rewrite",
+    ]
 
     foreach(entry, devmgr_config) {
       args += [ "--entry=$entry" ]

@@ -5,7 +5,7 @@
 import("//build/board.gni")
 import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
-import("//build/images/boot_args.gni")
+import("//build/images/args.gni")
 import("//build/testing/platforms.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
@@ -304,6 +304,13 @@ build_api_module("images") {
   testonly = true
   data_keys = [ "images" ]
   deps = [
+    # XXX(46415): as the build is specialized by board (bootfs_only)
+    # for bringup, it is not possible for this to be complete. As this
+    # is used in the formation of the build API with infrastructure,
+    # and infrastructure assumes that the board configuration modulates
+    # the definition of `zircon-a` between bringup/non-bringup, we can
+    # not in fact have a complete description. See the associated
+    # conditional at this group also.
     "build/images",
 
     # TODO(fxbug.dev/9708): have this target roll up to a build API module of
@@ -486,11 +493,10 @@ group("default") {
     "//sdk",
   ]
 
-  if (bootfs_only || base_package_labels != [] || cache_package_labels != []) {
-    deps += [ "//build/images" ]
-  }
-  if (universe_package_labels != []) {
-    deps += [ "//build/images:updates" ]
+  # SDK-only builds must not attempt to build images.
+  if (bootfs_only || base_package_labels + cache_package_labels +
+                     universe_package_labels != []) {
+    deps += [ "//build/images:default-images" ]
   }
 }
 

@@ -1,0 +1,167 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/board.gni")
+import("//build/config/fuchsia/zbi.gni")
+import("//build/images/args.gni")
+import("//build/images/boot.gni")
+import("//build/images/custom_signing.gni")
+import("//build/images/manifest.gni")
+import("//build/images/ta.gni")
+
+assert(current_toolchain == target_toolchain)
+
+# XXX: Temporary solution: we grab every package in the build and ensure that
+# these are contributing to the bootfs_manifest that we generate.
+generated_file("system_package.manifest_args") {
+  testonly = true
+  outputs = [ target_gen_dir + "/system_package.manifest_args" ]
+  data_keys = [ "system_image_rsps" ]
+  walk_keys = [ "system_image_barrier" ]
+  deps = [ "//build/images:packages" ]
+}
+
+generate_manifest("boot.manifest") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  output_name = "boot.manifest"
+  zircon_groups = "all"
+
+  deps = [ ":system_package.manifest_args" ]
+  system_package_manifest_args =
+      get_target_outputs(":system_package.manifest_args")
+  sources = system_package_manifest_args
+  args = [ "@" + rebase_path(system_package_manifest_args[0], root_build_dir) ]
+}
+
+action("devmgr_config.txt") {
+  testonly = true
+
+  script = "../manifest.py"
+  outputs = [ "$target_out_dir/devmgr_config.txt" ]
+  args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
+  deps = [ ":boot.manifest" ]
+
+  foreach(entry, devmgr_config) {
+    args += [ "--entry=$entry" ]
+  }
+}
+
+coordinator_label = "//src/devices:devices.bootfs"
+coordinator_target_dir = get_label_info(coordinator_label, "target_out_dir")
+coordinator_target_name = get_label_info(coordinator_label, "name")
+coordinator_manifest = coordinator_target_dir + "/" + coordinator_target_name
+
+component_manager_label = "//src/sys/component_manager:component_manager.bootfs"
+component_manager_target_dir =
+    get_label_info(component_manager_label, "target_out_dir")
+component_manager_target_name = get_label_info(component_manager_label, "name")
+component_manager_manifest =
+    component_manager_target_dir + "/" + component_manager_target_name
+
+root_manifests_label = "//src/sys/bootstrap:root_manifests.bootfs"
+root_manifests_target_dir =
+    get_label_info(root_manifests_label, "target_out_dir")
+root_manifests_target_name = get_label_info(root_manifests_label, "name")
+root_manifests_manifest =
+    root_manifests_target_dir + "/" + root_manifests_target_name
+
+zbi("bringup") {
+  testonly = true
+
+  deps = [
+    ":boot.manifest",
+    ":devmgr_config.txt",
+    component_manager_label,
+    coordinator_label,
+    root_manifests_label,
+  ]
+
+  boot_manifest_outputs = get_target_outputs(":boot.manifest")
+  inputs = [ boot_manifest_outputs[0] ] + [
+             component_manager_manifest,
+             coordinator_manifest,
+             root_manifests_manifest,
+             zircon_kernel_zbi,
+           ]
+
+  manifest = [
+    {
+      outputs = [ "config/devmgr" ]
+      sources = get_target_outputs(":devmgr_config.txt")
+    },
+  ]
+  foreach(ta_uuid, fuchsia_ta_uuids) {
+    manifest += [
+      {
+        outputs = [ "lib/firmware/${ta_uuid}${ta_dest_suffix}" ]
+        sources = [ rebase_path("${ta_path}/${ta_uuid}${ta_src_suffix}") ]
+      },
+    ]
+  }
+
+  cmdline = kernel_cmdline_args + board_kernel_cmdline_args
+  cmdline_inputs = kernel_cmdline_files
+  manifest += bootfs_extra
+
+  metadata = {
+    images = [
+      {
+        name = "zircon-a"
+        path = "bringup.zbi"
+        type = "zbi"
+
+        archive = true
+        bootserver_pave = []
+
+        # Bringup builds always mexec from the paver
+        bootserver_pave += [ "--boot" ]
+
+        if (custom_signing_script == "" && !use_vboot) {
+          bootserver_pave += [
+            "--zircona",
+            # TODO(ZX-2625): `dm reboot-recovery` boots from zircon-b instead of
+            # zircon-r, so for now zedboot is being paved to this slot.
+            # "--zirconb",
+          ]
+        }
+      },
+    ]
+
+    image_paths = [
+      "IMAGE_ZIRCONA_ZBI=bringup.zbi",
+
+      # TODO(mcgrathr): The complete ZBI can be used with a separate
+      # kernel too, the kernel image in it will just be ignored.  So
+      # just use the primary ZBI for this until all uses are
+      # converted to using the ZBI alone.  Then remove this as
+      # IMAGE_BOOT_RAM variable should no longer be in use.
+      "IMAGE_BOOT_RAM=bringup.zbi",
+    ]
+
+    images += [
+      {
+        archive = true
+        bootserver_netboot = [ "--boot" ]
+        name = "fuchsia"
+        path = "bringup.zbi"
+        type = "zbi"
+      },
+    ]
+    image_paths += [
+      "IMAGE_NETBOOT_RAM=bringup.zbi",
+      "IMAGE_NETBOOT_ZBI=bringup.zbi",
+    ]
+  }
+}
+
+if (custom_signing_script != "") {
+  custom_signed_zbi("signed") {
+    output_name = "bringup.zbi"
+    testonly = true
+    deps = [ ":bringup" ]
+    zbi = get_target_outputs(":bringup")
+  }
+}

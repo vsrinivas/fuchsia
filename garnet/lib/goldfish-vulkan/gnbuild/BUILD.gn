@@ -49,6 +49,7 @@ if (have_libvulkan) {
 }
 
 package("goldfish") {
+  package_name = "goldfish-system"
   deprecated_system_image = true
 
   if (have_libvulkan) {

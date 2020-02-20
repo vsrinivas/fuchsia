@@ -5,7 +5,6 @@
 import("//build/compiled_action.gni")
 import("//build/config/clang/clang.gni")
 import("//build/config/fuchsia/zircon_images.gni")
-import("//build/images/boot_args.gni")
 
 # Build a "kernel partition" target for ChromeOS targets.
 #

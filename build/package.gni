@@ -5,7 +5,7 @@
 import("//build/board.gni")
 import("//build/cmx/cmx.gni")
 import("//build/compiled_action.gni")
-import("//build/images/boot.gni")
+import("//build/images/args.gni")
 import("//build/images/manifest.gni")
 import("//build/json/validate_json.gni")
 import("//build/package/component.gni")
@@ -74,9 +74,7 @@ template("package_metadata_list") {
                            ])
 
     if (!defined(outputs)) {
-      outputs = [
-        target_gen_dir + "/" + target_name,
-      ]
+      outputs = [ target_gen_dir + "/" + target_name ]
     }
 
     walk_keys = [ "package_barrier" ]
@@ -109,9 +107,7 @@ template("component_index_metadata_list") {
                            ])
 
     if (!defined(outputs)) {
-      outputs = [
-        target_gen_dir + "/" + target_name,
-      ]
+      outputs = [ target_gen_dir + "/" + target_name ]
     }
 
     data_keys = [ "component_index" ]
@@ -171,9 +167,7 @@ template("pm_build_package") {
 
     deps += [ invoker.manifest ]
 
-    inputs = [
-      pkg_manifest_file,
-    ]
+    inputs = [ pkg_manifest_file ]
 
     depfile = "$pkg_out_dir/meta.far.d"
 
@@ -609,9 +603,7 @@ template("package") {
           "$target_out_dir/pkg_meta/$target_name.test_metadata"
       metadata_manifest_target_name = "${target_name}_test_metadata"
       generated_file(metadata_manifest_target_name) {
-        outputs = [
-          metadata_manifest_patches,
-        ]
+        outputs = [ metadata_manifest_patches ]
         output_conversion = "json"
         data_keys = [ "test_metadata_manifest_patches" ]
         walk_keys = [ "test_barrier" ]
@@ -958,8 +950,10 @@ template("package") {
     }
 
     if (pkg.deprecated_system_image || bootfs_only) {
+      system_rsp_label = pkg_target_name + ".system.rsp"
+
       # System image packages just donate manifest arguments
-      generate_response_file(pkg_target_name) {
+      generate_response_file(system_rsp_label) {
         if (defined(pkg.visibility)) {
           visibility = pkg.visibility
         }
@@ -974,98 +968,102 @@ template("package") {
           system_image_rsps = [ "@" +
                                 rebase_path(target_out_dir + "/" + output_name,
                                             root_build_dir) ]
+
+          system_image_barrier = []
         }
       }
       not_needed([ "component_indices" ])
-    } else {
-      # Fuchsia package aggregates a manifest from it's arguments and builds a
-      # metadata archive.
+    }
 
-      manifest = "${pkg_target_name}.manifest"
+    # Fuchsia package aggregates a manifest from it's arguments and builds a
+    # metadata archive.
 
-      # Synthesize the meta/package file.
-      pkg_meta_package = "${pkg_target_name}_meta_package.json"
-      action(pkg_meta_package) {
-        visibility = [ ":$manifest" ]
-        script = "//build/gn/write_package_json.py"
-        outputs = [
-          "$target_out_dir/$pkg_meta_package",
-        ]
-        args = [
-          "--name",
-          pkg.package_name,
-          "--version",
-          pkg.package_version,
-          rebase_path(pkg_meta_package, root_build_dir, target_out_dir),
-        ]
+    manifest = "${pkg_target_name}.manifest"
+
+    # Synthesize the meta/package file.
+    pkg_meta_package = "${pkg_target_name}_meta_package.json"
+    action(pkg_meta_package) {
+      visibility = [ ":$manifest" ]
+      script = "//build/gn/write_package_json.py"
+      outputs = [ "$target_out_dir/$pkg_meta_package" ]
+      args = [
+        "--name",
+        pkg.package_name,
+        "--version",
+        pkg.package_version,
+        rebase_path(pkg_meta_package, root_build_dir, target_out_dir),
+      ]
+    }
+
+    generate_manifest(manifest) {
+      visibility = [ ":" + pkg_target_name ]
+      sources = manifest_sources + get_target_outputs(":$pkg_meta_package")
+      args =
+          manifest_args + [ "--entry=meta/package=" +
+                            rebase_path(pkg_meta_package, "", target_out_dir) ]
+      deps = pkg.deps + [ ":$pkg_meta_package" ]
+      public_deps = pkg.public_deps
+
+      foreach(component, pkg.components) {
+        # TODO(CF-162): Add to component_indices
+        deps += [ component ]
+        component_name = get_label_info(component, "name")
+        dir = get_label_info(component, "target_out_dir")
+        rsp_file = "${dir}/${component_name}.rsp"
+        sources += [ rsp_file ]
+        args += [ "@" + rebase_path(rsp_file) ]
+      }
+    }
+
+    # Next generate a sealed package file.
+    pm_build_package(pkg_target_name) {
+      if (defined(pkg.visibility)) {
+        visibility = pkg.visibility
+      }
+      package_name = pkg.package_name
+      manifest = ":$manifest"
+      metadata = {
+        forward_variables_from(pkg.metadata, "*")
+
+        component_index = component_indices
+
+        # We only ever want to collect the following component indices from
+        # packages, not from dependencies of packages, so the barrier prevents
+        # us from walking any further in the dependency chain. See `gn help
+        # walk_keys` for more information on the mechanic.
+        component_index_barrier = []
       }
 
-      generate_manifest(manifest) {
-        visibility = [ ":" + pkg_target_name ]
-        sources = manifest_sources + get_target_outputs(":$pkg_meta_package")
-        args = manifest_args +
-               [ "--entry=meta/package=" +
-                 rebase_path(pkg_meta_package, "", target_out_dir) ]
-        deps = pkg.deps + [ ":$pkg_meta_package" ]
-        public_deps = pkg.public_deps
+      deps = pkg.deps
+      data_deps = pkg.data_deps
+      public_deps = pkg.public_deps
 
-        foreach(component, pkg.components) {
-          # TODO(CF-162): Add to component_indices
-          deps += [ component ]
-          component_name = get_label_info(component, "name")
-          dir = get_label_info(component, "target_out_dir")
-          rsp_file = "${dir}/${component_name}.rsp"
-          sources += [ rsp_file ]
-          args += [ "@" + rebase_path(rsp_file) ]
-        }
+      if (pkg.deprecated_system_image || bootfs_only) {
+        public_deps += [ ":" + system_rsp_label ]
       }
 
-      # Next generate a sealed package file.
-      pm_build_package(pkg_target_name) {
-        if (defined(pkg.visibility)) {
-          visibility = pkg.visibility
-        }
-        package_name = pkg.package_name
-        manifest = ":$manifest"
-        metadata = {
-          forward_variables_from(pkg.metadata, "*")
-
-          component_index = component_indices
-
-          # We only ever want to collect the following component indices from
-          # packages, not from dependencies of packages, so the barrier prevents
-          # us from walking any further in the dependency chain. See `gn help
-          # walk_keys` for more information on the mechanic.
-          component_index_barrier = []
-        }
-
-        deps = pkg.deps
-        data_deps = pkg.data_deps
-        public_deps = pkg.public_deps
-
-        # Add the dep on the allowlist here rather than in pkg.deps earlier so that we can allow
-        # specific targets by the package target's name using visibility.
-        if (defined(pkg.deprecated_misc_storage)) {
-          deps += [
-            "${pkg.deprecated_misc_storage}:deprecated_misc_storage_allowlist",
-          ]
-        }
-        if (defined(require_bare_tests_allowlist) &&
-            require_bare_tests_allowlist) {
-          deps += [ "//build:deprecated_bare_tests_allowlist" ]
-        }
-        if (defined(pkg.deprecated_shell)) {
-          deps += [ "${pkg.deprecated_shell}:deprecated_shell_allowlist" ]
-        }
-        if (defined(pkg.global_data)) {
-          deps += [ "${pkg.global_data}:global_data_allowlist" ]
-        }
-        if (defined(pkg.rootjob_svc)) {
-          deps += [ "${pkg.rootjob_svc}:rootjob_svc_allowlist" ]
-        }
-        if (defined(pkg.rootresource_svc)) {
-          deps += [ "${pkg.rootresource_svc}:rootresource_svc_allowlist" ]
-        }
+      # Add the dep on the allowlist here rather than in pkg.deps earlier so that we can allow
+      # specific targets by the package target's name using visibility.
+      if (defined(pkg.deprecated_misc_storage)) {
+        deps += [
+          "${pkg.deprecated_misc_storage}:deprecated_misc_storage_allowlist",
+        ]
+      }
+      if (defined(require_bare_tests_allowlist) &&
+          require_bare_tests_allowlist) {
+        deps += [ "//build:deprecated_bare_tests_allowlist" ]
+      }
+      if (defined(pkg.deprecated_shell)) {
+        deps += [ "${pkg.deprecated_shell}:deprecated_shell_allowlist" ]
+      }
+      if (defined(pkg.global_data)) {
+        deps += [ "${pkg.global_data}:global_data_allowlist" ]
+      }
+      if (defined(pkg.rootjob_svc)) {
+        deps += [ "${pkg.rootjob_svc}:rootjob_svc_allowlist" ]
+      }
+      if (defined(pkg.rootresource_svc)) {
+        deps += [ "${pkg.rootresource_svc}:rootresource_svc_allowlist" ]
       }
     }
   } else {
@@ -1081,9 +1079,7 @@ template("package") {
                                "visibility",
                                "testonly",
                              ])
-      data_deps = [
-        ":$target_name($target_toolchain)",
-      ]
+      data_deps = [ ":$target_name($target_toolchain)" ]
     }
 
     # Suppress unused variable warnings.

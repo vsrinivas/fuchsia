@@ -18,7 +18,7 @@ kernel_cmdline_args = [
   "netsvc.disable=false",
 ]
 
-meta_package_labels = [ "//build/images:config-data" ]
+meta_package_labels = []
 
 base_package_labels = []
 

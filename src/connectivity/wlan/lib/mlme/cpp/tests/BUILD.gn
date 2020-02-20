@@ -231,6 +231,8 @@ package("wlanphy-testdev-driver") {
       name = "wlanphy-testdev.so"
     },
   ]
+
+  deps = [ "//src/connectivity/wlan/drivers/testing:wlanphy-testdev" ]
 }
 
 test_package("wlan_tests") {
