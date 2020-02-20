@@ -51,5 +51,5 @@ documentation about participation in the protocol.  Packed structures are not
 currently supported.
 
 [fidl-style]: /docs/development/languages/fidl/style.md
-[fidl-api]: /docs/development/api/fidl.md
-[bits]: /docs/development/api/fidl.md#bits
+[fidl-api]: /docs/concepts/api/fidl.md
+[bits]: /docs/concepts/api/fidl.md#bits

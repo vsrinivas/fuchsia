@@ -24,7 +24,7 @@ This document is a description of the Fuchsia Interface Definition Language
 [Language Specification]: ../reference/language.md
 [Compiler Specification]: ../reference/compiler.md
 [Style Guide]: ../style.md
-[API Rubric]: ../../../api/fidl.md
+[API Rubric]: /docs/concepts/api/fidl.md
 [Linter to Check API Readability / Style]: ../reference/linter.md
 [C Language Bindings]: ../tutorial/tutorial-c.md
 [Low-Level C++ Language Bindings]: ../tutorial/tutorial-llcpp.md

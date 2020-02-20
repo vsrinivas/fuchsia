@@ -71,7 +71,7 @@ examples should be very generic and simple. If you feel like you need a more ela
 consider creating a procedural document to reinforce your reference documentation.
 
 For the style guide for API documentation, see
-[API style guide](/docs/development/api/documentation.md).
+[API style guide](/docs/concepts/api/documentation.md).
 
 ## Conceptual documentation {#conceptual-documentation}
 

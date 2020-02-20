@@ -43,9 +43,6 @@ toc:
 - title: "Manage threads"
   section:
   - include: /docs/development/threads/_toc.yaml
-- title: "Develop APIs for Fuchsia"
-  section:
-  - include: /docs/development/api/_toc.yaml
 - title: "Develop using the SDK"
   section:
   - include: /docs/development/sdk/_toc.yaml

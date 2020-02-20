@@ -3,24 +3,24 @@
 # team as reviewer.
 toc:
 - title: "API development"
-  path: /docs/development/api
+  path: /docs/concepts/api
 - title: "CLI tool help requirements"
-  path: /docs/development/api/cli_help.md
+  path: /docs/concepts/api/cli_help.md
 - title: "Command-line tools rubric"
-  path: /docs/development/api/cli.md
+  path: /docs/concepts/api/cli.md
 - title: "C library readability rubric"
-  path: /docs/development/api/c.md
-- title: "Dart API readability Rubric"
-  path: /docs/development/api/dart.md
+  path: /docs/concepts/api/c.md
+- title: "Dart API readability rubric"
+  path: /docs/concepts/api/dart.md
 - title: "Fuchsia API council charter"
-  path: /docs/development/api/council.md
+  path: /docs/concepts/api/council.md
 - title: "Fuchsia device interface rubric"
-  path: /docs/development/api/device_interfaces.md
+  path: /docs/concepts/api/device_interfaces.md
 - title: "API documentation readability rubric"
-  path: /docs/development/api/documentation.md
+  path: /docs/concepts/api/documentation.md
 - title: "FIDL API readability rubric"
-  path: /docs/development/api/fidl.md
+  path: /docs/concepts/api/fidl.md
 - title: "Zircon system interface rubric"
-  path: /docs/development/api/system.md
+  path: /docs/concepts/api/system.md
 - title: "Developer tool guidelines"
-  path: /docs/development/api/tools.md
+  path: /docs/concepts/api/tools.md

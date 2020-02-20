@@ -1,6 +1,6 @@
 # FIDL
 
-FIDL (or "**F**uchsia **I**nterface **D**efinition **L**anguage") is the IPC system for Fuchsia.
+FIDL (**F**uchsia **I**nterface **D**efinition **L**anguage) is the IPC system for Fuchsia.
 
 ## Start here
 
@@ -51,7 +51,7 @@ Please read the [CONTRIBUTING](CONTRIBUTING.md) chapter for more information.
 
 <!-- xrefs -->
 [fidl-style]: /docs/development/languages/fidl/style.md
-[fidl-api]: /docs/development/api/fidl.md
+[fidl-api]: /docs/concepts/api/fidl.md
 
 <!-- these in particular make the table manageable, and have the form:
      <language>-lang (the language part)

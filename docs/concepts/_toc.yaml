@@ -4,6 +4,9 @@
 toc:
 - title: "Overview"
   path: /docs/concepts
+- title: "API"
+  section:
+  - include: /docs/concepts/api/_toc.yaml
 - title: "Architecture"
   section:
   - include: /docs/concepts/architecture/_toc.yaml

@@ -440,7 +440,7 @@ specification that describes a configuration structure.  Similarly, if a
 structure must match an ABI defined in a C header, reference the C header.
 
 For more information about what your comments should contain, see the [API
-Documentation Rubric](/docs/development/api/documentation.md).
+Documentation Rubric](/docs/concepts/api/documentation.md).
 
 #### Referencing FIDL protocols or protocol methods
 

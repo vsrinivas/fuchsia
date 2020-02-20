@@ -34,14 +34,14 @@ and debugging Fuchsia and programs running on Fuchsia.
 
 ## API
 
- - [README](api/README.md) - Developing APIs for Fuchsia
- - [Council](api/council.md) - Definition of the API council
- - [System](api/system.md) - Rubric for designing the Zircon System Interface
+ - [README](/docs/concepts/api/README.md) - Developing APIs for Fuchsia
+ - [Council](/docs/concepts/api/council.md) - Definition of the API council
+ - [System](/docs/concepts/api/system.md) - Rubric for designing the Zircon System Interface
  - [FIDL API][fidl-api] - Rubric for designing FIDL protocols
  - [FIDL style][fidl-style] - FIDL style rubric
- - [C](api/c.md) - Rubric for designing C library interfaces
- - [Tools](api/tools.md) - Rubrics for designing developer tools
- - [Devices](api/device_interfaces.md) - Rubric for designing device interfaces
+ - [C](/docs/concepts/api/c.md) - Rubric for designing C library interfaces
+ - [Tools](/docs/concepts/api/tools.md) - Rubrics for designing developer tools
+ - [Devices](/docs/concepts/api/device_interfaces.md) - Rubric for designing device interfaces
 
 ## ABI
 
@@ -116,5 +116,5 @@ This section covers Fuchsia-wide conventions and best practices.
 [hikey960]: /docs/development/hardware/hikey960.md "HiKey960 (96boards.org)"
 [intel-nuc]: /docs/development/hardware/intel_nuc.md "Intel NUC"
 [fidl-style]: /docs/development/languages/fidl/style.md
-[fidl-api]: /docs/development/api/fidl.md
+[fidl-api]: /docs/concepts/api/fidl.md
 [usb-descriptors-endpoints]: /docs/development/drivers/usb/getting_descriptors_and_endpoints.md
