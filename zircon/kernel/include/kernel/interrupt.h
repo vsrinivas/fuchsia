@@ -18,13 +18,13 @@ typedef struct int_handler_saved_state {
 // int_handler_finish().
 static inline void int_handler_start(int_handler_saved_state_t* state) {
   arch_set_blocking_disallowed(true);
-  thread_t* current_thread = get_current_thread();
+  Thread* current_thread = get_current_thread();
   // Save the value of preempt_pending for restoring later.
-  state->old_preempt_pending = current_thread->preempt_pending;
+  state->old_preempt_pending = current_thread->preempt_pending_;
   // Clear preempt_pending so that we can later detect whether a
   // reschedule is made pending during the interrupt handler.
-  current_thread->preempt_pending = false;
-  thread_preempt_disable();
+  current_thread->preempt_pending_ = false;
+  CurrentThread::PreemptDisable();
 }
 
 // Leave the main part of handling an interrupt, following a call to
@@ -32,14 +32,14 @@ static inline void int_handler_start(int_handler_saved_state_t* state) {
 //
 // This returns whether the caller should call thread_preempt().
 static inline bool int_handler_finish(int_handler_saved_state_t* state) {
-  thread_t* current_thread = get_current_thread();
-  thread_preempt_reenable_no_resched();
+  Thread* current_thread = get_current_thread();
+  CurrentThread::PreemptReenableNoResched();
   bool do_preempt = false;
-  if (current_thread->preempt_pending) {
+  if (current_thread->preempt_pending_) {
     // A preemption became pending during the interrupt handler.  If
     // preemption is now enabled, indicate that the caller should now
     // do the preemption.
-    if (thread_preempt_disable_count() == 0) {
+    if (CurrentThread::PreemptDisableCount() == 0) {
       do_preempt = true;
     }
   } else {
@@ -47,7 +47,7 @@ static inline bool int_handler_finish(int_handler_saved_state_t* state) {
     //
     // Restore the old value of preempt_pending.  This may be true if
     // resched_disable is non-zero.
-    current_thread->preempt_pending = state->old_preempt_pending;
+    current_thread->preempt_pending_ = state->old_preempt_pending;
   }
   arch_set_blocking_disallowed(false);
   return do_preempt;

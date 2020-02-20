@@ -222,8 +222,8 @@ static void mp_unplug_trampoline(void) {
   // We're still holding the thread lock from the reschedule that took us
   // here.
 
-  thread_t* ct = get_current_thread();
-  auto unplug_done = reinterpret_cast<event_t*>(ct->arg);
+  Thread* ct = get_current_thread();
+  auto unplug_done = reinterpret_cast<event_t*>(ct->arg_);
 
   cpu_num_t cpu_num = arch_curr_cpu_num();
   sched_transition_off_cpu(cpu_num);
@@ -239,7 +239,7 @@ static void mp_unplug_trampoline(void) {
   // We had better not be holding any OwnedWaitQueues at this point in time
   // (it is unclear how we would have ever obtained any in the first place
   // since everything this thread ever does is in this function).
-  DEBUG_ASSERT(ct->owned_wait_queues.is_empty());
+  DEBUG_ASSERT(ct->owned_wait_queues_.is_empty());
 
   // do *not* enable interrupts, we want this CPU to never receive another
   // interrupt
@@ -285,7 +285,7 @@ zx_status_t mp_hotplug_cpu_mask(cpu_mask_t cpu_mask) {
 }
 
 // Unplug a single CPU.  Must be called while holding the hotplug lock
-static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, thread_t** leaked_thread) {
+static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, Thread** leaked_thread) {
   // Wait for |cpu_id| to complete any in-progress DPCs and terminate its DPC thread.  Later, once
   // nothing is running on it, we'll migrate its queued DPCs to another CPU.
   dpc_shutdown(cpu_id);
@@ -304,8 +304,8 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, thread_t**
   // HIGHEST_PRIORITY task scheduled in between when we resume the
   // thread and when the CPU is woken up).
   event_t unplug_done = EVENT_INITIAL_VALUE(unplug_done, false, 0);
-  thread_t* t = thread_create_etc(NULL, "unplug_thread", NULL, &unplug_done, HIGHEST_PRIORITY,
-                                  mp_unplug_trampoline);
+  Thread* t = Thread::CreateEtc(NULL, "unplug_thread", NULL, &unplug_done, HIGHEST_PRIORITY,
+                                mp_unplug_trampoline);
   if (t == NULL) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -316,11 +316,11 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, thread_t**
   }
 
   // Pin to the target CPU
-  thread_set_cpu_affinity(t, cpu_num_to_mask(cpu_id));
+  t->SetCpuAffinity(cpu_num_to_mask(cpu_id));
   // Set real time to cancel the pre-emption timer
-  thread_set_real_time(t);
+  t->SetRealTime();
 
-  status = thread_detach_and_resume(t);
+  status = t->DetachAndResume();
   if (status != ZX_OK) {
     goto cleanup_thread;
   }
@@ -370,7 +370,7 @@ cleanup_thread:
 // |SMP_MAX_CPUS|. If null, the threads used to "cleanup" each CPU will be
 // leaked. If non-null, they will be returned to the caller so that the caller
 // can |thread_forget| them.
-zx_status_t mp_unplug_cpu_mask(cpu_mask_t cpu_mask, thread_t** leaked_threads) {
+zx_status_t mp_unplug_cpu_mask(cpu_mask_t cpu_mask, Thread** leaked_threads) {
   DEBUG_ASSERT(!arch_ints_disabled());
   Guard<Mutex> lock(&mp.hotplug_lock);
 
@@ -422,7 +422,7 @@ interrupt_eoi mp_mbx_reschedule_irq(void*) {
   CPU_STATS_INC(reschedule_ipis);
 
   if (mp.active_cpus & cpu_num_to_mask(cpu)) {
-    thread_preempt_set_pending();
+    CurrentThread::PreemptSetPending();
   }
 
   return IRQ_EOI_DEACTIVATE;

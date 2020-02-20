@@ -748,7 +748,7 @@ static bool multiple_regions_test() {
   fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test aspace");
   ASSERT_NONNULL(aspace, "VmAspace::Create pointer");
 
-  vmm_aspace_t* old_aspace = get_current_thread()->aspace;
+  vmm_aspace_t* old_aspace = get_current_thread()->aspace_;
   vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(aspace.get()));
 
   // allocate region 0
@@ -1513,8 +1513,8 @@ static bool vmo_lookup_clone_test() {
   ASSERT_EQ(ZX_OK, status, "vmobject creation\n");
 
   fbl::RefPtr<VmObject> clone;
-  status = vmo->CreateClone(Resizability::NonResizable, CloneType::Snapshot, 0, alloc_size,
-                            false, &clone);
+  status = vmo->CreateClone(Resizability::NonResizable, CloneType::Snapshot, 0, alloc_size, false,
+                            &clone);
   ASSERT_EQ(ZX_OK, status, "vmobject creation\n");
   ASSERT_TRUE(clone, "vmobject creation\n");
 
@@ -1578,8 +1578,8 @@ static bool vmo_clone_removes_write_test() {
   // happy.
   vmo->set_user_id(42);
   fbl::RefPtr<VmObject> clone;
-  status = vmo->CreateClone(Resizability::NonResizable, CloneType::Snapshot, 0, PAGE_SIZE, true,
-                            &clone);
+  status =
+      vmo->CreateClone(Resizability::NonResizable, CloneType::Snapshot, 0, PAGE_SIZE, true, &clone);
   EXPECT_EQ(ZX_OK, status, "create clone");
 
   // Aspace should now have a read only mapping with the same underlying page.
@@ -1607,7 +1607,7 @@ static bool vmo_zero_scan_test() {
   EXPECT_EQ(0u, vmo->ScanForZeroPages(false));
 
   // Create a user mapping that we can read/write from.
-  fbl::RefPtr<VmAspace> user_aspace = fbl::RefPtr(vmm_aspace_to_obj(get_current_thread()->aspace));
+  fbl::RefPtr<VmAspace> user_aspace = fbl::RefPtr(vmm_aspace_to_obj(get_current_thread()->aspace_));
   fbl::RefPtr<VmAddressRegion> root_user_vmar = user_aspace->RootVmar();
   fbl::RefPtr<VmMapping> mapping;
   status = root_user_vmar->CreateVmMapping(

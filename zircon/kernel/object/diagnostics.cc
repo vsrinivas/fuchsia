@@ -881,7 +881,7 @@ static int hwd_thread(void* arg) {
 
     previous_handle_count = handle_count;
 
-    thread_sleep_relative(ZX_SEC(1));
+    CurrentThread::SleepRelative(ZX_SEC(1));
   }
 }
 
@@ -899,7 +899,7 @@ void DumpProcessMemoryUsage(const char* prefix, size_t min_pages) {
 
 static int mwd_thread(void* arg) {
   for (;;) {
-    thread_sleep_relative(ZX_SEC(1));
+    CurrentThread::SleepRelative(ZX_SEC(1));
     DumpProcessMemoryUsage("MemoryHog! ", mwd_limit);
   }
 }
@@ -935,10 +935,10 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
       mwd_limit = argv[2].u * 256;
     }
     if (!mwd_running) {
-      thread_t* t = thread_create("mwd", mwd_thread, nullptr, DEFAULT_PRIORITY);
+      Thread* t = Thread::Create("mwd", mwd_thread, nullptr, DEFAULT_PRIORITY);
       if (t) {
         mwd_running = true;
-        thread_resume(t);
+        t->Resume();
       }
     }
   } else if (strcmp(argv[1].str, "ps") == 0) {
@@ -954,10 +954,10 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
       hwd_limit = argv[2].u;
     }
     if (!hwd_running) {
-      thread_t* t = thread_create("hwd", hwd_thread, nullptr, DEFAULT_PRIORITY);
+      Thread* t = Thread::Create("hwd", hwd_thread, nullptr, DEFAULT_PRIORITY);
       if (t) {
         hwd_running = true;
-        thread_resume(t);
+        t->Resume();
       }
     }
   } else if (strcmp(argv[1].str, "ht") == 0) {

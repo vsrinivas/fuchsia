@@ -26,18 +26,18 @@ static constexpr uint64_t kMdscrSSMask = 1;
 // Single Step for PSTATE, see ARMv8 Manual C5.2.18, enable Single step for Process
 static constexpr uint64_t kSSMaskSPSR = (1 << 21);
 
-zx_status_t arch_get_general_regs(thread_t* thread, zx_thread_state_general_regs_t* out) {
+zx_status_t arch_get_general_regs(Thread* thread, zx_thread_state_general_regs_t* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
   // Punt if registers aren't available. E.g.,
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
-  if (thread->arch.suspended_general_regs == nullptr) {
+  if (thread->arch_.suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  arm64_iframe_t* in = thread->arch.suspended_general_regs;
+  arm64_iframe_t* in = thread->arch_.suspended_general_regs;
   DEBUG_ASSERT(in);
 
   static_assert(sizeof(in->r) == sizeof(out->r), "");
@@ -46,23 +46,23 @@ zx_status_t arch_get_general_regs(thread_t* thread, zx_thread_state_general_regs
   out->sp = in->usp;
   out->pc = in->elr;
   out->cpsr = in->spsr & kUserVisibleFlags;
-  out->tpidr = thread->arch.tpidr_el0;
+  out->tpidr = thread->arch_.tpidr_el0;
 
   return ZX_OK;
 }
 
-zx_status_t arch_set_general_regs(thread_t* thread, const zx_thread_state_general_regs_t* in) {
+zx_status_t arch_set_general_regs(Thread* thread, const zx_thread_state_general_regs_t* in) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
   // Punt if registers aren't available. E.g.,
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
-  if (thread->arch.suspended_general_regs == nullptr) {
+  if (thread->arch_.suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  arm64_iframe_t* out = thread->arch.suspended_general_regs;
+  arm64_iframe_t* out = thread->arch_.suspended_general_regs;
   DEBUG_ASSERT(out);
 
   static_assert(sizeof(out->r) == sizeof(in->r), "");
@@ -71,22 +71,22 @@ zx_status_t arch_set_general_regs(thread_t* thread, const zx_thread_state_genera
   out->usp = in->sp;
   out->elr = in->pc;
   out->spsr = (out->spsr & ~kUserVisibleFlags) | (in->cpsr & kUserVisibleFlags);
-  thread->arch.tpidr_el0 = in->tpidr;
+  thread->arch_.tpidr_el0 = in->tpidr;
 
   return ZX_OK;
 }
 
-zx_status_t arch_get_single_step(thread_t* thread, zx_thread_state_single_step_t* out) {
+zx_status_t arch_get_single_step(Thread* thread, zx_thread_state_single_step_t* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
   // Punt if registers aren't available. E.g.,
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
-  if (thread->arch.suspended_general_regs == nullptr) {
+  if (thread->arch_.suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  arm64_iframe_t* regs = thread->arch.suspended_general_regs;
+  arm64_iframe_t* regs = thread->arch_.suspended_general_regs;
 
   const bool mdscr_ss_enable = !!(regs->mdscr & kMdscrSSMask);
   const bool spsr_ss_enable = !!(regs->spsr & kSSMaskSPSR);
@@ -95,7 +95,7 @@ zx_status_t arch_get_single_step(thread_t* thread, zx_thread_state_single_step_t
   return ZX_OK;
 }
 
-zx_status_t arch_set_single_step(thread_t* thread, const zx_thread_state_single_step_t* in) {
+zx_status_t arch_set_single_step(Thread* thread, const zx_thread_state_single_step_t* in) {
   if (*in != 0 && *in != 1) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -106,10 +106,10 @@ zx_status_t arch_set_single_step(thread_t* thread, const zx_thread_state_single_
 
   // Punt if registers aren't available. E.g.,
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
-  if (thread->arch.suspended_general_regs == nullptr) {
+  if (thread->arch_.suspended_general_regs == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  arm64_iframe_t* regs = thread->arch.suspended_general_regs;
+  arm64_iframe_t* regs = thread->arch_.suspended_general_regs;
   if (*in) {
     regs->mdscr |= kMdscrSSMask;
     regs->spsr |= kSSMaskSPSR;
@@ -120,22 +120,22 @@ zx_status_t arch_set_single_step(thread_t* thread, const zx_thread_state_single_
   return ZX_OK;
 }
 
-zx_status_t arch_get_fp_regs(thread_t* thread, zx_thread_state_fp_regs* out) {
+zx_status_t arch_get_fp_regs(Thread* thread, zx_thread_state_fp_regs* out) {
   // There are no ARM fp regs.
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t arch_set_fp_regs(thread_t* thread, const zx_thread_state_fp_regs* in) {
+zx_status_t arch_set_fp_regs(Thread* thread, const zx_thread_state_fp_regs* in) {
   // There are no ARM fp regs.
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t arch_get_vector_regs(thread_t* thread, zx_thread_state_vector_regs* out) {
+zx_status_t arch_get_vector_regs(Thread* thread, zx_thread_state_vector_regs* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
-  const fpstate* in = &thread->arch.fpstate;
+  const fpstate* in = &thread->arch_.fpstate;
   out->fpcr = in->fpcr;
   out->fpsr = in->fpsr;
   for (int i = 0; i < 32; i++) {
@@ -146,12 +146,12 @@ zx_status_t arch_get_vector_regs(thread_t* thread, zx_thread_state_vector_regs* 
   return ZX_OK;
 }
 
-zx_status_t arch_set_vector_regs(thread_t* thread, const zx_thread_state_vector_regs* in) {
+zx_status_t arch_set_vector_regs(Thread* thread, const zx_thread_state_vector_regs* in) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
-  fpstate* out = &thread->arch.fpstate;
+  fpstate* out = &thread->arch_.fpstate;
   out->fpcr = in->fpcr;
   out->fpsr = in->fpsr;
   for (int i = 0; i < 32; i++) {
@@ -162,7 +162,7 @@ zx_status_t arch_set_vector_regs(thread_t* thread, const zx_thread_state_vector_
   return ZX_OK;
 }
 
-zx_status_t arch_get_debug_regs(thread_t* thread, zx_thread_state_debug_regs* out) {
+zx_status_t arch_get_debug_regs(Thread* thread, zx_thread_state_debug_regs* out) {
   *out = {};
   out->hw_bps_count = arm64_hw_breakpoint_count();
   out->hw_wps_count = arm64_hw_watchpoint_count();
@@ -176,23 +176,23 @@ zx_status_t arch_get_debug_regs(thread_t* thread, zx_thread_state_debug_regs* ou
 
   // HW breakpoints.
   for (size_t i = 0; i < out->hw_bps_count; i++) {
-    out->hw_bps[i].dbgbcr = thread->arch.debug_state.hw_bps[i].dbgbcr;
-    out->hw_bps[i].dbgbvr = thread->arch.debug_state.hw_bps[i].dbgbvr;
+    out->hw_bps[i].dbgbcr = thread->arch_.debug_state.hw_bps[i].dbgbcr;
+    out->hw_bps[i].dbgbvr = thread->arch_.debug_state.hw_bps[i].dbgbvr;
   }
 
   // Watchpoints.
   for (size_t i = 0; i < out->hw_wps_count; i++) {
-    out->hw_wps[i].dbgwcr = thread->arch.debug_state.hw_wps[i].dbgwcr;
-    out->hw_wps[i].dbgwvr = thread->arch.debug_state.hw_wps[i].dbgwvr;
+    out->hw_wps[i].dbgwcr = thread->arch_.debug_state.hw_wps[i].dbgwcr;
+    out->hw_wps[i].dbgwvr = thread->arch_.debug_state.hw_wps[i].dbgwvr;
   }
 
-  out->esr = thread->arch.debug_state.esr;
-  out->far = thread->arch.debug_state.far;
+  out->esr = thread->arch_.debug_state.esr;
+  out->far = thread->arch_.debug_state.far;
 
   return ZX_OK;
 }
 
-zx_status_t arch_set_debug_regs(thread_t* thread, const zx_thread_state_debug_regs* in) {
+zx_status_t arch_set_debug_regs(Thread* thread, const zx_thread_state_debug_regs* in) {
   arm64_debug_state_t state = {};
 
   // We copy over the state from the input.
@@ -222,38 +222,38 @@ zx_status_t arch_set_debug_regs(thread_t* thread, const zx_thread_state_debug_re
   // meaning that the debug HW state will be cleared almost immediatelly.
   // This should always be there.
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
-  if (!thread->arch.suspended_general_regs) {
+  if (!thread->arch_.suspended_general_regs) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   bool hw_debug_needed = (active_breakpoints > 0) || (active_watchpoints > 0);
 
   arm64_set_debug_state_for_thread(thread, hw_debug_needed);
-  state.esr = thread->arch.debug_state.esr;
-  state.far = thread->arch.debug_state.far;
+  state.esr = thread->arch_.debug_state.esr;
+  state.far = thread->arch_.debug_state.far;
 
-  thread->arch.track_debug_state = true;
-  thread->arch.debug_state = state;
+  thread->arch_.track_debug_state = true;
+  thread->arch_.debug_state = state;
 
   return ZX_OK;
 }
 
-zx_status_t arch_get_x86_register_fs(thread_t thread, uint64_t* out) {
+zx_status_t arch_get_x86_register_fs(Thread* thread, uint64_t* out) {
   // There is no FS register on ARM.
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t arch_set_x86_register_fs(thread_t* thread, const uint64_t* in) {
+zx_status_t arch_set_x86_register_fs(Thread* thread, const uint64_t* in) {
   // There is no FS register on ARM.
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t arch_get_x86_register_gs(thread_t* thread, uint64_t* out) {
+zx_status_t arch_get_x86_register_gs(Thread* thread, uint64_t* out) {
   // There is no GS register on ARM.
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t arch_set_x86_register_gs(thread_t* thread, const uint64_t* in) {
+zx_status_t arch_set_x86_register_gs(Thread* thread, const uint64_t* in) {
   // There is no GS register on ARM.
   return ZX_ERR_NOT_SUPPORTED;
 }

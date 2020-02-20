@@ -84,9 +84,9 @@ static int wait_sema_thread(void* arg) {
   return static_cast<int>(status);
 }
 
-static bool thread_is_blocked(const thread_t* t) {
+static bool thread_is_blocked(const Thread* t) {
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  return (t->state == THREAD_BLOCKED);
+  return (t->state_ == THREAD_BLOCKED);
 }
 
 enum class Signal { kPost, kKill, kSuspend };
@@ -100,13 +100,13 @@ static bool signal_test() {
   ASSERT_EQ(0u, sema.count());
   ASSERT_EQ(0u, sema.num_waiters());
 
-  auto thread = thread_create("test semaphore", wait_sema_thread, &sema, DEFAULT_PRIORITY);
+  auto thread = Thread::Create("test semaphore", wait_sema_thread, &sema, DEFAULT_PRIORITY);
 
   ASSERT(nullptr != thread);
-  thread_resume(thread);
+  thread->Resume();
 
   while (thread_is_blocked(thread) == false) {
-    thread_sleep_relative(ZX_MSEC(1));
+    CurrentThread::SleepRelative(ZX_MSEC(1));
   }
 
   ASSERT_EQ(0u, sema.count());
@@ -120,18 +120,18 @@ static bool signal_test() {
       break;
 
     case Signal::kKill:
-      thread_kill(thread);
+      thread->Kill();
       expected_error = ZX_ERR_INTERNAL_INTR_KILLED;
       break;
 
     case Signal::kSuspend:
-      thread_suspend(thread);
+      thread->Suspend();
       expected_error = ZX_ERR_INTERNAL_INTR_RETRY;
       break;
   }
 
   int retcode = ZX_OK;
-  thread_join(thread, &retcode, ZX_TIME_INFINITE);
+  thread->Join(&retcode, ZX_TIME_INFINITE);
   ASSERT_EQ(expected_error, retcode);
 
   ASSERT_EQ(0u, sema.count());

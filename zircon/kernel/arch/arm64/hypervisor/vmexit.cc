@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <bits.h>
+#include <lib/affine/ratio.h>
 #include <platform.h>
 #include <trace.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -16,7 +17,6 @@
 #include <dev/psci.h>
 #include <dev/timer/arm_generic.h>
 #include <hypervisor/ktrace.h>
-#include <lib/affine/ratio.h>
 #include <vm/fault.h>
 #include <vm/physmap.h>
 
@@ -98,7 +98,7 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
   const WaitInstruction wi(iss);
   if (wi.is_wfe) {
     ktrace_vcpu_exit(VCPU_WFE_INSTRUCTION, guest_state->system_state.elr_el2);
-    thread_reschedule();
+    CurrentThread::Reschedule();
     return ZX_OK;
   }
 

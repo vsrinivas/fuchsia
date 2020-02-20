@@ -15,32 +15,32 @@
 
 __BEGIN_CDECLS
 
-struct thread_t;
+struct Thread;
 
 // The caller is responsible for making sure the thread is in an exception
 // or is suspended, and stays so.
-zx_status_t arch_get_general_regs(thread_t* thread, zx_thread_state_general_regs* out);
-zx_status_t arch_set_general_regs(thread_t* thread, const zx_thread_state_general_regs* in);
+zx_status_t arch_get_general_regs(Thread* thread, zx_thread_state_general_regs* out);
+zx_status_t arch_set_general_regs(Thread* thread, const zx_thread_state_general_regs* in);
 
-zx_status_t arch_get_fp_regs(thread_t* thread, zx_thread_state_fp_regs* out);
-zx_status_t arch_set_fp_regs(thread_t* thread, const zx_thread_state_fp_regs* in);
+zx_status_t arch_get_fp_regs(Thread* thread, zx_thread_state_fp_regs* out);
+zx_status_t arch_set_fp_regs(Thread* thread, const zx_thread_state_fp_regs* in);
 
-zx_status_t arch_get_vector_regs(thread_t* thread, zx_thread_state_vector_regs* out);
-zx_status_t arch_set_vector_regs(thread_t* thread, const zx_thread_state_vector_regs* in);
+zx_status_t arch_get_vector_regs(Thread* thread, zx_thread_state_vector_regs* out);
+zx_status_t arch_set_vector_regs(Thread* thread, const zx_thread_state_vector_regs* in);
 
-zx_status_t arch_get_debug_regs(thread_t* thread, zx_thread_state_debug_regs* out);
-zx_status_t arch_set_debug_regs(thread_t* thread, const zx_thread_state_debug_regs* in);
+zx_status_t arch_get_debug_regs(Thread* thread, zx_thread_state_debug_regs* out);
+zx_status_t arch_set_debug_regs(Thread* thread, const zx_thread_state_debug_regs* in);
 
-zx_status_t arch_get_single_step(thread_t* thread, zx_thread_state_single_step_t* out);
-zx_status_t arch_set_single_step(thread_t* thread, const zx_thread_state_single_step_t* in);
-
-// Only relevant on x86. Returns ZX_ERR_NOT_SUPPORTED on ARM.
-zx_status_t arch_get_x86_register_fs(thread_t* thread, uint64_t* out);
-zx_status_t arch_set_x86_register_fs(thread_t* thread, const uint64_t* in);
+zx_status_t arch_get_single_step(Thread* thread, zx_thread_state_single_step_t* out);
+zx_status_t arch_set_single_step(Thread* thread, const zx_thread_state_single_step_t* in);
 
 // Only relevant on x86. Returns ZX_ERR_NOT_SUPPORTED on ARM.
-zx_status_t arch_get_x86_register_gs(thread_t* thread, uint64_t* out);
-zx_status_t arch_set_x86_register_gs(thread_t* thread, const uint64_t* in);
+zx_status_t arch_get_x86_register_fs(Thread* thread, uint64_t* out);
+zx_status_t arch_set_x86_register_fs(Thread* thread, const uint64_t* in);
+
+// Only relevant on x86. Returns ZX_ERR_NOT_SUPPORTED on ARM.
+zx_status_t arch_get_x86_register_gs(Thread* thread, uint64_t* out);
+zx_status_t arch_set_x86_register_gs(Thread* thread, const uint64_t* in);
 
 __END_CDECLS
 

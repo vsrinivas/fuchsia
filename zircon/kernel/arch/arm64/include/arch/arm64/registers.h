@@ -104,8 +104,8 @@ typedef struct arm64_debug_state {
 } arm64_debug_state_t;
 
 /* Enable/disable the HW debug functionalities for the specified thread. */
-struct thread_t;
-void arm64_set_debug_state_for_thread(thread_t*, bool active);
+struct Thread;
+void arm64_set_debug_state_for_thread(Thread*, bool active);
 
 /* Checks whether the given state is valid to install on a running thread.
  *

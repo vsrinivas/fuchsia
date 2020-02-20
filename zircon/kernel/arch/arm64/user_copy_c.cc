@@ -18,7 +18,7 @@ zx_status_t arch_copy_from_user(void* dst, const void* src, size_t len) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return _arm64_user_copy(dst, src, len, &get_current_thread()->arch.data_fault_resume,
+  return _arm64_user_copy(dst, src, len, &get_current_thread()->arch_.data_fault_resume,
                           ARM64_USER_COPY_DO_FAULTS)
       .status;
 }
@@ -28,7 +28,7 @@ zx_status_t arch_copy_to_user(void* dst, const void* src, size_t len) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return _arm64_user_copy(dst, src, len, &get_current_thread()->arch.data_fault_resume,
+  return _arm64_user_copy(dst, src, len, &get_current_thread()->arch_.data_fault_resume,
                           ARM64_USER_COPY_DO_FAULTS)
       .status;
 }
@@ -42,8 +42,9 @@ zx_status_t arch_copy_from_user_capture_faults(void* dst, const void* src, size_
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Arm64UserCopyRet ret = _arm64_user_copy(
-      dst, src, len, &get_current_thread()->arch.data_fault_resume, ARM64_USER_COPY_CAPTURE_FAULTS);
+  Arm64UserCopyRet ret =
+      _arm64_user_copy(dst, src, len, &get_current_thread()->arch_.data_fault_resume,
+                       ARM64_USER_COPY_CAPTURE_FAULTS);
   // If a fault didn't occur, and ret.status == ZX_OK, this will copy garbage data. It is the
   // responsibility of the caller to check the status and ignore.
   *pf_va = ret.pf_va;
@@ -57,8 +58,9 @@ zx_status_t arch_copy_to_user_capture_faults(void* dst, const void* src, size_t 
     return ZX_ERR_INVALID_ARGS;
   }
 
-  Arm64UserCopyRet ret = _arm64_user_copy(
-      dst, src, len, &get_current_thread()->arch.data_fault_resume, ARM64_USER_COPY_CAPTURE_FAULTS);
+  Arm64UserCopyRet ret =
+      _arm64_user_copy(dst, src, len, &get_current_thread()->arch_.data_fault_resume,
+                       ARM64_USER_COPY_CAPTURE_FAULTS);
   // If a fault didn't occur, and ret.status == ZX_OK, this will copy garbage data. It is the
   // responsibility of the caller to check the status and ignore.
   *pf_va = ret.pf_va;

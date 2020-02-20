@@ -386,11 +386,11 @@ void x86_extended_register_restore_state(void* register_state) {
   }
 }
 
-void x86_extended_register_context_switch(thread_t* old_thread, thread_t* new_thread) {
+void x86_extended_register_context_switch(Thread* old_thread, Thread* new_thread) {
   if (likely(old_thread)) {
-    x86_extended_register_save_state(old_thread->arch.extended_register_state);
+    x86_extended_register_save_state(old_thread->arch_.extended_register_state);
   }
-  x86_extended_register_restore_state(new_thread->arch.extended_register_state);
+  x86_extended_register_restore_state(new_thread->arch_.extended_register_state);
 }
 
 static void read_xsave_state_info(void) {

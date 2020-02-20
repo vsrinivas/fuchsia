@@ -48,7 +48,7 @@ zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
   flags |= VMM_PF_FLAG_HW_FAULT;
 
 #if TRACE_PAGE_FAULT || LOCAL_TRACE
-  thread_t* current_thread = get_current_thread();
+  Thread* current_thread = get_current_thread();
   TRACEF("thread %s va %#" PRIxPTR ", flags 0x%x\n", current_thread->name, addr, flags);
 #endif
 
@@ -86,19 +86,19 @@ template <typename GuardType, typename Lock>
 static void vmm_set_active_aspace_internal(vmm_aspace_t* aspace, Lock lock) {
   LTRACEF("aspace %p\n", aspace);
 
-  thread_t* t = get_current_thread();
+  Thread* t = get_current_thread();
   DEBUG_ASSERT(t);
 
-  if (aspace == t->aspace) {
+  if (aspace == t->aspace_) {
     return;
   }
 
   // grab the thread lock and switch to the new address space
   GuardType __UNUSED lock_guard{lock};
 
-  vmm_aspace_t* old = t->aspace;
-  t->aspace = aspace;
-  vmm_context_switch(old, t->aspace);
+  vmm_aspace_t* old = t->aspace_;
+  t->aspace_ = aspace;
+  vmm_context_switch(old, t->aspace_);
 }
 
 void vmm_set_active_aspace(vmm_aspace_t* aspace) {
@@ -187,8 +187,8 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
     printf("VmAspace::Create aspace %p\n", aspace.get());
 
     test_aspace = aspace;
-    get_current_thread()->aspace = reinterpret_cast<vmm_aspace_t*>(aspace.get());
-    thread_sleep(1);  // XXX hack to force it to reschedule and thus load the aspace
+    get_current_thread()->aspace_ = reinterpret_cast<vmm_aspace_t*>(aspace.get());
+    CurrentThread::Sleep(1);  // XXX hack to force it to reschedule and thus load the aspace
   } else if (!strcmp(argv[1].str, "free_aspace")) {
     if (argc < 2) {
       goto notenoughargs;
@@ -199,9 +199,9 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
       test_aspace = nullptr;
     }
 
-    if (get_current_thread()->aspace == reinterpret_cast<vmm_aspace_t*>(aspace.get())) {
-      get_current_thread()->aspace = nullptr;
-      thread_sleep(1);  // hack
+    if (get_current_thread()->aspace_ == reinterpret_cast<vmm_aspace_t*>(aspace.get())) {
+      get_current_thread()->aspace_ = nullptr;
+      CurrentThread::Sleep(1);  // hack
     }
 
     zx_status_t err = aspace->Destroy();
@@ -212,8 +212,8 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
     }
 
     test_aspace = fbl::RefPtr((VmAspace*)(void*)argv[2].u);
-    get_current_thread()->aspace = reinterpret_cast<vmm_aspace_t*>(test_aspace.get());
-    thread_sleep(1);  // XXX hack to force it to reschedule and thus load the aspace
+    get_current_thread()->aspace_ = reinterpret_cast<vmm_aspace_t*>(test_aspace.get());
+    CurrentThread::Sleep(1);  // XXX hack to force it to reschedule and thus load the aspace
   } else {
     printf("unknown command\n");
     goto usage;

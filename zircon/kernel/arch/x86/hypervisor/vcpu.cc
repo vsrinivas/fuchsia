@@ -233,9 +233,9 @@ zx_status_t AutoVmcs::SetControl(VmcsField32 controls, uint64_t true_msr, uint64
 }
 
 AutoPin::AutoPin(uint16_t vpid)
-    : prev_cpu_mask_(get_current_thread()->hard_affinity), thread_(hypervisor::pin_thread(vpid)) {}
+    : prev_cpu_mask_(get_current_thread()->hard_affinity_), thread_(hypervisor::pin_thread(vpid)) {}
 
-AutoPin::~AutoPin() { thread_set_cpu_affinity(thread_, prev_cpu_mask_); }
+AutoPin::~AutoPin() { thread_->SetCpuAffinity(prev_cpu_mask_); }
 
 static uint64_t ept_pointer(paddr_t pml4_address) {
   return
@@ -635,7 +635,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   // 2. The state of the VMCS associated with the VCPU is cached within the
   //    CPU. To move to a different CPU, we must perform an explicit migration
   //    which will cost us performance.
-  thread_t* thread = hypervisor::pin_thread(vpid);
+  Thread* thread = hypervisor::pin_thread(vpid);
 
   fbl::AllocChecker ac;
   ktl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, vpid, thread));
@@ -692,7 +692,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   return ZX_OK;
 }
 
-Vcpu::Vcpu(Guest* guest, uint16_t vpid, const thread_t* thread)
+Vcpu::Vcpu(Guest* guest, uint16_t vpid, const Thread* thread)
     : guest_(guest), vpid_(vpid), thread_(thread), running_(false), vmx_state_(/* zero-init */) {}
 
 Vcpu::~Vcpu() {
@@ -773,14 +773,14 @@ void Vcpu::RestoreGuestExtendedRegisters(uint64_t guest_cr4) {
   DEBUG_ASSERT(arch_ints_disabled());
   if (!x86_xsave_supported()) {
     // Save host and restore guest x87/SSE state with fxrstor/fxsave.
-    x86_extended_register_save_state(thread_->arch.extended_register_state);
+    x86_extended_register_save_state(thread_->arch_.extended_register_state);
     x86_extended_register_restore_state(guest_extended_registers_.get());
     return;
   }
 
   // Save host state.
   vmx_state_.host_state.xcr0 = x86_xgetbv(0);
-  x86_extended_register_save_state(thread_->arch.extended_register_state);
+  x86_extended_register_save_state(thread_->arch_.extended_register_state);
 
   // Restore guest state.
   x86_xsetbv(0, x86_extended_xcr0_component_bitmap());
@@ -793,7 +793,7 @@ void Vcpu::SaveGuestExtendedRegisters(uint64_t guest_cr4) {
   if (!x86_xsave_supported()) {
     // Save host and restore guest x87/SSE state with fxrstor/fxsave.
     x86_extended_register_save_state(guest_extended_registers_.get());
-    x86_extended_register_restore_state(thread_->arch.extended_register_state);
+    x86_extended_register_restore_state(thread_->arch_.extended_register_state);
     return;
   }
 
@@ -804,7 +804,7 @@ void Vcpu::SaveGuestExtendedRegisters(uint64_t guest_cr4) {
 
   // Restore host state.
   x86_xsetbv(0, vmx_state_.host_state.xcr0);
-  x86_extended_register_restore_state(thread_->arch.extended_register_state);
+  x86_extended_register_restore_state(thread_->arch_.extended_register_state);
 }
 
 zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {

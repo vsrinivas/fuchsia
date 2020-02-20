@@ -196,7 +196,7 @@ static int arena_alloc_helper(void* arg) {
       // The user registers we pass to |thread_process_pending_signals| do not matter because this
       // thread is a pure kernel thread and has no user mode component.
       iframe_t iframe = {};
-      thread_process_pending_signals(GeneralRegsSource::Iframe, &iframe);
+      CurrentThread::ProcessPendingSignals(GeneralRegsSource::Iframe, &iframe);
     }
   }
 }
@@ -208,25 +208,25 @@ static bool parallel_alloc() {
   ASSERT_EQ(arena.Init("test", 4), ZX_OK);
 
   // Spin up two instances of the allocation helper that will run in parallel.
-  auto t1 = thread_create("gparena worker1", arena_alloc_helper<0, 8>, &arena, DEFAULT_PRIORITY);
-  auto t2 = thread_create("gparena worker2", arena_alloc_helper<0, 8>, &arena, DEFAULT_PRIORITY);
-  thread_resume(t1);
-  thread_resume(t2);
+  auto t1 = Thread::Create("gparena worker1", arena_alloc_helper<0, 8>, &arena, DEFAULT_PRIORITY);
+  auto t2 = Thread::Create("gparena worker2", arena_alloc_helper<0, 8>, &arena, DEFAULT_PRIORITY);
+  t1->Resume();
+  t2->Resume();
 
   // Attempt to join one of the threads, letting it run for a bit. If the join succeeds this means
   // the helper terminated, which indicates it encountered an error.
-  zx_status_t status = thread_join(t1, nullptr, current_time() + ZX_MSEC(500));
+  zx_status_t status = t1->Join(nullptr, current_time() + ZX_MSEC(500));
   EXPECT_NE(status, ZX_OK);
   // Check that the other thread is still running as well.
-  status = thread_join(t2, nullptr, current_time());
+  status = t2->Join(nullptr, current_time());
   EXPECT_NE(status, ZX_OK);
 
   // Cleanup.
-  thread_kill(t1);
-  thread_kill(t2);
-  status = thread_join(t1, nullptr, current_time() + ZX_SEC(5));
+  t1->Kill();
+  t2->Kill();
+  status = t1->Join(nullptr, current_time() + ZX_SEC(5));
   EXPECT_EQ(status, ZX_OK);
-  status = thread_join(t2, nullptr, current_time() + ZX_SEC(5));
+  status = t2->Join(nullptr, current_time() + ZX_SEC(5));
   EXPECT_EQ(status, ZX_OK);
 
   END_TEST;
@@ -245,11 +245,11 @@ static bool parallel_grow_memory() {
 
   // Spin up a worker that will perform allocations in parallel whilst we are causing the arena
   // to need to be grown.
-  auto t = thread_create("gparena worker", arena_alloc_helper<0, 8>, &arena, DEFAULT_PRIORITY);
-  thread_resume(t);
+  auto t = Thread::Create("gparena worker", arena_alloc_helper<0, 8>, &arena, DEFAULT_PRIORITY);
+  t->Resume();
 
   // let the worker run for a bit to make sure its started.
-  zx_status_t status = thread_join(t, nullptr, current_time() + ZX_MSEC(10));
+  zx_status_t status = t->Join(nullptr, current_time() + ZX_MSEC(10));
   EXPECT_NE(status, ZX_OK);
 
   // Allocate all the rest of the objects causing arena to have to grow.
@@ -259,12 +259,12 @@ static bool parallel_grow_memory() {
   }
 
   // Worker should still be running fine.
-  status = thread_join(t, nullptr, current_time() + ZX_MSEC(10));
+  status = t->Join(nullptr, current_time() + ZX_MSEC(10));
   EXPECT_NE(status, ZX_OK);
 
   // Cleanup.
-  thread_kill(t);
-  status = thread_join(t, nullptr, current_time() + ZX_SEC(5));
+  t->Kill();
+  status = t->Join(nullptr, current_time() + ZX_SEC(5));
   EXPECT_EQ(status, ZX_OK);
 
   for (int i = 0; i < count - 1; i++) {

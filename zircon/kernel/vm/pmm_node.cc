@@ -45,7 +45,7 @@ PmmNode::~PmmNode() {
     request_evt_.Signal();
     free_pages_evt_.Signal();
     int res = 0;
-    thread_join(request_thread_, &res, ZX_TIME_INFINITE);
+    request_thread_->Join(&res, ZX_TIME_INFINITE);
     DEBUG_ASSERT(res == 0);
   }
 }
@@ -655,6 +655,6 @@ static int pmm_node_request_loop(void* arg) {
 
 void PmmNode::InitRequestThread() {
   request_thread_ =
-      thread_create("pmm-node-request-thread", pmm_node_request_loop, this, HIGH_PRIORITY);
-  thread_resume(request_thread_);
+      Thread::Create("pmm-node-request-thread", pmm_node_request_loop, this, HIGH_PRIORITY);
+  request_thread_->Resume();
 }

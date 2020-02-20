@@ -231,7 +231,7 @@ static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flag
   LTRACEF("data fault: PC at %#" PRIx64 ", is_user %d, FAR %#" PRIx64 ", esr 0x%x, iss 0x%x\n",
           iframe->elr, is_user, far, esr, iss);
 
-  uint64_t dfr = get_current_thread()->arch.data_fault_resume;
+  uint64_t dfr = get_current_thread()->arch_.data_fault_resume;
   if (unlikely(dfr && !BIT_SET(dfr, ARM64_DFR_RUN_FAULT_HANDLER_BIT))) {
     // Need to reconstruct the canonical resume address by ensuring it is correctly sign extended.
     // Double check the bit before ARM64_DFR_RUN_FAULT_HANDLER_BIT was set (indicating kernel
@@ -395,7 +395,7 @@ extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags) {
 
   /* preempt the thread if the interrupt has signaled it */
   if (do_preempt) {
-    thread_preempt();
+    CurrentThread::Preempt();
   }
 
   fix_exception_percpu_pointer(exception_flags, iframe->r);
@@ -412,7 +412,7 @@ extern "C" void arm64_invalid_exception(arm64_iframe_t* iframe, unsigned int whi
 /* called from assembly */
 extern "C" void arch_iframe_process_pending_signals(iframe_t* iframe) {
   DEBUG_ASSERT(iframe != nullptr);
-  thread_process_pending_signals(GeneralRegsSource::Iframe, iframe);
+  CurrentThread::ProcessPendingSignals(GeneralRegsSource::Iframe, iframe);
 }
 
 void arch_dump_exception_context(const arch_exception_context_t* context) {
@@ -470,16 +470,16 @@ zx_status_t arch_dispatch_user_policy_exception(void) {
   return dispatch_user_exception(ZX_EXCP_POLICY_ERROR, &context);
 }
 
-bool arch_install_exception_context(thread_t* thread, const arch_exception_context_t* context) {
+bool arch_install_exception_context(Thread* thread, const arch_exception_context_t* context) {
   if (!context->frame) {
     // TODO(fxb/30521): Must be a synthetic exception as they don't (yet) provide the registers.
     return false;
   }
 
   arch_set_suspended_general_regs(thread, GeneralRegsSource::Iframe, context->frame);
-  thread->arch.debug_state.esr = context->esr;
-  thread->arch.debug_state.far = context->far;
+  thread->arch_.debug_state.esr = context->esr;
+  thread->arch_.debug_state.far = context->far;
   return true;
 }
 
-void arch_remove_exception_context(thread_t* thread) { arch_reset_suspended_general_regs(thread); }
+void arch_remove_exception_context(Thread* thread) { arch_reset_suspended_general_regs(thread); }

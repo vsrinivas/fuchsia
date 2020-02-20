@@ -178,18 +178,18 @@ static bool run_testcase_in_thread(const unittest_testcase_registration_t* testc
     zx_status_t status = aspace->Destroy();
     DEBUG_ASSERT(status == ZX_OK);
   });
-  thread_t* t =
-      thread_create("unittest", run_unittest_thread_entry,
-                    const_cast<void*>(static_cast<const void*>(testcase)), DEFAULT_PRIORITY);
+  Thread* t =
+      Thread::Create("unittest", run_unittest_thread_entry,
+                     const_cast<void*>(static_cast<const void*>(testcase)), DEFAULT_PRIORITY);
   if (!t) {
     unittest_printf("failed to create unittest thread\n");
     return false;
   }
   aspace->AttachToThread(t);
 
-  thread_resume(t);
+  t->Resume();
   int success = 0;
-  zx_status_t status = thread_join(t, &success, ZX_TIME_INFINITE);
+  zx_status_t status = t->Join(&success, ZX_TIME_INFINITE);
   if (status != ZX_OK) {
     unittest_printf("failed to join unittest thread: %d\n", status);
     return false;

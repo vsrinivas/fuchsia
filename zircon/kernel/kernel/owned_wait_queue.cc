@@ -171,7 +171,7 @@ class PiKTracer;
 template <>
 class PiKTracer<PiTracingLevel::None> {
  public:
-  void Trace(thread_t* t, int old_effec_prio, int new_effec_prio) {}
+  void Trace(Thread* t, int old_effec_prio, int new_effec_prio) {}
 };
 
 struct PiKTracerFlowIdGenerator {
@@ -188,9 +188,9 @@ class PiKTracer<Level, ktl::enable_if_t<(Level == PiTracingLevel::Normal) ||
   PiKTracer() = default;
   ~PiKTracer() { Flush(FlushType::FINAL); }
 
-  void Trace(thread_t* t, int old_effec_prio, int old_inherited_prio) {
-    if ((old_effec_prio != t->effec_priority) ||
-        ((Level == PiTracingLevel::Extended) && (old_inherited_prio != t->inherited_priority))) {
+  void Trace(Thread* t, int old_effec_prio, int old_inherited_prio) {
+    if ((old_effec_prio != t->effec_priority_) ||
+        ((Level == PiTracingLevel::Extended) && (old_inherited_prio != t->inherited_priority_))) {
       if (thread_ == nullptr) {
         // Generate the start event and a flow id.
         flow_id_ = PiKTracerFlowIdGenerator::gen_.fetch_add(1, std::memory_order_relaxed);
@@ -205,8 +205,8 @@ class PiKTracer<Level, ktl::enable_if_t<(Level == PiTracingLevel::Normal) ||
       // We don't want to actually log this event until we know whether or not
       // it will be the final event in the flow.
       thread_ = t;
-      priorities_ = (old_effec_prio & 0xFF) | ((t->effec_priority & 0xFF) << 8) |
-                    ((old_inherited_prio & 0xFF) << 16) | ((t->inherited_priority & 0xFF) << 24);
+      priorities_ = (old_effec_prio & 0xFF) | ((t->effec_priority_ & 0xFF) << 8) |
+                    ((old_inherited_prio & 0xFF) << 16) | ((t->inherited_priority_ & 0xFF) << 24);
     }
   }
 
@@ -220,8 +220,8 @@ class PiKTracer<Level, ktl::enable_if_t<(Level == PiTracingLevel::Normal) ||
 
     uint32_t tid;
     uint32_t flags;
-    if (thread_->user_thread != nullptr) {
-      tid = static_cast<uint32_t>(thread_->user_tid);
+    if (thread_->user_thread_ != nullptr) {
+      tid = static_cast<uint32_t>(thread_->user_tid_);
       flags = static_cast<uint32_t>(arch_curr_cpu_num());
     } else {
       tid = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(thread_));
@@ -235,7 +235,7 @@ class PiKTracer<Level, ktl::enable_if_t<(Level == PiTracingLevel::Normal) ||
     ktrace(TAG_INHERIT_PRIORITY, flow_id_, tid, priorities_, flags);
   }
 
-  thread_t* thread_ = nullptr;
+  Thread* thread_ = nullptr;
   uint32_t flow_id_ = 0;
   uint32_t priorities_ = 0;
 };
@@ -250,21 +250,21 @@ OwnedWaitQueue::~OwnedWaitQueue() {
   DEBUG_ASSERT(owner_ == nullptr);
 }
 
-void OwnedWaitQueue::DisownAllQueues(thread_t* t) {
+void OwnedWaitQueue::DisownAllQueues(Thread* t) {
   // It is important that this thread not be blocked by any other wait queues
   // during this operation.  If it was possible for the thread to be blocked,
   // we would need to update all of the PI chain bookkeeping too.
-  DEBUG_ASSERT(t->blocking_wait_queue == nullptr);
+  DEBUG_ASSERT(t->blocking_wait_queue_ == nullptr);
 
-  for (auto& q : t->owned_wait_queues) {
+  for (auto& q : t->owned_wait_queues_) {
     DEBUG_ASSERT(q.owner_ == t);
     q.owner_ = nullptr;
   }
 
-  t->owned_wait_queues.clear();
+  t->owned_wait_queues_.clear();
 }
 
-bool OwnedWaitQueue::QueuePressureChanged(thread_t* t, int old_prio, int new_prio,
+bool OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio,
                                           cpu_mask_t* accum_cpu_mask) TA_REQ(thread_lock) {
   fbl::AutoLock guard(&qpc_recursion_guard);
   DEBUG_ASSERT(old_prio != new_prio);
@@ -297,7 +297,7 @@ bool OwnedWaitQueue::QueuePressureChanged(thread_t* t, int old_prio, int new_pri
       // there is nothing to do.  We can just stop.  The maximum inherited
       // priority must have come from a different wait queue.
       //
-      if (old_prio < t->inherited_priority) {
+      if (old_prio < t->inherited_priority_) {
         return local_resched;
       }
 
@@ -305,7 +305,7 @@ bool OwnedWaitQueue::QueuePressureChanged(thread_t* t, int old_prio, int new_pri
       // to recompute the new maximum priority across all of the wait
       // queues currently owned by this thread.
       __UNUSED int orig_new_prio = new_prio;
-      for (const auto& owq : t->owned_wait_queues) {
+      for (const auto& owq : t->owned_wait_queues_) {
         int queue_prio = wait_queue_blocked_priority(&owq);
 
         // If our bookkeeping is accurate, it should be impossible for
@@ -317,14 +317,14 @@ bool OwnedWaitQueue::QueuePressureChanged(thread_t* t, int old_prio, int new_pri
 
       // If our calculated new priority is still the same as our current
       // inherited priority, then we are done.
-      if (new_prio == t->inherited_priority) {
+      if (new_prio == t->inherited_priority_) {
         return local_resched;
       }
     } else {
       // Likewise, if the pressure just went up, but the new pressure is
       // not strictly higher than the current inherited priority, then
       // there is nothing to do.
-      if (new_prio <= t->inherited_priority) {
+      if (new_prio <= t->inherited_priority_) {
         return local_resched;
       }
     }
@@ -333,9 +333,9 @@ bool OwnedWaitQueue::QueuePressureChanged(thread_t* t, int old_prio, int new_pri
     // our inherited priority.  Update it, and check to see if that resulted
     // in a change of the maximum waiter priority of the wait queue blocking
     // this thread (if any).  If not, then we are done.
-    const wait_queue_t* bwq = t->blocking_wait_queue;
-    int old_effec_prio = t->effec_priority;
-    int old_inherited_prio = t->inherited_priority;
+    const wait_queue_t* bwq = t->blocking_wait_queue_;
+    int old_effec_prio = t->effec_priority_;
+    int old_inherited_prio = t->inherited_priority_;
     int old_queue_prio = bwq ? wait_queue_blocked_priority(bwq) : -1;
     int new_queue_prio;
 
@@ -345,8 +345,8 @@ bool OwnedWaitQueue::QueuePressureChanged(thread_t* t, int old_prio, int new_pri
 
     // If the effective priority of this thread has gone up or down, record
     // it in the kernel counters as a PI promotion or demotion.
-    if (old_effec_prio != t->effec_priority) {
-      if (old_effec_prio < t->effec_priority) {
+    if (old_effec_prio != t->effec_priority_) {
+      if (old_effec_prio < t->effec_priority_) {
         pi_promotions.Add(1);
       } else {
         pi_demotions.Add(1);
@@ -394,14 +394,14 @@ bool OwnedWaitQueue::WaitersPriorityChanged(int old_prio) {
   return local_resched;
 }
 
-bool OwnedWaitQueue::UpdateBookkeeping(thread_t* new_owner, int old_prio,
+bool OwnedWaitQueue::UpdateBookkeeping(Thread* new_owner, int old_prio,
                                        cpu_mask_t* out_accum_cpu_mask) {
   int new_prio = wait_queue_blocked_priority(this);
   bool local_resched = false;
   cpu_mask_t accum_cpu_mask = 0;
 
   // The new owner may not be a dying thread.
-  if ((new_owner != nullptr) && (new_owner->state == THREAD_DEATH)) {
+  if ((new_owner != nullptr) && (new_owner->state_ == THREAD_DEATH)) {
     new_owner = nullptr;
   }
 
@@ -418,10 +418,10 @@ bool OwnedWaitQueue::UpdateBookkeeping(thread_t* new_owner, int old_prio,
     // Looks like the ownership has actually changed.  Start releasing
     // ownership and propagating the PI consequences for the old owner (if
     // any).
-    thread_t* old_owner = owner();
+    Thread* old_owner = owner();
     if (old_owner != nullptr) {
       DEBUG_ASSERT(this->InContainer());
-      old_owner->owned_wait_queues.erase(*this);
+      old_owner->owned_wait_queues_.erase(*this);
       owner_ = nullptr;
 
       if ((old_prio >= 0) && QueuePressureChanged(old_owner, old_prio, -1, &accum_cpu_mask)) {
@@ -430,8 +430,8 @@ bool OwnedWaitQueue::UpdateBookkeeping(thread_t* new_owner, int old_prio,
 
       // If we no longer own any queues, then we had better not be inheriting any priority at
       // this point in time.
-      DEBUG_ASSERT(!old_owner->owned_wait_queues.is_empty() ||
-                   (old_owner->inherited_priority == -1));
+      DEBUG_ASSERT(!old_owner->owned_wait_queues_.is_empty() ||
+                   (old_owner->inherited_priority_ == -1));
     }
 
     // Update to the new owner.  If there is a new owner, fix the
@@ -440,7 +440,7 @@ bool OwnedWaitQueue::UpdateBookkeeping(thread_t* new_owner, int old_prio,
     owner_ = new_owner;
     if (new_owner != nullptr) {
       DEBUG_ASSERT(!this->InContainer());
-      new_owner->owned_wait_queues.push_back(this);
+      new_owner->owned_wait_queues_.push_back(this);
 
       if ((new_prio >= 0) && QueuePressureChanged(new_owner, -1, new_prio, &accum_cpu_mask)) {
         local_resched = true;
@@ -457,7 +457,7 @@ bool OwnedWaitQueue::UpdateBookkeeping(thread_t* new_owner, int old_prio,
   return local_resched;
 }
 
-bool OwnedWaitQueue::WakeThreadsInternal(uint32_t wake_count, thread_t** out_new_owner,
+bool OwnedWaitQueue::WakeThreadsInternal(uint32_t wake_count, Thread** out_new_owner,
                                          Hook on_thread_wake_hook) {
   DEBUG_ASSERT(magic == MAGIC);
   DEBUG_ASSERT(out_new_owner != nullptr);
@@ -473,7 +473,7 @@ bool OwnedWaitQueue::WakeThreadsInternal(uint32_t wake_count, thread_t** out_new
 
   bool do_resched = false;
   uint32_t woken = 0;
-  ForeachThread([&](thread_t* t) TA_REQ(thread_lock) -> bool {
+  ForeachThread([&](Thread* t) TA_REQ(thread_lock) -> bool {
     // Call the user supplied hook and let them decide what to do with this
     // thread (updating their own bookkeeping in the process)
     using Action = Hook::Action;
@@ -522,12 +522,12 @@ bool OwnedWaitQueue::WakeThreadsInternal(uint32_t wake_count, thread_t** out_new
   return do_resched;
 }
 
-zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, thread_t* new_owner,
+zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, Thread* new_owner,
                                                 ResourceOwnership resource_ownership) {
-  thread_t* current_thread = get_current_thread();
+  Thread* current_thread = get_current_thread();
 
   DEBUG_ASSERT(magic == MAGIC);
-  DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
+  DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
@@ -580,7 +580,7 @@ zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, thread
 bool OwnedWaitQueue::WakeThreads(uint32_t wake_count, Hook on_thread_wake_hook) {
   DEBUG_ASSERT(magic == MAGIC);
 
-  thread_t* new_owner;
+  Thread* new_owner;
   int old_queue_prio = wait_queue_blocked_priority(this);
   bool local_resched = WakeThreadsInternal(wake_count, &new_owner, on_thread_wake_hook);
 
@@ -592,7 +592,7 @@ bool OwnedWaitQueue::WakeThreads(uint32_t wake_count, Hook on_thread_wake_hook) 
 }
 
 bool OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue_target,
-                                    uint32_t requeue_count, thread_t* requeue_owner,
+                                    uint32_t requeue_count, Thread* requeue_owner,
                                     Hook on_thread_wake_hook, Hook on_thread_requeue_hook) {
   DEBUG_ASSERT(magic == MAGIC);
   DEBUG_ASSERT(requeue_target != nullptr);
@@ -606,8 +606,8 @@ bool OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue
     // ownership to a thread which is not yet started should have been rejected
     // by layers of code above us, and a proper status code returned to the
     // user.
-    DEBUG_ASSERT(requeue_owner->state != THREAD_INITIAL);
-    if (requeue_owner->state == THREAD_DEATH) {
+    DEBUG_ASSERT(requeue_owner->state_ != THREAD_INITIAL);
+    if (requeue_owner->state_ == THREAD_DEATH) {
       requeue_owner = nullptr;
     }
   }
@@ -617,14 +617,14 @@ bool OwnedWaitQueue::WakeAndRequeue(uint32_t wake_count, OwnedWaitQueue* requeue
   int old_wake_prio = wait_queue_blocked_priority(this);
   int old_requeue_prio = wait_queue_blocked_priority(requeue_target);
 
-  thread_t* new_wake_owner;
+  Thread* new_wake_owner;
   bool local_resched = WakeThreadsInternal(wake_count, &new_wake_owner, on_thread_wake_hook);
 
   // If there are still threads left in the wake queue (this), and we were asked to
   // requeue threads, then do so.
   if (!this->IsEmpty() && requeue_count) {
     uint32_t requeued = 0;
-    ForeachThread([&](thread_t* t) TA_REQ(thread_lock) -> bool {
+    ForeachThread([&](Thread* t) TA_REQ(thread_lock) -> bool {
       // Call the user's requeue hook so that we can decide what to do
       // with this thread.
       using Action = Hook::Action;

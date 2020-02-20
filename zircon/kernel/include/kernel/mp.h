@@ -59,7 +59,7 @@ void mp_interrupt(mp_ipi_target_t, cpu_mask_t mask);
 void mp_sync_exec(mp_ipi_target_t, cpu_mask_t mask, mp_sync_task_t task, void* context);
 
 zx_status_t mp_hotplug_cpu_mask(cpu_mask_t mask);
-zx_status_t mp_unplug_cpu_mask(cpu_mask_t mask, thread_t** leaked_thread = nullptr);
+zx_status_t mp_unplug_cpu_mask(cpu_mask_t mask, Thread** leaked_thread = nullptr);
 static inline zx_status_t mp_hotplug_cpu(cpu_num_t cpu) {
   return mp_hotplug_cpu_mask(cpu_num_to_mask(cpu));
 }

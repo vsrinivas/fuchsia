@@ -30,7 +30,7 @@ template <typename F>
 void wait_for_cond(F cond) {
   zx_duration_t wait_duration = ZX_USEC(1);
   while (!cond()) {
-    thread_sleep_relative(wait_duration);
+    CurrentThread::SleepRelative(wait_duration);
     // Increase wait_duration time by ~10%.
     wait_duration += (wait_duration / 10u + 1u);
   }
@@ -40,19 +40,19 @@ void wait_for_cond(F cond) {
 class WorkerThread {
  public:
   explicit WorkerThread(const char* name) {
-    thread_ = thread_create(name, &WorkerThread::WorkerBody, this, LOW_PRIORITY);
+    thread_ = Thread::Create(name, &WorkerThread::WorkerBody, this, LOW_PRIORITY);
     ASSERT(thread_ != nullptr);
   }
 
   ~WorkerThread() { Join(); }
 
-  void Start() { thread_resume(thread_); }
+  void Start() { thread_->Resume(); }
 
   void Join() {
     if (thread_ != nullptr) {
       atomic_store(&worker_should_stop_, 1);
       int unused_retcode;
-      zx_status_t result = thread_join(thread_, &unused_retcode, ZX_TIME_INFINITE);
+      zx_status_t result = thread_->Join(&unused_retcode, ZX_TIME_INFINITE);
       ASSERT(result == ZX_OK);
       thread_ = nullptr;
     }
@@ -63,7 +63,7 @@ class WorkerThread {
     wait_for_cond([start_iterations, this]() { return start_iterations != worker_iterations(); });
   }
 
-  thread_t* thread() const { return thread_; }
+  Thread* thread() const { return thread_; }
 
   int worker_iterations() { return atomic_load(&worker_iterations_); }
 
@@ -80,7 +80,7 @@ class WorkerThread {
 
   volatile int worker_iterations_ = 0;
   volatile int worker_should_stop_ = 0;
-  thread_t* thread_;
+  Thread* thread_;
 };
 
 bool set_affinity_self_test() {
@@ -92,7 +92,7 @@ bool set_affinity_self_test() {
   ASSERT_NE(online_cpus, 0u, "Expected at least one CPU to be online.");
   auto worker_body = +[](void* arg) -> int {
     cpu_mask_t& online_cpus = *reinterpret_cast<cpu_mask_t*>(arg);
-    thread_t* const self = get_current_thread();
+    Thread* const self = get_current_thread();
 
     for (cpu_num_t c = 0u; c <= highest_cpu_set(online_cpus); c++) {
       // Skip offline CPUs.
@@ -101,7 +101,7 @@ bool set_affinity_self_test() {
       }
 
       // Set affinity to the given core.
-      thread_set_cpu_affinity(self, cpu_num_to_mask(c));
+      self->SetCpuAffinity(cpu_num_to_mask(c));
 
       // Ensure we are on the correct CPU.
       const cpu_num_t current_cpu = arch_curr_cpu_num();
@@ -114,15 +114,14 @@ bool set_affinity_self_test() {
 
     return ZX_OK;
   };
-  thread_t* worker =
-      thread_create("set_affinity_self_test_worker", worker_body, &online_cpus, DEFAULT_PRIORITY);
+  Thread* worker =
+      Thread::Create("set_affinity_self_test_worker", worker_body, &online_cpus, DEFAULT_PRIORITY);
   ASSERT_NONNULL(worker, "thread_create failed.");
-  thread_resume(worker);
+  worker->Resume();
 
   // Wait for the worker thread to test itself.
   int worker_retcode;
-  ASSERT_EQ(thread_join(worker, &worker_retcode, ZX_TIME_INFINITE), ZX_OK,
-            "Failed to join thread.");
+  ASSERT_EQ(worker->Join(&worker_retcode, ZX_TIME_INFINITE), ZX_OK, "Failed to join thread.");
   EXPECT_EQ(worker_retcode, ZX_OK, "Worker thread failed.");
 
   END_TEST;
@@ -144,9 +143,9 @@ bool set_affinity_other_test() {
     }
     return 0;
   };
-  thread_t* worker =
-      thread_create("set_affinity_other_test_worker", worker_body, &state, LOW_PRIORITY);
-  thread_resume(worker);
+  Thread* worker =
+      Thread::Create("set_affinity_other_test_worker", worker_body, &state, LOW_PRIORITY);
+  worker->Resume();
 
   // Migrate the worker task amongst different threads.
   const cpu_mask_t online_cpus = mp_get_online_mask();
@@ -158,7 +157,7 @@ bool set_affinity_other_test() {
     }
 
     // Set affinity to the given core.
-    thread_set_cpu_affinity(worker, cpu_num_to_mask(c));
+    worker->SetCpuAffinity(cpu_num_to_mask(c));
 
     // Wait for it to land on the correct CPU.
     wait_for_cond(
@@ -168,8 +167,7 @@ bool set_affinity_other_test() {
   // Done.
   atomic_store(&state.should_stop, 1);
   int worker_retcode;
-  ASSERT_EQ(thread_join(worker, &worker_retcode, ZX_TIME_INFINITE), ZX_OK,
-            "Failed to join thread.");
+  ASSERT_EQ(worker->Join(&worker_retcode, ZX_TIME_INFINITE), ZX_OK, "Failed to join thread.");
 
   END_TEST;
 }
@@ -181,7 +179,7 @@ bool thread_last_cpu_new_thread() {
   WorkerThread worker("last_cpu_new_thread");
 
   // Ensure we get INVALID_CPU as last cpu.
-  ASSERT_EQ(thread_last_cpu(worker.thread()), INVALID_CPU, "Last CPU on unstarted thread invalid.");
+  ASSERT_EQ(worker.thread()->LastCpu(), INVALID_CPU, "Last CPU on unstarted thread invalid.");
 
   // Clean up the thread.
   worker.Start();
@@ -206,10 +204,10 @@ bool thread_last_cpu_running_thread() {
     }
 
     // Set affinity to the given core.
-    thread_set_cpu_affinity(worker.thread(), cpu_num_to_mask(c));
+    worker.thread()->SetCpuAffinity(cpu_num_to_mask(c));
 
     // Ensure it is reported at the correct CPU.
-    wait_for_cond([c, &worker]() { return thread_last_cpu(worker.thread()) == c; });
+    wait_for_cond([c, &worker]() { return worker.thread()->LastCpu() == c; });
   }
 
   END_TEST;
@@ -225,7 +223,7 @@ bool thread_empty_soft_affinity_mask() {
   worker.WaitForWorkerProgress();
 
   // Set affinity to an invalid (empty) mask.
-  thread_set_soft_cpu_affinity(worker.thread(), 0);
+  worker.thread()->SetSoftCpuAffinity(0);
 
   // Ensure that the thread is still running.
   worker.WaitForWorkerProgress();
@@ -251,16 +249,16 @@ bool thread_conflicting_soft_and_hard_affinity() {
   worker.Start();
 
   // Set soft affinity to CPU A, wait for the thread to start running there.
-  thread_set_soft_cpu_affinity(worker.thread(), cpu_num_to_mask(a));
-  wait_for_cond([&worker, a]() { return thread_last_cpu(worker.thread()) == a; });
+  worker.thread()->SetSoftCpuAffinity(cpu_num_to_mask(a));
+  wait_for_cond([&worker, a]() { return worker.thread()->LastCpu() == a; });
 
   // Set hard affinity to CPU B, ensure the thread migrates there.
-  thread_set_cpu_affinity(worker.thread(), cpu_num_to_mask(b));
-  wait_for_cond([&worker, b]() { return thread_last_cpu(worker.thread()) == b; });
+  worker.thread()->SetCpuAffinity(cpu_num_to_mask(b));
+  wait_for_cond([&worker, b]() { return worker.thread()->LastCpu() == b; });
 
   // Remove the hard affinity. Make sure the thread migrates back to CPU A.
-  thread_set_cpu_affinity(worker.thread(), CPU_MASK_ALL);
-  wait_for_cond([&worker, a]() { return thread_last_cpu(worker.thread()) == a; });
+  worker.thread()->SetCpuAffinity(CPU_MASK_ALL);
+  wait_for_cond([&worker, a]() { return worker.thread()->LastCpu() == a; });
 
   END_TEST;
 }

@@ -79,7 +79,7 @@ void dpc_shutdown(uint cpu_id) {
   percpu.dpc_stop = true;
 
   // Take the thread pointer so we can join outside the spinlock.
-  thread_t* t = percpu.dpc_thread;
+  Thread* t = percpu.dpc_thread;
   percpu.dpc_thread = nullptr;
 
   spin_unlock_irqrestore(&dpc_lock, state);
@@ -89,7 +89,7 @@ void dpc_shutdown(uint cpu_id) {
 
   // Wait for it to terminate.
   int ret = 0;
-  zx_status_t status = thread_join(t, &ret, ZX_TIME_INFINITE);
+  zx_status_t status = t->Join(&ret, ZX_TIME_INFINITE);
   DEBUG_ASSERT(status == ZX_OK);
   DEBUG_ASSERT(ret == 0);
 }
@@ -185,9 +185,9 @@ void dpc_init_for_cpu(void) {
 
   char name[10];
   snprintf(name, sizeof(name), "dpc-%u", cpu_num);
-  cpu->dpc_thread = thread_create(name, &dpc_thread, NULL, DPC_THREAD_PRIORITY);
+  cpu->dpc_thread = Thread::Create(name, &dpc_thread, NULL, DPC_THREAD_PRIORITY);
   DEBUG_ASSERT(cpu->dpc_thread != nullptr);
-  thread_set_cpu_affinity(cpu->dpc_thread, cpu_num_to_mask(cpu_num));
+  cpu->dpc_thread->SetCpuAffinity(cpu_num_to_mask(cpu_num));
 
 #if WITH_UNIFIED_SCHEDULER
   // The DPC thread may use up to 150us out of every 300us (i.e. 50% of the CPU)
@@ -195,10 +195,10 @@ void dpc_init_for_cpu(void) {
   // a much lower frequency than 3.333KHz.
   // TODO(38571): Make this runtime tunable. It may be necessary to change the
   // DPC deadline params later in boot, after configuration is loaded somehow.
-  thread_set_deadline(cpu->dpc_thread, {ZX_USEC(150), ZX_USEC(300), ZX_USEC(300)});
+  cpu->dpc_thread->SetDeadline({ZX_USEC(150), ZX_USEC(300), ZX_USEC(300)});
 #endif
 
-  thread_resume(cpu->dpc_thread);
+  cpu->dpc_thread->Resume();
 }
 
 static void dpc_init(unsigned int level) {

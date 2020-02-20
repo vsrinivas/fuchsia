@@ -4,7 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/affine/ratio.h>
 #include <lib/unittest/unittest.h>
+#include <lib/zx/time.h>
 #include <platform.h>
 
 #include <fbl/auto_call.h>
@@ -12,8 +14,6 @@
 #include <kernel/mp.h>
 #include <ktl/atomic.h>
 #include <ktl/popcount.h>
-#include <lib/affine/ratio.h>
-#include <lib/zx/time.h>
 
 #include "tests.h"
 
@@ -42,18 +42,14 @@ bool mutex_spin_time_test(void) {
 
   // No matter what happens from here on out, make sure we restore our main
   // thread's priority and cpu affinity.
-  auto cleanup = fbl::MakeAutoCall([affinity = thread_get_cpu_affinity(get_current_thread()),
-                                    priority = get_current_thread()->base_priority]() {
-    thread_set_cpu_affinity(get_current_thread(), affinity);
-    thread_set_priority(get_current_thread(), priority);
+  auto cleanup = fbl::MakeAutoCall([affinity = get_current_thread()->GetCpuAffinity(),
+                                    priority = get_current_thread()->base_priority_]() {
+    get_current_thread()->SetCpuAffinity(affinity);
+    get_current_thread()->SetPriority(priority);
   });
 
   constexpr zx::duration kTimeouts[] = {
-    zx::usec(0),
-    zx::usec(50),
-    zx::usec(250),
-    zx::usec(750),
-    zx::usec(5000),
+      zx::usec(0), zx::usec(50), zx::usec(250), zx::usec(750), zx::usec(5000),
   };
 
   const affine::Ratio ticks_to_time = platform_get_ticks_to_time_ratio();
@@ -74,7 +70,7 @@ bool mutex_spin_time_test(void) {
     AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> ap_disabler;
     args.interlock.store(true);
     while (args.interlock.load() == true) {
-        arch_spinloop_pause();
+      arch_spinloop_pause();
     }
 
     Guard<Mutex> guard{&args.the_mutex, args.spin_max_duration.get()};
@@ -83,31 +79,31 @@ bool mutex_spin_time_test(void) {
 
   // Boost our thread priority and lock ourselves down to a specific CPU before
   // starting the test.
-  thread_set_cpu_affinity(get_current_thread(), timer_mask);
-  thread_set_priority(get_current_thread(), HIGH_PRIORITY);
+  get_current_thread()->SetCpuAffinity(timer_mask);
+  get_current_thread()->SetPriority(HIGH_PRIORITY);
 
   for (const auto& timeout : kTimeouts) {
     zx::ticks start, end;
-    thread_t* test_thread;
+    Thread* test_thread;
 
     // Setup the timeout and create the test thread (but don't start it yet).
     // Make sure that the thread runs on a different core from ours.
     args.spin_max_duration = timeout;
-    test_thread = thread_create("mutex spin timeout", thunk, &args, HIGH_PRIORITY);
+    test_thread = Thread::Create("mutex spin timeout", thunk, &args, HIGH_PRIORITY);
     ASSERT_NONNULL(test_thread, "Failed to create test thread");
-    thread_set_cpu_affinity(test_thread, spinner_mask);
+    test_thread->SetCpuAffinity(spinner_mask);
 
     // Hold onto the mutex while we create a thread and time how long it takes for the mutex to
     // become blocked.
     {
       AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> ap_disabler;
       Guard<Mutex> guard{&args.the_mutex};
-      thread_resume(test_thread);
+      test_thread->Resume();
 
       // Wait until the spinner thread is ready to go, then mark the start time
       // and tell the spinner it is OK to proceed.
       while (args.interlock.load() == false) {
-          arch_spinloop_pause();
+        arch_spinloop_pause();
       }
       start = zx::ticks(current_ticks());
       args.interlock.store(false);
@@ -117,7 +113,7 @@ bool mutex_spin_time_test(void) {
       while (true) {
         {
           Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
-          s = test_thread->state;
+          s = test_thread->state_;
         }
 
         if (s == THREAD_BLOCKED) {
@@ -136,7 +132,7 @@ bool mutex_spin_time_test(void) {
     // limit we ended up.  There is technically no upper bound to this number,
     // but we would like to observe the overshoot amount as being "reasonable"
     // in an unloaded manual test environment.
-    zx_status_t status = thread_join(test_thread, nullptr, current_time() + ZX_SEC(30));
+    zx_status_t status = test_thread->Join(nullptr, current_time() + ZX_SEC(30));
     ASSERT_EQ(status, ZX_OK, "test thread failed to exit!");
 
     zx::duration actual_spin_time(ticks_to_time.Scale((end - start).get()));
@@ -144,8 +140,8 @@ bool mutex_spin_time_test(void) {
 
     if (timeout.get() > 0) {
       int64_t overshoot = (((actual_spin_time - timeout).get()) * 10000) / timeout.get();
-      printf("Target %7ld nSec, Actual %7ld nSec.  Overshot by %ld.%02ld%%.\n",
-          timeout.get(), actual_spin_time.get(), overshoot / 100, overshoot % 100);
+      printf("Target %7ld nSec, Actual %7ld nSec.  Overshot by %ld.%02ld%%.\n", timeout.get(),
+             actual_spin_time.get(), overshoot / 100, overshoot % 100);
     } else {
       printf("\nTarget %7ld nSec, Actual %7ld nSec.\n", timeout.get(), actual_spin_time.get());
     }
@@ -153,7 +149,7 @@ bool mutex_spin_time_test(void) {
 
   END_TEST;
 }
-}
+}  // namespace
 
 UNITTEST_START_TESTCASE(mutex_spin_time_tests)
 UNITTEST("Mutex spin timeouts", (mutex_spin_time_test))

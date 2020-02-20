@@ -54,7 +54,7 @@ struct percpu {
   struct cpu_stats stats;
 
   // per cpu idle thread
-  thread_t idle_thread;
+  Thread idle_thread;
 
   // kernel counters arena
   int64_t* counters;
@@ -65,7 +65,7 @@ struct percpu {
   // request the dpc thread to stop by setting to true; guarded by dpc_lock
   bool dpc_stop;
   // each cpu has a dedicated thread for processing dpcs
-  thread_t* dpc_thread;
+  Thread* dpc_thread;
 
   // Page state counts are percpu because they change frequently and we don't want to pay for
   // synchronization, including atomic load/add/subtract.
@@ -102,9 +102,9 @@ struct percpu {
   // |Func| should accept a |percpu*|.
   template <typename Func>
   static void WithCurrentPreemptDisable(Func&& func) {
-    thread_preempt_disable();
+    CurrentThread::PreemptDisable();
     ktl::forward<Func>(func)(&Get(arch_curr_cpu_num()));
-    thread_preempt_reenable();
+    CurrentThread::PreemptReenable();
   }
 
   // Call |Func| once per CPU with each CPU's percpu struct with preemption disabled.
@@ -112,11 +112,11 @@ struct percpu {
   // |Func| should accept a |percpu*|.
   template <typename Func>
   static void ForEachPreemptDisable(Func&& func) {
-    thread_preempt_disable();
+    CurrentThread::PreemptDisable();
     for (cpu_num_t cpu_num = 0; cpu_num < processor_count(); ++cpu_num) {
       ktl::forward<Func>(func)(&Get(cpu_num));
     }
-    thread_preempt_reenable();
+    CurrentThread::PreemptReenable();
   }
 
  private:

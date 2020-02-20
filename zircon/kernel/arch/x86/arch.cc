@@ -118,7 +118,7 @@ void arch_resume(void) {
 }
 
 [[noreturn, gnu::noinline]] static void finish_secondary_entry(volatile int* aps_still_booting,
-                                                               thread_t* thread, uint cpu_num) {
+                                                               Thread* thread, uint cpu_num) {
   // Signal that this CPU is initialized.  It is important that after this
   // operation, we do not touch any resources associated with bootstrap
   // besides our thread_t and stack, since this is the checkpoint the
@@ -145,7 +145,7 @@ void arch_resume(void) {
   thread_secondary_cpu_init_early(thread);
   // The thread stacks and struct are from a single allocation, free it
   // when we exit into the scheduler.
-  thread->flags |= THREAD_FLAG_FREE_STRUCT;
+  thread->flags_ |= THREAD_FLAG_FREE_STRUCT;
 
   lk_secondary_cpu_entry();
 
@@ -164,7 +164,7 @@ fail:
 // want to generate stack-protector prologue/epilogue code,
 // which would use %gs.
 __NO_SAFESTACK __NO_RETURN void x86_secondary_entry(volatile int* aps_still_booting,
-                                                    thread_t* thread) {
+                                                    Thread* thread) {
   // Would prefer this to be in init_percpu, but there is a dependency on a
   // page mapping existing, and the BP calls that before the VM subsystem is
   // initialized.
@@ -194,7 +194,7 @@ __NO_SAFESTACK __NO_RETURN void x86_secondary_entry(volatile int* aps_still_boot
 #if __has_feature(safe_stack)
   // Set up the initial unsafe stack pointer.
   x86_write_gs_offset64(ZX_TLS_UNSAFE_SP_OFFSET,
-                        ROUNDDOWN(thread->stack.unsafe_base + thread->stack.size, 16));
+                        ROUNDDOWN(thread->stack_.unsafe_base + thread->stack_.size, 16));
 #endif
 
   x86_init_percpu((uint)cpu_num);

@@ -69,10 +69,10 @@ static void update_counters(zx_duration_t queue_time_ns) {
   samples_counter.Add(1);
 }
 
-static bool local_migrate_if_needed(thread_t* curr_thread);
+static bool local_migrate_if_needed(Thread* curr_thread);
 
 // compute the effective priority of a thread
-static void compute_effec_priority(thread_t* t) {
+static void compute_effec_priority(Thread* t) {
   int ep = t->base_priority + t->priority_boost;
   if (t->inherited_priority > ep) {
     ep = t->inherited_priority;
@@ -83,7 +83,7 @@ static void compute_effec_priority(thread_t* t) {
   t->effec_priority = ep;
 }
 
-static inline void post_boost_bookkeeping(thread_t* t) TA_REQ(thread_lock) {
+static inline void post_boost_bookkeeping(Thread* t) TA_REQ(thread_lock) {
   DEBUG_ASSERT(!NO_BOOST);
 
   int old_ep = t->effec_priority;
@@ -105,7 +105,7 @@ static inline void post_boost_bookkeeping(thread_t* t) TA_REQ(thread_lock) {
 }
 
 // boost the priority of the thread by +1
-static void boost_thread(thread_t* t) TA_REQ(thread_lock) {
+static void boost_thread(Thread* t) TA_REQ(thread_lock) {
   if (NO_BOOST) {
     return;
   }
@@ -124,7 +124,7 @@ static void boost_thread(thread_t* t) TA_REQ(thread_lock) {
 // deboost the priority of the thread by -1.
 // If deboosting because the thread is using up all of its time slice,
 // then allow the boost to go negative, otherwise only deboost to 0.
-static void deboost_thread(thread_t* t, bool quantum_expiration) TA_REQ(thread_lock) {
+static void deboost_thread(Thread* t, bool quantum_expiration) TA_REQ(thread_lock) {
   if (NO_BOOST) {
     return;
   }
@@ -190,7 +190,7 @@ static cpu_mask_t rand_cpu(cpu_mask_t mask) {
 }
 
 // return the mask of CPUs this thread may be scheduled on
-static cpu_mask_t get_allowed_cpus_mask(cpu_mask_t active_mask, const thread_t* thread) {
+static cpu_mask_t get_allowed_cpus_mask(cpu_mask_t active_mask, const Thread* thread) {
   // the thread may run on any active CPU allowed by both its hard and
   // soft CPU affinity
   const cpu_mask_t soft_affinity = thread->soft_affinity;
@@ -207,7 +207,7 @@ static cpu_mask_t get_allowed_cpus_mask(cpu_mask_t active_mask, const thread_t* 
 }
 
 // find a cpu to wake up
-static cpu_mask_t find_cpu_mask(thread_t* t) TA_REQ(thread_lock) {
+static cpu_mask_t find_cpu_mask(Thread* t) TA_REQ(thread_lock) {
   // get the last cpu the thread ran on
   cpu_mask_t last_ran_cpu_mask = cpu_num_to_mask(t->last_cpu);
 
@@ -268,7 +268,7 @@ static cpu_mask_t find_cpu_mask(thread_t* t) TA_REQ(thread_lock) {
 }
 
 // run queue manipulation
-static void insert_in_run_queue_head(cpu_num_t cpu, thread_t* t) TA_REQ(thread_lock) {
+static void insert_in_run_queue_head(cpu_num_t cpu, Thread* t) TA_REQ(thread_lock) {
   DEBUG_ASSERT(!list_in_list(&t->queue_node));
 
   list_add_head(&percpu::Get(cpu).run_queue[t->effec_priority], &t->queue_node);
@@ -278,7 +278,7 @@ static void insert_in_run_queue_head(cpu_num_t cpu, thread_t* t) TA_REQ(thread_l
   mp_set_cpu_busy(cpu);
 }
 
-static void insert_in_run_queue_tail(cpu_num_t cpu, thread_t* t) TA_REQ(thread_lock) {
+static void insert_in_run_queue_tail(cpu_num_t cpu, Thread* t) TA_REQ(thread_lock) {
   DEBUG_ASSERT(!list_in_list(&t->queue_node));
 
   list_add_tail(&percpu::Get(cpu).run_queue[t->effec_priority], &t->queue_node);
@@ -289,7 +289,7 @@ static void insert_in_run_queue_tail(cpu_num_t cpu, thread_t* t) TA_REQ(thread_l
 }
 
 // remove the thread from the run queue it's in
-static void remove_from_run_queue(thread_t* t, int prio_queue) TA_REQ(thread_lock) {
+static void remove_from_run_queue(Thread* t, int prio_queue) TA_REQ(thread_lock) {
   DEBUG_ASSERT(t->state == THREAD_READY);
   DEBUG_ASSERT(is_valid_cpu_num(t->curr_cpu));
 
@@ -308,7 +308,7 @@ static uint highest_run_queue(const struct percpu* c) TA_REQ(thread_lock) {
          (sizeof(c->run_queue_bitmap) * CHAR_BIT - NUM_PRIORITIES);
 }
 
-static thread_t* sched_get_top_thread(cpu_num_t cpu) TA_REQ(thread_lock) {
+static Thread* sched_get_top_thread(cpu_num_t cpu) TA_REQ(thread_lock) {
   // pop the head of the highest priority queue with any threads
   // queued up on the passed in cpu.
 
@@ -316,7 +316,7 @@ static thread_t* sched_get_top_thread(cpu_num_t cpu) TA_REQ(thread_lock) {
   if (likely(c->run_queue_bitmap)) {
     uint highest_queue = highest_run_queue(c);
 
-    thread_t* newthread = list_remove_head_type(&c->run_queue[highest_queue], thread_t, queue_node);
+    Thread* newthread = list_remove_head_type(&c->run_queue[highest_queue], thread_t, queue_node);
 
     DEBUG_ASSERT(newthread);
     DEBUG_ASSERT_MSG(newthread->hard_affinity & cpu_num_to_mask(cpu),
@@ -338,7 +338,7 @@ static thread_t* sched_get_top_thread(cpu_num_t cpu) TA_REQ(thread_lock) {
   return &c->idle_thread;
 }
 
-void sched_init_thread(thread_t* t, int priority) {
+void sched_init_thread(Thread* t, int priority) {
   t->base_priority = priority;
   t->priority_boost = 0;
   t->inherited_priority = -1;
@@ -350,7 +350,7 @@ void sched_block() {
 
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-  __UNUSED thread_t* current_thread = get_current_thread();
+  __UNUSED Thread* current_thread = get_current_thread();
 
   DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
   DEBUG_ASSERT(current_thread->state != THREAD_RUNNING);
@@ -361,7 +361,7 @@ void sched_block() {
 
 // find a cpu to run the thread on, put it in the run queue for that cpu, and accumulate a list
 // of cpus we'll need to reschedule, including the local cpu.
-static void find_cpu_and_insert(thread_t* t, bool* local_resched, cpu_mask_t* accum_cpu_mask)
+static void find_cpu_and_insert(Thread* t, bool* local_resched, cpu_mask_t* accum_cpu_mask)
     TA_REQ(thread_lock) {
   // find a core to run it on
   cpu_mask_t cpu = find_cpu_mask(t);
@@ -386,7 +386,7 @@ static void find_cpu_and_insert(thread_t* t, bool* local_resched, cpu_mask_t* ac
   }
 }
 
-bool sched_unblock(thread_t* t) {
+bool sched_unblock(Thread* t) {
   LOCAL_KTRACE_DURATION trace{"sched_unblock"_stringref};
 
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
@@ -418,7 +418,7 @@ bool sched_unblock_list(struct list_node* list) {
   // pop the list of threads and shove into the scheduler
   bool local_resched = false;
   cpu_mask_t accum_cpu_mask = 0;
-  thread_t* t;
+  Thread* t;
   while ((t = list_remove_tail_type(list, thread_t, queue_node))) {
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
     DEBUG_ASSERT(!thread_is_idle(t));
@@ -439,7 +439,7 @@ bool sched_unblock_list(struct list_node* list) {
 }
 
 // handle the special case of resuming a newly created idle thread
-void sched_unblock_idle(thread_t* t) {
+void sched_unblock_idle(Thread* t) {
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
   DEBUG_ASSERT(thread_is_idle(t));
@@ -459,7 +459,7 @@ void sched_yield() {
 
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-  thread_t* current_thread = get_current_thread();
+  Thread* current_thread = get_current_thread();
   DEBUG_ASSERT(!thread_is_idle(current_thread));
 
   // consume the rest of the time slice, deboost ourself, and go to the end of a queue
@@ -482,7 +482,7 @@ void sched_preempt() {
 
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-  thread_t* current_thread = get_current_thread();
+  Thread* current_thread = get_current_thread();
   uint curr_cpu = arch_curr_cpu_num();
 
   DEBUG_ASSERT(current_thread->curr_cpu == curr_cpu);
@@ -517,7 +517,7 @@ void sched_reschedule() {
 
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-  thread_t* current_thread = get_current_thread();
+  Thread* current_thread = get_current_thread();
   uint curr_cpu = arch_curr_cpu_num();
 
   if (current_thread->disable_counts != 0) {
@@ -550,7 +550,7 @@ void sched_reschedule() {
 }
 
 // migrate the current thread to a new cpu and locally reschedule to seal the deal
-static void migrate_current_thread(thread_t* current_thread) TA_REQ(thread_lock) {
+static void migrate_current_thread(Thread* current_thread) TA_REQ(thread_lock) {
   bool local_resched = false;
   cpu_mask_t accum_cpu_mask = 0;
 
@@ -573,7 +573,7 @@ void sched_transition_off_cpu(cpu_num_t old_cpu) {
   // Ensure we do not get scheduled on anymore.
   mp_set_curr_cpu_active(false);
 
-  thread_t* t;
+  Thread* t;
   bool local_resched = false;
   cpu_mask_t accum_cpu_mask = 0;
   cpu_mask_t pinned_mask = cpu_num_to_mask(old_cpu);
@@ -602,7 +602,7 @@ void sched_transition_off_cpu(cpu_num_t old_cpu) {
 
 // check to see if the current thread needs to migrate to a new core
 // the passed argument must be the current thread and must already be pushed into the READY state
-static bool local_migrate_if_needed(thread_t* curr_thread) TA_REQ(thread_lock) {
+static bool local_migrate_if_needed(Thread* curr_thread) TA_REQ(thread_lock) {
   DEBUG_ASSERT(curr_thread == get_current_thread());
   DEBUG_ASSERT(curr_thread->state == THREAD_READY);
 
@@ -617,7 +617,7 @@ static bool local_migrate_if_needed(thread_t* curr_thread) TA_REQ(thread_lock) {
 
 // potentially migrate a thread to a new core based on the affinity mask on the thread. If it's
 // running or in a scheduler queue, handle it.
-void sched_migrate(thread_t* t) {
+void sched_migrate(Thread* t) {
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
   bool local_resched = false;
@@ -672,7 +672,7 @@ void sched_migrate(thread_t* t) {
 
 // the effective priority of a thread has changed, do what is necessary to move the thread
 // from different queues and inform us if we need to reschedule
-static void sched_priority_changed(thread_t* t, int old_prio, bool* local_resched,
+static void sched_priority_changed(Thread* t, int old_prio, bool* local_resched,
                                    cpu_mask_t* accum_cpu_mask, PropagatePI propagate)
     TA_REQ(thread_lock) {
   switch (t->state) {
@@ -725,7 +725,7 @@ static void sched_priority_changed(thread_t* t, int old_prio, bool* local_resche
 
 // Set the inherited priority to |pri|.
 // pri < 0 disables priority inheritance and goes back to the naturally computed values
-void sched_inherit_priority(thread_t* t, int pri, bool* local_resched, cpu_mask_t* accum_cpu_mask) {
+void sched_inherit_priority(Thread* t, int pri, bool* local_resched, cpu_mask_t* accum_cpu_mask) {
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
   if (pri > HIGHEST_PRIORITY) {
@@ -748,7 +748,7 @@ void sched_inherit_priority(thread_t* t, int pri, bool* local_resched, cpu_mask_
 // changes the thread's base priority and if the re-computed effective priority changed
 //  then the thread is moved to the proper queue on the same processor and a re-schedule
 //  might be issued.
-void sched_change_priority(thread_t* t, int pri) {
+void sched_change_priority(Thread* t, int pri) {
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
   if (unlikely(t->state == THREAD_DEATH)) {
@@ -794,14 +794,14 @@ void sched_change_priority(thread_t* t, int pri) {
 // cranked down even tighter than before.  We need to have a very high weight in
 // order to even have a chance of meeting the expectations of a thread which is
 // attempting to apply a deadline profile.
-void sched_change_deadline(thread_t* t, const zx_sched_deadline_params_t&) {
+void sched_change_deadline(Thread* t, const zx_sched_deadline_params_t&) {
   sched_change_priority(t, 30);
 }
 
 // preemption timer that is set whenever a thread is scheduled
 void sched_preempt_timer_tick(zx_time_t now) {
   // if the preemption timer went off on the idle or a real time thread, ignore it
-  thread_t* current_thread = get_current_thread();
+  Thread* current_thread = get_current_thread();
   if (unlikely(thread_is_real_time_or_idle(current_thread))) {
     return;
   }
@@ -834,7 +834,7 @@ void sched_preempt_timer_tick(zx_time_t now) {
 // after set_current_thread (we'd now see newthread's unsafe-sp instead!).
 // Hence this function and everything it calls between this point and the
 // the low-level context switch must be marked with __NO_SAFESTACK.
-__NO_SAFESTACK static void final_context_switch(thread_t* oldthread, thread_t* newthread) {
+__NO_SAFESTACK static void final_context_switch(Thread* oldthread, Thread* newthread) {
   set_current_thread(newthread);
   arch_context_switch(oldthread, newthread);
 }
@@ -843,7 +843,7 @@ __NO_SAFESTACK static void final_context_switch(thread_t* oldthread, thread_t* n
 // state and queues it needs to be in. This routine simply picks the next thread and
 // switches to it.
 void sched_resched_internal() {
-  thread_t* current_thread = get_current_thread();
+  Thread* current_thread = get_current_thread();
   uint cpu = arch_curr_cpu_num();
 
   DEBUG_ASSERT(arch_ints_disabled());
@@ -856,13 +856,13 @@ void sched_resched_internal() {
   CPU_STATS_INC(reschedules);
 
   // pick a new thread to run
-  thread_t* newthread = sched_get_top_thread(cpu);
+  Thread* newthread = sched_get_top_thread(cpu);
 
   DEBUG_ASSERT(newthread);
 
   newthread->state = THREAD_RUNNING;
 
-  thread_t* oldthread = current_thread;
+  Thread* oldthread = current_thread;
   oldthread->preempt_pending = false;
 
   LOCAL_KTRACE("resched old pri", (uint32_t)oldthread->user_tid, oldthread->effec_priority);

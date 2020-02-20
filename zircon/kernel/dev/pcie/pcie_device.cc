@@ -272,7 +272,7 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
       ret = ZX_OK;
       break;
     }
-    thread_sleep_relative(ZX_MSEC(1));
+    CurrentThread::SleepRelative(ZX_MSEC(1));
   } while (zx_time_sub_time(current_time(), start) < ZX_SEC(5));
 
   if (ret != ZX_OK) {
@@ -291,7 +291,7 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
     initiate_flr(this);
 
     // 5) Software waits 100mSec
-    thread_sleep_relative(ZX_MSEC(100));
+    CurrentThread::SleepRelative(ZX_MSEC(100));
   }
 
   // NOTE: Even though the spec says that the reset operation is supposed
@@ -307,7 +307,7 @@ zx_status_t PcieDevice::DoFunctionLevelReset() {
       ret = ZX_OK;
       break;
     }
-    thread_sleep_relative(ZX_MSEC(1));
+    CurrentThread::SleepRelative(ZX_MSEC(1));
   } while (zx_time_sub_time(current_time(), start) < ZX_SEC(5));
 
   if (ret == ZX_OK) {

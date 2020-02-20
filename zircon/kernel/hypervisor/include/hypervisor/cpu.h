@@ -23,10 +23,10 @@ cpu_num_t cpu_of(uint16_t vpid);
 
 // Pin the current thread to a CPU, based on the given VPID, and reschedule it
 // to execute on that CPU.
-thread_t* pin_thread(uint16_t vpid);
+Thread* pin_thread(uint16_t vpid);
 
 // Check that the current thread is correctly pinned, based on the given VPID.
-bool check_pinned_cpu_invariant(uint16_t vpid, const thread_t* thread);
+bool check_pinned_cpu_invariant(uint16_t vpid, const Thread* thread);
 
 }  // namespace hypervisor
 

@@ -53,8 +53,8 @@ struct dlog {
 
 static dlog_t DLOG(DLOG_DATA);
 
-static thread_t* notifier_thread;
-static thread_t* dumper_thread;
+static Thread* notifier_thread;
+static Thread* dumper_thread;
 
 // Used to request that notifier and dumper threads terminate.
 static ktl::atomic<bool> notifier_shutdown_requested;
@@ -133,10 +133,10 @@ zx_status_t dlog_write(uint32_t flags, const void* data_ptr, size_t len) {
   hdr.datalen = static_cast<uint16_t>(len);
   hdr.flags = static_cast<uint16_t>(flags);
   hdr.timestamp = current_time();
-  thread_t* t = get_current_thread();
+  Thread* t = get_current_thread();
   if (t) {
-    hdr.pid = t->user_pid;
-    hdr.tid = t->user_tid;
+    hdr.pid = t->user_pid_;
+    hdr.tid = t->user_tid_;
   } else {
     hdr.pid = 0;
     hdr.tid = 0;
@@ -421,7 +421,7 @@ void dlog_shutdown(void) {
   notifier_shutdown_requested.store(true);
   event_signal(&DLOG.event, false);
   if (notifier_thread != nullptr) {
-    zx_status_t status = thread_join(notifier_thread, nullptr, deadline);
+    zx_status_t status = notifier_thread->Join(nullptr, deadline);
     if (status != ZX_OK) {
       dprintf(INFO, "Failed to join notifier thread: %d\n", status);
     }
@@ -431,7 +431,7 @@ void dlog_shutdown(void) {
   dumper_shutdown_requested.store(true);
   event_signal(&dumper_event, false);
   if (dumper_thread != nullptr) {
-    zx_status_t status = thread_join(dumper_thread, nullptr, deadline);
+    zx_status_t status = dumper_thread->Join(nullptr, deadline);
     if (status != ZX_OK) {
       dprintf(INFO, "Failed to join dumper thread: %d\n", status);
     }
@@ -443,15 +443,15 @@ static void dlog_init_hook(uint level) {
   DEBUG_ASSERT(notifier_thread == nullptr);
   DEBUG_ASSERT(dumper_thread == nullptr);
 
-  if ((notifier_thread = thread_create("debuglog-notifier", debuglog_notifier, NULL,
-                                       HIGH_PRIORITY - 1)) != NULL) {
-    thread_resume(notifier_thread);
+  if ((notifier_thread = Thread::Create("debuglog-notifier", debuglog_notifier, NULL,
+                                        HIGH_PRIORITY - 1)) != NULL) {
+    notifier_thread->Resume();
   }
 
   if (platform_serial_enabled() || platform_early_console_enabled()) {
     if ((dumper_thread =
-             thread_create("debuglog-dumper", debuglog_dumper, NULL, HIGH_PRIORITY - 2)) != NULL) {
-      thread_resume(dumper_thread);
+             Thread::Create("debuglog-dumper", debuglog_dumper, NULL, HIGH_PRIORITY - 2)) != NULL) {
+      dumper_thread->Resume();
     }
   }
 }

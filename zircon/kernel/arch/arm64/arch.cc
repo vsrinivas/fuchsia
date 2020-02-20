@@ -85,7 +85,7 @@ static int secondaries_released = 0;
 static volatile int secondaries_to_init = 0;
 
 // one for each secondary CPU, indexed by (cpu_num - 1).
-static thread_t _init_thread[SMP_MAX_CPUS - 1];
+static Thread _init_thread[SMP_MAX_CPUS - 1];
 
 // one for each CPU
 arm64_sp_info_t arm64_secondary_sp_list[SMP_MAX_CPUS];
@@ -97,7 +97,7 @@ uint64_t arm64_get_boot_el() { return arch_boot_el >> 2; }
 zx_status_t arm64_create_secondary_stack(uint cpu_num, uint64_t mpid) {
   // Allocate a stack, indexed by CPU num so that |arm64_secondary_entry| can find it.
   DEBUG_ASSERT_MSG(cpu_num > 0 && cpu_num < SMP_MAX_CPUS, "cpu_num: %u", cpu_num);
-  kstack_t* stack = &_init_thread[cpu_num - 1].stack;
+  kstack_t* stack = &_init_thread[cpu_num - 1].stack_;
   DEBUG_ASSERT(stack->base == 0);
   zx_status_t status = vm_allocate_kstack(stack);
   if (status != ZX_OK) {
@@ -137,7 +137,7 @@ zx_status_t arm64_create_secondary_stack(uint cpu_num, uint64_t mpid) {
 #endif
   arm64_secondary_sp_list[i].mpid = mpid;
   arm64_secondary_sp_list[i].sp = sp;
-  arm64_secondary_sp_list[i].stack_guard = get_current_thread()->arch.stack_guard;
+  arm64_secondary_sp_list[i].stack_guard = get_current_thread()->arch_.stack_guard;
   arm64_secondary_sp_list[i].unsafe_sp = unsafe_sp;
   arm64_secondary_sp_list[i].shadow_call_sp = shadow_call_sp;
 
@@ -146,7 +146,7 @@ zx_status_t arm64_create_secondary_stack(uint cpu_num, uint64_t mpid) {
 
 zx_status_t arm64_free_secondary_stack(uint cpu_num) {
   DEBUG_ASSERT(cpu_num > 0 && cpu_num < SMP_MAX_CPUS);
-  kstack_t* stack = &_init_thread[cpu_num - 1].stack;
+  kstack_t* stack = &_init_thread[cpu_num - 1].stack_;
   zx_status_t status = vm_free_kstack(stack);
   return status;
 }
@@ -255,15 +255,15 @@ void arch_setup_uspace_iframe(iframe_t* iframe, uintptr_t pc, uintptr_t sp, uint
 // Switch to user mode, set the user stack pointer to user_stack_top, put the svc stack pointer to
 // the top of the kernel stack.
 void arch_enter_uspace(iframe_t* iframe) {
-  thread_t* ct = get_current_thread();
+  Thread* ct = get_current_thread();
 
   LTRACEF("arm_uspace_entry(%#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR
           ", 0, %#" PRIxPTR ")\n",
-          iframe->r[0], iframe->r[1], iframe->spsr, ct->stack.top, iframe->usp, iframe->elr);
+          iframe->r[0], iframe->r[1], iframe->spsr, ct->stack_.top, iframe->usp, iframe->elr);
 
   arch_disable_ints();
 
-  arm64_uspace_entry(iframe, ct->stack.top);
+  arm64_uspace_entry(iframe, ct->stack_.top);
   __UNREACHABLE;
 }
 

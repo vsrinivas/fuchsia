@@ -34,9 +34,9 @@ void x86_init_smp(uint32_t* apic_ids, uint32_t num_cpus) {
   lk_init_secondary_cpus(num_cpus - 1);
 }
 
-static void free_stack_and_thread(thread_t* t) {
+static void free_stack_and_thread(Thread* t) {
   if (t) {
-    vm_free_kstack(&t->stack);
+    vm_free_kstack(&t->stack_);
     free(t);
   }
 }
@@ -81,15 +81,15 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
   for (unsigned int i = 0; i < count; ++i) {
     // TODO(johngro): Clean this up when we fix fxb/33473.  Users should not be directly
     // calloc'ing and initializing thread structures.
-    thread_t* thread = static_cast<thread_t*>(calloc(1, sizeof(thread_t)));
+    Thread* thread = static_cast<Thread*>(calloc(1, sizeof(Thread)));
     if (!thread) {
       status = ZX_ERR_NO_MEMORY;
       goto cleanup_all;
     }
     init_thread_struct(thread, "");
 
-    status = vm_allocate_kstack(&thread->stack);
-    bootstrap_data->per_cpu[i].kstack_base = thread->stack.base;
+    status = vm_allocate_kstack(&thread->stack_);
+    bootstrap_data->per_cpu[i].kstack_base = thread->stack_.base;
     bootstrap_data->per_cpu[i].thread = thread;
   }
 
@@ -106,7 +106,7 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
   dprintf(INFO, "\n");
 
   // Wait 10 ms and then send the startup signals
-  thread_sleep_relative(ZX_MSEC(10));
+  CurrentThread::SleepRelative(ZX_MSEC(10));
 
   // Actually send the startups
   DEBUG_ASSERT(bootstrap_instr_ptr < 1 * MB && IS_PAGE_ALIGNED(bootstrap_instr_ptr));
@@ -127,13 +127,13 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
     }
     // Wait 1ms for cores to boot.  The docs recommend 200us between STARTUP
     // IPIs.
-    thread_sleep_relative(ZX_MSEC(1));
+    CurrentThread::SleepRelative(ZX_MSEC(1));
   }
 
   // The docs recommend waiting 200us for cores to boot.  We do a bit more
   // work before the cores report in, so wait longer (up to 1 second).
   for (int tries_left = 200; aps_still_booting != 0 && tries_left > 0; --tries_left) {
-    thread_sleep_relative(ZX_MSEC(5));
+    CurrentThread::SleepRelative(ZX_MSEC(5));
   }
 
   uint failed_aps;

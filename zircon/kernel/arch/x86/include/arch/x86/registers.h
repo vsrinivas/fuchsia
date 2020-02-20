@@ -10,38 +10,38 @@
 // clang-format off
 
 // This header is intended to be included in both C and ASM
-#define X86_CR0_PE 0x00000001                   /* protected mode enable */
-#define X86_CR0_MP 0x00000002                   /* monitor coprocessor */
-#define X86_CR0_EM 0x00000004                   /* emulation */
-#define X86_CR0_TS 0x00000008                   /* task switched */
-#define X86_CR0_NE 0x00000020                   /* enable x87 exception */
-#define X86_CR0_WP 0x00010000                   /* supervisor write protect */
-#define X86_CR0_NW 0x20000000                   /* not write-through */
-#define X86_CR0_CD 0x40000000                   /* cache disable */
-#define X86_CR0_PG 0x80000000                   /* enable paging */
-#define X86_CR4_PAE 0x00000020                  /* PAE paging */
-#define X86_CR4_PGE 0x00000080                  /* page global enable */
-#define X86_CR4_OSFXSR 0x00000200               /* os supports fxsave */
-#define X86_CR4_OSXMMEXPT 0x00000400            /* os supports xmm exception */
-#define X86_CR4_UMIP 0x00000800                 /* User-mode instruction prevention */
-#define X86_CR4_VMXE 0x00002000                 /* enable vmx */
-#define X86_CR4_FSGSBASE 0x00010000             /* enable {rd,wr}{fs,gs}base */
-#define X86_CR4_PCIDE 0x00020000                /* Process-context ID enable  */
-#define X86_CR4_OSXSAVE 0x00040000              /* os supports xsave */
-#define X86_CR4_SMEP 0x00100000                 /* SMEP protection enabling */
-#define X86_CR4_SMAP 0x00200000                 /* SMAP protection enabling */
-#define X86_CR4_PKE 0x00400000                  /* Enable protection keys */
-#define X86_EFER_SCE 0x00000001                 /* enable SYSCALL */
-#define X86_EFER_LME 0x00000100                 /* long mode enable */
-#define X86_EFER_LMA 0x00000400                 /* long mode active */
-#define X86_EFER_NXE 0x00000800                 /* to enable execute disable bit */
-#define X86_MSR_IA32_PLATFORM_ID 0x00000017     /* platform id */
-#define X86_MSR_IA32_APIC_BASE 0x0000001b       /* APIC base physical address */
-#define X86_MSR_IA32_TSC_ADJUST 0x0000003b      /* TSC adjust */
-#define X86_MSR_IA32_SPEC_CTRL 0x00000048       /* Speculative Execution Controls */
+#define X86_CR0_PE 0x00000001               /* protected mode enable */
+#define X86_CR0_MP 0x00000002               /* monitor coprocessor */
+#define X86_CR0_EM 0x00000004               /* emulation */
+#define X86_CR0_TS 0x00000008               /* task switched */
+#define X86_CR0_NE 0x00000020               /* enable x87 exception */
+#define X86_CR0_WP 0x00010000               /* supervisor write protect */
+#define X86_CR0_NW 0x20000000               /* not write-through */
+#define X86_CR0_CD 0x40000000               /* cache disable */
+#define X86_CR0_PG 0x80000000               /* enable paging */
+#define X86_CR4_PAE 0x00000020              /* PAE paging */
+#define X86_CR4_PGE 0x00000080              /* page global enable */
+#define X86_CR4_OSFXSR 0x00000200           /* os supports fxsave */
+#define X86_CR4_OSXMMEXPT 0x00000400        /* os supports xmm exception */
+#define X86_CR4_UMIP 0x00000800             /* User-mode instruction prevention */
+#define X86_CR4_VMXE 0x00002000             /* enable vmx */
+#define X86_CR4_FSGSBASE 0x00010000         /* enable {rd,wr}{fs,gs}base */
+#define X86_CR4_PCIDE 0x00020000            /* Process-context ID enable  */
+#define X86_CR4_OSXSAVE 0x00040000          /* os supports xsave */
+#define X86_CR4_SMEP 0x00100000             /* SMEP protection enabling */
+#define X86_CR4_SMAP 0x00200000             /* SMAP protection enabling */
+#define X86_CR4_PKE 0x00400000              /* Enable protection keys */
+#define X86_EFER_SCE 0x00000001             /* enable SYSCALL */
+#define X86_EFER_LME 0x00000100             /* long mode enable */
+#define X86_EFER_LMA 0x00000400             /* long mode active */
+#define X86_EFER_NXE 0x00000800             /* to enable execute disable bit */
+#define X86_MSR_IA32_PLATFORM_ID 0x00000017 /* platform id */
+#define X86_MSR_IA32_APIC_BASE 0x0000001b   /* APIC base physical address */
+#define X86_MSR_IA32_TSC_ADJUST 0x0000003b  /* TSC adjust */
+#define X86_MSR_IA32_SPEC_CTRL 0x00000048   /* Speculative Execution Controls */
 #define X86_SPEC_CTRL_IBRS (1ull << 0)
 // Partitions indirect branch predictors across hyperthreads
-#define X86_SPEC_CTRL_STIBP (1ull << 1)		/* Single Thread Indirect Branch Predictors */
+#define X86_SPEC_CTRL_STIBP (1ull << 1) /* Single Thread Indirect Branch Predictors */
 #define X86_SPEC_CTRL_SSBD (1ull << 2)
 #define X86_MSR_IA32_PRED_CMD 0x00000049        /* Indirect Branch Prediction Command */
 #define X86_MSR_IA32_BIOS_UPDT_TRIG 0x00000079u /* Microcode Patch Loader */
@@ -106,10 +106,10 @@
 #define X86_MSR_PP1_ENERGY_STATUS 0x00000641       /* PP1 energy status */
 #define X86_MSR_PLATFORM_ENERGY_COUNTER 0x0000064d /* Platform energy counter */
 #define X86_MSR_PLATFORM_POWER_LIMIT 0x0000065c    /* Platform power limit control */
-#define X86_MSR_AMD_F10_DE_CFG 0xc0011029 /* AMD Family 10h+ decode config */
+#define X86_MSR_AMD_F10_DE_CFG 0xc0011029          /* AMD Family 10h+ decode config */
 #define X86_MSR_AMD_F10_DE_CFG_LFENCE_SERIALIZE (1 << 1)
 
-#define X86_MSR_AMD_LS_CFG 0xc0011020              /* Load/store unit configuration */
+#define X86_MSR_AMD_LS_CFG 0xc0011020 /* Load/store unit configuration */
 #define X86_AMD_LS_CFG_F15H_SSBD (1ull << 54)
 #define X86_AMD_LS_CFG_F16H_SSBD (1ull << 33)
 #define X86_AMD_LS_CFG_F17H_SSBD (1ull << 10)
@@ -280,8 +280,8 @@ void x86_extended_register_save_state(void* register_state);
 void x86_extended_register_restore_state(void* register_state);
 
 #ifdef __cplusplus
-struct thread_t;
-void x86_extended_register_context_switch(thread_t* old_thread, thread_t* new_thread);
+struct Thread;
+void x86_extended_register_context_switch(Thread* old_thread, Thread* new_thread);
 #endif
 
 void x86_set_extended_register_pt_state(bool threads);

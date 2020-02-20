@@ -641,7 +641,7 @@ void platform_mexec(mexec_asm_func mexec_assembly, memmov_ops_t* ops, uintptr_t 
 
 void platform_halt_secondary_cpus(void) {
   // Ensure the current thread is pinned to the boot CPU.
-  DEBUG_ASSERT(get_current_thread()->hard_affinity == cpu_num_to_mask(BOOT_CPU_ID));
+  DEBUG_ASSERT(get_current_thread()->hard_affinity_ == cpu_num_to_mask(BOOT_CPU_ID));
 
   // "Unplug" online secondary CPUs before halting them.
   cpu_mask_t primary = cpu_num_to_mask(BOOT_CPU_ID);

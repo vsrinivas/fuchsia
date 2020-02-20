@@ -25,7 +25,7 @@
 
 int sys_invalid_syscall(uint64_t num, uint64_t pc, uintptr_t vdso_code_address) {
   LTRACEF("invalid syscall %lu from PC %#lx vDSO code %#lx\n", num, pc, vdso_code_address);
-  thread_signal_policy_exception();
+  CurrentThread::SignalPolicyException();
   return ZX_ERR_BAD_SYSCALL;
 }
 
@@ -67,7 +67,7 @@ inline syscall_result do_syscall(uint64_t syscall_num, uint64_t pc, bool (*valid
   ktrace_tiny(TAG_SYSCALL_EXIT, (static_cast<uint32_t>(syscall_num << 8)) | arch_curr_cpu_num());
 
   // The assembler caller will re-disable interrupts at the appropriate time.
-  return {ret, thread_is_signaled(get_current_thread())};
+  return {ret, get_current_thread()->IsSignaled()};
 }
 
 syscall_result unknown_syscall(uint64_t syscall_num, uint64_t pc) {

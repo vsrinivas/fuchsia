@@ -212,16 +212,16 @@ zx_status_t acpi_transition_s_state(const zx_system_powerctl_arg_t* arg) {
     // If we're not shutting down, prepare a resume path and execute the
     // suspend on a separate thread (see comment on |suspend_thread()| for
     // explanation).
-    thread_t* t = thread_create("suspend-thread", suspend_thread,
-                                const_cast<zx_system_powerctl_arg_t*>(arg), HIGHEST_PRIORITY);
+    Thread* t = Thread::Create("suspend-thread", suspend_thread,
+                               const_cast<zx_system_powerctl_arg_t*>(arg), HIGHEST_PRIORITY);
     if (!t) {
       return ZX_ERR_NO_MEMORY;
     }
 
-    thread_resume(t);
+    t->Resume();
 
     zx_status_t retcode;
-    zx_status_t status = thread_join(t, &retcode, ZX_TIME_INFINITE);
+    zx_status_t status = t->Join(&retcode, ZX_TIME_INFINITE);
     ASSERT(status == ZX_OK);
 
     if (retcode != ZX_OK) {

@@ -197,8 +197,8 @@ zx_status_t dispatch_user_exception(uint exception_type,
                                     const arch_exception_context_t* arch_context) {
   LTRACEF("type %u, context %p\n", exception_type, arch_context);
 
-  thread_t* lk_thread = get_current_thread();
-  ThreadDispatcher* thread = lk_thread->user_thread;
+  Thread* lk_thread = get_current_thread();
+  ThreadDispatcher* thread = lk_thread->user_thread_;
   if (unlikely(!thread)) {
     // The current thread is not a user thread; bail.
     return ZX_ERR_BAD_STATE;

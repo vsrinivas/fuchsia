@@ -95,13 +95,13 @@ static void on_oom() {
       // Since killing is asynchronous, sleep for a short period for the system to quiesce. This
       // prevents us from rapidly killing more jobs than necessary. And if we don't find a
       // killable job, don't just spin since the next iteration probably won't find a one either.
-      thread_sleep_relative(ZX_MSEC(500));
+      CurrentThread::SleepRelative(ZX_MSEC(500));
       break;
 
     case OomBehavior::kReboot:
       const int kSleepSeconds = 8;
       printf("OOM: pausing for %ds after low mem signal\n", kSleepSeconds);
-      zx_status_t status = thread_sleep_relative(ZX_SEC(kSleepSeconds));
+      zx_status_t status = CurrentThread::SleepRelative(ZX_SEC(kSleepSeconds));
       if (status != ZX_OK) {
         printf("OOM: sleep failed: %d\n", status);
       }
@@ -178,10 +178,10 @@ static void memory_pressure_init() {
       panic("failed to initialize pmm reclamation: %d\n", status);
     }
 
-    auto thread = thread_create("oom-thread", oom_thread, nullptr, HIGH_PRIORITY);
+    auto thread = Thread::Create("oom-thread", oom_thread, nullptr, HIGH_PRIORITY);
     DEBUG_ASSERT(thread);
-    thread_detach(thread);
-    thread_resume(thread);
+    thread->Detach();
+    thread->Resume();
   }
 }
 

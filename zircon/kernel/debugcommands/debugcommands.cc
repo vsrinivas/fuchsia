@@ -290,7 +290,7 @@ static int cmd_sleep(int argc, const cmd_args *argv, uint32_t flags) {
       t = zx_duration_mul_int64(t, 1000);
   }
 
-  thread_sleep_relative(t);
+  CurrentThread::SleepRelative(t);
 
   return 0;
 }
@@ -306,10 +306,10 @@ static int crash_thread(void *) {
 static int cmd_crash(int argc, const cmd_args *argv, uint32_t flags) {
   if (argc > 1) {
     if (!strcmp(argv[1].str, "thread")) {
-      thread_t *t = thread_create("crasher", &crash_thread, NULL, DEFAULT_PRIORITY);
-      thread_resume(t);
+      Thread *t = Thread::Create("crasher", &crash_thread, NULL, DEFAULT_PRIORITY);
+      t->Resume();
 
-      thread_join(t, NULL, ZX_TIME_INFINITE);
+      t->Join(NULL, ZX_TIME_INFINITE);
       return 0;
     }
   }
@@ -342,7 +342,7 @@ __attribute__((noinline)) static void stomp_stack(size_t size) {
   // Neither is allowed anywhere in the kernel outside this test code.
   void *death = __builtin_alloca(size);  // OK in test-only code.
   memset(death, 0xaa, size);
-  thread_sleep_relative(ZX_USEC(1));
+  CurrentThread::SleepRelative(ZX_USEC(1));
 }
 
 static int cmd_stackstomp(int argc, const cmd_args *argv, uint32_t flags) {

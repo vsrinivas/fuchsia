@@ -44,25 +44,25 @@ ResourceOwnership BrwLock<PI>::Wake() {
       BrwLockState<PI>& state;
     };
     Context context = {ResourceOwnership::Normal, state_};
-    auto cbk = [](thread_t* woken, void* ctx) -> Action {
+    auto cbk = [](Thread* woken, void* ctx) -> Action {
       Context* context = reinterpret_cast<Context*>(ctx);
 
       if (context->ownership == ResourceOwnership::Normal) {
         // Check if target is blocked for writing and not reading
-        if (woken->state == THREAD_BLOCKED) {
+        if (woken->state_ == THREAD_BLOCKED) {
           context->state.writer_.store(woken, ktl::memory_order_relaxed);
           context->state.state_.fetch_add(-kBrwLockWaiter + kBrwLockWriter,
                                           ktl::memory_order_acq_rel);
           return Action::SelectAndAssignOwner;
         }
         // If not writing then we must be blocked for reading
-        DEBUG_ASSERT(woken->state == THREAD_BLOCKED_READ_LOCK);
+        DEBUG_ASSERT(woken->state_ == THREAD_BLOCKED_READ_LOCK);
         context->ownership = ResourceOwnership::Reader;
       }
       // Our current ownership is ResourceOwnership::Reader otherwise we would
       // have returned early
       DEBUG_ASSERT(context->ownership == ResourceOwnership::Reader);
-      if (woken->state == THREAD_BLOCKED_READ_LOCK) {
+      if (woken->state_ == THREAD_BLOCKED_READ_LOCK) {
         // We are waking readers and we found a reader, so we can wake them up and
         // search for me.
         context->state.state_.fetch_add(-kBrwLockWaiter + kBrwLockReader,
@@ -81,12 +81,12 @@ ResourceOwnership BrwLock<PI>::Wake() {
     }
     return context.ownership;
   } else {
-    thread_t* next = wait_.Peek();
+    Thread* next = wait_.Peek();
     DEBUG_ASSERT(next != NULL);
-    if (next->state == THREAD_BLOCKED_READ_LOCK) {
+    if (next->state_ == THREAD_BLOCKED_READ_LOCK) {
       while (!wait_.IsEmpty()) {
-        thread_t* next = wait_.Peek();
-        if (next->state != THREAD_BLOCKED_READ_LOCK) {
+        Thread* next = wait_.Peek();
+        if (next->state_ != THREAD_BLOCKED_READ_LOCK) {
           break;
         }
         state_.state_.fetch_add(-kBrwLockWaiter + kBrwLockReader, ktl::memory_order_acq_rel);
@@ -176,14 +176,14 @@ void BrwLock<PI>::WriteRelease() {
 
 #if LK_DEBUGLEVEL > 0
   if constexpr (PI == BrwLockEnablePi::Yes) {
-    thread_t* holder = state_.writer_.load(ktl::memory_order_relaxed);
-    thread_t* ct = get_current_thread();
+    Thread* holder = state_.writer_.load(ktl::memory_order_relaxed);
+    Thread* ct = get_current_thread();
     if (unlikely(ct != holder)) {
       panic(
           "BrwLock<PI>::WriteRelease: thread %p (%s) tried to release brwlock %p it "
           "doesn't "
           "own. Ownedby %p (%s)\n",
-          ct, ct->name, this, holder, holder ? holder->name : "none");
+          ct, ct->name_, this, holder, holder ? holder->name_ : "none");
     }
   }
 #endif
@@ -203,7 +203,7 @@ void BrwLock<PI>::WriteRelease() {
   // highest priority, and so it is fine if acquirers observe writer_ to be null
   // and 'fail' to treat us as the owner.
   if constexpr (PI == BrwLockEnablePi::Yes) {
-    thread_preempt_disable();
+    CurrentThread::PreemptDisable();
 
     state_.writer_.store(nullptr, ktl::memory_order_relaxed);
   }
@@ -215,7 +215,7 @@ void BrwLock<PI>::WriteRelease() {
   }
 
   if constexpr (PI == BrwLockEnablePi::Yes) {
-    thread_preempt_reenable();
+    CurrentThread::PreemptReenable();
   }
 }
 

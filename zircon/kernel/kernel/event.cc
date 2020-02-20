@@ -56,7 +56,7 @@ void event_destroy(event_t* e) {
 
 static zx_status_t event_wait_worker(event_t* e, const Deadline& deadline, bool interruptable,
                                      uint signal_mask) {
-  thread_t* current_thread = get_current_thread();
+  Thread* current_thread = get_current_thread();
   zx_status_t ret = ZX_OK;
 
   DEBUG_ASSERT(e->magic == EVENT_MAGIC);
@@ -64,7 +64,7 @@ static zx_status_t event_wait_worker(event_t* e, const Deadline& deadline, bool 
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-  current_thread->interruptable = interruptable;
+  current_thread->interruptable_ = interruptable;
 
   if (e->result != INT_MAX) {
     ret = e->result;
@@ -79,7 +79,7 @@ static zx_status_t event_wait_worker(event_t* e, const Deadline& deadline, bool 
     ret = wait_queue_block_etc(&e->wait, deadline, signal_mask, ResourceOwnership::Normal);
   }
 
-  current_thread->interruptable = false;
+  current_thread->interruptable_ = false;
 
   return ret;
 }

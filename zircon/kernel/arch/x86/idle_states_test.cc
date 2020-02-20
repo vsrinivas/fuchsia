@@ -19,8 +19,8 @@
 namespace {
 
 x86_idle_states_t kC1OnlyIdleStates = {
-  .states = {X86_CSTATE_C1(0)},
-  .default_state_mask = kX86IdleStateMaskC1Only,
+    .states = {X86_CSTATE_C1(0)},
+    .default_state_mask = kX86IdleStateMaskC1Only,
 };
 
 x86_idle_states_t kKabyLakeIdleStates = {
@@ -136,7 +136,7 @@ static uint8_t kGuardValue = UINT8_MAX;
 static int poke_monitor(void* arg) {
   // A short sleep ensures the main test thread has time to set up the monitor
   // and enter MWAIT.
-  thread_sleep_relative(zx_duration_from_msec(1));
+  CurrentThread::SleepRelative(zx_duration_from_msec(1));
   monitor = kGuardValue;
   return 0;
 }
@@ -156,8 +156,8 @@ bool test_enter_idle_states() {
 
       // Thread must be created and started before arming the monitor,
       // since thread creation appears to trip the monitor latch prematurely.
-      thread_t* thrd = thread_create("monitor_poker", &poke_monitor, nullptr, DEFAULT_PRIORITY);
-      thread_resume(thrd);
+      Thread* thrd = Thread::Create("monitor_poker", &poke_monitor, nullptr, DEFAULT_PRIORITY);
+      thrd->Resume();
 
       monitor = i;
       smp_mb();
@@ -166,7 +166,7 @@ bool test_enter_idle_states() {
       x86_mwait(state.MwaitHint());
 
       unittest_printf("Exiting state (%ld ns elapsed)\n", zx_time_sub_time(current_time(), start));
-      thread_join(thrd, nullptr, ZX_TIME_INFINITE);
+      thrd->Join(nullptr, ZX_TIME_INFINITE);
     }
   } else {
     unittest_printf("Skipping test; MWAIT/MONITOR not supported\n");

@@ -39,7 +39,7 @@
 
 __BEGIN_CDECLS
 
-struct thread_t;
+struct Thread;
 
 struct x86_percpu {
   /* a direct pointer to ourselves */
@@ -47,9 +47,9 @@ struct x86_percpu {
 
   /* the current thread */
 #ifdef __cplusplus
-  thread_t* current_thread;
+  Thread *current_thread;
 #else
-  struct thread_t* current_thread;
+  struct Thread *current_thread;
 #endif
 
   // The offsets of these two slots are published in
@@ -82,7 +82,7 @@ struct x86_percpu {
   uint32_t num_spinlocks;
 
   /* Last user vmm_aspace_t that was active on this core. Lazily updated. */
-  void* last_user_aspace;
+  void *last_user_aspace;
 
   /* This CPU's default TSS */
   tss_t default_tss __ALIGNED(16);
@@ -135,7 +135,7 @@ static inline uint arch_max_num_cpus(void) { return x86_num_cpus; }
 void x86_ipi_halt_handler(void *) __NO_RETURN;
 
 #ifdef __cplusplus
-void x86_secondary_entry(volatile int *aps_still_booting, thread_t *thread);
+void x86_secondary_entry(volatile int *aps_still_booting, Thread *thread);
 #endif
 
 void x86_force_halt_all_but_local_and_bsp(void);

@@ -91,7 +91,7 @@ IommuImpl::~IommuImpl() {
   // Before destroying the tables we must first unmap all entries from the device contexts as the
   // unmapping must be done with lock_ held, whilst object destruction must be done without the
   // lock beind held.
-  for (auto &table : context_tables_) {
+  for (auto& table : context_tables_) {
     table.UnmapAllFromDeviceContextsLocked();
   }
 
@@ -619,7 +619,7 @@ zx_status_t IommuImpl::WaitForValueLocked(RegType* reg,
     }
 
     zx_time_t sleep_deadline = fbl::min(zx_time_add_duration(now, kMaxSleepDuration), deadline);
-    thread_sleep(sleep_deadline);
+    CurrentThread::Sleep(sleep_deadline);
   }
   return ZX_ERR_TIMED_OUT;
 }

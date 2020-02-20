@@ -141,7 +141,7 @@ class PmmNode {
   uint64_t mem_avail_state_lower_bound_ TA_GUARDED(lock_);
   mem_avail_state_updated_callback_t mem_avail_state_callback_ TA_GUARDED(lock_);
 
-  thread_t* request_thread_ = nullptr;
+  Thread* request_thread_ = nullptr;
   ktl::atomic<bool> request_thread_live_ = true;
 
   bool free_fill_enabled_ TA_GUARDED(lock_) = false;

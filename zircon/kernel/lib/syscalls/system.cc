@@ -371,7 +371,7 @@ zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
 
   LTRACEF("zx_system_mexec allocated identity mapped page at %p\n", id_page_addr);
 
-  thread_migrate_to_cpu(BOOT_CPU_ID);
+  CurrentThread::MigrateToCpu(BOOT_CPU_ID);
 
   // We assume that when the system starts, only one CPU is running. We denote
   // this as the boot CPU.

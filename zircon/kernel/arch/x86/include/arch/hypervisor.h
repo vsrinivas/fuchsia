@@ -103,7 +103,7 @@ class Vcpu {
  private:
   Guest* guest_;
   const uint16_t vpid_;
-  const thread_t* thread_;
+  const Thread* thread_;
   ktl::atomic<bool> running_;
   LocalApicState local_apic_state_;
   PvClockState pvclock_state_;
@@ -113,7 +113,7 @@ class Vcpu {
   VmxPage vmcs_page_;
   ktl::unique_ptr<uint8_t[]> guest_extended_registers_;
 
-  Vcpu(Guest* guest, uint16_t vpid, const thread_t* thread);
+  Vcpu(Guest* guest, uint16_t vpid, const Thread* thread);
 
   void SaveGuestExtendedRegisters(uint64_t cr4);
   void RestoreGuestExtendedRegisters(uint64_t cr4);

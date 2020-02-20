@@ -350,20 +350,19 @@ class _InfoZirconThreads(gdb.Command):
     def invoke(self, arg, from_tty):
         # Do this first to make sure the previous value gets cleared out.
         # There's no way to unset a convenience var, so KISS.
-        gdb.execute("set $zx_threads = (thread_t*[1]) { 0 }")
+        gdb.execute("set $zx_threads = (Thread*[1]) { 0 }")
         tls_entry_lkuser = gdb.parse_and_eval("TLS_ENTRY_LKUSER")
         threads = _get_thread_list()
         num_threads = len(threads)
         # The array is origin-1-indexed. Have a null first entry to KISS.
-        gdb.execute(
-            "set $zx_threads = (thread_t*[%d]) { 0 }" % (num_threads + 1))
+        gdb.execute("set $zx_threads = (Thread*[%d]) { 0 }" % (num_threads + 1))
 
         # Populate the array first, before printing the summary, to make sure this
         # gets done even if there's an error during printing.
         num = 1
         for thread_ptr in threads:
             gdb.execute(
-                "set $zx_threads[%d] = (thread_t*) %u" % (num, thread_ptr))
+                "set $zx_threads[%d] = (Thread*) %u" % (num, thread_ptr))
             num += 1
 
         # Translating gdb values to python often trips over these. Heads up.
@@ -374,7 +373,7 @@ class _InfoZirconThreads(gdb.Command):
 
         print(
             "%3s %5s %-18s %-32s %s" %
-            ("Num", "Pid", "thread_t*", "Name", "State"))
+            ("Num", "Pid", "Thread*", "Name", "State"))
         # Make sure we restore these when we're done.
         try:
             user_thread_ptr_t = gdb.lookup_type("UserThread").pointer()

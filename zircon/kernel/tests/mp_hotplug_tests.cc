@@ -21,7 +21,7 @@ static int resume_cpu_test_thread(void* arg) {
 }
 
 // "Unplug" online secondary (non-BOOT) cores
-static zx_status_t unplug_all_cores(thread_t** leaked_threads) {
+static zx_status_t unplug_all_cores(Thread** leaked_threads) {
   cpu_mask_t cpumask = mp_get_online_mask() & ~cpu_num_to_mask(BOOT_CPU_ID);
   return mp_unplug_cpu_mask(cpumask, leaked_threads);
 }
@@ -57,9 +57,9 @@ static bool mp_hotplug_test() {
     printf("skipping test mp_hotplug, not enough online cpus\n");
     END_TEST;
   }
-  thread_migrate_to_cpu(BOOT_CPU_ID);
+  CurrentThread::MigrateToCpu(BOOT_CPU_ID);
   // "Unplug" online secondary (non-BOOT) cores
-  thread_t* leaked_threads[SMP_MAX_CPUS] = {};
+  Thread* leaked_threads[SMP_MAX_CPUS] = {};
   ASSERT_EQ(unplug_all_cores(leaked_threads), ZX_OK, "unplugging all cores failed");
   for (uint i = 0; i < num_cores; i++) {
     if (i == BOOT_CPU_ID) {
@@ -70,18 +70,18 @@ static bool mp_hotplug_test() {
     // Create a thread, affine it to the core just hotplugged
     // and make sure the thread does get scheduled there.
     uint running_core;
-    thread_t* nt = thread_create("resume-test-thread", resume_cpu_test_thread, &running_core,
-                                 DEFAULT_PRIORITY);
+    Thread* nt = Thread::Create("resume-test-thread", resume_cpu_test_thread, &running_core,
+                                DEFAULT_PRIORITY);
     ASSERT_NE(nullptr, nt, "Thread create failed");
-    thread_set_cpu_affinity(nt, cpu_num_to_mask(i));
-    thread_resume(nt);
-    ASSERT_EQ(thread_join(nt, nullptr, ZX_TIME_INFINITE), ZX_OK, "thread join failed");
+    nt->SetCpuAffinity(cpu_num_to_mask(i));
+    nt->Resume();
+    ASSERT_EQ(nt->Join(nullptr, ZX_TIME_INFINITE), ZX_OK, "thread join failed");
     ASSERT_EQ(i, running_core, "Thread not running on hotplugged core");
   }
 
   for (unsigned i = 0; i < fbl::count_of(leaked_threads); i++) {
     if (leaked_threads[i]) {
-      thread_forget(leaked_threads[i]);
+      leaked_threads[i]->Forget();
     }
   }
 

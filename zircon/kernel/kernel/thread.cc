@@ -74,8 +74,8 @@ static struct list_node thread_list = LIST_INITIAL_VALUE(thread_list);
 spin_lock_t thread_lock __CPU_ALIGN_EXCLUSIVE = SPIN_LOCK_INITIAL_VALUE;
 
 // local routines
-static void thread_exit_locked(thread_t* current_thread, int retcode) __NO_RETURN;
-static void thread_do_suspend(void);
+static void thread_exit_locked(Thread* current_thread, int retcode) __NO_RETURN;
+static void thread_do_suspend();
 
 const char* ToString(enum thread_state state) {
   switch (state) {
@@ -100,7 +100,7 @@ const char* ToString(enum thread_state state) {
   }
 }
 
-static void init_thread_lock_state(thread_t* t) {
+static void init_thread_lock_state(Thread* t) {
 #if WITH_LOCK_DEP
   auto* state = reinterpret_cast<lockdep::ThreadLockState*>(&t->lock_state);
   lockdep::SystemInitThreadLockState(state);
@@ -108,16 +108,16 @@ static void init_thread_lock_state(thread_t* t) {
 }
 
 // Default constructor/destructor.
-thread_t::thread_t() {}
-thread_t::~thread_t() {
-  DEBUG_ASSERT(blocking_wait_queue == nullptr);
+Thread::Thread() {}
+Thread::~Thread() {
+  DEBUG_ASSERT(blocking_wait_queue_ == nullptr);
   // owned_wait_queues is a fbl:: list of unmanaged pointers.  It will debug
   // assert if it is not empty when it destructs; we do not need to do so
   // here.
 }
 
-void init_thread_struct(thread_t* t, const char* name) {
-  memset(t, 0, sizeof(thread_t));
+void init_thread_struct(Thread* t, const char* name) {
+  memset(t, 0, sizeof(Thread));
 
   // Placement new to trigger any special construction requirements of the
   // thread_t structure.
@@ -125,28 +125,28 @@ void init_thread_struct(thread_t* t, const char* name) {
   // TODO(johngro): now that we have converted thread_t over to C++, consider
   // switching to using C++ constructors/destructors and new/delete to handle
   // all of this instead of using init_thread_struct and free_thread_resources
-  new (t) thread_t();
+  new (t) Thread();
 
-  t->magic = THREAD_MAGIC;
-  strlcpy(t->name, name, sizeof(t->name));
-  wait_queue_init(&t->retcode_wait_queue);
+  t->magic_ = THREAD_MAGIC;
+  strlcpy(t->name_, name, sizeof(t->name_));
+  wait_queue_init(&t->retcode_wait_queue_);
   init_thread_lock_state(t);
-  t->hard_affinity = CPU_MASK_ALL;
-  t->soft_affinity = CPU_MASK_ALL;
+  t->hard_affinity_ = CPU_MASK_ALL;
+  t->soft_affinity_ = CPU_MASK_ALL;
 }
 
-static void initial_thread_func(void) TA_REQ(thread_lock) __NO_RETURN;
-static void initial_thread_func(void) {
+static void initial_thread_func() TA_REQ(thread_lock) __NO_RETURN;
+static void initial_thread_func() {
   int ret;
 
   // release the thread lock that was implicitly held across the reschedule
   spin_unlock(&thread_lock);
   arch_enable_ints();
 
-  thread_t* ct = get_current_thread();
-  ret = (ct->arg) ? ct->entry(ct->arg) : ct->entry(ct->user_thread);
+  Thread* ct = get_current_thread();
+  ret = (ct->arg_) ? ct->entry_(ct->arg_) : ct->entry_(ct->user_thread_);
 
-  thread_exit(ret);
+  CurrentThread::Exit(ret);
 }
 
 /**
@@ -179,12 +179,12 @@ static void initial_thread_func(void) {
  *
  * @return  Pointer to thread object, or NULL on failure.
  */
-thread_t* thread_create_etc(thread_t* t, const char* name, thread_start_routine entry, void* arg,
-                            int priority, thread_trampoline_routine alt_trampoline) {
+Thread* Thread::CreateEtc(Thread* t, const char* name, thread_start_routine entry, void* arg,
+                          int priority, thread_trampoline_routine alt_trampoline) {
   unsigned int flags = 0;
 
   if (!t) {
-    t = static_cast<thread_t*>(malloc(sizeof(thread_t)));
+    t = static_cast<Thread*>(malloc(sizeof(Thread)));
     if (!t) {
       return NULL;
     }
@@ -193,21 +193,21 @@ thread_t* thread_create_etc(thread_t* t, const char* name, thread_start_routine 
 
   init_thread_struct(t, name);
 
-  t->entry = entry;
-  t->arg = arg;
-  t->state = THREAD_INITIAL;
-  t->signals = 0;
-  t->blocked_status = ZX_OK;
-  t->interruptable = false;
-  t->curr_cpu = INVALID_CPU;
-  t->last_cpu = INVALID_CPU;
+  t->entry_ = entry;
+  t->arg_ = arg;
+  t->state_ = THREAD_INITIAL;
+  t->signals_ = 0;
+  t->blocked_status_ = ZX_OK;
+  t->interruptable_ = false;
+  t->curr_cpu_ = INVALID_CPU;
+  t->last_cpu_ = INVALID_CPU;
 
-  t->retcode = 0;
-  wait_queue_init(&t->retcode_wait_queue);
+  t->retcode_ = 0;
+  wait_queue_init(&t->retcode_wait_queue_);
 
   sched_init_thread(t, priority);
 
-  zx_status_t status = vm_allocate_kstack(&t->stack);
+  zx_status_t status = vm_allocate_kstack(&t->stack_);
   if (status != ZX_OK) {
     if (flags & THREAD_FLAG_FREE_STRUCT) {
       free(t);
@@ -216,7 +216,7 @@ thread_t* thread_create_etc(thread_t* t, const char* name, thread_start_routine 
   }
 
   // save whether or not we need to free the thread struct and/or stack
-  t->flags = flags;
+  t->flags_ = flags;
 
   if (likely(alt_trampoline == NULL)) {
     alt_trampoline = initial_thread_func;
@@ -228,42 +228,42 @@ thread_t* thread_create_etc(thread_t* t, const char* name, thread_start_routine 
   // add it to the global thread list
   {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    list_add_head(&thread_list, &t->thread_list_node);
+    list_add_head(&thread_list, &t->thread_list_node_);
   }
 
   kcounter_add(thread_create_count, 1);
   return t;
 }
 
-thread_t* thread_create(const char* name, thread_start_routine entry, void* arg, int priority) {
-  return thread_create_etc(NULL, name, entry, arg, priority, NULL);
+Thread* Thread::Create(const char* name, thread_start_routine entry, void* arg, int priority) {
+  return Thread::CreateEtc(NULL, name, entry, arg, priority, NULL);
 }
 
-static void free_thread_resources(thread_t* t) {
-  if (t->stack.vmar != nullptr) {
+static void free_thread_resources(Thread* t) {
+  if (t->stack_.vmar != nullptr) {
 #if __has_feature(safe_stack)
-    DEBUG_ASSERT(t->stack.unsafe_vmar != nullptr);
+    DEBUG_ASSERT(t->stack_.unsafe_vmar != nullptr);
 #endif
 #if __has_feature(shadow_call_stack)
-    DEBUG_ASSERT(t->stack.shadow_call_vmar != nullptr);
+    DEBUG_ASSERT(t->stack_.shadow_call_vmar != nullptr);
 #endif
-    zx_status_t status = vm_free_kstack(&t->stack);
+    zx_status_t status = vm_free_kstack(&t->stack_);
     DEBUG_ASSERT(status == ZX_OK);
   }
 
   // call the tls callback for each slot as long there is one
   for (uint ix = 0; ix != THREAD_MAX_TLS_ENTRY; ++ix) {
-    if (t->tls_callback[ix]) {
-      t->tls_callback[ix](t->tls[ix]);
+    if (t->tls_callback_[ix]) {
+      t->tls_callback_[ix](t->tls_[ix]);
     }
   }
 
   // free the thread structure itself.  Manually trigger the struct's
   // destructor so that DEBUG_ASSERTs present in the owned_wait_queues member
   // get triggered.
-  bool thread_needs_free = (t->flags & THREAD_FLAG_FREE_STRUCT) != 0;
-  t->magic = 0;
-  t->~thread_t();
+  bool thread_needs_free = (t->flags_ & THREAD_FLAG_FREE_STRUCT) != 0;
+  t->magic_ = 0;
+  t->~Thread();
   if (thread_needs_free) {
     free(t);
   }
@@ -272,24 +272,18 @@ static void free_thread_resources(thread_t* t) {
 /**
  * @brief Flag a thread as real time
  *
- * @param t Thread to flag
- *
  * @return ZX_OK on success
  */
-zx_status_t thread_set_real_time(thread_t* t) {
-  if (!t) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+zx_status_t Thread::SetRealTime() {
+  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
 
   {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    if (t == get_current_thread()) {
+    if (this == get_current_thread()) {
       // if we're currently running, cancel the preemption timer.
       timer_preempt_cancel();
     }
-    t->flags |= THREAD_FLAG_REAL_TIME;
+    flags_ |= THREAD_FLAG_REAL_TIME;
   }
 
   return ZX_OK;
@@ -301,11 +295,9 @@ zx_status_t thread_set_real_time(thread_t* t) {
  * This function is called to start a thread which has just been
  * created with thread_create() or which has been suspended with
  * thread_suspend(). It can not fail.
- *
- * @param t  Thread to resume
  */
-void thread_resume(thread_t* t) {
-  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+void Thread::Resume() {
+  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
 
   bool ints_disabled = arch_ints_disabled();
   bool resched = false;
@@ -316,18 +308,18 @@ void thread_resume(thread_t* t) {
   {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-    if (t->state == THREAD_DEATH) {
+    if (state_ == THREAD_DEATH) {
       // The thread is dead, resuming it is a no-op.
       return;
     }
 
     // Clear the suspend signal in case there is a pending suspend
-    t->signals &= ~THREAD_SIGNAL_SUSPEND;
+    signals_ &= ~THREAD_SIGNAL_SUSPEND;
 
-    if (t->state == THREAD_INITIAL || t->state == THREAD_SUSPENDED) {
+    if (state_ == THREAD_INITIAL || state_ == THREAD_SUSPENDED) {
       // wake up the new thread, putting it in a run queue on a cpu. reschedule if the local
       // cpu run queue was modified
-      bool local_resched = sched_unblock(t);
+      bool local_resched = sched_unblock(this);
       if (resched && local_resched) {
         sched_reschedule();
       }
@@ -337,36 +329,34 @@ void thread_resume(thread_t* t) {
   kcounter_add(thread_resume_count, 1);
 }
 
-zx_status_t thread_detach_and_resume(thread_t* t) {
-  zx_status_t status = thread_detach(t);
+zx_status_t Thread::DetachAndResume() {
+  zx_status_t status = Detach();
   if (status != ZX_OK) {
     return status;
   }
-  thread_resume(t);
+  Resume();
   return ZX_OK;
 }
 
 /**
  * @brief  Suspend an initialized/ready/running thread
  *
- * @param t  Thread to suspend
- *
  * @return ZX_OK on success, ZX_ERR_BAD_STATE if the thread is dead
  */
-zx_status_t thread_suspend(thread_t* t) {
-  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
-  DEBUG_ASSERT(!thread_is_idle(t));
+zx_status_t Thread::Suspend() {
+  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  DEBUG_ASSERT(!IsIdle());
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-  if (t->state == THREAD_DEATH) {
+  if (state_ == THREAD_DEATH) {
     return ZX_ERR_BAD_STATE;
   }
 
-  t->signals |= THREAD_SIGNAL_SUSPEND;
+  signals_ |= THREAD_SIGNAL_SUSPEND;
 
   bool local_resched = false;
-  switch (t->state) {
+  switch (state_) {
     case THREAD_DEATH:
       // This should be unreachable because this state was handled above.
       panic("Unexpected thread state");
@@ -379,7 +369,7 @@ zx_status_t thread_suspend(thread_t* t) {
       // already executed ThreadDispatcher::Start() so all the userspace
       // entry data has been initialized and will be ready to go as soon as
       // the thread is unsuspended.
-      local_resched = sched_unblock(t);
+      local_resched = sched_unblock(this);
       break;
     case THREAD_READY:
       // thread is ready to run and not blocked or suspended.
@@ -390,7 +380,7 @@ zx_status_t thread_suspend(thread_t* t) {
       // The following call is not essential.  It just makes the
       // thread suspension happen sooner rather than at the next
       // timer interrupt or syscall.
-      mp_reschedule(cpu_num_to_mask(t->curr_cpu), 0);
+      mp_reschedule(cpu_num_to_mask(curr_cpu_), 0);
       break;
     case THREAD_SUSPENDED:
       // thread is suspended already
@@ -398,16 +388,16 @@ zx_status_t thread_suspend(thread_t* t) {
     case THREAD_BLOCKED:
     case THREAD_BLOCKED_READ_LOCK:
       // thread is blocked on something and marked interruptable
-      if (t->interruptable) {
-        wait_queue_unblock_thread(t, ZX_ERR_INTERNAL_INTR_RETRY);
+      if (interruptable_) {
+        wait_queue_unblock_thread(this, ZX_ERR_INTERNAL_INTR_RETRY);
       }
       break;
     case THREAD_SLEEPING:
       // thread is sleeping
-      if (t->interruptable) {
-        t->blocked_status = ZX_ERR_INTERNAL_INTR_RETRY;
+      if (interruptable_) {
+        blocked_status_ = ZX_ERR_INTERNAL_INTR_RETRY;
 
-        local_resched = sched_unblock(t);
+        local_resched = sched_unblock(this);
       }
       break;
   }
@@ -427,71 +417,71 @@ zx_status_t thread_suspend(thread_t* t) {
 // we can unwind the stack in order to get the state of userland's
 // callee-saved registers at the point where userland invoked the
 // syscall.
-void thread_signal_policy_exception(void) {
-  thread_t* t = get_current_thread();
+void CurrentThread::SignalPolicyException() {
+  Thread* t = get_current_thread();
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  t->signals |= THREAD_SIGNAL_POLICY_EXCEPTION;
+  t->signals_ |= THREAD_SIGNAL_POLICY_EXCEPTION;
 }
 
-zx_status_t thread_join(thread_t* t, int* retcode, zx_time_t deadline) {
-  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+zx_status_t Thread::Join(int* out_retcode, zx_time_t deadline) {
+  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
 
   {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-    if (t->flags & THREAD_FLAG_DETACHED) {
+    if (flags_ & THREAD_FLAG_DETACHED) {
       // the thread is detached, go ahead and exit
       return ZX_ERR_BAD_STATE;
     }
 
     // wait for the thread to die
-    if (t->state != THREAD_DEATH) {
-      zx_status_t status = wait_queue_block(&t->retcode_wait_queue, deadline);
+    if (state_ != THREAD_DEATH) {
+      zx_status_t status = wait_queue_block(&retcode_wait_queue_, deadline);
       if (status != ZX_OK) {
         return status;
       }
     }
 
-    DEBUG_ASSERT(t->magic == THREAD_MAGIC);
-    DEBUG_ASSERT(t->state == THREAD_DEATH);
-    DEBUG_ASSERT(t->blocking_wait_queue == NULL);
-    DEBUG_ASSERT(!list_in_list(&t->queue_node));
+    DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+    DEBUG_ASSERT(state_ == THREAD_DEATH);
+    DEBUG_ASSERT(blocking_wait_queue_ == NULL);
+    DEBUG_ASSERT(!list_in_list(&queue_node_));
 
     // save the return code
-    if (retcode) {
-      *retcode = t->retcode;
+    if (out_retcode) {
+      *out_retcode = retcode_;
     }
 
     // remove it from the master thread list
-    list_delete(&t->thread_list_node);
+    list_delete(&thread_list_node_);
 
     // clear the structure's magic
-    t->magic = 0;
+    magic_ = 0;
   }
 
-  free_thread_resources(t);
+  free_thread_resources(this);
 
   kcounter_add(thread_join_count, 1);
 
   return ZX_OK;
 }
 
-zx_status_t thread_detach(thread_t* t) {
-  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+zx_status_t Thread::Detach() {
+  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-  // if another thread is blocked inside thread_join() on this thread,
+  // if another thread is blocked inside Join() on this thread,
   // wake them up with a specific return code
-  wait_queue_wake_all(&t->retcode_wait_queue, false, ZX_ERR_BAD_STATE);
+  wait_queue_wake_all(&retcode_wait_queue_, false, ZX_ERR_BAD_STATE);
 
   // if it's already dead, then just do what join would have and exit
-  if (t->state == THREAD_DEATH) {
-    t->flags &= ~THREAD_FLAG_DETACHED;  // makes sure thread_join continues
+  if (state_ == THREAD_DEATH) {
+    flags_ &= ~THREAD_FLAG_DETACHED;  // makes sure Join continues
     guard.Release();
-    return thread_join(t, NULL, 0);
+    return Join(NULL, 0);
   } else {
-    t->flags |= THREAD_FLAG_DETACHED;
+    flags_ |= THREAD_FLAG_DETACHED;
     return ZX_OK;
   }
 }
@@ -499,10 +489,10 @@ zx_status_t thread_detach(thread_t* t) {
 // called back in the DPC worker thread to free the stack and/or the thread structure
 // itself for a thread that is exiting on its own.
 static void thread_free_dpc(struct dpc* dpc) {
-  thread_t* t = (thread_t*)dpc->arg;
+  Thread* t = (Thread*)dpc->arg;
 
-  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
-  DEBUG_ASSERT(t->state == THREAD_DEATH);
+  DEBUG_ASSERT(t->magic_ == THREAD_MAGIC);
+  DEBUG_ASSERT(t->state_ == THREAD_DEATH);
 
   // grab and release the thread lock, which effectively serializes us with
   // the thread that is queuing itself for destruction.
@@ -514,7 +504,7 @@ static void thread_free_dpc(struct dpc* dpc) {
   free_thread_resources(t);
 }
 
-__NO_RETURN static void thread_exit_locked(thread_t* current_thread, int retcode)
+__NO_RETURN static void thread_exit_locked(Thread* current_thread, int retcode)
     TA_REQ(thread_lock) {
   // create a dpc on the stack to queue up a free.
   // must be put at top scope in this function to force the compiler to keep it from
@@ -522,8 +512,8 @@ __NO_RETURN static void thread_exit_locked(thread_t* current_thread, int retcode
   dpc_t free_dpc = DPC_INITIAL_VALUE;
 
   // enter the dead state
-  current_thread->state = THREAD_DEATH;
-  current_thread->retcode = retcode;
+  current_thread->state_ = THREAD_DEATH;
+  current_thread->retcode_ = retcode;
 
   // Make sure that we have released any wait queues we may have owned when we
   // exited.  TODO(johngro):  Should we log a warning or take any other
@@ -536,12 +526,12 @@ __NO_RETURN static void thread_exit_locked(thread_t* current_thread, int retcode
   OwnedWaitQueue::DisownAllQueues(current_thread);
 
   // if we're detached, then do our teardown here
-  if (current_thread->flags & THREAD_FLAG_DETACHED) {
+  if (current_thread->flags_ & THREAD_FLAG_DETACHED) {
     // remove it from the master thread list
-    list_delete(&current_thread->thread_list_node);
+    list_delete(&current_thread->thread_list_node_);
 
     // queue a dpc to free the stack and, optionally, the thread structure
-    if (current_thread->stack.base || (current_thread->flags & THREAD_FLAG_FREE_STRUCT)) {
+    if (current_thread->stack_.base || (current_thread->flags_ & THREAD_FLAG_FREE_STRUCT)) {
       free_dpc.func = thread_free_dpc;
       free_dpc.arg = (void*)current_thread;
       zx_status_t status = dpc_queue_thread_locked(&free_dpc);
@@ -549,7 +539,7 @@ __NO_RETURN static void thread_exit_locked(thread_t* current_thread, int retcode
     }
   } else {
     // signal if anyone is waiting
-    wait_queue_wake_all(&current_thread->retcode_wait_queue, false, 0);
+    wait_queue_wake_all(&current_thread->retcode_wait_queue_, false, 0);
   }
 
   // reschedule
@@ -567,19 +557,19 @@ __NO_RETURN static void thread_exit_locked(thread_t* current_thread, int retcode
  *
  * This will free any resources allocated by thread_create.
  */
-void thread_forget(thread_t* t) {
+void Thread::Forget() {
   {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-    __UNUSED thread_t* current_thread = get_current_thread();
-    DEBUG_ASSERT(current_thread != t);
+    __UNUSED Thread* current_thread = get_current_thread();
+    DEBUG_ASSERT(current_thread != this);
 
-    list_delete(&t->thread_list_node);
+    list_delete(&thread_list_node_);
   }
 
-  DEBUG_ASSERT(!list_in_list(&t->queue_node));
+  DEBUG_ASSERT(!list_in_list(&queue_node_));
 
-  free_thread_resources(t);
+  free_thread_resources(this);
 }
 
 /**
@@ -589,16 +579,16 @@ void thread_forget(thread_t* t) {
  *
  * This function does not return.
  */
-void thread_exit(int retcode) {
-  thread_t* current_thread = get_current_thread();
+void CurrentThread::Exit(int retcode) {
+  Thread* current_thread = get_current_thread();
 
-  DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
-  DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
-  DEBUG_ASSERT(!thread_is_idle(current_thread));
+  DEBUG_ASSERT(current_thread->magic_ == THREAD_MAGIC);
+  DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
+  DEBUG_ASSERT(!current_thread->IsIdle());
 
-  if (current_thread->user_thread) {
+  if (current_thread->user_thread_) {
     DEBUG_ASSERT(!arch_ints_disabled() || !spin_lock_held(&thread_lock));
-    current_thread->user_thread->Exiting();
+    current_thread->user_thread_->Exiting();
   }
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
@@ -606,8 +596,8 @@ void thread_exit(int retcode) {
 }
 
 // kill a thread
-void thread_kill(thread_t* t) {
-  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+void Thread::Kill() {
+  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
@@ -615,19 +605,19 @@ void thread_kill(thread_t* t) {
   // NOTE: it's not important to do this atomically, since we're inside
   // the thread lock, but go ahead and flush it out to memory to avoid the amount
   // of races if another thread is looking at this.
-  t->signals |= THREAD_SIGNAL_KILL;
+  signals_ |= THREAD_SIGNAL_KILL;
   smp_mb();
 
   bool local_resched = false;
 
   // we are killing ourself
-  if (t == get_current_thread()) {
+  if (this == get_current_thread()) {
     return;
   }
 
   // general logic is to wake up the thread so it notices it had a signal delivered to it
 
-  switch (t->state) {
+  switch (state_) {
     case THREAD_INITIAL:
       // thread hasn't been started yet.
       // not really safe to wake it up, since it's only in this state because it's under
@@ -643,25 +633,25 @@ void thread_kill(thread_t* t) {
       // The following call is not essential.  It just makes the
       // thread termination happen sooner rather than at the next
       // timer interrupt or syscall.
-      mp_reschedule(cpu_num_to_mask(t->curr_cpu), 0);
+      mp_reschedule(cpu_num_to_mask(curr_cpu_), 0);
       break;
     case THREAD_SUSPENDED:
       // thread is suspended, resume it so it can get the kill signal
-      local_resched = sched_unblock(t);
+      local_resched = sched_unblock(this);
       break;
     case THREAD_BLOCKED:
     case THREAD_BLOCKED_READ_LOCK:
       // thread is blocked on something and marked interruptable
-      if (t->interruptable) {
-        wait_queue_unblock_thread(t, ZX_ERR_INTERNAL_INTR_KILLED);
+      if (interruptable_) {
+        wait_queue_unblock_thread(this, ZX_ERR_INTERNAL_INTR_KILLED);
       }
       break;
     case THREAD_SLEEPING:
       // thread is sleeping
-      if (t->interruptable) {
-        t->blocked_status = ZX_ERR_INTERNAL_INTR_KILLED;
+      if (interruptable_) {
+        blocked_status_ = ZX_ERR_INTERNAL_INTR_KILLED;
 
-        local_resched = sched_unblock(t);
+        local_resched = sched_unblock(this);
       }
       break;
     case THREAD_DEATH:
@@ -675,14 +665,14 @@ void thread_kill(thread_t* t) {
   }
 }
 
-cpu_mask_t thread_get_cpu_affinity(const thread_t* t) {
-  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+cpu_mask_t Thread::GetCpuAffinity() const {
+  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  return t->hard_affinity;
+  return hard_affinity_;
 }
 
-void thread_set_cpu_affinity(thread_t* t, cpu_mask_t affinity) {
-  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+void Thread::SetCpuAffinity(cpu_mask_t affinity) {
+  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
   DEBUG_ASSERT_MSG(
       (affinity & mp_get_active_mask()) != 0,
       "Attempted to set affinity mask to %#x, which has no overlap of active CPUs %#x.", affinity,
@@ -691,42 +681,42 @@ void thread_set_cpu_affinity(thread_t* t, cpu_mask_t affinity) {
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
   // set the affinity mask
-  t->hard_affinity = affinity;
+  hard_affinity_ = affinity;
 
   // let the scheduler deal with it
-  sched_migrate(t);
+  sched_migrate(this);
 }
 
-void thread_set_soft_cpu_affinity(thread_t* t, cpu_mask_t affinity) {
-  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+void Thread::SetSoftCpuAffinity(cpu_mask_t affinity) {
+  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
   // set the affinity mask
-  t->soft_affinity = affinity;
+  soft_affinity_ = affinity;
 
   // let the scheduler deal with it
-  sched_migrate(t);
+  sched_migrate(this);
 }
 
-cpu_mask_t thread_get_soft_cpu_affinity(const thread_t* t) {
-  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+cpu_mask_t Thread::GetSoftCpuAffinity() const {
+  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  return t->soft_affinity;
+  return soft_affinity_;
 }
 
-void thread_migrate_to_cpu(const cpu_num_t target_cpu) {
-  thread_set_cpu_affinity(get_current_thread(), cpu_num_to_mask(target_cpu));
+void CurrentThread::MigrateToCpu(const cpu_num_t target_cpu) {
+  get_current_thread()->SetCpuAffinity(cpu_num_to_mask(target_cpu));
 }
 
 // Returns true if it decides to kill the thread. The thread_lock must be held
 // when calling this function.
-static bool check_kill_signal(thread_t* current_thread) TA_REQ(thread_lock) {
+static bool check_kill_signal(Thread* current_thread) TA_REQ(thread_lock) {
   DEBUG_ASSERT(arch_ints_disabled());
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-  if (current_thread->signals & THREAD_SIGNAL_KILL) {
+  if (current_thread->signals_ & THREAD_SIGNAL_KILL) {
     // Ensure we don't recurse into thread_exit.
-    DEBUG_ASSERT(current_thread->state != THREAD_DEATH);
+    DEBUG_ASSERT(current_thread->state_ != THREAD_DEATH);
     return true;
   } else {
     return false;
@@ -734,16 +724,16 @@ static bool check_kill_signal(thread_t* current_thread) TA_REQ(thread_lock) {
 }
 
 // finish suspending the current thread
-static void thread_do_suspend(void) {
-  thread_t* current_thread = get_current_thread();
+static void thread_do_suspend() {
+  Thread* current_thread = get_current_thread();
   // Note: After calling this callback, we must not return without
   // calling the callback with THREAD_USER_STATE_RESUME.  That is
   // because those callbacks act as barriers which control when it is
   // safe for the zx_thread_read_state()/zx_thread_write_state()
   // syscalls to access the userland register state kept by thread_t.
-  if (current_thread->user_thread) {
+  if (current_thread->user_thread_) {
     DEBUG_ASSERT(!arch_ints_disabled() || !spin_lock_held(&thread_lock));
-    current_thread->user_thread->Suspending();
+    current_thread->user_thread_->Suspending();
   }
 
   {
@@ -752,14 +742,14 @@ static void thread_do_suspend(void) {
     // make sure we haven't been killed while the lock was dropped for the user callback
     if (check_kill_signal(current_thread)) {
       guard.Release();
-      thread_exit(0);
+      CurrentThread::Exit(0);
     }
 
     // Make sure the suspend signal wasn't cleared while we were running the
     // callback.
-    if (current_thread->signals & THREAD_SIGNAL_SUSPEND) {
-      current_thread->state = THREAD_SUSPENDED;
-      current_thread->signals &= ~THREAD_SIGNAL_SUSPEND;
+    if (current_thread->signals_ & THREAD_SIGNAL_SUSPEND) {
+      current_thread->state_ = THREAD_SUSPENDED;
+      current_thread->signals_ &= ~THREAD_SIGNAL_SUSPEND;
 
       // directly invoke the context switch, since we've already manipulated this thread's state
       sched_resched_internal();
@@ -770,46 +760,46 @@ static void thread_do_suspend(void) {
       // resume the thread.
       if (check_kill_signal(current_thread)) {
         guard.Release();
-        thread_exit(0);
+        CurrentThread::Exit(0);
       }
     }
   }
 
-  if (current_thread->user_thread) {
+  if (current_thread->user_thread_) {
     DEBUG_ASSERT(!arch_ints_disabled() || !spin_lock_held(&thread_lock));
-    current_thread->user_thread->Resuming();
+    current_thread->user_thread_->Resuming();
   }
 }
 
-bool thread_is_user_state_saved_locked(thread_t* thread) {
+bool thread_is_user_state_saved_locked(Thread* thread) {
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
-  return thread->user_state_saved;
+  return thread->user_state_saved_;
 }
 
-[[nodiscard]] static bool thread_save_user_state_locked(thread_t* thread) {
+[[nodiscard]] static bool thread_save_user_state_locked(Thread* thread) {
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
   DEBUG_ASSERT(thread == get_current_thread());
-  DEBUG_ASSERT(thread->user_thread != nullptr);
+  DEBUG_ASSERT(thread->user_thread_ != nullptr);
 
-  if (thread->user_state_saved) {
+  if (thread->user_state_saved_) {
     return false;
   }
-  thread->user_state_saved = true;
+  thread->user_state_saved_ = true;
   arch_save_user_state(thread);
   return true;
 }
 
-static void thread_restore_user_state_locked(thread_t* thread) {
+static void thread_restore_user_state_locked(Thread* thread) {
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
   DEBUG_ASSERT(thread == get_current_thread());
-  DEBUG_ASSERT(thread->user_thread != nullptr);
+  DEBUG_ASSERT(thread->user_thread_ != nullptr);
 
-  DEBUG_ASSERT(thread->user_state_saved);
-  thread->user_state_saved = false;
+  DEBUG_ASSERT(thread->user_state_saved_);
+  thread->user_state_saved_ = false;
   arch_restore_user_state(thread);
 }
 
-ScopedThreadExceptionContext::ScopedThreadExceptionContext(thread_t* thread,
+ScopedThreadExceptionContext::ScopedThreadExceptionContext(Thread* thread,
                                                            const arch_exception_context_t* context)
     : thread_(thread), context_(context) {
   DEBUG_ASSERT(thread == get_current_thread());
@@ -833,9 +823,9 @@ ScopedThreadExceptionContext::~ScopedThreadExceptionContext() {
 }
 
 // check for any pending signals and handle them
-void thread_process_pending_signals(GeneralRegsSource source, void* gregs) {
-  thread_t* current_thread = get_current_thread();
-  if (likely(current_thread->signals == 0)) {
+void CurrentThread::ProcessPendingSignals(GeneralRegsSource source, void* gregs) {
+  Thread* current_thread = get_current_thread();
+  if (likely(current_thread->signals_ == 0)) {
     return;
   }
 
@@ -845,7 +835,7 @@ void thread_process_pending_signals(GeneralRegsSource source, void* gregs) {
   // This thread is about to be killed, raise an exception, or become suspended.  If this is a user
   // thread, these are all debugger-visible actions.  Save the general registers so that a debugger
   // may access them.
-  const bool has_user_thread = current_thread->user_thread != nullptr;
+  const bool has_user_thread = current_thread->user_thread_ != nullptr;
   if (has_user_thread) {
     arch_set_suspended_general_regs(current_thread, source, gregs);
   }
@@ -858,12 +848,12 @@ void thread_process_pending_signals(GeneralRegsSource source, void* gregs) {
   if (check_kill_signal(current_thread)) {
     guard.Release();
     cleanup_suspended_general_regs.cancel();
-    thread_exit(0);
+    CurrentThread::Exit(0);
   }
 
   // Report any policy exceptions raised by syscalls.
-  if (has_user_thread && (current_thread->signals & THREAD_SIGNAL_POLICY_EXCEPTION)) {
-    current_thread->signals &= ~THREAD_SIGNAL_POLICY_EXCEPTION;
+  if (has_user_thread && (current_thread->signals_ & THREAD_SIGNAL_POLICY_EXCEPTION)) {
+    current_thread->signals_ &= ~THREAD_SIGNAL_POLICY_EXCEPTION;
     guard.Release();
 
     zx_status_t status = arch_dispatch_user_policy_exception();
@@ -873,8 +863,8 @@ void thread_process_pending_signals(GeneralRegsSource source, void* gregs) {
     return;
   }
 
-  if (current_thread->signals & THREAD_SIGNAL_SUSPEND) {
-    DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
+  if (current_thread->signals_ & THREAD_SIGNAL_SUSPEND) {
+    DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
     // This thread has been asked to suspend.  If it has a user mode component we need to save the
     // user register state prior to calling |thread_do_suspend| so that a debugger may access it
     // while the thread is suspended.
@@ -906,11 +896,11 @@ void thread_process_pending_signals(GeneralRegsSource source, void* gregs) {
  * This function will return at some later time. Possibly immediately if
  * no other threads are waiting to execute.
  */
-void thread_yield(void) {
-  __UNUSED thread_t* current_thread = get_current_thread();
+void CurrentThread::Yield() {
+  __UNUSED Thread* current_thread = get_current_thread();
 
-  DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
-  DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
+  DEBUG_ASSERT(current_thread->magic_ == THREAD_MAGIC);
+  DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
@@ -925,14 +915,14 @@ void thread_yield(void) {
  * This function places the current thread at the head of the run
  * queue and then yields the cpu to another thread.
  */
-void thread_preempt(void) {
-  thread_t* current_thread = get_current_thread();
+void CurrentThread::Preempt() {
+  Thread* current_thread = get_current_thread();
 
-  DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
-  DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
+  DEBUG_ASSERT(current_thread->magic_ == THREAD_MAGIC);
+  DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
-  if (!thread_is_idle(current_thread)) {
+  if (!current_thread->IsIdle()) {
     // only track when a meaningful preempt happens
     CPU_STATS_INC(irq_preempts);
   }
@@ -949,11 +939,11 @@ void thread_preempt(void) {
  * queue and then yields the cpu to another thread. Similar to
  * thread_preempt, but intended to be used at non interrupt context.
  */
-void thread_reschedule(void) {
-  thread_t* current_thread = get_current_thread();
+void CurrentThread::Reschedule() {
+  Thread* current_thread = get_current_thread();
 
-  DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
-  DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
+  DEBUG_ASSERT(current_thread->magic_ == THREAD_MAGIC);
+  DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
@@ -961,18 +951,18 @@ void thread_reschedule(void) {
   sched_reschedule();
 }
 
-void thread_check_preempt_pending(void) {
-  thread_t* current_thread = get_current_thread();
+void CurrentThread::CheckPreemptPending() {
+  Thread* current_thread = get_current_thread();
 
   // First check preempt_pending without the expense of taking the lock.
   // At this point, interrupts could be enabled, so an interrupt handler
   // might preempt us and set preempt_pending to false after we read it.
-  if (unlikely(current_thread->preempt_pending)) {
+  if (unlikely(current_thread->preempt_pending_)) {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
     // Recheck preempt_pending just in case it got set to false after
     // our earlier check.  Its value now cannot change because
     // interrupts are now disabled.
-    if (likely(current_thread->preempt_pending)) {
+    if (likely(current_thread->preempt_pending_)) {
       // This will set preempt_pending = false for us.
       sched_reschedule();
     }
@@ -981,9 +971,9 @@ void thread_check_preempt_pending(void) {
 
 // timer callback to wake up a sleeping thread
 static void thread_sleep_handler(timer_t* timer, zx_time_t now, void* arg) {
-  thread_t* t = (thread_t*)arg;
+  Thread* t = (Thread*)arg;
 
-  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+  DEBUG_ASSERT(t->magic_ == THREAD_MAGIC);
 
   // spin trylocking on the thread lock since the routine that set up the callback,
   // thread_sleep_etc, may be trying to simultaneously cancel this timer while holding the
@@ -992,12 +982,12 @@ static void thread_sleep_handler(timer_t* timer, zx_time_t now, void* arg) {
     return;
   }
 
-  if (t->state != THREAD_SLEEPING) {
+  if (t->state_ != THREAD_SLEEPING) {
     spin_unlock(&thread_lock);
     return;
   }
 
-  t->blocked_status = ZX_OK;
+  t->blocked_status_ = ZX_OK;
 
   // unblock the thread
   if (sched_unblock(t)) {
@@ -1033,12 +1023,12 @@ static zx_duration_t sleep_slack(zx_time_t deadline, zx_time_t now) {
  * interruptable argument allows this routine to return early if the thread was signaled
  * for something.
  */
-zx_status_t thread_sleep_etc(const Deadline& deadline, bool interruptable, zx_time_t now) {
-  thread_t* current_thread = get_current_thread();
+zx_status_t CurrentThread::SleepEtc(const Deadline& deadline, bool interruptable, zx_time_t now) {
+  Thread* current_thread = get_current_thread();
 
-  DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
-  DEBUG_ASSERT(current_thread->state == THREAD_RUNNING);
-  DEBUG_ASSERT(!thread_is_idle(current_thread));
+  DEBUG_ASSERT(current_thread->magic_ == THREAD_MAGIC);
+  DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
+  DEBUG_ASSERT(!current_thread->IsIdle());
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
   // Skip all of the work if the deadline has already passed.
@@ -1052,8 +1042,8 @@ zx_status_t thread_sleep_etc(const Deadline& deadline, bool interruptable, zx_ti
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
   // if we've been killed and going in interruptable, abort here
-  if (interruptable && unlikely((current_thread->signals))) {
-    if (current_thread->signals & THREAD_SIGNAL_KILL) {
+  if (interruptable && unlikely((current_thread->signals_))) {
+    if (current_thread->signals_ & THREAD_SIGNAL_KILL) {
       return ZX_ERR_INTERNAL_INTR_KILLED;
     } else {
       return ZX_ERR_INTERNAL_INTR_RETRY;
@@ -1063,35 +1053,35 @@ zx_status_t thread_sleep_etc(const Deadline& deadline, bool interruptable, zx_ti
   // set a one shot timer to wake us up and reschedule
   timer_set(&timer, deadline, thread_sleep_handler, current_thread);
 
-  current_thread->state = THREAD_SLEEPING;
-  current_thread->blocked_status = ZX_OK;
+  current_thread->state_ = THREAD_SLEEPING;
+  current_thread->blocked_status_ = ZX_OK;
 
-  current_thread->interruptable = interruptable;
+  current_thread->interruptable_ = interruptable;
   sched_block();
-  current_thread->interruptable = false;
+  current_thread->interruptable_ = false;
 
   // always cancel the timer, since we may be racing with the timer tick on other cpus
   timer_cancel(&timer);
 
-  return current_thread->blocked_status;
+  return current_thread->blocked_status_;
 }
 
-zx_status_t thread_sleep(zx_time_t deadline) {
+zx_status_t CurrentThread::Sleep(zx_time_t deadline) {
   const zx_time_t now = current_time();
-  return thread_sleep_etc(Deadline::no_slack(deadline), false, now);
+  return SleepEtc(Deadline::no_slack(deadline), false, now);
 }
 
-zx_status_t thread_sleep_relative(zx_duration_t delay) {
+zx_status_t CurrentThread::SleepRelative(zx_duration_t delay) {
   const zx_time_t now = current_time();
   const Deadline deadline = Deadline::no_slack(zx_time_add_duration(now, delay));
-  return thread_sleep_etc(deadline, false, now);
+  return SleepEtc(deadline, false, now);
 }
 
-zx_status_t thread_sleep_interruptable(zx_time_t deadline) {
+zx_status_t CurrentThread::SleepInterruptable(zx_time_t deadline) {
   const zx_time_t now = current_time();
   const TimerSlack slack(sleep_slack(deadline, now), TIMER_SLACK_LATE);
   const Deadline slackDeadline(deadline, slack);
-  return thread_sleep_etc(slackDeadline, true, now);
+  return SleepEtc(slackDeadline, true, now);
 }
 
 /**
@@ -1100,12 +1090,12 @@ zx_status_t thread_sleep_interruptable(zx_time_t deadline) {
  * This takes the thread_lock to ensure there are no races while calculating the
  * runtime of the thread.
  */
-zx_duration_t thread_runtime(const thread_t* t) {
+zx_duration_t Thread::Runtime() const {
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-  zx_duration_t runtime = t->runtime_ns;
-  if (t->state == THREAD_RUNNING) {
-    zx_duration_t recent = zx_time_sub_time(current_time(), t->last_started_running);
+  zx_duration_t runtime = runtime_ns_;
+  if (state_ == THREAD_RUNNING) {
+    zx_duration_t recent = zx_time_sub_time(current_time(), last_started_running_);
     runtime = zx_duration_add_duration(runtime, recent);
   }
 
@@ -1116,9 +1106,9 @@ zx_duration_t thread_runtime(const thread_t* t) {
  * @brief Get the last CPU the given thread was run on, or INVALID_CPU if the
  * thread has never run.
  */
-cpu_num_t thread_last_cpu(const thread_t* t) {
+cpu_num_t Thread::LastCpu() const {
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  return t->last_cpu;
+  return last_cpu_;
 }
 
 /**
@@ -1128,25 +1118,25 @@ cpu_num_t thread_last_cpu(const thread_t* t) {
  * a thread that is pinned to the current CPU and running at the
  * highest priority.
  */
-void thread_construct_first(thread_t* t, const char* name) {
+void thread_construct_first(Thread* t, const char* name) {
   DEBUG_ASSERT(arch_ints_disabled());
 
   cpu_num_t cpu = arch_curr_cpu_num();
 
   init_thread_struct(t, name);
-  t->state = THREAD_RUNNING;
-  t->flags = THREAD_FLAG_DETACHED;
-  t->signals = 0;
-  t->curr_cpu = cpu;
-  t->last_cpu = cpu;
-  t->hard_affinity = cpu_num_to_mask(cpu);
+  t->state_ = THREAD_RUNNING;
+  t->flags_ = THREAD_FLAG_DETACHED;
+  t->signals_ = 0;
+  t->curr_cpu_ = cpu;
+  t->last_cpu_ = cpu;
+  t->hard_affinity_ = cpu_num_to_mask(cpu);
   sched_init_thread(t, HIGHEST_PRIORITY);
 
   arch_thread_construct_first(t);
   set_current_thread(t);
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  list_add_head(&thread_list, &t->thread_list_node);
+  list_add_head(&thread_list, &t->thread_list_node_);
 }
 
 /**
@@ -1154,23 +1144,23 @@ void thread_construct_first(thread_t* t, const char* name) {
  *
  * This function is called once, from kmain()
  */
-void thread_init_early(void) {
+void thread_init_early() {
   DEBUG_ASSERT(arch_curr_cpu_num() == 0);
 
   // Init the boot percpu data.
   percpu::InitializeBoot();
 
   // create a thread to cover the current running state
-  thread_t* t = &percpu::Get(0).idle_thread;
+  Thread* t = &percpu::Get(0).idle_thread;
   thread_construct_first(t, "bootstrap");
 }
 
 /**
  * @brief Change name of current thread
  */
-void thread_set_name(const char* name) {
-  thread_t* current_thread = get_current_thread();
-  strlcpy(current_thread->name, name, sizeof(current_thread->name));
+void CurrentThread::SetName(const char* name) {
+  Thread* current_thread = get_current_thread();
+  strlcpy(current_thread->name_, name, sizeof(current_thread->name_));
 }
 
 /**
@@ -1179,14 +1169,14 @@ void thread_set_name(const char* name) {
  * Sets the thread to use the fair scheduling discipline using the given
  * priority.
  *
- * See thread_create() for a discussion of priority values.
+ * See Thread::Create() for a discussion of priority values.
  */
-void thread_set_priority(thread_t* t, int priority) {
-  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+void Thread::SetPriority(int priority) {
+  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
   ASSERT(priority >= LOWEST_PRIORITY && priority <= HIGHEST_PRIORITY);
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  sched_change_priority(t, priority);
+  sched_change_priority(this, priority);
 }
 
 /**
@@ -1198,13 +1188,13 @@ void thread_set_priority(thread_t* t, int priority) {
  * @param t The thread to set or change deadline scheduling parameters.
  * @param params The deadline parameters to apply to the thread.
  */
-void thread_set_deadline(thread_t* t, const zx_sched_deadline_params_t& params) {
-  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
+void Thread::SetDeadline(const zx_sched_deadline_params_t& params) {
+  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
   ASSERT(params.capacity > 0 && params.capacity <= params.relative_deadline &&
          params.relative_deadline <= params.period);
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  sched_change_deadline(t, params);
+  sched_change_deadline(this, params);
 }
 
 /**
@@ -1212,10 +1202,10 @@ void thread_set_deadline(thread_t* t, const zx_sched_deadline_params_t& params) 
  * ThreadDispatcher::Exiting()
  * ThreadDispatcher::Suspending() / Resuming()
  */
-void thread_set_usermode_thread(thread_t* t, ThreadDispatcher* user_thread) {
-  DEBUG_ASSERT(t->magic == THREAD_MAGIC);
-  DEBUG_ASSERT(t->state == THREAD_INITIAL);
-  t->user_thread = user_thread;
+void Thread::SetUsermodeThread(ThreadDispatcher* user_thread) {
+  DEBUG_ASSERT(magic_ == THREAD_MAGIC);
+  DEBUG_ASSERT(state_ == THREAD_INITIAL);
+  user_thread_ = user_thread;
 }
 
 /**
@@ -1225,25 +1215,25 @@ void thread_set_usermode_thread(thread_t* t, ThreadDispatcher* user_thread) {
  * executes when there is nothing else to do.  This function does not return.
  * This thread is called once at boot on the first cpu.
  */
-void thread_become_idle(void) {
+void CurrentThread::BecomeIdle() {
   DEBUG_ASSERT(arch_ints_disabled());
 
-  thread_t* t = get_current_thread();
+  Thread* t = get_current_thread();
   cpu_num_t curr_cpu = arch_curr_cpu_num();
 
   // Set our name
   char name[16];
   snprintf(name, sizeof(name), "idle %u", curr_cpu);
-  thread_set_name(name);
+  CurrentThread::SetName(name);
 
   // Mark ourself as idle
-  t->flags |= THREAD_FLAG_IDLE;
+  t->flags_ |= THREAD_FLAG_IDLE;
   sched_init_thread(t, IDLE_PRIORITY);
 
   // Pin the thread on the current cpu and mark it as already running
-  t->last_cpu = curr_cpu;
-  t->curr_cpu = curr_cpu;
-  t->hard_affinity = cpu_num_to_mask(curr_cpu);
+  t->last_cpu_ = curr_cpu;
+  t->curr_cpu_ = curr_cpu;
+  t->hard_affinity_ = cpu_num_to_mask(curr_cpu);
 
   // Cpu is active now
   mp_set_curr_cpu_active(true);
@@ -1270,43 +1260,43 @@ void thread_become_idle(void) {
  *
  * Prior to calling, |t->stack| must be properly constructed. See |vm_allocate_kstack|.
  */
-void thread_secondary_cpu_init_early(thread_t* t) {
+void thread_secondary_cpu_init_early(Thread* t) {
   DEBUG_ASSERT(arch_ints_disabled());
-  DEBUG_ASSERT(t->stack.base != 0);
+  DEBUG_ASSERT(t->stack_.base != 0);
 
   // Save |t|'s stack because |thread_construct_first| will zero out the whole struct.
-  kstack_t stack = t->stack;
+  kstack_t stack = t->stack_;
 
   char name[16];
   snprintf(name, sizeof(name), "cpu_init %u", arch_curr_cpu_num());
   thread_construct_first(t, name);
 
   // Restore the stack.
-  t->stack = stack;
+  t->stack_ = stack;
 }
 
 /**
  * @brief The last routine called on the secondary cpu's bootstrap thread.
  */
-void thread_secondary_cpu_entry(void) {
+void thread_secondary_cpu_entry() {
   mp_set_curr_cpu_active(true);
 
   dpc_init_for_cpu();
 
   // Exit from our bootstrap thread, and enter the scheduler on this cpu
-  thread_exit(0);
+  CurrentThread::Exit(0);
 }
 
 /**
  * @brief Create an idle thread for a secondary CPU
  */
-thread_t* thread_create_idle_thread(cpu_num_t cpu_num) {
+Thread* Thread::CreateIdleThread(cpu_num_t cpu_num) {
   DEBUG_ASSERT(cpu_num != 0 && cpu_num < SMP_MAX_CPUS);
 
   // Shouldn't be initialized yet
   // ZX-3672: if the idle thread appears initialized, dump some data
   // around it
-  if (unlikely(percpu::Get(cpu_num).idle_thread.magic != 0)) {
+  if (unlikely(percpu::Get(cpu_num).idle_thread.magic_ != 0)) {
     platform_panic_start();
     hexdump(&percpu::Get(cpu_num).idle_thread, 256);
     panic("ZX-3672: detected non zeroed idle thread for core %u\n", cpu_num);
@@ -1315,13 +1305,13 @@ thread_t* thread_create_idle_thread(cpu_num_t cpu_num) {
   char name[16];
   snprintf(name, sizeof(name), "idle %u", cpu_num);
 
-  thread_t* t = thread_create_etc(&percpu::Get(cpu_num).idle_thread, name, arch_idle_thread_routine,
-                                  NULL, IDLE_PRIORITY, NULL);
+  Thread* t = Thread::CreateEtc(&percpu::Get(cpu_num).idle_thread, name, arch_idle_thread_routine,
+                                NULL, IDLE_PRIORITY, NULL);
   if (t == NULL) {
     return t;
   }
-  t->flags |= THREAD_FLAG_IDLE | THREAD_FLAG_DETACHED;
-  t->hard_affinity = cpu_num_to_mask(cpu_num);
+  t->flags_ |= THREAD_FLAG_IDLE | THREAD_FLAG_DETACHED;
+  t->hard_affinity_ = cpu_num_to_mask(cpu_num);
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
   sched_unblock_idle(t);
@@ -1334,9 +1324,9 @@ thread_t* thread_create_idle_thread(cpu_num_t cpu_num) {
  * Returns "kernel" if there is no owner.
  */
 
-void thread_owner_name(thread_t* t, char out_name[THREAD_NAME_LENGTH]) {
-  if (t->user_thread) {
-    t->user_thread->process()->get_name(out_name);
+void Thread::OwnerName(char out_name[THREAD_NAME_LENGTH]) {
+  if (user_thread_) {
+    user_thread_->process()->get_name(out_name);
     return;
   }
   memcpy(out_name, "kernel", 7);
@@ -1367,63 +1357,63 @@ static const char* thread_state_to_str(enum thread_state state) {
 /**
  * @brief  Dump debugging info about the specified thread.
  */
-void dump_thread_locked(thread_t* t, bool full_dump) {
-  if (t->magic != THREAD_MAGIC) {
+void dump_thread_locked(Thread* t, bool full_dump) {
+  if (t->magic_ != THREAD_MAGIC) {
     dprintf(INFO, "dump_thread WARNING: thread at %p has bad magic\n", t);
   }
 
-  zx_duration_t runtime = t->runtime_ns;
-  if (t->state == THREAD_RUNNING) {
-    zx_duration_t recent = zx_time_sub_time(current_time(), t->last_started_running);
+  zx_duration_t runtime = t->runtime_ns_;
+  if (t->state_ == THREAD_RUNNING) {
+    zx_duration_t recent = zx_time_sub_time(current_time(), t->last_started_running_);
     runtime = zx_duration_add_duration(runtime, recent);
   }
 
   char oname[THREAD_NAME_LENGTH];
-  thread_owner_name(t, oname);
+  t->OwnerName(oname);
 
   if (full_dump) {
-    dprintf(INFO, "dump_thread: t %p (%s:%s)\n", t, oname, t->name);
+    dprintf(INFO, "dump_thread: t %p (%s:%s)\n", t, oname, t->name_);
     dprintf(INFO,
             "\tstate %s, curr/last cpu %d/%d, hard_affinity %#x, soft_cpu_affinty %#x, "
             "priority %d [%d:%d,%d], remaining time slice %" PRIi64 "\n",
-            thread_state_to_str(t->state), (int)t->curr_cpu, (int)t->last_cpu, t->hard_affinity,
-            t->soft_affinity, t->effec_priority, t->base_priority, t->priority_boost,
-            t->inherited_priority, t->remaining_time_slice);
+            thread_state_to_str(t->state_), (int)t->curr_cpu_, (int)t->last_cpu_, t->hard_affinity_,
+            t->soft_affinity_, t->effec_priority_, t->base_priority_, t->priority_boost_,
+            t->inherited_priority_, t->remaining_time_slice_);
     dprintf(INFO, "\truntime_ns %" PRIi64 ", runtime_s %" PRIi64 "\n", runtime,
             runtime / 1000000000);
-    dprintf(INFO, "\tstack.base 0x%lx, stack.vmar %p, stack.size %zu\n", t->stack.base,
-            t->stack.vmar, t->stack.size);
+    dprintf(INFO, "\tstack.base 0x%lx, stack.vmar %p, stack.size %zu\n", t->stack_.base,
+            t->stack_.vmar, t->stack_.size);
 #if __has_feature(safe_stack)
-    dprintf(INFO, "\tstack.unsafe_base 0x%lx, stack.unsafe_vmar %p\n", t->stack.unsafe_base,
-            t->stack.unsafe_vmar);
+    dprintf(INFO, "\tstack.unsafe_base 0x%lx, stack.unsafe_vmar %p\n", t->stack_.unsafe_base,
+            t->stack_.unsafe_vmar);
 #endif
 #if __has_feature(shadow_call_stack)
     dprintf(INFO, "\tstack.shadow_call_base 0x%lx, stack.shadow_call_vmar %p\n",
-            t->stack.shadow_call_base, t->stack.shadow_call_vmar);
+            t->stack_.shadow_call_base, t->stack_.shadow_call_vmar);
 #endif
-    dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s\n", t->entry, t->arg, t->flags,
-            (t->flags & THREAD_FLAG_DETACHED) ? "Dt" : "",
-            (t->flags & THREAD_FLAG_FREE_STRUCT) ? "Ft" : "",
-            (t->flags & THREAD_FLAG_REAL_TIME) ? "Rt" : "",
-            (t->flags & THREAD_FLAG_IDLE) ? "Id" : "");
+    dprintf(INFO, "\tentry %p, arg %p, flags 0x%x %s%s%s%s\n", t->entry_, t->arg_, t->flags_,
+            (t->flags_ & THREAD_FLAG_DETACHED) ? "Dt" : "",
+            (t->flags_ & THREAD_FLAG_FREE_STRUCT) ? "Ft" : "",
+            (t->flags_ & THREAD_FLAG_REAL_TIME) ? "Rt" : "",
+            (t->flags_ & THREAD_FLAG_IDLE) ? "Id" : "");
 
     dprintf(INFO, "\twait queue %p, blocked_status %d, interruptable %d, wait queues owned %s\n",
-            t->blocking_wait_queue, t->blocked_status, t->interruptable,
-            t->owned_wait_queues.is_empty() ? "no" : "yes");
+            t->blocking_wait_queue_, t->blocked_status_, t->interruptable_,
+            t->owned_wait_queues_.is_empty() ? "no" : "yes");
 
-    dprintf(INFO, "\taspace %p\n", t->aspace);
-    dprintf(INFO, "\tuser_thread %p, pid %" PRIu64 ", tid %" PRIu64 "\n", t->user_thread,
-            t->user_pid, t->user_tid);
+    dprintf(INFO, "\taspace %p\n", t->aspace_);
+    dprintf(INFO, "\tuser_thread %p, pid %" PRIu64 ", tid %" PRIu64 "\n", t->user_thread_,
+            t->user_pid_, t->user_tid_);
     arch_dump_thread(t);
   } else {
     printf("thr %p st %4s owq %d pri %2d [%d:%d,%d] pid %" PRIu64 " tid %" PRIu64 " (%s:%s)\n", t,
-           thread_state_to_str(t->state), !t->owned_wait_queues.is_empty(), t->effec_priority,
-           t->base_priority, t->priority_boost, t->inherited_priority, t->user_pid, t->user_tid,
-           oname, t->name);
+           thread_state_to_str(t->state_), !t->owned_wait_queues_.is_empty(), t->effec_priority_,
+           t->base_priority_, t->priority_boost_, t->inherited_priority_, t->user_pid_,
+           t->user_tid_, oname, t->name_);
   }
 }
 
-void dump_thread(thread_t* t, bool full) {
+void dump_thread(Thread* t, bool full) {
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
   dump_thread_locked(t, full);
 }
@@ -1432,12 +1422,12 @@ void dump_thread(thread_t* t, bool full) {
  * @brief  Dump debugging info about all threads
  */
 void dump_all_threads_locked(bool full) {
-  thread_t* t;
+  Thread* t;
 
-  list_for_every_entry (&thread_list, t, thread_t, thread_list_node) {
-    if (t->magic != THREAD_MAGIC) {
+  list_for_every_entry (&thread_list, t, Thread, thread_list_node_) {
+    if (t->magic_ != THREAD_MAGIC) {
       dprintf(INFO, "bad magic on thread struct %p, aborting.\n", t);
-      hexdump(t, sizeof(thread_t));
+      hexdump(t, sizeof(Thread));
       break;
     }
     dump_thread_locked(t, full);
@@ -1455,26 +1445,26 @@ void dump_thread_user_tid(uint64_t tid, bool full) {
 }
 
 void dump_thread_user_tid_locked(uint64_t tid, bool full) {
-  thread_t* t;
+  Thread* t;
 
-  list_for_every_entry (&thread_list, t, thread_t, thread_list_node) {
-    if (t->user_tid != tid) {
+  list_for_every_entry (&thread_list, t, Thread, thread_list_node_) {
+    if (t->user_tid_ != tid) {
       continue;
     }
 
-    if (t->magic != THREAD_MAGIC) {
+    if (t->magic_ != THREAD_MAGIC) {
       dprintf(INFO, "bad magic on thread struct %p, aborting.\n", t);
-      hexdump(t, sizeof(thread_t));
+      hexdump(t, sizeof(Thread));
       break;
     }
     dump_thread_locked(t, full);
   }
 }
 
-thread_t* thread_id_to_thread_slow(uint64_t tid) {
-  thread_t* t;
-  list_for_every_entry (&thread_list, t, thread_t, thread_list_node) {
-    if (t->user_tid == tid) {
+Thread* thread_id_to_thread_slow(uint64_t tid) {
+  Thread* t;
+  list_for_every_entry (&thread_list, t, Thread, thread_list_node_) {
+    if (t->user_tid_ == tid) {
       return t;
     }
   }
@@ -1486,18 +1476,18 @@ thread_t* thread_id_to_thread_slow(uint64_t tid) {
 
 // Used by ktrace at the start of a trace to ensure that all
 // the running threads, processes, and their names are known
-void ktrace_report_live_threads(void) {
-  thread_t* t;
+void ktrace_report_live_threads() {
+  Thread* t;
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-  list_for_every_entry (&thread_list, t, thread_t, thread_list_node) {
-    DEBUG_ASSERT(t->magic == THREAD_MAGIC);
-    if (t->user_tid) {
-      ktrace_name(TAG_THREAD_NAME, static_cast<uint32_t>(t->user_tid),
-                  static_cast<uint32_t>(t->user_pid), t->name);
+  list_for_every_entry (&thread_list, t, Thread, thread_list_node_) {
+    DEBUG_ASSERT(t->magic_ == THREAD_MAGIC);
+    if (t->user_tid_) {
+      ktrace_name(TAG_THREAD_NAME, static_cast<uint32_t>(t->user_tid_),
+                  static_cast<uint32_t>(t->user_pid_), t->name_);
     } else {
       ktrace_name(TAG_KTHREAD_NAME, static_cast<uint32_t>(reinterpret_cast<uintptr_t>(t)), 0,
-                  t->name);
+                  t->name_);
     }
   }
 }
@@ -1507,16 +1497,16 @@ typedef struct thread_backtrace {
   void* pc[THREAD_BACKTRACE_DEPTH];
 } thread_backtrace_t;
 
-static zx_status_t thread_read_stack(thread_t* t, void* ptr, void* out, size_t sz) {
-  if (!is_kernel_address((uintptr_t)ptr) || (reinterpret_cast<vaddr_t>(ptr) < t->stack.base) ||
-      (reinterpret_cast<vaddr_t>(ptr) > (t->stack.base + t->stack.size - sizeof(void*)))) {
+static zx_status_t thread_read_stack(Thread* t, void* ptr, void* out, size_t sz) {
+  if (!is_kernel_address((uintptr_t)ptr) || (reinterpret_cast<vaddr_t>(ptr) < t->stack_.base) ||
+      (reinterpret_cast<vaddr_t>(ptr) > (t->stack_.base + t->stack_.size - sizeof(void*)))) {
     return ZX_ERR_NOT_FOUND;
   }
   memcpy(out, ptr, sz);
   return ZX_OK;
 }
 
-static size_t thread_get_backtrace(thread_t* t, void* fp, thread_backtrace_t* tb) {
+static size_t thread_get_backtrace(Thread* t, void* fp, thread_backtrace_t* tb) {
   // without frame pointers, dont even try
   // the compiler should optimize out the body of all the callers if it's not present
   if (!WITH_FRAME_POINTERS) {
@@ -1544,7 +1534,7 @@ namespace {
 constexpr const char* bt_fmt = "{{{bt:%zu:%p}}}\n";
 }
 
-static zx_status_t _thread_print_backtrace(thread_t* t, void* fp) {
+static zx_status_t _thread_print_backtrace(Thread* t, void* fp) {
   if (!t || !fp) {
     return ZX_ERR_BAD_STATE;
   }
@@ -1565,14 +1555,14 @@ static zx_status_t _thread_print_backtrace(thread_t* t, void* fp) {
 }
 
 // print the backtrace of the current thread, at the current spot
-void thread_print_current_backtrace(void) {
+void thread_print_current_backtrace() {
   _thread_print_backtrace(get_current_thread(), __GET_FRAME(0));
 }
 
 // append the backtrace of the current thread to the passed in char pointer.
 // return the number of chars appended.
-size_t thread_append_current_backtrace(char* out, const size_t out_len) {
-  thread_t* current = get_current_thread();
+size_t CurrentThread::AppendCurrentBacktrace(char* out, const size_t out_len) {
+  Thread* current = get_current_thread();
   void* fp = __GET_FRAME(0);
 
   if (!current || !fp) {
@@ -1606,21 +1596,21 @@ void thread_print_current_backtrace_at_frame(void* caller_frame) {
 }
 
 // print the backtrace of a passed in thread, if possible
-zx_status_t thread_print_backtrace(thread_t* t) {
+zx_status_t Thread::PrintBacktrace() {
   // get the starting point if it's in a usable state
   void* fp = NULL;
-  switch (t->state) {
+  switch (state_) {
     case THREAD_BLOCKED:
     case THREAD_BLOCKED_READ_LOCK:
     case THREAD_SLEEPING:
     case THREAD_SUSPENDED:
       // thread is blocked, so ask the arch code to get us a starting point
-      fp = arch_thread_get_blocked_fp(t);
+      fp = arch_thread_get_blocked_fp(this);
       break;
     // we can't deal with every other state
     default:
       return ZX_ERR_BAD_STATE;
   }
 
-  return _thread_print_backtrace(t, fp);
+  return _thread_print_backtrace(this, fp);
 }

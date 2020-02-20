@@ -44,7 +44,7 @@ static bool TestConcurrentIntEventDispatcherTeardown() {
 
   // Spin up a thread to generate the interrupt. As IPIs cannot be masked this causes the
   // associated InterruptDispatcher handler to constantly get invoked, which is what we want.
-  thread_t* int_thread = thread_create(
+  Thread* int_thread = Thread::Create(
       "int",
       [](void* arg) -> int {
         ktl::atomic<uint16_t>* state = static_cast<ktl::atomic<uint16_t>*>(arg);
@@ -52,12 +52,12 @@ static bool TestConcurrentIntEventDispatcherTeardown() {
         // Loop until anything is set in the high byte of the state.
         while ((state->load(ktl::memory_order_seq_cst) & 0xff00) == 0) {
           apic_send_self_ipi(vec, DELIVERY_MODE_FIXED);
-          thread_yield();
+          CurrentThread::Yield();
         }
         return -1;
       },
       &state, DEFAULT_PRIORITY);
-  thread_resume(int_thread);
+  int_thread->Resume();
 
   // Remove the interrupt and if we don't deadlock and keep executing then all is well.
   interrupt.reset();
@@ -65,7 +65,7 @@ static bool TestConcurrentIntEventDispatcherTeardown() {
   // Signal the thread by setting bits in the high byte.
   state.fetch_or(0xff00, ktl::memory_order_seq_cst);
   // Shutdown the test.
-  zx_status_t status = thread_join(int_thread, nullptr, current_time() + ZX_SEC(5));
+  zx_status_t status = int_thread->Join(nullptr, current_time() + ZX_SEC(5));
   EXPECT_EQ(status, ZX_OK);
 #endif
 

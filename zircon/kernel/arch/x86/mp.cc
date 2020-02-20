@@ -63,8 +63,8 @@ volatile uint8_t fake_monitor;
 
 // Also set up a fake table of idle states.
 x86_idle_states_t fake_supported_idle_states = {
-  .states = {X86_CSTATE_C1(0)},
-  .default_state_mask = kX86IdleStateMaskC1Only,
+    .states = {X86_CSTATE_C1(0)},
+    .default_state_mask = kX86IdleStateMaskC1Only,
 };
 X86IdleStates fake_idle_states = X86IdleStates(&fake_supported_idle_states);
 
@@ -363,7 +363,7 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
       }
       // TODO(fxb/33667, fxb/12540): Spectre V2 (Skylake+ only): If we enter a deep sleep state,
       // fill the RSB before RET-ing from this function.
-      thread_preempt();
+      CurrentThread::Preempt();
     }
   } else {
     for (;;) {
@@ -552,7 +552,7 @@ static int cmd_idlestates(int argc, const cmd_args* argv, uint32_t flags) {
     }
     bp_percpu.idle_states->SetStateMask(static_cast<uint32_t>(argv[2].u));
     for (unsigned i = 1; i < x86_num_cpus; ++i) {
-      ap_percpus[i-1].idle_states->SetStateMask(static_cast<uint32_t>(argv[2].u));
+      ap_percpus[i - 1].idle_states->SetStateMask(static_cast<uint32_t>(argv[2].u));
     }
   } else {
     goto usage;

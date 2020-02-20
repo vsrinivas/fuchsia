@@ -21,14 +21,12 @@
  */
 #define FPU_ENABLE_MASK (3 << 20)
 
-static inline bool is_fpu_enabled(uint64_t cpacr) {
-  return !!(BITS(cpacr, 21, 20) != 0);
-}
+static inline bool is_fpu_enabled(uint64_t cpacr) { return !!(BITS(cpacr, 21, 20) != 0); }
 
-static void arm64_fpu_load_regs(thread_t* t) {
-  struct fpstate* fpstate = &t->arch.fpstate;
+static void arm64_fpu_load_regs(Thread* t) {
+  struct fpstate* fpstate = &t->arch_.fpstate;
 
-  LTRACEF("cpu %u, thread %s, load fpstate %p\n", arch_curr_cpu_num(), t->name, fpstate);
+  LTRACEF("cpu %u, thread %s, load fpstate %p\n", arch_curr_cpu_num(), t->name_, fpstate);
 
   static_assert(sizeof(fpstate->regs) == 16 * 32, "");
   __asm__ volatile(
@@ -53,10 +51,10 @@ static void arm64_fpu_load_regs(thread_t* t) {
       "r"((uint64_t)fpstate->fpcr), "r"((uint64_t)fpstate->fpsr));
 }
 
-__NO_SAFESTACK static void arm64_fpu_save_regs(thread_t* t) {
-  struct fpstate* fpstate = &t->arch.fpstate;
+__NO_SAFESTACK static void arm64_fpu_save_regs(Thread* t) {
+  struct fpstate* fpstate = &t->arch_.fpstate;
 
-  LTRACEF("cpu %u, thread %s, save fpstate %p\n", arch_curr_cpu_num(), t->name, fpstate);
+  LTRACEF("cpu %u, thread %s, save fpstate %p\n", arch_curr_cpu_num(), t->name_, fpstate);
 
   __asm__ volatile(
       "stp     q0, q1, [%0, #(0 * 32)]\n"
@@ -84,16 +82,16 @@ __NO_SAFESTACK static void arm64_fpu_save_regs(thread_t* t) {
   fpstate->fpcr = (uint32_t)fpcr;
   fpstate->fpsr = (uint32_t)fpsr;
 
-  LTRACEF("thread %s, fpcr %x, fpsr %x\n", t->name, fpstate->fpcr, fpstate->fpsr);
+  LTRACEF("thread %s, fpcr %x, fpsr %x\n", t->name_, fpstate->fpcr, fpstate->fpsr);
 }
 
-__NO_SAFESTACK static bool use_lazy_fpu_restore(thread_t* t) {
+__NO_SAFESTACK static bool use_lazy_fpu_restore(Thread* t) {
   // The number 8 here was selected by measuring |fp_restore_count| running
   // a particular workload.
-  return (t->arch.fp_restore_count < 8u);
+  return (t->arch_.fp_restore_count < 8u);
 }
 
-__NO_SAFESTACK void arm64_fpu_save_state(thread_t* t) {
+__NO_SAFESTACK void arm64_fpu_save_state(Thread* t) {
   // If the FPU is not enabled, then there's nothing to save.
   const uint64_t cpacr = __arm_rsr64("cpacr_el1");
   if (!is_fpu_enabled(cpacr)) {
@@ -102,7 +100,7 @@ __NO_SAFESTACK void arm64_fpu_save_state(thread_t* t) {
   arm64_fpu_save_regs(t);
 }
 
-__NO_SAFESTACK void arm64_fpu_restore_state(thread_t* t) {
+__NO_SAFESTACK void arm64_fpu_restore_state(Thread* t) {
   const uint64_t cpacr = __arm_rsr64("cpacr_el1");
   const bool enabled = is_fpu_enabled(cpacr);
   const bool lazy_restore = use_lazy_fpu_restore(t);
@@ -124,10 +122,10 @@ __NO_SAFESTACK void arm64_fpu_restore_state(thread_t* t) {
   arm64_fpu_load_regs(t);
 }
 
-__NO_SAFESTACK void arm64_fpu_context_switch(thread_t* oldthread, thread_t* newthread) {
+__NO_SAFESTACK void arm64_fpu_context_switch(Thread* oldthread, Thread* newthread) {
   const uint64_t cpacr = __arm_rsr64("cpacr_el1");
   if (is_fpu_enabled(cpacr)) {
-    LTRACEF("saving state on thread %s\n", oldthread->name);
+    LTRACEF("saving state on thread %s\n", oldthread->name_);
     arm64_fpu_save_regs(oldthread);
   }
 
@@ -151,7 +149,7 @@ __NO_SAFESTACK void arm64_fpu_context_switch(thread_t* oldthread, thread_t* newt
 
 // Called because of a fpu instruction caused exception.
 void arm64_fpu_exception(arm64_iframe_t* iframe, uint exception_flags) {
-  LTRACEF("cpu %u, thread %s, flags 0x%x\n", arch_curr_cpu_num(), get_current_thread()->name,
+  LTRACEF("cpu %u, thread %s, flags 0x%x\n", arch_curr_cpu_num(), get_current_thread()->name_,
           exception_flags);
 
   // Only valid to be called if exception came from lower level.
@@ -166,10 +164,10 @@ void arm64_fpu_exception(arm64_iframe_t* iframe, uint exception_flags) {
   __isb(ARM_MB_SY);
 
   // Load the fpu state for the current thread.
-  thread_t* t = get_current_thread();
+  Thread* t = get_current_thread();
   if (likely(t)) {
     DEBUG_ASSERT(use_lazy_fpu_restore(t));
-    t->arch.fp_restore_count++;
+    t->arch_.fp_restore_count++;
     arm64_fpu_load_regs(t);
   }
 }

@@ -48,7 +48,7 @@ template <>
 struct alignas(16) BrwLockState<BrwLockEnablePi::Yes> {
   BrwLockState(uint64_t state) : state_(state), writer_(nullptr) {}
   ktl::atomic<uint64_t> state_;
-  ktl::atomic<thread_t*> writer_;
+  ktl::atomic<Thread*> writer_;
 };
 
 static_assert(sizeof(BrwLockState<BrwLockEnablePi::Yes>) == 16,
@@ -85,7 +85,7 @@ class TA_CAP("mutex") BrwLock {
       // As readers are not recorded and do not receive boosting from blocking
       // writers they must not block or otherwise cease to run, otherwise
       // our PI will be violated.
-      thread_preempt_disable();
+      CurrentThread::PreemptDisable();
     }
     // Attempt the optimistic grab
     uint64_t prev = state_.state_.fetch_add(kBrwLockReader, ktl::memory_order_acquire);
@@ -113,7 +113,7 @@ class TA_CAP("mutex") BrwLock {
       ReleaseWakeup();
     }
     if constexpr (PI == BrwLockEnablePi::Yes) {
-      thread_preempt_reenable();
+      CurrentThread::PreemptReenable();
     }
   }
 
@@ -176,7 +176,7 @@ class TA_CAP("mutex") BrwLock {
   template <typename F>
   void CommonWriteAcquire(uint64_t expected_state_bits, F contended)
       TA_ACQ(this) TA_NO_THREAD_SAFETY_ANALYSIS {
-    thread_t* __UNUSED ct = get_current_thread();
+    Thread* __UNUSED ct = get_current_thread();
 
     bool success;
 

@@ -61,23 +61,23 @@ static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
       goto notenoughargs;
     }
 
-    thread_t* t = NULL;
+    Thread* t = NULL;
     if (is_kernel_address(argv[2].u)) {
-      t = (thread_t*)argv[2].u;
+      t = (Thread*)argv[2].u;
     } else {
       t = thread_id_to_thread_slow(argv[2].u);
     }
     if (t) {
-      thread_print_backtrace(t);
+      t->PrintBacktrace();
     }
   } else if (!strcmp(argv[1].str, "dump")) {
     if (argc < 3) {
       goto notenoughargs;
     }
 
-    thread_t* t = NULL;
+    Thread* t = NULL;
     if (is_kernel_address(argv[2].u)) {
-      t = (thread_t*)argv[2].u;
+      t = (Thread*)argv[2].u;
       dump_thread(t, true);
     } else {
       if (flags & CMD_FLAG_PANIC) {
@@ -107,7 +107,7 @@ static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
 
   // reschedule to let debuglog potentially run
   if (!(flags & CMD_FLAG_PANIC)) {
-    thread_reschedule();
+    CurrentThread::Reschedule();
   }
 
   return 0;
@@ -177,7 +177,7 @@ void RecurringCallback::CallbackWrapper(timer_t* t, zx_time_t now, void* arg) {
   }
 
   // reschedule to give the debuglog a chance to run
-  thread_preempt_set_pending();
+  CurrentThread::PreemptSetPending();
 }
 
 void RecurringCallback::Toggle() {
@@ -223,7 +223,7 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
       bool is_idle = !!mp_is_cpu_idle(i);
       if (is_idle) {
         zx_duration_t recent_idle_time =
-            zx_time_sub_time(current_time(), percpu.idle_thread.last_started_running);
+            zx_time_sub_time(current_time(), percpu.idle_thread.last_started_running_);
         idle_time = zx_duration_add_duration(idle_time, recent_idle_time);
       }
 

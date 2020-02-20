@@ -18,7 +18,7 @@
 static void rand_delay() {
   int64_t end = current_time() + (rand() % ZX_MSEC(1));
   do {
-    thread_yield();
+    CurrentThread::Yield();
   } while (current_time() < end);
 }
 
@@ -35,11 +35,11 @@ class BrwLockTest {
     BEGIN_TEST;
 
     BrwLockTest<LockType> test;
-    thread_t* reader_threads[readers];
-    thread_t* writer_threads[writers];
-    thread_t* upgrader_threads[upgraders];
+    Thread* reader_threads[readers];
+    Thread* writer_threads[writers];
+    Thread* upgrader_threads[upgraders];
 
-    int old_prio = get_current_thread()->base_priority;
+    int old_prio = get_current_thread()->base_priority_;
     // Run at high priority so that we can be validating what the other threads are doing.
     // Unless we are a uniprocessor, in which case we will just have to live with poor
     // testing. If we do boost priority then we need to make sure worker threads
@@ -48,47 +48,47 @@ class BrwLockTest {
     cpu_mask_t worker_mask = mp_get_online_mask();
     if (lowest_cpu_set(worker_mask) != highest_cpu_set(worker_mask)) {
       mp_get_online_mask();
-      thread_set_priority(get_current_thread(), HIGH_PRIORITY);
+      get_current_thread()->SetPriority(HIGH_PRIORITY);
       cpu_mask_t pin_mask = cpu_num_to_mask(lowest_cpu_set(worker_mask));
-      thread_set_cpu_affinity(get_current_thread(), pin_mask);
+      get_current_thread()->SetCpuAffinity(pin_mask);
       worker_mask -= pin_mask;
     } else {
-      thread_set_priority(get_current_thread(), DEFAULT_PRIORITY);
+      get_current_thread()->SetPriority(DEFAULT_PRIORITY);
     }
 
     // Start threads
     for (auto& t : reader_threads) {
-      t = thread_create(
+      t = Thread::Create(
           "reader worker",
           [](void* arg) -> int {
             static_cast<BrwLockTest*>(arg)->ReaderWorker();
             return 0;
           },
           &test, DEFAULT_PRIORITY);
-      thread_set_cpu_affinity(t, worker_mask);
-      thread_resume(t);
+      t->SetCpuAffinity(worker_mask);
+      t->Resume();
     }
     for (auto& t : writer_threads) {
-      t = thread_create(
+      t = Thread::Create(
           "writer worker",
           [](void* arg) -> int {
             static_cast<BrwLockTest*>(arg)->WriterWorker();
             return 0;
           },
           &test, DEFAULT_PRIORITY);
-      thread_set_cpu_affinity(t, worker_mask);
-      thread_resume(t);
+      t->SetCpuAffinity(worker_mask);
+      t->Resume();
     }
     for (auto& t : upgrader_threads) {
-      t = thread_create(
+      t = Thread::Create(
           "upgrader worker",
           [](void* arg) -> int {
             static_cast<BrwLockTest*>(arg)->UpgraderWorker();
             return 0;
           },
           &test, DEFAULT_PRIORITY);
-      thread_set_cpu_affinity(t, worker_mask);
-      thread_resume(t);
+      t->SetCpuAffinity(worker_mask);
+      t->Resume();
     }
 
     zx_time_t start = current_time();
@@ -101,7 +101,7 @@ class BrwLockTest {
       EXPECT_TRUE(num_writers == 0 || num_writers == 1, "Too many writers");
       EXPECT_TRUE((num_readers == 0 && num_writers == 0) || num_writers > 0 || num_readers > 0,
                   "Readers and writers");
-      thread_yield();
+      CurrentThread::Yield();
     }
 
     // Shutdown all the threads. Validating they can shutdown is important
@@ -109,21 +109,21 @@ class BrwLockTest {
     test.kill_.store(true, ktl::memory_order_seq_cst);
     zx_time_t join_deadline = current_time() + ZX_SEC(5);
     for (auto& t : reader_threads) {
-      zx_status_t status = thread_join(t, nullptr, join_deadline);
+      zx_status_t status = t->Join(nullptr, join_deadline);
       EXPECT_EQ(status, ZX_OK, "Reader failed to complete");
     }
     for (auto& t : writer_threads) {
-      zx_status_t status = thread_join(t, nullptr, join_deadline);
+      zx_status_t status = t->Join(nullptr, join_deadline);
       EXPECT_EQ(status, ZX_OK, "Writer failed to complete");
     }
     for (auto& t : upgrader_threads) {
-      zx_status_t status = thread_join(t, nullptr, join_deadline);
+      zx_status_t status = t->Join(nullptr, join_deadline);
       EXPECT_EQ(status, ZX_OK, "Upgrader failed to complete");
     }
     EXPECT_EQ(test.state_.load(ktl::memory_order_seq_cst), 0u, "Threads still holding lock");
 
     // Restore original priority.
-    thread_set_priority(get_current_thread(), old_prio);
+    get_current_thread()->SetPriority(old_prio);
 
     END_TEST;
   }
@@ -133,7 +133,7 @@ class BrwLockTest {
     while (!kill_.load(ktl::memory_order_relaxed)) {
       lock_.ReadAcquire();
       state_.fetch_add(1, ktl::memory_order_relaxed);
-      thread_yield();
+      CurrentThread::Yield();
       state_.fetch_sub(1, ktl::memory_order_relaxed);
       lock_.ReadRelease();
       rand_delay();
@@ -144,7 +144,7 @@ class BrwLockTest {
     while (!kill_.load(ktl::memory_order_relaxed)) {
       lock_.WriteAcquire();
       state_.fetch_add(0x10000, ktl::memory_order_relaxed);
-      thread_yield();
+      CurrentThread::Yield();
       state_.fetch_sub(0x10000, ktl::memory_order_relaxed);
       lock_.WriteRelease();
       rand_delay();
@@ -155,11 +155,11 @@ class BrwLockTest {
     while (!kill_.load(ktl::memory_order_relaxed)) {
       lock_.ReadAcquire();
       state_.fetch_add(1, ktl::memory_order_relaxed);
-      thread_yield();
+      CurrentThread::Yield();
       state_.fetch_sub(1, ktl::memory_order_relaxed);
       lock_.ReadUpgrade();
       state_.fetch_add(0x10000, ktl::memory_order_relaxed);
-      thread_yield();
+      CurrentThread::Yield();
       state_.fetch_sub(0x10000, ktl::memory_order_relaxed);
       lock_.WriteRelease();
       rand_delay();

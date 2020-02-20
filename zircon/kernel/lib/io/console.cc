@@ -60,15 +60,15 @@ static void __kernel_stdout_write(const char* str, size_t len) {
 
 #if WITH_DEBUG_LINEBUFFER
 static void __kernel_stdout_write_buffered(const char* str, size_t len) {
-  thread_t* t = get_current_thread();
+  Thread* t = get_current_thread();
 
   if (unlikely(t == NULL)) {
     __kernel_stdout_write(str, len);
     return;
   }
 
-  char* buf = t->linebuffer;
-  size_t pos = t->linebuffer_pos;
+  char* buf = t->linebuffer_;
+  size_t pos = t->linebuffer_pos_;
 
   // look for corruption and don't continue
   if (unlikely(!is_kernel_address((uintptr_t)buf) || pos >= THREAD_LINEBUFFER_LENGTH)) {
@@ -92,7 +92,7 @@ static void __kernel_stdout_write_buffered(const char* str, size_t len) {
       continue;
     }
   }
-  t->linebuffer_pos = pos;
+  t->linebuffer_pos_ = pos;
 }
 #endif
 

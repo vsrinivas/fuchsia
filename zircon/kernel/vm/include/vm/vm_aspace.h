@@ -79,7 +79,7 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   static VmAspace* vaddr_to_aspace(uintptr_t address);
 
   // set the per thread aspace pointer to this
-  void AttachToThread(thread_t* t);
+  void AttachToThread(Thread* t);
 
   void Dump(bool verbose) const;
 

@@ -89,7 +89,7 @@ enum class RegAccess { kGet, kSet };
 
 // Backend for arch_get_vector_regs and arch_set_vector_regs. This does a read or write of the
 // thread to or from the regs structure.
-zx_status_t x86_get_set_vector_regs(thread_t* thread, zx_thread_state_vector_regs* regs,
+zx_status_t x86_get_set_vector_regs(Thread* thread, zx_thread_state_vector_regs* regs,
                                     RegAccess access) {
   // Function to copy memory in the correct direction. Write the code using this function as if it
   // was "memcpy" in "get" mode, and it will be reversed in "set" mode.
@@ -118,7 +118,7 @@ zx_status_t x86_get_set_vector_regs(thread_t* thread, zx_thread_state_vector_reg
   uint32_t comp_size = 0;
   x86_xsave_legacy_area* save =
       static_cast<x86_xsave_legacy_area*>(x86_get_extended_register_state_component(
-          thread->arch.extended_register_state, X86_XSAVE_STATE_INDEX_SSE, mark_present,
+          thread->arch_.extended_register_state, X86_XSAVE_STATE_INDEX_SSE, mark_present,
           &comp_size));
   DEBUG_ASSERT(save);  // Legacy getter should always succeed.
   for (int i = 0; i < kNumSSERegs; i++) {
@@ -131,7 +131,7 @@ zx_status_t x86_get_set_vector_regs(thread_t* thread, zx_thread_state_vector_reg
   // AVX grows the registers to 256 bits each. Optional.
   constexpr int kYmmHighSize = 16;  // Additional bytes in each register.
   uint8_t* ymm_highbits = static_cast<uint8_t*>(x86_get_extended_register_state_component(
-      thread->arch.extended_register_state, X86_XSAVE_STATE_INDEX_AVX, mark_present, &comp_size));
+      thread->arch_.extended_register_state, X86_XSAVE_STATE_INDEX_AVX, mark_present, &comp_size));
   if (ymm_highbits) {
     DEBUG_ASSERT(comp_size == kYmmHighSize * kNumSSERegs);
     for (int i = 0; i < kNumSSERegs; i++) {
@@ -142,7 +142,7 @@ zx_status_t x86_get_set_vector_regs(thread_t* thread, zx_thread_state_vector_reg
   // AVX-512 opmask registers (8 64-bit registers). Optional.
   constexpr int kNumOpmaskRegs = 8;
   uint64_t* opmask = static_cast<uint64_t*>(x86_get_extended_register_state_component(
-      thread->arch.extended_register_state, X86_XSAVE_STATE_INDEX_AVX512_OPMASK, mark_present,
+      thread->arch_.extended_register_state, X86_XSAVE_STATE_INDEX_AVX512_OPMASK, mark_present,
       &comp_size));
   if (opmask) {
     DEBUG_ASSERT(comp_size == kNumOpmaskRegs * sizeof(uint64_t));
@@ -154,7 +154,7 @@ zx_status_t x86_get_set_vector_regs(thread_t* thread, zx_thread_state_vector_reg
   // AVX-512 high bits (256 bits extra each) for ZMM0-15.
   constexpr int kZmmHighSize = 32;  // Additional bytes in each register.
   uint8_t* zmm_highbits = static_cast<uint8_t*>(x86_get_extended_register_state_component(
-      thread->arch.extended_register_state, X86_XSAVE_STATE_INDEX_AVX512_LOWERZMM_HIGH,
+      thread->arch_.extended_register_state, X86_XSAVE_STATE_INDEX_AVX512_LOWERZMM_HIGH,
       mark_present, &comp_size));
   if (zmm_highbits) {
     DEBUG_ASSERT(comp_size == kZmmHighSize * kNumSSERegs);
@@ -167,7 +167,7 @@ zx_status_t x86_get_set_vector_regs(thread_t* thread, zx_thread_state_vector_reg
   constexpr int kNumZmmHighRegs = 16;  // Extra registers added over xmm/ymm.
   constexpr int kZmmRegSize = 64;      // Total register size.
   uint8_t* zmm_highregs = static_cast<uint8_t*>(x86_get_extended_register_state_component(
-      thread->arch.extended_register_state, X86_XSAVE_STATE_INDEX_AVX512_HIGHERZMM, mark_present,
+      thread->arch_.extended_register_state, X86_XSAVE_STATE_INDEX_AVX512_HIGHERZMM, mark_present,
       &comp_size));
   if (zmm_highregs) {
     DEBUG_ASSERT(comp_size == kNumZmmHighRegs * kZmmRegSize);
@@ -181,42 +181,42 @@ zx_status_t x86_get_set_vector_regs(thread_t* thread, zx_thread_state_vector_reg
 
 }  // namespace
 
-zx_status_t arch_get_general_regs(thread_t* thread, zx_thread_state_general_regs_t* out) {
+zx_status_t arch_get_general_regs(Thread* thread, zx_thread_state_general_regs_t* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
   // Punt if registers aren't available. E.g.,
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
-  if (thread->arch.suspended_general_regs.gregs == nullptr)
+  if (thread->arch_.suspended_general_regs.gregs == nullptr)
     return ZX_ERR_NOT_SUPPORTED;
 
-  DEBUG_ASSERT(thread->arch.suspended_general_regs.gregs);
-  switch (GeneralRegsSource(thread->arch.general_regs_source)) {
+  DEBUG_ASSERT(thread->arch_.suspended_general_regs.gregs);
+  switch (GeneralRegsSource(thread->arch_.general_regs_source)) {
     case GeneralRegsSource::Iframe:
-      x86_fill_in_gregs_from_iframe(out, thread->arch.suspended_general_regs.iframe);
+      x86_fill_in_gregs_from_iframe(out, thread->arch_.suspended_general_regs.iframe);
       break;
     case GeneralRegsSource::Syscall:
-      x86_fill_in_gregs_from_syscall(out, thread->arch.suspended_general_regs.syscall);
+      x86_fill_in_gregs_from_syscall(out, thread->arch_.suspended_general_regs.syscall);
       break;
     default:
       ASSERT(false);
   }
 
-  out->fs_base = thread->arch.fs_base;
-  out->gs_base = thread->arch.gs_base;
+  out->fs_base = thread->arch_.fs_base;
+  out->gs_base = thread->arch_.gs_base;
 
   return ZX_OK;
 }
 
-zx_status_t arch_set_general_regs(thread_t* thread, const zx_thread_state_general_regs_t* in) {
+zx_status_t arch_set_general_regs(Thread* thread, const zx_thread_state_general_regs_t* in) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
   // Punt if registers aren't available. E.g.,
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
-  if (thread->arch.suspended_general_regs.gregs == nullptr)
+  if (thread->arch_.suspended_general_regs.gregs == nullptr)
     return ZX_ERR_NOT_SUPPORTED;
 
   // If these addresses are not canonical, the kernel will GPF when it tries
@@ -226,10 +226,10 @@ zx_status_t arch_set_general_regs(thread_t* thread, const zx_thread_state_genera
   if (!x86_is_vaddr_canonical(in->gs_base))
     return ZX_ERR_INVALID_ARGS;
 
-  DEBUG_ASSERT(thread->arch.suspended_general_regs.gregs);
-  switch (GeneralRegsSource(thread->arch.general_regs_source)) {
+  DEBUG_ASSERT(thread->arch_.suspended_general_regs.gregs);
+  switch (GeneralRegsSource(thread->arch_.general_regs_source)) {
     case GeneralRegsSource::Iframe:
-      x86_fill_in_iframe_from_gregs(thread->arch.suspended_general_regs.iframe, in);
+      x86_fill_in_iframe_from_gregs(thread->arch_.suspended_general_regs.iframe, in);
       break;
     case GeneralRegsSource::Syscall: {
       // Disallow setting RIP to a non-canonical address, to prevent
@@ -241,36 +241,36 @@ zx_status_t arch_set_general_regs(thread_t* thread, const zx_thread_state_genera
       uint64_t noncanonical_addr = ((uint64_t)1) << (addr_width - 1);
       if (in->rip >= noncanonical_addr)
         return ZX_ERR_INVALID_ARGS;
-      x86_fill_in_syscall_from_gregs(thread->arch.suspended_general_regs.syscall, in);
+      x86_fill_in_syscall_from_gregs(thread->arch_.suspended_general_regs.syscall, in);
       break;
     }
   default:
     ASSERT(false);
   }
 
-  thread->arch.fs_base = in->fs_base;
-  thread->arch.gs_base = in->gs_base;
+  thread->arch_.fs_base = in->fs_base;
+  thread->arch_.gs_base = in->gs_base;
 
   return ZX_OK;
 }
 
-zx_status_t arch_get_single_step(thread_t* thread, zx_thread_state_single_step_t* out) {
+zx_status_t arch_get_single_step(Thread* thread, zx_thread_state_single_step_t* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
 
   // Punt if registers aren't available. E.g.,
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
-  if (thread->arch.suspended_general_regs.gregs == nullptr)
+  if (thread->arch_.suspended_general_regs.gregs == nullptr)
     return ZX_ERR_NOT_SUPPORTED;
 
   uint64_t* flags = nullptr;
-  switch (GeneralRegsSource(thread->arch.general_regs_source)) {
+  switch (GeneralRegsSource(thread->arch_.general_regs_source)) {
     case GeneralRegsSource::Iframe:
-      flags = &thread->arch.suspended_general_regs.iframe->flags;
+      flags = &thread->arch_.suspended_general_regs.iframe->flags;
       break;
     case GeneralRegsSource::Syscall:
-      flags = &thread->arch.suspended_general_regs.syscall->rflags;
+      flags = &thread->arch_.suspended_general_regs.syscall->rflags;
       break;
     default:
       ASSERT(false);
@@ -280,7 +280,7 @@ zx_status_t arch_get_single_step(thread_t* thread, zx_thread_state_single_step_t
   return ZX_OK;
 }
 
-zx_status_t arch_set_single_step(thread_t* thread, const zx_thread_state_single_step_t* in) {
+zx_status_t arch_set_single_step(Thread* thread, const zx_thread_state_single_step_t* in) {
   if (*in != 0 && *in != 1) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -291,16 +291,16 @@ zx_status_t arch_set_single_step(thread_t* thread, const zx_thread_state_single_
 
   // Punt if registers aren't available. E.g.,
   // TODO(fxb/30521): Registers aren't available in synthetic exceptions.
-  if (thread->arch.suspended_general_regs.gregs == nullptr)
+  if (thread->arch_.suspended_general_regs.gregs == nullptr)
     return ZX_ERR_NOT_SUPPORTED;
 
   uint64_t* flags = nullptr;
-  switch (GeneralRegsSource(thread->arch.general_regs_source)) {
+  switch (GeneralRegsSource(thread->arch_.general_regs_source)) {
     case GeneralRegsSource::Iframe:
-      flags = &thread->arch.suspended_general_regs.iframe->flags;
+      flags = &thread->arch_.suspended_general_regs.iframe->flags;
       break;
     case GeneralRegsSource::Syscall:
-      flags = &thread->arch.suspended_general_regs.syscall->rflags;
+      flags = &thread->arch_.suspended_general_regs.syscall->rflags;
       break;
     default:
       ASSERT(false);
@@ -314,7 +314,7 @@ zx_status_t arch_set_single_step(thread_t* thread, const zx_thread_state_single_
   return ZX_OK;
 }
 
-zx_status_t arch_get_fp_regs(thread_t* thread, zx_thread_state_fp_regs* out) {
+zx_status_t arch_get_fp_regs(Thread* thread, zx_thread_state_fp_regs* out) {
   // Don't leak any reserved fields.
   memset(out, 0, sizeof(zx_thread_state_fp_regs));
 
@@ -325,7 +325,7 @@ zx_status_t arch_get_fp_regs(thread_t* thread, zx_thread_state_fp_regs* out) {
   uint32_t comp_size = 0;
   x86_xsave_legacy_area* save =
       static_cast<x86_xsave_legacy_area*>(x86_get_extended_register_state_component(
-          thread->arch.extended_register_state, X86_XSAVE_STATE_INDEX_X87, false, &comp_size));
+          thread->arch_.extended_register_state, X86_XSAVE_STATE_INDEX_X87, false, &comp_size));
   DEBUG_ASSERT(save);  // Legacy getter should always succeed.
 
   out->fcw = save->fcw;
@@ -339,7 +339,7 @@ zx_status_t arch_get_fp_regs(thread_t* thread, zx_thread_state_fp_regs* out) {
   return ZX_OK;
 }
 
-zx_status_t arch_set_fp_regs(thread_t* thread, const zx_thread_state_fp_regs* in) {
+zx_status_t arch_set_fp_regs(Thread* thread, const zx_thread_state_fp_regs* in) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
@@ -347,7 +347,7 @@ zx_status_t arch_set_fp_regs(thread_t* thread, const zx_thread_state_fp_regs* in
   uint32_t comp_size = 0;
   x86_xsave_legacy_area* save =
       static_cast<x86_xsave_legacy_area*>(x86_get_extended_register_state_component(
-          thread->arch.extended_register_state, X86_XSAVE_STATE_INDEX_X87, true, &comp_size));
+          thread->arch_.extended_register_state, X86_XSAVE_STATE_INDEX_X87, true, &comp_size));
   DEBUG_ASSERT(save);  // Legacy getter should always succeed.
 
   save->fcw = in->fcw;
@@ -361,17 +361,17 @@ zx_status_t arch_set_fp_regs(thread_t* thread, const zx_thread_state_fp_regs* in
   return ZX_OK;
 }
 
-zx_status_t arch_get_vector_regs(thread_t* thread, zx_thread_state_vector_regs* out) {
+zx_status_t arch_get_vector_regs(Thread* thread, zx_thread_state_vector_regs* out) {
   return x86_get_set_vector_regs(thread, out, RegAccess::kGet);
 }
 
-zx_status_t arch_set_vector_regs(thread_t* thread, const zx_thread_state_vector_regs* in) {
+zx_status_t arch_set_vector_regs(Thread* thread, const zx_thread_state_vector_regs* in) {
   // The get_set function won't write in "kSet" mode so the const_cast is safe.
   return x86_get_set_vector_regs(thread, const_cast<zx_thread_state_vector_regs*>(in),
                                  RegAccess::kSet);
 }
 
-zx_status_t arch_get_debug_regs(thread_t* thread, zx_thread_state_debug_regs* out) {
+zx_status_t arch_get_debug_regs(Thread* thread, zx_thread_state_debug_regs* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
@@ -379,17 +379,17 @@ zx_status_t arch_get_debug_regs(thread_t* thread, zx_thread_state_debug_regs* ou
   // The kernel updates this per-thread data everytime a hw debug event occurs, meaning that
   // these values will be always up to date. If the thread is not using hw debug capabilities,
   // these will have the default zero values.
-  out->dr[0] = thread->arch.debug_state.dr[0];
-  out->dr[1] = thread->arch.debug_state.dr[1];
-  out->dr[2] = thread->arch.debug_state.dr[2];
-  out->dr[3] = thread->arch.debug_state.dr[3];
-  out->dr6 = thread->arch.debug_state.dr6;
-  out->dr7 = thread->arch.debug_state.dr7;
+  out->dr[0] = thread->arch_.debug_state.dr[0];
+  out->dr[1] = thread->arch_.debug_state.dr[1];
+  out->dr[2] = thread->arch_.debug_state.dr[2];
+  out->dr[3] = thread->arch_.debug_state.dr[3];
+  out->dr6 = thread->arch_.debug_state.dr6;
+  out->dr7 = thread->arch_.debug_state.dr7;
 
   return ZX_OK;
 }
 
-zx_status_t arch_set_debug_regs(thread_t* thread, const zx_thread_state_debug_regs* in) {
+zx_status_t arch_set_debug_regs(Thread* thread, const zx_thread_state_debug_regs* in) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
@@ -409,7 +409,7 @@ zx_status_t arch_set_debug_regs(thread_t* thread, const zx_thread_state_debug_re
     return ZX_ERR_INVALID_ARGS;
 
   // NOTE: This currently does a write-read round-trip to the CPU in order to ensure that
-  //       |thread->arch.debug_state| tracks the exact value as it is stored in the registers.
+  //       |thread->arch_.debug_state| tracks the exact value as it is stored in the registers.
   // TODO(ZX-3038): Ideally, we could do some querying at boot time about the format that the CPU
   //                is storing reserved bits and we can create a mask we can apply to the input
   //                values and avoid changing the state.
@@ -421,9 +421,9 @@ zx_status_t arch_set_debug_regs(thread_t* thread, const zx_thread_state_debug_re
   // Write and then read from the CPU to have real values tracked by the thread data.
   // Mark the thread as now tracking the debug state.
   x86_write_hw_debug_regs(&new_debug_state);
-  x86_read_hw_debug_regs(&thread->arch.debug_state);
+  x86_read_hw_debug_regs(&thread->arch_.debug_state);
 
-  thread->arch.track_debug_state = true;
+  thread->arch_.track_debug_state = true;
 
   // Restore the original debug state. Should always work as the input was already validated.
   x86_write_hw_debug_regs(&current_debug_state);
@@ -431,35 +431,35 @@ zx_status_t arch_set_debug_regs(thread_t* thread, const zx_thread_state_debug_re
   return ZX_OK;
 }
 
-zx_status_t arch_get_x86_register_fs(thread_t* thread, uint64_t* out) {
+zx_status_t arch_get_x86_register_fs(Thread* thread, uint64_t* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
-  *out = thread->arch.fs_base;
+  *out = thread->arch_.fs_base;
   return ZX_OK;
 }
 
-zx_status_t arch_set_x86_register_fs(thread_t* thread, const uint64_t* in) {
+zx_status_t arch_set_x86_register_fs(Thread* thread, const uint64_t* in) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
-  thread->arch.fs_base = *in;
+  thread->arch_.fs_base = *in;
   return ZX_OK;
 }
 
-zx_status_t arch_get_x86_register_gs(thread_t* thread, uint64_t* out) {
+zx_status_t arch_get_x86_register_gs(Thread* thread, uint64_t* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
-  *out = thread->arch.gs_base;
+  *out = thread->arch_.gs_base;
   return ZX_OK;
 }
 
-zx_status_t arch_set_x86_register_gs(thread_t* thread, const uint64_t* in) {
+zx_status_t arch_set_x86_register_gs(Thread* thread, const uint64_t* in) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   DEBUG_ASSERT(thread_is_user_state_saved_locked(thread));
-  thread->arch.gs_base = *in;
+  thread->arch_.gs_base = *in;
   return ZX_OK;
 }
 

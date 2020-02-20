@@ -22,7 +22,7 @@ int clock_tests(int, const cmd_args*, uint32_t) {
   uint64_t c;
   zx_time_t t2;
 
-  thread_sleep_relative(ZX_MSEC(100));
+  CurrentThread::SleepRelative(ZX_MSEC(100));
   c = arch_cycle_count();
   current_time();
   c = arch_cycle_count() - c;
@@ -49,11 +49,11 @@ int clock_tests(int, const cmd_args*, uint32_t) {
 
   printf("counting to 5, in one second intervals\n");
   for (int i = 0; i < 5; i++) {
-    thread_sleep_relative(ZX_SEC(1));
+    CurrentThread::SleepRelative(ZX_SEC(1));
     printf("%d\n", i + 1);
   }
 
-  cpu_mask_t old_affinity = get_current_thread()->hard_affinity;
+  cpu_mask_t old_affinity = get_current_thread()->hard_affinity_;
 
   for (cpu_num_t cpu = 0; cpu < SMP_MAX_CPUS; cpu++) {
     if (!mp_is_cpu_online(cpu))
@@ -61,7 +61,7 @@ int clock_tests(int, const cmd_args*, uint32_t) {
 
     printf("measuring cpu clock against current_time() on cpu %u\n", cpu);
 
-    thread_set_cpu_affinity(get_current_thread(), cpu_num_to_mask(cpu));
+    get_current_thread()->SetCpuAffinity(cpu_num_to_mask(cpu));
 
     for (int i = 0; i < 3; i++) {
       uint64_t cycles = arch_cycle_count();
@@ -73,7 +73,7 @@ int clock_tests(int, const cmd_args*, uint32_t) {
     }
   }
 
-  thread_set_cpu_affinity(get_current_thread(), old_affinity);
+  get_current_thread()->SetCpuAffinity(old_affinity);
 
   return 0;
 }

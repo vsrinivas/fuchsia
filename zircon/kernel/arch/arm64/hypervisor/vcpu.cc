@@ -192,7 +192,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   auto auto_call = fbl::MakeAutoCall([guest, vpid]() { guest->FreeVpid(vpid); });
 
   // For efficiency, we pin the thread to the CPU.
-  thread_t* thread = hypervisor::pin_thread(vpid);
+  Thread* thread = hypervisor::pin_thread(vpid);
 
   fbl::AllocChecker ac;
   ktl::unique_ptr<Vcpu> vcpu(new (&ac) Vcpu(guest, vpid, thread));
@@ -227,7 +227,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   return ZX_OK;
 }
 
-Vcpu::Vcpu(Guest* guest, uint8_t vpid, const thread_t* thread)
+Vcpu::Vcpu(Guest* guest, uint8_t vpid, const Thread* thread)
     : guest_(guest), vpid_(vpid), thread_(thread), running_(false) {}
 
 Vcpu::~Vcpu() {
@@ -262,7 +262,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
       // to the guest.
       ktrace_vcpu_exit(vmexit_interrupt_ktrace_meta(ich_state->misr),
                        guest_state->system_state.elr_el2);
-      status = thread_->signals & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
+      status = thread_->signals_ & THREAD_SIGNAL_KILL ? ZX_ERR_CANCELED : ZX_OK;
     } else if (status == ZX_OK) {
       status = vmexit_handler(&hcr_, guest_state, &gich_state_, guest_->AddressSpace(),
                               guest_->Traps(), packet);

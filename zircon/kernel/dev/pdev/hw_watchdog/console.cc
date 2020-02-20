@@ -115,7 +115,7 @@ static int cmd_watchdog(int argc, const cmd_args* argv, uint32_t flags) {
       // 3) Disable interrupts.
       // 4) Spin forever.
       //
-      thread_migrate_to_cpu(BOOT_CPU_ID);
+      CurrentThread::MigrateToCpu(BOOT_CPU_ID);
       platform_halt_secondary_cpus();
       arch_disable_ints();
 

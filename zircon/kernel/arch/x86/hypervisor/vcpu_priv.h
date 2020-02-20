@@ -245,7 +245,7 @@ class AutoPin {
 
  private:
   cpu_mask_t prev_cpu_mask_;
-  thread_t* thread_;
+  Thread* thread_;
 };
 
 bool cr0_is_invalid(AutoVmcs* vmcs, uint64_t cr0_value);

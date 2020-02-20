@@ -58,14 +58,14 @@ static void deadlock_test(void) {
 
   event_t gate = EVENT_INITIAL_VALUE(gate, false, 0);
 
-  thread_t* threads[5] = {0};
+  Thread* threads[5] = {0};
   for (uint i = 0; i < fbl::count_of(threads); ++i) {
-    threads[i] = thread_create("sync_ipi_deadlock", deadlock_test_thread, &gate, DEFAULT_PRIORITY);
+    threads[i] = Thread::Create("sync_ipi_deadlock", deadlock_test_thread, &gate, DEFAULT_PRIORITY);
     if (!threads[i]) {
       TRACEF("  failed to create thread\n");
       goto cleanup;
     }
-    thread_resume(threads[i]);
+    threads[i]->Resume();
   }
 
   event_signal(&gate, true);
@@ -73,7 +73,7 @@ static void deadlock_test(void) {
 cleanup:
   for (uint i = 0; i < fbl::count_of(threads); ++i) {
     if (threads[i]) {
-      thread_join(threads[i], NULL, ZX_TIME_INFINITE);
+      threads[i]->Join(NULL, ZX_TIME_INFINITE);
     }
   }
   event_destroy(&gate);

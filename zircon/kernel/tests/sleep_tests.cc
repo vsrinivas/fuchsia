@@ -18,11 +18,12 @@ static int thread_sleep_test(void) {
   int early = 0;
   for (int i = 0; i < 5; i++) {
     zx_time_t now = current_time();
-    thread_sleep_relative(ZX_MSEC(500));
+    CurrentThread::SleepRelative(ZX_MSEC(500));
     zx_duration_t actual_delay = current_time() - now;
     if (actual_delay < ZX_MSEC(500)) {
       early = 1;
-      printf("thread_sleep_relative(ZX_MSEC(500)) returned after %" PRIi64 " ns\n", actual_delay);
+      printf("CurrentThread::SleepRelative(ZX_MSEC(500)) returned after %" PRIi64 " ns\n",
+             actual_delay);
     }
   }
   return early;

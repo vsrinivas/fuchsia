@@ -53,9 +53,9 @@ static bool event_signal_result_after_wait_test() {
 
   event_waiter_args args = {&event, ZX_OK};
 
-  thread_t* waiter =
-      thread_create("event waiter thread", &event_waiter_thread, &args, DEFAULT_PRIORITY);
-  thread_resume(waiter);
+  Thread* waiter =
+      Thread::Create("event waiter thread", &event_waiter_thread, &args, DEFAULT_PRIORITY);
+  waiter->Resume();
 
   int64_t wait_duration = ZX_USEC(1);
   while (true) {
@@ -63,12 +63,12 @@ static bool event_signal_result_after_wait_test() {
       // Check if the waiter thread is in the blocked state, indicating that the event
       // has latched.
       Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-      if (waiter->state == THREAD_BLOCKED) {
+      if (waiter->state_ == THREAD_BLOCKED) {
         break;
       }
     }
     // Nope - sleep and try again.
-    thread_sleep_relative(wait_duration);
+    CurrentThread::SleepRelative(wait_duration);
     wait_duration *= 2;
   }
 
@@ -76,7 +76,7 @@ static bool event_signal_result_after_wait_test() {
   ASSERT_EQ(wake_count, 1, "expected to wake 1 thread once waiter has latched");
 
   int thread_retcode = 0;
-  thread_join(waiter, &thread_retcode, ZX_TIME_INFINITE);
+  waiter->Join(&thread_retcode, ZX_TIME_INFINITE);
 
   ASSERT_EQ(thread_retcode, 0, "");
 

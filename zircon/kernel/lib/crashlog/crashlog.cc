@@ -193,7 +193,7 @@ size_t crashlog_to_string(char* out, const size_t out_len, zircon_crash_reason_t
     return out_len;
   }
 
-  size_t len = thread_append_current_backtrace(buf, remain);
+  size_t len = CurrentThread::AppendCurrentBacktrace(buf, remain);
   if (len > remain) {
     return out_len;
   }

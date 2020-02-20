@@ -172,7 +172,7 @@ static void BecomeThreadSafe(uint level) { GetInstance()->BecomeThreadSafe(); }
 // PRNG reseeding loop.
 static int ReseedPRNG(void* arg) {
   for (;;) {
-    thread_sleep_relative(ZX_SEC(30));
+    CurrentThread::SleepRelative(ZX_SEC(30));
 
     unsigned int successful = 0;  // number of successful entropy sources
     entropy::Collector* collector = nullptr;
@@ -200,8 +200,8 @@ static int ReseedPRNG(void* arg) {
 
 // Start a thread to reseed PRNG.
 static void StartReseedThread(uint level) {
-  thread_t* t = thread_create("prng-reseed", ReseedPRNG, nullptr, HIGHEST_PRIORITY);
-  thread_detach_and_resume(t);
+  Thread* t = Thread::Create("prng-reseed", ReseedPRNG, nullptr, HIGHEST_PRIORITY);
+  t->DetachAndResume();
 }
 
 }  // namespace GlobalPRNG

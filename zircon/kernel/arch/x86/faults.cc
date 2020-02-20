@@ -101,13 +101,13 @@ __NO_RETURN static void exception_die(x86_iframe_t* frame, const char* msg) {
 static bool try_dispatch_user_exception(x86_iframe_t* frame, uint exception_type) {
   if (is_from_user(frame)) {
     struct arch_exception_context context = {false, frame, 0};
-    thread_preempt_reenable_no_resched();
+    CurrentThread::PreemptReenableNoResched();
     arch_set_blocking_disallowed(false);
     arch_enable_ints();
     zx_status_t erc = dispatch_user_exception(exception_type, &context);
     arch_disable_ints();
     arch_set_blocking_disallowed(true);
-    thread_preempt_disable();
+    CurrentThread::PreemptDisable();
     if (erc == ZX_OK)
       return true;
   }
@@ -123,10 +123,10 @@ static void x86_debug_handler(x86_iframe_t* frame) {
   // to actually change the debug registers for a thread is through the thread_write_state
   // syscall.
 
-  thread_t* thread = get_current_thread();
+  Thread* thread = get_current_thread();
 
   // We save the current state so that exception handlers can check what kind of exception it was.
-  x86_read_debug_status(&thread->arch.debug_state.dr6);
+  x86_read_debug_status(&thread->arch_.debug_state.dr6);
 
   // NOTE: a HW breakpoint exception can also represent a single step.
   // TODO(ZX-3037): Is it worth separating this into two separate exceptions?
@@ -135,10 +135,10 @@ static void x86_debug_handler(x86_iframe_t* frame) {
     // doesn't automatically do it.
     //
     // After this point, any exception handler that reads DR6 won't see the single step bit active.
-    X86_DBG_STATUS_BD_SET(&thread->arch.debug_state.dr6, 0);
-    X86_DBG_STATUS_BS_SET(&thread->arch.debug_state.dr6, 0);
-    X86_DBG_STATUS_BT_SET(&thread->arch.debug_state.dr6, 0);
-    x86_write_debug_status(thread->arch.debug_state.dr6);
+    X86_DBG_STATUS_BD_SET(&thread->arch_.debug_state.dr6, 0);
+    X86_DBG_STATUS_BS_SET(&thread->arch_.debug_state.dr6, 0);
+    X86_DBG_STATUS_BT_SET(&thread->arch_.debug_state.dr6, 0);
+    x86_write_debug_status(thread->arch_.debug_state.dr6);
 
     return;
   }
@@ -254,7 +254,7 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
   vaddr_t va = x86_get_cr2();
 
   /* reenable interrupts */
-  thread_preempt_reenable_no_resched();
+  CurrentThread::PreemptReenableNoResched();
   arch_set_blocking_disallowed(false);
   arch_enable_ints();
 
@@ -262,7 +262,7 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
   auto ac = fbl::MakeAutoCall([]() {
     arch_disable_ints();
     arch_set_blocking_disallowed(true);
-    thread_preempt_disable();
+    CurrentThread::PreemptDisable();
   });
 
   /* check for flags we're not prepared to handle */
@@ -289,7 +289,7 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
 
   /* Check if the page fault handler should be skipped. It is skipped if there's a page_fault_resume
    * address and the highest bit is 0. */
-  uint64_t pfr = get_current_thread()->arch.page_fault_resume;
+  uint64_t pfr = get_current_thread()->arch_.page_fault_resume;
   if (unlikely(pfr && !BIT_SET(pfr, X86_PFR_RUN_FAULT_HANDLER_BIT))) {
     // Need to reconstruct the canonical resume address by ensuring it is correctly sign extended.
     // Double check the bit before X86_PFR_RUN_FAULT_HANDLER_BIT was set (indicating kernel
@@ -477,7 +477,7 @@ void x86_exception_handler(x86_iframe_t* frame) {
   }
 
   if (do_preempt)
-    thread_preempt();
+    CurrentThread::Preempt();
 
   DEBUG_ASSERT_MSG(arch_ints_disabled(),
                    "ints disabled on way out of exception, vector %" PRIu64 " IP %#" PRIx64 "\n",
@@ -485,12 +485,12 @@ void x86_exception_handler(x86_iframe_t* frame) {
 }
 
 void x86_syscall_process_pending_signals(x86_syscall_general_regs_t* gregs) {
-  thread_process_pending_signals(GeneralRegsSource::Syscall, gregs);
+  CurrentThread::ProcessPendingSignals(GeneralRegsSource::Syscall, gregs);
 }
 
 void arch_iframe_process_pending_signals(iframe_t* iframe) {
   DEBUG_ASSERT(iframe != nullptr);
-  thread_process_pending_signals(GeneralRegsSource::Iframe, iframe);
+  CurrentThread::ProcessPendingSignals(GeneralRegsSource::Iframe, iframe);
 }
 
 void arch_dump_exception_context(const arch_exception_context_t* context) {
@@ -534,7 +534,7 @@ zx_status_t arch_dispatch_user_policy_exception(void) {
   return dispatch_user_exception(ZX_EXCP_POLICY_ERROR, &context);
 }
 
-bool arch_install_exception_context(thread_t* thread, const arch_exception_context_t* context) {
+bool arch_install_exception_context(Thread* thread, const arch_exception_context_t* context) {
   if (!context->frame) {
     // TODO(fxb/30521): Must be a synthetic exception as they don't (yet) provide the registers.
     return false;
@@ -544,4 +544,4 @@ bool arch_install_exception_context(thread_t* thread, const arch_exception_conte
   return true;
 }
 
-void arch_remove_exception_context(thread_t* thread) { arch_reset_suspended_general_regs(thread); }
+void arch_remove_exception_context(Thread* thread) { arch_reset_suspended_general_regs(thread); }

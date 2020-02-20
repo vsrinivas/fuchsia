@@ -534,7 +534,7 @@ fbl::RefPtr<VmAddressRegionOrMapping> VmAspace::FindRegion(vaddr_t va) {
   }
 }
 
-void VmAspace::AttachToThread(thread_t* t) {
+void VmAspace::AttachToThread(Thread* t) {
   canary_.Assert();
   DEBUG_ASSERT(t);
 
@@ -542,10 +542,10 @@ void VmAspace::AttachToThread(thread_t* t) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
   // not prepared to handle setting a new address space or one on a running thread
-  DEBUG_ASSERT(!t->aspace);
-  DEBUG_ASSERT(t->state != THREAD_RUNNING);
+  DEBUG_ASSERT(!t->aspace_);
+  DEBUG_ASSERT(t->state_ != THREAD_RUNNING);
 
-  t->aspace = reinterpret_cast<vmm_aspace_t*>(this);
+  t->aspace_ = reinterpret_cast<vmm_aspace_t*>(this);
 }
 
 zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
@@ -625,7 +625,7 @@ VmAspace* VmAspace::vaddr_to_aspace(uintptr_t address) {
   if (is_kernel_address(address)) {
     return kernel_aspace();
   } else if (is_user_address(address)) {
-    return vmm_aspace_to_obj(get_current_thread()->aspace);
+    return vmm_aspace_to_obj(get_current_thread()->aspace_);
   } else {
     return nullptr;
   }

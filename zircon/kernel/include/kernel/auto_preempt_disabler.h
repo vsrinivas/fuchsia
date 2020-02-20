@@ -66,13 +66,13 @@ class AutoPreemptDisabler<APDInitialState::PREEMPT_ALLOWED> {
 
   ~AutoPreemptDisabler() {
     if (started_) {
-      thread_preempt_reenable();
+      CurrentThread::PreemptReenable();
     }
   }
 
   void Disable() {
     if (!started_) {
-      thread_preempt_disable();
+      CurrentThread::PreemptDisable();
       started_ = true;
     }
   }
@@ -91,8 +91,8 @@ class AutoPreemptDisabler<APDInitialState::PREEMPT_ALLOWED> {
 template <>
 class AutoPreemptDisabler<APDInitialState::PREEMPT_DISABLED> {
  public:
-  AutoPreemptDisabler() { thread_preempt_disable(); }
-  ~AutoPreemptDisabler() { thread_preempt_reenable(); }
+  AutoPreemptDisabler() { CurrentThread::PreemptDisable(); }
+  ~AutoPreemptDisabler() { CurrentThread::PreemptReenable(); }
 
   // No move, no copy
   AutoPreemptDisabler(const AutoPreemptDisabler&) = delete;

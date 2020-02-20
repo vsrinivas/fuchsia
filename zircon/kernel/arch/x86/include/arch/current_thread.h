@@ -10,15 +10,15 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_CURRENT_THREAD_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_CURRENT_THREAD_H_
 
-static inline thread_t* get_current_thread(void) {
+static inline Thread* get_current_thread(void) {
   /* Read directly from gs, rather than via x86_get_percpu()->current_thread,
    * so that this is atomic.  Otherwise, we could context switch between the
    * read of percpu from gs and the read of the current_thread pointer, and
    * discover the current thread on a different CPU */
-  return (thread_t*)x86_read_gs_offset64(PERCPU_CURRENT_THREAD_OFFSET);
+  return (Thread*)x86_read_gs_offset64(PERCPU_CURRENT_THREAD_OFFSET);
 }
 
-static inline void set_current_thread(thread_t* t) {
+static inline void set_current_thread(Thread* t) {
   /* See above for why this is a direct gs write */
   x86_write_gs_offset64(PERCPU_CURRENT_THREAD_OFFSET, (uint64_t)t);
 }

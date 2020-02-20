@@ -66,11 +66,11 @@ class TA_CAP("mutex") Mutex {
   // Accessors to extract the holder pointer from the val member
   uintptr_t val() const { return val_.load(ktl::memory_order_relaxed); }
 
-  static thread_t* holder_from_val(uintptr_t value) {
-    return reinterpret_cast<thread_t*>(value & ~STATE_FLAG_CONTESTED);
+  static Thread* holder_from_val(uintptr_t value) {
+    return reinterpret_cast<Thread*>(value & ~STATE_FLAG_CONTESTED);
   }
 
-  thread_t* holder() const { return holder_from_val(val()); }
+  Thread* holder() const { return holder_from_val(val()); }
 
   fbl::Canary<MAGIC> magic_;
   ktl::atomic<uintptr_t> val_{STATE_FREE};

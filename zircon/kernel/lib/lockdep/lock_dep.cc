@@ -46,7 +46,7 @@ int LockDepThread(void* /*arg*/) {
 }
 
 void LockDepInit(unsigned /*level*/) {
-  thread_t* t = thread_create("lockdep", &LockDepThread, NULL, LOW_PRIORITY);
+  Thread* t = thread_create("lockdep", &LockDepThread, NULL, LOW_PRIORITY);
   thread_detach_and_resume(t);
 }
 
@@ -112,7 +112,7 @@ namespace lockdep {
 void SystemLockValidationError(AcquiredLockEntry* bad_entry, AcquiredLockEntry* conflicting_entry,
                                ThreadLockState* state, void* caller_address, void* caller_frame,
                                LockResult result) {
-  thread_t* const current_thread = get_current_thread();
+  Thread* const current_thread = get_current_thread();
 
   char owner_name[THREAD_NAME_LENGTH];
   thread_owner_name(current_thread, owner_name);

@@ -93,12 +93,12 @@ void lk_main() {
 
   // create a thread to complete system initialization
   dprintf(SPEW, "creating bootstrap completion thread\n");
-  thread_t* t = thread_create("bootstrap2", &bootstrap2, NULL, DEFAULT_PRIORITY);
-  thread_detach(t);
-  thread_resume(t);
+  Thread* t = Thread::Create("bootstrap2", &bootstrap2, NULL, DEFAULT_PRIORITY);
+  t->Detach();
+  t->Resume();
 
   // become the idle thread and enable interrupts to start the scheduler
-  thread_become_idle();
+  CurrentThread::BecomeIdle();
 }
 
 static int bootstrap2(void*) {
@@ -150,7 +150,7 @@ void lk_init_secondary_cpus(uint secondary_cpu_count) {
     secondary_cpu_count = SMP_MAX_CPUS - 1;
   }
   for (uint i = 0; i < secondary_cpu_count; i++) {
-    thread_t* t = thread_create_idle_thread(i + 1);
+    Thread* t = Thread::CreateIdleThread(i + 1);
     if (!t) {
       dprintf(CRITICAL, "could not allocate idle thread %u\n", i + 1);
       secondary_idle_thread_count = i;

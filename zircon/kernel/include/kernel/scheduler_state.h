@@ -17,7 +17,7 @@
 #include <ffl/fixed.h>
 
 // Forward declaration.
-struct thread_t;
+struct Thread;
 
 // Fixed-point task weight.
 //
@@ -166,7 +166,7 @@ class SchedulerState {
   }
 
   // WAVLTree node state.
-  fbl::WAVLTreeNodeState<thread_t*> run_queue_node_;
+  fbl::WAVLTreeNodeState<Thread*> run_queue_node_;
 
   // The scheduling discipline of this thread. Determines whether the thread is
   // enqueued on the fair or deadline run queues and whether the weight or
@@ -263,7 +263,7 @@ class SchedulerState {
   friend class Scheduler;
 
   // WAVLTree node state.
-  fbl::WAVLTreeNodeState<thread_t*> run_queue_node_;
+  fbl::WAVLTreeNodeState<Thread*> run_queue_node_;
 
   // The current weight of the thread.
   SchedWeight weight_{0};

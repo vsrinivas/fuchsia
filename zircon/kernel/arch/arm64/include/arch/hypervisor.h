@@ -121,7 +121,7 @@ class Vcpu {
  private:
   Guest* guest_;
   const uint8_t vpid_;
-  const thread_t* thread_;
+  const Thread* thread_;
   ktl::atomic<bool> running_;
   // We allocate El2State in its own page as it is passed between EL1 and EL2,
   // which have different address space mappings. This ensures that El2State
@@ -130,7 +130,7 @@ class Vcpu {
   GichState gich_state_;
   uint64_t hcr_;
 
-  Vcpu(Guest* guest, uint8_t vpid, const thread_t* thread);
+  Vcpu(Guest* guest, uint8_t vpid, const Thread* thread);
 };
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_HYPERVISOR_H_

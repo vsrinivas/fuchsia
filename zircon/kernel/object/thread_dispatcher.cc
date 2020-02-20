@@ -44,7 +44,7 @@ zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uin
                                      KernelHandle<ThreadDispatcher>* out_handle,
                                      zx_rights_t* out_rights) {
   // Create the lower level thread and attach it to the scheduler.
-  thread_t* core_thread = thread_create(name.data(), StartRoutine, nullptr, DEFAULT_PRIORITY);
+  Thread* core_thread = Thread::Create(name.data(), StartRoutine, nullptr, DEFAULT_PRIORITY);
   if (!core_thread) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -52,7 +52,7 @@ zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uin
   fbl::AllocChecker ac;
   auto user_thread = fbl::AdoptRef(new (&ac) ThreadDispatcher(process, core_thread, flags));
   if (!ac.check()) {
-    thread_forget(core_thread);
+    core_thread->Forget();
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -63,13 +63,13 @@ zx_status_t ThreadDispatcher::Create(fbl::RefPtr<ProcessDispatcher> process, uin
   return ZX_OK;
 }
 
-ThreadDispatcher::ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, thread_t* core_thread,
+ThreadDispatcher::ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, Thread* core_thread,
                                    uint32_t flags)
     : process_(ktl::move(process)),
       core_thread_(core_thread),
       exceptionate_(ZX_EXCEPTION_CHANNEL_TYPE_THREAD) {
   LTRACE_ENTRY_OBJ;
-  thread_set_usermode_thread(core_thread_, this);
+  core_thread_->SetUsermodeThread(this);
   kcounter_add(dispatcher_thread_create_count, 1);
 }
 
@@ -86,9 +86,9 @@ ThreadDispatcher::~ThreadDispatcher() {
       // join the LK thread before doing anything else to clean up LK state and ensure
       // the thread we're destroying has stopped.
       LTRACEF("joining LK thread to clean up state\n");
-      [[maybe_unused]] auto ret = thread_join(core_thread_, nullptr, ZX_TIME_INFINITE);
+      [[maybe_unused]] auto ret = core_thread_->Join(nullptr, ZX_TIME_INFINITE);
       LTRACEF("done joining LK thread\n");
-      DEBUG_ASSERT_MSG(ret == ZX_OK, "thread_join returned something other than ZX_OK\n");
+      DEBUG_ASSERT_MSG(ret == ZX_OK, "Thread::Join returned something other than ZX_OK\n");
       break;
     }
     case ThreadState::Lifecycle::INITIAL:
@@ -97,7 +97,7 @@ ThreadDispatcher::~ThreadDispatcher() {
     case ThreadState::Lifecycle::INITIALIZED:
       // as we've been initialized previously, forget the LK thread.
       // note that thread_forget is not called for self since the thread is not running.
-      thread_forget(core_thread_);
+      core_thread_->Forget();
       break;
     default:
       DEBUG_ASSERT_MSG(false, "bad state %s, this %p\n",
@@ -141,8 +141,8 @@ zx_status_t ThreadDispatcher::set_name(const char* name, size_t len) {
     len = ZX_MAX_NAME_LEN - 1;
 
   Guard<SpinLock, IrqSave> guard{&name_lock_};
-  memcpy(core_thread_->name, name, len);
-  memset(core_thread_->name + len, 0, ZX_MAX_NAME_LEN - len);
+  memcpy(core_thread_->name_, name, len);
+  memset(core_thread_->name_ + len, 0, ZX_MAX_NAME_LEN - len);
   return ZX_OK;
 }
 
@@ -151,7 +151,7 @@ void ThreadDispatcher::get_name(char out_name[ZX_MAX_NAME_LEN]) const {
 
   Guard<SpinLock, IrqSave> guard{&name_lock_};
   memset(out_name, 0, ZX_MAX_NAME_LEN);
-  strlcpy(out_name, core_thread_->name, ZX_MAX_NAME_LEN);
+  strlcpy(out_name, core_thread_->name_, ZX_MAX_NAME_LEN);
 }
 
 // start a thread
@@ -183,20 +183,20 @@ zx_status_t ThreadDispatcher::MakeRunnable(const EntryState& entry, bool suspend
   // bump the ref on this object that the LK thread state will now own until the lk thread has
   // exited
   AddRef();
-  core_thread_->user_tid = get_koid();
-  core_thread_->user_pid = process_->get_koid();
+  core_thread_->user_tid_ = get_koid();
+  core_thread_->user_pid_ = process_->get_koid();
 
   // start the thread in RUNNING state, if we're starting suspended it will transition to
   // SUSPENDED when it checks thread signals before executing any user code
   SetStateLocked(ThreadState::Lifecycle::RUNNING);
 
   if (suspend_count_ == 0) {
-    thread_resume(core_thread_);
+    core_thread_->Resume();
   } else {
-    // thread_suspend() only fails if the underlying thread is already dead, which we should
-    // ignore here to match the behavior of thread_resume(); our Exiting() callback will run
+    // Thread::Suspend() only fails if the underlying thread is already dead, which we should
+    // ignore here to match the behavior of Thread::Resume(); our Exiting() callback will run
     // shortly to clean us up
-    thread_suspend(core_thread_);
+    core_thread_->Suspend();
   }
 
   return ZX_OK;
@@ -219,7 +219,7 @@ void ThreadDispatcher::Exit() {
 
   // exit here
   // this will recurse back to us in ::Exiting()
-  thread_exit(0);
+  CurrentThread::Exit(0);
 
   __UNREACHABLE;
 }
@@ -239,7 +239,7 @@ void ThreadDispatcher::Kill() {
     case ThreadState::Lifecycle::RUNNING:
     case ThreadState::Lifecycle::SUSPENDED:
       // deliver a kernel kill signal to the thread
-      thread_kill(core_thread_);
+      core_thread_->Kill();
 
       // enter the dying state
       SetStateLocked(ThreadState::Lifecycle::DYING);
@@ -278,7 +278,7 @@ zx_status_t ThreadDispatcher::Suspend() {
     case ThreadState::Lifecycle::RUNNING:
     case ThreadState::Lifecycle::SUSPENDED:
       if (suspend_count_ == 1)
-        return thread_suspend(core_thread_);
+        return core_thread_->Suspend();
       return ZX_OK;
     case ThreadState::Lifecycle::DYING:
     case ThreadState::Lifecycle::DEAD:
@@ -312,7 +312,7 @@ void ThreadDispatcher::Resume() {
     case ThreadState::Lifecycle::SUSPENDED:
       // It's possible the thread never transitioned from RUNNING -> SUSPENDED.
       if (suspend_count_ == 0)
-        thread_resume(core_thread_);
+        core_thread_->Resume();
       break;
     case ThreadState::Lifecycle::DYING:
     case ThreadState::Lifecycle::DEAD:
@@ -328,8 +328,7 @@ bool ThreadDispatcher::IsDyingOrDead() const {
 
 bool ThreadDispatcher::IsDyingOrDeadLocked() const {
   auto lifecycle = state_.lifecycle();
-  return lifecycle == ThreadState::Lifecycle::DYING ||
-         lifecycle == ThreadState::Lifecycle::DEAD;
+  return lifecycle == ThreadState::Lifecycle::DYING || lifecycle == ThreadState::Lifecycle::DEAD;
 }
 
 bool ThreadDispatcher::HasStarted() const {
@@ -587,7 +586,7 @@ zx_status_t ThreadDispatcher::GetInfoForUserspace(zx_info_thread_t* info) {
   // We assume that we can fit the entire mask in the first word of
   // cpu_affinity_mask.
   static_assert(SMP_MAX_CPUS <= sizeof(info->cpu_affinity_mask.mask[0]) * 8);
-  info->cpu_affinity_mask.mask[0] = thread_get_soft_cpu_affinity(core_thread_);
+  info->cpu_affinity_mask.mask[0] = core_thread_->GetSoftCpuAffinity();
 
   return ZX_OK;
 }
@@ -723,9 +722,9 @@ bool ThreadDispatcher::HandleSingleShotException(Exceptionate* exceptionate,
 }
 
 // T is the state type to read.
-// F is a function that gets state T and has signature |zx_status_t (F)(thread_t*, T*)|.
+// F is a function that gets state T and has signature |zx_status_t (F)(Thread*, T*)|.
 template <typename T, typename F>
-zx_status_t ThreadDispatcher::ReadStateGeneric(F get_state_func, thread_t* thread,
+zx_status_t ThreadDispatcher::ReadStateGeneric(F get_state_func, Thread* thread,
                                                user_out_ptr<void> buffer, size_t buffer_size) {
   if (buffer_size < sizeof(T)) {
     return ZX_ERR_BUFFER_TOO_SMALL;
@@ -777,9 +776,9 @@ zx_status_t ThreadDispatcher::ReadState(zx_thread_state_topic_t state_kind,
 }
 
 // T is the state type to write.
-// F is a function that sets state T and has signature |zx_status_t (F)(thread_t*, const T*)|.
+// F is a function that sets state T and has signature |zx_status_t (F)(Thread*, const T*)|.
 template <typename T, typename F>
-zx_status_t ThreadDispatcher::WriteStateGeneric(F set_state_func, thread_t* thread,
+zx_status_t ThreadDispatcher::WriteStateGeneric(F set_state_func, Thread* thread,
                                                 user_in_ptr<const void> buffer,
                                                 size_t buffer_size) {
   if (buffer_size < sizeof(T)) {
@@ -837,7 +836,7 @@ zx_status_t ThreadDispatcher::SetPriority(int32_t priority) {
     return ZX_ERR_BAD_STATE;
   }
   // The priority was already validated by the Profile dispatcher.
-  thread_set_priority(core_thread_, priority);
+  core_thread_->SetPriority(priority);
   return ZX_OK;
 }
 
@@ -849,7 +848,7 @@ zx_status_t ThreadDispatcher::SetDeadline(const zx_sched_deadline_params_t& para
     return ZX_ERR_BAD_STATE;
   }
   // The deadline parameters are already validated by the Profile dispatcher.
-  thread_set_deadline(core_thread_, params);
+  core_thread_->SetDeadline(params);
   return ZX_OK;
 }
 
@@ -861,7 +860,7 @@ zx_status_t ThreadDispatcher::SetSoftAffinity(cpu_mask_t mask) {
     return ZX_ERR_BAD_STATE;
   }
   // The mask was already validated by the Profile dispatcher.
-  thread_set_soft_cpu_affinity(core_thread_, mask);
+  core_thread_->SetSoftCpuAffinity(mask);
   return ZX_OK;
 }
 

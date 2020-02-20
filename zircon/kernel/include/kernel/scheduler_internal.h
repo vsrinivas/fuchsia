@@ -25,29 +25,30 @@
 // time to the node's own finish time.
 template <typename Iter>
 void Scheduler::SubtreeMinObserver::RecordInsert(Iter node) {
-  node->scheduler_state.min_finish_time_ = node->scheduler_state.finish_time_;
+  node->scheduler_state_.min_finish_time_ = node->scheduler_state_.finish_time_;
 }
 
 // Collisions are not allowed as WAVLTree::insert_or_find is not used by the
 // scheduler.
 template <typename Iter>
-void Scheduler::SubtreeMinObserver::RecordInsertCollision(thread_t* node, Iter collision) {
-  ZX_DEBUG_ASSERT_MSG(false, "Key collision: node=%s collision=%s!", node->name, collision->name);
+void Scheduler::SubtreeMinObserver::RecordInsertCollision(Thread* node, Iter collision) {
+  ZX_DEBUG_ASSERT_MSG(false, "Key collision: node=%s collision=%s!", node->name_, collision->name_);
 }
 
 // Replacements are not used as WAVLTree::insert_or_replace is not used by the
 // scheduler.
 template <typename Iter>
-void Scheduler::SubtreeMinObserver::RecordInsertReplace(Iter node, thread_t* replacement) {
-  ZX_DEBUG_ASSERT_MSG(false, "Key collision: node=%s collision=%s!", node->name, replacement->name);
+void Scheduler::SubtreeMinObserver::RecordInsertReplace(Iter node, Thread* replacement) {
+  ZX_DEBUG_ASSERT_MSG(false, "Key collision: node=%s collision=%s!", node->name_,
+                      replacement->name_);
 }
 
 // Adjust each ancestor node as the tree is descended to find the insertion
 // point for the new node.
 template <typename Iter>
-void Scheduler::SubtreeMinObserver::RecordInsertTraverse(thread_t* node, Iter ancestor) {
-  if (ancestor->scheduler_state.min_finish_time_ > node->scheduler_state.finish_time_) {
-    ancestor->scheduler_state.min_finish_time_ = node->scheduler_state.finish_time_;
+void Scheduler::SubtreeMinObserver::RecordInsertTraverse(Thread* node, Iter ancestor) {
+  if (ancestor->scheduler_state_.min_finish_time_ > node->scheduler_state_.finish_time_) {
+    ancestor->scheduler_state_.min_finish_time_ = node->scheduler_state_.finish_time_;
   }
 }
 
@@ -72,17 +73,17 @@ template <typename Iter>
 void Scheduler::SubtreeMinObserver::RecordRotation(Iter pivot, Iter lr_child, Iter /*rl_child*/,
                                                    Iter parent, Iter sibling) {
   // The overall subtree maintains the same min.
-  pivot->scheduler_state.min_finish_time_ = parent->scheduler_state.min_finish_time_;
+  pivot->scheduler_state_.min_finish_time_ = parent->scheduler_state_.min_finish_time_;
 
   // Compute the min with the newly adopted child.
-  parent->scheduler_state.min_finish_time_ = parent->scheduler_state.finish_time_;
+  parent->scheduler_state_.min_finish_time_ = parent->scheduler_state_.finish_time_;
   if (sibling) {
-    parent->scheduler_state.min_finish_time_ = std::min(parent->scheduler_state.min_finish_time_,
-                                                        sibling->scheduler_state.min_finish_time_);
+    parent->scheduler_state_.min_finish_time_ = std::min(
+        parent->scheduler_state_.min_finish_time_, sibling->scheduler_state_.min_finish_time_);
   }
   if (lr_child) {
-    parent->scheduler_state.min_finish_time_ = std::min(parent->scheduler_state.min_finish_time_,
-                                                        lr_child->scheduler_state.min_finish_time_);
+    parent->scheduler_state_.min_finish_time_ = std::min(
+        parent->scheduler_state_.min_finish_time_, lr_child->scheduler_state_.min_finish_time_);
   }
 }
 
@@ -90,17 +91,17 @@ void Scheduler::SubtreeMinObserver::RecordRotation(Iter pivot, Iter lr_child, It
 // root. Traverse up the tree from the point of invalidation and restore the
 // subtree invariant.
 template <typename Iter>
-void Scheduler::SubtreeMinObserver::RecordErase(thread_t* /*node*/, Iter invalidated) {
+void Scheduler::SubtreeMinObserver::RecordErase(Thread* /*node*/, Iter invalidated) {
   Iter current = invalidated;
   while (current) {
-    current->scheduler_state.min_finish_time_ = current->scheduler_state.finish_time_;
+    current->scheduler_state_.min_finish_time_ = current->scheduler_state_.finish_time_;
     if (Iter left = current.left(); left) {
-      current->scheduler_state.min_finish_time_ = std::min(
-          current->scheduler_state.min_finish_time_, left->scheduler_state.min_finish_time_);
+      current->scheduler_state_.min_finish_time_ = std::min(
+          current->scheduler_state_.min_finish_time_, left->scheduler_state_.min_finish_time_);
     }
     if (Iter right = current.right(); right) {
-      current->scheduler_state.min_finish_time_ = std::min(
-          current->scheduler_state.min_finish_time_, right->scheduler_state.min_finish_time_);
+      current->scheduler_state_.min_finish_time_ = std::min(
+          current->scheduler_state_.min_finish_time_, right->scheduler_state_.min_finish_time_);
     }
     current = current.parent();
   }

@@ -122,8 +122,8 @@ void scanner_pop_disable_count() {
 }
 
 static void scanner_init_func(uint level) {
-  thread_t *thread =
-      thread_create("scanner-request-thread", scanner_request_thread, nullptr, LOW_PRIORITY);
+  Thread *thread =
+    Thread::Create("scanner-request-thread", scanner_request_thread, nullptr, LOW_PRIORITY);
   DEBUG_ASSERT(thread);
   if (!gCmdline.GetBool("kernel.page-scanner.start-at-boot", false)) {
     Guard<Mutex> guard{scanner_disabled_lock::Get()};
@@ -131,7 +131,7 @@ static void scanner_init_func(uint level) {
     scanner_operation.fetch_or(kScannerOpDisable);
     scanner_request_event.Signal();
   }
-  thread_resume(thread);
+  thread->Resume();
 }
 
 LK_INIT_HOOK(scanner_init, &scanner_init_func, LK_INIT_LEVEL_LAST)

@@ -429,7 +429,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
           bool is_idle = mp_is_cpu_idle(i);
           if (is_idle) {
             zx_duration_t recent_idle =
-                zx_time_sub_time(current_time(), cpu->idle_thread.last_started_running);
+                zx_time_sub_time(current_time(), cpu->idle_thread.last_started_running_);
             idle_time = zx_duration_add_duration(idle_time, recent_idle);
           }
           stats.idle_time = idle_time;

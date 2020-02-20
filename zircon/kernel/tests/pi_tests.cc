@@ -4,11 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <new>
-
 #include <lib/unittest/unittest.h>
 #include <platform.h>
 #include <zircon/types.h>
+
+#include <new>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -45,12 +45,12 @@ class TestThread;  // fwd decl
 class AutoPrioBooster {
  public:
   AutoPrioBooster() {
-    thread_t* t = get_current_thread();
-    initial_base_prio_ = t->base_priority;
-    thread_set_priority(t, TEST_HIGHEST_PRIORITY);
+    Thread* t = get_current_thread();
+    initial_base_prio_ = t->base_priority_;
+    t->SetPriority(TEST_HIGHEST_PRIORITY);
   }
 
-  ~AutoPrioBooster() { thread_set_priority(get_current_thread(), initial_base_prio_); }
+  ~AutoPrioBooster() { get_current_thread()->SetPriority(initial_base_prio_); }
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(AutoPrioBooster);
 
@@ -169,9 +169,9 @@ class Barrier {
       return;
     }
 
-    get_current_thread()->interruptable = true;
+    get_current_thread()->interruptable_ = true;
     queue_.Block(deadline);
-    get_current_thread()->interruptable = false;
+    get_current_thread()->interruptable_ = false;
   }
 
   bool state() const { return signaled_.load(); }
@@ -200,7 +200,7 @@ class LockedOwnedWaitQueue : public OwnedWaitQueue {
   void ReleaseOneThread() TA_EXCL(thread_lock) {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-    auto hook = [](thread_t*, void*) { return Hook::Action::SelectAndAssignOwner; };
+    auto hook = [](Thread*, void*) { return Hook::Action::SelectAndAssignOwner; };
 
     if (OwnedWaitQueue::WakeThreads(1u, {hook, nullptr})) {
       sched_reschedule();
@@ -300,7 +300,7 @@ class TestThread {
     ASSERT_GE(base_prio, TEST_LOWEST_PRIORITY);
     ASSERT_LT(base_prio, TEST_HIGHEST_PRIORITY);
 
-    thread_set_priority(thread_, base_prio);
+    thread_->SetPriority(base_prio);
 
     END_TEST;
   }
@@ -316,7 +316,7 @@ class TestThread {
     }
 
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    return thread_->inherited_priority;
+    return thread_->inherited_priority_;
   }
 
   int effective_priority() const {
@@ -325,7 +325,7 @@ class TestThread {
     }
 
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    return thread_->effec_priority;
+    return thread_->effec_priority_;
   }
 
   int base_priority() const {
@@ -334,7 +334,7 @@ class TestThread {
     }
 
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    return thread_->base_priority;
+    return thread_->base_priority_;
   }
 
   State state() const { return state_.load(); }
@@ -363,7 +363,7 @@ class TestThread {
 
   static Barrier allow_shutdown_;
 
-  thread_t* thread_ = nullptr;
+  Thread* thread_ = nullptr;
   ktl::atomic<State> state_{State::INITIAL};
   fbl::InlineFunction<void(void), kMaxOpLambdaCaptureStorageBytes> op_;
 };
@@ -378,7 +378,7 @@ bool TestThread::Create(int initial_base_priority) {
   ASSERT_GE(initial_base_priority, TEST_LOWEST_PRIORITY);
   ASSERT_LT(initial_base_priority, TEST_HIGHEST_PRIORITY);
 
-  thread_ = thread_create(
+  thread_ = Thread::Create(
       "pi_test_thread",
       [](void* ctx) -> int { return reinterpret_cast<TestThread*>(ctx)->ThreadEntry(); },
       reinterpret_cast<void*>(this), initial_base_priority);
@@ -393,7 +393,7 @@ bool TestThread::Create(int initial_base_priority) {
   // is *not* something to be emulated.  The NO_BOOST flag is not something
   // which should have an API, or be used by anything but very specific test
   // code.
-  thread_->flags |= THREAD_FLAG_NO_BOOST;
+  thread_->flags_ |= THREAD_FLAG_NO_BOOST;
   state_.store(State::CREATED);
 
   END_TEST;
@@ -407,7 +407,7 @@ bool TestThread::DoStall() {
   op_ = []() {};
 
   state_.store(State::WAITING_TO_START);
-  thread_resume(thread_);
+  thread_->Resume();
 
   ASSERT_TRUE(WaitFor<Condition::BLOCKED>());
 
@@ -421,13 +421,13 @@ bool TestThread::BlockOnOwnedQueue(OwnedWaitQueue* owned_wq, TestThread* owner, 
 
   op_ = [this, owned_wq, owner_thrd = owner ? owner->thread_ : nullptr, timeout]() {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    thread_->interruptable = true;
+    thread_->interruptable_ = true;
     owned_wq->BlockAndAssignOwner(timeout, owner_thrd, ResourceOwnership::Normal);
-    thread_->interruptable = false;
+    thread_->interruptable_ = false;
   };
 
   state_.store(State::WAITING_TO_START);
-  thread_resume(thread_);
+  thread_->Resume();
 
   ASSERT_TRUE(WaitFor<Condition::BLOCKED>());
 
@@ -452,7 +452,7 @@ bool TestThread::Reset(bool explicit_kill) {
       // Created but not started?  thread_forget seems to be the proper way to
       // cleanup a thread which was never started.
       ASSERT(thread_ != nullptr);
-      thread_forget(thread_);
+      thread_->Forget();
       thread_ = nullptr;
       break;
 
@@ -462,22 +462,22 @@ bool TestThread::Reset(bool explicit_kill) {
     case State::SHUTDOWN:
       // If we are explicitly killing the thread, send it the kill signal now.
       if (explicit_kill) {
-        thread_kill(thread_);
+        thread_->Kill();
       }
 
       // Hopefully, the thread is on it's way to termination as we speak.
       // Attempt to join it.  If this fails, print a warning and then kill it.
       ASSERT(thread_ != nullptr);
       int ret_code;
-      zx_status_t res = thread_join(thread_, &ret_code, current_time() + join_timeout);
+      zx_status_t res = thread_->Join(&ret_code, current_time() + join_timeout);
       if (res != ZX_OK) {
         printf("Failed to join thread %p (res %d); attempting to kill\n", thread_, res);
 
         // If we have already sent the kill signal to the thread and failed,
         // there is no point in trying to do so gain.
         if (!explicit_kill) {
-          thread_kill(thread_);
-          res = thread_join(thread_, &ret_code, current_time() + join_timeout);
+          thread_->Kill();
+          res = thread_->Join(&ret_code, current_time() + join_timeout);
         }
 
         if (res != ZX_OK) {
@@ -523,7 +523,7 @@ bool TestThread::WaitFor() {
       thread_state cur_state;
       {
         Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-        cur_state = thread_->state;
+        cur_state = thread_->state_;
       }
 
       if (cur_state == THREAD_BLOCKED) {
@@ -542,7 +542,7 @@ bool TestThread::WaitFor() {
 
     zx_time_t now = current_time();
     ASSERT_LT(now, deadline);
-    thread_sleep_relative(poll_interval);
+    CurrentThread::SleepRelative(poll_interval);
   }
 
   END_TEST;
@@ -717,7 +717,7 @@ bool pi_test_chain() {
     LockedOwnedWaitQueue queue;
     bool active = false;
   };
-  auto links = ktl::make_unique<ktl::array<Link, CHAIN_LEN -1>>(&ac);
+  auto links = ktl::make_unique<ktl::array<Link, CHAIN_LEN - 1>>(&ac);
   ASSERT_TRUE(ac.check());
 
   const DistroSpec PRIORITY_GENERATORS[] = {
@@ -1008,7 +1008,7 @@ bool pi_test_multi_waiter() {
             break;
           }
 
-          thread_sleep_relative(ZX_USEC(100));
+          CurrentThread::SleepRelative(ZX_USEC(100));
         }
 
         // Sanity checks.  Make sure that the new owner exists, and is not the

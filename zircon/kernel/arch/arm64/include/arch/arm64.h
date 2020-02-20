@@ -83,15 +83,16 @@ struct arm64_context_switch_frame {
   uint64_t lr;
 };
 
-struct thread_t;
+struct Thread;
 
 #if __has_feature(shadow_call_stack)
-void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp, uintptr_t** old_scsp, uintptr_t* new_scsp);
+void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp, uintptr_t** old_scsp,
+                          uintptr_t* new_scsp);
 #else
 void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp);
 #endif
 void arm64_uspace_entry(iframe_t* iframe, vaddr_t kstack) __NO_RETURN;
-arm64_context_switch_frame* arm64_get_context_switch_frame(thread_t* thread);
+arm64_context_switch_frame* arm64_get_context_switch_frame(Thread* thread);
 
 extern void arm64_el1_exception_base(void);
 void arm64_el3_to_el1(void);
@@ -110,9 +111,9 @@ void arm64_local_clean_cache_all();
 
 /* fpu routines */
 void arm64_fpu_exception(arm64_iframe_t* iframe, uint exception_flags);
-void arm64_fpu_context_switch(thread_t* oldthread, thread_t* newthread);
-void arm64_fpu_save_state(thread_t* t);
-void arm64_fpu_restore_state(thread_t* t);
+void arm64_fpu_context_switch(Thread* oldthread, Thread* newthread);
+void arm64_fpu_save_state(Thread* t);
+void arm64_fpu_restore_state(Thread* t);
 
 uint64_t arm64_get_boot_el(void);
 

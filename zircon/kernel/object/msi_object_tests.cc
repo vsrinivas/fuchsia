@@ -163,15 +163,15 @@ static bool interrupt_creation_test() {
 
     // Now have a child thread wait on the interrupt and report success back.
     auto thread =
-        thread_create("msi_object_waiter", interrupt_waiter,
-                      reinterpret_cast<void*>(interrupt.dispatcher().get()), DEFAULT_PRIORITY);
-    thread_resume(thread);
+      Thread::Create("msi_object_waiter", interrupt_waiter,
+                     reinterpret_cast<void*>(interrupt.dispatcher().get()), DEFAULT_PRIORITY);
+    thread->Resume();
     // Now that the child is waiting on the interrupt it should be unmasked.
     EXPECT_EQ(msi_id_masked, *reg_ptr);
     // Finally, trigger the interrupt, check for success, then ensure it was masked again.
     interrupt.dispatcher()->Trigger(current_time());
     int ret = 0;
-    EXPECT_EQ(ZX_OK, thread_join(thread, &ret, current_time() + ZX_SEC(1)));
+    EXPECT_EQ(ZX_OK, thread->Join(&ret, current_time() + ZX_SEC(1)));
     EXPECT_EQ(1, ret);
     ASSERT_EQ(msi_id_masked, *reg_ptr);
   }

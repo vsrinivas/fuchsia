@@ -160,20 +160,20 @@ bool prng_blocks() {
   PRNG prng(nullptr, 0, PRNG::NonThreadSafeTag());
   prng.BecomeThreadSafe();
 
-  thread_t* drawer =
-      thread_create("cprng drawer thread", &cprng_drawer_thread, &prng, DEFAULT_PRIORITY);
-  thread_resume(drawer);
+  Thread* drawer =
+    Thread::Create("cprng drawer thread", &cprng_drawer_thread, &prng, DEFAULT_PRIORITY);
+  drawer->Resume();
 
   int64_t wait_duration = ZX_USEC(1);
   while (true) {
     {
       // The drawer thread should be blocked waiting for the prng to have enough entropy.
       Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-      if (drawer->state == THREAD_BLOCKED) {
+      if (drawer->state_ == THREAD_BLOCKED) {
         break;
       }
     }
-    thread_sleep_relative(wait_duration);
+    CurrentThread::SleepRelative(wait_duration);
     wait_duration *= 2;
   }
 
@@ -181,7 +181,7 @@ bool prng_blocks() {
   // After this the thread has to eventually finish.
 
   int thread_retcode = 0;
-  zx_status_t res = thread_join(drawer, &thread_retcode, ZX_TIME_INFINITE);
+  zx_status_t res = drawer->Join(&thread_retcode, ZX_TIME_INFINITE);
   EXPECT_EQ(ZX_OK, res);
   END_TEST;
 }
@@ -195,12 +195,12 @@ bool prng_doesnt_block_if_entropy_is_added_early() {
   PRNG prng(nullptr, 0, PRNG::NonThreadSafeTag());
   prng.AddEntropy(fake_entropy, sizeof(fake_entropy));
   prng.BecomeThreadSafe();
-  thread_t* drawer =
-      thread_create("cprng drawer thread", &cprng_drawer_thread, &prng, DEFAULT_PRIORITY);
+  Thread* drawer =
+    Thread::Create("cprng drawer thread", &cprng_drawer_thread, &prng, DEFAULT_PRIORITY);
 
-  thread_resume(drawer);
+  drawer->Resume();
   int thread_retcode = 0;
-  zx_status_t res = thread_join(drawer, &thread_retcode, ZX_TIME_INFINITE);
+  zx_status_t res = drawer->Join(&thread_retcode, ZX_TIME_INFINITE);
   EXPECT_EQ(ZX_OK, res);
   END_TEST;
 }

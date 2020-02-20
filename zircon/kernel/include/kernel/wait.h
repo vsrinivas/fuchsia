@@ -84,7 +84,7 @@ int wait_queue_blocked_priority(const wait_queue_t*) TA_REQ(thread_lock);
 
 // returns the current highest priority blocked thread on this wait queue, or
 // null if no threads are blocked.
-thread_t* wait_queue_peek(wait_queue_t*) TA_REQ(thread_lock);
+Thread* wait_queue_peek(wait_queue_t*) TA_REQ(thread_lock);
 
 // release one or more threads from the wait queue.
 // reschedule = should the system reschedule if any is released.
@@ -99,24 +99,23 @@ int wait_queue_wake_all(wait_queue_t*, bool reschedule, zx_status_t wait_queue_e
 // Dequeue the first waiting thread, and set its blocking status, then return a
 // pointer to the thread which was dequeued.  Do not actually schedule the
 // thread to run.
-thread_t* wait_queue_dequeue_one(wait_queue_t* wait, zx_status_t wait_queue_error)
+Thread* wait_queue_dequeue_one(wait_queue_t* wait, zx_status_t wait_queue_error)
     TA_REQ(thread_lock);
 
 // Dequeue the specified thread and set its blocked_status.  Do not actually
 // schedule the thread to run.
-void wait_queue_dequeue_thread(wait_queue_t* wait, thread_t* t, zx_status_t wait_queue_error)
+void wait_queue_dequeue_thread(wait_queue_t* wait, Thread* t, zx_status_t wait_queue_error)
     TA_REQ(thread_lock);
 
 // Move the specified thread from the source wait queue to the dest wait queue.
-void wait_queue_move_thread(wait_queue_t* source, wait_queue_t* dest, thread_t* t)
+void wait_queue_move_thread(wait_queue_t* source, wait_queue_t* dest, Thread* t)
     TA_REQ(thread_lock);
 
 // is the wait queue currently empty
 bool wait_queue_is_empty(const wait_queue_t*) TA_REQ(thread_lock);
 
 // remove a specific thread out of a wait queue it's blocked on
-zx_status_t wait_queue_unblock_thread(thread_t* t, zx_status_t wait_queue_error)
-    TA_REQ(thread_lock);
+zx_status_t wait_queue_unblock_thread(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock);
 
 // A thread's priority has changed.  Update the wait queue bookkeeping to
 // properly reflect this change.
@@ -128,7 +127,7 @@ zx_status_t wait_queue_unblock_thread(thread_t* t, zx_status_t wait_queue_error)
 //
 // If |propagate| is PropagatePI::No, do not attempt to propagate the PI change.
 // This is the mode used by OwnedWaitQueue during a batch update of a PI chain.
-bool wait_queue_priority_changed(thread_t* t, int old_prio, PropagatePI propagate)
+bool wait_queue_priority_changed(Thread* t, int old_prio, PropagatePI propagate)
     TA_REQ(thread_lock);
 
 // validate that the queue of a given wait queue is valid
@@ -148,8 +147,7 @@ class WaitQueue : protected wait_queue_t {
   WaitQueue& operator=(WaitQueue&) = delete;
   WaitQueue& operator=(WaitQueue&&) = delete;
 
-  static zx_status_t UnblockThread(thread_t* t, zx_status_t wait_queue_error)
-      TA_REQ(thread_lock) {
+  static zx_status_t UnblockThread(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
     return wait_queue_unblock_thread(t, wait_queue_error);
   }
 
@@ -161,9 +159,7 @@ class WaitQueue : protected wait_queue_t {
     return wait_queue_block_etc(this, deadline, 0, ResourceOwnership::Reader);
   }
 
-  thread_t* Peek() TA_REQ(thread_lock) {
-    return wait_queue_peek(this);
-  }
+  Thread* Peek() TA_REQ(thread_lock) { return wait_queue_peek(this); }
 
   int WakeOne(bool reschedule, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
     return wait_queue_wake_one(this, reschedule, wait_queue_error);
@@ -177,11 +173,11 @@ class WaitQueue : protected wait_queue_t {
 
   uint32_t Count() const TA_REQ(thread_lock) { return this->count; }
 
-  thread_t* DequeueOne(zx_status_t wait_queue_error) TA_REQ(thread_lock) {
+  Thread* DequeueOne(zx_status_t wait_queue_error) TA_REQ(thread_lock) {
     return wait_queue_dequeue_one(this, wait_queue_error);
   }
 
-  void DequeueThread(thread_t* t, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
+  void DequeueThread(Thread* t, zx_status_t wait_queue_error) TA_REQ(thread_lock) {
     wait_queue_dequeue_thread(this, t, wait_queue_error);
   }
 
@@ -189,7 +185,7 @@ class WaitQueue : protected wait_queue_t {
   explicit constexpr WaitQueue(int magic)
       : wait_queue_t(WAIT_QUEUE_INITIAL_VALUE_MAGIC(*this, magic)) {}
 
-  static void MoveThread(WaitQueue* source, WaitQueue* dest, thread_t* t) TA_REQ(thread_lock) {
+  static void MoveThread(WaitQueue* source, WaitQueue* dest, Thread* t) TA_REQ(thread_lock) {
     return wait_queue_move_thread(source, dest, t);
   }
 };

@@ -27,7 +27,7 @@ ktl::unique_ptr<UserMemory> UserMemory::Create(size_t size) {
     return nullptr;
   }
 
-  fbl::RefPtr<VmAspace> aspace = fbl::RefPtr(vmm_aspace_to_obj(get_current_thread()->aspace));
+  fbl::RefPtr<VmAspace> aspace = fbl::RefPtr(vmm_aspace_to_obj(get_current_thread()->aspace_));
   DEBUG_ASSERT(aspace);
   DEBUG_ASSERT(aspace->is_user());
   fbl::RefPtr<VmAddressRegion> root_vmar = aspace->RootVmar();

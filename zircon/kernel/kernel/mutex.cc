@@ -53,8 +53,8 @@ class KTracer<KernelMutexTracingLevel::None> {
   KTracer() = default;
   void KernelMutexUncontestedAcquire(const Mutex* mutex) {}
   void KernelMutexUncontestedRelease(const Mutex* mutex) {}
-  void KernelMutexBlock(const Mutex* mutex, thread_t* blocker, uint32_t waiter_count) {}
-  void KernelMutexWake(const Mutex* mutex, thread_t* new_owner, uint32_t waiter_count) {}
+  void KernelMutexBlock(const Mutex* mutex, Thread* blocker, uint32_t waiter_count) {}
+  void KernelMutexWake(const Mutex* mutex, Thread* new_owner, uint32_t waiter_count) {}
 };
 
 template <KernelMutexTracingLevel Level>
@@ -75,24 +75,23 @@ class KTracer<Level, ktl::enable_if_t<(Level == KernelMutexTracingLevel::Contest
     }
   }
 
-  void KernelMutexBlock(const Mutex* mutex, const thread_t* blocker, uint32_t waiter_count) {
+  void KernelMutexBlock(const Mutex* mutex, const Thread* blocker, uint32_t waiter_count) {
     KernelMutexTrace(TAG_KERNEL_MUTEX_BLOCK, mutex, blocker, waiter_count);
   }
 
-  void KernelMutexWake(const Mutex* mutex, const thread_t* new_owner, uint32_t waiter_count) {
+  void KernelMutexWake(const Mutex* mutex, const Thread* new_owner, uint32_t waiter_count) {
     KernelMutexTrace(TAG_KERNEL_MUTEX_RELEASE, mutex, new_owner, waiter_count);
   }
 
  private:
-  void KernelMutexTrace(uint32_t tag, const Mutex* mutex, const thread_t* t,
-                        uint32_t waiter_count) {
+  void KernelMutexTrace(uint32_t tag, const Mutex* mutex, const Thread* t, uint32_t waiter_count) {
     uint32_t mutex_id = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(mutex));
     uint32_t tid = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(t));
     uint32_t flags =
         static_cast<uint32_t>(arch_curr_cpu_num() & KTRACE_FLAGS_KERNEL_MUTEX_CPUID_MASK);
 
-    if ((t != nullptr) && (t->user_thread != nullptr)) {
-      tid = static_cast<uint32_t>(t->user_tid);
+    if ((t != nullptr) && (t->user_thread_ != nullptr)) {
+      tid = static_cast<uint32_t>(t->user_tid_);
       flags |= KTRACE_FLAGS_KERNEL_MUTEX_USER_MODE_TID;
     }
 
@@ -110,9 +109,9 @@ Mutex::~Mutex() {
 
   if (LK_DEBUGLEVEL > 0) {
     if (val() != STATE_FREE) {
-      thread_t* h = holder();
+      Thread* h = holder();
       panic("~Mutex(): thread %p (%s) tried to destroy locked mutex %p, locked by %p (%s)\n",
-            get_current_thread(), get_current_thread()->name, this, h, h->name);
+            get_current_thread(), get_current_thread()->name_, this, h, h->name_);
     }
   }
 
@@ -126,7 +125,7 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
   magic_.Assert();
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
-  thread_t* const ct = get_current_thread();
+  Thread* const ct = get_current_thread();
   const uintptr_t new_mutex_state = reinterpret_cast<uintptr_t>(ct);
 
   // Fastest path: The mutex is unlocked and uncontested. Try to acquire it
@@ -171,7 +170,7 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
 
   if ((LK_DEBUGLEVEL > 0) && unlikely(this->IsHeld())) {
     panic("Mutex::Acquire: thread %p (%s) tried to acquire mutex %p it already owns.\n", ct,
-          ct->name, this);
+          ct->name_, this);
   }
 
   {
@@ -202,7 +201,7 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
     // without holding the thread lock (which we currently hold).  We need
     // to be sure that we inform our owned wait queue that this is the
     // proper queue owner as we block.
-    thread_t* cur_owner = holder_from_val(old_mutex_state);
+    Thread* cur_owner = holder_from_val(old_mutex_state);
     KTracer{}.KernelMutexBlock(this, cur_owner, wait_.Count() + 1);
     zx_status_t ret =
         wait_.BlockAndAssignOwner(Deadline::infinite(), cur_owner, ResourceOwnership::Normal);
@@ -222,7 +221,7 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
 // Shared implementation of release
 template <Mutex::ThreadLockState TLS>
 void Mutex::ReleaseInternal(const bool allow_reschedule) {
-  thread_t* ct = get_current_thread();
+  Thread* ct = get_current_thread();
 
   // Try the fast path.  Assume that we are locked, but uncontested.
   uintptr_t old_mutex_state = reinterpret_cast<uintptr_t>(ct);
@@ -242,12 +241,12 @@ void Mutex::ReleaseInternal(const bool allow_reschedule) {
     uintptr_t expected_state = reinterpret_cast<uintptr_t>(ct) | STATE_FLAG_CONTESTED;
 
     if (unlikely(old_mutex_state != expected_state)) {
-      auto other_holder = reinterpret_cast<thread_t*>(old_mutex_state & ~STATE_FLAG_CONTESTED);
+      auto other_holder = reinterpret_cast<Thread*>(old_mutex_state & ~STATE_FLAG_CONTESTED);
       panic(
           "Mutex::ReleaseInternal: sanity check failure.  Thread %p (%s) tried to release "
           "mutex %p.  Expected state (%lx) != observed state (%lx).  Other holder (%s)\n",
-          ct, ct->name, this, expected_state, old_mutex_state,
-          other_holder ? other_holder->name : "<none>");
+          ct, ct->name_, this, expected_state, old_mutex_state,
+          other_holder ? other_holder->name_ : "<none>");
     }
   }
 
@@ -264,9 +263,9 @@ void Mutex::ReleaseInternal(const bool allow_reschedule) {
   // the queue to the thread which was woken so that it can properly receive
   // the priority pressure of the remaining waiters.
   using Action = OwnedWaitQueue::Hook::Action;
-  thread_t* woken;
-  auto cbk = [](thread_t* woken, void* ctx) -> Action {
-    *(reinterpret_cast<thread_t**>(ctx)) = woken;
+  Thread* woken;
+  auto cbk = [](Thread* woken, void* ctx) -> Action {
+    *(reinterpret_cast<Thread**>(ctx)) = woken;
     return Action::SelectAndAssignOwner;
   };
 

@@ -336,10 +336,10 @@ class FutexContext {
   // 2) Second, they allow us to maintain user-thread blocked_futex_id info as
   //    the OwnedWaitQueue code selects threads to be woken/requeued.
   template <OwnedWaitQueue::Hook::Action action>
-  static OwnedWaitQueue::Hook::Action ResetBlockingFutexId(thread_t* thrd,
+  static OwnedWaitQueue::Hook::Action ResetBlockingFutexId(Thread* thrd,
                                                            void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS;
   template <OwnedWaitQueue::Hook::Action action>
-  static OwnedWaitQueue::Hook::Action SetBlockingFutexId(thread_t* thrd,
+  static OwnedWaitQueue::Hook::Action SetBlockingFutexId(Thread* thrd,
                                                          void* ctx) TA_NO_THREAD_SAFETY_ANALYSIS;
 
   // FutexContexts may not be copied, moved, or allocated on the heap.  They

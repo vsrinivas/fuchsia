@@ -82,7 +82,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
                             zx_rights_t* out_rights);
   ~ThreadDispatcher();
 
-  static ThreadDispatcher* GetCurrent() { return get_current_thread()->user_thread; }
+  static ThreadDispatcher* GetCurrent() { return get_current_thread()->user_thread_; }
 
   // Dispatcher implementation.
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_THREAD; }
@@ -120,8 +120,8 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
 
   zx_status_t set_name(const char* name, size_t len) final __NONNULL((2));
   void get_name(char out_name[ZX_MAX_NAME_LEN]) const final __NONNULL((2));
-  uint64_t runtime_ns() const { return thread_runtime(core_thread_); }
-  cpu_num_t last_cpu() const { return thread_last_cpu(core_thread_); }
+  uint64_t runtime_ns() const { return core_thread_->Runtime(); }
+  cpu_num_t last_cpu() const { return core_thread_->LastCpu(); }
 
   // Assuming the thread is stopped waiting for an exception response,
   // fill in |*report| with the exception report.
@@ -202,7 +202,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   void Resuming();
 
  private:
-  ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, thread_t* core_thread, uint32_t flags);
+  ThreadDispatcher(fbl::RefPtr<ProcessDispatcher> process, Thread* core_thread, uint32_t flags);
   ThreadDispatcher(const ThreadDispatcher&) = delete;
   ThreadDispatcher& operator=(const ThreadDispatcher&) = delete;
 
@@ -228,10 +228,10 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   bool HasStartedLocked() const TA_REQ(get_lock());
 
   template <typename T, typename F>
-  zx_status_t ReadStateGeneric(F get_state_func, thread_t* thread, user_out_ptr<void> buffer,
+  zx_status_t ReadStateGeneric(F get_state_func, Thread* thread, user_out_ptr<void> buffer,
                                size_t buffer_size);
   template <typename T, typename F>
-  zx_status_t WriteStateGeneric(F set_state_func, thread_t* thread, user_in_ptr<const void> buffer,
+  zx_status_t WriteStateGeneric(F set_state_func, Thread* thread, user_in_ptr<const void> buffer,
                                 size_t buffer_size);
 
   // The containing process holds a list of all its threads.
@@ -240,7 +240,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   const fbl::RefPtr<ProcessDispatcher> process_;
 
   // The thread as understood by the lower kernel.
-  thread_t* const core_thread_;
+  Thread* const core_thread_;
 
   // User thread starting register values.
   EntryState user_entry_;

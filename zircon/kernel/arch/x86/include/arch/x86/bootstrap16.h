@@ -88,7 +88,7 @@ struct __PACKED x86_ap_bootstrap_data {
     // Virtual address of base of initial kstack
     vaddr_t kstack_base;
     // Virtual address of initial thread_t
-    thread_t* thread;
+    Thread* thread;
   } per_cpu[SMP_MAX_CPUS - 1];
 };
 

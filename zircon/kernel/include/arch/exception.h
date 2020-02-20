@@ -11,7 +11,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-struct thread_t;
+struct Thread;
 typedef struct arch_exception_context arch_exception_context_t;
 typedef struct zx_exception_report zx_exception_report_t;
 
@@ -42,9 +42,9 @@ void arch_fill_in_exception_context(const arch_exception_context_t* context,
 // corresponding call to |arch_remove_exception_context()| prior to the thread resuming execution if
 // it returns true.
 __WARN_UNUSED_RESULT
-bool arch_install_exception_context(thread_t* thread, const arch_exception_context_t* context);
+bool arch_install_exception_context(Thread* thread, const arch_exception_context_t* context);
 
 // Undo a previous call to |arch_install_exception_context()|.
-void arch_remove_exception_context(thread_t* thread);
+void arch_remove_exception_context(Thread* thread);
 
 #endif  // ZIRCON_KERNEL_INCLUDE_ARCH_EXCEPTION_H_

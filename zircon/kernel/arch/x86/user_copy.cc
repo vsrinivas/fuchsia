@@ -107,9 +107,9 @@ static X64CopyToFromUserRet _arch_copy_from_user(void* dst, const void* src, siz
   // address (speculatively); dependent operations can leak the values read-in.
   __asm__ __volatile__("lfence" ::: "memory");
 
-  thread_t* thr = get_current_thread();
+  Thread* thr = get_current_thread();
   X64CopyToFromUserRet ret =
-      _x86_copy_to_or_from_user(dst, src, len, &thr->arch.page_fault_resume, fault_return_mask);
+      _x86_copy_to_or_from_user(dst, src, len, &thr->arch_.page_fault_resume, fault_return_mask);
 
   DEBUG_ASSERT(!g_x86_feature_has_smap || !ac_flag());
   return ret;
@@ -139,9 +139,9 @@ static X64CopyToFromUserRet _arch_copy_to_user(void* dst, const void* src, size_
   if (!can_access(dst, len))
     return (X64CopyToFromUserRet){.status = ZX_ERR_INVALID_ARGS, .pf_flags = 0, .pf_va = 0};
 
-  thread_t* thr = get_current_thread();
+  Thread* thr = get_current_thread();
   X64CopyToFromUserRet ret =
-      _x86_copy_to_or_from_user(dst, src, len, &thr->arch.page_fault_resume, fault_return_mask);
+      _x86_copy_to_or_from_user(dst, src, len, &thr->arch_.page_fault_resume, fault_return_mask);
 
   DEBUG_ASSERT(!g_x86_feature_has_smap || !ac_flag());
   return ret;
