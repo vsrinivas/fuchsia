@@ -32,6 +32,7 @@
     { "protocol": "/svc/fuchsia.device.manager.Administrator", "as": "/svc_for_sys/fuchsia.device.manager.Administrator" },
     { "protocol": "/svc/fuchsia.device.manager.DebugDumper", "as": "/svc_for_sys/fuchsia.device.manager.DebugDumper" },
     { "protocol": "/svc/fuchsia.device.manager.BindDebugger", "as": "/svc_for_sys/fuchsia.device.manager.BindDebugger" },
+    { "protocol": "/svc/fuchsia.hardware.power.statecontrol.Admin", "as": "/svc_for_sys/fuchsia.hardware.power.statecontrol.Admin" },
     { "protocol": "/svc/fuchsia.kernel.Counter", "as": "/svc_for_sys/fuchsia.kernel.Counter" },
     { "protocol": "/svc/fuchsia.kernel.DebugBroker", "as": "/svc_for_sys/fuchsia.kernel.DebugBroker" },
     { "protocol": "/svc/fuchsia.paver.Paver", "as": "/svc_for_sys/fuchsia.paver.Paver" },
