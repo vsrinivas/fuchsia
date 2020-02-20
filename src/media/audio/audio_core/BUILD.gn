@@ -263,6 +263,9 @@ executable("unittest_bin") {
     "//zircon/system/fidl/fuchsia-hardware-audio",
     "//zircon/system/fidl/fuchsia-scheduler",
   ]
+
+  # TODO(46533): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("audio_core_unittests") {
