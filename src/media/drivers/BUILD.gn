@@ -3,5 +3,13 @@
 # found in the LICENSE file.
 
 group("drivers") {
+  testonly = true
   deps = [ "amlogic_encoder" ]
+
+  if (target_cpu == "arm64") {
+    deps += [
+      "amlogic_decoder:amlogic_decoder",
+      "amlogic_decoder:amlogic_video_decoder_test_build",
+    ]
+  }
 }

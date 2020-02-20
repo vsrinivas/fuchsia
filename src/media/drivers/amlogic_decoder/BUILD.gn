@@ -16,9 +16,12 @@ declare_args() {
 
 # These targets only compile for arm64.
 if (target_cpu == "arm64") {
-  driver_module("amlogic_decoder") {
-    output_name = "amlogic_video_decoder"
+  group("amlogic_decoder") {
+    testonly = true
+    deps = [ ":amlogic_decoder_package" ]
+  }
 
+  driver_module("amlogic_video_decoder") {
     deps = [
       ":sources",
       ":test_support",
@@ -190,7 +193,7 @@ if (target_cpu == "arm64") {
     outputs = [ "$root_out_dir/firmware/video_test_data/{{source_file_part}}" ]
   }
 
-  package("amlogic_video_decoder") {
+  package("amlogic_decoder_package") {
     deprecated_system_image = true
 
     # internal access is needed to get the firmware from the default path
@@ -201,7 +204,8 @@ if (target_cpu == "arm64") {
       }
 
       if (amlogic_decoder_firmware_path == "") {
-        amlogic_decoder_firmware_path = "firmware/video_ucode.bin"
+        amlogic_decoder_firmware_path =
+            "//prebuilt/media/firmware/amlogic-decoder/video_ucode.bin"
       }
       libraries = [
         {
@@ -242,7 +246,7 @@ if (target_cpu == "arm64") {
           },
         ]
       } else {
-        deps += [ ":amlogic_decoder" ]
+        deps += [ ":amlogic_video_decoder" ]
         drivers = [
           {
             name = "amlogic_video_decoder.so"
