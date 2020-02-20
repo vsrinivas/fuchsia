@@ -11,15 +11,24 @@ group("tests") {
   deps = []
 
   if (host_os == "linux") {
-    deps += [ ":disable_syscalls_tests($host_toolchain)" ]
+    deps += [
+      ":disable_debugging_disable_serial_test($host_toolchain)",
+      ":disable_debugging_enable_serial_test($host_toolchain)",
+      ":disable_debugging_output_only_serial_test($host_toolchain)",
+      ":disabled_makes_ktrace_fail_test($host_toolchain)",
+      ":enable_debugging_test($host_toolchain)",
+      ":invalid_serial_setting_test($host_toolchain)",
+      ":ktrace_works_when_enabled_test($host_toolchain)",
+    ]
   }
 }
 
 if (is_linux) {
-  go_library("lib") {
+  go_library("disable_syscalls_support_lib") {
     testonly = true
 
-    name = "fuchsia.googlesource.com/tests/disable_syscalls"
+    name = "fuchsia.googlesource.com/tests/disable_syscalls/support"
+    source_dir = "//src/tests/disable_syscalls/support"
 
     deps = [ "//src/testing/qemu" ]
   }
@@ -50,12 +59,45 @@ if (is_linux) {
       ]
     }
   }
-  go_test("disable_syscalls_tests") {
-    gopackages = [ "fuchsia.googlesource.com/tests/disable_syscalls" ]
-    deps = [ ":lib" ]
-    non_go_deps = [
-      ":misc_tools",
-      ":syscall_zbi",
-    ]
+
+  # These take >5m (the infra timeout) if they're all in one binary, so they
+  # need to be split into multiple binaries.
+
+  template("split_go_test") {
+    split_name = invoker.target_name
+    go_library(target_name) {
+      testonly = true
+      name = "fuchsia.googlesource.com/tests/disable_syscalls/$split_name"
+      source_dir = "//src/tests/disable_syscalls/$split_name"
+      deps = [
+        ":disable_syscalls_support_lib",
+        "//src/testing/qemu",
+      ]
+    }
+
+    go_test("${split_name}_test") {
+      gopackages =
+          [ "fuchsia.googlesource.com/tests/disable_syscalls/$split_name" ]
+      deps = [ ":$split_name" ]
+      non_go_deps = [
+        ":misc_tools",
+        ":syscall_zbi",
+      ]
+    }
+  }
+
+  split_go_test("disable_debugging_disable_serial") {
+  }
+  split_go_test("disable_debugging_enable_serial") {
+  }
+  split_go_test("disable_debugging_output_only_serial") {
+  }
+  split_go_test("disabled_makes_ktrace_fail") {
+  }
+  split_go_test("enable_debugging") {
+  }
+  split_go_test("invalid_serial_setting") {
+  }
+  split_go_test("ktrace_works_when_enabled") {
   }
 }
