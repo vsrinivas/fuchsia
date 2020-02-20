@@ -5,6 +5,8 @@
 #include "library_loader.h"
 
 #include "rapidjson/error/en.h"
+#include "src/lib/fidl_codec/builtin_semantic.h"
+#include "src/lib/fidl_codec/semantic_parser.h"
 #include "src/lib/fidl_codec/wire_object.h"
 #include "src/lib/fidl_codec/wire_types.h"
 #include "src/lib/fxl/logging.h"
@@ -564,6 +566,7 @@ void Library::FieldNotFound(std::string_view container_type, std::string_view co
 LibraryLoader::LibraryLoader(std::vector<std::unique_ptr<std::istream>>* library_streams,
                              LibraryReadError* err) {
   AddAll(library_streams, err);
+  ParseBuiltinSemantic();
 }
 
 bool LibraryLoader::AddAll(std::vector<std::unique_ptr<std::istream>>* library_streams,
@@ -628,6 +631,12 @@ void LibraryLoader::AddMethod(const InterfaceMethod* method) {
       ordinal_map_[method->old_ordinal()]->insert(ordinal_map_[method->old_ordinal()]->begin(),
                                                   method);
   }
+}
+
+void LibraryLoader::ParseBuiltinSemantic() {
+  semantic::ParserErrors parser_errors;
+  semantic::SemanticParser parser(this, semantic::builtin_semantic, &parser_errors);
+  parser.ParseSemantic();
 }
 
 }  // namespace fidl_codec

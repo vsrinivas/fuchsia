@@ -224,7 +224,8 @@ void SyscallFidlMessageHandle::DisplayOutline(SyscallDisplayDispatcher* dispatch
   }
   if (!dispatcher->message_decoder_dispatcher().DecodeMessage(
           decoder->process_id(), handle_value, bytes_value, num_bytes_value, handle_infos_value,
-          num_handles_value, type(), os, line_header, tabs)) {
+          num_handles_value, type(), os, line_header, tabs,
+          decoder->GetDecodedMessageDataAddress())) {
     DumpMessage(/*error=*/true, bytes_value, num_bytes_value, handle_infos_value, num_handles_value,
                 dispatcher, line_header, tabs, os);
   } else if (dispatcher->dump_messages()) {
@@ -245,7 +246,8 @@ void SyscallFidlMessageHandleInfo::DisplayOutline(SyscallDisplayDispatcher* disp
   uint32_t num_handles_value = num_handles()->Value(decoder, stage);
   if (!dispatcher->message_decoder_dispatcher().DecodeMessage(
           decoder->process_id(), handle_value, bytes_value, num_bytes_value, handle_infos_value,
-          num_handles_value, type(), os, line_header, tabs)) {
+          num_handles_value, type(), os, line_header, tabs,
+          decoder->GetDecodedMessageDataAddress())) {
     DumpMessage(/*error=*/true, bytes_value, num_bytes_value, handle_infos_value, num_handles_value,
                 dispatcher, line_header, tabs, os);
   } else if (dispatcher->dump_messages()) {

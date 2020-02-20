@@ -22,6 +22,7 @@
 
 namespace fidl_codec {
 
+struct DecodedMessageData;
 class MessageDecoderDispatcher;
 class Struct;
 class StructValue;
@@ -50,7 +51,7 @@ class DecodedMessage {
   // Displays a decoded message using the fields. Returns true if we have been able to display
   // correctly the message.
   bool Display(const Colors& colors, bool pretty_print, int columns, std::ostream& os,
-               std::string_view line_header, int tabs);
+               std::string_view line_header, int tabs, DecodedMessageData* decoded_message_data);
 
  private:
   const fidl_message_header_t* header_ = nullptr;
@@ -92,7 +93,7 @@ class MessageDecoderDispatcher {
   bool DecodeMessage(uint64_t process_koid, zx_handle_t handle, const uint8_t* bytes,
                      uint32_t num_bytes, const zx_handle_info_t* handles, uint32_t num_handles,
                      SyscallFidlType type, std::ostream& os, std::string_view line_header = "",
-                     int tabs = 0);
+                     int tabs = 0, DecodedMessageData* decoded_message_data = nullptr);
 
   // Heuristic which computes the direction of a message (outgoing request, incomming response,
   // ...).

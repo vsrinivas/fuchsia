@@ -18,6 +18,9 @@
 
 namespace fidl_codec {
 
+class HandleValue;
+class StringValue;
+class StructValue;
 class Visitor;
 
 // Base class for all the values we can find within a message.
@@ -41,8 +44,9 @@ class Value {
   // point value. For integer values, we can lost precision during the conversion.
   virtual bool GetDoubleValue(double* result) const { return false; }
 
-  // Methods to downcast a value to a StructValue. Returns a StructValue-type pointer to this object
-  // when this object is a StructValue and nullptr in all other cases.
+  // Methods to downcast a value.
+  virtual const StringValue* AsStringValue() const { return nullptr; }
+  virtual const HandleValue* AsHandleValue() const { return nullptr; }
   virtual StructValue* AsStructValue() { return nullptr; }
   virtual const StructValue* AsStructValue() const { return nullptr; }
 
@@ -207,6 +211,8 @@ class StringValue : public Value {
 
   const std::string& string() const { return string_; }
 
+  const StringValue* AsStringValue() const override { return this; }
+
   int DisplaySize(const Type* for_type, int remaining_size) const override;
 
   void PrettyPrint(const Type* for_type, PrettyPrinter& printer) const override;
@@ -223,6 +229,8 @@ class HandleValue : public Value {
   explicit HandleValue(const zx_handle_info_t& handle) : handle_(handle) {}
 
   const zx_handle_info_t& handle() const { return handle_; }
+
+  const HandleValue* AsHandleValue() const override { return this; }
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
 
@@ -266,8 +274,12 @@ class StructValue : public Value {
     fields_.emplace(std::make_pair(member, std::move(value)));
   }
 
+  void AddField(std::string_view name, std::unique_ptr<Value> value);
+
   StructValue* AsStructValue() override { return this; }
   const StructValue* AsStructValue() const override { return this; }
+
+  const Value* GetFieldValue(std::string_view field_name) const;
 
   int DisplaySize(const Type* for_type, int remaining_size) const override;
 
@@ -346,6 +358,14 @@ class TableValue : public Value {
   const Table& table_definition_;
   std::map<const TableMember*, std::unique_ptr<Value>> members_;
   Ordinal32 highest_member_ = 0;
+};
+
+enum class MessageType { kRequest, kResponse };
+
+struct DecodedMessageData {
+  const semantic::MethodSemantic* semantic = nullptr;
+  std::unique_ptr<StructValue> decoded_request;
+  std::unique_ptr<StructValue> decoded_response;
 };
 
 }  // namespace fidl_codec

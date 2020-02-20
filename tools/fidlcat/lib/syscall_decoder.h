@@ -20,6 +20,7 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
+#include "src/lib/fidl_codec/wire_object.h"
 #include "tools/fidlcat/lib/comparator.h"
 #include "tools/fidlcat/lib/decoder.h"
 #include "tools/fidlcat/lib/type_decoder.h"
@@ -143,6 +144,11 @@ class SyscallDecoder {
   uint64_t return_address() const { return return_address_; }
   uint64_t syscall_return_value() const { return syscall_return_value_; }
   int pending_request_count() const { return pending_request_count_; }
+  const fidl_codec::DecodedMessageData& decoded_message_data() const {
+    return decoded_message_data_;
+  }
+
+  fidl_codec::DecodedMessageData* GetDecodedMessageDataAddress() { return &decoded_message_data_; }
 
   // True if the decoder has been aborted. That means that the process for this decoder
   // terminated but we have still some pending requests.
@@ -273,6 +279,9 @@ class SyscallDecoder {
   bool input_arguments_loaded_ = false;
   bool aborted_ = false;
   DecoderError error_;
+  // All the decoded message (a request and/or a response). This is only available after the
+  // syscall have been printed. It is used to try to infer some information from the message.
+  fidl_codec::DecodedMessageData decoded_message_data_;
 };
 
 class SyscallDisplay : public SyscallUse {

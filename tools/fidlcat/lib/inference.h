@@ -28,6 +28,10 @@ class Inference : public fidl_codec::semantic::HandleSemantic {
   // Function called when __libc_extensions_init (from libc) is intercepted.
   void LibcExtensionsInit(SyscallDecoder* decoder);
 
+  // Function call for channel functions which read/write FILD messages to try to infer some
+  // semantic.
+  void InferMessage(SyscallDecoder* decoder, fidl_codec::semantic::ContextType context_type);
+
   // Called after a zx_channel_create syscall has been displayed.
   void ZxChannelCreate(SyscallDecoder* decoder);
 

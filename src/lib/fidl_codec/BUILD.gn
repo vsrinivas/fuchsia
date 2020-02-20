@@ -11,6 +11,7 @@ static_library("fidl_codec") {
   friend = [ ":tests" ]
 
   public = [
+    "builtin_semantic.h",
     "display_handle.h",
     "display_options.h",
     "encoder.h",
@@ -30,6 +31,7 @@ static_library("fidl_codec") {
   ]
 
   sources = [
+    "builtin_semantic.cc",
     "display_handle.cc",
     "encoder.cc",
     "library_loader.cc",
@@ -54,6 +56,7 @@ static_library("fidl_codec") {
 executable("fidl_codec_test_bin") {
   testonly = true
   sources = [
+    "builtin_semantic_test.cc",
     "dispatcher_test.cc",
     "library_loader_test.cc",
     "message_decoder_test.cc",

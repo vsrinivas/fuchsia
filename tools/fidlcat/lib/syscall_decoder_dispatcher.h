@@ -1624,6 +1624,21 @@ class SyscallDecoderDispatcher {
   // Called when we intercept zx_channel_create.
   void ZxChannelCreate(SyscallDecoder* decoder) { inference_.ZxChannelCreate(decoder); }
 
+  // Called when we intercept zx_channel_read or a zx_channel_read_etc.
+  void ZxChannelRead(SyscallDecoder* decoder) {
+    inference_.InferMessage(decoder, fidl_codec::semantic::ContextType::kRead);
+  }
+
+  // Called when we intercept zx_channel_write.
+  void ZxChannelWrite(SyscallDecoder* decoder) {
+    inference_.InferMessage(decoder, fidl_codec::semantic::ContextType::kWrite);
+  }
+
+  // Called when we intercept zx_channel_call.
+  void ZxChannelCall(SyscallDecoder* decoder) {
+    inference_.InferMessage(decoder, fidl_codec::semantic::ContextType::kCall);
+  }
+
   // Called when we intercept zx_port_create.
   void ZxPortCreate(SyscallDecoder* decoder) { inference_.ZxPortCreate(decoder); }
 

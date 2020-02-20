@@ -153,6 +153,22 @@ void UnionValue::Visit(Visitor* visitor, const Type* for_type) const {
   visitor->VisitUnionValue(this, for_type);
 }
 
+const Value* StructValue::GetFieldValue(std::string_view field_name) const {
+  for (const auto& field : fields_) {
+    if (field.first->name() == field_name) {
+      return field.second.get();
+    }
+  }
+  return nullptr;
+}
+
+void StructValue::AddField(std::string_view name, std::unique_ptr<Value> value) {
+  StructMember* member = struct_definition_.SearchMember(name);
+  if (member != nullptr) {
+    AddField(member, std::move(value));
+  }
+}
+
 int StructValue::DisplaySize(const Type* for_type, int remaining_size) const {
   int size = 0;
   for (const auto& member : struct_definition_.members()) {

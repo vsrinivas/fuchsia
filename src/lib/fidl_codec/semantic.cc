@@ -7,6 +7,7 @@
 #include <string>
 
 #include "src/lib/fidl_codec/printer.h"
+#include "src/lib/fidl_codec/wire_object.h"
 #include "zircon/system/public/zircon/processargs.h"
 #include "zircon/system/public/zircon/types.h"
 
@@ -15,17 +16,134 @@ namespace semantic {
 
 void ExpressionRequest::Dump(std::ostream& os) const { os << "request"; }
 
+bool ExpressionRequest::Execute(SemanticContext* context, ExpressionValue* result) const {
+  if (context->request() == nullptr) {
+    return false;
+  }
+  result->set(context->request());
+  return true;
+}
+
 void ExpressionHandle::Dump(std::ostream& os) const { os << "handle"; }
+
+bool ExpressionHandle::Execute(SemanticContext* context, ExpressionValue* result) const {
+  result->set(context->handle());
+  return true;
+}
 
 void ExpressionFieldAccess::Dump(std::ostream& os) const { os << *expression_ << '.' << field_; }
 
+bool ExpressionFieldAccess::Execute(SemanticContext* context, ExpressionValue* result) const {
+  ExpressionValue value;
+  if (!expression_->Execute(context, &value)) {
+    return false;
+  }
+  if (value.value() != nullptr) {
+    const StructValue* struct_value = value.value()->AsStructValue();
+    if (struct_value != nullptr) {
+      const Value* field_value = struct_value->GetFieldValue(field_);
+      if (field_value == nullptr) {
+        return false;
+      }
+      result->set(field_value);
+      return true;
+    }
+  }
+  return false;
+}
+
 void ExpressionSlash::Dump(std::ostream& os) const { os << *left_ << " / " << *right_; }
 
+bool ExpressionSlash::Execute(SemanticContext* context, ExpressionValue* result) const {
+  ExpressionValue left_value;
+  ExpressionValue right_value;
+  if (!left_->Execute(context, &left_value) || !right_->Execute(context, &right_value)) {
+    return false;
+  }
+  const HandleDescription* description = left_value.handle_description();
+  if ((description == nullptr) && (left_value.handle() != ZX_HANDLE_INVALID)) {
+    description =
+        context->handle_semantic()->GetHandleDescription(context->pid(), left_value.handle());
+  }
+  if (description == nullptr) {
+    return false;
+  }
+  if (right_value.value() != nullptr) {
+    auto string_value = right_value.value()->AsStringValue();
+    if (string_value != nullptr) {
+      if (description->path().empty()) {
+        result->set(description->type(), description->fd(), string_value->string());
+        return true;
+      }
+      if (string_value->string() == ".") {
+        result->set(description->type(), description->fd(), description->path());
+        return true;
+      }
+      const char* data = string_value->string().c_str();
+      size_t length = string_value->string().size();
+      if ((length >= 2) && (strncmp(data, "./", 2) == 0)) {
+        data += 2;
+        length -= 2;
+      }
+      if (description->path() == "/") {
+        result->set(description->type(), description->fd(), "/" + std::string(data, length));
+        return true;
+      }
+      result->set(description->type(), description->fd(),
+                  description->path() + "/" + std::string(data, length));
+      return true;
+    }
+  }
+  return false;
+}
+
 void Assignment::Dump(std::ostream& os) const { os << *destination_ << " = " << *source_ << '\n'; }
+
+void Assignment::Execute(SemanticContext* context) const {
+  ExpressionValue destination_value;
+  ExpressionValue source_value;
+  if (!destination_->Execute(context, &destination_value) ||
+      !source_->Execute(context, &source_value)) {
+    return;
+  }
+  if (destination_value.value() == nullptr) {
+    return;
+  }
+  auto handle_value = destination_value.value()->AsHandleValue();
+  if (handle_value == nullptr) {
+    return;
+  }
+  zx_handle_t destination_handle = handle_value->handle().handle;
+  if (destination_handle == ZX_HANDLE_INVALID) {
+    return;
+  }
+  // Currently we only work on requests. If we also work on response, this would need to be
+  // modified.
+  switch (context->type()) {
+    case ContextType::kRead:
+      break;
+    case ContextType::kWrite:
+    case ContextType::kCall:
+      destination_handle =
+          context->handle_semantic()->GetLinkedHandle(context->pid(), destination_handle);
+      if (destination_handle == ZX_HANDLE_INVALID) {
+        return;
+      }
+      break;
+  }
+  context->handle_semantic()->AddHandleDescription(context->pid(), destination_handle,
+                                                   source_value.handle_description());
+}
 
 void MethodSemantic::Dump(std::ostream& os) const {
   for (const auto& assignment : assignments_) {
     assignment->Dump(os);
+  }
+}
+
+void MethodSemantic::ExecuteAssignments(SemanticContext* context) const {
+  for (const auto& assignment : assignments_) {
+    assignment->Execute(context);
   }
 }
 

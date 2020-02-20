@@ -120,7 +120,8 @@ bool DecodedMessage::DecodeMessage(MessageDecoderDispatcher* dispatcher, uint64_
 }
 
 bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int columns, std::ostream& os,
-                             std::string_view line_header, int tabs) {
+                             std::string_view line_header, int tabs,
+                             DecodedMessageData* decoded_message_data) {
   if (header_->ordinal == kFidlOrdinalEpitaph) {
     auto epitaph = reinterpret_cast<const fidl_epitaph_t*>(header_);
     PrettyPrinter printer(os, colors, line_header, columns, tabs);
@@ -156,6 +157,10 @@ bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int column
       }
       os << DocumentToString(&actual_request) << '\n';
     }
+    if (is_request_ && (decoded_message_data != nullptr)) {
+      decoded_message_data->semantic = method_->semantic();
+      decoded_message_data->decoded_request = std::move(decoded_request_);
+    }
   }
   if (matched_response_ && (!is_request_ || (direction_ == Direction::kUnknown))) {
     PrettyPrinter printer(os, colors, line_header, columns, /*header_on_every_line=*/true, tabs);
@@ -171,6 +176,10 @@ bool DecodedMessage::Display(const Colors& colors, bool pretty_print, int column
         decoded_response_->ExtractJson(actual_response.GetAllocator(), actual_response);
       }
       os << DocumentToString(&actual_response) << '\n';
+    }
+    if (is_request_ && (decoded_message_data != nullptr)) {
+      decoded_message_data->semantic = method_->semantic();
+      decoded_message_data->decoded_response = std::move(decoded_response_);
     }
   }
   if (matched_request_ || matched_response_) {
@@ -215,14 +224,15 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
                                              const uint8_t* bytes, uint32_t num_bytes,
                                              const zx_handle_info_t* handles, uint32_t num_handles,
                                              SyscallFidlType type, std::ostream& os,
-                                             std::string_view line_header, int tabs) {
+                                             std::string_view line_header, int tabs,
+                                             DecodedMessageData* decoded_message_data) {
   DecodedMessage message;
   if (!message.DecodeMessage(this, process_koid, handle, bytes, num_bytes, handles, num_handles,
                              type, os, line_header, tabs)) {
     return false;
   }
   return message.Display(colors_, display_options_.pretty_print, display_options_.columns, os,
-                         line_header, tabs);
+                         line_header, tabs, decoded_message_data);
 }
 
 Direction MessageDecoderDispatcher::ComputeDirection(uint64_t process_koid, zx_handle_t handle,

@@ -227,6 +227,15 @@ class Struct {
 
   void AddMember(std::string_view name, std::unique_ptr<Type> type);
 
+  StructMember* SearchMember(std::string_view name) const {
+    for (const auto& member : members_) {
+      if (member->name() == name) {
+        return member.get();
+      }
+    }
+    return nullptr;
+  }
+
   // Wrap this Struct in a non-nullable type and use the given visitor on it.
   void VisitAsType(TypeVisitor* visitor) const;
 
@@ -498,6 +507,8 @@ class LibraryLoader {
 
   // Adds a method ordinal to the ordinal map.
   void AddMethod(const InterfaceMethod* method);
+
+  void ParseBuiltinSemantic();
 
   // Returns a pointer to a set of methods that have this ordinal.  There may be
   // more than one if the method was composed into multiple protocols.  For

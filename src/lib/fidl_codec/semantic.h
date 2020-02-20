@@ -20,6 +20,46 @@ class StructValue;
 
 namespace semantic {
 
+class ExpressionValue;
+class HandleSemantic;
+
+// The context type (the kind of syscall).
+enum class ContextType { kRead, kWrite, kCall };
+
+// Context used during the execution of semantic rules.
+class SemanticContext {
+ public:
+  SemanticContext(HandleSemantic* handle_semantic, zx_koid_t pid, zx_handle_t handle,
+                  ContextType type, const StructValue* request, const StructValue* response)
+      : handle_semantic_(handle_semantic),
+        pid_(pid),
+        handle_(handle),
+        type_(type),
+        request_(request),
+        response_(response) {}
+
+  HandleSemantic* handle_semantic() const { return handle_semantic_; }
+  zx_koid_t pid() const { return pid_; }
+  zx_handle_t handle() const { return handle_; }
+  ContextType type() const { return type_; }
+  const StructValue* request() const { return request_; }
+  const StructValue* response() const { return response_; }
+
+ private:
+  // The semantic rules for the FIDL method.
+  HandleSemantic* const handle_semantic_;
+  // The process id.
+  const zx_koid_t pid_;
+  // The handle we are reading/writing on.
+  const zx_handle_t handle_;
+  // The context type.
+  const ContextType type_;
+  // The request (can be null).
+  const StructValue* const request_;
+  // The response (can be null).
+  const StructValue* const response_;
+};
+
 // Base class for all expressions (for semantic).
 class Expression {
  public:
@@ -28,6 +68,9 @@ class Expression {
 
   // Dump the expression.
   virtual void Dump(std::ostream& os) const = 0;
+
+  // Execute the expression for a gien context.
+  virtual bool Execute(SemanticContext* context, ExpressionValue* result) const = 0;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Expression& expression) {
@@ -41,6 +84,7 @@ class ExpressionRequest : public Expression {
   ExpressionRequest() = default;
 
   void Dump(std::ostream& os) const override;
+  bool Execute(SemanticContext* context, ExpressionValue* result) const override;
 };
 
 // Defines an expression which accesses the handle used to read/write the request.
@@ -49,6 +93,7 @@ class ExpressionHandle : public Expression {
   ExpressionHandle() = default;
 
   void Dump(std::ostream& os) const override;
+  bool Execute(SemanticContext* context, ExpressionValue* result) const override;
 };
 
 // Defines the access to an object field.
@@ -58,6 +103,7 @@ class ExpressionFieldAccess : public Expression {
       : expression_(std::move(expression)), field_(field) {}
 
   void Dump(std::ostream& os) const override;
+  bool Execute(SemanticContext* context, ExpressionValue* result) const override;
 
  private:
   const std::unique_ptr<Expression> expression_;
@@ -71,6 +117,7 @@ class ExpressionSlash : public Expression {
       : left_(std::move(left)), right_(std::move(right)) {}
 
   void Dump(std::ostream& os) const override;
+  bool Execute(SemanticContext* context, ExpressionValue* result) const override;
 
  private:
   const std::unique_ptr<Expression> left_;
@@ -85,6 +132,7 @@ class Assignment {
       : destination_(std::move(destination)), source_(std::move(source)) {}
 
   void Dump(std::ostream& os) const;
+  void Execute(SemanticContext* context) const;
 
  private:
   const std::unique_ptr<Expression> destination_;
@@ -103,6 +151,7 @@ class MethodSemantic {
   }
 
   void Dump(std::ostream& os) const;
+  void ExecuteAssignments(SemanticContext* context) const;
 
  private:
   std::vector<std::unique_ptr<Assignment>> assignments_;
@@ -229,6 +278,30 @@ class HandleSemantic {
 
  private:
   std::map<zx_koid_t, ProcessSemantic> process_handles_;
+};
+
+// Holds the evaluation of an expression. Only one of the three fields can be defined.
+class ExpressionValue {
+ public:
+  ExpressionValue() : handle_description_() {}
+
+  void set(const Value* value) { value_ = value; }
+  void set(zx_handle_t handle) { handle_ = handle; }
+  void set(std::string_view type, int64_t fd, std::string_view path) {
+    handle_description_ = std::make_unique<HandleDescription>(type, fd, path);
+  }
+
+  const Value* value() const { return value_; }
+  zx_handle_t handle() const { return handle_; }
+  const HandleDescription* handle_description() const { return handle_description_.get(); }
+
+ private:
+  // If not null, the value is a FIDL value.
+  const Value* value_ = nullptr;
+  // If not ZX_HANDLE_INVALID, the value is a handle.
+  zx_handle_t handle_ = ZX_HANDLE_INVALID;
+  // If not null, the value is a handle description.
+  std::unique_ptr<HandleDescription> handle_description_;
 };
 
 }  // namespace semantic

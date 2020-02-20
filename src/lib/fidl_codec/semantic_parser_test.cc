@@ -12,6 +12,7 @@
 #include "gtest/gtest.h"
 #include "library_loader.h"
 #include "src/lib/fidl_codec/list_test_data.h"
+#include "src/lib/fidl_codec/semantic_parser_test.h"
 
 namespace fidl_codec {
 namespace semantic {
@@ -19,17 +20,6 @@ namespace semantic {
 // Checks the semantic parser.
 // Checks that we detects errors.
 // Checks that we do a good recovery on errors (only a few tests display more than one error).
-
-class SemanticParserTest : public ::testing::Test {
- public:
-  SemanticParserTest();
-
- protected:
-  void SetUp() override;
-
-  LibraryReadError err_;
-  LibraryLoader library_loader_;
-};
 
 SemanticParserTest::SemanticParserTest() {
   fidl_codec_test::SdkExamples sdk_examples;
