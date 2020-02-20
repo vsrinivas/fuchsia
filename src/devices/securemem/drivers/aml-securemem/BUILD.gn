@@ -85,6 +85,9 @@ test("aml-securemem-test") {
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
     "//zircon/system/fidl/fuchsia-tee",
   ]
+
+  # TODO(46354): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("aml-securemem-manifest") {
