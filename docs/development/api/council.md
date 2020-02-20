@@ -125,30 +125,32 @@ The council is comprised of Fuchsia contributors who have demonstrated:
 
 Members are appointed by each functional area of the project:
 
-| Area              | Appointee               |
-| ----------------- | ----------------------- |
-| Architecture      | silberst@google.com     |
-| Auth              | jsankey@google.com      |
-| Component         | jeffbrown@google.com    |
-| Connectivity      | jamuraa@google.com      |
-| DDK               | teisenbe@google.com     |
-| Developer         | dschulyer@google.com    |
-| Drivers           | ravoorir@google.com     |
-| Experiences       | chaselatta@google.com   |
-| FIDL              | ianloic@google.com      |
-| Graphics          | adamgousetis@google.com |
-| Kernel            | cpu@google.com          |
-| Ledger            | qsr@google.com          |
-| Media             | dalesat@google.com      |
-| Metrics           | rudominer@google.com    |
-| Modular           | lindkvist@google.com    |
-| Security          | jsankey@google.com      |
-| Software Delivery | raggi@google.com        |
-| Storage           | smklein@google.com      |
-| System            | cpu@google.com          |
-| Toolchain         | mcgrathr@google.com     |
-| Virtualization    | abdulla@google.com      |
-| Web               | wez@google.com          |
+| Area              | Appointee                |
+| ----------------- | ------------------------ |
+| Architecture      | silberst@google.com      |
+| Auth              | jsankey@google.com       |
+| Component Runtime | geb@google.com           |
+| Connectivity      | jamuraa@google.com       |
+| DDK               | teisenbe@google.com      |
+| Developer         | dschulyer@google.com     |
+| Diagnostics       | crjohns@google.com       |
+| Drivers           | ravoorir@google.com      |
+| Experiences       | chaselatta@google.com    |
+| FIDL              | ianloic@google.com       |
+| Graphics          | adamgousetis@google.com  |
+| HCI (a11y, i18n)  | neelsa@google.com        |
+| Kernel            | cpu@google.com           |
+| Ledger            | qsr@google.com           |
+| Media             | dalesat@google.com       |
+| Metrics           | rudominer@google.com     |
+| Security          | jsankey@google.com       |
+| Sessions          | lindkvist@google.com     |
+| Software Delivery | computerdruid@google.com |
+| Storage           | cpu@google.com           |
+| System            | cpu@google.com           |
+| Toolchain         | mcgrathr@google.com      |
+| Virtualization    | abdulla@google.com       |
+| Web               | wez@google.com           |
 
 As the project evolves, the list of functional areas (and therefore the makeup
 of the council) will evolve as well. The list of functional areas is maintained
