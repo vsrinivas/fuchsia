@@ -421,6 +421,9 @@ func (n *Client) Beacon() (*net.UDPAddr, error) {
 		IP:   net.IPv6zero,
 		Port: n.AdvertPort,
 	})
+	if err != nil {
+		return nil, err
+	}
 	defer conn.Close()
 
 	conn.SetReadDeadline(time.Now().Add(n.Timeout))

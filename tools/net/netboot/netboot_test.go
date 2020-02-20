@@ -84,6 +84,23 @@ func startFakeNetbootServers(t *testing.T, nodenames []string) (int, func()) {
 	}
 }
 
+func TestBeacon(t *testing.T) {
+	c := NewClient(time.Second)
+	conn, err := net.ListenUDP("udp6", &net.UDPAddr{
+		IP:   net.IPv6zero,
+		Port: c.AdvertPort,
+	})
+	if err != nil {
+		t.Fatalf("unable to listen UDP: %v", err)
+	}
+	defer conn.Close()
+
+	_, err = c.Beacon()
+	if err == nil {
+		t.Errorf("Expected error for multiple Beacon() calls")
+	}
+}
+
 func TestInvalidNetbootHeaders(t *testing.T) {
 	invalidHeaders := []netbootMessage{
 		{
