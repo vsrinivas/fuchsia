@@ -49,4 +49,17 @@ TEST(VulkanUtils, ClipToRect) {
   EXPECT_EQ(rect, copy);
 }
 
+// This test ensures that Fuchsia-specific Vulkan functions
+// are properly loaded into the dynamic dispatcher whenever
+// we are on a Fuchsia platform.
+#ifdef VK_USE_PLATFORM_FUCHSIA
+using VKFunctionTest = ::testing::Test;
+VK_TEST(VKFunctionTest, FuchsiaFunctionLoading) {
+  auto escher = escher::test::GetEscher();
+  auto vk_loader = escher->device()->dispatch_loader();
+
+  EXPECT_TRUE(vk_loader.vkCreateBufferCollectionFUCHSIA);
+}
+#endif
+
 }  // anonymous namespace
