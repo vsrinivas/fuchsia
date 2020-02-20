@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "bin/test_sysmgr_service"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

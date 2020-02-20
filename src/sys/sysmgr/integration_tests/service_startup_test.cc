@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/logger/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -9,11 +10,13 @@
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include <regex>
+
 #include <fidl/examples/echo/cpp/fidl.h>
+#include <gmock/gmock.h>
 #include <test/sysmgr/cpp/fidl.h>
 
 #include "gtest/gtest.h"
-#include "src/lib/fxl/logging.h"
 #include "src/sys/appmgr/appmgr.h"
 
 namespace sysmgr {
@@ -22,28 +25,38 @@ namespace {
 
 using TestSysmgr = ::gtest::RealLoopFixture;
 
+class SimpleLogCollector : public fuchsia::logger::LogListener {
+ public:
+  explicit SimpleLogCollector(fidl::InterfaceRequest<fuchsia::logger::LogListener> request,
+                              async_dispatcher_t* dispatcher)
+      : binding_(this, std::move(request), dispatcher) {
+    binding_.set_error_handler([this](zx_status_t s) {
+      if (!done_) {
+        FAIL() << "Connection to simple collector closed early";
+      }
+    });
+  }
+
+  virtual void Log(fuchsia::logger::LogMessage message) override {
+    messages_.emplace_back(message.msg);
+  };
+
+  virtual void LogMany(std::vector<fuchsia::logger::LogMessage> messages) override {
+    for (auto& l : messages) {
+      Log(std::move(l));
+    }
+  }
+
+  virtual void Done() override { done_ = true; }
+
+  bool done_;
+  fidl::Binding<fuchsia::logger::LogListener> binding_;
+  std::vector<std::string> messages_;
+};
+
 TEST_F(TestSysmgr, ServiceStartup) {
   zx::channel h1, h2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
-
-  std::vector<std::string> sysmgr_args;
-  // When auto_update_packages=true, this tests that the presence of amber
-  // in the sys environment allows component loading to succeed. It should work
-  // with a mocked amber.
-  constexpr char kSysmgrConfig[] = R"(--config=
-{
-  "services": {
-    "test.sysmgr.Interface": "fuchsia-pkg://fuchsia.com/sysmgr_integration_tests#meta/test_sysmgr_service.cmx",
-    "fuchsia.pkg.PackageResolver": "fuchsia-pkg://fuchsia.com/sysmgr_integration_tests#meta/mock_resolver.cmx"
-  },
-  "startup_services": [
-    "fuchsia.pkg.PackageResolver"
-  ],
-  "update_dependencies": [
-    "fuchsia.pkg.PackageResolver"
-  ]
-})";
-  sysmgr_args.push_back(kSysmgrConfig);
 
   auto environment_services = sys::ComponentContext::Create()->svc();
 
@@ -53,13 +66,15 @@ TEST_F(TestSysmgr, ServiceStartup) {
   root_realm_services->names = std::vector<std::string>{fidl::examples::echo::Echo::Name_};
   root_realm_services->host_directory = environment_services->CloneChannel().TakeChannel();
 
-  component::AppmgrArgs args{.pa_directory_request = h2.release(),
-                             .root_realm_services = std::move(root_realm_services),
-                             .environment_services = std::move(environment_services),
-                             .sysmgr_url = "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx",
-                             .sysmgr_args = std::move(sysmgr_args),
-                             .run_virtual_console = false,
-                             .retry_sysmgr_crash = false};
+  std::vector<std::string> sysmgr_args;
+  component::AppmgrArgs args{
+      .pa_directory_request = h2.release(),
+      .root_realm_services = std::move(root_realm_services),
+      .environment_services = std::move(environment_services),
+      .sysmgr_url = "fuchsia-pkg://fuchsia.com/sysmgr_integration_tests#meta/sysmgr.cmx",
+      .sysmgr_args = std::move(sysmgr_args),
+      .run_virtual_console = false,
+      .retry_sysmgr_crash = false};
   component::Appmgr appmgr(dispatcher(), std::move(args));
 
   // h1 is connected to h2, which is injected above as appmgr's
@@ -76,6 +91,11 @@ TEST_F(TestSysmgr, ServiceStartup) {
   std::string response;
   ::test::sysmgr::InterfacePtr interface_ptr;
   ASSERT_EQ(ZX_OK, sysmgr_svc.Connect(interface_ptr.NewRequest(dispatcher())));
+
+  fuchsia::logger::LogPtr log_ptr;
+  fidl::InterfaceHandle<fuchsia::logger::LogListener> listener_handle;
+  SimpleLogCollector collector(listener_handle.NewRequest(), dispatcher());
+  ASSERT_EQ(ZX_OK, sysmgr_svc.Connect(log_ptr.NewRequest(dispatcher())));
 
   interface_ptr->Ping([&](fidl::StringPtr r) {
     received_response = true;
@@ -95,6 +115,28 @@ TEST_F(TestSysmgr, ServiceStartup) {
   });
   RunLoopUntil([&] { return received_response; });
   EXPECT_EQ(echo_msg, response);
+
+  auto filter_options = fuchsia::logger::LogFilterOptions::New();
+  std::vector<std::string> expected_patterns{
+      "test_sysmgr_service.cc\\([0-9]{1,4}\\): Entering loop.",
+      "test_sysmgr_service.cc\\([0-9]{1,4}\\): Received ping.",
+  };
+  // FIXME(45589) can't use DumpLogs without a fence
+  log_ptr->Listen(std::move(listener_handle), std::move(filter_options));
+  RunLoopUntil([&collector, &expected_patterns] {
+    return (collector.messages_.size() == expected_patterns.size());
+  });
+
+  ASSERT_EQ(expected_patterns.size(), collector.messages_.size());
+  auto expected = expected_patterns.begin();
+  auto observed = collector.messages_.begin();
+  while (expected != expected_patterns.end() || observed != collector.messages_.end()) {
+    ASSERT_THAT(*observed, ::testing::MatchesRegex(*expected));
+    expected++;
+    observed++;
+  }
+  ASSERT_EQ(expected, expected_patterns.end());
+  ASSERT_EQ(observed, collector.messages_.end());
 }
 
 }  // namespace

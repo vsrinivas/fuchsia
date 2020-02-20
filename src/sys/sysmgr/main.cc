@@ -18,26 +18,19 @@ constexpr char kConfigDataDir[] = "/config/data/";
 
 int main(int argc, const char** argv) {
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-  if (!fxl::SetLogSettingsFromCommandLine(command_line))
+  if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
     return 1;
-
-  sysmgr::Config config;
-  if (command_line.HasOption("config")) {
-    std::string config_data;
-    command_line.GetOptionValue("config", &config_data);
-    config.ParseFromString(config_data, "command line");
-  } else {
-    config.ParseFromDirectory(kConfigDataDir);
   }
 
+  sysmgr::Config config;
+  config.ParseFromDirectory(kConfigDataDir);
   if (config.HasError()) {
     FXL_LOG(ERROR) << "Parsing config failed:\n" << config.error_str();
     return ZX_ERR_INVALID_ARGS;
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  sysmgr::App app(std::move(config));
-
+  sysmgr::App app(std::move(config), &loop);
   loop.Run();
   return 0;
 }

@@ -10,6 +10,8 @@
 
 #include <test/sysmgr/cpp/fidl.h>
 
+#include "src/lib/syslog/cpp/logger.h"
+
 namespace sysmgr {
 namespace test {
 namespace {
@@ -22,7 +24,10 @@ class Service : public ::test::sysmgr::Interface {
 
   ~Service() = default;
 
-  void Ping(PingCallback callback) override { callback("test_sysmgr_service_startup"); }
+  void Ping(PingCallback callback) override {
+    FX_LOGS(INFO) << "Received ping.";
+    callback("test_sysmgr_service_startup");
+  }
 
  private:
   std::unique_ptr<sys::ComponentContext> context_;
@@ -34,9 +39,11 @@ class Service : public ::test::sysmgr::Interface {
 }  // namespace sysmgr
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger();
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   sysmgr::test::Service service;
+  FX_LOGS(INFO) << "Entering loop.";
   loop.Run();
   return 0;
 }

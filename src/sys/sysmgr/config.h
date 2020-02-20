@@ -36,12 +36,10 @@ class Config {
   // Returns false if there were any errors.
   bool ParseFromDirectory(const std::string& dir);
 
-  // Initializes the Config from a JSON string. |pseudo_file| is used as the
-  // 'file' in the error string.
-  bool ParseFromString(const std::string& data, const std::string& pseudo_file);
-
   bool HasError() const;
   std::string error_str() const;
+
+  std::string& diagnostics_url() { return diagnostics_url_; }
 
   ServiceMap TakeServices() { return std::move(services_); }
 
@@ -68,6 +66,7 @@ class Config {
   OptionalServices optional_services_;
   AppVector apps_;
   json::JSONParser json_parser_;
+  std::string diagnostics_url_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Config);
 };

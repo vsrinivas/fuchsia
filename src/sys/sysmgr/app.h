@@ -7,6 +7,7 @@
 
 #include <fuchsia/pkg/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
@@ -30,7 +31,7 @@ namespace sysmgr {
 // of the environment.
 class App {
  public:
-  explicit App(Config config);
+  explicit App(Config config, async::Loop* loop);
   ~App();
 
  private:
@@ -42,6 +43,7 @@ class App {
   void RegisterLoader();
   void RegisterDefaultServiceConnector();
   void LaunchApplication(fuchsia::sys::LaunchInfo launch_info);
+  void StartDiagnostics(fuchsia::sys::LaunchInfo launch_diagnostics, async::Loop* loop);
 
   std::unique_ptr<sys::ComponentContext> component_context_;
 
@@ -52,6 +54,9 @@ class App {
   fuchsia::sys::EnvironmentPtr env_;
   fuchsia::sys::EnvironmentControllerPtr env_controller_;
   fuchsia::sys::LauncherPtr env_launcher_;
+
+  // controller for sys diagnostics
+  fuchsia::sys::ComponentControllerPtr diagnostics_controller_;
 
   vfs::PseudoDir svc_root_;
   std::vector<std::string> svc_names_;

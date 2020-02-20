@@ -1,0 +1,15 @@
+{
+    "program": {
+        "args": [
+            "--disable-klog",
+            "--config-path",
+            "/pkg/data/observer_config.json"
+        ],
+        "binary": "bin/archivist"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.internal.ComponentEventProvider"
+        ]
+    }
+}

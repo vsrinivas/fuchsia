@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
@@ -26,6 +27,7 @@ executable("test_sysmgr_service") {
     ":interface",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
@@ -63,6 +65,8 @@ executable("service_startup_test") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr:appmgr_for_test",
+    "//third_party/googletest:gmock",
+    "//zircon/system/fidl/fuchsia-logger",
   ]
 }
 
@@ -84,6 +88,13 @@ executable("package_updating_loader_test") {
   ]
 }
 
+config_data("sysmgr_integration_test_observer_config") {
+  for_pkg = "sysmgr_integration_tests"
+  outputs = [ "service_startup_test.config" ]
+
+  sources = [ "config/service_startup_test.config" ]
+}
+
 test_package("integration_tests") {
   package_name = "sysmgr_integration_tests"
 
@@ -91,7 +102,10 @@ test_package("integration_tests") {
     ":mock_resolver",
     ":package_updating_loader_test",
     ":service_startup_test",
+    ":sysmgr_integration_test_observer_config",
     ":test_sysmgr_service",
+    "//src/diagnostics/archivist:bin",
+    "//src/sys/sysmgr:bin",
   ]
 
   binaries = [
@@ -100,6 +114,12 @@ test_package("integration_tests") {
     },
     {
       name = "test_sysmgr_service"
+    },
+    {
+      name = "archivist"
+    },
+    {
+      name = "sysmgr"
     },
   ]
 
@@ -122,6 +142,21 @@ test_package("integration_tests") {
     {
       path = rebase_path("meta/mock_resolver.cmx")
       dest = "mock_resolver.cmx"
+    },
+    {
+      path = rebase_path("meta/observer.cmx")
+      dest = "observer.cmx"
+    },
+    {
+      path = "//src/sys/sysmgr/meta/sysmgr.cmx"
+      dest = "sysmgr.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = "//src/diagnostics/archivist/configs/observer_config.json"
+      dest = "observer_config.json"
     },
   ]
 

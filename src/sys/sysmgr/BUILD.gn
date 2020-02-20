@@ -30,6 +30,7 @@ source_set("lib") {
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
+    "//zircon/public/lib/async-loop-cpp",
   ]
 
   if (auto_update_packages) {
