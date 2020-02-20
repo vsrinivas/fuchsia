@@ -41,6 +41,7 @@ struct TestService {
     env: NestedEnvironment,
     publisher: PublisherProxy,
     discovery: DiscoveryProxy,
+    observer_discovery: ObserverDiscoveryProxy,
     new_usage_watchers: mpsc::Receiver<(AudioRenderUsage, UsageWatcherProxy)>,
     usage_watchers: HashMap<AudioRenderUsage, UsageWatcherProxy>,
 }
@@ -88,12 +89,16 @@ impl TestService {
         let discovery = mediasession
             .connect_to_service::<DiscoveryMarker>()
             .context("Connecting to Discovery")?;
+        let observer_discovery = mediasession
+            .connect_to_service::<ObserverDiscoveryMarker>()
+            .context("Connecting to ObserverDiscovery")?;
 
         Ok(Self {
             app: mediasession,
             env,
             publisher,
             discovery,
+            observer_discovery,
             new_usage_watchers,
             usage_watchers: HashMap::new(),
         })
@@ -105,6 +110,17 @@ impl TestService {
         self.discovery.watch_sessions(watch_options, watcher_client)?;
         Ok(TestWatcher {
             watcher: watcher_server.into_stream().context("Turning watcher into stream")?,
+        })
+    }
+
+    fn new_observer_watcher(&self, watch_options: WatchOptions) -> Result<TestWatcher> {
+        let (watcher_client, watcher_server) =
+            create_endpoints().context("Creating observer watcher endpoints")?;
+        self.observer_discovery.watch_sessions(watch_options, watcher_client)?;
+        Ok(TestWatcher {
+            watcher: watcher_server
+                .into_stream()
+                .context("Turning observer watcher into stream")?,
         })
     }
 
@@ -451,7 +467,7 @@ test!(players_get_ids, || async {
     Ok(())
 });
 
-test!(users_can_watch_session_status, || async {
+test!(session_controllers_can_watch_session_status, || async {
     let service = TestService::new()?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
 
@@ -476,6 +492,85 @@ test!(users_can_watch_session_status, || async {
     assert_matches!(
         status1.player_status,
         Some(PlayerStatus { player_state: Some(PlayerState::Paused), .. })
+    );
+
+    Ok(())
+});
+
+test!(session_observers_can_watch_session_status, || async {
+    let service = TestService::new()?;
+    let mut watcher = service.new_observer_watcher(Decodable::new_empty())?;
+
+    let mut player1 = TestPlayer::new(&service).await?;
+    let mut player2 = TestPlayer::new(&service).await?;
+
+    player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    let _updates = watcher.wait_for_n_updates(1).await?;
+
+    let (session1, session1_request) = create_proxy()?;
+    service.observer_discovery.connect_to_session(player1.id, session1_request)?;
+    let status1 = session1.watch_status().await.context("Watching session status (1st time)")?;
+    assert_matches!(
+        status1.player_status,
+        Some(PlayerStatus { player_state: Some(PlayerState::Playing), .. })
+    );
+
+    player2.emit_delta(delta_with_state(PlayerState::Buffering)).await?;
+    player1.emit_delta(delta_with_state(PlayerState::Paused)).await?;
+    let _updates = watcher.wait_for_n_updates(2).await?;
+    let status1 = session1.watch_status().await.context("Watching session status (2nd time)")?;
+    assert_matches!(
+        status1.player_status,
+        Some(PlayerStatus { player_state: Some(PlayerState::Paused), .. })
+    );
+
+    Ok(())
+});
+
+test!(player_disconnection_disconects_observers, || async {
+    let service = TestService::new()?;
+    let mut watcher = service.new_observer_watcher(Decodable::new_empty())?;
+
+    let mut player = TestPlayer::new(&service).await?;
+
+    player.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    let _updates = watcher.wait_for_n_updates(1).await?;
+
+    let (session, session_request) = create_proxy()?;
+    service.observer_discovery.connect_to_session(player.id, session_request)?;
+    assert!(session.watch_status().await.is_ok());
+
+    drop(player);
+    while let Ok(_) = session.watch_status().await {}
+
+    // Passes by terminating, indicating the observer is disconnected.
+
+    Ok(())
+});
+
+test!(observers_caught_up_with_state_of_session, || async {
+    let service = TestService::new()?;
+    let mut watcher = service.new_observer_watcher(Decodable::new_empty())?;
+
+    let mut player = TestPlayer::new(&service).await?;
+
+    player.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    let _updates = watcher.wait_for_n_updates(1).await?;
+
+    let (session1, session1_request) = create_proxy()?;
+    service.observer_discovery.connect_to_session(player.id, session1_request)?;
+    let status1 = session1.watch_status().await.context("Watching session status (1st time)")?;
+    assert_matches!(
+        status1.player_status,
+        Some(PlayerStatus { player_state: Some(PlayerState::Playing), .. })
+    );
+
+    let (session2, session2_request) = create_proxy()?;
+    service.observer_discovery.connect_to_session(player.id, session2_request)?;
+    let status2 = session2.watch_status().await.context("Watching session status (2nd time)")?;
+    assert_matches!(
+        status2.player_status,
+        Some(PlayerStatus { player_state: Some(PlayerState::Playing), .. })
     );
 
     Ok(())

@@ -264,9 +264,42 @@ impl Discovery {
         std::mem::swap(&mut interrupted, &mut self.interrupt_paused_players);
     }
 
+    async fn observe_session(
+        &mut self,
+        session_id: u64,
+        session_request: ServerEnd<SessionObserverMarker>,
+    ) {
+        let status_request_stream = match session_request.into_stream() {
+            Ok(status_request_stream) => status_request_stream,
+            Err(e) => {
+                fx_log_info!(
+                    tag: LOG_TAG,
+                    "Client tried to observe session but sent a bad handle: {:?}",
+                    e
+                );
+                return;
+            }
+        };
+
+        let status_request_stream = status_request_stream
+            .map(std::result::Result::ok)
+            .take_while(|r| future::ready(r.is_some()))
+            .filter_map(|r| future::ready(r.and_then(SessionObserverRequest::into_watch_status)));
+        let session_info_stream = self.single_session_info_stream(session_id);
+
+        let observer = Observer::new(session_info_stream, status_request_stream);
+
+        self.players
+            .with_elem(session_id, move |player: &mut Player| {
+                player.add_proxy_task(observer.map(drop).boxed());
+            })
+            .await;
+    }
+
     pub async fn serve(
         mut self,
         mut discovery_request_stream: mpsc::Receiver<DiscoveryRequest>,
+        mut observer_request_stream: mpsc::Receiver<ObserverDiscoveryRequest>,
     ) -> Result<()> {
         // Loop forever. All input channels live the life of the service, so we will always have a
         // stream to poll.
@@ -283,6 +316,20 @@ impl Discovery {
                         }
                         DiscoveryRequest::WatchSessions { watch_options, session_watcher, ..} => {
                             self.watch_sessions(watch_options, session_watcher).await;
+                        }
+                    }
+                }
+                // A request from any of the potentially many clients connected
+                // to `ObserverDiscovery`.
+                request = observer_request_stream.select_next_some() => {
+                    match request {
+                        ObserverDiscoveryRequest::ConnectToSession {
+                            session_id, session_request, ..
+                        } => {
+                            self.observe_session(session_id, session_request).await;
+                        },
+                        ObserverDiscoveryRequest::WatchSessions { watch_options, sessions_watcher, .. } => {
+                            self.watch_sessions(watch_options, sessions_watcher).await;
                         }
                     }
                 }
@@ -322,18 +369,19 @@ mod test {
     #[test]
     async fn watchers_caught_up_to_existing_players() -> Result<()> {
         let (mut player_sink, player_stream) = mpsc::channel(100);
-        let (mut request_sink, request_stream) = mpsc::channel(100);
+        let (mut discovery_request_sink, discovery_request_stream) = mpsc::channel(100);
+        let (_observer_request_sink, observer_request_stream) = mpsc::channel(100);
         let dummy_control_handle =
             create_endpoints::<DiscoveryMarker>()?.1.into_stream_and_control_handle()?.1;
 
         let (usage_reporter_proxy, _server_end) = create_proxy::<UsageReporterMarker>()?;
         let under_test = Discovery::new(player_stream, usage_reporter_proxy);
-        spawn_log_error(under_test.serve(request_stream));
+        spawn_log_error(under_test.serve(discovery_request_stream, observer_request_stream));
 
         // Create one watcher ahead of any players, for synchronization.
         let (watcher1_client, watcher1_server) = create_endpoints::<SessionsWatcherMarker>()?;
         let mut watcher1 = watcher1_server.into_stream()?;
-        request_sink
+        discovery_request_sink
             .send(DiscoveryRequest::WatchSessions {
                 watch_options: Decodable::new_empty(),
                 session_watcher: watcher1_client,
@@ -370,7 +418,7 @@ mod test {
         // A new watcher connecting after the registration of the player should be caught up
         // with the existence of the player.
         let (watcher2_client, watcher2_server) = create_endpoints::<SessionsWatcherMarker>()?;
-        request_sink
+        discovery_request_sink
             .send(DiscoveryRequest::WatchSessions {
                 watch_options: Decodable::new_empty(),
                 session_watcher: watcher2_client,

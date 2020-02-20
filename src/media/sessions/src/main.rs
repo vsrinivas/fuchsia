@@ -43,11 +43,12 @@ async fn main() {
 
     let (player_sink, player_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
     let (discovery_request_sink, discovery_request_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
+    let (observer_request_sink, observer_request_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
 
     let usage_reporter_proxy =
         client::connect_to_service::<UsageReporterMarker>().expect("Connecting to UsageReporter");
     let discovery = self::services::discovery::Discovery::new(player_stream, usage_reporter_proxy);
-    spawn_log_error(discovery.serve(discovery_request_stream));
+    spawn_log_error(discovery.serve(discovery_request_stream, observer_request_stream));
 
     server
         .dir("svc")
@@ -61,6 +62,12 @@ async fn main() {
             move |request_stream: fidl_fuchsia_media_sessions2::DiscoveryRequestStream| {
                 let discovery_request_sink = discovery_request_sink.clone().sink_err_into();
                 spawn_log_error(request_stream.err_into().forward(discovery_request_sink));
+            },
+        )
+        .add_fidl_service(
+            move |request_stream: fidl_fuchsia_media_sessions2::ObserverDiscoveryRequestStream| {
+                let observer_request_sink = observer_request_sink.clone().sink_err_into();
+                spawn_log_error(request_stream.err_into().forward(observer_request_sink));
             },
         );
     inspector.serve(&mut server).expect("Serving inspect");
