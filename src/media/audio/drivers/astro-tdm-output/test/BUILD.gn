@@ -40,6 +40,9 @@ test("astro-audio-out-test") {
     "//zircon/system/banjo/ddk.protocol.gpio:ddk.protocol.gpio_mock",
     "//zircon/system/banjo/ddk.protocol.i2c",
   ]
+
+  # TODO(46334): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("astro-audio-out-test-manifest") {
