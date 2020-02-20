@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
@@ -51,7 +52,15 @@ driver_module("amlogic_encoder_driver") {
 package("amlogic_encoder") {
   deprecated_system_image = true
 
-  if (target_cpu == "arm64") {
+  # internal access is needed to get firmware from prebuilt path
+  if (internal_access && target_cpu == "arm64") {
+    libraries = [
+      {
+        source = rebase_path(
+                "//prebuilt/media/firmware/amlogic_encoder/h264_enc.bin")
+        name = "firmware/h264_enc.bin"
+      },
+    ]
     deps = [ ":amlogic_encoder_driver" ]
     drivers = [
       {
