@@ -1285,6 +1285,7 @@ static zx_status_t brcmf_configure_opensecurity(struct brcmf_if* ifp) {
   int32_t wpa_val;
 
   /* set wsec */
+  BRCMF_DBG(CONN, "Setting wsec to 0\n");
   err = brcmf_fil_bsscfg_int_set(ifp, "wsec", 0);
   if (err != ZX_OK) {
     BRCMF_ERR("wsec error %d\n", err);
@@ -1292,6 +1293,7 @@ static zx_status_t brcmf_configure_opensecurity(struct brcmf_if* ifp) {
   }
   /* set upper-layer auth */
   wpa_val = WPA_AUTH_DISABLED;
+  BRCMF_DBG(CONN, "Setting wpa_auth to %d\n", wpa_val);
   err = brcmf_fil_bsscfg_int_set(ifp, "wpa_auth", wpa_val);
   if (err != ZX_OK) {
     BRCMF_ERR("wpa_auth error %d\n", err);
@@ -1380,8 +1382,6 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
   const struct brcmf_vs_tlv* wpa_ie;
   int32_t fw_err = 0;
   bool is_rsn_ie = true;
-  uint32_t wpa_auth;
-  uint8_t auth_type;
 
   BRCMF_DBG(TRACE, "Enter\n");
   if (!check_vif_up(ifp->vif)) {
@@ -1396,13 +1396,11 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
     goto done;
   }
 
-  auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
   if (req->rsne_len) {
     BRCMF_DBG(CONN, "using RSNE rsn len: %zu\n", req->rsne_len);
     // Pass RSNE to firmware
     ie_len = req->rsne_len;
     ie = req->rsne;
-    wpa_auth = WPA2_AUTH_PSK | WPA2_AUTH_UNSPECIFIED;
   } else if (req->vendor_ie_len) {
     BRCMF_DBG(CONN, "using WPA1 vendor_ie len: %zu\n", req->vendor_ie_len);
     wpa_ie = brcmf_find_wpaie(req->vendor_ie, req->vendor_ie_len);
@@ -1415,19 +1413,19 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
     is_rsn_ie = false;
     ie_len = wpa_ie->len + TLV_HDR_LEN;
     ie = wpa_ie;
-    wpa_auth = WPA_AUTH_PSK | WPA_AUTH_UNSPECIFIED;
   } else {
     // Neither RSNE or WPA1 is set
-    auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
-    wpa_auth = WPA_AUTH_DISABLED;
     ie = nullptr;
     ie_len = 0;
   }
-  err = brcmf_fil_iovar_data_set(ifp, "wpaie", ie, ie_len, &fw_err);
-  if (err != ZX_OK) {
-    BRCMF_ERR("wpaie failed: %s, fw err %s\n", zx_status_get_string(err),
-              brcmf_fil_get_errstr(fw_err));
-    return err;
+  if (ie) {
+    // Set wpaie only if ie is set
+    err = brcmf_fil_iovar_data_set(ifp, "wpaie", ie, ie_len, &fw_err);
+    if (err != ZX_OK) {
+      BRCMF_ERR("wpaie failed: %s, fw err %s\n", zx_status_get_string(err),
+                brcmf_fil_get_errstr(fw_err));
+      return err;
+    }
   }
 
   // TODO(WLAN-733): We should be getting the IEs from SME. Passing a null entry seems
@@ -1439,26 +1437,18 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
     BRCMF_DBG(TRACE, "Applied Vndr IEs for Assoc request\n");
   }
 
-  err = brcmf_fil_bsscfg_int_set(ifp, "wpa_auth", wpa_auth);
-  if (err != ZX_OK) {
-    BRCMF_ERR("set wpa_auth failed (%d)\n", err);
-    return err;
-  }
-  brcmf_set_auth_type(ndev, auth_type);
-
   brcmf_set_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
   chanspec = channel_to_chanspec(&cfg->d11inf, &ifp->bss.chan);
   cfg->channel = chanspec;
 
   if (ie_len > 0) {
     struct brcmf_vs_tlv* tmp_ie = (struct brcmf_vs_tlv*)ie;
+
     err = brcmf_configure_wpaie(ifp, tmp_ie, is_rsn_ie, false);
     if (err != ZX_OK) {
       BRCMF_ERR("Failed to install RSNE: %s\n", zx_status_get_string(err));
       goto fail;
     }
-  } else {
-    brcmf_configure_opensecurity(ifp);
   }
 
   ssid_len = std::min<uint32_t>(ifp->bss.ssid.len, WLAN_MAX_SSID_LEN);
@@ -1729,6 +1719,8 @@ static zx_status_t brcmf_cfg80211_add_key(struct net_device* ndev,
       goto done;
   }
 
+  BRCMF_DBG(CONN, "key length (%d) key index (%d) algo (%d) flags (%d)\n", key->len, key->index,
+            key->algo, key->flags);
   err = send_key_to_dongle(ifp, key);
   if (err != ZX_OK) {
     goto done;
@@ -1743,6 +1735,7 @@ static zx_status_t brcmf_cfg80211_add_key(struct net_device* ndev,
     goto done;
   }
   wsec |= val;
+  BRCMF_DBG(CONN, "setting wsec to 0x%x\n", wsec);
   err = brcmf_fil_bsscfg_int_set(ifp, "wsec", wsec);
   if (err != ZX_OK) {
     BRCMF_ERR("set wsec error (%d)\n", err);
@@ -2494,8 +2487,6 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
       BRCMF_ERR("Failed to install RSNE: %s\n", zx_status_get_string(status));
       goto fail;
     }
-  } else {
-    brcmf_configure_opensecurity(ifp);
   }
 
   status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_BCNPRD, req->beacon_period, &fw_err);
@@ -2709,6 +2700,7 @@ void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
   wlanif_join_confirm_t result;
   result.result_code = WLAN_JOIN_RESULT_SUCCESS;
 
+  brcmf_configure_opensecurity(ifp);
   BRCMF_DBG(WLANIF, "Sending join confirm to SME. result: %s\n",
             result.result_code == WLAN_JOIN_RESULT_SUCCESS
                 ? "success"
