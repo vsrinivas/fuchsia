@@ -190,6 +190,9 @@ executable("config_unittest") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(46560): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("data_provider_unittest") {
@@ -228,6 +231,9 @@ executable("data_provider_unittest") {
     "//third_party/rapidjson",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(46560): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("feedback_agent_integration_test") {
@@ -262,6 +268,9 @@ executable("feedback_agent_integration_test") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-logger",
   ]
+
+  # TODO(46560): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("feedback_id_provider_unittest") {
@@ -293,6 +302,9 @@ executable("feedback_id_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(46560): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("inspect_exe") {
@@ -367,6 +379,9 @@ executable("system_log_recorder_unittest") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
   ]
+
+  # TODO(46560): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("board_info_provider_unittest") {
