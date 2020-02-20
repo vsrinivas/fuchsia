@@ -6,6 +6,9 @@
 
 #include <zircon/assert.h>
 
+#include <algorithm>
+#include <iterator>
+
 #include <fbl/algorithm.h>
 #include <safemath/checked_math.h>
 
@@ -159,11 +162,10 @@ void SecmemSession::PackUint32Parameter(uint32_t value, std::vector<uint8_t>* bu
 
   buffer->reserve(new_buf_size);
   buffer->insert(buffer->end(), param_begin, param_end);
-}
 
-void SecmemSession::PadParameterBuffer(std::vector<uint8_t>* buffer) {
-  ZX_DEBUG_ASSERT(buffer);
-  buffer->insert(buffer->end(), static_cast<size_t>(kParameterBufferPaddingSize), 0);
+  if (buffer->size() < new_buf_size) {
+    std::fill_n(std::back_inserter(*buffer), new_buf_size - buffer->size(), 0);
+  }
 }
 
 TEEC_Result SecmemSession::InvokeSecmemCommand(uint32_t command,
@@ -283,12 +285,11 @@ zx_status_t SecmemSession::GetVp9HeaderSize(zx_paddr_t vp9_paddr, uint32_t befor
 
   std::vector<uint8_t> cmd_buffer;
   // Reserve room for 3 parameters.
-  cmd_buffer.reserve(kParameterAlignment * 3 + kParameterBufferPaddingSize);
+  cmd_buffer.reserve(kParameterAlignment * 3);
 
   PackUint32Parameter(kSecmemCommandIdGetVp9HeaderSize, &cmd_buffer);
   PackUint32Parameter(static_cast<uint32_t>(vp9_paddr), &cmd_buffer);
   PackUint32Parameter(before_size, &cmd_buffer);
-  PadParameterBuffer(&cmd_buffer);
 
   const TEEC_Result tee_status = InvokeSecmemCommand(kSecmemCommandIdGetVp9HeaderSize, &cmd_buffer);
   if (tee_status != TEEC_SUCCESS) {

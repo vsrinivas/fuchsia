@@ -35,12 +35,10 @@ class SecmemSession {
  private:
   static constexpr uint64_t kParameterAlignment = 32u;
   static constexpr uint64_t kParameterBufferSize = ZX_PAGE_SIZE;
-  static constexpr uint64_t kParameterBufferPaddingSize = 64u;
 
   static void PackUint32Parameter(uint32_t value, std::vector<uint8_t>* buffer);
   static fit::result<uint32_t> UnpackUint32Parameter(const std::vector<uint8_t>& buffer,
                                                      size_t* offset_in_out);
-  static void PadParameterBuffer(std::vector<uint8_t>* buffer);
 
   explicit SecmemSession(uint32_t session_id, fuchsia::tee::DeviceSyncPtr tee_connection)
       : session_id_(session_id), tee_connection_(std::move(tee_connection)) {}
