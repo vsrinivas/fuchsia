@@ -309,15 +309,15 @@ class GNBuilder(Frontend):
                 n for n in binary_names if _filename_no_ext(n) == layer_name
             ]
 
-            if filtered:
-                # Replace harcoded arch in the found binary filename.
-                binary = filtered[0].replace(
-                    '/' + arch + '/', "/${target_cpu}/")
-            else:
-                # We didn't find a matching binary. Rather than throw an error
-                # here, we'll emit a build rule with 'MISSING' in the file path,
-                # which will cause a test failure.
-                binary = 'MISSING/{}.so'.format(layer_name)
+            if not filtered:
+                # If the binary could not be found then do not generate a target
+                # for this layer. The missing targets will cause a mismatch with
+                # the "golden" outputs.
+                continue
+
+            # Replace harcoded arch in the found binary filename.
+            binary = filtered[0].replace(
+                '/' + arch + '/', "/${target_cpu}/")
 
             layer = model.VulkanLayer(
                 name=layer_name,

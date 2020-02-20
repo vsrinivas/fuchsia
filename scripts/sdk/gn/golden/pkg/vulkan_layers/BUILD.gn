@@ -56,30 +56,3 @@ group("VkLayer_image_pipe_swapchain") {
   ]
 }
 
-copy("test_missing_binary_config") {
-  sources = [
-    "data/vulkan/explicit_layer.d/test_missing_binary.json",
-  ]
-  outputs = [
-    "${root_gen_dir}/data/vulkan/explicit_layer.d/test_missing_binary.json",
-  ]
-}
-
-copy("test_missing_binary_lib") {
-  sources = [
-    # Layer test_missing_binary has a config but does not have a binary.
-    # This path will result in a build error.
-    "../../MISSING/test_missing_binary.so",
-  ]
-  outputs = [
-    "${root_out_dir}/lib/{{source_file_part}}",
-  ]
-}
-
-group("test_missing_binary") {
-  data_deps = [
-    ":test_missing_binary_config",
-    ":test_missing_binary_lib",
-  ]
-}
-
