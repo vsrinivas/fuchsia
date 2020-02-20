@@ -420,7 +420,7 @@ use std::mem;
 use std::ops::{Bound, Range, RangeBounds};
 
 use never::Never;
-use zerocopy::{ByteSlice, ByteSliceMut, LayoutVerified, Unaligned};
+use zerocopy::{ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned};
 
 /// A buffer that may be fragmented in multiple parts which are discontiguous in
 /// memory.
@@ -1292,9 +1292,22 @@ pub trait BufferView<B: ByteSlice>: Sized + AsRef<[u8]> {
     /// is left unchanged.
     fn into_rest(self) -> B;
 
+    /// Peeks at an object at the front of the buffer's body.
+    ///
+    /// `peek_obj_front` peeks at `size_of::<T>()` bytes at the front of the
+    /// buffer's body, and interprets them as a `T`. Unlike `take_obj_front`,
+    /// `peek_obj_front` does not modify the body. If the body is not at least
+    /// `size_of::<T>()` bytes in length, `peek_obj_front` returns `None`.
+    fn peek_obj_front<T>(&mut self) -> Option<&T>
+    where
+        T: FromBytes + Unaligned,
+    {
+        Some(LayoutVerified::<_, T>::new_unaligned_from_prefix((&*self).as_ref())?.0.into_ref())
+    }
+
     /// Takes an object from the front of the buffer's body.
     ///
-    /// `take_obj_front` consumes `size_of::<T>` bytes from the front of the
+    /// `take_obj_front` consumes `size_of::<T>()` bytes from the front of the
     /// buffer's body, and interprets them as a `T`. After a successful call to
     /// `take_obj_front::<T>()`, the prefix is `size_of::<T>()` bytes longer and
     /// the body is `size_of::<T>()` bytes shorter. If the body is not at least
@@ -1330,9 +1343,22 @@ pub trait BufferView<B: ByteSlice>: Sized + AsRef<[u8]> {
         Some(LayoutVerified::new_slice_unaligned(bytes).unwrap())
     }
 
+    /// Peeks at an object at the back of the buffer's body.
+    ///
+    /// `peek_obj_back` peeks at `size_of::<T>()` bytes at the back of the
+    /// buffer's body, and interprets them as a `T`. Unlike `take_obj_back`,
+    /// `peek_obj_back` does not modify the body. If the body is not at least
+    /// `size_of::<T>()` bytes in length, `peek_obj_back` returns `None`.
+    fn peek_obj_back<T>(&mut self) -> Option<&T>
+    where
+        T: FromBytes + Unaligned,
+    {
+        Some(LayoutVerified::<_, T>::new_unaligned_from_suffix((&*self).as_ref())?.1.into_ref())
+    }
+
     /// Takes an object from the back of the buffer's body.
     ///
-    /// `take_obj_back` consumes `size_of::<T>` bytes from the back of the
+    /// `take_obj_back` consumes `size_of::<T>()` bytes from the back of the
     /// buffer's body, and interprets them as a `T`. After a successful call to
     /// `take_obj_back::<T>()`, the suffix is `size_of::<T>()` bytes longer and
     /// the body is `size_of::<T>()` bytes shorter. If the body is not at least
@@ -2047,8 +2073,10 @@ mod tests {
         assert_eq!(view.len(), 9);
         assert_eq!(view.take_back(1).unwrap().as_ref(), &[9][..]);
         assert_eq!(view.len(), 8);
+        assert_eq!(view.peek_obj_front::<[u8; 2]>().unwrap(), &[1, 2]);
         assert_eq!(view.take_obj_front::<[u8; 2]>().unwrap().as_ref(), [1, 2]);
         assert_eq!(view.len(), 6);
+        assert_eq!(view.peek_obj_back::<[u8; 2]>().unwrap(), &[7, 8]);
         assert_eq!(view.take_obj_back::<[u8; 2]>().unwrap().as_ref(), [7, 8]);
         assert_eq!(view.len(), 4);
         assert!(view.take_front(5).is_none());
@@ -2073,9 +2101,11 @@ mod tests {
         assert_eq!(view.take_back_zero(1).unwrap().as_ref(), &[0][..]);
         assert_eq!(view.len(), 7);
         assert_eq!(&view.as_mut()[0..2], &[2, 3][..]);
+        assert_eq!(view.peek_obj_front::<[u8; 2]>().unwrap(), &[2, 3]);
         assert_eq!(view.take_obj_front_zero::<[u8; 2]>().unwrap().as_ref(), &[0, 0][..]);
         assert_eq!(view.len(), 5);
         assert_eq!(&view.as_mut()[3..5], &[7, 8][..]);
+        assert_eq!(view.peek_obj_back::<[u8; 2]>().unwrap(), &[7, 8]);
         assert_eq!(view.take_obj_back_zero::<[u8; 2]>().unwrap().as_ref(), &[0, 0][..]);
         assert_eq!(view.len(), 3);
         assert!(view.take_front_zero(5).is_none());
