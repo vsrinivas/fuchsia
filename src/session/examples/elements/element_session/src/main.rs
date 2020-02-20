@@ -4,8 +4,10 @@
 
 use {
     anyhow::{Context as _, Error},
-    element_management::{ElementManager, ElementManagerError, SimpleElementManager},
+    element_management::{Element, ElementManager, ElementManagerError, SimpleElementManager},
+    fidl::encoding::Decodable,
     fidl_fuchsia_session::{
+        AnnotationError, Annotations, ElementControllerRequest, ElementControllerRequestStream,
         ElementManagerRequest, ElementManagerRequestStream, ProposeElementError,
     },
     fidl_fuchsia_session_examples::{ElementPingRequest, ElementPingRequestStream},
@@ -87,12 +89,12 @@ async fn handle_element_manager_requests(
     mut stream: ElementManagerRequestStream,
     element_manager: &impl ElementManager,
 ) -> Result<(), Error> {
-    let mut elements = vec![];
+    let mut uncontrolled_elements = vec![];
     while let Some(request) =
         stream.try_next().await.context("Error handling element manager request stream")?
     {
         match request {
-            ElementManagerRequest::ProposeElement { spec, element_controller: _, responder } => {
+            ElementManagerRequest::ProposeElement { spec, element_controller, responder } => {
                 let mut child_name: String =
                     thread_rng().sample_iter(&Alphanumeric).take(16).collect();
                 child_name.make_ascii_lowercase();
@@ -102,8 +104,21 @@ async fn handle_element_manager_requests(
                     .await
                 {
                     Ok(element) => {
-                        elements.push(element);
-                        Ok(())
+                        match element_controller {
+                            Some(element_controller) => match element_controller.into_stream() {
+                                Ok(stream) => {
+                                    handle_element_controller_request_stream(stream, element);
+                                    Ok(())
+                                }
+                                Err(_) => Err(ProposeElementError::Rejected),
+                            },
+                            // If the element proposer did not provide a controller, add the
+                            // element to a vector to keep it alive:
+                            None => {
+                                uncontrolled_elements.push(element);
+                                Ok(())
+                            }
+                        }
                     }
                     // Most of the errors which could be encountered when adding an element are
                     // not the result of an error by the FIDL client. This lists all the cases
@@ -125,6 +140,42 @@ async fn handle_element_manager_requests(
         }
     }
     Ok(())
+}
+
+/// Handles the ElementController requests.
+///
+/// # Parameters
+/// - `stream`: the input channel which receives [`ElementController`] requests.
+/// - `element`: the [`Element`] that is being controlled.
+///
+/// # Returns
+/// () when there are no more valid requests.
+fn handle_element_controller_request_stream(
+    mut stream: ElementControllerRequestStream,
+    mut element: Element,
+) {
+    fasync::spawn(async move {
+        while let Ok(Some(request)) = stream.try_next().await {
+            match request {
+                ElementControllerRequest::SetAnnotations { annotations, responder } => {
+                    let _ = responder.send(
+                        &mut element
+                            .set_annotations(annotations)
+                            .map_err(|_: anyhow::Error| AnnotationError::Rejected),
+                    );
+                }
+                ElementControllerRequest::GetAnnotations { responder } => {
+                    let mut annotations = element.get_annotations();
+                    if annotations.is_err() {
+                        // GetAnnotations does not return errors, so just return empty annotations.
+                        annotations =
+                            Ok(Annotations { custom_annotations: None, ..Annotations::new_empty() })
+                    }
+                    let _ = responder.send(annotations.unwrap());
+                }
+            }
+        }
+    });
 }
 
 #[cfg(test)]

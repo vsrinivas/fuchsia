@@ -12,13 +12,14 @@ use {
     async_trait::async_trait,
     fidl,
     fidl::endpoints::{DiscoverableService, Proxy, UnifiedServiceMarker},
-    fidl_fuchsia_component as fcomponent,
-    fidl_fuchsia_session::{AdditionalCapabilities, ElementSpec},
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_mem as fmem,
+    fidl_fuchsia_session::{AdditionalCapabilities, Annotation, Annotations, ElementSpec, Value},
     fidl_fuchsia_sys as fsys, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
     fuchsia_component,
     fuchsia_component::client::connect_to_service,
     fuchsia_syslog::fx_log_info,
     fuchsia_zircon as zx, realm_management,
+    std::collections::HashMap,
     std::fmt,
     thiserror::Error,
 };
@@ -149,6 +150,9 @@ pub struct Element {
     /// exposed by the component.
     exposed_capabilities: ExposedCapabilities,
 
+    /// Element annotation key/value pairs.
+    custom_annotations: HashMap<String, Value>,
+
     /// The component URL used to launch the component. Private but printable via "{:?}".
     url: String,
 
@@ -180,6 +184,7 @@ impl Element {
             url: url.to_string(),
             name: "".to_string(),
             collection: "".to_string(),
+            custom_annotations: HashMap::new(),
         }
     }
 
@@ -201,6 +206,7 @@ impl Element {
             url: url.to_string(),
             name: name.to_string(),
             collection: collection.to_string(),
+            custom_annotations: HashMap::new(),
         }
     }
 
@@ -303,6 +309,43 @@ impl Element {
             server_channel,
         )?;
         Ok(())
+    }
+
+    pub fn set_annotations(&mut self, annotations: Annotations) -> Result<(), anyhow::Error> {
+        if let Some(mut custom_annotations) = annotations.custom_annotations {
+            for annotation in custom_annotations.drain(..) {
+                if annotation.value.is_none() {
+                    self.custom_annotations.remove(&annotation.key);
+                } else {
+                    // TODO(richkadel): add error checking per the FIDL spec
+
+                    self.custom_annotations
+                        .insert(annotation.key.to_string(), *annotation.value.unwrap());
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub fn get_annotations(&mut self) -> Result<Annotations, anyhow::Error> {
+        let mut custom_annotations = vec![];
+        for (key, value) in &self.custom_annotations {
+            custom_annotations.push(Annotation {
+                key: key.to_string(),
+                // value: None,
+                value: Some(Box::new(match &*value {
+                    Value::Text(content) => Value::Text(content.to_string()),
+                    Value::Buffer(content) => {
+                        let mut bytes = Vec::<u8>::with_capacity(content.size as usize);
+                        let vmo = fidl::Vmo::create(content.size).unwrap();
+                        content.vmo.read(&mut bytes[..], 0)?;
+                        vmo.write(&bytes[..], 0)?;
+                        Value::Buffer(fmem::Buffer { vmo, size: content.size })
+                    }
+                })),
+            });
+        }
+        Ok(Annotations { custom_annotations: Some(custom_annotations) })
     }
 }
 
@@ -492,12 +535,18 @@ impl ElementManager for SimpleElementManager {
             .component_url
             .ok_or_else(|| ElementManagerError::url_missing(child_name, child_collection))?;
 
-        let element = if is_realm_aware_component(&child_url) {
+        let mut element = if is_realm_aware_component(&child_url) {
             self.launch_child_component(&child_name, &child_url, child_collection, &self.realm)
                 .await?
         } else {
             self.launch_component_outside_realm(&child_url, spec.additional_capabilities).await?
         };
+        if spec.annotations.is_some() {
+            element.set_annotations(spec.annotations.unwrap()).map_err(|err: anyhow::Error| {
+                ElementManagerError::not_launched(child_url.clone(), err.to_string())
+            })?;
+        }
+
         Ok(element)
     }
 }
@@ -637,7 +686,7 @@ mod tests {
         }
     }
 
-    /// Tests that adding a component with a cmx file successfully returns [`Ok`].
+    /// Tests that adding a component with a .cm file successfully returns [`Ok`].
     #[fasync::run_singlethreaded(test)]
     async fn element_manager_trait_test_launch_element() {
         lazy_static! {
