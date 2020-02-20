@@ -78,6 +78,7 @@ group("drivers") {
     "//src/connectivity/telephony:drivers",
     "//src/graphics/drivers",
     "//src/media/drivers",
+    "//src/ui/input/drivers/hid-input-report",
   ]
   if (target_cpu == "arm64") {
     public_deps += [ "//garnet/packages/prod:amlogic_video_decoder" ]
