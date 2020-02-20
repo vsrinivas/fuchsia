@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, Error},
-    command::{ClientVariable, Command},
+    command::Command,
     reply::Reply,
     std::convert::TryFrom,
     std::io::{Read, Write},
@@ -65,6 +65,7 @@ pub fn upload<T: Read + Write>(data: &[u8], interface: &mut T) -> Result<Reply, 
 #[cfg(test)]
 mod test {
     use super::*;
+    use command::ClientVariable;
 
     struct TestTransport {
         replies: Vec<Reply>,
