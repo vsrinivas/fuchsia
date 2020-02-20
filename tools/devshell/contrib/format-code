@@ -135,8 +135,22 @@ get_all_files() {
 
 $GET_FILES
 
+# Do not format these files
+NO_FORMAT=(
+  # fxb/46090
+  "${FUCHSIA_DIR}/build/unification/images/BUILD.gn"
+  "${FUCHSIA_DIR}/build/unification/tests/host/BUILD.gn"
+  "${FUCHSIA_DIR}/zircon/system/banjo/BUILD.gn"
+  "${FUCHSIA_DIR}/zircon/system/fidl/BUILD.gn"
+  "${FUCHSIA_DIR}/zircon/system/utest/BUILD.gn"
+)
+
+for to_remove in "${NO_FORMAT[@]}"; do
+  FILES=("${FILES[@]//$to_remove}")
+done
+
 if [[ -n "${VERBOSE}" ]]; then
-  printf "Files to be formatted:\n%s\n" "${FILES}"
+  printf "Files to be formatted:\n%s\n" "${FILES[@]}"
 fi
 
 declare CLANG_CMD="${PREBUILT_CLANG_DIR}/bin/clang-format -style=file -fallback-style=Google -sort-includes -i"
@@ -154,7 +168,7 @@ declare FIX_HEADER_GUARDS_CMD="${FUCHSIA_DIR}/scripts/style/check-header-guards.
 
 # If there is a FIDL file to fix, and we don't have a copy of fidl-format,
 # generate one.
-for file in ${FILES}; do
+for file in "${FILES[@]}"; do
   if [[ ${file} =~ .*\.fidl ]]; then
     if [[ ! -x "${FIDL_BIN}" ]]; then
        printf "fidl-format not found: attempting to build it\n"
@@ -168,7 +182,7 @@ done
 
 [[ -n "${RUST_ENTRY_POINT}" ]] && ${RUST_ENTRY_POINT_FMT_CMD} "${RUST_ENTRY_POINT}"
 
-for file in ${FILES}; do
+for file in ${FILES[@]}; do
   # Git reports deleted files, which we don't want to try to format
   [[ ! -f "${file}" ]] && continue
 
