@@ -31,6 +31,7 @@ async fn start_ascendd() {
 }
 
 // Daemon
+#[derive(Clone)]
 pub struct Daemon {
     remote_control_proxy: RemoteControlProxy,
 }
@@ -46,8 +47,8 @@ impl Daemon {
         Daemon { remote_control_proxy }
     }
 
-    pub async fn handle_requests_from_stream<'a>(
-        &'a self,
+    pub async fn handle_requests_from_stream(
+        &self,
         mut stream: DaemonRequestStream,
         quiet: bool,
     ) -> Result<(), Error> {
@@ -92,11 +93,7 @@ impl Daemon {
         panic!("No remote control found.  Is a device connected?")
     }
 
-    pub async fn handle_request<'a>(
-        &'a self,
-        req: DaemonRequest,
-        quiet: bool,
-    ) -> Result<(), Error> {
+    pub async fn handle_request(&self, req: DaemonRequest, quiet: bool) -> Result<(), Error> {
         match req {
             DaemonRequest::EchoString { value, responder } => {
                 if !quiet {
@@ -132,17 +129,6 @@ impl Daemon {
 ////////////////////////////////////////////////////////////////////////////////
 // Overnet Server implementation
 
-fn spawn_daemon_server(stream: DaemonRequestStream, quiet: bool) {
-    hoist::spawn(async move {
-        Daemon::new()
-            .await
-            .unwrap()
-            .handle_requests_from_stream(stream, quiet)
-            .await
-            .unwrap_or_else(|err| panic!("Fatal error handling request: {:?}", err));
-    });
-}
-
 async fn next_request(
     stream: &mut ServiceProviderRequestStream,
 ) -> Result<Option<ServiceProviderRequest>, Error> {
@@ -150,7 +136,7 @@ async fn next_request(
     Ok(stream.try_next().await.context("error running service provider server")?)
 }
 
-async fn exec_server(quiet: bool) -> Result<(), Error> {
+async fn exec_server(daemon: Daemon, quiet: bool) -> Result<(), Error> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
     let mut stream = ServiceProviderRequestStream::from_channel(chan);
@@ -166,7 +152,13 @@ async fn exec_server(quiet: bool) -> Result<(), Error> {
         }
         let chan =
             fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
-        spawn_daemon_server(DaemonRequestStream::from_channel(chan), quiet);
+        let daemon_clone = daemon.clone();
+        hoist::spawn(async move {
+            daemon_clone
+                .handle_requests_from_stream(DaemonRequestStream::from_channel(chan), quiet)
+                .await
+                .unwrap_or_else(|err| panic!("fatal error handling request: {:?}", err));
+        });
     }
     Ok(())
 }
@@ -185,7 +177,9 @@ pub async fn start() -> Result<(), Error> {
     log::info!("Starting ascendd");
     start_ascendd().await;
     log::info!("Starting daemon overnet server");
-    exec_server(true).await
+    let daemon = Daemon::new().await?;
+
+    exec_server(daemon, true).await
 }
 
 ////////////////////////////////////////////////////////////////////////////////
