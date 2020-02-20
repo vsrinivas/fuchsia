@@ -26,11 +26,11 @@ TEST(WavWriterTest, EmptyFileRiffChunkSize) {
   wav_writer.Close();
 
   // Read WAV header
-  std::pair<uint8_t*, intptr_t> file_pair = files::ReadFileToBytes(file_name);
-  ASSERT_GE(file_pair.second, 0);
-  ASSERT_NE(file_pair.first, nullptr);
+  std::vector<uint8_t> data;
+  ASSERT_TRUE(files::ReadFileToVector(file_name, &data));
+  ASSERT_GE(data.size(), static_cast<size_t>(0));
   int byte_offset = 0;
-  auto riff_header = reinterpret_cast<RiffChunkHeader*>(&file_pair.first[byte_offset]);
+  auto riff_header = reinterpret_cast<RiffChunkHeader*>(&data.data()[byte_offset]);
   EXPECT_EQ(36u, riff_header->length) << "Riff chunk size is wrong";
 }
 
@@ -43,11 +43,11 @@ TEST(WavWriterTest, NonEmptyFileRiffChunkSize) {
   wav_writer.Close();
 
   // Read WAV header
-  std::pair<uint8_t*, intptr_t> file_pair = files::ReadFileToBytes(file_name);
-  ASSERT_GE(file_pair.second, 0);
-  ASSERT_NE(file_pair.first, nullptr);
+  std::vector<uint8_t> data;
+  ASSERT_TRUE(files::ReadFileToVector(file_name, &data));
+  ASSERT_GE(data.size(), static_cast<size_t>(0));
   int byte_offset = 0;
-  auto riff_header = reinterpret_cast<RiffChunkHeader*>(&file_pair.first[byte_offset]);
+  auto riff_header = reinterpret_cast<RiffChunkHeader*>(&data.data()[byte_offset]);
   EXPECT_EQ(46u, riff_header->length) << "Riff chunk size is wrong";
 }
 

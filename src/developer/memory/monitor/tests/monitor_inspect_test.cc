@@ -100,19 +100,11 @@ class InspectTest : public sys::testing::TestWithEnvironment {
       return fit::error();
     }
 
-    // The fbl::Array below will take ownership of buf.first.
-    std::pair<uint8_t*, intptr_t> buf = files::ReadFileToBytes(path);
-    if (buf.first == nullptr) {
+    std::vector<uint8_t> data;
+    if (!files::ReadFileToVector(path, &data)) {
       return fit::error();
     }
-    // fbl::Array takes ownership of the file path, but uses delete[] instead of
-    // delete.  To avoid the error ASan would give us if we simply transferred
-    // ownership, we copy the array to something that can use delete[].
-    std::vector<uint8_t> new_buf;
-    new_buf.resize(buf.second);
-    memcpy(new_buf.data(), buf.first, buf.second);
-    free(buf.first);
-    return inspect::ReadFromBuffer(std::move(new_buf));
+    return inspect::ReadFromBuffer(std::move(data));
   }
 
  private:
@@ -135,7 +127,8 @@ TEST_F(InspectTest, FirstLaunch) {
 }
 
 TEST_F(InspectTest, SecondLaunch) {
-  // Make sure that the high_water_previous_boot property is made visible only upon the second run.
+  // Make sure that the high_water_previous_boot property is made visible only upon the second
+  // run.
   auto result = GetInspectHierarchy();
   ASSERT_TRUE(result.is_ok());
   auto hierarchy = result.take_value();
