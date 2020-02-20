@@ -65,6 +65,9 @@ executable("basemgr_launcher_test") {
     "//src/ui/scenic/lib/scenic:scenic",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(46535): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 hermetic_tests_package("basemgr_launcher_tests") {
