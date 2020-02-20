@@ -20,6 +20,7 @@ zx_library("gpt") {
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/fzl",
+    "$zx/system/ulib/mbr",
     "$zx/system/ulib/range",
     "$zx/system/ulib/zircon",
     "$zx/third_party/ulib/cksum",

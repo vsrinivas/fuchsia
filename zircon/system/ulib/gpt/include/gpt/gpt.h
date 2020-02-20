@@ -250,9 +250,6 @@ class GptDevice {
   // number of blocks
   uint64_t blocks_ = 0;
 
-  // true if valid mbr exists on disk
-  bool mbr_ = false;
-
   // header buffer, should be primary copy
   gpt_header_t header_ = {};
 

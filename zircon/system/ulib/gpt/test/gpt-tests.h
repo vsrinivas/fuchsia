@@ -14,6 +14,7 @@
 #include <fbl/unique_fd.h>
 #include <gpt/gpt.h>
 #include <gpt/guid.h>
+#include <mbr/mbr.h>
 
 namespace gpt {
 namespace {
@@ -75,6 +76,9 @@ class LibGptTest {
 
   // Get the Range from GPT.
   void ReadRange();
+
+  // Read the MBR from the disk.
+  zx_status_t ReadMbr(mbr::Mbr* mbr) const;
 
   // Prepare disk to run Add Partition tests.
   // 1. initialize GPT

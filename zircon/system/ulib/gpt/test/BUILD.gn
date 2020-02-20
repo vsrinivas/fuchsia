@@ -44,6 +44,7 @@ test("gpt-unit") {
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/gpt",
+    "//zircon/public/lib/mbr",
     "//zircon/public/lib/ramdevice-client",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",

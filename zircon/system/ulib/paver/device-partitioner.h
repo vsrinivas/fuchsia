@@ -187,7 +187,7 @@ class EfiDevicePartitioner : public DevicePartitioner {
   zx_status_t FindPartition(Partition partition_type,
                             std::unique_ptr<PartitionClient>* out_partition) const override;
 
-  zx_status_t FinalizePartition(Partition unused) const override { return ZX_OK; }
+  zx_status_t FinalizePartition(Partition unused) const override;
 
   zx_status_t WipeFvm() const override;
 

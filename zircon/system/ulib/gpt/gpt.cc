@@ -23,6 +23,7 @@
 #include <fbl/vector.h>
 #include <gpt/gpt.h>
 #include <gpt/guid.h>
+#include <mbr/mbr.h>
 #include <range/range.h>
 
 namespace gpt {
@@ -36,15 +37,6 @@ using BlockRange = range::Range<uint64_t>;
     printf((f), ##__VA_ARGS__);
 
 bool debug_out = false;
-
-struct mbr_partition_t {
-  uint8_t status;
-  uint8_t chs_first[3];
-  uint8_t type;
-  uint8_t chs_last[3];
-  uint32_t lba;
-  uint32_t sectors;
-};
 
 void print_array(const gpt_partition_t* const partitions[kPartitionCount], int c) {
   char GUID[GPT_GUID_STRLEN];
@@ -349,35 +341,6 @@ void SetPartitionVisibility(gpt_partition_t* partition, bool visible) {
 }
 
 zx_status_t GptDevice::FinalizeAndSync(bool persist) {
-  // write fake mbr if needed
-  uint8_t mbr[blocksize_];
-  off_t offset;
-  ssize_t ret;
-  if (!mbr_) {
-    memset(mbr, 0, blocksize_);
-    mbr[0x1fe] = 0x55;
-    mbr[0x1ff] = 0xaa;
-
-    mbr_partition_t part = {};
-    part.chs_first[1] = 0x1;
-    part.type = 0xee;  // gpt protective mbr
-    part.chs_last[0] = 0xfe;
-    part.chs_last[1] = 0xff;
-    part.chs_last[2] = 0xff;
-    part.lba = 1;
-    part.sectors = blocks_ & 0xffffffff;
-    // Written to stack and copied to avoid UBsan complaint about writing to
-    // unaligned struct.
-    memcpy(mbr + 0x1be, &part, sizeof(part));
-
-    offset = 0;
-    ret = pwrite(fd_.get(), mbr, blocksize_, offset);
-    if (ret != static_cast<ssize_t>(blocksize_)) {
-      return ZX_ERR_IO;
-    }
-    mbr_ = true;
-  }
-
   auto result = InitializePrimaryHeader(blocksize_, blocks_);
 
   if (result.is_error()) {
@@ -429,9 +392,22 @@ zx_status_t GptDevice::FinalizeAndSync(bool persist) {
   header.crc32 = crc32(0, reinterpret_cast<const uint8_t*>(&header), kHeaderSize);
 
   if (persist) {
-    zx_status_t status;
+    // Write protective MBR.
+    mbr::Mbr mbr = {};
+    mbr.partitions[0].chs_address_start[1] = 0x1;
+    mbr.partitions[0].type = mbr::kPartitionTypeGptProtective;
+    mbr.partitions[0].chs_address_end[0] = 0xff;
+    mbr.partitions[0].chs_address_end[1] = 0xff;
+    mbr.partitions[0].chs_address_end[2] = 0xff;
+    mbr.partitions[0].start_sector_lba = 1;
+    mbr.partitions[0].num_sectors = blocks_ & 0xffffffff;
+    ssize_t ret = pwrite(fd_.get(), &mbr, sizeof(mbr), /*offset*/ 0);
+    if (ret != static_cast<ssize_t>(blocksize_)) {
+      return ZX_ERR_IO;
+    }
+
     // write backup to disk
-    status = gpt_sync_current(fd_.get(), blocksize_, &header, buf.get());
+    zx_status_t status = gpt_sync_current(fd_.get(), blocksize_, &header, buf.get());
     if (status != ZX_OK) {
       return status;
     }
@@ -637,7 +613,6 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t block_count,
     dev->blocksize_ = blocksize;
     dev->blocks_ = block_count;
   }
-  dev->mbr_ = block[0x1fe] == 0x55 && block[0x1ff] == 0xaa;
   dev->fd_ = std::move(fdp);
   *out_dev = std::move(dev);
   return ZX_OK;

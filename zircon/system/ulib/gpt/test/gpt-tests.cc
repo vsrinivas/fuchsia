@@ -332,6 +332,11 @@ void LibGptTest::ReadRange() {
   ASSERT_GT(GetUsableBlockCount(), 0, "GPT occupied all available blocks");
 }
 
+zx_status_t LibGptTest::ReadMbr(mbr::Mbr* mbr) const {
+  ssize_t ret = pread(fd_.get(), mbr, sizeof(*mbr), 0);
+  return ret < 0 ? ZX_ERR_IO : ZX_OK;
+}
+
 void LibGptTest::PrepDisk(bool sync) {
   if (sync) {
     Sync();
@@ -923,6 +928,21 @@ TEST_F(GptDeviceTest, FinalizeAndSync) {
   libGptTest->Sync();
   libGptTest->Reset();
   EXPECT_TRUE(libGptTest->IsGptValid());
+
+  // Check the protective MBR that was written to disk.
+  mbr::Mbr mbr;
+  zx_status_t status = libGptTest->ReadMbr(&mbr);
+  ASSERT_OK(status, "Failed to read MBR");
+  EXPECT_EQ(mbr::kMbrBootSignature, mbr.boot_signature, "Invalid MBR boot signature");
+  mbr::MbrPartitionEntry expected{
+      .status = 0,
+      .chs_address_start = {0, 1, 0},
+      .type = mbr::kPartitionTypeGptProtective,
+      .chs_address_end = {0xff, 0xff, 0xff},
+      .start_sector_lba = 1,
+      .num_sectors = static_cast<uint32_t>(libGptTest->GetBlockCount() & 0xffffffff),
+  };
+  EXPECT_BYTES_EQ(&expected, &mbr.partitions[0], sizeof(expected), "Invalid protective MBR");
 }
 
 // Tests the range the GPT blocks falls within disk.

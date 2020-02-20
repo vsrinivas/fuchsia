@@ -967,6 +967,10 @@ zx_status_t EfiDevicePartitioner::FindPartition(
   }
 }
 
+zx_status_t EfiDevicePartitioner::FinalizePartition(Partition partition_type) const {
+  return gpt_->GetGpt()->Sync();
+}
+
 zx_status_t EfiDevicePartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
 
 zx_status_t EfiDevicePartitioner::InitPartitionTables() const {
