@@ -13,72 +13,72 @@ group("tests") {
   deps = [
     # Disabled for now until io.test.fidl changes.
     #":fdio_test",
-    ":io_fidl_conformance_tests",
+    #":io_fidl_conformance_tests",
     "//src/sys/component_manager",
   ]
 }
 
-rustc_library("io_conformance") {
-  name = "io_conformance"
-  edition = "2018"
-  deps = [
-    "//sdk/fidl/fuchsia.io.test:fuchsia.io.test-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/sys/component_manager/tests:test_utils_lib",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:futures",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-  ]
-}
+# rustc_library("io_conformance") {
+#   name = "io_conformance"
+#   edition = "2018"
+#   deps = [
+#     "//sdk/fidl/fuchsia.io.test:fuchsia.io.test-rustc",
+#     "//src/lib/fidl/rust/fidl",
+#     "//src/lib/fuchsia-async",
+#     "//src/sys/component_manager/tests:test_utils_lib",
+#     "//src/sys/component_manager/tests/fidl:components-rustc",
+#     "//third_party/rust_crates:anyhow",
+#     "//third_party/rust_crates:async-trait",
+#     "//third_party/rust_crates:futures",
+#     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+#   ]
+# }
 
-rustc_test("io1_conformance_test") {
-  name = "io1_conformance_test"
-  edition = "2018"
-  source_root = "test.rs"
-  deps = [
-    ":io_conformance",
-    "//sdk/fidl/fuchsia.io.test:fuchsia.io.test-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/component_manager/tests:test_utils_lib",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:futures",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-  ]
-}
+# rustc_test("io1_conformance_test") {
+#   name = "io1_conformance_test"
+#   edition = "2018"
+#   source_root = "io1_tests.rs"
+#   deps = [
+#     ":io_conformance",
+#     "//sdk/fidl/fuchsia.io.test:fuchsia.io.test-rustc",
+#     "//src/lib/fidl/rust/fidl",
+#     "//src/lib/fuchsia-async",
+#     "//src/lib/fuchsia-component",
+#     "//src/lib/zircon/rust:fuchsia-zircon",
+#     "//src/sys/component_manager/tests:test_utils_lib",
+#     "//src/sys/component_manager/tests/fidl:components-rustc",
+#     "//third_party/rust_crates:anyhow",
+#     "//third_party/rust_crates:async-trait",
+#     "//third_party/rust_crates:futures",
+#     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+#   ]
+# }
 
-test_package("io_fidl_conformance_tests") {
-  deps = [
-    ":io1_conformance_test",
-    "conformance_harness/ulibfs:bin",
-  ]
+# test_package("io_fidl_conformance_tests") {
+#   deps = [
+#     ":io1_conformance_test",
+#     "conformance_harness/ulibfs:bin",
+#   ]
 
-  meta = [
-    {
-      path = rebase_path(
-              "conformance_harness/ulibfs/meta/io_conformance_harness_ulibfs.cml")
-      dest = "io_conformance_harness_ulibfs.cm"
-    },
-  ]
-  binaries = [
-    {
-      name = "io_conformance_harness_ulibfs"
-    },
-  ]
+#   meta = [
+#     {
+#       path = rebase_path(
+#               "conformance_harness/ulibfs/meta/io_conformance_harness_ulibfs.cml")
+#       dest = "io_conformance_harness_ulibfs.cm"
+#     },
+#   ]
+#   binaries = [
+#     {
+#       name = "io_conformance_harness_ulibfs"
+#     },
+#   ]
 
-  tests = [
-    {
-      name = "io1_conformance_test"
-    },
-  ]
-}
+#   tests = [
+#     {
+#       name = "io1_conformance_test"
+#     },
+#   ]
+# }
 
 test("io_conformance_fdio") {
   sources = [ "fdio.cc" ]

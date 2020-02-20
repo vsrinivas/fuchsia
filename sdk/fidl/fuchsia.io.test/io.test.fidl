@@ -30,29 +30,140 @@ using fuchsia.io;
 /// See `src/storage/conformance/README.md` for an overview of io conformance
 /// testing.
 ///
-/// Temporary protocol for child components of test component to expose their
-/// harness protocol to prevent race conditions by just having the child
-/// component expose their protocol.
+/// Temporary protocol for child components of the test suite component to
+/// expose their io1 harness protocol to prevent race conditions by just having
+/// the child component expose their protocol.
 /// TODO(fxb/45684): Change this to use ComponentManager events for connections
 /// once available.
 [Discoverable]
-protocol HarnessReceiver {
-    /// Send Io1TestHarness to for receiver to connect to.
-    SendIo1Harness(Io1TestHarness harness);
+protocol Io1HarnessReceiver {
+    /// Send Io1Harness to for the test suite to connect to.
+    SendIo1Harness(Io1Harness harness);
 };
 
-/// Io1 test harness to provide functions for the test suite to make connections.
-/// TODO(fxb/45610): Update io1 basic directory structure test harness once
-/// design is fleshed out.
+/// Temporary protocol for child components of the test suite component to
+/// expose their io2 harness protocol to prevent race conditions by just having
+/// the child component expose their protocol.
+/// TODO(fxb/45684): Change this to use ComponentManager events for connections
+/// once available.
+[Discoverable]
+protocol Io2HarnessReceiver {
+    /// Send Io2Harness to the test suite to connect to.
+    SendIo2Harness(Io2Harness harness);
+};
+
+/// `Io1Config` lets the test harness modulate the set of expected outcomes and
+/// behaviors validated by the test suite, by declaring specific properties
+/// about the filesystem implementation. For example, setting [`ImmutableFile`]
+/// to true informs the test suites that files hosted by this harness do not
+/// support mutation.
+table Io1Config {
+    /// Files are read-only.
+    1: bool immutable_file;
+
+    /// Directories are read-only.
+    2: bool immutable_dir;
+
+    /// The exec rights is not supported.
+    3: bool no_exec;
+
+    /// Vmofiles are not supported.
+    4: bool no_vmofile;
+};
+
+[Discoverable]
+protocol Io1Harness {
+    /// Returns the list of properties of the filesystem.
+    GetConfig() -> (Io1Config config);
+
+    /// Serves an empty directory.
+    ///
+    /// + `flags` the flags the served directory connection has.
+    /// + `directory_request` the server end of the root directory connection.
+    GetEmptyDirectory(uint32 flags,
+                      request<fuchsia.io.Directory> directory_request);
+
+    /// Serves a directory with a single file inside.
+    ///
+    /// + `name` the name of the file in the root directory.
+    /// + `flags` the flags the served directory connection has.
+    /// + `directory_request` the server end of the root directory connection.
+    GetDirectoryWithEmptyFile(string name,
+                              uint32 flags,
+                              request<fuchsia.io.Directory> directory_request);
+
+    /// Serves a directory with a single vmofile inside.
+    ///
+    /// + `name` the name of the vmofile in the root directory.
+    /// + `flags` the flags the served directory connection has.
+    /// + `directory_request` the server end of the root directory connection.
+    GetDirectoryWithVmoFile(fuchsia.mem.Range file,
+                            string name,
+                            uint32 flags,
+                            request<fuchsia.io.Directory> directory_request);
+
+    /// Serves a directory with a single directory inside.
+    ///
+    /// + `name` the name of the child directory in the root directory.
+    /// + `flags` the flags the served directory connection has.
+    /// + `directory_request` the server end of the root directory connection.
+    GetDirectoryWithDirectory(string name,
+                              uint32 flags,
+                              request<fuchsia.io.Directory> directory_request);
+
+    /// Serves a directory with the following structure:
+    ///
+    /// /                                           <--root directory
+    /// /`name`                                     <--child directory
+    /// /`name`/`nested_name`                       <--nested child directory
+    ///
+    /// + `dirname` the name of the child directory in the root directory.
+    /// + `nested_dirname` the name of the nested child directory in the child
+    ///    directory.
+    /// + `flags` the flags the served directory connection has.
+    /// + `directory_request` the server end of the root directory connection.
+    GetDirectoryWithNestedDirectory(string name,
+                                    string nested_name,
+                                    uint32 flags,
+                                    request<fuchsia.io.Directory> directory_request);
+
+    /// Serves a directory that holds a child `remote_directory` with name
+    /// `dir_name`. The `directory_request` connection to the root directory
+    /// has rights defined by `flags`.
+    /// Note: This might not actually be needed for the defined io1 tests, but
+    /// still might be useful for future testing if a fs forwards the correct
+    /// request to the remote.
+    ///
+    /// + `remote_directory` the client end of the child remote directory.
+    /// + `name` the name of the child remote directory in the root directory.
+    /// + `flags` the flags the served directory connection has.
+    /// + `directory_request` the server end of the root directory connection.
+    GetDirectoryWithRemoteDirectory(fuchsia.io.Directory remote_directory,
+                                    string name,
+                                    uint32 flags,
+                                    request<fuchsia.io.Directory> directory_request);
+};
+
+/// Stub harness api for the io2.fidl protocol.
 /// TODO(fxb/46082): Add separate io2 test harness api once we come up with a
 /// good enough set of functions that we have enough flexibility to create
 /// variable directory structures to with explicit permission settings for tests.
 [Discoverable]
-protocol Io1TestHarness {
-    GetEmptyDirectory(request<fuchsia.io.Directory> directory_request);
-    GetDirectoryWithVmoFile(fuchsia.mem.Range buffer,
-                            request<fuchsia.io.Directory> directory_request);
-    GetDirectoryWithRemoteDirectory(string:fuchsia.io.MAX_PATH path,
-                                    fuchsia.io.Directory remote_directory,
-                                    request<fuchsia.io.Directory> directory_request);
+protocol Io2Harness {
+    /// Prepares a test case with an empty directory. The directory metadata
+    /// and directory entires should be read-only.
+    ///
+    /// + `directory_request` the server end of the root directory connection.
+    ///
+    /// This connection should have the following rights:
+    ///
+    ///     * [`fuchsia.io2/Rights.CONNECT`].
+    ///     * [`fuchsia.io2/Rights.ENUMERATE`].
+    ///     * [`fuchsia.io2/Rights.TRAVERSE`].
+    ///     * [`fuchsia.io2/Rights.READ_BYTES`].
+    ///     * [`fuchsia.io2/Rights.WRITE_BYTES`].
+    ///     * [`fuchsia.io2/Rights.GET_ATTRIBUTES`].
+    ///     * [`fuchsia.io2/Rights.UPDATE_ATTRIBUTES`].
+    ///
+    GetEmptyDirectory(handle<channel> directory_request);
 };
