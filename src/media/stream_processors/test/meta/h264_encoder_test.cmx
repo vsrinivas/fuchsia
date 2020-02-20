@@ -1,0 +1,31 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.mediacodec.CodecFactory": "fuchsia-pkg://fuchsia.com/codec_factory#meta/codec_factory.cmx"
+            },
+            "system-services": [
+                "fuchsia.sysmem.Allocator"
+            ]
+        }
+    },
+    "program": {
+        "args": [
+            "--test-threads=1"
+        ],
+        "binary": "test/h264_encoder_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/media-codec",
+            "class/sysmem"
+        ],
+        "features": [],
+        "services": [
+            "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

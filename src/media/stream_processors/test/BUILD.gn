@@ -15,6 +15,7 @@ group("test") {
     ":audio_decoder_test",
     ":audio_encoder_test",
     ":h264_decoder_test",
+    ":h264_encoder_test",
     ":stream_processor_lib_test",
     ":video_frame_hasher_test",
   ]
@@ -239,6 +240,33 @@ test_package("h264_decoder_test") {
       path = rebase_path(
               "../../../../garnet/test_data/media/third_party/chromium_media_test_data/bear.h264")
       dest = "bear.h264"
+    },
+  ]
+}
+
+rustc_test("h264_encoder_test_bin") {
+  name = "h264_encoder_test"
+  edition = "2018"
+  source_root = "h264_encoder_test/lib.rs"
+
+  deps = [
+    ":stream_processor_encoder_factory_lib",
+    ":stream_processor_test_lib",
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+test_package("h264_encoder_test") {
+  deps = [ ":h264_encoder_test_bin" ]
+
+  tests = [
+    {
+      name = "h264_encoder_test"
+      environments = [ sherlock_env ]
     },
   ]
 }
