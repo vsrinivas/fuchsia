@@ -53,6 +53,7 @@ prebuilt_package("web_engine_pkg") {
 
 group("web_runner") {
   deps = [
+    ":tzdata_for_web_runner",
     ":web_runner_config",
     ":web_runner_pkg",
   ]
@@ -73,6 +74,11 @@ prebuilt_package("web_runner_pkg") {
   archive =
       prebuilt_archive_base_path + "/arch/" + target_cpu + "/web_runner.far"
   debug_archive = debug_archive_base_path + "/web_runner.symbols.tar.bz2"
+}
+
+icu_tzdata_config_data("tzdata_for_web_runner") {
+  for_pkg = "web_runner"
+  data_version = "44"
 }
 
 # Prebuilt FAR tests
