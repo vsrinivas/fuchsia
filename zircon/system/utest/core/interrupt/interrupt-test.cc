@@ -18,6 +18,7 @@ extern "C" zx_handle_t get_root_resource(void);
 constexpr zx::time kSignaledTimeStamp1(12345);
 constexpr zx::time kSignaledTimeStamp2(67890);
 constexpr uint32_t kKey = 789;
+constexpr uint32_t kUnboundInterruptNumber = 29;
 
 class RootResourceFixture : public zxtest::Test {
  public:
@@ -250,7 +251,7 @@ TEST_F(InterruptTest, BindVcpuTest) {
   }
   ASSERT_OK(status);
 
-  ASSERT_OK(zx::interrupt::create(*root_resource_, 0, 0, &interrupt));
+  ASSERT_OK(zx::interrupt::create(*root_resource_, kUnboundInterruptNumber, 0, &interrupt));
   ASSERT_OK(zx::vcpu::create(guest, 0, 0, &vcpu1));
   ASSERT_OK(zx::vcpu::create(guest, 0, 0, &vcpu2));
 
@@ -296,7 +297,7 @@ TEST_F(InterruptTest, UnableToBindToVcpuAfterPort) {
   }
   ASSERT_OK(status);
 
-  ASSERT_OK(zx::interrupt::create(*root_resource_, 0, 0, &interrupt));
+  ASSERT_OK(zx::interrupt::create(*root_resource_, kUnboundInterruptNumber, 0, &interrupt));
   ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
   ASSERT_OK(zx::vcpu::create(guest, 0, 0, &vcpu));
 
@@ -321,7 +322,7 @@ TEST_F(InterruptTest, UnableToBindVcpuMultipleGuests) {
   }
   ASSERT_OK(status);
 
-  ASSERT_OK(zx::interrupt::create(*root_resource_, 0, 0, &interrupt));
+  ASSERT_OK(zx::interrupt::create(*root_resource_, kUnboundInterruptNumber, 0, &interrupt));
   ASSERT_OK(zx::vcpu::create(guest1, 0, 0, &vcpu1));
   ASSERT_OK(zx::guest::create(*root_resource_, 0, &guest2, &vmar2));
   ASSERT_OK(zx::vcpu::create(guest2, 0, 0, &vcpu2));
