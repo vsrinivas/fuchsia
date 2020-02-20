@@ -46,7 +46,7 @@ capabilities exposed by its children through
 Children can be created in two ways:
 
 - Statically: The parent declares the existence of the child in its own
-  [component declaration](#component-declarations). The child is destroyed
+  [component declaration][doc-component-declaration]. The child is destroyed
   automatically if the child declaration is removed in an updated version of
   the parent's software.
 - Dynamically: The parent uses [realm services][doc-realms] to add
@@ -77,7 +77,7 @@ Children remain forever dependent upon their parent; they cannot be reparented
 and they cannot outlive their parent. When a parent is destroyed so are all
 of its children.
 
-This model resembles [composition][wiki-object-composition] in object-oriented
+This model resembles [composition][wiki-object-composition]{:.external} in object-oriented
 programming languages.
 
 ![Diagram of component instance encapsulation](images/topology_encapsulation.png)
@@ -114,7 +114,7 @@ for more information.
 
 A compartment is an isolation boundary for component instances. It is an
 essential mechanism for preserving the
-[confidentiality, integrity, and availability][wiki-infosec] of components.
+[confidentiality, integrity, and availability][wiki-infosec]{:.external} of components.
 
 Physical hardware can act as a compartment. Components running on the
 same physical hardware share CPU, memory, persistent storage, and peripherals.
@@ -147,16 +147,17 @@ stronger guarantees on behalf of runnees. Similarly, running each component
 on separate hardware might offer the strongest guarantees but would be
 impractical. There are trade-offs.
 
-See the [compartment documentation][doc-compartments]
-for more information.
-
 ![Diagram of compartment layouts](images/topology_compartments.png)
 
-[doc-collections]: realms.md#collections
-[doc-manifests]: component_manifests.md
-[doc-realms]: realms.md
-[glossary-job]: ../../glossary.md#job
-[glossary-process]: ../../glossary.md#process
+[doc-collections]: /docs/concepts/components/realms.md#collections
+[doc-manifests]: /docs/concepts/components/component_manifests.md
+[doc-realms]: /docs/concepts/components/realms.md
+[doc-monikers]: /docs/concepts/components/monikers.md
+[doc-capability-routing]: /docs/concepts/components/component_manifests.md#capability-routing
+[doc-component-declaration]: /docs/concepts/components/declarations.md
+[glossary-job]: /docs/glossary.md#job
+[glossary-process]: /docs/glossary.md#process
+[glossary-component-instance-tree]: /docs/glossary.md#component-instance-tree
 [wiki-infosec]: https://en.wikipedia.org/wiki/Information_security
 [wiki-least-privilege]: https://en.wikipedia.org/wiki/Principle_of_least_privilege
 [wiki-object-composition]: https://en.wikipedia.org/wiki/Object_composition
