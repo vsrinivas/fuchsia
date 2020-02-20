@@ -2,9 +2,5 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Project policy"
-  contents:
-  - include: /docs/project/policy/_toc.yaml
-- title: "RFCs"
-  contents:
-  - include: /docs/project/rfcs/_toc.yaml
+- title: "External dependencies"
+  path: /docs/project/policy/external_dependencies.md
