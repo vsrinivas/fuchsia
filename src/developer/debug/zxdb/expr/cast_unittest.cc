@@ -386,7 +386,7 @@ TEST_F(Cast, C) {
 // inheritance tests.
 TEST_F(Cast, StaticCastVirtualInheritance) {
   auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
-  VirtualInheritanceTestSetup setup(eval_context.get());
+  VirtualInheritanceTestSetup setup;
   setup.SaveMockData(eval_context->data_provider());
 
   // Casing from "derived" to "base" covers two regular and one virtual inheritance step. This is

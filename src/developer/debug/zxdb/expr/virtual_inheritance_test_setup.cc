@@ -11,7 +11,7 @@
 
 namespace zxdb {
 
-VirtualInheritanceTestSetup::VirtualInheritanceTestSetup(MockEvalContext* eval_context) {
+VirtualInheritanceTestSetup::VirtualInheritanceTestSetup() {
   auto int32_type = MakeInt32Type();
 
   // Base.

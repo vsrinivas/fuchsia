@@ -5,11 +5,13 @@
 #include "src/developer/debug/zxdb/expr/resolve_base.h"
 
 #include "gtest/gtest.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/zxdb/common/test_with_loop.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
 #include "src/developer/debug/zxdb/expr/virtual_base_test_setup.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/elf_symbol.h"
+#include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
@@ -23,7 +25,7 @@ class ResolveBase : public TestWithLoop {};
 }  // namespace
 
 // Given a class without a vtable, verifies that the DerivedTypeForVtable does a synchronous no-op.
-TEST_F(ResolveBase, PromotePtrRefToDerived_NotVirtual) {
+TEST_F(ResolveBase, PromotePtrRefToDerived_NoVtable) {
   auto eval_context = fxl::MakeRefCounted<MockEvalContext>();
 
   auto not_virtual =
@@ -83,9 +85,9 @@ TEST_F(ResolveBase, PromotePtrRefToDerived) {
   // Part 2: vtable pointer points to "Base".
 
   // Fix up the vtable pointer to the base class.
-  eval_context->AddLocation(setup.kVtableAddress,
-                            Location(setup.kVtableAddress, FileLine(), 0,
-                                     SymbolContext::ForRelativeAddresses(), setup.base_vtable));
+  Location vtable_location(setup.kVtableAddress, FileLine(), 0,
+                           SymbolContext::ForRelativeAddresses(), setup.base_vtable);
+  eval_context->AddLocation(setup.kVtableAddress, vtable_location);
 
   result = Err("Not called");
   PromotePtrRefToDerived(eval_context, PromoteToDerived::kPtrOrRef, base_ptr,
@@ -97,7 +99,7 @@ TEST_F(ResolveBase, PromotePtrRefToDerived) {
   // -----------------------------------------------------------------------------------------------
   // Part 3: vtable pointer is invalid.
 
-  // Declare no symbol ad this address.
+  // Declare no symbol at this address.
   eval_context->AddLocation(setup.kVtableAddress,
                             Location(Location::State::kSymbolized, setup.kVtableAddress));
 
@@ -112,6 +114,28 @@ TEST_F(ResolveBase, PromotePtrRefToDerived) {
   // returning the input rather than forwarding an error.
   EXPECT_EQ(base_ptr, result.value());
   EXPECT_EQ("const BaseClass* const", result.value().type()->GetFullName());
+
+  // -----------------------------------------------------------------------------------------------
+  // Part 4: virtual inheritance means we can't promote to derived.
+
+  // Put back the good derived vtable location cleared in the previous step so it will succeed.
+  eval_context->AddLocation(setup.kVtableAddress,
+                            Location(setup.kVtableAddress, FileLine(), 0,
+                                     SymbolContext::ForRelativeAddresses(), setup.derived_vtable));
+
+  // Replace the inheritance record with one indicating virtual inheritance. This placeholder
+  // expression won't work in practice (see VirtualInheritanceTestSetup for a real one) but the
+  // presence of some expression will trigger a casting failure.
+  auto virtual_inheritance = fxl::MakeRefCounted<InheritedFrom>(
+      setup.base_class, std::vector<uint8_t>{llvm::dwarf::DW_OP_dup});
+  setup.derived_class->set_inherited_from({LazySymbol(virtual_inheritance)});
+
+  result = Err("Not called");
+  PromotePtrRefToDerived(eval_context, PromoteToDerived::kPtrOrRef, base_ptr,
+                         [&result](ErrOrValue r) { result = r; });
+  loop().RunUntilNoTasks();
+  ASSERT_TRUE(result.ok()) << result.err().msg();
+  EXPECT_EQ(base_ptr, result.value());  // Should give same input as output.
 }
 
 }  // namespace zxdb

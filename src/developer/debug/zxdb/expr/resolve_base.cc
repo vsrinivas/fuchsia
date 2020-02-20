@@ -39,6 +39,8 @@ const char kVtableSymbolNamePrefix[] = "vtable for ";
 // pointed-to/referenced type first, we avoid this overhead.
 void PromotePtrRefToDerived(const fxl::RefPtr<EvalContext>& context, PromoteToDerived what,
                             ExprValue value, EvalCallback cb) {
+  // Errors in this function should issue the callback with the original value. Errors mean that
+  // promotion has failed, but we can still handle the original base class pointer.
   if (!value.type())
     return cb(std::move(value));
 
@@ -115,7 +117,13 @@ void PromotePtrRefToDerived(const fxl::RefPtr<EvalContext>& context, PromoteToDe
         dest_type = fxl::MakeRefCounted<ModifiedType>(modifier_tag, std::move(dest_type));
         dest_type = AddCVQualifiersToMatch(original_value.type(), std::move(dest_type));
         CastExprValue(context, CastType::kStatic, original_value, dest_type, ExprValueSource(),
-                      std::move(cb));
+                      [original_value, cb = std::move(cb)](ErrOrValue value) mutable {
+                        // Discard casting errors to just use the original value.
+                        if (value.has_error())
+                          cb(std::move(original_value));
+                        else
+                          cb(value.value());
+                      });
       });
 }
 

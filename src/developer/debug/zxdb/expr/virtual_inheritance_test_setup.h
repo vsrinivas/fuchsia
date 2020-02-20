@@ -73,7 +73,7 @@ class MockSymbolDataProvider;
 // This uses GCC's style of expressions. See also ResolveCollectionTest.VirtualInheritance which
 // tests Clang's version of virtual inheritance.
 struct VirtualInheritanceTestSetup {
-  explicit VirtualInheritanceTestSetup(MockEvalContext* eval_context);
+  VirtualInheritanceTestSetup();
 
   // Sets the mock vtable data to be served.
   void SaveMockData(MockSymbolDataProvider* mock) const;
