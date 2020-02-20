@@ -153,7 +153,14 @@ tftp_status transport_send(void* data, size_t len, void* cookie) {
            ((errno == EAGAIN) || (errno == EWOULDBLOCK) || (errno == ENOBUFS)));
   if (send_result < 0) {
     fprintf(stderr, "\n%s: Attempted to send %zu bytes\n", appname, len);
-    fprintf(stderr, "%s: Send failed with errno = %d (%s)\n", appname, errno, strerror(errno));
+    switch (errno) {
+      case EADDRNOTAVAIL:
+        fprintf(stderr, "%s: Network configuration error: %s (%d)\n", appname, strerror(errno),
+                errno);
+        break;
+      default:
+        fprintf(stderr, "%s: Send failed with errno = %d (%s)\n", appname, errno, strerror(errno));
+    }
     return TFTP_ERR_IO;
   }
   return TFTP_NO_ERROR;
