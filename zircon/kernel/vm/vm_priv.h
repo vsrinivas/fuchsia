@@ -16,7 +16,11 @@
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 
-#define VM_GLOBAL_TRACE 0
+// Individual files do `#define LOCAL_TRACE VM_GLOBAL_TRACE(0)`.
+// This lets one edit just that one file to switch that `0` to `1`,
+// or edit this file to replace `local` with `1` and get all those
+// files at once.
+#define VM_GLOBAL_TRACE(local) local
 
 // return a pointer to the zero page
 static inline vm_page_t* vm_get_zero_page(void) {

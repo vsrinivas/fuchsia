@@ -20,7 +20,7 @@
 
 #include "vm_priv.h"
 
-#define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
+#define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 VmAddressRegion::VmAddressRegion(VmAspace& aspace, vaddr_t base, size_t size, uint32_t vmar_flags)
     : VmAddressRegionOrMapping(base, size, vmar_flags | VMAR_CAN_RWX_FLAGS, &aspace, nullptr) {

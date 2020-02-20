@@ -12,6 +12,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <ktl/algorithm.h>
 
 #define LOCAL_TRACE 0
 
@@ -57,7 +58,7 @@ zx_status_t MBufChain::ReadHelper(T* chain, user_out_ptr<char> dst, size_t len, 
   auto iter = chain->tail_.begin();
   while (pos < len && iter != chain->tail_.end()) {
     const char* src = iter->data_ + iter->off_;
-    size_t copy_len = MIN(iter->len_, len - pos);
+    size_t copy_len = ktl::min(static_cast<size_t>(iter->len_), len - pos);
     zx_status_t status = dst.byte_offset(pos).copy_array_to_user(src, copy_len);
     if (status != ZX_OK) {
       return status;

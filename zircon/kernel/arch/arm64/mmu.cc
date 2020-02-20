@@ -27,6 +27,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <kernel/mutex.h>
+#include <ktl/algorithm.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
@@ -574,7 +575,7 @@ ssize_t ArmArchVmAspace<paf>::UnmapPageTable(vaddr_t vaddr, vaddr_t vaddr_rel, s
     block_size = 1UL << index_shift;
     block_mask = block_size - 1;
     vaddr_rem = vaddr_rel & block_mask;
-    chunk_size = MIN(size, block_size - vaddr_rem);
+    chunk_size = ktl::min(size, block_size - vaddr_rem);
     index = vaddr_rel >> index_shift;
 
     pte = page_table[index];
@@ -651,7 +652,7 @@ ssize_t ArmArchVmAspace<paf>::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_i
     block_size = 1UL << index_shift;
     block_mask = block_size - 1;
     vaddr_rem = vaddr_rel & block_mask;
-    chunk_size = MIN(size, block_size - vaddr_rem);
+    chunk_size = ktl::min(size, block_size - vaddr_rem);
     index = vaddr_rel >> index_shift;
 
     if (((vaddr_rel | paddr) & block_mask) || (chunk_size != block_size) ||
@@ -728,7 +729,7 @@ zx_status_t ArmArchVmAspace<paf>::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vad
     block_size = 1UL << index_shift;
     block_mask = block_size - 1;
     vaddr_rem = vaddr_rel & block_mask;
-    chunk_size = MIN(size, block_size - vaddr_rem);
+    chunk_size = ktl::min(size, block_size - vaddr_rem);
     index = vaddr_rel >> index_shift;
     pte = page_table[index];
 

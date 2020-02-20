@@ -20,7 +20,7 @@
 
 #include "vm_priv.h"
 
-#define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
+#define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 VmObjectPhysical::VmObjectPhysical(fbl::RefPtr<vm_lock_t> lock, paddr_t base, uint64_t size)
     : VmObject(ktl::move(lock)), size_(size), base_(base) {

@@ -18,7 +18,7 @@
 
 #include "vm_priv.h"
 
-#define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
+#define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 // Simple boot time allocator that starts by allocating physical memory off
 // the end of wherever the kernel is loaded in physical space.

@@ -20,6 +20,7 @@
 #include <arch/ops.h>
 #include <dev/hw_rng.h>
 #include <kernel/spinlock.h>
+#include <ktl/algorithm.h>
 #include <platform/debug.h>
 
 void spin(uint32_t usecs) {
@@ -76,7 +77,7 @@ void hexdump_very_ex(const void* ptr, size_t len, uint64_t disp_addr, hexdump_pr
       uint32_t buf[4];
       uint8_t cbuf[16];
     } u;
-    size_t s = ROUNDUP(MIN(len - count, 16), 4);
+    size_t s = ROUNDUP(ktl::min(len - count, size_t{16}), 4);
     size_t i;
 
     bool cur_line_zeros = true;
@@ -128,7 +129,7 @@ void hexdump8_very_ex(const void* ptr, size_t len, uint64_t disp_addr, hexdump_p
   int zero_line_count = 0;
   for (count = 0; count < len; count += 16, address += 16) {
     bool cur_line_zeros = true;
-    for (i = 0; i < MIN(len - count, 16); i++) {
+    for (i = 0; i < ktl::min(len - count, size_t{16}); i++) {
       cur_line_zeros &= (((const uint8_t*)address)[i] == 0);
     }
     if (cur_line_zeros) {
@@ -147,7 +148,7 @@ void hexdump8_very_ex(const void* ptr, size_t len, uint64_t disp_addr, hexdump_p
 
     pfn(((disp_addr + len) > 0xFFFFFFFF) ? "0x%016llx: " : "0x%08llx: ", disp_addr + count);
 
-    for (i = 0; i < MIN(len - count, 16); i++) {
+    for (i = 0; i < ktl::min(len - count, size_t{16}); i++) {
       pfn("%02hhx ", *(const uint8_t*)(address + i));
     }
 
@@ -157,7 +158,7 @@ void hexdump8_very_ex(const void* ptr, size_t len, uint64_t disp_addr, hexdump_p
 
     pfn("|");
 
-    for (i = 0; i < MIN(len - count, 16); i++) {
+    for (i = 0; i < ktl::min(len - count, size_t{16}); i++) {
       char c = ((const char*)address)[i];
       pfn("%c", isprint(c) ? c : '.');
     }

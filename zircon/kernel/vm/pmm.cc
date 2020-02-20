@@ -38,7 +38,7 @@
 #include "pmm_node.h"
 #include "vm_priv.h"
 
-#define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
+#define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 // The (currently) one and only pmm node
 static PmmNode pmm_node;

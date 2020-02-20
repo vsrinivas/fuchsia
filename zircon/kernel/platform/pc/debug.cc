@@ -28,6 +28,7 @@
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
+#include <ktl/algorithm.h>
 #include <lk/init.h>
 #include <platform/console.h>
 #include <platform/debug.h>
@@ -541,7 +542,7 @@ static char* debug_platform_tx_FIFO_bytes(const char* str, size_t* len, bool* co
   size_t i, copy_bytes;
   char* s = (char*)str;
 
-  copy_bytes = MIN(uart_fifo_depth, *len);
+  copy_bytes = ktl::min(static_cast<size_t>(uart_fifo_depth), *len);
   for (i = 0; i < copy_bytes; i++) {
     if (*s == '\n' && map_NL && !*copied_CR) {
       uart_write(0, '\r');

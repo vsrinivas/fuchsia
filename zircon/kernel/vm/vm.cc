@@ -27,7 +27,7 @@
 
 #include "vm_priv.h"
 
-#define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
+#define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 // boot time allocated page full of zeros
 vm_page_t* zero_page;

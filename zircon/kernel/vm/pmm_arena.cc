@@ -20,7 +20,7 @@
 #include "pmm_node.h"
 #include "vm_priv.h"
 
-#define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
+#define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 zx_status_t PmmArena::Init(const pmm_arena_info_t* info, PmmNode* node) {
   // TODO: validate that info is sane (page aligned, etc)

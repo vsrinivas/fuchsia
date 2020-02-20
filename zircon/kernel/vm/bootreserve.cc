@@ -15,7 +15,7 @@
 
 #include "vm_priv.h"
 
-#define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
+#define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 static const size_t NUM_RESERVES = 16;
 static reserve_range_t res[NUM_RESERVES];

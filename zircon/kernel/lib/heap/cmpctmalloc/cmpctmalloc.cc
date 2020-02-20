@@ -21,6 +21,7 @@
 #include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
+#include <ktl/algorithm.h>
 #include <vm/vm.h>
 
 // Malloc implementation tuned for space.
@@ -130,7 +131,7 @@
 // memory.
 //
 // See also |HEAP_LARGE_ALLOC_BYTES|.
-#define HEAP_GROW_SIZE (256 * 1024)
+#define HEAP_GROW_SIZE size_t(256 * 1024)
 #endif
 
 static_assert(IS_PAGE_ALIGNED(HEAP_GROW_SIZE), "");
@@ -146,7 +147,7 @@ static_assert(IS_PAGE_ALIGNED(HEAP_GROW_SIZE), "");
 // size of the cached block.
 //
 // See also |HEAP_GROW_SIZE|.
-#define HEAP_LARGE_ALLOC_BYTES (1u << HEAP_ALLOC_VIRTUAL_BITS)
+#define HEAP_LARGE_ALLOC_BYTES (size_t(1) << HEAP_ALLOC_VIRTUAL_BITS)
 
 // When we grow the heap we have to have somewhere in the freelist to put the
 // resulting freelist entry, so the freelist has to have a certain number of
@@ -442,8 +443,7 @@ static void FixLeftPointer(header_t* right, header_t* new_left) TA_REQ(TheHeapLo
   right->left = (header_t*)(((uintptr_t)new_left & ~1) | tag);
 }
 
-[[maybe_unused]]
-static void check_free_fill(void* ptr, size_t size) TA_REQ(TheHeapLock::Get()) {
+[[maybe_unused]] static void check_free_fill(void* ptr, size_t size) TA_REQ(TheHeapLock::Get()) {
   // The first 16 bytes of the region won't have free fill due to overlap
   // with the allocator bookkeeping.
   const size_t start = sizeof(free_t) - sizeof(header_t);
@@ -589,7 +589,7 @@ static void cmpct_test_trim(void) TA_EXCL(TheHeapLock::Get()) {
       a = static_cast<char*>(cmpct_alloc(s));
       if (with_second_alloc) {
         a2 = static_cast<char*>(cmpct_alloc(1));
-        if (s<PAGE_SIZE>> 1) {
+        if (s<PAGE_SIZE> > 1) {
           // It is the intention of the test that a is at the start
           // of an OS allocation and that a2 is "right after" it.
           // Otherwise we are not testing what I thought. OS
@@ -812,15 +812,15 @@ void* cmpct_alloc(size_t size) {
   int bucket = find_nonempty_bucket(start_bucket);
   if (bucket == -1) {
     // Grow heap by at least 12% if we can.
-    size_t growby =
-        MIN(HEAP_LARGE_ALLOC_BYTES, MAX(theheap.size >> 3, MAX(HEAP_GROW_SIZE, rounded_up)));
+    size_t growby = ktl::min(HEAP_LARGE_ALLOC_BYTES,
+                             ktl::max(theheap.size >> 3, ktl::max(HEAP_GROW_SIZE, rounded_up)));
     // Try to add a new OS allocation to the heap, reducing the size until
     // we succeed or get too small.
     while (heap_grow(growby) < 0) {
       if (growby <= rounded_up) {
         return NULL;
       }
-      growby = MAX(growby >> 1, rounded_up);
+      growby = ktl::max(growby >> 1, rounded_up);
     }
     bucket = find_nonempty_bucket(start_bucket);
   }
@@ -862,7 +862,7 @@ void* cmpct_realloc(void* payload, size_t size) {
     return NULL;
   }
 
-  memcpy(new_payload, payload, MIN(size, old_size));
+  memcpy(new_payload, payload, ktl::min(size, old_size));
   cmpct_free(payload);
   return new_payload;
 }

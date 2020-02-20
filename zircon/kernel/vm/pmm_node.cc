@@ -22,7 +22,7 @@
 #include "fbl/algorithm.h"
 #include "vm_priv.h"
 
-#define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
+#define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 KCOUNTER(pmm_alloc_async, "vm.pmm.alloc.async")
 

@@ -23,6 +23,7 @@
 #include <fbl/inline_array.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_piece.h>
+#include <ktl/algorithm.h>
 #include <object/handle.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
@@ -371,7 +372,7 @@ zx_status_t sys_process_read_memory(zx_handle_t handle, zx_vaddr_t vaddr, user_o
   // TODO(ZX-1631): While this limits reading to the mapped address space of
   // this VMO, it should be reading from multiple VMOs, not a single one.
   // Additionally, it is racy with the mapping going away.
-  buffer_size = MIN(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
+  buffer_size = ktl::min(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
   zx_status_t st =
       vmo->ReadUser(up->aspace().get(), buffer.reinterpret<char>(), offset, buffer_size);
 
@@ -430,7 +431,7 @@ zx_status_t sys_process_write_memory(zx_handle_t handle, zx_vaddr_t vaddr,
   // TODO(ZX-1631): While this limits writing to the mapped address space of
   // this VMO, it should be writing to multiple VMOs, not a single one.
   // Additionally, it is racy with the mapping going away.
-  buffer_size = MIN(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
+  buffer_size = ktl::min(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
   zx_status_t st =
       vmo->WriteUser(up->aspace().get(), buffer.reinterpret<const char>(), offset, buffer_size);
 

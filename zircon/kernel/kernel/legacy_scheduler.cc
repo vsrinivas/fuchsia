@@ -5,8 +5,6 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "kernel/sched.h"
-
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
@@ -25,7 +23,10 @@
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
 #include <kernel/thread.h>
+#include <ktl/algorithm.h>
 #include <vm/vm.h>
+
+#include "kernel/sched.h"
 
 // disable priority boosting
 #define NO_BOOST 0
@@ -883,7 +884,7 @@ void sched_resched_internal() {
   zx_duration_t old_runtime = zx_time_sub_time(now, oldthread->last_started_running);
   oldthread->runtime_ns = zx_duration_add_duration(oldthread->runtime_ns, old_runtime);
   oldthread->remaining_time_slice = zx_duration_sub_duration(
-      oldthread->remaining_time_slice, MIN(old_runtime, oldthread->remaining_time_slice));
+      oldthread->remaining_time_slice, ktl::min(old_runtime, oldthread->remaining_time_slice));
 
   // set up quantum for the new thread if it was consumed
   if (newthread->remaining_time_slice == 0) {

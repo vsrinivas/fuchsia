@@ -19,6 +19,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
+#include <ktl/algorithm.h>
 #include <ktl/limits.h>
 #include <ktl/unique_ptr.h>
 #include <object/handle.h>
@@ -212,7 +213,8 @@ zx_status_t sys_pci_init(zx_handle_t handle, user_in_ptr<const zx_pci_init_arg_t
            (arg->addr_window_count == 1) ? "" : "s");
     for (uint32_t i = 0; i < arg->addr_window_count; i++) {
       const size_t window_type_idx =
-          MIN(fbl::count_of(kAddrWindowTypes) - 1, arg->addr_windows[i].cfg_space_type);
+          ktl::min(fbl::count_of(kAddrWindowTypes) - 1,
+                   static_cast<size_t>(arg->addr_windows[i].cfg_space_type));
       const char* window_type_name = kAddrWindowTypes[window_type_idx];
 
       printf("[%u]\n\tcfg_space_type: %s\n\thas_ecam: %d\n\tbase: %#" PRIxPTR

@@ -8,6 +8,7 @@
 #include <inttypes.h>
 
 #include <fbl/ref_ptr.h>
+#include <ktl/algorithm.h>
 #include <object/channel_dispatcher.h>
 #include <object/handle.h>
 #include <object/process_dispatcher.h>
@@ -66,7 +67,7 @@ zx_status_t sys_resource_create(zx_handle_t parent_rsrc, uint32_t options, uint6
 
   // Extract the name from userspace if one was provided.
   char name[ZX_MAX_NAME_LEN] = {0};
-  size_t namesize = MIN(name_size, ZX_MAX_NAME_LEN - 1);
+  size_t namesize = ktl::min(name_size, ZX_MAX_NAME_LEN - 1);
   if (name_size > 0) {
     if (user_name.copy_array_from_user(name, namesize) != ZX_OK) {
       return ZX_ERR_INVALID_ARGS;

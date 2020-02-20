@@ -45,6 +45,7 @@
 #include <kernel/thread.h>
 #include <kernel/thread_lock.h>
 #include <kernel/timer.h>
+#include <ktl/algorithm.h>
 #include <ktl/atomic.h>
 #include <lockdep/lockdep.h>
 #include <object/process_dispatcher.h>
@@ -1016,7 +1017,7 @@ static zx_duration_t sleep_slack(zx_time_t deadline, zx_time_t now) {
     return MIN_SLEEP_SLACK;
   }
   zx_duration_t slack = zx_time_sub_time(deadline, now) / DIV_SLEEP_SLACK;
-  return MAX(MIN_SLEEP_SLACK, MIN(slack, MAX_SLEEP_SLACK));
+  return ktl::max(MIN_SLEEP_SLACK, ktl::min(slack, MAX_SLEEP_SLACK));
 }
 
 /**
@@ -1207,16 +1208,15 @@ void thread_set_deadline(thread_t* t, const zx_sched_deadline_params_t& params) 
 }
 
 /**
-* @brief Set the pointer to the user-mode thread, this will receive callbacks:
-* ThreadDispatcher::Exiting()
-* ThreadDispatcher::Suspending() / Resuming()
-*/
+ * @brief Set the pointer to the user-mode thread, this will receive callbacks:
+ * ThreadDispatcher::Exiting()
+ * ThreadDispatcher::Suspending() / Resuming()
+ */
 void thread_set_usermode_thread(thread_t* t, ThreadDispatcher* user_thread) {
   DEBUG_ASSERT(t->magic == THREAD_MAGIC);
   DEBUG_ASSERT(t->state == THREAD_INITIAL);
   t->user_thread = user_thread;
 }
-
 
 /**
  * @brief  Become an idle thread

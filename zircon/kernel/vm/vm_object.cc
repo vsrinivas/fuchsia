@@ -17,6 +17,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
+#include <ktl/algorithm.h>
 #include <ktl/move.h>
 #include <vm/physmap.h>
 #include <vm/vm.h>
@@ -25,7 +26,7 @@
 
 #include "vm_priv.h"
 
-#define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
+#define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 VmObject::GlobalList VmObject::all_vmos_ = {};
 
@@ -384,7 +385,7 @@ zx_status_t VmObject::CacheOp(const uint64_t start_offset, const uint64_t len,
 
     // This cache op will either terminate at the end of the current page or
     // at the end of the whole op range -- whichever comes first.
-    const size_t op_end_offset = MIN(page_end_offset, end_offset);
+    const size_t op_end_offset = ktl::min(page_end_offset, end_offset);
 
     const size_t cache_op_len = op_end_offset - op_start_offset;
 

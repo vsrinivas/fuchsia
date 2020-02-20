@@ -20,7 +20,7 @@
 #include "vm/vm_address_region.h"
 #include "vm_priv.h"
 
-#define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
+#define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
 VmMapping::VmMapping(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
                      fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags)

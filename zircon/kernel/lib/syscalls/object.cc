@@ -16,6 +16,7 @@
 #include <kernel/mp.h>
 #include <kernel/stats.h>
 #include <kernel/thread_lock.h>
+#include <ktl/algorithm.h>
 #include <object/bus_transaction_initiator_dispatcher.h>
 #include <object/diagnostics.h>
 #include <object/exception_dispatcher.h>
@@ -199,7 +200,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
         return status;
       size_t num_threads = threads.size();
       size_t num_space_for = buffer_size / sizeof(zx_koid_t);
-      size_t num_to_copy = MIN(num_threads, num_space_for);
+      size_t num_to_copy = ktl::min(num_threads, num_space_for);
 
       // Don't try to copy if there are no bytes to copy, as the "is
       // user space" check may not handle (_buffer == NULL and len == 0).
@@ -404,7 +405,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       size_t num_cpus = arch_max_num_cpus();
       size_t num_space_for = buffer_size / sizeof(zx_info_cpu_stats_t);
-      size_t num_to_copy = MIN(num_cpus, num_space_for);
+      size_t num_to_copy = ktl::min(num_cpus, num_space_for);
 
       // build an alias to the output buffer that is in units of the cpu stat structure
       user_out_ptr<zx_info_cpu_stats_t> cpu_buf = _buffer.reinterpret<zx_info_cpu_stats_t>();
@@ -639,7 +640,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       size_t num_records = handle_info.size();
       size_t num_space_for = buffer_size / sizeof(zx_info_handle_extended_t);
-      size_t num_to_copy = MIN(num_records, num_space_for);
+      size_t num_to_copy = ktl::min(num_records, num_space_for);
 
       // Don't try to copy if there are no bytes to copy, as the "is
       // user space" check may not handle (_buffer == NULL and len == 0).

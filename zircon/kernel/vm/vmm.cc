@@ -26,7 +26,7 @@
 
 #include "vm_priv.h"
 
-#define LOCAL_TRACE MAX(VM_GLOBAL_TRACE, 0)
+#define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 #define TRACE_PAGE_FAULT 0
 
 // This file mostly contains C wrappers around the underlying C++ objects, conforming to

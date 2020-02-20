@@ -15,6 +15,7 @@
 #include <string.h>
 #include <sys/types.h>
 
+#include <ktl/algorithm.h>
 #include <platform/debug.h>
 
 struct _output_args {
@@ -171,10 +172,10 @@ PRINTF_DECL(_printf_engine)
       chars_written += err;     \
     }                           \
   } while (0)
-#define OUTPUT_CHAR(c)        \
-  do {                        \
-    char __temp[1] = {static_cast<char>(c)};     \
-    OUTPUT_STRING(__temp, 1); \
+#define OUTPUT_CHAR(c)                       \
+  do {                                       \
+    char __temp[1] = {static_cast<char>(c)}; \
+    OUTPUT_STRING(__temp, 1);                \
   } while (0)
 
   for (;;) {
@@ -358,7 +359,7 @@ PRINTF_DECL(_printf_engine)
     // In the event of a field width smaller than the length, we need to
     // truncate the width to fit. This only applies to %s.
     if (flags & FIELDWIDTHFLAG) {
-      string_len = MIN(string_len, format_num);
+      string_len = ktl::min(string_len, static_cast<size_t>(format_num));
     }
 
     if (flags & LEFTFORMATFLAG) {

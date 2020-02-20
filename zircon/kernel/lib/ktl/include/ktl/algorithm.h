@@ -9,7 +9,17 @@
 
 namespace ktl {
 
+// "Sorting operations" (subset)
 using std::stable_sort;
+
+// "Minimum/maximum operations"
+using std::clamp;
+using std::max;
+using std::max_element;
+using std::min;
+using std::min_element;
+using std::minmax;
+using std::minmax_element;
 
 }  // namespace ktl
 
