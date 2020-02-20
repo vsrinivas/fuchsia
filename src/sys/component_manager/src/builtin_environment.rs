@@ -207,11 +207,11 @@ impl BuiltinEnvironment {
         if let Some(event_source_factory) = &self.event_source_factory {
             model.root_realm.hooks.install(event_source_factory.hooks()).await;
 
-            let system = event_source_factory.create(None).await;
+            let event_source = event_source_factory.create(None).await;
 
             service_fs.dir("svc").add_fidl_service(move |stream| {
-                let system = system.clone();
-                system.serve_async(stream);
+                let event_source = event_source.clone();
+                event_source.serve_async(stream);
             });
         }
 

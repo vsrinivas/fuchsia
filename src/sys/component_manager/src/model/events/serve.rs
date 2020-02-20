@@ -14,48 +14,61 @@ use {
         },
     },
     async_trait::async_trait,
-    fidl::endpoints::{create_request_stream, ClientEnd, ServerEnd},
+    fidl::endpoints::{create_request_stream, ClientEnd},
     fidl_fuchsia_test_events as fevents, fuchsia_async as fasync, fuchsia_trace as trace,
     fuchsia_zircon as zx,
-    futures::{lock::Mutex, StreamExt},
+    futures::{lock::Mutex, StreamExt, TryStreamExt},
+    log::error,
     std::{path::PathBuf, sync::Arc},
 };
 
-pub async fn serve_event_source(
-    mut system: EventSource,
-    mut stream: fevents::EventSourceSyncRequestStream,
+pub async fn serve_event_source_sync(
+    event_source: EventSource,
+    stream: fevents::EventSourceSyncRequestStream,
 ) {
-    while let Some(Ok(request)) = stream.next().await {
-        match request {
-            fevents::EventSourceSyncRequest::Subscribe { event_types, server_end, responder } => {
-                // Convert the FIDL event types into standard event types
-                let event_types = event_types
-                    .into_iter()
-                    .map(|event_type| convert_fidl_event_type_to_std(event_type))
-                    .collect();
-
-                // Subscribe to events.
-                let event_stream = system.subscribe(event_types).await;
-                let scope = system.scope();
-
-                // Serve the event_stream over FIDL asynchronously
-                fasync::spawn(async move {
-                    serve_event_stream(
-                        event_stream,
-                        scope.unwrap_or(AbsoluteMoniker::root()),
+    let result = stream
+        .try_for_each_concurrent(None, move |request| {
+            let mut event_source = event_source.clone();
+            async move {
+                match request {
+                    fevents::EventSourceSyncRequest::Subscribe {
+                        event_types,
                         server_end,
-                    )
-                    .await;
-                });
+                        responder,
+                    } => {
+                        // Convert the FIDL event types into standard event types
+                        let event_types = event_types
+                            .into_iter()
+                            .map(|event_type| convert_fidl_event_type_to_std(event_type))
+                            .collect();
 
-                // Unblock the component
-                responder.send().unwrap();
+                        // Subscribe to events.
+                        let event_stream = event_source.subscribe(event_types).await;
+                        let scope = event_source.scope();
+
+                        // Unblock the component
+                        responder.send()?;
+
+                        // Serve the event_stream over FIDL asynchronously
+                        let stream = server_end.into_stream()?;
+                        serve_event_stream(
+                            event_stream,
+                            scope.unwrap_or(AbsoluteMoniker::root()),
+                            stream,
+                        )
+                        .await?;
+                    }
+                    fevents::EventSourceSyncRequest::StartComponentTree { responder } => {
+                        event_source.start_component_tree().await;
+                        responder.send()?;
+                    }
+                }
+                Ok(())
             }
-            fevents::EventSourceSyncRequest::StartComponentTree { responder } => {
-                system.start_component_tree().await;
-                responder.send().unwrap();
-            }
-        }
+        })
+        .await;
+    if let Err(e) = result {
+        error!("Error serving EventSource: {}", e);
     }
 }
 
@@ -63,11 +76,8 @@ pub async fn serve_event_source(
 async fn serve_event_stream(
     mut event_stream: EventStream,
     scope_moniker: AbsoluteMoniker,
-    server_end: ServerEnd<fevents::EventStreamSyncMarker>,
-) {
-    // Serve the EventStream FIDL protocol asynchronously
-    let mut stream = server_end.into_stream().unwrap();
-
+    mut stream: fevents::EventStreamSyncRequestStream,
+) -> Result<(), fidl::Error> {
     while let Some(Ok(fevents::EventStreamSyncRequest::Next { responder })) = stream.next().await {
         trace::duration!("component_manager", "events:fidl_get_next");
         // Wait for the next breakpoint to occur
@@ -78,8 +88,9 @@ async fn serve_event_stream(
         let event_fidl_object = create_event_fidl_object(&scope_moniker, event);
 
         // Respond with the Event FIDL object
-        responder.send(event_fidl_object).unwrap();
+        responder.send(event_fidl_object)?;
     }
+    Ok(())
 }
 
 fn maybe_create_event_payload(

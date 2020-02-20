@@ -9,7 +9,7 @@ use {
             error::ModelError,
             events::{
                 registry::{EventRegistry, EventStream},
-                serve::serve_event_source,
+                serve::serve_event_source_sync,
             },
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             moniker::AbsoluteMoniker,
@@ -163,36 +163,36 @@ impl Hook for EventSourceFactoryInner {
 pub struct EventSource {
     scope_moniker: Option<AbsoluteMoniker>,
     registry: Arc<EventRegistry>,
-    resolve_instance_receiver: Arc<Mutex<Option<EventStream>>>,
+    resolve_instance_event_stream: Arc<Mutex<Option<EventStream>>>,
 }
 
 impl EventSource {
     pub async fn new(scope_moniker: Option<AbsoluteMoniker>, registry: Arc<EventRegistry>) -> Self {
-        let resolve_instance_receiver = Arc::new(Mutex::new(Some(
+        let resolve_instance_event_stream = Arc::new(Mutex::new(Some(
             registry.subscribe(scope_moniker.clone(), vec![EventType::ResolveInstance]).await,
         )));
-        Self { scope_moniker, registry, resolve_instance_receiver }
+        Self { scope_moniker, registry, resolve_instance_event_stream }
     }
 
-    /// Drops the `ResolveInstance` receiver, thereby permitting components within the
+    /// Drops the `ResolveInstance` event stream, thereby permitting components within the
     /// realm to be started.
     pub async fn start_component_tree(&mut self) {
-        let mut resolve_instance_receiver = self.resolve_instance_receiver.lock().await;
-        *resolve_instance_receiver = None;
+        let mut resolve_instance_event_stream = self.resolve_instance_event_stream.lock().await;
+        *resolve_instance_event_stream = None;
     }
 
     /// Subscribes to events corresponding to the `events` vector. The events are scoped
     /// to this `EventSource`'s realm. In other words, this EventSoure  will only
     /// receive events that have a target moniker within the realm of it's `scope_moniker`.
     pub async fn subscribe(&self, events: Vec<EventType>) -> EventStream {
-        // Create a receiver for the given events
+        // Create an event stream for the given events
         self.registry.subscribe(self.scope_moniker.clone(), events.clone()).await
     }
 
-    /// Serves a `EventSource` FIDL protocol.
+    /// Serves a `EventSourceSync` FIDL protocol.
     pub fn serve_async(self, stream: fevents::EventSourceSyncRequestStream) {
         fasync::spawn(async move {
-            serve_event_source(self, stream).await;
+            serve_event_source_sync(self, stream).await;
         });
     }
 
