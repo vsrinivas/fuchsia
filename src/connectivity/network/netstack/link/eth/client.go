@@ -24,14 +24,16 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
-// #cgo CFLAGS: -I${SRCDIR}/../../../zircon/public
 // #include <zircon/device/ethernet.h>
+// #include <zircon/types.h>
 import "C"
 
 const zxsioEthSignalStatus = zx.SignalUser0
 const tag = "eth"
 
 type FifoEntry = C.struct_eth_fifo_entry
+
+const FifoMaxSize = C.ZX_FIFO_MAX_SIZE_BYTES
 
 type entries struct {
 	// len(storage) must be a power of two; we rely on this fact to enable

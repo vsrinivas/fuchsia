@@ -54,14 +54,14 @@ func prependableComparer(x, y buffer.Prependable) bool {
 }
 
 func TestEndpoint(t *testing.T) {
-	maxSize := 4096 / uint(unsafe.Sizeof(eth.FifoEntry{}))
+	maxDepth := eth.FifoMaxSize / uint(unsafe.Sizeof(eth.FifoEntry{}))
 
 	arena, err := eth.NewArena()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	for i := 0; i < bits.Len(maxSize); i++ {
+	for i := 0; i < bits.Len(maxDepth); i++ {
 		depth := uint32(1 << i)
 		t.Run(fmt.Sprintf("depth=%d", depth), func(t *testing.T) {
 			var inRxFifo, outTxFifo zx.Handle
