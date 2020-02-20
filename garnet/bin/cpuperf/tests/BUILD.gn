@@ -23,6 +23,9 @@ executable("cpuperf_tests_bin") {
     "//garnet/bin/cpuperf:unittests",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(46558): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("cpuperf_integration_tests") {
