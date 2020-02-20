@@ -71,10 +71,7 @@ executable("root_presenter_unittests") {
 executable("root_presenter_apptests") {
   testonly = true
 
-  sources = [
-    "accessibility_focuser_registry_test.cc",
-    "accessibility_pointer_event_registry_test.cc",
-  ]
+  sources = [ "accessibility_pointer_event_registry_test.cc" ]
 
   deps = [
     "//garnet/public/lib/gtest",
@@ -85,7 +82,5 @@ executable("root_presenter_apptests") {
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/bin/root_presenter:lib",
-    "//src/ui/bin/root_presenter/tests/fakes",
-        "//src/lib/syslog/cpp",
   ]
 }

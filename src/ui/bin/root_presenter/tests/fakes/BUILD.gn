@@ -6,8 +6,6 @@ source_set("fakes") {
   testonly = true
 
   sources = [
-    "fake_focuser.cc",
-    "fake_focuser.h",
     "fake_scenic.cc",
     "fake_scenic.h",
     "fake_session.cc",

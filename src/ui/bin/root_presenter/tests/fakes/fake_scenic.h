@@ -9,7 +9,6 @@
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
 #include <lib/fidl/cpp/binding_set.h>
 
-#include "src/ui/bin/root_presenter/tests/fakes/fake_focuser.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_session.h"
 
 namespace root_presenter {
@@ -20,7 +19,6 @@ class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
   FakeScenic();
   ~FakeScenic() override;
 
-  FakeFocuser* fakeFocuser() { return &fake_focuser_; }
   FakeSession* fakeSession() { return &fake_session_; }
 
   void NotImplemented_(const std::string& name) final {}
@@ -35,13 +33,9 @@ class FakeScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
   // Scenic implementation.
   void CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
                      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) override;
-  void CreateSession2(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
-                      fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
-                      fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) override;
 
  private:
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> bindings_;
-  FakeFocuser fake_focuser_;
   FakeSession fake_session_;
 };
 
