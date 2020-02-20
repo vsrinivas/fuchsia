@@ -260,7 +260,7 @@ impl Discovery {
 
     pub async fn serve(
         mut self,
-        mut request_stream: mpsc::Receiver<DiscoveryRequest>,
+        mut discovery_request_stream: mpsc::Receiver<DiscoveryRequest>,
     ) -> Result<()> {
         // Loop forever. All input channels live the life of the service, so we will always have a
         // stream to poll.
@@ -268,7 +268,7 @@ impl Discovery {
             futures::select! {
                 // A request has come in from any of the potentially many clients connected to the
                 // discovery service.
-                request = request_stream.select_next_some() => {
+                request = discovery_request_stream.select_next_some() => {
                     match request {
                         DiscoveryRequest::ConnectToSession {
                             session_id, session_control_request, ..
