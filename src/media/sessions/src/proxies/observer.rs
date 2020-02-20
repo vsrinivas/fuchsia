@@ -7,13 +7,39 @@ use fidl_fuchsia_media_sessions2::*;
 use fuchsia_syslog::fx_log_warn;
 use fuchsia_zircon as zx;
 use futures::{
-    stream::{Fuse, Stream, StreamExt},
+    stream::{Fuse, Map, Stream, StreamExt},
     Future,
 };
 use std::{
     pin::Pin,
     task::{Context, Poll},
 };
+
+pub enum WatchStatusResponder {
+    SessionControl(SessionControlWatchStatusResponder),
+    SessionObserver(SessionObserverWatchStatusResponder),
+}
+
+impl From<SessionControlWatchStatusResponder> for WatchStatusResponder {
+    fn from(src: SessionControlWatchStatusResponder) -> Self {
+        WatchStatusResponder::SessionControl(src)
+    }
+}
+
+impl From<SessionObserverWatchStatusResponder> for WatchStatusResponder {
+    fn from(src: SessionObserverWatchStatusResponder) -> Self {
+        WatchStatusResponder::SessionObserver(src)
+    }
+}
+
+impl WatchStatusResponder {
+    fn send(self, status: SessionInfoDelta) -> std::result::Result<(), fidl::Error> {
+        match self {
+            WatchStatusResponder::SessionControl(responder) => responder.send(status),
+            WatchStatusResponder::SessionObserver(responder) => responder.send(status),
+        }
+    }
+}
 
 /// Serves a hanging get for a session's status.
 ///
@@ -26,11 +52,11 @@ use std::{
 ///
 /// It enforces the rule that only one hanging get may exist at a time, and
 /// answers requests with the latest status.
-pub struct Observer<S1, S2> {
+pub struct Observer<S1, S2, I> {
     status: Fuse<S1>,
-    responders: Fuse<S2>,
+    responders: Fuse<Map<S2, fn(I) -> WatchStatusResponder>>,
     current_status: Option<SessionInfoDelta>,
-    current_responder: Option<SessionControlWatchStatusResponder>,
+    current_responder: Option<WatchStatusResponder>,
 }
 
 #[derive(Debug)]
@@ -39,15 +65,16 @@ enum UpdateError {
     DuplicateRequestForStatus,
 }
 
-impl<S1, S2> Observer<S1, S2>
+impl<S1, S2, I> Observer<S1, S2, I>
 where
+    I: Into<WatchStatusResponder>,
     S1: Stream<Item = SessionInfoDelta> + Unpin,
-    S2: Stream<Item = SessionControlWatchStatusResponder> + Unpin,
+    S2: Stream<Item = I> + Unpin,
 {
     pub fn new(status: S1, responders: S2) -> Self {
         Self {
             status: status.fuse(),
-            responders: responders.fuse(),
+            responders: responders.map(Into::into as fn(I) -> WatchStatusResponder).fuse(),
             current_responder: None,
             current_status: None,
         }
@@ -78,10 +105,11 @@ where
     }
 }
 
-impl<S1, S2> Future for Observer<S1, S2>
+impl<S1, S2, I> Future for Observer<S1, S2, I>
 where
+    I: Into<WatchStatusResponder>,
     S1: Stream<Item = SessionInfoDelta> + Unpin,
-    S2: Stream<Item = SessionControlWatchStatusResponder> + Unpin,
+    S2: Stream<Item = I> + Unpin,
 {
     type Output = Result<()>;
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
