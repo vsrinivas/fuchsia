@@ -188,4 +188,7 @@ executable("cobalt_app_unittests") {
     "//third_party/googletest:gmock",
     "//zircon/system/fidl/fuchsia-cobalt",
   ]
+
+  # TODO(46555): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }

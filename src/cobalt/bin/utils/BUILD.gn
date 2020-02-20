@@ -68,4 +68,7 @@ executable("cobalt_utils_unittests") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-testing",
   ]
+
+  # TODO(46555): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
