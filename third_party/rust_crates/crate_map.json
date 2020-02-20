@@ -546,11 +546,6 @@
             "package_name": "termion"
         },
         {
-            "crate_name": "test_case",
-            "crate_type": "proc-macro",
-            "package_name": "test-case"
-        },
-        {
             "crate_name": "textwrap",
             "crate_type": "lib",
             "package_name": "textwrap"
@@ -998,11 +993,6 @@
             "package_name": "serde_json"
         },
         {
-            "crate_name": "signal_hook",
-            "crate_type": "lib",
-            "package_name": "signal-hook"
-        },
-        {
             "crate_name": "slab",
             "crate_type": "lib",
             "package_name": "slab"
@@ -1046,11 +1036,6 @@
             "crate_name": "termion",
             "crate_type": "lib",
             "package_name": "termion"
-        },
-        {
-            "crate_name": "test_case",
-            "crate_type": "proc-macro",
-            "package_name": "test-case"
         },
         {
             "crate_name": "thiserror",

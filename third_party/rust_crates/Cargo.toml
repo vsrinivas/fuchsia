@@ -168,8 +168,6 @@ void = "1.0.2"
 vte = "0.3"
 walkdir = "2.2.7"
 webpki = "0.21"
-xi-core-lib = { version = "0.2.0", default-features = false } # disable "notify" crate
-xi-rpc = "0.2.0"
 
 # Host-side only dependencies
 [target.'cfg(not(target_os = "fuchsia"))'.dependencies]
@@ -199,9 +197,3 @@ servo-freetype-sys = { path = "tiny_mirrors/servo-freetype-sys" }
 web-sys = { path = "tiny_mirrors/web-sys" }
 winapi = { path = "tiny_mirrors/winapi" }
 winapi-util = { path = "tiny_mirrors/winapi-util" }
-xi-core-lib = { path = "../rust-mirrors/xi-editor/rust/core-lib" }
-xi-rope = { path = "../rust-mirrors/xi-editor/rust/rope" }
-xi-rpc = { path = "../rust-mirrors/xi-editor/rust/rpc" }
-xi-trace = { path = "..//rust-mirrors/xi-editor/rust/trace" }
-xi-trace-dump = { path = "../rust-mirrors/xi-editor/rust/trace-dump" }
-xi-unicode = { path = "../rust-mirrors/xi-editor/rust/unicode" }
