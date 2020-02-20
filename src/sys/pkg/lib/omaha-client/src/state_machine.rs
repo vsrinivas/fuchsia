@@ -367,7 +367,12 @@ where
 
         self.persist_data().await;
 
-        if self.state != State::WaitingForReboot {
+        if self.state == State::WaitingForReboot {
+            info!("Rebooting the system at the end of a successful update");
+            if let Err(e) = self.installer.perform_reboot().await {
+                error!("Unable to reboot the system: {}", e);
+            }
+        } else {
             self.set_state(State::Idle).await;
         }
     }
@@ -855,6 +860,7 @@ mod tests {
         protocol::Cohort,
         storage::MemStorage,
     };
+    use anyhow::anyhow;
     use futures::executor::{block_on, LocalPool};
     use futures::future::{BoxFuture, LocalBoxFuture};
     use futures::task::LocalSpawnExt;
@@ -1799,8 +1805,11 @@ mod tests {
         });
     }
 
-    #[derive(Debug)]
-    pub struct TestInstaller;
+    #[derive(Debug, Default)]
+    pub struct TestInstaller {
+        reboot_called: bool,
+        should_fail: bool,
+    }
 
     impl Installer for TestInstaller {
         type InstallPlan = StubPlan;
@@ -1810,8 +1819,21 @@ mod tests {
             _install_plan: &StubPlan,
             _observer: Option<&dyn ProgressObserver>,
         ) -> BoxFuture<'_, Result<(), Self::Error>> {
-            clock::mock::set(time::i64_to_time(222222222));
-            future::ready(Ok(())).boxed()
+            if self.should_fail {
+                future::ready(Err(StubInstallErrors::Failed)).boxed()
+            } else {
+                clock::mock::set(time::i64_to_time(222222222));
+                future::ready(Ok(())).boxed()
+            }
+        }
+
+        fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>> {
+            self.reboot_called = true;
+            if self.should_fail {
+                future::ready(Err(anyhow!("reboot failed"))).boxed()
+            } else {
+                future::ready(Ok(())).boxed()
+            }
         }
     }
 
@@ -1835,7 +1857,7 @@ mod tests {
             let mut state_machine = StateMachine::new(
                 StubPolicyEngine,
                 http,
-                TestInstaller,
+                TestInstaller::default(),
                 &config,
                 StubTimer,
                 MockMetricsReporter::new(false),
@@ -1996,6 +2018,76 @@ mod tests {
                 state_machine.metrics_reporter.metrics,
                 vec![Metrics::AttemptsToSucceed(1), Metrics::AttemptsToSucceed(3)]
             );
+        });
+    }
+
+    #[test]
+    fn test_successful_update_triggers_reboot() {
+        block_on(async {
+            let config = config_generator();
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "ok"
+                }
+              }],
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                http,
+                TestInstaller::default(),
+                &config,
+                StubTimer,
+                MockMetricsReporter::new(false),
+                Rc::new(Mutex::new(MemStorage::new())),
+                make_test_app_set(),
+            )
+            .await;
+
+            state_machine.start_update_check(CheckOptions::default()).await;
+
+            assert!(state_machine.installer.reboot_called);
+        });
+    }
+
+    #[test]
+    fn test_failed_update_does_not_trigger_reboot() {
+        block_on(async {
+            let config = config_generator();
+            let response = json!({"response":{
+              "server": "prod",
+              "protocol": "3.0",
+              "app": [{
+                "appid": "{00000000-0000-0000-0000-000000000001}",
+                "status": "ok",
+                "updatecheck": {
+                  "status": "ok"
+                }
+              }],
+            }});
+            let response = serde_json::to_vec(&response).unwrap();
+            let http = MockHttpRequest::new(hyper::Response::new(response.into()));
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                http,
+                TestInstaller { should_fail: true, ..Default::default() },
+                &config,
+                StubTimer,
+                MockMetricsReporter::new(false),
+                Rc::new(Mutex::new(StubStorage)),
+                make_test_app_set(),
+            )
+            .await;
+
+            state_machine.start_update_check(CheckOptions::default()).await;
+
+            assert!(!state_machine.installer.reboot_called)
         });
     }
 

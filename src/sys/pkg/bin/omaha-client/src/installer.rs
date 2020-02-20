@@ -7,11 +7,14 @@
 #![allow(dead_code)]
 
 use crate::install_plan::FuchsiaInstallPlan;
+use anyhow::anyhow;
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_update_installer::{
     Initiator, InstallerMarker, InstallerProxy, MonitorEvent, MonitorMarker, MonitorOptions,
     Options, State,
 };
+use fuchsia_component::client::connect_to_service;
+use fuchsia_zircon as zx;
 use futures::future::BoxFuture;
 use futures::prelude::*;
 use log::info;
@@ -108,6 +111,18 @@ impl Installer for FuchsiaInstaller {
             }
 
             Err(FuchsiaInstallError::Installer)
+        }
+        .boxed()
+    }
+
+    fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>> {
+        async move {
+            zx::Status::ok(
+                connect_to_service::<fidl_fuchsia_device_manager::AdministratorMarker>()?
+                    .suspend(fidl_fuchsia_device_manager::SUSPEND_FLAG_REBOOT)
+                    .await?,
+            )
+            .map_err(|e| anyhow!("Suspend error: {}", e))
         }
         .boxed()
     }

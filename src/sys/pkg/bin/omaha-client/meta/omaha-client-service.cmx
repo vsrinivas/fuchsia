@@ -16,6 +16,7 @@
             "fuchsia.boot.Arguments",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.cobalt.SystemDataUpdater",
+            "fuchsia.device.manager.Administrator",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
             "fuchsia.paver.Paver",

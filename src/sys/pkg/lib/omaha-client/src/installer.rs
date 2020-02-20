@@ -45,6 +45,10 @@ pub trait Installer {
         install_plan: &Self::InstallPlan,
         observer: Option<&dyn ProgressObserver>,
     ) -> BoxFuture<'_, Result<(), Self::Error>>;
+
+    /// Perform a reboot of the system (in whichever manner that the installer needs to perform
+    /// a reboot.  This fn may not get an opportunity to return.
+    fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>>;
 }
 
 /// The trait for observing progress on the initiated installation.
