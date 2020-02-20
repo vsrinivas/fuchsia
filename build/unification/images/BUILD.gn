@@ -1294,7 +1294,7 @@ aggregate_manifest("migrated-image") {
     "//src/developer/cmd:bin-manifest",
     "//src/devices/serial/drivers/serial-async:serial-async-manifest",
     "//zircon/system/uapp/audio:bin-manifest",
-    "//zircon/system/uapp/backlight:backlight-manifest",
+    "//src/ui/backlight/bin/backlight:backlight-manifest",
     "//zircon/system/uapp/dd:dd-manifest",
     "//zircon/system/uapp/df:df-manifest",
 
