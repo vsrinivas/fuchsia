@@ -20,7 +20,6 @@
 
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
-//#include "src/ui/a11y/lib/semantics/tests/semantic_tree_parser.h"
 #include "src/ui/a11y/lib/util/util.h"
 
 namespace accessibility_test {
@@ -88,8 +87,7 @@ TEST_F(ViewManagerTest, GetsTreeByKoid) {
   view_manager_.SetSemanticsEnabled(true);
   MockSemanticProvider semantic_provider(&view_manager_);
   RunLoopUntilIdle();
-  const auto tree_weak_ptr =
-      view_manager_.GetTreeByKoid(a11y::GetKoid(semantic_provider.view_ref()));
+  const auto tree_weak_ptr = view_manager_.GetTreeByKoid(semantic_provider.koid());
   EXPECT_TRUE(tree_weak_ptr);
   EXPECT_EQ(tree_weak_ptr->Size(), 0u);
 }
@@ -98,15 +96,13 @@ TEST_F(ViewManagerTest, ClosesChannel) {
   view_manager_.SetSemanticsEnabled(true);
   MockSemanticProvider semantic_provider(&view_manager_);
   RunLoopUntilIdle();
-  const auto tree_weak_ptr =
-      view_manager_.GetTreeByKoid(a11y::GetKoid(semantic_provider.view_ref()));
+  const auto tree_weak_ptr = view_manager_.GetTreeByKoid(semantic_provider.koid());
   EXPECT_TRUE(tree_weak_ptr);
   EXPECT_EQ(tree_weak_ptr->Size(), 0u);
   // Forces the client to disconnect.
   semantic_provider.SendEventPairSignal();
   RunLoopUntilIdle();
-  const auto invalid_tree_weak_ptr =
-      view_manager_.GetTreeByKoid(a11y::GetKoid(semantic_provider.view_ref()));
+  const auto invalid_tree_weak_ptr = view_manager_.GetTreeByKoid(semantic_provider.koid());
   EXPECT_FALSE(invalid_tree_weak_ptr);
 }
 
@@ -116,9 +112,8 @@ TEST_F(ViewManagerTest, LogFileRemoved) {
   view_manager_.SetSemanticsEnabled(true);
   MockSemanticProvider semantic_provider(&view_manager_);
   RunLoopUntilIdle();
-  const auto tree_weak_ptr =
-      view_manager_.GetTreeByKoid(a11y::GetKoid(semantic_provider.view_ref()));
-  std::string debug_file = std::to_string(a11y::GetKoid(semantic_provider.view_ref()));
+  const auto tree_weak_ptr = view_manager_.GetTreeByKoid(semantic_provider.koid());
+  std::string debug_file = std::to_string(semantic_provider.koid());
   {
     vfs::internal::Node* node;
     EXPECT_EQ(ZX_OK, debug_dir()->Lookup(debug_file, &node));

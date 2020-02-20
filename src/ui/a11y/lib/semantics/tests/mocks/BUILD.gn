@@ -22,6 +22,7 @@ source_set("mocks") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
+    "//src/ui/a11y/lib/util",
   ]
 
   deps = [

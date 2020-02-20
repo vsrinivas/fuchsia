@@ -11,6 +11,7 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"
+#include "src/ui/a11y/lib/util/util.h"
 
 namespace accessibility_test {
 
@@ -24,7 +25,7 @@ class MockSemanticProvider {
   explicit MockSemanticProvider(fuchsia::accessibility::semantics::SemanticsManager* manager);
   ~MockSemanticProvider() = default;
 
-  const fuchsia::ui::views::ViewRef& view_ref() const { return view_ref_; };
+  zx_koid_t koid() const { return a11y::GetKoid(view_ref_); };
 
   // Calls UpdateSemanticNodes() on SemanticTree with given nodes list.
   void UpdateSemanticNodes(std::vector<fuchsia::accessibility::semantics::Node> nodes);

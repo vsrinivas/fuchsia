@@ -96,15 +96,14 @@ TEST_F(ExploreActionTest, ReadLabel) {
 
   // Check that the committed node is present in the semantic tree.
   vfs::internal::Node* test_node;
-  ASSERT_EQ(ZX_OK, debug_dir()->Lookup(std::to_string(a11y::GetKoid(semantic_provider_.view_ref())),
-                                       &test_node));
+  ASSERT_EQ(ZX_OK, debug_dir()->Lookup(std::to_string(semantic_provider_.koid()), &test_node));
   char buffer[kMaxLogBufferSize];
   accessibility_test::ReadFile(test_node, kSemanticTreeSingle.size(), buffer);
   EXPECT_EQ(kSemanticTreeSingle, buffer);
 
   a11y::ExploreAction explore_action(&action_context_);
   a11y::ExploreAction::ActionData action_data;
-  action_data.koid = a11y::GetKoid(semantic_provider_.view_ref());
+  action_data.koid = semantic_provider_.koid();
 
   semantic_provider_.SetHitTestResult(0);
 
