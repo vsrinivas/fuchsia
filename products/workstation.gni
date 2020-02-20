@@ -34,6 +34,8 @@ cache_package_labels += [
 universe_package_labels += [
   "//src/ui/examples:spinning_square_view",
   "//src/ui/examples:bouncing_ball",
+  "//examples/fidl/echo_client/cpp:echo_client",
+  "//examples/fidl/echo_server/cpp:echo_server",
 ]
 
 kernel_cmdline_args += [
