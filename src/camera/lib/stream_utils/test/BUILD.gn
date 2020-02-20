@@ -12,4 +12,7 @@ executable("test") {
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main_with_syslog",
   ]
+
+  # TODO(46547): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
