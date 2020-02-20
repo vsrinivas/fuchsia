@@ -23,9 +23,11 @@
 #include "src/developer/debug/zxdb/console/commands/verb_kill.h"
 #include "src/developer/debug/zxdb/console/commands/verb_libs.h"
 #include "src/developer/debug/zxdb/console/commands/verb_list.h"
+#include "src/developer/debug/zxdb/console/commands/verb_locals.h"
 #include "src/developer/debug/zxdb/console/commands/verb_mem_analyze.h"
 #include "src/developer/debug/zxdb/console/commands/verb_mem_read.h"
 #include "src/developer/debug/zxdb/console/commands/verb_opendump.h"
+#include "src/developer/debug/zxdb/console/commands/verb_print.h"
 #include "src/developer/debug/zxdb/console/commands/verb_ps.h"
 #include "src/developer/debug/zxdb/console/commands/verb_quit.h"
 #include "src/developer/debug/zxdb/console/commands/verb_quit_agent.h"
@@ -118,9 +120,11 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     all_verbs[Verb::kLibs] = GetLibsVerbRecord();
     all_verbs[Verb::kList] = GetListVerbRecord();
     all_verbs[Verb::kListProcesses] = GetPsVerbRecord();
+    all_verbs[Verb::kLocals] = GetLocalsVerbRecord();
     all_verbs[Verb::kMemAnalyze] = GetMemAnalyzeVerbRecord();
     all_verbs[Verb::kMemRead] = GetMemReadVerbRecord();
     all_verbs[Verb::kOpenDump] = GetOpendumpVerbRecord();
+    all_verbs[Verb::kPrint] = GetPrintVerbRecord();
     all_verbs[Verb::kQuitAgent] = GetQuitAgentVerbRecord();
     all_verbs[Verb::kQuit] = GetQuitVerbRecord();
     all_verbs[Verb::kRegs] = GetRegsVerbRecord();
