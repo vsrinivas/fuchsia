@@ -24,6 +24,7 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 #include <vm/vm_aspace.h>
+#include <vm/vm_object_paged.h>
 
 #include "vm_priv.h"
 
@@ -118,56 +119,42 @@ void vm_init() {
 
   VmAspace* aspace = VmAspace::kernel_aspace();
 
-  // we expect the kernel to be in a temporary mapping, define permanent
-  // regions for those now
-  struct temp_region {
-    const char* name;
-    vaddr_t base;
-    size_t size;
-    uint arch_mmu_flags;
-  } regions[] = {
-      {
-          .name = "kernel_code",
-          .base = (vaddr_t)__code_start,
-          .size = ROUNDUP((uintptr_t)__code_end - (uintptr_t)__code_start, PAGE_SIZE),
-          .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_EXECUTE,
-      },
-      {
-          .name = "kernel_rodata",
-          .base = (vaddr_t)__rodata_start,
-          .size = ROUNDUP((uintptr_t)__rodata_end - (uintptr_t)__rodata_start, PAGE_SIZE),
-          .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ,
-      },
-      {
-          .name = "kernel_data",
-          .base = (vaddr_t)__data_start,
-          .size = ROUNDUP((uintptr_t)__data_end - (uintptr_t)__data_start, PAGE_SIZE),
-          .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
-      },
-      {
-          .name = "kernel_bss",
-          .base = (vaddr_t)__bss_start,
-          .size = ROUNDUP((uintptr_t)_end - (uintptr_t)__bss_start, PAGE_SIZE),
-          .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
-      },
-  };
+  fbl::RefPtr<VmAddressRegion> kernel_region;
+  // | kernel_region_size | is the size in bytes of the region of memory occupied by the kernel
+  // program's various segments (code, rodata, data, bss, etc.), inclusive of any gaps between
+  // them.
+  size_t kernel_region_size = get_kernel_size();
+  // Create a VMAR that covers the address space occupied by the kernel program segments (code,
+  // rodata, data, bss ,etc.). By creating this VMAR, we are effectively marking these addresses as
+  // off limits to the VM. That way, the VM won't inadverantly use them for something else. This is
+  // consistent with the initial mapping in start.S where the whole kernel region mapping was
+  // written into the page table.
+  //
+  // Note: Even though there might be usable gaps in between the segments, we're covering the whole
+  // regions. The thinking is that it's both simpler and safer to not use the address space that
+  // exists between kernel program segments.
+  zx_status_t status = aspace->RootVmar()->CreateSubVmar(
+      kernel_regions[0].base - aspace->RootVmar()->base(), kernel_region_size, 0,
+      VMAR_FLAG_CAN_MAP_SPECIFIC | VMAR_FLAG_SPECIFIC | VMAR_CAN_RWX_FLAGS, "kernel region vmar",
+      &kernel_region);
+  ASSERT(status == ZX_OK);
 
-  for (uint i = 0; i < fbl::count_of(regions); ++i) {
-    temp_region* region = &regions[i];
+  for (uint i = 0; i < fbl::count_of(kernel_regions); ++i) {
+    auto region = &kernel_regions[i];
     ASSERT(IS_PAGE_ALIGNED(region->base));
 
     dprintf(INFO,
             "VM: reserving kernel region [%#" PRIxPTR ", %#" PRIxPTR ") flags %#x name '%s'\n",
             region->base, region->base + region->size, region->arch_mmu_flags, region->name);
-
-    zx_status_t status = aspace->ReserveSpace(region->name, region->size, region->base);
-    ASSERT(status == ZX_OK);
-    status = ProtectRegion(aspace, region->base, region->arch_mmu_flags);
+    status = kernel_region->ReserveSpace(region->name, region->base, region->size,
+                                         region->arch_mmu_flags);
     ASSERT(status == ZX_OK);
   }
 
   // reserve the kernel aspace where the physmap is
-  aspace->ReserveSpace("physmap", PHYSMAP_SIZE, PHYSMAP_BASE);
+  status = aspace->RootVmar()->ReserveSpace("physmap", PHYSMAP_BASE, PHYSMAP_SIZE,
+                                            ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE);
+  ASSERT(status == ZX_OK);
 
 #if !DISABLE_KASLR  // Disable random memory padding for KASLR
   // Reserve random padding of up to 64GB after first mapping. It will make
@@ -177,8 +164,8 @@ void vm_init() {
   crypto::GlobalPRNG::GetInstance()->Draw(&entropy, sizeof(entropy));
 
   size_t random_size = PAGE_ALIGN(entropy % (64ULL * GB));
-  zx_status_t status =
-      aspace->ReserveSpace("random_padding", random_size, PHYSMAP_BASE + PHYSMAP_SIZE);
+  status = aspace->RootVmar()->ReserveSpace(
+      "random_padding", PHYSMAP_BASE + PHYSMAP_SIZE, random_size, 0);
   ASSERT(status == ZX_OK);
   LTRACEF("VM: aspace random padding size: %#" PRIxPTR "\n", random_size);
 #endif

@@ -9,13 +9,15 @@
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_VM_H_
 
 #include <arch.h>
-#include <arch/kernel_aspace.h>
 #include <assert.h>
 #include <list.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
+
+#include <arch/kernel_aspace.h>
+#include <vm/arch_vm_aspace.h>
 
 #define PAGE_ALIGN(x) ALIGN((x), PAGE_SIZE)
 #define ROUNDUP_PAGE_SIZE(x) ROUNDUP((x), PAGE_SIZE)
@@ -59,7 +61,8 @@ void print_mmap(const F &f, uintptr_t bias, const void *begin, const void *end,
   f("{{{mmap:%#lx:%#lx:load:0:%s:%#lx}}}\n", start, size, perm, start + bias);
 }
 
-template <class F> void print_module(const F &f, const char *build_id) {
+template <class F>
+void print_module(const F &f, const char *build_id) {
   f("{{{module:0:kernel:elf:%s}}}\n", build_id);
 }
 
@@ -90,6 +93,41 @@ void vmm_set_active_aspace(vmm_aspace_t* aspace);
 // specialized version of above function that must be called with the thread_lock already held.
 // This is only intended for use by panic handlers.
 void vmm_set_active_aspace_locked(vmm_aspace_t* aspace);
+
+struct kernel_region {
+  const char *name;
+  vaddr_t base;
+  size_t size;
+  uint arch_mmu_flags;
+};
+
+// List of kernel program's various segments.
+static kernel_region kernel_regions[] = {
+    {
+        .name = "kernel_code",
+        .base = (vaddr_t)__code_start,
+        .size = ROUNDUP((uintptr_t)__code_end - (uintptr_t)__code_start, PAGE_SIZE),
+        .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_EXECUTE,
+    },
+    {
+        .name = "kernel_rodata",
+        .base = (vaddr_t)__rodata_start,
+        .size = ROUNDUP((uintptr_t)__rodata_end - (uintptr_t)__rodata_start, PAGE_SIZE),
+        .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ,
+    },
+    {
+        .name = "kernel_data",
+        .base = (vaddr_t)__data_start,
+        .size = ROUNDUP((uintptr_t)__data_end - (uintptr_t)__data_start, PAGE_SIZE),
+        .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
+    },
+    {
+        .name = "kernel_bss",
+        .base = (vaddr_t)__bss_start,
+        .size = ROUNDUP((uintptr_t)_end - (uintptr_t)__bss_start, PAGE_SIZE),
+        .arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
+    },
+};
 
 __END_CDECLS
 

@@ -1755,6 +1755,44 @@ static bool arch_noncontiguous_map() {
   END_TEST;
 }
 
+// Test to make sure all the vm kernel regions (code, rodata, data, bss, etc.) is correctly mapped
+// in vm and has the correct arch_mmu_flags. This test also check that all gaps are contained within
+// a VMAR.
+static bool vm_kernel_region_test() {
+  BEGIN_TEST;
+
+  fbl::RefPtr<VmAddressRegionOrMapping> kernel_vmar =
+      VmAspace::kernel_aspace()->RootVmar()->FindRegion(reinterpret_cast<vaddr_t>(__code_start));
+  EXPECT_NE(kernel_vmar.get(), nullptr);
+  EXPECT_FALSE(kernel_vmar->is_mapping());
+  for (vaddr_t base = reinterpret_cast<vaddr_t>(__code_start);
+       base < reinterpret_cast<vaddr_t>(_end); base += PAGE_SIZE) {
+    bool within_region = false;
+    for (auto kernel_region : kernel_regions) {
+      // This would not overflow because the region base and size are hard-coded.
+      if (base >= kernel_region.base &&
+          base + PAGE_SIZE <= kernel_region.base + kernel_region.size) {
+        // If this page exists within a kernel region, then it should be within a VmMapping with
+        // the correct arch MMU flags.
+        within_region = true;
+        fbl::RefPtr<VmAddressRegionOrMapping> region =
+            kernel_vmar->as_vm_address_region()->FindRegion(base);
+        // Every page from __code_start to _end should either be a VmMapping or a VMAR.
+        EXPECT_NE(region.get(), nullptr);
+        EXPECT_TRUE(region->is_mapping());
+        EXPECT_EQ(kernel_region.arch_mmu_flags, region->as_vm_mapping()->arch_mmu_flags());
+        break;
+      }
+    }
+    if (!within_region) {
+      auto region = VmAspace::kernel_aspace()->RootVmar()->FindRegion(base);
+      EXPECT_EQ(region.get(), kernel_vmar.get());
+    }
+  }
+
+  END_TEST;
+}
+
 namespace {
 bool AddPage(VmPageList* pl, vm_page_t* page, uint64_t offset) {
   if (!pl) {
@@ -2384,6 +2422,7 @@ VM_UNITTEST(vmo_lookup_clone_test)
 VM_UNITTEST(vmo_clone_removes_write_test)
 VM_UNITTEST(vmo_zero_scan_test)
 VM_UNITTEST(arch_noncontiguous_map)
+VM_UNITTEST(vm_kernel_region_test)
 // Uncomment for debugging
 // VM_UNITTEST(dump_all_aspaces)  // Run last
 UNITTEST_END_TESTCASE(vm_tests, "vm", "Virtual memory tests")

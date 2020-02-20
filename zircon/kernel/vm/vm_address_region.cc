@@ -1037,3 +1037,34 @@ zx_status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, ui
   }
   panic("Unexpected allocation failure\n");
 }
+
+zx_status_t VmAddressRegion::ReserveSpace(const char* name, vaddr_t base, size_t size,
+                                          uint arch_mmu_flags) {
+  canary_.Assert();
+  if (!is_in_range(base, size)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  size_t offset = base - base_;
+  // We need a zero-length VMO to pass into CreateVmMapping so that a VmMapping would be created.
+  // The VmMapping is already mapped to physical pages in start.S.
+  // We would never call MapRange on the VmMapping, thus the VMO would never actually allocate any
+  // physical pages and we would never modify the PTE except for the permission change bellow
+  // caused by Protect.
+  fbl::RefPtr<VmObject> vmo;
+  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, 0, &vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+  vmo->set_name(name, strlen(name));
+  // allocate a region and put it in the aspace list
+  fbl::RefPtr<VmMapping> r(nullptr);
+  // Here we use permissive arch_mmu_flags so that the following Protect call would actually
+  // call arch_aspace().Protect to change the mmu_flags in PTE.
+  status = CreateVmMapping(
+      offset, size, 0, VMAR_FLAG_SPECIFIC, vmo, 0,
+      ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE, name, &r);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return r->Protect(base, size, arch_mmu_flags);
+}

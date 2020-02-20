@@ -246,6 +246,11 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
   // Protect() will fail.
   virtual zx_status_t Protect(vaddr_t base, size_t size, uint new_arch_mmu_flags);
 
+  // Reserve a memory region within this VMAR. This region is already mapped in the page table with
+  // |arch_mmu_flags|. VMAR should create a VmMapping for this region even though no physical pages
+  // need to be allocated for this region.
+  zx_status_t ReserveSpace(const char* name, size_t base, size_t size, uint arch_mmu_flags);
+
   const char* name() const { return name_; }
   bool is_mapping() const override { return false; }
   bool has_parent() const;
