@@ -6,8 +6,8 @@ group("ui") {
   deps = [
     "a11y",
     "bin",
-    "drivers",
     "examples",
+    "input",
     "scenic",
     "tools",
   ]
@@ -19,7 +19,7 @@ group("tests") {
   deps = [
     "a11y:tests",
     "bin:tests",
-    "drivers:tests",
+    "input:tests",
     "lib:tests",
     "scenic:tests",
     "testing:tests",

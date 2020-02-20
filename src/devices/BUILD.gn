@@ -30,7 +30,7 @@ generate_manifest("devices.bootfs") {
     "bin",
     "lib/driver",
     "//src/bringup/virtcon:virtual-console",
-    "//src/ui/drivers/hid-input-report",
+    "//src/ui/input/drivers/hid-input-report",
   ]
 
   # TODO(bwb): match the file in the image to the respective build name

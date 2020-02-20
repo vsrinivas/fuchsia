@@ -11,8 +11,8 @@
 #include <zxtest/zxtest.h>
 
 #include "keyboard-vt100.h"
-#include "src/ui/lib/hid-input-report/fidl.h"
-#include "src/ui/lib/hid-input-report/keyboard.h"
+#include "src/ui/input/lib/hid-input-report/fidl.h"
+#include "src/ui/input/lib/hid-input-report/keyboard.h"
 #include "src/ui/lib/key_util/key_util.h"
 
 // Global port needed for IPC calls.
