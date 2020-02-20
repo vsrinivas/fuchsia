@@ -1,7 +1,7 @@
 {
     "program": {
         "args": [
-            "--sniff",
+            "--log-packets",
             "--verbosity=debug"
         ],
         "binary": "bin/netstack"

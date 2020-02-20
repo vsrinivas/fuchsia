@@ -19,7 +19,6 @@ type Result<T = ()> = std::result::Result<T, anyhow::Error>;
 /// Abstraction for a Fuchsia component which offers network stack services.
 trait Netstack {
     const URL: &'static str;
-    const ARGS: &'static [&'static str];
 }
 
 /// Uninstantiable type that represents Netstack2's implementation of a
@@ -27,8 +26,7 @@ trait Netstack {
 enum Netstack2 {}
 
 impl Netstack for Netstack2 {
-    const URL: &'static str = fuchsia_component::fuchsia_single_component_package_url!("netstack");
-    const ARGS: &'static [&'static str] = &["--sniff", "verbosity=debug"];
+    const URL: &'static str = "fuchsia-pkg://fuchsia.com/netstack#meta/netstack_debug.cmx";
 }
 
 /// Uninstantiable type that represents Netstack3's implementation of a
@@ -37,7 +35,6 @@ enum Netstack3 {}
 
 impl Netstack for Netstack3 {
     const URL: &'static str = fuchsia_component::fuchsia_single_component_package_url!("netstack3");
-    const ARGS: &'static [&'static str] = &[];
 }
 
 fn connect_to_service<S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService>(
@@ -119,15 +116,7 @@ fn create_netstack_environment<N: Netstack>(
                     .map(|name| fidl_fuchsia_netemul_environment::LaunchService {
                         name,
                         url: N::URL.to_string(),
-                        arguments: Some(
-                            N::ARGS
-                                // TODO(tamird): use into_iter after
-                                // https://github.com/rust-lang/rust/issues/25725.
-                                .iter()
-                                .map(std::ops::Deref::deref)
-                                .map(str::to_string)
-                                .collect(),
-                        ),
+                        arguments: None,
                     })
                     .chain(
                         Some(

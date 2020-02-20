@@ -14,6 +14,7 @@ import (
 	"os"
 	"reflect"
 	"runtime"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"syscall/zx"
@@ -71,6 +72,39 @@ func (s *bindingSetCounterStat) Value() uint64 {
 	return uint64(sum)
 }
 
+type atomicBool uint32
+
+// IsBoolFlag implements flag.boolFlag.IsBoolFlag.
+//
+// See the flag.Value documentation for more information.
+func (*atomicBool) IsBoolFlag() bool {
+	return true
+}
+
+// Set implements flag.Value.Set.
+func (a *atomicBool) Set(s string) error {
+	v, err := strconv.ParseBool(s)
+	if err != nil {
+		return err
+	}
+	var val uint32
+	if v {
+		val = 1
+	}
+	atomic.StoreUint32((*uint32)(a), val)
+	return nil
+}
+
+// String implements flag.Value.String.
+func (a *atomicBool) String() string {
+	return strconv.FormatBool(atomic.LoadUint32((*uint32)(a)) != 0)
+}
+
+func init() {
+	// As of this writing the default is 1.
+	atomic.StoreUint32(&sniffer.LogPackets, 0)
+}
+
 func Main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -78,16 +112,10 @@ func Main() {
 	logLevel := syslog.InfoLevel
 
 	flags := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-	sniff := flags.Bool("sniff", false, "Enable the sniffer")
+	flags.Var((*atomicBool)(&sniffer.LogPackets), "log-packets", "Enable packet logging")
 	flags.Var(&logLevel, "verbosity", "Set the logging verbosity")
 	if err := flags.Parse(os.Args[1:]); err != nil {
 		panic(err)
-	}
-
-	if *sniff {
-		atomic.StoreUint32(&sniffer.LogPackets, 1)
-	} else {
-		atomic.StoreUint32(&sniffer.LogPackets, 0)
 	}
 
 	appCtx := appcontext.CreateFromStartupInfo()
