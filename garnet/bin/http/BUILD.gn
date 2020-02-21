@@ -90,6 +90,9 @@ executable("http_service_tests_bin") {
     ":lib",
     "//src/lib/fxl/test:gtest_main",
   ]
+
+  # TODO(46731): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("http_service_tests") {
