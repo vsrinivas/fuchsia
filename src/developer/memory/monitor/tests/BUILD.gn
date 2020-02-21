@@ -78,6 +78,9 @@ executable("test-inspect") {
     "//zircon/public/lib/fs",
     "//zircon/public/lib/inspect",
   ]
+
+  # TODO(46756): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("memory_monitor_inspect_integration_tests") {
