@@ -1087,7 +1087,7 @@ inline zx_status_t Clone(const ::fidl::test::json::Union& value,
 
 template<>
 struct Equality<::fidl::test::json::Union> {
-  static inline bool Equals(const ::fidl::test::json::Union& _lhs, const ::fidl::test::json::Union& _rhs) {
+  bool operator()(const ::fidl::test::json::Union& _lhs, const ::fidl::test::json::Union& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -1106,6 +1106,11 @@ struct Equality<::fidl::test::json::Union> {
         return false;
       }
     }
+
+  static inline bool Equals(const ::fidl::test::json::Union& _lhs, const ::fidl::test::json::Union& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::Union>{}(_lhs, _rhs);
+  }
 };
 template <>
 struct IsFidlXUnion<::fidl::test::json::StrictUnion> : public std::true_type {};
@@ -1145,7 +1150,7 @@ inline zx_status_t Clone(const ::fidl::test::json::StrictUnion& value,
 
 template<>
 struct Equality<::fidl::test::json::StrictUnion> {
-  static inline bool Equals(const ::fidl::test::json::StrictUnion& _lhs, const ::fidl::test::json::StrictUnion& _rhs) {
+  bool operator()(const ::fidl::test::json::StrictUnion& _lhs, const ::fidl::test::json::StrictUnion& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -1164,6 +1169,11 @@ struct Equality<::fidl::test::json::StrictUnion> {
         return false;
       }
     }
+
+  static inline bool Equals(const ::fidl::test::json::StrictUnion& _lhs, const ::fidl::test::json::StrictUnion& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::StrictUnion>{}(_lhs, _rhs);
+  }
 };
 template <>
 struct IsFidlXUnion<::fidl::test::json::ReverseOrdinalUnion> : public std::true_type {};
@@ -1203,7 +1213,7 @@ inline zx_status_t Clone(const ::fidl::test::json::ReverseOrdinalUnion& value,
 
 template<>
 struct Equality<::fidl::test::json::ReverseOrdinalUnion> {
-  static inline bool Equals(const ::fidl::test::json::ReverseOrdinalUnion& _lhs, const ::fidl::test::json::ReverseOrdinalUnion& _rhs) {
+  bool operator()(const ::fidl::test::json::ReverseOrdinalUnion& _lhs, const ::fidl::test::json::ReverseOrdinalUnion& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -1220,6 +1230,11 @@ struct Equality<::fidl::test::json::ReverseOrdinalUnion> {
         return false;
       }
     }
+
+  static inline bool Equals(const ::fidl::test::json::ReverseOrdinalUnion& _lhs, const ::fidl::test::json::ReverseOrdinalUnion& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::ReverseOrdinalUnion>{}(_lhs, _rhs);
+  }
 };
 template <>
 struct CodingTraits<::fidl::test::json::Pizza>
@@ -1232,11 +1247,16 @@ inline zx_status_t Clone(const ::fidl::test::json::Pizza& value,
 
 template<>
 struct Equality<::fidl::test::json::Pizza> {
-  static inline bool Equals(const ::fidl::test::json::Pizza& _lhs, const ::fidl::test::json::Pizza& _rhs) {
+  bool operator()(const ::fidl::test::json::Pizza& _lhs, const ::fidl::test::json::Pizza& _rhs) const {
     if (!::fidl::Equals(_lhs.toppings, _rhs.toppings)) {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::fidl::test::json::Pizza& _lhs, const ::fidl::test::json::Pizza& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::Pizza>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -1250,11 +1270,16 @@ inline zx_status_t Clone(const ::fidl::test::json::Pasta& value,
 
 template<>
 struct Equality<::fidl::test::json::Pasta> {
-  static inline bool Equals(const ::fidl::test::json::Pasta& _lhs, const ::fidl::test::json::Pasta& _rhs) {
+  bool operator()(const ::fidl::test::json::Pasta& _lhs, const ::fidl::test::json::Pasta& _rhs) const {
     if (!::fidl::Equals(_lhs.sauce, _rhs.sauce)) {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::fidl::test::json::Pasta& _lhs, const ::fidl::test::json::Pasta& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::Pasta>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -1295,7 +1320,7 @@ inline zx_status_t Clone(const ::fidl::test::json::StrictPizzaOrPasta& value,
 
 template<>
 struct Equality<::fidl::test::json::StrictPizzaOrPasta> {
-  static inline bool Equals(const ::fidl::test::json::StrictPizzaOrPasta& _lhs, const ::fidl::test::json::StrictPizzaOrPasta& _rhs) {
+  bool operator()(const ::fidl::test::json::StrictPizzaOrPasta& _lhs, const ::fidl::test::json::StrictPizzaOrPasta& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -1312,6 +1337,11 @@ struct Equality<::fidl::test::json::StrictPizzaOrPasta> {
         return false;
       }
     }
+
+  static inline bool Equals(const ::fidl::test::json::StrictPizzaOrPasta& _lhs, const ::fidl::test::json::StrictPizzaOrPasta& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::StrictPizzaOrPasta>{}(_lhs, _rhs);
+  }
 };
 template <>
 struct IsFidlXUnion<::fidl::test::json::PizzaOrPasta> : public std::true_type {};
@@ -1351,7 +1381,7 @@ inline zx_status_t Clone(const ::fidl::test::json::PizzaOrPasta& value,
 
 template<>
 struct Equality<::fidl::test::json::PizzaOrPasta> {
-  static inline bool Equals(const ::fidl::test::json::PizzaOrPasta& _lhs, const ::fidl::test::json::PizzaOrPasta& _rhs) {
+  bool operator()(const ::fidl::test::json::PizzaOrPasta& _lhs, const ::fidl::test::json::PizzaOrPasta& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -1368,6 +1398,11 @@ struct Equality<::fidl::test::json::PizzaOrPasta> {
         return false;
       }
     }
+
+  static inline bool Equals(const ::fidl::test::json::PizzaOrPasta& _lhs, const ::fidl::test::json::PizzaOrPasta& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::PizzaOrPasta>{}(_lhs, _rhs);
+  }
 };
 template <>
 struct IsFidlXUnion<::fidl::test::json::FlexiblePizzaOrPasta> : public std::true_type {};
@@ -1407,7 +1442,7 @@ inline zx_status_t Clone(const ::fidl::test::json::FlexiblePizzaOrPasta& value,
 
 template<>
 struct Equality<::fidl::test::json::FlexiblePizzaOrPasta> {
-  static inline bool Equals(const ::fidl::test::json::FlexiblePizzaOrPasta& _lhs, const ::fidl::test::json::FlexiblePizzaOrPasta& _rhs) {
+  bool operator()(const ::fidl::test::json::FlexiblePizzaOrPasta& _lhs, const ::fidl::test::json::FlexiblePizzaOrPasta& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -1424,6 +1459,11 @@ struct Equality<::fidl::test::json::FlexiblePizzaOrPasta> {
         return false;
       }
     }
+
+  static inline bool Equals(const ::fidl::test::json::FlexiblePizzaOrPasta& _lhs, const ::fidl::test::json::FlexiblePizzaOrPasta& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::FlexiblePizzaOrPasta>{}(_lhs, _rhs);
+  }
 };
 template <>
 struct IsFidlXUnion<::fidl::test::json::ExplicitPizzaOrPasta> : public std::true_type {};
@@ -1463,7 +1503,7 @@ inline zx_status_t Clone(const ::fidl::test::json::ExplicitPizzaOrPasta& value,
 
 template<>
 struct Equality<::fidl::test::json::ExplicitPizzaOrPasta> {
-  static inline bool Equals(const ::fidl::test::json::ExplicitPizzaOrPasta& _lhs, const ::fidl::test::json::ExplicitPizzaOrPasta& _rhs) {
+  bool operator()(const ::fidl::test::json::ExplicitPizzaOrPasta& _lhs, const ::fidl::test::json::ExplicitPizzaOrPasta& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -1480,6 +1520,11 @@ struct Equality<::fidl::test::json::ExplicitPizzaOrPasta> {
         return false;
       }
     }
+
+  static inline bool Equals(const ::fidl::test::json::ExplicitPizzaOrPasta& _lhs, const ::fidl::test::json::ExplicitPizzaOrPasta& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::ExplicitPizzaOrPasta>{}(_lhs, _rhs);
+  }
 };
 template <>
 struct CodingTraits<::fidl::test::json::NullableUnionStruct>
@@ -1492,11 +1537,16 @@ inline zx_status_t Clone(const ::fidl::test::json::NullableUnionStruct& value,
 
 template<>
 struct Equality<::fidl::test::json::NullableUnionStruct> {
-  static inline bool Equals(const ::fidl::test::json::NullableUnionStruct& _lhs, const ::fidl::test::json::NullableUnionStruct& _rhs) {
+  bool operator()(const ::fidl::test::json::NullableUnionStruct& _lhs, const ::fidl::test::json::NullableUnionStruct& _rhs) const {
     if (!::fidl::Equals(_lhs.the_union, _rhs.the_union)) {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::fidl::test::json::NullableUnionStruct& _lhs, const ::fidl::test::json::NullableUnionStruct& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::NullableUnionStruct>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -1537,7 +1587,7 @@ inline zx_status_t Clone(const ::fidl::test::json::FlexibleUnion& value,
 
 template<>
 struct Equality<::fidl::test::json::FlexibleUnion> {
-  static inline bool Equals(const ::fidl::test::json::FlexibleUnion& _lhs, const ::fidl::test::json::FlexibleUnion& _rhs) {
+  bool operator()(const ::fidl::test::json::FlexibleUnion& _lhs, const ::fidl::test::json::FlexibleUnion& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -1556,6 +1606,11 @@ struct Equality<::fidl::test::json::FlexibleUnion> {
         return false;
       }
     }
+
+  static inline bool Equals(const ::fidl::test::json::FlexibleUnion& _lhs, const ::fidl::test::json::FlexibleUnion& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::FlexibleUnion>{}(_lhs, _rhs);
+  }
 };
 template <>
 struct IsFidlXUnion<::fidl::test::json::FieldCollision> : public std::true_type {};
@@ -1595,7 +1650,7 @@ inline zx_status_t Clone(const ::fidl::test::json::FieldCollision& value,
 
 template<>
 struct Equality<::fidl::test::json::FieldCollision> {
-  static inline bool Equals(const ::fidl::test::json::FieldCollision& _lhs, const ::fidl::test::json::FieldCollision& _rhs) {
+  bool operator()(const ::fidl::test::json::FieldCollision& _lhs, const ::fidl::test::json::FieldCollision& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -1610,6 +1665,11 @@ struct Equality<::fidl::test::json::FieldCollision> {
         return false;
       }
     }
+
+  static inline bool Equals(const ::fidl::test::json::FieldCollision& _lhs, const ::fidl::test::json::FieldCollision& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::FieldCollision>{}(_lhs, _rhs);
+  }
 };
 template <>
 struct IsFidlXUnion<::fidl::test::json::ExplicitUnion> : public std::true_type {};
@@ -1649,7 +1709,7 @@ inline zx_status_t Clone(const ::fidl::test::json::ExplicitUnion& value,
 
 template<>
 struct Equality<::fidl::test::json::ExplicitUnion> {
-  static inline bool Equals(const ::fidl::test::json::ExplicitUnion& _lhs, const ::fidl::test::json::ExplicitUnion& _rhs) {
+  bool operator()(const ::fidl::test::json::ExplicitUnion& _lhs, const ::fidl::test::json::ExplicitUnion& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -1666,4 +1726,9 @@ struct Equality<::fidl::test::json::ExplicitUnion> {
         return false;
       }
     }
+
+  static inline bool Equals(const ::fidl::test::json::ExplicitUnion& _lhs, const ::fidl::test::json::ExplicitUnion& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::ExplicitUnion>{}(_lhs, _rhs);
+  }
 };}  // namespace fidl

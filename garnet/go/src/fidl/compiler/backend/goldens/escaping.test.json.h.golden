@@ -43,10 +43,15 @@ inline zx_status_t Clone(const ::escapeme::DocCommentWithQuotes& value,
 
 template<>
 struct Equality<::escapeme::DocCommentWithQuotes> {
-  static inline bool Equals(const ::escapeme::DocCommentWithQuotes& _lhs, const ::escapeme::DocCommentWithQuotes& _rhs) {
+  bool operator()(const ::escapeme::DocCommentWithQuotes& _lhs, const ::escapeme::DocCommentWithQuotes& _rhs) const {
     if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::escapeme::DocCommentWithQuotes& _lhs, const ::escapeme::DocCommentWithQuotes& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::escapeme::DocCommentWithQuotes>{}(_lhs, _rhs);
   }
 };}  // namespace fidl

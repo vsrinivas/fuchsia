@@ -544,7 +544,7 @@ inline zx_status_t Clone(const ::fidl::test::json::SimpleTable& _value,
 }
 template<>
 struct Equality<::fidl::test::json::SimpleTable> {
-  static inline bool Equals(const ::fidl::test::json::SimpleTable& _lhs, const ::fidl::test::json::SimpleTable& _rhs) {
+  bool operator()(const ::fidl::test::json::SimpleTable& _lhs, const ::fidl::test::json::SimpleTable& _rhs) const {
     if (_lhs.has_x()) {
       if (!_rhs.has_x()) {
 	return false;
@@ -566,6 +566,11 @@ struct Equality<::fidl::test::json::SimpleTable> {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::fidl::test::json::SimpleTable& _lhs, const ::fidl::test::json::SimpleTable& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::SimpleTable>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -578,7 +583,7 @@ inline zx_status_t Clone(const ::fidl::test::json::ReverseOrdinalTable& _value,
 }
 template<>
 struct Equality<::fidl::test::json::ReverseOrdinalTable> {
-  static inline bool Equals(const ::fidl::test::json::ReverseOrdinalTable& _lhs, const ::fidl::test::json::ReverseOrdinalTable& _rhs) {
+  bool operator()(const ::fidl::test::json::ReverseOrdinalTable& _lhs, const ::fidl::test::json::ReverseOrdinalTable& _rhs) const {
     if (_lhs.has_z()) {
       if (!_rhs.has_z()) {
 	return false;
@@ -610,6 +615,11 @@ struct Equality<::fidl::test::json::ReverseOrdinalTable> {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::fidl::test::json::ReverseOrdinalTable& _lhs, const ::fidl::test::json::ReverseOrdinalTable& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::ReverseOrdinalTable>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -622,7 +632,7 @@ inline zx_status_t Clone(const ::fidl::test::json::OlderSimpleTable& _value,
 }
 template<>
 struct Equality<::fidl::test::json::OlderSimpleTable> {
-  static inline bool Equals(const ::fidl::test::json::OlderSimpleTable& _lhs, const ::fidl::test::json::OlderSimpleTable& _rhs) {
+  bool operator()(const ::fidl::test::json::OlderSimpleTable& _lhs, const ::fidl::test::json::OlderSimpleTable& _rhs) const {
     if (_lhs.has_x()) {
       if (!_rhs.has_x()) {
 	return false;
@@ -635,6 +645,11 @@ struct Equality<::fidl::test::json::OlderSimpleTable> {
     }
     return true;
   }
+
+  static inline bool Equals(const ::fidl::test::json::OlderSimpleTable& _lhs, const ::fidl::test::json::OlderSimpleTable& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::OlderSimpleTable>{}(_lhs, _rhs);
+  }
 };
 template <>
 struct CodingTraits<::fidl::test::json::NewerSimpleTable>
@@ -646,7 +661,7 @@ inline zx_status_t Clone(const ::fidl::test::json::NewerSimpleTable& _value,
 }
 template<>
 struct Equality<::fidl::test::json::NewerSimpleTable> {
-  static inline bool Equals(const ::fidl::test::json::NewerSimpleTable& _lhs, const ::fidl::test::json::NewerSimpleTable& _rhs) {
+  bool operator()(const ::fidl::test::json::NewerSimpleTable& _lhs, const ::fidl::test::json::NewerSimpleTable& _rhs) const {
     if (_lhs.has_x()) {
       if (!_rhs.has_x()) {
 	return false;
@@ -679,6 +694,11 @@ struct Equality<::fidl::test::json::NewerSimpleTable> {
     }
     return true;
   }
+
+  static inline bool Equals(const ::fidl::test::json::NewerSimpleTable& _lhs, const ::fidl::test::json::NewerSimpleTable& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::NewerSimpleTable>{}(_lhs, _rhs);
+  }
 };
 template <>
 struct CodingTraits<::fidl::test::json::EmptyTable>
@@ -690,7 +710,12 @@ inline zx_status_t Clone(const ::fidl::test::json::EmptyTable& _value,
 }
 template<>
 struct Equality<::fidl::test::json::EmptyTable> {
-  static inline bool Equals(const ::fidl::test::json::EmptyTable& _lhs, const ::fidl::test::json::EmptyTable& _rhs) {
+  bool operator()(const ::fidl::test::json::EmptyTable& _lhs, const ::fidl::test::json::EmptyTable& _rhs) const {
     return true;
+  }
+
+  static inline bool Equals(const ::fidl::test::json::EmptyTable& _lhs, const ::fidl::test::json::EmptyTable& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::EmptyTable>{}(_lhs, _rhs);
   }
 };}  // namespace fidl

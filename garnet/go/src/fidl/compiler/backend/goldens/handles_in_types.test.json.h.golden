@@ -243,7 +243,7 @@ inline zx_status_t Clone(const ::test::name::UnionWithHandle& value,
 
 template<>
 struct Equality<::test::name::UnionWithHandle> {
-  static inline bool Equals(const ::test::name::UnionWithHandle& _lhs, const ::test::name::UnionWithHandle& _rhs) {
+  bool operator()(const ::test::name::UnionWithHandle& _lhs, const ::test::name::UnionWithHandle& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -257,6 +257,11 @@ struct Equality<::test::name::UnionWithHandle> {
         return *_lhs.UnknownData() == *_rhs.UnknownData();
       }
     }
+
+  static inline bool Equals(const ::test::name::UnionWithHandle& _lhs, const ::test::name::UnionWithHandle& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::UnionWithHandle>{}(_lhs, _rhs);
+  }
 };
 template <>
 struct CodingTraits<::test::name::TableWithHandle>
@@ -268,7 +273,7 @@ inline zx_status_t Clone(const ::test::name::TableWithHandle& _value,
 }
 template<>
 struct Equality<::test::name::TableWithHandle> {
-  static inline bool Equals(const ::test::name::TableWithHandle& _lhs, const ::test::name::TableWithHandle& _rhs) {
+  bool operator()(const ::test::name::TableWithHandle& _lhs, const ::test::name::TableWithHandle& _rhs) const {
     if (_lhs.has_h()) {
       if (!_rhs.has_h()) {
 	return false;
@@ -280,6 +285,11 @@ struct Equality<::test::name::TableWithHandle> {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::test::name::TableWithHandle& _lhs, const ::test::name::TableWithHandle& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::TableWithHandle>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -293,7 +303,7 @@ inline zx_status_t Clone(const ::test::name::HandlesInTypes& value,
 
 template<>
 struct Equality<::test::name::HandlesInTypes> {
-  static inline bool Equals(const ::test::name::HandlesInTypes& _lhs, const ::test::name::HandlesInTypes& _rhs) {
+  bool operator()(const ::test::name::HandlesInTypes& _lhs, const ::test::name::HandlesInTypes& _rhs) const {
     if (!::fidl::Equals(_lhs.normal_handle, _rhs.normal_handle)) {
       return false;
     }
@@ -313,5 +323,10 @@ struct Equality<::test::name::HandlesInTypes> {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::test::name::HandlesInTypes& _lhs, const ::test::name::HandlesInTypes& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::HandlesInTypes>{}(_lhs, _rhs);
   }
 };}  // namespace fidl

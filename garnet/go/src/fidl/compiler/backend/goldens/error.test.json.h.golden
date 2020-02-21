@@ -340,11 +340,16 @@ inline zx_status_t Clone(const ::fidl::test::json::Example_foo_Response& value,
 
 template<>
 struct Equality<::fidl::test::json::Example_foo_Response> {
-  static inline bool Equals(const ::fidl::test::json::Example_foo_Response& _lhs, const ::fidl::test::json::Example_foo_Response& _rhs) {
+  bool operator()(const ::fidl::test::json::Example_foo_Response& _lhs, const ::fidl::test::json::Example_foo_Response& _rhs) const {
     if (!::fidl::Equals(_lhs.y, _rhs.y)) {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::fidl::test::json::Example_foo_Response& _lhs, const ::fidl::test::json::Example_foo_Response& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::Example_foo_Response>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -385,7 +390,7 @@ inline zx_status_t Clone(const ::fidl::test::json::Example_foo_Result& value,
 
 template<>
 struct Equality<::fidl::test::json::Example_foo_Result> {
-  static inline bool Equals(const ::fidl::test::json::Example_foo_Result& _lhs, const ::fidl::test::json::Example_foo_Result& _rhs) {
+  bool operator()(const ::fidl::test::json::Example_foo_Result& _lhs, const ::fidl::test::json::Example_foo_Result& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -402,4 +407,9 @@ struct Equality<::fidl::test::json::Example_foo_Result> {
         return false;
       }
     }
+
+  static inline bool Equals(const ::fidl::test::json::Example_foo_Result& _lhs, const ::fidl::test::json::Example_foo_Result& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::Example_foo_Result>{}(_lhs, _rhs);
+  }
 };}  // namespace fidl

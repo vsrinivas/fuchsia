@@ -71,7 +71,7 @@ inline zx_status_t Clone(const ::fidl::test::json::Simple& value,
 
 template<>
 struct Equality<::fidl::test::json::Simple> {
-  static inline bool Equals(const ::fidl::test::json::Simple& _lhs, const ::fidl::test::json::Simple& _rhs) {
+  bool operator()(const ::fidl::test::json::Simple& _lhs, const ::fidl::test::json::Simple& _rhs) const {
     if (!::fidl::Equals(_lhs.f1, _rhs.f1)) {
       return false;
     }
@@ -79,6 +79,11 @@ struct Equality<::fidl::test::json::Simple> {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::fidl::test::json::Simple& _lhs, const ::fidl::test::json::Simple& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::Simple>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -92,7 +97,7 @@ inline zx_status_t Clone(const ::fidl::test::json::BasicStruct& value,
 
 template<>
 struct Equality<::fidl::test::json::BasicStruct> {
-  static inline bool Equals(const ::fidl::test::json::BasicStruct& _lhs, const ::fidl::test::json::BasicStruct& _rhs) {
+  bool operator()(const ::fidl::test::json::BasicStruct& _lhs, const ::fidl::test::json::BasicStruct& _rhs) const {
     if (!::fidl::Equals(_lhs.x, _rhs.x)) {
       return false;
     }
@@ -100,5 +105,10 @@ struct Equality<::fidl::test::json::BasicStruct> {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::fidl::test::json::BasicStruct& _lhs, const ::fidl::test::json::BasicStruct& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::BasicStruct>{}(_lhs, _rhs);
   }
 };}  // namespace fidl

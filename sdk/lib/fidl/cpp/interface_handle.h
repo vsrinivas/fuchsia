@@ -163,8 +163,13 @@ class InterfaceHandle final {
 // Equality.
 template <typename T>
 struct Equality<InterfaceHandle<T>> {
-  static bool Equals(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) {
+  bool operator()(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) const {
     return lhs.channel() == rhs.channel();
+  }
+
+  // TODO(46638): Remove this when all clients have been transitioned to functor.
+  static bool Equals(const InterfaceHandle<T>& lhs, const InterfaceHandle<T>& rhs) {
+    return Equality<InterfaceHandle<T>>{}(lhs, rhs);
   }
 };
 

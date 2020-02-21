@@ -43,10 +43,15 @@ inline zx_status_t Clone(const ::example::Foo& value,
 
 template<>
 struct Equality<::example::Foo> {
-  static inline bool Equals(const ::example::Foo& _lhs, const ::example::Foo& _rhs) {
+  bool operator()(const ::example::Foo& _lhs, const ::example::Foo& _rhs) const {
     if (!::fidl::Equals(_lhs.field, _rhs.field)) {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::example::Foo& _lhs, const ::example::Foo& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::example::Foo>{}(_lhs, _rhs);
   }
 };}  // namespace fidl

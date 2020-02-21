@@ -1297,7 +1297,7 @@ inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ResponseAsStruct_Re
 
 template<>
 struct Equality<::test::name::WithErrorSyntax_ResponseAsStruct_Response> {
-  static inline bool Equals(const ::test::name::WithErrorSyntax_ResponseAsStruct_Response& _lhs, const ::test::name::WithErrorSyntax_ResponseAsStruct_Response& _rhs) {
+  bool operator()(const ::test::name::WithErrorSyntax_ResponseAsStruct_Response& _lhs, const ::test::name::WithErrorSyntax_ResponseAsStruct_Response& _rhs) const {
     if (!::fidl::Equals(_lhs.a, _rhs.a)) {
       return false;
     }
@@ -1308,6 +1308,11 @@ struct Equality<::test::name::WithErrorSyntax_ResponseAsStruct_Response> {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::test::name::WithErrorSyntax_ResponseAsStruct_Response& _lhs, const ::test::name::WithErrorSyntax_ResponseAsStruct_Response& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::WithErrorSyntax_ResponseAsStruct_Response>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -1348,7 +1353,7 @@ inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ResponseAsStruct_Re
 
 template<>
 struct Equality<::test::name::WithErrorSyntax_ResponseAsStruct_Result> {
-  static inline bool Equals(const ::test::name::WithErrorSyntax_ResponseAsStruct_Result& _lhs, const ::test::name::WithErrorSyntax_ResponseAsStruct_Result& _rhs) {
+  bool operator()(const ::test::name::WithErrorSyntax_ResponseAsStruct_Result& _lhs, const ::test::name::WithErrorSyntax_ResponseAsStruct_Result& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -1365,6 +1370,11 @@ struct Equality<::test::name::WithErrorSyntax_ResponseAsStruct_Result> {
         return false;
       }
     }
+
+  static inline bool Equals(const ::test::name::WithErrorSyntax_ResponseAsStruct_Result& _lhs, const ::test::name::WithErrorSyntax_ResponseAsStruct_Result& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::WithErrorSyntax_ResponseAsStruct_Result>{}(_lhs, _rhs);
+  }
 };
 template <>
 struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>
@@ -1377,11 +1387,16 @@ inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Re
 
 template<>
 struct Equality<::test::name::WithErrorSyntax_ErrorAsPrimitive_Response> {
-  static inline bool Equals(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& _lhs, const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& _rhs) {
+  bool operator()(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& _lhs, const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& _rhs) const {
     if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& _lhs, const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -1422,7 +1437,7 @@ inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Re
 
 template<>
 struct Equality<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result> {
-  static inline bool Equals(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& _lhs, const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& _rhs) {
+  bool operator()(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& _lhs, const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -1439,6 +1454,11 @@ struct Equality<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result> {
         return false;
       }
     }
+
+  static inline bool Equals(const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& _lhs, const ::test::name::WithErrorSyntax_ErrorAsPrimitive_Result& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::WithErrorSyntax_ErrorAsPrimitive_Result>{}(_lhs, _rhs);
+  }
 };
 template <>
 struct CodingTraits<::test::name::WithErrorSyntax_ErrorAsEnum_Response>
@@ -1451,11 +1471,16 @@ inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsEnum_Respons
 
 template<>
 struct Equality<::test::name::WithErrorSyntax_ErrorAsEnum_Response> {
-  static inline bool Equals(const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& _lhs, const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& _rhs) {
+  bool operator()(const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& _lhs, const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& _rhs) const {
     if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& _lhs, const ::test::name::WithErrorSyntax_ErrorAsEnum_Response& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::WithErrorSyntax_ErrorAsEnum_Response>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -1479,8 +1504,13 @@ inline zx_status_t Clone(::test::name::ErrorEnun value,
 }
 template<>
 struct Equality<::test::name::ErrorEnun> {
-  static inline bool Equals(const ::test::name::ErrorEnun& _lhs, const ::test::name::ErrorEnun& _rhs) {
+  bool operator()(const ::test::name::ErrorEnun& _lhs, const ::test::name::ErrorEnun& _rhs) const {
     return _lhs == _rhs;
+  }
+
+  static inline bool Equals(const ::test::name::ErrorEnun& _lhs, const ::test::name::ErrorEnun& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::ErrorEnun>{}(_lhs, _rhs);
   }
 };
 
@@ -1523,7 +1553,7 @@ inline zx_status_t Clone(const ::test::name::WithErrorSyntax_ErrorAsEnum_Result&
 
 template<>
 struct Equality<::test::name::WithErrorSyntax_ErrorAsEnum_Result> {
-  static inline bool Equals(const ::test::name::WithErrorSyntax_ErrorAsEnum_Result& _lhs, const ::test::name::WithErrorSyntax_ErrorAsEnum_Result& _rhs) {
+  bool operator()(const ::test::name::WithErrorSyntax_ErrorAsEnum_Result& _lhs, const ::test::name::WithErrorSyntax_ErrorAsEnum_Result& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -1540,4 +1570,9 @@ struct Equality<::test::name::WithErrorSyntax_ErrorAsEnum_Result> {
         return false;
       }
     }
+
+  static inline bool Equals(const ::test::name::WithErrorSyntax_ErrorAsEnum_Result& _lhs, const ::test::name::WithErrorSyntax_ErrorAsEnum_Result& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::WithErrorSyntax_ErrorAsEnum_Result>{}(_lhs, _rhs);
+  }
 };}  // namespace fidl

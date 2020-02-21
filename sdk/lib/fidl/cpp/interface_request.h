@@ -129,8 +129,13 @@ using InterfaceRequestHandler = fit::function<void(fidl::InterfaceRequest<Interf
 // Equality.
 template <typename T>
 struct Equality<InterfaceRequest<T>> {
-  static bool Equals(const InterfaceRequest<T>& lhs, const InterfaceRequest<T>& rhs) {
+  bool operator()(const InterfaceRequest<T>& lhs, const InterfaceRequest<T>& rhs) const {
     return lhs.channel() == rhs.channel();
+  }
+
+  // TODO(46638): Remove this when all clients have been transitioned to functor.
+  static bool Equals(const InterfaceRequest<T>& lhs, const InterfaceRequest<T>& rhs) {
+    return Equality<InterfaceRequest<T>>{}(lhs, rhs);
   }
 };
 

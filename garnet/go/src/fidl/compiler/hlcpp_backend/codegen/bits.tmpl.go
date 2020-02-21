@@ -91,10 +91,15 @@ inline zx_status_t Clone({{ .Namespace }}::{{ .Name }} value,
 
 template<>
 struct Equality<{{ .Namespace }}::{{ .Name }}> {
-  static inline bool Equals(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) {
+  bool operator()(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) const {
     {{ .Type }} _lhs_underlying = static_cast<{{ .Type }}>(_lhs);
     {{ .Type }} _rhs_underlying = static_cast<{{ .Type }}>(_rhs);
-    return Equality<{{ .Type }}>::Equals(_lhs_underlying, _rhs_underlying);
+    return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
+  }
+
+  static inline bool Equals(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<{{ .Namespace }}::{{ .Name }}>{}(_lhs, _rhs);
   }
 };
 {{- end }}

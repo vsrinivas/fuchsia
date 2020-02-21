@@ -48,7 +48,7 @@ inline zx_status_t Clone(const ::example::ByteAndBytes& value,
 
 template<>
 struct Equality<::example::ByteAndBytes> {
-  static inline bool Equals(const ::example::ByteAndBytes& _lhs, const ::example::ByteAndBytes& _rhs) {
+  bool operator()(const ::example::ByteAndBytes& _lhs, const ::example::ByteAndBytes& _rhs) const {
     if (!::fidl::Equals(_lhs.single_byte, _rhs.single_byte)) {
       return false;
     }
@@ -62,5 +62,10 @@ struct Equality<::example::ByteAndBytes> {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::example::ByteAndBytes& _lhs, const ::example::ByteAndBytes& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::example::ByteAndBytes>{}(_lhs, _rhs);
   }
 };}  // namespace fidl

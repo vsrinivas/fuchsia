@@ -61,8 +61,13 @@ inline zx_status_t Clone(::test::name::MyStrictEnum value,
 }
 template<>
 struct Equality<::test::name::MyStrictEnum> {
-  static inline bool Equals(const ::test::name::MyStrictEnum& _lhs, const ::test::name::MyStrictEnum& _rhs) {
+  bool operator()(const ::test::name::MyStrictEnum& _lhs, const ::test::name::MyStrictEnum& _rhs) const {
     return _lhs == _rhs;
+  }
+
+  static inline bool Equals(const ::test::name::MyStrictEnum& _lhs, const ::test::name::MyStrictEnum& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::MyStrictEnum>{}(_lhs, _rhs);
   }
 };
 
@@ -88,8 +93,13 @@ inline zx_status_t Clone(::test::name::MyEnum value,
 }
 template<>
 struct Equality<::test::name::MyEnum> {
-  static inline bool Equals(const ::test::name::MyEnum& _lhs, const ::test::name::MyEnum& _rhs) {
+  bool operator()(const ::test::name::MyEnum& _lhs, const ::test::name::MyEnum& _rhs) const {
     return _lhs == _rhs;
+  }
+
+  static inline bool Equals(const ::test::name::MyEnum& _lhs, const ::test::name::MyEnum& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::MyEnum>{}(_lhs, _rhs);
   }
 };
 

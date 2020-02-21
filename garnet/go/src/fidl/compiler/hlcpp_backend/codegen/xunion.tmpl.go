@@ -433,7 +433,7 @@ inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
 
 template<>
 struct Equality<{{ .Namespace }}::{{ .Name }}> {
-  static inline bool Equals(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) {
+  bool operator()(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -455,6 +455,11 @@ struct Equality<{{ .Namespace }}::{{ .Name }}> {
       {{ end -}}
       }
     {{end -}}
+  }
+
+  static inline bool Equals(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<{{ .Namespace }}::{{ .Name }}>{}(_lhs, _rhs);
   }
 };
 

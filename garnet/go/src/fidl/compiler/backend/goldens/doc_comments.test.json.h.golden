@@ -558,7 +558,7 @@ inline zx_status_t Clone(const ::test::name::Union& value,
 
 template<>
 struct Equality<::test::name::Union> {
-  static inline bool Equals(const ::test::name::Union& _lhs, const ::test::name::Union& _rhs) {
+  bool operator()(const ::test::name::Union& _lhs, const ::test::name::Union& _rhs) const {
     if (_lhs.Ordinal() != _rhs.Ordinal()) {
       return false;
     }
@@ -573,6 +573,11 @@ struct Equality<::test::name::Union> {
         return false;
       }
     }
+
+  static inline bool Equals(const ::test::name::Union& _lhs, const ::test::name::Union& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::Union>{}(_lhs, _rhs);
+  }
 };
 template <>
 struct CodingTraits<::test::name::Table>
@@ -584,7 +589,7 @@ inline zx_status_t Clone(const ::test::name::Table& _value,
 }
 template<>
 struct Equality<::test::name::Table> {
-  static inline bool Equals(const ::test::name::Table& _lhs, const ::test::name::Table& _rhs) {
+  bool operator()(const ::test::name::Table& _lhs, const ::test::name::Table& _rhs) const {
     if (_lhs.has_Field()) {
       if (!_rhs.has_Field()) {
 	return false;
@@ -596,6 +601,11 @@ struct Equality<::test::name::Table> {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::test::name::Table& _lhs, const ::test::name::Table& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::Table>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -609,11 +619,16 @@ inline zx_status_t Clone(const ::test::name::Struct& value,
 
 template<>
 struct Equality<::test::name::Struct> {
-  static inline bool Equals(const ::test::name::Struct& _lhs, const ::test::name::Struct& _rhs) {
+  bool operator()(const ::test::name::Struct& _lhs, const ::test::name::Struct& _rhs) const {
     if (!::fidl::Equals(_lhs.Field, _rhs.Field)) {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::test::name::Struct& _lhs, const ::test::name::Struct& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::Struct>{}(_lhs, _rhs);
   }
 };
 template <>
@@ -637,8 +652,13 @@ inline zx_status_t Clone(::test::name::MyEnum value,
 }
 template<>
 struct Equality<::test::name::MyEnum> {
-  static inline bool Equals(const ::test::name::MyEnum& _lhs, const ::test::name::MyEnum& _rhs) {
+  bool operator()(const ::test::name::MyEnum& _lhs, const ::test::name::MyEnum& _rhs) const {
     return _lhs == _rhs;
+  }
+
+  static inline bool Equals(const ::test::name::MyEnum& _lhs, const ::test::name::MyEnum& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::MyEnum>{}(_lhs, _rhs);
   }
 };
 
@@ -665,9 +685,14 @@ inline zx_status_t Clone(::test::name::MyBits value,
 
 template<>
 struct Equality<::test::name::MyBits> {
-  static inline bool Equals(const ::test::name::MyBits& _lhs, const ::test::name::MyBits& _rhs) {
+  bool operator()(const ::test::name::MyBits& _lhs, const ::test::name::MyBits& _rhs) const {
     uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
     uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
-    return Equality<uint32_t>::Equals(_lhs_underlying, _rhs_underlying);
+    return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
+  }
+
+  static inline bool Equals(const ::test::name::MyBits& _lhs, const ::test::name::MyBits& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::MyBits>{}(_lhs, _rhs);
   }
 };}  // namespace fidl

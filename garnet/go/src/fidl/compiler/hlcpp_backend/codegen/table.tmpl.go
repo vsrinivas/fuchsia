@@ -243,7 +243,7 @@ inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& _value,
 }
 template<>
 struct Equality<{{ .Namespace }}::{{ .Name }}> {
-  static inline bool Equals(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) {
+  bool operator()(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) const {
     {{- range .Members }}
     if (_lhs.{{ .MethodHasName }}()) {
       if (!_rhs.{{ .MethodHasName }}()) {
@@ -257,6 +257,11 @@ struct Equality<{{ .Namespace }}::{{ .Name }}> {
     }
     {{- end }}
     return true;
+  }
+
+  static inline bool Equals(const {{ .Namespace }}::{{ .Name }}& _lhs, const {{ .Namespace }}::{{ .Name }}& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<{{ .Namespace }}::{{ .Name }}>{}(_lhs, _rhs);
   }
 };
 

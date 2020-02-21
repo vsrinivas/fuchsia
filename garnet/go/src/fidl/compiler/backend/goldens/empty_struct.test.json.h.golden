@@ -257,10 +257,15 @@ inline zx_status_t Clone(const ::fidl::test::json::Empty& value,
 
 template<>
 struct Equality<::fidl::test::json::Empty> {
-  static inline bool Equals(const ::fidl::test::json::Empty& _lhs, const ::fidl::test::json::Empty& _rhs) {
+  bool operator()(const ::fidl::test::json::Empty& _lhs, const ::fidl::test::json::Empty& _rhs) const {
     if (!::fidl::Equals(_lhs.__reserved, _rhs.__reserved)) {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::fidl::test::json::Empty& _lhs, const ::fidl::test::json::Empty& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::fidl::test::json::Empty>{}(_lhs, _rhs);
   }
 };}  // namespace fidl

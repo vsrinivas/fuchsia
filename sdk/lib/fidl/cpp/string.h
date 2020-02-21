@@ -172,7 +172,7 @@ class StringPtr final {
   const std::string& operator*() const { return str_; }
 
   FIDL_FIT_OPTIONAL_DEPRECATED("use value_or(\"\")")
-  operator const std::string&() const { return str_; }
+  operator const std::string &() const { return str_; }
 
  private:
   std::string str_;
@@ -183,94 +183,96 @@ class StringPtr final {
 
 template <>
 struct Equality<StringPtr> {
-  static inline bool Equals(const StringPtr& a, const StringPtr& b) {
-    if (!a.has_value()) {
-      return !b.has_value();
+  bool operator()(const StringPtr& lhs, const StringPtr& rhs) const {
+    if (!lhs.has_value()) {
+      return !rhs.has_value();
     }
-    return !!b.has_value() && a.value() == b.value();
+    return rhs.has_value() && lhs.value() == rhs.value();
+  }
+
+  // TODO(46638): Remove this when all clients have been transitioned to functor.
+  static inline bool Equals(const StringPtr& lhs, const StringPtr& rhs) {
+    return ::fidl::Equality<StringPtr>{}(lhs, rhs);
   }
 };
 
-inline bool operator==(const StringPtr& a, const StringPtr& b) {
-  if (!a.has_value()) {
-    return !b.has_value();
-  }
-  return !!b.has_value() && a.value() == b.value();
+inline bool operator==(const StringPtr& lhs, const StringPtr& rhs) {
+  return ::fidl::Equality<StringPtr>{}(lhs, rhs);
 }
 
-inline bool operator==(const char* a, const StringPtr& b) {
-  if (a == nullptr) {
-    return !b.has_value();
+inline bool operator==(const char* lhs, const StringPtr& rhs) {
+  if (lhs == nullptr) {
+    return !rhs.has_value();
   }
-  return !!b.has_value() && a == b.value();
+  return rhs.has_value() && lhs == rhs.value();
 }
 
-inline bool operator==(const StringPtr& a, const char* b) {
-  if (!a.has_value()) {
-    return b == nullptr;
+inline bool operator==(const StringPtr& lhs, const char* rhs) {
+  if (!lhs.has_value()) {
+    return rhs == nullptr;
   }
-  return b != nullptr && a.value() == b;
+  return rhs != nullptr && lhs.value() == rhs;
 }
 
-inline bool operator!=(const StringPtr& a, const StringPtr& b) { return !(a == b); }
+inline bool operator!=(const StringPtr& lhs, const StringPtr& rhs) { return !(lhs == rhs); }
 
-inline bool operator!=(const char* a, const StringPtr& b) { return !(a == b); }
+inline bool operator!=(const char* lhs, const StringPtr& rhs) { return !(lhs == rhs); }
 
-inline bool operator!=(const StringPtr& a, const char* b) { return !(a == b); }
+inline bool operator!=(const StringPtr& lhs, const char* rhs) { return !(lhs == rhs); }
 
-inline bool operator<(const StringPtr& a, const StringPtr& b) {
-  if (!a.has_value() || !b.has_value()) {
-    return !!b.has_value();
+inline bool operator<(const StringPtr& lhs, const StringPtr& rhs) {
+  if (!lhs.has_value() || !rhs.has_value()) {
+    return rhs.has_value();
   }
-  return *a < *b;
+  return *lhs < *rhs;
 }
 
-inline bool operator<(const char* a, const StringPtr& b) {
-  if (a == nullptr || !b.has_value()) {
-    return !!b.has_value();
+inline bool operator<(const char* lhs, const StringPtr& rhs) {
+  if (lhs == nullptr || !rhs.has_value()) {
+    return rhs.has_value();
   }
-  return a < *b;
+  return lhs < *rhs;
 }
 
-inline bool operator<(const StringPtr& a, const char* b) {
-  if (!a.has_value() || b == nullptr) {
-    return b != nullptr;
+inline bool operator<(const StringPtr& lhs, const char* rhs) {
+  if (!lhs.has_value() || rhs == nullptr) {
+    return rhs != nullptr;
   }
-  return *a < b;
+  return *lhs < rhs;
 }
 
-inline bool operator>(const StringPtr& a, const StringPtr& b) {
-  if (!a.has_value() || !b.has_value()) {
-    return !!a.has_value();
+inline bool operator>(const StringPtr& lhs, const StringPtr& rhs) {
+  if (!lhs.has_value() || !rhs.has_value()) {
+    return !!lhs.has_value();
   }
-  return *a > *b;
+  return *lhs > *rhs;
 }
 
-inline bool operator>(const char* a, const StringPtr& b) {
-  if (a == nullptr || !b.has_value()) {
-    return a != nullptr;
+inline bool operator>(const char* lhs, const StringPtr& rhs) {
+  if (lhs == nullptr || !rhs.has_value()) {
+    return lhs != nullptr;
   }
-  return a > *b;
+  return lhs > *rhs;
 }
 
-inline bool operator>(const StringPtr& a, const char* b) {
-  if (!a.has_value() || b == nullptr) {
-    return a != nullptr;
+inline bool operator>(const StringPtr& lhs, const char* rhs) {
+  if (!lhs.has_value() || rhs == nullptr) {
+    return lhs != nullptr;
   }
-  return *a > b;
+  return *lhs > rhs;
 }
 
-inline bool operator<=(const StringPtr& a, const StringPtr& b) { return !(a > b); }
+inline bool operator<=(const StringPtr& lhs, const StringPtr& rhs) { return !(lhs > rhs); }
 
-inline bool operator<=(const char* a, const StringPtr& b) { return !(a > b); }
+inline bool operator<=(const char* lhs, const StringPtr& rhs) { return !(lhs > rhs); }
 
-inline bool operator<=(const StringPtr& a, const char* b) { return !(a > b); }
+inline bool operator<=(const StringPtr& lhs, const char* rhs) { return !(lhs > rhs); }
 
-inline bool operator>=(const StringPtr& a, const StringPtr& b) { return !(a < b); }
+inline bool operator>=(const StringPtr& lhs, const StringPtr& rhs) { return !(lhs < rhs); }
 
-inline bool operator>=(const char* a, const StringPtr& b) { return !(a < b); }
+inline bool operator>=(const char* lhs, const StringPtr& rhs) { return !(lhs < rhs); }
 
-inline bool operator>=(const StringPtr& a, const char* b) { return !(a < b); }
+inline bool operator>=(const StringPtr& lhs, const char* rhs) { return !(lhs < rhs); }
 
 #if defined(FIDL_USE_FIT_OPTIONAL)
 FIDL_FIT_OPTIONAL_DEPRECATED("Use value_or(\"\")")

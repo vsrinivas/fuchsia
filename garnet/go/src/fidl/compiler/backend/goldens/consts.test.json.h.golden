@@ -85,8 +85,13 @@ inline zx_status_t Clone(::test::name::EnumType value,
 }
 template<>
 struct Equality<::test::name::EnumType> {
-  static inline bool Equals(const ::test::name::EnumType& _lhs, const ::test::name::EnumType& _rhs) {
+  bool operator()(const ::test::name::EnumType& _lhs, const ::test::name::EnumType& _rhs) const {
     return _lhs == _rhs;
+  }
+
+  static inline bool Equals(const ::test::name::EnumType& _lhs, const ::test::name::EnumType& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::EnumType>{}(_lhs, _rhs);
   }
 };
 
@@ -112,8 +117,13 @@ inline zx_status_t Clone(::test::name::BitsType value,
 }
 template<>
 struct Equality<::test::name::BitsType> {
-  static inline bool Equals(const ::test::name::BitsType& _lhs, const ::test::name::BitsType& _rhs) {
+  bool operator()(const ::test::name::BitsType& _lhs, const ::test::name::BitsType& _rhs) const {
     return _lhs == _rhs;
+  }
+
+  static inline bool Equals(const ::test::name::BitsType& _lhs, const ::test::name::BitsType& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::test::name::BitsType>{}(_lhs, _rhs);
   }
 };
 

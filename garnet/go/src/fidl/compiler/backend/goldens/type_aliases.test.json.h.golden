@@ -61,7 +61,7 @@ inline zx_status_t Clone(const ::example::ExampleOfUseOfAliases& value,
 
 template<>
 struct Equality<::example::ExampleOfUseOfAliases> {
-  static inline bool Equals(const ::example::ExampleOfUseOfAliases& _lhs, const ::example::ExampleOfUseOfAliases& _rhs) {
+  bool operator()(const ::example::ExampleOfUseOfAliases& _lhs, const ::example::ExampleOfUseOfAliases& _rhs) const {
     if (!::fidl::Equals(_lhs.field_of_u32, _rhs.field_of_u32)) {
       return false;
     }
@@ -93,5 +93,10 @@ struct Equality<::example::ExampleOfUseOfAliases> {
       return false;
     }
     return true;
+  }
+
+  static inline bool Equals(const ::example::ExampleOfUseOfAliases& _lhs, const ::example::ExampleOfUseOfAliases& _rhs) {
+    // TODO(46638): Remove this when all clients have been transitioned to functor.
+    return ::fidl::Equality<::example::ExampleOfUseOfAliases>{}(_lhs, _rhs);
   }
 };}  // namespace fidl

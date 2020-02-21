@@ -244,7 +244,7 @@ class VectorPtr {
   // To mutate the vector, use operator* or operator-> or one of the mutation
   // functions.
   FIDL_FIT_OPTIONAL_DEPRECATED("use value_or()")
-  operator const std::vector<T>&() const { return vec_; }
+  operator const std::vector<T> &() const { return vec_; }
 
  private:
   std::vector<T> vec_;
@@ -255,11 +255,16 @@ class VectorPtr {
 
 template <class T>
 struct Equality<VectorPtr<T>> {
-  static inline bool Equals(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) {
+  bool operator()(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) const {
     if (!lhs.has_value() || !rhs.has_value()) {
       return !lhs.has_value() == !rhs.has_value();
     }
-    return Equality<std::vector<T>>::Equals(lhs.value(), rhs.value());
+    return ::fidl::Equality<std::vector<T>>{}(lhs.value(), rhs.value());
+  }
+
+  // TODO(46638): Remove this when all clients have been transitioned to functor.
+  static inline bool Equals(const VectorPtr<T>& lhs, const VectorPtr<T>& rhs) {
+    return ::fidl::Equality<VectorPtr<T>>{}(lhs, rhs);
   }
 };
 
