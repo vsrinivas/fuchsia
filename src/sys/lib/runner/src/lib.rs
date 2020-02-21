@@ -4,10 +4,7 @@
 
 pub mod component;
 
-use {
-    cm_rust::data::DictionaryExt, fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys,
-    std::path::Path, thiserror::Error,
-};
+use {cm_rust::data::ObjectExt, fidl_fuchsia_sys2 as fsys, std::path::Path, thiserror::Error};
 
 /// An error encountered operating on `ComponentStartInfo`.
 #[derive(Debug, PartialEq, Eq, Error)]
@@ -49,7 +46,7 @@ pub fn get_program_binary(
 ) -> Result<String, StartInfoProgramError> {
     if let Some(program) = &start_info.program {
         if let Some(val) = program.find("binary") {
-            if let fdata::Value::Str(bin) = val {
+            if let fsys::Value::Str(bin) = val {
                 if !Path::new(bin).is_absolute() {
                     Ok(bin.to_string())
                 } else {
@@ -72,12 +69,12 @@ pub fn get_program_args(
 ) -> Result<Vec<String>, StartInfoProgramError> {
     if let Some(program) = &start_info.program {
         if let Some(args) = program.find("args") {
-            if let fdata::Value::Vec(vec) = args {
+            if let fsys::Value::Vec(vec) = args {
                 return vec
                     .values
                     .iter()
                     .map(|v| {
-                        if let Some(fdata::Value::Str(a)) = v.as_ref().map(|x| &**x) {
+                        if let Some(fsys::Value::Str(a)) = v.as_ref().map(|x| &**x) {
                             Ok(a.clone())
                         } else {
                             Err(StartInfoProgramError::InvalidArguments)
@@ -114,11 +111,11 @@ mod tests {
     #[test]
     fn get_program_binary_test() {
         let new_start_info = |binary_name: Option<&str>| fsys::ComponentStartInfo {
-            program: Some(fdata::Dictionary {
-                entries: vec![fdata::Entry {
+            program: Some(fsys::Object {
+                entries: vec![fsys::Entry {
                     key: "binary".to_string(),
                     value: binary_name
-                        .and_then(|s| Some(Box::new(fdata::Value::Str(s.to_string())))),
+                        .and_then(|s| Some(Box::new(fsys::Value::Str(s.to_string())))),
                 }],
             }),
             ns: None,
@@ -140,12 +137,12 @@ mod tests {
         );
     }
 
-    fn new_args_set(args: Vec<Option<Box<fdata::Value>>>) -> fsys::ComponentStartInfo {
+    fn new_args_set(args: Vec<Option<Box<fsys::Value>>>) -> fsys::ComponentStartInfo {
         fsys::ComponentStartInfo {
-            program: Some(fdata::Dictionary {
-                entries: vec![fdata::Entry {
+            program: Some(fsys::Object {
+                entries: vec![fsys::Entry {
                     key: "args".to_string(),
-                    value: Some(Box::new(fdata::Value::Vec(fdata::Vector { values: args }))),
+                    value: Some(Box::new(fsys::Value::Vec(fsys::Vector { values: args }))),
                 }],
             }),
             ns: None,
@@ -162,7 +159,7 @@ mod tests {
         assert_eq!(
             e,
             get_program_args(&fsys::ComponentStartInfo {
-                program: Some(fdata::Dictionary { entries: vec![] }),
+                program: Some(fsys::Object { entries: vec![] }),
                 ns: None,
                 outgoing_dir: None,
                 runtime_dir: None,
@@ -175,7 +172,7 @@ mod tests {
 
         assert_eq!(
             Ok(vec!["a".to_string()]),
-            get_program_args(&new_args_set(vec![Some(Box::new(fdata::Value::Str(
+            get_program_args(&new_args_set(vec![Some(Box::new(fsys::Value::Str(
                 "a".to_string()
             )))]))
         );
@@ -183,22 +180,22 @@ mod tests {
         assert_eq!(
             Ok(vec!["a".to_string(), "b".to_string()]),
             get_program_args(&new_args_set(vec![
-                Some(Box::new(fdata::Value::Str("a".to_string()))),
-                Some(Box::new(fdata::Value::Str("b".to_string()))),
+                Some(Box::new(fsys::Value::Str("a".to_string()))),
+                Some(Box::new(fsys::Value::Str("b".to_string()))),
             ]))
         );
 
         assert_eq!(
             Err(StartInfoProgramError::InvalidArguments),
             get_program_args(&new_args_set(vec![
-                Some(Box::new(fdata::Value::Str("a".to_string()))),
+                Some(Box::new(fsys::Value::Str("a".to_string()))),
                 None,
             ]))
         );
 
         assert_eq!(
             Err(StartInfoProgramError::InvalidArguments),
-            get_program_args(&new_args_set(vec![Some(Box::new(fdata::Value::Inum(1))),]))
+            get_program_args(&new_args_set(vec![Some(Box::new(fsys::Value::Inum(1))),]))
         );
     }
 }

@@ -156,7 +156,6 @@ mod tests {
         super::*,
         cm_fidl_translator, directory_broker,
         fidl::endpoints::ServerEnd,
-        fidl_fuchsia_data as fdata,
         fidl_fuchsia_io::NodeMarker,
         fuchsia_async as fasync,
         std::path::Path,
@@ -227,10 +226,10 @@ mod tests {
         let fsys::Component { resolved_url, decl, package } = component;
         assert_eq!(resolved_url.unwrap(), url);
         let expected_decl = fsys::ComponentDecl {
-            program: Some(fdata::Dictionary {
-                entries: vec![fdata::Entry {
+            program: Some(fsys::Object {
+                entries: vec![fsys::Entry {
                     key: "binary".to_string(),
-                    value: Some(Box::new(fdata::Value::Str("bin/hello_world".to_string()))),
+                    value: Some(Box::new(fsys::Value::Str("bin/hello_world".to_string()))),
                 }],
             }),
             uses: Some(vec![fsys::UseDecl::Runner(fsys::UseRunnerDecl {

@@ -919,7 +919,7 @@
     "facets": {
       "type": "object",
       "title": "Facets",
-      "description": "Freeform dictionary containing third-party metadata"
+      "description": "Freeform object containing third-party metadata"
     },
     "runners": {
       "type": "array",

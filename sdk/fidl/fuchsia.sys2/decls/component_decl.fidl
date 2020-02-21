@@ -5,7 +5,6 @@
 library fuchsia.sys2;
 
 using fuchsia.component;
-using fuchsia.data;
 
 /// A component declaration.
 ///
@@ -32,7 +31,7 @@ table ComponentDecl {
     ///   The environment variables to provide to the executable at runtime.
     ///
     /// Other runners may define different entries.
-    1: fuchsia.data.Dictionary program;
+    1: Object program;
 
     /// List of capabilities used by the component. These consist of
     /// capabilities offered to the component that are installed in its incoming
@@ -56,7 +55,7 @@ table ComponentDecl {
     4: vector<OfferDecl> offers;
 
     /// Additional metadata about the component.
-    5: fuchsia.data.Dictionary facets;
+    5: Object facets;
 
     /// The component's statically instantiated children. The children must have
     /// unique names.

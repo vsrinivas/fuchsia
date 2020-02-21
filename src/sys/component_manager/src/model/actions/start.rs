@@ -162,7 +162,7 @@ async fn make_execution_runtime(
     )?;
     let start_info = fsys::ComponentStartInfo {
         resolved_url: Some(url),
-        program: data::clone_option_dictionary(&decl.program),
+        program: data::clone_option_object(&decl.program),
         ns: Some(ns),
         outgoing_dir: Some(ServerEnd::new(outgoing_dir_server)),
         runtime_dir: Some(ServerEnd::new(runtime_dir_server)),

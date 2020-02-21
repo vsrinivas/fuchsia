@@ -5,7 +5,7 @@
 use {
     cm_fidl_validator,
     cm_json::{self, cm, Error},
-    fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_sys2 as fsys,
     serde_json::{Map, Value},
 };
 
@@ -408,42 +408,42 @@ impl CmInto<fsys::StartupMode> for cm::StartupMode {
     }
 }
 
-impl CmInto<Option<fdata::Dictionary>> for Option<Map<String, Value>> {
-    fn cm_into(self) -> Result<Option<fdata::Dictionary>, Error> {
+impl CmInto<Option<fsys::Object>> for Option<Map<String, Value>> {
+    fn cm_into(self) -> Result<Option<fsys::Object>, Error> {
         match self {
             Some(from) => {
-                let dict = dictionary_from_map(from)?;
-                Ok(Some(dict))
+                let obj = object_from_map(from)?;
+                Ok(Some(obj))
             }
             None => Ok(None),
         }
     }
 }
 
-fn dictionary_from_map(in_obj: Map<String, Value>) -> Result<fdata::Dictionary, Error> {
-    let mut out = fdata::Dictionary { entries: vec![] };
+fn object_from_map(in_obj: Map<String, Value>) -> Result<fsys::Object, Error> {
+    let mut out = fsys::Object { entries: vec![] };
     for (k, v) in in_obj {
         if let Some(value) = convert_value(v)? {
-            out.entries.push(fdata::Entry { key: k, value: Some(value) });
+            out.entries.push(fsys::Entry { key: k, value: Some(value) });
         }
     }
     Ok(out)
 }
 
-fn convert_value(v: Value) -> Result<Option<Box<fdata::Value>>, Error> {
+fn convert_value(v: Value) -> Result<Option<Box<fsys::Value>>, Error> {
     Ok(match v {
         Value::Null => None,
-        Value::Bool(b) => Some(Box::new(fdata::Value::Bit(b))),
+        Value::Bool(b) => Some(Box::new(fsys::Value::Bit(b))),
         Value::Number(n) => {
             if let Some(i) = n.as_i64() {
-                Some(Box::new(fdata::Value::Inum(i)))
+                Some(Box::new(fsys::Value::Inum(i)))
             } else if let Some(f) = n.as_f64() {
-                Some(Box::new(fdata::Value::Fnum(f)))
+                Some(Box::new(fsys::Value::Fnum(f)))
             } else {
                 return Err(Error::Parse(format!("Number is out of range: {}", n)));
             }
         }
-        Value::String(s) => Some(Box::new(fdata::Value::Str(s.clone()))),
+        Value::String(s) => Some(Box::new(fsys::Value::Str(s.clone()))),
         Value::Array(a) => {
             let mut values = vec![];
             for v in a {
@@ -451,12 +451,12 @@ fn convert_value(v: Value) -> Result<Option<Box<fdata::Value>>, Error> {
                     values.push(Some(value));
                 }
             }
-            let vector = fdata::Vector { values };
-            Some(Box::new(fdata::Value::Vec(vector)))
+            let vector = fsys::Vector { values };
+            Some(Box::new(fsys::Value::Vec(vector)))
         }
         Value::Object(o) => {
-            let dict = dictionary_from_map(o)?;
-            Some(Box::new(fdata::Value::Dict(dict)))
+            let obj = object_from_map(o)?;
+            Some(Box::new(fsys::Value::Obj(obj)))
         }
     })
 }
@@ -532,10 +532,10 @@ mod tests {
                 }
             }),
             output = {
-                let program = fdata::Dictionary{entries: vec![
-                    fdata::Entry{
+                let program = fsys::Object{entries: vec![
+                    fsys::Entry{
                         key: "binary".to_string(),
-                        value: Some(Box::new(fdata::Value::Str("bin/app".to_string()))),
+                        value: Some(Box::new(fsys::Value::Str("bin/app".to_string()))),
                     }
                 ]};
                 let mut decl = new_component_decl();
@@ -543,7 +543,7 @@ mod tests {
                 decl
             },
         },
-        test_translate_dictionary_primitive => {
+        test_translate_object_primitive => {
             input = json!({
                 "program": {
                     "string": "bar",
@@ -554,22 +554,22 @@ mod tests {
                 }
             }),
             output = {
-                let program = fdata::Dictionary{entries: vec![
-                    fdata::Entry{
+                let program = fsys::Object{entries: vec![
+                    fsys::Entry{
                         key: "bool".to_string(),
-                        value: Some(Box::new(fdata::Value::Bit(true))),
+                        value: Some(Box::new(fsys::Value::Bit(true))),
                     },
-                    fdata::Entry{
+                    fsys::Entry{
                         key: "float".to_string(),
-                        value: Some(Box::new(fdata::Value::Fnum(3.14))),
+                        value: Some(Box::new(fsys::Value::Fnum(3.14))),
                     },
-                    fdata::Entry{
+                    fsys::Entry{
                         key: "int".to_string(),
-                        value: Some(Box::new(fdata::Value::Inum(-42))),
+                        value: Some(Box::new(fsys::Value::Inum(-42))),
                     },
-                    fdata::Entry{
+                    fsys::Entry{
                         key: "string".to_string(),
-                        value: Some(Box::new(fdata::Value::Str("bar".to_string()))),
+                        value: Some(Box::new(fsys::Value::Str("bar".to_string()))),
                     },
                 ]};
                 let mut decl = new_component_decl();
@@ -577,7 +577,7 @@ mod tests {
                 decl
             },
         },
-        test_translate_dictionary_nested => {
+        test_translate_object_nested => {
             input = json!({
                 "program": {
                     "obj": {
@@ -592,30 +592,30 @@ mod tests {
                 }
             }),
             output = {
-                let dict_inner = fdata::Dictionary{entries: vec![
-                    fdata::Entry{
+                let obj_inner = fsys::Object{entries: vec![
+                    fsys::Entry{
                         key: "string".to_string(),
-                        value: Some(Box::new(fdata::Value::Str("bar".to_string()))),
+                        value: Some(Box::new(fsys::Value::Str("bar".to_string()))),
                     },
                 ]};
-                let vector = fdata::Vector{values: vec![
-                    Some(Box::new(fdata::Value::Dict(dict_inner))),
-                    Some(Box::new(fdata::Value::Inum(-42)))
+                let vector = fsys::Vector{values: vec![
+                    Some(Box::new(fsys::Value::Obj(obj_inner))),
+                    Some(Box::new(fsys::Value::Inum(-42)))
                 ]};
-                let dict_outer = fdata::Dictionary{entries: vec![
-                    fdata::Entry{
+                let obj_outer = fsys::Object{entries: vec![
+                    fsys::Entry{
                         key: "array".to_string(),
-                        value: Some(Box::new(fdata::Value::Vec(vector))),
+                        value: Some(Box::new(fsys::Value::Vec(vector))),
                     },
                 ]};
-                let program = fdata::Dictionary{entries: vec![
-                    fdata::Entry{
+                let program = fsys::Object{entries: vec![
+                    fsys::Entry{
                         key: "bool".to_string(),
-                        value: Some(Box::new(fdata::Value::Bit(true))),
+                        value: Some(Box::new(fsys::Value::Bit(true))),
                     },
-                    fdata::Entry{
+                    fsys::Entry{
                         key: "obj".to_string(),
-                        value: Some(Box::new(fdata::Value::Dict(dict_outer))),
+                        value: Some(Box::new(fsys::Value::Obj(obj_outer))),
                     },
                 ]};
                 let mut decl = new_component_decl();
@@ -1397,22 +1397,22 @@ mod tests {
                 }
             }),
             output = {
-                let vector = fdata::Vector{values: vec![
-                    Some(Box::new(fdata::Value::Str("me".to_string()))),
-                    Some(Box::new(fdata::Value::Str("you".to_string()))),
+                let vector = fsys::Vector{values: vec![
+                    Some(Box::new(fsys::Value::Str("me".to_string()))),
+                    Some(Box::new(fsys::Value::Str("you".to_string()))),
                 ]};
-                let facets = fdata::Dictionary{entries: vec![
-                    fdata::Entry{
+                let facets = fsys::Object{entries: vec![
+                    fsys::Entry{
                         key: "authors".to_string(),
-                        value: Some(Box::new(fdata::Value::Vec(vector))),
+                        value: Some(Box::new(fsys::Value::Vec(vector))),
                     },
-                    fdata::Entry{
+                    fsys::Entry{
                         key: "title".to_string(),
-                        value: Some(Box::new(fdata::Value::Str("foo".to_string()))),
+                        value: Some(Box::new(fsys::Value::Str("foo".to_string()))),
                     },
-                    fdata::Entry{
+                    fsys::Entry{
                         key: "year".to_string(),
-                        value: Some(Box::new(fdata::Value::Inum(2018))),
+                        value: Some(Box::new(fsys::Value::Inum(2018))),
                     },
                 ]};
                 let mut decl = new_component_decl();
@@ -1566,10 +1566,10 @@ mod tests {
                 ]
             }),
             output = {
-                let program = fdata::Dictionary {entries: vec![
-                    fdata::Entry {
+                let program = fsys::Object {entries: vec![
+                    fsys::Entry {
                         key: "binary".to_string(),
-                        value: Some(Box::new(fdata::Value::Str("bin/app".to_string()))),
+                        value: Some(Box::new(fsys::Value::Str("bin/app".to_string()))),
                     },
                 ]};
                 let uses = vec![
@@ -1625,14 +1625,14 @@ mod tests {
                         durability: Some(fsys::Durability::Persistent),
                     },
                 ];
-                let facets = fdata::Dictionary {entries: vec![
-                    fdata::Entry {
+                let facets = fsys::Object {entries: vec![
+                    fsys::Entry {
                         key: "author".to_string(),
-                        value: Some(Box::new(fdata::Value::Str("Fuchsia".to_string()))),
+                        value: Some(Box::new(fsys::Value::Str("Fuchsia".to_string()))),
                     },
-                    fdata::Entry {
+                    fsys::Entry {
                         key: "year".to_string(),
-                        value: Some(Box::new(fdata::Value::Inum(2018))),
+                        value: Some(Box::new(fsys::Value::Inum(2018))),
                     },
                 ]};
                 let storages = vec![

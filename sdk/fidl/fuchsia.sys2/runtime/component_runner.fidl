@@ -4,7 +4,6 @@
 
 library fuchsia.sys2;
 
-using fuchsia.data;
 using fuchsia.io;
 using fuchsia.component;
 
@@ -56,7 +55,7 @@ table ComponentStartInfo {
 
     /// The component's program declaration.
     /// This information originates from `ComponentDecl.program`.
-    2: fuchsia.data.Dictionary program;
+    2: Object program;
 
     /// The namespace to provide to the component instance.
     3: ComponentNamespace ns;

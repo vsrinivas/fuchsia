@@ -1,12 +1,12 @@
 use anyhow::Error;
 use cm_fidl_translator;
-use fidl_fuchsia_data as fd;
 use fidl_fuchsia_io2 as fio2;
 use fidl_fuchsia_sys2::{
     ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, DependencyType, Durability,
-    ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeServiceDecl, FrameworkRef,
-    OfferDecl, OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl, RealmRef, Ref, RunnerDecl,
-    SelfRef, StartupMode, UseDecl, UseProtocolDecl, UseRunnerDecl, UseServiceDecl,
+    Entry, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeServiceDecl, FrameworkRef,
+    Object, OfferDecl, OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl, RealmRef, Ref,
+    RunnerDecl, SelfRef, StartupMode, UseDecl, UseProtocolDecl, UseRunnerDecl, UseServiceDecl,
+    Value,
 };
 use std::fs::File;
 use std::io::Read;
@@ -19,10 +19,10 @@ fn main() {
 
     let cm_decl = cm_fidl_translator::translate(&cm_content).expect("could not translate cm");
     let expected_decl = {
-        let program = fd::Dictionary {
-            entries: vec![fd::Entry {
+        let program = Object {
+            entries: vec![Entry {
                 key: "binary".to_string(),
-                value: Some(Box::new(fd::Value::Str("bin/example".to_string()))),
+                value: Some(Box::new(Value::Str("bin/example".to_string()))),
             }],
         };
         let uses = vec![
@@ -111,13 +111,13 @@ fn main() {
             name: Some("modular".to_string()),
             durability: Some(Durability::Persistent),
         }];
-        let facets = fd::Dictionary {
+        let facets = Object {
             entries: vec![
-                fd::Entry {
+                Entry {
                     key: "author".to_string(),
-                    value: Some(Box::new(fd::Value::Str("Fuchsia".to_string()))),
+                    value: Some(Box::new(Value::Str("Fuchsia".to_string()))),
                 },
-                fd::Entry { key: "year".to_string(), value: Some(Box::new(fd::Value::Inum(2018))) },
+                Entry { key: "year".to_string(), value: Some(Box::new(Value::Inum(2018))) },
             ],
         };
         ComponentDecl {

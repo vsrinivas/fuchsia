@@ -36,7 +36,7 @@ pub struct Document {
     /// Storage capability declarations.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub storage: Option<Vec<Storage>>,
-    /// Freeform dictionary containing third-party metadata.
+    /// Freeform object containing third-party metadata.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub facets: Option<Map<String, Value>>,
     /// Runner capability declarations.

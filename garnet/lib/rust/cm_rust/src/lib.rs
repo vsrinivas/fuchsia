@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    cm_fidl_validator, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2,
-    fidl_fuchsia_sys2 as fsys,
+    cm_fidl_validator, fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
     std::collections::HashMap,
     std::convert::{From, TryFrom, TryInto},
     std::fmt,
@@ -160,14 +159,14 @@ macro_rules! fidl_into_vec {
 
 #[derive(Debug, PartialEq, Default)]
 pub struct ComponentDecl {
-    pub program: Option<fdata::Dictionary>,
+    pub program: Option<fsys::Object>,
     pub uses: Vec<UseDecl>,
     pub exposes: Vec<ExposeDecl>,
     pub offers: Vec<OfferDecl>,
     pub children: Vec<ChildDecl>,
     pub collections: Vec<CollectionDecl>,
     pub storage: Vec<StorageDecl>,
-    pub facets: Option<fdata::Dictionary>,
+    pub facets: Option<fsys::Object>,
     pub runners: Vec<RunnerDecl>,
     pub environments: Vec<EnvironmentDecl>,
 }
@@ -330,14 +329,14 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
 impl Clone for ComponentDecl {
     fn clone(&self) -> Self {
         ComponentDecl {
-            program: data::clone_option_dictionary(&self.program),
+            program: data::clone_option_object(&self.program),
             uses: self.uses.clone(),
             exposes: self.exposes.clone(),
             offers: self.offers.clone(),
             children: self.children.clone(),
             collections: self.collections.clone(),
             storage: self.storage.clone(),
-            facets: data::clone_option_dictionary(&self.facets),
+            facets: data::clone_option_object(&self.facets),
             runners: self.runners.clone(),
             environments: self.environments.clone(),
         }
@@ -544,11 +543,11 @@ fidl_into_vec!(EnvironmentDecl, fsys::EnvironmentDecl);
 fidl_translations_opt_type!(String);
 fidl_translations_opt_type!(fsys::StartupMode);
 fidl_translations_opt_type!(fsys::Durability);
-fidl_translations_opt_type!(fdata::Dictionary);
+fidl_translations_opt_type!(fsys::Object);
 fidl_translations_opt_type!(fio2::Operations);
 fidl_translations_opt_type!(fsys::EnvironmentExtends);
 fidl_translations_identical!(Option<fio2::Operations>);
-fidl_translations_identical!(Option<fdata::Dictionary>);
+fidl_translations_identical!(Option<fsys::Object>);
 fidl_translations_identical!(Option<String>);
 
 /// A path to a capability.
@@ -667,9 +666,9 @@ impl fmt::Display for CapabilityName {
 }
 
 // TODO: Runners and third parties can use this to parse `program` or `facets`.
-impl FidlIntoNative<Option<HashMap<String, Value>>> for Option<fdata::Dictionary> {
+impl FidlIntoNative<Option<HashMap<String, Value>>> for Option<fsys::Object> {
     fn fidl_into_native(self) -> Option<HashMap<String, Value>> {
-        self.map(|d| from_fidl_dict(d))
+        self.map(|d| from_fidl_obj(d))
     }
 }
 
@@ -730,32 +729,32 @@ pub enum Value {
     Fnum(f64),
     Str(String),
     Vec(Vec<Value>),
-    Dict(HashMap<String, Value>),
+    Obj(HashMap<String, Value>),
     Null,
 }
 
-impl FidlIntoNative<Value> for Option<Box<fdata::Value>> {
+impl FidlIntoNative<Value> for Option<Box<fsys::Value>> {
     fn fidl_into_native(self) -> Value {
         match self {
             Some(v) => match *v {
-                fdata::Value::Bit(b) => Value::Bit(b),
-                fdata::Value::Inum(i) => Value::Inum(i),
-                fdata::Value::Fnum(f) => Value::Fnum(f),
-                fdata::Value::Str(s) => Value::Str(s),
-                fdata::Value::Vec(v) => Value::Vec(from_fidl_vec(v)),
-                fdata::Value::Dict(d) => Value::Dict(from_fidl_dict(d)),
+                fsys::Value::Bit(b) => Value::Bit(b),
+                fsys::Value::Inum(i) => Value::Inum(i),
+                fsys::Value::Fnum(f) => Value::Fnum(f),
+                fsys::Value::Str(s) => Value::Str(s),
+                fsys::Value::Vec(v) => Value::Vec(from_fidl_vec(v)),
+                fsys::Value::Obj(d) => Value::Obj(from_fidl_obj(d)),
             },
             None => Value::Null,
         }
     }
 }
 
-fn from_fidl_vec(vec: fdata::Vector) -> Vec<Value> {
+fn from_fidl_vec(vec: fsys::Vector) -> Vec<Value> {
     vec.values.into_iter().map(|v| v.fidl_into_native()).collect()
 }
 
-fn from_fidl_dict(dict: fdata::Dictionary) -> HashMap<String, Value> {
-    dict.entries.into_iter().map(|e| (e.key, e.value.fidl_into_native())).collect()
+fn from_fidl_obj(obj: fsys::Object) -> HashMap<String, Value> {
+    obj.entries.into_iter().map(|e| (e.key, e.value.fidl_into_native())).collect()
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1431,10 +1430,10 @@ mod tests {
         },
         try_from_all => {
             input = fsys::ComponentDecl {
-               program: Some(fdata::Dictionary{entries: vec![
-                   fdata::Entry{
+               program: Some(fsys::Object{entries: vec![
+                   fsys::Entry{
                        key: "binary".to_string(),
-                       value: Some(Box::new(fdata::Value::Str("bin/app".to_string()))),
+                       value: Some(Box::new(fsys::Value::Str("bin/app".to_string()))),
                    },
                ]}),
                uses: Some(vec![
@@ -1609,10 +1608,10 @@ mod tests {
                         durability: Some(fsys::Durability::Transient),
                     },
                ]),
-               facets: Some(fdata::Dictionary{entries: vec![
-                   fdata::Entry{
+               facets: Some(fsys::Object{entries: vec![
+                   fsys::Entry{
                        key: "author".to_string(),
-                       value: Some(Box::new(fdata::Value::Str("Fuchsia".to_string()))),
+                       value: Some(Box::new(fsys::Value::Str("Fuchsia".to_string()))),
                    },
                ]}),
                storage: Some(vec![
@@ -1639,10 +1638,10 @@ mod tests {
             },
             result = {
                 ComponentDecl {
-                    program: Some(fdata::Dictionary{entries: vec![
-                        fdata::Entry{
+                    program: Some(fsys::Object{entries: vec![
+                        fsys::Entry{
                             key: "binary".to_string(),
-                            value: Some(Box::new(fdata::Value::Str("bin/app".to_string()))),
+                            value: Some(Box::new(fsys::Value::Str("bin/app".to_string()))),
                         },
                     ]}),
                     uses: vec![
@@ -1773,10 +1772,10 @@ mod tests {
                             durability: fsys::Durability::Transient,
                         },
                     ],
-                    facets: Some(fdata::Dictionary{entries: vec![
-                       fdata::Entry{
+                    facets: Some(fsys::Object{entries: vec![
+                       fsys::Entry{
                            key: "author".to_string(),
-                           value: Some(Box::new(fdata::Value::Str("Fuchsia".to_string()))),
+                           value: Some(Box::new(fsys::Value::Str("Fuchsia".to_string()))),
                        },
                     ]}),
                     storage: vec![
@@ -1944,67 +1943,67 @@ mod tests {
     }
 
     test_fidl_into! {
-        fidl_into_dictionary => {
+        fidl_into_object => {
             input = {
-                let dict_inner = fdata::Dictionary{entries: vec![
-                    fdata::Entry{
+                let obj_inner = fsys::Object{entries: vec![
+                    fsys::Entry{
                         key: "string".to_string(),
-                        value: Some(Box::new(fdata::Value::Str("bar".to_string()))),
+                        value: Some(Box::new(fsys::Value::Str("bar".to_string()))),
                     },
                 ]};
-                let vector = fdata::Vector{values: vec![
-                    Some(Box::new(fdata::Value::Dict(dict_inner))),
-                    Some(Box::new(fdata::Value::Inum(-42)))
+                let vector = fsys::Vector{values: vec![
+                    Some(Box::new(fsys::Value::Obj(obj_inner))),
+                    Some(Box::new(fsys::Value::Inum(-42)))
                 ]};
-                let dict_outer = fdata::Dictionary{entries: vec![
-                    fdata::Entry{
+                let obj_outer = fsys::Object{entries: vec![
+                    fsys::Entry{
                         key: "array".to_string(),
-                        value: Some(Box::new(fdata::Value::Vec(vector))),
+                        value: Some(Box::new(fsys::Value::Vec(vector))),
                     },
                 ]};
-                let dict = fdata::Dictionary {entries: vec![
-                    fdata::Entry {
+                let obj = fsys::Object {entries: vec![
+                    fsys::Entry {
                         key: "bool".to_string(),
-                        value: Some(Box::new(fdata::Value::Bit(true))),
+                        value: Some(Box::new(fsys::Value::Bit(true))),
                     },
-                    fdata::Entry {
-                        key: "dict".to_string(),
-                        value: Some(Box::new(fdata::Value::Dict(dict_outer))),
+                    fsys::Entry {
+                        key: "obj".to_string(),
+                        value: Some(Box::new(fsys::Value::Obj(obj_outer))),
                     },
-                    fdata::Entry {
+                    fsys::Entry {
                         key: "float".to_string(),
-                        value: Some(Box::new(fdata::Value::Fnum(3.14))),
+                        value: Some(Box::new(fsys::Value::Fnum(3.14))),
                     },
-                    fdata::Entry {
+                    fsys::Entry {
                         key: "int".to_string(),
-                        value: Some(Box::new(fdata::Value::Inum(-42))),
+                        value: Some(Box::new(fsys::Value::Inum(-42))),
                     },
-                    fdata::Entry {
+                    fsys::Entry {
                         key: "null".to_string(),
                         value: None,
                     },
-                    fdata::Entry {
+                    fsys::Entry {
                         key: "string".to_string(),
-                        value: Some(Box::new(fdata::Value::Str("bar".to_string()))),
+                        value: Some(Box::new(fsys::Value::Str("bar".to_string()))),
                     },
                 ]};
-                Some(dict)
+                Some(obj)
             },
             result = {
-                let mut dict_inner = HashMap::new();
-                dict_inner.insert("string".to_string(), Value::Str("bar".to_string()));
-                let mut dict_outer = HashMap::new();
-                let vector = vec![Value::Dict(dict_inner), Value::Inum(-42)];
-                dict_outer.insert("array".to_string(), Value::Vec(vector));
+                let mut obj_inner = HashMap::new();
+                obj_inner.insert("string".to_string(), Value::Str("bar".to_string()));
+                let mut obj_outer = HashMap::new();
+                let vector = vec![Value::Obj(obj_inner), Value::Inum(-42)];
+                obj_outer.insert("array".to_string(), Value::Vec(vector));
 
-                let mut dict: HashMap<String, Value> = HashMap::new();
-                dict.insert("bool".to_string(), Value::Bit(true));
-                dict.insert("float".to_string(), Value::Fnum(3.14));
-                dict.insert("int".to_string(), Value::Inum(-42));
-                dict.insert("string".to_string(), Value::Str("bar".to_string()));
-                dict.insert("dict".to_string(), Value::Dict(dict_outer));
-                dict.insert("null".to_string(), Value::Null);
-                Some(dict)
+                let mut obj: HashMap<String, Value> = HashMap::new();
+                obj.insert("bool".to_string(), Value::Bit(true));
+                obj.insert("float".to_string(), Value::Fnum(3.14));
+                obj.insert("int".to_string(), Value::Inum(-42));
+                obj.insert("string".to_string(), Value::Str("bar".to_string()));
+                obj.insert("obj".to_string(), Value::Obj(obj_outer));
+                obj.insert("null".to_string(), Value::Null);
+                Some(obj)
             },
         },
     }
