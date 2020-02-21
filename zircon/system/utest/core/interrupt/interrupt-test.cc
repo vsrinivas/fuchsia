@@ -236,8 +236,14 @@ TEST_F(InterruptTest, WaitThreadFunctionsAfterSuspendResume) {
   ASSERT_OK(thread.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), &observed));
 }
 
+#if defined(__x86_64__)  // fxb/46207
+#define MAYBE_BindVcpuTest DISABLED_BindVcpuTest
+#else
+#define MAYBE_BindVcpuTest BindVcpuTest
+#endif
+
 // Tests binding an interrupt to multiple VCPUs
-TEST_F(InterruptTest, BindVcpuTest) {
+TEST_F(InterruptTest, MAYBE_BindVcpuTest) {
   zx::interrupt interrupt;
   zx::guest guest;
   zx::vmar vmar;
@@ -282,8 +288,14 @@ TEST_F(InterruptTest, UnableToBindVirtualToVcpuAfterPort) {
   ASSERT_EQ(interrupt.bind_vcpu(vcpu, 0), ZX_ERR_NOT_SUPPORTED);
 }
 
+#if defined(__x86_64__)  // fxb/46207
+#define MAYBE_UnableToBindToVcpuAfterPort DISABLED_UnableToBindToVcpuAfterPort
+#else
+#define MAYBE_UnableToBindToVcpuAfterPort UnableToBindToVcpuAfterPort
+#endif
+
 // Tests binding an interrupt to a VCPU, after binding it to a port
-TEST_F(InterruptTest, UnableToBindToVcpuAfterPort) {
+TEST_F(InterruptTest, MAYBE_UnableToBindToVcpuAfterPort) {
   zx::interrupt interrupt;
   zx::port port;
   zx::guest guest;
@@ -305,8 +317,14 @@ TEST_F(InterruptTest, UnableToBindToVcpuAfterPort) {
   ASSERT_EQ(interrupt.bind_vcpu(vcpu, 0), ZX_ERR_ALREADY_BOUND);
 }
 
+#if defined(__x86_64__)  // fxb/46207
+#define MAYBE_UnableToBindToVcpuMultipleGuests DISABLED_UnableToBindToVcpuMultipleGuests
+#else
+#define MAYBE_UnableToBindToVcpuMultipleGuests UnableToBindToVcpuMultipleGuests
+#endif
+
 // Tests binding an interrupt to VCPUs from different guests
-TEST_F(InterruptTest, UnableToBindVcpuMultipleGuests) {
+TEST_F(InterruptTest, MAYBE_UnableToBindVcpuMultipleGuests) {
   zx::interrupt interrupt;
   zx::guest guest1;
   zx::guest guest2;
