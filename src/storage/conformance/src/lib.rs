@@ -12,7 +12,7 @@ pub mod directory_request_logger;
 
 /// Injector for child components started by component manager BlackBoxTest
 /// to connect and provide Io1TestHarness to the test.
-pub mod harness_receiver;
+pub mod io1_harness_receiver;
 
 /// Allows aggregating requests from many io1 protocol channel loggers into one
 /// source.

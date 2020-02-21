@@ -5,7 +5,7 @@
     "use": [
         { "runner": "elf" },
         {
-            "protocol": "/svc/fuchsia.io.test.HarnessReceiver",
+            "protocol": "/svc/fuchsia.io.test.Io1HarnessReceiver",
             "from": "framework",
         }
     ],

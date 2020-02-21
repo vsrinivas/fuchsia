@@ -11,21 +11,20 @@ use {
     test_utils_lib::events::Injector,
 };
 
-/// Capability that serves the HarnessReceiver FIDL protocol in one task and allows
+/// Capability that serves the Io1HarnessReceiver FIDL protocol in one task and allows
 /// another task to wait on the received Io1TestHarness. This allows io conformance tests
 /// to finish set up before notifying the receiver, sending the connection to the harness.
 /// This is done to prevent race conditions when connecting to the harness on setup.
 #[derive(Clone)]
-pub struct HarnessReceiver {
-    tx: Arc<Mutex<mpsc::Sender<fidl::endpoints::ClientEnd<io_test::Io1TestHarnessMarker>>>>,
+pub struct Io1HarnessReceiver {
+    tx: Arc<Mutex<mpsc::Sender<fidl::endpoints::ClientEnd<io_test::Io1HarnessMarker>>>>,
 }
 
-impl HarnessReceiver {
-    /// Returns a HarnessReceiver and a channel to listen for received Io1TestHarness connections
+impl Io1HarnessReceiver {
+    /// Returns a Io1HarnessReceiver and a channel to listen for received Io1Harness connections
     /// sent to the receiver.
     pub fn new(
-    ) -> (Arc<Self>, mpsc::Receiver<fidl::endpoints::ClientEnd<io_test::Io1TestHarnessMarker>>)
-    {
+    ) -> (Arc<Self>, mpsc::Receiver<fidl::endpoints::ClientEnd<io_test::Io1HarnessMarker>>) {
         let (tx, rx) = mpsc::channel(0);
         let tx = Arc::new(Mutex::new(tx));
         (Arc::new(Self { tx }), rx)
@@ -33,15 +32,15 @@ impl HarnessReceiver {
 }
 
 #[async_trait]
-impl Injector for HarnessReceiver {
-    type Marker = io_test::HarnessReceiverMarker;
+impl Injector for Io1HarnessReceiver {
+    type Marker = io_test::Io1HarnessReceiverMarker;
 
     async fn serve(
         self: Arc<Self>,
-        mut request_stream: io_test::HarnessReceiverRequestStream,
+        mut request_stream: io_test::Io1HarnessReceiverRequestStream,
     ) -> Result<(), Error> {
         // Start listening to requests from the client.
-        while let Some(Ok(io_test::HarnessReceiverRequest::SendIo1Harness {
+        while let Some(Ok(io_test::Io1HarnessReceiverRequest::SendIo1Harness {
             harness,
             control_handle: _,
         })) = request_stream.next().await

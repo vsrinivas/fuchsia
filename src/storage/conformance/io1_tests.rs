@@ -7,7 +7,8 @@ use {
     fidl_fuchsia_io as io, fidl_fuchsia_io_test as io_test, fuchsia_async as fasync,
     futures::StreamExt,
     io_conformance::{
-        harness_receiver::HarnessReceiver, io1_request_logger_factory::Io1RequestLoggerFactory,
+        io1_harness_receiver::Io1HarnessReceiver,
+        io1_request_logger_factory::Io1RequestLoggerFactory,
     },
     test_utils_lib::test_utils::BlackBoxTest,
 };
@@ -16,7 +17,7 @@ use {
 // to a HarnessReceiver injector, and returns the connected HarnessProxy.
 async fn setup_harness_connection(
     url: String,
-) -> Result<(io_test::Io1TestHarnessProxy, BlackBoxTest), Error> {
+) -> Result<(io_test::Io1HarnessProxy, BlackBoxTest), Error> {
     let test = BlackBoxTest::default(&url)
         .await
         .context(format!("Cannot create BlackBoxTest with url {}", &url))?;
@@ -25,7 +26,7 @@ async fn setup_harness_connection(
 
     // Install HarnessReceiver injector for the child component to connect and to send
     // the harness to run the test through.
-    let (capability, mut rx) = HarnessReceiver::new();
+    let (capability, mut rx) = Io1HarnessReceiver::new();
     let injector =
         event_source.install_injector(capability).await.context("Cannot install injector.")?;
 
@@ -63,12 +64,19 @@ async fn open_remote_directory_test() {
     let (logger, mut rx) = Io1RequestLoggerFactory::new();
     let remote_dir_server =
         logger.get_logged_directory(remote_name.to_string(), remote_dir_server).await;
-    harness.get_empty_directory(remote_dir_server).expect("Cannot get empty remote directory.");
+    harness
+        .get_empty_directory(io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE, remote_dir_server)
+        .expect("Cannot get empty remote directory.");
 
     let (test_dir_proxy, test_dir_server) =
         fidl::endpoints::create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy.");
     harness
-        .get_directory_with_remote_directory(remote_name, remote_dir_client, test_dir_server)
+        .get_directory_with_remote_directory(
+            remote_dir_client,
+            remote_name,
+            io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE,
+            test_dir_server,
+        )
         .expect("Cannot get test harness directory.");
 
     let (_remote_dir_proxy, remote_dir_server) =
