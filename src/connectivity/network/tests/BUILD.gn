@@ -46,6 +46,9 @@ rustc_test("netstack_fidl_integration_test") {
     "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
   ]
+
+  # TODO(46769): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 rustc_test("netstack_cobalt_integration_test") {
