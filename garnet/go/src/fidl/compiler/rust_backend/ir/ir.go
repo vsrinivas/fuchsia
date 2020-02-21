@@ -155,7 +155,6 @@ type Parameter struct {
 	Type         string
 	BorrowedType string
 	Name         string
-	Offset       int
 }
 
 type Service struct {
@@ -392,9 +391,10 @@ var handleSubtypes = map[types.HandleSubtype]string{
 }
 
 type compiler struct {
-	decls        types.DeclMap
-	library      types.LibraryIdentifier
-	externCrates map[string]bool
+	decls                  types.DeclMap
+	library                types.LibraryIdentifier
+	externCrates           map[string]bool
+	requestResponsePayload map[types.EncodedCompoundIdentifier]types.Struct
 }
 
 func (c *compiler) inExternalLibrary(ci types.CompoundIdentifier) bool {
@@ -680,21 +680,22 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 	return e
 }
 
-func (c *compiler) compileParameterArray(val []types.Parameter) []Parameter {
-	r := []Parameter{}
+func (c *compiler) compileParameterArray(payload types.EncodedCompoundIdentifier) []Parameter {
+	val, ok := c.requestResponsePayload[payload]
+	if !ok {
+		log.Panic("Unknown request/response struct: ", payload)
+	}
 
-	for _, v := range val {
-		p := Parameter{
+	var parameters []Parameter
+	for _, v := range val.Members {
+		parameters = append(parameters, Parameter{
 			OGType:       v.Type,
 			Type:         c.compileType(v.Type, false).Decl,
 			BorrowedType: c.compileType(v.Type, true).Decl,
 			Name:         compileSnakeIdentifier(v.Name),
-			Offset:       v.FieldShapeV1.Offset,
-		}
-		r = append(r, p)
+		})
 	}
-
-	return r
+	return parameters
 }
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
@@ -709,18 +710,19 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 	for _, v := range val.Methods {
 		name := compileSnakeIdentifier(v.Name)
 		camelName := compileCamelIdentifier(v.Name)
-		request := c.compileParameterArray(v.Request)
-		response := c.compileParameterArray(v.Response)
-
 		m := Method{
 			Attributes:  v.Attributes,
 			Ordinals:    types.NewOrdinalsStep7(v, "UNUSED", "UNUSED"),
 			Name:        name,
 			CamelName:   camelName,
 			HasRequest:  v.HasRequest,
-			Request:     request,
 			HasResponse: v.HasResponse,
-			Response:    response,
+		}
+		if v.RequestPayload != "" {
+			m.Request = c.compileParameterArray(v.RequestPayload)
+		}
+		if v.ResponsePayload != "" {
+			m.Response = c.compileParameterArray(v.ResponsePayload)
 		}
 		r.Methods = append(r.Methods, m)
 	}
@@ -1237,7 +1239,12 @@ func (dc *derivesCompiler) fillDerivesForType(ogType types.Type) derives {
 func Compile(r types.Root) Root {
 	root := Root{}
 	thisLibParsed := types.ParseLibraryName(r.Name)
-	c := compiler{r.DeclsWithDependencies(), thisLibParsed, map[string]bool{}}
+	c := compiler{
+		r.DeclsWithDependencies(),
+		thisLibParsed,
+		map[string]bool{},
+		map[types.EncodedCompoundIdentifier]types.Struct{},
+	}
 
 	for _, v := range r.Bits {
 		root.Bits = append(root.Bits, c.compileBits(v))
@@ -1251,20 +1258,16 @@ func Compile(r types.Root) Root {
 		root.Enums = append(root.Enums, c.compileEnum(v))
 	}
 
-	for _, v := range r.Interfaces {
-		root.Interfaces = append(root.Interfaces, c.compileInterface(v))
-	}
-
 	for _, v := range r.Services {
 		root.Services = append(root.Services, c.compileService(v))
 	}
 
 	for _, v := range r.Structs {
-		// TODO(7704) remove once anonymous structs are supported
 		if v.Anonymous {
-			continue
+			c.requestResponsePayload[v.Name] = v
+		} else {
+			root.Structs = append(root.Structs, c.compileStruct(v))
 		}
-		root.Structs = append(root.Structs, c.compileStruct(v))
 	}
 
 	for _, v := range r.XUnions {
@@ -1282,6 +1285,10 @@ func Compile(r types.Root) Root {
 
 	for _, v := range r.Tables {
 		root.Tables = append(root.Tables, c.compileTable(v))
+	}
+
+	for _, v := range r.Interfaces {
+		root.Interfaces = append(root.Interfaces, c.compileInterface(v))
 	}
 
 	c.fillDerives(&root)
