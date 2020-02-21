@@ -27,6 +27,9 @@ rustc_binary("fuchsia_component_test_outer_bin") {
     "//third_party/rust_crates:thiserror",
   ]
   source_root = "outer.rs"
+
+  # TODO(46724): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("fuchsia_component_test_outer") {
