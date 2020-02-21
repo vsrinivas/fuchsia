@@ -676,16 +676,6 @@
             "package_name": "webpki"
         },
         {
-            "crate_name": "xi_core_lib",
-            "crate_type": "lib",
-            "package_name": "xi-core-lib"
-        },
-        {
-            "crate_name": "xi_rpc",
-            "crate_type": "lib",
-            "package_name": "xi-rpc"
-        },
-        {
             "crate_name": "xml",
             "crate_type": "lib",
             "package_name": "xml-rs"
