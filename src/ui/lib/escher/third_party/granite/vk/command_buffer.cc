@@ -122,6 +122,7 @@ void CommandBuffer::BeginGraphics() {
 }
 
 void CommandBuffer::BeginGraphicsOrComputeContext() {
+  TRACE_DURATION("gfx", "CommandBuffer::BeginGraphicsOrComputeContext");
   dirty_ = ~0u;
   dirty_descriptor_sets_ = ~0u;
   current_vk_pipeline_ = vk::Pipeline();
@@ -207,6 +208,7 @@ void CommandBuffer::BeginRenderPass(const RenderPassInfo& info) {
 }
 
 void CommandBuffer::EndRenderPass() {
+  TRACE_DURATION("gfx", "CommandBuffer::EndRenderPass");
   FXL_DCHECK(IsInRenderPass());
 
   vk().endRenderPass();
