@@ -47,6 +47,9 @@ test("unit_tests") {
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(46765): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 group("tests") {
