@@ -5,6 +5,7 @@
 use anyhow::Error;
 
 mod app;
+mod graphics_util;
 mod view;
 
 /// Entry point for the `graphical_session`. It creates an instance of the `App`, runs it, and

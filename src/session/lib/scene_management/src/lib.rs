@@ -4,10 +4,9 @@
 
 mod display_metrics;
 mod flat_scene_manager;
-pub mod graphics_utils;
+mod graphics_utils;
 mod scene_manager;
 
 pub use display_metrics::DisplayMetrics;
-pub use display_metrics::ViewingDistance;
 pub use flat_scene_manager::FlatSceneManager;
 pub use scene_manager::SceneManager;

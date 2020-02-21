@@ -3,18 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::display_metrics::{DisplayMetrics, ViewingDistance},
-    crate::graphics_utils,
+    crate::display_metrics::DisplayMetrics,
     crate::scene_manager::{self, SceneManager},
     anyhow::Error,
     async_trait::async_trait,
     fidl, fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
-    fidl_fuchsia_ui_gfx::Vec3,
     fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
-    fuchsia_scenic as scenic,
-    fuchsia_scenic::DisplayRotation,
-    std::collections::HashMap,
-    std::f32::consts as f32const,
+    fuchsia_scenic as scenic, fuchsia_scenic,
     std::sync::Arc,
 };
 
@@ -43,7 +38,7 @@ pub struct FlatSceneManager {
 
     /// The [`scenic::ViewHolder`], and their associated [`scenic::EntityNodes`], which have been
     /// added to the Scene.
-    views: HashMap<u32, scenic::ViewHolder>,
+    views: Vec<scenic::ViewHolder>,
 
     /// The node for the cursor. It is optional in case a scene doesn't render a cursor.
     cursor_node: Option<scenic::EntityNode>,
@@ -53,7 +48,7 @@ pub struct FlatSceneManager {
 
     /// The resources used to construct the scene. If these are dropped, they will be removed
     /// from Scenic, so they must be kept alive for the lifetime of `FlatSceneManager`.
-    resources: ScenicResources,
+    _resources: ScenicResources,
 }
 
 /// A struct containing all the Scenic resources which are unused but still need to be kept alive.
@@ -65,63 +60,46 @@ struct ScenicResources {
     _layer: scenic::Layer,
     _layer_stack: scenic::LayerStack,
     _renderer: scenic::Renderer,
-    scene: scenic::Scene,
+    _scene: scenic::Scene,
 }
 
 #[async_trait]
 impl SceneManager for FlatSceneManager {
     async fn new(
-        scenic_proxy: ui_scenic::ScenicProxy,
+        scenic: ui_scenic::ScenicProxy,
         display_pixel_density: Option<f32>,
-        viewing_distance: Option<ViewingDistance>,
+        viewing_distance: Option<f32>,
     ) -> Result<Self, Error> {
-        Self::new_with_display_adjustments(
-            scenic_proxy,
-            display_pixel_density,
-            viewing_distance,
-            None,
-        )
-        .await
-    }
+        let session: scenic::SessionPtr = FlatSceneManager::create_session(&scenic)?;
 
-    async fn new_with_display_adjustments(
-        scenic_proxy: ui_scenic::ScenicProxy,
-        display_pixel_density: Option<f32>,
-        viewing_distance: Option<ViewingDistance>,
-        display_rotation: Option<DisplayRotation>,
-    ) -> Result<Self, Error> {
-        // Size the layer to fit the size of the display.
-        let display_info = scenic_proxy.get_display_info().await?;
-
-        let (display_width, display_height) = (display_info.width_in_px, display_info.height_in_px);
-
-        let display_metrics = DisplayMetrics::new(
-            display_width,
-            display_height,
-            display_pixel_density,
-            viewing_distance,
-            display_rotation,
-        );
-
-        let session: scenic::SessionPtr = Self::create_session(&scenic_proxy)?;
-
-        let ambient_light = Self::create_ambient_light(&session);
-        let scene = Self::create_ambiently_lit_scene(&session, &ambient_light);
+        let ambient_light = FlatSceneManager::create_ambient_light(&session);
+        let scene = FlatSceneManager::create_ambiently_lit_scene(&session, &ambient_light);
 
         let camera = scenic::Camera::new(session.clone(), &scene);
-        let renderer = Self::create_renderer(&session, &camera);
+        let renderer = FlatSceneManager::create_renderer(&session, &camera);
+
+        // Size the layer to fit the size of the display.
+        let display_info = scenic.get_display_info().await?;
+
+        let display_metrics = DisplayMetrics::new(
+            display_info.width_in_px,
+            display_info.height_in_px,
+            display_pixel_density,
+            viewing_distance,
+        );
+
+        scene.set_scale(display_metrics.pixels_per_pip(), display_metrics.pixels_per_pip(), 1.0);
+
+        let (display_width, display_height) =
+            (display_info.width_in_px as f32, display_info.height_in_px as f32);
 
         let layer =
-            Self::create_layer(&session, &renderer, display_width as f32, display_height as f32);
-        let layer_stack = Self::create_layer_stack(&session, &layer);
-        let compositor = Self::create_compositor(&session, &layer_stack);
-        if display_metrics.rotation() != DisplayRotation::None {
-            compositor.set_display_rotation(display_metrics.rotation());
-        }
+            FlatSceneManager::create_layer(&session, &renderer, display_width, display_height);
+        let layer_stack = FlatSceneManager::create_layer_stack(&session, &layer);
+        let compositor = FlatSceneManager::create_compositor(&session, &layer_stack);
 
+        // Add the root node to the scene immediately.
         let root_node = scenic::EntityNode::new(session.clone());
-        root_node.set_translation(0.0, 0.0, -0.1); // TODO(fxb/23608)
-                                                   // Add the root node to the scene immediately.
         scene.add_child(&root_node);
 
         let compositor_id = compositor.id();
@@ -133,7 +111,7 @@ impl SceneManager for FlatSceneManager {
             _layer: layer,
             _layer_stack: layer_stack,
             _renderer: renderer,
-            scene,
+            _scene: scene,
         };
 
         scene_manager::start_presentation_loop(Arc::downgrade(&session));
@@ -141,21 +119,15 @@ impl SceneManager for FlatSceneManager {
         Ok(FlatSceneManager {
             session,
             root_node,
-            display_width: display_width as f32,
-            display_height: display_height as f32,
+            display_width,
+            display_height,
             compositor_id,
-            resources,
-            views: HashMap::new(),
+            _resources: resources,
+            views: vec![],
             display_metrics,
             cursor_node: None,
             cursor_shape: None,
         })
-    }
-
-    async fn remove_view_from_scene(&mut self, node: scenic::EntityNode) -> Result<(), Error> {
-        let _view_holder = self.views.remove(&node.id());
-        self.root_node.remove_child(&node);
-        Ok(())
     }
 
     async fn add_view_to_scene(
@@ -165,9 +137,8 @@ impl SceneManager for FlatSceneManager {
     ) -> Result<scenic::EntityNode, Error> {
         let token_pair = scenic::ViewTokenPair::new()?;
         view_provider.create_view(token_pair.view_token.value, None, None)?;
-
         let view_holder_node = self.create_view_holder_node(token_pair.view_holder_token, name);
-
+        self.root_node.add_child(&view_holder_node);
         Ok(view_holder_node)
     }
 
@@ -201,7 +172,7 @@ impl FlatSceneManager {
     /// should be placed to render "in front of" another view.
     const VIEW_BOUNDS_DEPTH: f32 = -800.0;
     /// The depth at which to draw the cursor in order to ensure it's on top of everything else
-    const CURSOR_DEPTH: f32 = Self::VIEW_BOUNDS_DEPTH - 1.0;
+    const CURSOR_DEPTH: f32 = FlatSceneManager::VIEW_BOUNDS_DEPTH - 1.0;
 
     /// Creates a new Scenic session.
     ///
@@ -210,9 +181,9 @@ impl FlatSceneManager {
     ///
     /// # Errors
     /// If the [`scenic::SessionPtr`] could not be created.
-    fn create_session(scenic_proxy: &ui_scenic::ScenicProxy) -> Result<scenic::SessionPtr, Error> {
+    fn create_session(scenic: &ui_scenic::ScenicProxy) -> Result<scenic::SessionPtr, Error> {
         let (session_proxy, session_request_stream) = fidl::endpoints::create_proxy()?;
-        scenic_proxy.create_session(session_request_stream, None)?;
+        scenic.create_session(session_request_stream, None)?;
 
         Ok(scenic::Session::new(session_proxy))
     }
@@ -301,6 +272,7 @@ impl FlatSceneManager {
     ) -> scenic::DisplayCompositor {
         let compositor = scenic::DisplayCompositor::new(session.clone());
         compositor.set_layer_stack(&layer_stack);
+
         compositor
     }
 
@@ -315,32 +287,15 @@ impl FlatSceneManager {
         name: Option<String>,
     ) -> scenic::EntityNode {
         let view_holder = scenic::ViewHolder::new(self.session.clone(), view_holder_token, name);
-        let view_holder_node = scenic::EntityNode::new(self.session.clone());
-        self.root_node.add_child(&view_holder_node);
-        view_holder_node.attach(&view_holder);
-
-        self.apply_display_model(&view_holder, &view_holder_node);
-
-        self.views.insert(view_holder_node.id(), view_holder);
-
-        view_holder_node
-    }
-
-    fn apply_display_model(
-        &mut self,
-        view_holder: &scenic::ViewHolder,
-        view_holder_node: &scenic::EntityNode,
-    ) {
-        let mut rotated_width_in_pips = self.display_metrics.width_in_pips();
-        let mut rotated_height_in_pips = self.display_metrics.height_in_pips();
-        if self.display_metrics.rotation() as u32 % 180 != 0 {
-            std::mem::swap(&mut rotated_width_in_pips, &mut rotated_height_in_pips);
-        }
 
         let view_properties = ui_gfx::ViewProperties {
             bounding_box: ui_gfx::BoundingBox {
-                min: ui_gfx::Vec3 { x: 0.0, y: 0.0, z: Self::VIEW_BOUNDS_DEPTH },
-                max: ui_gfx::Vec3 { x: rotated_width_in_pips, y: rotated_height_in_pips, z: 0.0 },
+                min: ui_gfx::Vec3 { x: 0.0, y: 0.0, z: FlatSceneManager::VIEW_BOUNDS_DEPTH },
+                max: ui_gfx::Vec3 {
+                    x: self.display_metrics.width_in_pips(),
+                    y: self.display_metrics.height_in_pips(),
+                    z: 0.0,
+                },
             },
             downward_input: true,
             focus_change: true,
@@ -349,43 +304,13 @@ impl FlatSceneManager {
         };
         view_holder.set_view_properties(view_properties);
 
-        // NOTE: SceneManager currently supprts square pixels only. If this changes in the future,
-        // there would be two different values for scale: horizontal and vertical; and these two
-        // values will also need to be swapped, if the screen is rotated 90 or 270 degrees.
-        self.resources.scene.set_scale(
-            self.display_metrics.pixels_per_pip(),
-            self.display_metrics.pixels_per_pip(),
-            1.0,
-        );
+        let view_holder_node = scenic::EntityNode::new(self.session.clone());
+        view_holder_node.attach(&view_holder);
+        view_holder_node.set_translation(0.0, 0.0, 0.0);
 
-        view_holder_node.set_anchor(rotated_width_in_pips / 2.0, rotated_height_in_pips / 2.0, 0.0);
+        self.views.push(view_holder);
 
-        if self.display_metrics.rotation() != DisplayRotation::None {
-            let angle_radians: f32 = self.display_metrics.rotation_in_degrees() as u32 as f32
-                * (f32const::PI / 180.0) as f32;
-            let quat = graphics_utils::quaternion_from_axis_angle(
-                Vec3 { x: 0.0, y: 0.0, z: 1.0 },
-                angle_radians,
-            );
-            view_holder_node.set_rotation(quat.x, quat.y, quat.z, quat.w);
-        }
-
-        let width_in_pixels: f32 = self.display_metrics.width_in_pixels() as f32;
-        let height_in_pixels: f32 = self.display_metrics.height_in_pixels() as f32;
-        let density = self.display_metrics.pixels_per_pip();
-
-        let mut rotated_width_in_pixels = width_in_pixels;
-        let mut rotated_height_in_pixels = height_in_pixels;
-        if self.display_metrics.rotation() as u32 % 180 != 0 {
-            std::mem::swap(&mut rotated_width_in_pixels, &mut rotated_height_in_pixels);
-        }
-
-        // Center the view in the display. This is particularly important if the view is rotated
-        // because the axis of rotation is not the center of the screen.
-        let left_offset = (width_in_pixels - rotated_width_in_pixels) / density / 2.0;
-        let top_offset = (height_in_pixels - rotated_height_in_pixels) / density / 2.0;
-
-        view_holder_node.set_translation(left_offset, top_offset, 0.0);
+        view_holder_node
     }
 
     /// Gets the `EntityNode` for the cursor or creates one if it doesn't exist yet.

@@ -12,11 +12,12 @@ use {
     },
     fuchsia_zircon::{ClockId, Time},
     png,
-    scene_management::graphics_utils,
     std::f32::consts::PI,
     std::fs::File,
     std::sync::{Arc, Mutex},
 };
+
+use crate::graphics_util;
 
 /// A `View` represents the content which is displayed in the Whale Session.
 ///
@@ -244,7 +245,7 @@ impl View {
 
         let angle = t * PI * 2.0;
         let quat =
-            graphics_utils::quaternion_from_axis_angle(Vec3 { x: 0.0, y: 0.0, z: 1.0 }, angle);
+            graphics_util::quaternion_from_axis_angle(Vec3 { x: 0.0, y: 0.0, z: 1.0 }, angle);
         self.rect_shape.set_rotation(quat.x, quat.y, quat.z, quat.w);
     }
 }

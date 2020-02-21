@@ -29,9 +29,6 @@ rustc_library("scene_management") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:png",
     "//third_party/rust_crates:thiserror",
-
-    # TODO(fxb/45535): Replace native C calls in display_metrics.rs with rust-lang/libm.
-    # "//third_party/rust_crates:libm",
   ]
 }
 
