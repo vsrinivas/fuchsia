@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport},
     fidl_fuchsia_ui_input as fidl_ui_input,
     fuchsia_syslog::fx_log_err,
-    futures::channel::mpsc::{Receiver, Sender},
+    futures::channel::mpsc::Sender,
     maplit::hashmap,
     std::collections::HashMap,
     std::iter::FromIterator,
@@ -142,45 +142,6 @@ pub struct TouchBinding {
 
     /// Holds information about this device.
     device_descriptor: TouchDeviceDescriptor,
-}
-
-/// Retrieves a list of proxies to all touch devices.
-///
-/// # Errors
-/// If no touch devices exist.
-pub async fn all_touch_devices() -> Result<Vec<InputDeviceProxy>, Error> {
-    input_device::all_devices(input_device::InputDeviceType::Touch).await
-}
-
-/// Returns a vector of [`TouchBindings`] for all currently connected touch devices.
-///
-/// # Errors
-/// If there was an error binding to any touch device.
-pub async fn all_touch_bindings(
-    input_event_sender: Sender<input_device::InputEvent>,
-) -> Result<Vec<TouchBinding>, Error> {
-    let device_proxies = all_touch_devices().await?;
-    let mut device_bindings: Vec<TouchBinding> = vec![];
-
-    for device_proxy in device_proxies {
-        let device_binding: TouchBinding =
-            TouchBinding::new(device_proxy, input_event_sender.clone()).await?;
-        device_bindings.push(device_binding);
-    }
-
-    Ok(device_bindings)
-}
-
-/// Returns a stream of InputEvents from all touch devices.
-///
-/// # Errors
-/// If there was an error binding to any touch device.
-pub async fn all_touch_events() -> Result<Receiver<InputEvent>, Error> {
-    let (event_sender, event_receiver) =
-        futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-    let _bindings = all_touch_bindings(event_sender).await?;
-
-    Ok(event_receiver)
 }
 
 #[async_trait]

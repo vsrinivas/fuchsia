@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_input_report as fidl_input_report,
     fidl_fuchsia_input_report::{InputDeviceProxy, InputReport},
     fuchsia_syslog::fx_log_err,
-    futures::channel::mpsc::{Receiver, Sender},
+    futures::channel::mpsc::Sender,
     std::collections::HashSet,
     std::iter::FromIterator,
 };
@@ -72,45 +72,6 @@ pub struct MouseBinding {
 pub struct MouseDeviceDescriptor {
     /// The id of the connected mouse input device.
     pub device_id: u32,
-}
-
-/// Retrieves a list of proxies to all mouse devices.
-///
-/// # Errors
-/// If no mouse devices exist.
-pub async fn all_mouse_devices() -> Result<Vec<InputDeviceProxy>, Error> {
-    input_device::all_devices(input_device::InputDeviceType::Mouse).await
-}
-
-/// Returns a vector of [`MouseBindings`] for all currently connected mice.
-///
-/// # Errors
-/// If there was an error binding to any mouse.
-pub async fn all_mouse_bindings(
-    input_event_sender: Sender<input_device::InputEvent>,
-) -> Result<Vec<MouseBinding>, Error> {
-    let device_proxies = all_mouse_devices().await?;
-    let mut device_bindings: Vec<MouseBinding> = vec![];
-
-    for device_proxy in device_proxies {
-        let device_binding: MouseBinding =
-            MouseBinding::new(device_proxy, input_event_sender.clone()).await?;
-        device_bindings.push(device_binding);
-    }
-
-    Ok(device_bindings)
-}
-
-/// Returns a stream of InputEvents from all mouse devices.
-///
-/// # Errors
-/// If there was an error binding to any mouse.
-pub async fn all_mouse_events() -> Result<Receiver<input_device::InputEvent>, Error> {
-    let (event_sender, event_receiver) =
-        futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-    let _bindings = all_mouse_bindings(event_sender).await?;
-
-    Ok(event_receiver)
 }
 
 #[async_trait]

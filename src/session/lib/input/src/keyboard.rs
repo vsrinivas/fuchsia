@@ -10,10 +10,7 @@ use {
     fidl_fuchsia_ui_input2::{Key, KeyEventPhase, Modifiers},
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
-    futures::{
-        channel::mpsc::{Receiver, Sender},
-        SinkExt,
-    },
+    futures::{channel::mpsc::Sender, SinkExt},
     input_synthesis::usages::is_modifier,
     maplit::hashmap,
     std::collections::HashMap,
@@ -84,45 +81,6 @@ pub struct KeyboardBinding {
 
     /// Holds information about this device.
     device_descriptor: KeyboardDeviceDescriptor,
-}
-
-/// Retrieves a list of proxies to all keyboard devices.
-///
-/// # Errors
-/// If no keyboard devices exist.
-pub async fn all_keyboard_devices() -> Result<Vec<InputDeviceProxy>, Error> {
-    input_device::all_devices(input_device::InputDeviceType::Keyboard).await
-}
-
-/// Returns a vector of [`KeyboardBindings`] for all currently connected keyboards.
-///
-/// # Errors
-/// If there was an error binding to any keyboard.
-pub async fn all_keyboard_bindings(
-    input_event_sender: Sender<input_device::InputEvent>,
-) -> Result<Vec<KeyboardBinding>, Error> {
-    let device_proxies = all_keyboard_devices().await?;
-    let mut device_bindings: Vec<KeyboardBinding> = vec![];
-
-    for device_proxy in device_proxies {
-        let device_binding: KeyboardBinding =
-            KeyboardBinding::new(device_proxy, input_event_sender.clone()).await?;
-        device_bindings.push(device_binding);
-    }
-
-    Ok(device_bindings)
-}
-
-/// Returns a stream of InputEvents from all keyboard devices.
-///
-/// # Errors
-/// If there was an error binding to any keyboard.
-pub async fn all_keyboard_events() -> Result<Receiver<input_device::InputEvent>, Error> {
-    let (event_sender, event_receiver) =
-        futures::channel::mpsc::channel(input_device::INPUT_EVENT_BUFFER_SIZE);
-    let _bindings = all_keyboard_bindings(event_sender).await?;
-
-    Ok(event_receiver)
 }
 
 #[async_trait]
