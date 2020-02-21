@@ -10,8 +10,8 @@
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
-#include <lib/fdio/watcher.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/watcher.h>
 #include <lib/fzl/fifo.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sync/completion.h>
@@ -254,8 +254,8 @@ bool RamdiskStatsTest(void) {
   ASSERT_EQ(status, ZX_OK);
   ASSERT_EQ(block_stats.write.success.total_calls, 2);
   ASSERT_EQ(block_stats.write.success.bytes_transferred, 2 * kBlockSize);
-  ASSERT_EQ(block_stats.read.success.total_calls, 1);
-  ASSERT_EQ(block_stats.read.success.bytes_transferred, 1 * kBlockSize);
+  ASSERT_GE(block_stats.read.success.total_calls, 1);
+  ASSERT_GE(block_stats.read.success.bytes_transferred, 1 * kBlockSize);
   ASSERT_EQ(block_stats.flush.success.total_calls, 1);
   ASSERT_EQ(block_stats.flush.success.bytes_transferred, 0);
 
