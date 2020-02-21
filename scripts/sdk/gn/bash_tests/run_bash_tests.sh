@@ -14,3 +14,4 @@ declare -r SCRIPT_SRC_DIR
 "${SCRIPT_SRC_DIR}/script_runner.sh" fpublish-test.sh
 "${SCRIPT_SRC_DIR}/script_runner.sh" fserve-test.sh
 "${SCRIPT_SRC_DIR}/script_runner.sh" fssh-test.sh
+"${SCRIPT_SRC_DIR}/script_runner.sh" femu-test.sh

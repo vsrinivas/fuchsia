@@ -28,6 +28,16 @@ sys.path += [os.path.join(FUCHSIA_ROOT, 'scripts', 'sdk', 'common')]
 from frontend import Frontend
 import template_model as model
 
+# Any extra files which need to be added manually to the SDK can be specified here
+EXTRA_COPY = [
+    # Copy various files to support femu.sh from implementation of fx emu.
+    # See base/bin/femu-meta.json for more detail about the files needed.
+    [ os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'emu'),
+      os.path.join('bin', 'devshell', 'emu') ],
+    [ os.path.join(FUCHSIA_ROOT, 'tools', 'devshell', 'lib', 'fvm.sh'),
+      os.path.join('bin', 'devshell', 'lib', 'fvm.sh') ],
+]
+
 
 class GNBuilder(Frontend):
     """Frontend for GN.
@@ -86,6 +96,10 @@ class GNBuilder(Frontend):
 
         # Propagate the metadata for the Core SDK into the GN SDK.
         shutil.copytree(self.source('meta'), self.dest('meta'))
+
+        # Copy any additional files that would normally not be included
+        for each in EXTRA_COPY:
+          shutil.copy2(each[0], self.dest(each[1]))
 
     def finalize(self, arch, types):
         self.write_additional_files()

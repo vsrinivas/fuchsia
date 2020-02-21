@@ -1,0 +1,15 @@
+{
+    "files": [
+        "bin/femu.sh",
+        "bin/femu-exec-wrapper.sh",
+        "bin/fuchsia-common.sh",
+        "bin/fx-image-common.sh",
+        "bin/devshell/emu",
+        "bin/devshell/lib/image_build_vars.sh",
+        "bin/devshell/lib/fvm.sh"
+    ],
+    "name": "femu",
+    "root": "bin",
+    "target_files": {},
+    "type": "host_tool"
+}
