@@ -23,7 +23,7 @@
 #include <thread>
 
 #include <fbl/algorithm.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #define ROUNDUP(a, b) (((a) + ((b)-1)) & ~((b)-1))
 
@@ -56,9 +56,7 @@ bool check_pages_mapped(zx_handle_t process, uintptr_t base, uint64_t bitmap, si
   return true;
 }
 
-bool destroy_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, DestroyTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   ASSERT_EQ(zx_process_create(zx_job_default(), kProcessName, sizeof(kProcessName) - 1, 0, &process,
@@ -81,13 +79,9 @@ bool destroy_test() {
   EXPECT_EQ(zx_handle_close(sub_vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
-bool basic_allocate_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, BasicAllocateTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t region1, region2;
@@ -114,13 +108,9 @@ bool basic_allocate_test() {
   EXPECT_EQ(zx_handle_close(region2), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
-bool map_in_compact_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, MapInCompactTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t vmo;
@@ -154,14 +144,10 @@ bool map_in_compact_test() {
   EXPECT_EQ(zx_handle_close(region), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Attempt to allocate out of the region bounds
-bool allocate_oob_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, AllocateOobTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t region1, region2;
@@ -189,14 +175,10 @@ bool allocate_oob_test() {
   EXPECT_EQ(zx_handle_close(region1), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Attempt to make unsatisfiable allocations
-bool allocate_unsatisfiable_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, AllocateUnsatisfiableTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t region1, region2, region3;
@@ -233,15 +215,11 @@ bool allocate_unsatisfiable_test() {
   EXPECT_EQ(zx_handle_close(region1), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Validate that when we destroy a VMAR, all operations on it
 // and its children fail.
-bool destroyed_vmar_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, DestroyedVmarTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t vmo;
@@ -325,15 +303,11 @@ bool destroyed_vmar_test() {
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Create a mapping, destroy the VMAR it is in, then attempt to create a new
 // mapping over it.
-bool map_over_destroyed_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, MapOverDestroyedTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t vmo, vmo2;
@@ -408,8 +382,6 @@ bool map_over_destroyed_test() {
   EXPECT_EQ(zx_handle_close(vmo2), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 struct AlignTestdata {
@@ -453,9 +425,7 @@ zx_status_t MakeManualAlignedVmar(size_t vmar_size, zx_handle_t* vmar) {
   return status;
 }
 
-bool alignment_vmar_map_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, AlignmentVmarMapTest) {
   const size_t size = PAGE_SIZE * 2;
   const auto vmar_size = (8ull * 1024 * 1024 * 1024);
 
@@ -507,12 +477,9 @@ bool alignment_vmar_map_test() {
   ASSERT_EQ(zx_vmar_destroy(vmar), ZX_OK);
   ASSERT_EQ(zx_handle_close(vmar), ZX_OK);
   ASSERT_EQ(zx_handle_close(vmo), ZX_OK);
-  END_TEST;
 }
 
-bool alignment_vmar_allocate_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, AlignmentVmarAllocateTest) {
   const size_t size = PAGE_SIZE * 16;
   const auto vmar_size = (8ull * 1024 * 1024 * 1024);
 
@@ -563,13 +530,11 @@ bool alignment_vmar_allocate_test() {
 
   ASSERT_EQ(zx_vmar_destroy(vmar), ZX_OK);
   ASSERT_EQ(zx_handle_close(vmar), ZX_OK);
-  END_TEST;
 }
 
 // Test to ensure we can map from a given VMO offset with MAP_RANGE enabled. This tests against
 // a bug found when creating MmioBuffer with a provided VMO and an offset.
-bool vmar_map_range_offset_test() {
-  BEGIN_TEST;
+TEST(Vmar, VmarMapRangeOffsetTest) {
   zx::vmar vmar;
   zx::vmo vmo;
   zx::process process;
@@ -579,13 +544,10 @@ bool vmar_map_range_offset_test() {
   ASSERT_EQ(zx::vmo::create(PAGE_SIZE * 4, 0, &vmo), ZX_OK);
   uintptr_t mapping;
   EXPECT_EQ(vmar.map(0, vmo, 0x2000, 0x1000, ZX_VM_MAP_RANGE, &mapping), ZX_OK);
-  END_TEST;
 }
 
 // Attempt overmapping with FLAG_SPECIFIC to ensure it fails
-bool overmapping_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, OvermappingTest) {
   zx_handle_t process;
   zx_handle_t region[3] = {};
   zx_handle_t vmar;
@@ -665,14 +627,10 @@ bool overmapping_test() {
   EXPECT_EQ(zx_handle_close(region[1]), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Test passing in bad arguments
-bool invalid_args_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, InvalidArgsTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t vmo;
@@ -828,14 +786,10 @@ bool invalid_args_test() {
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Test passing in unaligned lens to unmap/protect
-bool unaligned_len_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, UnalignedLenTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t vmo;
@@ -862,14 +816,10 @@ bool unaligned_len_test() {
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Test passing in unaligned lens to map
-bool unaligned_len_map_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, UnalignedLenMapTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t vmo;
@@ -906,14 +856,10 @@ bool unaligned_len_map_test() {
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Validate that dropping vmar handle rights affects mapping privileges
-bool rights_drop_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, RightsDropTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t vmo;
@@ -962,15 +908,11 @@ bool rights_drop_test() {
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Validate that protect can't be used to escalate mapping privileges beyond
 // the VMAR handle's and the original VMO handle's
-bool protect_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, ProtectTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t vmo;
@@ -1016,15 +958,11 @@ bool protect_test() {
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Validate that a region can't be created with higher RWX privileges than its
 // parent.
-bool nested_region_perms_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, NestedRegionPermsTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t vmo;
@@ -1096,13 +1034,9 @@ bool nested_region_perms_test() {
 
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
-bool object_info_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, ObjectInfoTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t region;
@@ -1126,14 +1060,10 @@ bool object_info_test() {
   EXPECT_EQ(zx_handle_close(region), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Verify that we can split a single mapping with an unmap call
-bool unmap_split_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, UnmapSplitTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t vmo;
@@ -1190,14 +1120,10 @@ bool unmap_split_test() {
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Verify that we can unmap multiple ranges simultaneously
-bool unmap_multiple_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, UnmapMultipleTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t vmo;
@@ -1339,14 +1265,10 @@ bool unmap_multiple_test() {
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Verify that we can unmap multiple ranges simultaneously
-bool unmap_base_not_mapped_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, UnmapBaseNotMappedTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t vmo;
@@ -1378,14 +1300,10 @@ bool unmap_base_not_mapped_test() {
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Verify that we can overwrite subranges and multiple ranges simultaneously
-bool map_specific_overwrite_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, MapSpecificOverwriteTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t vmo, vmo2;
@@ -1459,14 +1377,10 @@ bool map_specific_overwrite_test() {
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmo2), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Verify that we can split a single mapping with a protect call
-bool protect_split_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, ProtectSplitTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t vmo;
@@ -1515,15 +1429,11 @@ bool protect_split_test() {
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Validate that protect can be used across multiple mappings.  Make sure intersecting a subregion
 // or gap fails
-bool protect_multiple_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, ProtectMultipleTest) {
   zx_handle_t process;
   zx_handle_t vmar;
   zx_handle_t vmo, vmo2;
@@ -1642,14 +1552,10 @@ bool protect_multiple_test() {
   EXPECT_EQ(zx_handle_close(vmo2), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmar), ZX_OK);
   EXPECT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Verify that we can change protections on a demand paged mapping successfully.
-bool protect_over_demand_paged_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, ProtectOverDemandPagedTest) {
   zx_handle_t vmo;
   const size_t size = 100 * PAGE_SIZE;
   ASSERT_EQ(zx_vmo_create(size, 0, &vmo), ZX_OK);
@@ -1680,14 +1586,10 @@ bool protect_over_demand_paged_test() {
                "mapping should no longer be writeable");
 
   EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), mapping_addr, size), ZX_OK);
-
-  END_TEST;
 }
 
 // Verify that we can change protections on unmapped pages successfully.
-bool protect_large_uncommitted_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, ProtectLargeUncomittedTest) {
   zx_handle_t vmo;
   // Create a 1GB VMO
   const size_t size = 1ull << 30;
@@ -1724,14 +1626,10 @@ bool protect_large_uncommitted_test() {
                "mapping should no longer be writeable");
 
   EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), mapping_addr, size), ZX_OK);
-
-  END_TEST;
 }
 
 // Verify vmar_op_range() commit/decommit of mapped VMO pages.
-bool range_op_commit_vmo_pages() {
-  BEGIN_TEST;
-
+TEST(Vmar, RangeOpCommitVmoPages) {
   // Create a VMO to map parts of into a VMAR.
   const size_t kVmoSize = PAGE_SIZE * 5;
   zx_handle_t vmo = ZX_HANDLE_INVALID;
@@ -1816,14 +1714,10 @@ bool range_op_commit_vmo_pages() {
   // Clean up the test VMAR and VMO.
   EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), vmar_base, kVmoSize), ZX_OK);
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
-
-  END_TEST;
 }
 
 // Attempt to unmap a large mostly uncommitted VMO
-bool unmap_large_uncommitted_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, UnmapLargeUncommittedTest) {
   zx_handle_t vmo;
   // Create a 1GB VMO
   const size_t size = 1ull << 30;
@@ -1860,13 +1754,9 @@ bool unmap_large_uncommitted_test() {
                "mapping should no longer be writeable");
 
   EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), mapping_addr, size), ZX_OK);
-
-  END_TEST;
 }
 
-bool partial_unmap_and_read() {
-  BEGIN_TEST;
-
+TEST(Vmar, PartialUnmapAndRead) {
   // Map a two-page VMO.
   zx_handle_t vmo;
   ASSERT_EQ(zx_vmo_create(PAGE_SIZE * 2, 0, &vmo), ZX_OK);
@@ -1910,13 +1800,9 @@ bool partial_unmap_and_read() {
 
   // Unmap the left over first page.
   EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), mapping_addr, PAGE_SIZE), ZX_OK);
-
-  END_TEST;
 }
 
-bool partial_unmap_and_write() {
-  BEGIN_TEST;
-
+TEST(Vmar, PartialUnmapAndWrite) {
   // Map a two-page VMO.
   zx_handle_t vmo;
   ASSERT_EQ(zx_vmo_create(PAGE_SIZE * 2, 0, &vmo), ZX_OK);
@@ -1961,13 +1847,9 @@ bool partial_unmap_and_write() {
 
   // Unmap the left over first page.
   EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), mapping_addr, PAGE_SIZE), ZX_OK);
-
-  END_TEST;
 }
 
-bool partial_unmap_with_vmar_offset() {
-  BEGIN_TEST;
-
+TEST(Vmar, PartialUnmapWithVmarOffset) {
   constexpr size_t kOffset = 0x1000;
   constexpr size_t kVmoSize = PAGE_SIZE * 10;
   // Map a VMO, using an offset into the VMO.
@@ -2020,13 +1902,9 @@ bool partial_unmap_with_vmar_offset() {
                                    2, &actual),
             ZX_OK);
   EXPECT_EQ(actual, 1);
-
-  END_TEST;
 }
 
-bool allow_faults_test() {
-  BEGIN_TEST;
-
+TEST(Vmar, AllowFaultsTest) {
   // No-op test that checks the current default behavior.
   // TODO(stevensd): Add meaningful tests once the flag is actually implemented.
   zx_handle_t vmo;
@@ -2039,15 +1917,11 @@ bool allow_faults_test() {
   EXPECT_EQ(zx_handle_close(vmo), ZX_OK);
 
   EXPECT_EQ(zx_vmar_unmap(zx_vmar_root_self(), mapping_addr, PAGE_SIZE), ZX_OK);
-
-  END_TEST;
 }
 
 // Regression test for a scenario where process_read_memory could use a stale RefPtr<VmObject>
 // This will not always detect the failure scenario, but will never false positive.
-bool concurrent_unmap_read_memory() {
-  BEGIN_TEST;
-
+TEST(Vmar, ConcurrentUnmapReadMemory) {
   auto root_vmar = zx::vmar::root_self();
 
   zx::vmar child_vmar;
@@ -2081,44 +1955,6 @@ bool concurrent_unmap_read_memory() {
 
   running = false;
   t.join();
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(vmar_tests)
-RUN_TEST(destroy_test);
-RUN_TEST(basic_allocate_test);
-RUN_TEST(allocate_oob_test);
-RUN_TEST(allocate_unsatisfiable_test);
-RUN_TEST(destroyed_vmar_test);
-RUN_TEST(map_over_destroyed_test);
-RUN_TEST(alignment_vmar_map_test);
-RUN_TEST(alignment_vmar_allocate_test);
-RUN_TEST(map_in_compact_test);
-RUN_TEST(vmar_map_range_offset_test);
-RUN_TEST(overmapping_test);
-RUN_TEST(invalid_args_test);
-RUN_TEST(unaligned_len_test);
-RUN_TEST(unaligned_len_map_test);
-RUN_TEST(rights_drop_test);
-RUN_TEST(protect_test);
-RUN_TEST(nested_region_perms_test);
-RUN_TEST(object_info_test);
-RUN_TEST(unmap_split_test);
-RUN_TEST(unmap_multiple_test);
-RUN_TEST(unmap_base_not_mapped_test);
-RUN_TEST(map_specific_overwrite_test);
-RUN_TEST(protect_split_test);
-RUN_TEST(protect_multiple_test);
-RUN_TEST(protect_over_demand_paged_test);
-RUN_TEST(protect_large_uncommitted_test);
-RUN_TEST(range_op_commit_vmo_pages);
-RUN_TEST(unmap_large_uncommitted_test);
-RUN_TEST(partial_unmap_and_read);
-RUN_TEST(partial_unmap_and_write);
-RUN_TEST(partial_unmap_with_vmar_offset);
-RUN_TEST(allow_faults_test);
-RUN_TEST(concurrent_unmap_read_memory);
-END_TEST_CASE(vmar_tests)
