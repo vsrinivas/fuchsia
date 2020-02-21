@@ -51,6 +51,12 @@ static_library("fidl_codec") {
     "//zircon/public/lib/fidl_base",
     "//zircon/system/public",
   ]
+
+  # TODO(46798): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  # We are finding a negation of -9223372036854775808 which cannot fit into int64_t,
+  # in wire_types.h which is public.
+  public_configs = [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 executable("fidl_codec_test_bin") {
