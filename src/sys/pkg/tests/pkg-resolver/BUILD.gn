@@ -322,6 +322,9 @@ rustc_test("resolve_succeeds_with_broken_minfs") {
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
     "//zircon/system/fidl/fuchsia-tracing-provider:fuchsia-tracing-provider-rustc",
   ]
+
+  # TODO(46772): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 rustc_test("resolve_succeeds") {
