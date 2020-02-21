@@ -30,6 +30,7 @@ recovery_packages = [
   "//src/security/root_ssl_certificates",
   "//src/sys/appmgr:appmgr_scheme_config",
   "//src/sys/appmgr",
+  "//src/sys/core",
   "//src/sys/pkg/bin/amber",
   "//src/sys/pkg/bin/omaha-client",
   "//src/sys/pkg/bin/pkg-cache",
