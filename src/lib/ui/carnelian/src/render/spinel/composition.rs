@@ -92,7 +92,13 @@ pub struct SpinelComposition {
 }
 
 impl SpinelComposition {
-    pub(crate) fn set_up_spn_composition(&self, composition: SpnComposition, clip: Rect<u32>) {
+    pub(crate) fn set_up_spn_composition(
+        &self,
+        context: &InnerContext,
+        raster_builder: SpnRasterBuilder,
+        composition: SpnComposition,
+        clip: Rect<u32>,
+    ) {
         unsafe {
             let clip = [clip.min_x(), clip.min_y(), clip.max_x(), clip.max_y()];
             spn!(spn_composition_reset(composition));
@@ -100,16 +106,55 @@ impl SpinelComposition {
         }
 
         for (i, Layer { raster, .. }) in self.layers.iter().enumerate() {
-            for raster in raster.rasters().iter() {
+            for (paths_and_transforms, txty) in raster.rasters.iter() {
                 unsafe {
-                    spn!(spn_composition_place(
-                        composition,
-                        &**raster,
-                        &(i as u32),
-                        ptr::null(),
-                        1,
-                    ));
+                    spn!(spn_raster_builder_begin(raster_builder));
                 }
+
+                for (path, transform) in paths_and_transforms.iter() {
+                    const SPINEL_TRANSFORM_MULTIPLIER: f32 = 32.0;
+
+                    let transform = transform.post_translate(*txty);
+                    let transform = SpnTransform {
+                        sx: transform.m11 * SPINEL_TRANSFORM_MULTIPLIER,
+                        shx: transform.m21 * SPINEL_TRANSFORM_MULTIPLIER,
+                        tx: transform.m31 * SPINEL_TRANSFORM_MULTIPLIER,
+                        shy: transform.m12 * SPINEL_TRANSFORM_MULTIPLIER,
+                        sy: transform.m22 * SPINEL_TRANSFORM_MULTIPLIER,
+                        ty: transform.m32 * SPINEL_TRANSFORM_MULTIPLIER,
+                        w0: 0.0,
+                        w1: 0.0,
+                    };
+                    let clip = SpnClip {
+                        x0: std::f32::MIN,
+                        y0: std::f32::MIN,
+                        x1: std::f32::MAX,
+                        y1: std::f32::MAX,
+                    };
+
+                    unsafe {
+                        spn!(spn_raster_builder_add(
+                            raster_builder,
+                            &**path,
+                            ptr::null_mut(),
+                            &transform,
+                            ptr::null_mut(),
+                            &clip,
+                            1,
+                        ));
+                    }
+                }
+
+                let raster =
+                    unsafe { init(|ptr| spn!(spn_raster_builder_end(raster_builder, ptr))) };
+
+                unsafe {
+                    spn!(spn_composition_place(composition, &raster, &(i as u32), ptr::null(), 1,));
+                }
+
+                context.get_checked().map(|context| unsafe {
+                    spn!(spn_raster_release(context, &raster as *const _, 1))
+                });
             }
         }
     }

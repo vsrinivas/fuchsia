@@ -34,7 +34,7 @@ pub trait Backend: Copy + Debug + Default + Eq + Hash + Ord + Sized {
     /// Stateful path builder.
     type PathBuilder: PathBuilder<Self>;
     /// Compact rasterized form of any number of paths.
-    type Raster: Add<Output = Self::Raster> + Clone + Eq;
+    type Raster: Raster;
     /// Stateful raster builder.
     type RasterBuilder: RasterBuilder<Self>;
     /// Composition of stylized rasters.
@@ -155,6 +155,12 @@ pub trait PathBuilder<B: Backend> {
     fn build(self) -> B::Path;
 }
 
+/// Raster.
+pub trait Raster: Add<Output = Self> + Clone + Eq {
+    /// Translate raster.
+    fn translate(self, translation: Vector2D<i32>) -> Self;
+}
+
 /// Builds one Raster.
 pub trait RasterBuilder<B: Backend> {
     /// Add a path to the raster with optional transform.
@@ -213,7 +219,7 @@ pub struct Layer<B: Backend> {
     /// Layer raster.
     pub raster: B::Raster,
     /// Layer style.
-    pub style: Style, // Will also contain txty when available.
+    pub style: Style,
 }
 
 /// A group of ordered layers.

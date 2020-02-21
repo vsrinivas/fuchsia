@@ -129,31 +129,17 @@ impl<B: Backend> RoundedLine<B> {
 
 struct Hand<B: Backend> {
     line: RoundedLine<B>,
-    elevation: f32,
     raster: Option<B::Raster>,
-    shadow_raster: Option<B::Raster>,
     color: Color,
 }
 
 impl<B: Backend> Hand<B> {
-    fn new_raster(
-        mut raster_builder: impl RasterBuilder<B>,
-        path: &B::Path,
-        rotation: &Transform2D<f32>,
-        txty: &Vector2D<f32>,
-    ) -> B::Raster {
-        let transform = rotation.post_translate(*txty);
-        raster_builder.add(path, Some(&transform));
-        raster_builder.build()
-    }
-
     fn new(
         path_builder: impl PathBuilder<B>,
         thickness: f32,
         length: f32,
         offset: f32,
         color: Color,
-        elevation: f32,
     ) -> Self {
         let line = RoundedLine::new(
             path_builder,
@@ -162,22 +148,14 @@ impl<B: Backend> Hand<B> {
             thickness,
         );
 
-        Self { line, elevation, raster: None, shadow_raster: None, color }
+        Self { line, raster: None, color }
     }
 
-    fn update(&mut self, context: &mut impl Context<B>, scale: f32, angle: f32, position: Point) {
+    fn update(&mut self, context: &mut impl Context<B>, scale: f32, angle: f32) {
         let rotation = Transform2D::create_rotation(Angle::radians(angle)).post_scale(scale, scale);
-
-        let txty = Vector2D::new(position.x, position.y);
-        let raster =
-            Self::new_raster(context.raster_builder().unwrap(), &self.line.path, &rotation, &txty);
-        self.raster.replace(raster);
-
-        let shadow_offset = self.elevation * scale;
-        let txty = Vector2D::new(position.x + shadow_offset, position.y + shadow_offset * 2.0);
-        let raster =
-            Self::new_raster(context.raster_builder().unwrap(), &self.line.path, &rotation, &txty);
-        self.shadow_raster.replace(raster);
+        let mut raster_builder = context.raster_builder().unwrap();
+        raster_builder.add(&self.line.path, Some(&rotation));
+        self.raster.replace(raster_builder.build());
     }
 }
 
@@ -196,34 +174,25 @@ impl<B: Backend> Scene<B> {
         const HOUR_HAND_COLOR: Color = Color { r: 254, g: 72, b: 100, a: 255 };
         const MINUTE_HAND_COLOR: Color = Color { r: 254, g: 72, b: 100, a: 127 };
         const SECOND_HAND_COLOR: Color = Color::white();
+        const RADIUS: f32 = 0.4;
 
-        let radius = 0.4;
-        let thickness = radius / 20.0;
-        let offset = radius / 5.0;
-        let elevation = 0.01;
+        let thickness = RADIUS / 20.0;
+        let offset = RADIUS / 5.0;
         let hour_hand = Hand::new(
             context.path_builder().unwrap(),
             thickness * 2.0,
-            radius,
+            RADIUS,
             offset,
             HOUR_HAND_COLOR,
-            elevation,
         );
-        let minute_hand = Hand::new(
-            context.path_builder().unwrap(),
-            thickness,
-            radius,
-            0.0,
-            MINUTE_HAND_COLOR,
-            elevation,
-        );
+        let minute_hand =
+            Hand::new(context.path_builder().unwrap(), thickness, RADIUS, 0.0, MINUTE_HAND_COLOR);
         let second_hand = Hand::new(
             context.path_builder().unwrap(),
             thickness / 2.0,
-            radius + offset,
+            RADIUS + offset,
             offset,
             SECOND_HAND_COLOR,
-            elevation,
         );
 
         Self {
@@ -237,15 +206,13 @@ impl<B: Backend> Scene<B> {
         }
     }
 
-    fn update(&mut self, context: &mut impl Context<B>, size: &Size) {
+    fn update(&mut self, context: &mut impl Context<B>, size: &Size, scale: f32) {
         if self.size != *size {
             self.size = *size;
             self.hour_index = std::usize::MAX;
             self.minute_index = std::usize::MAX;
             self.second_index = std::usize::MAX;
         }
-        let scale = size.width.min(size.height);
-        let center = Point::new(size.width / 2.0, size.height / 2.0);
         const MICROSECONDS_PER_SECOND: f32 = 1e+6;
         let now = Local::now();
         let (_is_pm, hour12) = now.hour12();
@@ -259,19 +226,19 @@ impl<B: Backend> Scene<B> {
         let index = ((R0 + hour / 12.0).rem_euclid(1.0) * STEPS as f32) as usize;
         if index != self.hour_index {
             let angle = index as f32 * 2.0 * f32::consts::PI / STEPS as f32;
-            self.hour_hand.update(context, scale, -angle, center);
+            self.hour_hand.update(context, scale, -angle);
             self.hour_index = index;
         }
         let index = ((R0 + minute / 60.0).rem_euclid(1.0) * STEPS as f32) as usize;
         if index != self.minute_index {
             let angle = index as f32 * 2.0 * f32::consts::PI / STEPS as f32;
-            self.minute_hand.update(context, scale, -angle, center);
+            self.minute_hand.update(context, scale, -angle);
             self.minute_index = index;
         }
         let index = ((R0 + second / 60.0).rem_euclid(1.0) * STEPS as f32) as usize;
         if index != self.second_index {
             let angle = index as f32 * 2.0 * f32::consts::PI / STEPS as f32;
-            self.second_hand.update(context, scale, -angle, center);
+            self.second_hand.update(context, scale, -angle);
             self.second_index = index;
         }
     }
@@ -291,8 +258,14 @@ impl<B: Backend> Contents<B> {
         Self { image, composition, size: Size::zero(), previous_rasters: Vec::new() }
     }
 
-    fn update(&mut self, context: &mut impl Context<B>, scene: &Scene<B>, size: &Size) {
+    fn update(&mut self, context: &mut impl Context<B>, scene: &Scene<B>, size: &Size, scale: f32) {
         const SHADOW_COLOR: Color = Color { r: 0, g: 0, b: 0, a: 13 };
+        const ELEVATION: f32 = 0.01;
+
+        let center = Vector2D::new(size.width as i32 / 2, size.height as i32 / 2);
+        let elevation = (ELEVATION * scale) as i32;
+        let shadow_offset = center + Vector2D::new(elevation, elevation * 2);
+
         let clip = Rect::new(
             Point2D::new(0, 0),
             Size2D::new(size.width.floor() as u32, size.height.floor() as u32),
@@ -313,7 +286,7 @@ impl<B: Backend> Contents<B> {
         let layers = hands
             .iter()
             .map(|hand| Layer {
-                raster: hand.raster.clone().unwrap(),
+                raster: hand.raster.clone().unwrap().translate(center),
                 style: Style {
                     fill_rule: FillRule::NonZero,
                     fill: Fill::Solid(hand.color),
@@ -324,10 +297,11 @@ impl<B: Backend> Contents<B> {
                 raster: hands
                     .iter()
                     .fold(None, |raster_union: Option<B::Raster>, hand| {
+                        let raster = hand.raster.clone().unwrap().translate(shadow_offset);
                         if let Some(raster_union) = raster_union {
-                            Some(raster_union + hand.shadow_raster.clone().unwrap())
+                            Some(raster_union + raster)
                         } else {
-                            hand.shadow_raster.clone()
+                            Some(raster)
                         }
                     })
                     .unwrap(),
@@ -343,10 +317,11 @@ impl<B: Backend> Contents<B> {
                     .enumerate()
                     .fold(None, |raster_union: Option<B::Raster>, (i, hand)| {
                         if i != 1 {
+                            let raster = hand.raster.clone().unwrap().translate(shadow_offset);
                             if let Some(raster_union) = raster_union {
-                                Some(raster_union + hand.shadow_raster.clone().unwrap())
+                                Some(raster_union + raster)
                             } else {
-                                hand.shadow_raster.clone()
+                                Some(raster)
                             }
                         } else {
                             raster_union
@@ -374,10 +349,9 @@ impl<B: Backend> Contents<B> {
 
         // Keep reference to rasters for clearing.
         self.previous_rasters.extend(
-            hands
-                .iter()
-                .map(|hand| hand.raster.clone().unwrap())
-                .chain(hands.iter().map(|hand| hand.shadow_raster.clone().unwrap())),
+            hands.iter().map(|hand| hand.raster.clone().unwrap().translate(center)).chain(
+                hands.iter().map(|hand| hand.raster.clone().unwrap().translate(shadow_offset)),
+            ),
         );
     }
 }
@@ -405,8 +379,9 @@ impl<B: Backend, C: Context<B>> ViewAssistant for ClockfaceViewAssistant<B, C> {
         duration!("gfx", "update");
         let canvas = context.canvas.as_ref().unwrap().borrow();
         let size = &context.size;
+        let scale = size.width.min(size.height);
 
-        self.scene.update(&mut self.context, size);
+        self.scene.update(&mut self.context, size, scale);
 
         // Temporary hack to deal with the fact that carnelian
         // allocates a new buffer for each frame with the same
@@ -422,7 +397,7 @@ impl<B: Backend, C: Context<B>> ViewAssistant for ClockfaceViewAssistant<B, C> {
             content = self.contents.entry(canvas.id).or_insert_with(|| Contents::new(image));
         }
 
-        content.update(&mut self.context, &self.scene, size);
+        content.update(&mut self.context, &self.scene, size, scale);
 
         Ok(())
     }

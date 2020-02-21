@@ -38,12 +38,35 @@ impl MoldComposition {
         map.global(0, vec![mold::tile::Op::ColorAccZero]);
 
         for (i, layer) in self.layers.iter().enumerate() {
+            let mut rasters = vec![];
+
+            for (paths_and_transforms, txty) in layer.raster.rasters.iter() {
+                let mut paths_transforms = vec![];
+
+                for (path, transform) in paths_and_transforms {
+                    let transform = transform.post_translate(*txty);
+                    let transform: [f32; 9] = [
+                        transform.m11,
+                        transform.m21,
+                        transform.m31,
+                        transform.m12,
+                        transform.m22,
+                        transform.m32,
+                        0.0,
+                        0.0,
+                        1.0,
+                    ];
+                    paths_transforms.push(((**path).clone(), transform));
+                }
+
+                rasters.push(mold::Raster::from_paths_and_transforms(
+                    paths_transforms.iter().map(|(path, transform)| (path, transform)),
+                ));
+            }
+
             map.print(
                 i as u32 + 1,
-                mold::Layer::new(
-                    mold::Raster::union(layer.raster.rasters.iter()),
-                    style_to_ops(&layer.style),
-                ),
+                mold::Layer::new(mold::Raster::union(rasters.iter()), style_to_ops(&layer.style)),
             );
         }
 

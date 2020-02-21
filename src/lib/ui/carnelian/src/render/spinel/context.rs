@@ -693,18 +693,7 @@ impl Context<Spinel> for SpinelContext {
     }
 
     fn raster_builder(&self) -> Option<SpinelRasterBuilder> {
-        if Rc::strong_count(&self.raster_builder) == 1 {
-            unsafe {
-                spn!(spn_raster_builder_begin(*self.raster_builder));
-            }
-
-            Some(SpinelRasterBuilder {
-                context: Rc::clone(&self.inner),
-                raster_builder: Rc::clone(&self.raster_builder),
-            })
-        } else {
-            None
-        }
+        Some(SpinelRasterBuilder { paths: Vec::new() })
     }
 
     fn new_image(&mut self, size: Size2D<u32>) -> SpinelImage {
@@ -739,7 +728,7 @@ impl Context<Spinel> for SpinelContext {
                 vulkan.format,
                 vulkan.buffer_collection,
                 image_index,
-                SpinelImage(index)
+                SpinelImage(index),
             ));
 
             index
@@ -1106,7 +1095,12 @@ impl Context<Spinel> for SpinelContext {
         let spn_composition = *self.compositions.entry(image_id).or_insert_with(|| unsafe {
             init(|ptr| spn!(spn_composition_create(spn_context, ptr)))
         });
-        composition.set_up_spn_composition(spn_composition, clip);
+        composition.set_up_spn_composition(
+            &*self.inner.borrow(),
+            *self.raster_builder,
+            spn_composition,
+            clip,
+        );
         let spn_styling = composition
             .spn_styling(&*self.inner.borrow())
             .expect("SpinelComposition::spn_styling called from outside SpinelContext::render");

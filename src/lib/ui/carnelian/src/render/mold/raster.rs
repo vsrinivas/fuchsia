@@ -2,19 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::ops::Add;
+use std::{ops::Add, rc::Rc};
 
-use euclid::Transform2D;
+use euclid::{Transform2D, Vector2D};
 use smallvec::{smallvec, SmallVec};
 
 use crate::render::{
     mold::{Mold, MoldPath},
-    RasterBuilder,
+    Raster, RasterBuilder,
 };
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct MoldRaster {
-    pub(crate) rasters: SmallVec<[mold::Raster; 1]>,
+    pub(crate) rasters: SmallVec<[(Vec<(Rc<mold::Path>, Transform2D<f32>)>, Vector2D<f32>); 1]>,
+}
+
+impl Raster for MoldRaster {
+    fn translate(mut self, translation: Vector2D<i32>) -> Self {
+        for (_, txty) in &mut self.rasters {
+            *txty += translation.to_f32();
+        }
+        self
+    }
 }
 
 impl Add for MoldRaster {
@@ -26,9 +35,28 @@ impl Add for MoldRaster {
     }
 }
 
+impl Eq for MoldRaster {}
+
+impl PartialEq for MoldRaster {
+    fn eq(&self, other: &Self) -> bool {
+        self.rasters.len() == other.rasters.len()
+            && self.rasters.iter().zip(other.rasters.iter()).all(
+                |((paths_transforms, txty), (other_paths_transforms, other_txty))| {
+                    txty == other_txty
+                        && paths_transforms.len() == other_paths_transforms.len()
+                        && paths_transforms.iter().zip(other_paths_transforms.iter()).all(
+                            |((path, transform), (other_path, other_transform))| {
+                                Rc::ptr_eq(&path, &other_path) && transform == other_transform
+                            },
+                        )
+                },
+            )
+    }
+}
+
 #[derive(Debug)]
 pub struct MoldRasterBuilder {
-    paths_transforms: Vec<(MoldPath, [f32; 9])>,
+    paths_transforms: Vec<(Rc<mold::Path>, Transform2D<f32>)>,
 }
 
 impl MoldRasterBuilder {
@@ -39,26 +67,11 @@ impl MoldRasterBuilder {
 
 impl RasterBuilder<Mold> for MoldRasterBuilder {
     fn add_with_transform(&mut self, path: &MoldPath, transform: &Transform2D<f32>) -> &mut Self {
-        let transform: [f32; 9] = [
-            transform.m11,
-            transform.m21,
-            transform.m31,
-            transform.m12,
-            transform.m22,
-            transform.m32,
-            0.0,
-            0.0,
-            1.0,
-        ];
-        self.paths_transforms.push((path.clone(), transform));
+        self.paths_transforms.push((Rc::clone(&path.path), *transform));
         self
     }
 
     fn build(self) -> MoldRaster {
-        MoldRaster {
-            rasters: smallvec![mold::Raster::from_paths_and_transforms(
-                self.paths_transforms.iter().map(|(path, transform)| (&*path.path, transform)),
-            )],
-        }
+        MoldRaster { rasters: smallvec![(self.paths_transforms, Vector2D::zero())] }
     }
 }

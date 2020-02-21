@@ -10,7 +10,7 @@ use {
         FrameBufferPtr, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
         ViewKey, ViewMode,
     },
-    euclid::{Point2D, Rect, Size2D, Transform2D, Vector2D},
+    euclid::{Point2D, Rect, Size2D, Vector2D},
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_input_report as hid_input_report,
     fidl_fuchsia_sysmem::BufferCollectionTokenMarker,
@@ -24,10 +24,8 @@ use {
     rand::{thread_rng, Rng},
     rusttype::{GlyphId, Scale, Segment},
     std::{
-        cell::RefCell,
         collections::{BTreeMap, VecDeque},
         f32, fs,
-        rc::Rc,
     },
     textwrap::wrap_iter,
 };
@@ -81,8 +79,8 @@ struct Args {
     #[argh(switch, short = 'm')]
     use_mold: bool,
 
-    /// contents scale (default scale is 2.0)
-    #[argh(option, default = "2.0")]
+    /// contents scale (default scale is 3.0)
+    #[argh(option, default = "3.0")]
     scale: f32,
 
     /// scrolling method (Redraw|CopyRedraw|SlidingOffset|MotionBlur)
@@ -199,7 +197,6 @@ fn lerp(t: f32, p0: Point, p1: Point) -> Point {
     Point::new(p0.x * (1.0 - t) + p1.x * t, p0.y * (1.0 - t) + p1.y * t)
 }
 
-// TODO: Remove and use spn_path_builder_cubic_to.
 fn cubic<B: Backend>(
     path_builder: &mut impl PathBuilder<B>,
     p0: Point,
@@ -212,6 +209,8 @@ fn cubic<B: Backend>(
 
     path_builder.move_to(p0);
     path_builder.cubic_to(p1, p2, p3);
+
+    // Sub-divide curve to determine bounding box.
 
     let deviation_x = (p0.x + p2.x - 3.0 * (p1.x + p2.x)).abs();
     let deviation_y = (p0.y + p2.y - 3.0 * (p1.y + p2.y)).abs();
@@ -242,7 +241,7 @@ fn cubic<B: Backend>(
 }
 
 struct Glyph<B: Backend> {
-    path: Rc<RefCell<B::Path>>,
+    raster: B::Raster,
     bounding_box: Rect<f32>,
 }
 
@@ -291,15 +290,16 @@ impl<B: Backend> Glyph<B> {
             bounding_box = bounding_box.union(&Point::new(glyph_box.max.x, glyph_box.max.y));
         }
 
-        Self {
-            path: Rc::new(RefCell::new(path_builder.build())),
-            bounding_box: bounding_box.to_rect(),
-        }
+        let path = path_builder.build();
+        let mut raster_builder = context.raster_builder().unwrap();
+        raster_builder.add(&path, None);
+
+        Self { raster: raster_builder.build(), bounding_box: bounding_box.to_rect() }
     }
 }
 
 struct Text<B: Backend> {
-    paths: Vec<(Vector2D<f32>, Rc<RefCell<B::Path>>, Rect<f32>, Option<B::Raster>)>,
+    raster: B::Raster,
     bounding_box: Rect<f32>,
 }
 
@@ -318,39 +318,53 @@ impl<B: Backend> Text<B> {
         let scale = Scale::uniform(size);
         let v_metrics = face.font.v_metrics(scale);
         let mut ascent = v_metrics.ascent;
-        let mut paths = Vec::new();
+        let mut raster_union = None;
 
         for line in wrap_iter(text, wrap) {
-            let y_offset = Vector2D::new(0.0, ascent);
+            // TODO: adjust vertical alignment of glyphs to match first glyph.
+            let y_offset = Vector2D::new(0, ascent as i32);
             let chars = line.chars();
-            let mut x = 0.0;
+            let mut x: f32 = 0.0;
             let mut last = None;
             for g in face.font.glyphs_for(chars) {
                 let g = g.scaled(scale);
                 let id = g.id();
                 let w = g.h_metrics().advance_width
                     + last.map(|last| face.font.pair_kerning(scale, last, id)).unwrap_or(0.0);
-                let position = y_offset + Vector2D::new(x, 0.0);
+
+                // Lookup glyph entry in cache.
+                // TODO: improve sub pixel placement using a larger cache.
+                let position = y_offset + Vector2D::new(x as i32, 0);
                 let glyph = glyphs.entry(id).or_insert_with(|| Glyph::new(context, face, size, id));
-                paths.push((position, glyph.path.clone(), glyph.bounding_box, None));
-                let glyph_bounding_box = glyph.bounding_box.translate(&position);
+
+                // Clone and translate raster.
+                let raster = glyph.raster.clone().translate(position);
+                raster_union = if let Some(raster_union) = raster_union {
+                    Some(raster_union + raster)
+                } else {
+                    Some(raster)
+                };
+
+                // Expand bounding box.
+                let glyph_bounding_box = glyph.bounding_box.translate(&position.to_f32());
                 if bounding_box.is_empty() {
                     bounding_box = glyph_bounding_box;
                 } else {
                     bounding_box = bounding_box.union(&glyph_bounding_box);
                 }
+
                 x += w;
                 last = Some(id);
             }
             ascent += size;
         }
 
-        Self { paths, bounding_box }
+        Self { raster: raster_union.unwrap(), bounding_box }
     }
 }
 
 struct Flower<B: Backend> {
-    path: B::Path,
+    raster: B::Raster,
     bounding_box: Rect<f32>,
 }
 
@@ -389,7 +403,10 @@ impl<B: Backend> Flower<B> {
             t += dt * 2.0;
         }
 
-        Self { path: path_builder.build(), bounding_box: bounding_box.to_rect() }
+        let mut raster_builder = context.raster_builder().unwrap();
+        raster_builder.add(&path_builder.build(), None);
+
+        Self { raster: raster_builder.build(), bounding_box: bounding_box.to_rect() }
     }
 }
 
@@ -415,10 +432,9 @@ const ITEM_TYPE_FLOWER: i32 = 4;
 const ITEM_TYPE_COUNT: i32 = 5;
 
 struct Item<B: Backend> {
-    paths: Vec<(Vector2D<f32>, Rc<RefCell<B::Path>>, Rect<f32>, Option<B::Raster>)>,
-    origin: Point,
-    bounding_box: (Rect<f32>, B::Path, Option<B::Raster>),
-    txty: [f32; 2],
+    raster: B::Raster,
+    bounding_box: Rect<f32>,
+    bounding_box_raster: B::Raster,
     color: Color,
     id: i32,
 }
@@ -430,7 +446,6 @@ struct Scene<B: Backend> {
     text_disabled: bool,
     scroll_offset_y: u32,
     last_scroll_offset_y: u32,
-    raster_ty: f32,
     title_glyphs: BTreeMap<GlyphId, Glyph<B>>,
     body_glyphs: BTreeMap<GlyphId, Glyph<B>>,
     columns: Vec<VecDeque<Item<B>>>,
@@ -447,9 +462,8 @@ impl<B: Backend> Scene<B> {
             exposure,
             max_columns,
             text_disabled,
-            scroll_offset_y: scroll_offset_y,
+            scroll_offset_y,
             last_scroll_offset_y: scroll_offset_y,
-            raster_ty: -(scroll_offset_y as f32),
             title_glyphs: BTreeMap::new(),
             body_glyphs: BTreeMap::new(),
             columns: Vec::new(),
@@ -459,6 +473,8 @@ impl<B: Backend> Scene<B> {
 
     fn new_item(
         context: &mut impl Context<B>,
+        offset: Vector2D<i32>,
+        align_bottom: bool,
         scale: f32,
         title_glyphs: &mut BTreeMap<GlyphId, Glyph<B>>,
         body_glyphs: &mut BTreeMap<GlyphId, Glyph<B>>,
@@ -469,7 +485,7 @@ impl<B: Backend> Scene<B> {
         let item_type =
             if text_disabled { ITEM_TYPE_FLOWER } else { id.rem_euclid(ITEM_TYPE_COUNT) };
         // Alternate between title, body, and flower shape.
-        let (paths, bounding_box, origin, color) = match item_type {
+        let (raster, bounding_box, x, color) = match item_type {
             ITEM_TYPE_TITLE => {
                 const TITLE_SIZE: f32 = 32.0;
 
@@ -479,12 +495,7 @@ impl<B: Backend> Scene<B> {
                 let text =
                     Text::new(context, &title, size, wrap as usize, &FONT_FACE, title_glyphs);
 
-                (
-                    text.paths,
-                    text.bounding_box.round_out(),
-                    Point::new(0.0, 0.0),
-                    Color { r: 0, g: 0, b: 0, a: 255 },
-                )
+                (text.raster, text.bounding_box.round_out(), 0, Color { r: 0, g: 0, b: 0, a: 255 })
             }
             ITEM_TYPE_BODY_MIN..=ITEM_TYPE_BODY_MAX => {
                 const BODY_SIZE: f32 = 20.0;
@@ -497,12 +508,7 @@ impl<B: Backend> Scene<B> {
                 let body = lipsum_words(rng.gen_range(BODY_MIN_WORDS, BODY_MAX_WORDS));
                 let text = Text::new(context, &body, size, wrap as usize, &FONT_FACE, body_glyphs);
 
-                (
-                    text.paths,
-                    text.bounding_box.round_out(),
-                    Point::new(0.0, 0.0),
-                    Color { r: 0, g: 0, b: 0, a: 255 },
-                )
+                (text.raster, text.bounding_box.round_out(), 0, Color { r: 0, g: 0, b: 0, a: 255 })
             }
             ITEM_TYPE_FLOWER => {
                 const FLOWER_MIN_PETALS: usize = 3;
@@ -517,38 +523,32 @@ impl<B: Backend> Scene<B> {
                 let r1: f32 = rng.gen_range(FLOWER_MIN_R1, FLOWER_MAX_R1) * scale;
                 let r2: f32 = rng.gen_range(FLOWER_MIN_R2, FLOWER_MAX_R2) * scale;
                 let flower = Flower::new(context, petal_count, r1, r2);
-                let x = column_width / 2.0;
+                let x = column_width as i32 / 2;
                 let bounding_box = flower.bounding_box.round_out();
 
-                (
-                    vec![(
-                        Vector2D::zero(),
-                        Rc::new(RefCell::new(flower.path)),
-                        bounding_box,
-                        None,
-                    )],
-                    bounding_box,
-                    Point::new(x, 0.0),
-                    random_color(),
-                )
+                (flower.raster, bounding_box.round_out(), x, random_color())
             }
             _ => unreachable!(),
         };
 
+        // Create a bounding box raster that can be used for efficient clearing.
         let mut path_builder = context.path_builder().unwrap();
         path_builder.move_to(bounding_box.origin);
         path_builder.line_to(bounding_box.top_right());
         path_builder.line_to(bounding_box.bottom_right());
         path_builder.line_to(bounding_box.bottom_left());
         path_builder.line_to(bounding_box.origin);
+        let mut raster_builder = context.raster_builder().unwrap();
+        raster_builder.add(&path_builder.build(), None);
+        let bounding_box_raster = raster_builder.build();
 
-        let bounding_box = bounding_box.translate(&origin.to_vector());
+        let y = if align_bottom { -bounding_box.size.height } else { 0.0 };
+        let offset = offset + Vector2D::new(x, (y - bounding_box.min_y()) as i32);
 
         Item {
-            paths,
-            origin,
-            bounding_box: (bounding_box, path_builder.build(), None),
-            txty: [0.0, 0.0],
+            raster: raster.translate(offset),
+            bounding_box: bounding_box.translate(&offset.to_f32()),
+            bounding_box_raster: bounding_box_raster.translate(offset),
             color,
             id,
         }
@@ -592,7 +592,7 @@ impl<B: Backend> Scene<B> {
         }
 
         // Discard distance needs to be at least height for clearing. Extra distance
-        // avoids unncessary work by keeping items around that are likely to become
+        // avoids unnecessary work by keeping items around that are likely to become
         // visible again. This improves performance at the cost of increased memory
         // usage.
         let discard_distance = size.height + DISCARD_EXTRA_DISTANCE;
@@ -604,7 +604,7 @@ impl<B: Backend> Scene<B> {
             // Remove items at the bottom of column that are no longer visible and
             // outside discard distance.
             while !column.is_empty()
-                && (column.back().unwrap().bounding_box.0.min_y() - top)
+                && (column.back().unwrap().bounding_box.min_y() - top)
                     > (size.height + discard_distance)
             {
                 column.pop_back();
@@ -613,142 +613,56 @@ impl<B: Backend> Scene<B> {
             // Remove items at the top of column that are no longer visible and
             // outside discard distance.
             while !column.is_empty()
-                && (column.front().unwrap().bounding_box.0.max_y() - top) < -discard_distance
+                && (column.front().unwrap().bounding_box.max_y() - top) < -discard_distance
             {
                 column.pop_front();
             }
 
             // Add new items at the bottom of column to fill visible region.
             while column.is_empty()
-                || (column.back().unwrap().bounding_box.0.max_y() - top + padding) < size.height
+                || (column.back().unwrap().bounding_box.max_y() - top + padding) < size.height
             {
                 let (id, y) = if let Some(item) = column.back() {
-                    (
-                        item.id + get_id_step(item.id, ITEM_TYPE_BODY_MIN),
-                        item.bounding_box.0.max_y(),
-                    )
+                    (item.id + get_id_step(item.id, ITEM_TYPE_BODY_MIN), item.bounding_box.max_y())
                 } else {
                     (0, top)
                 };
-                let mut item = Self::new_item(
+                column.push_back(Self::new_item(
                     context,
+                    Vector2D::new(margin as i32, (y + padding) as i32),
+                    false,
                     self.scale,
                     &mut self.title_glyphs,
                     &mut self.body_glyphs,
                     id,
                     column_size as f32,
                     self.text_disabled,
-                );
-                let offset =
-                    Vector2D::new(margin as f32, y - item.bounding_box.0.min_y() + padding);
-                item.origin += offset;
-                item.bounding_box.0 = item.bounding_box.0.translate(&offset);
-                item.txty[1] = self.raster_ty;
-                column.push_back(item);
+                ));
             }
 
             // Add new items at the top of column to fill visible region.
             while column.is_empty()
-                || (column.front().unwrap().bounding_box.0.min_y() - top - padding) > 0.0
+                || (column.front().unwrap().bounding_box.min_y() - top - padding) > 0.0
             {
                 let (id, y) = if let Some(item) = column.front() {
-                    (
-                        item.id - get_id_step(item.id, ITEM_TYPE_BODY_MAX),
-                        item.bounding_box.0.min_y(),
-                    )
+                    (item.id - get_id_step(item.id, ITEM_TYPE_BODY_MAX), item.bounding_box.min_y())
                 } else {
                     (0, top + size.height as f32)
                 };
-                let mut item = Self::new_item(
+                column.push_front(Self::new_item(
                     context,
+                    Vector2D::new(margin as i32, (y - padding) as i32),
+                    true,
                     self.scale,
                     &mut self.title_glyphs,
                     &mut self.body_glyphs,
                     id,
                     column_size as f32,
                     self.text_disabled,
-                );
-                let offset = Vector2D::new(
-                    margin as f32,
-                    y - item.bounding_box.0.size.height - item.bounding_box.0.min_y() - padding,
-                );
-                item.origin += offset;
-                item.bounding_box.0 = item.bounding_box.0.translate(&offset);
-                item.txty[1] = self.raster_ty;
-                column.push_front(item);
+                ));
             }
 
             self.total_items += column.len();
-        }
-    }
-
-    fn set_raster_ty(&mut self, raster_ty: f32) {
-        if raster_ty != self.raster_ty {
-            let dy = raster_ty - self.raster_ty;
-            for item in self.columns.iter_mut().flat_map(|c| c.iter_mut()) {
-                item.txty[1] += dy;
-                item.bounding_box.2 = None;
-                for (_, _, _, raster) in item.paths.iter_mut() {
-                    raster.take();
-                }
-            }
-            self.raster_ty = raster_ty;
-        }
-    }
-
-    fn set_items_ty(&mut self, ty: f32) {
-        for item in self.columns.iter_mut().flat_map(|c| c.iter_mut()) {
-            item.txty[1] = ty;
-            item.bounding_box.2 = None;
-            for (_, _, _, raster) in item.paths.iter_mut() {
-                raster.take();
-            }
-        }
-    }
-
-    fn build_rasters_for_viewport(&mut self, context: &mut impl Context<B>, viewport: &Rect<f32>) {
-        for item in self.columns.iter_mut().flat_map(|c| c.iter_mut()) {
-            if viewport.intersects(&item.bounding_box.0) {
-                for (offset, path, bounding_box, raster) in item.paths.iter_mut() {
-                    let bounding_box = bounding_box.translate(&Vector2D::new(
-                        item.origin.x + offset.x,
-                        item.origin.y + offset.y,
-                    ));
-                    if raster.is_none() && viewport.intersects(&bounding_box) {
-                        let new_raster = {
-                            let mut raster_builder = context.raster_builder().unwrap();
-                            let transform = Transform2D::create_translation(
-                                item.origin.x + offset.x + item.txty[0],
-                                item.origin.y + offset.y + item.txty[1],
-                            );
-                            raster_builder.add(&path.borrow(), Some(&transform));
-                            raster_builder.build()
-                        };
-                        raster.replace(new_raster);
-                    }
-                }
-            }
-        }
-    }
-
-    fn build_clear_rasters_for_viewport(
-        &mut self,
-        context: &mut impl Context<B>,
-        viewport: &Rect<f32>,
-    ) {
-        for item in self.columns.iter_mut().flat_map(|c| c.iter_mut()) {
-            if item.bounding_box.2.is_none() && viewport.intersects(&item.bounding_box.0) {
-                let new_raster = {
-                    let mut raster_builder = context.raster_builder().unwrap();
-                    let transform = Transform2D::create_translation(
-                        item.origin.x + item.txty[0],
-                        item.origin.y + item.txty[1],
-                    );
-                    raster_builder.add(&item.bounding_box.1, Some(&transform));
-                    raster_builder.build()
-                };
-                item.bounding_box.2.replace(new_raster);
-            }
         }
     }
 
@@ -756,25 +670,20 @@ impl<B: Backend> Scene<B> {
         &self,
         composition: &mut B::Composition,
         viewport: &Rect<f32>,
+        ty: i32,
     ) {
         let layers = self
             .columns
             .iter()
             .flat_map(|column| column.iter())
-            .filter(|item| viewport.intersects(&item.bounding_box.0))
-            .filter_map(|item| {
-                if let Some(raster) = &item.bounding_box.2 {
-                    Some(Layer {
-                        raster: raster.clone(),
-                        style: Style {
-                            fill_rule: FillRule::WholeTile,
-                            fill: Fill::Solid(BACKGROUND_COLOR),
-                            blend_mode: BlendMode::Over,
-                        },
-                    })
-                } else {
-                    None
-                }
+            .filter(|item| viewport.intersects(&item.bounding_box))
+            .map(|item| Layer {
+                raster: item.bounding_box_raster.clone().translate(Vector2D::new(0, ty)),
+                style: Style {
+                    fill_rule: FillRule::WholeTile,
+                    fill: Fill::Solid(BACKGROUND_COLOR),
+                    blend_mode: BlendMode::Over,
+                },
             });
 
         composition.splice(..0, layers);
@@ -784,38 +693,20 @@ impl<B: Backend> Scene<B> {
         &self,
         composition: &mut B::Composition,
         viewport: &Rect<f32>,
+        ty: i32,
     ) {
         let layers = self
             .columns
             .iter()
             .flat_map(|column| column.iter())
-            .filter(|item| viewport.intersects(&item.bounding_box.0))
-            .filter_map(|item| {
-                if let Some(raster) = item.paths.iter().fold(
-                    None,
-                    |raster_union: Option<B::Raster>, (_, _, _, raster)| {
-                        if let Some(raster) = raster {
-                            if let Some(raster_union) = raster_union {
-                                Some(raster_union + raster.clone())
-                            } else {
-                                Some(raster.clone())
-                            }
-                        } else {
-                            raster_union
-                        }
-                    },
-                ) {
-                    Some(Layer {
-                        raster,
-                        style: Style {
-                            fill_rule: FillRule::NonZero,
-                            fill: Fill::Solid(item.color),
-                            blend_mode: BlendMode::Over,
-                        },
-                    })
-                } else {
-                    None
-                }
+            .filter(|item| viewport.intersects(&item.bounding_box))
+            .map(|item| Layer {
+                raster: item.raster.clone().translate(Vector2D::new(0, ty)),
+                style: Style {
+                    fill_rule: FillRule::NonZero,
+                    fill: Fill::Solid(item.color),
+                    blend_mode: BlendMode::Over,
+                },
             });
 
         composition.splice(..0, layers);
@@ -859,24 +750,30 @@ impl<B: Backend> Contents<B> {
         match self.scroll_method {
             // Method 1: Translate paths and redraw the whole scene each frame.
             ScrollMethod::Redraw => {
-                // Add clear layers from previous viewport.
+                // Clear composition.
+                self.composition.splice(.., std::iter::empty::<Layer<B>>());
+
+                // Add clear layers for previous viewport.
                 let viewport = Rect::new(
                     Point::new(0.0, self.scroll_offset_y as f32),
                     Size::new(width as f32, height as f32),
                 );
-                scene.set_raster_ty(-(self.scroll_offset_y as f32));
-                scene.build_clear_rasters_for_viewport(context, &viewport);
-                self.composition.splice(.., std::iter::empty::<Layer<B>>());
-                scene.prepend_clear_layers_to_composition(&mut self.composition, &viewport);
+                scene.prepend_clear_layers_to_composition(
+                    &mut self.composition,
+                    &viewport,
+                    -(self.scroll_offset_y as i32),
+                );
 
                 // Add layers for current viewport.
                 let viewport = Rect::new(
                     Point::new(0.0, scene.scroll_offset_y as f32),
                     Size::new(width as f32, height as f32),
                 );
-                scene.set_raster_ty(-(scene.scroll_offset_y as f32));
-                scene.build_rasters_for_viewport(context, &viewport);
-                scene.prepend_layers_to_composition(&mut self.composition, &viewport);
+                scene.prepend_layers_to_composition(
+                    &mut self.composition,
+                    &viewport,
+                    -(scene.scroll_offset_y as i32),
+                );
 
                 // Render scene.
                 context.render(&self.composition, None, self.image, &ext);
@@ -930,7 +827,10 @@ impl<B: Backend> Contents<B> {
                     }
                 }
 
-                // Add clear layers from previous viewport of clip.
+                // Clear composition.
+                self.composition.splice(.., std::iter::empty::<Layer<B>>());
+
+                // Add clear layers for previous viewport of clip.
                 let viewport = Rect::new(
                     Point::new(
                         clip.origin.x as f32,
@@ -938,10 +838,11 @@ impl<B: Backend> Contents<B> {
                     ),
                     Size::new(clip.size.width as f32, clip.size.height as f32),
                 );
-                scene.set_raster_ty(-(self.scroll_offset_y as f32));
-                scene.build_clear_rasters_for_viewport(context, &viewport);
-                self.composition.splice(.., std::iter::empty::<Layer<B>>());
-                scene.prepend_clear_layers_to_composition(&mut self.composition, &viewport);
+                scene.prepend_clear_layers_to_composition(
+                    &mut self.composition,
+                    &viewport,
+                    -(self.scroll_offset_y as i32),
+                );
 
                 // Add layers for current viewport of clip.
                 let viewport = Rect::new(
@@ -951,9 +852,11 @@ impl<B: Backend> Contents<B> {
                     ),
                     Size::new(clip.size.width as f32, clip.size.height as f32),
                 );
-                scene.set_raster_ty(-(scene.scroll_offset_y as f32));
-                scene.build_rasters_for_viewport(context, &viewport);
-                scene.prepend_layers_to_composition(&mut self.composition, &viewport);
+                scene.prepend_layers_to_composition(
+                    &mut self.composition,
+                    &viewport,
+                    -(scene.scroll_offset_y as i32),
+                );
 
                 // Render clip.
                 context.render(&self.composition, Some(clip), self.image, &ext);
@@ -1028,30 +931,31 @@ impl<B: Backend> Contents<B> {
                 // render at the correct location in staging image.
                 let mut dy = (top / buffer_height) * buffer_height;
 
-                // Translate intersecting paths and render bottom span if needed.
+                // Render bottom span if needed.
                 if bottom_y0 < bottom_y1 {
                     let mut composition = Composition::new(std::iter::empty(), BACKGROUND_COLOR);
-                    let clear_dy = (dy as i32 + clear_offset) as u32;
-                    let viewport = Rect::new(
-                        Point::new(0.0, (clear_dy + bottom_y0) as f32),
-                        Size::new(width as f32, (bottom_y1 - bottom_y0) as f32),
-                    );
-                    scene.set_items_ty(-(clear_dy as f32));
-                    scene.build_clear_rasters_for_viewport(context, &viewport);
-                    scene.prepend_clear_layers_to_composition(&mut composition, &viewport);
-
-                    let viewport = Rect::new(
-                        Point::new(0.0, (dy + bottom_y0) as f32),
-                        Size::new(width as f32, (bottom_y1 - bottom_y0) as f32),
-                    );
-                    scene.set_items_ty(-(dy as f32));
-                    scene.build_rasters_for_viewport(context, &viewport);
-                    scene.prepend_layers_to_composition(&mut composition, &viewport);
-
                     let clip = Rect::new(
                         Point2D::new(0, bottom_y0),
                         Size2D::new(width, bottom_y1 - bottom_y0),
                     );
+
+                    // Add layers for previous viewport of bottom clip.
+                    let viewport = Rect::new(
+                        Point::new(0.0, (clip.origin.y + dy) as f32 + clear_offset as f32),
+                        clip.size.to_f32(),
+                    );
+                    scene.prepend_clear_layers_to_composition(
+                        &mut composition,
+                        &viewport,
+                        -(dy as i32 + clear_offset as i32),
+                    );
+
+                    // Add layers for current viewport of bottom clip.
+                    let viewport =
+                        Rect::new(Point::new(0.0, (clip.origin.y + dy) as f32), clip.size.to_f32());
+                    scene.prepend_layers_to_composition(&mut composition, &viewport, -(dy as i32));
+
+                    // Render bottom clip.
                     context.render(&composition, Some(clip), image, &ext);
 
                     ext.pre_clear = None;
@@ -1083,26 +987,25 @@ impl<B: Backend> Contents<B> {
                 });
 
                 let mut composition = Composition::new(std::iter::empty(), BACKGROUND_COLOR);
-
-                let clear_dy = (dy as i32 + clear_offset) as u32;
-                let viewport = Rect::new(
-                    Point::new(0.0, (clear_dy + top_y0) as f32),
-                    Size::new(width as f32, (top_y1 - top_y0) as f32),
-                );
-                scene.set_items_ty(-(clear_dy as f32));
-                scene.build_clear_rasters_for_viewport(context, &viewport);
-                scene.prepend_clear_layers_to_composition(&mut composition, &viewport);
-
-                // Translate intersecting paths and render top span.
-                let viewport = Rect::new(
-                    Point::new(0.0, (dy + top_y0) as f32),
-                    Size::new(width as f32, (top_y1 - top_y0) as f32),
-                );
-                scene.set_items_ty(-(dy as f32));
-                scene.build_rasters_for_viewport(context, &viewport);
-                scene.prepend_layers_to_composition(&mut composition, &viewport);
-
                 let clip = Rect::new(Point2D::new(0, top_y0), Size2D::new(width, top_y1 - top_y0));
+
+                // Add layers for previous viewport of top clip.
+                let viewport = Rect::new(
+                    Point::new(0.0, (clip.origin.y + dy) as f32 + clear_offset as f32),
+                    clip.size.to_f32(),
+                );
+                scene.prepend_clear_layers_to_composition(
+                    &mut composition,
+                    &viewport,
+                    -(dy as i32 + clear_offset as i32),
+                );
+
+                // Add layers for current viewport of top clip.
+                let viewport =
+                    Rect::new(Point::new(0.0, (clip.origin.y + dy) as f32), clip.size.to_f32());
+                scene.prepend_layers_to_composition(&mut composition, &viewport, -(dy as i32));
+
+                // Render top clip.
                 context.render(&composition, Some(clip), image, &ext);
 
                 staging_image.replace(image);
