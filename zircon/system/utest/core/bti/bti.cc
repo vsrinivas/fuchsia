@@ -12,15 +12,13 @@
 #include <thread>
 #include <vector>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 extern "C" zx_handle_t get_root_resource(void);
 
 namespace {
 
-bool bti_create_test() {
-  BEGIN_TEST;
-
+TEST(Bti, Create) {
   zx::iommu iommu;
   zx::bti bti;
   zx::pmt pmt;
@@ -32,13 +30,9 @@ bool bti_create_test() {
                             iommu.reset_and_get_address()),
             ZX_OK);
   ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
-
-  END_TEST;
 }
 
-bool bti_pin_test_helper(bool contiguous_vmo) {
-  BEGIN_TEST;
-
+void bti_pin_test_helper(bool contiguous_vmo) {
   zx::iommu iommu;
   zx::bti bti;
   // Please do not use get_root_resource() in new code. See ZX-1467.
@@ -70,17 +64,13 @@ bool bti_pin_test_helper(bool contiguous_vmo) {
       ASSERT_EQ(paddrs[i], paddrs[0] + i * ZX_PAGE_SIZE);
     }
   }
-
-  END_TEST;
 }
 
-bool bti_pin_test() { return bti_pin_test_helper(false); }
+TEST(Bti, Pin) { bti_pin_test_helper(false); }
 
-bool bti_pin_contiguous_test() { return bti_pin_test_helper(true); }
+TEST(Bti, PinContiguous) { bti_pin_test_helper(true); }
 
-bool bti_pin_contig_flag_test() {
-  BEGIN_TEST;
-
+TEST(Bti, PinContigFlag) {
   zx::iommu iommu;
   zx::bti bti;
   // Please do not use get_root_resource() in new code. See ZX-1467.
@@ -103,13 +93,9 @@ bool bti_pin_contig_flag_test() {
             ZX_OK);
 
   ASSERT_EQ(pmt.unpin(), ZX_OK);
-
-  END_TEST;
 }
 
-bool bti_resize_test() {
-  BEGIN_TEST;
-
+TEST(Bti, Resize) {
   zx::iommu iommu;
   zx::bti bti;
   zx::pmt pmt;
@@ -131,13 +117,9 @@ bool bti_resize_test() {
   EXPECT_EQ(vmo.set_size(0), ZX_ERR_BAD_STATE);
 
   pmt.unpin();
-
-  END_TEST;
 }
 
-bool bti_clone_test() {
-  BEGIN_TEST;
-
+TEST(Bti, Clone) {
   zx::iommu iommu;
   zx::bti bti;
   zx::pmt pmt;
@@ -165,13 +147,9 @@ bool bti_clone_test() {
   pmt.unpin();
 
   EXPECT_EQ(vmo.wait_one(ZX_VMO_ZERO_CHILDREN, zx::time::infinite_past(), &o), ZX_OK);
-
-  END_TEST;
 }
 
-bool bti_no_delayed_unpin_test() {
-  BEGIN_TEST;
-
+TEST(Bti, NoDelayedUnpin) {
   zx::iommu iommu;
   zx::bti bti;
   // Please do not use get_root_resource() in new code. See ZX-1467.
@@ -249,18 +227,6 @@ bool bti_no_delayed_unpin_test() {
 
   running = false;
   thread.join();
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(bti_tests)
-RUN_TEST(bti_create_test);
-RUN_TEST(bti_pin_test);
-RUN_TEST(bti_pin_contiguous_test);
-RUN_TEST(bti_pin_contig_flag_test);
-RUN_TEST(bti_resize_test);
-RUN_TEST(bti_clone_test);
-RUN_TEST(bti_no_delayed_unpin_test);
-END_TEST_CASE(bti_tests)

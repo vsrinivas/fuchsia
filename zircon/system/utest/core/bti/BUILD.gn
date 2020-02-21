@@ -7,8 +7,8 @@ source_set("bti") {
   sources = [ "bti.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }
