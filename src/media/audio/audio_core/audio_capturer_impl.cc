@@ -54,24 +54,31 @@ const Format kInitialFormat =
 }  // namespace
 
 std::unique_ptr<AudioCapturerImpl> AudioCapturerImpl::Create(
-    bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
+    fuchsia::media::AudioCapturerConfiguration configuration, std::optional<Format> format,
+    std::optional<fuchsia::media::AudioCaptureUsage> usage,
+    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
     AudioCoreImpl* owner) {
   return std::unique_ptr<AudioCapturerImpl>(new AudioCapturerImpl(
-      loopback, std::move(audio_capturer_request), &owner->threading_model(), &owner->route_graph(),
-      &owner->audio_admin(), &owner->volume_manager(), &owner->link_matrix()));
+      std::move(configuration), format, usage, std::move(audio_capturer_request),
+      &owner->threading_model(), &owner->route_graph(), &owner->audio_admin(),
+      &owner->volume_manager(), &owner->link_matrix()));
 }
 
 std::unique_ptr<AudioCapturerImpl> AudioCapturerImpl::Create(
-    bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
+    fuchsia::media::AudioCapturerConfiguration configuration, std::optional<Format> format,
+    std::optional<fuchsia::media::AudioCaptureUsage> usage,
+    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
     ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
     StreamVolumeManager* volume_manager, LinkMatrix* link_matrix) {
-  return std::unique_ptr<AudioCapturerImpl>(
-      new AudioCapturerImpl(loopback, std::move(audio_capturer_request), threading_model,
-                            route_graph, admin, volume_manager, link_matrix));
+  return std::unique_ptr<AudioCapturerImpl>(new AudioCapturerImpl(
+      std::move(configuration), format, usage, std::move(audio_capturer_request), threading_model,
+      route_graph, admin, volume_manager, link_matrix));
 }
 
 AudioCapturerImpl::AudioCapturerImpl(
-    bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
+    fuchsia::media::AudioCapturerConfiguration configuration, std::optional<Format> format,
+    std::optional<fuchsia::media::AudioCaptureUsage> usage,
+    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
     ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
     StreamVolumeManager* volume_manager, LinkMatrix* link_matrix)
     : AudioObject(Type::AudioCapturer),
@@ -82,7 +89,7 @@ AudioCapturerImpl::AudioCapturerImpl(
       volume_manager_(*volume_manager),
       route_graph_(*route_graph),
       state_(State::WaitingForVmo),
-      loopback_(loopback),
+      loopback_(configuration.is_loopback()),
       min_fence_time_(zx::nsec(0)),
       // Ideally, initialize this to the native configuration of our initially-bound source.
       format_(kInitialFormat),
@@ -101,6 +108,14 @@ AudioCapturerImpl::AudioCapturerImpl(
 
   binding_.set_error_handler([this](zx_status_t status) { BeginShutdown(); });
   source_links_.reserve(16u);
+
+  if (usage) {
+    usage_ = *usage;
+  }
+
+  if (format) {
+    UpdateFormat(*format);
+  }
 }
 
 AudioCapturerImpl::~AudioCapturerImpl() {

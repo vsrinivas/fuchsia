@@ -90,17 +90,40 @@ void AudioCoreImpl::CreateAudioRenderer(
   route_graph_.AddRenderer(AudioRendererImpl::Create(std::move(audio_renderer_request), this));
 }
 
+void AudioCoreImpl::CreateAudioCapturerWithConfiguration(
+    fuchsia::media::AudioStreamType stream_type, fuchsia::media::AudioCaptureUsage usage,
+    fuchsia::media::AudioCapturerConfiguration configuration,
+    fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) {
+  auto format = Format::Create(stream_type);
+  if (format.is_error()) {
+    FX_LOGS(WARNING) << "Attempted to create AudioCapturer with invalid stream type";
+    return;
+  }
+
+  route_graph_.AddLoopbackCapturer(
+      AudioCapturerImpl::Create(std::move(configuration), {format.take_value()}, {usage},
+                                std::move(audio_capturer_request), this));
+}
+
 void AudioCoreImpl::CreateAudioCapturer(
     bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) {
   TRACE_DURATION("audio", "AudioCoreImpl::CreateAudioCapturer");
   AUD_VLOG(TRACE);
+
   if (loopback) {
-    route_graph_.AddLoopbackCapturer(
-        AudioCapturerImpl::Create(loopback, std::move(audio_capturer_request), this));
-  } else {
-    route_graph_.AddCapturer(
-        AudioCapturerImpl::Create(loopback, std::move(audio_capturer_request), this));
+    route_graph_.AddLoopbackCapturer(AudioCapturerImpl::Create(
+        fuchsia::media::AudioCapturerConfiguration::WithLoopback(
+            fuchsia::media::LoopbackAudioCapturerConfiguration()),
+        /*format= */ std::nullopt,
+        /*usage= */ std::nullopt, std::move(audio_capturer_request), this));
+    return;
   }
+
+  route_graph_.AddCapturer(
+      AudioCapturerImpl::Create(fuchsia::media::AudioCapturerConfiguration::WithInput(
+                                    fuchsia::media::InputAudioCapturerConfiguration()),
+                                /*format= */ std::nullopt,
+                                /*usage= */ std::nullopt, std::move(audio_capturer_request), this));
 }
 
 void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage render_usage,

@@ -294,14 +294,18 @@ void AudioAdminTest::SetUpCapturer(unsigned int index, fuchsia::media::AudioCapt
   int16_t* buffer;
   zx::vmo capture_vmo;
 
-  audio_core_sync_->CreateAudioCapturer(true, audio_capturer_[index].NewRequest());
+  fuchsia::media::AudioCapturerConfiguration configuration;
+  configuration.set_loopback(fuchsia::media::LoopbackAudioCapturerConfiguration());
+
+  auto format =
+      fuchsia::media::AudioStreamType{.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
+                                      .channels = kChannelCount,
+                                      .frames_per_second = kSampleRate};
+
+  audio_core_sync_->CreateAudioCapturerWithConfiguration(format, usage, std::move(configuration),
+                                                         audio_capturer_[index].NewRequest());
 
   audio_capturer_[index].set_error_handler(ErrorHandler());
-
-  fuchsia::media::AudioStreamType format;
-  format.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
-  format.channels = kChannelCount;
-  format.frames_per_second = kSampleRate;
 
   capture_sample_size_[index] = sizeof(int16_t);
 
@@ -321,8 +325,6 @@ void AudioAdminTest::SetUpCapturer(unsigned int index, fuchsia::media::AudioCapt
     buffer[i] = data;
   }
 
-  audio_capturer_[index]->SetUsage(usage);
-  audio_capturer_[index]->SetPcmStreamType(format);
   audio_capturer_[index]->AddPayloadBuffer(0, std::move(capture_vmo));
   // All audio capturers, by default, are set to 0 dB unity gain (passthru).
 }

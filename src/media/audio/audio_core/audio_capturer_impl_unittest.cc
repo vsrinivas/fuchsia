@@ -58,9 +58,13 @@ class AudioCapturerImplTest : public testing::ThreadingModelFixture {
     route_graph_.SetThrottleOutput(
         &threading_model(),
         ThrottleOutput::Create(&threading_model(), &device_registry_, &link_matrix_));
+
+    auto format = Format::Create(stream_type_).take_value();
     auto capturer = AudioCapturerImpl::Create(
-        /*loopback=*/false, fidl_capturer_.NewRequest(), &threading_model(), &route_graph_, &admin_,
-        &volume_manager_, &link_matrix_);
+        fuchsia::media::AudioCapturerConfiguration::WithInput(
+            fuchsia::media::InputAudioCapturerConfiguration()),
+        {format}, {fuchsia::media::AudioCaptureUsage::BACKGROUND}, fidl_capturer_.NewRequest(),
+        &threading_model(), &route_graph_, &admin_, &volume_manager_, &link_matrix_);
     capturer_ = capturer.get();
     EXPECT_NE(capturer_, nullptr);
 
@@ -107,7 +111,6 @@ TEST_F(AudioCapturerImplTest, CanShutdownWithUnusedBuffer) {
   ASSERT_EQ(
       vmo_.duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_WRITE | ZX_RIGHT_READ | ZX_RIGHT_MAP, &duplicate),
       ZX_OK);
-  fidl_capturer_->SetPcmStreamType(stream_type_);
   fidl_capturer_->AddPayloadBuffer(0, std::move(duplicate));
   RunLoopUntilIdle();
 }
@@ -146,9 +149,7 @@ TEST_F(AudioCapturerImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuff
   route_graph_.AddInput(input.get());
   RunLoopUntilIdle();
 
-  fidl_capturer_->SetPcmStreamType(stream_type_);
   fidl_capturer_->AddPayloadBuffer(0, std::move(duplicate));
-  fidl_capturer_->SetUsage(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT);
 
   RunLoopUntilIdle();
   EXPECT_EQ(link_matrix_.SourceLinkCount(*capturer_), 1u);

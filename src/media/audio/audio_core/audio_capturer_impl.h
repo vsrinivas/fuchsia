@@ -39,10 +39,14 @@ class AudioCapturerImpl : public AudioObject,
                           public StreamVolume {
  public:
   static std::unique_ptr<AudioCapturerImpl> Create(
-      bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
+      fuchsia::media::AudioCapturerConfiguration configuration, std::optional<Format> format,
+      std::optional<fuchsia::media::AudioCaptureUsage> usage,
+      fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
       AudioCoreImpl* owner);
   static std::unique_ptr<AudioCapturerImpl> Create(
-      bool loopback, fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
+      fuchsia::media::AudioCapturerConfiguration configuration, std::optional<Format> format,
+      std::optional<fuchsia::media::AudioCaptureUsage> usage,
+      fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
       ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
       StreamVolumeManager* volume_manager, LinkMatrix* link_matrix);
 
@@ -117,7 +121,9 @@ class AudioCapturerImpl : public AudioObject,
            state != AudioCapturerImpl::State::Shutdown;
   }
 
-  AudioCapturerImpl(bool loopback,
+  AudioCapturerImpl(fuchsia::media::AudioCapturerConfiguration configuration,
+                    std::optional<Format> format,
+                    std::optional<fuchsia::media::AudioCaptureUsage> usage,
                     fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
                     ThreadingModel* threading_model, RouteGraph* route_graph, AudioAdmin* admin,
                     StreamVolumeManager* volume_manager, LinkMatrix* link_matrix);

@@ -48,6 +48,10 @@ class AudioCoreImpl : public fuchsia::media::AudioCore, UsageGainAdjustment {
   // |fuchsia::media::AudioCore|
   void CreateAudioRenderer(
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request) final;
+  void CreateAudioCapturerWithConfiguration(
+      fuchsia::media::AudioStreamType stream_type, fuchsia::media::AudioCaptureUsage usage,
+      fuchsia::media::AudioCapturerConfiguration configuration,
+      fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) final;
   void CreateAudioCapturer(
       bool loopback,
       fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request) final;
