@@ -19,6 +19,7 @@
 #include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/lib/timekeeper/test_clock.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
@@ -38,7 +39,9 @@ class CobaltTest : public UnitTestFixture, public CobaltTestFixture {
  public:
   CobaltTest()
       : CobaltTestFixture(/*unit_test_fixture=*/this),
-        cobalt_(std::make_unique<Cobalt>(dispatcher(), services())) {}
+        clock_(new timekeeper::TestClock()),
+        cobalt_(std::make_unique<Cobalt>(dispatcher(), services(),
+                                         std::unique_ptr<timekeeper::TestClock>(clock_))) {}
 
  protected:
   void LogOccurrence() {
@@ -53,6 +56,8 @@ class CobaltTest : public UnitTestFixture, public CobaltTestFixture {
 
   const std::vector<CobaltEvent> SentCobaltEvents() { return events_; }
 
+  // The lifetime of |clock_| is managed by |cobalt_|.
+  timekeeper::TestClock* clock_;
   std::unique_ptr<Cobalt> cobalt_;
 
  private:
@@ -69,6 +74,27 @@ TEST_F(CobaltTest, Check_Log) {
   }
 
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray(SentCobaltEvents()));
+}
+
+TEST_F(CobaltTest, Check_Timer) {
+  constexpr zx::time kStartTime(0);
+  constexpr zx::time kEndTime(kStartTime + zx::usec(5));
+
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+
+  clock_->Set(kStartTime);
+  const uint64_t timer_id = cobalt_->StartTimer();
+
+  clock_->Set(kEndTime);
+  cobalt_->LogElapsedTime(BugreportGenerationFlow::kSuccess, timer_id);
+
+  RunLoopUntilIdle();
+
+  EXPECT_THAT(
+      ReceivedCobaltEvents(),
+      UnorderedElementsAreArray({
+          CobaltEvent(BugreportGenerationFlow::kSuccess, (kEndTime - kStartTime).to_usecs()),
+      }));
 }
 
 TEST_F(CobaltTest, Check_LoggerLosesConnection_BeforeLoggingEvents) {

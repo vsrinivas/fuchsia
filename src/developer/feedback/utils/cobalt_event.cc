@@ -23,12 +23,15 @@ bool operator==(const CobaltEvent& lhs, const CobaltEvent& rhs) {
     return false;
   }
 
-  // We only check the count for Count events.
-  if (lhs.type == CobaltEventType::kCount && lhs.count != rhs.count) {
-    return false;
+  switch (lhs.type) {
+    // If the event is an occurrence event then the count/usecs_elapsed field isn't relevant.
+    case CobaltEventType::kOccurrence:
+      return true;
+    case CobaltEventType::kCount:
+      return lhs.count == rhs.count;
+    case CobaltEventType::kTimeElapsed:
+      return lhs.usecs_elapsed == rhs.usecs_elapsed;
   }
-
-  return true;
 }
 
 std::ostream& operator<<(std::ostream& os, const CobaltEvent& event) {
@@ -43,6 +46,10 @@ std::string CobaltEvent::ToString() const {
     case CobaltEventType::kCount:
       return fxl::StringPrintf("{type: count, metric_id: %u, event_code: %u, count: %lu}",
                                metric_id, event_code, count);
+    case CobaltEventType::kTimeElapsed:
+      return fxl::StringPrintf(
+          "{type: time elapsed, metric_id: %u, event_code: %u, usecs elapsed: %lu}", metric_id,
+          event_code, usecs_elapsed);
   }
 }
 

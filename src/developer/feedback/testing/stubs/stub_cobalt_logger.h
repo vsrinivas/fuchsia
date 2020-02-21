@@ -35,19 +35,16 @@ class StubCobaltLoggerBase : public fuchsia::cobalt::Logger {
   bool WasLogCobaltEventsCalled() const { return WasFunctionCalled(Function::LogCobaltEvents); }
 
  protected:
-  template <typename... Args>
-  void SetLastEvent(Args&&... args) {
-    events_.emplace_back(std::forward<Args>(args)...);
-  }
+  void SetLastEvent(uint32_t metric_id, uint32_t event_code, uint64_t count);
 
   void MarkLogEventAsCalled() { MarkFunctionAsCalled(Function::LogEvent); }
   void MarkLogEventCountAsCalled() { return MarkFunctionAsCalled(Function::LogEventCount); }
-  void MarkLogElapsedTimeCalled() { return MarkFunctionAsCalled(Function::LogElapsedTime); }
-  void MarkLogFrameRateCalled() { return MarkFunctionAsCalled(Function::LogFrameRate); }
-  void MarkLogMemoryUsageCalled() { return MarkFunctionAsCalled(Function::LogMemoryUsage); }
-  void MarkStartTimerCalled() { return MarkFunctionAsCalled(Function::StartTimer); }
-  void MarkEndTimerCalled() { return MarkFunctionAsCalled(Function::EndTimer); }
-  void MarkLogIntHistogramCalled() { return MarkFunctionAsCalled(Function::LogIntHistogram); }
+  void MarkLogElapsedTimeAsCalled() { return MarkFunctionAsCalled(Function::LogElapsedTime); }
+  void MarkLogFrameRateAsCalled() { return MarkFunctionAsCalled(Function::LogFrameRate); }
+  void MarkLogMemoryUsageAsCalled() { return MarkFunctionAsCalled(Function::LogMemoryUsage); }
+  void MarkStartTimerAsCalled() { return MarkFunctionAsCalled(Function::StartTimer); }
+  void MarkEndTimerAsCalled() { return MarkFunctionAsCalled(Function::EndTimer); }
+  void MarkLogIntHistogramAsCalled() { return MarkFunctionAsCalled(Function::LogIntHistogram); }
   void MarkLogCustomEventAsCalled() { return MarkFunctionAsCalled(Function::LogCustomEvent); }
   void MarkLogCobaltEventAsCalled() { return MarkFunctionAsCalled(Function::LogCobaltEvent); }
   void MarkLogCobaltEventsAsCalled() { return MarkFunctionAsCalled(Function::LogCobaltEvents); }
@@ -152,6 +149,9 @@ class StubCobaltLogger : public StubCobaltLoggerBase {
   void LogEventCount(uint32_t metric_id, uint32_t event_code, ::std::string component,
                      int64_t period_duration_micros, int64_t count,
                      fuchsia::cobalt::Logger::LogEventCountCallback callback) override;
+  void LogElapsedTime(uint32_t metric_id, uint32_t event_code, ::std::string component,
+                      int64_t elapsed_micros,
+                      fuchsia::cobalt::Logger::LogEventCountCallback callback) override;
 };
 
 // Fail to acknowledge that LogEvent() was called and return |Status::INVALID_ARGUMENTS|.

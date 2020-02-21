@@ -39,11 +39,17 @@ std::string ToString(const Status& status) {
   }
 }
 
+uint64_t CurrentTimeUSecs(const std::unique_ptr<timekeeper::Clock>& clock) {
+  return zx::nsec(clock->Now().get()).to_usecs();
+}
+
 }  // namespace
 
-Cobalt::Cobalt(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)
+Cobalt::Cobalt(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+               std::unique_ptr<timekeeper::Clock> clock)
     : dispatcher_(dispatcher),
       services_(services),
+      clock_(std::move(clock)),
       logger_reconnection_backoff_(/*initial_delay=*/zx::msec(100), /*retry_factor=*/2u,
                                    /*max_delay=*/zx::hour(1)) {
   logger_.set_error_handler([this](zx_status_t status) {
@@ -59,6 +65,7 @@ void Cobalt::Shutdown() {
   shut_down_ = true;
 
   pending_events_.clear();
+  timer_starts_usecs_.clear();
 
   reconnect_task_.Cancel();
 
@@ -122,6 +129,14 @@ void Cobalt::LogEvent(CobaltEvent event) {
   SendEvent(event_id);
 }
 
+uint64_t Cobalt::StartTimer() {
+  FX_CHECK(!shut_down_);
+
+  const uint64_t timer_id = next_event_id_++;
+  timer_starts_usecs_.insert(std::make_pair(timer_id, CurrentTimeUSecs(clock_)));
+  return timer_id;
+}
+
 void Cobalt::SendEvent(uint64_t event_id) {
   if (!logger_) {
     return;
@@ -151,6 +166,10 @@ void Cobalt::SendEvent(uint64_t event_id) {
       logger_->LogEventCount(event.metric_id, event.event_code, /*component=*/"",
                              /*period_duration_micros=*/0u, event.count, std::move(cb));
       break;
+    case CobaltEventType::kTimeElapsed:
+      logger_->LogElapsedTime(event.metric_id, event.event_code, /*component=*/"",
+                              /*elapsed_micros=*/event.usecs_elapsed, std::move(cb));
+      break;
   }
 }
 
@@ -158,6 +177,12 @@ void Cobalt::SendAllPendingEvents() {
   for (const auto& [event_id, _] : pending_events_) {
     SendEvent(event_id);
   }
+}
+
+uint64_t Cobalt::GetTimerDurationUSecs(uint64_t timer_id) const {
+  FX_CHECK(timer_starts_usecs_.find(timer_id) != timer_starts_usecs_.end());
+
+  return CurrentTimeUSecs(clock_) - timer_starts_usecs_.at(timer_id);
 }
 
 }  // namespace feedback

@@ -15,14 +15,8 @@
 namespace feedback {
 
 struct CobaltEvent {
-  CobaltEvent(uint32_t metric_id, uint32_t event_code)
-      : type(CobaltEventType::kOccurrence),
-        metric_id(metric_id),
-        event_code(event_code),
-        count(0u) {}
-
-  CobaltEvent(uint32_t metric_id, uint32_t event_code, uint64_t count)
-      : type(CobaltEventType::kCount), metric_id(metric_id), event_code(event_code), count(count) {}
+  CobaltEvent(CobaltEventType type, uint32_t metric_id, uint32_t event_code, uint64_t count)
+      : type(type), metric_id(metric_id), event_code(event_code), count(count) {}
 
   // Define constructors that allow for the omission of a metric id.
   template <typename EventCodeType>
@@ -48,7 +42,11 @@ struct CobaltEvent {
   CobaltEventType type;
   uint32_t metric_id = 0;
   uint32_t event_code = 0;
-  uint64_t count = 0;
+
+  union {
+    uint64_t count;          // Used for Count metrics.
+    uint64_t usecs_elapsed;  // Used for Time Elapsed metrics.
+  };
 };
 
 bool operator==(const CobaltEvent& lhs, const CobaltEvent& rhs);

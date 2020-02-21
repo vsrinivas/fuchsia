@@ -42,6 +42,8 @@ source_set("cobalt") {
 
   public_deps = [
     ":metrics_registry",
+    "//garnet/public/lib/timekeeper:system",
+    "//garnet/public/lib/timekeeper:timekeeper",
     "//sdk/lib/sys/cpp",
     "//src/lib/backoff:backoff",
     "//zircon/public/lib/fit",

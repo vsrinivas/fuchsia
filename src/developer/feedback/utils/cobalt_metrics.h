@@ -65,6 +65,16 @@ enum class TimedOutData {
   kBoardInfo = cobalt_registry::FeedbackDataCollectionTimeoutMetricDimensionData::BoardInfo,
 };
 
+enum class BugreportGenerationFlow {
+  kUnknown = cobalt_registry::BugreportGenerationDurationUsecsMetricDimensionFlow::Unknown,
+  kSuccess = cobalt_registry::BugreportGenerationDurationUsecsMetricDimensionFlow::Success,
+  kFailure = cobalt_registry::BugreportGenerationDurationUsecsMetricDimensionFlow::Failure,
+};
+
+inline constexpr uint32_t MetricIDForEventCode(const BugreportGenerationFlow bug_report) {
+  return cobalt_registry::kBugreportGenerationDurationUsecsMetricId;
+}
+
 inline constexpr uint32_t MetricIDForEventCode(const TimedOutData data) {
   return cobalt_registry::kFeedbackDataCollectionTimeoutMetricId;
 }
@@ -88,7 +98,12 @@ inline constexpr uint32_t MetricIDForEventCode(const CrashpadFunctionError funct
 enum class CobaltEventType {
   kOccurrence,
   kCount,
+  kTimeElapsed,
 };
+
+inline constexpr CobaltEventType EventTypeForEventCode(const BugreportGenerationFlow status) {
+  return CobaltEventType::kTimeElapsed;
+}
 
 inline constexpr CobaltEventType EventTypeForEventCode(const TimedOutData data) {
   return CobaltEventType::kOccurrence;

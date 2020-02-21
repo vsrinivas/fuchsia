@@ -90,6 +90,7 @@ executable("cobalt_unittest") {
   sources = [ "cobalt_unittest.cc" ]
 
   deps = [
+    "//garnet/public/lib/timekeeper:testing",
     "//src/developer/feedback/testing:cobalt_test_fixture",
     "//src/developer/feedback/testing:gpretty_printers",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
