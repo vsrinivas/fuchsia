@@ -38,6 +38,7 @@ rustc_binary("scene_manager_session_bin") {
     "//src/session/lib/input",
     "//src/session/lib/scene_management",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
   ]
 }
