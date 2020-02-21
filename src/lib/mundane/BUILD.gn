@@ -24,6 +24,9 @@ rustc_library("mundane") {
     "experimental-sha512-ec",
     "kdf",
   ]
+
+  # TODO(46762): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 unittest_package("mundane-tests") {
