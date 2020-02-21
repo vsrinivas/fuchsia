@@ -323,7 +323,7 @@ TEST_F(DynamicIfTest, QueryInfo) {
   wlanphy_impl_info_t info = {};
   // Test brcmfmac supports simutaneous client ap operation
   Query(&info);
-  EXPECT_NE(info.wlan_info.caps & WLAN_INFO_HARDWARE_CAPABILITY_CLIENT_AP_COMBINATION,
+  EXPECT_NE(info.wlan_info.caps & WLAN_INFO_HARDWARE_CAPABILITY_SIMULTANEOUS_CLIENT_AP,
             static_cast<size_t>(0));
 }
 

@@ -70,5 +70,18 @@ TEST(WlanphyTest, ConvertPhyBandInfo) {
   EXPECT_EQ(out[0].supported_channels.channels, expected_channels_2g);
   EXPECT_EQ(out[1].supported_channels.channels, expected_channels_5g);
 }
+
+TEST(WlanphyTest, ConvertPhyCaps) {
+  std::vector<wlan_device::Capability> caps;
+  uint32_t phy_caps_mask = WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME |
+                           WLAN_INFO_HARDWARE_CAPABILITY_SIMULTANEOUS_CLIENT_AP;
+
+  ConvertPhyCaps(&caps, phy_caps_mask);
+  EXPECT_NE(std::find(caps.begin(), caps.end(), wlan_device::Capability::SHORT_SLOT_TIME),
+            caps.end());
+  EXPECT_NE(std::find(caps.begin(), caps.end(), wlan_device::Capability::SIMULTANEOUS_CLIENT_AP),
+            caps.end());
+}
+
 }  // namespace
 }  // namespace wlanphy

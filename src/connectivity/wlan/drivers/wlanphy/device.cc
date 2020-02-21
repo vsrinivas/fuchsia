@@ -162,8 +162,7 @@ static void ConvertPhyRolesInfo(::std::vector<wlan_device::MacRole>* MacRoles,
   }
 }
 
-static void ConvertPhyCaps(::std::vector<wlan_device::Capability>* Capabilities,
-                           uint32_t phy_caps_mask) {
+void ConvertPhyCaps(::std::vector<wlan_device::Capability>* Capabilities, uint32_t phy_caps_mask) {
   Capabilities->resize(0);
   if (phy_caps_mask & WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE) {
     Capabilities->push_back(wlan_device::Capability::SHORT_PREAMBLE);
@@ -176,6 +175,9 @@ static void ConvertPhyCaps(::std::vector<wlan_device::Capability>* Capabilities,
   }
   if (phy_caps_mask & WLAN_INFO_HARDWARE_CAPABILITY_RADIO_MSMT) {
     Capabilities->push_back(wlan_device::Capability::RADIO_MSMT);
+  }
+  if (phy_caps_mask & WLAN_INFO_HARDWARE_CAPABILITY_SIMULTANEOUS_CLIENT_AP) {
+    Capabilities->push_back(wlan_device::Capability::SIMULTANEOUS_CLIENT_AP);
   }
 }
 

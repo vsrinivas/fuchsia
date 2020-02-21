@@ -26,6 +26,7 @@ enum Capability {
     SPECTRUM_MGMT = 1;
     SHORT_SLOT_TIME = 2;
     RADIO_MSMT = 3;
+    SIMULTANEOUS_CLIENT_AP = 4;
 };
 
 struct HtCapabilities {

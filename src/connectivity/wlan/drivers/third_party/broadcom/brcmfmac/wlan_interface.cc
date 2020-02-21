@@ -182,7 +182,7 @@ zx_status_t WlanInterface::Query(brcmf_pub* drvr, wlanphy_impl_info_t* out_info)
   info.caps =
       WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE | WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT |
       WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME | WLAN_INFO_HARDWARE_CAPABILITY_RADIO_MSMT |
-      WLAN_INFO_HARDWARE_CAPABILITY_CLIENT_AP_COMBINATION;
+      WLAN_INFO_HARDWARE_CAPABILITY_SIMULTANEOUS_CLIENT_AP;
   info.bands_count = 1;
   info.bands[0].band = WLAN_INFO_BAND_2GHZ;
   // TODO(cphoenix): Once this isn't temp/stub code anymore, remove unnecessary "= 0" lines.
