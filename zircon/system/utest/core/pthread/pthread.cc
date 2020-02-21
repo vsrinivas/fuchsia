@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <pthread.h>
-
 #include <errno.h>
 #include <inttypes.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <zircon/syscalls.h>
 
 #include <atomic>
 
-#include <zircon/syscalls.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
@@ -30,7 +29,7 @@ static int thread_with_lock = 0;
 static void log(const char* str) {
   struct timespec time;
   clock_gettime(CLOCK_REALTIME, &time);
-  unittest_printf("[%08lu.%08lu]: %s", time.tv_sec, time.tv_nsec / 1000, str);
+  printf("[%08lu.%08lu]: %s", time.tv_sec, time.tv_nsec / 1000, str);
 }
 
 static void* mutex_thread_1(void* arg) {
@@ -155,8 +154,7 @@ static void wait_for_count(const std::atomic_int& var, int value, pthread_mutex_
   pthread_mutex_unlock(mutex);
 }
 
-bool pthread_test(void) {
-  BEGIN_TEST;
+TEST(Pthread, Basic) {
   pthread_t thread1, thread2, thread3;
 
   log("testing uncontested case\n");
@@ -208,7 +206,7 @@ bool pthread_test(void) {
   int result = pthread_cond_timedwait(&cond, &mutex, &delay);
   pthread_mutex_unlock(&mutex);
   log("pthread_cond_timedwait returned\n");
-  unittest_printf("pthread_cond_timedwait result: %d\n", result);
+  printf("pthread_cond_timedwait result: %d\n", result);
 
   EXPECT_EQ(result, ETIMEDOUT, "Lock should have timeout");
 
@@ -224,22 +222,18 @@ bool pthread_test(void) {
   log("thread 2 joined\n");
   pthread_join(thread3, NULL);
   log("thread 3 joined\n");
-
-  END_TEST;
 }
 
-bool pthread_self_main_thread_test(void) {
-  BEGIN_TEST;
+TEST(Pthread, SelfMainThread) {
   pthread_t self = pthread_self();
   pthread_t null = 0;
   ASSERT_NE(self, null, "pthread_self() was NULL");
-  END_TEST;
 }
 
 // Pick a stack size well bigger than the default, which is <1MB.
 constexpr size_t stack_size = 16u << 20;
 
-static bool big_stack_check() {
+static void big_stack_check() {
   // Stack allocate a lot, but less than the full stack size.
   volatile uint8_t buffer[stack_size / 2];
   uint8_t value = 0u;
@@ -255,8 +249,6 @@ static bool big_stack_check() {
   }
 
   ASSERT_EQ(sum, expected_sum, "buffer corrupted");
-
-  return true;
 }
 
 static void* bigger_stack_thread(void* unused) {
@@ -264,9 +256,7 @@ static void* bigger_stack_thread(void* unused) {
   return nullptr;
 }
 
-static bool pthread_big_stack_size() {
-  BEGIN_TEST;
-
+TEST(Pthread, BigStackSize) {
   pthread_t thread;
   pthread_attr_t attr;
   int result = pthread_attr_init(&attr);
@@ -277,13 +267,9 @@ static bool pthread_big_stack_size() {
   ASSERT_EQ(result, 0, "failed to start thread");
   result = pthread_join(thread, nullptr);
   ASSERT_EQ(result, 0, "failed to join thread");
-
-  END_TEST;
 }
 
-static bool pthread_getstack_check() {
-  BEGIN_TEST;
-
+static void pthread_getstack_check() {
   pthread_attr_t attr;
   int result = pthread_getattr_np(pthread_self(), &attr);
   ASSERT_EQ(result, 0, "pthread_getattr_np failed");
@@ -303,32 +289,21 @@ static bool pthread_getstack_check() {
   // there is also an "unsafe stack", where e.g. &attr will reside.
   uintptr_t here = reinterpret_cast<uintptr_t>(__builtin_frame_address(0));
 
-  unittest_printf("pthread_attr_getstack reports [%#" PRIxPTR ", %#" PRIxPTR "); SP ~= %#" PRIxPTR
-                  "\n",
-                  low, high, here);
+  printf("pthread_attr_getstack reports [%#" PRIxPTR ", %#" PRIxPTR "); SP ~= %#" PRIxPTR "\n", low,
+         high, here);
 
   ASSERT_LT(low, here, "reported stack base not below actual SP");
   ASSERT_GT(high, here, "reported stack end not above actual SP");
-
-  END_TEST;
 }
 
-static bool pthread_getstack_main_thread() {
-  BEGIN_TEST;
-
-  ASSERT_TRUE(pthread_getstack_check(), "pthread_attr_getstack on main thread");
-
-  END_TEST;
-}
+TEST(Pthread, GetstackMainThread) { pthread_getstack_check(); }
 
 static void* getstack_thread(void*) {
-  bool ok = pthread_getstack_check();
-  return reinterpret_cast<void*>(static_cast<uintptr_t>(ok));
+  pthread_getstack_check();
+  return reinterpret_cast<void*>(static_cast<uintptr_t>(true));
 }
 
-static bool pthread_getstack_on_new_thread(const pthread_attr_t* attr) {
-  BEGIN_TEST;
-
+static void pthread_getstack_on_new_thread(const pthread_attr_t* attr) {
   pthread_t thread;
   int result = pthread_create(&thread, attr, &getstack_thread, nullptr);
   ASSERT_EQ(result, 0, "pthread_create failed");
@@ -338,32 +313,16 @@ static bool pthread_getstack_on_new_thread(const pthread_attr_t* attr) {
 
   bool ok = static_cast<bool>(reinterpret_cast<uintptr_t>(thread_result));
   ASSERT_TRUE(ok, "pthread_attr_getstack on another thread");
-
-  END_TEST;
 }
 
-static bool pthread_getstack_other_thread() { return pthread_getstack_on_new_thread(nullptr); }
+TEST(Pthread, GetstackOtherThread) { pthread_getstack_on_new_thread(nullptr); }
 
-static bool pthread_getstack_other_thread_explicit_size() {
-  BEGIN_TEST;
-
+TEST(Pthread, GetstackOtherThreadExplicitSize) {
   pthread_attr_t attr;
   int result = pthread_attr_init(&attr);
   ASSERT_EQ(result, 0, "pthread_attr_init failed");
   result = pthread_attr_setstacksize(&attr, 1 << 20);
   ASSERT_EQ(result, 0, "pthread_attr_setstacksize failed");
 
-  ASSERT_TRUE(pthread_getstack_on_new_thread(&attr),
-              "pthread_attr_getstack on a thread with explicit stack size");
-
-  END_TEST;
+  pthread_getstack_on_new_thread(&attr);
 }
-
-BEGIN_TEST_CASE(pthread_tests)
-RUN_TEST(pthread_test)
-RUN_TEST(pthread_self_main_thread_test)
-RUN_TEST(pthread_big_stack_size)
-RUN_TEST(pthread_getstack_main_thread)
-RUN_TEST(pthread_getstack_other_thread)
-RUN_TEST(pthread_getstack_other_thread_explicit_size)
-END_TEST_CASE(pthread_tests)
