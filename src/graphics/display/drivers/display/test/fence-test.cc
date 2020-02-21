@@ -25,8 +25,10 @@ class FenceTest : public zxtest::Test {
   void SetUp() override {
     zx::event ev;
     zx::event::create(0, &ev);
-    fence_ = fbl::AdoptRef(new Fence(&cb_, async_get_default_dispatcher(), 1, std::move(ev)));
+    fence_ = fbl::AdoptRef(new Fence(&cb_, loop_.dispatcher(), 1, std::move(ev)));
   }
+
+  void TearDown() override { fence_->ClearRef(); }
 
   async::TestLoop& loop() { return loop_; }
   fbl::RefPtr<Fence> fence() { return fence_; }

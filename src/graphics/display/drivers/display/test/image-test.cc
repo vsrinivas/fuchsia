@@ -9,6 +9,7 @@
 #include <lib/async/default.h>
 #include <zircon/pixelformat.h>
 
+#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 
@@ -64,6 +65,10 @@ TEST_F(ImageTest, RetiredImagesAreAlwaysUsable) {
   info.pixel_format = ZX_PIXEL_FORMAT_RGB_x888;
   info.type = 0;
   auto image = ImportImage(std::move(vmo), info);
+  fbl::AutoCall image_cleanup([controller = controller(), image]() {
+    controller->AssertMtxAliasHeld(image->mtx());
+    image->ResetFences();
+  });
 
   zx::event signal_event;
   ASSERT_OK(zx::event::create(0, &signal_event));
@@ -72,6 +77,7 @@ TEST_F(ImageTest, RetiredImagesAreAlwaysUsable) {
   auto signal_fence = fbl::AdoptRef(
       new Fence(this, controller()->loop().dispatcher(), 1, std::move(signal_event_dup)));
   signal_fence->CreateRef();
+  fbl::AutoCall signal_cleanup([signal_fence]() { signal_fence->ClearRef(); });
 
   zx::port signal_port;
   ASSERT_OK(zx::port::create(0, &signal_port));

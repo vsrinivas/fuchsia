@@ -62,6 +62,15 @@ class IntegrationTest : public TestBase {
     sysmem_ = std::make_unique<sysmem::Allocator::SyncClient>(std::move(client));
   }
 
+  // |TestBase|
+  void TearDown() override {
+    EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return this->primary_client_dead(); }));
+    // Send one last vsync, to make sure any blank configs take effect.
+    display()->SendVsync();
+    EXPECT_EQ(0, controller()->TEST_imported_images_count());
+    TestBase::TearDown();
+  }
+
   std::unique_ptr<sysmem::Allocator::SyncClient> sysmem_;
 };
 
@@ -191,8 +200,8 @@ TEST_F(IntegrationTest, DISABLED_SendVsyncsAfterClientsBail) {
 
   // Send the controller a vsync for an image it won't recognize anymore.
   const uint64_t handles[] = {0UL};
-  controller()->DisplayControllerInterfaceOnDisplayVsync(
-      primary_client->display_id(), 0u, handles, 1);
+  controller()->DisplayControllerInterfaceOnDisplayVsync(primary_client->display_id(), 0u, handles,
+                                                         1);
 
   // Send a second vsync, using the config the client applied.
   display()->SendVsync();

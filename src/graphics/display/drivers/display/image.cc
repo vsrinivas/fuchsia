@@ -26,8 +26,8 @@ Image::Image(Controller* controller, const image_t& info) : info_(info), control
 
 Image::~Image() {
   if (!capture_image_) {
-    ZX_DEBUG_ASSERT(!std::atomic_load(&in_use_));
-    ZX_DEBUG_ASSERT(!list_in_list(&node.link));
+    ZX_ASSERT(!std::atomic_load(&in_use_));
+    ZX_ASSERT(!list_in_list(&node.link));
     controller_->ReleaseImage(this);
   } else {
     controller_->ReleaseCaptureImage(this);
