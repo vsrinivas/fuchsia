@@ -85,6 +85,31 @@ inline constexpr uint32_t MetricIDForEventCode(const CrashpadFunctionError funct
   return cobalt_registry::kCrashpadErrorsMetricId;
 }
 
+enum class CobaltEventType {
+  kOccurrence,
+  kCount,
+};
+
+inline constexpr CobaltEventType EventTypeForEventCode(const TimedOutData data) {
+  return CobaltEventType::kOccurrence;
+}
+
+inline constexpr CobaltEventType EventTypeForEventCode(const RebootReason reason) {
+  return CobaltEventType::kOccurrence;
+}
+
+inline constexpr CobaltEventType EventTypeForEventCode(const CrashState state) {
+  return CobaltEventType::kOccurrence;
+}
+
+inline constexpr CobaltEventType EventTypeForEventCode(const UploadAttemptState state) {
+  return CobaltEventType::kCount;
+}
+
+inline constexpr CobaltEventType EventTypeForEventCode(const CrashpadFunctionError function) {
+  return CobaltEventType::kOccurrence;
+}
+
 }  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_UTILS_COBALT_METRICS_H_

@@ -15,24 +15,19 @@
 namespace feedback {
 
 struct CobaltEvent {
-  // Represents a Cobalt event.
-  //
-  // Only supports a single-dimension occurrence and count events.
-  enum class Type {
-    Occurrence,
-    Count,
-  };
-
   CobaltEvent(uint32_t metric_id, uint32_t event_code)
-      : type(Type::Occurrence), metric_id(metric_id), event_code(event_code), count(0u) {}
+      : type(CobaltEventType::kOccurrence),
+        metric_id(metric_id),
+        event_code(event_code),
+        count(0u) {}
 
   CobaltEvent(uint32_t metric_id, uint32_t event_code, uint64_t count)
-      : type(Type::Count), metric_id(metric_id), event_code(event_code), count(count) {}
+      : type(CobaltEventType::kCount), metric_id(metric_id), event_code(event_code), count(count) {}
 
   // Define constructors that allow for the omission of a metric id.
   template <typename EventCodeType>
   explicit CobaltEvent(EventCodeType event_code)
-      : type(Type::Occurrence),
+      : type(EventTypeForEventCode(event_code)),
         metric_id(MetricIDForEventCode(event_code)),
         event_code(static_cast<uint32_t>(event_code)),
         count(0u) {
@@ -41,7 +36,7 @@ struct CobaltEvent {
 
   template <typename EventCodeType>
   CobaltEvent(EventCodeType event_code, uint64_t count)
-      : type(Type::Count),
+      : type(EventTypeForEventCode(event_code)),
         metric_id(MetricIDForEventCode(event_code)),
         event_code(static_cast<uint32_t>(event_code)),
         count(count) {
@@ -50,7 +45,7 @@ struct CobaltEvent {
 
   std::string ToString() const;
 
-  Type type;
+  CobaltEventType type;
   uint32_t metric_id = 0;
   uint32_t event_code = 0;
   uint64_t count = 0;

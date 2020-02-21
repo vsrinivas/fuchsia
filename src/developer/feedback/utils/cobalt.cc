@@ -7,6 +7,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/zx/time.h>
 
+#include <string>
+
 #include "src/developer/feedback/utils/cobalt_metrics.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -142,10 +144,10 @@ void Cobalt::SendEvent(uint64_t event_id) {
   };
 
   switch (event.type) {
-    case CobaltEvent::Type::Occurrence:
+    case CobaltEventType::kOccurrence:
       logger_->LogEvent(event.metric_id, event.event_code, std::move(cb));
       break;
-    case CobaltEvent::Type::Count:
+    case CobaltEventType::kCount:
       logger_->LogEventCount(event.metric_id, event.event_code, /*component=*/"",
                              /*period_duration_micros=*/0u, event.count, std::move(cb));
       break;
