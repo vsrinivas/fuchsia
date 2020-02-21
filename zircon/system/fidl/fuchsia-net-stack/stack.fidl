@@ -17,7 +17,9 @@ using device_path = string:255;
 using interface_list = vector<InterfaceInfo>:255;
 
 /// An alias that may be used to refer to an interface.
-using interface_name = string:32;
+// C struct `ifreq` limits interface name to 16 bytes, with the last byte
+// reserved for null terminator.
+using interface_name = string:15;
 
 enum PresenceStatus {
     /// The interface is added.

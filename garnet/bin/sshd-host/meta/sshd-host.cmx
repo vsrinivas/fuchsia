@@ -12,6 +12,7 @@
         "services": [
             "fuchsia.hardware.pty.Device",
             "fuchsia.net.NameLookup",
+            "fuchsia.net.stack.Stack",
             "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher"
         ]

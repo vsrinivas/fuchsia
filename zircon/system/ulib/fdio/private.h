@@ -100,6 +100,27 @@ typedef struct fdio_ops {
   zx_status_t (*shutdown)(fdio_t* io, int how, int16_t* out_code);
 } fdio_ops_t;
 
+#define MAKE_GET_SERVICE(fn_name, symbol)                        \
+  static zx_status_t fn_name(symbol::SyncClient** out) {         \
+    static symbol::SyncClient* saved;                            \
+    static std::once_flag once;                                  \
+    static zx_status_t status;                                   \
+    std::call_once(once, [&]() {                                 \
+      zx::channel out;                                           \
+      status = fdio_service_connect_by_name(symbol::Name, &out); \
+      if (status != ZX_OK) {                                     \
+        return;                                                  \
+      }                                                          \
+      static symbol::SyncClient client(std::move(out));          \
+      saved = &client;                                           \
+    });                                                          \
+    if (status != ZX_OK) {                                       \
+      return status;                                             \
+    }                                                            \
+    *out = saved;                                                \
+    return ZX_OK;                                                \
+  }
+
 // fdio_t ioflag values
 #define IOFLAG_CLOEXEC (1 << 0)
 #define IOFLAG_EPOLL (1 << 2)

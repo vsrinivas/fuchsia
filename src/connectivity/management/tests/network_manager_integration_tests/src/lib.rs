@@ -172,7 +172,7 @@ async fn add_ethernet_device(
     device: fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_ethernet::DeviceMarker>,
     name: &str,
 ) -> Result<(), Error> {
-    let device_name = format!("/mock_device/{}", name);
+    let device_name = format!("/mock/{}", name);
     let id = netstack_proxy
         .add_ethernet_device(
             &device_name,
@@ -295,7 +295,7 @@ async fn test_commands() {
           ("show lanconfig 0",
            "Id \\{ uuid: \\[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\} Response: \\(LanProperties \\{ address_v4: None, enable_dhcp_server: None, dhcp_config: None, address_v6: None, enable_dns_forwarder: None, enable: None \\}, Some\\(Error \\{ code: NotSupported, description: None \\}\\)",""),
            ("show ports",
-            "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+            "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
             ""),
             ("show routes", "Response: \\[\\]",""),
             ("show wans", "Response: \\[\\]",""),
@@ -315,7 +315,7 @@ async fn test_add_wan() {
         // ("command to test", "expected regex match statement"),
         // There should be two ports.
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
         ("show wans", "Response: \\[\\]\n","There should be no WANs created yet."),
         (" add wan wan1 --ports 2 3", error_message,"add wan interface with two ports; should fail."),
@@ -337,7 +337,7 @@ async fn test_remove_wan() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", "comment"),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
         ("show wans", "Response: \\[\\]\n","There should be no WANs created yet."),
         (" add wan wan1 --ports 2", "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n","add wan interface using existing port; should succeed."),
@@ -367,7 +367,7 @@ async fn test_add_lan() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", "comment"),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
         ("show lans", "Response: \\[\\]\n","There should be no LANs created yet."),
         (" add lan lan1 --ports 2", "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n","add lan interface using existing port; should succeed."),
@@ -383,7 +383,7 @@ async fn test_add_lan() {
          "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Lan\\), name: Some\\(\"lan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Lan\\(LanProperties \\{ address_v4: None, enable_dhcp_server: Some\\(false\\), dhcp_config: None, address_v6: None, enable_dns_forwarder: Some\\(false\\), enable: Some\\(false\\) \\}\\)\\) \\}, Lif \\{ element: Some\\(Id \\{ uuid: \\[7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 2 \\}\\), type_: Some\\(Lan\\), name: Some\\(\"lan2\"\\), port_ids: Some\\(\\[3, 4\\]\\), vlan: Some\\(0\\), properties: Some\\(Lan\\(LanProperties \\{ address_v4: None, enable_dhcp_server: Some\\(false\\), dhcp_config: None, address_v6: None, enable_dns_forwarder: Some\\(false\\), enable: Some\\(false\\) \\}\\)\\) \\}\\]\n",
          "There should be two LAN interfaces."),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
     ]).await;
 }
@@ -395,7 +395,7 @@ async fn test_remove_lan() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", "comment"),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
         ("show lans", "Response: \\[\\]\n","There should be no LANs created yet."),
         (" add lan lan1 --ports 2", "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n","add lan interface using existing port; should succeed."),
@@ -422,7 +422,7 @@ async fn test_lan_dhcp() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", description),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
          (" add lan lan1 --ports 2",
     "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
@@ -474,7 +474,7 @@ async fn test_lan_ip() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", description),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
          (" add lan lan1 --ports 2",
     "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
@@ -510,7 +510,7 @@ async fn test_lan_state() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", description),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
          (" add lan lan1 --ports 2",
     "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
@@ -560,7 +560,7 @@ async fn test_interface_config_persists() {
     let device = test_device().await;
     execute_test_suite(&device, test_suite![
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
          (" add lan lan1 --ports 2",
     "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
@@ -593,7 +593,7 @@ async fn test_wan_connection() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", description),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
          (" add wan wan1 --ports 2",
     "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
@@ -641,7 +641,7 @@ async fn test_wan_ip() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", description),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
         (" add wan wan1 --ports 2", "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n","add wan interface using existing port; should succeed."),
         ("show wan 5",
@@ -702,7 +702,7 @@ async fn test_wan_mac() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", "comment"),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
         ("show wans", "Response: \\[\\]\n","There should be no WANs created yet."),
         (" add wan wan1 --ports 2", "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n","add wan interface using existing port; should succeed."),
@@ -737,7 +737,7 @@ async fn test_wan_state() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", description),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
          (" add wan wan1 --ports 2",
     "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
@@ -808,7 +808,7 @@ async fn test_port_forward() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", description),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
          (" add wan wan1 --ports 2",
     "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
@@ -832,7 +832,7 @@ async fn test_route() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", description),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
          (" add wan wan1 --ports 2",
     "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
@@ -856,7 +856,7 @@ async fn test_security_config() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", description),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
         ("set security-config nat enable",
          "Some\\(\"Pending further config to update NAT rules\"\\) \\}\\)",
@@ -916,7 +916,7 @@ async fn test_dhcp_config() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", description),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
          (" add wan wan1 --ports 2",
     "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
@@ -940,7 +940,7 @@ async fn test_dns_config() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", description),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
          (" add wan wan1 --ports 2",
     "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
@@ -985,7 +985,7 @@ async fn test_dns_forwarder() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", description),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
         (" add wan wan1 --ports 2",
     "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
@@ -1009,7 +1009,7 @@ async fn test_link_events() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", description),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
         (" add wan wan1 --ports 2",
     "Response: \\(Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), None\\)\n",
@@ -1031,7 +1031,7 @@ async fn test_link_events() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", description),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
         ("show wans",
 "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
@@ -1047,7 +1047,7 @@ async fn test_link_events() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", description),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
         ("show wans",
 "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",
@@ -1063,7 +1063,7 @@ async fn test_link_events() {
     execute_test_suite(&device, test_suite![
         // ("command to test", "expected regex match statement", description),
         ("show ports",
-         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock_device/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock_device/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock_device/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
+         "Port \\{ element: Id \\{ uuid: \\[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 2, path: \"/mock/port1\" \\}\nPort \\{ element: Id \\{ uuid: \\[3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 3, path: \"/mock/port2\" \\}\nPort \\{ element: Id \\{ uuid: \\[4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 4, path: \"/mock/port3\" \\}\nPort \\{ element: Id \\{ uuid: \\[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 0 \\}, id: 1, path: \"loopback\" \\}\n",
          "test starts with three ports present."),
         ("show wans",
 "Response: \\[Lif \\{ element: Some\\(Id \\{ uuid: \\[5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0\\], version: 1 \\}\\), type_: Some\\(Wan\\), name: Some\\(\"wan1\"\\), port_ids: Some\\(\\[2\\]\\), vlan: Some\\(0\\), properties: Some\\(Wan\\(WanProperties \\{ connection_type: Some\\(Direct\\), connection_parameters: None, address_method: Some\\(Manual\\), address_v4: None, gateway_v4: None, connection_v6_mode: Some\\(Passthrough\\), address_v6: None, gateway_v6: None, hostname: None, clone_mac: None, mtu: None, enable: Some\\(false\\), metric: None \\}\\)\\) \\}\\]\n",

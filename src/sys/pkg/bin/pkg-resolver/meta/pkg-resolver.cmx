@@ -21,6 +21,7 @@
             "fuchsia.boot.Arguments",
             "fuchsia.logger.LogSink",
             "fuchsia.net.NameLookup",
+            "fuchsia.net.stack.Stack",
             "fuchsia.pkg.PackageCache",
             "fuchsia.posix.socket.Provider",
             "fuchsia.tracing.provider.Registry"

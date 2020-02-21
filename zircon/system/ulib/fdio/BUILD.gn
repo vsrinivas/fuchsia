@@ -73,6 +73,7 @@ if (get_path_info(toolchain.environment, "extension") == "fuzzer") {
       "$zx/system/fidl/fuchsia-io:llcpp",
       "$zx/system/fidl/fuchsia-ldsvc:c",
       "$zx/system/fidl/fuchsia-net:llcpp",
+      "$zx/system/fidl/fuchsia-net-stack:llcpp",
       "$zx/system/fidl/fuchsia-posix-socket:llcpp",
       "$zx/system/fidl/fuchsia-process:c",
       "$zx/system/ulib/fbl",

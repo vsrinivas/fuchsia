@@ -25,27 +25,6 @@ namespace fio = ::llcpp::fuchsia::io;
 namespace fnet = ::llcpp::fuchsia::net;
 namespace fsocket = ::llcpp::fuchsia::posix::socket;
 
-#define MAKE_GET_SERVICE(fn_name, symbol)                        \
-  static zx_status_t fn_name(symbol::SyncClient** out) {         \
-    static symbol::SyncClient* saved;                            \
-    static std::once_flag once;                                  \
-    static zx_status_t status;                                   \
-    std::call_once(once, [&]() {                                 \
-      zx::channel out;                                           \
-      status = fdio_service_connect_by_name(symbol::Name, &out); \
-      if (status != ZX_OK) {                                     \
-        return;                                                  \
-      }                                                          \
-      static symbol::SyncClient client(std::move(out));          \
-      saved = &client;                                           \
-    });                                                          \
-    if (status != ZX_OK) {                                       \
-      return status;                                             \
-    }                                                            \
-    *out = saved;                                                \
-    return ZX_OK;                                                \
-  }
-
 MAKE_GET_SERVICE(get_socket_provider, fsocket::Provider)
 MAKE_GET_SERVICE(get_name_lookup, fnet::NameLookup)
 

@@ -12,9 +12,11 @@
 #include <netinet/if_ether.h>
 #include <netinet/tcp.h>
 #include <poll.h>
+#include <sys/ioctl.h>
 #include <sys/uio.h>
 
 #include <array>
+#include <cstdlib>
 #include <future>
 #include <thread>
 
@@ -169,16 +171,47 @@ constexpr int INET_ECN_MASK = 3;
 
 using SocketKind = std::tuple<int, int>;
 
-constexpr int kSockOptOn = 1;
-constexpr int kSockOptOff = 0;
+std::string socketKindToString(const ::testing::TestParamInfo<SocketKind>& info) {
+  std::string domain;
+  switch (std::get<0>(info.param)) {
+    case AF_INET:
+      domain = "IPv4";
+      break;
+    case AF_INET6:
+      domain = "IPv6";
+      break;
+    default:
+      domain = std::to_string(std::get<0>(info.param));
+      break;
+  }
+  std::string type;
+  switch (std::get<1>(info.param)) {
+    case SOCK_DGRAM:
+      type = "Datagram";
+      break;
+    case SOCK_STREAM:
+      type = "Stream";
+      break;
+    default:
+      type = std::to_string(std::get<1>(info.param));
+  }
+  return domain + "_" + type;
+}
 
-class SocketOptsTest : public ::testing::TestWithParam<SocketKind> {
+// Share common functions for SocketKind based tests.
+class SocketKindTest : public ::testing::TestWithParam<SocketKind> {
  protected:
   fbl::unique_fd NewSocket() const {
     SocketKind s = GetParam();
     return fbl::unique_fd(socket(std::get<0>(s), std::get<1>(s), 0));
   }
+};
 
+constexpr int kSockOptOn = 1;
+constexpr int kSockOptOff = 0;
+
+class SocketOptsTest : public SocketKindTest {
+ protected:
   bool IsTCP() const { return std::get<1>(GetParam()) == SOCK_STREAM; }
 
   bool IsIPv6() const { return std::get<0>(GetParam()) == AF_INET6; }
@@ -961,33 +994,7 @@ TEST_P(SocketOptsTest, SetReceiveTOSChar) {
 INSTANTIATE_TEST_SUITE_P(LocalhostTest, SocketOptsTest,
                          ::testing::Combine(::testing::Values(AF_INET, AF_INET6),
                                             ::testing::Values(SOCK_DGRAM, SOCK_STREAM)),
-                         [](const ::testing::TestParamInfo<SocketKind>& info) {
-                           std::string domain;
-                           switch (std::get<0>(info.param)) {
-                             case AF_INET:
-                               domain = "IPv4";
-                               break;
-                             case AF_INET6:
-                               domain = "IPv6";
-                               break;
-                             default:
-                               domain = std::to_string(std::get<0>(info.param));
-                               break;
-                           }
-                           std::string type;
-                           switch (std::get<1>(info.param)) {
-                             case SOCK_DGRAM:
-                               type = "Datagram";
-                               break;
-                             case SOCK_STREAM:
-                               type = "Stream";
-                               break;
-                             default:
-                               type = std::to_string(std::get<1>(info.param));
-                           }
-
-                           return domain + "_" + type;
-                         });
+                         socketKindToString);
 
 class ReuseTest
     : public ::testing::TestWithParam<::std::tuple<int /* type */, in_addr_t /* address */>> {};
@@ -2656,6 +2663,74 @@ TEST_P(NetSocketTest, SocketPeekTest) {
 }
 
 INSTANTIATE_TEST_SUITE_P(NetSocket, NetSocketTest, ::testing::Values(SOCK_DGRAM, SOCK_STREAM));
+
+TEST_P(SocketKindTest, IoctlIndexNameLookupRoundTrip) {
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = NewSocket()) << strerror(errno);
+
+  // This test assumes index 1 is bound to a valid interface. In Fuchsia's test environment (the
+  // component executing this test), 1 is always bound to "lo".
+  struct ifreq ifr_iton;
+  ifr_iton.ifr_ifindex = 1;
+  // Set ifr_name to random chars to test ioctl correctly sets null terminator.
+  memset(ifr_iton.ifr_name, 0xdead, IFNAMSIZ);
+  ASSERT_EQ(strnlen(ifr_iton.ifr_name, IFNAMSIZ), (size_t)IFNAMSIZ);
+  ASSERT_EQ(ioctl(fd.get(), SIOCGIFNAME, &ifr_iton), 0) << strerror(errno);
+  ASSERT_LT(strnlen(ifr_iton.ifr_name, IFNAMSIZ), (size_t)IFNAMSIZ);
+
+  struct ifreq ifr_ntoi;
+  strncpy(ifr_ntoi.ifr_name, ifr_iton.ifr_name, IFNAMSIZ);
+  ASSERT_EQ(ioctl(fd.get(), SIOCGIFINDEX, &ifr_ntoi), 0) << strerror(errno);
+  EXPECT_EQ(ifr_ntoi.ifr_ifindex, 1);
+
+  struct ifreq ifr_ntoi_err;
+  memset(ifr_ntoi_err.ifr_name, 0xdead, IFNAMSIZ);
+  // Although the first few bytes of ifr_name contain the correct name, there is no null terminator
+  // and the remaining bytes are gibberish, should match no interfaces.
+  memcpy(ifr_ntoi_err.ifr_name, ifr_iton.ifr_name, strnlen(ifr_iton.ifr_name, IFNAMSIZ));
+  ASSERT_EQ(ioctl(fd.get(), SIOCGIFINDEX, &ifr_ntoi_err), -1);
+  EXPECT_EQ(errno, ENODEV);
+}
+
+TEST_P(SocketKindTest, IoctlIndexToNameNotFound) {
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = NewSocket()) << strerror(errno);
+  // Invalid ifindex "-1" should match no interfaces.
+  struct ifreq ifr_iton;
+  ifr_iton.ifr_ifindex = -1;
+  ASSERT_EQ(ioctl(fd.get(), SIOCGIFNAME, &ifr_iton), -1);
+  EXPECT_EQ(errno, ENODEV);
+}
+
+TEST_P(SocketKindTest, IoctlNameToIndexNotFound) {
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = NewSocket()) << strerror(errno);
+  // Emtpy name should match no interface.
+  struct ifreq ifr_ntoi;
+  *ifr_ntoi.ifr_name = 0;
+  ASSERT_EQ(ioctl(fd.get(), SIOCGIFINDEX, &ifr_ntoi), -1);
+  EXPECT_EQ(errno, ENODEV);
+}
+
+TEST(SocketKindTest, IoctlNameIndexLookupForNonSocketFd) {
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(open("/", O_RDONLY | O_DIRECTORY))) << strerror(errno);
+
+  struct ifreq ifr_iton;
+  ifr_iton.ifr_ifindex = 1;
+  ASSERT_EQ(ioctl(fd.get(), SIOCGIFNAME, &ifr_iton), -1);
+  EXPECT_EQ(errno, ENOTTY);
+
+  struct ifreq ifr_ntoi;
+  strcpy(ifr_ntoi.ifr_name, "loblah");
+  ASSERT_EQ(ioctl(fd.get(), SIOCGIFINDEX, &ifr_ntoi), -1);
+  EXPECT_EQ(errno, ENOTTY);
+}
+
+INSTANTIATE_TEST_SUITE_P(NetSocket, SocketKindTest,
+                         ::testing::Combine(::testing::Values(AF_INET, AF_INET6),
+                                            ::testing::Values(SOCK_DGRAM, SOCK_STREAM)),
+                         socketKindToString);
 
 TEST(NetDatagramTest, PingIpv4LoopbackAddresses) {
   const char* msg = "hello";

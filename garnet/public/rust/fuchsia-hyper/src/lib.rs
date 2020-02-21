@@ -6,10 +6,13 @@ use hyper_rustls;
 use rustls;
 
 use {
+    fidl_fuchsia_net_stack::{StackMarker, StackSynchronousProxy},
     fuchsia_async::{
         net::{TcpConnector, TcpStream},
         EHandle,
     },
+    fuchsia_component::client::connect_channel_to_service_at,
+    fuchsia_zircon as zx,
     futures::{
         compat::Compat,
         future::{Future, FutureExt, TryFutureExt},
@@ -143,14 +146,25 @@ fn parse_ip_addr(host: &str, port: u16) -> Option<SocketAddr> {
                 return None;
             }
 
-            // TODO(21415 and 39402): the netstack team is still working on how we should convert
-            // IPv6 zone_ids into scope_ids (see http://fxb/21415). However, both golang and curl
-            // allow for an integer zone_id to be treated as the scope_id, so copy that behavior
-            // until 21415 the proper solution is figured out.
-            //
-            // When we do start parsing more complex zone_ids, we should validate that the value
-            // matches rfc6874 grammar `ZoneID = 1*( unreserved / pct-encoded )`.
-            zone_id.parse::<u32>().ok()?
+            // TODO: validate that the value matches rfc6874 grammar `ZoneID = 1*( unreserved / pct-encoded )`.
+            match zone_id.parse::<u32>() {
+                Ok(zone_id_num) => zone_id_num,
+                Err(_) => {
+                    let (proxy, server) = zx::Channel::create().expect("failed to create channel");
+                    connect_channel_to_service_at::<StackMarker>(server, "/svc")
+                        .expect("failed to connect to netstack");
+                    let mut netstack = StackSynchronousProxy::new(proxy);
+                    let interface = netstack
+                        .list_interfaces(zx::Time::INFINITE)
+                        .expect("failed to list interfaces")
+                        .into_iter()
+                        .find(|interface| interface.properties.name == zone_id);
+                    match interface {
+                        Some(interface) => interface.id as u32,
+                        None => return None,
+                    }
+                }
+            }
         }
         None => 0,
     };
@@ -210,14 +224,17 @@ mod test {
     }
 
     #[test]
-    fn test_parse_ipv6_addr_with_zone_does_not_support_interface_names() {
+    fn test_parse_ipv6_addr_with_zone_supports_interface_names() {
+        let expected = "fe80::1:2:3:4".parse::<Ipv6Addr>().unwrap();
+
         let addr = parse_ip_addr("[fe80::1:2:3:4%25lo]", 8080);
-        assert_eq!(addr, None);
+        assert_eq!(addr, Some(SocketAddr::V6(SocketAddrV6::new(expected, 8080, 0, 1))));
+
+        assert_eq!(parse_ip_addr("[fe80::1:2:3:4%25unknownif]", 8080), None);
     }
 
     #[test]
     fn test_parse_ipv6_addr_with_zone_must_be_local() {
-        let addr = parse_ip_addr("[fe81::1:2:3:4%252]", 8080);
-        assert_eq!(addr, None);
+        assert_eq!(parse_ip_addr("[fe81::1:2:3:4%252]", 8080), None);
     }
 }
