@@ -31,5 +31,39 @@ TEST(VersionedTimelineFunctionTest, UpdateIncrementsGeneration) {
   }
 }
 
+TEST(DerivedTimelineFunctionTest, UpdateIncrementsGeneration) {
+  TimelineFunction function1 = TimelineFunction(1, 1, 1, 1);
+  auto base = fbl::MakeRefCounted<VersionedTimelineFunction>(function1);
+
+  TimelineFunction function2 = TimelineFunction(1, 2, 1, 1);
+  auto under_test = fbl::MakeRefCounted<DerivedTimelineFunction>(base, function2);
+
+  auto [f, generation] = under_test->get();
+  ASSERT_EQ(f, TimelineFunction::Compose(function2, function1));
+
+  // Update with the same function, should not increment generation.
+  base->Update(function1);
+  under_test->Update(function2);
+  {
+    auto [_, gen] = under_test->get();
+    EXPECT_EQ(gen, generation);
+  }
+
+  // Update base function, increment generation.
+  base->Update(function2);
+  {
+    auto [_, gen] = under_test->get();
+    ASSERT_GT(gen, generation);
+    generation = gen;
+  }
+
+  // Update derived function, increment generation.
+  under_test->Update(function1);
+  {
+    auto [_, gen] = under_test->get();
+    EXPECT_GT(gen, generation);
+  }
+}
+
 }  // namespace
 }  // namespace media::audio
