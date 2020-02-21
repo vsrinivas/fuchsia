@@ -5,8 +5,8 @@
 use super::*;
 
 use fidl_fuchsia_bluetooth_avrcp::{
-    AbsoluteVolumeHandlerProxy, NotificationEvent, PlayStatus, TargetAvcError, TargetHandlerProxy,
-    TargetPassthroughError,
+    AbsoluteVolumeHandlerProxy, MediaAttributes, NotificationEvent, PlayStatus, TargetAvcError,
+    TargetHandlerProxy, TargetPassthroughError,
 };
 
 /// Delegates commands received on any peer channels to the currently registered target handler and
@@ -157,11 +157,26 @@ impl TargetDelegate {
         // if we have a FIDL error, return no players available
         send_command_fut.await.map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)
     }
+
+    pub async fn send_get_media_attributes_command(
+        &self,
+    ) -> Result<MediaAttributes, TargetAvcError> {
+        let send_command_fut = {
+            let inner_guard = self.inner.lock();
+            match &inner_guard.target_handler {
+                Some(target_handler) => target_handler.get_media_attributes(),
+                None => return Err(TargetAvcError::RejectedNoAvailablePlayers),
+            }
+        };
+
+        send_command_fut.await.map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)?
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl::encoding::Decodable as FidlDecodable;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth_avrcp::{TargetHandlerMarker, TargetHandlerRequest};
     use matches::assert_matches;
@@ -196,6 +211,37 @@ mod tests {
             .expect("Error creating TargetHandler endpoint");
         assert_matches!(target_delegate.set_target_handler(target_proxy_3), Ok(()));
         drop(target_stream_3);
+    }
+
+    #[test]
+    // Test getting correct response from a get_media_attributes command.
+    fn test_get_media_attributes() {
+        let mut exec = fasync::Executor::new().expect("executor::new failed");
+        let target_delegate = TargetDelegate::new();
+        // try with a target handler
+        let (target_proxy, mut target_stream) = create_proxy_and_stream::<TargetHandlerMarker>()
+            .expect("Error creating TargetHandler endpoint");
+        assert_matches!(target_delegate.set_target_handler(target_proxy), Ok(()));
+
+        let get_media_attr_fut = target_delegate.send_get_media_attributes_command();
+        pin_utils::pin_mut!(get_media_attr_fut);
+        assert!(exec.run_until_stalled(&mut get_media_attr_fut).is_pending());
+
+        let select_next_some_fut = target_stream.select_next_some();
+        pin_utils::pin_mut!(select_next_some_fut);
+        match exec.run_until_stalled(&mut select_next_some_fut) {
+            Poll::Ready(Ok(TargetHandlerRequest::GetMediaAttributes { responder })) => {
+                assert!(responder.send(&mut Ok(MediaAttributes::new_empty())).is_ok());
+            }
+            _ => assert!(false, "unexpected stream state"),
+        };
+
+        match exec.run_until_stalled(&mut get_media_attr_fut) {
+            Poll::Ready(attributes) => {
+                assert_eq!(attributes, Ok(MediaAttributes::new_empty()));
+            }
+            _ => assert!(false, "unexpected state"),
+        }
     }
 
     // test we get the default response before a target handler is set and test we get the response

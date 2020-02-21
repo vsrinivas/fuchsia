@@ -256,6 +256,48 @@ async fn handle_get_play_status(
     Ok(Box::new(response))
 }
 
+async fn handle_get_element_attributes(
+    cmd: GetElementAttributesCommand,
+    target_delegate: Arc<TargetDelegate>,
+) -> Result<Box<dyn PacketEncodable>, StatusCode> {
+    let element_attributes = target_delegate
+        .send_get_media_attributes_command()
+        .await
+        .map_err(|e| StatusCode::from(e))?;
+
+    let mut response = GetElementAttributesResponse::default();
+    for attribute in cmd.attributes() {
+        match &attribute {
+            MediaAttributeId::Title => {
+                response.title = element_attributes.title.clone();
+            }
+            MediaAttributeId::ArtistName => {
+                response.artist_name = element_attributes.artist_name.clone();
+            }
+            MediaAttributeId::AlbumName => {
+                response.album_name = element_attributes.album_name.clone();
+            }
+            MediaAttributeId::TrackNumber => {
+                response.track_number = element_attributes.track_number.clone();
+            }
+            MediaAttributeId::TotalNumberOfTracks => {
+                response.total_number_of_tracks = element_attributes.total_number_of_tracks.clone();
+            }
+            MediaAttributeId::Genre => {
+                response.genre = element_attributes.genre.clone();
+            }
+            MediaAttributeId::PlayingTime => {
+                response.playing_time = element_attributes.playing_time.clone();
+            }
+            _ => {
+                fx_log_err!("Support for attribute {:?} not implemented.", attribute);
+            }
+        }
+    }
+
+    Ok(Box::new(response))
+}
+
 /// Sends status command response. Send's Implemented/Stable on response code on success.
 fn send_status_response(
     command: impl IncomingTargetCommand,
@@ -305,8 +347,10 @@ async fn handle_status_command(
             StatusCommand::GetCurrentPlayerApplicationSettingValue(_) => {}
             StatusCommand::GetPlayerApplicationSettingAttributeText(_) => {}
             StatusCommand::GetPlayerApplicationSettingValueText(_) => {}
-            StatusCommand::GetElementAttributes(cmd) => {}
             */
+            StatusCommand::GetElementAttributes(cmd) => {
+                handle_get_element_attributes(cmd, delegate).await
+            }
             StatusCommand::GetPlayStatus(cmd) => handle_get_play_status(cmd, delegate).await,
             _ => {
                 // TODO: remove when we have finish implementing the rest of this enum
@@ -549,7 +593,11 @@ mod test {
                         responder.send(&mut Err(TargetAvcError::RejectedInternalError))
                     }
                     TargetHandlerRequest::GetMediaAttributes { responder } => {
-                        responder.send(&mut Err(TargetAvcError::RejectedInternalError))
+                        responder.send(&mut Ok(MediaAttributes {
+                            title: Some("Foo".to_string()),
+                            artist_name: Some("Bar".to_string()),
+                            ..MediaAttributes::new_empty()
+                        }))
                     }
                     TargetHandlerRequest::GetPlayStatus { responder } => {
                         responder.send(&mut Err(TargetAvcError::RejectedInternalError))
@@ -604,7 +652,6 @@ mod test {
         cmd_handler
     }
 
-    /// currently not implemented so expecting InvalidParameter to be returned
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handle_get_element_attribute_cmd() -> Result<(), Error> {
         let target_proxy = create_dumby_target_handler(false);
@@ -623,11 +670,11 @@ mod test {
         .to_vec();
 
         let command = MockAvcCommand::new(
-            AvcPacketType::Command(AvcCommandType::Control),
+            AvcPacketType::Command(AvcCommandType::Status),
             AvcOpCode::VendorDependent,
             packet_body,
         )
-        .expect_reject_with_status_code(0x20, StatusCode::InvalidParameter);
+        .expect_stable();
 
         cmd_handler.handle_command_internal(command).await
     }
