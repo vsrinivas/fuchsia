@@ -30,6 +30,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:uuid",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }

@@ -16,6 +16,7 @@ use {
     std::collections::HashSet,
     std::path::PathBuf,
     test_executor::TestEvent,
+    uuid::Uuid,
 };
 
 // Start test manager and serve it over `stream`.
@@ -75,7 +76,7 @@ async fn run_test<W: std::marker::Unpin + AsyncWrite>(
     let realm = client::connect_to_service::<fsys::RealmMarker>()
         .context("could not connect to Realm service")?;
 
-    let name = "name".to_owned();
+    let name = format!("test-{}", Uuid::new_v4().to_string());
     let mut collection_ref = fsys::CollectionRef { name: "tests".to_string() };
     let child_decl = fsys::ChildDecl {
         name: Some(name.clone()),

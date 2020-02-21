@@ -33,4 +33,10 @@
             "durability": "transient",
         },
     ],
+    "expose": [
+        {
+            "protocol": "/svc/fuchsia.test.manager.Harness",
+            "from": "self",
+        }
+  ],
 }

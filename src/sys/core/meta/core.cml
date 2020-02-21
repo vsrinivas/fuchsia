@@ -7,6 +7,10 @@
       "url": "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm",
       "startup": "eager",
     },
+    {
+      "name": "test_manager",
+      "url": "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm",
+    },
   ],
   "expose": [
     // Non-zircon services for svchost
@@ -69,6 +73,13 @@
       "to": [ "#appmgr" ],
     },
     {
+      "protocol": [
+        "/svc/fuchsia.test.manager.Harness",
+      ],
+      "from": "#test_manager",
+      "to": [ "#appmgr" ],
+    },
+    {
       "directory": "/boot",
       "from": "realm",
       "to": [ "#appmgr" ],
@@ -118,7 +129,10 @@
     {
       "runner": "elf",
       "from": "realm",
-      "to": [ "#appmgr" ],
+      "to": [
+        "#appmgr",
+        "#test_manager"
+      ],
     },
   ],
 }

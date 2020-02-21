@@ -45,6 +45,9 @@
     // From sysinfo
     { "protocol": "/svc/fuchsia.sysinfo.SysInfo", "as": "/svc_for_sys/fuchsia.sysinfo.SysInfo" },
 
+    // From test_manager
+    { "protocol": "/svc/fuchsia.test.manager.Harness", "as": "/svc_for_sys/fuchsia.test.manager.Harness" },
+
     // These services are used by appmgr directly
     {
       "protocol": [
