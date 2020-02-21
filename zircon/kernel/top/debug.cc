@@ -8,12 +8,12 @@
 #include "debug.h"
 
 #include <ctype.h>
-#include <list.h>
 #include <platform.h>
 #include <printf.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/boot/crash-reason.h>
+#include <zircon/listnode.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 

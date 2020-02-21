@@ -11,9 +11,9 @@
 #include <lib/counters.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/ktrace.h>
-#include <list.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/listnode.h>
 #include <zircon/rights.h>
 
 #include <arch/defines.h>

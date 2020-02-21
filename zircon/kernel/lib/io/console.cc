@@ -11,9 +11,9 @@
 #include <err.h>
 #include <lib/debuglog.h>
 #include <lib/io.h>
-#include <list.h>
 #include <platform.h>
 #include <string.h>
+#include <zircon/listnode.h>
 
 #include <arch/ops.h>
 #include <kernel/auto_lock.h>

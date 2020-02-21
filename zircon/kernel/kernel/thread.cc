@@ -24,12 +24,12 @@
 #include <lib/heap.h>
 #include <lib/ktrace.h>
 #include <lib/version.h>
-#include <list.h>
 #include <platform.h>
 #include <printf.h>
 #include <stdlib.h>
 #include <string.h>
 #include <target.h>
+#include <zircon/listnode.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 

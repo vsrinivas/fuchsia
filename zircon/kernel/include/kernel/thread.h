@@ -9,9 +9,9 @@
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_H_
 
 #include <debug.h>
-#include <list.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
+#include <zircon/listnode.h>
 #include <zircon/syscalls/scheduler.h>
 #include <zircon/types.h>
 

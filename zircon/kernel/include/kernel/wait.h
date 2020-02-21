@@ -8,9 +8,9 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_WAIT_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_WAIT_H_
 
-#include <list.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
+#include <zircon/listnode.h>
 #include <zircon/types.h>
 
 #include <arch/defines.h>

@@ -10,11 +10,11 @@
 
 #include <arch.h>
 #include <assert.h>
-#include <list.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
+#include <zircon/listnode.h>
 
 #include <arch/kernel_aspace.h>
 #include <vm/arch_vm_aspace.h>
@@ -54,8 +54,7 @@ extern char _end[];
 
 // Prints a single mapping required to interpret backtraces.
 template <class F>
-void print_mmap(const F &f, uintptr_t bias, const void *begin, const void *end,
-                const char *perm) {
+void print_mmap(const F &f, uintptr_t bias, const void *begin, const void *end, const char *perm) {
   const uintptr_t start = reinterpret_cast<uintptr_t>(begin);
   const size_t size = reinterpret_cast<uintptr_t>(end) - start;
   f("{{{mmap:%#lx:%#lx:load:0:%s:%#lx}}}\n", start, size, perm, start + bias);
@@ -84,15 +83,15 @@ typedef struct vmm_aspace vmm_aspace_t;
 // internal kernel routines below, do not call directly
 
 // internal routine by the scheduler to swap mmu contexts
-void vmm_context_switch(vmm_aspace_t* oldspace, vmm_aspace_t* newaspace);
+void vmm_context_switch(vmm_aspace_t *oldspace, vmm_aspace_t *newaspace);
 
 // set the current user aspace as active on the current thread.
 // NULL is a valid argument, which unmaps the current user address space
-void vmm_set_active_aspace(vmm_aspace_t* aspace);
+void vmm_set_active_aspace(vmm_aspace_t *aspace);
 
 // specialized version of above function that must be called with the thread_lock already held.
 // This is only intended for use by panic handlers.
-void vmm_set_active_aspace_locked(vmm_aspace_t* aspace);
+void vmm_set_active_aspace_locked(vmm_aspace_t *aspace);
 
 struct kernel_region {
   const char *name;

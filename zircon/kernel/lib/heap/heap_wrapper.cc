@@ -11,10 +11,10 @@
 #include <lib/cmpctmalloc.h>
 #include <lib/console.h>
 #include <lib/heap.h>
-#include <list.h>
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/listnode.h>
 
 #include <arch/ops.h>
 #include <kernel/auto_lock.h>

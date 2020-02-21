@@ -8,8 +8,8 @@
 
 #include <assert.h>
 #include <err.h>
-#include <list.h>
 #include <trace.h>
+#include <zircon/listnode.h>
 
 #include <kernel/event.h>
 #include <kernel/percpu.h>

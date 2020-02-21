@@ -7,9 +7,9 @@
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_PERCPU_H_
 
 #include <lib/lazy_init/lazy_init.h>
-#include <list.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
+#include <zircon/listnode.h>
 
 #include <arch/ops.h>
 #include <kernel/align.h>

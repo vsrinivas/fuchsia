@@ -10,12 +10,12 @@
 #include <inttypes.h>
 #include <lib/counters.h>
 #include <lib/ktrace.h>
-#include <list.h>
 #include <platform.h>
 #include <printf.h>
 #include <string.h>
 #include <target.h>
 #include <trace.h>
+#include <zircon/listnode.h>
 #include <zircon/types.h>
 
 #include <algorithm>

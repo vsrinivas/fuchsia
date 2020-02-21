@@ -26,11 +26,11 @@
 #include <inttypes.h>
 #include <lib/affine/ratio.h>
 #include <lib/counters.h>
-#include <list.h>
 #include <platform.h>
 #include <stdlib.h>
 #include <trace.h>
 #include <zircon/compiler.h>
+#include <zircon/listnode.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 

@@ -8,9 +8,9 @@
 #ifndef ZIRCON_KERNEL_LIB_IO_INCLUDE_LIB_IO_H_
 #define ZIRCON_KERNEL_LIB_IO_INCLUDE_LIB_IO_H_
 
-#include <list.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
+#include <zircon/listnode.h>
 
 /* LK specific calls to register to get input/output of the main console */
 

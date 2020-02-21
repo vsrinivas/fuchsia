@@ -11,11 +11,11 @@
 #include <endian.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
-#include <list.h>
 #include <platform.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/listnode.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 

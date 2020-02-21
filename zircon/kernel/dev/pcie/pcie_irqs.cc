@@ -8,10 +8,10 @@
 #include <assert.h>
 #include <debug.h>
 #include <err.h>
-#include <list.h>
 #include <pow2.h>
 #include <string.h>
 #include <trace.h>
+#include <zircon/listnode.h>
 
 #include <limits>
 

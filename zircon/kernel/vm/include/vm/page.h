@@ -8,10 +8,10 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_H_
 
-#include <list.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
+#include <zircon/listnode.h>
 
 #include <vm/page_state.h>
 

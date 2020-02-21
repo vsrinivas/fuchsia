@@ -7,9 +7,9 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_SCHED_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_SCHED_H_
 
-#include <list.h>
 #include <stdbool.h>
 #include <zircon/compiler.h>
+#include <zircon/listnode.h>
 #include <zircon/syscalls/scheduler.h>
 
 #include <kernel/thread.h>
