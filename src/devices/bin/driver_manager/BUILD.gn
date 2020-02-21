@@ -117,6 +117,9 @@ test("driver_manager_test") {
     ":lib",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(46714): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("driver_manager_tests") {
