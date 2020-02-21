@@ -3,23 +3,29 @@
 // found in the LICENSE file.
 
 use {
+    anyhow::format_err,
+    bt_a2dp::media_types::*,
     bt_a2dp_sink_metrics as metrics, bt_avdtp as avdtp,
-    fidl_fuchsia_bluetooth_bredr::ProfileDescriptor,
+    fidl_fuchsia_bluetooth_bredr::{ProfileDescriptor, ProfileProxy},
     fuchsia_async as fasync,
-    fuchsia_bluetooth::{detachable_map::DetachableMap, types::PeerId},
+    fuchsia_bluetooth::{
+        detachable_map::{DetachableMap, DetachableWeak},
+        types::PeerId,
+    },
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect as inspect,
-    fuchsia_syslog::{fx_log_info, fx_log_warn},
+    fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
     parking_lot::RwLock,
     std::{
         collections::hash_map::Entry,
         collections::{HashMap, HashSet},
+        convert::TryInto,
         sync::Arc,
     },
 };
 
-use crate::{avrcp_relay::AvrcpRelay, peer, Streams};
+use crate::{avrcp_relay::AvrcpRelay, peer, Streams, SBC_SEID};
 
 fn codectype_to_availability_metric(
     codec_type: avdtp::MediaCodecType,
@@ -89,6 +95,8 @@ pub struct ConnectedPeers {
     descriptors: HashMap<PeerId, Option<ProfileDescriptor>>,
     /// The set of streams that are made available to peers.
     streams: Streams,
+    /// Profile Proxy, used to connect new transport sockets.
+    profile: ProfileProxy,
     /// Cobalt logger to use and hand out to peers
     cobalt_sender: CobaltSender,
     /// Media session domain
@@ -98,6 +106,7 @@ pub struct ConnectedPeers {
 impl ConnectedPeers {
     pub(crate) fn new(
         streams: Streams,
+        profile: ProfileProxy,
         cobalt_sender: CobaltSender,
         domain: Option<String>,
     ) -> Self {
@@ -105,6 +114,7 @@ impl ConnectedPeers {
             connected: DetachableMap::new(),
             descriptors: HashMap::new(),
             streams,
+            profile,
             cobalt_sender,
             domain,
         }
@@ -112,6 +122,53 @@ impl ConnectedPeers {
 
     pub(crate) fn get(&self, id: &PeerId) -> Option<Arc<RwLock<peer::Peer>>> {
         self.connected.get(id).and_then(|p| p.upgrade())
+    }
+
+    pub fn is_connected(&self, id: &PeerId) -> bool {
+        self.connected.contains_key(id)
+    }
+
+    async fn start_streaming(
+        peer: &DetachableWeak<PeerId, RwLock<peer::Peer>>,
+    ) -> Result<(), anyhow::Error> {
+        let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
+        let remote_streams = strong.read().collect_capabilities().await?;
+
+        // Find the SBC stream, which should exist (it is required)
+        // TODO(39321): Prefer AAC when remote peer supports AAC.
+        let remote_stream = remote_streams
+            .iter()
+            .filter(|stream| stream.information().endpoint_type() == &avdtp::EndpointType::Source)
+            .find(|stream| stream.codec_type() == Some(&avdtp::MediaCodecType::AUDIO_SBC))
+            .ok_or(format_err!("Couldn't find a compatible stream"))?;
+
+        // TODO(39321): Choose codec options based on availability and quality.
+        let sbc_media_codec_info = SbcCodecInfo::new(
+            SbcSamplingFrequency::FREQ44100HZ,
+            SbcChannelMode::JOINT_STEREO,
+            SbcBlockCount::SIXTEEN,
+            SbcSubBands::EIGHT,
+            SbcAllocation::LOUDNESS,
+            SbcCodecInfo::BITPOOL_MIN,
+            53, // Commonly used upper bound for bitpool value.
+        )?;
+
+        let sbc_settings = avdtp::ServiceCapability::MediaCodec {
+            media_type: avdtp::MediaType::Audio,
+            codec_type: avdtp::MediaCodecType::AUDIO_SBC,
+            codec_extra: sbc_media_codec_info.to_bytes(),
+        };
+
+        let strong = peer.upgrade().ok_or(format_err!("Disconnected"))?;
+        let _ = strong
+            .read()
+            .start_stream(
+                SBC_SEID.try_into().unwrap(),
+                remote_stream.local_id().clone(),
+                sbc_settings.clone(),
+            )
+            .await?;
+        Ok(())
     }
 
     pub fn found(&mut self, id: PeerId, desc: ProfileDescriptor) {
@@ -125,7 +182,13 @@ impl ConnectedPeers {
         }
     }
 
-    pub fn connected(&mut self, inspect: &inspect::Inspector, id: PeerId, channel: zx::Socket) {
+    pub fn connected(
+        &mut self,
+        inspect: inspect::Node,
+        id: PeerId,
+        channel: zx::Socket,
+        initiate_streaming: bool,
+    ) {
         match self.get(&id) {
             Some(peer) => {
                 if let Err(e) = peer.write().receive_channel(channel) {
@@ -141,21 +204,25 @@ impl ConnectedPeers {
                         return;
                     }
                 };
-                let inspect = inspect.root().create_child(format!("peer {}", id));
+
                 let mut peer = peer::Peer::create(
                     id,
                     avdtp_peer,
                     self.streams.clone(),
+                    self.profile.clone(),
                     inspect,
                     self.cobalt_sender.clone(),
                 );
 
                 // Start remote discovery if profile information exists for the device_id
+                // and a2dp sink not assuming the INT role.
                 match self.descriptors.entry(id) {
                     Entry::Occupied(entry) => {
                         if let Some(prof) = entry.get() {
                             peer.set_descriptor(prof.clone());
-                            spawn_stream_discovery(&peer);
+                            if !initiate_streaming {
+                                spawn_stream_discovery(&peer);
+                            }
                         }
                     }
                     // Otherwise just insert the device ID with no profile
@@ -169,11 +236,24 @@ impl ConnectedPeers {
 
                 let avrcp_relay = AvrcpRelay::start(id, self.domain.clone()).ok();
 
+                if initiate_streaming {
+                    let weak_peer = self.connected.get(&id).expect("just added");
+                    fuchsia_async::spawn_local(async move {
+                        if let Err(e) = ConnectedPeers::start_streaming(&weak_peer).await {
+                            fx_vlog!(tag: "a2dp-sink", 1, "Streaming task ended: {:?}", e);
+                            weak_peer.detach();
+                        }
+                    });
+                }
+
                 // Remove the peer when we disconnect.
                 let detached_peer = self.connected.get(&id).expect("just added");
+                let mut descriptors = self.descriptors.clone();
+                let disconnected_id = id.clone();
                 fasync::spawn(async move {
                     closed_fut.await;
                     detached_peer.detach();
+                    descriptors.remove(&disconnected_id);
                     // Captures the relay to extend the lifetime until after the peer clooses.
                     drop(avrcp_relay);
                 });
@@ -187,7 +267,10 @@ mod tests {
     use super::*;
 
     use bt_avdtp::Request;
-    use fidl_fuchsia_bluetooth_bredr::ServiceClassProfileIdentifier;
+    use fidl::endpoints::create_proxy_and_stream;
+    use fidl_fuchsia_bluetooth_bredr::{
+        ProfileMarker, ProfileRequestStream, ServiceClassProfileIdentifier,
+    };
     use fidl_fuchsia_cobalt::CobaltEvent;
     use futures::channel::mpsc;
     use futures::{self, task::Poll, StreamExt};
@@ -237,26 +320,29 @@ mod tests {
         };
     }
 
-    fn setup_connected_peer_test() -> (fasync::Executor, PeerId, ConnectedPeers, inspect::Inspector)
-    {
-        let exec = fasync::Executor::new().expect("executor should build");
+    fn setup_connected_peer_test(
+    ) -> (fasync::Executor, PeerId, ConnectedPeers, inspect::Inspector, ProfileRequestStream) {
+        let exec = fasync::Executor::new_with_fake_time().expect("executor should build");
+        let (proxy, stream) =
+            create_proxy_and_stream::<ProfileMarker>().expect("Profile proxy should be created");
         let id = PeerId(1);
         let (cobalt_sender, _) = fake_cobalt_sender();
 
-        let peers = ConnectedPeers::new(Streams::new(), cobalt_sender, None);
+        let peers = ConnectedPeers::new(Streams::new(), proxy, cobalt_sender, None);
 
         let inspect = inspect::Inspector::new();
 
-        (exec, id, peers, inspect)
+        (exec, id, peers, inspect, stream)
     }
 
     #[test]
     fn connected_peers_connect_creates_peer() {
-        let (mut exec, id, mut peers, inspect) = setup_connected_peer_test();
+        let (mut exec, id, mut peers, inspect, _stream) = setup_connected_peer_test();
 
         let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
-        peers.connected(&inspect, id, signaling);
+        let inspect = inspect.root().create_child(format!("peer {}", id));
+        peers.connected(inspect, id, signaling, false);
 
         let peer = match peers.get(&id) {
             None => panic!("Peer should be in ConnectedPeers after connection"),
@@ -279,11 +365,12 @@ mod tests {
 
     #[test]
     fn connected_peers_found_connected_peer_starts_discovery() {
-        let (mut exec, id, mut peers, inspect) = setup_connected_peer_test();
+        let (mut exec, id, mut peers, inspect, _stream) = setup_connected_peer_test();
 
         let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
-        peers.connected(&inspect, id, signaling);
+        let inspect = inspect.root().create_child(format!("peer {}", id));
+        peers.connected(inspect, id, signaling, false);
 
         let profile_desc = ProfileDescriptor {
             profile_id: ServiceClassProfileIdentifier::AdvancedAudioDistribution,
@@ -298,7 +385,7 @@ mod tests {
 
     #[test]
     fn connected_peers_connected_found_peer_starts_discovery() {
-        let (mut exec, id, mut peers, inspect) = setup_connected_peer_test();
+        let (mut exec, id, mut peers, inspect, _stream) = setup_connected_peer_test();
 
         let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
@@ -310,18 +397,20 @@ mod tests {
 
         peers.found(id, profile_desc);
 
-        peers.connected(&inspect, id, signaling);
+        let inspect = inspect.root().create_child(format!("peer {}", id));
+        peers.connected(inspect, id, signaling, false);
 
         expect_started_discovery(&mut exec, remote);
     }
 
     #[test]
     fn connected_peers_peer_disconnect_removes_peer() {
-        let (mut exec, id, mut peers, inspect) = setup_connected_peer_test();
+        let (mut exec, id, mut peers, inspect, _stream) = setup_connected_peer_test();
 
         let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
-        peers.connected(&inspect, id, signaling);
+        let inspect = inspect.root().create_child(format!("peer {}", id));
+        peers.connected(inspect, id, signaling, false);
         run_to_stalled(&mut exec);
 
         // Disconnect the signaling channel, peer should be gone.
@@ -334,11 +423,12 @@ mod tests {
 
     #[test]
     fn connected_peers_reconnect_works() {
-        let (mut exec, id, mut peers, inspect) = setup_connected_peer_test();
+        let (mut exec, id, mut peers, inspect, _stream) = setup_connected_peer_test();
 
         let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
-        peers.connected(&inspect, id, signaling);
+        let inspect1 = inspect.root().create_child(format!("peer {}", id));
+        peers.connected(inspect1, id, signaling, false);
         run_to_stalled(&mut exec);
 
         // Disconnect the signaling channel, peer should be gone.
@@ -351,7 +441,8 @@ mod tests {
         // Connect another peer with the same ID
         let (_remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
 
-        peers.connected(&inspect, id, signaling);
+        let inspect2 = inspect.root().create_child(format!("peer {}", id));
+        peers.connected(inspect2, id, signaling, false);
         run_to_stalled(&mut exec);
 
         // Should be connected.
