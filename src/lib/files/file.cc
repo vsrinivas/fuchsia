@@ -103,36 +103,6 @@ bool ReadFileDescriptorToVector(int fd, std::vector<uint8_t>* result) {
   return ReadFileDescriptor(fd, result);
 }
 
-std::pair<uint8_t*, intptr_t> ReadFileToBytes(const std::string& path) {
-  std::pair<uint8_t*, intptr_t> failure_pair{nullptr, -1};
-  fbl::unique_fd fd(open(path.c_str(), O_RDONLY | BINARY_MODE));
-  if (!fd.is_valid())
-    return failure_pair;
-  return ReadFileDescriptorToBytes(fd.get());
-}
-
-std::pair<uint8_t*, intptr_t> ReadFileDescriptorToBytes(int fd) {
-  std::pair<uint8_t*, intptr_t> failure_pair{nullptr, -1};
-  struct stat stat_buffer;
-  if (fstat(fd, &stat_buffer) != 0) {
-    return failure_pair;
-  }
-  intptr_t file_size = stat_buffer.st_size;
-  uint8_t* ptr = (uint8_t*)malloc(file_size);
-
-  size_t bytes_left = file_size;
-  size_t offset = 0;
-  while (bytes_left > 0) {
-    ssize_t bytes_read = HANDLE_EINTR(read(fd, &ptr[offset], bytes_left));
-    if (bytes_read < 0) {
-      return failure_pair;
-    }
-    offset += bytes_read;
-    bytes_left -= bytes_read;
-  }
-  return std::pair<uint8_t*, intptr_t>(ptr, file_size);
-}
-
 bool IsFile(const std::string& path) { return IsFileAt(AT_FDCWD, path); }
 
 bool IsFileAt(int dirfd, const std::string& path) {
