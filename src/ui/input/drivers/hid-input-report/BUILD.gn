@@ -62,6 +62,9 @@ test("hid-input-report-test-bin") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-hardware-input:c",
   ]
+
+  # TODO(46730): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("hid-input-report-test") {

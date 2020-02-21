@@ -51,6 +51,9 @@ test("lib-hid-input-report-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(46730): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 unittest_package("test") {

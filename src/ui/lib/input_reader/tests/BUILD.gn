@@ -124,4 +124,7 @@ executable("input_reader_unittests") {
     "//zircon/public/lib/hid",
     "//zircon/public/lib/hid-parser",
   ]
+
+  # TODO(46730): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
