@@ -8,7 +8,7 @@
 namespace media::audio::mixer {
 
 // Display the filter table values.
-void Filter::DisplayTable(const std::vector<float>& filter_coefficients) {
+void Filter::DisplayTable(const CoefficientTable& filter_coefficients) {
   FX_LOGS(INFO) << "Filter: src rate " << source_rate_ << ", dest rate " << dest_rate_
                 << ", width 0x" << std::hex << side_width_;
 
@@ -40,7 +40,7 @@ void Filter::DisplayTable(const std::vector<float>& filter_coefficients) {
 // Used to debug computation of output values (ComputeSample), from coefficients and input values.
 constexpr bool kTraceComputation = false;
 
-float Filter::ComputeSampleFromTable(const std::vector<float>& filter_coefficients,
+float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients,
                                      uint32_t frac_offset, float* center) {
   FX_DCHECK(frac_offset <= frac_size_) << frac_offset;
 
@@ -84,7 +84,6 @@ float Filter::ComputeSampleFromTable(const std::vector<float>& filter_coefficien
 // Calculate our nearest-neighbor filter. With it we perform frame-rate conversion.
 void PointFilter::SetUpFilterCoefficients() {
   auto width = side_width();
-  filter_coefficients_.resize(width, 0.0f);
 
   // We need not account for rate_conversion_ratio here.
   auto transition_idx = frac_size() >> 1u;
@@ -111,7 +110,6 @@ void PointFilter::SetUpFilterCoefficients() {
 // Calculate our linear-interpolation filter. With it we perform frame-rate conversion.
 void LinearFilter::SetUpFilterCoefficients() {
   auto width = side_width();
-  filter_coefficients_.resize(width, 0.0f);
 
   // We need not account for rate_conversion_ratio here.
   uint32_t transition_idx = frac_size();
@@ -137,7 +135,6 @@ void LinearFilter::SetUpFilterCoefficients() {
 // Calculate our windowed-sinc FIR filter. With it we perform band-limited frame-rate conversion.
 void SincFilter::SetUpFilterCoefficients() {
   auto width = side_width();
-  filter_coefficients_.resize(width, 0.0f);
 
   auto frac_one = frac_size();
 

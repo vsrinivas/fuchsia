@@ -12,6 +12,7 @@ source_set("mixer") {
   public_configs = [ "..:audio_core_config" ]
   sources = [
     "channel_strip.h",
+    "coefficient_table.h",
     "filter.cc",
     "filter.h",
     "frames.h",
@@ -40,12 +41,12 @@ source_set("mixer") {
     "//src/media/audio/lib/logging",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/ffl",
+    "//zircon/public/lib/trace",
   ]
 
   deps = [
     "//sdk/lib/media/cpp:no_converters",
     "//src/lib/syslog/cpp",
-    "//zircon/public/lib/trace",
   ]
 
   # TODO(46722): UBSan has found an instance of undefined behavior in this target.
@@ -79,6 +80,7 @@ executable("unittest_bin") {
   sources = [
     "bookkeeping_unittest.cc",
     "channel_strip_unittest.cc",
+    "coefficient_table_unittest.cc",
     "filter_unittest.cc",
     "gain_unittest.cc",
     "linear_sampler_unittest.cc",

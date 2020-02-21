@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/media/audio/audio_core/mixer/coefficient_table.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 
 namespace media::audio::mixer {
@@ -40,8 +41,8 @@ class Filter {
   // used for debugging purposes only
   virtual void Display() = 0;
 
-  void DisplayTable(const std::vector<float>& filter_coefficients);
-  float ComputeSampleFromTable(const std::vector<float>& filter_coefficients, uint32_t frac_offset,
+  void DisplayTable(const CoefficientTable& filter_coefficients);
+  float ComputeSampleFromTable(const CoefficientTable& filter_coefficients, uint32_t frac_offset,
                                float* center);
 
   uint32_t source_rate() const { return source_rate_; }
@@ -85,7 +86,8 @@ class PointFilter : public Filter {
  public:
   PointFilter(uint32_t source_rate, uint32_t dest_rate, uint32_t num_frac_bits = kPtsFractionalBits)
       : Filter(source_rate, dest_rate, /* side_width= */ (1u << (num_frac_bits - 1u)) + 1u,
-               num_frac_bits) {
+               num_frac_bits),
+        filter_coefficients_(side_width(), num_frac_bits) {
     SetUpFilterCoefficients();
   }
   PointFilter() : PointFilter(48000, 48000){};
@@ -101,7 +103,7 @@ class PointFilter : public Filter {
  private:
   void SetUpFilterCoefficients();
 
-  std::vector<float> filter_coefficients_;
+  CoefficientTable filter_coefficients_;
 };
 
 // Linear interpolation, implemented using the convolution filter.
@@ -118,7 +120,8 @@ class LinearFilter : public Filter {
  public:
   LinearFilter(uint32_t source_rate, uint32_t dest_rate,
                uint32_t num_frac_bits = kPtsFractionalBits)
-      : Filter(source_rate, dest_rate, /* side_width= */ 1u << num_frac_bits, num_frac_bits) {
+      : Filter(source_rate, dest_rate, /* side_width= */ 1u << num_frac_bits, num_frac_bits),
+        filter_coefficients_(side_width(), num_frac_bits) {
     SetUpFilterCoefficients();
   }
   LinearFilter() : LinearFilter(48000, 48000){};
@@ -134,7 +137,7 @@ class LinearFilter : public Filter {
  private:
   void SetUpFilterCoefficients();
 
-  std::vector<float> filter_coefficients_;
+  CoefficientTable filter_coefficients_;
 };
 
 // "Fractional-delay" sinc-based resampler with integrated low-pass filter.
@@ -142,7 +145,8 @@ class SincFilter : public Filter {
  public:
   SincFilter(uint32_t source_rate, uint32_t dest_rate, uint32_t side_width = kSincFilterSideLength,
              uint32_t num_frac_bits = kPtsFractionalBits)
-      : Filter(source_rate, dest_rate, side_width, num_frac_bits) {
+      : Filter(source_rate, dest_rate, side_width, num_frac_bits),
+        filter_coefficients_(side_width, num_frac_bits) {
     SetUpFilterCoefficients();
   }
   SincFilter() : SincFilter(48000, 48000){};
@@ -166,7 +170,7 @@ class SincFilter : public Filter {
  private:
   void SetUpFilterCoefficients();
 
-  std::vector<float> filter_coefficients_;
+  CoefficientTable filter_coefficients_;
 };
 
 }  // namespace media::audio::mixer
