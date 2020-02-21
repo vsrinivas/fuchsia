@@ -395,6 +395,9 @@ pub const ZX_VMO_CHILD_PRIVATE_PAGER_COPY: u32 = 1 << 4;
 pub const ZX_CHANNEL_MAX_MSG_HANDLES: u32 = 64;
 pub const ZX_CHANNEL_MAX_MSG_BYTES: u32 = 65536;
 
+// fifo write size constants
+pub const ZX_FIFO_MAX_SIZE_BYTES: u32 = 4096;
+
 // Task response codes if a process is externally killed
 pub const ZX_TASK_RETCODE_SYSCALL_KILL: i64 = -1024;
 pub const ZX_TASK_RETCODE_OOM_KILL: i64 = -1025;
