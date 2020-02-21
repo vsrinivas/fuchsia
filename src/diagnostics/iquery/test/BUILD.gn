@@ -24,6 +24,9 @@ rustc_test("iquery_golden_test") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
+
+  # TODO(46744): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("iquery_golden_tests") {
