@@ -217,6 +217,48 @@ async fn test_audio() {
     verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM);
 }
 
+// Tests that the volume level gets rounded to two decimal places.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_volume_rounding() {
+    let (service_registry, fake_services) = create_services().await;
+
+    let (env, store) = create_environment(service_registry).await;
+
+    let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
+
+    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    verify_audio_stream(
+        settings.clone(),
+        AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
+    );
+
+    set_volume(
+        &audio_proxy,
+        vec![AudioStreamSettings {
+            stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
+            source: Some(AudioStreamSettingSource::User),
+            user_volume: Some(Volume { level: Some(0.7015), muted: Some(CHANGED_VOLUME_MUTED) }),
+        }],
+    )
+    .await;
+
+    let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
+    verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
+
+    assert_eq!(
+        (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
+        fake_services.audio_core.lock().await.get_level_and_mute(AudioRenderUsage::Media).unwrap()
+    );
+
+    // Check to make sure value wrote out to store correctly.
+    let stored_streams: [AudioStream; 5];
+    {
+        let mut store_lock = store.lock().await;
+        stored_streams = store_lock.get().await.streams;
+    }
+    verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM);
+}
+
 // Test to ensure mic input change events are received.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_audio_input() {
