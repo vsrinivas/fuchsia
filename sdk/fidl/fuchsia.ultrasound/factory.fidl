@@ -1,0 +1,26 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ultrasound;
+
+using fuchsia.media;
+
+[Discoverable]
+protocol Factory {
+    /// Creates a new |fuchsia.media.AudioCapturer| that is capable of capturing audio in
+    /// the ultrasonic frequency range.
+    ///
+    /// See |fuchsia.media.AudioCore| for more information on the operation of a
+    /// |fuchsia.media.AudioCapturer|.
+    CreateCapturer(request<fuchsia.media.AudioCapturer> request)
+        -> (handle<clock> reference_clock, fuchsia.media.StreamType stream_type);
+
+    /// Creates a new |fuchsia.media.AudioRenderer| that is capable of producing audio in
+    /// the ultrasonic frequency range.
+    ///
+    /// See |fuchsia.media.AudioCore| for more information on the operation of a
+    /// |fuchsia.media.AudioRenderer|.
+    CreateRenderer(request<fuchsia.media.AudioRenderer> renderer)
+        -> (handle<clock> reference_clock, fuchsia.media.StreamType stream_type);
+};
