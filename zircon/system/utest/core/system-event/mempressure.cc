@@ -5,11 +5,11 @@
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 // Tests in this file rely that the default job is the root job.
 
-static bool retrieve_mem_event(zx_system_event_type_t event_type) {
+static void retrieve_mem_event(zx_system_event_type_t event_type) {
   zx::event mem_event;
 
   ASSERT_EQ(zx_system_get_event(ZX_HANDLE_INVALID, event_type, mem_event.reset_and_get_address()),
@@ -26,7 +26,7 @@ static bool retrieve_mem_event(zx_system_event_type_t event_type) {
 
   zx::unowned_job root_job(zx_job_default());
   if (!root_job->is_valid()) {
-    unittest_printf("no root job. skipping part of test\n");
+    printf("no root job. skipping part of test\n");
   } else {
     ASSERT_EQ(zx_system_get_event(root_job->get(), ~0u, mem_event.reset_and_get_address()),
               ZX_ERR_INVALID_ARGS, "incorrect kind value does not retrieve");
@@ -43,13 +43,12 @@ static bool retrieve_mem_event(zx_system_event_type_t event_type) {
     EXPECT_EQ(info.type, ZX_OBJ_TYPE_EVENT, "incorrect type");
     EXPECT_EQ(info.rights, ZX_DEFAULT_SYSTEM_EVENT_LOW_MEMORY_RIGHTS, "incorrect rights");
   }
-  return true;
 }
 
-static bool signal_mem_event_from_userspace(zx_system_event_type_t event_type) {
+static void signal_mem_event_from_userspace(zx_system_event_type_t event_type) {
   zx::unowned_job root_job(zx_job_default());
   if (!root_job->is_valid()) {
-    unittest_printf("no root job. skipping test\n");
+    printf("no root job. skipping test\n");
   } else {
     zx::event mem_event;
     ASSERT_EQ(zx_system_get_event(root_job->get(), event_type, mem_event.reset_and_get_address()),
@@ -57,64 +56,43 @@ static bool signal_mem_event_from_userspace(zx_system_event_type_t event_type) {
 
     ASSERT_EQ(mem_event.signal(0, 1), ZX_ERR_ACCESS_DENIED, "shouldn't be able to signal");
   }
-  return true;
 }
 
-static bool retrieve_oom_test(void) {
-  BEGIN_TEST;
-  retrieve_mem_event(ZX_SYSTEM_EVENT_OUT_OF_MEMORY);
-  END_TEST;
-}
+TEST(SystemEvent, RetrieveOom) { retrieve_mem_event(ZX_SYSTEM_EVENT_OUT_OF_MEMORY); }
 
-static bool cannot_signal_oom_from_userspace_test(void) {
-  BEGIN_TEST;
+TEST(SystemEvent, CannotSignalOomFromUserspace) {
   signal_mem_event_from_userspace(ZX_SYSTEM_EVENT_OUT_OF_MEMORY);
-  END_TEST;
 }
 
-static bool retrieve_mempressure_critical_test(void) {
-  BEGIN_TEST;
+TEST(SystemEvent, RetrieveMempressureCritical) {
   retrieve_mem_event(ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL);
-  END_TEST;
 }
 
-static bool cannot_signal_mempressure_critical_from_userspace_test(void) {
-  BEGIN_TEST;
+TEST(SystemEvent, CannotSignalMempressureCriticalFromUserspace) {
   signal_mem_event_from_userspace(ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL);
-  END_TEST;
 }
 
-static bool retrieve_mempressure_warning_test(void) {
-  BEGIN_TEST;
+TEST(SystemEvent, RetreiveMempressureWarning) {
   retrieve_mem_event(ZX_SYSTEM_EVENT_MEMORY_PRESSURE_WARNING);
-  END_TEST;
 }
 
-static bool cannot_signal_mempressure_warning_from_userspace_test(void) {
-  BEGIN_TEST;
+TEST(SystemEvent, CannotSignalMempressureWarningFromUserspace) {
   signal_mem_event_from_userspace(ZX_SYSTEM_EVENT_MEMORY_PRESSURE_WARNING);
-  END_TEST;
 }
 
-static bool retrieve_mempressure_normal_test(void) {
-  BEGIN_TEST;
+TEST(SystemEvent, RetrieveMempressureNormal) {
   retrieve_mem_event(ZX_SYSTEM_EVENT_MEMORY_PRESSURE_NORMAL);
-  END_TEST;
 }
 
-static bool cannot_signal_mempressure_normal_from_userspace_test(void) {
-  BEGIN_TEST;
+TEST(SystemEvent, CannotSignalMempressureNormalFromUserspace) {
   signal_mem_event_from_userspace(ZX_SYSTEM_EVENT_MEMORY_PRESSURE_NORMAL);
-  END_TEST;
 }
 
-static bool exactly_one_memory_event_signaled_test(void) {
-  BEGIN_TEST;
-
+TEST(SystemEvent, ExactlyOneMemoryEventSignaled) {
   zx::unowned_job root_job(zx_job_default());
   if (!root_job->is_valid()) {
-    unittest_printf("no root job. skipping part of test\n");
-    return true;
+    printf("no root job. skipping part of test\n");
+    return;
   }
 
   const int kNumEvents = 4;
@@ -144,17 +122,4 @@ static bool exactly_one_memory_event_signaled_test(void) {
   }
 
   ASSERT_EQ(events_signaled, 1, "exactly one memory event signaled");
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(system_event_tests)
-RUN_TEST(retrieve_oom_test)
-RUN_TEST(retrieve_mempressure_critical_test)
-RUN_TEST(retrieve_mempressure_warning_test)
-RUN_TEST(retrieve_mempressure_normal_test)
-RUN_TEST(cannot_signal_oom_from_userspace_test)
-RUN_TEST(cannot_signal_mempressure_critical_from_userspace_test)
-RUN_TEST(cannot_signal_mempressure_warning_from_userspace_test)
-RUN_TEST(cannot_signal_mempressure_normal_from_userspace_test)
-RUN_TEST(exactly_one_memory_event_signaled_test)
-END_TEST_CASE(system_event_tests)
