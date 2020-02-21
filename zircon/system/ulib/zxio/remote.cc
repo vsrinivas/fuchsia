@@ -840,6 +840,7 @@ zx_status_t zxio_remote_init(zxio_storage_t* storage, zx_handle_t control, zx_ha
   zxio_init(&remote->io, &zxio_remote_ops);
   remote->control = control;
   remote->event = event;
+  remote->stream = ZX_HANDLE_INVALID;
   return ZX_OK;
 }
 
@@ -908,6 +909,7 @@ zx_status_t zxio_dir_init(zxio_storage_t* storage, zx_handle_t control) {
   zxio_init(&remote->io, &zxio_dir_ops);
   remote->control = control;
   remote->event = ZX_HANDLE_INVALID;
+  remote->stream = ZX_HANDLE_INVALID;
   return ZX_OK;
 }
 

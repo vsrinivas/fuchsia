@@ -12,6 +12,7 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <functional>
 
 namespace {
 
@@ -62,6 +63,67 @@ zx_status_t zxio_vmo_do_vector(size_t start, size_t length, size_t* offset,
 }
 
 }  // namespace
+
+// A utility which helps implementing the C-style |zxio_ops_t| ops table
+// from a C++ class. The specific backend implementation should inherit
+// from |HasIo| as the first base class, ensuring that the |zxio_t| part
+// appears that the beginning of its object layout.
+class HasIo {
+ protected:
+  explicit HasIo(const zxio_ops_t& ops) { zxio_init(&io_, &ops); }
+
+  zxio_t* io() { return &io_; }
+  const zxio_t* io() const { return &io_; }
+
+  template <typename T>
+  struct Adaptor {
+    static_assert(std::is_base_of<HasIo, T>::value);
+    static_assert(sizeof(T) <= sizeof(zxio_storage_t),
+                  "C++ implementation class must fit inside zxio_storage_t.");
+    static_assert(!std::is_polymorphic_v<T>,
+                  "C++ implementation class must be not contain vtables.");
+
+    // Converts a member function in the implementation C++ class to a signature
+    // compatible with the definition in the ops table.
+    //
+    // This class assumes the |zxio_t*| pointer as passed as the first argument to
+    // all |zxio_ops_t| entries is the pointer to the C++ implementation instance.
+    //
+    // For example, given the |release| call with the following signature:
+    //
+    //   zx_status_t (*release)(zxio_t* io, zx_handle_t* out_handle);
+    //
+    // The C++ implementation may define a member function with this signature:
+    //
+    //   zx_status_t MyClass::Release(zx_handle_t* out_handle);
+    //
+    // And |Adaptor<MyClass>::From<&Release>| will evaluate to a function with a
+    // signature compatible to the C-style definition, treating |io| as a pointer
+    // to the |HasIo|, invoking the corresponding member function automatically.
+    template <auto fn, typename... Args>
+    static zx_status_t From(Args... args) {
+      auto memfn = std::mem_fn(fn);
+      return FromImpl(memfn, args...);
+    }
+
+   private:
+    template <typename MemFn, typename... Args>
+    static zx_status_t FromImpl(MemFn memfn, zxio_t* io, Args... args) {
+      T* instance = reinterpret_cast<T*>(io);
+      return memfn(instance, args...);
+    }
+  };
+
+ private:
+  static constexpr void CheckLayout();
+
+  zxio_t io_;
+};
+
+constexpr void HasIo::CheckLayout() {
+  static_assert(offsetof(HasIo, io_) == 0);
+  static_assert(alignof(HasIo) == alignof(zxio_t));
+}
 
 bool zxio_is_valid(const zxio_t* io);
 

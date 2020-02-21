@@ -278,6 +278,7 @@ zx_status_t zxio_remote_v2_init(zxio_storage_t* storage, zx_handle_t control,
   zxio_init(&remote->io, &zxio_remote_v2_ops);
   remote->control = control;
   remote->observer = observer;
+  remote->stream = ZX_HANDLE_INVALID;
   return ZX_OK;
 }
 
@@ -300,6 +301,8 @@ zx_status_t zxio_dir_v2_init(zxio_storage_t* storage, zx_handle_t control) {
   auto remote = reinterpret_cast<zxio_remote_v2_t*>(storage);
   zxio_init(&remote->io, &zxio_dir_v2_ops);
   remote->control = control;
+  remote->observer = ZX_HANDLE_INVALID;
+  remote->stream = ZX_HANDLE_INVALID;
   return ZX_OK;
 }
 

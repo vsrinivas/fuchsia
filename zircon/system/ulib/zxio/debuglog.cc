@@ -14,47 +14,62 @@
 
 #define LOGBUF_MAX (ZX_LOG_RECORD_MAX - sizeof(zx_log_record_t))
 
+namespace {
+
 // A |zxio_t| backend that uses a debuglog.
 //
 // The |handle| handle is a Zircon debuglog object.
-typedef struct zxio_debuglog {
-  zxio_t io;
-  zx::debuglog handle;
-  sync_mutex_t lock;
+class Debuglog : public HasIo {
+ public:
+  explicit Debuglog(zx::debuglog debuglog) : HasIo(kOps), handle_(std::move(debuglog)) {}
+
+ private:
+  zx_status_t Close();
+  zx_status_t Clone(zx_handle_t* out_handle);
+  zx_status_t Writev(const zx_iovec_t* vector, size_t vector_count, zxio_flags_t flags,
+                     size_t* out_actual);
+  zx_status_t IsATty(bool* tty);
+
+  static const zxio_ops_t kOps;
+
+  zx::debuglog handle_;
+  sync_mutex_t lock_;
   struct {
-    unsigned next;
+    unsigned next = 0;
     std::unique_ptr<std::array<char, LOGBUF_MAX>> pending;
-  } buffer __TA_GUARDED(lock);
-} zxio_debuglog_t;
+  } buffer_ __TA_GUARDED(lock_);
+};
 
-static_assert(sizeof(zxio_debuglog_t) <= sizeof(zxio_storage_t),
-              "zxio_debuglog_t must fit inside zxio_storage_t.");
+constexpr zxio_ops_t Debuglog::kOps = ([]() {
+  using Adaptor = Adaptor<Debuglog>;
+  zxio_ops_t ops = zxio_default_ops;
+  ops.close = Adaptor::From<&Debuglog::Close>;
+  ops.clone = Adaptor::From<&Debuglog::Clone>;
+  ops.write_vector = Adaptor::From<&Debuglog::Writev>;
+  ops.isatty = Adaptor::From<&Debuglog::IsATty>;
+  return ops;
+})();
 
-static zx_status_t zxio_debuglog_close(zxio_t* io) {
-  auto debuglog = reinterpret_cast<zxio_debuglog_t*>(io);
-  debuglog->~zxio_debuglog_t();
+zx_status_t Debuglog::Close() {
+  this->~Debuglog();
   return ZX_OK;
 }
 
-zx_status_t zxio_debuglog_clone(zxio_t* io, zx_handle_t* out_handle) {
-  auto debuglog = reinterpret_cast<zxio_debuglog_t*>(io);
+zx_status_t Debuglog::Clone(zx_handle_t* out_handle) {
   zx::debuglog handle;
-  zx_status_t status = debuglog->handle.duplicate(ZX_RIGHT_SAME_RIGHTS, &handle);
+  zx_status_t status = handle_.duplicate(ZX_RIGHT_SAME_RIGHTS, &handle);
   *out_handle = handle.release();
   return status;
 }
 
-static zx_status_t zxio_debuglog_write_vector(zxio_t* io, const zx_iovec_t* vector,
-                                              size_t vector_count, zxio_flags_t flags,
-                                              size_t* out_actual) {
+zx_status_t Debuglog::Writev(const zx_iovec_t* vector, size_t vector_count, zxio_flags_t flags,
+                             size_t* out_actual) {
   if (flags) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto debuglog = reinterpret_cast<zxio_debuglog_t*>(io);
-
-  auto& outgoing = debuglog->buffer;
-  sync_mutex_lock(&debuglog->lock);
+  auto& outgoing = buffer_;
+  sync_mutex_lock(&lock_);
   if (outgoing.pending == nullptr) {
     outgoing.pending = std::make_unique<std::array<char, LOGBUF_MAX>>();
   }
@@ -72,12 +87,12 @@ static zx_status_t zxio_debuglog_write_vector(zxio_t* io, const zx_iovec_t* vect
         // TA_REQUIRES, then this function compiles, but its call in
         // zxio_do_vector doesn't, because the compiler can't tell that the lock
         // is held in that function.
-        []() __TA_ASSERT(debuglog->lock) {}();
+        []() __TA_ASSERT(lock_) {}();
         const char* data = static_cast<const char*>(buffer);
         for (size_t i = 0; i < capacity; ++i) {
           char c = *data++;
           if (c == '\n') {
-            debuglog->handle.write(0, outgoing.pending->data(), outgoing.next);
+            handle_.write(0, outgoing.pending->data(), outgoing.next);
             outgoing.next = 0;
             continue;
           }
@@ -86,7 +101,7 @@ static zx_status_t zxio_debuglog_write_vector(zxio_t* io, const zx_iovec_t* vect
           }
           (*outgoing.pending)[outgoing.next++] = c;
           if (outgoing.next == LOGBUF_MAX) {
-            debuglog->handle.write(0, outgoing.pending->data(), outgoing.next);
+            handle_.write(0, outgoing.pending->data(), outgoing.next);
             outgoing.next = 0;
             continue;
           }
@@ -94,11 +109,11 @@ static zx_status_t zxio_debuglog_write_vector(zxio_t* io, const zx_iovec_t* vect
         *out_actual = capacity;
         return ZX_OK;
       });
-  sync_mutex_unlock(&debuglog->lock);
+  sync_mutex_unlock(&lock_);
   return status;
 }
 
-static zx_status_t zxio_debuglog_isatty(zxio_t* io, bool* tty) {
+zx_status_t Debuglog::IsATty(bool* tty) {
   // debuglog needs to be a tty in order to tell stdio
   // to use line-buffering semantics - bunching up log messages
   // for an arbitrary amount of time makes for confusing results!
@@ -106,22 +121,9 @@ static zx_status_t zxio_debuglog_isatty(zxio_t* io, bool* tty) {
   return ZX_OK;
 }
 
-static constexpr zxio_ops_t zxio_debuglog_ops = ([]() {
-  zxio_ops_t ops = zxio_default_ops;
-  ops.close = zxio_debuglog_close;
-  ops.clone = zxio_debuglog_clone;
-  ops.write_vector = zxio_debuglog_write_vector;
-  ops.isatty = zxio_debuglog_isatty;
-  return ops;
-})();
+}  // namespace
 
 zx_status_t zxio_debuglog_init(zxio_storage_t* storage, zx::debuglog handle) {
-  auto debuglog = new (storage) zxio_debuglog_t{
-      .io = storage->io,
-      .handle = std::move(handle),
-      .lock = {},
-      .buffer = {},
-  };
-  zxio_init(&debuglog->io, &zxio_debuglog_ops);
+  new (storage) Debuglog(std::move(handle));
   return ZX_OK;
 }

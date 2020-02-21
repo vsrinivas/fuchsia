@@ -112,27 +112,35 @@ class File : public zxtest::Test {
     return static_cast<ServerImpl*>(server_.get());
   }
 
-  zx_status_t OpenFile() {
+  fit::result<zx::channel, zx_status_t> OpenConnection() {
     zx::channel client_end, server_end;
     zx_status_t status = zx::channel::create(0, &client_end, &server_end);
     if (status != ZX_OK) {
-      return status;
+      return fit::error(status);
     }
     fit::result<fidl::BindingRef, zx_status_t> bind_result =
         fidl::AsyncBind(loop_->dispatcher(), std::move(server_end), server_.get());
     EXPECT_TRUE(bind_result.is_ok());
     if (bind_result.is_error()) {
-      return bind_result.error();
+      return bind_result.take_error_result();
     }
+    return fit::ok(std::move(client_end));
+  }
 
-    auto result = fio::File::Call::Describe(client_end.borrow());
+  zx_status_t OpenFile() {
+    fit::result<zx::channel, zx_status_t> client_end = OpenConnection();
+    if (client_end.is_error()) {
+      return client_end.error();
+    }
+    auto result = fio::File::Call::Describe(client_end.value().borrow());
 
     if (result.status() != ZX_OK) {
-      return status;
+      return result.status();
     }
 
     EXPECT_TRUE(result->info.is_file());
-    return zxio_file_init(&file_, client_end.release(), result->info.mutable_file().event.release(),
+    return zxio_file_init(&file_, client_end.take_value().release(),
+                          result->info.mutable_file().event.release(),
                           result->info.mutable_file().stream.release());
   }
 
@@ -401,6 +409,25 @@ TEST_F(FileConcurrentAccess, CloseShouldInterruptOtherOps) {
   ASSERT_TRUE(get_attr_returned.load());
   ASSERT_STATUS(ZX_ERR_PEER_CLOSED, concurrent.get());
   ASSERT_OK(zxio_destroy(&file_.io));
+}
+
+class Remote : public File {
+ public:
+  zx_status_t OpenRemote() {
+    fit::result<zx::channel, zx_status_t> client_end = OpenConnection();
+    if (client_end.is_error()) {
+      return client_end.error();
+    }
+
+    return zxio_remote_init(&file_, client_end.take_value().release(), ZX_HANDLE_INVALID);
+  }
+};
+
+TEST_F(Remote, ReadWriteChannel) {
+  TestServerChannel* server = nullptr;
+  ASSERT_NO_FAILURES(server = StartServer<TestServerChannel>());
+  ASSERT_OK(OpenRemote());
+  ASSERT_NO_FAILURES(FileTestSuite::ReadWrite(&file_.io));
 }
 
 }  // namespace
