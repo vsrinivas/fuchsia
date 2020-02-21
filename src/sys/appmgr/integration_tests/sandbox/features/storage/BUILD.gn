@@ -45,6 +45,10 @@ sandbox_test_package("has_isolated_cache_storage") {
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
     "//third_party/googletest:gmock",
   ]
+
+  # TODO(46729): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   environments = basic_envs
 }
 
