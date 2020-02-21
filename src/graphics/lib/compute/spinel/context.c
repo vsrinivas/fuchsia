@@ -17,9 +17,9 @@
 //
 
 spn_result_t
-spn_context_status(spn_context_t context)
+spn_context_status(spn_context_t context, spn_status_t const * status)
 {
-  return context->status(context->device);
+  return context->status(context->device, status);
 }
 
 //

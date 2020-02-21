@@ -344,7 +344,7 @@ class Context : public spinel_api::Context {
   spn_result_t
   reset() override;
   spn_result_t
-  status() const override;
+  status(spn_status_t const * status) const override;
 
   spn_result_t
   createPathBuilder(spn_path_builder_t * path_builder) override;

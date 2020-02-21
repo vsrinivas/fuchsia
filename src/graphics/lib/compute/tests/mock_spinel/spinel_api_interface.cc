@@ -107,9 +107,9 @@ spn_context_reset(spn_context_t context)
 }
 
 spn_result_t
-spn_context_status(spn_context_t context)
+spn_context_status(spn_context_t context, spn_status_t const * status)
 {
-  return fromSpinel(context)->status();
+  return fromSpinel(context)->status(status);
 }
 
 /////////////////////////////////////////////////////////////////////////////

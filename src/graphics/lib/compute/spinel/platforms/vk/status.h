@@ -12,6 +12,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include "spinel_result.h"
+#include "spinel_vk_types.h"
 #include "vk.h"
 
 //
@@ -35,7 +36,7 @@ spn_device_status_dispose(struct spn_device * const device);
 //
 
 spn_result_t
-spn_device_get_status(struct spn_device * const device);
+spn_device_get_status(struct spn_device * const device, spn_status_t const * status);
 
 //
 //

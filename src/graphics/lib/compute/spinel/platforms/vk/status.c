@@ -17,10 +17,20 @@
 #include "vk_target.h"
 
 //
+// Used to probe the type
+//
+
+struct spn_vk_status_ext_base
+{
+  void *                   ext;
+  spn_vk_status_ext_type_e type;
+};
+
+//
 //
 //
 
-struct spn_status
+struct spn_status_block_pool
 {
   struct spn_vk_ds_status_t ds_status;
 
@@ -40,9 +50,10 @@ struct spn_status
 void
 spn_device_status_create(struct spn_device * const device)
 {
-  struct spn_status * const status = spn_allocator_host_perm_alloc(&device->allocator.host.perm,
-                                                                   SPN_MEM_FLAGS_READ_WRITE,
-                                                                   sizeof(*status));
+  struct spn_status_block_pool * const status =
+    spn_allocator_host_perm_alloc(&device->allocator.host.perm,
+                                  SPN_MEM_FLAGS_READ_WRITE,
+                                  sizeof(*status));
 
   device->status = status;
 
@@ -79,8 +90,8 @@ spn_device_status_create(struct spn_device * const device)
 void
 spn_device_status_dispose(struct spn_device * const device)
 {
-  struct spn_vk * const     instance = device->instance;
-  struct spn_status * const status   = device->status;
+  struct spn_vk * const                instance = device->instance;
+  struct spn_status_block_pool * const status   = device->status;
 
   spn_vk_ds_release_status(instance, status->ds_status);
 
@@ -97,8 +108,32 @@ spn_device_status_dispose(struct spn_device * const device)
 //
 
 spn_result_t
-spn_device_get_status(struct spn_device * const device)
+spn_device_get_status(struct spn_device * const device, spn_status_t const * status)
 {
+  //
+  // accumulate extensions
+  //
+  struct spn_vk_status_ext_block_pool * block_pool = NULL;
+
+  void * ext_next = status->ext;
+
+  while (ext_next != NULL)
+    {
+      struct spn_vk_status_ext_base * const base = ext_next;
+
+      switch (base->type)
+        {
+          case SPN_VK_STATUS_EXT_TYPE_BLOCK_POOL:
+            block_pool = ext_next;
+            break;
+
+          default:
+            return SPN_ERROR_STATUS_EXTENSION_INVALID;
+        }
+
+      ext_next = base->ext;
+    }
+
   //
   // drain all work in flight
   //
@@ -114,14 +149,14 @@ spn_device_get_status(struct spn_device * const device)
   VkCommandBuffer cb = spn_device_dispatch_get_cb(device, id);
 
   //
-  struct spn_vk * const     instance = device->instance;
-  struct spn_status * const status   = device->status;
+  struct spn_vk * const                instance  = device->instance;
+  struct spn_status_block_pool * const status_bp = device->status;
 
   // bind the global block pool
   spn_vk_ds_bind_get_status_block_pool(instance, cb, spn_device_block_pool_get_ds(device));
 
   // bind the status
-  spn_vk_ds_bind_get_status_status(instance, cb, status->ds_status);
+  spn_vk_ds_bind_get_status_status(instance, cb, status_bp->ds_status);
 
   // bind pipeline
   spn_vk_p_bind_get_status(instance, cb);
@@ -146,42 +181,34 @@ spn_device_get_status(struct spn_device * const device)
   spn(device_wait_all(device, true));
 
   //
-  // print out the results
+  // return the results
   //
-  // FIXME(allanmac): we can return status info a struct at some point
-  // instead of a noisy print.
-  //
-  {
-    struct spn_vk_target_config const * const config = spn_vk_get_config(instance);
+  if (block_pool)
+    {
+      struct spn_vk_target_config const * const config = spn_vk_get_config(instance);
 
-    if ((config->allocator.device.hr_dw.properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
-      {
-        VkMappedMemoryRange const mmr = { .sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-                                          .pNext  = NULL,
-                                          .memory = status->h.dm,
-                                          .offset = 0,
-                                          .size   = VK_WHOLE_SIZE };
+      if ((config->allocator.device.hr_dw.properties & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
+        {
+          VkMappedMemoryRange const mmr = { .sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+                                            .pNext  = NULL,
+                                            .memory = status_bp->h.dm,
+                                            .offset = 0,
+                                            .size   = VK_WHOLE_SIZE };
 
-        vk(InvalidateMappedMemoryRanges(device->environment.d, 1, &mmr));
-      }
+          vk(InvalidateMappedMemoryRanges(device->environment.d, 1, &mmr));
+        }
 
-    size_t const block_bytes = sizeof(uint32_t) << config->block_pool.block_dwords_log2;
+      size_t const block_bytes = sizeof(uint32_t) << config->block_pool.block_dwords_log2;
 
-    uint32_t const reads   = status->h.mapped->status_bp_atomics[SPN_BLOCK_POOL_ATOMICS_READS];
-    uint32_t const writes  = status->h.mapped->status_bp_atomics[SPN_BLOCK_POOL_ATOMICS_WRITES];
-    uint32_t const avail   = writes - reads;
-    uint32_t const bp_size = spn_device_block_pool_get_size(device);
-    uint32_t const inuse   = bp_size - avail;
+      uint32_t const reads   = status_bp->h.mapped->status_bp_atomics[SPN_BLOCK_POOL_ATOMICS_READS];
+      uint32_t const writes  = status_bp->h.mapped->status_bp_atomics[SPN_BLOCK_POOL_ATOMICS_WRITES];
+      uint32_t const avail   = writes - reads;
+      uint32_t const bp_size = spn_device_block_pool_get_size(device);
+      uint32_t const inuse   = bp_size - avail;
 
-    fprintf(stderr,
-            "writes/reads/avail/alloc: %9u / %9u / %9u = %9.3f MB / %9u = %9.3f MB\n",
-            writes,
-            reads,
-            avail,
-            (block_bytes * avail) / (1024.0 * 1024.0),
-            inuse,
-            (block_bytes * inuse) / (1024.0 * 1024.0));
-  }
+      block_pool->avail = avail * block_bytes;
+      block_pool->inuse = inuse * block_bytes;
+    }
 
   //
   // Temporarily dump the debug buffer here

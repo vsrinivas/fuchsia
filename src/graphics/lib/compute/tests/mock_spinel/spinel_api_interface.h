@@ -72,7 +72,7 @@ class Context : public RefCounted, public SpinelWrapper<struct spn_context> {
   virtual spn_result_t
   reset() = 0;
   virtual spn_result_t
-  status() const = 0;
+  status(spn_status_t const *) const = 0;
 
   // NOTE: the createXXX() method should set pointers to PathBuilder/RasterBuilder/Composition/Styling
   // instances.

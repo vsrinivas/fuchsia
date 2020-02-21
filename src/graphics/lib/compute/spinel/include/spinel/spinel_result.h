@@ -65,7 +65,9 @@ extern "C" {
   SPN_RESULT(SPN_ERROR_STYLING_SEALED)                                                             \
                                                                                                    \
   SPN_RESULT(SPN_ERROR_HANDLE_INVALID)                                                             \
-  SPN_RESULT(SPN_ERROR_HANDLE_OVERFLOW)
+  SPN_RESULT(SPN_ERROR_HANDLE_OVERFLOW)                                                            \
+                                                                                                   \
+  SPN_RESULT(SPN_ERROR_STATUS_EXTENSION_INVALID)
 
 //
 //

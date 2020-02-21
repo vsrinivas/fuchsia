@@ -1,9 +1,9 @@
 {
-    "spinel/spinel.h": "cdfb1f2a27635d067a312fd102b1a26d487bc612", 
+    "spinel/spinel.h": "5705a1ba0de8bc69de73ddca418aada13b6d9e35", 
     "spinel/spinel_assert.h": "f561cfcf729cb4aaad4f2fbbb36eb90ed89d21e1", 
     "spinel/spinel_opcodes.h": "1b6b8612a10d39d4f9b8d2cd5d09b5df8324d629", 
-    "spinel/spinel_result.h": "dfee08e10a53cb54ce3af2380dbd97f4224efb3d", 
-    "spinel/spinel_types.h": "6836ecf840f85a615d76fab416f2b8b8a7792760", 
+    "spinel/spinel_result.h": "b8b9d90fd503cb393d09c8244245843d9eadd840", 
+    "spinel/spinel_types.h": "4c296db62cc3688010a7baf6374636b96fdc12d6", 
     "spinel/spinel_vk.h": "6c391f16ddfcb8fde8f5248abcffaa3bbf73a031", 
-    "spinel/spinel_vk_types.h": "1590a4dfe2685f73d87042ff03ec127a31a8d842"
+    "spinel/spinel_vk_types.h": "9c710ae34f409d41f62a27d47e62cff492ce816a"
 }

@@ -211,6 +211,30 @@ typedef struct spn_vk_render_submit_ext_image_post_barrier
 } spn_vk_render_submit_ext_image_post_barrier_t;
 
 //
+// VULKAN STATUS EXTENSIONS
+//
+//
+// These extensions can be chained in any order.
+//
+
+typedef enum spn_vk_status_ext_type_e
+{
+  SPN_VK_STATUS_EXT_TYPE_BLOCK_POOL,
+} spn_vk_status_ext_type_e;
+
+//
+// BLOCK POOL
+//
+
+typedef struct spn_vk_status_ext_block_pool
+{
+  void *                   ext;
+  spn_vk_status_ext_type_e type;
+  uint64_t                 avail;
+  uint64_t                 inuse;
+} spn_vk_status_ext_block_pool_t;
+
+//
 //
 //
 

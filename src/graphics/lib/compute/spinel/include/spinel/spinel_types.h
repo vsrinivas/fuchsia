@@ -142,6 +142,17 @@ typedef struct spn_render_submit
 } spn_render_submit_t;
 
 //
+// STATUS
+//
+// Retreive status defined in the extension chain.
+//
+
+typedef struct spn_status
+{
+  void * ext;
+} spn_status_t;
+
+//
 //
 //
 

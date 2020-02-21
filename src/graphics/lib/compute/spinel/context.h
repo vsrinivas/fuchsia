@@ -23,7 +23,7 @@ struct spn_context
   //
   //
   //
-  spn_result_t (*status)(struct spn_device * const device);
+  spn_result_t (*status)(struct spn_device * const device, spn_status_t const * status);
 
   //
   //

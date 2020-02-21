@@ -26,6 +26,25 @@ TEST_F(spinel_vk, context)
   SUCCEED();
 }
 
+//
+// retrieve context block pool status
+//
+TEST_F(spinel_vk, block_pool_status)
+{
+  spn_vk_status_ext_block_pool_t s_block_pool = {
+    .ext   = NULL,
+    .type  = SPN_VK_STATUS_EXT_TYPE_BLOCK_POOL,
+    .avail = 0,
+    .inuse = 0,
+  };
+
+  spn_status_t s = {
+    .ext = &s_block_pool,
+  };
+
+  spn(context_status(context, &s));
+}
+
 ////////////////////////////////////////////////////////////////////
 //
 // PATH BUILDER

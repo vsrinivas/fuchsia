@@ -73,12 +73,8 @@ pub enum SpnVkRenderSubmitExtType {
     SpnVkRenderSubmitExtTypeImagePostBarrier,
 }
 
-pub type SpnVkRenderSubmitExtImageRenderPfn<T> = unsafe extern "C" fn(
-    queue: vk::Queue,
-    fence: vk::Fence,
-    cb: vk::CommandBuffer,
-    data: *const T,
-);
+pub type SpnVkRenderSubmitExtImageRenderPfn<T> =
+    unsafe extern "C" fn(queue: vk::Queue, fence: vk::Fence, cb: vk::CommandBuffer, data: *const T);
 
 #[repr(C)]
 pub struct SpnVkRenderSubmitExtImageRender<T> {
@@ -153,6 +149,20 @@ pub struct SpnVkRenderSubmitExtImagePostBarrier {
     pub type_: SpnVkRenderSubmitExtType,
     pub new_layout: vk::ImageLayout,
     pub dst_qfi: u32,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub enum SpnVkStatusExtType {
+    SpnVkStatusExtTypeBlockPool,
+}
+
+#[repr(C)]
+pub struct SpnVkStatusExtBlockPool {
+    pub ext: *mut raw::c_void,
+    pub type_: SpnVkStatusExtType,
+    pub avail: u64,
+    pub inuse: u64,
 }
 
 macro_rules! spinel_errors {
@@ -332,6 +342,12 @@ pub struct SpnRenderSubmit {
     pub clip: [u32; 4],
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct SpnStatus {
+    pub ext: *mut raw::c_void,
+}
+
 extern "C" {
     pub fn spn_vk_find_target(
         vendor_id: u32,
@@ -375,7 +391,7 @@ extern "C" {
     pub fn spn_context_release(context: SpnContext) -> SpnResult;
     pub fn spn_context_reset(context: SpnContext) -> SpnResult;
 
-    pub fn spn_context_status(context: SpnContext) -> SpnResult;
+    pub fn spn_context_status(context: SpnContext, status: *mut SpnStatus) -> SpnResult;
 
     pub fn spn_path_builder_create(
         context: SpnContext,

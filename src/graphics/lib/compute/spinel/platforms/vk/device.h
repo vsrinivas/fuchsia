@@ -50,11 +50,11 @@ struct spn_device
 
   } allocator;
 
-  struct spn_queue_pool *  queue_pool;
-  struct spn_handle_pool * handle_pool;
-  struct spn_dispatch *    dispatch;
-  struct spn_block_pool *  block_pool;
-  struct spn_status *      status;
+  struct spn_queue_pool *        queue_pool;
+  struct spn_handle_pool *       handle_pool;
+  struct spn_dispatch *          dispatch;
+  struct spn_block_pool *        block_pool;
+  struct spn_status_block_pool * status;
 };
 
 //

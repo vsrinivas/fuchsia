@@ -42,7 +42,7 @@ Context::reset()
 }
 
 spn_result_t
-Context::status() const
+Context::status(spn_status_t const * status) const
 {
   return SPN_SUCCESS;
 }
