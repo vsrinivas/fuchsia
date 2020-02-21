@@ -83,7 +83,10 @@ package("loadbench") {
 executable("loadbench_unittests") {
   testonly = true
 
-  sources = [ "tracing_unittest.cc" ]
+  sources = [
+    "tracing_unittest.cc",
+    "workload_unittest.cc",
+  ]
 
   deps = [
     ":lib",

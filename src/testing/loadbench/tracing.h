@@ -79,22 +79,22 @@ class Tracing {
   virtual ~Tracing() { Stop(); }
 
   struct DurationStats {
-    uint64_t begin_ts = 0;
-    uint64_t end_ts = 0;
-    uint64_t wall_duration = 0;
+    uint64_t begin_ts_ns = 0;
+    uint64_t end_ts_ns = 0;
+    uint64_t wall_duration_ns = 0;
     std::optional<std::array<uint64_t, 2>> payload = std::nullopt;
 
-    DurationStats(uint64_t begin) { begin_ts = begin; }
+    DurationStats(uint64_t begin) { begin_ts_ns = begin; }
   };
 
   struct QueuingStats {
-    uint64_t begin_ts = 0;
-    uint64_t end_ts = 0;
-    uint64_t queuing_time = 0;
+    uint64_t begin_ts_ns = 0;
+    uint64_t end_ts_ns = 0;
+    uint64_t queuing_time_ns = 0;
     uint64_t associated_thread = 0;
 
     QueuingStats(uint64_t begin, uint64_t thread) {
-      begin_ts = begin;
+      begin_ts_ns = begin;
       associated_thread = thread;
     }
   };

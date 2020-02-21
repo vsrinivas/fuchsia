@@ -511,24 +511,24 @@ bool Tracing::PopulateDurationStats(std::string string_ref,
   uint32_t desired_event_name_id;
 
   bool done = false;
-    while (!done) {
-      auto [read_success, buffer_end] =
-          FetchRecord(root_resource_, data_buf, &offset, &bytes_read_per_fetch, buf_len);
+  while (!done) {
+    auto [read_success, buffer_end] =
+        FetchRecord(root_resource_, data_buf, &offset, &bytes_read_per_fetch, buf_len);
 
-      if (!read_success) {
-        FXL_LOG(WARNING) << "Error reading traces, trace read stopped.";
-        return false;
-      } else if (buffer_end) {
-        done = true;
-        continue;
-      }
+    if (!read_success) {
+      FXL_LOG(WARNING) << "Error reading traces, trace read stopped.";
+      return false;
+    } else if (buffer_end) {
+      done = true;
+      continue;
+    }
 
-      const auto record_opt = KTraceRecord::ParseRecord(data_buf, buf_len);
+    const auto record_opt = KTraceRecord::ParseRecord(data_buf, buf_len);
 
-      if (!record_opt) {
-        FXL_LOG(WARNING) << "Error reading traces, trace read stopped.";
-        return false;
-      }
+    if (!record_opt) {
+      FXL_LOG(WARNING) << "Error reading traces, trace read stopped.";
+      return false;
+    }
 
     auto& record = record_opt.value();
 
@@ -555,8 +555,8 @@ bool Tracing::PopulateDurationStats(std::string string_ref,
         } else if (!duration_stats->empty()) {
           auto& latest_record = duration_stats->back();
 
-          latest_record.end_ts = rec->ts;
-          latest_record.wall_duration = latest_record.end_ts - latest_record.begin_ts;
+          latest_record.end_ts_ns = rec->ts;
+          latest_record.wall_duration_ns = latest_record.end_ts_ns - latest_record.begin_ts_ns;
           latest_record.payload = record.Get128BitPayload();
         }
       } else if (record.IsFlow()) {
@@ -576,8 +576,9 @@ bool Tracing::PopulateDurationStats(std::string string_ref,
           if (flow_iter == queuing_stats->end()) {
             continue;
           } else {
-            flow_iter->second.end_ts = rec->ts;
-            flow_iter->second.queuing_time = flow_iter->second.end_ts - flow_iter->second.begin_ts;
+            flow_iter->second.end_ts_ns = rec->ts;
+            flow_iter->second.queuing_time_ns =
+                flow_iter->second.end_ts_ns - flow_iter->second.begin_ts_ns;
           }
         }
       }

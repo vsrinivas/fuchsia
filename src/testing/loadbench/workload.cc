@@ -4,6 +4,7 @@
 
 #include "workload.h"
 
+#include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/port.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/time.h>
@@ -629,6 +630,63 @@ void Workload::ParseWorker(const rapidjson::Value& worker) {
   }
 }
 
+void Workload::ParseTracing(const rapidjson::Value& tracing) {
+  FXL_CHECK(tracing.IsObject()) << "Tracing configuration must be a JSON object!";
+
+  TracingConfig config;
+
+  if (tracing.HasMember("group mask")) {
+    const auto& group_mask = GetMember("group mask", tracing, "Tracing");
+
+    if (group_mask.IsUint()) {
+      config.group_mask = GetUint("group mask", tracing, "Tracing");
+    } else if (group_mask.IsString()) {
+      const std::string group_mask_str = GetString("group mask", tracing, "Tracing");
+
+      if (group_mask_str == "KTRACE_GRP_ALL") {
+        config.group_mask = KTRACE_GRP_ALL;
+      } else if (group_mask_str == "KTRACE_GRP_META") {
+        config.group_mask = KTRACE_GRP_META;
+      } else if (group_mask_str == "KTRACE_GRP_LIFECYCLE") {
+        config.group_mask = KTRACE_GRP_LIFECYCLE;
+      } else if (group_mask_str == "KTRACE_GRP_SCHEDULER") {
+        config.group_mask = KTRACE_GRP_SCHEDULER;
+      } else if (group_mask_str == "KTRACE_GRP_TASKS") {
+        config.group_mask = KTRACE_GRP_TASKS;
+      } else if (group_mask_str == "KTRACE_GRP_IPC") {
+        config.group_mask = KTRACE_GRP_IPC;
+      } else if (group_mask_str == "KTRACE_GRP_IRQ") {
+        config.group_mask = KTRACE_GRP_IRQ;
+      } else if (group_mask_str == "KTRACE_GRP_PROBE") {
+        config.group_mask = KTRACE_GRP_PROBE;
+      } else if (group_mask_str == "KTRACE_GRP_ARCH") {
+        config.group_mask = KTRACE_GRP_ARCH;
+      } else if (group_mask_str == "KTRACE_GRP_SYSCALL") {
+        config.group_mask = KTRACE_GRP_SYSCALL;
+      } else {
+        FXL_LOG(WARNING) << "Tracing enabled with unknown group mask, mask set to all groups.";
+        config.group_mask = KTRACE_GRP_ALL;
+      }
+    } else {
+      FXL_CHECK(false) << "Tracing group mask must be an unsigned integer or string!";
+      __builtin_unreachable();
+    }
+  } else /*Set default tracing group mask*/ {
+    FXL_LOG(WARNING) << "Tracing enabled with no group mask specified, mask set to all groups.";
+    config.group_mask = KTRACE_GRP_ALL;
+  }
+
+  if (tracing.HasMember("filepath")) {
+    config.filepath = GetString("filepath", tracing, "Tracing");
+  }
+
+  if (tracing.HasMember("string ref")) {
+    config.trace_string_ref = GetString("string ref", tracing, "Tracing");
+  }
+
+  tracing_ = config;
+}
+
 void GetLineAndColumnForOffset(const std::string& input, size_t offset, int32_t* output_line,
                                int32_t* output_column) {
   if (offset == 0) {
@@ -728,7 +786,8 @@ Workload Workload::Load(const std::string& path) {
 
   // Handle tracing.
   if (document.HasMember("tracing")) {
-    workload.tracing_enabled_ = GetUint("tracing", document, "Workload");
+    const auto& tracing = GetObject("tracing", document, "Workload");
+    workload.ParseTracing(tracing);
   }
 
   return workload;

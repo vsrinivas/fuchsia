@@ -12,6 +12,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <optional>
@@ -24,6 +25,7 @@
 #include "action.h"
 #include "object.h"
 #include "src/lib/fxl/logging.h"
+#include "tracing.h"
 #include "utility.h"
 #include "worker.h"
 #include "workload.h"
@@ -131,6 +133,13 @@ int main(int argc, char** argv) {
   std::cout << "Waiting for workers to start up..." << std::endl;
   Worker::WaitForAllReady(threads.size());
 
+  Tracing tracing;
+  if (workload.tracing().has_value()) {
+    tracing.Rewind();
+    tracing.Start(workload.tracing().value().group_mask);
+    std::cout << "Tracing started." << std::endl;
+  }
+
   std::cout << "Kicking off workload..." << std::endl;
   Worker::StartAll();
 
@@ -148,6 +157,11 @@ int main(int argc, char** argv) {
 
   std::cout << "Terminating workload..." << std::endl;
   Worker::TerminateAll();
+
+  if (workload.tracing().has_value()) {
+    tracing.Stop();
+    std::cout << "Tracing stopped." << std::endl;
+  }
 
   for (auto& thread : threads) {
     thread.join();
@@ -225,6 +239,57 @@ int main(int argc, char** argv) {
       const auto runtime_b = group_b.second.AverageRuntime();
       std::cout << "  Relative Runtime: "
                 << 100.0 * (runtime_a - runtime_b) / (runtime_a + runtime_b) << " %" << std::endl;
+    }
+  }
+
+  if (workload.tracing().has_value()) {
+    TracingConfig config = workload.tracing().value();
+
+    if (config.filepath.has_value()) {
+      std::string tracing_filepath = config.filepath.value();
+
+      std::ofstream human_readable_file;
+      human_readable_file.open(tracing_filepath);
+
+      if (human_readable_file) {
+        std::cout << "Traces being saved in " << tracing_filepath << "..." << std::endl;
+
+        if (!tracing.WriteHumanReadable(human_readable_file))
+          FXL_LOG(ERROR) << "Writing human readable file failed.";
+      } else {
+        FXL_LOG(ERROR) << "Failed to open " << tracing_filepath << ".";
+      }
+    }
+
+    if (config.trace_string_ref.has_value()) {
+      std::vector<Tracing::DurationStats> duration_stats;
+      std::map<uint64_t, Tracing::QueuingStats> queuing_stats;
+
+      if (!tracing.PopulateDurationStats(config.trace_string_ref.value(), &duration_stats,
+                                         &queuing_stats)) {
+        FXL_LOG(ERROR) << "Provided string ref not found.";
+      } else if (duration_stats.size() != 0 && queuing_stats.size() != 0) {
+        uint64_t total_wall_duration_ns{0};
+        uint64_t total_queuing_time_ns{0};
+
+        for (auto& event : duration_stats) {
+          total_wall_duration_ns += event.wall_duration_ns;
+        }
+
+        for (auto& event : queuing_stats) {
+          total_queuing_time_ns += event.second.queuing_time_ns;
+        }
+
+        std::cout << "Tracing stats:" << std::endl;
+        std::cout << "  Average Wall Duration: "
+                  << double_nanoseconds{total_wall_duration_ns}.count() / duration_stats.size()
+                  << " ns." << std::endl;
+        std::cout << "  Average Queuing Time: "
+                  << double_nanoseconds{total_queuing_time_ns}.count() / queuing_stats.size()
+                  << " ns." << std::endl;
+      } else {
+        FXL_LOG(WARNING) << "No events found that match provided string ref.";
+      }
     }
   }
 

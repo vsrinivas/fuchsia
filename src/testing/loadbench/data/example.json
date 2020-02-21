@@ -56,6 +56,10 @@
     }
   ],
 
-  // Optional kernel tracing, argument sets group mask.
-  "tracing": 0
+  // Optional kernel tracing.
+  "tracing": {
+    "group mask": "KTRACE_GRP_ALL",
+    "filepath": "/tmp/latest.ktrace",
+    "string ref": "clock_read",
+  },
 }

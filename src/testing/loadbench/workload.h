@@ -49,6 +49,12 @@ struct WorkerConfig {
   std::vector<std::unique_ptr<Action>> actions;
 };
 
+struct TracingConfig {
+  uint32_t group_mask;
+  std::optional<std::string> filepath;
+  std::optional<std::string> trace_string_ref;
+};
+
 // Represents the configuration and state parsed from a workload JSON
 // definition file.
 class Workload {
@@ -66,7 +72,7 @@ class Workload {
   const auto& name() const { return name_; }
   const auto& priority() const { return priority_; }
   const auto& interval() const { return interval_; }
-  const auto& tracing() const { return tracing_enabled_; }
+  const auto& tracing() const { return tracing_; }
 
   auto& workers() { return workers_; }
 
@@ -121,6 +127,7 @@ class Workload {
   std::unique_ptr<Action> ParseAction(const rapidjson::Value& action);
   void ParseNamedBehavior(const std::string& name, const rapidjson::Value& behavior);
   void ParseWorker(const rapidjson::Value& worker);
+  void ParseTracing(const rapidjson::Value& tracing);
 
   std::string name_;
   std::optional<int> priority_;
@@ -129,7 +136,7 @@ class Workload {
   std::unordered_map<std::string, std::unique_ptr<Object>> objects_;
   std::unordered_map<std::string, std::unique_ptr<Action>> behaviors_;
   std::vector<WorkerConfig> workers_;
-  std::optional<uint32_t> tracing_enabled_;
+  std::optional<TracingConfig> tracing_;
 };
 
 #endif  // SRC_TESTING_LOADBENCH_WORKLOAD_H_

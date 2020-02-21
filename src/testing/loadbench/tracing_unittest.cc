@@ -118,7 +118,7 @@ class CreateMockTrace128BitPayload {
     args[0] = a_;
     args[1] = b_;
 
-    return { true, false };
+    return {true, false};
   }
 
  private:
@@ -1083,9 +1083,9 @@ TEST(TracingTest, DurationStatsHandlesEmptyPayloads) {
       mock_tracing.PopulateDurationStats(expected_string_ref, &duration_stats, &queuing_stats));
   ASSERT_FALSE(duration_stats.empty());
   ASSERT_FALSE(duration_stats.front().payload);
-  ASSERT_EQ(duration_stats.front().begin_ts, begin_ts);
-  ASSERT_EQ(duration_stats.front().end_ts, end_ts);
-  ASSERT_EQ(duration_stats.front().wall_duration, end_ts - begin_ts);
+  ASSERT_EQ(duration_stats.front().begin_ts_ns, begin_ts);
+  ASSERT_EQ(duration_stats.front().end_ts_ns, end_ts);
+  ASSERT_EQ(duration_stats.front().wall_duration_ns, end_ts - begin_ts);
 }
 
 TEST(TracingTest, DurationStatsHandlesPayloads) {
@@ -1121,9 +1121,9 @@ TEST(TracingTest, DurationStatsHandlesPayloads) {
       mock_tracing.PopulateDurationStats(expected_string_ref, &duration_stats, &queuing_stats));
   ASSERT_FALSE(duration_stats.empty());
   ASSERT_TRUE(duration_stats.front().payload);
-  ASSERT_EQ(duration_stats.front().begin_ts, begin_ts);
-  ASSERT_EQ(duration_stats.front().end_ts, end_ts);
-  ASSERT_EQ(duration_stats.front().wall_duration, end_ts - begin_ts);
+  ASSERT_EQ(duration_stats.front().begin_ts_ns, begin_ts);
+  ASSERT_EQ(duration_stats.front().end_ts_ns, end_ts);
+  ASSERT_EQ(duration_stats.front().wall_duration_ns, end_ts - begin_ts);
   ASSERT_EQ(duration_stats.front().payload.value()[0], a);
   ASSERT_EQ(duration_stats.front().payload.value()[1], b);
 }
@@ -1138,8 +1138,7 @@ TEST(TracingTest, DurationStatsHandlesFlowRecords) {
   uint32_t mock_name_id = 0x14;
   uint32_t mock_begin_tag =
       static_cast<uint32_t>(TAG_FLOW_BEGIN(mock_name_id, KTRACE_GRP_SCHEDULER));
-  uint32_t mock_end_tag =
-      static_cast<uint32_t>(TAG_FLOW_END(mock_name_id, KTRACE_GRP_SCHEDULER));
+  uint32_t mock_end_tag = static_cast<uint32_t>(TAG_FLOW_END(mock_name_id, KTRACE_GRP_SCHEDULER));
   const char* expected_string_ref = "expected_string_ref";
   const uint64_t begin_ts = 12345678;
   const uint64_t end_ts = begin_ts - 12345;
@@ -1147,8 +1146,10 @@ TEST(TracingTest, DurationStatsHandlesFlowRecords) {
   const uint64_t associated_thread = 54321;
 
   CreateMockNameTrace string_ref_to_find(mock_name_tag, 0, 0, mock_name_id, expected_string_ref);
-  CreateMockTrace128BitPayload begin_duration_record(mock_begin_tag, 0, begin_ts, flow_id, associated_thread);
-  CreateMockTrace128BitPayload end_duration_record(mock_end_tag, 0, end_ts, flow_id, associated_thread);
+  CreateMockTrace128BitPayload begin_duration_record(mock_begin_tag, 0, begin_ts, flow_id,
+                                                     associated_thread);
+  CreateMockTrace128BitPayload end_duration_record(mock_end_tag, 0, end_ts, flow_id,
+                                                   associated_thread);
   ReaderHelper reader_helper;
 
   EXPECT_CALL(mock_tracing, FetchRecord)
@@ -1161,9 +1162,9 @@ TEST(TracingTest, DurationStatsHandlesFlowRecords) {
       mock_tracing.PopulateDurationStats(expected_string_ref, &duration_stats, &queuing_stats));
   ASSERT_FALSE(queuing_stats.empty());
   ASSERT_EQ(queuing_stats.begin()->first, flow_id);
-  ASSERT_EQ(queuing_stats.begin()->second.begin_ts, begin_ts);
-  ASSERT_EQ(queuing_stats.begin()->second.end_ts, end_ts);
-  ASSERT_EQ(queuing_stats.begin()->second.queuing_time, end_ts - begin_ts);
+  ASSERT_EQ(queuing_stats.begin()->second.begin_ts_ns, begin_ts);
+  ASSERT_EQ(queuing_stats.begin()->second.end_ts_ns, end_ts);
+  ASSERT_EQ(queuing_stats.begin()->second.queuing_time_ns, end_ts - begin_ts);
   ASSERT_EQ(queuing_stats.begin()->second.associated_thread, associated_thread);
 }
 }  // anonymous namespace

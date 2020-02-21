@@ -17,6 +17,7 @@
 #include <string>
 
 using double_seconds = std::chrono::duration<double, std::chrono::seconds::period>;
+using double_nanoseconds = std::chrono::duration<double, std::chrono::nanoseconds::period>;
 
 // Parses a duration in string form, which may include the units m, s, ms, us, or ns, and returns
 // the equivalent value in nanoseconds.
