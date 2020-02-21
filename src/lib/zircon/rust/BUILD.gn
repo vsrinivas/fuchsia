@@ -68,6 +68,9 @@ rustc_test("fuchsia-zircon-unittest") {
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-runtime",
   ]
+
+  # TODO(46723): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 rustc_binary("exit_with_code_util") {
