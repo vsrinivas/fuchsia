@@ -5,10 +5,9 @@
 use {
     crate::{
         known_ess_store::EssJsonRead,
-        network_config::{NetworkConfig, NetworkIdentifier},
+        network_config::{Credential, NetworkConfig, NetworkIdentifier},
     },
     anyhow::format_err,
-    fidl_fuchsia_wlan_policy as fidl_policy,
     log::{error, info},
     parking_lot::Mutex,
     serde_json,
@@ -79,22 +78,17 @@ impl SavedNetworksManager {
         for config in config_list {
             // Choose appropriate unknown values based on password and how known
             // ESS have been used for connections.
-            let credential = credential_from_bytes(config.password);
-            if let Ok(network_config) = NetworkConfig::new(
-                (config.ssid.clone(), derive_security_type(&credential)),
-                // TODO(40966) make a better choice for security type and credential
-                credential,
-                false,
-                false,
-            ) {
-                saved_networks
-                    .entry((config.ssid.clone(), network_config.security_type))
-                    .or_default()
-                    .push(network_config);
+            let credential = Credential::from_bytes(config.password);
+            let network_id =
+                NetworkIdentifier::new(config.ssid, credential.derived_security_type());
+            if let Ok(network_config) =
+                NetworkConfig::new(network_id.clone(), credential, false, false)
+            {
+                saved_networks.entry(network_id).or_default().push(network_config);
             } else {
                 eprintln!(
                     "Error creating network config from loaded data for SSID {}",
-                    String::from_utf8_lossy(&config.ssid)
+                    String::from_utf8_lossy(&network_id.ssid.clone())
                 );
             }
         }
@@ -121,26 +115,22 @@ impl SavedNetworksManager {
     /// together before, do not modify the saved config.
     pub fn store(
         &self,
-        ssid: Vec<u8>,
-        credential: fidl_policy::Credential,
+        network_id: NetworkIdentifier,
+        credential: Credential,
     ) -> Result<(), anyhow::Error> {
         let mut guard = self.saved_networks.lock();
-        let network_entry = guard.entry((ssid.clone(), derive_security_type(&credential)));
+        let network_entry = guard.entry(network_id.clone());
         if let Entry::Occupied(network_configs) = &network_entry {
-            // TODO(40966): when we know security type of the networks we store, check for
-            // same security type
             if network_configs.get().iter().any(|cfg| cfg.credential == credential) {
                 info!(
                     "wlancfg: Saving a previously saved network with same password: {}",
-                    String::from_utf8_lossy(&ssid)
+                    String::from_utf8_lossy(&network_id.ssid)
                 );
                 return Ok(());
             }
         }
-        // TODO(40966) - add meaningful use of security type
-        let network_config =
-            NetworkConfig::new((ssid, derive_security_type(&credential)), credential, false, false)
-                .map_err(|_| format_err!("Error creating the network config to store"))?;
+        let network_config = NetworkConfig::new(network_id, credential, false, false)
+            .map_err(|_| format_err!("Error creating the network config to store"))?;
 
         let network_configs = network_entry.or_default();
         evict_if_needed(network_configs);
@@ -150,13 +140,7 @@ impl SavedNetworksManager {
 
     /// Update a saved network that after connecting to it. If a network with these identifiers
     /// has not been connected to before, this will not save it and return an error.
-    /// TODO(nmccracken) add security type once we make use of security type when connecting
-    /// (do by completion of 35912)
-    pub fn record_connect_success(
-        &self,
-        id: NetworkIdentifier,
-        credential: &fidl_policy::Credential,
-    ) {
+    pub fn record_connect_success(&self, id: NetworkIdentifier, credential: &Credential) {
         if let Some(networks) = self.saved_networks.lock().get_mut(&id) {
             for network in networks {
                 if &network.credential == credential {
@@ -167,8 +151,8 @@ impl SavedNetworksManager {
         // Will not reach here if we find the saved network with matching SSID and credential.
         info!(
             "Failed finding network ({},{:?}) to record success.",
-            String::from_utf8_lossy(&id.0),
-            id.1
+            String::from_utf8_lossy(&id.ssid),
+            id.security_type
         );
     }
 }
@@ -198,36 +182,11 @@ fn evict_if_needed(configs: &mut Vec<NetworkConfig>) {
     configs.remove(0);
 }
 
-/// Returns:
-/// - an Open-Credential instance iff `bytes` is empty,
-/// - a PSK-Credential instance iff `bytes` holds exactly 64 bytes,
-/// - a Password-Credential in all other cases.
-/// In the PSK case, the provided bytes must represent the PSK in hex format.
-/// Note: This function is of temporary nature until connection results communicate
-/// type of credential
-pub fn credential_from_bytes(bytes: Vec<u8>) -> fidl_policy::Credential {
-    const PSK_HEX_STRING_LENGTH: usize = 64;
-    match bytes.len() {
-        0 => fidl_policy::Credential::None(fidl_policy::Empty),
-        PSK_HEX_STRING_LENGTH => fidl_policy::Credential::Psk(bytes),
-        _ => fidl_policy::Credential::Password(bytes),
-    }
-}
-
-/// Choose a security type that fits the credential while we don't actually know the security type
-/// of the saved networks.
-pub fn derive_security_type(credential: &fidl_policy::Credential) -> fidl_policy::SecurityType {
-    match credential {
-        fidl_policy::Credential::None(_) => fidl_policy::SecurityType::None,
-        _ => fidl_policy::SecurityType::Wpa2,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        crate::network_config::{NetworkConfig, PerformanceStats},
+        crate::network_config::{PerformanceStats, SecurityType},
         std::{io::Write, mem, path::Path},
         tempfile,
     };
@@ -241,48 +200,44 @@ mod tests {
         // Expect the store to be constructed successfully even if the file doesn't
         // exist yet
         let saved_networks = create_saved_networks(temp_dir.path());
+        let network_id_foo = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
 
-        assert!(saved_networks
-            .lookup((b"foo".to_vec(), fidl_policy::SecurityType::Wpa2))
-            .is_empty());
+        assert!(saved_networks.lookup(network_id_foo.clone()).is_empty());
         assert_eq!(0, saved_networks.known_network_count());
         saved_networks
-            .store(b"foo".to_vec(), credential_from_bytes(b"qwertyuio".to_vec()))
+            .store(network_id_foo.clone(), Credential::Password(b"qwertyuio".to_vec()))
             .expect("storing 'foo' failed");
         assert_eq!(
-            vec![network_config(b"foo", b"qwertyuio")],
-            saved_networks.lookup((b"foo".to_vec(), fidl_policy::SecurityType::Wpa2))
+            vec![network_config("foo", "qwertyuio")],
+            saved_networks.lookup(network_id_foo.clone())
         );
         assert_eq!(1, saved_networks.known_network_count());
 
         saved_networks
-            .store(b"foo".to_vec(), credential_from_bytes(b"12345678".to_vec()))
+            .store(network_id_foo.clone(), Credential::Password(b"12345678".to_vec()))
             .expect("storing 'foo' a second time failed");
         // There should only be one saved "foo" network because MAX_CONFIGS_PER_SSID is 1.
         // When this constant becomes greater than 1, both network configs should be found
         assert_eq!(
-            vec![network_config(b"foo", b"12345678")],
-            saved_networks.lookup((b"foo".to_vec(), fidl_policy::SecurityType::Wpa2))
+            vec![network_config("foo", "12345678")],
+            saved_networks.lookup(network_id_foo.clone())
         );
         assert_eq!(1, saved_networks.known_network_count());
 
+        let network_id_baz = NetworkIdentifier::new(b"baz".to_vec(), SecurityType::Wpa2);
         saved_networks
-            .store(b"baz".to_vec(), credential_from_bytes(vec![1; 64]))
+            .store(network_id_baz.clone(), Credential::Psk(vec![1; 64]))
             .expect("storing 'baz' with PSK failed");
         assert_eq!(
-            vec![network_config(b"baz", &[1; 64])],
-            saved_networks.lookup((b"baz".to_vec(), fidl_policy::SecurityType::Wpa2))
+            vec![network_config("baz", [1; 64].to_vec())],
+            saved_networks.lookup(network_id_baz.clone())
         );
         assert_eq!(2, saved_networks.known_network_count());
 
         // Currently store is not yet persistent. Soon it should become persistent.
         let saved_networks = create_saved_networks(temp_dir.path());
-        assert!(saved_networks
-            .lookup((b"foo".to_vec(), fidl_policy::SecurityType::Wpa2))
-            .is_empty());
-        assert!(saved_networks
-            .lookup((b"baz".to_vec(), fidl_policy::SecurityType::Wpa2))
-            .is_empty());
+        assert!(saved_networks.lookup(network_id_foo).is_empty());
+        assert!(saved_networks.lookup(network_id_baz).is_empty());
         assert_eq!(0, saved_networks.known_network_count());
     }
 
@@ -293,18 +248,16 @@ mod tests {
         // Expect the store to be constructed successfully even if the file doesn't
         // exist yet
         let saved_networks = create_saved_networks(temp_dir.path());
+        let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
 
         saved_networks
-            .store(b"foo".to_vec(), credential_from_bytes(b"qwertyuio".to_vec()))
+            .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
             .expect("storing 'foo' failed");
         saved_networks
-            .store(b"foo".to_vec(), credential_from_bytes(b"qwertyuio".to_vec()))
+            .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
             .expect("storing 'foo' a second time failed");
-        let expected_cfgs = vec![network_config(b"foo", b"qwertyuio")];
-        assert_eq!(
-            expected_cfgs,
-            saved_networks.lookup((b"foo".to_vec(), fidl_policy::SecurityType::Wpa2))
-        );
+        let expected_cfgs = vec![network_config("foo", "qwertyuio")];
+        assert_eq!(expected_cfgs, saved_networks.lookup(network_id));
         assert_eq!(1, saved_networks.known_network_count());
     }
 
@@ -315,45 +268,43 @@ mod tests {
         // Expect the store to be constructed successfully even if the file doesn't
         // exist yet
         let saved_networks = create_saved_networks(temp_dir.path());
+        let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
 
         // save max + 1 networks with same SSID and different credentials
         for i in 0..MAX_CONFIGS_PER_SSID + 1 {
             let mut password = b"password".to_vec();
             password.push(i as u8);
             saved_networks
-                .store(b"foo".to_vec(), credential_from_bytes(password))
+                .store(network_id.clone(), Credential::Password(password))
                 .expect("Failed to saved network");
         }
 
         // since none have been connected to yet, we don't care which config was removed
-        assert_eq!(
-            MAX_CONFIGS_PER_SSID,
-            saved_networks.lookup((b"foo".to_vec(), fidl_policy::SecurityType::Wpa2)).len()
-        );
+        assert_eq!(MAX_CONFIGS_PER_SSID, saved_networks.lookup(network_id).len());
     }
 
     #[test]
     fn connect_network() {
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let saved_networks = create_saved_networks(temp_dir.path());
-        const WPA2: fidl_policy::SecurityType = fidl_policy::SecurityType::Wpa2;
+        let network_id = NetworkIdentifier::new(b"bar".to_vec(), SecurityType::Wpa2);
 
-        let mut config = network_config(b"bar", b"password");
+        let mut config = network_config("bar", "password");
         // if connect and network hasn't been saved, should give an error and not save network
-        saved_networks.record_connect_success((b"foo".to_vec(), WPA2), &config.credential);
-        assert!(saved_networks.lookup((b"bar".to_vec(), WPA2)).is_empty());
+        saved_networks.record_connect_success(network_id.clone(), &config.credential);
+        assert!(saved_networks.lookup(network_id.clone()).is_empty());
         assert_eq!(0, saved_networks.known_network_count());
 
         // save a network and record connect success
         saved_networks
-            .store(b"bar".to_vec(), credential_from_bytes(b"password".to_vec()))
+            .store(network_id.clone(), Credential::Password(b"password".to_vec()))
             .expect("Failed save network");
-        let credential = fidl_policy::Credential::Password(b"password".to_vec());
-        saved_networks.record_connect_success((b"bar".to_vec(), WPA2), &credential);
+        let credential = Credential::Password(b"password".to_vec());
+        saved_networks.record_connect_success(network_id.clone(), &credential);
 
         // check that the saved network config has been updated
         config.has_ever_connected = true;
-        assert_eq!(vec![config], saved_networks.lookup((b"bar".to_vec(), WPA2)));
+        assert_eq!(vec![config], saved_networks.lookup(network_id.clone()));
     }
 
     #[test]
@@ -361,7 +312,7 @@ mod tests {
         // this test is less meaningful when MAX_CONFIGS_PER_SSID is greater than 1, otherwise
         // the only saved configs should be removed when the max capacity is met, regardless of
         // whether it has been connected to.
-        let unconnected_config = network_config(b"foo", b"password");
+        let unconnected_config = network_config("foo", "password");
         let mut connected_config = unconnected_config.clone();
         connected_config.has_ever_connected = false;
         let mut network_configs = vec![connected_config; MAX_CONFIGS_PER_SSID - 1];
@@ -384,10 +335,10 @@ mod tests {
         assert_eq!(expected_cfgs, configs);
 
         if MAX_CONFIGS_PER_SSID > 1 {
-            let mut configs = vec![network_config(b"foo", b"password")];
+            let mut configs = vec![network_config("foo", "password")];
             evict_if_needed(&mut configs);
             // if MAX_CONFIGS_PER_SSID is 1, this wouldn't be true
-            assert_eq!(vec![network_config(b"foo", b"password")], configs);
+            assert_eq!(vec![network_config("foo", "password")], configs);
         }
     }
 
@@ -407,8 +358,9 @@ mod tests {
         assert!(!path.exists());
 
         // Writing an entry should not create the file yet because networks configs don't persist.
+        let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
         saved_networks
-            .store(b"foo".to_vec(), credential_from_bytes(b"qwertyuio".to_vec()))
+            .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
             .expect("storing 'foo' failed");
         assert!(!path.exists());
     }
@@ -419,8 +371,9 @@ mod tests {
             .expect("Failed to create a SavedNetworksManager");
 
         // expect error once network configs are saved persistently, for now expect none
+        let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
         saved_networks
-            .store(b"foo".to_vec(), credential_from_bytes(b"qwertyuio".to_vec()))
+            .store(network_id, Credential::Password(b"qwertyuio".to_vec()))
             .expect("expected store to fail");
     }
 
@@ -431,14 +384,12 @@ mod tests {
         // Expect the store to be constructed successfully even if the file doesn't
         // exist yet
         let saved_networks = create_saved_networks(temp_dir.path());
+        let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
 
         saved_networks
-            .store(b"foo".to_vec(), credential_from_bytes(b"qwertyuio".to_vec()))
+            .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
             .expect("storing 'foo' failed");
-        assert_eq!(
-            vec![network_config(b"foo", b"qwertyuio")],
-            saved_networks.lookup((b"foo".to_vec(), fidl_policy::SecurityType::Wpa2))
-        );
+        assert_eq!(vec![network_config("foo", "qwertyuio")], saved_networks.lookup(network_id));
         assert_eq!(1, saved_networks.known_network_count());
         saved_networks.clear().expect("clearing store failed");
         assert_eq!(0, saved_networks.known_network_count());
@@ -453,37 +404,12 @@ mod tests {
             .expect("Failed to create a SavedNetworksManager")
     }
 
-    #[test]
-    fn test_credential_from_bytes() {
-        assert_eq!(credential_from_bytes(vec![1]), fidl_policy::Credential::Password(vec![1]));
-        assert_eq!(
-            credential_from_bytes(vec![2; 63]),
-            fidl_policy::Credential::Password(vec![2; 63])
-        );
-        assert_eq!(credential_from_bytes(vec![2; 64]), fidl_policy::Credential::Psk(vec![2; 64]));
-        assert_eq!(
-            credential_from_bytes(vec![]),
-            fidl_policy::Credential::None(fidl_policy::Empty)
-        );
-    }
-
-    #[test]
-    fn test_derive_security_type_from_credential() {
-        let password = fidl_policy::Credential::Password(b"password".to_vec());
-        let psk = fidl_policy::Credential::Psk(b"psk-type".to_vec());
-        let none = fidl_policy::Credential::None(fidl_policy::Empty);
-
-        assert_eq!(fidl_policy::SecurityType::Wpa2, derive_security_type(&password));
-        assert_eq!(fidl_policy::SecurityType::Wpa2, derive_security_type(&psk));
-        assert_eq!(fidl_policy::SecurityType::None, derive_security_type(&none));
-    }
-
     // hard code unused fields for tests same as known_ess_store until they are used
-    fn network_config(ssid: &[u8], password: &[u8]) -> NetworkConfig {
-        let credential = credential_from_bytes(password.to_vec());
+    fn network_config(ssid: impl Into<Vec<u8>>, password: impl Into<Vec<u8>>) -> NetworkConfig {
+        let credential = Credential::from_bytes(password.into());
         NetworkConfig {
-            ssid: ssid.to_vec(),
-            security_type: derive_security_type(&credential),
+            ssid: ssid.into(),
+            security_type: credential.derived_security_type(),
             credential,
             has_ever_connected: false,
             seen_in_passive_scan_results: false,

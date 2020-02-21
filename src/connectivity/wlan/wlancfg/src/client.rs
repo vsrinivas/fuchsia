@@ -4,16 +4,15 @@
 
 use {
     crate::{
-        config_manager::{credential_from_bytes, derive_security_type, SavedNetworksManager},
+        config_manager::SavedNetworksManager,
         known_ess_store::{KnownEss, KnownEssStore},
-        network_config::clone_credential,
+        network_config::{Credential, NetworkIdentifier, SecurityType},
         policy::client::sme_credential_from_policy,
         state_machine::{self, IntoStateExt},
     },
     anyhow::format_err,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
-    fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async::DurationExt,
     fuchsia_zircon::prelude::*,
     futures::{
@@ -171,7 +170,10 @@ async fn attempt_auto_connect(services: &Services) -> Result<Option<Vec<u8>>, an
         .map(|b| {
             services
                 .saved_networks
-                .lookup((b.ssid.to_vec(), security_from_protection(b.protection)))
+                .lookup(NetworkIdentifier::new(
+                    b.ssid.to_vec(),
+                    security_from_protection(b.protection),
+                ))
                 .into_iter()
                 .map(|cfg| (cfg.ssid, cfg.credential))
         })
@@ -179,11 +181,9 @@ async fn attempt_auto_connect(services: &Services) -> Result<Option<Vec<u8>>, an
         .collect::<HashMap<_, _>>();
 
     for (ssid, credential) in network_by_ssid {
-        if connect_to_known_network(&services.sme, ssid.clone(), clone_credential(&credential))
-            .await?
-        {
+        if connect_to_known_network(&services.sme, ssid.clone(), credential.clone()).await? {
             services.saved_networks.record_connect_success(
-                (ssid.clone(), derive_security_type(&credential)),
+                NetworkIdentifier::new(ssid.clone(), credential.derived_security_type()),
                 &credential,
             );
             return Ok(Some(ssid));
@@ -192,18 +192,18 @@ async fn attempt_auto_connect(services: &Services) -> Result<Option<Vec<u8>>, an
     Ok(None)
 }
 
-fn security_from_protection(protection: fidl_sme::Protection) -> fidl_policy::SecurityType {
+fn security_from_protection(protection: fidl_sme::Protection) -> SecurityType {
     use fidl_sme::Protection;
     match protection {
-        Protection::Wpa2Enterprise | Protection::Wpa2Personal => fidl_policy::SecurityType::Wpa2,
-        _ => fidl_policy::SecurityType::None,
+        Protection::Wpa2Enterprise | Protection::Wpa2Personal => SecurityType::Wpa2,
+        _ => SecurityType::None,
     }
 }
 
 async fn connect_to_known_network(
     sme: &fidl_sme::ClientSmeProxy,
     ssid: Vec<u8>,
-    credential: fidl_policy::Credential,
+    credential: Credential,
 ) -> Result<bool, anyhow::Error> {
     let ssid_str = String::from_utf8_lossy(&ssid).into_owned();
     println!("wlancfg: Auto-connecting to '{}'", ssid_str);
@@ -229,7 +229,7 @@ async fn manual_connect_state(
         "wlancfg: Connecting to '{}' because of a manual request from the user",
         String::from_utf8_lossy(&req.ssid)
     );
-    let credential = credential_from_bytes(req.password.clone());
+    let credential = Credential::from_bytes(req.password.clone());
     let txn = start_connect_txn(&services.sme, &req.ssid, &credential)?;
     let connected_fut = wait_until_connected(txn);
     pin_mut!(connected_fut);
@@ -245,14 +245,15 @@ async fn manual_connect_state(
                     let ess = KnownEss { password: req.password.clone() };
                     services.ess_store.store(req.ssid.clone(), ess).unwrap_or_else(
                             |e| eprintln!("wlancfg: Failed to store network password: {}", e));
-                    services.saved_networks.store(req.ssid.clone(), clone_credential(&credential))
+                    let network_id = NetworkIdentifier::new(
+                        req.ssid.clone(),
+                        credential.derived_security_type()
+                    );
+                    services.saved_networks.store(network_id.clone(), credential.clone())
                          .unwrap_or_else(
                             |e| eprintln!("wlancfg: Failed to store network config: {}", e));
                     services.saved_networks
-                        .record_connect_success(
-                            (req.ssid.clone(), derive_security_type(&credential)),
-                            &credential_from_bytes(req.password)
-                        );
+                        .record_connect_success(network_id, &credential);
                     connected_state(services, next_req).into_state()
                 },
                 other => {
@@ -378,7 +379,7 @@ fn start_scan_txn(
 fn start_connect_txn(
     sme: &fidl_sme::ClientSmeProxy,
     ssid: &[u8],
-    credential: &fidl_policy::Credential,
+    credential: &Credential,
 ) -> Result<fidl_sme::ConnectTransactionProxy, anyhow::Error> {
     let (connect_txn, remote) = create_proxy()?;
     let credential = sme_credential_from_policy(credential);
@@ -452,7 +453,7 @@ mod tests {
         let saved_networks = create_saved_networks(temp_dir.path());
         let not_saved_ssid = &b"foo"[..];
         let saved_ssid = &b"bar"[..];
-        let saved_password = credential_from_bytes(b"qwertyuio".to_vec());
+        let saved_password = Credential::Password(b"qwertyuio".to_vec());
         let (_client, fut, sme_server) =
             create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
         let mut next_sme_req = sme_server.into_future();
@@ -469,7 +470,7 @@ mod tests {
 
         // now add a network, and verify the count reflects it
         saved_networks
-            .store(saved_ssid.to_vec(), saved_password)
+            .store(NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2), saved_password)
             .expect("failed to store a network password");
         assert_eq!(1, saved_networks.known_network_count());
 
@@ -491,10 +492,10 @@ mod tests {
         let not_saved_ssid = b"foo";
         let saved_ssid = b"bar";
         let saved_password_str = b"qwertyuio";
-        let saved_password = credential_from_bytes(saved_password_str.to_vec());
+        let saved_password = Credential::Password(saved_password_str.to_vec());
         // save the network to trigger a scan
         saved_networks
-            .store(saved_ssid.to_vec(), saved_password)
+            .store(NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2), saved_password)
             .expect("failed to store a network password");
 
         let (_client, fut, sme_server) =
@@ -543,7 +544,7 @@ mod tests {
         assert_eq!(None, exec.wake_next_timer());
 
         let config = saved_networks
-            .lookup((b"bar".to_vec(), fidl_policy::SecurityType::Wpa2))
+            .lookup(NetworkIdentifier::new(b"bar".to_vec(), SecurityType::Wpa2))
             .pop()
             .expect("Failed to get network config");
         assert!(config.has_ever_connected);
@@ -555,9 +556,12 @@ mod tests {
         let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
         let ess_store = create_ess_store(temp_dir.path());
         let saved_networks = create_saved_networks(temp_dir.path());
+        let saved_ssid = b"bar";
+        let saved_password_str = b"qwertyuio";
+        let saved_password = Credential::Password(saved_password_str.to_vec());
         // save the network to trigger a scan
         saved_networks
-            .store(b"bar".to_vec(), credential_from_bytes(b"qwertyuio".to_vec()))
+            .store(NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2), saved_password)
             .expect("failed to store a network password");
 
         let (_client, fut, sme_server) =
@@ -576,8 +580,8 @@ mod tests {
         exchange_connect_with_sme(
             &mut exec,
             &mut next_sme_req,
-            b"bar",
-            b"qwertyuio",
+            saved_ssid,
+            saved_password_str,
             fidl_sme::ConnectResultCode::Failed,
         );
         // Auto connect failed so we should remain in the 'auto connect' state and sleep
@@ -587,7 +591,7 @@ mod tests {
 
         // After failed auto connect, the network should not have been marked connected
         let config = saved_networks
-            .lookup((b"bar".to_vec(), fidl_policy::SecurityType::Wpa2))
+            .lookup(NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2))
             .pop()
             .expect("Failed to get network config");
         assert_eq!(false, config.has_ever_connected);
@@ -600,11 +604,12 @@ mod tests {
         let ess_store = create_ess_store(temp_dir.path());
         let saved_networks = create_saved_networks(temp_dir.path());
         let saved_ssid = b"foo";
+        let saved_net_id = NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2);
         let saved_password = b"qwertyuio";
-        let saved_credential = credential_from_bytes(saved_password.to_vec());
+        let saved_credential = Credential::Password(saved_password.to_vec());
         // save the network to trigger a scan
         saved_networks
-            .store(saved_ssid.to_vec(), saved_credential)
+            .store(saved_net_id, saved_credential)
             .expect("failed to store a network password");
 
         let (_client, fut, sme_server) =
@@ -651,11 +656,12 @@ mod tests {
         let ess_store = create_ess_store(temp_dir.path());
         let saved_networks = create_saved_networks(temp_dir.path());
         let saved_ssid = b"foo";
+        let saved_net_id = NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2);
         let saved_password = b"12345678";
-        let saved_credential = credential_from_bytes(saved_password.to_vec());
+        let saved_credential = Credential::Password(saved_password.to_vec());
         // save the network that will be autoconnected
         saved_networks
-            .store(saved_ssid.to_vec(), saved_credential)
+            .store(saved_net_id.clone(), saved_credential)
             .expect("failed to store a network password");
 
         let (_client, fut, sme_server) =
@@ -714,10 +720,8 @@ mod tests {
         assert_eq!(None, exec.wake_next_timer());
 
         // Since we connected to foo, the saved network configuration should reflect this
-        let config = saved_networks
-            .lookup((b"foo".to_vec(), fidl_policy::SecurityType::Wpa2))
-            .pop()
-            .expect("failed to get network config");
+        let config =
+            saved_networks.lookup(saved_net_id).pop().expect("failed to get network config");
         assert!(config.has_ever_connected);
     }
 
@@ -729,7 +733,8 @@ mod tests {
         let saved_networks = create_saved_networks(temp_dir.path());
         let manual_connect_ssid = b"foo";
         let manual_connect_password = b"qwertyuio";
-        let manual_connect_security = fidl_policy::SecurityType::Wpa2;
+        let manual_connect_id =
+            NetworkIdentifier::new(manual_connect_ssid.to_vec(), SecurityType::Wpa2);
         let (client, fut, sme_server) =
             create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
         let mut next_sme_req = sme_server.into_future();
@@ -760,21 +765,15 @@ mod tests {
         assert_eq!(None, exec.wake_next_timer());
 
         // Network should be saved as known since we connected successfully
-        assert_eq!(
-            1,
-            saved_networks.lookup((manual_connect_ssid.to_vec(), manual_connect_security)).len()
-        );
+        assert_eq!(1, saved_networks.lookup(manual_connect_id.clone()).len());
         let cfg = NetworkConfig::new(
-            (manual_connect_ssid.to_vec(), manual_connect_security),
-            fidl_policy::Credential::Password(manual_connect_password.to_vec()),
+            manual_connect_id.clone(),
+            Credential::Password(manual_connect_password.to_vec()),
             true,
             false,
         )
         .expect("Failed to create expected network config");
-        assert_eq!(
-            vec![cfg],
-            saved_networks.lookup((manual_connect_ssid.to_vec(), manual_connect_security))
-        );
+        assert_eq!(vec![cfg], saved_networks.lookup(manual_connect_id));
     }
 
     #[test]
@@ -834,12 +833,12 @@ mod tests {
         // Since we successfully connected to bar but not to foo, bar should have been saved and
         // foo should not have been saved
         let bar_config = saved_networks
-            .lookup((b"bar".to_vec(), fidl_policy::SecurityType::Wpa2))
+            .lookup(NetworkIdentifier::new(b"bar".to_vec(), SecurityType::Wpa2))
             .pop()
             .expect("failed to get network config");
         assert!(bar_config.has_ever_connected);
         assert!(saved_networks
-            .lookup((b"foo".to_vec(), fidl_policy::SecurityType::Wpa2))
+            .lookup(NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2))
             .is_empty());
     }
 
@@ -850,12 +849,13 @@ mod tests {
         let ess_store = create_ess_store(temp_dir.path());
         let saved_networks = create_saved_networks(temp_dir.path());
         let saved_ssid = b"foo";
+        let saved_net_id = NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2);
         let saved_password = b"12345678";
         let manual_connect_ssid = b"bar";
         let manual_connect_password = b"qwertyuio";
         // save the network that will be autoconnected
         saved_networks
-            .store(saved_ssid.to_vec(), credential_from_bytes(saved_password.to_vec()))
+            .store(saved_net_id.clone(), Credential::Password(saved_password.to_vec()))
             .expect("failed to store a network password");
 
         let (client, fut, sme_server) =
@@ -905,12 +905,10 @@ mod tests {
         assert_eq!(None, exec.wake_next_timer());
 
         // Check that saved network configs for both networks have been created
-        let foo_config = saved_networks
-            .lookup((b"foo".to_vec(), fidl_policy::SecurityType::Wpa2))
-            .pop()
-            .expect("failed to get config for foo");
+        let foo_config =
+            saved_networks.lookup(saved_net_id).pop().expect("failed to get config for foo");
         let bar_config = saved_networks
-            .lookup((b"bar".to_vec(), fidl_policy::SecurityType::Wpa2))
+            .lookup(NetworkIdentifier::new(manual_connect_ssid.to_vec(), SecurityType::Wpa2))
             .pop()
             .expect("failed to get config for bar");
         assert!(foo_config.has_ever_connected);
@@ -924,6 +922,7 @@ mod tests {
         let ess_store = create_ess_store(temp_dir.path());
         let saved_networks = create_saved_networks(temp_dir.path());
         let saved_ssid = b"bar";
+        let saved_net_id = NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2);
         let saved_password = b"qwertyuio";
         let manual_connect_ssid = b"foo";
         let manual_connect_password = b"qwertyuio";
@@ -946,7 +945,7 @@ mod tests {
         );
         // auto connect will only scan with a saved network, make sure we have one
         saved_networks
-            .store(saved_ssid.to_vec(), credential_from_bytes(saved_password.to_vec()))
+            .store(saved_net_id, Credential::Password(saved_password.to_vec()))
             .expect("failed to store a network password");
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
 
@@ -969,7 +968,7 @@ mod tests {
 
         // Network should not be saved as known since we failed to connect
         assert!(saved_networks
-            .lookup((manual_connect_ssid.to_vec(), fidl_policy::SecurityType::Wpa2))
+            .lookup(NetworkIdentifier::new(manual_connect_ssid.to_vec(), SecurityType::Wpa2))
             .is_empty());
         assert_eq!(1, saved_networks.known_network_count());
     }
@@ -1139,6 +1138,7 @@ mod tests {
         let ess_store = create_ess_store(temp_dir.path());
         let saved_networks = create_saved_networks(temp_dir.path());
         let saved_ssid = b"foo";
+        let saved_net_id = NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2);
         let saved_password = b"12345678";
         let (client, fut, sme_server) =
             create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
@@ -1147,7 +1147,7 @@ mod tests {
 
         // Save the network that we will auto-connect to
         saved_networks
-            .store(saved_ssid.to_vec(), credential_from_bytes(saved_password.to_vec()))
+            .store(saved_net_id, Credential::Password(saved_password.to_vec()))
             .expect("failed to store a network password");
 
         // Get the state machine into the connected state by auto-connecting to a known

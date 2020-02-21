@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{client, config_manager::SavedNetworksManager, known_ess_store::KnownEssStore};
-
 use {
+    crate::{client, config_manager::SavedNetworksManager, known_ess_store::KnownEssStore},
     fidl::{self, endpoints::create_proxy},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device_service as wlan_service,
     fidl_fuchsia_wlan_service as legacy, fidl_fuchsia_wlan_sme as fidl_sme,
@@ -398,8 +397,14 @@ fn empty_counter() -> fidl_wlan_stats::Counter {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::known_ess_store::KnownEss, fidl_fuchsia_wlan_policy as fidl_policy,
-        fuchsia_async as fasync, futures::task::Poll, pin_utils::pin_mut,
+        super::*,
+        crate::{
+            known_ess_store::KnownEss,
+            network_config::{Credential, NetworkIdentifier, SecurityType},
+        },
+        fuchsia_async as fasync,
+        futures::task::Poll,
+        pin_utils::pin_mut,
         wlan_common::assert_variant,
     };
 
@@ -513,8 +518,9 @@ mod tests {
         ess_store
             .store(b"foo".to_vec(), KnownEss { password: b"qwertyuio".to_vec() })
             .expect("Failed to store to ess store");
+        let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
         saved_networks
-            .store(b"foo".to_vec(), fidl_policy::Credential::Password(b"qwertyuio".to_vec()))
+            .store(network_id, Credential::Password(b"qwertyuio".to_vec()))
             .expect("Failed to save network");
 
         // Send the request to clear saved networks.
