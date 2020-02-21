@@ -3,36 +3,61 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::{Context, Error},
+    async_trait::async_trait,
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_info,
-    futures::channel::mpsc::Receiver,
-    futures::StreamExt,
-    input::{input_device, mouse},
+    input::{input_device, input_handler::InputHandler, input_pipeline::InputPipeline},
 };
 
-/// Creates an `InputEvent` receiver to listen for mouse input. Logs each mouse event as received.
+/// A simple InputHandler that prints MouseEvents as they're received.
+struct MouseEventPrinter;
+
+impl MouseEventPrinter {
+    pub fn new() -> Self {
+        MouseEventPrinter {}
+    }
+}
+
+#[async_trait]
+impl InputHandler for MouseEventPrinter {
+    async fn handle_input_event(
+        &mut self,
+        input_event: input_device::InputEvent,
+    ) -> Vec<input_device::InputEvent> {
+        match input_event {
+            input_device::InputEvent {
+                device_event: input_device::InputDeviceEvent::Mouse(mouse_event),
+                device_descriptor: input_device::InputDeviceDescriptor::Mouse(_mouse_descriptor),
+                event_time,
+            } => {
+                fx_log_info!("movement_x: {}", mouse_event.movement_x);
+                fx_log_info!("movement_y: {}", mouse_event.movement_y);
+                fx_log_info!("phase: {:?}", mouse_event.phase);
+                fx_log_info!("buttons: {:?}", mouse_event.buttons);
+                fx_log_info!("event_time: {:?}", event_time);
+
+                vec![]
+            }
+            _ => vec![input_event],
+        }
+    }
+}
+
+/// Creates an `InputPipeline` that binds to mouse devices. Logs each mouse event as received.
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["input_session"]).expect("Failed to initialize logger.");
 
-    let mut mouse_receiver: Receiver<input_device::InputEvent> = mouse::all_mouse_events().await?;
-    while let Some(input_event) = mouse_receiver.next().await {
-        match input_event {
-            input_device::InputEvent {
-                device_event: input_device::InputDeviceEvent::Mouse(mouse_event_descriptor),
-                device_descriptor: _,
-                event_time,
-            } => {
-                fx_log_info!("movement_x: {}", mouse_event_descriptor.movement_x);
-                fx_log_info!("movement_y: {}", mouse_event_descriptor.movement_y);
-                fx_log_info!("phase: {:?}", mouse_event_descriptor.phase);
-                fx_log_info!("buttons: {:?}", mouse_event_descriptor.buttons);
-                fx_log_info!("event_time: {:?}", event_time);
-            }
-            _ => {}
-        }
-    }
+    let input_pipeline = InputPipeline::new(
+        vec![input_device::InputDeviceType::Mouse],
+        vec![Box::new(MouseEventPrinter::new())],
+    )
+    .await
+    .context("Failed to create InputPipeline.")?;
+
+    input_pipeline.handle_input_events().await;
+
     Ok(())
 }
 
