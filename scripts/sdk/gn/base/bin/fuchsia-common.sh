@@ -101,7 +101,7 @@ function get-image-src-path {
   echo "gs://${FUCHSIA_BUCKET}/development/${1}/images/${2}.tgz"
 }
 
-# Run gsutil from a symlink in the directory of this script if exists, otherwise
+# Run gsutil from the directory of this script if it exists, otherwise
 # use the path.
 function run-gsutil {
   GSUTIL_BIN="${SCRIPT_SRC_DIR}/gsutil"
@@ -114,6 +114,21 @@ function run-gsutil {
     exit 2
   fi
   "${GSUTIL_BIN}" "$@"
+}
+
+# Run cipd from the directory of this script if it exists, otherwise
+# use the path.
+function run-cipd {
+  CIPD_BIN="${SCRIPT_SRC_DIR}/cipd"
+  if [[ ! -e "${CIPD_BIN}" ]]; then
+    CIPD_BIN="$(command -v cipd)"
+  fi
+
+  if [[ "${CIPD_BIN}" == "" ]]; then
+    fx-error "Cannot find cipd."
+    exit 2
+  fi
+  "${CIPD_BIN}" "$@"
 }
 
 function get-available-images {

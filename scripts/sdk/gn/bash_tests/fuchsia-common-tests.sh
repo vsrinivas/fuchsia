@@ -18,10 +18,12 @@ REPO_ROOT="$(realpath "$(dirname "${SOURCE_FILE}")")"
 MOCKED_SSH_BIN="mocked/ssh"
 MOCKED_DEVICE_FINDER="tools/device-finder"
 MOCKED_GSUTIL="${REPO_ROOT}/gsutil"
+MOCKED_CIPD="${REPO_ROOT}/cipd"
 BT_MOCKED_TOOLS=(
    "${MOCKED_SSH_BIN}"
    "${MOCKED_DEVICE_FINDER}"
    "${MOCKED_GSUTIL}"
+   "${MOCKED_CIPD}"
 )
 
 BT_SET_UP() {
@@ -95,6 +97,16 @@ TEST_run-gsutil() {
 EOF
   RESULT="$(run-gsutil ls gs://fuchsia/development/LATEST)"
   BT_EXPECT_EQ "${RESULT}" "gs://fuchsia/development/LATEST"
+}
+
+TEST_run-cipd() {
+  BT_ASSERT_FUNCTION_EXISTS run-cipd
+  btf::make_mock "${MOCKED_CIPD}"
+  cat > "${MOCKED_CIPD}.mock_side_effects" <<EOF
+    echo "fuchsia/"
+EOF
+  RESULT="$(run-cipd ls)"
+  BT_EXPECT_EQ "${RESULT}" "fuchsia/"
 }
 
 TEST_get-available-images() {
