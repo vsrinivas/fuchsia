@@ -7,7 +7,7 @@ source_set("resource") {
   sources = [ "resource.cc" ]
   deps = [
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zxtest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]

@@ -15,7 +15,7 @@
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 extern "C" zx_handle_t get_root_resource(void);
 
@@ -40,9 +40,7 @@ const zx::unowned_resource root() {
 // guess/probe valid vectors like we can MMIO and still assume the tests are
 // valid.
 
-static bool probe_address_space(void) {
-  BEGIN_TEST;
-
+TEST(Resource, ProbeAddressSpace) {
   zx_status_t status;
   // Scan mmio in chunks until we find a gap that isn't exclusively reserved physical memory.
   uint64_t step = 0x100000000;
@@ -58,15 +56,11 @@ static bool probe_address_space(void) {
     // If ZX_OK wasn't returned, then we should see ZX_ERR_NOT_FOUND and nothing else.
     ASSERT_EQ(ZX_ERR_NOT_FOUND, status);
   }
-
-  END_TEST;
 }
 
 // This is a basic smoketest for creating resources and verifying the internals
 // returned by zx_object_get_info match what the caller passed for creation.
-static bool TestBasicActions(void) {
-  BEGIN_TEST;
-
+TEST(Resource, BasicActions) {
   zx::resource new_root;
   zx_info_resource_t info;
   char root_name[] = "root";
@@ -97,13 +91,10 @@ static bool TestBasicActions(void) {
   EXPECT_EQ(info.base, mmio_test_base);
   EXPECT_EQ(info.size, mmio_test_size);
   EXPECT_EQ(0, strncmp(info.name, mmio_name, ZX_MAX_NAME_LEN));
-
-  END_TEST;
 }
 
 // This test covers every path that returns ZX_ERR_INVALID_ARGS from the syscall.
-static bool TestInvalidArgs(void) {
-  BEGIN_TEST;
+TEST(Resource, InvalidArgs) {
   zx::resource temp;
   zx::resource fail_hnd;
   // test privilege inversion by seeing if an MMIO resource can other resources.
@@ -133,14 +124,11 @@ static bool TestInvalidArgs(void) {
   EXPECT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO | 0xFF0000, mmio_test_base,
                                  mmio_test_size, NULL, 0, &temp),
             ZX_ERR_INVALID_ARGS);
-
-  END_TEST;
 }
 
-static bool TestExclusiveShared(void) {
+TEST(Resource, ExclusiveShared) {
   // Try to create a shared  resource and ensure it blocks an exclusive
   // resource.
-  BEGIN_TEST;
   zx::resource mmio_1, mmio_2;
   EXPECT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE,
                                  mmio_test_base, mmio_test_size, NULL, 0, &mmio_1),
@@ -148,13 +136,11 @@ static bool TestExclusiveShared(void) {
   EXPECT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base, mmio_test_size, NULL,
                                  0, &mmio_2),
             ZX_ERR_NOT_FOUND);
-  END_TEST;
 }
 
-static bool TestSharedExclusive(void) {
-  // Try to create a shared  resource and ensure it blocks an exclusive
+TEST(Resource, SharedExclusive) {
+  // Try to create a shared resource and ensure it blocks an exclusive
   // resource.
-  BEGIN_TEST;
   zx::resource mmio_1, mmio_2;
   EXPECT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base, mmio_test_size, NULL,
                                  0, &mmio_1),
@@ -162,12 +148,10 @@ static bool TestSharedExclusive(void) {
   EXPECT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE,
                                  mmio_test_base, mmio_test_size, NULL, 0, &mmio_2),
             ZX_ERR_NOT_FOUND);
-  END_TEST;
 }
 
-static bool TestVmoCreation(void) {
+TEST(Resource, VmoCreation) {
   // Attempt to create a resource and then a vmo using that resource.
-  BEGIN_TEST;
   zx::resource mmio;
   zx::vmo vmo;
   ASSERT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base, mmio_test_size, NULL,
@@ -176,13 +160,11 @@ static bool TestVmoCreation(void) {
   EXPECT_EQ(
       zx_vmo_create_physical(mmio.get(), mmio_test_base, PAGE_SIZE, vmo.reset_and_get_address()),
       ZX_OK);
-  END_TEST;
 }
 
-static bool TestVmoCreationSmaller(void) {
+TEST(Resource, VmoCreationSmaller) {
   // Attempt to create a resource smaller than a page and ensure it still expands access to the
   // entire page.
-  BEGIN_TEST;
   zx::resource mmio;
   zx::vmo vmo;
   ASSERT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base, PAGE_SIZE / 2, NULL, 0,
@@ -191,13 +173,11 @@ static bool TestVmoCreationSmaller(void) {
   EXPECT_EQ(
       zx_vmo_create_physical(mmio.get(), mmio_test_base, PAGE_SIZE, vmo.reset_and_get_address()),
       ZX_OK);
-  END_TEST;
 }
 
-static bool TestVmoCreationUnaligned(void) {
+TEST(Resource, VmoCreationUnaligned) {
   // Attempt to create an unaligned resource and ensure that the bounds are rounded appropriately
   // to the proper PAGE_SIZE.
-  BEGIN_TEST;
   zx::resource mmio;
   zx::vmo vmo;
   ASSERT_EQ(zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base + 0x7800, 0x2000, NULL,
@@ -206,7 +186,6 @@ static bool TestVmoCreationUnaligned(void) {
   EXPECT_EQ(zx_vmo_create_physical(mmio.get(), mmio_test_base + 0x7000, 0x2000,
                                    vmo.reset_and_get_address()),
             ZX_OK);
-  END_TEST;
 }
 
 // Returns zero on failure.
@@ -221,9 +200,7 @@ static zx_rights_t get_vmo_rights(const zx::vmo& vmo) {
   return info.rights;
 }
 
-static bool TestVmoReplaceAsExecutable() {
-  BEGIN_TEST;
-
+TEST(Resource, VmoReplaceAsExecutable) {
   zx::resource vmex;
   zx::vmo vmo, vmo2, vmo3;
 
@@ -248,12 +225,9 @@ static bool TestVmoReplaceAsExecutable() {
   ASSERT_EQ(ZX_OK, zx_handle_duplicate(vmo.get(), ZX_RIGHT_READ, vmo2.reset_and_get_address()));
   EXPECT_EQ(ZX_ERR_WRONG_TYPE,
             zx_vmo_replace_as_executable(vmo2.get(), vmo.get(), vmo3.reset_and_get_address()));
-
-  END_TEST;
 }
 
-static bool TestCreateResourceSlice() {
-  BEGIN_TEST;
+TEST(Resource, CreateResourceSlice) {
   {
     zx::resource mmio, smaller_mmio;
     ASSERT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base, PAGE_SIZE,
@@ -323,7 +297,6 @@ static bool TestCreateResourceSlice() {
     EXPECT_EQ(ZX_OK, zx_vmo_create_physical(smaller_mmio.get(), mmio_test_base, PAGE_SIZE,
                                             vmo.reset_and_get_address()));
   }
-  END_TEST;
 }
 
 #if defined(__x86_64__)
@@ -332,8 +305,7 @@ static inline void outb(uint16_t port, uint8_t data) {
   __asm__ __volatile__("outb %1, %0" : : "dN"(port), "a"(data));
 }
 
-static bool test_ioports(void) {
-  BEGIN_TEST;
+TEST(Resource, Ioports) {
   // On x86 create an ioport resource and attempt to have the privilege bits
   // set for the process.
   zx::resource io;
@@ -363,23 +335,6 @@ static bool test_ioports(void) {
   EXPECT_EQ(zx_ioports_release(one_io.get(), io_base, io_size), ZX_ERR_OUT_OF_RANGE);
 
   EXPECT_EQ(zx_ioports_release(one_io.get(), 0x80, 1), ZX_OK);
-
-  END_TEST;
 }
-#endif
 
-BEGIN_TEST_CASE(resource_tests)
-RUN_TEST(probe_address_space);
-RUN_TEST(TestBasicActions);
-RUN_TEST(TestCreateResourceSlice);
-RUN_TEST(TestExclusiveShared);
-RUN_TEST(TestSharedExclusive);
-RUN_TEST(TestInvalidArgs);
-RUN_TEST(TestVmoCreation);
-RUN_TEST(TestVmoCreationSmaller);
-RUN_TEST(TestVmoCreationUnaligned);
-RUN_TEST(TestVmoReplaceAsExecutable);
-#if defined(__x86_64__)
-RUN_TEST(test_ioports);
-#endif
-END_TEST_CASE(resource_tests)
+#endif  // defined(__x86_64__)
