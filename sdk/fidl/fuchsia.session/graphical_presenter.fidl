@@ -1,0 +1,99 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.session;
+
+using fuchsia.ui.views;
+
+/// A `GraphicalPresenter` organizes and presents graphical views.
+///
+/// The presented views can be annotated with `fuchsia.session.Annotations` to communicate
+/// presentation properties to the `GraphicalPresenter`.
+///
+/// The `GraphicalPresenter` protocol is used, for example, when a session component written
+/// in Rust wants to delegate presenting element views to a child component written in
+/// Flutter.
+///
+/// For example, a session component that manages the lifecycle of elements may delegate
+/// presentation of element views to a different child component that implements
+/// `GraphicalPresenter`.
+protocol GraphicalPresenter {
+    /// Presents the view described by `view_spec`.
+    ///
+    /// `view_controller_request` allows clients to control aspects of the presented view.
+    /// If the `view_controller_request` is closed by the `GraphicalPresenter`, the client
+    /// can assume that the view is no longer being presented.
+    ///
+    /// If the client closes the `view_controller_request`, or there is no request, the
+    /// `GraphicalPresenter` may dismiss the view at any time with no signal to the
+    /// client.
+    ///
+    /// The client is notified of view events via the `ViewController`.
+    PresentView(ViewSpec view_spec, request<ViewController> view_controller_request);
+};
+
+/// Errors returned by `GraphicalPresenter.PresentView`.
+enum ViewControllerEpitaph {
+    /// The provided `ViewSpec` was missing a valid `ViewHolderToken`.
+    INVALID_VIEW_SPEC = 1;
+    /// The presenter rejected the request to present the view.
+    REJECTED = 2;
+};
+
+/// A `ViewSpec` contains all the information `GraphicalPresenter` needs to present a view.
+table ViewSpec {
+    /// The view holder token for the presented view.
+    /// Required.
+    1: fuchsia.ui.views.ViewHolderToken view_holder_token;
+
+    /// The annotations associated with the presented view.
+    ///
+    /// The presenter must observe incoming annotations and update the presentation
+    /// accordingly.
+    ///
+    /// For views that come from elements, the annotations are expected to be the same
+    /// as the annotations for the element. For example, if the `GraphicalPresenter`
+    /// component uses `ElementManager` to add an element to the session, and gives it
+    /// an annotation, the presenter can expect that annotation to be passed back in
+    /// `ViewSpec.annotations` for the associated view.
+    ///
+    /// Optional.
+    2: Annotations annotations;
+};
+
+/// A `ViewController` gives clients of `GraphicalPresenter` control over the views
+/// they present.
+///
+/// EPITAPH
+///
+/// This interface uses a FIDL epitaph to indicate that the view:
+/// - failed to be presented: `INVALID_VIEW_SPEC`
+/// - presentation was rejected: `REJECTED`
+/// - view was dismissed: `ZX_OK`
+protocol ViewController {
+    /// Annotates the view with |annotations|.
+    /// The presenter must observe incoming annotation requests and update
+    /// the presentation accordingly.
+    ///
+    /// The presenter must adhere to the following rules for annotation updates:
+    /// - Annotations are added when their `Annotation.key` was not present in a previous
+    ///   set of annotations.
+    /// - Annotations are updated when their `Annotation.value` is non-null.
+    /// - Annotations are deleted when their `Annotation.value` is null.
+    ///
+    /// When the `Annotate` call returns, clients can assume that annotations have
+    /// been updated and incorporated into the presentation.
+    Annotate(Annotations annotations) -> ();
+
+    /// Instructs the presenter to dismiss the associated view.
+    ///
+    /// This call results in the `ViewController` being closed with a
+    /// `ZX_OK` epitaph once any exit animation has been performed, the
+    /// view/view holder connection has been severed, and the component
+    /// instance serving the view can be terminated.
+    Dismiss();
+
+    /// Informs the view controller that the view was presented successfully.
+    -> OnPresented();
+};

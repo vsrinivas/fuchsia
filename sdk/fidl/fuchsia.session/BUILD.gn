@@ -8,10 +8,12 @@ fidl("fuchsia.session") {
   sources = [
     "annotation.fidl",
     "element_manager.fidl",
+    "graphical_presenter.fidl",
     "launcher.fidl",
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.url",
     "//zircon/system/fidl/fuchsia-io",
     "//zircon/system/fidl/fuchsia-io2",
