@@ -1,18 +1,23 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 import 'package:flutter/material.dart';
 import 'package:internationalization/strings.dart';
 import '../blocs/tabs_bloc.dart';
 import '../blocs/webpage_bloc.dart';
 import '../models/tabs_action.dart';
 
+// TODO(fxb/45264): Make the common factors as part of Ermine central styles.
 const _kTabBarHeight = 24.0;
 const _kMinTabWidth = 120.0;
-const _kSeparatorWidth = 1.0;
+const _kBorderWidth = 1.0;
 const _kTabPadding = EdgeInsets.symmetric(horizontal: _kTabBarHeight);
 const _kScrollToMargin = _kMinTabWidth / 3;
-const _kCloseMark = '×';
+const _kScrollAnimationDuration = 300;
+const _kIconSize = 14.0;
+
+enum _ScrollButtonType { left, right }
 
 @visibleForTesting
 double get kTabBarHeight => _kTabBarHeight;
@@ -21,13 +26,10 @@ double get kTabBarHeight => _kTabBarHeight;
 double get kMinTabWidth => _kMinTabWidth;
 
 @visibleForTesting
-double get kSeparatorWidth => _kSeparatorWidth;
+double get kBorderWidth => _kBorderWidth;
 
 @visibleForTesting
 double get kScrollToMargin => _kScrollToMargin;
-
-@visibleForTesting
-String get kCloseMark => _kCloseMark;
 
 /// The list of currently opened tabs in the browser.
 ///
@@ -59,7 +61,10 @@ class _TabsWidgetState extends State<TabsWidget>
   AnimationController _ghostController;
   AnimationController _leftNewGhostController;
   AnimationController _rightNewGhostController;
+
   final _scrollController = ScrollController();
+  final _leftScrollButton = _ScrollButton(_ScrollButtonType.left);
+  final _rightScrollButton = _ScrollButton(_ScrollButtonType.right);
 
   ThemeData _browserTheme;
 
@@ -133,24 +138,18 @@ class _TabsWidgetState extends State<TabsWidget>
                 border: Border(
                   top: BorderSide(
                     color: _browserTheme.accentColor,
-                    width: 1.0,
+                    width: _kBorderWidth,
                   ),
                   bottom: BorderSide(
                     color: _browserTheme.accentColor,
-                    width: 1.0,
+                    width: _kBorderWidth,
                   ),
                 ),
               ),
               child: LayoutBuilder(
                 builder: (context, constraints) => _tabWidth > _kMinTabWidth
                     ? _buildTabStacks()
-                    // TODO (fxb/45238): Change the ListView to a Custom scrollable list.
-                    // TODO (fxb/45239): Implement tab rearrangement for the scrollable tab list.
-                    : ListView(
-                        controller: _scrollController,
-                        scrollDirection: Axis.horizontal,
-                        children: _buildPageTabs(width: _kMinTabWidth),
-                      ),
+                    : _buildScrollableTabListWithButtons(),
               ),
             );
           }
@@ -167,6 +166,50 @@ class _TabsWidgetState extends State<TabsWidget>
   }
 
   // BUILDERS
+
+  Widget _buildScrollableTabListWithButtons() => Row(
+        children: <Widget>[
+          _buildScrollButton(_leftScrollButton),
+          Expanded(child: _buildScrollableTabList()),
+          _buildScrollButton(_rightScrollButton),
+        ],
+      );
+
+  Widget _buildScrollableTabList() => NotificationListener<ScrollNotification>(
+        onNotification: (scrollNotification) {
+          if (scrollNotification is ScrollEndNotification) {
+            _onScrollEnd(scrollNotification.metrics);
+          }
+          return true;
+        },
+        child: SingleChildScrollView(
+          controller: _scrollController,
+          scrollDirection: Axis.horizontal,
+          physics: NeverScrollableScrollPhysics(),
+          child: _buildTabStacks(),
+        ),
+      );
+
+  Widget _buildScrollButton(_ScrollButton button) => GestureDetector(
+        onTap: () => _onScrollButtonTap(button),
+        child: Container(
+          width: _kTabBarHeight,
+          height: _kTabBarHeight,
+          color: _browserTheme.buttonColor,
+          child: Center(
+            child: AnimatedBuilder(
+              animation: button.isEnabled,
+              builder: (_, __) => Icon(
+                button.icon,
+                color: button.isEnabled.value
+                    ? _browserTheme.primaryColor
+                    : _browserTheme.primaryColor.withOpacity(0.2),
+                size: _kIconSize,
+              ),
+            ),
+          ),
+        ),
+      );
 
   Widget _buildTabStacks() => Stack(
         children: <Widget>[
@@ -261,6 +304,7 @@ class _TabsWidgetState extends State<TabsWidget>
     renderingIndex ??= index;
 
     return Container(
+      key: Key('tab'),
       width: _tabWidth,
       height: _kTabBarHeight,
       decoration: BoxDecoration(
@@ -289,29 +333,9 @@ class _TabsWidgetState extends State<TabsWidget>
   Border _buildBorder(bool hasBorder) => Border(
         left: BorderSide(
           color: hasBorder ? _browserTheme.accentColor : Colors.transparent,
-          width: 1.0,
+          width: _kBorderWidth,
         ),
       );
-
-  // TODO(fxb/45239): This is an old code and will be removed.
-  List<Widget> _buildPageTabs({@required double width}) => widget.bloc.tabs
-      .map(_buildTab)
-      // add a 1pip separator before every tab,
-      // divide the rest of the space between tabs
-      .expand((item) => [
-            SizedBox(
-              width: _kSeparatorWidth,
-              child: Container(
-                color: _browserTheme.accentColor,
-              ),
-            ),
-            width == null
-                ? Expanded(child: item, flex: 1)
-                : SizedBox(child: item, width: width),
-          ])
-      // skip the first separator
-      .skip(1)
-      .toList();
 
   Widget _buildTab(WebPageBloc tab) => _TabWidget(
         bloc: tab,
@@ -332,8 +356,7 @@ class _TabsWidgetState extends State<TabsWidget>
     if (_scrollController.hasClients) {
       final viewportWidth = _scrollController.position.viewportDimension;
       final currentTabIndex = widget.bloc.currentTabIdx;
-      final currentTabPosition =
-          currentTabIndex * (_kMinTabWidth + _kSeparatorWidth);
+      final currentTabPosition = currentTabIndex * _kMinTabWidth;
 
       final offsetForLeftEdge = currentTabPosition - _kScrollToMargin;
       final offsetForRightEdge =
@@ -350,7 +373,7 @@ class _TabsWidgetState extends State<TabsWidget>
       if (newOffset != null) {
         _scrollController.animateTo(
           newOffset,
-          duration: Duration(milliseconds: 300),
+          duration: Duration(milliseconds: _kScrollAnimationDuration),
           curve: Curves.ease,
         );
       }
@@ -374,8 +397,11 @@ class _TabsWidgetState extends State<TabsWidget>
 
   void _onDragUpdate(DragUpdateDetails details) {
     double dragOffsetX = details.globalPosition.dx - _dragStartX;
+    double dragXMax = (_scrollController.hasClients)
+        ? (_tabWidth * widget.bloc.tabs.length) - _tabWidth
+        : (_tabListWidth - _tabWidth);
     _currentTabX.value = ((_tabWidth * widget.bloc.currentTabIdx) + dragOffsetX)
-        .clamp(0.0, _tabListWidth - _tabWidth);
+        .clamp(0.0, dragXMax);
 
     if (!_isAnimating) {
       if (_isOverlappingLeftTabHalf()) {
@@ -437,6 +463,35 @@ class _TabsWidgetState extends State<TabsWidget>
     _currentTabX.value = _tabWidth * _ghostIndex;
   }
 
+  void _onScrollButtonTap(_ScrollButton button) {
+    if (!button.isEnabled.value) {
+      return;
+    }
+
+    final currentOffset = _scrollController.offset;
+    final newOffset = (_tabListWidth / 2) * button.directionFactor;
+
+    _scrollController.animateTo(
+      currentOffset + newOffset,
+      duration: Duration(milliseconds: _kScrollAnimationDuration),
+      curve: Curves.ease,
+    );
+  }
+
+  void _onScrollEnd(ScrollMetrics metrics) {
+    if (_canScrollTo(_ScrollButtonType.left)) {
+      _leftScrollButton.enable();
+    } else {
+      _leftScrollButton.disable();
+    }
+
+    if (_canScrollTo(_ScrollButtonType.right)) {
+      _rightScrollButton.enable();
+    } else {
+      _rightScrollButton.disable();
+    }
+  }
+
   // CHECKERS
 
   bool _isOverlappingLeftTabHalf() {
@@ -460,6 +515,25 @@ class _TabsWidgetState extends State<TabsWidget>
       return true;
     }
     return false;
+  }
+
+  bool _canScrollTo(_ScrollButtonType direction) {
+    switch (direction) {
+      case _ScrollButtonType.left:
+        if (_scrollController.offset <= 0.0) {
+          return false;
+        }
+        return true;
+      case _ScrollButtonType.right:
+        if (_scrollController.offset >=
+            (_kMinTabWidth * widget.bloc.tabs.length -
+                _scrollController.position.viewportDimension)) {
+          return false;
+        }
+        return true;
+      default:
+        return true;
+    }
   }
 
   // ANIMATORS
@@ -535,23 +609,27 @@ class _TabWidgetState extends State<_TabWidget> {
                   ),
                 ),
                 Positioned(
-                  top: 0.0,
                   right: 0.0,
-                  bottom: 0.0,
                   child: AnimatedBuilder(
                     animation: _hovering,
                     builder: (_, child) => Offstage(
                       offstage: !(widget.selected || _hovering.value),
                       child: child,
                     ),
-                    child: AspectRatio(
-                      aspectRatio: 1.0,
+                    child: Padding(
+                      padding: EdgeInsets.all(4.0),
                       child: GestureDetector(
                         onTap: widget.onClose,
                         child: Container(
                           color: Colors.transparent,
                           alignment: Alignment.center,
-                          child: Text(_kCloseMark),
+                          child: Icon(
+                            Icons.clear,
+                            color: widget.selected
+                                ? baseTheme.primaryColor
+                                : baseTheme.accentColor,
+                            size: _kIconSize,
+                          ),
                         ),
                       ),
                     ),
@@ -564,4 +642,29 @@ class _TabWidgetState extends State<_TabWidget> {
       ),
     );
   }
+}
+
+class _ScrollButton {
+  final _ScrollButtonType type;
+  IconData icon;
+  final ValueNotifier<bool> isEnabled = ValueNotifier<bool>(true);
+  double directionFactor = 0.0;
+
+  _ScrollButton(this.type)
+      : assert(
+            type == _ScrollButtonType.left || type == _ScrollButtonType.right) {
+    switch (type) {
+      case _ScrollButtonType.left:
+        icon = Icons.keyboard_arrow_left;
+        directionFactor = -1.0;
+        break;
+      case _ScrollButtonType.right:
+        icon = Icons.keyboard_arrow_right;
+        directionFactor = 1.0;
+        break;
+    }
+  }
+
+  void disable() => isEnabled.value = false;
+  void enable() => isEnabled.value = true;
 }

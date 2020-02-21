@@ -19,10 +19,13 @@ import 'src/widgets/error_page.dart';
 import 'src/widgets/navigation_bar.dart';
 import 'src/widgets/tabs_widget.dart';
 
-const _kBackgroundColor = Color(0xFFE5E5E5);
-const _kForegroundColor = Color(0xFF191919);
-const _kSelectionColor = Color(0x26191919);
-const _kTextStyle = TextStyle(color: _kForegroundColor, fontSize: 14.0);
+// TODO(fxb/45264): Replace these with colors from the central Ermine styles.
+const _kErmineColor100 = Color(0xFFE5E5E5);
+const _kErmineColor200 = Color(0xFFBDBDBD);
+const _kErmineColor300 = Color(0xFF282828);
+const _kErmineColor400 = Color(0xFF0C0C0C);
+
+const _kTextStyle = TextStyle(color: _kErmineColor400, fontSize: 14.0);
 
 class App extends StatelessWidget {
   final AppModel model;
@@ -44,13 +47,14 @@ class App extends StatelessWidget {
                   title: Strings.browser,
                   theme: ThemeData(
                     fontFamily: 'RobotoMono',
-                    textSelectionColor: _kSelectionColor,
-                    textSelectionHandleColor: _kForegroundColor,
-                    hintColor: _kForegroundColor,
-                    cursorColor: _kForegroundColor,
-                    primaryColor: _kBackgroundColor,
-                    canvasColor: _kBackgroundColor,
-                    accentColor: _kForegroundColor,
+                    textSelectionColor: _kErmineColor200,
+                    textSelectionHandleColor: _kErmineColor400,
+                    hintColor: _kErmineColor400,
+                    cursorColor: _kErmineColor400,
+                    primaryColor: _kErmineColor100,
+                    canvasColor: _kErmineColor100,
+                    accentColor: _kErmineColor400,
+                    buttonColor: _kErmineColor300,
                     textTheme: TextTheme(
                       bodyText2: _kTextStyle,
                       subtitle1: _kTextStyle,
