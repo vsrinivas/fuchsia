@@ -142,6 +142,9 @@ executable("mesh_tests") {
     "//third_party/googletest:gtest",
   ]
 
+  # TODO(46752): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
