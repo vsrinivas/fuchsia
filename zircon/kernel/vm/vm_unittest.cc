@@ -2389,6 +2389,189 @@ static bool vmpl_merge_onto_test() {
   END_TEST;
 }
 
+void insert_region(RegionList* regions, vaddr_t base, size_t size) {
+  fbl::AllocChecker ac;
+  auto test_region = fbl::AdoptRef(new (&ac) VmAddressRegionDummy(base, size));
+  ASSERT(ac.check());
+  regions->InsertRegion(ktl::move(test_region));
+}
+
+bool remove_region(RegionList* regions, vaddr_t base) {
+  auto region = regions->FindRegion(base);
+  if (region == nullptr) {
+    return false;
+  }
+  regions->RemoveRegion(region.get());
+  return true;
+}
+
+static bool region_list_get_alloc_spot_test() {
+  BEGIN_TEST;
+
+  RegionList regions;
+  vaddr_t base = 0xFFFF000000000000;
+  vaddr_t size = 0x0001000000000000;
+  vaddr_t alloc_spot = 0;
+  // Set the align to be 0x1000.
+  uint8_t align_pow2 = 12;
+  // Allocate 1 page, should be allocated at [+0, +0x1000].
+  size_t alloc_size = 0x1000;
+  zx_status_t status = regions.GetAllocSpot(&alloc_spot, align_pow2, /*entropy=*/0, alloc_size,
+                                            base, size, /*prng=*/nullptr);
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_EQ(base, alloc_spot);
+  insert_region(&regions, alloc_spot, alloc_size);
+
+  // Manually insert a sub region at [+0x2000, 0x3000].
+  insert_region(&regions, base + 0x2000, alloc_size);
+
+  // Try to allocate 2 page, since the gap is too small, we would allocate at [0x3000, 0x5000].
+  alloc_size = 0x2000;
+  status = regions.GetAllocSpot(&alloc_spot, align_pow2, /*entropy=*/0, alloc_size, base, size,
+                                /*prng=*/nullptr);
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_EQ(base + 0x3000, alloc_spot);
+  insert_region(&regions, alloc_spot, alloc_size);
+
+  EXPECT_TRUE(remove_region(&regions, base + 0x2000));
+
+  // After we remove the region, we now have a gap at [0x1000, 0x3000].
+  alloc_size = 0x2000;
+  status = regions.GetAllocSpot(&alloc_spot, align_pow2, /*entropy=*/0, alloc_size, base, size,
+                                /*prng=*/nullptr);
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_EQ(base + 0x1000, alloc_spot);
+  insert_region(&regions, alloc_spot, alloc_size);
+
+  // Now we have fill all the gaps, next region should start at 0x5000.
+  alloc_size = 0x1000;
+  status = regions.GetAllocSpot(&alloc_spot, align_pow2, /*entropy=*/0, alloc_size, base, size,
+                                /*prng=*/nullptr);
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_EQ(base + 0x5000, alloc_spot);
+  insert_region(&regions, alloc_spot, alloc_size);
+
+  // Test for possible overflow cases. We try to allocate all the rest of the spaces. The last
+  // region should be from [0x6000, base + size - 1], we should be able to find this region and
+  // allocate all the size from it.
+  alloc_size = size - 0x6000;
+  status = regions.GetAllocSpot(&alloc_spot, align_pow2, /*entropy=*/0, alloc_size, base, size,
+                                /*prng=*/nullptr);
+  EXPECT_EQ(ZX_OK, status);
+  EXPECT_EQ(base + 0x6000, alloc_spot);
+
+  END_TEST;
+}
+
+static bool region_list_get_alloc_spot_no_memory_test() {
+  BEGIN_TEST;
+
+  RegionList regions;
+  vaddr_t base = 0xFFFF000000000000;
+  vaddr_t size = 0x0001000000000000;
+  // Set the align to be 0x1000.
+  uint8_t align_pow2 = 12;
+
+  insert_region(&regions, base, size - 0x1000);
+
+  size_t alloc_size = 0x2000;
+  vaddr_t alloc_spot = 0;
+  // There is only a 1 page gap, and we are asking for two pages, so ZX_ERR_NO_MEMORY should be
+  // returned.
+  zx_status_t status =
+      regions.GetAllocSpot(&alloc_spot, align_pow2, /*entropy=*/0, alloc_size, base, size,
+                           /*prng=*/nullptr);
+  EXPECT_EQ(ZX_ERR_NO_MEMORY, status);
+
+  END_TEST;
+}
+
+static bool region_list_find_region_test() {
+  BEGIN_TEST;
+
+  RegionList regions;
+  vaddr_t base = 0xFFFF000000000000;
+
+  auto region = regions.FindRegion(base);
+  EXPECT_EQ(region.get(), nullptr);
+
+  insert_region(&regions, base + 0x1000, 0x1000);
+
+  region = regions.FindRegion(base + 1);
+  EXPECT_EQ(region.get(), nullptr);
+
+  region = regions.FindRegion(base + 0x1001);
+  EXPECT_NE(region.get(), nullptr);
+  EXPECT_EQ(base + 0x1000, region->base());
+  EXPECT_EQ((size_t)0x1000, region->size());
+
+  END_TEST;
+}
+
+static bool region_list_include_or_higher_test() {
+  BEGIN_TEST;
+
+  RegionList regions;
+  vaddr_t base = 0xFFFF000000000000;
+
+  insert_region(&regions, base + 0x1000, 0x1000);
+
+  auto itr = regions.IncludeOrHigher(base + 1);
+  EXPECT_TRUE(itr.IsValid());
+  EXPECT_EQ(base + 0x1000, itr->base());
+  EXPECT_EQ((size_t)0x1000, itr->size());
+
+  itr = regions.IncludeOrHigher(base + 0x1001);
+  EXPECT_TRUE(itr.IsValid());
+  EXPECT_EQ(base + 0x1000, itr->base());
+  EXPECT_EQ((size_t)0x1000, itr->size());
+
+  itr = regions.IncludeOrHigher(base + 0x2000);
+  EXPECT_FALSE(itr.IsValid());
+
+  END_TEST;
+}
+
+static bool region_list_upper_bound_test() {
+  BEGIN_TEST;
+
+  RegionList regions;
+  vaddr_t base = 0xFFFF000000000000;
+
+  insert_region(&regions, base + 0x1000, 0x1000);
+
+  auto itr = regions.UpperBound(base + 0xFFF);
+  EXPECT_TRUE(itr.IsValid());
+  EXPECT_EQ(base + 0x1000, itr->base());
+  EXPECT_EQ((size_t)0x1000, itr->size());
+
+  itr = regions.UpperBound(base + 0x1000);
+  EXPECT_FALSE(itr.IsValid());
+
+  END_TEST;
+}
+
+static bool region_list_is_range_available_test() {
+  BEGIN_TEST;
+
+  RegionList regions;
+  vaddr_t base = 0xFFFF000000000000;
+
+  insert_region(&regions, base + 0x1000, 0x1000);
+  insert_region(&regions, base + 0x3000, 0x1000);
+
+  EXPECT_TRUE(regions.IsRangeAvailable(base, 0x1000));
+  EXPECT_FALSE(regions.IsRangeAvailable(base, 0x1001));
+  EXPECT_FALSE(regions.IsRangeAvailable(base + 1, 0x1000));
+  EXPECT_TRUE(regions.IsRangeAvailable(base + 0x2000, 1));
+  EXPECT_FALSE(regions.IsRangeAvailable(base + 0x1FFF, 0x2000));
+
+  EXPECT_TRUE(regions.IsRangeAvailable(0xFFFFFFFFFFFFFFFF, 1));
+  EXPECT_FALSE(regions.IsRangeAvailable(base, 0x0001000000000000));
+
+  END_TEST;
+}
+
 // Use the function name as the test name
 #define VM_UNITTEST(fname) UNITTEST(#fname, fname)
 
@@ -2424,6 +2607,12 @@ VM_UNITTEST(vmo_clone_removes_write_test)
 VM_UNITTEST(vmo_zero_scan_test)
 VM_UNITTEST(arch_noncontiguous_map)
 VM_UNITTEST(vm_kernel_region_test)
+VM_UNITTEST(region_list_get_alloc_spot_test)
+VM_UNITTEST(region_list_get_alloc_spot_no_memory_test)
+VM_UNITTEST(region_list_find_region_test)
+VM_UNITTEST(region_list_include_or_higher_test)
+VM_UNITTEST(region_list_upper_bound_test)
+VM_UNITTEST(region_list_is_range_available_test)
 // Uncomment for debugging
 // VM_UNITTEST(dump_all_aspaces)  // Run last
 UNITTEST_END_TESTCASE(vm_tests, "vm", "Virtual memory tests")

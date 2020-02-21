@@ -277,10 +277,10 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
     if (base_ == base && size_ != size) {
       // We need to remove ourselves from tree before updating base_,
       // since base_ is the tree key.
-      fbl::RefPtr<VmAddressRegionOrMapping> ref(parent_->subregions_.erase(*this));
+      fbl::RefPtr<VmAddressRegionOrMapping> ref(parent_->subregions_.RemoveRegion(this));
       base_ += size;
       object_offset_ += size;
-      parent_->subregions_.insert(ktl::move(ref));
+      parent_->subregions_.InsertRegion(ktl::move(ref));
     }
     size_ -= size;
 
@@ -623,7 +623,7 @@ zx_status_t VmMapping::DestroyLocked() {
   // Detach the now dead region from the parent
   if (parent_) {
     DEBUG_ASSERT(subregion_list_node_.InContainer());
-    parent_->RemoveSubregion(this);
+    parent_->subregions_.RemoveRegion(this);
   }
 
   // mark ourself as dead
@@ -787,7 +787,7 @@ void VmMapping::ActivateLocked() {
 
   state_ = LifeCycleState::ALIVE;
   object_->AddMappingLocked(this);
-  parent_->subregions_.insert(fbl::RefPtr<VmAddressRegionOrMapping>(this));
+  parent_->subregions_.InsertRegion(fbl::RefPtr<VmAddressRegionOrMapping>(this));
 }
 
 void VmMapping::Activate() {

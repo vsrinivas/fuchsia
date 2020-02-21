@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/crypto/prng.h>
 #include <lib/userabi/vdso.h>
 #include <pow2.h>
 #include <trace.h>
@@ -130,7 +131,7 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
     if (align_pow2 > 0 && (new_base & ((1ULL << align_pow2) - 1))) {
       return ZX_ERR_INVALID_ARGS;
     }
-    if (!IsRangeAvailableLocked(new_base, size)) {
+    if (!subregions_.IsRangeAvailable(new_base, size)) {
       if (is_specific_overwrite) {
         return OverwriteVmMapping(new_base, size, vmar_flags, vmo, vmo_offset, arch_mmu_flags, out);
       }
@@ -293,7 +294,7 @@ zx_status_t VmAddressRegion::DestroyLocked() {
     // Iterate through children destroying mappings. If we find a
     // subregion, stop so we can traverse down.
     fbl::RefPtr<VmAddressRegion> child_region = nullptr;
-    while (!cur->subregions_.is_empty() && !child_region) {
+    while (!cur->subregions_.IsEmpty() && !child_region) {
       VmAddressRegionOrMapping* child = &cur->subregions_.front();
       if (child->is_mapping()) {
         // DestroyLocked should remove this child from our list on success.
@@ -314,7 +315,7 @@ zx_status_t VmAddressRegion::DestroyLocked() {
       // All children are destroyed, so now destroy the current node.
       if (cur->parent_) {
         DEBUG_ASSERT(cur->subregion_list_node_.InContainer());
-        cur->parent_->RemoveSubregion(cur.get());
+        cur->parent_->subregions_.RemoveRegion(cur.get());
       }
       cur->state_ = LifeCycleState::DEAD;
       VmAddressRegion* cur_parent = cur->parent_;
@@ -328,38 +329,12 @@ zx_status_t VmAddressRegion::DestroyLocked() {
   return ZX_OK;
 }
 
-void VmAddressRegion::RemoveSubregion(VmAddressRegionOrMapping* region) {
-  subregions_.erase(*region);
-}
-
 fbl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegion(vaddr_t addr) {
   Guard<fbl::Mutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
     return nullptr;
   }
-  return FindRegionLocked(addr);
-}
-
-fbl::RefPtr<VmAddressRegionOrMapping> VmAddressRegion::FindRegionLocked(vaddr_t addr) {
-  canary_.Assert();
-
-  // Find the first region with a base greater than *addr*.  If a region
-  // exists for *addr*, it will be immediately before it.
-  auto itr = --subregions_.upper_bound(addr);
-  if (!itr.IsValid()) {
-    return nullptr;
-  }
-  // Subregion size should never be zero unless during unmapping which should never overlap with
-  // this operation.
-  DEBUG_ASSERT(itr->size() > 0);
-  vaddr_t region_end;
-  bool overflowed = add_overflow(itr->base(), itr->size() - 1, &region_end);
-  ASSERT(!overflowed);
-  if (itr->base() > addr || addr > region_end) {
-    return nullptr;
-  }
-
-  return itr.CopyPointer();
+  return subregions_.FindRegion(addr);
 }
 
 size_t VmAddressRegion::AllocatedPagesLocked() const {
@@ -371,8 +346,8 @@ size_t VmAddressRegion::AllocatedPagesLocked() const {
   }
 
   size_t sum = 0;
-  for (const auto& child : subregions_) {
-    sum += child.AllocatedPagesLocked();
+  for (auto child = subregions_.cbegin(); child != subregions_.cend(); child++) {
+    sum += child->AllocatedPagesLocked();
   }
   return sum;
 }
@@ -382,7 +357,7 @@ zx_status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags, PageRequest* p
   DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
   auto vmar = fbl::RefPtr(this);
-  while (auto next = vmar->FindRegionLocked(va)) {
+  while (auto next = vmar->subregions_.FindRegion(va)) {
     if (next->is_mapping()) {
       return next->PageFault(va, pf_flags, page_request);
     }
@@ -392,43 +367,9 @@ zx_status_t VmAddressRegion::PageFault(vaddr_t va, uint pf_flags, PageRequest* p
   return ZX_ERR_NOT_FOUND;
 }
 
-bool VmAddressRegion::IsRangeAvailableLocked(vaddr_t base, size_t size) {
-  DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
-  DEBUG_ASSERT(size > 0);
-
-  // Find the first region with base > *base*.  Since subregions_ has no
-  // overlapping elements, we just need to check this one and the prior
-  // child.
-
-  auto prev = subregions_.upper_bound(base);
-  auto next = prev--;
-
-  if (prev.IsValid()) {
-    vaddr_t prev_last_byte;
-    if (add_overflow(prev->base(), prev->size() - 1, &prev_last_byte)) {
-      return false;
-    }
-    if (prev_last_byte >= base) {
-      return false;
-    }
-  }
-
-  if (next.IsValid() && next != subregions_.end()) {
-    vaddr_t last_byte;
-    if (add_overflow(base, size - 1, &last_byte)) {
-      return false;
-    }
-    if (next->base() <= last_byte) {
-      return false;
-    }
-  }
-  return true;
-}
-
-bool VmAddressRegion::CheckGapLocked(const ChildList::iterator& prev,
-                                     const ChildList::iterator& next, vaddr_t* pva,
-                                     vaddr_t search_base, vaddr_t align, size_t region_size,
-                                     size_t min_gap, uint arch_mmu_flags) {
+bool VmAddressRegion::CheckGapLocked(VmAddressRegionOrMapping* prev, VmAddressRegionOrMapping* next,
+                                     vaddr_t* pva, vaddr_t search_base, vaddr_t align,
+                                     size_t region_size, size_t min_gap, uint arch_mmu_flags) {
   DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
   vaddr_t gap_beg;  // first byte of a gap
@@ -440,7 +381,7 @@ bool VmAddressRegion::CheckGapLocked(const ChildList::iterator& prev,
   DEBUG_ASSERT(pva);
 
   // compute the starting address of the gap
-  if (prev.IsValid()) {
+  if (prev != nullptr) {
     if (add_overflow(prev->base(), prev->size(), &gap_beg) ||
         add_overflow(gap_beg, min_gap, &gap_beg)) {
       goto not_found;
@@ -450,7 +391,7 @@ bool VmAddressRegion::CheckGapLocked(const ChildList::iterator& prev,
   }
 
   // compute the ending address of the gap
-  if (next.IsValid()) {
+  if (next != nullptr) {
     if (gap_beg == next->base()) {
       goto next_gap;  // no gap between regions
     }
@@ -481,11 +422,11 @@ bool VmAddressRegion::CheckGapLocked(const ChildList::iterator& prev,
   LTRACEF_LEVEL(2, "search base %#" PRIxPTR " gap_beg %#" PRIxPTR " end %#" PRIxPTR "\n",
                 search_base, gap_beg, gap_end);
 
-  prev_arch_mmu_flags = (prev.IsValid() && prev->is_mapping())
+  prev_arch_mmu_flags = (prev != nullptr && prev->is_mapping())
                             ? prev->as_vm_mapping()->arch_mmu_flags()
                             : ARCH_MMU_FLAG_INVALID;
 
-  next_arch_mmu_flags = (next.IsValid() && next->is_mapping())
+  next_arch_mmu_flags = (next != nullptr && next->is_mapping())
                             ? next->as_vm_mapping()->arch_mmu_flags()
                             : ARCH_MMU_FLAG_INVALID;
 
@@ -531,7 +472,7 @@ bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
       if (!ve->OnVmAddressRegion(vmar, depth)) {
         return false;
       }
-      if (!vmar->subregions_.is_empty()) {
+      if (!vmar->subregions_.IsEmpty()) {
         // If the sub-VMAR is not empty, iterate through its children.
         itr = vmar->subregions_.begin();
         end = vmar->subregions_.end();
@@ -543,7 +484,7 @@ bool VmAddressRegion::EnumerateChildrenLocked(VmEnumerator* ve, uint depth) {
       // If we are at a depth greater than the minimum, and have reached
       // the end of a sub-VMAR range, we ascend and continue iteration.
       do {
-        itr = up->subregions_.upper_bound(curr->base());
+        itr = up->subregions_.UpperBound(curr->base());
         if (itr.IsValid()) {
           break;
         }
@@ -572,8 +513,8 @@ void VmAddressRegion::Dump(uint depth, bool verbose) const {
   }
   printf("vmar %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx ref %d '%s'\n", this, base_,
          base_ + (size_ - 1), size_, ref_count_debug(), name_);
-  for (const auto& child : subregions_) {
-    child.Dump(depth + 1, verbose);
+  for (auto child = subregions_.cbegin(); child != subregions_.cend(); child++) {
+    child->Dump(depth + 1, verbose);
   }
 }
 
@@ -582,7 +523,7 @@ void VmAddressRegion::Activate() {
   DEBUG_ASSERT(aspace_->lock()->lock().IsHeld());
 
   state_ = LifeCycleState::ALIVE;
-  parent_->subregions_.insert(fbl::RefPtr<VmAddressRegionOrMapping>(this));
+  parent_->subregions_.InsertRegion(fbl::RefPtr<VmAddressRegionOrMapping>(this));
 }
 
 zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
@@ -607,7 +548,7 @@ zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  if (subregions_.is_empty()) {
+  if (subregions_.IsEmpty()) {
     return ZX_ERR_BAD_STATE;
   }
 
@@ -623,8 +564,8 @@ zx_status_t VmAddressRegion::RangeOp(uint32_t op, vaddr_t base, size_t size,
   DEBUG_ASSERT(size > 0);
   bool overflowed = add_overflow(base, size - 1, &end_addr_byte);
   ASSERT(!overflowed);
-  auto end = subregions_.upper_bound(end_addr_byte);
-  auto begin = UpperBoundInternalLocked(base);
+  auto end = subregions_.UpperBound(end_addr_byte);
+  auto begin = subregions_.IncludeOrHigher(base);
   vaddr_t op_end_byte = 0;
 
   for (auto curr = begin; curr != end; curr++) {
@@ -719,19 +660,6 @@ zx_status_t VmAddressRegion::UnmapAllowPartial(vaddr_t base, size_t size) {
                              true /* allow_partial_vmar */);
 }
 
-VmAddressRegion::ChildList::iterator VmAddressRegion::UpperBoundInternalLocked(vaddr_t base) {
-  // Find the first region with a base greater than *base*.  If a region
-  // exists for *base*, it will be immediately before it.
-  auto itr = --subregions_.upper_bound(base);
-  if (!itr.IsValid()) {
-    itr = subregions_.begin();
-  } else if (base >= itr->base() && base - itr->base() >= itr->size()) {
-    // If *base* isn't in this region, ignore it.
-    ++itr;
-  }
-  return itr;
-}
-
 zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
                                                  bool can_destroy_regions,
                                                  bool allow_partial_vmar) {
@@ -741,7 +669,7 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (subregions_.is_empty()) {
+  if (subregions_.IsEmpty()) {
     return ZX_OK;
   }
 
@@ -756,8 +684,8 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
   DEBUG_ASSERT(size > 0);
   bool overflowed = add_overflow(base, size - 1, &end_addr_byte);
   ASSERT(!overflowed);
-  auto end = subregions_.upper_bound(end_addr_byte);
-  auto begin = UpperBoundInternalLocked(base);
+  auto end = subregions_.UpperBound(end_addr_byte);
+  auto begin = subregions_.IncludeOrHigher(base);
 
   if (!allow_partial_vmar) {
     // Check if we're partially spanning a subregion, or aren't allowed to
@@ -823,9 +751,9 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
       if (allow_partial_vmar) {
         // If partial VMARs are allowed, we descend into sub-VMARs.
         fbl::RefPtr<VmAddressRegion> vmar = curr->as_vm_address_region();
-        if (!vmar->subregions_.is_empty()) {
-          begin = vmar->UpperBoundInternalLocked(base);
-          end = vmar->subregions_.upper_bound(end_addr_byte);
+        if (!vmar->subregions_.IsEmpty()) {
+          begin = vmar->subregions_.IncludeOrHigher(base);
+          end = vmar->subregions_.UpperBound(end_addr_byte);
           itr = begin;
           at_top = false;
         }
@@ -840,7 +768,7 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
       // sub-VMAR range, we ascend and continue iteration.
       do {
         // Use the stashed curr_base as if curr was a mapping we may have destroyed it.
-        begin = up->subregions_.upper_bound(curr_base);
+        begin = up->subregions_.UpperBound(curr_base);
         if (begin.IsValid()) {
           break;
         }
@@ -852,7 +780,7 @@ zx_status_t VmAddressRegion::UnmapInternalLocked(vaddr_t base, size_t size,
         // break out of the loop.
         break;
       }
-      end = up->subregions_.upper_bound(end_addr_byte);
+      end = up->subregions_.UpperBound(end_addr_byte);
       itr = begin;
     }
   }
@@ -877,7 +805,7 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (subregions_.is_empty()) {
+  if (subregions_.IsEmpty()) {
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -885,12 +813,12 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
   vaddr_t end_addr_byte = 0;
   bool overflowed = add_overflow(base, size - 1, &end_addr_byte);
   ASSERT(!overflowed);
-  const auto end = subregions_.upper_bound(end_addr_byte);
+  const auto end = subregions_.UpperBound(end_addr_byte);
 
   // Find the first region with a base greater than *base*.  If a region
   // exists for *base*, it will be immediately before it.  If *base* isn't in
   // that entry, bail since it's unmapped.
-  auto begin = --subregions_.upper_bound(base);
+  auto begin = --subregions_.UpperBound(base);
   if (!begin.IsValid() || begin->size() <= base - begin->base()) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -957,37 +885,6 @@ zx_status_t VmAddressRegion::Protect(vaddr_t base, size_t size, uint new_arch_mm
   return ZX_OK;
 }
 
-template <typename F>
-void VmAddressRegion::ForEachGap(F func, uint8_t align_pow2) {
-  const vaddr_t align = 1UL << align_pow2;
-
-  // Scan the regions list to find the gap to the left of each region.  We
-  // round up the end of the previous region to the requested alignment, so
-  // all gaps reported will be for aligned ranges.
-  vaddr_t prev_region_end = ROUNDUP(base_, align);
-  for (const auto& region : subregions_) {
-    if (region.base() > prev_region_end) {
-      const size_t gap = region.base() - prev_region_end;
-      if (!func(prev_region_end, gap)) {
-        return;
-      }
-    }
-    if (add_overflow(region.base(), region.size(), &prev_region_end)) {
-      // This region is already the last region.
-      return;
-    }
-    prev_region_end = ROUNDUP(prev_region_end, align);
-  }
-
-  // Grab the gap to the right of the last region (note that if there are no
-  // regions, this handles reporting the VMAR's whole span as a gap).
-  if (size_ > prev_region_end - base_) {
-    // This is equal to base_ + size_ - prev_region_end, but guarantee no overflow.
-    const size_t gap = size_ - (prev_region_end - base_);
-    func(prev_region_end, gap);
-  }
-}
-
 namespace {
 
 // Compute the number of allocation spots that satisfy the alignment within the
@@ -1014,86 +911,43 @@ zx_status_t VmAddressRegion::AllocSpotLocked(size_t size, uint8_t align_pow2, ui
 
   align_pow2 = fbl::max(align_pow2, static_cast<uint8_t>(PAGE_SIZE_SHIFT));
   const vaddr_t align = 1UL << align_pow2;
-
   // Ensure our candidate calculation shift will not overflow.
   const uint8_t entropy = aspace_->AslrEntropyBits(flags_ & VMAR_FLAG_COMPACT);
-  DEBUG_ASSERT(entropy < sizeof(size_t) * 8);
-  // Calculate the number of spaces that we can fit this allocation in.
-  size_t candidate_spaces = 0;
-  // This is the maximum number of spaces we need to consider based on our desired entropy.
-  const size_t max_candidate_spaces = 1ul << entropy;
-  ForEachGap(
-      [align, align_pow2, size, &candidate_spaces, &max_candidate_spaces](vaddr_t gap_base,
-                                                                          size_t gap_len) -> bool {
-        DEBUG_ASSERT(IS_ALIGNED(gap_base, align));
-        if (gap_len >= size) {
-          candidate_spaces += AllocationSpotsInRange(gap_len, size, align_pow2);
-        }
-        // Return early if we've already found more spaces than we will be considering.
-        if (candidate_spaces >= max_candidate_spaces) {
-          return false;
-        }
-        return true;
-      },
-      align_pow2);
-
-  if (candidate_spaces == 0) {
-    return ZX_ERR_NO_MEMORY;
+  vaddr_t alloc_spot = 0;
+  crypto::PRNG* prng = nullptr;
+  if (aspace_->is_aslr_enabled()) {
+    prng = &aspace_->AslrPrng();
   }
 
-  // Cap our candidate spaces to our entropy limit.
-  if (candidate_spaces > max_candidate_spaces) {
-    candidate_spaces = max_candidate_spaces;
+  zx_status_t status =
+      subregions_.GetAllocSpot(&alloc_spot, align_pow2, entropy, size, base_, size_, prng);
+  if (status != ZX_OK) {
+    return status;
   }
-
-  // Choose the index of the allocation to use.
-  //
-  // Avoid calling the PRNG when ASLR is disabled, as it won't be initialized.
-  size_t selected_index;
-  if (candidate_spaces > 1) {
-    DEBUG_ASSERT(aspace_->is_aslr_enabled());
-    selected_index = aspace_->AslrPrng().RandInt(candidate_spaces);
-  } else {
-    selected_index = 0;
-  }
-  DEBUG_ASSERT(selected_index < candidate_spaces);
-
-  // Find which allocation we picked.
-  vaddr_t alloc_spot = static_cast<vaddr_t>(-1);
-  ForEachGap(
-      [align_pow2, size, &alloc_spot, &selected_index](vaddr_t gap_base, size_t gap_len) -> bool {
-        if (gap_len < size) {
-          return true;
-        }
-
-        const size_t spots = AllocationSpotsInRange(gap_len, size, align_pow2);
-        if (selected_index < spots) {
-          alloc_spot = gap_base + (selected_index << align_pow2);
-          return false;
-        }
-        selected_index -= spots;
-        return true;
-      },
-      align_pow2);
-  ASSERT(alloc_spot != static_cast<vaddr_t>(-1));
-  ASSERT(IS_ALIGNED(alloc_spot, align));
 
   // Sanity check that the allocation fits.
   vaddr_t alloc_last_byte;
   bool overflowed = add_overflow(alloc_spot, size - 1, &alloc_last_byte);
   ASSERT(!overflowed);
-  auto after_iter = subregions_.upper_bound(alloc_last_byte);
+  auto after_iter = subregions_.UpperBound(alloc_last_byte);
   auto before_iter = after_iter;
 
-  if (after_iter == subregions_.begin() || subregions_.size() == 0) {
+  if (after_iter == subregions_.begin() || subregions_.IsEmpty()) {
     before_iter = subregions_.end();
   } else {
     --before_iter;
   }
 
   ASSERT(before_iter == subregions_.end() || before_iter.IsValid());
-
-  if (CheckGapLocked(before_iter, after_iter, spot, alloc_spot, align, size, 0, arch_mmu_flags) &&
+  VmAddressRegionOrMapping* before = nullptr;
+  if (before_iter.IsValid()) {
+    before = &(*before_iter);
+  }
+  VmAddressRegionOrMapping* after = nullptr;
+  if (after_iter.IsValid()) {
+    after = &(*after_iter);
+  }
+  if (CheckGapLocked(before, after, spot, alloc_spot, align, size, 0, arch_mmu_flags) &&
       *spot != static_cast<vaddr_t>(-1)) {
     return ZX_OK;
   }
@@ -1129,4 +983,182 @@ zx_status_t VmAddressRegion::ReserveSpace(const char* name, vaddr_t base, size_t
     return status;
   }
   return r->Protect(base, size, arch_mmu_flags);
+}
+
+fbl::RefPtr<VmAddressRegionOrMapping> RegionList::RemoveRegion(VmAddressRegionOrMapping* region) {
+  return regions_.erase(*region);
+}
+
+void RegionList::InsertRegion(fbl::RefPtr<VmAddressRegionOrMapping> region) {
+  regions_.insert(region);
+}
+
+fbl::RefPtr<VmAddressRegionOrMapping> RegionList::FindRegion(vaddr_t addr) const {
+  // Find the first region with a base greater than *addr*.  If a region
+  // exists for *addr*, it will be immediately before it.
+  auto itr = --regions_.upper_bound(addr);
+  if (!itr.IsValid()) {
+    return nullptr;
+  }
+  // Subregion size should never be zero unless during unmapping which should never overlap with
+  // this operation.
+  DEBUG_ASSERT(itr->size() > 0);
+  vaddr_t region_end;
+  bool overflowed = add_overflow(itr->base(), itr->size() - 1, &region_end);
+  ASSERT(!overflowed);
+  if (itr->base() > addr || addr > region_end) {
+    return nullptr;
+  }
+
+  return itr.CopyPointer();
+}
+
+RegionList::ChildList::iterator RegionList::IncludeOrHigher(vaddr_t base) {
+  // Find the first region with a base greater than *base*.  If a region
+  // exists for *base*, it will be immediately before it.
+  auto itr = regions_.upper_bound(base);
+  itr--;
+  if (!itr.IsValid()) {
+    itr = regions_.begin();
+  } else if (base >= itr->base() && base - itr->base() >= itr->size()) {
+    // If *base* isn't in this region, ignore it.
+    ++itr;
+  }
+  return itr;
+}
+
+RegionList::ChildList::iterator RegionList::UpperBound(vaddr_t base) {
+  return regions_.upper_bound(base);
+}
+
+bool RegionList::IsRangeAvailable(vaddr_t base, size_t size) const {
+  DEBUG_ASSERT(size > 0);
+
+  // Find the first region with base > *base*.  Since subregions_ has no
+  // overlapping elements, we just need to check this one and the prior
+  // child.
+
+  auto prev = regions_.upper_bound(base);
+  auto next = prev--;
+
+  if (prev.IsValid()) {
+    vaddr_t prev_last_byte;
+    if (add_overflow(prev->base(), prev->size() - 1, &prev_last_byte)) {
+      return false;
+    }
+    if (prev_last_byte >= base) {
+      return false;
+    }
+  }
+
+  if (next.IsValid() && next != regions_.end()) {
+    vaddr_t last_byte;
+    if (add_overflow(base, size - 1, &last_byte)) {
+      return false;
+    }
+    if (next->base() <= last_byte) {
+      return false;
+    }
+  }
+  return true;
+}
+
+zx_status_t RegionList::GetAllocSpot(vaddr_t* alloc_spot, uint8_t align_pow2, uint8_t entropy,
+                                     size_t size, vaddr_t parent_base, size_t parent_size,
+                                     crypto::PRNG* prng) const {
+  DEBUG_ASSERT(entropy < sizeof(size_t) * 8);
+  const vaddr_t align = 1UL << align_pow2;
+  // Calculate the number of spaces that we can fit this allocation in.
+  size_t candidate_spaces = 0;
+  // This is the maximum number of spaces we need to consider based on our desired entropy.
+  const size_t max_candidate_spaces = 1ul << entropy;
+
+  ForEachGap(
+      [align, align_pow2, size, &candidate_spaces, &max_candidate_spaces](vaddr_t gap_base,
+                                                                          size_t gap_len) -> bool {
+        DEBUG_ASSERT(IS_ALIGNED(gap_base, align));
+        if (gap_len >= size) {
+          candidate_spaces += AllocationSpotsInRange(gap_len, size, align_pow2);
+        }
+        // Return early if we've already found more spaces than we will be considering.
+        if (candidate_spaces >= max_candidate_spaces) {
+          return false;
+        }
+        return true;
+      },
+      align_pow2, parent_base, parent_size);
+
+  if (candidate_spaces == 0) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  // Cap our candidate spaces to our entropy limit.
+  if (candidate_spaces > max_candidate_spaces) {
+    candidate_spaces = max_candidate_spaces;
+  }
+
+  // Choose the index of the allocation to use.
+  //
+  // Avoid calling the PRNG when ASLR is disabled, as it won't be initialized.
+  size_t selected_index;
+  if (candidate_spaces > 1) {
+    DEBUG_ASSERT(prng);
+    selected_index = prng->RandInt(candidate_spaces);
+  } else {
+    selected_index = 0;
+  }
+  DEBUG_ASSERT(selected_index < candidate_spaces);
+
+  // Find which allocation we picked.
+  *alloc_spot = static_cast<vaddr_t>(-1);
+  ForEachGap(
+      [align_pow2, size, &alloc_spot, &selected_index](vaddr_t gap_base, size_t gap_len) -> bool {
+        if (gap_len < size) {
+          return true;
+        }
+
+        const size_t spots = AllocationSpotsInRange(gap_len, size, align_pow2);
+        if (selected_index < spots) {
+          *alloc_spot = gap_base + (selected_index << align_pow2);
+          return false;
+        }
+        selected_index -= spots;
+        return true;
+      },
+      align_pow2, parent_base, parent_size);
+  ASSERT(*alloc_spot != static_cast<vaddr_t>(-1));
+  ASSERT(IS_ALIGNED(*alloc_spot, align));
+  return ZX_OK;
+}
+
+template <typename F>
+void RegionList::ForEachGap(F func, uint8_t align_pow2, vaddr_t parent_base,
+                            size_t parent_size) const {
+  const vaddr_t align = 1UL << align_pow2;
+
+  // Scan the regions list to find the gap to the left of each region.  We
+  // round up the end of the previous region to the requested alignment, so
+  // all gaps reported will be for aligned ranges.
+  vaddr_t prev_region_end = ROUNDUP(parent_base, align);
+  for (const auto& region : regions_) {
+    if (region.base() > prev_region_end) {
+      const size_t gap = region.base() - prev_region_end;
+      if (!func(prev_region_end, gap)) {
+        return;
+      }
+    }
+    if (add_overflow(region.base(), region.size(), &prev_region_end)) {
+      // This region is already the last region.
+      return;
+    }
+    prev_region_end = ROUNDUP(prev_region_end, align);
+  }
+
+  // Grab the gap to the right of the last region (note that if there are no
+  // regions, this handles reporting the VMAR's whole span as a gap).
+  if (parent_size > prev_region_end - parent_base) {
+    // This is equal to parent_base + parent_size - prev_region_end, but guarantee no overflow.
+    const size_t gap = parent_size - (prev_region_end - parent_base);
+    func(prev_region_end, gap);
+  }
 }

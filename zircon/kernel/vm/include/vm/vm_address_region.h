@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_VM_ADDRESS_REGION_H_
 
 #include <assert.h>
+#include <lib/crypto/prng.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdint.h>
 #include <zircon/types.h>
@@ -129,6 +130,14 @@ class VmAddressRegionOrMapping : public fbl::RefCounted<VmAddressRegionOrMapping
   // Dump debug info
   virtual void Dump(uint depth, bool verbose) const = 0;
 
+  // utility so WAVL tree can find the intrusive node for the child list
+  struct WAVLTreeTraits {
+    static fbl::WAVLTreeNodeState<fbl::RefPtr<VmAddressRegionOrMapping>, bool>& node_state(
+        VmAddressRegionOrMapping& obj) {
+      return obj.subregion_list_node_;
+    }
+  };
+
  private:
   fbl::Canary<fbl::magic("VMRM")> canary_;
 
@@ -194,16 +203,62 @@ class VmAddressRegionOrMapping : public fbl::RefCounted<VmAddressRegionOrMapping
   // pointer back to our parent region (nullptr if root or destroyed)
   VmAddressRegion* parent_;
 
-  // utility so WAVL tree can find the intrusive node for the child list
-  struct WAVLTreeTraits {
-    static fbl::WAVLTreeNodeState<fbl::RefPtr<VmAddressRegionOrMapping>, bool>& node_state(
-        VmAddressRegionOrMapping& obj) {
-      return obj.subregion_list_node_;
-    }
-  };
-
   // node for element in list of parent's children.
   fbl::WAVLTreeNodeState<fbl::RefPtr<VmAddressRegionOrMapping>, bool> subregion_list_node_;
+};
+
+// A list of regions ordered by virtual address.
+class RegionList final {
+ public:
+  using ChildList = fbl::WAVLTree<vaddr_t, fbl::RefPtr<VmAddressRegionOrMapping>,
+                                  fbl::DefaultKeyedObjectTraits<vaddr_t, VmAddressRegionOrMapping>,
+                                  VmAddressRegionOrMapping::WAVLTreeTraits>;
+  // Remove *region* from the list, returns the removed region.
+  fbl::RefPtr<VmAddressRegionOrMapping> RemoveRegion(VmAddressRegionOrMapping* region);
+
+  // Insert *region* to the region list.
+  void InsertRegion(fbl::RefPtr<VmAddressRegionOrMapping> region);
+
+  // Find the region that covers addr, returns nullptr if not found.
+  fbl::RefPtr<VmAddressRegionOrMapping> FindRegion(vaddr_t addr) const;
+
+  // Find the region that contains |base|, or if that doesn't exist, the first region that contains
+  // an address greater than |base|.
+  ChildList::iterator IncludeOrHigher(vaddr_t base);
+
+  ChildList::iterator UpperBound(vaddr_t base);
+
+  // Check whether it would be valid to create a child in the range [base, base+size).
+  bool IsRangeAvailable(vaddr_t base, size_t size) const;
+
+  // Get the allocation spot that is free and large enough for the aligned size.
+  zx_status_t GetAllocSpot(vaddr_t* alloc_spot, uint8_t align_pow2, uint8_t entropy, size_t size,
+                           vaddr_t parent_base, size_t parent_size, crypto::PRNG* prng) const;
+
+  // Utility for allocators for iterating over gaps between allocations.
+  // F should have a signature of bool func(vaddr_t gap_base, size_t gap_size).
+  // If func returns false, the iteration stops.  gap_base will be aligned in accordance with
+  // align_pow2.
+  template <typename F>
+  void ForEachGap(F func, uint8_t align_pow2, vaddr_t parent_base, size_t parent_size) const;
+
+  // Returns whether the region list is empty.
+  bool IsEmpty() const { return regions_.is_empty(); }
+
+  // Returns the iterator points to the first element of the list.
+  VmAddressRegionOrMapping& front() { return regions_.front(); }
+
+  ChildList::iterator begin() { return regions_.begin(); }
+
+  ChildList::const_iterator cbegin() const { return regions_.cbegin(); }
+
+  ChildList::iterator end() { return regions_.end(); }
+
+  ChildList::const_iterator cend() const { return regions_.cend(); }
+
+ private:
+  // list of memory regions, indexed by base address.
+  ChildList regions_;
 };
 
 // A representation of a contiguous range of virtual address space
@@ -272,16 +327,10 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
   virtual bool EnumerateChildrenLocked(VmEnumerator* ve, uint depth);
 
   friend class VmMapping;
-  // Remove *region* from the subregion list
-  void RemoveSubregion(VmAddressRegionOrMapping* region);
 
   friend fbl::RefPtr<VmAddressRegion>;
 
  private:
-  using ChildList = fbl::WAVLTree<vaddr_t, fbl::RefPtr<VmAddressRegionOrMapping>,
-                                  fbl::DefaultKeyedObjectTraits<vaddr_t, VmAddressRegionOrMapping>,
-                                  WAVLTreeTraits>;
-
   DISALLOW_COPY_ASSIGN_AND_MOVE(VmAddressRegion);
 
   fbl::Canary<fbl::magic("VMAR")> canary_;
@@ -290,9 +339,6 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
   VmAddressRegion(VmAspace& aspace, vaddr_t base, size_t size, uint32_t vmar_flags);
   VmAddressRegion(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
                   const char* name);
-
-  // Version of FindRegion() that does not acquire the aspace lock
-  fbl::RefPtr<VmAddressRegionOrMapping> FindRegionLocked(vaddr_t addr);
 
   // Version of Destroy() that does not acquire the aspace lock
   zx_status_t DestroyLocked() override;
@@ -312,10 +358,6 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
                                  fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
                                  uint arch_mmu_flags, fbl::RefPtr<VmAddressRegionOrMapping>* out);
 
-  // Find the child of this VMAR that contains |base|, or if that doesn't
-  // exist, the first child that contains an address greater than |base|.
-  ChildList::iterator UpperBoundInternalLocked(vaddr_t base);
-
   // Implementation for Unmap() and OverwriteVmMapping() that does not hold
   // the aspace lock. If |can_destroy_regions| is true, then this may destroy
   // VMARs that it completely covers. If |allow_partial_vmar| is true, then
@@ -324,30 +366,16 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
   zx_status_t UnmapInternalLocked(vaddr_t base, size_t size, bool can_destroy_regions,
                                   bool allow_partial_vmar);
 
-  // internal utilities for interacting with the children list
-
-  // returns true if it would be valid to create a child in the
-  // range [base, base+size)
-  bool IsRangeAvailableLocked(vaddr_t base, size_t size);
-
   // returns true if we can meet the allocation between the given children,
   // and if so populates pva with the base address to use.
-  bool CheckGapLocked(const ChildList::iterator& prev, const ChildList::iterator& next,
-                      vaddr_t* pva, vaddr_t search_base, vaddr_t align, size_t region_size,
-                      size_t min_gap, uint arch_mmu_flags);
+  bool CheckGapLocked(VmAddressRegionOrMapping* prev, VmAddressRegionOrMapping* next, vaddr_t* pva,
+                      vaddr_t search_base, vaddr_t align, size_t region_size, size_t min_gap,
+                      uint arch_mmu_flags);
 
   // search for a spot to allocate for a region of a given size
   zx_status_t AllocSpotLocked(size_t size, uint8_t align_pow2, uint arch_mmu_flags, vaddr_t* spot);
 
-  // Utility for allocators for iterating over gaps between allocations
-  // F should have a signature of bool func(vaddr_t gap_base, size_t gap_size).
-  // If func returns false, the iteration stops.  gap_base will be aligned in
-  // accordance with align_pow2.
-  template <typename F>
-  void ForEachGap(F func, uint8_t align_pow2);
-
-  // list of subregions, indexed by base address
-  ChildList subregions_;
+  RegionList subregions_;
 
   const char name_[32] = {};
 };
@@ -357,6 +385,12 @@ class VmAddressRegion : public VmAddressRegionOrMapping {
 class VmAddressRegionDummy final : public VmAddressRegion {
  public:
   VmAddressRegionDummy() : VmAddressRegion() {}
+
+  // Used for testing.
+  VmAddressRegionDummy(vaddr_t base, size_t size) : VmAddressRegion() {
+    base_ = base;
+    size_ = size;
+  }
 
   zx_status_t CreateSubVmar(size_t offset, size_t size, uint8_t align_pow2, uint32_t vmar_flags,
                             const char* name, fbl::RefPtr<VmAddressRegion>* out) override {
