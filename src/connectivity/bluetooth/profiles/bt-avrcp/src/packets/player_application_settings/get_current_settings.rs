@@ -10,8 +10,8 @@ use super::*;
 /// See AVRCP Sec 6.5.3
 #[derive(Debug)]
 pub struct GetCurrentPlayerApplicationSettingValueCommand {
-    num_attribute_ids: u8,
-    attribute_ids: Vec<PlayerApplicationSettingAttributeId>,
+    pub num_attribute_ids: u8,
+    pub attribute_ids: Vec<PlayerApplicationSettingAttributeId>,
 }
 
 impl GetCurrentPlayerApplicationSettingValueCommand {
@@ -162,6 +162,29 @@ impl Encodable for GetCurrentPlayerApplicationSettingValueResponse {
             buf_idx += 2;
         }
         Ok(())
+    }
+}
+
+impl From<PlayerApplicationSettings> for GetCurrentPlayerApplicationSettingValueResponse {
+    fn from(src: PlayerApplicationSettings) -> GetCurrentPlayerApplicationSettingValueResponse {
+        let mut values = vec![];
+
+        if let Some(eq) = src.equalizer {
+            values.push((PlayerApplicationSettingAttributeId::Equalizer, u8::from(&eq)))
+        }
+        if let Some(repeat_mode) = src.repeat_status_mode {
+            values.push((
+                PlayerApplicationSettingAttributeId::RepeatStatusMode,
+                u8::from(&repeat_mode),
+            ))
+        }
+        if let Some(shuffle_mode) = src.shuffle_mode {
+            values.push((PlayerApplicationSettingAttributeId::ShuffleMode, u8::from(&shuffle_mode)))
+        }
+        if let Some(scan_mode) = src.scan_mode {
+            values.push((PlayerApplicationSettingAttributeId::ScanMode, u8::from(&scan_mode)))
+        }
+        GetCurrentPlayerApplicationSettingValueResponse::new(values)
     }
 }
 

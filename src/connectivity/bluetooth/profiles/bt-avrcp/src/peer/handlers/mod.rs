@@ -334,6 +334,23 @@ async fn handle_list_player_application_setting_values(
     Ok(Box::new(response))
 }
 
+async fn handle_get_current_player_application_setting_value(
+    cmd: GetCurrentPlayerApplicationSettingValueCommand,
+    target_delegate: Arc<TargetDelegate>,
+) -> Result<Box<dyn PacketEncodable>, StatusCode> {
+    let current_values: PlayerApplicationSettings = target_delegate
+        .send_get_player_application_settings_command(
+            cmd.attribute_ids.into_iter().map(|id| id.into()).collect(),
+        )
+        .await
+        .map(|v| v.into())
+        .map_err(|e| StatusCode::from(e))?;
+
+    let response: GetCurrentPlayerApplicationSettingValueResponse = current_values.into();
+
+    Ok(Box::new(response))
+}
+
 /// Sends status command response. Send's Implemented/Stable on response code on success.
 fn send_status_response(
     command: impl IncomingTargetCommand,
@@ -378,7 +395,6 @@ async fn handle_status_command(
         match status_command {
             StatusCommand::GetCapabilities(cmd) => handle_get_capabilities(cmd, delegate).await,
             /* Todo: implement
-            StatusCommand::GetCurrentPlayerApplicationSettingValue(_) => {}
             StatusCommand::GetPlayerApplicationSettingAttributeText(_) => {}
             StatusCommand::GetPlayerApplicationSettingValueText(_) => {}
             */
@@ -387,6 +403,9 @@ async fn handle_status_command(
             }
             StatusCommand::ListPlayerApplicationSettingValues(cmd) => {
                 handle_list_player_application_setting_values(cmd).await
+            }
+            StatusCommand::GetCurrentPlayerApplicationSettingValue(cmd) => {
+                handle_get_current_player_application_setting_value(cmd, delegate).await
             }
             StatusCommand::GetElementAttributes(cmd) => {
                 handle_get_element_attributes(cmd, delegate).await
@@ -655,7 +674,10 @@ mod test {
                     TargetHandlerRequest::GetPlayerApplicationSettings {
                         attribute_ids: _,
                         responder,
-                    } => responder.send(&mut Err(TargetAvcError::RejectedInternalError)),
+                    } => responder.send(&mut Ok(fidl_avrcp::PlayerApplicationSettings {
+                        shuffle_mode: Some(fidl_avrcp::ShuffleMode::Off),
+                        ..fidl_avrcp::PlayerApplicationSettings::new_empty()
+                    })),
                     TargetHandlerRequest::SetPlayerApplicationSettings {
                         requested_settings: _,
                         responder,
@@ -837,6 +859,41 @@ mod test {
             0x00, 0x05, // param_len, 5 bytes
             0x04, // Number of settings, 4
             0x01, 0x02, 0x03, 0x04, // The 4 values RepeatStatusMode can take.
+        ]
+        .to_vec();
+
+        let command = MockAvcCommand::new(
+            AvcPacketType::Command(AvcCommandType::Status),
+            AvcOpCode::VendorDependent,
+            packet_body,
+        )
+        .expect_body(expected_packet_response)
+        .expect_response_type(AvcResponseType::ImplementedStable);
+
+        cmd_handler.handle_command_internal(command).await
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn handle_get_player_application_settings_cmd() -> Result<(), Error> {
+        let target_proxy = create_dumby_target_handler(false);
+        let cmd_handler = create_command_handler(Some(target_proxy), None);
+
+        // generic vendor status command
+        let packet_body: Vec<u8> = [
+            0x13, // GetCurrentPlayerApplicationSettingValue pdu id
+            0x00, // Single packet
+            0x00, 0x02, // param_len, 2 bytes
+            0x01, // Number of settings: 1
+            0x03, // Attribute: ShuffleMode
+        ]
+        .to_vec();
+        let expected_packet_response: Vec<u8> = [
+            0x13, // GetCurrentPlayerApplicationSettingValue pdu id
+            0x00, // Single packet
+            0x00, 0x03, // param_len: 3 bytes
+            0x01, // Number of settings: 1
+            0x03, // Attribute: ShuffleMode
+            0x01, // Value: Off = 1
         ]
         .to_vec();
 

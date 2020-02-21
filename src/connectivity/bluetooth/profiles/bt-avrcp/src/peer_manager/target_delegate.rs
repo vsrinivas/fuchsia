@@ -185,6 +185,23 @@ impl TargetDelegate {
 
         send_command_fut.await.map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)?
     }
+
+    pub async fn send_get_player_application_settings_command(
+        &self,
+        attributes: Vec<fidl_avrcp::PlayerApplicationSettingAttributeId>,
+    ) -> Result<fidl_avrcp::PlayerApplicationSettings, TargetAvcError> {
+        let send_command_fut = {
+            let inner_guard = self.inner.lock();
+            match &inner_guard.target_handler {
+                Some(target_handler) => {
+                    target_handler.get_player_application_settings(&mut attributes.into_iter())
+                }
+                None => return Err(TargetAvcError::RejectedNoAvailablePlayers),
+            }
+        };
+
+        send_command_fut.await.map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)?
+    }
 }
 
 #[cfg(test)]
@@ -287,6 +304,52 @@ mod tests {
         match exec.run_until_stalled(&mut list_pas_fut) {
             Poll::Ready(attributes) => {
                 assert_eq!(attributes, Ok(vec![]));
+            }
+            _ => assert!(false, "unexpected state"),
+        }
+    }
+
+    #[test]
+    // Test getting correct response from a get_player_application_settings command.
+    fn test_get_player_application_settings() {
+        let mut exec = fasync::Executor::new().expect("executor::new failed");
+        let target_delegate = TargetDelegate::new();
+
+        let (target_proxy, mut target_stream) = create_proxy_and_stream::<TargetHandlerMarker>()
+            .expect("Error creating TargetHandler endpoint");
+        assert_matches!(target_delegate.set_target_handler(target_proxy), Ok(()));
+
+        let attributes = vec![fidl_avrcp::PlayerApplicationSettingAttributeId::ShuffleMode];
+        let get_pas_fut = target_delegate.send_get_player_application_settings_command(attributes);
+        pin_utils::pin_mut!(get_pas_fut);
+        assert!(exec.run_until_stalled(&mut get_pas_fut).is_pending());
+
+        let select_next_some_fut = target_stream.select_next_some();
+        pin_utils::pin_mut!(select_next_some_fut);
+        match exec.run_until_stalled(&mut select_next_some_fut) {
+            Poll::Ready(Ok(TargetHandlerRequest::GetPlayerApplicationSettings {
+                responder,
+                ..
+            })) => {
+                assert!(responder
+                    .send(&mut Ok(fidl_avrcp::PlayerApplicationSettings {
+                        shuffle_mode: Some(fidl_avrcp::ShuffleMode::Off),
+                        ..fidl_avrcp::PlayerApplicationSettings::new_empty()
+                    }))
+                    .is_ok());
+            }
+            _ => assert!(false, "unexpected stream state"),
+        };
+
+        match exec.run_until_stalled(&mut get_pas_fut) {
+            Poll::Ready(attributes) => {
+                assert_eq!(
+                    attributes,
+                    Ok(fidl_avrcp::PlayerApplicationSettings {
+                        shuffle_mode: Some(fidl_avrcp::ShuffleMode::Off),
+                        ..fidl_avrcp::PlayerApplicationSettings::new_empty()
+                    })
+                );
             }
             _ => assert!(false, "unexpected state"),
         }
