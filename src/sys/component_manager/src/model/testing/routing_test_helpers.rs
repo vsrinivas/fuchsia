@@ -27,9 +27,7 @@ use {
         CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE,
         OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_sys2 as fsys,
-    fuchsia_async::EHandle,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
     fuchsia_zircon::HandleBased,
     futures::lock::Mutex,
     futures::prelude::*,
@@ -43,7 +41,7 @@ use {
         sync::Arc,
     },
     tempfile::TempDir,
-    vfs::{self as fvfs, directory::entry::DirectoryEntry, execution_scope::ExecutionScope},
+    vfs::directory::entry::DirectoryEntry,
 };
 
 /// Construct a capability path for the hippo service.
@@ -959,13 +957,7 @@ pub mod capability_util {
         let flags = OPEN_RIGHT_READABLE;
 
         let vns_path = to_fvfs_path(path);
-        runtime.exposed_dir.root_dir.clone().open(
-            ExecutionScope::from_executor(Box::new(EHandle::local())),
-            flags,
-            open_mode,
-            vns_path,
-            server_end,
-        );
+        runtime.exposed_dir.open(flags, open_mode, vns_path, server_end);
     }
 
     // This function should reproduce the logic of `crate::storage::generate_storage_path`
@@ -993,10 +985,10 @@ pub mod capability_util {
     }
 
     /// Function to convert a CapabilityPath to a pseudo_fs_mt::Path
-    fn to_fvfs_path(path: &CapabilityPath) -> fvfs::path::Path {
+    fn to_fvfs_path(path: &CapabilityPath) -> vfs::path::Path {
         let full_path = format!("{}/{}", path.dirname, path.basename);
         let split_string = full_path.split('/').filter(|s| !s.is_empty()).collect::<Vec<_>>();
-        fvfs::path::Path::validate_and_split(split_string.join("/"))
+        vfs::path::Path::validate_and_split(split_string.join("/"))
             .expect("Failed to validate and split path")
     }
 }

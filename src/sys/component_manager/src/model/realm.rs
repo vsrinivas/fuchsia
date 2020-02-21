@@ -37,7 +37,7 @@ use {
         path::PathBuf,
         sync::{Arc, Weak},
     },
-    vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path},
+    vfs::path::Path,
 };
 
 /// A realm is a container for an individual component instance and its children.  It is provided
@@ -503,13 +503,7 @@ impl Realm {
         // directories using OPEN_FLAG_POSIX which automatically opens the new connection using
         // the same directory rights as the parent directory connection.
         let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
-        exposed_dir.root_dir.clone().open(
-            ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
-            flags,
-            fio::MODE_TYPE_DIRECTORY,
-            Path::empty(),
-            server_end,
-        );
+        exposed_dir.open(flags, fio::MODE_TYPE_DIRECTORY, Path::empty(), server_end);
         Ok(())
     }
 }
@@ -897,7 +891,11 @@ async fn stop_component_internal<'a>(
 pub mod tests {
     use {
         super::*,
-        crate::model::testing::mocks::{ControlMessage, ControllerActionResponse, MockController},
+        crate::model::testing::{
+            mocks::{ControlMessage, ControllerActionResponse, MockController},
+            routing_test_helpers::RoutingTest,
+            test_helpers::{self, ComponentDeclBuilder},
+        },
         fidl::endpoints,
         fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
         fuchsia_zircon::{self as zx, AsHandleRef, Koid},
@@ -1214,5 +1212,45 @@ pub mod tests {
             Poll::Ready(Ok(StopComponentSuccess::StoppedWithTimeoutRace)),
             exec.run_until_stalled(&mut stop_fut)
         );
+    }
+
+    // The "exposed dir" of a component is hosted by component manager on behalf of
+    // a running component. This test makes sure that when a component is stopped,
+    // the exposed dir is no longer being served.
+    #[fasync::run_singlethreaded(test)]
+    async fn stop_component_closes_exposed_dir() {
+        use crate::model::binding::Binder;
+        let test = RoutingTest::new(
+            "root",
+            vec![(
+                "root",
+                ComponentDeclBuilder::new()
+                    .expose(cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+                        source: cm_rust::ExposeSource::Self_,
+                        source_path: "/svc/foo".try_into().expect("bad cap path"),
+                        target: cm_rust::ExposeTarget::Realm,
+                        target_path: "/svc/foo".try_into().expect("bad cap path"),
+                    }))
+                    .build(),
+            )],
+        )
+        .await;
+        let realm = test.model.bind(&vec![].into()).await.expect("failed to bind");
+        let (node_proxy, server_end) =
+            fidl::endpoints::create_proxy::<fio::NodeMarker>().expect("failed to create endpoints");
+        realm.open_exposed(server_end.into_channel()).await.expect("failed to open exposed dir");
+
+        // Ensure that the directory is open to begin with.
+        let proxy = DirectoryProxy::new(node_proxy.into_channel().unwrap());
+        assert!(test_helpers::dir_contains(&proxy, "svc", "foo").await);
+
+        Realm::stop_instance(Arc::clone(&test.model), &realm, false)
+            .await
+            .expect("failed to stop instance");
+
+        // The directory should have received a PEER_CLOSED signal.
+        fasync::OnSignals::new(&proxy.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED)
+            .await
+            .expect("failed waiting for channel to close");
     }
 }
