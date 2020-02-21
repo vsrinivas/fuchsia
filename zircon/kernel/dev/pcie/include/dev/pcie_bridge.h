@@ -35,6 +35,8 @@ class PcieBridge : public PcieDevice, public PcieUpstreamNode {
   // Device overrides
   void Unplug() override;
 
+  zx_status_t EnableBusMasterUpstream(bool enabled) override;
+
   // UpstreamNode overrides
   RegionAllocator& pf_mmio_regions() final { return pf_mmio_regions_; }
   RegionAllocator& mmio_lo_regions() final { return mmio_lo_regions_; }
@@ -77,13 +79,14 @@ class PcieBridge : public PcieDevice, public PcieUpstreamNode {
   RegionAllocator::Region::UPtr mmio_window_;
   RegionAllocator::Region::UPtr pio_window_;
 
-  uint64_t pf_mem_base_;
-  uint64_t pf_mem_limit_;
-  uint32_t mem_base_;
-  uint32_t mem_limit_;
-  uint32_t io_base_;
-  uint32_t io_limit_;
-  bool supports_32bit_pio_;
+  size_t downstream_bus_mastering_cnt_ = 0;
+  uint64_t pf_mem_base_ = 0;
+  uint64_t pf_mem_limit_ = 0;
+  uint32_t mem_base_ = 0;
+  uint32_t mem_limit_ = 0;
+  uint32_t io_base_ = 0;
+  uint32_t io_limit_ = 0;
+  bool supports_32bit_pio_ = false;
   fbl::RefPtr<PcieDevice> ScanDevice(const PciConfig* cfg, uint dev_id, uint func_id);
 };
 

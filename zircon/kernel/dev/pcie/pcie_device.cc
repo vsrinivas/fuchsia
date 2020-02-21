@@ -359,6 +359,20 @@ void PcieDevice::ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) {
   }
 }
 
+zx_status_t PcieDevice::EnableBusMaster(bool enabled) {
+  if (enabled && disabled_) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  zx_status_t st =
+      ModifyCmd(enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN, enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
+  if (st != ZX_OK) {
+    return st;
+  }
+
+  return upstream_->EnableBusMasterUpstream(enabled);
+}
+
 zx_status_t PcieDevice::ProbeBarsLocked() {
   DEBUG_ASSERT(cfg_);
   DEBUG_ASSERT(dev_lock_.lock().IsHeld());

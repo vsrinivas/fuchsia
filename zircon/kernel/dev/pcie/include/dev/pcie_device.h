@@ -19,6 +19,7 @@
 #include <dev/pcie_caps.h>
 #include <dev/pcie_irqs.h>
 #include <dev/pcie_ref_counted.h>
+#include <dev/pcie_upstream_node.h>
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
@@ -28,7 +29,6 @@
 
 /* Fwd decls */
 class PcieBusDriver;
-class PcieUpstreamNode;
 
 /*
  * struct used to fetch information about a config
@@ -102,13 +102,7 @@ class PcieDevice {
    * master.
    * @return A zx_status_t indicating success or failure of the operation.
    */
-  inline zx_status_t EnableBusMaster(bool enabled) {
-    if (enabled && disabled_)
-      return ZX_ERR_BAD_STATE;
-
-    return ModifyCmd(enabled ? 0 : PCI_COMMAND_BUS_MASTER_EN,
-                     enabled ? PCI_COMMAND_BUS_MASTER_EN : 0);
-  }
+  zx_status_t EnableBusMaster(bool enabled);
 
   /*
    * Enable or disable PIO access in a device's configuration.

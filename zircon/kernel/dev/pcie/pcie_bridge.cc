@@ -22,6 +22,8 @@
 #include <lk/init.h>
 #include <vm/vm.h>
 
+#include <zircon/errors.h>
+
 #define LOCAL_TRACE 0
 
 PcieBridge::PcieBridge(PcieBusDriver& bus_drv, uint bus_id, uint dev_id, uint func_id, uint mbus_id)
@@ -116,6 +118,39 @@ zx_status_t PcieBridge::Init(PcieUpstreamNode& upstream) {
   }
   // Release the device lock, then recurse and scan for downstream devices.
   ScanDownstream();
+  return ZX_OK;
+}
+
+zx_status_t PcieBridge::EnableBusMasterUpstream(bool enabled) {
+  TRACE_ENTRY;
+  // If being asked to disable Bus Mastering then we should ensure that no other
+  // devices downstream of this bridge still have it enabled. If any do then we
+  // leave BusMastering enabled.
+  {
+    Guard<Mutex> guard{&dev_lock_};
+    if (enabled) {
+      downstream_bus_mastering_cnt_++;
+    } else {
+      if (downstream_bus_mastering_cnt_ == 0) {
+        return ZX_ERR_BAD_STATE;
+      }
+      downstream_bus_mastering_cnt_--;
+    }
+  }
+
+  TRACEF("UpstreamNode bm cnt: %zu\n", downstream_bus_mastering_cnt_);
+  // Only make a change to the bridge's configuration in a case where the
+  // state of the children has changed meaningfully.
+  if (downstream_bus_mastering_cnt_ == 0) {
+    TRACEF("Disabling BusMastering\n");
+    return PcieDevice::EnableBusMaster(false);
+  }
+
+  if (downstream_bus_mastering_cnt_ == 1 && enabled) {
+    TRACEF("Enabling BusMastering\n");
+    return PcieDevice::EnableBusMaster(true);
+  }
+
   return ZX_OK;
 }
 

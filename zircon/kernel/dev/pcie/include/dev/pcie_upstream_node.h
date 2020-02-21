@@ -37,6 +37,7 @@ class PcieUpstreamNode {
   // Require that derived classes implement ref counting.
   PCIE_REQUIRE_REFCOUNTED;
 
+  virtual zx_status_t EnableBusMasterUpstream(bool enabled) = 0;
   fbl::RefPtr<PcieDevice> GetDownstream(uint ndx) { return bus_drv_.GetDownstream(*this, ndx); }
   PcieBusDriver& driver() { return bus_drv_; }
 
