@@ -103,14 +103,9 @@ int Sherlock::Thread() {
     zxlogf(ERROR, "PwmInit() failed\n");
   }
 
-  /*
-  // Disabling thermal driver since it sets the A73 cores
-  // frequency and voltage incorrectly.
-  // TODO(35875): Re-enable when this is fixed.
   if (ThermalInit() != ZX_OK) {
     zxlogf(ERROR, "ThermalInit() failed\n");
   }
-  */
 
   if (DisplayInit() != ZX_OK) {
     zxlogf(ERROR, "DisplayInit()failed\n");

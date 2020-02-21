@@ -341,9 +341,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sys/platform/05:00:14/clocks",
       "sys/platform/05:00:2/aml-i2c",
       "sys/platform/05:00:10/aml-canvas",
-      // Disabling this driver temporarily
-      // TODO(35875): Re-enable when this is fixed.
-      //"aml-thermal/thermal",
+      "aml-thermal/thermal",
       "sys/platform/00:00:1e/dw-dsi",
       "display/astro-display/display-controller",
       "sys/platform/05:00:18/aml-usb-phy-v2",
