@@ -1827,7 +1827,7 @@ TEST(NetStreamTest, ResetOnFullReceiveBufferShutdown) {
 #endif
 
   // Close the server to trigger a TCP Reset now that linger is 0.
-  EXPECT_EQ(close(server.get()), 0);
+  EXPECT_EQ(close(server.release()), 0);
 
   // Shutdown the client side to unblock the client receive loop.
 #if defined(__linux__)
