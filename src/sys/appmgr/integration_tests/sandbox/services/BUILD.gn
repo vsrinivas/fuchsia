@@ -25,6 +25,10 @@ sandbox_test_package("some_services") {
     "//zircon/system/fidl/fuchsia-debugdata",
     "//zircon/system/fidl/fuchsia-process",
   ]
+
+  # TODO(46761): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   environments = basic_envs
 }
 
@@ -37,6 +41,10 @@ sandbox_test_package("no_services") {
     "//third_party/googletest:gmock",
     "//zircon/system/fidl/fuchsia-debugdata",
   ]
+
+  # TODO(46761): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   environments = basic_envs
 }
 
@@ -50,5 +58,9 @@ sandbox_test_package("multiple_components") {
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
     "//third_party/googletest:gmock",
   ]
+
+  # TODO(46761): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   environments = basic_envs
 }
