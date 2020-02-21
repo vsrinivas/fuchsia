@@ -152,6 +152,14 @@ std::string FormatConsoleString(const std::string& input);
 // returned target should be used instead of the one from the command (it may be a new one).
 ErrOr<Target*> GetRunnableTarget(ConsoleContext* context, const Command& cmd);
 
+// If the system has at least one running process, returns no error. If not, returns an error
+// describing that there must be a process running.
+//
+// When doing global things like System::Continue(), it will succeed if there are no running
+// programs (it will successfully continue all 0 processes). This is confusing to the user so this
+// function is used to check first.
+Err VerifySystemHasRunningProcess(System* system);
+
 // Callback for the process/job commands that displays the current process/job and what happened.
 // The verb affects the message printed to the screen.
 //

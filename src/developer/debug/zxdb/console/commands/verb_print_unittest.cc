@@ -74,4 +74,57 @@ TEST_F(VerbPrint, TypeOverrides) {
   EXPECT_EQ("More than one type override (-c, -d, -u, -x) specified.", event.output.AsString());
 }
 
+// A client end-to-end test for vector register formats.
+TEST_F(VerbPrint, VectorRegisterFormat) {
+  // Thread needs to be stopped. We can't use InjectExceptionWithStack because we want the real
+  // frame implementation which provides the real EvalContext and SymbolDataSource.
+  debug_ipc::NotifyException exception;
+  exception.type = debug_ipc::ExceptionType::kSingleStep;
+  exception.thread.process_koid = kProcessKoid;
+  exception.thread.thread_koid = kThreadKoid;
+  exception.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+  exception.thread.frames.emplace_back(0x10000, 0x20000, 0x3000);
+  InjectException(exception);
+
+  // Don't care about the stop notification.
+  loop().RunUntilNoTasks();
+  console().FlushOutputEvents();
+
+  // Provide a frame with a value for register xmm0 (the default architecture of the test harness is
+  // X64 so use it's vector registers).
+  ASSERT_EQ(debug_ipc::Arch::kX64, session().arch());
+  mock_remote_api()->SetRegisterCategory(
+      debug_ipc::RegisterCategory::kVector,
+      {debug_ipc::Register(
+          debug_ipc::RegisterID::kX64_xmm0,
+          std::vector<uint8_t>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf})});
+
+  console().ProcessInputLine("set vector-format i64");
+  console().GetOutputEvent();  // Eat output from the set.
+
+  // The default architecture of the test harness is ARM64 so use it's vector registers.
+  console().ProcessInputLine("print -x xmm0");
+  loop().RunUntilNoTasks();
+  auto event = console().GetOutputEvent();
+  EXPECT_EQ("{0x706050403020100, 0xf0e0d0c0b0a0908}", event.output.AsString());
+
+  console().ProcessInputLine("set vector-format u16");
+  console().GetOutputEvent();  // Eat output from the set.
+  console().ProcessInputLine("print -x xmm0");
+  loop().RunUntilNoTasks();
+  event = console().GetOutputEvent();
+  EXPECT_EQ(
+      "{\n"
+      "  [0] = 0x100\n"
+      "  [1] = 0x302\n"
+      "  [2] = 0x504\n"
+      "  [3] = 0x706\n"
+      "  [4] = 0x908\n"
+      "  [5] = 0xb0a\n"
+      "  [6] = 0xd0c\n"
+      "  [7] = 0xf0e\n"
+      "}",
+      event.output.AsString());
+}
+
 }  // namespace zxdb

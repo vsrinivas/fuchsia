@@ -603,6 +603,14 @@ ErrOr<Target*> GetRunnableTarget(ConsoleContext* context, const Command& cmd) {
   return new_target;
 }
 
+Err VerifySystemHasRunningProcess(System* system) {
+  for (const Target* target : system->GetTargets()) {
+    if (target->GetProcess())
+      return Err();
+  }
+  return Err("No processes are running.");
+}
+
 void ProcessCommandCallback(fxl::WeakPtr<Target> target, bool display_message_on_success,
                             const Err& err, CommandCallback callback) {
   if (display_message_on_success || err.has_error()) {
