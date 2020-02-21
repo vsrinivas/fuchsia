@@ -349,6 +349,17 @@ func getSockOptIPv6(ep tcpip.Endpoint, name int16) (interface{}, *tcpip.Error) {
 		}
 		return int32(0), nil
 
+	case C.IPV6_RECVTCLASS:
+		v, err := ep.GetSockOptBool(tcpip.ReceiveTClassOption)
+		if err != nil {
+			return nil, err
+		}
+		var o int32
+		if v {
+			o = 1
+		}
+		return o, nil
+
 	default:
 		syslog.Infof("unimplemented getsockopt: SOL_IPV6 name=%d", name)
 
@@ -712,6 +723,20 @@ func setSockOptIPv6(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 			v = 0
 		}
 		return ep.SetSockOpt(tcpip.IPv6TrafficClassOption(v))
+
+	case C.IPV6_RECVTCLASS:
+		// Although this is a boolean int flag, linux enforces that it is not
+		// a char. This is a departure for how this is handled for the
+		// comparable IPv4 option.
+		// https://github.com/torvalds/linux/blob/f2850dd5ee015bd7b77043f731632888887689c7/net/ipv6/ipv6_sockglue.c#L345
+		if len(optVal) < sizeOfInt32 {
+			return tcpip.ErrInvalidOptionValue
+		}
+		v, err := parseIntOrChar(optVal)
+		if err != nil {
+			return nil
+		}
+		return ep.SetSockOptBool(tcpip.ReceiveTClassOption, v != 0)
 
 	default:
 		syslog.Infof("unimplemented setsockopt: SOL_IPV6 name=%d optVal=%x", name, optVal)

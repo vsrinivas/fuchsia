@@ -906,10 +906,6 @@ TEST_P(SocketOptsTest, ReceiveTOSDefault) {
   if (IsTCP()) {
     GTEST_SKIP() << "Skip receive TOS tests on TCP socket";
   }
-  // TODO(37284): Enable IPV6_RECVTCLASS
-  if (IsIPv6()) {
-    GTEST_SKIP() << "IPV6_RECVTCLASS not yet supported: issue 37284";
-  }
 
   fbl::unique_fd s;
   ASSERT_TRUE(s = NewSocket()) << strerror(errno);
@@ -927,10 +923,6 @@ TEST_P(SocketOptsTest, ReceiveTOSDefault) {
 TEST_P(SocketOptsTest, SetReceiveTOS) {
   if (IsTCP()) {
     GTEST_SKIP() << "Skip receive TOS tests on TCP socket";
-  }
-  // TODO(37284): Enable IPV6_RECVTCLASS
-  if (IsIPv6()) {
-    GTEST_SKIP() << "IPV6_RECVTCLASS not yet supported: issue 37284";
   }
 
   fbl::unique_fd s;
@@ -956,13 +948,63 @@ TEST_P(SocketOptsTest, SetReceiveTOS) {
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
-TEST_P(SocketOptsTest, SetReceiveTOSChar) {
+// Tests that a two byte RECVTOS/RECVTCLASS optval is acceptable.
+TEST_P(SocketOptsTest, SetReceiveTOSShort) {
   if (IsTCP()) {
     GTEST_SKIP() << "Skip receive TOS tests on TCP socket";
   }
-  // TODO(37284): Enable IPV6_RECVTCLASS
+
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  constexpr char kSockOptOn2Byte[] = {kSockOptOn, 0};
+  constexpr char kSockOptOff2Byte[] = {kSockOptOff, 0};
+
+  SockOption t = GetRecvTOSOption();
   if (IsIPv6()) {
-    GTEST_SKIP() << "IPV6_RECVTCLASS not yet supported: issue 37284";
+    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn2Byte, sizeof(kSockOptOn2Byte)),
+              -1)
+        << strerror(errno);
+    EXPECT_EQ(errno, EINVAL) << strerror(errno);
+  } else {
+    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn2Byte, sizeof(kSockOptOn2Byte)),
+              0)
+        << strerror(errno);
+  }
+
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  if (IsIPv6()) {
+    EXPECT_EQ(get, kSockOptOff);
+  } else {
+    EXPECT_EQ(get, kSockOptOn);
+  }
+
+  if (IsIPv6()) {
+    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOff2Byte, sizeof(kSockOptOff2Byte)),
+              -1)
+        << strerror(errno);
+    EXPECT_EQ(errno, EINVAL) << strerror(errno);
+  } else {
+    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOff2Byte, sizeof(kSockOptOff2Byte)),
+              0)
+        << strerror(errno);
+  }
+
+  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+  EXPECT_EQ(get_len, sizeof(get));
+  EXPECT_EQ(get, kSockOptOff);
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+// Tests that a one byte sized optval is acceptable for RECVTOS and not for
+// RECVTCLASS.
+TEST_P(SocketOptsTest, SetReceiveTOSChar) {
+  if (IsTCP()) {
+    GTEST_SKIP() << "Skip receive TOS tests on TCP socket";
   }
 
   fbl::unique_fd s;
@@ -972,17 +1014,37 @@ TEST_P(SocketOptsTest, SetReceiveTOSChar) {
   constexpr char kSockOptOffChar = kSockOptOff;
 
   SockOption t = GetRecvTOSOption();
-  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar, sizeof(kSockOptOnChar)), 0)
-      << strerror(errno);
+  if (IsIPv6()) {
+    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar, sizeof(kSockOptOnChar)),
+              -1)
+        << strerror(errno);
+    EXPECT_EQ(errno, EINVAL) << strerror(errno);
+  } else {
+    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOnChar, sizeof(kSockOptOnChar)),
+              0)
+        << strerror(errno);
+  }
 
   int get = -1;
   socklen_t get_len = sizeof(get);
   EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
   EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, kSockOptOn);
+  if (IsIPv6()) {
+    EXPECT_EQ(get, kSockOptOff);
+  } else {
+    EXPECT_EQ(get, kSockOptOn);
+  }
 
-  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOffChar, sizeof(kSockOptOffChar)), 0)
-      << strerror(errno);
+  if (IsIPv6()) {
+    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOffChar, sizeof(kSockOptOffChar)),
+              -1)
+        << strerror(errno);
+    EXPECT_EQ(errno, EINVAL) << strerror(errno);
+  } else {
+    ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOffChar, sizeof(kSockOptOffChar)),
+              0)
+        << strerror(errno);
+  }
 
   EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
   EXPECT_EQ(get_len, sizeof(get));
