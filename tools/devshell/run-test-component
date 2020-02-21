@@ -7,7 +7,8 @@
 #### DEPRECATED
 ### build a test package and run on target.
 
-## Deprecated, please use fx run-test
+## This command is being deprecated in favor of `fx test`. Read more at:
+##   https://fuchsia.dev/fuchsia-src/development/testing/running_tests_as_components#converting_from_run-test_or_run-host-tests
 ##
 ## usage: fx run-test-component [-t|--test <test_name>] [-d|--device <device>] PKG_TARGET
 ## Builds the specified test package (e.g., appmgr_integration_tests), copies it to the
@@ -31,5 +32,4 @@ function usage {
   fx-command-help run-test-component
 }
 
-echo $'This is deprecated. Please use fx test.\n'
 fx-command-run run-test "$@"

@@ -4,9 +4,13 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Run, inspect and debug
+#### DEPRECATED
 ### build a test package and run on target.
 
 ## usage: fx run-test PKG_TARGET [runtests flags]
+##
+## This command is being deprecated in favor of `fx test`. Read more at:
+##   https://fuchsia.dev/fuchsia-src/development/testing/running_tests_as_components#converting_from_run-test_or_run-host-tests
 ##
 ## Builds the update package group, updates the device as necessary, and then
 ## executes the test as specified by [runtests flags] (or all tests in
@@ -54,6 +58,8 @@ function main {
     target="$1"
     shift
   esac
+
+  fx-warn "This command is being depreacted in favor of \`fx test\`. Read more at:\n  - https://fuchsia.dev/fuchsia-src/development/testing/running_tests_as_components#converting_from_run-test_or_run-host-tests\n"
 
   check-for-amber-server || return 1
 

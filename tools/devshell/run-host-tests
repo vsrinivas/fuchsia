@@ -4,9 +4,14 @@
 # found in the LICENSE file.
 
 #### CATEGORY=Run, inspect and debug
+#### DEPRECATED
 ### build and run tests on host
 
 ## Usage: fx run-host-tests [-z] [host test names ...] [-- [test runner flags]]
+##
+## This command is being deprecated in favor of `fx test`. Read more at:
+##   https://fuchsia.dev/fuchsia-src/development/testing/running_tests_as_components#running_tests\n
+##
 ## Builds and runs the given host tests.
 ## With "-z" passed, only Zircon tests will be run - and
 ## without it only tests from Garnet and above.
@@ -18,6 +23,8 @@ set -o pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
+
+fx-warn "This command is being depreacted in favor of \`fx test\`. Read more at:\n  - https://fuchsia.dev/fuchsia-src/development/testing/running_tests_as_components#converting_from_run-test_or_run-host-tests\n"
 
 TEST_NAMES=()
 function main {
