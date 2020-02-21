@@ -142,6 +142,9 @@ executable("sandbox_unittest") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/memfs-cpp",
   ]
+
+  # TODO(46766): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 package("netemul_sandbox") {
