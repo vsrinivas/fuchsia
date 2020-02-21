@@ -5,6 +5,7 @@
 #![allow(unused)]
 use {
     crate::args::{Ffx, Subcommand},
+    crate::config::command::exec_config,
     crate::constants::{CONFIG_JSON_FILE, DAEMON, MAX_RETRY_COUNT},
     anyhow::{Context, Error},
     ffx_daemon::{is_daemon_running, start as start_daemon},
@@ -193,12 +194,13 @@ async fn async_main() -> Result<(), Error> {
             Ok(())
         }
         Subcommand::Daemon(_) => start_daemon().await,
+        Subcommand::Config(c) => exec_config(c),
     }
 }
 
 fn main() {
     hoist::run(async move {
-        async_main().await.map_err(|e| log::error!("{}", e)).expect("could not start ffx");
+        async_main().await.map_err(|e| println!("{}", e)).expect("could not start ffx");
     })
 }
 

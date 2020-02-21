@@ -5,17 +5,19 @@
 use {
     anyhow::{anyhow, Error},
     serde_json::Value,
+    std::fs::{File, OpenOptions},
     std::io::{BufReader, BufWriter, Read, Write},
 };
 
-enum ConfigLevel {
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum ConfigLevel {
     Defaults,
     Build,
     Global,
     User,
 }
 
-trait Config {
+pub trait Config {
     fn get(&self, key: &str) -> Option<&Value>;
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<(), Error>;
 }
@@ -183,6 +185,96 @@ impl Config for PersistentConfig {
             ConfigLevel::Defaults => Err(anyhow!("Cannot override defaults")),
             _ => self.data.set(&level, key, value),
         }
+    }
+}
+
+pub struct FileBackedConfig {
+    data: PersistentConfig,
+}
+
+impl FileBackedConfig {
+    pub fn load(
+        defaults: &Option<String>,
+        global: &Option<String>,
+        build: &Option<&String>,
+        user: &Option<String>,
+    ) -> Result<Self, Error> {
+        let data = PersistentConfig::load(
+            FileBackedConfig::reader(defaults)?,
+            FileBackedConfig::reader(global)?,
+            FileBackedConfig::reader_from_ref(build)?,
+            FileBackedConfig::reader(user)?,
+        )?;
+        Ok(FileBackedConfig { data })
+    }
+
+    fn reader_from_ref(path: &Option<&String>) -> Result<Option<BufReader<File>>, Error> {
+        match path {
+            Some(p) => match File::open(p) {
+                Ok(f) => Ok(Some(BufReader::new(f))),
+                Err(e) => Err(anyhow!("Could not open file {}", e)),
+            },
+            None => Ok(None),
+        }
+    }
+
+    fn reader(path: &Option<String>) -> Result<Option<BufReader<File>>, Error> {
+        match path {
+            Some(p) => match File::open(p) {
+                Ok(f) => Ok(Some(BufReader::new(f))),
+                Err(e) => Err(anyhow!("Could not open file {}", e)),
+            },
+            None => Ok(None),
+        }
+    }
+
+    fn writer_from_ref(path: &Option<&String>) -> Result<Option<BufWriter<File>>, Error> {
+        match path {
+            Some(p) => {
+                let file = OpenOptions::new().write(true).create(true).open(p);
+                match file {
+                    Ok(f) => Ok(Some(BufWriter::new(f))),
+                    Err(e) => Err(anyhow!("Could not open file {}", e)),
+                }
+            }
+            None => Ok(None),
+        }
+    }
+
+    fn writer(path: &Option<String>) -> Result<Option<BufWriter<File>>, Error> {
+        match path {
+            Some(p) => {
+                let file = OpenOptions::new().write(true).create(true).open(p);
+                match file {
+                    Ok(f) => Ok(Some(BufWriter::new(f))),
+                    Err(e) => Err(anyhow!("Could not open file {}", e)),
+                }
+            }
+            None => Ok(None),
+        }
+    }
+
+    pub fn save(
+        &self,
+        global: &Option<String>,
+        build: &Option<&String>,
+        user: &Option<String>,
+    ) -> Result<(), Error> {
+        self.data.save(
+            FileBackedConfig::writer(global)?,
+            FileBackedConfig::writer_from_ref(build)?,
+            FileBackedConfig::writer(user)?,
+        )
+    }
+}
+
+impl Config for FileBackedConfig {
+    fn get(&self, key: &str) -> Option<&Value> {
+        self.data.get(key)
+    }
+
+    fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<(), Error> {
+        self.data.set(level, key, value)
     }
 }
 

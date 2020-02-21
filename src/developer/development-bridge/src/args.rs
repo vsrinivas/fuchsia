@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use argh::FromArgs;
+use {crate::config::args::ConfigCommand, argh::FromArgs};
 
 #[derive(FromArgs, Debug, PartialEq)]
 /// Fuchsia Development Bridge
@@ -45,6 +45,7 @@ pub enum Subcommand {
     Echo(EchoCommand),
     List(ListCommand),
     RunComponent(RunComponentCommand),
+    Config(ConfigCommand),
 }
 
 #[cfg(test)]
