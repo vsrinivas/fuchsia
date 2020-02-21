@@ -620,7 +620,7 @@ bool linearize_xunion_primitive_field() {
   EXPECT_NULL(error, error);
 
   uint8_t golden_linearized_prefix[] = {
-      0xe3, 0x60, 0x0e, 0x13,  // The ordinal value is 0x130e60e3
+      0x03, 0x00, 0x00, 0x00,  // The ordinal value is 3
       0x00, 0x00, 0x00, 0x00,  // xunion padding
       0x08, 0x00, 0x00, 0x00,  // num_bytes of envelope
       0x00, 0x00, 0x00, 0x00,  // num_handles of envelope

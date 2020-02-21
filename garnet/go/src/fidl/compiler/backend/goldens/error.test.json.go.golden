@@ -75,8 +75,8 @@ const (
 
 type ExampleFooResult struct {
 	I_exampleFooResultTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Response ExampleFooResponse  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
-	Err uint32  `fidl:"2" fidl_hashed_ord:"2" fidl_explicit_ord:"2"`
+	Response ExampleFooResponse  `fidl:"1"`
+	Err uint32  `fidl:"2"`
 }
 
 func (_m *ExampleFooResult) Which() I_exampleFooResultTag {

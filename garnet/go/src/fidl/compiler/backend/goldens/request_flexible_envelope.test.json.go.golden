@@ -110,8 +110,8 @@ const (
 type FlexibleFoo struct {
 	I_flexibleFooTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData []byte
-	S string  `fidl:"1," fidl_hashed_ord:"1056421836" fidl_explicit_ord:"1"`
-	I int32  `fidl:"2" fidl_hashed_ord:"1911600824" fidl_explicit_ord:"2"`
+	S string  `fidl:"1,"`
+	I int32  `fidl:"2"`
 }
 
 func (_m *FlexibleFoo) Which() I_flexibleFooTag {
@@ -161,8 +161,8 @@ const (
 
 type StrictFoo struct {
 	I_strictFooTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	S string  `fidl:"1," fidl_hashed_ord:"215696753" fidl_explicit_ord:"1"`
-	I int32  `fidl:"2" fidl_hashed_ord:"2063855467" fidl_explicit_ord:"2"`
+	S string  `fidl:"1,"`
+	I int32  `fidl:"2"`
 }
 
 func (_m *StrictFoo) Which() I_strictFooTag {

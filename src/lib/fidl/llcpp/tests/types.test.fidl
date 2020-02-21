@@ -67,7 +67,3 @@ struct FooResponse {
 protocol Baz {
     Foo(FooRequest req) -> (FooResponse res);
 };
-
-struct TestXUnionStruct {
-    TestXUnion xu;
-};

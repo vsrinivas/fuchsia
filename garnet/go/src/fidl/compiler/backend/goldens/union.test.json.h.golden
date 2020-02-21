@@ -38,8 +38,6 @@ class Union final {
   static Union WithStringNeedsConstructor(::std::string&&);
   static Union WithVectorStringAlsoNeedsConstructor(::std::vector<::std::string>&&);
 
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
-
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kPrimitive = 1,  // 0x1
@@ -149,8 +147,6 @@ class StrictUnion final {
   static StrictUnion WithStringNeedsConstructor(::std::string&&);
   static StrictUnion WithVectorStringAlsoNeedsConstructor(::std::vector<::std::string>&&);
 
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
-
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kPrimitive = 1,  // 0x1
@@ -258,8 +254,6 @@ class ReverseOrdinalUnion final {
   
   static ReverseOrdinalUnion WithFirst(uint32_t&&);
   static ReverseOrdinalUnion WithSecond(uint32_t&&);
-
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -394,8 +388,6 @@ class StrictPizzaOrPasta final {
   static StrictPizzaOrPasta WithPizza(class Pizza&&);
   static StrictPizzaOrPasta WithPasta(class Pasta&&);
 
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
-
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kPizza = 1,  // 0x1
@@ -488,8 +480,6 @@ class PizzaOrPasta final {
   
   static PizzaOrPasta WithPizza(class Pizza&&);
   static PizzaOrPasta WithPasta(class Pasta&&);
-
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -584,8 +574,6 @@ class FlexiblePizzaOrPasta final {
   static FlexiblePizzaOrPasta WithPizza(class Pizza&&);
   static FlexiblePizzaOrPasta WithPasta(class Pasta&&);
 
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
-
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kPizza = 1,  // 0x1
@@ -678,8 +666,6 @@ class ExplicitPizzaOrPasta final {
   
   static ExplicitPizzaOrPasta WithPizza(class Pizza&&);
   static ExplicitPizzaOrPasta WithPasta(class Pasta&&);
-
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -795,8 +781,6 @@ class FlexibleUnion final {
   static FlexibleUnion WithStringNeedsConstructor(::std::string&&);
   static FlexibleUnion WithVectorStringAlsoNeedsConstructor(::std::vector<::std::string>&&);
 
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
-
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kPrimitive = 1,  // 0x1
@@ -904,8 +888,6 @@ class FieldCollision final {
   
   static FieldCollision WithFieldCollisionTag(int32_t&&);
 
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
-
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kFieldCollisionTag = 1,  // 0x1
@@ -983,8 +965,6 @@ class ExplicitUnion final {
   
   static ExplicitUnion WithPrimitive(int32_t&&);
   static ExplicitUnion WithStringNeedsConstructor(::std::string&&);
-
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   

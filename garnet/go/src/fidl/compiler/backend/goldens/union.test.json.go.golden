@@ -52,8 +52,8 @@ const (
 
 type PizzaOrPasta struct {
 	I_pizzaOrPastaTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Pizza Pizza  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
-	Pasta Pasta  `fidl:"2" fidl_hashed_ord:"2" fidl_explicit_ord:"2"`
+	Pizza Pizza  `fidl:"1"`
+	Pasta Pasta  `fidl:"2"`
 }
 
 func (_m *PizzaOrPasta) Which() I_pizzaOrPastaTag {
@@ -96,8 +96,8 @@ const (
 
 type ExplicitPizzaOrPasta struct {
 	I_explicitPizzaOrPastaTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Pizza Pizza  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
-	Pasta Pasta  `fidl:"4" fidl_hashed_ord:"4" fidl_explicit_ord:"4"`
+	Pizza Pizza  `fidl:"1"`
+	Pasta Pasta  `fidl:"4"`
 }
 
 func (_m *ExplicitPizzaOrPasta) Which() I_explicitPizzaOrPastaTag {
@@ -140,8 +140,8 @@ const (
 
 type FlexiblePizzaOrPasta struct {
 	I_flexiblePizzaOrPastaTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Pizza Pizza  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
-	Pasta Pasta  `fidl:"2" fidl_hashed_ord:"2" fidl_explicit_ord:"2"`
+	Pizza Pizza  `fidl:"1"`
+	Pasta Pasta  `fidl:"2"`
 }
 
 func (_m *FlexiblePizzaOrPasta) Which() I_flexiblePizzaOrPastaTag {
@@ -184,8 +184,8 @@ const (
 
 type StrictPizzaOrPasta struct {
 	I_strictPizzaOrPastaTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Pizza Pizza  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
-	Pasta Pasta  `fidl:"2" fidl_hashed_ord:"2" fidl_explicit_ord:"2"`
+	Pizza Pizza  `fidl:"1"`
+	Pasta Pasta  `fidl:"2"`
 }
 
 func (_m *StrictPizzaOrPasta) Which() I_strictPizzaOrPastaTag {
@@ -229,9 +229,9 @@ const (
 
 type Union struct {
 	I_unionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Primitive int32  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
-	StringNeedsConstructor string  `fidl:"2," fidl_hashed_ord:"2" fidl_explicit_ord:"2"`
-	VectorStringAlsoNeedsConstructor []string  `fidl:"3,," fidl_hashed_ord:"3" fidl_explicit_ord:"3"`
+	Primitive int32  `fidl:"1"`
+	StringNeedsConstructor string  `fidl:"2,"`
+	VectorStringAlsoNeedsConstructor []string  `fidl:"3,,"`
 }
 
 func (_m *Union) Which() I_unionTag {
@@ -286,9 +286,9 @@ const (
 
 type FlexibleUnion struct {
 	I_flexibleUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Primitive int32  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
-	StringNeedsConstructor string  `fidl:"2," fidl_hashed_ord:"2" fidl_explicit_ord:"2"`
-	VectorStringAlsoNeedsConstructor []string  `fidl:"3,," fidl_hashed_ord:"3" fidl_explicit_ord:"3"`
+	Primitive int32  `fidl:"1"`
+	StringNeedsConstructor string  `fidl:"2,"`
+	VectorStringAlsoNeedsConstructor []string  `fidl:"3,,"`
 }
 
 func (_m *FlexibleUnion) Which() I_flexibleUnionTag {
@@ -343,9 +343,9 @@ const (
 
 type StrictUnion struct {
 	I_strictUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Primitive int32  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
-	StringNeedsConstructor string  `fidl:"2," fidl_hashed_ord:"2" fidl_explicit_ord:"2"`
-	VectorStringAlsoNeedsConstructor []string  `fidl:"3,," fidl_hashed_ord:"3" fidl_explicit_ord:"3"`
+	Primitive int32  `fidl:"1"`
+	StringNeedsConstructor string  `fidl:"2,"`
+	VectorStringAlsoNeedsConstructor []string  `fidl:"3,,"`
 }
 
 func (_m *StrictUnion) Which() I_strictUnionTag {
@@ -398,7 +398,7 @@ const (
 
 type FieldCollision struct {
 	I_fieldCollisionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	FieldCollisionTag int32  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
+	FieldCollisionTag int32  `fidl:"1"`
 }
 
 func (_m *FieldCollision) Which() I_fieldCollisionTag {
@@ -430,8 +430,8 @@ const (
 
 type ExplicitUnion struct {
 	I_explicitUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Primitive int32  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
-	StringNeedsConstructor string  `fidl:"3," fidl_hashed_ord:"3" fidl_explicit_ord:"3"`
+	Primitive int32  `fidl:"1"`
+	StringNeedsConstructor string  `fidl:"3,"`
 }
 
 func (_m *ExplicitUnion) Which() I_explicitUnionTag {
@@ -474,8 +474,8 @@ const (
 
 type ReverseOrdinalUnion struct {
 	I_reverseOrdinalUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	First uint32  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
-	Second uint32  `fidl:"2" fidl_hashed_ord:"2" fidl_explicit_ord:"2"`
+	First uint32  `fidl:"1"`
+	Second uint32  `fidl:"2"`
 }
 
 func (_m *ReverseOrdinalUnion) Which() I_reverseOrdinalUnionTag {

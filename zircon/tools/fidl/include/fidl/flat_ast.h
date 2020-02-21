@@ -1273,14 +1273,9 @@ struct XUnion;
 // See the comment on the StructMember class for why this is a top-level class.
 // TODO(fxb/37535): Move this to a nested class inside Union.
 struct XUnionMemberUsed : public Object {
-  XUnionMemberUsed(std::unique_ptr<raw::Ordinal32> hashed_ordinal,
-                   std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
+  XUnionMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
                    std::unique_ptr<raw::AttributeList> attributes)
-      : hashed_ordinal(std::move(hashed_ordinal)),
-        type_ctor(std::move(type_ctor)),
-        name(name),
-        attributes(std::move(attributes)) {}
-  std::unique_ptr<raw::Ordinal32> hashed_ordinal;
+      : type_ctor(std::move(type_ctor)), name(name), attributes(std::move(attributes)) {}
   std::unique_ptr<TypeConstructor> type_ctor;
   SourceSpan name;
   std::unique_ptr<raw::AttributeList> attributes;
@@ -1297,17 +1292,14 @@ struct XUnionMemberUsed : public Object {
 struct XUnionMember : public Object {
   using Used = XUnionMemberUsed;
 
-  XUnionMember(std::unique_ptr<raw::Ordinal32> explicit_ordinal,
-               std::unique_ptr<raw::Ordinal32> hashed_ordinal,
-               std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
-               std::unique_ptr<raw::AttributeList> attributes)
-      : explicit_ordinal(std::move(explicit_ordinal)),
-        maybe_used(std::make_unique<Used>(std::move(hashed_ordinal), std::move(type_ctor), name,
-                                          std::move(attributes))) {}
-  XUnionMember(std::unique_ptr<raw::Ordinal32> explicit_ordinal, SourceSpan span)
-      : explicit_ordinal(std::move(explicit_ordinal)), span(span) {}
+  XUnionMember(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
+               SourceSpan name, std::unique_ptr<raw::AttributeList> attributes)
+      : ordinal(std::move(ordinal)),
+        maybe_used(std::make_unique<Used>(std::move(type_ctor), name, std::move(attributes))) {}
+  XUnionMember(std::unique_ptr<raw::Ordinal32> ordinal, SourceSpan span)
+      : ordinal(std::move(ordinal)), span(span) {}
 
-  std::unique_ptr<raw::Ordinal32> explicit_ordinal;
+  std::unique_ptr<raw::Ordinal32> ordinal;
 
   // The span for reserved members.
   std::optional<SourceSpan> span;
@@ -1315,8 +1307,6 @@ struct XUnionMember : public Object {
   std::unique_ptr<Used> maybe_used;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
-
-  const std::unique_ptr<raw::Ordinal32>& write_ordinal() const { return explicit_ordinal; }
 };
 
 struct XUnion final : public TypeDecl {

@@ -16,7 +16,7 @@ StrictFoo::~StrictFoo() {
   Destroy();
 }
 
-StrictFoo::StrictFoo(StrictFoo&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+StrictFoo::StrictFoo(StrictFoo&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kS:
       new (&s_) ::std::string();
@@ -33,7 +33,7 @@ StrictFoo::StrictFoo(StrictFoo&& other) : tag_(GetWriteOrdinal(other.tag_)) {
 StrictFoo& StrictFoo::operator=(StrictFoo&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kS:
         new (&s_) ::std::string();
@@ -60,18 +60,6 @@ StrictFoo StrictFoo::WithI(int32_t&& val) {
   return result;
 }
 
-
-fidl_xunion_tag_t StrictFoo::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  switch (ordinal) {
-    case 1:
-    case 215696753:
-      return StrictFoo::Tag::kS;
-    case 2:
-    case 2063855467:
-      return StrictFoo::Tag::kI;
-  }
-  return ordinal;
-}
 
 void StrictFoo::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -172,10 +160,9 @@ void StrictFoo::Destroy() {
 }
 
 void StrictFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
@@ -199,7 +186,7 @@ FlexibleFoo::~FlexibleFoo() {
   Destroy();
 }
 
-FlexibleFoo::FlexibleFoo(FlexibleFoo&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+FlexibleFoo::FlexibleFoo(FlexibleFoo&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kS:
       new (&s_) ::std::string();
@@ -220,7 +207,7 @@ FlexibleFoo::FlexibleFoo(FlexibleFoo&& other) : tag_(GetWriteOrdinal(other.tag_)
 FlexibleFoo& FlexibleFoo::operator=(FlexibleFoo&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kS:
         new (&s_) ::std::string();
@@ -251,18 +238,6 @@ FlexibleFoo FlexibleFoo::WithI(int32_t&& val) {
   return result;
 }
 
-
-fidl_xunion_tag_t FlexibleFoo::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  switch (ordinal) {
-    case 1:
-    case 1056421836:
-      return FlexibleFoo::Tag::kS;
-    case 2:
-    case 1911600824:
-      return FlexibleFoo::Tag::kI;
-  }
-  return ordinal;
-}
 
 void FlexibleFoo::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -371,10 +346,9 @@ void FlexibleFoo::Destroy() {
 }
 
 void FlexibleFoo::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;

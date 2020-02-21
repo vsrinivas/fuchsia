@@ -81,7 +81,7 @@ const (
 
 type ExampleUnion struct {
 	I_exampleUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Variant uint32  `fidl:"1" fidl_hashed_ord:"1" fidl_explicit_ord:"1"`
+	Variant uint32  `fidl:"1"`
 }
 
 func (_m *ExampleUnion) Which() I_exampleUnionTag {
@@ -114,7 +114,7 @@ const (
 type ExampleXUnion struct {
 	I_exampleXUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData []byte
-	Variant uint32  `fidl:"1" fidl_hashed_ord:"1300389554" fidl_explicit_ord:"1"`
+	Variant uint32  `fidl:"1"`
 }
 
 func (_m *ExampleXUnion) Which() I_exampleXUnionTag {

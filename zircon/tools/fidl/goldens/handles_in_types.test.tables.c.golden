@@ -35,11 +35,11 @@ static const fidl_type_t Vector4294967295nonnullable30Array20_20Handlevmononnull
 
 
 static const struct FidlXUnionField Fields25test_name_UnionWithHandle[] = {
-    /*FidlXUnionField*/{.type=&HandlevmononnullableTable, .ordinal=1u, .hashed_ordinal=1108158728u, .explicit_ordinal=1u}
+    /*FidlXUnionField*/{.type=&HandlevmononnullableTable, .ordinal=1u}
 };
 const fidl_type_t test_name_UnionWithHandleTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields25test_name_UnionWithHandle, .nullable=kFidlNullability_Nonnullable, .name="test.name/UnionWithHandle", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_test_name_UnionWithHandleTable}}};
 static const struct FidlXUnionField Fields36test_name_UnionWithHandleNullableRef[] = {
-    /*FidlXUnionField*/{.type=&HandlevmononnullableTable, .ordinal=1u, .hashed_ordinal=1108158728u, .explicit_ordinal=1u}
+    /*FidlXUnionField*/{.type=&HandlevmononnullableTable, .ordinal=1u}
 };
 const fidl_type_t test_name_UnionWithHandleNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields36test_name_UnionWithHandleNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/UnionWithHandle", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_test_name_UnionWithHandleNullableRefTable}}};
 static const struct FidlTableField Fields25test_name_TableWithHandle[] = {
@@ -75,11 +75,11 @@ static const fidl_type_t v1_Vector4294967295nonnullable36v1_Array20_23v1_Handlev
 
 
 static const struct FidlXUnionField Fields28v1_test_name_UnionWithHandle[] = {
-    /*FidlXUnionField*/{.type=&v1_HandlevmononnullableTable, .ordinal=1u, .hashed_ordinal=1108158728u, .explicit_ordinal=1u}
+    /*FidlXUnionField*/{.type=&v1_HandlevmononnullableTable, .ordinal=1u}
 };
 const fidl_type_t v1_test_name_UnionWithHandleTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields28v1_test_name_UnionWithHandle, .nullable=kFidlNullability_Nonnullable, .name="test.name/UnionWithHandle", .strictness=kFidlStrictness_Flexible, .alt_type=&test_name_UnionWithHandleTable}}};
 static const struct FidlXUnionField Fields39v1_test_name_UnionWithHandleNullableRef[] = {
-    /*FidlXUnionField*/{.type=&v1_HandlevmononnullableTable, .ordinal=1u, .hashed_ordinal=1108158728u, .explicit_ordinal=1u}
+    /*FidlXUnionField*/{.type=&v1_HandlevmononnullableTable, .ordinal=1u}
 };
 const fidl_type_t v1_test_name_UnionWithHandleNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields39v1_test_name_UnionWithHandleNullableRef, .nullable=kFidlNullability_Nullable, .name="test.name/UnionWithHandle", .strictness=kFidlStrictness_Flexible, .alt_type=&test_name_UnionWithHandleNullableRefTable}}};
 static const struct FidlTableField Fields28v1_test_name_TableWithHandle[] = {

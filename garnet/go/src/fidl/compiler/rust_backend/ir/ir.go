@@ -68,12 +68,10 @@ type XUnion struct {
 
 type XUnionMember struct {
 	types.Attributes
-	Type            string
-	OGType          types.Type
-	Name            string
-	Ordinal         int
-	ExplicitOrdinal int
-	HashedOrdinal   int
+	Type    string
+	OGType  types.Type
+	Name    string
+	Ordinal int
 }
 
 type Result struct {
@@ -786,13 +784,11 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 
 func (c *compiler) compileXUnionMember(val types.XUnionMember) XUnionMember {
 	return XUnionMember{
-		Attributes:      val.Attributes,
-		Type:            c.compileType(val.Type, false).Decl,
-		OGType:          val.Type,
-		Name:            compileCamelIdentifier(val.Name),
-		Ordinal:         val.Ordinal,
-		ExplicitOrdinal: val.ExplicitOrdinal,
-		HashedOrdinal:   val.HashedOrdinal,
+		Attributes: val.Attributes,
+		Type:       c.compileType(val.Type, false).Decl,
+		OGType:     val.Type,
+		Name:       compileCamelIdentifier(val.Name),
+		Ordinal:    val.Ordinal,
 	}
 }
 

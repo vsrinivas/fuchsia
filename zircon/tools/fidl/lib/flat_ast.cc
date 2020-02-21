@@ -1869,13 +1869,6 @@ bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> x
 
     if (member->maybe_used) {
       auto span = member->maybe_used->identifier->span();
-      auto hashed_ordinal = std::make_unique<raw::Ordinal32>(
-          fidl::ordinals::GetGeneratedOrdinal32(library_name_, name.decl_name(), *member));
-      if (hashed_ordinal->value <= kXunionOrdinalCutoff) {
-        return Fail(member->span(),
-                    "hashed ordinal is <= 512, and conflicts with explicit ordinal space, try "
-                    "using a different Selector");
-      }
       std::unique_ptr<TypeConstructor> type_ctor;
       if (!ConsumeTypeConstructor(std::move(member->maybe_used->type_ctor), span, &type_ctor))
         return false;
@@ -1884,8 +1877,8 @@ bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> x
         return Fail(member->span(), "Extensible union members cannot be nullable");
       }
 
-      members.emplace_back(std::move(explicit_ordinal), std::move(hashed_ordinal),
-                           std::move(type_ctor), span, std::move(member->maybe_used->attributes));
+      members.emplace_back(std::move(explicit_ordinal), std::move(type_ctor), span,
+                           std::move(member->maybe_used->attributes));
     } else {
       members.emplace_back(std::move(explicit_ordinal), member->span());
     }
@@ -2208,8 +2201,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
         std::ostringstream msg;
         msg << "mismatched named type assignment: cannot define a constant or default value of "
                "type "
-            << identifier_type->type_decl->name.full_name()
-            << " using a value of type " << type;
+            << identifier_type->type_decl->name.full_name() << " using a value of type " << type;
         return Fail(msg.str());
       };
 
@@ -3305,23 +3297,15 @@ bool Library::CompileUnion(Union* union_declaration) {
 
 bool Library::CompileXUnion(XUnion* xunion_declaration) {
   Scope<std::string_view> scope;
-  Ordinal32Scope hashed_scope;
-  Ordinal32Scope explicit_scope;
+  Ordinal32Scope ordinal_scope;
 
   for (auto& member : xunion_declaration->members) {
-    auto ordinal_result =
-        explicit_scope.Insert(member.explicit_ordinal->value, member.explicit_ordinal->span());
+    auto ordinal_result = ordinal_scope.Insert(member.ordinal->value, member.ordinal->span());
     if (!ordinal_result.ok())
-      return Fail(member.explicit_ordinal->span(),
+      return Fail(member.ordinal->span(),
                   "Multiple xunion fields with the same ordinal; previous was at " +
                       ordinal_result.previous_occurrence().position_str());
     if (member.maybe_used) {
-      ordinal_result = hashed_scope.Insert(member.maybe_used->hashed_ordinal->value,
-                                           member.maybe_used->hashed_ordinal->span());
-      if (!ordinal_result.ok())
-        return Fail(member.maybe_used->hashed_ordinal->span(),
-                    "Multiple xunion fields with the same ordinal; previous was at " +
-                        ordinal_result.previous_occurrence().position_str());
       auto name_result = scope.Insert(member.maybe_used->name.data(), member.maybe_used->name);
       if (!name_result.ok())
         return Fail(member.maybe_used->name,
@@ -3333,7 +3317,7 @@ bool Library::CompileXUnion(XUnion* xunion_declaration) {
     }
   }
 
-  if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(explicit_scope)) {
+  if (auto ordinal_and_loc = FindFirstNonDenseOrdinal(ordinal_scope)) {
     auto [ordinal, span] = *ordinal_and_loc;
     std::ostringstream msg_stream;
     msg_stream << "missing ordinal " << ordinal;

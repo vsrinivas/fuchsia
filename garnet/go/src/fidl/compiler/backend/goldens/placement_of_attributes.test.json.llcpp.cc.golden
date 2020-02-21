@@ -130,9 +130,9 @@ void ExampleProtocol::SetTransactionHeaderFor::MethodRequest(const ::fidl::Decod
 }
 auto ::llcpp::example::ExampleXUnion::which() const -> Tag {
   ZX_ASSERT(!has_invalid_tag());
-  switch (ordinal()) {
+  switch (ordinal_) {
   case Ordinal::kVariant:
-    return static_cast<Tag>(ordinal());
+    return static_cast<Tag>(ordinal_);
   default:
     return Tag::kUnknown;
   }

@@ -107,7 +107,7 @@ struct ExampleXUnion {
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_variant() const { return ordinal() == Ordinal::kVariant; }
+  bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
 
   static ExampleXUnion WithVariant(uint32_t* val) {
     ExampleXUnion result;
@@ -121,11 +121,11 @@ struct ExampleXUnion {
   }
 
   uint32_t& mutable_variant() {
-    ZX_ASSERT(ordinal() == Ordinal::kVariant);
+    ZX_ASSERT(ordinal_ == Ordinal::kVariant);
     return *static_cast<uint32_t*>(envelope_.data);
   }
   const uint32_t& variant() const {
-    ZX_ASSERT(ordinal() == Ordinal::kVariant);
+    ZX_ASSERT(ordinal_ == Ordinal::kVariant);
     return *static_cast<uint32_t*>(envelope_.data);
   }
   void* unknownData() const {
@@ -147,15 +147,6 @@ struct ExampleXUnion {
     kVariant = 1,  // 0x1
   };
 
-  Ordinal ordinal() const {
-    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-      case 1:
-      case 1300389554:
-        return Ordinal::kVariant;
-    }
-    return ordinal_;
-  }
-
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -173,7 +164,7 @@ struct ExampleUnion {
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_variant() const { return ordinal() == Ordinal::kVariant; }
+  bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
 
   static ExampleUnion WithVariant(uint32_t* val) {
     ExampleUnion result;
@@ -187,16 +178,16 @@ struct ExampleUnion {
   }
 
   uint32_t& mutable_variant() {
-    ZX_ASSERT(ordinal() == Ordinal::kVariant);
+    ZX_ASSERT(ordinal_ == Ordinal::kVariant);
     return *static_cast<uint32_t*>(envelope_.data);
   }
   const uint32_t& variant() const {
-    ZX_ASSERT(ordinal() == Ordinal::kVariant);
+    ZX_ASSERT(ordinal_ == Ordinal::kVariant);
     return *static_cast<uint32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal());
+    return static_cast<Tag>(ordinal_);
   }
 
   static constexpr const fidl_type_t* Type = &v1_example_ExampleUnionTable;
@@ -211,10 +202,6 @@ struct ExampleUnion {
     Invalid = 0,
     kVariant = 1,  // 0x1
   };
-
-  Ordinal ordinal() const {
-    return ordinal_;
-  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;

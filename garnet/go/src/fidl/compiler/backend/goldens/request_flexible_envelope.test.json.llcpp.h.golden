@@ -41,7 +41,7 @@ struct StrictFoo {
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_s() const { return ordinal() == Ordinal::kS; }
+  bool is_s() const { return ordinal_ == Ordinal::kS; }
 
   static StrictFoo WithS(::fidl::StringView* val) {
     StrictFoo result;
@@ -55,15 +55,15 @@ struct StrictFoo {
   }
 
   ::fidl::StringView& mutable_s() {
-    ZX_ASSERT(ordinal() == Ordinal::kS);
+    ZX_ASSERT(ordinal_ == Ordinal::kS);
     return *static_cast<::fidl::StringView*>(envelope_.data);
   }
   const ::fidl::StringView& s() const {
-    ZX_ASSERT(ordinal() == Ordinal::kS);
+    ZX_ASSERT(ordinal_ == Ordinal::kS);
     return *static_cast<::fidl::StringView*>(envelope_.data);
   }
 
-  bool is_i() const { return ordinal() == Ordinal::kI; }
+  bool is_i() const { return ordinal_ == Ordinal::kI; }
 
   static StrictFoo WithI(int32_t* val) {
     StrictFoo result;
@@ -77,16 +77,16 @@ struct StrictFoo {
   }
 
   int32_t& mutable_i() {
-    ZX_ASSERT(ordinal() == Ordinal::kI);
+    ZX_ASSERT(ordinal_ == Ordinal::kI);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& i() const {
-    ZX_ASSERT(ordinal() == Ordinal::kI);
+    ZX_ASSERT(ordinal_ == Ordinal::kI);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal());
+    return static_cast<Tag>(ordinal_);
   }
 
   static constexpr const fidl_type_t* Type = &v1_fidl_test_json_StrictFooTable;
@@ -102,18 +102,6 @@ struct StrictFoo {
     kS = 1,  // 0x1
     kI = 2,  // 0x2
   };
-
-  Ordinal ordinal() const {
-    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-      case 1:
-      case 215696753:
-        return Ordinal::kS;
-      case 2:
-      case 2063855467:
-        return Ordinal::kI;
-    }
-    return ordinal_;
-  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
@@ -134,7 +122,7 @@ struct FlexibleFoo {
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_s() const { return ordinal() == Ordinal::kS; }
+  bool is_s() const { return ordinal_ == Ordinal::kS; }
 
   static FlexibleFoo WithS(::fidl::StringView* val) {
     FlexibleFoo result;
@@ -148,15 +136,15 @@ struct FlexibleFoo {
   }
 
   ::fidl::StringView& mutable_s() {
-    ZX_ASSERT(ordinal() == Ordinal::kS);
+    ZX_ASSERT(ordinal_ == Ordinal::kS);
     return *static_cast<::fidl::StringView*>(envelope_.data);
   }
   const ::fidl::StringView& s() const {
-    ZX_ASSERT(ordinal() == Ordinal::kS);
+    ZX_ASSERT(ordinal_ == Ordinal::kS);
     return *static_cast<::fidl::StringView*>(envelope_.data);
   }
 
-  bool is_i() const { return ordinal() == Ordinal::kI; }
+  bool is_i() const { return ordinal_ == Ordinal::kI; }
 
   static FlexibleFoo WithI(int32_t* val) {
     FlexibleFoo result;
@@ -170,11 +158,11 @@ struct FlexibleFoo {
   }
 
   int32_t& mutable_i() {
-    ZX_ASSERT(ordinal() == Ordinal::kI);
+    ZX_ASSERT(ordinal_ == Ordinal::kI);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& i() const {
-    ZX_ASSERT(ordinal() == Ordinal::kI);
+    ZX_ASSERT(ordinal_ == Ordinal::kI);
     return *static_cast<int32_t*>(envelope_.data);
   }
   void* unknownData() const {
@@ -196,18 +184,6 @@ struct FlexibleFoo {
     kS = 1,  // 0x1
     kI = 2,  // 0x2
   };
-
-  Ordinal ordinal() const {
-    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-      case 1:
-      case 1056421836:
-        return Ordinal::kS;
-      case 2:
-      case 1911600824:
-        return Ordinal::kI;
-    }
-    return ordinal_;
-  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;

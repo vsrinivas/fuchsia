@@ -45,8 +45,6 @@ class StrictFoo final {
   static StrictFoo WithS(::std::string&&);
   static StrictFoo WithI(int32_t&&);
 
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
-
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kS = 1,  // 0x1
@@ -139,8 +137,6 @@ class FlexibleFoo final {
   
   static FlexibleFoo WithS(::std::string&&);
   static FlexibleFoo WithI(int32_t&&);
-
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   kUnknown = 0,

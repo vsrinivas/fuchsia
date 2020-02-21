@@ -30,14 +30,10 @@ fidl_xunion! {
 		S {
 			ty: String,
 			ordinal: 1,
-			explicit_ordinal: 1,
-			hashed_ordinal: 1056421836,
 		},
 		I {
 			ty: i32,
 			ordinal: 2,
-			explicit_ordinal: 2,
-			hashed_ordinal: 1911600824,
 		},
 	],
 	unknown_member: __UnknownVariant,
@@ -50,14 +46,10 @@ fidl_xunion! {
 		S {
 			ty: String,
 			ordinal: 1,
-			explicit_ordinal: 1,
-			hashed_ordinal: 215696753,
 		},
 		I {
 			ty: i32,
 			ordinal: 2,
-			explicit_ordinal: 2,
-			hashed_ordinal: 2063855467,
 		},
 	],
 }
@@ -69,14 +61,10 @@ fidl_xunion! {
 		S {
 			ty: String,
 			ordinal: 2,
-			explicit_ordinal: 2,
-			hashed_ordinal: 1104328308,
 		},
 		I {
 			ty: i32,
 			ordinal: 1,
-			explicit_ordinal: 1,
-			hashed_ordinal: 239266458,
 		},
 	],
 	unknown_member: __UnknownVariant,
@@ -89,14 +77,10 @@ fidl_xunion! {
 		S {
 			ty: String,
 			ordinal: 3,
-			explicit_ordinal: 3,
-			hashed_ordinal: 1579569872,
 		},
 		I {
 			ty: i32,
 			ordinal: 2,
-			explicit_ordinal: 2,
-			hashed_ordinal: 1284403118,
 		},
 	],
 }
@@ -108,14 +92,10 @@ fidl_xunion! {
 		I {
 			ty: i64,
 			ordinal: 1,
-			explicit_ordinal: 1,
-			hashed_ordinal: 1103730460,
 		},
 		F {
 			ty: f32,
 			ordinal: 2,
-			explicit_ordinal: 2,
-			hashed_ordinal: 1480211663,
 		},
 	],
 	unknown_member: __UnknownVariant,
@@ -128,20 +108,14 @@ fidl_xunion! {
 		I {
 			ty: i64,
 			ordinal: 1,
-			explicit_ordinal: 1,
-			hashed_ordinal: 170200420,
 		},
 		S {
 			ty: String,
 			ordinal: 2,
-			explicit_ordinal: 2,
-			hashed_ordinal: 697958567,
 		},
 		V {
 			ty: Vec<String>,
 			ordinal: 3,
-			explicit_ordinal: 3,
-			hashed_ordinal: 57791921,
 		},
 	],
 	unknown_member: __UnknownVariant,
@@ -154,20 +128,14 @@ fidl_xunion! {
 		I {
 			ty: i32,
 			ordinal: 1,
-			explicit_ordinal: 1,
-			hashed_ordinal: 1350988770,
 		},
 		F {
 			ty: f32,
 			ordinal: 2,
-			explicit_ordinal: 2,
-			hashed_ordinal: 676019752,
 		},
 		S {
 			ty: String,
 			ordinal: 3,
-			explicit_ordinal: 3,
-			hashed_ordinal: 384461647,
 		},
 	],
 }
@@ -179,8 +147,6 @@ fidl_xunion! {
 		Empty {
 			ty: Empty,
 			ordinal: 1,
-			explicit_ordinal: 1,
-			hashed_ordinal: 1720857888,
 		},
 	],
 	unknown_member: __UnknownVariant,
@@ -193,8 +159,6 @@ fidl_xunion! {
 		V {
 			ty: Vec<u8>,
 			ordinal: 1,
-			explicit_ordinal: 1,
-			hashed_ordinal: 480655205,
 		},
 	],
 }
@@ -206,14 +170,10 @@ fidl_xunion! {
 		I {
 			ty: i64,
 			ordinal: 1,
-			explicit_ordinal: 1,
-			hashed_ordinal: 269774049,
 		},
 		F {
 			ty: f32,
 			ordinal: 4,
-			explicit_ordinal: 4,
-			hashed_ordinal: 898646268,
 		},
 	],
 	unknown_member: __UnknownVariant,

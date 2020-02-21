@@ -4,40 +4,34 @@
 
 // Forward declarations for old <-> V1 mappings
 
-extern const fidl_type_t top_TopGetFooRequestTable;
-extern const fidl_type_t top_TopGetFooResponseTable;
-extern const fidl_type_t v1_top_TopGetFooRequestTable;
-extern const fidl_type_t v1_top_TopGetFooResponseTable;
+extern const fidl_type_t test_name_SecondProtocolMethodOnSecondRequestTable;
+extern const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable;
+extern const fidl_type_t v1_test_name_SecondProtocolMethodOnSecondRequestTable;
+extern const fidl_type_t v1_test_name_FirstProtocolMethodOnFirstRequestTable;
 
 // Coding tables for old wire format.
 
-extern const fidl_type_t bottom_FooTable;
 
 
-extern const fidl_type_t top_TopGetFooRequestTable;
-static const struct FidlStructField Fields20top_TopGetFooRequest[] = {};
-const fidl_type_t top_TopGetFooRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields20top_TopGetFooRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="top/TopGetFooRequest", .alt_type=&v1_top_TopGetFooRequestTable}}};
+extern const fidl_type_t test_name_SecondProtocolMethodOnSecondRequestTable;
+static const struct FidlStructField Fields45test_name_SecondProtocolMethodOnSecondRequest[] = {};
+const fidl_type_t test_name_SecondProtocolMethodOnSecondRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields45test_name_SecondProtocolMethodOnSecondRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/SecondProtocolMethodOnSecondRequest", .alt_type=&v1_test_name_SecondProtocolMethodOnSecondRequestTable}}};
 
-extern const fidl_type_t top_TopGetFooResponseTable;
-static const struct FidlStructField Fields21top_TopGetFooResponse[] = {
-    /*FidlStructField*/{.type=&bottom_FooTable, .offset=16u, .padding=4u}
-};
-const fidl_type_t top_TopGetFooResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields21top_TopGetFooResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="top/TopGetFooResponse", .alt_type=&v1_top_TopGetFooResponseTable}}};
+extern const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable;
+static const struct FidlStructField Fields43test_name_FirstProtocolMethodOnFirstRequest[] = {};
+const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields43test_name_FirstProtocolMethodOnFirstRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/FirstProtocolMethodOnFirstRequest", .alt_type=&v1_test_name_FirstProtocolMethodOnFirstRequestTable}}};
 
 
 // Coding tables for v1 wire format.
 
-extern const fidl_type_t v1_bottom_FooTable;
 
 
-extern const fidl_type_t v1_top_TopGetFooRequestTable;
-static const struct FidlStructField Fields23v1_top_TopGetFooRequest[] = {};
-const fidl_type_t v1_top_TopGetFooRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields23v1_top_TopGetFooRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="top/TopGetFooRequest", .alt_type=&top_TopGetFooRequestTable}}};
+extern const fidl_type_t v1_test_name_SecondProtocolMethodOnSecondRequestTable;
+static const struct FidlStructField Fields48v1_test_name_SecondProtocolMethodOnSecondRequest[] = {};
+const fidl_type_t v1_test_name_SecondProtocolMethodOnSecondRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields48v1_test_name_SecondProtocolMethodOnSecondRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/SecondProtocolMethodOnSecondRequest", .alt_type=&test_name_SecondProtocolMethodOnSecondRequestTable}}};
 
-extern const fidl_type_t v1_top_TopGetFooResponseTable;
-static const struct FidlStructField Fields24v1_top_TopGetFooResponse[] = {
-    /*FidlStructField*/{.type=&v1_bottom_FooTable, .offset=16u, .padding=4u}
-};
-const fidl_type_t v1_top_TopGetFooResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields24v1_top_TopGetFooResponse, .field_count=1u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="top/TopGetFooResponse", .alt_type=&top_TopGetFooResponseTable}}};
+extern const fidl_type_t v1_test_name_FirstProtocolMethodOnFirstRequestTable;
+static const struct FidlStructField Fields46v1_test_name_FirstProtocolMethodOnFirstRequest[] = {};
+const fidl_type_t v1_test_name_FirstProtocolMethodOnFirstRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields46v1_test_name_FirstProtocolMethodOnFirstRequest, .field_count=0u, .size=16u, .max_out_of_line=0u, .contains_union=false, .name="test.name/FirstProtocolMethodOnFirstRequest", .alt_type=&test_name_FirstProtocolMethodOnFirstRequestTable}}};
 
 

@@ -76,8 +76,6 @@ class StrictSimpleXUnion final {
   static StrictSimpleXUnion WithF(float&&);
   static StrictSimpleXUnion WithS(::std::string&&);
 
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
-
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kI = 1,  // 0x1
@@ -186,8 +184,6 @@ class StrictFoo final {
   static StrictFoo WithS(::std::string&&);
   static StrictFoo WithI(int32_t&&);
 
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
-
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kS = 1,  // 0x1
@@ -280,8 +276,6 @@ class StrictBoundedXUnion final {
   
   static StrictBoundedXUnion WithV(::std::vector<uint8_t>&&);
 
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
-
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kV = 1,  // 0x1
@@ -359,8 +353,6 @@ class OlderSimpleUnion final {
   
   static OlderSimpleUnion WithI(int64_t&&);
   static OlderSimpleUnion WithF(float&&);
-
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   kUnknown = 0,
@@ -652,8 +644,6 @@ class NewerSimpleUnion final {
   static NewerSimpleUnion WithS(::std::string&&);
   static NewerSimpleUnion WithV(::std::vector<::std::string>&&);
 
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
-
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   kUnknown = 0,
     Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
@@ -776,8 +766,6 @@ class FlexibleFoo final {
   static FlexibleFoo WithS(::std::string&&);
   static FlexibleFoo WithI(int32_t&&);
 
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
-
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   kUnknown = 0,
     Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
@@ -883,8 +871,6 @@ class ExplicitXUnion final {
   
   static ExplicitXUnion WithI(int64_t&&);
   static ExplicitXUnion WithF(float&&);
-
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   kUnknown = 0,
@@ -992,8 +978,6 @@ class ExplicitStrictFoo final {
   static ExplicitStrictFoo WithS(::std::string&&);
   static ExplicitStrictFoo WithI(int32_t&&);
 
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
-
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kS = 3,  // 0x3
@@ -1086,8 +1070,6 @@ class ExplicitFoo final {
   
   static ExplicitFoo WithS(::std::string&&);
   static ExplicitFoo WithI(int32_t&&);
-
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   kUnknown = 0,
@@ -1213,8 +1195,6 @@ class XUnionContainingEmptyStruct final {
 
   
   static XUnionContainingEmptyStruct WithEmpty(class Empty&&);
-
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   kUnknown = 0,

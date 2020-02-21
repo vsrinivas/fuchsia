@@ -51,7 +51,7 @@ struct Union {
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_Primitive() const { return ordinal() == Ordinal::kPrimitive; }
+  bool is_Primitive() const { return ordinal_ == Ordinal::kPrimitive; }
 
   static Union WithPrimitive(int32_t* val) {
     Union result;
@@ -65,15 +65,15 @@ struct Union {
   }
 
   int32_t& mutable_Primitive() {
-    ZX_ASSERT(ordinal() == Ordinal::kPrimitive);
+    ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& Primitive() const {
-    ZX_ASSERT(ordinal() == Ordinal::kPrimitive);
+    ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
     return *static_cast<int32_t*>(envelope_.data);
   }
 
-  bool is_StringNeedsConstructor() const { return ordinal() == Ordinal::kStringNeedsConstructor; }
+  bool is_StringNeedsConstructor() const { return ordinal_ == Ordinal::kStringNeedsConstructor; }
 
   static Union WithStringNeedsConstructor(::fidl::StringView* val) {
     Union result;
@@ -87,15 +87,15 @@ struct Union {
   }
 
   ::fidl::StringView& mutable_StringNeedsConstructor() {
-    ZX_ASSERT(ordinal() == Ordinal::kStringNeedsConstructor);
+    ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
     return *static_cast<::fidl::StringView*>(envelope_.data);
   }
   const ::fidl::StringView& StringNeedsConstructor() const {
-    ZX_ASSERT(ordinal() == Ordinal::kStringNeedsConstructor);
+    ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
     return *static_cast<::fidl::StringView*>(envelope_.data);
   }
 
-  bool is_VectorStringAlsoNeedsConstructor() const { return ordinal() == Ordinal::kVectorStringAlsoNeedsConstructor; }
+  bool is_VectorStringAlsoNeedsConstructor() const { return ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor; }
 
   static Union WithVectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>* val) {
     Union result;
@@ -109,16 +109,16 @@ struct Union {
   }
 
   ::fidl::VectorView<::fidl::StringView>& mutable_VectorStringAlsoNeedsConstructor() {
-    ZX_ASSERT(ordinal() == Ordinal::kVectorStringAlsoNeedsConstructor);
+    ZX_ASSERT(ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor);
     return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
   }
   const ::fidl::VectorView<::fidl::StringView>& VectorStringAlsoNeedsConstructor() const {
-    ZX_ASSERT(ordinal() == Ordinal::kVectorStringAlsoNeedsConstructor);
+    ZX_ASSERT(ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor);
     return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal());
+    return static_cast<Tag>(ordinal_);
   }
 
   static constexpr const fidl_type_t* Type = &v1_fidl_test_json_UnionTable;
@@ -135,10 +135,6 @@ struct Union {
     kStringNeedsConstructor = 2,  // 0x2
     kVectorStringAlsoNeedsConstructor = 3,  // 0x3
   };
-
-  Ordinal ordinal() const {
-    return ordinal_;
-  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
@@ -159,7 +155,7 @@ struct StrictUnion {
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_Primitive() const { return ordinal() == Ordinal::kPrimitive; }
+  bool is_Primitive() const { return ordinal_ == Ordinal::kPrimitive; }
 
   static StrictUnion WithPrimitive(int32_t* val) {
     StrictUnion result;
@@ -173,15 +169,15 @@ struct StrictUnion {
   }
 
   int32_t& mutable_Primitive() {
-    ZX_ASSERT(ordinal() == Ordinal::kPrimitive);
+    ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& Primitive() const {
-    ZX_ASSERT(ordinal() == Ordinal::kPrimitive);
+    ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
     return *static_cast<int32_t*>(envelope_.data);
   }
 
-  bool is_StringNeedsConstructor() const { return ordinal() == Ordinal::kStringNeedsConstructor; }
+  bool is_StringNeedsConstructor() const { return ordinal_ == Ordinal::kStringNeedsConstructor; }
 
   static StrictUnion WithStringNeedsConstructor(::fidl::StringView* val) {
     StrictUnion result;
@@ -195,15 +191,15 @@ struct StrictUnion {
   }
 
   ::fidl::StringView& mutable_StringNeedsConstructor() {
-    ZX_ASSERT(ordinal() == Ordinal::kStringNeedsConstructor);
+    ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
     return *static_cast<::fidl::StringView*>(envelope_.data);
   }
   const ::fidl::StringView& StringNeedsConstructor() const {
-    ZX_ASSERT(ordinal() == Ordinal::kStringNeedsConstructor);
+    ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
     return *static_cast<::fidl::StringView*>(envelope_.data);
   }
 
-  bool is_VectorStringAlsoNeedsConstructor() const { return ordinal() == Ordinal::kVectorStringAlsoNeedsConstructor; }
+  bool is_VectorStringAlsoNeedsConstructor() const { return ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor; }
 
   static StrictUnion WithVectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>* val) {
     StrictUnion result;
@@ -217,16 +213,16 @@ struct StrictUnion {
   }
 
   ::fidl::VectorView<::fidl::StringView>& mutable_VectorStringAlsoNeedsConstructor() {
-    ZX_ASSERT(ordinal() == Ordinal::kVectorStringAlsoNeedsConstructor);
+    ZX_ASSERT(ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor);
     return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
   }
   const ::fidl::VectorView<::fidl::StringView>& VectorStringAlsoNeedsConstructor() const {
-    ZX_ASSERT(ordinal() == Ordinal::kVectorStringAlsoNeedsConstructor);
+    ZX_ASSERT(ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor);
     return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal());
+    return static_cast<Tag>(ordinal_);
   }
 
   static constexpr const fidl_type_t* Type = &v1_fidl_test_json_StrictUnionTable;
@@ -243,10 +239,6 @@ struct StrictUnion {
     kStringNeedsConstructor = 2,  // 0x2
     kVectorStringAlsoNeedsConstructor = 3,  // 0x3
   };
-
-  Ordinal ordinal() const {
-    return ordinal_;
-  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
@@ -266,7 +258,7 @@ struct ReverseOrdinalUnion {
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_first() const { return ordinal() == Ordinal::kFirst; }
+  bool is_first() const { return ordinal_ == Ordinal::kFirst; }
 
   static ReverseOrdinalUnion WithFirst(uint32_t* val) {
     ReverseOrdinalUnion result;
@@ -280,15 +272,15 @@ struct ReverseOrdinalUnion {
   }
 
   uint32_t& mutable_first() {
-    ZX_ASSERT(ordinal() == Ordinal::kFirst);
+    ZX_ASSERT(ordinal_ == Ordinal::kFirst);
     return *static_cast<uint32_t*>(envelope_.data);
   }
   const uint32_t& first() const {
-    ZX_ASSERT(ordinal() == Ordinal::kFirst);
+    ZX_ASSERT(ordinal_ == Ordinal::kFirst);
     return *static_cast<uint32_t*>(envelope_.data);
   }
 
-  bool is_second() const { return ordinal() == Ordinal::kSecond; }
+  bool is_second() const { return ordinal_ == Ordinal::kSecond; }
 
   static ReverseOrdinalUnion WithSecond(uint32_t* val) {
     ReverseOrdinalUnion result;
@@ -302,16 +294,16 @@ struct ReverseOrdinalUnion {
   }
 
   uint32_t& mutable_second() {
-    ZX_ASSERT(ordinal() == Ordinal::kSecond);
+    ZX_ASSERT(ordinal_ == Ordinal::kSecond);
     return *static_cast<uint32_t*>(envelope_.data);
   }
   const uint32_t& second() const {
-    ZX_ASSERT(ordinal() == Ordinal::kSecond);
+    ZX_ASSERT(ordinal_ == Ordinal::kSecond);
     return *static_cast<uint32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal());
+    return static_cast<Tag>(ordinal_);
   }
 
   static constexpr const fidl_type_t* Type = &v1_fidl_test_json_ReverseOrdinalUnionTable;
@@ -327,10 +319,6 @@ struct ReverseOrdinalUnion {
     kFirst = 1,  // 0x1
     kSecond = 2,  // 0x2
   };
-
-  Ordinal ordinal() const {
-    return ordinal_;
-  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
@@ -350,7 +338,7 @@ struct StrictPizzaOrPasta {
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_pizza() const { return ordinal() == Ordinal::kPizza; }
+  bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
   static StrictPizzaOrPasta WithPizza(::llcpp::fidl::test::json::Pizza* val) {
     StrictPizzaOrPasta result;
@@ -364,15 +352,15 @@ struct StrictPizzaOrPasta {
   }
 
   ::llcpp::fidl::test::json::Pizza& mutable_pizza() {
-    ZX_ASSERT(ordinal() == Ordinal::kPizza);
+    ZX_ASSERT(ordinal_ == Ordinal::kPizza);
     return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data);
   }
   const ::llcpp::fidl::test::json::Pizza& pizza() const {
-    ZX_ASSERT(ordinal() == Ordinal::kPizza);
+    ZX_ASSERT(ordinal_ == Ordinal::kPizza);
     return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data);
   }
 
-  bool is_pasta() const { return ordinal() == Ordinal::kPasta; }
+  bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
   static StrictPizzaOrPasta WithPasta(::llcpp::fidl::test::json::Pasta* val) {
     StrictPizzaOrPasta result;
@@ -386,16 +374,16 @@ struct StrictPizzaOrPasta {
   }
 
   ::llcpp::fidl::test::json::Pasta& mutable_pasta() {
-    ZX_ASSERT(ordinal() == Ordinal::kPasta);
+    ZX_ASSERT(ordinal_ == Ordinal::kPasta);
     return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data);
   }
   const ::llcpp::fidl::test::json::Pasta& pasta() const {
-    ZX_ASSERT(ordinal() == Ordinal::kPasta);
+    ZX_ASSERT(ordinal_ == Ordinal::kPasta);
     return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal());
+    return static_cast<Tag>(ordinal_);
   }
 
   static constexpr const fidl_type_t* Type = &v1_fidl_test_json_StrictPizzaOrPastaTable;
@@ -411,10 +399,6 @@ struct StrictPizzaOrPasta {
     kPizza = 1,  // 0x1
     kPasta = 2,  // 0x2
   };
-
-  Ordinal ordinal() const {
-    return ordinal_;
-  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
@@ -434,7 +418,7 @@ struct PizzaOrPasta {
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_pizza() const { return ordinal() == Ordinal::kPizza; }
+  bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
   static PizzaOrPasta WithPizza(::llcpp::fidl::test::json::Pizza* val) {
     PizzaOrPasta result;
@@ -448,15 +432,15 @@ struct PizzaOrPasta {
   }
 
   ::llcpp::fidl::test::json::Pizza& mutable_pizza() {
-    ZX_ASSERT(ordinal() == Ordinal::kPizza);
+    ZX_ASSERT(ordinal_ == Ordinal::kPizza);
     return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data);
   }
   const ::llcpp::fidl::test::json::Pizza& pizza() const {
-    ZX_ASSERT(ordinal() == Ordinal::kPizza);
+    ZX_ASSERT(ordinal_ == Ordinal::kPizza);
     return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data);
   }
 
-  bool is_pasta() const { return ordinal() == Ordinal::kPasta; }
+  bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
   static PizzaOrPasta WithPasta(::llcpp::fidl::test::json::Pasta* val) {
     PizzaOrPasta result;
@@ -470,16 +454,16 @@ struct PizzaOrPasta {
   }
 
   ::llcpp::fidl::test::json::Pasta& mutable_pasta() {
-    ZX_ASSERT(ordinal() == Ordinal::kPasta);
+    ZX_ASSERT(ordinal_ == Ordinal::kPasta);
     return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data);
   }
   const ::llcpp::fidl::test::json::Pasta& pasta() const {
-    ZX_ASSERT(ordinal() == Ordinal::kPasta);
+    ZX_ASSERT(ordinal_ == Ordinal::kPasta);
     return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal());
+    return static_cast<Tag>(ordinal_);
   }
 
   static constexpr const fidl_type_t* Type = &v1_fidl_test_json_PizzaOrPastaTable;
@@ -495,10 +479,6 @@ struct PizzaOrPasta {
     kPizza = 1,  // 0x1
     kPasta = 2,  // 0x2
   };
-
-  Ordinal ordinal() const {
-    return ordinal_;
-  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
@@ -518,7 +498,7 @@ struct FlexiblePizzaOrPasta {
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_pizza() const { return ordinal() == Ordinal::kPizza; }
+  bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
   static FlexiblePizzaOrPasta WithPizza(::llcpp::fidl::test::json::Pizza* val) {
     FlexiblePizzaOrPasta result;
@@ -532,15 +512,15 @@ struct FlexiblePizzaOrPasta {
   }
 
   ::llcpp::fidl::test::json::Pizza& mutable_pizza() {
-    ZX_ASSERT(ordinal() == Ordinal::kPizza);
+    ZX_ASSERT(ordinal_ == Ordinal::kPizza);
     return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data);
   }
   const ::llcpp::fidl::test::json::Pizza& pizza() const {
-    ZX_ASSERT(ordinal() == Ordinal::kPizza);
+    ZX_ASSERT(ordinal_ == Ordinal::kPizza);
     return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data);
   }
 
-  bool is_pasta() const { return ordinal() == Ordinal::kPasta; }
+  bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
   static FlexiblePizzaOrPasta WithPasta(::llcpp::fidl::test::json::Pasta* val) {
     FlexiblePizzaOrPasta result;
@@ -554,16 +534,16 @@ struct FlexiblePizzaOrPasta {
   }
 
   ::llcpp::fidl::test::json::Pasta& mutable_pasta() {
-    ZX_ASSERT(ordinal() == Ordinal::kPasta);
+    ZX_ASSERT(ordinal_ == Ordinal::kPasta);
     return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data);
   }
   const ::llcpp::fidl::test::json::Pasta& pasta() const {
-    ZX_ASSERT(ordinal() == Ordinal::kPasta);
+    ZX_ASSERT(ordinal_ == Ordinal::kPasta);
     return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal());
+    return static_cast<Tag>(ordinal_);
   }
 
   static constexpr const fidl_type_t* Type = &v1_fidl_test_json_FlexiblePizzaOrPastaTable;
@@ -579,10 +559,6 @@ struct FlexiblePizzaOrPasta {
     kPizza = 1,  // 0x1
     kPasta = 2,  // 0x2
   };
-
-  Ordinal ordinal() const {
-    return ordinal_;
-  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
@@ -602,7 +578,7 @@ struct ExplicitPizzaOrPasta {
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_pizza() const { return ordinal() == Ordinal::kPizza; }
+  bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
   static ExplicitPizzaOrPasta WithPizza(::llcpp::fidl::test::json::Pizza* val) {
     ExplicitPizzaOrPasta result;
@@ -616,15 +592,15 @@ struct ExplicitPizzaOrPasta {
   }
 
   ::llcpp::fidl::test::json::Pizza& mutable_pizza() {
-    ZX_ASSERT(ordinal() == Ordinal::kPizza);
+    ZX_ASSERT(ordinal_ == Ordinal::kPizza);
     return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data);
   }
   const ::llcpp::fidl::test::json::Pizza& pizza() const {
-    ZX_ASSERT(ordinal() == Ordinal::kPizza);
+    ZX_ASSERT(ordinal_ == Ordinal::kPizza);
     return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data);
   }
 
-  bool is_pasta() const { return ordinal() == Ordinal::kPasta; }
+  bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
   static ExplicitPizzaOrPasta WithPasta(::llcpp::fidl::test::json::Pasta* val) {
     ExplicitPizzaOrPasta result;
@@ -638,16 +614,16 @@ struct ExplicitPizzaOrPasta {
   }
 
   ::llcpp::fidl::test::json::Pasta& mutable_pasta() {
-    ZX_ASSERT(ordinal() == Ordinal::kPasta);
+    ZX_ASSERT(ordinal_ == Ordinal::kPasta);
     return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data);
   }
   const ::llcpp::fidl::test::json::Pasta& pasta() const {
-    ZX_ASSERT(ordinal() == Ordinal::kPasta);
+    ZX_ASSERT(ordinal_ == Ordinal::kPasta);
     return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal());
+    return static_cast<Tag>(ordinal_);
   }
 
   static constexpr const fidl_type_t* Type = &v1_fidl_test_json_ExplicitPizzaOrPastaTable;
@@ -663,10 +639,6 @@ struct ExplicitPizzaOrPasta {
     kPizza = 1,  // 0x1
     kPasta = 4,  // 0x4
   };
-
-  Ordinal ordinal() const {
-    return ordinal_;
-  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
@@ -687,7 +659,7 @@ struct FlexibleUnion {
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_Primitive() const { return ordinal() == Ordinal::kPrimitive; }
+  bool is_Primitive() const { return ordinal_ == Ordinal::kPrimitive; }
 
   static FlexibleUnion WithPrimitive(int32_t* val) {
     FlexibleUnion result;
@@ -701,15 +673,15 @@ struct FlexibleUnion {
   }
 
   int32_t& mutable_Primitive() {
-    ZX_ASSERT(ordinal() == Ordinal::kPrimitive);
+    ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& Primitive() const {
-    ZX_ASSERT(ordinal() == Ordinal::kPrimitive);
+    ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
     return *static_cast<int32_t*>(envelope_.data);
   }
 
-  bool is_StringNeedsConstructor() const { return ordinal() == Ordinal::kStringNeedsConstructor; }
+  bool is_StringNeedsConstructor() const { return ordinal_ == Ordinal::kStringNeedsConstructor; }
 
   static FlexibleUnion WithStringNeedsConstructor(::fidl::StringView* val) {
     FlexibleUnion result;
@@ -723,15 +695,15 @@ struct FlexibleUnion {
   }
 
   ::fidl::StringView& mutable_StringNeedsConstructor() {
-    ZX_ASSERT(ordinal() == Ordinal::kStringNeedsConstructor);
+    ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
     return *static_cast<::fidl::StringView*>(envelope_.data);
   }
   const ::fidl::StringView& StringNeedsConstructor() const {
-    ZX_ASSERT(ordinal() == Ordinal::kStringNeedsConstructor);
+    ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
     return *static_cast<::fidl::StringView*>(envelope_.data);
   }
 
-  bool is_VectorStringAlsoNeedsConstructor() const { return ordinal() == Ordinal::kVectorStringAlsoNeedsConstructor; }
+  bool is_VectorStringAlsoNeedsConstructor() const { return ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor; }
 
   static FlexibleUnion WithVectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>* val) {
     FlexibleUnion result;
@@ -745,16 +717,16 @@ struct FlexibleUnion {
   }
 
   ::fidl::VectorView<::fidl::StringView>& mutable_VectorStringAlsoNeedsConstructor() {
-    ZX_ASSERT(ordinal() == Ordinal::kVectorStringAlsoNeedsConstructor);
+    ZX_ASSERT(ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor);
     return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
   }
   const ::fidl::VectorView<::fidl::StringView>& VectorStringAlsoNeedsConstructor() const {
-    ZX_ASSERT(ordinal() == Ordinal::kVectorStringAlsoNeedsConstructor);
+    ZX_ASSERT(ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor);
     return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal());
+    return static_cast<Tag>(ordinal_);
   }
 
   static constexpr const fidl_type_t* Type = &v1_fidl_test_json_FlexibleUnionTable;
@@ -771,10 +743,6 @@ struct FlexibleUnion {
     kStringNeedsConstructor = 2,  // 0x2
     kVectorStringAlsoNeedsConstructor = 3,  // 0x3
   };
-
-  Ordinal ordinal() const {
-    return ordinal_;
-  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
@@ -793,7 +761,7 @@ struct FieldCollision {
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_field_collision_tag() const { return ordinal() == Ordinal::kFieldCollisionTag; }
+  bool is_field_collision_tag() const { return ordinal_ == Ordinal::kFieldCollisionTag; }
 
   static FieldCollision WithFieldCollisionTag(int32_t* val) {
     FieldCollision result;
@@ -807,16 +775,16 @@ struct FieldCollision {
   }
 
   int32_t& mutable_field_collision_tag() {
-    ZX_ASSERT(ordinal() == Ordinal::kFieldCollisionTag);
+    ZX_ASSERT(ordinal_ == Ordinal::kFieldCollisionTag);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& field_collision_tag() const {
-    ZX_ASSERT(ordinal() == Ordinal::kFieldCollisionTag);
+    ZX_ASSERT(ordinal_ == Ordinal::kFieldCollisionTag);
     return *static_cast<int32_t*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal());
+    return static_cast<Tag>(ordinal_);
   }
 
   static constexpr const fidl_type_t* Type = &v1_fidl_test_json_FieldCollisionTable;
@@ -831,10 +799,6 @@ struct FieldCollision {
     Invalid = 0,
     kFieldCollisionTag = 1,  // 0x1
   };
-
-  Ordinal ordinal() const {
-    return ordinal_;
-  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
@@ -854,7 +818,7 @@ struct ExplicitUnion {
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_Primitive() const { return ordinal() == Ordinal::kPrimitive; }
+  bool is_Primitive() const { return ordinal_ == Ordinal::kPrimitive; }
 
   static ExplicitUnion WithPrimitive(int32_t* val) {
     ExplicitUnion result;
@@ -868,15 +832,15 @@ struct ExplicitUnion {
   }
 
   int32_t& mutable_Primitive() {
-    ZX_ASSERT(ordinal() == Ordinal::kPrimitive);
+    ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
     return *static_cast<int32_t*>(envelope_.data);
   }
   const int32_t& Primitive() const {
-    ZX_ASSERT(ordinal() == Ordinal::kPrimitive);
+    ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
     return *static_cast<int32_t*>(envelope_.data);
   }
 
-  bool is_StringNeedsConstructor() const { return ordinal() == Ordinal::kStringNeedsConstructor; }
+  bool is_StringNeedsConstructor() const { return ordinal_ == Ordinal::kStringNeedsConstructor; }
 
   static ExplicitUnion WithStringNeedsConstructor(::fidl::StringView* val) {
     ExplicitUnion result;
@@ -890,16 +854,16 @@ struct ExplicitUnion {
   }
 
   ::fidl::StringView& mutable_StringNeedsConstructor() {
-    ZX_ASSERT(ordinal() == Ordinal::kStringNeedsConstructor);
+    ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
     return *static_cast<::fidl::StringView*>(envelope_.data);
   }
   const ::fidl::StringView& StringNeedsConstructor() const {
-    ZX_ASSERT(ordinal() == Ordinal::kStringNeedsConstructor);
+    ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
     return *static_cast<::fidl::StringView*>(envelope_.data);
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
-    return static_cast<Tag>(ordinal());
+    return static_cast<Tag>(ordinal_);
   }
 
   static constexpr const fidl_type_t* Type = &v1_fidl_test_json_ExplicitUnionTable;
@@ -915,10 +879,6 @@ struct ExplicitUnion {
     kPrimitive = 1,  // 0x1
     kStringNeedsConstructor = 3,  // 0x3
   };
-
-  Ordinal ordinal() const {
-    return ordinal_;
-  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;

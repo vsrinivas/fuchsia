@@ -16,7 +16,7 @@ Union::~Union() {
   Destroy();
 }
 
-Union::Union(Union&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+Union::Union(Union&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kPrimitive:
       Primitive_ = std::move(other.Primitive_);
@@ -37,7 +37,7 @@ Union::Union(Union&& other) : tag_(GetWriteOrdinal(other.tag_)) {
 Union& Union::operator=(Union&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kPrimitive:
         Primitive_ = std::move(other.Primitive_);
@@ -73,10 +73,6 @@ Union Union::WithVectorStringAlsoNeedsConstructor(::std::vector<::std::string>&&
   return result;
 }
 
-
-fidl_xunion_tag_t Union::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  return ordinal;
-}
 
 void Union::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -198,10 +194,9 @@ void Union::Destroy() {
 }
 
 void Union::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
@@ -228,7 +223,7 @@ StrictUnion::~StrictUnion() {
   Destroy();
 }
 
-StrictUnion::StrictUnion(StrictUnion&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+StrictUnion::StrictUnion(StrictUnion&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kPrimitive:
       Primitive_ = std::move(other.Primitive_);
@@ -249,7 +244,7 @@ StrictUnion::StrictUnion(StrictUnion&& other) : tag_(GetWriteOrdinal(other.tag_)
 StrictUnion& StrictUnion::operator=(StrictUnion&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kPrimitive:
         Primitive_ = std::move(other.Primitive_);
@@ -285,10 +280,6 @@ StrictUnion StrictUnion::WithVectorStringAlsoNeedsConstructor(::std::vector<::st
   return result;
 }
 
-
-fidl_xunion_tag_t StrictUnion::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  return ordinal;
-}
 
 void StrictUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -410,10 +401,9 @@ void StrictUnion::Destroy() {
 }
 
 void StrictUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
@@ -440,7 +430,7 @@ ReverseOrdinalUnion::~ReverseOrdinalUnion() {
   Destroy();
 }
 
-ReverseOrdinalUnion::ReverseOrdinalUnion(ReverseOrdinalUnion&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+ReverseOrdinalUnion::ReverseOrdinalUnion(ReverseOrdinalUnion&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kFirst:
       first_ = std::move(other.first_);
@@ -456,7 +446,7 @@ ReverseOrdinalUnion::ReverseOrdinalUnion(ReverseOrdinalUnion&& other) : tag_(Get
 ReverseOrdinalUnion& ReverseOrdinalUnion::operator=(ReverseOrdinalUnion&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kFirst:
         first_ = std::move(other.first_);
@@ -482,10 +472,6 @@ ReverseOrdinalUnion ReverseOrdinalUnion::WithSecond(uint32_t&& val) {
   return result;
 }
 
-
-fidl_xunion_tag_t ReverseOrdinalUnion::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  return ordinal;
-}
 
 void ReverseOrdinalUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -583,10 +569,9 @@ void ReverseOrdinalUnion::Destroy() {
 }
 
 void ReverseOrdinalUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
@@ -644,7 +629,7 @@ StrictPizzaOrPasta::~StrictPizzaOrPasta() {
   Destroy();
 }
 
-StrictPizzaOrPasta::StrictPizzaOrPasta(StrictPizzaOrPasta&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+StrictPizzaOrPasta::StrictPizzaOrPasta(StrictPizzaOrPasta&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kPizza:
       new (&pizza_) class Pizza();
@@ -662,7 +647,7 @@ StrictPizzaOrPasta::StrictPizzaOrPasta(StrictPizzaOrPasta&& other) : tag_(GetWri
 StrictPizzaOrPasta& StrictPizzaOrPasta::operator=(StrictPizzaOrPasta&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kPizza:
         new (&pizza_) class Pizza();
@@ -690,10 +675,6 @@ StrictPizzaOrPasta StrictPizzaOrPasta::WithPasta(class Pasta&& val) {
   return result;
 }
 
-
-fidl_xunion_tag_t StrictPizzaOrPasta::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  return ordinal;
-}
 
 void StrictPizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -797,10 +778,9 @@ void StrictPizzaOrPasta::Destroy() {
 }
 
 void StrictPizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
@@ -824,7 +804,7 @@ PizzaOrPasta::~PizzaOrPasta() {
   Destroy();
 }
 
-PizzaOrPasta::PizzaOrPasta(PizzaOrPasta&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+PizzaOrPasta::PizzaOrPasta(PizzaOrPasta&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kPizza:
       new (&pizza_) class Pizza();
@@ -842,7 +822,7 @@ PizzaOrPasta::PizzaOrPasta(PizzaOrPasta&& other) : tag_(GetWriteOrdinal(other.ta
 PizzaOrPasta& PizzaOrPasta::operator=(PizzaOrPasta&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kPizza:
         new (&pizza_) class Pizza();
@@ -870,10 +850,6 @@ PizzaOrPasta PizzaOrPasta::WithPasta(class Pasta&& val) {
   return result;
 }
 
-
-fidl_xunion_tag_t PizzaOrPasta::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  return ordinal;
-}
 
 void PizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -977,10 +953,9 @@ void PizzaOrPasta::Destroy() {
 }
 
 void PizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
@@ -1004,7 +979,7 @@ FlexiblePizzaOrPasta::~FlexiblePizzaOrPasta() {
   Destroy();
 }
 
-FlexiblePizzaOrPasta::FlexiblePizzaOrPasta(FlexiblePizzaOrPasta&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+FlexiblePizzaOrPasta::FlexiblePizzaOrPasta(FlexiblePizzaOrPasta&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kPizza:
       new (&pizza_) class Pizza();
@@ -1022,7 +997,7 @@ FlexiblePizzaOrPasta::FlexiblePizzaOrPasta(FlexiblePizzaOrPasta&& other) : tag_(
 FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::operator=(FlexiblePizzaOrPasta&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kPizza:
         new (&pizza_) class Pizza();
@@ -1050,10 +1025,6 @@ FlexiblePizzaOrPasta FlexiblePizzaOrPasta::WithPasta(class Pasta&& val) {
   return result;
 }
 
-
-fidl_xunion_tag_t FlexiblePizzaOrPasta::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  return ordinal;
-}
 
 void FlexiblePizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -1157,10 +1128,9 @@ void FlexiblePizzaOrPasta::Destroy() {
 }
 
 void FlexiblePizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
@@ -1184,7 +1154,7 @@ ExplicitPizzaOrPasta::~ExplicitPizzaOrPasta() {
   Destroy();
 }
 
-ExplicitPizzaOrPasta::ExplicitPizzaOrPasta(ExplicitPizzaOrPasta&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+ExplicitPizzaOrPasta::ExplicitPizzaOrPasta(ExplicitPizzaOrPasta&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kPizza:
       new (&pizza_) class Pizza();
@@ -1202,7 +1172,7 @@ ExplicitPizzaOrPasta::ExplicitPizzaOrPasta(ExplicitPizzaOrPasta&& other) : tag_(
 ExplicitPizzaOrPasta& ExplicitPizzaOrPasta::operator=(ExplicitPizzaOrPasta&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kPizza:
         new (&pizza_) class Pizza();
@@ -1230,10 +1200,6 @@ ExplicitPizzaOrPasta ExplicitPizzaOrPasta::WithPasta(class Pasta&& val) {
   return result;
 }
 
-
-fidl_xunion_tag_t ExplicitPizzaOrPasta::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  return ordinal;
-}
 
 void ExplicitPizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -1337,10 +1303,9 @@ void ExplicitPizzaOrPasta::Destroy() {
 }
 
 void ExplicitPizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
@@ -1381,7 +1346,7 @@ FlexibleUnion::~FlexibleUnion() {
   Destroy();
 }
 
-FlexibleUnion::FlexibleUnion(FlexibleUnion&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+FlexibleUnion::FlexibleUnion(FlexibleUnion&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kPrimitive:
       Primitive_ = std::move(other.Primitive_);
@@ -1402,7 +1367,7 @@ FlexibleUnion::FlexibleUnion(FlexibleUnion&& other) : tag_(GetWriteOrdinal(other
 FlexibleUnion& FlexibleUnion::operator=(FlexibleUnion&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kPrimitive:
         Primitive_ = std::move(other.Primitive_);
@@ -1438,10 +1403,6 @@ FlexibleUnion FlexibleUnion::WithVectorStringAlsoNeedsConstructor(::std::vector<
   return result;
 }
 
-
-fidl_xunion_tag_t FlexibleUnion::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  return ordinal;
-}
 
 void FlexibleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -1563,10 +1524,9 @@ void FlexibleUnion::Destroy() {
 }
 
 void FlexibleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
@@ -1593,7 +1553,7 @@ FieldCollision::~FieldCollision() {
   Destroy();
 }
 
-FieldCollision::FieldCollision(FieldCollision&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+FieldCollision::FieldCollision(FieldCollision&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kFieldCollisionTag:
       field_collision_tag_ = std::move(other.field_collision_tag_);
@@ -1606,7 +1566,7 @@ FieldCollision::FieldCollision(FieldCollision&& other) : tag_(GetWriteOrdinal(ot
 FieldCollision& FieldCollision::operator=(FieldCollision&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kFieldCollisionTag:
         field_collision_tag_ = std::move(other.field_collision_tag_);
@@ -1624,10 +1584,6 @@ FieldCollision FieldCollision::WithFieldCollisionTag(int32_t&& val) {
   return result;
 }
 
-
-fidl_xunion_tag_t FieldCollision::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  return ordinal;
-}
 
 void FieldCollision::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -1707,10 +1663,9 @@ void FieldCollision::Destroy() {
 }
 
 void FieldCollision::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
@@ -1731,7 +1686,7 @@ ExplicitUnion::~ExplicitUnion() {
   Destroy();
 }
 
-ExplicitUnion::ExplicitUnion(ExplicitUnion&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+ExplicitUnion::ExplicitUnion(ExplicitUnion&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kPrimitive:
       Primitive_ = std::move(other.Primitive_);
@@ -1748,7 +1703,7 @@ ExplicitUnion::ExplicitUnion(ExplicitUnion&& other) : tag_(GetWriteOrdinal(other
 ExplicitUnion& ExplicitUnion::operator=(ExplicitUnion&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kPrimitive:
         Primitive_ = std::move(other.Primitive_);
@@ -1775,10 +1730,6 @@ ExplicitUnion ExplicitUnion::WithStringNeedsConstructor(::std::string&& val) {
   return result;
 }
 
-
-fidl_xunion_tag_t ExplicitUnion::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  return ordinal;
-}
 
 void ExplicitUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -1879,10 +1830,9 @@ void ExplicitUnion::Destroy() {
 }
 
 void ExplicitUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;

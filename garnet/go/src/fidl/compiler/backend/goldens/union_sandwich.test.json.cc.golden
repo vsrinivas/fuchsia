@@ -16,7 +16,7 @@ UnionSize8Alignment4::~UnionSize8Alignment4() {
   Destroy();
 }
 
-UnionSize8Alignment4::UnionSize8Alignment4(UnionSize8Alignment4&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+UnionSize8Alignment4::UnionSize8Alignment4(UnionSize8Alignment4&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kVariant:
       variant_ = std::move(other.variant_);
@@ -29,7 +29,7 @@ UnionSize8Alignment4::UnionSize8Alignment4(UnionSize8Alignment4&& other) : tag_(
 UnionSize8Alignment4& UnionSize8Alignment4::operator=(UnionSize8Alignment4&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kVariant:
         variant_ = std::move(other.variant_);
@@ -47,10 +47,6 @@ UnionSize8Alignment4 UnionSize8Alignment4::WithVariant(uint32_t&& val) {
   return result;
 }
 
-
-fidl_xunion_tag_t UnionSize8Alignment4::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  return ordinal;
-}
 
 void UnionSize8Alignment4::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -130,10 +126,9 @@ void UnionSize8Alignment4::Destroy() {
 }
 
 void UnionSize8Alignment4::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
@@ -181,7 +176,7 @@ UnionSize36Alignment4::~UnionSize36Alignment4() {
   Destroy();
 }
 
-UnionSize36Alignment4::UnionSize36Alignment4(UnionSize36Alignment4&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+UnionSize36Alignment4::UnionSize36Alignment4(UnionSize36Alignment4&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kVariant:
       new (&variant_) ::std::array<uint8_t, 32>();
@@ -195,7 +190,7 @@ UnionSize36Alignment4::UnionSize36Alignment4(UnionSize36Alignment4&& other) : ta
 UnionSize36Alignment4& UnionSize36Alignment4::operator=(UnionSize36Alignment4&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kVariant:
         new (&variant_) ::std::array<uint8_t, 32>();
@@ -214,10 +209,6 @@ UnionSize36Alignment4 UnionSize36Alignment4::WithVariant(::std::array<uint8_t, 3
   return result;
 }
 
-
-fidl_xunion_tag_t UnionSize36Alignment4::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  return ordinal;
-}
 
 void UnionSize36Alignment4::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -300,10 +291,9 @@ void UnionSize36Alignment4::Destroy() {
 }
 
 void UnionSize36Alignment4::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
@@ -351,7 +341,7 @@ UnionSize12Alignment4::~UnionSize12Alignment4() {
   Destroy();
 }
 
-UnionSize12Alignment4::UnionSize12Alignment4(UnionSize12Alignment4&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+UnionSize12Alignment4::UnionSize12Alignment4(UnionSize12Alignment4&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kVariant:
       new (&variant_) ::std::array<uint8_t, 6>();
@@ -365,7 +355,7 @@ UnionSize12Alignment4::UnionSize12Alignment4(UnionSize12Alignment4&& other) : ta
 UnionSize12Alignment4& UnionSize12Alignment4::operator=(UnionSize12Alignment4&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kVariant:
         new (&variant_) ::std::array<uint8_t, 6>();
@@ -384,10 +374,6 @@ UnionSize12Alignment4 UnionSize12Alignment4::WithVariant(::std::array<uint8_t, 6
   return result;
 }
 
-
-fidl_xunion_tag_t UnionSize12Alignment4::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  return ordinal;
-}
 
 void UnionSize12Alignment4::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -470,10 +456,9 @@ void UnionSize12Alignment4::Destroy() {
 }
 
 void UnionSize12Alignment4::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
@@ -543,7 +528,7 @@ UnionSize24Alignment8::~UnionSize24Alignment8() {
   Destroy();
 }
 
-UnionSize24Alignment8::UnionSize24Alignment8(UnionSize24Alignment8&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+UnionSize24Alignment8::UnionSize24Alignment8(UnionSize24Alignment8&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kVariant:
       new (&variant_) class StructSize16Alignment8();
@@ -557,7 +542,7 @@ UnionSize24Alignment8::UnionSize24Alignment8(UnionSize24Alignment8&& other) : ta
 UnionSize24Alignment8& UnionSize24Alignment8::operator=(UnionSize24Alignment8&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kVariant:
         new (&variant_) class StructSize16Alignment8();
@@ -576,10 +561,6 @@ UnionSize24Alignment8 UnionSize24Alignment8::WithVariant(class StructSize16Align
   return result;
 }
 
-
-fidl_xunion_tag_t UnionSize24Alignment8::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  return ordinal;
-}
 
 void UnionSize24Alignment8::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -662,10 +643,9 @@ void UnionSize24Alignment8::Destroy() {
 }
 
 void UnionSize24Alignment8::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;

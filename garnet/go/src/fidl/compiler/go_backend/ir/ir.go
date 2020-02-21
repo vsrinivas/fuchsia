@@ -169,8 +169,6 @@ const (
 	FidlSizeV1Tag
 	FidlOffsetV1Tag
 	FidlAlignmentV1Tag
-	FidlHashedOrdTag
-	FidlExplicitOrdTag
 	FidlHandleSubtypeTag
 	FidlHandleRightsTag
 	EndTag   // This value must be last in the list to allow iteration over all tags.
@@ -187,10 +185,6 @@ func (t Tag) String() string {
 		return "fidl_offset_v1"
 	case FidlAlignmentV1Tag:
 		return "fidl_alignment_v1"
-	case FidlHashedOrdTag:
-		return "fidl_hashed_ord"
-	case FidlExplicitOrdTag:
-		return "fidl_explicit_ord"
 	case FidlHandleSubtypeTag:
 		return "fidl_handle_subtype"
 	case FidlHandleRightsTag:
@@ -870,9 +864,7 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 		ty, rbtag := c.compileType(false, member.Type)
 		rbtag.reverseOfBounds = append(rbtag.reverseOfBounds, member.Ordinal)
 		tags := Tags{
-			FidlTag:            rbtag,
-			FidlExplicitOrdTag: member.ExplicitOrdinal,
-			FidlHashedOrdTag:   member.HashedOrdinal,
+			FidlTag: rbtag,
 		}
 		if handleRights := c.computeHandleRights(member.Type); handleRights != nil {
 			tags[FidlHandleRightsTag] = *handleRights

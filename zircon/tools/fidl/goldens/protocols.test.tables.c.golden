@@ -397,16 +397,16 @@ static const struct FidlStructField Fields54v1_test_name_WithErrorSyntax_Respons
 const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields54v1_test_name_WithErrorSyntax_ResponseAsStruct_Response, .field_count=3u, .size=24u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithErrorSyntax_ResponseAsStruct_Response", .alt_type=&test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable}}};
 
 static const struct FidlXUnionField Fields52v1_test_name_WithErrorSyntax_ResponseAsStruct_Result[] = {
-    /*FidlXUnionField*/{.type=&v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u}
+    /*FidlXUnionField*/{.type=&v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u}
 };
 const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields52v1_test_name_WithErrorSyntax_ResponseAsStruct_Result, .nullable=kFidlNullability_Nonnullable, .name="test.name/WithErrorSyntax_ResponseAsStruct_Result", .strictness=kFidlStrictness_Strict, .alt_type=&test_name_WithErrorSyntax_ResponseAsStruct_ResultTable}}};
 static const struct FidlStructField Fields54v1_test_name_WithErrorSyntax_ErrorAsPrimitive_Response[] = {};
 const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields54v1_test_name_WithErrorSyntax_ErrorAsPrimitive_Response, .field_count=0u, .size=1u, .max_out_of_line=0u, .contains_union=false, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Response", .alt_type=&test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable}}};
 
 static const struct FidlXUnionField Fields52v1_test_name_WithErrorSyntax_ErrorAsPrimitive_Result[] = {
-    /*FidlXUnionField*/{.type=&v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
-    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u}
+    /*FidlXUnionField*/{.type=&v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResponseTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kUint32Table, .ordinal=2u}
 };
 const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields52v1_test_name_WithErrorSyntax_ErrorAsPrimitive_Result, .nullable=kFidlNullability_Nonnullable, .name="test.name/WithErrorSyntax_ErrorAsPrimitive_Result", .strictness=kFidlStrictness_Strict, .alt_type=&test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable}}};
 static const struct FidlStructField Fields49v1_test_name_WithErrorSyntax_ErrorAsEnum_Response[] = {};
@@ -416,7 +416,7 @@ static bool EnumValidatorFor_v1_test_name_ErrorEnun(uint64_t v) { return (v == 1
 const fidl_type_t v1_test_name_ErrorEnunTable = {.type_tag=kFidlTypeEnum, {.coded_enum={.underlying_type=kFidlCodedPrimitive_Uint32, .validate=&EnumValidatorFor_v1_test_name_ErrorEnun, .name="test.name/ErrorEnun"}}};
 
 static const struct FidlXUnionField Fields47v1_test_name_WithErrorSyntax_ErrorAsEnum_Result[] = {
-    /*FidlXUnionField*/{.type=&v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u},
-    /*FidlXUnionField*/{.type=&v1_test_name_ErrorEnunTable, .ordinal=2u, .hashed_ordinal=2u, .explicit_ordinal=2u}
+    /*FidlXUnionField*/{.type=&v1_test_name_WithErrorSyntax_ErrorAsEnum_ResponseTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&v1_test_name_ErrorEnunTable, .ordinal=2u}
 };
 const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields47v1_test_name_WithErrorSyntax_ErrorAsEnum_Result, .nullable=kFidlNullability_Nonnullable, .name="test.name/WithErrorSyntax_ErrorAsEnum_Result", .strictness=kFidlStrictness_Strict, .alt_type=&test_name_WithErrorSyntax_ErrorAsEnum_ResultTable}}};

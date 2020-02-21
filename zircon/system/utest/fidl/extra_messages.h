@@ -108,9 +108,9 @@ struct SampleXUnion {
     int32_t raw_int;
   };
 };
-constexpr uint32_t kSampleXUnionIntStructOrdinal = 376675050;
-constexpr uint32_t kSampleXUnionSimpleTableOrdinal = 586453270;
-constexpr uint32_t kSampleXUnionRawIntOrdinal = 319709411;
+constexpr uint32_t kSampleXUnionIntStructOrdinal = 1;
+constexpr uint32_t kSampleXUnionSimpleTableOrdinal = 2;
+constexpr uint32_t kSampleXUnionRawIntOrdinal = 3;
 
 struct SampleStrictXUnion {
   FIDL_ALIGNDECL
@@ -128,9 +128,9 @@ struct SampleStrictXUnion {
     int32_t raw_int;
   };
 };
-constexpr uint32_t kSampleStrictXUnionIntStructOrdinal = 1928460319;
-constexpr uint32_t kSampleStrictXUnionSimpleTableOrdinal = 915108668;
-constexpr uint32_t kSampleStrictXUnionRawIntOrdinal = 419938224;
+constexpr uint32_t kSampleStrictXUnionIntStructOrdinal = 1;
+constexpr uint32_t kSampleStrictXUnionSimpleTableOrdinal = 2;
+constexpr uint32_t kSampleStrictXUnionRawIntOrdinal = 3;
 
 struct SampleXUnionStruct {
   FIDL_ALIGNDECL

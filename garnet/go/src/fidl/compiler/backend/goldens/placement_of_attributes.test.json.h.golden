@@ -249,8 +249,6 @@ class ExampleXUnion final {
   
   static ExampleXUnion WithVariant(uint32_t&&);
 
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
-
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   kUnknown = 0,
     Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
@@ -339,8 +337,6 @@ class ExampleUnion final {
 
   
   static ExampleUnion WithVariant(uint32_t&&);
-
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   

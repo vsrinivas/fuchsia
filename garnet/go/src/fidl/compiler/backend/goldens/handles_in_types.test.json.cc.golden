@@ -15,7 +15,7 @@ UnionWithHandle::~UnionWithHandle() {
   Destroy();
 }
 
-UnionWithHandle::UnionWithHandle(UnionWithHandle&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+UnionWithHandle::UnionWithHandle(UnionWithHandle&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kH:
       new (&h_) ::zx::vmo();
@@ -33,7 +33,7 @@ UnionWithHandle::UnionWithHandle(UnionWithHandle&& other) : tag_(GetWriteOrdinal
 UnionWithHandle& UnionWithHandle::operator=(UnionWithHandle&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kH:
         new (&h_) ::zx::vmo();
@@ -56,15 +56,6 @@ UnionWithHandle UnionWithHandle::WithH(::zx::vmo&& val) {
   return result;
 }
 
-
-fidl_xunion_tag_t UnionWithHandle::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  switch (ordinal) {
-    case 1:
-    case 1108158728:
-      return UnionWithHandle::Tag::kH;
-  }
-  return ordinal;
-}
 
 void UnionWithHandle::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -155,10 +146,9 @@ void UnionWithHandle::Destroy() {
 }
 
 void UnionWithHandle::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;

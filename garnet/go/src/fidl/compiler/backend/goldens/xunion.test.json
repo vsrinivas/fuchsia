@@ -275,8 +275,6 @@
       "members": [
         {
           "ordinal": 1,
-          "explicit_ordinal": 1,
-          "hashed_ordinal": 1056421836,
           "reserved": false,
           "name": "s",
           "type": {
@@ -291,8 +289,6 @@
         },
         {
           "ordinal": 2,
-          "explicit_ordinal": 2,
-          "hashed_ordinal": 1911600824,
           "reserved": false,
           "name": "i",
           "type": {
@@ -328,8 +324,6 @@
       "members": [
         {
           "ordinal": 1,
-          "explicit_ordinal": 1,
-          "hashed_ordinal": 215696753,
           "reserved": false,
           "name": "s",
           "type": {
@@ -344,8 +338,6 @@
         },
         {
           "ordinal": 2,
-          "explicit_ordinal": 2,
-          "hashed_ordinal": 2063855467,
           "reserved": false,
           "name": "i",
           "type": {
@@ -381,8 +373,6 @@
       "members": [
         {
           "ordinal": 2,
-          "explicit_ordinal": 2,
-          "hashed_ordinal": 1104328308,
           "reserved": false,
           "name": "s",
           "type": {
@@ -397,8 +387,6 @@
         },
         {
           "ordinal": 1,
-          "explicit_ordinal": 1,
-          "hashed_ordinal": 239266458,
           "reserved": false,
           "name": "i",
           "type": {
@@ -413,7 +401,6 @@
         },
         {
           "ordinal": 3,
-          "explicit_ordinal": 3,
           "reserved": true,
           "location": {
             "filename": "xunion.test.fidl",
@@ -444,7 +431,6 @@
       "members": [
         {
           "ordinal": 1,
-          "explicit_ordinal": 1,
           "reserved": true,
           "location": {
             "filename": "xunion.test.fidl",
@@ -454,8 +440,6 @@
         },
         {
           "ordinal": 3,
-          "explicit_ordinal": 3,
-          "hashed_ordinal": 1579569872,
           "reserved": false,
           "name": "s",
           "type": {
@@ -470,8 +454,6 @@
         },
         {
           "ordinal": 2,
-          "explicit_ordinal": 2,
-          "hashed_ordinal": 1284403118,
           "reserved": false,
           "name": "i",
           "type": {
@@ -507,8 +489,6 @@
       "members": [
         {
           "ordinal": 1,
-          "explicit_ordinal": 1,
-          "hashed_ordinal": 1103730460,
           "reserved": false,
           "name": "i",
           "type": {
@@ -523,8 +503,6 @@
         },
         {
           "ordinal": 2,
-          "explicit_ordinal": 2,
-          "hashed_ordinal": 1480211663,
           "reserved": false,
           "name": "f",
           "type": {
@@ -560,8 +538,6 @@
       "members": [
         {
           "ordinal": 1,
-          "explicit_ordinal": 1,
-          "hashed_ordinal": 170200420,
           "reserved": false,
           "name": "i",
           "type": {
@@ -576,8 +552,6 @@
         },
         {
           "ordinal": 2,
-          "explicit_ordinal": 2,
-          "hashed_ordinal": 697958567,
           "reserved": false,
           "name": "s",
           "type": {
@@ -592,8 +566,6 @@
         },
         {
           "ordinal": 3,
-          "explicit_ordinal": 3,
-          "hashed_ordinal": 57791921,
           "reserved": false,
           "name": "v",
           "type": {
@@ -633,8 +605,6 @@
       "members": [
         {
           "ordinal": 1,
-          "explicit_ordinal": 1,
-          "hashed_ordinal": 1350988770,
           "reserved": false,
           "name": "i",
           "type": {
@@ -649,8 +619,6 @@
         },
         {
           "ordinal": 2,
-          "explicit_ordinal": 2,
-          "hashed_ordinal": 676019752,
           "reserved": false,
           "name": "f",
           "type": {
@@ -665,8 +633,6 @@
         },
         {
           "ordinal": 3,
-          "explicit_ordinal": 3,
-          "hashed_ordinal": 384461647,
           "reserved": false,
           "name": "s",
           "type": {
@@ -702,8 +668,6 @@
       "members": [
         {
           "ordinal": 1,
-          "explicit_ordinal": 1,
-          "hashed_ordinal": 1720857888,
           "reserved": false,
           "name": "empty",
           "type": {
@@ -740,8 +704,6 @@
       "members": [
         {
           "ordinal": 1,
-          "explicit_ordinal": 1,
-          "hashed_ordinal": 480655205,
           "reserved": false,
           "name": "v",
           "type": {
@@ -782,7 +744,6 @@
       "members": [
         {
           "ordinal": 3,
-          "explicit_ordinal": 3,
           "reserved": true,
           "location": {
             "filename": "xunion.test.fidl",
@@ -792,7 +753,6 @@
         },
         {
           "ordinal": 2,
-          "explicit_ordinal": 2,
           "reserved": true,
           "location": {
             "filename": "xunion.test.fidl",
@@ -802,8 +762,6 @@
         },
         {
           "ordinal": 1,
-          "explicit_ordinal": 1,
-          "hashed_ordinal": 269774049,
           "reserved": false,
           "name": "i",
           "type": {
@@ -818,8 +776,6 @@
         },
         {
           "ordinal": 4,
-          "explicit_ordinal": 4,
-          "hashed_ordinal": 898646268,
           "reserved": false,
           "name": "f",
           "type": {

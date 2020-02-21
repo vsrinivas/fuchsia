@@ -70,7 +70,7 @@ const fidl_type_t v1_test_name_InterfaceOnEventEventTable = {.type_tag=kFidlType
 
 
 static const struct FidlXUnionField Fields18v1_test_name_Union[] = {
-    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u, .hashed_ordinal=1u, .explicit_ordinal=1u}
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u}
 };
 const fidl_type_t v1_test_name_UnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=1u, .fields=Fields18v1_test_name_Union, .nullable=kFidlNullability_Nonnullable, .name="test.name/Union", .strictness=kFidlStrictness_Strict, .alt_type=&test_name_UnionTable}}};
 static const struct FidlTableField Fields18v1_test_name_Table[] = {

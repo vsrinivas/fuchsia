@@ -40,7 +40,7 @@ struct UnionWithHandle {
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_h() const { return ordinal() == Ordinal::kH; }
+  bool is_h() const { return ordinal_ == Ordinal::kH; }
 
   static UnionWithHandle WithH(::zx::vmo* val) {
     UnionWithHandle result;
@@ -54,11 +54,11 @@ struct UnionWithHandle {
   }
 
   ::zx::vmo& mutable_h() {
-    ZX_ASSERT(ordinal() == Ordinal::kH);
+    ZX_ASSERT(ordinal_ == Ordinal::kH);
     return *static_cast<::zx::vmo*>(envelope_.data);
   }
   const ::zx::vmo& h() const {
-    ZX_ASSERT(ordinal() == Ordinal::kH);
+    ZX_ASSERT(ordinal_ == Ordinal::kH);
     return *static_cast<::zx::vmo*>(envelope_.data);
   }
   void* unknownData() const {
@@ -79,15 +79,6 @@ struct UnionWithHandle {
     Invalid = 0,
     kH = 1,  // 0x1
   };
-
-  Ordinal ordinal() const {
-    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-      case 1:
-      case 1108158728:
-        return Ordinal::kH;
-    }
-    return ordinal_;
-  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;

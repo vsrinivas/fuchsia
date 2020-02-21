@@ -57,8 +57,6 @@ fidl_xunion! {
 		Field {
 			ty: i32,
 			ordinal: 1,
-			explicit_ordinal: 1,
-			hashed_ordinal: 1,
 		},
 	],
 }

@@ -33,7 +33,7 @@ Example_foo_Result::~Example_foo_Result() {
   Destroy();
 }
 
-Example_foo_Result::Example_foo_Result(Example_foo_Result&& other) : tag_(GetWriteOrdinal(other.tag_)) {
+Example_foo_Result::Example_foo_Result(Example_foo_Result&& other) : tag_(other.tag_) {
   switch (tag_) {
     case Tag::kResponse:
       new (&response_) class Example_foo_Response();
@@ -50,7 +50,7 @@ Example_foo_Result::Example_foo_Result(Example_foo_Result&& other) : tag_(GetWri
 Example_foo_Result& Example_foo_Result::operator=(Example_foo_Result&& other) {
   if (this != &other) {
     Destroy();
-    tag_ = GetWriteOrdinal(other.tag_);
+    tag_ = other.tag_;
     switch (tag_) {
       case Tag::kResponse:
         new (&response_) class Example_foo_Response();
@@ -77,10 +77,6 @@ Example_foo_Result Example_foo_Result::WithErr(uint32_t&& val) {
   return result;
 }
 
-
-fidl_xunion_tag_t Example_foo_Result::GetWriteOrdinal(fidl_xunion_tag_t ordinal) {
-  return ordinal;
-}
 
 void Example_foo_Result::Encode(::fidl::Encoder* encoder, size_t offset) {
   const size_t length_before = encoder->CurrentLength();
@@ -181,10 +177,9 @@ void Example_foo_Result::Destroy() {
 }
 
 void Example_foo_Result::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
-  fidl_xunion_tag_t canonical_tag = GetWriteOrdinal(tag);
-  if (tag_ != canonical_tag) {
+  if (tag_ != tag) {
     Destroy();
-    tag_ = canonical_tag;
+    tag_ = tag;
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;

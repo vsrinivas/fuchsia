@@ -73,8 +73,6 @@ class Example_foo_Result final {
   static Example_foo_Result WithResponse(class Example_foo_Response&&);
   static Example_foo_Result WithErr(uint32_t&&);
 
-  fidl_xunion_tag_t GetWriteOrdinal(fidl_xunion_tag_t ordinal);
-
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kResponse = 1,  // 0x1

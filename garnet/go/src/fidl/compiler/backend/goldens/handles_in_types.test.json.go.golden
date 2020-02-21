@@ -37,7 +37,7 @@ const (
 type UnionWithHandle struct {
 	I_unionWithHandleTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	I_unknownData []byte
-	H _zx.VMO  `fidl:"1,0" fidl_hashed_ord:"1108158728" fidl_explicit_ord:"1" fidl_handle_subtype:"3" fidl_handle_rights:"2147483648"`
+	H _zx.VMO  `fidl:"1,0" fidl_handle_subtype:"3" fidl_handle_rights:"2147483648"`
 }
 
 func (_m *UnionWithHandle) Which() I_unionWithHandleTag {
