@@ -80,31 +80,31 @@ group("tests") {
 #   ]
 # }
 
-test("io_conformance_fdio") {
-  sources = [ "fdio.cc" ]
-  deps = [
-    "//sdk/fidl/fuchsia.io.test",
-    "//sdk/lib/sys/cpp",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-loop-cpp",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fdio",
-    "//zircon/system/fidl/fuchsia-io",
-  ]
-}
+# test("io_conformance_fdio") {
+#   sources = [ "fdio.cc" ]
+#   deps = [
+#     "//sdk/fidl/fuchsia.io.test",
+#     "//sdk/lib/sys/cpp",
+#     "//third_party/googletest:gtest",
+#     "//zircon/public/lib/async-loop-cpp",
+#     "//zircon/public/lib/async-loop-default",
+#     "//zircon/public/lib/fbl",
+#     "//zircon/public/lib/fdio",
+#     "//zircon/system/fidl/fuchsia-io",
+#   ]
+# }
 
-test_package("fdio_test") {
-  package_name = "io_conformance_fdio_test"
-  deps = [ ":io_conformance_fdio" ]
-  tests = [
-    {
-      name = "io_conformance_fdio"
-      environments = basic_envs
+# test_package("fdio_test") {
+#   package_name = "io_conformance_fdio_test"
+#   deps = [ ":io_conformance_fdio" ]
+#   tests = [
+#     {
+#       name = "io_conformance_fdio"
+#       environments = basic_envs
 
-      # TODO(fxb/44968): Re-enable these tests once we fix race conditions involving starting
-      # and connecting components.
-      disabled = true
-    },
-  ]
-}
+#       # TODO(fxb/44968): Re-enable these tests once we fix race conditions involving starting
+#       # and connecting components.
+#       disabled = true
+#     },
+#   ]
+# }
