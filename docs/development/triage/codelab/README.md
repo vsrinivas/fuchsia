@@ -8,6 +8,12 @@ This codelab explains the Triage utility.
 * How to run it, including command line options
 * How to add and test detection rules
 
+The source files and examples to which this document refers are available at:
+
+* [//src/diagnostics/examples/triage/inspect.json][triage-inspect-example].
+* [//src/diagnostics/examples/triage/rules.triage][triage-rules-example].
+* [//src/diagnostics/examples/triage/solution][triage-codelab-solution].
+
 ## What is Triage?
 
 Triage allows you to scan bug dump files (bugreport.zip,
@@ -313,3 +319,8 @@ may be able to select the correct product file automatically.)
 See
 [Triage (fx triage)](/src/diagnostics/triage/README.md)
 for the latest features and options - Triage will keep improving!
+
+[triage-inspect-example]: /src/diagnostics/examples/triage/inspect.json
+[triage-rules-example]: /src/diagnostics/examples/triage/rules.triage
+[triage-codelab-solution]: /src/diagnostics/examples/triage/solution
+
