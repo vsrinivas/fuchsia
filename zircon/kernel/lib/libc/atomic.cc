@@ -1,6 +1,8 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Copyright 2019 The Fuchsia Authors
+//
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT
 
 // This file provides callout implementations of 16-byte atomic operations. When the compiler fails
 // to provide inline intrinsics for a given atomic operation, it will generate a call to one of

@@ -1,6 +1,8 @@
-// Copyright 2016 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Copyright 2016 The Fuchsia Authors
+//
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT
 
 #ifndef ZIRCON_KERNEL_LIB_FBL_INCLUDE_FBL_INLINE_ARRAY_H_
 #define ZIRCON_KERNEL_LIB_FBL_INCLUDE_FBL_INLINE_ARRAY_H_
