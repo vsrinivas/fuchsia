@@ -210,6 +210,7 @@ impl Into<fidl_fuchsia_hwinfo::ProductInfo> for ProductInfo {
             name: self.name,
             model: self.model,
             manufacturer: self.manufacturer,
+            build_date: None,
         }
     }
 }
