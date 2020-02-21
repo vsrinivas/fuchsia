@@ -91,6 +91,9 @@ test("driver_host_test") {
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/zxtest",
   ]
+
+  # TODO(46713): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 devmgr_manifest("devmgr-manifest") {
