@@ -171,15 +171,17 @@ function get-fuchsia-device-addr {
   local output devices
   case "$device" in
     "")
-        output="$("${finder}" list --netboot --ipv4=false --mdns=false "$@")" || {
+        # Note: the arguments below enable netboot, mdns is always enabled as well.
+        output="$("${finder}" list -netboot -ipv4=false "$@")" || {
           code=$?
           fx-error "Device discovery failed with status: $code"
           exit $code
         }
         if [[ "$(echo "${output}" | wc -l)" -gt "1" ]]; then
           fx-error "Multiple devices found."
-          fx-error "Please specify one of the following (check network if this fails):"
-          devices="$("${finder}" list --netboot --ipv4=false --mdns=false --full)" || {
+          fx-error "Please specify one of the following devices using either \`fx -d <device-name>\` or \`fx set-device <device-name>\`."
+          # Note: the arguments below enable netboot, mdns is always enabled as well.
+          devices="$("${finder}" list -netboot -ipv4=false -full)" || {
             code=$?
             fx-error "Device discovery failed with status: $code"
             exit $code
@@ -190,7 +192,8 @@ function get-fuchsia-device-addr {
           exit 1
         fi
         echo "${output}" ;;
-     *) "${finder}" resolve --device-limit 1 --netboot --ipv4=false --mdns=false "$@" "$device" ;;
+     # Note: the arguments below enable netboot, mdns is always enabled as well.
+     *) "${finder}" resolve -device-limit 1 -netboot -ipv4=false "$@" "$device" ;;
   esac
 }
 

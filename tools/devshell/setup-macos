@@ -11,31 +11,34 @@ fx-config-read
 
 FIREWALL_CMD="/usr/libexec/ApplicationFirewall/socketfilterfw"
 
-function list_zircon_tools() {
-  TOOL_LIST="$(${FIREWALL_CMD} --listapps | grep zircon | awk '{print $3}')"
+function list_tools() {
+  TOOL_LIST="$(${FIREWALL_CMD} --listapps | grep "${FUCHSIA_DIR}" | awk '{print $3}')"
   for f in "${TOOL_LIST[@]}"; do
     echo "${f}"
   done
 }
 
-function clear_zircon_tools() {
-  TOOL_LIST="$(${FIREWALL_CMD} --listapps | grep zircon | awk '{print $3}')"
+function clear_tools() {
+  TOOL_LIST="$(${FIREWALL_CMD} --listapps | grep "${FUCHSIA_DIR}" | awk '{print $3}')"
   for f in ${TOOL_LIST}; do
     sudo ${FIREWALL_CMD} --remove "${f}" &> /dev/null
   done
 }
 
-function allow_zircon_tools() {
+function allow_tools() {
   for f in ${ZIRCON_TOOLS_DIR}/*; do
+    sudo ${FIREWALL_CMD} --add "$f" --unblockapp "$f" &> /dev/null
+  done
+  for f in ${FUCHSIA_BUILD_DIR}/host-tools/*; do
     sudo ${FIREWALL_CMD} --add "$f" --unblockapp "$f" &> /dev/null
   done
 }
 
 function main() {
   echo "  clearing firewall rules.."
-  clear_zircon_tools
+  clear_tools
   echo "  adding firewall rules.."
-  allow_zircon_tools
+  allow_tools
 
   # Activate the changes
   sudo ${FIREWALL_CMD} --setglobalstate off &> /dev/null
@@ -44,7 +47,7 @@ function main() {
 
   echo "  following tools are registered in the firewall rules:"
   echo " "
-  list_zircon_tools
+  list_tools
   echo " "
 }
 
