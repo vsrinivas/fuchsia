@@ -71,6 +71,9 @@ executable("sessionctl_test") {
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//third_party/googletest:gtest_main",
   ]
+
+  # TODO(46757): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("session_shell_test") {
@@ -106,6 +109,9 @@ executable("inspect_session_test") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest_main",
   ]
+
+  # TODO(46757): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("intents_test") {
@@ -188,6 +194,9 @@ executable("sessionmgr_integration_test") {
     "//zircon/public/lib/fdio",
     "//zircon/system/fidl/fuchsia-device-manager",
   ]
+
+  # TODO(46757): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("story_shell_factory_test") {
