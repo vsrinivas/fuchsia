@@ -10,6 +10,10 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
+#include <cstdint>
+#include <memory>
+#include <vector>
+
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/logging.h"
 
@@ -41,54 +45,49 @@ bool FileReader::MapBuffer(const std::string& name, uint32_t trace_num) {
   lseek(raw_fd, 0, SEEK_SET);
 #ifdef __Fuchsia__
   // Mmap can currently fail if the file is on minfs, so just punt.
-  void* buffer = reinterpret_cast<void*>(-1);
+  void* mapped_buffer = reinterpret_cast<void*>(-1);
 #else
-  void* buffer = mmap(nullptr, file_size_, PROT_READ, MAP_PRIVATE, raw_fd, 0);
-  if (buffer == reinterpret_cast<void*>(-1)) {
+  void* mapped_buffer = mmap(nullptr, file_size_, PROT_READ, MAP_PRIVATE, raw_fd, 0);
+  if (mapped_buffer == reinterpret_cast<void*>(-1)) {
     FXL_VLOG(2) << name << ": Unable to map buffer file: " << file_name << ": " << strerror(errno);
   }
 #endif
-  if (buffer == reinterpret_cast<void*>(-1)) {
-    // Workaround this by just reading in the file.
-    std::pair<uint8_t*, intptr_t> bytes = files::ReadFileDescriptorToBytes(raw_fd);
-    if (bytes.first == nullptr) {
+  if (mapped_buffer == reinterpret_cast<void*>(-1)) {
+    std::vector<uint8_t> data;
+    if (!files::ReadFileDescriptorToVector(raw_fd, &data)) {
       FXL_LOG(ERROR) << "Error reading: " << file_name;
       return false;
     }
-    if (static_cast<size_t>(bytes.second) != file_size_) {
-      FXL_LOG(ERROR) << "Error reading: " << file_name << ": got " << bytes.second
+    if (data.size() != file_size_) {
+      FXL_LOG(ERROR) << "Error reading: " << file_name << ": got " << data.size()
                      << " bytes instead of expected " << file_size_;
       return false;
     }
-    buffer = reinterpret_cast<void*>(bytes.first);
+    buffer_ = std::move(data);
+    buffer_ptr_ = buffer_.data();
     file_is_mmapped_ = false;
   } else {
+    buffer_ptr_ = mapped_buffer;
     file_is_mmapped_ = true;
   }
-  buffer_contents_ = buffer;
 
-  ReaderStatus status = BufferReader::Create(name, buffer_contents_, file_size_, &buffer_reader_);
-  if (status != ReaderStatus::kOk) {
-    return false;
-  }
-
-  return true;
+  ReaderStatus status = BufferReader::Create(name, buffer_ptr_, file_size_, &buffer_reader_);
+  return status == ReaderStatus::kOk;
 }
 
 bool FileReader::UnmapBuffer() {
-  if (buffer_contents_) {
+  if (buffer_ptr_) {
     buffer_reader_.reset();
     if (file_is_mmapped_) {
-      auto buffer = const_cast<void*>(buffer_contents_);
+      auto buffer = const_cast<void*>(buffer_ptr_);
       int error = munmap(buffer, file_size_);
       if (error != 0) {
         FXL_LOG(ERROR) << "Unable to unmap buffer: " << strerror(errno);
         return false;
       }
-    } else {
-      free(const_cast<void*>(buffer_contents_));
     }
-    buffer_contents_ = nullptr;
+    buffer_ptr_ = nullptr;
+    buffer_ = std::vector<uint8_t>();  // Ensure the vector's data is freed
   }
   return true;
 }

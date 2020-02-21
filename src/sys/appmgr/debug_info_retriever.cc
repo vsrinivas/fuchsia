@@ -118,9 +118,15 @@ fbl::String DebugInfoRetriever::GetInfo(const zx::process* process, zx_koid_t* t
   }
 
   rewind(output);
-  auto output_pair = files::ReadFileDescriptorToBytes(fileno(output));
+
+  std::vector<uint8_t> data;
+  if (!files::ReadFileDescriptorToVector(fileno(output), &data)) {
+    fclose(output);
+    return "ERROR: Failed to read file contents";
+  }
+
   fclose(output);
-  return fbl::String((char*)output_pair.first, output_pair.second);
+  return fbl::String((char*)data.data(), data.size());
 }
 
 }  // namespace component

@@ -12,7 +12,9 @@
 #include <cstdint>
 #include <cstdio>
 #include <functional>
+#include <memory>
 #include <string>
+#include <vector>
 
 #include "reader.h"
 #include "src/lib/files/unique_fd.h"
@@ -35,7 +37,8 @@ class FileReader final : public Reader {
 
   FileNameProducer file_name_producer_;
 
-  const void* buffer_contents_ = nullptr;
+  std::vector<uint8_t> buffer_;
+  const void* buffer_ptr_ = nullptr;
   size_t file_size_ = 0;
   bool file_is_mmapped_ = false;
 
