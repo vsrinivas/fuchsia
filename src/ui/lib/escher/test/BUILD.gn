@@ -108,6 +108,9 @@ if (is_mac) {
       "//third_party/googletest:gmock",
     ]
 
+    # TODO(46717): Fix the leaks and remove this.
+    deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
     if (escher_use_runtime_glsl) {
       deps += [
         "//third_party/glslang:glslang_sources",
