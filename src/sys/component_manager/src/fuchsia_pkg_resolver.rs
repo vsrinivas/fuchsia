@@ -93,6 +93,7 @@ mod tests {
         super::*,
         cm_fidl_translator,
         fidl::endpoints::{self, ServerEnd},
+        fidl_fuchsia_data as fdata,
         fidl_fuchsia_sys::{LoaderMarker, LoaderRequest, Package},
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::TryStreamExt,
@@ -153,11 +154,11 @@ mod tests {
         // the resolver returned the right package dir.
         let fsys::Component { resolved_url, decl, package } = component;
         assert_eq!(resolved_url.unwrap(), url);
-        let program = fsys::Object {
-            entries: vec![fsys::Entry {
+        let program = fdata::Dictionary {
+            entries: Some(vec![fdata::DictionaryEntry {
                 key: "binary".to_string(),
-                value: Some(Box::new(fsys::Value::Str("bin/hello_world".to_string()))),
-            }],
+                value: Some(Box::new(fdata::DictionaryValue::Str("bin/hello_world".to_string()))),
+            }]),
         };
         let expected_decl = fsys::ComponentDecl {
             program: Some(program),

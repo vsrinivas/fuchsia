@@ -461,6 +461,7 @@ mod tests {
     use {
         super::*,
         fidl::endpoints::{create_proxy, ClientEnd, Proxy},
+        fidl_fuchsia_data as fdata,
         fidl_fuchsia_io::DirectoryProxy,
         fuchsia_async as fasync, io_util,
         runner::component::Killable,
@@ -498,22 +499,22 @@ mod tests {
             resolved_url: Some(
                 "fuchsia-pkg://fuchsia.com/hello_world_hippo#meta/hello_world.cm".to_string(),
             ),
-            program: Some(fsys::Object {
-                entries: vec![
-                    fsys::Entry {
-                        key: "binary".to_string(),
-                        value: Some(Box::new(fsys::Value::Str("bin/hello_world".to_string()))),
-                    },
-                    fsys::Entry {
+            program: Some(fdata::Dictionary {
+                entries: Some(vec![
+                    fdata::DictionaryEntry {
                         key: "args".to_string(),
-                        value: Some(Box::new(fsys::Value::Vec(fsys::Vector {
-                            values: vec![
-                                Some(Box::new(fsys::Value::Str("foo".to_string()))),
-                                Some(Box::new(fsys::Value::Str("bar".to_string()))),
-                            ],
-                        }))),
+                        value: Some(Box::new(fdata::DictionaryValue::StrVec(vec![
+                            "foo".to_string(),
+                            "bar".to_string(),
+                        ]))),
                     },
-                ],
+                    fdata::DictionaryEntry {
+                        key: "binary".to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str(
+                            "bin/hello_world".to_string(),
+                        ))),
+                    },
+                ]),
             }),
             ns: Some(ns),
             outgoing_dir: None,

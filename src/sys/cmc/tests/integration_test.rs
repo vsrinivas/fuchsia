@@ -1,5 +1,6 @@
 use anyhow::Error;
 use cm_fidl_translator;
+use fidl_fuchsia_data as fdata;
 use fidl_fuchsia_io2 as fio2;
 use fidl_fuchsia_sys2::{
     ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, DependencyType, Durability,
@@ -19,11 +20,11 @@ fn main() {
 
     let cm_decl = cm_fidl_translator::translate(&cm_content).expect("could not translate cm");
     let expected_decl = {
-        let program = Object {
-            entries: vec![Entry {
+        let program = fdata::Dictionary {
+            entries: Some(vec![fdata::DictionaryEntry {
                 key: "binary".to_string(),
-                value: Some(Box::new(Value::Str("bin/example".to_string()))),
-            }],
+                value: Some(Box::new(fdata::DictionaryValue::Str("bin/example".to_string()))),
+            }]),
         };
         let uses = vec![
             UseDecl::Runner(UseRunnerDecl { source_name: Some("elf".to_string()) }),

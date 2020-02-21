@@ -18,6 +18,7 @@ fidl("fuchsia.sys2") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.data",
     "//sdk/fidl/fuchsia.url",
     "//zircon/system/fidl/fuchsia-io",
     "//zircon/system/fidl/fuchsia-io2",

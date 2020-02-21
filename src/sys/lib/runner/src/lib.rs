@@ -4,7 +4,7 @@
 
 pub mod component;
 
-use {cm_rust::data::ObjectExt, fidl_fuchsia_sys2 as fsys, std::path::Path, thiserror::Error};
+use {fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys, std::path::Path, thiserror::Error};
 
 /// An error encountered operating on `ComponentStartInfo`.
 #[derive(Debug, PartialEq, Eq, Error)]
@@ -40,13 +40,27 @@ pub fn get_resolved_url(start_info: &fsys::ComponentStartInfo) -> Result<String,
     }
 }
 
+fn find<'a>(dict: &'a fdata::Dictionary, key: &str) -> Option<&'a fdata::DictionaryValue> {
+    match &dict.entries {
+        Some(entries) => {
+            for entry in entries {
+                if entry.key == key {
+                    return entry.value.as_ref().map(|val| &**val);
+                }
+            }
+            None
+        }
+        _ => None,
+    }
+}
+
 /// Retrieves program.binary from ComponentStartInfo and makes sure that path is relative.
 pub fn get_program_binary(
     start_info: &fsys::ComponentStartInfo,
 ) -> Result<String, StartInfoProgramError> {
     if let Some(program) = &start_info.program {
-        if let Some(val) = program.find("binary") {
-            if let fsys::Value::Str(bin) = val {
+        if let Some(val) = find(program, "binary") {
+            if let fdata::DictionaryValue::Str(bin) = val {
                 if !Path::new(bin).is_absolute() {
                     Ok(bin.to_string())
                 } else {
@@ -68,19 +82,9 @@ pub fn get_program_args(
     start_info: &fsys::ComponentStartInfo,
 ) -> Result<Vec<String>, StartInfoProgramError> {
     if let Some(program) = &start_info.program {
-        if let Some(args) = program.find("args") {
-            if let fsys::Value::Vec(vec) = args {
-                return vec
-                    .values
-                    .iter()
-                    .map(|v| {
-                        if let Some(fsys::Value::Str(a)) = v.as_ref().map(|x| &**x) {
-                            Ok(a.clone())
-                        } else {
-                            Err(StartInfoProgramError::InvalidArguments)
-                        }
-                    })
-                    .collect();
+        if let Some(args) = find(program, "args") {
+            if let fdata::DictionaryValue::StrVec(vec) = args {
+                return vec.iter().map(|v| Ok(v.clone())).collect();
             }
         }
     }
@@ -111,12 +115,12 @@ mod tests {
     #[test]
     fn get_program_binary_test() {
         let new_start_info = |binary_name: Option<&str>| fsys::ComponentStartInfo {
-            program: Some(fsys::Object {
-                entries: vec![fsys::Entry {
+            program: Some(fdata::Dictionary {
+                entries: Some(vec![fdata::DictionaryEntry {
                     key: "binary".to_string(),
                     value: binary_name
-                        .and_then(|s| Some(Box::new(fsys::Value::Str(s.to_string())))),
-                }],
+                        .and_then(|s| Some(Box::new(fdata::DictionaryValue::Str(s.to_string())))),
+                }]),
             }),
             ns: None,
             outgoing_dir: None,
@@ -137,13 +141,13 @@ mod tests {
         );
     }
 
-    fn new_args_set(args: Vec<Option<Box<fsys::Value>>>) -> fsys::ComponentStartInfo {
+    fn new_args_set(args: Vec<String>) -> fsys::ComponentStartInfo {
         fsys::ComponentStartInfo {
-            program: Some(fsys::Object {
-                entries: vec![fsys::Entry {
+            program: Some(fdata::Dictionary {
+                entries: Some(vec![fdata::DictionaryEntry {
                     key: "args".to_string(),
-                    value: Some(Box::new(fsys::Value::Vec(fsys::Vector { values: args }))),
-                }],
+                    value: Some(Box::new(fdata::DictionaryValue::StrVec(args))),
+                }]),
             }),
             ns: None,
             outgoing_dir: None,
@@ -159,7 +163,7 @@ mod tests {
         assert_eq!(
             e,
             get_program_args(&fsys::ComponentStartInfo {
-                program: Some(fsys::Object { entries: vec![] }),
+                program: Some(fdata::Dictionary { entries: Some(vec![]) }),
                 ns: None,
                 outgoing_dir: None,
                 runtime_dir: None,
@@ -172,30 +176,12 @@ mod tests {
 
         assert_eq!(
             Ok(vec!["a".to_string()]),
-            get_program_args(&new_args_set(vec![Some(Box::new(fsys::Value::Str(
-                "a".to_string()
-            )))]))
+            get_program_args(&new_args_set(vec!["a".to_string()]))
         );
 
         assert_eq!(
             Ok(vec!["a".to_string(), "b".to_string()]),
-            get_program_args(&new_args_set(vec![
-                Some(Box::new(fsys::Value::Str("a".to_string()))),
-                Some(Box::new(fsys::Value::Str("b".to_string()))),
-            ]))
-        );
-
-        assert_eq!(
-            Err(StartInfoProgramError::InvalidArguments),
-            get_program_args(&new_args_set(vec![
-                Some(Box::new(fsys::Value::Str("a".to_string()))),
-                None,
-            ]))
-        );
-
-        assert_eq!(
-            Err(StartInfoProgramError::InvalidArguments),
-            get_program_args(&new_args_set(vec![Some(Box::new(fsys::Value::Inum(1))),]))
+            get_program_args(&new_args_set(vec!["a".to_string(), "b".to_string()]))
         );
     }
 }

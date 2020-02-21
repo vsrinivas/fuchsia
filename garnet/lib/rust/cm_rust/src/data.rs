@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_sys2 as fsys;
+use {fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys};
 
 pub trait ObjectExt {
     fn find(&self, key: &str) -> Option<&fsys::Value>;
@@ -53,4 +53,10 @@ pub fn clone_value(v: &fsys::Value) -> fsys::Value {
 
 pub fn clone_option_boxed_value(v: &Option<Box<fsys::Value>>) -> Option<Box<fsys::Value>> {
     v.as_ref().map(|x| Box::new(clone_value(&**x)))
+}
+
+pub fn clone_option_dictionary(v: &Option<fdata::Dictionary>) -> Option<fdata::Dictionary> {
+    v.as_ref().map(|dict| fdata::Dictionary {
+        entries: dict.entries.as_ref().map(|entries| entries.clone()),
+    })
 }

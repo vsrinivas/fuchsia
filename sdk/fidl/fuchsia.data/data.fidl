@@ -4,30 +4,32 @@
 
 library fuchsia.data;
 
-/// A value is a boolean, integer, float, string, vector, or dictionary.
-union Value {
-    1: bool bit;
-    2: int64 inum;
-    3: float64 fnum;
-    4: string str;
-    5: Vector vec;
-    6: Dictionary dict;
-    // TODO(CP-154): Consider adding blobs.
-};
-
-/// A vector is a sequence of values.
-struct Vector {
-    vector<Value?> values;
-};
+// Maximum number of items in a dictionary's value.
+const uint32 MAX_NUM_VALUE_ITEMS = 1024;
+const uint32 MAX_NUM_ENTRIES = 1024;
+const uint32 MAX_KEY_LENGTH = 1024;
+const uint32 MAX_VALUE_LENGTH = 1024;
 
 /// A dictionary is a sequence of key/value pairs.
 /// Keys must be unique and sorted in lexicographically increasing order.
-struct Dictionary {
-    vector<Entry> entries;
+table Dictionary {
+    // A list of dictionary entries, where each entry is a (key, value) pair.
+    //
+    // Required.
+    1: vector<DictionaryEntry>:MAX_NUM_ENTRIES entries;
 };
 
 /// A key/value pair in a `Dictionary`.
-struct Entry {
-    string key;
-    Value? value;
+struct DictionaryEntry {
+    // The key for a dictionary entry.
+    string:MAX_KEY_LENGTH key;
+
+    // The value associated with the `key`.
+    DictionaryValue? value;
+};
+
+/// A dictionary's value is a string, or a list of strings.
+union DictionaryValue {
+    1: string:MAX_VALUE_LENGTH str;
+    2: vector<string:MAX_VALUE_LENGTH>:MAX_NUM_VALUE_ITEMS str_vec;
 };

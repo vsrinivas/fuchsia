@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    cm_fidl_validator, fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
+    cm_fidl_validator, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_sys2 as fsys,
     std::collections::HashMap,
     std::convert::{From, TryFrom, TryInto},
     std::fmt,
@@ -159,7 +160,7 @@ macro_rules! fidl_into_vec {
 
 #[derive(Debug, PartialEq, Default)]
 pub struct ComponentDecl {
-    pub program: Option<fsys::Object>,
+    pub program: Option<fdata::Dictionary>,
     pub uses: Vec<UseDecl>,
     pub exposes: Vec<ExposeDecl>,
     pub offers: Vec<OfferDecl>,
@@ -329,7 +330,7 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
 impl Clone for ComponentDecl {
     fn clone(&self) -> Self {
         ComponentDecl {
-            program: data::clone_option_object(&self.program),
+            program: data::clone_option_dictionary(&self.program),
             uses: self.uses.clone(),
             exposes: self.exposes.clone(),
             offers: self.offers.clone(),
@@ -544,10 +545,12 @@ fidl_translations_opt_type!(String);
 fidl_translations_opt_type!(fsys::StartupMode);
 fidl_translations_opt_type!(fsys::Durability);
 fidl_translations_opt_type!(fsys::Object);
+fidl_translations_opt_type!(fdata::Dictionary);
 fidl_translations_opt_type!(fio2::Operations);
 fidl_translations_opt_type!(fsys::EnvironmentExtends);
 fidl_translations_identical!(Option<fio2::Operations>);
 fidl_translations_identical!(Option<fsys::Object>);
+fidl_translations_identical!(Option<fdata::Dictionary>);
 fidl_translations_identical!(Option<String>);
 
 /// A path to a capability.
@@ -665,10 +668,16 @@ impl fmt::Display for CapabilityName {
     }
 }
 
-// TODO: Runners and third parties can use this to parse `program` or `facets`.
+// TODO: Runners and third parties can use this to parse `facets`.
 impl FidlIntoNative<Option<HashMap<String, Value>>> for Option<fsys::Object> {
     fn fidl_into_native(self) -> Option<HashMap<String, Value>> {
-        self.map(|d| from_fidl_obj(d))
+        self.map(|o| from_fidl_obj(o))
+    }
+}
+
+impl FidlIntoNative<Option<HashMap<String, DictionaryValue>>> for Option<fdata::Dictionary> {
+    fn fidl_into_native(self) -> Option<HashMap<String, DictionaryValue>> {
+        self.map(|d| from_fidl_dict(d))
     }
 }
 
@@ -733,6 +742,13 @@ pub enum Value {
     Null,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum DictionaryValue {
+    Str(String),
+    StrVec(Vec<String>),
+    Null,
+}
+
 impl FidlIntoNative<Value> for Option<Box<fsys::Value>> {
     fn fidl_into_native(self) -> Value {
         match self {
@@ -749,12 +765,31 @@ impl FidlIntoNative<Value> for Option<Box<fsys::Value>> {
     }
 }
 
+impl FidlIntoNative<DictionaryValue> for Option<Box<fdata::DictionaryValue>> {
+    fn fidl_into_native(self) -> DictionaryValue {
+        match self {
+            Some(v) => match *v {
+                fdata::DictionaryValue::Str(s) => DictionaryValue::Str(s),
+                fdata::DictionaryValue::StrVec(ss) => DictionaryValue::StrVec(ss),
+            },
+            None => DictionaryValue::Null,
+        }
+    }
+}
+
 fn from_fidl_vec(vec: fsys::Vector) -> Vec<Value> {
     vec.values.into_iter().map(|v| v.fidl_into_native()).collect()
 }
 
 fn from_fidl_obj(obj: fsys::Object) -> HashMap<String, Value> {
     obj.entries.into_iter().map(|e| (e.key, e.value.fidl_into_native())).collect()
+}
+
+fn from_fidl_dict(dict: fdata::Dictionary) -> HashMap<String, DictionaryValue> {
+    match dict.entries {
+        Some(entries) => entries.into_iter().map(|e| (e.key, e.value.fidl_into_native())).collect(),
+        _ => HashMap::new(),
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -1430,12 +1465,16 @@ mod tests {
         },
         try_from_all => {
             input = fsys::ComponentDecl {
-               program: Some(fsys::Object{entries: vec![
-                   fsys::Entry{
-                       key: "binary".to_string(),
-                       value: Some(Box::new(fsys::Value::Str("bin/app".to_string()))),
+               program: Some(fdata::Dictionary{entries: Some(vec![
+                   fdata::DictionaryEntry {
+                       key: "args".to_string(),
+                       value: Some(Box::new(fdata::DictionaryValue::StrVec(vec!["foo".to_string(), "bar".to_string()]))),
                    },
-               ]}),
+                   fdata::DictionaryEntry {
+                       key: "binary".to_string(),
+                       value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
+                   },
+               ])}),
                uses: Some(vec![
                    fsys::UseDecl::Service(fsys::UseServiceDecl {
                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
@@ -1638,12 +1677,16 @@ mod tests {
             },
             result = {
                 ComponentDecl {
-                    program: Some(fsys::Object{entries: vec![
-                        fsys::Entry{
-                            key: "binary".to_string(),
-                            value: Some(Box::new(fsys::Value::Str("bin/app".to_string()))),
+                    program: Some(fdata::Dictionary{entries: Some(vec![
+                        fdata::DictionaryEntry {
+                            key: "args".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::StrVec(vec!["foo".to_string(), "bar".to_string()]))),
                         },
-                    ]}),
+                        fdata::DictionaryEntry{
+                            key: "binary".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
+                        },
+                    ])}),
                     uses: vec![
                         UseDecl::Service(UseServiceDecl {
                             source: UseSource::Realm,

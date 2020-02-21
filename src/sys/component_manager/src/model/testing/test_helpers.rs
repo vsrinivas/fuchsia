@@ -21,7 +21,7 @@ use {
     },
     cm_rust::{ChildDecl, CollectionDecl, ComponentDecl, NativeIntoFidl},
     fidl::endpoints::{self, ServerEnd},
-    fidl_fidl_examples_echo as echo,
+    fidl_fidl_examples_echo as echo, fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
         DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE, OPEN_FLAG_CREATE,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
@@ -150,7 +150,10 @@ pub async fn get_live_child<'a>(realm: &'a Realm, child: &'a str) -> Arc<Realm> 
 
 /// Returns an empty component decl for an executable component.
 pub fn default_component_decl() -> ComponentDecl {
-    ComponentDecl { program: Some(fsys::Object { entries: vec![] }), ..Default::default() }
+    ComponentDecl {
+        program: Some(fdata::Dictionary { entries: Some(vec![]) }),
+        ..Default::default()
+    }
 }
 
 /// Name of the test runner.
@@ -162,7 +165,7 @@ pub const TEST_RUNNER_NAME: &str = "test_runner";
 /// runner.
 pub fn component_decl_with_test_runner() -> ComponentDecl {
     ComponentDecl {
-        program: Some(fsys::Object { entries: vec![] }),
+        program: Some(fdata::Dictionary { entries: Some(vec![]) }),
         uses: vec![cm_rust::UseDecl::Runner(cm_rust::UseRunnerDecl {
             source_name: TEST_RUNNER_NAME.into(),
         })],

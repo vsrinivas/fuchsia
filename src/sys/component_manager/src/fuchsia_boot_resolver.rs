@@ -102,7 +102,7 @@ mod tests {
     use {
         super::*,
         fidl::endpoints,
-        fidl_fuchsia_io as fio,
+        fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
         fidl_fuchsia_sys2::ComponentDecl,
         fuchsia_async::{self as fasync, EHandle},
         vfs::{
@@ -145,11 +145,11 @@ mod tests {
         let component = resolver.resolve_async(url).await?;
         assert_eq!(url, component.resolved_url.unwrap());
 
-        let program = fsys::Object {
-            entries: vec![fsys::Entry {
+        let program = fdata::Dictionary {
+            entries: Some(vec![fdata::DictionaryEntry {
                 key: "binary".to_string(),
-                value: Some(Box::new(fsys::Value::Str("bin/hello_world".to_string()))),
-            }],
+                value: Some(Box::new(fdata::DictionaryValue::Str("bin/hello_world".to_string()))),
+            }]),
         };
         let component_decl = ComponentDecl {
             program: Some(program),
