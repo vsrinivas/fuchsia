@@ -340,6 +340,7 @@ template("fuzzers_package") {
                              ])
 
       # Add selected fuzzers
+      fuzzer_names = []
       foreach(fuzzer, fuzzed) {
         fuzzer_name = get_label_info(fuzzer, "name")
         fuzzer_path = get_label_info(fuzzer, "target_gen_dir")
@@ -372,6 +373,10 @@ template("fuzzers_package") {
           "${fuzzer_label}_dictionary",
           "${fuzzer_label}_options",
         ]
+        fuzzer_names += [ fuzzer_name ]
+      }
+      foreach(fuzzer, prebuilt_fuzzed) {
+        fuzzer_names += [ get_label_info(fuzzer, "name") ]
       }
 
       # Add fuzzer tests for those not selected.
@@ -410,7 +415,7 @@ template("fuzzers_package") {
         fuzz_spec = [
           {
             fuzzers_package = package_name
-            fuzzers = fuzzed + prebuilt_fuzzed
+            fuzzers = fuzzer_names
             fuzz_host = host_fuzzed != []
           },
         ]
