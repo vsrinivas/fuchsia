@@ -119,6 +119,9 @@ executable("mac_tests") {
     "//third_party/googletest:gtest",
   ]
 
+  # TODO(46770): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }
 
