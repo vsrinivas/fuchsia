@@ -44,6 +44,9 @@ executable("system_time_updater_test_bin") {
     "//zircon/system/fidl/fuchsia-hardware-rtc",
     "//zircon/system/fidl/fuchsia-io",
   ]
+
+  # TODO(46758): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("system_time_updater_test") {
