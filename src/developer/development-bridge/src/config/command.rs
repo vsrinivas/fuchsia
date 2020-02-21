@@ -5,7 +5,7 @@
 use {
     crate::config::args::{
         ConfigCommand, EnvAccessCommand, EnvCommand, EnvGetCommand, EnvSetCommand, GetCommand,
-        SetCommand, SubCommand,
+        RemoveCommand, SetCommand, SubCommand,
     },
     crate::config::configuration::{Config, ConfigLevel, FileBackedConfig},
     crate::config::environment::Environment,
@@ -27,6 +27,7 @@ pub fn exec_config(config: ConfigCommand) -> Result<(), Error> {
         SubCommand::Env(env) => exec_env(env),
         SubCommand::Get(get) => exec_get(get),
         SubCommand::Set(set) => exec_set(set),
+        SubCommand::Remove(remove) => exec_remove(remove),
     };
     Ok(())
 }
@@ -73,6 +74,14 @@ fn exec_set(set: SetCommand) -> Result<(), Error> {
     let env = Environment::load(&file)?;
     let mut config = load_config_from_environment(&env, &set.build_dir)?;
     config.set(&set.level, &set.name, Value::String(set.value))?;
+    save_config_from_environment(&env, &mut config, set.build_dir)
+}
+
+fn exec_remove(set: RemoveCommand) -> Result<(), Error> {
+    let file = find_env_file()?;
+    let env = Environment::load(&file)?;
+    let mut config = load_config_from_environment(&env, &set.build_dir)?;
+    config.remove(&set.level, &set.name);
     save_config_from_environment(&env, &mut config, set.build_dir)
 }
 

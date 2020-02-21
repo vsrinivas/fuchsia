@@ -20,6 +20,7 @@ pub enum ConfigLevel {
 pub trait Config {
     fn get(&self, key: &str) -> Option<&Value>;
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<(), Error>;
+    fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<(), Error>;
 }
 
 struct ConfigData {
@@ -109,6 +110,27 @@ impl Config for ConfigData {
             ConfigLevel::Defaults => set(&mut self.defaults),
         }
     }
+
+    fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<(), Error> {
+        let remove = |config_data: &mut Option<Value>| -> Result<(), Error> {
+            match config_data {
+                Some(config) => match config.as_object_mut() {
+                    Some(map) => map
+                        .remove(&key.to_string())
+                        .ok_or_else(|| anyhow!("No config found matching {}", key))
+                        .map(|_| ()),
+                    None => Err(anyhow!("Config file parsing error")),
+                },
+                None => Ok(()),
+            }
+        };
+        match level {
+            ConfigLevel::User => remove(&mut self.user),
+            ConfigLevel::Build => remove(&mut self.build),
+            ConfigLevel::Global => remove(&mut self.global),
+            ConfigLevel::Defaults => remove(&mut self.defaults),
+        }
+    }
 }
 
 struct PersistentConfig {
@@ -186,6 +208,13 @@ impl Config for PersistentConfig {
             _ => self.data.set(&level, key, value),
         }
     }
+
+    fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<(), Error> {
+        match level {
+            ConfigLevel::Defaults => Err(anyhow!("Cannot override defaults")),
+            _ => self.data.remove(&level, key),
+        }
+    }
 }
 
 pub struct FileBackedConfig {
@@ -231,7 +260,7 @@ impl FileBackedConfig {
     fn writer_from_ref(path: &Option<&String>) -> Result<Option<BufWriter<File>>, Error> {
         match path {
             Some(p) => {
-                let file = OpenOptions::new().write(true).create(true).open(p);
+                let file = OpenOptions::new().write(true).truncate(true).create(true).open(p);
                 match file {
                     Ok(f) => Ok(Some(BufWriter::new(f))),
                     Err(e) => Err(anyhow!("Could not open file {}", e)),
@@ -244,7 +273,7 @@ impl FileBackedConfig {
     fn writer(path: &Option<String>) -> Result<Option<BufWriter<File>>, Error> {
         match path {
             Some(p) => {
-                let file = OpenOptions::new().write(true).create(true).open(p);
+                let file = OpenOptions::new().write(true).truncate(true).create(true).open(p);
                 match file {
                     Ok(f) => Ok(Some(BufWriter::new(f))),
                     Err(e) => Err(anyhow!("Could not open file {}", e)),
@@ -275,6 +304,10 @@ impl Config for FileBackedConfig {
 
     fn set(&mut self, level: &ConfigLevel, key: &str, value: Value) -> Result<(), Error> {
         self.data.set(level, key, value)
+    }
+
+    fn remove(&mut self, level: &ConfigLevel, key: &str) -> Result<(), Error> {
+        self.data.remove(level, key)
     }
 }
 
@@ -458,6 +491,32 @@ mod test {
         let value_user = test.get("name");
         assert!(value_user.is_some());
         assert_eq!(value_user.unwrap(), &Value::String(String::from("user")));
+        Ok(())
+    }
+
+    #[test]
+    fn test_remove() -> Result<(), Error> {
+        let mut test = ConfigData {
+            user: Some(serde_json::from_str(USER)?),
+            build: Some(serde_json::from_str(BUILD)?),
+            global: Some(serde_json::from_str(GLOBAL)?),
+            defaults: Some(serde_json::from_str(DEFAULTS)?),
+        };
+        test.remove(&ConfigLevel::User, "name")?;
+        let user_value = test.get("name");
+        assert!(user_value.is_some());
+        assert_eq!(user_value.unwrap(), &Value::String(String::from("Build")));
+        test.remove(&ConfigLevel::Build, "name")?;
+        let global_value = test.get("name");
+        assert!(global_value.is_some());
+        assert_eq!(global_value.unwrap(), &Value::String(String::from("Global")));
+        test.remove(&ConfigLevel::Global, "name")?;
+        let default_value = test.get("name");
+        assert!(default_value.is_some());
+        assert_eq!(default_value.unwrap(), &Value::String(String::from("Defaults")));
+        test.remove(&ConfigLevel::Defaults, "name")?;
+        let none_value = test.get("name");
+        assert!(none_value.is_none());
         Ok(())
     }
 

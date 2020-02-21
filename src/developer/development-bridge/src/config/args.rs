@@ -17,6 +17,7 @@ pub enum SubCommand {
     Env(EnvCommand),
     Get(GetCommand),
     Set(SetCommand),
+    Remove(RemoveCommand),
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -45,6 +46,25 @@ pub struct SetCommand {
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "get", description = "list config for a given level")]
 pub struct GetCommand {
+    #[argh(option)]
+    /// name of the config property
+    pub name: String,
+
+    // TODO(fxb/45493): figure out how to work with build directories.  Is it just the directory
+    // from which ffx is called? This will probably go away.
+    #[argh(option)]
+    /// an optional build directory to associate the build config provided - use used for "build"
+    /// configs
+    pub build_dir: Option<String>,
+}
+
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "remove", description = "remove config for a given level")]
+pub struct RemoveCommand {
+    #[argh(option, from_str_fn(parse_level))]
+    /// config level.  Possible values are "user", "build", "global", "default".
+    pub level: ConfigLevel,
+
     #[argh(option)]
     /// name of the config property
     pub name: String,
@@ -256,6 +276,46 @@ mod tests {
                 level_opt.1,
                 key,
                 value,
+                Some(build_dir.to_string()),
+            );
+        }
+    }
+
+    #[test]
+    fn test_remove() {
+        fn check(
+            args: &[&str],
+            expected_level: ConfigLevel,
+            expected_key: &str,
+            expected_build_dir: Option<String>,
+        ) {
+            assert_eq!(
+                ConfigCommand::from_args(CMD_NAME, args),
+                Ok(ConfigCommand {
+                    sub: SubCommand::Remove(RemoveCommand {
+                        level: expected_level,
+                        name: expected_key.to_string(),
+                        build_dir: expected_build_dir,
+                    })
+                })
+            )
+        }
+
+        let key = "test-key";
+        let build_dir = "/test/";
+        let levels = [
+            ("build", ConfigLevel::Build),
+            ("user", ConfigLevel::User),
+            ("global", ConfigLevel::Global),
+            ("default", ConfigLevel::Defaults),
+        ];
+
+        for level_opt in levels.iter() {
+            check(&["remove", "--name", key, "--level", level_opt.0], level_opt.1, key, None);
+            check(
+                &["remove", "--name", key, "--level", level_opt.0, "--build-dir", build_dir],
+                level_opt.1,
+                key,
                 Some(build_dir.to_string()),
             );
         }

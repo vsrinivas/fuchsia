@@ -50,7 +50,7 @@ impl Environment {
     }
 
     fn writer(path: &str) -> Result<BufWriter<File>, Error> {
-        let file = OpenOptions::new().write(true).create(true).open(path);
+        let file = OpenOptions::new().write(true).truncate(true).create(true).open(path);
         match file {
             Ok(f) => Ok(BufWriter::new(f)),
             Err(e) => Err(anyhow!("Could not open file {}", e)),
