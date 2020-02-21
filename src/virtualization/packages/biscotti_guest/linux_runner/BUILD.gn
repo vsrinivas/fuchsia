@@ -176,6 +176,9 @@ executable("linux_runner_unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/memfs",
   ]
+
+  # TODO(46750): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("linux_runner_tests") {
