@@ -1,0 +1,35 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("wlan-stash") {
+  name = "wlan_stash"
+  version = "0.1.0"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+test_package("wlan-stash-tests") {
+  deps = [
+    ":wlan-stash_test",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+  ]
+
+  tests = [
+    {
+      name = "wlan_stash_lib_test"
+      environments = basic_envs
+    },
+  ]
+}

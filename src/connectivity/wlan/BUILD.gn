@@ -57,6 +57,7 @@ group("tests") {
     "//src/connectivity/wlan/lib/rsn:wlan-rsn-tests",
     "//src/connectivity/wlan/lib/sme:wlan-sme-tests",
     "//src/connectivity/wlan/lib/span:wlan-span-tests",
+    "//src/connectivity/wlan/lib/stash:wlan-stash-tests",
     "//src/connectivity/wlan/lib/statemachine:wlan-statemachine-tests",
     "//src/connectivity/wlan/lib/wep_deprecated:wep-deprecated-tests",
     "//src/connectivity/wlan/testing/ap-smoke-test:wlan-ap-smoke-test",
