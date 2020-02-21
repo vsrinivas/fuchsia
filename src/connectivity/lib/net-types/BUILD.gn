@@ -18,6 +18,9 @@ rustc_library("net-types") {
     "//third_party/rust_crates:byteorder",
   ]
 
+  # TODO(46764): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   features = [ "std" ]
 }
 
