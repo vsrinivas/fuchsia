@@ -17,24 +17,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::task::{Context, Poll, Waker};
 use std::time::{Duration, Instant};
 
-pub trait PinConnection {
-    fn pin_it(self) -> Pin<Box<quiche::Connection>>
-    where
-        Self: Sized;
-}
-
-impl PinConnection for Box<quiche::Connection> {
-    fn pin_it(self) -> Pin<Box<quiche::Connection>> {
-        Pin::new(self)
-    }
-}
-
-impl PinConnection for Pin<Box<quiche::Connection>> {
-    fn pin_it(self) -> Pin<Box<quiche::Connection>> {
-        self
-    }
-}
-
 struct IO {
     conn: Pin<Box<quiche::Connection>>,
     seen_established: bool,
@@ -448,7 +430,7 @@ pub(crate) mod test_util {
             .take(quiche::MAX_CONN_ID_LEN)
             .collect();
         let client = AsyncConnection::from_connection(
-            quiche::connect(None, &scid, &mut client_config()?)?.pin_it(),
+            quiche::connect(None, &scid, &mut client_config()?)?,
             Endpoint::Client,
         );
         let scid: Vec<u8> = rand::thread_rng()
@@ -456,7 +438,7 @@ pub(crate) mod test_util {
             .take(quiche::MAX_CONN_ID_LEN)
             .collect();
         let server = AsyncConnection::from_connection(
-            quiche::accept(&scid, None, &mut server_config()?)?.pin_it(),
+            quiche::accept(&scid, None, &mut server_config()?)?,
             Endpoint::Server,
         );
         spawn(log_errors(

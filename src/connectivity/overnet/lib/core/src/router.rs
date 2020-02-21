@@ -19,7 +19,6 @@
 // on our behalf).
 
 use crate::{
-    async_quic::PinConnection,
     diagnostics_service::spawn_diagostic_service_request_handler,
     future_help::{Observable, Observer},
     labels::{Endpoint, NodeId, NodeLinkId},
@@ -399,9 +398,7 @@ impl Router {
             .collect();
         let p = Peer::new_client(
             node_id,
-            quiche::connect(None, &scid, &mut config)
-                .context("creating quic client connection")?
-                .pin_it(),
+            quiche::connect(None, &scid, &mut config).context("creating quic client connection")?,
             link_hint,
             self.link_state_observable.new_observer(),
             self.service_map.new_local_service_observer(),
@@ -438,9 +435,7 @@ impl Router {
             .collect();
         let p = Peer::new_server(
             node_id,
-            quiche::accept(&scid, None, &mut config)
-                .context("Creating quic server connection")?
-                .pin_it(),
+            quiche::accept(&scid, None, &mut config).context("Creating quic server connection")?,
             link_hint,
             &self,
         )
