@@ -43,6 +43,9 @@ executable("json_parser_unittests_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/rapidjson",
   ]
+
+  # TODO(46748): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 if (is_fuchsia) {
