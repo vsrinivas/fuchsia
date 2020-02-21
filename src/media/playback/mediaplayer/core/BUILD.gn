@@ -71,4 +71,7 @@ test("tests") {
     "//src/media/playback/mediaplayer/process",
     "//src/media/playback/mediaplayer/render",
   ]
+
+  # TODO(46755): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
