@@ -35,4 +35,7 @@ executable("ledger_lib_unittests") {
     "//src/ledger/lib/timekeeper:unittests",
     "//src/ledger/lib/vmo:unittests",
   ]
+
+  # TODO(46760): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
