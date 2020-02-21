@@ -127,7 +127,7 @@ TEST_F(ImagePipeTest, PresentImage_ShouldCallScheduleUpdate) {
 
   auto present_id =
       image_pipe_->PresentImage(image1_id, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
-                                CopyEventIntoFidlArray(CreateEvent()), [](auto) {});
+                                CopyEventIntoFidlArray(CreateEvent()), /*callback=*/[](auto) {});
 
   EXPECT_EQ(image_pipe_updater_->schedule_update_call_count_, 1u);
 
@@ -148,12 +148,11 @@ TEST_F(ImagePipeTest, PresentImagesOutOfOrder) {
                           GetVmoSize(checkerboard->vmo()),
                           fuchsia::images::MemoryType::HOST_MEMORY);
   }
-  fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
 
   image_pipe_->PresentImage(image1_id, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
-                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+                            CopyEventIntoFidlArray(CreateEvent()), /*callback=*/[](auto) {});
   image_pipe_->PresentImage(image1_id, zx::time(0), CopyEventIntoFidlArray(CreateEvent()),
-                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+                            CopyEventIntoFidlArray(CreateEvent()), /*callback=*/[](auto) {});
 
   ExpectLastReportedError(
       "ImagePipe: Present called with out-of-order presentation "
@@ -174,12 +173,11 @@ TEST_F(ImagePipeTest, PresentImagesInOrder) {
                           GetVmoSize(checkerboard->vmo()),
                           fuchsia::images::MemoryType::HOST_MEMORY);
   }
-  fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
 
   image_pipe_->PresentImage(image1_id, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
-                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+                            CopyEventIntoFidlArray(CreateEvent()), /*callback=*/[](auto) {});
   image_pipe_->PresentImage(image1_id, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
-                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+                            CopyEventIntoFidlArray(CreateEvent()), /*callback=*/[](auto) {});
 
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
@@ -205,12 +203,11 @@ TEST_F(ImagePipeTest, PresentImagesWithOffset) {
                           offset_bytes, GetVmoSize(shared_vmo->vmo()),
                           fuchsia::images::MemoryType::HOST_MEMORY);
   }
-  fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
 
   image_pipe_->PresentImage(image1_id, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
-                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+                            CopyEventIntoFidlArray(CreateEvent()), /*callback=*/[](auto) {});
   image_pipe_->PresentImage(image1_id, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
-                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+                            CopyEventIntoFidlArray(CreateEvent()), /*callback=*/[](auto) {});
 
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
@@ -232,8 +229,9 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
                           fuchsia::images::MemoryType::HOST_MEMORY);
   }
 
-  const auto present_id1 = image_pipe_->PresentImage(image1_id, zx::time(0), /*acquire_fences=*/{},
-                                                     /*release_fences=*/{}, /*callback=*/nullptr);
+  const auto present_id1 =
+      image_pipe_->PresentImage(image1_id, zx::time(0), /*acquire_fences=*/{},
+                                /*release_fences=*/{}, /*callback=*/[](auto) {});
 
   image_pipe_->Update(present_id1);
   ASSERT_TRUE(image_pipe_->current_image());
@@ -256,8 +254,9 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
                           GetVmoSize(gradient->vmo()), fuchsia::images::MemoryType::HOST_MEMORY);
   }
 
-  const auto present_id2 = image_pipe_->PresentImage(image2_id, zx::time(0), /*acquire_fences=*/{},
-                                                     /*release_fences=*/{}, /*callback=*/nullptr);
+  const auto present_id2 =
+      image_pipe_->PresentImage(image2_id, zx::time(0), /*acquire_fences=*/{},
+                                /*release_fences=*/{}, /*callback=*/[](auto) {});
 
   // Verify that the currently display image hasn't changed yet, since we haven't updated the image
   // pipe.
@@ -290,9 +289,10 @@ TEST_F(ImagePipeTest, ImagePipeUpdateTwoFrames) {
                         GetVmoSize(gradient_b->vmo()), fuchsia::images::MemoryType::HOST_MEMORY);
 
   image_pipe_->PresentImage(imageIdA, zx::time(0), std::vector<zx::event>(),
-                            std::vector<zx::event>(), nullptr);
-  const auto present_id = image_pipe_->PresentImage(imageIdB, zx::time(0), std::vector<zx::event>(),
-                                                    std::vector<zx::event>(), nullptr);
+                            std::vector<zx::event>(), /*callback=*/[](auto) {});
+  const auto present_id =
+      image_pipe_->PresentImage(imageIdB, zx::time(0), std::vector<zx::event>(),
+                                std::vector<zx::event>(), /*callback=*/[](auto) {});
 
   image_pipe_->Update(present_id);
 
@@ -307,10 +307,12 @@ TEST_F(ImagePipeTest, ImagePipeUpdateTwoFrames) {
 
   // Do it again, to make sure that update is called a second time (since
   // released images could be edited by the client before presentation).
-  const auto present_id2 = image_pipe_->PresentImage(
-      imageIdA, zx::time(0), std::vector<zx::event>(), std::vector<zx::event>(), nullptr);
-  const auto present_id3 = image_pipe_->PresentImage(
-      imageIdB, zx::time(0), std::vector<zx::event>(), std::vector<zx::event>(), nullptr);
+  const auto present_id2 =
+      image_pipe_->PresentImage(imageIdA, zx::time(0), std::vector<zx::event>(),
+                                std::vector<zx::event>(), /*callback=*/[](auto) {});
+  const auto present_id3 =
+      image_pipe_->PresentImage(imageIdB, zx::time(0), std::vector<zx::event>(),
+                                std::vector<zx::event>(), /*callback=*/[](auto) {});
 
   image_pipe_->Update(present_id2);
   image_pipe_->Update(present_id3);
@@ -341,8 +343,9 @@ TEST_F(ImagePipeTest, ImagePipeRemoveImageThatIsPendingPresent) {
                           fuchsia::images::MemoryType::HOST_MEMORY);
   }
 
-  const auto present_id1 = image_pipe_->PresentImage(image1_id, zx::time(0), /*acquire_fences=*/{},
-                                                     /*release_fences=*/{}, /*callback=*/nullptr);
+  const auto present_id1 =
+      image_pipe_->PresentImage(image1_id, zx::time(0), /*acquire_fences=*/{},
+                                /*release_fences=*/{}, /*callback=*/[](auto) {});
 
   // Current presented image should be null, since we haven't called Update yet.
   ASSERT_FALSE(image_pipe_->current_image());
@@ -373,8 +376,9 @@ TEST_F(ImagePipeTest, ImagePipeRemoveImageThatIsPendingPresent) {
   }
 
   // Make gradient the currently displayed image.
-  const auto present_id2 = image_pipe_->PresentImage(image2_id, zx::time(0), /*acquire_fences=*/{},
-                                                     /*release_fences=*/{}, /*callback=*/nullptr);
+  const auto present_id2 =
+      image_pipe_->PresentImage(image2_id, zx::time(0), /*acquire_fences=*/{},
+                                /*release_fences=*/{}, /*callback=*/[](auto) {});
 
   // Verify that the currently display image hasn't changed yet, since we
   // haven't called Update yet.

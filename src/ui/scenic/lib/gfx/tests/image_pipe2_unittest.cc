@@ -341,12 +341,12 @@ TEST_F(ImagePipe2Test, RemoveBufferCollectionRemovesImages) {
   image_pipe_->AddImage(kImageId1, kBufferId, 0, image_format);
 
   image_pipe_->PresentImage(kImageId1, zx::time(0), std::vector<zx::event>(),
-                            std::vector<zx::event>(), nullptr);
+                            std::vector<zx::event>(), /*callback=*/[](auto) {});
 
   // Remove buffer collection
   image_pipe_->RemoveBufferCollection(kBufferId);
   image_pipe_->PresentImage(kImageId1, zx::time(0), std::vector<zx::event>(),
-                            std::vector<zx::event>(), nullptr);
+                            std::vector<zx::event>(), /*callback=*/[](auto) {});
 
   ExpectLastReportedError("PresentImage: could not find Image with ID: 1");
 }
@@ -372,7 +372,7 @@ TEST_F(ImagePipe2Test, PresentImage_ShouldCallScheduleUpdate) {
   EXPECT_EQ(image_pipe_updater_->schedule_update_call_count_, 0u);
 
   image_pipe_->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
-                            CopyEventIntoFidlArray(CreateEvent()), [](auto) {});
+                            CopyEventIntoFidlArray(CreateEvent()), /*callback=*/[](auto) {});
 
   EXPECT_EQ(image_pipe_updater_->schedule_update_call_count_, 1u);
 
@@ -397,11 +397,10 @@ TEST_F(ImagePipe2Test, PresentImagesOutOfOrder) {
   image_format.coded_height = kHeight;
   image_pipe_->AddImage(kImageId, kBufferId, 0, image_format);
 
-  fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
   image_pipe_->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
-                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+                            CopyEventIntoFidlArray(CreateEvent()), /*callback=*/[](auto) {});
   image_pipe_->PresentImage(kImageId, zx::time(0), CopyEventIntoFidlArray(CreateEvent()),
-                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+                            CopyEventIntoFidlArray(CreateEvent()), /*callback=*/[](auto) {});
 
   ExpectLastReportedError(
       "PresentImage: Present called with out-of-order presentation "
@@ -426,11 +425,10 @@ TEST_F(ImagePipe2Test, PresentImagesInOrder) {
   image_format.coded_height = kHeight;
   image_pipe_->AddImage(kImageId, kBufferId, 0, image_format);
 
-  fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
   image_pipe_->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
-                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+                            CopyEventIntoFidlArray(CreateEvent()), /*callback=*/[](auto) {});
   image_pipe_->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
-                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+                            CopyEventIntoFidlArray(CreateEvent()), /*callback=*/[](auto) {});
 
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
@@ -455,11 +453,10 @@ TEST_F(ImagePipe2Test, PresentImagesWithOddSize) {
   image_format.coded_height = kHeight;
   image_pipe_->AddImage(kImageId, kBufferId, 0, image_format);
 
-  fuchsia::images::ImagePipe::PresentImageCallback callback = [](auto) {};
   image_pipe_->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
-                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+                            CopyEventIntoFidlArray(CreateEvent()), /*callback=*/[](auto) {});
   image_pipe_->PresentImage(kImageId, zx::time(1), CopyEventIntoFidlArray(CreateEvent()),
-                            CopyEventIntoFidlArray(CreateEvent()), std::move(callback));
+                            CopyEventIntoFidlArray(CreateEvent()), /*callback=*/[](auto) {});
 
   EXPECT_SCENIC_SESSION_ERROR_COUNT(0);
 }
@@ -484,8 +481,9 @@ TEST_F(ImagePipe2Test, ImagePipePresentTwoFrames) {
   const uint32_t kImageId1 = 1;
   image_pipe_->AddImage(kImageId1, kBufferId, 0, image_format);
 
-  const auto present_id = image_pipe_->PresentImage(kImageId1, zx::time(0), /*acquire_fences=*/{},
-                                                    /*release_fences=*/{}, /*callback=*/nullptr);
+  const auto present_id =
+      image_pipe_->PresentImage(kImageId1, zx::time(0), /*acquire_fences=*/{},
+                                /*release_fences=*/{}, /*callback=*/[](auto) {});
 
   // Current presented image should be null, since we haven't called Update yet.
   ASSERT_FALSE(image_pipe_->current_image());
@@ -502,8 +500,9 @@ TEST_F(ImagePipe2Test, ImagePipePresentTwoFrames) {
   const uint32_t kImageId2 = 2;
   image_pipe_->AddImage(kImageId2, kBufferId, 1, image_format);
 
-  const auto present_id2 = image_pipe_->PresentImage(kImageId2, zx::time(0), /*acquire_fences=*/{},
-                                                     /*release_fences=*/{}, /*callback=*/nullptr);
+  const auto present_id2 =
+      image_pipe_->PresentImage(kImageId2, zx::time(0), /*acquire_fences=*/{},
+                                /*release_fences=*/{}, /*callback=*/[](auto) {});
 
   // Verify that the currently display image hasn't changed yet, since we
   // haven't called Update yet.
@@ -558,9 +557,10 @@ TEST_F(ImagePipe2Test, ImagePipeUpdateTwoFrames) {
 
   // Present both images
   image_pipe_->PresentImage(kImageId1, zx::time(0), std::vector<zx::event>(),
-                            std::vector<zx::event>(), nullptr);
-  const auto present_id = image_pipe_->PresentImage(
-      kImageId2, zx::time(0), std::vector<zx::event>(), std::vector<zx::event>(), nullptr);
+                            std::vector<zx::event>(), /*callback=*/[](auto) {});
+  const auto present_id =
+      image_pipe_->PresentImage(kImageId2, zx::time(0), std::vector<zx::event>(),
+                                std::vector<zx::event>(), /*callback=*/[](auto) {});
 
   image_pipe_->Update(present_id);
 
@@ -578,11 +578,13 @@ TEST_F(ImagePipe2Test, ImagePipeUpdateTwoFrames) {
   //
   // In this case, we need to run to idle after presenting image A, so that image B is returned by
   // the pool, marked dirty, and is free to be acquired again.
-  const auto present_id2 = image_pipe_->PresentImage(
-      kImageId1, zx::time(0), std::vector<zx::event>(), std::vector<zx::event>(), nullptr);
+  const auto present_id2 =
+      image_pipe_->PresentImage(kImageId1, zx::time(0), std::vector<zx::event>(),
+                                std::vector<zx::event>(), /*callback=*/[](auto) {});
   image_pipe_->Update(present_id2);
-  const auto present_id3 = image_pipe_->PresentImage(
-      kImageId2, zx::time(0), std::vector<zx::event>(), std::vector<zx::event>(), nullptr);
+  const auto present_id3 =
+      image_pipe_->PresentImage(kImageId2, zx::time(0), std::vector<zx::event>(),
+                                std::vector<zx::event>(), /*callback=*/[](auto) {});
   image_pipe_->Update(present_id3);
 
   image_out = image_pipe_->current_image();
@@ -614,8 +616,9 @@ TEST_F(ImagePipe2Test, ImagePipeRemoveImageThatIsPendingPresent) {
   image_format.coded_height = kHeight;
   image_pipe_->AddImage(kImageId1, kBufferId, 0, image_format);
 
-  const auto present_id = image_pipe_->PresentImage(kImageId1, zx::time(0), /*acquire_fences=*/{},
-                                                    /*release_fences=*/{}, /*callback=*/nullptr);
+  const auto present_id =
+      image_pipe_->PresentImage(kImageId1, zx::time(0), /*acquire_fences=*/{},
+                                /*release_fences=*/{}, /*callback=*/[](auto) {});
 
   // Current presented image should be null, since we haven't called Update yet.
   ASSERT_FALSE(image_pipe_->current_image());
@@ -639,8 +642,9 @@ TEST_F(ImagePipe2Test, ImagePipeRemoveImageThatIsPendingPresent) {
   image_pipe_->AddImage(kImageId2, kBufferId, 1, image_format);
 
   // Make gradient the currently displayed image.
-  const auto present_id2 = image_pipe_->PresentImage(kImageId2, zx::time(0), /*acquire_fences=*/{},
-                                                     /*release_fences=*/{}, /*callback=*/nullptr);
+  const auto present_id2 =
+      image_pipe_->PresentImage(kImageId2, zx::time(0), /*acquire_fences=*/{},
+                                /*release_fences=*/{}, /*callback=*/[](auto) {});
 
   // Verify that the currently display image hasn't changed yet, since we haven't called Update yet.
   ASSERT_EQ(image_pipe_->current_image(), image1);

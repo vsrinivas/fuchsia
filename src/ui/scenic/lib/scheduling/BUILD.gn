@@ -68,6 +68,7 @@ source_set("timings") {
   ]
   public_deps = [
     "//src/lib/fxl",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
   ]
 }

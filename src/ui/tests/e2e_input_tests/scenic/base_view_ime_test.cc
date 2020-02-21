@@ -82,17 +82,16 @@ class ImeClientView : public scenic::BaseView {
   void OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) override {
     if (has_logical_size()) {
       CreateScene(logical_size().x, logical_size().y);
-      session()->Present(zx_clock_get_monotonic(),
-                         [](auto info) { FXL_LOG(INFO) << "Client: scene created."; });
+      InvalidateScene([](auto info) { FXL_LOG(INFO) << "Client: scene created."; });
     }
   }
 
   // |scenic::BaseView|
   void OnScenicEvent(fuchsia::ui::scenic::Event event) override {
     if (event.is_gfx() && event.gfx().is_view_attached_to_scene()) {
-      // TODO(fxb/41382): Remove this extra Present() call. Today we need it to ensure the ViewTree
-      // connection gets flushed on time.
-      session()->Present(zx_clock_get_monotonic(), [this](auto info) {
+      // TODO(fxb/41382): Remove this extra InvalidateScene() call. Today we need it to ensure the
+      // ViewTree connection gets flushed on time.
+      InvalidateScene([this](auto info) {
         // When view is connected to scene (a proxy for "has rendered"), trigger input injection.
         FXL_LOG(INFO) << "Client: view attached to scene.";
         FXL_CHECK(on_view_attached_to_scene_) << "on_view_attached_to_scene_ was not set!";

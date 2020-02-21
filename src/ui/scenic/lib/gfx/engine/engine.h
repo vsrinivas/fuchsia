@@ -165,6 +165,9 @@ class Engine : public scheduling::FrameRenderer {
 
   void InitializeShaderFs();
 
+  // Returns true if layers contain content to be rendered.
+  bool CheckForRenderableContent(const std::vector<HardwareLayerAssignment>& hlas);
+
   // Returns true if layers contain protected content.
   bool CheckForProtectedMemoryUse(const std::vector<HardwareLayerAssignment>& hlas);
 
@@ -195,6 +198,8 @@ class Engine : public scheduling::FrameRenderer {
   bool escher_cleanup_scheduled_ = false;
 
   bool render_continuously_ = false;
+
+  bool first_frame_ = true;
 
   bool last_frame_uses_protected_memory_ = false;
 

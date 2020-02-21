@@ -116,24 +116,28 @@ TEST_F(ViewEmbedderTest, DeadBindingShouldKillSession) {
 
   // Ensure that view2 connects to view1.
   bool view_connected_observed = false;
+  bool view2_connected_observed = false;
 
-  session->set_event_handler(
-      [&view_connected_observed](std::vector<fuchsia::ui::scenic::Event> events) {
-        for (const auto& event : events) {
-          if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
-              event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewConnected) {
-            view_connected_observed = true;
-            return;
-          }
+  session->set_event_handler([&](std::vector<fuchsia::ui::scenic::Event> events) {
+    for (const auto& event : events) {
+      if (event.Which() == fuchsia::ui::scenic::Event::Tag::kGfx &&
+          event.gfx().Which() == fuchsia::ui::gfx::Event::Tag::kViewConnected) {
+        if (view_holder.id() == event.gfx().view_connected().view_holder_id) {
+          view_connected_observed = true;
+        } else if (view_holder2.id() == event.gfx().view_connected().view_holder_id) {
+          view2_connected_observed = true;
         }
-        ASSERT_FALSE(true);
-      });
+        return;
+      }
+    }
+    ASSERT_FALSE(true);
+  });
 
   Present(session);
   Present(session2);
 
-  EXPECT_TRUE(
-      RunLoopWithTimeoutOrUntil([&view_connected_observed]() { return view_connected_observed; }));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&]() { return view_connected_observed && view2_connected_observed; }));
 
   // Crash Session2 by submitting an invalid release resource command.
   session2->AllocResourceId();

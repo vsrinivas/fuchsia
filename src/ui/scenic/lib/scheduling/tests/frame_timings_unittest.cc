@@ -4,6 +4,8 @@
 
 #include "src/ui/scenic/lib/scheduling/frame_timings.h"
 
+#include <lib/async/default.h>
+#include <lib/async/time.h>
 #include <lib/gtest/test_loop_fixture.h>
 
 namespace scheduling {
@@ -179,6 +181,28 @@ TEST_F(FrameTimingsTest, FrameDroppedBeforeRender_ShouldStillTriggerFrameRendere
   EXPECT_EQ(timestamps.actual_presentation_time, FrameTimings::kTimeDropped);
 }
 
+TEST_F(FrameTimingsTest, FrameSkipped_ShouldStillTriggerPresentCallbacks) {
+  // Reset the size of the swapchain. OnFrameSkipped() assumes that the
+  // registered swapchain size is zero, since nothing is submitted for rendering.
+  frame_timings_->RegisterSwapchains(0);
+
+  EXPECT_EQ(frame_rendered_call_count(), 0u);
+  EXPECT_EQ(frame_presented_call_count(), 0u);
+
+  RunLoopFor(zx::sec(1) / 60);
+
+  frame_timings_->OnFrameSkipped();
+
+  EXPECT_EQ(frame_rendered_call_count(), 0u);
+  EXPECT_EQ(frame_presented_call_count(), 1u);
+  EXPECT_TRUE(frame_timings_->FrameWasSkipped());
+  EXPECT_TRUE(frame_timings_->finalized());
+
+  FrameTimings::Timestamps timestamps = frame_timings_->GetTimestamps();
+  EXPECT_EQ(timestamps.render_done_time, Now());
+  EXPECT_EQ(timestamps.actual_presentation_time, Now());
+}
+
 TEST_F(FrameTimingsTest, LargerRenderingCpuDuration_ShouldBeReturned) {
   frame_timings_->OnFrameRendered(0, zx::time(100));
   frame_timings_->OnFrameCpuRendered(zx::time(400));
@@ -213,9 +237,8 @@ TEST(FrameTimings, InitTimestamps) {
   const zx::time render_start_time(12);
   const uint64_t frame_number = 5;
   auto timings = std::make_unique<FrameTimings>(
-      frame_number, target_present_time, latch_time,
-      render_start_time, [](const FrameTimings& timings){},
-      [](const FrameTimings& timings){});
+      frame_number, target_present_time, latch_time, render_start_time,
+      [](const FrameTimings& timings) {}, [](const FrameTimings& timings) {});
 
   FrameTimings::Timestamps init_timestamps = timings->GetTimestamps();
   // Inputs should be recorded in the timestamps.

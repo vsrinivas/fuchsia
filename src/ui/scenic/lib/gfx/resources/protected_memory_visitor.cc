@@ -82,6 +82,9 @@ void ProtectedMemoryVisitor::Visit(DisplayCompositor* r) {}
 void ProtectedMemoryVisitor::Visit(LayerStack* r) {}
 
 void ProtectedMemoryVisitor::Visit(Layer* r) {
+  if (has_protected_memory_use_) {
+    return;
+  }
   if (r->renderer()) {
     r->renderer()->Accept(this);
   }
@@ -104,6 +107,9 @@ void ProtectedMemoryVisitor::Visit(DirectionalLight* r) {}
 void ProtectedMemoryVisitor::Visit(PointLight* r) {}
 
 void ProtectedMemoryVisitor::VisitNode(Node* r) {
+  if (has_protected_memory_use_) {
+    return;
+  }
   if (!r->children().empty()) {
     for (auto& child : r->children()) {
       child->Accept(this);

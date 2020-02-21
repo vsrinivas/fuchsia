@@ -104,6 +104,8 @@ source_set("gfx") {
     "resources/dump_visitor.h",
     "resources/gpu_image.cc",
     "resources/gpu_image.h",
+    "resources/has_renderable_content_visitor.cc",
+    "resources/has_renderable_content_visitor.h",
     "resources/host_image.cc",
     "resources/host_image.h",
     "resources/image.cc",

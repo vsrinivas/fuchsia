@@ -86,11 +86,16 @@ class FrameTimings {
   // not dropped. This must be later  than or equal to the previously supplied
   // |target_presentation_time|.
   void OnFramePresented(size_t swapchain_index, zx::time time);
+
   // Called by the swapchain to record that this frame has been dropped. A
-  // dropped frame is assumed to have been presented on the display, and was
-  // not dropped. This must be later  than or equal to the previously supplied
-  // |target_presentation_time|
+  // dropped frame is assumed to have been rendered but not presented on the
+  // display.
   void OnFrameDropped(size_t swapchain_index);
+
+  // Called by the frame scheduler to record that this frame was never rendered,
+  // e.g. if there was no renderable content. This assumes that the swapchain count
+  // is 0.
+  void OnFrameSkipped();
 
   // It is possible for the GPU portion of the rendering of a frame to be
   // completed before the CPU portion. Therefore to ensure our frame scheduler
@@ -119,6 +124,10 @@ class FrameTimings {
   // Returns true if the frame was dropped by at least one swapchain that it was
   // submitted to. Value is subject to change until this class is |finalized()|.
   bool FrameWasDropped() const { return frame_was_dropped_; }
+
+  // Returns true if this frame was skipped by the renderer, and never submitted
+  // for rendering or presentation.
+  bool FrameWasSkipped() const { return frame_was_skipped_; }
 
  private:
   // Helper function when FrameTimings is finalized to validate the render time
@@ -161,6 +170,7 @@ class FrameTimings {
   zx::time rendering_cpu_finished_time_ = kTimeUninitialized;
 
   bool frame_was_dropped_ = false;
+  bool frame_was_skipped_ = false;
   bool finalized_ = false;
 
   OnTimingsRenderedCallback timings_rendered_callback_;

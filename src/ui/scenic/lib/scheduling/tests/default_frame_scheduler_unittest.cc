@@ -390,6 +390,54 @@ TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetSingleRenderCallExactlyOnTime
   EXPECT_EQ(present_count, 1u);
 }
 
+TEST_F(FrameSchedulerTest, SinglePresent2_ShouldGetPresentCallbackWhenNoContentToRender) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  constexpr SessionId kSessionId = 1;
+  SetSessionUpdateFailedNotExpected(scheduler.get(), kSessionId);
+  uint64_t present_count = 0;
+  scheduler->SetOnFramePresentedCallbackForSession(
+      kSessionId, [&present_count](fuchsia::scenic::scheduling::FramePresentedInfo info) {
+        present_count += info.presentation_infos.size();
+      });
+
+  // Set the LastVsyncTime arbitrarily in the future.
+  //
+  // We want to test our ability to schedule a frame "next time" given an arbitrary start,
+  // vs in a certain duration from Now() = 0, so this makes that distinction clear.
+  zx::time future_vsync_time =
+      zx::time(vsync_timing_->last_vsync_time() + vsync_timing_->vsync_interval() * 6);
+
+  vsync_timing_->set_last_vsync_time(future_vsync_time);
+
+  EXPECT_GT(vsync_timing_->last_vsync_time(), Now());
+
+  mock_renderer_->SetRenderFrameReturnValue(scheduling::RenderFrameResult::kNoContentToRender);
+
+  // Start the test.
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
+  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 0u);
+  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
+  EXPECT_EQ(present_count, 0u);
+
+  SchedulePresent2Update(scheduler, kSessionId,
+                         future_vsync_time + vsync_timing_->vsync_interval());
+
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 0u);
+  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 0u);
+
+  // Wait for one vsync period.
+  RunLoopUntil(zx::time(future_vsync_time + vsync_timing_->vsync_interval()));
+
+  // Present should have been scheduled and handled.
+  EXPECT_EQ(mock_updater_->update_sessions_call_count(), 1u);
+  EXPECT_EQ(mock_updater_->prepare_frame_call_count(), 1u);
+  EXPECT_EQ(mock_renderer_->render_frame_call_count(), 1u);
+  EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
+
+  EXPECT_EQ(present_count, 1u);
+}
+
 TEST_F(FrameSchedulerTest, PresentsForTheSameFrame_ShouldGetSingleRenderCall) {
   auto scheduler = CreateDefaultFrameScheduler();
 

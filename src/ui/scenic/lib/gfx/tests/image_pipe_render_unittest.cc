@@ -77,8 +77,8 @@ VK_TEST_F(ImagePipeRenderTest, ImageUpdatedOnlyAfterVisit) {
 
   // We present Image 2 at time (0) and Image 1 at time (1).
   // Only Image 1 should be updated and uploaded.
-  image_pipe->PresentImage(kImage2Id, zx::time(0), {}, {}, nullptr);
-  image_pipe->PresentImage(kImage1Id, zx::time(1), {}, {}, nullptr);
+  image_pipe->PresentImage(kImage2Id, zx::time(0), {}, {}, /*callback=*/[](auto) {});
+  image_pipe->PresentImage(kImage1Id, zx::time(1), {}, {}, /*callback=*/[](auto) {});
 
   // After ImagePipeUpdater updates the ImagePipe, the current_image() should be set
   // but Escher image is not created.
@@ -95,8 +95,8 @@ VK_TEST_F(ImagePipeRenderTest, ImageUpdatedOnlyAfterVisit) {
 
   // We present Image 1 (already rendered) at time (0) and Image 2 (not rendered yet)
   // at time (1). Only Image 2 should be updated and uploaded.
-  image_pipe->PresentImage(kImage1Id, zx::time(0), {}, {}, nullptr);
-  image_pipe->PresentImage(kImage2Id, zx::time(1), {}, {}, nullptr);
+  image_pipe->PresentImage(kImage1Id, zx::time(0), {}, {}, /*callback=*/[](auto) {});
+  image_pipe->PresentImage(kImage2Id, zx::time(1), {}, {}, /*callback=*/[](auto) {});
 
   // After ImagePipeUpdater updates the ImagePipe, the current_image() should be set
   // but Escher image is not created.
@@ -139,7 +139,7 @@ VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFrames) {
   zx::event acquire_fence1 = CreateEvent();
 
   image_pipe->PresentImage(image1_id, zx::time(0), CopyEventIntoFidlArray(acquire_fence1),
-                           /*release_fences=*/{}, nullptr);
+                           /*release_fences=*/{}, /*callback=*/[](auto) {});
 
   // Current presented image should be null, since we haven't signalled
   // acquire fence yet.
@@ -179,7 +179,7 @@ VK_TEST_F(ImagePipeRenderTest, ImagePipePresentTwoFrames) {
   zx::event acquire_fence2 = CreateEvent();
 
   image_pipe->PresentImage(image2_id, zx::time(0), CopyEventIntoFidlArray(acquire_fence2),
-                           /*release_fences=*/{}, nullptr);
+                           /*release_fences=*/{}, /*callback=*/[](auto) {});
 
   // Verify that the currently display image hasn't changed yet, since we
   // haven't signalled the acquire fence.

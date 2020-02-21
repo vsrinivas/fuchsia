@@ -295,7 +295,10 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
                           "no callbacks may be invoked.";
       break;
     case kNoContentToRender:
-      // Don't do anything.
+      // Immediately invoke presentation callbacks.
+      FXL_DCHECK(!frame_timings->finalized());
+      outstanding_frames_.push_back(std::move(frame_timings));
+      outstanding_frames_.back()->OnFrameSkipped();
       break;
   }
 
@@ -382,9 +385,10 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
   }
 
   FXL_DCHECK(!outstanding_frames_.empty());
-  // TODO(SCN-400): how should we handle this case?  It is theoretically possible, but if it happens
-  // then it means that the EventTimestamper is receiving signals out-of-order and is therefore
-  // generating bogus data.
+
+  // TODO(SCN-400): how should we handle this case?  It is theoretically possible, but if it
+  // happens then it means that the EventTimestamper is receiving signals out-of-order and is
+  // therefore generating bogus data.
   FXL_DCHECK(outstanding_frames_[0].get() == &timings) << "out-of-order.";
 
   FXL_DCHECK(timings.finalized());
@@ -393,6 +397,14 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
 
   if (timings.FrameWasDropped()) {
     TRACE_INSTANT("gfx", "FrameDropped", TRACE_SCOPE_PROCESS, "frame_number", frame_number);
+  } else if (timings.FrameWasSkipped()) {
+    TRACE_INSTANT("gfx", "FrameDropped", TRACE_SCOPE_PROCESS, "frame_number", frame_number);
+
+    auto presentation_info = fuchsia::images::PresentationInfo();
+    presentation_info.presentation_time = timestamps.actual_presentation_time.get();
+    presentation_info.presentation_interval = vsync_timing_->vsync_interval().get();
+
+    SignalPresentCallbacksUpTo(frame_number, presentation_info);
   } else {
     if (TRACE_CATEGORY_ENABLED("gfx")) {
       // Log trace data..

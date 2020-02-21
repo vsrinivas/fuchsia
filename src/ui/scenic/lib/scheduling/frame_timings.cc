@@ -4,6 +4,9 @@
 
 #include "src/ui/scenic/lib/scheduling/frame_timings.h"
 
+#include <lib/async/default.h>
+#include <lib/async/time.h>
+
 namespace scheduling {
 
 FrameTimings::FrameTimings(uint64_t frame_number, zx::time target_presentation_time,
@@ -124,6 +127,21 @@ void FrameTimings::OnFrameDropped(size_t swapchain_index) {
   record.frame_presented_time = kTimeDropped;
   actual_presentation_time_ = kTimeDropped;
   ++frame_presented_count_;
+
+  // Do scheduler-related cleanup.
+  if (received_all_callbacks()) {
+    Finalize();
+  }
+}
+
+void FrameTimings::OnFrameSkipped() {
+  FXL_CHECK(swapchain_records_.empty());
+
+  // Indicates that frame was skipped.
+  rendering_finished_time_ = zx::time(async_now(async_get_default_dispatcher()));
+  actual_presentation_time_ = zx::time(async_now(async_get_default_dispatcher()));
+
+  frame_was_skipped_ = true;
 
   // Do scheduler-related cleanup.
   if (received_all_callbacks()) {

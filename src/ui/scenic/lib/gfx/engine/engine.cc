@@ -22,6 +22,7 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/dump_visitor.h"
+#include "src/ui/scenic/lib/gfx/resources/has_renderable_content_visitor.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/traversal.h"
 #include "src/ui/scenic/lib/gfx/resources/protected_memory_visitor.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
@@ -149,6 +150,19 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
     return scheduling::RenderFrameResult::kNoContentToRender;
   }
 
+  // Don't render any initial frames if there is no shapenode with a material
+  // in the scene, i.e. anything that could actually be renderered. We do this
+  // to avoid triggering any changes in the display swapchain until we have
+  // content ready to render.
+  if (first_frame_) {
+    if (CheckForRenderableContent(hlas)) {
+      first_frame_ = false;
+    } else {
+      // No layer has any renderable content.
+      return scheduling::RenderFrameResult::kNoContentToRender;
+    }
+  }
+
   const bool uses_protected_memory = CheckForProtectedMemoryUse(hlas);
   if (last_frame_uses_protected_memory_ != uses_protected_memory) {
     for (auto& hla : hlas) {
@@ -220,6 +234,21 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
 
   CleanupEscher();
   return scheduling::RenderFrameResult::kRenderSuccess;
+}
+
+bool Engine::CheckForRenderableContent(const std::vector<HardwareLayerAssignment>& hlas) {
+  TRACE_DURATION("gfx", "CheckForRenderableContent");
+
+  HasRenderableContentVisitor visitor;
+  for (auto& hla : hlas) {
+    for (auto& layer_item : hla.items) {
+      for (auto& layer : layer_item.layers) {
+        layer->Accept(&visitor);
+      }
+    }
+  }
+
+  return visitor.HasRenderableContent();
 }
 
 bool Engine::CheckForProtectedMemoryUse(const std::vector<HardwareLayerAssignment>& hlas) {
