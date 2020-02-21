@@ -34,10 +34,10 @@ class GdcNode : public ProcessNode {
  public:
   GdcNode(async_dispatcher_t* dispatcher, const ddk::GdcProtocolClient& gdc,
           ProcessNode* parent_node,
-          std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats,
+          const std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats,
           fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
           fuchsia::camera2::CameraStreamType current_stream_type,
-          std::vector<fuchsia::camera2::CameraStreamType> supported_streams,
+          const std::vector<fuchsia::camera2::CameraStreamType>& supported_streams,
           fuchsia::camera2::FrameRate frame_rate)
       : ProcessNode(NodeType::kGdc, parent_node, output_image_formats,
                     std::move(output_buffer_collection), current_stream_type, supported_streams,
@@ -57,7 +57,7 @@ class GdcNode : public ProcessNode {
   // |parent_node| : pointer to the node to which we need to append this |OutputNode|.
   // |internal_output_node| : InternalConfigNode corresponding to this node.
   static fit::result<ProcessNode*, zx_status_t> CreateGdcNode(
-      ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
+      const ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
       zx_device_t* device, const ddk::GdcProtocolClient& gdc, StreamCreationData* info,
       ProcessNode* parent_node, const InternalConfigNode& internal_gdc_node);
 
@@ -69,7 +69,7 @@ class GdcNode : public ProcessNode {
   const hw_accel_remove_task_callback_t* remove_task_callback() { return &remove_task_callback_; }
 
   // Notifies that a frame is done processing by this node.
-  virtual void OnFrameAvailable(const frame_available_info_t* info) override;
+  void OnFrameAvailable(const frame_available_info_t* info) override;
 
   // Notifies that a frame is ready to be sent to the client.
   void OnReadyToProcess(const frame_available_info_t* info) override;

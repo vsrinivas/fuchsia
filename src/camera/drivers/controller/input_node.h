@@ -24,10 +24,10 @@ namespace camera {
 class InputNode : public ProcessNode {
  public:
   InputNode(fuchsia::camera2::CameraStreamType isp_stream_type,
-            std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats,
+            const std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats,
             fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
             fuchsia::camera2::CameraStreamType current_stream_type,
-            std::vector<fuchsia::camera2::CameraStreamType> supported_streams,
+            const std::vector<fuchsia::camera2::CameraStreamType>& supported_streams,
             async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp,
             fuchsia::camera2::FrameRate frame_rate)
       : ProcessNode(NodeType::kInputStream, output_image_formats,

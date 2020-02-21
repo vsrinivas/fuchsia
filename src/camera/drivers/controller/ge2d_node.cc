@@ -34,7 +34,7 @@ fit::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
     zx_device_t* device, const ddk::Ge2dProtocolClient& ge2d, StreamCreationData* info,
     ProcessNode* parent_node, const InternalConfigNode& internal_ge2d_node) {
   auto& input_buffers_hlcpp = parent_node->output_buffer_collection();
-  auto result = GetBuffers(memory_allocator, internal_ge2d_node, info, parent_node);
+  auto result = GetBuffers(memory_allocator, internal_ge2d_node, info);
   if (result.is_error()) {
     FX_LOGST(ERROR, kTag) << "Failed to get buffers";
     return fit::error(result.error());

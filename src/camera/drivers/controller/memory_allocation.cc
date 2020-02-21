@@ -15,7 +15,7 @@ namespace camera {
 constexpr auto kTag = "camera_controller";
 
 zx_status_t ControllerMemoryAllocator::AllocateSharedMemory(
-    std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints,
+    const std::vector<fuchsia::sysmem::BufferCollectionConstraints>& constraints,
     fuchsia::sysmem::BufferCollectionInfo_2* out_buffer_collection_info) const {
   TRACE_DURATION("camera", "ControllerMemoryAllocator::AllocateSharedMemory");
   if (out_buffer_collection_info == nullptr) {

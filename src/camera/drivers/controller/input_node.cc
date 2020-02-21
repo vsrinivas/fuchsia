@@ -30,7 +30,7 @@ fit::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
     return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
-  auto result = camera::GetBuffers(memory_allocator, info->node, info, nullptr);
+  auto result = camera::GetBuffers(memory_allocator, info->node, info);
   if (result.is_error()) {
     FX_PLOGST(ERROR, kTag, result.error()) << "Failed to get buffers";
     return fit::error(result.error());

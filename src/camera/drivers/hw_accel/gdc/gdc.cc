@@ -275,10 +275,6 @@ void GdcDevice::ProcessFrame(TaskInfo& info) {
 
 void GdcDevice::ChangeOutputResoultion(TaskInfo& info) {
   auto task = info.task;
-  // TODO: GDC needs an array of config vmos, one corresponding to
-  // an output resolution. Pass an array of config vmos via init,
-  // and add a method to get the config vmo corresponding to the
-  // new format. For now, all we do is switch to the new imageformat.
   task->set_output_format_index(info.index);
   // Invoke the callback function and tell about the output buffer index
   // which is ready to be used.

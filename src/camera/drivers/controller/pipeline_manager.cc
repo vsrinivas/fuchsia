@@ -20,7 +20,7 @@ constexpr auto kTag = "camera_controller";
 fit::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
     StreamCreationData* info, const InternalConfigNode& internal_node, ProcessNode* parent_node) {
   fit::result<OutputNode*, zx_status_t> result;
-  auto next_node_internal =
+  const auto* next_node_internal =
       GetNextNodeInPipeline(info->stream_config->properties.stream_type(), internal_node);
   if (!next_node_internal) {
     FX_LOGST(ERROR, kTag) << "Failed to get next node";

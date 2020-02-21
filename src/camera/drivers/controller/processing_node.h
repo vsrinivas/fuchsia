@@ -28,10 +28,11 @@ class StreamImpl;
 class ProcessNode {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ProcessNode);
-  ProcessNode(NodeType type, std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats,
+  ProcessNode(NodeType type,
+              const std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats,
               fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
               fuchsia::camera2::CameraStreamType current_stream_type,
-              std::vector<fuchsia::camera2::CameraStreamType> supported_streams,
+              const std::vector<fuchsia::camera2::CameraStreamType>& supported_streams,
               async_dispatcher_t* dispatcher, fuchsia::camera2::FrameRate frame_rate)
       : dispatcher_(dispatcher),
         output_frame_rate_(frame_rate),
@@ -48,7 +49,7 @@ class ProcessNode {
 
   ProcessNode(NodeType type, ProcessNode* parent_node,
               fuchsia::camera2::CameraStreamType current_stream_type,
-              std::vector<fuchsia::camera2::CameraStreamType> supported_streams,
+              const std::vector<fuchsia::camera2::CameraStreamType>& supported_streams,
               async_dispatcher_t* dispatcher, fuchsia::camera2::FrameRate frame_rate)
       : dispatcher_(dispatcher),
         output_frame_rate_(frame_rate),
@@ -62,10 +63,10 @@ class ProcessNode {
   }
 
   ProcessNode(NodeType type, ProcessNode* parent_node,
-              std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats,
+              const std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats,
               fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
               fuchsia::camera2::CameraStreamType current_stream_type,
-              std::vector<fuchsia::camera2::CameraStreamType> supported_streams,
+              const std::vector<fuchsia::camera2::CameraStreamType>& supported_streams,
               async_dispatcher_t* dispatcher, fuchsia::camera2::FrameRate frame_rate)
       : dispatcher_(dispatcher),
         output_frame_rate_(frame_rate),

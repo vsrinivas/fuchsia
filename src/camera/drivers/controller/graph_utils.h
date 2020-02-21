@@ -25,13 +25,9 @@ const InternalConfigNode* GetNextNodeInPipeline(const fuchsia::camera2::CameraSt
 // |memory_allocator| - Memory allocator to allocate memory using sysmem.
 // |producer| - Internal node for the producer.
 // |info| - Info about the stream to be created & the client buffer collection.
-// |producer_graph_node| - If this is nullptr, this API would allocate new buffers
-//                         If this is a valid node, then we would use the output
-//                         buffer collection of that node. This is needed for streams
-//                         which have one parent.
 fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> GetBuffers(
     const ControllerMemoryAllocator& memory_allocator, const InternalConfigNode& producer,
-    StreamCreationData* info, ProcessNode* producer_graph_node);
+    StreamCreationData* info);
 
 // Returns |true| if CameraStreamType |type| is present in the
 // vector |streams|.

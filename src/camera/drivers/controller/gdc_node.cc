@@ -55,7 +55,7 @@ fit::result<gdc_config_info, zx_status_t> LoadGdcConfiguration(
     return fit::error(status);
   }
   info.size = size;
-  return fit::ok(std::move(info));
+  return fit::ok(info);
 }
 
 void OnGdcFrameAvailable(void* ctx, const frame_available_info_t* info) {
@@ -63,11 +63,11 @@ void OnGdcFrameAvailable(void* ctx, const frame_available_info_t* info) {
 }
 
 fit::result<ProcessNode*, zx_status_t> GdcNode::CreateGdcNode(
-    ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
+    const ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
     zx_device_t* device, const ddk::GdcProtocolClient& gdc, StreamCreationData* info,
     ProcessNode* parent_node, const InternalConfigNode& internal_gdc_node) {
   auto& input_buffers_hlcpp = parent_node->output_buffer_collection();
-  auto result = GetBuffers(memory_allocator, internal_gdc_node, info, parent_node);
+  auto result = GetBuffers(memory_allocator, internal_gdc_node, info);
   if (result.is_error()) {
     FX_LOGST(ERROR, kTag) << "Failed to get buffers";
     return fit::error(result.error());
