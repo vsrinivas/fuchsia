@@ -40,6 +40,9 @@ rustc_test("font_provider_integration_tests_bin") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
   visibility = [ ":*" ]
+
+  # TODO(46719): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("font_provider_integration_tests") {
