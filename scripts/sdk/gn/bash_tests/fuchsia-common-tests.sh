@@ -93,7 +93,7 @@ TEST_run-gsutil() {
   cat > "${MOCKED_GSUTIL}.mock_side_effects" <<EOF
     echo "gs://fuchsia/development/LATEST"
 EOF
-  RESULT="$(run-gsutil ls gsutil ls gs://fuchsia/development/LATEST)"
+  RESULT="$(run-gsutil ls gs://fuchsia/development/LATEST)"
   BT_EXPECT_EQ "${RESULT}" "gs://fuchsia/development/LATEST"
 }
 
