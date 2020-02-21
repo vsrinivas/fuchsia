@@ -33,6 +33,9 @@ rustc_library("process_builder") {
     "//zircon/system/fidl/fuchsia-process:fuchsia-process-rustc",
   ]
 
+  # TODO(46774): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+
   # Test-only deps. Prefer adding deps used only in tests here instead of
   # above, which has the benefit of keeping unneeded deps out of the production
   # library and allows depending on 'testonly' targets.
