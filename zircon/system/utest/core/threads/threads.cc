@@ -23,7 +23,7 @@
 
 #include <mini-process/mini-process.h>
 #include <runtime/thread.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "register-set.h"
 #include "thread-functions/thread-functions.h"
@@ -36,7 +36,7 @@ static const char kThreadName[] = "test-thread";
 // waiting too long.
 constexpr zx_duration_t THREAD_BLOCKED_WAIT_DURATION = ZX_MSEC(1);
 
-static bool get_koid(zx_handle_t handle, zx_koid_t* koid) {
+static void get_koid(zx_handle_t handle, zx_koid_t* koid) {
   zx_info_handle_basic_t info;
   size_t records_read;
   ASSERT_EQ(
@@ -44,7 +44,6 @@ static bool get_koid(zx_handle_t handle, zx_koid_t* koid) {
       ZX_OK);
   ASSERT_EQ(records_read, 1u);
   *koid = info.koid;
-  return true;
 }
 
 static bool get_thread_info(zx_handle_t thread, zx_info_thread_t* info) {
@@ -53,28 +52,24 @@ static bool get_thread_info(zx_handle_t thread, zx_info_thread_t* info) {
 
 // Suspend the given thread and block until it reaches the suspended state. The suspend token
 // is written to the output parameter.
-static bool suspend_thread_synchronous(zx_handle_t thread, zx_handle_t* suspend_token) {
+static void suspend_thread_synchronous(zx_handle_t thread, zx_handle_t* suspend_token) {
   ASSERT_EQ(zx_task_suspend_token(thread, suspend_token), ZX_OK);
 
   zx_signals_t observed = 0u;
   ASSERT_EQ(zx_object_wait_one(thread, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, &observed), ZX_OK);
-
-  return true;
 }
 
 // Resume the given thread and block until it reaches the running state.
-static bool resume_thread_synchronous(zx_handle_t thread, zx_handle_t suspend_token) {
+static void resume_thread_synchronous(zx_handle_t thread, zx_handle_t suspend_token) {
   ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
 
   zx_signals_t observed = 0u;
   ASSERT_EQ(zx_object_wait_one(thread, ZX_THREAD_RUNNING, ZX_TIME_INFINITE, &observed), ZX_OK);
-
-  return true;
 }
 
 // Updates the thread state to advance over a software breakpoint instruction, assuming the
 // breakpoint was just hit. This does not resume the thread, only updates its state.
-static bool advance_over_breakpoint(zx_handle_t thread) {
+static void advance_over_breakpoint(zx_handle_t thread) {
 #if defined(__aarch64__)
   // Advance 4 bytes to the next instruction after the debug break.
   zx_thread_state_general_regs regs;
@@ -87,18 +82,15 @@ static bool advance_over_breakpoint(zx_handle_t thread) {
 #else
 #error Not supported on this platform.
 #endif
-  return true;
 }
 
 // Waits for the exception type excp_type, ignoring exceptions of type ignore_type (these will
 // just resume the thread), and issues errors for anything else.
 //
 // Fills |exception_out| with the resulting exception object.
-static bool wait_thread_excp_type(zx_handle_t thread, zx_handle_t exception_channel,
+static void wait_thread_excp_type(zx_handle_t thread, zx_handle_t exception_channel,
                                   uint32_t excp_type, uint32_t ignore_type,
                                   zx_handle_t* exception_out) {
-  BEGIN_HELPER;
-
   while (true) {
     ASSERT_EQ(zx_object_wait_one(exception_channel, ZX_CHANNEL_READABLE, ZX_TIME_INFINITE, nullptr),
               ZX_OK);
@@ -112,7 +104,7 @@ static bool wait_thread_excp_type(zx_handle_t thread, zx_handle_t exception_chan
     // Use EXPECTs rather than ASSERTs here so that if something fails
     // we log all the relevant information about the packet contents.
     zx_koid_t koid = ZX_KOID_INVALID;
-    EXPECT_TRUE(get_koid(thread, &koid));
+    get_koid(thread, &koid);
     EXPECT_EQ(info.tid, koid);
 
     if (info.type != ignore_type) {
@@ -126,8 +118,6 @@ static bool wait_thread_excp_type(zx_handle_t thread, zx_handle_t exception_chan
       zx_handle_close(exception);
     }
   }
-
-  END_HELPER;
 }
 
 namespace {
@@ -140,7 +130,7 @@ namespace {
 // See comment on start_thread (below) about constraints on the entry point.
 class ThreadStarter {
  public:
-  bool CreateThread(zxr_thread_t* thread_out, zx_handle_t* thread_h, bool start_suspended = false) {
+  void CreateThread(zxr_thread_t* thread_out, zx_handle_t* thread_h, bool start_suspended = false) {
     // TODO: Don't leak these when the thread dies.
     // If the thread should start suspended, give it a 0-size VMO for a stack so
     // that it will crash if it gets to userspace.
@@ -160,13 +150,10 @@ class ThreadStarter {
           zx_handle_duplicate(zxr_thread_get_handle(thread_out), ZX_RIGHT_SAME_RIGHTS, thread_h),
           ZX_OK);
     }
-
-    return true;
   }
 
-  bool GrowStackVmo() {
+  void GrowStackVmo() {
     ASSERT_EQ(stack_handle_.set_size(kStackSize), ZX_OK);
-    return true;
   }
 
   bool StartThread(zxr_thread_entry_t entry, void* arg) {
@@ -198,12 +185,13 @@ class ThreadStarter {
 static bool start_thread(zxr_thread_entry_t entry, void* arg, zxr_thread_t* thread_out,
                          zx_handle_t* thread_h) {
   ThreadStarter starter;
-  return starter.CreateThread(thread_out, thread_h) && starter.StartThread(entry, arg);
+  starter.CreateThread(thread_out, thread_h);
+  return starter.StartThread(entry, arg);
 }
 
 // Wait for |thread| to enter blocked state |reason|.
 // We wait forever and let Unittest's watchdog handle errors.
-static bool wait_thread_blocked(zx_handle_t thread, zx_thread_state_t reason) {
+static void wait_thread_blocked(zx_handle_t thread, zx_thread_state_t reason) {
   while (true) {
     zx_info_thread_t info;
     ASSERT_TRUE(get_thread_info(thread, &info));
@@ -211,7 +199,6 @@ static bool wait_thread_blocked(zx_handle_t thread, zx_thread_state_t reason) {
       break;
     zx_nanosleep(zx_deadline_after(THREAD_BLOCKED_WAIT_DURATION));
   }
-  return true;
 }
 
 static bool CpuMaskBitSet(const zx_cpu_set_t& set, uint32_t i) {
@@ -223,19 +210,16 @@ static bool CpuMaskBitSet(const zx_cpu_set_t& set, uint32_t i) {
   return ((set.mask[word] >> bit) & 1u) != 0;
 }
 
-static bool TestBasics() {
-  BEGIN_TEST;
+TEST(Threads, Basics) {
   zxr_thread_t thread;
   zx_handle_t thread_h;
   ASSERT_TRUE(start_thread(threads_test_sleep_fn, (void*)zx_deadline_after(ZX_MSEC(100)), &thread,
                            &thread_h));
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
-  END_TEST;
 }
 
-static bool TestInvalidRights() {
-  BEGIN_TEST;
+TEST(Threads, InvalidRights) {
   zxr_thread_t thread;
   zx_handle_t ro_process_h;
 
@@ -243,11 +227,9 @@ static bool TestInvalidRights() {
   ASSERT_EQ(zxr_thread_create(ro_process_h, "test_thread", false, &thread), ZX_ERR_ACCESS_DENIED);
 
   ASSERT_EQ(zx_handle_close(ro_process_h), ZX_OK);
-  END_TEST;
 }
 
-static bool TestDetach() {
-  BEGIN_TEST;
+TEST(Threads, Detach) {
   zxr_thread_t thread;
   zx_handle_t event;
   ASSERT_EQ(zx_event_create(0, &event), ZX_OK);
@@ -267,23 +249,18 @@ static bool TestDetach() {
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
 
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
-
-  END_TEST;
 }
 
-static bool TestEmptyNameSucceeds() {
-  BEGIN_TEST;
+TEST(Threads, EmptyNameSucceeds) {
   zx_handle_t thread;
   ASSERT_EQ(zx_thread_create(zx_process_self(), "", 0, 0, &thread), ZX_OK);
   static char thread_name[ZX_MAX_NAME_LEN];
   ASSERT_EQ(zx_object_get_property(thread, ZX_PROP_NAME, thread_name, ZX_MAX_NAME_LEN), ZX_OK);
   ASSERT_EQ(strcmp(thread_name, ""), 0);
   ASSERT_EQ(zx_handle_close(thread), ZX_OK);
-  END_TEST;
 }
 
-static bool TestLongNameSucceeds() {
-  BEGIN_TEST;
+TEST(Threads, LongNameSucceeds) {
   // Creating a thread with a super long name should succeed.
   static const char long_name[] =
       "0123456789012345678901234567890123456789"
@@ -298,15 +275,12 @@ static bool TestLongNameSucceeds() {
             ZX_OK);
   ASSERT_EQ(strncmp(thread_name, long_name, ZX_MAX_NAME_LEN - 1), 0);
   zxr_thread_destroy(&thread);
-  END_TEST;
 }
 
 // zx_thread_start() is not supposed to be usable for creating a
 // process's first thread.  That's what zx_process_start() is for.
 // Check that zx_thread_start() returns an error in this case.
-static bool TestThreadStartOnInitialThread() {
-  BEGIN_TEST;
-
+TEST(Threads, ThreadStartOnInitialThread) {
   static const char kProcessName[] = "test-proc-thread1";
   zx_handle_t process;
   zx_handle_t vmar;
@@ -320,16 +294,12 @@ static bool TestThreadStartOnInitialThread() {
   ASSERT_EQ(zx_handle_close(thread), ZX_OK);
   ASSERT_EQ(zx_handle_close(vmar), ZX_OK);
   ASSERT_EQ(zx_handle_close(process), ZX_OK);
-
-  END_TEST;
 }
 
 // Test that we don't get an assertion failure (and kernel panic) if we
 // pass a zero instruction pointer when starting a thread (in this case via
 // zx_process_start()).
-static bool TestThreadStartWithZeroInstructionPointer() {
-  BEGIN_TEST;
-
+TEST(Threads, ThreadStartWithZeroInstructionPointer) {
   static const char kProcessName[] = "test-proc-thread2";
   zx_handle_t process;
   zx_handle_t vmar;
@@ -350,13 +320,9 @@ static bool TestThreadStartWithZeroInstructionPointer() {
 
   ASSERT_EQ(zx_handle_close(process), ZX_OK);
   ASSERT_EQ(zx_handle_close(vmar), ZX_OK);
-
-  END_TEST;
 }
 
-static bool TestNonstartedThread() {
-  BEGIN_TEST;
-
+TEST(Threads, NonstartedThread) {
   // Perform apis against non started threads (in the INITIAL STATE).
   zx_handle_t thread;
 
@@ -364,12 +330,9 @@ static bool TestNonstartedThread() {
   ASSERT_EQ(zx_task_kill(thread), ZX_OK);
   ASSERT_EQ(zx_task_kill(thread), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread), ZX_OK);
-
-  END_TEST;
 }
 
-static bool TestInfoTaskStatsFails() {
-  BEGIN_TEST;
+TEST(Threads, InfoTaskStatsFails) {
   // Spin up a thread.
   zxr_thread_t thread;
   zx_handle_t thandle;
@@ -384,12 +347,9 @@ static bool TestInfoTaskStatsFails() {
   // If so, replace this with a real test; see example in process.cpp.
 
   ASSERT_EQ(zx_handle_close(thandle), ZX_OK);
-  END_TEST;
 }
 
-static bool TestGetLastScheduledCpu() {
-  BEGIN_TEST;
-
+TEST(Threads, GetLastScheduledCpu) {
   // State to synchronize with the worker thread.
   struct WorkerState {
     zx_handle_t started;
@@ -402,7 +362,7 @@ static bool TestGetLastScheduledCpu() {
   zxr_thread_t thread;
   zx_handle_t thread_h;
   ThreadStarter starter;
-  ASSERT_TRUE(starter.CreateThread(&thread, &thread_h));
+  starter.CreateThread(&thread, &thread_h);
 
   // Ensure "last_cpu" is ZX_INFO_INVALID_CPU prior to the thread starting.
   zx_info_thread_stats_t info;
@@ -439,18 +399,14 @@ static bool TestGetLastScheduledCpu() {
   ASSERT_EQ(zx_object_signal(state.should_stop, 0, ZX_USER_SIGNAL_0), ZX_OK);
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, nullptr), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
-
-  END_TEST;
 }
 
-static bool TestGetAffinity() {
-  BEGIN_TEST;
-
+TEST(Threads, GetAffinity) {
   // Create a thread.
   zxr_thread_t thread;
   zx_handle_t thread_h;
   ThreadStarter starter;
-  ASSERT_TRUE(starter.CreateThread(&thread, &thread_h));
+  starter.CreateThread(&thread, &thread_h);
 
   // Fetch affinity mask.
   zx_info_thread_t info;
@@ -475,13 +431,9 @@ static bool TestGetAffinity() {
   // Shut down and clean up.
   starter.DestroyThread();
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
-
-  END_TEST;
 }
 
-static bool TestResumeSuspended() {
-  BEGIN_TEST;
-
+TEST(Threads, ResumeSuspended) {
   zx_handle_t event;
   zxr_thread_t thread;
   zx_handle_t thread_h;
@@ -490,7 +442,7 @@ static bool TestResumeSuspended() {
   ASSERT_TRUE(start_thread(threads_test_wait_fn, &event, &thread, &thread_h));
 
   // threads_test_wait_fn() uses zx_object_wait_one() so we watch for that.
-  ASSERT_TRUE(wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
+  wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_WAIT_ONE);
 
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
   ASSERT_EQ(zx_task_suspend_token(thread_h, &suspend_token), ZX_OK);
@@ -499,11 +451,11 @@ static bool TestResumeSuspended() {
   // The thread should still be blocked on the event when it wakes up.
   // It needs to run for a bit to transition from suspended back to blocked
   // so we need to wait for it.
-  ASSERT_TRUE(wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
+  wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_WAIT_ONE);
 
   // Check that signaling the event while suspended results in the expected behavior.
   suspend_token = ZX_HANDLE_INVALID;
-  ASSERT_TRUE(suspend_thread_synchronous(thread_h, &suspend_token));
+  suspend_thread_synchronous(thread_h, &suspend_token);
 
   // Verify thread is suspended.
   zx_info_thread_t info;
@@ -512,13 +464,13 @@ static bool TestResumeSuspended() {
   ASSERT_EQ(info.wait_exception_channel_type, ZX_EXCEPTION_CHANNEL_TYPE_NONE);
 
   // Resuming the thread should mark the thread as blocked again.
-  ASSERT_TRUE(resume_thread_synchronous(thread_h, suspend_token));
+  resume_thread_synchronous(thread_h, suspend_token);
 
-  ASSERT_TRUE(wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
+  wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_WAIT_ONE);
 
   // When the thread is suspended the signaling should not take effect.
   suspend_token = ZX_HANDLE_INVALID;
-  ASSERT_TRUE(suspend_thread_synchronous(thread_h, &suspend_token));
+  suspend_thread_synchronous(thread_h, &suspend_token);
   ASSERT_EQ(zx_object_signal(event, 0, ZX_USER_SIGNAL_0), ZX_OK);
   ASSERT_EQ(zx_object_wait_one(event, ZX_USER_SIGNAL_1, zx_deadline_after(ZX_MSEC(100)), NULL),
             ZX_ERR_TIMED_OUT);
@@ -531,20 +483,16 @@ static bool TestResumeSuspended() {
 
   ASSERT_EQ(zx_handle_close(event), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
-
-  END_TEST;
 }
 
-static bool TestSuspendSleeping() {
-  BEGIN_TEST;
-
+TEST(Threads, SuspendSleeping) {
   const zx_time_t sleep_deadline = zx_deadline_after(ZX_MSEC(100));
   zxr_thread_t thread;
 
   zx_handle_t thread_h;
   ASSERT_TRUE(start_thread(threads_test_sleep_fn, (void*)sleep_deadline, &thread, &thread_h));
 
-  ASSERT_TRUE(wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_SLEEPING));
+  wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_SLEEPING);
 
   // Suspend the thread.
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
@@ -561,7 +509,7 @@ static bool TestSuspendSleeping() {
     ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
     // Early bail from the test, since we hit a possible race from an
     // overloaded machine.
-    END_TEST;
+    return;
   }
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, NULL), ZX_OK);
   ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
@@ -573,12 +521,9 @@ static bool TestSuspendSleeping() {
   ASSERT_GE(now, sleep_deadline, "thread did not sleep long enough");
 
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
-  END_TEST;
 }
 
-static bool TestSuspendChannelCall() {
-  BEGIN_TEST;
-
+TEST(Threads, SuspendChannelCall) {
   zxr_thread_t thread;
 
   zx_handle_t channel;
@@ -594,7 +539,7 @@ static bool TestSuspendChannelCall() {
 
   // Suspend the thread.
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
-  ASSERT_TRUE(suspend_thread_synchronous(thread_h, &suspend_token));
+  suspend_thread_synchronous(thread_h, &suspend_token);
 
   // Read the message
   uint8_t buf[9];
@@ -626,13 +571,9 @@ static bool TestSuspendChannelCall() {
 
   ASSERT_EQ(zx_handle_close(channel), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
-
-  END_TEST;
 }
 
-static bool TestSuspendPortCall() {
-  BEGIN_TEST;
-
+TEST(Threads, SuspendPortCall) {
   zxr_thread_t thread;
   zx_handle_t port[2];
   ASSERT_EQ(zx_port_create(0, &port[0]), ZX_OK);
@@ -641,7 +582,7 @@ static bool TestSuspendPortCall() {
   zx_handle_t thread_h;
   ASSERT_TRUE(start_thread(threads_test_port_fn, port, &thread, &thread_h));
 
-  ASSERT_TRUE(wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_PORT));
+  wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_PORT);
 
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
   ASSERT_EQ(zx_task_suspend_token(thread_h, &suspend_token), ZX_OK);
@@ -668,13 +609,9 @@ static bool TestSuspendPortCall() {
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
   ASSERT_EQ(zx_handle_close(port[0]), ZX_OK);
   ASSERT_EQ(zx_handle_close(port[1]), ZX_OK);
-
-  END_TEST;
 }
 
-static bool TestSuspendStopsThread() {
-  BEGIN_TEST;
-
+TEST(Threads, SuspendStopsThread) {
   zxr_thread_t thread;
 
   std::atomic<int> value = 0;
@@ -704,13 +641,9 @@ static bool TestSuspendStopsThread() {
   // receive an ZX_EXCP_THREAD_EXITING event.
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
-
-  END_TEST;
 }
 
-static bool TestSuspendMultiple() {
-  BEGIN_TEST;
-
+TEST(Threads, SuspendMultiple) {
   zx_handle_t event;
   zxr_thread_t thread;
   zx_handle_t thread_h;
@@ -725,11 +658,11 @@ static bool TestSuspendMultiple() {
                                              &exception_channel),
             ZX_OK);
   ASSERT_EQ(zx_object_signal(event, 0, ZX_USER_SIGNAL_0), ZX_OK);
-  ASSERT_TRUE(wait_thread_excp_type(thread_h, exception_channel, ZX_EXCP_SW_BREAKPOINT,
-                                    ZX_EXCP_THREAD_STARTING, &exception));
+  wait_thread_excp_type(thread_h, exception_channel, ZX_EXCP_SW_BREAKPOINT, ZX_EXCP_THREAD_STARTING,
+                        &exception);
 
   // The thread should now be blocked on a debugger exception.
-  ASSERT_TRUE(wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_EXCEPTION));
+  wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_EXCEPTION);
   zx_info_thread_t info;
   ASSERT_TRUE(get_thread_info(thread_h, &info));
   ASSERT_EQ(info.wait_exception_channel_type, ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER);
@@ -766,7 +699,7 @@ static bool TestSuspendMultiple() {
   ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED);
 
   // 2nd resume, should be running or sleeping after this.
-  ASSERT_TRUE(resume_thread_synchronous(thread_h, suspend_token2));
+  resume_thread_synchronous(thread_h, suspend_token2);
   ASSERT_TRUE(get_thread_info(thread_h, &info));
   ASSERT_TRUE(info.state == ZX_THREAD_STATE_RUNNING ||
               info.state == ZX_THREAD_STATE_BLOCKED_SLEEPING);
@@ -776,22 +709,14 @@ static bool TestSuspendMultiple() {
   EXPECT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, nullptr), ZX_OK);
   ASSERT_EQ(zx_handle_close(exception_channel), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
-
-  END_TEST;
 }
 
-static bool TestSuspendSelf() {
-  BEGIN_TEST;
-
+TEST(Threads, SuspendSelf) {
   zx_handle_t suspend_token;
   EXPECT_EQ(zx_task_suspend(zx_thread_self(), &suspend_token), ZX_ERR_NOT_SUPPORTED);
-
-  END_TEST;
 }
 
-static bool TestSuspendAfterDeath() {
-  BEGIN_TEST;
-
+TEST(Thread, SuspendAfterDeath) {
   zxr_thread_t thread;
   zx_handle_t thread_h;
   ASSERT_TRUE(start_thread(threads_test_infinite_sleep_fn, nullptr, &thread, &thread_h));
@@ -804,15 +729,11 @@ static bool TestSuspendAfterDeath() {
 
   EXPECT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, nullptr), ZX_OK);
   EXPECT_EQ(zx_handle_close(thread_h), ZX_OK);
-
-  END_TEST;
 }
 
 // This tests for a bug in which killing a suspended thread causes the
 // thread to be resumed and execute more instructions in userland.
-static bool TestKillSuspendedThread() {
-  BEGIN_TEST;
-
+TEST(Threads, KillSuspendedThread) {
   std::atomic<int> value = 0;
   zxr_thread_t thread;
   zx_handle_t thread_h;
@@ -824,7 +745,7 @@ static bool TestKillSuspendedThread() {
   }
 
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
-  ASSERT_TRUE(suspend_thread_synchronous(thread_h, &suspend_token));
+  suspend_thread_synchronous(thread_h, &suspend_token);
 
   // Attach to debugger channel so we can see ZX_EXCP_THREAD_EXITING.
   zx_handle_t exception_channel;
@@ -843,26 +764,21 @@ static bool TestKillSuspendedThread() {
 
   // Check that the thread is reported as exiting and not as resumed.
   zx_handle_t exception;
-  ASSERT_TRUE(
-      wait_thread_excp_type(thread_h, exception_channel, ZX_EXCP_THREAD_EXITING, 0, &exception));
+  wait_thread_excp_type(thread_h, exception_channel, ZX_EXCP_THREAD_EXITING, 0, &exception);
 
   // Clean up.
   ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
   ASSERT_EQ(zx_handle_close(exception), ZX_OK);
   ASSERT_EQ(zx_handle_close(exception_channel), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
-
-  END_TEST;
 }
 
 // Suspend a thread before starting and make sure it starts into suspended state.
-static bool TestStartSuspendedThread() {
-  BEGIN_TEST;
-
+TEST(Threads, StartSuspendedThread) {
   zxr_thread_t thread;
   zx_handle_t thread_h;
   ThreadStarter starter;
-  ASSERT_TRUE(starter.CreateThread(&thread, &thread_h, true));
+  starter.CreateThread(&thread, &thread_h, true);
 
   // Suspend first, then start the thread.
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
@@ -875,7 +791,7 @@ static bool TestStartSuspendedThread() {
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_SUSPENDED, ZX_TIME_INFINITE, NULL), ZX_OK);
 
   // Once we know it's suspended, give it a real stack.
-  ASSERT_TRUE(starter.GrowStackVmo());
+  starter.GrowStackVmo();
 
   // Make sure the thread still resumes properly.
   ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
@@ -888,18 +804,14 @@ static bool TestStartSuspendedThread() {
   ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
-
-  END_TEST;
 }
 
 // Suspend and resume a thread before starting, it should start as normal.
-static bool TestStartSuspendedAndResumedThread() {
-  BEGIN_TEST;
-
+TEST(Threads, StartSuspendedAndResumedThread) {
   zxr_thread_t thread;
   zx_handle_t thread_h;
   ThreadStarter starter;
-  ASSERT_TRUE(starter.CreateThread(&thread, &thread_h));
+  starter.CreateThread(&thread, &thread_h);
 
   // Suspend and resume.
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
@@ -918,20 +830,17 @@ static bool TestStartSuspendedAndResumedThread() {
   ASSERT_EQ(zx_task_kill(thread_h), ZX_OK);
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
-
-  END_TEST;
 }
 
-static bool port_wait_for_signal(zx_handle_t port, zx_handle_t thread, zx_time_t deadline,
+static void port_wait_for_signal(zx_handle_t port, zx_handle_t thread, zx_time_t deadline,
                                  zx_signals_t mask, zx_port_packet_t* packet) {
   ASSERT_EQ(zx_object_wait_async(thread, port, 0u, mask, ZX_WAIT_ASYNC_ONCE), ZX_OK);
   ASSERT_EQ(zx_port_wait(port, deadline, packet), ZX_OK);
   ASSERT_EQ(packet->type, ZX_PKT_TYPE_SIGNAL_ONE);
-  return true;
 }
 
 // Test signal delivery of suspended threads via async wait.
-static bool TestSuspendWaitAsyncSignalDeliveryWorker(void) {
+static void TestSuspendWaitAsyncSignalDeliveryWorker() {
   zx_handle_t event;
   zx_handle_t port;
   zxr_thread_t thread;
@@ -946,7 +855,7 @@ static bool TestSuspendWaitAsyncSignalDeliveryWorker(void) {
   zx_port_packet_t packet;
   // There should be a RUNNING signal packet present and not SUSPENDED.
   // This is from when the thread first started to run.
-  ASSERT_TRUE(port_wait_for_signal(port, thread_h, 0u, run_susp_mask, &packet));
+  port_wait_for_signal(port, thread_h, 0u, run_susp_mask, &packet);
   ASSERT_EQ(packet.signal.observed & run_susp_mask, ZX_THREAD_RUNNING);
 
   // Make sure there are no more packets.
@@ -957,13 +866,13 @@ static bool TestSuspendWaitAsyncSignalDeliveryWorker(void) {
   ASSERT_EQ(zx_port_cancel(port, thread_h, 0u), ZX_OK);
 
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
-  ASSERT_TRUE(suspend_thread_synchronous(thread_h, &suspend_token));
+  suspend_thread_synchronous(thread_h, &suspend_token);
 
   zx_info_thread_t info;
   ASSERT_TRUE(get_thread_info(thread_h, &info));
   ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED);
 
-  ASSERT_TRUE(resume_thread_synchronous(thread_h, suspend_token));
+  resume_thread_synchronous(thread_h, suspend_token);
   ASSERT_TRUE(get_thread_info(thread_h, &info));
   // At this point the thread may be running or blocked waiting for an
   // event. Either one is fine. threads_test_wait_fn() uses
@@ -973,30 +882,29 @@ static bool TestSuspendWaitAsyncSignalDeliveryWorker(void) {
 
   // We should see just RUNNING,
   // and it should be immediately present (no deadline).
-  ASSERT_TRUE(port_wait_for_signal(port, thread_h, 0u, run_susp_mask, &packet));
+  port_wait_for_signal(port, thread_h, 0u, run_susp_mask, &packet);
   ASSERT_EQ(packet.signal.observed & run_susp_mask, ZX_THREAD_RUNNING);
 
   // The thread should still be blocked on the event when it wakes up.
-  ASSERT_TRUE(wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
+  wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_WAIT_ONE);
 
   // Check that suspend/resume while blocked in a syscall results in
   // the expected behavior and is visible via async wait.
   suspend_token = ZX_HANDLE_INVALID;
   ASSERT_EQ(zx_task_suspend_token(thread_h, &suspend_token), ZX_OK);
-  ASSERT_TRUE(port_wait_for_signal(port, thread_h, zx_deadline_after(ZX_MSEC(100)),
-                                   ZX_THREAD_SUSPENDED, &packet));
+  port_wait_for_signal(port, thread_h, zx_deadline_after(ZX_MSEC(100)), ZX_THREAD_SUSPENDED,
+                       &packet);
   ASSERT_EQ(packet.signal.observed & run_susp_mask, ZX_THREAD_SUSPENDED);
 
   ASSERT_TRUE(get_thread_info(thread_h, &info));
   ASSERT_EQ(info.state, ZX_THREAD_STATE_SUSPENDED);
   ASSERT_EQ(zx_handle_close(suspend_token), ZX_OK);
-  ASSERT_TRUE(port_wait_for_signal(port, thread_h, zx_deadline_after(ZX_MSEC(100)),
-                                   ZX_THREAD_RUNNING, &packet));
+  port_wait_for_signal(port, thread_h, zx_deadline_after(ZX_MSEC(100)), ZX_THREAD_RUNNING, &packet);
   ASSERT_EQ(packet.signal.observed & run_susp_mask, ZX_THREAD_RUNNING);
 
   // Resumption from being suspended back into a blocking syscall will be
   // in the RUNNING state and then BLOCKED.
-  ASSERT_TRUE(wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
+  wait_thread_blocked(thread_h, ZX_THREAD_STATE_BLOCKED_WAIT_ONE);
 
   ASSERT_EQ(zx_object_signal(event, 0, ZX_USER_SIGNAL_0), ZX_OK);
   ASSERT_EQ(zx_object_wait_one(event, ZX_USER_SIGNAL_1, ZX_TIME_INFINITE, NULL), ZX_OK);
@@ -1006,22 +914,16 @@ static bool TestSuspendWaitAsyncSignalDeliveryWorker(void) {
   ASSERT_EQ(zx_handle_close(port), ZX_OK);
   ASSERT_EQ(zx_handle_close(event), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
-
-  return true;
 }
 
 // Test signal delivery of suspended threads via single async wait.
-static bool TestSuspendSingleWaitAsyncSignalDelivery() {
-  BEGIN_TEST;
-  EXPECT_TRUE(TestSuspendWaitAsyncSignalDeliveryWorker());
-  END_TEST;
+TEST(Threads, SuspendSingleWaitAsyncSignalDelivery) {
+  TestSuspendWaitAsyncSignalDeliveryWorker();
 }
 
 // Test signal delivery of suspended threads via repeating async wait.
-static bool TestSuspendRepeatingWaitAsyncSignalDelivery() {
-  BEGIN_TEST;
-  EXPECT_TRUE(TestSuspendWaitAsyncSignalDeliveryWorker());
-  END_TEST;
+TEST(Threads, SuspendRepeatingWaitAsyncSignalDelivery) {
+  TestSuspendWaitAsyncSignalDeliveryWorker();
 }
 
 // Helper class for setting up a test for reading register state from a worker thread.
@@ -1043,14 +945,12 @@ class RegisterReadSetup {
 
   // Run |thread_func| with |state|.  Once the thread reaches |expected_pc|, return, leaving the
   // thread suspended.
-  bool RunUntil(ThreadFunc thread_func, RegisterStruct* state, uintptr_t expected_pc) {
-    BEGIN_HELPER;
-
+  void RunUntil(ThreadFunc thread_func, RegisterStruct* state, uintptr_t expected_pc) {
     ASSERT_TRUE(start_thread((void (*)(void*))thread_func, state, &thread_, &thread_handle_));
 
     while (true) {
       ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_MSEC(1))), ZX_OK);
-      ASSERT_TRUE(Suspend());
+      Suspend();
       zx_thread_state_general_regs_t regs;
       ASSERT_EQ(
           zx_thread_read_state(thread_handle_, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)),
@@ -1058,15 +958,13 @@ class RegisterReadSetup {
       if (regs.REG_PC == expected_pc) {
         break;
       }
-      ASSERT_TRUE(Resume());
+      Resume();
     }
-
-    END_HELPER;
   }
 
-  bool Resume() { return resume_thread_synchronous(thread_handle_, suspend_token_); }
+  void Resume() { resume_thread_synchronous(thread_handle_, suspend_token_); }
 
-  bool Suspend() { return suspend_thread_synchronous(thread_handle_, &suspend_token_); }
+  void Suspend() { suspend_thread_synchronous(thread_handle_, &suspend_token_); }
 
  private:
   zxr_thread_t thread_;
@@ -1077,35 +975,28 @@ class RegisterReadSetup {
 // This tests the registers reported by zx_thread_read_state() for a
 // suspended thread.  It starts a thread which sets all the registers to
 // known test values.
-static bool TestReadingGeneralRegisterState() {
-  BEGIN_TEST;
-
+TEST(Threads, ReadingGeneralRegisterState) {
   zx_thread_state_general_regs_t gen_regs_expected;
   general_regs_fill_test_values(&gen_regs_expected);
   gen_regs_expected.REG_PC = (uintptr_t)spin_address;
 
   RegisterReadSetup<zx_thread_state_general_regs_t> setup;
-  ASSERT_TRUE(setup.RunUntil(&spin_with_general_regs, &gen_regs_expected,
-                             reinterpret_cast<uintptr_t>(&spin_address)));
+  setup.RunUntil(&spin_with_general_regs, &gen_regs_expected,
+                 reinterpret_cast<uintptr_t>(&spin_address));
 
   zx_thread_state_general_regs_t regs;
   ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_GENERAL_REGS, &regs,
                                  sizeof(regs)),
             ZX_OK);
   ASSERT_TRUE(general_regs_expect_eq(regs, gen_regs_expected));
-
-  END_TEST;
 }
 
-static bool TestReadingFpRegisterState() {
-  BEGIN_TEST;
-
+TEST(Threads, ReadingFpRegisterState) {
   zx_thread_state_fp_regs_t fp_regs_expected;
   fp_regs_fill_test_values(&fp_regs_expected);
 
   RegisterReadSetup<zx_thread_state_fp_regs_t> setup;
-  ASSERT_TRUE(setup.RunUntil(&spin_with_fp_regs, &fp_regs_expected,
-                             reinterpret_cast<uintptr_t>(&spin_address)));
+  setup.RunUntil(&spin_with_fp_regs, &fp_regs_expected, reinterpret_cast<uintptr_t>(&spin_address));
 
   zx_thread_state_fp_regs_t regs;
   zx_status_t status =
@@ -1118,19 +1009,15 @@ static bool TestReadingFpRegisterState() {
 #else
 #error unsupported platform
 #endif
-
-  END_TEST;
 }
 
-static bool TestReadingVectorRegisterState() {
-  BEGIN_TEST;
-
+TEST(Threads, ReadingVectorRegisterState) {
   zx_thread_state_vector_regs_t vector_regs_expected;
   vector_regs_fill_test_values(&vector_regs_expected);
 
   RegisterReadSetup<zx_thread_state_vector_regs_t> setup;
-  ASSERT_TRUE(setup.RunUntil(&spin_with_vector_regs, &vector_regs_expected,
-                             reinterpret_cast<uintptr_t>(&spin_address)));
+  setup.RunUntil(&spin_with_vector_regs, &vector_regs_expected,
+                 reinterpret_cast<uintptr_t>(&spin_address));
 
   zx_thread_state_vector_regs_t regs;
   ASSERT_EQ(
@@ -1138,8 +1025,6 @@ static bool TestReadingVectorRegisterState() {
       ZX_OK);
 
   ASSERT_TRUE(vector_regs_expect_eq(regs, vector_regs_expected));
-
-  END_TEST;
 }
 
 // Procedure:
@@ -1157,9 +1042,7 @@ class RegisterWriteSetup {
 
   zx_handle_t thread_handle() const { return thread_handle_; }
 
-  bool Init() {
-    BEGIN_HELPER;
-
+  void Init() {
     ASSERT_TRUE(start_thread(threads_test_atomic_store, &p_, &thread_, &thread_handle_));
 
     // Wait for the thread to begin executing.
@@ -1167,18 +1050,14 @@ class RegisterWriteSetup {
       zx_nanosleep(zx_deadline_after(THREAD_BLOCKED_WAIT_DURATION));
     }
 
-    ASSERT_TRUE(suspend_thread_synchronous(thread_handle_, &suspend_token_));
-
-    END_HELPER;
+    suspend_thread_synchronous(thread_handle_, &suspend_token_);
   }
 
   // The IP and SP set in the general registers will be filled in to the optional output
   // parameters. This is for the general register test since we change those values out from
   // under it.
-  bool DoSave(SaveFunc save_func, RegisterStruct* out, uint64_t* general_ip = nullptr,
+  void DoSave(SaveFunc save_func, RegisterStruct* out, uint64_t* general_ip = nullptr,
               uint64_t* general_sp = nullptr) {
-    BEGIN_HELPER;
-
     // Modify the PC to point to the routine, and the SP to point to the output struct.
     zx_thread_state_general_regs_t general_regs;
     ASSERT_EQ(zx_thread_read_state(thread_handle_, ZX_THREAD_STATE_GENERAL_REGS, &general_regs,
@@ -1209,8 +1088,6 @@ class RegisterWriteSetup {
               ZX_OK);
 
     memcpy(out, &stack.regs_got, sizeof(RegisterStruct));
-
-    END_HELPER;
   }
 
  private:
@@ -1223,11 +1100,9 @@ class RegisterWriteSetup {
 // This tests writing registers using zx_thread_write_state().  After
 // setting registers using that syscall, it reads back the registers and
 // checks their values.
-static bool TestWritingGeneralRegisterState() {
-  BEGIN_TEST;
-
+TEST(Threads, WritingGeneralRegisterState) {
   RegisterWriteSetup<zx_thread_state_general_regs_t> setup;
-  ASSERT_TRUE(setup.Init());
+  setup.Init();
 
   // Set the general registers.
   zx_thread_state_general_regs_t regs_to_set;
@@ -1238,22 +1113,18 @@ static bool TestWritingGeneralRegisterState() {
 
   zx_thread_state_general_regs_t regs;
   uint64_t ip = 0, sp = 0;
-  ASSERT_TRUE(setup.DoSave(&save_general_regs_and_exit_thread, &regs, &ip, &sp));
+  setup.DoSave(&save_general_regs_and_exit_thread, &regs, &ip, &sp);
 
   // Fix up the expected values with the IP/SP required for the register read.
   regs_to_set.REG_PC = ip;
   regs_to_set.REG_STACK_PTR = sp;
   EXPECT_TRUE(general_regs_expect_eq(regs_to_set, regs));
-
-  END_TEST;
 }
 
 // This tests writing single step state using zx_thread_write_state().
-static bool TestWritingSingleStepState() {
-  BEGIN_TEST;
-
+TEST(Threads, WritingSingleStepState) {
   RegisterWriteSetup<zx_thread_state_single_step_t> setup;
-  ASSERT_TRUE(setup.Init());
+  setup.Init();
 
   // 0 is valid.
   zx_thread_state_single_step_t single_step = 0;
@@ -1286,15 +1157,11 @@ static bool TestWritingSingleStepState() {
   ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_SINGLE_STEP, &single_step,
                                   sizeof(single_step) - 1),
             ZX_ERR_BUFFER_TOO_SMALL);
-
-  END_TEST;
 }
 
-static bool TestWritingFpRegisterState() {
-  BEGIN_TEST;
-
+TEST(Threads, WritingFpRegisterState) {
   RegisterWriteSetup<zx_thread_state_fp_regs_t> setup;
-  ASSERT_TRUE(setup.Init());
+  setup.Init();
 
   // The busyloop code executed initially by the setup class will have executed an MMX instruction
   // so that the MMX state is available to write.
@@ -1308,22 +1175,18 @@ static bool TestWritingFpRegisterState() {
   ASSERT_EQ(status, ZX_OK);
 
   zx_thread_state_fp_regs_t regs;
-  ASSERT_TRUE(setup.DoSave(&save_fp_regs_and_exit_thread, &regs));
+  setup.DoSave(&save_fp_regs_and_exit_thread, &regs);
   EXPECT_TRUE(fp_regs_expect_eq(regs_to_set, regs));
 #elif defined(__aarch64__)
   ASSERT_EQ(status, ZX_ERR_NOT_SUPPORTED);
 #else
 #error unsupported platform
 #endif
-
-  END_TEST;
 }
 
-static bool TestWritingVectorRegisterState() {
-  BEGIN_TEST;
-
+TEST(Threads, WritingVectorRegisterState) {
   RegisterWriteSetup<zx_thread_state_vector_regs_t> setup;
-  ASSERT_TRUE(setup.Init());
+  setup.Init();
 
   zx_thread_state_vector_regs_t regs_to_set;
   vector_regs_fill_test_values(&regs_to_set);
@@ -1332,18 +1195,14 @@ static bool TestWritingVectorRegisterState() {
             ZX_OK);
 
   zx_thread_state_vector_regs_t regs;
-  ASSERT_TRUE(setup.DoSave(&save_vector_regs_and_exit_thread, &regs));
+  setup.DoSave(&save_vector_regs_and_exit_thread, &regs);
   EXPECT_TRUE(vector_regs_expect_eq(regs_to_set, regs));
-
-  END_TEST;
 }
 
 // This test starts a thread which reads and writes from TLS.
-static bool TestThreadLocalRegisterState() {
-  BEGIN_TEST;
-
+TEST(Threads, ThreadLocalRegisterState) {
   RegisterWriteSetup<struct thread_local_regs> setup;
-  ASSERT_TRUE(setup.Init());
+  setup.Init();
 
   zx_thread_state_general_regs_t regs = {};
 
@@ -1364,7 +1223,7 @@ static bool TestThreadLocalRegisterState() {
             ZX_OK);
 
   struct thread_local_regs tls_regs;
-  ASSERT_TRUE(setup.DoSave(&save_thread_local_regs_and_exit_thread, &tls_regs));
+  setup.DoSave(&save_thread_local_regs_and_exit_thread, &tls_regs);
 
 #if defined(__x86_64__)
   EXPECT_EQ(tls_regs.fs_base_value, 0x1234);
@@ -1375,8 +1234,6 @@ static bool TestThreadLocalRegisterState() {
   EXPECT_EQ(tls_regs.tpidr_value, 0x1234);
   EXPECT_EQ(tpidr_value, 0x12345678);
 #endif
-
-  END_TEST;
 }
 
 #if defined(__x86_64__)
@@ -1399,9 +1256,7 @@ static uint32_t x86_linear_address_width() {
 // because if the kernel returns to that address using SYSRET, that can
 // cause a fault in kernel mode that is exploitable.  See
 // sysret_problem.md.
-static bool TestNoncanonicalRipAddress() {
-  BEGIN_TEST;
-
+TEST(Threads, NoncanonicalRipAddress) {
 #if defined(__x86_64__)
   zx_handle_t event;
   ASSERT_EQ(zx_event_create(0, &event), ZX_OK);
@@ -1410,10 +1265,10 @@ static bool TestNoncanonicalRipAddress() {
   ASSERT_TRUE(start_thread(threads_test_wait_fn, &event, &thread, &thread_handle));
 
   // Wait until the thread has entered the syscall.
-  ASSERT_TRUE(wait_thread_blocked(thread_handle, ZX_THREAD_STATE_BLOCKED_WAIT_ONE));
+  wait_thread_blocked(thread_handle, ZX_THREAD_STATE_BLOCKED_WAIT_ONE);
 
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
-  ASSERT_TRUE(suspend_thread_synchronous(thread_handle, &suspend_token));
+  suspend_thread_synchronous(thread_handle, &suspend_token);
 
   zx_thread_state_general_regs_t regs;
   ASSERT_EQ(zx_thread_read_state(thread_handle, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)),
@@ -1458,8 +1313,6 @@ static bool TestNoncanonicalRipAddress() {
   ASSERT_EQ(zx_handle_close(event), ZX_OK);
   ASSERT_EQ(zx_handle_close(thread_handle), ZX_OK);
 #endif
-
-  END_TEST;
 }
 
 // Test that, on ARM64, userland cannot use zx_thread_write_state() to
@@ -1467,9 +1320,7 @@ static bool TestNoncanonicalRipAddress() {
 // FIQ interrupt disable flags.  We don't want userland to be able to set
 // those flags to 1, since that would disable interrupts.  Also, userland
 // should not be able to read these bits.
-static bool TestWritingArmFlagsRegister() {
-  BEGIN_TEST;
-
+TEST(Threads, WritingArmFlagsRegister) {
 #if defined(__aarch64__)
   std::atomic<int> value = 0;
   zxr_thread_t thread;
@@ -1480,7 +1331,7 @@ static bool TestWritingArmFlagsRegister() {
     ASSERT_EQ(zx_nanosleep(zx_deadline_after(ZX_USEC(1))), ZX_OK);
   }
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
-  ASSERT_TRUE(suspend_thread_synchronous(thread_handle, &suspend_token));
+  suspend_thread_synchronous(thread_handle, &suspend_token);
 
   zx_thread_state_general_regs_t regs;
   ASSERT_EQ(zx_thread_read_state(thread_handle, ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)),
@@ -1518,12 +1369,9 @@ static bool TestWritingArmFlagsRegister() {
 
 // Clean up.
 #endif
-
-  END_TEST;
 }
 
-static bool TestWriteReadDebugRegisterState() {
-  BEGIN_TEST;
+TEST(Threads, WriteReadDebugRegisterState) {
 #if defined(__x86_64__)
   zx_thread_state_debug_regs_t debug_regs_to_write;
   zx_thread_state_debug_regs_t debug_regs_expected;
@@ -1538,8 +1386,8 @@ static bool TestWriteReadDebugRegisterState() {
   // 6. Read the state and compare it.
 
   RegisterReadSetup<zx_thread_state_debug_regs_t> setup;
-  ASSERT_TRUE(setup.RunUntil(&spin_with_debug_regs, &debug_regs_to_write,
-                             reinterpret_cast<uintptr_t>(&spin_address)));
+  setup.RunUntil(&spin_with_debug_regs, &debug_regs_to_write,
+                 reinterpret_cast<uintptr_t>(&spin_address));
 
   // Write the test values to the debug registers.
   ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS,
@@ -1547,8 +1395,8 @@ static bool TestWriteReadDebugRegisterState() {
             ZX_OK);
 
   // Resume and re-suspend the thread.
-  ASSERT_TRUE(setup.Resume());
-  ASSERT_TRUE(setup.Suspend());
+  setup.Resume();
+  setup.Suspend();
 
   // Get the current debug state of the suspended thread.
   zx_thread_state_debug_regs_t regs;
@@ -1562,8 +1410,7 @@ static bool TestWriteReadDebugRegisterState() {
   // We get how many breakpoints we have.
   zx_thread_state_debug_regs_t actual_regs = {};
   RegisterReadSetup<zx_thread_state_debug_regs_t> setup;
-  ASSERT_TRUE(setup.RunUntil(&spin_with_debug_regs, &actual_regs,
-                             reinterpret_cast<uintptr_t>(&spin_address)));
+  setup.RunUntil(&spin_with_debug_regs, &actual_regs, reinterpret_cast<uintptr_t>(&spin_address));
 
   ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS, &actual_regs,
                                  sizeof(actual_regs)),
@@ -1589,20 +1436,17 @@ static bool TestWriteReadDebugRegisterState() {
 
   ASSERT_TRUE(debug_regs_expect_eq(__FILE__, __LINE__, regs, expected));
 #endif
-  END_TEST;
 }
 
 // All writeable bits as 0.
 #define DR6_ZERO_MASK (0xffff0ff0ul)
 #define DR7_ZERO_MASK (0x700ul)
 
-static bool TestDebugRegistersValidation() {
-  BEGIN_TEST;
+TEST(Threads, DebugRegistersValidation) {
 #if defined(__x86_64__)
   zx_thread_state_debug_regs_t debug_regs = {};
   RegisterReadSetup<zx_thread_state_debug_regs_t> setup;
-  ASSERT_TRUE(setup.RunUntil(&spin_with_debug_regs, &debug_regs,
-                             reinterpret_cast<uintptr_t>(&spin_address)));
+  setup.RunUntil(&spin_with_debug_regs, &debug_regs, reinterpret_cast<uintptr_t>(&spin_address));
 
   // Writing all 0s should work and should mask values.
   ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
@@ -1654,8 +1498,7 @@ static bool TestDebugRegistersValidation() {
   zx_thread_state_debug_regs_t debug_regs = {};
   zx_thread_state_debug_regs_t actual_regs = {};
   RegisterReadSetup<zx_thread_state_debug_regs_t> setup;
-  ASSERT_TRUE(setup.RunUntil(&spin_with_debug_regs, &actual_regs,
-                             reinterpret_cast<uintptr_t>(&spin_address)));
+  setup.RunUntil(&spin_with_debug_regs, &actual_regs, reinterpret_cast<uintptr_t>(&spin_address));
 
   // We read the initial state to know how many HW breakpoints we have.
   ASSERT_EQ(zx_thread_read_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS, &actual_regs,
@@ -1676,7 +1519,7 @@ static bool TestDebugRegistersValidation() {
 
   debug_regs.hw_bps[1].dbgbcr = 0x1;  // Only the enabled value is set.
   // We use the address of a function we know is in userspace.
-  debug_regs.hw_bps[1].dbgbvr = reinterpret_cast<uint64_t>(TestDebugRegistersValidation);
+  debug_regs.hw_bps[1].dbgbvr = reinterpret_cast<uint64_t>(wait_thread_blocked);
   ASSERT_EQ(zx_thread_write_state(setup.thread_handle(), ZX_THREAD_STATE_DEBUG_REGS, &debug_regs,
                                   sizeof(debug_regs)),
             ZX_OK, "Validation should correctly mask invalid values");
@@ -1692,14 +1535,11 @@ static bool TestDebugRegistersValidation() {
   EXPECT_EQ(actual_regs.hw_bps[1].dbgbcr, 0x000001e5);
   EXPECT_EQ(actual_regs.hw_bps[1].dbgbvr, debug_regs.hw_bps[1].dbgbvr);
 #endif
-  END_TEST;
 }
 
 // This is a regression test for ZX-4390. Verify that upon entry to the kernel via fault on hardware
 // that lacks SMAP, a subsequent usercopy does not panic.
-static bool TestX86AcFlagUserCopy() {
-  BEGIN_TEST;
-
+TEST(Threads, X86AcFlagUserCopy) {
 #if defined(__x86_64__)
   zx::process process;
   zx::thread thread;
@@ -1711,7 +1551,7 @@ static bool TestX86AcFlagUserCopy() {
 
   // Suspend the process so we can set its AC flag.
   zx::handle suspend_token;
-  ASSERT_TRUE(suspend_thread_synchronous(thread.get(), suspend_token.reset_and_get_address()));
+  suspend_thread_synchronous(thread.get(), suspend_token.reset_and_get_address());
 
   zx_thread_state_general_regs_t regs{};
   ASSERT_EQ(thread.read_state(ZX_THREAD_STATE_GENERAL_REGS, &regs, sizeof(regs)), ZX_OK);
@@ -1724,7 +1564,7 @@ static bool TestX86AcFlagUserCopy() {
   // We can't catch this exception in userspace, the test requires the
   // kernel do a usercopy from an interrupt context which only happens when
   // the exception falls through unhandled.
-  unittest_printf_critical("Crashing a test process, the following dump is intentional\n");
+  printf("Crashing a test process, the following dump is intentional\n");
 
   // Resume.
   suspend_token.reset();
@@ -1736,46 +1576,4 @@ static bool TestX86AcFlagUserCopy() {
             ZX_OK);
   ASSERT_EQ(proc_info.return_code, ZX_TASK_RETCODE_EXCEPTION_KILL);
 #endif
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(threads_tests)
-RUN_TEST(TestBasics)
-RUN_TEST(TestInvalidRights)
-RUN_TEST(TestDetach)
-RUN_TEST(TestEmptyNameSucceeds)
-RUN_TEST(TestLongNameSucceeds)
-RUN_TEST(TestThreadStartOnInitialThread)
-RUN_TEST(TestThreadStartWithZeroInstructionPointer)
-RUN_TEST(TestNonstartedThread)
-RUN_TEST(TestInfoTaskStatsFails)
-RUN_TEST(TestGetLastScheduledCpu)
-RUN_TEST(TestGetAffinity)
-RUN_TEST(TestResumeSuspended)
-RUN_TEST(TestSuspendSleeping)
-RUN_TEST(TestSuspendChannelCall)
-RUN_TEST(TestSuspendPortCall)
-RUN_TEST(TestSuspendStopsThread)
-RUN_TEST(TestSuspendMultiple)
-RUN_TEST(TestSuspendSelf)
-RUN_TEST(TestSuspendAfterDeath)
-RUN_TEST(TestKillSuspendedThread)
-RUN_TEST(TestStartSuspendedThread)
-RUN_TEST(TestStartSuspendedAndResumedThread)
-RUN_TEST(TestSuspendSingleWaitAsyncSignalDelivery)
-RUN_TEST(TestSuspendRepeatingWaitAsyncSignalDelivery)
-RUN_TEST(TestReadingGeneralRegisterState)
-RUN_TEST(TestReadingFpRegisterState)
-RUN_TEST(TestReadingVectorRegisterState)
-RUN_TEST(TestWritingGeneralRegisterState)
-RUN_TEST(TestWritingSingleStepState)
-RUN_TEST(TestWritingFpRegisterState)
-RUN_TEST(TestWritingVectorRegisterState)
-RUN_TEST(TestThreadLocalRegisterState)
-RUN_TEST(TestNoncanonicalRipAddress)
-RUN_TEST(TestWritingArmFlagsRegister)
-RUN_TEST(TestWriteReadDebugRegisterState);
-RUN_TEST(TestDebugRegistersValidation);
-RUN_TEST(TestX86AcFlagUserCopy)
-END_TEST_CASE(threads_tests)

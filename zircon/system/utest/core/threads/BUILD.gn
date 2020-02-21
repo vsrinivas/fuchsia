@@ -15,7 +15,7 @@ source_set("threads") {
     "$zx/system/ulib/runtime",
     "$zx/system/ulib/test-exceptions",
     "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zxtest",
     "$zx/system/ulib/zx",
   ]
 }
