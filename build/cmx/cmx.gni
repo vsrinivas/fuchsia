@@ -136,7 +136,7 @@ template("cm_compile") {
                              "testonly",
                              "visibility",
                            ])
-    tool = "//src/sys/cmc/"
+    tool = "//src/sys/cmc"
     tool_output_name = "cmc"
 
     compiled_output = "$target_out_dir/$target_name"
