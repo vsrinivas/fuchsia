@@ -71,6 +71,8 @@ class PageEvictionManagerImpl : public PageEvictionManager, public PageEvictionD
   // Marks the given page as evicted in the page usage database.
   void MarkPageEvicted(std::string ledger_name, storage::PageId page_id);
 
+  // `was_evicted` is only guaranteed to be written to if the resulting status
+  // of this method is not INTERRUPTED.
   Status SynchronousTryEvictPage(coroutine::CoroutineHandler* handler, std::string ledger_name,
                                  storage::PageId page_id, PageEvictionCondition condition,
                                  PageWasEvicted* was_evicted);

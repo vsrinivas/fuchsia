@@ -117,6 +117,10 @@ void PageEvictionManagerImpl::TryEvictPage(absl::string_view ledger_name,
         PageWasEvicted was_evicted;
         Status status =
             SynchronousTryEvictPage(handler, ledger_name, page_id, condition, &was_evicted);
+        if (status == Status::INTERRUPTED)
+          // Because the status is INTERRUPTED, was_evicted is not set and
+          // doesn't hold meaningful information.
+          return std::make_tuple(Status::INTERRUPTED, false);
         return std::make_tuple(status, was_evicted);
       });
 }
