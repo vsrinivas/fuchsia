@@ -35,24 +35,24 @@ struct AudioEffectConfig {
 /// Association of a volume level with its decibel value.
 struct Volume {
     /// Specific volume level identifier in the range [0.0, 1.0].
-    float level;
+    float32 level;
     /// Decibel value of the associated volume level in the range [-120.0, 0.0].
-    float decibel;
+    float32 decibel;
 };
 
 /// Audio effects configuration details applied to audio streams within
 /// a device's media pipeline.
-table AudioMixGroup {
+struct AudioMixGroup {
     /// Identifier of the audio effects mix detailed in this object.
-    1: string:32 name;
+    string:32 name;
     /// True if the device profile is eligible for loopback capture.
-    2: bool loopback;
+    bool loopback;
     /// Audio effect configurations applied to the specified `streams`.
-    3: vector<AudioEffectConfig>:16 effects;
+    vector<AudioEffectConfig>:16 effects;
     /// Set of audio effect mixes, each of which consist of various effects configurations.
-    4: vector<AudioMixGroup>:16 inputs;
+    vector<AudioMixGroup?>:16 inputs;
     /// Names of the audio streams to which the `effects` are applied.
-    5: vector<fuchsia.media.AudioRenderUsage>:8 streams;
+    vector<fuchsia.media.AudioRenderUsage>:8 streams;
 };
 
 /// Specification of the audio effects mixes and volume curve for a device.
@@ -66,7 +66,7 @@ table AudioDeviceTuningProfile {
 [Discoverable]
 protocol AudioTuner {
     /// Provides names of audio effects classes available for tuning.
-    GetAvailableAudioEffects() -> (vector<AudioEffectName>:16 effects);
+    GetAvailableAudioEffects() -> (vector<AudioEffectType>:16 effects);
 
     /// Provides the current, tunable audio effects configuration and
     /// volume settings for the given device.
