@@ -76,7 +76,7 @@ inline void wait_queue_dequeue_thread_internal(wait_queue_t* wait, Thread* t,
 inline zx_status_t wait_queue_block_etc_pre(wait_queue_t* wait, const Deadline& deadline,
                                             uint signal_mask, ResourceOwnership reason)
     TA_REQ(thread_lock) {
-  Thread* current_thread = get_current_thread();
+  Thread* current_thread = Thread::Current::Get();
 
   if (deadline.when() != ZX_TIME_INFINITE && deadline.when() <= current_time()) {
     return ZX_ERR_TIMED_OUT;
@@ -102,7 +102,7 @@ inline zx_status_t wait_queue_block_etc_pre(wait_queue_t* wait, const Deadline& 
 
 inline zx_status_t wait_queue_block_etc_post(wait_queue_t* wait, const Deadline& deadline)
     TA_REQ(thread_lock) {
-  Thread* current_thread = get_current_thread();
+  Thread* current_thread = Thread::Current::Get();
   timer_t timer;
 
   // if the deadline is nonzero or noninfinite, set a callback to yank us out of the queue

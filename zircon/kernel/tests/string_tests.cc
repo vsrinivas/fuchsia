@@ -148,7 +148,7 @@ static void bench_memcpy(void) {
   size_t srcalign, dstalign;
 
   printf("memcpy speed test\n");
-  CurrentThread::SleepRelative(ZX_MSEC(200));  // let the debug string clear the serial port
+  Thread::Current::SleepRelative(ZX_MSEC(200));  // let the debug string clear the serial port
 
   for (srcalign = 0; srcalign < 64;) {
     for (dstalign = 0; dstalign < 64;) {
@@ -243,7 +243,7 @@ static void bench_memset(void) {
   size_t dstalign;
 
   printf("memset speed test\n");
-  CurrentThread::SleepRelative(ZX_MSEC(200));  // let the debug string clear the serial port
+  Thread::Current::SleepRelative(ZX_MSEC(200));  // let the debug string clear the serial port
 
   for (dstalign = 0; dstalign < 64; dstalign++) {
     spin_lock_saved_state_t state;

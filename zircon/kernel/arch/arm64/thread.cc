@@ -41,7 +41,7 @@ void arch_thread_initialize(Thread* t, vaddr_t entry_point) {
   // This is really a global (boot-time) constant value.
   // But it's stored in each thread struct to satisfy the
   // compiler ABI (TPIDR_EL1 + ZX_TLS_STACK_GUARD_OFFSET).
-  t->arch_.stack_guard = get_current_thread()->arch_.stack_guard;
+  t->arch_.stack_guard = Thread::Current::Get()->arch_.stack_guard;
 
   // set the stack pointer
   t->arch_.sp = (vaddr_t)frame;
@@ -58,7 +58,7 @@ __NO_SAFESTACK void arch_thread_construct_first(Thread* t) {
   // Propagate the values from the fake arch_thread that the thread
   // pointer points to now (set up in start.S) into the real thread
   // structure being set up now.
-  Thread* fake = get_current_thread();
+  Thread* fake = Thread::Current::Get();
   t->arch_.stack_guard = fake->arch_.stack_guard;
   t->arch_.unsafe_sp = fake->arch_.unsafe_sp;
 
@@ -72,7 +72,7 @@ __NO_SAFESTACK void arch_thread_construct_first(Thread* t) {
   // happens to have changed.  (We're assuming that the compiler doesn't
   // decide to cache the TPIDR_EL1 value across this function call, which
   // would be pointless since it's just one instruction to fetch it afresh.)
-  set_current_thread(t);
+  arch_set_current_thread(t);
 }
 
 static void arm64_tpidr_save_state(Thread* thread) {

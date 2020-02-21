@@ -212,7 +212,7 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
             pages_leaked += alloc_pages;
             printf("Leaked %lu pages\n", pages_leaked);
           }
-          CurrentThread::SleepRelative(ZX_SEC(1));
+          Thread::Current::SleepRelative(ZX_SEC(1));
         }
       } else {
         if (pmm_node.AllocPages(pages_till_oom, 0, &list) == ZX_OK) {

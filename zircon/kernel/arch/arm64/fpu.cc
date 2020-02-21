@@ -149,7 +149,7 @@ __NO_SAFESTACK void arm64_fpu_context_switch(Thread* oldthread, Thread* newthrea
 
 // Called because of a fpu instruction caused exception.
 void arm64_fpu_exception(arm64_iframe_t* iframe, uint exception_flags) {
-  LTRACEF("cpu %u, thread %s, flags 0x%x\n", arch_curr_cpu_num(), get_current_thread()->name_,
+  LTRACEF("cpu %u, thread %s, flags 0x%x\n", arch_curr_cpu_num(), Thread::Current::Get()->name_,
           exception_flags);
 
   // Only valid to be called if exception came from lower level.
@@ -164,7 +164,7 @@ void arm64_fpu_exception(arm64_iframe_t* iframe, uint exception_flags) {
   __isb(ARM_MB_SY);
 
   // Load the fpu state for the current thread.
-  Thread* t = get_current_thread();
+  Thread* t = Thread::Current::Get();
   if (likely(t)) {
     DEBUG_ASSERT(use_lazy_fpu_restore(t));
     t->arch_.fp_restore_count++;

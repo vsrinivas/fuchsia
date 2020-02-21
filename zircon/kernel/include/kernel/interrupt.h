@@ -18,13 +18,13 @@ typedef struct int_handler_saved_state {
 // int_handler_finish().
 static inline void int_handler_start(int_handler_saved_state_t* state) {
   arch_set_blocking_disallowed(true);
-  Thread* current_thread = get_current_thread();
+  Thread* current_thread = Thread::Current::Get();
   // Save the value of preempt_pending for restoring later.
   state->old_preempt_pending = current_thread->preempt_pending_;
   // Clear preempt_pending so that we can later detect whether a
   // reschedule is made pending during the interrupt handler.
   current_thread->preempt_pending_ = false;
-  CurrentThread::PreemptDisable();
+  Thread::Current::PreemptDisable();
 }
 
 // Leave the main part of handling an interrupt, following a call to
@@ -32,14 +32,14 @@ static inline void int_handler_start(int_handler_saved_state_t* state) {
 //
 // This returns whether the caller should call thread_preempt().
 static inline bool int_handler_finish(int_handler_saved_state_t* state) {
-  Thread* current_thread = get_current_thread();
-  CurrentThread::PreemptReenableNoResched();
+  Thread* current_thread = Thread::Current::Get();
+  Thread::Current::PreemptReenableNoResched();
   bool do_preempt = false;
   if (current_thread->preempt_pending_) {
     // A preemption became pending during the interrupt handler.  If
     // preemption is now enabled, indicate that the caller should now
     // do the preemption.
-    if (CurrentThread::PreemptDisableCount() == 0) {
+    if (Thread::Current::PreemptDisableCount() == 0) {
       do_preempt = true;
     }
   } else {

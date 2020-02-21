@@ -111,7 +111,7 @@ Mutex::~Mutex() {
     if (val() != STATE_FREE) {
       Thread* h = holder();
       panic("~Mutex(): thread %p (%s) tried to destroy locked mutex %p, locked by %p (%s)\n",
-            get_current_thread(), get_current_thread()->name_, this, h, h->name_);
+            Thread::Current::Get(), Thread::Current::Get()->name_, this, h, h->name_);
     }
   }
 
@@ -125,7 +125,7 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
   magic_.Assert();
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
-  Thread* const ct = get_current_thread();
+  Thread* const ct = Thread::Current::Get();
   const uintptr_t new_mutex_state = reinterpret_cast<uintptr_t>(ct);
 
   // Fastest path: The mutex is unlocked and uncontested. Try to acquire it
@@ -221,7 +221,7 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
 // Shared implementation of release
 template <Mutex::ThreadLockState TLS>
 void Mutex::ReleaseInternal(const bool allow_reschedule) {
-  Thread* ct = get_current_thread();
+  Thread* ct = Thread::Current::Get();
 
   // Try the fast path.  Assume that we are locked, but uncontested.
   uintptr_t old_mutex_state = reinterpret_cast<uintptr_t>(ct);

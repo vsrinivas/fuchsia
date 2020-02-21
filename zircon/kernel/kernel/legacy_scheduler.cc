@@ -350,7 +350,7 @@ void sched_block() {
 
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-  __UNUSED Thread* current_thread = get_current_thread();
+  __UNUSED Thread* current_thread = Thread::Current::Get();
 
   DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
   DEBUG_ASSERT(current_thread->state != THREAD_RUNNING);
@@ -459,7 +459,7 @@ void sched_yield() {
 
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-  Thread* current_thread = get_current_thread();
+  Thread* current_thread = Thread::Current::Get();
   DEBUG_ASSERT(!thread_is_idle(current_thread));
 
   // consume the rest of the time slice, deboost ourself, and go to the end of a queue
@@ -482,7 +482,7 @@ void sched_preempt() {
 
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-  Thread* current_thread = get_current_thread();
+  Thread* current_thread = Thread::Current::Get();
   uint curr_cpu = arch_curr_cpu_num();
 
   DEBUG_ASSERT(current_thread->curr_cpu == curr_cpu);
@@ -517,7 +517,7 @@ void sched_reschedule() {
 
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-  Thread* current_thread = get_current_thread();
+  Thread* current_thread = Thread::Current::Get();
   uint curr_cpu = arch_curr_cpu_num();
 
   if (current_thread->disable_counts != 0) {
@@ -603,7 +603,7 @@ void sched_transition_off_cpu(cpu_num_t old_cpu) {
 // check to see if the current thread needs to migrate to a new core
 // the passed argument must be the current thread and must already be pushed into the READY state
 static bool local_migrate_if_needed(Thread* curr_thread) TA_REQ(thread_lock) {
-  DEBUG_ASSERT(curr_thread == get_current_thread());
+  DEBUG_ASSERT(curr_thread == Thread::Current::Get());
   DEBUG_ASSERT(curr_thread->state == THREAD_READY);
 
   // if the affinity mask does not include the current cpu, migrate us right now
@@ -633,7 +633,7 @@ void sched_migrate(Thread* t) {
       }
 
       // we need to migrate
-      if (t == get_current_thread()) {
+      if (t == Thread::Current::Get()) {
         // current thread, so just shove ourself into another cpu's queue and reschedule locally
         migrate_current_thread(t);
         return;
@@ -679,7 +679,7 @@ static void sched_priority_changed(Thread* t, int old_prio, bool* local_resched,
     case THREAD_RUNNING:
       if (t->effec_priority < old_prio) {
         // we're currently running and dropped our effective priority, might want to resched
-        if (t == get_current_thread()) {
+        if (t == Thread::Current::Get()) {
           *local_resched = true;
         } else {
           *accum_cpu_mask |= cpu_num_to_mask(t->curr_cpu);
@@ -801,7 +801,7 @@ void sched_change_deadline(Thread* t, const zx_sched_deadline_params_t&) {
 // preemption timer that is set whenever a thread is scheduled
 void sched_preempt_timer_tick(zx_time_t now) {
   // if the preemption timer went off on the idle or a real time thread, ignore it
-  Thread* current_thread = get_current_thread();
+  Thread* current_thread = Thread::Current::Get();
   if (unlikely(thread_is_real_time_or_idle(current_thread))) {
     return;
   }
@@ -831,11 +831,11 @@ void sched_preempt_timer_tick(zx_time_t now) {
 }
 
 // On ARM64 with safe-stack, it's no longer possible to use the unsafe-sp
-// after set_current_thread (we'd now see newthread's unsafe-sp instead!).
+// after arch_set_current_thread (we'd now see newthread's unsafe-sp instead!).
 // Hence this function and everything it calls between this point and the
 // the low-level context switch must be marked with __NO_SAFESTACK.
 __NO_SAFESTACK static void final_context_switch(Thread* oldthread, Thread* newthread) {
-  set_current_thread(newthread);
+  arch_set_current_thread(newthread);
   arch_context_switch(oldthread, newthread);
 }
 
@@ -843,7 +843,7 @@ __NO_SAFESTACK static void final_context_switch(Thread* oldthread, Thread* newth
 // state and queues it needs to be in. This routine simply picks the next thread and
 // switches to it.
 void sched_resched_internal() {
-  Thread* current_thread = get_current_thread();
+  Thread* current_thread = Thread::Current::Get();
   uint cpu = arch_curr_cpu_num();
 
   DEBUG_ASSERT(arch_ints_disabled());

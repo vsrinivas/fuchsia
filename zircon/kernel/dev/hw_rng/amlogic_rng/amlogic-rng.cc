@@ -47,7 +47,7 @@ static size_t amlogic_hw_rng_get_entropy(void* buf, size_t len) {
         return 0;
       }
 
-      CurrentThread::SleepRelative(ZX_USEC(1));
+      Thread::Current::SleepRelative(ZX_USEC(1));
       retry++;
     }
 
@@ -62,7 +62,7 @@ static size_t amlogic_hw_rng_get_entropy(void* buf, size_t len) {
     len -= read_size;
 
     // Hardware RNG expected to be ready after an interval.
-    CurrentThread::SleepRelative(ZX_USEC(rng_refresh_interval_usec));
+    Thread::Current::SleepRelative(ZX_USEC(rng_refresh_interval_usec));
   }
   return total_read;
 }

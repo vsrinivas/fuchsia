@@ -43,14 +43,14 @@ cpu_mask_t percpu_exec(percpu_task_t task, void* context) {
 cpu_num_t cpu_of(uint16_t vpid) { return (vpid - 1) % arch_max_num_cpus(); }
 
 Thread* pin_thread(uint16_t vpid) {
-  Thread* thread = get_current_thread();
+  Thread* thread = Thread::Current::Get();
   thread->SetCpuAffinity(cpu_num_to_mask(cpu_of(vpid)));
   return thread;
 }
 
 bool check_pinned_cpu_invariant(uint16_t vpid, const Thread* thread) {
   cpu_num_t cpu = cpu_of(vpid);
-  return thread == get_current_thread() && thread->hard_affinity_ & cpu_num_to_mask(cpu) &&
+  return thread == Thread::Current::Get() && thread->hard_affinity_ & cpu_num_to_mask(cpu) &&
          arch_curr_cpu_num() == cpu;
 }
 

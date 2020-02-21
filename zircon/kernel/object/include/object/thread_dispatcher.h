@@ -82,7 +82,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
                             zx_rights_t* out_rights);
   ~ThreadDispatcher();
 
-  static ThreadDispatcher* GetCurrent() { return get_current_thread()->user_thread_; }
+  static ThreadDispatcher* GetCurrent() { return Thread::Current::Get()->user_thread_; }
 
   // Dispatcher implementation.
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_THREAD; }

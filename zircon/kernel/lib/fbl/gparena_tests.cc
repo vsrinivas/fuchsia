@@ -196,7 +196,7 @@ static int arena_alloc_helper(void* arg) {
       // The user registers we pass to |thread_process_pending_signals| do not matter because this
       // thread is a pure kernel thread and has no user mode component.
       iframe_t iframe = {};
-      CurrentThread::ProcessPendingSignals(GeneralRegsSource::Iframe, &iframe);
+      Thread::Current::ProcessPendingSignals(GeneralRegsSource::Iframe, &iframe);
     }
   }
 }

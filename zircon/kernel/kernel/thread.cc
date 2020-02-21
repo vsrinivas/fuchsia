@@ -143,10 +143,10 @@ static void initial_thread_func() {
   spin_unlock(&thread_lock);
   arch_enable_ints();
 
-  Thread* ct = get_current_thread();
+  Thread* ct = Thread::Current::Get();
   ret = (ct->arg_) ? ct->entry_(ct->arg_) : ct->entry_(ct->user_thread_);
 
-  CurrentThread::Exit(ret);
+  Thread::Current::Exit(ret);
 }
 
 /**
@@ -279,7 +279,7 @@ zx_status_t Thread::SetRealTime() {
 
   {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
-    if (this == get_current_thread()) {
+    if (this == Thread::Current::Get()) {
       // if we're currently running, cancel the preemption timer.
       timer_preempt_cancel();
     }
@@ -417,8 +417,8 @@ zx_status_t Thread::Suspend() {
 // we can unwind the stack in order to get the state of userland's
 // callee-saved registers at the point where userland invoked the
 // syscall.
-void CurrentThread::SignalPolicyException() {
-  Thread* t = get_current_thread();
+void Thread::Current::SignalPolicyException() {
+  Thread* t = Thread::Current::Get();
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
   t->signals_ |= THREAD_SIGNAL_POLICY_EXCEPTION;
 }
@@ -561,7 +561,7 @@ void Thread::Forget() {
   {
     Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
 
-    __UNUSED Thread* current_thread = get_current_thread();
+    __UNUSED Thread* current_thread = Thread::Current::Get();
     DEBUG_ASSERT(current_thread != this);
 
     list_delete(&thread_list_node_);
@@ -579,8 +579,8 @@ void Thread::Forget() {
  *
  * This function does not return.
  */
-void CurrentThread::Exit(int retcode) {
-  Thread* current_thread = get_current_thread();
+void Thread::Current::Exit(int retcode) {
+  Thread* current_thread = Thread::Current::Get();
 
   DEBUG_ASSERT(current_thread->magic_ == THREAD_MAGIC);
   DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
@@ -611,7 +611,7 @@ void Thread::Kill() {
   bool local_resched = false;
 
   // we are killing ourself
-  if (this == get_current_thread()) {
+  if (this == Thread::Current::Get()) {
     return;
   }
 
@@ -704,8 +704,8 @@ cpu_mask_t Thread::GetSoftCpuAffinity() const {
   return soft_affinity_;
 }
 
-void CurrentThread::MigrateToCpu(const cpu_num_t target_cpu) {
-  get_current_thread()->SetCpuAffinity(cpu_num_to_mask(target_cpu));
+void Thread::Current::MigrateToCpu(const cpu_num_t target_cpu) {
+  Thread::Current::Get()->SetCpuAffinity(cpu_num_to_mask(target_cpu));
 }
 
 // Returns true if it decides to kill the thread. The thread_lock must be held
@@ -725,7 +725,7 @@ static bool check_kill_signal(Thread* current_thread) TA_REQ(thread_lock) {
 
 // finish suspending the current thread
 static void thread_do_suspend() {
-  Thread* current_thread = get_current_thread();
+  Thread* current_thread = Thread::Current::Get();
   // Note: After calling this callback, we must not return without
   // calling the callback with THREAD_USER_STATE_RESUME.  That is
   // because those callbacks act as barriers which control when it is
@@ -742,7 +742,7 @@ static void thread_do_suspend() {
     // make sure we haven't been killed while the lock was dropped for the user callback
     if (check_kill_signal(current_thread)) {
       guard.Release();
-      CurrentThread::Exit(0);
+      Thread::Current::Exit(0);
     }
 
     // Make sure the suspend signal wasn't cleared while we were running the
@@ -760,7 +760,7 @@ static void thread_do_suspend() {
       // resume the thread.
       if (check_kill_signal(current_thread)) {
         guard.Release();
-        CurrentThread::Exit(0);
+        Thread::Current::Exit(0);
       }
     }
   }
@@ -778,7 +778,7 @@ bool thread_is_user_state_saved_locked(Thread* thread) {
 
 [[nodiscard]] static bool thread_save_user_state_locked(Thread* thread) {
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
-  DEBUG_ASSERT(thread == get_current_thread());
+  DEBUG_ASSERT(thread == Thread::Current::Get());
   DEBUG_ASSERT(thread->user_thread_ != nullptr);
 
   if (thread->user_state_saved_) {
@@ -791,7 +791,7 @@ bool thread_is_user_state_saved_locked(Thread* thread) {
 
 static void thread_restore_user_state_locked(Thread* thread) {
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
-  DEBUG_ASSERT(thread == get_current_thread());
+  DEBUG_ASSERT(thread == Thread::Current::Get());
   DEBUG_ASSERT(thread->user_thread_ != nullptr);
 
   DEBUG_ASSERT(thread->user_state_saved_);
@@ -802,7 +802,7 @@ static void thread_restore_user_state_locked(Thread* thread) {
 ScopedThreadExceptionContext::ScopedThreadExceptionContext(Thread* thread,
                                                            const arch_exception_context_t* context)
     : thread_(thread), context_(context) {
-  DEBUG_ASSERT(thread == get_current_thread());
+  DEBUG_ASSERT(thread == Thread::Current::Get());
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
   // It's possible that the context and state have been installed/saved earlier in the call chain.
   // If so, then it's some other object's responsibilty to remove/restore.
@@ -823,8 +823,8 @@ ScopedThreadExceptionContext::~ScopedThreadExceptionContext() {
 }
 
 // check for any pending signals and handle them
-void CurrentThread::ProcessPendingSignals(GeneralRegsSource source, void* gregs) {
-  Thread* current_thread = get_current_thread();
+void Thread::Current::ProcessPendingSignals(GeneralRegsSource source, void* gregs) {
+  Thread* current_thread = Thread::Current::Get();
   if (likely(current_thread->signals_ == 0)) {
     return;
   }
@@ -848,7 +848,7 @@ void CurrentThread::ProcessPendingSignals(GeneralRegsSource source, void* gregs)
   if (check_kill_signal(current_thread)) {
     guard.Release();
     cleanup_suspended_general_regs.cancel();
-    CurrentThread::Exit(0);
+    Thread::Current::Exit(0);
   }
 
   // Report any policy exceptions raised by syscalls.
@@ -896,8 +896,8 @@ void CurrentThread::ProcessPendingSignals(GeneralRegsSource source, void* gregs)
  * This function will return at some later time. Possibly immediately if
  * no other threads are waiting to execute.
  */
-void CurrentThread::Yield() {
-  __UNUSED Thread* current_thread = get_current_thread();
+void Thread::Current::Yield() {
+  __UNUSED Thread* current_thread = Thread::Current::Get();
 
   DEBUG_ASSERT(current_thread->magic_ == THREAD_MAGIC);
   DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
@@ -915,8 +915,8 @@ void CurrentThread::Yield() {
  * This function places the current thread at the head of the run
  * queue and then yields the cpu to another thread.
  */
-void CurrentThread::Preempt() {
-  Thread* current_thread = get_current_thread();
+void Thread::Current::Preempt() {
+  Thread* current_thread = Thread::Current::Get();
 
   DEBUG_ASSERT(current_thread->magic_ == THREAD_MAGIC);
   DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
@@ -939,8 +939,8 @@ void CurrentThread::Preempt() {
  * queue and then yields the cpu to another thread. Similar to
  * thread_preempt, but intended to be used at non interrupt context.
  */
-void CurrentThread::Reschedule() {
-  Thread* current_thread = get_current_thread();
+void Thread::Current::Reschedule() {
+  Thread* current_thread = Thread::Current::Get();
 
   DEBUG_ASSERT(current_thread->magic_ == THREAD_MAGIC);
   DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
@@ -951,8 +951,8 @@ void CurrentThread::Reschedule() {
   sched_reschedule();
 }
 
-void CurrentThread::CheckPreemptPending() {
-  Thread* current_thread = get_current_thread();
+void Thread::Current::CheckPreemptPending() {
+  Thread* current_thread = Thread::Current::Get();
 
   // First check preempt_pending without the expense of taking the lock.
   // At this point, interrupts could be enabled, so an interrupt handler
@@ -1023,8 +1023,8 @@ static zx_duration_t sleep_slack(zx_time_t deadline, zx_time_t now) {
  * interruptable argument allows this routine to return early if the thread was signaled
  * for something.
  */
-zx_status_t CurrentThread::SleepEtc(const Deadline& deadline, bool interruptable, zx_time_t now) {
-  Thread* current_thread = get_current_thread();
+zx_status_t Thread::Current::SleepEtc(const Deadline& deadline, bool interruptable, zx_time_t now) {
+  Thread* current_thread = Thread::Current::Get();
 
   DEBUG_ASSERT(current_thread->magic_ == THREAD_MAGIC);
   DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);
@@ -1066,18 +1066,18 @@ zx_status_t CurrentThread::SleepEtc(const Deadline& deadline, bool interruptable
   return current_thread->blocked_status_;
 }
 
-zx_status_t CurrentThread::Sleep(zx_time_t deadline) {
+zx_status_t Thread::Current::Sleep(zx_time_t deadline) {
   const zx_time_t now = current_time();
   return SleepEtc(Deadline::no_slack(deadline), false, now);
 }
 
-zx_status_t CurrentThread::SleepRelative(zx_duration_t delay) {
+zx_status_t Thread::Current::SleepRelative(zx_duration_t delay) {
   const zx_time_t now = current_time();
   const Deadline deadline = Deadline::no_slack(zx_time_add_duration(now, delay));
   return SleepEtc(deadline, false, now);
 }
 
-zx_status_t CurrentThread::SleepInterruptable(zx_time_t deadline) {
+zx_status_t Thread::Current::SleepInterruptable(zx_time_t deadline) {
   const zx_time_t now = current_time();
   const TimerSlack slack(sleep_slack(deadline, now), TIMER_SLACK_LATE);
   const Deadline slackDeadline(deadline, slack);
@@ -1133,7 +1133,7 @@ void thread_construct_first(Thread* t, const char* name) {
   sched_init_thread(t, HIGHEST_PRIORITY);
 
   arch_thread_construct_first(t);
-  set_current_thread(t);
+  arch_set_current_thread(t);
 
   Guard<spin_lock_t, IrqSave> guard{ThreadLock::Get()};
   list_add_head(&thread_list, &t->thread_list_node_);
@@ -1158,8 +1158,8 @@ void thread_init_early() {
 /**
  * @brief Change name of current thread
  */
-void CurrentThread::SetName(const char* name) {
-  Thread* current_thread = get_current_thread();
+void Thread::Current::SetName(const char* name) {
+  Thread* current_thread = Thread::Current::Get();
   strlcpy(current_thread->name_, name, sizeof(current_thread->name_));
 }
 
@@ -1215,16 +1215,16 @@ void Thread::SetUsermodeThread(ThreadDispatcher* user_thread) {
  * executes when there is nothing else to do.  This function does not return.
  * This thread is called once at boot on the first cpu.
  */
-void CurrentThread::BecomeIdle() {
+void Thread::Current::BecomeIdle() {
   DEBUG_ASSERT(arch_ints_disabled());
 
-  Thread* t = get_current_thread();
+  Thread* t = Thread::Current::Get();
   cpu_num_t curr_cpu = arch_curr_cpu_num();
 
   // Set our name
   char name[16];
   snprintf(name, sizeof(name), "idle %u", curr_cpu);
-  CurrentThread::SetName(name);
+  Thread::Current::SetName(name);
 
   // Mark ourself as idle
   t->flags_ |= THREAD_FLAG_IDLE;
@@ -1284,7 +1284,7 @@ void thread_secondary_cpu_entry() {
   dpc_init_for_cpu();
 
   // Exit from our bootstrap thread, and enter the scheduler on this cpu
-  CurrentThread::Exit(0);
+  Thread::Current::Exit(0);
 }
 
 /**
@@ -1556,13 +1556,13 @@ static zx_status_t _thread_print_backtrace(Thread* t, void* fp) {
 
 // print the backtrace of the current thread, at the current spot
 void thread_print_current_backtrace() {
-  _thread_print_backtrace(get_current_thread(), __GET_FRAME(0));
+  _thread_print_backtrace(Thread::Current::Get(), __GET_FRAME(0));
 }
 
 // append the backtrace of the current thread to the passed in char pointer.
 // return the number of chars appended.
-size_t CurrentThread::AppendCurrentBacktrace(char* out, const size_t out_len) {
-  Thread* current = get_current_thread();
+size_t Thread::Current::AppendCurrentBacktrace(char* out, const size_t out_len) {
+  Thread* current = Thread::Current::Get();
   void* fp = __GET_FRAME(0);
 
   if (!current || !fp) {
@@ -1592,7 +1592,7 @@ size_t CurrentThread::AppendCurrentBacktrace(char* out, const size_t out_len) {
 
 // print the backtrace of the current thread, at the given spot
 void thread_print_current_backtrace_at_frame(void* caller_frame) {
-  _thread_print_backtrace(get_current_thread(), caller_frame);
+  _thread_print_backtrace(Thread::Current::Get(), caller_frame);
 }
 
 // print the backtrace of a passed in thread, if possible

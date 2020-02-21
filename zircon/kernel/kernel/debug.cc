@@ -107,7 +107,7 @@ static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
 
   // reschedule to let debuglog potentially run
   if (!(flags & CMD_FLAG_PANIC)) {
-    CurrentThread::Reschedule();
+    Thread::Current::Reschedule();
   }
 
   return 0;
@@ -177,7 +177,7 @@ void RecurringCallback::CallbackWrapper(timer_t* t, zx_time_t now, void* arg) {
   }
 
   // reschedule to give the debuglog a chance to run
-  CurrentThread::PreemptSetPending();
+  Thread::Current::PreemptSetPending();
 }
 
 void RecurringCallback::Toggle() {

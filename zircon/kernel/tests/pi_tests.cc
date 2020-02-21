@@ -45,12 +45,12 @@ class TestThread;  // fwd decl
 class AutoPrioBooster {
  public:
   AutoPrioBooster() {
-    Thread* t = get_current_thread();
+    Thread* t = Thread::Current::Get();
     initial_base_prio_ = t->base_priority_;
     t->SetPriority(TEST_HIGHEST_PRIORITY);
   }
 
-  ~AutoPrioBooster() { get_current_thread()->SetPriority(initial_base_prio_); }
+  ~AutoPrioBooster() { Thread::Current::Get()->SetPriority(initial_base_prio_); }
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(AutoPrioBooster);
 
@@ -169,9 +169,9 @@ class Barrier {
       return;
     }
 
-    get_current_thread()->interruptable_ = true;
+    Thread::Current::Get()->interruptable_ = true;
     queue_.Block(deadline);
-    get_current_thread()->interruptable_ = false;
+    Thread::Current::Get()->interruptable_ = false;
   }
 
   bool state() const { return signaled_.load(); }
@@ -542,7 +542,7 @@ bool TestThread::WaitFor() {
 
     zx_time_t now = current_time();
     ASSERT_LT(now, deadline);
-    CurrentThread::SleepRelative(poll_interval);
+    Thread::Current::SleepRelative(poll_interval);
   }
 
   END_TEST;
@@ -1008,7 +1008,7 @@ bool pi_test_multi_waiter() {
             break;
           }
 
-          CurrentThread::SleepRelative(ZX_USEC(100));
+          Thread::Current::SleepRelative(ZX_USEC(100));
         }
 
         // Sanity checks.  Make sure that the new owner exists, and is not the

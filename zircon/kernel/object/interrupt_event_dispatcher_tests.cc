@@ -52,7 +52,7 @@ static bool TestConcurrentIntEventDispatcherTeardown() {
         // Loop until anything is set in the high byte of the state.
         while ((state->load(ktl::memory_order_seq_cst) & 0xff00) == 0) {
           apic_send_self_ipi(vec, DELIVERY_MODE_FIXED);
-          CurrentThread::Yield();
+          Thread::Current::Yield();
         }
         return -1;
       },

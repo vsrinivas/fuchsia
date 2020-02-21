@@ -524,7 +524,7 @@ bool OwnedWaitQueue::WakeThreadsInternal(uint32_t wake_count, Thread** out_new_o
 
 zx_status_t OwnedWaitQueue::BlockAndAssignOwner(const Deadline& deadline, Thread* new_owner,
                                                 ResourceOwnership resource_ownership) {
-  Thread* current_thread = get_current_thread();
+  Thread* current_thread = Thread::Current::Get();
 
   DEBUG_ASSERT(magic == MAGIC);
   DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);

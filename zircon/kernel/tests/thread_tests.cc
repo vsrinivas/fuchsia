@@ -37,8 +37,8 @@ static uint rand_range(uint low, uint high) {
 
 static int sleep_thread(void* arg) {
   for (;;) {
-    printf("sleeper %p\n", get_current_thread());
-    CurrentThread::SleepRelative(ZX_MSEC(rand() % 500));
+    printf("sleeper %p\n", Thread::Current::Get());
+    Thread::Current::SleepRelative(ZX_MSEC(rand() % 500));
   }
   return 0;
 }
@@ -59,7 +59,7 @@ static int mutex_thread(void* arg) {
 
   auto m = reinterpret_cast<Mutex*>(arg);
 
-  printf("mutex tester thread %p starting up, will go for %d iterations\n", get_current_thread(),
+  printf("mutex tester thread %p starting up, will go for %d iterations\n", Thread::Current::Get(),
          iterations);
 
   for (i = 0; i < iterations; i++) {
@@ -68,20 +68,20 @@ static int mutex_thread(void* arg) {
     if (shared != 0)
       panic("someone else has messed with the shared data\n");
 
-    shared = (intptr_t)get_current_thread();
+    shared = (intptr_t)Thread::Current::Get();
     if ((rand() % 5) == 0)
-      CurrentThread::Yield();
+      Thread::Current::Yield();
 
     if (++count % 10000 == 0)
-      printf("%p: count %d\n", get_current_thread(), count);
+      printf("%p: count %d\n", Thread::Current::Get(), count);
     shared = 0;
 
     m->Release();
     if ((rand() % 5) == 0)
-      CurrentThread::Yield();
+      Thread::Current::Yield();
   }
 
-  printf("mutex tester %p done\n", get_current_thread());
+  printf("mutex tester %p done\n", Thread::Current::Get());
 
   return 0;
 }
@@ -97,7 +97,7 @@ static int mutex_test(void) {
 
   for (uint i = 0; i < fbl::count_of(threads); i++) {
     threads[i] =
-        Thread::Create("mutex tester", &mutex_thread, &m, get_current_thread()->base_priority_);
+        Thread::Create("mutex tester", &mutex_thread, &m, Thread::Current::Get()->base_priority_);
     threads[i]->Resume();
   }
 
@@ -105,7 +105,7 @@ static int mutex_test(void) {
     threads[i]->Join(NULL, ZX_TIME_INFINITE);
   }
 
-  CurrentThread::SleepRelative(ZX_MSEC(100));
+  Thread::Current::SleepRelative(ZX_MSEC(100));
 
   printf("done with mutex tests\n");
 
@@ -133,7 +133,7 @@ static int mutex_inherit_test() {
         uint r = rand_range(1, inherit_test_mutex_count);
 
         // pick a random priority
-        get_current_thread()->SetPriority(rand_range(DEFAULT_PRIORITY - 4, DEFAULT_PRIORITY + 4));
+        Thread::Current::Get()->SetPriority(rand_range(DEFAULT_PRIORITY - 4, DEFAULT_PRIORITY + 4));
 
         // grab a random number of mutexes
         for (uint j = 0; j < r; j++) {
@@ -141,7 +141,7 @@ static int mutex_inherit_test() {
         }
 
         if (count % 1000 == 0)
-          printf("%p: count %d\n", get_current_thread(), count);
+          printf("%p: count %d\n", Thread::Current::Get(), count);
 
         // wait on a event for a period of time, to try to have other grabber threads
         // need to tweak our priority in either one of the mutexes we hold or the
@@ -161,7 +161,7 @@ static int mutex_inherit_test() {
     Thread* test_thread[inherit_test_thread_count];
     for (auto& t : test_thread) {
       t = Thread::Create("mutex tester", inherit_worker, &args,
-                         get_current_thread()->base_priority_);
+                         Thread::Current::Get()->base_priority_);
       t->Resume();
     }
 
@@ -170,7 +170,7 @@ static int mutex_inherit_test() {
     }
   }
 
-  CurrentThread::SleepRelative(ZX_MSEC(100));
+  Thread::Current::SleepRelative(ZX_MSEC(100));
 
   printf("done with mutex inheirit test\n");
 
@@ -181,13 +181,13 @@ static event_t e;
 
 static int event_signaler(void* arg) {
   printf("event signaler pausing\n");
-  CurrentThread::SleepRelative(ZX_SEC(1));
+  Thread::Current::SleepRelative(ZX_SEC(1));
 
   //  for (;;) {
   printf("signaling event\n");
   event_signal(&e, true);
   printf("done signaling event\n");
-  CurrentThread::Yield();
+  Thread::Current::Yield();
   //  }
 
   return 0;
@@ -197,17 +197,17 @@ static int event_waiter(void* arg) {
   uintptr_t count = (uintptr_t)arg;
 
   while (count > 0) {
-    printf("thread %p: waiting on event...\n", get_current_thread());
+    printf("thread %p: waiting on event...\n", Thread::Current::Get());
     zx_status_t status = event_wait_deadline(&e, ZX_TIME_INFINITE, true);
     if (status == ZX_ERR_INTERNAL_INTR_KILLED) {
-      printf("thread %p: killed\n", get_current_thread());
+      printf("thread %p: killed\n", Thread::Current::Get());
       return -1;
     } else if (status != ZX_OK) {
-      printf("thread %p: event_wait() returned error %d\n", get_current_thread(), status);
+      printf("thread %p: event_wait() returned error %d\n", Thread::Current::Get(), status);
       return -1;
     }
-    printf("thread %p: done waiting on event\n", get_current_thread());
-    CurrentThread::Yield();
+    printf("thread %p: done waiting on event\n", Thread::Current::Get());
+    Thread::Current::Yield();
     count--;
   }
 
@@ -240,7 +240,7 @@ static void event_test(void) {
   for (uint i = 0; i < fbl::count_of(threads); i++)
     threads[i]->Join(NULL, ZX_TIME_INFINITE);
 
-  CurrentThread::SleepRelative(ZX_SEC(2));
+  Thread::Current::SleepRelative(ZX_SEC(2));
   printf("destroying event\n");
   event_destroy(&e);
 
@@ -258,7 +258,7 @@ static void event_test(void) {
   for (uint i = 0; i < fbl::count_of(threads); i++)
     threads[i]->Resume();
 
-  CurrentThread::SleepRelative(ZX_SEC(2));
+  Thread::Current::SleepRelative(ZX_SEC(2));
 
   for (uint i = 0; i < fbl::count_of(threads); i++) {
     threads[i]->Kill();
@@ -272,8 +272,8 @@ static void event_test(void) {
 
 static int quantum_tester(void* arg) {
   for (;;) {
-    printf("%p: in this thread. rq %" PRIi64 "\n", get_current_thread(),
-           get_current_thread()->remaining_time_slice_);
+    printf("%p: in this thread. rq %" PRIi64 "\n", Thread::Current::Get(),
+           Thread::Current::Get()->remaining_time_slice_);
   }
   return 0;
 }
@@ -298,10 +298,10 @@ static int context_switch_tester(void* arg) {
 
   uint64_t count = arch_cycle_count();
   for (i = 0; i < iter; i++) {
-    CurrentThread::Yield();
+    Thread::Current::Yield();
   }
   total_count += arch_cycle_count() - count;
-  CurrentThread::SleepRelative(ZX_SEC(1));
+  Thread::Current::SleepRelative(ZX_SEC(1));
   printf("took %" PRIu64 " cycles to yield %d times, %" PRIu64 " per yield, %" PRIu64
          " per yield per thread\n",
          total_count, iter, total_count / iter, total_count / iter / thread_count);
@@ -317,10 +317,10 @@ static void context_switch_test(void) {
 
   Thread::Create("context switch idle", &context_switch_tester, (void*)1, DEFAULT_PRIORITY)
       ->DetachAndResume();
-  CurrentThread::SleepRelative(ZX_MSEC(100));
+  Thread::Current::SleepRelative(ZX_MSEC(100));
   event_signal(&context_switch_event, true);
   event_wait(&context_switch_done_event);
-  CurrentThread::SleepRelative(ZX_MSEC(100));
+  Thread::Current::SleepRelative(ZX_MSEC(100));
 
   event_unsignal(&context_switch_event);
   event_unsignal(&context_switch_done_event);
@@ -328,10 +328,10 @@ static void context_switch_test(void) {
       ->DetachAndResume();
   Thread::Create("context switch 2b", &context_switch_tester, (void*)2, DEFAULT_PRIORITY)
       ->DetachAndResume();
-  CurrentThread::SleepRelative(ZX_MSEC(100));
+  Thread::Current::SleepRelative(ZX_MSEC(100));
   event_signal(&context_switch_event, true);
   event_wait(&context_switch_done_event);
-  CurrentThread::SleepRelative(ZX_MSEC(100));
+  Thread::Current::SleepRelative(ZX_MSEC(100));
 
   event_unsignal(&context_switch_event);
   event_unsignal(&context_switch_done_event);
@@ -343,10 +343,10 @@ static void context_switch_test(void) {
       ->DetachAndResume();
   Thread::Create("context switch 4d", &context_switch_tester, (void*)4, DEFAULT_PRIORITY)
       ->DetachAndResume();
-  CurrentThread::SleepRelative(ZX_MSEC(100));
+  Thread::Current::SleepRelative(ZX_MSEC(100));
   event_signal(&context_switch_event, true);
   event_wait(&context_switch_done_event);
-  CurrentThread::SleepRelative(ZX_MSEC(100));
+  Thread::Current::SleepRelative(ZX_MSEC(100));
 }
 
 static volatile int atomic;
@@ -422,7 +422,7 @@ static void preempt_test(void) {
     Thread::Create("preempt tester", &preempt_tester, NULL, LOW_PRIORITY)->DetachAndResume();
 
   while (preempt_count > 0) {
-    CurrentThread::SleepRelative(ZX_SEC(1));
+    Thread::Current::SleepRelative(ZX_SEC(1));
   }
 
   printf("done with preempt test, above time stamps should be very close\n");
@@ -443,7 +443,7 @@ static void preempt_test(void) {
   }
 
   while (preempt_count > 0) {
-    CurrentThread::SleepRelative(ZX_SEC(1));
+    Thread::Current::SleepRelative(ZX_SEC(1));
   }
 
   printf("done with real-time preempt test, above time stamps should be 1 second apart\n");
@@ -453,7 +453,7 @@ static int join_tester(void* arg) {
   int val = (int)(uintptr_t)arg;
 
   printf("\t\tjoin tester starting\n");
-  CurrentThread::SleepRelative(ZX_MSEC(500));
+  Thread::Current::SleepRelative(ZX_MSEC(500));
   printf("\t\tjoin tester exiting with result %d\n", val);
 
   return val;
@@ -478,7 +478,7 @@ static int join_tester_server(void* arg) {
   printf("\tcreating and waiting on thread to exit with thread_join, after thread has exited\n");
   t = Thread::Create("join tester", &join_tester, (void*)2, DEFAULT_PRIORITY);
   t->Resume();
-  CurrentThread::SleepRelative(ZX_SEC(1));  // wait until thread is already dead
+  Thread::Current::SleepRelative(ZX_SEC(1));  // wait until thread is already dead
   ret = 99;
   printf("\tthread magic is 0x%x (should be 0x%x)\n", (unsigned)t->magic_, (unsigned)THREAD_MAGIC);
   err = t->Join(&ret, ZX_TIME_INFINITE);
@@ -489,13 +489,13 @@ static int join_tester_server(void* arg) {
   t = Thread::Create("join tester", &join_tester, (void*)3, DEFAULT_PRIORITY);
   t->Detach();
   t->Resume();
-  CurrentThread::SleepRelative(ZX_SEC(1));  // wait until the thread should be dead
+  Thread::Current::SleepRelative(ZX_SEC(1));  // wait until the thread should be dead
   printf("\tthread magic is 0x%x (should be 0)\n", (unsigned)t->magic_);
 
   printf("\tcreating a thread, detaching it after it should be dead\n");
   t = Thread::Create("join tester", &join_tester, (void*)4, DEFAULT_PRIORITY);
   t->Resume();
-  CurrentThread::SleepRelative(ZX_SEC(1));  // wait until thread is already dead
+  Thread::Current::SleepRelative(ZX_SEC(1));  // wait until thread is already dead
   printf("\tthread magic is 0x%x (should be 0x%x)\n", (unsigned)t->magic_, (unsigned)THREAD_MAGIC);
   t->Detach();
   printf("\tthread magic is 0x%x\n", (unsigned)t->magic_);
@@ -587,10 +587,10 @@ static void spinlock_test(void) {
 }
 
 static int sleeper_kill_thread(void* arg) {
-  CurrentThread::SleepRelative(ZX_MSEC(100));
+  Thread::Current::SleepRelative(ZX_MSEC(100));
 
   zx_time_t t = current_time();
-  zx_status_t err = CurrentThread::SleepInterruptable(t + ZX_SEC(5));
+  zx_status_t err = Thread::Current::SleepInterruptable(t + ZX_SEC(5));
   zx_duration_t duration = (current_time() - t) / ZX_MSEC(1);
   TRACEF("thread_sleep_interruptable returns %d after %" PRIi64 " msecs\n", err, duration);
 
@@ -600,7 +600,7 @@ static int sleeper_kill_thread(void* arg) {
 static int waiter_kill_thread_infinite_wait(void* arg) {
   event_t* e = (event_t*)arg;
 
-  CurrentThread::SleepRelative(ZX_MSEC(100));
+  Thread::Current::SleepRelative(ZX_MSEC(100));
 
   zx_time_t t = current_time();
   zx_status_t err = event_wait_deadline(e, ZX_TIME_INFINITE, true);
@@ -613,7 +613,7 @@ static int waiter_kill_thread_infinite_wait(void* arg) {
 static int waiter_kill_thread(void* arg) {
   event_t* e = (event_t*)arg;
 
-  CurrentThread::SleepRelative(ZX_MSEC(100));
+  Thread::Current::SleepRelative(ZX_MSEC(100));
 
   zx_time_t t = current_time();
   zx_status_t err = event_wait_deadline(e, t + ZX_SEC(5), true);
@@ -629,7 +629,7 @@ static void kill_tests(void) {
   printf("starting sleeper thread, then killing it while it sleeps.\n");
   t = Thread::Create("sleeper", sleeper_kill_thread, 0, LOW_PRIORITY);
   t->Resume();
-  CurrentThread::SleepRelative(ZX_MSEC(200));
+  Thread::Current::SleepRelative(ZX_MSEC(200));
   t->Kill();
   t->Join(NULL, ZX_TIME_INFINITE);
 
@@ -651,7 +651,7 @@ static void kill_tests(void) {
   event_init(&e, false, 0);
   t = Thread::Create("waiter", waiter_kill_thread_infinite_wait, &e, LOW_PRIORITY);
   t->Resume();
-  CurrentThread::SleepRelative(ZX_MSEC(200));
+  Thread::Current::SleepRelative(ZX_MSEC(200));
   t->Kill();
   t->Join(NULL, ZX_TIME_INFINITE);
   event_destroy(&e);
@@ -668,7 +668,7 @@ static void kill_tests(void) {
   event_init(&e, false, 0);
   t = Thread::Create("waiter", waiter_kill_thread, &e, LOW_PRIORITY);
   t->Resume();
-  CurrentThread::SleepRelative(ZX_MSEC(200));
+  Thread::Current::SleepRelative(ZX_MSEC(200));
   t->Kill();
   t->Join(NULL, ZX_TIME_INFINITE);
   event_destroy(&e);
@@ -707,7 +707,7 @@ static cpu_mask_t random_mask(cpu_mask_t active) {
 }
 
 static int affinity_test_thread(void* arg) {
-  Thread* t = get_current_thread();
+  Thread* t = Thread::Current::Get();
   affinity_test_state* state = static_cast<affinity_test_state*>(arg);
   cpu_mask_t active = mp_get_active_mask();
 
@@ -722,7 +722,7 @@ static int affinity_test_thread(void* arg) {
         break;
       case 1:  // sleep for a bit
         // printf("%p sleep\n", t);
-        CurrentThread::SleepRelative(ZX_USEC(rand() % 100));
+        Thread::Current::SleepRelative(ZX_USEC(rand() % 100));
         break;
       case 2:  // spin for a bit
         // printf("%p spin\n", t);
@@ -731,12 +731,12 @@ static int affinity_test_thread(void* arg) {
         break;
       case 3:  // yield
         // printf("%p yield\n", t);
-        spin_while(ZX_USEC((uint32_t)rand() % 100), CurrentThread::Yield);
+        spin_while(ZX_USEC((uint32_t)rand() % 100), Thread::Current::Yield);
         // printf("%p yield done\n", t);
         break;
       case 4:  // reschedule
         // printf("%p reschedule\n", t);
-        spin_while(ZX_USEC((uint32_t)rand() % 100), CurrentThread::Reschedule);
+        spin_while(ZX_USEC((uint32_t)rand() % 100), Thread::Current::Reschedule);
         // printf("%p reschedule done\n", t);
         break;
     }
@@ -773,11 +773,11 @@ __NO_INLINE static void affinity_test() {
   static const int duration = 30;
   printf("running tests for %i seconds\n", duration);
   for (int i = 0; i < duration; i++) {
-    CurrentThread::SleepRelative(ZX_SEC(1));
+    Thread::Current::SleepRelative(ZX_SEC(1));
     printf("%d sec elapsed\n", i + 1);
   }
   state.shutdown = true;
-  CurrentThread::SleepRelative(ZX_SEC(1));
+  Thread::Current::SleepRelative(ZX_SEC(1));
 
   for (auto& t : state.threads) {
     printf("joining thread %p\n", t);
@@ -808,7 +808,7 @@ static void tls_tests() {
 
   Thread* t = Thread::Create("tls-test", tls_test_thread, 0, LOW_PRIORITY);
   t->Resume();
-  CurrentThread::SleepRelative(ZX_MSEC(200));
+  Thread::Current::SleepRelative(ZX_MSEC(200));
   t->Join(nullptr, ZX_TIME_INFINITE);
 
   ASSERT(atomic_count == 2);
@@ -818,7 +818,7 @@ static void tls_tests() {
 }
 
 static int prio_test_thread(void* arg) {
-  Thread* t = get_current_thread();
+  Thread* t = Thread::Current::Get();
   ASSERT(t->base_priority_ == LOW_PRIORITY);
 
   auto ev = (event_t*)arg;
@@ -850,7 +850,7 @@ static int prio_test_thread(void* arg) {
 __NO_INLINE static void priority_test() {
   printf("starting priority tests\n");
 
-  Thread* t = get_current_thread();
+  Thread* t = Thread::Current::Get();
   int base_priority = t->base_priority_;
 
   if (base_priority != DEFAULT_PRIORITY) {
@@ -859,11 +859,11 @@ __NO_INLINE static void priority_test() {
   }
 
   t->SetPriority(DEFAULT_PRIORITY + 2);
-  CurrentThread::SleepRelative(ZX_MSEC(1));
+  Thread::Current::SleepRelative(ZX_MSEC(1));
   ASSERT(t->base_priority_ == DEFAULT_PRIORITY + 2);
 
   t->SetPriority(DEFAULT_PRIORITY - 2);
-  CurrentThread::SleepRelative(ZX_MSEC(1));
+  Thread::Current::SleepRelative(ZX_MSEC(1));
   ASSERT(t->base_priority_ == DEFAULT_PRIORITY - 2);
 
   cpu_mask_t active = mp_get_active_mask();
@@ -915,7 +915,7 @@ int thread_tests(int, const cmd_args*, uint32_t) {
   spinlock_test();
   atomic_test();
 
-  CurrentThread::SleepRelative(ZX_MSEC(200));
+  Thread::Current::SleepRelative(ZX_MSEC(200));
   context_switch_test();
 
   preempt_test();

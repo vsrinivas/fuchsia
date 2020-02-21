@@ -112,7 +112,7 @@ namespace lockdep {
 void SystemLockValidationError(AcquiredLockEntry* bad_entry, AcquiredLockEntry* conflicting_entry,
                                ThreadLockState* state, void* caller_address, void* caller_frame,
                                LockResult result) {
-  Thread* const current_thread = get_current_thread();
+  Thread* const current_thread = Thread::Current::Get();
 
   char owner_name[THREAD_NAME_LENGTH];
   thread_owner_name(current_thread, owner_name);
@@ -160,7 +160,7 @@ ThreadLockState* SystemGetThreadLockState() {
   if (arch_blocking_disallowed()) {
     return &get_local_percpu()->lock_state;
   }
-  return &get_current_thread()->lock_state;
+  return &Thread::Current::Get()->lock_state;
 }
 
 // Initializes an instance of ThreadLockState.

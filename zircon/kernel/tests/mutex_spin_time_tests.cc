@@ -42,10 +42,10 @@ bool mutex_spin_time_test(void) {
 
   // No matter what happens from here on out, make sure we restore our main
   // thread's priority and cpu affinity.
-  auto cleanup = fbl::MakeAutoCall([affinity = get_current_thread()->GetCpuAffinity(),
-                                    priority = get_current_thread()->base_priority_]() {
-    get_current_thread()->SetCpuAffinity(affinity);
-    get_current_thread()->SetPriority(priority);
+  auto cleanup = fbl::MakeAutoCall([affinity = Thread::Current::Get()->GetCpuAffinity(),
+                                    priority = Thread::Current::Get()->base_priority_]() {
+    Thread::Current::Get()->SetCpuAffinity(affinity);
+    Thread::Current::Get()->SetPriority(priority);
   });
 
   constexpr zx::duration kTimeouts[] = {
@@ -79,8 +79,8 @@ bool mutex_spin_time_test(void) {
 
   // Boost our thread priority and lock ourselves down to a specific CPU before
   // starting the test.
-  get_current_thread()->SetCpuAffinity(timer_mask);
-  get_current_thread()->SetPriority(HIGH_PRIORITY);
+  Thread::Current::Get()->SetCpuAffinity(timer_mask);
+  Thread::Current::Get()->SetPriority(HIGH_PRIORITY);
 
   for (const auto& timeout : kTimeouts) {
     zx::ticks start, end;

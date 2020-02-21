@@ -56,7 +56,7 @@ void event_destroy(event_t* e) {
 
 static zx_status_t event_wait_worker(event_t* e, const Deadline& deadline, bool interruptable,
                                      uint signal_mask) {
-  Thread* current_thread = get_current_thread();
+  Thread* current_thread = Thread::Current::Get();
   zx_status_t ret = ZX_OK;
 
   DEBUG_ASSERT(e->magic == EVENT_MAGIC);

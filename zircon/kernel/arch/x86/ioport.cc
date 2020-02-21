@@ -72,7 +72,7 @@ void x86_set_tss_io_bitmap(IoBitmap& io_bitmap) {
 IoBitmap* IoBitmap::GetCurrent() {
   // Fetch current thread's address space. If we have no address space (e.g.,
   // the idle thread), we also don't have an IO Bitmap.
-  struct vmm_aspace* aspace = get_current_thread()->aspace_;
+  struct vmm_aspace* aspace = Thread::Current::Get()->aspace_;
   if (aspace == nullptr) {
     return nullptr;
   }

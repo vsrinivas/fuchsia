@@ -625,7 +625,7 @@ VmAspace* VmAspace::vaddr_to_aspace(uintptr_t address) {
   if (is_kernel_address(address)) {
     return kernel_aspace();
   } else if (is_user_address(address)) {
-    return vmm_aspace_to_obj(get_current_thread()->aspace_);
+    return vmm_aspace_to_obj(Thread::Current::Get()->aspace_);
   } else {
     return nullptr;
   }

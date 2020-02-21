@@ -100,7 +100,7 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
     const zx_time_t now = current_time();
     {
       ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::WAIT_MANY);
-      zx_status_t result = CurrentThread::SleepEtc(slackDeadline, /* interruptable */ true, now);
+      zx_status_t result = Thread::Current::SleepEtc(slackDeadline, /* interruptable */ true, now);
       if (result != ZX_OK) {
         return result;
       }

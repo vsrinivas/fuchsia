@@ -72,7 +72,7 @@ static void timer_diag_all_cpus(void) {
 static void timer_diag_cb2(timer_t* timer, zx_time_t now, void* arg) {
   auto timer_count = static_cast<ktl::atomic<size_t>*>(arg);
   timer_count->fetch_add(1);
-  CurrentThread::PreemptSetPending();
+  Thread::Current::PreemptSetPending();
 }
 
 static void timer_diag_coalescing(TimerSlack slack, const zx_time_t* deadline,
@@ -98,7 +98,7 @@ static void timer_diag_coalescing(TimerSlack slack, const zx_time_t* deadline,
 
   // Wait for the timers to fire.
   while (timer_count.load() != count) {
-    CurrentThread::Sleep(current_time() + ZX_MSEC(5));
+    Thread::Current::Sleep(current_time() + ZX_MSEC(5));
   }
 
   free(timer);
@@ -225,7 +225,7 @@ static int timer_stress_worker(void* void_arg) {
     uint timer_cpu = arch_curr_cpu_num();
     const Deadline deadline = Deadline::no_slack(current_time() + timer_duration);
     timer_set(&t, deadline, timer_stress_cb, void_arg);
-    get_current_thread()->SetCpuAffinity(~cpu_num_to_mask(timer_cpu));
+    Thread::Current::Get()->SetCpuAffinity(~cpu_num_to_mask(timer_cpu));
     DEBUG_ASSERT(arch_curr_cpu_num() != timer_cpu);
     arch_enable_ints();
 
@@ -236,7 +236,7 @@ static int timer_stress_worker(void* void_arg) {
     // Sleep for the timer duration so that this thread's timer_cancel races with the timer
     // callback. We want to race to ensure there are no synchronization or memory visibility
     // issues.
-    CurrentThread::SleepRelative(timer_duration);
+    Thread::Current::SleepRelative(timer_duration);
     timer_cancel(&t);
   }
   return 0;
@@ -278,7 +278,7 @@ int timer_stress(int argc, const cmd_args* argv, uint32_t) {
     thread->Resume();
   }
 
-  CurrentThread::SleepRelative(ZX_SEC(argv[1].u));
+  Thread::Current::SleepRelative(ZX_SEC(argv[1].u));
   atomic_store(&args.timer_stress_done, 1);
 
   for (const auto& thread : threads) {
@@ -412,7 +412,7 @@ static bool trylock_or_cancel_canceled() {
 
   // The timer is set to run on timer_cpu, switch to a different CPU, acquire the spinlock then
   // signal the callback to proceed.
-  get_current_thread()->SetCpuAffinity(~cpu_num_to_mask(timer_cpu));
+  Thread::Current::Get()->SetCpuAffinity(~cpu_num_to_mask(timer_cpu));
   DEBUG_ASSERT(arch_curr_cpu_num() != timer_cpu);
 
   arch_enable_ints();
@@ -460,7 +460,7 @@ static bool trylock_or_cancel_get_lock() {
 
   // The timer is set to run on timer_cpu, switch to a different CPU, acquire the spinlock then
   // signal the callback to proceed.
-  get_current_thread()->SetCpuAffinity(~cpu_num_to_mask(timer_cpu));
+  Thread::Current::Get()->SetCpuAffinity(~cpu_num_to_mask(timer_cpu));
   DEBUG_ASSERT(arch_curr_cpu_num() != timer_cpu);
 
   arch_enable_ints();

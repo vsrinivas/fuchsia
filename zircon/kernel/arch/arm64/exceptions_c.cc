@@ -231,7 +231,7 @@ static void arm64_data_abort_handler(arm64_iframe_t* iframe, uint exception_flag
   LTRACEF("data fault: PC at %#" PRIx64 ", is_user %d, FAR %#" PRIx64 ", esr 0x%x, iss 0x%x\n",
           iframe->elr, is_user, far, esr, iss);
 
-  uint64_t dfr = get_current_thread()->arch_.data_fault_resume;
+  uint64_t dfr = Thread::Current::Get()->arch_.data_fault_resume;
   if (unlikely(dfr && !BIT_SET(dfr, ARM64_DFR_RUN_FAULT_HANDLER_BIT))) {
     // Need to reconstruct the canonical resume address by ensuring it is correctly sign extended.
     // Double check the bit before ARM64_DFR_RUN_FAULT_HANDLER_BIT was set (indicating kernel
@@ -395,7 +395,7 @@ extern "C" void arm64_irq(iframe_t* iframe, uint exception_flags) {
 
   /* preempt the thread if the interrupt has signaled it */
   if (do_preempt) {
-    CurrentThread::Preempt();
+    Thread::Current::Preempt();
   }
 
   fix_exception_percpu_pointer(exception_flags, iframe->r);
@@ -412,7 +412,7 @@ extern "C" void arm64_invalid_exception(arm64_iframe_t* iframe, unsigned int whi
 /* called from assembly */
 extern "C" void arch_iframe_process_pending_signals(iframe_t* iframe) {
   DEBUG_ASSERT(iframe != nullptr);
-  CurrentThread::ProcessPendingSignals(GeneralRegsSource::Iframe, iframe);
+  Thread::Current::ProcessPendingSignals(GeneralRegsSource::Iframe, iframe);
 }
 
 void arch_dump_exception_context(const arch_exception_context_t* context) {

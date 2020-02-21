@@ -112,11 +112,11 @@ constexpr zx_time_t& operator+=(zx_time_t& value, SchedDuration delta) {
 }
 
 // On ARM64 with safe-stack, it's no longer possible to use the unsafe-sp
-// after set_current_thread (we'd now see newthread's unsafe-sp instead!).
+// after arch_set_current_thread (we'd now see newthread's unsafe-sp instead!).
 // Hence this function and everything it calls between this point and the
 // the low-level context switch must be marked with __NO_SAFESTACK.
 __NO_SAFESTACK void FinalContextSwitch(Thread* oldthread, Thread* newthread) {
-  set_current_thread(newthread);
+  arch_set_current_thread(newthread);
   arch_context_switch(oldthread, newthread);
 }
 
@@ -345,7 +345,7 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
   LocalTraceDuration<KTRACE_DETAILED> trace{"reschedule_common"_stringref};
 
   const cpu_num_t current_cpu = arch_curr_cpu_num();
-  Thread* const current_thread = get_current_thread();
+  Thread* const current_thread = Thread::Current::Get();
   SchedulerState* const current_state = &current_thread->scheduler_state;
 
   DEBUG_ASSERT(arch_ints_disabled());
@@ -688,7 +688,7 @@ void Scheduler::Block() {
 
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-  Thread* const current_thread = get_current_thread();
+  Thread* const current_thread = Thread::Current::Get();
 
   DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
   DEBUG_ASSERT(current_thread->state != THREAD_RUNNING);
@@ -774,7 +774,7 @@ void Scheduler::Yield() {
 
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-  Thread* const current_thread = get_current_thread();
+  Thread* const current_thread = Thread::Current::Get();
   SchedulerState* const current_state = &current_thread->scheduler_state;
   DEBUG_ASSERT(!thread_is_idle(current_thread));
 
@@ -802,7 +802,7 @@ void Scheduler::Preempt() {
 
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-  Thread* current_thread = get_current_thread();
+  Thread* current_thread = Thread::Current::Get();
   const cpu_num_t current_cpu = arch_curr_cpu_num();
 
   DEBUG_ASSERT(current_thread->curr_cpu == current_cpu);
@@ -820,7 +820,7 @@ void Scheduler::Reschedule() {
 
   DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
-  Thread* current_thread = get_current_thread();
+  Thread* current_thread = Thread::Current::Get();
   const cpu_num_t current_cpu = arch_curr_cpu_num();
 
   if (current_thread->disable_counts != 0) {

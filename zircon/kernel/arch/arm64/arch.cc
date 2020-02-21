@@ -137,7 +137,7 @@ zx_status_t arm64_create_secondary_stack(uint cpu_num, uint64_t mpid) {
 #endif
   arm64_secondary_sp_list[i].mpid = mpid;
   arm64_secondary_sp_list[i].sp = sp;
-  arm64_secondary_sp_list[i].stack_guard = get_current_thread()->arch_.stack_guard;
+  arm64_secondary_sp_list[i].stack_guard = Thread::Current::Get()->arch_.stack_guard;
   arm64_secondary_sp_list[i].unsafe_sp = unsafe_sp;
   arm64_secondary_sp_list[i].shadow_call_sp = shadow_call_sp;
 
@@ -255,7 +255,7 @@ void arch_setup_uspace_iframe(iframe_t* iframe, uintptr_t pc, uintptr_t sp, uint
 // Switch to user mode, set the user stack pointer to user_stack_top, put the svc stack pointer to
 // the top of the kernel stack.
 void arch_enter_uspace(iframe_t* iframe) {
-  Thread* ct = get_current_thread();
+  Thread* ct = Thread::Current::Get();
 
   LTRACEF("arm_uspace_entry(%#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR ", %#" PRIxPTR
           ", 0, %#" PRIxPTR ")\n",

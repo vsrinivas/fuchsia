@@ -51,7 +51,7 @@ zx_status_t sys_nanosleep(zx_time_t deadline) {
   LTRACEF("nseconds %" PRIi64 "\n", deadline);
 
   if (deadline <= 0) {
-    CurrentThread::Yield();
+    Thread::Current::Yield();
     return ZX_OK;
   }
 
@@ -63,7 +63,7 @@ zx_status_t sys_nanosleep(zx_time_t deadline) {
 
   // This syscall is declared as "blocking", so a higher layer will automatically
   // retry if we return ZX_ERR_INTERNAL_INTR_RETRY.
-  return CurrentThread::SleepEtc(slackDeadline, /* interruptable */ true, now);
+  return Thread::Current::SleepEtc(slackDeadline, /* interruptable */ true, now);
 }
 
 // This must be accessed atomically from any given thread.

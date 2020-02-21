@@ -106,7 +106,7 @@ static bool signal_test() {
   thread->Resume();
 
   while (thread_is_blocked(thread) == false) {
-    CurrentThread::SleepRelative(ZX_MSEC(1));
+    Thread::Current::SleepRelative(ZX_MSEC(1));
   }
 
   ASSERT_EQ(0u, sema.count());

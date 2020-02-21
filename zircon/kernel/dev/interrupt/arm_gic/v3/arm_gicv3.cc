@@ -343,7 +343,7 @@ static void gic_handle_irq(iframe_t* frame) {
   ktrace_tiny(TAG_IRQ_ENTER, (vector << 8) | cpu);
 
   LTRACEF_LEVEL(2, "iar 0x%x cpu %u currthread %p vector %u pc %#" PRIxPTR "\n", iar, cpu,
-                get_current_thread(), vector, (uintptr_t)IFRAME_PC(frame));
+                Thread::Current::Get(), vector, (uintptr_t)IFRAME_PC(frame));
 
   // deliver the interrupt
   struct int_handler_struct* handler = pdev_get_int_handler(vector);

@@ -98,7 +98,7 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
   const WaitInstruction wi(iss);
   if (wi.is_wfe) {
     ktrace_vcpu_exit(VCPU_WFE_INSTRUCTION, guest_state->system_state.elr_el2);
-    CurrentThread::Reschedule();
+    Thread::Current::Reschedule();
     return ZX_OK;
   }
 

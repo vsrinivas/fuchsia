@@ -31,9 +31,6 @@
 
 struct Thread;
 
-static inline Thread* get_current_thread();
-static inline void set_current_thread(Thread*);
-
 // fwd decls
 class OwnedWaitQueue;
 class ThreadDispatcher;
@@ -125,15 +122,6 @@ static inline void dump_thread_user_tid_during_panic(uint64_t tid,
   dump_thread_user_tid_locked(tid, full);
 }
 
-// - As of now, this recreates the C API with no changes to argument types or spelling,
-//   other than thread_snake_case to SnakeCase.
-// - The only opinions so far are:
-//   - Whether to put a function as a free function in some namespace, vs. a static member function
-//     on the thread. As of now, like Create-type functions are static in Thread, while things that
-//     implicitly operate on the current thread are in the CurrentThread namespace.
-//   - What order and how to group functions in the class or namespace.
-// - Functions with definitions inline correspond to static inline functions above. Similarly, const
-//   is preserved in the translation.
 struct Thread {
   // TODO(kulakowski) Are these needed?
   // Default constructor/destructor declared to be not-inline in order to
@@ -234,6 +222,167 @@ struct Thread {
   bool CannotBoost() const {
     return !!(flags_ & (THREAD_FLAG_REAL_TIME | THREAD_FLAG_IDLE | THREAD_FLAG_NO_BOOST));
   }
+
+  // All of these operations implicitly operate on the current thread.
+  struct Current {
+    // This is defined below, just after the Thread declaration.
+    static inline Thread* Get();
+
+    // Scheduler routines to be used by regular kernel code.
+    static void Yield();
+    static void Preempt();
+    static void Reschedule();
+    static void Exit(int retcode) __NO_RETURN;
+    static void BecomeIdle() __NO_RETURN;
+
+    // Wait until the deadline has occurred.
+    //
+    // If interruptable, may return early with ZX_ERR_INTERNAL_INTR_KILLED if
+    // thread is signaled for kill.
+    static zx_status_t SleepEtc(const Deadline& deadline, bool interruptable, zx_time_t now);
+    // Non-interruptable version of SleepEtc.
+    static zx_status_t Sleep(zx_time_t deadline);
+    // Non-interruptable relative delay version of Sleep.
+    static zx_status_t SleepRelative(zx_duration_t delay);
+    // Interruptable version of Sleep.
+    static zx_status_t SleepInterruptable(zx_time_t deadline);
+
+    static void SignalPolicyException();
+
+    // Process pending signals, may never return because of kill signal.
+    static void ProcessPendingSignals(GeneralRegsSource source, void* gregs);
+
+    // Migrates the current thread to the CPU identified by target_cpu.
+    static void MigrateToCpu(cpu_num_t target_cpuid);
+
+    static void SetName(const char* name);
+
+    static void CheckPreemptPending();
+    static uint32_t PreemptDisableCount() {
+      return Thread::Current::Get()->disable_counts_ & 0xffff;
+    }
+    static uint32_t ReschedDisableCount() { return Thread::Current::Get()->disable_counts_ >> 16; }
+    // PreemptDisable() increments the preempt_disable counter for the
+    // current thread.  While preempt_disable is non-zero, preemption of the
+    // thread is disabled, including preemption from interrupt handlers.
+    // During this time, any call to Reschedule() or sched_reschedule()
+    // will only record that a reschedule is pending, and won't do a context
+    // switch.
+    //
+    // Note that this does not disallow blocking operations
+    // (e.g. mutex.Acquire()).  Disabling preemption does not prevent switching
+    // away from the current thread if it blocks.
+    //
+    // A call to PreemptDisable() must be matched by a later call to
+    // PreemptReenable() to decrement the preempt_disable counter.
+    static void PreemptDisable() {
+      DEBUG_ASSERT(Thread::Current::PreemptDisableCount() < 0xffff);
+
+      Thread* current_thread = Thread::Current::Get();
+      atomic_signal_fence();
+      ++current_thread->disable_counts_;
+      atomic_signal_fence();
+    }
+    // PreemptReenable() decrements the preempt_disable counter.  See
+    // PreemptDisable().
+    static void PreemptReenable() {
+      DEBUG_ASSERT(Thread::Current::PreemptDisableCount() > 0);
+
+      Thread* current_thread = Thread::Current::Get();
+      atomic_signal_fence();
+      uint32_t new_count = --current_thread->disable_counts_;
+      atomic_signal_fence();
+
+      if (new_count == 0) {
+        DEBUG_ASSERT(!arch_blocking_disallowed());
+        Thread::Current::CheckPreemptPending();
+      }
+    }
+    // This is the same as thread_preempt_reenable(), except that it does not
+    // check for any pending reschedules.  This is useful in interrupt handlers
+    // when we know that no reschedules should have become pending since
+    // calling thread_preempt_disable().
+    static void PreemptReenableNoResched() {
+      DEBUG_ASSERT(Thread::Current::PreemptDisableCount() > 0);
+
+      Thread* current_thread = Thread::Current::Get();
+      atomic_signal_fence();
+      --current_thread->disable_counts_;
+      atomic_signal_fence();
+    }
+    // ReschedDisable() increments the resched_disable counter for the
+    // current thread.  When resched_disable is non-zero, preemption of the
+    // thread from outside interrupt handlers is disabled.  However, interrupt
+    // handlers may still preempt the thread.
+    //
+    // This is a weaker version of PreemptDisable().
+    //
+    // As with PreemptDisable, blocking operations are still allowed while
+    // resched_disable is non-zero.
+    //
+    // A call to ReschedDisable() must be matched by a later call to
+    // ReschedReenable() to decrement the preempt_disable counter.
+    static void ReschedDisable() {
+      DEBUG_ASSERT(Thread::Current::ReschedDisableCount() < 0xffff);
+
+      Thread* current_thread = Thread::Current::Get();
+      atomic_signal_fence();
+      current_thread->disable_counts_ += 1 << 16;
+      atomic_signal_fence();
+    }
+    // ReschedReenable() decrements the preempt_disable counter.  See
+    // ReschedDisable().
+    static void ReschedReenable() {
+      DEBUG_ASSERT(Thread::Current::ReschedDisableCount() > 0);
+
+      Thread* current_thread = Thread::Current::Get();
+      atomic_signal_fence();
+      uint32_t new_count = current_thread->disable_counts_ - (1 << 16);
+      current_thread->disable_counts_ = new_count;
+      atomic_signal_fence();
+
+      if (new_count == 0) {
+        DEBUG_ASSERT(!arch_blocking_disallowed());
+        Thread::Current::CheckPreemptPending();
+      }
+    }
+    // PreemptSetPending() marks a preemption as pending for the
+    // current CPU.
+    //
+    // This is similar to Reschedule(), except that it may only be
+    // used inside an interrupt handler while interrupts and preemption
+    // are disabled, between PreemptPisable() and
+    // PreemptReenable().  It is similar to sched_reschedule(),
+    // except that it does not need to be called with thread_lock held.
+    static void PreemptSetPending() {
+      DEBUG_ASSERT(arch_ints_disabled());
+      DEBUG_ASSERT(arch_blocking_disallowed());
+      Thread* current_thread = Thread::Current::Get();
+      DEBUG_ASSERT(Thread::Current::PreemptDisableCount() > 0);
+
+      current_thread->preempt_pending_ = true;
+    }
+
+    static void PrintCurrentBacktrace();
+    // Append the backtrace of the current thread to the passed in char pointer up
+    // to `len' characters.
+    // Returns the number of chars appended.
+    static size_t AppendCurrentBacktrace(char* out, size_t len);
+    static void PrintCurrentBacktraceAtFrame(void* caller_frame);
+
+    static void DumpLocked(bool full) TA_REQ(thread_lock);
+    static void Dump(bool full) TA_EXCL(thread_lock);
+    static void DumpAllThreadsLocked(bool full) TA_REQ(thread_lock);
+    static void DumpAllThreads(bool full) TA_EXCL(thread_lock);
+    static void DumpUserTid(uint64_t tid, bool full) TA_EXCL(thread_lock);
+    static void DumpUserTidLocked(uint64_t tid, bool full) TA_REQ(thread_lock);
+    static void DumpAllDuringPanic(bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
+      dump_all_threads_during_panic(full);
+    }
+    static void DumpUserTidDuringPanic(uint64_t tid, bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
+      dump_thread_user_tid_during_panic(tid, full);
+    }
+  };
 
   // Print the backtrace of the thread, if possible.
   zx_status_t PrintBacktrace();
@@ -387,169 +536,10 @@ struct Thread {
   bool user_state_saved_;
 };
 
-// the current thread
+// For the moment, the arch-specific current thread implementations need to come here, after the
+// Thread definition.
 #include <arch/current_thread.h>
-
-struct CurrentThread {
-  static Thread* GetCurrent();
-
-  // Scheduler routines to be used by regular kernel code.
-  static void Yield();
-  static void Preempt();
-  static void Reschedule();
-  static void Exit(int retcode) __NO_RETURN;
-  static void BecomeIdle() __NO_RETURN;
-
-  // Wait until the deadline has occurred.
-  //
-  // If interruptable, may return early with ZX_ERR_INTERNAL_INTR_KILLED if
-  // thread is signaled for kill.
-  static zx_status_t SleepEtc(const Deadline& deadline, bool interruptable, zx_time_t now);
-  // Non-interruptable version of SleepEtc.
-  static zx_status_t Sleep(zx_time_t deadline);
-  // Non-interruptable relative delay version of Sleep.
-  static zx_status_t SleepRelative(zx_duration_t delay);
-  // Interruptable version of Sleep.
-  static zx_status_t SleepInterruptable(zx_time_t deadline);
-
-  static void SignalPolicyException();
-
-  // Process pending signals, may never return because of kill signal.
-  static void ProcessPendingSignals(GeneralRegsSource source, void* gregs);
-
-  // Migrates the current thread to the CPU identified by target_cpu.
-  static void MigrateToCpu(cpu_num_t target_cpuid);
-
-  static void SetName(const char* name);
-
-  static void CheckPreemptPending();
-  static inline uint32_t PreemptDisableCount() {
-    return get_current_thread()->disable_counts_ & 0xffff;
-  }
-  static inline uint32_t ReschedDisableCount() {
-    return get_current_thread()->disable_counts_ >> 16;
-  }
-  // PreemptDisable() increments the preempt_disable counter for the
-  // current thread.  While preempt_disable is non-zero, preemption of the
-  // thread is disabled, including preemption from interrupt handlers.
-  // During this time, any call to Reschedule() or sched_reschedule()
-  // will only record that a reschedule is pending, and won't do a context
-  // switch.
-  //
-  // Note that this does not disallow blocking operations
-  // (e.g. mutex.Acquire()).  Disabling preemption does not prevent switching
-  // away from the current thread if it blocks.
-  //
-  // A call to PreemptDisable() must be matched by a later call to
-  // PreemptReenable() to decrement the preempt_disable counter.
-  static inline void PreemptDisable() {
-    DEBUG_ASSERT(CurrentThread::PreemptDisableCount() < 0xffff);
-
-    Thread* current_thread = get_current_thread();
-    atomic_signal_fence();
-    ++current_thread->disable_counts_;
-    atomic_signal_fence();
-  }
-  // PreemptReenable() decrements the preempt_disable counter.  See
-  // PreemptDisable().
-  static inline void PreemptReenable() {
-    DEBUG_ASSERT(CurrentThread::PreemptDisableCount() > 0);
-
-    Thread* current_thread = get_current_thread();
-    atomic_signal_fence();
-    uint32_t new_count = --current_thread->disable_counts_;
-    atomic_signal_fence();
-
-    if (new_count == 0) {
-      DEBUG_ASSERT(!arch_blocking_disallowed());
-      CurrentThread::CheckPreemptPending();
-    }
-  }
-  // This is the same as thread_preempt_reenable(), except that it does not
-  // check for any pending reschedules.  This is useful in interrupt handlers
-  // when we know that no reschedules should have become pending since
-  // calling thread_preempt_disable().
-  static inline void PreemptReenableNoResched() {
-    DEBUG_ASSERT(CurrentThread::PreemptDisableCount() > 0);
-
-    Thread* current_thread = get_current_thread();
-    atomic_signal_fence();
-    --current_thread->disable_counts_;
-    atomic_signal_fence();
-  }
-  // ReschedDisable() increments the resched_disable counter for the
-  // current thread.  When resched_disable is non-zero, preemption of the
-  // thread from outside interrupt handlers is disabled.  However, interrupt
-  // handlers may still preempt the thread.
-  //
-  // This is a weaker version of PreemptDisable().
-  //
-  // As with PreemptDisable, blocking operations are still allowed while
-  // resched_disable is non-zero.
-  //
-  // A call to ReschedDisable() must be matched by a later call to
-  // ReschedReenable() to decrement the preempt_disable counter.
-  static inline void ReschedDisable() {
-    DEBUG_ASSERT(CurrentThread::ReschedDisableCount() < 0xffff);
-
-    Thread* current_thread = get_current_thread();
-    atomic_signal_fence();
-    current_thread->disable_counts_ += 1 << 16;
-    atomic_signal_fence();
-  }
-  // ReschedReenable() decrements the preempt_disable counter.  See
-  // ReschedDisable().
-  static inline void ReschedReenable() {
-    DEBUG_ASSERT(CurrentThread::ReschedDisableCount() > 0);
-
-    Thread* current_thread = get_current_thread();
-    atomic_signal_fence();
-    uint32_t new_count = current_thread->disable_counts_ - (1 << 16);
-    current_thread->disable_counts_ = new_count;
-    atomic_signal_fence();
-
-    if (new_count == 0) {
-      DEBUG_ASSERT(!arch_blocking_disallowed());
-      CurrentThread::CheckPreemptPending();
-    }
-  }
-  // PreemptSetPending() marks a preemption as pending for the
-  // current CPU.
-  //
-  // This is similar to Reschedule(), except that it may only be
-  // used inside an interrupt handler while interrupts and preemption
-  // are disabled, between PreemptPisable() and
-  // PreemptReenable().  It is similar to sched_reschedule(),
-  // except that it does not need to be called with thread_lock held.
-  static inline void PreemptSetPending() {
-    DEBUG_ASSERT(arch_ints_disabled());
-    DEBUG_ASSERT(arch_blocking_disallowed());
-    Thread* current_thread = get_current_thread();
-    DEBUG_ASSERT(CurrentThread::PreemptDisableCount() > 0);
-
-    current_thread->preempt_pending_ = true;
-  }
-
-  static void PrintCurrentBacktrace();
-  // Append the backtrace of the current thread to the passed in char pointer up
-  // to `len' characters.
-  // Returns the number of chars appended.
-  static size_t AppendCurrentBacktrace(char* out, size_t len);
-  static void PrintCurrentBacktraceAtFrame(void* caller_frame);
-
-  static void DumpLocked(bool full) TA_REQ(thread_lock);
-  static void Dump(bool full) TA_EXCL(thread_lock);
-  static void DumpAllThreadsLocked(bool full) TA_REQ(thread_lock);
-  static void DumpAllThreads(bool full) TA_EXCL(thread_lock);
-  static void DumpUserTid(uint64_t tid, bool full) TA_EXCL(thread_lock);
-  static void DumpUserTidLocked(uint64_t tid, bool full) TA_REQ(thread_lock);
-  static inline void DumpAllDuringPanic(bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
-    dump_all_threads_during_panic(full);
-  }
-  static inline void DumpUserTidDuringPanic(uint64_t tid, bool full) TA_NO_THREAD_SAFETY_ANALYSIS {
-    dump_thread_user_tid_during_panic(tid, full);
-  }
-};
+Thread* Thread::Current::Get() { return arch_get_current_thread(); }
 
 // TODO(johngro): Remove this when we have addressed fxb/33473.  Right now, this
 // is used in only one place (x86_bringup_aps in arch/x86/smp.cpp) outside of
@@ -584,15 +574,15 @@ static inline bool thread_lock_held(void) { return spin_lock_held(&thread_lock);
 // Thread local storage. See tls_slots.h in the object layer above for
 // the current slot usage.
 
-static inline void* tls_get(uint entry) { return get_current_thread()->tls_get(entry); }
+static inline void* tls_get(uint entry) { return Thread::Current::Get()->tls_get(entry); }
 
 static inline void* tls_set(uint entry, void* val) {
-  return get_current_thread()->tls_set(entry, val);
+  return Thread::Current::Get()->tls_set(entry, val);
 }
 
 // set the callback that is issued when the thread exits
 static inline void tls_set_callback(uint entry, thread_tls_callback_t cb) {
-  get_current_thread()->tls_set_callback(entry, cb);
+  Thread::Current::Get()->tls_set_callback(entry, cb);
 }
 
 // AutoReschedDisable is an RAII helper for disabling rescheduling
@@ -621,13 +611,13 @@ class AutoReschedDisable {
   AutoReschedDisable() {}
   ~AutoReschedDisable() {
     if (started_) {
-      CurrentThread::ReschedReenable();
+      Thread::Current::ReschedReenable();
     }
   }
 
   void Disable() {
     if (!started_) {
-      CurrentThread::ReschedDisable();
+      Thread::Current::ReschedDisable();
       started_ = true;
     }
   }

@@ -881,7 +881,7 @@ static int hwd_thread(void* arg) {
 
     previous_handle_count = handle_count;
 
-    CurrentThread::SleepRelative(ZX_SEC(1));
+    Thread::Current::SleepRelative(ZX_SEC(1));
   }
 }
 
@@ -899,7 +899,7 @@ void DumpProcessMemoryUsage(const char* prefix, size_t min_pages) {
 
 static int mwd_thread(void* arg) {
   for (;;) {
-    CurrentThread::SleepRelative(ZX_SEC(1));
+    Thread::Current::SleepRelative(ZX_SEC(1));
     DumpProcessMemoryUsage("MemoryHog! ", mwd_limit);
   }
 }

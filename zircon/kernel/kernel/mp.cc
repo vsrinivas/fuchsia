@@ -222,7 +222,7 @@ static void mp_unplug_trampoline(void) {
   // We're still holding the thread lock from the reschedule that took us
   // here.
 
-  Thread* ct = get_current_thread();
+  Thread* ct = Thread::Current::Get();
   auto unplug_done = reinterpret_cast<event_t*>(ct->arg_);
 
   cpu_num_t cpu_num = arch_curr_cpu_num();
@@ -422,7 +422,7 @@ interrupt_eoi mp_mbx_reschedule_irq(void*) {
   CPU_STATS_INC(reschedule_ipis);
 
   if (mp.active_cpus & cpu_num_to_mask(cpu)) {
-    CurrentThread::PreemptSetPending();
+    Thread::Current::PreemptSetPending();
   }
 
   return IRQ_EOI_DEACTIVATE;

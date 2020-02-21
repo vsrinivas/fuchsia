@@ -25,7 +25,7 @@
 
 int sys_invalid_syscall(uint64_t num, uint64_t pc, uintptr_t vdso_code_address) {
   LTRACEF("invalid syscall %lu from PC %#lx vDSO code %#lx\n", num, pc, vdso_code_address);
-  CurrentThread::SignalPolicyException();
+  Thread::Current::SignalPolicyException();
   return ZX_ERR_BAD_SYSCALL;
 }
 
@@ -45,7 +45,7 @@ inline syscall_result do_syscall(uint64_t syscall_num, uint64_t pc, bool (*valid
      above CPU_STATS_INC call as it also calls arch_curr_cpu_num. */
   arch_enable_ints();
 
-  LTRACEF_LEVEL(2, "t %p syscall num %" PRIu64 " ip/pc %#" PRIx64 "\n", get_current_thread(),
+  LTRACEF_LEVEL(2, "t %p syscall num %" PRIu64 " ip/pc %#" PRIx64 "\n", Thread::Current::Get(),
                 syscall_num, pc);
 
   ProcessDispatcher* current_process = ProcessDispatcher::GetCurrent();
@@ -58,7 +58,7 @@ inline syscall_result do_syscall(uint64_t syscall_num, uint64_t pc, bool (*valid
     ret = make_call(current_process);
   }
 
-  LTRACEF_LEVEL(2, "t %p ret %#" PRIx64 "\n", get_current_thread(), ret);
+  LTRACEF_LEVEL(2, "t %p ret %#" PRIx64 "\n", Thread::Current::Get(), ret);
 
   /* re-disable interrupts on the way out
      This must be done before the below ktrace_tiny call. */
@@ -67,7 +67,7 @@ inline syscall_result do_syscall(uint64_t syscall_num, uint64_t pc, bool (*valid
   ktrace_tiny(TAG_SYSCALL_EXIT, (static_cast<uint32_t>(syscall_num << 8)) | arch_curr_cpu_num());
 
   // The assembler caller will re-disable interrupts at the appropriate time.
-  return {ret, get_current_thread()->IsSignaled()};
+  return {ret, Thread::Current::Get()->IsSignaled()};
 }
 
 syscall_result unknown_syscall(uint64_t syscall_num, uint64_t pc) {

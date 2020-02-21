@@ -57,7 +57,7 @@ static bool mp_hotplug_test() {
     printf("skipping test mp_hotplug, not enough online cpus\n");
     END_TEST;
   }
-  CurrentThread::MigrateToCpu(BOOT_CPU_ID);
+  Thread::Current::MigrateToCpu(BOOT_CPU_ID);
   // "Unplug" online secondary (non-BOOT) cores
   Thread* leaked_threads[SMP_MAX_CPUS] = {};
   ASSERT_EQ(unplug_all_cores(leaked_threads), ZX_OK, "unplugging all cores failed");

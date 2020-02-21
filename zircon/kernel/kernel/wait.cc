@@ -247,7 +247,7 @@ Thread* wait_queue_peek(wait_queue_t* wait) {
  */
 zx_status_t wait_queue_block_etc(wait_queue_t* wait, const Deadline& deadline, uint signal_mask,
                                  ResourceOwnership reason) TA_REQ(thread_lock) {
-  Thread* current_thread = get_current_thread();
+  Thread* current_thread = Thread::Current::Get();
 
   DEBUG_ASSERT_MAGIC_CHECK(wait);
   DEBUG_ASSERT(current_thread->state_ == THREAD_RUNNING);

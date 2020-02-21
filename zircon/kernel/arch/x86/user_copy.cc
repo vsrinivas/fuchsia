@@ -107,7 +107,7 @@ static X64CopyToFromUserRet _arch_copy_from_user(void* dst, const void* src, siz
   // address (speculatively); dependent operations can leak the values read-in.
   __asm__ __volatile__("lfence" ::: "memory");
 
-  Thread* thr = get_current_thread();
+  Thread* thr = Thread::Current::Get();
   X64CopyToFromUserRet ret =
       _x86_copy_to_or_from_user(dst, src, len, &thr->arch_.page_fault_resume, fault_return_mask);
 
@@ -139,7 +139,7 @@ static X64CopyToFromUserRet _arch_copy_to_user(void* dst, const void* src, size_
   if (!can_access(dst, len))
     return (X64CopyToFromUserRet){.status = ZX_ERR_INVALID_ARGS, .pf_flags = 0, .pf_va = 0};
 
-  Thread* thr = get_current_thread();
+  Thread* thr = Thread::Current::Get();
   X64CopyToFromUserRet ret =
       _x86_copy_to_or_from_user(dst, src, len, &thr->arch_.page_fault_resume, fault_return_mask);
 

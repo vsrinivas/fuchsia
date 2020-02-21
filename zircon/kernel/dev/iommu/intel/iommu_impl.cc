@@ -619,7 +619,7 @@ zx_status_t IommuImpl::WaitForValueLocked(RegType* reg,
     }
 
     zx_time_t sleep_deadline = fbl::min(zx_time_add_duration(now, kMaxSleepDuration), deadline);
-    CurrentThread::Sleep(sleep_deadline);
+    Thread::Current::Sleep(sleep_deadline);
   }
   return ZX_ERR_TIMED_OUT;
 }

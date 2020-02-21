@@ -60,7 +60,7 @@ static void __kernel_stdout_write(const char* str, size_t len) {
 
 #if WITH_DEBUG_LINEBUFFER
 static void __kernel_stdout_write_buffered(const char* str, size_t len) {
-  Thread* t = get_current_thread();
+  Thread* t = Thread::Current::Get();
 
   if (unlikely(t == NULL)) {
     __kernel_stdout_write(str, len);

@@ -172,7 +172,7 @@ static void BecomeThreadSafe(uint level) { GetInstance()->BecomeThreadSafe(); }
 // PRNG reseeding loop.
 static int ReseedPRNG(void* arg) {
   for (;;) {
-    CurrentThread::SleepRelative(ZX_SEC(30));
+    Thread::Current::SleepRelative(ZX_SEC(30));
 
     unsigned int successful = 0;  // number of successful entropy sources
     entropy::Collector* collector = nullptr;

@@ -748,7 +748,7 @@ static bool multiple_regions_test() {
   fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test aspace");
   ASSERT_NONNULL(aspace, "VmAspace::Create pointer");
 
-  vmm_aspace_t* old_aspace = get_current_thread()->aspace_;
+  vmm_aspace_t* old_aspace = Thread::Current::Get()->aspace_;
   vmm_set_active_aspace(reinterpret_cast<vmm_aspace_t*>(aspace.get()));
 
   // allocate region 0
@@ -1607,7 +1607,8 @@ static bool vmo_zero_scan_test() {
   EXPECT_EQ(0u, vmo->ScanForZeroPages(false));
 
   // Create a user mapping that we can read/write from.
-  fbl::RefPtr<VmAspace> user_aspace = fbl::RefPtr(vmm_aspace_to_obj(get_current_thread()->aspace_));
+  fbl::RefPtr<VmAspace> user_aspace =
+      fbl::RefPtr(vmm_aspace_to_obj(Thread::Current::Get()->aspace_));
   fbl::RefPtr<VmAddressRegion> root_user_vmar = user_aspace->RootVmar();
   fbl::RefPtr<VmMapping> mapping;
   status = root_user_vmar->CreateVmMapping(

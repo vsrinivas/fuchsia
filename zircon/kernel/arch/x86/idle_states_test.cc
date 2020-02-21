@@ -136,7 +136,7 @@ static uint8_t kGuardValue = UINT8_MAX;
 static int poke_monitor(void* arg) {
   // A short sleep ensures the main test thread has time to set up the monitor
   // and enter MWAIT.
-  CurrentThread::SleepRelative(zx_duration_from_msec(1));
+  Thread::Current::SleepRelative(zx_duration_from_msec(1));
   monitor = kGuardValue;
   return 0;
 }

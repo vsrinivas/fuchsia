@@ -31,7 +31,7 @@ void BrwLock<PI>::Block(bool write) {
     panic(
         "BrwLock<%d>::Block: Block returned with error %d lock %p, thr %p, "
         "sp %p\n",
-        static_cast<bool>(PI), ret, this, get_current_thread(), __GET_FRAME());
+        static_cast<bool>(PI), ret, this, Thread::Current::Get(), __GET_FRAME());
   }
 }
 
@@ -154,7 +154,7 @@ void BrwLock<PI>::ContendedWriteAcquire() {
     if ((prev & kBrwLockReaderMask) == 0) {
       if ((prev & kBrwLockWaiterMask) == 0) {
         if constexpr (PI == BrwLockEnablePi::Yes) {
-          state_.writer_.store(get_current_thread(), ktl::memory_order_relaxed);
+          state_.writer_.store(Thread::Current::Get(), ktl::memory_order_relaxed);
         }
         // Must have raced previously as turns out there's no readers or
         // waiters, so we can convert to having the lock
@@ -177,7 +177,7 @@ void BrwLock<PI>::WriteRelease() {
 #if LK_DEBUGLEVEL > 0
   if constexpr (PI == BrwLockEnablePi::Yes) {
     Thread* holder = state_.writer_.load(ktl::memory_order_relaxed);
-    Thread* ct = get_current_thread();
+    Thread* ct = Thread::Current::Get();
     if (unlikely(ct != holder)) {
       panic(
           "BrwLock<PI>::WriteRelease: thread %p (%s) tried to release brwlock %p it "
@@ -203,7 +203,7 @@ void BrwLock<PI>::WriteRelease() {
   // highest priority, and so it is fine if acquirers observe writer_ to be null
   // and 'fail' to treat us as the owner.
   if constexpr (PI == BrwLockEnablePi::Yes) {
-    CurrentThread::PreemptDisable();
+    Thread::Current::PreemptDisable();
 
     state_.writer_.store(nullptr, ktl::memory_order_relaxed);
   }
@@ -215,7 +215,7 @@ void BrwLock<PI>::WriteRelease() {
   }
 
   if constexpr (PI == BrwLockEnablePi::Yes) {
-    CurrentThread::PreemptReenable();
+    Thread::Current::PreemptReenable();
   }
 }
 
@@ -244,7 +244,7 @@ void BrwLock<PI>::ContendedReadUpgrade() {
       state_.state_.fetch_add(-kBrwLockReader + kBrwLockWaiter, ktl::memory_order_relaxed);
   if ((prev & ~kBrwLockWaiterMask) == kBrwLockReader) {
     if constexpr (PI == BrwLockEnablePi::Yes) {
-      state_.writer_.store(get_current_thread(), ktl::memory_order_relaxed);
+      state_.writer_.store(Thread::Current::Get(), ktl::memory_order_relaxed);
     }
     // There are no writers or readers. There might be waiters, but as we
     // already have some form of lock we still have fairness even if we

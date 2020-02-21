@@ -45,7 +45,7 @@ class TA_CAP("mutex") Mutex {
   void ReleaseThreadLocked(const bool allow_reschedule) TA_REL() TA_REQ(thread_lock);
 
   // does the current thread hold the mutex?
-  bool IsHeld() const { return (holder() == get_current_thread()); }
+  bool IsHeld() const { return (holder() == Thread::Current::Get()); }
 
   // Panic unless the given lock is held.
   //

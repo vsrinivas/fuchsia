@@ -79,7 +79,7 @@ ThreadDispatcher::~ThreadDispatcher() {
   kcounter_add(dispatcher_thread_destroy_count, 1);
 
   DEBUG_ASSERT(core_thread_ != nullptr);
-  DEBUG_ASSERT(core_thread_ != get_current_thread());
+  DEBUG_ASSERT(core_thread_ != Thread::Current::Get());
 
   switch (state_.lifecycle()) {
     case ThreadState::Lifecycle::DEAD: {
@@ -207,7 +207,7 @@ void ThreadDispatcher::Exit() {
   LTRACE_ENTRY_OBJ;
 
   // only valid to call this on the current thread
-  DEBUG_ASSERT(get_current_thread() == core_thread_);
+  DEBUG_ASSERT(Thread::Current::Get() == core_thread_);
 
   {
     Guard<fbl::Mutex> guard{get_lock()};
@@ -217,7 +217,7 @@ void ThreadDispatcher::Exit() {
 
   // exit here
   // this will recurse back to us in ::Exiting()
-  CurrentThread::Exit(0);
+  Thread::Current::Exit(0);
 
   __UNREACHABLE;
 }

@@ -8,7 +8,7 @@
 #define ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_CURRENT_THREAD_H_
 
 /* use the cpu local thread context pointer to store current_thread */
-static inline Thread* get_current_thread(void) {
+static inline Thread* arch_get_current_thread(void) {
 #ifdef __clang__
   // Clang with --target=aarch64-fuchsia -mtp=el1 reads
   // TPIDR_EL1 for __builtin_thread_pointer (instead of the usual
@@ -23,7 +23,7 @@ static inline Thread* get_current_thread(void) {
   return (Thread*)tp;
 }
 
-static inline void set_current_thread(Thread* t) {
+static inline void arch_set_current_thread(Thread* t) {
   __arm_wsr64("tpidr_el1", (uint64_t)&t->arch_.thread_pointer_location);
   __isb(ARM_MB_SY);
 }

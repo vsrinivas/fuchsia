@@ -85,7 +85,7 @@ class TA_CAP("mutex") BrwLock {
       // As readers are not recorded and do not receive boosting from blocking
       // writers they must not block or otherwise cease to run, otherwise
       // our PI will be violated.
-      CurrentThread::PreemptDisable();
+      Thread::Current::PreemptDisable();
     }
     // Attempt the optimistic grab
     uint64_t prev = state_.state_.fetch_add(kBrwLockReader, ktl::memory_order_acquire);
@@ -113,7 +113,7 @@ class TA_CAP("mutex") BrwLock {
       ReleaseWakeup();
     }
     if constexpr (PI == BrwLockEnablePi::Yes) {
-      CurrentThread::PreemptReenable();
+      Thread::Current::PreemptReenable();
     }
   }
 
@@ -176,7 +176,7 @@ class TA_CAP("mutex") BrwLock {
   template <typename F>
   void CommonWriteAcquire(uint64_t expected_state_bits, F contended)
       TA_ACQ(this) TA_NO_THREAD_SAFETY_ANALYSIS {
-    Thread* __UNUSED ct = get_current_thread();
+    Thread* __UNUSED ct = Thread::Current::Get();
 
     bool success;
 

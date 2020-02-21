@@ -145,7 +145,7 @@ void platform_halt_cpu(void) {
 
 void platform_halt_secondary_cpus(void) {
   // Ensure the current thread is pinned to the boot CPU.
-  DEBUG_ASSERT(get_current_thread()->hard_affinity_ == cpu_num_to_mask(BOOT_CPU_ID));
+  DEBUG_ASSERT(Thread::Current::Get()->hard_affinity_ == cpu_num_to_mask(BOOT_CPU_ID));
 
   // "Unplug" online secondary CPUs before halting them.
   cpu_mask_t primary = cpu_num_to_mask(BOOT_CPU_ID);
@@ -207,7 +207,7 @@ static void topology_cpu_init(void) {
   // it is possible they don't match the hardware.
   constexpr auto check_cpus_booted = [](void*) -> int {
     // We wait for secondary cpus to start up.
-    CurrentThread::SleepRelative(ZX_SEC(5));
+    Thread::Current::SleepRelative(ZX_SEC(5));
 
     // Check that all cpus in the topology are now online.
     const auto online_mask = mp_get_online_mask();

@@ -30,7 +30,7 @@ template <typename F>
 void wait_for_cond(F cond) {
   zx_duration_t wait_duration = ZX_USEC(1);
   while (!cond()) {
-    CurrentThread::SleepRelative(wait_duration);
+    Thread::Current::SleepRelative(wait_duration);
     // Increase wait_duration time by ~10%.
     wait_duration += (wait_duration / 10u + 1u);
   }
@@ -92,7 +92,7 @@ bool set_affinity_self_test() {
   ASSERT_NE(online_cpus, 0u, "Expected at least one CPU to be online.");
   auto worker_body = +[](void* arg) -> int {
     cpu_mask_t& online_cpus = *reinterpret_cast<cpu_mask_t*>(arg);
-    Thread* const self = get_current_thread();
+    Thread* const self = Thread::Current::Get();
 
     for (cpu_num_t c = 0u; c <= highest_cpu_set(online_cpus); c++) {
       // Skip offline CPUs.

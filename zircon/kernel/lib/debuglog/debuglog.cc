@@ -133,7 +133,7 @@ zx_status_t dlog_write(uint32_t flags, const void* data_ptr, size_t len) {
   hdr.datalen = static_cast<uint16_t>(len);
   hdr.flags = static_cast<uint16_t>(flags);
   hdr.timestamp = current_time();
-  Thread* t = get_current_thread();
+  Thread* t = Thread::Current::Get();
   if (t) {
     hdr.pid = t->user_pid_;
     hdr.tid = t->user_tid_;

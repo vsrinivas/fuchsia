@@ -98,7 +98,7 @@ void lk_main() {
   t->Resume();
 
   // become the idle thread and enable interrupts to start the scheduler
-  CurrentThread::BecomeIdle();
+  Thread::Current::BecomeIdle();
 }
 
 static int bootstrap2(void*) {

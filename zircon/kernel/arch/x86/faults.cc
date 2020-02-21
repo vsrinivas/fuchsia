@@ -101,13 +101,13 @@ __NO_RETURN static void exception_die(x86_iframe_t* frame, const char* msg) {
 static bool try_dispatch_user_exception(x86_iframe_t* frame, uint exception_type) {
   if (is_from_user(frame)) {
     struct arch_exception_context context = {false, frame, 0};
-    CurrentThread::PreemptReenableNoResched();
+    Thread::Current::PreemptReenableNoResched();
     arch_set_blocking_disallowed(false);
     arch_enable_ints();
     zx_status_t erc = dispatch_user_exception(exception_type, &context);
     arch_disable_ints();
     arch_set_blocking_disallowed(true);
-    CurrentThread::PreemptDisable();
+    Thread::Current::PreemptDisable();
     if (erc == ZX_OK)
       return true;
   }
@@ -123,7 +123,7 @@ static void x86_debug_handler(x86_iframe_t* frame) {
   // to actually change the debug registers for a thread is through the thread_write_state
   // syscall.
 
-  Thread* thread = get_current_thread();
+  Thread* thread = Thread::Current::Get();
 
   // We save the current state so that exception handlers can check what kind of exception it was.
   x86_read_debug_status(&thread->arch_.debug_state.dr6);
@@ -221,7 +221,7 @@ __NO_RETURN static void x86_fatal_pfe_handler(x86_iframe_t* frame, ulong cr2) {
 
   uint64_t error_code = frame->err_code;
 
-  dump_thread_during_panic(get_current_thread(), true);
+  dump_thread_during_panic(Thread::Current::Get(), true);
 
   if (error_code & PFEX_U) {
     // User mode page fault
@@ -254,7 +254,7 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
   vaddr_t va = x86_get_cr2();
 
   /* reenable interrupts */
-  CurrentThread::PreemptReenableNoResched();
+  Thread::Current::PreemptReenableNoResched();
   arch_set_blocking_disallowed(false);
   arch_enable_ints();
 
@@ -262,7 +262,7 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
   auto ac = fbl::MakeAutoCall([]() {
     arch_disable_ints();
     arch_set_blocking_disallowed(true);
-    CurrentThread::PreemptDisable();
+    Thread::Current::PreemptDisable();
   });
 
   /* check for flags we're not prepared to handle */
@@ -289,7 +289,7 @@ static zx_status_t x86_pfe_handler(x86_iframe_t* frame) {
 
   /* Check if the page fault handler should be skipped. It is skipped if there's a page_fault_resume
    * address and the highest bit is 0. */
-  uint64_t pfr = get_current_thread()->arch_.page_fault_resume;
+  uint64_t pfr = Thread::Current::Get()->arch_.page_fault_resume;
   if (unlikely(pfr && !BIT_SET(pfr, X86_PFR_RUN_FAULT_HANDLER_BIT))) {
     // Need to reconstruct the canonical resume address by ensuring it is correctly sign extended.
     // Double check the bit before X86_PFR_RUN_FAULT_HANDLER_BIT was set (indicating kernel
@@ -477,7 +477,7 @@ void x86_exception_handler(x86_iframe_t* frame) {
   }
 
   if (do_preempt)
-    CurrentThread::Preempt();
+    Thread::Current::Preempt();
 
   DEBUG_ASSERT_MSG(arch_ints_disabled(),
                    "ints disabled on way out of exception, vector %" PRIu64 " IP %#" PRIx64 "\n",
@@ -485,12 +485,12 @@ void x86_exception_handler(x86_iframe_t* frame) {
 }
 
 void x86_syscall_process_pending_signals(x86_syscall_general_regs_t* gregs) {
-  CurrentThread::ProcessPendingSignals(GeneralRegsSource::Syscall, gregs);
+  Thread::Current::ProcessPendingSignals(GeneralRegsSource::Syscall, gregs);
 }
 
 void arch_iframe_process_pending_signals(iframe_t* iframe) {
   DEBUG_ASSERT(iframe != nullptr);
-  CurrentThread::ProcessPendingSignals(GeneralRegsSource::Iframe, iframe);
+  Thread::Current::ProcessPendingSignals(GeneralRegsSource::Iframe, iframe);
 }
 
 void arch_dump_exception_context(const arch_exception_context_t* context) {

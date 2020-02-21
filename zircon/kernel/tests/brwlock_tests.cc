@@ -18,7 +18,7 @@
 static void rand_delay() {
   int64_t end = current_time() + (rand() % ZX_MSEC(1));
   do {
-    CurrentThread::Yield();
+    Thread::Current::Yield();
   } while (current_time() < end);
 }
 
@@ -39,7 +39,7 @@ class BrwLockTest {
     Thread* writer_threads[writers];
     Thread* upgrader_threads[upgraders];
 
-    int old_prio = get_current_thread()->base_priority_;
+    int old_prio = Thread::Current::Get()->base_priority_;
     // Run at high priority so that we can be validating what the other threads are doing.
     // Unless we are a uniprocessor, in which case we will just have to live with poor
     // testing. If we do boost priority then we need to make sure worker threads
@@ -48,12 +48,12 @@ class BrwLockTest {
     cpu_mask_t worker_mask = mp_get_online_mask();
     if (lowest_cpu_set(worker_mask) != highest_cpu_set(worker_mask)) {
       mp_get_online_mask();
-      get_current_thread()->SetPriority(HIGH_PRIORITY);
+      Thread::Current::Get()->SetPriority(HIGH_PRIORITY);
       cpu_mask_t pin_mask = cpu_num_to_mask(lowest_cpu_set(worker_mask));
-      get_current_thread()->SetCpuAffinity(pin_mask);
+      Thread::Current::Get()->SetCpuAffinity(pin_mask);
       worker_mask -= pin_mask;
     } else {
-      get_current_thread()->SetPriority(DEFAULT_PRIORITY);
+      Thread::Current::Get()->SetPriority(DEFAULT_PRIORITY);
     }
 
     // Start threads
@@ -101,7 +101,7 @@ class BrwLockTest {
       EXPECT_TRUE(num_writers == 0 || num_writers == 1, "Too many writers");
       EXPECT_TRUE((num_readers == 0 && num_writers == 0) || num_writers > 0 || num_readers > 0,
                   "Readers and writers");
-      CurrentThread::Yield();
+      Thread::Current::Yield();
     }
 
     // Shutdown all the threads. Validating they can shutdown is important
@@ -123,7 +123,7 @@ class BrwLockTest {
     EXPECT_EQ(test.state_.load(ktl::memory_order_seq_cst), 0u, "Threads still holding lock");
 
     // Restore original priority.
-    get_current_thread()->SetPriority(old_prio);
+    Thread::Current::Get()->SetPriority(old_prio);
 
     END_TEST;
   }
@@ -133,7 +133,7 @@ class BrwLockTest {
     while (!kill_.load(ktl::memory_order_relaxed)) {
       lock_.ReadAcquire();
       state_.fetch_add(1, ktl::memory_order_relaxed);
-      CurrentThread::Yield();
+      Thread::Current::Yield();
       state_.fetch_sub(1, ktl::memory_order_relaxed);
       lock_.ReadRelease();
       rand_delay();
@@ -144,7 +144,7 @@ class BrwLockTest {
     while (!kill_.load(ktl::memory_order_relaxed)) {
       lock_.WriteAcquire();
       state_.fetch_add(0x10000, ktl::memory_order_relaxed);
-      CurrentThread::Yield();
+      Thread::Current::Yield();
       state_.fetch_sub(0x10000, ktl::memory_order_relaxed);
       lock_.WriteRelease();
       rand_delay();
@@ -155,11 +155,11 @@ class BrwLockTest {
     while (!kill_.load(ktl::memory_order_relaxed)) {
       lock_.ReadAcquire();
       state_.fetch_add(1, ktl::memory_order_relaxed);
-      CurrentThread::Yield();
+      Thread::Current::Yield();
       state_.fetch_sub(1, ktl::memory_order_relaxed);
       lock_.ReadUpgrade();
       state_.fetch_add(0x10000, ktl::memory_order_relaxed);
-      CurrentThread::Yield();
+      Thread::Current::Yield();
       state_.fetch_sub(0x10000, ktl::memory_order_relaxed);
       lock_.WriteRelease();
       rand_delay();

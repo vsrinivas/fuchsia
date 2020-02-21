@@ -68,7 +68,7 @@ static bool event_signal_result_after_wait_test() {
       }
     }
     // Nope - sleep and try again.
-    CurrentThread::SleepRelative(wait_duration);
+    Thread::Current::SleepRelative(wait_duration);
     wait_duration *= 2;
   }
 

@@ -161,7 +161,7 @@ bool prng_blocks() {
   prng.BecomeThreadSafe();
 
   Thread* drawer =
-    Thread::Create("cprng drawer thread", &cprng_drawer_thread, &prng, DEFAULT_PRIORITY);
+      Thread::Create("cprng drawer thread", &cprng_drawer_thread, &prng, DEFAULT_PRIORITY);
   drawer->Resume();
 
   int64_t wait_duration = ZX_USEC(1);
@@ -173,7 +173,7 @@ bool prng_blocks() {
         break;
       }
     }
-    CurrentThread::SleepRelative(wait_duration);
+    Thread::Current::SleepRelative(wait_duration);
     wait_duration *= 2;
   }
 
@@ -196,7 +196,7 @@ bool prng_doesnt_block_if_entropy_is_added_early() {
   prng.AddEntropy(fake_entropy, sizeof(fake_entropy));
   prng.BecomeThreadSafe();
   Thread* drawer =
-    Thread::Create("cprng drawer thread", &cprng_drawer_thread, &prng, DEFAULT_PRIORITY);
+      Thread::Create("cprng drawer thread", &cprng_drawer_thread, &prng, DEFAULT_PRIORITY);
 
   drawer->Resume();
   int thread_retcode = 0;
