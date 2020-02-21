@@ -26,6 +26,7 @@ pub struct SerializableProductInfo {
     pub name: Option<String>,
     pub model: Option<String>,
     pub manufacturer: Option<String>,
+    pub build_date: Option<String>,
 }
 
 /// ProductInfo object is not serializable so serialize the object.
@@ -47,6 +48,16 @@ impl SerializableProductInfo {
             None => None,
         };
 
+        // the syntax of build_date is "2019-10-24T04:23:49", we want it to be "191024"
+        let build_date = match &product.build_date {
+            Some(date) => {
+                let sub = &date[2..10];
+                let result = sub.replace("-", "");
+                Some(result.to_string())
+            }
+            None => None,
+        };
+
         SerializableProductInfo {
             sku: product.sku.clone(),
             language: product.language.clone(),
@@ -55,6 +66,7 @@ impl SerializableProductInfo {
             name: product.name.clone(),
             model: product.model.clone(),
             manufacturer: product.manufacturer.clone(),
+            build_date: build_date,
         }
     }
 }

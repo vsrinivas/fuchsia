@@ -26,6 +26,7 @@ const HW_TXT: &str = "hw.txt";
 const SKU_KEY: &str = "config";
 const LANGUAGE_KEY: &str = "lang";
 const REGULATORY_DOMAIN_KEY: &str = "country";
+const BUILD_DATE_KEY: &str = "mfg_date";
 
 async fn read_factory_file(
     path: &str,
@@ -109,6 +110,7 @@ pub struct ProductInfo {
     pub name: Option<String>,
     pub model: Option<String>,
     pub manufacturer: Option<String>,
+    pub build_date: Option<String>,
 }
 
 impl ProductInfo {
@@ -121,6 +123,7 @@ impl ProductInfo {
             name: None,
             model: None,
             manufacturer: None,
+            build_date: None,
         }
     }
 
@@ -152,6 +155,9 @@ impl ProductInfo {
                 }
                 REGULATORY_DOMAIN_KEY => {
                     self.country_code = Some(value.to_owned());
+                }
+                BUILD_DATE_KEY => {
+                    self.build_date = Some(value.to_owned());
                 }
                 _ => {
                     fx_log_warn!("hw.txt dictionary values {} - {}", key, value.to_owned());
@@ -210,7 +216,7 @@ impl Into<fidl_fuchsia_hwinfo::ProductInfo> for ProductInfo {
             name: self.name,
             model: self.model,
             manufacturer: self.manufacturer,
-            build_date: None,
+            build_date: self.build_date,
         }
     }
 }

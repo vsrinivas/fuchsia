@@ -40,6 +40,7 @@ async fn request_product_info() -> Result<(), Error> {
     assert_eq!(response.language.unwrap().to_string(), "en".to_string());
     assert_eq!(response.model.unwrap().to_string(), "test_product_model".to_string());
     assert_eq!(response.manufacturer.unwrap().to_string(), "test_manufacturer".to_string());
+    assert_eq!(response.build_date.unwrap().to_string(), "2019-10-24T04:23:49".to_string());
     assert_eq!(
         response.regulatory_domain.unwrap().country_code.unwrap().to_string(),
         "US".to_string()

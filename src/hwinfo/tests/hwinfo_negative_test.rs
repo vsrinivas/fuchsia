@@ -42,5 +42,6 @@ async fn request_product_info() -> Result<(), Error> {
     assert!(response.name.is_none());
     assert!(response.model.is_none());
     assert!(response.manufacturer.is_none());
+    assert!(response.build_date.is_none());
     Ok(())
 }
