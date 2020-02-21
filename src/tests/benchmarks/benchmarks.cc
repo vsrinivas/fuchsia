@@ -32,8 +32,6 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
     std::vector<std::string> extra_args = {"--quiet", "--runs", "100"};
 
     for (int process = 0; process < 6; ++process) {
-      // Performance tests implemented in the Garnet repo (the name
-      // "zircon_benchmarks" is now misleading).
       benchmarks_runner->AddLibPerfTestBenchmark(
           fxl::StringPrintf("zircon_benchmarks_process%06d", process), "/bin/zircon_benchmarks",
           extra_args);
@@ -41,8 +39,6 @@ void AddPerfTests(benchmarking::BenchmarksRunner* benchmarks_runner, bool perfco
   } else {
     std::vector<std::string> extra_args = {"--quiet"};
 
-    // Performance tests implemented in the Garnet repo (the name
-    // "zircon_benchmarks" is now misleading).
     benchmarks_runner->AddLibPerfTestBenchmark("zircon_benchmarks", "/bin/zircon_benchmarks",
                                                extra_args);
   }
