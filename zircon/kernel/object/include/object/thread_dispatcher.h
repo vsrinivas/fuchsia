@@ -260,7 +260,6 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   // Exceptionates have internal locking so we don't need to guard it here.
   Exceptionate exceptionate_;
   const zx_exception_report_t* exception_report_ TA_GUARDED(get_lock());
-  event_t exception_event_ = EVENT_INITIAL_VALUE(exception_event_, false, EVENT_FLAG_AUTOUNSIGNAL);
 
   // Non-null if the thread is currently processing a channel exception.
   fbl::RefPtr<ExceptionDispatcher> exception_ TA_GUARDED(get_lock());

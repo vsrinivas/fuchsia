@@ -104,8 +104,6 @@ ThreadDispatcher::~ThreadDispatcher() {
                        ThreadLifecycleToString(state_.lifecycle()), this);
   }
 
-  event_destroy(&exception_event_);
-
   if (state_.lifecycle() != ThreadState::Lifecycle::INITIAL) {
     // We grew the pool in Initialize(), which transitioned the thread from its
     // inintial state.
