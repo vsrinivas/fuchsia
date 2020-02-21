@@ -521,14 +521,14 @@ class Scheduler {
   // the runqueue tree.
   void Remove(Thread* thread) TA_REQ(thread_lock);
 
-  // Traits type to adapt the WAVLTree to thread_t with node state in the
+  // Traits type to adapt the WAVLTree to Thread with node state in the
   // fair_task_state member.
   struct TaskTraits {
     using KeyType = SchedulerState::KeyType;
-    static KeyType GetKey(const thread_t& thread) { return thread.scheduler_state.key(); }
+    static KeyType GetKey(const Thread& thread) { return thread.scheduler_state_.key(); }
     static bool LessThan(KeyType a, KeyType b) { return a < b; }
     static bool EqualTo(KeyType a, KeyType b) { return a == b; }
-    static auto& node_state(thread_t& thread) { return thread.scheduler_state.run_queue_node_; }
+    static auto& node_state(Thread& thread) { return thread.scheduler_state_.run_queue_node_; }
   };
 
   // Alias of the WAVLTree type for the runqueue.
