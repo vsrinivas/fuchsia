@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::format_err;
 use fidl::encoding::Decodable;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_sysmem as sysmem;
 use fuchsia_zircon as zx;
+use std::rc::Rc;
 use stream_processor_test::*;
 
 #[derive(Debug)]
@@ -42,6 +42,7 @@ impl TimestampGenerator {
 pub struct VideoFrameStream {
     pub frames: Vec<VideoFrame>,
     pub format: sysmem::ImageFormat2,
+    pub encoder_settings: Rc<dyn Fn() -> EncoderSettings>,
     pub frames_per_second: usize,
     pub timebase: Option<u64>,
 }
@@ -50,15 +51,12 @@ impl VideoFrameStream {
     pub fn create(
         format: sysmem::ImageFormat2,
         num_frames: usize,
+        encoder_settings: Rc<dyn Fn() -> EncoderSettings>,
         frames_per_second: usize,
         timebase: Option<u64>,
     ) -> Result<Self> {
-        if num_frames == 0 {
-            return Err(format_err!("num_frames can't be 0"));
-        }
         let frames = (0..num_frames).map(|_| VideoFrame::create(format.clone())).collect();
-
-        Ok(Self { frames, format, frames_per_second, timebase })
+        Ok(Self { frames, format, encoder_settings, frames_per_second, timebase })
     }
 
     pub fn timestamp_generator(&self) -> Option<TimestampGenerator> {
@@ -76,9 +74,9 @@ impl ElementaryStream for VideoFrameStream {
                 image_format: self.format.clone(),
                 ..<VideoUncompressedFormat as Decodable>::new_empty()
             }))),
-            encoder_settings: None,
+            encoder_settings: Some((self.encoder_settings)()),
             format_details_version_ordinal: Some(format_details_version_ordinal),
-            mime_type: None,
+            mime_type: Some("video/h264".to_string()),
             oob_bytes: None,
             pass_through_parameters: None,
             timebase: self.timebase,
@@ -159,6 +157,7 @@ mod test {
         let stream = VideoFrameStream::create(
             format.image_format,
             /*num_frames=*/ 2,
+            Rc::new(move || -> EncoderSettings { EncoderSettings::H264(H264EncoderSettings {}) }),
             /*frames_per_second=*/ 60,
             /*timebase=*/ Some(zx::Duration::from_seconds(1).into_nanos() as u64),
         )

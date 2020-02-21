@@ -194,14 +194,14 @@ zx_status_t DeviceCtx::Init() {
   return ZX_OK;
 }
 
-zx_status_t DeviceCtx::LoadFirmware() { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t DeviceCtx::LoadFirmware() { return ZX_OK; }
 
 // encoder control
-zx_status_t DeviceCtx::StartEncoder() { return ZX_ERR_NOT_SUPPORTED; }
-zx_status_t DeviceCtx::StopEncoder() { return ZX_ERR_NOT_SUPPORTED; }
-zx_status_t DeviceCtx::WaitForIdle() { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t DeviceCtx::StartEncoder() { return ZX_OK; }
+zx_status_t DeviceCtx::StopEncoder() { return ZX_OK; }
+zx_status_t DeviceCtx::WaitForIdle() { return ZX_OK; }
 zx_status_t DeviceCtx::EncodeFrame(const CodecBuffer* buffer, uint8_t* data, uint32_t len) {
-  return ZX_ERR_NOT_SUPPORTED;
+  return ZX_OK;
 }
 void DeviceCtx::ReturnBuffer(const CodecBuffer* buffer) {}
 void DeviceCtx::SetOutputBuffers(std::vector<const CodecBuffer*> buffers) {}

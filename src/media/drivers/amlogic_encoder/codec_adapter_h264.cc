@@ -549,6 +549,7 @@ void CodecAdapterH264::ProcessInput() {
     }
 
     if (item.is_end_of_stream()) {
+      events_->onCoreCodecOutputEndOfStream(/*error_detected_before=*/false);
       continue;
     }
 
