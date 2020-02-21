@@ -142,6 +142,21 @@ impl TargetDelegate {
         // if we have a FIDL error, return no players available
         send_command_fut.await.map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)?
     }
+
+    /// Send a set absolute volume command to the absolute volume handler.
+    pub async fn send_set_absolute_volume_command(&self, volume: u8) -> Result<u8, TargetAvcError> {
+        let send_command_fut = {
+            let inner_guard = self.inner.lock();
+            match &inner_guard.absolute_volume_handler {
+                Some(absolute_volume_handler) => absolute_volume_handler.set_volume(volume),
+                // we have don't have a volume handler, return no players available
+                None => return Err(TargetAvcError::RejectedInvalidParameter),
+            }
+        };
+
+        // if we have a FIDL error, return no players available
+        send_command_fut.await.map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)
+    }
 }
 
 #[cfg(test)]
