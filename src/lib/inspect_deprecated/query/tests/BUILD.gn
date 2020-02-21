@@ -33,6 +33,9 @@ executable("bin") {
     "//zircon/public/lib/async-loop-default",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
+
+  # TODO(46733): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("inspect_query_unittests") {

@@ -39,6 +39,9 @@ executable("test") {
     "//src/lib/inspect_deprecated",
     "//third_party/googletest:gmock",
   ]
+
+  # TODO(46733): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("bin-vmo") {
@@ -69,6 +72,9 @@ executable("test-vmo") {
     "//third_party/googletest:gmock",
     "//zircon/public/lib/inspect",
   ]
+
+  # TODO(46733): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("bin-health") {
@@ -99,6 +105,9 @@ executable("test-health") {
     "//third_party/googletest:gmock",
     "//zircon/public/lib/inspect",
   ]
+
+  # TODO(46733): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("inspect_integration_tests") {
