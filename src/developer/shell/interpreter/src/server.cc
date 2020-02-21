@@ -26,9 +26,11 @@ inline std::string_view GetView(::fidl::StringView view) {
   return std::string_view(view.data(), view.size());
 }
 
-std::unique_ptr<Type> GetType(const llcpp::fuchsia::shell::ShellType& shell_type) {
+std::unique_ptr<Type> GetType(ServerInterpreterContext* context, uint64_t node_file_id,
+                              uint64_t node_node_id,
+                              const llcpp::fuchsia::shell::ShellType& shell_type) {
   if (shell_type.is_undef()) {
-    return nullptr;
+    return std::make_unique<TypeUndefined>();
   }
   if (shell_type.is_builtin_type()) {
     switch (shell_type.builtin_type()) {
@@ -61,10 +63,11 @@ std::unique_ptr<Type> GetType(const llcpp::fuchsia::shell::ShellType& shell_type
       case llcpp::fuchsia::shell::BuiltinType::FLOAT64:
         return std::make_unique<TypeFloat64>();
       default:
-        return nullptr;
+        break;
     }
   }
-  return nullptr;
+  context->execution_context()->EmitError(NodeId(node_file_id, node_node_id), "Bad type.");
+  return std::make_unique<TypeUndefined>();
 }
 
 std::unique_ptr<Expression> ServerInterpreterContext::GetExpression(const NodeId& node_id) {
@@ -83,6 +86,24 @@ void ServerInterpreter::EmitError(ExecutionContext* context, std::string error_m
   if (context != nullptr) {
     context->set_has_errors();
   }
+}
+
+void ServerInterpreter::EmitError(ExecutionContext* context, NodeId node_id,
+                                  std::string error_message) {
+  FXL_DCHECK(context != nullptr);
+  std::vector<llcpp::fuchsia::shell::Location> locations;
+  llcpp::fuchsia::shell::NodeId fidl_node_id{.file_id = node_id.file_id,
+                                             .node_id = node_id.node_id};
+  auto builder =
+      llcpp::fuchsia::shell::Location::UnownedBuilder().set_node_id(fidl::unowned(&fidl_node_id));
+  locations.emplace_back(builder.build());
+  service_->OnError(context->id(), locations, std::move(error_message));
+  context->set_has_errors();
+}
+
+void ServerInterpreter::DumpDone(ExecutionContext* context) {
+  FXL_DCHECK(context != nullptr);
+  service_->OnDumpDone(context->id());
 }
 
 void ServerInterpreter::ContextDone(ExecutionContext* context) {
@@ -157,23 +178,6 @@ void Service::CreateExecutionContext(uint64_t context_id,
   }
 }
 
-void Service::ExecuteExecutionContext(uint64_t context_id,
-                                      ExecuteExecutionContextCompleter::Sync completer) {
-  auto context = interpreter_->GetServerContext(context_id);
-  if (context == nullptr) {
-    interpreter_->EmitError(nullptr,
-                            "Execution context " + std::to_string(context_id) + " not defined.");
-  } else {
-    if (context->PendingNodes()) {
-      interpreter_->EmitError(
-          context->execution_context(),
-          "Pending AST nodes for execution context " + std::to_string(context_id) + ".");
-    }
-    context->execution_context()->Execute();
-    interpreter_->EraseServerContext(context_id);
-  }
-}
-
 void Service::AddNodes(uint64_t context_id,
                        ::fidl::VectorView<::llcpp::fuchsia::shell::NodeDefinition> nodes,
                        AddNodesCompleter::Sync _completer) {
@@ -195,6 +199,34 @@ void Service::AddNodes(uint64_t context_id,
                                     std::to_string(node.node_id.node_id) + " (unknown type).");
       }
     }
+  }
+}
+
+void Service::DumpExecutionContext(uint64_t context_id,
+                                   ExecuteExecutionContextCompleter::Sync completer) {
+  auto context = interpreter_->GetServerContext(context_id);
+  if (context == nullptr) {
+    interpreter_->EmitError(nullptr,
+                            "Execution context " + std::to_string(context_id) + " not defined.");
+  } else {
+    context->execution_context()->Dump();
+  }
+}
+
+void Service::ExecuteExecutionContext(uint64_t context_id,
+                                      ExecuteExecutionContextCompleter::Sync completer) {
+  auto context = interpreter_->GetServerContext(context_id);
+  if (context == nullptr) {
+    interpreter_->EmitError(nullptr,
+                            "Execution context " + std::to_string(context_id) + " not defined.");
+  } else {
+    if (context->PendingNodes()) {
+      interpreter_->EmitError(
+          context->execution_context(),
+          "Pending AST nodes for execution context " + std::to_string(context_id) + ".");
+    }
+    context->execution_context()->Execute();
+    interpreter_->EraseServerContext(context_id);
   }
 }
 
@@ -223,9 +255,10 @@ void Service::AddVariableDefinition(ServerInterpreterContext* context, uint64_t 
                                     bool root_node) {
   std::unique_ptr<Expression> initial_value = interpreter_->GetExpression(
       context, NodeId(node.initial_value.file_id, node.initial_value.node_id));
-  auto result = std::make_unique<VariableDefinition>(interpreter(), node_file_id, node_node_id,
-                                                     GetView(node.name), GetType(node.type),
-                                                     node.mutable_value, std::move(initial_value));
+  auto result = std::make_unique<VariableDefinition>(
+      interpreter(), node_file_id, node_node_id, GetView(node.name),
+      GetType(context, node_file_id, node_node_id, node.type), node.mutable_value,
+      std::move(initial_value));
   interpreter_->AddInstruction(context, std::move(result), root_node);
 }
 

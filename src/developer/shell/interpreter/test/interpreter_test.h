@@ -36,8 +36,14 @@ class InterpreterTest : public ::testing::Test {
 
   void SetUp() override;
 
-  void Run() { loop_.Run(); }
-  void Quit() { loop_.Quit(); }
+  void Run() {
+    running_ = true;
+    loop_.Run();
+  }
+  void Quit() {
+    running_ = false;
+    loop_.Quit();
+  }
 
   InterpreterTestContext* CreateContext();
   InterpreterTestContext* GetContext(uint64_t context_id);
@@ -55,6 +61,7 @@ class InterpreterTest : public ::testing::Test {
   std::stringstream global_error_stream_;
   std::vector<std::string> results_;
   bool last_result_partial_ = false;
+  bool running_ = false;
 };
 
 #endif  // SRC_DEVELOPER_SHELL_INTERPRETER_TEST_INTERPRETER_TEST_H_

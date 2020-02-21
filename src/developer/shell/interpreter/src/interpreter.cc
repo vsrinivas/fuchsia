@@ -12,6 +12,23 @@
 namespace shell {
 namespace interpreter {
 
+void ExecutionContext::EmitError(std::string error_message) {
+  interpreter_->EmitError(this, std::move(error_message));
+}
+
+void ExecutionContext::EmitError(NodeId node_id, std::string error_message) {
+  interpreter_->EmitError(this, node_id, std::move(error_message));
+}
+
+void ExecutionContext::Dump() {
+  for (const auto& instruction : pending_instructions_) {
+    std::stringstream ss;
+    instruction->Dump(ss);
+    interpreter_->TextResult(this, ss.str());
+  }
+  interpreter_->DumpDone(this);
+}
+
 void ExecutionContext::Execute() {
   if (pending_instructions_.empty() || has_errors()) {
     if (!has_errors()) {
@@ -19,16 +36,21 @@ void ExecutionContext::Execute() {
     }
     interpreter_->ContextDoneWithAnalysisError(this);
   } else {
-    // Currently we don't know how to execute instructions.
-    // We just dump the instructions to be able to test the AST construction.
-    for (const auto& instruction : pending_instructions_) {
-      std::stringstream ss;
-      instruction->Dump(ss);
-      interpreter_->TextResult(this, ss.str());
+    // Currently we only do the compilation.
+    Compile();
+    if (has_errors()) {
+      interpreter_->ContextDoneWithAnalysisError(this);
+    } else {
+      interpreter_->ContextDone(this);
     }
-    interpreter_->ContextDone(this);
   }
   interpreter_->EraseContext(id_);
+}
+
+void ExecutionContext::Compile() {
+  for (const auto& instruction : pending_instructions_) {
+    instruction->Compile(this);
+  }
 }
 
 ExecutionContext* Interpreter::AddContext(uint64_t context_id) {

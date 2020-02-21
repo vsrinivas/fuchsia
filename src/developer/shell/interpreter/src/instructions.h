@@ -34,6 +34,7 @@ class VariableDefinition : public Instruction {
   const Expression* initial_value() const { return initial_value_.get(); }
 
   void Dump(std::ostream& os) const override;
+  void Compile(ExecutionContext* context) const override;
 
  private:
   // Name of the variable.

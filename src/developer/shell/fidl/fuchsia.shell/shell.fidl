@@ -133,6 +133,25 @@ protocol Shell {
     ///   received.
     CreateExecutionContext(uint64 context_id);
 
+    /// Adds nodes to the AST. This message can be used several time to build an AST.
+    ///
+    /// - `context_id` the id for the execution context. Instructions without a container are
+    ///   added to the context's pending instructions. All other nodes without a container are
+    ///   added to the interpreter AST.
+    /// - `nodes` all the node to be inserted. Children must be inserted before their container.
+    ///   That means that you should do a depth first traversal of your graph to generate these
+    ///   calls.
+    AddNodes(uint64 context_id, vector<NodeDefinition>:MAX nodes);
+
+    /// Dumps all the pending instructions. This generates an OnTextResult event for each pending
+    /// instruction with a brief description of that instruction.
+    /// When everything is dumped, OnDumpDone is called. Only the instructions successfully added
+    /// are dumped.
+    ///
+    /// - `context_id` the id for the execution context previously created with
+    ///   CreateExecutionContext.
+    DumpExecutionContext(uint64 context_id);
+
     /// Executes all the pending instructions. This can generate one or several errors using
     /// OnError.
     /// When the execution is finished (all the pending instructions have been handled),
@@ -144,16 +163,6 @@ protocol Shell {
     /// - `context_id` the id for the execution context previously created with
     ///   CreateExecutionContext.
     ExecuteExecutionContext(uint64 context_id);
-
-    /// Add nodes to the AST. This message can be used several time to build an AST.
-    ///
-    /// - `context_id` the id for the execution context. Instructions without a container are
-    ///   added to the context's pending instructions. All other nodes without a container are
-    ///   added to the interpreter AST.
-    /// - `nodes` all the node to be inserted. Children must be inserted before their container.
-    ///   That means that you should do a depth first traversal of your graph to generate these
-    ///   calls.
-    AddNodes(uint64 context_id, vector<NodeDefinition>:MAX nodes);
 
     /// Called each time the shell detects an error. This method can be called several times.
     /// The execution is done (started with ExecuteExecutionContext) when OnExecutionDone is
@@ -167,6 +176,11 @@ protocol Shell {
     ///   For global errors (not relative to a file), this is empty.
     /// - `error_message` the text message for the error.
     -> OnError(uint64 context_id, vector<Location>:MAX locations, string:MAX error_message);
+
+    /// Signals that the shell has dumped all the pending instructions.
+    ///
+    /// - `context_id` the execution context id.
+    -> OnDumpDone(uint64 context_id);
 
     /// Signals that the shell has handled all the pending instructions.
     /// This will be called exactly once when the ExecutionContext is completely finished (the

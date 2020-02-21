@@ -10,6 +10,15 @@
 namespace shell {
 namespace interpreter {
 
+class TypeUndefined : public Type {
+ public:
+  TypeUndefined() = default;
+
+  bool IsUndefined() const override { return true; }
+
+  void Dump(std::ostream& os) const override;
+};
+
 class TypeBuiltin : public Type {
  public:
   TypeBuiltin() = default;
@@ -83,6 +92,8 @@ class TypeInt64 : public TypeBuiltin {
   TypeInt64() = default;
 
   void Dump(std::ostream& os) const override;
+  void CreateVariable(ExecutionContext* context, Scope* scope, NodeId id,
+                      const std::string& name) const override;
 };
 
 class TypeUint64 : public TypeBuiltin {
@@ -90,6 +101,8 @@ class TypeUint64 : public TypeBuiltin {
   TypeUint64() = default;
 
   void Dump(std::ostream& os) const override;
+  void CreateVariable(ExecutionContext* context, Scope* scope, NodeId id,
+                      const std::string& name) const override;
 };
 
 class TypeInteger : public TypeBuiltin {

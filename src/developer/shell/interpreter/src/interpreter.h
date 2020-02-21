@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "src/developer/shell/interpreter/src/isolate.h"
 #include "src/developer/shell/interpreter/src/nodes.h"
 
 namespace shell {
@@ -36,14 +37,26 @@ class ExecutionContext {
     pending_instructions_.emplace_back(std::move(instruction));
   }
 
+  // Emit an error not associated to a node.
+  void EmitError(std::string error_message);
+
+  // Emit an error associated to a node.
+  void EmitError(NodeId node_id, std::string error_message);
+
+  // Dumps all the pending instructions.
+  void Dump();
+
+  // Compiles all the pending instructions.
+  void Compile();
+
   // Executes all the pending instructions.
   void Execute();
 
  private:
   // Interpreter which owns the context.
-  Interpreter* interpreter_;
+  Interpreter* const interpreter_;
   // Context id for the interpreter which owns the context.
-  uint64_t id_;
+  const uint64_t id_;
   // Instructions waiting to be executed.
   std::vector<std::unique_ptr<Instruction>> pending_instructions_;
   // True if the context encountered an error.
@@ -55,11 +68,19 @@ class ExecutionContext {
 // However, execution contexts from an interpreter share the same data.
 class Interpreter {
  public:
-  Interpreter() = default;
+  Interpreter() : isolate_(std::make_unique<Isolate>()) {}
   virtual ~Interpreter() = default;
+
+  Isolate* isolate() const { return isolate_.get(); }
 
   // Called when the interpreter encouter an error.
   virtual void EmitError(ExecutionContext* context, std::string error_message) = 0;
+
+  // Called when the interpreter encouter an error associated to a node.
+  virtual void EmitError(ExecutionContext* context, NodeId node_id, std::string error_message) = 0;
+
+  // Called when a context has dumped all its pending instructions.
+  virtual void DumpDone(ExecutionContext* context) = 0;
 
   // Called when a context is ready to terminate. Case where the execution succeeded.
   virtual void ContextDone(ExecutionContext* context) = 0;
@@ -111,6 +132,8 @@ class Interpreter {
   std::map<uint64_t, std::unique_ptr<ExecutionContext>> contexts_;
   // All the nodes handled by the interpreter.
   std::map<std::pair<uint64_t, uint64_t>, Node*> nodes_;
+  // The isolate ran by the interpreter.
+  std::unique_ptr<Isolate> isolate_;
 };
 
 }  // namespace interpreter

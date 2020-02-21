@@ -62,6 +62,8 @@ class ServerInterpreter : public Interpreter {
   explicit ServerInterpreter(Service* service) : service_(service) {}
 
   void EmitError(ExecutionContext* context, std::string error_message) override;
+  void EmitError(ExecutionContext* context, NodeId node_id, std::string error_message) override;
+  void DumpDone(ExecutionContext* context) override;
   void ContextDone(ExecutionContext* context) override;
   void ContextDoneWithAnalysisError(ExecutionContext* context) override;
   void TextResult(ExecutionContext* context, std::string_view text) override;
@@ -114,11 +116,13 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
 
   void CreateExecutionContext(uint64_t context_id,
                               CreateExecutionContextCompleter::Sync completer) override;
-  void ExecuteExecutionContext(uint64_t context_id,
-                               ExecuteExecutionContextCompleter::Sync completer) override;
   void AddNodes(uint64_t context_id,
                 ::fidl::VectorView<::llcpp::fuchsia::shell::NodeDefinition> nodes,
                 AddNodesCompleter::Sync _completer) override;
+  void DumpExecutionContext(uint64_t context_id,
+                            DumpExecutionContextCompleter::Sync completer) override;
+  void ExecuteExecutionContext(uint64_t context_id,
+                               ExecuteExecutionContextCompleter::Sync completer) override;
 
   // Helpers to be able to send events to the client.
   zx_status_t OnError(uint64_t context_id, std::vector<llcpp::fuchsia::shell::Location>& locations,
@@ -131,6 +135,11 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
   zx_status_t OnError(uint64_t context_id, const std::string& error_message) {
     std::vector<llcpp::fuchsia::shell::Location> locations;
     return OnError(context_id, locations, error_message);
+  }
+
+  zx_status_t OnDumpDone(uint64_t context_id) {
+    return llcpp::fuchsia::shell::Shell::SendOnDumpDoneEvent(::zx::unowned_channel(handle_),
+                                                             context_id);
   }
 
   zx_status_t OnExecutionDone(uint64_t context_id, llcpp::fuchsia::shell::ExecuteResult result) {

@@ -29,7 +29,8 @@ InterpreterTest::InterpreterTest()
   shell_.set_error_handler([this](zx_status_t status) {
     global_error_stream_ << "Shell server closed connection: " << zx_status_get_string(status)
                          << "\n";
-    Quit();
+    loop_.Quit();
+    ASSERT_FALSE(running_) << "Unexpected server termination.";
   });
 
   shell_.events().OnError = [this](uint64_t context_id,
@@ -41,10 +42,20 @@ InterpreterTest::InterpreterTest()
     } else {
       InterpreterTestContext* context = GetContext(context_id);
       ASSERT_NE(nullptr, context);
-      // Currently we can only have global errors (not relative to a node).
-      ASSERT_EQ(true, locations.empty());
+      for (const auto& location : locations) {
+        if (location.has_node_id()) {
+          context->error_stream << "node " << location.node_id().file_id << ':'
+                                << location.node_id().node_id << ' ';
+        }
+      }
       context->error_stream << error_message << "\n";
     }
+  };
+
+  shell_.events().OnDumpDone = [this](uint64_t context_id) {
+    InterpreterTestContext* context = GetContext(context_id);
+    ASSERT_NE(nullptr, context);
+    Quit();
   };
 
   shell_.events().OnExecutionDone = [this](uint64_t context_id,

@@ -223,10 +223,9 @@ TEST_F(InterpreterTest, VariableDefinition) {
   builder.VariableDefinition("x", TypeUint64(), false, builder.IntegerLiteral(10, false));
 
   shell()->AddNodes(context->id, std::move(*builder.nodes()));
-  shell()->ExecuteExecutionContext(context->id);
+  shell()->DumpExecutionContext(context->id);
   Run();
 
-  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->result);
   ASSERT_FALSE(last_result_partial());
   ASSERT_EQ(results().size(), static_cast<size_t>(3));
   ASSERT_EQ(results()[0], "var foo: uint64\n");
@@ -256,10 +255,9 @@ TEST_F(InterpreterTest, BuiltinTypes) {
   builder.VariableDefinition("f64", TypeFloat64(), true, NullNode);
 
   shell()->AddNodes(context->id, std::move(*builder.nodes()));
-  shell()->ExecuteExecutionContext(context->id);
+  shell()->DumpExecutionContext(context->id);
   Run();
 
-  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->result);
   ASSERT_FALSE(last_result_partial());
   ASSERT_EQ(results().size(), static_cast<size_t>(14));
   ASSERT_EQ(results()[0], "var b: bool\n");
@@ -276,4 +274,81 @@ TEST_F(InterpreterTest, BuiltinTypes) {
   ASSERT_EQ(results()[11], "var big_int: integer\n");
   ASSERT_EQ(results()[12], "var f32: float32\n");
   ASSERT_EQ(results()[13], "var f64: float64\n");
+}
+
+TEST_F(InterpreterTest, VariableOk) {
+  constexpr uint64_t kFileId = 1;
+  InterpreterTestContext* context = CreateContext();
+  shell()->CreateExecutionContext(context->id);
+
+  NodeBuilder builder(kFileId);
+  builder.VariableDefinition("bar", TypeUint64(), false, builder.IntegerLiteral(0, false));
+
+  shell()->AddNodes(context->id, std::move(*builder.nodes()));
+  shell()->ExecuteExecutionContext(context->id);
+  Run();
+
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::OK, context->result);
+
+  // TODO(vbelliard): Check the value of the variable after execution when it will be implemented.
+}
+
+TEST_F(InterpreterTest, VariableNoTypeNorValue) {
+  constexpr uint64_t kFileId = 1;
+  InterpreterTestContext* context = CreateContext();
+  shell()->CreateExecutionContext(context->id);
+
+  NodeBuilder builder(kFileId);
+  builder.VariableDefinition("bar", TypeUndef(), false, NullNode);
+
+  shell()->AddNodes(context->id, std::move(*builder.nodes()));
+  shell()->ExecuteExecutionContext(context->id);
+  Run();
+
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::ANALYSIS_ERROR, context->result);
+
+  std::string error_result = context->error_stream.str();
+  ASSERT_EQ("node 1:1 At least the type or the initial value must defined for a variable.\n",
+            error_result);
+}
+
+TEST_F(InterpreterTest, VariableTypeNotImplemented) {
+  constexpr uint64_t kFileId = 1;
+  InterpreterTestContext* context = CreateContext();
+  shell()->CreateExecutionContext(context->id);
+
+  NodeBuilder builder(kFileId);
+  builder.VariableDefinition("bar", TypeInteger(), false, NullNode);
+
+  shell()->AddNodes(context->id, std::move(*builder.nodes()));
+  shell()->ExecuteExecutionContext(context->id);
+  Run();
+
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::ANALYSIS_ERROR, context->result);
+
+  std::string error_result = context->error_stream.str();
+  ASSERT_EQ("node 1:1 Can't create variable 'bar' of type integer (not implemented yet).\n",
+            error_result);
+}
+
+TEST_F(InterpreterTest, VariableDefinedTwice) {
+  constexpr uint64_t kFileId = 1;
+  InterpreterTestContext* context = CreateContext();
+  shell()->CreateExecutionContext(context->id);
+
+  NodeBuilder builder(kFileId);
+  builder.VariableDefinition("bar", TypeUint64(), false, NullNode);
+  builder.VariableDefinition("bar", TypeUint64(), false, NullNode);
+
+  shell()->AddNodes(context->id, std::move(*builder.nodes()));
+  shell()->ExecuteExecutionContext(context->id);
+  Run();
+
+  ASSERT_EQ(fuchsia::shell::ExecuteResult::ANALYSIS_ERROR, context->result);
+
+  std::string error_result = context->error_stream.str();
+  ASSERT_EQ(
+      "node 1:2 Variable 'bar' already defined.\n"
+      "node 1:1 First definition.\n",
+      error_result);
 }

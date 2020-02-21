@@ -17,21 +17,8 @@ class ExecutionContext;
 class Expression;
 class Instruction;
 class Interpreter;
-
-// Base class for a type.
-class Type {
- public:
-  Type() = default;
-  virtual ~Type() = default;
-
-  // Prints the type.
-  virtual void Dump(std::ostream& os) const = 0;
-};
-
-inline std::ostream& operator<<(std::ostream& os, const Type& type) {
-  type.Dump(os);
-  return os;
-}
+class Scope;
+class Variable;
 
 struct NodeId {
   NodeId(uint64_t file_id, uint64_t node_id) : file_id(file_id), node_id(node_id) {}
@@ -48,6 +35,28 @@ struct NodeId {
   // Returns a text representation.
   std::string StringId() const { return std::to_string(file_id) + ":" + std::to_string(node_id); }
 };
+
+// Base class for a type.
+class Type {
+ public:
+  Type() = default;
+  virtual ~Type() = default;
+
+  // Returns true if the type is the undefined type.
+  virtual bool IsUndefined() const { return false; }
+
+  // Prints the type.
+  virtual void Dump(std::ostream& os) const = 0;
+
+  // Creates a variable of this type in the scope.
+  virtual void CreateVariable(ExecutionContext* context, Scope* scope, NodeId id,
+                              const std::string& name) const;
+};
+
+inline std::ostream& operator<<(std::ostream& os, const Type& type) {
+  type.Dump(os);
+  return os;
+}
 
 // Base class for all the AST nodes.
 class Node {
@@ -77,6 +86,9 @@ class Expression : public Node {
   Expression(Interpreter* interpreter, uint64_t file_id, uint64_t node_id)
       : Node(interpreter, file_id, node_id) {}
 
+  // Returns the type of the expression. The pointer is always valid (but it can be TypeUndefined).
+  virtual std::unique_ptr<Type> GetType() const;
+
   // Prints the expression.
   virtual void Dump(std::ostream& os) const = 0;
 };
@@ -94,6 +106,9 @@ class Instruction : public Node {
 
   // Prints the instruction.
   virtual void Dump(std::ostream& os) const = 0;
+
+  // Compiles the instruction (performs the semantic checks and generates code).
+  virtual void Compile(ExecutionContext* context) const = 0;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Instruction& instruction) {

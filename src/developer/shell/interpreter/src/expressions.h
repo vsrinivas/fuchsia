@@ -26,6 +26,7 @@ class IntegerLiteral : public Expression {
   uint64_t absolute_value() const { return absolute_value_; }
   bool negative() const { return negative_; }
 
+  std::unique_ptr<Type> GetType() const override;
   void Dump(std::ostream& os) const override;
 
  private:
