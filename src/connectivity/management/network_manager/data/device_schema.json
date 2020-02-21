@@ -476,15 +476,9 @@
           "additionalProperties": false,
           "properties": {
             "ip_forwarding": {
-              "type": "object",
-              "additionalProperties": false,
               "description": "Enables IP forwarding",
-              "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "default": false
-                }
-              }
+              "type": "boolean",
+              "default": false
             }
           }
         }

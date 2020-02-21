@@ -154,9 +154,7 @@
             }
         ],
         "services": {
-            "ip_forwarding": {
-                "enabled": true
-            }
+            "ip_forwarding": true
         }
     }
 }

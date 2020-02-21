@@ -397,7 +397,7 @@ impl From<&PortRange> for fidl_fuchsia_router_config::PortRange {
 #[serde(deny_unknown_fields)]
 pub struct Services {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ip_forwarding: Option<IpForwarding>,
+    pub ip_forwarding: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq)]
@@ -525,11 +525,6 @@ impl StaticIpAllocations {
         }
         Ok(())
     }
-}
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(deny_unknown_fields)]
-pub struct IpForwarding {
-    pub enabled: bool,
 }
 
 #[derive(Debug, PartialEq)]
@@ -1459,13 +1454,9 @@ impl Config {
 
     /// Returns the IP forwarding configuration.
     ///
-    /// If IP forwarding is enabled in the config, then this method will return true.
+    /// If IP forwarding is enabled in the configuration, then this method will return true.
     pub fn get_ip_forwarding_state(&self) -> bool {
-        self.get_services()
-            .ok()
-            .and_then(|x| x.ip_forwarding.as_ref())
-            .map(|i| i.enabled)
-            .unwrap_or(false)
+        self.get_services().ok().and_then(|s| s.ip_forwarding).unwrap_or(false)
     }
 }
 
@@ -1810,7 +1801,7 @@ mod tests {
                         },
                     },
                 ]),
-                services: Some(Services { ip_forwarding: Some(IpForwarding { enabled: true }) }),
+                services: Some(Services { ip_forwarding: Some(true) }),
                 acls: Some(Acls {
                     acl_entries: vec![
                         AclEntry {
