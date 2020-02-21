@@ -4,13 +4,22 @@
 
 import("//build/package.gni")
 
+group("intl_services") {
+  testonly = true
+  public_deps = [
+    ":config",
+    ":pkg",
+    ":tests",
+  ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ "tests" ]
+  public_deps = [ "tests" ]
 }
 
 group("config") {
-  deps = [ "config" ]
+  public_deps = [ "config" ]
 }
 
 executable("bin") {
@@ -27,7 +36,8 @@ executable("bin") {
   ]
 }
 
-package("intl_services") {
+package("pkg") {
+  package_name = "intl_services"
   deps = [
     ":bin",
     "config:sysmgr",

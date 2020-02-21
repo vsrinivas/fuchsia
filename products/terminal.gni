@@ -11,6 +11,8 @@ base_package_labels += [
   "//src/ui/bin/root_presenter:configs",
   "//src/graphics/bin/vulkan_loader",
   "//src/hwinfo:hwinfo_default_config",
+  "//src/intl/intl_services:config",
+  "//src/intl/intl_services:pkg",
   "//src/ui/a11y",
   "//src/ui/bin/ime:ime_service",
   "//src/ui/scenic",
