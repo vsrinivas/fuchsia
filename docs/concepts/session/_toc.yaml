@@ -4,3 +4,5 @@
 toc:
 - title: "Introduction to the session framework"
   path: /docs/concepts/session/introduction.md
+- title: "Input client library"
+  path: /docs/concepts/session/input.md
