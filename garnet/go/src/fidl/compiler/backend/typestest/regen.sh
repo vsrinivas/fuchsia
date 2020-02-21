@@ -160,4 +160,6 @@ done
 printf "%s\n" "${GOLDENS[@]//,}" | sort >> "${GOLDENS_DIR}/goldens.txt"
 
 > "${GOLDENS_DIR}/OWNERS"
-find "${EXAMPLE_DIR}/../.."  -name 'OWNERS' -exec cat {} \; | sort -u > "${GOLDENS_DIR}/OWNERS"
+find "${EXAMPLE_DIR}/../.."  -name 'OWNERS' -exec cat {} \; | grep -v -e "^#" | awk 'NF' | sort -u > "${GOLDENS_DIR}/OWNERS"
+echo "" >> "${GOLDENS_DIR}/OWNERS"
+echo "# COMPONENT: FIDL>Testing" >> "${GOLDENS_DIR}/OWNERS"
