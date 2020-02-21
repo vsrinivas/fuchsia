@@ -7,8 +7,7 @@ import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
-driver_module("driver") {
-  output_name = "hid-input-report"
+driver_module("hid-input-report") {
   sources = [ "input-report.cc" ]
   deps = [
     "//sdk/banjo/ddk.protocol.hiddevice",
@@ -26,18 +25,6 @@ driver_module("driver") {
   ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-}
-
-package("hid-input-report") {
-  deprecated_system_image = true
-
-  deps = [ ":driver" ]
-
-  drivers = [
-    {
-      name = "hid-input-report.so"
-    },
-  ]
 }
 
 test("hid-input-report-test-bin") {
