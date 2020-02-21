@@ -135,6 +135,11 @@ class ClustersModel extends ChangeNotifier implements ErmineShell {
 
       notifyListeners();
     }
+
+    // If the story was also focused, set focus on next story in same cluster.
+    if (focusedStory == story && currentCluster.value.stories.isNotEmpty) {
+      currentCluster.value.stories.last.focus();
+    }
   }
 
   /// Called when any story attribute changes.
@@ -143,7 +148,10 @@ class ClustersModel extends ChangeNotifier implements ErmineShell {
     if (story != null) {
       final storyCluster = _storyToCluster[story.id];
       if (story.focused) {
-        focusedStoryNotifier.value?.focused = false;
+        // De-focus existing story.
+        if (focusedStory != story) {
+          focusedStoryNotifier.value?.focused = false;
+        }
         focusedStoryNotifier.value = story;
         // If this story has focus, bring its cluster on screen.
         if (storyCluster != currentCluster.value) {
@@ -188,6 +196,8 @@ class ClusterModel extends ChangeNotifier {
 
   ClusterModel({this.title});
 
+  final List<ErmineStory> stories = <ErmineStory>[];
+
   final _storyToTile = <String, TileModel<ErmineStory>>{};
 
   bool get isEmpty => tilerModel.root.isEmpty;
@@ -199,6 +209,7 @@ class ClusterModel extends ChangeNotifier {
     assert(!_storyToTile.containsKey(story.id));
     final tile = tilerModel.add(content: story, minSize: _kMinTileSize);
     _storyToTile[story.id] = tile;
+    stories.add(story);
 
     notifyListeners();
   }
@@ -209,6 +220,7 @@ class ClusterModel extends ChangeNotifier {
     final tile = _storyToTile[story.id];
     tilerModel.remove(tile);
     _storyToTile.remove(story.id);
+    stories.remove(story);
 
     notifyListeners();
   }
