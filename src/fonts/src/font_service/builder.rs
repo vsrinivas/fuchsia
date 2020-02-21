@@ -94,7 +94,8 @@ impl FontServiceBuilder {
             }
         }
 
-        if self.fallback_collection.is_empty() {
+        // It's fine to have no fallback collection IFF we loaded an empty manifest.
+        if self.fallback_collection.is_empty() && !self.families.is_empty() {
             return Err(FontServiceBuilderError::NoFallbackCollection.into());
         }
 
@@ -426,6 +427,15 @@ mod tests {
             TypefaceCollection { faces: vec![expected_typeface.clone()] }
         );
 
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_empty_manifest() -> Result<(), Error> {
+        let manifest = FontManifestWrapper::Version2(v2::FontsManifest { families: vec![] });
+        let mut builder = FontServiceBuilder::new();
+        builder.add_manifest(manifest);
+        builder.build().await?; // Should succeed
         Ok(())
     }
 }
