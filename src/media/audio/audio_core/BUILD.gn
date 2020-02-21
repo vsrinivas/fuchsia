@@ -185,6 +185,10 @@ source_set("audio_core_lib") {
     "//zircon/system/fidl/fuchsia-hardware-audio",
     "//zircon/system/fidl/fuchsia-scheduler",
   ]
+
+  # TODO(39858): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 executable("audio_core_bin") {
