@@ -41,7 +41,7 @@ class ScopedTeecSession {
 // Wrapper around TEEC_Context to ensure correct deletion.
 class ScopedTeecContext {
  public:
-  ScopedTeecContext() : context_({0}), initialized_(false) {}
+  ScopedTeecContext() : context_({}), initialized_(false) {}
   ~ScopedTeecContext() {
     if (initialized_) {
       TEEC_FinalizeContext(&context_);
