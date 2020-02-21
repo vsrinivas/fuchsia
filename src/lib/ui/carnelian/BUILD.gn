@@ -51,6 +51,7 @@ rustc_library("carnelian") {
     "//third_party/rust_crates:lipsum",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:rusttype",
+    "//third_party/rust_crates:smallvec",
     "//third_party/rust_crates:textwrap",
     "//third_party/rust_crates:vk-sys",
     "//zircon/system/fidl/fuchsia-hardware-input:fuchsia-hardware-input-rustc",

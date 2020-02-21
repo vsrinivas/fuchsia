@@ -18,7 +18,6 @@ use fuchsia_framebuffer::PixelFormat;
 use crate::{Color, Point, ViewAssistantContext};
 
 pub mod mold;
-mod ops;
 pub mod spinel;
 
 pub use self::mold::Mold;

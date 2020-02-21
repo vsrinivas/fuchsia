@@ -5,23 +5,24 @@
 use std::ops::Add;
 
 use euclid::Transform2D;
+use smallvec::{smallvec, SmallVec};
 
 use crate::render::{
     mold::{Mold, MoldPath},
-    ops::Op,
     RasterBuilder,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MoldRaster {
-    pub(crate) raster: Op<mold::Raster>,
+    pub(crate) rasters: SmallVec<[mold::Raster; 1]>,
 }
 
 impl Add for MoldRaster {
     type Output = Self;
 
-    fn add(self, other: Self) -> Self::Output {
-        Self { raster: self.raster.add(other.raster) }
+    fn add(mut self, other: Self) -> Self::Output {
+        self.rasters.extend(other.rasters);
+        self
     }
 }
 
@@ -55,9 +56,9 @@ impl RasterBuilder<Mold> for MoldRasterBuilder {
 
     fn build(self) -> MoldRaster {
         MoldRaster {
-            raster: Op::Raster(mold::Raster::from_paths_and_transforms(
+            rasters: smallvec![mold::Raster::from_paths_and_transforms(
                 self.paths_transforms.iter().map(|(path, transform)| (&*path.path, transform)),
-            )),
+            )],
         }
     }
 }

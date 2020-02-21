@@ -41,7 +41,7 @@ impl MoldComposition {
             map.print(
                 i as u32 + 1,
                 mold::Layer::new(
-                    mold::Raster::union(layer.raster.raster.iter()),
+                    mold::Raster::union(layer.raster.rasters.iter()),
                     style_to_ops(&layer.style),
                 ),
             );

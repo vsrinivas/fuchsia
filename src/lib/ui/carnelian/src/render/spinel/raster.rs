@@ -5,10 +5,10 @@
 use std::{cell::RefCell, ops::Add, ptr, rc::Rc};
 
 use euclid::Transform2D;
+use smallvec::{smallvec, SmallVec};
 use spinel_rs_sys::*;
 
 use crate::render::{
-    ops::Op,
     spinel::{init, InnerContext, Spinel, SpinelPath},
     RasterBuilder,
 };
@@ -16,12 +16,12 @@ use crate::render::{
 #[derive(Clone, Debug)]
 pub struct SpinelRaster {
     context: Rc<RefCell<InnerContext>>,
-    raster: Option<Op<Rc<SpnRaster>>>,
+    rasters: Option<SmallVec<[Rc<SpnRaster>; 1]>>,
 }
 
 impl SpinelRaster {
-    pub(crate) fn raster(&self) -> &Op<Rc<SpnRaster>> {
-        self.raster.as_ref().unwrap()
+    pub(crate) fn rasters(&self) -> &[Rc<SpnRaster>] {
+        self.rasters.as_ref().map(|vec| vec.as_slice()).unwrap_or(&[])
     }
 }
 
@@ -31,22 +31,27 @@ impl Add for SpinelRaster {
     fn add(mut self, mut other: Self) -> Self::Output {
         assert!(Rc::ptr_eq(&self.context, &other.context));
 
-        Self {
-            context: Rc::clone(&self.context),
-            raster: self.raster.take().and_then(|raster| other.raster.take().map(|other| raster.add(other)))
-        }
+        self.rasters = match (self.rasters.take(), other.rasters.take()) {
+            (Some(mut rasters0), Some(rasters1)) => {
+                rasters0.extend(rasters1);
+                Some(rasters0)
+            }
+            (Some(rasters), None) | (None, Some(rasters)) => Some(rasters),
+            _ => None,
+        };
+        self
     }
 }
 
 impl Drop for SpinelRaster {
     fn drop(&mut self) {
-        if let Some(context) = self.context.borrow().get_checked() {
-            if let Some(raster) = self.raster.as_ref() {
-                for raster in raster.iter() {
-                    if Rc::strong_count(raster) == 1 {
-                        unsafe {
-                            spn!(spn_raster_release(context, &**raster as *const _, 1));
-                        }
+        if let (Some(context), Some(raster)) =
+            (self.context.borrow().get_checked(), self.rasters.as_ref())
+        {
+            for raster in raster.iter() {
+                if Rc::strong_count(raster) == 1 {
+                    unsafe {
+                        spn!(spn_raster_release(context, &**raster as *const _, 1));
                     }
                 }
             }
@@ -58,8 +63,13 @@ impl Eq for SpinelRaster {}
 
 impl PartialEq for SpinelRaster {
     fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.context, &other.context) && self.raster().len() == other.raster().len() &&
-            self.raster().iter().zip(other.raster().iter()).all(|(left, right)| Rc::ptr_eq(left, right))
+        Rc::ptr_eq(&self.context, &other.context)
+            && self.rasters().len() == other.rasters().len()
+            && self
+                .rasters()
+                .iter()
+                .zip(other.rasters().iter())
+                .all(|(left, right)| Rc::ptr_eq(left, right))
     }
 }
 
@@ -104,9 +114,9 @@ impl RasterBuilder<Spinel> for SpinelRasterBuilder {
     fn build(self) -> SpinelRaster {
         SpinelRaster {
             context: Rc::clone(&self.context),
-            raster: Some(Op::Raster(Rc::new(unsafe {
+            rasters: Some(smallvec![Rc::new(unsafe {
                 init(|ptr| spn!(spn_raster_builder_end(*self.raster_builder, ptr)))
-            }))),
+            })]),
         }
     }
 }

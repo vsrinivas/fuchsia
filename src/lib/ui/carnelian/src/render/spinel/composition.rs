@@ -96,14 +96,11 @@ impl SpinelComposition {
         unsafe {
             let clip = [clip.min_x(), clip.min_y(), clip.max_x(), clip.max_y()];
             spn!(spn_composition_reset(composition));
-            spn!(spn_composition_set_clip(
-                composition,
-                clip.as_ptr(),
-            ));
+            spn!(spn_composition_set_clip(composition, clip.as_ptr(),));
         }
 
         for (i, Layer { raster, .. }) in self.layers.iter().enumerate() {
-            for raster in raster.raster().iter() {
+            for raster in raster.rasters().iter() {
                 unsafe {
                     spn!(spn_composition_place(
                         composition,
