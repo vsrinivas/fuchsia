@@ -10,7 +10,7 @@ use super::*;
 /// AVRCP 1.6.1 section 6.5.5 GetPlayerApplicationSettingAttributeText
 pub struct GetPlayerApplicationSettingAttributeTextCommand {
     num_attributes: u8,
-    attribute_ids: Vec<PlayerApplicationSettingAttributeId>,
+    pub attribute_ids: Vec<PlayerApplicationSettingAttributeId>,
 }
 
 impl GetPlayerApplicationSettingAttributeTextCommand {
@@ -114,7 +114,6 @@ pub struct GetPlayerApplicationSettingAttributeTextResponse {
 }
 
 impl GetPlayerApplicationSettingAttributeTextResponse {
-    #[allow(dead_code)]
     pub fn new(
         attribute_infos: Vec<AttributeInfo>,
     ) -> GetPlayerApplicationSettingAttributeTextResponse {

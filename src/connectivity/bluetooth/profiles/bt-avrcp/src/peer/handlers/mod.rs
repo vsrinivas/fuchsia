@@ -351,6 +351,37 @@ async fn handle_get_current_player_application_setting_value(
     Ok(Box::new(response))
 }
 
+async fn handle_get_player_application_setting_attribute_text(
+    cmd: GetPlayerApplicationSettingAttributeTextCommand,
+) -> Result<Box<dyn PacketEncodable>, StatusCode> {
+    let mut attribute_text: Vec<AttributeInfo> = vec![];
+    // Send static text descriptions of the supported attributes.
+    // Descriptions taken from AVRCP 1.6, Section 27, Appendix F.
+    for attribute_id in cmd.attribute_ids {
+        let desc;
+        match attribute_id {
+            PlayerApplicationSettingAttributeId::RepeatStatusMode => {
+                desc = "Repeat Mode status".to_string().into_bytes();
+            }
+            PlayerApplicationSettingAttributeId::ShuffleMode => {
+                desc = "Shuffle ON/OFF status".to_string().into_bytes();
+            }
+            _ => {
+                return Err(StatusCode::InvalidParameter);
+            }
+        }
+        attribute_text.push(AttributeInfo::new(
+            attribute_id,
+            CharsetId::Utf8,
+            desc.len() as u8,
+            desc,
+        ));
+    }
+    let response = GetPlayerApplicationSettingAttributeTextResponse::new(attribute_text);
+
+    Ok(Box::new(response))
+}
+
 /// Sends status command response. Send's Implemented/Stable on response code on success.
 fn send_status_response(
     command: impl IncomingTargetCommand,
@@ -395,7 +426,6 @@ async fn handle_status_command(
         match status_command {
             StatusCommand::GetCapabilities(cmd) => handle_get_capabilities(cmd, delegate).await,
             /* Todo: implement
-            StatusCommand::GetPlayerApplicationSettingAttributeText(_) => {}
             StatusCommand::GetPlayerApplicationSettingValueText(_) => {}
             */
             StatusCommand::ListPlayerApplicationSettingAttributes(_) => {
@@ -406,6 +436,9 @@ async fn handle_status_command(
             }
             StatusCommand::GetCurrentPlayerApplicationSettingValue(cmd) => {
                 handle_get_current_player_application_setting_value(cmd, delegate).await
+            }
+            StatusCommand::GetPlayerApplicationSettingAttributeText(cmd) => {
+                handle_get_player_application_setting_attribute_text(cmd).await
             }
             StatusCommand::GetElementAttributes(cmd) => {
                 handle_get_element_attributes(cmd, delegate).await
@@ -894,6 +927,44 @@ mod test {
             0x01, // Number of settings: 1
             0x03, // Attribute: ShuffleMode
             0x01, // Value: Off = 1
+        ]
+        .to_vec();
+
+        let command = MockAvcCommand::new(
+            AvcPacketType::Command(AvcCommandType::Status),
+            AvcOpCode::VendorDependent,
+            packet_body,
+        )
+        .expect_body(expected_packet_response)
+        .expect_response_type(AvcResponseType::ImplementedStable);
+
+        cmd_handler.handle_command_internal(command).await
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn handle_get_player_application_setting_attribute_text_cmd() -> Result<(), Error> {
+        let target_proxy = create_dumby_target_handler(false);
+        let cmd_handler = create_command_handler(Some(target_proxy), None);
+
+        // generic vendor status command
+        let packet_body: Vec<u8> = [
+            0x15, // GetPlayerApplicationSettingAttributeText pdu id
+            0x00, // Single packet
+            0x00, 0x02, // param_len, 2 bytes
+            0x01, // Number of settings: 1
+            0x03, // Attribute: Shuffle mode
+        ]
+        .to_vec();
+        let expected_packet_response: Vec<u8> = [
+            0x15, // GetPlayerApplicationSettingAttributeText pdu id
+            0x00, // Single packet
+            0x00, 0x1A, // param_len, 26 bytes
+            0x01, // Number of settings, 1
+            0x03, // Attribute: ShuffleMode
+            0x00, 0x6a, // CharacterSet: Utf-8
+            0x15, // Value length: 21
+            0x53, 0x68, 0x75, 0x66, 0x66, 0x6c, 0x65, 0x20, // "Shuffle ON/OFF status"
+            0x4f, 0x4e, 0x2f, 0x4f, 0x46, 0x46, 0x20, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73,
         ]
         .to_vec();
 
