@@ -13,6 +13,7 @@ use {
     clonable_error::ClonableError,
     font_info::FontInfoLoaderImpl,
     fuchsia_syslog::fx_vlog,
+    fuchsia_trace as trace,
     manifest::{v2, FontManifestWrapper, FontsManifest},
     std::{
         collections::BTreeMap,
@@ -111,6 +112,15 @@ impl FontServiceBuilder {
         manifest: v2::FontsManifest,
         manifest_path: Option<PathBuf>,
     ) -> Result<(), Error> {
+        let path_string: String = manifest_path
+            .as_ref()
+            .map(|path| path.to_string_lossy().to_string())
+            .unwrap_or_default();
+        trace::duration!(
+                "fonts",
+                "font_service:builder:add_fonts_from_manifest_v2",
+                "path" => &path_string[..]);
+
         for mut manifest_family in manifest.families {
             // Register the family itself
             let family_name = UniCase::new(manifest_family.name.clone());
@@ -207,6 +217,14 @@ impl FontServiceBuilder {
         manifest_v1: FontsManifest,
         manifest_path: Option<PathBuf>,
     ) -> Result<(), Error> {
+        let path_string: String = manifest_path
+            .as_ref()
+            .map(|path| path.to_string_lossy().to_string())
+            .unwrap_or_default();
+        trace::duration!(
+                "fonts",
+                "font_service:builder:add_fonts_from_manifest_v2",
+                "path" => &path_string[..]);
         let manifest_v2 = self.convert_manifest_v1_to_v2(manifest_v1).await.map_err(|e| {
             FontServiceBuilderError::ConversionFromV1 {
                 manifest_path: manifest_path.clone(),
@@ -233,8 +251,11 @@ impl FontServiceBuilder {
                             v2::AssetLocation::LocalFile(v2::LocalFileLocator { directory }) => {
                                 let asset_path = directory.join(&manifest_asset.file_name);
                                 let buffer = AssetCollection::load_asset_to_vmo(&asset_path)?;
-                                let font_info = font_info_loader
-                                    .load_font_info(buffer, manifest_typeface.index)?;
+                                let font_info = {
+                                    trace::duration!("fonts", "FontInfoLoaderImpl:load_font_info");
+                                    font_info_loader
+                                        .load_font_info(buffer, manifest_typeface.index)?
+                                };
                                 manifest_typeface.code_points = font_info.char_set;
                             }
                             _ => {

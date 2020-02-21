@@ -26,6 +26,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_syslog::*,
+    fuchsia_trace as trace,
     futures::prelude::*,
     itertools::Itertools,
     std::{collections::BTreeMap, iter, sync::Arc},
@@ -143,8 +144,18 @@ impl FontService {
         &self,
         request: fonts::TypefaceRequest,
     ) -> Result<fonts::TypefaceResponse, Error> {
-        let matched_family: Option<FontFamilyMatch<'_>> = query_field!(request, family)
-            .and_then(|family| self.match_family(&UniCase::new(family.name.clone())));
+        let query_family = query_field!(request, family);
+        let query_family_string =
+            (&query_family).map(|family| family.name.clone()).unwrap_or_default();
+        trace::duration!(
+            "fonts",
+            "service:match_request",
+            "family" => &query_family_string[..]);
+        // TODO(fxb/44328): If support for lazy trace args is added, include more query params, e.g.
+        // code points.
+
+        let matched_family: Option<FontFamilyMatch<'_>> =
+            query_family.and_then(|family| self.match_family(&UniCase::new(family.name.clone())));
 
         let mut request = match &matched_family {
             Some(FontFamilyMatch { family: _, overrides: Some(overrides) }) => {

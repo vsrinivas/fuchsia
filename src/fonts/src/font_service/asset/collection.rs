@@ -15,7 +15,7 @@ use {
     fidl_fuchsia_io as io, fidl_fuchsia_mem as mem,
     fidl_fuchsia_pkg::{FontResolverMarker, UpdatePolicy},
     fuchsia_component::client::connect_to_service,
-    fuchsia_zircon as zx,
+    fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::lock::Mutex,
     io_util,
     manifest::v2,
@@ -213,6 +213,12 @@ impl AssetCollection {
         asset_id: AssetId,
         package_locator: &v2::PackageLocator,
     ) -> Result<io::DirectoryProxy, AssetCollectionError> {
+        let package_url = package_locator.url.to_string();
+        trace::duration!(
+            "fonts",
+            "asset:collection:fetch_and_cache_package_directory",
+            "package_url" => &package_url[..]);
+
         // Get directory handle from FontResolver
         let font_resolver = connect_to_service::<FontResolverMarker>()
             .map_err(|e| AssetCollectionError::ServiceConnectionError(Error::from(e).into()))?;
@@ -221,7 +227,7 @@ impl AssetCollection {
             .map_err(|e| AssetCollectionError::ServiceConnectionError(Error::from(e).into()))?;
 
         let status = font_resolver
-            .resolve(&package_locator.url.to_string(), &mut update_policy, dir_request)
+            .resolve(&package_url, &mut update_policy, dir_request)
             .await
             .map_err(|e| {
                 AssetCollectionError::PackageResolverError(
@@ -249,6 +255,11 @@ impl AssetCollection {
         package_locator: &v2::PackageLocator,
         file_name: &str,
     ) -> Result<mem::Buffer, AssetCollectionError> {
+        trace::duration!(
+            "fonts",
+            "asset:collection:load_buffer_from_directory_proxy",
+            "file_name" => file_name);
+
         let packaged_file_error = |cause: ClonableError| AssetCollectionError::PackagedFileError {
             file_name: file_name.to_string(),
             package_locator: package_locator.clone(),
@@ -278,6 +289,11 @@ impl AssetCollection {
 
     /// Gets `VMO` handle to the [`Asset`] at `path`.
     pub(crate) fn load_asset_to_vmo(path: &Path) -> Result<mem::Buffer, AssetCollectionError> {
+        let path_string = path.to_str().unwrap_or_default();
+        trace::duration!(
+                "fonts",
+                "asset:collection:load_asset_to_vmo",
+                "path" => path_string);
         let file = File::open(path).map_err(|e| {
             AssetCollectionError::LocalFileNotAccessible(path.to_owned(), Error::from(e).into())
         })?;

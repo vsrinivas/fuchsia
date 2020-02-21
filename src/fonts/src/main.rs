@@ -15,6 +15,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as syslog, *},
+    fuchsia_trace as trace, fuchsia_trace_provider as trace_provider,
     std::path::PathBuf,
 };
 
@@ -37,6 +38,8 @@ struct Args {
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["fonts"])?;
+    trace_provider::trace_provider_create_with_fdio();
+    trace::instant!("fonts", "startup", trace::Scope::Process);
 
     // We have to convert legacy uses of "--font-manifest=<PATH>" to "--font-manifest <PATH>".
     let arg_strings: Vec<String> = std::env::args()

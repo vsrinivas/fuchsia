@@ -72,6 +72,8 @@ rustc_binary("font_provider") {
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-url",
     "//src/lib/syslog/rust:syslog",
+    "//src/lib/trace/rust:trace",
+    "//src/lib/trace/rust:trace-provider",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",

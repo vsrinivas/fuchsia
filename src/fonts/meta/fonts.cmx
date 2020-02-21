@@ -8,7 +8,8 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.pkg.FontResolver"
+            "fuchsia.pkg.FontResolver",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }
