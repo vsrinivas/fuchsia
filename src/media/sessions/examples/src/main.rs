@@ -56,6 +56,7 @@ impl Player {
             shuffle_on: Some(false),
             error: None,
             content_type: Some(ContentType::Other),
+            ..Decodable::new_empty()
         }
     }
 

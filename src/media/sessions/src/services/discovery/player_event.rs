@@ -50,6 +50,7 @@ impl PlayerEvent {
                         shuffle_on: Some(player_status.shuffle_on),
                         content_type: Some(player_status.content_type),
                         error: player_status.error,
+                        ..Decodable::new_empty()
                     }),
                     metadata: delta.metadata,
                     player_capabilities: Some(PlayerCapabilities {
