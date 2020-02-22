@@ -3,16 +3,21 @@
 # found in the LICENSE file.
 
 # -------------- READ BEFORE EDITING ---------------
-# This file describes the third-party packages used by Rust code and how they should be built.
+# This file describes the third-party packages used by Rust code and
+# how they should be built.
 #
-# Every edit to this file should be followed by `fx update-rustc-third-party`, a build,
-# and then `fx update-rustc-crate-map --output third_party/rust_crates/crate_map.json`.
+# Every edit to this file should be followed by:
+# - fx update-rustc-third-party
+# - fx build
+# - fx update-rustc-crate-map --output third_party/rust_crates/crate_map.json
 #
-# Always request non-default features you use. This can sometimes get missed if
-# another third-party crate in our build requests the same feature you use:
-# your builds will usually work, but `fx rustdoc` will fail.
+# Always request non-default features you use. This can sometimes get
+# missed if another third-party crate in our build requests the same
+# feature you use: your builds will usually work, but `fx rustdoc` will
+# fail.
 #
-# More information is available in docs/development/languages/rust/third_party.md.
+# More information is available in
+# docs/development/languages/rust/third_party.md.
 
 [package]
 name = "fuchsia-third-party"
