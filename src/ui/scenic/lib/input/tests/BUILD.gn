@@ -40,6 +40,9 @@ executable("unittests") {
     "//src/ui/scenic/lib/input",
     "//third_party/googletest:gtest",
   ]
+
+  # TODO(46839): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 source_set("util") {

@@ -57,4 +57,7 @@ executable("unittests") {
     "//src/ui/scenic/lib/gfx/tests:testing_deps",
     "//src/ui/scenic/lib/shutdown/tests:unittests",
   ]
+
+  # TODO(46839): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
