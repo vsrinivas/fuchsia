@@ -1,10 +1,20 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.stash.SecureStore": "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/wlancfg_bin_test"
     },
     "sandbox": {
         "features": [
             "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.stash.SecureStore"
         ]
     }
 }

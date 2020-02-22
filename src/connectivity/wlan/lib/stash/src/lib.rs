@@ -14,7 +14,7 @@ use {
     std::collections::{HashMap, HashSet},
 };
 
-const NODE_SEPARATOR: &'static str = "#/@";
+pub const NODE_SEPARATOR: &'static str = "#/@";
 
 pub struct StashNode {
     // Always terminated with `NODE_SEPARATOR`

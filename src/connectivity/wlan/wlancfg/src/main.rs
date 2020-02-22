@@ -13,6 +13,7 @@ mod known_ess_store;
 mod network_config;
 mod policy;
 mod shim;
+mod stash;
 mod state_machine;
 
 use {

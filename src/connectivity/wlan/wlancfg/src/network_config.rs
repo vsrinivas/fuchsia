@@ -4,6 +4,7 @@
 
 use {
     fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_sme as fidl_sme,
+    serde_derive::{Deserialize, Serialize},
     std::{collections::VecDeque, time::SystemTime},
     wlan_common::mac::Bssid,
 };
@@ -109,7 +110,7 @@ impl NetworkConfig {
 }
 
 /// The credential of a network connection. It mirrors the fidl_fuchsia_wlan_policy Credential
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum Credential {
     None,
     Password(Vec<u8>),
@@ -143,7 +144,7 @@ impl Credential {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub enum SecurityType {
     None,
     Wep,
@@ -178,7 +179,7 @@ impl From<SecurityType> for fidl_policy::SecurityType {
 
 /// The network identifier is the SSID and security policy of the network, and it is used to
 /// distinguish networks. It mirrors the NetworkIdentifier in fidl_fuchsia_wlan_policy.
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct NetworkIdentifier {
     pub ssid: Vec<u8>,
     pub security_type: SecurityType,
