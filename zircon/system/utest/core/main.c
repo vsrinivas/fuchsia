@@ -5,7 +5,9 @@
 #include <errno.h>
 #include <stdio.h>
 #include <sys/uio.h>
+#include <threads.h>
 #include <unistd.h>
+#include <zircon/compiler.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
@@ -25,13 +27,40 @@ static zx_handle_t log_handle;
 
 #define LOGBUF_MAX (ZX_LOG_RECORD_MAX - sizeof(zx_log_record_t))
 
+static mtx_t linebuffer_lock = MTX_INIT;
+static char linebuffer[LOGBUF_MAX] __TA_GUARDED(linebuffer_lock);
+static size_t linebuffer_size __TA_GUARDED(linebuffer_lock);
+
+// Flushes and resets linebuffer.
+static void flush_linebuffer_locked(void) __TA_REQUIRES(linebuffer_lock) {
+  zx_debuglog_write(log_handle, 0, linebuffer, linebuffer_size);
+  linebuffer_size = 0;
+}
+
 static void log_write(const void* data, size_t len) {
-  while (len > 0) {
-    size_t xfer = (len > LOGBUF_MAX) ? LOGBUF_MAX : len;
-    zx_debuglog_write(log_handle, 0, data, xfer);
-    data += xfer;
-    len -= xfer;
+  mtx_lock(&linebuffer_lock);
+
+  // printf calls write multiple times within a print, but each debuglog write
+  // is a separate record, so each inserts a logical newline. To avoid
+  // inappropriate breaking, do a version of _IOLBF here. A write of len == 0
+  // indicates an fflush.
+
+  if (len == 0) {
+    flush_linebuffer_locked();
   }
+
+  for (size_t i = 0; i < len; ++i) {
+    if (linebuffer_size == sizeof(linebuffer)) {
+      flush_linebuffer_locked();
+    }
+    char c = ((const char*)data)[i];
+    linebuffer[linebuffer_size++] = c;
+    if (c == '\n') {
+      flush_linebuffer_locked();
+    }
+  }
+
+  mtx_unlock(&linebuffer_lock);
 }
 
 // libc init and io stubs
@@ -60,7 +89,7 @@ void __libc_extensions_init(uint32_t count, zx_handle_t handle[], uint32_t info[
       zx_process_exit(-2);
     }
     static const char kStartMsg[] = "*** Running standalone Zircon core tests ***\n";
-    zx_debuglog_write(log_handle, 0, kStartMsg, sizeof(kStartMsg));
+    zx_debuglog_write(log_handle, 0, kStartMsg, sizeof(kStartMsg) - 1);
   }
 }
 
