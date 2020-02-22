@@ -56,6 +56,9 @@ test("fs-test-utils") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-io:c",
   ]
+
+  # TODO(46861): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("fs-test-utils-manifest") {
