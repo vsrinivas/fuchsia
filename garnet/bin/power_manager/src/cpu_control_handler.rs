@@ -300,59 +300,65 @@ impl CpuControlHandler {
 
         let current_p_state_index = self.current_p_state_index.get();
 
+        // This is reused several times.
+        let num_cores = self.cpu_control_params.num_cores as f64;
+
         // The operation completion rate over the last sample interval is
         //     num_operations / sample_interval,
         // where
         //     num_operations = last_load * last_frequency * sample_interval.
         // Hence,
-        //     last_operation_rate = last_load * last_frequency.
-        let last_load = self.get_load().await? as f64;
-        let last_operation_rate = {
+        //     last_op_rate = last_load * last_frequency.
+        let (last_op_rate, last_max_op_rate) = {
+            let last_load = self.get_load().await? as f64;
+            self.inspect.last_load.set(last_load);
+            fuchsia_trace::counter!(
+                "power_manager",
+                "CpuControlHandler last_load",
+                0,
+                "last_load" => last_load
+            );
+
             // TODO(pshickel): Eventually we'll need a way to query the load only from the cores we
             // care about. As far as I can tell, there isn't currently a way to correlate the CPU
             // info coming from CpuStats with that from CpuCtrl.
             let last_frequency = self.cpu_control_params.p_states[current_p_state_index].frequency;
-            last_frequency.mul_scalar(last_load)
+            (last_frequency.mul_scalar(last_load), last_frequency.mul_scalar(num_cores))
         };
 
         // If no P-states meet the selection criterion, use the lowest-power state.
         let mut p_state_index = self.cpu_control_params.p_states.len() - 1;
 
-        self.inspect.last_op_rate.set(last_operation_rate.0);
-        self.inspect.last_load.set(last_load);
+        self.inspect.last_op_rate.set(last_op_rate.0);
         fuchsia_trace::instant!(
             "power_manager",
             "CpuControlHandler::set_max_power_consumption_data",
             fuchsia_trace::Scope::Thread,
             "driver" => self.cpu_driver_path.as_str(),
             "current_p_state_index" => current_p_state_index as u32,
-            "last_op_rate" => last_operation_rate.0
-        );
-        fuchsia_trace::counter!(
-            "power_manager",
-            "CpuControlHandler last_load",
-            0,
-            "last_load" => last_load
+            "last_op_rate" => last_op_rate.0
         );
 
         for (i, state) in self.cpu_control_params.p_states.iter().enumerate() {
-            // We estimate that the operation rate over the next interval will be the min of
-            // the last operation rate and the frequency of the P-state under consideration.
-            //
-            // Note that we don't currently account for a rise in frequency allowing for a possible
-            // increase in the operation rate.
-            let max_operation_rate =
-                state.frequency.mul_scalar(self.cpu_control_params.num_cores as f64);
-            let estimated_operation_rate = if max_operation_rate < last_operation_rate {
-                max_operation_rate
+            // We assume that the last operation rate carries over to the next interval unless:
+            //  - It exceeds the max operation rate at the new frequency, in which case it is
+            //    truncated to the new max.
+            //  - It is within a small delta of the max rate at the last frequency, in which case we
+            //    assume that it would rise to the new maximum if the clock speed were to increase.
+            const ESSENTIALLY_MAX_LOAD_FRACTION: f64 = 0.99;
+            let new_max_op_rate = state.frequency.mul_scalar(num_cores);
+            let estimated_op_rate = if last_op_rate > new_max_op_rate
+                || last_op_rate > last_max_op_rate.mul_scalar(ESSENTIALLY_MAX_LOAD_FRACTION)
+            {
+                new_max_op_rate
             } else {
-                last_operation_rate
+                last_op_rate
             };
 
             let estimated_power = get_cpu_power(
                 self.cpu_control_params.capacitance,
                 state.voltage,
-                estimated_operation_rate,
+                estimated_op_rate,
             );
             if estimated_power <= *max_power {
                 p_state_index = i;

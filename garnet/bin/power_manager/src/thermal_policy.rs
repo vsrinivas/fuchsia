@@ -611,6 +611,53 @@ mod tests {
         heat_sink_thermal_capacity: f64,
     }
 
+    /// Method for rolling over incomplete operations within OperationScheduler.
+    enum OperationRolloverMethod {
+        /// Enqueue imcomplete operations for the next time interval.
+        _Enqueue,
+        /// Drop incomplete operations.
+        Drop,
+    }
+
+    /// Schedules operations to send to the simulated CPU.
+    struct OperationScheduler {
+        /// Rate of operations sent to the CPU, scheduled as a function of time.
+        rate_schedule: Box<dyn Fn(Seconds) -> Hertz>,
+        /// Method for rolling over incomplete operations.
+        rollover_method: OperationRolloverMethod,
+        /// Number of incomplete operations. Recorded as a float rather than an integer for ease
+        /// of use in associated calculations.
+        num_operations: f64,
+    }
+
+    impl OperationScheduler {
+        fn new(
+            rate_schedule: Box<dyn Fn(Seconds) -> Hertz>,
+            rollover_method: OperationRolloverMethod,
+        ) -> OperationScheduler {
+            Self { rate_schedule, rollover_method, num_operations: 0.0 }
+        }
+
+        /// Steps from time `t` to `t+dt`, accumulating new operations accordingly.
+        fn step(&mut self, t: Seconds, dt: Seconds) {
+            if let OperationRolloverMethod::Drop = self.rollover_method {
+                self.num_operations = 0.0;
+            }
+            self.num_operations += (self.rate_schedule)(t) * dt;
+        }
+
+        // Marks `num` operations complete.
+        fn complete_operations(&mut self, num: f64) {
+            assert!(
+                num <= self.num_operations,
+                "More operations marked complete than were available ({} vs. {})",
+                num,
+                self.num_operations,
+            );
+            self.num_operations -= num;
+        }
+    }
+
     struct Simulator {
         /// CPU temperature.
         cpu_temperature: Celsius,
@@ -620,8 +667,8 @@ mod tests {
         environment_temperature: Celsius,
         /// Simulated time.
         time: Seconds,
-        /// Rate of operations sent to the CPU, scheduled as a function of time.
-        operation_rate_schedule: Box<dyn Fn(Seconds) -> Hertz>,
+        /// Schedules simulated CPU operations.
+        op_scheduler: OperationScheduler,
         /// Accumulated idle time on each simulated CPU.
         idle_times: Vec<Nanoseconds>,
         /// Parameters for the simulated CPUs.
@@ -640,8 +687,8 @@ mod tests {
         thermal_model_params: ThermalModelParams,
         /// Parameters for the simulated CPU.
         cpu_params: SimulatedCpuParams,
-        /// Rate of operations sent to the CPU, scheduled as a function of time.
-        operation_rate_schedule: Box<dyn Fn(Seconds) -> Hertz>,
+        /// Schedules simulated CPU operations.
+        op_scheduler: OperationScheduler,
         /// Initial temperature of the CPU.
         initial_cpu_temperature: Celsius,
         /// Initial temperature of the heat sink.
@@ -658,7 +705,7 @@ mod tests {
                 heat_sink_temperature: p.initial_heat_sink_temperature,
                 environment_temperature: p.environment_temperature,
                 time: Seconds(0.0),
-                operation_rate_schedule: p.operation_rate_schedule,
+                op_scheduler: p.op_scheduler,
                 idle_times: vec![Nanoseconds(0); p.cpu_params.num_cpus as usize],
                 p_state_index: 0,
                 thermal_model_params: p.thermal_model_params,
@@ -721,9 +768,14 @@ mod tests {
 
         /// Steps the simulator ahead in time by `dt`.
         fn step(&mut self, dt: Seconds) {
-            let num_operations = (self.operation_rate_schedule)(self.time).0 * dt.0;
-            self.step_thermal_model(dt, num_operations);
-            self.step_idle_times(dt, num_operations);
+            self.op_scheduler.step(self.time, dt);
+
+            // `step_cpu` needs to run before `step_thermal_model`, so we know how many operations
+            // can actually be completed at the current P-state.
+            let num_operations_completed = self.step_cpu(dt, self.op_scheduler.num_operations);
+            self.op_scheduler.complete_operations(num_operations_completed);
+
+            self.step_thermal_model(dt, num_operations_completed);
             self.time += dt;
         }
 
@@ -772,19 +824,27 @@ mod tests {
             self.heat_sink_temperature = Celsius(temperatures[1]);
         }
 
-        /// Steps accumulated idle times of the simulated CPUs ahead by `dt`.
-        fn step_idle_times(&mut self, dt: Seconds, num_operations: f64) {
+        /// Steps the simulated CPU ahead by `dt`, updating `self.idle_times` and returning the
+        /// number of operations completed.
+        fn step_cpu(&mut self, dt: Seconds, num_operations_requested: f64) -> f64 {
             let frequency = self.get_p_state().frequency;
-            let total_cpu_time = num_operations / frequency;
+            let num_operations_completed = f64::min(
+                num_operations_requested,
+                frequency * dt * self.cpu_params.num_cpus as f64,
+            );
+
+            let total_cpu_time = num_operations_completed / frequency;
             let active_time_per_core = total_cpu_time.div_scalar(self.cpu_params.num_cpus as f64);
 
-            // For now, we require that the cores do not saturate.
+            // Calculation of `num_operations_completed` should guarantee this condition.
             assert!(active_time_per_core <= dt);
 
             let idle_time_per_core = dt - active_time_per_core;
             self.idle_times
                 .iter_mut()
                 .for_each(|x| *x += Nanoseconds(idle_time_per_core.into_nanos()));
+
+            num_operations_completed
         }
     }
 
@@ -843,6 +903,20 @@ mod tests {
     impl ThermalPolicyTest {
         /// Iniitalizes a new ThermalPolicyTest.
         fn new(sim_params: SimulatorParams, policy_params: ThermalPolicyParams) -> Self {
+            {
+                let p = &sim_params.cpu_params;
+                let max_op_rate = p.p_states[0].frequency.mul_scalar(p.num_cpus as f64);
+                let max_power = cpu_control_handler::get_cpu_power(
+                    p.capacitance,
+                    p.p_states[0].voltage,
+                    max_op_rate,
+                );
+                assert!(
+                    max_power < policy_params.controller_params.sustainable_power,
+                    "Sustainable power does not support running CPU at maximum power."
+                );
+            }
+
             let time = Seconds(0.0);
             let mut executor = fasync::Executor::new_with_fake_time().unwrap();
             executor.set_fake_time(fasync::Time::from_nanos(time.into_nanos()));
@@ -969,7 +1043,7 @@ mod tests {
                 target_temperature: Celsius(85.0),
                 e_integral_min: -20.0,
                 e_integral_max: 0.0,
-                sustainable_power: Watts(1.1),
+                sustainable_power: Watts(1.3),
                 proportional_gain: 0.0,
                 integral_gain: 0.2,
             },
@@ -988,7 +1062,10 @@ mod tests {
             SimulatorParams {
                 thermal_model_params: default_thermal_model_params(),
                 cpu_params: default_cpu_params(),
-                operation_rate_schedule: Box::new(move |_| operation_rate),
+                op_scheduler: OperationScheduler::new(
+                    Box::new(move |_| operation_rate),
+                    OperationRolloverMethod::Drop,
+                ),
                 initial_cpu_temperature: Celsius(30.0),
                 initial_heat_sink_temperature: Celsius(30.0),
                 environment_temperature: Celsius(22.0),
@@ -1017,7 +1094,10 @@ mod tests {
             SimulatorParams {
                 thermal_model_params: default_thermal_model_params(),
                 cpu_params: default_cpu_params(),
-                operation_rate_schedule: Box::new(move |_| Hertz(3e9)),
+                op_scheduler: OperationScheduler::new(
+                    Box::new(move |_| Hertz(3e9)),
+                    OperationRolloverMethod::Drop,
+                ),
                 initial_cpu_temperature: target_temperature,
                 initial_heat_sink_temperature: target_temperature,
                 environment_temperature: target_temperature,
@@ -1044,7 +1124,10 @@ mod tests {
             SimulatorParams {
                 thermal_model_params: default_thermal_model_params(),
                 cpu_params: default_cpu_params(),
-                operation_rate_schedule: Box::new(move |_| Hertz(3e9)),
+                op_scheduler: OperationScheduler::new(
+                    Box::new(move |_| Hertz(3e9)),
+                    OperationRolloverMethod::Drop,
+                ),
                 initial_cpu_temperature: shutdown_temperature - Celsius(10.0),
                 initial_heat_sink_temperature: shutdown_temperature - Celsius(10.0),
                 environment_temperature: shutdown_temperature,
@@ -1082,7 +1165,10 @@ mod tests {
             SimulatorParams {
                 thermal_model_params: default_thermal_model_params(),
                 cpu_params: default_cpu_params(),
-                operation_rate_schedule: Box::new(move |_| operation_rate),
+                op_scheduler: OperationScheduler::new(
+                    Box::new(move |_| operation_rate),
+                    OperationRolloverMethod::Drop,
+                ),
                 initial_cpu_temperature: Celsius(80.0),
                 initial_heat_sink_temperature: Celsius(80.0),
                 environment_temperature: Celsius(75.0),
@@ -1122,6 +1208,75 @@ mod tests {
             cumulative_sum / 100.0
         };
         assert!((average_temperature - target_temperature.0).abs() < 0.1);
+    }
+
+    // Tests for a bug that led to jitter in P-state selection at max load.
+    //
+    // CpuControlHandler was originally implemented to estimate the operation rate in the upcoming
+    // cycle as the operation rate over the previous cycle, even if the previous rate was maximal.
+    // This underpredicted the new operation rate when the CPU was saturated.
+    //
+    // For example, suppose a 4-core CPU operated at 1.5 GHz over the previous cycle. If it was
+    // saturated, its operation rate was 6.0 GHz. If we raise the clock speed to 2GHz and the CPU
+    // remains saturated, we will have underpredicted its operation rate by 25%.
+    //
+    // This underestimation manifested as unwanted jitter between P-states. After transitioning from
+    // P0 to P1, for example, the available power required to select P0 would drop by the ratio of
+    // frequencies, f1/f0. This made an immediate transition back to P0 very likely.
+    //
+    // Note that since the CPU temperature immediately drops when its clock speed is lowered, this
+    // behavior of dropping clock speed for a single cycle may occur for good reason. To isolate the
+    // undesired behavior in this test, we use an extremely large time constant. Doing so mostly
+    // eliminates the change in filtered temperature in the cycles immediately following a P-state
+    // transition.
+    #[test]
+    fn test_no_jitter_at_max_load() {
+        // Choose an operation rate that induces max load at highest frequency.
+        let cpu_params = default_cpu_params();
+        let operation_rate =
+            cpu_params.p_states[0].frequency.mul_scalar(cpu_params.num_cpus as f64);
+
+        // Use a very large filter time constant: 1 deg raw --> 0.001 deg filtered in the first
+        // cycle after a change.
+        let mut policy_params = default_policy_params();
+        policy_params.controller_params.filter_time_constant = Seconds(1000.0);
+
+        let mut test = ThermalPolicyTest::new(
+            SimulatorParams {
+                thermal_model_params: default_thermal_model_params(),
+                cpu_params: cpu_params,
+                op_scheduler: OperationScheduler::new(
+                    Box::new(move |_| operation_rate),
+                    OperationRolloverMethod::Drop,
+                ),
+                initial_cpu_temperature: Celsius(80.0),
+                initial_heat_sink_temperature: Celsius(80.0),
+                environment_temperature: Celsius(75.0),
+            },
+            policy_params,
+        );
+
+        // Run the simulation (up to 1 hour simulated time) until the CPU transitions to a lower
+        // clock speed.
+        let max_iterations = 3600;
+        let mut throttling_started = false;
+        for _ in 0..max_iterations {
+            test.iterate_n_times(1);
+            let s = test.sim.borrow();
+            if s.p_state_index > 0 {
+                assert_eq!(s.p_state_index, 1, "Should have transitioned to P-state 1.");
+                throttling_started = true;
+                break;
+            }
+        }
+        assert!(
+            throttling_started,
+            format!("CPU throttling did not begin within {} iterations", max_iterations)
+        );
+
+        // Iterated one more time, and make sure the clock speed is still reduced.
+        test.iterate_n_times(1);
+        assert_ne!(test.sim.borrow().p_state_index, 0);
     }
 
     /// Tests for the presence and correctness of dynamically-added inspect data
