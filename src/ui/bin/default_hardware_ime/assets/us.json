@@ -3,7 +3,7 @@
     {
       "modifiers" : [],
       "optional_modifiers" : [
-        "NumLock", "ScrollLock"
+        "NumLock", "ScrollLock", "Control", "Alt", "Meta"
       ],
       "entries" : {
         "0x00000001" : {"symbol" : "a"},
@@ -39,7 +39,7 @@
     {
       "modifiers" : [],
       "optional_modifiers" : [
-        "NumLock", "ScrollLock", "CapsLock"
+        "NumLock", "ScrollLock", "CapsLock", "Control", "Alt", "Meta"
       ],
       "entries" : {
         "0x00000001" : {"symbol" : "A"},
@@ -99,7 +99,7 @@
         "Shift"
       ],
       "optional_modifiers" : [
-        "NumLock", "ScrollLock", "CapsLock"
+        "NumLock", "ScrollLock", "CapsLock", "Control", "Alt", "Meta"
       ],
       "entries" : {
         "0x00000001" : {"symbol" : "A"},

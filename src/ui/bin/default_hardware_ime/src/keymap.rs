@@ -239,7 +239,13 @@ mod tests {
         let semantic_key_page = semantic_key_map.get(0).expect("semantic key map is defined");
         assert_eq!(
             semantic_key_page.optional_modifiers,
-            Some(ui_input::Modifiers::NumLock | ui_input::Modifiers::ScrollLock)
+            Some(
+                ui_input::Modifiers::NumLock
+                    | ui_input::Modifiers::ScrollLock
+                    | ui_input::Modifiers::Control
+                    | ui_input::Modifiers::Alt
+                    | ui_input::Modifiers::Meta
+            )
         );
 
         let semantic_key_page_entries = semantic_key_page.entries.as_ref().expect("has entries");
