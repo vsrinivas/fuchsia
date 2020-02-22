@@ -14,6 +14,10 @@ static_library("elflib") {
   deps = [ "//zircon/system/public" ]
 
   public_deps = [ "//zircon/public/lib/fbl" ]
+
+  # TODO(46795): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 # An example stripped binary. Originally copied from out/x64/cowsay.
