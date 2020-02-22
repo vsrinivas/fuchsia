@@ -46,6 +46,9 @@ executable("beacon_unittests") {
     "//src/lib/fxl/test:gtest_main",
   ]
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
+
+  # TODO(46855): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("probe_unittests") {
