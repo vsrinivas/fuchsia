@@ -112,6 +112,10 @@ zx_test("blobfs-integration") {
   ]
 
   include_dirs = [ ".." ]
+
+  # TODO(46865): Fix the leaks and remove this.
+  deps +=
+      [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 zx_test("blobfs-large-integration") {
