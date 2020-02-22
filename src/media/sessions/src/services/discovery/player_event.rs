@@ -42,16 +42,7 @@ impl PlayerEvent {
                     is_locally_active: active,
                     domain: registration.map(|r| r.domain),
                     is_local: delta.local,
-                    player_status: delta.player_status.map(|player_status| PlayerStatus {
-                        duration: player_status.duration,
-                        player_state: Some(player_status.player_state),
-                        timeline_function: player_status.timeline_function,
-                        repeat_mode: Some(player_status.repeat_mode),
-                        shuffle_on: Some(player_status.shuffle_on),
-                        content_type: Some(player_status.content_type),
-                        error: player_status.error,
-                        ..Decodable::new_empty()
-                    }),
+                    player_status: delta.player_status.map(Into::into),
                     metadata: delta.metadata,
                     player_capabilities: Some(PlayerCapabilities {
                         flags: delta.player_capabilities.map(|c| c.flags),

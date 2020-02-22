@@ -456,6 +456,44 @@ test!(disconnected_player_results_in_removal_event, || async {
     Ok(())
 });
 
+test!(player_status, || async {
+    let service = TestService::new()?;
+
+    let mut player = TestPlayer::new(&service).await?;
+
+    let expected_player_status = || PlayerStatus {
+        duration: Some(11),
+        player_state: Some(PlayerState::Playing),
+        timeline_function: Some(TimelineFunction {
+            subject_time: 0,
+            reference_time: 10,
+            subject_delta: 1,
+            reference_delta: 1,
+        }),
+        repeat_mode: Some(RepeatMode::Group),
+        shuffle_on: Some(true),
+        content_type: Some(ContentType::Movie),
+        error: Some(Error::Other),
+        ..Decodable::new_empty()
+    };
+
+    player
+        .emit_delta(PlayerInfoDelta {
+            player_status: Some(expected_player_status()),
+            ..Decodable::new_empty()
+        })
+        .await?;
+
+    let (session, session_request) = create_proxy()?;
+    service.discovery.connect_to_session(player.id, session_request)?;
+    let status = session.watch_status().await.expect("Watching player status");
+    let actual_player_status = status.player_status.expect("Unwrapping player status");
+
+    assert_eq!(actual_player_status, expected_player_status());
+
+    Ok(())
+});
+
 test!(players_get_ids, || async {
     let service = TestService::new()?;
 
