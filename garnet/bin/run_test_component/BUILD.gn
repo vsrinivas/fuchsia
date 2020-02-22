@@ -99,6 +99,9 @@ executable("test_bin") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
+
+  # TODO(46834): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("run_test_component_unittests") {

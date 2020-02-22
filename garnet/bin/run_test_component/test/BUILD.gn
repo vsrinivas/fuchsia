@@ -33,6 +33,9 @@ executable("bin") {
     "//zircon/system/fidl/fuchsia-debugdata",
     "//zircon/system/fidl/fuchsia-process",
   ]
+
+  # TODO(46834): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("coverage_component") {
