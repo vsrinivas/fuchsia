@@ -4,15 +4,16 @@
 
 #pragma once
 
-#include <fbl/function.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/suspend_token.h>
 #include <lib/zx/thread.h>
 #include <threads.h>
-#include <unittest/unittest.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
+
+#include <fbl/function.h>
+#include <zxtest/zxtest.h>
 
 namespace pager_tests {
 
@@ -37,13 +38,11 @@ class TestThread {
     return zx_thread_.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr) == ZX_OK;
   }
 
-  bool SuspendSync() {
+  void SuspendSync() {
     ASSERT_EQ(zx_thread_.suspend(&suspend_token_), ZX_OK);
 
     zx_signals_t observed = 0u;
     ASSERT_EQ(zx_thread_.wait_one(ZX_THREAD_SUSPENDED, zx::time::infinite(), &observed), ZX_OK);
-
-    return true;
   }
 
   void Resume() { suspend_token_.reset(); }

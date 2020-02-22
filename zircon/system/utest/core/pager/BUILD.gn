@@ -16,9 +16,9 @@ source_set("pager") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/inspector",
     "$zx/system/ulib/sync",
-    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
     "$zx/third_party/ulib/backtrace",
   ]
 }
