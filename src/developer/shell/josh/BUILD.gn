@@ -37,4 +37,7 @@ executable("bin") {
   # Extra stack needed to avoid crashes when calling QuickJS functions
   # with asan enabled.
   ldflags = [ "-Wl,-z,stack-size=0x200000" ]
+
+  # TODO(46840): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
