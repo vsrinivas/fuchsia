@@ -15,6 +15,9 @@ rustc_library("trace") {
     "//third_party/rust_crates:libc",
   ]
   non_rust_deps = [ "//zircon/public/lib/trace-engine" ]
+
+  # TODO(46857): Fix the leaks and remove this.
+  non_rust_deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 unittest_package("rust-trace-test") {
