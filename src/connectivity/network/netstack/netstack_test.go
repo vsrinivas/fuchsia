@@ -46,6 +46,40 @@ const (
 	testLinkLocalV6Addr2 tcpip.Address = "\xfe\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02"
 )
 
+// TestStackNICEnableDisable tests that the NIC in stack.Stack is enabled or
+// disabled when the underlying link is brought up or down, respectively.
+func TestStackNICEnableDisable(t *testing.T) {
+	ns := newNetstack(t)
+	eth := deviceForAddEth(ethernet.Info{}, t)
+	eth.StopImpl = func() error { return nil }
+	config := netstack.InterfaceConfig{Name: testDeviceName}
+	ifs, err := ns.addEth(testTopoPath, config, &eth)
+	if err != nil {
+		t.Fatalf("ns.addEth(%q, %+v, _): %s", testTopoPath, config, err)
+	}
+
+	// The NIC should initially be disabled in stack.Stack.
+	if enabled := ns.stack.CheckNIC(ifs.nicid); enabled {
+		t.Fatalf("got ns.stack.CheckNIC(%d) = true, want = false", ifs.nicid)
+	}
+
+	// Bringing the link up should enable the NIC in stack.Stack.
+	if err := ifs.eth.Up(); err != nil {
+		t.Fatal("ifs.eth.Up(): ", err)
+	}
+	if enabled := ns.stack.CheckNIC(ifs.nicid); !enabled {
+		t.Fatalf("got ns.stack.CheckNIC(%d) = false, want = true", ifs.nicid)
+	}
+
+	// Bringing the link down should disable the NIC in stack.Stack.
+	if err := ifs.eth.Down(); err != nil {
+		t.Fatal("ifs.eth.Down(): ", err)
+	}
+	if enabled := ns.stack.CheckNIC(ifs.nicid); enabled {
+		t.Fatalf("got ns.stack.CheckNIC(%d) = true, want = false", ifs.nicid)
+	}
+}
+
 func TestBindingSetCounterStat_Value(t *testing.T) {
 	s := bindingSetCounterStat{bindingSets: []*fidl.BindingSet{
 		new(fidl.BindingSet),
@@ -301,6 +335,9 @@ func TestIpv6LinkLocalAddr(t *testing.T) {
 	if err != nil {
 		t.Fatalf("addEth(_, _, _): %s", err)
 	}
+	if err := ifs.eth.Up(); err != nil {
+		t.Fatal("ifs.eth.Up(): ", err)
+	}
 
 	nicInfos := ns.stack.NICInfo()
 	nicInfo, ok := nicInfos[ifs.nicid]
@@ -316,112 +353,6 @@ func TestIpv6LinkLocalAddr(t *testing.T) {
 	}
 	if _, found := findAddress(nicInfo.ProtocolAddresses, want); !found {
 		t.Fatalf("got NIC addrs = %+v, want = %+v", nicInfo.ProtocolAddresses, want)
-	}
-}
-
-func TestRememberForgetSlaacAddrs(t *testing.T) {
-	addr1 := tcpip.AddressWithPrefix{
-		Address:   "\xa0\x80\x00\x00\x00\x00\x00\x00\x00\x03\x04\xff\xfe\x05\x06\x07",
-		PrefixLen: 64,
-	}
-	addr2 := tcpip.AddressWithPrefix{
-		Address:   "\xa0\x81\x00\x00\x00\x00\x00\x00\x00\x03\x04\xff\xfe\x05\x06\x07",
-		PrefixLen: 64,
-	}
-
-	ns := newNetstack(t)
-
-	eth := deviceForAddEth(ethernet.Info{}, t)
-	var ifs *ifState
-	{
-		var err error
-		ifs, err = ns.addEth(testTopoPath, netstack.InterfaceConfig{Name: testDeviceName}, &eth)
-		if err != nil {
-			t.Fatalf("addEth(_, _, _): %s", err)
-		}
-	}
-
-	// Remember addr1.
-	has, err := ns.hasSLAACAddress(ifs.nicid, addr1)
-	if err != nil {
-		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs.nicid, addr1, err)
-	}
-	if has {
-		t.Fatalf("unexpectedly remember addr = %s for nicID (%d)", addr1, ifs.nicid)
-	}
-	if err := ns.rememberSLAACAddress(ifs.nicid, addr1); err != nil {
-		t.Fatalf("ns.rememberSLAACAddress(%d, %s): %s", ifs.nicid, addr1, err)
-	}
-	has, err = ns.hasSLAACAddress(ifs.nicid, addr1)
-	if err != nil {
-		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs.nicid, addr1, err)
-	}
-	if !has {
-		t.Fatalf("missing addr = %s for nicID (%d)", addr1, ifs.nicid)
-	}
-
-	// Remember addr2.
-	has, err = ns.hasSLAACAddress(ifs.nicid, addr2)
-	if err != nil {
-		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs.nicid, addr2, err)
-	}
-	if has {
-		t.Fatalf("unexpectedly remember addr = %s for nicID (%d)", addr2, ifs.nicid)
-	}
-	if err := ns.rememberSLAACAddress(ifs.nicid, addr2); err != nil {
-		t.Fatalf("ns.rememberSLAACAddress(%d, %s): %s", ifs.nicid, addr2, err)
-	}
-	has, err = ns.hasSLAACAddress(ifs.nicid, addr2)
-	if err != nil {
-		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs.nicid, addr2, err)
-	}
-	if !has {
-		t.Fatalf("missing addr = %s for nicID (%d)", addr2, ifs.nicid)
-	}
-
-	// Forget addr1.
-	if err := ns.forgetSLAACAddress(ifs.nicid, addr1); err != nil {
-		t.Fatalf("ns.forgetSLAACAddress(%d, %s): %s", ifs.nicid, addr1, err)
-	}
-	has, err = ns.hasSLAACAddress(ifs.nicid, addr1)
-	if err != nil {
-		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs.nicid, addr1, err)
-	}
-	if has {
-		t.Fatalf("unexpectedly remember addr = %s for nicID (%d)", addr1, ifs.nicid)
-	}
-	has, err = ns.hasSLAACAddress(ifs.nicid, addr2)
-	if err != nil {
-		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs.nicid, addr2, err)
-	}
-	if !has {
-		t.Fatalf("missing addr = %s for nicID (%d)", addr2, ifs.nicid)
-	}
-
-	// Forget addr1 again.
-	if err := ns.forgetSLAACAddress(ifs.nicid, addr1); err != tcpip.ErrBadAddress {
-		t.Fatalf("got ns.forgetSLAACAddress(%d, %s) = %v, want = %s", ifs.nicid, addr1, err, tcpip.ErrBadAddress)
-	}
-
-	// Remember addr2 again.
-	if err := ns.rememberSLAACAddress(ifs.nicid, addr2); err != tcpip.ErrBadAddress {
-		t.Fatalf("got ns.rememberSLAACAddress(%d, %s) = %v, want = %s", ifs.nicid, addr2, err, tcpip.ErrBadAddress)
-	}
-
-	// Try unknown NICID.
-	unknownNICID := ifs.nicid + 1
-	has, err = ns.hasSLAACAddress(unknownNICID, addr1)
-	if err != tcpip.ErrUnknownNICID {
-		t.Fatalf("got ns.hasSLAACAddress(%d, %s) = (_, %v), want = (_, %s)", unknownNICID, addr1, err, tcpip.ErrUnknownNICID)
-	}
-	if has {
-		t.Fatalf("got ns.hasSLAACAddress(%d, %s) = (true, _), want = (false, _)", unknownNICID, addr1)
-	}
-	if err := ns.rememberSLAACAddress(unknownNICID, addr1); err != tcpip.ErrUnknownNICID {
-		t.Fatalf("got ns.rememberSLAACAddress(%d, %s) = %v, want = %s", unknownNICID, addr1, err, tcpip.ErrUnknownNICID)
-	}
-	if err := ns.forgetSLAACAddress(unknownNICID, addr1); err != tcpip.ErrUnknownNICID {
-		t.Fatalf("got ns.forgetSLAACAddress(%d, %s) = %v, want = %s", unknownNICID, addr1, err, tcpip.ErrUnknownNICID)
 	}
 }
 
@@ -825,6 +756,9 @@ func TestListInterfaceAddresses(t *testing.T) {
 	ifState, err := ns.addEth(testTopoPath, netstack.InterfaceConfig{}, &d)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if err := ifState.eth.Up(); err != nil {
+		t.Fatal("ifState.eth.Up: ", err)
 	}
 
 	// The call to ns.addEth() added addresses to the stack. Make sure we include

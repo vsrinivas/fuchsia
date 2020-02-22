@@ -387,147 +387,11 @@ func TestNDPIPv6PrefixDiscovery(t *testing.T) {
 	}
 }
 
-// Test that attempting to invalidate an auto-generated address we don't
-// remember is not an issue.
-func TestNDPInvalidateUnknownAutoGenAddr(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	addrWithPrefix := testProtocolAddr1.AddressWithPrefix
-
-	ndpDisp := newNDPDispatcherForTest()
-	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
-	ndpDisp.start(ctx)
-
-	eth := deviceForAddEth(ethernet.Info{}, t)
-	ifs, err := ns.addEth("/path1", netstack.InterfaceConfig{Name: "name1"}, &eth)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Invalidate the auto-generated address addrWithPrefix from eth (even
-	// though we do not yet know about it).
-	ndpDisp.OnAutoGenAddressInvalidated(ifs.nicid, addrWithPrefix)
-	waitForEmptyQueue(ndpDisp)
-	if has, err := ns.hasSLAACAddress(ifs.nicid, addrWithPrefix); err != nil {
-		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs.nicid, addrWithPrefix, err)
-	} else if has {
-		t.Fatalf("unexpected addr = %s for nicID (%d)", addrWithPrefix, ifs.nicid)
-	}
-}
-
-// Test that ndpDispatcher properly handles the generation and invalidation of
-// SLAAC addresses.
-func TestSLAAC(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	nic1Addr1 := testProtocolAddr1.AddressWithPrefix
-	nic2Addr1 := testProtocolAddr2.AddressWithPrefix
-	nic2Addr2 := testProtocolAddr3.AddressWithPrefix
-
-	ndpDisp := newNDPDispatcherForTest()
-	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
-	ndpDisp.start(ctx)
-
-	eth1 := deviceForAddEth(ethernet.Info{}, t)
-	ifs1, err := ns.addEth("/path1", netstack.InterfaceConfig{Name: "name1"}, &eth1)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	eth2 := deviceForAddEth(ethernet.Info{}, t)
-	ifs2, err := ns.addEth("/path2", netstack.InterfaceConfig{Name: "name2"}, &eth2)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Test auto-generating a new address on eth1.
-	accept := ndpDisp.OnAutoGenAddress(ifs1.nicid, nic1Addr1)
-	if !accept {
-		t.Fatalf("got ndpDisp.OnAutoGenAddress(%d, %s) = false, want = true", ifs1.nicid, nic1Addr1)
-	}
-	waitForEmptyQueue(ndpDisp)
-	if has, err := ns.hasSLAACAddress(ifs1.nicid, nic1Addr1); err != nil {
-		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs1.nicid, nic1Addr1, err)
-	} else if !has {
-		t.Fatalf("missing addr = %s for nicID (%d)", nic1Addr1, ifs1.nicid)
-	}
-
-	// Test auto-generating a new address on eth2.
-	accept = ndpDisp.OnAutoGenAddress(ifs2.nicid, nic2Addr1)
-	if !accept {
-		t.Fatalf("got ndpDisp.OnAutoGenAddress(%d, %s) = false, want = true", ifs1.nicid, nic2Addr1)
-	}
-	waitForEmptyQueue(ndpDisp)
-	if has, err := ns.hasSLAACAddress(ifs2.nicid, nic2Addr1); err != nil {
-		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs2.nicid, nic2Addr1, err)
-	} else if !has {
-		t.Fatalf("missing addr = %s for nicID (%d)", nic2Addr1, ifs2.nicid)
-	}
-	// Should still have the address generated earlier for eth1.
-	if has, err := ns.hasSLAACAddress(ifs1.nicid, nic1Addr1); err != nil {
-		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs1.nicid, nic1Addr1, err)
-	} else if !has {
-		t.Fatalf("missing addr = %s for nicID (%d)", nic1Addr1, ifs1.nicid)
-	}
-
-	// Test auto-generating another address on eth2.
-	accept = ndpDisp.OnAutoGenAddress(ifs2.nicid, nic2Addr2)
-	if !accept {
-		t.Fatalf("got ndpDisp.OnAutoGenAddress(%d, %s) = false, want = true", ifs1.nicid, nic2Addr2)
-	}
-	waitForEmptyQueue(ndpDisp)
-	if has, err := ns.hasSLAACAddress(ifs2.nicid, nic2Addr2); err != nil {
-		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs2.nicid, nic2Addr2, err)
-	} else if !has {
-		t.Fatalf("missing addr = %s for nicID (%d)", nic2Addr2, ifs2.nicid)
-	}
-	// Should still have the addresses generated earlier.
-	if has, err := ns.hasSLAACAddress(ifs2.nicid, nic2Addr1); err != nil {
-		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs2.nicid, nic2Addr1, err)
-	} else if !has {
-		t.Fatalf("missing addr = %s for nicID (%d)", nic2Addr1, ifs2.nicid)
-	}
-	if has, err := ns.hasSLAACAddress(ifs1.nicid, nic1Addr1); err != nil {
-		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs1.nicid, nic1Addr1, err)
-	} else if !has {
-		t.Fatalf("missing addr = %s for nicID (%d)", nic1Addr1, ifs1.nicid)
-	}
-
-	// Test invalidating an auto-generated address from eth2.
-	ndpDisp.OnAutoGenAddressInvalidated(ifs2.nicid, nic2Addr2)
-	waitForEmptyQueue(ndpDisp)
-	if has, err := ns.hasSLAACAddress(ifs2.nicid, nic2Addr2); err != nil {
-		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs2.nicid, nic2Addr2, err)
-	} else if has {
-		t.Fatalf("unexpected addr = %s for nicID (%d)", nic2Addr2, ifs2.nicid)
-	}
-	// Should still have the addresses generated earlier.
-	if has, err := ns.hasSLAACAddress(ifs2.nicid, nic2Addr1); err != nil {
-		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs2.nicid, nic2Addr1, err)
-	} else if !has {
-		t.Fatalf("missing addr = %s for nicID (%d)", nic2Addr1, ifs2.nicid)
-	}
-	if has, err := ns.hasSLAACAddress(ifs1.nicid, nic1Addr1); err != nil {
-		t.Fatalf("ns.hasSLAACAddress(%d, %s): %s", ifs1.nicid, nic1Addr1, err)
-	} else if !has {
-		t.Fatalf("missing addr = %s for nicID (%d)", nic1Addr1, ifs1.nicid)
-	}
-}
-
-// Test that when a link is brought down, discovered routers and prefixes, and
-// auto-generated addresses are disabled and removed, respectively. Also test
-// that receiving an invalidation event for a discovered router or prefix when
-// a NIC is down results in that discovered router or prefix being invaldiated
-// locally as well.
+// TestLinkDown tests that Recursive DNS Servers learned from NDP are
+// invalidated when a NIC is brought down.
 func TestLinkDown(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	nic1Addr1 := testProtocolAddr1
-	nic2Addr1 := testProtocolAddr2
-	nic2Addr2 := testProtocolAddr3
 
 	ndpDisp := newNDPDispatcherForTest()
 	ns := newNetstackWithNDPDispatcher(t, ndpDisp)
@@ -572,94 +436,9 @@ func TestLinkDown(t *testing.T) {
 		NIC:  ifs2.nicid,
 	}
 
-	// Mock discovered routers and prefixes, and auto-generated addresses.
-	if err := ns.stack.AddProtocolAddress(ifs1.nicid, nic1Addr1); err != nil {
-		t.Errorf("AddProtocolAddress(%d, %+v): %s", ifs1.nicid, nic1Addr1, err)
-	}
-	if err := ns.stack.AddProtocolAddress(ifs2.nicid, nic2Addr1); err != nil {
-		t.Errorf("AddProtocolAddress(%d, %+v): %s", ifs2.nicid, nic2Addr1, err)
-	}
-	if err := ns.stack.AddProtocolAddress(ifs2.nicid, nic2Addr2); err != nil {
-		t.Errorf("AddProtocolAddress(%d, %+v): %s", ifs2.nicid, nic2Addr2, err)
-	}
-
-	// If the test already failed, we cannot go any further.
-	if t.Failed() {
-		t.FailNow()
-	}
-
-	ndpDisp.OnDefaultRouterDiscovered(ifs1.nicid, testLinkLocalV6Addr1)
-	ndpDisp.OnDefaultRouterDiscovered(ifs2.nicid, testLinkLocalV6Addr1)
-	ndpDisp.OnDefaultRouterDiscovered(ifs2.nicid, testLinkLocalV6Addr2)
-	ndpDisp.OnOnLinkPrefixDiscovered(ifs1.nicid, subnet1)
-	ndpDisp.OnOnLinkPrefixDiscovered(ifs2.nicid, subnet1)
-	ndpDisp.OnOnLinkPrefixDiscovered(ifs2.nicid, subnet2)
-	ndpDisp.OnAutoGenAddress(ifs1.nicid, nic1Addr1.AddressWithPrefix)
-	ndpDisp.OnAutoGenAddress(ifs2.nicid, nic2Addr1.AddressWithPrefix)
-	ndpDisp.OnAutoGenAddress(ifs2.nicid, nic2Addr2.AddressWithPrefix)
 	ndpDisp.OnRecursiveDNSServerOption(ifs1.nicid, []tcpip.Address{addr1NIC1.Addr, addr2NIC1.Addr}, defaultLifetime)
 	ndpDisp.OnRecursiveDNSServerOption(ifs2.nicid, []tcpip.Address{addr1NIC2.Addr, addr3NIC2.Addr}, defaultLifetime)
 	waitForEmptyQueue(ndpDisp)
-	nicInfos := ns.stack.NICInfo()
-	rts := ns.stack.GetRouteTable()
-	nic1Rtr1Rt := defaultV6Route(ifs1.nicid, testLinkLocalV6Addr1)
-	nic2Rtr1Rt := defaultV6Route(ifs2.nicid, testLinkLocalV6Addr1)
-	nic2Rtr2Rt := defaultV6Route(ifs2.nicid, testLinkLocalV6Addr2)
-	if !containsRoute(rts, nic1Rtr1Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic1Rtr1Rt, rts)
-	}
-	if !containsRoute(rts, nic2Rtr1Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic2Rtr1Rt, rts)
-	}
-	if !containsRoute(rts, nic2Rtr2Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic2Rtr2Rt, rts)
-	}
-	nic1Sub1Rt := onLinkV6Route(ifs1.nicid, subnet1)
-	nic2Sub1Rt := onLinkV6Route(ifs2.nicid, subnet1)
-	nic2Sub2Rt := onLinkV6Route(ifs2.nicid, subnet2)
-	if !containsRoute(rts, nic1Sub1Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic1Sub1Rt, rts)
-	}
-	if !containsRoute(rts, nic2Sub1Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic2Sub1Rt, rts)
-	}
-	if !containsRoute(rts, nic2Sub2Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic2Sub2Rt, rts)
-	}
-	if nicInfo, ok := nicInfos[ifs1.nicid]; !ok {
-		t.Errorf("stack.NICInfo()[%d]: %s", ifs1.nicid, tcpip.ErrUnknownNICID)
-	} else {
-		addrs := nicInfo.ProtocolAddresses
-		if _, found := findAddress(addrs, nic1Addr1); !found {
-			t.Errorf("missing addr = %+v, got NIC addrs = %+v", nic1Addr1, addrs)
-		}
-	}
-	if nicInfo, ok := nicInfos[ifs2.nicid]; !ok {
-		t.Errorf("stack.NICInfo()[%d]: %s", ifs2.nicid, tcpip.ErrUnknownNICID)
-	} else {
-		addrs := nicInfo.ProtocolAddresses
-		if _, found := findAddress(addrs, nic2Addr1); !found {
-			t.Errorf("missing addr = %+v, got NIC addrs = %+v", nic2Addr1, addrs)
-		}
-		if _, found := findAddress(addrs, nic2Addr2); !found {
-			t.Errorf("missing addr = %+v, got NIC addrs = %+v", nic2Addr2, addrs)
-		}
-	}
-	if has, err := ns.hasSLAACAddress(ifs1.nicid, nic1Addr1.AddressWithPrefix); err != nil {
-		t.Errorf("ns.hasSLAACAddress(%d, %s): %s", ifs1.nicid, nic1Addr1.AddressWithPrefix, err)
-	} else if !has {
-		t.Errorf("expected remembered addr = %s for nicID (%d)", nic1Addr1.AddressWithPrefix, ifs1.nicid)
-	}
-	if has, err := ns.hasSLAACAddress(ifs2.nicid, nic2Addr1.AddressWithPrefix); err != nil {
-		t.Errorf("ns.hasSLAACAddress(%d, %s): %s", ifs2.nicid, nic2Addr1.AddressWithPrefix, err)
-	} else if !has {
-		t.Errorf("expected remembered addr = %s for nicID (%d)", nic2Addr1.AddressWithPrefix, ifs2.nicid)
-	}
-	if has, err := ns.hasSLAACAddress(ifs2.nicid, nic2Addr2.AddressWithPrefix); err != nil {
-		t.Errorf("ns.hasSLAACAddress(%d, %s): %s", ifs2.nicid, nic2Addr2.AddressWithPrefix, err)
-	} else if !has {
-		t.Errorf("expected remembered addr = %s for nicID (%d)", nic2Addr2.AddressWithPrefix, ifs2.nicid)
-	}
 	servers := ns.dnsClient.GetServersCache()
 	if !containsFullAddress(servers, addr1NIC1) {
 		t.Errorf("expected %+v to be in the DNS server cache, got = %+v", addr1NIC1, servers)
@@ -682,67 +461,12 @@ func TestLinkDown(t *testing.T) {
 		t.FailNow()
 	}
 
-	// Bring eth2 down and make sure the discovered routers and prefixes,
-	// and auto-generated addresses on it were disabled and removed from
-	// the Stack, respectively.
+	// Bring eth2 down and make sure the DNS servers learned from that NIC are
+	// invalidated.
 	if err := ifs2.eth.Down(); err != nil {
 		t.Fatalf("ifs2.eth.Down(): %s", err)
 	}
 	waitForEmptyQueue(ndpDisp)
-	nicInfos = ns.stack.NICInfo()
-	rts = ns.stack.GetRouteTable()
-	if !containsRoute(rts, nic1Rtr1Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic1Rtr1Rt, rts)
-	}
-	if containsRoute(rts, nic2Rtr1Rt) {
-		t.Errorf("should not have route = %s in the route table, got = %s", nic2Rtr1Rt, rts)
-	}
-	if containsRoute(rts, nic2Rtr2Rt) {
-		t.Errorf("should not have route = %s in the route table, got = %s", nic2Rtr2Rt, rts)
-	}
-	if !containsRoute(rts, nic1Sub1Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic1Sub1Rt, rts)
-	}
-	if containsRoute(rts, nic2Sub1Rt) {
-		t.Errorf("should not have route = %s in the route table, got = %s", nic2Sub1Rt, rts)
-	}
-	if containsRoute(rts, nic2Sub2Rt) {
-		t.Errorf("should not have route = %s in the route table, got = %s", nic2Sub2Rt, rts)
-	}
-	if nicInfo, ok := nicInfos[ifs1.nicid]; !ok {
-		t.Errorf("stack.NICInfo()[%d]: %s", ifs1.nicid, tcpip.ErrUnknownNICID)
-	} else {
-		addrs := nicInfo.ProtocolAddresses
-		if _, found := findAddress(addrs, nic1Addr1); !found {
-			t.Errorf("missing addr = %+v, got NIC addrs = %+v", nic1Addr1, addrs)
-		}
-	}
-	if nicInfo, ok := nicInfos[ifs2.nicid]; !ok {
-		t.Errorf("stack.NICInfo()[%d]: %s", ifs2.nicid, tcpip.ErrUnknownNICID)
-	} else {
-		addrs := nicInfo.ProtocolAddresses
-		if _, found := findAddress(addrs, nic2Addr1); found {
-			t.Errorf("found unexpected addr = %+v, got NIC addrs = %+v", nic2Addr1, addrs)
-		}
-		if _, found := findAddress(addrs, nic2Addr2); found {
-			t.Errorf("found unexpected addr = %+v, got NIC addrs = %+v", nic2Addr2, addrs)
-		}
-	}
-	if has, err := ns.hasSLAACAddress(ifs1.nicid, nic1Addr1.AddressWithPrefix); err != nil {
-		t.Errorf("ns.hasSLAACAddress(%d, %s): %s", ifs1.nicid, nic1Addr1.AddressWithPrefix, err)
-	} else if !has {
-		t.Errorf("expected remembered addr = %s for nicID (%d)", nic1Addr1.AddressWithPrefix, ifs1.nicid)
-	}
-	if has, err := ns.hasSLAACAddress(ifs2.nicid, nic2Addr1.AddressWithPrefix); err != nil {
-		t.Errorf("ns.hasSLAACAddress(%d, %s): %s", ifs2.nicid, nic2Addr1.AddressWithPrefix, err)
-	} else if has {
-		t.Errorf("unexpected remembered addr = %s for nicID (%d)", nic2Addr1.AddressWithPrefix, ifs2.nicid)
-	}
-	if has, err := ns.hasSLAACAddress(ifs2.nicid, nic2Addr2.AddressWithPrefix); err != nil {
-		t.Errorf("ns.hasSLAACAddress(%d, %s): %s", ifs2.nicid, nic2Addr2.AddressWithPrefix, err)
-	} else if has {
-		t.Errorf("unexpected remembered addr = %s for nicID (%d)", nic2Addr2.AddressWithPrefix, ifs2.nicid)
-	}
 	servers = ns.dnsClient.GetServersCache()
 	if !containsFullAddress(servers, addr1NIC1) {
 		t.Errorf("expected %+v to be in the DNS server cache, got = %+v", addr1NIC1, servers)
@@ -759,66 +483,12 @@ func TestLinkDown(t *testing.T) {
 		t.FailNow()
 	}
 
-	// Bring eth2 up and make sure that routes for previously discovered
-	// routers and prefixes are added again, and the auto-generated
-	// addresses remain removed.
+	// Bring eth2 up and make sure the DNS servers learned from that NIC do not
+	// reappear.
 	if err := ifs2.eth.Up(); err != nil {
 		t.Fatalf("ifs2.eth.Up(): %s", err)
 	}
-	nicInfos = ns.stack.NICInfo()
-	rts = ns.stack.GetRouteTable()
-	if !containsRoute(rts, nic1Rtr1Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic1Rtr1Rt, rts)
-	}
-	if !containsRoute(rts, nic2Rtr1Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic2Rtr1Rt, rts)
-	}
-	if !containsRoute(rts, nic2Rtr2Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic2Rtr2Rt, rts)
-	}
-	if !containsRoute(rts, nic1Sub1Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic1Sub1Rt, rts)
-	}
-	if !containsRoute(rts, nic2Sub1Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic2Sub1Rt, rts)
-	}
-	if !containsRoute(rts, nic2Sub2Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic2Sub2Rt, rts)
-	}
-	if nicInfo, ok := nicInfos[ifs1.nicid]; !ok {
-		t.Errorf("stack.NICInfo()[%d]: %s", ifs1.nicid, tcpip.ErrUnknownNICID)
-	} else {
-		addrs := nicInfo.ProtocolAddresses
-		if _, found := findAddress(addrs, nic1Addr1); !found {
-			t.Errorf("missing addr = %+v, got NIC addrs = %+v", nic1Addr1, addrs)
-		}
-	}
-	if nicInfo, ok := nicInfos[ifs2.nicid]; !ok {
-		t.Errorf("stack.NICInfo()[%d]: %s", ifs2.nicid, tcpip.ErrUnknownNICID)
-	} else {
-		addrs := nicInfo.ProtocolAddresses
-		if _, found := findAddress(addrs, nic2Addr1); found {
-			t.Errorf("found unexpected addr = %+v, got NIC addrs = %+v", nic2Addr1, addrs)
-		}
-		if _, found := findAddress(addrs, nic2Addr2); found {
-			t.Errorf("found unexpected addr = %+v, got NIC addrs = %+v", nic2Addr2, addrs)
-		}
-	}
-	if has, err := ns.hasSLAACAddress(ifs1.nicid, nic1Addr1.AddressWithPrefix); err != nil {
-		t.Errorf("ns.hasSLAACAddress(%d, %s): %s", ifs1.nicid, nic1Addr1.AddressWithPrefix, err)
-	} else if !has {
-		t.Errorf("expected remembered addr = %s for nicID (%d)", nic1Addr1.AddressWithPrefix, ifs1.nicid)
-	}
-	if has, err := ns.hasSLAACAddress(ifs2.nicid, nic2Addr1.AddressWithPrefix); err != nil {
-		t.Errorf("ns.hasSLAACAddress(%d, %s): %s", ifs2.nicid, nic2Addr1.AddressWithPrefix, err)
-	} else if has {
-		t.Errorf("unexpected remembered addr = %s for nicID (%d)", nic2Addr1.AddressWithPrefix, ifs2.nicid)
-	}
-	if has, err := ns.hasSLAACAddress(ifs2.nicid, nic2Addr2.AddressWithPrefix); err != nil {
-		t.Errorf("ns.hasSLAACAddress(%d, %s): %s", ifs2.nicid, nic2Addr2.AddressWithPrefix, err)
-	} else if has {
-		t.Errorf("unexpected remembered addr = %s for nicID (%d)", nic2Addr2.AddressWithPrefix, ifs2.nicid)
-	}
+	waitForEmptyQueue(ndpDisp)
 	servers = ns.dnsClient.GetServersCache()
 	if !containsFullAddress(servers, addr1NIC1) {
 		t.Errorf("expected %+v to be in the DNS server cache, got = %+v", addr1NIC1, servers)
@@ -828,43 +498,6 @@ func TestLinkDown(t *testing.T) {
 	}
 	if l := len(servers); l != 2 {
 		t.Errorf("got len(servers) = %d, want = 2; servers = %+v", l, servers)
-	}
-
-	// If the test already failed, we cannot go any further.
-	if t.Failed() {
-		t.FailNow()
-	}
-
-	// Invalidate some routers and prefixes after bringing eth2 down
-	// and make sure the relevant routes do not get re-added when eth2 is
-	// brought back up.
-	if err := ifs2.eth.Down(); err != nil {
-		t.Fatalf("ifs2.eth.Down(): %s", err)
-	}
-	ndpDisp.OnDefaultRouterInvalidated(ifs2.nicid, testLinkLocalV6Addr1)
-	ndpDisp.OnOnLinkPrefixInvalidated(ifs2.nicid, subnet1)
-	if err := ifs2.eth.Up(); err != nil {
-		t.Fatalf("ifs2.eth.Down(): %s", err)
-	}
-	waitForEmptyQueue(ndpDisp)
-	rts = ns.stack.GetRouteTable()
-	if !containsRoute(rts, nic1Rtr1Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic1Rtr1Rt, rts)
-	}
-	if containsRoute(rts, nic2Rtr1Rt) {
-		t.Errorf("should not have route = %s in the route table, got = %s", nic2Rtr1Rt, rts)
-	}
-	if !containsRoute(rts, nic2Rtr2Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic2Rtr2Rt, rts)
-	}
-	if !containsRoute(rts, nic1Sub1Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic1Sub1Rt, rts)
-	}
-	if containsRoute(rts, nic2Sub1Rt) {
-		t.Errorf("should not have route = %s in the route table, got = %s", nic2Sub1Rt, rts)
-	}
-	if !containsRoute(rts, nic2Sub2Rt) {
-		t.Errorf("missing route = %s from route table, got = %s", nic2Sub2Rt, rts)
 	}
 }
 

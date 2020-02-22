@@ -20,23 +20,13 @@ const (
 	// staticRouteAvoidingLifeCycleHooks is the dynamic flag when adding a
 	// new route in response to an NDP discovery event.
 	//
-	// routes are added as a 'static' route because stack.Stack does not yet
-	// support bringing a NIC down. 'dynamic' routes are deleted when the
-	// integrator (Netstack) brings an interface down locally, but
-	// stack.Stack will continue to consider the routers and prefixes as
-	// valid and not send any discovered events for it after the interface
-	// is brought back up. The notions of static/dynamic are defined only
-	// with respect to Netstack's interface lifecycle hooks which isn't
-	// implemented by stack.Stack; thus such routes must be 'static' to
-	// escape Netstack's lifecycle management hooks that 'dynamic' routes
-	// will be affected by.
-	//
-	// https://gvisor.dev/issue/1491 tracks the issue of stack.Stack not
-	// supporting NIC lifecycle management.
+	// routes are added as a 'static' route because the integrator (Netstack)
+	// removes all dynamic routes on DHCPv4 related changes. Routes must be
+	// 'static' to escape Netstack's DHCP-learned routes' lifecycle management
+	// hooks that 'dynamic' routes will be affected by.
 	//
 	// TODO(fxb/43503): Instead of adding routes as static, support a type
-	// of dynamic route that can be batch disabled (separate from dynamic
-	// routes that should be batch deleted).
+	// of dynamic route specifically for NDP.
 	staticRouteAvoidingLifeCycleHooks = false
 )
 
@@ -303,8 +293,8 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 				nicID, addr := event.nicID, event.addr
 				rt := defaultV6Route(nicID, addr)
 				syslog.Infof("ndp: discovered a default router (%s) on nicID (%d), adding a default route to it: [%s]", addr, nicID, rt)
-				// rt is added as a 'static' route because stack.Stack does not
-				// yet support bringing a NIC down. See
+				// rt is added as a 'static' route because Netstack will remove dynamic
+				// routes on DHCPv4 changes. See
 				// staticRouteAvoidingLifeCycleHooks for more details.
 				if err := n.ns.AddRoute(rt, metricNotSet, staticRouteAvoidingLifeCycleHooks); err != nil {
 					syslog.Errorf("ndp: failed to add the default route [%s] for the discovered router (%s) on nicID (%d): %s", rt, addr, nicID, err)
@@ -322,8 +312,8 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 				nicID, prefix := event.nicID, event.prefix
 				rt := onLinkV6Route(nicID, prefix)
 				syslog.Infof("ndp: discovered an on-link prefix (%s) on nicID (%d), adding an on-link route to it: [%s]", prefix, nicID, rt)
-				// rt is added as a 'static' route because stack.Stack does not
-				// yet support bringing a NIC down. See
+				// rt is added as a 'static' route because Netstack will remove dynamic
+				// routes on DHCPv4 changes. See
 				// staticRouteAvoidingLifeCycleHooks for more details.
 				if err := n.ns.AddRoute(rt, metricNotSet, staticRouteAvoidingLifeCycleHooks); err != nil {
 					syslog.Errorf("ndp: failed to add the on-link route [%s] for the discovered on-link prefix (%s) on nicID (%d): %s", rt, prefix, nicID, err)
@@ -339,17 +329,11 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 
 			case *ndpGeneratedAutoGenAddrEvent:
 				nicID, addrWithPrefix := event.nicID, event.addrWithPrefix
-				syslog.Infof("ndp: added an auto-generated address (%s) on nicID (%d), remembering it locally...", addrWithPrefix, nicID)
-				if err := n.ns.rememberSLAACAddress(nicID, addrWithPrefix); err != nil {
-					syslog.Errorf("ndp: failed to remember auto-generated address (%s) on nicID (%d): %s", addrWithPrefix, nicID, err)
-				}
+				syslog.Infof("ndp: added an auto-generated address (%s) on nicID (%d)", addrWithPrefix, nicID)
 
 			case *ndpInvalidatedAutoGenAddrEvent:
 				nicID, addrWithPrefix := event.nicID, event.addrWithPrefix
-				syslog.Infof("ndp: invalidated an auto-generated address (%s) on nicID (%d), forgetting it locally...", addrWithPrefix, nicID)
-				if err := n.ns.forgetSLAACAddress(nicID, addrWithPrefix); err != nil {
-					syslog.Errorf("ndp: failed to forget auto-generated address (%s) on nicID (%d): %s", addrWithPrefix, nicID, err)
-				}
+				syslog.Infof("ndp: invalidated an auto-generated address (%s) on nicID (%d)", addrWithPrefix, nicID)
 
 			case *ndpRecursiveDNSServerEvent:
 				nicID, addrs, lifetime := event.nicID, event.addrs, event.lifetime

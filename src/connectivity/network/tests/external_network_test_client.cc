@@ -37,7 +37,20 @@ TEST(ExternalNetworkTest, ConnectToNonRoutableINET) {
   addr.sin_port = htons(1337);
 
   ASSERT_EQ(connect(s, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), -1);
-  ASSERT_EQ(errno, EINPROGRESS) << strerror(errno);
+
+  // The host env (linux) may have a route to the remote (e.g. default route),
+  // resulting in a TCP handshake being attempted and errno being set to
+  // EINPROGRESS. In a fuchsia environment, errno will never be set to
+  // EINPROGRESS because a TCP handshake will never be performed (the test is
+  // run without network configurations that make the remote routable).
+  //
+  // TODO(fxb/46817): Set errno to the same value as linux when a remote is
+  // unroutable.
+#if defined(__linux__)
+  ASSERT_TRUE(errno == EINPROGRESS || errno == ENETUNREACH) << strerror(errno);
+#else
+  ASSERT_EQ(errno, EHOSTUNREACH) << strerror(errno);
+#endif
 
   ASSERT_EQ(close(s), 0) << strerror(errno);
 }
@@ -58,11 +71,14 @@ TEST(ExternalNetworkTest, ConnectToNonRoutableINET6) {
 
   ASSERT_EQ(connect(s, reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), -1);
 
-// If host test env does not support ipv6, the errno is set to ENETUNREACH.
-// If host test env does not have a route to the remote, the errno is set to
-// EHOSTUNREACH.
-// TODO(sshrivy): See if there's a way to detect this in program and assert
-// accordingly.
+  // The host env (linux) may have a route to the remote (e.g. default route),
+  // resulting in a TCP handshake being attempted and errno being set to
+  // EINPROGRESS. In a fuchsia environment, errno will never be set to
+  // EINPROGRESS because a TCP handshake will never be performed (the test is
+  // run without network configurations that make the remote routable).
+  //
+  // TODO(fxb/46817): Set errno to the same value as linux when a remote is
+  // unroutable.
 #if defined(__linux__)
   ASSERT_TRUE(errno == EINPROGRESS || errno == ENETUNREACH) << strerror(errno);
 #else
@@ -104,7 +120,7 @@ TEST(ExternalNetworkTest, ConnectToRoutableNonexistentINET) {
 #if defined(__linux__)
   EXPECT_EQ(errno, ETIMEDOUT) << strerror(errno);
 #else
-  EXPECT_EQ(errno, EHOSTDOWN) << strerror(errno);
+  EXPECT_EQ(errno, EHOSTUNREACH) << strerror(errno);
 #endif
 
   EXPECT_EQ(close(fd), 0) << strerror(errno);
@@ -143,7 +159,7 @@ TEST(ExternalNetworkTest, UDPErrSend) {
   EXPECT_EQ(ret, len) << strerror(errno);
 #else
   EXPECT_EQ(ret, -1);
-  EXPECT_EQ(errno, EHOSTDOWN) << strerror(errno);
+  EXPECT_EQ(errno, EHOSTUNREACH) << strerror(errno);
 #endif
 
   // Postcondition sanity check: write completes without error.
