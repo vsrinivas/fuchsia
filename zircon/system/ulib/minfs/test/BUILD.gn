@@ -96,6 +96,9 @@ zx_test("minfs-integration") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
+
+  # TODO(46863): Fix the leaks and remove this.
+  deps += [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 zx_test("minfs-power") {
@@ -121,6 +124,10 @@ zx_test("minfs-power") {
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxtest",
   ]
+
+  # TODO(46863): Fix the leaks and remove this.
+  deps += 
+      [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 zx_test("minfs-host") {
