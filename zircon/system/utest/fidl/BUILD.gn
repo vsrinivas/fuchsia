@@ -64,6 +64,10 @@ if (is_fuchsia) {
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     configs +=
         [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
+
+    # TODO(46873): Fix the leaks and remove this.
+    deps +=
+        [ "$zx/public/gn/config/instrumentation:suppress-lsan.DO-NOT-USE-THIS" ]
   }
 } else if (current_os == host_os && current_cpu == host_cpu) {
   # Some of the tests can run on host.
