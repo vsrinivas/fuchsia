@@ -208,7 +208,7 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
 
   // friend FutexContext so that it can manipulate the blocking_futex_id_ member of
   // ThreadDispatcher, and so that it can access the "thread_" member of the class so that
-  // wait_queue opertations can be performed on ThreadDispatchers
+  // wait_queue operations can be performed on ThreadDispatchers
   friend class FutexContext;
 
   // kernel level entry point
