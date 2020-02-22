@@ -122,7 +122,7 @@ zx_status_t StreamDispatcher::WriteVector(VmAspace* current_aspace, user_in_iove
       return ZX_ERR_FILE_BIG;
     }
 
-    size_t content_size = vmo_->ExpandContentIfNeeded(requested_content_size);
+    size_t content_size = vmo_->ExpandContentIfNeeded(requested_content_size, seek_);
     if (seek_ >= content_size) {
       return ZX_ERR_NO_SPACE;
     }
@@ -151,7 +151,7 @@ zx_status_t StreamDispatcher::WriteVectorAt(VmAspace* current_aspace, user_in_io
     return ZX_ERR_FILE_BIG;
   }
 
-  size_t content_size = vmo_->ExpandContentIfNeeded(requested_content_size);
+  size_t content_size = vmo_->ExpandContentIfNeeded(requested_content_size, offset);
   if (offset >= content_size) {
     return ZX_ERR_NO_SPACE;
   }
@@ -185,7 +185,7 @@ zx_status_t StreamDispatcher::AppendVector(VmAspace* current_aspace, user_in_iov
       return ZX_ERR_FILE_BIG;
     }
 
-    size_t content_size = vmo_->ExpandContentIfNeeded(requested_content_size);
+    size_t content_size = vmo_->ExpandContentIfNeeded(requested_content_size, offset);
     if (offset >= content_size) {
       return ZX_ERR_NO_SPACE;
     }

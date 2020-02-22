@@ -574,4 +574,95 @@ TEST(StreamTestCase, Append) {
   ASSERT_EQ(ZX_ERR_FILE_BIG, stream.writev(ZX_STREAM_APPEND, &vec, 1, &actual));
 }
 
+TEST(StreamTestCase, ExtendFillsWithZeros) {
+  const size_t kPageCount = 6;
+  const size_t kVmoSize = PAGE_SIZE * kPageCount;
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
+
+  zx::stream stream;
+  ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_WRITE, vmo, 0, &stream));
+
+  char scratch[PAGE_SIZE];
+  memset(scratch, 'x', sizeof(scratch));
+
+  for (size_t i = 0; i < kPageCount; ++i) {
+    ASSERT_OK(vmo.write(scratch, PAGE_SIZE * i, sizeof(scratch)));
+  }
+
+  char buffer[17] = "0123456789ABCDEF";
+  zx_iovec_t vec = {
+      .buffer = buffer,
+      .capacity = 4,
+  };
+
+  size_t actual = 0u;
+  ASSERT_OK(stream.writev_at(0, PAGE_SIZE * 2 - 2, &vec, 1, &actual));
+  ASSERT_EQ(4, actual);
+
+  memset(scratch, 'a', sizeof(scratch));
+  ASSERT_OK(vmo.read(scratch, 0, sizeof(scratch)));
+
+  for (size_t i = 0; i < PAGE_SIZE; ++i) {
+    ASSERT_EQ(0, scratch[i], "The %zu byte should be zero.", i);
+  }
+
+  memset(scratch, 'a', sizeof(scratch));
+  ASSERT_OK(vmo.read(scratch, PAGE_SIZE, sizeof(scratch)));
+
+  for (size_t i = 0; i < PAGE_SIZE - 2; ++i) {
+    ASSERT_EQ(0, scratch[i], "The %zu byte of the second page should be zero.", i);
+  }
+
+  ASSERT_EQ('0', scratch[PAGE_SIZE - 2]);
+  ASSERT_EQ('1', scratch[PAGE_SIZE - 1]);
+
+  memset(scratch, 'a', sizeof(scratch));
+  ASSERT_OK(vmo.read(scratch, PAGE_SIZE * 2, sizeof(scratch)));
+
+  ASSERT_EQ('2', scratch[0]);
+  ASSERT_EQ('3', scratch[1]);
+  ASSERT_EQ('x', scratch[2]);
+  ASSERT_EQ('x', scratch[3]);
+
+  ASSERT_OK(stream.seek(ZX_STREAM_SEEK_ORIGIN_START, PAGE_SIZE * 5 - 2, nullptr));
+
+  actual = 0;
+  ASSERT_OK(stream.writev(0, &vec, 1, &actual));
+  ASSERT_EQ(4, actual);
+
+  memset(scratch, 'a', sizeof(scratch));
+  ASSERT_OK(vmo.read(scratch, PAGE_SIZE * 2, sizeof(scratch)));
+
+  ASSERT_EQ('2', scratch[0]);
+  ASSERT_EQ('3', scratch[1]);
+  ASSERT_EQ(0, scratch[2]);
+  ASSERT_EQ(0, scratch[3]);
+
+  memset(scratch, 'a', sizeof(scratch));
+  ASSERT_OK(vmo.read(scratch, PAGE_SIZE * 3, sizeof(scratch)));
+
+  for (size_t i = 0; i < PAGE_SIZE; ++i) {
+    ASSERT_EQ(0, scratch[i], "The %zu byte of the third page should be zero.", i);
+  }
+
+  memset(scratch, 'a', sizeof(scratch));
+  ASSERT_OK(vmo.read(scratch, PAGE_SIZE * 4, sizeof(scratch)));
+
+  for (size_t i = 0; i < PAGE_SIZE - 2; ++i) {
+    ASSERT_EQ(0, scratch[i], "The %zu byte of the fourth page should be zero.", i);
+  }
+
+  ASSERT_EQ('0', scratch[PAGE_SIZE - 2]);
+  ASSERT_EQ('1', scratch[PAGE_SIZE - 1]);
+
+  memset(scratch, 'a', sizeof(scratch));
+  ASSERT_OK(vmo.read(scratch, PAGE_SIZE * 5, sizeof(scratch)));
+
+  ASSERT_EQ('2', scratch[0]);
+  ASSERT_EQ('3', scratch[1]);
+  ASSERT_EQ('x', scratch[2]);
+  ASSERT_EQ('x', scratch[3]);
+}
+
 }  // namespace

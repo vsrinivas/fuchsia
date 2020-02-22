@@ -31,10 +31,12 @@ atomically set to the content size of the stream prior to writing the data.
 
 If the write operation would write beyond the end of the stream, the function
 will attempt to increase the content size of the stream in order to receive the
-given data.  If the resize operation fails after some amount of data was
-written to the stream, the function will return successfully.  If no bytes were
-written to stream, the operation will return **ZX_ERR_FILE_BIG** or
-**ZX_ERR_NO_SPACE**, as appropriate.
+given data, filling any new, unwritten content with zero bytes.
+
+If the resize operation fails after some amount of data was written to the
+stream, the function will return successfully.  If no bytes were written to
+stream, the operation will return **ZX_ERR_FILE_BIG** or **ZX_ERR_NO_SPACE**,
+as appropriate.
 
 If a NULL *actual* is passed in, it will be ignored.
 

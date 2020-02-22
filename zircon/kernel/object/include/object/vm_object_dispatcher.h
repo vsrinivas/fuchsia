@@ -69,7 +69,7 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
 
   // Returns the actual content size after attempting to resize the VMO to fit
   // the requested content size.
-  uint64_t ExpandContentIfNeeded(uint64_t requested_content_size);
+  uint64_t ExpandContentIfNeeded(uint64_t requested_content_size, uint64_t zero_until_offset);
 
   const fbl::RefPtr<VmObject>& vmo() const { return vmo_; }
   zx_koid_t pager_koid() const { return pager_koid_; }
