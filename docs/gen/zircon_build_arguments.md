@@ -102,7 +102,7 @@ Enable kernel lock dependency tracking.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:26
+From //kernel/params.gni:28
 
 ### enable_lock_dep_tests
 Enable kernel lock dependency tracking tests.  By default this is
@@ -112,7 +112,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:62
+From //kernel/params.gni:64
 
 ### enable_netsvc_debugging_features
 Whether to include various features (non-shipping, insecure, etc.) in the
@@ -131,7 +131,7 @@ Enable userspace PCI and disable kernel PCI.
 
 **Current value (from the default):** `false`
 
-From //kernel/params.gni:42
+From //kernel/params.gni:44
 
 ### environment_args
 List of clauses to apply other GN build arguments to specific compilation
@@ -297,7 +297,7 @@ From //public/gn/toolchain/goma.gni:13
 
 **Current value (from the default):** `"0xffffffff00000000"`
 
-From //kernel/params.gni:20
+From //kernel/params.gni:22
 
 ### kernel_debug_level
 Enables various kernel debugging and diagnostic features.  Valid
@@ -309,7 +309,7 @@ the two and set kernel_debug_level independently.
 
 **Current value (from the default):** `2`
 
-From //kernel/params.gni:54
+From //kernel/params.gni:56
 
 ### kernel_extra_defines
 Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
@@ -317,7 +317,7 @@ Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
 
 **Current value (from the default):** `[]`
 
-From //kernel/params.gni:46
+From //kernel/params.gni:48
 
 ### kernel_version_string
 Version string embedded in the kernel for `zx_system_get_version_string`.
@@ -326,7 +326,7 @@ revision of the checkout.
 
 **Current value (from the default):** `""`
 
-From //kernel/lib/version/BUILD.gn:9
+From //kernel/lib/version/BUILD.gn:11
 
 ### malloc
 
@@ -362,7 +362,7 @@ zero add increasing details at the cost of increased trace buffer use.
 
 **Current value (from the default):** `0`
 
-From //kernel/params.gni:39
+From //kernel/params.gni:41
 
 ### select_scheduler
 Select an available scheduler.
@@ -370,13 +370,13 @@ Valid values are: "legacy", "fair", "unified"
 
 **Current value (from the default):** `"unified"`
 
-From //kernel/params.gni:30
+From //kernel/params.gni:32
 
 ### smp_max_cpus
 
 **Current value (from the default):** `16`
 
-From //kernel/params.gni:12
+From //kernel/params.gni:14
 
 ### symbol_level
 * 0 means no debugging information.
