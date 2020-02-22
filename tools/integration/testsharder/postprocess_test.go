@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"testing"
 	"time"
@@ -247,6 +248,40 @@ func TestWithTargetDuration(t *testing.T) {
 			{"test3", "test5", "test7"},
 		}
 		assertShardsContainTests(t, actual, expectedTests)
+	})
+
+	t.Run("adjusts other envs if one env exceeds max shard count", func(t *testing.T) {
+		var env2Tests []int
+		for i := 3; i <= 2+(maxShardsPerEnvironment*2); i++ {
+			env2Tests = append(env2Tests, i)
+		}
+		input := []*Shard{
+			namedShard(env1, "env1", 1, 2),
+			namedShard(env2, "env2", env2Tests...),
+		}
+		actual := WithTargetDuration(input, 1, 0, defaultDurations)
+		// The subshards created for env2 must each have two tests and take
+		// twice the target duration, since there are 2 *
+		// maxShardsPerEnvironment tests that each take 1ns (which is the target
+		// duration). So even though env1's two tests could be put on separate
+		// shards without exceeding maxShardsPerEnvironment, we put them in a
+		// single shard because the expected maximum duration of all shards is
+		// two times the target duration anyway.
+		expectedEnvs := make([]build.Environment, maxShardsPerEnvironment+1)
+		expectedEnvs[0] = env1
+		for i := 1; i < maxShardsPerEnvironment+1; i++ {
+			expectedEnvs[i] = env2
+		}
+		actualEnvs := make([]build.Environment, len(actual))
+		for i, shard := range actual {
+			if len(shard.Tests) != 2 {
+				t.Fatalf("shard doesn't have two tests: %v", shard)
+			}
+			actualEnvs[i] = shard.Env
+		}
+		if !reflect.DeepEqual(expectedEnvs, actualEnvs) {
+			t.Fatalf("expected shard envs %v, got %v", actual, actualEnvs)
+		}
 	})
 
 	t.Run("sorts shards by basename of first test", func(t *testing.T) {

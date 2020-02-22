@@ -115,16 +115,26 @@ func WithTargetDuration(shards []*Shard, targetDuration time.Duration, targetTes
 	}
 
 	if targetDuration > 0 {
-		// If any single test is expected to take longer than `targetDuration`,
-		// it's no use creating shards whose entire expected runtimes are
-		// shorter than that one test. So in that case we use the longest test's
-		// expected duration as the target duration.
 		for _, shard := range shards {
+			var shardDuration time.Duration
+			// If any single test is expected to take longer than `targetDuration`,
+			// it's no use creating shards whose entire expected runtimes are
+			// shorter than that one test. So in that case we use the longest test's
+			// expected duration as the target duration.
 			for _, t := range shard.Tests {
 				duration := testDurations.Get(t).MedianDuration
 				if duration > targetDuration {
 					targetDuration = duration
 				}
+				shardDuration += duration
+			}
+			// If any environment would exceed the maximum shard count, then its
+			// shard durations will exceed the specified target duration. So
+			// increase the target duration accordingly for the other
+			// environments.
+			subShardCount := divRoundUp(int(shardDuration), int(targetDuration))
+			if subShardCount > maxShardsPerEnvironment {
+				targetDuration = time.Duration(divRoundUp(int(shardDuration), maxShardsPerEnvironment))
 			}
 		}
 	}
