@@ -64,10 +64,32 @@ test_package("cobalt_tests") {
       # We don't want to run this version of cobalt_testapp in the Garnet
       # CI/CQ  because it uses the real network. We run cobalt_testapp_no_network
       # instead. This version is run in the stand-alone cobalt_client CQ.
+      # TODO(46062): Move to cobalt_tests_do_not_run_manually and enable.
       disabled = true
       environments = basic_envs
     },
 
+    {
+      # TODO(46062): Delete this test once cobalt_prober-x64-debug-new is passing.
+      name =
+          rebase_path("meta/cobalt_testapp_for_prober_do_not_run_manually.cmx")
+      dest = "cobalt_testapp_for_prober_do_not_run_manually"
+
+      # We don't want to run this version of cobalt_testapp in the Garnet
+      # CI/CQ  because it uses the real network. We run cobalt_testapp_no_network
+      # instead. This version is run in the stand-alone cobalt_client CI.
+      # It should not be run outside of CI, since it populates a test pipeline
+      # whose output is inspected.
+      disabled = true
+      environments = basic_envs
+    },
+  ]
+}
+
+test_package("cobalt_tests_do_not_run_manually") {
+  deps = [ "testapp:cobalt_testapp" ]
+
+  tests = [
     {
       name =
           rebase_path("meta/cobalt_testapp_for_prober_do_not_run_manually.cmx")
