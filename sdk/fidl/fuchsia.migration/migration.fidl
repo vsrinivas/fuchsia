@@ -5,6 +5,19 @@
 library fuchsia.migration;
 using fuchsia.io;
 
+enum MigrationStatus {
+    UNKNOWN = 1;
+    IN_PROGRESS = 2;
+    COMPLETE = 3;
+    ENCOUNTERED_ERROR = 4;
+};
+
+/// Table for state of migration operations.
+table MigrationState {
+    1: MigrationStatus status;
+    2: uint8 progress_percentage;
+};
+
 [FragileBase]
 protocol Provider {
     Get(request<fuchsia.io.Directory> dir);
@@ -24,4 +37,12 @@ protocol KronkProvider {
 [Discoverable]
 protocol DisplayProvider {
     compose Provider;
+};
+
+/// Protocol to watch for changes when a migration of system data is started.
+[Discoverable]
+protocol State {
+    /// Hanging get. Will return immediatedly on first call per connection
+    /// and then on change after that.
+    Watch() -> (MigrationState state);
 };
