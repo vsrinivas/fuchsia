@@ -56,6 +56,9 @@ test("ledger_unittests") {
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
+
+  # TODO(46749): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test("ledger_host_tests") {

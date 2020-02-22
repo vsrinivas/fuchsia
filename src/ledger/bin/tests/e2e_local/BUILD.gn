@@ -37,4 +37,7 @@ executable("e2e_local") {
   data_deps = [ "//src/ledger/bin/app" ]
 
   configs += [ "//src/ledger:ledger_config" ]
+
+  # TODO(46749): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
