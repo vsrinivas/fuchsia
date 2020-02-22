@@ -58,9 +58,9 @@
 // kernel counters. TODO(cpu): remove LK-era counters
 // The counters below never decrease.
 //
-// counts the number of thread_t successfully created.
+// counts the number of Threads successfully created.
 KCOUNTER(thread_create_count, "thread.create")
-// counts the number of thread_t joined. Never decreases.
+// counts the number of Threads joined. Never decreases.
 KCOUNTER(thread_join_count, "thread.join")
 // counts the number of calls to suspend() that succeeded.
 KCOUNTER(thread_suspend_count, "thread.suspend")
@@ -120,9 +120,9 @@ void init_thread_struct(Thread* t, const char* name) {
   memset(t, 0, sizeof(Thread));
 
   // Placement new to trigger any special construction requirements of the
-  // thread_t structure.
+  // Thread structure.
   //
-  // TODO(johngro): now that we have converted thread_t over to C++, consider
+  // TODO(johngro): now that we have converted Thread over to C++, consider
   // switching to using C++ constructors/destructors and new/delete to handle
   // all of this instead of using init_thread_struct and free_thread_resources
   new (t) Thread();
@@ -155,7 +155,7 @@ static void initial_thread_func() {
  * This function creates a new thread.  The thread is initially suspended, so you
  * need to call thread_resume() to execute it.
  *
- * @param  t               If not NULL, use the supplied thread_t
+ * @param  t               If not NULL, use the supplied Thread
  * @param  name            Name of thread
  * @param  entry           Entry point of thread
  * @param  arg             Arbitrary argument passed to entry(). It can be null.
@@ -730,7 +730,7 @@ static void thread_do_suspend() {
   // calling the callback with THREAD_USER_STATE_RESUME.  That is
   // because those callbacks act as barriers which control when it is
   // safe for the zx_thread_read_state()/zx_thread_write_state()
-  // syscalls to access the userland register state kept by thread_t.
+  // syscalls to access the userland register state kept by Thread.
   if (current_thread->user_thread_) {
     DEBUG_ASSERT(!arch_ints_disabled() || !spin_lock_held(&thread_lock));
     current_thread->user_thread_->Suspending();

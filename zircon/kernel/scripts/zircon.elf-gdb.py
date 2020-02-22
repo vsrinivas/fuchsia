@@ -208,7 +208,7 @@ def register_zircon_pretty_printers(obj):
 
 
 def _get_thread_list():
-    """ Return a list of all thread_t threads.
+    """ Return a list of all Thread threads.
 
   The result is constrained by "zircon max-info-threads".
   """

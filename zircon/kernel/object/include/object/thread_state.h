@@ -26,11 +26,11 @@ class ThreadState {
   // when a thread is resumed after being suspended.
   enum class Lifecycle {
     // The ThreadDispatcher has been allocated, but not yet
-    // associated to a thread_t or an aspace.
+    // associated to a Thread or an aspace.
     INITIAL,
 
     // The ThreadDispatcher is now associated to its underlying
-    // thread_t and the containing process's address space, and is
+    // Thread and the containing process's address space, and is
     // waiting to be run.
     INITIALIZED,
 

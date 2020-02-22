@@ -13,7 +13,8 @@ __BEGIN_CDECLS
 
 // kstack encapsulates a kernel stack.
 //
-// kstack must be a C struct because it is embedded in thread_t.
+// kstack must be a C struct because it is embedded in Thread.
+// TODO(33473) This is no longer true.
 typedef struct kstack {
   vaddr_t base;
   size_t size;

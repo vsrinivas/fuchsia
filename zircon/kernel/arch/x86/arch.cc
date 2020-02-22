@@ -121,7 +121,7 @@ void arch_resume(void) {
                                                                Thread* thread, uint cpu_num) {
   // Signal that this CPU is initialized.  It is important that after this
   // operation, we do not touch any resources associated with bootstrap
-  // besides our thread_t and stack, since this is the checkpoint the
+  // besides our Thread and stack, since this is the checkpoint the
   // bootstrap process uses to identify completion.
   int old_val = atomic_and(aps_still_booting, ~(1U << cpu_num));
   if (old_val == 0) {
