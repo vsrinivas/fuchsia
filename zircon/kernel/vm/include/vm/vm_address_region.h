@@ -259,6 +259,24 @@ class RegionList final {
  private:
   // list of memory regions, indexed by base address.
   ChildList regions_;
+
+  // A structure to contain allocated spot address or number of available slots.
+  struct AllocSpotInfo {
+    // candidate_spot_count is the number of available slot that we could allocate if we have not
+    // found the spot with index |selected_index| to allocate.
+    size_t candidate_spot_count = 0;
+    // Found indicates whether we have found the spot with index |selected_indexes|.
+    bool found = false;
+    // alloc_spot is the virtual start address of the spot to allocate if we find one.
+    vaddr_t alloc_spot = 0;
+  };
+
+  // Try to find the |selected_index| spot among all the gaps, alloc_spot_info contains the max
+  // candidate spots if |selected_index| is larger than candidate_spaces. In this case, we need to
+  // pick a smaller index and try again.
+  void FindAllocSpotInGaps(size_t size, uint8_t align_pow2, vaddr_t selected_index,
+                           vaddr_t parent_base, vaddr_t parent_size,
+                           AllocSpotInfo* alloc_spot_info) const;
 };
 
 // A representation of a contiguous range of virtual address space

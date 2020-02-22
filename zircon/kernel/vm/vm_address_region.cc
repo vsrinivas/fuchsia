@@ -174,6 +174,7 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
 
   vmar->Activate();
   *out = ktl::move(vmar);
+
   return ZX_OK;
 }
 
@@ -1063,71 +1064,100 @@ bool RegionList::IsRangeAvailable(vaddr_t base, size_t size) const {
   return true;
 }
 
-zx_status_t RegionList::GetAllocSpot(vaddr_t* alloc_spot, uint8_t align_pow2, uint8_t entropy,
-                                     size_t size, vaddr_t parent_base, size_t parent_size,
-                                     crypto::PRNG* prng) const {
-  DEBUG_ASSERT(entropy < sizeof(size_t) * 8);
+void RegionList::FindAllocSpotInGaps(size_t size, uint8_t align_pow2, vaddr_t selected_index,
+                                     vaddr_t parent_base, vaddr_t parent_size,
+                                     RegionList::AllocSpotInfo* alloc_spot_info) const {
   const vaddr_t align = 1UL << align_pow2;
-  // Calculate the number of spaces that we can fit this allocation in.
-  size_t candidate_spaces = 0;
-  // This is the maximum number of spaces we need to consider based on our desired entropy.
-  const size_t max_candidate_spaces = 1ul << entropy;
-
+  // candidate_spot_count is the number of available slot that we could allocate if we have not found
+  // the spot with index |selected_index| to allocate.
+  size_t candidate_spot_count = 0;
+  // Found indicates whether we have found the spot with index |selected_indexes|.
+  bool found = false;
+  // alloc_spot is the virtual start address of the spot to allocate if we find one.
+  vaddr_t alloc_spot = 0;
   ForEachGap(
-      [align, align_pow2, size, &candidate_spaces, &max_candidate_spaces](vaddr_t gap_base,
-                                                                          size_t gap_len) -> bool {
+      [align, align_pow2, size, &candidate_spot_count, &selected_index, &alloc_spot, &found](
+          vaddr_t gap_base, size_t gap_len) -> bool {
         DEBUG_ASSERT(IS_ALIGNED(gap_base, align));
-        if (gap_len >= size) {
-          candidate_spaces += AllocationSpotsInRange(gap_len, size, align_pow2);
-        }
-        // Return early if we've already found more spaces than we will be considering.
-        if (candidate_spaces >= max_candidate_spaces) {
-          return false;
-        }
-        return true;
-      },
-      align_pow2, parent_base, parent_size);
-
-  if (candidate_spaces == 0) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  // Cap our candidate spaces to our entropy limit.
-  if (candidate_spaces > max_candidate_spaces) {
-    candidate_spaces = max_candidate_spaces;
-  }
-
-  // Choose the index of the allocation to use.
-  //
-  // Avoid calling the PRNG when ASLR is disabled, as it won't be initialized.
-  size_t selected_index;
-  if (candidate_spaces > 1) {
-    DEBUG_ASSERT(prng);
-    selected_index = prng->RandInt(candidate_spaces);
-  } else {
-    selected_index = 0;
-  }
-  DEBUG_ASSERT(selected_index < candidate_spaces);
-
-  // Find which allocation we picked.
-  *alloc_spot = static_cast<vaddr_t>(-1);
-  ForEachGap(
-      [align_pow2, size, &alloc_spot, &selected_index](vaddr_t gap_base, size_t gap_len) -> bool {
         if (gap_len < size) {
+          // Ignore gap that is too small.
           return true;
         }
-
         const size_t spots = AllocationSpotsInRange(gap_len, size, align_pow2);
+        candidate_spot_count += spots;
+
         if (selected_index < spots) {
-          *alloc_spot = gap_base + (selected_index << align_pow2);
+          // If we are able to find the spot with index |selected_indexes| in this gap, then we have
+          // found our pick.
+          found = true;
+          alloc_spot = gap_base + (selected_index << align_pow2);
           return false;
         }
         selected_index -= spots;
         return true;
       },
       align_pow2, parent_base, parent_size);
-  ASSERT(*alloc_spot != static_cast<vaddr_t>(-1));
+  alloc_spot_info->found = found;
+  alloc_spot_info->alloc_spot = alloc_spot;
+  alloc_spot_info->candidate_spot_count = candidate_spot_count;
+  return;
+}
+
+zx_status_t RegionList::GetAllocSpot(vaddr_t* alloc_spot, uint8_t align_pow2, uint8_t entropy,
+                                     size_t size, vaddr_t parent_base, size_t parent_size,
+                                     crypto::PRNG* prng) const {
+  DEBUG_ASSERT(entropy < sizeof(size_t) * 8);
+  const vaddr_t align = 1UL << align_pow2;
+  // This is the maximum number of spaces we need to consider based on our desired entropy.
+  const size_t max_candidate_spaces = 1ul << entropy;
+  vaddr_t selected_index = 0;
+  if (prng != nullptr) {
+    // We first pick a index in [0, max_candidate_spaces] and hope to find the index.
+    // If the number of available spots is less than selected_index, alloc_spot_info.founds would
+    // be false. This means that selected_index is too large, we have to pick again in a smaller
+    // range and try again.
+    //
+    // Note that this is mathematically equal to randomly pick a spot within
+    // [0, candidate_spot_count] if selected_index <= candidate_spot_count.
+    //
+    // Prove as following:
+    // Define M = candidate_spot_count
+    // Define N = max_candidate_spaces (M < N, otherwise we can randomly allocate any spot from
+    // [0, max_candidate_spaces], thus allocate a specific slot has (1 / N) probability).
+    // Define slot X0 where X0 belongs to [1, M].
+    // Define event A: randomly pick a slot X in [1, N], N = X0.
+    // Define event B: randomly pick a slot X in [1, N], N belongs to [1, M].
+    // Define event C: randomly pick a slot X in [1, N], N = X0 when N belongs to [1, M].
+    // P(C) = P(A | B)
+    // Since when A happens, B definitely happens, so P(AB) = P(A)
+    // P(C) = P(A) / P(B) = (1 / N) / (M / N) = (1 / M)
+    // which is equal to the probability of picking a specific spot in [0, M].
+    selected_index = prng->RandInt(max_candidate_spaces);
+  }
+
+  AllocSpotInfo alloc_spot_info;
+  FindAllocSpotInGaps(size, align_pow2, selected_index, parent_base, parent_size,
+                      &alloc_spot_info);
+  size_t candidate_spot_count = alloc_spot_info.candidate_spot_count;
+  if (candidate_spot_count == 0) {
+    DEBUG_ASSERT(!alloc_spot_info.found);
+    return ZX_ERR_NO_MEMORY;
+  }
+  if (!alloc_spot_info.found) {
+    if (candidate_spot_count > max_candidate_spaces) {
+      candidate_spot_count = max_candidate_spaces;
+    }
+    // If the number of candidate spaces is less than the index we want, let's pick again from the
+    // range for available spaces.
+    DEBUG_ASSERT(prng);
+    selected_index = prng->RandInt(candidate_spot_count);
+     FindAllocSpotInGaps(size, align_pow2, selected_index, parent_base, parent_size,
+                         &alloc_spot_info);
+  }
+  DEBUG_ASSERT(alloc_spot_info.found);
+  *alloc_spot = alloc_spot_info.alloc_spot;
   ASSERT(IS_ALIGNED(*alloc_spot, align));
+
   return ZX_OK;
 }
 
