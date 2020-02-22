@@ -39,9 +39,9 @@ source_set("collector-test") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/cobalt-collector",
-    "//zircon/public/lib/in-memory-logger",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/fit",
+    "//zircon/public/lib/in-memory-logger",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-cobalt:llcpp",
@@ -72,8 +72,7 @@ source_set("metrics-test") {
 
   # TODO(42493): UBSan has found an instance of undefined behavior in this target.
   # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
-  configs +=
-      [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
+  configs += [ "//build/config:temporarily_disable_ubsan_do_not_use" ]
 }
 
 source_set("in-memory-logger-test") {
@@ -113,6 +112,9 @@ test("cobalt-client-unit") {
     ":in-memory-logger-test",
     ":metrics-test",
   ]
+
+  # TODO(46868): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("cobalt-client-unit-manifest") {
