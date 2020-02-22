@@ -73,6 +73,9 @@ executable("trace_tests_bin") {
     "//garnet/bin/trace:unittests",
     "//garnet/lib/measure:unittests",
   ]
+
+  # TODO(46850): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 source_set("run_test") {
@@ -170,6 +173,9 @@ executable("trace_integration_tests") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
+
+  # TODO(46850): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("run_integration_test") {
