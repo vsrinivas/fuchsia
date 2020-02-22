@@ -41,46 +41,159 @@ table ConnectionOptions {
     /// the resulting protocol is unspecified.
     2: NodeProtocolSet protocols;
 
-    /// Requests the specified rights on the new connection. If absent, inherits
-    /// the same rights as the source connection.
+    /// Requests rights on the new connection according to the specified rules.
+    /// See [`fuchsia.io2/RightsRequest`].
     ///
     /// ## Rights Hierarchy
     ///
-    /// Respecting principles of least privileges, `rights` must meet the
-    /// following restrictions:
+    /// Respecting principles of least privileges, rights in general must meet
+    /// the following restrictions:
     ///
     /// * A connection must have nonzero rights.
-    /// * Rights must never increase in a derived connection:
-    ///   + During [`Directory.Open`], you may only request the same rights as
-    ///     what the directory connection already has, or a subset of those.
-    ///   + During [`Node.Reopen`], similarly, you may only request the same or
-    ///     a subset of rights possessed by the original connection.
-    /// * Exceeding those rights causes `object_request` to be closed with a
-    ///   `ZX_ERR_ACCESS_DENIED` epitaph.
+    /// * From the perspective of a client, rights must never increase in a
+    ///   derived connection.
+    /// * From the perspective of a directory proxy, it must ensure that
+    ///   new connections opened through it cannot have more rights than
+    ///   the connection where the proxy received the `Open`/`Reopen` call.
     ///
     /// The proper enforcement of the rights hierarchy is a powerful refinement
     /// over the existing access control facilities offered by directory
-    /// sandboxing. The rights manipulation should be implemented mechanically
-    /// without knowledge of any specific rights, and servers should propagate
-    /// unknown bits members, to gracefully handle future rights extensions.
+    /// sandboxing.
     ///
     /// ## Rights Inheritance
     ///
-    /// Absent `rights` field means inheriting the same rights as the source.
+    /// If `rights_request` is absent, inherits at most the rights on the source
+    /// connection:
     ///
     /// * During [`Node.Reopen`], the new connection would have the same rights
     ///   as the connection where the `Reopen` call is made.
-    /// * During [`Directory.Open`], the connection would have the same
-    ///   rights as the connection where the `Open` call is made.
+    /// * During [`Directory.Open`], the rights on the connection would inherit
+    ///   from the connection where the `Open` call is made. If the path crosses
+    ///   intermediate proxies, a proxy may strip elements from the resulting
+    ///   rights if the intermediate connection does not have the corresponding
+    ///   rights.
     ///
-    /// Note: `rights` limits the set of operations allowed on the new
-    /// connection, but does not guarantee their availability. For convenience,
-    /// clients may query the [`ConnectionInfo.available_operations`] field on a
-    /// new connection, which is the intersection of the rights and abilities
-    /// and indicates the guaranteed set of available operations.
+    /// ## Rights vs Abilities
+    ///
+    /// The rights on a connection limits the set of operations allowed on that
+    /// connection, but does not guarantee their availability, because the
+    /// object may not support it. For convenience, clients may query the
+    /// [`ConnectionInfo.available_operations`] field on a new connection,
+    /// which is the intersection of the rights and abilities and indicates the
+    /// guaranteed set of available operations.
     ///
     /// See [`fuchsia.io2/Rights`] and [`fuchsia.io2/Abilities`].
-    3: Rights rights;
+    ///
+    /// ## Implementation Notes
+    ///
+    /// When a directory proxy encounters an absent `rights` field, let `r` be
+    /// the rights on the connection where it received this request, the proxy
+    /// should fill in this field with the following:
+    ///
+    /// ```
+    /// RightsRequest {
+    ///     at_most: r,
+    ///     at_least: 0,
+    ///     resolution: RightsResolution.MAXIMIZE,
+    /// }
+    /// ```
+    ///
+    /// before forwarding the request to the remote party.
+    3: RightsRequest rights_request;
+};
+
+/// Options for requesting rights on the new connection. Because opening a
+/// new connection may involve multiple hops through directory proxies,
+/// we require the client to set an upper bound and lower bound on the
+/// rights request, and intermediate proxies to refine these bounds.
+///
+/// The rights manipulation should be implemented mechanically
+/// without knowledge of any specific rights, and servers should propagate
+/// unknown bits members, to gracefully handle future rights extensions.
+///
+/// ## Implementation Notes
+///
+/// It could be common for a client to request an exact set of rights.
+/// We recommend client libraries to define a helper function like follows:
+///
+/// ```
+/// fn Exact(exact_rights: Rights) -> RightsRequest {
+///     RightsRequest {
+///         at_most: exact_rights,
+///         at_least: exact_rights,
+///         resolution: RightsResolution.MAXIMIZE,
+///     }
+/// }
+/// ```
+struct RightsRequest {
+    /// Sets an upper bound on the resulting rights. The exact rights will
+    /// depend on `resolution`.
+    ///
+    /// ## Implementation Notes
+    ///
+    /// When a directory proxy encounters this variant, it should compute the
+    /// intersection between this and the rights on the connection where it
+    /// received the request, to shrink the rights.
+    ///
+    /// * If the intersection is empty, or not a superset of `at_least`,
+    ///   the proxy should close `object_request` with the
+    ///   `ZX_ERR_ACCESS_DENIED` epitaph.
+    /// * Otherwise, the proxy should forward the `Open` call as usual,
+    ///   but update `at_most` with the shrunk rights.
+    Rights at_most;
+
+    /// Sets a lower bound on the resulting rights. The exact rights will
+    /// depend on `resolution`.
+    ///
+    /// + During [`Directory.Open`], you may only specify the same rights as
+    ///   what the directory connection already has, or a subset of those.
+    /// + During [`Node.Reopen`], similarly, you may only specify the same or
+    ///   a subset of rights possessed by the original connection.
+    /// + Exceeding those rights causes `object_request` to be closed with a
+    ///   `ZX_ERR_ACCESS_DENIED` epitaph.
+    ///
+    /// Therefore there are these invariants which should be maintained:
+    ///
+    /// ```
+    /// at_most ⊋ {}
+    /// at_most ⊃ at_least
+    /// rights_on_connection_where_open_is_received ⊋ {}
+    /// rights_on_connection_where_open_is_received ⊃ at_least
+    /// ```
+    ///
+    /// using the superset (`⊃`), proper superset (`⊋`),
+    /// and empty set (`{}`) notations.
+    Rights at_least;
+
+    /// Controls how the rights on the new connection are computed from
+    /// `at_most` and `at_least`. See [`fuchsia.io2/RightsResolution`].
+    RightsResolution resolution;
+};
+
+/// When an `Open`/`Reopen` request reaches its final remote server, it should
+/// assign rights on the new connection based on one of these modes.
+enum RightsResolution : uint32 {
+    /// The rights will be the intersection between [`RightsRequest.at_most`]
+    /// and the connection where the `Open`/`Reopen` request was received,
+    /// closing `object_request` with `ZX_ERR_ACCESS_DENIED` if it is empty.
+    MAXIMIZE = 1;
+
+    /// The rights will be determined by the following rules:
+    ///
+    /// * If the negotiated protocol on the new connection is
+    ///   [`fuchsia.io2/Directory`], the rules from the `MAXIMIZE` case applies.
+    /// * Otherwise, the rights will be [`RightsRequest.at_least`] if it
+    ///   does not exceed rights on the current connection.
+    /// * Otherwise, `object_request` should be closed with
+    ///   `ZX_ERR_ACCESS_DENIED`.
+    ///
+    /// The motivation for this enum is to facilitate implementing POSIX
+    /// compatibility layers. The POSIX file permission model relies on ambient
+    /// authority: access control on files are resolved based on the `mode` of
+    /// the file, and the current user. There is no concept of hierarchical
+    /// permissions. Fuchsia, on the other hand, restricts rights on file
+    /// connections to never exceed that of its containing directory connection.
+    POSIX = 2;
 };
 
 /// Flags applicable to both [`Directory.Open`] and [`Node.Reopen`].
