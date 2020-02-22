@@ -4,6 +4,8 @@
 
 #include "src/connectivity/weave/weavestack/app.h"
 
+#include <lib/syslog/cpp/logger.h>
+
 #include <Weave/DeviceLayer/PlatformManager.h>
 
 namespace weavestack {
@@ -26,8 +28,13 @@ class App::WeaveState {};
 void App::WeaveMain() {
   auto state = std::make_unique<WeaveState>();
 
-  PlatformMgr().InitWeaveStack();
-  // TODO: while (state.KeepRunning()) { do stuff }
+  WEAVE_ERROR err;
+
+  err = PlatformMgr().InitWeaveStack();
+  if (err != WEAVE_NO_ERROR) {
+    FX_LOGS(ERROR) << "InitWeaveStack() failed " << nl::ErrorStr(err);
+    return;
+  }
 }
 
 }  // namespace weavestack

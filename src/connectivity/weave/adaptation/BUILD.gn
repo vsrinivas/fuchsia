@@ -32,6 +32,9 @@ openweave_adaptation_layer("adaptation") {
   ]
   public_configs = [ ":adaptation_config" ]
   public_deps = [ "//third_party/openweave-core" ]
+  deps = [
+    "//src/lib/syslog/cpp",
+  ]
 }
 
 config("adaptation_config") {

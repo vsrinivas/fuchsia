@@ -4,6 +4,7 @@
 #ifndef GENERIC_PLATFORM_MANAGER_IMPL_FUCHSIA_IPP
 #define GENERIC_PLATFORM_MANAGER_IMPL_FUCHSIA_IPP
 
+// clang-format off
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/PlatformManager.h>
 #include "generic_platform_manager_impl_fuchsia.h"
@@ -11,7 +12,9 @@
 // Include the non-inline definitions for the GenericPlatformManagerImpl<> template,
 // from which the GenericPlatformManagerImpl_Fuchsia<> template inherits.
 #include <Weave/DeviceLayer/internal/GenericPlatformManagerImpl.ipp>
+// clang-format on
 
+#include <lib/syslog/cpp/logger.h>
 
 namespace nl {
 namespace Weave {
@@ -22,12 +25,68 @@ template<class ImplClass>
 WEAVE_ERROR GenericPlatformManagerImpl_Fuchsia<ImplClass>::_InitWeaveStack(void)
 {
     WEAVE_ERROR err = WEAVE_NO_ERROR;
+    nl::Weave::WeaveMessageLayer::InitContext initContext;
 
-    // Call up to the base class _InitWeaveStack() to perform the bulk of the initialization.
-    err = GenericPlatformManagerImpl<ImplClass>::_InitWeaveStack();
-    SuccessOrExit(err);
+    err = system_layer_.Init(nullptr);
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "System layer init failed: " << ErrorStr(err);
+      return err;
+    }
 
-exit:
+    err = inet_layer_.Init(system_layer_, nullptr);
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "Inet layer init failed: " << ErrorStr(err);
+      return err;
+    }
+
+    err = fabric_state_.Init();
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "FabricState init failed: " << ErrorStr(err);
+      return err;
+    }
+
+    initContext.inet = &inet_layer_;
+    initContext.systemLayer = &system_layer_;
+    initContext.fabricState = &fabric_state_;
+    initContext.listenTCP = true;
+    initContext.listenUDP = true;
+
+    err = message_layer_.Init(&initContext);
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "Message layer init failed: "<< ErrorStr(err);
+      return err;
+    }
+
+    err = ExchangeMgr.Init(&message_layer_);
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "Exchange manager init failed: "<< ErrorStr(err);
+      return err;
+    }
+
+    err = security_manager_.Init(ExchangeMgr, system_layer_);
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "Security manager init failed: " << ErrorStr(err);
+      return err;
+    }
+
+    err = DeviceDescriptionSvr().Init();
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "device DeviceDescription init failed: "<< ErrorStr(err);
+      return err;
+    }
+
+    err = DeviceControlSvr().Init();
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "device control svr init failed: " << ErrorStr(err);
+      return err;
+    }
+
+    err = FabricProvisioningSvr().Init();
+    if (err != WEAVE_NO_ERROR) {
+      FX_LOGS(ERROR) << "FabricProvisioningSvr init failed: " << ErrorStr(err);
+      return err;
+    }
+
     return err;
 }
 
@@ -37,7 +96,7 @@ void GenericPlatformManagerImpl_Fuchsia<ImplClass>::_LockWeaveStack(void) {}
 template<class ImplClass>
 bool GenericPlatformManagerImpl_Fuchsia<ImplClass>::_TryLockWeaveStack(void)
 {
-    return true;
+  return true;
 }
 
 template<class ImplClass>

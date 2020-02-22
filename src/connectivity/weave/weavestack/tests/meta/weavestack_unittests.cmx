@@ -1,0 +1,15 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+            }
+        }
+    },
+   "program": {
+        "binary": "test/weavestack_unittests"
+    },
+    "sandbox": {
+        "services": [ "fuchsia.posix.socket.Provider" ]
+    }
+}

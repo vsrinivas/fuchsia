@@ -1,0 +1,40 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":weavestack_unittests" ]
+}
+
+test_package("weavestack_unittests") {
+  deps = [ ":unittests" ]
+
+  tests = [
+    {
+      name = "weavestack_unittests"
+      environments = basic_envs
+    },
+  ]
+}
+
+executable("unittests") {
+  output_name = "weavestack_unittests"
+
+  testonly = true
+
+  sources = [ "app_test.cc" ]
+
+  public_deps = [
+    "//src/connectivity/weave/weavestack:lib",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/zx",
+  ]
+}

@@ -3,6 +3,8 @@
         "binary": "bin/weavestack"
     },
     "sandbox": {
-        "services": []
+        "services": [
+            "fuchsia.posix.socket.Provider"
+        ]
     }
 }

@@ -15,7 +15,9 @@ namespace DeviceLayer {
 
 PlatformManagerImpl PlatformManagerImpl::sInstance;
 
-WEAVE_ERROR PlatformManagerImpl::_InitWeaveStack(void) { return WEAVE_NO_ERROR; }
+WEAVE_ERROR PlatformManagerImpl::_InitWeaveStack(void) {
+  return Internal::GenericPlatformManagerImpl_Fuchsia<PlatformManagerImpl>::_InitWeaveStack();
+}
 
 }  // namespace DeviceLayer
 }  // namespace Weave

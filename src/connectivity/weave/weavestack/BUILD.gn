@@ -14,9 +14,11 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/lib/sys/cpp",
+    "//src/lib/syslog/cpp",
     "//src/connectivity/weave/adaptation",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/zx",
   ]
 }
 
@@ -32,7 +34,6 @@ group("weavestack") {
   testonly = true
   public_deps = [
     ":pkg",
-    ":tests",
   ]
 }
 
@@ -54,31 +55,3 @@ package("pkg") {
   ]
 }
 
-executable("unittests") {
-  output_name = "weavestack_unittests"
-
-  testonly = true
-
-  sources = [ "app_test.cc" ]
-
-  public_deps = [
-    ":lib",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-}
-
-unittest_package("weavestack_unittests") {
-  deps = [ ":unittests" ]
-
-  tests = [
-    {
-      name = "weavestack_unittests"
-      environments = basic_envs
-    },
-  ]
-}
-
-group("tests") {
-  testonly = true
-  public_deps = [ ":weavestack_unittests" ]
-}
