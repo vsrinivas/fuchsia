@@ -456,6 +456,34 @@ _asan_variant = {
   }
 }
 
+# When fuzzing with ASan, we configure it to be ClusterFuzz-friendly
+# (https://google.github.io/clusterfuzz).
+_asan_fuzzer_toolchain_args = {
+  forward_variables_from(_asan_variant.toolchain_args, "*")
+  asan_default_options = string_join(
+          ":",
+          [
+            # https://github.com/google/sanitizers/wiki/SanitizerCommonFlags
+            "alloc_dealloc_mismatch=0",
+            "check_malloc_usable_size=0",
+            "detect_odr_violation=0",
+            "max_uar_stack_size_log=16",
+            "print_scariness=1",
+
+            # https://github.com/google/sanitizers/wiki/AddressSanitizerFlags
+            "allocator_may_return_null=1",
+            "detect_leaks=0",
+            "malloc_context_size=128",
+            "print_summary=1",
+            "print_suppressions=0",
+            "strict_memcmp=0",
+            "symbolize=0",
+
+            # Avoid leaking memory (fxb/34570)
+            "clear_shadow_mmap_threshold=0",
+          ])
+}
+
 # Disable identical code folding in fuzzer toolchain variants, since accurate
 # stack traces are most useful under fuzzing than reduced binary sizes.
 _fuzzer_remove_common_configs = [ "//build/config/fuchsia:icf" ]
@@ -562,39 +590,26 @@ declare_args() {
       }
     },
 
-    # Fuzzer variants for various sanitizers,  -fsanitize=fuzzer results
-    # in undefined symbols in shared objects that are satisfied in the final,
-    # statically linked fuzzer.
+    # Fuzzer variants for various sanitizers.
     {
       name = "asan-fuzzer"
-
-      # TODO(aarongreen): TC-264: Clang emits new/new[]/delete/delete[] into
-      # libfuzzer's static libc++.  Remove this when fixed.
       forward_variables_from(_asan_variant, "*", [ "toolchain_args" ])
-      toolchain_args = {
-        forward_variables_from(_asan_variant.toolchain_args, "*")
-
-        # Unless otherwise noted, these options are the defaults from ClusterFuzz.
-        asan_default_options =
-            string_join(":",
-                        [
-                          "alloc_dealloc_mismatch=0",
-                          "allocator_may_return_null=1",
-                          "check_malloc_usable_size=0",
-                          "detect_leaks=0",
-                          "detect_odr_violation=0",
-                          "malloc_context_size=128",
-                          "max_uar_stack_size_log=16",
-                          "print_scariness=1",
-                          "print_summary=1",
-                          "print_suppressions=0",
-                          "strict_memcmp=0",
-                          "symbolize=0",
-                          "clear_shadow_mmap_threshold=0",  # avoid leaking
-                                                            # memory (fxb/34570)
-                        ])
-      }
+      toolchain_args = _asan_fuzzer_toolchain_args
       configs += [ "//build/config/sanitizers:fuzzer" ]
+      configs += _fuzzer_remove_common_configs  # Ensure present when removing.
+      remove_common_configs = _fuzzer_remove_common_configs
+      remove_shared_configs = _fuzzer_remove_shared_configs
+    },
+    {
+      # See the note on //build/config/sanitizers:rust-asan. This target can
+      # only be used for binaries that are linked by clang and not rustc.
+      name = "rust-asan-fuzzer"
+      forward_variables_from(_asan_variant, "*", [ "toolchain_args" ])
+      toolchain_args = _asan_fuzzer_toolchain_args
+      configs += [
+        "//build/config/sanitizers:rust-asan",
+        "//build/config/sanitizers:fuzzer",
+      ]
       configs += _fuzzer_remove_common_configs  # Ensure present when removing.
       remove_common_configs = _fuzzer_remove_common_configs
       remove_shared_configs = _fuzzer_remove_shared_configs

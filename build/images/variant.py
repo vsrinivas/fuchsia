@@ -15,6 +15,7 @@ ZIRCON_DRIVER_IDENT = ('Zircon\0', ZIRCON_NOTE_DRIVER)
 LIBCXX_SONAMES = ['libc++.so.2', 'libc++abi.so.1', 'libunwind.so.1']
 
 FUZZER_VARIANT_SUFFIX = '-fuzzer'
+RUST_VARIANT_PREFIX = 'rust-'
 
 
 def binary_info(filename):
@@ -61,7 +62,7 @@ def make_variant(name, info):
         tc = '%s-shared' % info.cpu.gn
     else:
         tc = '%s-%s-shared' % (info.cpu.gn, name)
-        libprefix = name + '/'
+        libprefix = name
         if 'asan' in name:
             runtime = 'libclang_rt.asan.so'
             # ASan drivers need devhost.asan.
@@ -69,13 +70,20 @@ def make_variant(name, info):
             has_libcxx = True
         elif 'ubsan' in name or 'sancov' in name:
             runtime = 'libclang_rt.ubsan_standalone.so'
-        if name.endswith(FUZZER_VARIANT_SUFFIX):
+        if libprefix.endswith(FUZZER_VARIANT_SUFFIX):
             # Fuchsia-built fuzzers don't have their own separate libprefix.
             # They just use the base variant.
-            libprefix = name[:-len(FUZZER_VARIANT_SUFFIX)] + '/'
+            libprefix = libprefix[:-len(FUZZER_VARIANT_SUFFIX)]
+        if name.startswith(RUST_VARIANT_PREFIX):
+            # TODO(45102): Until the system libraries and loaders can support
+            # using toolchain-supplied compiler runtimes, the rustc variants
+            # need to use clang variants.
+            libprefix = libprefix[len(RUST_VARIANT_PREFIX):]
         if 'lto' in name:
             # LTO variants don't get their own libprefix like instrumented ones.
             libprefix = ''
+        if libprefix != '':
+            libprefix += '/'
     return variant(tc, libprefix, runtime, aux, has_libcxx)
 
 

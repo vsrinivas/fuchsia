@@ -122,6 +122,26 @@ if (asan_default_options != "") {
   }
 }
 
+# rustc flags for AddressSanitizer, primarily used for fuzzing Rust code.
+# TODO(45102): This is technically wrong; it will use clang's ASan.
+# rustc is built from a different fork of LLVM and should use a matching ASan.
+# However, Fuchsia's libc and dynamic linker cooperate to set up the shadow
+# memory and currently always link against clang's ASan. Using both rustc and
+# clang's ASan would also be infeasible, as symbol names and shadow memory
+# regions would conflict.
+#
+# Thus, variants using this config currently IGNORE the potential ABI
+# incompatibility and simply use clang's ASan. If/when this breaks, these
+# test-only variants should be disabled until a resolution can be found.
+#
+# Additionally, variants using this config CANNOT be used on binaries linked
+# by rustc, as it will fail to find its runtime. It CAN be used to build
+# libraries with rustc that are then linked into executables by clang, e.g.
+# fuzzers.
+variant("rust-asan") {
+  rustflags = [ "-Zsanitizer=address" ]
+}
+
 variant("ubsan") {
   common_flags = [ "-fsanitize=undefined" ]
 
@@ -161,6 +181,14 @@ variant("fuzzer") {
   if (is_fuchsia) {
     libs = [ "zircon" ]
   }
+
+  rustflags = [
+    "-Cpasses=sancov",
+    "-Cllvm-args=-sanitizer-coverage-level=4",
+    "-Cllvm-args=-sanitizer-coverage-trace-compares",
+    "-Cllvm-args=-sanitizer-coverage-inline-8bit-counters",
+    "-Cllvm-args=-sanitizer-coverage-pc-table",
+  ]
 }
 
 variant("sancov") {
