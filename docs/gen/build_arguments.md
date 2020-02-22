@@ -908,7 +908,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:616
+From //build/config/BUILDCONFIG.gn:631
 
 ### fastboot_product
 
@@ -1386,7 +1386,19 @@ Each element of the list is one variant, which is a scope defining:
   remove_common_configs = ["//build/config/fuchsia:icf"]
   remove_shared_configs = ["//build/config:symbol_no_undefined"]
   toolchain_args = {
-  asan_default_options = "alloc_dealloc_mismatch=0:allocator_may_return_null=1:check_malloc_usable_size=0:detect_leaks=0:detect_odr_violation=0:malloc_context_size=128:max_uar_stack_size_log=16:print_scariness=1:print_summary=1:print_suppressions=0:strict_memcmp=0:symbolize=0:clear_shadow_mmap_threshold=0"
+  asan_default_options = "alloc_dealloc_mismatch=0:check_malloc_usable_size=0:detect_odr_violation=0:max_uar_stack_size_log=16:print_scariness=1:allocator_may_return_null=1:detect_leaks=0:malloc_context_size=128:print_summary=1:print_suppressions=0:strict_memcmp=0:symbolize=0:clear_shadow_mmap_threshold=0"
+  use_scudo = false
+}
+}, {
+  configs = ["//build/config/sanitizers:asan", "//build/config/sanitizers:rust-asan", "//build/config/sanitizers:fuzzer", "//build/config/fuchsia:icf"]
+  host_only = {
+  remove_shared_configs = ["//build/config:symbol_no_undefined"]
+}
+  name = "rust-asan-fuzzer"
+  remove_common_configs = ["//build/config/fuchsia:icf"]
+  remove_shared_configs = ["//build/config:symbol_no_undefined"]
+  toolchain_args = {
+  asan_default_options = "alloc_dealloc_mismatch=0:check_malloc_usable_size=0:detect_odr_violation=0:max_uar_stack_size_log=16:print_scariness=1:allocator_may_return_null=1:detect_leaks=0:malloc_context_size=128:print_summary=1:print_suppressions=0:strict_memcmp=0:symbolize=0:clear_shadow_mmap_threshold=0"
   use_scudo = false
 }
 }, {
@@ -1397,7 +1409,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:521
+From //build/config/BUILDCONFIG.gn:549
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -1939,7 +1951,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:821
+From //build/config/BUILDCONFIG.gn:836
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -1948,7 +1960,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:826
+From //build/config/BUILDCONFIG.gn:841
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -1972,7 +1984,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:662
+From //build/config/BUILDCONFIG.gn:677
 
 ### signed_image
 
@@ -2210,7 +2222,7 @@ From //build/config/sanitizers/BUILD.gn:35
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:636
+From //build/config/BUILDCONFIG.gn:651
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
