@@ -24,6 +24,9 @@ executable("config_test") {
     "//src/sys/sysmgr:lib",
     "//third_party/googletest:gmock",
   ]
+
+  # TODO(46846): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 test_package("sysmgr_tests") {

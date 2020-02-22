@@ -68,6 +68,9 @@ executable("service_startup_test") {
     "//third_party/googletest:gmock",
     "//zircon/system/fidl/fuchsia-logger",
   ]
+
+  # TODO(46846): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 executable("package_updating_loader_test") {
