@@ -198,6 +198,7 @@ impl IncomingNamespace {
         let (client_end, server_end) =
             create_endpoints().expect("could not create storage proxy endpoints");
         let model = model.clone();
+        let cloned_target_path = target_path.clone();
         let route_on_usage = async move {
             // Wait for the channel to become readable.
             let server_end = fasync::Channel::from_channel(server_end.into_channel())
@@ -221,7 +222,10 @@ impl IncomingNamespace {
             }
             .await;
             if let Err(e) = res {
-                error!("failed to route directory for component {}: {:?}", abs_moniker, e);
+                error!(
+                    "failed to route directory {} from {}: {:?}",
+                    cloned_target_path, abs_moniker, e
+                );
             }
         };
 
