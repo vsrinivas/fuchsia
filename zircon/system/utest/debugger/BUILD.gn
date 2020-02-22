@@ -53,6 +53,9 @@ test("debugger") {
   ]
 
   deps += [ "//zircon/system/utest/dlopen-indirect-deps:dlopen-indirect-deps-test-module" ]
+
+  # TODO(46869): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("debugger-manifest") {
