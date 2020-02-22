@@ -50,9 +50,9 @@ test("elf-search") {
     }
   }
   sources = [
-    "elf.c",
     "elf-search-test.cc",
-    ]
+    "elf.c",
+  ]
   deps = [
     "//zircon/public/lib/elf-search",
     "//zircon/public/lib/elfload",
@@ -64,6 +64,9 @@ test("elf-search") {
   ]
   data_deps = [ ":elf-search-test-helper" ]
   include_dirs = [ "include" ]
+
+  # TODO(46871): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("elf-search-test-helper-manifest") {
