@@ -2005,7 +2005,7 @@ generated_file("image_paths") {
   outputs = [ "$root_build_dir/image_paths.sh" ]
   output_conversion = "list lines"
   data_keys = [ "image_paths" ]
-  deps = [ ":default-images" ]
+  deps = [ ":images" ]
 }
 
 # Add this tag to deps of non_production GN labels (packages/configs).
