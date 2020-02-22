@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <future>
 #include <string>
+
 #include <ddktl/fidl.h>
 
 namespace fidl_tel_snoop = ::llcpp::fuchsia::telephony::snoop;
@@ -23,6 +24,14 @@ static const std::string kAtCmdRespNoCarrier = "NO CARRIER\r";
 static const std::string kAtCmdReqAtCgmi = "AT+CGMI\r";
 static const std::string kAtCmdRespManuId = "Sierra Wireless Incorporated\r\rOK\r";
 static const std::string kAtCmdRespErr = "ERROR\r";
+
+static const size_t kRaceDetectionPrefixSize = 4;
+static const std::string kRaceDetectionRequestPrefix = "RACE";
+static const std::string kRaceDetectionResponsePrefix = "ECAR";
+
+static const std::string kInvalidUnicodeRequest = "INVALID UNICODE";
+static const size_t kInvalidUnicodeResponseSize = 2;
+static const char* kInvalidUnicodeResponse = "\x80\x81";
 
 constexpr uint32_t kTelCtrlPlanePktMax = 2048;
 
@@ -52,7 +61,7 @@ static void sent_fake_at_msg(zx::channel& channel, uint8_t* resp, uint32_t resp_
 }
 
 void AtDevice::SnoopCtrlMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
-                             fidl_tel_snoop::Direction direction) {
+                            fidl_tel_snoop::Direction direction) {
   if (GetCtrlSnoopChannel()) {
     fidl_tel_snoop::Message snoop_msg;
     fidl_tel_snoop::QmiMessage msg;
@@ -64,26 +73,44 @@ void AtDevice::SnoopCtrlMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
     memcpy(msg.opaque_bytes.data_, snoop_data, current_length);
     snoop_msg.set_qmi_message(&msg);
     zxlogf(INFO, "at-fake-transport: snoop msg %u %u %u %u sent\n", msg.opaque_bytes.data_[0],
-           msg.opaque_bytes.data_[1], msg.opaque_bytes.data_[2],
-           msg.opaque_bytes.data_[3]);
+           msg.opaque_bytes.data_[1], msg.opaque_bytes.data_[2], msg.opaque_bytes.data_[3]);
     fidl_tel_snoop::Publisher::Call::SendMessage(zx::unowned_channel(GetCtrlSnoopChannel().get()),
                                                  std::move(snoop_msg));
   }
 }
 
 void AtDevice::ReplyCtrlMsg(uint8_t* req, uint32_t req_size, uint8_t* resp, uint32_t resp_size) {
-  zxlogf(INFO, "at-fake-driver: req %u %u %u %u with len %u\n", req[0], req[1], req[2], req[3], req_size);
+  zxlogf(INFO, "at-fake-driver: req %u %u %u %u with len %u\n", req[0], req[1], req[2], req[3],
+         req_size);
   if (0 == memcmp(req, kAtCmdReqAtdStr.c_str(), kAtCmdReqAtdStr.size())) {
     resp_size = std::min(kAtCmdRespNoCarrier.size(), static_cast<std::size_t>(resp_size));
     memcpy(resp, kAtCmdRespNoCarrier.c_str(), resp_size);
-    zxlogf(INFO, "at-fake-driver: resp %u %u %u %u with len %u\n", resp[0], resp[1], resp[2], resp[3], resp_size);
+    zxlogf(INFO, "at-fake-driver: resp %u %u %u %u with len %u\n", resp[0], resp[1], resp[2],
+           resp[3], resp_size);
     sent_fake_at_msg(GetCtrlChannel(), resp, resp_size);
     SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
+
   } else if (0 == memcmp(req, kAtCmdReqAtCgmi.c_str(), kAtCmdReqAtCgmi.size())) {
     resp_size = std::min(kAtCmdRespManuId.size(), static_cast<std::size_t>(resp_size));
     memcpy(resp, kAtCmdRespManuId.c_str(), resp_size);
     sent_fake_at_msg(GetCtrlChannel(), resp, resp_size);
     SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
+
+  } else if (0 == memcmp(req, kInvalidUnicodeRequest.c_str(), kInvalidUnicodeRequest.size())) {
+    resp_size = std::min(kInvalidUnicodeResponseSize, static_cast<std::size_t>(resp_size));
+    memcpy(resp, kInvalidUnicodeResponse, resp_size);
+    sent_fake_at_msg(GetCtrlChannel(), resp, resp_size);
+    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
+
+  } else if (req_size >= kRaceDetectionPrefixSize &&
+             0 == memcmp(req, kRaceDetectionRequestPrefix.c_str(), kRaceDetectionPrefixSize)) {
+    resp_size = std::min(resp_size, req_size);
+    memcpy(resp, kRaceDetectionResponsePrefix.c_str(), kRaceDetectionPrefixSize);
+    memcpy(resp + kRaceDetectionPrefixSize, req + kRaceDetectionPrefixSize,
+           req_size - kRaceDetectionPrefixSize);
+    sent_fake_at_msg(GetCtrlChannel(), resp, resp_size);
+    SnoopCtrlMsg(resp, resp_size, fidl_tel_snoop::Direction::FROM_MODEM);
+
   } else {
     zxlogf(ERROR, "at-fake-driver: unexpected at msg received\n");
     resp_size = std::min(kAtCmdRespErr.size(), static_cast<std::size_t>(resp_size));
@@ -149,8 +176,7 @@ zx_status_t AtDevice::Bind() {
   // create a port to watch at messages
   zx_status_t status = zx::port::create(0, &GetCtrlChannelPort());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "at-fake-transport: failed to create a port: %s\n",
-           zx_status_get_string(status));
+    zxlogf(ERROR, "at-fake-transport: failed to create a port: %s\n", zx_status_get_string(status));
     return status;
   }
 

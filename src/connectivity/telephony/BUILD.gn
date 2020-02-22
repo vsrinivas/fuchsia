@@ -7,6 +7,7 @@ group("telephony") {
   public_deps = [
     ":tests",
     "//src/connectivity/telephony/config",
+    "//src/connectivity/telephony/ril-at",
     "//src/connectivity/telephony/ril-qmi",
     "//src/connectivity/telephony/telephony",
     "//src/connectivity/telephony/tools",

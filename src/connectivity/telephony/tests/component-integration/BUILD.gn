@@ -12,6 +12,10 @@ group("fake-qmi-query") {
   public_deps = [ "fake-qmi-query" ]
 }
 
+group("fake-at-query") {
+  testonly = true
+  public_deps = [ "fake-at-query" ]
+}
 group("snooper") {
   testonly = true
   public_deps = [ "snooper:multi-clients" ]

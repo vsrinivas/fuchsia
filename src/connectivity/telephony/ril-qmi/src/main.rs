@@ -187,6 +187,9 @@ impl FrilService {
                     responder.send(&mut Ok(RadioPowerState::Off))?
                 }
             }
+            RadioInterfaceLayerRequest::RawCommand { command: _command, responder } => {
+                responder.send(&mut Err(RilError::UnknownError))?
+            }
         }
         Ok(())
     }

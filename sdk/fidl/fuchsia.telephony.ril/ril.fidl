@@ -71,4 +71,7 @@ protocol RadioInterfaceLayer {
 
     /// Signal Strength (dBm) for LTE networks (total received wideband power).
     GetSignalStrength() -> (float32 dbm) error RilError;
+
+    /// Raw string to send to modem for development.
+    RawCommand(string command) -> (string result) error RilError;
 };
