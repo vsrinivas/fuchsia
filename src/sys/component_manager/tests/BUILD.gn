@@ -61,6 +61,9 @@ rustc_test("shutdown_integration_test_bin") {
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
   ]
+
+  # TODO(46841): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 rustc_binary("system_controller_client") {
