@@ -52,6 +52,9 @@ test("ethernet-unittest") {
     "//zircon/system/banjo/ddk.protocol.ethernet",
     "//zircon/system/fidl/fuchsia-hardware-ethernet:c",
   ]
+
+  # TODO(46872): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("ethernet-manifest") {
