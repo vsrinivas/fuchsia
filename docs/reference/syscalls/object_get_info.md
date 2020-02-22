@@ -787,6 +787,14 @@ typedef struct zx_info_bti {
 
     // The number of bytes in the device's address space (UINT64_MAX if 2^64).
     uint64_t aspace_size;
+
+    // The count of the pinned memory object tokens. Requesting this count is
+    // racy, so this should only be used for informative reasons.
+    uint64_t pmo_count;
+
+    // The count of the quarantined pinned memory object tokens. Requesting this count is
+    // racy, so this should only be used for informative reasons.
+    uint64_t quarantine_count;
 } zx_info_bti_t;
 ```
 

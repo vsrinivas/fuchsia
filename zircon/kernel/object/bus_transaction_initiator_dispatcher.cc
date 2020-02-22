@@ -126,6 +126,18 @@ void BusTransactionInitiatorDispatcher::Quarantine(fbl::RefPtr<PinnedMemoryToken
   }
 }
 
+// The count of the pinned memory object tokens.
+uint64_t BusTransactionInitiatorDispatcher::pmo_count() const {
+  Guard<fbl::Mutex> guard{get_lock()};
+  return pinned_memory_.size_slow();
+}
+
+// The count of the quarantined pinned memory object tokens.
+uint64_t BusTransactionInitiatorDispatcher::quarantine_count() const {
+  Guard<fbl::Mutex> guard{get_lock()};
+  return quarantine_.size_slow();
+}
+
 void BusTransactionInitiatorDispatcher::PrintQuarantineWarningLocked() {
   uint64_t leaked_pages = 0;
   size_t num_entries = 0;

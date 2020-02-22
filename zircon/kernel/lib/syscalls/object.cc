@@ -563,6 +563,8 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       zx_info_bti_t info = {
           .minimum_contiguity = dispatcher->minimum_contiguity(),
           .aspace_size = dispatcher->aspace_size(),
+          .pmo_count = dispatcher->pmo_count(),
+          .quarantine_count = dispatcher->quarantine_count(),
       };
 
       return single_record_result(_buffer, buffer_size, _actual, _avail, info);

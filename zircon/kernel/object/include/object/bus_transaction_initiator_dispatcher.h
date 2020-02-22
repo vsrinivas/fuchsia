@@ -65,6 +65,12 @@ class BusTransactionInitiatorDispatcher final
   // The number of bytes in the address space (UINT64_MAX if 2^64).
   uint64_t aspace_size() const { return iommu_->aspace_size(bti_id_); }
 
+  // The count of the pinned memory object tokens.
+  uint64_t pmo_count() const;
+
+  // The count of the quarantined pinned memory object tokens.
+  uint64_t quarantine_count() const;
+
  protected:
   friend PinnedMemoryTokenDispatcher;
 

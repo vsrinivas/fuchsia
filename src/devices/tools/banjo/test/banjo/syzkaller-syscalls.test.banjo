@@ -378,6 +378,8 @@ struct zx_info_vmar {
 struct zx_info_bti {
     uint64 minimum_contiguity;
     uint64 aspace_size;
+    uint64 pmo_count;
+    uint64 quarantine_count;
 };
 
 [valueset = "options zx_socket_create_options"]

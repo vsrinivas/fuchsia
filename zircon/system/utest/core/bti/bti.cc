@@ -149,6 +149,50 @@ TEST(Bti, Clone) {
   EXPECT_EQ(vmo.wait_one(ZX_VMO_ZERO_CHILDREN, zx::time::infinite_past(), &o), ZX_OK);
 }
 
+TEST(Bti, GetInfoTest) {
+  zx::iommu iommu;
+  zx::bti bti;
+  zx::pmt pmt;
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  zx::unowned_resource root_res(get_root_resource());
+  zx_iommu_desc_dummy_t desc;
+  // Please do not use get_root_resource() in new code. See ZX-1467.
+  ASSERT_EQ(zx_iommu_create(get_root_resource(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                            iommu.reset_and_get_address()),
+            ZX_OK);
+  ASSERT_EQ(zx::bti::create(iommu, 0, 0xdeadbeef, &bti), ZX_OK);
+  // Query the info on the bti. It should have no pmos, and no quarantines:
+  zx_info_bti_t bti_info;
+  EXPECT_EQ(bti.get_info(ZX_INFO_BTI, &bti_info, sizeof(bti_info), nullptr, nullptr), ZX_OK);
+  EXPECT_EQ(bti_info.pmo_count, 0);
+  EXPECT_EQ(bti_info.quarantine_count, 0);
+
+  zx::vmo vmo;
+  ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, ZX_VMO_RESIZABLE, &vmo), ZX_OK);
+
+  zx_paddr_t paddrs;
+  ASSERT_EQ(bti.pin(ZX_BTI_PERM_READ, vmo, 0, ZX_PAGE_SIZE, &paddrs, 1, &pmt), ZX_OK);
+
+  // Now our bti should have one pmo, and no quarantines:
+  EXPECT_EQ(bti.get_info(ZX_INFO_BTI, &bti_info, sizeof(bti_info), nullptr, nullptr), ZX_OK);
+  EXPECT_EQ(bti_info.pmo_count, 1);
+  EXPECT_EQ(bti_info.quarantine_count, 0);
+
+  // Delete pmt without unpinning. This should trigger a quarantine.
+  pmt.reset();
+
+  // Now our bti should have one pmo, and one quarantines:
+  EXPECT_EQ(bti.get_info(ZX_INFO_BTI, &bti_info, sizeof(bti_info), nullptr, nullptr), ZX_OK);
+  EXPECT_EQ(bti_info.pmo_count, 1);
+  EXPECT_EQ(bti_info.quarantine_count, 1);
+
+  EXPECT_EQ(bti.release_quarantine(), ZX_OK);
+  // Now our bti should have no pmo, and no quarantines:
+  EXPECT_EQ(bti.get_info(ZX_INFO_BTI, &bti_info, sizeof(bti_info), nullptr, nullptr), ZX_OK);
+  EXPECT_EQ(bti_info.pmo_count, 0);
+  EXPECT_EQ(bti_info.quarantine_count, 0);
+}
+
 TEST(Bti, NoDelayedUnpin) {
   zx::iommu iommu;
   zx::bti bti;

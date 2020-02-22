@@ -159,9 +159,11 @@ VALIDATE_TYPE_SIZE_ALIGNMENT(zx_arm64_exc_data_t, 16, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_arm64_exc_data_t, esr, 0, 4);
 VALIDATE_FIELD_OFFSET_SIZE(zx_arm64_exc_data_t, far, 8, 8);
 
-VALIDATE_TYPE_SIZE_ALIGNMENT(zx_info_bti_t, 16, 8);
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_info_bti_t, 32, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_bti_t, minimum_contiguity, 0, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_bti_t, aspace_size, 8, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_bti_t, pmo_count, 16, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_bti_t, quarantine_count, 24, 8);
 
 VALIDATE_TYPE_SIZE_ALIGNMENT(zx_info_handle_basic_t, 32, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_handle_basic_t, koid, 0, 8);

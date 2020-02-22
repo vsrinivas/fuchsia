@@ -1589,6 +1589,8 @@ OBJECT_GET_INFO_RESOURCE_DISPLAY_TEST(
   zx_info_bti_t buffer;                                                                        \
   buffer.minimum_contiguity = kMinimumContiguity;                                              \
   buffer.aspace_size = kAspaceSize;                                                            \
+  buffer.pmo_count = 0;                                                                        \
+  buffer.quarantine_count = 0;                                                                 \
   auto value =                                                                                 \
       ZxObjectGetInfo(result, #result, kHandle, ZX_INFO_BTI, reinterpret_cast<void*>(&buffer), \
                       sizeof(buffer), nullptr, nullptr);                                       \
@@ -1609,11 +1611,13 @@ OBJECT_GET_INFO_BTI_DISPLAY_TEST(
     "zx_object_get_info("
     "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
     "topic:\x1B[32mzx_object_info_topic_t\x1B[0m: \x1B[34mZX_INFO_BTI\x1B[0m, "
-    "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m16\x1B[0m)\n"
+    "buffer_size:\x1B[32msize_t\x1B[0m: \x1B[34m32\x1B[0m)\n"
     "  -> \x1B[32mZX_OK\x1B[0m\n"
     "      info:\x1B[32mzx_info_bti_t\x1B[0m: {\n"
     "        minimum_contiguity:\x1B[32muint64\x1B[0m: \x1B[34m1048576\x1B[0m\n"
     "        aspace_size:\x1B[32muint64\x1B[0m: \x1B[34m536870912\x1B[0m\n"
+    "        pmo_count:\x1B[32muint64\x1B[0m: \x1B[34m0\x1B[0m\n"
+    "        quarantine_count:\x1B[32muint64\x1B[0m: \x1B[34m0\x1B[0m\n"
     "      }\n");
 
 // zx_object_get_child tests.

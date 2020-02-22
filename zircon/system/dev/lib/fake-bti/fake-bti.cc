@@ -88,6 +88,8 @@ zx_status_t Bti::get_info(zx_handle_t handle, uint32_t topic, void* buffer, size
         zx_info_bti_t info = {
             .minimum_contiguity = ZX_PAGE_SIZE,
             .aspace_size = UINT64_MAX,
+            .pmo_count = 0,
+            .quarantine_count = 0,
         };
         memcpy(buffer, &info, sizeof(info));
         if (actual_count) {

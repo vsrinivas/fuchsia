@@ -49,6 +49,8 @@ zx_exception_header {
 zx_info_bti {
 	minimum_contiguity	int64
 	aspace_size	int64
+	pmo_count	int64
+	quarantine_count	int64
 }
 
 zx_info_cpu_stats {

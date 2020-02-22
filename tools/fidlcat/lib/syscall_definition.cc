@@ -200,6 +200,8 @@ class ZxInfoBti : public Class<zx_info_bti_t> {
 
   static uint64_t minimum_contiguity(const zx_info_bti_t* from) { return from->minimum_contiguity; }
   static uint64_t aspace_size(const zx_info_bti_t* from) { return from->aspace_size; }
+  static uint64_t pmo_count(const zx_info_bti_t* from) { return from->pmo_count; }
+  static uint64_t quarantine_count(const zx_info_bti_t* from) { return from->quarantine_count; }
 
  private:
   ZxInfoBti() : Class("zx_info_bti_t") {
@@ -207,6 +209,10 @@ class ZxInfoBti : public Class<zx_info_bti_t> {
         "minimum_contiguity", SyscallType::kUint64, minimum_contiguity));
     AddField(std::make_unique<ClassField<zx_info_bti_t, uint64_t>>(
         "aspace_size", SyscallType::kUint64, aspace_size));
+    AddField(std::make_unique<ClassField<zx_info_bti_t, uint64_t>>(
+        "pmo_count", SyscallType::kUint64, pmo_count));
+    AddField(std::make_unique<ClassField<zx_info_bti_t, uint64_t>>(
+        "quarantine_count", SyscallType::kUint64, quarantine_count));
   }
   ZxInfoBti(const ZxInfoBti&) = delete;
   ZxInfoBti& operator=(const ZxInfoBti&) = delete;
