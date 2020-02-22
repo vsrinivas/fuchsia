@@ -113,6 +113,9 @@ test("fs") {
     "//zircon/system/fidl/fuchsia-mem:c",
     "//zircon/system/fidl/fuchsia-minfs:c",
   ]
+
+  # TODO(46860): Fix the leaks and remove this.
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("fs-manifest") {
