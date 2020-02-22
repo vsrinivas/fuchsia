@@ -9,6 +9,7 @@
 #include "mold/mold.h"
 #include "spinel/spinel.h"
 #include "spinel/spinel_assert.h"
+#include "spinel/spinel_vk_types.h"
 #include "tests/common/utils.h"
 #include "tests/common/vk_utils.h"
 
@@ -358,7 +359,9 @@ DemoMoldApp::teardown()
 {
   LOG("TEARDOWN\n");
   // TODO(digit): Wait for Spinel context drain
-  spn_context_status(spinel_context_);
+  spn_vk_status_ext_block_pool_t status_block_pool = { .type = SPN_VK_STATUS_EXT_TYPE_BLOCK_POOL };
+  spn_status_t const             status            = { .ext = &status_block_pool };
+  spn_context_status(spinel_context_, &status);
 
   image_buffers_.clear();
   image_provider_->teardown();

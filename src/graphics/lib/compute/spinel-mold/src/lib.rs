@@ -234,6 +234,13 @@ pub struct RenderSubmit {
 }
 
 #[cfg(not(feature = "lib"))]
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct Status {
+    pub ext: *mut std::ffi::c_void,
+}
+
+#[cfg(not(feature = "lib"))]
 pub type ContextPtr = *const RefCell<Context>;
 #[cfg(not(feature = "lib"))]
 pub type PathBuilderPtr = *const RefCell<PathBuilder>;
@@ -292,7 +299,7 @@ pub unsafe extern "C" fn spn_context_reset(context: ContextPtr) -> SpnResult {
 #[cfg(not(feature = "lib"))]
 #[no_mangle]
 #[allow(unused_variables)]
-pub unsafe extern "C" fn spn_context_status(context: ContextPtr) -> SpnResult {
+pub unsafe extern "C" fn spn_context_status(context: ContextPtr, status: Status) -> SpnResult {
     SpnResult::SpnSuccess
 }
 

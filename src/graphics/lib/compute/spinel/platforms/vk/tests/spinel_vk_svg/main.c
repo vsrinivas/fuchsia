@@ -947,7 +947,23 @@ main(int argc, char const * argv[])
   //
   // FIXME(allanmac): need to drain everything before shutting down
   //
-  spn_context_status(context);
+  spn_vk_status_ext_block_pool_t status_block_pool = {
+
+    .type = SPN_VK_STATUS_EXT_TYPE_BLOCK_POOL,
+  };
+
+  spn_status_t const status = {
+
+    .ext = &status_block_pool,
+  };
+  spn_context_status(context, &status);
+
+  fprintf(stderr,
+          "avail/alloc: %9lu = %9.3f MB / %9lu = %9.3f MB\n",
+          status_block_pool.avail,
+          status_block_pool.avail / (1024.0 * 1024.0),
+          status_block_pool.inuse,
+          status_block_pool.inuse / (1024.0 * 1024.0));
 
   //
   // save buffer as PPM
