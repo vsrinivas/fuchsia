@@ -72,9 +72,25 @@ If you need to keep test storage for the debugging after the test ends, use
 `--realm-label` flag.
 
 The `--realm-label` flag defines the label for environment that your test runs
-in. When the test ends, the storage won't be deleted automatically. When you're
-done exploring the contents of the directory, you may want to delete it to free
-up space or prevent it from interfering with the results of future tests.
+in. When the test ends, the storage won't be deleted automatically - it'll be
+accessible at a path under /data. Assuming you:
+
+- gave your test component (in package `mypackage` with component manifest
+  `myurl.cmx`) access to the "isolated-persistent-storage" feature
+- passed --realm-label=foo to run-test-component
+- wrote to the file `/data/bar` from the test binary
+- can connect to the device via `fx shell`
+
+You should see the written file under the path
+`/data/r/sys/r/<REALM>/fuchsia.com:<PACKAGE>:0#meta:<CMX>/<FILE>`, e.g.
+`/data/r/sys/r/foo/fuchsia.com:mypackage:0#meta:myurl.cmx/bar`
+
+Assuming you can connect to the device via ssh, you can get the data off the
+device with the in-tree utility `fx scp`.
+
+When you're done exploring the contents of the directory, you may want to
+delete it to free up space or prevent it from interfering with the results of
+future tests.
 
 ## Ambient Services
 
