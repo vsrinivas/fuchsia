@@ -41,7 +41,7 @@ SECTIONS
     } :code
 
     /*
-     * This is separate from .text just so gen-kaslr-relocs.sh can match
+     * This is separate from .text just so gen-kaslr-fixups.sh can match
      * it.  The relocation processor skips this section because this code
      * all runs before the boot-time fixups are applied and has its own
      * special relationship with the memory layouts.
@@ -51,7 +51,7 @@ SECTIONS
     }
 
     /*
-     * This is separate from .text just so gen-kaslr-relocs.sh can match
+     * This is separate from .text just so gen-kaslr-fixups.sh can match
      * it.  This section contains movabs instructions that get 64-bit
      * address fixups in place.  This is safe because this code is never
      * used until long after fixups have been applied.  In general, the
