@@ -5,6 +5,8 @@
 #ifndef SYSROOT_ZIRCON_HW_USB_CDC_H_
 #define SYSROOT_ZIRCON_HW_USB_CDC_H_
 
+#include <stdint.h>
+
 // clang-format off
 
 #include <zircon/compiler.h>
