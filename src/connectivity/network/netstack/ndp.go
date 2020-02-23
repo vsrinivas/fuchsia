@@ -35,22 +35,28 @@ type ndpEvent interface {
 	isNDPEvent()
 }
 
-// ndpRouterEventCommon holds the common fields for all events related to NDP
-// default router discovery and invalidation.
-type ndpRouterEventCommon struct {
+// ndpRouterAndDADEventCommon holds the common fields for NDP default router
+// discovery and invalidation, and Duplicate Address Detection events.
+type ndpRouterAndDADEventCommon struct {
 	nicID tcpip.NICID
 	addr  tcpip.Address
 }
 
 // isNDPEvent implements ndpEvent.isNDPEvent.
-func (*ndpRouterEventCommon) isNDPEvent() {}
+func (*ndpRouterAndDADEventCommon) isNDPEvent() {}
+
+type ndpDuplicateAddressDetectionEvent struct {
+	ndpRouterAndDADEventCommon
+	resolved bool
+	err      *tcpip.Error
+}
 
 type ndpDiscoveredRouterEvent struct {
-	ndpRouterEventCommon
+	ndpRouterAndDADEventCommon
 }
 
 type ndpInvalidatedRouterEvent struct {
-	ndpRouterEventCommon
+	ndpRouterAndDADEventCommon
 }
 
 // ndpPrefixEventCommon holds the common fields for all events related to NDP
@@ -145,7 +151,16 @@ type ndpDispatcher struct {
 
 // OnDuplicateAddressDetectionStatus implements
 // stack.NDPDispatcher.OnDuplicateAddressDetectionStatus.
-func (*ndpDispatcher) OnDuplicateAddressDetectionStatus(tcpip.NICID, tcpip.Address, bool, *tcpip.Error) {
+func (n *ndpDispatcher) OnDuplicateAddressDetectionStatus(nicID tcpip.NICID, addr tcpip.Address, resolved bool, err *tcpip.Error) {
+	syslog.Infof("ndp: OnDuplicateAddressDetectionStatus(%d, %s, %t, %v)", nicID, addr, resolved, err)
+	n.addEvent(&ndpDuplicateAddressDetectionEvent{
+		ndpRouterAndDADEventCommon: ndpRouterAndDADEventCommon{
+			nicID: nicID,
+			addr:  addr,
+		},
+		resolved: resolved,
+		err:      err,
+	})
 }
 
 // OnDefaultRouterDiscovered implements stack.NDPDispatcher.OnDefaultRouterDiscovered.
@@ -154,14 +169,14 @@ func (*ndpDispatcher) OnDuplicateAddressDetectionStatus(tcpip.NICID, tcpip.Addre
 // discovered default router.
 func (n *ndpDispatcher) OnDefaultRouterDiscovered(nicID tcpip.NICID, addr tcpip.Address) bool {
 	syslog.Infof("ndp: OnDefaultRouterDiscovered(%d, %s)", nicID, addr)
-	n.addEvent(&ndpDiscoveredRouterEvent{ndpRouterEventCommon: ndpRouterEventCommon{nicID: nicID, addr: addr}})
+	n.addEvent(&ndpDiscoveredRouterEvent{ndpRouterAndDADEventCommon: ndpRouterAndDADEventCommon{nicID: nicID, addr: addr}})
 	return true
 }
 
 // OnDefaultRouterInvalidated implements stack.NDPDispatcher.OnDefaultRouterInvalidated.
 func (n *ndpDispatcher) OnDefaultRouterInvalidated(nicID tcpip.NICID, addr tcpip.Address) {
 	syslog.Infof("ndp: OnDefaultRouterInvalidated(%d, %s)", nicID, addr)
-	n.addEvent(&ndpInvalidatedRouterEvent{ndpRouterEventCommon: ndpRouterEventCommon{nicID: nicID, addr: addr}})
+	n.addEvent(&ndpInvalidatedRouterEvent{ndpRouterAndDADEventCommon: ndpRouterAndDADEventCommon{nicID: nicID, addr: addr}})
 }
 
 // OnOnLinkPrefixDiscovered implements stack.NDPDispatcher.OnOnLinkPrefixDiscovered.
@@ -289,6 +304,17 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 
 			// Handle the event.
 			switch event := event.(type) {
+			case *ndpDuplicateAddressDetectionEvent:
+				if event.resolved {
+					syslog.Infof("ndp: DAD resolved for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
+				} else if err := event.err; err != nil {
+					syslog.Errorf("ndp: DAD for %s on nicID (%d) encountered error = %s, sending interface changed event...", event.addr, event.nicID, err)
+				} else {
+					syslog.Warnf("ndp: duplicate address detected during DAD for %s on nicID (%d), sending interface changed event...", event.addr, event.nicID)
+				}
+
+				n.ns.onInterfacesChanged()
+
 			case *ndpDiscoveredRouterEvent:
 				nicID, addr := event.nicID, event.addr
 				rt := defaultV6Route(nicID, addr)
@@ -333,7 +359,8 @@ func (n *ndpDispatcher) start(ctx context.Context) {
 
 			case *ndpInvalidatedAutoGenAddrEvent:
 				nicID, addrWithPrefix := event.nicID, event.addrWithPrefix
-				syslog.Infof("ndp: invalidated an auto-generated address (%s) on nicID (%d)", addrWithPrefix, nicID)
+				syslog.Infof("ndp: invalidated an auto-generated address (%s) on nicID (%d), sending interface changed event...", addrWithPrefix, nicID)
+				n.ns.onInterfacesChanged()
 
 			case *ndpRecursiveDNSServerEvent:
 				nicID, addrs, lifetime := event.nicID, event.addrs, event.lifetime

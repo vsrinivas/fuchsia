@@ -7,6 +7,8 @@ package netstack
 import (
 	"context"
 	"fmt"
+	"syscall/zx"
+	"syscall/zx/zxwait"
 	"testing"
 	"time"
 
@@ -27,6 +29,8 @@ const (
 	middleLifetimeTimeout = middleLifetime * time.Second
 	incrementalTimeout    = 100 * time.Millisecond
 	defaultLifetime       = time.Hour
+
+	onInterfacesChangedEventTimeout = time.Second
 )
 
 var (
@@ -85,6 +89,77 @@ func waitForEmptyQueue(n *ndpDispatcher) {
 			break
 		}
 		<-n.testNotifyCh
+	}
+}
+
+// Test that netstack service clients receive an OnInterfacesChanged event on
+// DAD and SLAAC address invalidation events.
+func TestSendingOnInterfacesChangedEvent(t *testing.T) {
+	tests := []struct {
+		name       string
+		ndpEventFn func(id tcpip.NICID, ndpDisp *ndpDispatcher)
+	}{
+		{
+			name: "On DAD event",
+			ndpEventFn: func(id tcpip.NICID, ndpDisp *ndpDispatcher) {
+				ndpDisp.OnDuplicateAddressDetectionStatus(id, testLinkLocalV6Addr1, false, nil)
+			},
+		},
+		{
+			name: "On SLAAC address invalidated event",
+			ndpEventFn: func(id tcpip.NICID, ndpDisp *ndpDispatcher) {
+				ndpDisp.OnAutoGenAddressInvalidated(id, testProtocolAddr1.AddressWithPrefix)
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			ndpDisp := newNDPDispatcherForTest()
+			ns := newNetstackWithNDPDispatcher(t, ndpDisp)
+			ndpDisp.start(ctx)
+
+			eth := deviceForAddEth(ethernet.Info{}, t)
+			ifs, err := ns.addEth("/path", netstack.InterfaceConfig{Name: "name"}, &eth)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := ifs.eth.Up(); err != nil {
+				t.Fatalf("ifs.eth.Up(): %s", err)
+			}
+
+			req, cli, err := netstack.NewNetstackInterfaceRequest()
+			if err != nil {
+				t.Fatalf("netstack.NewNetstackInterfaceRequest(): %s", err)
+			}
+			defer cli.Close()
+			if _, err := ns.netstackService.BindingSet.Add(&netstack.NetstackStub{Impl: &netstackImpl{ns: ns}}, req.ToChannel(), nil); err != nil {
+				t.Fatalf("netstackService.BindingSet.Add(_, _, nil): %s", err)
+			}
+
+			// Send an event to ndpDisp that should trigger an OnInterfacesChanged
+			// event from the netstack.
+			test.ndpEventFn(ifs.nicid, ndpDisp)
+			waitForEmptyQueue(ndpDisp)
+
+			signals, err := zxwait.Wait(*cli.Channel.Handle(), zx.SignalChannelReadable|zx.SignalChannelPeerClosed, zx.Sys_deadline_after(zx.Duration(onInterfacesChangedEventTimeout.Nanoseconds())))
+			if err != nil {
+				t.Fatalf("zxwait.Wait(_, zx.SignalChannelReadable|zx.SignalChannelPeerClosed, %s): %s", onInterfacesChangedEventTimeout, err)
+			}
+			if signals&zx.SignalChannelReadable == 0 {
+				t.Fatalf("got zxwait.Wait(_, zx.SignalChannelReadable|zx.SignalChannelPeerClosed, %s) = %b, want = %b", onInterfacesChangedEventTimeout, signals, zx.SignalChannelReadable)
+			}
+			interfaces, err := cli.ExpectOnInterfacesChanged()
+			if err != nil {
+				t.Fatalf("cli.ExpectOnInterfacesChanged(): %s", err)
+			}
+			if l := len(interfaces); l != 1 {
+				t.Errorf("got len(interfaces) = %d, want = 1", l)
+			}
+		})
 	}
 }
 
