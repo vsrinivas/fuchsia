@@ -141,9 +141,9 @@ their parent's services in the same sense as *fuchsia.sys.Environment* does, tha
 the same **instance** of a service. Rather, managed environments may *optionally* inherit their parent's
 service *configuration*, that is, the configuration of which services to launch in the environment.
 
-The *ManagedEnvironment* service also provides a special *fuchsia.sys.Launcher* instance that provides
-extended functionality, such as forwarding *VirtualDevice* instances in a `/vdev` path and mounting
-a memfs under `/vdata` for components that request *dev* and *isolated-persistent-storage*, respectively.
+The *ManagedEnvironment* service also provides a special *fuchsia.sys.Launcher* instance that
+provides extended functionality, such as forwarding *VirtualDevice* instances in a `/vdev` path for
+components that request *dev* sandbox permissions.
 
 *VirtualDevice* instances are a `vfs` hook for [NetworkContext](#networkcontext)'s *Endpoints*. That
 allows for clients to expose specific *Endpoints* on the `vfs` under the created root folder `/vdev`.

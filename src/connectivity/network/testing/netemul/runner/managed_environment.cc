@@ -233,13 +233,6 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
 
 zx::channel ManagedEnvironment::OpenVdevDirectory() { return virtual_devices_.OpenAsDirectory(); }
 
-zx::channel ManagedEnvironment::OpenVdataDirectory() {
-  if (!virtual_data_) {
-    virtual_data_ = std::make_unique<VirtualData>();
-  }
-  return virtual_data_->GetDirectory();
-}
-
 void ManagedEnvironment::Bind(fidl::InterfaceRequest<ManagedEnvironment::FManagedEnvironment> req) {
   if (ready_) {
     bindings_.AddBinding(this, std::move(req));

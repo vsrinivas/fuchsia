@@ -30,7 +30,7 @@ const NETWORK_NAME: &str = "test-net";
 const EP0_NAME: &str = "ep0";
 const EP1_NAME: &str = "ep1";
 const EVENT_CODE: i32 = 1;
-const SETUP_FILE: &str = "/vdata/test-setup";
+const SETUP_FILE: &str = "/data/test-setup";
 const SETUP_FILE_DATA: &str = "Hello World";
 
 pub struct BusConnection {
@@ -200,7 +200,7 @@ fn run_test_2(opt: &Opt) -> Result<(), Error> {
 
 fn run_setup_test(opt: &Opt) -> Result<(), Error> {
     fx_log_info!("Running setup test: {}", opt.name);
-    // create a file in vdata, that will be verified by root test
+    // create a file in /data, that will be verified by root test
     let () = fs::write(SETUP_FILE, SETUP_FILE_DATA).context("setup can't write file")?;
     Ok(())
 }

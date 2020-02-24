@@ -802,17 +802,13 @@ TEST_F(SandboxTest, ServiceExittingCausesFailure) {
 TEST_F(SandboxTest, DestructorRunsCleanly) {
   // This test verifies that if the sandbox is destroyed while tests are
   // running inside it, it'll shutdown cleanly.
-  // Specifically, this test was added due to a crash in the destruction
-  // of VirtualData (inside ManagedEnvironment) while a process is currently
-  // accessing the vfs.
-  // Dummy_proc is launched with "-d" which causes it to open a file in
-  // the virtual file system and we ensure that we destroy the sandbox
-  // While it is still running.
+  // Dummy proc is launched with a large wait value in -w to ensure that we destroy the sandbox
+  // while it is still running.
   SetCmx(R"(
 {
    "default_url": "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/dummy_proc.cmx",
    "environment" : {
-      "test" : [ { "arguments": ["-d", "-w", "90000"] } ]
+      "test" : [ { "arguments": ["-w", "90000"] } ]
    }
 }
 )");

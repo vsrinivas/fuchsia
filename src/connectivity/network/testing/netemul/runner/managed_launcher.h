@@ -18,7 +18,6 @@ class ManagedEnvironment;
 class ManagedLauncher : public fuchsia::sys::Launcher {
  public:
   static constexpr const char* kVdevRoot = "/vdev";
-  static constexpr const char* kVDataRoot = "/vdata";
 
   explicit ManagedLauncher(ManagedEnvironment* environment);
 

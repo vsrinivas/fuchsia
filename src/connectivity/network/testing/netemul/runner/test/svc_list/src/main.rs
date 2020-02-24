@@ -4,8 +4,6 @@
 
 use anyhow::{format_err, Context as _, Error};
 
-use std::fs;
-use std::io;
 use std::path::Path;
 
 use fidl;
@@ -33,26 +31,8 @@ const EP_NAME: &str = "ep0";
 const EP_MOUNT: &str = "class/ethernet/ep0";
 const MY_PACKAGE: &str = "fuchsia-pkg://fuchsia.com/netemul_sandbox_test#meta/svc_list.cmx";
 const NETSTACK_URL: &str = "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx";
-const SKIP_DIRS: &'static [&str] = &["/data", "/pkg"];
 const FAKE_SVC_NAME: &str = "fuchsia.some.fake.Service";
 const FAKE_SVC_URL: &str = "fuchsia-pkg://fuchsia.com/fake#meta/fake.cmx";
-
-fn visit_dirs(dir: &Path) -> io::Result<()> {
-    let strpath = dir.to_str().unwrap();
-    if SKIP_DIRS.contains(&strpath) {
-        // skip some of the entries to avoid clogging the logs
-        println!("{}/[...]", strpath);
-    } else if dir.is_dir() {
-        for entry in fs::read_dir(dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            let str = path.to_str().expect("paths need strings?");
-            println!("{}", str);
-            visit_dirs(dir.join(path).as_path())?;
-        }
-    }
-    Ok(())
-}
 
 async fn wait_for_component(
     component_events: &mut ComponentControllerEventStream,
@@ -182,14 +162,6 @@ fn check_virtual_device(vdev: &str) -> Result<(), Error> {
     }
 }
 
-fn check_vdata() -> Result<(), Error> {
-    if Path::new("/vdata/.THIS_IS_A_VIRTUAL_FS").exists() {
-        Ok(())
-    } else {
-        Err(format_err!("/vdata does not exist"))
-    }
-}
-
 async fn launch_grandchild() -> Result<(), Error> {
     let env = client::connect_to_service::<ManagedEnvironmentMarker>()?;
 
@@ -246,7 +218,6 @@ async fn launch_grandchild() -> Result<(), Error> {
 
 fn main() -> Result<(), Error> {
     // make sure all services exist!
-    check_vdata()?;
     check_service(NetworkContextMarker::NAME)?;
     check_service(ManagedEnvironmentMarker::NAME)?;
     check_service(SyncManagerMarker::NAME)?;
@@ -267,8 +238,6 @@ fn main() -> Result<(), Error> {
     if opt.is_child {
         let mut executor = fasync::Executor::new().context("Error creating executor")?;
         println!("Running as child");
-        // print whole namespace to console (for manual testing)
-        visit_dirs(Path::new("/"))?;
         // check that the virtual ethernet device is there
         check_virtual_device(EP_MOUNT)?;
         // check that netstack was served

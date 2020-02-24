@@ -42,8 +42,6 @@ source_set("src") {
     "sandbox_env.h",
     "sandbox_service.cc",
     "sandbox_service.h",
-    "virtual_data.cc",
-    "virtual_data.h",
     "virtual_devices.cc",
     "virtual_devices.h",
   ]
@@ -142,9 +140,6 @@ executable("sandbox_unittest") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/memfs-cpp",
   ]
-
-  # TODO(46766): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 package("netemul_sandbox") {

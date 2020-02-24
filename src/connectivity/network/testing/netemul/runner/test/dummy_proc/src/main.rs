@@ -26,8 +26,6 @@ struct Opt {
     publish: Option<i32>,
     #[structopt(short = "e")]
     event: Option<i32>,
-    #[structopt(short = "d")]
-    look_at_data: bool,
     #[structopt(short = "P")]
     check_path: Option<String>,
     #[structopt(short = "s")]
@@ -121,16 +119,6 @@ async fn main() -> Result<(), Error> {
         println!("Sleeping for {}...", wait);
         std::thread::sleep(std::time::Duration::from_millis(wait));
     }
-
-    let _file = if opt.look_at_data {
-        println!("Looking at data...");
-        Some(
-            std::fs::File::open(std::path::Path::new("/vdata/.THIS_IS_A_VIRTUAL_FS"))
-                .context("failed to get vdata")?,
-        )
-    } else {
-        None
-    };
 
     if let Some(path) = opt.check_path {
         println!("Checking path existence {}...", &path);

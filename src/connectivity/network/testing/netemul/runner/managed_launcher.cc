@@ -148,13 +148,6 @@ bool ManagedLauncher::UpdateLaunchInfo(fuchsia::sys::PackagePtr package,
     launch_info->flat_namespace->directories.push_back(env_->OpenVdevDirectory());
   }
 
-  if (cmx.sandbox_meta().HasFeature("isolated-persistent-storage")) {
-    CreateFlatNamespace(launch_info);
-    // add virtual data folder (in-memory fs) to namespace
-    launch_info->flat_namespace->paths.emplace_back(kVDataRoot);
-    launch_info->flat_namespace->directories.push_back(env_->OpenVdataDirectory());
-  }
-
   if (!launch_info->out) {
     launch_info->out = env_->loggers().CreateLogger(package->resolved_url, false);
   }

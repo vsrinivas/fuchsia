@@ -15,7 +15,6 @@
 #include "managed_logger.h"
 #include "sandbox_env.h"
 #include "src/lib/fxl/macros.h"
-#include "virtual_data.h"
 #include "virtual_devices.h"
 
 namespace netemul {
@@ -54,7 +53,6 @@ class ManagedEnvironment : public fuchsia::netemul::environment::ManagedEnvironm
   sys::testing::EnclosingEnvironment& environment();
   ManagedLoggerCollection& loggers();
   zx::channel OpenVdevDirectory();
-  zx::channel OpenVdataDirectory();
 
  private:
   ManagedEnvironment(const SandboxEnv::Ptr& sandbox_env);
@@ -71,7 +69,6 @@ class ManagedEnvironment : public fuchsia::netemul::environment::ManagedEnvironm
   std::vector<ManagedEnvironment::Ptr> children_;
   std::vector<LaunchService> service_config_;
   VirtualDevices virtual_devices_;
-  std::unique_ptr<VirtualData> virtual_data_;
   std::vector<fidl::InterfaceRequest<FManagedEnvironment>> pending_requests_;
   bool ready_;
 
