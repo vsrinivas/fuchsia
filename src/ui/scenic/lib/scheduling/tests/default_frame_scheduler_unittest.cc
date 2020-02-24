@@ -1525,6 +1525,41 @@ TEST_F(FrameSchedulerTest, AddSessionUpdatersInSessionUpdater) {
   }
 }
 
+// Checks that SessionUpdater being deleted by another SessionUpdater doesn't crash the frame
+// scheduler.
+// NOTE: This test relies on the frame scheduler at least initially maintaining insertion order of
+// SessionUpdaters. If this changes the test needs to be reworked.
+TEST_F(FrameSchedulerTest, KillingFollowingSessionUpdaterInPreviousSessionUpdater_ShouldNotCrash) {
+  auto scheduler = CreateDefaultFrameScheduler();
+
+  constexpr SessionId kSession1 = 1;
+  SetSessionUpdateFailedNotExpected(scheduler.get(), kSession1);
+
+  auto updater1 = std::make_unique<MockSessionUpdaterWithFunctionOnUpdate>([]() {
+    EXPECT_FALSE(true) << "Should never be called.";
+  });
+  auto updater2 = std::make_unique<MockSessionUpdaterWithFunctionOnUpdate>([&updater1]() {
+    // No call should have been made to UpdateSessions of |updater1|. If this ever fails then the
+    // SessionUpdaters are probably out of expected order in the frame scheduler and the test needs
+    // to be reworked.
+    EXPECT_EQ(updater1->update_sessions_call_count(), 0U);
+    updater1.reset();
+  });
+
+  // Add updaters in opposite order to ensure updater1 will be called after updater2.
+  scheduler->AddSessionUpdater(updater2->GetWeakPtr());
+  scheduler->AddSessionUpdater(updater1->GetWeakPtr());
+
+  // Schedule an update.
+  ScheduleUpdateAndCallback(scheduler, kSession1, zx::time(0), [](auto...) {});
+
+  // We should now only be calling the update on |updater2|. If the deletion wasn't handled
+  // properly, we should see a crash in RunLoop.
+  EXPECT_NO_FATAL_FAILURE(RunLoopFor(zx::sec(2)));
+  EXPECT_FALSE(updater1);
+  EXPECT_EQ(updater2->update_sessions_call_count(), 1U);
+}
+
 TEST_F(FrameSchedulerTest, SquashedPresents_ShouldSignalAllCallbacksInOrder) {
   auto scheduler = CreateDefaultFrameScheduler();
 

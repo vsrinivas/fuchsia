@@ -502,6 +502,10 @@ SessionUpdater::UpdateResults DefaultFrameScheduler::ApplyUpdatesToEachUpdater(
   std::for_each(
       session_updaters_.begin(), session_updaters_.end(),
       [&sessions_to_update, &update_results, frame_number](fxl::WeakPtr<SessionUpdater> updater) {
+        // We still need to check for dead updaters since more could die inside UpdateSessions.
+        if (!updater) {
+          return;
+        }
         auto session_results = updater->UpdateSessions(sessions_to_update, frame_number);
         // Aggregate results from each updater.
         // Note: Currently, only one SessionUpdater handles each SessionId. If this
