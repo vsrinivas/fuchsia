@@ -130,7 +130,7 @@ group("all") {
     "//sdk/lib/fidl/cpp/fuzzing:fidl_cpp_fuzzing_tests",
     "//sdk/lib/fuzzing/cpp:fuzz_input_unittests($host_toolchain)",
     "//sdk/lib/fuzzing/cpp:fuzzing_traits_tests",
-    "//sdk/lib/inspect/contrib/cpp:inspect_contrib_cpp_tests",
+    "//sdk/lib/inspect/contrib/cpp:tests",
     "//sdk/lib/inspect/service/cpp/tests:inspect_service_cpp_tests",
     "//sdk/lib/svc:svc_tests",
     "//sdk/lib/sys/cpp/testing/examples:component_context_provider_example_test",

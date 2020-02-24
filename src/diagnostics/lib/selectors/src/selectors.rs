@@ -237,7 +237,11 @@ pub fn tokenize_string(untokenized_selector: &str, delimiter: char) -> Result<Ve
     // Push the last section of the selector into the aggregator since we don't delimit the
     // end of the selector.
     if curr_token_builder.is_empty() {
-        return Err(format_err!("Cannot have empty strings delimited by {}", delimiter));
+        return Err(format_err!(
+            "Cannot have empty strings delimited by {}: {}",
+            delimiter,
+            untokenized_selector
+        ));
     }
 
     token_aggregator.push(curr_token_builder);

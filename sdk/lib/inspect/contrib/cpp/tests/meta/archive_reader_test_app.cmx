@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "bin/archive_reader_test_app"
+    }
+}
