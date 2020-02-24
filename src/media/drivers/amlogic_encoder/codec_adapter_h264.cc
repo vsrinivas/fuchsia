@@ -55,6 +55,12 @@ void CodecAdapterH264::CoreCodecInit(
 
   initial_input_format_details_ = fidl::Clone(initial_input_format_details);
   latest_input_format_details_ = fidl::Clone(initial_input_format_details);
+
+  result = device_->InitEncoder(initial_input_format_details_);
+  if (result != ZX_OK) {
+    events_->onCoreCodecFailCodec("In CodecAdapterH264::CoreCodecInit(), InitEncoder failed");
+    return;
+  }
 }
 
 void CodecAdapterH264::CoreCodecStartStream() {

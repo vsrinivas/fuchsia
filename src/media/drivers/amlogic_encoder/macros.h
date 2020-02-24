@@ -32,4 +32,24 @@
     }                                \
   } while (0)
 
+inline uint32_t truncate_to_32(uint64_t input) {
+  assert(!(input & 0xffffffff00000000ul));
+  return static_cast<uint32_t>(input);
+}
+
+// Wait for a condition to become true, with a timeout.
+template <typename DurationType, typename T>
+bool WaitForRegister(DurationType timeout, T condition) {
+  auto start = std::chrono::high_resolution_clock::now();
+  auto cast_timeout =
+      std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(timeout);
+  while (!condition()) {
+    if (std::chrono::high_resolution_clock::now() - start >= cast_timeout) {
+      return false;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+  return true;
+}
+
 #endif  // SRC_MEDIA_DRIVERS_AMLOGIC_ENCODER_MACROS_H_
