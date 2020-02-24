@@ -332,7 +332,7 @@ mod tests {
     use {
         super::*,
         crate::model::{hooks::Hooks, moniker::AbsoluteMoniker},
-        anyhow::Context as _,
+        anyhow::{format_err, Context},
         fidl::endpoints::{ClientEnd, Proxy, ServerEnd, ServiceMarker},
         fidl_fuchsia_io as fio,
         fidl_test_processbuilder::{UtilMarker, UtilProxy},
@@ -340,7 +340,7 @@ mod tests {
         fuchsia_runtime::{job_default, HandleType},
         fuchsia_zircon::HandleBased,
         futures::lock::Mutex,
-        std::{fs::File, mem, path::Path},
+        std::mem,
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
             file::pcb::asynchronous::read_only_static, path, pseudo_directory,
@@ -446,12 +446,21 @@ mod tests {
     }
 
     // Common setup for all tests that start a test util process through the launcher service.
-    fn setup_test_util(
+    async fn setup_test_util(
         launcher: &fproc::LauncherProxy,
     ) -> Result<(fproc::LaunchInfo, UtilProxy), Error> {
         const TEST_UTIL_BIN: &'static str = "/pkg/bin/process_builder_test_util";
-        let binpath = Path::new(TEST_UTIL_BIN);
-        let vmo = fdio::get_vmo_copy_from_file(&File::open(binpath)?)?.replace_as_executable()?;
+        let file_proxy = io_util::open_file_in_namespace(
+            TEST_UTIL_BIN,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+        )?;
+        let (status, fidlbuf) = file_proxy
+            .get_buffer(fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC)
+            .await
+            .map_err(|e| format_err!("getting test_util as exec failed: {}", e))?;
+        zx::Status::ok(status)
+            .map_err(|e| format_err!("getting test_util as exec failed: {}", e))?;
+        let vmo = fidlbuf.ok_or(format_err!("no buffer returned from GetBuffer"))?.vmo;
         let job = job_default();
 
         let (dir_client, dir_server) = zx::Channel::create()?;
@@ -479,7 +488,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn start_util_with_args() -> Result<(), Error> {
         let (launcher, _process_launcher) = serve_launcher().await?;
-        let (mut launch_info, proxy) = setup_test_util(&launcher)?;
+        let (mut launch_info, proxy) = setup_test_util(&launcher).await?;
 
         let test_args = vec!["arg0", "arg1", "arg2"];
         let mut test_args_iters: Vec<_> = test_args.iter().map(|s| s.bytes()).collect();
@@ -507,7 +516,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn start_util_with_env() -> Result<(), Error> {
         let (launcher, _process_launcher) = serve_launcher().await?;
-        let (mut launch_info, proxy) = setup_test_util(&launcher)?;
+        let (mut launch_info, proxy) = setup_test_util(&launcher).await?;
 
         let test_env = vec![("VAR1", "value2"), ("VAR2", "value2")];
         let test_env_strs: Vec<_> = test_env.iter().map(|v| format!("{}={}", v.0, v.1)).collect();
@@ -535,7 +544,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn start_util_with_namespace_entries() -> Result<(), Error> {
         let (launcher, _process_launcher) = serve_launcher().await?;
-        let (mut launch_info, proxy) = setup_test_util(&launcher)?;
+        let (mut launch_info, proxy) = setup_test_util(&launcher).await?;
 
         let mut randbuf = [0; 8];
         zx::cprng_draw(&mut randbuf)?;
@@ -580,7 +589,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn create_without_starting() -> Result<(), Error> {
         let (launcher, _process_launcher) = serve_launcher().await?;
-        let (mut launch_info, proxy) = setup_test_util(&launcher)?;
+        let (mut launch_info, proxy) = setup_test_util(&launcher).await?;
 
         let test_args = vec!["arg0", "arg1", "arg2"];
         let mut test_args_iters: Vec<_> = test_args.iter().map(|s| s.bytes()).collect();
