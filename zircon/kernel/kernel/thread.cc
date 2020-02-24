@@ -102,7 +102,7 @@ const char* ToString(enum thread_state state) {
 
 static void init_thread_lock_state(Thread* t) {
 #if WITH_LOCK_DEP
-  auto* state = reinterpret_cast<lockdep::ThreadLockState*>(&t->lock_state);
+  auto* state = reinterpret_cast<lockdep::ThreadLockState*>(&t->lock_state_);
   lockdep::SystemInitThreadLockState(state);
 #endif
 }

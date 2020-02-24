@@ -38,7 +38,7 @@ int LockDepThread(void* /*arg*/) {
     // Add some hysteresis to avoid re-triggering the loop detector on
     // close successive updates to the graph and to give the inline
     // validation reports a chance to print out first.
-    thread_sleep_relative(ZX_SEC(2));
+    Thread::Current::SleepRelative(ZX_SEC(2));
 
     lockdep::LoopDetectionPass();
   }
@@ -46,8 +46,8 @@ int LockDepThread(void* /*arg*/) {
 }
 
 void LockDepInit(unsigned /*level*/) {
-  Thread* t = thread_create("lockdep", &LockDepThread, NULL, LOW_PRIORITY);
-  thread_detach_and_resume(t);
+  Thread* t = Thread::Create("lockdep", &LockDepThread, NULL, LOW_PRIORITY);
+  t->DetachAndResume();
 }
 
 // Dumps the state of the lock dependency graph.
@@ -115,14 +115,14 @@ void SystemLockValidationError(AcquiredLockEntry* bad_entry, AcquiredLockEntry* 
   Thread* const current_thread = Thread::Current::Get();
 
   char owner_name[THREAD_NAME_LENGTH];
-  thread_owner_name(current_thread, owner_name);
+  current_thread->OwnerName(owner_name);
 
-  const uint64_t user_pid = current_thread->user_pid;
-  const uint64_t user_tid = current_thread->user_tid;
+  const uint64_t user_pid = current_thread->user_pid_;
+  const uint64_t user_tid = current_thread->user_tid_;
 
   printf("\nZIRCON KERNEL OOPS\n");
   printf("Lock validation failed for thread %p pid %" PRIu64 " tid %" PRIu64 " (%s:%s):\n",
-         current_thread, user_pid, user_tid, owner_name, current_thread->name);
+         current_thread, user_pid, user_tid, owner_name, current_thread->name_);
   printf("Reason: %s\n", ToString(result));
   printf("Bad lock: name=%s order=%" PRIu64 "\n", LockClassState::GetName(bad_entry->id()),
          bad_entry->order());
@@ -160,7 +160,7 @@ ThreadLockState* SystemGetThreadLockState() {
   if (arch_blocking_disallowed()) {
     return &get_local_percpu()->lock_state;
   }
-  return &Thread::Current::Get()->lock_state;
+  return &Thread::Current::Get()->lock_state_;
 }
 
 // Initializes an instance of ThreadLockState.
