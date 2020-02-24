@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <zircon/syscalls.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 static pthread_key_t tsd_key;
 static pthread_key_t tsd_key_dtor;
@@ -27,17 +27,16 @@ static void test_tls(int thread_no) {
   EXPECT_EQ(*v, value1, "wrong TLS value for key");
   v = pthread_getspecific(tsd_key_dtor);
   EXPECT_EQ(*v, value2, "wrong TLS value for key_dtor");
-  unittest_printf("tls_test completed for thread: %d\n", thread_no);
+  printf("tls_test completed for thread: %d\n", thread_no);
 }
 
 static void* do_work(void* arg) {
-  unittest_printf("do_work for thread: %d\n", *(int*)arg);
+  printf("do_work for thread: %d\n", *(int*)arg);
   test_tls(*(int*)arg);
   return NULL;
 }
 
-bool tls_test(void) {
-  BEGIN_TEST;
+TEST(PthreadTls, PthreadTls) {
   ASSERT_EQ(pthread_key_create(&tsd_key, NULL), 0, "Error during key creation");
   ASSERT_EQ(pthread_key_create(&tsd_key_dtor, dtor), 0, "Error during key creation");
 
@@ -49,26 +48,21 @@ bool tls_test(void) {
 
     pthread_t thread2, thread3;
 
-    unittest_printf("creating thread: %d\n", thread_1);
+    printf("creating thread: %d\n", thread_1);
     pthread_create(&thread2, NULL, do_work, &thread_1);
 
-    unittest_printf("creating thread: %d\n", thread_2);
+    printf("creating thread: %d\n", thread_2);
     pthread_create(&thread3, NULL, do_work, &thread_2);
 
     test_tls(main_thread);
 
-    unittest_printf("joining thread: %d\n", thread_1);
+    printf("joining thread: %d\n", thread_1);
     pthread_join(thread2, NULL);
 
-    unittest_printf("joining thread: %d\n", thread_2);
+    printf("joining thread: %d\n", thread_2);
     pthread_join(thread3, NULL);
 
     expected_dtor_count += 2;
     ASSERT_EQ(atomic_load(&dtor_count), expected_dtor_count, "dtors not run");
   }
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(tls_tests)
-RUN_TEST(tls_test)
-END_TEST_CASE(tls_tests)
