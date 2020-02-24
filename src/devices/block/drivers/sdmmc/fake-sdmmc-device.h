@@ -20,6 +20,12 @@ namespace sdmmc {
 
 class Bind : public fake_ddk::Bind {
  public:
+  ~Bind() {
+    for (auto& child : children_release_) {
+      child.op(child.ctx);
+    }
+  }
+
   int total_children() const { return total_children_; }
 
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
@@ -43,6 +49,11 @@ class Bind : public fake_ddk::Bind {
   }
 
  private:
+  struct ReleaseOp {
+    void* ctx;
+    void (*op)(void* ctx);
+  };
+
   struct GetProtocolOp {
     void* ctx;
     zx_status_t (*op)(void* ctx, uint32_t proto_id, void* protocol);
@@ -62,6 +73,7 @@ class Bind : public fake_ddk::Bind {
   void* unbind_ctx_ = nullptr;
   void (*unbind_op_)(void* ctx) = nullptr;
 
+  std::vector<ReleaseOp> children_release_;
   std::vector<GetProtocolOp> children_get_proto_;
   std::vector<std::vector<zx_device_prop_t>> children_props_;
 };

@@ -21,6 +21,7 @@ zx_status_t Bind::DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_ar
     *out = kFakeChild;
     children_++;
     total_children_++;
+    children_release_.push_back({args->ctx, args->ops->release});
     children_get_proto_.push_back({args->ctx, args->ops->get_protocol});
     children_props_.push_back(
         std::vector<zx_device_prop_t>(args->props, args->props + args->prop_count));
