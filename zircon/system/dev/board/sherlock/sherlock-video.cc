@@ -9,6 +9,7 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
+#include <soc/aml-meson/g12b-clk.h>
 #include <soc/aml-t931/t931-hw.h>
 
 #include "sherlock.h"
@@ -84,6 +85,10 @@ constexpr zx_bind_inst_t canvas_match[] = {
 constexpr zx_bind_inst_t tee_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_TEE),
 };
+const zx_bind_inst_t dos_gclk0_vdec_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_DOS_GCLK_VDEC),
+};
 constexpr device_component_part_t sysmem_component[] = {
     {countof(root_match), root_match},
     {countof(sysmem_match), sysmem_match},
@@ -96,9 +101,14 @@ constexpr device_component_part_t tee_component[] = {
     {countof(root_match), root_match},
     {countof(tee_match), tee_match},
 };
+constexpr device_component_part_t dos_gclk0_vdec_component[] = {
+    {countof(root_match), root_match},
+    {countof(dos_gclk0_vdec_match), dos_gclk0_vdec_match},
+};
 constexpr device_component_t components[] = {
     {countof(sysmem_component), sysmem_component},
     {countof(canvas_component), canvas_component},
+    {countof(dos_gclk0_vdec_component), dos_gclk0_vdec_component},
     {countof(tee_component), tee_component},
 };
 

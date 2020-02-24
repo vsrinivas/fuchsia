@@ -23,10 +23,17 @@ class FakeOwner : public DecoderCore::Owner {
   fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() override {
     return video_->SysmemAllocatorSyncPtr();
   }
+  void ToggleClock(ClockType type, bool enable) override {
+    enable_clock_state_[static_cast<int>(type)] = enable;
+  }
+  bool enable_clock_state(ClockType type) const {
+    return enable_clock_state_[static_cast<int>(type)];
+  }
 
  private:
   MmioRegisters* mmio_;
   AmlogicVideo* video_;
+  std::array<bool, static_cast<int>(ClockType::kMax)> enable_clock_state_{};
 };
 
 constexpr uint32_t kDosbusMemorySize = 0x10000;
@@ -77,5 +84,6 @@ TEST(Vdec1UnitTest, PowerOn) {
   // confirm non vdec bits weren't touched
   EXPECT_EQ(0xffff0000,
             HhiVdecClkCntl::Get().ReadFrom(fake_owner.mmio()->hiubus).reg_value() & 0xffff0000);
-  EXPECT_EQ(0xffffffff, DosGclkEn::Get().ReadFrom(fake_owner.mmio()->dosbus).reg_value());
+  EXPECT_EQ(0xfffffc00, DosGclkEn::Get().ReadFrom(fake_owner.mmio()->dosbus).reg_value());
+  EXPECT_TRUE(fake_owner.enable_clock_state(ClockType::kGclkVdec));
 }

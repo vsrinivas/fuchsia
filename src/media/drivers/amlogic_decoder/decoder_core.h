@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DECODER_CORE_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DECODER_CORE_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DECODER_CORE_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DECODER_CORE_H_
 
 #include <lib/zx/handle.h>
 
@@ -36,6 +36,11 @@ struct InputContext {
 
 enum class DeviceType;
 
+enum class ClockType {
+  kGclkVdec,
+  kMax,
+};
+
 class DecoderCore {
  public:
   class Owner {
@@ -47,6 +52,8 @@ class DecoderCore {
     virtual void UngateClocks() = 0;
 
     virtual void GateClocks() = 0;
+
+    virtual void ToggleClock(ClockType type, bool enable) = 0;
 
     [[nodiscard]] virtual DeviceType device_type() = 0;
 
@@ -81,4 +88,4 @@ class DecoderCore {
   virtual void RestoreInputContext(InputContext* context) {}
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_DECODER_CORE_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_DECODER_CORE_H_

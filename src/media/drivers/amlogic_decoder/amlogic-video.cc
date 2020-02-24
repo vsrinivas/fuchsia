@@ -76,12 +76,13 @@ enum {
   kComponentPdev = 0,
   kComponentSysmem = 1,
   kComponentCanvas = 2,
+  kComponentDosGclkVdec = 3,
   // The tee is optional.
-  kComponentTee = 3,
+  kComponentTee = 4,
   // with tee
-  kMaxComponentCount = 4,
+  kMaxComponentCount = 5,
   // without tee
-  kMinComponentCount = 3,
+  kMinComponentCount = 4,
 };
 
 }  // namespace
@@ -643,6 +644,14 @@ zx_status_t AmlogicVideo::TeeVp9AddHeaders(zx_paddr_t page_phys_base, uint32_t b
   return status;
 }
 
+void AmlogicVideo::ToggleClock(ClockType type, bool enable) {
+  if (enable) {
+    clock_enable(&clocks_[static_cast<int>(type)]);
+  } else {
+    clock_disable(&clocks_[static_cast<int>(type)]);
+  }
+}
+
 zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   parent_ = parent;
 
@@ -680,6 +689,13 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   status = device_get_protocol(components[kComponentCanvas], ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
   if (status != ZX_OK) {
     DECODE_ERROR("Could not get video CANVAS protocol\n");
+    return status;
+  }
+
+  status = device_get_protocol(components[kComponentDosGclkVdec], ZX_PROTOCOL_CLOCK,
+                               &clocks_[static_cast<int>(ClockType::kGclkVdec)]);
+  if (status != ZX_OK) {
+    DECODE_ERROR("Could not get CLOCK protocol\n");
     return status;
   }
 

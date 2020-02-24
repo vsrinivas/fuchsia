@@ -100,7 +100,8 @@ void Vdec1::PowerOn() {
       .set_vdec_en(true)
       .set_vdec_sel(clock_sel)
       .WriteTo(mmio()->hiubus);
-  DosGclkEn::Get().ReadFrom(mmio()->dosbus).set_vdec_en(0x3ff).WriteTo(mmio()->dosbus);
+  owner_->ToggleClock(ClockType::kGclkVdec, true);
+
   DosMemPdVdec::Get().FromValue(0).WriteTo(mmio()->dosbus);
   {
     auto temp = AoRtiGenPwrIso0::Get().ReadFrom(mmio()->aobus);

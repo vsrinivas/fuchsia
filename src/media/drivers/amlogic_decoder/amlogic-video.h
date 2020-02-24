@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_
 
 #include <fuchsia/tee/cpp/fidl.h>
 #include <lib/zx/handle.h>
@@ -21,6 +21,7 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/amlogiccanvas.h>
+#include <ddk/protocol/clock.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
 #include <ddk/protocol/tee.h>
@@ -89,6 +90,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   [[nodiscard]] MmioRegisters* mmio() override { return registers_.get(); }
   void UngateClocks() override;
   void GateClocks() override;
+  void ToggleClock(ClockType type, bool enable) override;
 
   // CanvasEntry::Owner implementation.
   void FreeCanvas(CanvasEntry* canvas) override;
@@ -188,6 +190,8 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   sysmem_protocol_t sysmem_{};
   amlogic_canvas_protocol_t canvas_{};
 
+  clock_protocol_t clocks_[static_cast<int>(ClockType::kMax)] = {};
+
   // Unlike sysmem and canvas, tee is optional (no tee on vim2).
   tee_protocol_t tee_{};
   bool is_tee_available_ = false;
@@ -252,4 +256,4 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   Watchdog watchdog_{this};
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_AMLOGIC_VIDEO_H_

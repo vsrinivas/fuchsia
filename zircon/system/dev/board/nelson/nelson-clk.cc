@@ -8,8 +8,8 @@
 #include <ddk/metadata/clock.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-#include <soc/aml-s905d3/s905d3-hw.h>
 #include <soc/aml-meson/sm1-clk.h>
+#include <soc/aml-s905d3/s905d3-hw.h>
 
 #include "nelson.h"
 
@@ -33,12 +33,15 @@ constexpr pbus_mmio_t clk_mmios[] = {
 };
 
 constexpr clock_id_t clock_ids[] = {
-  {sm1_clk::CLK_RESET},   // PLACEHOLDER.
+    {sm1_clk::CLK_RESET},  // PLACEHOLDER.
 
-  // For audio driver.
-  {sm1_clk::CLK_HIFI_PLL},
-  {sm1_clk::CLK_SYS_PLL_DIV16},
-  {sm1_clk::CLK_SYS_CPU_CLK_DIV16},
+    // For audio driver.
+    {sm1_clk::CLK_HIFI_PLL},
+    {sm1_clk::CLK_SYS_PLL_DIV16},
+    {sm1_clk::CLK_SYS_CPU_CLK_DIV16},
+
+    // For video decoder
+    {sm1_clk::CLK_DOS_GCLK_VDEC},
 };
 
 constexpr pbus_metadata_t clock_metadata[] = {
