@@ -217,16 +217,15 @@ executable("crashpad_agent_integration_test") {
   sources = [ "crashpad_agent_integration_test.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.cobalt.test",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
+    "//src/developer/feedback/testing:fake_cobalt",
     "//src/developer/feedback/utils:cobalt",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-cobalt",
     "//zircon/system/fidl/fuchsia-mem",
   ]
 
