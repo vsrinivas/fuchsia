@@ -734,3 +734,39 @@ test!(player_paused_before_interruption_is_not_resumed_by_its_end, || async {
 
     Ok(())
 });
+
+test!(player_paused_during_interruption_is_not_resumed_by_its_end, || async {
+    let mut service = TestService::new()?;
+    let mut player = TestPlayer::new(&service).await?;
+    let (session, session_server) = create_proxy()?;
+    service.discovery.connect_to_session(player.id, session_server)?;
+
+    player
+        .emit_delta(delta_with_interruption(PlayerState::Playing, InterruptionBehavior::Pause))
+        .await?;
+    service.dequeue_watcher().await;
+
+    // We take the watch request from the player's queue and don't answer it, so that
+    // the stream of requests coming in that we match on down below doesn't contain it.
+    let _watch_request = player.requests.try_next().await?;
+
+    service.start_interruption(AudioRenderUsage::Media).await;
+    player
+        .wait_for_request(|request| matches!(request, PlayerRequest::Pause {..}))
+        .await
+        .expect("Waiting for player to receive pause");
+
+    session.pause()?;
+    player
+        .wait_for_request(|request| matches!(request, PlayerRequest::Pause {..}))
+        .await
+        .expect("Waiting for player to receive pause");
+
+    service.stop_interruption(AudioRenderUsage::Media).await;
+
+    drop(service);
+    let next = player.requests.try_next().await?;
+    assert!(next.is_none());
+
+    Ok(())
+});

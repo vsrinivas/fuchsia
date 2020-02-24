@@ -60,6 +60,16 @@ pub struct Discovery {
     players: StreamMap<SessionId, Player>,
     /// A set of ids of players paused by an interruption on their audio usage.
     interrupt_paused_players: HashSet<SessionId>,
+    /// A channel over which out of band interrupted removals can be sent. For
+    /// example, if an audio interruption occurs and we pause a player, we add it
+    /// to the interrupted set.
+    ///
+    /// If a user then sends a pause command during the interruption, we must
+    /// remove the player from the interrupted set, otherwise we would wake up the
+    /// player after the interruption against the user's intent.
+    interrupted_removal_sink: mpsc::Sender<SessionId>,
+    /// A stream of interrupted set removal commands.
+    interrupted_removal_stream: mpsc::Receiver<SessionId>,
     /// A stream of interruptions of audio usages, observed from the audio service.
     interrupter: Interrupter,
     /// The sender through which we distribute player events to all watchers.
@@ -71,6 +81,8 @@ impl Discovery {
         player_stream: mpsc::Receiver<Player>,
         usage_reporter_proxy: UsageReporterProxy,
     ) -> Self {
+        let (interrupted_removal_sink, interrupted_removal_stream) =
+            mpsc::channel(CHANNEL_BUFFER_SIZE);
         Self {
             player_stream,
             catch_up_events: HashMap::new(),
@@ -79,6 +91,8 @@ impl Discovery {
             players: StreamMap::new(),
             interrupt_paused_players: HashSet::new(),
             interrupter: Interrupter::new(usage_reporter_proxy),
+            interrupted_removal_sink,
+            interrupted_removal_stream,
             player_update_sender: mpmc::Sender::default(),
         }
     }
@@ -138,10 +152,16 @@ impl Discovery {
         let (mut control_request_sink, control_request_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
         let (mut status_request_sink, status_request_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
 
+        let mut interrupted_removal_sink = self.interrupted_removal_sink.clone();
         let partitioner = move || async move {
             while let Some(request) = requests.try_next().await? {
                 match ForwardControlRequest::try_from(request) {
-                    Ok(control_request) => control_request_sink.send(control_request).await?,
+                    Ok(control_request) => {
+                        if matches!(control_request, ForwardControlRequest::Pause) {
+                            interrupted_removal_sink.send(session_id).await?;
+                        }
+                        control_request_sink.send(control_request).await?
+                    }
                     Err(status_request) => status_request_sink.send(status_request).await?,
                 }
             }
@@ -340,6 +360,9 @@ impl Discovery {
                 // Watch the audio service for interruption notifications.
                 interruption = self.interrupter.select_next_some() => {
                     self.handle_interruption(interruption).await;
+                }
+                removal = self.interrupted_removal_stream.select_next_some() => {
+                    self.interrupt_paused_players.remove(&removal);
                 }
                 // Drive dispatch of events to watcher clients.
                  _ = self.watchers.select_next_some() => {}
