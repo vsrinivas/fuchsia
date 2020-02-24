@@ -69,14 +69,22 @@ executable("cobalt_testapp") {
   configs += [ "//third_party/cobalt:cobalt_config" ]
 }
 
+source_set("fake_timekeeper_lib") {
+  sources = [ "fake_timekeeper.h" ]
+
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/lib/syslog/cpp",
+    "//src/sys/timekeeper:fuchsia.time",
+  ]
+}
+
 executable("fake_timekeeper") {
   output_name = "fake_timekeeper"
-  sources = [
-    "fake_timekeeper.h",
-    "fake_timekeeper_main.cc",
-  ]
+  sources = [ "fake_timekeeper_main.cc" ]
 
   deps = [
+    ":fake_timekeeper_lib",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",

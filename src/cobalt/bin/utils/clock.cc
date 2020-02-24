@@ -8,8 +8,9 @@
 
 namespace cobalt {
 
-FuchsiaSystemClock::FuchsiaSystemClock(sys::ComponentContext* context) : context_(context) {
-  context_->svc()->Connect(utc_.NewRequest());
+FuchsiaSystemClock::FuchsiaSystemClock(
+    const std::shared_ptr<sys::ServiceDirectory>& service_directory) {
+  service_directory->Connect(utc_.NewRequest());
 }
 
 std::optional<std::chrono::system_clock::time_point> FuchsiaSystemClock::now() {

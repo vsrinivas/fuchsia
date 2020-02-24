@@ -25,6 +25,10 @@ class FakeTimekeeper : public ::fuchsia::time::testing::Utc_TestBase {
     context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
   }
 
+  explicit FakeTimekeeper(sys::ComponentContext* context) {
+    context->outgoing()->AddPublicService(bindings_.GetHandler(this));
+  }
+
   void NotImplemented_(const std::string& name) override {
     FX_LOGS(ERROR) << name << " is not implemented";
   }

@@ -31,9 +31,15 @@ class RealSteadyClock : public SteadyClock {
   std::chrono::steady_clock::time_point Now() override { return std::chrono::steady_clock::now(); }
 };
 
-class FuchsiaSystemClock : public util::ValidatedClockInterface {
+class FuchsiaSystemClockInterface : public util::ValidatedClockInterface {
  public:
-  explicit FuchsiaSystemClock(sys::ComponentContext* context);
+  // Waits for the system clock to become accurate, then call the callback.
+  virtual void AwaitExternalSource(std::function<void()> callback) = 0;
+};
+
+class FuchsiaSystemClock : public FuchsiaSystemClockInterface {
+ public:
+  explicit FuchsiaSystemClock(const std::shared_ptr<sys::ServiceDirectory>& service_directory);
 
   // Returns the current time once the Fuchsia timekeeper service reports that
   // the system clock has been initialized from an external source.
@@ -43,12 +49,11 @@ class FuchsiaSystemClock : public util::ValidatedClockInterface {
   //
   // Uses the timekeeper (fuchsia.time.Utc) service to wait for the clock to be
   // initialized from a suitably accurate external time source.
-  void AwaitExternalSource(std::function<void()> callback);
+  void AwaitExternalSource(std::function<void()> callback) override;
 
  private:
   void WatchStateCallback(const fuchsia::time::UtcState& utc_state);
 
-  sys::ComponentContext* context_;
   fuchsia::time::UtcPtr utc_;
   std::function<void()> callback_;
   bool accurate_ = false;

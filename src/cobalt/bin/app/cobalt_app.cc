@@ -58,7 +58,7 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
                      size_t max_bytes_per_observation_store, const std::string& product_name,
                      const std::string& board_name, const std::string& version)
     : context_(std::move(context)),
-      system_clock_(FuchsiaSystemClock(context_.get())),
+      system_clock_(FuchsiaSystemClock(context_->svc())),
       network_wrapper_(dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
                        [this] { return context_->svc()->Connect<http::HttpService>(); }),
       timer_manager_(dispatcher) {

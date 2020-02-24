@@ -41,7 +41,7 @@ class FuchsiaSystemClockTest : public ::gtest::TestLoopFixture {
   void SetUp() override {
     auto service_provider = context_provider_.service_directory_provider();
     service_provider->AddService<fuchsia::time::Utc>(utc_bindings_.GetHandler(&utc_impl_));
-    clock_ = std::make_unique<FuchsiaSystemClock>(context_provider_.context());
+    clock_ = std::make_unique<FuchsiaSystemClock>(service_provider->service_directory());
   }
 
   void TearDown() override {
