@@ -62,11 +62,17 @@ enum ContentType {
 };
 
 /// Status of a media player.
+// Next Id: 9
 table PlayerStatus {
     /// Total duration of playing media.
     ///
     /// Omit if not known or not applicable.
     1: zx.duration duration;
+    /// Whether the playing media is live (such as television or a
+    /// live stream).
+    ///
+    /// If omitted, the default is false.
+    8: bool is_live;
     /// State of the player.
     ///
     /// Will always be present.
