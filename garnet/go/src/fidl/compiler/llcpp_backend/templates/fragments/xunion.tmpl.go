@@ -6,7 +6,7 @@ package fragments
 
 const XUnion = `
 {{- define "XUnionForwardDeclaration" }}
-struct {{ .Name }};
+class {{ .Name }};
 {{- end }}
 
 {{- define "XUnionDeclaration" }}
@@ -15,8 +15,16 @@ extern "C" const fidl_type_t {{ .TableType }};
 {{range .DocComments}}
 //{{ . }}
 {{- end}}
-struct {{ .Name }} {
+class {{ .Name }} {
+  public:
   {{ .Name }}() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  {{ .Name }}({{ .Name }}&&) = default;
+  {{ .Name }}& operator=({{ .Name }}&&) = default;
+
+  ~{{ .Name }}() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
   {{- range .Members }}
@@ -33,18 +41,18 @@ struct {{ .Name }} {
 
   bool is_{{ .Name }}() const { return ordinal_ == Ordinal::{{ .TagName }}; }
 
-  static {{ $.Name }} With{{ .UpperCamelCaseName }}({{ .Type.LLDecl }}* val) {
+  static {{ $.Name }} With{{ .UpperCamelCaseName }}(::fidl::tracking_ptr<{{ .Type.LLDecl }}>&& val) {
     {{ $.Name }} result;
-    result.set_{{ .Name }}(val);
+    result.set_{{ .Name }}(std::move(val));
     return result;
   }
 {{ "" }}
   {{- range .DocComments }}
   //{{ . }}
   {{- end }}
-  void set_{{ .Name }}({{ .Type.LLDecl }}* elem) {
+  void set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type.LLDecl }}>&& elem) {
     ordinal_ = Ordinal::{{ .TagName }};
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 {{ "" }}
   {{- range .DocComments }}
@@ -52,18 +60,18 @@ struct {{ .Name }} {
   {{- end }}
   {{ .Type.LLDecl }}& mutable_{{ .Name }}() {
     ZX_ASSERT(ordinal_ == Ordinal::{{ .TagName }});
-    return *static_cast<{{ .Type.LLDecl }}*>(envelope_.data);
+    return *static_cast<{{ .Type.LLDecl }}*>(envelope_.data.get());
   }
   const {{ .Type.LLDecl }}& {{ .Name }}() const {
     ZX_ASSERT(ordinal_ == Ordinal::{{ .TagName }});
-    return *static_cast<{{ .Type.LLDecl }}*>(envelope_.data);
+    return *static_cast<{{ .Type.LLDecl }}*>(envelope_.data.get());
   }
   {{- end }}
 
   {{- if .IsFlexible }}
   void* unknownData() const {
     ZX_ASSERT(which() == Tag::kUnknown);
-    return envelope_.data;
+    return envelope_.data.get();
   }
   {{- end }}
   {{- if .IsFlexible }}
@@ -90,12 +98,27 @@ struct {{ .Name }} {
   {{- end }}
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    {{- range .Members }}
+    case {{ .Ordinal }}: {
+      ::fidl::tracking_ptr<{{.Type.LLDecl}}> to_destroy =
+        static_cast<::fidl::tracking_ptr<{{.Type.LLDecl}}>>(std::move(envelope_.data));
+      break;
+    }
+    {{- end}}
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
 
   {{- /* All fields are private to maintain standard layout */}}
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 {{- end }}
 

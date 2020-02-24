@@ -120,12 +120,12 @@ Marker Marker::MatchIntegerLiteral(int64_t* val) {
 // (result()).
 class ParseResult {
  public:
-  ParseResult(const Marker& marker, const Err& err, llcpp::fuchsia::shell::ShellType type,
+  ParseResult(const Marker& marker, const Err& err, llcpp::fuchsia::shell::ShellType&& type,
               uint64_t node_id)
-      : marker_(marker), err_(err), type_(type), node_id_(node_id) {}
+      : marker_(marker), err_(err), type_(std::move(type)), node_id_(node_id) {}
   Marker marker() { return marker_; }
   Err result() { return err_; }
-  llcpp::fuchsia::shell::ShellType type() { return type_; }
+  llcpp::fuchsia::shell::ShellType type() { return std::move(type_); }
   uint64_t node_id() { return node_id_; }
 
  private:
@@ -152,7 +152,8 @@ class Parser {
     llcpp::fuchsia::shell::BuiltinType* type_ptr = builder_->ManageCopyOf(&type);
 
     return ParseResult(after_int, Err(),
-                       llcpp::fuchsia::shell::ShellType::WithBuiltinType(type_ptr), node_id);
+                       llcpp::fuchsia::shell::ShellType::WithBuiltinType(fidl::unowned(type_ptr)),
+                       node_id);
   }
 
   ParseResult ParseSimpleExpression(Marker m) {

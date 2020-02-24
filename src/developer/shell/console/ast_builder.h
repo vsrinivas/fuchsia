@@ -24,7 +24,7 @@ class AstBuilder {
 
   // The undefined type.  Useful when your node isn't typed.
   llcpp::fuchsia::shell::ShellType undef() {
-    return llcpp::fuchsia::shell::ShellType::WithUndef(&undef_);
+    return llcpp::fuchsia::shell::ShellType::WithUndef(fidl::unowned(&undef_));
   }
 
   // Returns the set of nodes managed by thie AstBuilder as a vector view, suitable for sending to
@@ -56,7 +56,7 @@ class AstBuilder {
   // the given |type|, the |node_id| refers to the node that, when evaluated, gives the initial
   // value, and |is_const| tells you whether the variable is const.  Returns the resulting node_id.
   uint64_t AddVariableDeclaration(const std::string& identifier,
-                                  llcpp::fuchsia::shell::ShellType type, uint64_t node_id,
+                                  llcpp::fuchsia::shell::ShellType&& type, uint64_t node_id,
                                   bool is_const);
 
   // Adds an integer literal node with the value |i|.  Returns the resulting node_id.
@@ -66,7 +66,7 @@ class AstBuilder {
   AstBuilder(const AstBuilder&) = delete;
 
  private:
-  bool undef_;
+  fidl::aligned<bool> undef_;
   uint64_t next_id_;
   // Replace with arena allocation.
   std::vector<std::unique_ptr<char[]>> bufs_;

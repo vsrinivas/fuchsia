@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_UAPP_DISK_PAVE_PAYLOAD_STREAMER_H_
+#define ZIRCON_SYSTEM_UAPP_DISK_PAVE_PAYLOAD_STREAMER_H_
 
-#include <fbl/unique_fd.h>
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
+
+#include <fbl/unique_fd.h>
 
 namespace disk_pave {
 
@@ -30,7 +32,9 @@ class PayloadStreamer : public ::llcpp::fuchsia::paver::PayloadStream::Interface
   fbl::unique_fd payload_;
   zx::vmo vmo_;
   fzl::VmoMapper mapper_;
-  bool eof_reached_ = false;
+  fidl::aligned<bool> eof_reached_ = false;
 };
 
 }  // namespace disk_pave
+
+#endif  // ZIRCON_SYSTEM_UAPP_DISK_PAVE_PAYLOAD_STREAMER_H_

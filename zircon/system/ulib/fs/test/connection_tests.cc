@@ -177,7 +177,7 @@ TEST_F(ConnectionTest, FileGetSetFlagsDirectory) {
     zx::channel dc1, dc2;
     ASSERT_OK(zx::channel::create(0u, &dc1, &dc2));
     ASSERT_OK(fdio_open_at(client_end.get(), "dir",
-                          fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, dc2.release()));
+                           fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE, dc2.release()));
 
     auto dir_get_result = fio::File::Call::GetFlags(zx::unowned_channel(dc1));
     EXPECT_NOT_OK(dir_get_result.status());
@@ -203,16 +203,16 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
 
   // Helper method to monitor the OnOpen event, used by the tests below
   auto expect_on_open = [](zx::unowned_channel channel, fit::function<void(fio::NodeInfo)> cb) {
-    zx_status_t event_status = fio::Node::Call::HandleEvents(std::move(channel),
-                                                             fio::Node::EventHandlers{
-        .on_open = [&](zx_status_t status, fio::NodeInfo info) {
-          EXPECT_OK(status);
-          EXPECT_FALSE(info.has_invalid_tag());
-          cb(info);
-          return ZX_OK;
-        },
-        .unknown = []() { return ZX_ERR_INVALID_ARGS; }
-    });
+    zx_status_t event_status = fio::Node::Call::HandleEvents(
+        std::move(channel),
+        fio::Node::EventHandlers{.on_open =
+                                     [&](zx_status_t status, fio::NodeInfo info) {
+                                       EXPECT_OK(status);
+                                       EXPECT_FALSE(info.has_invalid_tag());
+                                       cb(std::move(info));
+                                       return ZX_OK;
+                                     },
+                                 .unknown = []() { return ZX_ERR_INVALID_ARGS; }});
     // Expect that |on_open| was received
     EXPECT_EQ(ZX_OK, event_status);
   };
@@ -223,23 +223,22 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
   zx::channel dc1, dc2;
   ASSERT_OK(zx::channel::create(0u, &dc1, &dc2));
   ASSERT_OK(fio::Directory::Call::Open(
-      zx::unowned_channel(client_end),
-      fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_DIRECTORY, kOpenMode,
-      fidl::StringView("file_or_dir"), std::move(dc2)).status());
-  expect_on_open(zx::unowned_channel(dc1), [](fio::NodeInfo info) {
-    EXPECT_TRUE(info.is_directory());
-  });
+                zx::unowned_channel(client_end),
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_DIRECTORY,
+                kOpenMode, fidl::StringView("file_or_dir"), std::move(dc2))
+                .status());
+  expect_on_open(zx::unowned_channel(dc1),
+                 [](fio::NodeInfo info) { EXPECT_TRUE(info.is_directory()); });
 
   // Connect to polymorphic node as a file, by passing |OPEN_FLAG_NOT_DIRECTORY|.
   zx::channel fc1, fc2;
   ASSERT_OK(zx::channel::create(0u, &fc1, &fc2));
   ASSERT_OK(fio::Directory::Call::Open(
-      zx::unowned_channel(client_end),
-      fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_NOT_DIRECTORY, kOpenMode,
-      fidl::StringView("file_or_dir"), std::move(fc2)).status());
-  expect_on_open(zx::unowned_channel(fc1), [](fio::NodeInfo info) {
-    EXPECT_TRUE(info.is_file());
-  });
+                zx::unowned_channel(client_end),
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_DESCRIBE | fio::OPEN_FLAG_NOT_DIRECTORY,
+                kOpenMode, fidl::StringView("file_or_dir"), std::move(fc2))
+                .status());
+  expect_on_open(zx::unowned_channel(fc1), [](fio::NodeInfo info) { EXPECT_TRUE(info.is_file()); });
 }
 
 // A vnode which maintains a counter of number of |Open| calls that
@@ -319,9 +318,9 @@ TEST_F(ConnectionClosingTest, ClosingChannelImpliesClosingNode) {
     zx::channel fc1, fc2;
     ASSERT_OK(zx::channel::create(0u, &fc1, &fc2));
     ASSERT_OK(fio::Directory::Call::Open(
-        zx::unowned_channel(client_end),
-        fio::OPEN_RIGHT_READABLE, kOpenMode,
-        fidl::StringView("count_outstanding_open_vnode"), std::move(fc2)).status());
+                  zx::unowned_channel(client_end), fio::OPEN_RIGHT_READABLE, kOpenMode,
+                  fidl::StringView("count_outstanding_open_vnode"), std::move(fc2))
+                  .status());
     clients.push_back(std::move(fc1));
   }
 

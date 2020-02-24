@@ -743,7 +743,7 @@ void UsbPeripheral::SetConfiguration(DeviceDescriptor device_desc,
     if (shutting_down_) {
       zxlogf(ERROR, "%s: cannot set configuration while clearing functions\n", __func__);
       zx_status_t status = ZX_ERR_BAD_STATE;
-      response.set_err(&status);
+      response.set_err(fidl::unowned(&status));
       completer.Reply(std::move(response));
       return;
     }
@@ -751,14 +751,14 @@ void UsbPeripheral::SetConfiguration(DeviceDescriptor device_desc,
 
   if (func_descs.count() == 0) {
     zx_status_t status = ZX_ERR_INVALID_ARGS;
-    response.set_err(&status);
+    response.set_err(fidl::unowned(&status));
     completer.Reply(std::move(response));
     return;
   }
 
   zx_status_t status = SetDeviceDescriptor(device_desc);
   if (status != ZX_OK) {
-    response.set_err(&status);
+    response.set_err(fidl::unowned(&status));
     completer.Reply(std::move(response));
     return;
   }
@@ -767,12 +767,12 @@ void UsbPeripheral::SetConfiguration(DeviceDescriptor device_desc,
   }
   status = BindFunctions();
   if (status != ZX_OK) {
-    response.set_err(&status);
+    response.set_err(fidl::unowned(&status));
     completer.Reply(std::move(response));
     return;
   }
-  peripheral::Device_SetConfiguration_Response resp;
-  response.set_response(&resp);
+  fidl::aligned<peripheral::Device_SetConfiguration_Response> resp;
+  response.set_response(fidl::unowned(&resp));
   completer.Reply(std::move(response));
 }
 

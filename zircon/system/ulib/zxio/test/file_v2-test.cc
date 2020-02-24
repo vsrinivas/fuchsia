@@ -41,7 +41,7 @@ class TestServerBase : public fio2::File::Interface {
     if (query == fio2::ConnectionInfoQuery::REPRESENTATION) {
       auto file_info_builder = fio2::FileInfo::UnownedBuilder();
       fio2::FileInfo file_info = file_info_builder.build();
-      auto representation = fio2::Representation::WithFile(&file_info);
+      auto representation = fio2::Representation::WithFile(fidl::unowned(&file_info));
       auto info_builder = fio2::ConnectionInfo::UnownedBuilder();
       info_builder.set_representation(fidl::unowned(&representation));
       completer.Reply(info_builder.build());
@@ -181,7 +181,7 @@ class TestServerEvent final : public TestServerBase {
       }
       file_info_builder.set_observer(fidl::unowned(&client_observer));
       fio2::FileInfo file_info = file_info_builder.build();
-      auto representation = fio2::Representation::WithFile(&file_info);
+      auto representation = fio2::Representation::WithFile(fidl::unowned(&file_info));
       auto info_builder = fio2::ConnectionInfo::UnownedBuilder();
       info_builder.set_representation(fidl::unowned(&representation));
       completer.Reply(info_builder.build());
@@ -350,7 +350,7 @@ class TestServerStream final : public TestServerBase {
       }
       file_info_builder.set_stream(fidl::unowned(&client_stream));
       fio2::FileInfo file_info = file_info_builder.build();
-      auto representation = fio2::Representation::WithFile(&file_info);
+      auto representation = fio2::Representation::WithFile(fidl::unowned(&file_info));
       auto info_builder = fio2::ConnectionInfo::UnownedBuilder();
       info_builder.set_representation(fidl::unowned(&representation));
       completer.Reply(info_builder.build());

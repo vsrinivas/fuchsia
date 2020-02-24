@@ -42,7 +42,7 @@ class TestServerBase : public fio::File::Interface {
 
   void Describe(DescribeCompleter::Sync completer) override {
     fio::FileObject file_object;
-    completer.Reply(fio::NodeInfo::WithFile(&file_object));
+    completer.Reply(fio::NodeInfo::WithFile(fidl::unowned(&file_object)));
   }
 
   void Sync(SyncCompleter::Sync completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
@@ -170,7 +170,7 @@ class TestServerEvent final : public TestServerBase {
       completer.Close(ZX_ERR_INTERNAL);
       return;
     }
-    completer.Reply(fio::NodeInfo::WithFile(&file_object));
+    completer.Reply(fio::NodeInfo::WithFile(fidl::unowned(&file_object)));
   }
 
  private:
@@ -343,7 +343,7 @@ class TestServerStream final : public TestServerBase {
       completer.Close(ZX_ERR_INTERNAL);
       return;
     }
-    completer.Reply(fio::NodeInfo::WithFile(&file_object));
+    completer.Reply(fio::NodeInfo::WithFile(fidl::unowned(&file_object)));
   }
 
  private:
@@ -381,6 +381,7 @@ TEST_F(FileConcurrentAccess, CloseShouldInterruptOtherOps) {
       completer_->Close(ZX_ERR_IO);
     }
     sync_completion_t* called_get_attr() { return &called_get_attr_; }
+
    private:
     sync_completion_t called_get_attr_;
     std::optional<GetAttrCompleter::Async> completer_;
@@ -390,7 +391,7 @@ TEST_F(FileConcurrentAccess, CloseShouldInterruptOtherOps) {
   ASSERT_OK(OpenFile());
 
   std::atomic<bool> get_attr_returned = false;
-  std::future<zx_status_t> concurrent = std::async(std::launch::async, [&]{
+  std::future<zx_status_t> concurrent = std::async(std::launch::async, [&] {
     zxio_node_attr_t attr;
     zx_status_t status = zxio_attr_get(&file_.io, &attr);
     get_attr_returned.store(true);

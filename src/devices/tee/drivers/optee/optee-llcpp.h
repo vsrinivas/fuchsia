@@ -152,17 +152,20 @@ class Buffer {
 class Parameter {
  public:
   fuchsia_tee::Parameter to_llcpp() {
-    if (std::holds_alternative<fuchsia_tee::None>(data_)) {
-      llcpp_data_ = std::get<fuchsia_tee::None>(data_);
-      return fuchsia_tee::Parameter::WithNone(&std::get<fuchsia_tee::None>(llcpp_data_));
+    if (std::holds_alternative<fidl::aligned<fuchsia_tee::None>>(data_)) {
+      llcpp_data_ = std::get<fidl::aligned<fuchsia_tee::None>>(data_);
+      return fuchsia_tee::Parameter::WithNone(
+          fidl::unowned(&std::get<fidl::aligned<fuchsia_tee::None>>(llcpp_data_)));
     }
     if (std::holds_alternative<Value>(data_)) {
       llcpp_data_ = std::get<Value>(data_).to_llcpp();
-      return fuchsia_tee::Parameter::WithValue(&std::get<fuchsia_tee::Value>(llcpp_data_));
+      return fuchsia_tee::Parameter::WithValue(
+          fidl::unowned(&std::get<fuchsia_tee::Value>(llcpp_data_)));
     }
     if (std::holds_alternative<Buffer>(data_)) {
       llcpp_data_ = std::get<Buffer>(data_).to_llcpp();
-      return fuchsia_tee::Parameter::WithBuffer(&std::get<fuchsia_tee::Buffer>(llcpp_data_));
+      return fuchsia_tee::Parameter::WithBuffer(
+          fidl::unowned(&std::get<fuchsia_tee::Buffer>(llcpp_data_)));
     }
 
     return fuchsia_tee::Parameter();
@@ -175,10 +178,11 @@ class Parameter {
   void set_buffer(Buffer buffer) { data_ = std::move(buffer); }
 
  private:
-  std::variant<std::monostate, fuchsia_tee::None, fuchsia_tee::Value, fuchsia_tee::Buffer>
+  std::variant<std::monostate, fidl::aligned<fuchsia_tee::None>, fuchsia_tee::Value,
+               fuchsia_tee::Buffer>
       llcpp_data_{};
 
-  std::variant<std::monostate, fuchsia_tee::None, Value, Buffer> data_{};
+  std::variant<std::monostate, fidl::aligned<fuchsia_tee::None>, Value, Buffer> data_{};
 };
 
 class ParameterSet {

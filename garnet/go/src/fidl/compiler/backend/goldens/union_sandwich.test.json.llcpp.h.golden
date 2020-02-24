@@ -24,20 +24,28 @@ namespace test {
 namespace fidl {
 namespace unionsandwich {
 
-struct UnionSize8Alignment4;
+class UnionSize8Alignment4;
 struct SandwichUnionSize8Alignment4;
-struct UnionSize36Alignment4;
+class UnionSize36Alignment4;
 struct SandwichUnionSize36Alignment4;
-struct UnionSize12Alignment4;
+class UnionSize12Alignment4;
 struct SandwichUnionSize12Alignment4;
 struct StructSize16Alignment8;
-struct UnionSize24Alignment8;
+class UnionSize24Alignment8;
 struct SandwichUnionSize24Alignment8;
 
 extern "C" const fidl_type_t v1_test_fidl_unionsandwich_UnionSize8Alignment4Table;
 
-struct UnionSize8Alignment4 {
+class UnionSize8Alignment4 {
+  public:
   UnionSize8Alignment4() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  UnionSize8Alignment4(UnionSize8Alignment4&&) = default;
+  UnionSize8Alignment4& operator=(UnionSize8Alignment4&&) = default;
+
+  ~UnionSize8Alignment4() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kVariant = 1,  // 0x1
@@ -47,24 +55,24 @@ struct UnionSize8Alignment4 {
 
   bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
 
-  static UnionSize8Alignment4 WithVariant(uint32_t* val) {
+  static UnionSize8Alignment4 WithVariant(::fidl::tracking_ptr<uint32_t>&& val) {
     UnionSize8Alignment4 result;
-    result.set_variant(val);
+    result.set_variant(std::move(val));
     return result;
   }
 
-  void set_variant(uint32_t* elem) {
+  void set_variant(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kVariant;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   uint32_t& mutable_variant() {
     ZX_ASSERT(ordinal_ == Ordinal::kVariant);
-    return *static_cast<uint32_t*>(envelope_.data);
+    return *static_cast<uint32_t*>(envelope_.data.get());
   }
   const uint32_t& variant() const {
     ZX_ASSERT(ordinal_ == Ordinal::kVariant);
-    return *static_cast<uint32_t*>(envelope_.data);
+    return *static_cast<uint32_t*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -84,16 +92,37 @@ struct UnionSize8Alignment4 {
     kVariant = 1,  // 0x1
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<uint32_t> to_destroy =
+        static_cast<::fidl::tracking_ptr<uint32_t>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_test_fidl_unionsandwich_UnionSize36Alignment4Table;
 
-struct UnionSize36Alignment4 {
+class UnionSize36Alignment4 {
+  public:
   UnionSize36Alignment4() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  UnionSize36Alignment4(UnionSize36Alignment4&&) = default;
+  UnionSize36Alignment4& operator=(UnionSize36Alignment4&&) = default;
+
+  ~UnionSize36Alignment4() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kVariant = 1,  // 0x1
@@ -103,24 +132,24 @@ struct UnionSize36Alignment4 {
 
   bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
 
-  static UnionSize36Alignment4 WithVariant(::fidl::Array<uint8_t, 32>* val) {
+  static UnionSize36Alignment4 WithVariant(::fidl::tracking_ptr<::fidl::Array<uint8_t, 32>>&& val) {
     UnionSize36Alignment4 result;
-    result.set_variant(val);
+    result.set_variant(std::move(val));
     return result;
   }
 
-  void set_variant(::fidl::Array<uint8_t, 32>* elem) {
+  void set_variant(::fidl::tracking_ptr<::fidl::Array<uint8_t, 32>>&& elem) {
     ordinal_ = Ordinal::kVariant;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::fidl::Array<uint8_t, 32>& mutable_variant() {
     ZX_ASSERT(ordinal_ == Ordinal::kVariant);
-    return *static_cast<::fidl::Array<uint8_t, 32>*>(envelope_.data);
+    return *static_cast<::fidl::Array<uint8_t, 32>*>(envelope_.data.get());
   }
   const ::fidl::Array<uint8_t, 32>& variant() const {
     ZX_ASSERT(ordinal_ == Ordinal::kVariant);
-    return *static_cast<::fidl::Array<uint8_t, 32>*>(envelope_.data);
+    return *static_cast<::fidl::Array<uint8_t, 32>*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -140,16 +169,37 @@ struct UnionSize36Alignment4 {
     kVariant = 1,  // 0x1
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<::fidl::Array<uint8_t, 32>> to_destroy =
+        static_cast<::fidl::tracking_ptr<::fidl::Array<uint8_t, 32>>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_test_fidl_unionsandwich_UnionSize12Alignment4Table;
 
-struct UnionSize12Alignment4 {
+class UnionSize12Alignment4 {
+  public:
   UnionSize12Alignment4() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  UnionSize12Alignment4(UnionSize12Alignment4&&) = default;
+  UnionSize12Alignment4& operator=(UnionSize12Alignment4&&) = default;
+
+  ~UnionSize12Alignment4() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kVariant = 1,  // 0x1
@@ -159,24 +209,24 @@ struct UnionSize12Alignment4 {
 
   bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
 
-  static UnionSize12Alignment4 WithVariant(::fidl::Array<uint8_t, 6>* val) {
+  static UnionSize12Alignment4 WithVariant(::fidl::tracking_ptr<::fidl::Array<uint8_t, 6>>&& val) {
     UnionSize12Alignment4 result;
-    result.set_variant(val);
+    result.set_variant(std::move(val));
     return result;
   }
 
-  void set_variant(::fidl::Array<uint8_t, 6>* elem) {
+  void set_variant(::fidl::tracking_ptr<::fidl::Array<uint8_t, 6>>&& elem) {
     ordinal_ = Ordinal::kVariant;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::fidl::Array<uint8_t, 6>& mutable_variant() {
     ZX_ASSERT(ordinal_ == Ordinal::kVariant);
-    return *static_cast<::fidl::Array<uint8_t, 6>*>(envelope_.data);
+    return *static_cast<::fidl::Array<uint8_t, 6>*>(envelope_.data.get());
   }
   const ::fidl::Array<uint8_t, 6>& variant() const {
     ZX_ASSERT(ordinal_ == Ordinal::kVariant);
-    return *static_cast<::fidl::Array<uint8_t, 6>*>(envelope_.data);
+    return *static_cast<::fidl::Array<uint8_t, 6>*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -196,16 +246,37 @@ struct UnionSize12Alignment4 {
     kVariant = 1,  // 0x1
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<::fidl::Array<uint8_t, 6>> to_destroy =
+        static_cast<::fidl::tracking_ptr<::fidl::Array<uint8_t, 6>>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_test_fidl_unionsandwich_UnionSize24Alignment8Table;
 
-struct UnionSize24Alignment8 {
+class UnionSize24Alignment8 {
+  public:
   UnionSize24Alignment8() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  UnionSize24Alignment8(UnionSize24Alignment8&&) = default;
+  UnionSize24Alignment8& operator=(UnionSize24Alignment8&&) = default;
+
+  ~UnionSize24Alignment8() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kVariant = 1,  // 0x1
@@ -215,24 +286,24 @@ struct UnionSize24Alignment8 {
 
   bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
 
-  static UnionSize24Alignment8 WithVariant(::llcpp::test::fidl::unionsandwich::StructSize16Alignment8* val) {
+  static UnionSize24Alignment8 WithVariant(::fidl::tracking_ptr<::llcpp::test::fidl::unionsandwich::StructSize16Alignment8>&& val) {
     UnionSize24Alignment8 result;
-    result.set_variant(val);
+    result.set_variant(std::move(val));
     return result;
   }
 
-  void set_variant(::llcpp::test::fidl::unionsandwich::StructSize16Alignment8* elem) {
+  void set_variant(::fidl::tracking_ptr<::llcpp::test::fidl::unionsandwich::StructSize16Alignment8>&& elem) {
     ordinal_ = Ordinal::kVariant;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::llcpp::test::fidl::unionsandwich::StructSize16Alignment8& mutable_variant() {
     ZX_ASSERT(ordinal_ == Ordinal::kVariant);
-    return *static_cast<::llcpp::test::fidl::unionsandwich::StructSize16Alignment8*>(envelope_.data);
+    return *static_cast<::llcpp::test::fidl::unionsandwich::StructSize16Alignment8*>(envelope_.data.get());
   }
   const ::llcpp::test::fidl::unionsandwich::StructSize16Alignment8& variant() const {
     ZX_ASSERT(ordinal_ == Ordinal::kVariant);
-    return *static_cast<::llcpp::test::fidl::unionsandwich::StructSize16Alignment8*>(envelope_.data);
+    return *static_cast<::llcpp::test::fidl::unionsandwich::StructSize16Alignment8*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -252,10 +323,23 @@ struct UnionSize24Alignment8 {
     kVariant = 1,  // 0x1
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<::llcpp::test::fidl::unionsandwich::StructSize16Alignment8> to_destroy =
+        static_cast<::fidl::tracking_ptr<::llcpp::test::fidl::unionsandwich::StructSize16Alignment8>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table;

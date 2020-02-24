@@ -56,9 +56,7 @@ zx_status_t SerialPpp::Create(void* /*ctx*/, zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t SerialPpp::Init() {
-  return loop_.StartThread();
-}
+zx_status_t SerialPpp::Init() { return loop_.StartThread(); }
 
 void SerialPpp::WaitCallbacks() {
   while (true) {
@@ -284,17 +282,17 @@ void SerialPpp::FrameDeviceServer::Rx(fppp::ProtocolType protocol, RxCompleter::
       fppp::Device_Rx_Response response;
       auto [protocol, data] = frame.take_value();
       response.data = fidl::VectorView<uint8_t>(data.data(), data.size());
-      result.set_response(&response);
+      result.set_response(fidl::unowned(&response));
       completer.Reply(std::move(result));
     } else if (frame.is_error()) {
       zx_status_t status = frame.take_error();
-      result.set_err(&status);
+      result.set_err(fidl::unowned(&status));
       completer.Reply(std::move(result));
     } else {
       zx_status_t status = ZX_ERR_INTERNAL;
-      result.set_err(&status);
+      result.set_err(fidl::unowned(&status));
       completer.Reply(std::move(result));
-    }    
+    }
   };
   dev_->Rx(protocol, std::move(callback));
 }
@@ -304,11 +302,11 @@ void SerialPpp::FrameDeviceServer::Tx(fppp::ProtocolType protocol, fidl::VectorV
   auto status = dev_->Tx(protocol, fbl::Span(data.data(), data.count()));
   fppp::Device_Tx_Result result;
 
-  fppp::Device_Tx_Response response;
+  fidl::aligned<fppp::Device_Tx_Response> response;
   if (status == ZX_OK) {
-    result.set_response(&response);
+    result.set_response(fidl::unowned(&response));
   } else {
-    result.set_err(&status);
+    result.set_err(fidl::unowned(&status));
   }
 
   completer.Reply(std::move(result));
@@ -332,11 +330,11 @@ void SerialPpp::FrameDeviceServer::Enable(bool up, EnableCompleter::Sync complet
   auto status = dev_->Enable(up);
   fppp::Device_Enable_Result result;
 
-  fppp::Device_Enable_Response response;
+  fidl::aligned<fppp::Device_Enable_Response> response;
   if (status == ZX_OK) {
-    result.set_response(&response);
+    result.set_response(fidl::unowned(&response));
   } else {
-    result.set_err(&status);
+    result.set_err(fidl::unowned(&status));
   }
 
   completer.Reply(std::move(result));

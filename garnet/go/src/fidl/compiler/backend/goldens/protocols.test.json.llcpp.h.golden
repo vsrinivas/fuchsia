@@ -26,9 +26,9 @@ namespace test {
 namespace name {
 
 struct WithErrorSyntax_ResponseAsStruct_Response;
-struct WithErrorSyntax_ResponseAsStruct_Result;
+class WithErrorSyntax_ResponseAsStruct_Result;
 struct WithErrorSyntax_ErrorAsPrimitive_Response;
-struct WithErrorSyntax_ErrorAsPrimitive_Result;
+class WithErrorSyntax_ErrorAsPrimitive_Result;
 struct WithErrorSyntax_ErrorAsEnum_Response;
 class ChannelProtocol;
 class WithAndWithoutRequestResponse;
@@ -38,13 +38,21 @@ enum class ErrorEnun : uint32_t {
 };
 
 
-struct WithErrorSyntax_ErrorAsEnum_Result;
+class WithErrorSyntax_ErrorAsEnum_Result;
 class WithErrorSyntax;
 
 extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
 
-struct WithErrorSyntax_ResponseAsStruct_Result {
+class WithErrorSyntax_ResponseAsStruct_Result {
+  public:
   WithErrorSyntax_ResponseAsStruct_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  WithErrorSyntax_ResponseAsStruct_Result(WithErrorSyntax_ResponseAsStruct_Result&&) = default;
+  WithErrorSyntax_ResponseAsStruct_Result& operator=(WithErrorSyntax_ResponseAsStruct_Result&&) = default;
+
+  ~WithErrorSyntax_ResponseAsStruct_Result() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
@@ -55,46 +63,46 @@ struct WithErrorSyntax_ResponseAsStruct_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  static WithErrorSyntax_ResponseAsStruct_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response* val) {
+  static WithErrorSyntax_ResponseAsStruct_Result WithResponse(::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>&& val) {
     WithErrorSyntax_ResponseAsStruct_Result result;
-    result.set_response(val);
+    result.set_response(std::move(val));
     return result;
   }
 
-  void set_response(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response* elem) {
+  void set_response(::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>&& elem) {
     ordinal_ = Ordinal::kResponse;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response& mutable_response() {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response*>(envelope_.data);
+    return *static_cast<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response*>(envelope_.data.get());
   }
   const ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response& response() const {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response*>(envelope_.data);
+    return *static_cast<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response*>(envelope_.data.get());
   }
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  static WithErrorSyntax_ResponseAsStruct_Result WithErr(uint32_t* val) {
+  static WithErrorSyntax_ResponseAsStruct_Result WithErr(::fidl::tracking_ptr<uint32_t>&& val) {
     WithErrorSyntax_ResponseAsStruct_Result result;
-    result.set_err(val);
+    result.set_err(std::move(val));
     return result;
   }
 
-  void set_err(uint32_t* elem) {
+  void set_err(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kErr;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   uint32_t& mutable_err() {
     ZX_ASSERT(ordinal_ == Ordinal::kErr);
-    return *static_cast<uint32_t*>(envelope_.data);
+    return *static_cast<uint32_t*>(envelope_.data.get());
   }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ == Ordinal::kErr);
-    return *static_cast<uint32_t*>(envelope_.data);
+    return *static_cast<uint32_t*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -115,16 +123,42 @@ struct WithErrorSyntax_ResponseAsStruct_Result {
     kErr = 2,  // 0x2
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response> to_destroy =
+        static_cast<::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response>>(std::move(envelope_.data));
+      break;
+    }
+    case 2: {
+      ::fidl::tracking_ptr<uint32_t> to_destroy =
+        static_cast<::fidl::tracking_ptr<uint32_t>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
 
-struct WithErrorSyntax_ErrorAsPrimitive_Result {
+class WithErrorSyntax_ErrorAsPrimitive_Result {
+  public:
   WithErrorSyntax_ErrorAsPrimitive_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  WithErrorSyntax_ErrorAsPrimitive_Result(WithErrorSyntax_ErrorAsPrimitive_Result&&) = default;
+  WithErrorSyntax_ErrorAsPrimitive_Result& operator=(WithErrorSyntax_ErrorAsPrimitive_Result&&) = default;
+
+  ~WithErrorSyntax_ErrorAsPrimitive_Result() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
@@ -135,46 +169,46 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response* val) {
+  static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>&& val) {
     WithErrorSyntax_ErrorAsPrimitive_Result result;
-    result.set_response(val);
+    result.set_response(std::move(val));
     return result;
   }
 
-  void set_response(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response* elem) {
+  void set_response(::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>&& elem) {
     ordinal_ = Ordinal::kResponse;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& mutable_response() {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response*>(envelope_.data);
+    return *static_cast<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response*>(envelope_.data.get());
   }
   const ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response& response() const {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response*>(envelope_.data);
+    return *static_cast<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response*>(envelope_.data.get());
   }
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(uint32_t* val) {
+  static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(::fidl::tracking_ptr<uint32_t>&& val) {
     WithErrorSyntax_ErrorAsPrimitive_Result result;
-    result.set_err(val);
+    result.set_err(std::move(val));
     return result;
   }
 
-  void set_err(uint32_t* elem) {
+  void set_err(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kErr;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   uint32_t& mutable_err() {
     ZX_ASSERT(ordinal_ == Ordinal::kErr);
-    return *static_cast<uint32_t*>(envelope_.data);
+    return *static_cast<uint32_t*>(envelope_.data.get());
   }
   const uint32_t& err() const {
     ZX_ASSERT(ordinal_ == Ordinal::kErr);
-    return *static_cast<uint32_t*>(envelope_.data);
+    return *static_cast<uint32_t*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -195,16 +229,42 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
     kErr = 2,  // 0x2
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response> to_destroy =
+        static_cast<::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response>>(std::move(envelope_.data));
+      break;
+    }
+    case 2: {
+      ::fidl::tracking_ptr<uint32_t> to_destroy =
+        static_cast<::fidl::tracking_ptr<uint32_t>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
 
-struct WithErrorSyntax_ErrorAsEnum_Result {
+class WithErrorSyntax_ErrorAsEnum_Result {
+  public:
   WithErrorSyntax_ErrorAsEnum_Result() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  WithErrorSyntax_ErrorAsEnum_Result(WithErrorSyntax_ErrorAsEnum_Result&&) = default;
+  WithErrorSyntax_ErrorAsEnum_Result& operator=(WithErrorSyntax_ErrorAsEnum_Result&&) = default;
+
+  ~WithErrorSyntax_ErrorAsEnum_Result() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
@@ -215,46 +275,46 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
 
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
-  static WithErrorSyntax_ErrorAsEnum_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response* val) {
+  static WithErrorSyntax_ErrorAsEnum_Result WithResponse(::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>&& val) {
     WithErrorSyntax_ErrorAsEnum_Result result;
-    result.set_response(val);
+    result.set_response(std::move(val));
     return result;
   }
 
-  void set_response(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response* elem) {
+  void set_response(::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>&& elem) {
     ordinal_ = Ordinal::kResponse;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response& mutable_response() {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response*>(envelope_.data);
+    return *static_cast<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response*>(envelope_.data.get());
   }
   const ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response& response() const {
     ZX_ASSERT(ordinal_ == Ordinal::kResponse);
-    return *static_cast<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response*>(envelope_.data);
+    return *static_cast<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response*>(envelope_.data.get());
   }
 
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
-  static WithErrorSyntax_ErrorAsEnum_Result WithErr(::llcpp::test::name::ErrorEnun* val) {
+  static WithErrorSyntax_ErrorAsEnum_Result WithErr(::fidl::tracking_ptr<::llcpp::test::name::ErrorEnun>&& val) {
     WithErrorSyntax_ErrorAsEnum_Result result;
-    result.set_err(val);
+    result.set_err(std::move(val));
     return result;
   }
 
-  void set_err(::llcpp::test::name::ErrorEnun* elem) {
+  void set_err(::fidl::tracking_ptr<::llcpp::test::name::ErrorEnun>&& elem) {
     ordinal_ = Ordinal::kErr;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::llcpp::test::name::ErrorEnun& mutable_err() {
     ZX_ASSERT(ordinal_ == Ordinal::kErr);
-    return *static_cast<::llcpp::test::name::ErrorEnun*>(envelope_.data);
+    return *static_cast<::llcpp::test::name::ErrorEnun*>(envelope_.data.get());
   }
   const ::llcpp::test::name::ErrorEnun& err() const {
     ZX_ASSERT(ordinal_ == Ordinal::kErr);
-    return *static_cast<::llcpp::test::name::ErrorEnun*>(envelope_.data);
+    return *static_cast<::llcpp::test::name::ErrorEnun*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -275,10 +335,28 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
     kErr = 2,  // 0x2
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response> to_destroy =
+        static_cast<::fidl::tracking_ptr<::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response>>(std::move(envelope_.data));
+      break;
+    }
+    case 2: {
+      ::fidl::tracking_ptr<::llcpp::test::name::ErrorEnun> to_destroy =
+        static_cast<::fidl::tracking_ptr<::llcpp::test::name::ErrorEnun>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_test_name_WithErrorSyntax_ResponseAsStruct_ResponseTable;

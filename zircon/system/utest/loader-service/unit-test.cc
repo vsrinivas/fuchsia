@@ -116,8 +116,8 @@ TEST(LoaderServiceTest, Create) {
     ~TestDirectory() {}
 
     void Describe(DescribeCompleter::Sync completer) override {
-      fuchsia::io::DirectoryObject obj;
-      fuchsia::io::NodeInfo info = fuchsia::io::NodeInfo::WithDirectory(&obj);
+      fidl::aligned<fuchsia::io::DirectoryObject> obj;
+      fuchsia::io::NodeInfo info = fuchsia::io::NodeInfo::WithDirectory(fidl::unowned(&obj));
       completer.Reply(std::move(info));
     }
     void Close(CloseCompleter::Sync completer) override { completer.Reply(ZX_OK); }
@@ -131,8 +131,8 @@ TEST(LoaderServiceTest, Create) {
 
       // Send the OnOpen event on the channel
       fuchsia::io::FileObject obj;
-      fuchsia::io::NodeInfo info = fuchsia::io::NodeInfo::WithFile(&obj);
-      fuchsia::io::File::SendOnOpenEvent(zx::unowned_channel{object}, ZX_OK, info);
+      fuchsia::io::NodeInfo info = fuchsia::io::NodeInfo::WithFile(fidl::unowned(&obj));
+      fuchsia::io::File::SendOnOpenEvent(zx::unowned_channel{object}, ZX_OK, std::move(info));
 
       // Wire object up to a new TestFile instance
       auto file = std::make_unique<TestFile>(last_get_buffer_flags_ptr_);

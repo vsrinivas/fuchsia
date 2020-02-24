@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cobalt-client/cpp/collector_internal.h>
-
 #include <fuchsia/cobalt/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -17,6 +15,7 @@
 
 #include <utility>
 
+#include <cobalt-client/cpp/collector_internal.h>
 #include <cobalt-client/cpp/histogram_internal.h>
 #include <cobalt-client/cpp/types_internal.h>
 
@@ -78,7 +77,7 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, const HistogramBucket* 
   // Safe because is read only.
   auto int_histogram =
       fidl::VectorView<HistogramBucket>(const_cast<HistogramBucket*>(buckets), bucket_count);
-  event.payload.set_int_histogram(&int_histogram);
+  event.payload.set_int_histogram(fidl::unowned(&int_histogram));
 
   auto log_result = llcpp::fuchsia::cobalt::Logger::Call::LogCobaltEvent(
       zx::unowned_channel(logger_), std::move(event));
@@ -94,7 +93,7 @@ bool CobaltLogger::Log(const MetricOptions& metric_info, RemoteCounter::Type cou
   }
   auto event = MetricIntoToCobaltEvent(metric_info);
   llcpp::fuchsia::cobalt::CountEvent event_count{.period_duration_micros = 0, .count = count};
-  event.payload.set_event_count(&event_count);
+  event.payload.set_event_count(fidl::unowned(&event_count));
 
   auto log_result = llcpp::fuchsia::cobalt::Logger::Call::LogCobaltEvent(
       zx::unowned_channel(logger_), std::move(event));

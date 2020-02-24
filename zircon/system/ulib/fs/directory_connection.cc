@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/internal/directory_connection.h>
-
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/io.h>
@@ -23,6 +21,7 @@
 
 #include <fbl/string_buffer.h>
 #include <fs/debug.h>
+#include <fs/internal/directory_connection.h>
 #include <fs/internal/fidl_transaction.h>
 #include <fs/mount_channel.h>
 #include <fs/trace.h>
@@ -90,9 +89,8 @@ void DirectoryConnection::Describe(DescribeCompleter::Sync completer) {
   if (result.is_error()) {
     return completer.Close(result.error());
   }
-  ConvertToIoV1NodeInfo(result.take_value(), [&](fio::NodeInfo info) {
-    completer.Reply(info);
-  });
+  ConvertToIoV1NodeInfo(result.take_value(),
+                        [&](fio::NodeInfo&& info) { completer.Reply(std::move(info)); });
 }
 
 void DirectoryConnection::Sync(SyncCompleter::Sync completer) {
@@ -146,16 +144,14 @@ void DirectoryConnection::Open(uint32_t open_flags, uint32_t mode, fidl::StringV
 
   if (!PrevalidateFlags(open_flags)) {
     FS_PRETTY_TRACE_DEBUG("[DirectoryOpen] prevalidate failed",
-                          ", incoming flags: ", ZxFlags(open_flags),
-                          ", path: ", path);
+                          ", incoming flags: ", ZxFlags(open_flags), ", path: ", path);
     if (open_options.flags.describe) {
       return write_error(std::move(channel), ZX_ERR_INVALID_ARGS);
     }
   }
 
   FS_PRETTY_TRACE_DEBUG("[DirectoryOpen] our options: ", options(),
-                        ", incoming options: ", open_options,
-                        ", path: ", path);
+                        ", incoming options: ", open_options, ", path: ", path);
   if (options().flags.node_reference) {
     return write_error(std::move(channel), ZX_ERR_BAD_HANDLE);
   }
@@ -180,8 +176,7 @@ void DirectoryConnection::Open(uint32_t open_flags, uint32_t mode, fidl::StringV
 }
 
 void DirectoryConnection::Unlink(fidl::StringView path, UnlinkCompleter::Sync completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryUnlink] our options: ", options(),
-                        ", path: ", path);
+  FS_PRETTY_TRACE_DEBUG("[DirectoryUnlink] our options: ", options(), ", path: ", path);
 
   if (options().flags.node_reference) {
     return completer.Reply(ZX_ERR_BAD_HANDLE);
@@ -231,8 +226,8 @@ void DirectoryConnection::GetToken(GetTokenCompleter::Sync completer) {
 
 void DirectoryConnection::Rename(fidl::StringView src, zx::handle dst_parent_token,
                                  fidl::StringView dst, RenameCompleter::Sync completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryRename] our options: ", options(),
-                        ", src: ", src, ", dst: ", dst);
+  FS_PRETTY_TRACE_DEBUG("[DirectoryRename] our options: ", options(), ", src: ", src,
+                        ", dst: ", dst);
 
   // |fuchsia.io/Directory.Rename| only specified the token to be a generic handle; casting it here.
   zx::event token(dst_parent_token.release());
@@ -254,8 +249,7 @@ void DirectoryConnection::Rename(fidl::StringView src, zx::handle dst_parent_tok
 
 void DirectoryConnection::Link(fidl::StringView src, zx::handle dst_parent_token,
                                fidl::StringView dst, LinkCompleter::Sync completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryLink] our options: ", options(),
-                        ", src: ", src, ", dst: ", dst);
+  FS_PRETTY_TRACE_DEBUG("[DirectoryLink] our options: ", options(), ", src: ", src, ", dst: ", dst);
 
   // |fuchsia.io/Directory.Rename| only specified the token to be a generic handle; casting it here.
   zx::event token(dst_parent_token.release());

@@ -49,12 +49,12 @@ ReplySuccess({{ template "Params" .Result.ValueMembers }})
 
 {{- define "ReplyCFlavorResultSuccessMethodDefinition" }}
 void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorResultSuccessMethodSignature" . }} {
-  {{ .Result.ValueStructDecl }} response;
+  ::fidl::aligned<{{ .Result.ValueStructDecl }}> response;
   {{- range .Result.ValueMembers }}
-  response.{{ .Name }} = std::move({{ .Name }});
+  response.value.{{ .Name }} = std::move({{ .Name }});
   {{- end }}
 
-  Reply({{ .Result.ResultDecl }}::WithResponse(&response));
+  Reply({{ .Result.ResultDecl }}::WithResponse(::fidl::unowned(&response)));
 }
 {{- end }}
 
@@ -64,7 +64,7 @@ ReplyError({{ .Result.ErrorDecl }} error)
 
 {{- define "ReplyCFlavorResultErrorMethodDefinition" }}
 void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorResultErrorMethodSignature" . }} {
-  Reply({{ .Result.ResultDecl }}::WithErr(&error));
+  Reply({{ .Result.ResultDecl }}::WithErr(::fidl::unowned(&error)));
 }
 {{- end }}
 `

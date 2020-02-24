@@ -32,7 +32,7 @@ void BindReply(const fbl::RefPtr<zx_device_t>& dev,
   completer.Reply(status, std::move(test_output));
 
   bool complete_bind = true;
-  for (auto &child : dev->children) {
+  for (auto& child : dev->children) {
     if ((child.flags & DEV_FLAG_INVISIBLE) || child.ops->init) {
       // Driver has initializatin to do.
       complete_bind = false;
@@ -196,7 +196,7 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync completer) {
   this->dev()->unbind_cb = [dev = this->dev(), completer = completer.ToAsync(),
                             trace = std::move(trace)](zx_status_t status) mutable {
     llcpp::fuchsia::device::manager::DeviceController_Unbind_Result result;
-    llcpp::fuchsia::device::manager::DeviceController_Unbind_Response response;
+    fidl::aligned<llcpp::fuchsia::device::manager::DeviceController_Unbind_Response> response;
     if (status != ZX_OK && dev->parent) {
       // If unbind returns an error, and if client is waiting for unbind to complete,
       // inform the client.
@@ -205,7 +205,7 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync completer) {
         unbind_children_conn(status);
       }
     }
-    result.set_response(&response);
+    result.set_response(fidl::unowned(&response));
     completer.Reply(std::move(result));
   };
   ApiAutoLock lock;
@@ -216,8 +216,9 @@ void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync 
   ZX_ASSERT(this->dev()->removal_cb == nullptr);
   this->dev()->removal_cb = [completer = completer.ToAsync()](zx_status_t status) mutable {
     llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result result;
-    llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response response;
-    result.set_response(&response);
+    fidl::aligned<llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response>
+        response;
+    result.set_response(fidl::unowned(&response));
     completer.Reply(std::move(result));
   };
   ApiAutoLock lock;

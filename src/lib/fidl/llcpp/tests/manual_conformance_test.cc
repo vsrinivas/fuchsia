@@ -44,9 +44,9 @@ TEST(InlineXUnionInStruct, Success) {
     llcpp_misc::InlineXUnionInStruct input;
     llcpp_misc::SimpleUnion simple_union;
     int64_t i64 = 0xdeadbeef;
-    simple_union.set_i64(&i64);
+    simple_union.set_i64(fidl::unowned(&i64));
     input.before = fidl::StringView(before);
-    input.xu.set_su(&simple_union);
+    input.xu.set_su(fidl::unowned(&simple_union));
     input.after = fidl::StringView(after);
     std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
     fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
@@ -104,7 +104,7 @@ TEST(PrimitiveInXUnionInStruct, Success) {
   {
     llcpp_misc::InlineXUnionInStruct input;
     input.before = fidl::StringView(before);
-    input.xu.set_i(&integer);
+    input.xu.set_i(fidl::unowned(&integer));
     input.after = fidl::StringView(after);
     std::vector<uint8_t> buffer(ZX_CHANNEL_MAX_MSG_BYTES);
     fidl::BytePart bytes(&buffer[0], static_cast<uint32_t>(buffer.size()));
@@ -330,7 +330,7 @@ TEST(ComplexTable, Success) {
                               .set_y(fidl::unowned(&table_y));
     auto simple_table = simple_builder.build();
     llcpp_misc::SampleXUnion xu;
-    xu.set_i(&xunion_i);
+    xu.set_i(fidl::unowned(&xunion_i));
     std::vector<fidl::StringView> strings_vector{
         fidl::StringView(before),
         fidl::StringView(after),

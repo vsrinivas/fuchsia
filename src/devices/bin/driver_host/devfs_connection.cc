@@ -254,8 +254,8 @@ void DevfsConnection::GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync compl
   for (size_t i = 0; i < fuchsia_device_MAX_DEVICE_POWER_STATES; i++) {
     response.dpstates[i] = states[i];
   }
-  completer.Reply(
-      ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result::WithResponse(&response));
+  completer.Reply(::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result::WithResponse(
+      fidl::unowned(&response)));
 };
 
 void DevfsConnection::SetPerformanceState(uint32_t requested_state,
@@ -277,7 +277,7 @@ void DevfsConnection::UpdatePowerStateMapping(
                   ::llcpp::fuchsia::device::manager::MAX_SYSTEM_POWER_STATES>
         mapping,
     UpdatePowerStateMappingCompleter::Sync completer) {
-  ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response response;
+  fidl::aligned<::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response> response;
 
   std::array<::llcpp::fuchsia::device::SystemPowerStateInfo,
              ::llcpp::fuchsia::device::manager::MAX_SYSTEM_POWER_STATES>
@@ -289,10 +289,11 @@ void DevfsConnection::UpdatePowerStateMapping(
   zx_status_t status = dev->SetSystemPowerStateMapping(states_mapping);
   if (status != ZX_OK) {
     return completer.Reply(
-        ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::WithErr(&status));
+        ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::WithErr(
+            fidl::unowned(&status)));
   }
-  completer.Reply(
-      ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::WithResponse(&response));
+  completer.Reply(::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::WithResponse(
+      fidl::unowned(&response)));
 }
 
 void DevfsConnection::GetPowerStateMapping(GetPowerStateMappingCompleter::Sync completer) {
@@ -304,8 +305,8 @@ void DevfsConnection::GetPowerStateMapping(GetPowerStateMappingCompleter::Sync c
   for (size_t i = 0; i < fuchsia_device_manager_MAX_SYSTEM_POWER_STATES; i++) {
     response.mapping[i] = mapping[i];
   }
-  completer.Reply(
-      ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::WithResponse(&response));
+  completer.Reply(::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::WithResponse(
+      fidl::unowned(&response)));
 };
 
 void DevfsConnection::Suspend(::llcpp::fuchsia::device::DevicePowerState requested_state,

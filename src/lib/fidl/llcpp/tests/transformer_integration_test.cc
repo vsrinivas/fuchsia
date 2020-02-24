@@ -21,8 +21,8 @@
 #include <example/llcpp/fidl.h>
 #include <transformerintegration/test/llcpp/fidl.h>
 
-#include "src/lib/fidl/llcpp/tests/test_utils.h"
 #include "gtest/gtest.h"
+#include "src/lib/fidl/llcpp/tests/test_utils.h"
 
 namespace test = ::llcpp::transformerintegration::test;
 
@@ -73,11 +73,11 @@ class TransformerIntegrationTest : public ::testing::Test {
   static void InitSandwich(::llcpp::example::Sandwich4* sandwich) {
     sandwich->before = 0x04030201u;
     sandwich->after = 0x08070605;
-    fidl::Array<uint8_t, 32> array;
-    for (size_t i = 0; i < array.size(); i++) {
-      array[i] = static_cast<uint8_t>(0xa0 + i);
+    fidl::aligned<fidl::Array<uint8_t, 32>> array;
+    for (size_t i = 0; i < array.value.size(); i++) {
+      array.value[i] = static_cast<uint8_t>(0xa0 + i);
     }
-    sandwich->the_union.set_variant(&array);
+    sandwich->the_union.set_variant(fidl::unowned(&array));
   }
 
  private:

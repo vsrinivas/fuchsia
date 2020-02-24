@@ -25,14 +25,22 @@ namespace fidl {
 namespace test {
 namespace json {
 
-struct StrictFoo;
-struct FlexibleFoo;
+class StrictFoo;
+class FlexibleFoo;
 class Protocol;
 
 extern "C" const fidl_type_t v1_fidl_test_json_StrictFooTable;
 
-struct StrictFoo {
+class StrictFoo {
+  public:
   StrictFoo() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  StrictFoo(StrictFoo&&) = default;
+  StrictFoo& operator=(StrictFoo&&) = default;
+
+  ~StrictFoo() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kS = 1,  // 0x1
@@ -43,46 +51,46 @@ struct StrictFoo {
 
   bool is_s() const { return ordinal_ == Ordinal::kS; }
 
-  static StrictFoo WithS(::fidl::StringView* val) {
+  static StrictFoo WithS(::fidl::tracking_ptr<::fidl::StringView>&& val) {
     StrictFoo result;
-    result.set_s(val);
+    result.set_s(std::move(val));
     return result;
   }
 
-  void set_s(::fidl::StringView* elem) {
+  void set_s(::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kS;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::fidl::StringView& mutable_s() {
     ZX_ASSERT(ordinal_ == Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data);
+    return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ == Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data);
+    return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
 
   bool is_i() const { return ordinal_ == Ordinal::kI; }
 
-  static StrictFoo WithI(int32_t* val) {
+  static StrictFoo WithI(::fidl::tracking_ptr<int32_t>&& val) {
     StrictFoo result;
-    result.set_i(val);
+    result.set_i(std::move(val));
     return result;
   }
 
-  void set_i(int32_t* elem) {
+  void set_i(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kI;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   int32_t& mutable_i() {
     ZX_ASSERT(ordinal_ == Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data);
+    return *static_cast<int32_t*>(envelope_.data.get());
   }
   const int32_t& i() const {
     ZX_ASSERT(ordinal_ == Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data);
+    return *static_cast<int32_t*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -103,16 +111,42 @@ struct StrictFoo {
     kI = 2,  // 0x2
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<::fidl::StringView> to_destroy =
+        static_cast<::fidl::tracking_ptr<::fidl::StringView>>(std::move(envelope_.data));
+      break;
+    }
+    case 2: {
+      ::fidl::tracking_ptr<int32_t> to_destroy =
+        static_cast<::fidl::tracking_ptr<int32_t>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_fidl_test_json_FlexibleFooTable;
 
-struct FlexibleFoo {
+class FlexibleFoo {
+  public:
   FlexibleFoo() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  FlexibleFoo(FlexibleFoo&&) = default;
+  FlexibleFoo& operator=(FlexibleFoo&&) = default;
+
+  ~FlexibleFoo() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kS = 1,  // 0x1
@@ -124,50 +158,50 @@ struct FlexibleFoo {
 
   bool is_s() const { return ordinal_ == Ordinal::kS; }
 
-  static FlexibleFoo WithS(::fidl::StringView* val) {
+  static FlexibleFoo WithS(::fidl::tracking_ptr<::fidl::StringView>&& val) {
     FlexibleFoo result;
-    result.set_s(val);
+    result.set_s(std::move(val));
     return result;
   }
 
-  void set_s(::fidl::StringView* elem) {
+  void set_s(::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kS;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::fidl::StringView& mutable_s() {
     ZX_ASSERT(ordinal_ == Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data);
+    return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
   const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ == Ordinal::kS);
-    return *static_cast<::fidl::StringView*>(envelope_.data);
+    return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
 
   bool is_i() const { return ordinal_ == Ordinal::kI; }
 
-  static FlexibleFoo WithI(int32_t* val) {
+  static FlexibleFoo WithI(::fidl::tracking_ptr<int32_t>&& val) {
     FlexibleFoo result;
-    result.set_i(val);
+    result.set_i(std::move(val));
     return result;
   }
 
-  void set_i(int32_t* elem) {
+  void set_i(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kI;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   int32_t& mutable_i() {
     ZX_ASSERT(ordinal_ == Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data);
+    return *static_cast<int32_t*>(envelope_.data.get());
   }
   const int32_t& i() const {
     ZX_ASSERT(ordinal_ == Ordinal::kI);
-    return *static_cast<int32_t*>(envelope_.data);
+    return *static_cast<int32_t*>(envelope_.data.get());
   }
   void* unknownData() const {
     ZX_ASSERT(which() == Tag::kUnknown);
-    return envelope_.data;
+    return envelope_.data.get();
   }
   Tag which() const;
 
@@ -185,10 +219,28 @@ struct FlexibleFoo {
     kI = 2,  // 0x2
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<::fidl::StringView> to_destroy =
+        static_cast<::fidl::tracking_ptr<::fidl::StringView>>(std::move(envelope_.data));
+      break;
+    }
+    case 2: {
+      ::fidl::tracking_ptr<int32_t> to_destroy =
+        static_cast<::fidl::tracking_ptr<int32_t>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;

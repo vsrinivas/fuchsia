@@ -377,12 +377,12 @@ zx_status_t fdio_from_on_open_event(zx::channel channel, fdio_t** out_io) {
       zx::unowned_channel(event_channel_handle),
       fio::Directory::EventHandlers{.on_open =
                                         [channel = std::move(channel), out_io](
-                                            zx_status_t status, fio::NodeInfo info) mutable {
+                                            zx_status_t status, fio::NodeInfo&& info) mutable {
                                           if (status != ZX_OK) {
                                             return status;
                                           }
-                                          return fdio_from_node_info(std::move(channel), info,
-                                                                     out_io);
+                                          return fdio_from_node_info(std::move(channel),
+                                                                     std::move(info), out_io);
                                         },
                                     .unknown = [] { return ZX_ERR_IO; }});
 }

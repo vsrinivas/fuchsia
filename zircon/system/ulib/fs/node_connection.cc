@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/internal/node_connection.h>
-
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/io.h>
@@ -24,6 +22,7 @@
 #include <fbl/string_buffer.h>
 #include <fs/debug.h>
 #include <fs/internal/fidl_transaction.h>
+#include <fs/internal/node_connection.h>
 #include <fs/trace.h>
 #include <fs/vfs_types.h>
 #include <fs/vnode.h>
@@ -56,9 +55,8 @@ void NodeConnection::Describe(DescribeCompleter::Sync completer) {
   if (result.is_error()) {
     return completer.Close(result.error());
   }
-  ConvertToIoV1NodeInfo(result.take_value(), [&](fio::NodeInfo info) {
-    completer.Reply(info);
-  });
+  ConvertToIoV1NodeInfo(result.take_value(),
+                        [&](fio::NodeInfo&& info) { completer.Reply(std::move(info)); });
 }
 
 void NodeConnection::Sync(SyncCompleter::Sync completer) {

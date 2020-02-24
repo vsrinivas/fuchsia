@@ -24,14 +24,22 @@ namespace llcpp {
 namespace test {
 namespace name {
 
-struct UnionWithHandle;
+class UnionWithHandle;
 class TableWithHandle;
 struct HandlesInTypes;
 
 extern "C" const fidl_type_t v1_test_name_UnionWithHandleTable;
 
-struct UnionWithHandle {
+class UnionWithHandle {
+  public:
   UnionWithHandle() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  UnionWithHandle(UnionWithHandle&&) = default;
+  UnionWithHandle& operator=(UnionWithHandle&&) = default;
+
+  ~UnionWithHandle() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kH = 1,  // 0x1
@@ -42,28 +50,28 @@ struct UnionWithHandle {
 
   bool is_h() const { return ordinal_ == Ordinal::kH; }
 
-  static UnionWithHandle WithH(::zx::vmo* val) {
+  static UnionWithHandle WithH(::fidl::tracking_ptr<::zx::vmo>&& val) {
     UnionWithHandle result;
-    result.set_h(val);
+    result.set_h(std::move(val));
     return result;
   }
 
-  void set_h(::zx::vmo* elem) {
+  void set_h(::fidl::tracking_ptr<::zx::vmo>&& elem) {
     ordinal_ = Ordinal::kH;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::zx::vmo& mutable_h() {
     ZX_ASSERT(ordinal_ == Ordinal::kH);
-    return *static_cast<::zx::vmo*>(envelope_.data);
+    return *static_cast<::zx::vmo*>(envelope_.data.get());
   }
   const ::zx::vmo& h() const {
     ZX_ASSERT(ordinal_ == Ordinal::kH);
-    return *static_cast<::zx::vmo*>(envelope_.data);
+    return *static_cast<::zx::vmo*>(envelope_.data.get());
   }
   void* unknownData() const {
     ZX_ASSERT(which() == Tag::kUnknown);
-    return envelope_.data;
+    return envelope_.data.get();
   }
   Tag which() const;
 
@@ -80,10 +88,23 @@ struct UnionWithHandle {
     kH = 1,  // 0x1
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<::zx::vmo> to_destroy =
+        static_cast<::fidl::tracking_ptr<::zx::vmo>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_test_name_TableWithHandleTable;

@@ -69,6 +69,21 @@ class tracking_ptr final {
  public:
   constexpr tracking_ptr() noexcept { set_marked(kNullMarkedPtr); }
   constexpr tracking_ptr(std::nullptr_t) noexcept { set_marked(kNullMarkedPtr); }
+  // Disabled constructor that exists to produce helpful error messages for the user.
+  // Use templating to only trigger the static assert when the constructor is used.
+  template <bool U = true, typename = std::enable_if_t<U>>
+  tracking_ptr(T* raw_ptr) {
+    static_assert(
+        !U,
+        "fidl::tracking_ptr cannot be constructed directly from a raw pointer. "
+        "If FIDL does not own the memory, indicate this by constructing a fidl::unowned_ptr "
+        "using the fidl::unowned(&val) helper. "
+        "As an alternative, consider using a fidl::Allocator."
+#if TRACKING_PTR_ENABLE_UNIQUE_PTR_CONSTRUCTOR
+        " For heap allocator values, construct with unique_ptr<T>."
+#endif
+    );
+  }
   template <typename U,
             typename = std::enable_if_t<(std::is_array<T>::value == std::is_array<U>::value) ||
                                         std::is_void<T>::value || std::is_void<U>::value>>
@@ -87,7 +102,7 @@ class tracking_ptr final {
   tracking_ptr(unowned_ptr<ArraylessT> other) {
     static_assert(std::alignment_of<T>::value >= kMinAlignment,
                   "unowned_ptr must point to an aligned value. "
-                  "An insufficiently aligned value can be aligned with fidl::align");
+                  "An insufficiently aligned value can be aligned with fidl::aligned");
     set_unowned(other.get());
   }
   // This constructor exists to strip off 'aligned' from the type (aligned<bool> -> bool).

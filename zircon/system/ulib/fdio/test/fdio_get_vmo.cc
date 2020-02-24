@@ -67,10 +67,10 @@ class TestServer final : public fuchsia_io::File::Interface {
       vmofile.vmo = std::move(vmo);
       vmofile.offset = 0;
       vmofile.length = context->content_size;
-      completer.Reply(fuchsia_io::NodeInfo::WithVmofile(&vmofile));
+      completer.Reply(fuchsia_io::NodeInfo::WithVmofile(fidl::unowned(&vmofile)));
     } else {
       fuchsia_io::FileObject fo;
-      completer.Reply(fuchsia_io::NodeInfo::WithFile(&fo));
+      completer.Reply(fuchsia_io::NodeInfo::WithFile(fidl::unowned(&fo)));
     }
   }
 

@@ -42,17 +42,17 @@ void AstBuilder::SetRoot(uint64_t node_id) {
 }
 
 uint64_t AstBuilder::AddVariableDeclaration(const std::string& identifier,
-                                            llcpp::fuchsia::shell::ShellType type, uint64_t node_id,
-                                            bool is_const) {
+                                            llcpp::fuchsia::shell::ShellType&& type,
+                                            uint64_t node_id, bool is_const) {
   auto def = ManageNew<llcpp::fuchsia::shell::VariableDefinition>();
   char* name_buf = ManageCopyOf(identifier.c_str(), identifier.size());
   def->name.set_data(name_buf);
   def->name.set_size(identifier.size());
-  def->type = type;
+  def->type = std::move(type);
   def->mutable_value = !is_const;
   def->initial_value.node_id = node_id;
   def->initial_value.file_id = 0;  // Need to do something useful here.
-  auto node = llcpp::fuchsia::shell::Node::WithVariableDefinition(def);
+  auto node = llcpp::fuchsia::shell::Node::WithVariableDefinition(fidl::unowned(def));
   return AddNode(std::move(node));
 }
 
@@ -69,7 +69,7 @@ uint64_t AstBuilder::AddIntegerLiteral(int64_t i) {
 
   literal->absolute_value = ::fidl::VectorView<uint64_t>(managed_val, 1);
   literal->negative = (i < 0);
-  auto node = llcpp::fuchsia::shell::Node::WithIntegerLiteral(literal);
+  auto node = llcpp::fuchsia::shell::Node::WithIntegerLiteral(fidl::unowned(literal));
   uint64_t node_id = AddNode(std::move(node));
 
   return node_id;

@@ -67,12 +67,12 @@ void QmiDevice::SnoopCtrlMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
     qmi_msg.direction = direction;
     qmi_msg.timestamp = zx_clock_get_monotonic();
     memcpy(qmi_msg.opaque_bytes.data_, snoop_data, current_length);
-    snoop_msg.set_qmi_message(&qmi_msg);
+    snoop_msg.set_qmi_message(fidl::unowned(&qmi_msg));
     zxlogf(INFO, "qmi-fake-transport: snoop msg %u %u %u %u sent\n", qmi_msg.opaque_bytes.data_[0],
            qmi_msg.opaque_bytes.data_[1], qmi_msg.opaque_bytes.data_[2],
            qmi_msg.opaque_bytes.data_[3]);
     fidl_tel_snoop::Publisher::Call::SendMessage(zx::unowned_channel(GetCtrlSnoopChannel().get()),
-                                                 snoop_msg);
+                                                 std::move(snoop_msg));
   }
 }
 

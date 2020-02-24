@@ -384,8 +384,10 @@ func (b *llcppValueBuilder) OnXUnion(value gidlir.Object, decl *gidlmixer.XUnion
 		fieldDecl, _ := decl.ForKey(field.Key)
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
+		alignedVar := b.newVar()
+		b.Builder.WriteString(fmt.Sprintf("fidl::aligned<%s> %s = std::move(%s);\n", typeName(fieldDecl), alignedVar, fieldVar))
 		b.Builder.WriteString(fmt.Sprintf(
-			"%s.set_%s(&%s);\n", containerVar, field.Key.Name, fieldVar))
+			"%s.set_%s(fidl::unowned(&%s));\n", containerVar, field.Key.Name, alignedVar))
 	}
 	b.lastVar = containerVar
 }

@@ -1761,11 +1761,11 @@ void Coordinator::Suspend(
     power_fidl::statecontrol::Admin::Interface::SuspendCompleter::Sync completer) {
   auto callback = [completer = completer.ToAsync()](zx_status_t status) mutable {
     power_fidl::statecontrol::Admin_Suspend_Result result;
-    power_fidl::statecontrol::Admin_Suspend_Response response;
+    fidl::aligned<power_fidl::statecontrol::Admin_Suspend_Response> response;
     if (status != ZX_OK) {
-      result.set_err(&status);
+      result.set_err(fidl::unowned(&status));
     } else {
-      result.set_response(&response);
+      result.set_response(fidl::unowned(&response));
     }
     completer.Reply(std::move(result));
   };

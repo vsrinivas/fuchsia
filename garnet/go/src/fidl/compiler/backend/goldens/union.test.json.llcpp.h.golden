@@ -24,24 +24,32 @@ namespace fidl {
 namespace test {
 namespace json {
 
-struct Union;
-struct StrictUnion;
-struct ReverseOrdinalUnion;
+class Union;
+class StrictUnion;
+class ReverseOrdinalUnion;
 struct Pizza;
 struct Pasta;
-struct StrictPizzaOrPasta;
-struct PizzaOrPasta;
-struct FlexiblePizzaOrPasta;
-struct ExplicitPizzaOrPasta;
+class StrictPizzaOrPasta;
+class PizzaOrPasta;
+class FlexiblePizzaOrPasta;
+class ExplicitPizzaOrPasta;
 struct NullableUnionStruct;
-struct FlexibleUnion;
-struct FieldCollision;
-struct ExplicitUnion;
+class FlexibleUnion;
+class FieldCollision;
+class ExplicitUnion;
 
 extern "C" const fidl_type_t v1_fidl_test_json_UnionTable;
 
-struct Union {
+class Union {
+  public:
   Union() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  Union(Union&&) = default;
+  Union& operator=(Union&&) = default;
+
+  ~Union() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kPrimitive = 1,  // 0x1
@@ -53,68 +61,68 @@ struct Union {
 
   bool is_Primitive() const { return ordinal_ == Ordinal::kPrimitive; }
 
-  static Union WithPrimitive(int32_t* val) {
+  static Union WithPrimitive(::fidl::tracking_ptr<int32_t>&& val) {
     Union result;
-    result.set_Primitive(val);
+    result.set_Primitive(std::move(val));
     return result;
   }
 
-  void set_Primitive(int32_t* elem) {
+  void set_Primitive(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kPrimitive;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   int32_t& mutable_Primitive() {
     ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data);
+    return *static_cast<int32_t*>(envelope_.data.get());
   }
   const int32_t& Primitive() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data);
+    return *static_cast<int32_t*>(envelope_.data.get());
   }
 
   bool is_StringNeedsConstructor() const { return ordinal_ == Ordinal::kStringNeedsConstructor; }
 
-  static Union WithStringNeedsConstructor(::fidl::StringView* val) {
+  static Union WithStringNeedsConstructor(::fidl::tracking_ptr<::fidl::StringView>&& val) {
     Union result;
-    result.set_StringNeedsConstructor(val);
+    result.set_StringNeedsConstructor(std::move(val));
     return result;
   }
 
-  void set_StringNeedsConstructor(::fidl::StringView* elem) {
+  void set_StringNeedsConstructor(::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kStringNeedsConstructor;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::fidl::StringView& mutable_StringNeedsConstructor() {
     ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data);
+    return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
   const ::fidl::StringView& StringNeedsConstructor() const {
     ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data);
+    return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
 
   bool is_VectorStringAlsoNeedsConstructor() const { return ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor; }
 
-  static Union WithVectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>* val) {
+  static Union WithVectorStringAlsoNeedsConstructor(::fidl::tracking_ptr<::fidl::VectorView<::fidl::StringView>>&& val) {
     Union result;
-    result.set_VectorStringAlsoNeedsConstructor(val);
+    result.set_VectorStringAlsoNeedsConstructor(std::move(val));
     return result;
   }
 
-  void set_VectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>* elem) {
+  void set_VectorStringAlsoNeedsConstructor(::fidl::tracking_ptr<::fidl::VectorView<::fidl::StringView>>&& elem) {
     ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::fidl::VectorView<::fidl::StringView>& mutable_VectorStringAlsoNeedsConstructor() {
     ZX_ASSERT(ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
+    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data.get());
   }
   const ::fidl::VectorView<::fidl::StringView>& VectorStringAlsoNeedsConstructor() const {
     ZX_ASSERT(ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
+    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -136,16 +144,47 @@ struct Union {
     kVectorStringAlsoNeedsConstructor = 3,  // 0x3
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<int32_t> to_destroy =
+        static_cast<::fidl::tracking_ptr<int32_t>>(std::move(envelope_.data));
+      break;
+    }
+    case 2: {
+      ::fidl::tracking_ptr<::fidl::StringView> to_destroy =
+        static_cast<::fidl::tracking_ptr<::fidl::StringView>>(std::move(envelope_.data));
+      break;
+    }
+    case 3: {
+      ::fidl::tracking_ptr<::fidl::VectorView<::fidl::StringView>> to_destroy =
+        static_cast<::fidl::tracking_ptr<::fidl::VectorView<::fidl::StringView>>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_fidl_test_json_StrictUnionTable;
 
-struct StrictUnion {
+class StrictUnion {
+  public:
   StrictUnion() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  StrictUnion(StrictUnion&&) = default;
+  StrictUnion& operator=(StrictUnion&&) = default;
+
+  ~StrictUnion() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kPrimitive = 1,  // 0x1
@@ -157,68 +196,68 @@ struct StrictUnion {
 
   bool is_Primitive() const { return ordinal_ == Ordinal::kPrimitive; }
 
-  static StrictUnion WithPrimitive(int32_t* val) {
+  static StrictUnion WithPrimitive(::fidl::tracking_ptr<int32_t>&& val) {
     StrictUnion result;
-    result.set_Primitive(val);
+    result.set_Primitive(std::move(val));
     return result;
   }
 
-  void set_Primitive(int32_t* elem) {
+  void set_Primitive(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kPrimitive;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   int32_t& mutable_Primitive() {
     ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data);
+    return *static_cast<int32_t*>(envelope_.data.get());
   }
   const int32_t& Primitive() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data);
+    return *static_cast<int32_t*>(envelope_.data.get());
   }
 
   bool is_StringNeedsConstructor() const { return ordinal_ == Ordinal::kStringNeedsConstructor; }
 
-  static StrictUnion WithStringNeedsConstructor(::fidl::StringView* val) {
+  static StrictUnion WithStringNeedsConstructor(::fidl::tracking_ptr<::fidl::StringView>&& val) {
     StrictUnion result;
-    result.set_StringNeedsConstructor(val);
+    result.set_StringNeedsConstructor(std::move(val));
     return result;
   }
 
-  void set_StringNeedsConstructor(::fidl::StringView* elem) {
+  void set_StringNeedsConstructor(::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kStringNeedsConstructor;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::fidl::StringView& mutable_StringNeedsConstructor() {
     ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data);
+    return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
   const ::fidl::StringView& StringNeedsConstructor() const {
     ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data);
+    return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
 
   bool is_VectorStringAlsoNeedsConstructor() const { return ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor; }
 
-  static StrictUnion WithVectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>* val) {
+  static StrictUnion WithVectorStringAlsoNeedsConstructor(::fidl::tracking_ptr<::fidl::VectorView<::fidl::StringView>>&& val) {
     StrictUnion result;
-    result.set_VectorStringAlsoNeedsConstructor(val);
+    result.set_VectorStringAlsoNeedsConstructor(std::move(val));
     return result;
   }
 
-  void set_VectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>* elem) {
+  void set_VectorStringAlsoNeedsConstructor(::fidl::tracking_ptr<::fidl::VectorView<::fidl::StringView>>&& elem) {
     ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::fidl::VectorView<::fidl::StringView>& mutable_VectorStringAlsoNeedsConstructor() {
     ZX_ASSERT(ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
+    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data.get());
   }
   const ::fidl::VectorView<::fidl::StringView>& VectorStringAlsoNeedsConstructor() const {
     ZX_ASSERT(ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
+    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -240,16 +279,47 @@ struct StrictUnion {
     kVectorStringAlsoNeedsConstructor = 3,  // 0x3
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<int32_t> to_destroy =
+        static_cast<::fidl::tracking_ptr<int32_t>>(std::move(envelope_.data));
+      break;
+    }
+    case 2: {
+      ::fidl::tracking_ptr<::fidl::StringView> to_destroy =
+        static_cast<::fidl::tracking_ptr<::fidl::StringView>>(std::move(envelope_.data));
+      break;
+    }
+    case 3: {
+      ::fidl::tracking_ptr<::fidl::VectorView<::fidl::StringView>> to_destroy =
+        static_cast<::fidl::tracking_ptr<::fidl::VectorView<::fidl::StringView>>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_fidl_test_json_ReverseOrdinalUnionTable;
 
-struct ReverseOrdinalUnion {
+class ReverseOrdinalUnion {
+  public:
   ReverseOrdinalUnion() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  ReverseOrdinalUnion(ReverseOrdinalUnion&&) = default;
+  ReverseOrdinalUnion& operator=(ReverseOrdinalUnion&&) = default;
+
+  ~ReverseOrdinalUnion() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kFirst = 1,  // 0x1
@@ -260,46 +330,46 @@ struct ReverseOrdinalUnion {
 
   bool is_first() const { return ordinal_ == Ordinal::kFirst; }
 
-  static ReverseOrdinalUnion WithFirst(uint32_t* val) {
+  static ReverseOrdinalUnion WithFirst(::fidl::tracking_ptr<uint32_t>&& val) {
     ReverseOrdinalUnion result;
-    result.set_first(val);
+    result.set_first(std::move(val));
     return result;
   }
 
-  void set_first(uint32_t* elem) {
+  void set_first(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kFirst;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   uint32_t& mutable_first() {
     ZX_ASSERT(ordinal_ == Ordinal::kFirst);
-    return *static_cast<uint32_t*>(envelope_.data);
+    return *static_cast<uint32_t*>(envelope_.data.get());
   }
   const uint32_t& first() const {
     ZX_ASSERT(ordinal_ == Ordinal::kFirst);
-    return *static_cast<uint32_t*>(envelope_.data);
+    return *static_cast<uint32_t*>(envelope_.data.get());
   }
 
   bool is_second() const { return ordinal_ == Ordinal::kSecond; }
 
-  static ReverseOrdinalUnion WithSecond(uint32_t* val) {
+  static ReverseOrdinalUnion WithSecond(::fidl::tracking_ptr<uint32_t>&& val) {
     ReverseOrdinalUnion result;
-    result.set_second(val);
+    result.set_second(std::move(val));
     return result;
   }
 
-  void set_second(uint32_t* elem) {
+  void set_second(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kSecond;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   uint32_t& mutable_second() {
     ZX_ASSERT(ordinal_ == Ordinal::kSecond);
-    return *static_cast<uint32_t*>(envelope_.data);
+    return *static_cast<uint32_t*>(envelope_.data.get());
   }
   const uint32_t& second() const {
     ZX_ASSERT(ordinal_ == Ordinal::kSecond);
-    return *static_cast<uint32_t*>(envelope_.data);
+    return *static_cast<uint32_t*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -320,16 +390,42 @@ struct ReverseOrdinalUnion {
     kSecond = 2,  // 0x2
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<uint32_t> to_destroy =
+        static_cast<::fidl::tracking_ptr<uint32_t>>(std::move(envelope_.data));
+      break;
+    }
+    case 2: {
+      ::fidl::tracking_ptr<uint32_t> to_destroy =
+        static_cast<::fidl::tracking_ptr<uint32_t>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_fidl_test_json_StrictPizzaOrPastaTable;
 
-struct StrictPizzaOrPasta {
+class StrictPizzaOrPasta {
+  public:
   StrictPizzaOrPasta() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  StrictPizzaOrPasta(StrictPizzaOrPasta&&) = default;
+  StrictPizzaOrPasta& operator=(StrictPizzaOrPasta&&) = default;
+
+  ~StrictPizzaOrPasta() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kPizza = 1,  // 0x1
@@ -340,46 +436,46 @@ struct StrictPizzaOrPasta {
 
   bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
-  static StrictPizzaOrPasta WithPizza(::llcpp::fidl::test::json::Pizza* val) {
+  static StrictPizzaOrPasta WithPizza(::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>&& val) {
     StrictPizzaOrPasta result;
-    result.set_pizza(val);
+    result.set_pizza(std::move(val));
     return result;
   }
 
-  void set_pizza(::llcpp::fidl::test::json::Pizza* elem) {
+  void set_pizza(::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::llcpp::fidl::test::json::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data);
+    return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data.get());
   }
   const ::llcpp::fidl::test::json::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data);
+    return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data.get());
   }
 
   bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
-  static StrictPizzaOrPasta WithPasta(::llcpp::fidl::test::json::Pasta* val) {
+  static StrictPizzaOrPasta WithPasta(::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>&& val) {
     StrictPizzaOrPasta result;
-    result.set_pasta(val);
+    result.set_pasta(std::move(val));
     return result;
   }
 
-  void set_pasta(::llcpp::fidl::test::json::Pasta* elem) {
+  void set_pasta(::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::llcpp::fidl::test::json::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data);
+    return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data.get());
   }
   const ::llcpp::fidl::test::json::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data);
+    return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -400,16 +496,42 @@ struct StrictPizzaOrPasta {
     kPasta = 2,  // 0x2
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza> to_destroy =
+        static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>>(std::move(envelope_.data));
+      break;
+    }
+    case 2: {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta> to_destroy =
+        static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_fidl_test_json_PizzaOrPastaTable;
 
-struct PizzaOrPasta {
+class PizzaOrPasta {
+  public:
   PizzaOrPasta() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  PizzaOrPasta(PizzaOrPasta&&) = default;
+  PizzaOrPasta& operator=(PizzaOrPasta&&) = default;
+
+  ~PizzaOrPasta() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kPizza = 1,  // 0x1
@@ -420,46 +542,46 @@ struct PizzaOrPasta {
 
   bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
-  static PizzaOrPasta WithPizza(::llcpp::fidl::test::json::Pizza* val) {
+  static PizzaOrPasta WithPizza(::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>&& val) {
     PizzaOrPasta result;
-    result.set_pizza(val);
+    result.set_pizza(std::move(val));
     return result;
   }
 
-  void set_pizza(::llcpp::fidl::test::json::Pizza* elem) {
+  void set_pizza(::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::llcpp::fidl::test::json::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data);
+    return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data.get());
   }
   const ::llcpp::fidl::test::json::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data);
+    return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data.get());
   }
 
   bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
-  static PizzaOrPasta WithPasta(::llcpp::fidl::test::json::Pasta* val) {
+  static PizzaOrPasta WithPasta(::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>&& val) {
     PizzaOrPasta result;
-    result.set_pasta(val);
+    result.set_pasta(std::move(val));
     return result;
   }
 
-  void set_pasta(::llcpp::fidl::test::json::Pasta* elem) {
+  void set_pasta(::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::llcpp::fidl::test::json::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data);
+    return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data.get());
   }
   const ::llcpp::fidl::test::json::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data);
+    return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -480,16 +602,42 @@ struct PizzaOrPasta {
     kPasta = 2,  // 0x2
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza> to_destroy =
+        static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>>(std::move(envelope_.data));
+      break;
+    }
+    case 2: {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta> to_destroy =
+        static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_fidl_test_json_FlexiblePizzaOrPastaTable;
 
-struct FlexiblePizzaOrPasta {
+class FlexiblePizzaOrPasta {
+  public:
   FlexiblePizzaOrPasta() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  FlexiblePizzaOrPasta(FlexiblePizzaOrPasta&&) = default;
+  FlexiblePizzaOrPasta& operator=(FlexiblePizzaOrPasta&&) = default;
+
+  ~FlexiblePizzaOrPasta() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kPizza = 1,  // 0x1
@@ -500,46 +648,46 @@ struct FlexiblePizzaOrPasta {
 
   bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
-  static FlexiblePizzaOrPasta WithPizza(::llcpp::fidl::test::json::Pizza* val) {
+  static FlexiblePizzaOrPasta WithPizza(::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>&& val) {
     FlexiblePizzaOrPasta result;
-    result.set_pizza(val);
+    result.set_pizza(std::move(val));
     return result;
   }
 
-  void set_pizza(::llcpp::fidl::test::json::Pizza* elem) {
+  void set_pizza(::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::llcpp::fidl::test::json::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data);
+    return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data.get());
   }
   const ::llcpp::fidl::test::json::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data);
+    return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data.get());
   }
 
   bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
-  static FlexiblePizzaOrPasta WithPasta(::llcpp::fidl::test::json::Pasta* val) {
+  static FlexiblePizzaOrPasta WithPasta(::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>&& val) {
     FlexiblePizzaOrPasta result;
-    result.set_pasta(val);
+    result.set_pasta(std::move(val));
     return result;
   }
 
-  void set_pasta(::llcpp::fidl::test::json::Pasta* elem) {
+  void set_pasta(::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::llcpp::fidl::test::json::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data);
+    return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data.get());
   }
   const ::llcpp::fidl::test::json::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data);
+    return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -560,16 +708,42 @@ struct FlexiblePizzaOrPasta {
     kPasta = 2,  // 0x2
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza> to_destroy =
+        static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>>(std::move(envelope_.data));
+      break;
+    }
+    case 2: {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta> to_destroy =
+        static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_fidl_test_json_ExplicitPizzaOrPastaTable;
 
-struct ExplicitPizzaOrPasta {
+class ExplicitPizzaOrPasta {
+  public:
   ExplicitPizzaOrPasta() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  ExplicitPizzaOrPasta(ExplicitPizzaOrPasta&&) = default;
+  ExplicitPizzaOrPasta& operator=(ExplicitPizzaOrPasta&&) = default;
+
+  ~ExplicitPizzaOrPasta() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kPizza = 1,  // 0x1
@@ -580,46 +754,46 @@ struct ExplicitPizzaOrPasta {
 
   bool is_pizza() const { return ordinal_ == Ordinal::kPizza; }
 
-  static ExplicitPizzaOrPasta WithPizza(::llcpp::fidl::test::json::Pizza* val) {
+  static ExplicitPizzaOrPasta WithPizza(::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>&& val) {
     ExplicitPizzaOrPasta result;
-    result.set_pizza(val);
+    result.set_pizza(std::move(val));
     return result;
   }
 
-  void set_pizza(::llcpp::fidl::test::json::Pizza* elem) {
+  void set_pizza(::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>&& elem) {
     ordinal_ = Ordinal::kPizza;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::llcpp::fidl::test::json::Pizza& mutable_pizza() {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data);
+    return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data.get());
   }
   const ::llcpp::fidl::test::json::Pizza& pizza() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPizza);
-    return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data);
+    return *static_cast<::llcpp::fidl::test::json::Pizza*>(envelope_.data.get());
   }
 
   bool is_pasta() const { return ordinal_ == Ordinal::kPasta; }
 
-  static ExplicitPizzaOrPasta WithPasta(::llcpp::fidl::test::json::Pasta* val) {
+  static ExplicitPizzaOrPasta WithPasta(::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>&& val) {
     ExplicitPizzaOrPasta result;
-    result.set_pasta(val);
+    result.set_pasta(std::move(val));
     return result;
   }
 
-  void set_pasta(::llcpp::fidl::test::json::Pasta* elem) {
+  void set_pasta(::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>&& elem) {
     ordinal_ = Ordinal::kPasta;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::llcpp::fidl::test::json::Pasta& mutable_pasta() {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data);
+    return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data.get());
   }
   const ::llcpp::fidl::test::json::Pasta& pasta() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
-    return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data);
+    return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -640,16 +814,42 @@ struct ExplicitPizzaOrPasta {
     kPasta = 4,  // 0x4
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza> to_destroy =
+        static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Pizza>>(std::move(envelope_.data));
+      break;
+    }
+    case 4: {
+      ::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta> to_destroy =
+        static_cast<::fidl::tracking_ptr<::llcpp::fidl::test::json::Pasta>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_fidl_test_json_FlexibleUnionTable;
 
-struct FlexibleUnion {
+class FlexibleUnion {
+  public:
   FlexibleUnion() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  FlexibleUnion(FlexibleUnion&&) = default;
+  FlexibleUnion& operator=(FlexibleUnion&&) = default;
+
+  ~FlexibleUnion() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kPrimitive = 1,  // 0x1
@@ -661,68 +861,68 @@ struct FlexibleUnion {
 
   bool is_Primitive() const { return ordinal_ == Ordinal::kPrimitive; }
 
-  static FlexibleUnion WithPrimitive(int32_t* val) {
+  static FlexibleUnion WithPrimitive(::fidl::tracking_ptr<int32_t>&& val) {
     FlexibleUnion result;
-    result.set_Primitive(val);
+    result.set_Primitive(std::move(val));
     return result;
   }
 
-  void set_Primitive(int32_t* elem) {
+  void set_Primitive(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kPrimitive;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   int32_t& mutable_Primitive() {
     ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data);
+    return *static_cast<int32_t*>(envelope_.data.get());
   }
   const int32_t& Primitive() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data);
+    return *static_cast<int32_t*>(envelope_.data.get());
   }
 
   bool is_StringNeedsConstructor() const { return ordinal_ == Ordinal::kStringNeedsConstructor; }
 
-  static FlexibleUnion WithStringNeedsConstructor(::fidl::StringView* val) {
+  static FlexibleUnion WithStringNeedsConstructor(::fidl::tracking_ptr<::fidl::StringView>&& val) {
     FlexibleUnion result;
-    result.set_StringNeedsConstructor(val);
+    result.set_StringNeedsConstructor(std::move(val));
     return result;
   }
 
-  void set_StringNeedsConstructor(::fidl::StringView* elem) {
+  void set_StringNeedsConstructor(::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kStringNeedsConstructor;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::fidl::StringView& mutable_StringNeedsConstructor() {
     ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data);
+    return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
   const ::fidl::StringView& StringNeedsConstructor() const {
     ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data);
+    return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
 
   bool is_VectorStringAlsoNeedsConstructor() const { return ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor; }
 
-  static FlexibleUnion WithVectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>* val) {
+  static FlexibleUnion WithVectorStringAlsoNeedsConstructor(::fidl::tracking_ptr<::fidl::VectorView<::fidl::StringView>>&& val) {
     FlexibleUnion result;
-    result.set_VectorStringAlsoNeedsConstructor(val);
+    result.set_VectorStringAlsoNeedsConstructor(std::move(val));
     return result;
   }
 
-  void set_VectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>* elem) {
+  void set_VectorStringAlsoNeedsConstructor(::fidl::tracking_ptr<::fidl::VectorView<::fidl::StringView>>&& elem) {
     ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::fidl::VectorView<::fidl::StringView>& mutable_VectorStringAlsoNeedsConstructor() {
     ZX_ASSERT(ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
+    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data.get());
   }
   const ::fidl::VectorView<::fidl::StringView>& VectorStringAlsoNeedsConstructor() const {
     ZX_ASSERT(ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor);
-    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
+    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -744,16 +944,47 @@ struct FlexibleUnion {
     kVectorStringAlsoNeedsConstructor = 3,  // 0x3
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<int32_t> to_destroy =
+        static_cast<::fidl::tracking_ptr<int32_t>>(std::move(envelope_.data));
+      break;
+    }
+    case 2: {
+      ::fidl::tracking_ptr<::fidl::StringView> to_destroy =
+        static_cast<::fidl::tracking_ptr<::fidl::StringView>>(std::move(envelope_.data));
+      break;
+    }
+    case 3: {
+      ::fidl::tracking_ptr<::fidl::VectorView<::fidl::StringView>> to_destroy =
+        static_cast<::fidl::tracking_ptr<::fidl::VectorView<::fidl::StringView>>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_fidl_test_json_FieldCollisionTable;
 
-struct FieldCollision {
+class FieldCollision {
+  public:
   FieldCollision() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  FieldCollision(FieldCollision&&) = default;
+  FieldCollision& operator=(FieldCollision&&) = default;
+
+  ~FieldCollision() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kFieldCollisionTag = 1,  // 0x1
@@ -763,24 +994,24 @@ struct FieldCollision {
 
   bool is_field_collision_tag() const { return ordinal_ == Ordinal::kFieldCollisionTag; }
 
-  static FieldCollision WithFieldCollisionTag(int32_t* val) {
+  static FieldCollision WithFieldCollisionTag(::fidl::tracking_ptr<int32_t>&& val) {
     FieldCollision result;
-    result.set_field_collision_tag(val);
+    result.set_field_collision_tag(std::move(val));
     return result;
   }
 
-  void set_field_collision_tag(int32_t* elem) {
+  void set_field_collision_tag(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kFieldCollisionTag;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   int32_t& mutable_field_collision_tag() {
     ZX_ASSERT(ordinal_ == Ordinal::kFieldCollisionTag);
-    return *static_cast<int32_t*>(envelope_.data);
+    return *static_cast<int32_t*>(envelope_.data.get());
   }
   const int32_t& field_collision_tag() const {
     ZX_ASSERT(ordinal_ == Ordinal::kFieldCollisionTag);
-    return *static_cast<int32_t*>(envelope_.data);
+    return *static_cast<int32_t*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -800,16 +1031,37 @@ struct FieldCollision {
     kFieldCollisionTag = 1,  // 0x1
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<int32_t> to_destroy =
+        static_cast<::fidl::tracking_ptr<int32_t>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_fidl_test_json_ExplicitUnionTable;
 
-struct ExplicitUnion {
+class ExplicitUnion {
+  public:
   ExplicitUnion() : ordinal_(Ordinal::Invalid), envelope_{} {}
+
+  ExplicitUnion(ExplicitUnion&&) = default;
+  ExplicitUnion& operator=(ExplicitUnion&&) = default;
+
+  ~ExplicitUnion() {
+    reset_ptr(nullptr);
+  }
 
   enum class Tag : fidl_xunion_tag_t {
     kPrimitive = 1,  // 0x1
@@ -820,46 +1072,46 @@ struct ExplicitUnion {
 
   bool is_Primitive() const { return ordinal_ == Ordinal::kPrimitive; }
 
-  static ExplicitUnion WithPrimitive(int32_t* val) {
+  static ExplicitUnion WithPrimitive(::fidl::tracking_ptr<int32_t>&& val) {
     ExplicitUnion result;
-    result.set_Primitive(val);
+    result.set_Primitive(std::move(val));
     return result;
   }
 
-  void set_Primitive(int32_t* elem) {
+  void set_Primitive(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kPrimitive;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   int32_t& mutable_Primitive() {
     ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data);
+    return *static_cast<int32_t*>(envelope_.data.get());
   }
   const int32_t& Primitive() const {
     ZX_ASSERT(ordinal_ == Ordinal::kPrimitive);
-    return *static_cast<int32_t*>(envelope_.data);
+    return *static_cast<int32_t*>(envelope_.data.get());
   }
 
   bool is_StringNeedsConstructor() const { return ordinal_ == Ordinal::kStringNeedsConstructor; }
 
-  static ExplicitUnion WithStringNeedsConstructor(::fidl::StringView* val) {
+  static ExplicitUnion WithStringNeedsConstructor(::fidl::tracking_ptr<::fidl::StringView>&& val) {
     ExplicitUnion result;
-    result.set_StringNeedsConstructor(val);
+    result.set_StringNeedsConstructor(std::move(val));
     return result;
   }
 
-  void set_StringNeedsConstructor(::fidl::StringView* elem) {
+  void set_StringNeedsConstructor(::fidl::tracking_ptr<::fidl::StringView>&& elem) {
     ordinal_ = Ordinal::kStringNeedsConstructor;
-    envelope_.data = static_cast<void*>(elem);
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
   }
 
   ::fidl::StringView& mutable_StringNeedsConstructor() {
     ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data);
+    return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
   const ::fidl::StringView& StringNeedsConstructor() const {
     ZX_ASSERT(ordinal_ == Ordinal::kStringNeedsConstructor);
-    return *static_cast<::fidl::StringView*>(envelope_.data);
+    return *static_cast<::fidl::StringView*>(envelope_.data.get());
   }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -880,10 +1132,28 @@ struct ExplicitUnion {
     kStringNeedsConstructor = 3,  // 0x3
   };
 
+  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
+    // To clear the existing value, std::move it and let it go out of scope.
+    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
+    case 1: {
+      ::fidl::tracking_ptr<int32_t> to_destroy =
+        static_cast<::fidl::tracking_ptr<int32_t>>(std::move(envelope_.data));
+      break;
+    }
+    case 3: {
+      ::fidl::tracking_ptr<::fidl::StringView> to_destroy =
+        static_cast<::fidl::tracking_ptr<::fidl::StringView>>(std::move(envelope_.data));
+      break;
+    }
+    }
+
+    envelope_.data = std::move(new_ptr);
+  }
+
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
-  fidl_envelope_t envelope_;
+  ::fidl::Envelope<void> envelope_;
 };
 
 extern "C" const fidl_type_t v1_fidl_test_json_PizzaTable;

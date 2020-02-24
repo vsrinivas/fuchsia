@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_CORE_NETSVC_PAYLOAD_STREAMER_H_
+#define ZIRCON_SYSTEM_CORE_NETSVC_PAYLOAD_STREAMER_H_
 
-#include <fbl/function.h>
-#include <fbl/unique_fd.h>
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
+
+#include <fbl/function.h>
+#include <fbl/unique_fd.h>
 
 namespace netsvc {
 
@@ -36,7 +38,9 @@ class PayloadStreamer : public ::llcpp::fuchsia::paver::PayloadStream::Interface
   zx::vmo vmo_;
   fzl::VmoMapper mapper_;
   size_t read_offset_ = 0;
-  bool eof_reached_ = false;
+  fidl::aligned<bool> eof_reached_ = false;
 };
 
 }  // namespace netsvc
+
+#endif  // ZIRCON_SYSTEM_CORE_NETSVC_PAYLOAD_STREAMER_H_
