@@ -487,11 +487,13 @@ be reserved, allowing the default serial port to be used outside the kernel.
 
 On x64, some additional values are supported for configuring 8250-like UARTs:
 
-- If set to "legacy", the legacy COM1 interface is used.
-- A port-io UART can be specified using "ioport,\<portno>,\<irq>".
-- An MMIO UART can be specified using "mmio,\<physaddr>,\<irq>".
+- If set to `legacy`, the legacy COM1 interface is used.
+- If set to `acpi`, the UART specified by the `DBG2` ACPI entry on the system
+  will be used, if available.
+- A port-io UART can be specified using `ioport,\<portno>,\<irq>`.
+- An MMIO UART can be specified using `mmio,\<physaddr>,\<irq>`.
 
-For example, "ioport,0x3f8,4" would describe the legacy COM1 interface.
+For example, `ioport,0x3f8,4` would describe the legacy COM1 interface.
 
 All numbers may be in any base accepted by *strtoul*().
 

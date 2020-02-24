@@ -42,6 +42,35 @@ struct DebugPort {
 // contain a user-specified UART configuration.
 //
 // Exposed for testing.
-zx_status_t parse_serial_cmdline(const char* serial_mode, DebugPort* port);
+struct SerialConfig {
+  enum class Type {
+    // Serial configuration not specified.
+    kUnspecified,
+    // Serial explicitly disabled.
+    kDisabled,
+    // Should scan ACPI for a DBG2 port.
+    kAcpi,
+    // Should use custom IO port and interrupt.
+    kIoPort,
+    // Should use a custom MMIO address and interrupt.
+    kMmio,
+  };
+  Type type;
+
+  // Per-type configuration.
+  union {
+    // Valid if type == kMmio.
+    struct {
+      uint32_t irq;
+      paddr_t phys_addr;
+    } mmio;
+    // Valid if type == kIoPort.
+    struct {
+      uint32_t irq;
+      uint32_t port;
+    } io_port;
+  } config;
+};
+zx_status_t parse_serial_cmdline(const char* serial_mode, SerialConfig* config);
 
 #endif  // ZIRCON_KERNEL_PLATFORM_PC_DEBUG_H_

@@ -69,6 +69,10 @@ constexpr int kBaudRate = 115200;
 // Hardware details of the system debug port.
 static DebugPort debug_port = {DebugPort::Type::Unknown, 0, 0, 0, 0};
 
+// Parsed kernel command line, if one is present.
+static SerialConfig kernel_serial_command_line = {/*type=*/SerialConfig::Type::kUnspecified,
+                                                  /*config=*/{}};
+
 // UART state.
 static bool output_enabled = false;
 cbuf_t console_input_buf;
@@ -244,18 +248,24 @@ bool platform_serial_enabled() {
   }
 }
 
-zx_status_t parse_serial_cmdline(const char* serial_mode, DebugPort* port) {
+zx_status_t parse_serial_cmdline(const char* serial_mode, SerialConfig* config) {
   // Check if the user has explicitly disabled the UART.
   if (!strcmp(serial_mode, "none")) {
-    port->type = DebugPort::Type::Disabled;
+    config->type = SerialConfig::Type::kDisabled;
+    return ZX_OK;
+  }
+
+  // Detect UART from ACPI DBG2 table?
+  if (!strcmp(serial_mode, "acpi")) {
+    config->type = SerialConfig::Type::kAcpi;
     return ZX_OK;
   }
 
   // Legacy mode port (x86 IO ports).
   if (!strcmp(serial_mode, "legacy")) {
-    port->type = DebugPort::Type::IoPort;
-    port->io_port = 0x3f8;
-    port->irq = ISA_IRQ_SERIAL1;
+    config->type = SerialConfig::Type::kIoPort;
+    config->config.io_port.port = 0x3f8;
+    config->config.io_port.irq = ISA_IRQ_SERIAL1;
     return ZX_OK;
   }
 
@@ -292,9 +302,9 @@ zx_status_t parse_serial_cmdline(const char* serial_mode, DebugPort* port) {
   memcpy(type_buf, serial_mode, type_len);
   type_buf[type_len] = 0;
   if (!strcmp(type_buf, "ioport")) {
-    port->type = DebugPort::Type::IoPort;
+    config->type = SerialConfig::Type::kIoPort;
   } else if (!strcmp(type_buf, "mmio")) {
-    port->type = DebugPort::Type::Mmio;
+    config->type = SerialConfig::Type::kMmio;
   } else {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -310,11 +320,6 @@ zx_status_t parse_serial_cmdline(const char* serial_mode, DebugPort* port) {
   if (endptr != addr_buf + addr_len) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (port->type == DebugPort::Type::IoPort) {
-    port->io_port = static_cast<uint32_t>(base);
-  } else {
-    port->phys_addr = base;
-  }
 
   // Parse out the IRQ part
   irq_val = strtoul(irq_start, &endptr, 0);
@@ -327,7 +332,14 @@ zx_status_t parse_serial_cmdline(const char* serial_mode, DebugPort* port) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  port->irq = static_cast<uint32_t>(irq_val);
+  // Set up the output config.
+  if (config->type == SerialConfig::Type::kIoPort) {
+    config->config.io_port.port = static_cast<uint32_t>(base);
+    config->config.io_port.irq = static_cast<uint32_t>(irq_val);
+  } else {
+    config->config.mmio.phys_addr = base;
+    config->config.mmio.irq = static_cast<uint32_t>(irq_val);
+  }
   return ZX_OK;
 }
 
@@ -353,59 +365,95 @@ static void update_zbi_uart(const DebugPort& port) {
   }
 }
 
-// Parse the kernel command line.
+// Set up serial based on a parsed kernel command line.
 //
-// Return "true" if a debug port was found.
-static bool handle_serial_cmdline(DebugPort* port) {
+// Return "true" if a command line config was found. UARTs with early boot support (IOMMU, MMIO)
+// will be set up in this case, while those needing to be started later (ACPI) will be left
+// uninitialised.
+static bool handle_serial_cmdline(SerialConfig* config) {
   // Fetch the command line.
   const char* serial_mode = gCmdline.GetString("kernel.serial");
   if (serial_mode == nullptr) {
     // Nothing provided.
+    config->type = SerialConfig::Type::kUnspecified;
     return false;
   }
 
   // Otherwise, parse command line and update "bootloader.uart".
-  zx_status_t result = parse_serial_cmdline(serial_mode, port);
+  zx_status_t result = parse_serial_cmdline(serial_mode, config);
   if (result != ZX_OK) {
     dprintf(INFO, "Failed to parse \"kernel.serial\" parameter. Disabling serial.\n");
     // Explictly disable the serial.
-    port->type = DebugPort::Type::Disabled;
+    setup_uart({DebugPort::Type::Disabled, 0, 0, 0, 0});
+    // Return true, because we found a config (albiet, an invalid one).
+    config->type = SerialConfig::Type::kDisabled;
     return true;
   }
 
-  // Finish setup.
-  if (port->type == DebugPort::Type::Mmio) {
+  // Set up MMIO-based UARTs now.
+  if (config->type == SerialConfig::Type::kMmio) {
     // Convert the physical address specified in the command line into a virtual
     // address and mark it as reserved.
-    port->mem_addr = reinterpret_cast<vaddr_t>(paddr_to_physmap(port->phys_addr));
-    mark_mmio_region_to_reserve(port->phys_addr, PAGE_SIZE);
-  } else if (port->type == DebugPort::Type::IoPort) {
-    // Reserve the IO port range.
-    mark_pio_region_to_reserve(port->io_port, 8);
+    DebugPort port;
+    port.type = DebugPort::Type::Mmio;
+    port.irq = config->config.mmio.irq;
+    port.phys_addr = config->config.mmio.phys_addr;
+    port.mem_addr = reinterpret_cast<vaddr_t>(paddr_to_physmap(port.phys_addr));
+
+    // Reserve the memory range.
+    mark_mmio_region_to_reserve(port.phys_addr, PAGE_SIZE);
+
+    setup_uart(port);
+    return true;
   }
 
+  // Set up IO port-based UARTs now.
+  if (config->type == SerialConfig::Type::kIoPort) {
+    DebugPort port;
+    port.type = DebugPort::Type::IoPort;
+    port.irq = config->config.io_port.irq;
+    port.io_port = config->config.io_port.port;
+
+    // Reserve the IO port range.
+    mark_pio_region_to_reserve(port.io_port, 8);
+
+    setup_uart(port);
+    return true;
+  }
+
+  // We have a config, but can't set it up yet.
   return true;
 }
 
 // Attempt to read information about a debug UART out of the ZBI.
 //
 // Return "true" if a debug port was found.
-static bool handle_serial_zbi(DebugPort* port) {
+static bool handle_serial_zbi() {
   switch (bootloader.uart.type) {
-    case ZBI_UART_PC_PORT:
-      port->type = DebugPort::Type::IoPort;
-      port->io_port = static_cast<uint32_t>(bootloader.uart.base);
-      mark_pio_region_to_reserve(port->io_port, 8);
-      port->irq = bootloader.uart.irq;
+    case ZBI_UART_PC_PORT: {
+      DebugPort port;
+      port.type = DebugPort::Type::IoPort;
+      port.io_port = static_cast<uint32_t>(bootloader.uart.base);
+      mark_pio_region_to_reserve(port.io_port, 8);
+      port.irq = bootloader.uart.irq;
+      dprintf(INFO, "UART: kernel serial enabled via ZBI entry: port=%#x, irq=%#x\n", port.io_port,
+              port.irq);
+      setup_uart(port);
       return true;
+    }
 
-    case ZBI_UART_PC_MMIO:
-      port->type = DebugPort::Type::Mmio;
-      port->phys_addr = bootloader.uart.base;
-      port->mem_addr = reinterpret_cast<vaddr_t>(paddr_to_physmap(bootloader.uart.base));
-      mark_mmio_region_to_reserve(port->phys_addr, PAGE_SIZE);
-      port->irq = bootloader.uart.irq;
+    case ZBI_UART_PC_MMIO: {
+      DebugPort port;
+      port.type = DebugPort::Type::Mmio;
+      port.phys_addr = bootloader.uart.base;
+      port.mem_addr = reinterpret_cast<vaddr_t>(paddr_to_physmap(bootloader.uart.base));
+      mark_mmio_region_to_reserve(port.phys_addr, PAGE_SIZE);
+      port.irq = bootloader.uart.irq;
+      dprintf(INFO, "UART: kernel serial enabled via ZBI entry: mmio=%#lx, irq=%#x\n",
+              port.phys_addr, port.irq);
+      setup_uart(port);
       return true;
+    }
 
     case ZBI_UART_NONE:
     default:
@@ -416,12 +464,13 @@ static bool handle_serial_zbi(DebugPort* port) {
 // Attempt to read information about a debug UART out of the ZBI.
 //
 // Return "true" if a debug port was found.
-static bool handle_serial_acpi(DebugPort* port) {
+static bool handle_serial_acpi() {
   // Fetch ACPI debug port information, if present.
   AcpiTableProvider provider;
   AcpiDebugPortDescriptor desc;
   zx_status_t status = AcpiTables(&provider).debug_port(&desc);
   if (status != ZX_OK) {
+    dprintf(INFO, "UART: no DBG2 ACPI entry found, or unsupported port type.\n");
     return false;
   }
 
@@ -436,42 +485,46 @@ static bool handle_serial_acpi(DebugPort* port) {
       /*arch_mmu_flags=*/ARCH_MMU_FLAG_UNCACHED_DEVICE | ARCH_MMU_FLAG_PERM_READ |
           ARCH_MMU_FLAG_PERM_WRITE);
   if (status != ZX_OK) {
-    dprintf(INFO, "UART: failed to allocate phsyical memory for ACPI UART.\n");
+    dprintf(INFO, "UART: failed to allocate physical memory for ACPI UART.\n");
     return false;
   }
 
   // Initialise.
   dprintf(INFO, "UART: found ACPI debug port at address %#08lx.\n", desc.address);
-  port->type = DebugPort::Type::Mmio;
-  port->phys_addr = desc.address;
-  port->mem_addr = reinterpret_cast<vaddr_t>(ptr);
-  port->irq = 0;
+  DebugPort port;
+  port.type = DebugPort::Type::Mmio;
+  port.phys_addr = desc.address;
+  port.mem_addr = reinterpret_cast<vaddr_t>(ptr);
+  port.irq = 0;
+  setup_uart(port);
   return true;
 }
 
 void pc_init_debug_early() {
   // Fetch serial information from the command line.
-  DebugPort port;
-  if (handle_serial_cmdline(&port)) {
-    setup_uart(port);
+  if (handle_serial_cmdline(&kernel_serial_command_line)) {
     return;
   }
 
-  // Failing that, fetch serial information from the ZBI.
-  if (handle_serial_zbi(&port)) {
-    setup_uart(port);
-    return;
-  }
+  // Failing that, attempt to fetch serial information from the ZBI.
+  handle_serial_zbi();
 }
 
 void pc_init_debug_post_acpi() {
-  // Fetch serial information from ACPI if we still don't have anything.
-  if (debug_port.type == DebugPort::Type::Unknown) {
-    DebugPort port;
-    if (handle_serial_acpi(&port)) {
-      setup_uart(port);
-    }
+  // If we already have a UART configured, bail.
+  if (debug_port.type != DebugPort::Type::Unknown) {
+    return;
   }
+
+  // Fetch serial information from ACPI if it was specified on the command line and we still don't
+  // have anything.
+  if (kernel_serial_command_line.type == SerialConfig::Type::kAcpi) {
+    handle_serial_acpi();
+    return;
+  }
+
+  // No debug UART.
+  dprintf(INFO, "UART: no debug UART detected.\n");
 }
 
 void pc_init_debug() {
