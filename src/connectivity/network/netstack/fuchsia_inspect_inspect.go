@@ -290,7 +290,7 @@ func (impl *nicInfoInspectImpl) ListChildren() []string {
 		statsLabel,
 	}
 	if impl.value.dhcpEnabled {
-		children = append(children, "DHCP Info")
+		children = append(children, dhcpInfo)
 	}
 	return children
 }
