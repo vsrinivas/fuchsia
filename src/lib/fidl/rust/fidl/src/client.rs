@@ -131,7 +131,7 @@ impl Client {
             }
         }
 
-        EventReceiver { inner: self.inner.clone(), terminated: false }
+        EventReceiver { inner: self.inner.clone(), state: EventReceiverState::Active }
     }
 
     /// Send an encodable message without expecting a response.
@@ -261,18 +261,28 @@ impl MessageInterest {
     }
 }
 
+#[derive(Debug)]
+enum EventReceiverState {
+    Active,
+    Epitaph,
+    Terminated,
+}
+
 /// A stream of events as `MessageBuf`s.
 #[derive(Debug)]
 pub struct EventReceiver {
     inner: Arc<ClientInner>,
-    terminated: bool,
+    state: EventReceiverState,
 }
 
 impl Unpin for EventReceiver {}
 
 impl FusedStream for EventReceiver {
     fn is_terminated(&self) -> bool {
-        self.terminated
+        match self.state {
+            EventReceiverState::Terminated => true,
+            _ => false,
+        }
     }
 }
 
@@ -284,17 +294,30 @@ impl Stream for EventReceiver {
     type Item = Result<MessageBuf, Error>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        if self.is_terminated() {
-            panic!("polled EventReceiver after `None`");
+        match self.state {
+            EventReceiverState::Active => {}
+            EventReceiverState::Terminated => {
+                panic!("polled EventReceiver after `None`");
+            }
+            EventReceiverState::Epitaph => {
+                self.state = EventReceiverState::Terminated;
+                return Poll::Ready(None);
+            }
         }
+
         Poll::Ready(match ready!(self.inner.as_ref().poll_recv_event(cx)) {
             Ok(x) => Some(Ok(x)),
-            Err(Error::ClientChannelClosed(_)) => {
-                // The channel is closed, set our internal state so that on the
-                // next poll_next() we panic and is_terminated() returns an
-                // appropriate value.
-                self.terminated = true;
+            Err(Error::ClientChannelClosed(zx_status::Status::PEER_CLOSED)) => {
+                // The channel is closed, with no epitaph. Set our internal state so that on
+                // the next poll_next() we panic and is_terminated() returns an appropriate value.
+                self.state = EventReceiverState::Terminated;
                 None
+            }
+            Err(Error::ClientChannelClosed(epitaph)) => {
+                // The channel is closed with an epitaph. Return the epitaph and set our internal
+                // state so that on the next poll_next() we return a None and terminate the stream.
+                self.state = EventReceiverState::Epitaph;
+                Some(Err(Error::ClientChannelClosed(epitaph)))
             }
             Err(e) => Some(Err(e)),
         })
@@ -911,6 +934,27 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
+    #[should_panic(expected = "polled EventReceiver after `None`")]
+    async fn receiver_panics_when_polled_after_receiving_epitaph_then_none() {
+        let (client_end, server_end) = zx::Channel::create().unwrap();
+        let client_end = AsyncChannel::from_channel(client_end).unwrap();
+        let client = Client::new(client_end);
+        let mut stream = client.take_event_receiver();
+
+        epitaph::write_epitaph_impl(&server_end, zx_status::Status::UNAVAILABLE)
+            .expect("wrote epitaph");
+        drop(server_end);
+
+        assert_matches!(
+            stream.next().await,
+            Some(Err(crate::Error::ClientChannelClosed(zx_status::Status::UNAVAILABLE)))
+        );
+        assert_matches!(stream.next().await, None);
+        // this should panic
+        let _ = stream.next().await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
     async fn event_can_be_taken() {
         let (client_end, _) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
@@ -1037,7 +1081,13 @@ mod tests {
         server.close_with_epitaph(zx_status::Status::UNAVAILABLE).expect("failed to write epitaph");
 
         let mut event_receiver = client.take_event_receiver();
-        let recv = event_receiver.next().map(|x| assert!(x.is_none(), "should be None"));
+        let recv = async move {
+            assert_matches!(
+                event_receiver.next().await,
+                Some(Err(crate::Error::ClientChannelClosed(zx_status::Status::UNAVAILABLE)))
+            );
+            assert_matches!(event_receiver.next().await, None);
+        };
 
         // add a timeout to receiver so if test is broken it doesn't take forever
         let recv =
