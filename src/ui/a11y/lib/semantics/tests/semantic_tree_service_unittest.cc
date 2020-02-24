@@ -231,13 +231,13 @@ TEST_F(SemanticTreeServiceTest, LogsSemanticTree) {
   semantic_tree_->UpdateSemanticNodes(std::move(updates));
   semantic_tree_->CommitUpdates([]() {});
   const std::string expected_semantic_tree_odd =
-      "Node_id: 0, Label:Node-0\n"
-      "    Node_id: 1, Label:Node-1\n"
-      "        Node_id: 3, Label:Node-3\n"
-      "        Node_id: 4, Label:Node-4\n"
-      "    Node_id: 2, Label:Node-2\n"
-      "        Node_id: 5, Label:Node-5\n"
-      "        Node_id: 6, Label:Node-6\n";
+      "ID: 0 Label:Node-0\n"
+      "    ID: 1 Label:Node-1\n"
+      "        ID: 3 Label:Node-3\n"
+      "        ID: 4 Label:Node-4\n"
+      "    ID: 2 Label:Node-2\n"
+      "        ID: 5 Label:Node-5\n"
+      "        ID: 6 Label:Node-6\n";
 
   vfs::internal::Node* node;
   EXPECT_EQ(ZX_OK, debug_dir()->Lookup(std::to_string(semantic_tree_->view_ref_koid()), &node));

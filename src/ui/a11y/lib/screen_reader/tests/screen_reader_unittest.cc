@@ -30,9 +30,6 @@ using fuchsia::accessibility::semantics::Hit;
 using fuchsia::accessibility::semantics::Node;
 using fuchsia::accessibility::semantics::Role;
 
-const std::string kSemanticTreeSingle = "Node_id: 0, Label:Label A";
-constexpr int kMaxLogBufferSize = 1024;
-
 class ScreenReaderTest : public gtest::TestLoopFixture {
  public:
   ScreenReaderTest()
@@ -105,14 +102,6 @@ TEST_F(ScreenReaderTest, OnOneFingerSingleTapAction) {
   // Commit nodes.
   semantic_provider_.CommitUpdates();
   RunLoopUntilIdle();
-
-  // Check that the committed node is present in the semantic tree.
-  vfs::PseudoDir *debug_dir = context_provider_.context()->outgoing()->debug_dir();
-  vfs::internal::Node *test_node;
-  ASSERT_EQ(ZX_OK, debug_dir->Lookup(std::to_string(semantic_provider_.koid()), &test_node));
-  char buffer[kMaxLogBufferSize];
-  accessibility_test::ReadFile(test_node, kSemanticTreeSingle.size(), buffer);
-  EXPECT_EQ(kSemanticTreeSingle, buffer);
 
   semantic_provider_.SetHitTestResult(0);
 

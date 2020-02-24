@@ -33,16 +33,8 @@ using fuchsia::ui::input::accessibility::EventHandling;
 using fuchsia::ui::input::accessibility::PointerEventListener;
 using fuchsia::ui::input::accessibility::PointerEventListenerPtr;
 
-const std::string kSemanticTreeSingle = "Node_id: 0, Label:Label A";
+const std::string kSemanticTreeSingle = "ID: 0 Label:Label A\n";
 constexpr int kMaxLogBufferSize = 1024;
-
-// clang-format off
-constexpr std::array<float, 9> kIdentityMatrix = {
-    1, 0, 0,
-    0, 1, 0,
-    0, 0, 1};
-
-// clang-format on
 
 class AppUnitTest : public gtest::TestLoopFixture {
  public:

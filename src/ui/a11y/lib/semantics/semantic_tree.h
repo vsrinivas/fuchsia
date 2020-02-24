@@ -42,6 +42,7 @@ class SemanticTree {
     uint32_t TakeDeleteNodeId();
     const fuchsia::accessibility::semantics::Node& node() const;
     fuchsia::accessibility::semantics::Node TakeNode();
+    std::string ToString() const;
 
    private:
     // If present, deletes the node with |node_id|.
@@ -126,6 +127,11 @@ class SemanticTree {
   void PerformHitTesting(
       fuchsia::math::PointF local_point,
       fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) const;
+
+  // Debug aid.
+  // - Do not rely on the concrete format for testing or any other purpose.
+  // - Do not rely on this function being runtime efficient; it is not guaranteed to be.
+  std::string ToString() const;
 
  private:
   // Validates the state of the resulting tree if the pending updates in |nodes_to_be_updated_| were

@@ -75,7 +75,8 @@ void SemanticTreeService::CommitUpdates(CommitUpdatesCallback callback) {
     updates_.clear();
   } else {
     FX_LOGS(ERROR) << "Closing Semantic Tree Channel for View(KOID):" << koid_
-                   << " because client sent an invalid tree update";
+                   << " because client sent an invalid tree update. Tree before update: "
+                   << tree_->ToString();
     callback();
     close_channel_callback_(koid_);
   }
@@ -93,48 +94,6 @@ void SemanticTreeService::DeleteSemanticNodes(std::vector<uint32_t> node_ids) {
   }
 }
 
-void SemanticTreeService::LogSemanticTreeHelper(const Node* node, int current_level,
-                                                std::string* tree_log) {
-  if (!node) {
-    return;
-  }
-
-  // Add constant spaces proportional to the current tree level, so that
-  // child nodes are indented under parent node.
-  tree_log->append(kIndentSize * current_level, ' ');
-
-  // Add logs for the current node.
-  *tree_log = fxl::Concatenate({*tree_log, "Node_id: ", std::to_string(node->node_id()), ", Label:",
-                                node->has_attributes() && node->attributes().has_label()
-                                    ? node->attributes().label()
-                                    : "_empty",
-                                kNewLine});
-
-  // Iterate through all the children of the current node.
-  if (!node->has_child_ids()) {
-    return;
-  }
-  for (const auto& child_id : node->child_ids()) {
-    const auto* child = tree_->GetNode(child_id);
-    FX_DCHECK(child);
-    LogSemanticTreeHelper(child, current_level + 1, tree_log);
-  }
-}
-
-std::string SemanticTreeService::LogSemanticTree() {
-  const auto* root = tree_->GetNode(::a11y::SemanticTree::kRootNodeId);
-  std::string tree_log;
-  if (!root) {
-    tree_log = "Root Node not found.";
-    FX_LOGS(ERROR) << tree_log;
-    return tree_log;
-  }
-
-  LogSemanticTreeHelper(root, ::a11y::SemanticTree::kRootNodeId, &tree_log);
-  FX_VLOGS(1) << "Semantic Tree:" << std::endl << tree_log;
-  return tree_log;
-}
-
 void SemanticTreeService::InitializeDebugEntry() {
   if (debug_dir_) {
     // Add Semantic Tree log file in Hub-Debug directory.
@@ -142,7 +101,9 @@ void SemanticTreeService::InitializeDebugEntry() {
         debug_file_name_,
         std::make_unique<vfs::PseudoFile>(
             kMaxDebugFileSize, [this](std::vector<uint8_t>* output, size_t max_file_size) {
-              std::string buffer = LogSemanticTree();
+              std::string buffer = tree_->ToString();
+              FX_VLOGS(1) << "Semantic Tree:" << std::endl << buffer;
+
               size_t len = buffer.length();
               if (len > max_file_size) {
                 FX_LOGS(WARNING) << "Semantic Tree log file (" << std::to_string(koid_)

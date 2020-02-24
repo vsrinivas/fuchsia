@@ -7,10 +7,13 @@
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <lib/syslog/cpp/logger.h>
 
+#include <cstdint>
 #include <queue>
+#include <string>
 #include <unordered_set>
 
 #include "src/lib/fxl/logging.h"
+#include "src/lib/fxl/strings/concatenate.h"
 
 namespace a11y {
 namespace {
@@ -86,10 +89,12 @@ bool ValidateSubTreeForUpdate(
   if (!node) {
     // A parent node is trying to access a node that is neither in the original tree nor in the
     // updates.
+    FX_LOGS(ERROR) << "Tried to visit Node [" << node_id << "] which does not exist or was deleted";
     return false;
   }
   if (auto it = visited_nodes->insert(node_id); !it.second) {
     // This node id has been already visited, which indicates a cycle in this tree.
+    FX_LOGS(ERROR) << "Tried to visit already visited Node [" << node_id << "], possible cycle";
     return false;
   }
   if (node->has_child_ids()) {
@@ -128,6 +133,27 @@ const uint32_t& SemanticTree::TreeUpdate::delete_node_id() const {
 const Node& SemanticTree::TreeUpdate::node() const {
   FX_DCHECK(has_node());
   return *node_;
+}
+
+std::string SemanticTree::TreeUpdate::ToString() const {
+  std::string output = "Update: ";
+
+  if (has_delete_node_id()) {
+    output.append("Delete Node: [" + std::to_string(delete_node_id()) + "] ");
+  }
+  if (has_node()) {
+    std::stringstream update_node_string;
+
+    update_node_string << "Update Node [" << std::to_string(node().node_id()) << "] Children: [";
+
+    for (const auto child_id : node().child_ids()) {
+      update_node_string << child_id << ", ";
+    }
+    update_node_string << ']';
+
+    output.append(update_node_string.str());
+  }
+  return output;
 }
 
 SemanticTree::SemanticTree() = default;
@@ -322,6 +348,46 @@ void SemanticTree::PerformHitTesting(
     fuchsia::math::PointF local_point,
     fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) const {
   hit_testing_handler_(local_point, std::move(callback));
+}
+
+std::string SemanticTree::ToString() const {
+  std::function<void(const Node*, int, std::string*)> printNode;
+
+  printNode = [&printNode, this](const Node* node, int current_level, std::string* output) {
+    if (!node) {
+      return;
+    }
+
+    // Add indentation
+    output->append(4 * current_level, ' ');
+
+    *output = fxl::Concatenate({*output, "ID: ", std::to_string(node->node_id()), " Label:",
+                                node->has_attributes() && node->attributes().has_label()
+                                    ? node->attributes().label()
+                                    : "no label",
+                                "\n"});
+
+    if (!node->has_child_ids()) {
+      return;
+    }
+    for (const auto& child_id : node->child_ids()) {
+      const auto* child = GetNode(child_id);
+      FX_DCHECK(child);
+      printNode(child, current_level + 1, output);
+    }
+  };
+
+  const auto* root = GetNode(kRootNodeId);
+  std::string tree_string;
+
+  if (!root) {
+    tree_string = "Root Node not found.";
+    return tree_string;
+  }
+
+  printNode(root, kRootNodeId, &tree_string);
+
+  return tree_string;
 }
 
 }  // namespace a11y

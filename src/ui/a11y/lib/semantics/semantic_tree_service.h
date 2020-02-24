@@ -73,14 +73,6 @@ class SemanticTreeService : public fuchsia::accessibility::semantics::SemanticTr
       ::fuchsia::math::PointF local_point,
       fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback);
 
-  // Returns a string representation of the underlying |tree_| object.
-  std::string LogSemanticTree();
-
-  // Recursively traverses  |tree_| starting from |node|, filling |tree_log|
-  // a string representation of the tree.
-  void LogSemanticTreeHelper(const fuchsia::accessibility::semantics::Node* root_node,
-                             int current_level, std::string* tree_log);
-
   // Function to create per view log files under debug directory for
   // debugging semantic tree.
   void InitializeDebugEntry();

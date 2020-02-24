@@ -18,9 +18,6 @@ using fuchsia::accessibility::semantics::Attributes;
 using fuchsia::accessibility::semantics::Node;
 using fuchsia::accessibility::semantics::Role;
 
-const std::string kSemanticTreeSingle = "Node_id: 0, Label:Label A";
-constexpr int kMaxLogBufferSize = 1024;
-
 class DefaultActionTest : public gtest::TestLoopFixture {
  public:
   DefaultActionTest()
@@ -70,13 +67,6 @@ TEST_F(DefaultActionTest, OnAccessibilitActionRequestedCalled) {
   semantic_provider_.CommitUpdates();
   RunLoopUntilIdle();
 
-  // Check that the committed node is present in the semantic tree.
-  vfs::internal::Node* test_node;
-  ASSERT_EQ(ZX_OK, debug_dir()->Lookup(std::to_string(semantic_provider_.koid()), &test_node));
-  char buffer[kMaxLogBufferSize];
-  accessibility_test::ReadFile(test_node, kSemanticTreeSingle.size(), buffer);
-  EXPECT_EQ(kSemanticTreeSingle, buffer);
-
   a11y::DefaultAction default_action(&action_context_);
   a11y::DefaultAction::ActionData action_data;
   action_data.koid = semantic_provider_.koid();
@@ -106,13 +96,6 @@ TEST_F(DefaultActionTest, OnAccessibilitActionRequestedNotCalled) {
   // Commit nodes.
   semantic_provider_.CommitUpdates();
   RunLoopUntilIdle();
-
-  // Check that the committed node is present in the semantic tree.
-  vfs::internal::Node* test_node;
-  ASSERT_EQ(ZX_OK, debug_dir()->Lookup(std::to_string(semantic_provider_.koid()), &test_node));
-  char buffer[kMaxLogBufferSize];
-  accessibility_test::ReadFile(test_node, kSemanticTreeSingle.size(), buffer);
-  EXPECT_EQ(kSemanticTreeSingle, buffer);
 
   a11y::DefaultAction default_action(&action_context_);
   a11y::DefaultAction::ActionData action_data;
