@@ -208,6 +208,7 @@ class HidDeviceTest : public zxtest::Test {
     }
 
     instance_ops_.ops->close(instance_ops_.ctx, 0);
+    instance_ops_.ops->release(instance_ops_.ctx);
     instance_driver_ = nullptr;
   }
 
@@ -289,6 +290,7 @@ TEST_F(HidDeviceTest, TestQuery) {
 
   // Close the instance device.
   dev_ops.ops->close(dev_ops.ctx, 0);
+  dev_ops.ops->release(dev_ops.ctx);
 }
 
 TEST_F(HidDeviceTest, BootMouseSendReport) {
