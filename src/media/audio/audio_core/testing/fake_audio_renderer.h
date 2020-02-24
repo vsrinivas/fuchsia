@@ -44,7 +44,9 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
   fit::result<std::shared_ptr<Stream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override;
   void CleanupDestLink(const AudioObject& dest) override;
-  std::optional<fuchsia::media::Usage> usage() const override { return {UsageFrom(usage_)}; }
+  std::optional<fuchsia::media::Usage> usage() const override {
+    return {fuchsia::media::Usage::WithRenderUsage(fidl::Clone(usage_))};
+  }
 
   // |fuchsia::media::AudioRenderer|
   void AddPayloadBuffer(uint32_t id, ::zx::vmo payload_buffer) override {}

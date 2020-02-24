@@ -131,7 +131,8 @@ void AudioCoreImpl::SetRenderUsageGain(fuchsia::media::AudioRenderUsage render_u
   TRACE_DURATION("audio", "AudioCoreImpl::SetRenderUsageGain");
   AUD_VLOG(TRACE) << " (render_usage: " << static_cast<int>(render_usage) << ", " << gain_db
                   << " dB)";
-  volume_manager_.SetUsageGain(UsageFrom(render_usage), gain_db);
+  volume_manager_.SetUsageGain(fuchsia::media::Usage::WithRenderUsage(std::move(render_usage)),
+                               gain_db);
 }
 
 void AudioCoreImpl::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage capture_usage,
@@ -139,19 +140,22 @@ void AudioCoreImpl::SetCaptureUsageGain(fuchsia::media::AudioCaptureUsage captur
   TRACE_DURATION("audio", "AudioCoreImpl::SetCaptureUsageGain");
   AUD_VLOG(TRACE) << " (capture_usage: " << static_cast<int>(capture_usage) << ", " << gain_db
                   << " dB)";
-  volume_manager_.SetUsageGain(UsageFrom(capture_usage), gain_db);
+  volume_manager_.SetUsageGain(fuchsia::media::Usage::WithCaptureUsage(std::move(capture_usage)),
+                               gain_db);
 }
 
 void AudioCoreImpl::SetRenderUsageGainAdjustment(fuchsia::media::AudioRenderUsage render_usage,
                                                  float db_gain) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetRenderUsageGainAdjustment");
-  volume_manager_.SetUsageGainAdjustment(UsageFrom(render_usage), db_gain);
+  volume_manager_.SetUsageGainAdjustment(
+      fuchsia::media::Usage::WithRenderUsage(std::move(render_usage)), db_gain);
 }
 
 void AudioCoreImpl::SetCaptureUsageGainAdjustment(fuchsia::media::AudioCaptureUsage capture_usage,
                                                   float db_gain) {
   TRACE_DURATION("audio", "AudioCoreImpl::SetCaptureUsageGainAdjustment");
-  volume_manager_.SetUsageGainAdjustment(UsageFrom(capture_usage), db_gain);
+  volume_manager_.SetUsageGainAdjustment(
+      fuchsia::media::Usage::WithCaptureUsage(std::move(capture_usage)), db_gain);
 }
 
 void AudioCoreImpl::BindUsageVolumeControl(

@@ -10,18 +10,6 @@
 
 namespace media::audio {
 
-fuchsia::media::Usage UsageFrom(fuchsia::media::AudioRenderUsage render_usage) {
-  fuchsia::media::Usage usage;
-  usage.set_render_usage(render_usage);
-  return usage;
-}
-
-fuchsia::media::Usage UsageFrom(fuchsia::media::AudioCaptureUsage capture_usage) {
-  fuchsia::media::Usage usage;
-  usage.set_capture_usage(capture_usage);
-  return usage;
-}
-
 float UsageGainSettings::GetUsageGain(const fuchsia::media::Usage& usage) const {
   TRACE_DURATION("audio", "UsageGainSettings::GetUsageGain");
   if (usage.is_render_usage()) {

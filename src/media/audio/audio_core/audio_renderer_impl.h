@@ -141,7 +141,9 @@ class AudioRendererImpl : public AudioObject,
   // |media::audio::AudioObject|
   void OnLinkAdded() override;
   const std::shared_ptr<Format>& format() const final { return format_; }
-  std::optional<fuchsia::media::Usage> usage() const override { return {UsageFrom(usage_)}; }
+  std::optional<fuchsia::media::Usage> usage() const override {
+    return {fuchsia::media::Usage::WithRenderUsage(fidl::Clone(usage_))};
+  }
   fit::result<std::shared_ptr<Stream>, zx_status_t> InitializeDestLink(
       const AudioObject& dest) override;
   void CleanupDestLink(const AudioObject& dest) override;

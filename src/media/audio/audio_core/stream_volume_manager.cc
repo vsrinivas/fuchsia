@@ -62,17 +62,17 @@ void StreamVolumeManager::VolumeSettingImpl::SetVolume(float volume) {
 
 StreamVolumeManager::StreamVolumeManager(async_dispatcher_t* fidl_dispatcher)
     : render_usage_volume_setting_impls_{
-          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioRenderUsage::BACKGROUND), this),
-          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA), this),
-          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioRenderUsage::INTERRUPTION), this),
-          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT), this),
-          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioRenderUsage::COMMUNICATION), this),
+          VolumeSettingImpl(fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::BACKGROUND), this),
+          VolumeSettingImpl(fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA), this),
+          VolumeSettingImpl(fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::INTERRUPTION), this),
+          VolumeSettingImpl(fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT), this),
+          VolumeSettingImpl(fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::COMMUNICATION), this),
       },
       capture_usage_volume_setting_impls_{
-          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioCaptureUsage::BACKGROUND), this),
-          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioCaptureUsage::FOREGROUND), this),
-          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT), this),
-          VolumeSettingImpl(UsageFrom(fuchsia::media::AudioCaptureUsage::COMMUNICATION), this),
+          VolumeSettingImpl(fuchsia::media::Usage::WithCaptureUsage(fuchsia::media::AudioCaptureUsage::BACKGROUND), this),
+          VolumeSettingImpl(fuchsia::media::Usage::WithCaptureUsage(fuchsia::media::AudioCaptureUsage::FOREGROUND), this),
+          VolumeSettingImpl(fuchsia::media::Usage::WithCaptureUsage(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT), this),
+          VolumeSettingImpl(fuchsia::media::Usage::WithCaptureUsage(fuchsia::media::AudioCaptureUsage::COMMUNICATION), this),
       },
       render_usage_volume_controls_{
         VolumeControl(&render_usage_volume_setting_impls_[fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND)], fidl_dispatcher),

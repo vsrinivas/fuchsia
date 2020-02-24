@@ -9,11 +9,6 @@
 
 namespace media::audio {
 
-// TODO(35491): Remove when transitioned to xunion; xunions generate these functions.
-fuchsia::media::Usage UsageFrom(fuchsia::media::AudioRenderUsage render_usage);
-
-fuchsia::media::Usage UsageFrom(fuchsia::media::AudioCaptureUsage capture_usage);
-
 // Usage loudness settings in gain dbfs units.
 // This class is not thread safe.
 class UsageGainSettings {

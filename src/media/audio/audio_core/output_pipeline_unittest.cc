@@ -89,10 +89,14 @@ TEST_F(OutputPipelineTest, Trim) {
 
   // Add some streams so that one is routed to each mix stage in our pipeline.
   auto pipeline = CreateOutputPipeline();
-  pipeline->AddInput(stream1, UsageFrom(fuchsia::media::AudioRenderUsage::BACKGROUND));
-  pipeline->AddInput(stream2, UsageFrom(fuchsia::media::AudioRenderUsage::INTERRUPTION));
-  pipeline->AddInput(stream3, UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA));
-  pipeline->AddInput(stream4, UsageFrom(fuchsia::media::AudioRenderUsage::COMMUNICATION));
+  pipeline->AddInput(stream1, fuchsia::media::Usage::WithRenderUsage(
+                                  fuchsia::media::AudioRenderUsage::BACKGROUND));
+  pipeline->AddInput(stream2, fuchsia::media::Usage::WithRenderUsage(
+                                  fuchsia::media::AudioRenderUsage::INTERRUPTION));
+  pipeline->AddInput(
+      stream3, fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA));
+  pipeline->AddInput(stream4, fuchsia::media::Usage::WithRenderUsage(
+                                  fuchsia::media::AudioRenderUsage::COMMUNICATION));
 
   bool packet_released[8] = {};
   testing::PacketFactory packet_factory1(dispatcher(), kDefaultFormat, PAGE_SIZE);

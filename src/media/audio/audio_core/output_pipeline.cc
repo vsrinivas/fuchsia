@@ -16,11 +16,9 @@ std::vector<fuchsia::media::Usage> UsagesFromRenderUsages(
     const std::vector<fuchsia::media::AudioRenderUsage>& render_usages) {
   std::vector<fuchsia::media::Usage> usages;
 
-  // Awkward syntax to select the correct overload of |UsageFrom|.
-  fuchsia::media::Usage (*usage_from)(fuchsia::media::AudioRenderUsage) = &UsageFrom;
-
-  std::transform(render_usages.cbegin(), render_usages.cend(), std::back_inserter(usages),
-                 usage_from);
+  std::transform(
+      render_usages.cbegin(), render_usages.cend(), std::back_inserter(usages),
+      [](auto usage) { return fuchsia::media::Usage::WithRenderUsage(fidl::Clone(usage)); });
   return usages;
 }
 

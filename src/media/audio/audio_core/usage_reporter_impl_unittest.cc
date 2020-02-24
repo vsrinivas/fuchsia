@@ -13,7 +13,8 @@
 
 namespace media::audio {
 
-const auto kMediaUsage = UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA);
+const auto kMediaUsage =
+    fuchsia::media::Usage::WithRenderUsage(fuchsia::media::AudioRenderUsage::MEDIA);
 const auto kMutedState = fuchsia::media::UsageState::WithMuted({});
 const auto kUnadjustedState = fuchsia::media::UsageState::WithUnadjusted({});
 const auto kActivateCallback = true;
