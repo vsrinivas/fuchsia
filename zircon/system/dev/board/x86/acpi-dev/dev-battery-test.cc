@@ -9,6 +9,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 
 #define SIGNAL_WAIT_TIMEOUT (5000u)
@@ -101,7 +102,8 @@ void verify_battery_change_signal(uint32_t level, uint32_t state) {
   pkg.Package.Elements = elements;
   pkg.Type = ACPI_TYPE_PACKAGE;
 
-  ACPI_ALLOCATE_ZEROED((ACPI_SIZE)(sizeof(pkg)));
+  void* buf = ACPI_ALLOCATE_ZEROED((ACPI_SIZE)(sizeof(pkg)));
+  const auto cleanup = fbl::AutoCall([buf]() { ACPI_FREE(buf); });
   dev->bst_buffer.Pointer = &pkg;
 
   // test simulates charge to 50
