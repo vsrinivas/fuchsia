@@ -9,7 +9,7 @@
 namespace minfs {
 
 zx_status_t Loader::LoadSuperblock(uint64_t dev_offset, storage::BlockBuffer* buffer) const {
-  return RunReadOperation(buffer, 0, 0, 1);
+  return RunReadOperation(buffer, 0, dev_offset, 1);
 }
 
 zx_status_t Loader::LoadInodeBitmap(const Superblock& superblock,

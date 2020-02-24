@@ -20,6 +20,7 @@ zx_test("minfs-unit") {
     "unit/inspector-test.cc",
     "unit/journal-test.cc",
     "unit/loader-test.cc",
+    "unit/minfs-inspector-test.cc",
     "unit/mkfs-test.cc",
     "unit/parser-test.cc",
     "unit/superblock-test.cc",

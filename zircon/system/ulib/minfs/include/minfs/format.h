@@ -70,6 +70,9 @@ constexpr uint32_t kMinfsMagicDir  = MinfsMagic(kMinfsTypeDir);
 constexpr uint32_t kMinfsMagicFile = MinfsMagic(kMinfsTypeFile);
 constexpr uint32_t MinfsMagicType(uint32_t n) { return n & 0xFF; }
 
+// Number of blocks allocated to the superblock.
+constexpr blk_t kSuperblockBlocks = 1;
+
 // Number of blocks allocated to the backup superblock.
 constexpr blk_t kBackupSuperblockBlocks = 1;
 

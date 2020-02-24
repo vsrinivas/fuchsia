@@ -17,6 +17,7 @@ zx_library("minfs") {
     "minfs/host.h",
     "minfs/metrics.h",
     "minfs/pending-work.h",
+    "minfs/minfs-inspector.h",
   ]
   host = true
   static = true
@@ -116,6 +117,7 @@ zx_library("minfs") {
       "inspector-superblock.cc",
       "inspector.cc",
       "inspector/loader.cc",
+      "inspector/minfs-inspector.cc",
       "inspector/parser.cc",
       "superblock.cc",
       "vnode-allocation.cc",
