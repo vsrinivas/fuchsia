@@ -6,6 +6,7 @@ use {
     crate::component_control::ComponentController,
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_device_manager as fdevmgr,
+    fidl_fuchsia_net as fnet, fidl_fuchsia_net_stack as fnetstack,
     fuchsia_component::client::{launcher, AppBuilder},
     futures::prelude::*,
 };
@@ -14,15 +15,20 @@ mod component_control;
 
 pub struct RemoteControlService {
     admin_proxy: fdevmgr::AdministratorProxy,
+    netstack_proxy: fnetstack::StackProxy,
 }
 
 impl RemoteControlService {
     pub fn new() -> Result<Self, Error> {
-        return Ok(Self::new_with_proxies(Self::construct_admin_proxy()?));
+        let (admin_proxy, netstack_proxy) = Self::construct_proxies()?;
+        return Ok(Self::new_with_proxies(admin_proxy, netstack_proxy));
     }
 
-    pub fn new_with_proxies(admin_proxy: fdevmgr::AdministratorProxy) -> Self {
-        return Self { admin_proxy };
+    pub fn new_with_proxies(
+        admin_proxy: fdevmgr::AdministratorProxy,
+        netstack_proxy: fnetstack::StackProxy,
+    ) -> Self {
+        return Self { admin_proxy, netstack_proxy };
     }
 
     pub async fn serve_stream<'a>(
@@ -51,15 +57,22 @@ impl RemoteControlService {
                 rcs::RemoteControlRequest::RebootDevice { reboot_type, responder } => {
                     self.reboot_device(reboot_type, responder).await?;
                 }
+                rcs::RemoteControlRequest::IdentifyHost { responder } => {
+                    self.identify_host(responder).await?;
+                }
             }
         }
         Ok(())
     }
 
-    fn construct_admin_proxy() -> Result<fdevmgr::AdministratorProxy, Error> {
-        let proxy = fuchsia_component::client::connect_to_service::<fdevmgr::AdministratorMarker>()
-            .map_err(|s| format_err!("Failed to connect to DevMgr service: {}", s))?;
-        return Ok(proxy);
+    fn construct_proxies() -> Result<(fdevmgr::AdministratorProxy, fnetstack::StackProxy), Error> {
+        let admin_proxy =
+            fuchsia_component::client::connect_to_service::<fdevmgr::AdministratorMarker>()
+                .map_err(|s| format_err!("Failed to connect to DevMgr service: {}", s))?;
+        let netstack_proxy =
+            fuchsia_component::client::connect_to_service::<fnetstack::StackMarker>()
+                .map_err(|s| format_err!("Failed to connect to NetStack service: {}", s))?;
+        return Ok((admin_proxy, netstack_proxy));
     }
 
     pub fn spawn_component_async(
@@ -119,19 +132,62 @@ impl RemoteControlService {
         self.admin_proxy.suspend(suspend_flag).await?;
         Ok(())
     }
+
+    pub async fn identify_host<'a>(
+        &'a self,
+        responder: rcs::RemoteControlIdentifyHostResponder,
+    ) -> Result<(), Error> {
+        let ilist = match self.netstack_proxy.list_interfaces().await {
+            Ok(l) => l,
+            Err(e) => {
+                log::error!("Getting interface list failed: {}", e);
+                responder
+                    .send(&mut Err(rcs::IdentifyHostError::ListInterfacesFailed))
+                    .context("sending IdentifyHost error response")?;
+                return Ok(());
+            }
+        };
+
+        let mut result: Vec<rcs::InterfaceAddress> = vec![];
+
+        for int in ilist.iter() {
+            for addr in int.properties.addresses.iter() {
+                let iaddr = rcs::InterfaceAddress {
+                    ip_address: match addr.ip_address {
+                        fnet::IpAddress::Ipv4(i) => {
+                            rcs::IpAddress::Ipv4(rcs::Ipv4Address { addr: i.addr })
+                        }
+                        fnet::IpAddress::Ipv6(i) => {
+                            rcs::IpAddress::Ipv6(rcs::Ipv6Address { addr: i.addr })
+                        }
+                    },
+                    prefix_len: addr.prefix_len,
+                };
+                result.push(iaddr);
+            }
+        }
+        responder
+            .send(&mut Ok(rcs::IdentifyHostResponse { addresses: Some(result) }))
+            .context("sending IdentifyHost response")?;
+
+        return Ok(());
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use {
         super::*, fidl::endpoints::create_proxy, fidl_fuchsia_developer_remotecontrol as rcs,
-        fuchsia_async as fasync, fuchsia_zircon as zx,
+        fidl_fuchsia_hardware_ethernet::MacAddress, fuchsia_async as fasync, fuchsia_zircon as zx,
     };
 
     // This is the exit code zircon will return when a component is killed.
     const EXIT_CODE_KILLED: i64 = -1024;
     // This is the exit code zircon will return for an non-existent package.
     const EXIT_CODE_START_FAILED: i64 = -1;
+
+    const IPV4_ADDR: [u8; 4] = [127, 0, 0, 1];
+    const IPV6_ADDR: [u8; 16] = [127, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6];
 
     fn setup_fake_admin_service() -> fdevmgr::AdministratorProxy {
         let (proxy, mut stream) =
@@ -166,15 +222,53 @@ mod tests {
         proxy
     }
 
-    async fn run_reboot_test(reboot_type: rcs::RebootType) {
-        let (rcs_proxy, stream) =
-            fidl::endpoints::create_proxy_and_stream::<rcs::RemoteControlMarker>().unwrap();
+    fn setup_fake_netstack_service() -> fnetstack::StackProxy {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<fnetstack::StackMarker>().unwrap();
+
         fasync::spawn(async move {
-            RemoteControlService::new_with_proxies(setup_fake_admin_service())
-                .serve_stream(stream)
-                .await
-                .unwrap();
+            while let Ok(req) = stream.try_next().await {
+                match req {
+                    Some(fnetstack::StackRequest::ListInterfaces { responder }) => {
+                        let mut resp = vec![fnetstack::InterfaceInfo {
+                            id: 1,
+                            properties: fnetstack::InterfaceProperties {
+                                name: String::from("eth0"),
+                                topopath: String::from("N/A"),
+                                filepath: String::from("N/A"),
+                                administrative_status: fnetstack::AdministrativeStatus::Enabled,
+                                physical_status: fnetstack::PhysicalStatus::Up,
+                                mtu: 1,
+                                features: 0,
+                                mac: Some(Box::new(MacAddress { octets: [1, 2, 3, 4, 5, 6] })),
+                                addresses: vec![
+                                    fnetstack::InterfaceAddress {
+                                        ip_address: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
+                                            addr: IPV4_ADDR,
+                                        }),
+                                        prefix_len: 4,
+                                    },
+                                    fnetstack::InterfaceAddress {
+                                        ip_address: fnet::IpAddress::Ipv6(fnet::Ipv6Address {
+                                            addr: IPV6_ADDR,
+                                        }),
+                                        prefix_len: 6,
+                                    },
+                                ],
+                            },
+                        }];
+                        let _ = responder.send(&mut resp.iter_mut());
+                    }
+                    _ => assert!(false),
+                }
+            }
         });
+
+        proxy
+    }
+
+    async fn run_reboot_test(reboot_type: rcs::RebootType) {
+        let rcs_proxy = setup_rcs();
 
         let response = rcs_proxy.reboot_device(reboot_type).await.unwrap();
         assert_eq!(response, ());
@@ -207,7 +301,11 @@ mod tests {
     }
 
     fn setup_rcs() -> rcs::RemoteControlProxy {
-        let service = RemoteControlService::new().unwrap();
+        let service: RemoteControlService;
+        service = RemoteControlService::new_with_proxies(
+            setup_fake_admin_service(),
+            setup_fake_netstack_service(),
+        );
 
         let (rcs_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<rcs::RemoteControlMarker>().unwrap();
@@ -314,6 +412,26 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_reboot_bootloader() -> Result<(), Error> {
         run_reboot_test(rcs::RebootType::Bootloader).await;
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_identify_host() -> Result<(), Error> {
+        let rcs_proxy = setup_rcs();
+
+        let resp = rcs_proxy.identify_host().await.unwrap().unwrap();
+
+        let addrs = resp.addresses.unwrap();
+        assert_eq!(addrs.len(), 2);
+
+        let v4 = addrs[0];
+        assert_eq!(v4.prefix_len, 4);
+        assert_eq!(v4.ip_address, rcs::IpAddress::Ipv4(rcs::Ipv4Address { addr: IPV4_ADDR }));
+
+        let v6 = addrs[1];
+        assert_eq!(v6.prefix_len, 6);
+        assert_eq!(v6.ip_address, rcs::IpAddress::Ipv6(rcs::Ipv6Address { addr: IPV6_ADDR }));
+
         Ok(())
     }
 }

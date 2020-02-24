@@ -35,6 +35,8 @@ protocol RemoteControl {
         request<ComponentController> controller
         ) -> () error ComponentControlError;
 
+    IdentifyHost() -> (IdentifyHostResponse response) error IdentifyHostError;
+
     // This should be a fire-and-forget, but that seems to do
     // nothing in Overnet.
     // TODO(fxb/43011) look into this.

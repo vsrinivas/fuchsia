@@ -9,6 +9,7 @@ fidl("remote-control") {
 
   sources = [
     "component-control.fidl",
+    "host-identification.fidl",
     "remote-control.fidl",
   ]
 

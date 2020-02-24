@@ -43,6 +43,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
+    "//zircon/system/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 }
 

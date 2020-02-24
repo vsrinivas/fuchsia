@@ -6,6 +6,7 @@
         "services": [
             "fuchsia.device.manager.Administrator",
             "fuchsia.logger.LogSink",
+            "fuchsia.net.stack.Stack",
             "fuchsia.overnet.Overnet",
             "fuchsia.overnet.ServicePublisher",
             "fuchsia.sys.Launcher"
