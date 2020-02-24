@@ -4,3 +4,5 @@
 toc:
 - title: "External dependencies"
   path: /docs/project/policy/external_dependencies.md
+- title: "Programming languages"
+  path: /docs/project/policy/programming_languages.md
