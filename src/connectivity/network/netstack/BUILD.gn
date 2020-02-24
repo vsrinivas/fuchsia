@@ -88,6 +88,10 @@ test_package("netstack_gotests") {
     {
       name = "netstack_link_eth_test"
       environments = [ qemu_env ]
+      args = [
+        "--test.timeout",
+        "2m",
+      ]
     },
     {
       name = "netstack_test"
