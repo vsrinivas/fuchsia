@@ -34,7 +34,7 @@ Note: The black box testing framework covers all of these points.
 The testing framework provides two Rust libraries for black box testing:
 
 - `BlackBoxTest`
-- `BreakpointSystemClient`
+- `EventSource`
 
 ### BlackBoxTest
 
@@ -77,32 +77,33 @@ By the end of this statement:
 
 - A component manager instance has been created in a hermetic environment.
 - The root component is specified by the given URL.
-- Component manager is waiting to be unblocked by the breakpoint system.
+- Component manager is waiting to be unblocked by the `EventSource`.
 - The root [component manifest](component_manifests.md) (`root.cm`) has been
 resolved.
 - No component has been started.
 - Component manager’s outgoing directory is serving:
   - The hub of the root component at `$out/hub`.
-  - The `BreakpointSystem` FIDL service at
-    `$out/svc/fuchsia.test.breakpoints.BreakpointSystem`.
+  - The `EventSourceSync` FIDL service at
+    `$out/svc/fuchsia.test.events.EventSourceSync`.
 - The state of the hub reflects the following:
   - Static children of the root component should be visible.
   - Grandchildren of the root component should not be visible (because they
   haven't been resolved yet).
   - There should be no `exec` directories for any component.
 
-The `BreakpointSystem` FIDL service is used to set breakpoints and unblock
-component manager. This code demonstrates using the `BreakpointSystem` service:
+Use the `EventSourceSync` FIDL service to subscribe to events and unblock
+the component manager. The following example shows you how to use the
+`EventSourceSync` service:
 
 ```rust
-let breakpoint_system = test.connect_to_breakpoint_system().await?;
-let receiver = breakpoint_system.set_breakpoints(vec![StopInstance::TYPE]).await?;
-breakpoint_system.start_component_tree().await?;
+let event_source = test.connect_to_event_source().await?;
+let event_stream = event_source.subscribe(vec![StopInstance::TYPE]).await?;
+event_source.start_component_tree().await?;
 ```
 
 By the end of this code block:
 
-- A breakpoint receiver has been created which listens to `StopInstance` events.
+- An `event_stream` has been created which receives `StopInstance` events.
 - Component manager’s execution has begun.
 - The root component (and its eager children, if any) will be started soon.
 
@@ -136,58 +137,58 @@ launch_component_and_expect_output(
 ).await?;
 ```
 
-### BreakpointSystemClient
+### EventSource
 
-The breakpoint system addresses the problem of verifying state in component
+The `EventSource` addresses the problem of verifying state in component
 manager and is analogous to a debugger's breakpoint system.
 
-Since the breakpoint system is built on top of system events:
+Since the `EventSource` is built on top of system events:
 
-- A breakpoint can only be set on a system event.
+- A subscription can only be set on a system event.
 - It supports all system events in component manager.
 - It can be scoped down to a [realm](realms.md) of the component hierarchy.
 - It follows the component manager’s rules of event propagation (i.e - an
 event dispatched at a child realm is also dispatched to its parent).
 
-Note: When component manager is in [debug mode](#debug-mode), the breakpoint
-system is installed at the root. Hence it receives events from all components.
+Note: When component manager is in [debug mode](#debug-mode), an `EventSource`
+is installed at the root. Hence it receives events from all components.
 
 For reliable state verification, a test must be able to:
 
 - Expect or wait for various events to occur in component manager.
 - Halt the component manager task that is processing the event.
 
-The workflow for the `BreakpointSystemClient` library looks something like this:
+The workflow for the `EventSource` library looks something like this:
 
 ```rust
-// Create a BreakpointSystemClient using ::new() or use the client
+// Create a EventSource using ::new() or use the client
 // provided by BlackBoxTest
 let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/foo#meta/root.cm").await?;
 
-// Get a receiver by setting breakpoints
-let breakpoint_system = test.connect_to_breakpoint_system().await?;
-let receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
+// Get an event stream of the `BeforeStartInstance` event.
+let event_source = test.connect_to_event_source().await?;
+let event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
 
 // Unblock component manager
-breakpoint_system.start_component_tree().await?;
+event_source.start_component_tree().await?;
 
-// Wait for an invocation
-let invocation = receiver.expect_type::<BeforeStartInstance>().await?;
+// Wait for an event
+let event = event_stream.expect_type::<BeforeStartInstance>().await?;
 
 // Verify state
 ...
 
-// Resume from invocation
-invocation.resume().await?;
+// Resume from event
+event.resume().await?;
 ```
 
-### Scoping of breakpoints
+### Scoping of events
 
-The breakpoints system can be requested by any component instance within the
+The `EventSource` can be requested by any component instance within the
 component topology served by the component manager. The component manager only
 delivers system events within the realm of the requesting component instance.
 
-A component instance can request a scoped `BreakpointSystem` in its manifest
+A component instance can request a scoped `EventSourceSync` in its manifest
 file as follows:
 
 ```
@@ -198,7 +199,7 @@ file as follows:
     "use": [
         {
             "protocol": [
-                "/svc/fuchsia.test.breakpoints.BreakpointSystem",
+                "/svc/fuchsia.test.events.EventSourceSync",
             ],
             "from": "framework"
         },
@@ -207,75 +208,75 @@ file as follows:
 ```
 
 Another component can pass along its scope of system events by passing along the
-`BreakpointSystem` capability through the conventional routing operations `offer`,
+`EventSourceSync` capability through the conventional routing operations `offer`,
 `expose` and `use`.
 
-If a component requests a `BreakpointSystem` then its children cannot start until it explicitly
+If a component requests a `EventSourceSync` then its children cannot start until it explicitly
 calls `start_component_tree`.
 
 ### Additional functionality
 
 With complex component hierarchies, event propagation is hard to predict and
 may even be non-deterministic due to the asynchronous nature of component
-manager. To deal with these cases, breakpoints offer the following additional
+manager. To deal with these cases, `EventSource` offers the following additional
 functionality:
 
-- [Multiple receivers](#multiple-receivers)
-- [Discardable receivers](#discardable-receivers)
+- [Multiple event streams](#multiple-event-streams)
+- [Discardable event streams](#discardable-event-streams)
 - [Capability injection](#capability-injection)
 - [Capability interposition](#capability-interposition)
 - [Event sinks](#event-sinks)
 
-#### Multiple receivers {#multiple-receivers}
+#### Multiple event streams {#multiple-event-streams}
 
-It is possible to register multiple receivers, each listening to their own set
+It is possible to register multiple event streams, each listening to their own set
 of events:
 
 ```rust
 // BeforeStartInstance and RouteCapability events can be interleaved,
-// so use different receivers.
-let start_receiver = breakpoint_system.set_breakpoints(vec![BeforeStartInstance::TYPE]).await?;
-let route_receiver =
-    breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
+// so use different event streams.
+let start_event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+let route_event_stream =
+    event_source.subscribe(vec![RouteCapability::TYPE]).await?;
 
 // Expect 5 components to start
 for _ in 1..=5 {
-    let invocation = start_receiver.expect_type::<BeforeStartInstance>().await?;
-    invocation.resume().await?;
+    let event = start_event_stream.expect_type::<BeforeStartInstance>().await?;
+    event.resume().await?;
 }
 
 // Expect a RouteCapability event from ./foo:0
-let invocation = route_receiver.expect_exact::<RouteCapability>("./foo:0").await?;
-invocation.resume().await?;
+let event = route_event_stream.expect_exact::<RouteCapability>("./foo:0").await?;
+event.resume().await?;
 ```
 
-#### Discardable receivers {#discardable-receivers}
+#### Discardable event streams {#discardable-event-streams}
 
-It is possible to listen for specific invocations and then discard the receiver,
-causing future invocations to be ignored:
+It is possible to listen for specific events and then discard the event stream,
+causing future events to be ignored:
 
 ```rust
-// Set a breakpoint on StopInstance events
-let stop_receiver = breakpoint_system.set_breakpoints(vec![StopInstance::TYPE]).await?;
+// Subscribe to StopInstance events
+let stop_event_stream = event_source.subscribe(vec![StopInstance::TYPE]).await?;
 
 {
-    // Temporarily set a breakpoint on RouteCapability events
-    let use_receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
+    // Temporarily subscribe to RouteCapability events
+    let use_event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
 
     // Expect a RouteCapability event from ./bar:0
-    let invocation = route_receiver.expect_exact::<RouteCapability>("./bar:0").await?;
-    println!("/bar:0 used capability -> {}", invocation.capability_id);
-    invocation.resume().await?;
+    let event = route_event_stream.expect_exact::<RouteCapability>("./bar:0").await?;
+    println!("/bar:0 used capability -> {}", event.capability_id);
+    event.resume().await?;
 }
 
-// At this point, the test does not care about RouteCapability events, so the receiver
-// can be dropped. If the receiver were left instantiated, component manager would
-// halt on future RouteCapability events.
+// At this point, the test does not care about RouteCapability events, so the
+// event stream can be dropped. If the event stream were left instantiated,
+// component manager would halt on future RouteCapability events.
 
 // Expect a StopInstance event
-let invocation = stop_receiver.expect_type::<StopInstance>().await?;
-println!("{} was stopped!", invocation.target_moniker);
-invocation.resume().await?;
+let event = stop_event_stream.expect_type::<StopInstance>().await?;
+println!("{} was stopped!", event.target_moniker);
+event.resume().await?;
 ```
 
 #### Capability injection {#capability-injection}
@@ -311,31 +312,31 @@ It is possible to listen for a `RouteCapability` event and install the injector:
 // Create the server end of EchoService
 let echo_capability = EchoCapability::new();
 
-// Set a breakpoint on RouteCapability events
-let receiver = breakpoint_system.set_breakpoints(vec![RouteCapability::TYPE]).await?;
+// Subscribe to RouteCapability events
+let event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
 
 // Wait until ./foo:0 attempts to connect to the EchoService component capability
-let invocation = receiver.wait_until_component_capability(
+let event = event_stream.wait_until_component_capability(
     "./foo:0",
     "/svc/fuchsia.echo.EchoService",
 ).await?;
 
-invocation.inject(echo_capability).await?;
+event.inject(echo_capability).await?;
 
-// Resume from the invocation
-invocation.resume().await?;
+// Resume from the event
+event.resume().await?;
 ```
 
-Alternatively, the `BreakpointSystem` can automatically install an injector
+Alternatively, the `EventSourceSync` can automatically install an injector
 matching the capability requested by any component in the test.
 
 ```rust
 let echo_capability = EchoCapability::new();
-breakpoint_system.install_injector(echo_capability).await?;
+event_source.install_injector(echo_capability).await?;
 
-// Set up other breakpoints.
+// Subscribe to other events.
 
-breakpoint_system.start_component_tree().await?;
+event_source.start_component_tree().await?;
 ```
 
 #### Capability interposition {#capability-interposition}
@@ -385,26 +386,26 @@ The test can use `EchoInterposer` on any `RouteCapability` event:
 
 ```rust
 // Wait for echo_looper to attempt to connect to the Echo service
-let invocation = receiver
+let event = event_stream
     .wait_until_component_capability("/echo_looper:0", "/svc/fidl.examples.routing.echo.Echo")
     .await?;
 
 // Setup the interposer
 let (interposer, mut rx) = EchoInterposer::new();
-invocation.interpose(interposer).await?;
-invocation.resume().await?;
+event.interpose(interposer).await?;
+event.resume().await?;
 ```
 
-Alternatively, the `BreakpointSystem` can automatically install an interposer
+Alternatively, the `EventSourceSync` can automatically install an interposer
 matching the capability requested by any component in the test.
 
 ```rust
 let (interposer, mut rx) = EchoInterposer::new();
-breakpoint_system.install_interposer(interposer).await?;
+event_source.install_interposer(interposer).await?;
 
-// Set up other breakpoints.
+// Subscribe to othere events.
 
-breakpoint_system.start_component_tree().await?;
+event_source.start_component_tree().await?;
 ```
 
 #### Event sinks {#event-sinks}
@@ -413,12 +414,12 @@ It is possible to soak up events of certain types and drain them at a later
 point in time:
 
 ```rust
-let receiver = breakpoint_system.set_breakpoints(vec![PostDestroyInstance::TYPE]).await?;
-let sink = breakpoint_system.soak_events(vec![BeforeStartInstance::TYPE]).await?;
+let event_stream = event_source.subscribe(vec![PostDestroyInstance::TYPE]).await?;
+let sink = event_source.soak_events(vec![BeforeStartInstance::TYPE]).await?;
 
 // Wait for the root component to be destroyed
-let invocation = receiver.expect_exact::<PostDestroyInstance>(".").await?;
-invocation.resume().await?;
+let event = event_stream.expect_exact::<PostDestroyInstance>(".").await?;
+event.resume().await?;
 
 // Drain events from the sink
 let events = sink.drain().await;
@@ -442,7 +443,7 @@ assert_eq!(events, vec![
 
 ## Debug Mode {#debug-mode}
 
-Both `BlackBoxTest` and `BreakpointSystemClient` rely on component manager’s
+Both `BlackBoxTest` and `EventSource` rely on component manager’s
 debug mode.
 
 To start component manager in debug mode, pass in `--debug` as an additional
@@ -453,15 +454,15 @@ When component manager is in debug mode, it does the following:
 
 1. Creates the root realm and built-in services.
 
-1. Creates the hub and the breakpoint system.
+1. Creates the hub and the `EventSource`.
 
 1. Serves the following from component manager's outgoing directory:
 
    - The hub of the root component at `$out/hub`.
 
-   - The `BreakpointSystem` FIDL service at
-   `$out/svc/fuchsia.test.breakpoints.BreakpointSystem`.
+   - The `EventSourceSync` FIDL service at
+   `$out/svc/fuchsia.test.events.EventSourceSync`.
 
-1. Waits to be unblocked by the `BreakpointSystem` FIDL service.
+1. Waits to be unblocked by the `EventSourceSync` FIDL service.
 
 1. Starts up the root component (including any eager children).
