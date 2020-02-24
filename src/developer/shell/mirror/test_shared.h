@@ -17,6 +17,8 @@ namespace shell::mirror {
 class FileRepo {
  public:
   FileRepo(const async_loop_config_t* config) : loop_(config) {}
+  ~FileRepo();
+
   // Initializes a repo in memfs
   void InitMemRepo(std::string path);
 
@@ -27,6 +29,7 @@ class FileRepo {
  private:
   async::Loop loop_;
   std::string path_;
+  memfs_filesystem_t* fs_;
 };
 
 }  // namespace shell::mirror

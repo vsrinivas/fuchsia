@@ -14,7 +14,12 @@ namespace shell::mirror {
 void FileRepo::InitMemRepo(std::string path) {
   path_ = path;
   ASSERT_EQ(loop_.StartThread(), ZX_OK);
-  ASSERT_EQ(ZX_OK, memfs_install_at(loop_.dispatcher(), path.c_str()));
+  ASSERT_EQ(ZX_OK, memfs_install_at(loop_.dispatcher(), path.c_str(), &fs_));
+}
+
+FileRepo::~FileRepo() {
+  loop_.Shutdown();
+  memfs_uninstall_unsafe(fs_, path_.c_str());
 }
 
 void FileRepo::WriteFiles(const std::vector<std::pair<std::string, std::string>>& golden) {

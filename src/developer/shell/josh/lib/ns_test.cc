@@ -56,7 +56,8 @@ TEST_F(NsTest, ListFiles) {
   InitBuiltins("/pkg/data/fidling", "/pkg/data/lib");
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
-  ASSERT_EQ(ZX_OK, memfs_install_at(loop.dispatcher(), "/ns_test_tmp"));
+  memfs_filesystem_t* fs;
+  ASSERT_EQ(ZX_OK, memfs_install_at(loop.dispatcher(), "/ns_test_tmp", &fs));
 
   std::string test_string = R"(
       globalThis.resultOne = undefined;
@@ -124,6 +125,8 @@ TEST_F(NsTest, ListFiles) {
       }
   )";
   ASSERT_TRUE(Eval(test_string));
+  loop.Shutdown();
+  memfs_uninstall_unsafe(fs, "/ns_test_tmp");
 }
 
 TEST_F(NsTest, ListRootDir) {

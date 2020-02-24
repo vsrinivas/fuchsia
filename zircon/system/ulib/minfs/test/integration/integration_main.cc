@@ -42,12 +42,16 @@ int main(int argc, char** argv) {
     printf("Unable to initialize local tmpfs loop\n");
     return -1;
   }
-  if (memfs_install_at(loop.dispatcher(), "/minfs-tmp") != ZX_OK) {
+  memfs_filesystem_t* fs;
+  if (memfs_install_at(loop.dispatcher(), "/minfs-tmp", &fs) != ZX_OK) {
     printf("Unable to install local tmpfs\n");
     return -1;
   }
 
   zxtest::Runner::GetInstance()->AddGlobalTestEnvironment(std::move(parent));
 
-  return RUN_ALL_TESTS(argc, argv);
+  int result = RUN_ALL_TESTS(argc, argv);
+  loop.Shutdown();
+  memfs_uninstall_unsafe(fs, "/minfs-tmp");
+  return result;
 }

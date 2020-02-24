@@ -8,8 +8,8 @@
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fdio/unsafe.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fdio/unsafe.h>
 #include <lib/memfs/memfs.h>
 #include <limits.h>
 #include <unistd.h>
@@ -105,16 +105,22 @@ int main(int argc, char** argv) {
     }
   }
 
-  // Initialize tmpfs.
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  if (loop.StartThread() != ZX_OK) {
-    fprintf(stderr, "Error: Cannot initialize local tmpfs loop\n");
-    return -1;
-  }
-  if (memfs_install_at(loop.dispatcher(), kTmpfsPath) != ZX_OK) {
-    fprintf(stderr, "Error: Cannot install local tmpfs\n");
-    return -1;
-  }
+  int result;
+  memfs_filesystem_t* fs;
+  {
+    // Initialize tmpfs.
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    if (loop.StartThread() != ZX_OK) {
+      fprintf(stderr, "Error: Cannot initialize local tmpfs loop\n");
+      return -1;
+    }
+    if (memfs_install_at(loop.dispatcher(), kTmpfsPath, &fs) != ZX_OK) {
+      fprintf(stderr, "Error: Cannot install local tmpfs\n");
+      return -1;
+    }
 
-  return unittest_run_all_tests(argc, argv) ? 0 : -1;
+    result = unittest_run_all_tests(argc, argv) ? 0 : -1;
+  }
+  memfs_uninstall_unsafe(fs, kTmpfsPath);
+  return result;
 }

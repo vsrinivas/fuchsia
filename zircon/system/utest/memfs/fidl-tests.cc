@@ -34,33 +34,37 @@ namespace fio = ::llcpp::fuchsia::io;
 bool TestFidlBasic() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop.StartThread(), ZX_OK);
+  memfs_filesystem_t* fs;
+  {
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp"), ZX_OK);
-  fbl::unique_fd fd(open("/fidltmp", O_DIRECTORY | O_RDONLY));
-  ASSERT_GE(fd.get(), 0);
+    ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp", &fs), ZX_OK);
+    fbl::unique_fd fd(open("/fidltmp", O_DIRECTORY | O_RDONLY));
+    ASSERT_GE(fd.get(), 0);
 
-  // Create a file
-  const char* filename = "file-a";
-  fd.reset(openat(fd.get(), filename, O_CREAT | O_RDWR));
-  ASSERT_GE(fd.get(), 0);
-  const char* data = "hello";
-  ssize_t datalen = strlen(data);
-  ASSERT_EQ(write(fd.get(), data, datalen), datalen);
-  fd.reset();
+    // Create a file
+    const char* filename = "file-a";
+    fd.reset(openat(fd.get(), filename, O_CREAT | O_RDWR));
+    ASSERT_GE(fd.get(), 0);
+    const char* data = "hello";
+    ssize_t datalen = strlen(data);
+    ASSERT_EQ(write(fd.get(), data, datalen), datalen);
+    fd.reset();
 
-  zx_handle_t h, request;
-  ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);
-  ASSERT_EQ(fdio_service_connect("/fidltmp/file-a", request), ZX_OK);
+    zx_handle_t h, request;
+    ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);
+    ASSERT_EQ(fdio_service_connect("/fidltmp/file-a", request), ZX_OK);
 
-  auto describe_result = fio::File::Call::Describe(zx::unowned_channel(h));
-  ASSERT_EQ(describe_result.status(), ZX_OK);
-  ASSERT_TRUE(describe_result.Unwrap()->info.is_file());
-  ASSERT_EQ(describe_result.Unwrap()->info.file().event.get(), ZX_HANDLE_INVALID);
-  zx_handle_close(h);
+    auto describe_result = fio::File::Call::Describe(zx::unowned_channel(h));
+    ASSERT_EQ(describe_result.status(), ZX_OK);
+    ASSERT_TRUE(describe_result.Unwrap()->info.is_file());
+    ASSERT_EQ(describe_result.Unwrap()->info.file().event.get(), ZX_HANDLE_INVALID);
+    zx_handle_close(h);
 
-  loop.Shutdown();
+    loop.Shutdown();
+  }
+  ASSERT_EQ(memfs_uninstall_unsafe(fs, "/fidltmp"), ZX_OK);
 
   // No way to clean up the namespace entry. See ZX-2013 for more details.
 
@@ -70,30 +74,34 @@ bool TestFidlBasic() {
 bool TestFidlOpenReadOnly() {
   BEGIN_TEST;
 
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  ASSERT_EQ(loop.StartThread(), ZX_OK);
+  memfs_filesystem_t* fs;
+  {
+    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    ASSERT_EQ(loop.StartThread(), ZX_OK);
 
-  ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp-ro"), ZX_OK);
-  fbl::unique_fd fd(open("/fidltmp-ro", O_DIRECTORY | O_RDONLY));
-  ASSERT_GE(fd.get(), 0);
+    ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp-ro", &fs), ZX_OK);
+    fbl::unique_fd fd(open("/fidltmp-ro", O_DIRECTORY | O_RDONLY));
+    ASSERT_GE(fd.get(), 0);
 
-  // Create a file
-  const char* filename = "file-ro";
-  fd.reset(openat(fd.get(), filename, O_CREAT | O_RDWR));
-  ASSERT_GE(fd.get(), 0);
-  fd.reset();
+    // Create a file
+    const char* filename = "file-ro";
+    fd.reset(openat(fd.get(), filename, O_CREAT | O_RDWR));
+    ASSERT_GE(fd.get(), 0);
+    fd.reset();
 
-  zx_handle_t h, request;
-  ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);
-  ASSERT_EQ(fdio_open("/fidltmp-ro/file-ro", ZX_FS_RIGHT_READABLE, request), ZX_OK);
+    zx_handle_t h, request;
+    ASSERT_EQ(zx_channel_create(0, &h, &request), ZX_OK);
+    ASSERT_EQ(fdio_open("/fidltmp-ro/file-ro", ZX_FS_RIGHT_READABLE, request), ZX_OK);
 
-  auto result = fio::File::Call::GetFlags(zx::unowned_channel(h));
-  ASSERT_EQ(result.status(), ZX_OK);
-  ASSERT_EQ(result.Unwrap()->s, ZX_OK);
-  ASSERT_EQ(result.Unwrap()->flags, ZX_FS_RIGHT_READABLE);
-  zx_handle_close(h);
+    auto result = fio::File::Call::GetFlags(zx::unowned_channel(h));
+    ASSERT_EQ(result.status(), ZX_OK);
+    ASSERT_EQ(result.Unwrap()->s, ZX_OK);
+    ASSERT_EQ(result.Unwrap()->flags, ZX_FS_RIGHT_READABLE);
+    zx_handle_close(h);
 
-  loop.Shutdown();
+    loop.Shutdown();
+  }
+  memfs_uninstall_unsafe(fs, nullptr);
 
   // No way to clean up the namespace entry. See ZX-2013 for more details.
 
@@ -127,8 +135,8 @@ bool TestFidlQueryFilesystem() {
   {
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_EQ(loop.StartThread(), ZX_OK);
-
-    ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp-basic"), ZX_OK);
+    memfs_filesystem_t* fs;
+    ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/fidltmp-basic", &fs), ZX_OK);
     fbl::unique_fd fd(open("/fidltmp-basic", O_DIRECTORY | O_RDONLY));
     ASSERT_GE(fd.get(), 0);
 
@@ -141,6 +149,7 @@ bool TestFidlQueryFilesystem() {
     ASSERT_EQ(info.used_bytes, 0);
 
     loop.Shutdown();
+    ASSERT_EQ(memfs_uninstall_unsafe(fs, "/fidltmp-basic"), ZX_OK);
   }
 
   // No way to clean up the namespace entry. See ZX-2013 for more details.

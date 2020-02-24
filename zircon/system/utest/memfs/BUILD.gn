@@ -48,9 +48,6 @@ test("memfs") {
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-io:llcpp",
   ]
-
-  # TODO(46862): Fix the leaks and remove this.
-  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 migrated_manifest("memfs-manifest") {

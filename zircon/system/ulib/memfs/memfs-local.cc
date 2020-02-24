@@ -57,7 +57,8 @@ zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher, memfs_filesy
   return ZX_OK;
 }
 
-zx_status_t memfs_install_at(async_dispatcher_t* dispatcher, const char* path) {
+zx_status_t memfs_install_at(async_dispatcher_t* dispatcher, const char* path,
+                             memfs_filesystem_t** out_fs) {
   fdio_ns_t* ns;
   zx_status_t status = fdio_ns_get_installed(&ns);
   if (status != ZX_OK) {
@@ -77,6 +78,26 @@ zx_status_t memfs_install_at(async_dispatcher_t* dispatcher, const char* path) {
     return status;
   }
 
+  if (out_fs != nullptr) {
+    *out_fs = fs;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t memfs_uninstall_unsafe(memfs_filesystem_t* fs, const char* path) {
+  fdio_ns_t* ns;
+  zx_status_t status = fdio_ns_get_installed(&ns);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = fdio_ns_unbind(ns, path);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  delete fs;
   return ZX_OK;
 }
 

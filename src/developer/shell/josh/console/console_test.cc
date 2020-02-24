@@ -19,7 +19,8 @@
 TEST(Console, Sanity) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
-  ASSERT_EQ(ZX_OK, memfs_install_at(loop.dispatcher(), "/test_tmp"));
+  memfs_filesystem_t* fs;
+  ASSERT_EQ(ZX_OK, memfs_install_at(loop.dispatcher(), "/test_tmp", &fs));
 
   constexpr const char* name = "/test_tmp/tmp.XXXXXX";
   std::unique_ptr<char[]> buffer(new char[strlen(name) + 1]);
@@ -41,4 +42,6 @@ TEST(Console, Sanity) {
   std::ifstream in(filename.c_str());
   std::string actual((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
   ASSERT_STREQ(expected.c_str(), actual.c_str());
+  loop.Shutdown();
+  memfs_uninstall_unsafe(fs, "/test_tmp");
 }
