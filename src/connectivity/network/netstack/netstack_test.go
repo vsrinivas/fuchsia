@@ -65,16 +65,16 @@ func TestStackNICEnableDisable(t *testing.T) {
 	}
 
 	// Bringing the link up should enable the NIC in stack.Stack.
-	if err := ifs.eth.Up(); err != nil {
-		t.Fatal("ifs.eth.Up(): ", err)
+	if err := ifs.controller.Up(); err != nil {
+		t.Fatal("ifs.controller.Up(): ", err)
 	}
 	if enabled := ns.stack.CheckNIC(ifs.nicid); !enabled {
 		t.Fatalf("got ns.stack.CheckNIC(%d) = false, want = true", ifs.nicid)
 	}
 
 	// Bringing the link down should disable the NIC in stack.Stack.
-	if err := ifs.eth.Down(); err != nil {
-		t.Fatal("ifs.eth.Down(): ", err)
+	if err := ifs.controller.Down(); err != nil {
+		t.Fatal("ifs.controller.Down(): ", err)
 	}
 	if enabled := ns.stack.CheckNIC(ifs.nicid); enabled {
 		t.Fatalf("got ns.stack.CheckNIC(%d) = true, want = false", ifs.nicid)
@@ -410,8 +410,8 @@ func TestIpv6LinkLocalAddr(t *testing.T) {
 	if err != nil {
 		t.Fatalf("addEth(_, _, _): %s", err)
 	}
-	if err := ifs.eth.Up(); err != nil {
-		t.Fatal("ifs.eth.Up(): ", err)
+	if err := ifs.controller.Up(); err != nil {
+		t.Fatal("ifs.controller.Up(): ", err)
 	}
 
 	want := tcpip.ProtocolAddress{
@@ -473,7 +473,7 @@ func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
 
 	// Bringing the ethernet device up should result in the link-local
 	// route being added.
-	if err := ifs.eth.Up(); err != nil {
+	if err := ifs.controller.Up(); err != nil {
 		t.Fatalf("eth.Up(): %s", err)
 	}
 	rt = ns.stack.GetRouteTable()
@@ -483,7 +483,7 @@ func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
 
 	// Bringing the ethernet device down should result in the link-local
 	// route being removed.
-	if err := ifs.eth.Down(); err != nil {
+	if err := ifs.controller.Down(); err != nil {
 		t.Fatalf("eth.Down(): %s", err)
 	}
 	rt = ns.stack.GetRouteTable()
@@ -561,7 +561,7 @@ func TestDhcpConfiguration(t *testing.T) {
 
 	ifs.setDHCPStatus(name, true)
 
-	ifs.eth.Up()
+	ifs.controller.Up()
 
 	ifs.mu.Lock()
 	if !ifs.mu.dhcp.enabled {
@@ -573,7 +573,7 @@ func TestDhcpConfiguration(t *testing.T) {
 	}
 	ifs.mu.Unlock()
 
-	ifs.eth.Down()
+	ifs.controller.Down()
 
 	ifs.mu.Lock()
 	if ifs.mu.dhcp.running() {
@@ -584,7 +584,7 @@ func TestDhcpConfiguration(t *testing.T) {
 	}
 	ifs.mu.Unlock()
 
-	ifs.eth.Up()
+	ifs.controller.Up()
 
 	ifs.mu.Lock()
 	if !ifs.mu.dhcp.running() {
@@ -657,7 +657,7 @@ func TestStaticIPConfiguration(t *testing.T) {
 	}
 	ifs.mu.Unlock()
 
-	ifs.eth.Down()
+	ifs.controller.Down()
 
 	ifs.mu.Lock()
 	if ifs.mu.dhcp.enabled {
@@ -668,7 +668,7 @@ func TestStaticIPConfiguration(t *testing.T) {
 	}
 	ifs.mu.Unlock()
 
-	ifs.eth.Up()
+	ifs.controller.Up()
 
 	ifs.mu.Lock()
 	if ifs.mu.dhcp.enabled {
@@ -873,8 +873,8 @@ func TestListInterfaceAddresses(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ifState.eth.Up(); err != nil {
-		t.Fatal("ifState.eth.Up(): ", err)
+	if err := ifState.controller.Up(); err != nil {
+		t.Fatal("ifState.controller.Up(): ", err)
 	}
 
 	waitForDAD := func(addr tcpip.Address) {

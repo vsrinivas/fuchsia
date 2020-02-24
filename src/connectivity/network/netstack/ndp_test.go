@@ -127,8 +127,8 @@ func TestSendingOnInterfacesChangedEvent(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := ifs.eth.Up(); err != nil {
-				t.Fatalf("ifs.eth.Up(): %s", err)
+			if err := ifs.controller.Up(); err != nil {
+				t.Fatalf("ifs.controller.Up(): %s", err)
 			}
 
 			req, cli, err := netstack.NewNetstackInterfaceRequest()
@@ -178,8 +178,8 @@ func TestNDPInvalidateUnknownIPv6Router(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ifs.eth.Up(); err != nil {
-		t.Fatalf("ifs.eth.Up(): %s", err)
+	if err := ifs.controller.Up(); err != nil {
+		t.Fatalf("ifs.controller.Up(): %s", err)
 	}
 
 	// Invalidate the router with IP testLinkLocalV6Addr1 from eth (even
@@ -206,16 +206,16 @@ func TestNDPIPv6RouterDiscovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ifs1.eth.Up(); err != nil {
-		t.Fatalf("ifs1.eth.Up(): %s", err)
+	if err := ifs1.controller.Up(); err != nil {
+		t.Fatalf("ifs1.controller.Up(): %s", err)
 	}
 	eth2 := deviceForAddEth(ethernet.Info{}, t)
 	ifs2, err := ns.addEth("/path2", netstack.InterfaceConfig{Name: "name2"}, &eth2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ifs2.eth.Up(); err != nil {
-		t.Fatalf("ifs2.eth.Up(): %s", err)
+	if err := ifs2.controller.Up(); err != nil {
+		t.Fatalf("ifs2.controller.Up(): %s", err)
 	}
 
 	// Test discovering a new default router on eth1.
@@ -328,8 +328,8 @@ func TestNDPInvalidateUnknownIPv6Prefix(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ifs.eth.Up(); err != nil {
-		t.Fatalf("ifs.eth.Up(): %s", err)
+	if err := ifs.controller.Up(); err != nil {
+		t.Fatalf("ifs.controller.Up(): %s", err)
 	}
 
 	// Invalidate the prefix subnet1 from eth (even though we do not yet know
@@ -356,16 +356,16 @@ func TestNDPIPv6PrefixDiscovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ifs1.eth.Up(); err != nil {
-		t.Fatalf("ifs1.eth.Up(): %s", err)
+	if err := ifs1.controller.Up(); err != nil {
+		t.Fatalf("ifs1.controller.Up(): %s", err)
 	}
 	eth2 := deviceForAddEth(ethernet.Info{}, t)
 	ifs2, err := ns.addEth("/path2", netstack.InterfaceConfig{Name: "name2"}, &eth2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ifs2.eth.Up(); err != nil {
-		t.Fatalf("ifs2.eth.Up(): %s", err)
+	if err := ifs2.controller.Up(); err != nil {
+		t.Fatalf("ifs2.controller.Up(): %s", err)
 	}
 
 	// Test discovering a new on-link prefix on eth1.
@@ -477,8 +477,8 @@ func TestLinkDown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ifs1.eth.Up(); err != nil {
-		t.Fatalf("ifs1.eth.Up(): %s", err)
+	if err := ifs1.controller.Up(); err != nil {
+		t.Fatalf("ifs1.controller.Up(): %s", err)
 	}
 	eth2 := deviceForAddEth(ethernet.Info{}, t)
 	eth2.StopImpl = func() error { return nil }
@@ -486,8 +486,8 @@ func TestLinkDown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ifs2.eth.Up(); err != nil {
-		t.Fatalf("ifs2.eth.Up(): %s", err)
+	if err := ifs2.controller.Up(); err != nil {
+		t.Fatalf("ifs2.controller.Up(): %s", err)
 	}
 
 	addr1NIC1 := tcpip.FullAddress{
@@ -538,8 +538,8 @@ func TestLinkDown(t *testing.T) {
 
 	// Bring eth2 down and make sure the DNS servers learned from that NIC are
 	// invalidated.
-	if err := ifs2.eth.Down(); err != nil {
-		t.Fatalf("ifs2.eth.Down(): %s", err)
+	if err := ifs2.controller.Down(); err != nil {
+		t.Fatalf("ifs2.controller.Down(): %s", err)
 	}
 	waitForEmptyQueue(ndpDisp)
 	servers = ns.dnsClient.GetServersCache()
@@ -560,8 +560,8 @@ func TestLinkDown(t *testing.T) {
 
 	// Bring eth2 up and make sure the DNS servers learned from that NIC do not
 	// reappear.
-	if err := ifs2.eth.Up(); err != nil {
-		t.Fatalf("ifs2.eth.Up(): %s", err)
+	if err := ifs2.controller.Up(); err != nil {
+		t.Fatalf("ifs2.controller.Up(): %s", err)
 	}
 	waitForEmptyQueue(ndpDisp)
 	servers = ns.dnsClient.GetServersCache()
@@ -601,8 +601,8 @@ func TestRecursiveDNSServers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ifs1.eth.Up(); err != nil {
-		t.Fatalf("ifs1.eth.Up(): %s", err)
+	if err := ifs1.controller.Up(); err != nil {
+		t.Fatalf("ifs1.controller.Up(): %s", err)
 	}
 	eth2 := deviceForAddEth(ethernet.Info{}, t)
 	eth2.StopImpl = func() error { return nil }
@@ -610,8 +610,8 @@ func TestRecursiveDNSServers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ifs2.eth.Up(); err != nil {
-		t.Fatalf("ifs2.eth.Up(): %s", err)
+	if err := ifs2.controller.Up(); err != nil {
+		t.Fatalf("ifs2.controller.Up(): %s", err)
 	}
 
 	addr1NIC1 := tcpip.FullAddress{
@@ -723,8 +723,8 @@ func TestRecursiveDNSServersWithInfiniteLifetime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ifs1.eth.Up(); err != nil {
-		t.Fatalf("ifs1.eth.Up(): %s", err)
+	if err := ifs1.controller.Up(); err != nil {
+		t.Fatalf("ifs1.controller.Up(): %s", err)
 	}
 
 	addr1 := tcpip.FullAddress{

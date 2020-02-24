@@ -262,10 +262,10 @@ type Netstack struct {
 
 // Each ifState tracks the state of a network interface.
 type ifState struct {
-	ns       *Netstack
-	eth      link.Controller
-	nicid    tcpip.NICID
-	filepath string
+	ns         *Netstack
+	controller link.Controller
+	nicid      tcpip.NICID
+	filepath   string
 	// features can include any value that's valid in fuchsia.hardware.ethernet.Info.features.
 	features uint32
 	mu       struct {
@@ -816,7 +816,7 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 			panic("NIC known by netstack not in interface table")
 		}
 		ifs := nicInfo.Context.(*ifState)
-		if err := ifs.eth.SetPromiscuousMode(true); err != nil {
+		if err := ifs.controller.SetPromiscuousMode(true); err != nil {
 			return nil, err
 		}
 		links = append(links, ifs.bridgeable)
@@ -859,10 +859,10 @@ func (ns *Netstack) addEndpoint(
 	enabled bool,
 ) (*ifState, error) {
 	ifs := &ifState{
-		ns:       ns,
-		eth:      controller,
-		filepath: filepath,
-		features: features,
+		ns:         ns,
+		controller: controller,
+		filepath:   filepath,
+		features:   features,
 	}
 
 	ifs.mu.state = link.StateUnknown
@@ -870,7 +870,7 @@ func (ns *Netstack) addEndpoint(
 	ifs.mu.dhcp.running = func() bool { return false }
 	ifs.mu.dhcp.cancel = func() {}
 
-	ifs.eth.SetOnStateChange(ifs.stateChange)
+	ifs.controller.SetOnStateChange(ifs.stateChange)
 
 	// LinkEndpoint chains:
 	// Put sniffer as close as the NIC.

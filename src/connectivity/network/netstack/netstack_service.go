@@ -380,15 +380,15 @@ func (ni *netstackImpl) SetInterfaceStatus(nicid uint32, enabled bool) error {
 	var err error
 	var op string
 	if enabled {
-		err = ifs.eth.Up()
+		err = ifs.controller.Up()
 		op = "Up()"
 	} else {
-		err = ifs.eth.Down()
+		err = ifs.controller.Down()
 		op = "Down()"
 	}
 
 	if err != nil {
-		syslog.Infof("(NIC %d).eth.%s = %s", nicid, op, err)
+		syslog.Infof("(NIC %d).controller.%s = %s", nicid, op, err)
 	}
 	return nil
 }

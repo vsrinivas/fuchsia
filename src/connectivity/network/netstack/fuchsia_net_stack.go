@@ -54,10 +54,10 @@ func getInterfaceInfo(nicInfo tcpipstack.NICInfo) stack.InterfaceInfo {
 
 	var mac *ethernet.MacAddress
 	var topopath string
-	if eth := ifs.eth; eth != nil {
+	if controller := ifs.controller; controller != nil {
 		mac = &ethernet.MacAddress{}
 		copy(mac.Octets[:], ifs.endpoint.LinkAddress())
-		topopath = eth.Path()
+		topopath = controller.Path()
 	}
 
 	return stack.InterfaceInfo{
@@ -114,8 +114,8 @@ func (ns *Netstack) delInterface(id uint64) stack.StackDelEthernetInterfaceResul
 	}
 
 	ifs := nicInfo.Context.(*ifState)
-	if err := ifs.eth.Close(); err != nil {
-		syslog.Errorf("ifs.eth.Close() failed (NIC: %d): %v", id, err)
+	if err := ifs.controller.Close(); err != nil {
+		syslog.Errorf("ifs.controller.Close() failed (NIC: %d): %v", id, err)
 		result.SetErr(stack.ErrorInternal)
 		return result
 	}
@@ -149,8 +149,8 @@ func (ns *Netstack) enableInterface(id uint64) stack.StackEnableInterfaceResult 
 	}
 
 	ifs := nicInfo.Context.(*ifState)
-	if err := ifs.eth.Up(); err != nil {
-		syslog.Errorf("ifs.eth.Up() failed (NIC %d): %s", id, err)
+	if err := ifs.controller.Up(); err != nil {
+		syslog.Errorf("ifs.controller.Up() failed (NIC %d): %s", id, err)
 		result.SetErr(stack.ErrorInternal)
 		return result
 	}
@@ -169,8 +169,8 @@ func (ns *Netstack) disableInterface(id uint64) stack.StackDisableInterfaceResul
 	}
 
 	ifs := nicInfo.Context.(*ifState)
-	if err := ifs.eth.Down(); err != nil {
-		syslog.Errorf("ifs.eth.Down() failed (NIC %d): %s", id, err)
+	if err := ifs.controller.Down(); err != nil {
+		syslog.Errorf("ifs.controller.Down() failed (NIC %d): %s", id, err)
 		result.SetErr(stack.ErrorInternal)
 		return result
 	}
