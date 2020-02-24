@@ -94,6 +94,7 @@ TEST(SherlockAudioStreamOutTest, CodecInitGood) {
 
   ASSERT_NOT_NULL(server);
   server->DdkUnbindDeprecated();
+  server->DdkRelease();
   EXPECT_TRUE(tester.Ok());
   audio_enable_gpio.VerifyAndClear();
 }
