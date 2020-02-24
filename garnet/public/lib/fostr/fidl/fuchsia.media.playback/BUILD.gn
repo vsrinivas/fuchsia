@@ -11,6 +11,5 @@ fostr_fidl("fuchsia.media.playback") {
     "//garnet/public/lib/fostr/fidl/fuchsia.math",
     "//garnet/public/lib/fostr/fidl/fuchsia.media",
     "//garnet/public/lib/fostr/fidl/fuchsia.media.audio",
-    "//garnet/public/lib/fostr/fidl/fuchsia.net.oldhttp",
   ]
 }
