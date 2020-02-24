@@ -78,9 +78,6 @@ group("drivers") {
     "//src/graphics/drivers",
     "//src/media/drivers",
   ]
-  if (target_cpu == "arm64") {
-    public_deps += [ "//garnet/packages/prod:amlogic_video_decoder" ]
-  }
   if (target_cpu == "x64") {
     public_deps += [
       "//garnet/packages/prod:goldfish-vulkan",
@@ -452,16 +449,6 @@ group("wlanif") {
     "//src/connectivity/wlan/drivers/wlan",
     "//src/connectivity/wlan/drivers/wlanif",
   ]
-}
-
-if (target_cpu == "arm64") {
-  group("amlogic_video_decoder") {
-    testonly = true
-    public_deps = [
-      "//src/media/drivers/amlogic_decoder",
-      "//src/media/drivers/amlogic_decoder:amlogic_video_decoder_test_build",
-    ]
-  }
 }
 
 group("wlanphy") {

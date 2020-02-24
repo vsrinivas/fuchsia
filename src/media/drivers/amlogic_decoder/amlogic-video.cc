@@ -93,6 +93,7 @@ AmlogicVideo::AmlogicVideo() {
 }
 
 AmlogicVideo::~AmlogicVideo() {
+  LOG(INFO, "Tearing down AmlogicVideo");
   if (vdec0_interrupt_handle_) {
     zx_interrupt_destroy(vdec0_interrupt_handle_.get());
     if (vdec0_interrupt_thread_.joinable())

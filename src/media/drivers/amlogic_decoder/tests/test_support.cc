@@ -4,8 +4,9 @@
 
 #include "test_support.h"
 
-#include <ddk/driver.h>
 #include <lib/zx/vmar.h>
+
+#include <ddk/driver.h>
 
 #include "gtest/gtest.h"
 
@@ -20,11 +21,11 @@ zx_device_t* TestSupport::parent_device() { return g_parent_device; }
 
 void TestSupport::set_parent_device(zx_device_t* handle) { g_parent_device = handle; }
 
-void TestSupport::RunAllTests() {
+bool TestSupport::RunAllTests() {
   const int kArgc = 1;
   const char* argv[kArgc] = {"test_support"};
   testing::InitGoogleTest(const_cast<int*>(&kArgc), const_cast<char**>(argv));
-  (void)RUN_ALL_TESTS();
+  return RUN_ALL_TESTS() == 0;
 }
 
 std::unique_ptr<TestSupport::FirmwareFile> TestSupport::LoadFirmwareFile(const char* name) {

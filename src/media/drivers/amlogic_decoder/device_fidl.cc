@@ -14,9 +14,6 @@ DeviceFidl::DeviceFidl(DeviceCtx* device) : device_(device) {
 }
 
 DeviceFidl::~DeviceFidl() {
-  // If we hit this in any useful situation, we'll need to implement this.
-  ZX_ASSERT_MSG(false, "not implemented");
-
   // The DeviceCtx should have already moved over to the shared_fidl_thread()
   // for this (if ~DeviceCtx implemented), else it's not safe to ~fidl::Binding.
   //

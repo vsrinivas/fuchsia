@@ -8,8 +8,6 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 
 declare_args() {
-  amlogic_decoder_tests = false
-
   # Path to the amlogic decoder firmware file. Overrides the default in the build.
   amlogic_decoder_firmware_path = ""
 }
@@ -17,8 +15,21 @@ declare_args() {
 # These targets only compile for arm64.
 if (target_cpu == "arm64") {
   group("amlogic_decoder") {
+    deps = [
+      ":amlogic_decoder_firmware",
+      ":amlogic_decoder_package",
+    ]
+  }
+
+  group("tests") {
     testonly = true
-    deps = [ ":amlogic_decoder_package" ]
+
+    deps = [
+      ":amlogic_decoder_firmware",
+      ":amlogic_decoder_test_package",
+      ":test_amlogic_codec_factory_package",
+      "tests/runner:amlogic_decoder_integration_tests",
+    ]
   }
 
   driver_module("amlogic_video_decoder") {
@@ -27,7 +38,10 @@ if (target_cpu == "arm64") {
       ":test_support",
     ]
 
-    sources = [ "tests/test_support_disabled.cc" ]
+    sources = [
+      "binding.c",
+      "tests/test_support_disabled.cc",
+    ]
 
     configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
     configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
@@ -41,8 +55,9 @@ if (target_cpu == "arm64") {
 
     deps = [
       ":sources",
-      ":tests",
+      ":test_sources",
     ]
+    sources = [ "test_binding.c" ]
 
     configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
     configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
@@ -50,9 +65,6 @@ if (target_cpu == "arm64") {
 
   config("sources_include_config") {
     include_dirs = [ "." ]
-    if (amlogic_decoder_tests) {
-      include_dirs += [ "./tests/integration/test_data_headers" ]
-    }
   }
 
   source_set("test_support") {
@@ -74,7 +86,6 @@ if (target_cpu == "arm64") {
       # HW driving:
       "amlogic-video.cc",
       "amlogic-video.h",
-      "binding.c",
       "decoder_core.h",
       "firmware_blob.cc",
       "firmware_blob.h",
@@ -137,6 +148,7 @@ if (target_cpu == "arm64") {
       "//zircon/public/lib/hwreg",
       "//zircon/public/lib/mmio",
       "//zircon/public/lib/safemath",
+      "//zircon/public/lib/sync",
       "//zircon/public/lib/tee-client-api",
       "//zircon/public/lib/zx",
       "//zircon/system/banjo/ddk.protocol.amlogiccanvas",
@@ -157,7 +169,7 @@ if (target_cpu == "arm64") {
     cflags = []
   }
 
-  source_set("tests") {
+  source_set("test_sources") {
     testonly = true
     deps = [
       ":sources",
@@ -193,81 +205,72 @@ if (target_cpu == "arm64") {
     outputs = [ "$root_out_dir/firmware/video_test_data/{{source_file_part}}" ]
   }
 
+  package("amlogic_decoder_firmware") {
+    deprecated_system_image = true
+    if (amlogic_decoder_firmware_path == "") {
+      amlogic_decoder_firmware_path =
+          "//prebuilt/media/firmware/amlogic-decoder/video_ucode.bin"
+    }
+    libraries = [
+      {
+        source = rebase_path(amlogic_decoder_firmware_path)
+        name = "firmware/amlogic_video_ucode.bin"
+      },
+    ]
+  }
+
   package("amlogic_decoder_package") {
     deprecated_system_image = true
 
     # internal access is needed to get the firmware from the default path
     if (target_cpu == "arm64" &&
         (internal_access || amlogic_decoder_firmware_path != "")) {
-      if (amlogic_decoder_tests) {
-        testonly = true
-      }
-
-      if (amlogic_decoder_firmware_path == "") {
-        amlogic_decoder_firmware_path =
-            "//prebuilt/media/firmware/amlogic-decoder/video_ucode.bin"
-      }
-      libraries = [
+      deps = [ ":amlogic_video_decoder" ]
+      drivers = [
         {
-          source = rebase_path(amlogic_decoder_firmware_path)
-          name = "firmware/amlogic_video_ucode.bin"
+          name = "amlogic_video_decoder.so"
         },
       ]
-
-      deps = []
-      if (amlogic_decoder_tests) {
-        deps += [
-          ":amlogic_decoder_test",
-          ":test_files($shlib_toolchain)",
-        ]
-        drivers = [
-          {
-            name = "amlogic_video_decoder_test.so"
-          },
-        ]
-
-        # The test data is stored as a firmware file, because that's the only way
-        # that a file can be read from a driver.
-        libraries += [
-          {
-            name = "firmware/video_test_data/bear.mpeg2"
-          },
-          {
-            name = "firmware/video_test_data/bear.h264"
-          },
-          {
-            name = "firmware/video_test_data/test-25fps.h264"
-          },
-          {
-            name = "firmware/video_test_data/test-25fps.vp9"
-          },
-          {
-            name = "firmware/video_test_data/test-25fps.vp9_2"
-          },
-        ]
-      } else {
-        deps += [ ":amlogic_video_decoder" ]
-        drivers = [
-          {
-            name = "amlogic_video_decoder.so"
-          },
-        ]
-      }
-    } else {
-      assert(!amlogic_decoder_tests, "amlogic decoder not built")
     }
   }
 
-  # This causes both versions of the driver to be built, so compile
-  # errors in tests are hit on the CQ.
-  group("amlogic_video_decoder_test_build") {
-    testonly = true
+  package("amlogic_decoder_test_package") {
+    deprecated_system_image = true
 
-    if (target_cpu == "arm64") {
-      deps = [
-        ":amlogic_decoder",
+    # internal access is needed to get the firmware from the default path
+    if (target_cpu == "arm64" &&
+        (internal_access || amlogic_decoder_firmware_path != "")) {
+      testonly = true
+
+      deps = []
+      deps += [
         ":amlogic_decoder_test",
-        ":test_amlogic_codec_factory_package",
+        ":test_files($shlib_toolchain)",
+      ]
+      drivers = [
+        {
+          name = "amlogic_video_decoder_test.so"
+        },
+      ]
+
+      # The test data is stored as a firmware file, because that's the only way
+      # that a file can be read from a driver.
+      libraries = [
+        {
+          name = "firmware/video_test_data/bear.mpeg2"
+        },
+        {
+          name = "firmware/video_test_data/bear.h264"
+        },
+        {
+          name = "firmware/video_test_data/test-25fps.h264"
+        },
+        {
+          name = "firmware/video_test_data/test-25fps.vp9"
+        },
+        {
+          name = "firmware/video_test_data/test-25fps.vp9_2"
+        },
       ]
     }
   }

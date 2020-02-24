@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "test/disabled/amlogic_decoder_integration_tests"
+    },
+    "sandbox": {
+        "dev": [
+            "aml-video"
+        ],
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}

@@ -5,6 +5,7 @@
 #include "device_ctx.h"
 
 #include <fuchsia/hardware/mediacodec/c/fidl.h>
+#include <lib/sync/completion.h>
 
 #include "amlogic-video.h"
 #include "macros.h"
@@ -24,11 +25,11 @@ static zx_status_t amlogic_video_message(void* ctx, fidl_msg_t* msg, fidl_txn_t*
   return fuchsia_hardware_mediacodec_Device_dispatch(ctx, txn, msg, &kFidlOps);
 }
 
+static void amlogic_release(void* ctx) { delete static_cast<DeviceCtx*>(ctx); }
+
 static zx_protocol_device_t amlogic_video_device_ops = {
-    DEVICE_OPS_VERSION, .message = amlogic_video_message,
-    // TODO(jbauman) or TODO(dustingreen): .suspend .resume, maybe .release if
-    // it would ever be run.  Currently ~AmlogicVideo code sets lower power, but
-    // ~AmlogicVideo doesn't run yet.
+    DEVICE_OPS_VERSION, .release = amlogic_release, .message = amlogic_video_message,
+    // TODO(jbauman) or TODO(dustingreen): .suspend .resume
 };
 
 }  // namespace
@@ -40,14 +41,6 @@ DeviceCtx::DeviceCtx(DriverCtx* driver)
 }
 
 DeviceCtx::~DeviceCtx() {
-  // TODO(dustingreen): Depending on whether device .release() can get called on
-  // this deivce, we'll likely need to sequence the shutdown more explicitly.
-  // This destruction order seems like a reasonable starting point, but is not
-  // tested:
-  //
-  // ~device_fidl_
-  // ~video_
-  //
   // There are two ways to destroy a fidl::Binding safely:
   //   * Switch to FIDL thread before Unbind() or ~Binding.
   //   * async::Loop Quit() + JoinThreads() before Unbind() or ~Binding
@@ -59,14 +52,13 @@ DeviceCtx::~DeviceCtx() {
   // itself running on the shared_fidl_thread() (or we could check which thread
   // here, if we really need to).
   //
-  // For now, it's not clear that we actually need to implement this destructor
-  // however, since this device is very likely to have a dedicated devhost and
-  // may not .release() the device - and even if it does .release() the device
-  // there is no clear need for the cleanup described above to actually be
-  // implemented.
-
-  // TODO(dustingreen): Implement this destructor iff it's actually used/called.
-  ZX_PANIC("amlogic-decoder DeviceCtx::~DeviceCtx not implemented\n");
+  // This code is only run when we switch between test and production drivers.
+  sync_completion_t completion;
+  driver_->PostToSharedFidl([this, &completion]() {
+    device_fidl_.reset();
+    sync_completion_signal(&completion);
+  });
+  sync_completion_wait(&completion, ZX_TIME_INFINITE);
 }
 
 zx_status_t DeviceCtx::Bind(zx_device_t* parent) {

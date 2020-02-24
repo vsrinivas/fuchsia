@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/driver.h>
-
 #include <memory>
+
+#include <ddk/driver.h>
 
 #include "test_support.h"
 
@@ -16,4 +16,4 @@ zx_device_t* TestSupport::parent_device() { return g_parent_device; }
 
 void TestSupport::set_parent_device(zx_device_t* handle) { g_parent_device = handle; }
 
-void TestSupport::RunAllTests() {}
+bool TestSupport::RunAllTests() { return true; }

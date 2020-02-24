@@ -21,7 +21,7 @@ group("tests") {
   deps = [
     "//sdk/lib/media/cpp:media_lib_timeline_tests",
     "//src/media/audio:tests",
-    "//src/media/codec:tests",
+    "//src/media/drivers:tests",
     "//src/media/lib:tests",
     "//src/media/playback:tests",
     "//src/media/sessions:tests",

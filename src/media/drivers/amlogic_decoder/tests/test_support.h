@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_TESTS_TEST_SUPPORT_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_TESTS_TEST_SUPPORT_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_TESTS_TEST_SUPPORT_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_TESTS_TEST_SUPPORT_H_
 
-#include <ddk/device.h>
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
+
+#include <ddk/device.h>
 
 class TestSupport {
  public:
@@ -25,9 +26,9 @@ class TestSupport {
 
   static void set_parent_device(zx_device_t* handle);
 
-  static void RunAllTests();
+  static bool RunAllTests();
 
   static std::unique_ptr<FirmwareFile> LoadFirmwareFile(const char* name);
 };
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_TESTS_TEST_SUPPORT_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_TESTS_TEST_SUPPORT_H_
