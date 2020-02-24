@@ -56,6 +56,7 @@ class FakeBlockDevice : public ddk::BlockImplProtocol<FakeBlockDevice> {
       num_calls_++;
       trim_length_ += operation->trim.length;
     }
+    completion_cb(cookie, ZX_OK, operation);
   }
 
   int num_calls() const { return num_calls_; }
