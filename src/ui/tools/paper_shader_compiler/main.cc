@@ -109,5 +109,29 @@ int main(int argc, const char** argv) {
     return EXIT_FAILURE;
   }
 
+  // Test shaders from escher/test/vk/shader_program_unittest.cc
+  const escher::ShaderProgramData test_variant1 = {
+      .source_files = {{escher::ShaderStage::kVertex, "shaders/model_renderer/main.vert"},
+                       {escher::ShaderStage::kFragment, "shaders/model_renderer/main.frag"}},
+      .args = escher::ShaderVariantArgs({{"USE_ATTRIBUTE_UV", "1"},
+                                         {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
+                                         {"NO_SHADOW_LIGHTING_PASS", "1"}}),
+  };
+  const escher::ShaderProgramData test_variant2 = {
+      .source_files = {{escher::ShaderStage::kVertex, "shaders/model_renderer/main.vert"},
+                       {escher::ShaderStage::kFragment, "shaders/model_renderer/main.frag"}},
+      .args = escher::ShaderVariantArgs({{"USE_ATTRIBUTE_UV", "0"},
+                                         {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
+                                         {"NO_SHADOW_LIGHTING_PASS", "1"}}),
+  };
+
+  if (!CompileAndWriteShader(filesystem, test_variant1)) {
+    return EXIT_FAILURE;
+  }
+
+  if (!CompileAndWriteShader(filesystem, test_variant2)) {
+    return EXIT_FAILURE;
+  }
+
   return EXIT_SUCCESS;
 }

@@ -96,6 +96,12 @@ test_package("scenic_tests") {
   public_deps = vulkan_validation_layers.public_deps
   loadable_modules = vulkan_validation_layers.loadable_modules
   resources = vulkan_validation_layers.resources
+
+  if (escher_use_runtime_glsl) {
+    resources += escher_shaders_resources
+  } else {
+    resources += escher_shaders_spirv_resources
+  }
 }
 
 declare_args() {

@@ -27,7 +27,9 @@ std::unique_ptr<Escher> GetEscherWithProtectedMemoryEnabled() {
   auto vulkan_instance =
       escher::test::EscherEnvironment::GetGlobalTestEnvironment()->GetVulkanInstance();
   auto vulkan_device = VulkanDeviceQueues::New(vulkan_instance, device_params);
-  auto escher = std::make_unique<Escher>(vulkan_device);
+  auto hack_filesystem =
+      escher::test::EscherEnvironment::GetGlobalTestEnvironment()->GetFilesystem();
+  auto escher = std::make_unique<Escher>(vulkan_device, hack_filesystem);
   if (!escher->allow_protected_memory()) {
     return nullptr;
   }

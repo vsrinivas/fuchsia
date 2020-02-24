@@ -222,13 +222,12 @@ VK_TEST_F(ShaderProgramTest, CachedVariants) {
   auto escher = test::GetEscher();
 
   // TODO(ES-183): remove PaperRenderer shader dependency.
-  ShaderVariantArgs variant1({{"NO_SHADOW_LIGHTING_PASS", "1"},
-                              {"USE_ATTRIBUTE_UV", "1"},
-                              {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"}});
-  ShaderVariantArgs variant2({{"NO_SHADOW_LIGHTING_PASS", "1"},
-                              {"USE_ATTRIBUTE_UV", "0"},
-                              {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"}});
-
+  ShaderVariantArgs variant1({{"USE_ATTRIBUTE_UV", "1"},
+                              {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
+                              {"NO_SHADOW_LIGHTING_PASS", "1"}});
+  ShaderVariantArgs variant2({{"USE_ATTRIBUTE_UV", "0"},
+                              {"USE_PAPER_SHADER_PUSH_CONSTANTS", "1"},
+                              {"NO_SHADOW_LIGHTING_PASS", "1"}});
   const char* kMainVert = "shaders/model_renderer/main.vert";
   const char* kMainFrag = "shaders/model_renderer/main.frag";
 
