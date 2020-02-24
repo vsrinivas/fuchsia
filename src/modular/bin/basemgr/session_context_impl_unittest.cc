@@ -40,7 +40,7 @@ TEST_F(SessionContextImplTest, StartSessionmgrWithTokenManagers) {
       modular::CloneStruct(app_config) /* session_shell_config */,
       modular::CloneStruct(app_config) /* story_shell_config */,
       false /* use_session_shell_for_story_shell_factory */, std::move(agent_token_manager),
-      nullptr /* account */, fuchsia::ui::views::ViewToken(), nullptr /* additional_services */,
+      fuchsia::ui::views::ViewToken(), nullptr /* additional_services */,
       zx::channel() /* overridden_config_handle */,
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>) {} /* get_presentation */,
       [](modular::SessionContextImpl::ShutDownReason, bool) {} /* done_callback */);
@@ -69,7 +69,7 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
       /* session_shell_config= */ modular::CloneStruct(app_config),
       /* story_shell_config= */ modular::CloneStruct(app_config),
       /* use_session_shell_for_story_shell_factory= */ false, std::move(agent_token_manager),
-      /* account= */ nullptr, fuchsia::ui::views::ViewToken(),
+      fuchsia::ui::views::ViewToken(),
       /* additional_services */ nullptr, zx::channel() /* overridden_config_handle */,
       /* get_presentation= */
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>) {},

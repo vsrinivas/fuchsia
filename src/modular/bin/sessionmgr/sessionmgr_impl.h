@@ -61,8 +61,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
  private:
   // |Sessionmgr|
-  void Initialize(std::string session_id, fuchsia::modular::auth::AccountPtr account,
-                  fuchsia::modular::AppConfig session_shell_config,
+  void Initialize(std::string session_id, fuchsia::modular::AppConfig session_shell_config,
                   fuchsia::modular::AppConfig story_shell_config,
                   bool use_session_shell_for_story_shell_factory,
                   fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
@@ -74,11 +73,9 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                         SwapSessionShellCallback callback) override;
 
   // Sequence of Initialize() broken up into steps for clarity.
-  // TODO(MF-279): Remove |account| and |agent_token_manager| once sessions
-  // start receiving persona handles.
+  // TODO(MF-279): Remove |agent_token_manager| once sessions start receiving persona handles.
   void InitializeSessionEnvironment(std::string session_id);
-  void InitializeUser(fuchsia::modular::auth::AccountPtr account,
-                      fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager);
+  void InitializeUser(fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager);
   void InitializeLedger();
   void InitializeAgentRunner();
   void InitializeIntlPropertyProvider();
@@ -99,8 +96,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   zx::channel GetLedgerRepositoryDirectory();
 
   // |fuchsia::modular::SessionShellContext|
-  void GetAccount(
-      fit::function<void(::std::unique_ptr<::fuchsia::modular::auth::Account>)> callback) override;
   void GetComponentContext(
       fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) override;
   void GetFocusController(
@@ -190,8 +185,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::unique_ptr<LedgerClient> ledger_client_;
   // Provides services to the Ledger
   component::ServiceProviderImpl ledger_service_provider_;
-
-  fuchsia::modular::auth::AccountPtr account_;
 
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> session_shell_app_;
   std::unique_ptr<ViewHost> session_shell_view_host_;

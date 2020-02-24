@@ -21,9 +21,9 @@ SessionContextImpl::SessionContextImpl(
     fuchsia::modular::AppConfig sessionmgr_config, fuchsia::modular::AppConfig session_shell_config,
     fuchsia::modular::AppConfig story_shell_config, bool use_session_shell_for_story_shell_factory,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
-    fuchsia::modular::auth::AccountPtr account, fuchsia::ui::views::ViewToken view_token,
-    fuchsia::sys::ServiceListPtr additional_services, zx::channel config_handle,
-    GetPresentationCallback get_presentation, OnSessionShutdownCallback on_session_shutdown)
+    fuchsia::ui::views::ViewToken view_token, fuchsia::sys::ServiceListPtr additional_services,
+    zx::channel config_handle, GetPresentationCallback get_presentation,
+    OnSessionShutdownCallback on_session_shutdown)
     : session_context_binding_(this),
       get_presentation_(std::move(get_presentation)),
       on_session_shutdown_(std::move(on_session_shutdown)),
@@ -48,7 +48,7 @@ SessionContextImpl::SessionContextImpl(
 
   // 3. Initialize the Sessionmgr service.
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
-  sessionmgr_->Initialize(session_id, std::move(account), std::move(session_shell_config),
+  sessionmgr_->Initialize(session_id, std::move(session_shell_config),
                           std::move(story_shell_config), use_session_shell_for_story_shell_factory,
                           std::move(agent_token_manager), session_context_binding_.NewBinding(),
                           std::move(view_token));

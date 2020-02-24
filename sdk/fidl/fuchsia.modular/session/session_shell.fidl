@@ -4,7 +4,6 @@
 
 library fuchsia.modular;
 
-using fuchsia.modular.auth;
 using fuchsia.ui.policy;
 using fuchsia.ui.views;
 
@@ -55,9 +54,6 @@ struct ViewIdentifier {
 /// offered than a generic `ServiceProvider`.
 [Discoverable]
 protocol SessionShellContext {
-    /// The account associated with the currently logged-in user. It's NULL if
-    /// logged into GUEST mode.
-    GetAccount() -> (fuchsia.modular.auth.Account? account);
     GetComponentContext(request<ComponentContext> request);
     GetFocusController(request<FocusController> request);
     GetFocusProvider(request<FocusProvider> request);

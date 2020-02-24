@@ -157,8 +157,7 @@ SessionmgrImpl::~SessionmgrImpl() = default;
 // |finitish_initialization_| lambda does initialize some Sessionmgr-scoped resources only once,
 // upon demand.)
 void SessionmgrImpl::Initialize(
-    std::string session_id, fuchsia::modular::auth::AccountPtr account,
-    fuchsia::modular::AppConfig session_shell_config,
+    std::string session_id, fuchsia::modular::AppConfig session_shell_config,
     fuchsia::modular::AppConfig story_shell_config, bool use_session_shell_for_story_shell_factory,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
     fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
@@ -191,7 +190,7 @@ void SessionmgrImpl::Initialize(
   AtEnd(Reset(&session_context_));
 
   InitializeSessionEnvironment(session_id);
-  InitializeUser(std::move(account), std::move(agent_token_manager));
+  InitializeUser(std::move(agent_token_manager));
   InitializeAgentRunner();
   InitializeSessionShell(std::move(session_shell_config), std::move(view_token));
 }
@@ -245,13 +244,9 @@ void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
 }
 
 void SessionmgrImpl::InitializeUser(
-    fuchsia::modular::auth::AccountPtr account,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager) {
   agent_token_manager_ = agent_token_manager.Bind();
   AtEnd(Reset(&agent_token_manager_));
-
-  account_ = std::move(account);
-  AtEnd(Reset(&account_));
 }
 
 zx::channel SessionmgrImpl::GetLedgerRepositoryDirectory() {
@@ -609,11 +604,6 @@ void SessionmgrImpl::Terminate(fit::function<void()> done) {
   at_end_done_ = std::move(done);
 
   TerminateRecurse(at_end_.size() - 1);
-}
-
-void SessionmgrImpl::GetAccount(
-    fit::function<void(::std::unique_ptr<::fuchsia::modular::auth::Account>)> callback) {
-  callback(fidl::Clone(account_));
 }
 
 void SessionmgrImpl::GetComponentContext(
