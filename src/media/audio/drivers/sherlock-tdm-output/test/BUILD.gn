@@ -32,6 +32,7 @@ test("sherlock-audio-out-test") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/mock-i2c",
+    "//zircon/public/lib/mock-mmio-reg",
     "//zircon/public/lib/simple-audio-stream",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",

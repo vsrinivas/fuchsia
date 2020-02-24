@@ -41,6 +41,86 @@ constexpr size_t kNumberOfChannels = 2;
 NelsonAudioStreamOut::NelsonAudioStreamOut(zx_device_t* parent)
     : SimpleAudioStream(parent, false), pdev_(parent) {}
 
+zx_status_t NelsonAudioStreamOut::InitCodec() {
+  auto status = codec_.GetInfo();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not get codec info %d\n", __FUNCTION__, status);
+    return status;
+  }
+
+  // Reset and initialize codec after we have configured I2S.
+  status = codec_.Reset();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not reset codec %d\n", __FUNCTION__, status);
+    return status;
+  }
+
+  status = codec_.SetNotBridged();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not set not bridged mode %d\n", __FUNCTION__, status);
+    return status;
+  }
+
+  status = codec_.CheckExpectedDaiFormat();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not get expected DAI format %d\n", __FUNCTION__, status);
+    return status;
+  }
+
+  uint32_t channels[] = {0, 1};
+  dai_format_t format = {
+      .number_of_channels = 2,
+      .channels_to_use_list = channels,
+      .channels_to_use_count = countof(channels),
+      .sample_format = kWantedSampleFormat,
+      .justify_format = kWantedJustifyFormat,
+      .frame_rate = kWantedFrameRate,
+      .bits_per_channel = kWantedBitsPerChannel,
+      .bits_per_sample = kWantedBitsPerSample,
+  };
+  status = codec_.SetDaiFormat(format);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not set DAI format %d\n", __FUNCTION__, status);
+    return status;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t NelsonAudioStreamOut::InitHW() {
+  lib_->Shutdown();
+
+  auto status = InitCodec();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not initialize codec - %d\n", __FILE__, status);
+    return status;
+  }
+
+  lib_->Initialize();
+
+  // Setup TDM.
+
+  // 3 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample (works for 32 in codec), no mixing.
+  lib_->ConfigTdmOutSlot(3, 1, 31, 15, 0);
+
+  // Lane0 right channel.
+  lib_->ConfigTdmOutSwaps(0x00000010);
+
+  // Lane 0, unmask first 2 slots (0x00000003),
+  lib_->ConfigTdmOutLane(0, 0x00000003);
+
+  // Setup appropriate tdm clock signals. mclk = 1.536GHz/125 = 12.288MHz.
+  lib_->SetMclkDiv(124);
+
+  // sclk = 12.288MHz/4 = 3.072MHz, 32 every 64 sclks is frame sync (I2S).
+  lib_->SetSclkDiv(3, 31, 63);
+
+  lib_->Sync();
+
+  zxlogf(INFO, "audio: Nelson audio output initialized\n");
+  return ZX_OK;
+}
+
 zx_status_t NelsonAudioStreamOut::InitPdev() {
   composite_protocol_t composite;
 
@@ -108,26 +188,8 @@ zx_status_t NelsonAudioStreamOut::InitPdev() {
     zxlogf(ERROR, "%s failed to Init buffer %d\n", __FILE__, status);
     return status;
   }
+
   lib_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr, pinned_ring_buffer_.region(0).size);
-
-  // Setup TDM.
-
-  // 3 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample (works for 32 in codec), no mixing.
-  lib_->ConfigTdmOutSlot(3, 1, 31, 15, 0);
-
-  // Lane0 right channel.
-  lib_->ConfigTdmOutSwaps(0x00000010);
-
-  // Lane 0, unmask first 2 slots (0x00000003),
-  lib_->ConfigTdmOutLane(0, 0x00000003);
-
-  // Setup appropriate tdm clock signals. mclk = 1.536GHz/125 = 12.288MHz.
-  lib_->SetMclkDiv(124);
-
-  // sclk = 12.288MHz/4 = 3.072MHz, 32 every 64 sclks is frame sync (I2S).
-  lib_->SetSclkDiv(3, 31, 63);
-
-  lib_->Sync();
 
   codec_.proto_client_ = components[COMPONENT_CODEC];
   if (!codec_.proto_client_.is_valid()) {
@@ -135,49 +197,7 @@ zx_status_t NelsonAudioStreamOut::InitPdev() {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  status = codec_.GetInfo();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get codec info %d\n", __FUNCTION__, status);
-    return status;
-  }
-
-  // Reset and initialize codec after we have configured I2S.
-  status = codec_.Reset();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not reset codec %d\n", __FUNCTION__, status);
-    return status;
-  }
-
-  status = codec_.SetNotBridged();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not set not bridged mode %d\n", __FUNCTION__, status);
-    return status;
-  }
-
-  status = codec_.CheckExpectedDaiFormat();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not get expected DAI format %d\n", __FUNCTION__, status);
-    return status;
-  }
-
-  uint32_t channels[] = {0, 1};
-  dai_format_t format = {
-      .number_of_channels = 2,
-      .channels_to_use_list = channels,
-      .channels_to_use_count = countof(channels),
-      .sample_format = kWantedSampleFormat,
-      .justify_format = kWantedJustifyFormat,
-      .frame_rate = kWantedFrameRate,
-      .bits_per_channel = kWantedBitsPerChannel,
-      .bits_per_sample = kWantedBitsPerSample,
-  };
-  status = codec_.SetDaiFormat(format);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not set DAI format %d\n", __FUNCTION__, status);
-    return status;
-  }
-  zxlogf(INFO, "audio: Nelson audio output initialized\n");
-  return ZX_OK;
+  return InitHW();
 }
 
 zx_status_t NelsonAudioStreamOut::Init() {

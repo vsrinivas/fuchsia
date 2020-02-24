@@ -51,6 +51,8 @@ class NelsonAudioStreamOut : public SimpleAudioStream {
   NelsonAudioStreamOut(zx_device_t* parent);
   ~NelsonAudioStreamOut() {}
 
+  zx_status_t InitCodec() TA_REQ(domain_token());
+  zx_status_t InitHW() TA_REQ(domain_token());
   zx_status_t AddFormats() TA_REQ(domain_token());
   zx_status_t InitBuffer(size_t size) TA_REQ(domain_token());
   zx_status_t InitPdev() TA_REQ(domain_token());

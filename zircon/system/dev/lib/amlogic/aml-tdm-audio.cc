@@ -27,12 +27,10 @@ std::unique_ptr<AmlTdmDevice> AmlTdmDevice::Create(ddk::MmioBuffer mmio, ee_audi
     return nullptr;
   }
 
-  tdm->InitRegs();
-
   return tdm;
 }
 
-void AmlTdmDevice::InitRegs() {
+void AmlTdmDevice::Initialize() {
   // Enable the audio domain clocks used by this instance.
   AudioClkEna((EE_AUDIO_CLK_GATE_TDMOUTA << tdm_ch_) | (EE_AUDIO_CLK_GATE_FRDDRA << frddr_ch_) |
               EE_AUDIO_CLK_GATE_ARB);

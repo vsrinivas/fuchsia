@@ -63,6 +63,52 @@ zx_status_t SherlockAudioStreamOut::InitCodecs() {
   return ZX_OK;
 }
 
+zx_status_t SherlockAudioStreamOut::InitHW() {
+  aml_audio_->Shutdown();
+
+  auto status = InitCodecs();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not init codecs - %d\n", __func__, status);
+    return status;
+  }
+
+  aml_audio_->Initialize();
+
+  // Setup Stereo Left Justified:
+  // -lrclk duty = 64 sclk (SetSclkDiv lrdiv=63 below).
+  // -No delay from the time the lrclk signal changes state state to the first bit of data on the
+  // data lines.
+  // -3072MHz/64 = 48KHz.
+
+  // 5 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample, enable mix L+R on lane 1.
+  aml_audio_->ConfigTdmOutSlot(5, 1, 31, 15, (1 << 1));
+
+  // Lane 0 L channel set to FRDDR slot 0.
+  // Lane 0 R channel set to FRDDR slot 1.
+  // Lane 1 L channel set to FRDDR slot 2.  Mixed with R, see ConfigTdmOutSlot above.
+  // Lane 1 R channel set to FRDDR slot 3.  Mixed with L, see ConfigTdmOutSlot above.
+  aml_audio_->ConfigTdmOutSwaps(0x00003210);
+
+  // Tweeters: Lane 0, unmask TDM slots 0 & 1 (L+R FRDDR slots 0 & 1).
+  aml_audio_->ConfigTdmOutLane(0, 0x00000003);
+
+  // Woofer: Lane 1, unmask TDM slot 0 & 1 (Woofer FRDDR slots 2 & 3).
+  aml_audio_->ConfigTdmOutLane(1, 0x00000003);
+
+  // mclk = T931_HIFI_PLL_RATE/125 = 1536MHz/125 = 12.288MHz.
+  aml_audio_->SetMclkDiv(124);
+
+  // Per schematic, mclk uses pad 0 (MCLK_0 instead of MCLK_1).
+  aml_audio_->SetMClkPad(MCLK_PAD_0);
+
+  // sclk = 12.288MHz/4 = 3.072MHz, 32L + 32R sclks = 64 sclks.
+  aml_audio_->SetSclkDiv(3, 31, 63);
+
+  aml_audio_->Sync();
+
+  return ZX_OK;
+}
+
 zx_status_t SherlockAudioStreamOut::InitPdev() {
   composite_protocol_t composite;
 
@@ -151,50 +197,11 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
   // Strength 1 for mclk (bit 18,  GPIOAO(9)), GPIO offsets are in 4 bytes units.
   mmio->SetBit<uint32_t>(18, 4 * T931_AO_PAD_DS_A);
 
-  status = InitCodecs();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not init codecs - %d\n", __func__, status);
-    return status;
-  }
-
   InitBuffer(kRingBufferSize);
-
   aml_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr,
                         pinned_ring_buffer_.region(0).size);
 
-  // Setup Stereo Left Justified:
-  // -lrclk duty = 64 sclk (SetSclkDiv lrdiv=63 below).
-  // -No delay from the time the lrclk signal changes state state to the first bit of data on the
-  // data lines.
-  // -3072MHz/64 = 48KHz.
-
-  // 5 bitoffset, 2 slots, 32 bits/slot, 16 bits/sample, enable mix L+R on lane 1.
-  aml_audio_->ConfigTdmOutSlot(5, 1, 31, 15, (1 << 1));
-
-  // Lane 0 L channel set to FRDDR slot 0.
-  // Lane 0 R channel set to FRDDR slot 1.
-  // Lane 1 L channel set to FRDDR slot 2.  Mixed with R, see ConfigTdmOutSlot above.
-  // Lane 1 R channel set to FRDDR slot 3.  Mixed with L, see ConfigTdmOutSlot above.
-  aml_audio_->ConfigTdmOutSwaps(0x00003210);
-
-  // Tweeters: Lane 0, unmask TDM slots 0 & 1 (L+R FRDDR slots 0 & 1).
-  aml_audio_->ConfigTdmOutLane(0, 0x00000003);
-
-  // Woofer: Lane 1, unmask TDM slot 0 & 1 (Woofer FRDDR slots 2 & 3).
-  aml_audio_->ConfigTdmOutLane(1, 0x00000003);
-
-  // mclk = T931_HIFI_PLL_RATE/125 = 1536MHz/125 = 12.288MHz.
-  aml_audio_->SetMclkDiv(124);
-
-  // Per schematic, mclk uses pad 0 (MCLK_0 instead of MCLK_1).
-  aml_audio_->SetMClkPad(MCLK_PAD_0);
-
-  // sclk = 12.288MHz/4 = 3.072MHz, 32L + 32R sclks = 64 sclks.
-  aml_audio_->SetSclkDiv(3, 31, 63);
-
-  aml_audio_->Sync();
-
-  return ZX_OK;
+  return InitHW();
 }
 
 zx_status_t SherlockAudioStreamOut::Init() {

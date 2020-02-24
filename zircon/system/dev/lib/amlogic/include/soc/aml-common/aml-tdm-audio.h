@@ -45,49 +45,32 @@ class AmlTdmDevice {
   void ConfigTdmOutSwaps(uint32_t swaps);
 
   // Sets the buffer/length pointers for dma engine
-  //  must resize in lower 32-bits of address space
+  // must resize in lower 32-bits of address space.
   zx_status_t SetBuffer(zx_paddr_t buf, size_t len);
 
-  /*
-      Returns offset of dma pointer in the ring buffer
-  */
+  // Returns offset of dma pointer in the ring buffer.
   uint32_t GetRingPosition();
 
-  /*
-      Resets state of dma mechanisms and starts clocking data
-      onto tdm bus with data fetched from beginning of buffer
-  */
+  // Resets state of dma mechanisms and starts clocking data
+  // onto tdm bus with data fetched from beginning of buffer.
   uint64_t Start();
 
-  /*
-      Stops clocking data out on the TDM bus
-      (physical tdm bus signals remain active)
-  */
+  // Stops clocking data out on the TDM bus (physical tdm bus signals remain active).
   void Stop();
 
-  /*
-      Synchronize the state of TDM bus signals with fifo/dma engine
-  */
+  // Synchronize the state of TDM bus signals with fifo/dma engine.
   void Sync();
 
-  /*
-      Stops the clocking data, shuts down frddr, and quiets output signals
-  */
-  void Shutdown();
+  // Start clocking, configure FRDDR and TDM.
+  virtual void Initialize();  // virtual for unit test.
+
+  // Stops the clocking data, shuts down frddr, and quiets output signals.
+  virtual void Shutdown();  // virtual for unit test.
 
   uint32_t fifo_depth() const { return fifo_depth_; }
 
- private:
-  const uint32_t fifo_depth_;     // in bytes.
-  const aml_tdm_out_t tdm_ch_;    // tdm output block used by this instance
-  const aml_frddr_t frddr_ch_;    // fromddr channel used by this instance
-  const aml_tdm_mclk_t mclk_ch_;  // mclk channel used by this instance
-  const ee_audio_mclk_src_t clk_src_;
-  const zx_off_t frddr_base_;  // base offset of frddr ch used by this instance
-  const zx_off_t tdm_base_;    // base offset of our tdmout block
-  const ddk::MmioBuffer mmio_;
-  friend class std::default_delete<AmlTdmDevice>;
-
+ protected:
+  // Protected for unit test.
   AmlTdmDevice(ddk::MmioBuffer mmio, ee_audio_mclk_src_t clk_src, aml_tdm_out_t tdm,
                aml_frddr_t frddr, aml_tdm_mclk_t mclk, uint32_t fifo_depth, AmlVersion version)
       : fifo_depth_(fifo_depth),
@@ -99,8 +82,19 @@ class AmlTdmDevice {
         tdm_base_(GetTdmBase(tdm)),
         mmio_(std::move(mmio)),
         version_(version) {}
+  virtual ~AmlTdmDevice() = default;  // protected for unit test.
 
-  ~AmlTdmDevice() = default;
+ private:
+  const uint32_t fifo_depth_;     // in bytes.
+  const aml_tdm_out_t tdm_ch_;    // tdm output block used by this instance
+  const aml_frddr_t frddr_ch_;    // fromddr channel used by this instance
+  const aml_tdm_mclk_t mclk_ch_;  // mclk channel used by this instance
+  const ee_audio_mclk_src_t clk_src_;
+  const zx_off_t frddr_base_;  // base offset of frddr ch used by this instance
+  const zx_off_t tdm_base_;    // base offset of our tdmout block
+  const ddk::MmioBuffer mmio_;
+  const AmlVersion version_;
+  friend class std::default_delete<AmlTdmDevice>;
 
   /* Get the register block offset for our ddr block */
   static zx_off_t GetFrddrBase(aml_frddr_t ch) {
@@ -133,7 +127,6 @@ class AmlTdmDevice {
 
   void AudioClkEna(uint32_t audio_blk_mask);
   void AudioClkDis(uint32_t audio_blk_mask);
-  void InitRegs();
   void FRDDREnable();
   void FRDDRDisable();
   void TdmOutDisable();
@@ -143,8 +136,6 @@ class AmlTdmDevice {
   zx_off_t GetFrddrOffset(zx_off_t off) { return frddr_base_ + off; }
   /* Get the register block offset for our tdm block */
   zx_off_t GetTdmOffset(zx_off_t off) { return tdm_base_ + off; }
-
-  const AmlVersion version_;
 };
 
 #endif  // ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_TDM_AUDIO_H_

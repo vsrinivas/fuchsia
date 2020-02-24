@@ -43,6 +43,40 @@ zx_status_t AstroAudioStreamOut::InitCodec() {
   return ZX_OK;
 }
 
+zx_status_t AstroAudioStreamOut::InitHW() {
+  aml_audio_->Shutdown();
+
+  auto status = InitCodec();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s could not initialize codec - %d\n", __FILE__, status);
+    return status;
+  }
+
+  aml_audio_->Initialize();
+  // Setup TDM.
+
+  // 3 bitoffset, 4 slots, 32 bits/slot, 16 bits/sample, no mixing.
+  aml_audio_->ConfigTdmOutSlot(3, 3, 31, 15, 0);
+
+  // Lane0 right channel.
+  aml_audio_->ConfigTdmOutSwaps(0x00000010);
+
+  // Lane 0, unmask first 2 slots (0x00000003),
+  aml_audio_->ConfigTdmOutLane(0, 0x00000003);
+
+  // Setup appropriate tdm clock signals. mclk = 1536MHz/125 = 12.288MHz.
+  aml_audio_->SetMclkDiv(124);
+
+  // No need to set mclk pad via SetMClkPad (TAS2770 features "MCLK Free Operation").
+
+  // sclk = 12.288MHz/2 = 6.144MHz, 1 every 128 sclks is frame sync.
+  aml_audio_->SetSclkDiv(1, 0, 127);
+
+  aml_audio_->Sync();
+
+  return ZX_OK;
+}
+
 zx_status_t AstroAudioStreamOut::InitPDev() {
   composite_protocol_t composite;
 
@@ -102,40 +136,13 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
     return ZX_ERR_NO_MEMORY;
   }
 
-  status = InitCodec();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s could not initialize codec - %d\n", __FILE__, status);
-    return status;
-  }
-
   // Initialize the ring buffer
   InitBuffer(RB_SIZE);
 
   aml_audio_->SetBuffer(pinned_ring_buffer_.region(0).phys_addr,
                         pinned_ring_buffer_.region(0).size);
 
-  // Setup TDM.
-
-  // 3 bitoffset, 4 slots, 32 bits/slot, 16 bits/sample, no mixing.
-  aml_audio_->ConfigTdmOutSlot(3, 3, 31, 15, 0);
-
-  // Lane0 right channel.
-  aml_audio_->ConfigTdmOutSwaps(0x00000010);
-
-  // Lane 0, unmask first 2 slots (0x00000003),
-  aml_audio_->ConfigTdmOutLane(0, 0x00000003);
-
-  // Setup appropriate tdm clock signals. mclk = 1536MHz/125 = 12.288MHz.
-  aml_audio_->SetMclkDiv(124);
-
-  // No need to set mclk pad via SetMClkPad (TAS2770 features "MCLK Free Operation").
-
-  // sclk = 12.288MHz/2 = 6.144MHz, 1 every 128 sclks is frame sync.
-  aml_audio_->SetSclkDiv(1, 0, 127);
-
-  aml_audio_->Sync();
-
-  return ZX_OK;
+  return InitHW();
 }
 
 zx_status_t AstroAudioStreamOut::Init() {

@@ -48,10 +48,12 @@ class SherlockAudioStreamOut : public SimpleAudioStream {
 
   virtual zx_status_t InitPdev() TA_REQ(domain_token());  // virtual and protected for unit test.
   zx_status_t InitCodecs() TA_REQ(domain_token());        // protected for unit test.
+  zx_status_t InitHW() TA_REQ(domain_token());            // protected for unit test.
 
   fbl::Array<std::unique_ptr<Tas5720>> codecs_
       TA_GUARDED(domain_token());                                // protected for unit test.
   ddk::GpioProtocolClient audio_en_ TA_GUARDED(domain_token());  // protected for unit test.
+  std::unique_ptr<AmlTdmDevice> aml_audio_;                      // protected for unit test.
 
  private:
   friend class fbl::RefPtr<SherlockAudioStreamOut>;
@@ -67,7 +69,6 @@ class SherlockAudioStreamOut : public SimpleAudioStream {
   metadata::Codec codecs_types_ TA_GUARDED(domain_token());
   zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_token());
   fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(domain_token());
-  std::unique_ptr<AmlTdmDevice> aml_audio_;
   ddk::GpioProtocolClient audio_fault_ TA_GUARDED(domain_token());
   zx::bti bti_ TA_GUARDED(domain_token());
 };

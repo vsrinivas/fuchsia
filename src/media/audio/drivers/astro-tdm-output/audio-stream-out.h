@@ -53,6 +53,7 @@ class AstroAudioStreamOut : public SimpleAudioStream {
 
   static constexpr uint8_t kFifoDepth = 0x20;
 
+  zx_status_t InitHW();
   zx_status_t AddFormats() __TA_REQUIRES(domain_token());
   zx_status_t InitBuffer(size_t size);
   virtual zx_status_t InitPDev();  // virtual for unit testing.
