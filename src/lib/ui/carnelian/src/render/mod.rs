@@ -225,8 +225,11 @@ pub struct Layer<B: Backend> {
 /// A group of ordered layers.
 pub trait Composition<B: Backend> {
     /// Creates a composition of ordered layers where the layers with lower index appear on top.
-    fn new(layers: impl IntoIterator<Item = Layer<B>>, background_color: Color) -> Self;
-
+    fn new(background_color: Color) -> Self;
+    /// Creates a composition using an initial set of layers.
+    fn with_layers(layers: impl IntoIterator<Item = Layer<B>>, background_color: Color) -> Self;
+    /// Resets composition by removing all layers.
+    fn clear(&mut self);
     /// Creates a splicing iterator that replaces the specified range in the composition
     /// with the given `replace_with` iterator and yields the removed items.
     /// `replace_with` does not need to be the same length as `range`.
@@ -266,7 +269,7 @@ pub(crate) mod tests {
             let dst_image = context.get_current_image(view_context);
 
             context.render(
-                &Composition::new(
+                &Composition::with_layers(
                     vec![Layer {
                         raster: raster.clone() + raster,
                         style: Style {

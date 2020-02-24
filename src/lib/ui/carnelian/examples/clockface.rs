@@ -253,7 +253,7 @@ struct Contents<B: Backend> {
 
 impl<B: Backend> Contents<B> {
     fn new(image: B::Image) -> Self {
-        let composition = Composition::new(std::iter::empty(), BACKGROUND_COLOR);
+        let composition = Composition::new(BACKGROUND_COLOR);
 
         Self { image, composition, size: Size::zero(), previous_rasters: Vec::new() }
     }

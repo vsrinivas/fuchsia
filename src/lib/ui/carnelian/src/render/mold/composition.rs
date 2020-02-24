@@ -86,8 +86,16 @@ impl MoldComposition {
 }
 
 impl Composition<Mold> for MoldComposition {
-    fn new(layers: impl IntoIterator<Item = Layer<Mold>>, background_color: Color) -> Self {
+    fn new(background_color: Color) -> Self {
+        Self { layers: Rc::new(vec![]), background_color }
+    }
+
+    fn with_layers(layers: impl IntoIterator<Item = Layer<Mold>>, background_color: Color) -> Self {
         Self { layers: Rc::new(layers.into_iter().collect()), background_color }
+    }
+
+    fn clear(&mut self) {
+        Rc::get_mut(&mut self.layers).unwrap().clear();
     }
 
     fn splice<R, I>(&mut self, range: R, replace_with: I) -> Splice<'_, I::IntoIter>

@@ -723,7 +723,7 @@ struct Contents<B: Backend> {
 
 impl<B: Backend> Contents<B> {
     fn new(image: B::Image, scroll_method: ScrollMethod) -> Self {
-        let composition = Composition::new(std::iter::empty(), BACKGROUND_COLOR);
+        let composition = Composition::new(BACKGROUND_COLOR);
 
         Self { image, scroll_method, scroll_offset_y: 0, size: Size::zero(), composition }
     }
@@ -750,8 +750,7 @@ impl<B: Backend> Contents<B> {
         match self.scroll_method {
             // Method 1: Translate paths and redraw the whole scene each frame.
             ScrollMethod::Redraw => {
-                // Clear composition.
-                self.composition.splice(.., std::iter::empty::<Layer<B>>());
+                self.composition.clear();
 
                 // Add clear layers for previous viewport.
                 let viewport = Rect::new(
@@ -827,8 +826,7 @@ impl<B: Backend> Contents<B> {
                     }
                 }
 
-                // Clear composition.
-                self.composition.splice(.., std::iter::empty::<Layer<B>>());
+                self.composition.clear();
 
                 // Add clear layers for previous viewport of clip.
                 let viewport = Rect::new(
@@ -933,7 +931,7 @@ impl<B: Backend> Contents<B> {
 
                 // Render bottom span if needed.
                 if bottom_y0 < bottom_y1 {
-                    let mut composition = Composition::new(std::iter::empty(), BACKGROUND_COLOR);
+                    let mut composition = Composition::new(BACKGROUND_COLOR);
                     let clip = Rect::new(
                         Point2D::new(0, bottom_y0),
                         Size2D::new(width, bottom_y1 - bottom_y0),
@@ -986,7 +984,7 @@ impl<B: Backend> Contents<B> {
                     },
                 });
 
-                let mut composition = Composition::new(std::iter::empty(), BACKGROUND_COLOR);
+                let mut composition = Composition::new(BACKGROUND_COLOR);
                 let clip = Rect::new(Point2D::new(0, top_y0), Size2D::new(width, top_y1 - top_y0));
 
                 // Add layers for previous viewport of top clip.

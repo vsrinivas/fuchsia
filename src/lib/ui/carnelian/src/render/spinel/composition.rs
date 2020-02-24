@@ -208,8 +208,19 @@ impl SpinelComposition {
 }
 
 impl Composition<Spinel> for SpinelComposition {
-    fn new(layers: impl IntoIterator<Item = Layer<Spinel>>, background_color: Color) -> Self {
+    fn new(background_color: Color) -> Self {
+        Self { layers: vec![], background_color: background_color.to_f32() }
+    }
+
+    fn with_layers(
+        layers: impl IntoIterator<Item = Layer<Spinel>>,
+        background_color: Color,
+    ) -> Self {
         Self { layers: layers.into_iter().collect(), background_color: background_color.to_f32() }
+    }
+
+    fn clear(&mut self) {
+        self.layers.clear();
     }
 
     fn splice<R, I>(&mut self, range: R, replace_with: I) -> Splice<'_, I::IntoIter>
