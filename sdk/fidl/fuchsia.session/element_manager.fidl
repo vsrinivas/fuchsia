@@ -43,8 +43,8 @@ protocol ElementController {
     /// * If a key exists with a null value, the annotation is deleted.
     SetAnnotations(Annotations annotations) -> () error AnnotationError;
 
-    /// Returns the current `annotations` for the controlled element.
-    GetAnnotations() -> (Annotations annotations);
+    /// Returns the current `Annotations` for the controlled element.
+    GetAnnotations() -> (Annotations annotations) error AnnotationError;
 };
 
 /// Errors which can be returned when attempting to add elements to a session.
@@ -56,16 +56,6 @@ enum ProposeElementError {
     /// errors with components of the ElementSpec. (See `AnnotationError` for
     /// some specific examples.)
     REJECTED = 2;
-};
-
-/// Error returned from calls to SetAnnotations().
-enum AnnotationError {
-    /// The session rejected the annotations to add to the controlled element.
-    /// Reasons for rejection may be due to annotations that violate defined
-    /// type constraints, such as:
-    ///   * The `Value` size exceeds the maximum length, `MAX_TEXT_LENGTH` or `MAX_BUFFER_BYTES`
-    ///   * The total number of annotations on an element exceeds `MAX_ANNOTATIONS`.
-    REJECTED = 1;
 };
 
 /// Describes an Element to be added to a session.

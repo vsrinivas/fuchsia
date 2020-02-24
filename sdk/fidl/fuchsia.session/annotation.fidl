@@ -6,28 +6,11 @@ library fuchsia.session;
 
 using fuchsia.mem;
 
-/// Maximum number of annotations per element.
-const uint32 MAX_ANNOTATIONS = 100;
-
-/// Maximum length of [`fuchsia.session/Key`].
-const uint32 MAX_KEY_LENGTH = 256;
-
-/// Maximum length of a [`fuchsia.session/Value`] `text` field, in characters.
-const uint32 MAX_TEXT_LENGTH = 1024;
-
-/// Maximum length of a [`fuchsia.session/Value`] `buffer` field, in bytes.
-const uint32 MAX_BUFFER_BYTES = 102400;
-
-/// An identifier for an [`fuchsia.session/Annotation`].
-using Key = string:MAX_KEY_LENGTH;
-
 /// The value of a [`fuchsia.session/Entry`].
 ///
 /// The actual field used depends on the type of annotation.
-///
-/// The size of `buffer` is limited to `MAX_BUFFER_BYTES` bytes.
 union Value {
-    1: string:MAX_TEXT_LENGTH text;
+    1: string:MAX text;
     2: fuchsia.mem.Buffer buffer;
 };
 
@@ -38,10 +21,24 @@ union Value {
 /// own conventions.
 struct Annotation {
     /// An identfier for this annotation.
-    Key key;
+    string:MAX key;
 
     /// The content of this annotation.
     Value? value;
+};
+
+/// Error returned from calls to SetAnnotations() or GetAnnotations().
+enum AnnotationError {
+    /// The session rejected the annotations to add to the controlled element.
+    /// Reasons for rejection may be due to annotations that violate defined
+    /// type constraints, such as:
+    ///   * The `Value` size exceeds the maximum length.
+    ///   * The total number of annotations on an element exceeds `MAX`
+    REJECTED = 1;
+
+    /// The element failed to return the annotations from a call to get_annotations()/
+    /// Reasons for the failure may be due to inability to read buffer bytes.
+    NOT_FOUND = 2;
 };
 
 // NOTE: `Annotations` is a table (and not a type alias) to anticipate the possibility that
@@ -50,5 +47,5 @@ struct Annotation {
 /// Contains the annotations applied to an Element.
 table Annotations {
     /// A list of dynamically-defined annotations.
-    1: vector<Annotation>:MAX_ANNOTATIONS custom_annotations;
+    1: vector<Annotation>:MAX custom_annotations;
 };

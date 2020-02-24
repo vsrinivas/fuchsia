@@ -5,9 +5,8 @@
 use {
     anyhow::{Context as _, Error},
     element_management::{Element, ElementManager, ElementManagerError, SimpleElementManager},
-    fidl::encoding::Decodable,
     fidl_fuchsia_session::{
-        AnnotationError, Annotations, ElementControllerRequest, ElementControllerRequestStream,
+        AnnotationError, ElementControllerRequest, ElementControllerRequestStream,
         ElementManagerRequest, ElementManagerRequestStream, ProposeElementError,
     },
     fidl_fuchsia_session_examples::{ElementPingRequest, ElementPingRequestStream},
@@ -27,6 +26,9 @@ enum ExposedServices {
 /// this session's CML file.
 const ELEMENT_COLLECTION_NAME: &str = "elements";
 
+/// The maximum number of concurrent requests.
+const NUM_CONCURRENT_REQUESTS: usize = 5;
+
 /// This session exposes one service which is offered to all elements started in the session and
 /// prints a string when an element sends a request to said service.
 ///
@@ -40,24 +42,24 @@ async fn main() -> Result<(), Error> {
 
     fs.take_and_serve_directory_handle()?;
 
-    let realm =
-        connect_to_service::<fsys::RealmMarker>().context("Could not connect to Realm service.")?;
-    let element_manager = SimpleElementManager::new(realm);
-
-    while let Some(service_request) = fs.next().await {
-        match service_request {
-            ExposedServices::ElementPing(request_stream) => {
-                handle_element_ping_requests(request_stream)
-                    .await
-                    .expect("Failed to run element ping service.");
+    fs.for_each_concurrent(
+        NUM_CONCURRENT_REQUESTS,
+        move |service_request: ExposedServices| async move {
+            match service_request {
+                ExposedServices::ElementPing(request_stream) => {
+                    handle_element_ping_requests(request_stream)
+                        .await
+                        .expect("Failed to run element ping service.");
+                }
+                ExposedServices::ElementManager(request_stream) => {
+                    handle_element_manager_requests(request_stream)
+                        .await
+                        .expect("Failed to run element manager service.");
+                }
             }
-            ExposedServices::ElementManager(request_stream) => {
-                handle_element_manager_requests(request_stream, &element_manager)
-                    .await
-                    .expect("Failed to run element manager service.");
-            }
-        }
-    }
+        },
+    )
+    .await;
     Ok(())
 }
 
@@ -86,9 +88,12 @@ async fn handle_element_ping_requests(mut stream: ElementPingRequestStream) -> R
 /// `Ok` if the element manager ran successfully, or an `ElementManagerError` if execution halted unexpectedly.
 async fn handle_element_manager_requests(
     mut stream: ElementManagerRequestStream,
-    element_manager: &impl ElementManager,
 ) -> Result<(), Error> {
     let mut uncontrolled_elements = vec![];
+    let realm =
+        connect_to_service::<fsys::RealmMarker>().context("Could not connect to Realm service.")?;
+
+    let element_manager = SimpleElementManager::new(realm);
     while let Some(request) =
         stream.try_next().await.context("Error handling element manager request stream")?
     {
@@ -106,7 +111,9 @@ async fn handle_element_manager_requests(
                         match element_controller {
                             Some(element_controller) => match element_controller.into_stream() {
                                 Ok(stream) => {
-                                    handle_element_controller_request_stream(stream, element);
+                                    fasync::spawn(handle_element_controller_request_stream(
+                                        stream, element,
+                                    ));
                                     Ok(())
                                 }
                                 Err(_) => Err(ProposeElementError::Rejected),
@@ -149,38 +156,240 @@ async fn handle_element_manager_requests(
 ///
 /// # Returns
 /// () when there are no more valid requests.
-fn handle_element_controller_request_stream(
+async fn handle_element_controller_request_stream(
     mut stream: ElementControllerRequestStream,
     mut element: Element,
 ) {
-    fasync::spawn(async move {
-        while let Ok(Some(request)) = stream.try_next().await {
-            match request {
-                ElementControllerRequest::SetAnnotations { annotations, responder } => {
-                    let _ = responder.send(
-                        &mut element
-                            .set_annotations(annotations)
-                            .map_err(|_: anyhow::Error| AnnotationError::Rejected),
-                    );
-                }
-                ElementControllerRequest::GetAnnotations { responder } => {
-                    let mut annotations = element.get_annotations();
-                    if annotations.is_err() {
-                        // GetAnnotations does not return errors, so just return empty annotations.
-                        annotations =
-                            Ok(Annotations { custom_annotations: None, ..Annotations::new_empty() })
-                    }
-                    let _ = responder.send(annotations.unwrap());
-                }
+    while let Ok(Some(request)) = stream.try_next().await {
+        match request {
+            ElementControllerRequest::SetAnnotations { annotations, responder } => {
+                let _ = responder.send(
+                    &mut element
+                        .set_annotations(annotations)
+                        .map_err(|_: anyhow::Error| AnnotationError::Rejected),
+                );
+            }
+            ElementControllerRequest::GetAnnotations { responder } => {
+                let mut annotations = &mut element
+                    .get_annotations()
+                    .map_err(|_: anyhow::Error| AnnotationError::NotFound);
+                let _ = responder.send(&mut annotations);
             }
         }
-    });
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn dummy_test() {
-        println!("Don't panic!(), you've got this!");
+    use {
+        super::*, fidl::endpoints::create_proxy_and_stream, fuchsia_async as fasync,
+        fuchsia_zircon as zx,
+    };
+
+    /// Tests that an Element is created with an empty vector of Annotations.
+    #[fasync::run_singlethreaded(test)]
+    async fn get_annotations_test() {
+        let url = "component_url";
+        let collection = "collection";
+        let name = "name";
+        let (p1, _) = zx::Channel::create().unwrap();
+
+        let element = Element::from_directory_channel(
+            p1,
+            &name.to_string(),
+            &url.to_string(),
+            &collection.to_string(),
+        );
+        let (element_controller_proxy, element_controller_server) =
+            create_proxy_and_stream::<fidl_fuchsia_session::ElementControllerMarker>()
+                .expect("Failed to create ElementController proxy and server.");
+
+        fasync::spawn(handle_element_controller_request_stream(element_controller_server, element));
+        let annotations = element_controller_proxy.get_annotations().await;
+        assert!(annotations.is_ok());
+        let unwrapped_annotations = annotations.unwrap();
+        assert!(unwrapped_annotations.is_ok());
+        assert_eq!(unwrapped_annotations.unwrap().custom_annotations.unwrap().len(), 0);
+    }
+
+    /// Tests that get_annotations properly returns the Annotations passed in via set_annotations().
+    #[fasync::run_singlethreaded(test)]
+    async fn set_annotations_test() {
+        let url = "component_url";
+        let collection = "collection";
+        let name = "name";
+        let (p1, _) = zx::Channel::create().unwrap();
+
+        let element = Element::from_directory_channel(
+            p1,
+            &name.to_string(),
+            &url.to_string(),
+            &collection.to_string(),
+        );
+
+        let (element_controller_proxy, element_controller_server) =
+            create_proxy_and_stream::<fidl_fuchsia_session::ElementControllerMarker>()
+                .expect("Failed to create ElementController proxy and server.");
+
+        fasync::spawn_local(handle_element_controller_request_stream(
+            element_controller_server,
+            element,
+        ));
+
+        let annotation = fidl_fuchsia_session::Annotation {
+            key: "key".to_string(),
+            value: Some(Box::new(fidl_fuchsia_session::Value::Text("value".to_string()))),
+        };
+        let annotations =
+            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation]) };
+
+        // Cannot implement a Copy of an Annotation so just make another variable with idenitical
+        // fields to test the resulting calls.
+        let annotation_2 = fidl_fuchsia_session::Annotation {
+            key: "key".to_string(),
+            value: Some(Box::new(fidl_fuchsia_session::Value::Text("value".to_string()))),
+        };
+        let annotations_2 =
+            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation_2]) };
+        let _ = element_controller_proxy.set_annotations(annotations).await.unwrap();
+
+        let returned_annotations = element_controller_proxy.get_annotations().await;
+        assert!(returned_annotations.is_ok());
+        let unwrapped_annotations = returned_annotations.unwrap();
+        assert!(unwrapped_annotations.is_ok());
+        assert_eq!(unwrapped_annotations.unwrap(), annotations_2);
+    }
+
+    /// Tests that calling set_annotations() twice with the same key updates the value as expected.
+    #[fasync::run_singlethreaded(test)]
+    async fn update_annotations_test() {
+        let url = "component_url";
+        let collection = "collection";
+        let name = "name";
+        let (p1, _) = zx::Channel::create().unwrap();
+
+        let element = Element::from_directory_channel(
+            p1,
+            &name.to_string(),
+            &url.to_string(),
+            &collection.to_string(),
+        );
+
+        let (element_controller_proxy, element_controller_server) =
+            create_proxy_and_stream::<fidl_fuchsia_session::ElementControllerMarker>()
+                .expect("Failed to create ElementController proxy and server.");
+
+        fasync::spawn_local(handle_element_controller_request_stream(
+            element_controller_server,
+            element,
+        ));
+
+        let annotation = fidl_fuchsia_session::Annotation {
+            key: "key".to_string(),
+            value: Some(Box::new(fidl_fuchsia_session::Value::Text("value".to_string()))),
+        };
+        let annotations =
+            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation]) };
+
+        let annotation_2 = fidl_fuchsia_session::Annotation {
+            key: "key".to_string(),
+            value: Some(Box::new(fidl_fuchsia_session::Value::Text("value".to_string()))),
+        };
+        let annotations_2 =
+            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation_2]) };
+
+        let _ = element_controller_proxy.set_annotations(annotations).await.unwrap();
+
+        let returned_annotations = element_controller_proxy.get_annotations().await;
+        assert!(returned_annotations.is_ok());
+        let unwrapped_annotations = returned_annotations.unwrap();
+        assert!(unwrapped_annotations.is_ok());
+        assert_eq!(unwrapped_annotations.unwrap(), annotations_2);
+
+        let annotation_3 = fidl_fuchsia_session::Annotation {
+            key: "key".to_string(),
+            value: Some(Box::new(fidl_fuchsia_session::Value::Text("new_value".to_string()))),
+        };
+        let annotations_3 =
+            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation_3]) };
+
+        let annotation_4 = fidl_fuchsia_session::Annotation {
+            key: "key".to_string(),
+            value: Some(Box::new(fidl_fuchsia_session::Value::Text("new_value".to_string()))),
+        };
+        let annotations_4 =
+            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation_4]) };
+
+        let _ = element_controller_proxy.set_annotations(annotations_3).await.unwrap();
+
+        let returned_annotations = element_controller_proxy.get_annotations().await;
+        assert!(returned_annotations.is_ok());
+        assert!(returned_annotations.is_ok());
+        let unwrapped_annotations = returned_annotations.unwrap();
+        assert!(unwrapped_annotations.is_ok());
+        assert_eq!(unwrapped_annotations.unwrap(), annotations_4);
+    }
+
+    /// Tests that updating a Annotation to have a Value of None removes it from the custom_annotations
+    /// vector.
+    #[fasync::run_singlethreaded(test)]
+    async fn remove_annotations_test() {
+        let url = "component_url";
+        let collection = "collection";
+        let name = "name";
+        let (p1, _) = zx::Channel::create().unwrap();
+
+        let element = Element::from_directory_channel(
+            p1,
+            &name.to_string(),
+            &url.to_string(),
+            &collection.to_string(),
+        );
+
+        let (element_controller_proxy, element_controller_server) =
+            create_proxy_and_stream::<fidl_fuchsia_session::ElementControllerMarker>()
+                .expect("Failed to create ElementController proxy and server.");
+
+        fasync::spawn_local(handle_element_controller_request_stream(
+            element_controller_server,
+            element,
+        ));
+
+        let annotation = fidl_fuchsia_session::Annotation {
+            key: "key".to_string(),
+            value: Some(Box::new(fidl_fuchsia_session::Value::Text("value".to_string()))),
+        };
+        let annotations =
+            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation]) };
+
+        let _ = element_controller_proxy.set_annotations(annotations).await.unwrap();
+
+        let annotation_2 = fidl_fuchsia_session::Annotation {
+            key: "key".to_string(),
+            value: Some(Box::new(fidl_fuchsia_session::Value::Text("value".to_string()))),
+        };
+        let annotations_2 =
+            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation_2]) };
+
+        // Check that there are Annotations.
+        let returned_annotations = element_controller_proxy.get_annotations().await;
+        assert!(returned_annotations.is_ok());
+        let unwrapped_annotations = returned_annotations.unwrap();
+        assert!(unwrapped_annotations.is_ok());
+        assert_eq!(unwrapped_annotations.unwrap(), annotations_2);
+
+        // Remove the Annotations.
+        let annotation_3 = fidl_fuchsia_session::Annotation { key: "key".to_string(), value: None };
+        let annotations_3 =
+            fidl_fuchsia_session::Annotations { custom_annotations: Some(vec![annotation_3]) };
+        let _ = element_controller_proxy.set_annotations(annotations_3).await.unwrap();
+
+        let returned_annotations = element_controller_proxy.get_annotations().await;
+        assert!(returned_annotations.is_ok());
+        let unwrapped_annotations = returned_annotations.unwrap();
+        assert!(unwrapped_annotations.is_ok());
+
+        // Verify that there are no Annotations stored.
+        assert_eq!(unwrapped_annotations.unwrap().custom_annotations.unwrap().len(), 0);
     }
 }

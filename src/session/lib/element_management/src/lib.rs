@@ -111,6 +111,8 @@ pub trait ElementManager {
     /// - `child_collection`: The collection to add the element in, must match a collection in the
     ///                       calling component's CML file.
     ///
+    /// On success, the [`Element`] is returned back to the session.
+    ///
     /// # Errors
     /// If the child cannot be created or bound in the current [`fidl_fuchsia_sys2::Realm`]. In
     /// particular, it is an error to call [`launch_element`] twice with the same `child_name`.
@@ -317,8 +319,6 @@ impl Element {
                 if annotation.value.is_none() {
                     self.custom_annotations.remove(&annotation.key);
                 } else {
-                    // TODO(richkadel): add error checking per the FIDL spec
-
                     self.custom_annotations
                         .insert(annotation.key.to_string(), *annotation.value.unwrap());
                 }
@@ -332,7 +332,6 @@ impl Element {
         for (key, value) in &self.custom_annotations {
             custom_annotations.push(Annotation {
                 key: key.to_string(),
-                // value: None,
                 value: Some(Box::new(match &*value {
                     Value::Text(content) => Value::Text(content.to_string()),
                     Value::Buffer(content) => {
@@ -788,6 +787,7 @@ mod tests {
         let component_url = "test_url.cmx";
         let child_name = "child";
         let child_collection = "elements";
+
         let realm = spawn_realm_server(move |realm_request| match realm_request {
             _ => {
                 // CFv1 elements do not use the realm so fail the test if it is requested.
