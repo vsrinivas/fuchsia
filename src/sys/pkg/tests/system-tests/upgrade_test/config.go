@@ -5,6 +5,7 @@
 package upgrade
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -101,13 +102,13 @@ func (c *Config) GetDowngradeBuilder() (*artifacts.Builder, error) {
 	return c.archiveConfig.BuildArchive().GetBuilder(c.downgradeBuilderName), nil
 }
 
-func (c *Config) GetDowngradeBuildID() (string, error) {
+func (c *Config) GetDowngradeBuildID(ctx context.Context) (string, error) {
 	if c.downgradeBuilderName != "" && c.downgradeBuildID == "" {
 		b, err := c.GetDowngradeBuilder()
 		if err != nil {
 			return "", err
 		}
-		id, err := b.GetLatestBuildID()
+		id, err := b.GetLatestBuildID(ctx)
 		if err != nil {
 			return "", fmt.Errorf("failed to lookup build id: %s", err)
 		}
@@ -125,13 +126,13 @@ func (c *Config) GetUpgradeBuilder() (*artifacts.Builder, error) {
 	return c.archiveConfig.BuildArchive().GetBuilder(c.upgradeBuilderName), nil
 }
 
-func (c *Config) GetUpgradeBuildID() (string, error) {
+func (c *Config) GetUpgradeBuildID(ctx context.Context) (string, error) {
 	if c.upgradeBuilderName != "" && c.upgradeBuildID == "" {
 		b, err := c.GetUpgradeBuilder()
 		if err != nil {
 			return "", err
 		}
-		id, err := b.GetLatestBuildID()
+		id, err := b.GetLatestBuildID(ctx)
 		if err != nil {
 			return "", fmt.Errorf("failt to lookup build id: %s", err)
 		}
@@ -141,19 +142,19 @@ func (c *Config) GetUpgradeBuildID() (string, error) {
 	return c.upgradeBuildID, nil
 }
 
-func (c *Config) GetDowngradeRepository(dir string) (*packages.Repository, error) {
-	buildID, err := c.GetDowngradeBuildID()
+func (c *Config) GetDowngradeRepository(ctx context.Context, dir string) (*packages.Repository, error) {
+	buildID, err := c.GetDowngradeBuildID(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if buildID != "" {
-		build, err := c.archiveConfig.BuildArchive().GetBuildByID(buildID, dir)
+		build, err := c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir)
 		if err != nil {
 			return nil, err
 		}
 
-		return build.GetPackageRepository()
+		return build.GetPackageRepository(ctx)
 	}
 
 	if c.downgradeFuchsiaBuildDir != "" {
@@ -163,19 +164,19 @@ func (c *Config) GetDowngradeRepository(dir string) (*packages.Repository, error
 	return nil, fmt.Errorf("downgrade repository not specified")
 }
 
-func (c *Config) GetUpgradeRepository(dir string) (*packages.Repository, error) {
-	buildID, err := c.GetUpgradeBuildID()
+func (c *Config) GetUpgradeRepository(ctx context.Context, dir string) (*packages.Repository, error) {
+	buildID, err := c.GetUpgradeBuildID(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if buildID != "" {
-		build, err := c.archiveConfig.BuildArchive().GetBuildByID(buildID, dir)
+		build, err := c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir)
 		if err != nil {
 			return nil, err
 		}
 
-		return build.GetPackageRepository()
+		return build.GetPackageRepository(ctx)
 	}
 
 	if c.upgradeFuchsiaBuildDir != "" {
@@ -185,25 +186,25 @@ func (c *Config) GetUpgradeRepository(dir string) (*packages.Repository, error) 
 	return nil, fmt.Errorf("upgrade repository not specified")
 }
 
-func (c *Config) GetDowngradePaver(dir string) (*paver.Paver, error) {
+func (c *Config) GetDowngradePaver(ctx context.Context, dir string) (*paver.Paver, error) {
 	sshPrivateKey, err := c.deviceConfig.SSHPrivateKey()
 	if err != nil {
 		return nil, err
 	}
 	sshPublicKey := sshPrivateKey.PublicKey()
 
-	buildID, err := c.GetDowngradeBuildID()
+	buildID, err := c.GetDowngradeBuildID(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if buildID != "" {
-		build, err := c.archiveConfig.BuildArchive().GetBuildByID(buildID, dir)
+		build, err := c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir)
 		if err != nil {
 			return nil, err
 		}
 
-		return build.GetPaver(sshPublicKey)
+		return build.GetPaver(ctx, sshPublicKey)
 	}
 
 	if c.downgradeFuchsiaBuildDir != "" {

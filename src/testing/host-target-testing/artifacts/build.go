@@ -5,6 +5,7 @@
 package artifacts
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -25,12 +26,12 @@ type Build struct {
 }
 
 // GetPackageRepository returns a Repository for this build.
-func (b *Build) GetPackageRepository() (*packages.Repository, error) {
+func (b *Build) GetPackageRepository(ctx context.Context) (*packages.Repository, error) {
 	if b.packages != nil {
 		return b.packages, nil
 	}
 
-	path, err := b.archive.download(b.dir, b.ID, "packages.tar.gz")
+	path, err := b.archive.download(ctx, b.dir, b.ID, "packages.tar.gz")
 	if err != nil {
 		return nil, fmt.Errorf("failed to download packages.tar.gz: %s", err)
 	}
@@ -41,7 +42,7 @@ func (b *Build) GetPackageRepository() (*packages.Repository, error) {
 		return nil, err
 	}
 
-	p, err := packages.NewRepositoryFromTar(packagesDir, path)
+	p, err := packages.NewRepositoryFromTar(ctx, packagesDir, path)
 	if err != nil {
 		return nil, err
 	}
@@ -53,8 +54,8 @@ func (b *Build) GetPackageRepository() (*packages.Repository, error) {
 // GetBuildArchive downloads and extracts the build-artifacts.tgz from the
 // build id `buildId`. Returns a path to the directory of the extracted files,
 // or an error if it fails to download or extract.
-func (b *Build) GetBuildArchive() (string, error) {
-	path, err := b.archive.download(b.dir, b.ID, "build-archive.tgz")
+func (b *Build) GetBuildArchive(ctx context.Context) (string, error) {
+	path, err := b.archive.download(ctx, b.dir, b.ID, "build-archive.tgz")
 	if err != nil {
 		return "", fmt.Errorf("failed to download build-archive.tar.gz: %s", err)
 	}
@@ -65,7 +66,7 @@ func (b *Build) GetBuildArchive() (string, error) {
 		return "", err
 	}
 
-	if err := util.Untar(buildArchiveDir, path); err != nil {
+	if err := util.Untar(ctx, buildArchiveDir, path); err != nil {
 		return "", fmt.Errorf("failed to extract packages: %s", err)
 	}
 
@@ -73,8 +74,8 @@ func (b *Build) GetBuildArchive() (string, error) {
 }
 
 // GetPaver downloads and returns a paver for the build.
-func (b *Build) GetPaver(publicKey ssh.PublicKey) (*paver.Paver, error) {
-	buildArchiveDir, err := b.GetBuildArchive()
+func (b *Build) GetPaver(ctx context.Context, publicKey ssh.PublicKey) (*paver.Paver, error) {
+	buildArchiveDir, err := b.GetBuildArchive(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -109,12 +110,12 @@ type BlobInfo struct {
 }
 
 // GetSystemSnapshot downloads and returns the system snapshot for the build.
-func (b *Build) GetSystemSnapshot() (*SystemSnapshot, error) {
+func (b *Build) GetSystemSnapshot(ctx context.Context) (*SystemSnapshot, error) {
 	if b.snapshot != nil {
 		return b.snapshot, nil
 	}
 
-	path, err := b.archive.download(b.dir, b.ID, "system.snapshot.json")
+	path, err := b.archive.download(ctx, b.dir, b.ID, "system.snapshot.json")
 	if err != nil {
 		return nil, fmt.Errorf("failed to download system.snapshot.json: %s", err)
 	}

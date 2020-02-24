@@ -5,6 +5,7 @@
 package paver
 
 import (
+	"context"
 	"io/ioutil"
 	"log"
 	"os"
@@ -28,7 +29,7 @@ func NewPaver(paveZedbootScript, paveScript string, publicKey ssh.PublicKey) *Pa
 
 // Pave runs a paver service for one pave. If `deviceName` is not empty, the
 // pave will only be applied to the specified device.
-func (p *Paver) Pave(deviceName string) error {
+func (p *Paver) Pave(ctx context.Context, deviceName string) error {
 	// Write out the public key's authorized keys.
 	authorizedKeys, err := ioutil.TempFile("", "")
 	if err != nil {
@@ -45,15 +46,15 @@ func (p *Paver) Pave(deviceName string) error {
 	}
 
 	// Run pave-zedboot.sh to bootstrap the new bootloader and zedboot.
-	if err := p.runPave(deviceName, p.paveZedbootScript, "--allow-zedboot-version-mismatch"); err != nil {
+	if err := p.runPave(ctx, deviceName, p.paveZedbootScript, "--allow-zedboot-version-mismatch"); err != nil {
 		return err
 	}
 
 	// Run pave.sh to install Fuchsia.
-	return p.runPave(deviceName, p.paveScript, "--fail-fast-if-version-mismatch", "--authorized-keys", authorizedKeys.Name())
+	return p.runPave(ctx, deviceName, p.paveScript, "--fail-fast-if-version-mismatch", "--authorized-keys", authorizedKeys.Name())
 }
 
-func (p *Paver) runPave(deviceName string, script string, args ...string) error {
+func (p *Paver) runPave(ctx context.Context, deviceName string, script string, args ...string) error {
 	log.Printf("paving device %q with %s", deviceName, script)
 	path, err := exec.LookPath(script)
 	if err != nil {
@@ -65,7 +66,7 @@ func (p *Paver) runPave(deviceName string, script string, args ...string) error 
 		args = append(args, "-n", deviceName)
 	}
 	log.Printf("running: %s %q", path, args)
-	cmd := exec.Command(path, args...)
+	cmd := exec.CommandContext(ctx, path, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

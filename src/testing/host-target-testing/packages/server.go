@@ -30,7 +30,7 @@ type Server struct {
 	server *http.Server
 }
 
-func newServer(dir string, localHostname string, repoName string) (*Server, error) {
+func newServer(ctx context.Context, dir string, localHostname string, repoName string) (*Server, error) {
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
 		return nil, err
@@ -66,6 +66,15 @@ func newServer(dir string, localHostname string, repoName string) (*Server, erro
 		if err := server.Serve(listener); err != http.ErrServerClosed {
 			log.Fatalf("failed to shutdown server: %s", err)
 		}
+	}()
+
+	// Tear down the server if the context expires.
+	go func() {
+		select {
+		case <-ctx.Done():
+			server.Shutdown(ctx)
+		}
+
 	}()
 
 	return &Server{

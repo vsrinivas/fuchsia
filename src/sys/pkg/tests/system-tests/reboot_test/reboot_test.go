@@ -7,10 +7,10 @@ package reboot
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"testing"
-	"time"
 
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
@@ -45,142 +45,151 @@ func TestReboot(t *testing.T) {
 	}
 	defer cleanup()
 
-	device, err := c.deviceConfig.NewDeviceClient()
+	device, err := c.deviceConfig.NewDeviceClient(ctx)
 	if err != nil {
 		t.Fatalf("failed to create ota test client: %s", err)
 	}
 	defer device.Close()
 
-	paveDevice(t, ctx, device, outputDir)
+	if err := paveDevice(ctx, device, outputDir); err != nil {
+		t.Fatalf("paving failed: %s", err)
+	}
+
 	testReboot(t, ctx, device, outputDir)
 }
 
 func testReboot(t *testing.T, ctx context.Context, device *device.Client, outputDir string) {
-	for i := 0; i < c.cycleCount; i++ {
-		log.Printf("Reboot Attempt %d", i+1)
+	for i := 1; i <= c.cycleCount; i++ {
+		log.Printf("Reboot Attempt %d", i)
 
-		err := withTimeout(ctx, c.cycleTimeout, func() {
-			doTestReboot(t, ctx, device, outputDir)
-		})
-		if err != nil {
-			t.Fatalf("OTA Cycle timed out: %s", err)
+		if err := doTestReboot(ctx, device, outputDir); err != nil {
+			t.Fatalf("OTA Cycle %d timed out: %s", i, err)
 		}
 	}
 }
 
-func doTestReboot(t *testing.T, ctx context.Context, device *device.Client, outputDir string) {
-	repo, err := c.getRepository(outputDir)
+func doTestReboot(ctx context.Context, device *device.Client, outputDir string) error {
+	ctx, cancel := context.WithTimeout(ctx, c.cycleTimeout)
+	defer cancel()
+
+	repo, err := c.getRepository(ctx, outputDir)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 
 	rpcClient, err := device.StartRpcSession(ctx, repo)
 	if err != nil {
-		t.Fatalf("unable to connect to sl4f: %s", err)
+		return fmt.Errorf("unable to connect to sl4f: %s", err)
 	}
 	defer rpcClient.Close()
 
 	// Install version N on the device if it is not already on that version.
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
-		t.Fatalf("error extracting expected system image merkle: %s", err)
+		return fmt.Errorf("error extracting expected system image merkle: %s", err)
 	}
 
 	expectedConfig, err := determineActiveConfig(ctx, rpcClient)
 	if err != nil {
-		t.Fatalf("error determining target config: %s", err)
+		return fmt.Errorf("error determining target config: %s", err)
 	}
 
-	validateDevice(t, ctx, device, rpcClient, expectedSystemImageMerkle, expectedConfig)
+	if err := validateDevice(ctx, device, rpcClient, expectedSystemImageMerkle, expectedConfig); err != nil {
+		return err
+	}
 
 	if err := device.Reboot(ctx, repo, &rpcClient); err != nil {
-		t.Fatalf("error rebooting: %s", err)
+		return fmt.Errorf("error rebooting: %s", err)
 	}
 
-	validateDevice(t, ctx, device, rpcClient, expectedSystemImageMerkle, expectedConfig)
+	return validateDevice(ctx, device, rpcClient, expectedSystemImageMerkle, expectedConfig)
 }
 
-func paveDevice(t *testing.T, ctx context.Context, device *device.Client, outputDir string) {
-	err := withTimeout(ctx, c.paveTimeout, func() {
-		doPaveDevice(t, ctx, device, outputDir)
-	})
-	if err != nil {
-		t.Fatalf("Paving timed out: %s", err)
-	}
-}
+func paveDevice(ctx context.Context, device *device.Client, outputDir string) error {
+	ctx, cancel := context.WithTimeout(ctx, c.paveTimeout)
+	defer cancel()
 
-func doPaveDevice(t *testing.T, ctx context.Context, device *device.Client, outputDir string) {
 	if !c.shouldRepaveDevice() {
-		return
+		return nil
 	}
 
-	repo, err := c.getRepository(outputDir)
+	repo, err := c.getRepository(ctx, outputDir)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
-		t.Fatalf("error extracting expected system image merkle: %s", err)
+		return fmt.Errorf("error extracting expected system image merkle: %s", err)
 	}
 
 	// Only pave if the device is not running the expected version.
-	if isDeviceUpToDate(t, ctx, device, expectedSystemImageMerkle) {
+	upToDate, err := isDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
+	if err != nil {
+		return err
+	}
+	if upToDate {
 		log.Printf("device already up to date")
-		return
+		return nil
 	}
 
-	paver, err := c.getPaver(outputDir)
+	paver, err := c.getPaver(ctx, outputDir)
 	if err != nil {
-		t.Fatal(err)
+		return fmt.Errorf("failed to get paver: %s", err)
 	}
 
 	log.Printf("starting pave")
 
 	// Reboot the device into recovery and pave it.
-	if err = device.RebootToRecovery(); err != nil {
-		t.Fatalf("failed to reboot to recovery: %s", err)
+	if err = device.RebootToRecovery(ctx); err != nil {
+		return fmt.Errorf("failed to reboot to recovery: %s", err)
 	}
 
-	if err = paver.Pave(c.deviceConfig.DeviceName); err != nil {
-		t.Fatalf("device failed to pave: %s", err)
+	if err = paver.Pave(ctx, c.deviceConfig.DeviceName); err != nil {
+		return fmt.Errorf("device failed to pave: %s", err)
 	}
 
 	// Wait for the device to come online.
-	device.WaitForDeviceToBeConnected()
+	if err := device.WaitForDeviceToBeConnected(ctx); err != nil {
+		return fmt.Errorf("device failed to connect: %s", err)
+	}
 
 	rpcClient, err := device.StartRpcSession(ctx, repo)
 	if err != nil {
-		t.Fatalf("unable to connect to sl4f: %s", err)
+		return fmt.Errorf("unable to connect to sl4f: %s", err)
 	}
 	defer rpcClient.Close()
 
 	// Check if we support ABR. If so, we always boot into A after a pave.
 	expectedConfig, err := determineActiveConfig(ctx, rpcClient)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 	if expectedConfig != nil {
 		config := sl4f.ConfigurationA
 		expectedConfig = &config
 	}
 
-	validateDevice(t, ctx, device, rpcClient, expectedSystemImageMerkle, expectedConfig)
+	if err := validateDevice(ctx, device, rpcClient, expectedSystemImageMerkle, expectedConfig); err != nil {
+		return err
+	}
 
 	log.Printf("paving successful")
+
+	return nil
 }
 
-func isDeviceUpToDate(t *testing.T, ctx context.Context, device *device.Client, expectedSystemImageMerkle string) bool {
+func isDeviceUpToDate(ctx context.Context, device *device.Client, expectedSystemImageMerkle string) (bool, error) {
 	// Get the device's current /system/meta. Error out if it is the same
 	// version we are about to OTA to.
-	remoteSystemImageMerkle, err := device.GetSystemImageMerkle()
+	remoteSystemImageMerkle, err := device.GetSystemImageMerkle(ctx)
 	if err != nil {
-		t.Fatal(err)
+		return false, err
 	}
 	log.Printf("current system image merkle: %q", remoteSystemImageMerkle)
 	log.Printf("upgrading to system image merkle: %q", expectedSystemImageMerkle)
 
-	return expectedSystemImageMerkle == remoteSystemImageMerkle
+	return expectedSystemImageMerkle == remoteSystemImageMerkle, nil
 }
 
 func determineActiveConfig(ctx context.Context, rpcClient *sl4f.Client) (*sl4f.Configuration, error) {
@@ -198,50 +207,37 @@ func determineActiveConfig(ctx context.Context, rpcClient *sl4f.Client) (*sl4f.C
 }
 
 func validateDevice(
-	t *testing.T,
 	ctx context.Context,
 	device *device.Client,
 	rpcClient *sl4f.Client,
 	expectedSystemImageMerkle string,
 	expectedConfig *sl4f.Configuration,
-) {
+) error {
 	// At the this point the system should have been updated to the target
 	// system version. Confirm the update by fetching the device's current
 	// /system/meta, and making sure it is the correct version.
-	if !isDeviceUpToDate(t, ctx, device, expectedSystemImageMerkle) {
-		t.Fatalf("system version failed to update to %q", expectedSystemImageMerkle)
+	upToDate, err := isDeviceUpToDate(ctx, device, expectedSystemImageMerkle)
+	if err != nil {
+		return err
+	}
+	if !upToDate {
+		return fmt.Errorf("system version failed to update to %q", expectedSystemImageMerkle)
 	}
 
 	// Make sure the device doesn't have any broken static packages.
 	if err := rpcClient.ValidateStaticPackages(ctx); err != nil {
-		t.Fatal(err)
+		return err
 	}
 
 	// Ensure the device is booting from the expected boot slot
 	activeConfig, err := determineActiveConfig(ctx, rpcClient)
 	if err != nil {
-		t.Fatalf("unable to determine active boot configuration: %s", err)
+		return fmt.Errorf("unable to determine active boot configuration: %s", err)
 	}
 
 	if expectedConfig != nil && activeConfig != nil && *activeConfig != *expectedConfig {
-		t.Fatalf("expected device to boot from slot %s, got %s", *expectedConfig, *activeConfig)
+		return fmt.Errorf("expected device to boot from slot %s, got %s", *expectedConfig, *activeConfig)
 	}
-}
 
-func withTimeout(ctx context.Context, timeout time.Duration, f func()) error {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	ch := make(chan struct{})
-	go func() {
-		f()
-		ch <- struct{}{}
-	}()
-
-	select {
-	case <-ch:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+	return nil
 }

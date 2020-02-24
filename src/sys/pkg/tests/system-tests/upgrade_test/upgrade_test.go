@@ -44,7 +44,7 @@ func TestMain(m *testing.M) {
 func TestOTA(t *testing.T) {
 	ctx := context.Background()
 
-	device, err := c.deviceConfig.NewDeviceClient()
+	device, err := c.deviceConfig.NewDeviceClient(ctx)
 	if err != nil {
 		t.Fatalf("failed to create ota test client: %s", err)
 	}
@@ -82,33 +82,23 @@ func testOTAs(t *testing.T, ctx context.Context, device *device.Client, rpcClien
 	for i := 1; i <= c.cycleCount; i++ {
 		log.Printf("OTA Attempt %d", i)
 
-		ctx, cancel := context.WithTimeout(ctx, c.cycleTimeout)
-		defer cancel()
-
-		ch := make(chan error)
-		go func() {
-			ch <- doTestOTAs(ctx, device, rpcClient)
-		}()
-
-		select {
-		case err := <-ch:
-			if err != nil {
-				t.Fatalf("OTA Attempt %d failed: %s", i, err)
-			}
-		case <-ctx.Done():
-			t.Fatalf("OTA Attempt %d timed out: %s", i, ctx.Err())
+		if err := doTestOTAs(ctx, device, rpcClient); err != nil {
+			t.Fatalf("OTA Attempt %d failed: %s", i, err)
 		}
 	}
 }
 
 func doTestOTAs(ctx context.Context, device *device.Client, rpcClient **sl4f.Client) error {
+	ctx, cancel := context.WithTimeout(ctx, c.cycleTimeout)
+	defer cancel()
+
 	outputDir, cleanup, err := c.archiveConfig.OutputDir()
 	if err != nil {
 		return fmt.Errorf("failed to get output directory: %s", err)
 	}
 	defer cleanup()
 
-	repo, err := c.GetUpgradeRepository(outputDir)
+	repo, err := c.GetUpgradeRepository(ctx, outputDir)
 	if err != nil {
 		return fmt.Errorf("failed to get upgrade repository: %s", err)
 	}
@@ -165,7 +155,7 @@ func testLongevityOTAs(t *testing.T, ctx context.Context, device *device.Client,
 	for {
 		log.Printf("Look up latest build for builder %s", builder)
 
-		buildID, err := builder.GetLatestBuildID()
+		buildID, err := builder.GetLatestBuildID(ctx)
 		if err != nil {
 			t.Fatalf("error getting latest build for builder %s: %s", builder, err)
 		}
@@ -177,7 +167,7 @@ func testLongevityOTAs(t *testing.T, ctx context.Context, device *device.Client,
 		}
 		log.Printf("Longevity Test Attempt %d upgrading from build %s to build %s", attempt, lastBuildID, buildID)
 
-		if err := testLongevityOTAAttempt(t, ctx, device, rpcClient, buildID, checkABR); err != nil {
+		if err := testLongevityOTAAttempt(ctx, device, rpcClient, buildID, checkABR); err != nil {
 			t.Fatalf("Longevity Test Attempt %d failed: %s", attempt, err)
 		}
 
@@ -190,42 +180,28 @@ func testLongevityOTAs(t *testing.T, ctx context.Context, device *device.Client,
 	}
 }
 
-func testLongevityOTAAttempt(t *testing.T, ctx context.Context, device *device.Client, rpcClient **sl4f.Client, buildID string, checkABR bool) error {
-	ctx, cancel := context.WithTimeout(ctx, c.cycleTimeout)
-	defer cancel()
-
-	ch := make(chan error)
-	go func() {
-		ch <- doTestLongevityOTAAttempt(ctx, device, rpcClient, buildID, checkABR)
-	}()
-
-	select {
-	case err := <-ch:
-		return err
-	case <-ctx.Done():
-		return fmt.Errorf("OTA Cycle timed out: %s", ctx.Err())
-	}
-}
-
-func doTestLongevityOTAAttempt(
+func testLongevityOTAAttempt(
 	ctx context.Context,
 	device *device.Client,
 	rpcClient **sl4f.Client,
 	buildID string,
 	checkABR bool,
 ) error {
+	ctx, cancel := context.WithTimeout(ctx, c.cycleTimeout)
+	defer cancel()
+
 	outputDir, cleanup, err := c.archiveConfig.OutputDir()
 	if err != nil {
 		return fmt.Errorf("failed to get output directory: %s", err)
 	}
 	defer cleanup()
 
-	build, err := c.archiveConfig.BuildArchive().GetBuildByID(buildID, outputDir)
+	build, err := c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, outputDir)
 	if err != nil {
 		return fmt.Errorf("failed to find build %s: %s", buildID, err)
 	}
 
-	repo, err := build.GetPackageRepository()
+	repo, err := build.GetPackageRepository(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get repo for build: %s", err)
 	}
@@ -254,38 +230,18 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 	ctx, cancel := context.WithTimeout(ctx, c.paveTimeout)
 	defer cancel()
 
-	type result struct {
-		rpcClient *sl4f.Client
-		err       error
-	}
-
-	ch := make(chan result)
-	go func() {
-		rpcClient, err := doPaveDevice(ctx, device)
-		ch <- result{rpcClient: rpcClient, err: err}
-	}()
-
-	select {
-	case r := <-ch:
-		return r.rpcClient, r.err
-	case <-ctx.Done():
-		return nil, fmt.Errorf("Paving timed out: %s", ctx.Err())
-	}
-}
-
-func doPaveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error) {
 	outputDir, cleanup, err := c.archiveConfig.OutputDir()
 	if err != nil {
 		return nil, err
 	}
 	defer cleanup()
 
-	downgradePaver, err := c.GetDowngradePaver(outputDir)
+	downgradePaver, err := c.GetDowngradePaver(ctx, outputDir)
 	if err != nil {
 		return nil, fmt.Errorf("error getting downgrade paver: %s", err)
 	}
 
-	downgradeRepo, err := c.GetDowngradeRepository(outputDir)
+	downgradeRepo, err := c.GetDowngradeRepository(ctx, outputDir)
 	if err != nil {
 		return nil, fmt.Errorf("error etting downgrade repository: %s", err)
 	}
@@ -298,16 +254,18 @@ func doPaveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, err
 	}
 
 	// Reboot the device into recovery and pave it.
-	if err = device.RebootToRecovery(); err != nil {
+	if err = device.RebootToRecovery(ctx); err != nil {
 		return nil, fmt.Errorf("failed to reboot to recovery: %s", err)
 	}
 
-	if err = downgradePaver.Pave(c.deviceConfig.DeviceName); err != nil {
+	if err = downgradePaver.Pave(ctx, c.deviceConfig.DeviceName); err != nil {
 		return nil, fmt.Errorf("device failed to pave: %s", err)
 	}
 
 	// Wait for the device to come online.
-	device.WaitForDeviceToBeConnected()
+	if err = device.WaitForDeviceToBeConnected(ctx); err != nil {
+		return nil, fmt.Errorf("device failed to connect: %s", err)
+	}
 
 	rpcClient, err := device.StartRpcSession(ctx, downgradeRepo)
 	if err != nil {
@@ -434,7 +392,7 @@ func otaToPackage(
 	// In order to manually trigger the system updater, we need the `run`
 	// package. Since builds can be configured to not automatically install
 	// packages, we need to explicitly resolve it.
-	err = device.Run("pkgctl resolve fuchsia-pkg://fuchsia.com/run/0", os.Stdout, os.Stderr)
+	err = device.Run(ctx, "pkgctl resolve fuchsia-pkg://fuchsia.com/run/0", os.Stdout, os.Stderr)
 	if err != nil {
 		return fmt.Errorf("error resolving the run package: %v", err)
 	}
@@ -445,7 +403,7 @@ func otaToPackage(
 	log.Printf("starting system OTA")
 
 	cmd := fmt.Sprintf("run \"fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx\" --update \"%s\" && sleep 60", updatePackageUrl)
-	err = device.Run(cmd, os.Stdout, os.Stderr)
+	err = device.Run(ctx, cmd, os.Stdout, os.Stderr)
 	if err != nil {
 		if _, ok := err.(*ssh.ExitMissingError); !ok {
 			return fmt.Errorf("failed to run system_updater.cmx: %s", err)
@@ -453,9 +411,21 @@ func otaToPackage(
 	}
 
 	// Wait until we get a signal that we have disconnected
-	wg.Wait()
+	ch := make(chan struct{})
+	go func() {
+		wg.Wait()
+		ch <- struct{}{}
+	}()
 
-	device.WaitForDeviceToBeConnected()
+	select {
+	case <-ch:
+	case <-ctx.Done():
+		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
+	}
+
+	if err = device.WaitForDeviceToBeConnected(ctx); err != nil {
+		return fmt.Errorf("device failed to connect: %s", err)
+	}
 
 	log.Printf("OTA complete, validating device")
 	// FIXME: See comment in device.TriggerSystemOTA()
@@ -479,7 +449,7 @@ func isDeviceUpToDate(ctx context.Context, device *device.Client, rpcClient *sl4
 	var remoteSystemImageMerkle string
 	var err error
 	if rpcClient == nil {
-		remoteSystemImageMerkle, err = device.GetSystemImageMerkle()
+		remoteSystemImageMerkle, err = device.GetSystemImageMerkle(ctx)
 	} else {
 		remoteSystemImageMerkle, err = rpcClient.GetSystemImageMerkle(ctx)
 	}
@@ -540,7 +510,7 @@ func validateDevice(
 	// Make sure the device doesn't have any broken static packages.
 	// FIXME(40913): every builder should at least build sl4f as a universe package.
 	if rpcClient == nil {
-		if err := device.ValidateStaticPackages(); err != nil {
+		if err := device.ValidateStaticPackages(ctx); err != nil {
 			return fmt.Errorf("failed to validate static packages: %s", err)
 		}
 	} else {

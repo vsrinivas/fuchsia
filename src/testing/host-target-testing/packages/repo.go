@@ -5,6 +5,7 @@
 package packages
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -74,8 +75,8 @@ func NewRepository(dir string) (*Repository, error) {
 // NewRepositoryFromTar extracts a repository from a tar.gz, and returns a
 // Repository parsed from it. It returns an error if the repository does not
 // exist, or contains malformed metadata.
-func NewRepositoryFromTar(dst string, src string) (*Repository, error) {
-	if err := util.Untar(dst, src); err != nil {
+func NewRepositoryFromTar(ctx context.Context, dst string, src string) (*Repository, error) {
+	if err := util.Untar(ctx, dst, src); err != nil {
 		return nil, fmt.Errorf("failed to extract packages: %s", err)
 	}
 
@@ -95,8 +96,8 @@ func (r *Repository) OpenBlob(merkle string) (*os.File, error) {
 	return os.Open(filepath.Join(r.Dir, "blobs", merkle))
 }
 
-func (r *Repository) Serve(localHostname string, repoName string) (*Server, error) {
-	return newServer(r.Dir, localHostname, repoName)
+func (r *Repository) Serve(ctx context.Context, localHostname string, repoName string) (*Server, error) {
+	return newServer(ctx, r.Dir, localHostname, repoName)
 }
 
 func (r *Repository) LookupUpdateSystemImageMerkle() (string, error) {

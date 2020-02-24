@@ -9,6 +9,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -21,9 +22,9 @@ import (
 
 // RunCommand executes a command on the host and returns the stdout and stderr
 // as byte strings.
-func RunCommand(name string, arg ...string) ([]byte, []byte, error) {
+func RunCommand(ctx context.Context, name string, arg ...string) ([]byte, []byte, error) {
 	log.Printf("running: %s %q", name, arg)
-	c := exec.Command(name, arg...)
+	c := exec.CommandContext(ctx, name, arg...)
 	var o bytes.Buffer
 	var e bytes.Buffer
 	c.Stdout = &o
@@ -35,7 +36,7 @@ func RunCommand(name string, arg ...string) ([]byte, []byte, error) {
 }
 
 // Untar untars a tar.gz file into a directory.
-func Untar(dst string, src string) error {
+func Untar(ctx context.Context, dst string, src string) error {
 	log.Printf("untarring %s into %s", src, dst)
 
 	f, err := os.Open(src)
@@ -53,37 +54,51 @@ func Untar(dst string, src string) error {
 	tr := tar.NewReader(gz)
 
 	for {
-		header, err := tr.Next()
-		if err == io.EOF {
-			return nil
-		} else if err != nil {
-			return err
-		}
-
-		path := filepath.Join(dst, header.Name)
-		info := header.FileInfo()
-		if info.IsDir() {
-			if err := os.MkdirAll(path, info.Mode()); err != nil {
-				return err
-			}
-		} else {
-			if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			header, err := tr.Next()
+			if err == io.EOF {
+				return nil
+			} else if err != nil {
 				return err
 			}
 
-			if _, err = os.Stat(path); err == nil {
-				continue
-			}
-
-			err := AtomicallyWriteFile(path, info.Mode(), func(f *os.File) error {
-				_, err := io.Copy(f, tr)
-				return err
-			})
-			if err != nil {
+			if err := untarNext(dst, tr, header); err != nil {
 				return err
 			}
 		}
 	}
+}
+
+func untarNext(dst string, tr *tar.Reader, header *tar.Header) error {
+	path := filepath.Join(dst, header.Name)
+	info := header.FileInfo()
+	if info.IsDir() {
+		if err := os.MkdirAll(path, info.Mode()); err != nil {
+			return err
+		}
+	} else {
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			return err
+		}
+
+		// Skip entry if path already exists.
+		if _, err := os.Stat(path); err == nil {
+			return nil
+		}
+
+		err := AtomicallyWriteFile(path, info.Mode(), func(f *os.File) error {
+			_, err := io.Copy(f, tr)
+			return err
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func ParsePackageList(rd io.Reader) (map[string]string, error) {

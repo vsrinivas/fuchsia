@@ -34,12 +34,15 @@ type Client struct {
 }
 
 // NewClient creates a new Client.
-func NewClient(deviceHostname string, privateKey ssh.Signer) (*Client, error) {
+func NewClient(ctx context.Context, deviceHostname string, privateKey ssh.Signer) (*Client, error) {
 	sshConfig, err := newSSHConfig(privateKey)
 	if err != nil {
 		return nil, err
 	}
-	sshClient := sshclient.NewClient(net.JoinHostPort(deviceHostname, "22"), sshConfig)
+	sshClient, err := sshclient.NewClient(ctx, net.JoinHostPort(deviceHostname, "22"), sshConfig)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Client{
 		deviceHostname: deviceHostname,
@@ -69,13 +72,13 @@ func (c *Client) Close() {
 
 // Run a command to completion on the remote device and write STDOUT and STDERR
 // to the passed in io.Writers.
-func (c *Client) Run(command string, stdout io.Writer, stderr io.Writer) error {
-	return c.sshClient.Run(command, stdout, stderr)
+func (c *Client) Run(ctx context.Context, command string, stdout io.Writer, stderr io.Writer) error {
+	return c.sshClient.Run(ctx, command, stdout, stderr)
 }
 
 // WaitForDeviceToBeConnected blocks until a device is available for access.
-func (c *Client) WaitForDeviceToBeConnected() {
-	c.sshClient.WaitToBeConnected()
+func (c *Client) WaitForDeviceToBeConnected(ctx context.Context) error {
+	return c.sshClient.WaitToBeConnected(ctx)
 }
 
 // RegisterDisconnectListener adds a waiter that gets notified when the ssh and
@@ -84,19 +87,19 @@ func (c *Client) RegisterDisconnectListener(wg *sync.WaitGroup) {
 	c.sshClient.RegisterDisconnectListener(wg)
 }
 
-func (c *Client) GetSshConnection() (string, error) {
+func (c *Client) GetSshConnection(ctx context.Context) (string, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	err := c.Run("PATH= echo $SSH_CONNECTION", &stdout, &stderr)
+	err := c.Run(ctx, "PATH= echo $SSH_CONNECTION", &stdout, &stderr)
 	if err != nil {
 		return "", fmt.Errorf("failed to read SSH_CONNECTION: %s: %s", err, string(stderr.Bytes()))
 	}
 	return strings.Split(string(stdout.Bytes()), " ")[0], nil
 }
 
-func (c *Client) GetSystemImageMerkle() (string, error) {
+func (c *Client) GetSystemImageMerkle(ctx context.Context) (string, error) {
 	const systemImageMeta = "/system/meta"
-	merkle, err := c.ReadRemotePath(systemImageMeta)
+	merkle, err := c.ReadRemotePath(ctx, systemImageMeta)
 	if err != nil {
 		return "", err
 	}
@@ -116,7 +119,7 @@ func (c *Client) Reboot(ctx context.Context, repo *packages.Repository, rpcClien
 	var wg sync.WaitGroup
 	c.RegisterDisconnectListener(&wg)
 
-	err := c.Run("dm reboot", os.Stdout, os.Stderr)
+	err := c.Run(ctx, "dm reboot", os.Stdout, os.Stderr)
 	if err != nil {
 		if _, ok := err.(*ssh.ExitMissingError); !ok {
 			return fmt.Errorf("failed to reboot: %s", err)
@@ -126,7 +129,17 @@ func (c *Client) Reboot(ctx context.Context, repo *packages.Repository, rpcClien
 	log.Printf("waiting...")
 
 	// Wait until we get a signal that we have disconnected
-	wg.Wait()
+	ch := make(chan struct{})
+	go func() {
+		wg.Wait()
+		ch <- struct{}{}
+	}()
+
+	select {
+	case <-ch:
+	case <-ctx.Done():
+		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
+	}
 
 	c.verifyReboot(ctx, repo, rpcClient)
 
@@ -137,13 +150,13 @@ func (c *Client) Reboot(ctx context.Context, repo *packages.Repository, rpcClien
 
 // RebootToRecovery asks the device to reboot into the recovery partition. It
 // waits until the device disconnects before returning.
-func (c *Client) RebootToRecovery() error {
+func (c *Client) RebootToRecovery(ctx context.Context) error {
 	log.Printf("rebooting to recovery")
 
 	var wg sync.WaitGroup
 	c.RegisterDisconnectListener(&wg)
 
-	err := c.Run("dm reboot-recovery", os.Stdout, os.Stderr)
+	err := c.Run(ctx, "dm reboot-recovery", os.Stdout, os.Stderr)
 	if err != nil {
 		if _, ok := err.(*ssh.ExitMissingError); !ok {
 			return fmt.Errorf("failed to reboot into recovery: %s", err)
@@ -151,7 +164,17 @@ func (c *Client) RebootToRecovery() error {
 	}
 
 	// Wait until we get a signal that we have disconnected
-	wg.Wait()
+	ch := make(chan struct{})
+	go func() {
+		wg.Wait()
+		ch <- struct{}{}
+	}()
+
+	select {
+	case <-ch:
+	case <-ctx.Done():
+		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
+	}
 
 	return nil
 }
@@ -168,12 +191,22 @@ func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository
 	var wg sync.WaitGroup
 	c.RegisterDisconnectListener(&wg)
 
-	if err := c.Run("amberctl system_update", os.Stdout, os.Stderr); err != nil {
+	if err := c.Run(ctx, "amberctl system_update", os.Stdout, os.Stderr); err != nil {
 		return fmt.Errorf("failed to trigger OTA: %s", err)
 	}
 
 	// Wait until we get a signal that we have disconnected
-	wg.Wait()
+	ch := make(chan struct{})
+	go func() {
+		wg.Wait()
+		ch <- struct{}{}
+	}()
+
+	select {
+	case <-ch:
+	case <-ctx.Done():
+		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
+	}
 
 	c.verifyReboot(ctx, repo, rpcClient)
 
@@ -203,7 +236,9 @@ func (c *Client) setupReboot(ctx context.Context, rpcClient **sl4f.Client) error
 }
 
 func (c *Client) verifyReboot(ctx context.Context, repo *packages.Repository, rpcClient **sl4f.Client) error {
-	c.WaitForDeviceToBeConnected()
+	if err := c.WaitForDeviceToBeConnected(ctx); err != nil {
+		return err
+	}
 
 	if *rpcClient != nil {
 		// FIXME: It would make sense to be able to close the rpcClient
@@ -228,7 +263,7 @@ func (c *Client) verifyReboot(ctx context.Context, repo *packages.Repository, rp
 		// reboot check file no longer exists.
 		var exists bool
 		if *rpcClient == nil {
-			exists, err = c.RemoteFileExists(rebootCheckPath)
+			exists, err = c.RemoteFileExists(ctx, rebootCheckPath)
 		} else {
 			exists, err = (*rpcClient).PathExists(ctx, rebootCheckPath)
 		}
@@ -244,11 +279,11 @@ func (c *Client) verifyReboot(ctx context.Context, repo *packages.Repository, rp
 }
 
 // ValidateStaticPackages checks that all static packages have no missing blobs.
-func (c *Client) ValidateStaticPackages() error {
+func (c *Client) ValidateStaticPackages(ctx context.Context) error {
 	log.Printf("validating static packages")
 
 	path := "/pkgfs/ctl/validation/missing"
-	f, err := c.ReadRemotePath(path)
+	f, err := c.ReadRemotePath(ctx, path)
 	if err != nil {
 		return fmt.Errorf("error reading %q: %s", path, err)
 	}
@@ -263,10 +298,10 @@ func (c *Client) ValidateStaticPackages() error {
 }
 
 // ReadRemotePath read a file off the remote device.
-func (c *Client) ReadRemotePath(path string) ([]byte, error) {
+func (c *Client) ReadRemotePath(ctx context.Context, path string) ([]byte, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	err := c.sshClient.Run(fmt.Sprintf(
+	err := c.sshClient.Run(ctx, fmt.Sprintf(
 		`(
 		test -e "%s" &&
 		while IFS='' read f; do
@@ -284,9 +319,9 @@ func (c *Client) ReadRemotePath(path string) ([]byte, error) {
 }
 
 // DeleteRemotePath deletes a file off the remote device.
-func (c *Client) DeleteRemotePath(path string) error {
+func (c *Client) DeleteRemotePath(ctx context.Context, path string) error {
 	var stderr bytes.Buffer
-	err := c.sshClient.Run(fmt.Sprintf("PATH= rm %q", path), os.Stdout, &stderr)
+	err := c.sshClient.Run(ctx, fmt.Sprintf("PATH= rm %q", path), os.Stdout, &stderr)
 	if err != nil {
 		return fmt.Errorf("failed to delete %q: %s: %s", path, err, string(stderr.Bytes()))
 	}
@@ -295,9 +330,9 @@ func (c *Client) DeleteRemotePath(path string) error {
 }
 
 // RemoteFileExists checks if a file exists on the remote device.
-func (c *Client) RemoteFileExists(path string) (bool, error) {
+func (c *Client) RemoteFileExists(ctx context.Context, path string) (bool, error) {
 	var stderr bytes.Buffer
-	err := c.Run(fmt.Sprintf("PATH= ls %s", path), ioutil.Discard, &stderr)
+	err := c.Run(ctx, fmt.Sprintf("PATH= ls %s", path), ioutil.Discard, &stderr)
 	if err == nil {
 		return true, nil
 	}
@@ -312,31 +347,31 @@ func (c *Client) RemoteFileExists(path string) (bool, error) {
 }
 
 // RegisterPackageRepository adds the repository as a repository inside the device.
-func (c *Client) RegisterPackageRepository(repo *packages.Server) error {
+func (c *Client) RegisterPackageRepository(ctx context.Context, repo *packages.Server) error {
 	log.Printf("registering package repository: %s", repo.Dir)
 	cmd := fmt.Sprintf("amberctl add_src -f %s -h %s", repo.URL, repo.Hash)
-	return c.Run(cmd, os.Stdout, os.Stderr)
+	return c.Run(ctx, cmd, os.Stdout, os.Stderr)
 }
 
 func (c *Client) ServePackageRepository(ctx context.Context, repo *packages.Repository, name string) (*packages.Server, error) {
 	// Make sure the device doesn't have any broken static packages.
-	if err := c.ValidateStaticPackages(); err != nil {
+	if err := c.ValidateStaticPackages(ctx); err != nil {
 		return nil, err
 	}
 
 	// Tell the device to connect to our repository.
-	localHostname, err := c.GetSshConnection()
+	localHostname, err := c.GetSshConnection(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// Serve the repository before the test begins.
-	server, err := repo.Serve(localHostname, "host_target_testing")
+	server, err := repo.Serve(ctx, localHostname, "host_target_testing")
 	if err != nil {
 		return nil, err
 	}
 
-	if err := c.RegisterPackageRepository(server); err != nil {
+	if err := c.RegisterPackageRepository(ctx, server); err != nil {
 		server.Shutdown(ctx)
 		return nil, err
 	}
@@ -346,13 +381,13 @@ func (c *Client) ServePackageRepository(ctx context.Context, repo *packages.Repo
 
 func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository) (*sl4f.Client, error) {
 	// Determine the address of this device from the point of view of the target.
-	localHostname, err := c.sshClient.GetSshConnection()
+	localHostname, err := c.sshClient.GetSshConnection(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// Ensure this client is running system_image or system_image_prime from repo.
-	currentSystemImageMerkle, err := c.GetSystemImageMerkle()
+	currentSystemImageMerkle, err := c.GetSystemImageMerkle(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +397,7 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 
 	// Serve the package repository.
 	repoName := "host_target_testing_sl4f"
-	repoServer, err := repo.Serve(localHostname, repoName)
+	repoServer, err := repo.Serve(ctx, localHostname, repoName)
 	if err != nil {
 		return nil, err
 	}
@@ -371,7 +406,7 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 	// Configure the target to use this repository as "fuchsia-pkg://host_target_testing".
 	log.Printf("registering package repository: %s", repoServer.Dir)
 	cmd := fmt.Sprintf("amberctl add_repo_cfg -f %s -h %s", repoServer.URL, repoServer.Hash)
-	if err := c.sshClient.Run(cmd, os.Stdout, os.Stderr); err != nil {
+	if err := c.sshClient.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
 		return nil, err
 	}
 

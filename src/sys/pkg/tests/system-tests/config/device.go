@@ -5,6 +5,7 @@
 package config
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -39,10 +40,10 @@ func NewDeviceConfig(fs *flag.FlagSet) *DeviceConfig {
 	return c
 }
 
-func (c *DeviceConfig) DeviceHostname() (string, error) {
+func (c *DeviceConfig) DeviceHostname(ctx context.Context) (string, error) {
 	if c.deviceHostname == "" {
 		var err error
-		c.deviceHostname, err = c.netaddr("--nowait", "--timeout=1000", "--fuchsia", c.DeviceName)
+		c.deviceHostname, err = c.netaddr(ctx, "--nowait", "--timeout=1000", "--fuchsia", c.DeviceName)
 		if err != nil {
 			return "", fmt.Errorf("ERROR: netaddr failed: %s", err)
 		}
@@ -54,8 +55,8 @@ func (c *DeviceConfig) DeviceHostname() (string, error) {
 	return c.deviceHostname, nil
 }
 
-func (c *DeviceConfig) netaddr(arg ...string) (string, error) {
-	stdout, stderr, err := util.RunCommand(c.netaddrPath, arg...)
+func (c *DeviceConfig) netaddr(ctx context.Context, arg ...string) (string, error) {
+	stdout, stderr, err := util.RunCommand(ctx, c.netaddrPath, arg...)
 	if err != nil {
 		return "", fmt.Errorf("netaddr failed: %s: %s", err, string(stderr))
 	}
@@ -83,8 +84,8 @@ func (c *DeviceConfig) SSHPrivateKey() (ssh.Signer, error) {
 	return c.sshPrivateKey, nil
 }
 
-func (c *DeviceConfig) NewDeviceClient() (*device.Client, error) {
-	deviceHostname, err := c.DeviceHostname()
+func (c *DeviceConfig) NewDeviceClient(ctx context.Context) (*device.Client, error) {
+	deviceHostname, err := c.DeviceHostname(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -94,5 +95,5 @@ func (c *DeviceConfig) NewDeviceClient() (*device.Client, error) {
 		return nil, err
 	}
 
-	return device.NewClient(deviceHostname, sshPrivateKey)
+	return device.NewClient(ctx, deviceHostname, sshPrivateKey)
 }

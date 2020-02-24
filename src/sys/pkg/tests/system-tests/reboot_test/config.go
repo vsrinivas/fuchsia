@@ -5,6 +5,7 @@
 package reboot
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -76,13 +77,13 @@ func (c *config) getBuilder() (*artifacts.Builder, error) {
 	return c.archiveConfig.BuildArchive().GetBuilder(c.builderName), nil
 }
 
-func (c *config) getBuildID() (string, error) {
+func (c *config) getBuildID(ctx context.Context) (string, error) {
 	if c.builderName != "" && c.buildID == "" {
 		b, err := c.getBuilder()
 		if err != nil {
 			return "", err
 		}
-		id, err := b.GetLatestBuildID()
+		id, err := b.GetLatestBuildID(ctx)
 		if err != nil {
 			return "", fmt.Errorf("failed to lookup build id: %s", err)
 		}
@@ -92,19 +93,19 @@ func (c *config) getBuildID() (string, error) {
 	return c.buildID, nil
 }
 
-func (c *config) getRepository(dir string) (*packages.Repository, error) {
-	buildID, err := c.getBuildID()
+func (c *config) getRepository(ctx context.Context, dir string) (*packages.Repository, error) {
+	buildID, err := c.getBuildID(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if buildID != "" {
-		build, err := c.archiveConfig.BuildArchive().GetBuildByID(buildID, dir)
+		build, err := c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir)
 		if err != nil {
 			return nil, err
 		}
 
-		return build.GetPackageRepository()
+		return build.GetPackageRepository(ctx)
 	}
 
 	if c.fuchsiaBuildDir != "" {
@@ -114,25 +115,25 @@ func (c *config) getRepository(dir string) (*packages.Repository, error) {
 	return nil, fmt.Errorf("repository not specified")
 }
 
-func (c *config) getPaver(dir string) (*paver.Paver, error) {
+func (c *config) getPaver(ctx context.Context, dir string) (*paver.Paver, error) {
 	sshPrivateKey, err := c.deviceConfig.SSHPrivateKey()
 	if err != nil {
 		return nil, err
 	}
 	sshPublicKey := sshPrivateKey.PublicKey()
 
-	buildID, err := c.getBuildID()
+	buildID, err := c.getBuildID(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	if buildID != "" {
-		build, err := c.archiveConfig.BuildArchive().GetBuildByID(buildID, dir)
+		build, err := c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, dir)
 		if err != nil {
 			return nil, err
 		}
 
-		return build.GetPaver(sshPublicKey)
+		return build.GetPaver(ctx, sshPublicKey)
 	}
 
 	if c.fuchsiaBuildDir != "" {

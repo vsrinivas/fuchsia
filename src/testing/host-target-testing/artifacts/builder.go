@@ -5,6 +5,7 @@
 package artifacts
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -18,8 +19,8 @@ type Builder struct {
 }
 
 // LookupBuildID looks up the latest build id for a given builder.
-func (b *Builder) GetLatestBuildID() (string, error) {
-	stdout, stderr, err := util.RunCommand(b.archive.lkgbPath, b.name)
+func (b *Builder) GetLatestBuildID(ctx context.Context) (string, error) {
+	stdout, stderr, err := util.RunCommand(ctx, b.archive.lkgbPath, b.name)
 	if err != nil {
 		return "", fmt.Errorf("lkgb failed: %s: %s", err, string(stderr))
 	}
@@ -27,13 +28,13 @@ func (b *Builder) GetLatestBuildID() (string, error) {
 }
 
 // GetLatestBuild looks up the latest build for a given builder.
-func (b *Builder) GetLatestBuild(dir string) (*Build, error) {
-	id, err := b.GetLatestBuildID()
+func (b *Builder) GetLatestBuild(ctx context.Context, dir string) (*Build, error) {
+	id, err := b.GetLatestBuildID(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return b.archive.GetBuildByID(id, dir)
+	return b.archive.GetBuildByID(ctx, id, dir)
 }
 
 func (b *Builder) String() string {

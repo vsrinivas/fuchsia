@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/host_target_testing/sshclient"
-	"golang.org/x/crypto/ssh"
 )
 
 // Client is a wrapper around sl4f that supports auto-installing and starting
@@ -34,7 +33,7 @@ type Client struct {
 	url       string
 	repoName  string
 	seq       uint64
-	server    *ssh.Session
+	server    *sshclient.Session
 }
 
 func NewClient(ctx context.Context, sshClient *sshclient.Client, addr string, repoName string) (*Client, error) {
@@ -68,7 +67,7 @@ func (c *Client) connect(ctx context.Context) error {
 	// cached on the device. Since builds can be configured to not
 	// automatically cache packages, we need to explicitly resolve it.
 	cmd := fmt.Sprintf("pkgctl resolve fuchsia-pkg://%s/run/0", c.repoName)
-	if err := c.sshClient.Run(cmd, os.Stdout, os.Stderr); err != nil {
+	if err := c.sshClient.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
 		log.Printf("unable to resolve `run` package: %s", err)
 		return err
 	}
@@ -77,14 +76,14 @@ func (c *Client) connect(ctx context.Context) error {
 	// run it if the build is not configured to automatically cache
 	// packages.
 	cmd = fmt.Sprintf("pkgctl resolve fuchsia-pkg://%s/sl4f/0", c.repoName)
-	if err := c.sshClient.Run(cmd, os.Stdout, os.Stderr); err != nil {
+	if err := c.sshClient.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
 		log.Printf("unable to resolve `sl4f` package: %s", err)
 		return err
 	}
 
 	// Start the sl4f daemon.
 	cmd = fmt.Sprintf("run fuchsia-pkg://%s/sl4f#meta/sl4f.cmx", c.repoName)
-	server, err := c.sshClient.Start(cmd, os.Stdout, os.Stderr)
+	server, err := c.sshClient.Start(ctx, cmd, os.Stdout, os.Stderr)
 	if err != nil {
 		log.Printf("unable to launch sl4f: %s", err)
 		return err

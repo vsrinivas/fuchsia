@@ -5,6 +5,7 @@
 package artifacts
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -38,10 +39,10 @@ func (a *Archive) GetBuilder(name string) *Builder {
 }
 
 // GetBuildByID looks up a build artifact by the given id.
-func (a *Archive) GetBuildByID(id string, dir string) (*Build, error) {
+func (a *Archive) GetBuildByID(ctx context.Context, id string, dir string) (*Build, error) {
 	// Make sure the build exists.
 	args := []string{"ls", "-build", id}
-	stdout, stderr, err := util.RunCommand(a.artifactsPath, args...)
+	stdout, stderr, err := util.RunCommand(ctx, a.artifactsPath, args...)
 	if err != nil {
 		if len(stderr) != 0 {
 			fmt.Printf("artifacts output: \n%s", stdout)
@@ -55,7 +56,7 @@ func (a *Archive) GetBuildByID(id string, dir string) (*Build, error) {
 
 // Download an artifact from the build id `buildID` named `src` and write it
 // into a directory `dst`.
-func (a *Archive) download(dir string, buildID string, src string) (string, error) {
+func (a *Archive) download(ctx context.Context, dir string, buildID string, src string) (string, error) {
 	basename := filepath.Base(src)
 	buildDir := filepath.Join(dir, buildID)
 	path := filepath.Join(buildDir, basename)
@@ -82,7 +83,7 @@ func (a *Archive) download(dir string, buildID string, src string) (string, erro
 			"-dst", tmpfile.Name(),
 		}
 
-		_, stderr, err := util.RunCommand(a.artifactsPath, args...)
+		_, stderr, err := util.RunCommand(ctx, a.artifactsPath, args...)
 		if err != nil {
 			if len(stderr) != 0 {
 				return fmt.Errorf("artifacts failed: %s: %s", err, string(stderr))
