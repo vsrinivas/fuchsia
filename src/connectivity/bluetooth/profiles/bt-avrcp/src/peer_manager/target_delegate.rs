@@ -202,6 +202,23 @@ impl TargetDelegate {
 
         send_command_fut.await.map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)?
     }
+
+    pub async fn send_set_player_application_settings_command(
+        &self,
+        requested_settings: fidl_avrcp::PlayerApplicationSettings,
+    ) -> Result<fidl_avrcp::PlayerApplicationSettings, TargetAvcError> {
+        let send_command_fut = {
+            let inner_guard = self.inner.lock();
+            match &inner_guard.target_handler {
+                Some(target_handler) => {
+                    target_handler.set_player_application_settings(requested_settings)
+                }
+                None => return Err(TargetAvcError::RejectedNoAvailablePlayers),
+            }
+        };
+
+        send_command_fut.await.map_err(|_| TargetAvcError::RejectedNoAvailablePlayers)?
+    }
 }
 
 #[cfg(test)]
@@ -209,7 +226,9 @@ mod tests {
     use super::*;
     use fidl::encoding::Decodable as FidlDecodable;
     use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_bluetooth_avrcp::{TargetHandlerMarker, TargetHandlerRequest};
+    use fidl_fuchsia_bluetooth_avrcp::{
+        Equalizer, PlayerApplicationSettings, TargetHandlerMarker, TargetHandlerRequest,
+    };
     use matches::assert_matches;
     use std::task::Poll;
 
@@ -350,6 +369,49 @@ mod tests {
                         ..fidl_avrcp::PlayerApplicationSettings::new_empty()
                     })
                 );
+            }
+            _ => assert!(false, "unexpected state"),
+        }
+    }
+
+    #[test]
+    // Test getting correct response from a get_player_application_settings command.
+    fn test_set_player_application_settings() {
+        let mut exec = fasync::Executor::new().expect("executor::new failed");
+        let target_delegate = TargetDelegate::new();
+
+        let (target_proxy, mut target_stream) = create_proxy_and_stream::<TargetHandlerMarker>()
+            .expect("Error creating TargetHandler endpoint");
+        assert_matches!(target_delegate.set_target_handler(target_proxy), Ok(()));
+
+        // Current media doesn't support Equalizer.
+        let attributes = PlayerApplicationSettings {
+            equalizer: Some(Equalizer::Off),
+            ..PlayerApplicationSettings::new_empty()
+        };
+        let set_pas_fut = target_delegate.send_set_player_application_settings_command(attributes);
+        pin_utils::pin_mut!(set_pas_fut);
+        assert!(exec.run_until_stalled(&mut set_pas_fut).is_pending());
+
+        let select_next_some_fut = target_stream.select_next_some();
+        pin_utils::pin_mut!(select_next_some_fut);
+        match exec.run_until_stalled(&mut select_next_some_fut) {
+            Poll::Ready(Ok(TargetHandlerRequest::SetPlayerApplicationSettings {
+                responder,
+                ..
+            })) => {
+                assert!(responder
+                    .send(&mut Ok(fidl_avrcp::PlayerApplicationSettings::new_empty()))
+                    .is_ok());
+            }
+            _ => assert!(false, "unexpected stream state"),
+        };
+
+        // We expect the returned `set_settings` to be empty, since we requested an
+        // unsupported application setting.
+        match exec.run_until_stalled(&mut set_pas_fut) {
+            Poll::Ready(attr) => {
+                assert_eq!(attr, Ok(fidl_avrcp::PlayerApplicationSettings::new_empty()));
             }
             _ => assert!(false, "unexpected state"),
         }

@@ -185,7 +185,7 @@ impl From<Equalizer> for fidl_avrcp::Equalizer {
 }
 
 // TODO(41253): Add support to handle custom attributes.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PlayerApplicationSettings {
     pub equalizer: Option<Equalizer>,
     pub repeat_status_mode: Option<RepeatStatusMode>,

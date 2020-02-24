@@ -5,6 +5,9 @@
 use std::u8;
 
 use super::*;
+use crate::packets;
+use crate::packets::player_application_settings::PlayerApplicationSettingAttributeId;
+use crate::packets::*;
 
 /// Packet format for a SetPlayerApplicationSettingValue command.
 /// See AVRCP Sec 6.5.4
@@ -91,6 +94,47 @@ impl Encodable for SetPlayerApplicationSettingValueCommand {
     }
 }
 
+impl TryFrom<SetPlayerApplicationSettingValueCommand> for PlayerApplicationSettings {
+    type Error = packets::Error;
+    fn try_from(
+        src: SetPlayerApplicationSettingValueCommand,
+    ) -> Result<PlayerApplicationSettings, Error> {
+        let mut setting = PlayerApplicationSettings::new(None, None, None, None);
+        if src.num_player_application_setting_attributes as usize != src.attribute_id_values.len() {
+            return Err(Error::InvalidMessage);
+        }
+        for (attribute_id, value) in src.attribute_id_values {
+            // TODO(41253): If fetching the attribute_id fails, check to see if it's
+            // a valid custom attribute. Handle accordingly.
+            let attribute_id = PlayerApplicationSettingAttributeId::try_from(attribute_id)
+                .map_err(|_| Error::InvalidMessage)?;
+            match attribute_id {
+                PlayerApplicationSettingAttributeId::Equalizer => {
+                    let pas_value: Equalizer =
+                        Equalizer::try_from(value).map_err(|_| Error::InvalidMessage)?;
+                    setting.equalizer = Some(pas_value);
+                }
+                PlayerApplicationSettingAttributeId::RepeatStatusMode => {
+                    let pas_value: RepeatStatusMode =
+                        RepeatStatusMode::try_from(value).map_err(|_| Error::InvalidMessage)?;
+                    setting.repeat_status_mode = Some(pas_value);
+                }
+                PlayerApplicationSettingAttributeId::ShuffleMode => {
+                    let pas_value: ShuffleMode =
+                        ShuffleMode::try_from(value).map_err(|_| Error::InvalidMessage)?;
+                    setting.shuffle_mode = Some(pas_value);
+                }
+                PlayerApplicationSettingAttributeId::ScanMode => {
+                    let pas_value: ScanMode =
+                        ScanMode::try_from(value).map_err(|_| Error::InvalidMessage)?;
+                    setting.scan_mode = Some(pas_value);
+                }
+            }
+        }
+        Ok(setting)
+    }
+}
+
 /// Packet format for a SetPlayerApplicationSettingValue response.
 /// The response is simply an acknowledgement, so it's empty.
 /// See AVRCP Sec 6.5.4
@@ -98,7 +142,6 @@ impl Encodable for SetPlayerApplicationSettingValueCommand {
 pub struct SetPlayerApplicationSettingValueResponse {}
 
 impl SetPlayerApplicationSettingValueResponse {
-    #[allow(dead_code)]
     pub fn new() -> SetPlayerApplicationSettingValueResponse {
         Self {}
     }

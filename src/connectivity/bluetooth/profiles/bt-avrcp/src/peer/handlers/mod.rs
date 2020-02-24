@@ -516,6 +516,24 @@ fn send_control_response(
     }
 }
 
+async fn handle_set_player_application_setting_value(
+    cmd: SetPlayerApplicationSettingValueCommand,
+    target_delegate: Arc<TargetDelegate>,
+) -> Result<Box<dyn PacketEncodable>, StatusCode> {
+    let requested_settings =
+        PlayerApplicationSettings::try_from(cmd).map_err(|_| StatusCode::InvalidParameter)?;
+
+    let set_settings = target_delegate
+        .send_set_player_application_settings_command(requested_settings.into())
+        .await?;
+
+    // Log the resulting set_settings, as it is valid for it to be different than the `requested_settings`.
+    fx_vlog!(tag: "avrcp", 2, "Media set player application settings: {:?}", set_settings);
+
+    let response = SetPlayerApplicationSettingValueResponse::new();
+    Ok(Box::new(response))
+}
+
 async fn handle_set_absolute_volume(
     cmd: SetAbsoluteVolumeCommand,
     target_delegate: Arc<TargetDelegate>,
@@ -538,10 +556,12 @@ async fn handle_control_command(
     let control_fut = async {
         match control_command {
             /* TODO: Implement
-            ControlCommand::SetPlayerApplicationSettingValue(_) => {},
             ControlCommand::RequestContinuingResponse(_) => {},
             ControlCommand::AbortContinuingResponse(_) => {},
             */
+            ControlCommand::SetPlayerApplicationSettingValue(cmd) => {
+                handle_set_player_application_setting_value(cmd, delegate).await
+            }
             ControlCommand::SetAbsoluteVolume(cmd) => {
                 handle_set_absolute_volume(cmd, delegate).await
             }
@@ -730,7 +750,9 @@ mod test {
                     TargetHandlerRequest::SetPlayerApplicationSettings {
                         requested_settings: _,
                         responder,
-                    } => responder.send(&mut Err(TargetAvcError::RejectedInternalError)),
+                    } => {
+                        responder.send(&mut Ok(fidl_avrcp::PlayerApplicationSettings::new_empty()))
+                    }
                     TargetHandlerRequest::GetNotification { event_id: _, responder } => {
                         responder.send(&mut Err(TargetAvcError::RejectedInternalError))
                     }
@@ -1035,6 +1057,39 @@ mod test {
         )
         .expect_body(expected_packet_response)
         .expect_response_type(AvcResponseType::ImplementedStable);
+
+        cmd_handler.handle_command_internal(command).await
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn handle_set_player_application_setting_value() -> Result<(), Error> {
+        let target_proxy = create_dumby_target_handler(false);
+        let cmd_handler = create_command_handler(Some(target_proxy), None);
+
+        // generic vendor status command
+        let packet_body: Vec<u8> = [
+            0x14, // SetPlayerApplicationSettingValue pdu id
+            0x00, // Single packet
+            0x00, 0x03, // param_len, 3 bytes
+            0x01, // Number of settings: 1
+            0x02, // Setting attribute: Repeat Status mode
+            0x01, // Setting value: Off
+        ]
+        .to_vec();
+        let _expected_packet_response: Vec<u8> = [
+            0x14, // SetPlayerApplicationSettingValue pdu id
+            0x00, // Single packet
+            0x00, 0x01, // param_len,  bytes
+            0x04,
+        ]
+        .to_vec();
+
+        let command = MockAvcCommand::new(
+            AvcPacketType::Command(AvcCommandType::Control),
+            AvcOpCode::VendorDependent,
+            packet_body,
+        )
+        .expect_accept();
 
         cmd_handler.handle_command_internal(command).await
     }
