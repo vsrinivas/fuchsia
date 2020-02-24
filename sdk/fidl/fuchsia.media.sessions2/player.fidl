@@ -63,17 +63,35 @@ enum ContentType {
 
 /// Status of a media player.
 table PlayerStatus {
-    /// Total duration of playing media. Omitted if not known or not applicable.
+    /// Total duration of playing media.
+    ///
+    /// Omit if not known or not applicable.
     1: zx.duration duration;
+    /// State of the player.
+    ///
+    /// Will always be present.
     2: PlayerState player_state;
     /// A playback function that describes the position and rate of
     /// play through the media as a function of `CLOCK_MONOTONIC`.
+    ///
+    /// Include in order to render a position in media timeline
+    /// for users. Optional.
     3: fuchsia.media.TimelineFunction timeline_function;
+    /// Repeat mode of the player.
+    ///
+    /// Will always be present.
     4: RepeatMode repeat_mode;
+    /// Shuffle mode of the player.
+    ///
+    /// Will always be present.
     5: bool shuffle_on;
-    /// The type of content playing back. Omitted if it is not a first class
-    /// category.
+    /// The type of content playing back.
+    ///
+    /// Will always be present.
     6: ContentType content_type;
+    /// An error the player may have encountered.
+    ///
+    /// Should only be present in case of error.
     7: Error error;
 };
 
