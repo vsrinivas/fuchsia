@@ -759,6 +759,7 @@ TEST(HidHelperTest, ParseAsusTouch) {
   hid::DeviceDescriptor* dev = nullptr;
   auto res = hid::ParseReportDescriptor(asus_touch_desc, sizeof(asus_touch_desc), &dev);
   ASSERT_EQ(res, hid::ParseResult::kParseOk);
+  hid::FreeDeviceDescriptor(dev);
 }
 
 TEST(HidHelperTest, ParseEveTouchpadV2) {
@@ -867,4 +868,5 @@ TEST(HidHelperTest, ParseEveTouchpadV2) {
 
   // Make sure we checked each of the report fields.
   ASSERT_EQ(ix, dev->report[0].input_count);
+  hid::FreeDeviceDescriptor(dev);
 }

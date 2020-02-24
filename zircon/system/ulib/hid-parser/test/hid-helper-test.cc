@@ -50,6 +50,7 @@ TEST(HidParserHelperTest, ParseMinmaxSigned) {
   EXPECT_EQ(fields[1].attr.logc_mm.max, -1);
   EXPECT_EQ(fields[1].attr.phys_mm.min, -5);
   EXPECT_EQ(fields[1].attr.phys_mm.max, -1);
+  hid::FreeDeviceDescriptor(dev);
 }
 
 // Test that the push and pop operations complete successfully.
@@ -146,6 +147,7 @@ TEST(HidParserHelperTest, ParsePushPop) {
     EXPECT_EQ(fields[ix].attr.logc_mm.max, 1);
     EXPECT_EQ(expected_flags & fields[ix].flags, expected_flags);
   }
+  hid::FreeDeviceDescriptor(dev);
 }
 
 TEST(HidParserHelperTest, UsageHelper) {
