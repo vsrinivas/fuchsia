@@ -26,7 +26,7 @@ enum Status {
     FAILED = 2;
 
     /// The test was skipped.
-    /// A skipped outcome typically indicates that no attempt was made to run
+    /// A skipped status typically indicates that no attempt was made to run
     /// the test.
     ///
     /// Examples:
