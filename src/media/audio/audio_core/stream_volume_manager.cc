@@ -5,8 +5,52 @@
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
+namespace {
+
+std::string ToString(const fuchsia::media::AudioRenderUsage& render_usage) {
+  switch (render_usage) {
+    case fuchsia::media::AudioRenderUsage::MEDIA:
+      return "Render::Media";
+    case fuchsia::media::AudioRenderUsage::BACKGROUND:
+      return "Render::Background";
+    case fuchsia::media::AudioRenderUsage::SYSTEM_AGENT:
+      return "Render::SystemAgent";
+    case fuchsia::media::AudioRenderUsage::INTERRUPTION:
+      return "Render::Interruption";
+    case fuchsia::media::AudioRenderUsage::COMMUNICATION:
+      return "Render::Communication";
+    default:
+      return "Unrecognized render usage";
+  }
+}
+
+std::string ToString(const fuchsia::media::AudioCaptureUsage& capture_usage) {
+  switch (capture_usage) {
+    case fuchsia::media::AudioCaptureUsage::FOREGROUND:
+      return "Capture::Foreground";
+    case fuchsia::media::AudioCaptureUsage::BACKGROUND:
+      return "Capture::Background";
+    case fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT:
+      return "Capture::SystemAgent";
+    case fuchsia::media::AudioCaptureUsage::COMMUNICATION:
+      return "Capture::Communication";
+    default:
+      return "Unrecognized render usage";
+  }
+}
+
+std::string ToString(const fuchsia::media::Usage& usage) {
+  if (usage.is_render_usage()) {
+    return ToString(usage.render_usage());
+  }
+
+  return ToString(usage.capture_usage());
+}
+
+}  // namespace
 
 StreamVolumeManager::VolumeSettingImpl::VolumeSettingImpl(fuchsia::media::Usage usage,
                                                           StreamVolumeManager* owner)
@@ -100,6 +144,7 @@ void StreamVolumeManager::RemoveStream(StreamVolume* stream_volume) {
 }
 
 void StreamVolumeManager::SetUsageVolume(fuchsia::media::Usage usage, float volume) {
+  AUD_VLOG(TRACE) << "Set usage " << ToString(usage) << " to volume " << volume;
   usage_volume_settings_.SetUsageVolume(fidl::Clone(usage), volume);
   UpdateStreamsWithUsage(std::move(usage));
 }
