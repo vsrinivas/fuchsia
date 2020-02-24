@@ -10,11 +10,10 @@ executable("test") {
 
   sources = [
     "clocktree-test.cc",
+    "testclock.cc",
   ]
 
-  include_dirs = [
-    "../include"
-  ]
+  include_dirs = [ "../include" ]
 
   deps = [
     "//src/devices/clock/lib/clocktree",
@@ -26,9 +25,7 @@ executable("test") {
 }
 
 test_package("clocktree_test") {
-  deps = [
-    ":test",
-  ]
+  deps = [ ":test" ]
   tests = [
     {
       name = "clocktree_test"

@@ -24,7 +24,8 @@ class BaseClock {
   /// Clock Gating Control.
   virtual zx_status_t Enable() = 0;
   virtual zx_status_t Disable() = 0;
-  virtual zx_status_t IsEnabled(bool* out) = 0;
+  virtual zx_status_t IsHwEnabled(bool* out) = 0;
+  zx_status_t IsEnabled(bool* out);
 
   // Clock frequency control.
   virtual zx_status_t SetRate(const Hertz rate, const Hertz parent_rate) = 0;

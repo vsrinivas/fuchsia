@@ -117,15 +117,7 @@ zx_status_t Tree::IsEnabledLocked(const uint32_t id, bool* out) {
 
   BaseClock* self = clocks_[id];
 
-  zx_status_t st = self->IsEnabled(out);
-
-  if (st == ZX_ERR_NOT_SUPPORTED) {
-    // If this clock doesn't support IsEnabled, just report the refcount.
-    *out = self->EnableCount() > 0;
-    return ZX_OK;
-  }
-
-  return st;
+  return self->IsEnabled(out);
 }
 
 zx_status_t Tree::SetRate(const uint32_t id, const Hertz rate) {
@@ -155,7 +147,54 @@ zx_status_t Tree::SetInput(const uint32_t id, const uint32_t input_index) {
   return SetInputLocked(id, input_index);
 }
 zx_status_t Tree::SetInputLocked(const uint32_t id, const uint32_t input_index) {
-  return ZX_ERR_NOT_SUPPORTED;
+  if (!InRange(id)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  BaseClock* self = clocks_[id];
+
+  uint32_t old_parent_id = self->ParentId();
+  uint32_t new_parent_id;
+  zx_status_t st = self->GetInputId(input_index, &new_parent_id);
+  if (st != ZX_OK) {
+    return st;
+  }
+
+  if (!InRange(new_parent_id)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (old_parent_id == new_parent_id) {
+    // Input is already set correctly, no work to do.
+    return ZX_OK;
+  }
+
+  const bool should_migrate_refs = self->EnableCount() > 0;
+
+  // (1) if `self` is enabled then it should add a ref to its new parent.
+  if (should_migrate_refs) {
+    st = EnableLocked(new_parent_id);
+    if (st != ZX_OK) {
+      return st;
+    }
+  }
+
+  // (2) Perform the reparent operation.
+  st = self->SetInput(input_index);
+  if (st != ZX_OK) {
+    if (should_migrate_refs) {
+      DisableLocked(new_parent_id);
+    }
+    return st;
+  }
+
+  // (3) If `self` is enabled then it should remember to drop a ref to its old
+  //     parent after the reparent operation completes.
+  if (should_migrate_refs) {
+    DisableLocked(old_parent_id);
+  }
+
+  return ZX_OK;
 }
 
 zx_status_t Tree::GetNumInputs(const uint32_t id, uint32_t* out) {
@@ -163,14 +202,27 @@ zx_status_t Tree::GetNumInputs(const uint32_t id, uint32_t* out) {
   return GetNumInputsLocked(id, out);
 }
 zx_status_t Tree::GetNumInputsLocked(const uint32_t id, uint32_t* out) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
+  if (!InRange(id)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
 
+  BaseClock* self = clocks_[id];
+
+  return self->GetNumInputs(out);
+}
 zx_status_t Tree::GetInput(const uint32_t id, uint32_t* out) {
   fbl::AutoLock lock(&topology_mutex_);
   return GetInputLocked(id, out);
 }
-zx_status_t Tree::GetInputLocked(const uint32_t id, uint32_t* out) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t Tree::GetInputLocked(const uint32_t id, uint32_t* out) {
+  if (!InRange(id)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  BaseClock* self = clocks_[id];
+
+  return self->GetInput(out);
+}
 
 // Helper functions
 bool Tree::InRange(const uint32_t index) const { return index < count_; }

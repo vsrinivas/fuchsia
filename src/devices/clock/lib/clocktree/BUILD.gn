@@ -4,6 +4,7 @@
 
 source_set("clocktree") {
   sources = [
+    "baseclock.cc",
     "clocktree.cc",
   ]
   deps = [
