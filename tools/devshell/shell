@@ -22,6 +22,11 @@ case $1 in
   ;;
 esac
 
+if [[ ! -f "${FUCHSIA_DIR}/.ssh/pkey" ]]; then
+  fx-warn "Generated SSH key is missing, connections may fail"
+  fx-warn "Remove ${FUCHSIA_DIR}/.ssh/authorized_keys and run jiri run-hooks to regenerate"
+fi
+
 device_addr="$(get-fuchsia-device-addr)"
 if [[ -z "${device_addr}" ]]; then
   # Error output is provided to stderr by get-fuchsia-device-addr
