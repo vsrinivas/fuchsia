@@ -28,11 +28,19 @@ func TestSetCommand(t *testing.T) {
 			expected: []string{"a", "b", "c"},
 		},
 		{
-			name:        "use runtests",
+			name:        "use runtests URL",
 			useRuntests: true,
 			test: build.Test{
 				Path:       "/path/to/test",
 				PackageURL: "fuchsia-pkg://example.com/test.cmx",
+			},
+			expected: []string{"runtests", "-t", "fuchsia-pkg://example.com/test.cmx", "-o", "REMOTE_DIR"},
+		},
+		{
+			name:        "use runtests path",
+			useRuntests: true,
+			test: build.Test{
+				Path: "/path/to/test",
 			},
 			expected: []string{"runtests", "-t", "test", "/path/to", "-o", "REMOTE_DIR"},
 		},

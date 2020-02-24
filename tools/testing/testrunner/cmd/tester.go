@@ -138,9 +138,13 @@ func setCommand(test *build.Test, useRuntests bool, remoteOutputDir string) {
 	}
 
 	if useRuntests {
-		name := path.Base(test.Path)
-		dir := path.Dir(test.Path)
-		test.Command = []string{runtestsName, "-t", name, dir, "-o", remoteOutputDir}
+		if test.PackageURL != "" {
+			test.Command = []string{runtestsName, "-t", test.PackageURL, "-o", remoteOutputDir}
+		} else {
+			name := path.Base(test.Path)
+			dir := path.Dir(test.Path)
+			test.Command = []string{runtestsName, "-t", name, dir, "-o", remoteOutputDir}
+		}
 		return
 	} else if test.PackageURL != "" {
 		if strings.HasSuffix(test.PackageURL, componentV2Suffix) {
