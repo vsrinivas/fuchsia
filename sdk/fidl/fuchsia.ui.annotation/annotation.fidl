@@ -6,19 +6,6 @@ library fuchsia.ui.annotation;
 
 using fuchsia.ui.views;
 
-enum CreationStatus {
-    OK = 0;
-
-    // |ViewRef| is invalid.
-    VIEWREF_INVALID = 1;
-
-    // Provided |ViewRef| doesn't refer to an existing |View|.
-    VIEW_DOES_NOT_EXIST = 2;
-
-    // Failed when creating annotation |ViewHolder|.
-    VIEWHOLDER_CREATION_FAILED = 3;
-};
-
 /// Annotation allows a privileged client service to create an "annotation"
 /// |ViewHolder|, linked with an annotation |View| drawn within the View-space
 /// of the existing client |View|.
@@ -52,16 +39,17 @@ protocol Registry {
     /// take effect until we schedule a new frame by calling Present() on any
     /// Session.
     ///
-    /// There are a few erroneous conditions where the annotation |ViewHolder|
-    /// will not be created, and callers should remove the annotation |View|
-    /// and |Session| they create.
+    /// EPITAPH
     ///
-    /// Error conditions include:
-    ///  + If the provided |ViewRef| is invalid;
-    ///  + If the provided |ViewRef| doesn't refer to an existing Scenic |View|;
-    ///  + If Scenic fails creating the annotation |ViewHolder|.
+    /// There are a few erroneous conditions where the annotation |ViewHolder|
+    /// will not be created and the the FIDL binding will be disconnected.
+    /// Clients should remove the annotation |View| and |Session| they create.
+    ///
+    /// It may return the following epitaphs:
+    ///
+    /// - ZX_ERR_INVALID_ARGS, if the provided |ViewRef| is invalid.
+    /// - ZX_ERR_PEER_CLOSED, if Scenic fails creating the annotation |ViewHolder|.
     ///
     CreateAnnotationViewHolder(fuchsia.ui.views.ViewRef client_view,
-                               fuchsia.ui.views.ViewHolderToken view_holder_token)
-        -> (CreationStatus status);
+                               fuchsia.ui.views.ViewHolderToken view_holder_token) -> ();
 };
