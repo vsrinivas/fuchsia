@@ -318,9 +318,9 @@ TEST_F(InterruptTest, MAYBE_UnableToBindToVcpuAfterPort) {
 }
 
 #if defined(__x86_64__)  // fxb/46207
-#define MAYBE_UnableToBindToVcpuMultipleGuests DISABLED_UnableToBindToVcpuMultipleGuests
+#define MAYBE_UnableToBindVcpuMultipleGuests DISABLED_UnableToBindToVcpuMultipleGuests
 #else
-#define MAYBE_UnableToBindToVcpuMultipleGuests UnableToBindToVcpuMultipleGuests
+#define MAYBE_UnableToBindVcpuMultipleGuests UnableToBindToVcpuMultipleGuests
 #endif
 
 // Tests binding an interrupt to VCPUs from different guests
