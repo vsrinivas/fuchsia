@@ -163,8 +163,8 @@ static bool interrupt_creation_test() {
 
     // Now have a child thread wait on the interrupt and report success back.
     auto thread =
-      Thread::Create("msi_object_waiter", interrupt_waiter,
-                     reinterpret_cast<void*>(interrupt.dispatcher().get()), DEFAULT_PRIORITY);
+        Thread::Create("msi_object_waiter", interrupt_waiter,
+                       reinterpret_cast<void*>(interrupt.dispatcher().get()), DEFAULT_PRIORITY);
     thread->Resume();
     // Now that the child is waiting on the interrupt it should be unmasked.
     EXPECT_EQ(msi_id_masked, *reg_ptr);
@@ -187,5 +187,6 @@ static bool interrupt_creation_test() {
 UNITTEST_START_TESTCASE(msi_object)
 UNITTEST("simple test for creation / get_info", allocation_creation_and_info_test)
 UNITTEST("test for msi platform support", allocation_support_test)
-UNITTEST("test basic msi dispatcher operation", interrupt_creation_test)
+// TODO(fxb/46894): Disable test flake until root cause is found and resolved.
+// UNITTEST("test basic msi dispatcher operation", interrupt_creation_test)
 UNITTEST_END_TESTCASE(msi_object, "msi", "Tests for MSI objects")
