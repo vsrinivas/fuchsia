@@ -494,6 +494,33 @@ test!(player_status, || async {
     Ok(())
 });
 
+test!(player_capabilities, || async {
+    let service = TestService::new()?;
+
+    let mut player = TestPlayer::new(&service).await?;
+
+    let expected_player_capabilities = || PlayerCapabilities {
+        flags: Some(PlayerCapabilityFlags::Pause | PlayerCapabilityFlags::SkipForward),
+    };
+
+    player
+        .emit_delta(PlayerInfoDelta {
+            player_capabilities: Some(expected_player_capabilities()),
+            ..Decodable::new_empty()
+        })
+        .await?;
+
+    let (session, session_request) = create_proxy()?;
+    service.discovery.connect_to_session(player.id, session_request)?;
+    let status = session.watch_status().await.expect("Watching player capabilities");
+    let actual_player_capabilities =
+        status.player_capabilities.expect("Unwrapping player capabilities");
+
+    assert_eq!(actual_player_capabilities, expected_player_capabilities());
+
+    Ok(())
+});
+
 test!(players_get_ids, || async {
     let service = TestService::new()?;
 

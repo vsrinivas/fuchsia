@@ -44,9 +44,7 @@ impl PlayerEvent {
                     is_local: delta.local,
                     player_status: delta.player_status.map(Into::into),
                     metadata: delta.metadata,
-                    player_capabilities: Some(PlayerCapabilities {
-                        flags: delta.player_capabilities.map(|c| c.flags),
-                    }),
+                    player_capabilities: delta.player_capabilities.map(Into::into),
                     media_images: delta.media_images.map(|media_images| {
                         media_images
                             .into_iter()
