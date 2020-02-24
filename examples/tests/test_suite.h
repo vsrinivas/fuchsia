@@ -35,7 +35,7 @@ class TestSuite : public fuchsia::test::Suite {
   void GetTests(GetTestsCallback callback) override;
 
   void Run(std::vector<fuchsia::test::Invocation> tests, fuchsia::test::RunOptions /*unused*/,
-           fidl::InterfaceHandle<fuchsia::test::RunListener> run_listener) override;
+           fidl::InterfaceHandle<fuchsia::test::TestListener> test_listener) override;
 
   fidl::InterfaceRequestHandler<fuchsia::test::Suite> GetHandler();
 

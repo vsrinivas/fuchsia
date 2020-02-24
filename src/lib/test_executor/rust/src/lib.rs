@@ -8,8 +8,8 @@ use {
     anyhow::{format_err, Context as _},
     fidl_fuchsia_sys::LauncherProxy,
     fidl_fuchsia_test::{
-        Invocation, RunListenerRequest::OnTestCaseStarted, TestCaseListenerRequest::Finished,
-        TestCaseListenerRequestStream,
+        Invocation, TestCaseListenerRequest::Finished, TestCaseListenerRequestStream,
+        TestListenerRequest::OnTestCaseStarted,
     },
     fuchsia_async as fasync,
     fuchsia_syslog::{fx_vlog, macros::*},
@@ -218,20 +218,20 @@ pub async fn run_and_collect_results(
     for case in cases {
         invocations.push(Invocation { name: Some(case.name.unwrap()), tag: None });
     }
-    let (run_listener_client, mut run_listener) =
-        fidl::endpoints::create_request_stream::<fidl_fuchsia_test::RunListenerMarker>()
+    let (test_listener_client, mut test_listener) =
+        fidl::endpoints::create_request_stream::<fidl_fuchsia_test::TestListenerMarker>()
             .map_err(|e| format_err!("Error creating request stream: {}", e))?;
     fx_vlog!(1, "running tests");
     suite
         .run(
             &mut invocations.into_iter().map(|i| i.into()),
             fidl_fuchsia_test::RunOptions {},
-            run_listener_client,
+            test_listener_client,
         )
         .map_err(|e| format_err!("Error running tests in '{}': {}", test_url, e))?;
 
     let mut test_case_processors = Vec::new();
-    while let Some(result_event) = run_listener
+    while let Some(result_event) = test_listener
         .try_next()
         .await
         .map_err(|e| format_err!("Error waiting for listener: {}", e))?

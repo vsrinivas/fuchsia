@@ -40,7 +40,7 @@ void TestSuite::GetTests(GetTestsCallback callback) {
 
 void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
                     fuchsia::test::RunOptions /*unused*/,
-                    fidl::InterfaceHandle<fuchsia::test::RunListener> run_listener) {
+                    fidl::InterfaceHandle<fuchsia::test::TestListener> test_listener) {
   if (options_.close_channel_run) {
     binding_.Close(ZX_ERR_PEER_CLOSED);
     return;
@@ -48,8 +48,8 @@ void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
   if (options_.dont_service_run) {
     return;
   }
-  fuchsia::test::RunListenerPtr ptr;
-  ptr.Bind(std::move(run_listener));
+  fuchsia::test::TestListenerPtr ptr;
+  ptr.Bind(std::move(test_listener));
   for (auto& test_invocation : tests) {
     const auto& test_name = test_invocation.name();
     zx::socket log_sock;

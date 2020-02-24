@@ -11,7 +11,7 @@ use {
         OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest,
-    fidl_fuchsia_test::{Invocation, Result_ as TestResult, RunListenerProxy, Status},
+    fidl_fuchsia_test::{Invocation, Result_ as TestResult, Status, TestListenerProxy},
     fsys::ComponentControllerMarker,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -433,7 +433,7 @@ impl TestServer {
         &self,
         invocation: Invocation,
         component: Arc<Component>,
-        run_listener: &RunListenerProxy,
+        test_listener: &TestListenerProxy,
     ) -> Result<(), RunTestError> {
         let test = invocation.name.as_ref().ok_or(RunTestError::TestCaseName)?.to_string();
         fx_log_info!("Running test {}", test);
@@ -474,7 +474,7 @@ impl TestServer {
                 .map_err(FidlError::CreateProxy)
                 .unwrap();
 
-        run_listener
+        test_listener
             .on_test_case_started(invocation, log_client, listener)
             .map_err(RunTestError::SendStart)?;
         let test_logger =
@@ -563,17 +563,17 @@ impl TestServer {
         Ok(())
     }
 
-    /// Runs tests defined by `tests_names` and uses `run_listener` to send test events.
+    /// Runs tests defined by `tests_names` and uses `test_listener` to send test events.
     // TODO(45852): Support disabled tests.
     // TODO(45853): Support test stdout, or devise a mechanism to replace it.
     pub async fn run_tests(
         &self,
         invocations: Vec<Invocation>,
         component: Arc<Component>,
-        run_listener: RunListenerProxy,
+        test_listener: TestListenerProxy,
     ) -> Result<(), RunTestError> {
         for invocation in invocations {
-            self.run_test(invocation, component.clone(), &run_listener).await?;
+            self.run_test(invocation, component.clone(), &test_listener).await?;
         }
         Ok(())
     }
@@ -772,8 +772,8 @@ mod tests {
         fidl::endpoints::ClientEnd,
         fidl_fuchsia_sys2 as fsys,
         fidl_fuchsia_test::{
-            RunListenerMarker, RunListenerRequest::OnTestCaseStarted, RunListenerRequestStream,
-            TestCaseListenerRequest::Finished,
+            TestCaseListenerRequest::Finished, TestListenerMarker,
+            TestListenerRequest::OnTestCaseStarted, TestListenerRequestStream,
         },
         fio::OPEN_RIGHT_WRITABLE,
         fuchsia_runtime::job_default,
@@ -908,7 +908,7 @@ mod tests {
     }
 
     async fn collect_listener_event(
-        mut listener: RunListenerRequestStream,
+        mut listener: TestListenerRequestStream,
     ) -> Result<Vec<ListenerEvent>, Error> {
         let mut ret = vec![];
         // collect loggers so that they do not die.
@@ -944,9 +944,9 @@ mod tests {
         let component = sample_test_component()?;
         let server = TestServer::new(test_data.proxy()?);
 
-        let (run_listener_client, run_listener) =
-            fidl::endpoints::create_request_stream::<RunListenerMarker>()
-                .expect("Failed to create run_listener");
+        let (test_listener_client, test_listener) =
+            fidl::endpoints::create_request_stream::<TestListenerMarker>()
+                .expect("Failed to create test_listener");
 
         let run_fut = server.run_tests(
             names_to_invocation(vec![
@@ -956,10 +956,10 @@ mod tests {
                 "Tests/SampleParameterizedTestFixture.Test/2",
             ]),
             component,
-            run_listener_client.into_proxy().expect("Can't convert listener into proxy"),
+            test_listener_client.into_proxy().expect("Can't convert listener into proxy"),
         );
 
-        let result_fut = collect_listener_event(run_listener);
+        let result_fut = collect_listener_event(test_listener);
 
         let (result, events_result) = future::join(run_fut, result_fut).await;
         result.expect("Failed to run tests");
@@ -999,17 +999,17 @@ mod tests {
         let component = sample_test_component()?;
         let server = TestServer::new(test_data.proxy()?);
 
-        let (run_listener_client, run_listener) =
-            fidl::endpoints::create_request_stream::<RunListenerMarker>()
-                .expect("Failed to create run_listener");
+        let (test_listener_client, test_listener) =
+            fidl::endpoints::create_request_stream::<TestListenerMarker>()
+                .expect("Failed to create test_listener");
 
         let run_fut = server.run_tests(
             vec![],
             component,
-            run_listener_client.into_proxy().expect("Can't convert listener into proxy"),
+            test_listener_client.into_proxy().expect("Can't convert listener into proxy"),
         );
 
-        let result_fut = collect_listener_event(run_listener);
+        let result_fut = collect_listener_event(test_listener);
 
         let (result, events_result) = future::join(run_fut, result_fut).await;
         result.expect("Failed to run tests");
@@ -1026,17 +1026,17 @@ mod tests {
         let component = sample_test_component()?;
         let server = TestServer::new(test_data.proxy()?);
 
-        let (run_listener_client, run_listener) =
-            fidl::endpoints::create_request_stream::<RunListenerMarker>()
-                .expect("Failed to create run_listener");
+        let (test_listener_client, test_listener) =
+            fidl::endpoints::create_request_stream::<TestListenerMarker>()
+                .expect("Failed to create test_listener");
 
         let run_fut = server.run_tests(
             names_to_invocation(vec!["SampleTest2.SimplePass"]),
             component,
-            run_listener_client.into_proxy().expect("Can't convert listener into proxy"),
+            test_listener_client.into_proxy().expect("Can't convert listener into proxy"),
         );
 
-        let result_fut = collect_listener_event(run_listener);
+        let result_fut = collect_listener_event(test_listener);
 
         let (result, events_result) = future::join(run_fut, result_fut).await;
         result.expect("Failed to run tests");

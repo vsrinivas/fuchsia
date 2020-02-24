@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_test::{Invocation, Result_ as TestResult, RunListenerProxy, Status},
+    fidl_fuchsia_test::{Invocation, Result_ as TestResult, Status, TestListenerProxy},
     fuchsia_async as fasync,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
@@ -154,14 +154,14 @@ impl GTestAdapter {
         })
     }
 
-    /// Runs tests defined by `tests_names` and uses `run_listener` to send test events.
+    /// Runs tests defined by `tests_names` and uses `test_listener` to send test events.
     // TODO(anmittal): Support disabled tests.
     // TODO(anmittal): Don't run tests which are not present in test file or handle them.
     // TODO(anmittal): Support test stdout, or devise a mechanism to replace it.
     pub async fn run_tests(
         &self,
         invocations: Vec<Invocation>,
-        run_listener: RunListenerProxy,
+        test_listener: TestListenerProxy,
     ) -> Result<(), Error> {
         for invocation in invocations {
             let test = invocation
@@ -192,7 +192,7 @@ impl GTestAdapter {
                 fidl::endpoints::create_proxy::<fidl_fuchsia_test::TestCaseListenerMarker>()
                     .context("cannot create proxy")?;
 
-            run_listener
+            test_listener
                 .on_test_case_started(invocation, log_client, listener)
                 .context("Cannot send start event")?;
 
@@ -341,8 +341,8 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_test::{
-            RunListenerMarker, RunListenerRequest::OnTestCaseStarted, RunListenerRequestStream,
-            TestCaseListenerRequest::Finished,
+            TestCaseListenerRequest::Finished, TestListenerMarker,
+            TestListenerRequest::OnTestCaseStarted, TestListenerRequestStream,
         },
         std::cmp::PartialEq,
         std::path::Path,
@@ -389,7 +389,7 @@ mod tests {
     }
 
     async fn collect_listener_event(
-        mut listener: RunListenerRequestStream,
+        mut listener: TestListenerRequestStream,
     ) -> Result<Vec<ListenerEvent>, Error> {
         let mut ret = vec![];
         // collect loggers so that they do not die.
@@ -420,9 +420,9 @@ mod tests {
     async fn run_multiple_tests() {
         fuchsia_syslog::init_with_tags(&["gtest_adapter"]).expect("cannot init logger");
 
-        let (run_listener_client, run_listener) =
-            fidl::endpoints::create_request_stream::<RunListenerMarker>()
-                .expect("Failed to create run_listener");
+        let (test_listener_client, test_listener) =
+            fidl::endpoints::create_request_stream::<TestListenerMarker>()
+                .expect("Failed to create test_listener");
         let adapter =
             GTestAdapter::new("/pkg/bin/sample_tests".to_owned()).expect("Cannot create adapter");
 
@@ -433,10 +433,10 @@ mod tests {
                 "SampleTest2.SimplePass",
                 "Tests/SampleParameterizedTestFixture.Test/2",
             ]),
-            run_listener_client.into_proxy().expect("Can't convert listener into proxy"),
+            test_listener_client.into_proxy().expect("Can't convert listener into proxy"),
         );
 
-        let result_fut = collect_listener_event(run_listener);
+        let result_fut = collect_listener_event(test_listener);
 
         let (result, events_result) = future::join(run_fut, result_fut).await;
         result.expect("Failed to run tests");
@@ -471,18 +471,18 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_no_test() {
-        let (run_listener_client, run_listener) =
-            fidl::endpoints::create_request_stream::<RunListenerMarker>()
-                .expect("Failed to create run_listener");
+        let (test_listener_client, test_listener) =
+            fidl::endpoints::create_request_stream::<TestListenerMarker>()
+                .expect("Failed to create test_listener");
         let adapter =
             GTestAdapter::new("/pkg/bin/sample_tests".to_owned()).expect("Cannot create adapter");
 
         let run_fut = adapter.run_tests(
             vec![],
-            run_listener_client.into_proxy().expect("Can't convert listener into proxy"),
+            test_listener_client.into_proxy().expect("Can't convert listener into proxy"),
         );
 
-        let result_fut = collect_listener_event(run_listener);
+        let result_fut = collect_listener_event(test_listener);
 
         let (result, events_result) = future::join(run_fut, result_fut).await;
         result.expect("Failed to run tests");
@@ -493,18 +493,18 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_one_test() {
-        let (run_listener_client, run_listener) =
-            fidl::endpoints::create_request_stream::<RunListenerMarker>()
-                .expect("Failed to create run_listener");
+        let (test_listener_client, test_listener) =
+            fidl::endpoints::create_request_stream::<TestListenerMarker>()
+                .expect("Failed to create test_listener");
         let adapter =
             GTestAdapter::new("/pkg/bin/sample_tests".to_owned()).expect("Cannot create adapter");
 
         let run_fut = adapter.run_tests(
             names_to_invocation(vec!["SampleTest2.SimplePass"]),
-            run_listener_client.into_proxy().expect("Can't convert listener into proxy"),
+            test_listener_client.into_proxy().expect("Can't convert listener into proxy"),
         );
 
-        let result_fut = collect_listener_event(run_listener);
+        let result_fut = collect_listener_event(test_listener);
 
         let (result, events_result) = future::join(run_fut, result_fut).await;
         result.expect("Failed to run tests");

@@ -64,7 +64,7 @@ protocol TestCaseListener {
 };
 
 /// Listens to updates from test runs.
-protocol RunListener {
+protocol TestListener {
     /// Indicates that an individual test invocation has started execution.
     OnTestCaseStarted(Invocation invocation, handle<socket> primary_log, request<TestCaseListener> listener);
 };
@@ -79,6 +79,6 @@ protocol Suite {
     ///
     /// |tests| may contain duplicate elements, in which case the same test is
     /// run multiple times as indicated.
-    /// Closing |run_listener| marks the end of this call.
-    Run(vector<Invocation>:MAX tests, RunOptions options, RunListener listener);
+    /// Closing |test_listener| marks the end of this call.
+    Run(vector<Invocation>:MAX tests, RunOptions options, TestListener listener);
 };

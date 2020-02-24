@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_test as ftest,
     fsyslog::{fx_log_err, fx_log_info},
-    ftest::{Invocation, RunListenerProxy},
+    ftest::{Invocation, TestListenerProxy},
     fuchsia_async as fasync, fuchsia_syslog as fsyslog, fuchsia_zircon as zx,
     futures::prelude::*,
     lazy_static::lazy_static,
@@ -135,7 +135,7 @@ impl RustTestAdapter {
     async fn run_tests(
         &self,
         invocations: Vec<Invocation>,
-        proxy: RunListenerProxy,
+        proxy: TestListenerProxy,
     ) -> Result<(), Error> {
         fx_log_info!("running tests");
         for invocation in invocations {
@@ -341,8 +341,8 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_test::{
-            RunListenerMarker, RunListenerRequest::OnTestCaseStarted, RunListenerRequestStream,
-            TestCaseListenerRequest::Finished,
+            TestCaseListenerRequest::Finished, TestListenerMarker,
+            TestListenerRequest::OnTestCaseStarted, TestListenerRequestStream,
         },
         std::cmp::PartialEq,
     };
@@ -358,7 +358,7 @@ mod tests {
     }
 
     async fn collect_results(
-        mut listener: RunListenerRequestStream,
+        mut listener: TestListenerRequestStream,
     ) -> Result<Vec<ListenerEvent>, Error> {
         let mut events = vec![];
         while let Some(result_event) = listener.try_next().await? {
@@ -452,13 +452,13 @@ mod tests {
             "tests::c_passing_test",
         ]);
 
-        let (run_listener_client, run_listener) =
-            fidl::endpoints::create_request_stream::<RunListenerMarker>()
-                .expect("failed to create run_listener");
-        let proxy = run_listener_client.into_proxy().expect("can't convert listener into proxy");
+        let (test_listener_client, test_listener) =
+            fidl::endpoints::create_request_stream::<TestListenerMarker>()
+                .expect("failed to create test_listener");
+        let proxy = test_listener_client.into_proxy().expect("can't convert listener into proxy");
 
         let run_future = adapter.run_tests(tests, proxy);
-        let result_future = collect_results(run_listener);
+        let result_future = collect_results(test_listener);
 
         let (run_option, result_option) = future::join(run_future, result_future).await;
 
