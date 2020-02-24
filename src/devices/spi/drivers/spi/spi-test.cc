@@ -47,6 +47,7 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
 
   zx_status_t DeviceRemove(zx_device_t* device) {
     if (device == reinterpret_cast<zx_device_t*>(bus_device_)) {
+      delete bus_device_;
       bus_device_ = nullptr;
       return ZX_OK;
     } else {
