@@ -4,8 +4,7 @@
     },
     "sandbox": {
         "features": [
-            "hub",
-            "deprecated-ambient-replace-as-executable"
+            "hub"
         ],
         "services": [
             "fuchsia.process.Launcher",

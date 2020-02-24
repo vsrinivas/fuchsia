@@ -6,8 +6,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_io::{self as fio, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE},
-    fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_io as fio, fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys,
     fuchsia_runtime::{job_default, HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, HandleBased},
     futures::prelude::*,
@@ -120,7 +119,7 @@ impl ComponentNamespace {
     pub fn clone(&self) -> Result<Self, ComponentNamespaceError> {
         let mut ns = Self { items: Vec::with_capacity(self.items.len()) };
         for (path, proxy) in &self.items {
-            let client_proxy = io_util::clone_directory(proxy, CLONE_FLAG_SAME_RIGHTS)
+            let client_proxy = io_util::clone_directory(proxy, fio::CLONE_FLAG_SAME_RIGHTS)
                 .map_err(ComponentNamespaceError::DirectoryClone)?;
             ns.items.push((path.clone(), client_proxy));
         }
@@ -225,8 +224,12 @@ pub async fn configure_launcher(
     // The loader service should only be able to load files from `/pkg/lib`. Giving it a larger
     // scope is potentially a security vulnerability, as it could make it trivial for parts of
     // applications to get handles to things the application author didn't intend.
-    let lib_proxy = io_util::open_directory(pkg_proxy, &Path::new("lib"), OPEN_RIGHT_READABLE)
-        .map_err(|e| LaunchError::LibLoadError(e.to_string()))?;
+    let lib_proxy = io_util::open_directory(
+        pkg_proxy,
+        &Path::new("lib"),
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+    )
+    .map_err(|e| LaunchError::LibLoadError(e.to_string()))?;
     let (ll_client_chan, ll_service_chan) =
         zx::Channel::create().map_err(LaunchError::ChannelCreation)?;
     library_loader::start(lib_proxy, ll_service_chan);
@@ -421,11 +424,12 @@ mod tests {
             let mut ns = fsys::ComponentNamespace { paths: vec![], directories: vec![] };
             if include_pkg {
                 let pkg_path = "/pkg".to_string();
-                let pkg_chan = io_util::open_directory_in_namespace("/pkg", OPEN_RIGHT_READABLE)
-                    .unwrap()
-                    .into_channel()
-                    .unwrap()
-                    .into_zx_channel();
+                let pkg_chan =
+                    io_util::open_directory_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE)
+                        .unwrap()
+                        .into_channel()
+                        .unwrap()
+                        .into_zx_channel();
                 let pkg_handle = ClientEnd::new(pkg_chan);
 
                 ns = fsys::ComponentNamespace {

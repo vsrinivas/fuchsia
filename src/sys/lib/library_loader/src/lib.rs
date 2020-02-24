@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Error},
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, VMO_FLAG_READ},
+    fidl_fuchsia_io::{self as fio, DirectoryProxy},
     fidl_fuchsia_ldsvc::{LoaderRequest, LoaderRequestStream},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{TryFutureExt, TryStreamExt},
@@ -16,11 +16,14 @@ use {
 
 /// start will expose the `fuchsia.ldsvc.Loader` service over the given channel, providing VMO
 /// buffers of requested library object names from `lib_proxy`.
+///
+/// `lib_proxy` must have been opened with at minimum OPEN_RIGHT_READABLE and OPEN_RIGHT_EXECUTABLE
+/// rights.
 pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
     fasync::spawn(
         async move {
             let mut search_dirs =
-                vec![io_util::clone_directory(&lib_proxy, CLONE_FLAG_SAME_RIGHTS)?];
+                vec![io_util::clone_directory(&lib_proxy, fio::CLONE_FLAG_SAME_RIGHTS)?];
             // Wait for requests
             let mut stream =
                 LoaderRequestStream::from_channel(fasync::Channel::from_channel(chan)?);
@@ -60,7 +63,7 @@ pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
                     }
                     LoaderRequest::Clone { loader, responder } => {
                         let new_lib_proxy =
-                            io_util::clone_directory(&lib_proxy, CLONE_FLAG_SAME_RIGHTS)?;
+                            io_util::clone_directory(&lib_proxy, fio::CLONE_FLAG_SAME_RIGHTS)?;
                         start(new_lib_proxy, loader.into_channel());
                         responder.send(zx::sys::ZX_OK)?;
                     }
@@ -74,25 +77,27 @@ pub fn start(lib_proxy: DirectoryProxy, chan: zx::Channel) {
 
 /// load_vmo will attempt to open the provided name in `dir_proxy` and return an executable VMO
 /// with the contents.
+///
+/// `dir_proxy` must have been opened with at minimum OPEN_RIGHT_READABLE and OPEN_RIGHT_EXECUTABLE
+/// rights.
 pub async fn load_vmo<'a>(
     dir_proxy: &'a DirectoryProxy,
     object_name: &'a str,
 ) -> Result<zx::Vmo, Error> {
-    let file_proxy =
-        io_util::open_file(dir_proxy, &Path::new(object_name), io_util::OPEN_RIGHT_READABLE)?;
+    let file_proxy = io_util::open_file(
+        dir_proxy,
+        &Path::new(object_name),
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+    )?;
     let (status, fidlbuf) = file_proxy
-        .get_buffer(VMO_FLAG_READ)
+        .get_buffer(fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC)
         .await
         .map_err(|e| format_err!("reading object at {:?} failed: {}", object_name, e))?;
     let status = zx::Status::from_raw(status);
     if status != zx::Status::OK {
         return Err(format_err!("reading object at {:?} failed: {}", object_name, status));
     }
-    fidlbuf
-        .ok_or(format_err!("no buffer returned from GetBuffer"))?
-        .vmo
-        .replace_as_executable()
-        .map_err(|status| format_err!("failed to replace VMO as executable: {}", status))
+    Ok(fidlbuf.ok_or(format_err!("no buffer returned from GetBuffer"))?.vmo)
 }
 
 /// parses a config string from the `fuchsia.ldsvc.Loader` service. See
@@ -103,49 +108,53 @@ fn parse_config_string(
     config: &str,
 ) -> Result<Vec<DirectoryProxy>, Error> {
     if config.contains("/") {
-        return Err(format_err!("'/' chacter found in loader service config string"));
+        return Err(format_err!("'/' character found in loader service config string"));
     }
     if Some('!') == config.chars().last() {
         let sub_dir_proxy = io_util::open_directory(
             dir_proxy,
             &Path::new(&config[..config.len() - 1]),
-            io_util::OPEN_RIGHT_READABLE,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )?;
         Ok(vec![sub_dir_proxy])
     } else {
-        let dir_proxy_clone = io_util::clone_directory(dir_proxy, CLONE_FLAG_SAME_RIGHTS)?;
-        let sub_dir_proxy =
-            io_util::open_directory(dir_proxy, &Path::new(config), io_util::OPEN_RIGHT_READABLE)?;
+        let dir_proxy_clone = io_util::clone_directory(dir_proxy, fio::CLONE_FLAG_SAME_RIGHTS)?;
+        let sub_dir_proxy = io_util::open_directory(
+            dir_proxy,
+            &Path::new(config),
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+        )?;
         Ok(vec![sub_dir_proxy, dir_proxy_clone])
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*,
-        fidl::endpoints::{Proxy, ServerEnd},
-        fidl_fuchsia_io::{DirectoryMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE},
-        fidl_fuchsia_ldsvc::{LoaderMarker, LoaderProxy},
-        fuchsia_vfs_pseudo_fs::{
-            directory::entry::DirectoryEntry, file::simple::read_only, pseudo_directory,
-        },
-        std::iter,
-        std::path::Path,
-    };
+    use {super::*, fidl_fuchsia_ldsvc::LoaderMarker};
+
+    async fn list_directory<'a>(root_proxy: &'a DirectoryProxy) -> Vec<String> {
+        let dir = io_util::clone_directory(&root_proxy, fio::CLONE_FLAG_SAME_RIGHTS)
+            .expect("Failed to clone DirectoryProxy");
+        let entries = files_async::readdir(&dir).await.expect("readdir failed");
+        entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>()
+    }
 
     #[fasync::run_singlethreaded(test)]
-    // TODO: Use a synthetic /pkg/lib in this test so it doesn't depend on the package layout
     async fn load_objects_test() -> Result<(), Error> {
-        let mut pkg_lib = io_util::open_directory_in_namespace("/pkg/lib", OPEN_RIGHT_READABLE)?;
+        // Open this test's real /pkg/lib directory to use for this test, and then check to see
+        // whether an asan subdirectory is present, and use it instead if so.
+        // TODO(fxb/37534): Use a synthetic /pkg/lib in this test so it doesn't depend on the
+        // package layout (like whether sanitizers are in use) once Rust vfs supports
+        // OPEN_RIGHT_EXECUTABLE
+        let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
+        let mut pkg_lib = io_util::open_directory_in_namespace("/pkg/lib", rights)?;
         let entries = list_directory(&pkg_lib).await;
         if entries.iter().any(|f| &f as &str == "asan") {
-            pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("asan"), OPEN_RIGHT_READABLE)?;
+            pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("asan"), rights)?;
         }
-        let (client_chan, service_chan) = zx::Channel::create()?;
-        start(pkg_lib, service_chan);
 
-        let loader = LoaderProxy::from_channel(fasync::Channel::from_channel(client_chan)?);
+        let (loader_proxy, loader_service) = fidl::endpoints::create_proxy::<LoaderMarker>()?;
+        start(pkg_lib, loader_service.into_channel());
 
         for (obj_name, should_succeed) in vec![
             // Should be able to access lib/ld.so.1
@@ -165,7 +174,7 @@ mod tests {
             // Should not be able to access meta/component_manager_tests_hello_world.cm
             ("../meta/component_manager_tests_hello_world.cm", false),
         ] {
-            let (res, o_vmo) = loader.load_object(obj_name).await?;
+            let (res, o_vmo) = loader_proxy.load_object(obj_name).await?;
             if should_succeed {
                 assert_eq!(zx::sys::ZX_OK, res, "loading {} did not succeed", obj_name);
                 assert!(o_vmo.is_some());
@@ -177,33 +186,20 @@ mod tests {
         Ok(())
     }
 
-    async fn list_directory<'a>(root_proxy: &'a DirectoryProxy) -> Vec<String> {
-        let dir = io_util::clone_directory(&root_proxy, CLONE_FLAG_SAME_RIGHTS)
-            .expect("Failed to clone DirectoryProxy");
-        let entries = files_async::readdir(&dir).await.expect("readdir failed");
-        entries.iter().map(|entry| entry.name.clone()).collect::<Vec<String>>()
-    }
-
     #[fasync::run_singlethreaded(test)]
     async fn config_test() -> Result<(), Error> {
-        let mut example_dir = pseudo_directory! {
-            "foo" => read_only(|| Ok(b"hippos".to_vec())),
-            "bar" => pseudo_directory! {
-                "baz" => read_only(|| Ok(b"rule".to_vec())),
-            },
-        };
-
-        let (example_dir_proxy, example_dir_service) =
-            fidl::endpoints::create_proxy::<DirectoryMarker>()?;
-        example_dir.open(
-            OPEN_RIGHT_READABLE,
-            MODE_TYPE_DIRECTORY,
-            &mut iter::empty(),
-            ServerEnd::new(example_dir_service.into_channel()),
-        );
-        fasync::spawn(async move {
-            let _ = example_dir.await;
-        });
+        // This /pkg/lib/config_test/ directory is added by the build rules for this test package,
+        // since we need a directory that supports OPEN_RIGHT_EXECUTABLE. It contains a file 'foo'
+        // which contains 'hippos' and a file 'bar/baz' (that is, baz in a subdirectory bar) which
+        // contains 'rule'.
+        // TODO(fxb/37534): Use a synthetic /pkg/lib in this test so it doesn't depend on the
+        // package layout once Rust vfs supports OPEN_RIGHT_EXECUTABLE
+        let pkg_lib = io_util::open_directory_in_namespace(
+            "/pkg/lib/config_test/",
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+        )?;
+        let (loader_proxy, loader_service) = fidl::endpoints::create_proxy::<LoaderMarker>()?;
+        start(pkg_lib, loader_service.into_channel());
 
         // Attempt to access things with different configurations
         for (obj_name, config, expected_result) in vec![
@@ -222,12 +218,6 @@ mod tests {
             // Should be able to load baz with config "bar" (also look in sub directory bar)
             ("baz", Some("bar"), Some("rule")),
         ] {
-            let example_dir_proxy_clone =
-                io_util::clone_directory(&example_dir_proxy, CLONE_FLAG_SAME_RIGHTS)?;
-
-            let (loader_proxy, loader_service) = fidl::endpoints::create_proxy::<LoaderMarker>()?;
-            start(example_dir_proxy_clone, loader_service.into_channel());
-
             if let Some(config) = config {
                 assert_eq!(zx::sys::ZX_OK, loader_proxy.config(config).await?);
             }

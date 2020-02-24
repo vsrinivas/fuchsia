@@ -12,7 +12,7 @@ use {
     anyhow::format_err,
     cm_fidl_translator,
     fidl::endpoints::{create_proxy, ClientEnd},
-    fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE},
+    fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy},
     fidl_fuchsia_sys2 as fsys,
     fuchsia_url::pkg_url::PkgUrl,
     futures::lock::Mutex,
@@ -23,85 +23,88 @@ use {
 
 pub static SCHEME: &str = "fuchsia-pkg";
 
-/// Resolves component URLs with the "fuchsia-pkg" scheme. See the fuchsia_pkg_url crate for URL
-/// syntax. Uses raw pkgfs handle, and thus can only load packages from the "base" package set.
-/// The root component must expose "/pkgfs" directory capability for this to work.
+/// Resolves component URLs with the "fuchsia-pkg" scheme.
+///
+/// This is a 'pure' CFv2 fuchsia-pkg resolver, in that it does not rely on an existing package
+/// resolver implementation (like fuchsia_pkg_resolver::FuchsiaPkgResolver does), and instead
+/// directly implements a resolver on top of a pkgfs directory connection (i.e. through
+/// /pkgfs/packages). However, because of this it is currently limited to loading packages from the
+/// "base" package set".
+///
+/// The root component must expose a "/pkgfs" directory capability for this to work.
+///
+/// See the fuchsia_pkg_url crate for URL syntax.
+///
+/// TODO(fxb/46491): Replace this with one or more v2 resolver capabilities implemented and exposed
+/// by the package system, and simply used appropriately in the component topology.
 pub struct FuchsiaPkgResolver {
     model: Arc<Mutex<Option<Weak<Model>>>>,
-    pkgfs_handle: Mutex<Option<DirectoryProxy>>,
+    pkgfs_proxy: Mutex<Option<DirectoryProxy>>,
 }
 
 impl FuchsiaPkgResolver {
     pub fn new(model: Arc<Mutex<Option<Weak<Model>>>>) -> FuchsiaPkgResolver {
-        FuchsiaPkgResolver { model, pkgfs_handle: Mutex::new(None) }
+        FuchsiaPkgResolver { model, pkgfs_proxy: Mutex::new(None) }
+    }
+
+    // Open a new directory connection to pkgfs, which (for this resolver to work) must be exposed
+    // as a directory capability named '/pkgfs' from the root component to the runtime:
+    // - perform capability routing
+    // - bind to the appropriate component
+    // - open the pkgfs directory capability
+    async fn open_pkgfs(&self) -> Result<DirectoryProxy, anyhow::Error> {
+        let model_guard = self.model.lock().await;
+        let model = model_guard.as_ref().expect("model reference missing");
+        let model = model.upgrade().ok_or(ResolverError::model_not_available())?;
+        let (capability_path, abs_moniker) =
+            routing::find_exposed_root_directory_capability(&model, "/pkgfs".try_into().unwrap())
+                .await
+                .map_err(|e| format_err!("failed to route pkgfs handle: {}", e))?;
+        let (pkgfs_proxy, pkgfs_server) = create_proxy::<DirectoryMarker>()?;
+        model
+            .bind(&abs_moniker)
+            .await
+            .map_err(|e| format_err!("failed to bind to pkgfs provider: {}", e))?
+            .open_outgoing(
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+                fio::MODE_TYPE_DIRECTORY,
+                capability_path.to_path_buf(),
+                pkgfs_server.into_channel(),
+            )
+            .await
+            .map_err(|e| {
+                format_err!("failed to open outgoing directory of pkgfs provider: {}", e)
+            })?;
+        Ok(pkgfs_proxy)
     }
 
     async fn resolve_package(
         &self,
         component_package_url: &PkgUrl,
     ) -> Result<DirectoryProxy, ResolverError> {
-        let mut o_pkgfs_handle = self.pkgfs_handle.lock().await;
-        if o_pkgfs_handle.is_none() {
-            // If we don't currently have a handle to pkgfs...
-            // - perform capability routing
-            // - bind to the appropriate component
-            // - open the pkgfs directory capability
-            // - and store the opened handle in self.pkgfs_handle.
-            let model_guard = self.model.lock().await;
-            let model = model_guard.as_ref().expect("model reference missing");
-            let model = model.upgrade().ok_or(ResolverError::model_not_available())?;
-            let (capability_path, abs_moniker) = routing::find_exposed_root_directory_capability(
-                &model,
-                "/pkgfs".try_into().unwrap(),
-            )
-            .await
-            .map_err(|e| {
-                ResolverError::component_not_available(
-                    component_package_url.to_string(),
-                    format_err!("failed to route pkgfs handle: {}", e),
-                )
-            })?;
-            let (pkgfs_client, pkgfs_server) = create_proxy::<DirectoryMarker>().map_err(|e| {
+        // Grab the proxy_proxy lock and lazy-initialize if not already done.
+        let mut pkgfs_proxy = self.pkgfs_proxy.lock().await;
+        if pkgfs_proxy.is_none() {
+            *pkgfs_proxy = Some(self.open_pkgfs().await.map_err(|e| {
                 ResolverError::component_not_available(component_package_url.to_string(), e)
-            })?;
-            model
-                .bind(&abs_moniker)
-                .await
-                .map_err(|e| {
-                    ResolverError::component_not_available(
-                        component_package_url.to_string(),
-                        format_err!("failed to bind to pkgfs provider: {}", e),
-                    )
-                })?
-                .open_outgoing(
-                    OPEN_RIGHT_READABLE,
-                    MODE_TYPE_DIRECTORY,
-                    capability_path.to_path_buf(),
-                    pkgfs_server.into_channel(),
-                )
-                .await
-                .map_err(|e| {
-                    ResolverError::component_not_available(
-                        component_package_url.to_string(),
-                        format_err!("failed to open outgoing directory of pkgfs provider: {}", e),
-                    )
-                })?;
-            *o_pkgfs_handle = Some(pkgfs_client)
+            })?);
         }
-        // The system package is available at the `system` path inside of pkgfs, whereas all other
-        // packages are available at `packages/$PACKAGE_NAME/0`.
-        let p = match io_util::canonicalize_path(component_package_url.root_url().path()) {
-            "system" => PathBuf::from("system"),
-            path => PathBuf::from("packages").join(path).join("0"),
-        };
-        let dir =
-            io_util::open_directory(o_pkgfs_handle.as_ref().unwrap(), &p, OPEN_RIGHT_READABLE)
-                .map_err(|e| {
-                    ResolverError::component_not_available(
-                        component_package_url.to_string(),
-                        e.context("failed to open package directory"),
-                    )
-                })?;
+
+        // Package contents are available at `packages/$PACKAGE_NAME/0`.
+        let root_url = component_package_url.root_url();
+        let package_name = io_util::canonicalize_path(root_url.path());
+        let path = PathBuf::from("packages").join(package_name).join("0");
+        let dir = io_util::open_directory(
+            pkgfs_proxy.as_ref().unwrap(),
+            &path,
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+        )
+        .map_err(|e| {
+            ResolverError::component_not_available(
+                component_package_url.to_string(),
+                e.context("failed to open package directory"),
+            )
+        })?;
         Ok(dir)
     }
 
@@ -122,7 +125,7 @@ impl FuchsiaPkgResolver {
         let dir = self.resolve_package(&component_package_url).await?;
 
         // Read component manifest from package.
-        let file = io_util::open_file(&dir, cm_path, io_util::OPEN_RIGHT_READABLE)
+        let file = io_util::open_file(&dir, cm_path, fio::OPEN_RIGHT_READABLE)
             .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
         let cm_str = io_util::read_file(&file)
             .await
@@ -154,68 +157,84 @@ impl Resolver for FuchsiaPkgResolver {
 mod tests {
     use {
         super::*,
-        cm_fidl_translator, directory_broker,
-        fidl::endpoints::ServerEnd,
+        cm_fidl_translator,
+        fidl::endpoints::{create_proxy_and_stream, ServerEnd},
         fidl_fuchsia_data as fdata,
-        fidl_fuchsia_io::NodeMarker,
+        fidl_fuchsia_io::{DirectoryRequest, NodeMarker},
         fuchsia_async as fasync,
+        futures::prelude::*,
         std::path::Path,
-        vfs::{
-            directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path,
-            pseudo_directory,
-        },
     };
 
-    fn new_fake_pkgfs() -> DirectoryProxy {
-        let (pkgfs_client, pkgfs_server) = create_proxy::<DirectoryMarker>().unwrap();
+    // Simulate a fake pkgfs Directory service that only contains a single package ("hello_world"),
+    // using our own package directory (hosted by the real pkgfs) as the contents. In other words,
+    // connect the path "packages/hello_world/0/" to "/pkg" from our namespace.
+    // TODO(fxb/37534): This is implemented by manually handling the Directory.Open and forwarding
+    // to the test's real package directory because Rust vfs does not yet support
+    // OPEN_RIGHT_EXECUTABLE. Simplify in the future.
+    struct FakePkgfs;
 
-        fasync::spawn_local(async move {
-            let packages_dir_broker_fn =
-                |_, _, relative_path: String, server_end: ServerEnd<NodeMarker>| {
-                    if relative_path.is_empty() {
-                        // We don't support this in this fake, drop the server_end
-                        return;
+    impl FakePkgfs {
+        pub fn new() -> DirectoryProxy {
+            let (proxy, mut stream) = create_proxy_and_stream::<DirectoryMarker>().unwrap();
+            fasync::spawn_local(async move {
+                while let Some(request) = stream.try_next().await.unwrap() {
+                    match request {
+                        DirectoryRequest::Open {
+                            flags,
+                            mode: _,
+                            path,
+                            object,
+                            control_handle: _,
+                        } => Self::handle_open(&path, flags, object),
+                        _ => panic!("Fake doesn't support request: {:?}", request),
                     }
-                    let path = PathBuf::from(relative_path.clone());
-                    let mut path_iter = path.iter();
+                }
+            });
+            proxy
+        }
 
-                    // We're simulating a package server that only contains the "hello_world" package.
-                    if path_iter.next().unwrap().to_str().unwrap() != "hello_world" {
-                        return;
-                    }
+        fn handle_open(path: &str, flags: u32, server_end: ServerEnd<NodeMarker>) {
+            if path.is_empty() {
+                // We don't support this in this fake, drop the server_end
+                return;
+            }
+            let path = Path::new(path);
+            let mut path_iter = path.iter();
 
-                    // The next item is 0, as per pkgfs semantics. Check it and skip it.
-                    assert_eq!("0", path_iter.next().unwrap().to_str().unwrap());
+            // "packages/" should always be the first path component used by the resolver.
+            assert_eq!("packages", path_iter.next().unwrap().to_str().unwrap());
 
-                    let mut open_path = PathBuf::from("/pkg");
-                    open_path.extend(path_iter);
-                    io_util::connect_in_namespace(
-                        open_path.to_str().unwrap(),
-                        server_end.into_channel(),
-                        OPEN_RIGHT_READABLE,
-                    )
-                    .expect("failed to open path in namespace");
-                };
-            let fake_pkgfs = pseudo_directory! {
-                "packages" =>
-                    directory_broker::DirectoryBroker::new(Box::new(packages_dir_broker_fn)),
-            };
-            fake_pkgfs.open(
-                ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
-                OPEN_RIGHT_READABLE,
-                MODE_TYPE_DIRECTORY,
-                path::Path::empty(),
-                ServerEnd::new(pkgfs_server.into_channel()),
-            );
-        });
-        pkgfs_client
+            // We're simulating a package server that only contains the "hello_world"
+            // package. This returns rather than asserts so that we can attempt to resolve
+            // other packages.
+            if path_iter.next().unwrap().to_str().unwrap() != "hello_world" {
+                return;
+            }
+
+            // The next item is 0, as per pkgfs semantics. Check it and skip it.
+            assert_eq!("0", path_iter.next().unwrap().to_str().unwrap());
+
+            // Connect the server_end by forwarding to our real package directory, which can handle
+            // OPEN_RIGHT_EXECUTABLE. Also, pass through the input flags here to ensure that we
+            // don't artificially pass the test (i.e. the resolver needs to ask for the appropriate
+            // rights).
+            let mut open_path = PathBuf::from("/pkg");
+            open_path.extend(path_iter);
+            io_util::connect_in_namespace(
+                open_path.to_str().unwrap(),
+                server_end.into_channel(),
+                flags,
+            )
+            .expect("failed to open path in namespace");
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn resolve_test() {
         let resolver = FuchsiaPkgResolver {
             model: Arc::new(Mutex::new(None)),
-            pkgfs_handle: Mutex::new(Some(new_fake_pkgfs())),
+            pkgfs_proxy: Mutex::new(Some(FakePkgfs::new())),
         };
         let url = "fuchsia-pkg://fuchsia.com/hello_world#\
                    meta/component_manager_tests_hello_world.cm";
@@ -252,15 +271,22 @@ mod tests {
 
         let fsys::Package { package_url, package_dir } = package.unwrap();
         assert_eq!(package_url.unwrap(), "fuchsia-pkg://fuchsia.com/hello_world");
+
         let dir_proxy = package_dir.unwrap().into_proxy().unwrap();
         let path = Path::new("meta/component_manager_tests_hello_world.cm");
-        let file_proxy = io_util::open_file(&dir_proxy, path, io_util::OPEN_RIGHT_READABLE)
+        let file_proxy = io_util::open_file(&dir_proxy, path, fio::OPEN_RIGHT_READABLE)
             .expect("could not open cm");
         let cm_contents = io_util::read_file(&file_proxy).await.expect("could not read cm");
         assert_eq!(
             cm_fidl_translator::translate(&cm_contents).expect("could not parse cm"),
             expected_decl
         );
+
+        // Try to load an executable file, like a binary, reusing the library_loader helper that
+        // opens with OPEN_RIGHT_EXECUTABLE and gets a VMO with VMO_FLAG_EXEC.
+        library_loader::load_vmo(&dir_proxy, "bin/hello_world")
+            .await
+            .expect("failed to open executable file");
     }
 
     macro_rules! test_resolve_error {
@@ -280,7 +306,7 @@ mod tests {
     async fn resolve_errors_test() {
         let resolver = FuchsiaPkgResolver {
             model: Arc::new(Mutex::new(None)),
-            pkgfs_handle: Mutex::new(Some(new_fake_pkgfs())),
+            pkgfs_proxy: Mutex::new(Some(FakePkgfs::new())),
         };
         test_resolve_error!(
             resolver,

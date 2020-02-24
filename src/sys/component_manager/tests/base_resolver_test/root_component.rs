@@ -4,17 +4,14 @@
 
 use {
     anyhow::Error,
-    directory_broker,
     fidl::endpoints::*,
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryRequest, NodeMarker},
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::*,
     fuchsia_runtime,
     fuchsia_zircon::{self as zx},
-    io_util,
-    vfs::{
-        directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
-        pseudo_directory,
-    },
+    futures::prelude::*,
+    std::path::{Path, PathBuf},
 };
 
 #[fasync::run_singlethreaded]
@@ -25,25 +22,7 @@ async fn main() -> Result<(), Error> {
             .expect("missing directory request handle");
 
     let startup_handle = ServerEnd::new(zx::Channel::from(startup_handle));
-
-    let pkg_dir = io_util::open_directory_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE)
-        .expect("failed to open /pkg");
-    let fake_pkgfs = pseudo_directory! {
-        "pkgfs" => pseudo_directory! {
-            "packages" => pseudo_directory! {
-                "echo_server" => pseudo_directory! {
-                    "0" => directory_broker::DirectoryBroker::from_directory_proxy(pkg_dir),
-                },
-            },
-        },
-    };
-    fake_pkgfs.open(
-        ExecutionScope::from_executor(Box::new(fasync::EHandle::local())),
-        fio::OPEN_RIGHT_READABLE,
-        fio::MODE_TYPE_DIRECTORY,
-        Path::empty(),
-        startup_handle,
-    );
+    FakePkgfs::new(startup_handle).expect("failed to serve fake pkgfs");
 
     // Bind to the echo_server.
     let mut child_ref = fsys::ChildRef { name: "echo_server".to_string(), collection: None };
@@ -54,4 +33,91 @@ async fn main() -> Result<(), Error> {
     // Wait indefinitely
     fasync::futures::future::pending::<()>().await;
     panic!("This is an unreachable statement!");
+}
+
+// Simulate a fake pkgfs Directory service that only contains a single package, "echo_server".
+// This fake is more complex than the one in fuchsia_base_pkg_resolver.rs because it needs to
+// support an intermediate Directory.Open call, to open the 'pkgfs root' when initializing the
+// resolver, rather than a single Open straight to the faked package. The fake therefore has two modes:
+//   1. FakePkgfs::new will initially support opening path "pkgfs/", and handles that open by creating a
+//   new fake connection of the 2nd mode.
+//   2. The 2nd mode fakes a connection inside the pkgfs root directory, and thus supports opening
+//   path "packages/echo_server/0/". It handles that open by connecting to this component's own real
+//   package directory.
+// TODO(fxb/37534): This is implemented by manually handling the Directory.Open and forwarding to
+// the test's real package directory because Rust vfs does not yet support OPEN_RIGHT_EXECUTABLE.
+// Simplify in the future.
+struct FakePkgfs;
+
+impl FakePkgfs {
+    pub fn new(server_end: ServerEnd<DirectoryMarker>) -> Result<(), Error> {
+        Self::new_internal(false, server_end)
+    }
+
+    fn new_internal(
+        inside_pkgfs: bool,
+        server_end: ServerEnd<DirectoryMarker>,
+    ) -> Result<(), Error> {
+        let mut stream = server_end.into_stream().expect("failed to create stream");
+        fasync::spawn_local(async move {
+            while let Some(request) = stream.try_next().await.unwrap() {
+                match request {
+                    DirectoryRequest::Open { flags, mode: _, path, object, control_handle: _ } => {
+                        Self::handle_open(inside_pkgfs, &path, flags, object)
+                    }
+                    DirectoryRequest::Clone { flags, object, control_handle: _ } => {
+                        if flags != fio::CLONE_FLAG_SAME_RIGHTS {
+                            panic!(
+                                "Fake doesn't support these flags in Directory.Clone: {:#x}",
+                                flags
+                            )
+                        }
+
+                        // Create a new connection of the same type as the current connection.
+                        Self::new_internal(inside_pkgfs, ServerEnd::new(object.into_channel()))
+                            .unwrap();
+                    }
+                    _ => panic!("Fake doesn't support request: {:?}", request),
+                }
+            }
+        });
+        Ok(())
+    }
+
+    fn handle_open(inside_pkgfs: bool, path: &str, flags: u32, server_end: ServerEnd<NodeMarker>) {
+        // Only support opening the echo_server package's directory. All other paths just drop the
+        // server_end.
+        let path = Path::new(path);
+        let mut path_iter = path.iter();
+
+        // If the fake connection is in 'inside_pkg' mode, only support opening the echo_server
+        // package's directory. Otherwise, only support opening 'pkgfs/'. All other paths just drop
+        // the server_end so the client observes PEER_CLOSED>
+        let (expected_path, expected_len) = match inside_pkgfs {
+            false => (Path::new("pkgfs/"), 1),
+            true => (Path::new("packages/echo_server/0"), 3),
+        };
+        if path_iter.by_ref().take(expected_len).cmp(expected_path.iter())
+            != std::cmp::Ordering::Equal
+        {
+            return;
+        }
+
+        if inside_pkgfs {
+            // Connect the server_end by forwarding to our real package directory, which can handle
+            // OPEN_RIGHT_EXECUTABLE. Also, pass through the input flags here to ensure that we don't
+            // artificially elevate rights (i.e. the resolver needs to ask for the appropriate rights).
+            let mut open_path = PathBuf::from("/pkg");
+            open_path.extend(path_iter);
+            io_util::connect_in_namespace(
+                open_path.to_str().unwrap(),
+                server_end.into_channel(),
+                flags,
+            )
+            .expect("failed to open path in namespace");
+        } else {
+            // Create a new fake connection to handle this open, but using the 2nd mode.
+            Self::new_internal(true, ServerEnd::new(server_end.into_channel())).unwrap();
+        }
+    }
 }

@@ -7,7 +7,7 @@ use {
     anyhow::format_err,
     cm_fidl_translator,
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_io::DirectoryMarker,
+    fidl_fuchsia_io::{self as fio, DirectoryMarker},
     fidl_fuchsia_sys::LoaderProxy,
     fidl_fuchsia_sys2 as fsys,
     fuchsia_url::pkg_url::PkgUrl,
@@ -17,8 +17,13 @@ use {
 #[allow(unused)]
 pub static SCHEME: &str = "fuchsia-pkg";
 
-/// Resolves component URLs with the "fuchsia-pkg" scheme. See the fuchsia_pkg_url crate for URL
-/// syntax.
+/// Resolves component URLs with the "fuchsia-pkg" scheme by proxying to an existing
+/// fuchsia.sys.Loader service (which is the CFv1 equivalent of fuchsia.sys2.ComponentResolver).
+///
+/// This resolver implementation is used to bridge the v1 and v2 component runtime worlds in
+/// situations where the v2 runtime runs under the v1 runtime.
+///
+/// See the fuchsia_pkg_url crate for URL syntax.
 pub struct FuchsiaPkgResolver {
     loader: LoaderProxy,
 }
@@ -61,7 +66,7 @@ impl FuchsiaPkgResolver {
         let dir = ClientEnd::<DirectoryMarker>::new(dir)
             .into_proxy()
             .expect("failed to create directory proxy");
-        let file = io_util::open_file(&dir, cm_path, io_util::OPEN_RIGHT_READABLE)
+        let file = io_util::open_file(&dir, cm_path, fio::OPEN_RIGHT_READABLE)
             .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
         let cm_str = io_util::read_file(&file)
             .await
@@ -119,6 +124,8 @@ mod tests {
             proxy
         }
 
+        // TODO(fxb/37534): This can be simplified to no longer need to use the test's real package
+        // directory once Rust vfs supports OPEN_RIGHT_EXECUTABLE.
         fn load_url(&self, package_url: &str) -> Option<Package> {
             let (dir_c, dir_s) = zx::Channel::create().unwrap();
             let parsed_url = PkgUrl::parse(&package_url).expect("bad url");
@@ -126,11 +133,12 @@ mod tests {
             if parsed_url.name().unwrap() != "hello_world" {
                 return None;
             }
+
             let path = Path::new("/pkg");
             io_util::connect_in_namespace(
                 path.to_str().unwrap(),
                 dir_s,
-                io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+                fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
             )
             .expect("could not connect to /pkg");
             Some(Package {
@@ -154,6 +162,7 @@ mod tests {
         // the resolver returned the right package dir.
         let fsys::Component { resolved_url, decl, package } = component;
         assert_eq!(resolved_url.unwrap(), url);
+
         let program = fdata::Dictionary {
             entries: Some(vec![fdata::DictionaryEntry {
                 key: "binary".to_string(),
@@ -179,15 +188,22 @@ mod tests {
 
         let fsys::Package { package_url, package_dir } = package.unwrap();
         assert_eq!(package_url.unwrap(), "fuchsia-pkg://fuchsia.com/hello_world");
+
         let dir_proxy = package_dir.unwrap().into_proxy().unwrap();
         let path = Path::new("meta/component_manager_tests_hello_world.cm");
-        let file_proxy = io_util::open_file(&dir_proxy, path, io_util::OPEN_RIGHT_READABLE)
+        let file_proxy = io_util::open_file(&dir_proxy, path, fio::OPEN_RIGHT_READABLE)
             .expect("could not open cm");
         let cm_contents = io_util::read_file(&file_proxy).await.expect("could not read cm");
         assert_eq!(
             cm_fidl_translator::translate(&cm_contents).expect("could not parse cm"),
             expected_decl
         );
+
+        // Try to load an executable file, like a binary, reusing the library_loader helper that
+        // opens with OPEN_RIGHT_EXECUTABLE and gets a VMO with VMO_FLAG_EXEC.
+        library_loader::load_vmo(&dir_proxy, "bin/hello_world")
+            .await
+            .expect("failed to open executable file");
     }
 
     macro_rules! test_resolve_error {

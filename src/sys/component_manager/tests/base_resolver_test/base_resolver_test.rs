@@ -4,16 +4,18 @@
 
 use {
     anyhow::Error,
-    fidl_fidl_examples_echo as fidl_echo, fuchsia_async as fasync,
+    fidl_fidl_examples_echo as fidl_echo, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::client::*,
-    io_util,
     test_utils_lib::{events::*, test_utils::*},
 };
 
 #[fasync::run_singlethreaded(test)]
 async fn base_resolver_test() -> Result<(), Error> {
     // Obtain access to this component's pkg directory
-    let pkg_proxy = io_util::open_directory_in_namespace("/pkg", io_util::OPEN_RIGHT_READABLE)?;
+    let pkg_proxy = io_util::open_directory_in_namespace(
+        "/pkg",
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+    )?;
     let pkg_channel = pkg_proxy.into_channel().unwrap().into_zx_channel();
 
     // A custom BlackBoxTest is required because

@@ -1,10 +1,5 @@
 {
     "program": {
         "binary": "test/library_loader_tests"
-    },
-    "sandbox": {
-        "features": [
-            "deprecated-ambient-replace-as-executable"
-        ]
     }
 }

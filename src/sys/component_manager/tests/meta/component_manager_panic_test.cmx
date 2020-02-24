@@ -10,16 +10,15 @@
         "binary": "test/component_manager_panic_test"
     },
     "sandbox": {
+        "features": [
+            "hub"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.pkg.PackageResolver",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Environment"
-        ],
-        "features": [
-            "hub",
-            "deprecated-ambient-replace-as-executable"
         ]
     }
 }

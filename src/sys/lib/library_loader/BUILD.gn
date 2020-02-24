@@ -17,7 +17,6 @@ rustc_library("library_loader") {
     "//garnet/lib/rust/io_util",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/lib/storage/pseudo-fs",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -28,8 +27,27 @@ rustc_library("library_loader") {
   ]
 }
 
+# These are some extra files that are included in the test package under lib/config_test, for use in
+# the config_test unit test. This is necessary because the library loader must be able to load the
+# files using OPEN_RIGHT_EXECUTABLE/VMO_FLAG_EXEC, and the easiest way to provide a test directory
+# that supports that is a real pkgfs directory.
+# TODO(fxb/37534): Remove this once Rust vfs supports OPEN_RIGHT_EXECUTABLE
+generate_manifest("config_test_files") {
+  args = [
+    "--entry=lib/config_test/foo=" +
+        rebase_path("config_test_files/foo", root_build_dir),
+    "--entry=lib/config_test/bar/baz=" +
+        rebase_path("config_test_files/bar/baz", root_build_dir),
+  ]
+}
+
 test_package("library_loader_tests") {
-  deps = [ ":library_loader_test" ]
+  deps = [
+    ":config_test_files",
+    ":library_loader_test",
+  ]
+
+  extra = get_target_outputs(":config_test_files")
 
   tests = [
     {

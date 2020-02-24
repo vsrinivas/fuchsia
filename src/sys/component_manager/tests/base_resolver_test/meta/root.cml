@@ -25,6 +25,6 @@
     },
   ],
   "expose": [
-    { "directory": "/pkgfs", "from": "self", "rights": ["r*"] },
+    { "directory": "/pkgfs", "from": "self", "rights": ["rx*"] },
   ]
 }

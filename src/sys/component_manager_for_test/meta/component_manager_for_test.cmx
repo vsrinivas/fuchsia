@@ -10,7 +10,6 @@
             "class/input-report"
         ],
         "features": [
-            "deprecated-ambient-replace-as-executable",
             "isolated-temp"
         ],
         "services": [

@@ -10,9 +10,6 @@
         "binary": "test/component_manager_for_test_integration_test"
     },
     "sandbox": {
-        "features": [
-            "deprecated-ambient-replace-as-executable"
-        ],
         "services": [
             "fuchsia.sys.Launcher",
             "fuchsia.logger.LogSink"
