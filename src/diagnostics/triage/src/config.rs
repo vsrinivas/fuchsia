@@ -42,7 +42,7 @@ impl ConfigFileSchema {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum OutputFormat {
     Text,
     CSV,
@@ -123,10 +123,18 @@ impl InspectContext {
 
 /// Parses the inspect.json file and all the config files.
 pub fn initialize(options: Options) -> Result<StateHolder, Error> {
-    let Options { output_format, inspect, config_files, .. } = options;
+    let Options { directories, output_format, inspect, config_files, .. } = options;
 
     let mut inspect_contexts = Vec::new();
-    inspect_contexts.push(InspectContext::initialize_from_file(inspect)?);
+    inspect_contexts.push(InspectContext::initialize_from_file(inspect.unwrap())?);
+
+    for directory in directories {
+        let inspect_file = Path::new(&directory).join("inspect.json").into_os_string();
+        match InspectContext::initialize_from_file(inspect_file.to_string_lossy().to_string()) {
+            Ok(c) => inspect_contexts.push(c),
+            Err(e) => println!("{}", e),
+        };
+    }
 
     if config_files.len() == 0 {
         return Err(format_err!("Need at least one config file; use --config"));
@@ -185,6 +193,20 @@ mod test {
         assert!(InspectData::from("foo".to_string()).is_err(), "'foo' isn't valid JSON");
         assert!(InspectData::from(r#"{"a":5}"#.to_string()).is_err(), "Needed an array");
         assert!(InspectData::from("[]".to_string()).is_ok(), "A JSON array should have worked");
+        Ok(())
+    }
+
+    #[test]
+    fn output_format_from_string() -> Result<(), Error> {
+        assert_eq!(OutputFormat::from_str("csv")?, OutputFormat::CSV);
+        assert_eq!(OutputFormat::from_str("text")?, OutputFormat::Text);
+        assert!(OutputFormat::from_str("").is_err(), "Should have returned 'Err' on ''");
+        assert!(OutputFormat::from_str("CSV").is_err(), "Should have returned 'Err' on 'CSV'");
+        assert!(OutputFormat::from_str("Text").is_err(), "Should have returned 'Err' on 'Text'");
+        assert!(
+            OutputFormat::from_str("GARBAGE").is_err(),
+            "Should have returned 'Err' on 'GARBAGE'"
+        );
         Ok(())
     }
 }

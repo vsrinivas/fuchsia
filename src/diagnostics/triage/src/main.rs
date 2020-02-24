@@ -9,8 +9,11 @@ mod result_format; // Formats the triage results.
 mod validate; // Check config - including that metrics/triggers work correctly.
 
 use {
-    act::ActionContext, act::ActionResults, anyhow::Error, config::OutputFormat,
-    config::StateHolder, result_format::ActionResultFormatter, structopt::StructOpt,
+    act::{ActionContext, ActionResults},
+    anyhow::Error,
+    config::{OutputFormat, StateHolder},
+    result_format::ActionResultFormatter,
+    structopt::StructOpt,
 };
 
 #[derive(StructOpt, Debug)]
@@ -22,12 +25,16 @@ pub struct Options {
 
     /// inspect.json file
     // TODO(cphoenix): #[argh(option, long = "inspect")]
-    #[structopt(long, default_value = "~/inspect.json")]
-    inspect: String,
+    #[structopt(long)]
+    inspect: Option<String>,
 
     /// How to print the results.
     #[structopt(long = "output_format")]
     output_format: OutputFormat,
+
+    /// Directories to read "inspect.json" files from.
+    #[structopt(long = "directory")]
+    directories: Vec<String>,
 }
 
 fn main() {

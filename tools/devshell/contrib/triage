@@ -7,8 +7,7 @@
 ### generate a report of error conditions
 
 ## usage: fx triage [--config <config-file>]
-##                  [--inspect <path-to-inspect.json>]
-##
+##                  [--inspect <path-to-inspect.json>] ##
 ## Processes "fx bugreport" output looking for problems specified in a config
 ## file. If no bugreport output is specified (no '--inspect') it runs a new
 ## "fx bugreport" and uses its "inspect.json" file.
@@ -16,9 +15,16 @@
 ##    --config <config-file-or-dir>      Path to config file or dir
 ##    --inspect <path-to-inspect.json>   Path to inspect.json
 ##    --output_format <format>           How the results should be formatted.
+##    --directory <dir>                  Directory to get an inspect.json file from
 ##    --test                             Run self-tests (only)
 ##
 ## 0 or more --config paths may be given. Path is relative to CWD, or absolute.
+##   If path is a directory, path/*.triage will be loaded.
+##   If 0 paths are given, config defaults to
+##   /src/diagnostics/config/triage/*.triage.
+##
+## 0 or more --directories paths may be given. Path is relative to CWD, or
+##   absolute.
 ##   If path is a directory, path/*.triage will be loaded.
 ##   If 0 paths are given, config defaults to
 ##   /src/diagnostics/config/triage/*.triage.
@@ -38,7 +44,10 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"\
 # Defaults.
 config_paths=( )
 inspect=""
+output_format=""
 testit=""
+directories=( )
+flags=""
 
 # Flag parsing.
 while [[ "$1" =~ ^- ]]; do
@@ -59,6 +68,10 @@ while [[ "$1" =~ ^- ]]; do
       shift
       output_format="$1"
       ;;
+    --directory)
+      shift
+      directories+=( "$1" )
+      ;;
     --test)
       testit="yes"
       ;;
@@ -76,7 +89,7 @@ triage_exe="${HOST_OUT_DIR}/../host-tools/triage"
 if [[ -n "$testit" ]]; then
   "${HOST_OUT_DIR}/../host-tools/triage_test" --target "${triage_exe}" \
     --root "${FUCHSIA_DIR}"
-  exit
+    exit
 fi
 
 if (( !"${#config_paths[@]}" )); then
@@ -86,16 +99,26 @@ fi
 config_files=( )
 for config_path in "${config_paths[@]}"; do
   if [[ -d "${config_path}" ]] ; then
-    config_files+=( "${config_path}"/*.triage )
+    config_files+=( "${config_path}"*.triage )
   else
     config_files+=( "${config_path}" )
   fi
 done
 
-config_file_args=( )
-for config_file in "${config_files[@]}"; do
-  config_file_args+=("--config" "${config_file}")
+for config_file in "${config_files[@]}"
+do
+  flags="${flags} --config ${config_file}"
 done
+
+for directory in "${directories[@]}"
+do
+  flags="${flags} --directory ${directory}"
+done
+
+if [ -z "${output_format}" ]; then
+   output_format="text"
+fi
+flags="${flags} --output_format ${output_format}"
 
 # Post-flag processing.
 if [ -z "${inspect}" ]; then
@@ -105,9 +128,7 @@ if [ -z "${inspect}" ]; then
   unzip "${temp_dir}/bugreport.zip" -d "${temp_dir}" > /dev/null
   inspect="${temp_dir}/inspect.json"
 fi
+flags="${flags} --inspect ${inspect}"
 
-if [ -z "${output_format}" ]; then
-   output_format="text"
-fi
-
-$triage_exe --output_format "${output_format}" --inspect "${inspect}" "${config_file_args[@]}"
+echo "${triage_exe} ${flags}"
+$triage_exe ${flags}
