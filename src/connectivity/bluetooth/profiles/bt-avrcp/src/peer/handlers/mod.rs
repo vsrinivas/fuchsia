@@ -382,6 +382,26 @@ async fn handle_get_player_application_setting_attribute_text(
     Ok(Box::new(response))
 }
 
+async fn handle_get_player_application_setting_value_text(
+    cmd: GetPlayerApplicationSettingValueTextCommand,
+) -> Result<Box<dyn PacketEncodable>, StatusCode> {
+    let value_infos = match cmd.attribute_id() {
+        PlayerApplicationSettingAttributeId::RepeatStatusMode => {
+            repeat_status_mode_to_value_info(cmd.value_ids())
+                .map_err(|_| StatusCode::InvalidParameter)?
+        }
+        PlayerApplicationSettingAttributeId::ShuffleMode => {
+            shuffle_mode_to_value_info(cmd.value_ids()).map_err(|_| StatusCode::InvalidParameter)?
+        }
+        _ => {
+            return Err(StatusCode::InvalidParameter);
+        }
+    };
+    let response = GetPlayerApplicationSettingValueTextResponse::new(value_infos);
+
+    Ok(Box::new(response))
+}
+
 /// Sends status command response. Send's Implemented/Stable on response code on success.
 fn send_status_response(
     command: impl IncomingTargetCommand,
@@ -425,9 +445,6 @@ async fn handle_status_command(
     let status_fut = async {
         match status_command {
             StatusCommand::GetCapabilities(cmd) => handle_get_capabilities(cmd, delegate).await,
-            /* Todo: implement
-            StatusCommand::GetPlayerApplicationSettingValueText(_) => {}
-            */
             StatusCommand::ListPlayerApplicationSettingAttributes(_) => {
                 handle_list_player_application_setting_attributes(delegate).await
             }
@@ -440,14 +457,13 @@ async fn handle_status_command(
             StatusCommand::GetPlayerApplicationSettingAttributeText(cmd) => {
                 handle_get_player_application_setting_attribute_text(cmd).await
             }
+            StatusCommand::GetPlayerApplicationSettingValueText(cmd) => {
+                handle_get_player_application_setting_value_text(cmd).await
+            }
             StatusCommand::GetElementAttributes(cmd) => {
                 handle_get_element_attributes(cmd, delegate).await
             }
             StatusCommand::GetPlayStatus(cmd) => handle_get_play_status(cmd, delegate).await,
-            _ => {
-                // TODO: remove when we have finish implementing the rest of this enum
-                Err(StatusCode::InvalidParameter)
-            }
         }
     };
 
@@ -965,6 +981,50 @@ mod test {
             0x15, // Value length: 21
             0x53, 0x68, 0x75, 0x66, 0x66, 0x6c, 0x65, 0x20, // "Shuffle ON/OFF status"
             0x4f, 0x4e, 0x2f, 0x4f, 0x46, 0x46, 0x20, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73,
+        ]
+        .to_vec();
+
+        let command = MockAvcCommand::new(
+            AvcPacketType::Command(AvcCommandType::Status),
+            AvcOpCode::VendorDependent,
+            packet_body,
+        )
+        .expect_body(expected_packet_response)
+        .expect_response_type(AvcResponseType::ImplementedStable);
+
+        cmd_handler.handle_command_internal(command).await
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn handle_get_player_application_setting_value_text_cmd() -> Result<(), Error> {
+        let target_proxy = create_dumby_target_handler(false);
+        let cmd_handler = create_command_handler(Some(target_proxy), None);
+
+        // generic vendor status command
+        let packet_body: Vec<u8> = [
+            0x16, // GetPlayerApplicationSettingValueText pdu id
+            0x00, // Single packet
+            0x00, 0x04, // param_len, 4 bytes
+            0x02, // Attribute: Repeat mode
+            0x02, // Number of values: 2
+            0x01, // Off
+            0x02, // Single track
+        ]
+        .to_vec();
+        let expected_packet_response: Vec<u8> = [
+            0x16, // GetPlayerApplicationSettingValueText pdu id
+            0x00, // Single packet
+            0x00, 0x1f, // param_len,  bytes
+            0x02, // Number of values, 2
+            0x01, // Value: Off
+            0x00, 0x6a, // CharacterSet: Utf-8
+            0x03, // Value length: 3
+            0x4f, 0x66, 0x66, // Off
+            0x02, // Value: Single track repeat
+            0x00, 0x6a, // CharacterSet: Utf-8
+            0x13, // Value length: 19 bytes
+            0x53, 0x69, 0x6e, 0x67, 0x6c, 0x65, 0x20, 0x74, 0x72, 0x61, 0x63, 0x6b, 0x20, 0x72,
+            0x65, 0x70, 0x65, 0x61, 0x74, // "Single track repeat"
         ]
         .to_vec();
 

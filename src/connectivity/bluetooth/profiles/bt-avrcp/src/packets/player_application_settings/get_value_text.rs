@@ -21,6 +21,14 @@ impl GetPlayerApplicationSettingValueTextCommand {
     ) -> GetPlayerApplicationSettingValueTextCommand {
         Self { attribute_id, num_values: value_ids.len() as u8, value_ids }
     }
+
+    pub fn attribute_id(&self) -> PlayerApplicationSettingAttributeId {
+        self.attribute_id
+    }
+
+    pub fn value_ids(&self) -> Vec<u8> {
+        self.value_ids.clone()
+    }
 }
 
 /// Packet PDU ID for vendor dependent packet encoding.
@@ -116,6 +124,37 @@ impl ValueInfo {
     }
 }
 
+/// Attempts to convert attribute value IDs into a vector of ValueInfo objects.
+pub fn repeat_status_mode_to_value_info(value_ids: Vec<u8>) -> Result<Vec<ValueInfo>, Error> {
+    let mut infos = vec![];
+    for value in value_ids {
+        let value_id = RepeatStatusMode::try_from(value).map_err(|_| Error::OutOfRange)?;
+        let desc = match value_id {
+            RepeatStatusMode::Off => "Off".to_string().into_bytes(),
+            RepeatStatusMode::SingleTrackRepeat => "Single track repeat".to_string().into_bytes(),
+            RepeatStatusMode::AllTrackRepeat => "All track repeat".to_string().into_bytes(),
+            RepeatStatusMode::GroupRepeat => "Group repeat".to_string().into_bytes(),
+        };
+        infos.push(ValueInfo::new(value, CharsetId::Utf8, desc.len() as u8, desc));
+    }
+    Ok(infos)
+}
+
+/// Attempts to convert attribute value IDs into a vector of ValueInfo objects.
+pub fn shuffle_mode_to_value_info(value_ids: Vec<u8>) -> Result<Vec<ValueInfo>, Error> {
+    let mut infos = vec![];
+    for value in value_ids {
+        let value_id = ShuffleMode::try_from(value).map_err(|_| Error::OutOfRange)?;
+        let desc = match value_id {
+            ShuffleMode::Off => "Off".to_string().into_bytes(),
+            ShuffleMode::AllTrackShuffle => "All tracks shuffle".to_string().into_bytes(),
+            ShuffleMode::GroupShuffle => "Group shuffle".to_string().into_bytes(),
+        };
+        infos.push(ValueInfo::new(value, CharsetId::Utf8, desc.len() as u8, desc));
+    }
+    Ok(infos)
+}
+
 #[derive(Debug)]
 /// AVRCP 1.6.1 section 6.5.6 GetPlayerApplicationSettingValueText response.
 pub struct GetPlayerApplicationSettingValueTextResponse {
@@ -124,7 +163,6 @@ pub struct GetPlayerApplicationSettingValueTextResponse {
 }
 
 impl GetPlayerApplicationSettingValueTextResponse {
-    #[allow(dead_code)]
     pub fn new(value_infos: Vec<ValueInfo>) -> GetPlayerApplicationSettingValueTextResponse {
         Self { num_values: value_infos.len() as u8, value_infos }
     }
@@ -352,5 +390,54 @@ mod tests {
         let command = [0x01, 0x01, 0x00, 0x04, 0x05, 0x01];
         let result = GetPlayerApplicationSettingValueTextResponse::decode(&command);
         assert!(result.is_err());
+    }
+
+    #[test]
+    /// Test converting a byte buffer (in the context of RepeatStatusMode) to a
+    /// ValueInfo object works as expected.
+    fn test_repeat_status_mode_to_value_info() {
+        let buf = vec![1, 4];
+        let expected = vec![
+            ValueInfo::new(1, CharsetId::Utf8, 3, vec![79, 102, 102]), // "Off"
+            ValueInfo::new(
+                4,
+                CharsetId::Utf8,
+                12,
+                vec![71, 114, 111, 117, 112, 32, 114, 101, 112, 101, 97, 116], // "Group repeat"
+            ),
+        ];
+        let res = repeat_status_mode_to_value_info(buf);
+        assert_eq!(Ok(expected), res);
+
+        // Contains an invalid valueID among valid ones. Should error.
+        let invalid_buf = vec![0, 2, 9];
+        let res = repeat_status_mode_to_value_info(invalid_buf);
+        assert_eq!(Err("OutOfRange".to_string()), res.map_err(|e| format!("{:?}", e)));
+    }
+
+    #[test]
+    /// Test converting a byte buffer (in the context of ShuffleMode) to a
+    /// ValueInfo object works as expected.
+    fn test_shuffle_mode_to_value_info() {
+        let buf = vec![1, 2];
+        let expected = vec![
+            ValueInfo::new(1, CharsetId::Utf8, 3, vec![79, 102, 102]), // "Off"
+            ValueInfo::new(
+                2,
+                CharsetId::Utf8,
+                18,
+                vec![
+                    65, 108, 108, 32, 116, 114, 97, 99, 107, 115, 32, 115, 104, 117, 102, 102, 108,
+                    101,
+                ], // "All tracks shuffle"
+            ),
+        ];
+        let res = shuffle_mode_to_value_info(buf);
+        assert_eq!(Ok(expected), res);
+
+        // Contains an invalid valueID among valid ones. Should error.
+        let invalid_buf = vec![4];
+        let res = shuffle_mode_to_value_info(invalid_buf);
+        assert_eq!(Err("OutOfRange".to_string()), res.map_err(|e| format!("{:?}", e)));
     }
 }
