@@ -521,6 +521,49 @@ test!(player_capabilities, || async {
     Ok(())
 });
 
+test!(media_images, || async {
+    let service = TestService::new()?;
+
+    let mut player = TestPlayer::new(&service).await?;
+
+    let expected_media_images = || {
+        vec![
+            MediaImage {
+                image_type: Some(MediaImageType::SourceIcon),
+                sizes: Some(vec![ImageSizeVariant {
+                    url: String::from("http://url1"),
+                    width: 10,
+                    height: 10,
+                }]),
+            },
+            MediaImage {
+                image_type: Some(MediaImageType::Artwork),
+                sizes: Some(vec![ImageSizeVariant {
+                    url: String::from("http://url1"),
+                    width: 10,
+                    height: 10,
+                }]),
+            },
+        ]
+    };
+
+    player
+        .emit_delta(PlayerInfoDelta {
+            media_images: Some(expected_media_images()),
+            ..Decodable::new_empty()
+        })
+        .await?;
+
+    let (session, session_request) = create_proxy()?;
+    service.discovery.connect_to_session(player.id, session_request)?;
+    let status = session.watch_status().await.expect("Watching media images");
+    let actual_media_images = status.media_images.expect("Unwrapping media images");
+
+    assert_eq!(actual_media_images, expected_media_images());
+
+    Ok(())
+});
+
 test!(players_get_ids, || async {
     let service = TestService::new()?;
 
