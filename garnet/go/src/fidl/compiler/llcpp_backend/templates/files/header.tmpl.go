@@ -13,6 +13,7 @@ const Header = `
 #include <lib/fidl/internal.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/fidl/llcpp/array.h>
+#include <lib/fidl/llcpp/buffer_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/envelope.h>

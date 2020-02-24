@@ -50,53 +50,34 @@ zxio_node_attr_t ToZxioNodeAttr(const fio2::NodeAttributes& attr) {
   return zxio_attr;
 }
 
-// Threading a callback to pass the resulting LLCPP table, since tables
-// in LLCPP does not recursively own the data.
-template <typename F>
-auto ToIo2NodeAttributes(const zxio_node_attr_t& attr, F f)
-    -> decltype(f(std::declval<fio2::NodeAttributes>())) {
-  fio2::NodeAttributes::UnownedBuilder builder;
-  fio2::NodeProtocolSet protocols;
+fio2::NodeAttributes ToIo2NodeAttributes(fidl::Allocator& allocator, const zxio_node_attr_t& attr) {
+  fio2::NodeAttributes::Builder builder(allocator.make<fio2::NodeAttributes::Frame>());
   if (attr.has.protocols) {
-    protocols = ToIo2NodeProtocols(attr.protocols);
-    builder.set_protocols(fidl::unowned(&protocols));
+    builder.set_protocols(
+        allocator.make<fio2::NodeProtocolSet>(ToIo2NodeProtocols(attr.protocols)));
   }
-  fio2::Operations abilities;
   if (attr.has.abilities) {
-    abilities = ToIo2Abilities(attr.abilities);
-    builder.set_abilities(fidl::unowned(&abilities));
+    builder.set_abilities(allocator.make<fio2::Operations>(ToIo2Abilities(attr.abilities)));
   }
-  uint64_t id;
   if (attr.has.id) {
-    id = attr.id;
-    builder.set_id(fidl::unowned(&id));
+    builder.set_id(allocator.make<uint64_t>(attr.id));
   }
-  uint64_t content_size;
   if (attr.has.content_size) {
-    content_size = attr.content_size;
-    builder.set_content_size(fidl::unowned(&content_size));
+    builder.set_content_size(allocator.make<uint64_t>(attr.content_size));
   }
-  uint64_t storage_size;
   if (attr.has.storage_size) {
-    storage_size = attr.storage_size;
-    builder.set_storage_size(fidl::unowned(&storage_size));
+    builder.set_storage_size(allocator.make<uint64_t>(attr.storage_size));
   }
-  uint64_t link_count;
   if (attr.has.link_count) {
-    link_count = attr.link_count;
-    builder.set_link_count(fidl::unowned(&link_count));
+    builder.set_link_count(allocator.make<uint64_t>(attr.link_count));
   }
-  uint64_t creation_time;
   if (attr.has.creation_time) {
-    creation_time = attr.creation_time;
-    builder.set_creation_time(fidl::unowned(&creation_time));
+    builder.set_creation_time(allocator.make<uint64_t>(attr.creation_time));
   }
-  uint64_t modification_time;
   if (attr.has.modification_time) {
-    modification_time = attr.modification_time;
-    builder.set_modification_time(fidl::unowned(&modification_time));
+    builder.set_modification_time(allocator.make<uint64_t>(attr.modification_time));
   }
-  return f(builder.build());
+  return builder.build();
 }
 
 // These functions are named with "v2" to avoid mixing up with fuchsia.io v1
@@ -225,17 +206,17 @@ zx_status_t zxio_remote_v2_attr_get(zxio_t* io, zxio_node_attr_t* out_attr) {
 }
 
 zx_status_t zxio_remote_v2_attr_set(zxio_t* io, const zxio_node_attr_t* attr) {
-  return ToIo2NodeAttributes(*attr, [io](fio2::NodeAttributes attributes) {
-    RemoteV2 rio(io);
-    auto result = fio2::Node::Call::UpdateAttributes(rio.control(), std::move(attributes));
-    if (result.status() != ZX_OK) {
-      return result.status();
-    }
-    if (result->result.is_err()) {
-      return result->result.err();
-    }
-    return ZX_OK;
-  });
+  fidl::BufferAllocator<1024> allocator;
+  auto attributes = ToIo2NodeAttributes(allocator, *attr);
+  RemoteV2 rio(io);
+  auto result = fio2::Node::Call::UpdateAttributes(rio.control(), std::move(attributes));
+  if (result.status() != ZX_OK) {
+    return result.status();
+  }
+  if (result->result.is_err()) {
+    return result->result.err();
+  }
+  return ZX_OK;
 }
 
 }  // namespace
