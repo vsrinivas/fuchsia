@@ -30,21 +30,21 @@ class TestDefinition {
 
   TestDefinition({
     @required this.buildDir,
+    @required this.name,
+    @required this.os,
     this.cpu,
     this.command,
     this.depsFile,
-    this.deviceTypes,
     this.label,
-    this.name,
-    this.os,
     this.packageUrl,
     this.path,
+    this.deviceTypes,
     this.tags,
   });
 
-  factory TestDefinition.fromJson({
-    Map<String, dynamic> data,
-    String buildDir,
+  factory TestDefinition.fromJson(
+    Map<String, dynamic> data, {
+    @required String buildDir,
   }) {
     Map<String, dynamic> testDetails = data['test'] ?? {};
     return TestDefinition(

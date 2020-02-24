@@ -1,6 +1,7 @@
 export 'arg_parser.dart';
 export 'checkers.dart';
 export 'cmd.dart';
+export 'cmd_cli.dart';
 export 'command_tokens.dart';
 export 'env_reader.dart';
 export 'exceptions.dart';

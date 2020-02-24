@@ -31,7 +31,7 @@ class Flags {
     this.dryRun = false,
     this.isVerbose = false,
     this.limit = 0,
-    this.realm = null,
+    this.realm,
     this.allOutput = false,
     this.simpleOutput = false,
     this.shouldOnlyRunDeviceTests = false,
@@ -149,7 +149,7 @@ class TestsConfig {
     return TestsConfig(
       flags: flags,
       runnerTokens:
-          flags.realm != null ? ['--realm-label=' + flags.realm] : const [],
+          flags.realm != null ? ['--realm-label=${flags.realm}'] : const [],
       passThroughTokens: passThroughTokens,
       testNames: testNames,
     );

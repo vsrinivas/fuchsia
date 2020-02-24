@@ -50,7 +50,10 @@ void main() {
           }
         },
       ];
-      List<TestDefinition> tds = tr.parseManifest(testJson, buildDir);
+      List<TestDefinition> tds = tr.parseManifest(
+        testJson,
+        buildDir,
+      );
       expect(tds, hasLength(1));
       expect(tds[0].packageUrl, '');
       expect(tds[0].depsFile, testJson[0]['test']['deps_file']);
@@ -77,7 +80,10 @@ void main() {
           }
         },
       ];
-      List<TestDefinition> tds = tr.parseManifest(testJson, buildDir);
+      List<TestDefinition> tds = tr.parseManifest(
+        testJson,
+        buildDir,
+      );
       expect(tds, hasLength(1));
       expect(tds[0].packageUrl, testJson[0]['test']['package_url']);
       expect(tds[0].depsFile, '');
@@ -228,10 +234,10 @@ void main() {
       var tds = testDefinitions.sublist(0)
         ..addAll([
           TestDefinition(
-            os: 'linux',
-            name: 'awesome host test',
-            path: 'host_x64/test',
             buildDir: buildDir,
+            name: 'awesome host test',
+            os: 'linux',
+            path: 'host_x64/test',
           ),
         ]);
       ParsedManifest parsedManifest = tr.aggregateTests(
@@ -254,10 +260,10 @@ void main() {
       var tds = testDefinitions.sublist(0)
         ..addAll([
           TestDefinition(
-            os: 'fuchsia',
-            name: 'awesome device test',
-            path: '/pkgfs/stuff',
             buildDir: buildDir,
+            name: 'awesome device test',
+            os: 'fuchsia',
+            path: '/pkgfs/stuff',
           ),
         ]);
       ParsedManifest parsedManifest = tr.aggregateTests(
@@ -479,23 +485,24 @@ void main() {
     List<TestDefinition> testDefinitions = [
       TestDefinition(
         buildDir: buildDir,
+        name: 'device test',
         os: 'fuchsia',
         packageUrl: 'fuchsia-pkg://fuchsia.com/fancy#test.cmx',
-        name: 'device test',
       ),
       TestDefinition(
         buildDir: buildDir,
+        name: 'example test',
         os: 'linux',
         path: '/asdf',
-        name: 'example test',
       ),
     ];
 
     test('when there are pass-thru commands', () async {
       var testsConfig = TestsConfig(
         flags: Flags.defaults(),
-        testNames: ['example test'],
         passThroughTokens: ['--xyz'],
+        runnerTokens: const [],
+        testNames: ['example test'],
       );
       ParsedManifest manifest = tr.aggregateTests(
         buildDir: '/custom',
@@ -517,6 +524,69 @@ void main() {
       // that the args were in fact passed through by evaluating that
       expect(resultEvent.message, '--xyz');
     });
+
+    test('when there are no pass-thru commands', () async {
+      var testsConfig = TestsConfig(
+        flags: Flags.defaults(),
+        passThroughTokens: [''],
+        runnerTokens: const [],
+        testNames: ['example test'],
+      );
+      ParsedManifest manifest = tr.aggregateTests(
+        buildDir: '/custom',
+        eventEmitter: _ignoreEvents,
+        testDefinitions: testDefinitions,
+        testsConfig: testsConfig,
+        testRunner: FakeTestRunner.passing(),
+      );
+      expect(manifest.testBundles, hasLength(1));
+      var stream = StreamQueue(manifest.testBundles[0].run());
+
+      TestEvent event = await stream.next;
+      expect(event, isA<TestStarted>());
+      event = await stream.next;
+      expect(event, isA<TestResult>());
+      TestResult resultEvent = event;
+
+      // [FakeTestRunner] passes args through to its stdout, so we can check
+      // that the args were in fact passed through by evaluating that
+      expect(resultEvent.message, '');
+    });
+
+    test('after parsing with "--" in middle', () {
+      List<List<String>> splitArgs = FuchsiaTestCommandCli.splitArgs(
+        ['asdf', 'ASDF', '--', 'some', 'flag'],
+      );
+      expect(splitArgs, hasLength(2));
+      expect(splitArgs[0], ['asdf', 'ASDF']);
+      expect(splitArgs[1], ['some', 'flag']);
+    });
+    test('after parsing with "--" at end', () {
+      List<List<String>> splitArgs = FuchsiaTestCommandCli.splitArgs(
+        ['asdf', 'ASDF', '--'],
+      );
+      expect(splitArgs, hasLength(2));
+      expect(splitArgs[0], ['asdf', 'ASDF']);
+      expect(splitArgs[1], hasLength(0));
+    });
+
+    test('after parsing with "--" at beginning', () {
+      List<List<String>> splitArgs = FuchsiaTestCommandCli.splitArgs(
+        ['--', 'asdf', 'ASDF'],
+      );
+      expect(splitArgs, hasLength(2));
+      expect(splitArgs[0], hasLength(0));
+      expect(splitArgs[1], ['asdf', 'ASDF']);
+    });
+
+    test('after parsing with no "--"', () {
+      List<List<String>> splitArgs = FuchsiaTestCommandCli.splitArgs(
+        ['asdf', 'ASDF'],
+      );
+      expect(splitArgs, hasLength(2));
+      expect(splitArgs[0], ['asdf', 'ASDF']);
+      expect(splitArgs[1], hasLength(0));
+    });
   });
 
   group('flags are parsed correctly', () {
@@ -533,7 +603,7 @@ void main() {
     });
 
     test('with --realm', () {
-      ArgResults results = fxTestArgParser.parse(['--realm foo']);
+      ArgResults results = fxTestArgParser.parse(['--realm=foo']);
       var testsConfig = TestsConfig.fromArgResults(results: results);
       expect(testsConfig.flags.realm, 'foo');
     });

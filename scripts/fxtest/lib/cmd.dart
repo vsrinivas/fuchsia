@@ -114,7 +114,7 @@ class FuchsiaTestCommand {
     }
   }
 
-  void abortTests() {
-    throw SigIntException();
-  }
+  /// Function guaranteed to be called at the end of execution, whether that is
+  /// natural or the result of a SIGINT.
+  Future<void> cleanUp() async {}
 }

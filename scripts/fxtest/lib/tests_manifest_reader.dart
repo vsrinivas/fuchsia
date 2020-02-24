@@ -49,8 +49,8 @@ class TestsManifestReader {
 
   /// Reads and parses the tests manifest file at `manifestLocation`.
   Future<List<TestDefinition>> loadTestsJson({
-    String buildDir,
-    String manifestFileName,
+    @required String buildDir,
+    @required String manifestFileName,
   }) async {
     List<dynamic> testJson = await readManifest(
       p.join(buildDir, manifestFileName),
@@ -63,8 +63,8 @@ class TestsManifestReader {
     return [
       for (var data in testJson)
         TestDefinition.fromJson(
+          Map<String, dynamic>.from(data),
           buildDir: buildDir,
-          data: Map<String, dynamic>.from(data),
         )
     ];
   }
