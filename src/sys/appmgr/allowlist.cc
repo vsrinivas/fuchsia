@@ -23,7 +23,10 @@ Allowlist::Allowlist(const fxl::UniqueFD& dir, const std::string& path,
   auto lines = fxl::SplitStringCopy(result, "\n", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
 
   for (auto& line : lines) {
-    internal_set_.insert(std::move(line));
+    // Skip over comments.
+    if (line.rfind("#", 0) != 0) {
+      internal_set_.insert(std::move(line));
+    }
   }
   file_found_ = true;
 }
