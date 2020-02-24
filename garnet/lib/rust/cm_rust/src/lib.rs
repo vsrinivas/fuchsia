@@ -170,6 +170,7 @@ pub struct ComponentDecl {
     pub facets: Option<fsys::Object>,
     pub runners: Vec<RunnerDecl>,
     pub environments: Vec<EnvironmentDecl>,
+    pub resolvers: Vec<ResolverDecl>,
 }
 
 impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
@@ -197,9 +198,10 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
                     fsys::ExposeDecl::Runner(r) => {
                         exposes.push(ExposeDecl::Runner(r.fidl_into_native()))
                     }
-                    fsys::ExposeDecl::Resolver(_) | fsys::ExposeDecl::__UnknownVariant { .. } => {
-                        panic!("invalid variant")
+                    fsys::ExposeDecl::Resolver(r) => {
+                        exposes.push(ExposeDecl::Resolver(r.fidl_into_native()))
                     }
+                    fsys::ExposeDecl::__UnknownVariant { .. } => panic!("invalid variant"),
                 }
             }
             for ((target, target_path), sources) in services.into_iter() {
@@ -234,9 +236,10 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
                     fsys::OfferDecl::Runner(s) => {
                         offers.push(OfferDecl::Runner(s.fidl_into_native()))
                     }
-                    fsys::OfferDecl::Resolver(_) | fsys::OfferDecl::__UnknownVariant { .. } => {
-                        panic!("invalid variant")
+                    fsys::OfferDecl::Resolver(r) => {
+                        offers.push(OfferDecl::Resolver(r.fidl_into_native()))
                     }
+                    fsys::OfferDecl::__UnknownVariant { .. } => panic!("invalid variant"),
                 }
             }
             for ((target, target_path), sources) in services.into_iter() {
@@ -254,6 +257,7 @@ impl FidlIntoNative<ComponentDecl> for fsys::ComponentDecl {
             facets: self.facets.fidl_into_native(),
             runners: self.runners.fidl_into_native(),
             environments: self.environments.fidl_into_native(),
+            resolvers: self.resolvers.fidl_into_native(),
         }
     }
 }
@@ -284,6 +288,9 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
                 ExposeDecl::Runner(r) => {
                     exposes.push(fsys::ExposeDecl::Runner(r.native_into_fidl()))
                 }
+                ExposeDecl::Resolver(r) => {
+                    exposes.push(fsys::ExposeDecl::Resolver(r.native_into_fidl()))
+                }
             }
         }
         let mut offers = vec![];
@@ -309,6 +316,9 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
                     offers.push(fsys::OfferDecl::Storage(s.native_into_fidl()))
                 }
                 OfferDecl::Runner(s) => offers.push(fsys::OfferDecl::Runner(s.native_into_fidl())),
+                OfferDecl::Resolver(r) => {
+                    offers.push(fsys::OfferDecl::Resolver(r.native_into_fidl()))
+                }
             }
         }
         fsys::ComponentDecl {
@@ -322,7 +332,7 @@ impl NativeIntoFidl<fsys::ComponentDecl> for ComponentDecl {
             facets: self.facets.native_into_fidl(),
             runners: self.runners.native_into_fidl(),
             environments: self.environments.native_into_fidl(),
-            resolvers: None,
+            resolvers: self.resolvers.native_into_fidl(),
         }
     }
 }
@@ -340,6 +350,7 @@ impl Clone for ComponentDecl {
             facets: data::clone_option_object(&self.facets),
             runners: self.runners.clone(),
             environments: self.environments.clone(),
+            resolvers: self.resolvers.clone(),
         }
     }
 }
@@ -387,6 +398,7 @@ pub enum ExposeDecl {
     Protocol(ExposeProtocolDecl),
     Directory(ExposeDirectoryDecl),
     Runner(ExposeRunnerDecl),
+    Resolver(ExposeResolverDecl),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -403,6 +415,7 @@ pub enum OfferDecl {
     Directory(OfferDirectoryDecl),
     Storage(OfferStorageDecl),
     Runner(OfferRunnerDecl),
+    Resolver(OfferResolverDecl),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -465,6 +478,14 @@ fidl_into_struct!(ExposeDirectoryDecl, ExposeDirectoryDecl, fsys::ExposeDirector
                       rights: Option<fio2::Operations>,
                       subdir: Option<PathBuf>,
                   });
+fidl_into_struct!(ExposeResolverDecl, ExposeResolverDecl, fsys::ExposeResolverDecl,
+                  fsys::ExposeResolverDecl,
+                  {
+                      source: ExposeSource,
+                      source_name: CapabilityName,
+                      target: ExposeTarget,
+                      target_name: CapabilityName,
+                  });
 fidl_into_struct!(ExposeRunnerDecl, ExposeRunnerDecl, fsys::ExposeRunnerDecl,
                   fsys::ExposeRunnerDecl,
                   {
@@ -473,7 +494,6 @@ fidl_into_struct!(ExposeRunnerDecl, ExposeRunnerDecl, fsys::ExposeRunnerDecl,
                       target: ExposeTarget,
                       target_name: CapabilityName,
                   });
-
 fidl_into_struct!(StorageDecl, StorageDecl, fsys::StorageDecl,
                   fsys::StorageDecl,
                   {
@@ -501,6 +521,14 @@ fidl_into_struct!(OfferDirectoryDecl, OfferDirectoryDecl, fsys::OfferDirectoryDe
                       subdir: Option<PathBuf>,
                       dependency_type: DependencyType,
                   });
+fidl_into_struct!(OfferResolverDecl, OfferResolverDecl, fsys::OfferResolverDecl,
+                  fsys::OfferResolverDecl,
+                  {
+                      source: OfferResolverSource,
+                      source_name: CapabilityName,
+                      target: OfferTarget,
+                      target_name: CapabilityName,
+                  });
 fidl_into_struct!(OfferRunnerDecl, OfferRunnerDecl, fsys::OfferRunnerDecl,
                   fsys::OfferRunnerDecl,
                   {
@@ -509,7 +537,6 @@ fidl_into_struct!(OfferRunnerDecl, OfferRunnerDecl, fsys::OfferRunnerDecl,
                       target: OfferTarget,
                       target_name: CapabilityName,
                   });
-
 fidl_into_struct!(ChildDecl, ChildDecl, fsys::ChildDecl, fsys::ChildDecl,
                   {
                       name: String,
@@ -522,6 +549,11 @@ fidl_into_struct!(CollectionDecl, CollectionDecl, fsys::CollectionDecl, fsys::Co
                   {
                       name: String,
                       durability: fsys::Durability,
+                  });
+fidl_into_struct!(ResolverDecl, ResolverDecl, fsys::ResolverDecl, fsys::ResolverDecl,
+                  {
+                      name: String,
+                      source_path: CapabilityPath,
                   });
 fidl_into_struct!(RunnerDecl, RunnerDecl, fsys::RunnerDecl, fsys::RunnerDecl,
                   {
@@ -539,6 +571,7 @@ fidl_into_vec!(UseDecl, fsys::UseDecl);
 fidl_into_vec!(ChildDecl, fsys::ChildDecl);
 fidl_into_vec!(CollectionDecl, fsys::CollectionDecl);
 fidl_into_vec!(StorageDecl, fsys::StorageDecl);
+fidl_into_vec!(ResolverDecl, fsys::ResolverDecl);
 fidl_into_vec!(RunnerDecl, fsys::RunnerDecl);
 fidl_into_vec!(EnvironmentDecl, fsys::EnvironmentDecl);
 fidl_translations_opt_type!(String);
@@ -1251,6 +1284,36 @@ impl NativeIntoFidl<Option<fsys::Ref>> for OfferRunnerSource {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum OfferResolverSource {
+    Realm,
+    Self_,
+    Child(String),
+}
+
+impl FidlIntoNative<OfferResolverSource> for Option<fsys::Ref> {
+    fn fidl_into_native(self) -> OfferResolverSource {
+        match self.unwrap() {
+            fsys::Ref::Realm(_) => OfferResolverSource::Realm,
+            fsys::Ref::Self_(_) => OfferResolverSource::Self_,
+            fsys::Ref::Child(c) => OfferResolverSource::Child(c.name),
+            _ => panic!("invalid OfferResolverSource variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<Option<fsys::Ref>> for OfferResolverSource {
+    fn native_into_fidl(self) -> Option<fsys::Ref> {
+        Some(match self {
+            OfferResolverSource::Realm => fsys::Ref::Realm(fsys::RealmRef {}),
+            OfferResolverSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
+            OfferResolverSource::Child(child_name) => {
+                fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
+            }
+        })
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum OfferTarget {
     Child(String),
@@ -1461,6 +1524,7 @@ mod tests {
                 facets: None,
                 runners: vec![],
                 environments: vec![],
+                resolvers: vec![],
             },
         },
         try_from_all => {
@@ -1535,6 +1599,15 @@ mod tests {
                        target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                        target_name: Some("elf".to_string()),
                    }),
+                   fsys::ExposeDecl::Resolver(fsys::ExposeResolverDecl{
+                       source: Some(fsys::Ref::Child(fsys::ChildRef {
+                           name: "netstack".to_string(),
+                           collection: None,
+                       })),
+                       source_name: Some("pkg".to_string()),
+                       target: Some(fsys::Ref::Realm(fsys::RealmRef{})),
+                       target_name: Some("pkg".to_string()),
+                   }),
                    fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
                        source: Some(fsys::Ref::Child(fsys::ChildRef {
                            name: "netstack".to_string(),
@@ -1597,6 +1670,17 @@ mod tests {
                           }
                        )),
                        target_name: Some("elf2".to_string()),
+                   }),
+                   fsys::OfferDecl::Resolver(fsys::OfferResolverDecl{
+                       source: Some(fsys::Ref::Realm(fsys::RealmRef{})),
+                       source_name: Some("pkg".to_string()),
+                       target: Some(fsys::Ref::Child(
+                          fsys::ChildRef {
+                             name: "echo".to_string(),
+                             collection: None,
+                          }
+                       )),
+                       target_name: Some("pkg".to_string()),
                    }),
                    fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
@@ -1667,13 +1751,18 @@ mod tests {
                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                    }
                ]),
+               resolvers: Some(vec![
+                   fsys::ResolverDecl {
+                       name: Some("pkg".to_string()),
+                       source_path: Some("/pkg_resolver".to_string()),
+                   }
+               ]),
                environments: Some(vec![
                    fsys::EnvironmentDecl {
                        name: Some("test_env".to_string()),
                        extends: Some(fsys::EnvironmentExtends::Realm),
                    }
                ]),
-               resolvers: None,
             },
             result = {
                 ComponentDecl {
@@ -1732,6 +1821,12 @@ mod tests {
                             target: ExposeTarget::Realm,
                             target_name: "elf".try_into().unwrap(),
                         }),
+                        ExposeDecl::Resolver(ExposeResolverDecl {
+                            source: ExposeSource::Child("netstack".to_string()),
+                            source_name: "pkg".try_into().unwrap(),
+                            target: ExposeTarget::Realm,
+                            target_name: "pkg".try_into().unwrap(),
+                        }),
                         ExposeDecl::Service(ExposeServiceDecl {
                             sources: vec![
                                 ServiceSource::<ExposeServiceSource> {
@@ -1775,6 +1870,12 @@ mod tests {
                             source_name: "elf".try_into().unwrap(),
                             target: OfferTarget::Child("echo".to_string()),
                             target_name: "elf2".try_into().unwrap(),
+                        }),
+                        OfferDecl::Resolver(OfferResolverDecl {
+                            source: OfferResolverSource::Realm,
+                            source_name: "pkg".try_into().unwrap(),
+                            target: OfferTarget::Child("echo".to_string()),
+                            target_name: "pkg".try_into().unwrap(),
                         }),
                         OfferDecl::Service(OfferServiceDecl {
                             sources: vec![
@@ -1833,6 +1934,12 @@ mod tests {
                             name: "elf".to_string(),
                             source: RunnerSource::Self_,
                             source_path: "/elf".try_into().unwrap(),
+                        }
+                    ],
+                    resolvers: vec![
+                        ResolverDecl {
+                            name: "pkg".to_string(),
+                            source_path: "/pkg_resolver".try_into().unwrap(),
                         }
                     ],
                     environments: vec![

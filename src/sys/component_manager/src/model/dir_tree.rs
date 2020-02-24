@@ -172,8 +172,8 @@ impl DirTree {
             cm_rust::ExposeDecl::Service(d) => &d.target_path,
             cm_rust::ExposeDecl::Protocol(d) => &d.target_path,
             cm_rust::ExposeDecl::Directory(d) => &d.target_path,
-            cm_rust::ExposeDecl::Runner(_) => {
-                // Runners do not add directory entries.
+            cm_rust::ExposeDecl::Runner(_) | cm_rust::ExposeDecl::Resolver(_) => {
+                // Runners and resolvers do not add directory entries.
                 return;
             }
         };

@@ -28,6 +28,7 @@ pub enum Error {
     InvalidCollection(String, String, String),
     InvalidStorage(String, String, String),
     InvalidEnvironment(String, String, String),
+    InvalidResolver(String, String, String),
     MultipleRunnersSpecified(String),
 }
 
@@ -104,6 +105,14 @@ impl Error {
         Error::InvalidEnvironment(decl_type.into(), keyword.into(), environment.into())
     }
 
+    pub fn invalid_resolver(
+        decl_type: impl Into<String>,
+        keyword: impl Into<String>,
+        resolver: impl Into<String>,
+    ) -> Self {
+        Error::InvalidResolver(decl_type.into(), keyword.into(), resolver.into())
+    }
+
     pub fn multiple_runners_specified(decl_type: impl Into<String>) -> Self {
         Error::MultipleRunnersSpecified(decl_type.into())
     }
@@ -145,6 +154,11 @@ impl fmt::Display for Error {
                 f,
                 "\"{}\" is referenced in {}.{} but it does not appear in environments",
                 e, d, k,
+            ),
+            Error::InvalidResolver(d, k, r) => write!(
+                f,
+                "\"{}\" is referenced in {}.{} but it does not appear in resolvers",
+                r, d, k,
             ),
             Error::MultipleRunnersSpecified(d) => write!(f, "{} specifies multiple runners", d),
         }
@@ -191,9 +205,11 @@ pub fn validate(decl: &fsys::ComponentDecl) -> Result<(), ErrorList> {
         all_collections: HashSet::new(),
         all_storage_and_sources: HashMap::new(),
         all_runners_and_sources: HashMap::new(),
+        all_resolvers: HashSet::new(),
         all_environment_names: HashSet::new(),
         target_paths: HashMap::new(),
         offered_runner_names: HashMap::new(),
+        offered_resolver_names: HashMap::new(),
         errors: vec![],
     };
     ctx.validate().map_err(|errs| ErrorList::new(errs))
@@ -223,9 +239,11 @@ struct ValidationContext<'a> {
     all_collections: HashSet<&'a str>,
     all_storage_and_sources: HashMap<&'a str, Option<&'a str>>,
     all_runners_and_sources: HashMap<&'a str, Option<&'a str>>,
+    all_resolvers: HashSet<&'a str>,
     all_environment_names: HashSet<&'a str>,
     target_paths: PathMap<'a>,
     offered_runner_names: NameMap<'a>,
+    offered_resolver_names: NameMap<'a>,
     errors: Vec<Error>,
 }
 
@@ -256,29 +274,36 @@ impl<'a> ValidationContext<'a> {
 
         // Validate "children" and build the set of all children.
         if let Some(children) = self.decl.children.as_ref() {
-            for child in children.iter() {
+            for child in children {
                 self.validate_child_decl(&child);
             }
         }
 
         // Validate "collections" and build the set of all collections.
         if let Some(collections) = self.decl.collections.as_ref() {
-            for collection in collections.iter() {
+            for collection in collections {
                 self.validate_collection_decl(&collection);
             }
         }
 
         // Validate "storage" and build the set of all storage sections.
         if let Some(storage) = self.decl.storage.as_ref() {
-            for storage in storage.iter() {
+            for storage in storage {
                 self.validate_storage_decl(&storage);
             }
         }
 
         // Validate "runners" and build the set of all runners.
         if let Some(runners) = self.decl.runners.as_ref() {
-            for runner in runners.iter() {
+            for runner in runners {
                 self.validate_runner_decl(&runner);
+            }
+        }
+
+        // Validate "resolvers" and build the set of all resolvers.
+        if let Some(resolvers) = self.decl.resolvers.as_ref() {
+            for resolver in resolvers {
+                self.validate_resolver_decl(&resolver);
             }
         }
 
@@ -291,8 +316,14 @@ impl<'a> ValidationContext<'a> {
         if let Some(exposes) = self.decl.exposes.as_ref() {
             let mut target_paths = HashMap::new();
             let mut runner_names = HashSet::new();
+            let mut resolver_names = HashSet::new();
             for expose in exposes.iter() {
-                self.validate_expose_decl(&expose, &mut target_paths, &mut runner_names);
+                self.validate_expose_decl(
+                    &expose,
+                    &mut target_paths,
+                    &mut runner_names,
+                    &mut resolver_names,
+                );
             }
         }
 
@@ -514,6 +545,16 @@ impl<'a> ValidationContext<'a> {
         check_path(runner.source_path.as_ref(), "RunnerDecl", "source_path", &mut self.errors);
     }
 
+    fn validate_resolver_decl(&mut self, resolver: &'a fsys::ResolverDecl) {
+        if check_name(resolver.name.as_ref(), "ResolverDecl", "name", &mut self.errors) {
+            let name = resolver.name.as_ref().unwrap();
+            if !self.all_resolvers.insert(name) {
+                self.errors.push(Error::duplicate_field("ResolverDecl", "name", name.as_str()));
+            }
+        }
+        check_path(resolver.source_path.as_ref(), "ResolverDecl", "source_path", &mut self.errors);
+    }
+
     fn validate_source_child(&mut self, child: &fsys::ChildRef, decl_type: &str) {
         let mut valid = true;
         valid &= check_name(Some(&child.name), decl_type, "source.child.name", &mut self.errors);
@@ -544,6 +585,7 @@ impl<'a> ValidationContext<'a> {
         expose: &'a fsys::ExposeDecl,
         prev_target_paths: &mut HashMap<&'a str, AllowablePaths>,
         prev_runner_names: &mut HashSet<&'a str>,
+        prev_resolver_names: &mut HashSet<&'a str>,
     ) {
         match expose {
             fsys::ExposeDecl::Service(e) => {
@@ -598,16 +640,12 @@ impl<'a> ValidationContext<'a> {
                 }
             }
             fsys::ExposeDecl::Runner(e) => {
-                self.validate_expose_runner_fields(
-                    "ExposeRunnerDecl",
-                    e.source.as_ref(),
-                    e.source_name.as_ref(),
-                    e.target.as_ref(),
-                    e.target_name.as_ref(),
-                    prev_runner_names,
-                );
+                self.validate_expose_runner_fields(e, prev_runner_names);
             }
-            fsys::ExposeDecl::Resolver(_) | fsys::ExposeDecl::__UnknownVariant { .. } => {
+            fsys::ExposeDecl::Resolver(e) => {
+                self.validate_expose_resolver_fields(e, prev_resolver_names);
+            }
+            fsys::ExposeDecl::__UnknownVariant { .. } => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "expose"));
             }
         }
@@ -661,43 +699,91 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_expose_runner_fields(
+    /// Validates that the expose source is from `self`, `framework`, or a valid child.
+    fn validate_expose_source(
         &mut self,
-        decl: &str,
-        source: Option<&fsys::Ref>,
-        source_name: Option<&String>,
-        target: Option<&fsys::Ref>,
-        target_name: Option<&'a String>,
-        prev_runner_names: &mut HashSet<&'a str>,
+        source: &Option<fsys::Ref>,
+        decl_type: &str,
+        field_name: &str,
     ) {
-        // Ensure our source is valid.
-        match source {
-            Some(fsys::Ref::Self_(_)) => (),
-            Some(fsys::Ref::Child(child)) => self.validate_source_child(child, decl),
-            Some(_) => self.errors.push(Error::invalid_field(decl, "source")),
-            None => self.errors.push(Error::missing_field(decl, "source")),
-        }
+        match source.as_ref() {
+            Some(fsys::Ref::Self_(_)) | Some(fsys::Ref::Framework(_)) => {}
+            Some(fsys::Ref::Child(child)) => {
+                self.validate_source_child(child, decl_type);
+            }
+            Some(_) => {
+                self.errors.push(Error::invalid_field(decl_type, field_name));
+            }
+            None => {
+                self.errors.push(Error::missing_field(decl_type, field_name));
+            }
+        };
+    }
 
-        // Ensure our target is valid.
-        match target {
+    /// Validates that the expose target is to `realm` or `framework`.
+    fn validate_expose_target(
+        &mut self,
+        target: &Option<fsys::Ref>,
+        decl_type: &str,
+        field_name: &str,
+    ) {
+        match target.as_ref() {
             Some(fsys::Ref::Realm(_)) => {}
-            Some(_) => self.errors.push(Error::invalid_field(decl, "target")),
-            None => self.errors.push(Error::missing_field(decl, "target")),
-        }
+            Some(_) => {
+                self.errors.push(Error::invalid_field(decl_type, field_name));
+            }
+            None => {
+                self.errors.push(Error::missing_field(decl_type, field_name));
+            }
+        };
+    }
 
-        // Ensure source name is valid.
-        check_name(source_name, decl, "source_name", &mut self.errors);
-
-        // Ensure target_name is valid.
-        if check_name(target_name, decl, "target_name", &mut self.errors) {
+    fn validate_expose_resolver_fields(
+        &mut self,
+        resolver: &'a fsys::ExposeResolverDecl,
+        prev_resolver_names: &mut HashSet<&'a str>,
+    ) {
+        let decl = "ExposeResolverDecl";
+        self.validate_expose_source(&resolver.source, decl, "source");
+        self.validate_expose_target(&resolver.target, decl, "target");
+        check_name(resolver.source_name.as_ref(), decl, "source_name", &mut self.errors);
+        if check_name(resolver.target_name.as_ref(), decl, "target_name", &mut self.errors) {
             // Ensure that target_name hasn't already been exposed.
-            if !prev_runner_names.insert(target_name.unwrap()) {
-                self.errors.push(Error::duplicate_field(decl, "target_name", target_name.unwrap()));
+            let target_name = resolver.target_name.as_ref().unwrap();
+            if !prev_resolver_names.insert(target_name) {
+                self.errors.push(Error::duplicate_field(decl, "target_name", target_name));
             }
         }
 
-        // If the expose source is ourself, ensure we have a corresponding RunnerDecl.
-        if let (Some(fsys::Ref::Self_(_)), Some(name)) = (source, source_name) {
+        // If the expose source is `self`, ensure we have a corresponding ResolverDecl.
+        if let (Some(fsys::Ref::Self_(_)), Some(ref name)) =
+            (&resolver.source, &resolver.source_name)
+        {
+            if !self.all_resolvers.contains(name as &str) {
+                self.errors.push(Error::invalid_resolver(decl, "source", name));
+            }
+        }
+    }
+
+    fn validate_expose_runner_fields(
+        &mut self,
+        runner: &'a fsys::ExposeRunnerDecl,
+        prev_runner_names: &mut HashSet<&'a str>,
+    ) {
+        let decl = "ExposeRunnerDecl";
+        self.validate_expose_source(&runner.source, decl, "source");
+        self.validate_expose_target(&runner.target, decl, "target");
+        check_name(runner.source_name.as_ref(), decl, "source_name", &mut self.errors);
+        if check_name(runner.target_name.as_ref(), decl, "target_name", &mut self.errors) {
+            // Ensure that target_name hasn't already been exposed.
+            let target_name = runner.target_name.as_ref().unwrap();
+            if !prev_runner_names.insert(target_name) {
+                self.errors.push(Error::duplicate_field(decl, "target_name", target_name));
+            }
+        }
+
+        // If the expose source is `self`, ensure we have a corresponding RunnerDecl.
+        if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&runner.source, &runner.source_name) {
             if !self.all_runners_and_sources.contains_key(&name as &str) {
                 self.errors.push(Error::invalid_field(decl, "source"));
             }
@@ -767,16 +853,69 @@ impl<'a> ValidationContext<'a> {
                 );
             }
             fsys::OfferDecl::Runner(o) => {
-                self.validate_runner_offer_fields(
-                    "OfferRunnerDecl",
-                    o.source.as_ref(),
-                    o.source_name.as_ref(),
-                    o.target.as_ref(),
-                    o.target_name.as_ref(),
-                );
+                self.validate_runner_offer_fields(o);
             }
-            fsys::OfferDecl::Resolver(_) | fsys::OfferDecl::__UnknownVariant { .. } => {
+            fsys::OfferDecl::Resolver(o) => {
+                self.validate_resolver_offer_fields(o);
+            }
+            fsys::OfferDecl::__UnknownVariant { .. } => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "offer"));
+            }
+        }
+    }
+
+    /// Validates that the offer source is from `self`, `framework`, `realm`, or a valid child.
+    fn validate_offer_source(
+        &mut self,
+        source: &Option<fsys::Ref>,
+        decl_type: &str,
+        field_name: &str,
+    ) {
+        match source.as_ref() {
+            Some(fsys::Ref::Self_(_))
+            | Some(fsys::Ref::Framework(_))
+            | Some(fsys::Ref::Realm(_)) => {}
+            Some(fsys::Ref::Child(child)) => {
+                self.validate_source_child(child, decl_type);
+            }
+            Some(_) => {
+                self.errors.push(Error::invalid_field(decl_type, field_name));
+            }
+            None => {
+                self.errors.push(Error::missing_field(decl_type, field_name));
+            }
+        };
+    }
+
+    /// Validates that the offer target is to a valid child or collection.
+    fn validate_offer_target(
+        &mut self,
+        target: &'a Option<fsys::Ref>,
+        decl_type: &str,
+        field_name: &str,
+    ) -> Option<TargetId<'a>> {
+        match target.as_ref() {
+            Some(fsys::Ref::Child(child)) => {
+                if self.validate_child_ref(decl_type, field_name, &child) {
+                    Some(TargetId::Component(&child.name))
+                } else {
+                    None
+                }
+            }
+            Some(fsys::Ref::Collection(collection)) => {
+                if self.validate_collection_ref(decl_type, field_name, &collection) {
+                    Some(TargetId::Collection(&collection.name))
+                } else {
+                    None
+                }
+            }
+            Some(_) => {
+                self.errors.push(Error::invalid_field(decl_type, field_name));
+                None
+            }
+            None => {
+                self.errors.push(Error::missing_field(decl_type, field_name));
+                None
             }
         }
     }
@@ -844,67 +983,63 @@ impl<'a> ValidationContext<'a> {
         self.validate_storage_target(decl, storage_source_name, target);
     }
 
-    fn validate_runner_offer_fields(
-        &mut self,
-        decl: &str,
-        source: Option<&fsys::Ref>,
-        source_name: Option<&String>,
-        target: Option<&'a fsys::Ref>,
-        target_name: Option<&'a String>,
-    ) {
-        // Validate source.
-        match source {
-            Some(fsys::Ref::Realm(_)) => {}
-            Some(fsys::Ref::Self_(_)) => {}
-            Some(fsys::Ref::Child(child)) => self.validate_source_child(child, decl),
-            Some(_) => self.errors.push(Error::invalid_field(decl, "source")),
-            None => self.errors.push(Error::missing_field(decl, "source")),
+    fn validate_runner_offer_fields(&mut self, runner: &'a fsys::OfferRunnerDecl) {
+        let decl = "OfferRunnerDecl";
+        self.validate_offer_source(&runner.source, decl, "source");
+        check_name(runner.source_name.as_ref(), decl, "source_name", &mut self.errors);
+        // If the offer source is `self`, ensure we have a corresponding RunnerDecl.
+        if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&runner.source, &runner.source_name) {
+            if !self.all_runners_and_sources.contains_key(&name as &str) {
+                self.errors.push(Error::invalid_field(decl, "source"));
+            }
         }
-        check_name(source_name, decl, "source_name", &mut self.errors);
-
-        // Validate target.
-        let target_key = match target {
-            Some(fsys::Ref::Child(c)) => {
-                self.validate_child_ref(decl, "target", &c);
-                Some(TargetId::Component(&c.name))
-            }
-            Some(fsys::Ref::Collection(c)) => {
-                self.validate_collection_ref(decl, "target", &c);
-                Some(TargetId::Collection(&c.name))
-            }
-            Some(_) => {
-                self.errors.push(Error::invalid_field(decl, "target"));
-                None
-            }
-            None => {
-                self.errors.push(Error::missing_field(decl, "target"));
-                None
-            }
-        };
-        check_name(target_name, decl, "target_name", &mut self.errors);
-
-        // Assuming the target is valid, ensure the target runner name isn't already used.
-        if let (Some(target_key), Some(target_name)) = (target_key, target_name) {
+        let target_id = self.validate_offer_target(&runner.target, decl, "target");
+        check_name(runner.target_name.as_ref(), decl, "target_name", &mut self.errors);
+        if let (Some(target_id), Some(target_name)) = (target_id, runner.target_name.as_ref()) {
+            // Assuming the target_name is valid, ensure the target_name isn't already used.
             if !self
                 .offered_runner_names
-                .entry(target_key)
+                .entry(target_id)
                 .or_insert(HashSet::new())
                 .insert(target_name)
             {
                 self.errors.push(Error::duplicate_field(decl, "target_name", target_name as &str));
             }
-        };
-
-        // Ensure source != target.
-        match (source, target) {
-            (Some(fsys::Ref::Child(source_child)), Some(fsys::Ref::Child(target_child))) => {
-                if source_child.name == target_child.name {
-                    self.errors
-                        .push(Error::offer_target_equals_source(decl, &target_child.name as &str));
-                }
-            }
-            (_, _) => (),
         }
+        check_offer_target_is_not_source(&runner.target, &runner.source, decl, &mut self.errors);
+    }
+
+    fn validate_resolver_offer_fields(&mut self, resolver: &'a fsys::OfferResolverDecl) {
+        let decl = "OfferResolverDecl";
+        self.validate_offer_source(&resolver.source, decl, "source");
+        check_name(resolver.source_name.as_ref(), decl, "source_name", &mut self.errors);
+        // If the offer source is `self`, ensure we have a corresponding ResolverDecl.
+        if let (Some(fsys::Ref::Self_(_)), Some(ref name)) =
+            (&resolver.source, &resolver.source_name)
+        {
+            if !self.all_resolvers.contains(&name as &str) {
+                self.errors.push(Error::invalid_resolver(decl, "source", name));
+            }
+        }
+        let target_id = self.validate_offer_target(&resolver.target, decl, "target");
+        check_name(resolver.target_name.as_ref(), decl, "target_name", &mut self.errors);
+        if let (Some(target_id), Some(target_name)) = (target_id, resolver.target_name.as_ref()) {
+            // Assuming the target_name is valid, ensure the target_name isn't already used.
+            if !self
+                .offered_resolver_names
+                .entry(target_id)
+                .or_insert(HashSet::new())
+                .insert(target_name)
+            {
+                self.errors.push(Error::duplicate_field(decl, "target_name", target_name as &str));
+            }
+        }
+        check_offer_target_is_not_source(
+            &resolver.target,
+            &resolver.source,
+            decl,
+            &mut self.errors,
+        );
     }
 
     /// Check a `ChildRef` contains a valid child that exists.
@@ -1206,6 +1341,25 @@ fn check_url(
     start_err_len == errors.len()
 }
 
+/// Checks that the offer target is not the same as the offer source.
+fn check_offer_target_is_not_source(
+    target: &Option<fsys::Ref>,
+    source: &Option<fsys::Ref>,
+    decl_type: &str,
+    errors: &mut Vec<Error>,
+) -> bool {
+    match (source, target) {
+        (Some(fsys::Ref::Child(ref source_child)), Some(fsys::Ref::Child(ref target_child))) => {
+            if source_child.name == target_child.name {
+                errors.push(Error::offer_target_equals_source(decl_type, &target_child.name));
+                return false;
+            }
+        }
+        _ => {}
+    };
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -1214,11 +1368,11 @@ mod tests {
         fidl_fuchsia_sys2::{
             ChildDecl, ChildRef, CollectionDecl, CollectionRef, ComponentDecl, DependencyType,
             Durability, EnvironmentDecl, EnvironmentExtends, ExposeDecl, ExposeDirectoryDecl,
-            ExposeProtocolDecl, ExposeRunnerDecl, ExposeServiceDecl, FrameworkRef, OfferDecl,
-            OfferDirectoryDecl, OfferProtocolDecl, OfferRunnerDecl, OfferServiceDecl,
-            OfferStorageDecl, RealmRef, Ref, RunnerDecl, SelfRef, StartupMode, StorageDecl,
-            StorageRef, StorageType, UseDecl, UseDirectoryDecl, UseProtocolDecl, UseRunnerDecl,
-            UseServiceDecl, UseStorageDecl,
+            ExposeProtocolDecl, ExposeResolverDecl, ExposeRunnerDecl, ExposeServiceDecl,
+            FrameworkRef, OfferDecl, OfferDirectoryDecl, OfferProtocolDecl, OfferResolverDecl,
+            OfferRunnerDecl, OfferServiceDecl, OfferStorageDecl, RealmRef, Ref, ResolverDecl,
+            RunnerDecl, SelfRef, StartupMode, StorageDecl, StorageRef, StorageType, UseDecl,
+            UseDirectoryDecl, UseProtocolDecl, UseRunnerDecl, UseServiceDecl, UseStorageDecl,
         },
         lazy_static::lazy_static,
         proptest::prelude::*,
@@ -1655,6 +1809,12 @@ mod tests {
                         target: None,
                         target_name: None,
                     }),
+                    ExposeDecl::Resolver(ExposeResolverDecl {
+                        source: None,
+                        source_name: None,
+                        target: None,
+                        target_name: None,
+                    }),
                 ]);
                 decl
             },
@@ -1675,6 +1835,10 @@ mod tests {
                 Error::missing_field("ExposeRunnerDecl", "target"),
                 Error::missing_field("ExposeRunnerDecl", "source_name"),
                 Error::missing_field("ExposeRunnerDecl", "target_name"),
+                Error::missing_field("ExposeResolverDecl", "source"),
+                Error::missing_field("ExposeResolverDecl", "target"),
+                Error::missing_field("ExposeResolverDecl", "source_name"),
+                Error::missing_field("ExposeResolverDecl", "target_name"),
             ])),
         },
         test_validate_exposes_extraneous => {
@@ -1719,6 +1883,15 @@ mod tests {
                         target: Some(Ref::Realm(RealmRef {})),
                         target_name: Some("elf".to_string()),
                     }),
+                    ExposeDecl::Resolver(ExposeResolverDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "netstack".to_string(),
+                            collection: Some("modular".to_string()),
+                        })),
+                        source_name: Some("pkg".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
+                        target_name: Some("pkg".to_string()),
+                    }),
                 ]);
                 decl
             },
@@ -1727,6 +1900,7 @@ mod tests {
                 Error::extraneous_field("ExposeProtocolDecl", "source.child.collection"),
                 Error::extraneous_field("ExposeDirectoryDecl", "source.child.collection"),
                 Error::extraneous_field("ExposeRunnerDecl", "source.child.collection"),
+                Error::extraneous_field("ExposeResolverDecl", "source.child.collection"),
             ])),
         },
         test_validate_exposes_rights => {
@@ -1790,6 +1964,15 @@ mod tests {
                         target: Some(Ref::Realm(RealmRef {})),
                         target_name: Some("elf!".to_string()),
                     }),
+                    ExposeDecl::Resolver(ExposeResolverDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "^bad".to_string(),
+                            collection: None,
+                        })),
+                        source_name: Some("/path".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
+                        target_name: Some("pkg!".to_string()),
+                    }),
                 ]);
                 decl
             },
@@ -1807,6 +1990,9 @@ mod tests {
                 Error::invalid_character_in_field("ExposeRunnerDecl", "source.child.name", '^'),
                 Error::invalid_character_in_field("ExposeRunnerDecl", "source_name", '/'),
                 Error::invalid_character_in_field("ExposeRunnerDecl", "target_name", '!'),
+                Error::invalid_character_in_field("ExposeResolverDecl", "source.child.name", '^'),
+                Error::invalid_character_in_field("ExposeResolverDecl", "source_name", '/'),
+                Error::invalid_character_in_field("ExposeResolverDecl", "target_name", '!'),
             ])),
         },
         test_validate_exposes_invalid_source_target => {
@@ -1847,6 +2033,12 @@ mod tests {
                         target: Some(Ref::Framework(FrameworkRef {})),
                         target_name: Some("b".to_string()),
                     }),
+                    ExposeDecl::Resolver(ExposeResolverDecl {
+                        source: Some(Ref::Storage(StorageRef {name: "a".to_string()})),
+                        source_name: Some("a".to_string()),
+                        target: Some(Ref::Framework(FrameworkRef {})),
+                        target_name: Some("b".to_string()),
+                    }),
                 ]);
                 decl
             },
@@ -1861,6 +2053,8 @@ mod tests {
                 Error::invalid_field("ExposeDirectoryDecl", "target"),
                 Error::invalid_field("ExposeRunnerDecl", "source"),
                 Error::invalid_field("ExposeRunnerDecl", "target"),
+                Error::invalid_field("ExposeResolverDecl", "source"),
+                Error::invalid_field("ExposeResolverDecl", "target"),
             ])),
         },
         test_validate_exposes_long_identifiers => {
@@ -1905,6 +2099,15 @@ mod tests {
                         target: Some(Ref::Realm(RealmRef {})),
                         target_name: Some("b".repeat(101)),
                     }),
+                    ExposeDecl::Resolver(ExposeResolverDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "b".repeat(101),
+                            collection: None,
+                        })),
+                        source_name: Some("a".repeat(101)),
+                        target: Some(Ref::Realm(RealmRef {})),
+                        target_name: Some("b".repeat(101)),
+                    }),
                 ]);
                 decl
             },
@@ -1921,6 +2124,9 @@ mod tests {
                 Error::field_too_long("ExposeRunnerDecl", "source.child.name"),
                 Error::field_too_long("ExposeRunnerDecl", "source_name"),
                 Error::field_too_long("ExposeRunnerDecl", "target_name"),
+                Error::field_too_long("ExposeResolverDecl", "source.child.name"),
+                Error::field_too_long("ExposeResolverDecl", "source_name"),
+                Error::field_too_long("ExposeResolverDecl", "target_name"),
             ])),
         },
         test_validate_exposes_invalid_child => {
@@ -1965,6 +2171,15 @@ mod tests {
                         target: Some(Ref::Realm(RealmRef {})),
                         target_name: Some("elf".to_string()),
                     }),
+                    ExposeDecl::Resolver(ExposeResolverDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "netstack".to_string(),
+                            collection: None,
+                        })),
+                        source_name: Some("pkg".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
+                        target_name: Some("pkg".to_string()),
+                    }),
                 ]);
                 decl
             },
@@ -1973,6 +2188,7 @@ mod tests {
                 Error::invalid_child("ExposeProtocolDecl", "source", "netstack"),
                 Error::invalid_child("ExposeDirectoryDecl", "source", "netstack"),
                 Error::invalid_child("ExposeRunnerDecl", "source", "netstack"),
+                Error::invalid_child("ExposeResolverDecl", "source", "netstack"),
             ])),
         },
         test_validate_exposes_duplicate_target => {
@@ -1981,6 +2197,10 @@ mod tests {
                 decl.runners = Some(vec![RunnerDecl{
                     name: Some("source_elf".to_string()),
                     source: Some(Ref::Self_(SelfRef{})),
+                    source_path: Some("/path".to_string()),
+                }]);
+                decl.resolvers = Some(vec![ResolverDecl {
+                    name: Some("source_pkg".to_string()),
                     source_path: Some("/path".to_string()),
                 }]);
                 decl.exposes = Some(vec![
@@ -2030,6 +2250,18 @@ mod tests {
                         target: Some(Ref::Realm(RealmRef {})),
                         target_name: Some("elf".to_string()),
                     }),
+                    ExposeDecl::Resolver(ExposeResolverDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_name: Some("source_pkg".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
+                        target_name: Some("pkg".to_string()),
+                    }),
+                    ExposeDecl::Resolver(ExposeResolverDecl {
+                        source: Some(Ref::Self_(SelfRef{})),
+                        source_name: Some("source_pkg".to_string()),
+                        target: Some(Ref::Realm(RealmRef {})),
+                        target_name: Some("pkg".to_string()),
+                    }),
                 ]);
                 decl
             },
@@ -2040,6 +2272,7 @@ mod tests {
                                        "/svc/fuchsia.logger.Log"),
                 Error::duplicate_field("ExposeRunnerDecl", "target_name",
                                        "elf"),
+                Error::duplicate_field("ExposeResolverDecl", "target_name", "pkg"),
             ])),
         },
         test_validate_exposes_invalid_runner_from_self => {
@@ -2100,6 +2333,7 @@ mod tests {
                         target: None,
                         target_name: None,
                     }),
+
                 ]);
                 decl
             },
@@ -2241,6 +2475,19 @@ mod tests {
                         )),
                         target_name: Some("d".repeat(101)),
                     }),
+                    OfferDecl::Resolver(OfferResolverDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "a".repeat(101),
+                            collection: None,
+                        })),
+                        source_name: Some("b".repeat(101)),
+                        target: Some(Ref::Collection(
+                            CollectionRef {
+                                name: "c".repeat(101),
+                            }
+                        )),
+                        target_name: Some("d".repeat(101)),
+                    }),
                 ]);
                 decl
             },
@@ -2269,6 +2516,10 @@ mod tests {
                 Error::field_too_long("OfferRunnerDecl", "source_name"),
                 Error::field_too_long("OfferRunnerDecl", "target.collection.name"),
                 Error::field_too_long("OfferRunnerDecl", "target_name"),
+                Error::field_too_long("OfferResolverDecl", "source.child.name"),
+                Error::field_too_long("OfferResolverDecl", "source_name"),
+                Error::field_too_long("OfferResolverDecl", "target.collection.name"),
+                Error::field_too_long("OfferResolverDecl", "target_name"),
             ])),
         },
         test_validate_offers_rights => {
@@ -2369,6 +2620,20 @@ mod tests {
                         )),
                         target_name: Some("elf".to_string()),
                     }),
+                    OfferDecl::Resolver(OfferResolverDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "logger".to_string(),
+                            collection: Some("modular".to_string()),
+                        })),
+                        source_name: Some("pkg".to_string()),
+                        target: Some(Ref::Child(
+                            ChildRef {
+                                name: "netstack".to_string(),
+                                collection: Some("modular".to_string()),
+                            }
+                        )),
+                        target_name: Some("pkg".to_string()),
+                    }),
                 ]);
                 decl
             },
@@ -2382,6 +2647,8 @@ mod tests {
                 Error::extraneous_field("OfferStorageDecl", "target.child.collection"),
                 Error::extraneous_field("OfferRunnerDecl", "source.child.collection"),
                 Error::extraneous_field("OfferRunnerDecl", "target.child.collection"),
+                Error::extraneous_field("OfferResolverDecl", "source.child.collection"),
+                Error::extraneous_field("OfferResolverDecl", "target.child.collection"),
             ])),
         },
         test_validate_offers_invalid_identifiers => {
@@ -2440,6 +2707,18 @@ mod tests {
                         })),
                         target_name: Some("elf!".to_string()),
                     }),
+                    OfferDecl::Resolver(OfferResolverDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "^bad".to_string(),
+                            collection: None,
+                        })),
+                        source_name: Some("/path".to_string()),
+                        target: Some(Ref::Child(ChildRef {
+                            name: "%bad".to_string(),
+                            collection: None,
+                        })),
+                        target_name: Some("pkg!".to_string()),
+                    }),
                 ]);
                 decl
             },
@@ -2461,6 +2740,10 @@ mod tests {
                 Error::invalid_character_in_field("OfferRunnerDecl", "source_name", '/'),
                 Error::invalid_character_in_field("OfferRunnerDecl", "target.child.name", '%'),
                 Error::invalid_character_in_field("OfferRunnerDecl", "target_name", '!'),
+                Error::invalid_character_in_field("OfferResolverDecl", "source.child.name", '^'),
+                Error::invalid_character_in_field("OfferResolverDecl", "source_name", '/'),
+                Error::invalid_character_in_field("OfferResolverDecl", "target.child.name", '%'),
+                Error::invalid_character_in_field("OfferResolverDecl", "target_name", '!'),
             ])),
         },
         test_validate_offers_target_equals_source => {
@@ -2527,6 +2810,20 @@ mod tests {
                         )),
                         target_name: Some("web".to_string()),
                     }),
+                    OfferDecl::Resolver(OfferResolverDecl {
+                        source: Some(Ref::Child(ChildRef {
+                            name: "logger".to_string(),
+                            collection: None,
+                        })),
+                        source_name: Some("pkg".to_string()),
+                        target: Some(Ref::Child(
+                           ChildRef {
+                               name: "logger".to_string(),
+                               collection: None,
+                           }
+                        )),
+                        target_name: Some("pkg".to_string()),
+                    }),
                 ]);
                 decl.children = Some(vec![ChildDecl{
                     name: Some("logger".to_string()),
@@ -2541,6 +2838,7 @@ mod tests {
                 Error::offer_target_equals_source("OfferProtocolDecl", "logger"),
                 Error::offer_target_equals_source("OfferDirectoryDecl", "logger"),
                 Error::offer_target_equals_source("OfferRunnerDecl", "logger"),
+                Error::offer_target_equals_source("OfferResolverDecl", "logger"),
             ])),
         },
         test_validate_offers_storage_target_equals_source => {
@@ -2721,7 +3019,7 @@ mod tests {
                         dependency_type: Some(DependencyType::WeakForMigration),
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
-                        source: Some(Ref::Self_(SelfRef{})),
+                        source: Some(Ref::Realm(RealmRef{})),
                         source_name: Some("elf".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef { name: "modular".to_string() }
@@ -2729,8 +3027,24 @@ mod tests {
                         target_name: Some("duplicated".to_string()),
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
-                        source: Some(Ref::Self_(SelfRef{})),
+                        source: Some(Ref::Realm(RealmRef{})),
                         source_name: Some("elf".to_string()),
+                        target: Some(Ref::Collection(
+                           CollectionRef { name: "modular".to_string() }
+                        )),
+                        target_name: Some("duplicated".to_string()),
+                    }),
+                    OfferDecl::Resolver(OfferResolverDecl {
+                        source: Some(Ref::Realm(RealmRef{})),
+                        source_name: Some("pkg".to_string()),
+                        target: Some(Ref::Collection(
+                           CollectionRef { name: "modular".to_string() }
+                        )),
+                        target_name: Some("duplicated".to_string()),
+                    }),
+                    OfferDecl::Resolver(OfferResolverDecl {
+                        source: Some(Ref::Realm(RealmRef{})),
+                        source_name: Some("pkg".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef { name: "modular".to_string() }
                         )),
@@ -2757,6 +3071,7 @@ mod tests {
                 Error::duplicate_field("OfferServiceDecl", "target_path", "/data"),
                 Error::duplicate_field("OfferDirectoryDecl", "target_path", "/data"),
                 Error::duplicate_field("OfferRunnerDecl", "target_name", "duplicated"),
+                Error::duplicate_field("OfferResolverDecl", "target_name", "duplicated"),
             ])),
         },
         test_validate_offers_target_invalid => {
@@ -2846,7 +3161,7 @@ mod tests {
                         )),
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
-                        source: Some(Ref::Self_(SelfRef{})),
+                        source: Some(Ref::Realm(RealmRef{})),
                         source_name: Some("elf".to_string()),
                         target: Some(Ref::Child(
                             ChildRef {
@@ -2857,12 +3172,31 @@ mod tests {
                         target_name: Some("elf".to_string()),
                     }),
                     OfferDecl::Runner(OfferRunnerDecl {
-                        source: Some(Ref::Self_(SelfRef{})),
+                        source: Some(Ref::Realm(RealmRef{})),
                         source_name: Some("elf".to_string()),
                         target: Some(Ref::Collection(
                            CollectionRef { name: "modular".to_string(), }
                         )),
                         target_name: Some("elf".to_string()),
+                    }),
+                    OfferDecl::Resolver(OfferResolverDecl {
+                        source: Some(Ref::Realm(RealmRef{})),
+                        source_name: Some("pkg".to_string()),
+                        target: Some(Ref::Child(
+                            ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            }
+                        )),
+                        target_name: Some("pkg".to_string()),
+                    }),
+                    OfferDecl::Resolver(OfferResolverDecl {
+                        source: Some(Ref::Realm(RealmRef{})),
+                        source_name: Some("pkg".to_string()),
+                        target: Some(Ref::Collection(
+                           CollectionRef { name: "modular".to_string(), }
+                        )),
+                        target_name: Some("pkg".to_string()),
                     }),
                 ]);
                 decl
@@ -2878,6 +3212,8 @@ mod tests {
                 Error::invalid_collection("OfferStorageDecl", "target", "modular"),
                 Error::invalid_child("OfferRunnerDecl", "target", "netstack"),
                 Error::invalid_collection("OfferRunnerDecl", "target", "modular"),
+                Error::invalid_child("OfferResolverDecl", "target", "netstack"),
+                Error::invalid_collection("OfferResolverDecl", "target", "modular"),
             ])),
         },
 
@@ -3128,6 +3464,103 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::duplicate_field("RunnerDecl", "name", "elf"),
+            ])),
+        },
+
+        // Resolvers
+        test_validate_resolvers_empty => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.resolvers = Some(vec![ResolverDecl{
+                    name: None,
+                    source_path: None,
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::missing_field("ResolverDecl", "name"),
+                Error::missing_field("ResolverDecl", "source_path")
+            ])),
+        },
+        test_validate_resolvers_invalid_identifiers => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.resolvers = Some(vec![ResolverDecl{
+                    name: Some("^bad".to_string()),
+                    source_path: Some("&bad".to_string()),
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_character_in_field("ResolverDecl", "name", '^'),
+                Error::invalid_field("ResolverDecl", "source_path")
+            ])),
+        },
+        test_validate_resolvers_long_identifiers => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.resolvers = Some(vec![ResolverDecl{
+                    name: Some("a".repeat(101)),
+                    source_path: Some(format!("/{}", "f".repeat(1024))),
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::field_too_long("ResolverDecl", "name"),
+                Error::field_too_long("ResolverDecl", "source_path")
+            ])),
+        },
+        test_validate_resolvers_duplicate_name => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.resolvers = Some(vec![ResolverDecl{
+                    name: Some("a".to_string()),
+                    source_path: Some("/foo".to_string()),
+                },
+                ResolverDecl {
+                    name: Some("a".to_string()),
+                    source_path: Some("/bar".to_string()),
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::duplicate_field("ResolverDecl", "name", "a"),
+            ])),
+        },
+        test_validate_resolvers_missing_from_offer => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.offers = Some(vec![OfferDecl::Resolver(OfferResolverDecl{
+                    source: Some(Ref::Self_(SelfRef {})),
+                    source_name: Some("a".to_string()),
+                    target: Some(Ref::Child(ChildRef { name: "child".to_string(), collection: None })),
+                    target_name: Some("a".to_string()),
+                })]);
+                decl.children = Some(vec![ChildDecl {
+                    name: Some("child".to_string()),
+                    url: Some("test:///child".to_string()),
+                    startup: Some(StartupMode::Eager),
+                    environment: None,
+                }]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_resolver("OfferResolverDecl", "source", "a"),
+            ])),
+        },
+        test_validate_resolvers_missing_from_expose => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.exposes = Some(vec![ExposeDecl::Resolver(ExposeResolverDecl{
+                    source: Some(Ref::Self_(SelfRef {})),
+                    source_name: Some("a".to_string()),
+                    target: Some(Ref::Realm(RealmRef {})),
+                    target_name: Some("a".to_string()),
+                })]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_resolver("ExposeResolverDecl", "source", "a"),
             ])),
         },
     }

@@ -56,7 +56,7 @@ impl CmInto<fsys::ComponentDecl> for cm::Document {
             storage: self.storage.cm_into()?,
             runners: self.runners.cm_into()?,
             environments: self.environments.cm_into()?,
-            resolvers: None,
+            resolvers: self.resolvers.cm_into()?,
         })
     }
 }
@@ -80,7 +80,7 @@ impl CmInto<fsys::ExposeDecl> for cm::Expose {
             cm::Expose::Protocol(s) => fsys::ExposeDecl::Protocol(s.cm_into()?),
             cm::Expose::Directory(d) => fsys::ExposeDecl::Directory(d.cm_into()?),
             cm::Expose::Runner(r) => fsys::ExposeDecl::Runner(r.cm_into()?),
-            cm::Expose::Resolver(_) => return Err(Error::internal("unimplemented")),
+            cm::Expose::Resolver(r) => fsys::ExposeDecl::Resolver(r.cm_into()?),
         })
     }
 }
@@ -111,7 +111,7 @@ impl CmInto<fsys::OfferDecl> for cm::Offer {
             cm::Offer::Directory(d) => fsys::OfferDecl::Directory(d.cm_into()?),
             cm::Offer::Storage(s) => fsys::OfferDecl::Storage(s.cm_into()?),
             cm::Offer::Runner(r) => fsys::OfferDecl::Runner(r.cm_into()?),
-            cm::Offer::Resolver(_) => return Err(Error::internal("unimplemented")),
+            cm::Offer::Resolver(r) => fsys::OfferDecl::Resolver(r.cm_into()?),
         })
     }
 }
@@ -212,6 +212,17 @@ impl CmInto<fsys::ExposeRunnerDecl> for cm::ExposeRunner {
     }
 }
 
+impl CmInto<fsys::ExposeResolverDecl> for cm::ExposeResolver {
+    fn cm_into(self) -> Result<fsys::ExposeResolverDecl, Error> {
+        Ok(fsys::ExposeResolverDecl {
+            source: Some(self.source.cm_into()?),
+            source_name: Some(self.source_name.into()),
+            target: Some(self.target.cm_into()?),
+            target_name: Some(self.target_name.into()),
+        })
+    }
+}
+
 impl CmInto<fsys::OfferServiceDecl> for cm::OfferService {
     fn cm_into(self) -> Result<fsys::OfferServiceDecl, Error> {
         Ok(fsys::OfferServiceDecl {
@@ -273,6 +284,17 @@ impl CmInto<fsys::OfferRunnerDecl> for cm::OfferRunner {
     }
 }
 
+impl CmInto<fsys::OfferResolverDecl> for cm::OfferResolver {
+    fn cm_into(self) -> Result<fsys::OfferResolverDecl, Error> {
+        Ok(fsys::OfferResolverDecl {
+            source: Some(self.source.cm_into()?),
+            source_name: Some(self.source_name.into()),
+            target: Some(self.target.cm_into()?),
+            target_name: Some(self.target_name.into()),
+        })
+    }
+}
+
 impl CmInto<fsys::StorageType> for cm::StorageType {
     fn cm_into(self) -> Result<fsys::StorageType, Error> {
         match self {
@@ -318,6 +340,15 @@ impl CmInto<fsys::RunnerDecl> for cm::Runner {
         Ok(fsys::RunnerDecl {
             name: Some(self.name.into()),
             source: Some(self.source.cm_into()?),
+            source_path: Some(self.source_path.into()),
+        })
+    }
+}
+
+impl CmInto<fsys::ResolverDecl> for cm::Resolver {
+    fn cm_into(self) -> Result<fsys::ResolverDecl, Error> {
+        Ok(fsys::ResolverDecl {
+            name: Some(self.name.into()),
             source_path: Some(self.source_path.into()),
         })
     }
@@ -850,7 +881,19 @@ mod tests {
                             "target": "realm",
                             "target_name": "elf"
                         }
-                    }
+                    },
+                    {
+                        "resolver": {
+                            "source": {
+                                "child": {
+                                    "name": "logger"
+                                }
+                            },
+                            "source_name": "pkg_resolver",
+                            "target": "realm",
+                            "target_name": "pkg_resolver",
+                        }
+                    },
                 ],
                 "children": [
                     {
@@ -912,6 +955,15 @@ mod tests {
                             collection: None,
                         })),
                         target_name: Some("elf".to_string()),
+                        target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                    }),
+                    fsys::ExposeDecl::Resolver(fsys::ExposeResolverDecl {
+                        source_name: Some("pkg_resolver".to_string()),
+                        source: Some(fsys::Ref::Child(fsys::ChildRef{
+                            name: "logger".to_string(),
+                            collection: None,
+                        })),
+                        target_name: Some("pkg_resolver".to_string()),
                         target: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                     }),
                 ];
@@ -1099,7 +1151,7 @@ mod tests {
                     {
                         "runner": {
                             "source": {
-                                "self": {}
+                                "realm": {}
                             },
                             "source_name": "elf",
                             "target": {
@@ -1110,6 +1162,20 @@ mod tests {
                             "target_name": "elf"
                         }
                     },
+                    {
+                        "resolver": {
+                            "source": {
+                                "realm": {}
+                            },
+                            "source_name": "pkg_resolver",
+                            "target": {
+                                "child": {
+                                    "name": "logger"
+                                }
+                            },
+                            "target_name": "pkg_resolver",
+                        }
+                    }
                 ],
                 "children": [
                     {
@@ -1137,7 +1203,7 @@ mod tests {
                             "self": {}
                         }
                     }
-                ]
+                ],
             }),
             output = {
                 let offers = vec![
@@ -1261,7 +1327,7 @@ mod tests {
                         )),
                     }),
                     fsys::OfferDecl::Runner(fsys::OfferRunnerDecl {
-                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
                         source_name: Some("elf".to_string()),
                         target: Some(fsys::Ref::Child(
                            fsys::ChildRef {
@@ -1270,6 +1336,17 @@ mod tests {
                            }
                         )),
                         target_name: Some("elf".to_string()),
+                    }),
+                    fsys::OfferDecl::Resolver(fsys::OfferResolverDecl {
+                        source: Some(fsys::Ref::Realm(fsys::RealmRef {})),
+                        source_name: Some("pkg_resolver".to_string()),
+                        target: Some(fsys::Ref::Child(
+                            fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            }
+                        )),
+                        target_name: Some("pkg_resolver".to_string()),
                     }),
                 ];
                 let children = vec![
@@ -1503,6 +1580,27 @@ mod tests {
                 decl
             },
         },
+        test_translate_resolvers => {
+            input = json!({
+                "resolvers": [
+                    {
+                        "name": "pkg_resolver",
+                        "source_path": "/resolver",
+                    },
+                ]
+            }),
+            output = {
+                let resolvers = vec![
+                    fsys::ResolverDecl {
+                        name: Some("pkg_resolver".to_string()),
+                        source_path: Some("/resolver".to_string()),
+                    },
+                ];
+                let mut decl = new_component_decl();
+                decl.resolvers = Some(resolvers);
+                decl
+            },
+        },
         test_translate_all_sections => {
             input = json!({
                 "program": {
@@ -1595,7 +1693,13 @@ mod tests {
                         "name": "test_env",
                         "extends": "realm",
                     }
-                ]
+                ],
+                "resolvers": [
+                    {
+                        "name": "pkg_resolver",
+                        "source_path": "/resolver",
+                    }
+                ],
             }),
             output = {
                 let program = fdata::Dictionary {entries: Some(vec![
@@ -1687,6 +1791,12 @@ mod tests {
                         extends: Some(fsys::EnvironmentExtends::Realm),
                     }
                 ];
+                let resolvers = vec![
+                    fsys::ResolverDecl {
+                        name: Some("pkg_resolver".to_string()),
+                        source_path: Some("/resolver".to_string()),
+                    }
+                ];
                 fsys::ComponentDecl {
                     program: Some(program),
                     uses: Some(uses),
@@ -1698,7 +1808,7 @@ mod tests {
                     storage: Some(storages),
                     runners: Some(runners),
                     environments: Some(environments),
-                    resolvers: None,
+                    resolvers: Some(resolvers),
                 }
             },
         },

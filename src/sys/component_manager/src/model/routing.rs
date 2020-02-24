@@ -652,6 +652,7 @@ async fn walk_offer_chain<'a>(
             OfferDecl::Directory(d) => OfferSource::Directory(&d.source),
             OfferDecl::Storage(s) => OfferSource::Storage(s.source()),
             OfferDecl::Runner(r) => OfferSource::Runner(&r.source),
+            OfferDecl::Resolver(_) => return Err(ModelError::unsupported("Resolver capability")),
         };
         let (dir_rights, decl_subdir) = match offer {
             OfferDecl::Directory(OfferDirectoryDecl { rights, subdir, .. }) => {
@@ -807,6 +808,7 @@ async fn walk_expose_chain<'a>(pos: &'a mut WalkPosition) -> Result<CapabilitySo
             ExposeDecl::Protocol(ls) => (ExposeSource::Protocol(&ls.source), &ls.target),
             ExposeDecl::Directory(d) => (ExposeSource::Directory(&d.source), &d.target),
             ExposeDecl::Runner(r) => (ExposeSource::Runner(&r.source), &r.target),
+            ExposeDecl::Resolver(_) => return Err(ModelError::unsupported("Resolver capability")),
         };
         if target != &ExposeTarget::Realm {
             return Err(ModelError::capability_discovery_error(format_err!(

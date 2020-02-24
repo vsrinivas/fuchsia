@@ -11,8 +11,8 @@ use {
         realm::{Realm, RealmState},
     },
     cm_rust::{
-        ComponentDecl, OfferDecl, OfferDirectorySource, OfferRunnerSource, OfferServiceSource,
-        OfferStorageSource, OfferTarget, StorageDecl, StorageDirectorySource,
+        ComponentDecl, OfferDecl, OfferDirectorySource, OfferResolverSource, OfferRunnerSource,
+        OfferServiceSource, OfferStorageSource, OfferTarget, StorageDecl, StorageDirectorySource,
     },
     futures::future::select_all,
     maplit::hashset,
@@ -440,6 +440,24 @@ pub fn process_component_dependencies(
                     }
                 }
             }
+            OfferDecl::Resolver(resolver_offer) => {
+                match &resolver_offer.source {
+                    OfferResolverSource::Child(source) => match &resolver_offer.target {
+                        OfferTarget::Child(target) => vec![(
+                            DependencyNode::Child(source.clone()),
+                            DependencyNode::Child(target.clone()),
+                        )],
+                        OfferTarget::Collection(target) => vec![(
+                            DependencyNode::Child(source.clone()),
+                            DependencyNode::Collection(target.clone()),
+                        )],
+                    },
+                    OfferResolverSource::Self_ | OfferResolverSource::Realm => {
+                        // Capabilities coming from the parent aren't tracked.
+                        continue;
+                    }
+                }
+            }
         };
 
         for (capability_provider, capability_target) in source_target_pairs {
@@ -472,8 +490,9 @@ mod tests {
         crate::model::testing::test_helpers::default_component_decl,
         anyhow::Error,
         cm_rust::{
-            CapabilityPath, ChildDecl, DependencyType, ExposeDecl, ExposeProtocolDecl,
-            ExposeSource, ExposeTarget, OfferProtocolDecl, OfferServiceSource, OfferTarget,
+            CapabilityName, CapabilityPath, ChildDecl, DependencyType, ExposeDecl,
+            ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferProtocolDecl, OfferResolverDecl,
+            OfferServiceSource, OfferTarget,
         },
         fidl_fuchsia_sys2 as fsys,
         std::collections::HashMap,
@@ -987,5 +1006,41 @@ mod tests {
         };
 
         process_component_dependencies(&decl);
+    }
+
+    #[test]
+    fn test_resolver_capability_creates_dependency() {
+        let child_a = ChildDecl {
+            name: "childA".to_string(),
+            url: "ignored:///child".to_string(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+        };
+        let child_b = ChildDecl {
+            name: "childB".to_string(),
+            url: "ignored:///child".to_string(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+        };
+        let decl = ComponentDecl {
+            offers: vec![OfferDecl::Resolver(OfferResolverDecl {
+                source: OfferResolverSource::Child("childA".to_string()),
+                source_name: CapabilityName::try_from("resolver").unwrap(),
+                target_name: CapabilityName::try_from("resolver").unwrap(),
+                target: OfferTarget::Child("childB".to_string()),
+            })],
+            children: vec![child_a.clone(), child_b.clone()],
+            ..default_component_decl()
+        };
+
+        let mut expected = vec![
+            (
+                DependencyNode::Child(child_a.name.clone()),
+                vec![DependencyNode::Child(child_b.name.clone())],
+            ),
+            (DependencyNode::Child(child_b.name.clone()), vec![]),
+        ];
+        expected.sort_unstable();
+        validate_results(expected, process_component_dependencies(&decl));
     }
 }
