@@ -448,6 +448,7 @@ static bool RamdiskTestFilesystem(void) {
   strcpy(blockpath, "/dev/class/block/");
   DIR* dir = opendir(blockpath);
   ASSERT_NONNULL(dir);
+  const auto closer = fbl::AutoCall([dir]() { closedir(dir); });
 
   typedef struct watcher_args {
     const char* expected_name;
@@ -1725,6 +1726,7 @@ static bool RamdiskCreateAt(void) {
   ASSERT_EQ(ramdisk_create_at(devmgr.devfs_root().get(), PAGE_SIZE / 2, 512, &ramdisk), ZX_OK);
 
   ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), ramdisk_get_path(ramdisk), &fd), ZX_OK);
+  ramdisk_destroy(ramdisk);
   END_TEST;
 }
 
@@ -1748,6 +1750,7 @@ static bool RamdiskCreateAtGuid(void) {
             ZX_OK);
 
   ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), ramdisk_get_path(ramdisk), &fd), ZX_OK);
+  ramdisk_destroy(ramdisk);
   END_TEST;
 }
 
@@ -1769,6 +1772,7 @@ static bool RamdiskCreateAtVmo(void) {
   ASSERT_EQ(ramdisk_create_at_from_vmo(devmgr.devfs_root().get(), vmo.release(), &ramdisk), ZX_OK);
 
   ASSERT_EQ(RecursiveWaitForFile(devmgr.devfs_root(), ramdisk_get_path(ramdisk), &fd), ZX_OK);
+  ramdisk_destroy(ramdisk);
   END_TEST;
 }
 
