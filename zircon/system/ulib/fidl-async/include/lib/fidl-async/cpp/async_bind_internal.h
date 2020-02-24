@@ -45,15 +45,14 @@ class AsyncBinding {
     UnbindInternal(std::move(calling_ref), nullptr);
   }
 
-  void Close(std::shared_ptr<AsyncBinding>&& calling_ref,
-             zx_status_t epitaph) __TA_EXCLUDES(lock_) {
+  void Close(std::shared_ptr<AsyncBinding>&& calling_ref, zx_status_t epitaph)
+      __TA_EXCLUDES(lock_) {
     UnbindInternal(std::move(calling_ref), &epitaph);
   }
 
  protected:
   explicit AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-                        TypeErasedDispatchFn dispatch_fn,
-                        TypeErasedOnUnboundFn on_unbound_fn);
+                        TypeErasedDispatchFn dispatch_fn, TypeErasedOnUnboundFn on_unbound_fn);
 
  private:
   friend fidl::internal::AsyncTransaction;
@@ -75,7 +74,7 @@ class AsyncBinding {
   }
 
   static void OnUnboundTask(async_dispatcher_t* dispatcher, async_task_t* task,
-                              zx_status_t status) {
+                            zx_status_t status) {
     static_assert(std::is_standard_layout<UnboundTask>::value, "Need offsetof.");
     static_assert(offsetof(UnboundTask, task) == 0, "Cast async_task_t* to UnboundTask*.");
     auto* unbound_task = reinterpret_cast<UnboundTask*>(task);
@@ -89,8 +88,8 @@ class AsyncBinding {
   void MessageHandler(zx_status_t status, const zx_packet_signal_t* signal) __TA_EXCLUDES(lock_);
 
   // Used by both Close() and Unbind().
-  void UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
-                      zx_status_t* epitaph) __TA_EXCLUDES(lock_);
+  void UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref, zx_status_t* epitaph)
+      __TA_EXCLUDES(lock_);
 
   // Triggered by explicit Unbind(), channel peer closed, or other channel/dispatcher error in the
   // context of a dispatcher thread with exclusive ownership of the internal binding reference. If
@@ -99,8 +98,8 @@ class AsyncBinding {
   void OnUnbind(zx_status_t epitaph, UnboundReason reason) __TA_EXCLUDES(lock_);
 
   // Destroys calling_ref and waits for the release of any other outstanding references to the
-  // binding. Recovers the channel endpoint if requested.
-  zx::channel WaitForDelete(std::shared_ptr<AsyncBinding>&& calling_ref, bool get_channel);
+  // binding. Recovers the channel endpoint.
+  zx::channel WaitForDelete(std::shared_ptr<AsyncBinding>&& calling_ref);
 
   // Invokes OnUnbind() with the appropriate arguments based on the status.
   void OnEnableNextDispatchError(zx_status_t error);
@@ -118,7 +117,10 @@ class AsyncBinding {
   zx::channel* out_channel_ = nullptr;
 
   std::mutex lock_;
-  struct { zx_status_t status; bool send; } epitaph_ __TA_GUARDED(lock_) = {ZX_OK, false};
+  struct {
+    zx_status_t status;
+    bool send;
+  } epitaph_ __TA_GUARDED(lock_) = {ZX_OK, false};
   bool unbind_ __TA_GUARDED(lock_) = false;
   bool begun_ __TA_GUARDED(lock_) = false;
 };

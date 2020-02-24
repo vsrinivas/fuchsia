@@ -65,17 +65,19 @@ void AsyncBinding::OnUnbind(zx_status_t epitaph, UnboundReason reason) {
   auto* intf = interface_;
 
   // Release the internal reference and wait for the deleter to run.
-  auto channel = WaitForDelete(std::move(binding), reason != UnboundReason::kPeerClosed);
+  auto channel = WaitForDelete(std::move(binding));
 
-  // If required, send the epitaph and close the channel.
+  // If required, send the epitaph.
   if (send_epitaph && channel) {
-    auto tmp = std::move(channel);
-    fidl_epitaph_write(tmp.get(), epitaph);
+    fidl_epitaph_write(channel.get(), epitaph);
   }
 
   // Execute the unbound hook if specified.
-  if (on_unbound_fn)
+  if (on_unbound_fn) {
     on_unbound_fn(intf, reason, std::move(channel));
+  }
+
+  // With no unbound callback, we close the channel here.
 }
 
 void AsyncBinding::MessageHandler(zx_status_t status, const zx_packet_signal_t* signal) {
@@ -175,16 +177,15 @@ void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
   bool peer_closed = epitaph && *epitaph == ZX_ERR_PEER_CLOSED;
   // Wait for deletion and take the channel. This will only wait on internal code which will not
   // block indefinitely.
-  auto channel = WaitForDelete(std::move(binding), !peer_closed);
+  auto channel = WaitForDelete(std::move(binding));
 
-  // If required, send the epitaph and close the channel.
+  // If required, send the epitaph.
   if (channel && epitaph) {
-    auto tmp = std::move(channel);
-    fidl_epitaph_write(tmp.get(), *epitaph);
+    fidl_epitaph_write(channel.get(), *epitaph);
   }
 
   if (!on_unbound_fn)
-    return;
+    return;  // channel goes out of scope here and gets closed.
   // Send the error handler as part of a new task on the dispatcher. This avoids nesting user code
   // in the same thread context which could cause deadlock.
   auto task = new UnboundTask{
@@ -196,13 +197,11 @@ void AsyncBinding::UnbindInternal(std::shared_ptr<AsyncBinding>&& calling_ref,
   ZX_ASSERT(async_post_task(dispatcher, &task->task) == ZX_OK);
 }
 
-zx::channel AsyncBinding::WaitForDelete(std::shared_ptr<AsyncBinding>&& calling_ref,
-                                        bool get_channel) {
+zx::channel AsyncBinding::WaitForDelete(std::shared_ptr<AsyncBinding>&& calling_ref) {
   sync_completion_t on_delete;
   calling_ref->on_delete_ = &on_delete;
   zx::channel channel;
-  if (get_channel)
-    calling_ref->out_channel_ = &channel;
+  calling_ref->out_channel_ = &channel;
   calling_ref.reset();
   ZX_ASSERT(sync_completion_wait(&on_delete, ZX_TIME_INFINITE) == ZX_OK);
   return channel;
