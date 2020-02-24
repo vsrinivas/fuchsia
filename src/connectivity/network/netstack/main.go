@@ -72,6 +72,24 @@ const (
 	//
 	// As per RFC 4861 section 10, 1s is the default time between retransmissions.
 	dadRetransmitTimer = time.Second
+
+	// maxRtrSolicitations is the maximum number of Router Solicitation messages
+	// to send when a NIC becomes enabled.
+	//
+	// As per RFC 4861 section 10, 3 is the default number of messages.
+	maxRtrSolicitations = 3
+
+	// rtrSolicitationInterval is the amount of time between sending Router
+	// Solicitation messages.
+	//
+	// As per RFC 4861 section 10, 4s is the default time between transmissions.
+	rtrSolicitationInterval = 4 * time.Second
+
+	// maxRtrSolicitationDelay is the maximum amount of time to wait before
+	// sending the first Router Solicitation message.
+	//
+	// As per RFC 4861 section 10, 1s is the default maximum time to wait.
+	maxRtrSolicitationDelay = time.Second
 )
 
 type bindingSetCounterStat struct {
@@ -167,12 +185,15 @@ func Main() {
 		},
 		HandleLocal: true,
 		NDPConfigs: tcpipstack.NDPConfigurations{
-			DupAddrDetectTransmits: dadTransmits,
-			RetransmitTimer:        dadRetransmitTimer,
-			HandleRAs:              true,
-			DiscoverDefaultRouters: true,
-			DiscoverOnLinkPrefixes: true,
-			AutoGenGlobalAddresses: true,
+			DupAddrDetectTransmits:  dadTransmits,
+			RetransmitTimer:         dadRetransmitTimer,
+			MaxRtrSolicitations:     maxRtrSolicitations,
+			RtrSolicitationInterval: rtrSolicitationInterval,
+			MaxRtrSolicitationDelay: maxRtrSolicitationDelay,
+			HandleRAs:               true,
+			DiscoverDefaultRouters:  true,
+			DiscoverOnLinkPrefixes:  true,
+			AutoGenGlobalAddresses:  true,
 		},
 		NDPDisp:              ndpDisp,
 		AutoGenIPv6LinkLocal: true,
