@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/fidl/fidl.gni")
 import("//build/testing/environments.gni")
 import("//topaz/runtime/dart/dart_fuchsia_test.gni")
@@ -96,4 +97,16 @@ dart_fuchsia_test("simple_browser_target_test") {
   ]
 
   environments = basic_envs
+}
+
+config_data("web_engine_config") {
+  for_pkg = "web_engine"
+
+  outputs = [
+    "config.json",
+  ]
+
+  sources = [
+    "config/web_engine.json",
+  ]
 }
