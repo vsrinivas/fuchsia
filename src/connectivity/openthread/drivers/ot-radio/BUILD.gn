@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
 
@@ -37,8 +38,36 @@ driver_module("ot-radio") {
   include_dirs =
       [ "//src/connectivity/openthread/third_party/openthread/spinel-framer" ]
 
+  if (internal_access) {
+    sources += [ "ot_radio_bootloader.cc" ]
+    defines = [ "INTERNAL_ACCESS" ]
+    deps += [ ":version-string" ]
+  }
+
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+if (internal_access) {
+  source_set("version-string") {
+    sources = [ "$target_gen_dir/ot_radio_firmware_version_string.cc" ]
+
+    deps = [ ":gen-version-string" ]
+  }
+
+  copy("ot-radio-firmware") {
+    sources = [ "//prebuilt/connectivity/openthread/radio-firmware/ot-ncp-app-release.bin" ]
+    outputs = [ "$root_out_dir/firmware/{{source_file_part}}" ]
+  }
+
+  action("gen-version-string") {
+    visibility = [ ":version-string" ]
+    outputs = [ "$target_gen_dir/ot_radio_firmware_version_string.cc" ]
+    sources = [ "//prebuilt/connectivity/openthread/radio-firmware/ot-ncp-app-release.bin" ]
+    script = "gen-version-string.sh"
+    args = rebase_path(outputs, root_build_dir) +
+           rebase_path(sources, root_build_dir)
+  }
 }
 
 package("openthread") {
@@ -52,4 +81,19 @@ package("openthread") {
       name = "ot-radio-driver.so"
     },
   ]
+
+  if (internal_access) {
+    deps += [
+      # The copy step has to be in the shared-library toolchain to use the
+      # expected output directory, since we treat firmware blobs as if they
+      # were libraries which always use the shared-library toolchain to build.
+      ":ot-radio-firmware($shlib_toolchain)",
+    ]
+
+    libraries = [
+      {
+        name = "firmware/ot-ncp-app-release.bin"
+      },
+    ]
+  }
 }

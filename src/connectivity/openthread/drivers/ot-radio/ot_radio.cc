@@ -4,6 +4,7 @@
 
 #include "ot_radio.h"
 
+#include <ctype.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/driver-unit-test/utils.h>
@@ -13,6 +14,9 @@
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/status.h>
+#include <zircon/time.h>
+
+#include <iostream>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -29,6 +33,8 @@
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
 
+#include "ot_radio_bootloader.h"
+
 namespace ot {
 namespace lowpan_spinel_fidl = ::llcpp::fuchsia::lowpan::spinel;
 
@@ -37,15 +43,8 @@ enum {
   COMPONENT_SPI,
   COMPONENT_INT_GPIO,
   COMPONENT_RESET_GPIO,
+  COMPONENT_BOOTLOADER_GPIO,
   COMPONENT_COUNT,
-};
-
-enum {
-  PORT_KEY_RADIO_IRQ,
-  PORT_KEY_TX_TO_APP,
-  PORT_KEY_RX_FROM_APP,
-  PORT_KEY_TX_TO_RADIO,
-  PORT_KEY_EXIT_THREAD,
 };
 
 OtRadioDevice::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(OtRadioDevice& ot_radio)
@@ -169,7 +168,11 @@ void OtRadioDevice::SetChannel(zx::channel channel, SetChannelCompleter::Sync co
 
 zx_status_t OtRadioDevice::StartLoopThread() {
   zxlogf(TRACE, "Start loop thread\n");
-  return loop_.StartThread("ot-stack-loop");
+  zx_status_t status = loop_.StartThread("ot-stack-loop");
+  if (status == ZX_OK) {
+    thrd_status_.loop_thrd_running = true;
+  }
+  return status;
 }
 
 bool OtRadioDevice::RunUnitTests(void* ctx, zx_device_t* parent, zx_handle_t channel) {
@@ -234,6 +237,21 @@ zx_status_t OtRadioDevice::Init() {
     return status;
   }
 
+  status = device_get_protocol(components[COMPONENT_BOOTLOADER_GPIO], ZX_PROTOCOL_GPIO,
+                               &gpio_[OT_RADIO_BOOTLOADER_PIN]);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "ot-radio %s: failed to acquire radio bootloader pin\n", __func__);
+    return status;
+  }
+
+  status = gpio_[OT_RADIO_BOOTLOADER_PIN].ConfigOut(1);
+
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "ot-radio %s: failed to configure bootloader gpio, status = %d", __func__,
+           status);
+    return status;
+  }
+
   uint32_t device_id;
   status = device_get_metadata(components[COMPONENT_PDEV], DEVICE_METADATA_PRIVATE, &device_id,
                                sizeof(device_id), &actual);
@@ -248,7 +266,7 @@ zx_status_t OtRadioDevice::Init() {
   return ZX_OK;
 }
 
-zx_status_t OtRadioDevice::ReadRadioPacket(void) {
+zx_status_t OtRadioDevice::ReadRadioPacket() {
   if ((inbound_allowance_ > 0) && (spinel_framer_->IsPacketPresent())) {
     spinel_framer_->ReceivePacketFromRadio(spi_rx_buffer_, &spi_rx_buffer_len_);
     if (spi_rx_buffer_len_ > 0) {
@@ -299,9 +317,13 @@ zx_status_t OtRadioDevice::RadioPacketTx(uint8_t* frameBuffer, uint16_t length) 
 }
 
 zx_status_t OtRadioDevice::DriverUnitTestGetNCPVersion() {
-  uint8_t get_ncp_version_cmd[] = {0x81, 0x02, 0x02};  // HEADER, CMD ID, PROPERTY ID
   spinel_framer_->SetInboundAllowanceStatus(true);
   inbound_allowance_ = kOutboundAllowanceInit;
+  return GetNCPVersion();
+}
+
+zx_status_t OtRadioDevice::GetNCPVersion() {
+  uint8_t get_ncp_version_cmd[] = {0x81, 0x02, 0x02};  // HEADER, CMD ID, PROPERTY ID
   return RadioPacketTx(get_ncp_version_cmd, sizeof(get_ncp_version_cmd));
 }
 
@@ -344,7 +366,7 @@ zx_status_t OtRadioDevice::Reset() {
   return status;
 }
 
-zx_status_t OtRadioDevice::RadioThread(void) {
+zx_status_t OtRadioDevice::RadioThread() {
   zx_status_t status = ZX_OK;
   zxlogf(ERROR, "ot-radio: entered thread\n");
 
@@ -425,7 +447,7 @@ zx_status_t OtRadioDevice::Create(void* ctx, zx_device_t* parent,
   return ZX_OK;
 }
 
-zx_status_t OtRadioDevice::Bind(void) {
+zx_status_t OtRadioDevice::Bind() {
   zx_status_t status = DdkAdd("ot-radio", 0, nullptr, 0, ZX_PROTOCOL_OT_RADIO);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ot-radio: Could not create device: %d\n", status);
@@ -436,7 +458,7 @@ zx_status_t OtRadioDevice::Bind(void) {
   return status;
 }
 
-zx_status_t OtRadioDevice::Start(void) {
+zx_status_t OtRadioDevice::CreateAndBindPortToIntr() {
   zx_status_t status = zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ot-radio: port create failed %d\n", status);
@@ -444,20 +466,68 @@ zx_status_t OtRadioDevice::Start(void) {
   }
 
   status = interrupt_.bind(port_, PORT_KEY_RADIO_IRQ, 0);
-
   if (status != ZX_OK) {
     zxlogf(ERROR, "ot-radio: interrupt bind failed %d\n", status);
     return status;
   }
 
-  auto cleanup = fbl::MakeAutoCall([&]() { ShutDown(); });
+  return ZX_OK;
+}
 
+void OtRadioDevice::StartRadioThread() {
   auto callback = [](void* cookie) {
     return reinterpret_cast<OtRadioDevice*>(cookie)->RadioThread();
   };
   int ret = thrd_create_with_name(&thread_, callback, this, "ot-radio-thread");
-
   ZX_DEBUG_ASSERT(ret == thrd_success);
+
+  // Set status flag so shutdown can take appropriate action
+  // cleared by StopRadioThread
+  thrd_status_.radio_thrd_running = true;
+}
+
+zx_status_t OtRadioDevice::Start() {
+  zx_status_t status = CreateAndBindPortToIntr();
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  StartRadioThread();
+  auto cleanup = fbl::MakeAutoCall([&]() { ShutDown(); });
+
+#ifdef INTERNAL_ACCESS
+  // Update the NCP Firmware if new version is available
+  bool update_fw = false;
+  status = CheckFWUpdateRequired(&update_fw);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "ot-radio: Check FW Update required failed with status: %d\n", status);
+    return status;
+  }
+
+  if (update_fw) {
+    // Print as it may be useful, expected to be rare occurence,
+    zxlogf(INFO, "ot-radio: Will start FW update\n");
+
+    // Stop the loop for handling port events, so port can be used by bootloader
+    StopRadioThread();
+
+    // Update firmware here
+    OtRadioDeviceBootloader dev_bl(this);
+    OtRadioBlResult result = dev_bl.UpdateRadioFirmware();
+    if (result != BL_RET_SUCCESS) {
+      zxlogf(ERROR, "ot-radio: radio firmware update failed with %d. Last zx_status %d\n", result,
+             dev_bl.GetLastZxStatus());
+      return ZX_ERR_INTERNAL;
+    }
+
+    zxlogf(INFO, "ot-radio: FW update done successfully\n");
+
+    // Restart the Radio thread:
+    StartRadioThread();
+  } else {
+    zxlogf(TRACE, "ot-radio: NCP firmware is already up-to-date\n");
+  }
+#endif
 
   status = StartLoopThread();
   if (status != ZX_OK) {
@@ -472,6 +542,61 @@ zx_status_t OtRadioDevice::Start(void) {
   return status;
 }
 
+#ifdef INTERNAL_ACCESS
+zx_status_t OtRadioDevice::CheckFWUpdateRequired(bool* update_fw) {
+  // TODO - Early exit is added until License issue on firmware is resolved and
+  // we can upload the actual firmware. Tracked by bug 43881
+  // Once license is available:
+  // 1) Create new CIPD package with firmware and upload it.
+  // 2) Checkin integration change which uses that package
+  // 3) Remove next two lines and also enable corresponding tests
+  *update_fw = false;
+  return ZX_OK;
+
+  // Get the new firmware version:
+  std::string new_fw_version = GetNewFirmwareVersion();
+  if (new_fw_version.size() == 0) {
+    // Invalid version string indicates invalid firmware
+    zxlogf(ERROR, "ot-radio: The new firmware is invalid\n");
+    *update_fw = false;
+    // Return error instead of ZX_OK and just not-updating,
+    // may point to some bug
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  // Get current firmware version
+  std::string cur_fw_version;
+  auto status = GetNCPVersion();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "ot-radio: get ncp version failed with status: %d\n", status);
+    return status;
+  }
+
+  // Wait for response to arrive, signaled by spi_rx_complete_
+  status = sync_completion_wait(&spi_rx_complete_, ZX_SEC(10));
+  if (status != ZX_OK) {
+    zxlogf(ERROR,
+           "ot-radio: sync_completion_wait_deadline failed with status: %d, \
+       this means firmware may be behaving incorrectly\n",
+           status);
+    *update_fw = true;
+    return ZX_OK;
+  }
+
+  // Response is received, copy it to the string cur_fw_version
+  // First make sure that last character is null
+  ZX_DEBUG_ASSERT(spi_rx_buffer_len_ <= kMaxFrameSize);
+  spi_rx_buffer_[spi_rx_buffer_len_ - 1] = '\0';
+  zxlogf(TRACE, "ot-radio: response received size = %d, value : %s\n", spi_rx_buffer_len_,
+         reinterpret_cast<char*>(&(spi_rx_buffer_[3])));
+  cur_fw_version.assign(reinterpret_cast<char*>(&(spi_rx_buffer_[3])));
+
+  // We want to update firmware if the versions don't match
+  *update_fw = (cur_fw_version.compare(new_fw_version) != 0);
+  return ZX_OK;
+}
+#endif
+
 void OtRadioDevice::DdkRelease() { delete this; }
 
 void OtRadioDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
@@ -479,13 +604,30 @@ void OtRadioDevice::DdkUnbindNew(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
+void OtRadioDevice::StopRadioThread() {
+  if (thrd_status_.radio_thrd_running) {
+    zx_port_packet packet = {PORT_KEY_EXIT_THREAD, ZX_PKT_TYPE_USER, ZX_OK, {}};
+    port_.queue(&packet);
+    thrd_join(thread_, NULL);
+    thrd_status_.radio_thrd_running = false;
+  }
+}
+
+void OtRadioDevice::StopLoopThread() {
+  if (thrd_status_.loop_thrd_running) {
+    loop_.Shutdown();
+    thrd_status_.loop_thrd_running = false;
+  }
+}
+
 zx_status_t OtRadioDevice::ShutDown() {
-  zx_port_packet packet = {PORT_KEY_EXIT_THREAD, ZX_PKT_TYPE_USER, ZX_OK, {}};
-  port_.queue(&packet);
-  thrd_join(thread_, NULL);
+  StopRadioThread();
+
   gpio_[OT_RADIO_INT_PIN].ReleaseInterrupt();
   interrupt_.destroy();
-  loop_.Shutdown();
+
+  StopLoopThread();
+
   return ZX_OK;
 }
 

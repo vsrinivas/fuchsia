@@ -98,6 +98,7 @@ static const gpio_pin_t gpio_pins[] = {
     // For OpenThread radio
     {GPIO_OT_RADIO_RESET},
     {GPIO_OT_RADIO_INTERRUPT},
+    {GPIO_OT_RADIO_BOOTLOADER},
     // LED
     {GPIO_AMBER_LED},
     {GPIO_GREEN_LED},

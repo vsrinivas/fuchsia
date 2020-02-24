@@ -43,6 +43,10 @@ static constexpr zx_bind_inst_t gpio_reset_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_OT_RADIO_RESET),
 };
+static constexpr zx_bind_inst_t gpio_bootloader_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_OT_RADIO_BOOTLOADER),
+};
 static constexpr device_component_part_t ot_dev_component[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(ot_dev_match), ot_dev_match},
@@ -55,10 +59,15 @@ static constexpr device_component_part_t gpio_reset_component[] = {
     {fbl::count_of(root_match), root_match},
     {fbl::count_of(gpio_reset_match), gpio_reset_match},
 };
+static constexpr device_component_part_t gpio_bootloader_component[] = {
+    {fbl::count_of(root_match), root_match},
+    {fbl::count_of(gpio_bootloader_match), gpio_bootloader_match},
+};
 static constexpr device_component_t ot_components[] = {
     {fbl::count_of(ot_dev_component), ot_dev_component},
     {fbl::count_of(gpio_int_component), gpio_int_component},
     {fbl::count_of(gpio_reset_component), gpio_reset_component},
+    {fbl::count_of(gpio_bootloader_component), gpio_bootloader_component},
 };
 
 zx_status_t Sherlock::OtRadioInit() {
