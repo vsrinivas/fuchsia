@@ -6,7 +6,7 @@
 //! These tests are not intended for verifying PCAPNG formats in general, only that used by netdump.
 
 use {
-    anyhow::{format_err, Error},
+    anyhow::{format_err, Context, Error},
     fuchsia_async as fasync,
     helper::*,
     net_types::ip::IpVersion,
@@ -48,7 +48,7 @@ fn main() -> Result<(), Error> {
 fn read_default_dumpfile() -> Result<Vec<u8>, Error> {
     let path_str = format!("{}/{}", DUMPFILE_DIR, DEFAULT_DUMPFILE);
     let path = Path::new(&path_str);
-    let file = std::fs::read(&path)?;
+    let file = std::fs::read(&path).context("Read dumpfile")?;
     Ok(file)
 }
 
@@ -213,7 +213,7 @@ fn pcapng_no_packets_test(env: &mut TestEnvironment) -> Result<(), Error> {
         .insert_pcapng_dump_to_stdout()
         .insert_write_to_dumpfile(DEFAULT_DUMPFILE);
 
-    let output = env.run_test_case_no_packets(args.into())?;
+    let output = env.run_test_case_no_packets(args.into()).context("Run test case")?;
     let dumpfile = read_default_dumpfile()?;
     assert_eq!(dumpfile.len(), SECTION_HEADER_LENGTH + INTERFACE_DESCRIPTION_LENGTH);
     assert_eq!(dumpfile, output.stdout);

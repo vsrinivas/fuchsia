@@ -29,8 +29,12 @@ use {
 
 mod tests;
 
-/// Directory for dumpfile to reside.
-pub const DUMPFILE_DIR: &str = "/vdata";
+/// Local directory where dumpfile will be written.
+///
+/// This directory will be forwarded to netdump's namespace.
+pub const DUMPFILE_DIR: &str = "/data";
+/// The name that `DUMPFILE_DIR` takes when forwarded to netdump's namespace.
+const NETDUMP_OUTPUT_DIR: &str = "/out";
 /// Default dumpfile name to use.
 pub const DEFAULT_DUMPFILE: &str = "netdump.pcapng";
 /// Minimum valid dumpfile size in bytes.
@@ -89,7 +93,8 @@ impl Args {
     /// Helper method for inserting a write to pcapng dumpfile argument.
     /// `path`: The file path to use, relative to `DUMPFILE_DIR`.
     pub fn insert_write_to_dumpfile(self, path: &str) -> Self {
-        self.insert_arg("-w".into()).insert_arg(format!("{}/{}", DUMPFILE_DIR, path))
+        // NOTE: `DUMPFILE_DIR` is forwarded to netdump under the name `NETDUMP_OUTPUT_DIR`
+        self.insert_arg("-w".into()).insert_arg(format!("{}/{}", NETDUMP_OUTPUT_DIR, path))
     }
 
     /// Helper method for inserting a pcapng dump to stdout argument.
@@ -157,6 +162,12 @@ pub struct TestEnvironment {
     executor: Executor,
 }
 
+fn new_netdump_app_builder(args: Vec<String>) -> Result<client::AppBuilder, Error> {
+    Ok(client::AppBuilder::new(NETDUMP_URL.to_string())
+        .add_dir_to_namespace(NETDUMP_OUTPUT_DIR.into(), File::open(DUMPFILE_DIR)?)?
+        .args(args))
+}
+
 impl TestEnvironment {
     pub fn new(mut executor: Executor, test_name: &str) -> Result<Self, Error> {
         let env = client::connect_to_service::<ManagedEnvironmentMarker>()?;
@@ -205,8 +216,7 @@ impl TestEnvironment {
     ) -> Result<client::Output, Error> {
         Self::remove_dumpfile(dumpfile)?;
 
-        let app_fut =
-            client::AppBuilder::new(NETDUMP_URL.to_string()).args(args).output(&self.launcher)?;
+        let app_fut = new_netdump_app_builder(args)?.output(&self.launcher)?;
 
         let watcher_fut = Box::pin(Self::watch_for_dumpfile(dumpfile.into()));
         let setup_fut = future::select(app_fut, watcher_fut);
@@ -231,8 +241,7 @@ impl TestEnvironment {
     /// Can be reused for multiple test cases provided that all previous test cases passed and did not
     /// return `Result::Err`. Useful for testing invalid packet capture setup.
     pub fn run_test_case_no_packets(&mut self, args: Vec<String>) -> Result<client::Output, Error> {
-        let app_fut =
-            client::AppBuilder::new(NETDUMP_URL.to_string()).args(args).output(&self.launcher)?;
+        let app_fut = new_netdump_app_builder(args)?.output(&self.launcher)?;
 
         self.executor.run_singlethreaded(app_fut)
     }
