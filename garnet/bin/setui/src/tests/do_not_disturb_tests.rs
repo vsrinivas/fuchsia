@@ -4,7 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::registry::device_storage::{testing::*, DeviceStorageFactory},
+    crate::registry::device_storage::testing::*,
     crate::switchboard::base::{DoNotDisturbInfo, SettingType},
     crate::EnvironmentBuilder,
     crate::Runtime,
@@ -16,7 +16,10 @@ const ENV_NAME: &str = "settings_service_do_not_disturb_test_environment";
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_do_not_disturb() {
     let storage_factory = InMemoryStorageFactory::create_handle();
-    let store = storage_factory.lock().await.get_store::<DoNotDisturbInfo>();
+    let store = storage_factory
+        .lock()
+        .await
+        .get_device_storage::<DoNotDisturbInfo>(StorageAccessContext::Test);
 
     // Prepopulate initial value.
     {

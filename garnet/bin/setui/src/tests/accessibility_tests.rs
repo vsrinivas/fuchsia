@@ -6,7 +6,6 @@
 use {
     crate::fidl_clone::FIDLClone,
     crate::registry::device_storage::testing::*,
-    crate::registry::device_storage::DeviceStorageFactory,
     crate::switchboard::accessibility_types::{AccessibilityInfo, ColorBlindnessType},
     crate::switchboard::base::SettingType,
     crate::EnvironmentBuilder,
@@ -70,7 +69,8 @@ async fn test_accessibility_set_all() {
 
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = InMemoryStorageFactory::create_handle();
-    let store = factory.lock().await.get_store::<AccessibilityInfo>();
+    let store =
+        factory.lock().await.get_device_storage::<AccessibilityInfo>(StorageAccessContext::Test);
     let accessibility_proxy = create_test_accessibility_env(factory).await;
 
     // Fetch the initial value.
@@ -126,7 +126,8 @@ async fn test_accessibility_set_captions() {
 
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = InMemoryStorageFactory::create_handle();
-    let store = factory.lock().await.get_store::<AccessibilityInfo>();
+    let store =
+        factory.lock().await.get_device_storage::<AccessibilityInfo>(StorageAccessContext::Test);
     let accessibility_proxy = create_test_accessibility_env(factory).await;
 
     // Set for_media and window_color in the top-level CaptionsSettings.

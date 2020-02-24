@@ -6,7 +6,6 @@
 use {
     crate::agent::restore_agent::RestoreAgent,
     crate::registry::device_storage::testing::*,
-    crate::registry::device_storage::DeviceStorageFactory,
     crate::switchboard::base::{DisplayInfo, SettingType},
     crate::tests::fakes::brightness_service::BrightnessService,
     crate::tests::fakes::service_registry::ServiceRegistry,
@@ -123,7 +122,10 @@ async fn validate_restore(manual_brightness: f32, auto_brightness: bool) {
 
     let storage_factory = InMemoryStorageFactory::create_handle();
     {
-        let store = storage_factory.lock().await.get_store::<DisplayInfo>();
+        let store = storage_factory
+            .lock()
+            .await
+            .get_device_storage::<DisplayInfo>(StorageAccessContext::Test);
         let info = DisplayInfo {
             manual_brightness_value: manual_brightness,
             auto_brightness: auto_brightness,

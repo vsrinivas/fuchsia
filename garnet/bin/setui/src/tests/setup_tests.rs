@@ -5,7 +5,6 @@
 #[cfg(test)]
 use {
     crate::registry::device_storage::testing::*,
-    crate::registry::device_storage::DeviceStorageFactory,
     crate::switchboard::base::SettingType,
     crate::switchboard::base::{ConfigurationInterfaceFlags, SetupInfo},
     crate::tests::fakes::device_admin_service::{Action, DeviceAdminService},
@@ -44,7 +43,8 @@ async fn test_setup_default() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_setup() {
     let storage_factory = InMemoryStorageFactory::create_handle();
-    let store = storage_factory.lock().await.get_store::<SetupInfo>();
+    let store =
+        storage_factory.lock().await.get_device_storage::<SetupInfo>(StorageAccessContext::Test);
 
     // Prepopulate initial value
     {

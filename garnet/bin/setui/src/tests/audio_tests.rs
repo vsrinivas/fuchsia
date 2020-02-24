@@ -8,7 +8,7 @@ use {
     crate::audio::default_audio_info,
     crate::fidl_clone::FIDLClone,
     crate::registry::device_storage::testing::*,
-    crate::registry::device_storage::{DeviceStorage, DeviceStorageFactory},
+    crate::registry::device_storage::DeviceStorage,
     crate::switchboard::base::{
         AudioInfo, AudioInputInfo, AudioSettingSource, AudioStream, AudioStreamType, SettingType,
     },
@@ -129,7 +129,7 @@ fn verify_audio_stream(settings: AudioSettings, stream: AudioStreamSettings) {
 async fn create_storage(
     factory: Arc<Mutex<InMemoryStorageFactory>>,
 ) -> Arc<Mutex<DeviceStorage<AudioInfo>>> {
-    let store = factory.lock().await.get_store::<AudioInfo>();
+    let store = factory.lock().await.get_device_storage::<AudioInfo>(StorageAccessContext::Test);
     {
         let mut store_lock = store.lock().await;
         let audio_info = default_audio_info();
@@ -446,7 +446,10 @@ async fn test_volume_restore() {
     let storage_factory = InMemoryStorageFactory::create_handle();
     let expected_info = (0.9, false);
     {
-        let store = storage_factory.lock().await.get_store::<AudioInfo>();
+        let store = storage_factory
+            .lock()
+            .await
+            .get_device_storage::<AudioInfo>(StorageAccessContext::Test);
         let mut stored_info = default_audio_info();
         for stream in stored_info.streams.iter_mut() {
             if stream.stream_type == AudioStreamType::Media {

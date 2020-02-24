@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 use {
     crate::registry::base::{Command, Context, Notifier, SettingHandler, State},
-    crate::registry::device_storage::{DeviceStorageCompatible, DeviceStorageFactory},
+    crate::registry::device_storage::{
+        DeviceStorage, DeviceStorageCompatible, DeviceStorageFactory,
+    },
     crate::switchboard::base::{
         DisplayInfo, SettingRequest, SettingResponse, SettingType, SwitchboardError,
     },
@@ -41,6 +43,8 @@ pub fn spawn_display_controller<T: DeviceStorageFactory + Send + Sync + 'static>
             .connect::<fidl_fuchsia_ui_brightness::ControlMarker>()
             .expect("connected to brightness");
 
+        let storage = storage_handle.lock().await.get_store::<DisplayInfo>();
+
         while let Some(command) = display_handler_rx.next().await {
             match command {
                 Command::ChangeState(state) => match state {
@@ -55,8 +59,6 @@ pub fn spawn_display_controller<T: DeviceStorageFactory + Send + Sync + 'static>
                     #[allow(unreachable_patterns)]
                     match request {
                         SettingRequest::Restore => {
-                            let storage = storage_handle.lock().await.get_store::<DisplayInfo>();
-
                             // Load and set value
                             // TODO(fxb/35004): Listen to changes using hanging
                             // get as well
@@ -65,12 +67,8 @@ pub fn spawn_display_controller<T: DeviceStorageFactory + Send + Sync + 'static>
                                 let mut storage_lock = storage.lock().await;
                                 stored_value = storage_lock.get().await;
                             }
-                            match set_brightness(
-                                stored_value,
-                                &brightness_service,
-                                storage_handle.clone(),
-                            )
-                            .await
+                            match set_brightness(stored_value, &brightness_service, storage.clone())
+                                .await
                             {
                                 Ok(_) => {
                                     responder.send(Ok(None)).unwrap();
@@ -95,7 +93,7 @@ pub fn spawn_display_controller<T: DeviceStorageFactory + Send + Sync + 'static>
                                     brightness_value,
                                 ),
                                 &brightness_service,
-                                storage_handle.clone(),
+                                storage.clone(),
                             )
                             .await
                             .unwrap_or_else(move |e| {
@@ -108,8 +106,6 @@ pub fn spawn_display_controller<T: DeviceStorageFactory + Send + Sync + 'static>
                         SettingRequest::SetAutoBrightness(auto_brightness_enabled) => {
                             let brightness_value: f32;
                             {
-                                let storage =
-                                    storage_handle.lock().await.get_store::<DisplayInfo>();
                                 let mut storage_lock = storage.lock().await;
                                 let stored_value = storage_lock.get().await;
                                 brightness_value = stored_value.manual_brightness_value;
@@ -118,7 +114,7 @@ pub fn spawn_display_controller<T: DeviceStorageFactory + Send + Sync + 'static>
                             set_brightness(
                                 DisplayInfo::new(auto_brightness_enabled, brightness_value),
                                 &brightness_service,
-                                storage_handle.clone(),
+                                storage.clone(),
                             )
                             .await
                             .unwrap_or_else(move |e| {
@@ -129,7 +125,6 @@ pub fn spawn_display_controller<T: DeviceStorageFactory + Send + Sync + 'static>
                             notify(notifier_lock.clone());
                         }
                         SettingRequest::Get => {
-                            let storage = storage_handle.lock().await.get_store::<DisplayInfo>();
                             let mut storage_lock = storage.lock().await;
                             responder
                                 .send(Ok(Some(SettingResponse::Brightness(
@@ -153,12 +148,11 @@ pub fn spawn_display_controller<T: DeviceStorageFactory + Send + Sync + 'static>
     display_handler_tx
 }
 
-async fn set_brightness<T: DeviceStorageFactory + Send + Sync + 'static>(
+async fn set_brightness(
     info: DisplayInfo,
     brightness_service: &fidl_fuchsia_ui_brightness::ControlProxy,
-    storage_handle: Arc<Mutex<T>>,
+    storage: Arc<Mutex<DeviceStorage<DisplayInfo>>>,
 ) -> Result<(), fidl::Error> {
-    let storage = storage_handle.lock().await.get_store::<DisplayInfo>();
     let mut storage_lock = storage.lock().await;
     storage_lock.write(&info, false).await.unwrap_or_else(move |e| {
         fx_log_err!("failed storing brightness, {}", e);

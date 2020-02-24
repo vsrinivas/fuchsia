@@ -5,7 +5,6 @@
 #[cfg(test)]
 use {
     crate::registry::device_storage::testing::*,
-    crate::registry::device_storage::DeviceStorageFactory,
     crate::switchboard::base::SettingType,
     crate::EnvironmentBuilder,
     crate::Runtime,
@@ -69,7 +68,7 @@ async fn create_test_intl_env(storage_factory: Arc<Mutex<InMemoryStorageFactory>
 async fn test_intl_e2e() {
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = InMemoryStorageFactory::create_handle();
-    let store = factory.lock().await.get_store::<IntlInfo>();
+    let store = factory.lock().await.get_device_storage::<IntlInfo>(StorageAccessContext::Test);
     let intl_service = create_test_intl_env(factory).await;
 
     // Check if the initial value is correct.
@@ -108,7 +107,7 @@ async fn test_intl_e2e() {
 async fn test_intl_e2e_set_twice() {
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = InMemoryStorageFactory::create_handle();
-    let store = factory.lock().await.get_store::<IntlInfo>();
+    let store = factory.lock().await.get_device_storage::<IntlInfo>(StorageAccessContext::Test);
     let intl_service = create_test_intl_env(factory).await;
 
     // Initial value is not None.
@@ -149,7 +148,7 @@ async fn test_intl_e2e_set_twice() {
 async fn test_intl_e2e_idempotent_set() {
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = InMemoryStorageFactory::create_handle();
-    let store = factory.lock().await.get_store::<IntlInfo>();
+    let store = factory.lock().await.get_device_storage::<IntlInfo>(StorageAccessContext::Test);
     let intl_service = create_test_intl_env(factory).await;
 
     // Check if the initial value is correct.

@@ -4,8 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::registry::device_storage::testing::*,
-    crate::registry::device_storage::DeviceStorageFactory, crate::switchboard::base::PrivacyInfo,
+    crate::registry::device_storage::testing::*, crate::switchboard::base::PrivacyInfo,
     crate::switchboard::base::SettingType, crate::EnvironmentBuilder, crate::Runtime,
     fidl_fuchsia_settings::*,
 };
@@ -20,7 +19,7 @@ async fn test_privacy() {
 
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = InMemoryStorageFactory::create_handle();
-    let store = factory.lock().await.get_store::<PrivacyInfo>();
+    let store = factory.lock().await.get_device_storage::<PrivacyInfo>(StorageAccessContext::Test);
 
     let env = EnvironmentBuilder::new(Runtime::Nested(ENV_NAME), factory)
         .settings(&[SettingType::Privacy])

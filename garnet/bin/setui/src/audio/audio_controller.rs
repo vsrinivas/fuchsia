@@ -128,6 +128,8 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
         let sound_player_added_files: Arc<Mutex<HashSet<&str>>> =
             Arc::new(Mutex::new(HashSet::new()));
 
+        let storage = storage_factory_handle.lock().await.get_store::<AudioInfo>();
+
         while let Some(command) = audio_handler_rx.next().await {
             match command {
                 Command::ChangeState(state) => match state {
@@ -139,21 +141,16 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                     }
                 },
                 Command::HandleRequest(request, responder) => {
+                    let mut stored_value = storage.lock().await.get().await;
+
                     #[allow(unreachable_patterns)]
                     match request {
                         SettingRequest::Restore => {
-                            // Load stored audio info and set the stream volumes.
-                            let stored_value =
-                                extract_stored_audio_info(storage_factory_handle.clone()).await;
-
                             let stored_streams = stored_value.streams.iter().cloned().collect();
                             update_volume_stream(&stored_streams, &mut stream_volume_controls)
                                 .await;
                         }
                         SettingRequest::SetVolume(volume) => {
-                            let mut stored_value =
-                                extract_stored_audio_info(storage_factory_handle.clone()).await;
-
                             // Connect to the SoundPlayer the first time a volume event occurs.
                             if sound_player_connection.is_none() {
                                 sound_player_connection =
@@ -196,11 +193,17 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
 
                             stored_value.streams =
                                 get_streams_array_from_map(&stream_volume_controls);
-                            persist_audio_info(
-                                stored_value.clone(),
-                                storage_factory_handle.clone(),
-                            )
-                            .await;
+
+                            let storage_handle_clone = storage.clone();
+
+                            fasync::spawn(async move {
+                                let mut storage_lock = storage_handle_clone.lock().await;
+                                storage_lock.write(&stored_value, false).await.unwrap_or_else(
+                                    move |e| {
+                                        fx_log_err!("failed storing audio, {}", e);
+                                    },
+                                );
+                            });
 
                             let _ = responder.send(Ok(None)).ok();
                             if let Some(notifier) = (*notifier_lock.read()).clone() {
@@ -228,9 +231,6 @@ pub fn spawn_audio_controller<T: DeviceStorageFactory + Send + Sync + 'static>(
                             )
                             .await
                             .ok();
-
-                            let stored_value =
-                                extract_stored_audio_info(storage_factory_handle.clone()).await;
                             let _ = responder
                                 .send(Ok(Some(SettingResponse::Audio(AudioInfo {
                                     streams: stored_value.streams,
@@ -376,28 +376,6 @@ async fn update_volume_stream(
             volume_control.set_volume(stream.clone()).await;
         }
     }
-}
-
-async fn persist_audio_info<T: DeviceStorageFactory + Send + Sync + 'static>(
-    info: AudioInfo,
-    storage_factory_handle: Arc<Mutex<T>>,
-) {
-    fasync::spawn(async move {
-        let storage = storage_factory_handle.lock().await.get_store::<AudioInfo>();
-        let mut storage_lock = storage.lock().await;
-        storage_lock.write(&info, false).await.unwrap_or_else(move |e| {
-            fx_log_err!("failed storing audio, {}", e);
-        });
-    });
-}
-
-async fn extract_stored_audio_info<T: DeviceStorageFactory + Send + Sync + 'static>(
-    storage_factory_handle: Arc<Mutex<T>>,
-) -> AudioInfo {
-    let storage = storage_factory_handle.lock().await.get_store::<AudioInfo>();
-    let mut storage_lock = storage.lock().await;
-    let stored = storage_lock.get().await;
-    stored as AudioInfo
 }
 
 // Checks to see if |service_connected| contains true. If it is not, then

@@ -5,7 +5,6 @@
 #[cfg(test)]
 use {
     crate::registry::device_storage::testing::*,
-    crate::registry::device_storage::DeviceStorageFactory,
     crate::switchboard::base::{SettingType, SystemInfo, SystemLoginOverrideMode},
     crate::tests::fakes::device_admin_service::{Action, DeviceAdminService},
     crate::tests::fakes::device_settings_service::DeviceSettingsService,
@@ -28,7 +27,8 @@ async fn test_system() {
         fidl_fuchsia_settings::LoginOverride::AuthProvider;
 
     let storage_factory = InMemoryStorageFactory::create_handle();
-    let store = storage_factory.lock().await.get_store::<SystemInfo>();
+    let store =
+        storage_factory.lock().await.get_device_storage::<SystemInfo>(StorageAccessContext::Test);
 
     // Write out initial value to storage.
     {

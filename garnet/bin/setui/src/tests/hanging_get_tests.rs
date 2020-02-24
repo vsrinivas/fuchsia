@@ -4,7 +4,6 @@
 
 #[cfg(test)]
 use crate::registry::device_storage::testing::*;
-use crate::registry::device_storage::DeviceStorageFactory;
 use crate::switchboard::base::{ConfigurationInterfaceFlags, SettingType, SetupInfo};
 use crate::tests::fakes::device_admin_service::DeviceAdminService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
@@ -20,7 +19,8 @@ const ENV_NAME: &str = "hanging_get_test_environment";
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_multiple_watches() {
   let storage_factory = InMemoryStorageFactory::create_handle();
-  let store = storage_factory.lock().await.get_store::<SetupInfo>();
+  let store =
+    storage_factory.lock().await.get_device_storage::<SetupInfo>(StorageAccessContext::Test);
   let initial_interfaces =
     ConfigurationInterfaceFlags::WIFI | ConfigurationInterfaceFlags::ETHERNET;
 
