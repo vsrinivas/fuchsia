@@ -2,19 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::format_err;
-use log::error;
-use parking_lot::{Mutex, MutexGuard};
-use serde_derive::{Deserialize, Serialize};
-use serde_json;
-use std::{
-    collections::HashMap,
-    fs, io, mem,
-    path::{Path, PathBuf},
+use serde_derive::Deserialize;
+use {
+    anyhow::format_err,
+    log::error,
+    parking_lot::{Mutex, MutexGuard},
+    serde_derive::Serialize,
+    serde_json,
+    std::{
+        collections::HashMap,
+        fs, io, mem,
+        path::{Path, PathBuf},
+    },
 };
 
-const KNOWN_NETWORKS_PATH: &str = "/data/known_networks.json";
-const TMP_KNOWN_NETWORKS_PATH: &str = "/data/known_networks.json.tmp";
+pub const KNOWN_NETWORKS_PATH: &str = "/data/known_networks.json";
+pub const TMP_KNOWN_NETWORKS_PATH: &str = "/data/known_networks.json.tmp";
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct KnownEss {
@@ -22,7 +25,6 @@ pub struct KnownEss {
 }
 
 type EssMap = HashMap<Vec<u8>, KnownEss>;
-
 pub struct KnownEssStore {
     storage_path: PathBuf,
     tmp_storage_path: PathBuf,
@@ -44,13 +46,6 @@ struct EssJsonWrite<'a> {
 }
 
 impl KnownEssStore {
-    pub fn new() -> Result<Self, anyhow::Error> {
-        Self::new_with_paths(
-            PathBuf::from(KNOWN_NETWORKS_PATH),
-            PathBuf::from(TMP_KNOWN_NETWORKS_PATH),
-        )
-    }
-
     pub fn new_with_paths(
         storage_path: PathBuf,
         tmp_storage_path: PathBuf,
@@ -99,6 +94,7 @@ impl KnownEssStore {
     }
 
     pub fn clear(&self) -> Result<(), anyhow::Error> {
+        println!("storage path is {:?}", self.tmp_storage_path.as_path().to_str());
         let mut guard = self.ess_by_ssid.lock();
         guard.clear();
         self.write(guard)

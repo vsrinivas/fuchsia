@@ -2,6 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
+                "fuchsia.stash.SecureStore": "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx",
                 "fuchsia.wlan.device.service.DeviceService": [
                     "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx",
                     "--isolated_devmgr"
@@ -20,6 +21,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.stash.SecureStore",
             "fuchsia.wlan.devmgr.IsolatedDevmgr",
             "fuchsia.wlan.service.Wlan",
             "fuchsia.wlan.device.service.DeviceService"

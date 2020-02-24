@@ -384,14 +384,18 @@ mod tests {
         },
         futures::{channel::mpsc, task::Poll},
         pin_utils::pin_mut,
-        std::path::Path,
+        tempfile::TempDir,
         wlan_common::assert_variant,
     };
 
     /// Creates an ESS Store holding entries for protected and unprotected networks.
-    fn create_network_store(path: &Path) -> SavedNetworksPtr {
+    async fn create_network_store(stash_id: impl AsRef<str>) -> SavedNetworksPtr {
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks = Arc::new(
-            SavedNetworksManager::new_with_paths(path.join("store.json"))
+            SavedNetworksManager::new_with_stash_or_paths(stash_id, path, tmp_path)
+                .await
                 .expect("Failed to create a KnownEssStore"),
         );
         let network_id_none = NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::None);
@@ -436,8 +440,8 @@ mod tests {
     #[test]
     fn connect_request_unknown_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let saved_networks = create_network_store(temp_dir.path());
+        let stash_id = "connect_request_unknown_network";
+        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -480,8 +484,8 @@ mod tests {
     #[test]
     fn connect_request_open_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let saved_networks = create_network_store(temp_dir.path());
+        let stash_id = "connect_request_open_network";
+        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -528,8 +532,8 @@ mod tests {
     #[test]
     fn connect_request_protected_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let saved_networks = create_network_store(temp_dir.path());
+        let stash_id = "connect_request_protected_network";
+        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -577,8 +581,8 @@ mod tests {
     #[test]
     fn connect_request_protected_psk_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let saved_networks = create_network_store(temp_dir.path());
+        let stash_id = "connect_request_protected_psk_network";
+        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -626,8 +630,8 @@ mod tests {
     #[test]
     fn connect_request_success() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let saved_networks = create_network_store(temp_dir.path());
+        let stash_id = "connect_request_success";
+        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -706,8 +710,8 @@ mod tests {
     #[test]
     fn connect_request_failure() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let saved_networks = create_network_store(temp_dir.path());
+        let stash_id = "connect_request_failure";
+        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -771,8 +775,8 @@ mod tests {
     #[test]
     fn register_update_listener() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let saved_networks = create_network_store(temp_dir.path());
+        let stash_id = "register_update_listeners";
+        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -826,8 +830,8 @@ mod tests {
     #[test]
     fn multiple_controllers_write_attempt() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let saved_networks = create_network_store(temp_dir.path());
+        let stash_id = "multiple_controllers_write_attempt";
+        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -903,8 +907,8 @@ mod tests {
     #[test]
     fn multiple_controllers_epitaph() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let saved_networks = create_network_store(temp_dir.path());
+        let stash_id = "multiple_controllers_epitaph";
+        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -946,8 +950,8 @@ mod tests {
     #[test]
     fn no_client_interface() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let saved_networks = create_network_store(temp_dir.path());
+        let stash_id = "no_client_interface";
+        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -1000,9 +1004,13 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn get_correct_config() {
-        let path = tempfile::TempDir::new().expect("failed to create temp dir").into_path();
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let stash_id = "get_correct_config";
         let saved_networks = Arc::new(
-            SavedNetworksManager::new_with_paths(path)
+            SavedNetworksManager::new_with_stash_or_paths(stash_id, path, tmp_path)
+                .await
                 .expect("Failed to create SavedNetworksManager"),
         );
         let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);

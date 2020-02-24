@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{client, config_manager::SavedNetworksManager, known_ess_store::KnownEssStore},
+    crate::{client, config_manager::SavedNetworksManager},
     fidl::{self, endpoints::create_proxy},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_device_service as wlan_service,
     fidl_fuchsia_wlan_service as legacy, fidl_fuchsia_wlan_sme as fidl_sme,
@@ -65,12 +65,11 @@ const MAX_CONCURRENT_WLAN_REQUESTS: usize = 1000;
 pub async fn serve_legacy(
     requests: legacy::WlanRequestStream,
     client: ClientRef,
-    ess_store: Arc<KnownEssStore>,
     saved_networks: Arc<SavedNetworksManager>,
 ) -> Result<(), fidl::Error> {
     requests
         .try_for_each_concurrent(MAX_CONCURRENT_WLAN_REQUESTS, |req| {
-            handle_request(&client, req, Arc::clone(&ess_store), Arc::clone(&saved_networks))
+            handle_request(&client, req, Arc::clone(&saved_networks))
         })
         .await
 }
@@ -78,7 +77,6 @@ pub async fn serve_legacy(
 async fn handle_request(
     client: &ClientRef,
     req: legacy::WlanRequest,
-    ess_store: Arc<KnownEssStore>,
     saved_networks: Arc<SavedNetworksManager>,
 ) -> Result<(), fidl::Error> {
     match req {
@@ -113,9 +111,6 @@ async fn handle_request(
         }
         legacy::WlanRequest::ClearSavedNetworks { responder } => {
             info!("Clearing all saved networks.");
-            if let Err(e) = ess_store.clear() {
-                eprintln!("Error clearing known ESS: {}", e);
-            }
             if let Err(e) = saved_networks.clear() {
                 eprintln!("Error clearing network configs: {}", e);
             }
@@ -398,13 +393,11 @@ fn empty_counter() -> fidl_wlan_stats::Counter {
 mod tests {
     use {
         super::*,
-        crate::{
-            known_ess_store::KnownEss,
-            network_config::{Credential, NetworkIdentifier, SecurityType},
-        },
+        crate::network_config::{Credential, NetworkIdentifier, SecurityType},
         fuchsia_async as fasync,
         futures::task::Poll,
         pin_utils::pin_mut,
+        tempfile::TempDir,
         wlan_common::assert_variant,
     };
 
@@ -484,20 +477,16 @@ mod tests {
     #[test]
     fn clear_saved_networks_request() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let temp_path = temp_dir.path();
+        let stash_id = "clear_saved_networks_request";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("temp.json");
+
         let saved_networks = Arc::new(
-            SavedNetworksManager::new_with_paths(
-                temp_path.join("network_store.json").to_path_buf(),
-            )
+            exec.run_singlethreaded(SavedNetworksManager::new_with_stash_or_paths(
+                stash_id, path, tmp_path,
+            ))
             .expect("Failed to make saved networks manager"),
-        );
-        let ess_store = Arc::new(
-            KnownEssStore::new_with_paths(
-                temp_path.join("store.json").to_path_buf(),
-                temp_path.join("store.json.temp"),
-            )
-            .expect("Failed to create a KnownEssStore"),
         );
 
         let (wlan_proxy, requests) =
@@ -505,19 +494,11 @@ mod tests {
         let requests = requests.into_stream().expect("failed to create stream");
 
         // Begin handling legacy requests.
-        let fut = serve_legacy(
-            requests,
-            ClientRef::new(),
-            Arc::clone(&ess_store),
-            Arc::clone(&saved_networks),
-        )
-        .unwrap_or_else(|e| panic!("failed to serve legacy requests: {}", e));
+        let fut = serve_legacy(requests, ClientRef::new(), Arc::clone(&saved_networks))
+            .unwrap_or_else(|e| panic!("failed to serve legacy requests: {}", e));
         fasync::spawn(fut);
 
-        // Save the networks directly without going through the legacy API.
-        ess_store
-            .store(b"foo".to_vec(), KnownEss { password: b"qwertyuio".to_vec() })
-            .expect("Failed to store to ess store");
+        // Save the network directly without going through the legacy API.
         let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);
         saved_networks
             .store(network_id, Credential::Password(b"qwertyuio".to_vec()))
@@ -532,6 +513,5 @@ mod tests {
 
         // There should be no networks saved.
         assert_eq!(0, saved_networks.known_network_count());
-        assert_eq!(0, ess_store.known_network_count());
     }
 }

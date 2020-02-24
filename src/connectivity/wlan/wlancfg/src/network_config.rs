@@ -117,20 +117,30 @@ pub enum Credential {
     Psk(Vec<u8>),
 }
 
-/// Returns:
-/// - an Open-Credential instance iff `bytes` is empty,
-/// - a PSK-Credential instance iff `bytes` holds exactly 64 bytes,
-/// - a Password-Credential in all other cases.
-/// In the PSK case, the provided bytes must represent the PSK in hex format.
-/// Note: This function is of temporary nature until connection results communicate
-/// type of credential
 impl Credential {
+    /// Returns:
+    /// - an Open-Credential instance iff `bytes` is empty,
+    /// - a PSK-Credential instance iff `bytes` holds exactly 64 bytes,
+    /// - a Password-Credential in all other cases.
+    /// In the PSK case, the provided bytes must represent the PSK in hex format.
+    /// Note: This function is of temporary nature until connection results communicate
+    /// type of credential
     pub fn from_bytes(bytes: impl AsRef<[u8]> + Into<Vec<u8>>) -> Self {
         const PSK_HEX_STRING_LENGTH: usize = 64;
         match bytes.as_ref().len() {
             0 => Credential::None,
             PSK_HEX_STRING_LENGTH => Credential::Psk(bytes.into()),
             _ => Credential::Password(bytes.into()),
+        }
+    }
+
+    /// Transform credential into the bytes that represent the credential, dropping the information
+    /// of the type. This is used to support the legacy storage method.
+    pub fn into_bytes(self) -> Vec<u8> {
+        match self {
+            Credential::Password(pwd) => pwd,
+            Credential::Psk(psk) => psk,
+            Credential::None => vec![],
         }
     }
 

@@ -5,7 +5,6 @@
 use {
     crate::{
         config_manager::SavedNetworksManager,
-        known_ess_store::{KnownEss, KnownEssStore},
         network_config::{Credential, NetworkIdentifier, SecurityType},
         policy::client::sme_credential_from_policy,
         state_machine::{self, IntoStateExt},
@@ -25,7 +24,6 @@ use {
     std::{collections::HashMap, sync::Arc},
     void::ResultVoidErrExt,
 };
-
 const AUTO_CONNECT_RETRY_SECONDS: i64 = 10;
 const AUTO_CONNECT_SCAN_TIMEOUT_SECONDS: u8 = 20;
 const DISCONNECTION_MONITOR_SECONDS: i64 = 10;
@@ -66,16 +64,11 @@ enum ManualRequest {
 pub fn new_client(
     iface_id: u16,
     sme: fidl_sme::ClientSmeProxy,
-    ess_store: Arc<KnownEssStore>,
     saved_networks: Arc<SavedNetworksManager>,
 ) -> (Client, impl Future<Output = ()>) {
     let (req_sender, req_receiver) = mpsc::unbounded();
     let sme_event_stream = sme.take_event_stream();
-    let services = Services {
-        sme,
-        ess_store: Arc::clone(&ess_store),
-        saved_networks: Arc::clone(&saved_networks),
-    };
+    let services = Services { sme, saved_networks: Arc::clone(&saved_networks) };
     let fut = serve(iface_id, services, sme_event_stream, req_receiver);
     let client = Client { req_sender };
     (client, fut)
@@ -87,7 +80,6 @@ type NextReqFut = stream::StreamFuture<mpsc::UnboundedReceiver<ManualRequest>>;
 #[derive(Clone)]
 struct Services {
     sme: fidl_sme::ClientSmeProxy,
-    ess_store: Arc<KnownEssStore>,
     saved_networks: Arc<SavedNetworksManager>,
 }
 
@@ -175,15 +167,15 @@ async fn attempt_auto_connect(services: &Services) -> Result<Option<Vec<u8>>, an
                     security_from_protection(b.protection),
                 ))
                 .into_iter()
-                .map(|cfg| (cfg.ssid, cfg.credential))
+                .map(|cfg| ((cfg.ssid.clone(), cfg.security_type.clone()), cfg.credential.clone()))
         })
         .flatten()
         .collect::<HashMap<_, _>>();
 
-    for (ssid, credential) in network_by_ssid {
+    for ((ssid, security), credential) in network_by_ssid {
         if connect_to_known_network(&services.sme, ssid.clone(), credential.clone()).await? {
             services.saved_networks.record_connect_success(
-                NetworkIdentifier::new(ssid.clone(), credential.derived_security_type()),
+                NetworkIdentifier::new(ssid.clone(), security),
                 &credential,
             );
             return Ok(Some(ssid));
@@ -242,9 +234,6 @@ async fn manual_connect_state(
                 fidl_sme::ConnectResultCode::Success => {
                     println!("wlancfg: Successfully connected to '{}'",
                              String::from_utf8_lossy(&req.ssid));
-                    let ess = KnownEss { password: req.password.clone() };
-                    services.ess_store.store(req.ssid.clone(), ess).unwrap_or_else(
-                            |e| eprintln!("wlancfg: Failed to store network password: {}", e));
                     let network_id = NetworkIdentifier::new(
                         req.ssid.clone(),
                         credential.derived_security_type()
@@ -441,25 +430,26 @@ mod tests {
         fuchsia_async as fasync,
         futures::{stream::StreamFuture, task::Poll},
         std::path::Path,
-        tempfile,
+        tempfile::TempDir,
         wlan_common::assert_variant,
     };
 
     #[test]
     fn scans_only_requested_with_saved_networks() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
-        let saved_networks = create_saved_networks(temp_dir.path());
+        let id = "scans_only_requested_with_saved_networks";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
         let not_saved_ssid = &b"foo"[..];
         let saved_ssid = &b"bar"[..];
         let saved_password = Credential::Password(b"qwertyuio".to_vec());
-        let (_client, fut, sme_server) =
-            create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
+        let (_client, fut, sme_server) = create_client(Arc::clone(&saved_networks));
         let mut next_sme_req = sme_server.into_future();
         pin_mut!(fut);
 
-        // the ess store should be empty
+        // the saved networks store should be empty
         assert_eq!(0, saved_networks.known_network_count());
 
         // now verify that a scan was not requested
@@ -486,9 +476,11 @@ mod tests {
     #[test]
     fn auto_connect_to_known_ess() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
-        let saved_networks = create_saved_networks(temp_dir.path());
+        let id = "auto_connect_to_known_ess";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
         let not_saved_ssid = b"foo";
         let saved_ssid = b"bar";
         let saved_password_str = b"qwertyuio";
@@ -498,8 +490,7 @@ mod tests {
             .store(NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2), saved_password)
             .expect("failed to store a network password");
 
-        let (_client, fut, sme_server) =
-            create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
+        let (_client, fut, sme_server) = create_client(Arc::clone(&saved_networks));
         let mut next_sme_req = sme_server.into_future();
         pin_mut!(fut);
 
@@ -553,19 +544,21 @@ mod tests {
     #[test]
     fn failed_auto_connect_to_known_ess() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
-        let saved_networks = create_saved_networks(temp_dir.path());
+        let id = "failed_auto_connect_to_known_ess";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
         let saved_ssid = b"bar";
+        let saved_network_id = NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2);
         let saved_password_str = b"qwertyuio";
         let saved_password = Credential::Password(saved_password_str.to_vec());
         // save the network to trigger a scan
         saved_networks
-            .store(NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2), saved_password)
+            .store(saved_network_id.clone(), saved_password)
             .expect("failed to store a network password");
 
-        let (_client, fut, sme_server) =
-            create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
+        let (_client, fut, sme_server) = create_client(Arc::clone(&saved_networks));
         let mut next_sme_req = sme_server.into_future();
         pin_mut!(fut);
 
@@ -590,19 +583,19 @@ mod tests {
         assert!(exec.wake_next_timer().is_some());
 
         // After failed auto connect, the network should not have been marked connected
-        let config = saved_networks
-            .lookup(NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2))
-            .pop()
-            .expect("Failed to get network config");
+        let config =
+            saved_networks.lookup(saved_network_id).pop().expect("Failed to get network config");
         assert_eq!(false, config.has_ever_connected);
     }
 
     #[test]
     fn auto_connect_to_multiple_bss() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
-        let saved_networks = create_saved_networks(temp_dir.path());
+        let id = "auto_connect_to_multiple_bss";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
         let saved_ssid = b"foo";
         let saved_net_id = NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2);
         let saved_password = b"qwertyuio";
@@ -612,8 +605,7 @@ mod tests {
             .store(saved_net_id, saved_credential)
             .expect("failed to store a network password");
 
-        let (_client, fut, sme_server) =
-            create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
+        let (_client, fut, sme_server) = create_client(Arc::clone(&saved_networks));
         let mut next_sme_req = sme_server.into_future();
         pin_mut!(fut);
         // Expect the state machine to initiate the scan, then send results back without
@@ -652,9 +644,11 @@ mod tests {
     #[test]
     fn auto_connect_when_deauth() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
-        let saved_networks = create_saved_networks(temp_dir.path());
+        let id = "auto_connect_when_deauth";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
         let saved_ssid = b"foo";
         let saved_net_id = NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2);
         let saved_password = b"12345678";
@@ -664,8 +658,7 @@ mod tests {
             .store(saved_net_id.clone(), saved_credential)
             .expect("failed to store a network password");
 
-        let (_client, fut, sme_server) =
-            create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
+        let (_client, fut, sme_server) = create_client(Arc::clone(&saved_networks));
         let mut next_sme_req = sme_server.into_future();
         pin_mut!(fut);
 
@@ -728,15 +721,16 @@ mod tests {
     #[test]
     fn manual_connect_cancels_auto_connect() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
-        let saved_networks = create_saved_networks(temp_dir.path());
+        let id = "manual_connect_cancels_auto_connect";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
         let manual_connect_ssid = b"foo";
         let manual_connect_password = b"qwertyuio";
         let manual_connect_id =
             NetworkIdentifier::new(manual_connect_ssid.to_vec(), SecurityType::Wpa2);
-        let (client, fut, sme_server) =
-            create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
+        let (client, fut, sme_server) = create_client(Arc::clone(&saved_networks));
         let mut next_sme_req = sme_server.into_future();
         pin_mut!(fut);
 
@@ -760,12 +754,12 @@ mod tests {
             Poll::Ready(Ok(fidl_sme::ConnectResultCode::Success)),
             exec.run_until_stalled(&mut receiver)
         );
+        assert_eq!(1, saved_networks.lookup(manual_connect_id.clone()).len());
 
         // Expect no pending timers
         assert_eq!(None, exec.wake_next_timer());
 
         // Network should be saved as known since we connected successfully
-        assert_eq!(1, saved_networks.lookup(manual_connect_id.clone()).len());
         let cfg = NetworkConfig::new(
             manual_connect_id.clone(),
             Credential::Password(manual_connect_password.to_vec()),
@@ -779,14 +773,15 @@ mod tests {
     #[test]
     fn manual_connect_cancels_manual_connect() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
-        let saved_networks = create_saved_networks(temp_dir.path());
+        let id = "manual_connect_cancels_manual_conenct";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
         let manual_connect_ssid = b"foo";
         let second_network_ssid = b"bar";
         let second_network_password = b"qwertyuio";
-        let (client, fut, sme_server) =
-            create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
+        let (client, fut, sme_server) = create_client(Arc::clone(&saved_networks));
         let mut next_sme_req = sme_server.into_future();
         pin_mut!(fut);
 
@@ -845,9 +840,11 @@ mod tests {
     #[test]
     fn manual_connect_when_already_connected() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
-        let saved_networks = create_saved_networks(temp_dir.path());
+        let id = "manual_connect_when_already_connected";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
         let saved_ssid = b"foo";
         let saved_net_id = NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2);
         let saved_password = b"12345678";
@@ -858,8 +855,7 @@ mod tests {
             .store(saved_net_id.clone(), Credential::Password(saved_password.to_vec()))
             .expect("failed to store a network password");
 
-        let (client, fut, sme_server) =
-            create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
+        let (client, fut, sme_server) = create_client(Arc::clone(&saved_networks));
         let mut next_sme_req = sme_server.into_future();
         pin_mut!(fut);
 
@@ -918,16 +914,17 @@ mod tests {
     #[test]
     fn manual_connect_failure_triggers_auto_connect() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
-        let saved_networks = create_saved_networks(temp_dir.path());
+        let id = "manual_connect_failure_triggers_auto_connect";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
         let saved_ssid = b"bar";
         let saved_net_id = NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2);
         let saved_password = b"qwertyuio";
         let manual_connect_ssid = b"foo";
         let manual_connect_password = b"qwertyuio";
-        let (client, fut, sme_server) =
-            create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
+        let (client, fut, sme_server) = create_client(Arc::clone(&saved_networks));
         let mut next_sme_req = sme_server.into_future();
         pin_mut!(fut);
 
@@ -976,13 +973,14 @@ mod tests {
     #[test]
     fn manual_connect_after_sme_disconnected() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
-        let saved_networks = create_saved_networks(temp_dir.path());
+        let id = "manual_connect_after_sme_disconnecting";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
         let manual_connect_ssid = b"foo";
         let manual_connect_password = b"qwertyuio";
-        let (client, fut, sme_server) =
-            create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
+        let (client, fut, sme_server) = create_client(Arc::clone(&saved_networks));
         let mut next_sme_req = sme_server.into_future();
         pin_mut!(fut);
 
@@ -1013,13 +1011,14 @@ mod tests {
     #[test]
     fn manual_connect_while_sme_is_disconnecting() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
-        let saved_networks = create_saved_networks(temp_dir.path());
+        let id = "manual_connect_while_sme_is_disconnecting";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
         let manual_connect_ssid = b"foo";
         let manual_connect_password = b"qwertyuio";
-        let (client, fut, sme_server) =
-            create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
+        let (client, fut, sme_server) = create_client(Arc::clone(&saved_networks));
         let mut next_sme_req = sme_server.into_future();
         pin_mut!(fut);
 
@@ -1060,11 +1059,12 @@ mod tests {
     #[test]
     fn disconnect_request_when_already_disconnected() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
-        let saved_networks = create_saved_networks(temp_dir.path());
-        let (client, fut, sme_server) =
-            create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
+        let id = "disconnect_request_when_already_disconnected";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
+        let (client, fut, sme_server) = create_client(Arc::clone(&saved_networks));
         let mut next_sme_req = sme_server.into_future();
         pin_mut!(fut);
 
@@ -1091,13 +1091,14 @@ mod tests {
     #[test]
     fn disconnect_request_when_manually_connecting() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
-        let saved_networks = create_saved_networks(temp_dir.path());
+        let id = "disconnect_request_when_manually_connecting";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
         let manual_connect_ssid = b"foo";
         let manual_connect_password = b"qwertyuio";
-        let (client, fut, sme_server) =
-            create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
+        let (client, fut, sme_server) = create_client(Arc::clone(&saved_networks));
         let mut next_sme_req = sme_server.into_future();
         pin_mut!(fut);
 
@@ -1134,14 +1135,15 @@ mod tests {
     #[test]
     fn disconnect_when_connected() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
-        let ess_store = create_ess_store(temp_dir.path());
-        let saved_networks = create_saved_networks(temp_dir.path());
+        let id = "disconnect_when_connected";
+        let temp_dir = TempDir::new().expect("failed to create temporary directory");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("networks.tmp");
+        let saved_networks = exec.run_singlethreaded(create_saved_networks(id, &path, &tmp_path));
         let saved_ssid = b"foo";
         let saved_net_id = NetworkIdentifier::new(saved_ssid.to_vec(), SecurityType::Wpa2);
         let saved_password = b"12345678";
-        let (client, fut, sme_server) =
-            create_client(Arc::clone(&ess_store), Arc::clone(&saved_networks));
+        let (client, fut, sme_server) = create_client(Arc::clone(&saved_networks));
         let mut next_sme_req = sme_server.into_future();
         pin_mut!(fut);
 
@@ -1298,28 +1300,24 @@ mod tests {
         responder
     }
 
-    fn create_ess_store(path: &Path) -> Arc<KnownEssStore> {
+    async fn create_saved_networks(
+        stash_id: impl AsRef<str>,
+        path: impl AsRef<Path>,
+        tmp_path: impl AsRef<Path>,
+    ) -> Arc<SavedNetworksManager> {
         Arc::new(
-            KnownEssStore::new_with_paths(path.join("store.json"), path.join("store.json.tmp"))
-                .expect("failed to create an KnownEssStore"),
-        )
-    }
-
-    fn create_saved_networks(path: &Path) -> Arc<SavedNetworksManager> {
-        Arc::new(
-            SavedNetworksManager::new_with_paths(path.join("store.json"))
-                .expect("failed to create an KnownEssStore"),
+            SavedNetworksManager::new_with_stash_or_paths(stash_id, &path, &tmp_path)
+                .await
+                .expect("failed to create an SavedNetworksManager"),
         )
     }
 
     fn create_client(
-        ess_store: Arc<KnownEssStore>,
         saved_networks: Arc<SavedNetworksManager>,
     ) -> (Client, impl Future<Output = ()>, ClientSmeRequestStream) {
         let (proxy, server) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
-        let (client, fut) =
-            new_client(0, proxy, Arc::clone(&ess_store), Arc::clone(&saved_networks));
+        let (client, fut) = new_client(0, proxy, Arc::clone(&saved_networks));
         let server = server.into_stream().expect("failed to create a request stream");
         (client, fut, server)
     }

@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    client, config::Config, config_manager::SavedNetworksManager, known_ess_store::KnownEssStore,
-    shim,
-};
+use crate::{client, config::Config, config_manager::SavedNetworksManager, shim};
 
 use anyhow::format_err;
 use fidl::endpoints::create_proxy;
@@ -27,7 +24,6 @@ pub struct Listener {
 pub async fn handle_event(
     listener: &Listener,
     evt: DeviceWatcherEvent,
-    ess_store: Arc<KnownEssStore>,
     saved_networks: Arc<SavedNetworksManager>,
 ) {
     println!("wlancfg got event: {:?}", evt);
@@ -41,7 +37,7 @@ pub async fn handle_event(
             println!("wlancfg: phy removed: {}", phy_id);
         }
         DeviceWatcherEvent::OnIfaceAdded { iface_id } => {
-            if let Err(e) = on_iface_added(listener, iface_id, ess_store, saved_networks).await {
+            if let Err(e) = on_iface_added(listener, iface_id, saved_networks).await {
                 println!("wlancfg: error adding new iface {}: {}", iface_id, e);
             }
         }
@@ -98,7 +94,6 @@ async fn query_phy(listener: &Listener, phy_id: u16) -> Result<wlan::PhyInfo, an
 async fn on_iface_added(
     listener: &Listener,
     iface_id: u16,
-    ess_store: Arc<KnownEssStore>,
     saved_networks: Arc<SavedNetworksManager>,
 ) -> Result<(), anyhow::Error> {
     let service = listener.proxy.clone();
@@ -113,7 +108,7 @@ async fn on_iface_added(
 
     zx::Status::ok(status).map_err(|e| format_err!("GetClientSme returned an error: {}", e))?;
 
-    let (c, fut) = client::new_client(iface_id, sme.clone(), ess_store, saved_networks);
+    let (c, fut) = client::new_client(iface_id, sme.clone(), saved_networks);
     fasync::spawn(fut);
     let lc = shim::Client { service, client: c, sme, iface_id };
     legacy_client.set_if_empty(lc);

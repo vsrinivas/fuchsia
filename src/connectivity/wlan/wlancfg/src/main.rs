@@ -17,7 +17,7 @@ mod stash;
 mod state_machine;
 
 use {
-    crate::{config::Config, config_manager::SavedNetworksManager, known_ess_store::KnownEssStore},
+    crate::{config::Config, config_manager::SavedNetworksManager},
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
     fuchsia_async as fasync,
@@ -31,7 +31,6 @@ use {
 
 async fn serve_fidl(
     _client_ref: shim::ClientRef,
-    ess_store: Arc<KnownEssStore>,
     saved_networks: Arc<SavedNetworksManager>,
 ) -> Result<Void, Error> {
     let mut fs = ServiceFs::new();
@@ -41,13 +40,8 @@ async fn serve_fidl(
     let saved_networks_clone = Arc::clone(&saved_networks);
     fs.dir("svc")
         .add_fidl_service(|stream| {
-            let fut = shim::serve_legacy(
-                stream,
-                _client_ref.clone(),
-                Arc::clone(&ess_store),
-                Arc::clone(&saved_networks),
-            )
-            .unwrap_or_else(|e| eprintln!("error serving legacy wlan API: {}", e));
+            let fut = shim::serve_legacy(stream, _client_ref.clone(), Arc::clone(&saved_networks))
+                .unwrap_or_else(|e| eprintln!("error serving legacy wlan API: {}", e));
             fasync::spawn(fut)
         })
         .add_fidl_service(move |reqs| {
@@ -83,11 +77,9 @@ fn main() -> Result<(), Error> {
     let wlan_svc = fuchsia_component::client::connect_to_service::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
 
-    let ess_store = Arc::new(KnownEssStore::new()?);
-    let saved_networks = Arc::new(SavedNetworksManager::new()?);
+    let saved_networks = Arc::new(executor.run_singlethreaded(SavedNetworksManager::new())?);
     let legacy_client = shim::ClientRef::new();
-    let fidl_fut =
-        serve_fidl(legacy_client.clone(), Arc::clone(&ess_store), Arc::clone(&saved_networks));
+    let fidl_fut = serve_fidl(legacy_client.clone(), Arc::clone(&saved_networks));
 
     let (watcher_proxy, watcher_server_end) = fidl::endpoints::create_proxy()?;
     wlan_svc.watch_devices(watcher_server_end)?;
@@ -95,13 +87,7 @@ fn main() -> Result<(), Error> {
     let fut = watcher_proxy
         .take_event_stream()
         .try_for_each(|evt| {
-            device::handle_event(
-                &listener,
-                evt,
-                Arc::clone(&ess_store),
-                Arc::clone(&saved_networks),
-            )
-            .map(Ok)
+            device::handle_event(&listener, evt, Arc::clone(&saved_networks)).map(Ok)
         })
         .err_into()
         .and_then(|_| future::ready(Err(format_err!("Device watcher future exited unexpectedly"))));
