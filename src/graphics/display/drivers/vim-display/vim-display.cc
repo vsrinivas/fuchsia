@@ -263,7 +263,7 @@ static void vim_release_image(void* ctx, image_t* image) {
     amlogic_canvas_free(&display->canvas, info->canvas_idx[0]);
     if (info->format == ZX_PIXEL_FORMAT_NV12)
       amlogic_canvas_free(&display->canvas, info->canvas_idx[1]);
-    free(info);
+    delete info;
   }
 }
 

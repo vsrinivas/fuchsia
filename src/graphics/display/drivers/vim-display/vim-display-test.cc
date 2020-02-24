@@ -88,6 +88,7 @@ TEST(VimDisplay, ImportVmo) {
   EXPECT_OK(
       protocol.ops->set_buffer_collection_constraints(protocol.ctx, &image, client_channel.get()));
   EXPECT_OK(protocol.ops->import_image(protocol.ctx, &image, client_channel.get(), 0));
+  protocol.ops->release_image(protocol.ctx, &image);
 
   EXPECT_TRUE(collection.set_constraints_called());
 }
