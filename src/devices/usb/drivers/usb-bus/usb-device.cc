@@ -250,8 +250,9 @@ void UsbDevice::DdkUnbindDeprecated() { DdkRemoveDeprecated(); }
 void UsbDevice::DdkRelease() {
   StopCallbackThread();
 
-  // Release the reference now that devmgr no longer has a pointer to this object.
-  __UNUSED bool dummy = Release();
+  if (Release()) {
+    delete this;
+  }
 }
 
 void UsbDevice::ControlComplete(void* ctx, usb_request_t* req) {
