@@ -8,8 +8,8 @@ use {
     anyhow::{format_err, Context as _},
     fidl_fuchsia_sys::LauncherProxy,
     fidl_fuchsia_test::{
-        Invocation,
-        RunListenerRequest::{OnTestCaseFinished, OnTestCaseStarted},
+        Invocation, RunListenerRequest::OnTestCaseStarted, TestCaseListenerRequest::Finished,
+        TestCaseListenerRequestStream,
     },
     fuchsia_async as fasync,
     fuchsia_syslog::{fx_vlog, macros::*},
@@ -23,7 +23,7 @@ use {
         ready,
         task::{Context, Poll},
     },
-    std::{cell::RefCell, collections::HashMap, marker::Unpin, pin::Pin},
+    std::{cell::RefCell, marker::Unpin, pin::Pin},
     zx::HandleBased,
 };
 
@@ -93,37 +93,88 @@ impl Stream for LoggerStream {
     }
 }
 
-struct LogProcessor {
-    name: String,
+struct TestCaseProcessor {
     f: Option<BoxFuture<'static, Result<(), anyhow::Error>>>,
 }
 
-impl LogProcessor {
-    pub fn new(test_case_name: String) -> LogProcessor {
-        LogProcessor { name: test_case_name, f: None }
+impl TestCaseProcessor {
+    /// This will start processing of logs and events in the background. The owner of this object
+    /// should call `wait_for_finish` method  to make sure all the background task completed.
+    pub fn new(
+        test_case_name: String,
+        listener: TestCaseListenerRequestStream,
+        logger_socket: zx::Socket,
+        sender: mpsc::Sender<TestEvent>,
+    ) -> Self {
+        let log_fut =
+            Self::collect_and_send_logs(test_case_name.clone(), logger_socket, sender.clone());
+        let f = Self::process_run_event(test_case_name, listener, log_fut, sender);
+
+        let (remote, remote_handle) = f.remote_handle();
+        fasync::spawn(remote);
+
+        TestCaseProcessor { f: Some(remote_handle.boxed()) }
     }
 
-    /// This will put a listener on `logger_socket`, process and send logs asynchronously in the
-    /// background.
-    /// Caller of this function must call `await_logs` to wait for all the logs to be collected.
-    pub fn collect_and_send_logs(
-        &mut self,
+    async fn process_run_event(
+        name: String,
+        mut listener: TestCaseListenerRequestStream,
+        mut log_fut: Option<BoxFuture<'static, Result<(), anyhow::Error>>>,
+        mut sender: mpsc::Sender<TestEvent>,
+    ) -> Result<(), anyhow::Error> {
+        while let Some(result) = listener
+            .try_next()
+            .await
+            .map_err(|e| format_err!("Error waiting for listener: {}", e))?
+        {
+            match result {
+                Finished { result, control_handle: _ } => {
+                    // get all logs before sending finish event.
+                    if let Some(ref mut log_fut) = log_fut.take().as_mut() {
+                        log_fut.await?;
+                    }
+
+                    let result = match result.status {
+                        Some(status) => match status {
+                            fidl_fuchsia_test::Status::Passed => TestResult::Passed,
+                            fidl_fuchsia_test::Status::Failed => TestResult::Failed,
+                            fidl_fuchsia_test::Status::Skipped => TestResult::Skipped,
+                        },
+                        // This will happen when test protocol is not properly implemented
+                        // by the test and it forgets to set the result.
+                        None => TestResult::Error,
+                    };
+                    sender
+                        .send(TestEvent::TestCaseFinished { test_case_name: name, result: result })
+                        .await?;
+                    return Ok(());
+                }
+            }
+        }
+        if let Some(ref mut log_fut) = log_fut.take().as_mut() {
+            log_fut.await?;
+        }
+        Ok(())
+    }
+
+    /// Internal method that put a listener on `logger_socket`, process and send logs asynchronously
+    /// in the background.
+    fn collect_and_send_logs(
+        name: String,
         logger_socket: zx::Socket,
         mut sender: mpsc::Sender<TestEvent>,
-    ) {
+    ) -> Option<BoxFuture<'static, Result<(), anyhow::Error>>> {
         if logger_socket.is_invalid_handle() {
-            return;
+            return None;
         }
 
         let mut ls = match LoggerStream::new(logger_socket) {
             Err(e) => {
                 fx_log_err!("Logger: Failed to create fuchsia async socket: {:?}", e);
-                return;
+                return None;
             }
             Ok(ls) => ls,
         };
-
-        let name = self.name.clone();
 
         let f = async move {
             while let Some(log) = ls
@@ -140,14 +191,12 @@ impl LogProcessor {
         };
 
         let (remote, remote_handle) = f.remote_handle();
-
         fasync::spawn(remote);
-
-        self.f = Some(remote_handle.boxed());
+        Some(remote_handle.boxed())
     }
 
-    /// This will wait for all the logs to be collected.
-    pub async fn await_logs(&mut self) -> Result<(), anyhow::Error> {
+    /// This will wait for all the logs and events to be collected
+    pub async fn wait_for_finish(&mut self) -> Result<(), anyhow::Error> {
         if let Some(ref mut f) = self.f.take().as_mut() {
             return Ok(f.await?);
         }
@@ -167,7 +216,7 @@ pub async fn run_and_collect_results(
     fx_vlog!(1, "got test list: {:#?}", cases);
     let mut invocations = Vec::<Invocation>::new();
     for case in cases {
-        invocations.push(Invocation { name: Some(case.name.unwrap()) });
+        invocations.push(Invocation { name: Some(case.name.unwrap()), tag: None });
     }
     let (run_listener_client, mut run_listener) =
         fidl::endpoints::create_request_stream::<fidl_fuchsia_test::RunListenerMarker>()
@@ -181,45 +230,29 @@ pub async fn run_and_collect_results(
         )
         .map_err(|e| format_err!("Error running tests in '{}': {}", test_url, e))?;
 
-    let mut log_processors = HashMap::new();
+    let mut test_case_processors = Vec::new();
     while let Some(result_event) = run_listener
         .try_next()
         .await
         .map_err(|e| format_err!("Error waiting for listener: {}", e))?
     {
         match result_event {
-            OnTestCaseStarted { name, primary_log, control_handle: _ } => {
+            OnTestCaseStarted { invocation, primary_log, listener, control_handle: _ } => {
+                let name = invocation.name.ok_or(format_err!("cannot find name in invocation"))?;
                 sender.send(TestEvent::TestCaseStarted { test_case_name: name.clone() }).await?;
-
-                let mut log_processor = LogProcessor::new(name.clone());
-                log_processor.collect_and_send_logs(primary_log, sender.clone());
-                log_processors.insert(name, log_processor);
-            }
-            OnTestCaseFinished { name, result, control_handle: _ } => {
-                // get all logs before sending finish event.
-                match log_processors.remove(&name) {
-                    Some(mut l) => l.await_logs().await?,
-                    None => {}
-                }
-                let result = match result.status {
-                    Some(status) => match status {
-                        fidl_fuchsia_test::Status::Passed => TestResult::Passed,
-                        fidl_fuchsia_test::Status::Failed => TestResult::Failed,
-                        fidl_fuchsia_test::Status::Skipped => TestResult::Skipped,
-                    },
-                    // This will happen when test protocol is not properly implemented
-                    // by the test and it forgets to set the result.
-                    None => TestResult::Error,
-                };
-                sender
-                    .send(TestEvent::TestCaseFinished { test_case_name: name, result: result })
-                    .await?;
+                let test_case_processor = TestCaseProcessor::new(
+                    name,
+                    listener.into_stream()?,
+                    primary_log,
+                    sender.clone(),
+                );
+                test_case_processors.push(test_case_processor);
             }
         }
     }
 
-    // await for rest of logs for which test case never completed.
-    join_all(log_processors.iter_mut().map(|(_, l)| l.await_logs()))
+    // await for all invocations to complete for which test case never completed.
+    join_all(test_case_processors.iter_mut().map(|i| i.wait_for_finish()))
         .await
         .into_iter()
         .fold(Ok(()), |acc, r| acc.and_then(|_| r))
@@ -268,15 +301,16 @@ mod tests {
     use super::*;
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn log_processor() {
+    async fn collect_logs() {
         let (sock_server, sock_client) =
             zx::Socket::create(zx::SocketOpts::STREAM).expect("Failed while creating socket");
 
         let name = "test_name";
-        let mut log_processor = LogProcessor::new(name.to_string());
 
         let (sender, mut recv) = mpsc::channel(1);
-        log_processor.collect_and_send_logs(sock_client, sender);
+
+        let fut = TestCaseProcessor::collect_and_send_logs(name.to_string(), sock_client, sender)
+            .expect("future should not be None");
 
         sock_server.write(b"test message 1").expect("Can't write msg to socket");
         sock_server.write(b"test message 2").expect("Can't write msg to socket");
@@ -307,7 +341,7 @@ mod tests {
         // messages can be read after socket server is closed.
         sock_server.write(b"test message 5").expect("Can't write msg to socket");
         sock_server.into_handle(); // this will drop this handle and close it.
-        log_processor.await_logs().await.expect("await logs should not fail");
+        fut.await.expect("log collection should not fail");
 
         msg = recv.next().await;
 

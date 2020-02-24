@@ -6,7 +6,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_test as ftest,
     fsyslog::{fx_log_err, fx_log_info},
-    ftest::RunListenerProxy,
+    ftest::{Invocation, RunListenerProxy},
     fuchsia_async as fasync, fuchsia_syslog as fsyslog, fuchsia_zircon as zx,
     futures::prelude::*,
     lazy_static::lazy_static,
@@ -124,12 +124,7 @@ impl RustTestAdapter {
                     let proxy =
                         listener.into_proxy().context("Can't convert listener channel to proxy")?;
 
-                    let test_names = tests
-                        .into_iter()
-                        .map(|test| test.name.expect("Invocation must have a name"))
-                        .collect();
-
-                    self.run_tests(test_names, proxy).await.context("Failed to run tests")?;
+                    self.run_tests(tests, proxy).await.context("Failed to run tests")?;
                 }
             }
         }
@@ -139,27 +134,36 @@ impl RustTestAdapter {
     /// Runs each of the tests passed in by name
     async fn run_tests(
         &self,
-        test_names: Vec<String>,
+        invocations: Vec<Invocation>,
         proxy: RunListenerProxy,
     ) -> Result<(), Error> {
         fx_log_info!("running tests");
-        for name in test_names {
+        for invocation in invocations {
+            let name = invocation
+                .name
+                .as_ref()
+                .ok_or(format_err!("Name should be present in Invocation"))?
+                .to_string();
+
             let (log_end, _logger) =
                 zx::Socket::create(zx::SocketOpts::empty()).context("Failed to create socket")?;
 
-            proxy.on_test_case_started(&name, log_end).context("on_test_case_started failed")?;
+            let (case_listener_proxy, listener) =
+                fidl::endpoints::create_proxy::<fidl_fuchsia_test::TestCaseListenerMarker>()
+                    .context("cannot create proxy")?;
+
+            proxy
+                .on_test_case_started(invocation, log_end, listener)
+                .context("on_test_case_started failed")?;
 
             match self.run_test(&name).await {
-                Ok(result) => proxy
-                    .on_test_case_finished(&name, result)
-                    .context("on_test_case_finished failed")?,
+                Ok(result) => {
+                    case_listener_proxy.finished(result).context("on_test_case_finished failed")?
+                }
                 Err(error) => {
                     fx_log_err!("failed to run test. {}", error);
-                    proxy
-                        .on_test_case_finished(
-                            &name,
-                            ftest::Result_ { status: Some(ftest::Status::Failed) },
-                        )
+                    case_listener_proxy
+                        .finished(ftest::Result_ { status: Some(ftest::Status::Failed) })
                         .context("on_test_case_finished failed")?;
                 }
             }
@@ -337,12 +341,15 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_test::{
-            RunListenerMarker,
-            RunListenerRequest::{OnTestCaseFinished, OnTestCaseStarted},
-            RunListenerRequestStream,
+            RunListenerMarker, RunListenerRequest::OnTestCaseStarted, RunListenerRequestStream,
+            TestCaseListenerRequest::Finished,
         },
         std::cmp::PartialEq,
     };
+
+    fn names_to_invocation(names: Vec<&str>) -> Vec<Invocation> {
+        names.iter().map(|s| Invocation { name: Some(s.to_string()), tag: None }).collect()
+    }
 
     #[derive(PartialEq, Debug)]
     enum ListenerEvent {
@@ -356,11 +363,18 @@ mod tests {
         let mut events = vec![];
         while let Some(result_event) = listener.try_next().await? {
             match result_event {
-                OnTestCaseStarted { name, .. } => {
-                    events.push(ListenerEvent::StartTest(name));
-                }
-                OnTestCaseFinished { name, result, .. } => {
-                    events.push(ListenerEvent::FinishTest(name, result))
+                OnTestCaseStarted { invocation, primary_log: _, listener, .. } => {
+                    let name = invocation.name.unwrap();
+                    events.push(ListenerEvent::StartTest(name.clone()));
+                    let mut listener = listener.into_stream()?;
+                    while let Some(result) = listener.try_next().await? {
+                        match result {
+                            Finished { result, .. } => {
+                                events.push(ListenerEvent::FinishTest(name, result));
+                                break;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -432,18 +446,18 @@ mod tests {
 
         let adapter = RustTestAdapter::new(test_info).expect("Cannot create adapter");
 
-        let test_names = vec![
-            String::from("tests::a_passing_test"),
-            String::from("tests::b_failing_test"),
-            String::from("tests::c_passing_test"),
-        ];
+        let tests = names_to_invocation(vec![
+            "tests::a_passing_test",
+            "tests::b_failing_test",
+            "tests::c_passing_test",
+        ]);
 
         let (run_listener_client, run_listener) =
             fidl::endpoints::create_request_stream::<RunListenerMarker>()
                 .expect("failed to create run_listener");
         let proxy = run_listener_client.into_proxy().expect("can't convert listener into proxy");
 
-        let run_future = adapter.run_tests(test_names, proxy);
+        let run_future = adapter.run_tests(tests, proxy);
         let result_future = collect_results(run_listener);
 
         let (run_option, result_option) = future::join(run_future, result_future).await;

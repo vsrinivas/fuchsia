@@ -7,6 +7,7 @@
 #include <fuchsia/test/cpp/fidl.h>
 #include <zircon/errors.h>
 
+#include "lib/fidl/cpp/clone.h"
 #include "src/lib/fxl/logging.h"
 
 namespace example {
@@ -50,11 +51,13 @@ void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
   fuchsia::test::RunListenerPtr ptr;
   ptr.Bind(std::move(run_listener));
   for (auto& test_invocation : tests) {
-    auto& test_name = test_invocation.name();
+    const auto& test_name = test_invocation.name();
     zx::socket log_sock;
     zx::socket test_case_log;
     zx::socket::create(0, &log_sock, &test_case_log);
-    ptr->OnTestCaseStarted(test_name, std::move(log_sock));
+    fuchsia::test::TestCaseListenerPtr test_case_list_ptr;
+    ptr->OnTestCaseStarted(fidl::Clone(test_invocation), std::move(log_sock),
+                           test_case_list_ptr.NewRequest());
     std::string msg1 = "log1 for " + test_name + "\n";
     std::string msg2 = "log2 for " + test_name + "\n";
     std::string msg3 = "log3 for " + test_name + "\n";
@@ -79,7 +82,7 @@ void TestSuite::Run(std::vector<fuchsia::test::Invocation> tests,
     }
 
     if (send_finished_event) {
-      ptr->OnTestCaseFinished(test_name, std::move(result));
+      test_case_list_ptr->Finished(std::move(result));
     }
   }
 }

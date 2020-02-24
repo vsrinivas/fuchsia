@@ -48,14 +48,9 @@ async fn run_test_suite(
                     .context("Cannot send fidl response")?;
             }
             ftest::SuiteRequest::Run { tests, options: _, listener, .. } => {
-                let mut test_names = Vec::with_capacity(tests.len());
-                for i in tests {
-                    let name = i.name.ok_or(format_err!("Name in invocation cannot be null"))?;
-                    test_names.push(name);
-                }
                 adapter
                     .run_tests(
-                        test_names,
+                        tests,
                         listener.into_proxy().context("Can't convert listener into proxy")?,
                     )
                     .await?;

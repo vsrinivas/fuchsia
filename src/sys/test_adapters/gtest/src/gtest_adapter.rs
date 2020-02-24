@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_test::{Result_ as TestResult, RunListenerProxy, Status},
+    fidl_fuchsia_test::{Invocation, Result_ as TestResult, RunListenerProxy, Status},
     fuchsia_async as fasync,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
@@ -160,10 +160,16 @@ impl GTestAdapter {
     // TODO(anmittal): Support test stdout, or devise a mechanism to replace it.
     pub async fn run_tests(
         &self,
-        test_names: Vec<String>,
+        invocations: Vec<Invocation>,
         run_listener: RunListenerProxy,
     ) -> Result<(), Error> {
-        for test in &test_names {
+        for invocation in invocations {
+            let test = invocation
+                .name
+                .as_ref()
+                .ok_or(format_err!("Name should be present in Invocation"))?
+                .to_string();
+
             fx_log_info!("Running test {}", test);
             let test_result_file =
                 FileScope::new(format!("/tmp/test_result_{}.json", Uuid::new_v4().to_simple()));
@@ -181,8 +187,13 @@ impl GTestAdapter {
 
             let (test_logger, log_client) =
                 zx::Socket::create(zx::SocketOpts::DATAGRAM).context("cannot create socket")?;
+
+            let (case_listener_proxy, listener) =
+                fidl::endpoints::create_proxy::<fidl_fuchsia_test::TestCaseListenerMarker>()
+                    .context("cannot create proxy")?;
+
             run_listener
-                .on_test_case_started(test, log_client)
+                .on_test_case_started(invocation, log_client, listener)
                 .context("Cannot send start event")?;
 
             let mut test_logger = fasync::Socket::from_socket(test_logger)?;
@@ -214,8 +225,9 @@ impl GTestAdapter {
                     .write(format!("test did not complete, test output:\n{}", output).as_bytes())
                     .await
                     .context("cannot write logs")?;
-                run_listener
-                    .on_test_case_finished(test, TestResult { status: Some(Status::Failed) })
+
+                case_listener_proxy
+                    .finished(TestResult { status: Some(Status::Failed) })
                     .context("Cannot send finish event")?;
                 continue; // run next test
             };
@@ -233,8 +245,9 @@ impl GTestAdapter {
                     .write(format!("unexpected output:\n{}", output).as_bytes())
                     .await
                     .context("cannot write logs")?;
-                run_listener
-                    .on_test_case_finished(test, TestResult { status: Some(Status::Failed) })
+
+                case_listener_proxy
+                    .finished(TestResult { status: Some(Status::Failed) })
                     .context("Cannot send finish event")?;
                 continue; // run next test
             }
@@ -248,13 +261,13 @@ impl GTestAdapter {
                             .await
                             .context("cannot write logs")?;
                     }
-                    run_listener
-                        .on_test_case_finished(test, TestResult { status: Some(Status::Failed) })
+                    case_listener_proxy
+                        .finished(TestResult { status: Some(Status::Failed) })
                         .context("Cannot send finish event")?;
                 }
                 None => {
-                    run_listener
-                        .on_test_case_finished(test, TestResult { status: Some(Status::Passed) })
+                    case_listener_proxy
+                        .finished(TestResult { status: Some(Status::Passed) })
                         .context("Cannot send finish event")?;
                 }
             }
@@ -328,9 +341,8 @@ mod tests {
     use {
         super::*,
         fidl_fuchsia_test::{
-            RunListenerMarker,
-            RunListenerRequest::{OnTestCaseFinished, OnTestCaseStarted},
-            RunListenerRequestStream,
+            RunListenerMarker, RunListenerRequest::OnTestCaseStarted, RunListenerRequestStream,
+            TestCaseListenerRequest::Finished,
         },
         std::cmp::PartialEq,
         std::path::Path,
@@ -342,6 +354,10 @@ mod tests {
             GTestAdapter::new("/pkg/bin/no_tests".to_owned()).expect("Cannot create adapter");
         let tests = adapter.enumerate_tests().await.expect("Can't enumerate tests");
         assert_eq!(tests.len(), 0, "got {:?}", tests);
+    }
+
+    fn names_to_invocation(names: Vec<&str>) -> Vec<Invocation> {
+        names.iter().map(|s| Invocation { name: Some(s.to_string()), tag: None }).collect()
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -380,12 +396,20 @@ mod tests {
         let mut loggers = vec![];
         while let Some(result_event) = listener.try_next().await? {
             match result_event {
-                OnTestCaseStarted { name, primary_log, .. } => {
-                    ret.push(ListenerEvent::StartTest(name));
+                OnTestCaseStarted { invocation, primary_log, listener, .. } => {
+                    let name = invocation.name.unwrap();
+                    ret.push(ListenerEvent::StartTest(name.clone()));
                     loggers.push(primary_log);
-                }
-                OnTestCaseFinished { name, result, .. } => {
-                    ret.push(ListenerEvent::FinishTest(name, result))
+
+                    let mut listener = listener.into_stream()?;
+                    while let Some(result) = listener.try_next().await? {
+                        match result {
+                            Finished { result, .. } => {
+                                ret.push(ListenerEvent::FinishTest(name, result));
+                                break;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -403,12 +427,12 @@ mod tests {
             GTestAdapter::new("/pkg/bin/sample_tests".to_owned()).expect("Cannot create adapter");
 
         let run_fut = adapter.run_tests(
-            vec![
-                "SampleTest1.SimpleFail".to_owned(),
-                "SampleTest1.Crashing".to_owned(),
-                "SampleTest2.SimplePass".to_owned(),
-                "Tests/SampleParameterizedTestFixture.Test/2".to_owned(),
-            ],
+            names_to_invocation(vec![
+                "SampleTest1.SimpleFail",
+                "SampleTest1.Crashing",
+                "SampleTest2.SimplePass",
+                "Tests/SampleParameterizedTestFixture.Test/2",
+            ]),
             run_listener_client.into_proxy().expect("Can't convert listener into proxy"),
         );
 
@@ -476,7 +500,7 @@ mod tests {
             GTestAdapter::new("/pkg/bin/sample_tests".to_owned()).expect("Cannot create adapter");
 
         let run_fut = adapter.run_tests(
-            vec!["SampleTest2.SimplePass".to_owned()],
+            names_to_invocation(vec!["SampleTest2.SimplePass"]),
             run_listener_client.into_proxy().expect("Can't convert listener into proxy"),
         );
 

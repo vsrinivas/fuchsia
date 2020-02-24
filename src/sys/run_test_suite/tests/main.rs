@@ -3,8 +3,24 @@
 // found in the LICENSE file.
 
 use run_test_suite_lib::{run_test, TestResult};
-use std::collections::HashSet;
 use std::str::from_utf8;
+
+/// split and sort output as output can come in any order.
+/// `output` is of type vec<u8> and `expected_output` is a string.
+macro_rules! assert_output {
+    ($output:expr, $expected_output:expr) => {
+        let mut expected_output = $expected_output.split("\n").collect::<Vec<_>>();
+        let mut output = from_utf8(&$output)
+            .expect("we should not get utf8 error.")
+            .split("\n")
+            .collect::<Vec<_>>();
+
+        expected_output.sort();
+        output.sort();
+
+        assert_eq!(output, expected_output);
+    };
+}
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_passing_test() {
@@ -33,7 +49,7 @@ async fn launch_and_test_passing_test() {
 [Example.Test3]	log3 for Example.Test3
 [PASSED]	Example.Test3
 ";
-    assert_eq!(from_utf8(&output), Ok(expected_output));
+    assert_output!(output, expected_output);
 
     assert_eq!(result, TestResult::Passed);
     assert_eq!(executed, passed);
@@ -69,7 +85,7 @@ async fn launch_and_test_passing_v2_test() {
 [Example.Test3]	log3 for Example.Test3
 [PASSED]	Example.Test3
 ";
-    assert_eq!(from_utf8(&output), Ok(expected_output));
+    assert_output!(output, expected_output);
 
     assert_eq!(result, TestResult::Passed);
     assert_eq!(executed, passed);
@@ -106,7 +122,8 @@ async fn launch_and_test_failing_test() {
 [Example.Test3]	log3 for Example.Test3
 [PASSED]	Example.Test3
 ";
-    assert_eq!(from_utf8(&output), Ok(expected_output));
+
+    assert_output!(output, expected_output);
 
     assert_eq!(result, TestResult::Failed);
 
@@ -144,12 +161,7 @@ Example.Test1
 Example.Test3
 ";
 
-    // split and sort output because for incomplete tests output can be in any order because of
-    // async calls. This will make sure we got all expected output lines.
-    let expected_output: HashSet<_> = expected_output.split("\n").collect();
-    let output: HashSet<_> = from_utf8(&output).unwrap().split("\n").collect();
-
-    assert_eq!(output, expected_output);
+    assert_output!(output, expected_output);
 
     assert_eq!(result, TestResult::Inconclusive);
 
@@ -184,7 +196,7 @@ async fn launch_and_test_invalid_test() {
 [Example.Test3]	log3 for Example.Test3
 [ERROR]	Example.Test3
 ";
-    assert_eq!(from_utf8(&output), Ok(expected_output));
+    assert_output!(output, expected_output);
 
     assert_eq!(result, TestResult::Error);
 
@@ -209,7 +221,7 @@ async fn launch_and_run_echo_test() {
     let expected_output = "[RUNNING]	EchoTest
 [PASSED]	EchoTest
 ";
-    assert_eq!(from_utf8(&output), Ok(expected_output));
+    assert_output!(output, expected_output);
 
     assert_eq!(result, TestResult::Passed);
 

@@ -140,7 +140,7 @@ async fn run_test_suite(mut stream: ftest::SuiteRequestStream) -> Result<(), Err
                     .send(&mut vec![ftest::Case { name: Some(test_name.to_string()) }].into_iter())
                     .expect("Should not error out");
             }
-            ftest::SuiteRequest::Run { tests, options: _, listener, .. } => {
+            ftest::SuiteRequest::Run { mut tests, options: _, listener, .. } => {
                 assert_eq!(tests.len(), 1);
                 assert_eq!(tests[0].name, Some(test_name.to_string()));
 
@@ -150,13 +150,14 @@ async fn run_test_suite(mut stream: ftest::SuiteRequestStream) -> Result<(), Err
                         .expect("cannot create socket.");
                 let mut result = ftest::Result_ { status: Some(ftest::Status::Passed) };
 
+                let (case_listener_proxy, listener) =
+                    fidl::endpoints::create_proxy::<fidl_fuchsia_test::TestCaseListenerMarker>()
+                        .expect("cannot create proxy");
                 proxy
-                    .on_test_case_started(test_name, log_end)
+                    .on_test_case_started(tests.pop().unwrap(), log_end, listener)
                     .expect("on_test_case_started failed");
                 run_test(logger, &mut result).await?;
-                proxy
-                    .on_test_case_finished(test_name, result)
-                    .expect("on_test_case_finished failed");
+                case_listener_proxy.finished(result).expect("on_test_case_finished failed");
             }
         }
     }

@@ -7,6 +7,9 @@ library fuchsia.test;
 /// Human-readable name for a test case.
 using Name = string:512;
 
+/// Optional unique tag to identitfy Invocation.
+using Tag = string:512;
+
 /// Describes a single test case.
 table Case {
     /// Uniquely identifies a test case within a test suite.
@@ -37,6 +40,10 @@ table Invocation {
     /// Uniquely identifies a test case within a test suite.
     /// This member is required.
     1: Name name;
+
+    /// Optional tag, arbitrarily specified by clients of `Suite`.
+    /// This field is not used by Suite protocol.
+    2: Tag tag;
 };
 
 /// Optional additional instructions for running test cases.
@@ -49,15 +56,17 @@ table Result {
     1: Status status;
 };
 
+/// Listens to updates from test case run.
+protocol TestCaseListener {
+    /// Indicates that an invididual test case has completed and result is
+    /// available.
+    Finished(Result result);
+};
+
 /// Listens to updates from test runs.
 protocol RunListener {
-    /// Indicates that an individual test case has started execution.
-    /// Provides the primary log stream used by this test case.
-    OnTestCaseStarted(Name name, handle<socket> primary_log);
-
-    /// Indicates that an invididual test case has completed and outcome is
-    /// available.
-    OnTestCaseFinished(Name name, Result result);
+    /// Indicates that an individual test invocation has started execution.
+    OnTestCaseStarted(Invocation invocation, handle<socket> primary_log, request<TestCaseListener> listener);
 };
 
 [Discoverable]

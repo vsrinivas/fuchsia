@@ -52,9 +52,6 @@ pub enum SuiteServerError {
 
     #[error("Cannot send fidl response: {:?}", _0)]
     Response(fidl::Error),
-
-    #[error("Name in invocation cannot be null")]
-    TestCaseName,
 }
 
 /// Error encountered while enumerating test.
@@ -125,6 +122,9 @@ pub enum RunTestError {
 
     #[error("can't get test result: {:?}", _0)]
     JsonParse(serde_json::error::Error),
+
+    #[error("Name in invocation cannot be null")]
+    TestCaseName,
 }
 
 /// Error while reading/writing log using socket
