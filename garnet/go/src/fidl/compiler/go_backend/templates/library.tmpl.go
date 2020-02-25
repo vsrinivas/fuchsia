@@ -38,8 +38,8 @@ const (
 {{ range $struct := .Structs -}}
 {{ template "StructDefinition" $struct }}
 {{ end -}}
-{{ range $union := .Unions -}}
-{{ template "UnionDefinition" $union }}
+{{ range $xunion := .XUnions -}}
+{{ template "XUnionDefinition" $xunion }}
 {{ end -}}
 {{ range $table := .Tables -}}
 {{ template "TableDefinition" $table }}

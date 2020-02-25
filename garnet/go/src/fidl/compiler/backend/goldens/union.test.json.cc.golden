@@ -432,11 +432,11 @@ ReverseOrdinalUnion::~ReverseOrdinalUnion() {
 
 ReverseOrdinalUnion::ReverseOrdinalUnion(ReverseOrdinalUnion&& other) : tag_(other.tag_) {
   switch (tag_) {
-    case Tag::kSecond:
-      second_ = std::move(other.second_);
-      break;
     case Tag::kFirst:
       first_ = std::move(other.first_);
+      break;
+    case Tag::kSecond:
+      second_ = std::move(other.second_);
       break;
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
@@ -448,11 +448,11 @@ ReverseOrdinalUnion& ReverseOrdinalUnion::operator=(ReverseOrdinalUnion&& other)
     Destroy();
     tag_ = other.tag_;
     switch (tag_) {
-      case Tag::kSecond:
-        second_ = std::move(other.second_);
-        break;
       case Tag::kFirst:
         first_ = std::move(other.first_);
+        break;
+      case Tag::kSecond:
+        second_ = std::move(other.second_);
         break;
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
@@ -461,14 +461,14 @@ ReverseOrdinalUnion& ReverseOrdinalUnion::operator=(ReverseOrdinalUnion&& other)
   return *this;
 }
 
-ReverseOrdinalUnion ReverseOrdinalUnion::WithSecond(uint32_t&& val) {
-  ReverseOrdinalUnion result;
-  result.set_second(std::move(val));
-  return result;
-}
 ReverseOrdinalUnion ReverseOrdinalUnion::WithFirst(uint32_t&& val) {
   ReverseOrdinalUnion result;
   result.set_first(std::move(val));
+  return result;
+}
+ReverseOrdinalUnion ReverseOrdinalUnion::WithSecond(uint32_t&& val) {
+  ReverseOrdinalUnion result;
+  result.set_second(std::move(val));
   return result;
 }
 
@@ -480,14 +480,14 @@ void ReverseOrdinalUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
   size_t envelope_offset = 0;
 
   switch (tag_) {
-    case Tag::kSecond: {
-      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder));
-      ::fidl::Encode(encoder, &second_, envelope_offset);
-      break;
-    }
     case Tag::kFirst: {
       envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder));
       ::fidl::Encode(encoder, &first_, envelope_offset);
+      break;
+    }
+    case Tag::kSecond: {
+      envelope_offset = encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(encoder));
+      ::fidl::Encode(encoder, &second_, envelope_offset);
       break;
     }
     default:
@@ -519,11 +519,11 @@ void ReverseOrdinalUnion::Decode(::fidl::Decoder* decoder, ReverseOrdinalUnion* 
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
-    case Tag::kSecond:
-      ::fidl::Decode(decoder, &value->second_, envelope_offset);
-      break;
     case Tag::kFirst:
       ::fidl::Decode(decoder, &value->first_, envelope_offset);
+      break;
+    case Tag::kSecond:
+      ::fidl::Decode(decoder, &value->second_, envelope_offset);
       break;
   }
 
@@ -533,19 +533,13 @@ zx_status_t ReverseOrdinalUnion::Clone(ReverseOrdinalUnion* result) const {
   result->Destroy();
   result->tag_ = tag_;
   switch (tag_) {
-    case Tag::kSecond:
-      return ::fidl::Clone(second_, &result->second_);
     case Tag::kFirst:
       return ::fidl::Clone(first_, &result->first_);
+    case Tag::kSecond:
+      return ::fidl::Clone(second_, &result->second_);
     default:
       return ZX_OK;
   }
-}
-
-ReverseOrdinalUnion& ReverseOrdinalUnion::set_second(uint32_t value) {
-  EnsureStorageInitialized(Tag::kSecond);
-  second_ = std::move(value);
-  return *this;
 }
 
 ReverseOrdinalUnion& ReverseOrdinalUnion::set_first(uint32_t value) {
@@ -554,11 +548,17 @@ ReverseOrdinalUnion& ReverseOrdinalUnion::set_first(uint32_t value) {
   return *this;
 }
 
+ReverseOrdinalUnion& ReverseOrdinalUnion::set_second(uint32_t value) {
+  EnsureStorageInitialized(Tag::kSecond);
+  second_ = std::move(value);
+  return *this;
+}
+
 void ReverseOrdinalUnion::Destroy() {
   switch (tag_) {
-    case Tag::kSecond:
-      break;
     case Tag::kFirst:
+      break;
+    case Tag::kSecond:
       break;
   
     default:
@@ -575,11 +575,11 @@ void ReverseOrdinalUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     switch (tag_) {
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
         break;
-      case Tag::kSecond:
-        new (&second_) uint32_t();
-        break;
       case Tag::kFirst:
         new (&first_) uint32_t();
+        break;
+      case Tag::kSecond:
+        new (&second_) uint32_t();
         break;
       default:
         break;
@@ -991,10 +991,6 @@ FlexiblePizzaOrPasta::FlexiblePizzaOrPasta(FlexiblePizzaOrPasta&& other) : tag_(
       break;
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
-    default:
-      new (&unknown_data_) decltype(unknown_data_);
-      unknown_data_ = std::move(other.unknown_data_);
-      break;
   }
 }
 
@@ -1012,10 +1008,6 @@ FlexiblePizzaOrPasta& FlexiblePizzaOrPasta::operator=(FlexiblePizzaOrPasta&& oth
         pasta_ = std::move(other.pasta_);
         break;
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
-        break;
-      default:
-        new (&unknown_data_) decltype(unknown_data_);
-        unknown_data_ = std::move(other.unknown_data_);
         break;
     }
   }
@@ -1051,7 +1043,6 @@ void FlexiblePizzaOrPasta::Encode(::fidl::Encoder* encoder, size_t offset) {
       ::fidl::Encode(encoder, &pasta_, envelope_offset);
       break;
     }
-    case Tag::kUnknown:
     default:
        break;
   }
@@ -1088,10 +1079,6 @@ void FlexiblePizzaOrPasta::Decode(::fidl::Decoder* decoder, FlexiblePizzaOrPasta
     case Tag::kPasta:
       new (&value->pasta_) class Pasta();
       ::fidl::Decode(decoder, &value->pasta_, envelope_offset);
-      break;
-  default:
-      value->unknown_data_.resize(xunion->envelope.num_bytes);
-      memcpy(value->unknown_data_.data(), xunion->envelope.data, xunion->envelope.num_bytes);
       break;
   }
 
@@ -1133,10 +1120,7 @@ void FlexiblePizzaOrPasta::Destroy() {
       pasta_.~decltype(pasta_)();
       break;
   
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
-      break;
     default:
-      unknown_data_.~vector();
       break;
   
   }
@@ -1157,7 +1141,6 @@ void FlexiblePizzaOrPasta::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
         new (&pasta_) class Pasta();
         break;
       default:
-        new (&unknown_data_) decltype(unknown_data_);
         break;
     }
   }
@@ -1378,10 +1361,6 @@ FlexibleUnion::FlexibleUnion(FlexibleUnion&& other) : tag_(other.tag_) {
       break;
     case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
       break;
-    default:
-      new (&unknown_data_) decltype(unknown_data_);
-      unknown_data_ = std::move(other.unknown_data_);
-      break;
   }
 }
 
@@ -1402,10 +1381,6 @@ FlexibleUnion& FlexibleUnion::operator=(FlexibleUnion&& other) {
         VectorStringAlsoNeedsConstructor_ = std::move(other.VectorStringAlsoNeedsConstructor_);
         break;
       case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
-        break;
-      default:
-        new (&unknown_data_) decltype(unknown_data_);
-        unknown_data_ = std::move(other.unknown_data_);
         break;
     }
   }
@@ -1451,7 +1426,6 @@ void FlexibleUnion::Encode(::fidl::Encoder* encoder, size_t offset) {
       ::fidl::Encode(encoder, &VectorStringAlsoNeedsConstructor_, envelope_offset);
       break;
     }
-    case Tag::kUnknown:
     default:
        break;
   }
@@ -1491,10 +1465,6 @@ void FlexibleUnion::Decode(::fidl::Decoder* decoder, FlexibleUnion* value, size_
     case Tag::kVectorStringAlsoNeedsConstructor:
       new (&value->VectorStringAlsoNeedsConstructor_) ::std::vector<::std::string>();
       ::fidl::Decode(decoder, &value->VectorStringAlsoNeedsConstructor_, envelope_offset);
-      break;
-  default:
-      value->unknown_data_.resize(xunion->envelope.num_bytes);
-      memcpy(value->unknown_data_.data(), xunion->envelope.data, xunion->envelope.num_bytes);
       break;
   }
 
@@ -1546,10 +1516,7 @@ void FlexibleUnion::Destroy() {
       VectorStringAlsoNeedsConstructor_.~decltype(VectorStringAlsoNeedsConstructor_)();
       break;
   
-    case static_cast<fidl_xunion_tag_t>(Tag::Invalid):
-      break;
     default:
-      unknown_data_.~vector();
       break;
   
   }
@@ -1573,7 +1540,6 @@ void FlexibleUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
         new (&VectorStringAlsoNeedsConstructor_) ::std::vector<::std::string>();
         break;
       default:
-        new (&unknown_data_) decltype(unknown_data_);
         break;
     }
   }

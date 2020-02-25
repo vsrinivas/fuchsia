@@ -144,6 +144,15 @@ class LintingTreeCallbacks {
   void OnExitUnionDeclaration(fit::function<void(const raw::UnionDeclaration&)> callback) {
     exit_union_declaration_callbacks_.push_back(std::move(callback));
   }
+  void OnXUnionDeclaration(fit::function<void(const raw::XUnionDeclaration&)> callback) {
+    xunion_declaration_callbacks_.push_back(std::move(callback));
+  }
+  void OnXUnionMember(fit::function<void(const raw::XUnionMember&)> callback) {
+    xunion_member_callbacks_.push_back(std::move(callback));
+  }
+  void OnExitXUnionDeclaration(fit::function<void(const raw::XUnionDeclaration&)> callback) {
+    exit_xunion_declaration_callbacks_.push_back(std::move(callback));
+  }
 
  private:
   // tree_visitor_ is initialized to a locally-defined class
@@ -192,6 +201,10 @@ class LintingTreeCallbacks {
   std::vector<fit::function<void(const raw::UnionMember&)>> union_member_callbacks_;
   std::vector<fit::function<void(const raw::UnionDeclaration&)>> union_declaration_callbacks_;
   std::vector<fit::function<void(const raw::UnionDeclaration&)>> exit_union_declaration_callbacks_;
+  std::vector<fit::function<void(const raw::XUnionMember&)>> xunion_member_callbacks_;
+  std::vector<fit::function<void(const raw::XUnionDeclaration&)>> xunion_declaration_callbacks_;
+  std::vector<fit::function<void(const raw::XUnionDeclaration&)>>
+      exit_xunion_declaration_callbacks_;
 };
 
 }  // namespace linter

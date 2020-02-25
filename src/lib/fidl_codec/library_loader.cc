@@ -95,14 +95,19 @@ std::string Bits::GetName(uint64_t absolute_value, bool negative) const {
 }
 
 UnionMember::UnionMember(const Union& union_definition, Library* enclosing_library,
-                         const rapidjson::Value* json_definition)
+                         const rapidjson::Value* json_definition, bool for_xunion)
     : union_definition_(union_definition),
       reserved_(
           enclosing_library->ExtractBool(json_definition, "table member", "<unknown>", "reserved")),
       name_(reserved_ ? "<reserved>"
                       : enclosing_library->ExtractString(json_definition, "union member",
                                                          "<unknown>", "name")),
-      ordinal_(enclosing_library->ExtractUint32(json_definition, "union member", name_, "ordinal")),
+      ordinal_(for_xunion ? enclosing_library->ExtractUint32(json_definition, "union member", name_,
+                                                             "ordinal")
+                          : (json_definition->HasMember("xunion_ordinal")
+                                 ? enclosing_library->ExtractUint32(json_definition, "union member",
+                                                                    name_, "xunion_ordinal")
+                                 : 0)),
       type_(reserved_
                 ? std::make_unique<InvalidType>()
                 : enclosing_library->ExtractType(json_definition, "union member", name_, "type")) {}
@@ -112,7 +117,7 @@ UnionMember::~UnionMember() = default;
 Union::Union(Library* enclosing_library, const rapidjson::Value* json_definition)
     : enclosing_library_(enclosing_library), json_definition_(json_definition) {}
 
-void Union::DecodeTypes() {
+void Union::DecodeTypes(bool for_xunion) {
   if (json_definition_ == nullptr) {
     return;
   }
@@ -124,10 +129,24 @@ void Union::DecodeTypes() {
     auto member_arr = (*json_definition_)["members"].GetArray();
     members_.reserve(member_arr.Size());
     for (auto& member : member_arr) {
-      members_.push_back(std::make_unique<UnionMember>(*this, enclosing_library_, &member));
+      members_.push_back(
+          std::make_unique<UnionMember>(*this, enclosing_library_, &member, for_xunion));
     }
   }
   json_definition_ = nullptr;
+}
+
+const UnionMember* Union::MemberWithTag(uint32_t tag) const {
+  // Only non reserved members count for the tag.
+  for (const auto& member : members_) {
+    if (!member->reserved()) {
+      if (tag == 0) {
+        return member.get();
+      }
+      --tag;
+    }
+  }
+  return nullptr;
 }
 
 const UnionMember* Union::MemberWithOrdinal(Ordinal32 ordinal) const {
@@ -375,6 +394,15 @@ void Library::DecodeTypes() {
                       std::forward_as_tuple(new Union(this, &uni)));
     }
   }
+
+  if (!json_definition_.HasMember("xunion_declarations")) {
+    FieldNotFound("library", name_, "xunion_declarations");
+  } else {
+    for (auto& xuni : json_definition_["xunion_declarations"].GetArray()) {
+      xunions_.emplace(std::piecewise_construct, std::forward_as_tuple(xuni["name"].GetString()),
+                       std::forward_as_tuple(new Union(this, &xuni)));
+    }
+  }
 }
 
 bool Library::DecodeAll() {
@@ -392,7 +420,10 @@ bool Library::DecodeAll() {
     tmp.second->DecodeTypes();
   }
   for (const auto& tmp : unions_) {
-    tmp.second->DecodeTypes();
+    tmp.second->DecodeUnionTypes();
+  }
+  for (const auto& tmp : xunions_) {
+    tmp.second->DecodeXunionTypes();
   }
   for (const auto& interface : interfaces_) {
     for (const auto& method : interface->methods()) {
@@ -427,8 +458,14 @@ std::unique_ptr<Type> Library::TypeFromIdentifier(bool is_nullable, std::string&
   }
   auto uni = unions_.find(identifier);
   if (uni != unions_.end()) {
-    uni->second->DecodeTypes();
+    uni->second->DecodeUnionTypes();
     return std::make_unique<UnionType>(std::ref(*uni->second), is_nullable);
+  }
+  auto xuni = xunions_.find(identifier);
+  if (xuni != xunions_.end()) {
+    // Note: XUnion and nullable XUnion are encoded in the same way
+    xuni->second->DecodeXunionTypes();
+    return std::make_unique<UnionType>(std::ref(*xuni->second), is_nullable);
   }
   Interface* ifc;
   if (GetInterfaceByName(identifier, &ifc)) {

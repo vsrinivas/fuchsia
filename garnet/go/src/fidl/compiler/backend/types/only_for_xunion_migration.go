@@ -9,11 +9,35 @@ package types
 // ConvertUnionToXUnion converts a union to a xunion. This should only be used
 // once we're already moved to the v1 format.
 func ConvertUnionToXUnion(union Union) XUnion {
+	var members []XUnionMember
+	for _, member := range union.Members {
+		if member.Reserved {
+			continue
+		}
+		members = append(members, XUnionMember{
+			Attributes:   member.Attributes,
+			Ordinal:      member.XUnionOrdinal,
+			Type:         member.Type,
+			Name:         member.Name,
+			Offset:       -1, // unused
+			MaxOutOfLine: -1, // unused
+		})
+	}
+	typeShape := TypeShape{
+		InlineSize:          24,
+		Alignment:           8,
+		Depth:               union.TypeShapeV1.Depth,
+		MaxHandles:          union.TypeShapeV1.MaxHandles,
+		MaxOutOfLine:        union.TypeShapeV1.MaxOutOfLine,
+		HasPadding:          union.TypeShapeV1.HasPadding,
+		HasFlexibleEnvelope: union.TypeShapeV1.HasFlexibleEnvelope,
+		ContainsUnion:       union.TypeShapeV1.ContainsUnion,
+	}
 	return XUnion{
 		Attributes:  union.Attributes,
 		Name:        union.Name,
-		Members:     union.Members,
-		TypeShapeV1: union.TypeShapeV1,
-		Strictness:  union.Strictness,
+		Members:     members,
+		TypeShapeV1: typeShape,
+		Strictness:  true,
 	}
 }

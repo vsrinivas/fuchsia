@@ -26,7 +26,7 @@ type interfaceKind struct{}
 type serviceKind struct{}
 type structKind struct{}
 type tableKind struct{}
-type unionKind struct{}
+type xunionKind struct{}
 
 var Kinds = struct {
 	Const     constKind
@@ -36,7 +36,7 @@ var Kinds = struct {
 	Service   serviceKind
 	Struct    structKind
 	Table     tableKind
-	Union     unionKind
+	XUnion    xunionKind
 }{}
 
 type Decl interface{}
@@ -115,22 +115,22 @@ type EnumMember struct {
 	Value string
 }
 
-type Union struct {
+type XUnion struct {
 	types.Attributes
 	Namespace    string
 	Name         string
 	TableType    string
-	Members      []UnionMember
+	Members      []XUnionMember
 	InlineSize   int
 	MaxHandles   int
 	MaxOutOfLine int
 	Result       *Result
 	HasPointer   bool
-	Kind         unionKind
+	Kind         xunionKind
 	types.Strictness
 }
 
-type UnionMember struct {
+type XUnionMember struct {
 	types.Attributes
 	Ordinal     uint64
 	Type        Type
@@ -140,8 +140,8 @@ type UnionMember struct {
 	Offset      int
 }
 
-func (um UnionMember) UpperCamelCaseName() string {
-	return common.ToUpperCamelCase(um.Name)
+func (xum XUnionMember) UpperCamelCaseName() string {
+	return common.ToUpperCamelCase(xum.Name)
 }
 
 type TableFrameItem struct {
@@ -176,6 +176,7 @@ type TableMember struct {
 	MethodHasName     string
 	MethodClearName   string
 	ValueUnionName    string
+	ValueXUnionName   string
 }
 
 type Struct struct {
@@ -672,13 +673,15 @@ func (c *compiler) compileType(val types.Type) Type {
 		case types.TableDeclType:
 			fallthrough
 		case types.UnionDeclType:
+			fallthrough
+		case types.XUnionDeclType:
 			if declType.IsPrimitive() {
 				r.IsPrimitive = true
 			}
 
 			if val.Nullable {
 				r.Decl = fmt.Sprintf("::std::unique_ptr<%s>", t)
-				if declType == types.UnionDeclType {
+				if declType == types.XUnionDeclType || declType == types.UnionDeclType {
 					r.LLDecl = fmt.Sprintf("%s", ft)
 				} else {
 					r.LLDecl = fmt.Sprintf("%s*", ft)
@@ -1061,9 +1064,9 @@ func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 	return r
 }
 
-func (c *compiler) compileUnionMember(val types.XUnionMember) UnionMember {
+func (c *compiler) compileXUnionMember(val types.XUnionMember) XUnionMember {
 	n := changeIfReserved(val.Name, "")
-	return UnionMember{
+	return XUnionMember{
 		Attributes:  val.Attributes,
 		Ordinal:     uint64(val.Ordinal),
 		Type:        c.compileType(val.Type),
@@ -1074,10 +1077,10 @@ func (c *compiler) compileUnionMember(val types.XUnionMember) UnionMember {
 	}
 }
 
-func (c *compiler) compileUnion(val types.Union) Union {
+func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 	name := c.compileCompoundIdentifier(val.Name, "", "", false)
 	tableType := c.compileTableType(val.Name)
-	r := Union{
+	r := XUnion{
 		Attributes:   val.Attributes,
 		Namespace:    c.namespace,
 		Name:         name,
@@ -1093,7 +1096,7 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		if v.Reserved {
 			continue
 		}
-		r.Members = append(r.Members, c.compileUnionMember(v))
+		r.Members = append(r.Members, c.compileXUnionMember(v))
 	}
 
 	if val.Attributes.HasAttribute("Result") {
@@ -1171,12 +1174,15 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 
 	// Note: for Result calculation unions must be compiled before structs.
 	for _, v := range r.Unions {
-		d := c.compileUnion(v)
+		var d Decl
+		vConverted := types.ConvertUnionToXUnion(v)
+		d = c.compileXUnion(vConverted)
 		decls[v.Name] = d
 	}
 
-	if len(r.XUnions) > 0 {
-		panic("unexpected xunions in JSON IR: xunions have been replaced by unions and should no longer exist")
+	for _, v := range r.XUnions {
+		d := c.compileXUnion(v)
+		decls[v.Name] = &d
 	}
 
 	for _, v := range r.Structs {

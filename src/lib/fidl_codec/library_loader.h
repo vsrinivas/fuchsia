@@ -154,7 +154,7 @@ class Bits : public EnumOrBits {
 class UnionMember {
  public:
   UnionMember(const Union& union_definition, Library* enclosing_library,
-              const rapidjson::Value* json_definition);
+              const rapidjson::Value* json_definition, bool for_xunion);
   ~UnionMember();
 
   const Union& union_definition() const { return union_definition_; }
@@ -179,13 +179,17 @@ class Union {
   const std::string& name() const { return name_; }
   const std::vector<std::unique_ptr<UnionMember>>& members() const { return members_; }
 
+  const UnionMember* MemberWithTag(uint32_t tag) const;
+
   const UnionMember* MemberWithOrdinal(Ordinal32 ordinal) const;
 
  private:
   Union(Library* enclosing_library, const rapidjson::Value* json_definition);
 
   // Decode all the values from the JSON definition.
-  void DecodeTypes();
+  void DecodeTypes(bool for_xunion);
+  void DecodeUnionTypes() { DecodeTypes(/*for_xunion=*/false); }
+  void DecodeXunionTypes() { DecodeTypes(/*for_xunion=*/true); }
 
   Library* enclosing_library_;
   const rapidjson::Value* json_definition_;
@@ -471,6 +475,7 @@ class Library {
   std::map<std::string, std::unique_ptr<Enum>> enums_;
   std::map<std::string, std::unique_ptr<Bits>> bits_;
   std::map<std::string, std::unique_ptr<Union>> unions_;
+  std::map<std::string, std::unique_ptr<Union>> xunions_;
   std::map<std::string, std::unique_ptr<Struct>> structs_;
   std::map<std::string, std::unique_ptr<Table>> tables_;
 };

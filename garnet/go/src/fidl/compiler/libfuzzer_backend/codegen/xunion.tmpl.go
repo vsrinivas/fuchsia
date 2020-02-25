@@ -4,8 +4,8 @@
 
 package codegen
 
-const tmplUnion = `
-{{- define "UnionSizeAndAlloc" }}
+const tmplXUnion = `
+{{- define "XUnionSizeAndAlloc" }}
 template<>
 struct MinSize<{{ .Name }}> {
   operator size_t() {

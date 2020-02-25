@@ -67,13 +67,6 @@ struct StructField {
   const uint32_t field_num;
 };
 
-struct TableField {
-  TableField(const Type* type, uint32_t ordinal) : type(type), ordinal(ordinal) {}
-
-  const Type* type;
-  const uint32_t ordinal;
-};
-
 struct UnionField {
   UnionField(const Type* type, uint32_t padding, uint32_t xunion_ordinal)
       : type(type), padding(padding), xunion_ordinal(xunion_ordinal) {}
@@ -81,6 +74,13 @@ struct UnionField {
   const Type* type;
   const uint32_t padding;
   const uint32_t xunion_ordinal;
+};
+
+struct TableField {
+  TableField(const Type* type, uint32_t ordinal) : type(type), ordinal(ordinal) {}
+
+  const Type* type;
+  const uint32_t ordinal;
 };
 
 struct XUnionField {
@@ -260,13 +260,13 @@ struct XUnionType : public Type {
   types::Strictness strictness;
   XUnionType* maybe_reference_type = nullptr;
 
-  // While the transformer exists, it is the only user of the "old" wire format
-  // and we assume that all xunions are "from union"
+  // This XUnionType was created from...
   enum class Source {
+    kFromXUnion = 1,    // ... a xunion declaration.
     kFromUnion,         // ... a (static) union declaration.
     kFromUnionPointer,  // ... a (static) pointer-to-union declaration.
   };
-  Source source = Source::kFromUnion;
+  Source source = Source::kFromXUnion;
 
   bool FromUnion() const { return source == Source::kFromUnion; }
 

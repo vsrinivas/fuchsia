@@ -563,9 +563,6 @@ class TransformerBase {
                 type->coded_xunion, *type->coded_xunion.alt_type->coded_union_pointer.union_type,
                 position, out_traversal_result);
           case kFidlTypeXUnion:
-            // NOTE: after https://fuchsia-review.googlesource.com/c/fuchsia/+/365937,
-            // the alt type of a xunion should always be a union, so this path should
-            // never be exercised
             return TransformXUnion(type->coded_xunion, position, out_traversal_result);
           case kFidlTypePrimitive:
           case kFidlTypeEnum:

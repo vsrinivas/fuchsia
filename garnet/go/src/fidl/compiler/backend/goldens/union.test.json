@@ -138,7 +138,7 @@
       },
       "members": [
         {
-          "ordinal": 1,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "pizza",
           "type": {
@@ -153,7 +153,7 @@
           }
         },
         {
-          "ordinal": 2,
+          "xunion_ordinal": 2,
           "reserved": false,
           "name": "pasta",
           "type": {
@@ -189,25 +189,7 @@
       },
       "members": [
         {
-          "ordinal": 3,
-          "reserved": true,
-          "location": {
-            "filename": "union.test.fidl",
-            "line": 17,
-            "column": 5
-          }
-        },
-        {
-          "ordinal": 2,
-          "reserved": true,
-          "location": {
-            "filename": "union.test.fidl",
-            "line": 18,
-            "column": 5
-          }
-        },
-        {
-          "ordinal": 1,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "pizza",
           "type": {
@@ -222,7 +204,25 @@
           }
         },
         {
-          "ordinal": 4,
+          "xunion_ordinal": 2,
+          "reserved": true,
+          "location": {
+            "filename": "union.test.fidl",
+            "line": 18,
+            "column": 5
+          }
+        },
+        {
+          "xunion_ordinal": 3,
+          "reserved": true,
+          "location": {
+            "filename": "union.test.fidl",
+            "line": 17,
+            "column": 5
+          }
+        },
+        {
+          "xunion_ordinal": 4,
           "reserved": false,
           "name": "pasta",
           "type": {
@@ -258,7 +258,7 @@
       },
       "members": [
         {
-          "ordinal": 1,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "pizza",
           "type": {
@@ -273,7 +273,7 @@
           }
         },
         {
-          "ordinal": 2,
+          "xunion_ordinal": 2,
           "reserved": false,
           "name": "pasta",
           "type": {
@@ -296,7 +296,7 @@
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": true,
+        "has_flexible_envelope": false,
         "contains_union": true
       }
     },
@@ -309,7 +309,7 @@
       },
       "members": [
         {
-          "ordinal": 1,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "pizza",
           "type": {
@@ -324,7 +324,7 @@
           }
         },
         {
-          "ordinal": 2,
+          "xunion_ordinal": 2,
           "reserved": false,
           "name": "pasta",
           "type": {
@@ -360,7 +360,7 @@
       },
       "members": [
         {
-          "ordinal": 1,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "Primitive",
           "type": {
@@ -374,7 +374,7 @@
           }
         },
         {
-          "ordinal": 2,
+          "xunion_ordinal": 2,
           "reserved": false,
           "name": "StringNeedsConstructor",
           "type": {
@@ -388,7 +388,7 @@
           }
         },
         {
-          "ordinal": 3,
+          "xunion_ordinal": 3,
           "reserved": false,
           "name": "VectorStringAlsoNeedsConstructor",
           "type": {
@@ -427,7 +427,7 @@
       },
       "members": [
         {
-          "ordinal": 1,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "Primitive",
           "type": {
@@ -441,7 +441,7 @@
           }
         },
         {
-          "ordinal": 2,
+          "xunion_ordinal": 2,
           "reserved": false,
           "name": "StringNeedsConstructor",
           "type": {
@@ -455,7 +455,7 @@
           }
         },
         {
-          "ordinal": 3,
+          "xunion_ordinal": 3,
           "reserved": false,
           "name": "VectorStringAlsoNeedsConstructor",
           "type": {
@@ -481,7 +481,7 @@
         "max_handles": 0,
         "max_out_of_line": 4294967295,
         "has_padding": true,
-        "has_flexible_envelope": true,
+        "has_flexible_envelope": false,
         "contains_union": true
       }
     },
@@ -494,7 +494,7 @@
       },
       "members": [
         {
-          "ordinal": 1,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "Primitive",
           "type": {
@@ -508,7 +508,7 @@
           }
         },
         {
-          "ordinal": 2,
+          "xunion_ordinal": 2,
           "reserved": false,
           "name": "StringNeedsConstructor",
           "type": {
@@ -522,7 +522,7 @@
           }
         },
         {
-          "ordinal": 3,
+          "xunion_ordinal": 3,
           "reserved": false,
           "name": "VectorStringAlsoNeedsConstructor",
           "type": {
@@ -561,7 +561,7 @@
       },
       "members": [
         {
-          "ordinal": 1,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "field_collision_tag",
           "type": {
@@ -596,16 +596,7 @@
       },
       "members": [
         {
-          "ordinal": 2,
-          "reserved": true,
-          "location": {
-            "filename": "union.test.fidl",
-            "line": 56,
-            "column": 5
-          }
-        },
-        {
-          "ordinal": 1,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "Primitive",
           "type": {
@@ -619,7 +610,16 @@
           }
         },
         {
-          "ordinal": 3,
+          "xunion_ordinal": 2,
+          "reserved": true,
+          "location": {
+            "filename": "union.test.fidl",
+            "line": 56,
+            "column": 5
+          }
+        },
+        {
+          "xunion_ordinal": 3,
           "reserved": false,
           "name": "StringNeedsConstructor",
           "type": {
@@ -654,21 +654,7 @@
       },
       "members": [
         {
-          "ordinal": 2,
-          "reserved": false,
-          "name": "second",
-          "type": {
-            "kind": "primitive",
-            "subtype": "uint32"
-          },
-          "location": {
-            "filename": "union.test.fidl",
-            "line": 62,
-            "column": 15
-          }
-        },
-        {
-          "ordinal": 1,
+          "xunion_ordinal": 1,
           "reserved": false,
           "name": "first",
           "type": {
@@ -678,6 +664,20 @@
           "location": {
             "filename": "union.test.fidl",
             "line": 63,
+            "column": 15
+          }
+        },
+        {
+          "xunion_ordinal": 2,
+          "reserved": false,
+          "name": "second",
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "location": {
+            "filename": "union.test.fidl",
+            "line": 62,
             "column": 15
           }
         }
@@ -695,6 +695,7 @@
       }
     }
   ],
+  "xunion_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
     "fidl.test.json/Union",

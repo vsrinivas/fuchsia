@@ -51,10 +51,10 @@ union Foo {
   ASSERT_EQ(fidl_union->members.size(), 2);
   auto& member0 = fidl_union->members[0];
   EXPECT_NONNULL(member0.maybe_used);
-  EXPECT_EQ(member0.ordinal->value, 1);
+  EXPECT_EQ(member0.xunion_ordinal->value, 1);
   auto& member1 = fidl_union->members[1];
   EXPECT_NONNULL(member1.maybe_used);
-  EXPECT_EQ(member1.ordinal->value, 2);
+  EXPECT_EQ(member1.xunion_ordinal->value, 2);
 
   END_TEST;
 }
@@ -81,19 +81,19 @@ union Foo {
   ASSERT_EQ(fidl_union->members.size(), 5);
   auto& member0 = fidl_union->members[0];
   EXPECT_NULL(member0.maybe_used);
-  EXPECT_EQ(member0.ordinal->value, 1);
+  EXPECT_EQ(member0.xunion_ordinal->value, 1);
   auto& member1 = fidl_union->members[1];
   EXPECT_NONNULL(member1.maybe_used);
-  EXPECT_EQ(member1.ordinal->value, 2);
+  EXPECT_EQ(member1.xunion_ordinal->value, 2);
   auto& member2 = fidl_union->members[2];
   EXPECT_NULL(member2.maybe_used);
-  EXPECT_EQ(member2.ordinal->value, 3);
+  EXPECT_EQ(member2.xunion_ordinal->value, 3);
   auto& member3 = fidl_union->members[3];
   EXPECT_NONNULL(member3.maybe_used);
-  EXPECT_EQ(member3.ordinal->value, 4);
+  EXPECT_EQ(member3.xunion_ordinal->value, 4);
   auto& member4 = fidl_union->members[4];
   EXPECT_NULL(member4.maybe_used);
-  EXPECT_EQ(member4.ordinal->value, 5);
+  EXPECT_EQ(member4.xunion_ordinal->value, 5);
 
   END_TEST;
 }
@@ -120,19 +120,19 @@ union Foo {
   ASSERT_EQ(fidl_union->members.size(), 5);
   auto& member0 = fidl_union->members[0];
   EXPECT_NONNULL(member0.maybe_used);
-  EXPECT_EQ(member0.ordinal->value, 5);
+  EXPECT_EQ(member0.xunion_ordinal->value, 5);
   auto& member1 = fidl_union->members[1];
   EXPECT_NONNULL(member1.maybe_used);
-  EXPECT_EQ(member1.ordinal->value, 2);
+  EXPECT_EQ(member1.xunion_ordinal->value, 2);
   auto& member2 = fidl_union->members[2];
   EXPECT_NULL(member2.maybe_used);
-  EXPECT_EQ(member2.ordinal->value, 3);
+  EXPECT_EQ(member2.xunion_ordinal->value, 3);
   auto& member3 = fidl_union->members[3];
   EXPECT_NULL(member3.maybe_used);
-  EXPECT_EQ(member3.ordinal->value, 1);
+  EXPECT_EQ(member3.xunion_ordinal->value, 1);
   auto& member4 = fidl_union->members[4];
   EXPECT_NONNULL(member4.maybe_used);
-  EXPECT_EQ(member4.ordinal->value, 4);
+  EXPECT_EQ(member4.xunion_ordinal->value, 4);
   END_TEST;
 }
 
@@ -262,7 +262,41 @@ union Foo {
   ASSERT_FALSE(library.Compile());
   auto errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "union members cannot be nullable");
+  ASSERT_STR_STR(errors[0].c_str(), "Union members cannot be nullable");
+
+  END_TEST;
+}
+
+bool ordinal_cutoff() {
+  BEGIN_TEST;
+
+  TestLibrary below_cutoff(R"FIDL(
+library example;
+
+union Foo {
+  512: string bar;
+};
+
+)FIDL");
+  ASSERT_FALSE(below_cutoff.Compile());
+  auto errors = below_cutoff.errors();
+  ASSERT_EQ(errors.size(), 1);
+  // the ordinal cutoff is enforced before checking for a dense ordinal space.
+  ASSERT_STR_STR(errors[0].c_str(), "missing ordinal 1 (ordinals must be dense)");
+
+  TestLibrary above_cutoff(R"FIDL(
+library example;
+
+union Foo {
+  513: string bar;
+};
+
+)FIDL");
+  ASSERT_FALSE(above_cutoff.Compile());
+  errors = above_cutoff.errors();
+  ASSERT_EQ(errors.size(), 1);
+  // the ordinal cutoff is enforced before checking for a dense ordinal space.
+  ASSERT_STR_STR(errors[0].c_str(), "explicit union ordinal must be <= 512");
 
   END_TEST;
 }
@@ -281,4 +315,5 @@ RUN_TEST(default_not_allowed)
 RUN_TEST(must_be_dense)
 RUN_TEST(must_have_at_least_one_non_reserved)
 RUN_TEST(no_nullable_members_in_unions)
+RUN_TEST(ordinal_cutoff)
 END_TEST_CASE(union_tests)

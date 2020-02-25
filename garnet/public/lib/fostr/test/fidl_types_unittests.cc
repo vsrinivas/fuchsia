@@ -42,7 +42,7 @@ std::istream& operator>>(std::istream& is, const std::string& value) {
 
 TEST(FidlTypes, UnionEmpty) {
   fuchsia::example::fostr::MyUnion u;
-  EXPECT_FIDL_TO_FORMAT_AS(u, "<empty union>");
+  EXPECT_FIDL_TO_FORMAT_AS(u, "<invalid union>");
 }
 
 TEST(FidlTypes, UnionSet) {
@@ -57,7 +57,7 @@ TEST(FidlTypes, XunionEmpty) {
 
   fuchsia::example::fostr::MyXunion xu;
 
-  EXPECT_FIDL_TO_FORMAT_AS(xu, "<empty union>");
+  EXPECT_FIDL_TO_FORMAT_AS(xu, "<empty xunion>");
 }
 
 // Tests a set xunion.

@@ -14,7 +14,7 @@ fidl_test_json_EmptyHandles {
        void void
 } [packed]
 fidl_test_json_StructWithNullableXUnionInLine {
-       x1InLine fidl_test_json_OlderSimpleUnionInLine
+        
 } [packed]
 fidl_test_json_StructWithNullableXUnionOutOfLine {
        void void
@@ -22,111 +22,6 @@ fidl_test_json_StructWithNullableXUnionOutOfLine {
 fidl_test_json_StructWithNullableXUnionHandles {
        void void
 } [packed]
-fidl_test_json_FlexibleFooInLine [
-       sInLine fidl_union_member[fidl_test_json_FlexibleFooTag_s, fidl_string]
-       i fidl_union_member[fidl_test_json_FlexibleFooTag_i, int32]
-]
-fidl_test_json_FlexibleFooOutOfLine [
-       sOutOfLine fidl_aligned[stringnoz]
-][varlen]
-fidl_test_json_FlexibleFooHandles [
-       void void
-][varlen]
-fidl_test_json_StrictFooInLine [
-       sInLine fidl_union_member[fidl_test_json_StrictFooTag_s, fidl_string]
-       i fidl_union_member[fidl_test_json_StrictFooTag_i, int32]
-]
-fidl_test_json_StrictFooOutOfLine [
-       sOutOfLine fidl_aligned[stringnoz]
-][varlen]
-fidl_test_json_StrictFooHandles [
-       void void
-][varlen]
-fidl_test_json_ExplicitFooInLine [
-       sInLine fidl_union_member[fidl_test_json_ExplicitFooTag_s, fidl_string]
-       i fidl_union_member[fidl_test_json_ExplicitFooTag_i, int32]
-        fidl_union_member[fidl_test_json_ExplicitFooTag_, ]
-]
-fidl_test_json_ExplicitFooOutOfLine [
-       sOutOfLine fidl_aligned[stringnoz]
-][varlen]
-fidl_test_json_ExplicitFooHandles [
-       void void
-][varlen]
-fidl_test_json_ExplicitStrictFooInLine [
-        fidl_union_member[fidl_test_json_ExplicitStrictFooTag_, ]
-       sInLine fidl_union_member[fidl_test_json_ExplicitStrictFooTag_s, fidl_string]
-       i fidl_union_member[fidl_test_json_ExplicitStrictFooTag_i, int32]
-]
-fidl_test_json_ExplicitStrictFooOutOfLine [
-       sOutOfLine fidl_aligned[stringnoz]
-][varlen]
-fidl_test_json_ExplicitStrictFooHandles [
-       void void
-][varlen]
-fidl_test_json_OlderSimpleUnionInLine [
-       i fidl_union_member[fidl_test_json_OlderSimpleUnionTag_i, int64]
-       f fidl_union_member[fidl_test_json_OlderSimpleUnionTag_f, int32]
-]
-fidl_test_json_OlderSimpleUnionOutOfLine [
-       void void
-][varlen]
-fidl_test_json_OlderSimpleUnionHandles [
-       void void
-][varlen]
-fidl_test_json_NewerSimpleUnionInLine [
-       i fidl_union_member[fidl_test_json_NewerSimpleUnionTag_i, int64]
-       sInLine fidl_union_member[fidl_test_json_NewerSimpleUnionTag_s, fidl_string]
-       vInLine fidl_union_member[fidl_test_json_NewerSimpleUnionTag_v, fidl_vector]
-]
-fidl_test_json_NewerSimpleUnionOutOfLine [
-       sOutOfLine fidl_aligned[stringnoz]
-       vOutOfLine parallel_array[fidl_string, fidl_aligned[stringnoz]]
-][varlen]
-fidl_test_json_NewerSimpleUnionHandles [
-       void void
-][varlen]
-fidl_test_json_StrictSimpleXUnionInLine [
-       i fidl_union_member[fidl_test_json_StrictSimpleXUnionTag_i, int32]
-       f fidl_union_member[fidl_test_json_StrictSimpleXUnionTag_f, int32]
-       sInLine fidl_union_member[fidl_test_json_StrictSimpleXUnionTag_s, fidl_string]
-]
-fidl_test_json_StrictSimpleXUnionOutOfLine [
-       sOutOfLine fidl_aligned[stringnoz]
-][varlen]
-fidl_test_json_StrictSimpleXUnionHandles [
-       void void
-][varlen]
-fidl_test_json_XUnionContainingEmptyStructInLine [
-       emptyInLine fidl_union_member[fidl_test_json_XUnionContainingEmptyStructTag_empty, fidl_test_json_EmptyInLine]
-]
-fidl_test_json_XUnionContainingEmptyStructOutOfLine [
-       emptyOutOfLine fidl_test_json_EmptyOutOfLine
-][varlen]
-fidl_test_json_XUnionContainingEmptyStructHandles [
-       empty fidl_test_json_EmptyHandles
-][varlen]
-fidl_test_json_StrictBoundedXUnionInLine [
-       vInLine fidl_union_member[fidl_test_json_StrictBoundedXUnionTag_v, fidl_vector]
-]
-fidl_test_json_StrictBoundedXUnionOutOfLine [
-       vOutOfLine array[int8]
-][varlen]
-fidl_test_json_StrictBoundedXUnionHandles [
-       void void
-][varlen]
-fidl_test_json_ExplicitXUnionInLine [
-        fidl_union_member[fidl_test_json_ExplicitXUnionTag_, ]
-        fidl_union_member[fidl_test_json_ExplicitXUnionTag_, ]
-       i fidl_union_member[fidl_test_json_ExplicitXUnionTag_i, int64]
-       f fidl_union_member[fidl_test_json_ExplicitXUnionTag_f, int32]
-]
-fidl_test_json_ExplicitXUnionOutOfLine [
-       void void
-][varlen]
-fidl_test_json_ExplicitXUnionHandles [
-       void void
-][varlen]
 
 
 fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequest {
@@ -137,8 +32,7 @@ fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestHa
 } [packed]
 fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse {
        hdr fidl_message_header[7548006651618394112]
-       xuInLine fidl_test_json_StrictBoundedXUnionInLine
-       xuOutOfLine fidl_test_json_StrictBoundedXUnionOutOfLine
+        
 } [packed]
 fidl_test_json_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseHandles {
        void void
@@ -151,7 +45,7 @@ fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequest
 } [packed]
 fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse {
        hdr fidl_message_header[1688296084360658944]
-       xuInLine fidl_test_json_OlderSimpleUnionInLine
+        
 } [packed]
 fidl_test_json_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseHandles {
        void void

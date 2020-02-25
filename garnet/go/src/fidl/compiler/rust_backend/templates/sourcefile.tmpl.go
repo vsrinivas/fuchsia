@@ -42,8 +42,8 @@ use fidl::{
 {{ range $result := .Results -}}
 {{ template "ResultDeclaration" $result}}
 {{ end -}}
-{{ range $union := .Unions -}}
-{{ template "UnionDeclaration" $union }}
+{{ range $xunion := .XUnions -}}
+{{ template "XUnionDeclaration" $xunion }}
 {{ end -}}
 {{ range $struct := .Structs -}}
 {{ template "StructDeclaration" $struct }}

@@ -300,6 +300,31 @@ void UnionDeclaration::Accept(TreeVisitor* visitor) const {
   }
 }
 
+void XUnionMember::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  if (maybe_used != nullptr) {
+    if (maybe_used->attributes != nullptr) {
+      visitor->OnAttributeList(maybe_used->attributes);
+    }
+  }
+  visitor->OnOrdinal32(*ordinal);
+  if (maybe_used != nullptr) {
+    visitor->OnTypeConstructor(maybe_used->type_ctor);
+    visitor->OnIdentifier(maybe_used->identifier);
+  }
+}
+
+void XUnionDeclaration::Accept(TreeVisitor* visitor) const {
+  SourceElementMark sem(visitor, *this);
+  if (attributes != nullptr) {
+    visitor->OnAttributeList(attributes);
+  }
+  visitor->OnIdentifier(identifier);
+  for (auto& member : members) {
+    visitor->OnXUnionMember(member);
+  }
+}
+
 void File::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);
   if (attributes != nullptr) {
@@ -329,6 +354,9 @@ void File::Accept(TreeVisitor* visitor) const {
   }
   for (auto& i : union_declaration_list) {
     visitor->OnUnionDeclaration(i);
+  }
+  for (auto& i : xunion_declaration_list) {
+    visitor->OnXUnionDeclaration(i);
   }
 }
 

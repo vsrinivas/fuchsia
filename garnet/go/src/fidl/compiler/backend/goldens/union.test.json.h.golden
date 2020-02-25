@@ -252,13 +252,13 @@ class ReverseOrdinalUnion final {
   ReverseOrdinalUnion& operator=(ReverseOrdinalUnion&&);
 
   
-  static ReverseOrdinalUnion WithSecond(uint32_t&&);
   static ReverseOrdinalUnion WithFirst(uint32_t&&);
+  static ReverseOrdinalUnion WithSecond(uint32_t&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
-    kSecond = 2,  // 0x2
     kFirst = 1,  // 0x1
+    kSecond = 2,  // 0x2
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
@@ -272,19 +272,6 @@ class ReverseOrdinalUnion final {
     return tag_ == Invalid;
   }
 
-  bool is_second() const { return tag_ == Tag::kSecond; }
-  
-  uint32_t& second() {
-    EnsureStorageInitialized(Tag::kSecond);
-    return second_;
-  }
-  
-  const uint32_t& second() const {
-    ZX_ASSERT(is_second());
-    return second_;
-  }
-  ReverseOrdinalUnion& set_second(uint32_t value);
-
   bool is_first() const { return tag_ == Tag::kFirst; }
   
   uint32_t& first() {
@@ -297,6 +284,19 @@ class ReverseOrdinalUnion final {
     return first_;
   }
   ReverseOrdinalUnion& set_first(uint32_t value);
+
+  bool is_second() const { return tag_ == Tag::kSecond; }
+  
+  uint32_t& second() {
+    EnsureStorageInitialized(Tag::kSecond);
+    return second_;
+  }
+  
+  const uint32_t& second() const {
+    ZX_ASSERT(is_second());
+    return second_;
+  }
+  ReverseOrdinalUnion& set_second(uint32_t value);
 
   Tag Which() const {
     
@@ -322,8 +322,8 @@ class ReverseOrdinalUnion final {
 
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(Tag::Invalid);
   union {
-    uint32_t second_;
     uint32_t first_;
+    uint32_t second_;
   };
 };
 
@@ -575,8 +575,6 @@ class FlexiblePizzaOrPasta final {
   static FlexiblePizzaOrPasta WithPasta(class Pasta&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-  kUnknown = 0,
-    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
   
     kPizza = 1,  // 0x1
     kPasta = 2,  // 0x2
@@ -621,13 +619,7 @@ class FlexiblePizzaOrPasta final {
 
   Tag Which() const {
     
-    switch (tag_) {
-      case Tag::kPizza:
-      case Tag::kPasta:
-        return Tag(tag_);
-      default:
-        return Tag::kUnknown;
-    }
+    return Tag(tag_);
     
   }
 
@@ -638,11 +630,7 @@ class FlexiblePizzaOrPasta final {
   }
 
   const std::vector<uint8_t>* UnknownData() const {
-    if (Which() != Tag::kUnknown) {
-      return nullptr;
-    }
-
-    return &unknown_data_;
+    return nullptr;
   }
 
   friend ::fidl::Equality<::fidl::test::json::FlexiblePizzaOrPasta>;
@@ -655,7 +643,6 @@ class FlexiblePizzaOrPasta final {
   union {
     class Pizza pizza_;
     class Pasta pasta_;
-    std::vector<uint8_t> unknown_data_;
   };
 };
 
@@ -795,8 +782,6 @@ class FlexibleUnion final {
   static FlexibleUnion WithVectorStringAlsoNeedsConstructor(::std::vector<::std::string>&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
-  kUnknown = 0,
-    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
   
     kPrimitive = 1,  // 0x1
     kStringNeedsConstructor = 2,  // 0x2
@@ -855,14 +840,7 @@ class FlexibleUnion final {
 
   Tag Which() const {
     
-    switch (tag_) {
-      case Tag::kPrimitive:
-      case Tag::kStringNeedsConstructor:
-      case Tag::kVectorStringAlsoNeedsConstructor:
-        return Tag(tag_);
-      default:
-        return Tag::kUnknown;
-    }
+    return Tag(tag_);
     
   }
 
@@ -873,11 +851,7 @@ class FlexibleUnion final {
   }
 
   const std::vector<uint8_t>* UnknownData() const {
-    if (Which() != Tag::kUnknown) {
-      return nullptr;
-    }
-
-    return &unknown_data_;
+    return nullptr;
   }
 
   friend ::fidl::Equality<::fidl::test::json::FlexibleUnion>;
@@ -891,7 +865,6 @@ class FlexibleUnion final {
     int32_t Primitive_;
     ::std::string StringNeedsConstructor_;
     ::std::vector<::std::string> VectorStringAlsoNeedsConstructor_;
-    std::vector<uint8_t> unknown_data_;
   };
 };
 
@@ -1248,10 +1221,10 @@ struct Equality<::fidl::test::json::ReverseOrdinalUnion> {
     switch (_lhs.Ordinal()) {
       case static_cast<fidl_xunion_tag_t>(::fidl::test::json::ReverseOrdinalUnion::Tag::Invalid):
         return true;
-      case ::fidl::test::json::ReverseOrdinalUnion::Tag::kSecond:
-        return ::fidl::Equals(_lhs.second_, _rhs.second_);
       case ::fidl::test::json::ReverseOrdinalUnion::Tag::kFirst:
         return ::fidl::Equals(_lhs.first_, _rhs.first_);
+      case ::fidl::test::json::ReverseOrdinalUnion::Tag::kSecond:
+        return ::fidl::Equals(_lhs.second_, _rhs.second_);
       
       default:
         return false;
@@ -1481,8 +1454,9 @@ struct Equality<::fidl::test::json::FlexiblePizzaOrPasta> {
         return ::fidl::Equals(_lhs.pizza_, _rhs.pizza_);
       case ::fidl::test::json::FlexiblePizzaOrPasta::Tag::kPasta:
         return ::fidl::Equals(_lhs.pasta_, _rhs.pasta_);
+      
       default:
-        return *_lhs.UnknownData() == *_rhs.UnknownData();
+        return false;
       }
     }
 
@@ -1627,8 +1601,9 @@ struct Equality<::fidl::test::json::FlexibleUnion> {
         return ::fidl::Equals(_lhs.StringNeedsConstructor_, _rhs.StringNeedsConstructor_);
       case ::fidl::test::json::FlexibleUnion::Tag::kVectorStringAlsoNeedsConstructor:
         return ::fidl::Equals(_lhs.VectorStringAlsoNeedsConstructor_, _rhs.VectorStringAlsoNeedsConstructor_);
+      
       default:
-        return *_lhs.UnknownData() == *_rhs.UnknownData();
+        return false;
       }
     }
 

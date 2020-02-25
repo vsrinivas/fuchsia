@@ -9,18 +9,24 @@ extern const fidl_type_t fidl_test_json_ProtocolRequestStrictResponseFlexibleRes
 extern const fidl_type_t fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
 extern const fidl_type_t fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
 extern const fidl_type_t fidl_test_json_StrictFooTable;
+extern const fidl_type_t fidl_test_json_StrictFooNullableRefTable;
 extern const fidl_type_t fidl_test_json_FlexibleFooTable;
+extern const fidl_type_t fidl_test_json_FlexibleFooNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable;
 extern const fidl_type_t v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
 extern const fidl_type_t v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
 extern const fidl_type_t v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
 extern const fidl_type_t v1_fidl_test_json_StrictFooTable;
+extern const fidl_type_t v1_fidl_test_json_StrictFooNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_FlexibleFooTable;
+extern const fidl_type_t v1_fidl_test_json_FlexibleFooNullableRefTable;
 
 // Coding tables for old wire format.
 
 extern const fidl_type_t fidl_test_json_StrictFooTable;
+extern const fidl_type_t fidl_test_json_StrictFooNullableRefTable;
 extern const fidl_type_t fidl_test_json_FlexibleFooTable;
+extern const fidl_type_t fidl_test_json_FlexibleFooNullableRefTable;
 
 
 static const fidl_type_t String4294967295nonnullableTable = {.type_tag=kFidlTypeString, {.coded_string={.max_size=4294967295u, .nullable=kFidlNullability_Nonnullable}}};
@@ -29,43 +35,53 @@ extern const fidl_type_t fidl_test_json_ProtocolRequestStrictResponseFlexibleReq
 static const struct FidlStructField Fields59fidl_test_json_ProtocolRequestStrictResponseFlexibleRequest[] = {
     /*FidlStructField*/{.type=&fidl_test_json_StrictFooTable, .offset=16u, .padding=0u}
 };
-const fidl_type_t fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields59fidl_test_json_ProtocolRequestStrictResponseFlexibleRequest, .field_count=1u, .size=40u, .max_out_of_line=4294967295u, .contains_union=true, .name="fidl.test.json/ProtocolRequestStrictResponseFlexibleRequest", .alt_type=&v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable}}};
+const fidl_type_t fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields59fidl_test_json_ProtocolRequestStrictResponseFlexibleRequest, .field_count=1u, .size=40u, .max_out_of_line=4294967295u, .contains_union=false, .name="fidl.test.json/ProtocolRequestStrictResponseFlexibleRequest", .alt_type=&v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable}}};
 
 extern const fidl_type_t fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
 static const struct FidlStructField Fields60fidl_test_json_ProtocolRequestStrictResponseFlexibleResponse[] = {
     /*FidlStructField*/{.type=&fidl_test_json_FlexibleFooTable, .offset=16u, .padding=0u}
 };
-const fidl_type_t fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields60fidl_test_json_ProtocolRequestStrictResponseFlexibleResponse, .field_count=1u, .size=40u, .max_out_of_line=4294967295u, .contains_union=true, .name="fidl.test.json/ProtocolRequestStrictResponseFlexibleResponse", .alt_type=&v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable}}};
+const fidl_type_t fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields60fidl_test_json_ProtocolRequestStrictResponseFlexibleResponse, .field_count=1u, .size=40u, .max_out_of_line=4294967295u, .contains_union=false, .name="fidl.test.json/ProtocolRequestStrictResponseFlexibleResponse", .alt_type=&v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable}}};
 
 extern const fidl_type_t fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
 static const struct FidlStructField Fields59fidl_test_json_ProtocolRequestFlexibleResponseStrictRequest[] = {
     /*FidlStructField*/{.type=&fidl_test_json_FlexibleFooTable, .offset=16u, .padding=0u}
 };
-const fidl_type_t fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields59fidl_test_json_ProtocolRequestFlexibleResponseStrictRequest, .field_count=1u, .size=40u, .max_out_of_line=4294967295u, .contains_union=true, .name="fidl.test.json/ProtocolRequestFlexibleResponseStrictRequest", .alt_type=&v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable}}};
+const fidl_type_t fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields59fidl_test_json_ProtocolRequestFlexibleResponseStrictRequest, .field_count=1u, .size=40u, .max_out_of_line=4294967295u, .contains_union=false, .name="fidl.test.json/ProtocolRequestFlexibleResponseStrictRequest", .alt_type=&v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable}}};
 
 extern const fidl_type_t fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
 static const struct FidlStructField Fields60fidl_test_json_ProtocolRequestFlexibleResponseStrictResponse[] = {
     /*FidlStructField*/{.type=&fidl_test_json_StrictFooTable, .offset=16u, .padding=0u}
 };
-const fidl_type_t fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields60fidl_test_json_ProtocolRequestFlexibleResponseStrictResponse, .field_count=1u, .size=40u, .max_out_of_line=4294967295u, .contains_union=true, .name="fidl.test.json/ProtocolRequestFlexibleResponseStrictResponse", .alt_type=&v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable}}};
+const fidl_type_t fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields60fidl_test_json_ProtocolRequestFlexibleResponseStrictResponse, .field_count=1u, .size=40u, .max_out_of_line=4294967295u, .contains_union=false, .name="fidl.test.json/ProtocolRequestFlexibleResponseStrictResponse", .alt_type=&v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable}}};
 
 
-static const struct FidlUnionField Fields24fidl_test_json_StrictFoo[] = {
-    /*FidlUnionField*/{.type=&String4294967295nonnullableTable, .padding=0u, .xunion_ordinal=1u},
-    /*FidlUnionField*/{.type=NULL, .padding=12u, .xunion_ordinal=2u}
+static const struct FidlXUnionField Fields24fidl_test_json_StrictFoo[] = {
+    /*FidlXUnionField*/{.type=&String4294967295nonnullableTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u}
 };
-const fidl_type_t fidl_test_json_StrictFooTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields24fidl_test_json_StrictFoo, .field_count=2u, .data_offset=8u, .size=24u, .name="fidl.test.json/StrictFoo", .alt_type=&v1_fidl_test_json_StrictFooTable}}};
-
-static const struct FidlUnionField Fields26fidl_test_json_FlexibleFoo[] = {
-    /*FidlUnionField*/{.type=&String4294967295nonnullableTable, .padding=0u, .xunion_ordinal=1u},
-    /*FidlUnionField*/{.type=NULL, .padding=12u, .xunion_ordinal=2u}
+const fidl_type_t fidl_test_json_StrictFooTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields24fidl_test_json_StrictFoo, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/StrictFoo", .strictness=kFidlStrictness_Strict, .alt_type=&v1_fidl_test_json_StrictFooTable}}};
+static const struct FidlXUnionField Fields35fidl_test_json_StrictFooNullableRef[] = {
+    /*FidlXUnionField*/{.type=&String4294967295nonnullableTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u}
 };
-const fidl_type_t fidl_test_json_FlexibleFooTable = {.type_tag=kFidlTypeUnion, {.coded_union={.fields=Fields26fidl_test_json_FlexibleFoo, .field_count=2u, .data_offset=8u, .size=24u, .name="fidl.test.json/FlexibleFoo", .alt_type=&v1_fidl_test_json_FlexibleFooTable}}};
-
+const fidl_type_t fidl_test_json_StrictFooNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields35fidl_test_json_StrictFooNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/StrictFoo", .strictness=kFidlStrictness_Strict, .alt_type=&v1_fidl_test_json_StrictFooNullableRefTable}}};
+static const struct FidlXUnionField Fields26fidl_test_json_FlexibleFoo[] = {
+    /*FidlXUnionField*/{.type=&String4294967295nonnullableTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u}
+};
+const fidl_type_t fidl_test_json_FlexibleFooTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields26fidl_test_json_FlexibleFoo, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/FlexibleFoo", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_fidl_test_json_FlexibleFooTable}}};
+static const struct FidlXUnionField Fields37fidl_test_json_FlexibleFooNullableRef[] = {
+    /*FidlXUnionField*/{.type=&String4294967295nonnullableTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u}
+};
+const fidl_type_t fidl_test_json_FlexibleFooNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields37fidl_test_json_FlexibleFooNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/FlexibleFoo", .strictness=kFidlStrictness_Flexible, .alt_type=&v1_fidl_test_json_FlexibleFooNullableRefTable}}};
 // Coding tables for v1 wire format.
 
 extern const fidl_type_t v1_fidl_test_json_StrictFooTable;
+extern const fidl_type_t v1_fidl_test_json_StrictFooNullableRefTable;
 extern const fidl_type_t v1_fidl_test_json_FlexibleFooTable;
+extern const fidl_type_t v1_fidl_test_json_FlexibleFooNullableRefTable;
 
 
 static const fidl_type_t v1_String4294967295nonnullableTable = {.type_tag=kFidlTypeString, {.coded_string={.max_size=4294967295u, .nullable=kFidlNullability_Nonnullable}}};
@@ -74,25 +90,25 @@ extern const fidl_type_t v1_fidl_test_json_ProtocolRequestStrictResponseFlexible
 static const struct FidlStructField Fields62v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequest[] = {
     /*FidlStructField*/{.type=&v1_fidl_test_json_StrictFooTable, .offset=16u, .padding=0u}
 };
-const fidl_type_t v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields62v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequest, .field_count=1u, .size=40u, .max_out_of_line=4294967295u, .contains_union=true, .name="fidl.test.json/ProtocolRequestStrictResponseFlexibleRequest", .alt_type=&fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable}}};
+const fidl_type_t v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields62v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleRequest, .field_count=1u, .size=40u, .max_out_of_line=4294967295u, .contains_union=false, .name="fidl.test.json/ProtocolRequestStrictResponseFlexibleRequest", .alt_type=&fidl_test_json_ProtocolRequestStrictResponseFlexibleRequestTable}}};
 
 extern const fidl_type_t v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable;
 static const struct FidlStructField Fields63v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponse[] = {
     /*FidlStructField*/{.type=&v1_fidl_test_json_FlexibleFooTable, .offset=16u, .padding=0u}
 };
-const fidl_type_t v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields63v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponse, .field_count=1u, .size=40u, .max_out_of_line=4294967295u, .contains_union=true, .name="fidl.test.json/ProtocolRequestStrictResponseFlexibleResponse", .alt_type=&fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable}}};
+const fidl_type_t v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields63v1_fidl_test_json_ProtocolRequestStrictResponseFlexibleResponse, .field_count=1u, .size=40u, .max_out_of_line=4294967295u, .contains_union=false, .name="fidl.test.json/ProtocolRequestStrictResponseFlexibleResponse", .alt_type=&fidl_test_json_ProtocolRequestStrictResponseFlexibleResponseTable}}};
 
 extern const fidl_type_t v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable;
 static const struct FidlStructField Fields62v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequest[] = {
     /*FidlStructField*/{.type=&v1_fidl_test_json_FlexibleFooTable, .offset=16u, .padding=0u}
 };
-const fidl_type_t v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields62v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequest, .field_count=1u, .size=40u, .max_out_of_line=4294967295u, .contains_union=true, .name="fidl.test.json/ProtocolRequestFlexibleResponseStrictRequest", .alt_type=&fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable}}};
+const fidl_type_t v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields62v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictRequest, .field_count=1u, .size=40u, .max_out_of_line=4294967295u, .contains_union=false, .name="fidl.test.json/ProtocolRequestFlexibleResponseStrictRequest", .alt_type=&fidl_test_json_ProtocolRequestFlexibleResponseStrictRequestTable}}};
 
 extern const fidl_type_t v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable;
 static const struct FidlStructField Fields63v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponse[] = {
     /*FidlStructField*/{.type=&v1_fidl_test_json_StrictFooTable, .offset=16u, .padding=0u}
 };
-const fidl_type_t v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields63v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponse, .field_count=1u, .size=40u, .max_out_of_line=4294967295u, .contains_union=true, .name="fidl.test.json/ProtocolRequestFlexibleResponseStrictResponse", .alt_type=&fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable}}};
+const fidl_type_t v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable = {.type_tag=kFidlTypeStruct, {.coded_struct={.fields=Fields63v1_fidl_test_json_ProtocolRequestFlexibleResponseStrictResponse, .field_count=1u, .size=40u, .max_out_of_line=4294967295u, .contains_union=false, .name="fidl.test.json/ProtocolRequestFlexibleResponseStrictResponse", .alt_type=&fidl_test_json_ProtocolRequestFlexibleResponseStrictResponseTable}}};
 
 
 static const struct FidlXUnionField Fields27v1_fidl_test_json_StrictFoo[] = {
@@ -100,8 +116,18 @@ static const struct FidlXUnionField Fields27v1_fidl_test_json_StrictFoo[] = {
     /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u}
 };
 const fidl_type_t v1_fidl_test_json_StrictFooTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields27v1_fidl_test_json_StrictFoo, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/StrictFoo", .strictness=kFidlStrictness_Strict, .alt_type=&fidl_test_json_StrictFooTable}}};
+static const struct FidlXUnionField Fields38v1_fidl_test_json_StrictFooNullableRef[] = {
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u}
+};
+const fidl_type_t v1_fidl_test_json_StrictFooNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields38v1_fidl_test_json_StrictFooNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/StrictFoo", .strictness=kFidlStrictness_Strict, .alt_type=&fidl_test_json_StrictFooNullableRefTable}}};
 static const struct FidlXUnionField Fields29v1_fidl_test_json_FlexibleFoo[] = {
     /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1u},
     /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u}
 };
 const fidl_type_t v1_fidl_test_json_FlexibleFooTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields29v1_fidl_test_json_FlexibleFoo, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/FlexibleFoo", .strictness=kFidlStrictness_Flexible, .alt_type=&fidl_test_json_FlexibleFooTable}}};
+static const struct FidlXUnionField Fields40v1_fidl_test_json_FlexibleFooNullableRef[] = {
+    /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=1u},
+    /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=2u}
+};
+const fidl_type_t v1_fidl_test_json_FlexibleFooNullableRefTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields40v1_fidl_test_json_FlexibleFooNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.json/FlexibleFoo", .strictness=kFidlStrictness_Flexible, .alt_type=&fidl_test_json_FlexibleFooNullableRefTable}}};

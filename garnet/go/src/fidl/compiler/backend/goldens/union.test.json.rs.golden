@@ -54,7 +54,7 @@ fidl_xunion! {
 }
 
 fidl_xunion! {
-	#[derive(Debug, PartialEq)]
+	#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 	name: FlexiblePizzaOrPasta,
 	members: [
 		Pizza {
@@ -66,7 +66,6 @@ fidl_xunion! {
 			ordinal: 2,
 		},
 	],
-	unknown_member: __UnknownVariant,
 }
 
 fidl_xunion! {
@@ -104,7 +103,7 @@ fidl_xunion! {
 }
 
 fidl_xunion! {
-	#[derive(Debug, PartialEq)]
+	#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 	name: FlexibleUnion,
 	members: [
 		Primitive {
@@ -120,7 +119,6 @@ fidl_xunion! {
 			ordinal: 3,
 		},
 	],
-	unknown_member: __UnknownVariant,
 }
 
 fidl_xunion! {
@@ -172,13 +170,13 @@ fidl_xunion! {
 	#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 	name: ReverseOrdinalUnion,
 	members: [
-		Second {
-			ty: u32,
-			ordinal: 2,
-		},
 		First {
 			ty: u32,
 			ordinal: 1,
+		},
+		Second {
+			ty: u32,
+			ordinal: 2,
 		},
 	],
 }

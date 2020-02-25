@@ -694,6 +694,7 @@ struct Decl {
     kStruct,
     kTable,
     kUnion,
+    kXUnion,
     kTypeAlias,
   };
 
@@ -1221,14 +1222,15 @@ struct UnionMemberUsed : public Object {
 struct UnionMember : public Object {
   using Used = UnionMemberUsed;
 
-  UnionMember(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
-              SourceSpan name, std::unique_ptr<raw::AttributeList> attributes)
-      : ordinal(std::move(ordinal)),
+  UnionMember(std::unique_ptr<raw::Ordinal32> xunion_ordinal,
+              std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
+              std::unique_ptr<raw::AttributeList> attributes)
+      : xunion_ordinal(std::move(xunion_ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type_ctor), name, std::move(attributes))) {}
-  UnionMember(std::unique_ptr<raw::Ordinal32> ordinal, SourceSpan span)
-      : ordinal(std::move(ordinal)), span(span) {}
+  UnionMember(std::unique_ptr<raw::Ordinal32> xunion_ordinal, SourceSpan span)
+      : xunion_ordinal(std::move(xunion_ordinal)), span(span) {}
 
-  std::unique_ptr<raw::Ordinal32> ordinal;
+  std::unique_ptr<raw::Ordinal32> xunion_ordinal;
 
   // The span for reserved members.
   std::optional<SourceSpan> span;
@@ -1256,7 +1258,74 @@ struct Union final : public TypeDecl {
   std::vector<Member> members;
   const types::Strictness strictness;
 
+  // Returns references to union members sorted by their xunion_ordinal.
   std::vector<std::reference_wrapper<const Member>> MembersSortedByXUnionOrdinal() const;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
+
+  // Returns the offset from the start of union where the union data resides. (Either 4, or 8.)
+  // This may only be queried for the old wire format (`WireFormat::kOld`).
+  uint32_t DataOffset(WireFormat wire_format) const;
+};
+
+struct XUnion;
+
+// See the comment on the StructMember class for why this is a top-level class.
+// TODO(fxb/37535): Move this to a nested class inside Union.
+struct XUnionMemberUsed : public Object {
+  XUnionMemberUsed(std::unique_ptr<TypeConstructor> type_ctor, SourceSpan name,
+                   std::unique_ptr<raw::AttributeList> attributes)
+      : type_ctor(std::move(type_ctor)), name(name), attributes(std::move(attributes)) {}
+  std::unique_ptr<TypeConstructor> type_ctor;
+  SourceSpan name;
+  std::unique_ptr<raw::AttributeList> attributes;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
+
+  FieldShape fieldshape(WireFormat wire_format) const;
+
+  const XUnion* parent = nullptr;
+};
+
+// See the comment on the StructMember class for why this is a top-level class.
+// TODO(fxb/37535): Move this to a nested class inside Union.
+struct XUnionMember : public Object {
+  using Used = XUnionMemberUsed;
+
+  XUnionMember(std::unique_ptr<raw::Ordinal32> ordinal, std::unique_ptr<TypeConstructor> type_ctor,
+               SourceSpan name, std::unique_ptr<raw::AttributeList> attributes)
+      : ordinal(std::move(ordinal)),
+        maybe_used(std::make_unique<Used>(std::move(type_ctor), name, std::move(attributes))) {}
+  XUnionMember(std::unique_ptr<raw::Ordinal32> ordinal, SourceSpan span)
+      : ordinal(std::move(ordinal)), span(span) {}
+
+  std::unique_ptr<raw::Ordinal32> ordinal;
+
+  // The span for reserved members.
+  std::optional<SourceSpan> span;
+
+  std::unique_ptr<Used> maybe_used;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
+};
+
+struct XUnion final : public TypeDecl {
+  using Member = XUnionMember;
+
+  XUnion(std::unique_ptr<raw::AttributeList> attributes, Name name,
+         std::vector<Member> unparented_members, types::Strictness strictness)
+      : TypeDecl(Kind::kXUnion, std::move(attributes), std::move(name)),
+        members(std::move(unparented_members)),
+        strictness(strictness) {
+    for (auto& member : members) {
+      if (member.maybe_used) {
+        member.maybe_used->parent = this;
+      }
+    }
+  }
+
+  std::vector<Member> members;
+  const types::Strictness strictness;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 };
@@ -1449,6 +1518,8 @@ class AttributeSchema {
     kTypeAliasDecl,
     kUnionDecl,
     kUnionMember,
+    kXUnionDecl,
+    kXUnionMember,
   };
 
   AttributeSchema(const std::set<Placement>& allowed_placements,
@@ -1601,6 +1672,7 @@ class Library {
   bool ConsumeStructDeclaration(std::unique_ptr<raw::StructDeclaration> struct_declaration);
   bool ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration);
   bool ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
+  bool ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> xunion_declaration);
 
   bool TypeCanBeConst(const Type* type);
   const Type* TypeResolve(const Type* type);
@@ -1621,6 +1693,7 @@ class Library {
   bool CompileStruct(Struct* struct_declaration);
   bool CompileTable(Table* table_declaration);
   bool CompileUnion(Union* union_declaration);
+  bool CompileXUnion(XUnion* xunion_declaration);
   bool CompileTypeAlias(TypeAlias* type_alias);
 
   // Compiling a type validates the type: in particular, we validate that optional identifier types
@@ -1673,6 +1746,7 @@ class Library {
   std::vector<std::unique_ptr<Struct>> struct_declarations_;
   std::vector<std::unique_ptr<Table>> table_declarations_;
   std::vector<std::unique_ptr<Union>> union_declarations_;
+  std::vector<std::unique_ptr<XUnion>> xunion_declarations_;
   std::vector<std::unique_ptr<TypeAlias>> type_alias_declarations_;
 
   // All Decl pointers here are non-null and are owned by the
@@ -1725,6 +1799,9 @@ struct Object::VisitorAny {
   virtual std::any Visit(const Union&) = 0;
   virtual std::any Visit(const Union::Member&) = 0;
   virtual std::any Visit(const Union::Member::Used&) = 0;
+  virtual std::any Visit(const XUnion&) = 0;
+  virtual std::any Visit(const XUnion::Member&) = 0;
+  virtual std::any Visit(const XUnion::Member::Used&) = 0;
   virtual std::any Visit(const Protocol&) = 0;
 };
 
@@ -1788,6 +1865,16 @@ inline std::any Union::Member::AcceptAny(VisitorAny* visitor) const {
 }
 
 inline std::any Union::Member::Used::AcceptAny(VisitorAny* visitor) const {
+  return visitor->Visit(*this);
+}
+
+inline std::any XUnion::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
+
+inline std::any XUnion::Member::AcceptAny(VisitorAny* visitor) const {
+  return visitor->Visit(*this);
+}
+
+inline std::any XUnion::Member::Used::AcceptAny(VisitorAny* visitor) const {
   return visitor->Visit(*this);
 }
 

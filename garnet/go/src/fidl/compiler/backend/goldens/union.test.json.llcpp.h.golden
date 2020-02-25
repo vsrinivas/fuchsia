@@ -323,33 +323,11 @@ class ReverseOrdinalUnion {
   }
 
   enum class Tag : fidl_xunion_tag_t {
-    kSecond = 2,  // 0x2
     kFirst = 1,  // 0x1
+    kSecond = 2,  // 0x2
   };
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
-
-  bool is_second() const { return ordinal_ == Ordinal::kSecond; }
-
-  static ReverseOrdinalUnion WithSecond(::fidl::tracking_ptr<uint32_t>&& val) {
-    ReverseOrdinalUnion result;
-    result.set_second(std::move(val));
-    return result;
-  }
-
-  void set_second(::fidl::tracking_ptr<uint32_t>&& elem) {
-    ordinal_ = Ordinal::kSecond;
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
-  }
-
-  uint32_t& mutable_second() {
-    ZX_ASSERT(ordinal_ == Ordinal::kSecond);
-    return *static_cast<uint32_t*>(envelope_.data.get());
-  }
-  const uint32_t& second() const {
-    ZX_ASSERT(ordinal_ == Ordinal::kSecond);
-    return *static_cast<uint32_t*>(envelope_.data.get());
-  }
 
   bool is_first() const { return ordinal_ == Ordinal::kFirst; }
 
@@ -372,6 +350,28 @@ class ReverseOrdinalUnion {
     ZX_ASSERT(ordinal_ == Ordinal::kFirst);
     return *static_cast<uint32_t*>(envelope_.data.get());
   }
+
+  bool is_second() const { return ordinal_ == Ordinal::kSecond; }
+
+  static ReverseOrdinalUnion WithSecond(::fidl::tracking_ptr<uint32_t>&& val) {
+    ReverseOrdinalUnion result;
+    result.set_second(std::move(val));
+    return result;
+  }
+
+  void set_second(::fidl::tracking_ptr<uint32_t>&& elem) {
+    ordinal_ = Ordinal::kSecond;
+    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+  }
+
+  uint32_t& mutable_second() {
+    ZX_ASSERT(ordinal_ == Ordinal::kSecond);
+    return *static_cast<uint32_t*>(envelope_.data.get());
+  }
+  const uint32_t& second() const {
+    ZX_ASSERT(ordinal_ == Ordinal::kSecond);
+    return *static_cast<uint32_t*>(envelope_.data.get());
+  }
   Tag which() const {
     ZX_ASSERT(!has_invalid_tag());
     return static_cast<Tag>(ordinal_);
@@ -387,19 +387,19 @@ class ReverseOrdinalUnion {
  private:
   enum class Ordinal : fidl_xunion_tag_t {
     Invalid = 0,
-    kSecond = 2,  // 0x2
     kFirst = 1,  // 0x1
+    kSecond = 2,  // 0x2
   };
 
   void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
     // To clear the existing value, std::move it and let it go out of scope.
     switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-    case 2: {
+    case 1: {
       ::fidl::tracking_ptr<uint32_t> to_destroy =
         static_cast<::fidl::tracking_ptr<uint32_t>>(std::move(envelope_.data));
       break;
     }
-    case 1: {
+    case 2: {
       ::fidl::tracking_ptr<uint32_t> to_destroy =
         static_cast<::fidl::tracking_ptr<uint32_t>>(std::move(envelope_.data));
       break;
@@ -643,7 +643,6 @@ class FlexiblePizzaOrPasta {
   enum class Tag : fidl_xunion_tag_t {
     kPizza = 1,  // 0x1
     kPasta = 2,  // 0x2
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
@@ -691,11 +690,10 @@ class FlexiblePizzaOrPasta {
     ZX_ASSERT(ordinal_ == Ordinal::kPasta);
     return *static_cast<::llcpp::fidl::test::json::Pasta*>(envelope_.data.get());
   }
-  void* unknownData() const {
-    ZX_ASSERT(which() == Tag::kUnknown);
-    return envelope_.data.get();
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
   }
-  Tag which() const;
 
   static constexpr const fidl_type_t* Type = &v1_fidl_test_json_FlexiblePizzaOrPastaTable;
   static constexpr uint32_t MaxNumHandles = 0;
@@ -858,7 +856,6 @@ class FlexibleUnion {
     kPrimitive = 1,  // 0x1
     kStringNeedsConstructor = 2,  // 0x2
     kVectorStringAlsoNeedsConstructor = 3,  // 0x3
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
@@ -928,11 +925,10 @@ class FlexibleUnion {
     ZX_ASSERT(ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor);
     return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data.get());
   }
-  void* unknownData() const {
-    ZX_ASSERT(which() == Tag::kUnknown);
-    return envelope_.data.get();
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
   }
-  Tag which() const;
 
   static constexpr const fidl_type_t* Type = &v1_fidl_test_json_FlexibleUnionTable;
   static constexpr uint32_t MaxNumHandles = 0;

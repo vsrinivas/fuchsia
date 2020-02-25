@@ -208,6 +208,15 @@ class TestLibrary final {
     return nullptr;
   }
 
+  const fidl::flat::XUnion* LookupXUnion(const std::string& name) {
+    for (const auto& xunion_decl : library_->xunion_declarations_) {
+      if (xunion_decl->GetName() == name) {
+        return xunion_decl.get();
+      }
+    }
+    return nullptr;
+  }
+
   const fidl::flat::Protocol* LookupProtocol(const std::string& name) {
     for (const auto& protocol_decl : library_->protocol_declarations_) {
       if (protocol_decl->GetName() == name) {

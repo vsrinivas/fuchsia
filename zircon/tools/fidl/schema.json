@@ -13,6 +13,7 @@
         "struct_declarations",
         "table_declarations",
         "union_declarations",
+        "xunion_declarations",
         "type_alias_declarations",
         "declaration_order",
         "declarations",
@@ -85,6 +86,13 @@
             "type": "array",
             "items": {
                 "$ref": "#/definitions/union"
+            }
+        },
+        "xunion_declarations": {
+            "description": "List of extensible unions",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/xunion"
             }
         },
         "type_alias_declarations": {
@@ -679,7 +687,7 @@
                     "type": "boolean"
                 },
                 "has_flexible_envelope": {
-                    "description": "Flag indicating if this declaration contains flexible envelopes (in unions or tables)",
+                    "description": "Flag indicating if this declaration contains flexible envelopes (in xunions or tables)",
                     "type": "boolean"
                 },
                 "contains_union": {
@@ -689,6 +697,78 @@
             }
         },
         "union": {
+            "description": "Definition of a union",
+            "type": "object",
+            "required": [
+                "name",
+                "members",
+                "type_shape_v1"
+            ],
+            "properties": {
+                "max_handles": {
+                    "description": "Maximum number of handles present in the union",
+                    "$ref": "#/definitions/count"
+                },
+                "maybe_attributes": {
+                    "description": "Optional list of union attributes",
+                    "$ref": "#/definitions/attributes-list"
+                },
+                "name": {
+                    "description": "Name of union",
+                    "$ref": "#/definitions/compound-identifier"
+                },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
+                },
+                "members": {
+                    "description": "List of union members",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/union-member"
+                    }
+                },
+                "type_shape_v1": {
+                    "description": "Type shape of this declaration",
+                    "$ref": "#/definitions/typeshape"
+                }
+            }
+        },
+        "union-member": {
+            "description": "Definition of a union member",
+            "type": "object",
+            "required": [
+                "xunion_ordinal",
+                "reserved"
+            ],
+            "properties": {
+                "xunion_ordinal": {
+                    "description": "Ordinal value of the member when this union is encoded/decoded as a xunion",
+                    "$ref": "#/definitions/ordinal"
+                },
+                "reserved": {
+                    "description": "Flag indicating that the member is reserved",
+                    "type": "boolean"
+                },
+                "name": {
+                    "description": "Name of union member",
+                    "$ref": "#/definitions/identifier"
+                },
+                "type": {
+                    "description": "Type of union member",
+                    "$ref": "#/definitions/type"
+                },
+                "location": {
+                    "description": "Source location of the declaration",
+                    "$ref": "#/definitions/location"
+                },
+                "maybe_attributes": {
+                    "description": "Optional list of union member attributes",
+                    "$ref": "#/definitions/attributes-list"
+                }
+            }
+        },
+        "xunion": {
             "description": "Definition of an extensible union",
             "type": "object",
             "required": [
@@ -718,7 +798,7 @@
                     "description": "List of extensible union members",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/union-member"
+                        "$ref": "#/definitions/xunion-member"
                     }
                 },
                 "strict": {
@@ -731,7 +811,7 @@
                 }
             }
         },
-        "union-member": {
+        "xunion-member": {
             "description": "Definition of an extensible union member",
             "type": "object",
             "required": [
@@ -845,6 +925,7 @@
                         "struct",
                         "table",
                         "union",
+                        "xunion",
                         "type_alias"
                     ]
                 }

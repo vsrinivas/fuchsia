@@ -10,7 +10,6 @@
 
 #include "test_library.h"
 
-// TODO(fxb/45702) this should be merged into union_tests.cc
 namespace {
 
 static bool Compiles(const std::string& source_code,
@@ -95,7 +94,7 @@ xunion Foo {
 )FIDL",
                         &errors));
   EXPECT_EQ(errors.size(), 1u);
-  ASSERT_STR_STR(errors.at(0).c_str(), "Multiple union fields with the same ordinal");
+  ASSERT_STR_STR(errors.at(0).c_str(), "Multiple xunion fields with the same ordinal");
 
   // Missing ordinals.
   EXPECT_FALSE(Compiles(R"FIDL(
@@ -247,13 +246,13 @@ union Foo {
 )FIDL");
   ASSERT_TRUE(union_library.Compile());
 
-  const fidl::flat::Union* ex_xunion = xunion_library.LookupUnion("Foo");
+  const fidl::flat::XUnion* ex_xunion = xunion_library.LookupXUnion("Foo");
   const fidl::flat::Union* ex_union = union_library.LookupUnion("Foo");
 
   ASSERT_NOT_NULL(ex_xunion);
   ASSERT_NOT_NULL(ex_union);
 
-  ASSERT_EQ(ex_union->members.front().ordinal->value, 1);
+  ASSERT_EQ(ex_union->members.front().xunion_ordinal->value, 1);
   ASSERT_EQ(ex_xunion->members.front().ordinal->value, 1);
 
   END_TEST;
@@ -270,8 +269,8 @@ protocol Example {
   ASSERT_TRUE(error_library.Compile());
   const fidl::flat::Union* error_union = error_library.LookupUnion("Example_Method_Result");
   ASSERT_NOT_NULL(error_union);
-  ASSERT_EQ(error_union->members.front().ordinal->value, 1);
-  ASSERT_EQ(error_union->members.back().ordinal->value, 2);
+  ASSERT_EQ(error_union->members.front().xunion_ordinal->value, 1);
+  ASSERT_EQ(error_union->members.back().xunion_ordinal->value, 2);
   END_TEST;
 }
 
@@ -289,26 +288,7 @@ xunion Foo {
   ASSERT_FALSE(library.Compile());
   auto errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "union members cannot be nullable");
-
-  END_TEST;
-}
-
-bool no_selector() {
-  BEGIN_TEST;
-
-  TestLibrary library(R"FIDL(
-library example;
-
-xunion Foo {
-  [Selector = "v2"] 1: string v;
-};
- 
-)FIDL");
-  ASSERT_FALSE(library.Compile());
-  auto errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_STR_STR(errors[0].c_str(), "placement of attribute 'Selector' disallowed here");
+  ASSERT_STR_STR(errors[0].c_str(), "Extensible union members cannot be nullable");
 
   END_TEST;
 }
@@ -322,5 +302,4 @@ RUN_TEST(invalid_empty_xunions)
 RUN_TEST(union_xunion_same_ordinals_explicit)
 RUN_TEST(error_syntax_explicit_ordinals)
 RUN_TEST(no_nullable_members_in_xunions)
-RUN_TEST(no_selector)
 END_TEST_CASE(xunion_tests)

@@ -33,7 +33,7 @@ func NewFidlGenerator() *FidlGenerator {
 	template.Must(tmpls.Parse(structTemplate))
 	template.Must(tmpls.Parse(tableTemplate))
 	template.Must(tmpls.Parse(testBaseTemplate))
-	template.Must(tmpls.Parse(unionTemplate))
+	template.Must(tmpls.Parse(xunionTemplate))
 	return &FidlGenerator{
 		tmpls: tmpls,
 	}

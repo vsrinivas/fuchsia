@@ -223,16 +223,16 @@ type StructMember struct {
 	Tags Tags
 }
 
-type Union struct {
+type XUnion struct {
 	types.Attributes
 	Name    string
 	TagName string
-	Members []UnionMember
+	Members []XUnionMember
 	Tags    Tags
 	types.Strictness
 }
 
-type UnionMember struct {
+type XUnionMember struct {
 	types.Attributes
 	Ordinal     uint64
 	Name        string
@@ -420,8 +420,8 @@ type Root struct {
 	// Structs represents the list of FIDL structs represented as Go structs.
 	Structs []Struct
 
-	// Unions represents the list of FIDL unions represented as Go structs.
-	Unions []Union
+	// XUnions represents the list of FIDL xunions represented as Go structs.
+	XUnions []XUnion
 
 	// Table represents the list of FIDL tables represented as Go structs.
 	Tables []Table
@@ -740,6 +740,8 @@ func (c *compiler) compileType(withCtx bool, val types.Type) (r Type, t StackOfB
 			fallthrough
 		case types.UnionDeclType:
 			fallthrough
+		case types.XUnionDeclType:
+			fallthrough
 		case types.TableDeclType:
 			if val.Nullable {
 				r = Type("*" + e)
@@ -853,8 +855,8 @@ func (c *compiler) compileStruct(withCtx bool, val types.Struct) Struct {
 	return r
 }
 
-func (c *compiler) compileUnion(val types.Union) Union {
-	var members []UnionMember
+func (c *compiler) compileXUnion(val types.XUnion) XUnion {
+	var members []XUnionMember
 	for _, member := range val.Members {
 		if member.Reserved {
 			continue
@@ -870,7 +872,7 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		if handleSubtype := c.computeHandleSubtype(member.Type); handleSubtype != types.ObjectTypeNone {
 			tags[FidlHandleSubtypeTag] = handleSubtype
 		}
-		members = append(members, UnionMember{
+		members = append(members, XUnionMember{
 			Attributes:  member.Attributes,
 			Ordinal:     uint64(member.Ordinal),
 			Type:        ty,
@@ -888,7 +890,7 @@ func (c *compiler) compileUnion(val types.Union) Union {
 		FidlSizeV1Tag:      val.TypeShapeV1.InlineSize,
 		FidlAlignmentV1Tag: val.TypeShapeV1.Alignment,
 	}
-	return Union{
+	return XUnion{
 		Attributes: val.Attributes,
 		Name:       c.compileCompoundIdentifier(val.Name, true, ""),
 		TagName:    "I_" + c.compileCompoundIdentifier(val.Name, false, TagSuffix),
@@ -1093,10 +1095,10 @@ func Compile(fidlData types.Root) Root {
 		}
 	}
 	for _, v := range fidlData.Unions {
-		r.Unions = append(r.Unions, c.compileUnion(v))
+		r.XUnions = append(r.XUnions, c.compileXUnion(types.ConvertUnionToXUnion(v)))
 	}
-	if len(fidlData.XUnions) > 0 {
-		panic("unexpected xunions in JSON IR: xunions have been replaced by unions and should no longer exist")
+	for _, v := range fidlData.XUnions {
+		r.XUnions = append(r.XUnions, c.compileXUnion(v))
 	}
 	for _, v := range fidlData.Tables {
 		r.Tables = append(r.Tables, c.compileTable(v))

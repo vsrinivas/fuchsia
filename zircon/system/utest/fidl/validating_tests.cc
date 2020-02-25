@@ -1634,7 +1634,7 @@ bool validate_valid_empty_nullable_xunion() {
   SampleNullableXUnionStruct message = {};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&v1_fidl_test_coding_SampleNullableXUnionStructTable, &message,
+  auto status = fidl_validate(&fidl_test_coding_SampleNullableXUnionStructTable, &message,
                               sizeof(fidl_xunion_t), 0, &error);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, error);
@@ -1648,7 +1648,7 @@ bool validate_empty_nonnullable_xunion() {
   SampleXUnionStruct message = {};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&v1_fidl_test_coding_SampleXUnionStructTable, &message,
+  auto status = fidl_validate(&fidl_test_coding_SampleXUnionStructTable, &message,
                               sizeof(fidl_xunion_t), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NONNULL(error);
@@ -1664,7 +1664,7 @@ bool validate_empty_nullable_xunion_nonzero_ordinal() {
   message.opt_xu.header.tag = kSampleXUnionIntStructOrdinal;
 
   const char* error = nullptr;
-  auto status = fidl_validate(&v1_fidl_test_coding_SampleNullableXUnionStructTable, &message,
+  auto status = fidl_validate(&fidl_test_coding_SampleNullableXUnionStructTable, &message,
                               sizeof(fidl_xunion_t), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NONNULL(error);
@@ -1681,7 +1681,7 @@ bool validate_nonempty_xunion_zero_ordinal() {
       (fidl_envelope_t){.num_bytes = 8, .num_handles = 0, .presence = FIDL_ALLOC_PRESENT};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&v1_fidl_test_coding_SampleXUnionStructTable, &message,
+  auto status = fidl_validate(&fidl_test_coding_SampleXUnionStructTable, &message,
                               sizeof(SampleXUnionStruct), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NONNULL(error);
@@ -1698,7 +1698,7 @@ bool validate_nonempty_nullable_xunion_zero_ordinal() {
       (fidl_envelope_t){.num_bytes = 8, .num_handles = 0, .presence = FIDL_ALLOC_PRESENT};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&v1_fidl_test_coding_SampleNullableXUnionStructTable, &message,
+  auto status = fidl_validate(&fidl_test_coding_SampleNullableXUnionStructTable, &message,
                               sizeof(SampleNullableXUnionStruct), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NONNULL(error);
@@ -1721,8 +1721,8 @@ bool validate_strict_xunion_unknown_ordinal() {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&v1_fidl_test_coding_SampleStrictXUnionStructTable, bytes,
-                              sizeof(bytes), 0, &error);
+  auto status = fidl_validate(&fidl_test_coding_SampleStrictXUnionStructTable, bytes, sizeof(bytes),
+                              0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NONNULL(error);
   EXPECT_STR_EQ(error, "strict xunion has unknown ordinal");
@@ -1745,7 +1745,7 @@ bool validate_flexible_xunion_unknown_ordinal() {
 
   const char* error = nullptr;
   auto status =
-      fidl_validate(&v1_fidl_test_coding_SampleXUnionStructTable, bytes, sizeof(bytes), 0, &error);
+      fidl_validate(&fidl_test_coding_SampleXUnionStructTable, bytes, sizeof(bytes), 0, &error);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error);
 

@@ -133,28 +133,19 @@ func ExplicitPizzaOrPastaWithPasta(pasta Pasta) ExplicitPizzaOrPasta {
 
 type I_flexiblePizzaOrPastaTag uint64
 const (
-	FlexiblePizzaOrPasta_unknownData = 0  // 0x00000000
 	FlexiblePizzaOrPastaPizza = 1 // 0x00000001
 	FlexiblePizzaOrPastaPasta = 2 // 0x00000002
 )
 
 
 type FlexiblePizzaOrPasta struct {
-	I_flexiblePizzaOrPastaTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData []byte
+	I_flexiblePizzaOrPastaTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	Pizza Pizza  `fidl:"1"`
 	Pasta Pasta  `fidl:"2"`
 }
 
 func (_m *FlexiblePizzaOrPasta) Which() I_flexiblePizzaOrPastaTag {
-	switch _m.I_flexiblePizzaOrPastaTag {
-	case 1:
-		return FlexiblePizzaOrPastaPizza
-	case 2:
-		return FlexiblePizzaOrPastaPasta
-	default:
-		return FlexiblePizzaOrPasta_unknownData
-	}
+	return _m.I_flexiblePizzaOrPastaTag
 }
 
 func (_m *FlexiblePizzaOrPasta) Ordinal() uint64 {
@@ -287,7 +278,6 @@ func UnionWithVectorStringAlsoNeedsConstructor(vectorStringAlsoNeedsConstructor 
 
 type I_flexibleUnionTag uint64
 const (
-	FlexibleUnion_unknownData = 0  // 0x00000000
 	FlexibleUnionPrimitive = 1 // 0x00000001
 	FlexibleUnionStringNeedsConstructor = 2 // 0x00000002
 	FlexibleUnionVectorStringAlsoNeedsConstructor = 3 // 0x00000003
@@ -295,24 +285,14 @@ const (
 
 
 type FlexibleUnion struct {
-	I_flexibleUnionTag `fidl:"x" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	I_unknownData []byte
+	I_flexibleUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
 	Primitive int32  `fidl:"1"`
 	StringNeedsConstructor string  `fidl:"2,"`
 	VectorStringAlsoNeedsConstructor []string  `fidl:"3,,"`
 }
 
 func (_m *FlexibleUnion) Which() I_flexibleUnionTag {
-	switch _m.I_flexibleUnionTag {
-	case 1:
-		return FlexibleUnionPrimitive
-	case 2:
-		return FlexibleUnionStringNeedsConstructor
-	case 3:
-		return FlexibleUnionVectorStringAlsoNeedsConstructor
-	default:
-		return FlexibleUnion_unknownData
-	}
+	return _m.I_flexibleUnionTag
 }
 
 func (_m *FlexibleUnion) Ordinal() uint64 {
@@ -487,15 +467,15 @@ func ExplicitUnionWithStringNeedsConstructor(stringNeedsConstructor string) Expl
 
 type I_reverseOrdinalUnionTag uint64
 const (
-	ReverseOrdinalUnionSecond = 2 // 0x00000002
 	ReverseOrdinalUnionFirst = 1 // 0x00000001
+	ReverseOrdinalUnionSecond = 2 // 0x00000002
 )
 
 
 type ReverseOrdinalUnion struct {
 	I_reverseOrdinalUnionTag `fidl:"x!" fidl_size_v1:"24" fidl_alignment_v1:"8"`
-	Second uint32  `fidl:"2"`
 	First uint32  `fidl:"1"`
+	Second uint32  `fidl:"2"`
 }
 
 func (_m *ReverseOrdinalUnion) Which() I_reverseOrdinalUnionTag {
@@ -506,17 +486,6 @@ func (_m *ReverseOrdinalUnion) Ordinal() uint64 {
 	return uint64(_m.I_reverseOrdinalUnionTag)
 }
 
-func (_m *ReverseOrdinalUnion) SetSecond(second uint32) {
-	_m.I_reverseOrdinalUnionTag = ReverseOrdinalUnionSecond
-	_m.Second = second
-}
-
-func ReverseOrdinalUnionWithSecond(second uint32) ReverseOrdinalUnion {
-	var _u ReverseOrdinalUnion
-	_u.SetSecond(second)
-	return _u
-}
-
 func (_m *ReverseOrdinalUnion) SetFirst(first uint32) {
 	_m.I_reverseOrdinalUnionTag = ReverseOrdinalUnionFirst
 	_m.First = first
@@ -525,6 +494,17 @@ func (_m *ReverseOrdinalUnion) SetFirst(first uint32) {
 func ReverseOrdinalUnionWithFirst(first uint32) ReverseOrdinalUnion {
 	var _u ReverseOrdinalUnion
 	_u.SetFirst(first)
+	return _u
+}
+
+func (_m *ReverseOrdinalUnion) SetSecond(second uint32) {
+	_m.I_reverseOrdinalUnionTag = ReverseOrdinalUnionSecond
+	_m.Second = second
+}
+
+func ReverseOrdinalUnionWithSecond(second uint32) ReverseOrdinalUnion {
+	var _u ReverseOrdinalUnion
+	_u.SetSecond(second)
 	return _u
 }
 

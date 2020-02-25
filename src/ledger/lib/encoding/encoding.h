@@ -52,9 +52,7 @@ bool DecodeFromBuffer(const fuchsia::mem::Buffer& buffer, T* data) {
   fidl::Message message(fidl::BytePart(bytes.data(), bytes.size(), bytes.size()),
                         fidl::HandlePart());
   const char* error_msg;
-  // We cannot use fidl::Message because it assumes that its contents contain
-  // a message header, so call fidl_decode manually.
-  zx_status_t status = fidl_decode(T::FidlType, bytes.data(), bytes.size(), nullptr, 0, &error_msg);
+  zx_status_t status = message.Decode(T::FidlType, &error_msg);
   if (status != ZX_OK) {
     return false;
   }

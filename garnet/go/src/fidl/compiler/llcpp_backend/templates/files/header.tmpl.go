@@ -50,15 +50,15 @@ namespace {{ . }} {
 {{- if Eq .Kind Kinds.Service }}{{ template "ServiceForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructForwardDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableForwardDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.Union }}{{ template "UnionForwardDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.XUnion }}{{ template "XUnionForwardDeclaration" . }}{{- end }}
 {{- end }}
 
-{{- /* Declare tables and unions first, since they store their members
+{{- /* Declare tables and xunions first, since they store their members
     out-of-line and so they only need forward declarations.
     See fxb/7919 formore context. */}}
 {{- range .Decls }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableDeclaration" . }}{{- end }}
-{{- if Eq .Kind Kinds.Union }}{{ template "UnionDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.XUnion }}{{ template "XUnionDeclaration" . }}{{- end }}
 {{- end }}
 
 {{- range .Decls }}
@@ -81,7 +81,7 @@ namespace fidl {
 {{- if Eq .Kind Kinds.Interface }}{{ template "InterfaceTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Struct }}{{ template "StructTraits" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "TableTraits" . }}{{- end }}
-{{- if Eq .Kind Kinds.Union }}{{ template "UnionTraits" . }}{{- end }}
+{{- if Eq .Kind Kinds.XUnion }}{{ template "XUnionTraits" . }}{{- end }}
 {{- end }}
 
 }  // namespace fidl

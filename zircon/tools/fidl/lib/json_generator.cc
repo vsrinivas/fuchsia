@@ -466,13 +466,58 @@ void JSONGenerator::Generate(const flat::Union& value) {
     GenerateObjectMember("location", NameSpan(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
+
+    // As part of the union-to-xunion migration, static unions now use an
+    // explicit syntax to specify their xunion_ordinal:
+    //
+    //     union Foo {
+    //         1: int bar;  // union tag 0, xunion ordinal 1
+    //         2: bool baz; // union tag 1, xunion ordinal 2
+    //     };
+    //
+    // This makes it look like the variants can be safely reordered, like table
+    // fields. However, since union tag indices come from the JSON members array
+    // -- which usually follows source order -- it would break ABI. We prevent
+    // this by sorting members by xunion_ordinal before emitting them.
+    GenerateObjectMember("members", value.MembersSortedByXUnionOrdinal());
+
+    GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
+
+    GenerateTypeShapes(value);
+  });
+}
+
+void JSONGenerator::Generate(const flat::Union::Member& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("xunion_ordinal", value.xunion_ordinal, Position::kFirst);
+    if (value.maybe_used) {
+      assert(!value.span);
+      GenerateObjectMember("reserved", false);
+      GenerateObjectMember("name", value.maybe_used->name);
+      GenerateTypeAndFromTypeAlias(*value.maybe_used->type_ctor);
+      GenerateObjectMember("location", NameSpan(value.maybe_used->name));
+      if (value.maybe_used->attributes)
+        GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
+    } else {
+      GenerateObjectMember("reserved", true);
+      GenerateObjectMember("location", NameSpan(value.span.value()));
+    }
+  });
+}
+
+void JSONGenerator::Generate(const flat::XUnion& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("name", value.name, Position::kFirst);
+    GenerateObjectMember("location", NameSpan(value.name));
+    if (value.attributes)
+      GenerateObjectMember("maybe_attributes", value.attributes);
     GenerateObjectMember("members", value.members);
     GenerateObjectMember("strict", value.strictness == types::Strictness::kStrict);
     GenerateTypeShapes(value);
   });
 }
 
-void JSONGenerator::Generate(const flat::Union::Member& value) {
+void JSONGenerator::Generate(const flat::XUnion::Member& value) {
   GenerateObject([&]() {
     GenerateObjectMember("ordinal", value.ordinal, Position::kFirst);
     if (value.maybe_used) {
@@ -630,6 +675,9 @@ void JSONGenerator::GenerateDeclarationsMember(const flat::Library* library, Pos
     for (const auto& decl : library->union_declarations_)
       GenerateDeclarationsEntry(count++, decl->name, "union");
 
+    for (const auto& decl : library->xunion_declarations_)
+      GenerateDeclarationsEntry(count++, decl->name, "xunion");
+
     for (const auto& decl : library->type_alias_declarations_)
       GenerateDeclarationsEntry(count++, decl->name, "type_alias");
   });
@@ -738,6 +786,7 @@ std::ostringstream JSONGenerator::Produce() {
     GenerateObjectMember("struct_declarations", AllStructs(library_));
     GenerateObjectMember("table_declarations", library_->table_declarations_);
     GenerateObjectMember("union_declarations", library_->union_declarations_);
+    GenerateObjectMember("xunion_declarations", library_->xunion_declarations_);
     GenerateObjectMember("type_alias_declarations", library_->type_alias_declarations_);
 
     // The library's declaration_order_ contains all the declarations for all

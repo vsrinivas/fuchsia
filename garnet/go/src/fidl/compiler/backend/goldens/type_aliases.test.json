@@ -292,6 +292,7 @@
   ],
   "table_declarations": [],
   "union_declarations": [],
+  "xunion_declarations": [],
   "type_alias_declarations": [
     {
       "name": "example/u32",

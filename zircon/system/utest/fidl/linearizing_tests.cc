@@ -6,17 +6,16 @@
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <limits.h>
+#include <unittest/unittest.h>
 #include <zircon/syscalls.h>
 
 #include <cstddef>
 #include <memory>
 #include <vector>
 
-#include <unittest/unittest.h>
-
 #include "extra_messages.h"
-#include "fidl_coded_types.h"
 #include "fidl_structs.h"
+#include "fidl_coded_types.h"
 
 namespace fidl {
 namespace {
@@ -563,13 +562,14 @@ bool linearize_xunion_empty_invariant_empty() {
 
   // Non-zero ordinal with empty envelope is an error
   SampleNullableXUnionStruct xunion = {};
-  xunion.opt_xu.header = (fidl_xunion_t){.tag = kSampleXUnionIntStructOrdinal, .envelope = {}};
+  xunion.opt_xu.header =
+      (fidl_xunion_t){.tag = kSampleXUnionIntStructOrdinal, .envelope = {}};
   constexpr uint32_t buf_size = 512;
   uint8_t buffer[buf_size];
   const char* error = nullptr;
   zx_status_t status;
   uint32_t actual_num_bytes = 0;
-  status = fidl_linearize(&v1_fidl_test_coding_SampleNullableXUnionStructTable, &xunion, buffer,
+  status = fidl_linearize(&fidl_test_coding_SampleNullableXUnionStructTable, &xunion, buffer,
                           buf_size, &actual_num_bytes, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NONNULL(error);
@@ -592,7 +592,7 @@ bool linearize_xunion_empty_invariant_zero_ordinal() {
   const char* error = nullptr;
   zx_status_t status;
   uint32_t actual_num_bytes = 0;
-  status = fidl_linearize(&v1_fidl_test_coding_SampleNullableXUnionStructTable, &xunion, buffer,
+  status = fidl_linearize(&fidl_test_coding_SampleNullableXUnionStructTable, &xunion, buffer,
                           buf_size, &actual_num_bytes, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NONNULL(error);
@@ -614,7 +614,7 @@ bool linearize_xunion_primitive_field() {
   const char* error = nullptr;
   zx_status_t status;
   uint32_t actual_num_bytes = 0;
-  status = fidl_linearize(&v1_fidl_test_coding_SampleXUnionStructTable, &xunion, buffer, buf_size,
+  status = fidl_linearize(&fidl_test_coding_SampleXUnionStructTable, &xunion, buffer, buf_size,
                           &actual_num_bytes, &error);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, error);

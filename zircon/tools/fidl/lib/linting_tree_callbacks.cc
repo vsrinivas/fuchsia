@@ -203,6 +203,25 @@ LintingTreeCallbacks::LintingTreeCallbacks() {
       }
       ProcessGapText(element->end_);
     }
+    void OnXUnionMember(std::unique_ptr<raw::XUnionMember> const& element) override {
+      ProcessGapText(element->start_);
+      for (auto& callback : callbacks_.xunion_member_callbacks_) {
+        callback(*element.get());
+      }
+      DeclarationOrderTreeVisitor::OnXUnionMember(element);
+      ProcessGapText(element->end_);
+    }
+    void OnXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> const& element) override {
+      ProcessGapText(element->start_);
+      for (auto& callback : callbacks_.xunion_declaration_callbacks_) {
+        callback(*element.get());
+      }
+      DeclarationOrderTreeVisitor::OnXUnionDeclaration(element);
+      for (auto& callback : callbacks_.exit_xunion_declaration_callbacks_) {
+        callback(*element.get());
+      }
+      ProcessGapText(element->end_);
+    }
 
    private:
     void InitGapTextRegex() {

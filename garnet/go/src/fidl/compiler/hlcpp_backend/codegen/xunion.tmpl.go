@@ -4,12 +4,12 @@
 
 package codegen
 
-const unionTemplate = `
-{{- define "UnionForwardDeclaration" }}
+const xunionTemplate = `
+{{- define "XUnionForwardDeclaration" }}
 class {{ .Name }};
 {{- end }}
 
-{{- define "UnionDeclaration" }}
+{{- define "XUnionDeclaration" }}
 {{range .DocComments}}
 ///{{ . }}
 {{- end}}
@@ -186,7 +186,7 @@ inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
 using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 {{- end }}
 
-{{- define "UnionDefinition" }}
+{{- define "XUnionDefinition" }}
 extern "C" const fidl_type_t {{ .TableType }};
 const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 
@@ -391,7 +391,7 @@ void {{ .Name }}::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
 
 {{- end }}
 
-{{- define "UnionTraits" }}
+{{- define "XUnionTraits" }}
 template <>
 struct IsFidlXUnion<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
 
