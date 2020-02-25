@@ -53,8 +53,6 @@ executable("bin") {
 }
 
 executable("fdr") {
-  output_name = "fdr"
-
   sources = [ "cli_main.cc" ]
 
   public_deps = [
@@ -65,19 +63,14 @@ executable("fdr") {
   ]
 }
 
-package("factory_reset") {
-  deps = [
-    ":bin",
-    ":fdr",
-  ]
+package("factory_reset_pkg") {
+  package_name = "factory_reset"
+
+  deps = [ ":bin" ]
 
   binaries = [
     {
       name = "factory_reset"
-    },
-    {
-      name = "fdr"
-      shell = true
     },
   ]
 
@@ -89,14 +82,32 @@ package("factory_reset") {
   ]
 }
 
-group("configs") {
-  deps = [ ":factory_reset_config" ]
+group("factory_reset") {
+  deps = [
+    ":factory_reset_config",
+    ":factory_reset_pkg",
+  ]
+}
+
+package("fdr_cli") {
+  deps = [ ":fdr" ]
+
+  binaries = [
+    {
+      name = "fdr"
+      shell = true
+    },
+  ]
 }
 
 config_data("factory_reset_config") {
   for_pkg = "sysmgr"
   outputs = [ "factory_reset.config" ]
   sources = [ "service.config" ]
+}
+
+group("tools") {
+  deps = [ ":fdr_cli" ]
 }
 
 group("tests") {

@@ -35,6 +35,7 @@ group("tools") {
     "//src/graphics/lib/magma:magma-tools",
     "//src/lib/icu:tools",
     "//src/media/bundles:tools",
+    "//src/recovery/factory_reset:tools",
     "//src/sys/component_manager_for_test",
     "//src/sys/locate",
     "//src/sys/pkg/bin/pm",
