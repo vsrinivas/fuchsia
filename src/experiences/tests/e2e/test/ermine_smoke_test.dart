@@ -10,11 +10,8 @@ import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
 /// Tests that the DUT running ermine can do the following:
-///  - Connect to base shell (userpicker_base_shell) using Flutter Driver.
-///  - Tap login button using scenic input utility.
-///  - Connect to user shell (ermine) using Flutter Driver.
+///  - Connect to ermine using Flutter Driver.
 ///  - Ensure its screenshot is not all black.
-///  - Log out of user shell (ermine).
 void main() {
   Sl4f sl4f;
   FlutterDriverConnector connector;
@@ -23,6 +20,13 @@ void main() {
   setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
     await sl4f.startServer();
+
+    // Check if ermine is up and registered itself with [Inspect].
+    final inspect = Inspect(sl4f.ssh);
+    final ermine = await inspect.inspectComponentRoot('ermine');
+    if (ermine == null) {
+      fail('could not find ermine\'s inspect node');
+    }
 
     connector = FlutterDriverConnector(sl4f);
     await connector.initialize();
