@@ -397,9 +397,9 @@ enum {
 #define CSR_DBG_HPET_MEM_REG_VAL (0xFFFF0000)
 
 /* DRAM INT TABLE */
-#define CSR_DRAM_INT_TBL_ENABLE (1 << 31)
-#define CSR_DRAM_INIT_TBL_WRITE_POINTER (1 << 28)
-#define CSR_DRAM_INIT_TBL_WRAP_CHECK (1 << 27)
+#define CSR_DRAM_INT_TBL_ENABLE (UINT32_C(1) << 31)
+#define CSR_DRAM_INIT_TBL_WRITE_POINTER (UINT32_C(1) << 28)
+#define CSR_DRAM_INIT_TBL_WRAP_CHECK (UINT32_C(1) << 27)
 
 /*
  * SHR target access (Shared block memory space)
