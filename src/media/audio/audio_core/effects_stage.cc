@@ -13,8 +13,8 @@ namespace {
 class MultiLibEffectsLoader {
  public:
   Effect CreateEffectByName(std::string_view lib_name, std::string_view effect_name,
-                            std::string_view instance_name, uint32_t frame_rate,
-                            uint16_t channels_in, uint16_t channels_out, std::string_view config) {
+                            uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
+                            std::string_view config) {
     auto it = std::find_if(holders_.begin(), holders_.end(),
                            [lib_name](auto& holder) { return holder.lib_name == lib_name; });
     if (it == holders_.end()) {
@@ -28,8 +28,8 @@ class MultiLibEffectsLoader {
     }
 
     FX_CHECK(it != holders_.end());
-    return it->loader->CreateEffectByName(effect_name, instance_name, frame_rate, channels_in,
-                                          channels_out, config);
+    return it->loader->CreateEffectByName(effect_name, frame_rate, channels_in, channels_out,
+                                          config);
   }
 
  private:
@@ -65,9 +65,9 @@ std::shared_ptr<EffectsStage> EffectsStage::Create(
   uint32_t frame_rate = source->format().frames_per_second();
   uint16_t channels = source->format().channels();
   for (const auto& effect_spec : effects) {
-    auto effect = loader.CreateEffectByName(effect_spec.lib_name, effect_spec.effect_name,
-                                            effect_spec.instance_name, frame_rate, channels,
-                                            channels, effect_spec.effect_config);
+    auto effect =
+        loader.CreateEffectByName(effect_spec.lib_name, effect_spec.effect_name, frame_rate,
+                                  channels, channels, effect_spec.effect_config);
     FX_DCHECK(effect);
     if (!effect) {
       FX_LOGS(ERROR) << "Unable to create effect '" << effect_spec.effect_name << "' with config '"

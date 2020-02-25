@@ -94,21 +94,20 @@ zx_status_t EffectsLoader::GetEffectInfo(uint32_t effect_id,
   return ZX_OK;
 }
 
-Effect EffectsLoader::CreateEffectByName(std::string_view name, std::string_view instance_name,
-                                         uint32_t frame_rate, uint16_t channels_in,
-                                         uint16_t channels_out, std::string_view config) const {
+Effect EffectsLoader::CreateEffectByName(std::string_view name, uint32_t frame_rate,
+                                         uint16_t channels_in, uint16_t channels_out,
+                                         std::string_view config) const {
   TRACE_DURATION("audio", "EffectsLoader::CreateEffectByName");
 
   auto effect_id = FindEffectIdForEffectName(name, effect_infos_);
   if (!effect_id) {
     return {};
   }
-  return CreateEffect(*effect_id, instance_name, frame_rate, channels_in, channels_out, config);
+  return CreateEffect(*effect_id, frame_rate, channels_in, channels_out, config);
 }
 
-Effect EffectsLoader::CreateEffect(uint32_t effect_id, std::string_view instance_name,
-                                   uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
-                                   std::string_view config) const {
+Effect EffectsLoader::CreateEffect(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
+                                   uint16_t channels_out, std::string_view config) const {
   TRACE_DURATION("audio", "EffectsLoader::CreateEffect");
   FX_DCHECK(module_);
 
@@ -124,7 +123,7 @@ Effect EffectsLoader::CreateEffect(uint32_t effect_id, std::string_view instance
   if (effects_handle == FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) {
     return {};
   }
-  return {effects_handle, module_, instance_name};
+  return {effects_handle, module_};
 }
 
 }  // namespace media::audio

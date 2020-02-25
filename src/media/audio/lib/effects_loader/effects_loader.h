@@ -39,12 +39,11 @@ class EffectsLoader {
   zx_status_t GetEffectInfo(uint32_t effect_id,
                             fuchsia_audio_effects_description* effect_desc) const;
 
-  Effect CreateEffectByName(std::string_view name, std::string_view instance_name,
-                            uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
-                            std::string_view config) const;
+  Effect CreateEffectByName(std::string_view name, uint32_t frame_rate, uint16_t channels_in,
+                            uint16_t channels_out, std::string_view config) const;
 
-  Effect CreateEffect(uint32_t effect_id, std::string_view instance_name, uint32_t frame_rate,
-                      uint16_t channels_in, uint16_t channels_out, std::string_view config) const;
+  Effect CreateEffect(uint32_t effect_id, uint32_t frame_rate, uint16_t channels_in,
+                      uint16_t channels_out, std::string_view config) const;
 
  private:
   EffectsLoader(EffectsModuleV1 module,

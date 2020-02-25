@@ -13,14 +13,11 @@ namespace {
 
 class EffectTest : public testing::EffectsLoaderTestBase {};
 
-static const std::string kInstanceName = "instance name";
-
 TEST_F(EffectTest, MoveEffect) {
   test_effects().AddEffect("assign_to_1.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 1.0);
 
-  Effect effect1 = effects_loader()->CreateEffect(0, kInstanceName, 1, 1, 1, {});
+  Effect effect1 = effects_loader()->CreateEffect(0, 1, 1, 1, {});
   ASSERT_TRUE(effect1);
-  ASSERT_EQ(kInstanceName, effect1.instance_name());
 
   // New, invalid, effect.
   Effect effect2;

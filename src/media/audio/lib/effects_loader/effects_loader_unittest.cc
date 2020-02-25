@@ -17,8 +17,6 @@ static constexpr uint32_t kInvalidEffectId = 1;
 static constexpr uint32_t kFrameRate = 48000;
 static constexpr uint16_t kTwoChannels = 2;
 
-static const std::string kInstanceName = "instance name";
-
 // The |EffectsLoaderModuleNotLoadedTest| suite holds tests that exercise the `EffectsLoader` in a
 // state before a valid module has been loaded. This is done by the test fixture for
 // |EffectsLoaderTest| so don't use the fixture for these test cases.
@@ -40,7 +38,7 @@ TEST(EffectsLoaderModuleNotLoadedTest, CreateWithNullModule) {
   // the loader itself and not deferred to the (unimplemented) module functions.
   fuchsia_audio_effects_description desc = {};
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, loader->GetEffectInfo(0, &desc));
-  auto effect = loader->CreateEffect(0, "", kFrameRate, kTwoChannels, kTwoChannels, {});
+  auto effect = loader->CreateEffect(0, kFrameRate, kTwoChannels, kTwoChannels, {});
   EXPECT_FALSE(effect);
 }
 
@@ -70,9 +68,8 @@ TEST_F(EffectsLoaderTest, CreateEffectByEffectId) {
   test_effects().AddEffect("assign_to_1.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 1.0);
   {
     ASSERT_EQ(0u, test_effects().InstanceCount());
-    Effect e = effects_loader()->CreateEffect(0, kInstanceName, kFrameRate, kTwoChannels, kTwoChannels, {});
+    Effect e = effects_loader()->CreateEffect(0, kFrameRate, kTwoChannels, kTwoChannels, {});
     EXPECT_TRUE(e);
-    EXPECT_EQ(kInstanceName, e.instance_name());
     ASSERT_EQ(1u, test_effects().InstanceCount());
   }
 
@@ -83,7 +80,7 @@ TEST_F(EffectsLoaderTest, CreateEffectByEffectId) {
 TEST_F(EffectsLoaderTest, CreateEffectInvalidEffectId) {
   // Since we didn't call 'AddEffect' there are no valid effect_id's that can be used for
   // CreateEffect.
-  Effect e = effects_loader()->CreateEffect(0, "", kFrameRate, kTwoChannels, kTwoChannels, {});
+  Effect e = effects_loader()->CreateEffect(0, kFrameRate, kTwoChannels, kTwoChannels, {});
   EXPECT_FALSE(e);
   ASSERT_EQ(0u, test_effects().InstanceCount());
 }
@@ -96,10 +93,9 @@ TEST_F(EffectsLoaderTest, CreateEffectByName) {
   RecreateLoader();
   {
     ASSERT_EQ(0u, test_effects().InstanceCount());
-    Effect e = effects_loader()->CreateEffectByName("assign_to_1.0", kInstanceName, kFrameRate,
-                                                    kTwoChannels, kTwoChannels, {});
+    Effect e = effects_loader()->CreateEffectByName("assign_to_1.0", kFrameRate, kTwoChannels,
+                                                    kTwoChannels, {});
     EXPECT_TRUE(e);
-    EXPECT_EQ(kInstanceName, e.instance_name());
     ASSERT_EQ(1u, test_effects().InstanceCount());
   }
 
@@ -115,7 +111,7 @@ TEST_F(EffectsLoaderTest, CreateEffectByNameInvalidName) {
   RecreateLoader();
   {
     ASSERT_EQ(0u, test_effects().InstanceCount());
-    Effect e = effects_loader()->CreateEffectByName("invalid_name", "", kFrameRate, kTwoChannels,
+    Effect e = effects_loader()->CreateEffectByName("invalid_name", kFrameRate, kTwoChannels,
                                                     kTwoChannels, {});
     EXPECT_FALSE(e);
     ASSERT_EQ(0u, test_effects().InstanceCount());
@@ -124,15 +120,14 @@ TEST_F(EffectsLoaderTest, CreateEffectByNameInvalidName) {
 
 TEST_F(EffectsLoaderTest, CreateEffectInvalidChannelConfiguration) {
   // The passthrough effect requires in_chans == out_chans.
-  Effect e = effects_loader()->CreateEffect(0, "", kFrameRate, kTwoChannels, kTwoChannels - 1, {});
+  Effect e = effects_loader()->CreateEffect(0, kFrameRate, kTwoChannels, kTwoChannels - 1, {});
   EXPECT_FALSE(e);
   ASSERT_EQ(0u, test_effects().InstanceCount());
 }
 
 TEST_F(EffectsLoaderTest, CreateEffectTooManyChannels) {
   static constexpr uint32_t kTooManyChannels = FUCHSIA_AUDIO_EFFECTS_CHANNELS_MAX + 1;
-  Effect e =
-      effects_loader()->CreateEffect(0, "", kFrameRate, kTooManyChannels, kTooManyChannels, {});
+  Effect e = effects_loader()->CreateEffect(0, kFrameRate, kTooManyChannels, kTooManyChannels, {});
   EXPECT_FALSE(e);
   ASSERT_EQ(0u, test_effects().InstanceCount());
 }
