@@ -174,11 +174,11 @@ impl RecordsContext for () {}
 /// This trait is kept separate from `RecordsImpl` to keep the lifetimes
 /// separated.
 pub(crate) trait RecordsImplLayout {
-    /// The type of errors that may be returned by a `RecordsImpl::parse_with_context`.
-    type Error;
-
     /// A context type that can be used to maintain state or do checks.
     type Context: RecordsContext;
+
+    /// The type of errors that may be returned by a `RecordsImpl::parse_with_context`.
+    type Error;
 }
 
 /// An implementation of a records parser.
@@ -265,10 +265,9 @@ impl<O> RecordsImplLayout for LimitedRecordsImplBridge<O>
 where
     O: LimitedRecordsImplLayout,
 {
-    type Error = O::Error;
-
     // All LimitedRecords get a context type of usize.
     type Context = usize;
+    type Error = O::Error;
 }
 
 impl<'a, O> RecordsImpl<'a> for LimitedRecordsImplBridge<O>
@@ -1279,8 +1278,8 @@ pub(crate) mod options {
     where
         O: OptionsImplLayout,
     {
-        type Error = OptionParseErr<O::Error>;
         type Context = ();
+        type Error = OptionParseErr<O::Error>;
     }
 
     impl<'a, O> RecordsImpl<'a> for OptionsImplBridge<O>
