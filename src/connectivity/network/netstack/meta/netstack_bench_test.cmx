@@ -1,0 +1,15 @@
+{
+    "program": {
+        "args": [
+            "--test.bench=.",
+            "--test.benchmem",
+            "--test.cpuprofile=/data/netstack_bench_profile"
+        ],
+        "binary": "test/netstack_bench_test"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ]
+    }
+}

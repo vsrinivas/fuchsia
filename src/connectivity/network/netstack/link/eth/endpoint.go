@@ -86,6 +86,6 @@ func (e *endpoint) GSOMaxSize() uint32 {
 	return 0
 }
 
-func NewLinkEndpoint(client *Client) *endpoint {
-	return &endpoint{LinkEndpoint: client}
+func NewLinkEndpoint(ep stack.LinkEndpoint) *endpoint {
+	return &endpoint{LinkEndpoint: ep}
 }
