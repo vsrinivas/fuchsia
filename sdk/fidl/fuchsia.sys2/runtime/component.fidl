@@ -28,6 +28,10 @@ table Component {
     /// resource from the `resolved_url`.  This mechanism is used for web
     /// applications.
     ///
+    /// Most runners, including but not limited to the builtin ELF runner,
+    /// require the package's directory connection to have OPEN_RIGHT_EXECUTABLE
+    /// rights in order to run the resolved component.
+    ///
     // TODO(CP-154): It might be better to return a package loader interface
     // here instead of immediately providing the package's content.
     // That would allow for finer grained pipelining of component installation
