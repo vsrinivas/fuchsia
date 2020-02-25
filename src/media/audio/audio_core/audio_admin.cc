@@ -269,7 +269,7 @@ void AudioAdmin::PolicyRules::ResetInteractions() {
       auto affected = static_cast<fuchsia::media::AudioRenderUsage>(j);
       SetRule(active, affected, fuchsia::media::Behavior::NONE);
     }
-    for (int j = 0; j < fuchsia::media::CAPTURE_USAGE_COUNT + 1; j++) {
+    for (int j = 0; j < fuchsia::media::CAPTURE_USAGE_COUNT; j++) {
       auto affected = static_cast<fuchsia::media::AudioCaptureUsage>(j);
       SetRule(active, affected, fuchsia::media::Behavior::NONE);
     }
