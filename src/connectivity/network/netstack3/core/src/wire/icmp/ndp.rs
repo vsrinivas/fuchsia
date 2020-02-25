@@ -404,7 +404,7 @@ pub(crate) mod options {
     pub(crate) struct NdpOptionsImpl;
 
     impl OptionsImplLayout for NdpOptionsImpl {
-        type Error = String;
+        type Error = ();
 
         // For NDP options the length should be multiplied by 8.
         const OPTION_LEN_MULTIPLIER: usize = 8;
@@ -417,25 +417,28 @@ pub(crate) mod options {
     impl<'a> OptionsImpl<'a> for NdpOptionsImpl {
         type Option = NdpOption<'a>;
 
-        fn parse(kind: u8, data: &'a [u8]) -> Result<Option<NdpOption>, String> {
-            Ok(Some(match NdpOptionType::from_u8(kind) {
-                Some(NdpOptionType::SourceLinkLayerAddress) => {
-                    NdpOption::SourceLinkLayerAddress(data)
-                }
-                Some(NdpOptionType::TargetLinkLayerAddress) => {
-                    NdpOption::TargetLinkLayerAddress(data)
-                }
-                Some(NdpOptionType::PrefixInformation) => NdpOption::PrefixInformation(
-                    LayoutVerified::<_, PrefixInformation>::new(data)
-                        .ok_or_else(|| "No parse data".to_string())?
-                        .into_ref(),
-                ),
-                Some(NdpOptionType::RedirectedHeader) => {
-                    NdpOption::RedirectedHeader { original_packet: &data[6..] }
-                }
-                Some(NdpOptionType::Mtu) => NdpOption::MTU(NetworkEndian::read_u32(&data[2..])),
-                None => return Ok(None),
-            }))
+        fn parse(kind: u8, data: &'a [u8]) -> Result<Option<NdpOption>, ()> {
+            NdpOptionType::from_u8(kind)
+                .map(|typ| {
+                    Ok(match typ {
+                        NdpOptionType::SourceLinkLayerAddress => {
+                            NdpOption::SourceLinkLayerAddress(data)
+                        }
+                        NdpOptionType::TargetLinkLayerAddress => {
+                            NdpOption::TargetLinkLayerAddress(data)
+                        }
+                        NdpOptionType::PrefixInformation => {
+                            let data =
+                                LayoutVerified::<_, PrefixInformation>::new(data).ok_or(())?;
+                            NdpOption::PrefixInformation(data.into_ref())
+                        }
+                        NdpOptionType::RedirectedHeader => {
+                            NdpOption::RedirectedHeader { original_packet: &data[6..] }
+                        }
+                        NdpOptionType::Mtu => NdpOption::MTU(NetworkEndian::read_u32(&data[2..])),
+                    })
+                })
+                .transpose()
         }
     }
 
