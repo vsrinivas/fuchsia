@@ -16,8 +16,6 @@ import (
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/packages"
 	"fuchsia.googlesource.com/host_target_testing/sl4f"
-
-	"golang.org/x/crypto/ssh"
 )
 
 var c *Config
@@ -310,29 +308,15 @@ func otaToPackage(
 
 	log.Printf("starting system OTA")
 
-	cmd := fmt.Sprintf("run \"fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx\" --update \"%s\" && sleep 60", updatePackageUrl)
-	err = device.Run(ctx, cmd, os.Stdout, os.Stderr)
-	if err != nil {
-		if _, ok := err.(*ssh.ExitMissingError); !ok {
-			return fmt.Errorf("failed to run system_updater.cmx: %s", err)
-		}
+	cmd := fmt.Sprintf("run \"fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx\" --initiator manual --reboot=false --update \"%s\"", updatePackageUrl)
+	if err = device.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
+		return fmt.Errorf("failed to run system_updater.cmx: %s", err)
 	}
 
-	// Wait until we get a signal that we have disconnected
-	ch := make(chan struct{})
-	go func() {
-		wg.Wait()
-		ch <- struct{}{}
-	}()
+	log.Printf("Update successful, rebooting now")
 
-	select {
-	case <-ch:
-	case <-ctx.Done():
-		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
-	}
-
-	if err = device.WaitForDeviceToBeConnected(ctx); err != nil {
-		return fmt.Errorf("device failed to connect: %s", err)
+	if err = device.Reboot(ctx, repo, rpcClient); err != nil {
+		return fmt.Errorf("device failed to reboot after OTA applied: %s", err)
 	}
 
 	log.Printf("OTA complete, validating device")
