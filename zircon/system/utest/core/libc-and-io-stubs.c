@@ -12,15 +12,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
-#include <unittest/unittest.h>
-
-// Explicitly include zxtest c wrappers, and avoid macro collision with
-// unitttest. This is safe, because all macros exported by this header
-// are internal, except for RUN_ALL_TESTS. The entry point is public though.
-// TODO(gevalentino): Once core-tests are fully migrated remove this comment and
-// unittest library import.
-#include <zxtest/c/zxtest.h>
-
 // output via debuglog syscalls
 
 static zx_handle_t log_handle;
@@ -136,33 +127,3 @@ off_t lseek(int fd, off_t offset, int whence) {
 
 __EXPORT
 int isatty(int fd) { return 1; }
-
-// TODO(mcgrathr): When unittest is gone, the zxtest library main will work
-// fine here and this can be removed.
-int main(int argc, char** argv) {
-  puts("Starting zxtest test cases...");
-  int zxtest_return_code = RUN_ALL_TESTS(argc, argv);
-  puts("[zxtest testsuite finished]");
-
-  puts("Starting unittest test cases...");
-  const bool ut_ok = unittest_run_all_tests(argc, argv);
-  puts("[unittest testsuite finished]");
-
-  if (ut_ok && zxtest_return_code == 0) {
-    // TODO(mcgrathr): The zircon.py recipe embeds this magic string.  When
-    // that's no longer used this can be removed.  It's now redundant with
-    // the success message from userboot after we return.
-    puts("core-tests succeeded RZMm59f7zOSs6aZUIXZR");
-  } else {
-    // The output of zxtest and unittest is concatenated, so it can be confusing
-    // if zxtest fails and unittest passed (and the user justs sees the "all tests
-    // passed" message of unittest). Add a bit more detail.
-    puts("");
-    puts("*** TESTS FAILED ***\n");
-    puts("At least one of the test frameworks 'zxtest' or 'unittest' failed.");
-    puts("Test output of the two frameworks are show above.");
-    printf("  * zxtest framework:   %s\n", zxtest_return_code == 0 ? "passed" : "FAILED");
-    printf("  * unittest framework: %s\n", ut_ok ? "passed" : "FAILED");
-  }
-  return ut_ok ? zxtest_return_code : EXIT_FAILURE;
-}
