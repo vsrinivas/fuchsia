@@ -5,7 +5,7 @@
 #include "watchdog.h"
 
 Watchdog::Watchdog(Owner* owner) : owner_(owner), loop_(&kAsyncLoopConfigNeverAttachToThread) {
-  loop_.StartThread();
+  ZX_ASSERT(ZX_OK == loop_.StartThread("Watchdog"));
   // Use late slack so the comparison in CheckAndResetTimeout works.
   zx::timer::create(ZX_TIMER_SLACK_LATE, ZX_CLOCK_MONOTONIC, &timer_);
   waiter_.set_object(timer_.get());

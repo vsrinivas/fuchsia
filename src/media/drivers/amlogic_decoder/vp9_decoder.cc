@@ -106,7 +106,7 @@ zx_status_t Vp9Decoder::BufferAllocator::AllocateBuffers(VideoDecoder::Owner* ow
                                rounded_up_size, buffer_is_secure,
                                /*is_writable=*/true, /*is_mapping_needed=*/!buffer_is_secure);
     if (!internal_buffer.is_ok()) {
-      DECODE_ERROR("VP9 working buffer allocation failed: %d\n", internal_buffer.error());
+      DECODE_ERROR("VP9 working buffer allocation failed: %d", internal_buffer.error());
       return internal_buffer.error();
     }
     buffer->SetBuffer(internal_buffer.take_value());
@@ -137,7 +137,7 @@ void Vp9Decoder::BufferAllocator::CheckBuffers() {
       buffer->buffer().CacheFlushInvalidate(offset, buffer_size - offset);
       for (uint32_t i = offset; i < buffer_size; ++i) {
         if (data[i] != (i & 0xff)) {
-          DECODE_ERROR("Data mismatch: %d != %d in buffer %d position %d\n", data[i], (i & 0xff),
+          DECODE_ERROR("Data mismatch: %d != %d in buffer %d position %d", data[i], (i & 0xff),
                        buf_number, i);
         }
         ZX_DEBUG_ASSERT(data[i] == (i & 0xff));
@@ -403,7 +403,7 @@ zx_status_t Vp9Decoder::InitializeHardware() {
   } else {
     state_ = DecoderState::kInitialWaitingForInput;
   }
-  DLOG("Initialized decoder\n");
+  DLOG("Initialized decoder");
   return ZX_OK;
 }
 
@@ -447,14 +447,17 @@ void Vp9Decoder::Frame::ReleaseIfNonreference() {
 
 void Vp9Decoder::ProcessCompletedFrames() {
   // On the first interrupt no frame will be completed.
-  if (!current_frame_)
+  if (!current_frame_) {
+    DLOG("!current_frame_");
     return;
+  }
 
   if (current_frame_data_.show_frame) {
     current_frame_->frame->has_pts = current_frame_data_.has_pts;
     current_frame_->frame->pts = current_frame_data_.pts;
     current_frame_->refcount++;
     current_frame_->client_refcount++;
+    DLOG("client_->OnFrameReady()");
     client_->OnFrameReady(current_frame_->frame);
   }
 
@@ -463,6 +466,7 @@ void Vp9Decoder::ProcessCompletedFrames() {
       if (reference_frame_map_[i]) {
         reference_frame_map_[i]->Deref();
       }
+      DLOG("reference_frame_map_[i] = current_frame_ - i: %u", i);
       reference_frame_map_[i] = current_frame_;
       current_frame_->refcount++;
     }
@@ -512,23 +516,23 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t code
         &video_frame->buffer, owner_->bti()->get(),
         frames[i].codec_buffer_spec.data().vmo().vmo_handle().get(), 0, IO_BUFFER_RW);
     if (status != ZX_OK) {
-      DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d\n", status);
+      DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d", status);
       return;
     }
     size_t vmo_size = io_buffer_size(&video_frame->buffer, 0);
     if (vmo_size < frame_vmo_bytes) {
-      DECODE_ERROR("Insufficient frame vmo bytes: %ld < %d\n", vmo_size, frame_vmo_bytes);
+      DECODE_ERROR("Insufficient frame vmo bytes: %ld < %d", vmo_size, frame_vmo_bytes);
       return;
     }
     status = io_buffer_physmap(&video_frame->buffer);
     if (status != ZX_OK) {
-      DECODE_ERROR("Failed to io_buffer_physmap - status: %d\n", status);
+      DECODE_ERROR("Failed to io_buffer_physmap - status: %d", status);
       return;
     }
 
     for (uint32_t i = 1; i < vmo_size / PAGE_SIZE; i++) {
       if (video_frame->buffer.phys_list[i - 1] + PAGE_SIZE != video_frame->buffer.phys_list[i]) {
-        DECODE_ERROR("VMO isn't contiguous\n");
+        DECODE_ERROR("VMO isn't contiguous");
         return;
       }
     }
@@ -544,7 +548,9 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t code
   ZX_DEBUG_ASSERT(!waiting_for_empty_frames_);
   waiting_for_new_frames_ = false;
   // Also updates state_.
+  DLOG("InitializedFrames PrepareNewFrame...");
   PrepareNewFrame(true);
+  DLOG("InitializedFrames PrepareNewFrame done");
 }
 
 void Vp9Decoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
@@ -567,7 +573,9 @@ void Vp9Decoder::ReturnFrame(std::shared_ptr<VideoFrame> frame) {
     ZX_ASSERT(owner_->IsDecoderCurrent(this));
     waiting_for_output_ready_ = false;
     waiting_for_empty_frames_ = false;
+    DLOG("ReturnFrame PrepareNewFrame...");
     PrepareNewFrame(true);
+    DLOG("ReturnFrame PrepareNewFrame done");
   }
 }
 
@@ -603,20 +611,42 @@ enum Vp9Command {
 void Vp9Decoder::UpdateDecodeSize(uint32_t size) {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kStoppedWaitingForInput ||
                   state_ == DecoderState::kInitialWaitingForInput);
+
+  frames_since_update_decode_size_ = 0;
+
   uint32_t old_decode_count = HevcDecodeCount::Get().ReadFrom(owner_->dosbus()).reg_value();
   if (old_decode_count != frame_done_count_) {
-    HevcDecodeSize::Get().FromValue(0).WriteTo(owner_->dosbus());
     HevcDecodeCount::Get().FromValue(frame_done_count_).WriteTo(owner_->dosbus());
   }
+
+  // When input is not from protected memory, this is the size of a frame including the AMLV header.
+  //
+  // When input is from protected memory, this is either the size of the frame when not a
+  // superframe, or a fake size that has the first frame of the superframe pretend to be larger than
+  // it actually is, with every subsequent frame after frame 0 pretending to be size 8.
+  ZX_DEBUG_ASSERT(size != 0);
+  DLOG("size: 0x%x", size);
+
+  uint32_t old_decode_size = HevcDecodeSize::Get().ReadFrom(owner_->dosbus()).reg_value();
+  DLOG("old_decode_size: 0x%x size: 0x%x", old_decode_size, size);
   HevcDecodeSize::Get()
-      .FromValue(HevcDecodeSize::Get().ReadFrom(owner_->dosbus()).reg_value() + size)
+      .FromValue(old_decode_size + size)
       .WriteTo(owner_->dosbus());
+
   if (state_ == DecoderState::kStoppedWaitingForInput) {
+    DLOG("kVp9ActionDone (kStoppedWaitingForInput)");
     HevcDecStatusReg::Get().FromValue(kVp9ActionDone).WriteTo(owner_->dosbus());
   }
+
   owner_->core()->StartDecoding();
   state_ = DecoderState::kRunning;
   owner_->watchdog()->Start();
+}
+
+uint32_t Vp9Decoder::FramesSinceUpdateDecodeSize() {
+  ZX_DEBUG_ASSERT(state_ == DecoderState::kStoppedWaitingForInput ||
+                  state_ == DecoderState::kInitialWaitingForInput);
+  return frames_since_update_decode_size_;
 }
 
 void Vp9Decoder::SetPausedAtEndOfStream() {
@@ -668,7 +698,7 @@ void Vp9Decoder::AdaptProbabilityCoefficients(uint32_t adapt_prob_status) {
 }
 
 void Vp9Decoder::HandleInterrupt() {
-  DLOG("%p Got VP9 interrupt\n", this);
+  DLOG("%p Got VP9 interrupt", this);
   ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
   owner_->watchdog()->Cancel();
   already_got_watchdog_ = false;
@@ -678,7 +708,7 @@ void Vp9Decoder::HandleInterrupt() {
   uint32_t dec_status = HevcDecStatusReg::Get().ReadFrom(owner_->dosbus()).reg_value();
   uint32_t adapt_prob_status = Vp9AdaptProbReg::Get().ReadFrom(owner_->dosbus()).reg_value();
 
-  DLOG("Decoder state: %x %x\n", dec_status, adapt_prob_status);
+  DLOG("Decoder state: %x %x", dec_status, adapt_prob_status);
   AdaptProbabilityCoefficients(adapt_prob_status);
 
   if (dec_status == kVp9InputBufferEmpty) {
@@ -686,20 +716,25 @@ void Vp9Decoder::HandleInterrupt() {
     // particularly large input frames, if we can get this to work. Currently
     // attempting to restart decoding after this in frame-based decoding mode
     // causes old data to be skipped.
-    DECODE_ERROR("Input buffer empty, insufficient padding?\n");
+    DECODE_ERROR("Input buffer empty, insufficient padding?");
     return;
   }
+
   if (dec_status == kVp9CommandNalDecodeDone) {
     owner_->core()->StopDecoding();
     state_ = DecoderState::kStoppedWaitingForInput;
+    HevcDecodeSize::Get().FromValue(0).WriteTo(owner_->dosbus());
     frame_data_provider_->ReadMoreInputData(this);
     return;
   }
+
   ProcessCompletedFrames();
 
   if (dec_status == kVp9CommandDecodingDataDone) {
     state_ = DecoderState::kFrameJustProduced;
+    frames_since_update_decode_size_++;
     frame_done_count_++;
+
     owner_->TryToReschedule();
     if (state_ != DecoderState::kSwappedOut && state_ != DecoderState::kRunning) {
       // TODO: Avoid running the decoder if there's no input data or output
@@ -707,20 +742,24 @@ void Vp9Decoder::HandleInterrupt() {
       // one decoder could hang indefinitely in this case without being swapped
       // out. This can happen if the player's paused or if the client hangs.
       state_ = DecoderState::kRunning;
+      DLOG("kVp9ActionDone (kRunning)");
       HevcDecStatusReg::Get().FromValue(kVp9ActionDone).WriteTo(owner_->dosbus());
       owner_->watchdog()->Start();
     }
     return;
   }
+
   if (dec_status != kProcessedHeader) {
-    DECODE_ERROR("Unexpected decode status %x\n", dec_status);
+    DECODE_ERROR("Unexpected decode status %x", dec_status);
     return;
   };
 
   state_ = DecoderState::kPausedAtHeader;
 
+  DLOG("PrepareNewFrame()");
   PrepareNewFrame(false);
-  DLOG("Done handling VP9 interrupt\n");
+
+  DLOG("Done handling VP9 interrupt");
 
   // PrepareNewFrame will tell the firmware to continue decoding if necessary.
 }
@@ -838,14 +877,14 @@ void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
       zx_status_t status = io_buffer_init(&current_frame_->compressed_data, owner_->bti()->get(),
                                           frame_buffer_size, IO_BUFFER_RW);
       if (status != ZX_OK) {
-        DECODE_ERROR("Couldn't allocate compressed frame data: %d\n", status);
+        DECODE_ERROR("Couldn't allocate compressed frame data: %d", status);
         return;
       }
       SetIoBufferName(&current_frame_->compressed_data, "Vp9CompressedFrame");
 
       status = io_buffer_physmap(&current_frame_->compressed_data);
       if (status != ZX_OK) {
-        DECODE_ERROR("Couldn't map compressed frame data: %d\n", status);
+        DECODE_ERROR("Couldn't map compressed frame data: %d", status);
         return;
       }
       io_buffer_cache_flush(&current_frame_->compressed_data, 0, frame_buffer_size);
@@ -972,10 +1011,11 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
   uint32_t stream_offset = HevcShiftByteCount::Get().ReadFrom(owner_->dosbus()).reg_value();
 
   PtsManager::LookupResult result = pts_manager_->Lookup(stream_offset);
+  DLOG("stream_offset (show existing): 0x%x has_pts: %u pts: %lu", stream_offset, result.has_pts(), result.pts());
   frame->frame->has_pts = result.has_pts();
   frame->frame->pts = result.pts();
   if (result.is_end_of_stream()) {
-    DLOG("##### END OF STREAM DETECTED ##### (ShowExistingFrame)\n");
+    DLOG("##### END OF STREAM DETECTED ##### (ShowExistingFrame)");
     client_->OnEos();
     return;
   }
@@ -984,6 +1024,7 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
   frame->client_refcount++;
   client_->OnFrameReady(frame->frame);
   ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);
+  DLOG("kVp9CommandDecodeSlice (show existing)");
   HevcDecStatusReg::Get().FromValue(kVp9CommandDecodeSlice).WriteTo(owner_->dosbus());
   state_ = DecoderState::kRunning;
   owner_->watchdog()->Start();
@@ -995,6 +1036,7 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
     // PrepareNewFrame() gets another chance to check again and set back to true
     // as necessary.  This bool needs to exist only so that ReturnFrame() can
     // know whether the decoder is currently needing PrepareNewFrame().
+    DLOG("waiting_for_output_ready_ = true");
     waiting_for_output_ready_ = true;
     return;
   }
@@ -1012,12 +1054,13 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
   }
 
   if (params.show_existing_frame) {
+    DLOG("ShowExistingFrame()");
     ShowExistingFrame(&params);
     return;
   }
 
-  // If this is failing due to running out of buffers then the function will be
-  // retried once more are received.
+  // If this is failing due to running out of buffers then the function will be retried once more
+  // are received.
   if (!FindNewFrameBuffer(&params, params_checked_previously)) {
     return;
   }
@@ -1029,10 +1072,11 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
   uint32_t stream_offset = HevcShiftByteCount::Get().ReadFrom(owner_->dosbus()).reg_value();
 
   PtsManager::LookupResult result = pts_manager_->Lookup(stream_offset);
+  DLOG("stream_offset (prepare new): 0x%x has_pts: %u pts: %lu", stream_offset, result.has_pts(), result.pts());
   current_frame_data_.has_pts = result.has_pts();
   current_frame_data_.pts = result.pts();
   if (result.is_end_of_stream()) {
-    DLOG("##### END OF STREAM DETECTED ##### (PrepareNewFrame)\n");
+    DLOG("##### END OF STREAM DETECTED ##### (PrepareNewFrame)");
     client_->OnEos();
     return;
   }
@@ -1062,6 +1106,7 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
   UpdateLoopFilter(&params);
 
   ZX_DEBUG_ASSERT(state_ == DecoderState::kPausedAtHeader);
+  DLOG("kVp9CommandDecodeSlice (prepare new frame)");
   HevcDecStatusReg::Get().FromValue(kVp9CommandDecodeSlice).WriteTo(owner_->dosbus());
   state_ = DecoderState::kRunning;
   owner_->watchdog()->Start();
@@ -1100,10 +1145,12 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
   uint32_t coded_height = fbl::round_up(params->hw_height, 2u);
   uint32_t stride = fbl::round_up(params->hw_width, 32u);
 
+  DLOG("coded_width: %u coded_height: %u stride: %u", coded_width, coded_height, stride);
+
   // Support up to 4kx2k, the hardware limit.
   constexpr uint32_t kMaxWidth = 4096, kMaxHeight = 2176;
   if (coded_width > kMaxWidth || coded_height > kMaxHeight) {
-    DECODE_ERROR("Invalid stream size %dx%d\n", coded_width, coded_height);
+    DECODE_ERROR("Invalid stream size %dx%d", coded_width, coded_height);
     CallErrorHandler();
     return false;
   }
@@ -1194,7 +1241,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
     ::zx::bti duplicated_bti;
     zx_status_t dup_result = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicated_bti);
     if (dup_result != ZX_OK) {
-      DECODE_ERROR("Failed to duplicate BTI - status: %d\n", dup_result);
+      DECODE_ERROR("Failed to duplicate BTI - status: %d", dup_result);
       return false;
     }
     // VP9 doesn't have sample_aspect_ratio at ES (.ivf) layer, so here we
@@ -1208,7 +1255,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
                                   coded_height, stride, display_width, display_height, false, 1, 1);
     if (initialize_result != ZX_OK) {
       if (initialize_result != ZX_ERR_STOP) {
-        DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n", initialize_result);
+        DECODE_ERROR("initialize_frames_handler_() failed - status: %d", initialize_result);
       }
       return false;
     }
@@ -1226,7 +1273,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
   }
   if (!new_frame) {
     waiting_for_empty_frames_ = true;
-    DLOG("Couldn't allocate framebuffer - all in use\n");
+    DLOG("Couldn't allocate framebuffer - all in use");
     return false;
   }
 
@@ -1270,7 +1317,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
         "Vp9MpredData", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), rounded_up_size,
         (1 << 16), is_secure(), /*is_writable=*/true, /*is_mapping_needed=*/false);
     if (!internal_buffer.is_ok()) {
-      DECODE_ERROR("Alloc buffer error: %d\n", internal_buffer.error());
+      DECODE_ERROR("Alloc buffer error: %d", internal_buffer.error());
       return false;
     }
     current_mpred_buffer_->mv_mpred_buffer.emplace(internal_buffer.take_value());
@@ -1366,7 +1413,7 @@ zx_status_t Vp9Decoder::AllocateFrames() {
           "Vp9CompressedFrameHeader", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(),
           kCompressedHeaderSize, 1 << 16, false, /*is_writable=*/true, /*is_mapping_neede=*/true);
       if (!internal_buffer.is_ok()) {
-        DECODE_ERROR("Alloc buffer error: %d\n", internal_buffer.error());
+        DECODE_ERROR("Alloc buffer error: %d", internal_buffer.error());
         return internal_buffer.error();
       }
       frame->compressed_header.emplace(internal_buffer.take_value());
@@ -1529,9 +1576,9 @@ void Vp9Decoder::InitializeParser() {
 
 void Vp9Decoder::OnSignaledWatchdog() {
   DLOG("Watchdog timeout");
-  DLOG("HevcParserLcuStart %x\n", HevcParserLcuStart::Get().ReadFrom(owner_->dosbus()).reg_value());
-  DLOG("HevcStreamLevel %d\n", HevcStreamLevel::Get().ReadFrom(owner_->dosbus()).reg_value());
-  DLOG("HevcParserIntStatus 0x%x\n",
+  DLOG("HevcParserLcuStart %x", HevcParserLcuStart::Get().ReadFrom(owner_->dosbus()).reg_value());
+  DLOG("HevcStreamLevel %d", HevcStreamLevel::Get().ReadFrom(owner_->dosbus()).reg_value());
+  DLOG("HevcParserIntStatus 0x%x",
        HevcParserIntStatus::Get().ReadFrom(owner_->dosbus()).reg_value());
   if (already_got_watchdog_ || !frame_data_provider_) {
     DECODE_ERROR("Got Vp9 watchdog timeout - fatal error");

@@ -17,7 +17,7 @@ class TestBasicClient : public VideoDecoder::Client {
 
   virtual ~TestBasicClient() = default;
 
-  void OnError() override { error_handler_(); }
+  void OnError() override { ZX_ASSERT(error_handler_); error_handler_(); }
   void OnEos() override { ZX_ASSERT_MSG(false, "Not implemented"); }
 
   bool IsOutputReady() override {

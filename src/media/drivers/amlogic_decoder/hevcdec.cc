@@ -148,7 +148,11 @@ void HevcDec::PowerOff() {
 }
 
 void HevcDec::StartDecoding() {
-  assert(!decoding_started_);
+  if (decoding_started_) {
+    // idempotent if already started
+    return;
+  }
+  ZX_DEBUG_ASSERT(!decoding_started_);
   decoding_started_ = true;
   // Delay to wait for previous command to finish.
   for (uint32_t i = 0; i < 3; i++) {
@@ -167,8 +171,11 @@ void HevcDec::StartDecoding() {
 }
 
 void HevcDec::StopDecoding() {
-  if (!decoding_started_)
+  if (!decoding_started_) {
+    // idempotent if already stopped
     return;
+  }
+  ZX_DEBUG_ASSERT(decoding_started_);
   decoding_started_ = false;
   HevcMpsr::Get().FromValue(0).WriteTo(mmio()->dosbus);
   HevcCpsr::Get().FromValue(0).WriteTo(mmio()->dosbus);
@@ -262,14 +269,14 @@ void HevcDec::UpdateWritePointer(uint32_t write_pointer) {
 uint32_t HevcDec::GetStreamInputOffset() {
   uint32_t write_ptr = HevcStreamWrPtr::Get().ReadFrom(mmio()->dosbus).reg_value();
   uint32_t buffer_start = HevcStreamStartAddr::Get().ReadFrom(mmio()->dosbus).reg_value();
-  assert(write_ptr >= buffer_start);
+  ZX_ASSERT(write_ptr >= buffer_start);
   return write_ptr - buffer_start;
 }
 
 uint32_t HevcDec::GetReadOffset() {
   uint32_t read_ptr = HevcStreamRdPtr::Get().ReadFrom(mmio()->dosbus).reg_value();
   uint32_t buffer_start = HevcStreamStartAddr::Get().ReadFrom(mmio()->dosbus).reg_value();
-  assert(read_ptr >= buffer_start);
+  ZX_ASSERT(read_ptr >= buffer_start);
   return read_ptr - buffer_start;
 }
 

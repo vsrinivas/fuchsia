@@ -24,10 +24,21 @@ class Vp9Decoder : public VideoDecoder {
   enum class InputType {
     // A single stream is decoded at once
     kSingleStream,
-    // Multiple streams are decoded at once
+    // Multiple streams are decoded at once.
+    //
+    // This mode is capable of interrupting re. frame headers and decoded frames until all frames
+    // previously delivered via the ring buffer are exhausted at which point the FW will interrupt
+    // re. out of input.  This mode isn't very forgiving about delivering additional data that
+    // doesn't contain at least the rest of a frame - the FW will hit the SW watchdog in that case.
     kMultiStream,
     // Multiple streams, each with input buffers divided on frame boundaries,
     // are decoded at once.
+    //
+    // This mode expects frames (originally separate or within a superframe) to be delivered
+    // separately to the FW.  If multiple frames are delivered together, the FW can respond to
+    // DecodeSlice with the second frame's header, instead of decoding the first frame's header,
+    // which may not be usable for decoding multiple frames delivered to the FW at once.  See
+    // kMultiStream for that purpose.
     kMultiFrameBased
   };
   class FrameDataProvider {
@@ -95,6 +106,9 @@ class Vp9Decoder : public VideoDecoder {
 
   void SetFrameDataProvider(FrameDataProvider* provider) { frame_data_provider_ = provider; }
   void UpdateDecodeSize(uint32_t size);
+  // The number of frames that have been emitted from the FW (not necessarily emitted downstream
+  // however) since the most recent UpdateDecodeSize().
+  uint32_t FramesSinceUpdateDecodeSize();
 
   __WARN_UNUSED_RESULT bool needs_more_input_data() const {
     return state_ == DecoderState::kStoppedWaitingForInput ||
@@ -315,6 +329,16 @@ class Vp9Decoder : public VideoDecoder {
   uint32_t decoded_frame_count_ = 0;
 
   uint32_t frame_done_count_ = 0;
+
+  // When we deliver a superframe containing multiple frames to the FW in one submit, the FW
+  // _sometimes_ emits more than one frame per UpdateDecodeSize() + kVp9CommandNalDecodeDone.
+  // Then later if we tell the FW to continue decoding with no more frames in the
+  // previously-submitted data, the FW doesn't interrupt (not even with kVp9CommandNalDecodeDone)
+  // and we hit the watchdog.  So instead, if the FW delivers more than one frame after
+  // UpdateDecodeSize before kVp9CommandNalDecodeDone, we notice and combine the two first entries
+  // in queued_frame_sizes_ to essentially remove one future UpdateDecodeSize() that's no longer
+  // needed.
+  uint32_t frames_since_update_decode_size_ = 0;
 
   // This is used to force new buffers to be allocated without needing a test stream that
   // resizes.

@@ -106,7 +106,7 @@ void DriverCtx::FatalError(const char* format, ...) {
   assert(buffer_bytes == buffer_bytes_2);
   va_end(args);
 
-  DECODE_ERROR("DriverCtx::FatalError(): %s\n", buffer.get());
+  DECODE_ERROR("DriverCtx::FatalError(): %s", buffer.get());
 
   // TODO(dustingreen): Send string in buffer via channel epitaphs, when
   // possible. The channel activity/failing server-side generally will race with

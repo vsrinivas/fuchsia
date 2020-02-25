@@ -82,6 +82,12 @@ constexpr uint32_t kInputPerPacketBufferBytesMax = 4 * 1024 * 1024;
 // Zero-initialized, so it shouldn't take up space on-disk.
 const uint8_t kFlushThroughZeroes[kFlushThroughBytes] = {};
 
+constexpr bool kHasSar = false;
+constexpr uint32_t kSarWidth = 1;
+constexpr uint32_t kSarHeight = 1;
+
+constexpr uint32_t kVdecFifoAlign = 8;
+
 static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
   return (static_cast<uint32_t>(d) << 24) | (static_cast<uint32_t>(c) << 16) |
          (static_cast<uint32_t>(b) << 8) | static_cast<uint32_t>(a);
@@ -162,16 +168,18 @@ void CodecAdapterVp9::CoreCodecSetSecureMemoryMode(
     // If output non-secure and input secure:
     //   * by design, this doesn't work for vp9 decode
     // If output non-secure and input non-secure:
-    //   * CPU copy from BufferCollection buffer to stream buffer.
+    //   * CPU copy from BufferCollection buffer to temp buffer, then parser copy from temp buffer
+    //     to stream buffer.  We could skip a copy here, but instead choose to get more efficient
+    //     test coverage (at least for now) by keeping this more similar to how secure input works.
     // If output secure and input non-secure:
     //   * CPU copy from BufferCollection buffer to tmp then parser copy from tmp to stream buffer.
     // If output secure and input secure:
     //   * Parser copy from BufferCollection buffer to stream buffer.
     //
-    // TODO(dustingreen): (or jbauman@) Probably we can just do use_parser_ true always?
-    if (IsOutputSecure()) {
-      use_parser_ = true;
-    }
+    // Always use_parser_, for now.  This is for more efficient / consistent test coverage.
+    ZX_DEBUG_ASSERT(use_parser_);
+    // use_parser_ is already true.  If output secure, it really must be true.
+    ZX_DEBUG_ASSERT(use_parser_ || !IsOutputSecure());
   }
 }
 
@@ -406,21 +414,26 @@ void CodecAdapterVp9::OnFrameReady(std::shared_ptr<VideoFrame> frame) {
     packet->ClearTimestampIsh();
   }
 
-  if (frame->coded_width != coded_width_ || frame->coded_height != coded_height_ ||
-      frame->stride != stride_ || frame->display_width != display_width_ ||
-      frame->display_height != display_height_) {
-    coded_width_ = frame->coded_width;
-    coded_height_ = frame->coded_height;
-    stride_ = frame->stride;
-    display_width_ = frame->display_width;
-    display_height_ = frame->display_height;
+  if (frame->coded_width != output_coded_width_ || frame->coded_height != output_coded_height_ ||
+      frame->stride != output_stride_ || frame->display_width != output_display_width_ ||
+      frame->display_height != output_display_height_) {
+    output_coded_width_ = frame->coded_width;
+    output_coded_height_ = frame->coded_height;
+    output_stride_ = frame->stride;
+    output_display_width_ = frame->display_width;
+    output_display_height_ = frame->display_height;
+    DLOG("output_coded_width_: %u output_coded_height_: %u output_stride_: %u "
+         "output_display_width_: %u output_display_height_: %u", output_coded_width_,
+         output_coded_height_, output_stride_, output_display_width_, output_display_height_);
     events_->onCoreCodecOutputFormatChange();
   }
 
+  DLOG("onCoreCodecOutputPacket()");
   events_->onCoreCodecOutputPacket(packet, false, false);
 }
 
 void CodecAdapterVp9::OnError() {
+  LOG(ERROR, "CodecAdapterVp9::OnError()");
   OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
 }
 
@@ -447,7 +460,7 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     is_stream_failed_ = false;
   }  // ~lock
 
-  auto decoder = std::make_unique<Vp9Decoder>(video_, this, Vp9Decoder::InputType::kMultiFrameBased,
+  auto decoder = std::make_unique<Vp9Decoder>(video_, this, Vp9Decoder::InputType::kMultiStream,
                                               false, IsOutputSecure());
   decoder->SetFrameDataProvider(this);
 
@@ -742,38 +755,38 @@ fuchsia::media::StreamOutputFormat CodecAdapterVp9::CoreCodecGetOutputFormat(
   // For the moment, we'll memcpy to NV12 without any extra padding.
   fuchsia::media::VideoUncompressedFormat video_uncompressed;
   video_uncompressed.fourcc = make_fourcc('N', 'V', '1', '2');
-  video_uncompressed.primary_width_pixels = coded_width_;
-  video_uncompressed.primary_height_pixels = coded_height_;
-  video_uncompressed.secondary_width_pixels = coded_width_ / 2;
-  video_uncompressed.secondary_height_pixels = coded_height_ / 2;
+  video_uncompressed.primary_width_pixels = output_coded_width_;
+  video_uncompressed.primary_height_pixels = output_coded_height_;
+  video_uncompressed.secondary_width_pixels = output_coded_width_ / 2;
+  video_uncompressed.secondary_height_pixels = output_coded_height_ / 2;
   // TODO(dustingreen): remove this field from the VideoUncompressedFormat or
   // specify separately for primary / secondary.
   video_uncompressed.planar = true;
   video_uncompressed.swizzled = false;
-  video_uncompressed.primary_line_stride_bytes = stride_;
-  video_uncompressed.secondary_line_stride_bytes = stride_;
+  video_uncompressed.primary_line_stride_bytes = output_stride_;
+  video_uncompressed.secondary_line_stride_bytes = output_stride_;
   video_uncompressed.primary_start_offset = 0;
-  video_uncompressed.secondary_start_offset = stride_ * coded_height_;
-  video_uncompressed.tertiary_start_offset = stride_ * coded_height_ + 1;
+  video_uncompressed.secondary_start_offset = output_stride_ * output_coded_height_;
+  video_uncompressed.tertiary_start_offset = output_stride_ * output_coded_height_ + 1;
   video_uncompressed.primary_pixel_stride = 1;
   video_uncompressed.secondary_pixel_stride = 2;
-  video_uncompressed.primary_display_width_pixels = display_width_;
-  video_uncompressed.primary_display_height_pixels = display_height_;
-  video_uncompressed.has_pixel_aspect_ratio = has_sar_;
-  video_uncompressed.pixel_aspect_ratio_width = sar_width_;
-  video_uncompressed.pixel_aspect_ratio_height = sar_height_;
+  video_uncompressed.primary_display_width_pixels = output_display_width_;
+  video_uncompressed.primary_display_height_pixels = output_display_height_;
+  video_uncompressed.has_pixel_aspect_ratio = kHasSar;
+  video_uncompressed.pixel_aspect_ratio_width = kSarWidth;
+  video_uncompressed.pixel_aspect_ratio_height = kSarHeight;
 
   video_uncompressed.image_format.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
-  video_uncompressed.image_format.coded_width = coded_width_;
-  video_uncompressed.image_format.coded_height = coded_height_;
-  video_uncompressed.image_format.bytes_per_row = stride_;
-  video_uncompressed.image_format.display_width = display_width_;
-  video_uncompressed.image_format.display_height = display_height_;
+  video_uncompressed.image_format.coded_width = output_coded_width_;
+  video_uncompressed.image_format.coded_height = output_coded_height_;
+  video_uncompressed.image_format.bytes_per_row = output_stride_;
+  video_uncompressed.image_format.display_width = output_display_width_;
+  video_uncompressed.image_format.display_height = output_display_height_;
   video_uncompressed.image_format.layers = 1;
   video_uncompressed.image_format.color_space.type = fuchsia::sysmem::ColorSpaceType::REC709;
-  video_uncompressed.image_format.has_pixel_aspect_ratio = has_sar_;
-  video_uncompressed.image_format.pixel_aspect_ratio_width = sar_width_;
-  video_uncompressed.image_format.pixel_aspect_ratio_height = sar_height_;
+  video_uncompressed.image_format.has_pixel_aspect_ratio = kHasSar;
+  video_uncompressed.image_format.pixel_aspect_ratio_width = kSarWidth;
+  video_uncompressed.image_format.pixel_aspect_ratio_height = kSarHeight;
 
   fuchsia::media::VideoFormat video_format;
   video_format.set_uncompressed(std::move(video_uncompressed));
@@ -912,15 +925,19 @@ void CodecAdapterVp9::SubmitDataToStreamBuffer(zx_paddr_t paddr_base, uint32_t p
                                                const std::vector<uint8_t>& data) {
   ZX_DEBUG_ASSERT(paddr_size == 0 || use_parser_);
   video_->AssertVideoDecoderLockHeld();
+  zx_status_t status;
   if (use_parser_) {
-    if (ZX_OK != video_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kParser,
-                                      IsPortSecure(kInputPort))) {
+    status = video_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kParser,
+                                              IsPortSecure(kInputPort));
+    if (status != ZX_OK) {
+      LOG(ERROR, "video_->SetProtected(kParser) failed - status: %d", status);
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }
     // Pass nullptr because we'll handle syncing updates manually.
-    if (ZX_OK != video_->parser()->InitializeEsParser(nullptr)) {
-      DECODE_ERROR("InitializeEsParser failed");
+    status = video_->parser()->InitializeEsParser(nullptr);
+    if (status != ZX_OK) {
+      DECODE_ERROR("InitializeEsParser failed - status: %d", status);
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }
@@ -937,32 +954,32 @@ void CodecAdapterVp9::SubmitDataToStreamBuffer(zx_paddr_t paddr_base, uint32_t p
     }
     video_->parser()->SyncFromDecoderInstance(video_->current_instance());
 
-    zx_status_t status;
     if (paddr_size) {
       status = video_->parser()->ParseVideoPhysical(paddr_base, paddr_size);
     } else {
       status = video_->parser()->ParseVideo(data.data(), data.size());
     }
-
     if (status != ZX_OK) {
-      DECODE_ERROR("Parsing video failed");
+      DECODE_ERROR("Parsing video failed - status: %d", status);
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }
-
-    if (ZX_OK != video_->parser()->WaitForParsingCompleted(ZX_SEC(10))) {
-      DECODE_ERROR("Parsing video timed out");
+    status = video_->parser()->WaitForParsingCompleted(ZX_SEC(10));
+    if (status != ZX_OK) {
+      DECODE_ERROR("Parsing video timed out - status: %d", status);
       video_->parser()->CancelParsing();
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }
-    if (ZX_OK != video_->parser()->ParseVideo(kFlushThroughZeroes, sizeof(kFlushThroughZeroes))) {
-      DECODE_ERROR("Parsing flush-through zeros failed");
+    status = video_->parser()->ParseVideo(kFlushThroughZeroes, sizeof(kFlushThroughZeroes));
+    if (status != ZX_OK) {
+      DECODE_ERROR("Parsing flush-through zeros failed - status: %d", status);
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }
-    if (ZX_OK != video_->parser()->WaitForParsingCompleted(ZX_SEC(10))) {
-      DECODE_ERROR("Parsing flush-through zeros timed out");
+    status = video_->parser()->WaitForParsingCompleted(ZX_SEC(10));
+    if (status != ZX_OK) {
+      DECODE_ERROR("Parsing flush-through zeros timed out - status: %d", status);
       video_->parser()->CancelParsing();
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
@@ -971,11 +988,15 @@ void CodecAdapterVp9::SubmitDataToStreamBuffer(zx_paddr_t paddr_base, uint32_t p
     video_->parser()->SyncToDecoderInstance(video_->current_instance());
   } else {
     ZX_DEBUG_ASSERT(!paddr_size);
-    if (ZX_OK != video_->ProcessVideoNoParser(data.data(), data.size())) {
+    status = video_->ProcessVideoNoParser(data.data(), data.size());
+    if (status != ZX_OK) {
+      LOG(ERROR, "video_->ProcessVideoNoParser() (data) failed - status: %d", status);
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }
-    if (ZX_OK != video_->ProcessVideoNoParser(kFlushThroughZeroes, sizeof(kFlushThroughZeroes))) {
+    status = video_->ProcessVideoNoParser(kFlushThroughZeroes, sizeof(kFlushThroughZeroes));
+    if (status != ZX_OK) {
+      LOG(ERROR, "video_->ProcessVideoNoParser() (zeroes) failed - status: %d", status);
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }
@@ -984,11 +1005,51 @@ void CodecAdapterVp9::SubmitDataToStreamBuffer(zx_paddr_t paddr_base, uint32_t p
 
 // The decoder lock is held by caller during this method.
 void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
+  // Typically we only get one frame from the FW per UpdateDecodeSize(), but if we submitted more
+  // than one frame of a superframe to the FW at once, we _sometimes_ get more than one frame from
+  // the FW before the kVp9CommandNalDecodeDone (and before the subsequent UpdateDecodeSize() for
+  // the next frame that we would have done).
+  //
+  // By adjusting queued_frame_sizes_ here when we get more than one frame, we avoid asking the FW
+  // to keep decoding if it's already delivered all the frames we're expecting.  If we ask the FW to
+  // keep decoding after all expected frames, we just end up hitting the watchdog (the FW doesn't
+  // indicate kVp9CommandNalDecodeDone unless a frame was emitted subsequent to the previous
+  // UpdateDecodeSize(), as far as I can tell).
+  //
+  // If input data isn't hostile, we likely will never see queued_frame_sizes_.size() == 0 when
+  // decoder->FramesSinceUpdateDecodeSize() > 1, but it doesn't hurt to check, in case the FW can
+  // somehow be influenced to output more frames than the number of AMLV headers we added.
+  if (decoder->FramesSinceUpdateDecodeSize() > 1 && queued_frame_sizes_.size() != 0) {
+    // We expect 1, and we already removed that 1 from queued_frame_sizes_ previously.  If more than
+    // 1 frame was indicated by the FW, then for each of the extra frames, we need to reduce the
+    // size of queued_frame_sizes_ by 1, without changing the sum of the values, unless the last
+    // item is being removed in which case the last item is removed and the sum becomes 0.
+    for (uint32_t i = 0; i < decoder->FramesSinceUpdateDecodeSize() - 1; ++i) {
+      DLOG("decoder->FramesSinceUpdateDecodeSize() > 1 -- "
+            "decoder->FramesSinceUpdateDecodeSize(): %u queued_frame_sizes_.front(): %u "
+            "queued_frame_sizes_.size(): %lu",
+            decoder->FramesSinceUpdateDecodeSize(), queued_frame_sizes_.front(),
+            queued_frame_sizes_.size());
+      uint32_t old_front_frame_size = queued_frame_sizes_.front();
+      queued_frame_sizes_.erase(queued_frame_sizes_.begin());
+      if (queued_frame_sizes_.size() == 0) {
+        // Done with all the frames we expected to see at the output, so move on to submit new data
+        // to the FIFO.  If we instead were to attempt to deliver the last few bytes to the FW, it
+        // would just get stuck not interrupting and not indicating that the input data is consumed
+        // (dec_status 0xe never happens).
+        //
+        // Despite skipping past some DecodeSize, the parsed_video_size_ stays in sync; apparently
+        // it really is parsed_decode_size_, not decoder_processed_bytes_.
+        break;
+      }
+      // Should still UpdateDecodeSize() with all the data of the superframe, overall, to avoid the
+      // possibility of not actually giving the last byte of the last frame to the FW.
+      queued_frame_sizes_.front() += old_front_frame_size;
+    }
+  }
+
   if (queued_frame_sizes_.size()) {
-    // This can pass in 0 when a superframe is being decoded from protected memory and this is a
-    // frame of the superframe other than frame 0 of the superframe, in which case the input data
-    // for the whole superframe was already part of the decode size given to the HW when starting
-    // frame 0 of the superframe.
+    DLOG("UpdateDecodeSize() (from prev)");
     decoder->UpdateDecodeSize(queued_frame_sizes_.front());
     queued_frame_sizes_.erase(queued_frame_sizes_.begin());
     return;
@@ -1008,13 +1069,17 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     }
 
     if (item.is_end_of_stream()) {
+      DLOG("SetEndOfStreamOffset() - parsed_video_size_: 0x%lx", parsed_video_size_);
       video_->pts_manager()->SetEndOfStreamOffset(parsed_video_size_);
       std::vector<uint8_t> split_data;
+      std::vector<uint32_t> frame_sizes;
       SplitSuperframe(reinterpret_cast<const uint8_t*>(&new_stream_ivf[kHeaderSkipBytes]),
-                      new_stream_ivf_len - kHeaderSkipBytes, &split_data);
+                      new_stream_ivf_len - kHeaderSkipBytes, &split_data, &frame_sizes);
+      ZX_DEBUG_ASSERT(frame_sizes.size() == 1);
       SubmitDataToStreamBuffer(/*paddr_base=*/0, /*paddr_size=*/0, split_data);
       // Intentionally not including kFlushThroughZeroes - this only includes
       // data in AMLV frames.
+      DLOG("UpdateDecodeSize() (EOS)");
       decoder->UpdateDecodeSize(split_data.size());
       return;
     }
@@ -1024,17 +1089,20 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     uint8_t* data = item.packet()->buffer()->base() + item.packet()->start_offset();
     uint32_t len = item.packet()->valid_length_bytes();
 
+    DLOG("InsertPts() - parsed_video_size_: 0x%lx has_timestamp_ish: %u timestamp_ish: %lu",
+         parsed_video_size_, item.packet()->has_timestamp_ish(), item.packet()->timestamp_ish());
     video_->pts_manager()->InsertPts(parsed_video_size_, item.packet()->has_timestamp_ish(),
                                      item.packet()->timestamp_ish());
 
     zx_paddr_t paddr_base = 0;
     uint32_t paddr_size = 0;
     std::vector<uint8_t> split_data;
+    // If we're using TeeVp9AddHeaders() we don't actually populate split_data, but we still care
+    // what the size would have been.
+    uint32_t after_repack_len = 0;
     std::vector<uint32_t> new_queued_frame_sizes;
-    uint32_t split_data_size = 0;
 
     if (IsPortSecure(kInputPort)) {
-      uint32_t after_repack_len;
       ZX_DEBUG_ASSERT(item.packet()->buffer()->is_pinned());
       paddr_base = item.packet()->buffer()->physical_base() + item.packet()->start_offset();
 
@@ -1051,28 +1119,36 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
         return;
       }
 
-      uint32_t increased_size = after_repack_len - len;
-      if ((after_repack_len < len) || (increased_size % 16 != 0) || (increased_size < 16)) {
-        LOG(ERROR, "TeeVp9AddHeaders() gave bad size 0x%x from 0x%x", after_repack_len, len);
-        OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
-        return;
-      }
-      uint32_t frame_count = increased_size / 16;
-
       paddr_size = after_repack_len;
-      new_queued_frame_sizes.push_back(after_repack_len);
-      // This prevents ReadMoreInputData() from adding more data to the stream buffer until the
-      // whole superframe is done.
-      for (uint32_t i = 1; i < frame_count; i++) {
-        new_queued_frame_sizes.push_back(0);
-      }
-      split_data_size = after_repack_len;
     } else {
-      SplitSuperframe(data, len, &split_data, &new_queued_frame_sizes);
-      split_data_size = split_data.size();
+      // We split superframes essentially the same way TeeVp9AddHeaders() does, to share as much
+      // handling as we can regardless of whether IsPortSecure(kInputPort).
+      SplitSuperframe(data, len, &split_data, &new_queued_frame_sizes, /*like_secmem=*/true);
+      after_repack_len = split_data.size();
+      // Because like_sysmem true, the after_repack_len includes an extraneous superframe footer
+      // size also, just like TeeVp9AddHeaders().
+      ZX_DEBUG_ASSERT(after_repack_len == len + new_queued_frame_sizes.size() * kVp9AmlvHeaderSize);
     }
 
-    parsed_video_size_ += split_data_size + kFlushThroughBytes;
+    uint32_t increased_size = after_repack_len - len;
+    if ((after_repack_len < len) || (increased_size % 16 != 0) || (increased_size < 16)) {
+      LOG(ERROR, "Repack gave bad size 0x%x from 0x%x", after_repack_len, len);
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+      return;
+    }
+    uint32_t frame_count = increased_size / 16;
+    DLOG("frame_count: 0x%x protected: %u", frame_count, IsPortSecure(kInputPort));
+
+    // Because TeeVp9AddHeaders() doesn't output the frame sizes within a superframe, we
+    // intentionally ignore those, even when the input data is non-protected, to keep the handling
+    // of protected and non-protected similar, for efficient test coverage.
+    new_queued_frame_sizes.clear();
+    new_queued_frame_sizes.push_back(after_repack_len - (frame_count - 1) * kVdecFifoAlign);
+    for (uint32_t i = 1; i < frame_count; ++i) {
+      new_queued_frame_sizes.push_back(kVdecFifoAlign);
+    }
+
+    parsed_video_size_ += after_repack_len + kFlushThroughBytes;
     SubmitDataToStreamBuffer(paddr_base, paddr_size, split_data);
     queued_frame_sizes_ = std::move(new_queued_frame_sizes);
 
@@ -1082,7 +1158,7 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
       return;
     }
 
-    // Only one frame per superframe should be given at a time, when possible.
+    DLOG("UpdateDecodeSize() (new)");
     decoder->UpdateDecodeSize(queued_frame_sizes_.front());
     queued_frame_sizes_.erase(queued_frame_sizes_.begin());
 
@@ -1099,6 +1175,10 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
 bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(
     uint32_t min_frame_count, uint32_t max_frame_count, uint32_t coded_width, uint32_t coded_height,
     uint32_t stride, uint32_t display_width, uint32_t display_height) {
+  DLOG("min_frame_count: %u max_frame_count: %u coded_width: %u coded_height: %u stride: %u "
+       "display_width: %u display_height: %u", min_frame_count, max_frame_count, coded_width,
+       coded_height, stride, display_width, display_height);
+  ZX_DEBUG_ASSERT(stride >= coded_width);
   // We don't ask codec_impl about this, because as far as codec_impl is
   // concerned, the output buffer collection might not be used for video
   // frames.  We could have common code for video decoders but for now we just
@@ -1108,64 +1188,84 @@ bool CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable(
   // if the corresponding value were rounded up according to the divisor before
   // we get here.
   if (!output_buffer_collection_info_) {
+    LOG(TRACE, "!output_buffer_collection_info_");
     return false;
   }
   fuchsia::sysmem::BufferCollectionInfo_2& info = output_buffer_collection_info_.value();
   ZX_DEBUG_ASSERT(info.settings.has_image_format_constraints);
   if (min_frame_count > info.buffer_count) {
+    LOG(TRACE, "min_frame_count > info.buffer_count");
     return false;
   }
   if (info.buffer_count > max_frame_count) {
     // The vp9_decoder.cc won't exercise this path since the max is always the same, and we won't
     // have allocated a collection with more than max_buffer_count.
+    LOG(TRACE, "info.buffer_count > max_frame_count");
     return false;
   }
   if (stride * coded_height * 3 / 2 > info.settings.buffer_settings.size_bytes) {
-    return false;
-  }
-  if (coded_width < info.settings.image_format_constraints.min_coded_width) {
-    return false;
-  }
-  if (coded_width > info.settings.image_format_constraints.max_coded_width) {
-    return false;
-  }
-  if (coded_width % info.settings.image_format_constraints.coded_width_divisor != 0) {
-    // Let it probably fail later when trying to re-negotiate buffers.
-    return false;
-  }
-  if (coded_height < info.settings.image_format_constraints.min_coded_height) {
-    return false;
-  }
-  if (coded_height > info.settings.image_format_constraints.max_coded_height) {
-    return false;
-  }
-  if (coded_height % info.settings.image_format_constraints.coded_height_divisor != 0) {
-    // Let it probably fail later when trying to re-negotiate buffers.
-    return false;
-  }
-  if (stride < info.settings.image_format_constraints.min_bytes_per_row) {
-    return false;
-  }
-  if (stride > info.settings.image_format_constraints.max_bytes_per_row) {
-    return false;
-  }
-  if (stride % info.settings.image_format_constraints.bytes_per_row_divisor != 0) {
-    // Let it probably fail later when trying to re-negotiate buffers.
+    LOG(TRACE, "stride * coded_height * 3 / 2 > info.settings.buffer_settings.size_bytes");
     return false;
   }
   if (display_width % info.settings.image_format_constraints.display_width_divisor != 0) {
     // Let it probably fail later when trying to re-negotiate buffers.
+    LOG(TRACE, "display_width %% info.settings.image_format_constraints.display_width_divisor != 0");
     return false;
   }
   if (display_height % info.settings.image_format_constraints.display_height_divisor != 0) {
     // Let it probably fail later when trying to re-negotiate buffers.
+    LOG(TRACE, "display_height %% info.settings.image_format_constraints.display_height_divisor != 0");
     return false;
   }
   if (coded_width * coded_height >
       info.settings.image_format_constraints.max_coded_width_times_coded_height) {
     // Let it probably fail later when trying to re-negotiate buffers.
+    LOG(TRACE, "coded_width * coded_height > max_coded_width_times_coded_height");
     return false;
   }
+
+  if (coded_width < info.settings.image_format_constraints.min_coded_width) {
+    LOG(TRACE, "coded_width < info.settings.image_format_constraints.min_coded_width -- "
+        "coded_width: %d min_coded_width: %d", coded_width, info.settings.image_format_constraints.min_coded_width);
+    return false;
+  }
+  if (coded_width > info.settings.image_format_constraints.max_coded_width) {
+    LOG(TRACE, "coded_width > info.settings.image_format_constraints.max_coded_width");
+    return false;
+  }
+  if (coded_width % info.settings.image_format_constraints.coded_width_divisor != 0) {
+    // Let it probably fail later when trying to re-negotiate buffers.
+    LOG(TRACE, "coded_width %% info.settings.image_format_constraints.coded_width_divisor != 0");
+    return false;
+  }
+  if (coded_height < info.settings.image_format_constraints.min_coded_height) {
+    LOG(TRACE, "coded_height < info.settings.image_format_constraints.min_coded_height");
+    return false;
+  }
+  if (coded_height > info.settings.image_format_constraints.max_coded_height) {
+    LOG(TRACE, "coded_height > info.settings.image_format_constraints.max_coded_height");
+    return false;
+  }
+  if (coded_height % info.settings.image_format_constraints.coded_height_divisor != 0) {
+    // Let it probably fail later when trying to re-negotiate buffers.
+    LOG(TRACE, "coded_height %% info.settings.image_format_constraints.coded_height_divisor != 0");
+    return false;
+  }
+  if (stride < info.settings.image_format_constraints.min_bytes_per_row) {
+    LOG(TRACE, "stride < info.settings.image_format_constraints.min_bytes_per_row -- stride: %d min_bytes_per_row: %d", stride, info.settings.image_format_constraints.min_bytes_per_row);
+    return false;
+  }
+  if (stride > info.settings.image_format_constraints.max_bytes_per_row) {
+    LOG(TRACE, "stride > info.settings.image_format_constraints.max_bytes_per_row");
+    return false;
+  }
+  if (stride % info.settings.image_format_constraints.bytes_per_row_divisor != 0) {
+    // Let it probably fail later when trying to re-negotiate buffers.
+    LOG(TRACE, "stride %% info.settings.image_format_constraints.bytes_per_row_divisor != 0");
+    return false;
+  }
+
+  DLOG("returning true");
   return true;
 }
 
@@ -1175,6 +1275,9 @@ zx_status_t CodecAdapterVp9::InitializeFrames(::zx::bti bti, uint32_t min_frame_
                                               uint32_t display_width, uint32_t display_height,
                                               bool has_sar, uint32_t sar_width,
                                               uint32_t sar_height) {
+  ZX_DEBUG_ASSERT(!has_sar);
+  ZX_DEBUG_ASSERT(sar_width == 1);
+  ZX_DEBUG_ASSERT(sar_height == 1);
   // First handle the special case of EndOfStream marker showing up at the
   // output.  We want to notice if up to this point we've been decoding into
   // buffers smaller than this.  By noticing here, we avoid requiring the client
@@ -1231,14 +1334,12 @@ zx_status_t CodecAdapterVp9::InitializeFrames(::zx::bti bti, uint32_t min_frame_
     // TODO(dustingreen): plumb actual frame counts.
     min_buffer_count_[kOutputPort] = min_frame_count;
     max_buffer_count_[kOutputPort] = max_frame_count;
+
     coded_width_ = coded_width;
     coded_height_ = coded_height;
     stride_ = stride;
     display_width_ = display_width;
     display_height_ = display_height;
-    has_sar_ = has_sar;
-    sar_width_ = sar_width;
-    sar_height_ = sar_height;
   }  // ~lock
 
   // This will snap the current stream_lifetime_ordinal_, and call
@@ -1266,6 +1367,7 @@ void CodecAdapterVp9::OnCoreCodecFailStream(fuchsia::media::StreamError error) {
     std::lock_guard<std::mutex> lock(lock_);
     is_stream_failed_ = true;
   }
+  LOG(ERROR, "CodecAdapterVp9::OnCoreCodecFailStream()");
   events_->onCoreCodecFailStream(error);
 }
 

@@ -4,6 +4,7 @@
 
 #include "vp9_utils.h"
 
+#include "macros.h"
 #include <byteswap.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -66,7 +67,7 @@ std::vector<uint32_t> TryParseSuperframeHeader(const uint8_t* data, uint32_t fra
 }
 
 void SplitSuperframe(const uint8_t* data, uint32_t frame_size, std::vector<uint8_t>* output_vector,
-                     std::vector<uint32_t>* superframe_byte_sizes) {
+                     std::vector<uint32_t>* superframe_byte_sizes, bool like_secmem) {
   std::vector<uint32_t> frame_sizes = TryParseSuperframeHeader(data, frame_size);
 
   if (frame_sizes.empty())
@@ -76,15 +77,21 @@ void SplitSuperframe(const uint8_t* data, uint32_t frame_size, std::vector<uint8
   for (auto& size : frame_sizes) {
     total_frame_bytes += size;
   }
-  const uint32_t kOutputHeaderSize = 16;
+  ZX_DEBUG_ASSERT_MSG(total_frame_bytes <= frame_size, "total_frame_bytes: 0x%x frame_size: 0x%x", total_frame_bytes, frame_size);
   uint32_t output_offset = output_vector->size();
   // This can be called multiple times on the same output_vector overall, but
   // should be amortized O(1), since resizing larger inserts elements at the end
   // and inserting elements at the end is amortized O(1) for std::vector.
-  output_vector->resize(output_offset + total_frame_bytes + kOutputHeaderSize * frame_sizes.size());
+  uint32_t output_vector_size_increase = kVp9AmlvHeaderSize * frame_sizes.size();
+  if (like_secmem) {
+    output_vector_size_increase += frame_size;
+  } else {
+    output_vector_size_increase += total_frame_bytes;
+  }
+  output_vector->resize(output_offset + output_vector_size_increase);
   uint8_t* output = &(*output_vector)[output_offset];
   for (auto& size : frame_sizes) {
-    ZX_DEBUG_ASSERT(output + kOutputHeaderSize - output_vector->data() <=
+    ZX_DEBUG_ASSERT(output + kVp9AmlvHeaderSize - output_vector->data() <=
                     static_cast<int64_t>(output_vector->size()));
     *reinterpret_cast<uint32_t*>(output) = bswap_32(size + 4);
     output += 4;
@@ -105,8 +112,13 @@ void SplitSuperframe(const uint8_t* data, uint32_t frame_size, std::vector<uint8
     output += size;
     frame_offset += size;
     if (superframe_byte_sizes) {
-      superframe_byte_sizes->push_back(size + kOutputHeaderSize);
+      superframe_byte_sizes->push_back(size + kVp9AmlvHeaderSize);
     }
   }
-  ZX_DEBUG_ASSERT(output - output_vector->data() == static_cast<int64_t>(output_vector->size()));
+  if (like_secmem) {
+    ZX_DEBUG_ASSERT(output - output_vector->data() + frame_size - total_frame_bytes ==
+                    static_cast<int64_t>(output_vector->size()));
+  } else {
+    ZX_DEBUG_ASSERT(output - output_vector->data() == static_cast<int64_t>(output_vector->size()));
+  }
 }

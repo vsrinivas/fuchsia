@@ -103,8 +103,9 @@ class CodecAdapterVp9 : public CodecAdapter,
 
   DeviceCtx* device_ = nullptr;
   AmlogicVideo* video_ = nullptr;
-  // TODO(fxb/35200): Enable for secure input.
-  bool use_parser_ = false;
+  // We always use the parser, because we must when output is protected, and we get more efficient
+  // test coverage if we always run that way.
+  bool use_parser_ = true;
 
   fuchsia::media::FormatDetails initial_input_format_details_;
 
@@ -136,17 +137,18 @@ class CodecAdapterVp9 : public CodecAdapter,
 
   uint32_t min_buffer_count_[kPortCount] = {};
   uint32_t max_buffer_count_[kPortCount] = {};
-  // These don't actually change, for VP9, since the SAR is at webm layer and
-  // the VP9 decoder never actually sees SAR.
-  bool has_sar_ = false;
-  uint32_t sar_width_ = 0;
-  uint32_t sar_height_ = 0;
   // These change on the fly as frames are decoded:
   uint32_t coded_width_ = 0;
   uint32_t coded_height_ = 0;
   uint32_t stride_ = 0;
   uint32_t display_width_ = 0;
   uint32_t display_height_ = 0;
+
+  uint32_t output_coded_width_ = 0;
+  uint32_t output_coded_height_ = 0;
+  uint32_t output_stride_ = 0;
+  uint32_t output_display_width_ = 0;
+  uint32_t output_display_height_ = 0;
 
   // Output frames get a PTS based on looking up the output frame's input stream
   // offset via the PtsManager.  For that to work we have to feed the input PTSs
