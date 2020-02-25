@@ -55,7 +55,7 @@ impl EventDispatcher {
         Self { scope_moniker, tx: Arc::new(Mutex::new(tx)) }
     }
 
-    /// Sends the event to a receiver, if fired in the scope of `scope_moniker`. Returns
+    /// Sends the event to an event stream, if fired in the scope of `scope_moniker`. Returns
     /// a responder which can be blocked on.
     async fn send(&self, event: ComponentEvent) -> Result<Option<oneshot::Receiver<()>>, Error> {
         if let Some(scope_moniker) = &self.scope_moniker {
@@ -93,11 +93,9 @@ impl EventStream {
     }
 
     /// Receives the next event from the sender.
-    pub async fn next(&mut self) -> Event {
+    pub async fn next(&mut self) -> Option<Event> {
         trace::duration!("component_manager", "events:next");
-        let event = self.rx.next().await.expect("EventDispatcher has closed the channel");
-        trace::flow_step!("component_manager", "event", event.event.id);
-        event
+        self.rx.next().await
     }
 
     /// Waits for an event with a particular EventType against a component with a
@@ -106,50 +104,50 @@ impl EventStream {
         &mut self,
         expected_event_type: EventType,
         expected_moniker: AbsoluteMoniker,
-    ) -> Event {
-        loop {
-            let event = self.next().await;
+    ) -> Option<Event> {
+        while let Some(event) = self.next().await {
             let actual_event_type = event.event.payload.type_();
             if expected_moniker == event.event.target_moniker
                 && expected_event_type == actual_event_type
             {
-                return event;
+                return Some(event);
             }
             event.resume();
         }
+        None
     }
 }
 
-/// Registers events from multiple tasks and sends events to all of them.
+/// Subscribes to events from multiple tasks and sends events to all of them.
 pub struct EventRegistry {
-    sender_map: Arc<Mutex<HashMap<EventType, Vec<EventDispatcher>>>>,
+    dispatcher_map: Arc<Mutex<HashMap<EventType, Vec<EventDispatcher>>>>,
 }
 
 impl EventRegistry {
     pub fn new() -> Self {
-        Self { sender_map: Arc::new(Mutex::new(HashMap::new())) }
+        Self { dispatcher_map: Arc::new(Mutex::new(HashMap::new())) }
     }
 
-    /// Registers events against a set of EventTypes.
+    /// Subscribes to events of a provided set of EventTypes.
     pub async fn subscribe(
         &self,
         scope_moniker: Option<AbsoluteMoniker>,
         event_types: Vec<EventType>,
     ) -> EventStream {
         let (tx, rx) = mpsc::channel(0);
-        let sender = EventDispatcher::new(scope_moniker, tx);
-        let receiver = EventStream::new(rx);
+        let dispatcher = EventDispatcher::new(scope_moniker, tx);
+        let event_stream = EventStream::new(rx);
 
-        let mut sender_map = self.sender_map.lock().await;
+        let mut dispatcher_map = self.dispatcher_map.lock().await;
         for event_type in event_types {
-            let senders = sender_map.entry(event_type).or_insert(vec![]);
-            senders.push(sender.clone());
+            let dispatchers = dispatcher_map.entry(event_type).or_insert(vec![]);
+            dispatchers.push(dispatcher.clone());
         }
 
-        receiver
+        event_stream
     }
 
-    /// Sends the event to all registered events and waits to be unblocked by all
+    /// Sends the event to all dispatchers and waits to be unblocked by all
     async fn send(&self, event: &ComponentEvent) -> Result<(), ModelError> {
         // Copy the senders so we don't hold onto the sender map lock
         // If we didn't do this, it is possible to deadlock while holding onto this lock.
@@ -158,10 +156,10 @@ impl EventRegistry {
         // Task B : call send(event2) -> lock on sender map
         // If task B was required to respond to event1, then this is a deadlock.
         // Neither task can make progress.
-        let senders = {
-            let sender_map = self.sender_map.lock().await;
-            if let Some(senders) = sender_map.get(&event.payload.type_()) {
-                senders.clone()
+        let dispatchers = {
+            let dispatcher_map = self.dispatcher_map.lock().await;
+            if let Some(dispatchers) = dispatcher_map.get(&event.payload.type_()) {
+                dispatchers.clone()
             } else {
                 // There were no senders for this event. Do nothing.
                 return Ok(());
@@ -169,8 +167,8 @@ impl EventRegistry {
         };
 
         let mut responder_channels = vec![];
-        for sender in senders {
-            let result = sender.send(event.clone()).await;
+        for dispatcher in dispatchers {
+            let result = dispatcher.send(event.clone()).await;
             match result {
                 Ok(Some(responder_channel)) => {
                     // A future can be canceled if the receiver was dropped after

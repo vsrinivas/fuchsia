@@ -13,7 +13,7 @@ use {
 async fn main() -> Result<(), Error> {
     // Track all the starting child components.
     let event_source = EventSource::new()?;
-    let event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
 
     event_source.start_component_tree().await?;
 

@@ -18,7 +18,7 @@ use {
     fidl_fuchsia_test_events as fevents, fuchsia_async as fasync, fuchsia_trace as trace,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt, TryStreamExt},
-    log::error,
+    log::{error, warn},
     std::{path::PathBuf, sync::Arc},
 };
 
@@ -33,7 +33,7 @@ pub async fn serve_event_source_sync(
                 match request {
                     fevents::EventSourceSyncRequest::Subscribe {
                         event_types,
-                        server_end,
+                        stream,
                         responder,
                     } => {
                         // Convert the FIDL event types into standard event types
@@ -50,7 +50,6 @@ pub async fn serve_event_source_sync(
                         responder.send()?;
 
                         // Serve the event_stream over FIDL asynchronously
-                        let stream = server_end.into_stream()?;
                         serve_event_stream(
                             event_stream,
                             scope.unwrap_or(AbsoluteMoniker::root()),
@@ -76,19 +75,22 @@ pub async fn serve_event_source_sync(
 async fn serve_event_stream(
     mut event_stream: EventStream,
     scope_moniker: AbsoluteMoniker,
-    mut stream: fevents::EventStreamSyncRequestStream,
+    client_end: ClientEnd<fevents::EventStreamMarker>,
 ) -> Result<(), fidl::Error> {
-    while let Some(Ok(fevents::EventStreamSyncRequest::Next { responder })) = stream.next().await {
+    let listener = client_end.into_proxy().expect("cannot create proxy from client_end");
+    while let Some(event) = event_stream.next().await {
         trace::duration!("component_manager", "events:fidl_get_next");
-        // Wait for the next breakpoint to occur
-        let event = event_stream.next().await;
-
         // Create the basic Event FIDL object.
         // This will begin serving the Handler protocol asynchronously.
         let event_fidl_object = create_event_fidl_object(&scope_moniker, event);
 
-        // Respond with the Event FIDL object
-        responder.send(event_fidl_object)?;
+        if let Err(e) = listener.on_event(event_fidl_object) {
+            // It's not an error for the client to drop the listener.
+            if !e.is_closed() {
+                warn!("Unexpected error while serving EventStream: {:?}", e);
+            }
+            break;
+        }
     }
     Ok(())
 }

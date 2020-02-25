@@ -38,7 +38,7 @@ async fn storage() -> Result<(), Error> {
     .await?;
 
     let event_source = test.connect_to_event_source().await?;
-    let event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
 
     event_source.start_component_tree().await?;
 
@@ -72,7 +72,7 @@ async fn storage_from_collection() -> Result<(), Error> {
     .await?;
 
     let event_source = test.connect_to_event_source().await?;
-    let event_stream = event_source
+    let mut event_stream = event_source
         .subscribe(vec![
             BeforeStartInstance::TYPE,
             PostDestroyInstance::TYPE,

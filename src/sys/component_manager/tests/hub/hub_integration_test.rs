@@ -38,17 +38,17 @@ impl TestRunner {
         let (hub_report_capability, channel_close_rx) = HubReportCapability::new();
 
         let (event_source, event_stream) = {
-            // Register temporary event_streams for StartInstance and RouteFrameworkCapability.
-            // These event_streams are registered separately because the events do not happen
-            // in predictable orders. There is a possibility for the RouteFrameworkCapability event
-            // to be interleaved between the StartInstance events.
+            // Subscribe to temporary event streams for BeforeStartInstance and RouteCapability.
+            // These events are subscribed to separately because the events do not happen
+            // in predictable orders. There is a possibility for the RouteCapability event
+            // to be interleaved between the BeforeStartInstance events.
             let event_source = test.connect_to_event_source().await?;
-            let start_event_stream =
+            let mut start_event_stream =
                 event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
 
-            // Register for events which are required by this test runner.
+            // Subscribe to events which are required by this test runner.
             // TODO(xbhatnag): There may be problems here if event_types contains
-            // StartInstance or RouteFrameworkCapability
+            // BeforeStartInstance or RouteCapability
             let event_stream = event_source.subscribe(event_types).await?;
 
             // Inject HubReportCapability wherever it's requested.
@@ -299,7 +299,7 @@ async fn advanced_routing() -> Result<(), Error> {
 async fn used_service_test() -> Result<(), Error> {
     let echo_service_name = "fidl.examples.routing.echo.Echo";
     let hub_report_service_name = "fuchsia.test.hub.HubReport";
-    let breakpoints_service_name = "fuchsia.test.events.EventSourceSync";
+    let event_source_service_name = "fuchsia.test.events.EventSourceSync";
 
     let (test_runner, _) = TestRunner::start(
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/used_service_echo_realm.cm",
@@ -308,11 +308,11 @@ async fn used_service_test() -> Result<(), Error> {
     )
     .await?;
 
-    // Verify that the hub shows the HubReport service and Breakpoint service in use
+    // Verify that the hub shows the HubReport service and EventSourceSync service in use
     test_runner
         .verify_directory_listing_locally(
             "/hub/exec/used/svc",
-            vec![breakpoints_service_name, hub_report_service_name],
+            vec![event_source_service_name, hub_report_service_name],
         )
         .await
         .send()?;
@@ -321,7 +321,7 @@ async fn used_service_test() -> Result<(), Error> {
     test_runner
         .verify_directory_listing_locally(
             "/hub/exec/used/svc",
-            vec![echo_service_name, breakpoints_service_name, hub_report_service_name],
+            vec![echo_service_name, event_source_service_name, hub_report_service_name],
         )
         .await
         .send()?;
@@ -330,7 +330,7 @@ async fn used_service_test() -> Result<(), Error> {
     test_runner
         .verify_directory_listing_locally(
             "/hub/exec/used/svc",
-            vec![echo_service_name, breakpoints_service_name, hub_report_service_name],
+            vec![echo_service_name, event_source_service_name, hub_report_service_name],
         )
         .await
         .send()?;
@@ -340,7 +340,7 @@ async fn used_service_test() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn dynamic_child_test() -> Result<(), Error> {
-    let (test_runner, event_stream) = TestRunner::start(
+    let (test_runner, mut event_stream) = TestRunner::start(
         "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/dynamic_child_reporter.cm",
         1,
         vec![PreDestroyInstance::TYPE, StopInstance::TYPE, PostDestroyInstance::TYPE],

@@ -29,7 +29,7 @@ fn compare_output(actual: Vec<String>, expected: Vec<&str>) {
 async fn empty_component() -> Result<(), Error> {
     let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/empty.cm").await?;
     let event_source = test.connect_to_event_source().await?;
-    let event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
 
     event_source.start_component_tree().await?;
 
@@ -59,7 +59,7 @@ async fn empty_component() -> Result<(), Error> {
 async fn tree() -> Result<(), Error> {
     let test = BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/root.cm").await?;
     let event_source = test.connect_to_event_source().await?;
-    let event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
 
     event_source.start_component_tree().await?;
 
@@ -151,7 +151,7 @@ async fn echo_realm() -> Result<(), Error> {
         BlackBoxTest::default("fuchsia-pkg://fuchsia.com/cs2_test#meta/echo_realm.cm").await?;
     let event_source = test.connect_to_event_source().await?;
 
-    let event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
     event_source.start_component_tree().await?;
 
     // 3 components are started. Order is irrelevant.

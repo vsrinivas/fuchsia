@@ -72,8 +72,8 @@ async fn main() -> Result<(), Error> {
     // integration test via HubReport
     hub_report.report_file_content("/hub/children/coll:simple_instance/children/child/id").await?;
 
-    // Register breakpoints for relevant events
-    let event_stream = event_source
+    // Subscribe to relevant events
+    let mut event_stream = event_source
         .subscribe(vec![StopInstance::TYPE, PreDestroyInstance::TYPE, PostDestroyInstance::TYPE])
         .await?;
 

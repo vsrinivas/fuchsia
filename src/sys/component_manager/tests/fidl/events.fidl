@@ -14,7 +14,7 @@ const uint64 MAX_NUM_EVENT_TYPES_RECEIVED = 9;
 /// This value is currently set arbitrarily.
 const uint64 MAX_CAPABILITY_ID_LENGTH = 50;
 
-/// These EventTypes are used for the Breakpoints protocol.
+/// These EventTypes are used for the EventStream protocol.
 /// They are FIDL versions of the EventType enum in hooks.rs and have
 /// the same meaning.
 enum EventType {
@@ -89,7 +89,7 @@ table RoutingPayload {
     3: CapabilitySource source;
 };
 
-/// Contains all information about a single event of a breakpoint
+/// Contains all information about a single event
 table Event {
     /// Event type corresponding to the event
     1: EventType event_type;
@@ -104,26 +104,23 @@ table Event {
     4: EventPayload event_payload;
 };
 
-/// Registers breakpoints in component manager.
+/// Subscribe to events in component manager.
 [Discoverable]
 protocol EventSourceSync {
     /// Subscribes to the events of the provided EventTypes.
     /// Returns a EventStreamSync which can be used
     /// to expect the registered types.
-    Subscribe(vector<EventType>:MAX_NUM_EVENT_TYPES_RECEIVED event_types, request<EventStreamSync> server_end) -> ();
+    Subscribe(vector<EventType>:MAX_NUM_EVENT_TYPES_RECEIVED event_types, EventStream stream) -> ();
 
     /// Resume the execution of components within the realm using a scoped
     /// EventSourceSync.  This method is idempotent.
     StartComponentTree() -> ();
 };
 
-/// Receives events for registered events in component manager.
-protocol EventStreamSync {
-    /// Blocks until the next event is dispatched.
-    ///
-    /// Note: The component manager is blocked after this call and will not be
-    /// allowed to proceed until resumed explicitly via the Handler.
-    Next() -> (Event event);
+/// Listener for events on the component hierarchy. The server won't wait for the client
+/// to handle the request before sending more events.
+protocol EventStream {
+    OnEvent(Event event);
 };
 
 /// Every Event supports this basic handler to allow resumption.

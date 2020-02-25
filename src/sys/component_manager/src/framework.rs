@@ -673,7 +673,8 @@ mod tests {
 
         let event = event_stream
             .wait_until(EventType::PreDestroyInstance, vec!["system:0", "coll:a:1"].into())
-            .await;
+            .await
+            .unwrap();
 
         // Child is not marked deleted yet.
         {
@@ -703,10 +704,11 @@ mod tests {
         }
 
         // Wait until 'PostDestroy' event for "a"
-        event_stream
+        let event = event_stream
             .wait_until(EventType::PostDestroyInstance, vec!["system:0", "coll:a:1"].into())
             .await
-            .resume();
+            .unwrap();
+        event.resume();
 
         assert!(!has_child(&test.realm, "coll:a:1").await);
 

@@ -252,10 +252,13 @@ mod tests {
         }
         .remote_handle();
         fasync::spawn(f);
-        let event = event_stream.wait_until(EventType::BeforeStartInstance, vec![].into()).await;
-        event.resume();
         let event =
-            event_stream.wait_until(EventType::BeforeStartInstance, vec!["system:0"].into()).await;
+            event_stream.wait_until(EventType::BeforeStartInstance, vec![].into()).await.unwrap();
+        event.resume();
+        let event = event_stream
+            .wait_until(EventType::BeforeStartInstance, vec!["system:0"].into())
+            .await
+            .unwrap();
         {
             let expected_urls: Vec<String> = vec!["test:///root_resolved".to_string()];
             assert_eq!(mock_runner.urls_run(), expected_urls);

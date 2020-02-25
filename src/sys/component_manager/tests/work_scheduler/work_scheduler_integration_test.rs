@@ -15,7 +15,7 @@ async fn basic_work_scheduler_test() -> Result<(), Error> {
     let test = BlackBoxTest::default(root_component_url).await?;
 
     let event_source = test.connect_to_event_source().await?;
-    let event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
     event_source.install_injector(work_scheduler_dispatch_reporter.clone()).await?;
@@ -41,7 +41,7 @@ async fn unbound_work_scheduler_test() -> Result<(), Error> {
     let test = BlackBoxTest::default(root_component_url).await?;
 
     let event_source = test.connect_to_event_source().await?;
-    let event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
 
     let work_scheduler_dispatch_reporter = WorkSchedulerDispatchReporter::new();
     event_source.install_injector(work_scheduler_dispatch_reporter.clone()).await?;

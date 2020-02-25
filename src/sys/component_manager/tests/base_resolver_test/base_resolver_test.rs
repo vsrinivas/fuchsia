@@ -32,7 +32,7 @@ async fn base_resolver_test() -> Result<(), Error> {
     let event_source = &test.connect_to_event_source().await?;
 
     // Subscribe to events and begin execution of component manager
-    let event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![BeforeStartInstance::TYPE]).await?;
 
     // Begin component manager's execution
     event_source.start_component_tree().await?;

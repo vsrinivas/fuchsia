@@ -19,8 +19,8 @@ async fn main() -> Result<(), Error> {
     event_source.start_component_tree().await?;
 
     let hub_report = {
-        // Register for RouteCapability events
-        let event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
+        // Subscribes to RouteCapability events
+        let mut event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
 
         // Connect to the HubReport service
         let hub_report = HubReport::new()?;
@@ -39,8 +39,8 @@ async fn main() -> Result<(), Error> {
     hub_report.report_directory_contents("/hub/exec/used/svc").await?;
 
     {
-        // Register for RouteCapability events
-        let event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
+        // Subscribes to RouteCapability events
+        let mut event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
 
         // Connect to the Echo capability.
         connect_to_service::<fecho::EchoMarker>().context("error connecting to Echo service")?;
@@ -58,8 +58,8 @@ async fn main() -> Result<(), Error> {
     hub_report.report_directory_contents("/hub/exec/used/svc").await?;
 
     {
-        // Register for RouteCapability events
-        let event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
+        // Subscribes to RouteCapability events
+        let mut event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
 
         // Connect to the Echo capability again
         connect_to_service::<fecho::EchoMarker>().context("error connecting to Echo service")?;

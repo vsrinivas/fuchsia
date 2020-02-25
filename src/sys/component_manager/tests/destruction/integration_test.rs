@@ -30,7 +30,7 @@ async fn destruction() -> Result<(), Error> {
 
     let sink =
         event_source.soak_events(vec![StopInstance::TYPE, PostDestroyInstance::TYPE]).await?;
-    let event_stream = event_source.subscribe(vec![PostDestroyInstance::TYPE]).await?;
+    let mut event_stream = event_source.subscribe(vec![PostDestroyInstance::TYPE]).await?;
     event_source.start_component_tree().await?;
 
     // Wait for `coll:root` to be destroyed.

@@ -48,12 +48,12 @@ async fn scoped_events_test() -> Result<(), Error> {
 
     // Inject an echo capability for `echo_reporter` so that we can observe its messages here.
     let mut echo_rx = {
-        let receiver = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
+        let mut event_stream = event_source.subscribe(vec![RouteCapability::TYPE]).await?;
 
         event_source.start_component_tree().await?;
 
         // Wait for `echo_reporter` to attempt to connect to the Echo service
-        let invocation = receiver
+        let event = event_stream
             .wait_until_framework_capability(
                 "./echo_reporter:0",
                 "/svc/fidl.examples.routing.echo.Echo",
@@ -63,8 +63,8 @@ async fn scoped_events_test() -> Result<(), Error> {
 
         // Setup the echo capability.
         let (capability, echo_rx) = EchoCapability::new();
-        invocation.inject(capability).await?;
-        invocation.resume().await?;
+        event.inject(capability).await?;
+        event.resume().await?;
 
         echo_rx
     };

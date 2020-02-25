@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Context, Error},
     async_trait::async_trait,
-    fidl::endpoints::{create_proxy, create_request_stream, ClientEnd, ServerEnd, ServiceMarker},
+    fidl::endpoints::{create_request_stream, ClientEnd, ServerEnd, ServiceMarker},
     fidl::Channel,
     fidl_fuchsia_test_events as fevents, fuchsia_async as fasync,
     fuchsia_component::client::*,
@@ -49,9 +49,9 @@ impl EventSource {
         &self,
         event_types: Vec<fevents::EventType>,
     ) -> Result<EventStream, Error> {
-        let (proxy, server_end) = create_proxy::<fevents::EventStreamSyncMarker>()?;
-        self.proxy.subscribe(&mut event_types.into_iter(), server_end).await?;
-        Ok(EventStream::new(proxy))
+        let (client_end, stream) = create_request_stream::<fevents::EventStreamMarker>()?;
+        self.proxy.subscribe(&mut event_types.into_iter(), client_end).await?;
+        Ok(EventStream::new(stream))
     }
 
     pub async fn soak_events(
@@ -69,7 +69,7 @@ impl EventSource {
     where
         I: Injector,
     {
-        let event_stream = self.subscribe(vec![RouteCapability::TYPE]).await?;
+        let mut event_stream = self.subscribe(vec![RouteCapability::TYPE]).await?;
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
         fasync::spawn(
             Abortable::new(
@@ -104,7 +104,7 @@ impl EventSource {
     where
         I: Interposer,
     {
-        let event_stream = self.subscribe(vec![RouteCapability::TYPE]).await?;
+        let mut event_stream = self.subscribe(vec![RouteCapability::TYPE]).await?;
         let (abort_handle, abort_registration) = AbortHandle::new_pair();
         fasync::spawn(
             Abortable::new(
@@ -157,7 +157,7 @@ impl EventSource {
         }
         event_types.dedup();
 
-        let event_stream = self.subscribe(event_types).await?;
+        let mut event_stream = self.subscribe(event_types).await?;
         let mut expected_events = expected_events;
 
         while let Ok(event) = event_stream.next().await {
@@ -192,32 +192,35 @@ impl EventSource {
     }
 }
 
-/// A wrapper over the EventStreamSync FIDL proxy.
-/// Provides convenience methods that build on EventStreamSync::Next
 pub struct EventStream {
-    proxy: fevents::EventStreamSyncProxy,
+    stream: fevents::EventStreamRequestStream,
 }
 
 impl EventStream {
-    fn new(proxy: fevents::EventStreamSyncProxy) -> Self {
-        Self { proxy }
+    pub fn new(stream: fevents::EventStreamRequestStream) -> Self {
+        Self { stream }
     }
 
-    pub async fn next(&self) -> Result<fevents::Event, Error> {
-        let event = self.proxy.next().await.context("could not get next breakpoint")?;
-        Ok(event)
+    pub async fn next(&mut self) -> Result<fevents::Event, Error> {
+        if let Some(Ok(fevents::EventStreamRequest::OnEvent { event, .. })) =
+            self.stream.next().await
+        {
+            Ok(event)
+        } else {
+            Err(format_err!("Stream terminated unexpectedly"))
+        }
     }
 
     /// Expects the next event to be of a particular type.
     /// Returns the casted type if successful and an error otherwise.
-    pub async fn expect_type<T: Event>(&self) -> Result<T, Error> {
+    pub async fn expect_type<T: Event>(&mut self) -> Result<T, Error> {
         let event = self.next().await?;
         T::from_fidl(event)
     }
 
     /// Expects the next event to be of a particular type and moniker.
     /// Returns the casted type if successful and an error otherwise.
-    pub async fn expect_exact<T: Event>(&self, expected_moniker: &str) -> Result<T, Error> {
+    pub async fn expect_exact<T: Event>(&mut self, expected_moniker: &str) -> Result<T, Error> {
         let event = self.expect_type::<T>().await?;
         if expected_moniker == event.target_moniker() {
             Ok(event)
@@ -229,7 +232,7 @@ impl EventStream {
     /// Waits for an event of a particular type.
     /// Implicitly resumes all other events.
     /// Returns the casted type if successful and an error otherwise.
-    pub async fn wait_until_type<T: Event>(&self) -> Result<T, Error> {
+    pub async fn wait_until_type<T: Event>(&mut self) -> Result<T, Error> {
         loop {
             let event = self.next().await?;
             if let Ok(event) = T::from_fidl(event) {
@@ -242,7 +245,7 @@ impl EventStream {
     /// Implicitly resumes all other events.
     /// Returns the casted type if successful and an error otherwise.
     pub async fn wait_until_exact<T: Event>(
-        &self,
+        &mut self,
         expected_target_moniker: &str,
     ) -> Result<T, Error> {
         loop {
@@ -258,7 +261,7 @@ impl EventStream {
     /// target moniker and capability. Implicitly resumes all other events.
     /// Returns the casted type if successful and an error otherwise.
     pub async fn wait_until_component_capability(
-        &self,
+        &mut self,
         expected_target_moniker: &str,
         expected_capability_id: &str,
     ) -> Result<RouteCapability, Error> {
@@ -278,7 +281,7 @@ impl EventStream {
     /// target moniker, scope moniker and capability. Implicitly resumes all other events.
     /// Returns the casted type if successful and an error otherwise.
     pub async fn wait_until_framework_capability(
-        &self,
+        &mut self,
         expected_target_moniker: &str,
         expected_capability_id: &str,
         expected_scope_moniker: Option<&str>,
@@ -551,7 +554,7 @@ pub struct EventSink {
 }
 
 impl EventSink {
-    fn soak_async(event_stream: EventStream) -> Self {
+    fn soak_async(mut event_stream: EventStream) -> Self {
         let drained_events = Arc::new(Mutex::new(vec![]));
         {
             // Start an async task that soaks up events from the event_stream
