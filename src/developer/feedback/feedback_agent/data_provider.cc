@@ -21,6 +21,7 @@
 #include "src/developer/feedback/feedback_agent/config.h"
 #include "src/developer/feedback/feedback_agent/image_conversion.h"
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/lib/timekeeper/system_clock.h"
 
 namespace feedback {
 namespace {
@@ -58,17 +59,21 @@ std::unique_ptr<DataProvider> DataProvider::TryCreate(
 
 DataProvider::DataProvider(async_dispatcher_t* dispatcher,
                            std::shared_ptr<sys::ServiceDirectory> services, const Config& config,
-                           std::function<void()> after_timeout, zx::duration timeout)
+                           std::function<void()> after_timeout, zx::duration timeout,
+                           std::unique_ptr<timekeeper::Clock> clock)
     : dispatcher_(dispatcher),
       services_(services),
       config_(config),
-      cobalt_(dispatcher_, services_),
+      cobalt_(dispatcher_, services_, std::move(clock)),
       after_timeout_(dispatcher, after_timeout, timeout),
       executor_(dispatcher) {}
 
 void DataProvider::GetData(GetDataCallback callback) {
   FX_CHECK(!shut_down_);
+
   after_timeout_.Acquire();
+  const uint64_t timer_id = cobalt_.StartTimer();
+
   auto annotations =
       fit::join_promise_vector(GetAnnotations(dispatcher_, services_, config_.annotation_allowlist,
                                               kDataTimeout, &cobalt_))
@@ -151,7 +156,13 @@ void DataProvider::GetData(GetDataCallback callback) {
                 return fit::ok(std::move(data));
               })
           .or_else([]() { return fit::error(ZX_ERR_INTERNAL); })
-          .then([this, callback = std::move(callback)](fit::result<Data, zx_status_t>& result) {
+          .then([this, callback = std::move(callback),
+                 timer_id](fit::result<Data, zx_status_t>& result) {
+            if (result.is_error()) {
+              cobalt_.LogElapsedTime(BugreportGenerationFlow::kFailure, timer_id);
+            } else {
+              cobalt_.LogElapsedTime(BugreportGenerationFlow::kSuccess, timer_id);
+            }
             callback(std::move(result));
             after_timeout_.Release();
           });

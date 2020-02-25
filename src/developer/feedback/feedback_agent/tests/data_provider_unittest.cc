@@ -49,6 +49,7 @@
 #include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/fxl/test/test_settings.h"
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/lib/timekeeper/test_clock.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
@@ -67,6 +68,7 @@ using fuchsia::intl::LocaleId;
 using fuchsia::intl::RegulatoryDomain;
 using fxl::SplitResult::kSplitWantNonEmpty;
 using fxl::WhiteSpaceHandling::kTrimWhitespace;
+using testing::UnorderedElementsAreArray;
 
 const std::set<std::string> kDefaultAnnotations = {
     kAnnotationBuildBoard,
@@ -112,6 +114,7 @@ constexpr bool kSuccess = true;
 constexpr bool kFailure = false;
 
 constexpr zx::duration kDataProviderIdleTimeout = zx::sec(5);
+constexpr zx::duration kDefaultBugReportFlowDuration = zx::usec(5);
 
 // Returns a Screenshot with the right dimensions, no image.
 std::unique_ptr<Screenshot> MakeUniqueScreenshot(const size_t image_dim_in_px) {
@@ -228,15 +231,21 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
 
  protected:
   void SetUpDataProvider(const Config& config) {
+    // |data_provider_.cobalt_| owns the test clock through a unique_ptr so we need to allocate
+    // |clock_| on the heap and then give |data_provider_| ownership of it. This allows us to
+    // control the time perceived by |data_provider_.cobalt_|.
+    clock_ = new timekeeper::TestClock();
     data_provider_.reset(new DataProvider(
         dispatcher(), services(), config, [this] { data_provider_timed_out_ = true; },
-        kDataProviderIdleTimeout));
+        kDataProviderIdleTimeout, std::unique_ptr<timekeeper::TestClock>(clock_)));
   }
 
   void SetUpDataProviderOnlyRequestingChannel(zx::duration timeout) {
+    clock_ = new timekeeper::TestClock();
     data_provider_.reset(new DataProvider(
         dispatcher(), services(), Config{{kAnnotationChannel}, {}},
-        [this] { data_provider_timed_out_ = true; }, timeout));
+        [this] { data_provider_timed_out_ = true; }, timeout,
+        std::unique_ptr<timekeeper::TestClock>(clock_)));
   }
 
   void SetUpScenic(std::unique_ptr<StubScenic> scenic) {
@@ -298,12 +307,20 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
     return out_response;
   }
 
-  fit::result<Data, zx_status_t> GetData() {
-    FX_CHECK(data_provider_);
+  fit::result<Data, zx_status_t> GetData(
+      zx::duration bugreport_flow_duration = kDefaultBugReportFlowDuration) {
+    FX_CHECK(data_provider_ && clock_);
 
     fit::result<Data, zx_status_t> out_result;
+
+    // We can set |clock_|'s start and end times because the call to start the timer happens
+    // independently of the loop while the call to end it happens in a task that is posted on the
+    // loop. So, as long the end time is set before the loop is run, a non-zero duration will be
+    // recorded.
+    clock_->Set(zx::time(0));
     data_provider_->GetData(
         [&out_result](fit::result<Data, zx_status_t> result) { out_result = std::move(result); });
+    clock_->Set(zx::time(0) + bugreport_flow_duration);
     RunLoopUntilIdle();
     return out_result;
   }
@@ -331,6 +348,9 @@ class DataProviderTest : public UnitTestFixture, public CobaltTestFixture {
   std::unique_ptr<StubLogger> logger_;
   std::unique_ptr<StubBoard> board_provider_;
   std::unique_ptr<StubProduct> product_provider_;
+
+  // The lifetime of |clock_| is managed by |data_provider_|.
+  timekeeper::TestClock* clock_;
 };
 
 TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
@@ -493,6 +513,12 @@ TEST_F(DataProviderTest, GetData_SmokeTest) {
   if (data.has_annotations()) {
     ASSERT_TRUE(data.has_attachment_bundle());
   }
+
+  EXPECT_THAT(
+      ReceivedCobaltEvents(),
+      UnorderedElementsAreArray({
+          CobaltEvent(BugreportGenerationFlow::kSuccess, kDefaultBugReportFlowDuration.to_usecs()),
+      }));
 }
 
 TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {

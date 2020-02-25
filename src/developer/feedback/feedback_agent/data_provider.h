@@ -18,6 +18,8 @@
 #include "src/developer/feedback/feedback_agent/config.h"
 #include "src/developer/feedback/feedback_agent/ref_counted_delayed_task.h"
 #include "src/developer/feedback/utils/cobalt.h"
+#include "src/lib/timekeeper/clock.h"
+#include "src/lib/timekeeper/system_clock.h"
 
 namespace feedback {
 
@@ -36,8 +38,10 @@ class DataProvider : public fuchsia::feedback::DataProvider {
                                                  std::function<void()> after_timeout,
                                                  zx::duration timeout);
 
-  DataProvider(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-               const Config& config, std::function<void()> after_timeout, zx::duration timeout);
+  DataProvider(
+      async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+      const Config& config, std::function<void()> after_timeout, zx::duration timeout,
+      std::unique_ptr<timekeeper::Clock> clock = std::make_unique<timekeeper::SystemClock>());
 
   // |fuchsia.feedback.DataProvider|
   void GetData(GetDataCallback callback) override;

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/cobalt/test/cpp/fidl.h>
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
@@ -28,8 +29,11 @@
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/feedback_agent.h"
 #include "src/developer/feedback/feedback_agent/tests/zx_object_util.h"
+#include "src/developer/feedback/testing/fake_cobalt.h"
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/utils/archive.h"
+#include "src/developer/feedback/utils/cobalt_metrics.h"
+#include "src/developer/feedback/utils/metrics_registry.cb.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/glob.h"
 #include "src/lib/fsl/handles/object_info.h"
@@ -59,6 +63,7 @@ using fuchsia::hwinfo::ProductInfo;
 using fuchsia::hwinfo::ProductPtr;
 using inspect::testing::PropertyList;
 using inspect::testing::UintIs;
+using testing::UnorderedElementsAreArray;
 
 class LogListener : public fuchsia::logger::LogListener {
  public:
@@ -89,7 +94,10 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
   FeedbackAgentIntegrationTest()
       : test_name_(testing::UnitTest::GetInstance()->current_test_info()->name()) {}
 
-  void SetUp() override { environment_services_ = sys::ServiceDirectory::CreateFromNamespace(); }
+  void SetUp() override {
+    environment_services_ = sys::ServiceDirectory::CreateFromNamespace();
+    fake_cobalt_ = std::make_unique<FakeCobalt>(environment_services_);
+  }
 
   void TearDown() override {
     if (inspect_test_app_controller_) {
@@ -324,6 +332,9 @@ class FeedbackAgentIntegrationTest : public sys::testing::TestWithEnvironment {
   fuchsia::sys::ComponentControllerPtr inspect_test_app_controller_;
 
   std::string test_name_;
+
+ protected:
+  std::unique_ptr<FakeCobalt> fake_cobalt_;
 };
 
 // We use VK_TEST instead of the regular TEST macro because Scenic needs Vulkan to operate properly
@@ -461,6 +472,29 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
     }
   }
   EXPECT_TRUE(has_entry_for_test_app);
+}
+
+TEST_F(FeedbackAgentIntegrationTest, GetData_CheckCobalt) {
+  // We make sure the components serving the services GetData() connects to are up and running.
+  WaitForLogger();
+  WaitForChannelProvider();
+  WaitForInspect();
+  WaitForBoardProvider();
+  WaitForProductProvider();
+
+  DataProviderSyncPtr data_provider;
+  environment_services_->Connect(data_provider.NewRequest());
+
+  DataProvider_GetData_Result out_result;
+  ASSERT_EQ(data_provider->GetData(&out_result), ZX_OK);
+
+  fit::result<Data, zx_status_t> result = std::move(out_result);
+  ASSERT_TRUE(result.is_ok());
+  EXPECT_THAT(fake_cobalt_->GetAllEventsOfType<BugreportGenerationFlow>(
+                  /*num_expected=*/1u, fuchsia::cobalt::test::LogMethod::LOG_ELAPSED_TIME),
+              UnorderedElementsAreArray({
+                  BugreportGenerationFlow::kSuccess,
+              }));
 }
 
 TEST_F(FeedbackAgentIntegrationTest, OneDataProviderPerRequest) {

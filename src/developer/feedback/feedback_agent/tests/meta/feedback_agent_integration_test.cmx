@@ -3,6 +3,7 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.cobalt.LoggerFactory": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
+                "fuchsia.cobalt.test.LoggerQuerier": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
                 "fuchsia.diagnostics.Archive": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
                 "fuchsia.factory.MiscFactoryStoreProvider": [
                     "fuchsia-pkg://fuchsia.com/fake_factory_store_providers#meta/misc.cmx",
@@ -37,6 +38,7 @@
         "services": [
             "fuchsia.boot.ReadOnlyLog",
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.cobalt.test.LoggerQuerier",
             "fuchsia.diagnostics.Archive",
             "fuchsia.factory.MiscFactoryStoreProvider",
             "fuchsia.feedback.DataProvider",

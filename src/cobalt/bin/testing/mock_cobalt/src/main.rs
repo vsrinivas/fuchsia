@@ -10,6 +10,7 @@ use {
     fidl_fuchsia_cobalt_test as cobalt_test, fuchsia_async as fasync,
     fuchsia_cobalt::CobaltEventExt,
     fuchsia_syslog::{self as syslog, fx_log_info},
+    fuchsia_zircon_status as zx_status,
     futures::{lock::Mutex, StreamExt, TryStreamExt},
     std::{collections::HashMap, sync::Arc},
 };
@@ -89,108 +90,112 @@ async fn handle_cobalt_logger(
     log: EventsLogHandle,
 ) -> Result<(), fidl::Error> {
     use cobalt::LoggerRequest::*;
-    stream
-        .try_for_each_concurrent(None, |event| async {
-            let mut log = log.lock().await;
-            let log_state = match event {
-                LogEvent { metric_id, event_code, responder } => {
-                    let state = &mut log.log_event;
-                    state.log.push(
-                        CobaltEvent::builder(metric_id).with_event_code(event_code).as_event(),
-                    );
-                    let () = responder.send(cobalt::Status::Ok)?;
-                    state
-                }
-                LogEventCount {
-                    metric_id,
-                    event_code,
-                    component,
-                    period_duration_micros,
-                    count,
-                    responder,
-                } => {
-                    let state = &mut log.log_event_count;
-                    state.log.push(
-                        CobaltEvent::builder(metric_id)
-                            .with_event_code(event_code)
-                            .with_component(component)
-                            .as_count_event(period_duration_micros, count),
-                    );
-                    let () = responder.send(cobalt::Status::Ok)?;
-                    state
-                }
-                LogElapsedTime { metric_id, event_code, component, elapsed_micros, responder } => {
-                    let state = &mut log.log_elapsed_time;
-                    state.log.push(
-                        CobaltEvent::builder(metric_id)
-                            .with_event_code(event_code)
-                            .with_component(component)
-                            .as_elapsed_time(elapsed_micros),
-                    );
-                    let () = responder.send(cobalt::Status::Ok)?;
-                    state
-                }
-                LogFrameRate { metric_id, event_code, component, fps, responder } => {
-                    let state = &mut log.log_frame_rate;
-                    state.log.push(
-                        CobaltEvent::builder(metric_id)
-                            .with_event_code(event_code)
-                            .with_component(component)
-                            .as_frame_rate(fps),
-                    );
-                    let () = responder.send(cobalt::Status::Ok)?;
-                    state
-                }
-                LogMemoryUsage { metric_id, event_code, component, bytes, responder } => {
-                    let state = &mut log.log_memory_usage;
-                    state.log.push(
-                        CobaltEvent::builder(metric_id)
-                            .with_event_code(event_code)
-                            .with_component(component)
-                            .as_memory_usage(bytes),
-                    );
-                    let () = responder.send(cobalt::Status::Ok)?;
-                    state
-                }
-                LogIntHistogram { metric_id, event_code, component, histogram, responder } => {
-                    let state = &mut log.log_int_histogram;
-                    state.log.push(
-                        CobaltEvent::builder(metric_id)
-                            .with_event_code(event_code)
-                            .with_component(component)
-                            .as_int_histogram(histogram),
-                    );
-                    let () = responder.send(cobalt::Status::Ok)?;
-                    state
-                }
-                LogCobaltEvent { event, responder } => {
-                    let state = &mut log.log_cobalt_event;
-                    state.log.push(event);
-                    let () = responder.send(cobalt::Status::Ok)?;
-                    state
-                }
-                LogCobaltEvents { mut events, responder } => {
-                    let state = &mut log.log_cobalt_events;
-                    state.log.append(&mut events);
-                    let () = responder.send(cobalt::Status::Ok)?;
-                    state
-                }
-                e => unimplemented!("Event {:?} is not supported by the mock cobalt server", e),
-            };
-            while let Some(hanging_get_state) = log_state.hanging.pop() {
-                let mut last_observed = hanging_get_state.last_observed.lock().await;
-                let events = (&mut log_state.log)
-                    .iter()
-                    .skip(*last_observed)
-                    .take(MAX_QUERY_LENGTH)
-                    .map(Clone::clone)
-                    .collect();
-                *last_observed = log_state.log.len();
-                let () = hanging_get_state.responder.send(&mut Ok((events, false)))?;
+    let fut = stream.try_for_each_concurrent(None, |event| async {
+        let mut log = log.lock().await;
+        let log_state = match event {
+            LogEvent { metric_id, event_code, responder } => {
+                let state = &mut log.log_event;
+                state
+                    .log
+                    .push(CobaltEvent::builder(metric_id).with_event_code(event_code).as_event());
+                let () = responder.send(cobalt::Status::Ok)?;
+                state
             }
-            Ok(())
-        })
-        .await
+            LogEventCount {
+                metric_id,
+                event_code,
+                component,
+                period_duration_micros,
+                count,
+                responder,
+            } => {
+                let state = &mut log.log_event_count;
+                state.log.push(
+                    CobaltEvent::builder(metric_id)
+                        .with_event_code(event_code)
+                        .with_component(component)
+                        .as_count_event(period_duration_micros, count),
+                );
+                let () = responder.send(cobalt::Status::Ok)?;
+                state
+            }
+            LogElapsedTime { metric_id, event_code, component, elapsed_micros, responder } => {
+                let state = &mut log.log_elapsed_time;
+                state.log.push(
+                    CobaltEvent::builder(metric_id)
+                        .with_event_code(event_code)
+                        .with_component(component)
+                        .as_elapsed_time(elapsed_micros),
+                );
+                let () = responder.send(cobalt::Status::Ok)?;
+                state
+            }
+            LogFrameRate { metric_id, event_code, component, fps, responder } => {
+                let state = &mut log.log_frame_rate;
+                state.log.push(
+                    CobaltEvent::builder(metric_id)
+                        .with_event_code(event_code)
+                        .with_component(component)
+                        .as_frame_rate(fps),
+                );
+                let () = responder.send(cobalt::Status::Ok)?;
+                state
+            }
+            LogMemoryUsage { metric_id, event_code, component, bytes, responder } => {
+                let state = &mut log.log_memory_usage;
+                state.log.push(
+                    CobaltEvent::builder(metric_id)
+                        .with_event_code(event_code)
+                        .with_component(component)
+                        .as_memory_usage(bytes),
+                );
+                let () = responder.send(cobalt::Status::Ok)?;
+                state
+            }
+            LogIntHistogram { metric_id, event_code, component, histogram, responder } => {
+                let state = &mut log.log_int_histogram;
+                state.log.push(
+                    CobaltEvent::builder(metric_id)
+                        .with_event_code(event_code)
+                        .with_component(component)
+                        .as_int_histogram(histogram),
+                );
+                let () = responder.send(cobalt::Status::Ok)?;
+                state
+            }
+            LogCobaltEvent { event, responder } => {
+                let state = &mut log.log_cobalt_event;
+                state.log.push(event);
+                let () = responder.send(cobalt::Status::Ok)?;
+                state
+            }
+            LogCobaltEvents { mut events, responder } => {
+                let state = &mut log.log_cobalt_events;
+                state.log.append(&mut events);
+                let () = responder.send(cobalt::Status::Ok)?;
+                state
+            }
+            e => unimplemented!("Event {:?} is not supported by the mock cobalt server", e),
+        };
+        while let Some(hanging_get_state) = log_state.hanging.pop() {
+            let mut last_observed = hanging_get_state.last_observed.lock().await;
+            let events = (&mut log_state.log)
+                .iter()
+                .skip(*last_observed)
+                .take(MAX_QUERY_LENGTH)
+                .map(Clone::clone)
+                .collect();
+            *last_observed = log_state.log.len();
+            let () = hanging_get_state.responder.send(&mut Ok((events, false)))?;
+        }
+        Ok(())
+    });
+
+    match fut.await {
+        // Don't consider PEER_CLOSED to be an error.
+        Err(fidl::Error::ServerResponseWrite(zx_status::Status::PEER_CLOSED)) => Ok(()),
+        other => other,
+    }
 }
 
 /// Handles requests to query the state of the mock.

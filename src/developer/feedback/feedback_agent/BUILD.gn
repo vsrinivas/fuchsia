@@ -113,6 +113,8 @@ source_set("data_provider_src") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/timekeeper",
+    "//garnet/public/lib/timekeeper:system",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.images",
     "//sdk/lib/sys/cpp",
