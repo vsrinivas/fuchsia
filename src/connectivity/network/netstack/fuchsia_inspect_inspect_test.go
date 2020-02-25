@@ -29,12 +29,12 @@ func TestStatCounterInspectImpl(t *testing.T) {
 		value: reflect.ValueOf(s),
 	}
 	children := v.ListChildren()
-	if diff := cmp.Diff(children, []string{
+	if diff := cmp.Diff([]string{
 		"ICMP",
 		"IP",
 		"TCP",
 		"UDP",
-	}); diff != "" {
+	}, children); diff != "" {
 		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
 	}
 	for _, childName := range children {
@@ -54,14 +54,14 @@ func TestStatCounterInspectImpl(t *testing.T) {
 	s.MalformedRcvdPackets.IncrementBy(2)
 	s.DroppedPackets.IncrementBy(3)
 
-	if diff := cmp.Diff(v.ReadData(), inspect.Object{
+	if diff := cmp.Diff(inspect.Object{
 		Name: v.name,
 		Metrics: []inspect.Metric{
 			{Key: "UnknownProtocolRcvdPackets", Value: inspect.MetricValueWithUintValue(s.UnknownProtocolRcvdPackets.Value())},
 			{Key: "MalformedRcvdPackets", Value: inspect.MetricValueWithUintValue(s.MalformedRcvdPackets.Value())},
 			{Key: "DroppedPackets", Value: inspect.MetricValueWithUintValue(s.DroppedPackets.Value())},
 		},
-	}, cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Metric{})); diff != "" {
+	}, v.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Metric{})); diff != "" {
 		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
 	}
 }
@@ -82,7 +82,7 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 		value: &ns.endpoints,
 	}
 	children := v.ListChildren()
-	if diff := cmp.Diff(children, []string(nil)); diff != "" {
+	if diff := cmp.Diff([]string(nil), children); diff != "" {
 		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
 	}
 
@@ -95,7 +95,7 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 
 	children = v.ListChildren()
 	sort.Strings(children)
-	if diff := cmp.Diff(children, []string{strconv.Itoa(key1), strconv.Itoa(key2)}); diff != "" {
+	if diff := cmp.Diff([]string{strconv.Itoa(key1), strconv.Itoa(key2)}, children); diff != "" {
 		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
 	}
 
@@ -140,31 +140,31 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 		}
 
 		epChildren := child.ListChildren()
-		if diff := cmp.Diff(epChildren, []string{
+		if diff := cmp.Diff([]string{
 			"Stats",
-		}); diff != "" {
+		}, epChildren); diff != "" {
 			t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
 		}
 		for _, c := range epChildren {
 			if c == "Stats" {
 				statsChild := child.GetChild(c)
-				if diff := cmp.Diff(statsChild.ListChildren(), []string{
+				if diff := cmp.Diff([]string{
 					"ReceiveErrors",
 					"ReadErrors",
 					"SendErrors",
 					"WriteErrors",
-				}); diff != "" {
+				}, statsChild.ListChildren()); diff != "" {
 					t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
 				}
 
 				// Compare against the expected inspect objects.
-				if diff := cmp.Diff(statsChild.ReadData(), expectInspectObj, cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Metric{}, inspect.Property{})); diff != "" {
+				if diff := cmp.Diff(expectInspectObj, statsChild.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Metric{}, inspect.Property{})); diff != "" {
 					t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
 				}
 			}
 		}
 
-		if diff := cmp.Diff(child.ReadData(), inspect.Object{
+		if diff := cmp.Diff(inspect.Object{
 			Name: name,
 			Properties: []inspect.Property{
 				{Key: "NetworkProtocol", Value: inspect.PropertyValueWithStr("IPv4")},
@@ -176,7 +176,7 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 				{Key: "BindNICID", Value: inspect.PropertyValueWithStr("0")},
 				{Key: "RegisterNICID", Value: inspect.PropertyValueWithStr("0")},
 			},
-		}, cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Metric{}, inspect.Property{})); diff != "" {
+		}, child.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Metric{}, inspect.Property{})); diff != "" {
 			t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
 		}
 	}
@@ -187,7 +187,7 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 		return true
 	})
 	children = v.ListChildren()
-	if diff := cmp.Diff(children, []string(nil)); diff != "" {
+	if diff := cmp.Diff([]string(nil), children); diff != "" {
 		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
 	}
 }
@@ -200,9 +200,9 @@ func TestNicInfoMapInspectImpl(t *testing.T) {
 		},
 	}
 	children := v.ListChildren()
-	if diff := cmp.Diff(children, []string{
+	if diff := cmp.Diff([]string{
 		"1", "2",
-	}); diff != "" {
+	}, children); diff != "" {
 		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
 	}
 	for _, childName := range children {
@@ -218,9 +218,9 @@ func TestNicInfoMapInspectImpl(t *testing.T) {
 		t.Errorf("got GetChild(%s) = %s, want = %v", childName, child, nil)
 	}
 
-	if diff := cmp.Diff(v.ReadData(), inspect.Object{
+	if diff := cmp.Diff(inspect.Object{
 		Name: "NICs",
-	}, cmpopts.IgnoreUnexported(inspect.Object{})); diff != "" {
+	}, v.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{})); diff != "" {
 		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
 	}
 }
@@ -230,9 +230,9 @@ func TestNicInfoInspectImpl(t *testing.T) {
 		name: "doesn't matter",
 	}
 	children := v.ListChildren()
-	if diff := cmp.Diff(children, []string{
+	if diff := cmp.Diff([]string{
 		"Stats",
-	}); diff != "" {
+	}, children); diff != "" {
 		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
 	}
 	for _, childName := range children {
@@ -252,7 +252,7 @@ func TestNicInfoInspectImpl(t *testing.T) {
 	v.value.Flags.Loopback = true
 	v.value.dnsServers = []tcpip.Address{"\x01\x02\x03\x04"}
 
-	if diff := cmp.Diff(v.ReadData(), inspect.Object{
+	if diff := cmp.Diff(inspect.Object{
 		Name: v.name,
 		Properties: []inspect.Property{
 			{Key: "Name", Value: inspect.PropertyValueWithStr(v.value.Name)},
@@ -268,7 +268,7 @@ func TestNicInfoInspectImpl(t *testing.T) {
 		Metrics: []inspect.Metric{
 			{Key: "MTU", Value: inspect.MetricValueWithUintValue(uint64(v.value.MTU))},
 		},
-	}, cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{})); diff != "" {
+	}, v.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{})); diff != "" {
 		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
 	}
 }
@@ -278,9 +278,9 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 		name: "doesn't matter",
 	}
 	children := v.ListChildren()
-	if diff := cmp.Diff(children, []string{
+	if diff := cmp.Diff([]string{
 		"Stats",
-	}); diff != "" {
+	}, children); diff != "" {
 		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
 	}
 	for _, childName := range children {
@@ -296,7 +296,7 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 		t.Errorf("got GetChild(%s) = %s, want = %v", childName, child, nil)
 	}
 
-	if diff := cmp.Diff(v.ReadData(), inspect.Object{
+	if diff := cmp.Diff(inspect.Object{
 		Name: v.name,
 		Properties: []inspect.Property{
 			{Key: "State", Value: inspect.PropertyValueWithStr(v.info.State.String())},
@@ -307,7 +307,7 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 			{Key: "Backoff", Value: inspect.PropertyValueWithStr(v.info.Backoff.String())},
 			{Key: "Retransmission", Value: inspect.PropertyValueWithStr(v.info.Retransmission.String())},
 		},
-	}, cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{})); diff != "" {
+	}, v.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{})); diff != "" {
 		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
 	}
 }
