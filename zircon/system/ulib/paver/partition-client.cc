@@ -145,6 +145,10 @@ zx_status_t BlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
 }
 
 zx_status_t BlockPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size) {
+  return Write(vmo, vmo_size, 0);
+}
+
+zx_status_t BlockPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size, size_t dev_offset) {
   vmoid_t vmoid;
   zx_status_t status = Setup(vmo, &vmoid);
   if (status != ZX_OK) {
@@ -163,7 +167,7 @@ zx_status_t BlockPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size) {
   }
   request.length = static_cast<uint32_t>(length);
   request.vmo_offset = 0;
-  request.dev_offset = 0;
+  request.dev_offset = dev_offset;
 
   if ((status = client_->Transaction(&request, 1)) != ZX_OK) {
     ERROR("Error writing partition data: %s\n", zx_status_get_string(status));

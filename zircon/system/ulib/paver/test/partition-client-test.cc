@@ -4,12 +4,22 @@
 
 #include "partition-client.h"
 
+#include <lib/devmgr-integration-test/fixture.h>
+#include <lib/driver-integration-test/fixture.h>
+#include <lib/fdio/fdio.h>
+#include <string.h>
+#include <zircon/hw/gpt.h>
+
 #include <memory>
 #include <vector>
 
 #include <zxtest/zxtest.h>
 
+#include "test-utils.h"
 #include "zircon/errors.h"
+
+using devmgr_integration_test::RecursiveWaitForFile;
+using driver_integration_test::IsolatedDevmgr;
 
 class FakePartitionClient final : public paver::PartitionClient {
  public:
@@ -519,4 +529,48 @@ TEST(AstroBootloaderPartitionClientTest, GetChannel) {
 TEST(AstroBootloaderPartitionClientTest, BlockFd) {
   paver::AstroBootloaderPartitionClient client(nullptr, nullptr);
   ASSERT_EQ(client.block_fd(), fbl::unique_fd());
+}
+
+class SherlockBootloaderPartitionClientTest : public zxtest::Test {
+ protected:
+  SherlockBootloaderPartitionClientTest() {
+    IsolatedDevmgr::Args args;
+    args.driver_search_paths.push_back("/boot/driver");
+    args.disable_block_watcher = false;
+    ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
+
+    fbl::unique_fd fd;
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
+  }
+
+  IsolatedDevmgr devmgr_;
+};
+
+TEST_F(SherlockBootloaderPartitionClientTest, Write) {
+  constexpr uint8_t kEmptyType[GPT_GUID_LEN] = GUID_EMPTY_VALUE;
+  char ref[1024] = {0};
+  strcpy(&ref[512], "Test");
+
+  zx::vmo vmo_write;
+  ASSERT_OK(zx::vmo::create(1024, 0, &vmo_write));
+  ASSERT_OK(vmo_write.write("Test", 0, sizeof("Test")));
+
+  std::unique_ptr<BlockDevice> gpt_dev;
+  ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, 2, 512, &gpt_dev));
+
+  zx::channel chan;
+  ASSERT_OK(fdio_get_service_handle(gpt_dev->fd(), chan.reset_and_get_address()));
+
+  paver::SherlockBootloaderPartitionClient client(std::move(chan));
+  ASSERT_OK(client.Write(vmo_write, 512));
+
+  zx::vmo vmo_read;
+  ASSERT_OK(zx::vmo::create(1024, 0, &vmo_read));
+  ASSERT_OK(client.Read(vmo_read, 1024));
+
+  char buf[1024] = {0};
+  ASSERT_OK(vmo_read.read(buf, 0, 1024));
+
+  ASSERT_EQ(std::memcmp(buf, ref, 1024), 0);
 }

@@ -1,7 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_PAVER_PARTITION_CLIENT_H_
+#define ZIRCON_SYSTEM_ULIB_PAVER_PARTITION_CLIENT_H_
 
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/hardware/skipblock/llcpp/fidl.h>
@@ -58,6 +59,7 @@ class BlockPartitionClient final : public PartitionClient {
   zx_status_t GetPartitionSize(size_t* out_size) final;
   zx_status_t Read(const zx::vmo& vmo, size_t size) final;
   zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size, size_t dev_offset);
   zx_status_t Trim() final;
   zx_status_t Flush() final;
   zx::channel GetChannel() final;
@@ -211,4 +213,34 @@ class AstroBootloaderPartitionClient final : public PartitionClient {
   std::unique_ptr<PartitionClient> tpl_;
 };
 
+class SherlockBootloaderPartitionClient final : public PartitionClient {
+ public:
+  explicit SherlockBootloaderPartitionClient(zx::channel partition)
+      : client_(std::move(partition)) {}
+
+  zx_status_t GetBlockSize(size_t* out_size) final { return client_.GetBlockSize(out_size); }
+  zx_status_t GetPartitionSize(size_t* out_size) final {
+    return client_.GetPartitionSize(out_size);
+  }
+  zx_status_t Read(const zx::vmo& vmo, size_t size) final { return client_.Read(vmo, size); }
+  zx_status_t Write(const zx::vmo& vmo, size_t vmo_size) final {
+    return client_.Write(vmo, vmo_size, 1);
+  }
+  zx_status_t Trim() final { return client_.Trim(); }
+  zx_status_t Flush() final { return client_.Flush(); }
+  zx::channel GetChannel() final { return client_.GetChannel(); }
+  fbl::unique_fd block_fd() final { return client_.block_fd(); }
+
+  // No copy, no move.
+  SherlockBootloaderPartitionClient(const SherlockBootloaderPartitionClient&) = delete;
+  SherlockBootloaderPartitionClient& operator=(const SherlockBootloaderPartitionClient&) = delete;
+  SherlockBootloaderPartitionClient(SherlockBootloaderPartitionClient&&) = delete;
+  SherlockBootloaderPartitionClient& operator=(SherlockBootloaderPartitionClient&&) = delete;
+
+ private:
+  BlockPartitionClient client_;
+};
+
 }  // namespace paver
+
+#endif  // ZIRCON_SYSTEM_ULIB_PAVER_PARTITION_CLIENT_H_

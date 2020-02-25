@@ -1383,14 +1383,14 @@ zx_status_t SherlockPartitioner::FindPartition(
       if (status != ZX_OK) {
         return status;
       }
-      auto boot0 = std::make_unique<BlockPartitionClient>(std::move(chan));
+      auto boot0 = std::make_unique<SherlockBootloaderPartitionClient>(std::move(chan));
 
       const uint8_t boot1_type[GPT_GUID_LEN] = GUID_EMMC_BOOT2_VALUE;
       status = OpenBlockPartition(gpt_->devfs_root(), nullptr, boot1_type, ZX_SEC(5), &chan);
       if (status != ZX_OK) {
         return status;
       }
-      auto boot1 = std::make_unique<BlockPartitionClient>(std::move(chan));
+      auto boot1 = std::make_unique<SherlockBootloaderPartitionClient>(std::move(chan));
 
       std::vector<std::unique_ptr<PartitionClient>> partitions;
       partitions.push_back(std::move(boot0));
