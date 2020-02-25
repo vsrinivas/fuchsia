@@ -40,11 +40,11 @@ pub trait Installer {
     /// Perform the installation as given by the install plan (as parsed form the Omaha server
     /// response).  If given, provide progress via the observer, and a final finished or Error
     /// indication via the Future.
-    fn perform_install(
-        &mut self,
+    fn perform_install<'a>(
+        &'a mut self,
         install_plan: &Self::InstallPlan,
-        observer: Option<&dyn ProgressObserver>,
-    ) -> BoxFuture<'_, Result<(), Self::Error>>;
+        observer: Option<&'a dyn ProgressObserver>,
+    ) -> BoxFuture<'a, Result<(), Self::Error>>;
 
     /// Perform a reboot of the system (in whichever manner that the installer needs to perform
     /// a reboot.  This fn may not get an opportunity to return.
@@ -56,18 +56,18 @@ pub trait Installer {
 /// The StateMachine may pass an implementation of this trait to the Installer, so that it can
 /// receive reports of the progress of the installation of the update.
 ///
-pub trait ProgressObserver {
+pub trait ProgressObserver: Sync {
     /// Receive progress on the installation.
     ///
     /// operation - The current operation of the install (if applicable)
-    /// progress - 0 to 100, current percentage
+    /// progress - 0 to 10,000, amount complete out of 10,000.
     /// total_size - Maximal size of the download of the install
     /// size_so_far - Downloaded data so far (may move forward erratically based on cached or
     ///               previously downloaded data)
     fn receive_progress(
-        &mut self,
+        &self,
         operation: Option<&str>,
-        progress: u32,
+        progress: u16,
         total_size: Option<u64>,
         size_so_far: Option<u64>,
     );

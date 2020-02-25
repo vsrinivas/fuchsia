@@ -58,6 +58,8 @@ rustc_binary("bin") {
 
   test_deps = [
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pretty_assertions",
   ]
 

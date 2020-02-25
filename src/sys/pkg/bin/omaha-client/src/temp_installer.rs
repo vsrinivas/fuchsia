@@ -8,9 +8,10 @@
 use crate::install_plan::FuchsiaInstallPlan;
 use anyhow::anyhow;
 use fidl_fuchsia_sys::LauncherProxy;
+use fuchsia_async as fasync;
 use fuchsia_component::client::{connect_to_service, launcher, AppBuilder, ExitStatus};
-use fuchsia_zircon as zx;
-use futures::future::BoxFuture;
+use fuchsia_zircon::{self as zx, Duration};
+use futures::future::{select, BoxFuture, Either};
 use futures::prelude::*;
 use omaha_client::{
     installer::{Installer, ProgressObserver},
@@ -55,17 +56,17 @@ impl Installer for FuchsiaInstaller {
     type InstallPlan = FuchsiaInstallPlan;
     type Error = FuchsiaInstallError;
 
-    fn perform_install(
-        &mut self,
+    fn perform_install<'a>(
+        &'a mut self,
         install_plan: &FuchsiaInstallPlan,
-        _observer: Option<&dyn ProgressObserver>,
-    ) -> BoxFuture<'_, Result<(), FuchsiaInstallError>> {
+        observer: Option<&'a dyn ProgressObserver>,
+    ) -> BoxFuture<'a, Result<(), FuchsiaInstallError>> {
         let url = install_plan.url.to_string();
         let initiator = match install_plan.install_source {
             InstallSource::ScheduledTask => "automatic",
             InstallSource::OnDemand => "manual",
         };
-        async move {
+        let system_updater = async move {
             AppBuilder::new("fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx")
                 .arg("-initiator")
                 .arg(initiator)
@@ -76,6 +77,21 @@ impl Installer for FuchsiaInstaller {
                 .await?
                 .ok()
                 .map_err(FuchsiaInstallError::Installer)
+        }
+        .boxed();
+        let progress_timer = make_progress_timer(observer.clone()).boxed();
+        // Send 0 outside of timer, so that 0 is always sent even if timer is never
+        // scheduled. Allows unit tests to be deterministic.
+        observer.map(|o| o.receive_progress(None, 0, None, None));
+        async move {
+            let update_res = match select(system_updater, progress_timer).await {
+                Either::Left((update_res, _)) => update_res,
+                Either::Right(((), system_updater)) => system_updater.await,
+            };
+            if update_res.is_ok() {
+                observer.map(|o| o.receive_progress(None, 10_000, None, None));
+            }
+            update_res
         }
         .boxed()
     }
@@ -93,73 +109,176 @@ impl Installer for FuchsiaInstaller {
     }
 }
 
+const EXPECTED_UPDATE_DURATION: Duration = Duration::from_minutes(4);
+const TIMER_CHUNKS: u16 = 90;
+const TIMER_MAX_PROGRESS: u16 = 9_000;
+
+async fn make_progress_timer(observer: Option<&dyn ProgressObserver>) {
+    let observer = if let Some(observer) = observer {
+        observer
+    } else {
+        return ();
+    };
+
+    fasync::Interval::new(EXPECTED_UPDATE_DURATION / TIMER_CHUNKS)
+        .enumerate()
+        .take(TIMER_CHUNKS as usize)
+        .map(|(i, ())| {
+            observer.receive_progress(
+                None,
+                (i as u16 + 1) * (TIMER_MAX_PROGRESS / TIMER_CHUNKS),
+                None,
+                None,
+            )
+        })
+        .collect::<()>()
+        .await;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_sys::{LaunchInfo, LauncherRequest, TerminationReason};
-    use fuchsia_async as fasync;
+    use fidl_fuchsia_sys::{LaunchInfo, LauncherRequest, LauncherRequestStream, TerminationReason};
+    use matches::assert_matches;
+    use parking_lot::Mutex;
+    use std::task::Poll;
 
     const TEST_URL: &str = "fuchsia-pkg://fuchsia.com/update/0";
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_perform_install() {
-        let (mut installer, mut stream) = FuchsiaInstaller::new_mock();
-        let plan = FuchsiaInstallPlan {
+    fn install_plan() -> FuchsiaInstallPlan {
+        FuchsiaInstallPlan {
             url: TEST_URL.parse().unwrap(),
             install_source: InstallSource::OnDemand,
-        };
-        let installer_fut = async move {
-            installer.perform_install(&plan, None).await.unwrap();
-        };
-        let stream_fut = async move {
-            match stream.next().await.unwrap() {
-                Ok(LauncherRequest::CreateComponent {
-                    launch_info: LaunchInfo { url, arguments, .. },
-                    controller: Some(controller),
-                    ..
-                }) => {
-                    assert_eq!(url, "fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx");
-                    assert_eq!(
-                        arguments,
-                        Some(vec![
-                            "-initiator".to_string(),
-                            "manual".to_string(),
-                            "-update".to_string(),
-                            TEST_URL.to_string(),
-                            "-reboot=false".to_string()
-                        ])
-                    );
-                    let (_stream, handle) = controller.into_stream_and_control_handle().unwrap();
-                    handle.send_on_terminated(0, TerminationReason::Exited).unwrap();
-                }
-                request => panic!("Unexpected request: {:?}", request),
+        }
+    }
+
+    async fn mock_launcher(mut reqs: LauncherRequestStream, exit_code: i64) {
+        match reqs.next().await.unwrap() {
+            Ok(LauncherRequest::CreateComponent {
+                launch_info: LaunchInfo { url, arguments, .. },
+                controller: Some(controller),
+                ..
+            }) => {
+                assert_eq!(url, "fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx");
+                assert_eq!(
+                    arguments,
+                    Some(vec![
+                        "-initiator".to_string(),
+                        "manual".to_string(),
+                        "-update".to_string(),
+                        TEST_URL.to_string(),
+                        "-reboot=false".to_string()
+                    ])
+                );
+                let (_stream, handle) = controller.into_stream_and_control_handle().unwrap();
+                handle.send_on_terminated(exit_code, TerminationReason::Exited).unwrap();
             }
+            request => panic!("Unexpected request: {:?}", request),
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_perform_install() {
+        let (mut installer, stream) = FuchsiaInstaller::new_mock();
+        let installer_fut = async move {
+            installer.perform_install(&install_plan(), None).await.unwrap();
         };
-        future::join(installer_fut, stream_fut).await;
+        let launcher_fut = mock_launcher(stream, 0);
+        future::join(installer_fut, launcher_fut).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_install_error() {
-        let (mut installer, mut stream) = FuchsiaInstaller::new_mock();
-        let plan = FuchsiaInstallPlan {
-            url: TEST_URL.parse().unwrap(),
-            install_source: InstallSource::OnDemand,
-        };
+        let (mut installer, stream) = FuchsiaInstaller::new_mock();
         let installer_fut = async move {
-            match installer.perform_install(&plan, None).await {
+            match installer.perform_install(&install_plan(), None).await {
                 Err(FuchsiaInstallError::Installer(_)) => {} // expected
                 result => panic!("Unexpected result: {:?}", result),
             }
         };
-        let stream_fut = async move {
-            match stream.next().await.unwrap() {
-                Ok(LauncherRequest::CreateComponent { controller: Some(controller), .. }) => {
-                    let (_stream, handle) = controller.into_stream_and_control_handle().unwrap();
-                    handle.send_on_terminated(1, TerminationReason::Exited).unwrap();
-                }
-                request => panic!("Unexpected request: {:?}", request),
-            }
-        };
-        future::join(installer_fut, stream_fut).await;
+        let launcher_fut = mock_launcher(stream, 1);
+        future::join(installer_fut, launcher_fut).await;
+    }
+
+    struct MockProgressObserver {
+        progresses: Mutex<Vec<u16>>,
+    }
+    impl MockProgressObserver {
+        fn new() -> Self {
+            Self { progresses: Mutex::new(vec![]) }
+        }
+    }
+    impl ProgressObserver for MockProgressObserver {
+        fn receive_progress(
+            &self,
+            operation: Option<&str>,
+            progress: u16,
+            total_size: Option<u64>,
+            size_so_far: Option<u64>,
+        ) {
+            assert_eq!(operation, None);
+            assert_eq!(total_size, None);
+            assert_eq!(size_so_far, None);
+            self.progresses.lock().push(progress);
+        }
+    }
+
+    #[test]
+    fn test_progress_timer_sends_all_updates() {
+        let mut exec = fasync::Executor::new_with_fake_time().unwrap();
+        let (mut installer, _stream) = FuchsiaInstaller::new_mock();
+        let observer = MockProgressObserver::new();
+
+        let mut installer_fut = installer.perform_install(&install_plan(), Some(&observer));
+
+        // Launcher's `_stream` is never handled, so installation will never complete.
+        assert_matches!(exec.run_until_stalled(&mut installer_fut), Poll::Pending);
+        while exec.wake_next_timer().is_some() {
+            assert_matches!(exec.run_until_stalled(&mut installer_fut), Poll::Pending);
+        }
+        assert_eq!(*observer.progresses.lock(), (0..=9000).step_by(100).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn test_progress_if_install_finishes_before_progress_timer_starts() {
+        let mut exec = fasync::Executor::new_with_fake_time().unwrap();
+        let (mut installer, stream) = FuchsiaInstaller::new_mock();
+        let observer = MockProgressObserver::new();
+        let launcher_fut = mock_launcher(stream, 0);
+
+        let installer_fut = installer.perform_install(&install_plan(), Some(&observer));
+
+        // Executor's fake time is never changed and timers are never manually awoken, so
+        // progress timer will never send progress updates.
+        assert_matches!(
+            exec.run_until_stalled(&mut future::join(installer_fut, launcher_fut).boxed()),
+            Poll::Ready((Ok(()), ()))
+        );
+        assert_eq!(*observer.progresses.lock(), vec![0, 10_000]);
+    }
+
+    #[test]
+    fn test_progress_if_install_finishes_before_progress_timer_finishes() {
+        let mut exec = fasync::Executor::new_with_fake_time().unwrap();
+        let (mut installer, stream) = FuchsiaInstaller::new_mock();
+        let observer = MockProgressObserver::new();
+        let launcher_fut = mock_launcher(stream, 0);
+
+        let mut installer_fut = installer.perform_install(&install_plan(), Some(&observer));
+
+        assert_matches!(exec.run_until_stalled(&mut installer_fut), Poll::Pending);
+        exec.set_fake_time(exec.now() + (EXPECTED_UPDATE_DURATION / 10));
+        while exec.wake_expired_timers() {
+            assert_matches!(exec.run_until_stalled(&mut installer_fut), Poll::Pending);
+        }
+
+        assert_matches!(
+            exec.run_until_stalled(&mut future::join(installer_fut, launcher_fut).boxed()),
+            Poll::Ready((Ok(()), ()))
+        );
+        assert_eq!(
+            *observer.progresses.lock(),
+            vec![0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 10000]
+        );
     }
 }
