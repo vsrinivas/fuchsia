@@ -73,6 +73,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   };
   AllocationResult allocation_result();
 
+  Device* parent_device() const { return parent_device_; }
+
  private:
   LogicalBufferCollection(Device* parent_device);
 

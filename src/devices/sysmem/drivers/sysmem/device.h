@@ -6,6 +6,7 @@
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_DEVICE_H_
 
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/closure-queue/closure_queue.h>
 #include <lib/zx/bti.h>
@@ -32,7 +33,7 @@
 namespace sysmem_driver {
 
 class Device;
-using DdkDeviceType = ddk::Device<Device, ddk::Messageable>;
+using DdkDeviceType = ddk::Device<Device, ddk::Messageable, ddk::UnbindableNew>;
 
 class Driver;
 class BufferCollectionToken;
@@ -59,6 +60,7 @@ class Device final : public DdkDeviceType,
 
   // Ddk mixin implementations.
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+  void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease() {
     // Don't do anything. The sysmem driver assumes it's alive for the
     // lifetime of the system.
@@ -94,11 +96,9 @@ class Device final : public DdkDeviceType,
 
   const sysmem_protocol_t* proto() const { return &in_proc_sysmem_protocol_; }
   const zx_device_t* device() const { return zxdev_; }
-  async_dispatcher_t* dispatcher() { return dispatcher_; }
+  async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
 
  private:
-  void Post(fit::closure to_run);
-
   class SecureMemConnection {
    public:
     SecureMemConnection(zx::channel connection, std::unique_ptr<async::Wait> wait_for_close);
@@ -110,6 +110,8 @@ class Device final : public DdkDeviceType,
   };
 
   Driver* parent_driver_ = nullptr;
+  async::Loop loop_;
+  thrd_t loop_thrd_;
 
   ddk::PDevProtocolClient pdev_;
   zx::bti bti_;
@@ -134,6 +136,10 @@ class Device final : public DdkDeviceType,
   // TODO(dustingreen): Consider unordered_map for this and some of above.
   std::map<fuchsia_sysmem_HeapType, MemoryAllocator*> secure_allocators_;
 
+  // This flag is used to determine if the closing of the current secure mem
+  // connection is an error (true), or expected (false).
+  std::shared_ptr<std::atomic_bool> current_close_is_abort_;
+
   // This has the connection to the securemem driver, if any.  Once allocated this is supposed to
   // stay allocated unless mexec is about to happen.  The server end takes care of handling
   // DdkSuspendNew() to allow mexec to work.  For example, by calling secmem TA.  This channel will
@@ -142,9 +148,6 @@ class Device final : public DdkDeviceType,
   std::unique_ptr<SecureMemConnection> secure_mem_;
 
   std::unique_ptr<MemoryAllocator> contiguous_system_ram_allocator_;
-
-  async_dispatcher_t* dispatcher_ = nullptr;
-  ClosureQueue closure_queue_;
 };
 
 }  // namespace sysmem_driver

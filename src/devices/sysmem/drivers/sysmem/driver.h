@@ -11,13 +11,7 @@
 namespace sysmem_driver {
 
 // Placeholder Driver ctx structure.  Not used for anything yet.
-class Driver {
- public:
-  async_dispatcher_t* dispatcher;
-  thrd_t dispatcher_thrd;
-
- private:
-};
+class Driver {};
 
 }  // namespace sysmem_driver
 

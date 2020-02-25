@@ -39,8 +39,6 @@ void TestBase::SetUp() {
   protocols[1] = {ZX_PROTOCOL_PBUS, *reinterpret_cast<const fake_ddk::Protocol*>(pbus_.proto())};
   protocols[2] = {ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())};
   sysmem_ctx_ = std::make_unique<sysmem_driver::Driver>();
-  sysmem_ctx_->dispatcher = loop_.dispatcher();
-  sysmem_ctx_->dispatcher_thrd = loop_thrd_;
   sysmem_ = std::make_unique<sysmem_driver::Device>(fake_ddk::kFakeParent, sysmem_ctx_.get());
   protocols[3] = {ZX_PROTOCOL_SYSMEM,
                   *reinterpret_cast<const fake_ddk::Protocol*>(sysmem_->proto())};

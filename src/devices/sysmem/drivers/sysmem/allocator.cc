@@ -28,7 +28,8 @@ const fuchsia_sysmem_Allocator_ops_t Allocator::kOps = {
 };
 
 Allocator::Allocator(Device* parent_device)
-    : FidlServer("sysmem allocator", kConcurrencyCap), parent_device_(parent_device) {
+    : FidlServer(parent_device->dispatcher(), "sysmem allocator", kConcurrencyCap),
+      parent_device_(parent_device) {
   // nothing else to do here
 }
 

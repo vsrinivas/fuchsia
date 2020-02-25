@@ -109,7 +109,7 @@ zx::channel BufferCollectionToken::TakeBufferCollectionRequest() {
 BufferCollectionToken::BufferCollectionToken(Device* parent_device,
                                              fbl::RefPtr<LogicalBufferCollection> parent,
                                              uint32_t rights_attenuation_mask)
-    : FidlServer("BufferCollectionToken", kConcurrencyCap),
+    : FidlServer(parent_device->dispatcher(), "BufferCollectionToken", kConcurrencyCap),
       parent_device_(parent_device),
       parent_(parent),
       rights_attenuation_mask_(rights_attenuation_mask) {

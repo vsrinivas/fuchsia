@@ -291,7 +291,8 @@ fbl::RefPtr<LogicalBufferCollection> BufferCollection::parent_shared() { return 
 bool BufferCollection::is_done() { return is_done_; }
 
 BufferCollection::BufferCollection(fbl::RefPtr<LogicalBufferCollection> parent)
-    : FidlServer("BufferCollection", kConcurrencyCap), parent_(parent) {
+    : FidlServer(parent->parent_device()->dispatcher(), "BufferCollection", kConcurrencyCap),
+      parent_(parent) {
   ZX_DEBUG_ASSERT(parent_);
 }
 

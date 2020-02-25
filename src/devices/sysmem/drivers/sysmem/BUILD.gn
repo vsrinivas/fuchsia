@@ -34,6 +34,7 @@ source_set("sysmem_common_srcs") {
     "//zircon/public/lib/fit",
     "//zircon/public/lib/image-format",
     "//zircon/public/lib/region-alloc",
+    "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
