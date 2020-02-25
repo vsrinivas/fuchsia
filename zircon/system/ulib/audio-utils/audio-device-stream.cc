@@ -324,6 +324,18 @@ zx_status_t AudioDeviceStream::GetString(audio_stream_string_id_t id,
   return DoNoFailCall(stream_ch_, req, out_str);
 }
 
+zx_status_t AudioDeviceStream::GetClockDomain(
+    audio_stream_cmd_get_clock_domain_resp_t* out_domain) const {
+  if (out_domain == nullptr)
+    return ZX_ERR_INVALID_ARGS;
+
+  audio_stream_cmd_get_clock_domain_req req;
+  req.hdr.cmd = AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN;
+  req.hdr.transaction_id = 1;
+
+  return DoNoFailCall(stream_ch_, req, out_domain);
+}
+
 zx_status_t AudioDeviceStream::PlugMonitor(float duration, PlugMonitorCallback* monitor) {
   const double duration_ns = static_cast<double>(duration) * ZX_SEC(1);
   const zx_time_t deadline = zx_deadline_after(static_cast<zx_duration_t>(duration_ns));

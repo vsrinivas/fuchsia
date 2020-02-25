@@ -17,6 +17,9 @@ namespace media::audio::test {
 
 constexpr size_t kUniqueIdLength = 16;
 
+// Except for sentinel value -1 (external clock domain), negative clock domain values are invalid
+constexpr int32_t kInvalidClockDomain = -2;
+
 enum DeviceType { Input, Output };
 
 class AudioDriverTest : public TestFixture {
@@ -33,6 +36,7 @@ class AudioDriverTest : public TestFixture {
   void RequestUniqueId();
   void RequestManufacturerString();
   void RequestProductString();
+  void RequestClockDomain();
   void RequestGain();
   void RequestSetGain();
   void RequestSetGain(audio_set_gain_flags_t flags, float gain_db);
@@ -56,6 +60,7 @@ class AudioDriverTest : public TestFixture {
                               audio_cmd_t expected_command);
 
   void HandleGetUniqueIdResponse(const audio_stream_cmd_get_unique_id_resp_t& response);
+  void HandleGetClockDomainResponse(const audio_stream_cmd_get_clock_domain_resp_t& response);
   void HandleGetStringResponse(const audio_stream_cmd_get_string_resp_t& response);
 
   void HandleGetGainResponse(const audio_stream_cmd_get_gain_resp_t& response);
@@ -106,6 +111,7 @@ class AudioDriverTest : public TestFixture {
   zx_txid_t unique_id_transaction_id_ = AUDIO_INVALID_TRANSACTION_ID;
   zx_txid_t manufacturer_string_transaction_id_ = AUDIO_INVALID_TRANSACTION_ID;
   zx_txid_t product_string_transaction_id_ = AUDIO_INVALID_TRANSACTION_ID;
+  zx_txid_t get_clock_domain_transaction_id_ = AUDIO_INVALID_TRANSACTION_ID;
   zx_txid_t get_gain_transaction_id_ = AUDIO_INVALID_TRANSACTION_ID;
   zx_txid_t get_formats_transaction_id_ = AUDIO_INVALID_TRANSACTION_ID;
 
@@ -122,6 +128,8 @@ class AudioDriverTest : public TestFixture {
   std::array<uint8_t, kUniqueIdLength> unique_id_;
   std::string manufacturer_;
   std::string product_;
+
+  int32_t clock_domain_ = kInvalidClockDomain;
 
   bool cur_mute_ = false;
   bool can_mute_ = false;
@@ -168,6 +176,7 @@ class AudioDriverTest : public TestFixture {
   bool received_get_unique_id_ = false;
   bool received_get_string_manufacturer_ = false;
   bool received_get_string_product_ = false;
+  bool received_get_clock_domain_ = false;
   bool received_get_gain_ = false;
   bool received_get_formats_ = false;
 

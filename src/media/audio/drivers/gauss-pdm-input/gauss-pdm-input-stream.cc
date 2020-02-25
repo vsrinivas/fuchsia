@@ -191,6 +191,7 @@ zx_status_t GaussPdmInputStream::ProcessStreamChannel(dispatcher::Channel* chann
     audio_proto::PlugDetectReq plug_detect;
     audio_proto::GetUniqueIdReq get_unique_id;
     audio_proto::GetStringReq get_string;
+    audio_proto::GetClockDomainReq get_clock_domain;
   } req;
 
   static_assert(sizeof(req) <= 256,
@@ -215,6 +216,7 @@ zx_status_t GaussPdmInputStream::ProcessStreamChannel(dispatcher::Channel* chann
     HREQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, OnPlugDetect, true);
     HREQ(AUDIO_STREAM_CMD_GET_UNIQUE_ID, get_unique_id, OnGetUniqueId, false);
     HREQ(AUDIO_STREAM_CMD_GET_STRING, get_string, OnGetString, false);
+    HREQ(AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN, get_clock_domain, OnGetClockDomain, false);
     default:
       zxlogf(ERROR, "Unrecognized stream command 0x%04x\n", req.hdr.cmd);
       return ZX_ERR_NOT_SUPPORTED;
@@ -522,6 +524,18 @@ zx_status_t GaussPdmInputStream::OnGetString(dispatcher::Channel* channel,
     resp.result = ZX_OK;
     resp.strlen = fbl::min<uint32_t>(res, sizeof(resp.str) - 1);
   }
+
+  return channel->Write(&resp, sizeof(resp));
+}
+
+zx_status_t GaussPdmInputStream::OnGetClockDomain(dispatcher::Channel* channel,
+                                                  const audio_proto::GetClockDomainReq& req) {
+  audio_proto::GetClockDomainResp resp;
+
+  resp.hdr = req.hdr;
+  // TODO(mpuryear): this HW actually does run on a different domain. Communicate with the board
+  // driver, determine the clock domain, return it here.
+  resp.clock_domain = 0;
 
   return channel->Write(&resp, sizeof(resp));
 }

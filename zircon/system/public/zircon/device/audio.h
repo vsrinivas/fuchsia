@@ -29,6 +29,7 @@ typedef uint32_t audio_cmd_t;
 #define AUDIO_STREAM_CMD_PLUG_DETECT ((audio_cmd_t)0x1004)
 #define AUDIO_STREAM_CMD_GET_UNIQUE_ID ((audio_cmd_t)0x1005)
 #define AUDIO_STREAM_CMD_GET_STRING ((audio_cmd_t)0x1006)
+#define AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN ((audio_cmd_t)0x1007)
 
 // Async notifications sent on the stream channel.
 #define AUDIO_STREAM_PLUG_DETECT_NOTIFY ((audio_cmd_t)0x2000)
@@ -350,13 +351,38 @@ typedef struct audio_stream_cmd_get_string_resp {
 static_assert(sizeof(audio_stream_cmd_get_string_resp_t) == 256,
               "audio_stream_cmd_get_string_resp_t must be exactly 256 bytes");
 
+// AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN
+//
+// Fetch the hardware clock domain for this device.
+// On products containing audio devices that are not locked to the local system clock, the board
+// driver will provide a clock tree entry to the audio driver at driver startup time. From that,
+// the audio driver can extract the clock domain and provide it to the sender, upon receiving this
+// command. This domain value is all that the sender needs, in order to locate controls for that
+// clock domain in the clock tree and trim that clock domain's rate.
+// On products containing audio devices that are locked to the local system monotonic clock, a clock
+// domain value of 0 should be returned.
+//
+// Must not be used with the NO_ACK flag.
+typedef struct audio_stream_cmd_get_clock_domain_req {
+  audio_cmd_hdr_t hdr;
+} audio_stream_cmd_get_clock_domain_req_t;
+
+typedef struct audio_stream_cmd_get_clock_domain_resp {
+  audio_cmd_hdr_t hdr;
+  int32_t clock_domain;
+} audio_stream_cmd_get_clock_domain_resp_t;
+
+//
+// Ring-buffer commands
+//
+
 // AUDIO_RB_CMD_GET_FIFO_DEPTH
 //
 // TODO(johngro) : Is calling this "FIFO" depth appropriate?  Should it be some
 // direction neutral form of something like "max-read-ahead-amount" or something
 // instead?
 //
-// May be not used with the NO_ACK flag.
+// Must not be used with the NO_ACK flag.
 typedef struct audio_rb_cmd_get_fifo_depth_req {
   audio_cmd_hdr_t hdr;
 } audio_rb_cmd_get_fifo_depth_req_t;

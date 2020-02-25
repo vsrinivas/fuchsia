@@ -253,6 +253,16 @@ protocol Configuration {
     /// before calling `Add()`, or after `Remove()`.
     ClearFormatRanges();
 
+    /// Set the virtual audio device's clock domain, an int32 provided by the
+    /// clock tree, with special values 0 for the MONOTONIC clock domain and
+    /// -1 for EXTERNAL domains that are not controllable  locally. This method
+    /// must be called before calling `Add()`, or after `Remove()`. Once the
+    /// device is activated, this value is returned by the driver in response
+    /// to an `AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN` command. This is not exposed
+    /// to clients by public APIs but is used in AudioCore's clock recovery for
+    /// this device (or more accurately, for this domain).
+    SetClockDomain(int32 clock_domain);
+
     /// Set the virtual audio device's fifo depth, in bytes. This must be called
     /// before calling `Add()`, or after `Remove()`. Once the device is
     /// activated, the depth of its FIFO is returned by the driver in response

@@ -235,6 +235,23 @@ void AudioDriverTest::RequestProductString() {
   RunLoopUntil([this]() { return received_get_string_product_ || error_occurred_; });
 }
 
+// Request that the driver return its clock domain.
+void AudioDriverTest::RequestClockDomain() {
+  if (error_occurred_) {
+    return;
+  }
+
+  MessageTransceiver::Message request_message;
+  auto& request = request_message.ResizeBytesAs<audio_stream_cmd_get_clock_domain_req_t>();
+  get_clock_domain_transaction_id_ = NextTransactionId();
+  request.hdr.transaction_id = get_clock_domain_transaction_id_;
+  request.hdr.cmd = AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN;
+
+  EXPECT_EQ(ZX_OK, stream_transceiver_.SendMessage(request_message));
+
+  RunLoopUntil([this]() { return received_get_clock_domain_; });
+}
+
 // Request that the driver return its gain capabilities and current state.
 void AudioDriverTest::RequestGain() {
   if (error_occurred_) {
@@ -604,6 +621,10 @@ void AudioDriverTest::OnInboundStreamMessage(MessageTransceiver::Message message
       HandleGetStringResponse(message.BytesAs<audio_stream_cmd_get_string_resp_t>());
       break;
 
+    case AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN:
+      HandleGetClockDomainResponse(message.BytesAs<audio_stream_cmd_get_clock_domain_resp_t>());
+      break;
+
     case AUDIO_STREAM_CMD_GET_GAIN:
       HandleGetGainResponse(message.BytesAs<audio_stream_cmd_get_gain_resp_t>());
       break;
@@ -707,6 +728,20 @@ void AudioDriverTest::HandleGetStringResponse(const audio_stream_cmd_get_string_
   } else {
     ASSERT_TRUE(false) << "Unrecognized string ID received: " << response.id;
   }
+}
+
+// Handle a get_clock_domain response on the stream channel.
+void AudioDriverTest::HandleGetClockDomainResponse(
+    const audio_stream_cmd_get_clock_domain_resp_t& response) {
+  if (!ValidateResponseHeader(response.hdr, get_clock_domain_transaction_id_,
+                              AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN)) {
+    return;
+  }
+
+  EXPECT_NE(response.clock_domain, kInvalidClockDomain);
+  clock_domain_ = response.clock_domain;
+
+  received_get_clock_domain_ = true;
 }
 
 // Handle a get_gain response on the stream channel.
@@ -1166,6 +1201,25 @@ TEST_F(AudioDriverTest, OutputGetProduct) {
   }
 
   RequestProductString();
+}
+
+// AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN
+// For input stream, verify a valid GET_CLOCK_DOMAIN response is successfully received.
+TEST_F(AudioDriverTest, InputGetClockDomain) {
+  if (!WaitForDevice(DeviceType::Input)) {
+    return;
+  }
+
+  RequestClockDomain();
+}
+
+// For output stream, verify a valid GET_CLOCK_DOMAIN response is successfully received.
+TEST_F(AudioDriverTest, OutputGetClockDomain) {
+  if (!WaitForDevice(DeviceType::Output)) {
+    return;
+  }
+
+  RequestClockDomain();
 }
 
 // AUDIO_STREAM_CMD_GET_GAIN

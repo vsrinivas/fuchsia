@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef AUDIO_PROTO_AUDIO_PROTO_H_
+#define AUDIO_PROTO_AUDIO_PROTO_H_
 
 #include <zircon/device/audio.h>
 
@@ -48,6 +49,10 @@ using GetUniqueIdResp = audio_stream_cmd_get_unique_id_resp_t;
 using GetStringReq = audio_stream_cmd_get_string_req_t;
 using GetStringResp = audio_stream_cmd_get_string_resp_t;
 
+// AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN
+using GetClockDomainReq = audio_stream_cmd_get_clock_domain_req_t;
+using GetClockDomainResp = audio_stream_cmd_get_clock_domain_resp_t;
+
 // AUDIO_RB_CMD_GET_FIFO_DEPTH
 using RingBufGetFifoDepthReq = audio_rb_cmd_get_fifo_depth_req_t;
 using RingBufGetFifoDepthResp = audio_rb_cmd_get_fifo_depth_resp_t;
@@ -71,3 +76,5 @@ const char* SampleFormatToString(SampleFormat sample_format);
 
 }  // namespace audio_proto
 }  // namespace audio
+
+#endif  // AUDIO_PROTO_AUDIO_PROTO_H_

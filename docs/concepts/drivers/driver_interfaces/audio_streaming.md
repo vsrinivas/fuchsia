@@ -801,9 +801,17 @@ depends on position notifications should take care to request that a sufficient
 number of notifications per ring be sent (minimum 2) and to process them quickly
 enough that aliasing does not occur.
 
-### Clock recovery
+### Clock recovery and synchronization
 
-> TODO: rewrite this section to include how clock recovery occurs, and how this
+Upon receiving `AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN` message, the driver must
+respond with the identifier of the clock domain containing that device. If the
+audio device is locked to the local system monotonic clock and does not expose a
+mechanism by which its rate would be fine-tuned, then it should return the value
+0 to represent the local CLOCK_MONOTONIC domain. A client may use this
+information (in addition to `AUDIO_RB_POSITION_NOTIFY` messages) to simplify the
+process of recovering the audio device's clock.
+
+> TODO: extend this section to include how clock recovery occurs, and how this
 > is exposed to clients. Also, detail how slewable oscillators are discovered
 > and controlled. We may need rate-change notifications to clients of slewable
 > clocks.

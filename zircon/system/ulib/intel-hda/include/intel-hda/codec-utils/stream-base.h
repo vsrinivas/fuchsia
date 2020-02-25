@@ -113,6 +113,8 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
                                   audio_proto::PlugDetectResp* out_resp) __TA_REQUIRES(obj_lock_);
   virtual void OnGetStringLocked(const audio_proto::GetStringReq& req,
                                  audio_proto::GetStringResp* out_resp) __TA_REQUIRES(obj_lock_);
+  virtual void OnGetClockDomainLocked(audio_proto::GetClockDomainResp* out_resp)
+      __TA_REQUIRES(obj_lock_);
 
   // Debug logging
   virtual void PrintDebugPrefix() const;
@@ -156,6 +158,9 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
                                   const audio_proto::GetUniqueIdReq& req) __TA_REQUIRES(obj_lock_);
   zx_status_t DoGetStringLocked(dispatcher::Channel* channel, bool privileged,
                                 const audio_proto::GetStringReq& req) __TA_REQUIRES(obj_lock_);
+  zx_status_t DoGetClockDomainLocked(dispatcher::Channel* channel, bool privileged,
+                                     const audio_proto::GetClockDomainReq& req)
+      __TA_REQUIRES(obj_lock_);
 
   zx_status_t SetDMAStreamLocked(uint16_t id, uint8_t tag) __TA_REQUIRES(obj_lock_);
 

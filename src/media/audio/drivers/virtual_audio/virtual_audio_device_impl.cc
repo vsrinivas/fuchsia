@@ -39,6 +39,7 @@ void VirtualAudioDeviceImpl::Init() {
   mfr_name_ = kDefaultManufacturerName;
   prod_name_ = kDefaultProductName;
   memcpy(unique_id_, kDefaultUniqueId, sizeof(unique_id_));
+  clock_domain_ = kDefaultClockDomain;
 
   // By default, we support one basic format range (stereo 16-bit 48kHz)
   supported_formats_.clear();
@@ -178,6 +179,8 @@ void VirtualAudioDeviceImpl::AddFormatRange(uint32_t format_flags, uint32_t min_
 };
 
 void VirtualAudioDeviceImpl::ClearFormatRanges() { supported_formats_.clear(); }
+
+void VirtualAudioDeviceImpl::SetClockDomain(int32_t clock_domain) { clock_domain_ = clock_domain; };
 
 void VirtualAudioDeviceImpl::SetFifoDepth(uint32_t fifo_depth_bytes) {
   fifo_depth_ = fifo_depth_bytes;

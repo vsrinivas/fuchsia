@@ -119,7 +119,7 @@ pub(crate) fn frames_from_duration(frames_per_second: usize, duration: zx::Durat
 }
 
 /// A software fuchsia audio output, which implements Audio Driver Streaming Interface
-/// as defined in //docs/zircon/driver_interfaces/audio.md
+/// as defined in //docs/concepts/drivers/driver_interfaces/audio_streaming.md
 pub struct SoftPcmOutput {
     /// The Stream channel handles format negotiation, plug detection, and gain
     stream: Arc<ChannelInner<stream::Request>>,
@@ -133,6 +133,8 @@ pub struct SoftPcmOutput {
     manufacturer: String,
     /// A product description for the hardware for the stream
     product: String,
+    /// The clock domain that this stream will present to the system
+    clock_domain: i32,
 
     /// The supported format of this output.
     /// Currently only support one format per output is supported.
@@ -154,7 +156,7 @@ pub struct SoftPcmOutput {
 
 impl SoftPcmOutput {
     /// Create a new software audio device, returning a client channel which can be supplied
-    /// to the AudioCore and will act correectly as an audio output driver channel which can
+    /// to the AudioCore and will act correctly as an audio output driver channel which can
     /// render audio in the `pcm_format` format, and an AudioFrameStream which produces the
     /// audio frames delivered to the audio output.
     /// Spawns a task to handle messages from the Audio Core and setup of internal VMO buffers
@@ -166,6 +168,7 @@ impl SoftPcmOutput {
         unique_id: &[u8; 16],
         manufacturer: &str,
         product: &str,
+        clock_domain: i32,
         pcm_format: fidl_fuchsia_media::PcmFormat,
         min_packet_duration: zx::Duration,
     ) -> Result<(zx::Channel, AudioFrameStream)> {
@@ -180,6 +183,7 @@ impl SoftPcmOutput {
             unique_id: unique_id.clone(),
             manufacturer: manufacturer.to_string(),
             product: product.to_string(),
+            clock_domain,
             supported_format,
             min_packet_duration,
             current_format: None,
@@ -249,6 +253,7 @@ impl SoftPcmOutput {
                 };
                 responder.reply(s)
             }
+            stream::Request::GetClockDomain { responder } => responder.reply(self.clock_domain),
         }
     }
 
@@ -396,6 +401,7 @@ mod tests {
     }
 
     const TEST_UNIQUE_ID: &[u8; 16] = &[5; 16];
+    const TEST_CLOCK_DOMAIN: i32 = 0x00010203;
 
     // Receive a message from the client channel.  Wait and expect a response that starts with the
     // expected bytes.  Returns handles that were sent in the response.
@@ -437,6 +443,7 @@ mod tests {
             TEST_UNIQUE_ID,
             &"Google".to_string(),
             &"UnitTest".to_string(),
+            TEST_CLOCK_DOMAIN,
             format,
             zx::Duration::from_millis(100),
         )
@@ -571,6 +578,18 @@ mod tests {
         let mut handles = recv_and_expect_response(&mut exec, &client, request, expected);
         assert_eq!(1, handles.len());
 
+        // GET_CLOCK_DOMAIN
+        let request: &[u8] = &[
+            0xF0, 0x0D, 0x00, 0x00, // transaction id
+            0x07, 0x10, 0x00, 0x00, // get_clock_domain
+        ];
+        let expected: &[u8] = &[
+            0xF0, 0x0D, 0x00, 0x00, // transaction_id
+            0x07, 0x10, 0x00, 0x00, // get_clock_domain
+            0x03, 0x02, 0x01, 0x00, // 0x00010203 clock_domain
+        ];
+        recv_and_expect_response(&mut exec, &client, request, expected);
+
         let rb = zx::Channel::from_handle(handles.pop().unwrap());
 
         // RB GET FIFO DEPTH
@@ -636,7 +655,7 @@ mod tests {
             0x02, 0x30, 0x00, 0x00, // start
             0x00, 0x00, 0x00, 0x00, // ZX_OK
             0x00, 0x00, 0x00, 0x00, // padding
-            27, 0x00, 0x00, 0x00, // Started at 27
+            0x1B, 0x00, 0x00, 0x00, // Started at 27 (0x1B)
             0x00, 0x00, 0x00, 0x00,
         ];
 

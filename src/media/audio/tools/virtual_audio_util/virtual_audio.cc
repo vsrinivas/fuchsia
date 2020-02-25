@@ -39,6 +39,7 @@ class VirtualAudioUtil {
     SET_MANUFACTURER,
     SET_PRODUCT_NAME,
     SET_UNIQUE_ID,
+    SET_CLOCK_DOMAIN,
     ADD_FORMAT_RANGE,
     CLEAR_FORMAT_RANGES,
     SET_FIFO_DEPTH,
@@ -76,6 +77,7 @@ class VirtualAudioUtil {
       {"mfg", Command::SET_MANUFACTURER},
       {"prod", Command::SET_PRODUCT_NAME},
       {"id", Command::SET_UNIQUE_ID},
+      {"clk-domain", Command::SET_CLOCK_DOMAIN},
       {"add-format", Command::ADD_FORMAT_RANGE},
       {"clear-format", Command::CLEAR_FORMAT_RANGES},
       {"fifo", Command::SET_FIFO_DEPTH},
@@ -105,6 +107,7 @@ class VirtualAudioUtil {
   static constexpr char kDefaultProductName[] = "Virgil, version 1.0";
   static constexpr uint8_t kDefaultUniqueId[16] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,
                                                    0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
+  static constexpr int32_t kDefaultClockDomain = 1;
 
   static constexpr uint8_t kDefaultFormatRangeOption = 0;
 
@@ -145,6 +148,7 @@ class VirtualAudioUtil {
   bool SetManufacturer(const std::string& name);
   bool SetProductName(const std::string& name);
   bool SetUniqueId(const std::string& unique_id);
+  bool SetClockDomain(const std::string& clock_domain);
   bool AddFormatRange(const std::string& format_str);
   bool ClearFormatRanges();
   bool SetFifoDepth(const std::string& fifo_str);
@@ -451,6 +455,9 @@ bool VirtualAudioUtil::ExecuteCommand(Command cmd, const std::string& value) {
     case Command::SET_UNIQUE_ID:
       success = SetUniqueId(value);
       break;
+    case Command::SET_CLOCK_DOMAIN:
+      success = SetClockDomain(value);
+      break;
     case Command::ADD_FORMAT_RANGE:
       success = AddFormatRange(value);
       break;
@@ -608,6 +615,22 @@ bool VirtualAudioUtil::SetUniqueId(const std::string& unique_id_str) {
   } else {
     input_->SetUniqueId(unique_id);
   }
+  return WaitForNoCallback();
+}
+
+bool VirtualAudioUtil::SetClockDomain(const std::string& clk_domain_str) {
+  if (!ConnectToDevice()) {
+    return false;
+  }
+
+  int32_t clock_domain =
+      (clk_domain_str == "" ? kDefaultClockDomain : fxl::StringToNumber<int32_t>(clk_domain_str));
+  if (configuring_output_) {
+    output_->SetClockDomain(clock_domain);
+  } else {
+    input_->SetClockDomain(clock_domain);
+  }
+
   return WaitForNoCallback();
 }
 

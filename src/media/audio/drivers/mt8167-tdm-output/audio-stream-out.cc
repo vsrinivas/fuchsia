@@ -192,6 +192,9 @@ zx_status_t Mt8167AudioStreamOut::Init() {
 
   unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
 
+  // TODO(mpuryear): change this to the domain of the clock received from the board driver
+  clock_domain_ = 0;
+
   return ZX_OK;
 }
 

@@ -68,6 +68,7 @@ class GaussPdmInputStream : public GaussPdmInputStreamBase,
 
   void DeactivateStreamChannel(const dispatcher::Channel* channel);
 
+  // Stream command handlers
   zx_status_t OnGetStreamFormats(dispatcher::Channel* channel,
                                  const audio_proto::StreamGetFmtsReq& req);
 
@@ -82,13 +83,14 @@ class GaussPdmInputStream : public GaussPdmInputStreamBase,
 
   zx_status_t OnGetUniqueId(dispatcher::Channel* channel, const audio_proto::GetUniqueIdReq& req);
   zx_status_t OnGetString(dispatcher::Channel* channel, const audio_proto::GetStringReq& req);
+  zx_status_t OnGetClockDomain(dispatcher::Channel* channel,
+                               const audio_proto::GetClockDomainReq& req);
 
   // Thunks for dispatching ring buffer channel events.
   zx_status_t ProcessRingBufferChannel(dispatcher::Channel* channel);
 
   void DeactivateRingBufferChannel(const dispatcher::Channel* channel);
 
-  // Stream command handlers
   // Ring buffer command handlers
   zx_status_t OnGetFifoDepth(dispatcher::Channel* channel,
                              const audio_proto::RingBufGetFifoDepthReq& req) __TA_REQUIRES(lock_);

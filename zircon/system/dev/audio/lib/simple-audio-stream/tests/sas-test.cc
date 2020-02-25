@@ -75,6 +75,8 @@ class MockSimpleAudio : public SimpleAudioStream {
 
     unique_id_ = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE;
 
+    clock_domain_ = 0;
+
     return ZX_OK;
   }
 
@@ -285,6 +287,24 @@ TEST(SimpleAudioTest, GetIds) {
   audio_stream_cmd_get_string_resp_t str = {};
   ASSERT_OK(channel_client->GetString(AUDIO_STREAM_STR_ID_MANUFACTURER, &str));
   ASSERT_BYTES_EQ(str.str, "Bike Sheds, Inc.", strlen("Bike Sheds, Inc.") + 1);
+}
+
+TEST(SimpleAudioTest, GetClockDomain) {
+  fake_ddk::Bind tester;
+  auto server = audio::SimpleAudioStream::Create<audio::MockSimpleAudio>(fake_ddk::kFakeParent);
+  ASSERT_NOT_NULL(server);
+
+  Device::SyncClient client(std::move(tester.FidlClient()));
+  Device::ResultOf::GetChannel channel_wrap = client.GetChannel();
+  ASSERT_EQ(channel_wrap.status(), ZX_OK);
+
+  // After we get the channel we use audio::utils serialization until we convert to FIDL.
+  auto channel_client = audio::utils::AudioOutput::Create(1);
+  channel_client->SetStreamChannel(std::move(channel_wrap->channel));
+
+  audio_stream_cmd_get_clock_domain_resp_t resp = {};
+  ASSERT_OK(channel_client->GetClockDomain(&resp));
+  ASSERT_EQ(resp.clock_domain, 0);
 }
 
 TEST(SimpleAudioTest, MultipleChannelsPlugDetectState) {

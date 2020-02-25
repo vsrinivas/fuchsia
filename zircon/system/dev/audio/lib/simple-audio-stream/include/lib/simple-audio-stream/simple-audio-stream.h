@@ -290,6 +290,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   char mfr_name_[64] __TA_GUARDED(domain_token()) = {};
   char prod_name_[64] __TA_GUARDED(domain_token()) = {};
   char device_name_[32] = {};
+  int32_t clock_domain_ __TA_GUARDED(domain_token()) = 0;
 
   uint32_t frame_size_ __TA_GUARDED(domain_token()) = 0;
   uint32_t fifo_depth_ __TA_GUARDED(domain_token()) = 0;
@@ -399,6 +400,10 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
       __TA_REQUIRES(domain_token());
 
   zx_status_t OnGetString(StreamChannel* channel, const audio_proto::GetStringReq& req) const
+      __TA_REQUIRES(domain_token());
+
+  zx_status_t OnGetClockDomain(StreamChannel* channel,
+                               const audio_proto::GetClockDomainReq& req) const
       __TA_REQUIRES(domain_token());
 
   zx_status_t NotifyPlugDetect() __TA_REQUIRES(domain_token());

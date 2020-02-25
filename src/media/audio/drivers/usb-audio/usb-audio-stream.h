@@ -107,6 +107,9 @@ class UsbAudioStream : public UsbAudioStreamBase,
                                   const audio_proto::GetUniqueIdReq& req) __TA_REQUIRES(lock_);
   zx_status_t OnGetStringLocked(dispatcher::Channel* channel, const audio_proto::GetStringReq& req)
       __TA_REQUIRES(lock_);
+  zx_status_t OnGetClockDomainLocked(dispatcher::Channel* channel,
+                                     const audio_proto::GetClockDomainReq& req)
+      __TA_REQUIRES(lock_);
 
   // Thunks for dispatching ring buffer channel events.
   zx_status_t ProcessRingBufferChannel(dispatcher::Channel* channel);
@@ -142,6 +145,8 @@ class UsbAudioStream : public UsbAudioStreamBase,
   fbl::RefPtr<dispatcher::Channel> stream_channel_ __TA_GUARDED(lock_);
   fbl::RefPtr<dispatcher::Channel> rb_channel_ __TA_GUARDED(lock_);
   fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
+
+  int32_t clock_domain_;
 
   size_t selected_format_ndx_;
   uint32_t selected_frame_rate_;

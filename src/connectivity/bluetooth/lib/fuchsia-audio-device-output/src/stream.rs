@@ -169,6 +169,12 @@ impl TryFrom<u32> for StringId {
     }
 }
 
+#[repr(C)]
+#[derive(AsBytes)]
+struct GetClockDomainResponse {
+    clock_domain: i32,
+}
+
 #[derive(Clone, FromPrimitive, Debug)]
 pub(crate) enum CommandType {
     GetFormats = 0x1000,
@@ -178,6 +184,7 @@ pub(crate) enum CommandType {
     PlugDetect = 0x1004,
     GetUniqueId = 0x1005,
     GetString = 0x1006,
+    GetClockDomain = 0x1007,
 }
 
 const COMMAND_NO_ACK: &u32 = &0x8000_0000;
@@ -226,6 +233,9 @@ pub(crate) enum Request {
     GetString {
         id: StringId,
         responder: GetStringResponder,
+    },
+    GetClockDomain {
+        responder: GetClockDomainResponder,
     },
 }
 
@@ -302,6 +312,9 @@ impl Decodable for Request {
                     responder: GetStringResponder { inner: chan_responder, id },
                 }
             }
+            CommandType::GetClockDomain => {
+                Request::GetClockDomain { responder: GetClockDomainResponder(chan_responder) }
+            }
         };
         Ok(res)
     }
@@ -317,6 +330,7 @@ impl ResponseDirectable for Request {
             Request::PlugDetect { responder, .. } => responder.inner.set_channel(channel),
             Request::GetUniqueId { responder } => responder.0.set_channel(channel),
             Request::GetString { responder, .. } => responder.inner.set_channel(channel),
+            Request::GetClockDomain { responder } => responder.0.set_channel(channel),
         }
     }
 }
@@ -479,6 +493,16 @@ impl GetStringResponder {
     pub fn reply(self, string: &String) -> Result<()> {
         let resp = GetStringResponse::build(self.id, string);
         self.inner.send(&resp.as_bytes())
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct GetClockDomainResponder(ChannelResponder);
+
+impl GetClockDomainResponder {
+    pub fn reply(self, clock_domain: i32) -> Result<()> {
+        let resp = GetClockDomainResponse { clock_domain };
+        self.0.send(&resp.as_bytes())
     }
 }
 
@@ -659,7 +683,7 @@ mod tests {
                 0x01, 0x10, 0x00, 0x00, // set_format
                 0x00, 0x00, 0x00, 0x00, // zx::status::ok
                 0x00, 0x00, 0x00, 0x00, // padding
-                27, 0x00, 0x00, 0x00, // 27 ns external delay
+                0x1B, 0x00, 0x00, 0x00, // 27 nanosec external delay
                 0x00, 0x00, 0x00, 0x00,
             ];
 
@@ -775,7 +799,7 @@ mod tests {
                 0x04, 0x10, 0x00, 0x00, // plug_detect
                 0x00, 0x00, 0x00, 0x80, // flags: can't notify + plugged
                 0x00, 0x00, 0x00, 0x00, // pad to align
-                27, 0x00, 0x00, 0x00, // plugged at 27 nanos
+                0x1B, 0x00, 0x00, 0x00, // plugged at 27 nanosec
                 0x00, 0x00, 0x00, 0x00,
             ];
 
@@ -852,5 +876,34 @@ mod tests {
         } else {
             panic!("decoding GetString failed: {:?}", r);
         }
+    }
+
+    #[test]
+    fn get_clock_domain() {
+        let (_, remote, chan) = setup_request_test();
+
+        let request: &[u8] = &[
+            0xF0, 0x0D, 0x00, 0x00, // transaction id
+            0x07, 0x10, 0x00, 0x00, // get_clock_domain
+        ];
+
+        let response_size =
+            mem::size_of::<AudioCommandHeader>() + mem::size_of::<GetClockDomainResponse>();
+
+        let r: Request = Request::decode(request).expect("decoding GetClockDomain failed");
+
+        let mut responder = match r {
+            Request::GetClockDomain { responder } => responder,
+            _ => panic!("Incorrect request for GetClockDomain: {:?}", r),
+        };
+
+        responder.0.set_channel(chan);
+        assert!(responder.reply(0).is_ok());
+        let expected_response: &[u8] = &[
+            0xF0, 0x0D, 0x00, 0x00, // transaction_id
+            0x07, 0x10, 0x00, 0x00, // get_clock_domain
+            0x00, 0x00, 0x00, 0x00, // CLOCK_DOMAIN_MONOTONIC (== 0)
+        ];
+        expect_channel_recv(&remote, response_size, expected_response);
     }
 }

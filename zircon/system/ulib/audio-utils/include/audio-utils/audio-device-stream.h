@@ -34,6 +34,7 @@ class AudioDeviceStream {
   zx_status_t GetUniqueId(audio_stream_cmd_get_unique_id_resp_t* out_id) const;
   zx_status_t GetString(audio_stream_string_id_t id,
                         audio_stream_cmd_get_string_resp_t* out_str) const;
+  zx_status_t GetClockDomain(audio_stream_cmd_get_clock_domain_resp_t* out_clk_domain) const;
   zx_status_t PlugMonitor(float duration, PlugMonitorCallback* monitor);
   zx_status_t SetFormat(uint32_t frames_per_second, uint16_t channels,
                         audio_sample_format_t sample_format);

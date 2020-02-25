@@ -160,6 +160,7 @@ zx_status_t AudioDriver::GetDriverInfo() {
   // 3) Fetch our product string.
   // 4) Fetch our current gain state and capabilities.
   // 5) Fetch our supported format list.
+  // 6) Fetch our clock domain.
 
   // Step #1, fetch unique IDs.
   {
@@ -217,6 +218,19 @@ zx_status_t AudioDriver::GetDriverInfo() {
     zx_status_t res = stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
     if (res != ZX_OK) {
       ShutdownSelf("Failed to request supported format list.", res);
+      return res;
+    }
+  }
+
+  // Step #6. Fetch our clock domain.
+  {
+    audio_stream_cmd_get_clock_domain_req_t req;
+    req.hdr.cmd = AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN;
+    req.hdr.transaction_id = TXID;
+
+    zx_status_t res = stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
+    if (res != ZX_OK) {
+      ShutdownSelf("Failed to request clock domain.", res);
       return res;
     }
   }
@@ -479,6 +493,7 @@ zx_status_t AudioDriver::ProcessStreamChannelMessage() {
     audio_stream_cmd_get_gain_resp_t get_gain;
     audio_stream_cmd_get_formats_resp_t get_formats;
     audio_stream_cmd_set_format_resp_t set_format;
+    audio_stream_cmd_get_clock_domain_resp_t get_clock_domain;
     audio_stream_cmd_plug_detect_resp_t pd_resp;
     audio_stream_plug_detect_notify_t pd_notify;
   } msg;
@@ -515,6 +530,11 @@ zx_status_t AudioDriver::ProcessStreamChannelMessage() {
     case AUDIO_STREAM_CMD_SET_FORMAT:
       CHECK_RESP(AUDIO_STREAM_CMD_SET_FORMAT, set_format, true, false);
       res = ProcessSetFormatResponse(msg.set_format, zx::channel(rxed_handle.release()));
+      break;
+
+    case AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN:
+      CHECK_RESP(AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN, get_clock_domain, false, false);
+      res = ProcessGetClockDomainResponse(msg.get_clock_domain);
       break;
 
     case AUDIO_STREAM_CMD_PLUG_DETECT:
@@ -779,6 +799,16 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(const audio_stream_cmd_set_for
   configuration_deadline_ = async::Now(owner_->mix_domain().dispatcher()) + kDefaultShortCmdTimeout;
   SetupCommandTimeout();
   return ZX_OK;
+}
+
+zx_status_t AudioDriver::ProcessGetClockDomainResponse(
+    audio_stream_cmd_get_clock_domain_resp_t& resp) {
+  TRACE_DURATION("audio", "AudioDriver::ProcessGetClockDomainResponse");
+  clock_domain_ = resp.clock_domain;
+
+  AUD_VLOG(TRACE) << "Received clock domain " << clock_domain_;
+
+  return OnDriverInfoFetched(kDriverInfoHasClockDomain);
 }
 
 zx_status_t AudioDriver::ProcessGetFifoDepthResponse(

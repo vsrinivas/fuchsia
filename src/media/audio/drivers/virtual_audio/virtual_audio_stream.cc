@@ -48,6 +48,7 @@ zx_status_t VirtualAudioStream::Init() {
 
   fifo_depth_ = parent_->fifo_depth_;
   external_delay_nsec_ = parent_->external_delay_nsec_;
+  clock_domain_ = parent_->clock_domain_;
 
   max_buffer_frames_ = parent_->max_buffer_frames_;
   min_buffer_frames_ = parent_->min_buffer_frames_;

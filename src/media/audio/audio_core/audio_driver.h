@@ -116,9 +116,10 @@ class AudioDriver {
   static constexpr uint32_t kDriverInfoHasProdStr = (1u << 2);
   static constexpr uint32_t kDriverInfoHasGainState = (1u << 3);
   static constexpr uint32_t kDriverInfoHasFormats = (1u << 4);
+  static constexpr uint32_t kDriverInfoHasClockDomain = (1u << 5);
   static constexpr uint32_t kDriverInfoHasAll = kDriverInfoHasUniqueId | kDriverInfoHasMfrStr |
                                                 kDriverInfoHasProdStr | kDriverInfoHasGainState |
-                                                kDriverInfoHasFormats;
+                                                kDriverInfoHasFormats | kDriverInfoHasClockDomain;
 
   // Counter of received position notifications since START.
   uint32_t position_notification_count_ = 0;
@@ -141,6 +142,8 @@ class AudioDriver {
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
   zx_status_t ProcessSetFormatResponse(const audio_stream_cmd_set_format_resp_t& resp,
                                        zx::channel rb_channel)
+      FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
+  zx_status_t ProcessGetClockDomainResponse(audio_stream_cmd_get_clock_domain_resp_t& resp)
       FXL_EXCLUSIVE_LOCKS_REQUIRED(owner_->mix_domain().token());
 
   // Ring buffer message handlers.
@@ -226,6 +229,8 @@ class AudioDriver {
   std::string product_name_;
   HwGainState hw_gain_state_;
   std::vector<audio_stream_format_range_t> format_ranges_;
+
+  int32_t clock_domain_;
 
   // Configuration state.
   zx::duration external_delay_;

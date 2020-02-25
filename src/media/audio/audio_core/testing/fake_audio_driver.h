@@ -49,6 +49,7 @@ class FakeAudioDriver {
   void set_formats(std::vector<audio_stream_format_range_t> formats) {
     formats_ = std::move(formats);
   }
+  void set_clock_domain(int32_t clock_domain) { clock_domain_ = clock_domain; }
   void set_plugged(bool plugged) { plugged_ = plugged; }
   void set_fifo_depth(uint32_t fifo_depth) { fifo_depth_ = fifo_depth; }
 
@@ -70,6 +71,7 @@ class FakeAudioDriver {
   void HandleCommandGetFormats(const audio_stream_cmd_get_formats_req_t& request);
   void HandleCommandSetFormat(const audio_stream_cmd_set_format_req_t& request);
   void HandleCommandPlugDetect(const audio_stream_cmd_plug_detect_req_t& request);
+  void HandleCommandGetClockDomain(const audio_stream_cmd_get_clock_domain_req_t& request);
 
   void OnInboundRingBufferMessage(test::MessageTransceiver::Message message);
   void OnInboundRingBufferError(zx_status_t status);
@@ -95,6 +97,8 @@ class FakeAudioDriver {
       .max_channels = 2,
       .flags = ASF_RANGE_FLAG_FPS_48000_FAMILY,
   }};
+  int32_t clock_domain_ = 0;
+
   size_t ring_buffer_size_;
   zx::vmo ring_buffer_;
 

@@ -71,6 +71,9 @@ void FakeAudioDriver::OnInboundStreamMessage(test::MessageTransceiver::Message m
     case AUDIO_STREAM_CMD_PLUG_DETECT:
       HandleCommandPlugDetect(message.BytesAs<audio_stream_cmd_plug_detect_req_t>());
       break;
+    case AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN:
+      HandleCommandGetClockDomain(message.BytesAs<audio_stream_cmd_get_clock_domain_req_t>());
+      break;
     default:
       EXPECT_TRUE(false) << "Unrecognized header.cmd value " << header.cmd;
       break;
@@ -194,6 +197,19 @@ void FakeAudioDriver::HandleCommandPlugDetect(const audio_stream_cmd_plug_detect
   // however.
   response.flags = AUDIO_PDNF_HARDWIRED;
   response.plug_state_time = 0;
+
+  zx_status_t status = stream_transceiver_.SendMessage(response_message);
+  EXPECT_EQ(ZX_OK, status);
+}
+
+void FakeAudioDriver::HandleCommandGetClockDomain(
+    const audio_stream_cmd_get_clock_domain_req_t& request) {
+  test::MessageTransceiver::Message response_message;
+  auto& response = response_message.ResizeBytesAs<audio_stream_cmd_get_clock_domain_resp_t>();
+  response.hdr.transaction_id = request.hdr.transaction_id;
+  response.hdr.cmd = request.hdr.cmd;
+
+  response.clock_domain = clock_domain_;
 
   zx_status_t status = stream_transceiver_.SendMessage(response_message);
   EXPECT_EQ(ZX_OK, status);

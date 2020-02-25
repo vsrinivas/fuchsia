@@ -326,6 +326,7 @@ zx_status_t UsbAudioStream::ProcessStreamChannel(dispatcher::Channel* channel, b
     audio_proto::PlugDetectReq plug_detect;
     audio_proto::GetUniqueIdReq get_unique_id;
     audio_proto::GetStringReq get_string;
+    audio_proto::GetClockDomainReq get_clock_domain;
     // TODO(johngro) : add more commands here
   } req;
 
@@ -350,6 +351,7 @@ zx_status_t UsbAudioStream::ProcessStreamChannel(dispatcher::Channel* channel, b
     HREQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, OnPlugDetectLocked, true);
     HREQ(AUDIO_STREAM_CMD_GET_UNIQUE_ID, get_unique_id, OnGetUniqueIdLocked, false);
     HREQ(AUDIO_STREAM_CMD_GET_STRING, get_string, OnGetStringLocked, false);
+    HREQ(AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN, get_clock_domain, OnGetClockDomainLocked, false);
     default:
       LOG(TRACE, "Unrecognized stream command 0x%04x\n", req.hdr.cmd);
       return ZX_ERR_NOT_SUPPORTED;
@@ -712,6 +714,16 @@ zx_status_t UsbAudioStream::OnGetStringLocked(dispatcher::Channel* channel,
     resp.result = ZX_OK;
     resp.strlen = static_cast<uint32_t>(todo);
   }
+
+  return channel->Write(&resp, sizeof(resp));
+}
+
+zx_status_t UsbAudioStream::OnGetClockDomainLocked(dispatcher::Channel* channel,
+                                                   const audio_proto::GetClockDomainReq& req) {
+  audio_proto::GetClockDomainResp resp;
+
+  resp.hdr = req.hdr;
+  resp.clock_domain = clock_domain_;
 
   return channel->Write(&resp, sizeof(resp));
 }

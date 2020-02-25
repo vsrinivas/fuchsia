@@ -255,6 +255,7 @@ zx_status_t SimpleAudioStream::ProcessStreamChannel(StreamChannel* channel, bool
     audio_proto::CmdHdr hdr;
     audio_proto::StreamGetFmtsReq get_formats;
     audio_proto::StreamSetFmtReq set_format;
+    audio_proto::GetClockDomainReq get_clock_domain;
     audio_proto::GetGainReq get_gain;
     audio_proto::SetGainReq set_gain;
     audio_proto::PlugDetectReq plug_detect;
@@ -280,6 +281,7 @@ zx_status_t SimpleAudioStream::ProcessStreamChannel(StreamChannel* channel, bool
   switch (cmd) {
     HREQ(AUDIO_STREAM_CMD_GET_FORMATS, get_formats, OnGetStreamFormats, false);
     HREQ(AUDIO_STREAM_CMD_SET_FORMAT, set_format, OnSetStreamFormat, false, privileged);
+    HREQ(AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN, get_clock_domain, OnGetClockDomain, false);
     HREQ(AUDIO_STREAM_CMD_GET_GAIN, get_gain, OnGetGain, false);
     HREQ(AUDIO_STREAM_CMD_SET_GAIN, set_gain, OnSetGain, true);
     HREQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, OnPlugDetect, true);
@@ -333,6 +335,7 @@ void SimpleAudioStream::DeactivateStreamChannel(StreamChannel* channel) {
   if (stream_channel_.get() == channel) {
     stream_channel_ = nullptr;
   }
+
   if (channel->in_plug_notify_list()) {
     plug_notify_channels_.erase(*channel);
   }
@@ -628,6 +631,16 @@ zx_status_t SimpleAudioStream::OnGetString(StreamChannel* channel,
     resp.result = ZX_OK;
     resp.strlen = fbl::min<uint32_t>(res, sizeof(resp.str) - 1);
   }
+
+  return channel->Write(&resp, sizeof(resp));
+}
+
+zx_status_t SimpleAudioStream::OnGetClockDomain(StreamChannel* channel,
+                                                const audio_proto::GetClockDomainReq& req) const {
+  audio_proto::GetClockDomainResp resp = {};
+
+  resp.hdr = req.hdr;
+  resp.clock_domain = clock_domain_;
 
   return channel->Write(&resp, sizeof(resp));
 }

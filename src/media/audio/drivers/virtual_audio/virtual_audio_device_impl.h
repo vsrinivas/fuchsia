@@ -62,6 +62,8 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   static constexpr bool kDefaultHardwired = false;
   static constexpr bool kDefaultPlugCanNotify = true;
 
+  static constexpr int32_t kDefaultClockDomain = 0;
+
   static std::unique_ptr<VirtualAudioDeviceImpl> Create(VirtualAudioControlImpl* owner,
                                                         bool is_input);
 
@@ -92,6 +94,8 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   void AddFormatRange(uint32_t format_flags, uint32_t min_rate, uint32_t max_rate,
                       uint8_t min_chans, uint8_t max_chans, uint16_t rate_family_flags) override;
   void ClearFormatRanges() override;
+
+  void SetClockDomain(int32_t clock_domain) override;
 
   void SetFifoDepth(uint32_t fifo_depth_bytes) override;
   void SetExternalDelay(zx_duration_t external_delay) override;
@@ -159,6 +163,8 @@ class VirtualAudioDeviceImpl : public fuchsia::virtualaudio::Input,
   std::string mfr_name_;
   std::string prod_name_;
   uint8_t unique_id_[16];
+
+  int32_t clock_domain_;
 
   std::vector<audio_stream_format_range_t> supported_formats_;
 

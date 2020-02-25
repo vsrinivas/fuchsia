@@ -568,6 +568,18 @@ zx_status_t IntelHDAStreamBase::DoGetStringLocked(dispatcher::Channel* channel, 
   return channel->Write(&resp, sizeof(resp));
 }
 
+zx_status_t IntelHDAStreamBase::DoGetClockDomainLocked(dispatcher::Channel* channel,
+                                                       bool privileged,
+                                                       const audio_proto::GetClockDomainReq& req) {
+  // Fill out the response header, then let the stream implementation fill out the payload.
+  audio_proto::GetClockDomainResp resp = {};
+  resp.hdr = req.hdr;
+  OnGetClockDomainLocked(&resp);
+
+  ZX_DEBUG_ASSERT(channel != nullptr);
+  return channel->Write(&resp, sizeof(resp));
+}
+
 #define HANDLE_REQ(_ioctl, _payload, _handler, _allow_noack)                                      \
   case _ioctl:                                                                                    \
     if (req_size != sizeof(req._payload)) {                                                       \
@@ -599,6 +611,7 @@ zx_status_t IntelHDAStreamBase::ProcessClientRequest(dispatcher::Channel* channe
     audio_proto::PlugDetectReq plug_detect;
     audio_proto::GetUniqueIdReq get_unique_id;
     audio_proto::GetStringReq get_string;
+    audio_proto::GetClockDomainReq get_clock_domain;
     // TODO(johngro) : add more commands here
   } req;
 
@@ -623,6 +636,7 @@ zx_status_t IntelHDAStreamBase::ProcessClientRequest(dispatcher::Channel* channe
     HANDLE_REQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, DoPlugDetectLocked, true);
     HANDLE_REQ(AUDIO_STREAM_CMD_GET_UNIQUE_ID, get_unique_id, DoGetUniqueIdLocked, false);
     HANDLE_REQ(AUDIO_STREAM_CMD_GET_STRING, get_string, DoGetStringLocked, false);
+    HANDLE_REQ(AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN, get_clock_domain, DoGetClockDomainLocked, false);
     default:
       DEBUG_LOG("Unrecognized stream command 0x%04x\n", req.hdr.cmd);
       return ZX_ERR_NOT_SUPPORTED;
@@ -831,6 +845,16 @@ void IntelHDAStreamBase::OnGetStringLocked(const audio_proto::GetStringReq& req,
       out_resp->result = ZX_ERR_NOT_FOUND;
       break;
   }
+}
+
+void IntelHDAStreamBase::OnGetClockDomainLocked(audio_proto::GetClockDomainResp* out_resp) {
+  ZX_DEBUG_ASSERT(out_resp != nullptr);
+
+  // By default we claim to be in the MONOTONIC clock domain.
+  // TODO(mpuryear): if the audio clock might possibly ever be in a different domain than the local
+  // system clock (either because it is trimmable [unlikely] or uses a different oscillator [even
+  // less likely]), handle that case here.
+  out_resp->clock_domain = 0;
 }
 
 }  // namespace codecs

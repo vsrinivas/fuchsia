@@ -93,6 +93,9 @@ class TdmOutputStream : public TdmAudioStreamBase,
   zx_status_t OnSetStreamFormatLocked(dispatcher::Channel* channel,
                                       const audio_proto::StreamSetFmtReq& req, bool privileged)
       __TA_REQUIRES(lock_);
+  zx_status_t OnGetClockDomainLocked(dispatcher::Channel* channel,
+                                     const audio_proto::GetClockDomainReq& req) const
+      __TA_REQUIRES(lock_);
   zx_status_t OnGetGainLocked(dispatcher::Channel* channel,
                               const audio_proto::GetGainReq& req) const __TA_REQUIRES(lock_);
   zx_status_t OnSetGainLocked(dispatcher::Channel* channel, const audio_proto::SetGainReq& req)
@@ -150,6 +153,9 @@ class TdmOutputStream : public TdmAudioStreamBase,
   std::unique_ptr<Tas57xx> left_sub_;
   std::unique_ptr<Tas57xx> right_sub_;
   std::unique_ptr<Tas57xx> tweeters_;
+
+  // TODO(mpuryear): change this to the domain of the clock received from the board driver
+  int32_t clock_domain_ = 0;
 
   float current_gain_ = -20.0;
 

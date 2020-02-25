@@ -272,6 +272,7 @@ zx_status_t TdmOutputStream::ProcessStreamChannel(dispatcher::Channel* channel, 
     audio_proto::PlugDetectReq plug_detect;
     audio_proto::GetUniqueIdReq get_unique_id;
     audio_proto::GetStringReq get_string;
+    audio_proto::GetClockDomainReq get_clock_domain;
     // TODO(hollande): add more commands here
   } req;
 
@@ -296,6 +297,7 @@ zx_status_t TdmOutputStream::ProcessStreamChannel(dispatcher::Channel* channel, 
     HREQ(AUDIO_STREAM_CMD_PLUG_DETECT, plug_detect, OnPlugDetectLocked, true);
     HREQ(AUDIO_STREAM_CMD_GET_UNIQUE_ID, get_unique_id, OnGetUniqueIdLocked, false);
     HREQ(AUDIO_STREAM_CMD_GET_STRING, get_string, OnGetStringLocked, false);
+    HREQ(AUDIO_STREAM_CMD_GET_CLOCK_DOMAIN, get_clock_domain, OnGetClockDomainLocked, false);
     default:
       zxlogf(ERROR, "Unrecognized stream command 0x%04x\n", req.hdr.cmd);
       return ZX_ERR_NOT_SUPPORTED;
@@ -560,6 +562,17 @@ zx_status_t TdmOutputStream::OnGetStringLocked(dispatcher::Channel* channel,
     resp.result = ZX_OK;
     resp.strlen = fbl::min<uint32_t>(res, sizeof(resp.str) - 1);
   }
+
+  return channel->Write(&resp, sizeof(resp));
+}
+
+zx_status_t TdmOutputStream::OnGetClockDomainLocked(
+    dispatcher::Channel* channel, const audio_proto::GetClockDomainReq& req) const {
+  ZX_DEBUG_ASSERT(channel != nullptr);
+  audio_proto::GetClockDomainResp resp = {};
+
+  resp.hdr = req.hdr;
+  resp.clock_domain = clock_domain_;
 
   return channel->Write(&resp, sizeof(resp));
 }
