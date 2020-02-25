@@ -27,8 +27,9 @@ class Effect {
   // `FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE` while `module` is non-null. Likewise it is an error to
   // create an `Effect` with `handle` != `FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE` and a null
   // `module`.
-  Effect(fuchsia_audio_effects_handle_t effects_handle, EffectsModuleV1 module)
-      : effects_handle_(effects_handle), module_(std::move(module)) {
+  Effect(fuchsia_audio_effects_handle_t effects_handle, EffectsModuleV1 module,
+         std::string_view instance_name)
+      : effects_handle_(effects_handle), module_(std::move(module)), instance_name_(instance_name) {
     // If handle_ is valid, module_ must be valid. If effects_handle_ is invalid, module_ must be
     // invalid.
     FX_DCHECK((effects_handle_ != FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE) == (module_.is_valid()));
@@ -49,6 +50,8 @@ class Effect {
   explicit operator bool() const { return is_valid(); }
 
   [[nodiscard]] fuchsia_audio_effects_handle_t get() const { return effects_handle_; }
+
+  std::string_view instance_name() const { return instance_name_; }
 
   // These methods are thin wrappers around the corresponding ABI calls that use the
   // fuchsia_audio_effects_handle_t and module used to create this effect. It is an error to call
@@ -72,6 +75,7 @@ class Effect {
  private:
   fuchsia_audio_effects_handle_t effects_handle_;
   EffectsModuleV1 module_;
+  std::string_view instance_name_;
 };
 
 }  // namespace media::audio
