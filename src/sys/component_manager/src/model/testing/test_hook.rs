@@ -113,30 +113,32 @@ impl fmt::Display for Lifecycle {
     }
 }
 
-#[derive(Clone)]
+/// TestHook is a Hook that generates a strings representing the component
+/// topology.
 pub struct TestHook {
-    inner: Arc<TestHookInner>,
-}
-
-pub struct TestHookInner {
     instances: Mutex<HashMap<AbsoluteMoniker, Arc<ComponentInstance>>>,
     lifecycle_events: Mutex<Vec<Lifecycle>>,
 }
 
 impl fmt::Display for TestHook {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "{}", self.inner.print())?;
+        writeln!(f, "{}", self.print())?;
         Ok(())
     }
 }
 
 impl TestHook {
     pub fn new() -> TestHook {
-        TestHook { inner: Arc::new(TestHookInner::new()) }
+        let abs_moniker = AbsoluteMoniker::root();
+        let instance =
+            ComponentInstance { abs_moniker: abs_moniker.clone(), children: Mutex::new(vec![]) };
+        let mut instances = HashMap::new();
+        instances.insert(abs_moniker, Arc::new(instance));
+        Self { instances: Mutex::new(instances), lifecycle_events: Mutex::new(vec![]) }
     }
 
     /// Returns the set of hooks into the component manager that TestHook is interested in.
-    pub fn hooks(&self) -> Vec<HooksRegistration> {
+    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "TestHook",
             vec![
@@ -146,31 +148,8 @@ impl TestHook {
                 EventType::PreDestroyInstance,
                 EventType::StopInstance,
             ],
-            Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+            Arc::downgrade(self) as Weak<dyn Hook>,
         )]
-    }
-
-    /// Recursively traverse the Instance tree to generate a string representing the component
-    /// topology.
-    pub fn print(&self) -> String {
-        self.inner.print()
-    }
-
-    pub fn lifecycle(&self) -> Vec<Lifecycle> {
-        self.inner.lifecycle()
-    }
-}
-
-/// TestHook is a Hook that generates a strings representing the component
-/// topology.
-impl TestHookInner {
-    pub fn new() -> TestHookInner {
-        let abs_moniker = AbsoluteMoniker::root();
-        let instance =
-            ComponentInstance { abs_moniker: abs_moniker.clone(), children: Mutex::new(vec![]) };
-        let mut instances = HashMap::new();
-        instances.insert(abs_moniker, Arc::new(instance));
-        TestHookInner { instances: Mutex::new(instances), lifecycle_events: Mutex::new(vec![]) }
     }
 
     /// Recursively traverse the Instance tree to generate a string representing the component
@@ -285,7 +264,7 @@ impl TestHookInner {
     }
 }
 
-impl Hook for TestHookInner {
+impl Hook for TestHook {
     fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(async move {
             match &event.payload {
@@ -312,11 +291,19 @@ impl Hook for TestHookInner {
     }
 }
 
-pub struct HubInjectionTestHook {}
+pub struct HubInjectionTestHook;
 
 impl HubInjectionTestHook {
     pub fn new() -> Self {
-        HubInjectionTestHook {}
+        Self
+    }
+
+    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
+        vec![HooksRegistration::new(
+            "TestHook",
+            vec![EventType::RouteCapability],
+            Arc::downgrade(self) as Weak<dyn Hook>,
+        )]
     }
 
     pub async fn on_route_scoped_framework_capability_async<'a>(
@@ -439,7 +426,7 @@ mod tests {
         // Try adding parent followed by children then verify the topology string
         // is correct.
         {
-            let test_hook = TestHookInner::new();
+            let test_hook = TestHook::new();
             assert!(test_hook.create_instance_if_necessary(&a).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(&ab).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(&ac).await.is_ok());
@@ -451,7 +438,7 @@ mod tests {
 
         // Changing the order of monikers should not affect the output string.
         {
-            let test_hook = TestHookInner::new();
+            let test_hook = TestHook::new();
             assert!(test_hook.create_instance_if_necessary(&a).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(&ac).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(&ab).await.is_ok());
@@ -463,7 +450,7 @@ mod tests {
 
         // Submitting children before parents should still succeed.
         {
-            let test_hook = TestHookInner::new();
+            let test_hook = TestHook::new();
             assert!(test_hook.create_instance_if_necessary(&acf).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(&abe).await.is_ok());
             assert!(test_hook.create_instance_if_necessary(&abd).await.is_ok());

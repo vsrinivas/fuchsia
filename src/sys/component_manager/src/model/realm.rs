@@ -58,7 +58,7 @@ pub struct Realm {
     /// The absolute moniker of this realm.
     pub abs_moniker: AbsoluteMoniker,
     /// The hooks scoped to this realm.
-    pub hooks: Hooks,
+    pub hooks: Arc<Hooks>,
 
     // These locks must be taken in the order declared if held simultaneously.
     /// The component's mutable state.
@@ -82,7 +82,7 @@ impl Realm {
             state: Mutex::new(None),
             execution: Mutex::new(ExecutionState::new()),
             actions: Mutex::new(ActionSet::new()),
-            hooks: Hooks::new(None),
+            hooks: Arc::new(Hooks::new(None)),
         }
     }
 
@@ -129,23 +129,23 @@ impl Realm {
             // Drop the lock before doing the work to resolve the state.
         }
         let component = self.environment.resolve(&self.component_url).await?;
-        Realm::populate_decl(self, component.decl.ok_or(ModelError::ComponentInvalid)?).await?;
+        self.populate_decl(component.decl.ok_or(ModelError::ComponentInvalid)?).await?;
         Ok(MutexGuard::map(self.state.lock().await, |s| s.as_mut().unwrap()))
     }
 
     /// Populates the component declaration of this realm's Instance using the provided
     /// `component_decl` if not already populated.
     pub async fn populate_decl(
-        realm: &Arc<Self>,
+        self: &Arc<Self>,
         component_decl: fsys::ComponentDecl,
     ) -> Result<(), ModelError> {
         let decl: ComponentDecl = component_decl
             .try_into()
-            .map_err(|e| ModelError::manifest_invalid(realm.component_url.clone(), e))?;
+            .map_err(|e| ModelError::manifest_invalid(self.component_url.clone(), e))?;
         let new_realm_state = {
-            let mut state = realm.lock_state().await;
+            let mut state = self.lock_state().await;
             if state.is_none() {
-                *state = Some(RealmState::new(realm, &decl).await?);
+                *state = Some(RealmState::new(self, &decl).await?);
                 true
             } else {
                 false
@@ -155,8 +155,8 @@ impl Realm {
         // in this call.
         if new_realm_state {
             let event =
-                Event::new(realm.abs_moniker.clone(), EventPayload::ResolveInstance { decl });
-            realm.hooks.dispatch(&event).await?;
+                Event::new(self.abs_moniker.clone(), EventPayload::ResolveInstance { decl });
+            self.hooks.dispatch(&event).await?;
         }
         Ok(())
     }
@@ -165,12 +165,12 @@ impl Realm {
     /// already, and returns a reference to the handle. If this component does not use meta storage
     /// Ok(None) will be returned.
     pub async fn resolve_meta_dir(
-        realm: &Arc<Realm>,
+        self: &Arc<Self>,
         model: &Arc<Model>,
     ) -> Result<Option<Arc<DirectoryProxy>>, ModelError> {
         {
             // If our meta directory has already been resolved, just return the answer.
-            let state = realm.lock_state().await;
+            let state = self.lock_state().await;
             let state = state.as_ref().expect("resolve_meta_dir: not resolved");
             if state.meta_dir.is_some() {
                 return Ok(Some(state.meta_dir.as_ref().unwrap().clone()));
@@ -192,7 +192,7 @@ impl Realm {
             model,
             &UseStorageDecl::Meta,
             MODE_TYPE_DIRECTORY,
-            realm,
+            self,
             server_chan,
         )
         .await?;
@@ -200,7 +200,7 @@ impl Realm {
             fasync::Channel::from_channel(meta_client_chan).unwrap(),
         ));
 
-        let mut state = realm.lock_state().await;
+        let mut state = self.lock_state().await;
         let state = state.as_mut().expect("resolve_meta_dir: not resolved");
         state.meta_dir = Some(meta_dir.clone());
         Ok(Some(meta_dir))
@@ -216,13 +216,13 @@ impl Realm {
     // Rust 1.40 doesn't support recursive async functions, so we
     // manually write out the type.
     pub fn resolve_runner<'a>(
-        realm: &'a Arc<Realm>,
+        self: &'a Arc<Self>,
         model: &'a Arc<Model>,
     ) -> BoxFuture<'a, Result<Arc<dyn Runner>, ModelError>> {
         async move {
             // Fetch component declaration.
             let decl = {
-                let state = realm.lock_state().await;
+                let state = self.lock_state().await;
                 state.as_ref().expect("resolve_runner: not resolved").decl().clone()
             };
 
@@ -242,7 +242,7 @@ impl Realm {
                     /*open_mode=*/ 0,
                     String::new(),
                     &UseDecl::Runner(runner_decl),
-                    realm,
+                    self,
                     server_channel.into_channel(),
                 )
                 .await?;
@@ -260,7 +260,7 @@ impl Realm {
     /// Adds the dynamic child defined by `child_decl` to the given `collection_name`. Once
     /// added, the component instance exists but is not bound.
     pub async fn add_dynamic_child(
-        realm: &Arc<Self>,
+        self: &Arc<Self>,
         collection_name: String,
         child_decl: &ChildDecl,
     ) -> Result<(), ModelError> {
@@ -271,7 +271,7 @@ impl Realm {
             }
         }
         let child_realm = {
-            let mut state = realm.lock_resolved_state().await?;
+            let mut state = self.lock_resolved_state().await?;
             let collection_decl = state
                 .decl()
                 .find_collection(&collection_name)
@@ -283,14 +283,14 @@ impl Realm {
                 }
             }
             if let Some(child_realm) =
-                state.add_child_realm(realm, child_decl, Some(collection_name.clone())).await?
+                state.add_child_realm(self, child_decl, Some(collection_name.clone())).await?
             {
                 child_realm
             } else {
                 let partial_moniker =
                     PartialMoniker::new(child_decl.name.clone(), Some(collection_name));
                 return Err(ModelError::instance_already_exists(
-                    realm.abs_moniker.clone(),
+                    self.abs_moniker.clone(),
                     partial_moniker,
                 ));
             }
@@ -300,37 +300,37 @@ impl Realm {
             child_realm.abs_moniker.clone(),
             EventPayload::AddDynamicChild { component_url: child_realm.component_url.clone() },
         );
-        realm.hooks.dispatch(&event).await?;
+        self.hooks.dispatch(&event).await?;
         Ok(())
     }
 
     /// Removes the dynamic child `partial_moniker`, returning the notification for the destroy
     /// action which the caller may await on.
     pub async fn remove_dynamic_child(
+        self: &Arc<Self>,
         model: Arc<Model>,
-        realm: Arc<Realm>,
         partial_moniker: &PartialMoniker,
     ) -> Result<Notification, ModelError> {
         let tup = {
-            let state = realm.lock_resolved_state().await?;
+            let state = self.lock_resolved_state().await?;
             state.live_child_realms.get(&partial_moniker).map(|t| t.clone())
         };
         if let Some(tup) = tup {
             let (instance, _) = tup;
             let child_moniker = ChildMoniker::from_partial(partial_moniker, instance);
             ActionSet::register(
-                realm.clone(),
+                self.clone(),
                 model.clone(),
                 Action::MarkDeleting(child_moniker.clone()),
             )
             .await
             .await?;
             let nf =
-                ActionSet::register(realm.clone(), model, Action::DeleteChild(child_moniker)).await;
+                ActionSet::register(self.clone(), model, Action::DeleteChild(child_moniker)).await;
             Ok(nf)
         } else {
             Err(ModelError::instance_not_found_in_realm(
-                realm.abs_moniker.clone(),
+                self.abs_moniker.clone(),
                 partial_moniker.clone(),
             ))
         }
@@ -342,12 +342,12 @@ impl Realm {
     ///
     /// REQUIRES: All dependents have already been stopped.
     pub async fn stop_instance(
+        self: &Arc<Self>,
         model: Arc<Model>,
-        realm: &Arc<Realm>,
         shut_down: bool,
     ) -> Result<(), ModelError> {
         let was_running = {
-            let mut execution = realm.lock_execution().await;
+            let mut execution = self.lock_execution().await;
             let was_running = execution.runtime.is_some();
 
             if let Some(runtime) = &mut execution.runtime {
@@ -359,7 +359,7 @@ impl Realm {
                 )));
                 runtime.stop_component(timer).await.map_err(|e| {
                     ModelError::RunnerCommunicationError {
-                        moniker: realm.abs_moniker.clone(),
+                        moniker: self.abs_moniker.clone(),
                         operation: "stop".to_string(),
                         err: ClonableError::from(anyhow::Error::from(e)),
                     }
@@ -372,10 +372,10 @@ impl Realm {
         };
         // When the realm is stopped, any child instances in transient collections must be
         // destroyed.
-        Self::destroy_transient_children(model.clone(), realm.clone()).await?;
+        self.destroy_transient_children(model.clone()).await?;
         if was_running {
-            let event = Event::new(realm.abs_moniker.clone(), EventPayload::StopInstance);
-            realm.hooks.dispatch(&event).await?;
+            let event = Event::new(self.abs_moniker.clone(), EventPayload::StopInstance);
+            self.hooks.dispatch(&event).await?;
         }
         Ok(())
     }
@@ -384,10 +384,10 @@ impl Realm {
     /// REQUIRES: All children have already been destroyed.
     // TODO: Need to:
     // - Delete the instance's persistent marker, if it was a persistent dynamic instance
-    pub async fn destroy_instance(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelError> {
+    pub async fn destroy_instance(self: &Arc<Self>, model: Arc<Model>) -> Result<(), ModelError> {
         // Clean up isolated storage.
         let decl = {
-            let state = realm.lock_state().await;
+            let state = self.lock_state().await;
             if let Some(state) = state.as_ref() {
                 state.decl.clone()
             } else {
@@ -398,7 +398,7 @@ impl Realm {
         };
         for use_ in decl.uses.iter() {
             if let UseDecl::Storage(use_storage) = use_ {
-                routing::route_and_delete_storage(&model, &use_storage, &realm).await?;
+                routing::route_and_delete_storage(&model, &use_storage, &self).await?;
                 break;
             }
         }
@@ -407,11 +407,11 @@ impl Realm {
 
     /// Registers actions to destroy all children of `realm` that live in transient collections.
     async fn destroy_transient_children(
+        self: &Arc<Self>,
         model: Arc<Model>,
-        realm: Arc<Realm>,
     ) -> Result<(), ModelError> {
         let (transient_colls, child_monikers) = {
-            let state = realm.lock_state().await;
+            let state = self.lock_state().await;
             if state.is_none() {
                 // Component instance was not resolved, so no dynamic children.
                 return Ok(());
@@ -437,14 +437,14 @@ impl Realm {
             if let Some(coll) = m.collection() {
                 if transient_colls.contains(coll) {
                     ActionSet::register(
-                        realm.clone(),
+                        self.clone(),
                         model.clone(),
                         Action::MarkDeleting(m.clone()),
                     )
                     .await
                     .await?;
                     let nf =
-                        ActionSet::register(realm.clone(), model.clone(), Action::DeleteChild(m))
+                        ActionSet::register(self.clone(), model.clone(), Action::DeleteChild(m))
                             .await;
                     futures.push(nf);
                 }
@@ -713,7 +713,7 @@ impl RealmState {
                 state: Mutex::new(None),
                 execution: Mutex::new(ExecutionState::new()),
                 actions: Mutex::new(ActionSet::new()),
-                hooks: Hooks::new(Some(&realm.hooks)),
+                hooks: Arc::new(Hooks::new(Some(realm.hooks.clone()))),
             });
             self.child_realms.insert(child_moniker, child_realm.clone());
             self.live_child_realms.insert(partial_moniker, (instance_id, child_realm.clone()));
@@ -1245,9 +1245,7 @@ pub mod tests {
         let proxy = DirectoryProxy::new(node_proxy.into_channel().unwrap());
         assert!(test_helpers::dir_contains(&proxy, "svc", "foo").await);
 
-        Realm::stop_instance(Arc::clone(&test.model), &realm, false)
-            .await
-            .expect("failed to stop instance");
+        realm.stop_instance(Arc::clone(&test.model), false).await.expect("failed to stop instance");
 
         // The directory should have received a PEER_CLOSED signal.
         fasync::OnSignals::new(&proxy.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED)

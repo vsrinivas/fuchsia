@@ -23,32 +23,27 @@ use {
 };
 
 /// Provides a hook for routing built-in runners to realms.
-#[derive(Clone)]
 pub struct BuiltinRunner {
-    inner: Arc<BuiltinRunnerInner>,
-}
-
-struct BuiltinRunnerInner {
     name: CapabilityName,
     runner: Arc<dyn Runner>,
 }
 
 impl BuiltinRunner {
     pub fn new(name: CapabilityName, runner: Arc<dyn Runner>) -> Self {
-        BuiltinRunner { inner: Arc::new(BuiltinRunnerInner { name, runner }) }
+        Self { name, runner }
     }
 
     /// Construct a `HooksRegistration` that will route our runner as a framework capability.
-    pub fn hook(&self) -> HooksRegistration {
-        HooksRegistration::new(
+    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
+        vec![HooksRegistration::new(
             "BuiltinRunner",
             vec![EventType::RouteCapability],
-            Arc::downgrade(&self.inner) as Weak<dyn Hook>,
-        )
+            Arc::downgrade(self) as Weak<dyn Hook>,
+        )]
     }
 }
 
-impl Hook for BuiltinRunnerInner {
+impl Hook for BuiltinRunner {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             if let EventPayload::RouteCapability {
@@ -145,11 +140,12 @@ mod tests {
     async fn get_cap_from_hook() -> Result<(), Error> {
         // Set up a runner.
         let mock_runner = Arc::new(MockRunner::new());
-        let builtin_runner = BuiltinRunner::new("elf".into(), Arc::clone(&mock_runner) as Arc<_>);
+        let builtin_runner =
+            Arc::new(BuiltinRunner::new("elf".into(), Arc::clone(&mock_runner) as Arc<_>));
 
         // Install the hook, and dispatch an event.
         let hooks = Hooks::new(None);
-        hooks.install(vec![builtin_runner.hook()]).await;
+        hooks.install(builtin_runner.hooks()).await;
         let provider_result = Arc::new(Mutex::new(None));
         hooks
             .dispatch(&Event::new(

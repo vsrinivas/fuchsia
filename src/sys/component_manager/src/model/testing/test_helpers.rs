@@ -526,7 +526,7 @@ pub fn new_test_model(
 pub struct ActionsTest {
     pub model: Arc<Model>,
     pub builtin_environment: Arc<BuiltinEnvironment>,
-    pub test_hook: TestHook,
+    pub test_hook: Arc<TestHook>,
     pub realm_proxy: Option<fsys::RealmProxy>,
     pub runner: Arc<MockRunner>,
 }
@@ -567,7 +567,7 @@ impl ActionsTest {
             .expect("failed to set up builtin environment"),
         );
         let builtin_environment_inner = builtin_environment.clone();
-        let test_hook = TestHook::new();
+        let test_hook = Arc::new(TestHook::new());
         model.root_realm.hooks.install(test_hook.hooks()).await;
         model.root_realm.hooks.install(extra_hooks).await;
 

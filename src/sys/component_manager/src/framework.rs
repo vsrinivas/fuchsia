@@ -40,11 +40,11 @@ lazy_static! {
 // The default implementation for framework services.
 pub struct RealmCapabilityProvider {
     scope_moniker: AbsoluteMoniker,
-    host: RealmCapabilityHost,
+    host: Arc<RealmCapabilityHost>,
 }
 
 impl RealmCapabilityProvider {
-    pub fn new(scope_moniker: AbsoluteMoniker, host: RealmCapabilityHost) -> Self {
+    pub fn new(scope_moniker: AbsoluteMoniker, host: Arc<RealmCapabilityHost>) -> Self {
         Self { scope_moniker, host }
     }
 }
@@ -75,10 +75,6 @@ impl CapabilityProvider for RealmCapabilityProvider {
 
 #[derive(Clone)]
 pub struct RealmCapabilityHost {
-    inner: Arc<RealmCapabilityHostInner>,
-}
-
-pub struct RealmCapabilityHostInner {
     model: Arc<Model>,
     config: ComponentManagerConfig,
 }
@@ -86,32 +82,18 @@ pub struct RealmCapabilityHostInner {
 // `RealmCapabilityHost` is a `Hook` that serves the `Realm` FIDL protocol.
 impl RealmCapabilityHost {
     pub fn new(model: Arc<Model>, config: ComponentManagerConfig) -> Self {
-        Self { inner: Arc::new(RealmCapabilityHostInner::new(model, config)) }
+        Self { model, config }
     }
 
-    pub fn hooks(&self) -> Vec<HooksRegistration> {
+    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "RealmCapabilityHost",
             vec![EventType::RouteCapability],
-            Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+            Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
 
     pub async fn serve(
-        &self,
-        scope_moniker: AbsoluteMoniker,
-        stream: fsys::RealmRequestStream,
-    ) -> Result<(), Error> {
-        self.inner.serve(scope_moniker, stream).await
-    }
-}
-
-impl RealmCapabilityHostInner {
-    pub fn new(model: Arc<Model>, config: ComponentManagerConfig) -> Self {
-        Self { model, config }
-    }
-
-    async fn serve(
         &self,
         scope_moniker: AbsoluteMoniker,
         mut stream: fsys::RealmRequestStream,
@@ -158,19 +140,15 @@ impl RealmCapabilityHostInner {
         cm_fidl_validator::validate_child(&child_decl)
             .map_err(|_| fcomponent::Error::InvalidArguments)?;
         let child_decl = child_decl.fidl_into_native();
-        Realm::add_dynamic_child(&realm, collection.name, &child_decl).await.map_err(
-            |e| match e {
-                ModelError::InstanceAlreadyExists { .. } => {
-                    fcomponent::Error::InstanceAlreadyExists
-                }
-                ModelError::CollectionNotFound { .. } => fcomponent::Error::CollectionNotFound,
-                ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
-                e => {
-                    error!("add_dynamic_child() failed: {:?}", e);
-                    fcomponent::Error::Internal
-                }
-            },
-        )?;
+        realm.add_dynamic_child(collection.name, &child_decl).await.map_err(|e| match e {
+            ModelError::InstanceAlreadyExists { .. } => fcomponent::Error::InstanceAlreadyExists,
+            ModelError::CollectionNotFound { .. } => fcomponent::Error::CollectionNotFound,
+            ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
+            e => {
+                error!("add_dynamic_child() failed: {:?}", e);
+                fcomponent::Error::Internal
+            }
+        })?;
         Ok(())
     }
 
@@ -231,19 +209,14 @@ impl RealmCapabilityHostInner {
     ) -> Result<(), fcomponent::Error> {
         child.collection.as_ref().ok_or(fcomponent::Error::InvalidArguments)?;
         let partial_moniker = PartialMoniker::new(child.name, child.collection);
-        let _ =
-            Realm::remove_dynamic_child(model, realm, &partial_moniker).await.map_err(
-                |e| match e {
-                    ModelError::InstanceNotFoundInRealm { .. } => {
-                        fcomponent::Error::InstanceNotFound
-                    }
-                    ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
-                    e => {
-                        error!("remove_dynamic_child() failed: {:?}", e);
-                        fcomponent::Error::Internal
-                    }
-                },
-            )?;
+        let _ = realm.remove_dynamic_child(model, &partial_moniker).await.map_err(|e| match e {
+            ModelError::InstanceNotFoundInRealm { .. } => fcomponent::Error::InstanceNotFound,
+            ModelError::Unsupported { .. } => fcomponent::Error::Unsupported,
+            e => {
+                error!("remove_dynamic_child() failed: {:?}", e);
+                fcomponent::Error::Internal
+            }
+        })?;
         Ok(())
     }
 
@@ -328,17 +301,17 @@ impl RealmCapabilityHostInner {
             (None, FrameworkCapability::Protocol(capability_path))
                 if *capability_path == *REALM_SERVICE =>
             {
-                return Ok(Some(Box::new(RealmCapabilityProvider::new(
-                    scope_moniker,
-                    RealmCapabilityHost { inner: self.clone() },
-                )) as Box<dyn CapabilityProvider>));
+                return Ok(Some(
+                    Box::new(RealmCapabilityProvider::new(scope_moniker, self.clone()))
+                        as Box<dyn CapabilityProvider>,
+                ));
             }
             _ => return Ok(capability_provider),
         }
     }
 }
 
-impl Hook for RealmCapabilityHostInner {
+impl Hook for RealmCapabilityHost {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             if let EventPayload::RouteCapability {
@@ -472,7 +445,7 @@ mod tests {
                 .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         );
-        let hook = TestHook::new();
+        let hook = Arc::new(TestHook::new());
         let test = RealmCapabilityTest::new(
             mock_resolver,
             mock_runner.clone(),
@@ -517,7 +490,7 @@ mod tests {
                 .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         );
-        let hook = TestHook::new();
+        let hook = Arc::new(TestHook::new());
         let test = RealmCapabilityTest::new(
             mock_resolver,
             Arc::new(MockRunner::new()),
@@ -748,7 +721,7 @@ mod tests {
                 .offer_runner_to_children(TEST_RUNNER_NAME)
                 .build(),
         );
-        let hook = TestHook::new();
+        let hook = Arc::new(TestHook::new());
         let test = RealmCapabilityTest::new(
             mock_resolver,
             Arc::new(MockRunner::new()),
@@ -818,7 +791,7 @@ mod tests {
         let mut out_dir = OutDir::new();
         out_dir.add_echo_service(CapabilityPath::try_from("/svc/foo").unwrap());
         mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
-        let hook = TestHook::new();
+        let hook = Arc::new(TestHook::new());
         let test = RealmCapabilityTest::new(
             mock_resolver,
             mock_runner.clone(),
@@ -880,7 +853,7 @@ mod tests {
         let mut out_dir = OutDir::new();
         out_dir.add_echo_service(CapabilityPath::try_from("/svc/foo").unwrap());
         mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
-        let hook = TestHook::new();
+        let hook = Arc::new(TestHook::new());
         let test = RealmCapabilityTest::new(
             mock_resolver,
             mock_runner.clone(),
@@ -934,7 +907,7 @@ mod tests {
         mock_resolver.add_component("unrunnable", component_decl_with_test_runner());
         let mock_runner = Arc::new(MockRunner::new());
         mock_runner.cause_failure("unrunnable");
-        let hook = TestHook::new();
+        let hook = Arc::new(TestHook::new());
         let test =
             RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;
 
@@ -980,7 +953,7 @@ mod tests {
         mock_resolver.add_component("unrunnable", component_decl_with_test_runner());
         let mock_runner = Arc::new(MockRunner::new());
         mock_runner.cause_failure("unrunnable");
-        let hook = TestHook::new();
+        let hook = Arc::new(TestHook::new());
         let test =
             RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;
 
@@ -1019,7 +992,7 @@ mod tests {
         );
         mock_resolver.add_component("static", component_decl_with_test_runner());
         let mock_runner = Arc::new(MockRunner::new());
-        let hook = TestHook::new();
+        let hook = Arc::new(TestHook::new());
         let test =
             RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;
 
@@ -1080,7 +1053,7 @@ mod tests {
                 .build(),
         );
         let mock_runner = Arc::new(MockRunner::new());
-        let hook = TestHook::new();
+        let hook = Arc::new(TestHook::new());
         let test =
             RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;
 

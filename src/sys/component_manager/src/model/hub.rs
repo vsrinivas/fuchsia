@@ -46,16 +46,12 @@ type Directory = Arc<pfs::Simple>;
 struct HubCapabilityProvider {
     abs_moniker: AbsoluteMoniker,
     relative_path: Vec<String>,
-    hub_inner: Arc<HubInner>,
+    hub: Arc<Hub>,
 }
 
 impl HubCapabilityProvider {
-    pub fn new(
-        abs_moniker: AbsoluteMoniker,
-        relative_path: Vec<String>,
-        hub_inner: Arc<HubInner>,
-    ) -> Self {
-        HubCapabilityProvider { abs_moniker, relative_path, hub_inner }
+    pub fn new(abs_moniker: AbsoluteMoniker, relative_path: Vec<String>, hub: Arc<Hub>) -> Self {
+        HubCapabilityProvider { abs_moniker, relative_path, hub }
     }
 }
 
@@ -80,7 +76,7 @@ impl CapabilityProvider for HubCapabilityProvider {
         let dir_path = pfsPath::validate_and_split(relative_path.clone()).map_err(|_| {
             ModelError::open_directory_error(self.abs_moniker.clone(), relative_path)
         })?;
-        self.hub_inner.open(&self.abs_moniker, flags, open_mode, dir_path, server_end).await?;
+        self.hub.open(&self.abs_moniker, flags, open_mode, dir_path, server_end).await?;
 
         Ok(())
     }
@@ -106,29 +102,33 @@ struct Execution {
 /// The Hub is a directory tree representing the component topology. Through the Hub,
 /// debugging and instrumentation tools can query information about component instances
 /// on the system, such as their component URLs, execution state and so on.
-///
-/// Hub itself does not store any state locally other than a reference to `HubInner`
-/// where all the state and business logic resides. This enables Hub to be cloneable
-/// to be passed across tasks.
 pub struct Hub {
-    inner: Arc<HubInner>,
+    instances: Mutex<HashMap<AbsoluteMoniker, Instance>>,
+    scope: ExecutionScope,
 }
 
 impl Hub {
     /// Create a new Hub given a `component_url` and a controller to the root directory.
     pub fn new(component_url: String) -> Result<Self, ModelError> {
-        Ok(Hub { inner: Arc::new(HubInner::new(component_url)?) })
+        let mut instances_map = HashMap::new();
+        let abs_moniker = AbsoluteMoniker::root();
+
+        Hub::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
+            .expect("Did not create directory.");
+
+        Ok(Hub {
+            instances: Mutex::new(instances_map),
+            scope: ExecutionScope::from_executor(Box::new(EHandle::local())),
+        })
     }
 
     pub async fn open_root(&self, flags: u32, server_end: zx::Channel) -> Result<(), ModelError> {
         let root_moniker = AbsoluteMoniker::root();
-        self.inner
-            .open(&root_moniker, flags, MODE_TYPE_DIRECTORY, pfsPath::empty(), server_end)
-            .await?;
+        self.open(&root_moniker, flags, MODE_TYPE_DIRECTORY, pfsPath::empty(), server_end).await?;
         Ok(())
     }
 
-    pub fn hooks(&self) -> Vec<HooksRegistration> {
+    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "Hub",
             vec![
@@ -139,29 +139,8 @@ impl Hub {
                 EventType::BeforeStartInstance,
                 EventType::StopInstance,
             ],
-            Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+            Arc::downgrade(self) as Weak<dyn Hook>,
         )]
-    }
-}
-
-struct HubInner {
-    instances: Mutex<HashMap<AbsoluteMoniker, Instance>>,
-    scope: ExecutionScope,
-}
-
-impl HubInner {
-    /// Create a new Hub given a |component_url| and a controller to the root directory.
-    pub fn new(component_url: String) -> Result<Self, ModelError> {
-        let mut instances_map = HashMap::new();
-        let abs_moniker = AbsoluteMoniker::root();
-
-        HubInner::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
-            .expect("Did not create directory.");
-
-        Ok(HubInner {
-            instances: Mutex::new(instances_map),
-            scope: ExecutionScope::from_executor(Box::new(EHandle::local())),
-        })
     }
 
     pub async fn open(
@@ -252,7 +231,7 @@ impl HubInner {
         mut instances_map: &'a mut HashMap<AbsoluteMoniker, Instance>,
     ) -> Result<(), ModelError> {
         if let Some(controlled) =
-            HubInner::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
+            Hub::add_instance_if_necessary(&abs_moniker, component_url, &mut instances_map)?
         {
             if let (Some(leaf), Some(parent_moniker)) = (abs_moniker.leaf(), abs_moniker.parent()) {
                 // In the children directory, the child's instance id is not used
@@ -615,7 +594,7 @@ impl HubInner {
     }
 }
 
-impl Hook for HubInner {
+impl Hook for Hub {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             match &event.payload {
@@ -922,11 +901,7 @@ mod tests {
                 host_fn: None,
                 runtime_host_fn: None,
             }],
-            vec![HooksRegistration::new(
-                "HubInjectionTestHook",
-                vec![EventType::RouteCapability],
-                Arc::downgrade(&hub_injection_test_hook) as Weak<dyn Hook>,
-            )],
+            hub_injection_test_hook.hooks(),
         )
         .await;
 

@@ -12,7 +12,6 @@ use {
             hooks::HooksRegistration,
             model::{ComponentManagerConfig, Model, ModelParams},
             moniker::{AbsoluteMoniker, PartialMoniker, RelativeMoniker},
-            realm::Realm,
             resolver::ResolverRegistry,
             runner::Runner,
             testing::{echo_service::*, mocks::*, out_dir::OutDir, test_helpers::*},
@@ -337,7 +336,8 @@ impl RoutingTest {
         let realm = self.model.look_up_realm(&moniker).await.expect("failed to look up realm");
         self.model.bind(&realm.abs_moniker).await.expect("bind instance failed");
         let partial_moniker = PartialMoniker::new(name.to_string(), Some(collection.to_string()));
-        let nf = Realm::remove_dynamic_child(self.model.clone(), realm, &partial_moniker)
+        let nf = realm
+            .remove_dynamic_child(self.model.clone(), &partial_moniker)
             .await
             .expect("failed to remove child");
         // Wait for destruction to fully complete.
@@ -667,7 +667,7 @@ pub mod capability_util {
         should_succeed: bool,
     ) {
         let realm = model.look_up_realm(&moniker).await.expect("failed to look up realm");
-        let meta_dir_res = Realm::resolve_meta_dir(&realm, model).await;
+        let meta_dir_res = realm.resolve_meta_dir(model).await;
         match (meta_dir_res, should_succeed) {
             (Ok(Some(meta_dir)), true) => write_hippo_file_to_directory(&meta_dir, true).await,
             (Err(ModelError::CapabilityDiscoveryError { .. }), false) => (),

@@ -35,56 +35,29 @@ lazy_static! {
 }
 
 pub struct EventSourceFactory {
-    inner: Arc<EventSourceFactoryInner>,
-}
-
-impl EventSourceFactory {
-    pub fn new() -> Self {
-        Self { inner: EventSourceFactoryInner::new() }
-    }
-
-    pub fn hooks(&self) -> Vec<HooksRegistration> {
-        vec![
-            // This hook must be registered with all events.
-            // However, a task will only receive events to which it subscribed.
-            HooksRegistration::new(
-                "EventRegistry",
-                vec![
-                    EventType::AddDynamicChild,
-                    EventType::BeforeStartInstance,
-                    EventType::PostDestroyInstance,
-                    EventType::PreDestroyInstance,
-                    EventType::ResolveInstance,
-                    EventType::RouteCapability,
-                    EventType::StopInstance,
-                ],
-                Arc::downgrade(&self.inner.event_registry) as Weak<dyn Hook>,
-            ),
-            // This hook provides the EventSource capability to components in the tree
-            HooksRegistration::new(
-                "EventSourceFactory",
-                vec![EventType::ResolveInstance, EventType::RouteCapability],
-                Arc::downgrade(&self.inner) as Weak<dyn Hook>,
-            ),
-        ]
-    }
-
-    pub async fn create(&self, scope_moniker: Option<AbsoluteMoniker>) -> EventSource {
-        self.inner.create(scope_moniker).await
-    }
-}
-
-struct EventSourceFactoryInner {
     event_source_registry: Mutex<HashMap<Option<AbsoluteMoniker>, EventSource>>,
     event_registry: Arc<EventRegistry>,
 }
 
-impl EventSourceFactoryInner {
-    pub fn new() -> Arc<Self> {
-        Arc::new(Self {
+impl EventSourceFactory {
+    pub fn new() -> Self {
+        Self {
             event_source_registry: Mutex::new(HashMap::new()),
             event_registry: Arc::new(EventRegistry::new()),
-        })
+        }
+    }
+
+    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
+        let mut hooks = self.event_registry.hooks();
+        hooks.append(&mut vec![
+            // This hook provides the EventSource capability to components in the tree
+            HooksRegistration::new(
+                "EventSourceFactory",
+                vec![EventType::ResolveInstance, EventType::RouteCapability],
+                Arc::downgrade(self) as Weak<dyn Hook>,
+            ),
+        ]);
+        hooks
     }
 
     /// Creates a `EventSource` that only receives events within the realm
@@ -121,7 +94,7 @@ impl EventSourceFactoryInner {
     }
 }
 
-impl Hook for EventSourceFactoryInner {
+impl Hook for EventSourceFactory {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<'_, Result<(), ModelError>> {
         Box::pin(async move {
             match &event.payload {

@@ -55,29 +55,19 @@ impl CapabilityProvider for EchoCapabilityProvider {
     }
 }
 
-pub struct EchoService {
-    inner: Arc<EchoServiceInner>,
-}
+pub struct EchoService;
 
 impl EchoService {
     pub fn new() -> Self {
-        Self { inner: Arc::new(EchoServiceInner::new()) }
+        Self
     }
 
-    pub fn hooks(&self) -> Vec<HooksRegistration> {
+    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "EchoService",
             vec![EventType::RouteCapability],
-            Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+            Arc::downgrade(self) as Weak<dyn Hook>,
         )]
-    }
-}
-
-struct EchoServiceInner;
-
-impl EchoServiceInner {
-    pub fn new() -> Self {
-        Self {}
     }
 
     async fn on_route_framework_capability_async<'a>(
@@ -96,7 +86,7 @@ impl EchoServiceInner {
     }
 }
 
-impl Hook for EchoServiceInner {
+impl Hook for EchoService {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             if let EventPayload::RouteCapability {

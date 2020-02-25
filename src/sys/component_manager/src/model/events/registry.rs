@@ -5,13 +5,16 @@
 use {
     crate::model::{
         error::ModelError,
-        hooks::{Event as ComponentEvent, EventType, Hook},
+        hooks::{Event as ComponentEvent, EventType, Hook, HooksRegistration},
         moniker::AbsoluteMoniker,
     },
     anyhow::Error,
     fuchsia_trace as trace,
     futures::{channel::*, future::BoxFuture, lock::Mutex, sink::SinkExt, StreamExt},
-    std::{collections::HashMap, sync::Arc},
+    std::{
+        collections::HashMap,
+        sync::{Arc, Weak},
+    },
 };
 
 /// Created for a particular component event.
@@ -126,6 +129,26 @@ pub struct EventRegistry {
 impl EventRegistry {
     pub fn new() -> Self {
         Self { dispatcher_map: Arc::new(Mutex::new(HashMap::new())) }
+    }
+
+    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
+        vec![
+            // This hook must be registered with all events.
+            // However, a task will only receive events to which it subscribed.
+            HooksRegistration::new(
+                "EventRegistry",
+                vec![
+                    EventType::AddDynamicChild,
+                    EventType::BeforeStartInstance,
+                    EventType::PostDestroyInstance,
+                    EventType::PreDestroyInstance,
+                    EventType::ResolveInstance,
+                    EventType::RouteCapability,
+                    EventType::StopInstance,
+                ],
+                Arc::downgrade(self) as Weak<dyn Hook>,
+            ),
+        ]
     }
 
     /// Subscribes to events of a provided set of EventTypes.

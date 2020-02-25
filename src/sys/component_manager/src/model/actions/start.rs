@@ -43,7 +43,7 @@ pub(super) async fn do_start(model: Arc<Model>, realm: Arc<Realm>) -> Result<(),
     let package = component.package;
 
     let (decl, live_child_descriptors) = {
-        Realm::populate_decl(&realm, component.decl.ok_or(ModelError::ComponentInvalid)?).await?;
+        realm.populate_decl(component.decl.ok_or(ModelError::ComponentInvalid)?).await?;
         let state = realm.lock_state().await;
         let state = state.as_ref().unwrap();
         let decl = state.decl().clone();
@@ -58,14 +58,15 @@ pub(super) async fn do_start(model: Arc<Model>, realm: Arc<Realm>) -> Result<(),
     };
 
     // Find the runner to use.
-    let runner = Realm::resolve_runner(&realm, &model).await.map_err(|e| {
+    let runner = realm.resolve_runner(&model).await.map_err(|e| {
         error!("failed to resolve runner for {}: {:?}", realm.abs_moniker, e);
         e
     })?;
 
     // Generate the Runtime which will be set in the Execution.
     let (pending_runtime, start_info, controller_server) =
-        make_execution_runtime(&model, &realm.abs_moniker, resolved_url, package, &decl).await?;
+        make_execution_runtime(&model, &realm.abs_moniker, resolved_url.clone(), package, &decl)
+            .await?;
 
     // Invoke the BeforeStart hook.
     {

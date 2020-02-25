@@ -17,43 +17,40 @@ use {
 /// This is used to terminate ComponentManager when the root component has been destroyed.
 /// TODO(xbhatnag): Consider replacing this with breakpoints.
 pub struct RootRealmStopNotifier {
-    pub rx: oneshot::Receiver<()>,
-    inner: Arc<RootRealmStopNotifierInner>,
+    rx: Mutex<Option<oneshot::Receiver<()>>>,
+    tx: Mutex<Option<oneshot::Sender<()>>>,
 }
 
 impl RootRealmStopNotifier {
     pub fn new() -> Self {
         let (tx, rx) = oneshot::channel();
-        let inner = Arc::new(RootRealmStopNotifierInner { tx: Mutex::new(Some(tx)) });
-        return Self { rx, inner };
+        Self { rx: Mutex::new(Some(rx)), tx: Mutex::new(Some(tx)) }
     }
 
-    pub fn hooks(&self) -> Vec<HooksRegistration> {
+    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "RootRealmStopNotifier",
             vec![EventType::StopInstance],
-            Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+            Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
 
-    pub async fn wait_for_root_realm_stop(self) {
-        self.rx.await.expect("Failed to wait for root instance to be stopped");
+    pub async fn wait_for_root_realm_stop(&self) {
+        let rx = { self.rx.lock().await.take() };
+        if let Some(rx) = rx {
+            rx.await.expect("Failed to wait for root instance to be stopped");
+        }
     }
 }
 
-struct RootRealmStopNotifierInner {
-    tx: Mutex<Option<oneshot::Sender<()>>>,
-}
-
-impl Hook for RootRealmStopNotifierInner {
+impl Hook for RootRealmStopNotifier {
     fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
-        let inner = self.clone();
         Box::pin(async move {
             if event.target_moniker.is_root() {
-                let tx = inner.tx.lock().await.take();
-                tx.expect("Root instance can only be stopped once.")
-                    .send(())
-                    .expect("Could not notify on StopInstance of root realm");
+                let tx = { self.tx.lock().await.take() };
+                if let Some(tx) = tx {
+                    tx.send(()).expect("Could not notify on StopInstance of root realm");
+                }
             }
             Ok(())
         })

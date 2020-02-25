@@ -81,21 +81,35 @@ struct ProcessLauncherState {
 }
 
 /// An implementation of the `fuchsia.process.Launcher` protocol using the `process_builder` crate.
-pub struct ProcessLauncher {
-    inner: Arc<ProcessLauncherInner>,
-}
+pub struct ProcessLauncher;
 
 impl ProcessLauncher {
     pub fn new() -> Self {
-        Self { inner: Arc::new(ProcessLauncherInner::new()) }
+        Self
     }
 
-    pub fn hooks(&self) -> Vec<HooksRegistration> {
+    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "ProcessLauncher",
             vec![EventType::RouteCapability],
-            Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+            Arc::downgrade(self) as Weak<dyn Hook>,
         )]
+    }
+
+    async fn on_route_framework_capability_async<'a>(
+        self: Arc<Self>,
+        capability: &'a FrameworkCapability,
+        capability_provider: Option<Box<dyn CapabilityProvider>>,
+    ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
+        match capability {
+            FrameworkCapability::Protocol(capability_path)
+                if *capability_path == *PROCESS_LAUNCHER_CAPABILITY_PATH =>
+            {
+                Ok(Some(Box::new(ProcessLauncherCapabilityProvider::new())
+                    as Box<dyn CapabilityProvider>))
+            }
+            _ => Ok(capability_provider),
+        }
     }
 
     /// Serves an instance of the `fuchsia.process.Launcher` protocol given an appropriate
@@ -250,31 +264,7 @@ impl ProcessLauncher {
     }
 }
 
-struct ProcessLauncherInner;
-
-impl ProcessLauncherInner {
-    pub fn new() -> Self {
-        Self {}
-    }
-
-    async fn on_route_framework_capability_async<'a>(
-        self: Arc<Self>,
-        capability: &'a FrameworkCapability,
-        capability_provider: Option<Box<dyn CapabilityProvider>>,
-    ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
-        match capability {
-            FrameworkCapability::Protocol(capability_path)
-                if *capability_path == *PROCESS_LAUNCHER_CAPABILITY_PATH =>
-            {
-                Ok(Some(Box::new(ProcessLauncherCapabilityProvider::new())
-                    as Box<dyn CapabilityProvider>))
-            }
-            _ => Ok(capability_provider),
-        }
-    }
-}
-
-impl Hook for ProcessLauncherInner {
+impl Hook for ProcessLauncher {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             if let EventPayload::RouteCapability {

@@ -242,7 +242,7 @@ pub async fn do_shutdown(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), Mod
     // Now that all children have shut down, shut down the parent.
     // TODO: Put the parent in a "shutting down" state so that if it creates new instances
     // after this point, they are created in a shut down state.
-    Realm::stop_instance(model, &realm, true).await?;
+    realm.stop_instance(model, true).await?;
 
     Ok(())
 }

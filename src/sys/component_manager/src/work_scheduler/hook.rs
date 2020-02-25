@@ -31,11 +31,11 @@ use {
 impl WorkScheduler {
     /// Helper to specify hooks associated with `WorkScheduler`. Accepts `&Arc<WorkScheduler>` to
     /// produce references needed by `HooksRegistration` without consuming `Arc`.
-    pub fn hooks(work_scheduler: &Arc<Self>) -> Vec<HooksRegistration> {
+    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "WorkScheduler",
             vec![EventType::ResolveInstance, EventType::RouteCapability],
-            Arc::downgrade(work_scheduler) as Weak<dyn Hook>,
+            Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
 

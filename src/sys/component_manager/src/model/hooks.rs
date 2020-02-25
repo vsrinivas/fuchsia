@@ -200,26 +200,21 @@ impl Event {
 }
 
 /// This is a collection of hooks to component manager events.
-/// Note: Cloning Hooks results in a shallow copy.
-#[derive(Clone)]
 pub struct Hooks {
-    parent: Option<Box<Hooks>>,
-    inner: Arc<Mutex<HooksInner>>,
+    parent: Option<Arc<Hooks>>,
+    hooks_map: Mutex<HashMap<EventType, Vec<HookEntry>>>,
 }
 
 impl Hooks {
-    pub fn new(parent: Option<&Hooks>) -> Self {
-        Self {
-            parent: parent.map(|hooks| Box::new(hooks.clone())),
-            inner: Arc::new(Mutex::new(HooksInner::new())),
-        }
+    pub fn new(parent: Option<Arc<Hooks>>) -> Self {
+        Self { parent, hooks_map: Mutex::new(HashMap::new()) }
     }
 
     pub async fn install(&self, hooks: Vec<HooksRegistration>) {
-        let mut inner = self.inner.lock().await;
+        let mut hooks_map = self.hooks_map.lock().await;
         for hook in hooks {
             'event_type: for event in hook.events {
-                let existing_hooks = &mut inner.hooks.entry(event).or_insert(vec![]);
+                let existing_hooks = &mut hooks_map.entry(event).or_insert(vec![]);
 
                 for existing_hook in existing_hooks.iter() {
                     // If this hook has already been installed, skip to next event type.
@@ -256,8 +251,8 @@ impl Hooks {
                 // call out to them. Since hooks are deduped at install time, we do not need
                 // to worry about that here.
                 let mut strong_hooks = vec![];
-                let mut inner = self.inner.lock().await;
-                if let Some(hooks) = inner.hooks.get_mut(&event.payload.type_()) {
+                let mut hooks_map = self.hooks_map.lock().await;
+                if let Some(hooks) = hooks_map.get_mut(&event.payload.type_()) {
                     hooks.retain(|hook| {
                         if let Some(callback) = hook.callback.upgrade() {
                             strong_hooks
@@ -307,16 +302,6 @@ struct HookEntry {
 struct StrongHookEntry {
     pub name: &'static str,
     pub callback: Arc<dyn Hook>,
-}
-
-pub struct HooksInner {
-    hooks: HashMap<EventType, Vec<HookEntry>>,
-}
-
-impl HooksInner {
-    pub fn new() -> Self {
-        Self { hooks: HashMap::new() }
-    }
 }
 
 #[cfg(test)]
@@ -420,8 +405,8 @@ mod tests {
     // This test verifies that events propagate from child_hooks to parent_hooks.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn event_propagation() {
-        let parent_hooks = Hooks::new(None);
-        let child_hooks = Hooks::new(Some(&parent_hooks));
+        let parent_hooks = Arc::new(Hooks::new(None));
+        let child_hooks = Hooks::new(Some(parent_hooks.clone()));
 
         let event_log = EventLog::new();
         let parent_call_counter = CallCounter::new("ParentCallCounter", Some(event_log.clone()));

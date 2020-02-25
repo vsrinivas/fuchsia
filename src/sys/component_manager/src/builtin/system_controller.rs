@@ -36,30 +36,20 @@ lazy_static! {
 
 #[derive(Clone)]
 pub struct SystemController {
-    inner: Arc<SystemControllerInner>,
+    model: Arc<Model>,
 }
 
 impl SystemController {
     pub fn new(model: Arc<Model>) -> Self {
-        Self { inner: Arc::new(SystemControllerInner::new(model)) }
+        Self { model }
     }
 
-    pub fn hooks(&self) -> Vec<HooksRegistration> {
+    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "SystemController",
             vec![EventType::RouteCapability],
-            Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+            Arc::downgrade(self) as Weak<dyn Hook>,
         )]
-    }
-}
-
-struct SystemControllerInner {
-    model: Arc<Model>,
-}
-
-impl SystemControllerInner {
-    pub fn new(model: Arc<Model>) -> Self {
-        Self { model }
     }
 
     async fn on_route_framework_capability_async<'a>(
@@ -79,7 +69,7 @@ impl SystemControllerInner {
     }
 }
 
-impl Hook for SystemControllerInner {
+impl Hook for SystemController {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             if let EventPayload::RouteCapability {

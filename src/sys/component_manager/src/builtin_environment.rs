@@ -37,7 +37,7 @@ use {
     fuchsia_component::server::*,
     fuchsia_runtime::{take_startup_handle, HandleType},
     fuchsia_zircon::{self as zx, HandleBased},
-    futures::{lock::Mutex, stream::StreamExt},
+    futures::stream::StreamExt,
     std::{collections::HashMap, sync::Arc},
 };
 
@@ -59,11 +59,11 @@ pub struct BuiltinEnvironment {
     pub vmex_service: Option<Arc<VmexService>>,
 
     pub work_scheduler: Arc<WorkScheduler>,
-    pub realm_capability_host: RealmCapabilityHost,
-    pub hub: Hub,
-    pub builtin_runners: HashMap<CapabilityName, BuiltinRunner>,
-    pub event_source_factory: Option<EventSourceFactory>,
-    pub stop_notifier: Mutex<Option<RootRealmStopNotifier>>,
+    pub realm_capability_host: Arc<RealmCapabilityHost>,
+    pub hub: Arc<Hub>,
+    pub builtin_runners: HashMap<CapabilityName, Arc<BuiltinRunner>>,
+    pub event_source_factory: Option<Arc<EventSourceFactory>>,
+    pub stop_notifier: Arc<RootRealmStopNotifier>,
 }
 
 impl BuiltinEnvironment {
@@ -139,29 +139,29 @@ impl BuiltinEnvironment {
         // Set up work scheduler.
         let work_scheduler =
             WorkScheduler::new(Arc::new(Arc::downgrade(model)) as Arc<dyn Binder>).await;
-        model.root_realm.hooks.install(WorkScheduler::hooks(&work_scheduler)).await;
+        model.root_realm.hooks.install(work_scheduler.hooks()).await;
 
         // Set up the realm service.
-        let realm_capability_host = RealmCapabilityHost::new(model.clone(), config);
+        let realm_capability_host = Arc::new(RealmCapabilityHost::new(model.clone(), config));
         model.root_realm.hooks.install(realm_capability_host.hooks()).await;
 
-        let hub = Hub::new(args.root_component_url.clone())?;
+        let hub = Arc::new(Hub::new(args.root_component_url.clone())?);
 
         // Set up the builtin runners.
         let mut builtin_runner_hooks = HashMap::new();
         for (name, runner) in builtin_runners.iter() {
-            let runner = BuiltinRunner::new(name.clone(), runner.clone());
-            model.root_realm.hooks.install(vec![runner.hook()]).await;
+            let runner = Arc::new(BuiltinRunner::new(name.clone(), runner.clone()));
+            model.root_realm.hooks.install(runner.hooks()).await;
             builtin_runner_hooks.insert(name.clone(), runner);
         }
 
         // Set up the root realm stop notifier.
-        let stop_notifier = RootRealmStopNotifier::new();
+        let stop_notifier = Arc::new(RootRealmStopNotifier::new());
         model.root_realm.hooks.install(stop_notifier.hooks()).await;
 
         let event_source_factory = {
             if args.debug {
-                Some(EventSourceFactory::new())
+                Some(Arc::new(EventSourceFactory::new()))
             } else {
                 None
             }
@@ -182,7 +182,7 @@ impl BuiltinEnvironment {
             hub,
             builtin_runners: builtin_runner_hooks,
             event_source_factory,
-            stop_notifier: Mutex::new(Some(stop_notifier)),
+            stop_notifier,
         })
     }
 
@@ -271,9 +271,6 @@ impl BuiltinEnvironment {
     }
 
     pub async fn wait_for_root_realm_stop(&self) {
-        let mut notifier = self.stop_notifier.lock().await;
-        if let Some(notifier) = notifier.take() {
-            notifier.wait_for_root_realm_stop().await;
-        }
+        self.stop_notifier.wait_for_root_realm_stop().await;
     }
 }

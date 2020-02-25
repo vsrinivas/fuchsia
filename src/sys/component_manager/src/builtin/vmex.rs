@@ -33,20 +33,18 @@ lazy_static! {
 }
 
 /// An implementation of fuchsia.security.resource.Vmex protocol.
-pub struct VmexService {
-    inner: Arc<VmexServiceInner>,
-}
+pub struct VmexService;
 
 impl VmexService {
     pub fn new() -> Self {
-        Self { inner: Arc::new(VmexServiceInner::new()) }
+        Self
     }
 
-    pub fn hooks(&self) -> Vec<HooksRegistration> {
+    pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "VmexService",
             vec![EventType::RouteCapability],
-            Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+            Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
 
@@ -67,14 +65,6 @@ impl VmexService {
         }
         Ok(())
     }
-}
-
-struct VmexServiceInner;
-
-impl VmexServiceInner {
-    pub fn new() -> Self {
-        Self {}
-    }
 
     async fn on_route_framework_capability_async<'a>(
         self: Arc<Self>,
@@ -92,7 +82,7 @@ impl VmexServiceInner {
     }
 }
 
-impl Hook for VmexServiceInner {
+impl Hook for VmexService {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
             if let EventPayload::RouteCapability {

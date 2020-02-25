@@ -282,7 +282,7 @@ async fn do_destroy(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelErr
     ok_or_first_error(results)?;
 
     // Now that all children have been destroyed, destroy the containing realm.
-    Realm::destroy_instance(model, realm).await?;
+    realm.destroy_instance(model).await?;
     Ok(())
 }
 
@@ -1510,30 +1510,20 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn shutdown_error() {
         struct StopErrorHook {
-            inner: Arc<StopErrorHookInner>,
+            moniker: AbsoluteMoniker,
         }
 
         impl StopErrorHook {
             fn new(moniker: AbsoluteMoniker) -> Self {
-                Self { inner: StopErrorHookInner::new(moniker) }
+                Self { moniker }
             }
 
-            fn hooks(&self) -> Vec<HooksRegistration> {
+            fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
                 vec![HooksRegistration::new(
                     "StopErrorHook",
                     vec![EventType::StopInstance],
-                    Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+                    Arc::downgrade(self) as Weak<dyn Hook>,
                 )]
-            }
-        }
-
-        struct StopErrorHookInner {
-            moniker: AbsoluteMoniker,
-        }
-
-        impl StopErrorHookInner {
-            fn new(moniker: AbsoluteMoniker) -> Arc<Self> {
-                Arc::new(Self { moniker })
             }
 
             async fn on_shutdown_instance_async(
@@ -1547,7 +1537,7 @@ pub mod tests {
             }
         }
 
-        impl Hook for StopErrorHookInner {
+        impl Hook for StopErrorHook {
             fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
                 Box::pin(async move {
                     if let EventPayload::StopInstance = event.payload {
@@ -1584,7 +1574,7 @@ pub mod tests {
             ("c", component_decl_with_test_runner()),
             ("d", component_decl_with_test_runner()),
         ];
-        let error_hook = StopErrorHook::new(vec!["a:0", "b:0"].into());
+        let error_hook = Arc::new(StopErrorHook::new(vec!["a:0", "b:0"].into()));
         let test = ActionsTest::new_with_hooks("root", components, None, error_hook.hooks()).await;
         let realm_a = test.look_up(vec!["a:0"].into()).await;
         let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
@@ -2242,30 +2232,20 @@ pub mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn destroy_error() {
         struct DestroyErrorHook {
-            inner: Arc<DestroyErrorHookInner>,
+            moniker: AbsoluteMoniker,
         }
 
         impl DestroyErrorHook {
             fn new(moniker: AbsoluteMoniker) -> Self {
-                Self { inner: DestroyErrorHookInner::new(moniker) }
+                Self { moniker }
             }
 
-            fn hooks(&self) -> Vec<HooksRegistration> {
+            fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
                 vec![HooksRegistration::new(
                     "DestroyErrorHook",
                     vec![EventType::PostDestroyInstance],
-                    Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+                    Arc::downgrade(self) as Weak<dyn Hook>,
                 )]
-            }
-        }
-
-        struct DestroyErrorHookInner {
-            moniker: AbsoluteMoniker,
-        }
-
-        impl DestroyErrorHookInner {
-            fn new(moniker: AbsoluteMoniker) -> Arc<Self> {
-                Arc::new(Self { moniker })
             }
 
             async fn on_destroy_instance_async(
@@ -2279,7 +2259,7 @@ pub mod tests {
             }
         }
 
-        impl Hook for DestroyErrorHookInner {
+        impl Hook for DestroyErrorHook {
             fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
                 Box::pin(async move {
                     if let EventPayload::PostDestroyInstance = event.payload {
@@ -2319,7 +2299,7 @@ pub mod tests {
         // The destroy hook is invoked just after the component instance is removed from the
         // list of children. Therefore, to cause destruction of `a` to fail, fail removal of
         // `/a/b`.
-        let error_hook = DestroyErrorHook::new(vec!["a:0", "b:0"].into());
+        let error_hook = Arc::new(DestroyErrorHook::new(vec!["a:0", "b:0"].into()));
         let test = ActionsTest::new_with_hooks("root", components, None, error_hook.hooks()).await;
         let realm_root = test.look_up(vec![].into()).await;
         let realm_a = test.look_up(vec!["a:0"].into()).await;
