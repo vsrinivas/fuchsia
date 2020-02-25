@@ -70,9 +70,15 @@ impl MoldComposition {
             );
         }
 
+        const BACKGROUND_LAYER_ID: u32 = 1 << 31;
+
         let len = self.layers.len() as u32 + 1;
+        if len > BACKGROUND_LAYER_ID {
+            panic!("too many layers {}", len - 1);
+        }
+
         map.global(
-            len,
+            BACKGROUND_LAYER_ID,
             vec![mold::tile::Op::ColorAccBackground(u32::from_be_bytes([
                 self.background_color.r,
                 self.background_color.g,
