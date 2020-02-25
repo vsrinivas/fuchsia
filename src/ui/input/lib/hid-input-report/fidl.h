@@ -94,6 +94,22 @@ struct FidlKeyboardDescriptor {
   FidlKeyboardOutputDescriptor output;
 };
 
+struct FidlConsumerControlInputDescriptor {
+  fuchsia_input_report::ConsumerControlInputDescriptor descriptor;
+  fuchsia_input_report::ConsumerControlInputDescriptor::UnownedBuilder builder;
+
+  fidl::VectorView<fuchsia_input_report::ConsumerControlButton> buttons_view;
+
+  ConsumerControlInputDescriptor data;
+};
+
+struct FidlConsumerControlDescriptor {
+  fuchsia_input_report::ConsumerControlDescriptor descriptor;
+  fuchsia_input_report::ConsumerControlDescriptor::UnownedBuilder builder;
+
+  FidlConsumerControlInputDescriptor input;
+};
+
 struct FidlDescriptor {
   fuchsia_input_report::DeviceDescriptor::UnownedBuilder builder;
 
@@ -101,6 +117,7 @@ struct FidlDescriptor {
   FidlSensorDescriptor sensor;
   FidlTouchDescriptor touch;
   FidlKeyboardDescriptor keyboard;
+  FidlConsumerControlDescriptor consumer_control;
 };
 
 struct FidlMouseInputReport {
@@ -147,12 +164,21 @@ struct FidlKeyboardInputReport {
   KeyboardInputReport data;
 };
 
+struct FidlConsumerControlInputReport {
+  fuchsia_input_report::ConsumerControlInputReport report;
+  fuchsia_input_report::ConsumerControlInputReport::UnownedBuilder builder;
+
+  fidl::VectorView<fuchsia_input_report::ConsumerControlButton> pressed_buttons_view;
+
+  ConsumerControlInputReport data;
+};
+
 struct FidlInputReport {
   fuchsia_input_report::InputReport::UnownedBuilder builder;
 
   zx_time_t time;
   std::variant<FidlMouseInputReport, FidlSensorInputReport, FidlTouchInputReport,
-               FidlKeyboardInputReport>
+               FidlKeyboardInputReport, FidlConsumerControlInputReport>
       report;
 };
 
@@ -167,6 +193,8 @@ KeyboardDescriptor ToKeyboardDescriptor(
     const fuchsia_input_report::KeyboardDescriptor& fidl_descriptor);
 TouchDescriptor ToTouchDescriptor(const fuchsia_input_report::TouchDescriptor& fidl_descriptor);
 SensorDescriptor ToSensorDescriptor(const fuchsia_input_report::SensorDescriptor& fidl_descriptor);
+ConsumerControlDescriptor ToConsumerControlDescriptor(
+    const fuchsia_input_report::ConsumerControlDescriptor& fidl_descriptor);
 
 // Creates a statically sized report from a Fidl Report.
 InputReport ToInputReport(const fuchsia_input_report::InputReport& fidl_report);

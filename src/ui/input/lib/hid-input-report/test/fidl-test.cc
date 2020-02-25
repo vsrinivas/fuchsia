@@ -314,3 +314,53 @@ TEST(FidlTest, KeyboardInputReport) {
     ASSERT_EQ(keyboard_report.pressed_keys[i], new_keyboard.pressed_keys[i]);
   }
 }
+
+TEST(FidlTest, ConsumerControlDescriptor) {
+  hid_input_report::ConsumerControlDescriptor descriptor = {};
+  descriptor.input = hid_input_report::ConsumerControlInputDescriptor();
+  descriptor.input->num_buttons = 3;
+  descriptor.input->buttons[0] = fuchsia_input_report::ConsumerControlButton::VOLUME_UP;
+  descriptor.input->buttons[1] = fuchsia_input_report::ConsumerControlButton::VOLUME_DOWN;
+  descriptor.input->buttons[2] = fuchsia_input_report::ConsumerControlButton::PAUSE;
+
+  hid_input_report::ReportDescriptor report_descriptor;
+  report_descriptor.descriptor = descriptor;
+
+  hid_input_report::FidlDescriptor fidl_descriptor = {};
+  ASSERT_OK(SetFidlDescriptor(report_descriptor, &fidl_descriptor));
+
+  fuchsia_input_report::DeviceDescriptor fidl = fidl_descriptor.builder.build();
+  ASSERT_TRUE(fidl.has_consumer_control());
+  ASSERT_TRUE(fidl.consumer_control().has_input());
+
+  hid_input_report::ConsumerControlDescriptor new_descriptor =
+      hid_input_report::ToConsumerControlDescriptor(fidl.consumer_control());
+
+  ASSERT_EQ(new_descriptor.input->num_buttons, descriptor.input->num_buttons);
+  for (size_t i = 0; i < descriptor.input->num_buttons; i++) {
+    ASSERT_EQ(new_descriptor.input->buttons[i], descriptor.input->buttons[i]);
+  }
+}
+
+TEST(FidlTest, ConsumerControlInputReport) {
+  hid_input_report::ConsumerControlInputReport report = {};
+  report.num_pressed_buttons = 3;
+  report.pressed_buttons[0] = fuchsia_input_report::ConsumerControlButton::VOLUME_UP;
+  report.pressed_buttons[1] = fuchsia_input_report::ConsumerControlButton::VOLUME_DOWN;
+  report.pressed_buttons[2] = fuchsia_input_report::ConsumerControlButton::PAUSE;
+
+  hid_input_report::InputReport input_report;
+  input_report.report = report;
+
+  hid_input_report::FidlInputReport fidl_report = {};
+  ASSERT_OK(SetFidlInputReport(input_report, &fidl_report));
+
+  hid_input_report::InputReport new_input_report =
+      hid_input_report::ToInputReport(fidl_report.builder.build());
+  auto new_report = std::get<hid_input_report::ConsumerControlInputReport>(new_input_report.report);
+
+  ASSERT_EQ(new_report.num_pressed_buttons, report.num_pressed_buttons);
+  for (size_t i = 0; i < report.num_pressed_buttons; i++) {
+    ASSERT_EQ(new_report.pressed_buttons[i], report.pressed_buttons[i]);
+  }
+}

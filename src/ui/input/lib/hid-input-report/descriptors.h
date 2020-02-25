@@ -137,14 +137,34 @@ struct SensorDescriptor {
   std::optional<SensorInputDescriptor> input;
 };
 
+struct ConsumerControlInputDescriptor {
+  std::array<fuchsia_input_report::ConsumerControlButton,
+             fuchsia_input_report::CONSUMER_CONTROL_MAX_NUM_BUTTONS>
+      buttons;
+  size_t num_buttons = 0;
+};
+
+struct ConsumerControlDescriptor {
+  std::optional<ConsumerControlInputDescriptor> input;
+};
+
+struct ConsumerControlInputReport {
+  std::array<fuchsia_input_report::ConsumerControlButton,
+             fuchsia_input_report::CONSUMER_CONTROL_MAX_NUM_BUTTONS>
+      pressed_buttons;
+  size_t num_pressed_buttons = 0;
+};
+
 struct ReportDescriptor {
-  std::variant<MouseDescriptor, SensorDescriptor, TouchDescriptor, KeyboardDescriptor> descriptor;
+  std::variant<MouseDescriptor, SensorDescriptor, TouchDescriptor, KeyboardDescriptor,
+               ConsumerControlDescriptor>
+      descriptor;
 };
 
 struct InputReport {
   std::optional<zx_time_t> time;
   std::variant<std::monostate, MouseInputReport, SensorInputReport, TouchInputReport,
-               KeyboardInputReport>
+               KeyboardInputReport, ConsumerControlInputReport>
       report;
 };
 

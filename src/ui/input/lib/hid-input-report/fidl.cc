@@ -159,6 +159,20 @@ void SetKeyboardInputReport(FidlKeyboardInputReport* report) {
   report->report = report->builder.build();
 }
 
+void SetConsumerControlInputDescriptor(FidlConsumerControlInputDescriptor* descriptor) {
+  descriptor->buttons_view = fidl::VectorView<fuchsia_input_report::ConsumerControlButton>(
+      descriptor->data.buttons.data(), descriptor->data.num_buttons);
+  descriptor->builder.set_buttons(fidl::unowned(&descriptor->buttons_view));
+  descriptor->descriptor = descriptor->builder.build();
+}
+
+void SetConsumerControlInputReport(FidlConsumerControlInputReport* report) {
+  report->pressed_buttons_view = fidl::VectorView<fuchsia_input_report::ConsumerControlButton>(
+      report->data.pressed_buttons.data(), report->data.num_pressed_buttons);
+  report->builder.set_pressed_buttons(fidl::unowned(&report->pressed_buttons_view));
+  report->report = report->builder.build();
+}
+
 zx_status_t SetFidlDescriptor(const hid_input_report::ReportDescriptor& hid_desc,
                               FidlDescriptor* descriptor) {
   if (std::holds_alternative<MouseDescriptor>(hid_desc.descriptor)) {
@@ -211,6 +225,20 @@ zx_status_t SetFidlDescriptor(const hid_input_report::ReportDescriptor& hid_desc
     descriptor->builder.set_keyboard(fidl::unowned(&descriptor->keyboard.descriptor));
     return ZX_OK;
   }
+  if (std::holds_alternative<ConsumerControlDescriptor>(hid_desc.descriptor)) {
+    const ConsumerControlDescriptor* hid_consumer_control =
+        &std::get<ConsumerControlDescriptor>(hid_desc.descriptor);
+    if (hid_consumer_control->input) {
+      descriptor->consumer_control.input.data = *hid_consumer_control->input;
+      SetConsumerControlInputDescriptor(&descriptor->consumer_control.input);
+      descriptor->consumer_control.builder.set_input(
+          fidl::unowned(&descriptor->consumer_control.input.descriptor));
+    }
+    descriptor->consumer_control.descriptor = descriptor->consumer_control.builder.build();
+    descriptor->builder.set_consumer_control(
+        fidl::unowned(&descriptor->consumer_control.descriptor));
+    return ZX_OK;
+  }
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -255,6 +283,16 @@ zx_status_t SetFidlInputReport(const hid_input_report::InputReport& hid_report,
     keyboard->data = std::get<KeyboardInputReport>(hid_report.report);
     SetKeyboardInputReport(keyboard);
     report->builder.set_keyboard(fidl::unowned(&keyboard->report));
+    return ZX_OK;
+  }
+  if (std::holds_alternative<ConsumerControlInputReport>(hid_report.report)) {
+    report->report = FidlConsumerControlInputReport();
+    FidlConsumerControlInputReport* consumer_control =
+        &std::get<FidlConsumerControlInputReport>(report->report);
+
+    consumer_control->data = std::get<ConsumerControlInputReport>(hid_report.report);
+    SetConsumerControlInputReport(consumer_control);
+    report->builder.set_consumer_control(fidl::unowned(&consumer_control->report));
     return ZX_OK;
   }
   return ZX_ERR_NOT_SUPPORTED;
@@ -376,6 +414,22 @@ SensorDescriptor ToSensorDescriptor(const fuchsia_input_report::SensorDescriptor
   return descriptor;
 }
 
+ConsumerControlDescriptor ToConsumerControlDescriptor(
+    const fuchsia_input_report::ConsumerControlDescriptor& fidl_descriptor) {
+  ConsumerControlDescriptor descriptor;
+  if (fidl_descriptor.has_input()) {
+    ConsumerControlInputDescriptor input;
+    if (fidl_descriptor.input().has_buttons()) {
+      input.num_buttons = fidl_descriptor.input().buttons().count();
+      for (size_t i = 0; i < fidl_descriptor.input().buttons().count(); i++) {
+        input.buttons[i] = fidl_descriptor.input().buttons()[i];
+      }
+    }
+    descriptor.input = input;
+  }
+  return descriptor;
+}
+
 MouseInputReport ToMouseInputReport(const fuchsia_input_report::MouseInputReport& fidl_report) {
   MouseInputReport report = {};
   if (fidl_report.has_movement_x()) {
@@ -457,6 +511,18 @@ SensorInputReport ToSensorInputReport(const fuchsia_input_report::SensorInputRep
   return report;
 }
 
+ConsumerControlInputReport ToConsumerControlInputReport(
+    const fuchsia_input_report::ConsumerControlInputReport& fidl_report) {
+  ConsumerControlInputReport report = {};
+  if (fidl_report.has_pressed_buttons()) {
+    report.num_pressed_buttons = fidl_report.pressed_buttons().count();
+    for (size_t i = 0; i < fidl_report.pressed_buttons().count(); i++) {
+      report.pressed_buttons[i] = fidl_report.pressed_buttons()[i];
+    }
+  }
+  return report;
+}
+
 InputReport ToInputReport(const fuchsia_input_report::InputReport& fidl_report) {
   InputReport report = {};
 
@@ -472,6 +538,8 @@ InputReport ToInputReport(const fuchsia_input_report::InputReport& fidl_report) 
     report.report = ToTouchInputReport(fidl_report.touch());
   } else if (fidl_report.has_sensor()) {
     report.report = ToSensorInputReport(fidl_report.sensor());
+  } else if (fidl_report.has_consumer_control()) {
+    report.report = ToConsumerControlInputReport(fidl_report.consumer_control());
   }
   return report;
 }
