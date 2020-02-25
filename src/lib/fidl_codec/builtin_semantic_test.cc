@@ -29,6 +29,9 @@ class BuiltinSemanticTest : public SemanticParserTest {
   void ExecuteWrite(const MethodSemantic* method_semantic, const StructValue* request,
                     const StructValue* response);
 
+  void ExecuteRead(const MethodSemantic* method_semantic, const StructValue* request,
+                   const StructValue* response);
+
  protected:
   HandleSemantic handle_semantic_;
   const zx_handle_info_t channel0_;
@@ -44,6 +47,73 @@ void BuiltinSemanticTest::ExecuteWrite(const MethodSemantic* method_semantic,
   fidl_codec::semantic::SemanticContext context(&handle_semantic_, kPid, kHandle,
                                                 ContextType::kWrite, request, response);
   method_semantic->ExecuteAssignments(&context);
+}
+
+void BuiltinSemanticTest::ExecuteRead(const MethodSemantic* method_semantic,
+                                      const StructValue* request, const StructValue* response) {
+  fidl_codec::semantic::SemanticContext context(&handle_semantic_, kPid, kHandle,
+                                                ContextType::kRead, request, response);
+  method_semantic->ExecuteAssignments(&context);
+}
+
+// Check Node::Clone: request.object = handle
+TEST_F(BuiltinSemanticTest, CloneWrite) {
+  // Checks that Node::Clone exists in fuchsia.io.
+  Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
+  ASSERT_NE(library, nullptr);
+  library->DecodeTypes();
+  Interface* interface = nullptr;
+  library->GetInterfaceByName("fuchsia.io/Node", &interface);
+  ASSERT_NE(interface, nullptr);
+  InterfaceMethod* method = interface->GetMethodByName("Clone");
+  ASSERT_NE(method, nullptr);
+  // Checks that the builtin semantic is defined for Clone.
+  ASSERT_NE(method->semantic(), nullptr);
+
+  // Check that by writing on this handle:
+  SetHandleSemantic("dir", "/svc");
+
+  // This message (we only define the fields used by the semantic):
+  StructValue request(*method->request());
+  request.AddField("object", std::make_unique<HandleValue>(channel0_));
+
+  ExecuteWrite(method->semantic(), &request, nullptr);
+
+  // We have this handle semantic for kChannel1.
+  const HandleDescription* description = handle_semantic_.GetHandleDescription(kPid, kChannel1);
+  ASSERT_NE(description, nullptr);
+  ASSERT_EQ(description->type(), "dir");
+  ASSERT_EQ(description->path(), "/svc");
+}
+
+// Check Node::Clone: request.object = handle
+TEST_F(BuiltinSemanticTest, CloneRead) {
+  // Checks that Node::Clone exists in fuchsia.io.
+  Library* library = library_loader_.GetLibraryFromName("fuchsia.io");
+  ASSERT_NE(library, nullptr);
+  library->DecodeTypes();
+  Interface* interface = nullptr;
+  library->GetInterfaceByName("fuchsia.io/Node", &interface);
+  ASSERT_NE(interface, nullptr);
+  InterfaceMethod* method = interface->GetMethodByName("Clone");
+  ASSERT_NE(method, nullptr);
+  // Checks that the builtin semantic is defined for Clone.
+  ASSERT_NE(method->semantic(), nullptr);
+
+  // Check that by writing on this handle:
+  SetHandleSemantic("dir", "/svc");
+
+  // This message (we only define the fields used by the semantic):
+  StructValue request(*method->request());
+  request.AddField("object", std::make_unique<HandleValue>(channel0_));
+
+  ExecuteRead(method->semantic(), &request, nullptr);
+
+  // We have this handle semantic for kChannel1.
+  const HandleDescription* description = handle_semantic_.GetHandleDescription(kPid, kChannel0);
+  ASSERT_NE(description, nullptr);
+  ASSERT_EQ(description->type(), "dir");
+  ASSERT_EQ(description->path(), "/svc");
 }
 
 // Check Directory::Open: request.object = handle / request.path

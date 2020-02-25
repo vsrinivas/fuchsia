@@ -131,8 +131,13 @@ void Assignment::Execute(SemanticContext* context) const {
       }
       break;
   }
+  const HandleDescription* handle_description = source_value.handle_description();
+  if ((handle_description == nullptr) && (source_value.handle() != ZX_HANDLE_INVALID)) {
+    handle_description =
+        context->handle_semantic()->GetHandleDescription(context->pid(), source_value.handle());
+  }
   context->handle_semantic()->AddHandleDescription(context->pid(), destination_handle,
-                                                   source_value.handle_description());
+                                                   handle_description);
 }
 
 void MethodSemantic::Dump(std::ostream& os) const {

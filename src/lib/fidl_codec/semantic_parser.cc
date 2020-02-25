@@ -184,7 +184,13 @@ void SemanticParser::ParseLibrary() {
     SkipBlock();
     return;
   }
-  if (IsIdentifier()) {
+  while (!ConsumeRightBrace()) {
+    if (!IsIdentifier()) {
+      AddError() << "Protocol name expected.\n";
+      SkipBlock();
+      NextLexicalToken();
+      return;
+    }
     Interface* interface = nullptr;
     if (library != nullptr) {
       std::string protocol_name = library->name() + "/" + std::string(current_string_);
@@ -194,37 +200,39 @@ void SemanticParser::ParseLibrary() {
       }
     }
     NextLexicalToken();
-    if (ParseColonColon()) {
-      if (IsIdentifier()) {
-        InterfaceMethod* method = nullptr;
-        if (interface != nullptr) {
-          method = interface->GetMethodByName(current_string_);
-          if (method == nullptr) {
-            AddError() << "Method " << current_string_ << " not found in protocol "
-                       << interface->name() << '\n';
-          }
-        }
-        NextLexicalToken();
-        if (ParseLeftBrace()) {
-          auto method_semantic = std::make_unique<MethodSemantic>();
-          while (!ConsumeRightBrace() && !IsEof()) {
-            ParseAssignment(method_semantic.get());
-          }
-          if (method != nullptr) {
-            method->set_semantic(std::move(method_semantic));
-          }
-          ParseRightBrace();
-          return;
-        }
-      } else {
-        AddError() << "Method name expected.\n";
+    if (!ParseColonColon()) {
+      SkipBlock();
+      NextLexicalToken();
+      return;
+    }
+    if (!IsIdentifier()) {
+      AddError() << "Method name expected.\n";
+      SkipBlock();
+      NextLexicalToken();
+      return;
+    }
+    InterfaceMethod* method = nullptr;
+    if (interface != nullptr) {
+      method = interface->GetMethodByName(current_string_);
+      if (method == nullptr) {
+        AddError() << "Method " << current_string_ << " not found in protocol " << interface->name()
+                   << '\n';
       }
     }
-  } else {
-    AddError() << "Protocol name expected.\n";
+    NextLexicalToken();
+    if (!ParseLeftBrace()) {
+      SkipBlock();
+      NextLexicalToken();
+      return;
+    }
+    auto method_semantic = std::make_unique<MethodSemantic>();
+    while (!ConsumeRightBrace() && !IsEof()) {
+      ParseAssignment(method_semantic.get());
+    }
+    if (method != nullptr) {
+      method->set_semantic(std::move(method_semantic));
+    }
   }
-  SkipBlock();
-  NextLexicalToken();
 }
 
 void SemanticParser::ParseAssignment(MethodSemantic* method_semantic) {
