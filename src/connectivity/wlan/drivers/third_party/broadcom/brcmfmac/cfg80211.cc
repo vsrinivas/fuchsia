@@ -62,8 +62,6 @@
 
 #define BRCMF_ND_INFO_TIMEOUT_MSEC 2000
 
-#define BRCMF_ASSOC_PARAMS_FIXED_SIZE (sizeof(struct brcmf_assoc_params_le) - sizeof(uint16_t))
-
 static bool check_vif_up(struct brcmf_cfg80211_vif* vif) {
   if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_READY, &vif->sme_state)) {
     BRCMF_DBG(INFO, "device is not ready : status (%lu)\n", vif->sme_state.load());

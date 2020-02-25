@@ -533,21 +533,48 @@ void SimFirmware::AssocScanDone() {
   // For now, just pick the first AP. The real firmware can select based on signal strength and
   // band, but since wlanstack makes its own decision, we won't bother to model that here for now.
   ScanResult& ap = assoc_state_.scan_results.front();
+  auth_state_.bss_capability.set_val(ap.bss_capability.val());
+
   assoc_opts->channel = ap.channel;
   assoc_opts->bssid = ap.bssid;
   assoc_state_.ifidx = scan_state_.ifidx;
 
+  // Send an event of the first scan result to driver when assoc scan is done.
+  EscanResultSeen(ap);
+
   assoc_state_.state = AssocState::ASSOCIATING;
   assoc_state_.opts = std::move(assoc_opts);
   assoc_state_.num_attempts = 0;
-  AssocStart();
+
+  // Values stored in assoc_state_ will be use in authentication step.
+  common::MacAddr srcAddr(mac_addr_);
+  common::MacAddr bssid(assoc_state_.opts->bssid);
+
+  uint16_t chanspec = channel_to_chanspec(&d11_inf_, &assoc_state_.opts->channel);
+  SetIFChanspec(assoc_state_.ifidx, chanspec);
+  hw_.SetChannel(assoc_state_.opts->channel);
+  hw_.EnableRx();
+
+  // Check the privacy bit to see whether AP is using OPEN mode for authentication
+  if (auth_state_.bss_capability.privacy()) {
+    AuthStart();
+  } else {
+    AssocStart();
+  }
 }
 
 void SimFirmware::AssocClearContext() {
+  auth_state_.bss_capability.clear();
   assoc_state_.opts = nullptr;
   assoc_state_.scan_results.clear();
   // Clear out the channel setting
   iface_tbl_[assoc_state_.ifidx].chanspec = 0;
+}
+
+void SimFirmware::AuthHandleFailure() {
+  auth_state_.state = AuthState::NOT_AUTHENTICATED;
+  SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_FAIL, assoc_state_.ifidx);
+  AssocClearContext();
 }
 
 void SimFirmware::AssocHandleFailure() {
@@ -555,19 +582,111 @@ void SimFirmware::AssocHandleFailure() {
     SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_FAIL, assoc_state_.ifidx);
     AssocClearContext();
     assoc_state_.state = AssocState::NOT_ASSOCIATED;
+    auth_state_.state = AuthState::NOT_AUTHENTICATED;
   } else {
     assoc_state_.num_attempts++;
+    if (auth_state_.bss_capability.privacy()) {
+      auth_state_.state = AuthState::NOT_AUTHENTICATED;
+      AuthStart();
+    } else {
+      AssocStart();
+    }
+  }
+}
+
+void SimFirmware::AuthStart() {
+  common::MacAddr srcAddr(mac_addr_);
+  common::MacAddr bssid(assoc_state_.opts->bssid);
+
+  auto callback = new std::function<void()>;
+  *callback = std::bind(&SimFirmware::AuthHandleFailure, this);
+  hw_.RequestCallback(callback, kAuthTimeout, &auth_state_.auth_timer_id);
+
+  ZX_ASSERT(auth_state_.state == AuthState::NOT_AUTHENTICATED);
+  simulation::SimAuthType auth_type;
+  if (auth_state_.auth_type == BRCMF_AUTH_MODE_OPEN) {
+    // Sequence number start from 0, end with at most 3.
+    auth_type = simulation::AUTH_TYPE_OPEN;
+  } else {
+    // When auth_state_.auth_type == BRCMF_AUTH_MODE_AUTO
+    auth_type = simulation::AUTH_TYPE_SHARED_KEY;
+  }
+
+  simulation::SimAuthFrame auth_req_frame(&hw_, srcAddr, bssid, 1, auth_type,
+                                          WLAN_AUTH_RESULT_SUCCESS);
+  hw_.Tx(&auth_req_frame);
+  auth_state_.state = AuthState::EXPECTING_SECOND;
+}
+
+void SimFirmware::RxAuthResp(const simulation::SimAuthFrame* frame) {
+  // If we are not expecting auth resp packets, ignore it,
+  if (auth_state_.state == AuthState::NOT_AUTHENTICATED ||
+      auth_state_.state == AuthState::AUTHENTICATED) {
+    return;
+  }
+
+  // Ignore if this is not intended for us
+  common::MacAddr mac_addr(mac_addr_);
+  if (frame->dst_addr_ != mac_addr) {
+    return;
+  }
+
+  // Ignore if this is not from the bssid with which we were trying to authenticate
+  if (frame->src_addr_ != assoc_state_.opts->bssid) {
+    return;
+  }
+
+  // Response received, cancel timer
+  hw_.CancelCallback(auth_state_.auth_timer_id);
+
+  // It should not be an auth req frame if its dst addr is a client
+  if (frame->seq_num_ != 2 && frame->seq_num_ != 4) {
+    return;
+  }
+
+  if (auth_state_.auth_type == BRCMF_AUTH_MODE_OPEN) {
+    ZX_ASSERT(auth_state_.state == AuthState::EXPECTING_SECOND);
+    ZX_ASSERT(frame->seq_num_ == 2);
+    if (frame->status_ == WLAN_AUTH_RESULT_REFUSED) {
+      AuthHandleFailure();
+      return;
+    }
+    auth_state_.state = AuthState::AUTHENTICATED;
     AssocStart();
+  } else {
+    // When auth_state_.auth_type == BRCMF_AUTH_MODE_AUTO
+    if (auth_state_.state == AuthState::EXPECTING_SECOND && frame->seq_num_ == 2) {
+      // Retry with AUTH_TYPE_OPEN_SYSTEM when refused in AUTH_TYPE_SHARED_KEY mode
+      if (frame->status_ == WLAN_AUTH_RESULT_REFUSED) {
+        auth_state_.state = AuthState::NOT_AUTHENTICATED;
+        auth_state_.auth_type = BRCMF_AUTH_MODE_OPEN;
+        AuthStart();
+        return;
+      }
+      // If we receive the second auth frame when we are expecting it, we send out the third one and
+      // set another timer for it.
+      auto callback = new std::function<void()>;
+      *callback = std::bind(&SimFirmware::AuthHandleFailure, this);
+      hw_.RequestCallback(callback, kAuthTimeout, &auth_state_.auth_timer_id);
+
+      auth_state_.state = AuthState::EXPECTING_FOURTH;
+
+      common::MacAddr srcAddr(mac_addr_);
+      common::MacAddr bssid(assoc_state_.opts->bssid);
+      simulation::SimAuthFrame auth_req_frame(&hw_, srcAddr, bssid, frame->seq_num_ + 1,
+                                              simulation::AUTH_TYPE_SHARED_KEY,
+                                              WLAN_AUTH_RESULT_SUCCESS);
+      hw_.Tx(&auth_req_frame);
+    } else if (auth_state_.state == AuthState::EXPECTING_FOURTH && frame->seq_num_ == 4) {
+      // If we receive the fourth auth frame when we are expecting it, start association
+      auth_state_.state = AuthState::AUTHENTICATED;
+      AssocStart();
+    }
   }
 }
 
 void SimFirmware::AssocStart() {
   common::MacAddr srcAddr(mac_addr_);
-
-  uint16_t chanspec = channel_to_chanspec(&d11_inf_, &assoc_state_.opts->channel);
-  SetIFChanspec(assoc_state_.ifidx, chanspec);
-  hw_.SetChannel(assoc_state_.opts->channel);
-  hw_.EnableRx();
 
   auto callback = new std::function<void()>;
   *callback = std::bind(&SimFirmware::AssocHandleFailure, this);
@@ -602,26 +721,26 @@ int16_t SimFirmware::GetSoftAPIfidx() {
   return -1;
 }
 // This routine for now only handles Disassoc Request meant for the SoftAP IF.
-void SimFirmware::RxDisassocReq(const common::MacAddr& src, const common::MacAddr& dst,
-                                uint16_t reason) {
-  BRCMF_DBG(SIM, "Disassoc from %s for %s reason: %d\n", MACSTR(src), MACSTR(dst), reason);
+void SimFirmware::RxDisassocReq(const simulation::SimDisassocReqFrame* frame) {
+  BRCMF_DBG(SIM, "Disassoc from %s for %s reason: %d\n", MACSTR(frame->src_addr_),
+            MACSTR(frame->dst_addr_), frame->reason_);
   // First check if this is a disassoc meant for a client associated to our SoftAP
-  auto ifidx = GetSoftAPIfidx(dst);
+  auto ifidx = GetSoftAPIfidx(frame->dst_addr_);
   if (ifidx == -1) {
     // Not meant for the SoftAP. Check if it is meant for the client interface
-    HandleDisassocForClientIF(src, dst, reason);
+    HandleDisassocForClientIF(frame->src_addr_, frame->dst_addr_, frame->reason_);
     return;
   }
   // Remove the client from the list (if found)
   for (auto client : iface_tbl_[ifidx].ap_config.clients) {
-    if (client == src) {
-      iface_tbl_[ifidx].ap_config.clients.remove(src);
+    if (client == frame->src_addr_) {
+      iface_tbl_[ifidx].ap_config.clients.remove(frame->src_addr_);
       // Send DISASSOC_IND and DEAUTH events to driver
       SendSimpleEventToDriver(BRCMF_E_DISASSOC_IND, BRCMF_E_STATUS_SUCCESS, ifidx,
                               BRCMF_EVENT_MSG_LINK, WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC,
-                              src);
+                              frame->src_addr_);
       SendSimpleEventToDriver(BRCMF_E_DEAUTH, BRCMF_E_STATUS_SUCCESS, ifidx, 0,
-                              WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC, src);
+                              WLAN_DEAUTH_REASON_LEAVING_NETWORK_DISASSOC, frame->src_addr_);
       BRCMF_DBG(SIM, "Disasoc done Num Clients: %lu\n", iface_tbl_[ifidx].ap_config.clients.size());
       return;
     }
@@ -629,8 +748,7 @@ void SimFirmware::RxDisassocReq(const common::MacAddr& src, const common::MacAdd
   BRCMF_DBG(SIM, "Client not found in List\n");
 }
 
-void SimFirmware::RxAssocResp(const common::MacAddr& src, const common::MacAddr& dst,
-                              uint16_t status) {
+void SimFirmware::RxAssocResp(const simulation::SimAssocRespFrame* frame) {
   // Ignore if we are not trying to associate
   if (assoc_state_.state != AssocState::ASSOCIATING) {
     return;
@@ -638,19 +756,19 @@ void SimFirmware::RxAssocResp(const common::MacAddr& src, const common::MacAddr&
 
   // Ignore if this is not intended for us
   common::MacAddr mac_addr(mac_addr_);
-  if (dst != mac_addr) {
+  if (frame->dst_addr_ != mac_addr) {
     return;
   }
 
   // Ignore if this is not from the bssid with which we were trying to associate
-  if (src != assoc_state_.opts->bssid) {
+  if (frame->src_addr_ != assoc_state_.opts->bssid) {
     return;
   }
 
   // Response received, cancel timer
   hw_.CancelCallback(assoc_state_.assoc_timer_id);
 
-  if (status == WLAN_ASSOC_RESULT_SUCCESS) {
+  if (frame->status_ == WLAN_ASSOC_RESULT_SUCCESS) {
     // Notify the driver that association succeeded
     assoc_state_.state = AssocState::ASSOCIATED;
     SendSimpleEventToDriver(BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx,
@@ -676,6 +794,7 @@ void SimFirmware::DisassocLocalClient(brcmf_scb_val_le* scb_val) {
     simulation::SimDisassocReqFrame disassoc_req_frame(&hw_, srcAddr, *bssid, reason);
     hw_.Tx(&disassoc_req_frame);
     assoc_state_.state = AssocState::NOT_ASSOCIATED;
+    auth_state_.state = AuthState::NOT_AUTHENTICATED;
     SendSimpleEventToDriver(BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, assoc_state_.ifidx);
   } else {
     SendSimpleEventToDriver(BRCMF_E_LINK, BRCMF_E_STATUS_FAIL, assoc_state_.ifidx);
@@ -711,19 +830,21 @@ void SimFirmware::HandleDisassocForClientIF(const common::MacAddr& src, const co
 }
 
 // Assoc Request from Client for the SoftAP IF
-void SimFirmware::RxAssocReq(const common::MacAddr& src, const common::MacAddr& dst) {
-  BRCMF_DBG(SIM, "Assoc from %s for %s\n", MACSTR(src), MACSTR(dst));
+void SimFirmware::RxAssocReq(const simulation::SimAssocReqFrame* frame) {
+  BRCMF_DBG(SIM, "Assoc from %s for %s\n", MACSTR(frame->src_addr_), MACSTR(frame->bssid_));
   for (uint8_t i = 0; i < kMaxIfSupported; i++) {
     if (iface_tbl_[i].allocated && iface_tbl_[i].ap_mode) {
-      if (std::memcmp(iface_tbl_[i].mac_addr.byte, dst.byte, ETH_ALEN) == 0) {
+      if (std::memcmp(iface_tbl_[i].mac_addr.byte, frame->bssid_.byte, ETH_ALEN) == 0) {
         // Indicate Assoc success to driver - by sending AUTH_IND and ASSOC_IND
         // AUTH_IND is a simple event with the source mac address included
-        SendSimpleEventToDriver(BRCMF_E_AUTH_IND, BRCMF_E_STATUS_SUCCESS, i, 0, 0, src);
+        SendSimpleEventToDriver(BRCMF_E_AUTH_IND, BRCMF_E_STATUS_SUCCESS, i, 0, 0,
+                                frame->src_addr_);
         // ASSOC_IND contains some TLVs
-        HandleAssocReq(i, src);
+        HandleAssocReq(i, frame->src_addr_);
         // Add the client to the list
-        iface_tbl_[i].ap_config.clients.push_back(src);
-        simulation::SimAssocRespFrame assoc_resp_frame(&hw_, dst, src, WLAN_ASSOC_RESULT_SUCCESS);
+        iface_tbl_[i].ap_config.clients.push_back(frame->src_addr_);
+        simulation::SimAssocRespFrame assoc_resp_frame(&hw_, frame->bssid_, frame->src_addr_,
+                                                       WLAN_ASSOC_RESULT_SUCCESS);
         hw_.Tx(&assoc_resp_frame);
         BRCMF_DBG(SIM, "Assoc done Num Clients : %lu\n", iface_tbl_[i].ap_config.clients.size());
         break;
@@ -906,13 +1027,21 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void*
   if (!std::strcmp(name, "pfn_macaddr")) {
     auto pfn_mac = static_cast<const brcmf_pno_macaddr_le*>(value);
     memcpy(pfn_mac_addr_.byte, pfn_mac->mac, ETH_ALEN);
-    return ZX_OK;
+  }
+
+  if (!std::strcmp(name, "wsec")) {
+    auto wsec = static_cast<const uint32_t*>(value);
+    wsec_ = *wsec;
+  }
+
+  if (!std::strcmp(name, "wsec_key")) {
+    auto wk_req = static_cast<const brcmf_wsec_key_le*>(value);
+    wsec_key_ = *wk_req;
   }
 
   if (!std::strcmp(name, "assoc_retry_max")) {
     auto assoc_max_retries = static_cast<const uint32_t*>(value);
     assoc_max_retries_ = *assoc_max_retries;
-    return ZX_OK;
   }
   if (!std::strcmp(name, "chanspec")) {
     if (value_len < sizeof(uint16_t)) {
@@ -939,6 +1068,16 @@ zx_status_t SimFirmware::IovarsSet(uint16_t ifidx, const char* name, const void*
       }
     }
     mpc_ = *mpc;
+  }
+
+  if (!std::strcmp(name, "wpa_auth")) {
+    auto wpa_auth = static_cast<const uint32_t*>(value);
+    wpa_auth_ = *wpa_auth;
+  }
+
+  if (!std::strcmp(name, "auth")) {
+    auto auth = static_cast<const uint32_t*>(value);
+    auth_state_.auth_type = *auth;
   }
   // FIXME: For now, just pretend that we successfully set the value even when we did nothing
   BRCMF_DBG(SIM, "Ignoring request to set iovar '%s'\n", name);
@@ -989,6 +1128,26 @@ zx_status_t SimFirmware::IovarsGet(uint16_t ifidx, const char* name, void* value
     } else {
       memcpy(value_out, &mpc_, sizeof(uint32_t));
     }
+  } else if (!std::strcmp(name, "wsec")) {
+    if (value_len < sizeof(wsec_)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    memcpy(value_out, &wsec_, sizeof(wsec_));
+  } else if (!std::strcmp(name, "wpa_auth")) {
+    if (value_len < sizeof(wpa_auth_)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    memcpy(value_out, &wpa_auth_, sizeof(wpa_auth_));
+  } else if (!std::strcmp(name, "auth")) {
+    if (value_len < sizeof(auth_state_.auth_type)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    memcpy(value_out, &auth_state_.auth_type, sizeof(auth_state_.auth_type));
+  } else if (!std::strcmp(name, "wsec_key")) {
+    if (value_len != sizeof(wsec_key_)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    memcpy(value_out, &wsec_key_, sizeof(wsec_key_));
   } else {
     // FIXME: We should return an error for an unrecognized firmware variable
     BRCMF_DBG(SIM, "Ignoring request to read iovar '%s'\n", name);
@@ -1185,31 +1344,37 @@ void SimFirmware::RxMgmtFrame(const simulation::SimManagementFrame* mgmt_frame,
   switch (mgmt_frame->MgmtFrameType()) {
     case simulation::SimManagementFrame::FRAME_TYPE_BEACON: {
       auto beacon = static_cast<const simulation::SimBeaconFrame*>(mgmt_frame);
-      RxBeacon(channel, beacon->ssid_, beacon->bssid_);
+      RxBeacon(channel, beacon);
       break;
     }
 
     case simulation::SimManagementFrame::FRAME_TYPE_PROBE_RESP: {
       auto probe_resp = static_cast<const simulation::SimProbeRespFrame*>(mgmt_frame);
-      RxProbeResp(channel, probe_resp->ssid_, probe_resp->src_addr_);
+      RxProbeResp(channel, probe_resp);
       break;
     }
 
     case simulation::SimManagementFrame::FRAME_TYPE_ASSOC_REQ: {
       auto assoc_req = static_cast<const simulation::SimAssocReqFrame*>(mgmt_frame);
-      RxAssocReq(assoc_req->src_addr_, assoc_req->bssid_);
+      RxAssocReq(assoc_req);
       break;
     }
 
     case simulation::SimManagementFrame::FRAME_TYPE_ASSOC_RESP: {
       auto assoc_resp = static_cast<const simulation::SimAssocRespFrame*>(mgmt_frame);
-      RxAssocResp(assoc_resp->src_addr_, assoc_resp->dst_addr_, assoc_resp->status_);
+      RxAssocResp(assoc_resp);
       break;
     }
 
     case simulation::SimManagementFrame::FRAME_TYPE_DISASSOC_REQ: {
       auto disassoc_req = static_cast<const simulation::SimDisassocReqFrame*>(mgmt_frame);
-      RxDisassocReq(disassoc_req->src_addr_, disassoc_req->dst_addr_, disassoc_req->reason_);
+      RxDisassocReq(disassoc_req);
+      break;
+    }
+
+    case simulation::SimManagementFrame::FRAME_TYPE_AUTH: {
+      auto auth_resp = static_cast<const simulation::SimAuthFrame*>(mgmt_frame);
+      RxAuthResp(auth_resp);
       break;
     }
 
@@ -1218,23 +1383,29 @@ void SimFirmware::RxMgmtFrame(const simulation::SimManagementFrame* mgmt_frame,
   }
 }
 
-void SimFirmware::RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                           const common::MacAddr& bssid) {
+void SimFirmware::RxBeacon(const wlan_channel_t& channel, const simulation::SimBeaconFrame* frame) {
   if (scan_state_.state != ScanState::SCANNING || scan_state_.opts->is_active) {
     return;
   }
-  ScanResult scan_result = {.channel = channel, .ssid = ssid, .bssid = bssid};
+
+  ScanResult scan_result = {.channel = channel, .ssid = frame->ssid_, .bssid = frame->bssid_};
+
+  scan_result.bss_capability.set_val(frame->capability_info_.val());
   scan_state_.opts->on_result_fn(scan_result);
 }
 
-void SimFirmware::RxProbeResp(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                              const common::MacAddr& bssid) {
+void SimFirmware::RxProbeResp(const wlan_channel_t& channel,
+                              const simulation::SimProbeRespFrame* frame) {
   if (scan_state_.state != ScanState::SCANNING || !scan_state_.opts->is_active) {
     return;
   }
-  ScanResult scan_result = {.channel = channel, .ssid = ssid, .bssid = bssid};
+
+  ScanResult scan_result = {.channel = channel, .ssid = frame->ssid_, .bssid = frame->src_addr_};
+
+  scan_result.bss_capability.set_val(frame->capability_info_.val());
   scan_state_.opts->on_result_fn(scan_result);
 }
+
 // Handle an Rx Beacon sent to us from the hardware, using it to fill in all of the fields in a
 // brcmf_escan_result.
 void SimFirmware::EscanResultSeen(const ScanResult& result_in) {
@@ -1267,9 +1438,10 @@ void SimFirmware::EscanResultSeen(const ScanResult& result_in) {
 
   // length of this record (includes IEs)
   bss_info->length = roundup(sizeof(brcmf_bss_info_le) + ssid_ie_size, 4);
-
   // channel
   bss_info->chanspec = channel_to_chanspec(&d11_inf_, &result_in.channel);
+  // capability
+  bss_info->capability = result_in.bss_capability.val();
 
   // ssid
   ZX_ASSERT(sizeof(bss_info->SSID) == sizeof(result_in.ssid.ssid));

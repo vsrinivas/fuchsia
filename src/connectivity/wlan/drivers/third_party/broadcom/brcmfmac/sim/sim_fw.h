@@ -28,13 +28,17 @@
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bcdc.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_d11.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_wifi.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_hw.h"
 
 namespace wlan::brcmfmac {
 
 // The amount of time we will wait for an association response after an association request
 constexpr zx::duration kAssocTimeout = zx::sec(1);
+// The amount of time we will wait for an authentication response after an authentication request
+constexpr zx::duration kAuthTimeout = zx::sec(1);
 
 class SimFirmware {
   class BcdcResponse {
@@ -59,6 +63,7 @@ class SimFirmware {
     wlan_channel_t channel;
     wlan_ssid_t ssid;
     common::MacAddr bssid;
+    wlan::CapabilityInfo bss_capability;
   };
 
   using ScanResultHandler = std::function<void(const ScanResult& scan_result)>;
@@ -120,6 +125,20 @@ class SimFirmware {
     uint8_t num_attempts;
     // The interface idx on which the assoc is being done
     uint16_t ifidx;
+  };
+
+  struct AuthState {
+    enum {
+      NOT_AUTHENTICATED,
+      EXPECTING_SECOND,
+      EXPECTING_FOURTH,
+      AUTHENTICATED
+    } state = NOT_AUTHENTICATED;
+
+    uint16_t auth_type;
+
+    uint64_t auth_timer_id;
+    wlan::CapabilityInfo bss_capability;
   };
 
   struct PacketBuf {
@@ -239,9 +258,11 @@ class SimFirmware {
   // Association operations
   void AssocScanResultSeen(const ScanResult& scan_result);
   void AssocScanDone();
-  void AssocStart();  // Scan complete, start association process
+  void AuthStart();  // Scan complete, start authentication process
+  void AssocStart();
   void AssocClearContext();
   void AssocHandleFailure();
+  void AuthHandleFailure();
   void DisassocStart(brcmf_scb_val_le* scb_val);
   void DisassocLocalClient(brcmf_scb_val_le* scb_val);
 
@@ -250,13 +271,12 @@ class SimFirmware {
 
   void RxMgmtFrame(const simulation::SimManagementFrame* mgmt_frame, const wlan_channel_t& channel);
 
-  void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                const common::MacAddr& bssid);
-  void RxAssocResp(const common::MacAddr& src, const common::MacAddr& dst, uint16_t status);
-  void RxDisassocReq(const common::MacAddr& src, const common::MacAddr& dst, uint16_t reason);
-  void RxAssocReq(const common::MacAddr& src, const common::MacAddr& dst);
-  void RxProbeResp(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                   const common::MacAddr& bssid);
+  void RxBeacon(const wlan_channel_t& channel, const simulation::SimBeaconFrame* frame);
+  void RxAssocResp(const simulation::SimAssocRespFrame* frame);
+  void RxDisassocReq(const simulation::SimDisassocReqFrame* frame);
+  void RxAssocReq(const simulation::SimAssocReqFrame* frame);
+  void RxProbeResp(const wlan_channel_t& channel, const simulation::SimProbeRespFrame* frame);
+  void RxAuthResp(const simulation::SimAuthFrame* frame);
 
   // Allocate a buffer for an event (brcmf_event)
   std::unique_ptr<std::vector<uint8_t>> CreateEventBuffer(size_t requested_size,
@@ -302,6 +322,7 @@ class SimFirmware {
   common::MacAddr pfn_mac_addr_;
   ScanState scan_state_;
   AssocState assoc_state_;
+  AuthState auth_state_;
   bool default_passive_scan_ = true;
   uint32_t default_passive_time_ = -1;  // In ms. -1 indicates value has not been set.
   int32_t power_mode_ = -1;             // -1 indicates value has not been set.
@@ -309,6 +330,9 @@ class SimFirmware {
   uint32_t assoc_max_retries_ = 0;
   bool dev_is_up_ = false;
   uint32_t mpc_ = 1;  // Read FW appears to be setting this to 1 by default.
+  uint32_t wsec_ = 0;
+  struct brcmf_wsec_key_le wsec_key_;
+  uint32_t wpa_auth_ = 0;
 };
 
 }  // namespace wlan::brcmfmac

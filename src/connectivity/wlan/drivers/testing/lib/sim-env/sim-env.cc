@@ -14,7 +14,6 @@ void Environment::Run() {
   while (!events_.empty()) {
     auto event = std::move(events_.front());
     events_.pop_front();
-
     // Make sure that time is always moving forward
     ZX_ASSERT(event->time >= time_);
     time_ = event->time;

@@ -66,6 +66,22 @@ executable("create_softap_test") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
+executable("auth_test") {
+  output_name = "auth_test"
+  testonly = true
+  sources = [ "auth_test.cc" ]
+  deps = [
+    ":sim_test",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-device",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/connectivity/wlan/lib/common/cpp:common",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake_ddk",
+  ]
+}
+
 executable("dynamic_if_test") {
   output_name = "dynamic_if_test"
   testonly = true
@@ -211,6 +227,7 @@ unittest_package("brcmfmac_sim_test") {
   deps = [
     ":active_scan_test",
     ":assoc_test",
+    ":auth_test",
     ":create_softap_test",
     ":dynamic_if_test",
     ":firmware_config_test",
@@ -227,6 +244,10 @@ unittest_package("brcmfmac_sim_test") {
     },
     {
       name = "create_softap_test"
+      environments = basic_envs
+    },
+    {
+      name = "auth_test"
       environments = basic_envs
     },
     {
