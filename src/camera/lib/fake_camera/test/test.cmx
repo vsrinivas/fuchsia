@@ -7,7 +7,7 @@
         }
     },
     "program": {
-        "binary": "test/virtual_camera_test"
+        "binary": "test/fake_camera_test"
     },
     "sandbox": {
         "services": [

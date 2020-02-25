@@ -191,7 +191,10 @@ fit::result<void, std::string> VirtualCameraImpl::CheckFrame(
   return fit::ok();
 }
 
-void VirtualCameraImpl::OnDestruction() { camera_ = nullptr; }
+void VirtualCameraImpl::OnDestruction() {
+  frame_waiters_.clear();
+  camera_ = nullptr;
+}
 
 void VirtualCameraImpl::OnStreamConnected(
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
