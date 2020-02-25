@@ -173,8 +173,8 @@ func (c *Client) WaitToBeConnected(ctx context.Context) error {
 
 	ch := make(chan struct{})
 	go func() {
+		defer close(ch)
 		wg.Wait()
-		ch <- struct{}{}
 	}()
 
 	select {

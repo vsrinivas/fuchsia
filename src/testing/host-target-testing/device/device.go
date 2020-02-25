@@ -112,40 +112,16 @@ func (c *Client) GetSystemImageMerkle(ctx context.Context) (string, error) {
 func (c *Client) Reboot(ctx context.Context, repo *packages.Repository, rpcClient **sl4f.Client) error {
 	log.Printf("rebooting")
 
-	if err := c.setupReboot(ctx, rpcClient); err != nil {
-		return err
-	}
-
-	var wg sync.WaitGroup
-	c.RegisterDisconnectListener(&wg)
-
-	err := c.Run(ctx, "dm reboot", os.Stdout, os.Stderr)
-	if err != nil {
-		if _, ok := err.(*ssh.ExitMissingError); !ok {
-			return fmt.Errorf("failed to reboot: %s", err)
+	return c.ExpectReboot(ctx, repo, rpcClient, func() error {
+		err := c.Run(ctx, "dm reboot", os.Stdout, os.Stderr)
+		if err != nil {
+			if _, ok := err.(*ssh.ExitMissingError); !ok {
+				return fmt.Errorf("failed to reboot: %s", err)
+			}
 		}
-	}
 
-	log.Printf("waiting...")
-
-	// Wait until we get a signal that we have disconnected
-	ch := make(chan struct{})
-	go func() {
-		wg.Wait()
-		ch <- struct{}{}
-	}()
-
-	select {
-	case <-ch:
-	case <-ctx.Done():
-		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
-	}
-
-	c.verifyReboot(ctx, repo, rpcClient)
-
-	log.Printf("device rebooted")
-
-	return nil
+		return nil
+	})
 }
 
 // RebootToRecovery asks the device to reboot into the recovery partition. It
@@ -166,8 +142,8 @@ func (c *Client) RebootToRecovery(ctx context.Context) error {
 	// Wait until we get a signal that we have disconnected
 	ch := make(chan struct{})
 	go func() {
+		defer close(ch)
 		wg.Wait()
-		ch <- struct{}{}
 	}()
 
 	select {
@@ -184,6 +160,16 @@ func (c *Client) RebootToRecovery(ctx context.Context) error {
 func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository, rpcClient **sl4f.Client) error {
 	log.Printf("triggering OTA")
 
+	return c.ExpectReboot(ctx, repo, rpcClient, func() error {
+		if err := c.Run(ctx, "amberctl system_update", os.Stdout, os.Stderr); err != nil {
+			return fmt.Errorf("failed to trigger OTA: %s", err)
+		}
+
+		return nil
+	})
+}
+
+func (c *Client) ExpectReboot(ctx context.Context, repo *packages.Repository, rpcClient **sl4f.Client, f func() error) error {
 	if err := c.setupReboot(ctx, rpcClient); err != nil {
 		return err
 	}
@@ -191,15 +177,17 @@ func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository
 	var wg sync.WaitGroup
 	c.RegisterDisconnectListener(&wg)
 
-	if err := c.Run(ctx, "amberctl system_update", os.Stdout, os.Stderr); err != nil {
-		return fmt.Errorf("failed to trigger OTA: %s", err)
+	if err := f(); err != nil {
+		// It's okay if we leak the disconnect listener, it'll get
+		// cleaned up next time the device disconnects.
+		return err
 	}
 
 	// Wait until we get a signal that we have disconnected
 	ch := make(chan struct{})
 	go func() {
+		defer close(ch)
 		wg.Wait()
-		ch <- struct{}{}
 	}()
 
 	select {
@@ -207,6 +195,8 @@ func (c *Client) TriggerSystemOTA(ctx context.Context, repo *packages.Repository
 	case <-ctx.Done():
 		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
 	}
+
+	log.Printf("device disconnected, waiting for device to boot")
 
 	c.verifyReboot(ctx, repo, rpcClient)
 
