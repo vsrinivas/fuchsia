@@ -19,10 +19,9 @@ rustc_macro("macros") {
 }
 
 if (host_toolchain == current_toolchain) {
-  rustc_test("tests") {
-    name = "vfs_macros_lib_test"
+  rustc_test("vfs_macro_test") {
+    name = "vfs_macro_test"
     edition = "2018"
-
     deps = [
       "//third_party/rust_crates:indoc",
       "//third_party/rust_crates:proc-macro-hack",
@@ -34,6 +33,6 @@ if (host_toolchain == current_toolchain) {
 } else {
   group("tests") {
     testonly = true
-    public_deps = [ ":tests($host_toolchain)" ]
+    public_deps = [ ":vfs_macro_test($host_toolchain)" ]
   }
 }

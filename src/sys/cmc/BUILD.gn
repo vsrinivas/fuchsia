@@ -5,15 +5,15 @@
 import("//build/host.gni")
 import("//build/package.gni")
 import("//build/package/component.gni")
-import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_binary_sdk.gni")
 import("//build/test/test_package.gni")
 
-rustc_binary("cmc") {
+rustc_binary_sdk("cmc") {
   name = "cmc"
   with_unit_tests = true
   edition = "2018"
 
-  sdk_category = "partner"
+  category = "partner"
 
   deps = [
     "//garnet/lib/rust/cm_json",

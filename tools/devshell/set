@@ -178,7 +178,7 @@ function main {
   shift
 
   local gn_cmd='gen'
-  local -a gn_switches=(--check --export-compile-commands=default)
+  local -a gn_switches=(--ide=json --check --export-compile-commands=default)
   local gn_after_args=""
   local base=()
   local universe=()

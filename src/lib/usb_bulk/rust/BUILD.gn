@@ -6,16 +6,6 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 
-# We need to make rustc link using clang++, appropriately configured, in order
-# to find libc++.
-config("clangxx_linker") {
-  visibility = [ ":*" ]
-  rustflags = [
-    "-Clinker=" + rebase_path("$clang_prefix/clang++", "", root_build_dir),
-    "-Cdefault-linker-libraries",
-  ]
-}
-
 rustc_library("lib") {
   name = "usb_bulk"
   edition = "2018"
@@ -23,7 +13,6 @@ rustc_library("lib") {
 
   deps = [ "//third_party/rust_crates:anyhow" ]
   non_rust_deps = [ "//src/lib/usb_bulk/cpp:usb_bulk" ]
-  configs += [ ":clangxx_linker" ]
 
   # The tests require a zedmon device attached to the host, and should not run
   # in the infrastructure currently.

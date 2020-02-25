@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/zircon_legacy_vars.gni")
+import("//build/rust/config.gni")
 import("//build/toolchain/ccache.gni")
 
 assert(current_os == "fuchsia")
@@ -59,6 +60,27 @@ config("compiler") {
     configs += [ ":ccache" ]
   }
   asmflags = cflags + cflags_c
+
+  rustflags = [
+    "-L",
+    sysroot + "/lib",
+    "-Clinker=" + clang_prefix_rebased + "/lld",
+    "-Clink-arg=--sysroot=" + sysroot,
+    "-Clink-arg=-L" + sysroot + "/lib",
+    "-Clink-arg=-L" + clang_resource_dir + "/" + rust_target + "/lib",
+    "-Clink-arg=--pack-dyn-relocs=relr",
+    "-Clink-arg=-dynamic-linker=ld.so.1",
+    "-Clink-arg=--threads",
+    "-Clink-arg=--icf=all",
+  ]
+
+  lib_dirs = [
+    # These libraries are required by Rust's libstd.
+    "$root_build_dir/gen/zircon/public/lib/backtrace",
+    "$root_build_dir/gen/zircon/public/lib/fdio",
+    "$root_build_dir/gen/zircon/public/lib/trace-engine",
+    "$root_build_dir/gen/zircon/public/lib/syslog",
+  ]
 }
 
 config("compiler_sysroot") {

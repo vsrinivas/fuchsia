@@ -34,3 +34,13 @@ toolchain("rustlang") {
     description = copy_description
   }
 }
+
+action("cargo_toml_gen") {
+  script = "//scripts/gn_to_cargo.py"
+  sources = []
+  inputs = []
+
+  outputs = [ "$target_gen_dir/cargo" ]
+  deps = [ "//third_party/rust_crates:build-third-party" ]
+  args = [ rebase_path("$root_build_dir/project.json", "") ]
+}

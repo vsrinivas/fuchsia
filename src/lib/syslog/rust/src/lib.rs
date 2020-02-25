@@ -350,7 +350,7 @@ mod test {
         log::set_max_level(get_log_filter(-1));
 
         info!("log info: {}", 10);
-        let tag = "fuchsia_syslog::test";
+        let tag = "fuchsia_syslog_lib_test::test";
         expected.push(format!("[{}] INFO: log info: 10", tag));
 
         warn!("log warn: {}", 10);

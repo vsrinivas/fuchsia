@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_artifact.gni")
+import("//build/rust/rustc_test.gni")
 
 # Defines a Rust library
 #
@@ -83,24 +83,81 @@ import("//build/rust/rustc_artifact.gni")
 #    ]
 #
 template("rustc_library") {
-  rustc_artifact(target_name) {
+  # TODO(bwb) remove all versions from the callers
+  # this is a hold-over. It's just noise right now.
+  not_needed(invoker, [ "version" ])
+
+  # if "with_unit_tests" is set to true, generate an additional rust test target
+  # TODO(bwb) deprecate this. All tests should be declared independently
+  if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
+    rustc_test("${target_name}_test") {
+      name = invoker.target_name + "_lib_test"
+      if (defined(invoker.name)) {
+        name = invoker.name + "_lib_test"
+      }
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "name",
+                               "configs",
+                             ])
+    }
+  }
+
+  if (defined(invoker.name)) {
+    output_name = invoker.name
+  } else {
+    output_name = target_name
+  }
+
+  if (defined(invoker.source_root)) {
+    source_root = invoker.source_root
+  } else {
+    source_root = "src/lib.rs"
+  }
+
+  if (defined(invoker.name)) {
+    package_name = invoker.name
+  } else {
+    package_name = target_name
+  }
+  crate_name = string_replace(package_name, "-", "_")
+
+  features = []
+  if (defined(invoker.features)) {
+    foreach(i, invoker.features) {
+      features += [ "--cfg=feature=\"${i}\"" ]
+    }
+  }
+
+  rust_library(target_name) {
+    crate_root = source_root
+    crate_name = crate_name
+    output_name = crate_name
+
+    configs = []
+    configs = invoker.configs
+
+    deps = []
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+
+    if (defined(invoker.non_rust_deps)) {
+      deps += invoker.non_rust_deps
+    }
+
+    rustflags = features
+
+    if (defined(invoker.edition) && invoker.edition == "2015") {
+      configs -= [ "//build/config:rust_edition_2018" ]
+      configs += [ "//build/config:rust_edition_2015" ]
+    }
+
     forward_variables_from(invoker,
                            [
-                             "name",
-                             "version",
-                             "edition",
-                             "configs",
-                             "deps",
-                             "test_deps",
-                             "non_rust_deps",
-                             "with_unit_tests",
-                             "test_environments",
-                             "source_root",
                              "testonly",
-                             "features",
                              "visibility",
-                             "__unstable_netstack3_only_specialization_bypass",
                            ])
-    type = "lib"
   }
 }

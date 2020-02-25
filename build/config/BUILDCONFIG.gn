@@ -181,6 +181,9 @@ default_common_binary_configs = [
   "//build/config:no_exceptions",
   "//build/config:no_rtti",
   "//build/config:symbol_visibility_hidden",
+  "//build/config:rust_edition_2018",
+  "//build/config:rust_no_features",
+  "//build/config:rust_target",
 ]
 
 if (is_debug) {
@@ -194,7 +197,9 @@ if (is_fuchsia) {
     "//build/config/fuchsia:auto_var_init",
     "//build/config/fuchsia:icf",
     "//build/config/fuchsia:large_rust_stack",
+    "//build/config/fuchsia:compiler",
     "//build/config/fuchsia:thread_safety_annotations",
+    "//build/config:rust_panic_abort",
 
     # TODO(44795): Change to using //build/config:werror here.
     "//build/config/fuchsia:werror",
@@ -205,6 +210,13 @@ if (is_fuchsia) {
   ]
 } else {
   default_common_binary_configs += [ "//build/config:werror" ]
+}
+
+if (is_mac) {
+  default_common_binary_configs += [ "//build/config/mac:compiler" ]
+}
+if (is_linux) {
+  default_common_binary_configs += [ "//build/config/linux:compiler" ]
 }
 
 default_common_binary_configs += [ "//build/config/lto:default" ]
@@ -240,21 +252,23 @@ if (toolchain_variant.is_pic_default) {
 set_defaults("source_set") {
   configs = default_common_binary_configs
 }
+
 set_defaults("static_library") {
   configs = default_common_binary_configs
 }
+
 set_defaults("shared_library") {
   configs = default_shared_library_configs
 }
+
 set_defaults("rust_library") {
-  configs = default_common_binary_configs
+  configs = default_shared_library_configs
 }
+
 set_defaults("rust_proc_macro") {
   configs = default_shared_library_configs
 }
-set_defaults("rust_cdylib") {
-  configs = default_shared_library_configs
-}
+
 set_defaults("loadable_module") {
   configs = default_shared_library_configs
 }
@@ -262,24 +276,32 @@ set_defaults("executable") {
   configs = default_executable_configs
 }
 
-# Same for the rustc_* templates.
+# Rustc wrapper defaults
 set_defaults("rustc_binary") {
-  configs = default_common_binary_configs
+  configs = default_executable_configs
 }
+
+set_defaults("rustc_binary_sdk") {
+  configs = default_executable_configs
+}
+
+set_defaults("rustc_test") {
+  configs = default_executable_configs
+}
+
+set_defaults("rustc_library") {
+  configs = default_shared_library_configs
+}
+
 set_defaults("rustc_cdylib") {
   configs = default_shared_library_configs
 }
-set_defaults("rustc_library") {
-  configs = default_common_binary_configs
-}
-set_defaults("rustc_macro") {
+set_defaults("rustc_dylib") {
   configs = default_shared_library_configs
 }
-set_defaults("rustc_staticlib") {
-  configs = default_common_binary_configs
-}
-set_defaults("rustc_test") {
-  configs = default_common_binary_configs
+
+set_defaults("rustc_macro") {
+  configs = default_shared_library_configs
 }
 
 if (toolchain_variant.with_shared) {

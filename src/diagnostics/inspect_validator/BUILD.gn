@@ -46,9 +46,6 @@ rustc_binary("validator_bin") {
 }
 
 rustc_test("validator_bin_test") {
-  # TODO(tmandry): This is here to work around https://github.com/rust-lang/rust/issues/66036.
-  with_lto = "none"
-
   edition = "2018"
   source_root = "src/main.rs"
   deps = validator_deps + [ "//src/lib/fuchsia-async" ]

@@ -79,6 +79,9 @@ base_package_labels += [
   "//src/sys/pkg:system-update-checker",
   "//src/sys/timekeeper",
   "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
+
+  # TODO remove when third party is built by GN
+  "//build/rust:cargo_toml_gen",
 ]
 
 cache_package_labels += []

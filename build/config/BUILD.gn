@@ -29,6 +29,40 @@ if (!is_fuchsia) {
   enable_frame_pointers = false
 }
 
+config("rust_edition_2018") {
+  rustflags = [ "--edition=2018" ]
+}
+
+config("rust_edition_2015") {
+  rustflags = [ "--edition=2015" ]
+}
+
+config("rust_opt_level_z") {
+  rustflags = [ "-Copt-level=z" ]
+}
+
+config("rust_no_features") {
+  rustflags = [ "-Zallow-features=" ]
+}
+
+config("netstack3_only_specialization_feature") {
+  rustflags = [ "-Zallow-features=specialization" ]
+}
+
+config("rust_target") {
+  rustflags = [
+    "--target",
+    rust_target,
+  ]
+}
+
+config("rust_panic_abort") {
+  rustflags = [
+    "-Cpanic=abort",
+    "-Zpanic_abort_tests",
+  ]
+}
+
 config("compiler") {
   asmflags = []
 
@@ -352,9 +386,7 @@ config("executable_config") {
   configs = []
 
   if (current_os == "fuchsia") {
-    configs += [
-      "//build/config/fuchsia:executable_config",
-    ]
+    configs += [ "//build/config/fuchsia:executable_config" ]
   } else if (current_os == "mac") {
     configs += [
       "//build/config/mac:mac_dynamic_flags",

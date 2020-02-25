@@ -6,14 +6,13 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_binary("merge_sdk") {
   name = "merge_sdk"
-
   with_unit_tests = true
-
   edition = "2018"
-
+  source_root = "src/main.rs"
   force_opt = "3"
 
-  with_lto = "fat"
+  configs -= [ "//build/config/lto:default" ]
+  configs += [ "//build/config/lto:lto" ]
 
   deps = [
     "//build/sdk/meta:rust",

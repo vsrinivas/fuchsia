@@ -17,23 +17,16 @@ template("fidl_alias") {
     foreach(suffix, [ "" ]) {
       group(target_name + suffix) {
         forward_variables_from(invoker, [ "testonly" ])
-        public_deps = [
-          "//sdk/fidl/$library_name:$library_name$suffix",
-        ]
+        public_deps = [ "//sdk/fidl/$library_name:$library_name$suffix" ]
       }
     }
     action("${target_name}_dot_packages") {
       forward_variables_from(invoker, [ "testonly" ])
       script = "//build/unification/copy_dot_packages.py"
-      deps = [
-        "//sdk/fidl/$library_name:${library_name}_dot_packages",
-      ]
-      inputs = [
-        get_label_info(deps[0], "target_gen_dir") + "/$library_name.packages",
-      ]
-      outputs = [
-        "$target_gen_dir/$dash_library_name.packages",
-      ]
+      deps = [ "//sdk/fidl/$library_name:${library_name}_dot_packages" ]
+      inputs = [ get_label_info(deps[0], "target_gen_dir") +
+                 "/$library_name.packages" ]
+      outputs = [ "$target_gen_dir/$dash_library_name.packages" ]
       args = [
         "--source",
         rebase_path(inputs[0]),
@@ -44,27 +37,17 @@ template("fidl_alias") {
   } else if (current_toolchain == fidl_toolchain) {
     copy("$library_name-libraries") {
       forward_variables_from(invoker, [ "testonly" ])
-      deps = [
-        "//sdk/fidl/$library_name:${library_name}",
-      ]
-      sources = [
-        get_label_info(deps[0], "target_gen_dir") + "/$library_name.libraries",
-      ]
-      outputs = [
-        "$target_gen_dir/$dash_library_name.libraries",
-      ]
+      deps = [ "//sdk/fidl/$library_name:${library_name}" ]
+      sources = [ get_label_info(deps[0], "target_gen_dir") +
+                  "/$library_name.libraries" ]
+      outputs = [ "$target_gen_dir/$dash_library_name.libraries" ]
     }
     copy("$library_name-json") {
       forward_variables_from(invoker, [ "testonly" ])
-      deps = [
-        "//sdk/fidl/$library_name:${library_name}",
-      ]
-      sources = [
-        get_label_info(deps[0], "target_gen_dir") + "/$library_name.fidl.json",
-      ]
-      outputs = [
-        "$target_gen_dir/$dash_library_name.fidl.json",
-      ]
+      deps = [ "//sdk/fidl/$library_name:${library_name}" ]
+      sources = [ get_label_info(deps[0], "target_gen_dir") +
+                  "/$library_name.fidl.json" ]
+      outputs = [ "$target_gen_dir/$dash_library_name.fidl.json" ]
     }
     group(target_name) {
       forward_variables_from(invoker, [ "testonly" ])
@@ -76,31 +59,12 @@ template("fidl_alias") {
   } else if (current_toolchain == go_toolchain) {
     copy(target_name) {
       forward_variables_from(invoker, [ "testonly" ])
-      deps = [
-        "//sdk/fidl/$library_name:${library_name}",
-      ]
-      sources = [
-        get_label_info(deps[0], "target_gen_dir") + "/$library_name.go_deps",
-      ]
-      outputs = [
-        "$target_gen_dir/$dash_library_name.go_deps",
-      ]
+      deps = [ "//sdk/fidl/$library_name:${library_name}" ]
+      sources = [ get_label_info(deps[0], "target_gen_dir") +
+                  "/$library_name.go_deps" ]
+      outputs = [ "$target_gen_dir/$dash_library_name.go_deps" ]
     }
   } else {
-    copy("$target_name-rustc_info") {
-      forward_variables_from(invoker, [ "testonly" ])
-      deps = [
-        "//sdk/fidl/$library_name:${library_name}-rustc_info",
-      ]
-      sources = [
-        get_label_info(deps[0], "target_out_dir") +
-            "/$library_name-rustc_info.json",
-      ]
-      outputs = [
-        "$target_out_dir/$dash_library_name-rustc_info.json",
-      ]
-    }
-    main_target_name = target_name
     suffixes = [
       "",
       "-rustc",
@@ -113,38 +77,25 @@ template("fidl_alias") {
     foreach(suffix, suffixes) {
       group(target_name + suffix) {
         forward_variables_from(invoker, [ "testonly" ])
-        public_deps = [
-          "//sdk/fidl/$library_name:$library_name$suffix",
-        ]
-        if (suffix == "-rustc") {
-          public_deps += [ ":$main_target_name-rustc_info" ]
-        }
+        public_deps = [ "//sdk/fidl/$library_name:$library_name$suffix" ]
       }
     }
   }
 
   group("c") {
-    public_deps = [
-      "//sdk/fidl/$library_name:${library_name}_c",
-    ]
+    public_deps = [ "//sdk/fidl/$library_name:${library_name}_c" ]
   }
 
   group("c.headers") {
-    public_deps = [
-      "//sdk/fidl/$library_name:${library_name}_c",
-    ]
+    public_deps = [ "//sdk/fidl/$library_name:${library_name}_c" ]
   }
 
   group("llcpp") {
-    public_deps = [
-      "//sdk/fidl/$library_name:${library_name}_llcpp",
-    ]
+    public_deps = [ "//sdk/fidl/$library_name:${library_name}_llcpp" ]
   }
 
   group("llcpp.headers") {
-    public_deps = [
-      "//sdk/fidl/$library_name:${library_name}_llcpp",
-    ]
+    public_deps = [ "//sdk/fidl/$library_name:${library_name}_llcpp" ]
   }
 
   if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {

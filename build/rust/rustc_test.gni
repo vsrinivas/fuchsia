@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_artifact.gni")
+import("//build/testing/test_spec.gni")
 
 # Defines a Rust unit test, without also compiling a separate binary or library
 # target.
@@ -61,27 +61,109 @@ import("//build/rust/rustc_artifact.gni")
 #     ]
 #   }
 template("rustc_test") {
-  rustc_artifact(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "name",
-                             "version",
-                             "edition",
-                             "configs",
-                             "deps",
-                             "non_rust_deps",
-                             "test_environments",
-                             "source_root",
-                             "features",
-                             "visibility",
-                             "with_lto",
-                             "__unstable_netstack3_only_specialization_bypass",
-                           ])
-    if (!defined(source_root)) {
-      source_root = "src/lib.rs"
+  not_needed(invoker,
+             [
+               "version",
+               "edition",
+               "force_opt",
+               "testonly",
+             ])
+
+  # default location for rust libraries
+  source_root = "src/lib.rs"
+  if (defined(invoker.source_root)) {
+    source_root = invoker.source_root
+  }
+
+  # use the target name unless another name is specified
+  package_name = target_name
+  if (defined(invoker.name)) {
+    package_name = invoker.name
+  } else {
+    package_name = "${target_name}"
+  }
+
+  # built-in gn rules do not support dashes
+  crate_name = string_replace(package_name, "-", "_")
+
+  if (!is_fuchsia) {
+    test_output_file = "${root_out_dir}/${crate_name}"
+    test_spec_target_name = "${target_name}_spec"
+    test_spec(test_spec_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      name = invoker.target_name
+      target = invoker.target_name
+      path = test_output_file
+      deps = []
+      if (defined(invoker.deps)) {
+        deps += invoker.deps
+      }
+      if (defined(invoker.non_rust_deps)) {
+        deps += invoker.non_rust_deps
+      }
+      if (defined(invoker.test_environments)) {
+        environments = invoker.test_environments
+      }
     }
-    type = "bin"
-    only_unit_tests = true
+  } else {
+    # if not a host-side target, we don't need this since it doesn't
+    # propogate to package.gni
+    not_needed(invoker, [ "test_environments" ])
+  }
+
+  # enable these features for the target
+  features = []
+  if (defined(invoker.features)) {
+    foreach(i, invoker.features) {
+      features += [ "--cfg=feature=\"${i}\"" ]
+    }
+  }
+
+  executable(target_name) {
+    # anything defined with rustc_test MUST be a test target
     testonly = true
+
+    configs = []
+    configs = invoker.configs
+
+    crate_root = source_root
+    output_name = crate_name
+    crate_name = crate_name
+
+    # tell rustc to compile in the test harness
+    rustflags = features + [ "--test" ]
+
+    deps = []
+    if (defined(invoker.deps)) {
+      deps = invoker.deps
+    }
+    if (defined(invoker.non_rust_deps)) {
+      deps += invoker.non_rust_deps
+    }
+
+    # test_deps specified in the parent template (if not used directly)
+    # should also be treated as normal dependencies
+    if (defined(invoker.test_deps)) {
+      deps += invoker.test_deps
+    }
+
+    if (is_linux || is_mac) {
+      # if this test is being built on host, depend on the test_spec
+      deps += [ ":$test_spec_target_name" ]
+    }
+
+    if (is_fuchsia) {
+      deps += [ "//build/test:rust_test_metadata" ]
+      metadata = {
+        test_barrier = [ "//build/test:rust_test_metadata" ]
+      }
+    }
+
+    if (defined(invoker.edition) && invoker.edition == "2015") {
+      configs -= [ "//build/config:rust_edition_2018" ]
+      configs += [ "//build/config:rust_edition_2015" ]
+    }
+
+    forward_variables_from(invoker, [ "visibility" ])
   }
 }

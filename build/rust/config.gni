@@ -93,9 +93,9 @@ if (current_os == "mac") {
   _suffix = rust_toolchain_triple_suffix
 }
 if (current_cpu == "x64") {
-  target = "x86_64-${_suffix}"
+  rust_target = "x86_64-${_suffix}"
 } else if (current_cpu == "arm64") {
-  target = "aarch64-${_suffix}"
+  rust_target = "aarch64-${_suffix}"
 }
 
 _host_os_cpu = "${host_os}-${host_cpu}"
@@ -113,7 +113,7 @@ clang_prefix_rebased = rebase_path(clang_prefix, "", root_build_dir)
 
 clang_resource_dir = exec_script(rebase_path("$clang_prefix_rebased/clang"),
                                  [
-                                   "--target=$target",
+                                   "--target=$rust_target",
                                    "-print-resource-dir",
                                  ],
                                  "trim string",
@@ -130,7 +130,7 @@ rust_build_args =
       "--lib-dir",
       rebase_path(get_label_info(":any($shlib_toolchain)", "root_out_dir")),
       "--target",
-      target,
+      rust_target,
       "--sysroot",
       _sysroot,
       "--clang_prefix",

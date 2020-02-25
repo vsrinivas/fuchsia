@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_artifact.gni")
-
 # Defines a Rust procedural macro
 #
 # Parameters
@@ -33,16 +31,6 @@ import("//build/rust/rustc_artifact.gni")
 #     and should only be changed when absolutely necessary
 #     (such as in the case of generated code).
 #
-#   with_lto (optional)
-#     Force LTO to be enabled/disabled for the binary. Values are "none", "thin" and
-#     "fat". This value takes precedence over GN args or the default value for the
-#     type of build (debug or release).
-#
-#   features (optional)
-#     A list of conditional compilation flags to enable. This can be used to set features for crates
-#     built in-tree which are also published to crates.io. This would be passed to rustc as
-#     '--cfg feature=XXX'
-#
 # Example of usage:
 #
 #   rustc_macro("foo") {
@@ -68,64 +56,56 @@ template("rustc_macro") {
   forward_variables_from(invoker, [ "visibility" ])
 
   proc_macro_target = "${target_name}_proc_macro"
-  proc_macro_host_target = ":${proc_macro_target}($host_toolchain)"
 
   # The actual host-target build of the proc macro crate.
   if (is_host) {
     if (defined(invoker.name)) {
-      rustc_artifact_name = invoker.name
+      package_name = invoker.name
     } else {
-      rustc_artifact_name = target_name
+      package_name = target_name
     }
-    rustc_artifact(proc_macro_target) {
+    crate_name = string_replace(package_name, "-", "_")
+
+    if (!defined(invoker.source_root)) {
+      source_root = "src/lib.rs"
+    } else {
+      source_root = invoker.source_root
+    }
+
+    rust_proc_macro(proc_macro_target) {
+      configs = []
+      configs = invoker.configs
+
+      not_needed(invoker,
+                 [
+                   "version",
+                   "non_rust_deps",
+                   "force_opt",
+                 ])
+      crate_root = source_root
+      output_name = crate_name
+      if (defined(invoker.non_rust_deps)) {
+        data_deps = invoker.non_rust_deps
+      }
+
+      if (invoker.edition == "2015") {
+        configs -= [ "//build/config:rust_edition_2018" ]
+        configs += [ "//build/config:rust_edition_2015" ]
+      }
+
       forward_variables_from(invoker,
                              [
                                "deps",
-                               "version",
-                               "edition",
-                               "configs",
-                               "source_root",
                                "testonly",
-                               "with_lto",
-                               "features",
+                               "visibility",
                              ])
-      name = rustc_artifact_name
-      type = "proc-macro"
-      output_filename_suffix = "_proc_macro"
     }
   } else {
     not_needed(invoker, "*")
   }
 
-  # Copy the generated Cargo.toml
-  copy_cargo_toml_target = "${target_name}_copy_cargo_toml"
-  proc_macro_target_gen_dir =
-      get_label_info(proc_macro_host_target, "target_gen_dir")
-  copy(copy_cargo_toml_target) {
-    visibility = [ ":${target_name}" ]
-    forward_variables_from(invoker, [ "testonly" ])
-    deps = [ proc_macro_host_target ]
-    sources = [ "$proc_macro_target_gen_dir/$proc_macro_target/Cargo.toml" ]
-    outputs = [ "$target_gen_dir/$target_name/Cargo.toml" ]
-  }
-
-  # Copy the generated _info.json which provides data about the target that
-  # was built.
-  copy_build_info_target = "${target_name}_info"
-  copy(copy_build_info_target) {
-    deps = [ ":${proc_macro_target}_info($host_toolchain)" ]
-    proc_macro_target_out_dir =
-        get_label_info(proc_macro_host_target, "target_out_dir")
-    sources = [ "$proc_macro_target_out_dir/${proc_macro_target}_info.json" ]
-    outputs = [ "$target_out_dir/${copy_build_info_target}.json" ]
-  }
-
-  # Group all of the `copy` targets into one group which is publicly exposed.
+  # redirect so that users don't need to be aware of host_toolchain requirement
   group(target_name) {
-    public_deps = [
-      ":$copy_build_info_target",
-      ":$copy_cargo_toml_target",
-      proc_macro_host_target,
-    ]
+    public_deps = [ ":${proc_macro_target}($host_toolchain)" ]
   }
 }

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_artifact.gni")
+import("//build/rust/rustc_test.gni")
 
 # Defines a Rust static library
 #
@@ -46,11 +46,6 @@ import("//build/rust/rustc_artifact.gni")
 #   output_name (optional)
 #     Name of the output file.
 #
-#   with_lto (optional)
-#     Force LTO to be enabled/disabled for the binary. Values are "none", "thin" and
-#     "fat". This value takes precedence over GN args or the default value for the
-#     type of build (debug or release).
-#
 #   features (optional)
 #     A list of conditional compilation flags to enable. This can be used to set features for crates
 #     built in-tree which are also published to crates.io. This would be passed to rustc as
@@ -68,32 +63,54 @@ import("//build/rust/rustc_artifact.gni")
 #     with_unit_tests = true
 #   }
 template("rustc_staticlib") {
-  rustc_target = "_${target_name}_rustc_artifact"
-  group_target = "${target_name}"
+  not_needed(invoker, [ "version" ])
 
-  if (defined(invoker.name)) {
-    rustc_artifact_name = invoker.name
-  } else {
-    rustc_artifact_name = target_name
+  # if "with_unit_tests" is set to true, generate an additional rust test target
+  # TODO(bwb) deprecate this. All tests should be declared independently
+  if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
+    rustc_test("${target_name}_test") {
+      not_needed(invoker, [ "public" ])
+      name = invoker.target_name + "_staticlib_test"
+      if (defined(invoker.name)) {
+        name = invoker.name + "_staticlib_test"
+      }
+      forward_variables_from(invoker, "*", [ "name" ])
+    }
   }
 
-  rustc_artifact(rustc_target) {
+  group_target = target_name
+  assert(defined(invoker.edition), "Must specify an edition")
+
+  rustc_target = "_${target_name}_rustc_static"
+  if (defined(invoker.name)) {
+    rustc_target = "_${invoker.name}_rustc_static"
+  }
+  rustc_target = string_replace(rustc_target, "-", "_")
+
+  if (!defined(invoker.source_root)) {
+    source_root = "src/lib.rs"
+  } else {
+    source_root = invoker.source_root
+  }
+
+  static_library(rustc_target) {
+    crate_root = source_root
+    output_name = rustc_target
+    if (defined(invoker.non_rust_deps)) {
+      data_deps = invoker.non_rust_deps
+    }
+
+    if (invoker.edition == "2015") {
+      configs -= [ "//build/config:rust_edition_2018" ]
+      configs += [ "//build/config:rust_edition_2015" ]
+    }
+
     forward_variables_from(invoker,
                            [
-                             "version",
                              "deps",
-                             "edition",
-                             "configs",
-                             "non_rust_deps",
-                             "with_unit_tests",
-                             "output_name",
-                             "source_root",
-                             "with_lto",
                              "testonly",
-                             "features",
+                             "visibility",
                            ])
-    name = rustc_artifact_name
-    type = "staticlib"
   }
 
   public_hdrs = []
@@ -101,11 +118,11 @@ template("rustc_staticlib") {
     public_hdrs += invoker.public
   }
 
-  header_target = "_${target_name}_staticlib_headers"
+  header_target = "_${rustc_target}_staticlib_headers"
 
   source_set(header_target) {
     public = public_hdrs
-    visibility = [ ":$group_target" ]
+    visibility = [ ":${group_target}" ]
     deps = []
     if (defined(invoker.non_rust_deps)) {
       # TODO(43781): This allows propagating non rust dependencies through a
@@ -115,21 +132,12 @@ template("rustc_staticlib") {
     }
   }
 
-  group(target_name) {
+  group(group_target) {
     forward_variables_from(invoker, [ "testonly" ])
     forward_variables_from(invoker, [ "visibility" ])
     public_deps = [
       ":$header_target",
       ":$rustc_target",
     ]
-  }
-
-  if (defined(invoker.with_unit_tests) && invoker.with_unit_tests) {
-    test_target_name = "${target_name}_test"
-    group(test_target_name) {
-      testonly = true
-      forward_variables_from(invoker, [ "visibility" ])
-      public_deps = [ ":${rustc_target}_test" ]
-    }
   }
 }

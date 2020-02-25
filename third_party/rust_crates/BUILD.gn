@@ -4,7 +4,91 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/rust/config.gni")  # for rust_build_{args,deps,inputs}
-import("//build/rust/rustc_artifact.gni")  # for rustc_third_party_artifact
+
+# file locations
+first_party_crate_root = "${root_out_dir}/rust_crates"
+third_party_build = "//third_party/rust_crates:build-third-party"
+third_party_search_path_config = "//third_party/rust_crates:search_path_config"
+third_party_deps_data = "${root_out_dir}/rust_third_party_crates/deps_data.json"
+third_party_crate_root = "${root_out_dir}/rust_third_party_crates"
+if (host_os == "mac") {
+  proc_macro_ext = ".dylib"
+} else {
+  proc_macro_ext = ".so"
+}
+
+# Create a target that resembles a rustc_artifact invocation and
+# can be depended on in the `deps` of other rustc_artifact invocations,
+# but is in fact backed by a Cargo-built third-party crate.
+#
+# Parameters
+#
+#   crate_name
+#   crate_type
+#   package_name
+#   visibility
+#   testonly
+template("rustc_third_party_artifact") {
+  forward_variables_from(invoker,
+                         [
+                           "visibility",
+                           "crate_name",
+                           "crate_type",
+                           "package_name",
+                           "testonly",
+                         ])
+
+  if (crate_type == "lib") {
+    ext = ".rlib"
+  } else if (crate_type == "proc-macro") {
+    ext = proc_macro_ext
+  } else {
+    assert(false, "unsupported third-party crate type: " + crate_type)
+  }
+
+  # Build target to match the one in rustc_artifact.
+  # Rather than being a rust_library target, however, this is actually a
+  # `config` which adds `--extern` flags to `rustflags` in order to
+  # make the given third-party dependency available to the target that
+  # is depending on this rule.
+  build_target_name = "${target_name}_build"
+  build_target_name = "${target_name}_build"
+  config(build_target_name) {
+    externs = [
+      {
+        crate_name = crate_name
+        path = "$third_party_crate_root/lib${crate_name}-${package_name}${ext}"
+      },
+    ]
+  }
+
+  # Dummy target to write target info
+  info_target_name = "${target_name}_info"
+  generated_file(info_target_name) {
+    outputs = [ "${target_out_dir}/${info_target_name}.json" ]
+    contents = {
+      crate_name = crate_name
+      crate_type = crate_type
+      package_name = package_name
+      third_party = true
+    }
+    output_conversion = "json"
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    public_deps = [
+      ":${info_target_name}",
+      third_party_build,
+    ]
+    public_configs = [ ":${build_target_name}" ]
+
+    # Everything that depends on a third-party library, even transitively,
+    # needs to include the third-party -Ldependency search paths.
+    all_dependent_configs = [ third_party_search_path_config ]
+  }
+}
 
 third_party_lock = "//third_party/rust_crates/Cargo.lock"
 third_party_toml = "//third_party/rust_crates/Cargo.toml"

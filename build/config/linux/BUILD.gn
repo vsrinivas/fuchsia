@@ -4,6 +4,7 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/config/sysroot.gni")
+import("//build/rust/config.gni")
 
 config("compiler") {
   cflags = []
@@ -34,6 +35,11 @@ config("compiler") {
   configs = [
     ":sysroot",
     ":target",
+  ]
+
+  rustflags = [
+    "-Clinker=" + rebase_path("$clang_prefix/clang++", "", root_build_dir),
+    "-Cdefault-linker-libraries",
   ]
 
   # TODO(TC-74) The implicitly linked static libc++.a depends on these.

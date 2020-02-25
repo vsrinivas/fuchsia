@@ -1,0 +1,110 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/sdk/sdk_atom.gni")
+
+# A Rust executable which can be bundled in an SDK.
+#
+# An equivalent to the built-in rust executable which adds an SDK atom declaration to
+# allow the resulting binary to be included in an SDK.
+#
+#   category (required)
+#     Publication level of the executable in SDKs.
+#     See //build/sdk/sdk_atom.gni.
+#
+#   sdk_deps (optional)
+#     List of labels representing elements that should be added to SDKs
+#     alongside the present binary.
+#     Labels in the list must represent SDK-ready targets.
+
+template("rustc_binary_sdk") {
+  assert(defined(invoker.category), "Must define an SDK category")
+
+  main_target_name = target_name
+
+  rustc_binary(main_target_name) {
+    configs = []
+    configs = invoker.configs
+
+    forward_variables_from(invoker, "*", [ "category" ])
+  }
+
+  if (!is_fuchsia) {
+    if (defined(invoker.output_name)) {
+      output_name = invoker.output_name
+    } else {
+      output_name = target_name
+    }
+
+    file_base = "tools/$output_name"
+
+    # TODO(fxb/42999): remove extra atom
+    if (current_cpu == host_cpu) {
+      sdk_atom("${target_name}_sdk_legacy") {
+        id = "sdk://$file_base"
+
+        category = invoker.category
+
+        meta = {
+          dest = "$file_base-meta.json"
+          schema = "host_tool"
+          value = {
+            type = "host_tool"
+            name = output_name
+            root = "tools"
+            files = [ file_base ]
+          }
+        }
+
+        files = [
+          {
+            source = "$root_out_dir/$output_name"
+            dest = file_base
+          },
+        ]
+
+        if (defined(invoker.sdk_deps)) {
+          deps = invoker.sdk_deps
+        }
+
+        non_sdk_deps = [ ":$main_target_name" ]
+      }
+    }
+
+    if (host_os == "linux" || host_os == "mac") {
+      file_base = "tools/$current_cpu/$output_name"
+    }
+
+    sdk_atom("${target_name}_sdk") {
+      id = "sdk://$file_base"
+
+      category = invoker.category
+
+      meta = {
+        dest = "$file_base-meta.json"
+        schema = "host_tool"
+        value = {
+          type = "host_tool"
+          name = output_name
+          root = "tools"
+          files = [ file_base ]
+        }
+      }
+
+      files = [
+        {
+          source = "$root_out_dir/$output_name"
+          dest = file_base
+        },
+      ]
+
+      if (defined(invoker.sdk_deps)) {
+        deps = invoker.sdk_deps
+      }
+
+      non_sdk_deps = [ ":$main_target_name" ]
+    }
+  }
+}

@@ -26,6 +26,7 @@ variant("lto") {
     # Enable whole-program devirtualization and virtual constant propagation.
     "-fwhole-program-vtables",
   ]
+  rustflags = [ "-Clto=fat" ]
 }
 
 variant("thinlto") {
@@ -43,4 +44,5 @@ variant("thinlto") {
     # periodically garbage-collected by the ThinLTO driver.
     "-Wl,--thinlto-cache-dir=$thinlto_cache_dir",
   ]
+  rustflags = [ "-Clto=thin" ]
 }

@@ -3,13 +3,40 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 
 rustc_library("netstack3-core") {
   name = "netstack3_core"
   version = "0.1.0"
   edition = "2018"
-  with_unit_tests = true
-  __unstable_netstack3_only_specialization_bypass = [ "specialization" ]
+
+  configs -= [ "//build/config:rust_no_features" ]
+  configs += [ "//build/config:netstack3_only_specialization_feature" ]
+
+  deps = [
+    "//garnet/lib/rust/never",
+    "//src/connectivity/lib/internet-checksum",
+    "//src/connectivity/lib/net-types",
+    "//src/connectivity/network/netstack3/core/specialize-ip-macro",
+    "//src/lib/mundane",
+    "//src/lib/network/packet",
+    "//src/lib/zerocopy",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:rand_xorshift",
+    "//third_party/rust_crates:thiserror",
+  ]
+}
+
+rustc_test("netstack3-core_test") {
+  version = "0.1.0"
+  edition = "2018"
+  name = "netstack3_core_lib_test"
+
+  configs -= [ "//build/config:rust_no_features" ]
+  configs += [ "//build/config:netstack3_only_specialization_feature" ]
 
   deps = [
     "//garnet/lib/rust/never",

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_artifact.gni")
+import("//build/rust/rustc_test.gni")
 
 # Defines a Rust binary
 #
@@ -59,11 +59,6 @@ import("//build/rust/rustc_artifact.gni")
 #     and should only be changed when absolutely necessary
 #     (such as in the case of generated code).
 #
-#   with_lto (optional)
-#     Force LTO to be enabled/disabled for the binary. Values are "none", "thin" and
-#     "fat". This value takes precedence over GN args or the default value for the
-#     type of build (debug or release).
-#
 #   force_opt (optional)
 #     Force a particular optimization level for this target (even when building in debug mode).
 #     Values include 0-3, s, or z. This does not change the optimization level of dependencies,
@@ -112,27 +107,102 @@ import("//build/rust/rustc_artifact.gni")
 #    ]
 #
 template("rustc_binary") {
-  rustc_artifact(target_name) {
+  # TODO(bwb) remove all versions from the callers
+  # this is a hold-over. It's just noise right now.
+  not_needed(invoker, [ "version" ])
+
+  # TODO soft-migration
+  not_needed(invoker, [ "with_lto" ])
+
+  # if "with_unit_tests" is set to true, generate an additional rust test target
+  # TODO(bwb) deprecate this. All tests should be declared independently
+  if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
+    rustc_test("${target_name}_test") {
+      name = invoker.target_name + "_bin_test"
+      if (defined(invoker.name)) {
+        name = invoker.name + "_bin_test"
+      }
+
+      configs = []
+      configs = invoker.configs
+
+      # rustc_test defaults to assuming the input is a binary.
+      # specify the source_root here to avoid this.
+      source_root = "src/main.rs"
+      if (defined(invoker.source_root)) {
+        source_root = invoker.source_root
+      }
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "name",
+                               "source_root",
+                             ])
+    }
+  }
+
+  ### Shim that converts rustc_binary to a default GN executable pattern ###
+
+  # default location for rust binaries
+  source_root = "src/main.rs"
+  if (defined(invoker.source_root)) {
+    source_root = invoker.source_root
+  }
+
+  # use the target name unless another name is specified
+  package_name = target_name
+  if (defined(invoker.name)) {
+    package_name = invoker.name
+  }
+
+  # built-in gn rules do not support dashes
+  crate_name = string_replace(package_name, "-", "_")
+
+  # enable these features for the target
+  features = []
+  if (defined(invoker.features)) {
+    foreach(i, invoker.features) {
+      features += [ "--cfg=feature=\"${i}\"" ]
+    }
+  }
+
+  executable(target_name) {
+    crate_root = source_root
+    output_name = crate_name
+    crate_name = crate_name
+    rustflags = features
+
+    configs = []
+    configs = invoker.configs
+
+    deps = []
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+
+    # TODO(bwb) remove "non_rust_deps" as a concept
+    if (defined(invoker.non_rust_deps)) {
+      deps += invoker.non_rust_deps
+    }
+
+    # in-tree default in 2018 edition
+    if (defined(invoker.edition) && invoker.edition == "2015") {
+      configs -= [ "//build/config:rust_edition_2018" ]
+      configs += [ "//build/config:rust_edition_2015" ]
+    }
+
+    # some binary targets override the optimization level
+    if (defined(invoker.force_opt)) {
+      if (invoker.force_opt == "z") {
+        configs += [ "//build/config:rust_opt_level_z" ]
+      }
+    }
+
+    # pass through these variables unmodified
     forward_variables_from(invoker,
                            [
-                             "name",
-                             "version",
-                             "edition",
-                             "configs",
-                             "deps",
-                             "test_deps",
-                             "non_rust_deps",
-                             "with_unit_tests",
-                             "test_environments",
-                             "source_root",
                              "testonly",
-                             "with_lto",
-                             "force_opt",
-                             "sdk_category",
-                             "features",
                              "visibility",
-                             "allow_deprecated",
                            ])
-    type = "bin"
   }
 }
