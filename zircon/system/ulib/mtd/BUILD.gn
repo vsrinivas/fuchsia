@@ -12,8 +12,9 @@ zx_library("mtd") {
   ]
   host = true
 
+  sources = []
   if (current_os == "linux") {
-    sources = [ "mtd-interface.cc" ]
+    sources += [ "mtd-interface.cc" ]
   }
 
   public_deps = [ "$zx/system/ulib/fbl:headers" ]

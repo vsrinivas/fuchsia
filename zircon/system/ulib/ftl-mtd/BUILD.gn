@@ -16,11 +16,13 @@ zx_library("ftl-mtd") {
   ]
 
   public_deps = [
-    "$zx/system/ulib/fbl",
-    "$zx/system/ulib/ftl",
+    "$zx/system/ulib/fbl:headers",
+    "$zx/system/ulib/ftl:headers",
   ]
 
   deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/ftl",
     "$zx/system/ulib/fvm-host",
     "$zx/system/ulib/mtd",
   ]
