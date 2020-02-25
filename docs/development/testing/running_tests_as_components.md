@@ -292,6 +292,26 @@ Now, with `fx test`, that simply becomes:
 <code class="devsite-terminal">fx test <var>NESTED_COMPONENT_NAME</var></code>
 </pre>
 
+#### Passing arguments to individual tests
+
+Note: `fx test` passes extra arguments to all selected tests. If you are
+targeting many test components in a single pass, this option may not be ideal.
+
+Use the `--` flag to provide additional arguments which are ignored by `fx test`
+and passed to test components.
+
+For example, to pass a timeout flag to a test that accepts it, execute:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">fx test <var>TEST_NAME</var> -- --timeout=5</code>
+</pre>
+
+Internally, this command runs the following:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">fx shell run-test-component <var>TEST_NAME</var> --timeout=5</code>
+</pre>
+
 #### Implementation
 
 When `fx test` runs your test component, `fx test` calls `run-test-component`
