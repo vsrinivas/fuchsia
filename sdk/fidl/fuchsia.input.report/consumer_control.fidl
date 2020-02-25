@@ -25,6 +25,9 @@ enum ConsumerControlButton : uint32 {
 
     /// This button represents muting the microphone on the host.
     MIC_MUTE = 5;
+
+    /// This button represents rebooting the host.
+    REBOOT = 6;
 };
 
 /// Describes the format of the input report that will be sent from the
