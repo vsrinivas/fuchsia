@@ -50,6 +50,7 @@ def includes():
     ret += '#include <trace/event.h>\n'
     ret += '#include <zircon/status.h>\n'
     ret += '#include "src/virtualization/bin/vmm/device/virtio_queue.h"\n'
+    ret += '#include <string>\n'
     return ret
 
 
@@ -201,6 +202,7 @@ def main():
                 header += generate_generic_method(export) + '\n'
             header += generate_handle_command(magma) + '\n'
             header += ' protected:\n'
+            header += '  std::string device_path_;\n'
             header += '  fbl::unique_fd device_fd_;\n'
             header += '};\n'
             header += guards(False) + '\n'

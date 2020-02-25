@@ -4,6 +4,7 @@
 
 #include "src/virtualization/bin/vmm/device/virtio_magma.h"
 
+#include <dirent.h>
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -20,7 +21,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
 
-static constexpr const char* kDevicePath = "/dev/class/gpu/000";
+static constexpr const char* kDeviceDir = "/dev/class/gpu";
 
 VirtioMagma::VirtioMagma(sys::ComponentContext* context) : DeviceBase(context) {}
 
@@ -40,13 +41,33 @@ void VirtioMagma::Start(
   out_queue_.set_interrupt(
       fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioMagma::Interrupt));
 
-  device_fd_ = fbl::unique_fd(open(kDevicePath, O_RDONLY));
-  if (!device_fd_.is_valid()) {
-    FXL_LOG(ERROR) << "Failed to open device at " << kDevicePath << ": " << strerror(errno);
+  auto dir = opendir(kDeviceDir);
+  if (!dir) {
+    FXL_LOG(ERROR) << "Failed to open device directory at " << kDeviceDir << ": "
+                   << strerror(errno);
     deferred.cancel();
     callback(ZX_ERR_NOT_FOUND);
     return;
   }
+
+  for (auto entry = readdir(dir); entry != nullptr && !device_fd_.is_valid();
+       entry = readdir(dir)) {
+    device_path_ = std::string(kDeviceDir) + "/" + entry->d_name;
+    device_fd_ = fbl::unique_fd(open(device_path_.c_str(), O_RDONLY));
+    if (!device_fd_.is_valid()) {
+      FXL_LOG(WARNING) << "Failed to open device at " << device_path_ << ": " << strerror(errno);
+    }
+  }
+
+  closedir(dir);
+
+  if (!device_fd_.is_valid()) {
+    FXL_LOG(ERROR) << "Failed to open any devices in " << kDeviceDir << ".";
+    deferred.cancel();
+    callback(ZX_ERR_NOT_FOUND);
+    return;
+  }
+
   deferred.cancel();
   callback(ZX_OK);
 }
@@ -83,7 +104,7 @@ zx_status_t VirtioMagma::Handle_device_import(const virtio_magma_device_import_c
   zx_status_t status = zx::channel::create(0u, &server_handle, &client_handle);
   if (status != ZX_OK)
     return status;
-  status = fdio_service_connect(kDevicePath, server_handle.release());
+  status = fdio_service_connect(device_path_.c_str(), server_handle.release());
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "fdio_service_connect failed - " << status;
     return status;

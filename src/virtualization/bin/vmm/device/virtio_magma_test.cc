@@ -71,6 +71,9 @@ class VirtioMagmaTest : public TestWithDevice {
         std::move(start_info), std::move(vmar),
         wayland_importer_mock_binding_.NewBinding(wayland_importer_mock_loop_.dispatcher()),
         &status);
+    if (status == ZX_ERR_NOT_FOUND) {
+      ADD_FAILURE() << "Failed to start VirtioMagma because no GPU devices were found.";
+    }
     ASSERT_EQ(ZX_OK, status);
 
     // Configure device queues.
