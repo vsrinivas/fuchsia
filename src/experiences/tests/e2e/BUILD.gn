@@ -8,6 +8,7 @@ import("//build/testing/environments.gni")
 dart_test("experiences_ermine_session_shell_e2e_test") {
   sources = [
     "ermine_driver.dart",
+
     # TODO(43263): Re-write ermine tests to use FlutterDriver.
     # "ermine_session_shell_ask_test.dart",
     # "ermine_session_shell_simple_browser_test.dart",
@@ -40,7 +41,10 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
 group("test") {
   testonly = true
 
-  deps = [
-    ":experiences_ermine_session_shell_e2e_test($host_toolchain)",
-  ]
+  deps = []
+
+  if (is_debug) {
+    # Ermine tests use Flutter Driver, which only works in debug builds.
+    deps += [ ":experiences_ermine_session_shell_e2e_test($host_toolchain)" ]
+  }
 }

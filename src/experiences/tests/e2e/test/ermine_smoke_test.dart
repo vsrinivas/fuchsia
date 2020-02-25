@@ -21,13 +21,6 @@ void main() {
     sl4f = Sl4f.fromEnvironment();
     await sl4f.startServer();
 
-    // Check if ermine is up and registered itself with [Inspect].
-    final inspect = Inspect(sl4f.ssh);
-    final ermine = await inspect.inspectComponentRoot('ermine');
-    if (ermine == null) {
-      fail('could not find ermine\'s inspect node');
-    }
-
     connector = FlutterDriverConnector(sl4f);
     await connector.initialize();
 
