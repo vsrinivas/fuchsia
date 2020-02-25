@@ -4,6 +4,7 @@
 
 pub mod ap;
 pub mod auth;
+mod block_ack;
 pub mod buffer;
 pub mod client;
 mod ddk_converter;

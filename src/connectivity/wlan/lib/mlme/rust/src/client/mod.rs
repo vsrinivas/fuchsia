@@ -13,6 +13,7 @@ mod stats;
 use {
     crate::{
         auth,
+        block_ack::{BlockAckTx, ADDBA_REQ_FRAME_LEN, ADDBA_RESP_FRAME_LEN},
         buffer::{BufferProvider, OutBuf},
         device::{Device, TxFlags},
         error::Error,
@@ -30,6 +31,8 @@ use {
     static_assertions::assert_eq_size,
     std::convert::TryInto,
     wlan_common::{
+        appendable::Appendable,
+        buffer_writer::BufferWriter,
         data_writer,
         ie::{self, parse_ht_capabilities, parse_vht_capabilities, rsn::rsne, Id, Reader},
         mac::{self, Aid, Bssid, MacAddr, PowerState},
@@ -37,26 +40,11 @@ use {
         sequence::SequenceManager,
         wmm,
     },
-    wlan_frame_writer::{write_frame, write_frame_with_fixed_buf},
+    wlan_frame_writer::{write_frame, write_frame_with_dynamic_buf, write_frame_with_fixed_buf},
     zerocopy::{AsBytes, ByteSlice},
 };
 
 pub use scanner::ScanError;
-
-// TODO(29887): Determine better value.
-const BLOCK_ACK_BUFFER_SIZE: u16 = 64;
-// TODO(29325): Implement QoS policy engine. See the following parts of the
-//              specification:
-//
-//              - IEEE Std 802.11-2016, 3.1 (Traffic Identifier)
-//              - IEEE Std 802.11-2016, 5.1.1.1 (Data Service - General)
-//              - IEEE Std 802.11-2016, 9.4.2.30 (Access Policy)
-//              - IEEE Std 802.11-2016, 9.2.4.5.2 (TID Subfield)
-//
-//              A TID is from [0, 15] and is assigned to an MSDU in the layers
-//              above the MAC. [0, 7] identify Traffic Categories (TCs) and
-//              [8, 15] identify parameterized TCs.
-const BLOCK_ACK_TID: u16 = 0; // TODO(29325): Implement QoS policy engine.
 
 /// Maximum size of EAPOL frames forwarded to SME.
 /// TODO(34845): Evaluate whether EAPOL size restriction is needed.
@@ -788,95 +776,6 @@ impl<'a> BoundClient<'a> {
             .map_err(|s| Error::Status(format!("error sending PS-Poll frame"), s))
     }
 
-    /// Sends an `ADDBA` request to the associated AP to begin a BlockAck
-    /// session. This frame is sent to initiate a BlockAck session with the AP
-    /// and is described by 802.11-2016, 9.6.5.2.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the management frame cannot be sent to the AP.
-    pub fn send_addba_req_frame(&mut self) -> Result<(), Error> {
-        // TODO(29887): It appears there is no particular rule to choose the
-        //              value for `dialog_token`. Persist the dialog token for
-        //              the BlockAck session and find a proven way to generate
-        //              tokens.  See IEEE Std 802.11-2016, 9.6.5.2.
-        const DIALOG_TOKEN: u8 = 1;
-        // TODO(29887): No timeout. Determine better value.
-        const NO_TIMEOUT: u16 = 0;
-
-        let (buf, bytes_written) = write_frame!(&mut self.ctx.buf_provider, {
-            headers: {
-                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_to_ap(
-                    mac::FrameControl(0)
-                        .with_frame_type(mac::FrameType::MGMT)
-                        .with_mgmt_subtype(mac::MgmtSubtype::ACTION),
-                    self.sta.bssid,
-                    self.sta.iface_mac,
-                    mac::SequenceControl(0)
-                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid.0) as u16)
-                ),
-                mac::ActionHdr: &mac::ActionHdr { action: mac::ActionCategory::BLOCK_ACK },
-                mac::AddbaReqHdr: &mac::AddbaReqHdr {
-                    action: mac::BlockAckAction::ADDBA_REQUEST,
-                    dialog_token: DIALOG_TOKEN,
-                    parameters: mac::BlockAckParameters(0)
-                        .with_amsdu(true)
-                        .with_policy(mac::BlockAckPolicy::IMMEDIATE)
-                        .with_tid(BLOCK_ACK_TID)
-                        .with_buffer_size(BLOCK_ACK_BUFFER_SIZE),
-                    timeout: NO_TIMEOUT,
-                    starting_sequence_control: mac::BlockAckStartingSequenceControl(0)
-                        .with_fragment_number(0) // IEEE Std 802.11-2016, 9.6.5.2 - Always zero.
-                        .with_starting_sequence_number(1),
-                }
-            },
-        })?;
-        let out_buf = OutBuf::from(buf, bytes_written);
-        self.send_mgmt_or_ctrl_frame(out_buf)
-            .map_err(|s| Error::Status(format!("error sending addba request frame"), s))
-    }
-
-    /// Sends an `ADDBA` response to the associated AP to begin a BlockAck
-    /// session. This frame is sent in response to an `ADDBA` request from the
-    /// AP and is described by 802.11-2016, 9.6.5.3.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the management frame cannot be sent to the AP.
-    pub fn send_addba_resp_frame(&mut self, dialog_token: u8) -> Result<(), Error> {
-        // TODO(29887): No timeout. Determine better value.
-        const NO_TIMEOUT: u16 = 0;
-
-        let (buf, bytes_written) = write_frame!(&mut self.ctx.buf_provider, {
-            headers: {
-                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_to_ap(
-                    mac::FrameControl(0)
-                        .with_frame_type(mac::FrameType::MGMT)
-                        .with_mgmt_subtype(mac::MgmtSubtype::ACTION),
-                    self.sta.bssid,
-                    self.sta.iface_mac,
-                    mac::SequenceControl(0)
-                        .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid.0) as u16)
-                ),
-                mac::ActionHdr: &mac::ActionHdr { action: mac::ActionCategory::BLOCK_ACK },
-                mac::AddbaRespHdr: &mac::AddbaRespHdr {
-                    action: mac::BlockAckAction::ADDBA_RESPONSE,
-                    dialog_token,
-                    status: mac::StatusCode::SUCCESS,
-                    parameters: mac::BlockAckParameters(0)
-                        .with_amsdu(true)
-                        .with_policy(mac::BlockAckPolicy::IMMEDIATE)
-                        .with_tid(BLOCK_ACK_TID)
-                        .with_buffer_size(BLOCK_ACK_BUFFER_SIZE),
-                    timeout: NO_TIMEOUT,
-                }
-            },
-        })?;
-        let out_buf = OutBuf::from(buf, bytes_written);
-        self.send_mgmt_or_ctrl_frame(out_buf)
-            .map_err(|s| Error::Status(format!("error sending addba response frame"), s))
-    }
-
     /// Called when a previously scheduled `TimedEvent` fired.
     pub fn handle_timed_event(&mut self, event: TimedEvent) {
         self.sta.state = Some(self.sta.state.take().unwrap().on_timed_event(self, event))
@@ -1047,17 +946,95 @@ impl<'a> BoundClient<'a> {
             None => warn!("main channel not set, cannot ensure on channel"),
         }
     }
+
+    /// Sends an `ADDBA` frame (request or response).
+    ///
+    /// This function accepts an `ADDBA` frame body and a length `n`. The length is the **total
+    /// length of the complete frame**, including management headers. See `ADDBA_REQ_FRAME_LEN` and
+    /// `ADDBA_RESP_FRAME_LEN`.
+    fn send_addba_frame(&mut self, n: usize, body: &[u8]) -> Result<(), Error> {
+        let mut buffer = self.ctx.buf_provider.get_buffer(n)?;
+        let mut writer = BufferWriter::new(&mut buffer[..]);
+        write_addba_hdr(&mut writer, self.sta.bssid, self.sta.iface_mac, &mut self.ctx.seq_mgr)
+            .and_then(|_| writer.append_bytes(body).map_err(Into::into))?;
+        let n = writer.bytes_written();
+        let buffer = OutBuf::from(buffer, n);
+        self.send_mgmt_or_ctrl_frame(buffer)
+            .map_err(|status| Error::Status(format!("error sending addba frame"), status))
+    }
+}
+
+impl<'a> BlockAckTx for BoundClient<'a> {
+    /// Sends an `ADDBA` request to the associated AP to begin a BlockAck session. This frame is
+    /// sent to initiate a BlockAck session with the AP and is described by 802.11-2016, 9.6.5.2.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the management frame cannot be sent to the AP.
+    fn send_addba_req_frame(&mut self, body: &[u8]) -> Result<(), Error> {
+        self.send_addba_frame(ADDBA_REQ_FRAME_LEN, body)
+    }
+
+    /// Sends an `ADDBA` response to the associated AP to begin a BlockAck session. This frame is
+    /// sent in response to an `ADDBA` request from the AP and is described by 802.11-2016,
+    /// 9.6.5.3.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the management frame cannot be sent to the AP.
+    fn send_addba_resp_frame(&mut self, body: &[u8]) -> Result<(), Error> {
+        self.send_addba_frame(ADDBA_RESP_FRAME_LEN, body)
+    }
+}
+
+/// Writes the header of the management frame for an `ADDBA` request or response to the given
+/// buffer.
+///
+/// The address may be that of the originator or recipient. The frame formats are described by IEEE
+/// Std 802.11-2016, 9.6.5.
+fn write_addba_hdr<B: Appendable>(
+    buffer: &mut B,
+    bssid: Bssid,
+    addr: MacAddr,
+    seq_mgr: &mut SequenceManager,
+) -> Result<usize, Error> {
+    // The management header differs for APs and clients. The frame control and management header
+    // are constructed here, but AP and client STAs share the code that constructs the body. See
+    // the `block_ack` module.
+    write_frame_with_dynamic_buf!(
+        buffer,
+        {
+            headers: {
+                mac::MgmtHdr: &mgmt_writer::mgmt_hdr_to_ap(
+                    mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::MGMT)
+                        .with_mgmt_subtype(mac::MgmtSubtype::ACTION),
+                    bssid,
+                    addr,
+                    mac::SequenceControl(0)
+                        .with_seq_num(seq_mgr.next_sns1(&bssid.0) as u16),
+                ),
+            },
+        }
+    )
+    .map(|(_, n)| n)
 }
 
 #[cfg(test)]
 mod tests {
     use {
         super::{state::DEFAULT_AUTO_DEAUTH_TIMEOUT_BEACON_COUNT, *},
-        crate::{buffer::FakeBufferProvider, client::lost_bss::LostBssCounter, device::FakeDevice},
+        crate::{
+            block_ack::{self, BlockAckState, Closed},
+            buffer::FakeBufferProvider,
+            client::lost_bss::LostBssCounter,
+            device::FakeDevice,
+        },
         fidl_fuchsia_wlan_common as fidl_common,
         wlan_common::{
             assert_variant, ie, stats::SignalStrengthAverage, test_utils::fake_frames::*, TimeUnit,
         },
+        wlan_statemachine::*,
     };
     const BSSID: Bssid = Bssid([6u8; 6]);
     const IFACE_MAC: MacAddr = [7u8; 6];
@@ -1181,6 +1158,7 @@ mod tests {
                     ),
                     status_check_timeout,
                     signal_strength_average: SignalStrengthAverage::new(),
+                    block_ack_state: StateMachine::new(BlockAckState::from(State::new(Closed))),
                 })));
             self.sta.state.replace(state);
         }
@@ -2005,13 +1983,18 @@ mod tests {
 
     #[test]
     fn send_addba_req_frame() {
-        let mut m = MockObjects::new();
-        let mut me = m.make_mlme();
-        me.make_client_station();
-        let mut client = me.get_bound_client().expect("client should be present");
-        client.send_addba_req_frame().expect("failed sending addba frame");
+        let mut mock = MockObjects::new();
+        let mut mlme = mock.make_mlme();
+        mlme.make_client_station();
+        let mut client = mlme.get_bound_client().expect("client should be present");
+
+        let mut body = [0u8; 16];
+        let mut writer = BufferWriter::new(&mut body[..]);
+        block_ack::write_addba_req_body(&mut writer, 1)
+            .and_then(|_| client.send_addba_req_frame(writer.into_written()))
+            .expect("failed sending addba frame");
         assert_eq!(
-            &m.fake_device.wlan_queue[0].0[..],
+            &mock.fake_device.wlan_queue[0].0[..],
             &[
                 // Mgmt header 1101 for action frame
                 0b11010000, 0b00000000, // frame control
@@ -2033,13 +2016,18 @@ mod tests {
 
     #[test]
     fn send_addba_resp_frame() {
-        let mut m = MockObjects::new();
-        let mut me = m.make_mlme();
-        me.make_client_station();
-        let mut client = me.get_bound_client().expect("client should be present");
-        client.send_addba_resp_frame(1).expect("failed sending addba frame");
+        let mut mock = MockObjects::new();
+        let mut mlme = mock.make_mlme();
+        mlme.make_client_station();
+        let mut client = mlme.get_bound_client().expect("client should be present");
+
+        let mut body = [0u8; 16];
+        let mut writer = BufferWriter::new(&mut body[..]);
+        block_ack::write_addba_resp_body(&mut writer, 1)
+            .and_then(|_| client.send_addba_resp_frame(writer.into_written()))
+            .expect("failed sending addba frame");
         assert_eq!(
-            &m.fake_device.wlan_queue[0].0[..],
+            &mock.fake_device.wlan_queue[0].0[..],
             &[
                 // Mgmt header 1101 for action frame
                 0b11010000, 0b00000000, // frame control

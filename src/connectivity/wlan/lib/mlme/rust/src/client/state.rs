@@ -10,6 +10,7 @@
 use {
     crate::{
         auth,
+        block_ack::{BlockAckState, Closed},
         client::{lost_bss::LostBssCounter, BoundClient, Client, Context, TimedEvent},
         ddk_converter as ddk,
         error::Error,
@@ -22,6 +23,7 @@ use {
     static_assertions::assert_eq_size,
     std::convert::TryInto,
     wlan_common::{
+        buffer_reader::BufferReader,
         energy::DecibelMilliWatt,
         ie,
         mac::{self, MacAddr, PowerState},
@@ -253,6 +255,7 @@ impl Associating {
                     lost_bss_counter,
                     status_check_timeout,
                     signal_strength_average: SignalStrengthAverage::new(),
+                    block_ack_state: StateMachine::new(BlockAckState::from(State::new(Closed))),
                 })
             }
             status_code => {
@@ -401,8 +404,8 @@ pub struct Association {
     /// Currently, QoS is enabled if the associated PHY is HT or VHT.
     pub qos: Qos,
 
-    /// |lost_bss_counter| is started when client is associated and used to keep track whether
-    /// BSS is still alive nearby.
+    /// `lost_bss_counter` is used to determine if the BSS is still alive nearby. It is started
+    /// when the client is associated.
     pub lost_bss_counter: LostBssCounter,
 
     /// |timeout| is the timeout that is scheduled for the association status check, which includes
@@ -411,6 +414,8 @@ pub struct Association {
     /// back on channel.
     pub status_check_timeout: StatusCheckTimeout,
     pub signal_strength_average: SignalStrengthAverage,
+
+    pub block_ack_state: StateMachine<BlockAckState>,
 }
 
 /// Client received a "successful" association response from the BSS.
@@ -535,6 +540,15 @@ impl Associated {
             hdr.ether_type.to_native(),
             &body,
         )
+    }
+
+    fn on_block_ack_frame<B: ByteSlice>(
+        &mut self,
+        sta: &mut BoundClient<'_>,
+        action: mac::BlockAckAction,
+        body: B,
+    ) {
+        self.0.block_ack_state.replace_state(|state| state.on_block_ack_frame(sta, action, body));
     }
 
     /// Process an inbound MLME-FinalizeAssociation.request.
@@ -851,6 +865,20 @@ impl States {
                         state.on_disassoc_frame(sta, &disassoc_hdr);
                         state.transition_to(Authenticated).into()
                     }
+                    mac::MgmtBody::Action { action_hdr, elements, .. } => match action_hdr.action {
+                        mac::ActionCategory::BLOCK_ACK => {
+                            let reader = BufferReader::new(elements);
+                            if let Some(action) = reader.peek_unaligned::<mac::BlockAckAction>() {
+                                state.on_block_ack_frame(
+                                    sta,
+                                    action.get(),
+                                    reader.into_remaining(),
+                                );
+                            }
+                            state.into()
+                        }
+                        _ => state.into(),
+                    },
                     _ => state.into(),
                 }
             }
@@ -1063,6 +1091,7 @@ mod tests {
     use {
         super::*,
         crate::{
+            block_ack::{write_addba_req_body, ADDBA_REQ_FRAME_LEN},
             buffer::FakeBufferProvider,
             client::{
                 channel_listener::ChannelListenerState, channel_scheduler::ChannelScheduler,
@@ -1074,10 +1103,13 @@ mod tests {
         fuchsia_zircon::{self as zx, DurationNum},
         wlan_common::{
             assert_variant,
+            buffer_writer::BufferWriter,
             mac::{Bssid, MacAddr},
+            mgmt_writer,
             sequence::SequenceManager,
             test_utils::fake_frames::*,
         },
+        wlan_frame_writer::write_frame_with_dynamic_buf,
         wlan_statemachine as statemachine,
     };
 
@@ -1164,6 +1196,7 @@ mod tests {
             qos: Qos::Disabled,
             status_check_timeout,
             signal_strength_average: SignalStrengthAverage::new(),
+            block_ack_state: StateMachine::new(BlockAckState::from(State::new(Closed))),
         }
     }
 
@@ -1660,6 +1693,57 @@ mod tests {
                 ..empty_associate_conf()
             }
         );
+    }
+
+    #[test]
+    fn associated_block_ack_frame() {
+        let mut mock = MockObjects::new();
+        let mut ctx = mock.make_ctx();
+        let mut station = make_client_station();
+        let mut client = station.bind(
+            &mut ctx,
+            &mut mock.scanner,
+            &mut mock.chan_sched,
+            &mut mock.channel_state,
+        );
+
+        let frame = {
+            let mut buffer = [0u8; ADDBA_REQ_FRAME_LEN];
+            let writer = BufferWriter::new(&mut buffer[..]);
+            let (mut writer, _) = write_frame_with_dynamic_buf!(
+                writer,
+                {
+                    headers: {
+                        mac::MgmtHdr: &mgmt_writer::mgmt_hdr_from_ap(
+                            mac::FrameControl(0)
+                                .with_frame_type(mac::FrameType::MGMT)
+                                .with_mgmt_subtype(mac::MgmtSubtype::ACTION),
+                            client.sta.iface_mac,
+                            client.sta.bssid,
+                            mac::SequenceControl(0)
+                                .with_seq_num(client.ctx.seq_mgr.next_sns1(&client.sta.bssid.0) as u16),
+                        ),
+                    },
+                }
+            )
+            .unwrap();
+            write_addba_req_body(&mut writer, 1).unwrap();
+            buffer
+        };
+
+        let state = States::from(statemachine::testing::new_state(Associated(empty_association(
+            &mut client,
+        ))));
+        match state.on_mac_frame(&mut client, &frame[..], None) {
+            States::Associated(state) => {
+                let (_, associated) = state.release_data();
+                match *associated.0.block_ack_state.as_ref() {
+                    BlockAckState::Established(_) => {}
+                    _ => panic!("client has not established BlockAck"),
+                }
+            }
+            _ => panic!("client no longer associated"),
+        }
     }
 
     #[test]
