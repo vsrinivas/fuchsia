@@ -1,3 +1,4 @@
+export 'analytics_reporter.dart';
 export 'arg_parser.dart';
 export 'checkers.dart';
 export 'cmd.dart';

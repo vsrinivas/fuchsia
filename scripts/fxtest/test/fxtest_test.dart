@@ -3,11 +3,25 @@ import 'package:args/args.dart';
 import 'package:async/async.dart';
 import 'package:path/path.dart' as p;
 import 'package:fxtest/fxtest.dart';
+import 'package:meta/meta.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
 
 // Mock this because it checks environment variables
 class MockEnvReader extends Mock implements EnvReader {}
+
+class AnalyticsFaker extends AnalyticsReporter {
+  List<List<String>> reportHistory = [];
+
+  @override
+  Future<void> report({
+    @required String subcommand,
+    @required String action,
+    String label,
+  }) async {
+    reportHistory.add([subcommand, action, label]);
+  }
+}
 
 // Mock this because it creates processes
 class FakeTestRunner extends Fake implements TestRunner {
@@ -606,6 +620,66 @@ void main() {
       ArgResults results = fxTestArgParser.parse(['--realm=foo']);
       var testsConfig = TestsConfig.fromArgResults(results: results);
       expect(testsConfig.flags.realm, 'foo');
+    });
+  });
+
+  group('test analytics are reporting', () {
+    var envReader = MockEnvReader();
+    when(envReader.getEnv('FUCHSIA_DIR')).thenReturn('/root/path/fuchsia');
+    var fuchsiaLocator = FuchsiaLocator(envReader: envReader);
+    var testBundles = <TestBundle>[
+      TestBundle(
+        TestDefinition(
+          buildDir: '/',
+          command: ['asdf'],
+          name: 'Big Test',
+          os: 'linux',
+        ),
+        workingDirectory: '.',
+        testRunner: FakeTestRunner.passing(),
+      ),
+    ];
+    test('functions on real test runs', () async {
+      var cmd = FuchsiaTestCommand(
+        analyticsReporter: AnalyticsFaker(),
+        fuchsiaLocator: fuchsiaLocator,
+        outputFormatter: null,
+        testsConfig: TestsConfig(
+          flags: Flags(dryRun: false),
+          passThroughTokens: [],
+          runnerTokens: [],
+          testNames: [],
+        ),
+      );
+      await cmd.runTests(testBundles).forEach((event) {});
+      await cmd.cleanUp();
+      expect(
+        // ignore: avoid_as
+        (cmd.analyticsReporter as AnalyticsFaker).reportHistory,
+        [
+          ['test', 'number', '1']
+        ],
+      );
+    });
+    test('is silent on dry runs', () async {
+      var cmd = FuchsiaTestCommand(
+        analyticsReporter: AnalyticsFaker(),
+        fuchsiaLocator: fuchsiaLocator,
+        outputFormatter: null,
+        testsConfig: TestsConfig(
+          flags: Flags(dryRun: true),
+          passThroughTokens: [],
+          runnerTokens: [],
+          testNames: [],
+        ),
+      );
+      await cmd.runTests(testBundles).forEach((event) {});
+      await cmd.cleanUp();
+      expect(
+        // ignore: avoid_as
+        (cmd.analyticsReporter as AnalyticsFaker).reportHistory,
+        hasLength(0),
+      );
     });
   });
 }

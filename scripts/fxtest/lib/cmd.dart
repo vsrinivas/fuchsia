@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:fxtest/fxtest.dart';
 import 'package:meta/meta.dart';
+import 'package:pedantic/pedantic.dart';
 
 /// Main entry-point for all Fuchsia tests, both host and on-device.
 ///
@@ -37,6 +38,8 @@ class FuchsiaTestCommand {
   // ignore: close_sinks
   final _eventStreamController = StreamController<TestEvent>();
 
+  final AnalyticsReporter analyticsReporter;
+
   /// Bundle of configuration options for this invocation.
   final TestsConfig testsConfig;
 
@@ -46,11 +49,14 @@ class FuchsiaTestCommand {
   /// Translator between [TestEvent] instances and output for the user.
   final OutputFormatter outputFormatter;
 
+  int _numberOfTests;
+
   FuchsiaTestCommand({
+    @required this.analyticsReporter,
     @required this.fuchsiaLocator,
     @required this.outputFormatter,
     @required this.testsConfig,
-  });
+  }) : _numberOfTests = 0;
 
   Stream<TestEvent> get stream => _eventStreamController.stream;
 
@@ -64,18 +70,7 @@ class FuchsiaTestCommand {
 
   Future<int> runTestSuite({TestsManifestReader manifestReader}) async {
     stream.listen(outputFormatter.update);
-
-    manifestReader ??= TestsManifestReader();
-    List<TestDefinition> testDefinitions = await manifestReader.loadTestsJson(
-      buildDir: fuchsiaLocator.buildDir,
-      manifestFileName: 'tests.json',
-    );
-    ParsedManifest parsedManifest = manifestReader.aggregateTests(
-      buildDir: fuchsiaLocator.buildDir,
-      eventEmitter: emitEvent,
-      testDefinitions: testDefinitions,
-      testsConfig: testsConfig,
-    );
+    var parsedManifest = await parseManifest(manifestReader);
     manifestReader.reportOnTestBundles(
       userFriendlyBuildDir: fuchsiaLocator.userFriendlyBuildDir,
       eventEmitter: emitEvent,
@@ -85,7 +80,10 @@ class FuchsiaTestCommand {
     var exitCode = 0;
 
     try {
-      await _runTests(parsedManifest.testBundles).forEach((event) {
+      // Let the output formatter know that we're done parsing and
+      // emitting preliminary events
+      emitEvent(BeginningTests());
+      await runTests(parsedManifest.testBundles).forEach((event) {
         emitEvent(event);
         if (event is TestResult && !event.isSuccess) {
           exitCode = 2;
@@ -98,16 +96,30 @@ class FuchsiaTestCommand {
     return exitCode;
   }
 
-  Stream<TestEvent> _runTests(List<TestBundle> testBundles) async* {
-    // Let the output formatter know that we're done parsing and
-    // emitting preliminary events
-    yield BeginningTests();
+  Future<ParsedManifest> parseManifest(
+    TestsManifestReader manifestReader,
+  ) async {
+    // ignore: parameter_assignments
+    manifestReader ??= TestsManifestReader();
+    List<TestDefinition> testDefinitions = await manifestReader.loadTestsJson(
+      buildDir: fuchsiaLocator.buildDir,
+      manifestFileName: 'tests.json',
+    );
+    return manifestReader.aggregateTests(
+      buildDir: fuchsiaLocator.buildDir,
+      eventEmitter: emitEvent,
+      testDefinitions: testDefinitions,
+      testsConfig: testsConfig,
+    );
+  }
 
+  Stream<TestEvent> runTests(List<TestBundle> testBundles) async* {
     var count = 0;
     for (TestBundle testBundle in testBundles) {
       yield* testBundle.run();
 
       count += 1;
+      _numberOfTests = count;
       if (testsConfig.flags.limit > 0 && count >= testsConfig.flags.limit) {
         break;
       }
@@ -116,5 +128,18 @@ class FuchsiaTestCommand {
 
   /// Function guaranteed to be called at the end of execution, whether that is
   /// natural or the result of a SIGINT.
-  Future<void> cleanUp() async {}
+  Future<void> cleanUp() async {
+    await _reportAnalytics();
+  }
+
+  Future<void> _reportAnalytics() async {
+    final _actuallyRanTests = _numberOfTests != null && _numberOfTests > 0;
+    if (!testsConfig.flags.dryRun && _actuallyRanTests) {
+      await analyticsReporter.report(
+        subcommand: 'test',
+        action: 'number',
+        label: '$_numberOfTests',
+      );
+    }
+  }
 }

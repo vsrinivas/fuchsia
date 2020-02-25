@@ -110,6 +110,11 @@ class FuchsiaTestCommandCli {
             shouldColorizeOutput: testsConfig.flags.simpleOutput,
           );
     _cmd = FuchsiaTestCommand(
+      analyticsReporter: testsConfig.flags.dryRun
+          ? AnalyticsReporter.noop()
+          : AnalyticsReporter(
+              fuchsiaLocator: FuchsiaLocator.shared,
+            ),
       fuchsiaLocator: FuchsiaLocator.shared,
       outputFormatter: formatter,
       testsConfig: testsConfig,
@@ -119,8 +124,7 @@ class FuchsiaTestCommandCli {
       formatter.update(TestInfo(wrapWith('> fx build', [green, styleBold])));
       await rebuildFuchsia();
     }
-    exitCode = await _cmd.runTestSuite();
-    return await _cmd.cleanUp();
+    exitCode = await _cmd.runTestSuite(manifestReader: TestsManifestReader());
   }
 
   Future<void> terminateEarly() async {
