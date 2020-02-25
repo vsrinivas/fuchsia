@@ -13,13 +13,13 @@ use {
     clonable_error::ClonableError,
     fdio::fdio_sys,
     fidl::endpoints::ServerEnd,
+    fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
-    fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_process as fproc, fuchsia_async as fasync,
     fuchsia_async::EHandle,
     fuchsia_component::client,
     fuchsia_runtime::{job_default, HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Job, Task},
-    futures::future::BoxFuture,
     log::warn,
     std::convert::TryFrom,
     std::{path::Path, sync::Arc},
@@ -200,7 +200,7 @@ impl ElfRunner {
     async fn configure_launcher(
         &self,
         resolved_url: &String,
-        start_info: fsys::ComponentStartInfo,
+        start_info: fcrunner::ComponentStartInfo,
         job: zx::Job,
         launcher: &fidl_fuchsia_process::LauncherProxy,
     ) -> Result<Option<(fidl_fuchsia_process::LaunchInfo, RuntimeDirectory)>, RunnerError> {
@@ -227,9 +227,7 @@ impl ElfRunner {
 
         // Convert the directories into proxies, so we can find "/pkg" and open "lib" and bin_path
         let ns = runner::component::ComponentNamespace::try_from(
-            start_info
-                .ns
-                .unwrap_or(fsys::ComponentNamespace { paths: vec![], directories: vec![] }),
+            start_info.ns.unwrap_or_else(|| vec![]),
         )
         .map_err(|e| RunnerError::invalid_args(resolved_url.clone(), e))?;
 
@@ -271,9 +269,8 @@ impl ElfRunner {
 
     async fn start_component(
         &self,
-        start_info: fsys::ComponentStartInfo,
-        server_end: ServerEnd<fsys::ComponentControllerMarker>,
-    ) -> Result<Option<runner::component::Controller<ElfComponent>>, RunnerError> {
+        start_info: fcrunner::ComponentStartInfo,
+    ) -> Result<Option<ElfComponent>, RunnerError> {
         let resolved_url =
             runner::get_resolved_url(&start_info).map_err(|e| RunnerError::invalid_args("", e))?;
 
@@ -327,9 +324,15 @@ impl ElfRunner {
 
         // Launch the component
         let process_koid = async {
-            let (status, process) = launcher.launch(&mut launch_info).await?;
+            let (status, process) = launcher
+                .launch(&mut launch_info)
+                .await
+                .map_err(|e| RunnerError::component_launch_error(&*resolved_url, e))?;
             if zx::Status::from_raw(status) != zx::Status::OK {
-                return Err(format_err!("failed to launch component: {}", status));
+                return Err(RunnerError::component_launch_error(
+                    resolved_url.clone(),
+                    format_err!("failed to launch component: {}", status),
+                ));
             }
 
             let mut process_koid = 0;
@@ -341,40 +344,13 @@ impl ElfRunner {
                     })?
                     .raw_koid();
             }
-
             Ok(process_koid)
         }
         .await
         .map_err(|e| RunnerError::component_launch_error(resolved_url.clone(), e))?;
 
         self.create_elf_directory(&runtime_dir, &resolved_url, process_koid, job_koid).await?;
-        let server_stream = server_end.into_stream().expect("failed to convert");
-        let controller = runner::component::Controller::new(
-            ElfComponent::new(runtime_dir, Job::from(component_job)),
-            server_stream,
-        );
-        Ok(Some(controller))
-    }
-
-    async fn start_async(
-        &self,
-        start_info: fsys::ComponentStartInfo,
-        server_end: ServerEnd<fsys::ComponentControllerMarker>,
-    ) -> Result<(), RunnerError> {
-        // start the component and move any Controller into a new async
-        // execution context. This future completes when the
-        // Controller is told to stop/kill the component.
-        self.start_component(start_info, server_end)
-            .await
-            .map(|controller_opt| -> Option<()> {
-                controller_opt.and_then(|controller| {
-                    fasync::spawn(async move {
-                        let _ = controller.serve().await;
-                    });
-                    Some(())
-                })
-            })
-            .map(|_option_unit| ())
+        Ok(Some(ElfComponent::new(runtime_dir, Job::from(component_job))))
     }
 }
 
@@ -401,6 +377,7 @@ impl runner::component::Killable for ElfComponent {
     }
 }
 
+#[async_trait]
 impl Runner for ElfRunner {
     /// Starts a component by creating a new Job and Process for the component.
     /// The Runner also creates and hosts a namespace for the component. The
@@ -409,12 +386,35 @@ impl Runner for ElfRunner {
     /// `ComponentController.Stop` or `ComponentController.Kill`. Sending
     /// `ComponentController.Stop` or `ComponentController.Kill` causes the
     /// Future to complete.
-    fn start(
+    async fn start(
         &self,
-        start_info: fsys::ComponentStartInfo,
-        server_end: ServerEnd<fsys::ComponentControllerMarker>,
-    ) -> BoxFuture<Result<(), RunnerError>> {
-        Box::pin(self.start_async(start_info, server_end))
+        start_info: fcrunner::ComponentStartInfo,
+        server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
+    ) {
+        // start the component and move the Controller into a new async
+        // execution context.
+        match self.start_component(start_info).await {
+            Ok(Some(elf_component)) => {
+                // This future completes when the
+                // Controller is told to stop/kill the component.
+                fasync::spawn(async move {
+                    let server_stream = server_end.into_stream().expect("failed to convert");
+                    runner::component::Controller::new(elf_component, server_stream)
+                        .serve()
+                        .await
+                        .unwrap_or_else(|e| warn!("serving ComponentController failed: {}", e));
+                });
+            }
+            Ok(None) => {
+                // TODO(fxb/): Should this signal an error?
+            }
+            Err(err) => {
+                // Deliver any errors as epitaphs over ComponentController.
+                server_end.close_with_epitaph(err.as_zx_status()).unwrap_or_else(|e| {
+                    warn!("failed to send epitaph on ComponentController channel: {}", e);
+                });
+            }
+        }
     }
 }
 
@@ -463,7 +463,10 @@ mod tests {
         fidl::endpoints::{create_proxy, ClientEnd, Proxy},
         fidl_fuchsia_data as fdata,
         fidl_fuchsia_io::DirectoryProxy,
-        fuchsia_async as fasync, io_util,
+        fuchsia_async as fasync,
+        futures::stream::StreamExt,
+        io_util,
+        matches::assert_matches,
         runner::component::Killable,
     };
 
@@ -483,7 +486,7 @@ mod tests {
 
     fn hello_world_startinfo(
         runtime_dir: Option<ServerEnd<DirectoryMarker>>,
-    ) -> fsys::ComponentStartInfo {
+    ) -> fcrunner::ComponentStartInfo {
         // Get a handle to /pkg
         let pkg_path = "/pkg".to_string();
         let pkg_chan = io_util::open_directory_in_namespace("/pkg", OPEN_RIGHT_READABLE)
@@ -493,9 +496,12 @@ mod tests {
             .into_zx_channel();
         let pkg_handle = ClientEnd::new(pkg_chan);
 
-        let ns = fsys::ComponentNamespace { paths: vec![pkg_path], directories: vec![pkg_handle] };
+        let ns = vec![fcrunner::ComponentNamespaceEntry {
+            path: Some(pkg_path),
+            directory: Some(pkg_handle),
+        }];
 
-        fsys::ComponentStartInfo {
+        fcrunner::ComponentStartInfo {
             resolved_url: Some(
                 "fuchsia-pkg://fuchsia.com/hello_world_hippo#meta/hello_world.cm".to_string(),
             ),
@@ -547,16 +553,13 @@ mod tests {
         };
         let launcher_connector = ProcessLauncherConnector::new(&args);
         let runner = ElfRunner::new(launcher_connector);
-        let (controller, server_controller) = create_proxy::<fsys::ComponentControllerMarker>()
+        let (controller, server_controller) = create_proxy::<fcrunner::ComponentControllerMarker>()
             .expect("could not create component controller endpoints");
 
         // TODO: This test currently results in a bunch of log spew when this test process exits
         // because this does not stop the component, which means its loader service suddenly goes
         // away. Stop the component when the Runner trait provides a way to do so.
-        runner
-            .start_async(start_info, server_controller)
-            .await
-            .expect("hello_world_test start failed");
+        runner.start(start_info, server_controller).await;
 
         // Verify that args are added to the runtime directory.
         assert_eq!("foo", read_file(&runtime_dir_proxy, "args/0").await);
@@ -597,13 +600,16 @@ mod tests {
         };
         let launcher_connector = ProcessLauncherConnector::new(&args);
         let runner = ElfRunner::new(launcher_connector);
-        let (_controller, server_controller) = create_proxy::<fsys::ComponentControllerMarker>()
-            .expect("could not create component controller endpoints");
+        let (client_controller, server_controller) =
+            create_proxy::<fcrunner::ComponentControllerMarker>()
+                .expect("could not create component controller endpoints");
 
-        match runner.start_async(start_info, server_controller).await {
-            Ok(_) => Err(format_err!("hello_world_fail_test succeeded unexpectedly")),
-            Err(_) => Ok(()),
-        }
+        runner.start(start_info, server_controller).await;
+        assert_matches!(
+            client_controller.take_event_stream().next().await.unwrap(),
+            Err(fidl::Error::ClientChannelClosed(_))
+        );
+        Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]

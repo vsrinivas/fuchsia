@@ -21,7 +21,8 @@ use {
     },
     cm_rust::{ChildDecl, CollectionDecl, ComponentDecl, NativeIntoFidl},
     fidl::endpoints::{self, ServerEnd},
-    fidl_fidl_examples_echo as echo, fidl_fuchsia_data as fdata,
+    fidl_fidl_examples_echo as echo, fidl_fuchsia_component_runner as fcrunner,
+    fidl_fuchsia_data as fdata,
     fidl_fuchsia_io::{
         DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE, OPEN_FLAG_CREATE,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
@@ -496,11 +497,10 @@ where
 ///
 /// Panics if the channel closes before we receive a request.
 pub async fn wait_for_runner_request(
-    recv: &mut Receiver<fsys::ComponentRunnerRequest>,
-) -> fsys::ComponentStartInfo {
-    let fsys::ComponentRunnerRequest::Start { start_info, responder, .. } =
+    recv: &mut Receiver<fcrunner::ComponentRunnerRequest>,
+) -> fcrunner::ComponentStartInfo {
+    let fcrunner::ComponentRunnerRequest::Start { start_info, .. } =
         recv.next().await.expect("Channel closed before request was received.");
-    responder.send(&mut Ok(())).expect("Failed to send response over channel.");
     start_info
 }
 

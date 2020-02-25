@@ -16,6 +16,7 @@ use {
     },
     cm_rust::data,
     fidl::endpoints::{self, Proxy, ServerEnd},
+    fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys,
     fuchsia_async::{self as fasync, EHandle},
@@ -95,7 +96,7 @@ pub(super) async fn do_start(model: Arc<Model>, realm: Arc<Realm>) -> Result<(),
     // It's possible that the component is stopped before getting here. If so, that's fine: the
     // runner will start the component, but its stop or kill signal will be immediately set on the
     // component controller.
-    runner.start(start_info, controller_server).await?;
+    runner.start(start_info, controller_server).await;
 
     Ok(())
 }
@@ -125,7 +126,7 @@ async fn make_execution_runtime(
     package: Option<fsys::Package>,
     decl: &cm_rust::ComponentDecl,
 ) -> Result<
-    (Runtime, fsys::ComponentStartInfo, ServerEnd<fsys::ComponentControllerMarker>),
+    (Runtime, fcrunner::ComponentStartInfo, ServerEnd<fcrunner::ComponentControllerMarker>),
     ModelError,
 > {
     // Create incoming/outgoing directories, and populate them.
@@ -143,7 +144,7 @@ async fn make_execution_runtime(
     let ns = namespace.populate(model, abs_moniker, decl).await?;
 
     let (controller_client, controller_server) =
-        endpoints::create_endpoints::<fsys::ComponentControllerMarker>()
+        endpoints::create_endpoints::<fcrunner::ComponentControllerMarker>()
             .expect("could not create component controller endpoints");
     let controller =
         controller_client.into_proxy().expect("failed to create ComponentControllerProxy");
@@ -160,7 +161,7 @@ async fn make_execution_runtime(
         exposed_dir,
         Some(controller),
     )?;
-    let start_info = fsys::ComponentStartInfo {
+    let start_info = fcrunner::ComponentStartInfo {
         resolved_url: Some(url),
         program: data::clone_option_dictionary(&decl.program),
         ns: Some(ns),

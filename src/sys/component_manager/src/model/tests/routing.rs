@@ -18,6 +18,7 @@ use {
     async_trait::async_trait,
     cm_rust::*,
     fidl::endpoints::ServerEnd,
+    fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_zircon as zx,
@@ -1854,7 +1855,7 @@ async fn use_runner_from_grandparent() {
 
     // Set up the system.
     let (runner_service, mut receiver) =
-        create_service_directory_entry::<fsys::ComponentRunnerMarker>();
+        create_service_directory_entry::<fcrunner::ComponentRunnerMarker>();
     let universe = RoutingTestBuilder::new("a", components)
         // Component "a" exposes a runner service.
         .add_outgoing_path("a", CapabilityPath::try_from("/svc/runner").unwrap(), runner_service)
@@ -1923,7 +1924,7 @@ async fn use_runner_from_sibling() {
 
     // Set up the system.
     let (runner_service, mut receiver) =
-        create_service_directory_entry::<fsys::ComponentRunnerMarker>();
+        create_service_directory_entry::<fcrunner::ComponentRunnerMarker>();
     let universe = RoutingTestBuilder::new("a", components)
         // Component "r" exposes a runner service.
         .add_outgoing_path("r", CapabilityPath::try_from("/svc/runner").unwrap(), runner_service)

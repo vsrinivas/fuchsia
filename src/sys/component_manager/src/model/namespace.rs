@@ -10,6 +10,7 @@ use {
     cm_rust::{self, ComponentDecl, UseDecl, UseStorageDecl},
     directory_broker,
     fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd},
+    fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeMarker},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_async::EHandle,
@@ -57,15 +58,15 @@ impl IncomingNamespace {
         Ok(Self { package_dir, dir_abort_handles: vec![] })
     }
 
-    /// In addition to populating an fsys::ComponentNamespace, `populate` will start serving and install
+    /// In addition to populating a Vec<fcrunner::ComponentNamespaceEntry>, `populate` will start serving and install
     /// handles to pseudo directories.
     pub async fn populate<'a>(
         &'a mut self,
         model: &'a Arc<Model>,
         abs_moniker: &'a AbsoluteMoniker,
         decl: &'a ComponentDecl,
-    ) -> Result<fsys::ComponentNamespace, ModelError> {
-        let mut ns = fsys::ComponentNamespace { paths: vec![], directories: vec![] };
+    ) -> Result<Vec<fcrunner::ComponentNamespaceEntry>, ModelError> {
+        let mut ns: Vec<fcrunner::ComponentNamespaceEntry> = vec![];
 
         // Populate the /pkg namespace.
         if let Some(package_dir) = self.package_dir.as_ref() {
@@ -123,7 +124,7 @@ impl IncomingNamespace {
 
     /// add_pkg_directory will add a handle to the component's package under /pkg in the namespace.
     fn add_pkg_directory(
-        ns: &mut fsys::ComponentNamespace,
+        ns: &mut Vec<fcrunner::ComponentNamespaceEntry>,
         package_dir: &DirectoryProxy,
     ) -> Result<(), ModelError> {
         let clone_dir_proxy = io_util::clone_directory(package_dir, fio::CLONE_FLAG_SAME_RIGHTS)
@@ -134,8 +135,10 @@ impl IncomingNamespace {
                 .expect("could not convert directory to channel")
                 .into_zx_channel(),
         );
-        ns.paths.push(PKG_PATH.to_str().unwrap().to_string());
-        ns.directories.push(cloned_dir);
+        ns.push(fcrunner::ComponentNamespaceEntry {
+            path: Some(PKG_PATH.to_str().unwrap().to_string()),
+            directory: Some(cloned_dir),
+        });
         Ok(())
     }
 
@@ -144,7 +147,7 @@ impl IncomingNamespace {
     /// `route_directory` to forward the channel to the source component's outgoing directory and
     /// terminates.
     fn add_directory_use(
-        ns: &mut fsys::ComponentNamespace,
+        ns: &mut Vec<fcrunner::ComponentNamespaceEntry>,
         waiters: &mut Vec<BoxFuture<()>>,
         use_: &UseDecl,
         model: &Arc<Model>,
@@ -158,7 +161,7 @@ impl IncomingNamespace {
     /// `route_storage` to forward the channel to the source component's outgoing directory and
     /// terminates.
     fn add_storage_use(
-        ns: &mut fsys::ComponentNamespace,
+        ns: &mut Vec<fcrunner::ComponentNamespaceEntry>,
         waiters: &mut Vec<BoxFuture<()>>,
         use_: &UseDecl,
         model: &Arc<Model>,
@@ -168,7 +171,7 @@ impl IncomingNamespace {
     }
 
     fn add_directory_helper(
-        ns: &mut fsys::ComponentNamespace,
+        ns: &mut Vec<fcrunner::ComponentNamespaceEntry>,
         waiters: &mut Vec<BoxFuture<()>>,
         use_: &UseDecl,
         model: &Arc<Model>,
@@ -230,8 +233,10 @@ impl IncomingNamespace {
         };
 
         waiters.push(Box::pin(route_on_usage));
-        ns.paths.push(target_path.clone());
-        ns.directories.push(client_end);
+        ns.push(fcrunner::ComponentNamespaceEntry {
+            path: Some(target_path.clone()),
+            directory: Some(client_end),
+        });
         Ok(())
     }
 
@@ -314,7 +319,7 @@ impl IncomingNamespace {
     /// be called when the IncomingNamespace is dropped.
     fn serve_and_install_svc_dirs(
         &mut self,
-        ns: &mut fsys::ComponentNamespace,
+        ns: &mut Vec<fcrunner::ComponentNamespaceEntry>,
         svc_dirs: HashMap<String, Directory>,
     ) -> Result<(), ModelError> {
         for (target_dir_path, pseudo_dir) in svc_dirs {
@@ -328,9 +333,10 @@ impl IncomingNamespace {
                 server_end.into_channel().into(),
             );
 
-            ns.paths.push(target_dir_path.as_str().to_string());
-            let client_end = ClientEnd::new(client_end.into_channel()); // coerce to ClientEnd<Dir>
-            ns.directories.push(client_end);
+            ns.push(fcrunner::ComponentNamespaceEntry {
+                path: Some(target_dir_path.as_str().to_string()),
+                directory: Some(ClientEnd::new(client_end.into_channel())), // coerce to ClientEnd<Dir>
+            });
         }
         Ok(())
     }

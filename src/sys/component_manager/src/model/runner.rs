@@ -3,26 +3,26 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
-    clonable_error::ClonableError,
-    fidl::endpoints::ServerEnd,
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    futures::{future::BoxFuture, stream::TryStreamExt},
-    thiserror::Error,
+    anyhow::Error, async_trait::async_trait, clonable_error::ClonableError,
+    fidl::endpoints::ServerEnd, fidl_fuchsia_component as fcomponent,
+    fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::stream::TryStreamExt, thiserror::Error,
 };
 
 /// Executes a component instance.
 /// TODO: The runner should return a trait object to allow the component instance to be stopped,
 /// binding to services, and observing abnormal termination.  In other words, a wrapper that
-/// encapsulates fsys::ComponentController FIDL interfacing concerns.
-/// TODO: Consider defining an internal representation for `fsys::ComponentStartInfo` so as to
+/// encapsulates fcrunner::ComponentController FIDL interfacing concerns.
+/// TODO: Consider defining an internal representation for `fcrunner::ComponentStartInfo` so as to
 /// further isolate the `Model` from FIDL interfacting concerns.
+#[async_trait]
 pub trait Runner: Sync + Send {
-    fn start(
+    #[must_use]
+    async fn start(
         &self,
-        start_info: fsys::ComponentStartInfo,
-        server_end: ServerEnd<fsys::ComponentControllerMarker>,
-    ) -> BoxFuture<Result<(), RunnerError>>;
+        start_info: fcrunner::ComponentStartInfo,
+        server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
+    );
 }
 
 /// Errors produced by `Runner`.
@@ -92,6 +92,13 @@ impl RunnerError {
             RunnerError::Unsupported { .. } => fcomponent::Error::Unsupported,
         }
     }
+
+    /// Convert this error into a zx::Status equivalent.
+    pub fn as_zx_status(&self) -> zx::Status {
+        zx::Status::from_raw(
+            self.as_fidl_error().into_primitive() as fuchsia_zircon_status::zx_status_t
+        )
+    }
 }
 
 /// A null runner for components without a runtime environment.
@@ -101,35 +108,35 @@ impl RunnerError {
 /// bindings to its children.
 pub(super) struct NullRunner {}
 
+#[async_trait]
 impl Runner for NullRunner {
-    fn start(
+    async fn start(
         &self,
-        _start_info: fsys::ComponentStartInfo,
-        server_end: ServerEnd<fsys::ComponentControllerMarker>,
-    ) -> BoxFuture<Result<(), RunnerError>> {
+        _start_info: fcrunner::ComponentStartInfo,
+        server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
+    ) {
         spawn_null_controller_server(
             server_end
                 .into_stream()
                 .expect("NullRunner failed to convert server channel into request stream"),
         );
-        Box::pin(async { Ok(()) })
     }
 }
 
 /// Spawn an async execution context which takes ownership of `server_end`
 /// and holds on to it until a stop or kill request is received.
-fn spawn_null_controller_server(mut request_stream: fsys::ComponentControllerRequestStream) {
+fn spawn_null_controller_server(mut request_stream: fcrunner::ComponentControllerRequestStream) {
     // Listen to the ComponentController server end and exit after the first
     // one, as this is the contract we have implemented so far. Exiting will
     // cause our handle to the channel to drop and close the channel.
     fasync::spawn(async move {
         while let Ok(Some(request)) = request_stream.try_next().await {
             match request {
-                fsys::ComponentControllerRequest::Stop { control_handle: c } => {
+                fcrunner::ComponentControllerRequest::Stop { control_handle: c } => {
                     c.shutdown();
                     break;
                 }
-                fsys::ComponentControllerRequest::Kill { control_handle: c } => {
+                fcrunner::ComponentControllerRequest::Kill { control_handle: c } => {
                     c.shutdown();
                     break;
                 }
@@ -158,36 +165,23 @@ impl std::convert::From<fcomponent::Error> for RemoteRunnerError {
 
 /// A runner provided by another component.
 pub struct RemoteRunner {
-    client: fsys::ComponentRunnerProxy,
+    client: fcrunner::ComponentRunnerProxy,
 }
 
 impl RemoteRunner {
-    pub fn new(client: fsys::ComponentRunnerProxy) -> RemoteRunner {
+    pub fn new(client: fcrunner::ComponentRunnerProxy) -> RemoteRunner {
         RemoteRunner { client }
-    }
-
-    async fn start_async(
-        &self,
-        start_info: fsys::ComponentStartInfo,
-        server_end: ServerEnd<fsys::ComponentControllerMarker>,
-    ) -> Result<(), RunnerError> {
-        let url = start_info.resolved_url.clone().unwrap_or_else(|| "<none>".to_string());
-        self.client
-            .start(start_info, server_end)
-            .await
-            .map_err(|e| RunnerError::runner_connection_error(e))?
-            .map_err(|e| RunnerError::component_launch_error(url, RemoteRunnerError(e)))?;
-        Ok(())
     }
 }
 
+#[async_trait]
 impl Runner for RemoteRunner {
-    fn start(
+    async fn start(
         &self,
-        start_info: fsys::ComponentStartInfo,
-        server_end: ServerEnd<fsys::ComponentControllerMarker>,
-    ) -> BoxFuture<Result<(), RunnerError>> {
-        Box::pin(self.start_async(start_info, server_end))
+        start_info: fcrunner::ComponentStartInfo,
+        server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
+    ) {
+        self.client.start(start_info, server_end).unwrap();
     }
 }
 
@@ -196,7 +190,6 @@ mod tests {
     use super::*;
     use {
         fidl::endpoints,
-        fidl_fuchsia_sys2 as fsys,
         fuchsia_async::OnSignals,
         fuchsia_zircon::{AsHandleRef, Signals},
     };
@@ -205,17 +198,19 @@ mod tests {
     async fn test_null_runner() {
         let null_runner = NullRunner {};
         let (client, server) =
-            endpoints::create_endpoints::<fsys::ComponentControllerMarker>().unwrap();
-        null_runner.start(
-            fsys::ComponentStartInfo {
-                resolved_url: None,
-                program: None,
-                ns: None,
-                outgoing_dir: None,
-                runtime_dir: None,
-            },
-            server,
-        );
+            endpoints::create_endpoints::<fcrunner::ComponentControllerMarker>().unwrap();
+        null_runner
+            .start(
+                fcrunner::ComponentStartInfo {
+                    resolved_url: None,
+                    program: None,
+                    ns: None,
+                    outgoing_dir: None,
+                    runtime_dir: None,
+                },
+                server,
+            )
+            .await;
         let proxy = client.into_proxy().expect("failed converting to proxy");
         proxy.stop().expect("failed to send message to null runner");
 

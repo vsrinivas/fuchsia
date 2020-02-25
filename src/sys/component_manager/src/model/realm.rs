@@ -20,6 +20,7 @@ use {
     clonable_error::ClonableError,
     cm_rust::{self, ChildDecl, ComponentDecl, UseDecl, UseStorageDecl},
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
+    fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{self as fio, DirectoryProxy, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef},
@@ -233,7 +234,7 @@ impl Realm {
             if let Some(runner_decl) = runner_decl {
                 // Open up a channel to the runner.
                 let (client_channel, server_channel) =
-                    create_endpoints::<fsys::ComponentRunnerMarker>()
+                    create_endpoints::<fcrunner::ComponentRunnerMarker>()
                         .map_err(|_| ModelError::InsufficientResources)?;
                 routing::route_use_capability(
                     model,
@@ -747,7 +748,7 @@ pub struct Runtime {
     /// Hosts a directory mapping the component's exposed capabilities.
     pub exposed_dir: ExposedDir,
     /// Used to interact with the Runner to influence the component's execution
-    pub controller: Option<fsys::ComponentControllerProxy>,
+    pub controller: Option<fcrunner::ComponentControllerProxy>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -792,7 +793,7 @@ impl Runtime {
         outgoing_dir: Option<DirectoryProxy>,
         runtime_dir: Option<DirectoryProxy>,
         exposed_dir: ExposedDir,
-        controller: Option<fsys::ComponentControllerProxy>,
+        controller: Option<fcrunner::ComponentControllerProxy>,
     ) -> Result<Self, ModelError> {
         Ok(Runtime { resolved_url, namespace, outgoing_dir, runtime_dir, exposed_dir, controller })
     }
@@ -829,7 +830,7 @@ impl Runtime {
 }
 
 async fn stop_component_internal<'a>(
-    controller: &fsys::ComponentControllerProxy,
+    controller: &fcrunner::ComponentControllerProxy,
     timer: BoxFuture<'a, ()>,
 ) -> Result<StopComponentSuccess, StopComponentError> {
     // Ask the controller to stop the component
@@ -897,7 +898,7 @@ pub mod tests {
             test_helpers::{self, ComponentDeclBuilder},
         },
         fidl::endpoints,
-        fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+        fuchsia_async as fasync,
         fuchsia_zircon::{self as zx, AsHandleRef, Koid},
         futures::lock::Mutex,
         std::{boxed::Box, collections::HashMap, sync::Arc, task::Poll},
@@ -911,7 +912,7 @@ pub mod tests {
         // the component.
         let stop_timeout = zx::Duration::from_millis(5);
         let (client, server) =
-            endpoints::create_endpoints::<fsys::ComponentControllerMarker>().unwrap();
+            endpoints::create_endpoints::<fcrunner::ComponentControllerMarker>().unwrap();
         let server_channel_koid = server
             .as_handle_ref()
             .basic_info()
@@ -952,7 +953,7 @@ pub mod tests {
     async fn stop_component_successful_component_already_gone() {
         let stop_timeout = zx::Duration::from_millis(100);
         let (client, server) =
-            endpoints::create_endpoints::<fsys::ComponentControllerMarker>().unwrap();
+            endpoints::create_endpoints::<fcrunner::ComponentControllerMarker>().unwrap();
 
         let timer = Box::pin(fasync::Timer::new(fasync::Time::after(stop_timeout)));
         let client_proxy = client.into_proxy().expect("failed to convert client to proxy");
@@ -981,7 +982,7 @@ pub mod tests {
         // for the component to stop.
         let stop_timeout = zx::Duration::from_seconds(5);
         let (client, server) =
-            endpoints::create_endpoints::<fsys::ComponentControllerMarker>().unwrap();
+            endpoints::create_endpoints::<fcrunner::ComponentControllerMarker>().unwrap();
         let server_channel_koid = server
             .as_handle_ref()
             .basic_info()
@@ -1059,7 +1060,7 @@ pub mod tests {
         // component.
         let stop_timeout = zx::Duration::from_seconds(5);
         let (client, server) =
-            endpoints::create_endpoints::<fsys::ComponentControllerMarker>().unwrap();
+            endpoints::create_endpoints::<fcrunner::ComponentControllerMarker>().unwrap();
         let server_channel_koid = server
             .as_handle_ref()
             .basic_info()
@@ -1145,7 +1146,7 @@ pub mod tests {
         // component.
         let stop_timeout = zx::Duration::from_seconds(5);
         let (client, server) =
-            endpoints::create_endpoints::<fsys::ComponentControllerMarker>().unwrap();
+            endpoints::create_endpoints::<fcrunner::ComponentControllerMarker>().unwrap();
         let server_channel_koid = server
             .as_handle_ref()
             .basic_info()

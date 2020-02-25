@@ -23,7 +23,7 @@ the component manager.
 
 When the component manager decides to start a component, it loads information
 describing the component into a
-[`fuchsia.sys2.ComponentStartInfo`][sdk-component-runner] and sends that
+[`fuchsia.component.runner.ComponentStartInfo`][sdk-component-runner] and sends that
 information to the runner when it invokes the runner's
 [`Start`][sdk-component-runner] method. The
 [`ComponentStartInfo`][sdk-component-runner]
@@ -37,7 +37,7 @@ component the runner may choose a strategy such as the following:
 -  Run the component in the same process as the runner.
 -  Execute the component as a job on a remote computer.
 
-The [`fuchsia.sys2.ComponentController`][sdk-component-runner] protocol
+The [`fuchsia.component.runner.ComponentController`][sdk-component-runner] protocol
 represents the component's excution. The runner is the server of this protocol,
 and the component manager is the client. This protocol allows the component
 manager to tell the runner about actions it needs to take on the component. For
@@ -111,7 +111,7 @@ following:
 
 A runner can be implemented by:
 
-1.  Providing a [`fuchsia.sys2.ComponentRunner`][sdk-component-runner] protocol
+1.  Providing a [`fuchsia.component.runner.ComponentRunner`][sdk-component-runner] protocol
     protocol from a component, and
 2.  Declaring a runner capability backed by this protocol.
 
@@ -129,12 +129,12 @@ responsible for:
 -   Providing a [`fuchsia.io.Directory`][sdk-directory] protocol containing
     runtime information about the launched component, which will be visible in
     the [hub][hub];
--   Providing a [`fuchsia.sys2.ComponentController`][sdk-component-controller]
+-   Providing a [`fuchsia.component.runner.ComponentController`][sdk-component-controller]
     protocol, allowing the component manager to request the runner stop or kill
     the component.
 
 Further details are in the
-[`fuchsia.sys2.ComponentRunner`][sdk-component-runner] documentation.
+[`fuchsia.component.runner.ComponentRunner`][sdk-component-runner] documentation.
 
 For a protocol offered by a component to be used as a runner, it must also
 declare a runner capability in its component manifest, as follows:
@@ -176,7 +176,7 @@ The created runner capability may then be [offered][offer] to children, or
 [hub]: hub.md
 [intro]: introduction.md#a-component-is-a-hermetic-composable-isolated-program
 [offer]: component_manifests.md#offer
-[sdk-component-controller]: /sdk/fidl/fuchsia.sys2/runtime/component_runner.fidl
-[sdk-component-runner]: /sdk/fidl/fuchsia.sys2/runtime/component_runner.fidl
+[sdk-component-controller]: /sdk/fidl/fuchsia.component.runner/component_runner.fidl
+[sdk-component-runner]: /sdk/fidl/fuchsia.component.runner/component_runner.fidl
 [sdk-directory]: /zircon/system/fidl/fuchsia-io/io.fidl
 [use]: component_manifests.md#use

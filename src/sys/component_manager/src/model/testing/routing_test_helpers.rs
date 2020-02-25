@@ -22,6 +22,7 @@ use {
     cm_rust::*,
     fidl::endpoints::{self, create_proxy, ClientEnd, ServerEnd},
     fidl_fidl_examples_echo::{self as echo},
+    fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
         DirectoryProxy, FileEvent, FileMarker, FileObject, FileProxy, NodeInfo, NodeMarker,
         CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE,
@@ -490,13 +491,14 @@ impl RoutingTest {
         expected_paths.extend(expected_paths_hs.into_iter());
 
         // Get the paths in the component's namespace.
-        let mut actual_paths = runner
+        let mut actual_paths: Vec<String> = runner
             .get_namespace(&format!("test:///{}_resolved", component_name))
             .expect("component not in namespace")
             .lock()
             .await
-            .paths
-            .clone();
+            .iter()
+            .map(|entry| entry.path.as_ref().unwrap().clone())
+            .collect();
 
         expected_paths.sort_unstable();
         actual_paths.sort_unstable();
@@ -922,19 +924,19 @@ pub mod capability_util {
         // Find the index of our directory in the namespace, and remove the directory and path. The
         // path is removed so that the paths/dirs aren't shuffled in the namespace.
         let index = ns
-            .paths
             .iter()
-            .position(|path| path == dir_string)
+            .position(|entry| entry.path.as_ref().unwrap() == dir_string)
             .expect(&format!("didn't find dir {}", dir_string));
-        let directory = ns.directories.remove(index);
-        let path = ns.paths.remove(index);
+        let entry = ns.remove(index);
 
         // Clone our directory, and then put the directory and path back on the end of the namespace so
         // that the namespace is (somewhat) unmodified.
-        let dir_proxy = directory.into_proxy().unwrap();
+        let dir_proxy = entry.directory.unwrap().into_proxy().unwrap();
         let dir_proxy_clone = io_util::clone_directory(&dir_proxy, CLONE_FLAG_SAME_RIGHTS).unwrap();
-        ns.directories.push(ClientEnd::new(dir_proxy.into_channel().unwrap().into_zx_channel()));
-        ns.paths.push(path);
+        ns.push(fcrunner::ComponentNamespaceEntry {
+            path: entry.path,
+            directory: Some(ClientEnd::new(dir_proxy.into_channel().unwrap().into_zx_channel())),
+        });
 
         dir_proxy_clone
     }

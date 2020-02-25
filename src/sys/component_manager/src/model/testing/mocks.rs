@@ -18,11 +18,12 @@ use {
     directory_broker::RoutingFn,
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
+    fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{DirectoryMarker, NodeMarker},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_async::EHandle,
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
-    futures::{future::BoxFuture, lock::Mutex, prelude::*},
+    futures::{lock::Mutex, prelude::*},
     std::{
         boxed::Box,
         collections::{HashMap, HashSet},
@@ -161,14 +162,18 @@ impl Resolver for MockResolver {
 
 pub type HostFn = Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync>;
 
-pub type ManagedNamespace = Mutex<fsys::ComponentNamespace>;
+pub type ManagedNamespace = Mutex<Vec<fcrunner::ComponentNamespaceEntry>>;
 
 struct MockRunnerInner {
     /// List of URLs started by this runner instance.
     urls_run: Vec<String>,
 
+    /// Map of URL to Vec of waiters that get notified when their associated URL is
+    /// "run" by the MockRunner.
+    url_waiters: HashMap<String, Vec<futures::channel::oneshot::Sender<()>>>,
+
     /// Namespace for each component, mapping resolved URL to the component's namespace.
-    namespaces: HashMap<String, Arc<Mutex<fsys::ComponentNamespace>>>,
+    namespaces: HashMap<String, Arc<Mutex<Vec<fcrunner::ComponentNamespaceEntry>>>>,
 
     /// Functions for serving the `outgoing` and `runtime` directories
     /// of a given compoment. When a component is started, these
@@ -199,6 +204,7 @@ impl MockRunner {
         MockRunner {
             inner: SyncMutex::new(MockRunnerInner {
                 urls_run: vec![],
+                url_waiters: HashMap::new(),
                 namespaces: HashMap::new(),
                 outgoing_host_fns: HashMap::new(),
                 runtime_host_fns: HashMap::new(),
@@ -241,14 +247,29 @@ impl MockRunner {
     pub fn get_request_map(&self) -> Arc<Mutex<HashMap<Koid, Vec<ControlMessage>>>> {
         self.inner.lock().unwrap().runner_requests.clone()
     }
+
+    /// Returns a future that completes when `url` was launched by the runner. If `url` was
+    /// already launched, returns a future that completes immediately.
+    pub fn wait_for_url(&self, url: &str) -> impl Future<Output = ()> {
+        let (sender, receiver) = futures::channel::oneshot::channel();
+        let mut inner = self.inner.lock().unwrap();
+        if let Some(_) = inner.urls_run.iter().find(|&u| u == url) {
+            sender.send(()).expect("failed to send url notice");
+        } else {
+            let waiters = inner.url_waiters.entry(url.to_string()).or_insert_with(|| vec![]);
+            waiters.push(sender);
+        }
+        async move { receiver.await.expect("failed to receive url notice") }
+    }
 }
 
+#[async_trait]
 impl Runner for MockRunner {
-    fn start(
+    async fn start(
         &self,
-        start_info: fsys::ComponentStartInfo,
-        server_end: ServerEnd<fsys::ComponentControllerMarker>,
-    ) -> BoxFuture<Result<(), RunnerError>> {
+        start_info: fcrunner::ComponentStartInfo,
+        server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
+    ) {
         let outgoing_host_fn;
         let runtime_host_fn;
         let runner_requests;
@@ -264,14 +285,22 @@ impl Runner for MockRunner {
             // Resolve the URL, and trigger a failure if previously requested.
             let resolved_url = start_info.resolved_url.unwrap();
             if state.failing_urls.contains(&resolved_url) {
-                return Box::pin(futures::future::ready(Err(RunnerError::component_launch_error(
-                    resolved_url,
-                    format_err!("ouch"),
-                ))));
+                let status = RunnerError::component_launch_error(
+                    resolved_url.clone(),
+                    format_err!("launch error"),
+                )
+                .as_zx_status();
+                server_end.close_with_epitaph(status).unwrap();
+                return;
             }
 
             // Record that this URL has been started.
             state.urls_run.push(resolved_url.clone());
+            if let Some(waiters) = state.url_waiters.remove(&resolved_url) {
+                for waiter in waiters {
+                    waiter.send(()).expect("failed to send url notice");
+                }
+            }
 
             // Create a namespace for the component.
             state
@@ -297,8 +326,6 @@ impl Runner for MockRunner {
             runtime_host_fn(start_info.runtime_dir.unwrap());
         }
         MockController::new(server_end, runner_requests, channel_koid).serve();
-
-        Box::pin(futures::future::ready(Ok(())))
     }
 }
 
@@ -338,7 +365,7 @@ pub struct ControllerActionResponse {
 
 pub struct MockController {
     pub messages: Arc<Mutex<HashMap<Koid, Vec<ControlMessage>>>>,
-    request_stream: fsys::ComponentControllerRequestStream,
+    request_stream: fcrunner::ComponentControllerRequestStream,
     koid: Koid,
     stop_resp: ControllerActionResponse,
     kill_resp: ControllerActionResponse,
@@ -350,7 +377,7 @@ impl MockController {
     /// `Koid`. When either a request to stop or kill a component is received
     /// the `MockController` will close the control channel immediately.
     pub fn new(
-        server_end: ServerEnd<fsys::ComponentControllerMarker>,
+        server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
         messages: Arc<Mutex<HashMap<Koid, Vec<ControlMessage>>>>,
         koid: Koid,
     ) -> MockController {
@@ -370,7 +397,7 @@ impl MockController {
     /// `kill_respone` provides the same control when the a request to kill is
     /// received.
     pub fn new_with_responses(
-        server_end: ServerEnd<fsys::ComponentControllerMarker>,
+        server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
         messages: Arc<Mutex<HashMap<Koid, Vec<ControlMessage>>>>,
         koid: Koid,
         stop_response: ControllerActionResponse,
@@ -397,7 +424,7 @@ impl MockController {
             self.messages.lock().await.insert(self.koid, Vec::new());
             while let Ok(Some(request)) = self.request_stream.try_next().await {
                 match request {
-                    fsys::ComponentControllerRequest::Stop { control_handle: c } => {
+                    fcrunner::ComponentControllerRequest::Stop { control_handle: c } => {
                         self.messages
                             .lock()
                             .await
@@ -418,7 +445,7 @@ impl MockController {
                             break;
                         }
                     }
-                    fsys::ComponentControllerRequest::Kill { control_handle: c } => {
+                    fcrunner::ComponentControllerRequest::Kill { control_handle: c } => {
                         self.messages
                             .lock()
                             .await

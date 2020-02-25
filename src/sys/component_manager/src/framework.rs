@@ -949,19 +949,6 @@ mod tests {
             assert_eq!(err, fcomponent::Error::InstanceNotFound);
         }
 
-        // Instance cannot start.
-        {
-            let mut child_ref = fsys::ChildRef { name: "unrunnable".to_string(), collection: None };
-            let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
-            let err = test
-                .realm_proxy
-                .bind_child(&mut child_ref, server_end)
-                .await
-                .expect("fidl call failed")
-                .expect_err("unexpected success");
-            assert_eq!(err, fcomponent::Error::InstanceCannotStart);
-        }
-
         // Instance cannot resolve.
         {
             let mut child_ref =
@@ -975,6 +962,34 @@ mod tests {
                 .expect_err("unexpected success");
             assert_eq!(err, fcomponent::Error::InstanceCannotResolve);
         }
+    }
+
+    // If a runner fails to launch a child, the error should not occur at `bind_child`.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn bind_child_runner_failure() {
+        let mut mock_resolver = MockResolver::new();
+        mock_resolver.add_component(
+            "root",
+            ComponentDeclBuilder::new()
+                .add_lazy_child("unrunnable")
+                .offer_runner_to_children(TEST_RUNNER_NAME)
+                .build(),
+        );
+        mock_resolver.add_component("unrunnable", component_decl_with_test_runner());
+        let mock_runner = Arc::new(MockRunner::new());
+        mock_runner.cause_failure("unrunnable");
+        let hook = TestHook::new();
+        let test =
+            RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;
+
+        let mut child_ref = fsys::ChildRef { name: "unrunnable".to_string(), collection: None };
+        let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        test.realm_proxy
+            .bind_child(&mut child_ref, server_end)
+            .await
+            .expect("fidl call failed")
+            .expect("bind failed");
+        // TODO(fxb/46913): Assert that `server_end` closes once instance death is monitored.
     }
 
     fn child_decl(name: &str) -> fsys::ChildDecl {

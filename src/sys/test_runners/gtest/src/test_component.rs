@@ -6,13 +6,13 @@ use {
     crate::errors::*,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
+    fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
         self as fio, DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest,
+    fidl_fuchsia_process as fproc, fidl_fuchsia_test as ftest,
     fidl_fuchsia_test::{Invocation, Result_ as TestResult, Status, TestListenerProxy},
-    fsys::ComponentControllerMarker,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_runtime::job_default,
@@ -92,7 +92,7 @@ pub struct Component {
 
 impl Component {
     fn new(
-        start_info: fsys::ComponentStartInfo,
+        start_info: fcrunner::ComponentStartInfo,
     ) -> Result<(Self, ServerEnd<DirectoryMarker>), ComponentError> {
         let url =
             runner::get_resolved_url(&start_info).map_err(ComponentError::InvalidStartInfo)?;
@@ -146,8 +146,8 @@ impl Drop for ComponentRuntime {
 
 /// Setup and run test component in background.
 pub fn start_component(
-    start_info: fsys::ComponentStartInfo,
-    server_end: ServerEnd<ComponentControllerMarker>,
+    start_info: fcrunner::ComponentStartInfo,
+    server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
 ) -> Result<(), ComponentError> {
     let (component, outgoing_dir) = Component::new(start_info)?;
     let component = Arc::new(component);
@@ -770,7 +770,6 @@ mod tests {
         super::*,
         anyhow::{Context as _, Error},
         fidl::endpoints::ClientEnd,
-        fidl_fuchsia_sys2 as fsys,
         fidl_fuchsia_test::{
             TestCaseListenerRequest::Finished, TestListenerMarker,
             TestListenerRequest::OnTestCaseStarted, TestListenerRequestStream,
@@ -812,8 +811,7 @@ mod tests {
     fn create_ns_from_current_ns(
         dir_paths: Vec<(&str, u32)>,
     ) -> Result<ComponentNamespace, ComponentNamespaceError> {
-        let mut paths = vec![];
-        let mut directories = vec![];
+        let mut ns = vec![];
         for (path, permission) in dir_paths {
             let chan = io_util::open_directory_in_namespace(path, permission)
                 .unwrap()
@@ -822,12 +820,11 @@ mod tests {
                 .into_zx_channel();
             let handle = ClientEnd::new(chan);
 
-            paths.push(path.to_string());
-            directories.push(handle);
+            ns.push(fcrunner::ComponentNamespaceEntry {
+                path: Some(path.to_string()),
+                directory: Some(handle),
+            });
         }
-
-        let ns = fsys::ComponentNamespace { paths: paths, directories: directories };
-
         ComponentNamespace::try_from(ns)
     }
 

@@ -6,7 +6,8 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_io as fio, fidl_fuchsia_process as fproc, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio,
+    fidl_fuchsia_process as fproc,
     fuchsia_runtime::{job_default, HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, HandleBased},
     futures::prelude::*,
@@ -35,7 +36,7 @@ pub trait Killable {
 pub struct Controller<C: Killable> {
     /// stream via which the component manager will ask the controller to
     /// manipulate the component
-    request_stream: fsys::ComponentControllerRequestStream,
+    request_stream: fcrunner::ComponentControllerRequestStream,
 
     /// killable object which kills underlying component.
     /// This would be None once the object is killed.
@@ -44,7 +45,7 @@ pub struct Controller<C: Killable> {
 
 impl<C: Killable> Controller<C> {
     /// Creates new instance
-    pub fn new(killable: C, requests: fsys::ComponentControllerRequestStream) -> Controller<C> {
+    pub fn new(killable: C, requests: fcrunner::ComponentControllerRequestStream) -> Controller<C> {
         Controller { killable: Some(killable), request_stream: requests }
     }
 
@@ -52,7 +53,7 @@ impl<C: Killable> Controller<C> {
     pub async fn serve(mut self) -> Result<(), Error> {
         while let Ok(Some(request)) = self.request_stream.try_next().await {
             match request {
-                fsys::ComponentControllerRequest::Stop { control_handle: c } => {
+                fcrunner::ComponentControllerRequest::Stop { control_handle: c } => {
                     // for now, treat a stop the same as a kill because this
                     // is not yet implementing proper behavior to first ask the
                     // remote process to exit
@@ -60,7 +61,7 @@ impl<C: Killable> Controller<C> {
                     c.shutdown();
                     break;
                 }
-                fsys::ComponentControllerRequest::Kill { control_handle: c } => {
+                fcrunner::ComponentControllerRequest::Kill { control_handle: c } => {
                     self.kill().await;
                     c.shutdown();
                     break;
@@ -79,7 +80,7 @@ impl<C: Killable> Controller<C> {
     }
 }
 
-/// An error encountered trying convert fsys::ComponentNamespace
+/// An error encountered trying convert Vec<fcrunner::ComponentNamespaceEntry>
 #[derive(Debug, Error)]
 pub enum ComponentNamespaceError {
     #[error("cannot clone directory for cloning namespace: {:?}", _0)]
@@ -87,6 +88,9 @@ pub enum ComponentNamespaceError {
 
     #[error("cannot convert directory handle to proxy: {}.", _0)]
     IntoProxy(fidl::Error),
+
+    #[error("missing path in namespace entry")]
+    MissingPath,
 }
 
 /// This represents Component namespace which is easier for other functions in this library to read
@@ -97,14 +101,15 @@ pub struct ComponentNamespace {
     items: Vec<(String, fio::DirectoryProxy)>,
 }
 
-impl TryFrom<fsys::ComponentNamespace> for ComponentNamespace {
+impl TryFrom<Vec<fcrunner::ComponentNamespaceEntry>> for ComponentNamespace {
     type Error = ComponentNamespaceError;
 
-    fn try_from(mut ns: fsys::ComponentNamespace) -> Result<Self, Self::Error> {
-        let mut new_ns = Self { items: Vec::with_capacity(ns.directories.len()) };
+    fn try_from(mut ns: Vec<fcrunner::ComponentNamespaceEntry>) -> Result<Self, Self::Error> {
+        let mut new_ns = Self { items: Vec::with_capacity(ns.len()) };
 
-        while let Some(path) = ns.paths.pop() {
-            if let Some(dir) = ns.directories.pop() {
+        while let Some(entry) = ns.pop() {
+            let path = entry.path.ok_or(ComponentNamespaceError::MissingPath)?;
+            if let Some(dir) = entry.directory {
                 new_ns
                     .items
                     .push((path, dir.into_proxy().map_err(ComponentNamespaceError::IntoProxy)?));
@@ -127,7 +132,7 @@ impl ComponentNamespace {
     }
 }
 
-/// An error encountered trying convert fsys::ComponentNamespace
+/// An error encountered trying to launch a component.
 #[derive(Debug, PartialEq, Eq, Error)]
 pub enum LaunchError {
     #[error("invalid binary path {}", _0)]
@@ -351,7 +356,7 @@ mod tests {
         };
 
         let (client_endpoint, server_endpoint) =
-            create_endpoints::<fsys::ComponentControllerMarker>()
+            create_endpoints::<fcrunner::ComponentControllerMarker>()
                 .expect("could not create component controller endpoints");
 
         let controller_stream =
@@ -384,7 +389,7 @@ mod tests {
         };
 
         let (client_endpoint, server_endpoint) =
-            create_endpoints::<fsys::ComponentControllerMarker>()
+            create_endpoints::<fcrunner::ComponentControllerMarker>()
                 .expect("could not create component controller endpoints");
 
         let controller_stream =
@@ -421,7 +426,7 @@ mod tests {
             // Clients cannot send messages on those handles in ns.
             extra_paths: Vec<&str>,
         ) -> Result<ComponentNamespace, ComponentNamespaceError> {
-            let mut ns = fsys::ComponentNamespace { paths: vec![], directories: vec![] };
+            let mut ns = Vec::<fcrunner::ComponentNamespaceEntry>::new();
             if include_pkg {
                 let pkg_path = "/pkg".to_string();
                 let pkg_chan =
@@ -432,17 +437,19 @@ mod tests {
                         .into_zx_channel();
                 let pkg_handle = ClientEnd::new(pkg_chan);
 
-                ns = fsys::ComponentNamespace {
-                    paths: vec![pkg_path],
-                    directories: vec![pkg_handle],
-                };
+                ns.push(fcrunner::ComponentNamespaceEntry {
+                    path: Some(pkg_path),
+                    directory: Some(pkg_handle),
+                });
             }
 
             for path in extra_paths {
                 let (client, _server) = create_endpoints::<fio::DirectoryMarker>()
                     .expect("could not create component controller endpoints");
-                ns.paths.push(path.to_string());
-                ns.directories.push(client);
+                ns.push(fcrunner::ComponentNamespaceEntry {
+                    path: Some(path.to_string()),
+                    directory: Some(client),
+                });
             }
             ComponentNamespace::try_from(ns)
         }

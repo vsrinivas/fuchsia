@@ -13,7 +13,7 @@ use {
     async_trait::async_trait,
     cm_rust::CapabilityName,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::future::BoxFuture,
     futures::stream::TryStreamExt,
     std::{
@@ -94,19 +94,15 @@ impl CapabilityProvider for RunnerCapabilityProvider {
         server_chan: zx::Channel,
     ) -> Result<(), ModelError> {
         let runner = Arc::clone(&self.runner);
-        let mut stream = ServerEnd::<fsys::ComponentRunnerMarker>::new(server_chan)
+        let mut stream = ServerEnd::<fcrunner::ComponentRunnerMarker>::new(server_chan)
             .into_stream()
             .expect("could not convert channel into stream");
         fasync::spawn(async move {
             // Keep handling requests until the stream closes.
             while let Ok(Some(request)) = stream.try_next().await {
-                let fsys::ComponentRunnerRequest::Start { start_info, controller, responder } =
+                let fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } =
                     request;
-                let mut result =
-                    runner.start(start_info, controller).await.map_err(|e| e.as_fidl_error());
-                if responder.send(&mut result).is_err() {
-                    break;
-                }
+                runner.start(start_info, controller).await;
             }
         });
         Ok(())
@@ -120,7 +116,6 @@ mod tests {
         crate::model::{
             hooks::Hooks,
             moniker::AbsoluteMoniker,
-            runner::RemoteRunnerError,
             testing::{mocks::MockRunner, routing_test_helpers::*, test_helpers::*},
         },
         anyhow::Error,
@@ -128,16 +123,17 @@ mod tests {
             self, CapabilityName, ChildDecl, ComponentDecl, OfferDecl, OfferRunnerDecl,
             OfferRunnerSource, OfferTarget, UseDecl, UseRunnerDecl,
         },
-        fidl_fuchsia_component as fcomponent,
+        fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
         futures::lock::Mutex,
+        futures::stream::StreamExt,
         matches::assert_matches,
     };
 
-    fn sample_start_info(name: &str) -> fsys::ComponentStartInfo {
-        fsys::ComponentStartInfo {
+    fn sample_start_info(name: &str) -> fcrunner::ComponentStartInfo {
+        fcrunner::ComponentStartInfo {
             resolved_url: Some(name.to_string()),
             program: None,
-            ns: Some(fsys::ComponentNamespace { paths: Vec::new(), directories: Vec::new() }),
+            ns: Some(vec![]),
             outgoing_dir: None,
             runtime_dir: None,
         }
@@ -170,19 +166,16 @@ mod tests {
         let provider = provider_result.lock().await.take().expect("did not get runner cap");
 
         // Open a connection to the provider.
-        let (client, server) = fidl::endpoints::create_proxy::<fsys::ComponentRunnerMarker>()?;
+        let (client, server) = fidl::endpoints::create_proxy::<fcrunner::ComponentRunnerMarker>()?;
         let (_, server_controller) =
-            fidl::endpoints::create_endpoints::<fsys::ComponentControllerMarker>()?;
+            fidl::endpoints::create_endpoints::<fcrunner::ComponentControllerMarker>()?;
         provider.open(0, 0, PathBuf::from("."), server.into_channel()).await?;
 
         // Start the client.
-        client
-            .start(sample_start_info("xxx://test"), server_controller)
-            .await?
-            .map_err(|x| RemoteRunnerError(x))?;
+        client.start(sample_start_info("xxx://test"), server_controller)?;
 
         // Ensure we saw the start event.
-        assert_eq!(mock_runner.urls_run(), vec!["xxx://test"]);
+        mock_runner.wait_for_url("xxx://test").await;
 
         Ok(())
     }
@@ -198,7 +191,7 @@ mod tests {
             Box::new(RunnerCapabilityProvider { runner: Arc::clone(&mock_runner) as Arc<_> });
 
         // Open a connection to the provider.
-        let (client, server) = fidl::endpoints::create_proxy::<fsys::ComponentRunnerMarker>()?;
+        let (client, server) = fidl::endpoints::create_proxy::<fcrunner::ComponentRunnerMarker>()?;
         provider.open(0, 0, PathBuf::from("."), server.into_channel()).await?;
 
         // Ensure errors are propagated back to the caller.
@@ -206,11 +199,23 @@ mod tests {
         // We make multiple calls over the same channel to ensure that the channel remains open
         // even after errors.
         for _ in 0..3i32 {
-            let (_, server_controller) =
-                fidl::endpoints::create_endpoints::<fsys::ComponentControllerMarker>()?;
-            assert_matches!(
-                client.start(sample_start_info("xxx://failing"), server_controller).await.unwrap(),
-                Err(fcomponent::Error::InstanceCannotStart)
+            let (client_controller, server_controller) =
+                fidl::endpoints::create_endpoints::<fcrunner::ComponentControllerMarker>()?;
+            client.start(sample_start_info("xxx://failing"), server_controller)?;
+            let actual = client_controller
+                .into_proxy()?
+                .take_event_stream()
+                .next()
+                .await
+                .unwrap()
+                .err()
+                .unwrap();
+
+            let expected_status = zx::Status::from_raw(
+                fcomponent::Error::InstanceCannotStart.into_primitive() as zx::zx_status_t,
+            );
+            assert_matches!(actual,
+                fidl::Error::ClientChannelClosed(status) if status == expected_status
             );
         }
 
@@ -246,7 +251,7 @@ mod tests {
         universe.bind_instance(&vec![].into()).await.expect("bind failed");
 
         // Ensure the instance starts up.
-        assert!(mock_runner.urls_run().iter().any(|s| s == "test:///a_resolved"));
+        mock_runner.wait_for_url("test:///a_resolved").await;
     }
 
     //   (cm)
@@ -304,7 +309,7 @@ mod tests {
         universe.bind_instance(&vec!["b:0"].into()).await.expect("bind failed");
 
         // Ensure the instances started up.
-        assert!(mock_runner.urls_run().iter().any(|s| s == "test:///a_resolved"));
-        assert!(mock_runner.urls_run().iter().any(|s| s == "test:///b_resolved"));
+        mock_runner.wait_for_url("test:///a_resolved").await;
+        mock_runner.wait_for_url("test:///b_resolved").await;
     }
 }

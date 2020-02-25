@@ -26,6 +26,7 @@ rustc_library("lib") {
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.security.resource:fuchsia.security.resource-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",

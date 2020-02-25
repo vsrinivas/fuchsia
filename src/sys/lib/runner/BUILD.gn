@@ -14,6 +14,7 @@ rustc_library("runner") {
 
   deps = [
     "//garnet/lib/rust/cm_rust",
+    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia-async",
     "//src/sys/lib/library_loader:library_loader",

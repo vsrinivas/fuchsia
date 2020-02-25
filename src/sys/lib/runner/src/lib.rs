@@ -4,7 +4,10 @@
 
 pub mod component;
 
-use {fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys, std::path::Path, thiserror::Error};
+use {
+    fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata, std::path::Path,
+    thiserror::Error,
+};
 
 /// An error encountered operating on `ComponentStartInfo`.
 #[derive(Debug, PartialEq, Eq, Error)]
@@ -33,7 +36,9 @@ pub enum StartInfoProgramError {
 }
 
 // Retrieves component URL from start_info or errors out if not found.
-pub fn get_resolved_url(start_info: &fsys::ComponentStartInfo) -> Result<String, StartInfoError> {
+pub fn get_resolved_url(
+    start_info: &fcrunner::ComponentStartInfo,
+) -> Result<String, StartInfoError> {
     match &start_info.resolved_url {
         Some(url) => Ok(url.to_string()),
         _ => Err(StartInfoError::MissingUrl),
@@ -56,7 +61,7 @@ fn find<'a>(dict: &'a fdata::Dictionary, key: &str) -> Option<&'a fdata::Diction
 
 /// Retrieves program.binary from ComponentStartInfo and makes sure that path is relative.
 pub fn get_program_binary(
-    start_info: &fsys::ComponentStartInfo,
+    start_info: &fcrunner::ComponentStartInfo,
 ) -> Result<String, StartInfoProgramError> {
     if let Some(program) = &start_info.program {
         if let Some(val) = find(program, "binary") {
@@ -79,7 +84,7 @@ pub fn get_program_binary(
 
 /// Retrieves program.args from ComponentStartInfo and validates them.
 pub fn get_program_args(
-    start_info: &fsys::ComponentStartInfo,
+    start_info: &fcrunner::ComponentStartInfo,
 ) -> Result<Vec<String>, StartInfoProgramError> {
     if let Some(program) = &start_info.program {
         if let Some(args) = find(program, "args") {
@@ -97,7 +102,7 @@ mod tests {
 
     #[test]
     fn get_resolved_url_test() {
-        let new_start_info = |url: Option<String>| fsys::ComponentStartInfo {
+        let new_start_info = |url: Option<String>| fcrunner::ComponentStartInfo {
             resolved_url: url,
             program: None,
             ns: None,
@@ -114,7 +119,7 @@ mod tests {
 
     #[test]
     fn get_program_binary_test() {
-        let new_start_info = |binary_name: Option<&str>| fsys::ComponentStartInfo {
+        let new_start_info = |binary_name: Option<&str>| fcrunner::ComponentStartInfo {
             program: Some(fdata::Dictionary {
                 entries: Some(vec![fdata::DictionaryEntry {
                     key: "binary".to_string(),
@@ -141,8 +146,8 @@ mod tests {
         );
     }
 
-    fn new_args_set(args: Vec<String>) -> fsys::ComponentStartInfo {
-        fsys::ComponentStartInfo {
+    fn new_args_set(args: Vec<String>) -> fcrunner::ComponentStartInfo {
+        fcrunner::ComponentStartInfo {
             program: Some(fdata::Dictionary {
                 entries: Some(vec![fdata::DictionaryEntry {
                     key: "args".to_string(),
@@ -162,7 +167,7 @@ mod tests {
 
         assert_eq!(
             e,
-            get_program_args(&fsys::ComponentStartInfo {
+            get_program_args(&fcrunner::ComponentStartInfo {
                 program: Some(fdata::Dictionary { entries: Some(vec![]) }),
                 ns: None,
                 outgoing_dir: None,

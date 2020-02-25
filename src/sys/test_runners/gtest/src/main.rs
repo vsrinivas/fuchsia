@@ -7,7 +7,7 @@ mod test_component;
 
 use {
     anyhow::Context as _,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::fx_log_err,
     futures::prelude::*,
@@ -43,10 +43,12 @@ pub enum RunnerError {
     RequestRead(fidl::Error),
 }
 
-async fn start_runner(mut stream: fsys::ComponentRunnerRequestStream) -> Result<(), RunnerError> {
+async fn start_runner(
+    mut stream: fcrunner::ComponentRunnerRequestStream,
+) -> Result<(), RunnerError> {
     while let Some(event) = stream.try_next().await.map_err(RunnerError::RequestRead)? {
         match event {
-            fsys::ComponentRunnerRequest::Start { start_info, controller, .. } => {
+            fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
                 if let Err(e) = start_component(start_info, controller) {
                     fx_log_err!("cannot start test: {:?}", e);
                     continue;

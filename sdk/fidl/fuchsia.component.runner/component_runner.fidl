@@ -1,0 +1,164 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.component.runner;
+
+using fuchsia.data;
+using fuchsia.io;
+using fuchsia.component;
+using fuchsia.url;
+
+const uint32 MAX_NAMESPACE_COUNT = 32;
+
+/// A protocol used for running components.
+///
+/// This protocol is implemented by components which provide a runtime
+/// environment for other components.
+///
+/// Note: The component manager is the only intended direct client of this
+/// interface.
+[Discoverable]
+protocol ComponentRunner {
+    /// Start running a component instance described by `start_info`.
+    ///
+    /// Component manager binds and uses `controller` to control the
+    /// lifetime of the newly started component instance.
+    ///
+    /// Errors are delivered as epitaphs over the `ComponentController`
+    /// protocol. In the event of an error, the runner must ensure that
+    /// resources are cleaned up.
+    ///
+    /// Errors:
+    ///
+    Start(ComponentStartInfo start_info,
+          request<ComponentController> controller);
+};
+
+/// A single component namespace entry, which describes a namespace mount point
+/// (`path`) and the directory backing it (`directory`). This type is usually
+/// composed inside a vector.  See `ComponentStartInfo.ns` for more details.
+table ComponentNamespaceEntry {
+    /// The mount point for the directory, including a
+    /// leading slash. For example: "/pkg", "/svc", or "/config/data".
+    1: string:fuchsia.component.MAX_PATH_LENGTH path;
+
+    /// The directory mounted at the above `path`.
+    2: fuchsia.io.Directory directory;
+};
+
+/// Parameters for starting a new component instance.
+table ComponentStartInfo {
+    /// The resolved URL of the component.
+    ///
+    /// This is the canonical URL obtained by the component resolver after
+    /// following redirects and resolving relative paths.
+    1: fuchsia.url.Url resolved_url;
+
+    /// The component's program declaration.
+    /// This information originates from `ComponentDecl.program`.
+    2: fuchsia.data.Dictionary program;
+
+    /// The namespace to provide to the component instance.
+    ///
+    /// A namespace specifies the set of directories that a component instance
+    /// receives at start-up. Through the namespace directories, a component
+    /// may access capabilities available to it. The contents of the namespace
+    /// are mainly determined by the component's `use` declarations but may
+    /// also contain additional capabilities automatically provided by the
+    /// framework.
+    ///
+    /// By convention, a component's namespace typically contains some or all
+    /// of the following directories:
+    ///
+    /// - "/svc": A directory containing services that the component requested
+    ///           to use via its "import" declarations.
+    /// - "/pkg": A directory containing the component's package, including its
+    ///           binaries, libraries, and other assets.
+    ///
+    /// The mount points specified in each entry must be unique and
+    /// non-overlapping. For example, [{"/foo", ..}, {"/foo/bar", ..}] is
+    /// invalid.
+    3: vector<ComponentNamespaceEntry>:MAX_NAMESPACE_COUNT ns;
+
+    /// The directory this component serves.
+    4: request<fuchsia.io.Directory> outgoing_dir;
+
+    /// The directory served by the runner to present runtime information about
+    /// the component.
+    5: request<fuchsia.io.Directory> runtime_dir;
+};
+
+/// A protocol for binding and controlling the lifetime of a component instance
+/// started using `ComponentRunner.Start()`. The component manager is the
+/// intended direct client of this protocol.
+///
+/// When the controlled component instance terminates or becomes inaccessible
+/// for any reason, the server closes the connection with an epitaph.
+///
+/// LIFECYCLE
+///
+/// A component may exist in one of two states: `Started`, or `Stopped`. The
+/// component is `Started` from the time `ComponentRunner.Start()` is called
+/// until the ComponentRunner closes the ComponentController handle. The
+/// component then transitions to `Stopped`.
+///
+/// Component manager uses ComponentController to terminate a component in two
+/// steps:
+///  1) Component manager calls `Stop()` to indicate that the ComponentRunner
+///     should stop a component's execution and close this connection with an
+///     epitaph.
+///  2) If after some time the ComponentController is not closed, component
+///     manager calls `Kill()` to indicate that the ComponentRunner must halt a
+///     component's execution immediately, and then close this connection with
+///     an epitaph.
+///
+/// Component manager first waits for the ComponentController to close, and
+/// then tears down the namespace it hosts for the stopped component. Component
+/// manager may call `Kill()` without first having called `Stop()`.
+///
+/// EPITAPH
+///
+/// This protocol sends a FIDL epitaph to indicate that the component instance
+/// has been terminated. The component runner is expected to clean up all
+/// resources attributed to the component before closing the connection.
+///
+/// The following epitaphs may be sent by the server on error:
+/// - `INVALID_ARGUMENTS`:
+///     * `start_info.resolved_url` is not supported by this
+///       runner;
+///     * `start_info` contains missing or invalid arguments.
+/// - `INSTANCE_CANNOT_START`: The runner could not start the component.
+///    For example, a critical part of the program could not be found or
+///    loaded, or the referenced binary was invalid for this runner.
+/// - `RESOURCE_UNAVAILABLE`: The component could not be launched due to
+///    lack of resources.
+/// - `INTERNAL`: An unexpected internal runner error was encountered.
+/// - `INSTANCE_DIED`: The component instance was started but
+///   subsequently terminated unexpectedly.
+/// - `ZX_OK`: The component instance was successfully terminated without
+///   error.
+/// - Other status codes (e.g. `ZX_ERR_PEER_CLOSED`) may indicate a failure
+///   of the component runner itself. The component manager may respond to such
+///   failures by terminating the component runner's job to ensure system
+///   stability.
+protocol ComponentController {
+    /// Request to stop the component instance.
+    ///
+    /// After stopping the component instance, the server should close this
+    /// connection with an epitaph. After the connection
+    /// closes, component manager considers this component instance to be
+    /// Stopped and the component's namespace will be torn down.
+    Stop();
+
+    /// Stop this component instance immediately.
+    ///
+    /// The ComponentRunner must immediately kill the component instance, and
+    /// then close this connection with an epitaph. After the connection
+    /// closes, component manager considers this component instance to be
+    /// Stopped and the component's namespace will be torn down.
+    ///
+    /// In some cases Kill() may be issued before Stop(), but that is not
+    /// guaranteed.
+    Kill();
+};

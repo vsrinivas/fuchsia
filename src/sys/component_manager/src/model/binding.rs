@@ -143,7 +143,7 @@ mod tests {
             CapabilityName, CapabilityPath, OfferDecl, OfferRunnerDecl, OfferRunnerSource,
             OfferTarget, RunnerDecl, RunnerSource,
         },
-        fuchsia_async as fasync,
+        fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
         futures::prelude::*,
         std::{collections::HashSet, convert::TryFrom, sync::Weak},
     };
@@ -544,7 +544,7 @@ mod tests {
 
         // Set up the runner.
         let (runner_service, mut receiver) =
-            create_service_directory_entry::<fsys::ComponentRunnerMarker>();
+            create_service_directory_entry::<fcrunner::ComponentRunnerMarker>();
         let mut out_dir = OutDir::new();
         out_dir.add_entry(CapabilityPath::try_from("/svc/runner").unwrap(), runner_service);
         mock_runner.add_host_fn("test:///a_resolved", out_dir.host_fn());
