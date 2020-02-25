@@ -86,6 +86,8 @@ void RunnerHolder::StartComponent(
   fuchsia::sys::ComponentControllerPtr remote_controller;
   auto remote_controller_request = remote_controller.NewRequest();
 
+  fxl::RefPtr<Namespace> ns_copy(ns);
+
   // TODO(anmittal): Create better unique instance id, instead of 1,2,3,4,...
   auto component = std::make_shared<ComponentBridge>(
       std::move(controller), std::move(remote_controller), this, url, std::move(args),
@@ -97,6 +99,9 @@ void RunnerHolder::StartComponent(
     component->SetParentJobId(koid_);
     impl->AddSubComponentHub(component->HubInfo());
   }
+
+  ns_copy->NotifyComponentStarted(component->url(), component->label(),
+                                  component->hub_instance_id());
 
   ComponentBridge* key = component.get();
   components_.emplace(key, std::move(component));

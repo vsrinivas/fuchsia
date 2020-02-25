@@ -112,6 +112,10 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
     return applications_;
   }
 
+  const std::unordered_map<std::string, std::unique_ptr<RunnerHolder>>& runners() const {
+    return runners_;
+  }
+
   const std::unordered_map<Realm*, std::unique_ptr<EnvironmentControllerImpl>>& children() const {
     return children_;
   }
@@ -166,6 +170,14 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
                                           const std::string& instance_id,
                                           fidl::InterfaceHandle<fuchsia::io::Directory> directory);
 
+  // Notifies the Realm components event subscriber when a component starts.
+  void NotifyComponentStarted(const std::string& component_url, const std::string& component_name,
+                              const std::string& instance_id);
+
+  // Notifies the Realm components event subscriber when a component stops.
+  void NotifyComponentStopped(const std::string& component_url, const std::string& component_name,
+                              const std::string& instance_id);
+
   // Fetches the relative realm path up to the provided |realm|
   std::vector<std::string> RelativeRealmPath(Realm* relative_root_realm);
 
@@ -209,14 +221,6 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
       RuntimeMetadata& runtime, fuchsia::sys::FlatNamespace flat,
       ComponentRequestWrapper component_request, fxl::RefPtr<Namespace> ns,
       fidl::VectorPtr<fuchsia::sys::ProgramMetadata> program_metadata);
-
-  // Notifies the Realm components event subscriber when a component starts.
-  void NotifyComponentStarted(const std::string& component_url, const std::string& component_name,
-                              const std::string& instance_id);
-
-  // Notifies the Realm components event subscriber when a component stops.
-  void NotifyComponentStopped(const std::string& component_url, const std::string& component_name,
-                              const std::string& instance_id);
 
   // When a component event will be triggered, this finds what provider to notify and with what
   // identity data. The provider will be either the one attached to this component or some provider

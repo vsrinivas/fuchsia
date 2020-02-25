@@ -12,6 +12,7 @@
 #include <queue>
 
 #include "lib/fidl/cpp/binding.h"
+#include "src/sys/appmgr/component_controller_impl.h"
 #include "src/sys/appmgr/realm.h"
 
 namespace component {
@@ -42,13 +43,16 @@ class ComponentEventProviderImpl : public fuchsia::sys::internal::ComponentEvent
   void NotifyComponentDirReady(fuchsia::sys::internal::SourceIdentity component,
                                fidl::InterfaceHandle<fuchsia::io::Directory> directory);
 
+ private:
   // Send Start and Diagnostics directory ready events for all components in this realm and children
   // realms.
   void NotifyOfExistingComponents();
 
- private:
+  // Send Start and Diagnostics directory for the given component.
+  void NotifyAboutExistingComponent(std::vector<std::string> relative_realm_path,
+                                    std::shared_ptr<ComponentControllerBase> application);
+
   // Not owned.
-  async_dispatcher_t* const dispatcher_;
   async::Executor executor_;
   fidl::Binding<fuchsia::sys::internal::ComponentEventProvider> binding_;
   fuchsia::sys::internal::ComponentEventListenerPtr listener_;
@@ -61,7 +65,7 @@ class ComponentEventProviderImpl : public fuchsia::sys::internal::ComponentEvent
   fxl::WeakPtrFactory<ComponentEventProviderImpl> weak_ptr_factory_;
 
   // Returns the relative realm path from the queries |leaf_realm| up to this provider |realm_|.
-  std::vector<std::string> RelativeRealmPath(Realm* leaf_realm);
+  std::vector<std::string> RelativeRealmPath(const Realm* leaf_realm);
 };
 
 }  // namespace component

@@ -84,7 +84,8 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
   ComponentControllerBase(fidl::InterfaceRequest<fuchsia::sys::ComponentController> request,
                           std::string url, std::string args, std::string label,
                           std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
-                          zx::channel exported_dir, zx::channel client_request);
+                          zx::channel exported_dir, zx::channel client_request,
+                          uint32_t diagnostics_max_retries = 0);
   virtual ~ComponentControllerBase() override;
 
  public:
@@ -97,6 +98,8 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
 
   // The url of this component.
   const std::string& url() const { return url_; }
+
+  const Realm* realm() const { return ns_->realm(); }
 
   // |fuchsia::sys::ComponentController| implementation:
   void Detach() override;
@@ -117,9 +120,11 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
 
   void SendOnTerminationEvent(int64_t, fuchsia::sys::TerminationReason);
 
+  void NotifyComponentStopped();
+
  private:
   // Notifies a realm's ComponentEventListener with the out/diagnostics directory for a component.
-  void NotifyDiagnosticsDirReady();
+  void NotifyDiagnosticsDirReady(uint32_t max_retries);
 
   async::Executor executor_;
 
@@ -151,6 +156,8 @@ class ComponentControllerBase : public fuchsia::sys::ComponentController {
 
   // whether the out directory is ready or not.
   bool out_ready_ = false;
+
+  uint32_t diagnostics_max_retries_ = 0;
 };
 
 class ComponentControllerImpl : public ComponentControllerBase {

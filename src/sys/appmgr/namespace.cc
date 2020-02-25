@@ -135,8 +135,26 @@ void Namespace::Resolve(std::string name, fuchsia::process::Resolver::ResolveCal
 void Namespace::NotifyComponentDiagnosticsDirReady(
     const std::string& component_url, const std::string& component_name,
     const std::string& component_id, fidl::InterfaceHandle<fuchsia::io::Directory> directory) {
-  realm_->NotifyComponentDiagnosticsDirReady(component_url, component_name, component_id,
-                                             std::move(directory));
+  if (realm_) {
+    realm_->NotifyComponentDiagnosticsDirReady(component_url, component_name, component_id,
+                                               std::move(directory));
+  }
+}
+
+void Namespace::NotifyComponentStarted(const std::string& component_url,
+                                       const std::string& component_name,
+                                       const std::string& component_id) {
+  if (realm_) {
+    realm_->NotifyComponentStarted(component_url, component_name, component_id);
+  }
+}
+
+void Namespace::NotifyComponentStopped(const std::string& component_url,
+                                       const std::string& component_name,
+                                       const std::string& component_id) {
+  if (realm_) {
+    realm_->NotifyComponentStopped(component_url, component_name, component_id);
+  }
 }
 
 void Namespace::MaybeAddComponentEventProvider() {

@@ -32,6 +32,7 @@ class Namespace : public fuchsia::sys::Environment,
  public:
   const fbl::RefPtr<ServiceProviderDirImpl>& services() const { return services_; }
   const fbl::RefPtr<JobProviderImpl>& job_provider() { return job_provider_; }
+  const Realm* realm() const { return realm_; }
 
   void AddBinding(fidl::InterfaceRequest<fuchsia::sys::Environment> environment);
 
@@ -80,6 +81,14 @@ class Namespace : public fuchsia::sys::Environment,
                                           const std::string& component_name,
                                           const std::string& component_id,
                                           fidl::InterfaceHandle<fuchsia::io::Directory> directory);
+
+  // Notifies a realms ComponentEventListener that a component started.
+  void NotifyComponentStarted(const std::string& component_url, const std::string& component_name,
+                              const std::string& component_id);
+
+  // Notifies a realms ComponentEventListener that a component stopped.
+  void NotifyComponentStopped(const std::string& component_url, const std::string& component_name,
+                              const std::string& component_id);
 
  private:
   FRIEND_MAKE_REF_COUNTED(Namespace);

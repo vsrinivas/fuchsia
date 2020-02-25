@@ -39,6 +39,10 @@ zx::process DuplicateProcess(const zx::process& process) {
   }
   return ret;
 }
+
+const uint32_t MAX_RETRIES_OUT_DIAGNOSTICS = 30;
+const uint32_t OUT_DIAGNOSTICS_RETRY_DELAY_MS = 500;
+
 }  // namespace
 
 ComponentRequestWrapper::ComponentRequestWrapper(
@@ -90,7 +94,7 @@ void FailedComponentController::Detach() {}
 ComponentControllerBase::ComponentControllerBase(
     fidl::InterfaceRequest<fuchsia::sys::ComponentController> request, std::string url,
     std::string args, std::string label, std::string hub_instance_id, fxl::RefPtr<Namespace> ns,
-    zx::channel exported_dir, zx::channel client_request)
+    zx::channel exported_dir, zx::channel client_request, uint32_t diagnostics_max_retries)
     : executor_(async_get_default_dispatcher()),
       binding_(this),
       label_(std::move(label)),
@@ -98,7 +102,8 @@ ComponentControllerBase::ComponentControllerBase(
       url_(std::move(url)),
       hub_(fbl::AdoptRef(new fs::PseudoDir())),
       ns_(std::move(ns)),
-      weak_ptr_factory_(this) {
+      weak_ptr_factory_(this),
+      diagnostics_max_retries_(diagnostics_max_retries) {
   if (request.is_valid()) {
     binding_.Bind(std::move(request));
     binding_.set_error_handler([this](zx_status_t /*status*/) { Kill(); });
@@ -128,7 +133,7 @@ ComponentControllerBase::ComponentControllerBase(
     out_ready_ = true;
     auto output_dir = fbl::AdoptRef(new fs::RemoteDir(cloned_exported_dir_.Unbind().TakeChannel()));
     hub_.PublishOut(std::move(output_dir));
-    NotifyDiagnosticsDirReady();
+    NotifyDiagnosticsDirReady(diagnostics_max_retries_);
     TRACE_DURATION_BEGIN("appmgr", "ComponentController::OnDirectoryReady");
     SendOnDirectoryReadyEvent();
     TRACE_DURATION_END("appmgr", "ComponentController::OnDirectoryReady");
@@ -138,15 +143,34 @@ ComponentControllerBase::ComponentControllerBase(
       [this](zx_status_t status) { cloned_exported_dir_.Unbind(); });
 }
 
-void ComponentControllerBase::NotifyDiagnosticsDirReady() {
-  auto promise = GetDiagnosticsDir().and_then(
-      [self = weak_ptr_factory_.GetWeakPtr()](fidl::InterfaceHandle<fuchsia::io::Directory>& dir) {
-        if (self) {
-          self->ns_->NotifyComponentDiagnosticsDirReady(self->url_, self->label_,
-                                                        self->hub_instance_id_, std::move(dir));
-        }
-      });
+void ComponentControllerBase::NotifyDiagnosticsDirReady(uint32_t max_retries) {
+  auto promise =
+      GetDiagnosticsDir()
+          .and_then([self = weak_ptr_factory_.GetWeakPtr()](
+                        fidl::InterfaceHandle<fuchsia::io::Directory>& dir) {
+            if (self) {
+              self->ns_->NotifyComponentDiagnosticsDirReady(self->url_, self->label_,
+                                                            self->hub_instance_id_, std::move(dir));
+            }
+          })
+          .or_else([self = weak_ptr_factory_.GetWeakPtr(), max_retries](zx_status_t& status) {
+            if (self && status == ZX_ERR_NOT_FOUND) {
+              async::PostDelayedTask(
+                  self->executor_.dispatcher(),
+                  [self = std::move(self), max_retries]() {
+                    if (self && max_retries > 0) {
+                      self->NotifyDiagnosticsDirReady(max_retries - 1);
+                    }
+                  },
+                  zx::msec(OUT_DIAGNOSTICS_RETRY_DELAY_MS));
+            }
+            return fit::error(status);
+          });
   executor_.schedule_task(std::move(promise));
+}
+
+void ComponentControllerBase::NotifyComponentStopped() {
+  ns_->NotifyComponentStopped(url_, label_, hub_instance_id_);
 }
 
 fit::promise<fidl::InterfaceHandle<fuchsia::io::Directory>, zx_status_t>
@@ -165,7 +189,7 @@ ComponentControllerBase::GetDiagnosticsDir() {
   fuchsia::io::NodePtr diagnostics_dir_node;
   fit::bridge<void, zx_status_t> bridge;
   diagnostics_dir_node.events().OnOpen =
-      [completer = std::move(bridge.completer)](
+      [completer = std::move(bridge.completer), label = label_](
           zx_status_t status, std::unique_ptr<fuchsia::io::NodeInfo> node_info) mutable {
         if (status != ZX_OK) {
           completer.complete_error(status);
@@ -329,7 +353,7 @@ ComponentBridge::ComponentBridge(fidl::InterfaceRequest<fuchsia::sys::ComponentC
                                  zx::channel client_request)
     : ComponentControllerBase(std::move(request), std::move(url), std::move(args), std::move(label),
                               hub_instance_id, std::move(ns), std::move(exported_dir),
-                              std::move(client_request)),
+                              std::move(client_request), MAX_RETRIES_OUT_DIAGNOSTICS),
       remote_controller_(std::move(remote_controller)),
       container_(std::move(container)),
       termination_reason_(TerminationReason::UNKNOWN) {
@@ -343,6 +367,7 @@ ComponentBridge::ComponentBridge(fidl::InterfaceRequest<fuchsia::sys::ComponentC
 
     SendOnTerminationEvent(return_code, termination_reason);
     remote_controller_.events().OnTerminated = nullptr;
+    NotifyComponentStopped();
     container_->ExtractComponent(this);
   };
 

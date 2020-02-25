@@ -12,11 +12,7 @@
 namespace component {
 
 ComponentEventProviderImpl::ComponentEventProviderImpl(Realm* realm, async_dispatcher_t* dispatcher)
-    : dispatcher_(dispatcher),
-      executor_(dispatcher),
-      binding_(this),
-      realm_(realm),
-      weak_ptr_factory_(this) {}
+    : executor_(dispatcher), binding_(this), realm_(realm), weak_ptr_factory_(this) {}
 
 ComponentEventProviderImpl::~ComponentEventProviderImpl() = default;
 
@@ -30,13 +26,14 @@ void ComponentEventProviderImpl::SetListener(
     listener_.Unbind();
     listener_.set_error_handler(nullptr);
   });
-  const zx_status_t status = async::PostTask(dispatcher_, [self = weak_ptr_factory_.GetWeakPtr()] {
-    if (!self) {
-      FXL_DLOG(WARNING) << "called posted task after exit, skipping callback";
-      return;
-    }
-    self->NotifyOfExistingComponents();
-  });
+  const zx_status_t status =
+      async::PostTask(executor_.dispatcher(), [self = weak_ptr_factory_.GetWeakPtr()] {
+        if (!self) {
+          FXL_DLOG(WARNING) << "called posted task after exit, skipping callback";
+          return;
+        }
+        self->NotifyOfExistingComponents();
+      });
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Could not synthesize events for existing components: "
                    << zx_status_get_string(status);
@@ -74,9 +71,9 @@ void ComponentEventProviderImpl::NotifyComponentDirReady(
   }
 }
 
-std::vector<std::string> ComponentEventProviderImpl::RelativeRealmPath(Realm* leaf_realm) {
+std::vector<std::string> ComponentEventProviderImpl::RelativeRealmPath(const Realm* leaf_realm) {
   std::vector<std::string> relative_realm_path;
-  Realm* realm = leaf_realm;
+  const Realm* realm = leaf_realm;
 
   // We stop traversing the realm tree bottom up until we arrive to this realm_ or the root.
   while (realm && realm != realm_) {
@@ -115,26 +112,43 @@ void ComponentEventProviderImpl::NotifyOfExistingComponents() {
 
     // Notify about all components in this realm.
     for (auto& pair : realm->applications()) {
-      const auto& application = pair.second;
-      fuchsia::sys::internal::SourceIdentity identity;
-      identity.set_component_url(application->url());
-      identity.set_component_name(application->label());
-      identity.set_instance_id(application->hub_instance_id());
-      identity.set_realm_path(relative_realm_path);
-      NotifyComponentStarted(fidl::Clone(identity));
+      NotifyAboutExistingComponent(relative_realm_path, pair.second);
+    }
 
-      // If the component doesn't have an out/diagnostics directory or its out/ directory ready
-      // doesn't exist, the and_then combinator won't be executed. Once the component exposes a
-      // diagnostics directory (if ever), the listener will be notified through the regular flow.
-      executor_.schedule_task(application->GetDiagnosticsDir().and_then(
-          [self = weak_ptr_factory_.GetWeakPtr(), identity = std::move(identity)](
-              fidl::InterfaceHandle<fuchsia::io::Directory>& dir) mutable {
-            if (self) {
-              self->NotifyComponentDirReady(std::move(identity), std::move(dir));
-            }
-          }));
+    // Notify about all components in runners in this realm.
+    for (auto& pair : realm->runners()) {
+      const auto& runner = pair.second;
+      for (auto& comp_pair : runner->components()) {
+        const auto& component_bridge = comp_pair.second;
+        // Given that an environment might have been created with use_parent_runners, we need to get
+        // its actual realm which might not be the realm where the runner is.
+        NotifyAboutExistingComponent(RelativeRealmPath(component_bridge->realm()),
+                                     component_bridge);
+      }
     }
   }
+}
+
+void ComponentEventProviderImpl::NotifyAboutExistingComponent(
+    std::vector<std::string> relative_realm_path,
+    std::shared_ptr<ComponentControllerBase> application) {
+  fuchsia::sys::internal::SourceIdentity identity;
+  identity.set_component_url(application->url());
+  identity.set_component_name(application->label());
+  identity.set_instance_id(application->hub_instance_id());
+  identity.set_realm_path(relative_realm_path);
+  NotifyComponentStarted(fidl::Clone(identity));
+
+  // If the component doesn't have an out/diagnostics directory or its out/ directory ready
+  // doesn't exist, the and_then combinator won't be executed. Once the component exposes a
+  // diagnostics directory (if ever), the listener will be notified through the regular flow.
+  executor_.schedule_task(application->GetDiagnosticsDir().and_then(
+      [self = weak_ptr_factory_.GetWeakPtr(),
+       identity = std::move(identity)](fidl::InterfaceHandle<fuchsia::io::Directory>& dir) mutable {
+        if (self) {
+          self->NotifyComponentDirReady(std::move(identity), std::move(dir));
+        }
+      }));
 }
 
 }  // namespace component
