@@ -81,6 +81,11 @@ void FakeInputReport::ConvertDescriptors(const fuchsia_input_report::DeviceDescr
     desc.descriptor = hid_input_report::ToSensorDescriptor(descriptor.sensor());
     descriptors_.push_back(std::move(desc));
   }
+  if (descriptor.has_consumer_control()) {
+    hid_input_report::ReportDescriptor desc = {};
+    desc.descriptor = hid_input_report::ToConsumerControlDescriptor(descriptor.consumer_control());
+    descriptors_.push_back(std::move(desc));
+  }
 }
 
 FakeInputReport* FakeInputReport::Create(zx_device_t* parent,

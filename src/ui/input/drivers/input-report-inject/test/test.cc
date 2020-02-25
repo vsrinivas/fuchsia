@@ -137,3 +137,44 @@ TEST_F(InputInjectTest, MouseTest) {
     ASSERT_TRUE(fidl::Equals(returned_reports[0], report));
   }
 }
+
+TEST_F(InputInjectTest, ConsumerControlTest) {
+  zx_status_t status;
+  zx::channel chan;
+  ASSERT_NO_FATAL_FAILURE(ConnectToInject(&chan));
+  auto inject_client = ::fuchsia::input::inject::FakeInputReportDevice_SyncProxy(std::move(chan));
+
+  // Create the Fake Input Device.
+  ::fuchsia::input::report::DeviceDescriptor descriptor;
+  {
+    ::fuchsia::input::report::ConsumerControlInputDescriptor input;
+    std::vector<::fuchsia::input::report::ConsumerControlButton> buttons;
+    buttons.push_back(::fuchsia::input::report::ConsumerControlButton::VOLUME_DOWN);
+    input.set_buttons(buttons);
+
+    ::fuchsia::input::report::ConsumerControlDescriptor consumer_control;
+    consumer_control.set_input(std::move(input));
+    descriptor.set_consumer_control(std::move(consumer_control));
+  }
+
+  {
+    fuchsia::input::inject::FakeInputReportDevice_MakeDevice_Result result;
+
+    ::fuchsia::input::report::DeviceDescriptor copy_descriptor;
+    ASSERT_EQ(ZX_OK, descriptor.Clone(&copy_descriptor));
+    status = inject_client.MakeDevice(std::move(copy_descriptor), &result);
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_FALSE(result.is_err());
+  }
+
+  ASSERT_NO_FATAL_FAILURE(ConnectToFile("class/input-report/000", &chan));
+  auto input_client = ::fuchsia::input::report::InputDevice_SyncProxy(std::move(chan));
+
+  // Check that the descriptor matches the one we sent.
+  {
+    fuchsia::input::report::DeviceDescriptor input_descriptor;
+    ASSERT_EQ(ZX_OK, input_client.GetDescriptor(&input_descriptor));
+
+    ASSERT_TRUE(fidl::Equals(descriptor, input_descriptor));
+  }
+}
