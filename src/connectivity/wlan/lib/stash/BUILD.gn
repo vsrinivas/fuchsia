@@ -14,6 +14,7 @@ rustc_library("wlan-stash") {
 
   deps = [
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
