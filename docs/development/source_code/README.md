@@ -106,14 +106,17 @@ If you don't like having to mangle your environment variables, and you want
 to the directory into which you copy `jiri`. If you don't, then `jiri`
 will not be able to keep itself up-to-date.
 
+Note: If your Fuchsia source code is not located in the `~/fuchsia` directory,
+replace `~/fuchsia/` with your Fuchsia directory.
+
 ```
-cp .jiri_root/bin/jiri ~/bin
+cp ~/fuchsia/.jiri_root/bin/jiri ~/bin
 ```
 
 To use the `fx` tool, you can either symlink it into your `~/bin` directory:
 
 ```
-ln -s `pwd`/scripts/fx ~/bin
+ln -s ~/fuchsia/scripts/fx ~/bin
 ```
 
 or just run the tool directly as `scripts/fx`. Make sure you have **jiri** in
