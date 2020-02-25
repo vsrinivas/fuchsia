@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/fit/function.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -16,7 +17,7 @@
 #include <list>
 #include <memory>
 
-#include <lib/fit/function.h>
+#include <fbl/auto_call.h>
 
 #include "src/lib/files/directory.h"
 
@@ -58,8 +59,9 @@ bool ForEachEntry(int root_fd, const std::string& path,
           continue;
         }
       }
-      if (!callback(path + "/" + name))
+      if (!callback(path + "/" + name)) {
         return false;
+      }
     }
   }
   return true;

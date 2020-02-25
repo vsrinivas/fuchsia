@@ -34,6 +34,7 @@
 
 #include <cstdarg>
 
+#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
 #include "private-socket.h"
@@ -1775,6 +1776,11 @@ __EXPORT
 int closedir(DIR* dir) {
   if (dir->is_iterator_initialized) {
     fdio_t* io = fd_to_io(dir->fd);
+    auto clean_io = fbl::MakeAutoCall([io] {
+      if (io != nullptr) {
+        fdio_release(io);
+      }
+    });
     fdio_get_ops(io)->dirent_iterator_destroy(io, &dir->iterator);
   }
   close(dir->fd);
@@ -1787,7 +1793,14 @@ struct dirent* readdir(DIR* dir) {
   fbl::AutoLock lock(&dir->lock);
   struct dirent* de = &dir->de;
   zxio_dirent_t* entry = nullptr;
+
   fdio_t* io = fd_to_io(dir->fd);
+  auto clean_io = fbl::MakeAutoCall([io] {
+    if (io != nullptr) {
+      fdio_release(io);
+    }
+  });
+
   // Lazy initialize the iterator.
   if (!dir->is_iterator_initialized) {
     zx_status_t status =
