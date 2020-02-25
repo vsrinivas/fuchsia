@@ -485,13 +485,10 @@ aggregate_manifest("legacy-aux") {
     ":test.fs.blobfs-unit-test",
 #------------------
 #------------------
-    ":test.fs.minfs-integration-test",
 #------------------
 #------------------
-    ":test.fs.minfs-power-test",
 #------------------
 #------------------
-    ":test.fs.minfs-unit-test",
 #------------------
 #------------------
 #------------------
@@ -1071,13 +1068,10 @@ aggregate_manifest("legacy-tests") {
     ":test.fs.blobfs-unit-test",
 #------------------
 #------------------
-    ":test.fs.minfs-integration-test",
 #------------------
 #------------------
-    ":test.fs.minfs-power-test",
 #------------------
 #------------------
-    ":test.fs.minfs-unit-test",
 #------------------
 #------------------
 #------------------
@@ -2819,11 +2813,12 @@ aggregate_manifest("migrated-aux") {
     "//zircon/system/ulib/fs/metrics/test:metrics-inspect-manifest",
     "//zircon/system/ulib/minfs/allocator/test:minfs-allocator-unit-manifest",
 #------------------
-    #":test.fs.minfs-integration-test",
+    "//zircon/system/ulib/minfs/test:minfs-integration-manifest",
+    "//zircon/system/ulib/minfs/test:minfs-power-manifest",
 #------------------
     "//zircon/system/utest/minfs-micro-benchmark:minfs-micro-benchmark-manifest",
 #------------------
-    #":test.fs.minfs-unit-test",
+    "//zircon/system/ulib/minfs/test:minfs-unit-manifest",
 #------------------
     "//zircon/system/ulib/c/test/sanitizer:sanitizer-utils-manifest",
 #------------------
@@ -3536,11 +3531,12 @@ aggregate_manifest("migrated-tests") {
     "//zircon/system/ulib/fs/metrics/test:metrics-inspect-manifest",
     "//zircon/system/ulib/minfs/allocator/test:minfs-allocator-unit-manifest",
 #------------------
-    #":test.fs.minfs-integration-test",
+    "//zircon/system/ulib/minfs/test:minfs-integration-manifest",
+    "//zircon/system/ulib/minfs/test:minfs-power-manifest",
 #------------------
     "//zircon/system/utest/minfs-micro-benchmark:minfs-micro-benchmark-manifest",
 #------------------
-    #":test.fs.minfs-unit-test",
+    "//zircon/system/ulib/minfs/test:minfs-unit-manifest",
 #------------------
     "//zircon/system/ulib/c/test/sanitizer:sanitizer-utils-manifest",
 #------------------
