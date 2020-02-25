@@ -23,6 +23,7 @@ group("garnet") {
   testonly = true
   public_deps = [
     "//garnet/packages/config:amber",
+    "//garnet/packages/config:factory_reset",
     "//garnet/packages/config:network",
     "//garnet/packages/config:openssh_keys",
     "//garnet/packages/config:thermd",

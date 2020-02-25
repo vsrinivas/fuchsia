@@ -65,6 +65,14 @@ group("shortcut") {
   public_deps = [ "//src/ui/bin/shortcut:configs" ]
 }
 
+group("factory_reset") {
+  testonly = true
+  public_deps = [
+    "//garnet/packages/config:services",
+    "//src/recovery/factory_reset:configs",
+  ]
+}
+
 group("ui_policy") {
   testonly = true
   public_deps = [ "//garnet/packages/config:services" ]
