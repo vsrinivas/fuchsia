@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_INCLUDE_STREAM_PROVIDER_H_
-#define SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_INCLUDE_STREAM_PROVIDER_H_
+#ifndef SRC_CAMERA_EXAMPLES_CAMERA_DISPLAY_STREAM_PROVIDER_STREAM_PROVIDER_H_
+#define SRC_CAMERA_EXAMPLES_CAMERA_DISPLAY_STREAM_PROVIDER_STREAM_PROVIDER_H_
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
@@ -56,4 +56,4 @@ class StreamProvider {
   ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::Stream> request, uint32_t index = 0) = 0;
 };
 
-#endif  // SRC_CAMERA_EXAMPLES_DEMO_STREAM_PROVIDER_INCLUDE_STREAM_PROVIDER_H_
+#endif  // SRC_CAMERA_EXAMPLES_CAMERA_DISPLAY_STREAM_PROVIDER_STREAM_PROVIDER_H_

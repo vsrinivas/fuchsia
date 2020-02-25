@@ -2,20 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("stream_provider") {
-  public_deps = [ ":stream_provider_lib" ]
-  public_configs = [ ":stream_provider_config" ]
-}
-
-source_set("stream_provider_lib") {
-  visibility = [ ":*" ]
-
+source_set("stream_provider") {
   sources = [
     "controller_stream_provider.cc",
+    "controller_stream_provider.h",
     "isp_stream_provider.cc",
+    "isp_stream_provider.h",
     "manager_stream_provider.cc",
+    "manager_stream_provider.h",
     "stream_provider.cc",
   ]
+
+  public = [ "stream_provider.h" ]
 
   deps = [
     "//sdk/fidl/fuchsia.camera",
@@ -31,17 +29,8 @@ source_set("stream_provider_lib") {
     "//zircon/public/lib/async-loop-cpp",
   ]
 
-  configs += [ ":stream_provider_config" ]
-
   public_deps = [
     "//sdk/fidl/fuchsia.camera2",
     "//zircon/system/fidl/fuchsia-sysmem",
   ]
-}
-
-config("stream_provider_config") {
-  visibility = [ ":*" ]
-
-  include_dirs =
-      [ "//src/camera/examples/camera_display/stream_provider/include" ]
 }

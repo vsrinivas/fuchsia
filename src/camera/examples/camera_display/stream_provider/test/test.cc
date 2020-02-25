@@ -4,7 +4,6 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <stream_provider.h>
 
 #include <algorithm>
 #include <iostream>
@@ -16,6 +15,8 @@
 #include <src/lib/syslog/cpp/logger.h>
 #include <trace-provider/provider.h>
 #include <trace/event.h>
+
+#include "src/camera/examples/camera_display/stream_provider/stream_provider.h"
 
 static uint32_t g_gtest_iteration = 0;
 

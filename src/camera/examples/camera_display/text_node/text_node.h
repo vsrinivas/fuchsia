@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_EXAMPLES_DEMO_TEXT_NODE_INCLUDE_TEXT_NODE_H_
-#define SRC_CAMERA_EXAMPLES_DEMO_TEXT_NODE_INCLUDE_TEXT_NODE_H_
+#ifndef SRC_CAMERA_EXAMPLES_CAMERA_DISPLAY_TEXT_NODE_TEXT_NODE_H_
+#define SRC_CAMERA_EXAMPLES_CAMERA_DISPLAY_TEXT_NODE_TEXT_NODE_H_
 
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/resources.h>
@@ -18,4 +18,4 @@ class TextNode : public scenic::Node {
   zx_status_t SetText(const std::string s);
 };
 
-#endif  // SRC_CAMERA_EXAMPLES_DEMO_TEXT_NODE_INCLUDE_TEXT_NODE_H_
+#endif  // SRC_CAMERA_EXAMPLES_CAMERA_DISPLAY_TEXT_NODE_TEXT_NODE_H_

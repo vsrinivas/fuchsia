@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/camera/examples/camera_display/text_node/text_node.h"
+
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/gfx-font-data/gfx-font-data.h>
-#include <text_node.h>
 
 #include <algorithm>
 
