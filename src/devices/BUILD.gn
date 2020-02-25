@@ -18,6 +18,7 @@ group("tests") {
   deps = [
     "bin:tests",
     "bind/debugger:tests",
+    "block:tests",
     "clock:tests",
     "lib:tests",
     "tests",

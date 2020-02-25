@@ -4,6 +4,7 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 import("//build/unification/images/migrated_manifest.gni")
 
 driver_module("virtio_block") {
@@ -134,4 +135,16 @@ migrated_manifest("virtio-block-test-manifest") {
 
 migrated_manifest("virtio-scsi-test-manifest") {
   deps = [ ":virtio-scsi-test" ]
+}
+
+unittest_package("virtio-block-test-package") {
+  deps = [ ":virtio-block-test" ]
+
+  tests = [
+    {
+      name = "virtio-block-test"
+      dest = "virtio-block-test-package"
+      environments = basic_envs
+    },
+  ]
 }
