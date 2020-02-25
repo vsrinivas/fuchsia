@@ -15,7 +15,7 @@ namespace cobalt {
 
 class SystemDataUpdaterImpl : public fuchsia::cobalt::SystemDataUpdater {
  public:
-  SystemDataUpdaterImpl(encoder::SystemData* system_data,
+  SystemDataUpdaterImpl(encoder::SystemDataInterface* system_data,
                         const std::string& cache_file_name_prefix);
 
   // Resets Cobalt's view of the system-wide experiment state and replaces it
@@ -62,7 +62,7 @@ class SystemDataUpdaterImpl : public fuchsia::cobalt::SystemDataUpdater {
   void ClearData();
 
  private:
-  encoder::SystemData* system_data_;  // Not owned.
+  encoder::SystemDataInterface* system_data_;  // Not owned.
   std::string cache_file_name_prefix_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SystemDataUpdaterImpl);

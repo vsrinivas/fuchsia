@@ -15,7 +15,7 @@ using fuchsia::cobalt::Status;
 
 constexpr char kChannelCacheFilenameSuffix[] = "last_reported_channel";
 
-SystemDataUpdaterImpl::SystemDataUpdaterImpl(encoder::SystemData* system_data,
+SystemDataUpdaterImpl::SystemDataUpdaterImpl(encoder::SystemDataInterface* system_data,
                                              const std::string& cache_file_name_prefix)
     : system_data_(system_data), cache_file_name_prefix_(cache_file_name_prefix) {
   RestoreData();

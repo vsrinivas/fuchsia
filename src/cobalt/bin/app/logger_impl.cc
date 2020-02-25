@@ -6,7 +6,7 @@
 
 namespace cobalt {
 
-LoggerImpl::LoggerImpl(std::unique_ptr<logger::Logger> logger, TimerManager* timer_manager)
+LoggerImpl::LoggerImpl(std::unique_ptr<logger::LoggerInterface> logger, TimerManager* timer_manager)
     : logger_(std::move(logger)), timer_manager_(timer_manager) {}
 
 void LoggerImpl::LogEvent(uint32_t metric_id, uint32_t event_code,

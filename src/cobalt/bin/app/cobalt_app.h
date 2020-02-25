@@ -23,7 +23,7 @@
 #include "src/cobalt/bin/app/timer_manager.h"
 #include "src/cobalt/bin/app/user_consent_watcher.h"
 #include "src/cobalt/bin/utils/clock.h"
-#include "src/lib/network_wrapper/network_wrapper_impl.h"
+#include "src/lib/network_wrapper/network_wrapper.h"
 #include "third_party/cobalt/src/public/cobalt_service.h"
 
 namespace cobalt {
@@ -94,9 +94,9 @@ class CobaltApp {
 
   std::unique_ptr<sys::ComponentContext> context_;
 
-  FuchsiaSystemClock system_clock_;
+  std::unique_ptr<FuchsiaSystemClockInterface> system_clock_;
 
-  network_wrapper::NetworkWrapperImpl network_wrapper_;
+  std::unique_ptr<network_wrapper::NetworkWrapper> network_wrapper_;
   TimerManager timer_manager_;
 
   std::unique_ptr<fuchsia::cobalt::Controller> controller_impl_;
@@ -107,9 +107,6 @@ class CobaltApp {
 
   std::unique_ptr<fuchsia::cobalt::SystemDataUpdater> system_data_updater_impl_;
   fidl::BindingSet<fuchsia::cobalt::SystemDataUpdater> system_data_updater_bindings_;
-
-  // Cobalt uses internal_logger_ to log events about Cobalt.
-  std::unique_ptr<logger::Logger> internal_logger_;
 
   std::unique_ptr<UserConsentWatcher> user_consent_watcher_;
 

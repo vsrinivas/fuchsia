@@ -11,6 +11,7 @@
 #include "src/cobalt/bin/app/utils.h"
 #include "src/cobalt/bin/utils/fuchsia_http_client.h"
 #include "src/lib/backoff/exponential_backoff.h"
+#include "src/lib/network_wrapper/network_wrapper_impl.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
 
 namespace cobalt {
@@ -58,9 +59,10 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
                      size_t max_bytes_per_observation_store, const std::string& product_name,
                      const std::string& board_name, const std::string& version)
     : context_(std::move(context)),
-      system_clock_(FuchsiaSystemClock(context_->svc())),
-      network_wrapper_(dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
-                       [this] { return context_->svc()->Connect<http::HttpService>(); }),
+      system_clock_(std::make_unique<FuchsiaSystemClock>(context_->svc())),
+      network_wrapper_(std::make_unique<network_wrapper::NetworkWrapperImpl>(
+          dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
+          [this] { return context_->svc()->Connect<http::HttpService>(); })),
       timer_manager_(dispatcher) {
   auto global_project_context_factory =
       std::make_shared<ProjectContextFactory>(ReadGlobalMetricsRegistryBytes(kMetricsRegistryPath));
@@ -76,7 +78,8 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
     target_pipeline = std::make_unique<TargetPipeline>(
         backend_environment, ReadPublicKeyPem(configuration_data_.ShufflerPublicKeyPath()),
         ReadPublicKeyPem(configuration_data_.AnalyzerPublicKeyPath()),
-        std::make_unique<FuchsiaHTTPClient>(&network_wrapper_, dispatcher), kClearcutMaxRetries);
+        std::make_unique<FuchsiaHTTPClient>(network_wrapper_.get(), dispatcher),
+        kClearcutMaxRetries);
   }
 
   auto internal_project_context = global_project_context_factory->NewProjectContext(
@@ -117,7 +120,7 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
 
       .local_aggregation_backfill_days = event_aggregator_backfill_days,
 
-      .validated_clock = &system_clock_,
+      .validated_clock = system_clock_.get(),
   };
 
   cobalt_service_ = std::make_unique<CobaltService>(std::move(cfg));
@@ -127,7 +130,7 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
   auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
   FX_LOGS(INFO) << "Waiting for the system clock to become accurate at: "
                 << std::put_time(std::localtime(&current_time), "%F %T %z");
-  system_clock_.AwaitExternalSource([this, start_event_aggregator_worker]() {
+  system_clock_->AwaitExternalSource([this, start_event_aggregator_worker]() {
     auto current_time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     FX_LOGS(INFO) << "The system clock has become accurate, now at: "
                   << std::put_time(std::localtime(&current_time), "%F %T %z");
