@@ -42,6 +42,8 @@ pub struct ValidPlayerRegistration {
 pub struct ValidPlayerStatus {
     #[fidl_field_type(optional)]
     pub duration: Option<i64>,
+    #[fidl_field_type(default = false)]
+    pub is_live: bool,
     pub player_state: PlayerState,
     #[fidl_field_type(optional)]
     pub timeline_function: Option<TimelineFunction>,

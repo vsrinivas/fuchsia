@@ -463,6 +463,7 @@ test!(player_status, || async {
 
     let expected_player_status = || PlayerStatus {
         duration: Some(11),
+        is_live: Some(true),
         player_state: Some(PlayerState::Playing),
         timeline_function: Some(TimelineFunction {
             subject_time: 0,
