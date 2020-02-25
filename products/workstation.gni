@@ -15,6 +15,7 @@ base_package_labels += [
   "//src/chromium",
   "//src/dart:dart_jit",
   "//src/dart:dart_jit_product",
+  "//src/experiences/bin/simple_browser:web_engine_config",
   "//src/experiences/session_shells/ermine",
   "//src/experiences/session_shells/ermine/session:session_config",
   "//src/experiences/settings",
