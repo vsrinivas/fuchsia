@@ -66,9 +66,7 @@ namespace {
   DO(TableMember) \
   DO(TableDeclaration) \
   DO(UnionMember) \
-  DO(UnionDeclaration) \
-  DO(XUnionMember) \
-  DO(XUnionDeclaration)
+  DO(UnionDeclaration)
 
 #define MAKE_ENUM_VARIANT(VAR) VAR,
 enum ElementType {
@@ -196,12 +194,6 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
   }
   void OnUnionDeclaration(std::unique_ptr<fidl::raw::UnionDeclaration> const& element) override {
     CheckSpanOfType(ElementType::UnionDeclaration, *element);
-  }
-  void OnXUnionMember(std::unique_ptr<fidl::raw::XUnionMember> const& element) override {
-    CheckSpanOfType(ElementType::XUnionMember, *element);
-  }
-  void OnXUnionDeclaration(std::unique_ptr<fidl::raw::XUnionDeclaration> const& element) override {
-    CheckSpanOfType(ElementType::XUnionDeclaration, *element);
   }
 
  private:
