@@ -8,63 +8,32 @@
 # set up steps happen as expected.
 
 set -e
-
-# Helpers.
-
-# Runs a bash script. The function provides these conveniences over calling the
-# script directly:
-#
-# * Rather than calling the bash script directly, this command explicitly
-#   invokes Bash and propagates some option flags.
-# * Rather than showing the bash output, this command only outputs output if a
-#   test fails.
-#
-# Args: the script to run and all args to pass.
-run_bash_script() {
-  local shell_flags
-  # propagate certain bash flags if present
-  shell_flags=()
-  if [[ $- == *x* ]]; then
-    shell_flags+=(-x)
-  fi
-  local output
-
-  output=$(bash "${shell_flags[@]}" "$@" 2>&1)
-  status=$?
-  if [[ ${status} != 0 ]]; then
-    echo "${output}"
-  fi
-
-  return ${status}
-}
+SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
+source "${SCRIPT_SRC_DIR}/gn-bash-test-lib.sh"
 
 # Verifies that the correct commands are run before starting Fuchsia DevTools
 TEST_fdevtools() {
   # Run command.
-  BT_EXPECT run_bash_script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fdevtools.sh" \
+  BT_EXPECT gn-test-run-bash-script "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fdevtools.sh" \
     --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
 
   # Verify that cipd was called to download the correct path
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/cipd.mock_state"
   local CIPD_ARGS=("${BT_MOCK_ARGS[@]:1}")
   local EXPECTED_CIPD_ARGS=(
+    _ANY_
     ensure
-    -ensure-file NOCHECK_TEMP_FILE
+    -ensure-file _ANY_
     -root "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/fuchsia_devtools"
   )
-  BT_EXPECT_EQ ${#EXPECTED_CIPD_ARGS[@]} ${#CIPD_ARGS[@]}
-  for i in "${!EXPECTED_CIPD_ARGS[@]}"; do
-    # The zbi tools creates an internal mktemp file that we don't know, so do not match NOCHECK_TEMP_FILE
-    if [[ "${EXPECTED_CIPD_ARGS[$i]}" != "NOCHECK_TEMP_FILE" ]]; then
-      BT_EXPECT_EQ "${EXPECTED_CIPD_ARGS[$i]}" "${CIPD_ARGS[$i]}"
-    fi
-  done
+
+  gn-test-check-mock-args "${EXPECTED_CIPD_ARGS[@]}"
 
   # Verify that the executable is called, no arguments are passed
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/fuchsia_devtools/system_monitor/linux/system_monitor.mock_state"
-  local MONITOR_ARGS=("${BT_MOCK_ARGS[@]:1}")
-  local EXPECTED_MONITOR_ARGS=()
-  BT_EXPECT_EQ ${#EXPECTED_MONITOR_ARGS[@]} ${#MONITOR_ARGS[@]}
+
+  gn-test-check-mock-args "${BT_TEMP_DIR}/scripts/sdk/gn/base/images/fuchsia_devtools/system_monitor/linux/system_monitor"
+
 }
 
 # Test initialization. Note that we copy various tools/devshell files and need to replicate the
@@ -72,6 +41,7 @@ TEST_fdevtools() {
 BT_FILE_DEPS=(
   scripts/sdk/gn/base/bin/fdevtools.sh
   scripts/sdk/gn/base/bin/fuchsia-common.sh
+  scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh
 )
 BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/images/fuchsia_devtools/system_monitor/linux/system_monitor

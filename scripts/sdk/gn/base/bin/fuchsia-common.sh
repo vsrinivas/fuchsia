@@ -37,6 +37,7 @@ function ssh-cmd {
 }
 
 function get-device-ip {
+  # $1 is the SDK_PATH.
   # -ipv4 false: Disable IPv4. Fuchsia devices are IPv6-compatible, so
   #   forcing IPv6 allows for easier manipulation of the result.
   "${1}/tools/device-finder" list -netboot -device-limit 1 -ipv4=false
