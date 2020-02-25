@@ -1,0 +1,84 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/fuzzer.gni")
+import("//build/rust/rustc_staticlib.gni")
+
+# Defines a Rust fuzzer
+#
+# The template creates a Rust static library with fuzz target functions enabled
+# and provides it to the usual `fuzzer` template. This can create three
+# different outputs based on the toolchain variant applied to the target:
+#   - If the toolchain variant is "rust-*san-fuzzer", this will build a fuzzer
+#     which instruments the Rust code of the target and its dependencies.
+#   - If the toolchain variant is "*san-fuzzer", this will build a fuzzer which
+#     instruments the C/C++ code of the target and its dependencies.
+#   - Otherwise, it will build an uninstrumented unit test that ensures the
+#     fuzzer code can build and link.
+#
+# Parameters:
+#
+#   version
+#   edition
+#   deps
+#   source_root
+#   features
+#     Same meaning as for rustc_staticlib.
+#
+#   cmx
+#   dictionary
+#   options
+#   executable parameters, except deps
+#     Same meaning as for fuzzer.
+#
+# Example:
+#
+# In src/lib.rs:
+#   #[cfg(fuzz)]
+#   fn my_fuzz_target(data: &[u8]) { ... }
+#
+#   #[cfg(fuzz)]
+#   mod fuzz {
+#     use super::*;
+#     use fuchsia-fuzzing::declare_fuzzers;
+#     declare_fuzzers!(my_fuzz_target, ...);
+#   }
+#
+# In BUILD.gn:
+#   rust_fuzzer("my_fuzzer") {
+#     edition = "2018"
+#   }
+#
+template("rustc_fuzzer") {
+  fuzzer_name = target_name
+  fuzzer_lib = "${fuzzer_name}_lib"
+  rustc_staticlib(fuzzer_lib) {
+    deps = []
+    forward_variables_from(invoker,
+                           [
+                             "version",
+                             "edition",
+                             "deps",
+                             "source_root",
+                             "features",
+                           ])
+    visibility = [ ":*" ]
+    testonly = true
+    configs += [ "//build/fuzzing:rust" ]
+    deps += [ "//src/lib/fuzzing/rust:fuchsia-fuzzing" ]
+  }
+
+  fuzzer(fuzzer_name) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "version",
+                             "edition",
+                             "deps",
+                             "source_root",
+                             "features",
+                           ])
+    deps = [ ":$fuzzer_lib" ]
+  }
+}

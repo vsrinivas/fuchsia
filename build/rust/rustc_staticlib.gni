@@ -68,8 +68,6 @@ import("//build/rust/rustc_artifact.gni")
 #     with_unit_tests = true
 #   }
 template("rustc_staticlib") {
-  forward_variables_from(invoker, [ "visibility" ])
-
   rustc_target = "_${target_name}_rustc_artifact"
   group_target = "${target_name}"
 
@@ -118,6 +116,8 @@ template("rustc_staticlib") {
   }
 
   group(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker, [ "visibility" ])
     public_deps = [
       ":$header_target",
       ":$rustc_target",
@@ -128,6 +128,7 @@ template("rustc_staticlib") {
     test_target_name = "${target_name}_test"
     group(test_target_name) {
       testonly = true
+      forward_variables_from(invoker, [ "visibility" ])
       public_deps = [ ":${rustc_target}_test" ]
     }
   }
