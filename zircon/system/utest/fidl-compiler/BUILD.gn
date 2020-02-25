@@ -173,6 +173,7 @@ if (current_toolchain == default_toolchain) {
       "protocol_tests.cc",
       "recursion_detector_tests.cc",
       "service_tests.cc",
+      "span_tests.cc",
       "strictness_tests.cc",
       "structs_tests.cc",
       "table_tests.cc",
