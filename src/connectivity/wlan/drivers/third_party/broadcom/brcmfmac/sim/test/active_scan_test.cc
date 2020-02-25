@@ -51,7 +51,7 @@ class ActiveScanTest : public SimTest {
  private:
   // StationIfc methods
   void ReceiveNotification(void* payload) override;
-  void Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) override;
+  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
 
   // This is the interface we will use for our single client interface
   std::unique_ptr<SimInterface> client_ifc_;
@@ -126,7 +126,7 @@ void ActiveScanTest::GetFirwarePfnMac() {
     sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "pfn_macaddr", sim_fw_pfn_mac_->byte, ETH_ALEN);
 }
 
-void ActiveScanTest::Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) {
+void ActiveScanTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
   GetFirwarePfnMac();
 
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
@@ -170,6 +170,9 @@ void ActiveScanTest::OnScanResult(const wlanif_scan_result_t* result) {
       EXPECT_EQ(result->bss.chan.primary, channel.primary);
       EXPECT_EQ(result->bss.chan.cbw, channel.cbw);
       EXPECT_EQ(result->bss.chan.secondary80, channel.secondary80);
+
+      // Verify has RSSI value
+      ASSERT_LT(result->bss.rssi_dbm, 0);
     }
   }
 

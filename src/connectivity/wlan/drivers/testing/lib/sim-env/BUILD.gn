@@ -8,6 +8,8 @@ static_library("sim-env") {
     "sim-env.h",
     "sim-frame.cc",
     "sim-frame.h",
+    "sim-sig-loss-model.cc",
+    "sim-sig-loss-model.h",
     "sim-sta-ifc.h",
   ]
 

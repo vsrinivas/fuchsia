@@ -64,6 +64,7 @@ class SimFirmware {
     wlan_ssid_t ssid;
     common::MacAddr bssid;
     wlan::CapabilityInfo bss_capability;
+    int8_t rssi_dbm;
   };
 
   using ScanResultHandler = std::function<void(const ScanResult& scan_result)>;
@@ -267,15 +268,16 @@ class SimFirmware {
   void DisassocLocalClient(brcmf_scb_val_le* scb_val);
 
   // Handlers for events from hardware
-  void Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel);
+  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info);
 
-  void RxMgmtFrame(const simulation::SimManagementFrame* mgmt_frame, const wlan_channel_t& channel);
+  void RxMgmtFrame(const simulation::SimManagementFrame* mgmt_frame, simulation::WlanRxInfo& info);
 
   void RxBeacon(const wlan_channel_t& channel, const simulation::SimBeaconFrame* frame);
   void RxAssocResp(const simulation::SimAssocRespFrame* frame);
   void RxDisassocReq(const simulation::SimDisassocReqFrame* frame);
   void RxAssocReq(const simulation::SimAssocReqFrame* frame);
-  void RxProbeResp(const wlan_channel_t& channel, const simulation::SimProbeRespFrame* frame);
+  void RxProbeResp(const wlan_channel_t& channel, const simulation::SimProbeRespFrame* frame,
+                   double signal_strength);
   void RxAuthResp(const simulation::SimAuthFrame* frame);
 
   // Allocate a buffer for an event (brcmf_event)

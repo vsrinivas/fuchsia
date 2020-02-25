@@ -68,7 +68,7 @@ class AuthTest : public SimTest {
 
  private:
   // Stationifc overrides
-  void Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) override;
+  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
   void ReceiveNotification(void* payload) override;
 
   // SME callbacks
@@ -84,7 +84,7 @@ class AuthTest : public SimTest {
   void OnAssocConf(const wlanif_assoc_confirm_t* resp);
 };
 
-void AuthTest::Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) {
+void AuthTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
   auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
 

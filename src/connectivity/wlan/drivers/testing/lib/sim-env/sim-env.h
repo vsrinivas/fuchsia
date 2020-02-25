@@ -35,12 +35,14 @@
 #include <zircon/types.h>
 
 #include <list>
+#include <map>
 
 #include <ddk/protocol/wlan/info.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/protocol/ieee80211.h>
 
 #include "sim-frame.h"
+#include "sim-sig-loss-model.h"
 #include "sim-sta-ifc.h"
 
 namespace wlan::simulation {
@@ -49,20 +51,32 @@ namespace wlan::simulation {
 //
 class Environment {
  public:
-  Environment() = default;
+  Environment();
   ~Environment() = default;
 
   // Add a station into the environment.
-  void AddStation(StationIfc* sta) { stations_.push_back(sta); }
+  void AddStation(StationIfc* sta) { stations_[sta] = new Location(0, 0); }
+
+  // Add a station into the environment at specific location.
+  void AddStation(StationIfc* sta, uint32_t x, uint32_t y) { stations_[sta] = new Location(x, y); }
 
   // Remove a station from the environment.
-  void RemoveStation(StationIfc* sta) { stations_.remove(sta); }
+  void RemoveStation(StationIfc* sta) {
+    delete stations_[sta];
+    stations_.erase(sta);
+  }
+
+  // Change the location of a station in the environment.
+  void MoveStation(StationIfc* sta, uint32_t x, uint32_t y) {
+    delete stations_[sta];
+    stations_[sta] = new Location(x, y);
+  }
 
   // Begin simulation. Function will return when there are no more events pending.
   void Run();
 
   // Send a frame into the simulated environment.
-  void Tx(const SimFrame* frame, const wlan_channel_t& channel);
+  void Tx(const SimFrame* frame, const WlanTxInfo& tx_info, StationIfc* sender);
 
   // Ask for a future notification, time is relative to current time. If 'id' is non-null, it will
   // be given a unique identifier for reference in future notification-related operations.
@@ -86,13 +100,16 @@ class Environment {
   };
 
   // All registered stations
-  std::list<StationIfc*> stations_;
+  std::map<StationIfc*, Location*> stations_;
 
   // Current time
   zx::time time_;
 
   // Future events, sorted by time
   std::list<std::unique_ptr<EnvironmentEvent>> events_;
+
+  // Signal strength loss model
+  std::unique_ptr<SignalLossModel> signal_loss_model_;
 };
 
 }  // namespace wlan::simulation

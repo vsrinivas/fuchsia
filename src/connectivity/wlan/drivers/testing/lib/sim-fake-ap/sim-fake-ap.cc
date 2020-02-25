@@ -46,7 +46,7 @@ void FakeAp::SetChannel(const wlan_channel_t& channel) {
                                        &beacon_state_.channel_switch_notification_id);
     beacon_state_.is_switching_channel = true;
   } else {
-    chan_ = channel;
+    tx_info_.channel = channel;
   }
 }
 
@@ -98,8 +98,8 @@ zx_status_t FakeAp::SetAuthType(SimAuthType auth_type) {
 
 bool FakeAp::CanReceiveChannel(const wlan_channel_t& channel) {
   // For now, require an exact match
-  return ((channel.primary == chan_.primary) && (channel.cbw == chan_.cbw) &&
-          (channel.secondary80 == chan_.secondary80));
+  return ((channel.primary == tx_info_.channel.primary) && (channel.cbw == tx_info_.channel.cbw) &&
+          (channel.secondary80 == tx_info_.channel.secondary80));
 }
 
 void FakeAp::ScheduleNextBeacon() {
@@ -119,7 +119,7 @@ void FakeAp::EnableBeacon(zx::duration beacon_period) {
   }
 
   // First beacon is sent out immediately
-  environment_->Tx(&beacon_state_.beacon_frame_, chan_);
+  environment_->Tx(&beacon_state_.beacon_frame_, tx_info_, this);
 
   beacon_state_.is_beaconing = true;
   beacon_state_.beacon_interval = beacon_period;
@@ -131,7 +131,7 @@ void FakeAp::DisableBeacon() {
   // If we stop beaconing when channel is switching, we cancel the channel switch event and directly
   // set channel to new channel.
   if (beacon_state_.is_switching_channel) {
-    chan_ = beacon_state_.channel_after_CSA;
+    tx_info_.channel = beacon_state_.channel_after_CSA;
     beacon_state_.is_switching_channel = false;
     ZX_ASSERT(environment_->CancelNotification(
                   this, beacon_state_.channel_switch_notification_id) == ZX_OK);
@@ -199,9 +199,9 @@ void FakeAp::ScheduleAuthResp(uint16_t seq_num_in, const common::MacAddr& dst,
   environment_->ScheduleNotification(this, auth_resp_interval_, static_cast<void*>(handler));
 }
 
-void FakeAp::Rx(const SimFrame* frame, const wlan_channel_t& channel) {
+void FakeAp::Rx(const SimFrame* frame, WlanRxInfo& info) {
   // Make sure we heard it
-  if (!CanReceiveChannel(channel)) {
+  if (!CanReceiveChannel(info.channel)) {
     return;
   }
 
@@ -371,11 +371,11 @@ void FakeAp::RxMgmtFrame(const SimManagementFrame* mgmt_frame) {
 
 zx_status_t FakeAp::DisassocSta(const common::MacAddr& sta_mac, uint16_t reason) {
   // Make sure the client is already associated
-  SimDisassocReqFrame disassoc_req_frame(this, bssid_, sta_mac, reason);
+  SimDisassocReqFrame disassoc_req_frame(bssid_, sta_mac, reason);
   for (auto client : clients_) {
     if (client->mac_addr_ == sta_mac && client->status_ == Client::ASSOCIATED) {
       // Client is already associated
-      environment_->Tx(&disassoc_req_frame, chan_);
+      environment_->Tx(&disassoc_req_frame, tx_info_, this);
       RemoveClient(sta_mac);
       return ZX_OK;
     }
@@ -386,7 +386,7 @@ zx_status_t FakeAp::DisassocSta(const common::MacAddr& sta_mac, uint16_t reason)
 
 void FakeAp::HandleBeaconNotification() {
   ZX_ASSERT(beacon_state_.is_beaconing);
-  environment_->Tx(&beacon_state_.beacon_frame_, chan_);
+  environment_->Tx(&beacon_state_.beacon_frame_, tx_info_, this);
   // Channel switch count decrease by 1 each time after sending a CSA beacon.
   if (beacon_state_.is_switching_channel) {
     auto CSA_ie = beacon_state_.beacon_frame_.FindIE(InformationElement::IE_TYPE_CSA);
@@ -398,25 +398,25 @@ void FakeAp::HandleBeaconNotification() {
 void FakeAp::HandleStopCSABeaconNotification() {
   ZX_ASSERT(beacon_state_.is_beaconing);
   beacon_state_.beacon_frame_.RemoveIE(InformationElement::SimIEType::IE_TYPE_CSA);
-  chan_ = beacon_state_.channel_after_CSA;
+  tx_info_.channel = beacon_state_.channel_after_CSA;
   beacon_state_.is_switching_channel = false;
 }
 
 void FakeAp::HandleAssocRespNotification(uint16_t status, common::MacAddr dst) {
-  SimAssocRespFrame assoc_resp_frame(this, bssid_, dst, status);
-  environment_->Tx(&assoc_resp_frame, chan_);
+  SimAssocRespFrame assoc_resp_frame(bssid_, dst, status);
+  environment_->Tx(&assoc_resp_frame, tx_info_, this);
 }
 
 void FakeAp::HandleProbeRespNotification(common::MacAddr dst) {
-  SimProbeRespFrame probe_resp_frame(this, bssid_, dst, ssid_);
+  SimProbeRespFrame probe_resp_frame(bssid_, dst, ssid_);
   probe_resp_frame.capability_info_.set_val(beacon_state_.beacon_frame_.capability_info_.val());
-  environment_->Tx(&probe_resp_frame, chan_);
+  environment_->Tx(&probe_resp_frame, tx_info_, this);
 }
 
 void FakeAp::HandleAuthRespNotification(uint16_t seq_num, common::MacAddr dst,
                                         SimAuthType auth_type, uint16_t status) {
-  SimAuthFrame auth_resp_frame(this, bssid_, dst, seq_num, auth_type, status);
-  environment_->Tx(&auth_resp_frame, chan_);
+  SimAuthFrame auth_resp_frame(bssid_, dst, seq_num, auth_type, status);
+  environment_->Tx(&auth_resp_frame, tx_info_, this);
 }
 
 void FakeAp::ReceiveNotification(void* payload) {

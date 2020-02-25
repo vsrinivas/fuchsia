@@ -16,11 +16,12 @@ namespace wlan::simulation {
 
 class SimFrame;
 class SimManagementFrame;
+struct WlanRxInfo;
 
 class StationIfc {
  public:
   // Handler for different frames.
-  virtual void Rx(const SimFrame* frame, const wlan_channel_t& channel) = 0;
+  virtual void Rx(const SimFrame* frame, WlanRxInfo& info) = 0;
 
   // Receive notification of a simulation event
   virtual void ReceiveNotification(void* payload) = 0;

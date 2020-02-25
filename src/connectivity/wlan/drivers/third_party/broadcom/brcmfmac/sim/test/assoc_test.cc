@@ -51,7 +51,7 @@ class AssocTest : public SimTest {
   struct AssocContext {
     // Information about the BSS we are attempting to associate with. Used to generate the
     // appropriate MLME calls (Join => Auth => Assoc).
-    wlan_channel_t channel = kDefaultChannel;
+    simulation::WlanTxInfo tx_info = {.channel = kDefaultChannel};
     common::MacAddr bssid = kDefaultBssid;
     wlan_ssid_t ssid = kDefaultSsid;
 
@@ -99,7 +99,7 @@ class AssocTest : public SimTest {
 
  private:
   // StationIfc overrides
-  void Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) override;
+  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
   void ReceiveNotification(void* payload) override;
 
   // SME callbacks
@@ -152,7 +152,7 @@ void AssocTest::ReceiveNotification(void* payload) {
   delete fn;
 }
 
-void AssocTest::Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) {
+void AssocTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
 
   auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
@@ -165,7 +165,7 @@ void AssocTest::Rx(const simulation::SimFrame* frame, const wlan_channel_t& chan
 
   if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_ASSOC_RESP) {
     auto assoc_resp = static_cast<const simulation::SimAssocRespFrame*>(mgmt_frame);
-    AssocRespInfo resp_info = {.channel = channel,
+    AssocRespInfo resp_info = {.channel = info.channel,
                                .src = assoc_resp->src_addr_,
                                .dst = assoc_resp->dst_addr_,
                                .status = assoc_resp->status_};
@@ -243,7 +243,7 @@ void AssocTest::StartAssoc() {
   std::memcpy(join_req.selected_bss.bssid, context_.bssid.byte, ETH_ALEN);
   join_req.selected_bss.ssid.len = context_.ssid.len;
   memcpy(join_req.selected_bss.ssid.data, context_.ssid.ssid, WLAN_MAX_SSID_LEN);
-  join_req.selected_bss.chan = context_.channel;
+  join_req.selected_bss.chan = context_.tx_info.channel;
   client_ifc_->if_impl_ops_->join_req(client_ifc_->if_impl_ctx_, &join_req);
 }
 
@@ -281,23 +281,22 @@ void AssocTest::TxFakeDisassocReq() {
   common::MacAddr my_mac(mac_buf);
 
   // Send a Disassoc Req to our STA (which is not associated)
-  simulation::SimDisassocReqFrame not_associated_frame(this, context_.bssid, my_mac,
+  simulation::SimDisassocReqFrame not_associated_frame(context_.bssid, my_mac,
                                                        kDefaultApDisassocReason);
-  env_->Tx(&not_associated_frame, context_.channel);
+  env_->Tx(&not_associated_frame, context_.tx_info, this);
 
   // Send a Disassoc Req from the wrong bss
   common::MacAddr wrong_src(context_.bssid);
   wrong_src.byte[ETH_ALEN - 1]++;
-  simulation::SimDisassocReqFrame wrong_bss_frame(this, wrong_src, my_mac,
-                                                  kDefaultApDisassocReason);
-  env_->Tx(&wrong_bss_frame, context_.channel);
+  simulation::SimDisassocReqFrame wrong_bss_frame(wrong_src, my_mac, kDefaultApDisassocReason);
+  env_->Tx(&wrong_bss_frame, context_.tx_info, this);
 
   // Send a Disassoc Req to a different STA
   common::MacAddr wrong_dst(my_mac);
   wrong_dst.byte[ETH_ALEN - 1]++;
-  simulation::SimDisassocReqFrame wrong_sta_frame(this, context_.bssid, wrong_dst,
+  simulation::SimDisassocReqFrame wrong_sta_frame(context_.bssid, wrong_dst,
                                                   kDefaultApDisassocReason);
-  env_->Tx(&wrong_sta_frame, context_.channel);
+  env_->Tx(&wrong_sta_frame, context_.tx_info, this);
 }
 // For this test, we want the pre-assoc scan test to fail because no APs are found.
 TEST_F(AssocTest, NoAps) {
@@ -308,7 +307,7 @@ TEST_F(AssocTest, NoAps) {
   context_.bssid = kBssid;
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   context_.ssid = {.len = 6, .ssid = "TestAP"};
-  context_.channel = {.primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+  context_.tx_info.channel = {.primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
 
   ScheduleCall(&AssocTest::StartAssoc, zx::msec(10));
 
@@ -481,15 +480,15 @@ void AssocTest::SendBadResp() {
   // Send a response from the wrong bss
   common::MacAddr wrong_src(context_.bssid);
   wrong_src.byte[ETH_ALEN - 1]++;
-  simulation::SimAssocRespFrame wrong_bss_frame(this, wrong_src, my_mac, WLAN_ASSOC_RESULT_SUCCESS);
-  env_->Tx(&wrong_bss_frame, context_.channel);
+  simulation::SimAssocRespFrame wrong_bss_frame(wrong_src, my_mac, WLAN_ASSOC_RESULT_SUCCESS);
+  env_->Tx(&wrong_bss_frame, context_.tx_info, this);
 
   // Send a response to a different STA
   common::MacAddr wrong_dst(my_mac);
   wrong_dst.byte[ETH_ALEN - 1]++;
-  simulation::SimAssocRespFrame wrong_dst_frame(this, context_.bssid, wrong_dst,
+  simulation::SimAssocRespFrame wrong_dst_frame(context_.bssid, wrong_dst,
                                                 WLAN_ASSOC_RESULT_SUCCESS);
-  env_->Tx(&wrong_dst_frame, context_.channel);
+  env_->Tx(&wrong_dst_frame, context_.tx_info, this);
 }
 
 // Verify that any non-applicable association responses (i.e., sent to or from the wrong MAC)
@@ -527,10 +526,10 @@ void AssocTest::SendMultipleResp() {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->IovarsGet(client_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
   common::MacAddr my_mac(mac_buf);
-  simulation::SimAssocRespFrame multiple_resp_frame(this, context_.bssid, my_mac,
+  simulation::SimAssocRespFrame multiple_resp_frame(context_.bssid, my_mac,
                                                     WLAN_ASSOC_RESULT_SUCCESS);
   for (unsigned i = 0; i < kRespCount; i++) {
-    env_->Tx(&multiple_resp_frame, context_.channel);
+    env_->Tx(&multiple_resp_frame, context_.tx_info, this);
   }
 }
 

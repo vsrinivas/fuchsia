@@ -37,7 +37,7 @@ class CreateSoftAPTest : public SimTest {
   void VerifyDisassoc();
 
  protected:
-  wlan_channel_t channel_ = kDefaultChannel;
+  simulation::WlanTxInfo tx_info_ = {.channel = kDefaultChannel};
 
  private:
   // SME callbacks
@@ -146,8 +146,8 @@ void CreateSoftAPTest::TxAssocReq() {
   sim->sim_fw->IovarsGet(softap_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
   common::MacAddr soft_ap_mac(mac_buf);
   const common::MacAddr mac(kFakeMac);
-  simulation::SimAssocReqFrame assoc_req_frame(this, mac, soft_ap_mac);
-  env_->Tx(&assoc_req_frame, channel_);
+  simulation::SimAssocReqFrame assoc_req_frame(mac, soft_ap_mac);
+  env_->Tx(&assoc_req_frame, tx_info_, this);
 }
 
 void CreateSoftAPTest::TxDisassocReq() {
@@ -158,11 +158,11 @@ void CreateSoftAPTest::TxDisassocReq() {
   common::MacAddr soft_ap_mac(mac_buf);
   const common::MacAddr mac(kFakeMac);
   // Associate with the SoftAP
-  simulation::SimAssocReqFrame assoc_req_frame(this, mac, soft_ap_mac);
-  env_->Tx(&assoc_req_frame, channel_);
+  simulation::SimAssocReqFrame assoc_req_frame(mac, soft_ap_mac);
+  env_->Tx(&assoc_req_frame, tx_info_, this);
   // Disassociate with the SoftAP
-  simulation::SimDisassocReqFrame disassoc_req_frame(this, mac, soft_ap_mac, 0);
-  env_->Tx(&disassoc_req_frame, channel_);
+  simulation::SimDisassocReqFrame disassoc_req_frame(mac, soft_ap_mac, 0);
+  env_->Tx(&disassoc_req_frame, tx_info_, this);
 }
 
 void CreateSoftAPTest::ScheduleAssocReq(zx::duration when) {

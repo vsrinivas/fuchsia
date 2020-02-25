@@ -49,16 +49,13 @@ class FakeAp : public StationIfc {
 
   FakeAp() = delete;
 
-  explicit FakeAp(Environment* environ) : environment_(environ) {
-    environ->AddStation(this);
-    beacon_state_.beacon_frame_.sender_ = this;
-  }
+  explicit FakeAp(Environment* environ) : environment_(environ) { environ->AddStation(this); }
 
   FakeAp(Environment* environ, const common::MacAddr& bssid, const wlan_ssid_t& ssid,
          const wlan_channel_t chan)
-      : environment_(environ), chan_(chan), bssid_(bssid), ssid_(ssid) {
+      : environment_(environ), bssid_(bssid), ssid_(ssid) {
     environ->AddStation(this);
-    beacon_state_.beacon_frame_.sender_ = this;
+    tx_info_.channel = chan;
     beacon_state_.beacon_frame_.bssid_ = bssid;
     beacon_state_.beacon_frame_.ssid_ = ssid;
   }
@@ -70,7 +67,7 @@ class FakeAp : public StationIfc {
   void SetSsid(const wlan_ssid_t& ssid);
   void SetCSABeaconInterval(zx::duration interval);
 
-  wlan_channel_t GetChannel() { return chan_; }
+  wlan_channel_t GetChannel() { return tx_info_.channel; }
   common::MacAddr GetBssid() { return bssid_; }
   wlan_ssid_t GetSsid() { return ssid_; }
   uint32_t GetNumAssociatedClient();
@@ -99,7 +96,7 @@ class FakeAp : public StationIfc {
 
   // StationIfc operations - these are the functions that allow the simulated AP to be used
   // inside of a sim-env environment.
-  void Rx(const SimFrame* frame, const wlan_channel_t& channel) override;
+  void Rx(const SimFrame* frame, WlanRxInfo& info) override;
   void ReceiveNotification(void* payload) override;
 
  private:
@@ -126,7 +123,8 @@ class FakeAp : public StationIfc {
   // The environment in which this fake AP is operating.
   Environment* environment_;
 
-  wlan_channel_t chan_;
+  // meta information needed for sending transmissions
+  simulation::WlanTxInfo tx_info_;
   common::MacAddr bssid_;
   wlan_ssid_t ssid_;
   struct Security security_ = {.cipher_suite = IEEE80211_CIPHER_SUITE_NONE};

@@ -10,6 +10,9 @@ namespace wlan::simulation {
 
 uint64_t Environment::event_count_ = 0;
 
+Environment::Environment()
+    : signal_loss_model_(std::unique_ptr<SignalLossModel>(new LogSignalLossModel())){};
+
 void Environment::Run() {
   while (!events_.empty()) {
     auto event = std::move(events_.front());
@@ -22,10 +25,13 @@ void Environment::Run() {
   }
 }
 
-void Environment::Tx(const SimFrame* frame, const wlan_channel_t& channel) {
-  for (auto sta : stations_) {
-    if (sta != frame->sender_) {
-      sta->Rx(frame, channel);
+void Environment::Tx(const SimFrame* frame, const WlanTxInfo& tx_info, StationIfc* sender) {
+  for (auto& sta : stations_) {
+    if (sta.first != sender) {
+      double signal_strength =
+          signal_loss_model_->CalcSignalStrength(stations_.at(sender), stations_.at(sta.first));
+      WlanRxInfo rx_info = {.channel = tx_info.channel, .signal_strength = signal_strength};
+      sta.first->Rx(frame, rx_info);
     }
   }
 }

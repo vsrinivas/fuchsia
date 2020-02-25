@@ -45,10 +45,24 @@ executable("frame_ie_tests") {
   ]
 }
 
+executable("location_tests") {
+  output_name = "location_tests"
+
+  testonly = true
+
+  sources = [ "location_tests.cc" ]
+
+  deps = [
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//src/lib/fxl/test/:gtest_main",
+  ]
+}
+
 unittest_package("wlan-sim-env-test") {
   deps = [
     ":event_unittests",
     ":frame_ie_tests",
+    ":location_tests",
     ":rx_tests",
   ]
 
@@ -63,6 +77,10 @@ unittest_package("wlan-sim-env-test") {
     },
     {
       name = "frame_ie_tests"
+      environments = basic_envs
+    },
+    {
+      name = "location_tests"
       environments = basic_envs
     },
   ]

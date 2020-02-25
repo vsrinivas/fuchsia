@@ -15,6 +15,7 @@ namespace wlan::brcmfmac {
 constexpr uint16_t kDefaultCh = 149;
 constexpr wlan_channel_t kDefaultChannel = {
     .primary = kDefaultCh, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+constexpr simulation::WlanTxInfo kDefaultTxInfo = {.channel = kDefaultChannel};
 constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 const common::MacAddr kFakeMac({0xde, 0xad, 0xbe, 0xef, 0x00, 0x02});
@@ -87,7 +88,7 @@ class DynamicIfTest : public SimTest {
   bool auth_ind_recv_ = false;
   bool assoc_ind_recv_ = false;
   // StationIfc overrides
-  void Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) override;
+  void Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) override;
   void ReceiveNotification(void* payload) override;
 
   // SME callbacks
@@ -186,13 +187,13 @@ void DynamicIfTest::ReceiveNotification(void* payload) {
   delete fn;
 }
 
-void DynamicIfTest::Rx(const simulation::SimFrame* frame, const wlan_channel_t& channel) {
+void DynamicIfTest::Rx(const simulation::SimFrame* frame, simulation::WlanRxInfo& info) {
   ASSERT_EQ(frame->FrameType(), simulation::SimFrame::FRAME_TYPE_MGMT);
 
   auto mgmt_frame = static_cast<const simulation::SimManagementFrame*>(frame);
   if (mgmt_frame->MgmtFrameType() == simulation::SimManagementFrame::FRAME_TYPE_ASSOC_RESP) {
     auto assoc_resp = static_cast<const simulation::SimAssocRespFrame*>(mgmt_frame);
-    AssocRespInfo resp_info = {.channel = channel,
+    AssocRespInfo resp_info = {.channel = info.channel,
                                .src = assoc_resp->src_addr_,
                                .dst = assoc_resp->dst_addr_,
                                .status = assoc_resp->status_};
@@ -271,8 +272,8 @@ void DynamicIfTest::TxAssocReq() {
   sim->sim_fw->IovarsGet(softap_ifc_->iface_id_, "cur_etheraddr", mac_buf, ETH_ALEN);
   common::MacAddr soft_ap_mac(mac_buf);
   const common::MacAddr mac(kFakeMac);
-  simulation::SimAssocReqFrame assoc_req_frame(this, mac, soft_ap_mac);
-  env_->Tx(&assoc_req_frame, kDefaultChannel);
+  simulation::SimAssocReqFrame assoc_req_frame(mac, soft_ap_mac);
+  env_->Tx(&assoc_req_frame, kDefaultTxInfo, this);
 }
 
 void DynamicIfTest::OnAssocInd(const wlanif_assoc_ind_t* ind) {
