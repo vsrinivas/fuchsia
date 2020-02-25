@@ -49,7 +49,6 @@
 #define BRCMF_ESCAN_TIMER_INTERVAL_MS 10000 /* E-Scan timeout */
 
 #define BRCMF_DISCONNECT_TIMEOUT  ZX_MSEC(50) /* Wait for disconnect to complete */
-#define BRCMF_SIGNAL_REPORT_TIMEOUT ZX_MSEC(1000) /* Signal report period */
 
 #define WL_ESCAN_ACTION_START      1
 #define WL_ESCAN_ACTION_CONTINUE   2
@@ -396,8 +395,6 @@ struct brcmf_cfg80211_info {
   struct brcmf_cfg80211_wowl wowl;
   struct brcmf_pno_info* pno;
   bool ap_started;
-  brcmf_timer_info_t signal_report_timer;
-  WorkItem signal_report_work;
 };
 
 /**
