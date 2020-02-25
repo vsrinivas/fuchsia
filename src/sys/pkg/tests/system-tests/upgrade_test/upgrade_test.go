@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -396,21 +397,34 @@ func otaToPackage(
 		return fmt.Errorf("error resolving the run package: %v", err)
 	}
 
+	var wg sync.WaitGroup
+	device.RegisterDisconnectListener(&wg)
+
 	log.Printf("starting system OTA")
 
-	err = device.ExpectReboot(ctx, repo, rpcClient, func() error {
-		cmd := fmt.Sprintf("run \"fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx\" --update \"%s\" && sleep 60", updatePackageUrl)
-		err = device.Run(ctx, cmd, os.Stdout, os.Stderr)
-		if err != nil {
-			if _, ok := err.(*ssh.ExitMissingError); !ok {
-				return fmt.Errorf("failed to run system_updater.cmx: %s", err)
-			}
-		}
-
-		return nil
-	})
+	cmd := fmt.Sprintf("run \"fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx\" --update \"%s\" && sleep 60", updatePackageUrl)
+	err = device.Run(ctx, cmd, os.Stdout, os.Stderr)
 	if err != nil {
-		log.Printf("device failed to OTA: %s", err)
+		if _, ok := err.(*ssh.ExitMissingError); !ok {
+			return fmt.Errorf("failed to run system_updater.cmx: %s", err)
+		}
+	}
+
+	// Wait until we get a signal that we have disconnected
+	ch := make(chan struct{})
+	go func() {
+		wg.Wait()
+		ch <- struct{}{}
+	}()
+
+	select {
+	case <-ch:
+	case <-ctx.Done():
+		return fmt.Errorf("device did not disconnect: %s", ctx.Err())
+	}
+
+	if err = device.WaitForDeviceToBeConnected(ctx); err != nil {
+		return fmt.Errorf("device failed to connect: %s", err)
 	}
 
 	log.Printf("OTA complete, validating device")
