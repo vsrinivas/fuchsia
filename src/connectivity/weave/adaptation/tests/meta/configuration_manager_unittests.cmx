@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/configuration_manager_unittests"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ]
+    }
+}

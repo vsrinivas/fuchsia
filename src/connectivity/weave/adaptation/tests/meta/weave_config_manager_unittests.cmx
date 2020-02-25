@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/weave_config_manager_unittests"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ]
+    }
+}

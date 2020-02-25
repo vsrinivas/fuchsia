@@ -22,28 +22,28 @@ namespace Internal {
  */
 class FuchsiaConfig {
  public:
-  using Key = uint32_t;
-  static const Key kConfigKey_SerialNum = 0;
-  static const Key kConfigKey_MfrDeviceId = 0;
-  static const Key kConfigKey_MfrDeviceCert = 0;
-  static const Key kConfigKey_MfrDeviceICACerts = 0;
-  static const Key kConfigKey_MfrDevicePrivateKey = 0;
-  static const Key kConfigKey_ProductRevision = 0;
-  static const Key kConfigKey_ManufacturingDate = 0;
-  static const Key kConfigKey_PairingCode = 0;
-  static const Key kConfigKey_FabricId = 0;
-  static const Key kConfigKey_ServiceConfig = 0;
-  static const Key kConfigKey_PairedAccountId = 0;
-  static const Key kConfigKey_ServiceId = 0;
-  static const Key kConfigKey_FabricSecret = 0;
-  static const Key kConfigKey_GroupKeyIndex = 0;
-  static const Key kConfigKey_LastUsedEpochKeyId = 0;
-  static const Key kConfigKey_FailSafeArmed = 0;
-  static const Key kConfigKey_WiFiStationSecType = 0;
-  static const Key kConfigKey_OperationalDeviceId = 0;
-  static const Key kConfigKey_OperationalDeviceCert = 0;
-  static const Key kConfigKey_OperationalDeviceICACerts = 0;
-  static const Key kConfigKey_OperationalDevicePrivateKey = 0;
+  using Key = const char*;
+  static const Key kConfigKey_SerialNum;
+  static const Key kConfigKey_MfrDeviceId;
+  static const Key kConfigKey_MfrDeviceCert;
+  static const Key kConfigKey_MfrDeviceICACerts;
+  static const Key kConfigKey_MfrDevicePrivateKey;
+  static const Key kConfigKey_ProductRevision;
+  static const Key kConfigKey_ManufacturingDate;
+  static const Key kConfigKey_PairingCode;
+  static const Key kConfigKey_FabricId;
+  static const Key kConfigKey_ServiceConfig;
+  static const Key kConfigKey_PairedAccountId;
+  static const Key kConfigKey_ServiceId;
+  static const Key kConfigKey_FabricSecret;
+  static const Key kConfigKey_GroupKeyIndex;
+  static const Key kConfigKey_LastUsedEpochKeyId;
+  static const Key kConfigKey_FailSafeArmed;
+  static const Key kConfigKey_WiFiStationSecType;
+  static const Key kConfigKey_OperationalDeviceId;
+  static const Key kConfigKey_OperationalDeviceCert;
+  static const Key kConfigKey_OperationalDeviceICACerts;
+  static const Key kConfigKey_OperationalDevicePrivateKey;
 
   static WEAVE_ERROR Init(void);
 

@@ -8,35 +8,64 @@ import("//build/testing/environments.gni")
 
 group("tests") {
   testonly = true
-
-  public_deps = [
-    ":adaptation_tests"
-  ]
+  public_deps = [ ":adaptation_tests" ]
 }
 
 test_package("adaptation_tests") {
   tests = [
     {
+      name = "configuration_manager_unittests"
+    },
+    {
       name = "platform_manager_unittests"
+    },
+    {
+      name = "weave_config_manager_unittests"
     },
   ]
   deps = [
+    ":configuration_manager_unittests",
     ":platform_manager_unittests",
+    ":weave_config_manager_unittests",
   ]
 }
 
-executable("platform_manager_unittests") {
+executable("configuration_manager_unittests") {
   testonly = true
-  output_name = "platform_manager_unittests"
-  sources = [
-    "platform_manager_unittests.cpp",
-  ]
+  output_name = "configuration_manager_unittests"
+  sources = [ "configuration_manager_unittests.cpp" ]
   deps = [
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/connectivity/weave/adaptation",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
-    "//third_party/googletest:gmock",
+  ]
+}
+
+executable("platform_manager_unittests") {
+  testonly = true
+  output_name = "platform_manager_unittests"
+  sources = [ "platform_manager_unittests.cpp" ]
+  deps = [
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/connectivity/weave/adaptation",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("weave_config_manager_unittests") {
+  testonly = true
+  output_name = "weave_config_manager_unittests"
+  sources = [ "weave_config_manager_unittests.cpp" ]
+  deps = [
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/connectivity/weave/adaptation",
+    "//src/lib/files:files",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gtest",
   ]
 }

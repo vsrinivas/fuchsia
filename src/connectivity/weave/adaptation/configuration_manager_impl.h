@@ -4,6 +4,7 @@
 #ifndef SRC_CONNECTIVITY_WEAVE_ADAPTATION_CONFIGURATION_MANAGER_IMPL_H_
 #define SRC_CONNECTIVITY_WEAVE_ADAPTATION_CONFIGURATION_MANAGER_IMPL_H_
 
+#include <Weave/DeviceLayer/WeaveDeviceConfig.h>
 #include <Weave/DeviceLayer/internal/GenericConfigurationManagerImpl.h>
 
 #include "fuchsia_config.h"

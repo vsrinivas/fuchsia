@@ -59,7 +59,7 @@ ConfigurationManagerImpl::_GetGroupKeyStore() {
 
 bool ConfigurationManagerImpl::_CanFactoryReset() { return true; }
 
-void ConfigurationManagerImpl::_InitiateFactoryReset() {}
+void ConfigurationManagerImpl::_InitiateFactoryReset() { FuchsiaConfig::FactoryResetConfig(); }
 
 WEAVE_ERROR ConfigurationManagerImpl::_ReadPersistedStorageValue(
     ::nl::Weave::Platform::PersistedStorage::Key key, uint32_t& value) {

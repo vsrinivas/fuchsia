@@ -27,19 +27,25 @@ openweave_adaptation_layer("adaptation") {
     "software_update_manager_impl.h",
     "warm_platform_config.h",
     "warm_support.cpp",
+    "weave_config_manager.cpp",
+    "weave_config_manager.h",
     "weave_device_platform_config.h",
     "weave_device_platform_event.h",
   ]
+  deps = [ "//src/lib/syslog/cpp" ]
   public_configs = [ ":adaptation_config" ]
-  public_deps = [ "//third_party/openweave-core" ]
-  deps = [
-    "//src/lib/syslog/cpp",
+  public_deps = [
+    "//src/lib/files",
+    "//src/lib/json_parser",
+    "//third_party/modp_b64",
+    "//third_party/openweave-core",
   ]
 }
 
 config("adaptation_config") {
   include_dirs = [ "." ]
   defines = [
+    # Defines for the third-party layer headers.
     "EXTERNAL_BLEMANAGERIMPL_HEADER=\"ble_manager_impl.h\"",
     "EXTERNAL_CONFIGURATIONMANAGERIMPL_HEADER=\"configuration_manager_impl.h\"",
     "EXTERNAL_CONNECTIVITYMANAGERIMPL_HEADER=\"connectivity_manager_impl.h\"",
