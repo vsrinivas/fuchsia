@@ -121,7 +121,7 @@ class TestH264 {
     EXPECT_EQ(std::future_status::ready,
               first_wait_valid.get_future().wait_for(std::chrono::seconds(1)));
 
-    DLOG("After first wait: frame_count: %u\n", frame_count);
+    DLOG("After first wait: frame_count: %u", frame_count);
 
     if (use_parser) {
       EXPECT_EQ(ZX_OK, video->parser()->ParseVideo(larger_h264->ptr, larger_h264->size));
@@ -180,14 +180,14 @@ class TestH264 {
         if (frame_count == kFirstVideoFrameCount)
           wait_valid.set_value();
         if (return_frames_immediately) {
-          DLOG("Before ReturnFrame()\n");
+          DLOG("Before ReturnFrame()");
           // video->video_decoder_lock_ already held here
           ReturnFrame(video.get(), frame);
         } else {
-          DLOG("Before push_back()\n");
+          DLOG("Before push_back()");
           frames_to_return.push_back(frame);
         }
-        DLOG("Done with frame.\n");
+        DLOG("Done with frame.");
       });
     }
 
@@ -211,7 +211,7 @@ class TestH264 {
     zx_nanosleep(zx_deadline_after(ZX_SEC(1)));
 
     {
-      DLOG("Returning frames\n");
+      DLOG("Returning frames");
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       return_frames_immediately = true;
       for (auto frame : frames_to_return) {
@@ -219,7 +219,7 @@ class TestH264 {
       }
       frames_to_return.clear();
     }
-    DLOG("Done returning frames.\n");
+    DLOG("Done returning frames.");
     EXPECT_EQ(std::future_status::ready, wait_valid.get_future().wait_for(std::chrono::seconds(1)));
 
     stop_parsing = true;

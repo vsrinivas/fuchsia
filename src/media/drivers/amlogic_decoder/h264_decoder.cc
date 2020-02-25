@@ -320,14 +320,14 @@ zx_status_t H264Decoder::Initialize() {
   if (!WaitForRegister(std::chrono::milliseconds(100), [this]() {
         return !(DcacDmaCtrl::Get().ReadFrom(owner_->dosbus()).reg_value() & 0x8000);
       })) {
-    DECODE_ERROR("Waiting for DCAC DMA timed out\n");
+    DECODE_ERROR("Waiting for DCAC DMA timed out");
     return ZX_ERR_TIMED_OUT;
   }
 
   if (!WaitForRegister(std::chrono::milliseconds(100), [this]() {
         return !(LmemDmaCtrl::Get().ReadFrom(owner_->dosbus()).reg_value() & 0x8000);
       })) {
-    DECODE_ERROR("Waiting for LMEM DMA timed out\n");
+    DECODE_ERROR("Waiting for LMEM DMA timed out");
     return ZX_ERR_TIMED_OUT;
   }
 
@@ -425,7 +425,7 @@ void H264Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t cod
         &frame->buffer, owner_->bti()->get(),
         frames[i].codec_buffer_spec.data().vmo().vmo_handle().get(), 0, IO_BUFFER_RW);
     if (status != ZX_OK) {
-      DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d\n", status);
+      DECODE_ERROR("Failed to io_buffer_init_vmo() for frame - status: %d", status);
       OnFatalError();
       return;
     }
@@ -496,7 +496,7 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t min_frame_count, uint32_t max
   ::zx::bti duplicated_bti;
   zx_status_t dup_result = owner_->bti()->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicated_bti);
   if (dup_result != ZX_OK) {
-    DECODE_ERROR("Failed to duplicate BTI - status: %d\n", dup_result);
+    DECODE_ERROR("Failed to duplicate BTI - status: %d", dup_result);
     return dup_result;
   }
   zx_status_t initialize_result = client_->InitializeFrames(
@@ -504,7 +504,7 @@ zx_status_t H264Decoder::InitializeFrames(uint32_t min_frame_count, uint32_t max
       stride, display_width, display_height, has_sar, sar_width, sar_height);
   if (initialize_result != ZX_OK) {
     if (initialize_result != ZX_ERR_STOP) {
-      DECODE_ERROR("initialize_frames_handler_() failed - status: %d\n", initialize_result);
+      DECODE_ERROR("initialize_frames_handler_() failed - status: %d", initialize_result);
     }
     return initialize_result;
   }
@@ -559,7 +559,7 @@ zx_status_t H264Decoder::InitializeStream() {
   if (!mb_width && stream_info.total_mbs())
     mb_width = 256;
   if (!mb_width) {
-    DECODE_ERROR("Width is 0 macroblocks\n");
+    DECODE_ERROR("Width is 0 macroblocks");
     // Not returning ZX_ERR_IO_DATA_INTEGRITY, because this isn't an explicit
     // integrity check.
     return ZX_ERR_INTERNAL;
@@ -571,7 +571,7 @@ zx_status_t H264Decoder::InitializeStream() {
 
   if (mb_width > kMaxDimension / kMacroblockPixels ||
       mb_height > kMaxDimension / kMacroblockPixels) {
-    DECODE_ERROR("Unsupported dimensions %dx%d macroblocks\n", mb_width, mb_height);
+    DECODE_ERROR("Unsupported dimensions %dx%d macroblocks", mb_width, mb_height);
     return ZX_ERR_INTERNAL;
   }
 
@@ -721,7 +721,7 @@ zx_status_t H264Decoder::InitializeStream() {
                        display_height, has_sar, sar_width, sar_height);
   if (status != ZX_OK) {
     if (status != ZX_ERR_STOP) {
-      DECODE_ERROR("InitializeFrames() failed: status: %d\n", status);
+      DECODE_ERROR("InitializeFrames() failed: status: %d", status);
     }
     return status;
   }
@@ -826,7 +826,7 @@ void H264Decoder::HandleInterrupt() {
 
     case kCommandFatalError: {
       auto error_count = AvScratchD::Get().ReadFrom(owner_->dosbus()).reg_value();
-      DECODE_ERROR("Decoder fatal error %d\n", error_count);
+      DECODE_ERROR("Decoder fatal error %d", error_count);
       owner_->core()->StopDecoding();
       // We need to reset the hardware here or for some malformed hardware streams (e.g.
       // bear_h264[638] = 44) the CPU will hang when trying to isolate VDEC1 power on shutdown.
@@ -838,13 +838,13 @@ void H264Decoder::HandleInterrupt() {
 
     case kCommandGotFirstOffset: {
       uint32_t first_offset = AvScratch1::Get().ReadFrom(owner_->dosbus()).reg_value();
-      DLOG("First offset: %d\n", first_offset);
+      DLOG("First offset: %d", first_offset);
       AvScratch0::Get().FromValue(0).WriteTo(owner_->dosbus());
       break;
     }
 
     default:
-      DECODE_ERROR("Got unknown command: %d\n", cpu_command);
+      DECODE_ERROR("Got unknown command: %d", cpu_command);
   }
 
   auto sei_itu35_flags = AvScratchJ::Get().ReadFrom(owner_->dosbus()).reg_value();

@@ -50,7 +50,7 @@ std::vector<uint8_t> ConvertIvfToAmlV(const uint8_t* data, uint32_t length) {
     uint32_t frame_size = frame_header->size_bytes;
     uint32_t data_offset = offset + sizeof(IvfFrameHeader);
     if (data_offset + frame_size > length) {
-      DECODE_ERROR("Invalid IVF file, truncating\n");
+      DECODE_ERROR("Invalid IVF file, truncating");
       return output_vector;
     }
 
@@ -70,7 +70,7 @@ std::vector<FrameData> ConvertIvfToAmlVFrames(const uint8_t* data, uint32_t leng
     uint32_t frame_size = frame_header->size_bytes;
     uint32_t data_offset = offset + sizeof(IvfFrameHeader);
     if (data_offset + frame_size > length) {
-      DECODE_ERROR("Invalid IVF file, truncating\n");
+      DECODE_ERROR("Invalid IVF file, truncating");
       return output_vector;
     }
 
@@ -176,7 +176,7 @@ class TestVP9 {
                                     &frames_returned, delayed_return, filename,
                                     test_hashes](std::shared_ptr<VideoFrame> frame) {
         ++frame_count;
-        DLOG("Got frame %d\n", frame_count);
+        DLOG("Got frame %d", frame_count);
         EXPECT_EQ(320u, frame->display_width);
         EXPECT_EQ(240u, frame->display_height);
         (void)filename;
@@ -283,7 +283,7 @@ class TestVP9 {
       client.SetFrameReadyNotifier(
           [&video, &frame_count, &wait_valid, &next_pts](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
-            DLOG("Got frame %d, pts: %ld\n", frame_count, frame->pts);
+            DLOG("Got frame %d, pts: %ld", frame_count, frame->pts);
 #if DUMP_VIDEO_TO_FILE
             DumpVideoFrameToFile(frame, filename);
 #endif
@@ -359,7 +359,7 @@ class TestVP9 {
       client.SetFrameReadyNotifier(
           [&video, &frame_count, &wait_valid](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
-            DLOG("Got frame %d\n", frame_count);
+            DLOG("Got frame %d", frame_count);
 #if DUMP_VIDEO_TO_FILE
             DumpVideoFrameToFile(frame.get(), filename);
 #endif
@@ -465,8 +465,8 @@ class TestVP9 {
       clients[0]->SetFrameReadyNotifier(
           [&video, &frame_count, &wait_valid](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
-            DLOG("Got frame %d\n", frame_count);
-            DLOG("coded_width: %d, coded_height: %d\n", frame->coded_width, frame->coded_height);
+            DLOG("Got frame %d", frame_count);
+            DLOG("coded_width: %d, coded_height: %d", frame->coded_width, frame->coded_height);
 #if DUMP_VIDEO_TO_FILE
             DumpVideoFrameToFile(frame.get(), "/tmp/bearmulti1.yuv");
 #endif
@@ -485,7 +485,7 @@ class TestVP9 {
             // This is called from the interrupt handler, which already holds the lock.
             video->AssertVideoDecoderLockHeld();
             ++frame_count1;
-            DLOG("Decoder 2 Got frame %d\n", frame_count1);
+            DLOG("Decoder 2 Got frame %d", frame_count1);
             EXPECT_EQ(320u, frame->display_width);
             EXPECT_EQ(240u, frame->display_height);
 #if DUMP_VIDEO_TO_FILE
@@ -619,7 +619,7 @@ class TestVP9 {
       client.SetFrameReadyNotifier([&video, &frame_count](std::shared_ptr<VideoFrame> frame) {
         ++frame_count;
         DECODE_ERROR("Got frame %d", frame_count);
-        DLOG("Got frame %d\n", frame_count);
+        DLOG("Got frame %d", frame_count);
         EXPECT_EQ(320u, frame->display_width);
         EXPECT_EQ(240u, frame->display_height);
         ReturnFrame(video.get(), frame);

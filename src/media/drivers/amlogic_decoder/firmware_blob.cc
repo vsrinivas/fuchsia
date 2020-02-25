@@ -20,7 +20,7 @@ zx_status_t FirmwareBlob::LoadFirmware(zx_device_t* device) {
   zx_status_t status =
       load_firmware(device, "amlogic_video_ucode.bin", vmo_.reset_and_get_address(), &fw_size_);
   if (status != ZX_OK) {
-    DECODE_ERROR("Couldn't load amlogic firmware\n");
+    DECODE_ERROR("Couldn't load amlogic firmware");
     return status;
   }
 
@@ -63,7 +63,7 @@ zx_status_t FirmwareBlob::LoadFirmware(zx_device_t* device) {
   uint64_t offset = kSignatureSize + kPackageHeaderSize;
   while (offset < fw_size_) {
     if (offset + sizeof(PackageEntryHeader) > fw_size_) {
-      DECODE_ERROR("PackageHeader doesn't fit in data\n");
+      DECODE_ERROR("PackageHeader doesn't fit in data");
       return ZX_ERR_NO_MEMORY;
     }
 
@@ -72,18 +72,18 @@ zx_status_t FirmwareBlob::LoadFirmware(zx_device_t* device) {
     offset += sizeof(PackageEntryHeader);
     uint32_t package_length = header->data.length;
     if (offset + package_length > fw_size_) {
-      DECODE_ERROR("Package too long\n");
+      DECODE_ERROR("Package too long");
       return ZX_ERR_NO_MEMORY;
     }
     if (sizeof(FirmwareHeader) > package_length) {
-      DECODE_ERROR("FirmwareHeader doesn't fit in data %d\n", package_length);
+      DECODE_ERROR("FirmwareHeader doesn't fit in data %d", package_length);
       return ZX_ERR_NO_MEMORY;
     }
 
     FirmwareHeader* firmware_data = reinterpret_cast<FirmwareHeader*>(data + offset);
     uint32_t firmware_length = firmware_data->data.data_size;
     if (static_cast<uint64_t>(firmware_length) + sizeof(FirmwareHeader) > package_length) {
-      DECODE_ERROR("Firmware data doesn't fit in data %d %ld %d\n", firmware_length,
+      DECODE_ERROR("Firmware data doesn't fit in data %d %ld %d", firmware_length,
                    sizeof(FirmwareHeader), package_length);
       return ZX_ERR_NO_MEMORY;
     }
@@ -169,7 +169,7 @@ std::string FirmwareTypeToName(FirmwareBlob::FirmwareType type) {
     case FirmwareBlob::FirmwareType::kDec_Vc1_G12a:
       return "vc1_g12a";
     default:
-      LOG(ERROR, "Unrecognized firmware type: %d\n", type);
+      LOG(ERROR, "Unrecognized firmware type: %d", type);
       return "";
   }
 }
@@ -183,7 +183,7 @@ zx_status_t FirmwareBlob::GetFirmwareData(FirmwareType firmware_type, uint8_t** 
     return ZX_ERR_INVALID_ARGS;
   auto it = firmware_code_.find(format_name);
   if (it == firmware_code_.end()) {
-    DECODE_ERROR("Couldn't find firmware type: %d\n", firmware_type);
+    DECODE_ERROR("Couldn't find firmware type: %d", firmware_type);
     return ZX_ERR_INVALID_ARGS;
   }
   *data_out = reinterpret_cast<uint8_t*>(ptr_) + it->second.offset;

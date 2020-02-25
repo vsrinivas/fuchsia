@@ -176,10 +176,10 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
   //   * The FIDL events are set up within CodecClient's constructor before
   //     binding.
 
-  VLOGF("reading adts file...\n");
+  VLOGF("reading adts file...");
   size_t input_size;
   std::unique_ptr<uint8_t[]> input_bytes = read_whole_file(input_adts_file.c_str(), &input_size);
-  VLOGF("done reading adts file.\n");
+  VLOGF("done reading adts file.");
 
   codec_factory.set_error_handler([](zx_status_t status) {
     // TODO(dustingreen): get and print CodecFactory channel epitaph once that's
@@ -187,10 +187,10 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
     LOGF("codec_factory failed - unexpected\n");
   });
 
-  VLOGF("before make_AudioSpecificConfig_from_ADTS_header()...\n");
-  VLOGF("input_bytes->get(): %p\n", input_bytes.get());
+  VLOGF("before make_AudioSpecificConfig_from_ADTS_header()...");
+  VLOGF("input_bytes->get(): %p", input_bytes.get());
   std::unique_ptr<uint8_t[]> asc = make_AudioSpecificConfig_from_ADTS_header(&input_bytes);
-  VLOGF("after make_AudioSpecificConfig_from_ADTS_header()\n");
+  VLOGF("after make_AudioSpecificConfig_from_ADTS_header()");
   std::vector<uint8_t> asc_vector(2);
   for (int i = 0; i < 2; i++) {
     asc_vector[i] = asc[i];
@@ -220,15 +220,15 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
   // We let the CodecClient handle the creation of the CodecPtr, because the
   // loop is already running, and we want the error handler to be set up by
   // CodecClient in advance of the channel potentially being closed.
-  VLOGF("before CodecClient::CodecClient()...\n");
+  VLOGF("before CodecClient::CodecClient()...");
   CodecClient codec_client(&fidl_loop, fidl_thread, std::move(sysmem));
   async::PostTask(
       main_loop->dispatcher(), [&codec_factory, create_params = std::move(create_params),
                                 codec_client_request = codec_client.GetTheRequestOnce()]() mutable {
-        VLOGF("before codec_factory->CreateDecoder() (async)\n");
+        VLOGF("before codec_factory->CreateDecoder() (async)");
         codec_factory->CreateDecoder(std::move(create_params), std::move(codec_client_request));
       });
-  VLOGF("before codec_client.Start()...\n");
+  VLOGF("before codec_client.Start()...");
   // This does a Sync(), so after this we can drop the CodecFactory without it
   // potentially cancelling our Codec create.
   codec_client.Start();
@@ -270,7 +270,7 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
 
   // The captures here require the main thread to call in_thread->join() before
   // the captures go out of scope.
-  VLOGF("before starting in_thread...\n");
+  VLOGF("before starting in_thread...");
   std::unique_ptr<std::thread> in_thread = std::make_unique<std::thread>(
       [&codec_client, full_input_details = std::move(full_input_details), &input_bytes,
        input_size]() mutable {
@@ -379,7 +379,7 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
             "on any input");
       }
       if (output->end_of_stream()) {
-        VLOGF("output end_of_stream() - done with output\n");
+        VLOGF("output end_of_stream() - done with output");
         // Just "break;" would be more fragile under code modification.
         goto end_of_output;
       }
@@ -534,16 +534,16 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
 
   // First wait for the input thread to be done feeding input data.  Before the
   // in_thread terminates, it'll have sent in a last empty EOS input buffer.
-  VLOGF("before in_thread->join()...\n");
+  VLOGF("before in_thread->join()...");
   in_thread->join();
-  VLOGF("after in_thread->join()\n");
+  VLOGF("after in_thread->join()");
 
   // The EOS queued as an input buffer should cause the codec to output an EOS
   // output buffer, at which point out_thread should terminate, after it has
   // finalized the output WAV file.
-  VLOGF("before out_thread->join()...\n");
+  VLOGF("before out_thread->join()...");
   out_thread->join();
-  VLOGF("after out_thread->join()\n");
+  VLOGF("after out_thread->join()");
 
   // Because CodecClient posted work to the loop which captured the CodecClient
   // as "this", it's important that we ensure that all such work is done trying
@@ -568,25 +568,25 @@ void use_aac_decoder(async::Loop* main_loop, fuchsia::mediacodec::CodecFactoryPt
   // of expected normal channel closure (or loop.Shutdown()) in any code that
   // runs on the loop.  This way, unexpected channel failure is the only case to
   // worry about.
-  VLOGF("before loop.Quit()\n");
+  VLOGF("before loop.Quit()");
   fidl_loop.Quit();
-  VLOGF("before loop.JoinThreads()...\n");
+  VLOGF("before loop.JoinThreads()...");
   fidl_loop.JoinThreads();
-  VLOGF("after loop.JoinThreads()\n");
+  VLOGF("after loop.JoinThreads()");
 
   // Close the channel explicitly (just so we can more easily print messages
   // before and after vs. ~codec_client).
-  VLOGF("before codec_client stop...\n");
+  VLOGF("before codec_client stop...");
   codec_client.Stop();
-  VLOGF("after codec_client stop.\n");
+  VLOGF("after codec_client stop.");
 
   // loop.Shutdown() the rest of the way explicitly (just so we can more easily
   // print messages before and after vs. ~loop).  If we did this before
   // codec_client.Stop() it would cause the channel bindings to fail because
   // async waits are failed as cancelled during Shutdown().
-  VLOGF("before loop.Shutdown()...\n");
+  VLOGF("before loop.Shutdown()...");
   fidl_loop.Shutdown();
-  VLOGF("after loop.Shutdown()\n");
+  VLOGF("after loop.Shutdown()");
 
   // The FIDL loop isn't running any more and the channels are closed.  There
   // are no other threads left that were started by this function.  We can just

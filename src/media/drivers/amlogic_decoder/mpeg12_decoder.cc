@@ -173,7 +173,7 @@ void Mpeg12Decoder::HandleInterrupt() {
   TryReturnFrames();
 
   if (AvScratchM::Get().ReadFrom(owner_->dosbus()).reg_value() & (1 << 16)) {
-    DLOG("ccbuf has new data\n");
+    DLOG("ccbuf has new data");
   }
 }
 
@@ -207,7 +207,7 @@ zx_status_t Mpeg12Decoder::InitializeVideoBuffers() {
     zx_status_t status = io_buffer_init(&frame->buffer, owner_->bti()->get(), buffer_size,
                                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK) {
-      DECODE_ERROR("Failed to make frame: %d\n", status);
+      DECODE_ERROR("Failed to make frame: %d", status);
       return status;
     }
 
@@ -220,7 +220,7 @@ zx_status_t Mpeg12Decoder::InitializeVideoBuffers() {
     auto uv_canvas = owner_->ConfigureCanvas(&frame->buffer, frame->uv_plane_offset, frame->stride,
                                              kMaxHeight / 2, 0, 0);
     if (!y_canvas || !uv_canvas) {
-      DECODE_ERROR("Failed to allocate canvases\n");
+      DECODE_ERROR("Failed to allocate canvases");
       return ZX_ERR_NO_MEMORY;
     }
     AvScratch::Get(i)

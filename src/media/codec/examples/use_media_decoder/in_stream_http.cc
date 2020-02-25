@@ -15,6 +15,8 @@
 #include "src/lib/fxl/logging.h"
 #include "util.h"
 
+#include <stdio.h>
+
 namespace {
 
 // To date, likely ignored.  For now the MD5 hashing seems to be the bottleneck,
@@ -50,7 +52,7 @@ InStreamHttp::InStreamHttp(async::Loop* fidl_loop, thrd_t fidl_thread,
   url_request.auto_follow_redirects = true;
   url_request.cache_mode = fuchsia::net::oldhttp::CacheMode::BYPASS_CACHE;
 
-  fuchsia::net::oldhttp::URLResponse response;
+  fuchsia::net::oldhttp::URLResponse response{};
   OneShotEvent have_response_event;
 
   PostToFidlSerial(
@@ -63,6 +65,11 @@ InStreamHttp::InStreamHttp(async::Loop* fidl_loop, thrd_t fidl_thread,
             });
       });
   have_response_event.Wait(zx::deadline_after(zx::sec(30)));
+
+  if (response.error) {
+    fprintf(stderr, "*response.error: %d - %s\n",
+        response.error->code, response.error->description->c_str());
+  }
 
   ZX_ASSERT_MSG(!response.error, "http response has error");
   ZX_ASSERT_MSG(response.body, "http response missing body");

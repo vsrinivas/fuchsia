@@ -50,7 +50,7 @@ class TestFrameAllocator : public TestBasicClient {
         zx_status_t vmo_create_result =
             zx::vmo::create_contiguous(bti, frame_vmo_bytes, 0, &frame_vmo);
         if (vmo_create_result != ZX_OK) {
-          DECODE_ERROR("zx_vmo_create_contiguous failed - status: %d\n", vmo_create_result);
+          DECODE_ERROR("zx_vmo_create_contiguous failed - status: %d", vmo_create_result);
           return;
         }
         fuchsia::media::StreamBufferData codec_buffer_data;

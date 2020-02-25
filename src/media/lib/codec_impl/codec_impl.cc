@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/defer.h>
 #include <lib/media/codec_impl/codec_impl.h>
+#include <lib/media/codec_impl/log.h>
 #include <threads.h>
 
 #include <fbl/macros.h>
@@ -20,25 +21,6 @@
 // ZX_HANDLE_INVALID to zx_channel_write(), since the channel error handling is
 // async (we Unbind(), sweep the in-proc send queue, and only then delete the
 // Binding).
-
-#define VLOG_ENABLED 0
-
-#if (VLOG_ENABLED)
-#define VLOGF(format, ...) LOGF(format, ##__VA_ARGS__)
-#else
-#define VLOGF(...) \
-  do {             \
-  } while (0)
-#endif
-
-#define LOGF(format, ...) \
-  printf("[%s:%s:%d] " format "\n", "codec_impl", __func__, __LINE__, ##__VA_ARGS__)
-
-// Temporary solution for logging in driver and non-driver contexts by logging to stderr
-// TODO(41539): Replace with logging interface that accommodates both driver and non-driver contexts
-#define LOG(severity, format, ...)      \
-  if (FX_LOG_##severity >= FX_LOG_INFO) \
-  fprintf(stderr, "[%s:%s:%d]" format "\n", "codec_impl", __func__, __LINE__, ##__VA_ARGS__)
 
 namespace {
 
@@ -357,7 +339,7 @@ void CodecImpl::SetInputBufferSettingsCommon(
 
 void CodecImpl::SetOutputBufferSettings(fuchsia::media::StreamBufferSettings output_settings) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
-  VLOGF("CodecImpl::SetOutputBufferSettings\n");
+  VLOGF("CodecImpl::SetOutputBufferSettings");
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     SetOutputBufferSettingsCommon(lock, &output_settings, nullptr);
@@ -421,7 +403,7 @@ void CodecImpl::AddOutputBufferInternal(bool is_client, fuchsia::media::StreamBu
 void CodecImpl::SetOutputBufferPartialSettings(
     fuchsia::media::StreamBufferPartialSettings output_partial_settings) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
-  VLOGF("CodecImpl::SetOutputBufferPartialSettings\n");
+  VLOGF("CodecImpl::SetOutputBufferPartialSettings");
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     if (!sysmem_) {
@@ -2754,13 +2736,13 @@ void CodecImpl::GenerateAndSendNewOutputConstraints(std::unique_lock<std::mutex>
 
 void CodecImpl::MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordinal) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
-  VLOGF("CodecImpl::MidStreamOutputConstraintsChange - stream: %lu\n", stream_lifetime_ordinal);
+  VLOGF("CodecImpl::MidStreamOutputConstraintsChange - stream: %lu", stream_lifetime_ordinal);
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     if (stream_lifetime_ordinal < stream_lifetime_ordinal_) {
       // ignore; The omx_meh_output_buffer_constraints_version_ordinal_ took
       // care of it.
-      VLOGF("CodecImpl::MidStreamOutputConstraintsChange - stale stream\n");
+      VLOGF("CodecImpl::MidStreamOutputConstraintsChange - stale stream");
       return;
     }
     ZX_DEBUG_ASSERT(stream_lifetime_ordinal == stream_lifetime_ordinal_);
@@ -2788,7 +2770,7 @@ void CodecImpl::MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordina
     }
 
     if (IsStoppingLocked()) {
-      VLOGF("CodecImpl::MidStreamOutputConstraintsChange IsStoppingLocked()\n");
+      VLOGF("CodecImpl::MidStreamOutputConstraintsChange IsStoppingLocked()");
       return;
     }
 
@@ -2797,7 +2779,7 @@ void CodecImpl::MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordina
       // core_codec_meh_output_buffer_constraints_version_ordinal_ is still set
       // such that the client will be forced to re-configure output buffers at
       // the start of the new stream.
-      VLOGF("CodecImpl::MidStreamOutputConstraintsChange future_discarded()\n");
+      VLOGF("CodecImpl::MidStreamOutputConstraintsChange future_discarded()");
       return;
     }
 
@@ -2807,7 +2789,7 @@ void CodecImpl::MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordina
 
   CoreCodecMidStreamOutputBufferReConfigFinish();
 
-  VLOGF("Done with mid-stream format change.\n");
+  VLOGF("Done with mid-stream format change.");
 }
 
 // TODO(dustingreen): Consider whether we ever intend to plumb anything coming from the core codec
@@ -3277,7 +3259,7 @@ void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
     // This failure is async, in the sense that the client may still be sending
     // input data, and the core codec is expected to just hold onto those
     // packets until the client has moved on from this stream.
-    fprintf(stderr, "onStreamFailed() - stream_lifetime_ordinal_: %lu\n", stream_lifetime_ordinal_);
+    LOG(ERROR, "onStreamFailed() - stream_lifetime_ordinal_: %lu error code: 0x%08x", stream_lifetime_ordinal_, error);
     if (!is_on_stream_failed_enabled_) {
       FailLocked(
           "onStreamFailed() with a client that didn't send "
@@ -3297,8 +3279,7 @@ void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
 }
 
 void CodecImpl::onCoreCodecMidStreamOutputConstraintsChange(bool output_re_config_required) {
-  VLOGF("CodecImpl::onCoreCodecMidStreamOutputConstraintsChange(): %d\n",
-        output_re_config_required);
+  VLOGF("CodecImpl::onCoreCodecMidStreamOutputConstraintsChange(): %d", output_re_config_required);
   // For now, the core codec thread is the only thread this gets called from.
   ZX_DEBUG_ASSERT(IsPotentiallyCoreCodecThread());
 
@@ -3508,7 +3489,7 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet, bool error_detected
 }
 
 void CodecImpl::onCoreCodecOutputEndOfStream(bool error_detected_before) {
-  VLOGF("CodecImpl::onCoreCodecOutputEndOfStream()\n");
+  VLOGF("CodecImpl::onCoreCodecOutputEndOfStream()");
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     ZX_DEBUG_ASSERT(IsStreamActiveLocked());
@@ -3547,7 +3528,7 @@ void CodecImpl::Stream::SetFutureFlushEndOfStream() {
 bool CodecImpl::Stream::future_flush_end_of_stream() { return future_flush_end_of_stream_; }
 
 CodecImpl::Stream::~Stream() {
-  VLOGF("~Stream() stream_lifetime_ordinal: %lu\n", stream_lifetime_ordinal_);
+  VLOGF("~Stream() stream_lifetime_ordinal: %lu", stream_lifetime_ordinal_);
 }
 
 void CodecImpl::Stream::SetInputFormatDetails(

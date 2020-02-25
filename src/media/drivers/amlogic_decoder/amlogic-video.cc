@@ -177,7 +177,7 @@ void AmlogicVideo::ClearDecoderInstance() {
 }
 
 void AmlogicVideo::RemoveDecoder(VideoDecoder* decoder) {
-  DLOG("Removing decoder: %p\n", decoder);
+  DLOG("Removing decoder: %p", decoder);
   std::lock_guard<std::mutex> lock(video_decoder_lock_);
   if (current_instance_ && current_instance_->decoder() == decoder) {
     current_instance_.reset();
@@ -304,13 +304,13 @@ std::unique_ptr<CanvasEntry> AmlogicVideo::ConfigureCanvas(io_buffer_t* io_buffe
   zx::vmo dup_vmo;
   zx_status_t status = vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
   if (status != ZX_OK) {
-    DECODE_ERROR("Failed to duplicate handle, status: %d\n", status);
+    DECODE_ERROR("Failed to duplicate handle, status: %d", status);
     return nullptr;
   }
   uint8_t idx;
   status = amlogic_canvas_config(&canvas_, dup_vmo.release(), offset, &info, &idx);
   if (status != ZX_OK) {
-    DECODE_ERROR("Failed to configure canvas, status: %d\n", status);
+    DECODE_ERROR("Failed to configure canvas, status: %d", status);
     return nullptr;
   }
 
@@ -382,7 +382,7 @@ zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(const void* data, uint32_
   uint32_t available_space = GetStreamBufferEmptySpaceAfterOffset(write_offset);
   if (!written_out) {
     if (len > available_space) {
-      DECODE_ERROR("Video too large\n");
+      DECODE_ERROR("Video too large");
       return ZX_ERR_OUT_OF_RANGE;
     }
   } else {
@@ -440,14 +440,14 @@ void AmlogicVideo::SwapOutCurrentInstance() {
 }
 
 void AmlogicVideo::TryToReschedule() {
-  DLOG("AmlogicVideo::TryToReschedule\n");
+  DLOG("AmlogicVideo::TryToReschedule");
   if (swapped_out_instances_.size() == 0) {
-    DLOG("Nothing swapped out; returning\n");
+    DLOG("Nothing swapped out; returning");
     return;
   }
 
   if (current_instance_ && !current_instance_->decoder()->CanBeSwappedOut()) {
-    DLOG("Current instance can't be swapped out\n");
+    DLOG("Current instance can't be swapped out");
     return;
   }
 
@@ -460,7 +460,7 @@ void AmlogicVideo::TryToReschedule() {
     }
   }
   if (other_instance == swapped_out_instances_.end()) {
-    DLOG("nothing to swap to\n");
+    DLOG("nothing to swap to");
     return;
   }
   ZX_ASSERT(!watchdog_.is_running());
@@ -477,13 +477,13 @@ void AmlogicVideo::SwapInCurrentInstance() {
 
   core_ = current_instance_->core();
   video_decoder_ = current_instance_->decoder();
-  DLOG("Swapping in %p\n", video_decoder_);
+  DLOG("Swapping in %p", video_decoder_);
   stream_buffer_ = current_instance_->stream_buffer();
   core()->PowerOn();
   zx_status_t status = video_decoder_->InitializeHardware();
   if (status != ZX_OK) {
     // Probably failed to load the right firmware.
-    DECODE_ERROR("Failed to initialize hardware: %d\n", status);
+    DECODE_ERROR("Failed to initialize hardware: %d", status);
     core_->PowerOff();
     core_ = nullptr;
     swapped_out_instances_.push_back(std::move(current_instance_));
@@ -659,7 +659,7 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   composite_protocol_t composite;
   auto status = device_get_protocol(parent, ZX_PROTOCOL_COMPOSITE, &composite);
   if (status != ZX_OK) {
-    DECODE_ERROR("Could not get composite protocol\n");
+    DECODE_ERROR("Could not get composite protocol");
     return status;
   }
 
@@ -667,7 +667,7 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   size_t actual;
   composite_get_components(&composite, components, countof(components), &actual);
   if (actual < kMinComponentCount || actual > kMaxComponentCount) {
-    DECODE_ERROR("could not get components\n");
+    DECODE_ERROR("could not get components");
     return ZX_ERR_NOT_SUPPORTED;
   }
   // If tee is available as a component, we require that we can get ZX_PROTOCOL_TEE.  It'd be nice
@@ -677,19 +677,19 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
 
   status = device_get_protocol(components[kComponentPdev], ZX_PROTOCOL_PDEV, &pdev_);
   if (status != ZX_OK) {
-    DECODE_ERROR("Failed to get pdev protocol\n");
+    DECODE_ERROR("Failed to get pdev protocol");
     return ZX_ERR_NO_MEMORY;
   }
 
   status = device_get_protocol(components[kComponentSysmem], ZX_PROTOCOL_SYSMEM, &sysmem_);
   if (status != ZX_OK) {
-    DECODE_ERROR("Could not get SYSMEM protocol\n");
+    DECODE_ERROR("Could not get SYSMEM protocol");
     return status;
   }
 
   status = device_get_protocol(components[kComponentCanvas], ZX_PROTOCOL_AMLOGIC_CANVAS, &canvas_);
   if (status != ZX_OK) {
-    DECODE_ERROR("Could not get video CANVAS protocol\n");
+    DECODE_ERROR("Could not get video CANVAS protocol");
     return status;
   }
 
@@ -731,7 +731,7 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
       device_type_ = DeviceType::kG12B;
       break;
     default:
-      DECODE_ERROR("Unknown soc pid: %d\n", info.pid);
+      DECODE_ERROR("Unknown soc pid: %d", info.pid);
       return ZX_ERR_INVALID_ARGS;
   }
 

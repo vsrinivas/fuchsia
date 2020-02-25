@@ -111,7 +111,7 @@ zx_status_t Parser::InitializeEsParser(DecoderInstance* instance) {
   // called from CodecImpl (indirectly via a CodecAdapter).
   if (!parser_interrupt_thread_.joinable()) {
     parser_interrupt_thread_ = std::thread([this]() {
-      DLOG("Starting parser thread\n");
+      DLOG("Starting parser thread");
       while (true) {
         zx_time_t time;
         zx_status_t zx_status = zx_interrupt_wait(interrupt_handle_.get(), &time);
@@ -127,7 +127,7 @@ zx_status_t Parser::InitializeEsParser(DecoderInstance* instance) {
         auto status = ParserIntStatus::Get().ReadFrom(owner_->mmio()->parser);
         // Clear interrupt.
         status.WriteTo(owner_->mmio()->parser);
-        DLOG("Got Parser interrupt status %x\n", status.reg_value());
+        DLOG("Got Parser interrupt status %x", status.reg_value());
         if (status.start_code_found()) {
           PfifoRdPtr::Get().FromValue(0).WriteTo(owner_->mmio()->parser);
           PfifoWrPtr::Get().FromValue(0).WriteTo(owner_->mmio()->parser);
@@ -336,7 +336,7 @@ void Parser::CancelParsing() {
   }
   assert(!owner_->is_parser_gated());
 
-  DECODE_ERROR("Parser cancelled\n");
+  DECODE_ERROR("Parser cancelled");
   parser_running_ = false;
 
   ParserFetchCmd::Get().FromValue(0).WriteTo(owner_->mmio()->parser);

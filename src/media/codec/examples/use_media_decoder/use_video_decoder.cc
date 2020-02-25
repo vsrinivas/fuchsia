@@ -368,9 +368,9 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputC
 }
 
 static void use_video_decoder(Format format, UseVideoDecoderParams params) {
-  VLOGF("use_video_decoder()\n");
+  VLOGF("use_video_decoder()");
 
-  VLOGF("before CodecClient::CodecClient()...\n");
+  VLOGF("before CodecClient::CodecClient()...");
   CodecClient codec_client(params.fidl_loop, params.fidl_thread, std::move(params.sysmem));
   // no effect if 0
   codec_client.SetMinOutputBufferSize(params.min_output_buffer_size);
@@ -394,7 +394,7 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
   async::PostTask(
       params.fidl_loop->dispatcher(),
       [&params, codec_client_request = codec_client.GetTheRequestOnce(), mime_type]() mutable {
-        VLOGF("before codec_factory->CreateDecoder() (async)\n");
+        VLOGF("before codec_factory->CreateDecoder() (async)");
         fuchsia::media::FormatDetails input_details;
         input_details.set_format_details_version_ordinal(0);
         input_details.set_mime_type(mime_type);
@@ -415,7 +415,7 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
                                             std::move(codec_client_request));
       });
 
-  VLOGF("before codec_client.Start()...\n");
+  VLOGF("before codec_client.Start()...");
   // This does a Sync(), so after this we can drop the CodecFactory without it
   // potentially cancelling our Codec create.
   codec_client.Start();
@@ -436,7 +436,7 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
   });
   unbind_done_event.Wait();
 
-  VLOGF("before starting in_thread...\n");
+  VLOGF("before starting in_thread...");
   std::unique_ptr<std::thread> in_thread = std::make_unique<std::thread>(
       [&codec_client, in_stream = params.in_stream, format, copier = params.input_copier]() {
         VLOGF("in_thread start");
@@ -479,7 +479,7 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
             "on any input");
       }
       if (output->end_of_stream()) {
-        VLOGF("output end_of_stream() - done with output\n");
+        VLOGF("output end_of_stream() - done with output");
         // Just "break;" would be more fragile under code modification.
         goto end_of_output;
       }
@@ -569,7 +569,7 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
             size_t total_size = raw->secondary_start_offset +
                                 raw->primary_height_pixels / 2 * raw->primary_line_stride_bytes;
             if (packet.valid_length_bytes() < total_size) {
-              Exit("packet.valid_length_bytes < total_size");
+              Exit("packet.valid_length_bytes < total_size (1) - valid_length_bytes: %u total_size: %lu", packet.valid_length_bytes(), total_size);
             }
             break;
           }
@@ -580,7 +580,7 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
             size_t total_size = y_size + u_size + v_size;
 
             if (packet.valid_length_bytes() < total_size) {
-              Exit("packet.valid_length_bytes < total_size");
+              Exit("packet.valid_length_bytes < total_size (2)");
             }
 
             if (raw->secondary_start_offset < y_size) {
@@ -707,16 +707,16 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
 
   // First wait for the input thread to be done feeding input data.  Before the
   // in_thread terminates, it'll have sent in a last empty EOS input buffer.
-  VLOGF("before in_thread->join()...\n");
+  VLOGF("before in_thread->join()...");
   in_thread->join();
-  VLOGF("after in_thread->join()\n");
+  VLOGF("after in_thread->join()");
 
   // The EOS queued as an input buffer should cause the codec to output an EOS
   // output buffer, at which point out_thread should terminate, after it has
   // finalized the output file.
-  VLOGF("before out_thread->join()...\n");
+  VLOGF("before out_thread->join()...");
   out_thread->join();
-  VLOGF("after out_thread->join()\n");
+  VLOGF("after out_thread->join()");
 
   // We wait for frame_sink to return all the frames for these reasons:
   //   * As of this writing, some noisy-in-the-log things can happen in Scenic
@@ -749,9 +749,9 @@ static void use_video_decoder(Format format, UseVideoDecoderParams params) {
 
   // Close the channels explicitly (just so we can more easily print messages
   // before and after vs. ~codec_client).
-  VLOGF("before codec_client stop...\n");
+  VLOGF("before codec_client stop...");
   codec_client.Stop();
-  VLOGF("after codec_client stop.\n");
+  VLOGF("after codec_client stop.");
 
   // success
   // ~codec_client

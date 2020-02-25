@@ -56,7 +56,7 @@ std::unique_ptr<uint8_t[]> read_whole_file(const char* filename, size_t* size) {
   if (input_size == -1) {
     Exit("file.tellg() failed");
   }
-  VLOGF("file size is: %lld\n", static_cast<long long>(input_size));
+  VLOGF("file size is: %lld", static_cast<long long>(input_size));
   std::unique_ptr<uint8_t[]> raw_adts = std::make_unique<uint8_t[]>(input_size);
   file.seekg(0, std::ios::beg);
   if (!file) {

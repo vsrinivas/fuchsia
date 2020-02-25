@@ -148,7 +148,7 @@ void AmlogicSecureMemDevice::DdkSuspendNew(ddk::SuspendTxn txn) {
     }
   }
 
-  LOG(TRACE, "aml-securemem: end DdkSuspend()\n");
+  LOG(TRACE, "aml-securemem: end DdkSuspend()");
   txn.Reply(ZX_OK, txn.requested_state());
 }
 
