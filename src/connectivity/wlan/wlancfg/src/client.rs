@@ -760,6 +760,7 @@ mod tests {
         assert_eq!(None, exec.wake_next_timer());
 
         // Network should be saved as known since we connected successfully
+        assert_eq!(1, saved_networks.lookup(manual_connect_id.clone()).len());
         let cfg = NetworkConfig::new(
             manual_connect_id.clone(),
             Credential::Password(manual_connect_password.to_vec()),

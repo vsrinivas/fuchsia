@@ -225,6 +225,7 @@ impl SavedNetworksManager {
                 }
             }
         }
+
         // Will not reach here if we find the saved network with matching SSID and credential.
         info!(
             "Failed finding network ({},{:?}) to record success.",
@@ -263,7 +264,7 @@ fn evict_if_needed(configs: &mut Vec<NetworkConfig>) {
 mod tests {
     use {
         super::*,
-        crate::network_config::{NetworkConfig, PerformanceStats, SecurityType},
+        crate::network_config::{PerformanceStats, SecurityType},
         fuchsia_async as fasync,
         std::{io::Write, mem},
         tempfile::TempDir,
@@ -499,7 +500,6 @@ mod tests {
                 .expect("failed to create saved networks store");
         // KnownEssStore deletes the file if it can't read it, as in this case.
         assert!(!path.exists());
-
         // Writing an entry should not create the file yet because networks configs don't persist.
         assert_eq!(0, saved_networks.known_network_count());
         let network_id = NetworkIdentifier::new(b"foo".to_vec(), SecurityType::Wpa2);

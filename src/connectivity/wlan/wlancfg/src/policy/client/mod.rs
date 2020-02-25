@@ -239,7 +239,30 @@ async fn handle_client_requests(
                     }
                 }
             }
-            unsupported => error!("unsupported request: {:?}", unsupported),
+            fidl_policy::ClientControllerRequest::StartClientConnections { responder } => {
+                let status = handle_client_request_start_connections();
+                responder.send(status)?;
+            }
+            fidl_policy::ClientControllerRequest::StopClientConnections { responder } => {
+                let status = handle_client_request_stop_connections();
+                responder.send(status)?;
+            }
+            fidl_policy::ClientControllerRequest::ScanForNetworks { iterator, .. } => {
+                handle_client_request_scan(iterator).await?;
+            }
+            fidl_policy::ClientControllerRequest::SaveNetwork { config, responder } => {
+                let mut err =
+                    handle_client_request_save_network(Arc::clone(&saved_networks), config);
+                responder.send(&mut err)?;
+            }
+            fidl_policy::ClientControllerRequest::RemoveNetwork { config, responder } => {
+                let mut err =
+                    handle_client_request_remove_network(Arc::clone(&saved_networks), config);
+                responder.send(&mut err)?;
+            }
+            fidl_policy::ClientControllerRequest::GetSavedNetworks { iterator, .. } => {
+                handle_client_request_get_networks(Arc::clone(&saved_networks), iterator).await?;
+            }
         }
     }
     Ok(())
@@ -328,6 +351,82 @@ async fn handle_client_request_connect(
     Ok((network_config.credential, local))
 }
 
+/// This is not yet implemented and just returns that request is not supported
+fn handle_client_request_start_connections() -> fidl_common::RequestStatus {
+    fidl_common::RequestStatus::RejectedNotSupported
+}
+
+/// This is not yet implemented and just returns that the request is not supported
+fn handle_client_request_stop_connections() -> fidl_common::RequestStatus {
+    fidl_common::RequestStatus::RejectedNotSupported
+}
+
+/// Respond to a scan request, returning results through the given iterator.
+/// This function is not yet implemented and just sends back that there was an error.
+async fn handle_client_request_scan(
+    iterator: fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>,
+) -> Result<(), fidl::Error> {
+    // for now instead of getting scan results, just return a general error
+    // TODO(44878) implement this method: perform a scan and return the results (networks or error)
+    let scan_results = Err(fidl_policy::ScanErrorCode::GeneralError);
+
+    // wait to get a request for a chunk of scan results, so we can respond to it with an error
+    let mut stream = iterator.into_stream()?;
+
+    if let Some(req) = stream.try_next().await? {
+        let fidl_policy::ScanResultIteratorRequest::GetNext { responder } = req;
+        let mut next_result = scan_results;
+        responder.send(&mut next_result)?;
+    } else {
+        // This will happen if the iterator request stream was closed and we expected to send
+        // another response.
+        // TODO(45113) Test this error path
+        info!("Info: peer closed channel for scan results unexpectedly");
+    }
+    Ok(())
+}
+
+/// This function handles requests to save a network by saving the network and sending back to the
+/// controller whether or not we successfully saved the network. There could be a fidl error in
+/// sending the response.
+/// Currently this just tries to respond with a general error, it is not yet implemented.
+fn handle_client_request_save_network(
+    mut _saved_networks: SavedNetworksPtr,
+    _network_config: fidl_policy::NetworkConfig,
+) -> Result<(), fidl_policy::NetworkConfigChangeError> {
+    Err(fidl_policy::NetworkConfigChangeError::GeneralError)
+}
+
+/// Will remove the specified network and respond to the remove network request with a network
+/// config change error if an error occurs while trying to remove the network.
+fn handle_client_request_remove_network(
+    mut _saved_networks: SavedNetworksPtr,
+    _config: fidl_policy::NetworkConfig,
+) -> Result<(), fidl_policy::NetworkConfigChangeError> {
+    // method is not yet implemented, respond with a general network config error
+    Err(fidl_policy::NetworkConfigChangeError::GeneralError)
+}
+
+/// For now, instead of giving actual results simply give nothing.
+async fn handle_client_request_get_networks(
+    _saved_networks: SavedNetworksPtr,
+    iterator: fidl::endpoints::ServerEnd<fidl_policy::NetworkConfigIteratorMarker>,
+) -> Result<(), fidl::Error> {
+    let mut stream = iterator.into_stream()?;
+    if let Some(req) = stream.try_next().await? {
+        let fidl_policy::NetworkConfigIteratorRequest::GetNext { responder } = req;
+        let networks: Vec<fidl_policy::NetworkConfig> = vec![];
+        responder.send(&mut networks.into_iter())?;
+    } else {
+        // This will happen if the iterator request stream was closed and we expected to send
+        // another response.
+        // TODO(45113) Test this error path
+        info!("Info: peer closed channel for get saved networks results unexpectedly");
+    }
+    Ok(())
+}
+
+/// convert from policy fidl Credential to sme fidl Credential
 pub fn sme_credential_from_policy(cred: &Credential) -> fidl_sme::Credential {
     match cred {
         Credential::Password(pwd) => fidl_sme::Credential::Password(pwd.clone()),
@@ -437,27 +536,56 @@ mod tests {
         )
     }
 
-    #[test]
-    fn connect_request_unknown_network() {
-        let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let stash_id = "connect_request_unknown_network";
+    struct TestValues {
+        saved_networks: SavedNetworksPtr,
+        provider: fidl_policy::ClientProviderProxy,
+        requests: fidl_policy::ClientProviderRequestStream,
+        client: ClientPtr,
+        sme_stream: fidl_sme::ClientSmeRequestStream,
+        update_sender: mpsc::UnboundedSender<listener::Message>,
+        listener_updates: mpsc::UnboundedReceiver<listener::Message>,
+    }
+
+    // setup channels and proxies needed for the tests to use use the Client Provider and
+    // Client Controller APIs in tests. The stash id should be the test name so that each
+    // test will have a unique persistent store behind it.
+    fn test_setup(stash_id: impl AsRef<str>, exec: &mut fasync::Executor) -> TestValues {
         let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
 
-        let (client, _sme_stream) = create_client();
-        let (update_sender, _listener_updates) = mpsc::unbounded();
-        let serve_fut =
-            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
+        let (client, sme_stream) = create_client();
+        let (update_sender, listener_updates) = mpsc::unbounded();
+        TestValues {
+            saved_networks,
+            provider,
+            requests,
+            client,
+            sme_stream,
+            update_sender,
+            listener_updates,
+        }
+    }
+
+    #[test]
+    fn connect_request_unknown_network() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup("connect_request_unknown_network", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            Arc::clone(&test_values.saved_networks),
+            test_values.requests,
+        );
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Request a new controller.
-        let (controller, _) = request_controller(&provider);
+        let (controller, _) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Issue connect request.
@@ -476,7 +604,8 @@ mod tests {
 
         // unknown network should not have been saved by saved networks manager
         // since we did not successfully connect
-        assert!(saved_networks
+        assert!(test_values
+            .saved_networks
             .lookup(NetworkIdentifier::new(b"foobar-unknown".to_vec(), SecurityType::None))
             .is_empty());
     }
@@ -484,24 +613,21 @@ mod tests {
     #[test]
     fn connect_request_open_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let stash_id = "connect_request_open_network";
-        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
 
-        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
-            .expect("failed to create ClientProvider proxy");
-        let requests = requests.into_stream().expect("failed to create stream");
-
-        let (client, mut sme_stream) = create_client();
-        let (update_sender, _listener_updates) = mpsc::unbounded();
-        let serve_fut =
-            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
+        let mut test_values = test_setup("connect_request_open_network", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            Arc::clone(&test_values.saved_networks),
+            test_values.requests,
+        );
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Request a new controller.
-        let (controller, _update_stream) = request_controller(&provider);
+        let (controller, _update_stream) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Issue connect request.
@@ -519,7 +645,7 @@ mod tests {
         );
 
         assert_variant!(
-            exec.run_until_stalled(&mut sme_stream.next()),
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
             Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
                 req, ..
             }))) => {
@@ -532,24 +658,20 @@ mod tests {
     #[test]
     fn connect_request_protected_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let stash_id = "connect_request_protected_network";
-        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
-
-        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
-            .expect("failed to create ClientProvider proxy");
-        let requests = requests.into_stream().expect("failed to create stream");
-
-        let (update_sender, _listener_updates) = mpsc::unbounded();
-        let (client, mut sme_stream) = create_client();
-        let serve_fut =
-            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
+        let mut test_values = test_setup("connect_request_protected_network", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            Arc::clone(&test_values.saved_networks),
+            test_values.requests,
+        );
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Request a new controller.
-        let (controller, _update_stream) = request_controller(&provider);
+        let (controller, _update_stream) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Issue connect request.
@@ -567,7 +689,7 @@ mod tests {
         );
 
         assert_variant!(
-            exec.run_until_stalled(&mut sme_stream.next()),
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
             Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
                 req, ..
             }))) => {
@@ -581,24 +703,20 @@ mod tests {
     #[test]
     fn connect_request_protected_psk_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let stash_id = "connect_request_protected_psk_network";
-        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
-
-        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
-            .expect("failed to create ClientProvider proxy");
-        let requests = requests.into_stream().expect("failed to create stream");
-
-        let (update_sender, _listener_updates) = mpsc::unbounded();
-        let (client, mut sme_stream) = create_client();
-        let serve_fut =
-            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
+        let mut test_values = test_setup("connect_request_protected_psk_network", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            Arc::clone(&test_values.saved_networks),
+            test_values.requests,
+        );
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Request a new controller.
-        let (controller, _update_stream) = request_controller(&provider);
+        let (controller, _update_stream) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Issue connect request.
@@ -616,7 +734,7 @@ mod tests {
         );
 
         assert_variant!(
-            exec.run_until_stalled(&mut sme_stream.next()),
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
             Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
                 req, ..
             }))) => {
@@ -630,26 +748,25 @@ mod tests {
     #[test]
     fn connect_request_success() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let stash_id = "connect_request_success";
-        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
-
-        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
-            .expect("failed to create ClientProvider proxy");
-        let requests = requests.into_stream().expect("failed to create stream");
-
-        let (client, mut sme_stream) = create_client();
-        let (update_sender, mut listener_updates) = mpsc::unbounded();
-        let serve_fut =
-            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
+        let mut test_values = test_setup("connect_request_success", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            Arc::clone(&test_values.saved_networks),
+            test_values.requests,
+        );
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Request a new controller.
-        let (controller, _update_stream) = request_controller(&provider);
+        let (controller, _update_stream) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(exec.run_until_stalled(&mut listener_updates.next()), Poll::Ready(_));
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
+            Poll::Ready(_)
+        );
 
         // Issue connect request.
         let connect_fut = controller.connect(&mut fidl_policy::NetworkIdentifier {
@@ -663,7 +780,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
 
         assert_variant!(
-            exec.run_until_stalled(&mut sme_stream.next()),
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
             Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
                 txn, ..
             }))) => {
@@ -680,7 +797,7 @@ mod tests {
 
         // Verify status update.
         let summary = assert_variant!(
-            exec.run_until_stalled(&mut listener_updates.next()),
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
             Poll::Ready(Some(listener::Message::NotifyListeners(summary))) => summary
         );
         let expected_summary = fidl_policy::ClientStateSummary {
@@ -698,7 +815,7 @@ mod tests {
 
         // saved network config should reflect that it has connected successfully
         let cfg = get_config(
-            Arc::clone(&saved_networks),
+            Arc::clone(&test_values.saved_networks),
             NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::None),
             Credential::None,
         );
@@ -710,26 +827,25 @@ mod tests {
     #[test]
     fn connect_request_failure() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let stash_id = "connect_request_failure";
-        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
-
-        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
-            .expect("failed to create ClientProvider proxy");
-        let requests = requests.into_stream().expect("failed to create stream");
-
-        let (client, mut sme_stream) = create_client();
-        let (update_sender, mut listener_updates) = mpsc::unbounded();
-        let serve_fut =
-            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
+        let mut test_values = test_setup("connect_request_failure", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            Arc::clone(&test_values.saved_networks),
+            test_values.requests,
+        );
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Request a new controller.
-        let (controller, _update_stream) = request_controller(&provider);
+        let (controller, _update_stream) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(exec.run_until_stalled(&mut listener_updates.next()), Poll::Ready(_));
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
+            Poll::Ready(_)
+        );
 
         // Issue connect request.
         let connect_fut = controller.connect(&mut fidl_policy::NetworkIdentifier {
@@ -743,7 +859,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
 
         assert_variant!(
-            exec.run_until_stalled(&mut sme_stream.next()),
+            exec.run_until_stalled(&mut test_values.sme_stream.next()),
             Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Connect {
                 txn, ..
             }))) => {
@@ -759,11 +875,14 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Verify status was not updated.
-        assert_variant!(exec.run_until_stalled(&mut listener_updates.next()), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
+            Poll::Pending
+        );
 
         // Verify network config reflects that we still have not connected successfully
         let cfg = get_config(
-            saved_networks,
+            test_values.saved_networks,
             NetworkIdentifier::new(b"foobar".to_vec(), SecurityType::None),
             Credential::None,
         );
@@ -773,28 +892,243 @@ mod tests {
     }
 
     #[test]
-    fn register_update_listener() {
+    fn start_and_stop_client_connections_should_fail() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let stash_id = "register_update_listeners";
-        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
+        let test_values = test_setup("start_and_stop_client_connections_should_fail", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            Arc::clone(&test_values.saved_networks),
+            test_values.requests,
+        );
+        pin_mut!(serve_fut);
 
-        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
-            .expect("failed to create ClientProvider proxy");
-        let requests = requests.into_stream().expect("failed to create stream");
+        // No request has been sent yet. Future should now be waiting for request.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
-        let (client, _sme_stream) = create_client();
-        let (update_sender, mut listener_updates) = mpsc::unbounded();
-        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
+        // Request a new controller.
+        let (controller, _update_stream) = request_controller(&test_values.provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Issue request to start client connections.
+        let start_fut = controller.start_client_connections();
+        pin_mut!(start_fut);
+
+        // Request should be rejected.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut start_fut),
+            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedNotSupported))
+        );
+
+        // Issue request to stop client connections.
+        let stop_fut = controller.stop_client_connections();
+        pin_mut!(stop_fut);
+
+        // Request should be rejected.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut stop_fut),
+            Poll::Ready(Ok(fidl_common::RequestStatus::RejectedNotSupported))
+        );
+    }
+
+    #[test]
+    fn scan_for_networks_should_fail() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup("scan_for_networks_should_fail", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            Arc::clone(&test_values.saved_networks),
+            test_values.requests,
+        );
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Request a new controller.
-        let (_controller, _update_stream) = request_controller(&provider);
+        let (controller, _update_stream) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
-            exec.run_until_stalled(&mut listener_updates.next()),
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
+            Poll::Ready(_)
+        );
+
+        // Issue request to scan.
+        let (iter, server) =
+            fidl::endpoints::create_proxy::<fidl_policy::ScanResultIteratorMarker>()
+                .expect("failed to create iterator");
+        controller.scan_for_networks(server).expect("Failed to call scan for networks");
+
+        // Request a chunk of scan results. Progress until waiting on response from server side of
+        // the iterator.
+        let mut scan_fut = iter.get_next();
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+        // Progress sever side forward so that it will respond to the iterator get next request.
+        // It will be waiting on the next client provider request because scan simply returns an
+        // error for now.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // the iterator should have given an error
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results");
+            assert_eq!(results, Err(fidl_policy::ScanErrorCode::GeneralError));
+        });
+    }
+
+    #[test]
+    fn save_network_should_fail() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup("save_network_should_fail", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            Arc::clone(&test_values.saved_networks),
+            test_values.requests,
+        );
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a new controller.
+        let (controller, _update_stream) = request_controller(&test_values.provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
+            Poll::Ready(_)
+        );
+
+        // Save some network
+        let network_id = fidl_policy::NetworkIdentifier {
+            ssid: b"foo".to_vec(),
+            type_: fidl_policy::SecurityType::None,
+        };
+        let network_config = fidl_policy::NetworkConfig {
+            id: Some(network_id),
+            credential: Some(fidl_policy::Credential::None(fidl_policy::Empty)),
+        };
+        let mut save_fut = controller.save_network(network_config);
+
+        // Run server_provider forward so that it will process the save network request
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(result) => {
+            let error = result.expect("Failed to get save network response");
+            assert_eq!(error, Err(fidl_policy::NetworkConfigChangeError::GeneralError));
+        });
+    }
+
+    #[test]
+    fn remove_network_should_fail() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup("remove_network_should_fail", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            Arc::clone(&test_values.saved_networks),
+            test_values.requests,
+        );
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a new controller.
+        let (controller, _update_stream) = request_controller(&test_values.provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
+            Poll::Ready(_)
+        );
+
+        // Request to remove some network
+        let network_id = fidl_policy::NetworkIdentifier {
+            ssid: b"foo".to_vec(),
+            type_: fidl_policy::SecurityType::None,
+        };
+        let network_config = fidl_policy::NetworkConfig {
+            id: Some(network_id),
+            credential: Some(fidl_policy::Credential::None(fidl_policy::Empty)),
+        };
+        let mut remove_fut = controller.remove_network(network_config);
+
+        // Run server_provider forward so that it will process the save network request
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        assert_variant!(exec.run_until_stalled(&mut remove_fut), Poll::Ready(result) => {
+            let error = result.expect("Failed to get save network response");
+            assert_eq!(error, Err(fidl_policy::NetworkConfigChangeError::GeneralError));
+        });
+    }
+
+    #[test]
+    fn get_saved_networks_should_fail() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup("get_saved_networks_should_fail", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            Arc::clone(&test_values.saved_networks),
+            test_values.requests,
+        );
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a new controller.
+        let (controller, _update_stream) = request_controller(&test_values.provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
+            Poll::Ready(_)
+        );
+
+        // Issue request to get the list of saved networks.
+        let (iter, server) =
+            fidl::endpoints::create_proxy::<fidl_policy::NetworkConfigIteratorMarker>()
+                .expect("failed to create iterator");
+        controller.get_saved_networks(server).expect("Failed to call scan for networks");
+
+        // Request a chunk of results. Will progress until waiting on response from server side of
+        // the iterator.
+        let mut get_saved_fut = iter.get_next();
+        assert_variant!(exec.run_until_stalled(&mut get_saved_fut), Poll::Pending);
+        // Progress sever side forward so that it will respond to the iterator get next request.
+        // After, it will be waiting on the next client provider request because get saved networks
+        // simply returns an empty list for now
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // the iterator should have given an empty list
+        assert_variant!(exec.run_until_stalled(&mut get_saved_fut), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next get-saved-networks results");
+            assert!(results.is_empty());
+        });
+    }
+
+    #[test]
+    fn register_update_listener() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup("register_update_listener", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            test_values.saved_networks,
+            test_values.requests,
+        );
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a new controller.
+        let (_controller, _update_stream) = request_controller(&test_values.provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.listener_updates.next()),
             Poll::Ready(Some(listener::Message::NewListener(_)))
         );
     }
@@ -802,7 +1136,6 @@ mod tests {
     #[test]
     fn get_listener() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-
         let (listener, requests) = create_proxy::<fidl_policy::ClientListenerMarker>()
             .expect("failed to create ClientProvider proxy");
         let requests = requests.into_stream().expect("failed to create stream");
@@ -830,27 +1163,24 @@ mod tests {
     #[test]
     fn multiple_controllers_write_attempt() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let stash_id = "multiple_controllers_write_attempt";
-        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
-
-        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
-            .expect("failed to create ClientProvider proxy");
-        let requests = requests.into_stream().expect("failed to create stream");
-
-        let (client, _sme_stream) = create_client();
-        let (update_sender, _listener_updates) = mpsc::unbounded();
-        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
+        let test_values = test_setup("multiple_controllers_write_attempt", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            test_values.saved_networks,
+            test_values.requests,
+        );
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Request a controller.
-        let (controller1, _) = request_controller(&provider);
+        let (controller1, _) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Request another controller.
-        let (controller2, _) = request_controller(&provider);
+        let (controller2, _) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Ensure first controller is operable. Issue connect request.
@@ -886,7 +1216,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Request another controller.
-        let (controller3, _) = request_controller(&provider);
+        let (controller3, _) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Ensure third controller is operable. Issue connect request.
@@ -907,27 +1237,24 @@ mod tests {
     #[test]
     fn multiple_controllers_epitaph() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let stash_id = "multiple_controllers_epitaph";
-        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
-
-        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
-            .expect("failed to create ClientProvider proxy");
-        let requests = requests.into_stream().expect("failed to create stream");
-
-        let (client, _sme_stream) = create_client();
-        let (update_sender, _listener_updates) = mpsc::unbounded();
-        let serve_fut = serve_provider_requests(client, update_sender, saved_networks, requests);
+        let test_values = test_setup("multiple_controllers_epitaph", &mut exec);
+        let serve_fut = serve_provider_requests(
+            test_values.client,
+            test_values.update_sender,
+            test_values.saved_networks,
+            test_values.requests,
+        );
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Request a controller.
-        let (_controller1, _) = request_controller(&provider);
+        let (_controller1, _) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Request another controller.
-        let (controller2, _) = request_controller(&provider);
+        let (controller2, _) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         let chan = controller2.into_channel().expect("error turning proxy into channel");

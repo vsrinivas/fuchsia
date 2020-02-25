@@ -94,7 +94,6 @@ impl KnownEssStore {
     }
 
     pub fn clear(&self) -> Result<(), anyhow::Error> {
-        println!("storage path is {:?}", self.tmp_storage_path.as_path().to_str());
         let mut guard = self.ess_by_ssid.lock();
         guard.clear();
         self.write(guard)
