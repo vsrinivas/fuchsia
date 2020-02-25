@@ -7,6 +7,7 @@
 
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
+#include <lib/zx/stream.h>
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -93,15 +94,15 @@ class VnodeFile final : public VnodeMemfs {
                                      fs::VnodeRepresentation* info) final;
   zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) final;
 
+  zx_status_t CreateBackingStoreIfNeeded();
+  size_t GetContentSize() const;
+
   // Ensure the underlying vmo is filled with zero from:
   // [start, round_up(end, PAGE_SIZE)).
   void ZeroTail(size_t start, size_t end);
 
   zx::vmo vmo_;
-  // Cached length of the vmo.
-  uint64_t vmo_size_;
-  // Logical length of the underlying file.
-  zx_off_t length_;
+  zx::stream stream_;
 };
 
 class VnodeDir final : public VnodeMemfs {

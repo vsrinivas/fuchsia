@@ -71,6 +71,7 @@ bool TestMemfsBasic() {
   char buf[32];
   ASSERT_EQ(read(fd, buf, sizeof(buf)), datalen);
   ASSERT_EQ(memcmp(buf, data, datalen), 0);
+  close(fd);
 
   // Readdir the file
   struct dirent* de;
@@ -79,6 +80,50 @@ bool TestMemfsBasic() {
   ASSERT_NONNULL((de = readdir(d)));
   ASSERT_EQ(strcmp(de->d_name, filename), 0);
   ASSERT_NULL(readdir(d));
+
+  ASSERT_EQ(closedir(d), 0);
+  sync_completion_t unmounted;
+  memfs_free_filesystem(vfs, &unmounted);
+  ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
+
+  END_TEST;
+}
+
+bool TestMemfsAppend() {
+  BEGIN_TEST;
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
+
+  // Create a memfs filesystem, acquire a file descriptor
+  memfs_filesystem_t* vfs;
+  zx_handle_t root;
+  ASSERT_EQ(memfs_create_filesystem(loop.dispatcher(), &vfs, &root), ZX_OK);
+  int fd;
+  ASSERT_EQ(fdio_fd_create(root, &fd), ZX_OK);
+
+  // Access files within the filesystem.
+  DIR* d = fdopendir(fd);
+
+  // Create a file
+  const char* filename = "file-a";
+  fd = openat(dirfd(d), filename, O_CREAT | O_RDWR | O_APPEND);
+  ASSERT_GE(fd, 0);
+  const char* data = "hello";
+  ssize_t datalen = strlen(data);
+  ASSERT_EQ(write(fd, data, datalen), datalen);
+  ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+  data = ", world";
+  datalen = strlen(data);
+  ASSERT_EQ(write(fd, data, datalen), datalen);
+  ASSERT_EQ(lseek(fd, 0, SEEK_CUR), 12);
+  ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
+  data = "hello, world";
+  datalen = strlen(data);
+  char buf[32];
+  ASSERT_EQ(read(fd, buf, sizeof(buf)), datalen);
+  ASSERT_EQ(memcmp(buf, data, datalen), 0);
+  close(fd);
 
   ASSERT_EQ(closedir(d), 0);
   sync_completion_t unmounted;
@@ -115,6 +160,7 @@ bool TestMemfsInstall() {
     char buf[32];
     ASSERT_EQ(read(fd, buf, sizeof(buf)), datalen);
     ASSERT_EQ(memcmp(buf, data, datalen), 0);
+    close(fd);
 
     // Readdir the file
     struct dirent* de;
@@ -233,7 +279,7 @@ bool TestMemfsOverflow() {
   ASSERT_TRUE(fd);
   ASSERT_EQ(pwrite(fd.get(), buf, 199, 0), 199);
   ASSERT_EQ(pwrite(fd.get(), buf, 226, 0xfffffffffffff801), -1);
-  ASSERT_EQ(errno, EFBIG);
+  ASSERT_EQ(errno, EINVAL);
 
   ASSERT_EQ(closedir(d), 0);
   sync_completion_t unmounted;
@@ -283,6 +329,7 @@ bool TestMemfsDetachLinkedFilesystem() {
 BEGIN_TEST_CASE(memfs_tests)
 RUN_TEST(TestMemfsNull)
 RUN_TEST(TestMemfsBasic)
+RUN_TEST(TestMemfsAppend)
 RUN_TEST(TestMemfsInstall)
 RUN_TEST(TestMemfsCloseDuringAccess)
 RUN_TEST(TestMemfsOverflow)

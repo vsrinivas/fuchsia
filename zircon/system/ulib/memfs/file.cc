@@ -25,78 +25,67 @@ namespace memfs {
 // Artificially cap the maximum in-memory file size to 512MB.
 constexpr size_t kMemfsMaxFileSize = 512 * 1024 * 1024;
 
-VnodeFile::VnodeFile(Vfs* vfs) : VnodeMemfs(vfs), vmo_size_(0), length_(0) {}
+VnodeFile::VnodeFile(Vfs* vfs) : VnodeMemfs(vfs) {}
 
 VnodeFile::~VnodeFile() = default;
 
 fs::VnodeProtocolSet VnodeFile::GetProtocols() const { return fs::VnodeProtocol::kFile; }
 
-zx_status_t VnodeFile::Read(void* data, size_t len, size_t off, size_t* out_actual) {
-  if ((off >= length_) || (!vmo_.is_valid())) {
+zx_status_t VnodeFile::Read(void* data, size_t length, size_t offset, size_t* out_actual) {
+  if (!stream_.is_valid()) {
     *out_actual = 0;
     return ZX_OK;
-  } else if (len > length_ - off) {
-    len = length_ - off;
   }
-
-  zx_status_t status = vmo_.read(data, off, len);
-  if (status == ZX_OK) {
-    *out_actual = len;
-  }
-  return status;
+  zx_iovec_t vector = {
+      .buffer = data,
+      .capacity = length,
+  };
+  return stream_.readv_at(0, offset, &vector, 1, out_actual);
 }
 
 zx_status_t VnodeFile::Write(const void* data, size_t len, size_t offset, size_t* out_actual) {
-  zx_status_t status;
-  if (offset > kMemfsMaxFileSize) {
-    return ZX_ERR_FILE_BIG;
-  }
-  size_t newlen;
-  if (add_overflow(offset, len, &newlen)) {
-    return ZX_ERR_FILE_BIG;
-  }
-  newlen = newlen > kMemfsMaxFileSize ? kMemfsMaxFileSize : newlen;
-  if ((status = vfs()->GrowVMO(vmo_, vmo_size_, newlen, &vmo_size_)) != ZX_OK) {
+  zx_status_t status = CreateBackingStoreIfNeeded();
+  if (status != ZX_OK) {
     return status;
   }
-  // Accessing beyond the end of the file? Extend it.
-  if (offset > length_) {
-    // Zero-extending the tail of the file by writing to
-    // an offset beyond the end of the file.
-    ZeroTail(length_, offset);
-  }
-  size_t writelen = newlen - offset;
-  if ((status = vmo_.write(data, offset, writelen)) != ZX_OK) {
+  zx_iovec_t vector = {
+      .buffer = const_cast<void*>(data),
+      .capacity = len,
+  };
+  status = stream_.writev_at(0, offset, &vector, 1, out_actual);
+  if (status != ZX_OK) {
     return status;
   }
   UpdateModified();
-  *out_actual = writelen;
-
-  if (newlen > length_) {
-    length_ = newlen;
-  }
-  if (writelen < len) {
-    // short write because we're beyond the end of the permissible length
-    return ZX_ERR_FILE_BIG;
-  }
   return ZX_OK;
 }
 
 zx_status_t VnodeFile::Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) {
-  zx_status_t status = Write(data, len, length_, out_actual);
-  *out_end = length_;
-  return status;
+  zx_status_t status = CreateBackingStoreIfNeeded();
+  if (status != ZX_OK) {
+    return status;
+  }
+  zx_iovec_t vector = {
+      .buffer = const_cast<void*>(data),
+      .capacity = len,
+  };
+  status = stream_.writev(ZX_STREAM_APPEND, &vector, 1, out_actual);
+  if (status != ZX_OK) {
+    return status;
+  }
+  // TODO: When we give clients direct access to a zx::stream, we will expose a race condition
+  // here because the content size could have changed after the writev above.
+  *out_end = GetContentSize();
+  UpdateModified();
+  return ZX_OK;
 }
 
 zx_status_t VnodeFile::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
-  zx_status_t status;
-  if (!vmo_.is_valid()) {
-    // First access to the file? Allocate it.
-    if ((status = zx::vmo::create(0, ZX_VMO_RESIZABLE, &vmo_)) != ZX_OK) {
-      return status;
-    }
+  zx_status_t status = CreateBackingStoreIfNeeded();
+  if (status != ZX_OK) {
+    return status;
   }
-
+  size_t content_size = GetContentSize();
   // Let clients map and set the names of their VMOs.
   zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHTS_PROPERTY;
   rights |= (flags & ::llcpp::fuchsia::io::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
@@ -104,7 +93,8 @@ zx_status_t VnodeFile::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   rights |= (flags & ::llcpp::fuchsia::io::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
   zx::vmo result;
   if (flags & ::llcpp::fuchsia::io::VMO_FLAG_PRIVATE) {
-    if ((status = vmo_.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, length_, &result)) != ZX_OK) {
+    if ((status = vmo_.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, content_size, &result)) !=
+        ZX_OK) {
       return status;
     }
 
@@ -112,7 +102,7 @@ zx_status_t VnodeFile::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
       return status;
     }
     *out_vmo = std::move(result);
-    *out_size = length_;
+    *out_size = content_size;
     return ZX_OK;
   }
 
@@ -120,7 +110,7 @@ zx_status_t VnodeFile::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
     return status;
   }
   *out_vmo = std::move(result);
-  *out_size = length_;
+  *out_size = content_size;
   return ZX_OK;
 }
 
@@ -128,7 +118,7 @@ zx_status_t VnodeFile::GetAttributes(fs::VnodeAttributes* attr) {
   *attr = fs::VnodeAttributes();
   attr->inode = ino_;
   attr->mode = V_TYPE_FILE | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH;
-  attr->content_size = length_;
+  attr->content_size = GetContentSize();
   attr->storage_size = fbl::round_up(attr->content_size, kMemfsBlksize);
   attr->link_count = link_count_;
   attr->creation_time = create_time_;
@@ -143,26 +133,63 @@ zx_status_t VnodeFile::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol
   return ZX_OK;
 }
 
-zx_status_t VnodeFile::Truncate(size_t len) {
-  zx_status_t status;
-  if (len > kMemfsMaxFileSize) {
+zx_status_t VnodeFile::Truncate(size_t length) {
+  if (length > kMemfsMaxFileSize) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if ((status = vfs()->GrowVMO(vmo_, vmo_size_, len, &vmo_size_)) != ZX_OK) {
+  zx_status_t status = CreateBackingStoreIfNeeded();
+  if (status != ZX_OK) {
     return status;
   }
-  if (len < length_) {
+
+  // TODO: When we give clients direct access to a zx::stream, we will expose a race condition
+  // between these two lines. Suppose an append happens between these two statements and we are
+  // growing the size of the file. The previous_content_size value will be stale, which means we
+  // will clobber some of the appended data when we ZeroTail below. We might need to move the
+  // truncate operation into the kernel in order to be sufficiently atomic.
+  size_t previous_content_size = GetContentSize();
+  vmo_.set_property(ZX_PROP_VMO_CONTENT_SIZE, &length, sizeof(length));
+
+  if (length < previous_content_size) {
     // Shrink the logical file length.
     // Zeroing the tail here is optional, but it saves memory.
-    ZeroTail(len, length_);
-  } else if (len > length_) {
+    ZeroTail(length, previous_content_size);
+  } else if (length > previous_content_size) {
     // Extend the logical file length.
-    ZeroTail(length_, len);
+    ZeroTail(previous_content_size, length);
   }
 
-  length_ = len;
   UpdateModified();
   return ZX_OK;
+}
+
+zx_status_t VnodeFile::CreateBackingStoreIfNeeded() {
+  if (vmo_.is_valid()) {
+    return ZX_OK;
+  }
+  zx_status_t status = zx::vmo::create(kMemfsMaxFileSize, 0, &vmo_);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, vmo_, 0u, &stream_);
+  if (status != ZX_OK) {
+    vmo_.reset();
+    return status;
+  }
+  return ZX_OK;
+}
+
+size_t VnodeFile::GetContentSize() const {
+  if (!vmo_.is_valid()) {
+    return 0u;
+  }
+  size_t content_size = 0u;
+  zx_status_t status =
+      vmo_.get_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size));
+  if (status != ZX_OK) {
+    return 0u;
+  }
+  return content_size;
 }
 
 void VnodeFile::ZeroTail(size_t start, size_t end) {
@@ -173,7 +200,7 @@ void VnodeFile::ZeroTail(size_t start, size_t end) {
     memset(buf, 0, ppage_size);
     ZX_ASSERT(vmo_.write(buf, start, ppage_size) == ZX_OK);
   }
-  end = fbl::min(fbl::round_up(end, kPageSize), vmo_size_);
+  end = fbl::min(fbl::round_up(end, kPageSize), kMemfsMaxFileSize);
   uint64_t decommit_offset = fbl::round_up(start, kPageSize);
   uint64_t decommit_length = end - decommit_offset;
 

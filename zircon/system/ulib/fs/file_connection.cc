@@ -150,10 +150,10 @@ void FileConnection::Write(fidl::VectorView<uint8_t> data, WriteCompleter::Sync 
   if (!options().rights.write) {
     return completer.Reply(ZX_ERR_BAD_HANDLE, 0);
   }
-  size_t actual = 0;
+  size_t actual = 0u;
   zx_status_t status;
   if (options().flags.append) {
-    size_t end;
+    size_t end = 0u;
     status = vnode()->Append(data.data(), data.count(), &end, &actual);
     if (status == ZX_OK) {
       offset_ = end;

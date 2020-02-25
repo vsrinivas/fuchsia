@@ -53,9 +53,9 @@ TEST(MemfsTest, UpdateTimeLargeFile) {
   ASSERT_OK(file->Truncate(offset));
   fs::VnodeAttributes before_file_attr, after_file_attr;
   ASSERT_OK(file->GetAttributes(&before_file_attr));
-  size_t actual;
+  size_t actual = 3984u;
   uint8_t buf[PAGE_SIZE]{};
-  ASSERT_EQ(ZX_ERR_FILE_BIG, file->Write(buf, PAGE_SIZE, offset, &actual));
+  ASSERT_EQ(ZX_OK, file->Write(buf, PAGE_SIZE, offset, &actual));
   ASSERT_EQ(PAGE_SIZE / 2, actual);
   ASSERT_OK(file->GetAttributes(&after_file_attr));
 
