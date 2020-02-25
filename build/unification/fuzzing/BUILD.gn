@@ -16,9 +16,6 @@ fuzzer_names = [
   "lz4",
   "lz4-decompress",
   "zbi-bootfs",
-  "zstd",
-  "zstd-seekable",
-  "zstd-seekable-symmetric",
 ]
 known_fuzzers = []
 foreach(fuzzer, fuzzer_names) {

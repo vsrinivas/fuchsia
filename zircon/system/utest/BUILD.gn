@@ -63,7 +63,6 @@ if (current_cpu != "") {
 #------------------
 #------------------
 #------------------
-      "$zx/system/ulib/blobfs/test",
 #------------------
 #------------------
 #------------------
@@ -228,7 +227,6 @@ if (current_cpu != "") {
     testonly = true
     deps = [
 #------------------
-      "$zx/system/ulib/blobfs/test:blobfs-host",
 #------------------
 #------------------
       "$zx/system/ulib/fvm/test",

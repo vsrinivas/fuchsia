@@ -317,31 +317,22 @@ aggregate_manifest("legacy-aux") {
     ":bin.zbi-bootfs-fuzzer.ubsan",
 #------------------
 #------------------
-    ":bin.zstd-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.zstd-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.zstd-fuzzer.ubsan",
 #------------------
 #------------------
-    ":bin.zstd-seekable-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.zstd-seekable-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.zstd-seekable-fuzzer.ubsan",
 #------------------
 #------------------
-    ":bin.zstd-seekable-symmetric-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.zstd-seekable-symmetric-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.zstd-seekable-symmetric-fuzzer.ubsan",
 #------------------
 #------------------
     ":test.c.debugdata-test",
@@ -476,13 +467,10 @@ aggregate_manifest("legacy-aux") {
     ":test.ddk.fshost-test-test",
 #------------------
 #------------------
-    ":test.fs.blobfs-integration-test",
 #------------------
 #------------------
-    ":test.fs.blobfs-large-integration-test",
 #------------------
 #------------------
-    ":test.fs.blobfs-unit-test",
 #------------------
 #------------------
 #------------------
@@ -900,31 +888,22 @@ aggregate_manifest("legacy-tests") {
     ":bin.zbi-bootfs-fuzzer.ubsan",
 #------------------
 #------------------
-    ":bin.zstd-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.zstd-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.zstd-fuzzer.ubsan",
 #------------------
 #------------------
-    ":bin.zstd-seekable-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.zstd-seekable-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.zstd-seekable-fuzzer.ubsan",
 #------------------
 #------------------
-    ":bin.zstd-seekable-symmetric-fuzzer.asan",
 #------------------
 #------------------
-    ":bin.zstd-seekable-symmetric-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    ":bin.zstd-seekable-symmetric-fuzzer.ubsan",
 #------------------
 #------------------
     ":test.c.debugdata-test",
@@ -1059,13 +1038,10 @@ aggregate_manifest("legacy-tests") {
     ":test.ddk.fshost-test-test",
 #------------------
 #------------------
-    ":test.fs.blobfs-integration-test",
 #------------------
 #------------------
-    ":test.fs.blobfs-large-integration-test",
 #------------------
 #------------------
-    ":test.fs.blobfs-unit-test",
 #------------------
 #------------------
 #------------------
@@ -1852,31 +1828,22 @@ aggregate_manifest("migrated-aux") {
     #":bin.zbi-bootfs-fuzzer.ubsan",
 #------------------
 #------------------
-    #":bin.zstd-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.zstd-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.zstd-fuzzer.ubsan",
 #------------------
 #------------------
-    #":bin.zstd-seekable-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.zstd-seekable-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.zstd-seekable-fuzzer.ubsan",
 #------------------
 #------------------
-    #":bin.zstd-seekable-symmetric-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.zstd-seekable-symmetric-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.zstd-seekable-symmetric-fuzzer.ubsan",
 #------------------
     "//src/media/audio/drivers/alc5663:alc5663-manifest",
     "//src/devices/tests/crash-device:crash-device-manifest",
@@ -2792,13 +2759,13 @@ aggregate_manifest("migrated-aux") {
     #":test.ddk.fshost-test-test",
 #------------------
 #------------------
-    #":test.fs.blobfs-integration-test",
+    "//zircon/system/ulib/blobfs/test:blobfs-integration-manifest",
 #------------------
 #------------------
-    #":test.fs.blobfs-large-integration-test",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-manifest",
 #------------------
 #------------------
-    #":test.fs.blobfs-unit-test",
+    "//zircon/system/ulib/blobfs/test:blobfs-unit-manifest",
 #------------------
     "//zircon/system/ulib/block-client/test:block-client-unit-manifest",
     "//zircon/system/utest/devfs:devfs-manifest",
@@ -3363,13 +3330,10 @@ aggregate_manifest("migrated-tests") {
     #":bin.zbi-bootfs-fuzzer.ubsan",
 #------------------
 #------------------
-    #":bin.zstd-fuzzer.asan",
 #------------------
 #------------------
-    #":bin.zstd-fuzzer.asan-ubsan",
 #------------------
 #------------------
-    #":bin.zstd-fuzzer.ubsan",
 #------------------
     "//src/media/audio/drivers/alc5663:alc5663-manifest",
     "//src/devices/tests/crash-device:crash-device-manifest",
@@ -3510,13 +3474,13 @@ aggregate_manifest("migrated-tests") {
     #":test.ddk.fshost-test-test",
 #------------------
 #------------------
-    #":test.fs.blobfs-integration-test",
+    "//zircon/system/ulib/blobfs/test:blobfs-integration-manifest",
 #------------------
 #------------------
-    #":test.fs.blobfs-large-integration-test",
+    "//zircon/system/ulib/blobfs/test:blobfs-large-integration-manifest",
 #------------------
 #------------------
-    #":test.fs.blobfs-unit-test",
+    "//zircon/system/ulib/blobfs/test:blobfs-unit-manifest",
 #------------------
     "//zircon/system/ulib/block-client/test:block-client-unit-manifest",
     "//zircon/system/utest/devfs:devfs-manifest",

@@ -31,7 +31,6 @@ foreach(entry, zircon_test_specs) {
 # critical when migrating tests from ZN to GN.
 listed_tests = [
 #------------------
-  "blobfs-host",
 #------------------
 #------------------
   "fidl",
@@ -111,7 +110,7 @@ group("migrated-tests") {
     "//zircon/system/utest/cmdline",
     "//zircon/system/utest/fit",
   #------------------
-    #"blobfs-host",
+    "//zircon/system/ulib/blobfs/test:blobfs-host",
   #------------------
   #------------------
     #"fidl",
