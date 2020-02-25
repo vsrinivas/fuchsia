@@ -23,7 +23,7 @@ void VariableDefinition::Dump(std::ostream& os) const {
   os << '\n';
 }
 
-void VariableDefinition::Compile(ExecutionContext* context) const {
+void VariableDefinition::Compile(ExecutionContext* context, code::Code* code) const {
   // Currently, we only create the variable within the global scope.
   const Type* inferred_type = type_.get();
   std::unique_ptr<Type> new_type;
@@ -40,14 +40,23 @@ void VariableDefinition::Compile(ExecutionContext* context) const {
     }
     inferred_type = new_type.get();
   }
-  Variable* existing = context->interpreter()->isolate()->global_scope()->GetVariable(name_);
+  const Variable* existing = context->interpreter()->isolate()->global_scope()->GetVariable(name_);
   if (existing != nullptr) {
     context->EmitError(id(), "Variable '" + name_ + "' already defined.");
     context->EmitError(existing->id(), "First definition.");
     return;
   }
-  inferred_type->CreateVariable(context, context->interpreter()->isolate()->global_scope(), id(),
-                                name_);
+  Variable* variable = inferred_type->CreateVariable(
+      context, context->interpreter()->isolate()->global_scope(), id(), name_);
+  if (variable == nullptr) {
+    return;
+  }
+  if (initial_value_ == nullptr) {
+    inferred_type->GenerateDefaultValue(context, code);
+  } else {
+    initial_value_->Compile(context, code, inferred_type);
+  }
+  code->Store64(variable->index());
 }
 
 }  // namespace interpreter

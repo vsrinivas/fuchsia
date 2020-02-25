@@ -230,6 +230,33 @@ void Service::ExecuteExecutionContext(uint64_t context_id,
   }
 }
 
+void Service::LoadGlobal(::fidl::StringView name, LoadGlobalCompleter::Sync completer) {
+  const Variable* variable = interpreter_->SearchGlobal(std::string(name.data(), name.size()));
+  llcpp::fuchsia::shell::Value shell_value;
+  fidl::aligned<bool> undef = true;
+  llcpp::fuchsia::shell::IntegerLiteral integer_literal;
+  std::vector<uint64_t> absolute_value;
+  if (variable == nullptr) {
+    shell_value.set_undef(fidl::tracking_ptr<bool>(fidl::unowned_ptr<fidl::aligned<bool>>(&undef)));
+  } else {
+    Value value;
+    interpreter_->LoadGlobal(variable, &value);
+    switch (value.type()) {
+      case ValueType::kUndef:
+        shell_value.set_undef(
+            fidl::tracking_ptr<bool>(fidl::unowned_ptr<fidl::aligned<bool>>(&undef)));
+        break;
+      case ValueType::kUint64:
+        absolute_value.emplace_back(value.value());
+        integer_literal.absolute_value = fidl::VectorView(absolute_value);
+        shell_value.set_integer_literal(
+            fidl::unowned_ptr<llcpp::fuchsia::shell::IntegerLiteral>(&integer_literal));
+        break;
+    }
+  }
+  completer.Reply(std::move(shell_value));
+}
+
 void Service::AddIntegerLiteral(ServerInterpreterContext* context, uint64_t node_file_id,
                                 uint64_t node_node_id,
                                 const llcpp::fuchsia::shell::IntegerLiteral& node, bool root_node) {

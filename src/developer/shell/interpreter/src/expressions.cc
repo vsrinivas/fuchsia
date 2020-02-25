@@ -23,5 +23,10 @@ void IntegerLiteral::Dump(std::ostream& os) const {
   os << absolute_value_;
 }
 
+void IntegerLiteral::Compile(ExecutionContext* context, code::Code* code,
+                             const Type* for_type) const {
+  for_type->GenerateIntegerLiteral(context, code, this);
+}
+
 }  // namespace interpreter
 }  // namespace shell

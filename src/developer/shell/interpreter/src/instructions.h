@@ -10,6 +10,7 @@
 #include <string>
 #include <string_view>
 
+#include "src/developer/shell/interpreter/src/code.h"
 #include "src/developer/shell/interpreter/src/nodes.h"
 
 namespace shell {
@@ -34,7 +35,7 @@ class VariableDefinition : public Instruction {
   const Expression* initial_value() const { return initial_value_.get(); }
 
   void Dump(std::ostream& os) const override;
-  void Compile(ExecutionContext* context) const override;
+  void Compile(ExecutionContext* context, code::Code* code) const override;
 
  private:
   // Name of the variable.

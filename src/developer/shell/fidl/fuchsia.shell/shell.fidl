@@ -123,10 +123,22 @@ struct NodeDefinition {
     bool root_node;
 };
 
+union Value {
+    /// Value not defined.
+    1: bool undef;
+    /// An integer value.
+    2: IntegerLiteral integer_literal;
+};
+
 /// Defines the protocol to communicate with a shell interpreter.
 [Discoverable]
 protocol Shell {
-    /// Creates an execution context.
+    /// Creates an execution context. An execution context can be a very small chunk of code.
+    /// For example, with a command line interface for which the user types an instruction and
+    /// then hits enter, each instruction will be in it's own execution context. However, they all
+    /// share the same isolate which stores globals. Each global variable definition in an
+    /// execution context is created at the isolate level (and, therefore, accessible from other
+    /// execution context).
     ///
     /// - `context_id` the id for the context. This id is provided by the client which must ensure
     ///   that the id is unique. A context_id can be reused as soon as OnExecutionDone is
@@ -163,6 +175,15 @@ protocol Shell {
     /// - `context_id` the id for the execution context previously created with
     ///   CreateExecutionContext.
     ExecuteExecutionContext(uint64 context_id);
+
+    /// Loads the value of the global variable specified by name.
+    /// This gives the value for the interpreter associated with the connection. The value is
+    /// independent from an execution context. However, if one or several execution contexts are
+    /// running when this method is called, the value of the variable is just a snapshot value (it
+    /// may be modified later by the running code).
+    ///
+    /// - `name` the name of the variable to load.
+    LoadGlobal(string:MAX name) -> (Value value);
 
     /// Called each time the shell detects an error. This method can be called several times.
     /// The execution is done (started with ExecuteExecutionContext) when OnExecutionDone is

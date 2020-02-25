@@ -123,6 +123,7 @@ class Service final : public llcpp::fuchsia::shell::Shell::Interface {
                             DumpExecutionContextCompleter::Sync completer) override;
   void ExecuteExecutionContext(uint64_t context_id,
                                ExecuteExecutionContextCompleter::Sync completer) override;
+  void LoadGlobal(::fidl::StringView name, LoadGlobalCompleter::Sync completer) override;
 
   // Helpers to be able to send events to the client.
   zx_status_t OnError(uint64_t context_id, std::vector<llcpp::fuchsia::shell::Location>& locations,

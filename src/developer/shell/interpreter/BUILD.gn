@@ -18,6 +18,8 @@ static_library("shell_interpreter") {
     "src/instructions.cc",
     "src/interpreter.cc",
     "src/nodes.cc",
+    "src/scope.cc",
+    "src/thread.cc",
     "src/types.cc",
   ]
 }

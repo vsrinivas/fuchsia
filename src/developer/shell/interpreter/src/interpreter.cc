@@ -36,21 +36,23 @@ void ExecutionContext::Execute() {
     }
     interpreter_->ContextDoneWithAnalysisError(this);
   } else {
-    // Currently we only do the compilation.
-    Compile();
+    auto code = std::make_unique<code::Code>();
+    Compile(code.get());
     if (has_errors()) {
       interpreter_->ContextDoneWithAnalysisError(this);
     } else {
-      interpreter_->ContextDone(this);
+      interpreter_->isolate()->AllocateGlobals();
+      interpreter_->isolate()->Execute(this, std::move(code));
     }
   }
   interpreter_->EraseContext(id_);
 }
 
-void ExecutionContext::Compile() {
+void ExecutionContext::Compile(code::Code* code) {
   for (const auto& instruction : pending_instructions_) {
-    instruction->Compile(this);
+    instruction->Compile(this, code);
   }
+  code->Ret();
 }
 
 ExecutionContext* Interpreter::AddContext(uint64_t context_id) {

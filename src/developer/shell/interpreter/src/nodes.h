@@ -10,12 +10,17 @@
 #include <ostream>
 #include <string>
 
+#include "src/developer/shell/interpreter/src/code.h"
+#include "src/developer/shell/interpreter/src/value.h"
+
 namespace shell {
 namespace interpreter {
 
 class ExecutionContext;
+class ExecutionScope;
 class Expression;
 class Instruction;
+class IntegerLiteral;
 class Interpreter;
 class Scope;
 class Variable;
@@ -42,15 +47,34 @@ class Type {
   Type() = default;
   virtual ~Type() = default;
 
+  // The size for the type in bytes.
+  virtual size_t Size() const = 0;
+
   // Returns true if the type is the undefined type.
   virtual bool IsUndefined() const { return false; }
+
+  // Creates an exact copy of the type.
+  virtual std::unique_ptr<Type> Duplicate() const = 0;
 
   // Prints the type.
   virtual void Dump(std::ostream& os) const = 0;
 
   // Creates a variable of this type in the scope.
-  virtual void CreateVariable(ExecutionContext* context, Scope* scope, NodeId id,
-                              const std::string& name) const;
+  virtual Variable* CreateVariable(ExecutionContext* context, Scope* scope, NodeId id,
+                                   const std::string& name) const;
+
+  // Generates a default value for this type. When the generated code is executed, it pushes the
+  // value to the thread's stack values.
+  virtual void GenerateDefaultValue(ExecutionContext* context, code::Code* code) const;
+
+  // Generates an integer literal for this type. When the generated code is executed, it pushes the
+  // value to the thread's stack value. The generation can generate an error if the literal is not
+  // compatible with the type.
+  virtual void GenerateIntegerLiteral(ExecutionContext* context, code::Code* code,
+                                      const IntegerLiteral* literal) const;
+
+  // Loads the current value of the variable stored at |index| in |scope| into |value|.
+  virtual void LoadVariable(const ExecutionScope* scope, size_t index, Value* value) const;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Type& type) {
@@ -91,6 +115,9 @@ class Expression : public Node {
 
   // Prints the expression.
   virtual void Dump(std::ostream& os) const = 0;
+
+  // Compiles the expression (perform the semantic checks and generates code).
+  virtual void Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const = 0;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Expression& expression) {
@@ -108,7 +135,7 @@ class Instruction : public Node {
   virtual void Dump(std::ostream& os) const = 0;
 
   // Compiles the instruction (performs the semantic checks and generates code).
-  virtual void Compile(ExecutionContext* context) const = 0;
+  virtual void Compile(ExecutionContext* context, code::Code* code) const = 0;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Instruction& instruction) {

@@ -29,6 +29,8 @@ class IntegerLiteral : public Expression {
   std::unique_ptr<Type> GetType() const override;
   void Dump(std::ostream& os) const override;
 
+  void Compile(ExecutionContext* context, code::Code* code, const Type* for_type) const override;
+
  private:
   // The absolute value for the integer.
   const uint64_t absolute_value_;

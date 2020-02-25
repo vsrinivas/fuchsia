@@ -31,8 +31,24 @@ class InterpreterTest : public ::testing::Test {
 
  protected:
   std::string GlobalErrors() { return global_error_stream_.str(); }
+  fuchsia::shell::ShellPtr& shell() { return shell_; }
   const std::vector<std::string>& results() const { return results_; }
   bool last_result_partial() const { return last_result_partial_; }
+
+  // Loads a global variable. The loads are defered after the end of the execution.
+  void LoadGlobal(const std::string& name) {
+    fuchsia::shell::Value value;
+    globals_.emplace(name, std::move(value));
+  }
+
+  // Gets the value for a global variable we loaded using LoadGlobal.
+  fuchsia::shell::Value* GetGlobal(const std::string& name) {
+    auto result = globals_.find(name);
+    if (result == globals_.end()) {
+      return nullptr;
+    }
+    return &result->second;
+  }
 
   void SetUp() override;
 
@@ -48,8 +64,6 @@ class InterpreterTest : public ::testing::Test {
   InterpreterTestContext* CreateContext();
   InterpreterTestContext* GetContext(uint64_t context_id);
 
-  fuchsia::shell::ShellPtr& shell() { return shell_; }
-
  private:
   async::Loop loop_;
   std::unique_ptr<sys::ComponentContext> context_;
@@ -62,6 +76,8 @@ class InterpreterTest : public ::testing::Test {
   std::vector<std::string> results_;
   bool last_result_partial_ = false;
   bool running_ = false;
+  std::map<std::string, fuchsia::shell::Value> globals_;
+  int pending_globals_ = 0;
 };
 
 #endif  // SRC_DEVELOPER_SHELL_INTERPRETER_TEST_INTERPRETER_TEST_H_

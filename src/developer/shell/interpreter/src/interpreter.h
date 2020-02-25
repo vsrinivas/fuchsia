@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "src/developer/shell/interpreter/src/code.h"
 #include "src/developer/shell/interpreter/src/isolate.h"
 #include "src/developer/shell/interpreter/src/nodes.h"
 
@@ -47,7 +48,7 @@ class ExecutionContext {
   void Dump();
 
   // Compiles all the pending instructions.
-  void Compile();
+  void Compile(code::Code* code);
 
   // Executes all the pending instructions.
   void Execute();
@@ -126,6 +127,14 @@ class Interpreter {
   // Inserts an instruction into a node.
   void InsertInstruction(ExecutionContext* context, uint64_t container_file_id,
                          uint64_t container_node_id, std::unique_ptr<Instruction> instruction);
+
+  const Variable* SearchGlobal(const std::string& name) const {
+    return isolate_->SearchGlobal(name);
+  }
+
+  void LoadGlobal(const Variable* variable, Value* value) const {
+    return isolate_->LoadGlobal(variable, value);
+  }
 
  private:
   // All the contexts for the interpreter.
