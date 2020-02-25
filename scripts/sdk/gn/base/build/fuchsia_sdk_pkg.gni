@@ -3,57 +3,13 @@
 # found in the LICENSE file.
 
 import("config/config.gni")
-import("fidl_library.gni")
-
-# Templates for Fuchsia SDK packages.
-
-# Defines a Fuchsia SDK FIDL library target.
-#
-# $namespace.$package_name must match the the library name specified in the FIDL
-# files.
-#
-# Parameters
-#
-#   sources
-#     Required: List of .fidl files.
-#
-#   package_name
-#     Optional: Name of the library. target_name is used if name
-#               is not specified explicitly.
-#
-#   namespace
-#     Optional: Namespace for the library.
-#
-#   deps
-#     Optional: List of other fidl_library() targets that this
-#               FIDL library depends on.
-#
-template("fuchsia_sdk_fidl_pkg") {
-  _package_name = target_name
-  if (defined(invoker.package_name)) {
-    _package_name = invoker.package_name
-  }
-
-  fidl_library(target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "deps",
-                             "public_deps",
-                             "testonly",
-                             "visibility",
-                           ])
-
-    library_name = _package_name
-
-    if (defined(invoker.namespace)) {
-      namespace = invoker.namespace
-    }
-
-    sources = invoker.sources
-  }
-}
 
 # Defines a Fuchsia SDK library target from source or prebuilt.
+#
+# If this target has header files, they are exposed via a config
+# object specifying the include_dirs.
+#
+# Shared libraries are copied to ${root_out_dir/lib} for packaging.
 #
 #
 # Parameters
@@ -84,6 +40,7 @@ template("fuchsia_sdk_fidl_pkg") {
 #
 # Declares a package containing uncompiled code and/or precompiled libraries.
 #
+#
 template("fuchsia_sdk_pkg") {
   config("${target_name}_config") {
     forward_variables_from(invoker, [ "include_dirs" ])
@@ -104,6 +61,7 @@ template("fuchsia_sdk_pkg") {
       }
 
       outputs = [ "${root_out_dir}/lib/{{source_file_part}}" ]
+      visibility = [ ":${target_name}" ]
     }
   }
 

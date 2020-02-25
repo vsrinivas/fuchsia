@@ -1,9 +1,9 @@
 <%include file="header.mako" />
 
-import("${data.relative_path_to_root}/build/fuchsia_sdk_pkg.gni")
+import("${data.relative_path_to_root}/build/fidl_library.gni")
 
-fuchsia_sdk_fidl_pkg("${data.name}") {
-  package_name = "${data.short_name}"
+fidl_library("${data.name}") {
+  library_name = "${data.short_name}"
   namespace = "${data.namespace}"
   public_deps = [
     % for dep in sorted(data.deps):
