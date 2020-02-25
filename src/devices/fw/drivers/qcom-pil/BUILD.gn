@@ -23,11 +23,11 @@ driver_module("qcom-pil") {
     "//zircon/public/lib/device-protocol-platform-device",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/mmio",
-    "//zircon/public/lib/qcom",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/banjo/ddk.protocol.clock",
     "//zircon/system/banjo/ddk.protocol.platform.device",
+    "//zircon/system/dev/lib/qcom",
   ]
   data_deps = [ ":firmware" ]
 }

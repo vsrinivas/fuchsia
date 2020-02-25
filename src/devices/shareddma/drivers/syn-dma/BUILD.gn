@@ -31,13 +31,13 @@ driver_module("syn-dma") {
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mmio",
-    "//zircon/public/lib/qcom",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.shareddma",
+    "//zircon/system/dev/lib/qcom",
   ]
 }
 
@@ -74,7 +74,6 @@ test("syn-dhub-test") {
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/mock-mmio-reg",
-    "//zircon/public/lib/qcom",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -82,6 +81,7 @@ test("syn-dhub-test") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.shareddma",
+    "//zircon/system/dev/lib/qcom",
   ]
 }
 

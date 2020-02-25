@@ -36,7 +36,6 @@ driver_module("vim3") {
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//src/devices/lib/driver",
     "//zircon/public/lib/amlogic",
-    "//zircon/public/lib/broadcom",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
@@ -53,6 +52,7 @@ driver_module("vim3") {
     "//zircon/system/banjo/ddk.protocol.platform.bus",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.scpi",
+    "//zircon/system/dev/lib/broadcom",
     "//zircon/system/fidl/fuchsia-hardware-thermal:c",
     "//zircon/system/fidl/fuchsia-sysmem:c",
   ]

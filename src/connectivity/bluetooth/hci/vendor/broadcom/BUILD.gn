@@ -60,11 +60,11 @@ test("bt-hci-broadcom-test") {
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/mock-sdio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/dev/lib/mock-sdio",
   ]
 }
 

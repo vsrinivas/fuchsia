@@ -29,9 +29,9 @@ source_set("sdio") {
     "//sdk/banjo/ddk.protocol.composite",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:bcdc",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
-    "//zircon/public/lib/broadcom",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/trace-driver",
+    "//zircon/system/dev/lib/broadcom",
     "//zircon/system/public",
   ]
   public_deps = [

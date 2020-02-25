@@ -41,8 +41,8 @@ source_set("scsi_lib") {
   public_deps = [
     "//src/devices/bus/lib/virtio",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/scsi",
     "//zircon/system/banjo/ddk.protocol.block",
+    "//zircon/system/dev/lib/scsi",
   ]
 }
 

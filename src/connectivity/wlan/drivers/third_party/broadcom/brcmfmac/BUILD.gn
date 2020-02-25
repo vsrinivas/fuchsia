@@ -170,10 +170,10 @@ source_set("core") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/broadcom",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/system/banjo/ddk.protocol.ethernet",
+    "//zircon/system/dev/lib/broadcom",
     "//zircon/system/public",
   ]
   friend = [ "test/*" ]

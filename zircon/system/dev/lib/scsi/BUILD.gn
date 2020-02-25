@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+##########################################
+# Though under //zircon, this build file #
+# is meant to be used in the Fuchsia GN  #
+# build.                                 #
+# See fxb/36548.                         #
+##########################################
+
+assert(!defined(zx) || zx != "/",
+       "This file can only be used in the Fuchsia GN build.")
+
+import("//build/unification/zx_library.gni")
+
 zx_library("scsi") {
   sdk = "source"
   sdk_headers = [
@@ -10,14 +22,14 @@ zx_library("scsi") {
   ]
   sources = [ "scsilib.cc" ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.block",
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/driver",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/system/banjo/ddk.protocol.block",
   ]
   public_deps = [
-    "$zx/system/ulib/ddk",
-    "$zx/system/ulib/ddktl",
-    "$zx/system/ulib/driver",
+    "//src/devices/lib/driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
   ]
 }

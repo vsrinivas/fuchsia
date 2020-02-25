@@ -84,8 +84,8 @@ test("dsi-host") {
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/image-format-llcpp",
     "//zircon/public/lib/mock-mmio-reg",
-    "//zircon/public/lib/mock-sysmem",
     "//zircon/public/lib/zxtest",
+    "//zircon/system/dev/lib/mock-sysmem",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
   ]
 }

@@ -83,7 +83,6 @@ test("astro-display-test") {
     "//zircon/public/lib/image-format-llcpp",
     "//zircon/public/lib/mipi-dsi",
     "//zircon/public/lib/mmio",
-    "//zircon/public/lib/mock-sysmem",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
@@ -95,6 +94,7 @@ test("astro-display-test") {
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/dev/lib/mock-sysmem",
     "//zircon/system/fidl/fuchsia-sysmem:c",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
   ]

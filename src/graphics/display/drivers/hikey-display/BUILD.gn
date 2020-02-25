@@ -69,7 +69,6 @@ test("hikey-display-test") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/mipi-dsi",
     "//zircon/public/lib/mmio",
-    "//zircon/public/lib/mock-sysmem",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
@@ -81,6 +80,7 @@ test("hikey-display-test") {
     "//zircon/system/banjo/ddk.protocol.i2c",
     "//zircon/system/banjo/ddk.protocol.platform.device",
     "//zircon/system/banjo/ddk.protocol.sysmem",
+    "//zircon/system/dev/lib/mock-sysmem",
     "//zircon/system/fidl/fuchsia-sysmem:c",
     "//zircon/system/fidl/fuchsia-sysmem:llcpp",
   ]
