@@ -68,11 +68,11 @@ The following addition to your driver's `BUILD.gn` target is needed to
 pick up tracing support:
 
 ```gn
-driver("my_driver") {
+driver_module("my_driver") {
   deps = [
     ...
-    "$zx/system/ulib/trace:headers"
-    "$zx/system/ulib/trace:trace-driver",
+    "//zircon/public/lib/trace"
+    "//zircon/public/lib/trace-driver",
   ]
 }
 ```
