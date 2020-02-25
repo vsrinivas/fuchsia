@@ -5,7 +5,6 @@
 package netstack
 
 import (
-	"fidl/fuchsia/net/stack"
 	"net"
 	"sort"
 	"syscall/zx"
@@ -15,17 +14,20 @@ import (
 
 	"netstack/fidlconv"
 	"netstack/link"
+	"netstack/link/eth"
 	"netstack/routes"
 
 	"fidl/fuchsia/hardware/ethernet"
 	fidlnet "fidl/fuchsia/net"
 	"fidl/fuchsia/net/dhcp"
+	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
+	tcpipstack "gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/udp"
 )
@@ -76,11 +78,18 @@ func (ns *Netstack) getNetInterfaces2() []netstack.NetInterface2 {
 		netInterface := netstack.NetInterface2{
 			Id:        uint32(ifs.nicid),
 			Flags:     ifs.getFlags(),
-			Features:  ifs.features,
 			Metric:    uint32(ifs.mu.metric),
 			Name:      nicInfo.Name,
 			Hwaddr:    []uint8(ifs.endpoint.LinkAddress()[:]),
 			Ipv6addrs: ipv6addrs,
+		}
+
+		if ifs.endpoint.Capabilities()&tcpipstack.CapabilityLoopback != 0 {
+			netInterface.Features |= ethernet.InfoFeatureLoopback
+		}
+
+		if client, ok := ifs.controller.(*eth.Client); ok {
+			netInterface.Features |= client.Info.Features
 		}
 
 		// Upstream reuses ErrNoLinkAddress to indicate no address can be found for the requested NIC and

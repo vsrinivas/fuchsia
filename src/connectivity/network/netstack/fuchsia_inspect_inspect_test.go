@@ -11,7 +11,11 @@ import (
 	"syscall/zx"
 	"testing"
 
+	"netstack/link/eth"
+
+	"fidl/fuchsia/hardware/ethernet"
 	inspect "fidl/fuchsia/inspect/deprecated"
+	ethernetext "fidlext/fuchsia/hardware/ethernet"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -260,8 +264,6 @@ func TestNicInfoInspectImpl(t *testing.T) {
 			{Key: "Running", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.Flags.Running))},
 			{Key: "Loopback", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.Flags.Loopback))},
 			{Key: "Promiscuous", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.Flags.Promiscuous))},
-			{Key: "Filepath", Value: inspect.PropertyValueWithStr(v.value.filepath)},
-			{Key: "Features", Value: inspect.PropertyValueWithStr(featuresString(v.value.features))},
 			{Key: "DNS server0", Value: inspect.PropertyValueWithStr(v.value.dnsServers[0].String())},
 			{Key: "DHCP enabled", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.dhcpEnabled))},
 		},
@@ -306,6 +308,67 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 			{Key: "Acquisition", Value: inspect.PropertyValueWithStr(v.info.Acquisition.String())},
 			{Key: "Backoff", Value: inspect.PropertyValueWithStr(v.info.Backoff.String())},
 			{Key: "Retransmission", Value: inspect.PropertyValueWithStr(v.info.Retransmission.String())},
+		},
+	}, v.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{})); diff != "" {
+		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestEthInfoInspectImpl(t *testing.T) {
+	const topopath, filepath = "topopath", "filepath"
+	const features = ethernet.InfoFeatureWlan | ethernet.InfoFeatureSynth | ethernet.InfoFeatureLoopback
+
+	arena, err := eth.NewArena()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	device := ethernetext.Device{
+		TB: t,
+		GetInfoImpl: func() (ethernet.Info, error) {
+			return ethernet.Info{
+				Features: features,
+			}, nil
+		},
+		GetFifosImpl: func() (int32, *ethernet.Fifos, error) {
+			return int32(zx.ErrOk), &ethernet.Fifos{}, nil
+		},
+		SetIoBufferImpl: func(zx.VMO) (int32, error) {
+			return int32(zx.ErrOk), nil
+		},
+		SetClientNameImpl: func(string) (int32, error) {
+			return int32(zx.ErrOk), nil
+		},
+		ConfigMulticastSetPromiscuousModeImpl: func(bool) (int32, error) {
+			return int32(zx.ErrOk), nil
+		},
+	}
+
+	client, err := eth.NewClient("client", topopath, filepath, &device, arena)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	v := ethInfoInspectImpl{
+		name:  "doesn't matter",
+		value: client,
+	}
+	children := v.ListChildren()
+	if diff := cmp.Diff([]string(nil), children); diff != "" {
+		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
+	}
+
+	childName := "not a real child"
+	if child := v.GetChild(childName); child != nil {
+		t.Errorf("got GetChild(%s) = %s, want = %v", childName, child, nil)
+	}
+
+	if diff := cmp.Diff(inspect.Object{
+		Name: v.name,
+		Properties: []inspect.Property{
+			{Key: "Topopath", Value: inspect.PropertyValueWithStr(topopath)},
+			{Key: "Filepath", Value: inspect.PropertyValueWithStr(filepath)},
+			{Key: "Features", Value: inspect.PropertyValueWithStr(featuresString(features))},
 		},
 	}, v.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{})); diff != "" {
 		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)

@@ -53,9 +53,16 @@ func getInterfaceInfo(nicInfo tcpipstack.NICInfo) stack.InterfaceInfo {
 		})
 	}
 
-	var topopath string
+	var features uint32
+	if ifs.endpoint.Capabilities()&tcpipstack.CapabilityLoopback != 0 {
+		features |= ethernet.InfoFeatureLoopback
+	}
+
+	var topopath, filepath string
 	if client, ok := ifs.controller.(*eth.Client); ok {
-		topopath = client.Path()
+		topopath = client.Topopath()
+		filepath = client.Filepath()
+		features |= client.Info.Features
 	}
 
 	mac := &ethernet.MacAddress{}
@@ -66,12 +73,12 @@ func getInterfaceInfo(nicInfo tcpipstack.NICInfo) stack.InterfaceInfo {
 		Properties: stack.InterfaceProperties{
 			Name:                 nicInfo.Name,
 			Topopath:             topopath,
-			Filepath:             ifs.filepath,
+			Filepath:             filepath,
 			Mac:                  mac,
 			Mtu:                  uint32(ifs.endpoint.MTU()),
 			AdministrativeStatus: administrativeStatus,
 			PhysicalStatus:       physicalStatus,
-			Features:             ifs.features,
+			Features:             features,
 			Addresses:            addrs,
 		},
 	}

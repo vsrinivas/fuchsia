@@ -15,6 +15,7 @@ import (
 	"app/context"
 	"netstack/dhcp"
 	"netstack/link"
+	"netstack/link/eth"
 	"syslog"
 
 	"fidl/fuchsia/hardware/ethernet"
@@ -38,6 +39,7 @@ const (
 	statsLabel = "Stats"
 	socketInfo = "Socket Info"
 	dhcpInfo   = "DHCP Info"
+	ethInfo    = "Ethernet Info"
 )
 
 // An adapter that implements fuchsia.inspect.Inspect using the above.
@@ -187,13 +189,12 @@ var _ inspectInner = (*nicInfoMapInspectImpl)(nil)
 type ifStateInfo struct {
 	stack.NICInfo
 	nicid       tcpip.NICID
-	filepath    string
-	features    uint32
 	state       link.State
 	dnsServers  []tcpip.Address
 	dhcpEnabled bool
 	dhcpInfo    dhcp.Info
 	dhcpStats   *dhcp.Stats
+	client      *eth.Client
 }
 
 type nicInfoMapInspectImpl struct {
@@ -273,10 +274,6 @@ func (impl *nicInfoInspectImpl) ReadData() inspect.Object {
 		})
 	}
 
-	object.Properties = append(object.Properties, []inspect.Property{
-		{Key: "Filepath", Value: inspect.PropertyValueWithStr(impl.value.filepath)},
-		{Key: "Features", Value: inspect.PropertyValueWithStr(featuresString(impl.value.features))},
-	}...)
 	for i, addr := range impl.value.dnsServers {
 		object.Properties = append(object.Properties, inspect.Property{
 			Key: fmt.Sprintf("DNS server%d", i), Value: inspect.PropertyValueWithStr(addr.String())})
@@ -291,6 +288,9 @@ func (impl *nicInfoInspectImpl) ListChildren() []string {
 	}
 	if impl.value.dhcpEnabled {
 		children = append(children, dhcpInfo)
+	}
+	if impl.value.client != nil {
+		children = append(children, ethInfo)
 	}
 	return children
 }
@@ -307,6 +307,11 @@ func (impl *nicInfoInspectImpl) GetChild(childName string) inspectInner {
 			name:  childName,
 			info:  impl.value.dhcpInfo,
 			stats: impl.value.dhcpStats,
+		}
+	case ethInfo:
+		return &ethInfoInspectImpl{
+			name:  childName,
+			value: impl.value.client,
 		}
 	default:
 		return nil
@@ -364,6 +369,32 @@ func (impl *dhcpInfoInspectImpl) GetChild(childName string) inspectInner {
 	default:
 		return nil
 	}
+}
+
+var _ inspectInner = (*ethInfoInspectImpl)(nil)
+
+type ethInfoInspectImpl struct {
+	name  string
+	value *eth.Client
+}
+
+func (impl *ethInfoInspectImpl) ReadData() inspect.Object {
+	return inspect.Object{
+		Name: impl.name,
+		Properties: []inspect.Property{
+			{Key: "Topopath", Value: inspect.PropertyValueWithStr(impl.value.Topopath())},
+			{Key: "Filepath", Value: inspect.PropertyValueWithStr(impl.value.Filepath())},
+			{Key: "Features", Value: inspect.PropertyValueWithStr(featuresString(impl.value.Info.Features))},
+		},
+	}
+}
+
+func (impl *ethInfoInspectImpl) ListChildren() []string {
+	return nil
+}
+
+func (impl *ethInfoInspectImpl) GetChild(childName string) inspectInner {
+	return nil
 }
 
 var _ inspectInner = (*socketInfoMapInspectImpl)(nil)

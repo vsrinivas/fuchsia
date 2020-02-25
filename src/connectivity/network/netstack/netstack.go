@@ -265,10 +265,7 @@ type ifState struct {
 	ns         *Netstack
 	controller link.Controller
 	nicid      tcpip.NICID
-	filepath   string
-	// features can include any value that's valid in fuchsia.hardware.ethernet.Info.features.
-	features uint32
-	mu       struct {
+	mu         struct {
 		sync.Mutex
 		state link.State
 		// metric is used by default for routes that originate from this NIC.
@@ -754,7 +751,7 @@ func (ns *Netstack) getDeviceName() string {
 func (ns *Netstack) addLoopback() error {
 	ifs, err := ns.addEndpoint(func(tcpip.NICID) string {
 		return "lo"
-	}, loopback.New(), link.NewLoopbackController(), false, defaultInterfaceMetric, ethernet.InfoFeatureLoopback, "[none]", true /* enabled */)
+	}, loopback.New(), link.NewLoopbackController(), false, defaultInterfaceMetric, true /* enabled */)
 	if err != nil {
 		return err
 	}
@@ -825,11 +822,11 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 	b := bridge.New(links)
 	return ns.addEndpoint(func(nicid tcpip.NICID) string {
 		return fmt.Sprintf("br%d", nicid)
-	}, b, b, false, defaultInterfaceMetric, 0, "[none]", false /* enabled */)
+	}, b, b, false, defaultInterfaceMetric, false /* enabled */)
 }
 
 func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceConfig, device ethernet.Device) (*ifState, error) {
-	client, err := eth.NewClient("netstack", topological_path, device, ns.arena)
+	client, err := eth.NewClient("netstack", topological_path, config.Filepath, device, ns.arena)
 	if err != nil {
 		return nil, err
 	}
@@ -839,7 +836,7 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 			return fmt.Sprintf("eth%d", nicid)
 		}
 		return config.Name
-	}, eth.NewLinkEndpoint(client), client, true, routes.Metric(config.Metric), client.Info.Features, config.Filepath, false /* enabled */)
+	}, eth.NewLinkEndpoint(client), client, true, routes.Metric(config.Metric), false /* enabled */)
 }
 
 // addEndpoint creates a new NIC with stack.Stack.
@@ -854,15 +851,11 @@ func (ns *Netstack) addEndpoint(
 	controller link.Controller,
 	doFilter bool,
 	metric routes.Metric,
-	features uint32,
-	filepath string,
 	enabled bool,
 ) (*ifState, error) {
 	ifs := &ifState{
 		ns:         ns,
 		controller: controller,
-		filepath:   filepath,
-		features:   features,
 	}
 
 	ifs.mu.state = link.StateUnknown
@@ -956,8 +949,6 @@ func (ns *Netstack) getIfStateInfo(nicInfo map[tcpip.NICID]stack.NICInfo) map[tc
 		info := ifStateInfo{
 			NICInfo:     ni,
 			nicid:       ifs.nicid,
-			features:    ifs.features,
-			filepath:    ifs.filepath,
 			state:       ifs.mu.state,
 			dnsServers:  ifs.mu.dnsServers,
 			dhcpEnabled: ifs.mu.dhcp.enabled,
@@ -967,6 +958,9 @@ func (ns *Netstack) getIfStateInfo(nicInfo map[tcpip.NICID]stack.NICInfo) map[tc
 			info.dhcpStats = ifs.mu.dhcp.Stats()
 		}
 		ifs.mu.Unlock()
+		if client, ok := ifs.controller.(*eth.Client); ok {
+			info.client = client
+		}
 		ifStates[id] = info
 	}
 	return ifStates

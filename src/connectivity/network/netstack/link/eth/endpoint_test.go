@@ -112,7 +112,7 @@ func TestEndpoint(t *testing.T) {
 					TxDepth: depth,
 				}, nil
 			}
-			inClient, err := eth.NewClient(t.Name(), "in", &inDevice, arena)
+			inClient, err := eth.NewClient(t.Name(), "inTopo", "inFile", &inDevice, arena)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -151,7 +151,7 @@ func TestEndpoint(t *testing.T) {
 					TxDepth: depth,
 				}, nil
 			}
-			outClient, err := eth.NewClient(t.Name(), "out", &outDevice, arena)
+			outClient, err := eth.NewClient(t.Name(), "outTopo", "outFile", &outDevice, arena)
 			if err != nil {
 				t.Fatal(err)
 			}

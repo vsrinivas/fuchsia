@@ -139,7 +139,8 @@ type Client struct {
 
 	device ethernet.Device
 	fifos  ethernet.Fifos
-	path   string
+
+	topopath, filepath string
 
 	mu        sync.Mutex
 	state     link.State
@@ -162,7 +163,7 @@ type Client struct {
 }
 
 // NewClient creates a new ethernet Client.
-func NewClient(clientName string, topo string, device ethernet.Device, arena *Arena) (*Client, error) {
+func NewClient(clientName string, topopath, filepath string, device ethernet.Device, arena *Arena) (*Client, error) {
 	if status, err := device.SetClientName(clientName); err != nil {
 		return nil, err
 	} else if err := checkStatus(status, "SetClientName"); err != nil {
@@ -190,11 +191,12 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 	}
 
 	c := &Client{
-		Info:   info,
-		device: device,
-		fifos:  *fifos,
-		path:   topo,
-		arena:  arena,
+		Info:     info,
+		device:   device,
+		fifos:    *fifos,
+		topopath: topopath,
+		filepath: filepath,
+		arena:    arena,
 	}
 	c.rx.init(fifos.RxDepth)
 	for i := range c.rx.storage {
@@ -557,8 +559,12 @@ func (c *Client) SetOnStateChange(f func(link.State)) {
 	c.stateFunc = f
 }
 
-func (c *Client) Path() string {
-	return c.path
+func (c *Client) Topopath() string {
+	return c.topopath
+}
+
+func (c *Client) Filepath() string {
+	return c.filepath
 }
 
 func (c *Client) changeStateLocked(s link.State) {
@@ -621,7 +627,7 @@ func (c *Client) closeLocked() error {
 	}
 	err := c.device.Stop()
 	if err != nil {
-		err = fmt.Errorf("fuchsia.hardware.ethernet.Device.Stop() for path %q failed: %s", c.path, err)
+		err = fmt.Errorf("fuchsia.hardware.ethernet.Device.Stop() for path %q failed: %s", c.topopath, err)
 	}
 
 	if err := c.fifos.Tx.Close(); err != nil {
