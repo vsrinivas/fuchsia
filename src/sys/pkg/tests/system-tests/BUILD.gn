@@ -49,7 +49,41 @@ group("system_tests") {
   ]
 }
 
+if (is_linux || is_mac) {
+  system_test_reboot_suite("nuc-release-reboot") {
+    environments = [
+      {
+        dimensions = {
+          device_type = "Intel NUC Kit NUC7i5DNHE"
+        }
+        tags = [ "reboot" ]
+      },
+    ]
+    timeout = "10m"
+    cycle_count = "5"
+    cycle_timeout = "2m"
+  }
+
+  system_test_reboot_suite("nuc-release-reboot-longevity") {
+    environments = [
+      {
+        dimensions = {
+          device_type = "Intel NUC Kit NUC7i5DNHE"
+        }
+        tags = [ "reboot-longevity" ]
+      },
+    ]
+    timeout = "4h"
+    cycle_count = "100"
+    cycle_timeout = "2m"
+  }
+}
+
 group("tests") {
   testonly = true
-  public_deps = [ ":system_tests" ]
+  public_deps = [
+    ":nuc-release-reboot($host_toolchain)",
+    ":nuc-release-reboot-longevity($host_toolchain)",
+    ":system_tests",
+  ]
 }
