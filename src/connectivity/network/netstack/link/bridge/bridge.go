@@ -155,10 +155,6 @@ func (ep *Endpoint) SetOnStateChange(f func(link.State)) {
 	ep.mu.onStateChange = f
 }
 
-func (ep *Endpoint) Path() string {
-	return "bridge"
-}
-
 // SetPromiscuousMode on a bridge is a no-op, since all of the constituent
 // links on a bridge need to already be in promiscuous mode for bridging to
 // work.

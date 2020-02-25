@@ -43,6 +43,7 @@ test_package("network_manager_integration_tests") {
     {
       name = "network_manager_integration_test"
       environments = basic_envs
+      disabled = true
     },
   ]
 }

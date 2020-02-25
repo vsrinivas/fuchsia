@@ -12,6 +12,7 @@ import (
 
 	"netstack/fidlconv"
 	"netstack/link"
+	"netstack/link/eth"
 
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/net"
@@ -52,13 +53,13 @@ func getInterfaceInfo(nicInfo tcpipstack.NICInfo) stack.InterfaceInfo {
 		})
 	}
 
-	var mac *ethernet.MacAddress
 	var topopath string
-	if controller := ifs.controller; controller != nil {
-		mac = &ethernet.MacAddress{}
-		copy(mac.Octets[:], ifs.endpoint.LinkAddress())
-		topopath = controller.Path()
+	if client, ok := ifs.controller.(*eth.Client); ok {
+		topopath = client.Path()
 	}
+
+	mac := &ethernet.MacAddress{}
+	copy(mac.Octets[:], ifs.endpoint.LinkAddress())
 
 	return stack.InterfaceInfo{
 		Id: uint64(ifs.nicid),

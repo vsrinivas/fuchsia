@@ -23,10 +23,6 @@ type Controller interface {
 	Close() error
 	SetOnStateChange(func(State))
 
-	// TODO(stijlist): remove all callers of this method;
-	// not all interfaces are backed by a topological path
-	// (e.g. loopback, bridge).
-	Path() string
 	SetPromiscuousMode(bool) error
 }
 
@@ -73,9 +69,6 @@ func (c *loopbackController) Close() error {
 }
 func (c *loopbackController) SetOnStateChange(f func(State)) {
 	c.onStateChange = f
-}
-func (c *loopbackController) Path() string {
-	return "loopback"
 }
 func (c *loopbackController) SetPromiscuousMode(bool) error {
 	return nil
