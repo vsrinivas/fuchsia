@@ -1,0 +1,74 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.legacymetrics;
+
+using zx;
+
+/// A single metric event to be recorded and sent to the UMA backend.
+union Event {
+    1: UserActionEvent user_action_event;
+    2: HistogramSample histogram_sample;
+    3: ImplementationDefinedEvent impl_defined_event;
+};
+
+/// Event that occurs in response to a user action. See
+/// https://chromium.googlesource.com/chromium/src.git/+/HEAD/tools/metrics/actions/README.md
+table UserActionEvent {
+    1: string:MAX name;
+
+    /// Required timestamp of the event occurence. See TimeTicks in
+    /// https://cs.chromium.org/chromium/src/base/time/time.h
+    2: zx.time time;
+};
+
+/// A sample to add to a collected histogram. See
+/// https://chromium.googlesource.com/chromium/src.git/+/HEAD/tools/metrics/histograms/README.md
+table HistogramSample {
+    // |info| and |value| are required.
+    1: HistogramInfo info;
+    2: int64 value;
+};
+
+/// Descriptor that identifies a histogram.
+table HistogramInfo {
+    /// Required histogram identifier. See these guidelines for more info:
+    /// https://chromium.googlesource.com/chromium/src.git/+/HEAD/tools/metrics/histograms/README.md#naming-your-histogram
+    1: string:MAX name;
+
+    /// Describes the structure of the histogram. Defaults to EXPONENTIAL when empty.
+    2: HistogramType type;
+
+    /// The (inclusive) minimum and maximum values for the entire histogram,
+    /// respectively. Required for all histogram types except ENUM, where
+    /// they can be inferred from |num_buckets|.
+    3: int64 min;
+    4: int64 max;
+
+    /// |num_buckets| describes the number of buckets in the entire histogram.
+    /// Required for all histogram types.
+    5: uint32 num_buckets;
+};
+
+/// See Chromium Histogram documentation for more info:
+/// https://cs.chromium.org/chromium/src/base/metrics/histogram.h
+enum HistogramType : uint32 {
+    /// Bucket ranges increase exponentially.
+    EXPONENTIAL = 0;
+
+    /// Bucket ranges are identical and evenly spaced.
+    LINEAR = 1;
+
+    /// Counts enumerated values (e.g. connection error codes).
+    ENUM = 2;
+};
+
+/// A custom event defined by the MetricsRecorder service. Refer to your
+/// MetricsRecorder implementation for more details on the payload structure.
+table ImplementationDefinedEvent {
+    /// Custom binary payload whose structure is defined by the MetricsRecorder
+    /// implementation. For example, it can represent a custom event protocol
+    /// buffer serialized to its wire format.
+    1: bytes data;
+};

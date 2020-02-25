@@ -1,0 +1,28 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.legacymetrics;
+
+/// Gathers metrics events and uploads them to UMA backends for analysis.
+[Discoverable]
+protocol MetricsRecorder {
+    /// Registers a client's MetricsProvider implementation that this service
+    /// uses to pull metrics as soon as possible.
+    Connect(MetricsProvider provider);
+};
+
+/// Each client that wants to record metrics must implement this interface and
+/// connect it to the MetricsRecorder service. Implementors are required to
+/// cache local metric events until they're requested.
+protocol MetricsProvider {
+    /// Requests the next available batch of events from this provider.
+    /// When specified, |max_count| limits the number of metrics returned by
+    /// this call; otherwise, it returns all available events. Note that this
+    /// method is a "hanging get" - if an implementor of this interface has no
+    /// events to report, it should hang the response until it has at least 1
+    /// event to report.
+    GetEvents(uint32? max_count) -> (vector<Event>:MAX events);
+
+    // TODO(fxb/46943): Indicate when events are dropped by the provider.
+};
