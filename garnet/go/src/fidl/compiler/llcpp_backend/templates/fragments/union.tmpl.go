@@ -4,12 +4,12 @@
 
 package fragments
 
-const XUnion = `
-{{- define "XUnionForwardDeclaration" }}
+const Union = `
+{{- define "UnionForwardDeclaration" }}
 class {{ .Name }};
 {{- end }}
 
-{{- define "XUnionDeclaration" }}
+{{- define "UnionDeclaration" }}
 
 extern "C" const fidl_type_t {{ .TableType }};
 {{range .DocComments}}
@@ -122,7 +122,7 @@ class {{ .Name }} {
 };
 {{- end }}
 
-{{- define "XUnionDefinition" }}
+{{- define "UnionDefinition" }}
 
 {{- if .IsFlexible }}
 auto {{ .Namespace }}::{{ .Name }}::which() const -> Tag {
@@ -146,7 +146,7 @@ void {{ .Namespace }}::{{ .Name }}::SizeAndOffsetAssertionHelper() {
 }
 {{- end }}
 
-{{- define "XUnionTraits" }}
+{{- define "UnionTraits" }}
 
 template <>
 struct IsFidlType<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};

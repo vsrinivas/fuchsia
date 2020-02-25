@@ -4,8 +4,8 @@
 
 package templates
 
-const XUnion = `
-{{- define "XUnionDeclaration" }}
+const Union = `
+{{- define "UnionDeclaration" }}
 fidl_xunion! {
 	{{- range .DocComments}}
 	///{{ . }}

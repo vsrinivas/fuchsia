@@ -16,7 +16,6 @@ struct Object;
 struct StructMember;
 struct TableMemberUsed;
 struct UnionMemberUsed;
-struct XUnionMemberUsed;
 
 }  // namespace flat
 
@@ -57,7 +56,7 @@ struct TypeShape {
   bool has_padding;
 
   bool has_flexible_envelope;
-  // Whether this type transitively contains a union. If this is false, union/xunion transformations
+  // Whether this type transitively contains a union. If this is false, union transformations
   // can be avoided
   bool contains_union;
 
@@ -81,7 +80,6 @@ struct FieldShape {
   explicit FieldShape(const flat::StructMember&, const WireFormat wire_format);
   explicit FieldShape(const flat::TableMemberUsed&, const WireFormat wire_format);
   explicit FieldShape(const flat::UnionMemberUsed&, const WireFormat wire_format);
-  explicit FieldShape(const flat::XUnionMemberUsed&, const WireFormat wire_format);
 
   uint32_t Offset() const { return offset; }
   // Padding after this field until the next field or the end of the container.

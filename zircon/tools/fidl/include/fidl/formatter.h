@@ -199,19 +199,6 @@ class FormattingTreeVisitor : public DeclarationOrderTreeVisitor {
     TreeVisitor::OnUnionMember(element);
   }
 
-  virtual void OnXUnionDeclaration(std::unique_ptr<XUnionDeclaration> const& element) override {
-    OnBlankLineRequiringNode();
-    TreeVisitor::OnXUnionDeclaration(element);
-  }
-
-  virtual void OnXUnionMember(std::unique_ptr<XUnionMember> const& element) override {
-    OnBlankLineRespectingNode();
-    ScopedBool mem(is_member_decl_);
-    ScopedBool before_colon(blank_space_before_colon_, false);
-    ScopedBool after_colon(blank_space_after_colon_, true);
-    TreeVisitor::OnXUnionMember(element);
-  }
-
   virtual void OnTypeConstructor(std::unique_ptr<TypeConstructor> const& element) override {
     ScopedIncrement si(nested_type_depth_);
     ScopedBool before_colon(blank_space_before_colon_, is_enum_or_bits_decl_);

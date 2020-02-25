@@ -561,7 +561,7 @@ union DeclName {
     1: string:64 ${TEST};
 };
 )FIDL"},
-      {"xunion", R"FIDL(
+      {"union", R"FIDL(
 library fidl.repeater;
 
 xunion DeclName {
@@ -770,7 +770,7 @@ union DeclName {
     1: string:64 ${TEST};
 };
 )FIDL"},
-      {"xunion", R"FIDL(
+      {"union", R"FIDL(
 library fidl.repeater;
 
 xunion DeclName {
@@ -847,7 +847,7 @@ union ${TEST} {
     1: string:64 decl_member;
 };
 )FIDL"},
-      {"xunion", R"FIDL(
+      {"union", R"FIDL(
 library fidl.repeater;
 
 xunion ${TEST} {
@@ -1181,7 +1181,7 @@ union DeclName {
     1: string:64 ${TEST};
 };
 )FIDL"},
-      {"xunion members", R"FIDL(
+      {"union members", R"FIDL(
 library fidl.a;
 
 xunion DeclName {
@@ -1259,7 +1259,7 @@ union ${TEST} {
     1: string:64 decl_member;
 };
 )FIDL"},
-      {"xunions", R"FIDL(
+      {"unions", R"FIDL(
 library zx;
 
 xunion ${TEST} {
@@ -1342,7 +1342,7 @@ union ${TEST} {
     1: string:64 decl_member;
 };
 )FIDL"},
-      {"xunions", R"FIDL(
+      {"unions", R"FIDL(
 library fidl.a;
 
 xunion ${TEST} {

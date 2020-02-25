@@ -79,7 +79,7 @@ func NewGenerator() *Generator {
 		fragments.SyncRequestInPlace,
 		fragments.SyncServer,
 		fragments.Table,
-		fragments.XUnion,
+		fragments.Union,
 		files.Header,
 		files.Source,
 	}

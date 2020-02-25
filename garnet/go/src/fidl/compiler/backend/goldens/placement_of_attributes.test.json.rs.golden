@@ -40,6 +40,17 @@ fidl_enum! {
 
 
 fidl_xunion! {
+	#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+	name: ExampleUnion,
+	members: [
+		Variant {
+			ty: u32,
+			ordinal: 1,
+		},
+	],
+}
+
+fidl_xunion! {
 	#[derive(Debug, PartialEq)]
 	name: ExampleXUnion,
 	members: [
@@ -49,17 +60,6 @@ fidl_xunion! {
 		},
 	],
 	unknown_member: __UnknownVariant,
-}
-
-fidl_xunion! {
-	#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-	name: ExampleUnion,
-	members: [
-		Variant {
-			ty: u32,
-			ordinal: 1,
-		},
-	],
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]

@@ -1101,6 +1101,7 @@ std::unique_ptr<raw::TableDeclaration> Parser::ParseTableDeclaration(
 
 std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
   ASTScope scope(this);
+
   auto attributes = MaybeParseAttributeList();
   if (!Ok())
     return Fail();
@@ -1119,6 +1120,7 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
   auto type_ctor = ParseTypeConstructor();
   if (!Ok())
     return Fail();
+
   auto identifier = ParseIdentifier();
   if (!Ok())
     return Fail();
@@ -1131,88 +1133,6 @@ std::unique_ptr<raw::UnionMember> Parser::ParseUnionMember() {
 std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
     std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, types::Strictness strictness) {
   std::vector<std::unique_ptr<raw::UnionMember>> members;
-
-  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kUnion));
-  if (!Ok())
-    return Fail();
-  auto identifier = ParseIdentifier();
-  if (!Ok())
-    return Fail();
-  ConsumeToken(OfKind(Token::Kind::kLeftCurly));
-  if (!Ok())
-    return Fail();
-
-  bool contains_non_reserved_member = false;
-  auto parse_member = [&members, &contains_non_reserved_member, this]() {
-    if (Peek().kind() == Token::Kind::kRightCurly) {
-      ConsumeToken(OfKind(Token::Kind::kRightCurly));
-      return Done;
-    } else {
-      members.emplace_back(ParseUnionMember());
-      if (members.back() && members.back()->maybe_used)
-        contains_non_reserved_member = true;
-      return More;
-    }
-  };
-
-  while (parse_member() == More) {
-    if (!Ok())
-      Fail();
-    ConsumeToken(OfKind(Token::Kind::kSemicolon));
-    if (!Ok())
-      return Fail();
-  }
-  if (!Ok())
-    Fail();
-
-  if (!contains_non_reserved_member)
-    return Fail(
-        "must have at least one non reserved member; you can use an empty struct "
-        "to define a placeholder variant");
-
-  return std::make_unique<raw::UnionDeclaration>(scope.GetSourceElement(), std::move(attributes),
-                                                 std::move(identifier), std::move(members),
-                                                 strictness);
-}
-
-std::unique_ptr<raw::XUnionMember> Parser::ParseXUnionMember() {
-  ASTScope scope(this);
-
-  auto attributes = MaybeParseAttributeList();
-  if (!Ok())
-    return Fail();
-  auto ordinal = ParseOrdinal32();
-  if (!Ok())
-    return Fail();
-
-  if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kReserved))) {
-    if (!Ok())
-      return Fail();
-    if (attributes)
-      return Fail("Cannot attach attributes to reserved ordinals");
-    return std::make_unique<raw::XUnionMember>(scope.GetSourceElement(), std::move(ordinal));
-  }
-
-  auto type_ctor = ParseTypeConstructor();
-  if (!Ok())
-    return Fail();
-
-  auto identifier = ParseIdentifier();
-  if (!Ok())
-    return Fail();
-
-  return std::make_unique<raw::XUnionMember>(scope.GetSourceElement(), std::move(ordinal),
-                                             std::move(type_ctor), std::move(identifier),
-                                             std::move(attributes));
-}
-
-std::unique_ptr<raw::XUnionDeclaration> Parser::ParseXUnionDeclaration(
-    std::unique_ptr<raw::AttributeList> attributes, ASTScope& scope, types::Strictness strictness) {
-  std::vector<std::unique_ptr<raw::XUnionMember>> members;
-
-  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kXUnion));
-  if (!Ok())
-    return Fail();
 
   auto identifier = ParseIdentifier();
   if (!Ok())
@@ -1228,7 +1148,7 @@ std::unique_ptr<raw::XUnionDeclaration> Parser::ParseXUnionDeclaration(
       ConsumeToken(OfKind(Token::Kind::kRightCurly));
       return Done;
     } else {
-      members.emplace_back(ParseXUnionMember());
+      members.emplace_back(ParseUnionMember());
       if (members.back() && members.back()->maybe_used)
         contains_non_reserved_member = true;
       return More;
@@ -1251,9 +1171,9 @@ std::unique_ptr<raw::XUnionDeclaration> Parser::ParseXUnionDeclaration(
         "must have at least one non reserved member; you can use an empty struct "
         "to define a placeholder variant");
 
-  return std::make_unique<raw::XUnionDeclaration>(scope.GetSourceElement(), std::move(attributes),
-                                                  std::move(identifier), std::move(members),
-                                                  strictness);
+  return std::make_unique<raw::UnionDeclaration>(scope.GetSourceElement(), std::move(attributes),
+                                                 std::move(identifier), std::move(members),
+                                                 strictness);
 }
 
 std::unique_ptr<raw::File> Parser::ParseFile() {
@@ -1268,7 +1188,6 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
   std::vector<std::unique_ptr<raw::StructDeclaration>> struct_declaration_list;
   std::vector<std::unique_ptr<raw::TableDeclaration>> table_declaration_list;
   std::vector<std::unique_ptr<raw::UnionDeclaration>> union_declaration_list;
-  std::vector<std::unique_ptr<raw::XUnionDeclaration>> xunion_declaration_list;
 
   auto attributes = MaybeParseAttributeList();
   if (!Ok())
@@ -1286,8 +1205,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
   auto parse_declaration = [&bits_declaration_list, &const_declaration_list, &enum_declaration_list,
                             &protocol_declaration_list, &service_declaration_list,
                             &struct_declaration_list, &done_with_library_imports, &using_list,
-                            &table_declaration_list, &union_declaration_list,
-                            &xunion_declaration_list, this]() {
+                            &table_declaration_list, &union_declaration_list, this]() {
     ASTScope scope(this);
     std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
     if (!Ok())
@@ -1309,13 +1227,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
           }
           break;
         case CASE_IDENTIFIER(Token::Subkind::kUnion):
-          break;
+          [[fallthrough]];
         case CASE_IDENTIFIER(Token::Subkind::kXUnion):
-          if (maybe_strictness.value() == types::Strictness::kFlexible) {
-            Fail(previous_token_,
-                 "xunions are flexible by default, please remove the \"flexible\" qualifier");
-            return More;
-          }
           break;
         default:
           std::string msg = "cannot specify strictness for " + std::string(Token::Name(Peek()));
@@ -1384,13 +1297,15 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
       case CASE_IDENTIFIER(Token::Subkind::kUnion):
         done_with_library_imports = true;
+        ConsumeToken(IdentifierOfSubkind(Token::Subkind::kUnion));
         union_declaration_list.emplace_back(ParseUnionDeclaration(
             std::move(attributes), scope, maybe_strictness.value_or(types::Strictness::kStrict)));
         return More;
 
       case CASE_IDENTIFIER(Token::Subkind::kXUnion):
         done_with_library_imports = true;
-        xunion_declaration_list.emplace_back(ParseXUnionDeclaration(
+        ConsumeToken(IdentifierOfSubkind(Token::Subkind::kXUnion));
+        union_declaration_list.emplace_back(ParseUnionDeclaration(
             std::move(attributes), scope, maybe_strictness.value_or(types::Strictness::kFlexible)));
         return More;
     }
@@ -1413,8 +1328,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       std::move(using_list), std::move(bits_declaration_list), std::move(const_declaration_list),
       std::move(enum_declaration_list), std::move(protocol_declaration_list),
       std::move(service_declaration_list), std::move(struct_declaration_list),
-      std::move(table_declaration_list), std::move(union_declaration_list),
-      std::move(xunion_declaration_list));
+      std::move(table_declaration_list), std::move(union_declaration_list));
 }
 
 }  // namespace fidl

@@ -10,7 +10,7 @@ test_name_HandlesInTypesInLine {
        handle_in_arrayInLine array[flags[fidl_handle_presence, int32], 5]
        handle_in_mixed_vec_arrayInLine fidl_vector
         
-        
+       union_with_handleInLine test_name_UnionWithHandleInLine
 } [packed]
 test_name_HandlesInTypesOutOfLine {
        handle_in_vecOutOfLine array[flags[fidl_handle_presence, int32]]
@@ -22,4 +22,13 @@ test_name_HandlesInTypesHandles {
        handle_in_arrayHandles array[zx_vmo, 5]
        handle_in_mixed_vec_array array[array[zx_vmo, 5]]
 } [packed]
+test_name_UnionWithHandleInLine [
+       h fidl_union_member[test_name_UnionWithHandleTag_h, flags[fidl_handle_presence, int32]]
+]
+test_name_UnionWithHandleOutOfLine [
+       void void
+][varlen]
+test_name_UnionWithHandleHandles [
+       h zx_vmo
+][varlen]
 

@@ -4,8 +4,8 @@
 
 package templates
 
-const XUnion = `
-{{- define "XUnionDefinition" -}}
+const Union = `
+{{- define "UnionDefinition" -}}
 type {{ .TagName }} uint64
 const (
 	{{- if .IsFlexible }}

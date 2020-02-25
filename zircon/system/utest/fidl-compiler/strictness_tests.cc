@@ -163,18 +163,27 @@ strict xunion StrictFoo {
 
 )FIDL");
   ASSERT_TRUE(library.Compile());
-  EXPECT_EQ(library.LookupXUnion("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
-  EXPECT_EQ(library.LookupXUnion("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
+  EXPECT_EQ(library.LookupUnion("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
+  EXPECT_EQ(library.LookupUnion("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
 
   END_TEST;
 }
 
 bool flexible_xunion_redundant() {
-  return redundant_strictness("flexible", R"FIDL(
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
 flexible xunion Foo {
   1: int32 i;
 };
+
 )FIDL");
+  ASSERT_TRUE(library.Compile());
+  ASSERT_EQ(library.LookupUnion("Foo")->strictness, fidl::types::Strictness::kFlexible);
+
+  END_TEST;
 }
 
 }  // namespace

@@ -322,10 +322,6 @@ std::string NameUnionTag(std::string_view union_name, const flat::Union::Member:
   return std::string(union_name) + "Tag_" + NameIdentifier(member.name);
 }
 
-std::string NameXUnionTag(std::string_view xunion_name, const flat::XUnion::Member::Used& member) {
-  return std::string(xunion_name) + "Tag_" + NameIdentifier(member.name);
-}
-
 std::string NameFlatConstant(const flat::Constant* constant) {
   switch (constant->kind) {
     case flat::Constant::Kind::kLiteral: {
@@ -439,8 +435,9 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind,
           case flat::Decl::Kind::kBits:
           case flat::Decl::Kind::kConst:
           case flat::Decl::Kind::kEnum:
-          case flat::Decl::Kind::kStruct:
-          case flat::Decl::Kind::kUnion: {
+          // all unions are assumed to take the "xunion" code path in the C generator
+          case flat::Decl::Kind::kUnion:
+          case flat::Decl::Kind::kStruct: {
             std::string name = NameCodedName(identifier_type->name, wire_format);
             if (identifier_type->nullability == types::Nullability::kNullable) {
               name.push_back('*');
@@ -449,8 +446,6 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind,
           }
           case flat::Decl::Kind::kTable:
             return "fidl_table_t";
-          case flat::Decl::Kind::kXUnion:
-            return "fidl_xunion_t";
           case flat::Decl::Kind::kProtocol:
             return "zx_handle_t";
           case flat::Decl::Kind::kService:

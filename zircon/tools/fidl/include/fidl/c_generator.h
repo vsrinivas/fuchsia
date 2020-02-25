@@ -115,11 +115,6 @@ class CGenerator {
     const flat::Union& union_info;
   };
 
-  struct NamedXUnion {
-    std::string name;
-    const flat::XUnion& xunion_info;
-  };
-
   enum class StructKind {
     kMessage,
     kNonmessage,
@@ -142,7 +137,6 @@ class CGenerator {
                                  StructKind kind);
   void GenerateTableDeclaration(std::string_view name);
   void GenerateTaggedUnionDeclaration(std::string_view name, const std::vector<Member>& members);
-  void GenerateTaggedXUnionDeclaration(std::string_view name, const std::vector<Member>& members);
 
   std::map<const flat::Decl*, NamedBits> NameBits(
       const std::vector<std::unique_ptr<flat::Bits>>& bits_infos);
@@ -158,8 +152,6 @@ class CGenerator {
       const std::vector<std::unique_ptr<flat::Table>>& table_infos);
   std::map<const flat::Decl*, NamedUnion> NameUnions(
       const std::vector<std::unique_ptr<flat::Union>>& union_infos);
-  std::map<const flat::Decl*, NamedXUnion> NameXUnions(
-      const std::vector<std::unique_ptr<flat::XUnion>>& xunion_infos);
 
   void ProduceBitsForwardDeclaration(const NamedBits& named_bits);
   void ProduceConstForwardDeclaration(const NamedConst& named_const);
@@ -168,7 +160,6 @@ class CGenerator {
   void ProduceStructForwardDeclaration(const NamedStruct& named_struct);
   void ProduceTableForwardDeclaration(const NamedTable& named_table);
   void ProduceUnionForwardDeclaration(const NamedUnion& named_union);
-  void ProduceXUnionForwardDeclaration(const NamedXUnion& named_xunion);
 
   void ProduceProtocolExternDeclaration(const NamedProtocol& named_protocol);
 
@@ -178,7 +169,6 @@ class CGenerator {
   void ProduceStructDeclaration(const NamedStruct& named_struct);
   void ProduceTableDeclaration(const NamedTable& named_table);
   void ProduceUnionDeclaration(const NamedUnion& named_union);
-  void ProduceXUnionDeclaration(const NamedXUnion& named_xunion);
 
   void ProduceProtocolClientDeclaration(const NamedProtocol& named_protocol);
   void ProduceProtocolClientImplementation(const NamedProtocol& named_protocol);

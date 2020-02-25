@@ -353,7 +353,7 @@
       },
       "members": [
         {
-          "xunion_ordinal": 1,
+          "ordinal": 1,
           "reserved": false,
           "name": "variant",
           "type": {
@@ -388,7 +388,7 @@
       },
       "members": [
         {
-          "xunion_ordinal": 1,
+          "ordinal": 1,
           "reserved": false,
           "name": "variant",
           "type": {
@@ -427,7 +427,7 @@
       },
       "members": [
         {
-          "xunion_ordinal": 1,
+          "ordinal": 1,
           "reserved": false,
           "name": "variant",
           "type": {
@@ -463,7 +463,7 @@
       },
       "members": [
         {
-          "xunion_ordinal": 1,
+          "ordinal": 1,
           "reserved": false,
           "name": "variant",
           "type": {
@@ -494,7 +494,6 @@
       }
     }
   ],
-  "xunion_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
     "test.fidl.unionsandwich/UnionSize8Alignment4",

@@ -57,16 +57,16 @@ type EnumMember struct {
 	Value     string
 }
 
-type XUnion struct {
+type Union struct {
 	types.Attributes
 	Derives derives
 	ECI     EncodedCompoundIdentifier
 	Name    string
-	Members []XUnionMember
+	Members []UnionMember
 	types.Strictness
 }
 
-type XUnionMember struct {
+type UnionMember struct {
 	types.Attributes
 	Type    string
 	OGType  types.Type
@@ -176,7 +176,7 @@ type Root struct {
 	Consts       []Const
 	Enums        []Enum
 	Structs      []Struct
-	XUnions      []XUnion
+	Unions       []Union
 	Results      []Result
 	Tables       []Table
 	Interfaces   []Interface
@@ -219,10 +219,10 @@ func (r *Root) findResult(eci EncodedCompoundIdentifier) *Result {
 	return nil
 }
 
-func (r *Root) findXUnion(eci EncodedCompoundIdentifier) *XUnion {
-	for i := range r.XUnions {
-		if r.XUnions[i].ECI == eci {
-			return &r.XUnions[i]
+func (r *Root) findUnion(eci EncodedCompoundIdentifier) *Union {
+	for i := range r.Unions {
+		if r.Unions[i].ECI == eci {
+			return &r.Unions[i]
 		}
 	}
 	return nil
@@ -598,7 +598,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 			// so no need to borrow
 			borrowed = false
 			fallthrough
-		case types.ConstDeclType, types.StructDeclType, types.UnionDeclType, types.XUnionDeclType:
+		case types.ConstDeclType, types.StructDeclType, types.UnionDeclType:
 			if val.Nullable {
 				if borrowed {
 					r = fmt.Sprintf("Option<&mut %s>", t)
@@ -782,8 +782,8 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 	return r
 }
 
-func (c *compiler) compileXUnionMember(val types.XUnionMember) XUnionMember {
-	return XUnionMember{
+func (c *compiler) compileUnionMember(val types.XUnionMember) UnionMember {
+	return UnionMember{
 		Attributes: val.Attributes,
 		Type:       c.compileType(val.Type, false).Decl,
 		OGType:     val.Type,
@@ -792,12 +792,12 @@ func (c *compiler) compileXUnionMember(val types.XUnionMember) XUnionMember {
 	}
 }
 
-func (c *compiler) compileXUnion(val types.XUnion) XUnion {
-	r := XUnion{
+func (c *compiler) compileUnion(val types.Union) Union {
+	r := Union{
 		Attributes: val.Attributes,
 		ECI:        val.Name,
 		Name:       c.compileCamelCompoundIdentifier(val.Name),
-		Members:    []XUnionMember{},
+		Members:    []UnionMember{},
 		Strictness: val.Strictness,
 	}
 
@@ -805,13 +805,13 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 		if v.Reserved {
 			continue
 		}
-		r.Members = append(r.Members, c.compileXUnionMember(v))
+		r.Members = append(r.Members, c.compileUnionMember(v))
 	}
 
 	return r
 }
 
-func (c *compiler) compileResultFromXUnion(val types.XUnion, root Root) Result {
+func (c *compiler) compileResultFromUnion(val types.Union, root Root) Result {
 	r := Result{
 		Attributes: val.Attributes,
 		ECI:        val.Name,
@@ -819,7 +819,7 @@ func (c *compiler) compileResultFromXUnion(val types.XUnion, root Root) Result {
 		OkOGTypes:  []types.Type{},
 		Ok:         []string{},
 		ErrOGType:  val.Members[1].Type,
-		ErrType:    c.compileXUnionMember(val.Members[1]).Type,
+		ErrType:    c.compileUnionMember(val.Members[1]).Type,
 		Size:       val.TypeShapeV1.InlineSize,
 		Alignment:  val.TypeShapeV1.Alignment,
 	}
@@ -898,7 +898,7 @@ func (v derives) andUnknown() derives {
 	// `Debug` impl. However, soon enough every type will implement
 	// `Debug`, `PartialEq`, and `Hash` due to the automatic impls for arrays.
 	// In any case, not having `Debug` for all types containing non-strict
-	// tables or xunions would be *extremely* annoying and a massively breaking
+	// tables or unions would be *extremely* annoying and a massively breaking
 	// change, so we leave them as `true` for now.
 	return v.and(newDerives(derivesDebug, derivesPartialEq))
 }
@@ -964,7 +964,7 @@ func (c *compiler) fillDerives(ir *Root) {
 	for _, v := range ir.Structs {
 		dc.fillDerivesForECI(v.ECI)
 	}
-	for _, v := range ir.XUnions {
+	for _, v := range ir.Unions {
 		dc.fillDerivesForECI(v.ECI)
 	}
 	for _, v := range ir.Results {
@@ -1095,36 +1095,36 @@ typeSwitch:
 		// non-strict tables.
 		derivesOut = derivesOut.remove(derivesCopy).andUnknown()
 		table.Derives = derivesOut
-	case types.UnionDeclType, types.XUnionDeclType:
+	case types.UnionDeclType:
 		// Although there are no more unions in Rust, this switch statement is
 		// over dc.decls[eci] where decls comes from DeclsWithDependencies(),
 		// which still distinguishes UnionDeclType and XUnionDeclType.
-		xunion := dc.root.findXUnion(eci)
+		union := dc.root.findUnion(eci)
 		var result *Result
-		if xunion == nil {
+		if union == nil {
 			result = dc.root.findResult(eci)
 		}
-		if xunion == nil && result == nil {
-			log.Panic("xunion not found: ", eci)
+		if union == nil && result == nil {
+			log.Panic("union not found: ", eci)
 		}
-		if xunion != nil {
-			// It's a xunion, not a result
+		if union != nil {
+			// It's a union, not a result
 			// Check if the derives have already been calculated
 			if deriveStatus.complete {
-				derivesOut = xunion.Derives
+				derivesOut = union.Derives
 				break typeSwitch
 			}
 			derivesOut = derivesAll
-			for _, member := range xunion.Members {
+			for _, member := range union.Members {
 				derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
 			}
-			if !xunion.Strictness {
+			if !union.Strictness {
 				// FIXME(cramertj) When large arrays are no longer an issue and we
 				// stop tracking Debug and PartialEq, this should set all values to
-				// false for non-strict xunions.
+				// false for non-strict unions.
 				derivesOut = derivesOut.remove(derivesCopy).andUnknown()
 			}
-			xunion.Derives = derivesOut
+			union.Derives = derivesOut
 		} else {
 			// It's a Result, not a union
 			// Check if the derives have already been calculated
@@ -1266,16 +1266,15 @@ func Compile(r types.Root) Root {
 		}
 	}
 
-	for _, v := range r.XUnions {
-		root.XUnions = append(root.XUnions, c.compileXUnion(v))
+	if len(r.XUnions) > 0 {
+		panic("unexpected xunions in JSON IR: xunions have been replaced by unions and should no longer exist")
 	}
 
 	for _, v := range r.Unions {
-		vConverted := types.ConvertUnionToXUnion(v)
 		if v.Attributes.HasAttribute("Result") {
-			root.Results = append(root.Results, c.compileResultFromXUnion(vConverted, root))
+			root.Results = append(root.Results, c.compileResultFromUnion(v, root))
 		} else {
-			root.XUnions = append(root.XUnions, c.compileXUnion(vConverted))
+			root.Unions = append(root.Unions, c.compileUnion(v))
 		}
 	}
 

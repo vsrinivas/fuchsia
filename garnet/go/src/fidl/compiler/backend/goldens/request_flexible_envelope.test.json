@@ -52,7 +52,7 @@
             "max_out_of_line": 4294967295,
             "has_padding": true,
             "has_flexible_envelope": false,
-            "contains_union": false
+            "contains_union": true
           },
           "has_response": true,
           "maybe_response": [
@@ -83,7 +83,7 @@
             "max_out_of_line": 4294967295,
             "has_padding": true,
             "has_flexible_envelope": true,
-            "contains_union": false
+            "contains_union": true
           },
           "is_composed": false
         },
@@ -125,7 +125,7 @@
             "max_out_of_line": 4294967295,
             "has_padding": true,
             "has_flexible_envelope": true,
-            "contains_union": false
+            "contains_union": true
           },
           "has_response": true,
           "maybe_response": [
@@ -156,7 +156,7 @@
             "max_out_of_line": 4294967295,
             "has_padding": true,
             "has_flexible_envelope": false,
-            "contains_union": false
+            "contains_union": true
           },
           "is_composed": false
         }
@@ -200,7 +200,7 @@
         "max_out_of_line": 4294967295,
         "has_padding": true,
         "has_flexible_envelope": false,
-        "contains_union": false
+        "contains_union": true
       }
     },
     {
@@ -238,7 +238,7 @@
         "max_out_of_line": 4294967295,
         "has_padding": true,
         "has_flexible_envelope": true,
-        "contains_union": false
+        "contains_union": true
       }
     },
     {
@@ -276,7 +276,7 @@
         "max_out_of_line": 4294967295,
         "has_padding": true,
         "has_flexible_envelope": true,
-        "contains_union": false
+        "contains_union": true
       }
     },
     {
@@ -314,13 +314,12 @@
         "max_out_of_line": 4294967295,
         "has_padding": true,
         "has_flexible_envelope": false,
-        "contains_union": false
+        "contains_union": true
       }
     }
   ],
   "table_declarations": [],
-  "union_declarations": [],
-  "xunion_declarations": [
+  "union_declarations": [
     {
       "name": "fidl.test.json/FlexibleFoo",
       "location": {
@@ -367,7 +366,7 @@
         "max_out_of_line": 4294967295,
         "has_padding": true,
         "has_flexible_envelope": true,
-        "contains_union": false
+        "contains_union": true
       }
     },
     {
@@ -416,7 +415,7 @@
         "max_out_of_line": 4294967295,
         "has_padding": true,
         "has_flexible_envelope": false,
-        "contains_union": false
+        "contains_union": true
       }
     }
   ],
@@ -432,7 +431,7 @@
     "fidl.test.json/SomeLongAnonymousPrefix1": "struct",
     "fidl.test.json/SomeLongAnonymousPrefix2": "struct",
     "fidl.test.json/SomeLongAnonymousPrefix3": "struct",
-    "fidl.test.json/FlexibleFoo": "xunion",
-    "fidl.test.json/StrictFoo": "xunion"
+    "fidl.test.json/FlexibleFoo": "union",
+    "fidl.test.json/StrictFoo": "union"
   }
 }

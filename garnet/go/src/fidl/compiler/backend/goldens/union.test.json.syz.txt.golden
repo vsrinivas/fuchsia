@@ -44,9 +44,9 @@ fidl_test_json_PizzaOrPastaHandles [
        pasta fidl_test_json_PastaHandles
 ][varlen]
 fidl_test_json_ExplicitPizzaOrPastaInLine [
+        fidl_union_member[fidl_test_json_ExplicitPizzaOrPastaTag_, ]
+        fidl_union_member[fidl_test_json_ExplicitPizzaOrPastaTag_, ]
        pizzaInLine fidl_union_member[fidl_test_json_ExplicitPizzaOrPastaTag_pizza, fidl_test_json_PizzaInLine]
-        fidl_union_member[fidl_test_json_ExplicitPizzaOrPastaTag_, ]
-        fidl_union_member[fidl_test_json_ExplicitPizzaOrPastaTag_, ]
        pastaInLine fidl_union_member[fidl_test_json_ExplicitPizzaOrPastaTag_pasta, fidl_test_json_PastaInLine]
 ]
 fidl_test_json_ExplicitPizzaOrPastaOutOfLine [
@@ -127,8 +127,8 @@ fidl_test_json_FieldCollisionHandles [
        void void
 ][varlen]
 fidl_test_json_ExplicitUnionInLine [
-       primitive fidl_union_member[fidl_test_json_ExplicitUnionTag_Primitive, int32]
         fidl_union_member[fidl_test_json_ExplicitUnionTag_, ]
+       primitive fidl_union_member[fidl_test_json_ExplicitUnionTag_Primitive, int32]
        string_needs_constructorInLine fidl_union_member[fidl_test_json_ExplicitUnionTag_StringNeedsConstructor, fidl_string]
 ]
 fidl_test_json_ExplicitUnionOutOfLine [
@@ -138,8 +138,8 @@ fidl_test_json_ExplicitUnionHandles [
        void void
 ][varlen]
 fidl_test_json_ReverseOrdinalUnionInLine [
-       first fidl_union_member[fidl_test_json_ReverseOrdinalUnionTag_first, int32]
        second fidl_union_member[fidl_test_json_ReverseOrdinalUnionTag_second, int32]
+       first fidl_union_member[fidl_test_json_ReverseOrdinalUnionTag_first, int32]
 ]
 fidl_test_json_ReverseOrdinalUnionOutOfLine [
        void void

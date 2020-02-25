@@ -214,7 +214,7 @@ static const struct FidlXUnionField Fields38v1_fidl_test_json_FlexiblePizzaOrPas
     /*FidlXUnionField*/{.type=&v1_fidl_test_json_PizzaTable, .ordinal=1u},
     /*FidlXUnionField*/{.type=&v1_fidl_test_json_PastaTable, .ordinal=2u}
 };
-const fidl_type_t v1_fidl_test_json_FlexiblePizzaOrPastaTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields38v1_fidl_test_json_FlexiblePizzaOrPasta, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/FlexiblePizzaOrPasta", .strictness=kFidlStrictness_Strict, .alt_type=&fidl_test_json_FlexiblePizzaOrPastaTable}}};
+const fidl_type_t v1_fidl_test_json_FlexiblePizzaOrPastaTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=2u, .fields=Fields38v1_fidl_test_json_FlexiblePizzaOrPasta, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/FlexiblePizzaOrPasta", .strictness=kFidlStrictness_Flexible, .alt_type=&fidl_test_json_FlexiblePizzaOrPastaTable}}};
 static const struct FidlXUnionField Fields38v1_fidl_test_json_ExplicitPizzaOrPasta[] = {
     /*FidlXUnionField*/{.type=&v1_fidl_test_json_PizzaTable, .ordinal=1u},
     /*FidlXUnionField*/{.type=&v1_fidl_test_json_PastaTable, .ordinal=4u}
@@ -230,7 +230,7 @@ static const struct FidlXUnionField Fields31v1_fidl_test_json_FlexibleUnion[] = 
     /*FidlXUnionField*/{.type=&v1_String4294967295nonnullableTable, .ordinal=2u},
     /*FidlXUnionField*/{.type=&v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable, .ordinal=3u}
 };
-const fidl_type_t v1_fidl_test_json_FlexibleUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=3u, .fields=Fields31v1_fidl_test_json_FlexibleUnion, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/FlexibleUnion", .strictness=kFidlStrictness_Strict, .alt_type=&fidl_test_json_FlexibleUnionTable}}};
+const fidl_type_t v1_fidl_test_json_FlexibleUnionTable = {.type_tag=kFidlTypeXUnion, {.coded_xunion={.field_count=3u, .fields=Fields31v1_fidl_test_json_FlexibleUnion, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.json/FlexibleUnion", .strictness=kFidlStrictness_Flexible, .alt_type=&fidl_test_json_FlexibleUnionTable}}};
 static const struct FidlXUnionField Fields32v1_fidl_test_json_FieldCollision[] = {
     /*FidlXUnionField*/{.type=&fidl_internal_kInt32Table, .ordinal=1u}
 };

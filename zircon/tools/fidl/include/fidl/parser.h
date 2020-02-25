@@ -277,10 +277,6 @@ class Parser {
   std::unique_ptr<raw::UnionDeclaration> ParseUnionDeclaration(
       std::unique_ptr<raw::AttributeList> attributes, ASTScope&, types::Strictness);
 
-  std::unique_ptr<raw::XUnionMember> ParseXUnionMember();
-  std::unique_ptr<raw::XUnionDeclaration> ParseXUnionDeclaration(
-      std::unique_ptr<raw::AttributeList> attributes, ASTScope&, types::Strictness);
-
   std::unique_ptr<raw::File> ParseFile();
 
   std::map<std::string_view, types::HandleSubtype> handle_subtype_table_;

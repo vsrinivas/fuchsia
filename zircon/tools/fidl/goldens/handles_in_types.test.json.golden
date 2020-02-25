@@ -148,7 +148,7 @@
         "max_out_of_line": 4294967295,
         "has_padding": true,
         "has_flexible_envelope": true,
-        "contains_union": false
+        "contains_union": true
       }
     }
   ],
@@ -191,8 +191,7 @@
       }
     }
   ],
-  "union_declarations": [],
-  "xunion_declarations": [
+  "union_declarations": [
     {
       "name": "test.name/UnionWithHandle",
       "location": {
@@ -227,7 +226,7 @@
         "max_out_of_line": 8,
         "has_padding": true,
         "has_flexible_envelope": true,
-        "contains_union": false
+        "contains_union": true
       }
     }
   ],
@@ -240,6 +239,6 @@
   "declarations": {
     "test.name/HandlesInTypes": "struct",
     "test.name/TableWithHandle": "table",
-    "test.name/UnionWithHandle": "xunion"
+    "test.name/UnionWithHandle": "union"
   }
 }

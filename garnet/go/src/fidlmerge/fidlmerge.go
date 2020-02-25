@@ -51,8 +51,20 @@ func main() {
 		os.Exit(1)
 	}
 
+	// until the templates that use unions/xunions are transitioned to 1. remove the union template
+	// and rename xunion to union, and 2. read unions from .Unions instead of .XUnions, fidlmerge
+	// needs to preprocess types.Root so that the correct output is generated.
+	r := mustReadJSONIr(*cmdlineflags.jsonPath)
+	if len(r.XUnions) > 0 {
+		panic("unexpected xunions in JSON IR: xunions have been replaced by unions and should no longer exist")
+	}
+	for _, v := range r.Unions {
+		r.XUnions = append(r.XUnions, types.ConvertUnionToXUnion(v))
+	}
+	r.Unions = []types.Union{}
+
 	results := GenerateFidl(*cmdlineflags.templatePath,
-		cmdlineflags.FidlAmendments().Amend(mustReadJSONIr(*cmdlineflags.jsonPath)),
+		cmdlineflags.FidlAmendments().Amend(r),
 		cmdlineflags.outputBase,
 		options)
 
@@ -127,14 +139,14 @@ func (a Amendments) ApplyExclusions(root types.Root) types.Root {
 	}
 	root.Tables = newTables
 
-	newUnions := root.Unions[:0]
-	for _, element := range root.Unions {
+	newUnions := root.XUnions[:0]
+	for _, element := range root.XUnions {
 		_, found := excludeMap[element.Name]
 		if !found {
 			newUnions = append(newUnions, element)
 		}
 	}
-	root.Unions = newUnions
+	root.XUnions = newUnions
 
 	newDeclOrder := root.DeclOrder[:0]
 	for _, element := range root.DeclOrder {
@@ -368,6 +380,10 @@ func GenerateFidl(templatePath string, fidl types.Root, outputBase *string, opti
 	}
 
 	template.Must(tmpls.Funcs(funcMap).Parse(string(returnBytes[:])))
+
+	if len(root.Unions) > 0 {
+		panic("should not have any unions, see <https://fuchsia-review.googlesource.com/c/fuchsia/+/365937/7/garnet/go/src/fidlmerge/fidlmerge.go#59> for context")
+	}
 
 	err = tmpls.ExecuteTemplate(os.Stdout, "Main", root)
 	if err != nil {

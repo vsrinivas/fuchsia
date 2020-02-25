@@ -71,6 +71,8 @@ class Message {
   // The ordinal in the message header.
   uint64_t ordinal() const { return header().ordinal; }
 
+  // TODO(fxb/46811) this should no longer be needed since all incoming messages
+  // should be using the new wire format.
   bool is_v1_message() const {
     return fidl_should_decode_union_from_xunion(GetBytesAs<fidl_message_header_t>());
   }

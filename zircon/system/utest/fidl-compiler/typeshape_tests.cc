@@ -1599,56 +1599,106 @@ xunion PaddingCheck {
     )FIDL");
   ASSERT_TRUE(test_library.Compile());
 
-  auto one_bool = test_library.LookupXUnion("XUnionWithOneBool");
+  auto one_bool = test_library.LookupUnion("XUnionWithOneBool");
   ASSERT_NONNULL(one_bool);
-  EXPECT_TRUE(CheckTypeShape(one_bool, Expected{
-                                           .inline_size = 24,
-                                           .alignment = 8,
-                                           .max_out_of_line = 8,
-                                           .depth = 1,
-                                           .has_padding = true,
-                                           .has_flexible_envelope = true,
-                                       }));
+  EXPECT_TRUE(CheckTypeShape(one_bool,
+                             Expected{
+                                 .inline_size = 8,
+                                 .alignment = 4,
+                                 .max_out_of_line = 0,
+                                 .depth = 0,
+                                 .has_padding = true,
+                                 .contains_union = true,
+                             },
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 8,
+                                 .depth = 1,
+                                 .has_padding = true,
+                                 .has_flexible_envelope = true,
+                                 .contains_union = true,
+                             }));
   ASSERT_EQ(one_bool->members.size(), 1);
   ASSERT_NONNULL(one_bool->members[0].maybe_used);
-  EXPECT_TRUE(CheckFieldShape(*one_bool->members[0].maybe_used, ExpectedField{.padding = 7}));
+  EXPECT_TRUE(CheckFieldShape(*one_bool->members[0].maybe_used,
+                              ExpectedField{.offset = 4, .padding = 3},
+                              ExpectedField{.padding = 7}));
 
   auto opt_one_bool = test_library.LookupStruct("StructWithOptionalXUnionWithOneBool");
   ASSERT_NONNULL(opt_one_bool);
-  EXPECT_TRUE(CheckTypeShape(opt_one_bool, Expected{
-                                               .inline_size = 24,
-                                               .alignment = 8,
-                                               .max_out_of_line = 8,
-                                               .depth = 1,
-                                               .has_padding = true,
-                                               .has_flexible_envelope = true,
-                                           }));
+  EXPECT_TRUE(CheckTypeShape(opt_one_bool,
+                             Expected{
+                                 .inline_size = 8,
+                                 .alignment = 8,
+                                 .max_out_of_line = 8,
+                                 .depth = 1,
+                                 .has_padding = true,
+                                 .contains_union = true,
+                             },
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 8,
+                                 .depth = 1,
+                                 .has_padding = true,
+                                 .has_flexible_envelope = true,
+                                 .contains_union = true,
+                             }));
 
-  auto xu = test_library.LookupXUnion("XUnionWithBoundedOutOfLineObject");
+  auto xu = test_library.LookupUnion("XUnionWithBoundedOutOfLineObject");
   ASSERT_NONNULL(xu);
-  EXPECT_TRUE(CheckTypeShape(xu, Expected{
-                                     .inline_size = 24,
-                                     .alignment = 8,
-                                     .max_out_of_line = 256,
-                                     .depth = 3,
-                                     .has_padding = true,
-                                     .has_flexible_envelope = true,
-                                 }));
+  EXPECT_TRUE(CheckTypeShape(xu,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 240,
+                                 .depth = 2,
+                                 .has_padding = true,
+                                 .contains_union = true,
+                             },
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 256,
+                                 .depth = 3,
+                                 .has_padding = true,
+                                 .has_flexible_envelope = true,
+                                 .contains_union = true,
+                             }));
 
-  auto unbounded = test_library.LookupXUnion("XUnionWithUnboundedOutOfLineObject");
+  auto unbounded = test_library.LookupUnion("XUnionWithUnboundedOutOfLineObject");
   ASSERT_NONNULL(unbounded);
-  EXPECT_TRUE(CheckTypeShape(unbounded, Expected{
-                                            .inline_size = 24,
-                                            .alignment = 8,
-                                            .max_out_of_line = std::numeric_limits<uint32_t>::max(),
-                                            .depth = 2,
-                                            .has_padding = true,
-                                            .has_flexible_envelope = true,
-                                        }));
+  EXPECT_TRUE(CheckTypeShape(unbounded,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = std::numeric_limits<uint32_t>::max(),
+                                 .depth = 1,
+                                 .has_padding = true,
+                                 .contains_union = true,
+                             },
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = std::numeric_limits<uint32_t>::max(),
+                                 .depth = 2,
+                                 .has_padding = true,
+                                 .has_flexible_envelope = true,
+                                 .contains_union = true,
+                             }));
 
-  auto xu_no_payload_padding = test_library.LookupXUnion("XUnionWithoutPayloadPadding");
+  auto xu_no_payload_padding = test_library.LookupUnion("XUnionWithoutPayloadPadding");
   ASSERT_NONNULL(xu_no_payload_padding);
   EXPECT_TRUE(CheckTypeShape(xu_no_payload_padding,
+                             Expected{
+                                 .inline_size = 64,
+                                 .alignment = 8,
+                                 .max_out_of_line = 0,
+                                 .depth = 0,
+                                 .has_padding = true,
+                                 .contains_union = true,
+                             },
                              Expected{
                                  .inline_size = 24,
                                  .alignment = 8,
@@ -1659,22 +1709,37 @@ xunion PaddingCheck {
                                  // there is no padding.
                                  .has_padding = true,
                                  .has_flexible_envelope = true,
+                                 .contains_union = true,
                              }));
 
-  auto padding_check = test_library.LookupXUnion("PaddingCheck");
+  auto padding_check = test_library.LookupUnion("PaddingCheck");
   ASSERT_NONNULL(padding_check);
-  EXPECT_TRUE(CheckTypeShape(padding_check, Expected{
-                                                .inline_size = 24,
-                                                .alignment = 8,
-                                                .max_out_of_line = 8,
-                                                .depth = 1,
-                                                .has_padding = true,
-                                                .has_flexible_envelope = true,
-                                            }));
+  EXPECT_TRUE(CheckTypeShape(padding_check,
+                             Expected{
+                                 .inline_size = 12,
+                                 .alignment = 4,
+                                 .max_out_of_line = 0,
+                                 .depth = 0,
+                                 .has_padding = true,
+                                 .contains_union = true,
+                             },
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 8,
+                                 .depth = 1,
+                                 .has_padding = true,
+                                 .has_flexible_envelope = true,
+                                 .contains_union = true,
+                             }));
   ASSERT_EQ(padding_check->members.size(), 2);
   ASSERT_NONNULL(padding_check->members[0].maybe_used);
-  EXPECT_TRUE(CheckFieldShape(*padding_check->members[0].maybe_used, ExpectedField{.padding = 5}));
-  EXPECT_TRUE(CheckFieldShape(*padding_check->members[1].maybe_used, ExpectedField{.padding = 3}));
+  EXPECT_TRUE(CheckFieldShape(*padding_check->members[0].maybe_used,
+                              ExpectedField{.offset = 4, .padding = 5},
+                              ExpectedField{.padding = 5}));
+  EXPECT_TRUE(CheckFieldShape(*padding_check->members[1].maybe_used,
+                              ExpectedField{.offset = 4, .padding = 3},
+                              ExpectedField{.padding = 3}));
 
   END_TEST;
 }
@@ -1719,70 +1784,125 @@ strict xunion StrictXUnionOfFlexibleTable {
     )FIDL");
   ASSERT_TRUE(test_library.Compile());
 
-  auto strict_xunion = test_library.LookupXUnion("StrictLeafXUnion");
+  auto strict_xunion = test_library.LookupUnion("StrictLeafXUnion");
   ASSERT_NONNULL(strict_xunion);
-  EXPECT_TRUE(CheckTypeShape(strict_xunion, Expected{
-                                                .inline_size = 24,
-                                                .alignment = 8,
-                                                .max_out_of_line = 8,
-                                                .depth = 1,
-                                                .has_padding = true,
-                                            }));
+  EXPECT_TRUE(CheckTypeShape(strict_xunion,
+                             Expected{
+                                 .inline_size = 16,
+                                 .alignment = 8,
+                                 .max_out_of_line = 0,
+                                 .depth = 0,
+                                 .has_padding = true,
+                                 .contains_union = true,
+                             },
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 8,
+                                 .depth = 1,
+                                 .has_padding = true,
+                                 .contains_union = true,
+                             }));
 
-  auto flexible_xunion = test_library.LookupXUnion("FlexibleLeafXUnion");
+  auto flexible_xunion = test_library.LookupUnion("FlexibleLeafXUnion");
   ASSERT_NONNULL(flexible_xunion);
-  EXPECT_TRUE(CheckTypeShape(flexible_xunion, Expected{
-                                                  .inline_size = 24,
-                                                  .alignment = 8,
-                                                  .max_out_of_line = 8,
-                                                  .depth = 1,
-                                                  .has_padding = true,
-                                                  .has_flexible_envelope = true,
-                                              }));
+  EXPECT_TRUE(CheckTypeShape(flexible_xunion,
+                             Expected{
+                                 .inline_size = 16,
+                                 .alignment = 8,
+                                 .max_out_of_line = 0,
+                                 .depth = 0,
+                                 .has_padding = true,
+                                 .contains_union = true,
+                             },
+                             Expected{.inline_size = 24,
+                                      .alignment = 8,
+                                      .max_out_of_line = 8,
+                                      .depth = 1,
+                                      .has_padding = true,
+                                      .has_flexible_envelope = true,
+                                      .contains_union = true}));
 
-  auto flexible_of_strict = test_library.LookupXUnion("FlexibleXUnionOfStrictXUnion");
+  auto flexible_of_strict = test_library.LookupUnion("FlexibleXUnionOfStrictXUnion");
   ASSERT_NONNULL(flexible_of_strict);
-  EXPECT_TRUE(CheckTypeShape(flexible_of_strict, Expected{
-                                                     .inline_size = 24,
-                                                     .alignment = 8,
-                                                     .max_out_of_line = 32,
-                                                     .depth = 2,
-                                                     .has_padding = true,
-                                                     .has_flexible_envelope = true,
-                                                 }));
+  EXPECT_TRUE(CheckTypeShape(flexible_of_strict,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 0,
+                                 .depth = 0,
+                                 .has_padding = true,
+                                 .contains_union = true,
+                             },
+                             Expected{.inline_size = 24,
+                                      .alignment = 8,
+                                      .max_out_of_line = 32,
+                                      .depth = 2,
+                                      .has_padding = true,
+                                      .has_flexible_envelope = true,
+                                      .contains_union = true}));
 
-  auto flexible_of_flexible = test_library.LookupXUnion("FlexibleXUnionOfFlexibleXUnion");
+  auto flexible_of_flexible = test_library.LookupUnion("FlexibleXUnionOfFlexibleXUnion");
   ASSERT_NONNULL(flexible_of_flexible);
-  EXPECT_TRUE(CheckTypeShape(flexible_of_flexible, Expected{
-                                                       .inline_size = 24,
-                                                       .alignment = 8,
-                                                       .max_out_of_line = 32,
-                                                       .depth = 2,
-                                                       .has_padding = true,
-                                                       .has_flexible_envelope = true,
-                                                   }));
+  EXPECT_TRUE(CheckTypeShape(flexible_of_flexible,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 0,
+                                 .depth = 0,
+                                 .has_padding = true,
+                                 .contains_union = true,
+                             },
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 32,
+                                 .depth = 2,
+                                 .has_padding = true,
+                                 .has_flexible_envelope = true,
+                                 .contains_union = true,
+                             }));
 
-  auto strict_of_strict = test_library.LookupXUnion("StrictXUnionOfStrictXUnion");
+  auto strict_of_strict = test_library.LookupUnion("StrictXUnionOfStrictXUnion");
   ASSERT_NONNULL(strict_of_strict);
-  EXPECT_TRUE(CheckTypeShape(strict_of_strict, Expected{
-                                                   .inline_size = 24,
-                                                   .alignment = 8,
-                                                   .max_out_of_line = 32,
-                                                   .depth = 2,
-                                                   .has_padding = true,
-                                                   .has_flexible_envelope = false,
-                                               }));
+  EXPECT_TRUE(CheckTypeShape(strict_of_strict,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 0,
+                                 .depth = 0,
+                                 .has_padding = true,
+                                 .contains_union = true,
+                             },
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 32,
+                                 .depth = 2,
+                                 .has_padding = true,
+                                 .contains_union = true,
+                             }));
 
-  auto strict_of_flexible = test_library.LookupXUnion("StrictXUnionOfFlexibleXUnion");
+  auto strict_of_flexible = test_library.LookupUnion("StrictXUnionOfFlexibleXUnion");
   ASSERT_NONNULL(strict_of_flexible);
-  EXPECT_TRUE(CheckTypeShape(strict_of_flexible, Expected{
-                                                     .inline_size = 24,
-                                                     .alignment = 8,
-                                                     .max_out_of_line = 32,
-                                                     .depth = 2,
-                                                     .has_padding = true,
-                                                     .has_flexible_envelope = true,
-                                                 }));
+  EXPECT_TRUE(CheckTypeShape(strict_of_flexible,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 0,
+                                 .depth = 0,
+                                 .has_padding = true,
+                                 .contains_union = true,
+                             },
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 32,
+                                 .depth = 2,
+                                 .has_padding = true,
+                                 .has_flexible_envelope = true,
+                                 .contains_union = true,
+                             }));
 
   auto flexible_table = test_library.LookupTable("FlexibleLeafTable");
   ASSERT_NONNULL(flexible_table);
@@ -1795,16 +1915,27 @@ strict xunion StrictXUnionOfFlexibleTable {
                                                  .has_flexible_envelope = true,
                                              }));
 
-  auto strict_xunion_of_flexible_table = test_library.LookupXUnion("StrictXUnionOfFlexibleTable");
+  auto strict_xunion_of_flexible_table = test_library.LookupUnion("StrictXUnionOfFlexibleTable");
   ASSERT_NONNULL(strict_xunion_of_flexible_table);
-  EXPECT_TRUE(CheckTypeShape(strict_xunion_of_flexible_table, Expected{
-                                                                  .inline_size = 24,
-                                                                  .alignment = 8,
-                                                                  .max_out_of_line = 16,
-                                                                  .depth = 2,
-                                                                  .has_padding = true,
-                                                                  .has_flexible_envelope = true,
-                                                              }));
+  EXPECT_TRUE(CheckTypeShape(strict_xunion_of_flexible_table,
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 0,
+                                 .depth = 1,
+                                 .has_padding = true,
+                                 .has_flexible_envelope = true,
+                                 .contains_union = true,
+                             },
+                             Expected{
+                                 .inline_size = 24,
+                                 .alignment = 8,
+                                 .max_out_of_line = 16,
+                                 .depth = 2,
+                                 .has_padding = true,
+                                 .has_flexible_envelope = true,
+                                 .contains_union = true,
+                             }));
 
   END_TEST;
 }
@@ -2941,15 +3072,15 @@ xunion OuterXUnion {
 )FIDL");
   ASSERT_TRUE(library.Compile());
 
-  auto inner_xunion = library.LookupXUnion("InnerXUnion");
+  auto inner_xunion = library.LookupUnion("InnerXUnion");
   ASSERT_NONNULL(inner_xunion);
-  EXPECT_TRUE(CheckContainsUnion(inner_xunion, false));
+  EXPECT_TRUE(CheckContainsUnion(inner_xunion, true));
 
   auto middle_union = library.LookupUnion("MiddleUnion");
   ASSERT_NONNULL(middle_union);
   EXPECT_TRUE(CheckContainsUnion(middle_union, true));
 
-  auto outer_xunion = library.LookupXUnion("OuterXUnion");
+  auto outer_xunion = library.LookupUnion("OuterXUnion");
   ASSERT_NONNULL(outer_xunion);
   EXPECT_TRUE(CheckContainsUnion(outer_xunion, true));
 
