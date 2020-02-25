@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"time"
 
@@ -98,7 +99,7 @@ func main() {
 
 	// Configure a test outputs object, responsible for producing TAP output,
 	// recording data sinks, and archiving other test outputs.
-	testOutdir := os.Getenv(testOutdirEnvVar)
+	testOutdir := filepath.Join(os.Getenv(testOutdirEnvVar), outDir)
 	if testOutdir == "" {
 		var err error
 		testOutdir, err = ioutil.TempDir("", "testrunner")

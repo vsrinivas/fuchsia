@@ -24,11 +24,13 @@ import (
 // testOutput manages the test runner's output drivers. Upon completion, if tar output is
 // initialized, a TAR archive containing all other outputs is produced.
 type testOutputs struct {
+	// DataDir is the dir to write data sinks to.
+	// TODO(fxb/43500): Remove when archive support is removed.
 	dataDir string
+	outDir  string
 	summary runtests.TestSummary
 	tap     *tap.Producer
 	tw      *tar.Writer
-	outDir  string
 }
 
 func createTestOutputs(producer *tap.Producer, dataDir, archivePath, outDir string) (*testOutputs, error) {
@@ -43,9 +45,9 @@ func createTestOutputs(producer *tap.Producer, dataDir, archivePath, outDir stri
 
 	return &testOutputs{
 		dataDir: dataDir,
+		outDir:  outDir,
 		tap:     producer,
 		tw:      tw,
-		outDir:  outDir,
 	}, nil
 }
 
@@ -99,31 +101,13 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 		return fmt.Errorf("failed to write stdio file for test %q: %v", result.Name, err)
 	}
 
-	if o.tw != nil || o.outDir != "" {
+	// TODO(fxb/43500): Remove once we've switched to outDir.
+	if o.tw != nil {
 		for _, sinks := range result.DataSinks {
 			for _, sink := range sinks {
 				sinkSrc := filepath.Join(o.dataDir, sink.File)
-				// TODO(fxb/43500): Remove once we've switched to outDir.
-				if o.tw != nil {
-					if err := tarutil.TarFile(o.tw, sinkSrc, sink.File); err != nil {
-						return fmt.Errorf("failed to tar data sink %q: %v", sink.Name, err)
-					}
-				}
-				if o.outDir != "" {
-					srcReader, err := os.Open(sinkSrc)
-					if err != nil {
-						return fmt.Errorf("failed to open sink src %q: %v", sink.Name, err)
-					}
-					defer srcReader.Close()
-					dest := filepath.Join(o.outDir, sink.File)
-					destWriter, err := osmisc.CreateFile(dest)
-					if err != nil {
-						return fmt.Errorf("failed to create file: %v", err)
-					}
-					defer destWriter.Close()
-					if _, err := io.Copy(destWriter, srcReader); err != nil {
-						return fmt.Errorf("failed to copy data sink %q to out dir: %v", sink.Name, err)
-					}
+				if err := tarutil.TarFile(o.tw, sinkSrc, sink.File); err != nil {
+					return fmt.Errorf("failed to tar data sink %q: %v", sink.Name, err)
 				}
 			}
 		}

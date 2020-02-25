@@ -74,7 +74,7 @@ func TestRecordingOfOutputs(t *testing.T) {
 	var buf bytes.Buffer
 	producer := tap.NewProducer(&buf)
 	producer.Plan(len(results))
-	o, err := createTestOutputs(producer, dataDir, archivePath, outDir)
+	o, err := createTestOutputs(producer, outDir, archivePath, outDir)
 	if err != nil {
 		t.Fatalf("failed to create a test outputs object: %v", err)
 	}
@@ -125,17 +125,22 @@ func TestRecordingOfOutputs(t *testing.T) {
 		t.Fatalf("failed to marshal expected summary: %v", err)
 	}
 
+	expectedSinks := map[string]string{
+		"sink_a1.txt": "SINK_A1",
+		"sink_a2.txt": "SINK_A2",
+		"sink_b.txt":  "SINK_B",
+	}
+
 	// Populate all of the expected output files.
 	expectedContents := map[string]string{
 		outputFileA:    "STDOUT_A",
 		outputFileB:    "STDERR_B",
-		"sink_a1.txt":  "SINK_A1",
-		"sink_a2.txt":  "SINK_A2",
-		"sink_b.txt":   "SINK_B",
 		"summary.json": string(summaryBytes),
 	}
-	for name, content := range expectedContents {
-		path := filepath.Join(o.dataDir, name)
+	for name, content := range expectedSinks {
+		// Add sinks to expectedContents.
+		expectedContents[name] = content
+		path := filepath.Join(o.outDir, name)
 		dir := filepath.Dir(path)
 		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 			t.Fatalf("failed to make directory %q for outputs: %v", dir, err)
