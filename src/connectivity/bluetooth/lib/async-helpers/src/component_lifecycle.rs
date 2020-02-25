@@ -29,9 +29,7 @@ impl ComponentLifecycleServer {
     pub fn spawn() -> Self {
         let broker = HangingGetBroker::new(
             LifecycleState::Initializing,
-            |s, o: LifecycleGetStateResponder| {
-                let _ = o.send(*s);
-            },
+            |s, o: LifecycleGetStateResponder| o.send(*s).is_ok(),
             DEFAULT_CHANNEL_SIZE,
         );
         let inner = broker.new_publisher();

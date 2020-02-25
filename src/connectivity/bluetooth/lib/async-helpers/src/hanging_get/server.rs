@@ -27,7 +27,7 @@ pub const DEFAULT_CHANNEL_SIZE: usize = 128;
 /// While it _can_ be used directly, most API consumers will want to use the higher level
 /// `HangingGetBroker` object. `HangingGetBroker` and its companion types provide `Send`
 /// for use from multiple threads or async tasks.
-pub struct HangingGet<S, K, O, F: Fn(&S, O)> {
+pub struct HangingGet<S, K, O, F: Fn(&S, O) -> bool> {
     state: S,
     notify: F,
     observers: HashMap<K, Window<O>>,
@@ -36,7 +36,7 @@ pub struct HangingGet<S, K, O, F: Fn(&S, O)> {
 impl<S, K, O, F> HangingGet<S, K, O, F>
 where
     K: Eq + Hash,
-    F: Fn(&S, O),
+    F: Fn(&S, O) -> bool,
 {
     fn notify_all(&mut self) {
         for window in self.observers.values_mut() {
@@ -201,7 +201,10 @@ where
 /// ```rust
 /// let broker = HangingGetBroker::new(
 ///     0u64, // Initial state
-///     |s, o: SheepCounterWatchCountResponder| o.send(s.clone()).unwrap(), // notify function with fidl auto-generated responder
+///     |s, o: SheepCounterWatchCountResponder| {
+///         o.send(s.clone()).unwrap();
+///         true
+///     }, // notify function with fidl auto-generated responder
 ///     DEFAULT_CHANNEL_SIZE, // Size of channels used by Publishers and Subscribers
 /// );
 ///
@@ -241,7 +244,7 @@ where
 ///     });
 /// }
 /// ```
-pub struct HangingGetBroker<S, O: Unpin + 'static, F: Fn(&S, O)> {
+pub struct HangingGetBroker<S, O: Unpin + 'static, F: Fn(&S, O) -> bool> {
     inner: HangingGet<S, subscriber_key::Key, O, F>,
     publisher: Publisher<S>,
     updates: mpsc::Receiver<UpdateFn<S>>,
@@ -257,7 +260,7 @@ impl<S, O, F> HangingGetBroker<S, O, F>
 where
     S: Clone + Send,
     O: Send + Unpin + 'static,
-    F: Fn(&S, O),
+    F: Fn(&S, O) -> bool,
 {
     /// Create a new broker.
     /// `state` is the initial state of the HangingGet
@@ -359,7 +362,7 @@ impl<O> Window<O> {
     /// Register a new observer. The observer will be notified immediately if the `Window`
     /// has a dirty view of the state. The observer will be stored for future notification
     /// if the `Window` does not have a dirty view.
-    pub fn observe<S>(&mut self, observer: O, f: impl Fn(&S, O), current_state: &S) {
+    pub fn observe<S>(&mut self, observer: O, f: impl Fn(&S, O) -> bool, current_state: &S) {
         self.observers.push(observer);
         if self.dirty {
             self.notify(f, current_state);
@@ -369,14 +372,18 @@ impl<O> Window<O> {
     /// Notify observers _if and only if_ the `Window` has a dirty view of `state`.
     /// If any observers were present and notified, the `Window` no longer has a dirty view
     /// after this method returns.
-    pub fn notify<S>(&mut self, f: impl Fn(&S, O), state: &S) {
+    pub fn notify<S>(&mut self, f: impl Fn(&S, O) -> bool, state: &S) {
         if self.observers.is_empty() {
             self.dirty = true;
         } else {
-            for observer in self.observers.drain(..) {
-                f(state, observer);
+            // `consumed` is false if _any_ observer returns false.
+            let consumed = self
+                .observers
+                .drain(..)
+                .fold(true, |consumed, observer| f(state, observer) && consumed);
+            if consumed {
+                self.dirty = false;
             }
-            self.dirty = false;
         }
     }
 }
@@ -490,6 +497,16 @@ mod tests {
         let o = TestObserver::expect_value(state);
         window.observe(o, TestObserver::observe, &state);
         assert!(!window.dirty);
+    }
+
+    #[test]
+    fn window_dirty_flag_respects_consumed_flag() {
+        let state = 0;
+        let mut window = Window::new();
+
+        let o = TestObserver::expect_value(state);
+        window.observe(o, TestObserver::observe_incomplete, &state);
+        assert!(window.dirty);
     }
 
     #[test]
@@ -607,7 +624,7 @@ mod tests {
         let mut ex = fasync::Executor::new().unwrap();
         let broker = HangingGetBroker::new(
             0i32,
-            |s, o: oneshot::Sender<_>| o.send(s.clone()).unwrap(),
+            |s, o: oneshot::Sender<_>| o.send(s.clone()).map(|()| true).unwrap(),
             TEST_CHANNEL_SIZE,
         );
         let publisher = broker.new_publisher();
@@ -629,7 +646,7 @@ mod tests {
     async fn pub_sub_updates_and_observes() {
         let broker = HangingGetBroker::new(
             0i32,
-            |s, o: oneshot::Sender<_>| o.send(s.clone()).unwrap(),
+            |s, o: oneshot::Sender<_>| o.send(s.clone()).map(|()| true).unwrap(),
             TEST_CHANNEL_SIZE,
         );
         let mut publisher = broker.new_publisher();
@@ -658,7 +675,7 @@ mod tests {
     async fn pub_sub_multiple_subscribers() {
         let broker = HangingGetBroker::new(
             0i32,
-            |s, o: oneshot::Sender<_>| o.send(s.clone()).unwrap(),
+            |s, o: oneshot::Sender<_>| o.send(s.clone()).map(|()| true).unwrap(),
             TEST_CHANNEL_SIZE,
         );
         let mut publisher = broker.new_publisher();

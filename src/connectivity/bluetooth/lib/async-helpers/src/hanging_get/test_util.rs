@@ -30,7 +30,7 @@ impl<V: Debug + Clone + Send + PartialEq> TestObserver<V> {
         TestObserver::new()
     }
 
-    pub fn observe(v: &V, o: Self) {
+    pub fn observe(v: &V, o: Self) -> bool {
         let mut value = o.value.borrow_mut();
         if value.is_some() {
             panic!("This observer has an observed a value that was not taken");
@@ -40,6 +40,22 @@ impl<V: Debug + Clone + Send + PartialEq> TestObserver<V> {
             None => panic!("This observer expected no observations to occur"),
         }
         *value = Some(v.clone());
+        true
+    }
+
+    // Observation happens but function returns false, arbitrarily indicating that the value was
+    // not completely consumed.
+    pub fn observe_incomplete(v: &V, o: Self) -> bool {
+        let mut value = o.value.borrow_mut();
+        if value.is_some() {
+            panic!("This observer has an observed a value that was not taken");
+        }
+        match &o.expected {
+            Some(expected) => assert_eq!(expected, v),
+            None => panic!("This observer expected no observations to occur"),
+        }
+        *value = Some(v.clone());
+        false
     }
 
     pub fn has_value(&self) -> bool {
