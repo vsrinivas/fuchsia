@@ -29,7 +29,9 @@ TEST(ParserTest, VariableDeclFail) {
 }
 
 TEST(ParserTest, TwoVariableDecl) {
-  const auto kTestString = "var x = 0;\nvar y = 0";
+  const auto kTestString =
+      "var x = 0;\n"
+      "var y = 0";
 
   auto parse = Parse(kTestString);
   EXPECT_FALSE(parse->HasErrors());
@@ -41,7 +43,9 @@ TEST(ParserTest, TwoVariableDecl) {
 }
 
 TEST(ParserTest, TwoVariableDeclFail) {
-  const auto kTestString = "varx = 0;\nvar y = 0";
+  const auto kTestString =
+      "varx = 0;\n"
+      "var y = 0";
 
   auto parse = Parse(kTestString);
   EXPECT_TRUE(parse->HasErrors());
@@ -50,7 +54,10 @@ TEST(ParserTest, TwoVariableDeclFail) {
 }
 
 TEST(ParserTest, TwoVariableDeclTrailingChars) {
-  const auto kTestString = "var x = 0;\nvar y = 0;\nxxx";
+  const auto kTestString =
+      "var x = 0;\n"
+      "var y = 0;\n"
+      "xxx";
 
   auto parse = Parse(kTestString);
   EXPECT_TRUE(parse->HasErrors());
@@ -58,6 +65,21 @@ TEST(ParserTest, TwoVariableDeclTrailingChars) {
   EXPECT_EQ(
       "Program(VariableDecl('var' Identifier('x') '=' Expression('0')) ';' VariableDecl('var' "
       "Identifier('y') '=' Expression('0')) ';' E[Unexpected 'xxx'])",
+      parse->ToString(kTestString));
+}
+
+TEST(ParserTest, TwoVariableDeclConst) {
+  const auto kTestString =
+      "var x = 0;\n"
+      "const y = 0";
+
+  auto parse = Parse(kTestString);
+  EXPECT_FALSE(parse->HasErrors());
+
+  EXPECT_EQ(
+      "Program("
+      "VariableDecl('var' Identifier('x') '=' Expression('0')) ';' "
+      "VariableDecl('const' Identifier('y') '=' Expression('0')))",
       parse->ToString(kTestString));
 }
 

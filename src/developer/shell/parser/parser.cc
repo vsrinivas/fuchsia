@@ -82,8 +82,8 @@ ParseResultStream Expression(ParseResultStream prefixes) {
 // Parses a variable declaration:
 //     var foo = 4.5
 ParseResultStream VariableDecl(ParseResultStream prefixes) {
-  return NT<ast::VariableDecl>(WSSeq(KW("var"), Identifier, Token("="), Expression))(
-      std::move(prefixes));
+  return NT<ast::VariableDecl>(
+      WSSeq(Alt(KW("var"), KW("const")), Identifier, Token("="), Expression))(std::move(prefixes));
 }
 
 // Parses the body of a program, but doesn't create an AST node. This is useful for parsing blocks
