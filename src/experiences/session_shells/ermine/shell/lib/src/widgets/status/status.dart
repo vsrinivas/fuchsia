@@ -118,10 +118,8 @@ class _ManualStatusEntry extends StatelessWidget {
       child: Row(
         children: <Widget>[
           StatusButton(Strings.restart, model.restartDevice),
-          Padding(padding: EdgeInsets.only(right: kPadding)),
-          StatusButton(Strings.shutdown, model.shutdownDevice),
           Spacer(),
-          StatusButton(Strings.logout, model.logoutSession, Key('logout')),
+          StatusButton(Strings.shutdown, model.shutdownDevice),
         ],
       ),
     );
