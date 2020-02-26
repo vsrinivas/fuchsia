@@ -175,5 +175,5 @@ and Dart).
    * *netstack*. Migrating netstack to another language would require a
      significant investment. In the fullness of time, we should migrate netstack
      to an approved language.
- * All other uses of Go in Fuchsia for production software on the target device
-   must be migrated to an approved language.
+ * All other uses of Go in the Fuchsia Platform Source Tree for production
+   software on the target device must be migrated to an approved language.
