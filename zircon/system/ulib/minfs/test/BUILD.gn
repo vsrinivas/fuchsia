@@ -42,6 +42,7 @@ test("minfs-unit") {
   test_group = "fs"
   sources = [
     "unit/bcache-test.cc",
+    "unit/disk-struct-test.cc",
     "unit/format-test.cc",
     "unit/fsck-test.cc",
     "unit/inspector-test.cc",
@@ -56,19 +57,19 @@ test("minfs-unit") {
   ]
   deps = [
     "//zircon/public/lib/block-client",
-    "//zircon/public/lib/fake-device",
+    "//zircon/public/lib/cksum",
     "//zircon/public/lib/disk_inspector",
+    "//zircon/public/lib/fake-device",
     "//zircon/public/lib/fs-management",
     "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/fvm",
     "//zircon/public/lib/minfs",
-    "//zircon/public/lib/test_support",
+    "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
+    "//zircon/public/lib/test_support",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-minfs:c",
-    "//zircon/public/lib/cksum",
-    "//zircon/public/lib/safemath",
   ]
   include_dirs = [ "//zircon/system/ulib/minfs" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
@@ -128,10 +129,10 @@ test("minfs-integration") {
     "//zircon/public/lib/fdio-caller",
     "//zircon/public/lib/fs-management",
     "//zircon/public/lib/fs-test-utils",
-    "//zircon/public/lib/posix_tests",
     "//zircon/public/lib/fs_test_support",
     "//zircon/public/lib/memfs",
     "//zircon/public/lib/minfs",
+    "//zircon/public/lib/posix_tests",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/fidl/fuchsia-io:llcpp",

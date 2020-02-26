@@ -37,6 +37,7 @@ zx_library("journal") {
       "background_executor.cc",
       "data_streamer.cc",
       "entry_view.cc",
+      "inspector/disk_struct.cc",
       "inspector/inspector_parser.cc",
       "inspector_journal.cc",
       "inspector_journal_entries.cc",

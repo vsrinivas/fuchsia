@@ -46,6 +46,7 @@ test("journal-unit") {
   sources = [
     "background_executor_test.cc",
     "data_streamer_test.cc",
+    "disk_struct_test.cc",
     "entry_view_test.cc",
     "header_view_test.cc",
     "inspector_parser_test.cc",
