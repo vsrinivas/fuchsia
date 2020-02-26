@@ -49,6 +49,13 @@ whether number or date, or plural or gender formatting is needed.
 To generate the ARB files, please refer to the instructions in
 `fuchsia_internationalization`.
 
+An example invocation is below, assuming that `$FUCHSIA_DIR` is set to the full
+path of the directory containing the Fuchsia checkout.
+
+```
+$FUCHSIA_DIR/topaz/public/dart/fuchsia_internationalization_flutter/scripts/run_extract_to_arb.sh
+```
+
 ## Translating
 
 The translation process amounts to making ARB files for each of the supported
@@ -64,6 +71,12 @@ Once translated you can use the file `./scripts/run_generate_from_arb.sh` from
 `fuchsia_internationalization` library to generate the Dart code that wires up
 the translation.  You will need to rebuild the entire project to take the new
 translations in.
+
+An example invocation is below.
+
+```
+$FUCHSIA_DIR/topaz/public/dart/fuchsia_internationalization_flutter/scripts/run_generate_from_arb.sh
+```
 
 # Further reading
 
