@@ -5,6 +5,17 @@
 import("//build/test.gni")
 import("//build/test/test_package.gni")
 
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":bugreport_tests",
+
+    # Packages for the components that we are injecting in the integration tests.
+    "//src/developer/feedback/testing/fakes:fake_data_provider",
+  ]
+}
+
 test_package("bugreport_tests") {
   tests = [
     {

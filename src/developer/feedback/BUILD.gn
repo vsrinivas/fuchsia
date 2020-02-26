@@ -19,7 +19,7 @@ group("tests") {
 
   public_deps = [
     "//src/developer/feedback/boot_log_checker/tests",
-    "//src/developer/feedback/bugreport/tests:bugreport_tests",
+    "//src/developer/feedback/bugreport/tests",
     "//src/developer/feedback/crashpad_agent/tests",
     "//src/developer/feedback/feedback_agent/tests",
     "//src/developer/feedback/utils/tests",

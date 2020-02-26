@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

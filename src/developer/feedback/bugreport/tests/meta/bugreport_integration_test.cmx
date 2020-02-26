@@ -2,8 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx",
-                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx"
+                "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/fake_data_provider#meta/fake_data_provider.cmx"
             }
         }
     },

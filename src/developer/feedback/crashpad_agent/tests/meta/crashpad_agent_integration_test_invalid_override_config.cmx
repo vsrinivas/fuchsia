@@ -3,12 +3,9 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.cobalt.LoggerFactory": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
-                "fuchsia.diagnostics.Archive": "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx",
                 "fuchsia.cobalt.test.LoggerQuerier": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
                 "fuchsia.feedback.CrashReporter": "fuchsia-pkg://fuchsia.com/fake_crashpad_agent_invalid_override_config#meta/crashpad_agent.cmx",
-                "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx",
-                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
-                "fuchsia.update.channel.Provider": "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx"
+                "fuchsia.feedback.DataProvider": "fuchsia-pkg://fuchsia.com/fake_data_provider#meta/fake_data_provider.cmx"
             }
         }
     },

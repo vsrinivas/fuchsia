@@ -99,7 +99,7 @@ test_package("feedback_agent_tests") {
   resources = [
     # needed for data_provider_unittest
     {
-      path = "resources/checkerboard_100.png"
+      path = "//src/developer/feedback/testing/resources/checkerboard_100.png"
       dest = "checkerboard_100.png"
     },
 
