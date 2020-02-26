@@ -8,6 +8,7 @@ use {
     fsyslog::{fx_log_err, fx_log_info},
     ftest::{Invocation, TestListenerProxy},
     fuchsia_async as fasync, fuchsia_syslog as fsyslog, fuchsia_zircon as zx,
+    futures::io::AsyncWriteExt,
     futures::prelude::*,
     lazy_static::lazy_static,
     regex::Regex,
@@ -145,8 +146,10 @@ impl RustTestAdapter {
                 .ok_or(format_err!("Name should be present in Invocation"))?
                 .to_string();
 
-            let (log_end, _logger) =
+            let (log_end, test_logger) =
                 zx::Socket::create(zx::SocketOpts::empty()).context("Failed to create socket")?;
+
+            let mut test_logger = fasync::Socket::from_socket(test_logger)?;
 
             let (case_listener_proxy, listener) =
                 fidl::endpoints::create_proxy::<fidl_fuchsia_test::TestCaseListenerMarker>()
@@ -156,7 +159,7 @@ impl RustTestAdapter {
                 .on_test_case_started(invocation, log_end, listener)
                 .context("on_test_case_started failed")?;
 
-            match self.run_test(&name).await {
+            match self.run_test(&name, &mut test_logger).await {
                 Ok(result) => {
                     case_listener_proxy.finished(result).context("on_test_case_finished failed")?
                 }
@@ -225,9 +228,12 @@ impl RustTestAdapter {
         Ok(test_names)
     }
 
-    /// Launches a process that actually runs the test and parses the resulting json output.
     #[cfg(rust_panic = "unwind")]
-    async fn run_test(&self, name: &str) -> Result<ftest::Result_, Error> {
+    async fn run_test<W: AsyncWriteExt + std::marker::Unpin>(
+        &self,
+        name: &str,
+        test_logger: &mut W,
+    ) -> Result<ftest::Result_, Error> {
         let c_test_name = CString::new(name).unwrap();
         let mut args: Vec<&CStr> = vec![&self.c_test_path, &c_test_name];
 
@@ -266,7 +272,10 @@ impl RustTestAdapter {
                         match result.event {
                             ResultEvent::Failed => {
                                 if let Some(output) = result.output {
-                                    fx_log_info!("Test Failed:\n{}", output);
+                                    test_logger
+                                        .write(format!("test failed:\n{}", output).as_bytes())
+                                        .await
+                                        .context("cannot write logs")?;
                                 }
                                 return Ok(ftest::Result_ { status: Some(ftest::Status::Failed) });
                             }
@@ -289,7 +298,11 @@ impl RustTestAdapter {
 
     /// Launches a process that actually runs the test and parses the resulting json output.
     #[cfg(rust_panic = "abort")]
-    async fn run_test(&self, name: &str) -> Result<ftest::Result_, Error> {
+    async fn run_test<W: AsyncWriteExt + std::marker::Unpin>(
+        &self,
+        name: &str,
+        test_logger: &mut W,
+    ) -> Result<ftest::Result_, Error> {
         // Exit codes used by Rust's libtest runner.
         const TR_OK: i64 = 50;
         const TR_FAILED: i64 = 51;
@@ -317,7 +330,13 @@ impl RustTestAdapter {
 
         match process_info.return_code {
             TR_OK => Ok(ftest::Result_ { status: Some(ftest::Status::Passed) }),
-            TR_FAILED => Ok(ftest::Result_ { status: Some(ftest::Status::Failed) }),
+            TR_FAILED => {
+                test_logger
+                    .write(format!("test failed:\n{}", output).as_bytes())
+                    .await
+                    .context("cannot write logs")?;
+                Ok(ftest::Result_ { status: Some(ftest::Status::Failed) })
+            }
             other => Err(format_err!(
                 "Received unexpected exit code {} from test process\noutput: {}",
                 other,
@@ -422,9 +441,11 @@ mod tests {
 
         let adapter = RustTestAdapter::new(test_info).expect("Cannot create adapter");
         let test_name = String::from("tests::a_passing_test");
-        let result = adapter.run_test(&test_name).await.expect("Failed to run test");
+        let mut logs = vec![];
+        let result = adapter.run_test(&test_name, &mut logs).await.expect("Failed to run test");
 
         assert_eq!(ftest::Result_ { status: Some(ftest::Status::Passed) }, result);
+        assert_eq!(logs, vec![]);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -434,9 +455,12 @@ mod tests {
 
         let adapter = RustTestAdapter::new(test_info).expect("Cannot create adapter");
         let test_name = String::from("tests::b_failing_test");
-        let result = adapter.run_test(&test_name).await.expect("Failed to run test");
+        let mut logs = vec![];
+        let result = adapter.run_test(&test_name, &mut logs).await.expect("Failed to run test");
 
         assert_eq!(ftest::Result_ { status: Some(ftest::Status::Failed) }, result);
+        let logs = from_utf8(&logs).unwrap();
+        assert!(logs.contains("I'm supposed panic!()"));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
