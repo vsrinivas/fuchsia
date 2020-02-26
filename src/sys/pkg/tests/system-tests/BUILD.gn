@@ -35,6 +35,12 @@ go_test("system_tests_reboot") {
   deps = [ ":system_tests_lib" ]
 }
 
+go_test("system_tests_tracking") {
+  gopackages = [ "fuchsia.googlesource.com/system_tests/tracking_test" ]
+  disabled = true
+  deps = [ ":system_tests_lib" ]
+}
+
 go_test("system_tests_upgrade") {
   gopackages = [ "fuchsia.googlesource.com/system_tests/upgrade_test" ]
   disabled = true
@@ -45,6 +51,7 @@ group("system_tests") {
   testonly = true
   deps = [
     ":system_tests_reboot($host_toolchain)",
+    ":system_tests_tracking($host_toolchain)",
     ":system_tests_upgrade($host_toolchain)",
   ]
 }

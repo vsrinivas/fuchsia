@@ -1,8 +1,8 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package upgrade
+package tracking
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"os"
 	"sync"
 	"testing"
+	"time"
 
 	"fuchsia.googlesource.com/host_target_testing/device"
 	"fuchsia.googlesource.com/host_target_testing/packages"
@@ -70,20 +71,57 @@ func TestOTA(t *testing.T) {
 		}
 	}
 
-	testOTAs(t, ctx, device, &rpcClient)
+	testTrackingOTAs(t, ctx, device, &rpcClient)
 }
 
-func testOTAs(t *testing.T, ctx context.Context, device *device.Client, rpcClient **sl4f.Client) {
-	for i := 1; i <= c.cycleCount; i++ {
-		log.Printf("OTA Attempt %d", i)
+func testTrackingOTAs(t *testing.T, ctx context.Context, device *device.Client, rpcClient **sl4f.Client) {
+	builder, err := c.GetUpgradeBuilder()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		if err := doTestOTAs(ctx, device, rpcClient); err != nil {
-			t.Fatalf("OTA Attempt %d failed: %s", i, err)
+	// We only check ABR after the first update, since we can't be sure if
+	// the initial version of Fuchsia is recent enough to support ABR, but
+	// it should support ABR after the first OTA.
+	checkABR := false
+
+	lastBuildID := ""
+	attempt := 1
+	for {
+		log.Printf("Look up latest build for builder %s", builder)
+
+		buildID, err := builder.GetLatestBuildID(ctx)
+		if err != nil {
+			t.Fatalf("error getting latest build for builder %s: %s", builder, err)
 		}
+
+		if buildID == lastBuildID {
+			log.Printf("already updated to %s, sleeping", buildID)
+			time.Sleep(60 * time.Second)
+			continue
+		}
+		log.Printf("Tracking Test Attempt %d upgrading from build %s to build %s", attempt, lastBuildID, buildID)
+
+		if err := testTrackingOTAAttempt(ctx, device, rpcClient, buildID, checkABR); err != nil {
+			t.Fatalf("Tracking Test Attempt %d failed: %s", attempt, err)
+		}
+
+		log.Printf("Tracking Test Attempt %d successful", attempt)
+		log.Printf("------------------------------------------------------------------------------")
+
+		checkABR = true
+		lastBuildID = buildID
+		attempt += 1
 	}
 }
 
-func doTestOTAs(ctx context.Context, device *device.Client, rpcClient **sl4f.Client) error {
+func testTrackingOTAAttempt(
+	ctx context.Context,
+	device *device.Client,
+	rpcClient **sl4f.Client,
+	buildID string,
+	checkABR bool,
+) error {
 	ctx, cancel := context.WithTimeout(ctx, c.cycleTimeout)
 	defer cancel()
 
@@ -93,45 +131,34 @@ func doTestOTAs(ctx context.Context, device *device.Client, rpcClient **sl4f.Cli
 	}
 	defer cleanup()
 
-	repo, err := c.GetUpgradeRepository(ctx, outputDir)
+	build, err := c.archiveConfig.BuildArchive().GetBuildByID(ctx, buildID, outputDir)
 	if err != nil {
-		return fmt.Errorf("failed to get upgrade repository: %s", err)
+		return fmt.Errorf("failed to find build %s: %s", buildID, err)
 	}
 
-	// Install version N on the device if it is not already on that version.
+	repo, err := build.GetPackageRepository(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get repo for build: %s", err)
+	}
+
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
-		return fmt.Errorf("error extracting expected system image merkle: %s", err)
+		return fmt.Errorf("failed to get repo system image merkle: %s", err)
 	}
 
 	upToDate, err := isDeviceUpToDate(ctx, device, *rpcClient, expectedSystemImageMerkle)
 	if err != nil {
 		return fmt.Errorf("failed to check if device is up to date: %s", err)
 	}
-	if !upToDate {
-		log.Printf("\n\n")
-		log.Printf("starting OTA from N-1 -> N test")
-		if err := systemOTA(ctx, device, rpcClient, repo, true); err != nil {
-			return fmt.Errorf("OTA from N-1 -> N failed: %s", err)
-		}
-		log.Printf("OTA from N-1 -> N successful")
+	if upToDate {
+		log.Printf("device already up to date")
+		return nil
 	}
 
 	log.Printf("\n\n")
-	log.Printf("starting OTA N -> N' test")
-	if err := systemPrimeOTA(ctx, device, rpcClient, repo, false); err != nil {
-		return fmt.Errorf("OTA from N -> N' failed: %s", err)
-	}
-	log.Printf("OTA from N -> N' successful")
+	log.Printf("OTAing to %s", build)
 
-	log.Printf("\n\n")
-	log.Printf("starting OTA N' -> N test")
-	if err := systemOTA(ctx, device, rpcClient, repo, false); err != nil {
-		return fmt.Errorf("OTA from N' -> N failed: %s", err)
-	}
-	log.Printf("OTA from N' -> N successful")
-
-	return nil
+	return systemOTA(ctx, device, rpcClient, repo, checkABR)
 }
 
 func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error) {
@@ -195,46 +222,6 @@ func paveDevice(ctx context.Context, device *device.Client) (*sl4f.Client, error
 	return rpcClient, nil
 }
 
-// FIXME(45156) In order to ease landing Omaha, we're temporarily disabling the
-// OTA test from talking directly to the update system, and instead are just
-// directly calling out to the `system_updater` like we do for the N->N'
-// upgrade. We need to do this because Omaha doesn't have a way to customize
-// which server we are talking to, so we wouldn't be able to tell it to upgrade
-// to the version of Fuchsia we want to test.
-//
-// We can revert back to this code once we've figured out how to implement this
-// customization.
-/*
-func systemOTA(t *testing.T, ctx context.Context, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) {
-	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
-	if err != nil {
-		t.Fatalf("error extracting expected system image merkle: %s", err)
-	}
-
-	expectedConfig, err := determineTargetConfig(ctx, *rpcClient)
-	if err != nil {
-		t.Fatalf("error determining target config: %s", err)
-	}
-
-	if isDeviceUpToDate(ctx, device, *rpcClient, expectedSystemImageMerkle) {
-		t.Fatalf("device already updated to the expected version %q", expectedSystemImageMerkle)
-	}
-
-	server, err := device.ServePackageRepository(ctx, repo, "upgrade_test")
-	if err != nil {
-		t.Fatalf("error setting up server: %s", err)
-	}
-	defer server.Shutdown(ctx)
-
-	if err := device.TriggerSystemOTA(ctx, repo, rpcClient); err != nil {
-		t.Fatalf("OTA failed: %s", err)
-	}
-
-	log.Printf("OTA complete, validating device")
-	validateDevice(t, ctx, device, *rpcClient, repo, expectedSystemImageMerkle, expectedConfig, checkABR)
-}
-*/
-
 func systemOTA(ctx context.Context, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) error {
 	expectedSystemImageMerkle, err := repo.LookupUpdateSystemImageMerkle()
 	if err != nil {
@@ -248,23 +235,6 @@ func systemOTA(ctx context.Context, device *device.Client, rpcClient **sl4f.Clie
 		repo,
 		expectedSystemImageMerkle,
 		"fuchsia-pkg://fuchsia.com/update",
-		checkABR,
-	)
-}
-
-func systemPrimeOTA(ctx context.Context, device *device.Client, rpcClient **sl4f.Client, repo *packages.Repository, checkABR bool) error {
-	expectedSystemImageMerkle, err := repo.LookupUpdatePrimeSystemImageMerkle()
-	if err != nil {
-		return fmt.Errorf("error extracting expected system image merkle: %s", err)
-	}
-
-	return otaToPackage(
-		ctx,
-		device,
-		rpcClient,
-		repo,
-		expectedSystemImageMerkle,
-		"fuchsia-pkg://fuchsia.com/update_prime",
 		checkABR,
 	)
 }

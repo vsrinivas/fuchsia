@@ -1,8 +1,8 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package upgrade
+package tracking
 
 import (
 	"context"
@@ -75,6 +75,10 @@ func (c *Config) Validate() error {
 	}
 	if defined != 1 {
 		return fmt.Errorf("exactly one of -upgrade-builder-name, -upgrade-build-id, or -upgrade-fuchsia-build-dir must be specified")
+	}
+
+	if c.upgradeBuilderName == "" {
+		return fmt.Errorf("-upgrade-builder-name to be specified")
 	}
 
 	if c.cycleCount < 1 {
