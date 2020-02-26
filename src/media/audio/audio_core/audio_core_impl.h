@@ -17,6 +17,7 @@
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
+#include "src/media/audio/audio_core/thermal_agent.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/usage_gain_adjustment.h"
 #include "src/media/audio/audio_core/usage_reporter_impl.h"
@@ -98,6 +99,8 @@ class AudioCoreImpl : public fuchsia::media::AudioCore, UsageGainAdjustment {
   // We allocate a sub-vmar to hold the audio renderer buffers. Keeping these in a sub-vmar allows
   // us to take advantage of ASLR while minimizing page table fragmentation.
   fbl::RefPtr<fzl::VmarManager> vmar_manager_;
+
+  std::unique_ptr<ThermalAgent> thermal_agent_;
 };
 
 }  // namespace media::audio

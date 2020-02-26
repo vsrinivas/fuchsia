@@ -18,12 +18,15 @@ Effect::~Effect() {
 
 // Allow move.
 Effect::Effect(Effect&& o) noexcept
-    : effects_handle_(o.effects_handle_), module_(std::move(o.module_)) {
+    : effects_handle_(o.effects_handle_),
+      module_(std::move(o.module_)),
+      instance_name_(std::move(o.instance_name_)) {
   o.effects_handle_ = FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE;
 }
 Effect& Effect::operator=(Effect&& o) noexcept {
   effects_handle_ = o.effects_handle_;
   module_ = std::move(o.module_);
+  instance_name_ = std::move(o.instance_name_);
   o.effects_handle_ = FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE;
   return *this;
 }

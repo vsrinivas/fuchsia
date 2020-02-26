@@ -142,4 +142,13 @@ void AudioOutput::Cleanup() {
   mix_timer_.Cancel();
 }
 
+void AudioOutput::SetEffectConfig(const std::string& instance_name, const std::string& config) {
+  mix_domain().PostTask([this, self = shared_from_this(), instance_name, config]() {
+    OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &mix_domain());
+    if (pipeline_ && !is_shutting_down()) {
+      pipeline_->SetEffectConfig(instance_name, config);
+    }
+  });
+}
+
 }  // namespace media::audio

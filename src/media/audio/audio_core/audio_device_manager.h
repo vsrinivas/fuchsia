@@ -56,6 +56,9 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   void AddDeviceEnumeratorClient(
       fidl::InterfaceRequest<fuchsia::media::AudioDeviceEnumerator> request);
 
+  // Sets the configuration of all effects in output pipelines with the given instance name.
+  void SetEffectConfig(const std::string& instance_name, const std::string& config);
+
   // |media::audio::DeviceRegistry|
   void AddDevice(const std::shared_ptr<AudioDevice>& device) override;
   void ActivateDevice(const std::shared_ptr<AudioDevice>& device) override;

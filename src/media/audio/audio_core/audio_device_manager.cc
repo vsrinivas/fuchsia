@@ -73,6 +73,13 @@ void AudioDeviceManager::AddDeviceEnumeratorClient(
   bindings_.AddBinding(this, std::move(request));
 }
 
+void AudioDeviceManager::SetEffectConfig(const std::string& instance_name,
+                                         const std::string& config) {
+  for (auto& [_, device] : devices_) {
+    device->SetEffectConfig(instance_name, config);
+  }
+}
+
 void AudioDeviceManager::AddDevice(const std::shared_ptr<AudioDevice>& device) {
   TRACE_DURATION("audio", "AudioDeviceManager::AddDevice");
   FX_DCHECK(device != nullptr);

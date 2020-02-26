@@ -20,6 +20,9 @@ enum EffectAction {
   //
   // Requires in_channels == out_channels
   TEST_EFFECTS_ACTION_ADD = 1,
+
+  // Set each sample in each channel to the size of the config string.
+  TEST_EFFECTS_ACTION_ASSIGN_CONFIG_SIZE = 2,
 };
 
 typedef struct {

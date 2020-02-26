@@ -122,4 +122,12 @@ Stream::TimelineFunctionSnapshot EffectsStage::ReferenceClockToFractionalFrames(
   return snapshot;
 }
 
+void EffectsStage::SetEffectConfig(const std::string& instance_name, const std::string& config) {
+  for (auto& effect : *effects_processor_) {
+    if (effect.instance_name() == instance_name) {
+      effect.UpdateConfiguration(config);
+    }
+  }
+}
+
 }  // namespace media::audio

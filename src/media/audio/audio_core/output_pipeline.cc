@@ -58,6 +58,12 @@ void OutputPipeline::RemoveInput(const Stream& stream) {
   streams_.erase(it);
 }
 
+void OutputPipeline::SetEffectConfig(const std::string& instance_name, const std::string& config) {
+  for (auto& effects_stage : effects_stages_) {
+    effects_stage->SetEffectConfig(instance_name, config);
+  }
+}
+
 std::shared_ptr<Stream> OutputPipeline::CreateMixStage(
     const PipelineConfig::MixGroup& spec, const Format& output_format,
     uint32_t max_block_size_frames,
@@ -76,6 +82,7 @@ std::shared_ptr<Stream> OutputPipeline::CreateMixStage(
     auto effects_stage = EffectsStage::Create(spec.effects, root);
     FX_DCHECK(effects_stage);
     if (effects_stage) {
+      effects_stages_.push_back(effects_stage);
       root = std::move(effects_stage);
     }
   }

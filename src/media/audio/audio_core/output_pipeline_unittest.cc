@@ -196,5 +196,53 @@ TEST_F(OutputPipelineTest, Loopback) {
   CheckBuffer(loopback_buf->payload(), 0.0, 96);
 }
 
+static const std::string kInstanceName = "instance name";
+static const std::string kConfig = "config";
+
+TEST_F(OutputPipelineTest, SetEffectConfig) {
+  auto test_effects = testing::TestEffectsModule::Open();
+  test_effects.AddEffect("assign_config_size")
+      .WithAction(TEST_EFFECTS_ACTION_ASSIGN_CONFIG_SIZE, 0.0);
+  PipelineConfig::MixGroup root{.name = "linearize",
+                                .input_streams =
+                                    {
+                                        fuchsia::media::AudioRenderUsage::BACKGROUND,
+                                    },
+                                .effects =
+                                    {
+                                        {
+                                            .lib_name = "test_effects.so",
+                                            .effect_name = "assign_config_size",
+                                            .instance_name = kInstanceName,
+                                            .effect_config = "",
+                                        },
+                                    },
+                                .inputs = {{
+                                    .name = "mix",
+                                    .input_streams =
+                                        {
+                                            fuchsia::media::AudioRenderUsage::MEDIA,
+                                            fuchsia::media::AudioRenderUsage::SYSTEM_AGENT,
+                                            fuchsia::media::AudioRenderUsage::INTERRUPTION,
+                                            fuchsia::media::AudioRenderUsage::COMMUNICATION,
+                                        },
+                                    .effects = {},
+                                }}};
+  auto pipeline_config = PipelineConfig(root);
+  auto pipeline =
+      std::make_shared<OutputPipeline>(pipeline_config, kDefaultFormat, 128, kDefaultTransform);
+
+  pipeline->SetEffectConfig(kInstanceName, kConfig);
+
+  // Verify our stream from the pipeline has the effects applied (we have no input streams so we
+  // should have silence with a single effect that sets all samples to the size of the new config).
+  auto buf = pipeline->LockBuffer(zx::time(0) + zx::msec(1), 0, 48);
+  ASSERT_TRUE(buf);
+  ASSERT_EQ(buf->start().Floor(), 0u);
+  ASSERT_EQ(buf->length().Floor(), 48u);
+  float expected_sample = static_cast<float>(kConfig.size());
+  CheckBuffer(buf->payload(), expected_sample, 96);
+}
+
 }  // namespace
 }  // namespace media::audio

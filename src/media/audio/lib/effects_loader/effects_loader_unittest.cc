@@ -70,7 +70,8 @@ TEST_F(EffectsLoaderTest, CreateEffectByEffectId) {
   test_effects().AddEffect("assign_to_1.0").WithAction(TEST_EFFECTS_ACTION_ASSIGN, 1.0);
   {
     ASSERT_EQ(0u, test_effects().InstanceCount());
-    Effect e = effects_loader()->CreateEffect(0, kInstanceName, kFrameRate, kTwoChannels, kTwoChannels, {});
+    Effect e = effects_loader()->CreateEffect(0, kInstanceName, kFrameRate, kTwoChannels,
+                                              kTwoChannels, {});
     EXPECT_TRUE(e);
     EXPECT_EQ(kInstanceName, e.instance_name());
     ASSERT_EQ(1u, test_effects().InstanceCount());

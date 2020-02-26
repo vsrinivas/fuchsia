@@ -44,9 +44,8 @@ class EffectsLoader {
                             std::string_view config) const;
 
   // TODO(dalesat): Remove when callers have been migrated.
-  Effect CreateEffectByName(std::string_view name, 
-                            uint32_t frame_rate, uint16_t channels_in, uint16_t channels_out,
-                            std::string_view config) const;
+  Effect CreateEffectByName(std::string_view name, uint32_t frame_rate, uint16_t channels_in,
+                            uint16_t channels_out, std::string_view config) const;
 
   Effect CreateEffect(uint32_t effect_id, std::string_view instance_name, uint32_t frame_rate,
                       uint16_t channels_in, uint16_t channels_out, std::string_view config) const;

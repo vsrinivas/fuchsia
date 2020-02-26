@@ -58,6 +58,17 @@ AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
   LoadDefaults();
 
   PublishServices();
+
+  // If there's a thermal configuration, start the thermal agent.
+  auto& thermal_config = ProcessConfig::instance().thermal_config();
+  if (!thermal_config.entries().empty()) {
+    thermal_agent_ = std::make_unique<ThermalAgent>(
+        component_context_->svc()->Connect<fuchsia::thermal::Controller>(), thermal_config,
+        ProcessConfig::instance().device_config(),
+        [this](const std::string& target_name, const std::string& config) {
+          device_manager_.SetEffectConfig(target_name, config);
+        });
+  }
 }
 
 AudioCoreImpl::~AudioCoreImpl() { Shutdown(); }

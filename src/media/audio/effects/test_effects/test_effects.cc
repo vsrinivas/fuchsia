@@ -66,6 +66,8 @@ class TestEffect {
         audio_buff_in_out[i] = audio_buff_in_out[i] + effect.value;
       } else if (effect.action == TEST_EFFECTS_ACTION_ASSIGN) {
         audio_buff_in_out[i] = effect.value;
+      } else if (effect.action == TEST_EFFECTS_ACTION_ASSIGN_CONFIG_SIZE) {
+        audio_buff_in_out[i] = config_.size();
       } else {
         return false;
       }

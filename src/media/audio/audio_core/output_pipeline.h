@@ -13,6 +13,7 @@
 #include <trace/event.h>
 
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/media/audio/audio_core/effects_stage.h"
 #include "src/media/audio/audio_core/mix_stage.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/stream.h"
@@ -50,6 +51,9 @@ class OutputPipeline : public Stream {
   // same |stream|.
   void RemoveInput(const Stream& stream);
 
+  // Sets the configuration of all effects with the given instance name.
+  void SetEffectConfig(const std::string& instance_name, const std::string& config);
+
   // |media::audio::Stream|
   std::optional<Stream::Buffer> LockBuffer(zx::time ref_time, int64_t frame,
                                            uint32_t frame_count) override {
@@ -80,6 +84,7 @@ class OutputPipeline : public Stream {
   MixStage& LookupStageForUsage(const fuchsia::media::Usage& usage);
 
   std::vector<std::pair<std::shared_ptr<MixStage>, std::vector<fuchsia::media::Usage>>> mix_stages_;
+  std::vector<std::shared_ptr<EffectsStage>> effects_stages_;
   std::vector<std::pair<std::shared_ptr<Stream>, fuchsia::media::Usage>> streams_;
 
   // This is the root of the mix graph. The other mix stages must be reachable from this node

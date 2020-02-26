@@ -189,5 +189,49 @@ TEST_F(EffectsStageTest, CompensateForEffectDelayInStreamTimeline) {
   EXPECT_LE(frame_13_frac_frames.raw_value(), 1);
 }
 
+static const std::string kInstanceName = "instance_name";
+static const std::string kInitialConfig = "different size than kConfig";
+static const std::string kConfig = "config";
+
+TEST_F(EffectsStageTest, SetEffectConfig) {
+  testing::PacketFactory packet_factory(dispatcher(), kDefaultFormat, PAGE_SIZE);
+
+  // Create a packet queue to use as our source stream.
+  auto timeline_function = fbl::MakeRefCounted<VersionedTimelineFunction>(TimelineFunction(
+      TimelineRate(FractionalFrames<uint32_t>(kDefaultFormat.frames_per_second()).raw_value(),
+                   zx::sec(1).to_nsecs())));
+  auto stream = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function);
+
+  // Create an effect we can load.
+  test_effects_.AddEffect("assign_config_size")
+      .WithAction(TEST_EFFECTS_ACTION_ASSIGN_CONFIG_SIZE, 0.0);
+
+  // Create the effects stage.
+  std::vector<PipelineConfig::Effect> effects;
+  effects.push_back(PipelineConfig::Effect{
+      .lib_name = testing::kTestEffectsModuleName,
+      .effect_name = "assign_config_size",
+      .instance_name = kInstanceName,
+      .effect_config = kInitialConfig,
+  });
+  auto effects_stage = EffectsStage::Create(effects, stream);
+
+  effects_stage->SetEffectConfig(kInstanceName, kConfig);
+
+  // Enqueue 10ms of frames in the packet queue.
+  stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10)));
+
+  // Read from the effects stage. Our effect sets each sample to the size of the config.
+  auto buf = effects_stage->LockBuffer(zx::time(0) + zx::msec(10), 0, 480);
+  ASSERT_TRUE(buf);
+  ASSERT_EQ(0u, buf->start().Floor());
+  ASSERT_EQ(480u, buf->length().Floor());
+
+  float expected_sample = static_cast<float>(kConfig.size());
+
+  auto& arr = as_array<float, 480>(buf->payload());
+  EXPECT_THAT(arr, Each(FloatEq(expected_sample)));
+}
+
 }  // namespace
 }  // namespace media::audio

@@ -27,6 +27,8 @@ class EffectsStage : public Stream {
 
   uint32_t block_size() const { return effects_processor_->block_size(); }
 
+  void SetEffectConfig(const std::string& instance_name, const std::string& config);
+
   // |media::audio::Stream|
   std::optional<Stream::Buffer> LockBuffer(zx::time ref_time, int64_t frame,
                                            uint32_t frame_count) override;
