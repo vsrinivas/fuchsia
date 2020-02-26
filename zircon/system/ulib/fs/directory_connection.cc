@@ -333,7 +333,7 @@ void DirectoryConnection::QueryFilesystem(QueryFilesystemCompleter::Sync complet
 
   fio::FilesystemInfo info;
   zx_status_t status = vnode()->QueryFilesystem(&info);
-  completer.Reply(status, status == ZX_OK ? &info : nullptr);
+  completer.Reply(status, status == ZX_OK ? fidl::unowned(&info) : nullptr);
 }
 
 void DirectoryConnection::GetDevicePath(GetDevicePathCompleter::Sync completer) {

@@ -90,7 +90,7 @@ bool test_vmofile_basic() {
   auto get_result = fio::File::Call::GetBuffer(zx::unowned_channel(h), fio::VMO_FLAG_READ);
   ASSERT_EQ(get_result.status(), ZX_OK);
   ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
-  llcpp::fuchsia::mem::Buffer* buffer = get_result.Unwrap()->buffer;
+  llcpp::fuchsia::mem::Buffer* buffer = get_result.Unwrap()->buffer.get();
   ASSERT_TRUE(buffer->vmo.is_valid());
   // TODO(fxb/37091): This currently provides SET_PROPERTY but shouldn't.
   ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights | ZX_RIGHT_SET_PROPERTY);
@@ -100,13 +100,13 @@ bool test_vmofile_basic() {
       fio::File::Call::GetBuffer(zx::unowned_channel(h), fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC);
   ASSERT_EQ(get_result.status(), ZX_OK);
   ASSERT_EQ(get_result.Unwrap()->s, ZX_ERR_ACCESS_DENIED);
-  ASSERT_EQ(get_result.Unwrap()->buffer, nullptr);
+  ASSERT_EQ(get_result.Unwrap()->buffer.get(), nullptr);
 
   get_result =
       fio::File::Call::GetBuffer(zx::unowned_channel(h), fio::VMO_FLAG_READ | fio::VMO_FLAG_WRITE);
   ASSERT_EQ(get_result.status(), ZX_OK);
   ASSERT_EQ(get_result.Unwrap()->s, ZX_ERR_ACCESS_DENIED);
-  ASSERT_EQ(get_result.Unwrap()->buffer, nullptr);
+  ASSERT_EQ(get_result.Unwrap()->buffer.get(), nullptr);
 
   auto describe_result = fio::File::Call::Describe(zx::unowned_channel(h));
   ASSERT_EQ(describe_result.status(), ZX_OK);
@@ -161,7 +161,7 @@ bool test_vmofile_exec() {
   auto get_result = fio::File::Call::GetBuffer(zx::unowned_channel(h), fio::VMO_FLAG_READ);
   ASSERT_EQ(get_result.status(), ZX_OK);
   ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
-  llcpp::fuchsia::mem::Buffer* buffer = get_result.Unwrap()->buffer;
+  llcpp::fuchsia::mem::Buffer* buffer = get_result.Unwrap()->buffer.get();
   ASSERT_TRUE(buffer->vmo.is_valid());
   // TODO(fxb/37091): This currently provides SET_PROPERTY but shouldn't.
   ASSERT_EQ(get_rights(buffer->vmo), kCommonExpectedRights | ZX_RIGHT_SET_PROPERTY);
@@ -173,7 +173,7 @@ bool test_vmofile_exec() {
       fio::File::Call::GetBuffer(zx::unowned_channel(h), fio::VMO_FLAG_READ | fio::VMO_FLAG_EXEC);
   ASSERT_EQ(get_result.status(), ZX_OK);
   ASSERT_EQ(get_result.Unwrap()->s, ZX_OK);
-  buffer = get_result.Unwrap()->buffer;
+  buffer = get_result.Unwrap()->buffer.get();
   ASSERT_TRUE(buffer->vmo.is_valid());
   // TODO(fxb/37091): This currently provides SET_PROPERTY but shouldn't.
   ASSERT_EQ(get_rights(buffer->vmo),

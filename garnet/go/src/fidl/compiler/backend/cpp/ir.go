@@ -684,7 +684,7 @@ func (c *compiler) compileType(val types.Type) Type {
 				if declType == types.XUnionDeclType || declType == types.UnionDeclType {
 					r.LLDecl = fmt.Sprintf("%s", ft)
 				} else {
-					r.LLDecl = fmt.Sprintf("%s*", ft)
+					r.LLDecl = fmt.Sprintf("::fidl::tracking_ptr<%s>", ft)
 				}
 				r.NeedsDtor = true
 			} else {

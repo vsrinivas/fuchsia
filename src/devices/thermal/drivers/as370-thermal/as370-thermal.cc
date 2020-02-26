@@ -125,7 +125,7 @@ void As370Thermal::GetInfo(GetInfoCompleter::Sync completer) {
 
 void As370Thermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync completer) {
   ThermalDeviceInfo device_info_copy = device_info_;
-  completer.Reply(ZX_OK, &device_info_copy);
+  completer.Reply(ZX_OK, fidl::unowned(&device_info_copy));
 }
 
 void As370Thermal::GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::Sync completer) {
@@ -133,7 +133,7 @@ void As370Thermal::GetDvfsInfo(PowerDomain power_domain, GetDvfsInfoCompleter::S
     completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
   } else {
     OperatingPoint dvfs_info_copy = device_info_.opps[static_cast<uint32_t>(power_domain)];
-    completer.Reply(ZX_OK, &dvfs_info_copy);
+    completer.Reply(ZX_OK, fidl::unowned(&dvfs_info_copy));
   }
 }
 

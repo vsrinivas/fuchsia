@@ -169,7 +169,7 @@ void PlatformBus::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter
   ::llcpp::fuchsia::sysinfo::InterruptControllerInfo info = {
       .type = interrupt_controller_type_,
   };
-  return completer.Reply(ZX_OK, &info);
+  return completer.Reply(ZX_OK, fidl::unowned(&info));
 }
 
 zx_status_t PlatformBus::PBusGetBoardInfo(pdev_board_info_t* out_info) {

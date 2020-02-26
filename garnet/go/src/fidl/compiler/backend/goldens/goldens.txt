@@ -115,6 +115,15 @@ inheritance_with_recursive_decl.test.json.llcpp.h.golden
 inheritance_with_recursive_decl.test.json.rs.golden
 inheritance_with_recursive_decl.test.json.syz.txt.golden
 inheritance_with_recursive_decl.test.json_test_base.h.golden
+nullable.test.json
+nullable.test.json.cc.golden
+nullable.test.json.go.golden
+nullable.test.json.h.golden
+nullable.test.json.llcpp.cc.golden
+nullable.test.json.llcpp.h.golden
+nullable.test.json.rs.golden
+nullable.test.json.syz.txt.golden
+nullable.test.json_test_base.h.golden
 placement_of_attributes.test.json
 placement_of_attributes.test.json.cc.golden
 placement_of_attributes.test.json.go.golden

@@ -235,7 +235,7 @@ void Lp50xxLight::GetGroupInfo(uint32_t group_id, GetGroupInfoCompleter::Sync co
       .count = static_cast<uint32_t>(group2led_[group_id].size()),
       .capability = ::llcpp::fuchsia::hardware::light::Capability::RGB,
   };
-  completer.Reply(ZX_OK, &info);
+  completer.Reply(ZX_OK, fidl::unowned(&info));
 }
 
 void Lp50xxLight::GetGroupCurrentSimpleValue(uint32_t group_id,

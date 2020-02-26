@@ -334,7 +334,11 @@ func (b *llcppValueBuilder) OnStruct(value gidlir.Object, decl *gidlmixer.Struct
 			"%s.%s = std::move(%s);\n", containerVar, field.Key.Name, b.lastVar))
 	}
 	if decl.IsNullable() {
-		b.lastVar = "&" + containerVar
+		alignedVar := b.newVar()
+		b.Builder.WriteString(fmt.Sprintf("fidl::aligned<%s> %s = std::move(%s);\n", typeNameIgnoreNullable(decl), alignedVar, containerVar))
+		unownedVar := b.newVar()
+		b.Builder.WriteString(fmt.Sprintf("%s %s = fidl::unowned(&%s);\n", typeName(decl), unownedVar, alignedVar))
+		b.lastVar = unownedVar
 	} else {
 		b.lastVar = containerVar
 	}
@@ -435,7 +439,7 @@ func (b *llcppValueBuilder) OnNull(decl gidlmixer.Declaration) {
 	b.lastVar = newVar
 }
 
-func typeName(decl gidlmixer.Declaration) string {
+func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 	switch decl := decl.(type) {
 	case *gidlmixer.BoolDecl:
 		return "bool"
@@ -444,8 +448,8 @@ func typeName(decl gidlmixer.Declaration) string {
 	case *gidlmixer.StringDecl:
 		return "fidl::StringView"
 	case *gidlmixer.StructDecl:
-		if decl.IsNullable() {
-			return fmt.Sprintf("%s*", identifierName(decl.Name))
+		if !ignoreNullable && decl.IsNullable() {
+			return fmt.Sprintf("fidl::tracking_ptr<%s>", identifierName(decl.Name))
 		}
 		return identifierName(decl.Name)
 	case *gidlmixer.TableDecl:
@@ -459,6 +463,14 @@ func typeName(decl gidlmixer.Declaration) string {
 	default:
 		panic("unhandled case")
 	}
+}
+
+func typeName(decl gidlmixer.Declaration) string {
+	return typeNameImpl(decl, false)
+}
+
+func typeNameIgnoreNullable(decl gidlmixer.Declaration) string {
+	return typeNameImpl(decl, true)
 }
 
 func identifierName(eci fidlir.EncodedCompoundIdentifier) string {

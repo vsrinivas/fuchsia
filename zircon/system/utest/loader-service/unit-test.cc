@@ -98,7 +98,7 @@ TEST(LoaderServiceTest, Create) {
       fuchsia::mem::Buffer buffer = {};
       buffer.size = 0;
       buffer.vmo = std::move(vmo);
-      completer.Reply(ZX_OK, &buffer);
+      completer.Reply(ZX_OK, fidl::unowned(&buffer));
     }
     uint32_t* get_buffer_flags_ptr_;
   };

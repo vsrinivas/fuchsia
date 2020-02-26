@@ -1114,7 +1114,7 @@ zx_status_t VnodeMinfs::GetDevicePath(size_t buffer_len, char* out_name, size_t*
 void VnodeMinfs::GetMetrics(GetMetricsCompleter::Sync completer) {
   ::llcpp::fuchsia::minfs::Metrics metrics;
   zx_status_t status = fs_->GetMetrics(&metrics);
-  completer.Reply(status, status == ZX_OK ? &metrics : nullptr);
+  completer.Reply(status, status == ZX_OK ? fidl::unowned(&metrics) : nullptr);
 }
 
 void VnodeMinfs::ToggleMetrics(bool enable, ToggleMetricsCompleter::Sync completer) {
@@ -1146,8 +1146,8 @@ void VnodeMinfs::GetAllocatedRegions(GetAllocatedRegionsCompleter::Sync complete
 }
 
 void VnodeMinfs::GetMountState(GetMountStateCompleter::Sync completer) {
-  MountState state = fs_->GetMountState();
-  completer.Reply(ZX_OK, &state);
+  fidl::aligned<MountState> state = fs_->GetMountState();
+  completer.Reply(ZX_OK, fidl::unowned(&state));
 }
 
 #endif

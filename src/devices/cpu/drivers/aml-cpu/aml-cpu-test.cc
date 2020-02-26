@@ -122,19 +122,19 @@ void FakeAmlThermal::GetInfo(GetInfoCompleter::Sync completer) {
   result.critical_temp_celsius = 0;
   result.max_trip_count = 0;
 
-  completer.Reply(ZX_OK, &result);
+  completer.Reply(ZX_OK, fidl::unowned(&result));
 }
 
 void FakeAmlThermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync completer) {
   fuchsia_thermal::ThermalDeviceInfo result = kFakeThermalDeviceInfo;
-  completer.Reply(ZX_OK, &result);
+  completer.Reply(ZX_OK, fidl::unowned(&result));
 }
 
 void FakeAmlThermal::GetDvfsInfo(fuchsia_thermal::PowerDomain pd,
                                  GetDvfsInfoCompleter::Sync completer) {
   fuchsia_thermal::ThermalDeviceInfo device_info = kFakeThermalDeviceInfo;
   fuchsia_thermal::OperatingPoint result = device_info.opps[PowerDomainToIndex(pd)];
-  completer.Reply(ZX_OK, &result);
+  completer.Reply(ZX_OK, fidl::unowned(&result));
 }
 
 void FakeAmlThermal::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync completer) {

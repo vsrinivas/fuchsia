@@ -11,9 +11,9 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/cksum.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/paver/provider.h>
 #include <lib/zx/vmo.h>
@@ -852,7 +852,7 @@ void CheckGuid(const fbl::unique_fd& device, const uint8_t type[GPT_GUID_LEN]) {
   auto result = partition::Partition::Call::GetTypeGuid(caller.channel());
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
-  auto* guid = result.value().guid;
+  auto* guid = result.value().guid.get();
   EXPECT_BYTES_EQ(type, guid, GPT_GUID_LEN);
 }
 

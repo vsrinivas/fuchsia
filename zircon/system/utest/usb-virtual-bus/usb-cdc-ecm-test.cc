@@ -9,9 +9,9 @@
 #include <fuchsia/hardware/ethernet/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/usb-virtual-bus-launcher/usb-virtual-bus-launcher.h>
 #include <lib/zx/clock.h>
@@ -156,7 +156,7 @@ class EthernetInterface {
     auto info = get_info_result.Unwrap()->info;
     auto get_fifos_result = ethernet_client_->GetFifos();
     ASSERT_OK(get_fifos_result.status());
-    auto fifos = get_fifos_result.Unwrap()->info;
+    auto fifos = get_fifos_result.Unwrap()->info.get();
     mtu_ = info.mtu;
     // Calculate optimal size of VMO, and set up RX and TX buffers.
     size_t optimal_vmo_size = (fifos->rx_depth * mtu_) + (fifos->tx_depth * mtu_);

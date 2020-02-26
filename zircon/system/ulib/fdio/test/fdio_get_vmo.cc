@@ -165,7 +165,7 @@ class TestServer final : public fuchsia_io::File::Interface {
     }
 
     buffer.vmo = std::move(result);
-    return completer.Reply(ZX_OK, &buffer);
+    return completer.Reply(ZX_OK, fidl::unowned(&buffer));
   }
 
  private:

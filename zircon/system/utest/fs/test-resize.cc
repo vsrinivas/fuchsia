@@ -38,7 +38,7 @@ bool QueryInfo(uint64_t* out_free_pool_size) {
   auto query_result = fio::DirectoryAdmin::Call::QueryFilesystem(caller.channel());
   ASSERT_EQ(query_result.status(), ZX_OK);
   ASSERT_NOT_NULL(query_result.Unwrap()->info);
-  fio::FilesystemInfo* info = query_result.Unwrap()->info;
+  fio::FilesystemInfo* info = query_result.Unwrap()->info.get();
   // This should always be true, for all filesystems.
   ASSERT_GT(info->total_bytes, info->used_bytes);
   *out_free_pool_size = info->free_shared_pool_bytes;

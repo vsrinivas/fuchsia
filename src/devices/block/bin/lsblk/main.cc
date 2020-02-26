@@ -9,9 +9,9 @@
 #include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <fuchsia/hardware/skipblock/llcpp/fidl.h>
 #include <inttypes.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
-#include <lib/fdio/cpp/caller.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
@@ -196,7 +196,8 @@ static int cmd_list_skip_blk(void) {
   return 0;
 }
 
-static int try_read_skip_blk(const fdio_cpp::UnownedFdioCaller& caller, off_t offset, size_t count) {
+static int try_read_skip_blk(const fdio_cpp::UnownedFdioCaller& caller, off_t offset,
+                             size_t count) {
   // check that count and offset are aligned to block size
   uint64_t blksize;
   zx_status_t status;
@@ -326,7 +327,7 @@ static int cmd_stats(const char* dev, bool clear) {
     fprintf(stderr, "Error getting stats for %s\n", dev);
     return -1;
   }
-  storage_metrics::BlockDeviceMetrics metrics(result->stats);
+  storage_metrics::BlockDeviceMetrics metrics(result->stats.get());
   metrics.Dump(stdout);
   return 0;
 }

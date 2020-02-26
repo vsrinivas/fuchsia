@@ -2403,7 +2403,7 @@ static int fs_stat(int fd, struct statfs* buf) {
   if (response->s != ZX_OK) {
     return ERROR(response->s);
   }
-  fio::FilesystemInfo* info = response->info;
+  fio::FilesystemInfo* info = response->info.get();
   if (info == nullptr) {
     return ERRNO(EIO);
   }

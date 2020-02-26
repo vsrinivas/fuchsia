@@ -350,7 +350,7 @@ springboard_t* tu_launch_init(zx_handle_t job, const char* name, int argc, const
   fprocess::Launcher::CreateWithoutStartingResponse* response = result.Unwrap();
   tu_check("fuchsia.process.Launcher#CreateWithoutStarting failed", response->status);
 
-  return new springboard(response->data);
+  return new springboard(response->data.get());
 }
 
 void springboard_set_bootstrap(springboard_t* sb, zx_handle_t bootstrap) {

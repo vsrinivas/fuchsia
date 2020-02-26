@@ -288,8 +288,8 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
       if (fvm_fd) {
         LOG("Found already formatted FVM.\n");
         fdio_cpp::UnownedFdioCaller volume_manager(fvm_fd.get());
-        auto result =
-            volume::VolumeManager::Call::GetInfo(fdio_cpp::UnownedFdioCaller(fvm_fd.get()).channel());
+        auto result = volume::VolumeManager::Call::GetInfo(
+            fdio_cpp::UnownedFdioCaller(fvm_fd.get()).channel());
         if (result.status() == ZX_OK) {
           auto get_maximum_slice_count = [](const fvm::sparse_image_t& header) {
             return fvm::FormatInfo::FromDiskSize(header.maximum_disk_size, header.slice_size)
@@ -761,7 +761,7 @@ zx_status_t FvmStreamPartitions(const fbl::unique_fd& devfs_root,
       ERROR("Failed to get unique GUID of new partition\n");
       return ZX_ERR_BAD_STATE;
     }
-    auto* guid = result.value().guid;
+    auto* guid = result.value().guid.get();
 
     auto result2 = volume::VolumeManager::Call::Activate(volume_manager.channel(), *guid, *guid);
     if (result2.status() != ZX_OK || result2.value().status != ZX_OK) {

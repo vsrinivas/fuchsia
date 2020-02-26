@@ -95,7 +95,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     return device_info.status();
   }
 
-  const fuchsia_thermal::ThermalDeviceInfo* info = device_info->info;
+  const fuchsia_thermal::ThermalDeviceInfo* info = device_info->info.get();
 
   // Hack: Only support one DVFS domain in this driver. When only one domain is
   // supported, it is published as the "Big" domain, so we check that the Little
@@ -216,7 +216,7 @@ zx_status_t AmlCpu::GetThermalOperatingPoints(fuchsia_thermal::OperatingPoint* o
     return ZX_ERR_INTERNAL;
   }
 
-  fuchsia_thermal::ThermalDeviceInfo* info = result->info;
+  fuchsia_thermal::ThermalDeviceInfo* info = result->info.get();
 
   // We only support one DVFS cluster on Astro.
   if (info->opps[1].count != 0) {

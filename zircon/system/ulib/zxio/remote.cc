@@ -718,7 +718,7 @@ zx_status_t zxio_remote_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo
   if (response->s != ZX_OK) {
     return response->s;
   }
-  llcpp::fuchsia::mem::Buffer* buffer = response->buffer;
+  llcpp::fuchsia::mem::Buffer* buffer = response->buffer.get();
   if (!buffer) {
     return ZX_ERR_IO;
   }

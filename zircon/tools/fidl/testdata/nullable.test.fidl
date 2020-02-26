@@ -1,0 +1,42 @@
+library fidl.test.nullable;
+
+struct StructWithNullableString {
+    string? val;
+};
+
+struct StructWithNullableVector {
+    vector<int32>? val;
+};
+
+struct StructWithNullableHandle {
+    handle<vmo>? val;
+};
+
+protocol SimpleProtocol {
+    Add(int32 a, int32 b) -> (int32 sum);
+};
+
+struct StructWithNullableProtocol {
+    SimpleProtocol? val;
+};
+
+struct StructWithNullableRequest {
+    request<SimpleProtocol>? val;
+};
+
+struct Int32Wrapper {
+    int32 val;
+};
+
+struct StructWithNullableStruct {
+    Int32Wrapper? val;
+};
+
+union SimpleUnion {
+    1: int32 a;
+    2: float32 b;
+};
+
+struct StructWithNullableUnion {
+    SimpleUnion? val;
+};
