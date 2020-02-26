@@ -194,10 +194,10 @@ impl EventRegistry {
             let result = dispatcher.send(event.clone()).await;
             match result {
                 Ok(Some(responder_channel)) => {
-                    // A future can be canceled if the receiver was dropped after
+                    // A future can be canceled if the EventStream was dropped after
                     // a send. We don't crash the system when this happens. It is
-                    // perfectly valid for a receiver to be dropped. That simply
-                    // means that the receiver is no longer interested in future
+                    // perfectly valid for a EventStream to be dropped. That simply
+                    // means that the EventStream is no longer interested in future
                     // events. So we force each future to return a success. This
                     // ensures that all the futures can be driven to completion.
                     let responder_channel = async move {
@@ -211,10 +211,10 @@ impl EventRegistry {
                 // `EventDispatcher`.
                 Ok(None) => (),
                 Err(_) => {
-                    // A send can fail if the receiver was dropped. We don't
+                    // A send can fail if the EventStream was dropped. We don't
                     // crash the system when this happens. It is perfectly
-                    // valid for a receiver to be dropped. That simply means
-                    // that the receiver is no longer interested in future
+                    // valid for a EventStream to be dropped. That simply means
+                    // that the EventStream is no longer interested in future
                     // events.
                 }
             }

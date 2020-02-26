@@ -752,7 +752,7 @@ mod connect_tests {
 
         let work_scheduler = WorkScheduler::new(binder).await;
         let hooks = Hooks::new(None);
-        hooks.install(WorkScheduler::hooks(&work_scheduler)).await;
+        hooks.install(work_scheduler.hooks()).await;
 
         let capability_provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::Framework {

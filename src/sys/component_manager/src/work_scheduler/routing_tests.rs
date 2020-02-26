@@ -159,10 +159,8 @@ async fn use_work_scheduler_with_expose_to_framework() {
         ),
     ];
     let work_scheduler = new_work_scheduler().await;
-    let test = RoutingTestBuilder::new("a", components)
-        .add_hooks(WorkScheduler::hooks(&work_scheduler))
-        .build()
-        .await;
+    let test =
+        RoutingTestBuilder::new("a", components).add_hooks(work_scheduler.hooks()).build().await;
     check_use_work_scheduler(&test, vec!["b:0"].into(), true).await;
 }
 
@@ -195,10 +193,8 @@ async fn use_work_scheduler_without_expose() {
         ),
     ];
     let work_scheduler = new_work_scheduler().await;
-    let test = RoutingTestBuilder::new("a", components)
-        .add_hooks(WorkScheduler::hooks(&work_scheduler))
-        .build()
-        .await;
+    let test =
+        RoutingTestBuilder::new("a", components).add_hooks(work_scheduler.hooks()).build().await;
     check_use_work_scheduler(&test, vec!["b:0"].into(), false).await;
 }
 
@@ -237,10 +233,8 @@ async fn use_work_scheduler_with_expose_to_realm() {
         ),
     ];
     let work_scheduler = new_work_scheduler().await;
-    let test = RoutingTestBuilder::new("a", components)
-        .add_hooks(WorkScheduler::hooks(&work_scheduler))
-        .build()
-        .await;
+    let test =
+        RoutingTestBuilder::new("a", components).add_hooks(work_scheduler.hooks()).build().await;
     check_use_work_scheduler(&test, vec!["b:0"].into(), false).await;
 }
 
@@ -281,10 +275,8 @@ async fn use_work_scheduler_control_routed() {
     ];
     let work_scheduler = new_work_scheduler().await;
 
-    let test = RoutingTestBuilder::new("a", components)
-        .add_hooks(WorkScheduler::hooks(&work_scheduler))
-        .build()
-        .await;
+    let test =
+        RoutingTestBuilder::new("a", components).add_hooks(work_scheduler.hooks()).build().await;
 
     check_use_work_scheduler_control(&test, vec!["b:0"].into(), offer_use_path.clone(), true).await;
 }
@@ -325,10 +317,8 @@ async fn use_work_scheduler_control_error() {
         ),
     ];
     let work_scheduler = new_work_scheduler().await;
-    let test = RoutingTestBuilder::new("a", components)
-        .add_hooks(WorkScheduler::hooks(&work_scheduler))
-        .build()
-        .await;
+    let test =
+        RoutingTestBuilder::new("a", components).add_hooks(work_scheduler.hooks()).build().await;
 
     check_use_work_scheduler_control(&test, vec!["b:0"].into(), offer_use_path.clone(), false)
         .await;
