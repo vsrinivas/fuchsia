@@ -30,7 +30,10 @@ pub fn create_keyboard_input_report(
 ) -> fidl_input_report::InputReport {
     fidl_input_report::InputReport {
         event_time: Some(event_time),
-        keyboard: Some(fidl_input_report::KeyboardInputReport { pressed_keys: Some(pressed_keys) }),
+        keyboard: Some(fidl_input_report::KeyboardInputReport {
+            pressed_keys: Some(pressed_keys),
+            pressed_keys3: None,
+        }),
         mouse: None,
         touch: None,
         sensor: None,
