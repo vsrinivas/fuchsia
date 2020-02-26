@@ -460,7 +460,7 @@ static void arm_gic_v2_init(const void* driver_data, uint32_t length) {
     GICV2M_REG_FRAMES[0] = driver->msi_frame_phys;
     GICV2M_REG_FRAMES_VIRT[0] = periph_paddr_to_vaddr(driver->msi_frame_phys);
     ASSERT(GICV2M_REG_FRAMES_VIRT[0]);
-    arm_gicv2m_init(GICV2M_REG_FRAMES, GICV2M_REG_FRAMES_VIRT, countof(GICV2M_REG_FRAMES));
+    arm_gicv2m_init(GICV2M_REG_FRAMES, GICV2M_REG_FRAMES_VIRT, fbl::count_of(GICV2M_REG_FRAMES));
   }
   pdev_register_interrupts(&gic_ops);
 

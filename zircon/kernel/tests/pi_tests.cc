@@ -737,14 +737,14 @@ bool pi_test_chain() {
       {DistroSpec::Type::SHUFFLE, 0, 0xb51e76ca5cf20875},
   };
 
-  for (uint32_t pgen_ndx = 0; pgen_ndx < countof(PRIORITY_GENERATORS); ++pgen_ndx) {
+  for (uint32_t pgen_ndx = 0; pgen_ndx < fbl::count_of(PRIORITY_GENERATORS); ++pgen_ndx) {
     PRINT_LOOP_ITER(pgen_ndx);
 
     // Generate the priority map for this pass.
-    int prio_map[countof(threads)];
+    int prio_map[fbl::count_of(threads)];
     CreateDistribution(prio_map, PRIORITY_GENERATORS[pgen_ndx]);
 
-    for (uint32_t ro_ndx = 0; ro_ndx < countof(RELEASE_ORDERS); ++ro_ndx) {
+    for (uint32_t ro_ndx = 0; ro_ndx < fbl::count_of(RELEASE_ORDERS); ++ro_ndx) {
       PRINT_LOOP_ITER(ro_ndx);
 
       // Generate the order in which we will release the links for this
@@ -768,7 +768,7 @@ bool pi_test_chain() {
 
         int expected_prio = -1;
 
-        for (uint32_t tndx = countof(threads); tndx-- > 0;) {
+        for (uint32_t tndx = fbl::count_of(threads); tndx-- > 0;) {
           PRINT_LOOP_ITER(tndx);
 
           // All threads should either be created, started or waiting for
@@ -790,7 +790,7 @@ bool pi_test_chain() {
           // pressure.  Otherwise, the expected priority should be the
           // priority of the maximum of the base priorities we have
           // traversed so far.
-          ASSERT_LT(tndx, countof(prio_map));
+          ASSERT_LT(tndx, fbl::count_of(prio_map));
           if ((tndx >= links->size()) || !(*links)[tndx].active) {
             expected_prio = prio_map[tndx];
           } else {
@@ -809,8 +809,8 @@ bool pi_test_chain() {
       TestThread::ResetShutdownBarrier();
 
       // Create our threads.
-      for (uint32_t tndx = 0; tndx < countof(threads); ++tndx) {
-        ASSERT_LT(tndx, countof(prio_map));
+      for (uint32_t tndx = 0; tndx < fbl::count_of(threads); ++tndx) {
+        ASSERT_LT(tndx, fbl::count_of(prio_map));
         PRINT_LOOP_ITER(tndx);
         ASSERT_TRUE(threads[tndx].Create(prio_map[tndx]));
         print_tndx.cancel();
@@ -824,7 +824,7 @@ bool pi_test_chain() {
 
       // Start each of the threads in the chain one at a time.  Make sure that the
       // pressure of the threads in the chain is properly transmitted each time.
-      for (uint32_t tndx = 1; tndx < countof(threads); ++tndx) {
+      for (uint32_t tndx = 1; tndx < fbl::count_of(threads); ++tndx) {
         PRINT_LOOP_ITER(tndx);
 
         auto& link = (*links)[tndx - 1];
@@ -893,7 +893,7 @@ bool pi_test_multi_waiter() {
   for (auto bt_prio : BLOCKING_THREAD_PRIO) {
     PRINT_LOOP_ITER(bt_prio);
 
-    for (uint32_t pgen_ndx = 0; pgen_ndx < countof(PRIORITY_GENERATORS); ++pgen_ndx) {
+    for (uint32_t pgen_ndx = 0; pgen_ndx < fbl::count_of(PRIORITY_GENERATORS); ++pgen_ndx) {
       PRINT_LOOP_ITER(pgen_ndx);
 
       // At the end of the tests, success or failure, be sure to clean up.
@@ -1073,7 +1073,7 @@ bool pi_test_multi_owned_queues() {
   for (auto bt_prio : BLOCKING_THREAD_PRIO) {
     PRINT_LOOP_ITER(bt_prio);
 
-    for (uint32_t pgen_ndx = 0; pgen_ndx < countof(PRIORITY_GENERATORS); ++pgen_ndx) {
+    for (uint32_t pgen_ndx = 0; pgen_ndx < fbl::count_of(PRIORITY_GENERATORS); ++pgen_ndx) {
       PRINT_LOOP_ITER(pgen_ndx);
 
       // At the end of the tests, success or failure, be sure to clean up.

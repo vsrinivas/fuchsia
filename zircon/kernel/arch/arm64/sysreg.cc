@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include <arch/arm64.h>
+#include <fbl/algorithm.h>
 
 #if ARCH_ARM64
 #include <lib/console.h>
@@ -58,18 +59,19 @@ static uint64_t read_sysregs(const char* regname) {
   return 0;
 }
 
-static const char * sysregs_list[] = {
-  "actlr_el1", "ccsidr_el1", "clidr_el1", "csselr_el1", "midr_el1", "mpidr_el1",
-  "sctlr_el1", "spsr_el1", "tcr_el1", "tpidrro_el0", "tpidr_el1", "ttbr0_el1",
-  "ttbr1_el1", "vbar_el1", "cntfrq_el0", "cntkctl_el1", "cntpct_el0", "cntps_ctl_el1",
-  "cntps_cval_el1", "cntps_tval_el1", "cntp_ctl_el0", "cntp_cval_el0", "cntp_tval_el0",
-  "cntvct_el0", "cntv_ctl_el0", "cntv_cval_el0", "cntv_tval_el0" };
+static const char* sysregs_list[] = {
+    "actlr_el1",     "ccsidr_el1",    "clidr_el1",     "csselr_el1",     "midr_el1",
+    "mpidr_el1",     "sctlr_el1",     "spsr_el1",      "tcr_el1",        "tpidrro_el0",
+    "tpidr_el1",     "ttbr0_el1",     "ttbr1_el1",     "vbar_el1",       "cntfrq_el0",
+    "cntkctl_el1",   "cntpct_el0",    "cntps_ctl_el1", "cntps_cval_el1", "cntps_tval_el1",
+    "cntp_ctl_el0",  "cntp_cval_el0", "cntp_tval_el0", "cntvct_el0",     "cntv_ctl_el0",
+    "cntv_cval_el0", "cntv_tval_el0"};
 
 static void print_sysregs_list() {
-  int size = countof(sysregs_list);
+  int size = fbl::count_of(sysregs_list);
   printf(" system register name: \n");
   for (int i = 0; i < size; i++) {
-    printf("      %s \n",sysregs_list[i]);
+    printf("      %s \n", sysregs_list[i]);
   }
 }
 

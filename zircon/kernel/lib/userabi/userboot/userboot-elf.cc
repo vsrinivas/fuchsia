@@ -14,6 +14,7 @@
 #include <zircon/syscalls.h>
 
 #include <elfload/elfload.h>
+#include <fbl/algorithm.h>
 
 #include "bootfs.h"
 #include "util.h"
@@ -125,7 +126,8 @@ static void stuff_loader_bootstrap(zx_handle_t log, zx_handle_t proc, zx_handle_
   check(log, zx_channel_create(0, loader_svc, &handles[BOOTSTRAP_LOADER_SVC]),
         "zx_channel_create failed");
 
-  zx_status_t status = zx_channel_write(to_child, 0, &msg, sizeof(msg), handles, countof(handles));
+  zx_status_t status =
+      zx_channel_write(to_child, 0, &msg, sizeof(msg), handles, fbl::count_of(handles));
   check(log, status, "zx_channel_write of loader bootstrap message failed");
 }
 

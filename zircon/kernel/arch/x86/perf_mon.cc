@@ -1667,9 +1667,9 @@ static perfmon::RecordHeader* x86_perfmon_write_last_branches(PerfmonState* stat
                                                               PmuEventId id) {
   auto rec = reinterpret_cast<perfmon::LastBranchRecord*>(hdr);
   auto num_entries = perfmon_lbr_stack_size;
-  static_assert(
-      perfmon::LastBranchRecord::kMaxNumLastBranch == countof(perfmon::LastBranchRecord::branches),
-      "");
+  static_assert(perfmon::LastBranchRecord::kMaxNumLastBranch ==
+                    countof(perfmon::LastBranchRecord::branches),
+                "");
   DEBUG_ASSERT(num_entries > 0 && num_entries <= perfmon::LastBranchRecord::kMaxNumLastBranch);
   arch_perfmon_write_header(&rec->header, perfmon::kRecordTypeLastBranch, id);
   rec->num_branches = num_entries;
