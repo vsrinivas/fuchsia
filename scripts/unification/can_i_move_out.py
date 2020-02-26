@@ -53,14 +53,10 @@ class Finder(object):
 
     def find_libraries(self, type):
         base = os.path.join(self._zircon_dir, 'system', type)
-        def has_zn_build_file(dir):
-            build_path = os.path.join(base, dir, 'BUILD.gn')
-            if not os.path.isfile(build_path):
-                return False
-            with open(build_path, 'r') as build_file:
-                return '//build/unification/zx_library.gni' not in build_file.read()
+        def has_build_file(dir):
+            return os.path.isfile(os.path.join(base, dir, 'BUILD.gn'))
         for _, dirs, _ in os.walk(base):
-            return filter(has_zn_build_file, dirs)
+            return filter(has_build_file, dirs)
 
 
 def main():
