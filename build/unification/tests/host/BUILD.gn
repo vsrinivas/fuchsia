@@ -44,7 +44,6 @@ listed_tests = [
   "fvm-host",
 #------------------
 #------------------
-  "fvm-unit",
 #------------------
 #------------------
 #------------------
@@ -124,7 +123,7 @@ group("migrated-tests") {
     #"fvm-host",
   #------------------
   #------------------
-    #"fvm-unit",
+    "//zircon/system/ulib/fvm/test:fvm-unit",
   #------------------
   #------------------
     "//zircon/system/ulib/minfs/test:minfs-host",

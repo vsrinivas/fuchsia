@@ -533,7 +533,6 @@ aggregate_manifest("legacy-aux") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.fvm-unit-test",
 #------------------
 #------------------
     ":test.sys.hermetic-compute-module-test",
@@ -1099,7 +1098,6 @@ aggregate_manifest("legacy-tests") {
 #------------------
 #------------------
 #------------------
-    ":test.sys.fvm-unit-test",
 #------------------
 #------------------
     ":test.sys.hermetic-compute-module-test",
@@ -2941,7 +2939,7 @@ aggregate_manifest("migrated-aux") {
     "//src/devices/block/drivers/fvm/test:fvm-driver-unittests-manifest",
     "//zircon/system/utest/fvm:fvm-manifest",
 #------------------
-    #":test.sys.fvm-unit-test",
+    "//zircon/system/ulib/fvm/test:fvm-unit-manifest",
 #------------------
     "//zircon/system/ulib/fzl/test:fzl-manifest",
     "//zircon/system/ulib/fzl/test:fzl-zxtest-manifest",
@@ -3661,7 +3659,7 @@ aggregate_manifest("migrated-tests") {
     "//src/devices/block/drivers/fvm/test:fvm-driver-unittests-manifest",
     "//zircon/system/utest/fvm:fvm-manifest",
 #------------------
-    #":test.sys.fvm-unit-test",
+    "//zircon/system/ulib/fvm/test:fvm-unit-manifest",
 #------------------
     "//zircon/system/ulib/fzl/test:fzl-manifest",
     "//zircon/system/ulib/fzl/test:fzl-zxtest-manifest",
