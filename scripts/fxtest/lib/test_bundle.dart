@@ -48,6 +48,15 @@ class TestBundle {
   ///
   /// Returns a stream of test events that send feedback to the user.
   Stream<TestEvent> run({Function(String) realtimeOutputSink}) async* {
+    var testType = testDefinition.executionHandle.testType;
+    if (testType == TestType.unsupportedDeviceTest) {
+      yield TestInfo(
+        'Skipping unrunnable legacy test: '
+        '"${testDefinition.executionHandle.handle}"',
+      );
+      return;
+    }
+
     CommandTokens commandTokens =
         testDefinition.executionHandle.getInvocationTokens(runnerFlags);
 

@@ -127,6 +127,24 @@ void main() {
       expect(tds[0].path, '');
       expect(tds[0].executionHandle.testType, TestType.unsupported);
     });
+
+    test('for unsupported device tests', () {
+      TestsManifestReader tr = TestsManifestReader();
+      List<dynamic> testJson = [
+        {
+          'environments': [],
+          'test': {
+            'cpu': 'arm64',
+            'name': 'some_name',
+            'path': '//asdf',
+            'os': 'fuchsia',
+          }
+        },
+      ];
+      List<TestDefinition> tds = tr.parseManifest(testJson, buildDir);
+      expect(tds, hasLength(1));
+      expect(tds[0].executionHandle.testType, TestType.unsupportedDeviceTest);
+    });
   });
 
   group('tests are aggregated correctly', () {

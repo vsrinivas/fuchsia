@@ -10,7 +10,23 @@ import 'package:fxtest/fxtest.dart';
 /// to account for. It is not an acceptable place for tests to end up. Should
 /// any tests find their way here, an exception will be raised that will halt
 /// test execution entirely (but which can be silenced with a flag).
-enum TestType { command, component, host, suite, unsupported }
+enum TestType {
+  command,
+  component,
+  host,
+  suite,
+
+  /// Catch-all for a test we know we haven't correctly included handling logic
+  unsupported,
+
+  /// Non-component but on-device tests (an illegal and mostly legacy configuration)
+  unsupportedDeviceTest,
+}
+
+const Set<TestType> unsupportedTestTypes = {
+  TestType.unsupportedDeviceTest,
+  TestType.unsupported,
+};
 
 class ExecutionHandle {
   final String handle;
@@ -22,12 +38,15 @@ class ExecutionHandle {
       : testType = TestType.component;
   ExecutionHandle.suite(this.handle, this.os) : testType = TestType.suite;
   ExecutionHandle.host(this.handle, this.os) : testType = TestType.host;
+  ExecutionHandle.unsupportedDeviceTest(this.handle)
+      : os = 'linux',
+        testType = TestType.unsupportedDeviceTest;
   ExecutionHandle.unsupported()
       : handle = '',
         os = '',
         testType = TestType.unsupported;
 
-  bool get isUnsupported => testType == TestType.unsupported;
+  bool get isUnsupported => unsupportedTestTypes.contains(testType);
 
   /// Produces the complete list of tokens required to invoke this test.
   ///

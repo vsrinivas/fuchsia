@@ -98,6 +98,13 @@ class TestDefinition {
 
       // As per above, `host` must be checked after `command`
     } else if (path != '' && path != null) {
+      // Tests with a path must be host tests. All Fuchsia tests *must* be
+      // component tests, which means these are a legacy configuration which is
+      // unsupported by `fx test`.
+      if (os == 'fuchsia') {
+        return ExecutionHandle.unsupportedDeviceTest(path);
+      }
+
       return ExecutionHandle.host(fullPath, os);
     }
     return ExecutionHandle.unsupported();

@@ -76,6 +76,30 @@ class TestsManifestReader {
     return jsonDecode(await File(manifestLocation).readAsString());
   }
 
+  // Handler for tests which are unsupported due to never before seen problems.
+  void _handleUnsupportedTest(
+    TestDefinition testDefinition,
+    TestsConfig testsConfig,
+    Function(TestEvent) eventEmitter,
+  ) {
+    String redError = '${wrapWith("Error:", [red])} '
+        'Could not parse test:\n$testDefinition';
+    if (testsConfig.flags.shouldSilenceUnsupported) {
+      if (testsConfig.flags.isVerbose) {
+        eventEmitter(TestInfo(redError));
+      }
+    } else {
+      String fxTest = wrapWith('fx test', [blue, styleBold]);
+      String dashU = wrapWith('-u', [blue, styleBold]);
+      redError += '\n\nThis is very likely a problem with the $fxTest script'
+          ' or the test itself, and is not of any error on your part.'
+          '\nPlease submit a bug to report this unparsed test to the'
+          ' Fuchsia team.\n\nPass the $dashU flag if you would like to'
+          ' continue with this error silenced.';
+      throw UnparsedTestException(redError);
+    }
+  }
+
   /// Loops over the provided list of [TestDefinition]s and, based on the
   /// results of all registered [Checker]s, returns a list of [TestBundle]s.
   ParsedManifest aggregateTests({
@@ -106,23 +130,16 @@ class TestsManifestReader {
       // failure that we should immediately correct.
       if (testDefinition.executionHandle.isUnsupported) {
         numUnparsedTests += 1;
-        String redError = '${wrapWith("Error:", [red])} '
-            'Could not parse test:\n$testDefinition';
-        if (testsConfig.flags.shouldSilenceUnsupported) {
-          if (testsConfig.flags.isVerbose) {
-            eventEmitter(TestInfo(redError));
-          }
+        var testType = testDefinition.executionHandle.testType;
+        if (testType == TestType.unsupported) {
+          _handleUnsupportedTest(testDefinition, testsConfig, eventEmitter);
           continue;
-        } else {
-          String fxTest = wrapWith('fx test', [blue, styleBold]);
-          String dashU = wrapWith('-u', [blue, styleBold]);
-          redError +=
-              '\n\nThis is very likely a problem with the $fxTest script'
-              ' or the test itself, and is not of any error on your part.'
-              '\nPlease submit a bug to report this unparsed test to the'
-              ' Fuchsia team.\n\nPass the $dashU flag if you would like to'
-              ' silence errors for unsupported tests and continue.';
-          throw UnparsedTestException(redError);
+        } else if (testType == TestType.unsupportedDeviceTest) {
+          // Currently an intentional no-op, since adding lines here would introduce
+          // ~20 lines of spammy output for every test invocation just from parsing
+          // the file. To avoid this, we handle DeviceTests at runtime, meaning if
+          // a user targets other tests exclusively, they don't have to see or worry
+          // about this.
         }
       }
 
