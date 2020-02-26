@@ -32,6 +32,7 @@ class Namespace : public fuchsia::sys::Environment,
  public:
   const fbl::RefPtr<ServiceProviderDirImpl>& services() const { return services_; }
   const fbl::RefPtr<JobProviderImpl>& job_provider() { return job_provider_; }
+  fxl::WeakPtr<Realm> realm() const { return realm_; }
 
   void AddBinding(fidl::InterfaceRequest<fuchsia::sys::Environment> environment);
 
@@ -81,9 +82,17 @@ class Namespace : public fuchsia::sys::Environment,
                                           const std::string& component_id,
                                           fidl::InterfaceHandle<fuchsia::io::Directory> directory);
 
+  // Notifies a realms ComponentEventListener that a component started.
+  void NotifyComponentStarted(const std::string& component_url, const std::string& component_name,
+                              const std::string& component_id);
+
+  // Notifies a realms ComponentEventListener that a component stopped.
+  void NotifyComponentStopped(const std::string& component_url, const std::string& component_name,
+                              const std::string& component_id);
+
  private:
   FRIEND_MAKE_REF_COUNTED(Namespace);
-  Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
+  Namespace(fxl::RefPtr<Namespace> parent, fxl::WeakPtr<Realm> realm,
             fuchsia::sys::ServiceListPtr additional_services,
             const std::vector<std::string>* service_whitelist);
 
@@ -97,7 +106,7 @@ class Namespace : public fuchsia::sys::Environment,
   fs::SynchronousVfs vfs_;
   fbl::RefPtr<ServiceProviderDirImpl> services_;
   fbl::RefPtr<JobProviderImpl> job_provider_;
-  Realm* const realm_;
+  fxl::WeakPtr<Realm> realm_;
   // Set if |additional_services.provider| was set.
   fuchsia::sys::ServiceProviderPtr service_provider_;
   // Set if |additional_services.host_directory| was set.

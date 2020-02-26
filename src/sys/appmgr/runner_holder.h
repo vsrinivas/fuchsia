@@ -35,6 +35,10 @@ class RunnerHolder : public ComponentContainer<ComponentBridge> {
 
   std::shared_ptr<ComponentBridge> ExtractComponent(ComponentBridge* controller) override;
 
+  const std::unordered_map<ComponentBridge*, std::shared_ptr<ComponentBridge>>& components() const {
+    return components_;
+  }
+
  private:
   void CreateComponentCallback(std::weak_ptr<ComponentControllerImpl> component);
   void Cleanup();

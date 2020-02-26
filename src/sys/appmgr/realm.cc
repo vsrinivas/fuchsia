@@ -278,7 +278,8 @@ Realm::Realm(RealmArgs args, zx::job job)
       environment_services_(args.environment_services),
       appmgr_config_dir_(std::move(args.appmgr_config_dir)),
       use_parent_runners_(args.options.use_parent_runners),
-      delete_storage_on_death_(args.options.delete_storage_on_death) {
+      delete_storage_on_death_(args.options.delete_storage_on_death),
+      weak_ptr_factory_(this) {
   // Only need to create this channel for the root realm.
   if (parent_ == nullptr) {
     auto status =
@@ -296,11 +297,12 @@ Realm::Realm(RealmArgs args, zx::job job)
   }
 
   if (args.options.inherit_parent_services) {
-    default_namespace_ = fxl::MakeRefCounted<Namespace>(
-        parent_->default_namespace_, this, std::move(args.additional_services), nullptr);
-  } else {
     default_namespace_ =
-        fxl::MakeRefCounted<Namespace>(nullptr, this, std::move(args.additional_services), nullptr);
+        fxl::MakeRefCounted<Namespace>(parent_->default_namespace_, weak_ptr_factory_.GetWeakPtr(),
+                                       std::move(args.additional_services), nullptr);
+  } else {
+    default_namespace_ = fxl::MakeRefCounted<Namespace>(
+        nullptr, weak_ptr_factory_.GetWeakPtr(), std::move(args.additional_services), nullptr);
   }
 
   fsl::SetObjectName(job_.get(), label_);
@@ -677,8 +679,8 @@ void Realm::CreateComponentWithRunnerForScheme(std::string runner_url,
     return;
   }
 
-  fxl::RefPtr<Namespace> ns =
-      fxl::MakeRefCounted<Namespace>(default_namespace_, this, nullptr, nullptr);
+  fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(
+      default_namespace_, weak_ptr_factory_.GetWeakPtr(), nullptr, nullptr);
 
   fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
   component_request.Extract(&controller);
@@ -880,8 +882,9 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
                                             .flags = ZX_POL_OVERRIDE_DENY});
   }
 
-  fxl::RefPtr<Namespace> ns = fxl::MakeRefCounted<Namespace>(
-      default_namespace_, this, std::move(launch_info.additional_services), service_whitelist);
+  fxl::RefPtr<Namespace> ns =
+      fxl::MakeRefCounted<Namespace>(default_namespace_, weak_ptr_factory_.GetWeakPtr(),
+                                     std::move(launch_info.additional_services), service_whitelist);
 
   if (IsAllowedToConnectToComponentEventProvider(fp.ToString())) {
     ns->MaybeAddComponentEventProvider();
@@ -1124,7 +1127,7 @@ internal::EventNotificationInfo Realm::GetEventNotificationInfo(const std::strin
 
     // Stop traversing the path to the root once a child of the root realm "app" is found.
     // "root" won't have a ComponentEventProvider.
-    while (realm->parent_ && realm->parent_->label_ != internal::kRootLabel && !provider) {
+    while (realm && realm->parent_ && realm->parent_->label_ != internal::kRootLabel && !provider) {
       realm = realm->parent_;
       if (realm->component_event_provider_) {
         provider = realm->component_event_provider_.get();

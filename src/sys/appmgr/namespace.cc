@@ -21,13 +21,13 @@
 
 namespace component {
 
-Namespace::Namespace(fxl::RefPtr<Namespace> parent, Realm* realm,
+Namespace::Namespace(fxl::RefPtr<Namespace> parent, fxl::WeakPtr<Realm> realm,
                      fuchsia::sys::ServiceListPtr additional_services,
                      const std::vector<std::string>* service_whitelist)
     : vfs_(async_get_default_dispatcher()),
       services_(fbl::AdoptRef(new ServiceProviderDirImpl(service_whitelist))),
-      job_provider_(fbl::AdoptRef(new JobProviderImpl(realm))),
-      realm_(realm) {
+      job_provider_(fbl::AdoptRef(new JobProviderImpl(realm.get()))),
+      realm_(std::move(realm)) {
   // WARNING! Do not add new services here! This makes services available in all
   // component namespaces ambiently without requiring proper routing between
   // realms, and this list should not be expanded.
@@ -135,8 +135,26 @@ void Namespace::Resolve(std::string name, fuchsia::process::Resolver::ResolveCal
 void Namespace::NotifyComponentDiagnosticsDirReady(
     const std::string& component_url, const std::string& component_name,
     const std::string& component_id, fidl::InterfaceHandle<fuchsia::io::Directory> directory) {
-  realm_->NotifyComponentDiagnosticsDirReady(component_url, component_name, component_id,
-                                             std::move(directory));
+  if (realm_) {
+    realm_->NotifyComponentDiagnosticsDirReady(component_url, component_name, component_id,
+                                               std::move(directory));
+  }
+}
+
+void Namespace::NotifyComponentStarted(const std::string& component_url,
+                                       const std::string& component_name,
+                                       const std::string& component_id) {
+  if (realm_) {
+    realm_->NotifyComponentStarted(component_url, component_name, component_id);
+  }
+}
+
+void Namespace::NotifyComponentStopped(const std::string& component_url,
+                                       const std::string& component_name,
+                                       const std::string& component_id) {
+  if (realm_) {
+    realm_->NotifyComponentStopped(component_url, component_name, component_id);
+  }
 }
 
 void Namespace::MaybeAddComponentEventProvider() {
