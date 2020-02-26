@@ -60,7 +60,6 @@ package("pkgfs") {
   ]
 }
 
-# FIXME: Until fuchsia_component exists again, ensure this and //src/sys/pkg/tests/amberctl:amberctl-tests stay in sync
 package("amber") {
   deprecated_misc_storage = "//build"
 
@@ -71,7 +70,29 @@ package("amber") {
       name = "grand_unified_binary"
       dest = "system_updater"
     },
+  ]
 
+  meta = [
+    {
+      path = rebase_path(
+              "//src/sys/pkg/bin/amber/system_updater/meta/system_updater.cmx")
+      dest = "system_updater.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("system_updater/images")
+      dest = "images"
+    },
+  ]
+}
+
+# FIXME: Until fuchsia_component exists again, ensure this and //src/sys/pkg/tests/amberctl:amberctl-tests stay in sync
+package("amberctl") {
+  deps = [ "//garnet/go/src/grand_unified_binary" ]
+
+  binaries = [
     # TODO(raggi): remove the underscore version of the command name once all
     # docs and scripts have been updated.
     # See https://fuchsia-review.googlesource.com/c/fuchsia/+/255274.
@@ -89,20 +110,8 @@ package("amber") {
 
   meta = [
     {
-      path = rebase_path(
-              "//src/sys/pkg/bin/amber/system_updater/meta/system_updater.cmx")
-      dest = "system_updater.cmx"
-    },
-    {
       path = rebase_path("meta/amberctl.cmx")
       dest = "amberctl.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("system_updater/images")
-      dest = "images"
     },
   ]
 }

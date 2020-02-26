@@ -84,6 +84,13 @@ base_package_labels += [
   "//build/rust:cargo_toml_gen",
 ]
 
+# Tools to control the pkg subsystem are in the base package set by default
+# so the software delivery system can be debugged and reconfigured without
+# access to the full universe package set.
+# Product configurations that lack an accessible shell environment should
+# remove these tools from the base package set.
+base_package_labels += [ "//src/sys/pkg:tools" ]
+
 cache_package_labels += []
 
 universe_package_labels += [ "//bundles:tools" ]

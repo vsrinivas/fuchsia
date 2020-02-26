@@ -30,6 +30,13 @@ group("core") {
     "bin/amber:pkgfs",
     "bin/pkg-cache",
     "bin/pkg-resolver",
+  ]
+}
+
+# Shell control commands
+group("tools") {
+  public_deps = [
+    "bin/amber:amberctl",
     "bin/pkgctl",
     "bin/update:update-bin",
   ]
