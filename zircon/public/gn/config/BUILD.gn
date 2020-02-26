@@ -808,6 +808,10 @@ config("temporarily_disable_ubsan_do_not_use") {
     # TODO(45621): UBSan has found an instance of undefined behavior in this target.
     # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
     "$zx_build/system/core/netsvc:*",
+
+    # TODO(46944): UBSan has found an instance of undefined behavior in this target.
+    # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+    "$zx_build/system/ulib/perftest:*",
   ]
 
   if (!is_gcc) {

@@ -27,4 +27,9 @@ zx_library("perftest") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
+
+  # TODO(46944): UBSan has found an instance of undefined behavior in this target.
+  # Disable UBSan for this target temporarily until it is migrated into CI/CQ.
+  # Add to public_configs since the UB is found in a public header.
+  public_configs = [ "$zx_build/public/gn/config:temporarily_disable_ubsan_do_not_use" ]
 }
