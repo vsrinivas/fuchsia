@@ -122,39 +122,5 @@ TEST_F(RealmTest, PackageResolverPolicy) {
   EXPECT_FALSE(realm->IsAllowedToUsePackageResolver(fp.WithoutVariantAndHash()));
 }
 
-TEST_F(RealmTest, PkgFsVersionsPolicy) {
-  static constexpr char kFile[] = R"F(
-  fuchsia-pkg://fuchsia.com/pkg-cache#meta/pkg-cache.cmx
-  )F";
-
-  // Stub out a dispatcher.  We won't actually run anything on it, but some
-  // things in Realm assert they can grab the implicit default eventloop, so
-  // keep them happy.
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-
-  std::string dir;
-  ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
-  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
-
-  // Add the allowlist.
-  ASSERT_TRUE(files::CreateDirectoryAt(dirfd.get(), "allowlist"));
-  auto filename = NewFile(dir, "allowlist/pkgfs_versions.txt", kFile);
-  auto realm = CreateTestRealm(std::move(dirfd));
-
-  FuchsiaPkgUrl fp;
-
-  // "Vanilla" package url, without variant or hash
-  fp.Parse("fuchsia-pkg://fuchsia.com/pkg-cache#meta/pkg-cache.cmx");
-  EXPECT_TRUE(realm->IsAllowedToUsePkgFsVersions(fp.WithoutVariantAndHash()));
-
-  // Variants and hashes should be thrown away
-  fp.Parse("fuchsia-pkg://fuchsia.com/pkg-cache/0?hash=123#meta/pkg-cache.cmx");
-  EXPECT_TRUE(realm->IsAllowedToUsePkgFsVersions(fp.WithoutVariantAndHash()));
-
-  // Check exclusion
-  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx");
-  EXPECT_FALSE(realm->IsAllowedToUsePkgFsVersions(fp.WithoutVariantAndHash()));
-}
-
 }  // namespace
 }  // namespace component

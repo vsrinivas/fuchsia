@@ -65,7 +65,6 @@ constexpr char kDeprecatedAmbientReplaceAsExecAllowlist[] =
     "allowlist/deprecated_ambient_replace_as_executable.txt";
 constexpr char kComponentEventProviderAllowlist[] = "allowlist/component_event_provider.txt";
 constexpr char kPackageResolverAllowlist[] = "allowlist/package_resolver.txt";
-constexpr char kPkgFsVersionsAllowlist[] = "allowlist/pkgfs_versions.txt";
 
 using fuchsia::sys::TerminationReason;
 
@@ -874,13 +873,6 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
       component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::UNSUPPORTED);
       return;
     }
-    if (sandbox.HasPkgFsPath("versions") &&
-        !IsAllowedToUsePkgFsVersions(fp.WithoutVariantAndHash())) {
-      FXL_LOG(ERROR) << "Component " << fp.WithoutVariantAndHash() << " is not allowed to use "
-                     << "pkgfs/versions. go/no-pkgfs-versions";
-      component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::UNSUPPORTED);
-      return;
-    }
   }
   if (!should_have_ambient_executable) {
     policies.push_back(zx_policy_basic_v2_t{.condition = ZX_POL_AMBIENT_MARK_VMO_EXEC,
@@ -1086,12 +1078,6 @@ bool Realm::IsAllowedToUsePackageResolver(std::string ns_id) {
   Allowlist package_resolver_allowlist(appmgr_config_dir_, kPackageResolverAllowlist,
                                        Allowlist::kExpected);
   return package_resolver_allowlist.IsAllowed(ns_id);
-}
-
-bool Realm::IsAllowedToUsePkgFsVersions(std::string ns_id) {
-  Allowlist pkgfs_versions_allowlist(appmgr_config_dir_, kPkgFsVersionsAllowlist,
-                                     Allowlist::kExpected);
-  return pkgfs_versions_allowlist.IsAllowed(ns_id);
 }
 
 void Realm::NotifyComponentStarted(const std::string& component_url,
