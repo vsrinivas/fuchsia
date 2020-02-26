@@ -17,15 +17,6 @@
 
 #include <stdio.h>
 
-namespace {
-
-// To date, likely ignored.  For now the MD5 hashing seems to be the bottleneck,
-// with the CPU not idle much, so even if this is ignored, the socket buffering
-// seems sufficient to avoid starving the overall pipe.
-const uint32_t kResponseBodyBufferSize = 2 * 1024 * 1024;
-
-}  // namespace
-
 InStreamHttp::InStreamHttp(async::Loop* fidl_loop, thrd_t fidl_thread,
                            sys::ComponentContext* component_context, std::string url)
     : InStream(fidl_loop, fidl_thread, component_context), url_(url) {
@@ -34,57 +25,41 @@ InStreamHttp::InStreamHttp(async::Loop* fidl_loop, thrd_t fidl_thread,
 
   // We're not runnign on the fidl_thread_, so we need to post over to the
   // fidl_thread_ for any binding, sending, etc.
-  fuchsia::net::oldhttp::HttpServicePtr http_service;
-  http_service.set_error_handler(
-      [](zx_status_t status) { Exit("http_service failed - status: %lu", status); });
-  component_context_->svc()->Connect(http_service.NewRequest(fidl_dispatcher_));
+  http_loader_.set_error_handler(
+      [](zx_status_t status) { Exit("http_loader_ failed - status: %lu", status); });
+  component_context->svc()->Connect(http_loader_.NewRequest(fidl_dispatcher_));
 
-  url_loader_.set_error_handler(
-      [](zx_status_t status) { Exit("url_loader_ failed - status: %lu", status); });
-  PostToFidlSerial(
-      [&http_service, url_loader_request = url_loader_.NewRequest(fidl_dispatcher_)]() mutable {
-        http_service->CreateURLLoader(std::move(url_loader_request));
-      });
+  fuchsia::net::http::Request http_request{};
+  // url_ is already UTF-8
+  http_request.set_url(std::vector<uint8_t>(url_.begin(), url_.end()));
 
-  fuchsia::net::oldhttp::URLRequest url_request{};
-  url_request.url = url_;
-  url_request.response_body_buffer_size = kResponseBodyBufferSize;
-  url_request.auto_follow_redirects = true;
-  url_request.cache_mode = fuchsia::net::oldhttp::CacheMode::BYPASS_CACHE;
-
-  fuchsia::net::oldhttp::URLResponse response{};
+  fuchsia::net::http::Response http_response{};
   OneShotEvent have_response_event;
-
-  PostToFidlSerial(
-      [this, url_request = std::move(url_request), &response, &have_response_event]() mutable {
-        url_loader_->Start(
-            std::move(url_request),
-            [&response, &have_response_event](fuchsia::net::oldhttp::URLResponse response_param) {
-              response = std::move(response_param);
-              have_response_event.Signal();
-            });
-      });
+  http_loader_->Fetch(std::move(http_request), [&http_response, &have_response_event](
+      fuchsia::net::http::Response response_param){
+    http_response = std::move(response_param);
+    have_response_event.Signal();
+  });
   have_response_event.Wait(zx::deadline_after(zx::sec(30)));
 
-  if (response.error) {
-    fprintf(stderr, "*response.error: %d - %s\n",
-        response.error->code, response.error->description->c_str());
+  if (http_response.has_error()) {
+    fprintf(stderr, "*response.error: %d\n", http_response.error());
   }
 
-  ZX_ASSERT_MSG(!response.error, "http response has error");
-  ZX_ASSERT_MSG(response.body, "http response missing body");
-  ZX_ASSERT_MSG(response.body->stream().is_valid(), "http response stream !is_valid()");
+  ZX_ASSERT_MSG(!http_response.has_error(), "http response has error");
+  ZX_ASSERT_MSG(http_response.has_body(), "http response missing body");
 
-  if (response.headers) {
-    for (auto& header : response.headers.value()) {
+  if (http_response.has_headers()) {
+    for (auto& header : http_response.headers()) {
       // TODO(dustingreen): deal with chunked encoding, or switch to a new http
       // client impl that deals with de-chunking before we see the data. For now
       // we rely on the http server to not generate chunked encoding.
-      ZX_ASSERT(!(header.name == "transfer-encoding" && header.value == "chunked"));
+      ZX_ASSERT(!(std::string(header.name.begin(), header.name.end()) == "transfer-encoding" &&
+                std::string(header.value.begin(), header.value.end()) == "chunked"));
     }
   }
 
-  socket_ = std::move(response.body->stream());
+  socket_ = std::move(*http_response.mutable_body());
 }
 
 InStreamHttp::~InStreamHttp() {
@@ -92,7 +67,7 @@ InStreamHttp::~InStreamHttp() {
 
   // By fencing anything we've previously posted to fidl_thread, we avoid
   // touching "this" too late.
-  PostToFidlSerial([this] { url_loader_.Unbind(); });
+  PostToFidlSerial([this] { http_loader_.Unbind(); });
 
   // After this call completes, we know the above post has run on fidl_thread_,
   // so no more code re. this instance will be running on fidl_thread_ (partly

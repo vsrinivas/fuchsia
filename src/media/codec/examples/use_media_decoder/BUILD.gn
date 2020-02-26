@@ -24,7 +24,7 @@ source_set("use_media_decoder_source_set") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.mediacodec",
-    "//sdk/fidl/fuchsia.net.oldhttp",
+    "//sdk/fidl/fuchsia.net.http",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/media/lib/codec_impl:fourcc",

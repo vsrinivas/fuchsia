@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_IN_STREAM_HTTP_H_
 #define SRC_MEDIA_CODEC_EXAMPLES_USE_MEDIA_DECODER_IN_STREAM_HTTP_H_
 
-#include <fuchsia/net/oldhttp/cpp/fidl.h>
+#include <fuchsia/net/http/cpp/fidl.h>
 
 #include "in_stream.h"
 
@@ -21,7 +21,7 @@ class InStreamHttp : public InStream {
                                 uint8_t* buffer_out, zx::time deadline) override;
 
   const std::string url_;
-  fuchsia::net::oldhttp::URLLoaderPtr url_loader_;
+  fuchsia::net::http::LoaderPtr http_loader_;
   // The Response.body.stream socket.
   zx::socket socket_;
 };

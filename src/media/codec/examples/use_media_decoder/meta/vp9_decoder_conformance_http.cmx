@@ -9,7 +9,7 @@
         ],
         "services": [
             "fuchsia.mediacodec.CodecFactory",
-            "fuchsia.net.oldhttp.HttpService",
+            "fuchsia.net.http.Loader",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sysmem.Allocator",
