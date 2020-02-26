@@ -23,12 +23,14 @@ use {
     futures::prelude::*,
     parking_lot::RwLock,
     std::sync::Arc,
+    system_image::CachePackages,
 };
 
 pub type PackageFetcher = queue::WorkSender<PkgUrl, (), Result<BlobId, Status>>;
 
 pub fn make_package_fetch_queue(
     cache: PackageCache,
+    system_cache_list: Arc<CachePackages>,
     repo_manager: Arc<RwLock<RepositoryManager>>,
     blob_fetcher: BlobFetcher,
     max_concurrency: usize,
@@ -36,10 +38,16 @@ pub fn make_package_fetch_queue(
     let (package_fetch_queue, package_fetcher) =
         queue::work_queue(max_concurrency, move |url: PkgUrl, _: ()| {
             let cache = cache.clone();
+            let system_cache_list = Arc::clone(&system_cache_list);
             let repo_manager = Arc::clone(&repo_manager);
             let blob_fetcher = blob_fetcher.clone();
             async move {
-                let fut = repo_manager.read().get_package(&url, &cache, &blob_fetcher);
+                let fut = repo_manager.read().get_package(
+                    &url,
+                    &cache,
+                    &system_cache_list,
+                    &blob_fetcher,
+                );
                 let merkle = fut.await?;
                 fx_log_info!("resolved {} to {}", url, merkle);
                 Ok(merkle)
@@ -57,35 +65,37 @@ pub async fn run_resolver_service(
 ) -> Result<(), Error> {
     stream
         .map_err(anyhow::Error::new)
-        .try_for_each_concurrent(None, |event| async {
-            match event {
-                PackageResolverRequest::Resolve {
-                    package_url,
-                    selectors,
-                    update_policy: _,
-                    dir,
-                    responder,
-                } => {
-                    // FIXME: need to implement selectors.
-                    if !selectors.is_empty() {
-                        fx_log_warn!("resolve does not support selectors yet");
-                    }
-                    let status =
-                        resolve(&rewriter, &cache, &package_fetcher, package_url, dir).await;
-                    responder.send(Status::from(status).into_raw())?;
-                    Ok(())
-                }
-                PackageResolverRequest::GetHash { package_url, responder } => {
-                    match get_hash(&rewriter, &repo_manager, &package_url.url).await {
-                        Ok(blob_id) => {
-                            fx_log_info!("hash of {} is {}", package_url.url, blob_id);
-                            responder.send(&mut Ok(blob_id.into()))?;
+        .try_for_each_concurrent(None, |event| {
+            async {
+                match event {
+                    PackageResolverRequest::Resolve {
+                        package_url,
+                        selectors,
+                        update_policy: _,
+                        dir,
+                        responder,
+                    } => {
+                        // FIXME: need to implement selectors.
+                        if !selectors.is_empty() {
+                            fx_log_warn!("resolve does not support selectors yet");
                         }
-                        Err(status) => {
-                            responder.send(&mut Err(status.into_raw()))?;
-                        }
+                        let status =
+                            resolve(&rewriter, &cache, &package_fetcher, package_url, dir).await;
+                        responder.send(Status::from(status).into_raw())?;
+                        Ok(())
                     }
-                    Ok(())
+                    PackageResolverRequest::GetHash { package_url, responder } => {
+                        match get_hash(&rewriter, &repo_manager, &package_url.url).await {
+                            Ok(blob_id) => {
+                                fx_log_info!("hash of {} is {}", package_url.url, blob_id);
+                                responder.send(&mut Ok(blob_id.into()))?;
+                            }
+                            Err(status) => {
+                                responder.send(&mut Err(status.into_raw()))?;
+                            }
+                        }
+                        Ok(())
+                    }
                 }
             }
         })
