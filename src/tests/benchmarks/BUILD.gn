@@ -21,16 +21,8 @@ executable("fuchsia_benchmarks_bin") {
   deps = [ "//garnet/testing/benchmarking:benchmarking" ]
 }
 
-zircon_extras_manifest("zircon-test-manifest") {
-  visibility = [ ":*" ]
-  manifest = "tests"
-  patterns = [ "test/sys/perf-test" ]
-}
-
 package("fuchsia_benchmarks") {
   testonly = true
-
-  extra = get_target_outputs(":zircon-test-manifest")
 
   binaries = [
     {
@@ -47,10 +39,7 @@ package("fuchsia_benchmarks") {
     },
   ]
 
-  deps = [
-    ":fuchsia_benchmarks_bin",
-    ":zircon-test-manifest",
-  ]
+  deps = [ ":fuchsia_benchmarks_bin" ]
 }
 
 executable("kernel-boot-timeline") {
