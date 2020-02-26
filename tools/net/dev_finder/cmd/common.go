@@ -330,9 +330,9 @@ func (cmd *devFinderCmd) filterInboundDevices(ctx context.Context, f <-chan *fuc
 	defer cancel()
 	defer cmd.close()
 	devices := make(map[string]*fuchsiaDevice)
-	resolveDomains := make(map[string]int)
+	resolveDomains := make(map[string]struct{})
 	for _, d := range domains {
-		resolveDomains[d] = 1
+		resolveDomains[d] = struct{}{}
 	}
 	for {
 		select {
@@ -343,7 +343,7 @@ func (cmd *devFinderCmd) filterInboundDevices(ctx context.Context, f <-chan *fuc
 			}
 			res := make([]*fuchsiaDevice, 0)
 			for _, d := range devices {
-				if resolveDomains[d.domain] == 1 {
+				if _, ok := resolveDomains[d.domain]; ok {
 					res = append(res, d)
 				}
 			}
@@ -355,7 +355,9 @@ func (cmd *devFinderCmd) filterInboundDevices(ctx context.Context, f <-chan *fuc
 			if cmd.shouldIgnoreIP(device.addr) {
 				continue
 			}
-			devices[device.domain] = device
+			if _, ok := resolveDomains[device.domain]; ok || len(resolveDomains) == 0 {
+				devices[device.domain] = device
+			}
 			if cmd.deviceLimit != 0 && len(devices) == cmd.deviceLimit {
 				return sortDeviceMap(devices), nil
 			}

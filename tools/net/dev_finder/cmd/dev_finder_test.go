@@ -321,6 +321,41 @@ func runSubTests(t *testing.T, node string, f func(*testing.T, subtest)) {
 	}
 }
 
+// This test drops in a device on the incoming channel that has a domain that
+// doesn't match the desired one while device-limit is set to 1. This should
+// not affect the device-limit (when the first inbound device is the wrong one).
+func TestFilterDevices(t *testing.T) {
+	nbDiscover := func(_ chan<- *netboot.Target, _ string, _ bool) (func() error, error) {
+		return func() error { return nil }, nil
+	}
+	cmd := newDevFinderCmd(
+		resolveMDNSHandler,
+		[]string{},
+		false,
+		false,
+		subtest{ipv4: true},
+		nbDiscover,
+	)
+	cmd.deviceLimit = 1
+	f := make(chan *fuchsiaDevice, 1024)
+	f <- &fuchsiaDevice{
+		addr:   net.ParseIP(defaultIPTarget),
+		domain: fuchsiaMDNSNodename1,
+	}
+	want := &fuchsiaDevice{
+		addr:   net.ParseIP(defaultIPTarget),
+		domain: fuchsiaMDNSNodename2,
+	}
+	f <- want
+	got, err := cmd.filterInboundDevices(context.Background(), f, fuchsiaMDNSNodename2)
+	if err != nil {
+		t.Error(err)
+	}
+	if d := cmp.Diff([]*fuchsiaDevice{want}, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
+		t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
+	}
+}
+
 //// Tests for the `list` command.
 
 func TestListDevices(t *testing.T) {
