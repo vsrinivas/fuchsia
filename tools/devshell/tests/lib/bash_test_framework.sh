@@ -13,14 +13,13 @@
 # RUNNING TESTS
 #
 # The bash_test_framework.sh library script does not depend on Fuchsia's
-# environment, but the "fx run-bash-test" command is a convenient way to
-# launch a test from anywhere in a fuchsia build directory. For example:
+# environment, but the "fx self-test" command is a convenient way to
+# launch a test from the //tools/devshell/tests directory. For example:
 #
-#    $ fx run-bash-test <host_test_script> [--option-flags]
+#    $ fx self-test <host_test_script>
 #
-# The "run-bash-test" wrapper script automatically loads the
-# bash_test_framework.sh library and then runs the host test script
-# (located in a standard directory for Fuchsia bash test scripts).
+# The "self-test" command automatically loads the
+# bash_test_framework.sh library and then runs the host test script.
 #
 # HOW THE FRAMEWORK EXECUTES YOUR TESTS
 #
@@ -174,12 +173,12 @@
 #   # BT_TEST_ARGS is a bash array variable that may contain test-specific command
 #   # line options passed to the test script after the argument '--', for example:
 #   #
-#   #   fx run-bash-test <host_test_script> [--framework_options] -- [--test_options]
+#   #   fx self-test <host_test_script> [--framework_options] -- [--test_options]
 #   #
 #   # BT_TEMP_DIR will be set to the temporary root directory created to execute
 #   # a single test.
 #   # BT_TEST_ARGS - array of command line arguments passed to the test script
-#   # after the argument '--' (can be included at the end of 'fx run-bash-test')
+#   # after the argument '--' (can be included at the end of 'fx self-test')
 #   #
 #   # The current working directory will be set to the directory containing the
 #   # BT_SET_UP bash function (from within the temporary root directory).
