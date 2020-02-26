@@ -43,13 +43,13 @@ pub const MIN_TEMP: f32 = -273.15;
 
 pub const CONVERSION_FACTOR: f64 = 1.41421;
 
-pub const ENUM_VAL: EnumType = ENUM_TYPE::VALUE;
+pub const ENUM_VAL: EnumType = EnumType::Value;
 
-pub const ENUM_PRIMITIVE_VAL: i32 = ENUM_TYPE::VALUE;
+pub const ENUM_PRIMITIVE_VAL: i32 = EnumType::Value;
 
-pub const BITS_VAL: BitsType = BITS_TYPE::VALUE;
+pub const BITS_VAL: BitsType = BitsType::Value;
 
-pub const BITS_PRIMITIVE_VAL: i32 = BITS_TYPE::VALUE;
+pub const BITS_PRIMITIVE_VAL: i32 = BitsType::Value;
 
 fidl_enum! {
   EnumType(i32) {

@@ -13,11 +13,13 @@ enum ErrorReturn : uint32 {
     CHANGED = 0x0D;
 };
 
+const ErrorReturn ERROR_RETURN_CONST = ErrorReturn.OK;
+
 [FragileBase]
 protocol TestInterface {
-  TestMethod(TestXUnion test_x_union) -> (TestXUnion test_x_union);
-  TestNullableXUnion(TestXUnion? test_x_union) -> (TestXUnion? test_x_union);
-  TestErrorMethod(uint16 arg) -> () error ErrorReturn;
+    TestMethod(TestXUnion test_x_union) -> (TestXUnion test_x_union);
+    TestNullableXUnion(TestXUnion? test_x_union) -> (TestXUnion? test_x_union);
+    TestErrorMethod(uint16 arg) -> () error ErrorReturn;
 };
 
 struct HasBigArray {

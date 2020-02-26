@@ -31,9 +31,8 @@ type Bits struct {
 
 type BitsMember struct {
 	types.Attributes
-	Name      string
-	ConstName string
-	Value     string
+	Name  string
+	Value string
 }
 
 type Const struct {
@@ -52,9 +51,8 @@ type Enum struct {
 
 type EnumMember struct {
 	types.Attributes
-	Name      string
-	ConstName string
-	Value     string
+	Name  string
+	Value string
 }
 
 type XUnion struct {
@@ -488,7 +486,17 @@ func compileLiteral(val types.Literal, typ types.Type) string {
 func (c *compiler) compileConstant(val types.Constant, typ types.Type) string {
 	switch val.Kind {
 	case types.IdentifierConstant:
-		return c.compileScreamingSnakeCompoundIdentifier(val.Identifier)
+		parts := types.ParseCompoundIdentifier(val.Identifier)
+		if parts.Member == types.Identifier("") {
+			// Top-level constant.
+			parts.Name = types.Identifier(compileScreamingSnakeIdentifier(parts.Name))
+		} else {
+			// Bits or enum member.
+			parts.Name = types.Identifier(compileCamelIdentifier(parts.Name))
+			// TODO(fxb/47034) For bits the member should be SCREAMING_SNAKE_CASE.
+			parts.Member = types.Identifier(compileCamelIdentifier(parts.Member))
+		}
+		return c.compileCompoundIdentifier(parts)
 	case types.LiteralConstant:
 		return compileLiteral(val.Literal, typ)
 	default:
@@ -647,9 +655,9 @@ func (c *compiler) compileBits(val types.Bits) Bits {
 	for _, v := range val.Members {
 		e.Members = append(e.Members, BitsMember{
 			Attributes: v.Attributes,
-			Name:       compileCamelIdentifier(v.Name),
-			ConstName:  compileScreamingSnakeIdentifier(v.Name),
-			Value:      c.compileConstant(v.Value, val.Type),
+			// TODO(fxb/47034) Should be SCREAMING_SNAKE_CASE.
+			Name:  compileCamelIdentifier(v.Name),
+			Value: c.compileConstant(v.Value, val.Type),
 		})
 	}
 	return e
@@ -666,7 +674,6 @@ func (c *compiler) compileEnum(val types.Enum) Enum {
 		e.Members = append(e.Members, EnumMember{
 			Attributes: v.Attributes,
 			Name:       compileCamelIdentifier(v.Name),
-			ConstName:  compileScreamingSnakeIdentifier(v.Name),
 			// TODO(FIDL-324): When we expose types consistently in the IR, we
 			// will not need to plug this here.
 			Value: c.compileConstant(v.Value, types.Type{
