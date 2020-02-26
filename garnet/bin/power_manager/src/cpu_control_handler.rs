@@ -459,7 +459,8 @@ impl InspectData {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::cpu_stats_handler;
+    use crate::test::mock_node::{create_mock_node, MessageMatcher};
+    use crate::{msg_eq, msg_ok_return};
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
     use futures::TryStreamExt;
@@ -521,22 +522,69 @@ pub mod tests {
     /// Tests that an unsupported message is handled gracefully and an Unsupported error is returned
     #[fasync::run_singlethreaded(test)]
     async fn test_unsupported_msg() {
-        let cpu_stats_node = cpu_stats_handler::tests::setup_simple_test_node().await;
-        let devhost_node = dev_control_handler::tests::setup_simple_test_node();
         let cpu_ctrl_node = setup_test_node(
             CpuControlParams {
                 num_cores: 1,
                 p_states: vec![PState { frequency: Hertz(0.0), voltage: Volts(0.0) }],
                 capacitance: Farads(0.0),
             },
-            cpu_stats_node,
-            devhost_node.clone(),
+            create_mock_node("StatsNode", vec![]),
+            create_mock_node(
+                "DevHostNode",
+                vec![
+                    // The CpuControlHandler node queries the current performance state from the
+                    // DevHost node during initialization.
+                    (msg_eq!(GetPerformanceState), msg_ok_return!(GetPerformanceState(0))),
+                ],
+            ),
         )
         .await;
         match cpu_ctrl_node.handle_message(&Message::ReadTemperature).await {
             Err(PowerManagerError::Unsupported) => {}
             e => panic!("Unexpected return value: {:?}", e),
         }
+    }
+
+    /// Tests that CpuControlParams' `validate` correctly returns an error under invalid inputs.
+    #[test]
+    fn test_invalid_cpu_params() {
+        // Num_cores == 0
+        assert!(CpuControlParams {
+            num_cores: 0,
+            p_states: vec![PState { frequency: Hertz(0.0), voltage: Volts(0.0) }],
+            capacitance: Farads(100e-12)
+        }
+        .validate()
+        .is_err());
+
+        // Empty p_states
+        assert!(CpuControlParams { num_cores: 1, p_states: vec![], capacitance: Farads(100e-12) }
+            .validate()
+            .is_err());
+
+        // p_states in order of increasing power usage
+        assert!(CpuControlParams {
+            num_cores: 1,
+            p_states: vec![
+                PState { frequency: Hertz(1.0), voltage: Volts(1.0) },
+                PState { frequency: Hertz(2.0), voltage: Volts(1.0) }
+            ],
+            capacitance: Farads(100e-12)
+        }
+        .validate()
+        .is_err());
+
+        // p_states with identical power usage
+        assert!(CpuControlParams {
+            num_cores: 1,
+            p_states: vec![
+                PState { frequency: Hertz(1.0), voltage: Volts(1.0) },
+                PState { frequency: Hertz(1.0), voltage: Volts(1.0) }
+            ],
+            capacitance: Farads(100e-12)
+        }
+        .validate()
+        .is_err());
     }
 
     async fn get_perf_state(devhost_node: Rc<dyn Node>) -> u32 {
@@ -573,9 +621,32 @@ pub mod tests {
             })
             .collect();
 
-        let cpu_stats_node = cpu_stats_handler::tests::setup_simple_test_node().await;
-        let devhost_node = dev_control_handler::tests::setup_simple_test_node();
-        let cpu_ctrl_node = setup_test_node(cpu_params, cpu_stats_node, devhost_node.clone()).await;
+        let stats_node = create_mock_node(
+            "StatsNode",
+            // The CpuControlHandler node queries the current CPU load each time it receives a
+            // SetMaxPowerConsumption message
+            vec![
+                (msg_eq!(GetTotalCpuLoad), msg_ok_return!(GetTotalCpuLoad(4.0))),
+                (msg_eq!(GetTotalCpuLoad), msg_ok_return!(GetTotalCpuLoad(4.0))),
+                (msg_eq!(GetTotalCpuLoad), msg_ok_return!(GetTotalCpuLoad(4.0))),
+            ],
+        );
+        let devhost_node = create_mock_node(
+            "DevHostNode",
+            vec![
+                // CpuControlHandler queries performance state during its initialiation
+                (msg_eq!(GetPerformanceState), msg_ok_return!(GetPerformanceState(0))),
+                // The test queries for current performance state
+                (msg_eq!(GetPerformanceState), msg_ok_return!(GetPerformanceState(0))),
+                // CpuControlHandler changes performance state to 1
+                (msg_eq!(SetPerformanceState(1)), msg_ok_return!(SetPerformanceState)),
+                // The test queries for current performance state
+                (msg_eq!(GetPerformanceState), msg_ok_return!(GetPerformanceState(1))),
+                // The test queries for current performance state
+                (msg_eq!(GetPerformanceState), msg_ok_return!(GetPerformanceState(1))),
+            ],
+        );
+        let cpu_ctrl_node = setup_test_node(cpu_params, stats_node, devhost_node.clone()).await;
 
         // Test case 1: Allow power consumption of the highest P-state; expect to be in P-state 0
         let commanded_power = power_consumption[0].mul_scalar(1.01);
@@ -620,8 +691,15 @@ pub mod tests {
             "Fake".to_string(),
             setup_fake_service(params),
             capacitance,
-            cpu_stats_handler::tests::setup_simple_test_node().await,
-            dev_control_handler::tests::setup_simple_test_node(),
+            create_mock_node("StatsNode", vec![]),
+            create_mock_node(
+                "DevHostNode",
+                vec![
+                    // The CpuControlHandler node queries the current performance state from the
+                    // DevHost node during initialization.
+                    (msg_eq!(GetPerformanceState), msg_ok_return!(GetPerformanceState(0))),
+                ],
+            ),
         )
         .with_inspect_root(inspector.root())
         .build()

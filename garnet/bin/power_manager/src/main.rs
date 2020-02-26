@@ -19,6 +19,9 @@ mod temperature_handler;
 mod thermal_limiter;
 mod thermal_policy;
 
+#[cfg(test)]
+mod test;
+
 use crate::power_manager::PowerManager;
 use anyhow::{format_err, Context, Error};
 use fdio;

@@ -5,7 +5,7 @@
 use crate::types::{Celsius, ThermalLoad, Watts};
 
 /// Defines the message types and arguments to be used for inter-node communication
-#[derive(Debug)]
+#[derive(Debug, PartialEq, PartialOrd)]
 #[allow(dead_code)]
 pub enum Message {
     /// Read the temperature
