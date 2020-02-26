@@ -12,6 +12,7 @@ rustc_library("rustyline") {
   name = "rustyline"
   edition = "2015"
   source_root = "../../../../third_party/rust-mirrors/rustyline/src/lib.rs"
+  configs -= [ "//build/config:rust_2018_idioms" ]
   deps = [
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:libc",

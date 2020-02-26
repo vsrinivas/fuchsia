@@ -42,7 +42,7 @@ where
     T: Unpin,
 {
     type Item = StreamItem<T, E>;
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if self.terminated {
             return Poll::Ready(None);
         }

@@ -184,7 +184,7 @@ impl FusedStream for TestStream {
 
 impl Stream for TestStream {
     type Item = usize;
-    fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         Poll::Ready(self.0.take())
     }
 }

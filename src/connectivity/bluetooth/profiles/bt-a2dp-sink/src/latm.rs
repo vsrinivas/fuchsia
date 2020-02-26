@@ -114,7 +114,7 @@ enum Payload<'a> {
 }
 
 // Helper function used in multiple syntax elements
-fn parse_latm_get_value(input: BitsCtx) -> IResult<BitsCtx, usize> {
+fn parse_latm_get_value(input: BitsCtx<'_>) -> IResult<BitsCtx<'_>, usize> {
     let mut value = 0;
     let (input, bytes_for_value) = take(2usize)(input)?;
 
@@ -131,12 +131,12 @@ fn parse_latm_get_value(input: BitsCtx) -> IResult<BitsCtx, usize> {
 
 impl Program {
     fn parse_layers(
-        input: BitsCtx,
+        input: BitsCtx<'_>,
         num_layers: usize,
         program_index: usize,
         audio_mux_version: usize,
         all_streams_same_time_framing: usize,
-    ) -> IResult<BitsCtx, Vec<Layer>> {
+    ) -> IResult<BitsCtx<'_>, Vec<Layer>> {
         let mut layers = Vec::new();
         let mut input = input;
 
@@ -156,11 +156,11 @@ impl Program {
     }
 
     pub fn parse(
-        input: BitsCtx,
+        input: BitsCtx<'_>,
         program_index: usize,
         audio_mux_version: usize,
         all_streams_same_time_framing: usize,
-    ) -> IResult<BitsCtx, Program> {
+    ) -> IResult<BitsCtx<'_>, Program> {
         let (input, num_layer): (_, usize) = take(3usize)(input)?;
         let (input, layers) = Self::parse_layers(
             input,
@@ -176,7 +176,7 @@ impl Program {
 impl Layer {
     fn parse_layer_config(
         audio_mux_version: usize,
-    ) -> impl Fn(BitsCtx) -> IResult<BitsCtx, AudioSpecificConfig> {
+    ) -> impl Fn(BitsCtx<'_>) -> IResult<BitsCtx<'_>, AudioSpecificConfig> {
         move |input| match audio_mux_version {
             0 => AudioSpecificConfig::parse(input),
             _ => {
@@ -191,12 +191,12 @@ impl Layer {
     }
 
     pub fn parse(
-        input: BitsCtx,
+        input: BitsCtx<'_>,
         layer_index: usize,
         program_index: usize,
         audio_mux_version: usize,
         all_streams_same_time_framing: usize,
-    ) -> IResult<BitsCtx, Layer> {
+    ) -> IResult<BitsCtx<'_>, Layer> {
         let (input, use_same_config) =
             cond(layer_index > 0 && program_index > 0, take(1usize))(input)?;
 
@@ -243,7 +243,7 @@ impl Layer {
 }
 
 impl AudioSpecificConfig {
-    fn parse(input: BitsCtx) -> IResult<BitsCtx, Self> {
+    fn parse(input: BitsCtx<'_>) -> IResult<BitsCtx<'_>, Self> {
         let start_input = input;
         let (input, mut audio_object_type) = take(5usize)(input)?;
         let (input, audio_object_type_ext): (_, std::option::Option<usize>) =
@@ -288,10 +288,10 @@ impl AudioSpecificConfig {
 
 impl GASpecificConfig {
     fn parse(
-        input: BitsCtx,
+        input: BitsCtx<'_>,
         channel_configuration: usize,
         audio_object_type: usize,
-    ) -> IResult<BitsCtx, Self> {
+    ) -> IResult<BitsCtx<'_>, Self> {
         let (input, frame_length_flag) = take(1usize)(input)?;
         let (input, depends_on_core_coder) = take(1usize)(input)?;
 
@@ -325,11 +325,11 @@ impl GASpecificConfig {
 
 impl StreamMuxConfig {
     fn parse_programs(
-        input: BitsCtx,
+        input: BitsCtx<'_>,
         count: usize,
         audio_mux_version: usize,
         all_streams_same_time_framing: usize,
-    ) -> IResult<BitsCtx, Vec<Program>> {
+    ) -> IResult<BitsCtx<'_>, Vec<Program>> {
         let mut programs = Vec::new();
         let mut input = input;
 
@@ -343,7 +343,7 @@ impl StreamMuxConfig {
         Ok((input, programs))
     }
 
-    fn parse(input: BitsCtx) -> IResult<BitsCtx, StreamMuxConfig> {
+    fn parse(input: BitsCtx<'_>) -> IResult<BitsCtx<'_>, StreamMuxConfig> {
         let (input, audio_mux_version) = take(1usize)(input)?;
         let (input, audio_mux_version_a) = cond(audio_mux_version != 0, take(1usize))(input)?;
 
@@ -555,7 +555,7 @@ mod test {
     #[test]
     fn test_audio_specific_config() {
         // aac-lc, 44100hz, stereo
-        let input: BitsCtx = (&[0x12, 0x10], 0usize);
+        let input: BitsCtx<'_> = (&[0x12, 0x10], 0usize);
 
         assert_matches!(
             AudioSpecificConfig::parse(input),
@@ -582,18 +582,18 @@ mod test {
     #[test]
     fn test_latm_get_value() {
         // 2 bytes, 0x01 << 8 | 0x01
-        let input: BitsCtx = (&[0x40, 0x40, 0x40], 0usize);
+        let input: BitsCtx<'_> = (&[0x40, 0x40, 0x40], 0usize);
         assert_matches!(parse_latm_get_value(input), Ok(((&[0x40], 2), 0x101)));
 
         // 1 byte, 0xff
-        let input: BitsCtx = (&[0x3f, 0xc0], 0usize);
+        let input: BitsCtx<'_> = (&[0x3f, 0xc0], 0usize);
         assert_matches!(parse_latm_get_value(input), Ok(((&[0xc0], 2), 0xff)));
     }
 
     #[test]
     fn test_stream_mux_config() {
         // version 0, 1 subframe/prog/layer, aac-lc stereo
-        let input: BitsCtx = (&[32, 0, 19, 144, 18, 39], 1);
+        let input: BitsCtx<'_> = (&[32, 0, 19, 144, 18, 39], 1);
 
         let (leftovers, parsed) = StreamMuxConfig::parse(input).expect("parsed ok");
         assert_eq!(leftovers, (&[39][0..], 5));
@@ -633,7 +633,7 @@ mod test {
     #[test]
     fn test_payload_length_info() {
         // 363 mux_slot_length_bytes
-        let input: BitsCtx = (&[39, 251, 97], 5);
+        let input: BitsCtx<'_> = (&[39, 251, 97], 5);
 
         let mut stream_mux_config = StreamMuxConfig {
             all_streams_same_time_framing: 1,

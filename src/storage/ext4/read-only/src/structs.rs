@@ -450,7 +450,7 @@ pub enum InvalidAddressErrorType {
 }
 
 impl fmt::Display for InvalidAddressErrorType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             InvalidAddressErrorType::Lower => write!(f, "lower"),
             InvalidAddressErrorType::Upper => write!(f, "upper"),

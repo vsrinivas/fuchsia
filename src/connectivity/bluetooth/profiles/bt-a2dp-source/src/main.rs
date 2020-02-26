@@ -269,7 +269,7 @@ impl<'a> SelectedStream<'a> {
     /// From the list of available remote streams, pick our preferred one and return matching codec parameters.
     fn pick(
         remote_streams: &'a Vec<avdtp::StreamEndpoint>,
-    ) -> Result<SelectedStream, anyhow::Error> {
+    ) -> Result<SelectedStream<'_>, anyhow::Error> {
         // prefer AAC
         if let Some(remote_stream) =
             Self::find_stream(remote_streams, &avdtp::MediaCodecType::AUDIO_AAC)

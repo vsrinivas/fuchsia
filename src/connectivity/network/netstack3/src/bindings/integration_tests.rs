@@ -369,7 +369,7 @@ impl TestStack {
     }
 
     /// Acquire a lock on this `TestStack`'s context.
-    pub(crate) fn ctx(&self) -> impl Future<Output = LockedStackContext<TestContext>> {
+    pub(crate) fn ctx(&self) -> impl Future<Output = LockedStackContext<'_, TestContext>> {
         self.ctx.lock()
     }
 }

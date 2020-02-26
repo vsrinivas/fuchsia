@@ -288,7 +288,7 @@ pub enum NetworkConfigError {
 }
 
 impl Debug for NetworkConfigError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
             NetworkConfigError::OpenNetworkPassword => {
                 write!(f, "can't have an open network with a password or PSK")

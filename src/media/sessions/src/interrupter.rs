@@ -53,7 +53,7 @@ pub enum InterruptionStage {
 
 impl Stream for Interrupter {
     type Item = Interruption;
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let next_report = Pin::new(&mut self.usage_watcher_requests).poll_next(cx);
         let next_report = match next_report {
             Poll::Ready(Some(report)) => report,

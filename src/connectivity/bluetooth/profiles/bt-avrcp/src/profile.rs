@@ -147,9 +147,9 @@ pub trait ProfileService: Debug {
         &'a self,
         peer_id: &'a PeerId,
         psm: u16,
-    ) -> BoxFuture<Result<zx::Socket, Error>>;
+    ) -> BoxFuture<'_, Result<zx::Socket, Error>>;
 
-    fn take_event_stream(&self) -> BoxStream<Result<AvrcpProfileEvent, Error>>;
+    fn take_event_stream(&self) -> BoxStream<'_, Result<AvrcpProfileEvent, Error>>;
 }
 
 #[derive(Debug)]
@@ -199,7 +199,7 @@ impl ProfileService for ProfileServiceImpl {
         &self,
         peer_id: &PeerId,
         psm: u16,
-    ) -> BoxFuture<Result<zx::Socket, Error>> {
+    ) -> BoxFuture<'_, Result<zx::Socket, Error>> {
         let peer_id = peer_id.clone();
         async move {
             let (status, channel) = self
@@ -220,7 +220,7 @@ impl ProfileService for ProfileServiceImpl {
         .boxed()
     }
 
-    fn take_event_stream(&self) -> BoxStream<Result<AvrcpProfileEvent, Error>> {
+    fn take_event_stream(&self) -> BoxStream<'_, Result<AvrcpProfileEvent, Error>> {
         let event_stream: ProfileEventStream = self.profile_svc.take_event_stream();
         let expected_service_id = self.service_id;
         event_stream

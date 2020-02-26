@@ -260,7 +260,7 @@ impl BufferWrite for IeDefinition {
 }
 
 impl Parse for IeDefinition {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let mut emit_offset = None;
         if input.peek2(Token![@]) {
             emit_offset = Some(input.parse::<Ident>()?);

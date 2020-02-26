@@ -58,7 +58,7 @@ impl ProfileService for MockProfileService {
         &'a self,
         _peer_id: &'a PeerId,
         _psm: u16,
-    ) -> BoxFuture<Result<zx::Socket, Error>> {
+    ) -> BoxFuture<'_, Result<zx::Socket, Error>> {
         let result = self.inner.fake_connect_to_device_response.lock().take();
 
         match result {
@@ -67,7 +67,7 @@ impl ProfileService for MockProfileService {
         }
     }
 
-    fn take_event_stream(&self) -> BoxStream<Result<AvrcpProfileEvent, Error>> {
+    fn take_event_stream(&self) -> BoxStream<'_, Result<AvrcpProfileEvent, Error>> {
         let value = self.inner.fake_events.lock().take();
         match value {
             Some(events) => stream::iter(events).boxed(),

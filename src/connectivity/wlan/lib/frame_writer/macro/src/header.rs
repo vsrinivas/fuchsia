@@ -66,7 +66,7 @@ impl BufferWrite for HeaderDefinition {
 }
 
 impl Parse for HeaderDefinition {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let header_type = input.parse::<ExprPath>()?.path;
 
         let optional = input.peek(Token![?]);

@@ -69,7 +69,7 @@ enum Proto {
     IPv6,
 }
 impl std::fmt::Display for Proto {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Proto::IPv4 => write!(f, "IPv4"),
             Proto::IPv6 => write!(f, "IPv6"),

@@ -132,7 +132,7 @@ enum ExposedCapabilities {
 }
 
 impl fmt::Debug for ExposedCapabilities {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ExposedCapabilities::App(_) => write!(f, "CFv1 App"),
             ExposedCapabilities::Directory(_) => write!(f, "CFv2 exposed capabilities Directory"),

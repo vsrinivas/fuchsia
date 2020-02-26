@@ -29,12 +29,12 @@ pub trait StorageManager: Sized {
     /// Provisions a new storage instance.  The same `Key` must be supplied
     /// during a call to `unlock`. Moves the `StorageManager` from the
     /// uninitialized to the unlocked state.
-    async fn provision(&self, key: Key) -> Result<(), AccountManagerError>;
+    async fn provision(&self, key: Key<'_>) -> Result<(), AccountManagerError>;
 
     /// Unlocks a locked storage resource.  Moves the `StorageManager` from
     /// the locked or uninitialized state to the available state. Fails if
     /// the key does not match the key originally given through `provision`.
-    async fn unlock(&self, key: Key) -> Result<(), AccountManagerError>;
+    async fn unlock(&self, key: Key<'_>) -> Result<(), AccountManagerError>;
 
     /// Locks the storage resource.  All connections to the directory should be
     /// closed prior to calling this method.  Moves the `StorageManager` from

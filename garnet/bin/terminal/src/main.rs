@@ -12,7 +12,7 @@ use {
 
 fn make_app_assistant_fut(
     app_context: &AppContext,
-) -> LocalBoxFuture<Result<AppAssistantPtr, Error>> {
+) -> LocalBoxFuture<'_, Result<AppAssistantPtr, Error>> {
     let f = async move {
         let assistant = Box::new(TerminalAssistant::new(app_context));
         Ok::<AppAssistantPtr, Error>(assistant)

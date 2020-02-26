@@ -1127,7 +1127,7 @@ mod tests {
             self.sta.replace(make_client_station());
         }
 
-        fn get_bound_client(&mut self) -> Option<BoundClient> {
+        fn get_bound_client(&mut self) -> Option<BoundClient<'_>> {
             match self.sta.as_mut() {
                 None => None,
                 Some(sta) => Some(sta.bind(

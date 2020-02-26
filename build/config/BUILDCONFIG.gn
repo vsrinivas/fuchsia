@@ -184,6 +184,7 @@ default_common_binary_configs = [
   "//build/config:rust_edition_2018",
   "//build/config:rust_no_features",
   "//build/config:rust_target",
+  "//build/config:rust_2018_idioms",
 ]
 
 if (is_debug) {

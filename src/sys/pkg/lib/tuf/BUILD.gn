@@ -3,14 +3,16 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
 rustc_library("tuf") {
   edition = "2018"
-  with_unit_tests = true
 
   source_root = "../../../../../third_party/rust-mirrors/rust-tuf/src/lib.rs"
+
+  configs -= [ "//build/config:rust_2018_idioms" ]
 
   deps = [
     "//third_party/rust_crates:chrono",
@@ -34,12 +36,42 @@ rustc_library("tuf") {
     "//third_party/rust_crates:url",
   ]
 
-  test_deps = [
+  # TODO(46838): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+}
+
+rustc_test("tuf_lib_test") {
+  edition = "2018"
+
+  source_root = "../../../../../third_party/rust-mirrors/rust-tuf/src/lib.rs"
+
+  configs -= [ "//build/config:rust_2018_idioms" ]
+
+  deps = [
+    "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:data-encoding",
+    "//third_party/rust_crates:derp",
     "//third_party/rust_crates:futures-executor",
+    "//third_party/rust_crates:futures-io",
+    "//third_party/rust_crates:futures-util",
+    "//third_party/rust_crates:http",
+    "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:itoa",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:percent-encoding",
     "//third_party/rust_crates:pretty_assertions",
+    "//third_party/rust_crates:ring",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_derive",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:untrusted",
+    "//third_party/rust_crates:url",
   ]
 
   # TODO(46838): Fix the leaks and remove this.
@@ -47,7 +79,7 @@ rustc_library("tuf") {
 }
 
 test_package("rust-tuf-tests") {
-  deps = [ ":tuf_test" ]
+  deps = [ ":tuf_lib_test" ]
 
   tests = [
     {

@@ -31,7 +31,7 @@ impl<'a> ActionResultFormatter<'a> {
     pub fn new(
         action_results: Vec<&ActionResults>,
         action_labels: Vec<String>,
-    ) -> ActionResultFormatter {
+    ) -> ActionResultFormatter<'_> {
         ActionResultFormatter { action_results, action_labels }
     }
 

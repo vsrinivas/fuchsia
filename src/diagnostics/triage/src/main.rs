@@ -48,7 +48,7 @@ fn try_to_run() -> Result<(), Error> {
         config::initialize(Options::from_args())?;
     // TODO(cphoenix): argh::from_env();
 
-    let mut action_contexts: Vec<ActionContext> =
+    let mut action_contexts: Vec<ActionContext<'_>> =
         inspect_contexts.iter().map(|c| act::ActionContext::new(&metrics, &actions, c)).collect();
 
     let action_results: Vec<&ActionResults> =

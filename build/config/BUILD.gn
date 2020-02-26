@@ -49,6 +49,10 @@ config("netstack3_only_specialization_feature") {
   rustflags = [ "-Zallow-features=specialization" ]
 }
 
+config("rust_2018_idioms") {
+  rustflags = [ "-Wrust-2018-idioms" ]
+}
+
 config("rust_target") {
   rustflags = [
     "--target",

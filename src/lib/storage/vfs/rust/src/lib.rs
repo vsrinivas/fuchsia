@@ -6,6 +6,8 @@
 //! callbacks.  Examples are: component configuration, debug information or statistics.
 
 #![recursion_limit = "1024"]
+// This crate doesn't comply with all 2018 idioms
+#![allow(rust_2018_idioms)]
 
 use proc_macro_hack::proc_macro_hack;
 

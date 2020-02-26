@@ -98,7 +98,7 @@ macro_rules! ptrs {(
         }
 
         impl ::std::fmt::Debug for $struct_name {
-            fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            fn fmt(&self, fmt: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 fmt.debug_struct(stringify!($struct_name)).finish()
             }
         }

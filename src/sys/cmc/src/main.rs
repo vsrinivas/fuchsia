@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #![warn(missing_docs)]
+// This crate doesn't comply with all 2018 idioms
+#![allow(elided_lifetimes_in_paths)]
 
 //! `cmc` is the Component Manifest Compiler.
 

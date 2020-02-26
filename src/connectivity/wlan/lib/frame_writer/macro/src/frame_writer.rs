@@ -78,7 +78,7 @@ struct MacroArgs {
 }
 
 impl Parse for MacroArgs {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let buffer_source = input.parse::<Expr>()?;
         input.parse::<Token![,]>()?;
         let write_defs = input.parse::<WriteDefinitions>()?;
@@ -95,7 +95,7 @@ struct WriteDefinitions {
 }
 
 impl Parse for WriteDefinitions {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let content;
         braced!(content in input);
         let groups = Punctuated::<GroupArgs, Token![,]>::parse_terminated(&content)?;
@@ -141,7 +141,7 @@ enum GroupArgs {
 }
 
 impl Parse for GroupArgs {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let name: Ident = input.parse()?;
         input.parse::<Token![:]>()?;
 

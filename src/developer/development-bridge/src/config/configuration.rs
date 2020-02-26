@@ -64,7 +64,7 @@ impl<'a> Iterator for PriorityConfigIterator<'a> {
 }
 
 impl ConfigData {
-    fn iter(&self) -> PriorityConfigIterator {
+    fn iter(&self) -> PriorityConfigIterator<'_> {
         PriorityConfigIterator { curr: None, config: self }
     }
 }

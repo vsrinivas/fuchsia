@@ -654,7 +654,7 @@ impl SpinelContext {
 }
 
 impl fmt::Debug for SpinelContext {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("SpinelContex")
             .field("inner", &self.inner)
             .field("path_builder", &self.path_builder)
