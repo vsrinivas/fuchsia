@@ -240,7 +240,7 @@ async fn manual_connect_state(
                     );
                     services.saved_networks.store(network_id.clone(), credential.clone())
                          .unwrap_or_else(
-                            |e| eprintln!("wlancfg: Failed to store network config: {}", e));
+                            |e| eprintln!("wlancfg: Failed to store network config: {:?}", e));
                     services.saved_networks
                         .record_connect_success(network_id, &credential);
                     connected_state(services, next_req).into_state()

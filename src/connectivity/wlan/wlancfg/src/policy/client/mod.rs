@@ -14,7 +14,7 @@ use {
     crate::{
         config_manager::SavedNetworksManager,
         fuse_pending::FusePending,
-        network_config::{Credential, NetworkIdentifier},
+        network_config::{Credential, NetworkConfigError, NetworkIdentifier, SaveError},
     },
     anyhow::{format_err, Error},
     fidl::epitaph::ChannelEpitaphExt,
@@ -28,7 +28,7 @@ use {
     },
     log::{error, info},
     parking_lot::Mutex,
-    std::sync::Arc,
+    std::{convert::TryFrom, sync::Arc},
 };
 
 pub mod listener;
@@ -251,13 +251,19 @@ async fn handle_client_requests(
                 handle_client_request_scan(iterator).await?;
             }
             fidl_policy::ClientControllerRequest::SaveNetwork { config, responder } => {
-                let mut err =
-                    handle_client_request_save_network(Arc::clone(&saved_networks), config);
-                responder.send(&mut err)?;
+                // If there is an error saving the network, log it and convert to a FIDL value.
+                let mut response =
+                    handle_client_request_save_network(Arc::clone(&saved_networks), config)
+                        .map_err(|e| {
+                            error!("Failed to save network: {:?}", e);
+                            fidl_policy::NetworkConfigChangeError::from(e)
+                        });
+                responder.send(&mut response)?;
             }
             fidl_policy::ClientControllerRequest::RemoveNetwork { config, responder } => {
                 let mut err =
-                    handle_client_request_remove_network(Arc::clone(&saved_networks), config);
+                    handle_client_request_remove_network(Arc::clone(&saved_networks), config)
+                        .map_err(|_| SaveError::GeneralError);
                 responder.send(&mut err)?;
             }
             fidl_policy::ClientControllerRequest::GetSavedNetworks { iterator, .. } => {
@@ -387,14 +393,20 @@ async fn handle_client_request_scan(
 }
 
 /// This function handles requests to save a network by saving the network and sending back to the
-/// controller whether or not we successfully saved the network. There could be a fidl error in
+/// controller whether or not we successfully saved the network. There could be a FIDL error in
 /// sending the response.
-/// Currently this just tries to respond with a general error, it is not yet implemented.
 fn handle_client_request_save_network(
-    mut _saved_networks: SavedNetworksPtr,
-    _network_config: fidl_policy::NetworkConfig,
-) -> Result<(), fidl_policy::NetworkConfigChangeError> {
-    Err(fidl_policy::NetworkConfigChangeError::GeneralError)
+    saved_networks: SavedNetworksPtr,
+    network_config: fidl_policy::NetworkConfig,
+) -> Result<(), NetworkConfigError> {
+    // The FIDL network config fields are defined as options, and we consider it an error if either
+    // field is missing (ie None) here.
+    let net_id = network_config.id.ok_or_else(|| NetworkConfigError::ConfigMissingId)?;
+    let credential = Credential::try_from(
+        network_config.credential.ok_or_else(|| NetworkConfigError::ConfigMissingCredential)?,
+    )?;
+    saved_networks.store(NetworkIdentifier::from(net_id), credential)?;
+    Ok(())
 }
 
 /// Will remove the specified network and respond to the remove network request with a network
@@ -402,9 +414,9 @@ fn handle_client_request_save_network(
 fn handle_client_request_remove_network(
     mut _saved_networks: SavedNetworksPtr,
     _config: fidl_policy::NetworkConfig,
-) -> Result<(), fidl_policy::NetworkConfigChangeError> {
+) -> Result<(), Error> {
     // method is not yet implemented, respond with a general network config error
-    Err(fidl_policy::NetworkConfigChangeError::GeneralError)
+    Err(format_err!("Remove network is not yet implemented"))
 }
 
 /// For now, instead of giving actual results simply give nothing.
@@ -979,27 +991,36 @@ mod tests {
     }
 
     #[test]
-    fn save_network_should_fail() {
+    fn save_network() {
         let mut exec = fasync::Executor::new().expect("failed to create an executor");
-        let mut test_values = test_setup("save_network_should_fail", &mut exec);
-        let serve_fut = serve_provider_requests(
-            test_values.client,
-            test_values.update_sender,
-            Arc::clone(&test_values.saved_networks),
-            test_values.requests,
+        let stash_id = "save_network";
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+        let saved_networks_fut =
+            SavedNetworksManager::new_with_stash_or_paths(stash_id, path, tmp_path);
+        pin_mut!(saved_networks_fut);
+        let saved_networks = Arc::new(
+            exec.run_singlethreaded(saved_networks_fut).expect("Failed to create a KnownEssStore"),
         );
+
+        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
+            .expect("failed to create ClientProvider proxy");
+        let requests = requests.into_stream().expect("failed to create stream");
+
+        let (client, _sme_stream) = create_client();
+        let (update_sender, mut listener_updates) = mpsc::unbounded();
+        let serve_fut =
+            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
         pin_mut!(serve_fut);
 
         // No request has been sent yet. Future should be idle.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Request a new controller.
-        let (controller, _update_stream) = request_controller(&test_values.provider);
+        let (controller, _update_stream) = request_controller(&provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            exec.run_until_stalled(&mut test_values.listener_updates.next()),
-            Poll::Ready(_)
-        );
+        assert_variant!(exec.run_until_stalled(&mut listener_updates.next()), Poll::Ready(_));
 
         // Save some network
         let network_id = fidl_policy::NetworkIdentifier {
@@ -1007,7 +1028,7 @@ mod tests {
             type_: fidl_policy::SecurityType::None,
         };
         let network_config = fidl_policy::NetworkConfig {
-            id: Some(network_id),
+            id: Some(network_id.clone()),
             credential: Some(fidl_policy::Credential::None(fidl_policy::Empty)),
         };
         let mut save_fut = controller.save_network(network_config);
@@ -1015,10 +1036,81 @@ mod tests {
         // Run server_provider forward so that it will process the save network request
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
+        // Check that the the response says we succeeded.
+        assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(result) => {
+            let save_result = result.expect("Failed to get save network response");
+            assert_eq!(save_result, Ok(()));
+        });
+
+        // Check that the value was actually saved in the saved networks manager.
+        let target_id = NetworkIdentifier::from(network_id);
+        let target_config = NetworkConfig::new(target_id.clone(), Credential::None, false, false)
+            .expect("Failed to create network config");
+        assert_eq!(saved_networks.lookup(target_id), vec![target_config]);
+    }
+
+    #[test]
+    fn save_bad_network_should_fail() {
+        let mut exec = fasync::Executor::new().expect("failed to create an executor");
+        let stash_id = "save_bad_network_should_fail";
+        let temp_dir = TempDir::new().expect("failed to create temp dir");
+        let path = temp_dir.path().join("networks.json");
+        let tmp_path = temp_dir.path().join("tmp.json");
+
+        // Need to create this here so that the temp files will be in scope here.
+        let saved_networks_fut =
+            SavedNetworksManager::new_with_stash_or_paths(stash_id, path, tmp_path);
+        pin_mut!(saved_networks_fut);
+        let _saved_networks = Arc::new(
+            exec.run_singlethreaded(&mut saved_networks_fut)
+                .expect("Failed to create a KnownEssStore"),
+        );
+        let saved_networks = exec.run_singlethreaded(create_network_store(stash_id));
+
+        let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
+            .expect("failed to create ClientProvider proxy");
+        let requests = requests.into_stream().expect("failed to create stream");
+
+        let (client, _sme_stream) = create_client();
+        let (update_sender, mut listener_updates) = mpsc::unbounded();
+        let serve_fut =
+            serve_provider_requests(client, update_sender, Arc::clone(&saved_networks), requests);
+        pin_mut!(serve_fut);
+
+        // No request has been sent yet. Future should be idle.
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Request a new controller.
+        let (controller, _update_stream) = request_controller(&provider);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut listener_updates.next()), Poll::Ready(_));
+
+        // Create a network config whose password is too short. FIDL network config does not
+        // require valid fields unlike our crate define config. We should not be able to
+        // successfully save this network through the API.
+        let bad_network_id = fidl_policy::NetworkIdentifier {
+            ssid: b"foo".to_vec(),
+            type_: fidl_policy::SecurityType::Wpa2,
+        };
+        let network_config = fidl_policy::NetworkConfig {
+            id: Some(bad_network_id.clone()),
+            credential: Some(fidl_policy::Credential::Password(b"bar".to_vec())),
+        };
+        // Attempt to save the config
+        let mut save_fut = controller.save_network(network_config);
+
+        // Run server_provider forward so that it will process the save network request
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Check that the the response says we failed to save the network.
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(result) => {
             let error = result.expect("Failed to get save network response");
-            assert_eq!(error, Err(fidl_policy::NetworkConfigChangeError::GeneralError));
+            assert_eq!(error, Err(SaveError::GeneralError));
         });
+
+        // Check that the value was was not saved in saved networks manager.
+        let target_id = NetworkIdentifier::from(bad_network_id);
+        assert_eq!(saved_networks.lookup(target_id), vec![]);
     }
 
     #[test]
@@ -1060,7 +1152,7 @@ mod tests {
 
         assert_variant!(exec.run_until_stalled(&mut remove_fut), Poll::Ready(result) => {
             let error = result.expect("Failed to get save network response");
-            assert_eq!(error, Err(fidl_policy::NetworkConfigChangeError::GeneralError));
+            assert_eq!(error, Err(SaveError::GeneralError));
         });
     }
 

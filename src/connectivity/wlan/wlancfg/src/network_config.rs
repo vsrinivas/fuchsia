@@ -5,7 +5,12 @@
 use {
     fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_sme as fidl_sme,
     serde_derive::{Deserialize, Serialize},
-    std::{collections::VecDeque, time::SystemTime},
+    std::{
+        collections::VecDeque,
+        convert::TryFrom,
+        fmt::{self, Debug},
+        time::SystemTime,
+    },
     wlan_common::mac::Bssid,
 };
 
@@ -16,8 +21,10 @@ const NUM_DENY_REASONS: usize = 10;
 const MIN_PASSWORD_LEN: usize = 8;
 const MAX_PASSWORD_LEN: usize = 63;
 const PSK_LEN: usize = 64;
+/// constraint on valid SSID legnth
+const MAX_SSID_LEN: usize = 32;
 
-type SaveError = fidl_policy::NetworkConfigChangeError;
+pub type SaveError = fidl_policy::NetworkConfigChangeError;
 
 /// History of connects, disconnects, and connection strength to estimate whether we can establish
 /// and maintain connection with a network and if it is weakening. Used in choosing best network.
@@ -95,7 +102,7 @@ impl NetworkConfig {
         credential: Credential,
         has_ever_connected: bool,
         seen_in_passive_scan_results: bool,
-    ) -> Result<Self, SaveError> {
+    ) -> Result<Self, NetworkConfigError> {
         check_config_errors(&id.ssid, &id.security_type, &credential)?;
 
         Ok(Self {
@@ -154,7 +161,20 @@ impl Credential {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+impl TryFrom<fidl_policy::Credential> for Credential {
+    type Error = NetworkConfigError;
+    /// Create a Credential from a fidl Crednetial value.
+    fn try_from(credential: fidl_policy::Credential) -> Result<Self, Self::Error> {
+        match credential {
+            fidl_policy::Credential::None(fidl_policy::Empty {}) => Ok(Self::None),
+            fidl_policy::Credential::Password(pwd) => Ok(Self::Password(pwd)),
+            fidl_policy::Credential::Psk(psk) => Ok(Self::Psk(psk)),
+            _ => Err(NetworkConfigError::CredentialTypeInvalid),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub enum SecurityType {
     None,
     Wep,
@@ -220,36 +240,94 @@ fn check_config_errors(
     ssid: impl AsRef<[u8]>,
     security_type: &SecurityType,
     credential: &Credential,
-) -> Result<(), SaveError> {
+) -> Result<(), NetworkConfigError> {
     // Verify SSID has at most 32 characters
-    if ssid.as_ref().len() > 32 {
-        return Err(SaveError::GeneralError);
+    if ssid.as_ref().len() > MAX_SSID_LEN {
+        return Err(NetworkConfigError::SsidLen);
     }
     // Verify that credentials match security type
     match security_type {
         SecurityType::None => {
             if let Credential::Psk(_) | Credential::Password(_) = credential {
-                return Err(SaveError::GeneralError);
+                return Err(NetworkConfigError::OpenNetworkPassword);
             }
         }
         SecurityType::Wpa | SecurityType::Wpa2 | SecurityType::Wpa3 => match credential {
             Credential::Password(pwd) => {
-                if pwd.len() < MIN_PASSWORD_LEN || pwd.len() > MAX_PASSWORD_LEN {
-                    return Err(SaveError::GeneralError);
+                if pwd.clone().len() < MIN_PASSWORD_LEN || pwd.clone().len() > MAX_PASSWORD_LEN {
+                    return Err(NetworkConfigError::PasswordLen);
                 }
             }
             Credential::Psk(psk) => {
-                if psk.len() != PSK_LEN {
-                    return Err(SaveError::GeneralError);
+                if psk.clone().len() != PSK_LEN {
+                    return Err(NetworkConfigError::PskLen);
                 }
             }
             _ => {
-                return Err(SaveError::GeneralError);
+                return Err(NetworkConfigError::MissingPasswordPsk);
             }
         },
         _ => {}
     }
     Ok(())
+}
+
+/// Error codes representing problems in trying to save a network config, such as errors saving
+/// or removing a network config, or for invalid values when trying to create a network config.
+pub enum NetworkConfigError {
+    OpenNetworkPassword,
+    PasswordLen,
+    PskLen,
+    SsidLen,
+    MissingPasswordPsk,
+    ConfigMissingId,
+    ConfigMissingCredential,
+    CredentialTypeInvalid,
+    StashWriteError,
+    LegacyWriteError,
+}
+
+impl Debug for NetworkConfigError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+        match self {
+            NetworkConfigError::OpenNetworkPassword => {
+                write!(f, "can't have an open network with a password or PSK")
+            }
+            NetworkConfigError::PasswordLen => write!(
+                f,
+                "password must be between {} and {} characters long",
+                MIN_PASSWORD_LEN, MAX_PASSWORD_LEN
+            ),
+            NetworkConfigError::PskLen => write!(f, "PSK must have length of {}", PSK_LEN),
+            NetworkConfigError::SsidLen => {
+                write!(f, "SSID has max allowed length of {}", MAX_SSID_LEN)
+            }
+            NetworkConfigError::MissingPasswordPsk => {
+                write!(f, "No password or PSK provided but required by security type")
+            }
+            NetworkConfigError::ConfigMissingId => {
+                write!(f, "cannot create network config, network id is None")
+            }
+            NetworkConfigError::ConfigMissingCredential => {
+                write!(f, "cannot create network config, no credential is given")
+            }
+            NetworkConfigError::CredentialTypeInvalid => {
+                write!(f, "cannot convert fidl Credential, unknown variant")
+            }
+            NetworkConfigError::StashWriteError => {
+                write!(f, "error writing network config to stash")
+            }
+            NetworkConfigError::LegacyWriteError => {
+                write!(f, "error writing network config to legacy storage")
+            }
+        }
+    }
+}
+
+impl From<NetworkConfigError> for fidl_policy::NetworkConfigChangeError {
+    fn from(_err: NetworkConfigError) -> Self {
+        fidl_policy::NetworkConfigChangeError::GeneralError
+    }
 }
 
 #[cfg(test)]
@@ -320,64 +398,58 @@ mod tests {
     fn new_network_config_invalid_ssid() {
         let credential = Credential::None;
 
-        let network_config = NetworkConfig::new(
+        let config_result = NetworkConfig::new(
             NetworkIdentifier::new([1; 33].to_vec(), SecurityType::Wpa2),
             credential,
             false,
             false,
         );
 
-        assert_variant!(network_config, Result::Err(err) =>
-            {assert_eq!(err, SaveError::GeneralError);}
-        );
+        assert_variant!(config_result, Err(NetworkConfigError::SsidLen));
     }
 
     #[test]
     fn new_network_config_invalid_password() {
         let credential = Credential::Password([1; 64].to_vec());
 
-        let network_config = NetworkConfig::new(
+        let config_result = NetworkConfig::new(
             NetworkIdentifier::new("foo", SecurityType::Wpa),
             credential,
             false,
             false,
         );
 
-        assert_variant!(network_config, Result::Err(err) =>
-            {assert_eq!(err, SaveError::GeneralError);}
-        );
+        assert_variant!(config_result, Err(NetworkConfigError::PasswordLen));
     }
 
     #[test]
     fn new_network_config_invalid_psk() {
         let credential = Credential::Psk(b"bar".to_vec());
 
-        let network_config = NetworkConfig::new(
+        let config_result = NetworkConfig::new(
             NetworkIdentifier::new("foo", SecurityType::Wpa2),
             credential,
             false,
             false,
         );
 
-        assert_variant!(network_config, Result::Err(err) =>
-            {assert_eq!(err, SaveError::GeneralError);}
-        );
+        assert_variant!(config_result, Err(NetworkConfigError::PskLen));
     }
 
     #[test]
     fn check_confing_errors_invalid_password() {
         // password too short
         let short_password = Credential::Password(b"1234567".to_vec());
-        assert_eq!(
-            Err(SaveError::GeneralError),
-            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa2, &short_password)
+        assert_variant!(
+            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa2, &short_password),
+            Err(NetworkConfigError::PasswordLen)
         );
 
         // password too long
         let long_password = Credential::Password([5, 65].to_vec());
-        assert_eq!(
-            Err(SaveError::GeneralError),
-            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa2, &long_password)
+        assert_variant!(
+            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa2, &long_password),
+            Err(NetworkConfigError::PasswordLen)
         );
     }
 
@@ -385,14 +457,16 @@ mod tests {
     fn check_config_errors_invalid_psk() {
         // PSK length not 64 characters
         let short_psk = Credential::Psk([6, 63].to_vec());
-        assert_eq!(
-            Err(SaveError::GeneralError),
-            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa2, &short_psk)
+
+        assert_variant!(
+            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa2, &short_psk),
+            Err(NetworkConfigError::PskLen)
         );
+
         let long_psk = Credential::Psk([7, 65].to_vec());
-        assert_eq!(
-            Err(SaveError::GeneralError),
-            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa2, &long_psk)
+        assert_variant!(
+            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa2, &long_psk),
+            Err(NetworkConfigError::PskLen)
         );
     }
 
@@ -400,39 +474,41 @@ mod tests {
     fn check_config_errors_invalid_security_credential() {
         // Use a password with open network.
         let password = Credential::Password(b"password".to_vec());
-        assert_eq!(
-            Err(SaveError::GeneralError),
-            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::None, &password)
-        );
-        let psk = Credential::Psk([1, 64].to_vec());
-        assert_eq!(
-            Err(SaveError::GeneralError),
-            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::None, &psk)
+        assert_variant!(
+            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::None, &password),
+            Err(NetworkConfigError::OpenNetworkPassword)
         );
 
+        let psk = Credential::Psk([1, 64].to_vec());
+        assert_variant!(
+            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::None, &psk),
+            Err(NetworkConfigError::OpenNetworkPassword)
+        );
         // Use no password with a protected network.
         let password = Credential::None;
-        assert_eq!(
-            Err(SaveError::GeneralError),
-            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa, &password)
+        assert_variant!(
+            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa, &password),
+            Err(NetworkConfigError::MissingPasswordPsk)
         );
-        assert_eq!(
-            Err(SaveError::GeneralError),
-            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa2, &password)
+
+        assert_variant!(
+            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa2, &password),
+            Err(NetworkConfigError::MissingPasswordPsk)
         );
-        assert_eq!(
-            Err(SaveError::GeneralError),
-            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa3, &password)
+
+        assert_variant!(
+            check_config_errors(&b"valid_ssid".to_vec(), &SecurityType::Wpa3, &password),
+            Err(NetworkConfigError::MissingPasswordPsk)
         );
     }
 
     #[test]
-    fn checkout_config_errors_invalid_ssid() {
+    fn check_config_errors_invalid_ssid() {
         // The longest valid SSID length is 32, so 33 characters is too long.
         let long_ssid = [64; 33].to_vec();
-        assert_eq!(
-            Err(SaveError::GeneralError),
-            check_config_errors(&long_ssid, &SecurityType::None, &Credential::None)
+        assert_variant!(
+            check_config_errors(&long_ssid, &SecurityType::None, &Credential::None),
+            Err(NetworkConfigError::SsidLen)
         );
     }
 

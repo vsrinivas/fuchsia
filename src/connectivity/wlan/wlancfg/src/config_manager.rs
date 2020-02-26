@@ -5,7 +5,9 @@
 use {
     crate::{
         known_ess_store::{self, EssJsonRead, KnownEss, KnownEssStore},
-        network_config::{Credential, NetworkConfig, NetworkIdentifier, SecurityType},
+        network_config::{
+            Credential, NetworkConfig, NetworkConfigError, NetworkIdentifier, SecurityType,
+        },
         stash::Stash,
     },
     anyhow::format_err,
@@ -164,7 +166,7 @@ impl SavedNetworksManager {
         self.saved_networks.lock().values().into_iter().flatten().count()
     }
 
-    // Return a list of network configs that match the given SSID.
+    /// Return a list of network configs that match the given SSID.
     pub fn lookup(&self, id: NetworkIdentifier) -> Vec<NetworkConfig> {
         self.saved_networks.lock().entry(id).or_default().iter().map(Clone::clone).collect()
     }
@@ -176,7 +178,7 @@ impl SavedNetworksManager {
         &self,
         network_id: NetworkIdentifier,
         credential: Credential,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), NetworkConfigError> {
         let mut guard = self.saved_networks.lock();
         let network_entry = guard.entry(network_id.clone());
         if let Entry::Occupied(network_configs) = &network_entry {
@@ -189,21 +191,23 @@ impl SavedNetworksManager {
             }
         }
         let network_config =
-            NetworkConfig::new(network_id.clone(), credential.clone(), false, false)
-                .map_err(|_| format_err!("Error creating the network config to store"))?;
-
+            NetworkConfig::new(network_id.clone(), credential.clone(), false, false)?;
         let network_configs = network_entry.or_default();
         evict_if_needed(network_configs);
         network_configs.push(network_config);
-        self.stash.lock().write(&network_id, &network_configs)?;
-
+        self.stash
+            .lock()
+            .write(&network_id, &network_configs)
+            .map_err(|_| NetworkConfigError::StashWriteError)?;
         // Write saved networks to the legacy store only if they are WPA2 or Open, as legacy store
         // does not support more types.
         if network_id.security_type == SecurityType::Wpa2
             || network_id.security_type == SecurityType::None
         {
             let ess = KnownEss { password: credential.into_bytes() };
-            self.legacy_store.store(network_id.ssid, ess)?;
+            self.legacy_store
+                .store(network_id.ssid, ess)
+                .map_err(|_| NetworkConfigError::LegacyWriteError)?;
         }
         Ok(())
     }
