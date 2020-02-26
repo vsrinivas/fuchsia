@@ -3,11 +3,21 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
+use argh::FromArgs;
 use fidl_fuchsia_overnet_protocol::StreamSocketGreeting;
 use futures::prelude::*;
 use overnet_core::{log_errors, spawn, Router, RouterOptions, StreamDeframer, StreamFramer};
 use std::rc::Rc;
 use tokio::io::AsyncRead;
+
+#[derive(FromArgs, Default)]
+/// daemon to lift a non-Fuchsia device into Overnet.
+pub struct Opt {
+    #[argh(option, long = "sockpath")]
+    /// path to the ascendd socket.
+    /// If not provided, this will default to a new socket-file in /tmp.
+    pub sockpath: Option<String>,
+}
 
 async fn read_incoming(
     stream: tokio::io::ReadHalf<tokio::net::UnixStream>,
@@ -113,7 +123,11 @@ async fn process_incoming(
     Ok(())
 }
 
-pub async fn run_ascendd(sockpath: String) -> Result<(), Error> {
+pub async fn run_ascendd(opt: Opt) -> Result<(), Error> {
+    let Opt { sockpath } = opt;
+
+    let sockpath = sockpath.unwrap_or(hoist::DEFAULT_ASCENDD_PATH.to_string());
+
     log::info!("[log] starting ascendd");
     hoist::logger::init()?;
     let _ = std::fs::remove_file(&sockpath);

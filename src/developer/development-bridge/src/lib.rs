@@ -24,7 +24,9 @@ mod constants;
 async fn start_ascendd() {
     log::info!("Starting ascendd");
     spawn(async move {
-        run_ascendd(SOCKET.to_string()).await.unwrap();
+        run_ascendd(ascendd_lib::Opt { sockpath: Some(SOCKET.to_string()), ..Default::default() })
+            .await
+            .unwrap();
     });
     log::info!("Connecting to target");
     Command::new(SOCAT).arg(LOCAL_SOCAT).arg(TARGET_SOCAT).spawn().unwrap();

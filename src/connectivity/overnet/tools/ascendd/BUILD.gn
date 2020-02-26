@@ -18,6 +18,7 @@ if (!is_fuchsia) {
       "//src/connectivity/overnet/lib/hoist",
       "//src/lib/fidl/rust/fidl",
       "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:argh",
       "//third_party/rust_crates:clap",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:log",
