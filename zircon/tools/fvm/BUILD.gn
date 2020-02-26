@@ -2,39 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-##########################################
-# Though under //zircon, this build file #
-# is meant to be used in the Fuchsia GN  #
-# build.                                 #
-# See fxb/36139.                         #
-##########################################
-
-import("//build/cpp/sdk_executable.gni")
-
-sdk_executable("fvm") {
-  category = "partner"
+zx_host_tool("fvm") {
   sources = [ "main.cc" ]
-  if (is_fuchsia) {
-    deps = [
-      "//zircon/public/lib/fbl",
-      "//zircon/public/lib/fit",
-      "//zircon/public/lib/fvm",
-      "//zircon/public/lib/safemath",
-      "//zircon/system/ulib/fvm-host",
-    ]
-  }
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/fvm",
+    "$zx/system/ulib/fvm-host",
+    "$zx/third_party/ulib/safemath",
+  ]
 
   if (current_os == "linux") {
     sources += [ "mtd.cc" ]
-    deps = [
-      "//zircon/public/lib/fbl-host",
-      "//zircon/public/lib/fit-host",
-      "//zircon/public/lib/fvm-host",
-      "//zircon/public/lib/safemath-host",
-      "//zircon/system/ulib/fvm-host",
-      "//zircon/system/ulib/ftl-mtd",
-      "//zircon/public/lib/mtd-host",
-      "//zircon/public/lib/zx-panic-libc",
+    deps += [
+      "$zx/system/ulib/ftl-mtd",
+      "$zx/system/ulib/mtd",
     ]
   } else {
     sources += [ "mtd-stub.cc" ]

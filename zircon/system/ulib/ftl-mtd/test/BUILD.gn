@@ -2,19 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-##########################################
-# Though under //zircon, this build file #
-# is meant to be used in the Fuchsia GN  #
-# build.                                 #
-# See fxb/36139.                         #
-##########################################
-
-assert(!defined(zx) || zx != "/",
-       "This file can only be used in the Fuchsia GN build.")
-
-import("//build/test.gni")
-import("//build/unification/images/migrated_manifest.gni")
-
 group("test") {
   testonly = true
 
@@ -29,87 +16,27 @@ source_set("common") {
 
   sources = [ "fake-nand-interface.cc" ]
 
-  if (is_fuchsia) {
-    deps = [ "//zircon/public/lib/mtd" ]
-  }
-  if (is_host) {
-    deps = [ "//zircon/public/lib/mtd-host" ]
-  }
- }
+  deps = [ "$zx/system/ulib/mtd:headers" ]
+}
 
-test("nand-volume-driver") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+zx_test("nand-volume-driver") {
   sources = [ "nand-volume-driver-tests.cc" ]
 
-  deps = [ ":common" ]
-
-  if (is_fuchsia) {
-    deps += [
-      "//zircon/system/ulib/ftl-mtd",
-      "//zircon/public/lib/mtd",
-      "//zircon/public/lib/zxtest",
-    ]
-  }
-  if (is_host) {
-    deps += [
-      "//zircon/system/ulib/ftl-mtd",
-      "//zircon/public/lib/mtd-host",
-      "//zircon/public/lib/zxtest-host",
-    ]
-  }
+  deps = [
+    ":common",
+    "$zx/system/ulib/ftl-mtd",
+    "$zx/system/ulib/mtd",
+    "$zx/system/ulib/zxtest",
+  ]
 }
 
-test("ftl-volume-wrapper") {
-  # Dependent manifests unfortunately cannot be marked as `testonly`.
-  # TODO(44278): Remove when converting this file to proper GN build idioms.
-  if (is_fuchsia) {
-    testonly = false
-  }
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
-  }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+zx_test("ftl-volume-wrapper") {
   sources = [ "ftl-volume-wrapper-tests.cc" ]
 
-  if (is_fuchsia) {
-    deps = [
-      "//zircon/system/ulib/ftl-mtd",
-      "//zircon/public/lib/mtd",
-      "//zircon/public/lib/zxtest",
-      "//zircon/system/ulib/fvm-host",
-    ]
-  } else {
-    deps = [
-      "//zircon/system/ulib/ftl-mtd",
-      "//zircon/public/lib/mtd-host",
-      "//zircon/public/lib/zxtest-host",
-      "//zircon/system/ulib/fvm-host",
-    ]
-  }
-}
-
-migrated_manifest("nand-volume-driver-manifest") {
-  deps = [ ":nand-volume-driver" ]
-}
-
-migrated_manifest("ftl-volume-wrapper-manifest") {
-  deps = [ ":ftl-volume-wrapper" ]
+  deps = [
+    "$zx/system/ulib/ftl-mtd",
+    "$zx/system/ulib/fvm-host",
+    "$zx/system/ulib/mtd",
+    "$zx/system/ulib/zxtest",
+  ]
 }

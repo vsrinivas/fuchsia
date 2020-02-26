@@ -183,11 +183,11 @@ sdk_molecule("core_tools") {
     "//zircon/public/tool/bootserver:bootserver_sdk",
     "//zircon/public/tool/fidl-format:fidl-format_sdk",
     "//zircon/public/tool/fidlc:fidlc_sdk",
+    "//zircon/public/tool/fvm:fvm_sdk",
     "//zircon/public/tool/loglistener:loglistener_sdk",
     "//zircon/public/tool/merkleroot:merkleroot_sdk",
     "//zircon/public/tool/minfs:minfs_sdk",
     "//zircon/public/tool/zbi:zbi_sdk",
-    "//zircon/tools/fvm:fvm_sdk",
   ]
 
   toolchains = []

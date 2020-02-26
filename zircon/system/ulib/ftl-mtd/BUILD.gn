@@ -2,18 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-##########################################
-# Though under //zircon, this build file #
-# is meant to be used in the Fuchsia GN  #
-# build.                                 #
-# See fxb/36548.                         #
-##########################################
-
-assert(!defined(zx) || zx != "/",
-       "This file can only be used in the Fuchsia GN build.")
-
-import("//build/unification/zx_library.gni")
-
 zx_library("ftl-mtd") {
   sdk = "source"
   sdk_headers = [
@@ -27,31 +15,15 @@ zx_library("ftl-mtd") {
     "nand-volume-driver.cc",
   ]
 
-  if (is_fuchsia) {
-    public_deps = [
-      "//zircon/public/lib/fbl",
-      "//zircon/public/lib/ftl",
-    ]
+  public_deps = [
+    "$zx/system/ulib/fbl:headers",
+    "$zx/system/ulib/ftl:headers",
+  ]
 
-    deps = [
-      "//zircon/public/lib/fbl",
-      "//zircon/public/lib/ftl",
-      "//zircon/public/lib/fbl",
-      "//zircon/public/lib/mtd",
-      "//zircon/system/ulib/fvm-host",
-    ]
-  } else {
-    public_deps = [
-      "//zircon/public/lib/fbl-host",
-      "//zircon/public/lib/ftl-host",
-    ]
-
-    deps = [
-      "//zircon/public/lib/fbl-host",
-      "//zircon/public/lib/ftl-host",
-      "//zircon/public/lib/fbl-host",
-      "//zircon/public/lib/mtd-host",
-      "//zircon/system/ulib/fvm-host",
-    ]
-  }
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/ftl",
+    "$zx/system/ulib/fvm-host",
+    "$zx/system/ulib/mtd",
+  ]
 }

@@ -41,6 +41,7 @@ listed_tests = [
 #------------------
 #------------------
 #------------------
+  "fvm-host",
 #------------------
 #------------------
 #------------------
@@ -61,10 +62,12 @@ listed_tests = [
 if (current_os == "linux") {
   listed_tests += [
 #------------------
+    "ftl-volume-wrapper",
 #------------------
 #------------------
 #------------------
 #------------------
+    "nand-volume-driver",
 #------------------
   ]
 }
@@ -117,8 +120,7 @@ group("migrated-tests") {
     "//zircon/system/utest/fs-host",
   #------------------
   #------------------
-    # Disabled because of fxbug.dev/37779 (20min+ run-time)
-    #"//zircon/system/utest/fvm-host",
+    #"fvm-host",
   #------------------
   #------------------
     "//zircon/system/ulib/fvm/test:fvm-unit",
@@ -149,13 +151,13 @@ group("migrated-tests") {
       "//zircon/system/utest/mtd",
       "//zircon/system/utest/nand-redundant-storage",
   #------------------
-      "//zircon/system/ulib/ftl-mtd/test:ftl-volume-wrapper",
+      #"ftl-volume-wrapper",
   #------------------
   #------------------
       "//zircon/system/utest/ftl-mtd:ftl-volume-wrapper-integration",
   #------------------
   #------------------
-      "//zircon/system/ulib/ftl-mtd/test:nand-volume-driver",
+      #"nand-volume-driver",
   #------------------
     ]
   }

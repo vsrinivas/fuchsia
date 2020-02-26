@@ -37,6 +37,7 @@ foreach(host, standard_build_hosts) {
       "blobfs",
       "bootserver",
       "fidl:tools",
+      "fvm",
       "kazoo",
       "ktrace-dump",
       "loglistener",
