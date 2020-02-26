@@ -417,28 +417,6 @@ rustc_test("get_hash") {
   ]
 }
 
-rustc_test("system_cache_fallback") {
-  name = "system-cache-fallback"
-  edition = "2018"
-
-  source_root = "src/system_cache_fallback.rs"
-
-  deps = [
-    ":lib",
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/fuchsia-async",
-    "//src/sys/pkg/lib/fuchsia-merkle",
-    "//src/sys/pkg/lib/fuchsia-pkg-testing",
-    "//src/sys/pkg/testing/blobfs-ramdisk",
-    "//src/sys/pkg/testing/pkgfs-ramdisk",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:matches",
-    "//third_party/rust_crates:openat",
-    "//third_party/rust_crates:serde_json",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-  ]
-}
-
 generate_manifest("empty-repo.manifest") {
   visibility = [ ":*" ]
   testonly = true
@@ -491,7 +469,6 @@ test_package("pkg-resolver-integration-tests") {
     ":resolve_recovers_from_http_errors",
     ":resolve_succeeds",
     ":resolve_succeeds_with_broken_minfs",
-    ":system_cache_fallback",
     "//garnet/go/src/grand_unified_binary",
     "//src/sys/pkg/bin/pkg-cache:bin",
     "//src/sys/pkg/bin/pkg-resolver:bin",
@@ -576,11 +553,6 @@ test_package("pkg-resolver-integration-tests") {
     {
       name = "resolve_succeeds_with_broken_minfs"
       dest = "resolve-succeeds-with-broken-minfs"
-      environments = basic_envs
-    },
-    {
-      name = "system_cache_fallback"
-      dest = "system-cache-fallback"
       environments = basic_envs
     },
   ]

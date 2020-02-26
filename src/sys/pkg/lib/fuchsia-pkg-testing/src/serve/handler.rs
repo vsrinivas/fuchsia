@@ -201,31 +201,6 @@ impl<H: UriPathHandler> ForPathPrefix<H> {
     }
 }
 
-/// Handler that overrides all the requests that end with the given request path using the
-/// given handler. Useful for hitting all versions of versioned TUF metadata (e.g. X.targets.json).
-/// TODO(ampearce): change ForPathSuffix and ForPathPrefix to use string matches rather than path.
-pub struct ForPathSuffix<H: UriPathHandler> {
-    suffix: PathBuf,
-    handler: H,
-}
-
-impl<H: UriPathHandler> UriPathHandler for ForPathSuffix<H> {
-    fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
-        if uri_path.ends_with(&self.suffix) {
-            self.handler.handle(uri_path, response)
-        } else {
-            ready(response).boxed()
-        }
-    }
-}
-
-impl<H: UriPathHandler> ForPathSuffix<H> {
-    /// Creates handler that overrides all the requests that start with the given request path
-    /// using the given handler.
-    pub fn new(suffix: impl Into<PathBuf>, handler: H) -> Self {
-        Self { suffix: suffix.into(), handler }
-    }
-}
 /// Handler that passes responses through the given handler once per unique path.
 pub struct OncePerPath<H: UriPathHandler> {
     handler: H,

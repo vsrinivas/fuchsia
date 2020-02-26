@@ -14,8 +14,7 @@
         ],
         "pkgfs": [
             "install",
-            "needs",
-            "system"
+            "needs"
         ],
         "services": [
             "fuchsia.amber.Control",

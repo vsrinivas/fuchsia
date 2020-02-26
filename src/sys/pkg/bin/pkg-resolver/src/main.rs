@@ -14,7 +14,6 @@ use {
     futures::{prelude::*, stream::FuturesUnordered},
     parking_lot::RwLock,
     std::{io, sync::Arc},
-    system_image::CachePackages,
 };
 
 mod cache;
@@ -83,10 +82,6 @@ async fn main_inner_async() -> Result<(), Error> {
         pkgfs::needs::Client::open_from_namespace().context("error connecting to pkgfs/needs")?;
     let cache = PackageCache::new(pkg_cache, pkgfs_install, pkgfs_needs);
 
-    // The list of cache packages from the system image, not to be confused with the PackageCache.
-    let system_cache_list = load_system_cache_list().await;
-    let system_cache_list = Arc::new(system_cache_list);
-
     let inspector = fuchsia_inspect::Inspector::new();
     let channel_inspect_state =
         ChannelInspectState::new(inspector.root().create_child("omaha_channel"));
@@ -122,7 +117,6 @@ async fn main_inner_async() -> Result<(), Error> {
 
     let (package_fetch_queue, package_fetcher) = resolver_service::make_package_fetch_queue(
         cache.clone(),
-        Arc::clone(&system_cache_list),
         Arc::clone(&repo_manager),
         blob_fetcher.clone(),
         MAX_CONCURRENT_PACKAGE_FETCHES,
@@ -215,7 +209,7 @@ async fn main_inner_async() -> Result<(), Error> {
 
     trace::instant!("app", "startup", trace::Scope::Process);
 
-    futures.collect::<()>().await;
+    let () = futures.collect().await;
 
     Ok(())
 }
@@ -323,36 +317,4 @@ fn load_font_package_manager() -> FontPackageManager {
             builder
         })
         .build()
-}
-
-// Read in the list of cache_packages from /system/data/cache_packages.
-// If we can't load it for some reason, return an empty cache.
-async fn load_system_cache_list() -> system_image::CachePackages {
-    let system_image = pkgfs::system::Client::open_from_namespace();
-    // Default to empty cache.
-    let empty = CachePackages::from_entries(vec![]);
-    let system_image = match system_image {
-        Ok(s) => s,
-        Err(e) => {
-            fx_log_err!("failed to open system image: {}", e);
-            return empty;
-        }
-    };
-    let cache_file = system_image.open_file("data/cache_packages").await;
-    let cache_file = match cache_file {
-        Ok(f) => f,
-        Err(e) => {
-            fx_log_err!("failed to open data/cache_packages: {}", e);
-            return empty;
-        }
-    };
-
-    let cache_list = CachePackages::deserialize(cache_file);
-    match cache_list {
-        Ok(cl) => return cl,
-        Err(e) => {
-            fx_log_err!("error opening package cache: {}", e);
-            return empty;
-        }
-    };
 }
