@@ -25,10 +25,12 @@
 // Clock creation options.
 #define ZX_CLOCK_OPT_MONOTONIC                   ((uint64_t)1u << 0)
 #define ZX_CLOCK_OPT_CONTINUOUS                  ((uint64_t)1u << 1)
+#define ZX_CLOCK_OPT_AUTO_START                  ((uint64_t)1u << 2)
 
 #define ZX_CLOCK_OPTS_ALL ( \
         ZX_CLOCK_OPT_MONOTONIC | \
-        ZX_CLOCK_OPT_CONTINUOUS)
+        ZX_CLOCK_OPT_CONTINUOUS | \
+        ZX_CLOCK_OPT_AUTO_START)
 
 // Clock update flags
 #define ZX_CLOCK_UPDATE_OPTION_VALUE_VALID       ((uint64_t)1u << 0)

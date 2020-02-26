@@ -648,8 +648,9 @@ TEST(KernelClocksTestCase, StartedSignal) {
   ASSERT_OK(clock.update(args.set_value(zx::time(0))));
 
   // This time, our wait should succeed and the pending signal should indicate
-  // ZX_CLOCK_STARTED
-  ASSERT_OK(clock.wait_one(ZX_CLOCK_STARTED, zx::deadline_after(zx::msec(50)), &pending));
+  // ZX_CLOCK_STARTED.  No timeout should be needed.  This clock should already
+  // be started.
+  ASSERT_OK(clock.wait_one(ZX_CLOCK_STARTED, zx::time(0), &pending));
   ASSERT_EQ(pending, ZX_CLOCK_STARTED);
 }
 
@@ -666,6 +667,110 @@ TEST(KernelClocksTestCase, DefaultRights) {
 
   // Make sure that the default rights match what we expect.
   ASSERT_EQ(ZX_DEFAULT_CLOCK_RIGHTS, basic_info.rights);
+}
+
+TEST(KernelClocksTestCase, AutoStarted) {
+  // Perform this test 3 times, one for each of the valid combinations of the
+  // clock behavior flags.  IOW - no guarantees, a guarantee of monotonicity,
+  // but not continuity, and a guarantee of both monotonicity and continuity.
+  constexpr std::array BASE_CREATE_OPTIONS = {
+      static_cast<uint64_t>(0),
+      ZX_CLOCK_OPT_MONOTONIC,
+      ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS,
+  };
+
+  constexpr zx::time the_dawn_of_time_itself{0};
+  zx::time one_year_from_now = zx::deadline_after(zx::hour(1) * 24 * 365);
+  zx::clock clock;
+
+  for (const auto base_create_option : BASE_CREATE_OPTIONS) {
+    // Create a simple clock, but specify that it should start ticking
+    // automatically.
+    ASSERT_OK(zx::clock::create(base_create_option | ZX_CLOCK_OPT_AUTO_START, nullptr, &clock));
+
+    // Fetch the details for the clock.  Our mono <-> synth transformation
+    // should be identity.
+    zx_clock_details_v1_t details;
+    ASSERT_OK(clock.get_details(&details));
+    ASSERT_EQ(details.mono_to_synthetic.reference_offset,
+              details.mono_to_synthetic.synthetic_offset);
+    ASSERT_EQ(details.mono_to_synthetic.rate.reference_ticks,
+              details.mono_to_synthetic.rate.synthetic_ticks);
+    ASSERT_NE(0, details.mono_to_synthetic.rate.reference_ticks);
+
+    // We omitted the create args structure, so the backstop time should be 0.
+    ASSERT_EQ(0, details.backstop_time);
+
+    // Make sure that the "started" signal has already been set for this clock
+    // (since we auto-started it)
+    zx_signals_t pending = 0;
+    ASSERT_OK(clock.wait_one(ZX_CLOCK_STARTED, zx::time(0), &pending));
+    ASSERT_EQ(pending, ZX_CLOCK_STARTED);
+
+    // Spot check the ticks <-> synth transformation by making sure that a
+    // simple read (which uses the ticks <-> synth transform under the hood) is
+    // properly bracketed by before and after observations of clock monotonic.
+    zx::time before = zx::clock::get_monotonic();
+    zx::time now;
+    ASSERT_OK(clock.read(now.get_address()));
+    zx::time after = zx::clock::get_monotonic();
+    ASSERT_LE(before, now);
+    ASSERT_GE(after, now);
+
+    // Check the various set options.  We should always be able set the rate of
+    // the clock, as well as the error bound.  Setting the value of the clock,
+    // however, is a limited operation.  With no restrictions, we should be able
+    // to set the clock to anything, all of the way back to the backstop.  For a
+    // monotonic clock, we should not be able to go backwards, but forwards
+    // should be fine.  For a continuous clock, neither backwards nor forwards
+    // should be OK.
+    zx::clock::update_args args;
+    switch (base_create_option) {
+      case 0:
+        ASSERT_OK(clock.update(args.reset().set_value(the_dawn_of_time_itself)));
+        ASSERT_OK(clock.update(args.reset().set_value(one_year_from_now)));
+        break;
+
+      case ZX_CLOCK_OPT_MONOTONIC:
+        ASSERT_STATUS(ZX_ERR_INVALID_ARGS,
+                      clock.update(args.reset().set_value(the_dawn_of_time_itself)));
+        ASSERT_OK(clock.update(args.reset().set_value(one_year_from_now)));
+        break;
+
+      case ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS:
+        ASSERT_STATUS(ZX_ERR_INVALID_ARGS,
+                      clock.update(args.reset().set_value(the_dawn_of_time_itself)));
+        ASSERT_STATUS(ZX_ERR_INVALID_ARGS, clock.update(args.reset().set_value(one_year_from_now)));
+        break;
+
+      default:
+        // this should never happen unless someone changes the list at the start
+        ZX_ASSERT(false);
+        break;
+    }
+
+    // Now check to be sure we can adjust the rate and the error bound.
+    // Provided that we have write access to the clock, this should always be
+    // OK.
+    ASSERT_OK(clock.update(args.reset().set_rate_adjust(35)));
+    ASSERT_OK(clock.update(args.reset().set_error_bound(100000)));
+  }
+
+  // Finally, attempt to create an auto-started clock, but specify a backstop
+  // time which is ahead of the current clock monotonic.  This should fail since
+  // we are asking for a clock which is supposed to start as a clone of clock
+  // monotonic, but whose current time would violate the backstop time.
+  //
+  // Note: since monotonic is ticking forward while we are attempting to pick a
+  // backstop time ahead of it, this is technically a race in the test.  Pick a
+  // backstop time which is ~1 year ahead of now.  The assumption here is that
+  // for the race to be lost, this test would need to go out to lunch for about
+  // a year, which should trip the test framework's stuck-test timeout well
+  // before the race is lost.
+  zx_clock_create_args_v1 create_args = {.backstop_time =
+                                             zx::deadline_after(zx::sec(86400ull * 365)).get()};
+  ASSERT_STATUS(ZX_ERR_INVALID_ARGS,
+                zx::clock::create(ZX_CLOCK_OPT_AUTO_START, &create_args, &clock));
 }
 
 }  // namespace

@@ -74,6 +74,13 @@ value of zero.
 + The maximum permissible range of frequency adjustment of a clock object is
   specified to be [-1000, +1000] PPM.  This property is not configurable.
 
+### Additional creation options
+
+#### **ZX_CLOCK_OPT_AUTO_START**
+When you use this option during clock creation, the clock begins in a started
+state instead of the default non-started state.  See [Starting a
+clock](#starting-a-clock) for details.
+
 ### Reading the clock
 
 Given a clock handle, users may query the current time given by that clock using
@@ -137,7 +144,7 @@ to also:
   permissive range of frequency adjustment described in the |Implied properties|
   section above.
 
-### Starting a clock and Clock Signals
+### Starting a clock and clock signals {#starting-a-clock}
 
 Immediately after creation, a clock has not yet been started.  All attempts to
 read the clock will return the clock's configured backstop time, which defaults
@@ -154,7 +161,21 @@ set, but it becomes set after the first successful update operation.  Once
 started, a clock will never stop and the **ZX_CLOCK_STARTED** signal will always
 be asserted.
 
-### Maintaining a clock.
+Initially, the clock is a clone of clock monotonic, which makes the
+transformation between the clock monotonic timeline and synthetic timeline the
+identity function. This clock may still be [maintained](#maintaining-a-clock)
+after creation, subject to the limitations imposed by rights, the
+**ZX_CLOCK_OPT_MONOTONIC** and **ZX_CLOCK_OPT_CONTINUOUS** properties, and the
+configured backstop time.
+
+If a clock is created with the **ZX_CLOCK_OPT_AUTO_START** options, it cannot be
+configured with a backstop time which is greater than the current clock
+monotonic time. If this was allowed, this would result in a state where a
+clock's current time is set to a time before its backstop time.
+
+
+
+### Maintaining a clock {#maintaining-a-clock}
 
 Users who possess **ZX_RIGHT_WRITE** permissions for a clock object may act as a
 maintainer of the clock using the `zx_clock_update()` syscall.  Three parameters

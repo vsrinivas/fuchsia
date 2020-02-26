@@ -42,8 +42,14 @@ zx_status_t ClockDispatcher::Create(uint64_t options, const zx_clock_create_args
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // Specified backstop times must be non-negative.
-  if (create_args.backstop_time < 0) {
+  // Make sure that the backstop time is valid.  If this clock is being created
+  // with the "auto start" flag, then it begins life as a clone of clock
+  // monotonic, and the backstop time has to be <= the current clock monotonic
+  // value.  Otherwise, the clock starts in the stopped state, and any specified
+  // backstop time must simply be non-negative.
+  //
+  if (((options & ZX_CLOCK_OPT_AUTO_START) && (create_args.backstop_time > current_time())) ||
+      (create_args.backstop_time < 0)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -63,6 +69,18 @@ ClockDispatcher::ClockDispatcher(uint64_t options, zx_time_t backstop_time)
       backstop_time_(backstop_time),
       mono_to_synthetic_{0, backstop_time, {0, 1}},
       ticks_to_synthetic_{0, backstop_time, {0, 1}} {
+  // If this clock is created with the "auto start" flag, set the clock up to
+  // initially be a clone of clock monotonic instead of being in an undefined
+  // (non-started) state.
+  if (options & ZX_CLOCK_OPT_AUTO_START) {
+    ZX_DEBUG_ASSERT(backstop_time <= current_time());  // This should have been checked by Create
+    affine::Ratio ticks_to_mono_ratio = platform_get_ticks_to_time_ratio();
+    mono_to_synthetic_ = {0, 0, {1, 1}},
+    ticks_to_synthetic_ = {
+        0, 0, {ticks_to_mono_ratio.numerator(), ticks_to_mono_ratio.denominator()}};
+    UpdateState(0, ZX_CLOCK_STARTED);
+  }
+
   kcounter_add(dispatcher_clock_create_count, 1);
 }
 

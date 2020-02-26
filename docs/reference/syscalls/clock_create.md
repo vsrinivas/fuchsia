@@ -31,7 +31,7 @@ overview of clock objects.
 
 ### Options
 
-Two options are currently defined for clock objects.
+The following options are defined for clock objects:
 
 + **ZX_CLOCK_OPT_MONOTONIC** : When set, creates a clock object which is
   guaranteed to never run backwards.  Monotonic clocks must always move forward.
@@ -41,6 +41,11 @@ Two options are currently defined for clock objects.
   Attempting to create a clock object with the **ZX_CLOCK_OPT_CONTINUOUS** option
   specified, but without the **ZX_CLOCK_OPT_MONOTONIC** option specified is an
   error which will be signalled with **ZX_ERR_INVALID_ARGS**.
++ **ZX_CLOCK_OPT_AUTO_START** : When set, creates a clock that is automatically
+  started and is initially a clone of clock monotonic. Users may still update
+  the clock within the limits defined by the monotonic and continuous options, the
+  handle rights, and the backstop time of the clock.
+
 
 ### Arguments
 
@@ -85,9 +90,11 @@ and **ZX_RIGHT_WRITE** rights assigned to them.
 
 ## ERRORS
 
- - **ZX_ERR_INVALID_ARGS** : An invalid option flag was specified, a bad args structure
- version/pointer was passed, or **ZX_CLOCK_OPT_CONTINUOUS** was specified without also
- specifying **ZX_CLOCK_OPT_MONOTONIC**.
+ - **ZX_ERR_INVALID_ARGS** : An invalid option flag was specified, a bad args
+   structure version or pointer was passed, **ZX_CLOCK_OPT_CONTINUOUS** was
+   specified without also specifying **ZX_CLOCK_OPT_MONOTONIC**, or the initial
+   backstop time of an automatically started clock is after the current clock
+   monotonic time.
  - **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
 
 ## SEE ALSO
