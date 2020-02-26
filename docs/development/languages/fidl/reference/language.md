@@ -131,7 +131,7 @@ const uint64 FUCHSIA = 4054509061583223046;
 const string USERNAME = "squeenze";
 const float32 MIN_TEMP = -273.15;
 const float64 CONVERSION_FACTOR = 1.41421358;
-const Beverage MY_DRINK = WATER;
+const Beverage MY_DRINK = Beverage.WATER;
 ```
 
 These declarations introduce a name within their scope.
