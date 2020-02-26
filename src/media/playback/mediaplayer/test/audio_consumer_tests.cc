@@ -89,7 +89,7 @@ class AudioConsumerTests : public sys::testing::TestWithEnvironment {
 
   fuchsia::media::AudioConsumerPtr audio_consumer_;
   bool audio_consumer_connection_closed_ = false;
-  bool got_status_;
+  bool got_status_ = false;
   fuchsia::media::AudioConsumerStatus last_status_;
 
   FakeAudio fake_audio_;
