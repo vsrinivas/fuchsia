@@ -37,6 +37,11 @@ examples, as well as investment from developer relations.
 written using straight-line code (e.g., using async/await in languages like Rust
 and Dart).
 
+*Strong encapsulation* is a term of art in object-oriented programming
+languages. It means that the language allows class designers to enforce
+visibility rules (e.g. `private` in C++ or Java) for the fields of a class and
+objects of that class.
+
 ## Languages
 
 ### C
@@ -177,3 +182,32 @@ and Dart).
      to an approved language.
  * All other uses of Go in the Fuchsia Platform Source Tree for production
    software on the target device must be migrated to an approved language.
+
+### Python
+
+#### Analysis
+
+ * Pro: The language is widely used.
+ * Pro: The language is used in the build systems of many open-source
+   dependencies of Fuchsia.
+ * Pro: People using the language are highly productive.
+ * Pro: The language has a robust ecosystem of contributors and libraries that
+   are likely to be useful on Fuchsia.
+ * Pro: The language provides memory safety guarantees, which reduces the risk
+   of software developed in the language having security bugs.
+ * Con: The language uses garbage collection to manage memory, which is more
+   resource intensive than other techniques for managing memory.
+ * Con: The language has a substantial runtime environment.
+ * Con: The language is not performance-competitive with C++, Rust, or Dart.
+ * Con: Programming errors are often detected during execution rather than
+   statically.
+ * Con: The language lacks strong encapsulation.
+
+#### Decision
+
+ * Python is not supported for end-developers.
+ * Python 3 is approved for use in the Fuchsia Platform Source Tree for the following purposes:
+  * Build
+  * Host tools
+ * Python 2.7 is deprecated and existing uses in the Fuchsia Platform Source
+   Tree must be migrated to an approved language.
