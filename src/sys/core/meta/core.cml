@@ -61,6 +61,7 @@
         "/svc/fuchsia.device.NameProvider",
         "/svc/fuchsia.device.manager.Administrator",
         "/svc/fuchsia.device.manager.DebugDumper",
+        "/svc/fuchsia.hardware.power.statecontrol.Admin",
         "/svc/fuchsia.kernel.Counter",
         "/svc/fuchsia.kernel.DebugBroker",
         "/svc/fuchsia.paver.Paver",
